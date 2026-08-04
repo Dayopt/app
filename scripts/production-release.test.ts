@@ -1844,6 +1844,49 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('promotes into a domain that was unassigned from the start', async () => {
+    // 未割当を「外部が動かした」と誤判定すると、READY な candidate を promote せずに
+    // 抜けてしまい、domain は無配信のまま残る。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      // web の alias は最初から未割当。promote 後は通常どおり応答させる。
+      if (url.includes('/v4/aliases/dayopt.app') && !world.live.webPromoted) {
+        return Response.json({});
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        world.live.webPromoted = 'yes';
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toContain('web');
+  });
+
+  it('fails when production keeps changing through every stabilization attempt', async () => {
+    // 検証の後に必ず promote が起きる状態。最後の掃きの後を検証できていないので
+    // success の根拠が無い。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      // 設定を読むたびに「有効化されている」ことにする（外部 promote の連続）。
+      if ((init?.method ?? 'GET') === 'GET' && url.includes('/v9/projects/')) {
+        const project = url.includes('web') ? 'web' : 'product';
+        world.autoAssign[project] = true;
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    // gate 運用の宣言値（false）を明示する。省略すると run 開始時点の観測（この mock
+    // では true）が期待値になり、掃きが何もしない。
+    await expect(release({ fetchImpl, expectedAutoAssign: false })).rejects.toThrow(
+      /kept changing while verifying/,
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

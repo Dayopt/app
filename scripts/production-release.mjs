@@ -985,10 +985,13 @@ export async function runProductionRelease({
    */
   const refreshObservedLive = async ({ skip = new Set() } = {}) => {
     for (const project of projects) {
-      // この run が説明を持つ project は触らない（promote / rollback / 待機中の
-      // 自動割当は、それぞれの経路が既に正しい記録を作っている）。
-      if (skip.has(project.name) || externallyLive.has(project.name)) continue;
-      const startId = before.get(project.name)?.id ?? null;
+      // rollback など、この run の経路が既に正しい記録を作った project は触らない。
+      if (skip.has(project.name)) continue;
+
+      // 比較対象は「今わかっている期待値」。待機中の自動割当を記録済みなら
+      // その ID で、無ければ run 開始時点の ID。**記録済みだからと飛ばさない**
+      // （そこから更に動いていた場合、古い観測を載せ続けることになる）。
+      const expected = externallyLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null;
       const live = await getLiveProduction({
         projectName: project.name,
         productionDomain: project.productionDomain,
@@ -998,8 +1001,15 @@ export async function runProductionRelease({
         fetchImpl,
       }).catch(() => undefined);
       if (live === undefined) continue; // 読めなかった
-      if ((live?.id ?? null) !== startId) {
+      if ((live?.id ?? null) === expected) continue;
+
+      if (live?.sha === sha) {
+        // target を配信している。gate を通っていなければ `uncertified` になる。
+        externallyLive.set(project.name, { id: live.id, sha: live.sha });
+        movedAway.delete(project.name);
+      } else {
         movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+        externallyLive.delete(project.name);
       }
     }
   };
@@ -1144,7 +1154,11 @@ export async function runProductionRelease({
         `Auto-assign was re-enabled during verification; re-checking (attempt ${attempt}).`,
       );
     }
-    return sweep.drifted;
+    // 回り切っても収束しない = 検証の後に必ず promote が起きている状態。最後の掃きの
+    // 後を検証できていないので、success の根拠が無い。認証せず失敗させる。
+    throw new ReleaseError(
+      `Production kept changing while verifying ${sha}; refusing to certify it as live`,
+    );
   };
 
   // **この関数のどの出口も、抜ける前に auto-assign を掃く。** 外部の promote は
@@ -1255,7 +1269,11 @@ export async function runProductionRelease({
       sleepImpl,
       nowImpl,
       logger,
-    }).catch((error) => {
+    }).catch(async (error) => {
+      // 片方が READY で自動割当された一方、もう片方が timeout / ERROR というケース。
+      // run 開始時点の snapshot だけで manifest を作ると、live になった候補が
+      // `pending` として載り、runbook が「production は無傷」と案内する。
+      await refreshObservedLive();
       throw Object.assign(error, { manifest: manifestFor('failed') });
     });
 
@@ -1289,10 +1307,13 @@ export async function runProductionRelease({
     }
 
     const movedElsewhere = candidates.filter(({ project, deployment }) => {
-      const now = current.get(project.name);
+      // **未割当（alias 無し）は `null` に正規化して比べる。** `now?.id` は undefined を
+      // 返すため、run 開始時点から未割当のままの domain が「外部が動かした」と判定され、
+      // READY な candidate を promote せずに抜けてしまう（domain は無配信のまま）。
+      const nowId = current.get(project.name)?.id ?? null;
       const wasId = before.get(project.name)?.id ?? null;
       // 同じ candidate を人が先に promote した場合は競合ではない。
-      return now?.id !== wasId && now?.id !== deployment.id;
+      return nowId !== wasId && nowId !== deployment.id;
     });
     if (movedElsewhere.length > 0) {
       const detail = movedElsewhere
