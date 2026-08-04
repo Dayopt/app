@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-08-04
 code: apps/product/src
 ---
 
@@ -75,7 +75,7 @@ features/{name}/
 | Feature     | domain の中身                                                                                         |
 | ----------- | ----------------------------------------------------------------------------------------------------- |
 | `timeblock` | `timeblock-destination` / `monthly-trend` / `streak-calculator` / `estimation-accuracy` / `tag-stats` |
-| `tags`      | `tag-colon` / `tag-tree` / `tag-merge` / `tag-ungroup`                                                |
+| `tags`      | `tag-tree` / `tag-merge`                                                                              |
 | `review`    | `variance` / `timePL/`（薄い構成）                                                                    |
 
 ### DAG Layer
