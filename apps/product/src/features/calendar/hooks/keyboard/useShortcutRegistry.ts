@@ -13,8 +13,8 @@ import { useEffect } from 'react';
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { handleGlobalKeyDown, registerShortcut } from '@/lib/keyboard/shortcut-registry';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { handleGlobalKeyDown, registerShortcut } from './shortcut-registry';
 
 /**
  * ショートカットレジストリのグローバルリスナーをマウントする

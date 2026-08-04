@@ -1,7 +1,7 @@
 /**
  * Keyboard Shortcut Registry
  *
- * カレンダー機能のキーボードショートカットを一元管理するレジストリ。
+ * app全体のキーボードショートカットを一元管理するレジストリ。
  * - ショートカット定義の集約（ヘルプダイアログ等で参照可能）
  * - 開発時のコンフリクト検出
  * - 単一のグローバルkeydownリスナーによる処理
@@ -15,25 +15,8 @@ import { logger } from '@/lib/logger';
 
 export type ShortcutHelpGroup = 'general' | 'navigation' | 'views' | 'blocks';
 
-export type ShortcutHelpLabelKey =
-  | 'calendar.shortcuts.actions.open'
-  | 'calendar.shortcuts.actions.previousPeriod'
-  | 'calendar.shortcuts.actions.nextPeriod'
-  | 'calendar.shortcuts.actions.today'
-  | 'calendar.shortcuts.actions.dayView'
-  | 'calendar.shortcuts.actions.twoDayView'
-  | 'calendar.shortcuts.actions.threeDayView'
-  | 'calendar.shortcuts.actions.fourDayView'
-  | 'calendar.shortcuts.actions.fiveDayView'
-  | 'calendar.shortcuts.actions.sixDayView'
-  | 'calendar.shortcuts.actions.sevenDayView'
-  | 'calendar.shortcuts.actions.toggleWeekends'
-  | 'calendar.shortcuts.actions.createBlock'
-  | 'calendar.shortcuts.actions.createBlockNow'
-  | 'calendar.shortcuts.actions.copyBlock'
-  | 'calendar.shortcuts.actions.pasteBlock'
-  | 'calendar.shortcuts.actions.deleteBlock'
-  | 'calendar.shortcuts.actions.closeInspector';
+/** 翻訳キーは feature 側が所有するため lib では string とし、宣言の一意性はカタログが担保する。 */
+export type ShortcutHelpLabelKey = string;
 
 export interface ShortcutHelpMetadata {
   group: ShortcutHelpGroup;

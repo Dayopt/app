@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 
+import type { ShortcutDef } from '@/lib/keyboard/shortcut-registry';
+import { registerShortcuts } from '@/lib/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../types/calendar.types';
-import type { ShortcutDef } from './shortcut-registry';
-import { registerShortcuts } from './shortcut-registry';
 
 /** useCalendarKeyboard フックのプロパティ */
 interface UseCalendarKeyboardProps {

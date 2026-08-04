@@ -9,13 +9,13 @@ import {
   useTimeblockWriteMutations,
 } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import type { ShortcutDef } from '@/lib/keyboard/shortcut-registry';
+import { registerShortcuts } from '@/lib/keyboard/shortcut-registry';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 import { resolveTimeblockClipboardPaste } from '../../lib/timeblock-clipboard-paste';
 import { useTimeblockClipboardStore } from '../../stores/useTimeblockClipboardStore';
-import type { ShortcutDef } from './shortcut-registry';
-import { registerShortcuts } from './shortcut-registry';
 
 /** useCalendarEventKeyboard フックのオプション */
 interface UseCalendarTimeblockKeyboardOptions {

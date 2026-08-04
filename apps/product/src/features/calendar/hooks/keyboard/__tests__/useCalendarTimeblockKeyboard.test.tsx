@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ShortcutDef } from '../shortcut-registry';
+import type { ShortcutDef } from '@/lib/keyboard/shortcut-registry';
+
 import { useCalendarEventKeyboard } from '../useCalendarTimeblockKeyboard';
 
 const mocks = vi.hoisted(() => ({
@@ -13,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   timeblockId: 'plan-1',
 }));
 
-vi.mock('../shortcut-registry', () => ({
+vi.mock('@/lib/keyboard/shortcut-registry', () => ({
   registerShortcuts: mocks.registerShortcuts,
 }));
 

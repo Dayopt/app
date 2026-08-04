@@ -9,6 +9,8 @@ import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettin
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import type { ShortcutDef } from '@/lib/keyboard/shortcut-registry';
+import { registerShortcuts } from '@/lib/keyboard/shortcut-registry';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import {
   buttonVariants,
@@ -20,8 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@dayopt/components';
-import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
-import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import { getMultiDayCount, type CalendarViewType } from '../../../types/calendar.types';
 
 /** ViewSwitcher コンポーネントのプロパティ */

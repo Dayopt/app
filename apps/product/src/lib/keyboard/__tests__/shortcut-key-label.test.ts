@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatShortcutKey } from '../shortcut-key-label';
+import { formatShortcutKey } from '@/lib/keyboard/shortcut-key-label';
 
 describe('formatShortcutKey', () => {
   it('Macではmodifierと矢印を記号で表示する', () => {

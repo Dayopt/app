@@ -6,12 +6,12 @@ import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
-import { formatShortcutKey, type ShortcutPlatform } from '../hooks/keyboard/shortcut-key-label';
+import { formatShortcutKey, type ShortcutPlatform } from '@/lib/keyboard/shortcut-key-label';
 import {
   getRegisteredShortcutHelpItems,
   type ShortcutHelpGroup,
   type ShortcutHelpItem,
-} from '../hooks/keyboard/shortcut-registry';
+} from '@/lib/keyboard/shortcut-registry';
 
 const GROUPS: ShortcutHelpGroup[] = ['general', 'navigation', 'views', 'blocks'];
 const GROUP_COLUMNS: readonly (readonly ShortcutHelpGroup[])[] = [

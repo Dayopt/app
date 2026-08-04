@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import type { ShortcutHelpItem } from '../hooks/keyboard/shortcut-registry';
+import type { ShortcutHelpItem } from '@/lib/keyboard/shortcut-registry';
 import { ShortcutCheatSheetDialog } from './ShortcutCheatSheetDialog';
 
 const SHORTCUTS: ShortcutHelpItem[] = [

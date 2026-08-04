@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { useUpdateUserSettings } from '@/lib/hooks/useUpdateUserSettings';
-import type { ShortcutDef } from './shortcut-registry';
-import { registerShortcut } from './shortcut-registry';
+import type { ShortcutDef } from '@/lib/keyboard/shortcut-registry';
+import { registerShortcut } from '@/lib/keyboard/shortcut-registry';
 
 /**
  * 週末表示切り替えのキーボードショートカット（Cmd/Ctrl + W）を管理するフック

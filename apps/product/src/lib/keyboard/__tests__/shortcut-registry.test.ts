@@ -4,7 +4,7 @@ import {
   getRegisteredShortcutHelpItems,
   handleGlobalKeyDown,
   registerShortcut,
-} from '../shortcut-registry';
+} from '@/lib/keyboard/shortcut-registry';
 
 const unregisterCallbacks: Array<() => void> = [];
 

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ShortcutHelpItem } from '../../hooks/keyboard/shortcut-registry';
+import type { ShortcutHelpItem } from '@/lib/keyboard/shortcut-registry';
 import { ShortcutCheatSheetDialog } from '../ShortcutCheatSheetDialog';
 
 const SHORTCUTS: ShortcutHelpItem[] = [
