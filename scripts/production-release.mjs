@@ -98,13 +98,15 @@ const short = (sha) => (typeof sha === 'string' ? sha.slice(0, 7) : 'unknown');
  *
  * 対象 commit が checkout に無い（shallow clone / gc 済み）場合は git が非 0 で終了し、
  * 呼び出し側の fail closed 経路へ落ちる。
+ *
+ * `cwd` は test が使い捨ての repo を渡すためだけの口。実行時は常に ROOT。
  */
-function gitDiffFiles(baseSha, targetSha) {
+export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
   const stdout = execFileSync(
     'git',
     ['diff', '--name-only', '--no-renames', '-z', baseSha, targetSha],
     {
-      cwd: ROOT,
+      cwd,
       encoding: 'utf8',
       maxBuffer: 32 * 1024 * 1024,
       // 失敗は戻り値（throw）で扱う。stderr をそのまま親へ流すと、fail closed の
@@ -713,6 +715,10 @@ export function buildManifest({ sha, status, projects, decisions, before, promot
         deploymentId: (serving ?? restored ?? live)?.id ?? null,
         sourceSha: (serving ?? restored ?? live)?.sha ?? null,
         previousDeploymentId: entry?.previous?.id ?? null,
+        // この run が動かしていない project の値は run 開始時点の観測。candidate 待機
+        // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
+        // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
+        observedAt: entry ? 'this-run' : 'run-start',
       };
     }),
   };
@@ -1114,6 +1120,12 @@ export async function runProductionRelease({
     // 条件は promote 件数ではなく targets。Auto-assign が有効な段階適用中は candidate が
     // 待機中に自動割当されて promote 件数が 0 になるため、promote 件数で分岐すると
     // cutover までこの smoke が一度も走らない（candidate smoke と同じ理由）。
+    //
+    // **promote していない側の失敗でも rollback する**（catch へ落ちる）。この smoke が
+    // 守りたいのは「product を進めたら web が壊れた」型の cross-app 破損で、そこでは
+    // rollback が唯一の復旧手段になる。代償として、無関係な既存障害が正常な promote を
+    // 巻き戻しうるが、production は数分前の既知状態へ戻るだけで、run は失敗として残る。
+    // 「壊れたまま success で終える」より安全な側へ倒す。
     if (!force && targets.length > 0) {
       for (const project of projects) {
         assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);

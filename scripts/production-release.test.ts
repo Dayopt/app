@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   RELEASE_PROJECTS,
   findDeploymentForSha,
+  gitDiffFiles,
   resolveProjectImpact,
   runProductionRelease,
   smokeDeployment,
@@ -883,14 +884,35 @@ describe('resolveProjectImpact', () => {
     ).toBe(false);
   });
 
-  it('reads real git history through the default implementation', () => {
-    // 既定の diff 実装（引数の綴り・-z 分割）が実際の git で動くことを確認する。
-    // ここが壊れても injection 付きの test は全て通ってしまう。
-    const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    const parent = execFileSync('git', ['rev-parse', 'HEAD~1'], { encoding: 'utf8' }).trim();
+  it('lists both sides of a rename through the real git', () => {
+    // 既定の diff 実装（引数の綴り・-z 分割・--no-renames）を実際の git で確認する。
+    // ここが壊れても injection 付きの test は全て通る。
+    //
+    // 使い捨て repo を作るのは、CI の Unit job が shallow clone（fetch-depth: 1）で
+    // 動くため。この repo の HEAD~1 に依存すると CI でだけ落ちる。
+    const repo = mkdtempSync(join(tmpdir(), 'release-diff-'));
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' });
+    git('init', '--quiet', '-b', 'main');
+    git('config', 'user.email', 'test@example.com');
+    git('config', 'user.name', 'test');
+    mkdirSync(join(repo, 'apps/product/src'), { recursive: true });
+    writeFileSync(join(repo, 'apps/product/src/page.tsx'), 'export const page = 1;\n');
+    git('add', '-A');
+    git('commit', '--quiet', '-m', 'base');
+    const base = git('rev-parse', 'HEAD').trim();
 
-    const decision = resolveProjectImpact({ project: product, baseSha: parent, targetSha: head });
-    expect(decision.reason).not.toMatch(/fail closed/);
+    // app から docs へ動かす。rename 検出が有効だと移動先しか出ず、product の
+    // build 入力からファイルが消えた事実を取りこぼす。
+    mkdirSync(join(repo, 'docs'), { recursive: true });
+    renameSync(join(repo, 'apps/product/src/page.tsx'), join(repo, 'docs/page.tsx'));
+    git('add', '-A');
+    git('commit', '--quiet', '-m', 'move');
+    const target = git('rev-parse', 'HEAD').trim();
+
+    expect(gitDiffFiles(base, target, { cwd: repo }).sort()).toEqual([
+      'apps/product/src/page.tsx',
+      'docs/page.tsx',
+    ]);
   });
 });
 
@@ -925,15 +947,31 @@ describe('runProductionRelease (affected-aware)', () => {
   });
 
   it('promotes both when a shared package changes', async () => {
+    // 実在する共有 package を使う。存在しない package 名だと未知 path の
+    // fail closed で両方 affected になり、依存グラフ解決を検証したことにならない。
     const world = createReleaseWorld();
 
     const result = await release({
       fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['packages/ui/src/button.tsx'],
+      diffFilesImpl: () => ['packages/i18n/src/index.ts'],
     });
 
     expect(result.status).toBe('promoted');
     expect(world.promoted()).toEqual(['web', 'product']);
+  });
+
+  it('promotes only product when a product-only package changes', async () => {
+    // packages/domain は product だけが依存する。依存グラフを実際に辿らないと
+    // この区別は出ない。
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['packages/domain/src/index.ts'],
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['product']);
   });
 
   it('is a no-op success when the merge affects no app', async () => {
@@ -950,6 +988,42 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(result.manifest.projects.map((entry: { action: string }) => entry.action)).toEqual([
       'skipped',
       'skipped',
+    ]);
+  });
+
+  it('is a no-op when one project already serves the SHA and the other is untouched', async () => {
+    // 前回 run が web だけ公開して中断した後の再実行。product の影響は product 自身の
+    // live SHA から測り直すので、product に影響が無ければこの状態は完結していて
+    // 何もしないのが正しい。manifest で両者の live SHA が読めることを担保する。
+    const world = createReleaseWorld({ webAlreadyAtTarget: true });
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['docs/engineering/infra.md'],
+    });
+
+    expect(result.status).toBe('unaffected');
+    expect(result.preexistingSplit).toEqual([]);
+    expect(world.pointCalls).toEqual([]);
+    expect(result.manifest.projects).toEqual([
+      expect.objectContaining({ name: 'web', action: 'already-serving', sourceSha: SHA }),
+      expect.objectContaining({ name: 'product', action: 'skipped', sourceSha: OLD_SHA }),
+    ]);
+  });
+
+  it('marks manifest values this run did not observe itself', async () => {
+    // unaffected な project の値は run 開始時点の観測。待機中に人が動かしていれば
+    // 実態とズレるため、復旧時に取り違えないよう出所を残す。
+    const world = createReleaseWorld();
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.manifest.projects).toEqual([
+      expect.objectContaining({ name: 'web', observedAt: 'run-start' }),
+      expect.objectContaining({ name: 'product', observedAt: 'this-run' }),
     ]);
   });
 
