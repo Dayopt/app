@@ -163,6 +163,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 - [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
 - [ ] `action: unassigned` は「production domain にどの deployment も割り当たっていない」状態（= その domain は配信されていない）。**最優先で復旧する。** `previousDeploymentId` が割り当て直す先で、Vercel Dashboard → Deployments → その deployment の "..." → Promote to Production。`deploymentId` は null なので戻し先の判断には使えない
+- [ ] **手で Promote / Instant Rollback したら、その project の Auto-assign Custom Production Domains を無効へ戻す。** Vercel の promote は毎回この設定を有効化する（[vercel/vercel#15095](https://github.com/vercel/vercel/issues/15095)）。release script は自動で戻すが、手動操作の分は戻らない。放置すると**次の main merge が release gate を通らず直接公開される**。Settings → Git で確認する
 
 #### ケースA: CI失敗（lint / typecheck）
 
@@ -197,6 +198,7 @@ promote 済みの deployment に問題があった場合だけ使う。
 - [ ] CLI / REST API / Redeploy で新しいProduction buildを作らない
 - [ ] **壊れている project だけを戻す。** Product / Web の SHA を揃えようとしない（release は影響を受ける project だけを進めるので、SHA が違うのは正常）。無関係な側を戻すと、検証済みの build を理由なく巻き戻すことになる
 - [ ] ロールバック後: 本番サイトで動作確認。**両 domain を見る**（`dayopt.app` と `app.dayopt.app`）。web の signup CTA から product へ入れるかは片側だけ戻した時の典型的な壊れ方
+- [ ] ロールバック後: **操作した project の Auto-assign Custom Production Domains を無効へ戻す**（Settings → Git）。Instant Rollback / Promote to Production はどちらもこの設定を有効化するため、戻さないと次の main merge が release gate を通らず直接公開される
 - [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
 
 Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。

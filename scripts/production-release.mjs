@@ -29,7 +29,10 @@ export const RELEASE_PROJECTS = [
     bypassEnv: 'VERCEL_BYPASS_WEB',
     productionDomain: 'dayopt.app',
     smokeChecks: [
-      { path: '/', matchedPath: '/en' },
+      // CTA の href まで見る。product 側の `/auth/signup` が生きていても、web から
+      // その導線が消えていれば入口は失われる（destination の存在確認だけでは足りない）。
+      // HeroSection は server component の素の <a href> なので SSR の本文に出る。
+      { path: '/', matchedPath: '/en', contains: 'app.dayopt.app/auth/signup' },
       { path: '/ja', matchedPath: '/ja' },
     ],
   },
@@ -1112,11 +1115,12 @@ export async function runProductionRelease({
           : `No project is affected by ${sha}; nothing to promote.`,
       );
       // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
+      // **ここでは失敗にしない。** 一時的な失敗なら stabilize の掃きで直る。判定を
+      // 最初の観測で確定させると、既に直っている状態で tag を打てなくする。
       const drifted = await sweepSettings();
-      if (drifted.length > 0)
-        throw Object.assign(driftError(sha, drifted), {
-          manifest: manifestFor('settings-drift'),
-        });
+      if (drifted.length > 0) {
+        logger.log(`Initial restore failed for ${drifted.join(', ')}; stabilization decides.`);
+      }
 
       // **promote が 0 件でも、この run が success を出せば「その build は live」として
       // tag gate を通る**（create-release.yml）。既に target を配信している project は
@@ -1190,6 +1194,8 @@ export async function runProductionRelease({
     // ないので読み直さない（この run が動かさない先の状態は before で足りる）。
     const current = new Map();
     for (const project of targets) {
+      // 25 分待った後の失敗。ここで manifest を付けずに抜けると、artifact が
+      // 1 つも残らない（run 開始時点の状態すら読めなくなる）。
       const state = await getLiveProduction({
         projectName: project.name,
         productionDomain: project.productionDomain,
@@ -1197,6 +1203,8 @@ export async function runProductionRelease({
         token,
         teamId,
         fetchImpl,
+      }).catch((error) => {
+        throw Object.assign(error, { manifest: manifestFor('failed') });
       });
       current.set(project.name, state);
     }
@@ -1262,6 +1270,11 @@ export async function runProductionRelease({
     if (superseded.length > 0) {
       const names = superseded.map(({ project }) => project.name).join(', ');
       logger.log(`Skipping promote: a newer production deployment already serves ${names}.`);
+      // 外部の promote が auto-assign を戻している可能性があるため、抜ける前に掃く。
+      // **drift があっても superseded のままにする。** ここは「より新しい deployment が
+      // live」と証明した経路で、settings-drift（= 正しい SHA が live）へ塗り替えると
+      // 復旧手順が矛盾する。設定の問題は報告として別に出す。
+      reportSweepDrift(await sweepSettings());
       return {
         status: 'superseded',
         sha,
@@ -1543,14 +1556,10 @@ export async function runProductionRelease({
   // 成功経路。ここまでの掃きの後に外部 promote が設定を戻していることがあるため、
   // もう一度掃いて、それでも残る drift は run の失敗にする（放置すると次の merge が
   // gate を迂回する）。production は正しい SHA を配信しているので deployment は戻さない。
-  const finalDrift = await sweepSettings();
-  if (finalDrift.length > 0) {
-    reportSweepDrift(finalDrift);
-    throw Object.assign(driftError(sha, finalDrift), {
-      manifest: manifestFor('settings-drift', { promoted: result.promoted ?? [] }),
-    });
-  }
-
+  // 成功経路でここに追加の掃きを置かない。**掃きの後に検証が無い構造を作らないため**
+  // （掃きは設定を直せてしまうので、その間に起きた promote が失敗として現れない）。
+  // 各 return 経路は stabilize（掃き + 検証を交互）か、superseded 側の明示的な掃きで
+  // 既に完了している。
   return result;
 }
 

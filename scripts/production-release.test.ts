@@ -25,7 +25,8 @@ const TOKEN = 'vercel-token-must-not-appear';
 const BYPASS = 'bypass-secret-must-not-appear';
 
 /** 実際の smoke marker をすべて含む body。個別テストで上書きする。 */
-const SMOKE_BODY = '<html lang="en">{"status":"healthy"}</html>';
+const SMOKE_BODY =
+  '<html lang="en"><a href="https://app.dayopt.app/auth/signup">start</a>{"status":"healthy"}</html>';
 
 /** RELEASE_PROJECTS が期待する x-matched-path を返す smoke response。 */
 const MATCHED_PATHS: Record<string, string> = {
@@ -1736,6 +1737,36 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(result.manifest.projects).toContainEqual(
       expect.objectContaining({ name: 'web', action: 'skipped', deploymentId: 'dpl_web_old' }),
     );
+  });
+
+  it('fails when the web page drops its signup CTA', async () => {
+    // product 側の /auth/signup が生きていても、web からの導線が消えれば入口は失われる。
+    const world = createReleaseWorld({
+      smokeBody: '<html lang="en">{"status":"healthy"}</html>', // CTA なし
+    });
+
+    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
+      /web: smoke \/ returned 200 without the expected content/,
+    );
+  });
+
+  it('keeps the superseded diagnosis even when the setting cannot be restored', async () => {
+    // superseded は「より新しい deployment が live」と証明した経路。settings-drift
+    // （= 正しい SHA が live）へ塗り替えると復旧手順が矛盾する。
+    const { fetchImpl: base } = createVercelMock({
+      '/v7/deployments': () => ({ deployments: [deployment('dpl_new', SHA, 'READY', 1000)] }),
+      '/v4/aliases/': () => ({ deploymentId: 'dpl_newer' }),
+      '/v13/deployments/': () => deploymentRecord('dpl_newer', OLD_SHA, 5000),
+      '/v9/projects/': () => ({ id: 'prj_test', autoAssignCustomDomains: true }),
+    });
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return base(input, init);
+    });
+
+    const result = await release({ fetchImpl, expectedAutoAssign: false });
+
+    expect(result.status).toBe('superseded');
   });
 
   it('sends no bypass secret to the production domains', async () => {
