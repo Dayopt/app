@@ -1624,6 +1624,44 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('smokes every domain when certifying an already-live target', async () => {
+    // 片側だけ見て success を出すと、健全でない skip 側の domain を認証したまま
+    // tag を打てる。web は既に target を配信、product は影響なしの混在ケース。
+    const world = createReleaseWorld({ webAlreadyAtTarget: true });
+    const smoked: string[] = [];
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('https://dayopt.app') || url.startsWith('https://app.dayopt.app')) {
+        smoked.push(new URL(url).origin);
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl, diffFilesImpl: () => ['docs/x.md'] });
+
+    expect(result.status).toBe('unaffected');
+    expect(new Set(smoked)).toEqual(new Set(['https://dayopt.app', 'https://app.dayopt.app']));
+  });
+
+  it('clears a transient restore failure that a later sweep recovers', async () => {
+    // ループ内の復元が一度失敗しても、最後の掃きで直っていれば設定は正しい。
+    // 過去の失敗を積み上げて release を止めると、tag を打てなくなる。
+    const world = createReleaseWorld();
+    let patchAttempts = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') {
+        patchAttempts += 1;
+        if (patchAttempts === 1) return new Response(null, { status: 500 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl });
+
+    expect(result.status).toBe('promoted');
+    expect(world.autoAssign).toEqual({ web: false, product: false });
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

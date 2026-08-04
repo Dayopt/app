@@ -790,7 +790,9 @@ export function buildManifest({
         action,
         deploymentId: (moved ?? serving ?? restored ?? external ?? live)?.id ?? null,
         sourceSha: (moved ?? serving ?? restored ?? external ?? live)?.sha ?? null,
-        previousDeploymentId: entry?.previous?.id ?? null,
+        // 未割当の時は「戻す先」が manifest から消えないよう、run 開始時点の deployment を
+        // 復旧先として残す（promote entry があればそちらが優先）。
+        previousDeploymentId: entry?.previous?.id ?? (moved && !moved.id ? live?.id : null) ?? null,
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。
@@ -916,6 +918,10 @@ export async function runProductionRelease({
   // この run が promote していないのに target SHA が live になった project。
   // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
   const externallyLive = new Map();
+
+  // 最終検証で使う candidate 一覧。promote 経路に入らなかった run では空のままで、
+  // その場合 verifyLiveState は「全 project が判定時の SHA を配信しているか」を見る。
+  let finalCandidates = [];
 
   // この run が promote した後に他者が別 deployment を live にした project。
   // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
@@ -1082,7 +1088,10 @@ export async function runProductionRelease({
       // 掃き忘れると次の main merge が gate を迂回して直接公開される。
       try {
         if (!force && alreadyServing.length > 0) {
-          for (const project of alreadyServing) {
+          // **smoke は alreadyServing だけでなく全 project の domain へ。** 通常経路と
+          // 同じ範囲にする。片側だけ見て success を出すと、健全でない skip 側の domain や
+          // cross-app の組み合わせ破損を認証したまま tag を打てる。
+          for (const project of projects) {
             assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
             await smokeDeployment({
               projectName: `${project.name} production`,
@@ -1134,6 +1143,7 @@ export async function runProductionRelease({
     }).catch((error) => {
       throw Object.assign(error, { manifest: manifestFor('failed') });
     });
+    finalCandidates = candidates;
 
     // 待機は最大 25 分ブロックする。その間に人が Instant Rollback や手動 promote を
     // 行いうるため、判定は待機後の実状態で行う。unaffected な project は promote 対象で
@@ -1431,8 +1441,10 @@ export async function runProductionRelease({
         failure = rollbackError;
         // 一部だけ戻して throw した場合、戻せた分はエラー側にしか残らない。
         rolledBack = rollbackError.rolledBack ?? [];
-        for (const { entry, live } of rollbackError.movedExternally ?? []) {
-          movedAway.set(entry.project.name, { id: live.id, sha: live.sha });
+        for (const { entry, live } of rollbackError.observedLive ??
+          rollbackError.movedExternally ??
+          []) {
+          movedAway.set(entry.project.name, { id: live.id ?? null, sha: live.sha ?? null });
         }
       } finally {
         // rollback の成否に関わらず、promote しなかった project の設定も掃く。
@@ -1447,18 +1459,24 @@ export async function runProductionRelease({
     // promote しなかった project も掃く。pending から除外された側や、外部の promote で
     // skip した側も、その promote の副作用で設定が飛んでいることがある。
     // ループ内の復元は「窓を作らない」ため、この掃きは「取りこぼさない」ためにある。
+    //
+    // **判定はこの最新の掃きだけで行う。** ループ内の復元が一時的に失敗しても、ここで
+    // 復元できていれば設定は正しい。過去の失敗を積み上げると、既に直っている状態で
+    // release を止めて tag を打てなくする。
     const swept = await sweepSettings();
-    for (const name of swept) {
-      if (!driftedProjects.includes(name)) driftedProjects.push(name);
+    if (driftedProjects.length > 0) {
+      logger.log(
+        `Earlier restore attempts failed for ${driftedProjects.join(', ')}; the final sweep decides.`,
+      );
     }
 
     // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
     // 放置すると次の merge が gate を迂回するため run は失敗させる。
-    if (driftedProjects.length > 0) {
+    if (swept.length > 0) {
       // production は正しい SHA を配信している。失敗の理由は設定の復元だけなので、
       // manifest の status を分ける。'failed' のままだと runbook の「失敗した run の
       // promoted は戻す」に従って、健全な deployment が不要に巻き戻される。
-      throw Object.assign(driftError(sha, driftedProjects), {
+      throw Object.assign(driftError(sha, swept), {
         manifest: manifestFor('settings-drift', { promoted }),
       });
     }
@@ -1489,6 +1507,21 @@ export async function runProductionRelease({
     });
   }
 
+  // **掃きの後にもう一度 alias を見る。** 検証 → 掃き の順のままだと、その間に起きた
+  // 外部 promote を誰も見ない（掃きは設定を直せてしまうので、失敗としては現れない）。
+  // 「この commit が live」という主張を出す直前の観測にする。
+  // superseded は promote 0 件で失敗を publish する経路なので、ここで別の失敗へ
+  // すり替えない（診断が変わってしまう）。
+  if (result.status !== 'superseded') {
+    try {
+      await verifyLiveState(finalCandidates);
+    } catch (error) {
+      throw Object.assign(error, {
+        manifest: manifestFor('failed', { promoted: result.promoted ?? [] }),
+      });
+    }
+  }
+
   return result;
 }
 
@@ -1507,6 +1540,8 @@ async function rollbackPromoted({
   const rolledBack = [];
   const stranded = [];
   const movedExternally = [];
+  /** 分類に関わらず「この run が置いたものでない live」を観測した記録。manifest 用。 */
+  const observedLive = [];
   const drifted = [...preexistingDrift];
 
   for (const entry of [...promoted].reverse()) {
@@ -1545,6 +1580,7 @@ async function rollbackPromoted({
     const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
     if (live && !isKnown) {
       movedExternally.push({ entry, live });
+      observedLive.push({ entry, live });
       logger.log(`${entry.project.name}: production already moved to ${live.id}; leaving it alone`);
       continue;
     }
@@ -1592,6 +1628,8 @@ async function rollbackPromoted({
           observed = true;
           if (settled?.id !== entry.previous.id) {
             landed = settled ?? { id: null, sha: null };
+            // 観測結果は分類に関わらず manifest へ載せる（alias 未割当も含む）。
+            observedLive.push({ entry, live: landed });
             break;
           }
         }
@@ -1670,6 +1708,7 @@ async function rollbackPromoted({
     throw Object.assign(new ReleaseError(lines.join(' '), { manualRollback: stranded }), {
       rolledBack,
       movedExternally,
+      observedLive,
     });
   }
 
