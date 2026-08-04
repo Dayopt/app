@@ -64,6 +64,12 @@ const SMOKE_RETRY_DELAY_MS = 2 * 1000;
 const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
 
 /**
+ * 「要求が受理されなかった」が確定する HTTP status。これ以外（5xx / transport 失敗）は
+ * 届いたかどうか分からないので、production を動かした可能性がある側として扱う。
+ */
+const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404]);
+
+/**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
  * 下回ると、rollback の途中で job が kill され、片方だけ promote された
  * production が手動 rollback の手掛かりごと失われる。
@@ -222,7 +228,12 @@ async function callVercel(
   const response = await fetchImpl(url, init);
   if (!response.ok) {
     // Response body may echo request context; report the status only.
-    throw new ReleaseError(`Vercel API ${label} failed with status ${response.status}`);
+    // status は呼び出し側が「要求が確実に拒否されたか（4xx）」と「届いたか不明か
+    // （5xx / transport）」を区別するために使う。
+    throw Object.assign(
+      new ReleaseError(`Vercel API ${label} failed with status ${response.status}`),
+      { status: response.status },
+    );
   }
   // promote / rollback answer 201 / 202 and may carry an empty body.
   return parseJson ? response.json() : null;
@@ -969,6 +980,7 @@ export async function runProductionRelease({
       const wanted = expectedId.get(project.name);
       if (wanted) {
         if (live?.id !== wanted) {
+          if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
           throw new ReleaseError(
             `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
               `${wanted}; refusing to report ${sha} as live`,
@@ -984,6 +996,7 @@ export async function runProductionRelease({
       // target SHA へ動いていた場合は許す（判定より進んだだけで、success の主張は
       // むしろ強くなる）。それ以外の SHA は判定の前提が崩れている。
       if (wantedSha && live?.sha !== wantedSha && live?.sha !== sha) {
+        if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
             `gate was running; refusing to report ${sha} as live`,
@@ -1024,7 +1037,9 @@ export async function runProductionRelease({
       // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
       const drifted = await sweepSettings();
       if (drifted.length > 0)
-        throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
+        throw Object.assign(driftError(sha, drifted), {
+          manifest: manifestFor('settings-drift'),
+        });
 
       // **promote が 0 件でも、この run が success を出せば「その build は live」として
       // tag gate を通る**（create-release.yml）。既に target を配信している project は
@@ -1061,7 +1076,9 @@ export async function runProductionRelease({
 
       const sweptAfterGates = await sweepSettings();
       if (sweptAfterGates.length > 0) {
-        throw Object.assign(driftError(sha, sweptAfterGates), { manifest: manifestFor('failed') });
+        throw Object.assign(driftError(sha, sweptAfterGates), {
+          manifest: manifestFor('settings-drift'),
+        });
       }
 
       return {
@@ -1278,6 +1295,13 @@ export async function runProductionRelease({
           // 「previous を previous へ promote する空振り」だけで、auto-assign は
           // rollback 側の復元と関数末尾の掃きが戻す。rollbackPromoted は実行前に
           // live を読み直し、第三の deployment が居れば触らない。
+          // ただし 4xx は「受理されなかった」が確定する。ここで rollback 対象に入れると
+          // 何も起きていない production へ 2 度目の mutation を撃ち、同じ理由でそれも
+          // 失敗して「手動 rollback が要る」と誤報することになる。
+          if (DEFINITIVE_REJECTIONS.has(error?.status)) {
+            logger.log(`${project.name}: promote was rejected (${error.status}); nothing to undo`);
+            throw error;
+          }
           logger.log(
             `${project.name}: promote request outcome is unknown; keeping it in the rollback scope`,
           );
@@ -1396,8 +1420,11 @@ export async function runProductionRelease({
     // production は正しい SHA を配信している。設定復元の失敗で巻き戻す理由はないが、
     // 放置すると次の merge が gate を迂回するため run は失敗させる。
     if (driftedProjects.length > 0) {
+      // production は正しい SHA を配信している。失敗の理由は設定の復元だけなので、
+      // manifest の status を分ける。'failed' のままだと runbook の「失敗した run の
+      // promoted は戻す」に従って、健全な deployment が不要に巻き戻される。
       throw Object.assign(driftError(sha, driftedProjects), {
-        manifest: manifestFor('failed', { promoted }),
+        manifest: manifestFor('settings-drift', { promoted }),
       });
     }
 

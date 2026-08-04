@@ -1424,6 +1424,60 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('does not roll back a promote that Vercel explicitly rejected', async () => {
+    // 4xx は「受理されなかった」が確定する。ここで戻しに行くと、何も起きていない
+    // production へ 2 度目の mutation を撃ち、同じ理由で失敗して誤報になる。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 403 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/promote\(web\) failed with status 403/);
+    expect(world.pointCalls).toEqual([]);
+  });
+
+  it('separates a settings-only failure from a failed promotion', async () => {
+    // production は正しい SHA を配信している。manifest の status が failed のままだと
+    // runbook の「失敗した run の promoted は戻す」で健全な deployment が巻き戻される。
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') return new Response(null, { status: 500 });
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl }).catch(
+      (thrown: Error & { manifest?: { status: string } }) => thrown,
+    );
+
+    expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
+    expect(error.manifest?.status).toBe('settings-drift');
+    expect(world.rolledBack()).toEqual([]);
+  });
+
+  it('records a move that only the final check observes', async () => {
+    // 最終確認で検出した移動も manifest へ載せる。載せないと復旧手順が
+    // run 開始時点の deployment を live と誤認する。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new', 'dpl_web_hotfix'],
+    });
+
+    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
