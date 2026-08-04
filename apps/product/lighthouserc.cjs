@@ -19,7 +19,7 @@
  */
 
 // PR時は1回、mainブランチでは3回実行
-const numberOfRuns = parseInt(process.env.LHCI_NUMBER_OF_RUNS || '1', 10)
+const numberOfRuns = parseInt(process.env.LHCI_NUMBER_OF_RUNS || '1', 10);
 
 module.exports = {
   ci: {
@@ -120,4 +120,4 @@ module.exports = {
       target: 'temporary-public-storage',
     },
   },
-}
+};
