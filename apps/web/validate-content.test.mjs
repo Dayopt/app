@@ -100,11 +100,7 @@ describe('blog tags validation', () => {
   });
 
   it('tags が3-6件なら tags関連のエラーは出さない', () => {
-    const result = validateFrontMatter(
-      { ...baseBlogFm, tags: ['a', 'b', 'c'] },
-      'blog',
-      false,
-    );
+    const result = validateFrontMatter({ ...baseBlogFm, tags: ['a', 'b', 'c'] }, 'blog', false);
     expect(result.errors.filter((e) => e.includes('tags'))).toEqual([]);
   });
 

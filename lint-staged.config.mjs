@@ -9,9 +9,7 @@ const relativeToRoot = (files) =>
 
 const relativeToWorkspace = (files, workspace) =>
   files
-    .filter((file) =>
-      toPosixPath(path.relative(process.cwd(), file)).startsWith(`${workspace}/`),
-    )
+    .filter((file) => toPosixPath(path.relative(process.cwd(), file)).startsWith(`${workspace}/`))
     .map((file) => toPosixPath(path.relative(path.join(process.cwd(), workspace), file)));
 
 export default {
