@@ -254,6 +254,7 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 - **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
 - flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
 - ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
+- **外部レビューは draft のまま `@codex review` コメントで回す**（2026-08-04 に PR #1818 で実測）。Codex の自動レビューは「review 用に open」「draft を ready 化」で発火するため、これを待つとレビュー 1 ラウンドごとに ready 化が要り、そのたびに重量層が丸ごと再走する。`@codex review` は PR の状態に依存しない独立トリガーで、draft のまま 👀 → レビュー投稿まで通る。指摘が尽きてから ready 化すれば、重量層は merge 前の 1 回に収まる
 - **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
 
@@ -311,6 +312,8 @@ gh pr merge <PR番号> --merge --delete-branch
 1. **fix を積む** — 指摘どおり修正コミットを push して resolve
 2. **反論を reply** — 採用しない根拠を thread に書いて resolve（黙って resolve しない）
 3. **issue 化** — エッジケース等を別 issue へ切り出し、issue 番号を reply して resolve
+
+レビューを起こすタイミングは §2 段階 CI の `@codex review`（draft のまま回す）に従う。
 
 外部レビュー（Codex）の指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
 
