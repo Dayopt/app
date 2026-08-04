@@ -31,12 +31,6 @@ export function useShortcutRegistry(): void {
       key: 'Shift+?',
       description: 'ショートカット一覧を開く',
       priority: 100,
-      help: {
-        group: 'general',
-        labelKey: 'calendar.shortcuts.actions.open',
-        order: 0,
-        displayKey: '?',
-      },
       handler: (event) => {
         event.preventDefault();
         useShellStore.getState().openSheet({ type: 'shortcutCheatSheet' });

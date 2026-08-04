@@ -23,6 +23,7 @@ import { useTimeblockInspectorStore, type ClipboardTimeblock } from '@/features/
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { toast } from '@/lib/toast';
+import { APP_SHORTCUT_CATALOG } from './app-shortcut-catalog';
 
 const ContactDialog = dynamic(
   () =>
@@ -184,6 +185,7 @@ export function GlobalOverlays() {
         onOpenChange={(open) => {
           if (!open) closeSheet();
         }}
+        catalog={APP_SHORTCUT_CATALOG}
       />
       <TimeblockInspector onViewStats={handleViewStats} onCopy={handleCopy} />
       <Toaster />

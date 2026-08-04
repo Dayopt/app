@@ -6,30 +6,18 @@ import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@dayopt/components';
 import { useTranslations } from 'next-intl';
 
+import type { ShortcutCatalog } from '@/lib/keyboard/shortcut-catalog';
 import { formatShortcutKey, type ShortcutPlatform } from '@/lib/keyboard/shortcut-key-label';
-import {
-  getRegisteredShortcutHelpItems,
-  type ShortcutHelpGroup,
-  type ShortcutHelpItem,
-} from '@/lib/keyboard/shortcut-registry';
 
-const GROUPS: ShortcutHelpGroup[] = ['general', 'navigation', 'views', 'blocks'];
-const GROUP_COLUMNS: readonly (readonly ShortcutHelpGroup[])[] = [
+const GROUP_COLUMNS: readonly (readonly string[])[] = [
   ['general', 'views'],
   ['navigation', 'blocks'],
 ];
 
-const GROUP_LABEL_KEYS = {
-  general: 'calendar.shortcuts.groups.general',
-  navigation: 'calendar.shortcuts.groups.navigation',
-  views: 'calendar.shortcuts.groups.views',
-  blocks: 'calendar.shortcuts.groups.blocks',
-} as const satisfies Record<ShortcutHelpGroup, string>;
-
 interface ShortcutCheatSheetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  shortcuts?: readonly ShortcutHelpItem[];
+  catalog: ShortcutCatalog;
   platform?: ShortcutPlatform;
 }
 
@@ -37,24 +25,25 @@ function detectShortcutPlatform(): ShortcutPlatform {
   return /Mac|iPhone|iPad/.test(navigator.userAgent) ? 'mac' : 'other';
 }
 
-/** Calendarで現在有効なキーボードショートカットを表示する。 */
+/** app全体で現在有効なキーボードショートカットを表示する。 */
 export function ShortcutCheatSheetDialog({
   open,
   onOpenChange,
-  shortcuts,
+  catalog,
   platform,
 }: ShortcutCheatSheetDialogProps) {
   const t = useTranslations();
   const hasMounted = useHasMounted();
   const resolvedPlatform = platform ?? (hasMounted ? detectShortcutPlatform() : 'other');
-  const items = shortcuts ?? getRegisteredShortcutHelpItems();
   const groupedItems = useMemo(
     () =>
-      GROUPS.map((group) => ({
-        group,
-        items: items.filter((item) => item.group === group),
-      })).filter((section) => section.items.length > 0),
-    [items],
+      catalog.groups
+        .map((group) => ({
+          group,
+          items: catalog.entries.filter((entry) => entry.groupId === group.id),
+        }))
+        .filter((section) => section.items.length > 0),
+    [catalog],
   );
 
   return (
@@ -68,11 +57,11 @@ export function ShortcutCheatSheetDialog({
           {GROUP_COLUMNS.map((columnGroups) => (
             <div key={columnGroups.join('-')} className="space-y-6">
               {groupedItems
-                .filter((section) => columnGroups.includes(section.group))
+                .filter((section) => columnGroups.includes(section.group.id))
                 .map((section) => (
-                  <section key={section.group} className="space-y-1">
+                  <section key={section.group.id} className="space-y-1">
                     <h3 className="text-muted-foreground px-2 text-xs font-medium">
-                      {t(GROUP_LABEL_KEYS[section.group])}
+                      {t(section.group.labelKey)}
                     </h3>
                     <div>
                       {section.items.map((item) => {

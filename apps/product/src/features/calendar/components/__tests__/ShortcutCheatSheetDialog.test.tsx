@@ -1,28 +1,33 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ShortcutHelpItem } from '@/lib/keyboard/shortcut-registry';
+import type { ShortcutCatalog } from '@/lib/keyboard/shortcut-catalog';
 import { ShortcutCheatSheetDialog } from '../ShortcutCheatSheetDialog';
 
-const SHORTCUTS: ShortcutHelpItem[] = [
-  {
-    group: 'blocks',
-    labelKey: 'calendar.shortcuts.actions.copyBlock',
-    order: 10,
-    keys: ['Cmd+C'],
-  },
-  {
-    group: 'blocks',
-    labelKey: 'calendar.shortcuts.actions.deleteBlock',
-    order: 20,
-    keys: ['Delete', 'Backspace'],
-  },
-];
+const CATALOG: ShortcutCatalog = {
+  groups: [
+    { id: 'blocks', labelKey: 'calendar.shortcuts.groups.blocks', scope: 'calendar', order: 0 },
+  ],
+  entries: [
+    {
+      groupId: 'blocks',
+      labelKey: 'calendar.shortcuts.actions.copyBlock',
+      order: 10,
+      keys: ['Cmd+C'],
+    },
+    {
+      groupId: 'blocks',
+      labelKey: 'calendar.shortcuts.actions.deleteBlock',
+      order: 20,
+      keys: ['Delete', 'Backspace'],
+    },
+  ],
+};
 
 describe('ShortcutCheatSheetDialog', () => {
   it('登録済み操作をplatformに合うキー表記で表示する', () => {
     render(
-      <ShortcutCheatSheetDialog open onOpenChange={vi.fn()} shortcuts={SHORTCUTS} platform="mac" />,
+      <ShortcutCheatSheetDialog open onOpenChange={vi.fn()} catalog={CATALOG} platform="mac" />,
     );
 
     expect(screen.getByText('calendar.shortcuts.actions.copyBlock')).toBeInTheDocument();
@@ -36,7 +41,7 @@ describe('ShortcutCheatSheetDialog', () => {
       <ShortcutCheatSheetDialog
         open
         onOpenChange={onOpenChange}
-        shortcuts={SHORTCUTS}
+        catalog={CATALOG}
         platform="other"
       />,
     );

@@ -66,6 +66,7 @@ export { useTimeblockSearchShortcut } from './hooks/keyboard/useTimeblockSearchS
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
 export { useTimeblockContextActions } from './hooks/operations/useTimeblockContextActions';
 export { useTimeblockOperations } from './hooks/operations/useTimeblockOperations';
+export { CALENDAR_SHORTCUT_CATALOG } from './keyboard/calendar-shortcut-catalog';
 
 // =============================================================================
 // Domain（Calendar 固有の仕様ルール）

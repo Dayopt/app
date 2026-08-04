@@ -124,11 +124,6 @@ export function ViewSwitcher({
       {
         key: '1',
         description: '1日表示に切り替え（1）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.dayView',
-          order: 100,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('day');
@@ -137,11 +132,6 @@ export function ViewSwitcher({
       {
         key: '2',
         description: '2日表示に切り替え（2）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.twoDayView',
-          order: 110,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('2day');
@@ -150,11 +140,6 @@ export function ViewSwitcher({
       {
         key: '3',
         description: '3日表示に切り替え（3）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.threeDayView',
-          order: 120,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('3day');
@@ -163,11 +148,6 @@ export function ViewSwitcher({
       {
         key: '4',
         description: '4日表示に切り替え（4）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.fourDayView',
-          order: 130,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('4day');
@@ -176,11 +156,6 @@ export function ViewSwitcher({
       {
         key: '5',
         description: '5日表示に切り替え（5）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.fiveDayView',
-          order: 140,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('5day');
@@ -189,11 +164,6 @@ export function ViewSwitcher({
       {
         key: '6',
         description: '6日表示に切り替え（6）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.sixDayView',
-          order: 150,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('6day');
@@ -202,11 +172,6 @@ export function ViewSwitcher({
       {
         key: '7',
         description: '7日表示に切り替え（7）',
-        help: {
-          group: 'views',
-          labelKey: 'calendar.shortcuts.actions.sevenDayView',
-          order: 160,
-        },
         handler: (e) => {
           e.preventDefault();
           onChangeRef.current('7day');
