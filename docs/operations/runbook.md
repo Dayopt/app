@@ -160,6 +160,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
 - [ ] manifest の `action: promoted` かつ run が失敗している project が、手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
+- [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
 
 #### ケースA: CI失敗（lint / typecheck）
 
@@ -1130,7 +1131,7 @@ npm run analytics:stats
 
 **壊れている project だけを戻す。Product / Web を同じ SHA へ揃えようとしない。** release は変更の影響を受ける project だけを進めるため、両者の live SHA が違うのは正常な定常状態であり、揃える先の deployment がそもそも存在しないこともある。
 
-戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving）と `deploymentId` / `previousDeploymentId` が入っている。`action: promoted` の project の `previousDeploymentId` が戻し先で、`skipped` / `already-serving` の project はこの release が触っていないので巻き添えで戻さない。artifact が無い古い run では run summary の `previous` deployment id を使う。
+戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
 
 - https://vercel.com/dayopt/product/deployments
 - https://vercel.com/dayopt/web/deployments

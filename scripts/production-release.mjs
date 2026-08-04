@@ -715,6 +715,7 @@ export function buildManifest({
   promoted,
   rolledBack,
   externallyLive = new Map(),
+  movedAway = new Map(),
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
@@ -733,13 +734,18 @@ export function buildManifest({
       const restored = rolled
         ? { id: entry.previous?.id ?? null, sha: entry.previous?.sha ?? null }
         : null;
+      // この run の promote 後に他者が別 deployment を live にした分。rollback せず
+      // 残しているので、我々の candidate ではなく観測した live を載せる。
+      const moved = entry && !rolled ? (movedAway.get(project.name) ?? null) : null;
       // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
       const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
       const action = entry
         ? rolled
           ? 'rolled-back'
-          : 'promoted'
+          : moved
+            ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+            : 'promoted'
         : external || live?.sha === sha
           ? 'already-serving'
           : decision?.affected
@@ -752,8 +758,8 @@ export function buildManifest({
         affected: decision?.affected ?? null,
         reason: decision?.reason ?? null,
         action,
-        deploymentId: (serving ?? restored ?? external ?? live)?.id ?? null,
-        sourceSha: (serving ?? restored ?? external ?? live)?.sha ?? null,
+        deploymentId: (moved ?? serving ?? restored ?? external ?? live)?.id ?? null,
+        sourceSha: (moved ?? serving ?? restored ?? external ?? live)?.sha ?? null,
         previousDeploymentId: entry?.previous?.id ?? null,
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
@@ -881,6 +887,11 @@ export async function runProductionRelease({
   // 待機中や gate 実行中に外部 actor が同じ candidate を promote した場合に入る。
   const externallyLive = new Map();
 
+  // この run が promote した後に他者が別 deployment を live にした project。
+  // rollback せず残すため、manifest には観測した live を載せる（我々の candidate を
+  // 配信中と誤記すると、runbook の手順で「戻す」対象に見えてしまう）。
+  const movedAway = new Map();
+
   const manifestFor = (status, { promoted = [], rolledBack = [] } = {}) =>
     buildManifest({
       sha,
@@ -891,6 +902,7 @@ export async function runProductionRelease({
       promoted,
       rolledBack,
       externallyLive,
+      movedAway,
     });
 
   // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
@@ -1285,6 +1297,26 @@ export async function runProductionRelease({
           );
         }
       }
+
+      // 混在 release（片方は run 開始時点で既に target を配信）では、その project は
+      // candidates に入らないため上の loop を通らない。gate の実行中に動かされると
+      // 「全 affected project が target を配信」という success の主張が嘘になる。
+      for (const project of alreadyServing) {
+        const live = await getLiveProduction({
+          projectName: project.name,
+          productionDomain: project.productionDomain,
+          projectId: projectIds.get(project.name),
+          token,
+          teamId,
+          fetchImpl,
+        });
+        if (live?.sha !== sha) {
+          throw new ReleaseError(
+            `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
+              `gate was running; refusing to report ${sha} as live`,
+          );
+        }
+      }
     }
   } catch (error) {
     // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
@@ -1309,6 +1341,9 @@ export async function runProductionRelease({
       failure = rollbackError;
       // 一部だけ戻して throw した場合、戻せた分はエラー側にしか残らない。
       rolledBack = rollbackError.rolledBack ?? [];
+      for (const { entry, live } of rollbackError.movedExternally ?? []) {
+        movedAway.set(entry.project.name, { id: live.id, sha: live.sha });
+      }
     } finally {
       // rollback の成否に関わらず、promote しなかった project の設定も掃く。
       reportSweepDrift(await sweepSettings());
@@ -1379,17 +1414,26 @@ async function rollbackPromoted({
     // ままなのは外部の介入ではなく **promote が反映されなかった**場合で、そこでは
     // rollback を撃つ（POST は受理済みなので後から反映されうる。観測ではなく
     // 意図した終端状態を明示する）。
-    const live = await getLiveProduction({
-      projectName: entry.project.name,
-      productionDomain: entry.project.productionDomain,
-      projectId: entry.projectId,
-      token,
-      teamId,
-      fetchImpl,
-    }).catch(() => null);
+    // **読めなかった時は触らない。** 失敗を「競合なし」と同一視すると、まさに守ろうと
+    // している hotfix を上書きしうる。production を変更するより、人の確認へ回す。
+    let live;
+    try {
+      live = await getLiveProduction({
+        projectName: entry.project.name,
+        productionDomain: entry.project.productionDomain,
+        projectId: entry.projectId,
+        token,
+        teamId,
+        fetchImpl,
+      });
+    } catch {
+      stranded.push(`${entry.project.name} -> ${entry.previous.id} (live deployment unreadable)`);
+      continue;
+    }
+
     const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
     if (live && !isKnown) {
-      movedExternally.push(`${entry.project.name} (now ${live.id})`);
+      movedExternally.push({ entry, live });
       logger.log(`${entry.project.name}: production already moved to ${live.id}; leaving it alone`);
       continue;
     }
@@ -1427,8 +1471,11 @@ async function rollbackPromoted({
       lines.push(`MANUAL ROLLBACK REQUIRED. Point production back to: ${stranded.join('; ')}`);
     }
     if (movedExternally.length > 0) {
+      const detail = movedExternally
+        .map(({ entry, live }) => `${entry.project.name} (now ${live.id})`)
+        .join('; ');
       lines.push(
-        `Left alone because another actor moved production first: ${movedExternally.join('; ')}. ` +
+        `Left alone because another actor moved production first: ${detail}. ` +
           `Confirm that deployment is the intended one.`,
       );
     }
@@ -1445,10 +1492,12 @@ async function rollbackPromoted({
       );
     }
     // manualRollback は「production pointer が動かせていない」ものだけを指す。
-    // rolledBack も載せる。ここで throw すると呼び出し側の代入が完了せず、
-    // 戻し済みの project まで「新 SHA を配信中」として manifest に載ってしまう。
+    // rolledBack / movedExternally も載せる。ここで throw すると呼び出し側の代入が
+    // 完了せず、戻し済みや他者が動かした分まで「我々の候補を配信中」として
+    // manifest に載ってしまう（runbook はその manifest を復旧の一次情報にする）。
     throw Object.assign(new ReleaseError(lines.join(' '), { manualRollback: stranded }), {
       rolledBack,
+      movedExternally,
     });
   }
 

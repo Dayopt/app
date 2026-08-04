@@ -1176,6 +1176,74 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.rolledBack()).toEqual(['product']);
   });
 
+  it('records an externally moved deployment as such, not as promoted', async () => {
+    // runbook は manifest の `action: promoted` を「戻す対象」として案内する。
+    // 他者の hotfix が live の側をそう記録すると、その hotfix を戻させてしまう。
+    const world = createReleaseWorld({
+      webAliasSequence: [
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_new',
+        'dpl_web_hotfix',
+      ],
+    });
+
+    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
+  });
+
+  it('refuses to roll back when the live deployment cannot be read', async () => {
+    // 読めない状態を「競合なし」と扱うと、守ろうとしている hotfix を上書きしうる。
+    // production を変更するより人の確認へ回す。
+    const world = createReleaseWorld();
+    let aliasReads = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      // rollback 直前の live 読み取り（web の alias）だけを落とす。
+      if (url.includes('/v4/aliases/dayopt.app')) {
+        aliasReads += 1;
+        if (aliasReads >= 5) return new Response(null, { status: 500 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
+    expect(error.message).toMatch(/live deployment unreadable/);
+    // 読めない状態で production を触っていない。
+    expect(world.rolledBack()).toEqual([]);
+  });
+
+  it('rechecks a preexisting target deployment in a mixed release', async () => {
+    // web は run 開始時点で既に target を配信（candidates に入らない）、product は
+    // affected。gate 実行中に web が動かされると「全 affected が target を配信」が嘘になる。
+    // web は targets に入らないため alias を読むのは 2 回だけ（run 開始時と最終確認）。
+    const world = createReleaseWorld({
+      webAlreadyAtTarget: true,
+      webAliasSequence: ['dpl_web_new', 'dpl_web_hotfix'],
+    });
+
+    await expect(
+      release({
+        fetchImpl: world.fetchImpl,
+        diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+      }),
+    ).rejects.toThrow(/web: production moved to .* refusing to report/);
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
