@@ -18,6 +18,7 @@ interface TagRow {
   icon: string | null;
   parent_id: string | null;
   sort_order: number;
+  archived_at: string | null;
 }
 
 function toMcpTag(tag: TagRow, isArchived: boolean) {
@@ -29,6 +30,7 @@ function toMcpTag(tag: TagRow, isArchived: boolean) {
     parentId: tag.parent_id,
     sortOrder: tag.sort_order,
     isArchived,
+    archivedAt: tag.archived_at,
   };
 }
 
@@ -43,6 +45,7 @@ export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) 
         'Past Plans and Records keep the tag they were given, so a tagId returned by entries.list, plans.list, records.list, or review.get can be missing from that default response.',
         'Pass includeArchived true to resolve those tagIds: archived tags are then appended after the active ones.',
         'Every tag carries isArchived, which is always present and is true only for archived tags.',
+        'Every tag also carries archivedAt, the date-time it was archived; it is always present and is null for tags that are not archived.',
         MCP_UNTRUSTED_CONTENT_NOTICE,
       ].join(' '),
       inputSchema: MCP_TAG_LIST_INPUT_SCHEMA,

@@ -38,7 +38,7 @@ lp:
 - 過去に作成済みの Plan / Record は、アーカイブ後も元のタグ名・色で表示され続ける（タグ lookup は `archived_at` / `is_active` で絞らない意図的な設計）
 - サービス層（Plan / Record の作成・更新経路）でアーカイブ済みタグの新規付与を拒否する（`TAG_ARCHIVED`）。DB trigger には実装しない
 - 例外: 既存の `tag_id` を変更しない編集（タイトル・メモの訂正など）は許可する。後からアーカイブされたタグを保持したままの編集を壊さないため
-- MCP の `tags.list` も既定ではアーカイブ済みを返さない（新規付与の候補集合と揃えるため）。ただし `plans.list` / `records.list` / `entries.list` / `review.get` はアーカイブ済みの `tagId` を返しうるので、その名前を解決するには `includeArchived: true` を渡す。各行は `includeArchived` の値によらず `isArchived` を持ち、アーカイブ済みは通常タグの後ろに並ぶ。`review.get` はタグ別集計行と `largest_tag_variance` signal 自体にも `isArchived` を直接含めるため、`tags.list` への突き合わせなしでアーカイブ済み分類の時間を判別できる
+- MCP の `tags.list` も既定ではアーカイブ済みを返さない（新規付与の候補集合と揃えるため）。ただし `plans.list` / `records.list` / `entries.list` / `review.get` はアーカイブ済みの `tagId` を返しうるので、その名前を解決するには `includeArchived: true` を渡す。各行は `includeArchived` の値によらず `isArchived` と `archivedAt`（アーカイブ日時、通常タグは null）を持ち、アーカイブ済みは通常タグの後ろに並ぶ。`review.get` はタグ別集計行と `largest_tag_variance` signal 自体にも `isArchived` を直接含めるため、`tags.list` への突き合わせなしでアーカイブ済み分類の時間を判別できる
 
 ## アーカイブ済みタグの復元
 

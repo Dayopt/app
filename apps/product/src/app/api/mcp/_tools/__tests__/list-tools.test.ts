@@ -433,8 +433,9 @@ describe('MCP list tools public contract', () => {
             icon: activeTag.icon,
             parentId: null,
             sortOrder: 0,
-            // includeArchived を渡さなくても isArchived は必ず載る
+            // includeArchived を渡さなくても isArchived / archivedAt は必ず載る
             isArchived: false,
+            archivedAt: null,
           },
         ],
       });
@@ -461,8 +462,13 @@ describe('MCP list tools public contract', () => {
       schemaVersion: 1,
       count: 2,
       tags: [
-        { id: activeTag.id, isArchived: false },
-        { id: archivedTag.id, name: archivedTag.name, isArchived: true },
+        { id: activeTag.id, isArchived: false, archivedAt: null },
+        {
+          id: archivedTag.id,
+          name: archivedTag.name,
+          isArchived: true,
+          archivedAt: archivedTag.archived_at,
+        },
       ],
     });
     expect(listArchived).toHaveBeenCalledOnce();
