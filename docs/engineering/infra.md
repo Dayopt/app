@@ -204,7 +204,7 @@ Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-gi
 
 ## CI 品質ゲート
 
-現在有効な job と依存関係は `.github/workflows/ci.yml` を正とする。ローカルの標準入口は `pnpm check`、個別コマンドは `AGENTS.md` を参照する。
+現在有効な job と依存関係は `.github/workflows/ci.yml` を正とする。ローカルの標準入口は `pnpm check`、個別コマンドは `CLAUDE.md` を参照する。
 
 ### GitHub品質サービス
 
@@ -1175,7 +1175,7 @@ ORDER BY schemaname, tablename;
 
 ### 関連
 
-- skill: `.agents/skills/supabase/SKILL.md`
+- skill: `.claude/skills/supabase/SKILL.md`
 - secrets: `docs/operations/secrets.md`
 
 ---

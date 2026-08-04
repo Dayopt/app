@@ -60,7 +60,7 @@ code: scripts/ci
 
 判定規則:
 
-- **docsOnly** — 変更ファイルの**全て**が docs 系パターン（`docs/**`、`.claude/**/*.md`、`.codex/**/*.md`、`.agents/**/*.md`、`AGENTS.md`、`CLAUDE.md`、`README.md`）に該当する時のみ true。[ci.yml](../../../.github/workflows/ci.yml) の paths-ignore と同一規則
+- **docsOnly** — 変更ファイルの**全て**が docs 系パターン（`docs/**`、`.claude/**/*.md`、`AGENTS.md`、`CLAUDE.md`、`README.md`）に該当する時のみ true。[ci.yml](../../../.github/workflows/ci.yml) の paths-ignore と同一規則
 - **product** — `apps/product/**`、`packages/**`（product は全 7 package に依存）、`supabase/**`、root 設定（`package.json` / `pnpm-lock.yaml` / `pnpm-workspace.yaml` / `turbo.json` / `tsconfig.base.json` / `.nvmrc`）のいずれかに触れた時 true
 - **web** — `apps/web/**`、`packages/**` のうち web が依存するもの（`packages/domain` 以外）、root 設定に触れた時 true
 - **integration** — [integration.yml](../../../.github/workflows/integration.yml) の現行 paths と同一集合（server contract / DB / migration / MCP / tRPC 境界）

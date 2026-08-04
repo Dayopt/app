@@ -24,7 +24,7 @@ mandate: **長期で負債を作らない・最適であり続ける**。launch 
 
 ### Step Count（UI フローを含む plan のみ）
 
-`AGENTS.md` §シンプルルール のルール 3「Google Calendar / Toggl より一手少なく」の実装。**ユーザー操作のフローを新設・変更する plan では必須**、それ以外では省略する（省略は違反ではない。plan-critic / plan-fact-checker も無い場合を欠落として扱わない）。
+`CLAUDE.md` §シンプルルール のルール 3「Google Calendar / Toggl より一手少なく」の実装。**ユーザー操作のフローを新設・変更する plan では必須**、それ以外では省略する（省略は違反ではない。plan-critic / plan-fact-checker も無い場合を欠落として扱わない）。
 
 同じ目的を達成するのに要する**ユーザー操作の数**を、比較対象と並べる。
 

@@ -30,7 +30,7 @@ Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/
 | タイミング | 更新するもの                                                  | 担当ルール                         |
 | ---------- | ------------------------------------------------------------- | ---------------------------------- |
 | 実装 PR    | Storybook story を同時更新                                    | `docs/engineering/storybook.md`    |
-| 実装 PR    | `docs/product/specs/` の該当 spec を同じ変更で更新            | `AGENTS.md` §Docs 運用責務         |
+| 実装 PR    | `docs/product/specs/` の該当 spec を同じ変更で更新            | `CLAUDE.md` §Docs 運用責務         |
 | リリース   | GitHub Release + blog の `release` 記事（en/ja）              | `releasing` + `docs-writing` skill |
 | リリース   | 公開 docs の該当ページ更新（`draft: true` → レビュー → 公開） | `docs-writing` skill               |
 | リリース   | ブログネタを issue 起票**だけ**する                           | `blog-ideas` skill                 |

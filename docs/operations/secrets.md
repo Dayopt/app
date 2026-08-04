@@ -27,7 +27,7 @@ PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel i
 
 ## AI エージェントの env ファイル境界
 
-Claude / Codex など全 coding agent に共通の境界。provider 固有の enforcement（Claude の `.claude/settings.json` deny + `pre-tool-guard.sh`、Codex の sandbox 設定）はこの節の実装であり、規約の正本はここに置く。
+Claude はローカル環境で作業する唯一の coding agent であり、本節はその境界を定める（Codex はクラウド PR レビュー専任でローカルファイル・env に触れない）。enforcement の実装は `.claude/settings.json` deny + `pre-tool-guard.sh`、規約の正本はこの節に置く。
 
 **触ってよい（読み書き可）**:
 

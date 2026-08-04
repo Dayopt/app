@@ -150,7 +150,7 @@ docs/projects/{project-name}/
 
 ## Pause point（どこで止まって確認するか）
 
-『アナタはなぜチェックリストを使わないのか』の実行層。判断層（`AGENTS.md` §シンプルルール）が「どちらへ行くか分からない」に対処するのに対し、こちらは**正解を知っているのに複雑さの中でやり損なう**方に対処する。
+『アナタはなぜチェックリストを使わないのか』の実行層。判断層（`CLAUDE.md` §シンプルルール）が「どちらへ行くか分からない」に対処するのに対し、こちらは**正解を知っているのに複雑さの中でやり損なう**方に対処する。
 
 **confirm リストは発動点の中に置く。この表はその地図で、リストの複製は持たない。** 参照文書（本ファイルや `plan-format.md`）は「なぜそうするか」の正本のまま維持する。
 
@@ -162,7 +162,7 @@ docs/projects/{project-name}/
 | session end | `/session-end`                                     | ユーザー起動                               |
 | commit 前   | husky `pre-commit` / `commit-msg`                  | 機械                                       |
 
-push 前の pause は git レベルの hook なので Claude / Codex / 人間 / wrapper script のすべてに効く。ただし**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。`--no-verify` での迂回は agent には禁止（`.claude/hooks/pre-tool-guard.sh` がブロック）、人間が使う場合は理由を一言残す。
+push 前の pause は git レベルの hook なので Claude / 人間 / wrapper script のすべてに効く。ただし**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。`--no-verify` での迂回は agent には禁止（`.claude/hooks/pre-tool-guard.sh` がブロック）、人間が使う場合は理由を一言残す。
 
 規律は 3 つ。**①機械で強制できるものは機械へ**（止まるのが最強）。**②機械化できないものだけ発動点で明示発話する**。「該当なし」も言い切り、黙って通さない。**③項目を 1 つ足すときは 1 つ削る**。長いチェックリストは形骸化するのが最悪の失敗モードなので、各点 5〜9 項目に収める。
 
@@ -209,7 +209,6 @@ UI 変更を含む作業では、関連 Story がある場合は Storybook を�
 
 - 既存 stories の regression なし
 - 新規 stories の描画確認
-- browser の選択は provider 固有の overlay に従う。Codex は `.codex/rules/browser.md` を正本とする
 - Tomoya の確認は最終的なプロダクト判断として追加できるが、Main 自身の検証の代替にはしない
 
 ## PR 粒度
@@ -365,13 +364,12 @@ branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する（
 
 ### 置き場と作成
 
-- Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。Codex は `~/.codex/worktrees/` を使う。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
-- 他ツールの worktree（`~/.codex/` 配下）は各ツールの管理に任せ、手動で触らない
+- Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
 - `.op-env.local` は gitignore 済みのため worktree には引き継がれないが、`pnpm dev` 実行時に main checkout から自動コピーされる（`scripts/dev-with-op.sh`）。手動セットアップは不要
 
 ### マージ後の掃除（AI の責務、merge と同一セッションで実施）
 
-**標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/git/finish-branch.sh`。Claude / Codex / 人間で共通）。
+**標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/git/finish-branch.sh`。Claude / 人間で共通）。
 
 ```bash
 pnpm branch:finish <PR番号>            # マージ→worktree削除→main ref 更新→branch削除→リモート確認
