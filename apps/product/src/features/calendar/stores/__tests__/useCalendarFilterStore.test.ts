@@ -93,6 +93,12 @@ describe('useCalendarFilterStore', () => {
       const state = useCalendarFilterStore.getState();
       expect(state.visibleTagIds.size).toBe(0);
     });
+
+    it('hideAllTags: showUntaggedもfalseにする（全部隠す操作のため）', () => {
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+      useCalendarFilterStore.getState().hideAllTags();
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    });
   });
 
   describe('グループ操作', () => {
@@ -188,6 +194,13 @@ describe('useCalendarFilterStore', () => {
       expect(state.visibleTagIds.has('tag-2')).toBe(true);
     });
 
+    it('showOnlyTag: showUntaggedをfalseにする（このタグだけ表示なら未分類は隠れる、#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+      useCalendarFilterStore.getState().showOnlyTag('tag-2');
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    });
+
     it('showOnlyGroupTags: 指定グループのタグのみ表示', () => {
       useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
       useCalendarFilterStore.getState().showOnlyGroupTags(['tag-1', 'tag-3']);
@@ -195,7 +208,14 @@ describe('useCalendarFilterStore', () => {
       expect(state.visibleTagIds.size).toBe(2);
     });
 
-    it('showOnlyUntagged: 未分類だけ表示（他のタグは全てOFF）', () => {
+    it('showOnlyGroupTags: showUntaggedをfalseにする（対称性、#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+      useCalendarFilterStore.getState().showOnlyGroupTags(['tag-1', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    });
+
+    it('showOnlyUntagged: 未分類だけ表示（他のタグは全てOFF、visibleTagIdsが空になる対称性）', () => {
       useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
       useCalendarFilterStore.getState().toggleShowUntagged(); // 一旦 false にしておく
       useCalendarFilterStore.getState().showOnlyUntagged();

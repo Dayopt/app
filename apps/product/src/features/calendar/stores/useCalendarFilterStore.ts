@@ -173,6 +173,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         hideAllTags: () =>
           set(() => ({
             visibleTagIds: new Set(),
+            showUntagged: false,
           })),
 
         showGroupTags: (tagIds) =>
@@ -236,6 +237,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         showOnlyTag: (tagId) =>
           set(() => ({
             visibleTagIds: new Set([tagId]),
+            showUntagged: false,
           })),
 
         showOnlyUntagged: () =>
@@ -247,6 +249,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         showOnlyGroupTags: (tagIds) =>
           set(() => ({
             visibleTagIds: new Set(tagIds),
+            showUntagged: false,
           })),
 
         isTagVisible: (tagId) => get().visibleTagIds.has(tagId),

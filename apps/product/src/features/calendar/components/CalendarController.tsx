@@ -281,6 +281,8 @@ export function CalendarController({
     visibleTagIds,
   ]);
   const calendarDiffRecords = useMemo(() => {
+    void visibleTagIds;
+    void showUntagged;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
@@ -294,7 +296,14 @@ export function CalendarController({
         endAt: entry.endDate ?? entry.displayEndDate,
       }))
       .filter((record) => isWithinVisibleDayBounds(record.startAt, record.endAt));
-  }, [allTimeblocks, calendarDiffEnabled, isEntryVisible, isWithinVisibleDayBounds]);
+  }, [
+    allTimeblocks,
+    calendarDiffEnabled,
+    isEntryVisible,
+    isWithinVisibleDayBounds,
+    showUntagged,
+    visibleTagIds,
+  ]);
   const calendarDiff = useMemo(
     () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffRecords, calendarDiffBounds),
     [calendarDiffBounds, calendarDiffPlans, calendarDiffRecords],
