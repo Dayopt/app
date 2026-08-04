@@ -4,7 +4,7 @@ import type { Row } from '@/lib/database';
 import type { Tag } from '../types';
 
 /** DB タグ行の型 */
-export type DbTagRow = Row<'tags'>;
+type DbTagRow = Row<'tags'>;
 
 /**
  * DBのタグ行をフロントエンド用の Tag 型に変換
