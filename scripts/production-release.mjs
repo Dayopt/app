@@ -66,8 +66,17 @@ const TERMINAL_FAILURE_STATES = new Set(['ERROR', 'CANCELED', 'DELETED']);
 /**
  * 「要求が受理されなかった」が確定する HTTP status。これ以外（5xx / transport 失敗）は
  * 届いたかどうか分からないので、production を動かした可能性がある側として扱う。
+ * 429 も含める。rate limit は要求の拒否であって、受理して遅延しているのではない。
  */
-const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404]);
+const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
+
+/**
+ * promote の受理が不確かな時、その反映を待つ猶予。POST が 5xx / transport で失敗しても
+ * Vercel 側が受理していることがあり、alias の変化は非同期に遅れて現れる。rollback 直後に
+ * 「previous のままだから戻った」と即断すると、その後に元の promote が着地して
+ * gate を通っていない deployment が live になる。
+ */
+const AMBIGUOUS_SETTLE_MS = 30 * 1000;
 
 /**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
@@ -81,7 +90,9 @@ const WORST_CASE_SMOKE_MS =
   (SMOKE_ATTEMPTS * SMOKE_TIMEOUT_MS + (SMOKE_ATTEMPTS - 1) * SMOKE_RETRY_DELAY_MS);
 
 export const WORST_CASE_RELEASE_MS =
-  READY_TIMEOUT_MS + WORST_CASE_SMOKE_MS * 2 + RELEASE_PROJECTS.length * ASSIGN_TIMEOUT_MS * 2;
+  READY_TIMEOUT_MS +
+  WORST_CASE_SMOKE_MS * 2 +
+  RELEASE_PROJECTS.length * (ASSIGN_TIMEOUT_MS * 2 + AMBIGUOUS_SETTLE_MS);
 
 export class ReleaseError extends Error {
   constructor(message, { manualRollback } = {}) {
@@ -753,7 +764,9 @@ export function buildManifest({
       const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
       const action = moved
-        ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+        ? moved.id
+          ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+          : 'unassigned' // production domain にどの deployment も割り当たっていない
         : entry
           ? rolled
             ? 'rolled-back'
@@ -980,7 +993,9 @@ export async function runProductionRelease({
       const wanted = expectedId.get(project.name);
       if (wanted) {
         if (live?.id !== wanted) {
-          if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
+          // live が null（alias 未割当）も観測結果。落とすと manifest が
+          // 「我々の candidate を配信中」のまま残る。
+          movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
           throw new ReleaseError(
             `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
               `${wanted}; refusing to report ${sha} as live`,
@@ -996,7 +1011,7 @@ export async function runProductionRelease({
       // target SHA へ動いていた場合は許す（判定より進んだだけで、success の主張は
       // むしろ強くなる）。それ以外の SHA は判定の前提が崩れている。
       if (wantedSha && live?.sha !== wantedSha && live?.sha !== sha) {
-        if (live) movedAway.set(project.name, { id: live.id, sha: live.sha });
+        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
             `gate was running; refusing to report ${sha} as live`,
@@ -1009,9 +1024,13 @@ export async function runProductionRelease({
   // 設定を true へ戻す（vercel/vercel#15095）。掃き忘れた出口が 1 つでもあると、
   // その run は正しく失敗したのに次の main merge が gate を通らず直接公開される。
   // 出口ごとに書くと必ず取り残しが出るため（実際 3 巡続けて別の出口が見つかった）、
-  // finally で一括して掃く。restoreAll は差分がある時だけ PATCH するので、
+  // 本体を包んで一括で掃く。restoreAll は差分がある時だけ PATCH するので、
   // 既に掃いた経路で重ねて呼んでも副作用は無い。
-  try {
+  //
+  // finally ではなく catch + 後処理にしているのは、**最後の掃きで見つかった drift を
+  // 失敗として扱う**ため。finally で throw すると実行中の例外を握り潰すので、
+  // 失敗経路では報告だけに留め、成功経路でだけ settings-drift へ倒す。
+  const result = await (async () => {
     // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
     // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
     // promote する予定が無い run には rollback scope 自体が無いので警告しない。
@@ -1305,7 +1324,9 @@ export async function runProductionRelease({
           logger.log(
             `${project.name}: promote request outcome is unknown; keeping it in the rollback scope`,
           );
-          promoted.push(entry);
+          // rollback 側で「戻った」と即断させないための印。previous は一度も live を
+          // 外れていない可能性があり、その場合 assignment の確認が即座に通ってしまう。
+          promoted.push({ ...entry, ambiguous: true });
           throw error;
         }
 
@@ -1437,9 +1458,24 @@ export async function runProductionRelease({
       gateChecksRan: !force,
       manifest: manifestFor('promoted', { promoted }),
     };
-  } finally {
+  })().catch(async (error) => {
+    // 失敗経路。元の失敗理由を優先し、掃きの結果は報告だけにする。
     reportSweepDrift(await sweepSettings());
+    throw error;
+  });
+
+  // 成功経路。ここまでの掃きの後に外部 promote が設定を戻していることがあるため、
+  // もう一度掃いて、それでも残る drift は run の失敗にする（放置すると次の merge が
+  // gate を迂回する）。production は正しい SHA を配信しているので deployment は戻さない。
+  const finalDrift = await sweepSettings();
+  if (finalDrift.length > 0) {
+    reportSweepDrift(finalDrift);
+    throw Object.assign(driftError(sha, finalDrift), {
+      manifest: manifestFor('settings-drift', { promoted: result.promoted ?? [] }),
+    });
   }
+
+  return result;
 }
 
 async function rollbackPromoted({
@@ -1514,6 +1550,31 @@ async function rollbackPromoted({
         nowImpl,
       });
       if (autoAssignDrifted) drifted.push(entry.project.name);
+
+      // **受理が不確かな promote では「previous のままだった」は戻った証拠にならない。**
+      // POST が届いていた場合、alias の変化は非同期に遅れて現れる。assignment の確認は
+      // previous が一度も live を外れていなければ即座に通ってしまうので、猶予を置いて
+      // 見直す。ここで target が現れたら、run 終了後に着地するのと同じ状態なので
+      // 手動確認へ回す。
+      if (entry.ambiguous) {
+        await sleepImpl(AMBIGUOUS_SETTLE_MS);
+        const settled = await getLiveProduction({
+          projectName: entry.project.name,
+          productionDomain: entry.project.productionDomain,
+          projectId: entry.projectId,
+          token,
+          teamId,
+          fetchImpl,
+        }).catch(() => null);
+        if (settled?.id !== entry.previous.id) {
+          stranded.push(
+            `${entry.project.name} -> ${entry.previous.id} ` +
+              `(a delayed promote landed on ${settled?.id ?? 'an unreadable deployment'})`,
+          );
+          continue;
+        }
+      }
+
       logger.log(`${entry.project.name}: rolled back to ${entry.previous.id}`);
       rolledBack.push(entry);
     } catch {

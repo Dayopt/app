@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   RELEASE_PROJECTS,
+  buildManifest,
   findDeploymentForSha,
   gitDiffFiles,
   resolveProjectImpact,
@@ -1478,6 +1479,77 @@ describe('runProductionRelease (affected-aware)', () => {
     );
   });
 
+  it('treats a rate-limited promote as a rejection, not an ambiguous one', async () => {
+    const world = createReleaseWorld();
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 429 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(/failed with status 429/);
+    // 拒否が確定しているので production は触らない。
+    expect(world.pointCalls).toEqual([]);
+  });
+
+  it('does not call an ambiguous promote rolled back when it lands late', async () => {
+    // POST は 5xx を返したが Vercel は受理していた場合。previous は一度も live を
+    // 外れないので assignment の確認は即座に通る。猶予後に target が現れたら、
+    // run 終了後に着地するのと同じ状態なので手動確認へ回す。
+    const world = createReleaseWorld();
+    let readsAfterRollback = -1;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 503 }); // 受理されたが response を失った
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        readsAfterRollback = 0;
+        return new Response(null, { status: 202 });
+      }
+      if (readsAfterRollback >= 0 && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        // 1 回目 = rollback の反映確認（previous は一度も外れていないので即通る）。
+        // 2 回目 = 猶予後の再確認。ここで遅れて着地した元の promote が見える。
+        return Response.json({
+          deploymentId: readsAfterRollback === 1 ? 'dpl_web_old' : 'dpl_web_new',
+        });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const error = await release({ fetchImpl }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
+    expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
+  });
+
+  it('fails when the production domain has no deployment at the final check', async () => {
+    // alias が外れた場合も観測結果。live が null だからと素通りさせない。
+    const world = createReleaseWorld();
+    let readsAfterPromote = -1;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_product_new')) {
+        readsAfterPromote = 0;
+        return world.fetchImpl(input, init);
+      }
+      // 2 回目（= 最終確認）だけ alias 未割当を返す。以降は通常どおり応答させないと
+      // rollback の反映確認が永久に満たされない。
+      if (readsAfterPromote >= 0 && url.includes('/v4/aliases/app.dayopt.app')) {
+        readsAfterPromote += 1;
+        if (readsAfterPromote === 2) return Response.json({});
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    await expect(release({ fetchImpl })).rejects.toThrow(
+      /product: production serves none, not the released dpl_product_new/,
+    );
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
@@ -1625,6 +1697,40 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(error.manifest?.projects).toContainEqual(
       expect.objectContaining({ name: 'web', action: 'promoted', deploymentId: 'dpl_web_new' }),
     );
+  });
+});
+
+describe('buildManifest', () => {
+  const project = RELEASE_PROJECTS[0]!;
+  const base = {
+    sha: SHA,
+    status: 'failed',
+    projects: [project],
+    decisions: new Map([[project.name, { affected: true, reason: 'changed' }]]),
+    before: new Map([[project.name, { id: 'dpl_web_old', sha: OLD_SHA }]]),
+    promoted: [],
+    rolledBack: [],
+  };
+
+  it('distinguishes an unassigned domain from another actor deployment', () => {
+    const unassigned = buildManifest({
+      ...base,
+      movedAway: new Map([[project.name, { id: null, sha: null }]]),
+    });
+    expect(unassigned.projects[0]).toMatchObject({
+      action: 'unassigned',
+      deploymentId: null,
+      observedAt: 'this-run',
+    });
+
+    const moved = buildManifest({
+      ...base,
+      movedAway: new Map([[project.name, { id: 'dpl_web_hotfix', sha: OLD_SHA }]]),
+    });
+    expect(moved.projects[0]).toMatchObject({
+      action: 'moved-externally',
+      deploymentId: 'dpl_web_hotfix',
+    });
   });
 });
 
