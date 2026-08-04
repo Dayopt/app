@@ -950,6 +950,26 @@ export async function runProductionRelease({
         }
         await runProductionConfigAudit({ token, teamId, fetchImpl });
         logger.log('Production Config Audit passed against live Vercel metadata.');
+
+        // smoke と audit で数分かかる。その間に人が Instant Rollback すると、
+        // 「この commit が live」という success の主張が嘘になる。この経路は promote を
+        // 行わないので candidate の ID 突き合わせ（後段）を通らない。ここで確認する。
+        for (const project of alreadyServing) {
+          const live = await getLiveProduction({
+            projectName: project.name,
+            productionDomain: project.productionDomain,
+            projectId: projectIds.get(project.name),
+            token,
+            teamId,
+            fetchImpl,
+          });
+          if (live?.sha !== sha) {
+            throw new ReleaseError(
+              `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
+                `gate was running; refusing to report ${sha} as live`,
+            );
+          }
+        }
       } catch (error) {
         // promote していないので戻す先は無い。設定は上で復元済み。
         throw Object.assign(error, { manifest: manifestFor('failed') });
@@ -1340,6 +1360,7 @@ async function rollbackPromoted({
 }) {
   const rolledBack = [];
   const stranded = [];
+  const movedExternally = [];
   const drifted = [...preexistingDrift];
 
   for (const entry of [...promoted].reverse()) {
@@ -1347,6 +1368,32 @@ async function rollbackPromoted({
       stranded.push(`${entry.project.name} (no previous production deployment recorded)`);
       continue;
     }
+
+    // **外部が先に production を動かしていたら触らない。** 我々が promote した後に
+    // 人が hotfix を promote した場合、ここで entry.previous を promote すると
+    // その hotfix を古い deployment で上書きすることになる。rollback は
+    // 「この run が置いた deployment を戻す」操作であって、production を
+    // 我々の想定へ強制する操作ではない。
+    //
+    // 判定は「candidate でも previous でもない第三の deployment か」。previous の
+    // ままなのは外部の介入ではなく **promote が反映されなかった**場合で、そこでは
+    // rollback を撃つ（POST は受理済みなので後から反映されうる。観測ではなく
+    // 意図した終端状態を明示する）。
+    const live = await getLiveProduction({
+      projectName: entry.project.name,
+      productionDomain: entry.project.productionDomain,
+      projectId: entry.projectId,
+      token,
+      teamId,
+      fetchImpl,
+    }).catch(() => null);
+    const isKnown = live && (live.id === entry.deployment.id || live.id === entry.previous.id);
+    if (live && !isKnown) {
+      movedExternally.push(`${entry.project.name} (now ${live.id})`);
+      logger.log(`${entry.project.name}: production already moved to ${live.id}; leaving it alone`);
+      continue;
+    }
+
     try {
       const { autoAssignDrifted } = await rollbackDeployment({
         projectName: entry.project.name,
@@ -1369,10 +1416,21 @@ async function rollbackPromoted({
     }
   }
 
-  if (stranded.length > 0 || drifted.length > 0 || preexistingSplit.length > 0) {
+  if (
+    stranded.length > 0 ||
+    drifted.length > 0 ||
+    preexistingSplit.length > 0 ||
+    movedExternally.length > 0
+  ) {
     const lines = [`Rollback after "${cause.message}" did not fully clean up.`];
     if (stranded.length > 0) {
       lines.push(`MANUAL ROLLBACK REQUIRED. Point production back to: ${stranded.join('; ')}`);
+    }
+    if (movedExternally.length > 0) {
+      lines.push(
+        `Left alone because another actor moved production first: ${movedExternally.join('; ')}. ` +
+          `Confirm that deployment is the intended one.`,
+      );
     }
     if (preexistingSplit.length > 0) {
       lines.push(

@@ -1140,6 +1140,42 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.rolledBack()).toEqual(['product']);
   });
 
+  it('refuses to report an already-live SHA when the domain moves during the gate', async () => {
+    // promote 0 件の経路は candidate の ID 突き合わせを通らない。smoke と audit の
+    // 数分の間に人が Instant Rollback すると、live でない commit に success が付く。
+    // 1回目=run 開始時（target を配信中）、2回目=検証時（別 SHA へ移動）。
+    const world = createReleaseWorld({
+      productionSha: SHA,
+      webAliasSequence: ['dpl_web_new', 'dpl_web_hotfix'],
+    });
+
+    await expect(
+      release({ fetchImpl: world.fetchImpl, diffFilesImpl: () => ['docs/x.md'] }),
+    ).rejects.toThrow(/web: production moved to .* refusing to report/);
+    expect(world.pointCalls).toEqual([]);
+  });
+
+  it('leaves a project alone when another actor moved production before the rollback', async () => {
+    // 我々の promote 後に人が hotfix を promote した場合。ここで entry.previous を
+    // promote すると、その hotfix を古い deployment で上書きしてしまう。
+    // 1-3回目=promote まで, 4回目=promote 反映確認, 5回目以降=外部が hotfix へ移動。
+    const world = createReleaseWorld({
+      webAliasSequence: [
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_new',
+        'dpl_web_hotfix',
+      ],
+    });
+
+    const error = await release({ fetchImpl: world.fetchImpl }).catch((thrown: Error) => thrown);
+
+    expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
+    // web は外部の hotfix が乗っているので触らない。product だけ戻す。
+    expect(world.rolledBack()).toEqual(['product']);
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
