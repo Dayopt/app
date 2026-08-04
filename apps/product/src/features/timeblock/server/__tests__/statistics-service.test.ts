@@ -260,6 +260,59 @@ describe('StatisticsService.getEstimationAccuracy', () => {
     expect(mockSupabase.from).toHaveBeenCalledWith('plans');
     expect(mockSupabase.from).toHaveBeenCalledWith('records');
   });
+
+  it('未設定と削除済みタグの Plan / Record を同じ未分類 bucket に集計する（#1576）', async () => {
+    const { service } = createService({
+      plans: createChainableMock([
+        {
+          id: 'p-unset',
+          tag_id: null,
+          start_at: '2026-07-01T00:00:00Z',
+          end_at: '2026-07-01T00:30:00Z',
+        },
+        {
+          id: 'p-deleted',
+          tag_id: 'deleted-tag-id',
+          start_at: '2026-07-02T00:00:00Z',
+          end_at: '2026-07-02T00:50:00Z',
+        },
+      ]),
+      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }]),
+      records: createChainableMock([
+        {
+          id: 'l1',
+          tag_id: null,
+          plan_id: 'p-unset',
+          source: 'manual',
+          start_at: '2026-07-01T00:00:00Z',
+          end_at: '2026-07-01T00:40:00Z',
+        },
+        {
+          id: 'l2',
+          tag_id: 'deleted-tag-id',
+          plan_id: 'p-deleted',
+          source: 'manual',
+          start_at: '2026-07-02T00:00:00Z',
+          end_at: '2026-07-02T01:00:00Z',
+        },
+      ]),
+    });
+
+    const result = await service.getEstimationAccuracy(USER_ID);
+
+    expect(result).toEqual([
+      {
+        tagId: null,
+        tagName: null,
+        tagColor: null,
+        isUncategorized: true,
+        avgPlannedMinutes: 40,
+        avgActualMinutes: 50,
+        avgDeviationMinutes: 10,
+        recordCount: 2,
+      },
+    ]);
+  });
 });
 
 describe('StatisticsService.getBlankRate', () => {

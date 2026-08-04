@@ -16,9 +16,10 @@ const MAX_TIME_PL_ROWS = 5;
 const MAX_ESTIMATION_ROWS = 3;
 
 export interface WeeklyReflectionEstimationRow {
-  tagId: string;
-  tagName: string;
-  tagColor: string;
+  tagId: string | null;
+  tagName: string | null;
+  tagColor: string | null;
+  isUncategorized: boolean;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
@@ -126,7 +127,7 @@ export function WeeklyReflectionPanel({
         ) : (
           <div className="divide-border-subtle divide-y">
             {sortedEstimationRows.map((row) => (
-              <EstimationBiasRow key={row.tagId} row={row} />
+              <EstimationBiasRow key={row.tagId ?? 'uncategorized'} row={row} />
             ))}
           </div>
         )}
@@ -244,12 +245,19 @@ function TimePLRow({
 }
 
 function EstimationBiasRow({ row }: { row: WeeklyReflectionEstimationRow }) {
+  const t = useTranslations('calendar.stats.overview');
   const deviation = Math.round(row.avgDeviationMinutes);
+  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
 
   return (
     <div className="flex min-h-11 min-w-0 items-center gap-2 px-2 py-2">
-      <TagIcon icon={null} color={resolveTagColor(row.tagColor)} size="sm" />
-      <span className="text-foreground min-w-0 flex-1 truncate text-sm">{row.tagName}</span>
+      <TagIcon
+        icon={null}
+        color={resolveTagColor(row.tagColor)}
+        size="sm"
+        isUncategorized={row.isUncategorized}
+      />
+      <span className="text-foreground min-w-0 flex-1 truncate text-sm">{tagName}</span>
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} /{' '}
         {formatDurationMinutes(Math.round(row.avgActualMinutes))}
@@ -310,11 +318,13 @@ function deriveReflectionSignal({
   const topBias = estimationRows[0];
   if (topBias && Math.abs(topBias.avgDeviationMinutes) >= 15) {
     const bias = Math.abs(Math.round(topBias.avgDeviationMinutes));
+    // 未分類が最大バイアスの場合、tagName(null) をそのまま補間せず翻訳ラベルへ差し替える
+    const tagLabel = topBias.tagName ?? t('overview.uncategorized');
     return {
       text:
         topBias.avgDeviationMinutes > 0
-          ? t('review.insightEstimationOver', { tag: topBias.tagName, bias })
-          : t('review.insightEstimationUnder', { tag: topBias.tagName, bias }),
+          ? t('review.insightEstimationOver', { tag: tagLabel, bias })
+          : t('review.insightEstimationUnder', { tag: tagLabel, bias }),
       detail: t('review.insightEstimationDetail'),
     };
   }

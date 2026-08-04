@@ -57,13 +57,13 @@ export class StatisticsKpiService {
     const records =
       planIds.length > 0 ? await fetchRecordsByPlanIds(this.supabase, userId, planIds) : [];
 
-    const planRows = plans
-      .filter((plan): plan is StatPlanRow & { tag_id: string } => plan.tag_id != null)
-      .map((plan) => ({
-        id: plan.id,
-        tag_id: plan.tag_id,
-        planned_minutes: minutesBetween(plan.start_at, plan.end_at),
-      }));
+    // tag_id が null の plan も未分類バケットとして集計に含める（#1576）。
+    // フィルタは `aggregatePlanRecordEstimationAccuracy` 側が担う。
+    const planRows = plans.map((plan) => ({
+      id: plan.id,
+      tag_id: plan.tag_id,
+      planned_minutes: minutesBetween(plan.start_at, plan.end_at),
+    }));
     const recordRows = records.map((record) => ({
       plan_id: record.plan_id,
       source: record.source,
