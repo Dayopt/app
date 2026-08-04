@@ -78,6 +78,10 @@ export function RecordLaneCard({
 }: RecordLaneCardProps) {
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
+  // tagName は「タグが実在するか」の source of truth（Tag.name は非nullのため、
+  // 実在すれば必ず文字列になる）。tagColor/tagIcon の null 判定は、既存タグの
+  // color=null（DB上は許容）と区別できないため使わない。
+  const isUncategorized = tagName === null;
   const displayName = tagName ?? t('common.tags.noTag');
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
@@ -140,7 +144,13 @@ export function RecordLaneCard({
     >
       <div className="flex items-start justify-between gap-1">
         <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-          <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
+          <TagIcon
+            icon={tagIcon}
+            color={tagColor ?? undefined}
+            size="sm"
+            className="shrink-0"
+            isUncategorized={isUncategorized}
+          />
           <span className="truncate">{displayName}</span>
         </p>
         {hasDiff && !compact && <DiffBadge diffMinutes={event.diffMinutes ?? 0} />}

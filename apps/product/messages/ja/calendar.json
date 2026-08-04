@@ -205,7 +205,6 @@
     "filter": {
       "type": "種類",
       "tags": "タグ",
-      "ungrouped": "グループなし",
       "untagged": "タグなし",
       "noTags": "タグで時間に名前をつけると、パターンが見えてきます。最初のタグを作りましょう",
       "comingSoon": "近日公開予定",
@@ -245,20 +244,10 @@
       "tagMenu": "タグメニュー",
       "expand": "展開",
       "collapse": "折りたたむ",
-      "ungroupTags": "グループを解除",
-      "ungroupTagsFailed": "グループを解除できませんでした。もう一度お試しください",
-      "ungroupTagsSuccess": "「{name}」のグループを解除しました（{count}個のタグ）",
-      "ungroupConflict": {
-        "title": "同名のタグが存在します",
-        "description": "「{names}」は既に存在します。既存のタグに統合されます。"
-      },
-      "deleteGroup": {
-        "label": "グループを削除",
-        "title": "「{name}」グループを削除",
-        "description": "{count}個のタグが削除されます。タイムブロック自体は削除されません。",
-        "success": "「{name}」グループを削除しました（{count}個のタグ）",
-        "failed": "グループを削除できませんでした。もう一度お試しください"
-      },
+      "archive": "アーカイブ",
+      "archivedSection": "アーカイブ済み",
+      "archivedLoadFailed": "アーカイブ済みタグを読み込めませんでした",
+      "restore": "復元",
       "createDialog": {
         "title": "新しいタグを作成",
         "name": "タグ名",
@@ -351,9 +340,7 @@
         "dayOfWeek": "曜日別の記録",
         "dayOfWeekDesc": "どの曜日に時間が集まったか",
         "hourly": "時間帯別の記録",
-        "hourlyDesc": "どの時間帯に時間が集まったか",
-        "currentPeriod": "この期間",
-        "previousPeriod": "前の期間"
+        "hourlyDesc": "どの時間帯に時間が集まったか"
       },
       "daily": {
         "timelineDesc": "予定と現実のずれを並べて見る",

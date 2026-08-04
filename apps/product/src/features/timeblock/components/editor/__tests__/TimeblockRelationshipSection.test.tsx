@@ -31,7 +31,13 @@ vi.mock('next-intl', () => ({
 }));
 
 vi.mock('@/features/tags', () => ({
-  TagIcon: () => <span aria-hidden="true" />,
+  TagIcon: ({ isUncategorized }: { isUncategorized?: boolean }) => (
+    <span
+      aria-hidden="true"
+      data-testid="tag-icon"
+      data-uncategorized={String(!!isUncategorized)}
+    />
+  ),
 }));
 
 vi.mock('@/lib/date', () => ({
@@ -59,6 +65,7 @@ const records: TimeblockRelationshipItem[] = [
     tagName: 'API development',
     tagColor: 'blue',
     tagIcon: null,
+    isUncategorized: false,
     startAt: new Date('2026-07-14T09:05:00.000Z'),
     endAt: new Date('2026-07-14T09:35:00.000Z'),
   },
@@ -67,6 +74,7 @@ const records: TimeblockRelationshipItem[] = [
     tagName: 'Review',
     tagColor: 'green',
     tagIcon: 'search',
+    isUncategorized: false,
     startAt: new Date('2026-07-14T10:10:00.000Z'),
     endAt: new Date('2026-07-14T10:55:00.000Z'),
   },
@@ -170,6 +178,46 @@ describe('TimeblockRelationshipSection', () => {
 
     expect(screen.getByText('Original plan is unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('未分類(タグ削除済み)のRecordは中立マーカーのTagIconを描画する', () => {
+    render(
+      <TimeblockRelationshipSection
+        kind="plan"
+        status="success"
+        records={[
+          {
+            id: 'record-uncategorized',
+            tagName: 'No tag',
+            tagColor: null,
+            tagIcon: null,
+            isUncategorized: true,
+            startAt: new Date('2026-07-14T09:05:00.000Z'),
+            endAt: new Date('2026-07-14T09:35:00.000Z'),
+          },
+        ]}
+        onOpen={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'true');
+  });
+
+  it('タグが実在するRecordは中立マーカーを立てない', () => {
+    render(
+      <TimeblockRelationshipSection
+        kind="plan"
+        status="success"
+        records={records}
+        onOpen={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    for (const icon of screen.getAllByTestId('tag-icon')) {
+      expect(icon).toHaveAttribute('data-uncategorized', 'false');
+    }
   });
 
   it('関係の取得失敗だけを再試行できる', async () => {

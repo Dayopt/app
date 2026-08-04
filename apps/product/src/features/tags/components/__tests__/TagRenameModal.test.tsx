@@ -16,6 +16,7 @@ const TAG_A: Tag = {
   parent_id: null,
   sort_order: 0,
   is_active: true,
+  archived_at: null,
   created_at: '2026-04-01T00:00:00.000Z',
   updated_at: '2026-04-01T00:00:00.000Z',
 };
@@ -29,6 +30,7 @@ const TAG_B: Tag = {
   parent_id: null,
   sort_order: 1,
   is_active: true,
+  archived_at: null,
   created_at: '2026-04-01T00:00:00.000Z',
   updated_at: '2026-04-01T00:00:00.000Z',
 };

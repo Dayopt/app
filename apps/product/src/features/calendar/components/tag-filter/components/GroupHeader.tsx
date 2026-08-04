@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import {
+  Archive,
   BarChart3,
   ChevronRight,
   Eye,
@@ -13,7 +14,6 @@ import {
   Plus,
   Smile,
   Trash2,
-  Unlink,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -37,7 +37,7 @@ interface GroupHeaderProps {
   indeterminate: boolean;
   collapsed: boolean;
   displayColor: string;
-  /** モバイル時: メニュー項目を簡略化（このグループだけ表示のみ） */
+  /** モバイル時: メニュー項目を簡略化（このグループだけ表示 + アーカイブのみ） */
   isMobile?: boolean;
   onCheckedChange: () => void;
   onToggleCollapse: () => void;
@@ -47,8 +47,8 @@ interface GroupHeaderProps {
   currentIcon?: string | null | undefined;
   onAddTagToGroup?: (() => void) | undefined;
   onRenameGroup?: (() => void) | undefined;
-  onUngroupTags?: (() => void) | undefined;
   onViewStats?: (() => void) | undefined;
+  onArchiveGroup?: (() => void) | undefined;
   onDeleteGroup?: (() => void) | undefined;
   /**
    * 行（名前部分）クリック時のハンドラ。指定なしは `onToggleCollapse` にフォールバック。
@@ -80,8 +80,8 @@ export function GroupHeader({
   currentIcon,
   onAddTagToGroup,
   onRenameGroup,
-  onUngroupTags,
   onViewStats,
+  onArchiveGroup,
   onDeleteGroup,
   onRowClick,
   highlighted = false,
@@ -198,10 +198,18 @@ export function GroupHeader({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
           {isMobile ? (
-            <DropdownMenuItem onClick={onShowOnlyGroup}>
-              <Eye className="mr-2 size-4" />
-              {t('calendar.filter.showOnlyThis')}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={onShowOnlyGroup}>
+                <Eye className="mr-2 size-4" />
+                {t('calendar.filter.showOnlyThis')}
+              </DropdownMenuItem>
+              {onArchiveGroup && (
+                <DropdownMenuItem onClick={onArchiveGroup}>
+                  <Archive className="mr-2 size-4" />
+                  {t('calendar.filter.archive')}
+                </DropdownMenuItem>
+              )}
+            </>
           ) : (
             <>
               {onAddTagToGroup && (
@@ -242,12 +250,6 @@ export function GroupHeader({
               {/* --- アクション --- */}
               <DropdownMenuSeparator />
 
-              {onUngroupTags && (
-                <DropdownMenuItem onClick={onUngroupTags}>
-                  <Unlink className="mr-2 size-4" />
-                  {t('calendar.filter.ungroupTags')}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={onShowOnlyGroup}>
                 <Eye className="mr-2 size-4" />
                 {t('calendar.filter.showOnlyThis')}
@@ -256,6 +258,14 @@ export function GroupHeader({
                 <DropdownMenuItem onClick={onViewStats}>
                   <BarChart3 className="mr-2 size-4" />
                   {t('calendar.filter.viewStats')}
+                </DropdownMenuItem>
+              )}
+
+              {/* アーカイブ（子タグも道連れ。可逆なので確認なし） */}
+              {onArchiveGroup && (
+                <DropdownMenuItem onClick={onArchiveGroup}>
+                  <Archive className="mr-2 size-4" />
+                  {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
 

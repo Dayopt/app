@@ -74,3 +74,40 @@ export const AllColorsDot: Story = {
     </div>
   ),
 };
+
+/**
+ * 未分類（タグ自体が存在しない）: `isUncategorized` で中立表示（bg-muted circle + Minus）。
+ * icon/color を渡しても無視される。Review の TimePLTagMarker と同じ視覚言語。
+ */
+export const Uncategorized: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-4">
+      <TagIcon icon={null} color={null} size="sm" isUncategorized />
+      <TagIcon icon={null} color={null} size="md" isUncategorized />
+      <TagIcon icon={null} color={null} size="lg" isUncategorized />
+    </div>
+  ),
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <TagIcon icon="briefcase" color="blue" size="sm" />
+        <TagIcon icon="briefcase" color="blue" size="md" />
+        <TagIcon icon="briefcase" color="blue" size="lg" />
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <TagIcon icon={null} color="blue" size="sm" />
+        <TagIcon icon={null} color="blue" size="md" />
+        <TagIcon icon={null} color="blue" size="lg" />
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <TagIcon icon={null} color={null} size="sm" isUncategorized />
+        <TagIcon icon={null} color={null} size="md" isUncategorized />
+        <TagIcon icon={null} color={null} size="lg" isUncategorized />
+      </div>
+    </div>
+  ),
+};

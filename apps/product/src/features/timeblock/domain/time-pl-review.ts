@@ -3,13 +3,16 @@ import { computePlanAccuracy, computePlanVariance, type PlanAccuracyStatus } fro
 import { aggregateTimePLTags } from './time-pl-tag-aggregation';
 
 export interface TimePLReviewSourceRow {
-  tagId: string;
+  /** 未分類（タグ削除で `tag_id = NULL` になった行）は null */
+  tagId: string | null;
   startAt: string;
   endAt: string;
 }
 
 export interface TimePLReviewTag {
-  tagId: string;
+  /** 未分類バケットは null。`isUncategorized` と常に一致する */
+  tagId: string | null;
+  isUncategorized: boolean;
   plannedMinutes: number;
   recordedMinutes: number;
   varianceMinutes: number;
@@ -24,7 +27,8 @@ export type TimePLReviewSignal =
     }
   | {
       code: 'largest_tag_variance';
-      tagId: string;
+      tagId: string | null;
+      isUncategorized: boolean;
       direction: 'recorded_less_than_planned' | 'recorded_more_than_planned';
       absoluteMinutes: number;
     };
@@ -44,7 +48,12 @@ export interface TimePLReview {
   signals: TimePLReviewSignal[];
 }
 
-/** 最小Plan / Record行から、tag別の決定論的なTime P/L reviewを導出する。 */
+/**
+ * 最小Plan / Record行から、tag別の決定論的なTime P/L reviewを導出する。
+ *
+ * `tagId` が null の行は単一の未分類バケット（`tagId: null` /
+ * `isUncategorized: true`）として集計に含める（#1576）。
+ */
 export function deriveTimePLReview(
   plans: ReadonlyArray<TimePLReviewSourceRow>,
   records: ReadonlyArray<TimePLReviewSourceRow>,
@@ -58,6 +67,7 @@ export function deriveTimePLReview(
       );
       return {
         tagId: totals.tagId,
+        isUncategorized: totals.tagId == null,
         plannedMinutes: totals.plannedMinutes,
         recordedMinutes: totals.recordedMinutes,
         varianceMinutes: roundToTenth(variance.varianceMinutes),
@@ -111,6 +121,7 @@ export function deriveTimePLReview(
     signals.push({
       code: 'largest_tag_variance',
       tagId: largestVariance.tagId,
+      isUncategorized: largestVariance.isUncategorized,
       direction:
         largestVariance.varianceMinutes > 0
           ? 'recorded_less_than_planned'
@@ -143,8 +154,10 @@ function roundToFourDecimals(value: number): number {
   return Math.round(value * 10_000) / 10_000;
 }
 
-function compareIds(left: string, right: string): number {
-  if (left < right) return -1;
-  if (left > right) return 1;
-  return 0;
+/** tie-break専用の全順序。未分類（null）は同点時だけ末尾へ回す。 */
+function compareIds(left: string | null, right: string | null): number {
+  if (left === right) return 0;
+  if (left == null) return 1;
+  if (right == null) return -1;
+  return left < right ? -1 : 1;
 }

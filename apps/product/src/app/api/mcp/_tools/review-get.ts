@@ -12,12 +12,18 @@ import { MCP_REVIEW_GET_INPUT_SCHEMA, MCP_REVIEW_GET_OUTPUT_SCHEMA } from './rev
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
+/** 未分類（tagId null）は常に false。archivedTagIds が未解決（degrade）の時も false 固定。 */
+function resolveIsArchived(tagId: string | null, archivedTagIds: Set<string> | null): boolean {
+  if (tagId === null) return false;
+  return archivedTagIds?.has(tagId) ?? false;
+}
+
 export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'review.get',
     {
       title: 'Get Dayopt Plan and Record review',
-      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
+      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. Time on blocks with no tag is included as a single uncategorized row with tagId null and isUncategorized true, so totals cover every block in the period. Tag rows and the largest_tag_variance signal also carry isArchived, true only when that tagId can no longer be assigned to new Plans or Records; its past time still counts in these totals. isArchived safely defaults to false when archived status cannot be resolved. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_REVIEW_GET_INPUT_SCHEMA,
       outputSchema: MCP_REVIEW_GET_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },
@@ -37,7 +43,28 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
           scopes: ctx.scopes,
           signal: extra.signal,
         });
-        const result = await trpc.statistics.getMcpReview(input);
+
+        // アーカイブ済み判定は review 本体と切り離して失敗させる。read:tags scope が
+        // 無い接続や tags.listArchived 側の一時的な失敗で review.get 全体を落とさない。
+        // 失敗時は null (= 全行 isArchived false) に degrade する。誤判定の向きは常に
+        // 安全側（非archivedをarchivedと誤表示することはなく、archivedの見落としのみ）。
+        const resolveArchivedTagIds = async (): Promise<Set<string> | null> => {
+          try {
+            const archivedTags = await trpc.tags.listArchived();
+            return new Set(archivedTags.map((tag) => tag.id));
+          } catch (error) {
+            captureUnexpectedMcpToolError(error, 'review_get_archived_tags');
+            logger.warn(
+              'MCP review get could not resolve archived tags; isArchived defaults to false',
+            );
+            return null;
+          }
+        };
+
+        const [result, archivedTagIds] = await Promise.all([
+          trpc.statistics.getMcpReview(input),
+          resolveArchivedTagIds(),
+        ]);
 
         return createMcpToolSuccess({
           schemaVersion: MCP_TOOL_SCHEMA_VERSION,
@@ -70,6 +97,8 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
             : null,
           tags: result.tags.map((tag) => ({
             tagId: tag.tagId,
+            isUncategorized: tag.isUncategorized,
+            isArchived: resolveIsArchived(tag.tagId, archivedTagIds),
             plannedMinutes: tag.plannedMinutes,
             recordedMinutes: tag.recordedMinutes,
             varianceMinutes: tag.varianceMinutes,
@@ -85,6 +114,8 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
               : {
                   code: signal.code,
                   tagId: signal.tagId,
+                  isUncategorized: signal.isUncategorized,
+                  isArchived: resolveIsArchived(signal.tagId, archivedTagIds),
                   direction: signal.direction,
                   absoluteMinutes: signal.absoluteMinutes,
                 },

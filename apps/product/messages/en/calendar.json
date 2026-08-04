@@ -205,7 +205,6 @@
     "filter": {
       "type": "Type",
       "tags": "Tags",
-      "ungrouped": "Ungrouped",
       "untagged": "Untagged",
       "noTags": "Give your time a name with tags, and patterns will start to show. Create your first tag.",
       "comingSoon": "Coming soon",
@@ -245,20 +244,10 @@
       "tagMenu": "Tag menu",
       "expand": "Expand",
       "collapse": "Collapse",
-      "ungroupTags": "Ungroup",
-      "ungroupTagsFailed": "Failed to ungroup tags",
-      "ungroupTagsSuccess": "Ungrouped \"{name}\" ({count} tags)",
-      "ungroupConflict": {
-        "title": "Tags with the same name already exist",
-        "description": "\"{names}\" already exists. It will be merged with the existing tag."
-      },
-      "deleteGroup": {
-        "label": "Delete group",
-        "title": "Delete group \"{name}\"",
-        "description": "{count} tags will be deleted. Timeblocks themselves will not be deleted.",
-        "success": "Deleted group \"{name}\" ({count} tags)",
-        "failed": "Failed to delete group"
-      },
+      "archive": "Archive",
+      "archivedSection": "Archived",
+      "archivedLoadFailed": "Could not load archived tags",
+      "restore": "Restore",
       "createDialog": {
         "title": "Create a new tag",
         "name": "Tag name",
@@ -351,9 +340,7 @@
         "dayOfWeek": "By day of week",
         "dayOfWeekDesc": "Which days your time gathered on",
         "hourly": "By hour",
-        "hourlyDesc": "Which hours your time gathered in",
-        "currentPeriod": "This period",
-        "previousPeriod": "Previous period"
+        "hourlyDesc": "Which hours your time gathered in"
       },
       "daily": {
         "timelineDesc": "See where the day diverged from the plan",

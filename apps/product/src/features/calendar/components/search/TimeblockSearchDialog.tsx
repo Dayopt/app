@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LoaderCircle, SearchX } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { TagIcon, useTags } from '@/features/tags';
+import { TagIcon, useArchivedTags, useTags } from '@/features/tags';
 import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
@@ -186,7 +186,12 @@ export function TimeblockSearchContent({
                   ) : null}
                 </div>
                 <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
-                  {tag ? <TagIcon icon={tag.icon} color={tag.color} size="sm" /> : null}
+                  <TagIcon
+                    icon={tag?.icon ?? null}
+                    color={tag?.color ?? null}
+                    size="sm"
+                    isUncategorized={!tag}
+                  />
                   <span className="truncate">{displayName}</span>
                 </p>
                 {result.note ? (
@@ -251,12 +256,18 @@ export function TimeblockSearchDialog({
     meta: { persist: false },
   });
   const tagsQuery = useTags();
+  // 検索結果にアーカイブ済みタグのブロックも表示されるため、archived を含めて解決する
+  // （#1576: 含めないと検索結果のタグ名がすべて「タグなし」に落ちる）。
+  const archivedTagsQuery = useArchivedTags();
   const { data: tags } = tagsQuery;
+  const { data: archivedTags } = archivedTagsQuery;
 
-  const tagsById = useMemo(
-    () => new Map((tags ?? []).map((tag) => [tag.id, tag satisfies SearchTag])),
-    [tags],
-  );
+  const tagsById = useMemo(() => {
+    const map = new Map<string, SearchTag>();
+    (tags ?? []).forEach((tag) => map.set(tag.id, tag));
+    (archivedTags ?? []).forEach((tag) => map.set(tag.id, tag));
+    return map;
+  }, [tags, archivedTags]);
   const merged = useMemo(
     () =>
       mergeTimeblockSearchResults(
@@ -273,13 +284,15 @@ export function TimeblockSearchDialog({
       (plansQuery.isLoading ||
         recordsQuery.isLoading ||
         tagsQuery.isLoading ||
+        archivedTagsQuery.isLoading ||
         plansQuery.isFetching ||
         recordsQuery.isFetching ||
-        tagsQuery.isFetching));
+        tagsQuery.isFetching ||
+        archivedTagsQuery.isFetching));
   const isError =
     !isDebouncing &&
     hasDebouncedQuery &&
-    (plansQuery.isError || recordsQuery.isError || tagsQuery.isError);
+    (plansQuery.isError || recordsQuery.isError || tagsQuery.isError || archivedTagsQuery.isError);
 
   const resetSearch = useCallback(() => {
     cancelDebounce();
@@ -332,8 +345,13 @@ export function TimeblockSearchDialog({
   );
 
   const retry = useCallback(() => {
-    void Promise.all([plansQuery.refetch(), recordsQuery.refetch(), tagsQuery.refetch()]);
-  }, [plansQuery, recordsQuery, tagsQuery]);
+    void Promise.all([
+      plansQuery.refetch(),
+      recordsQuery.refetch(),
+      tagsQuery.refetch(),
+      archivedTagsQuery.refetch(),
+    ]);
+  }, [plansQuery, recordsQuery, tagsQuery, archivedTagsQuery]);
 
   const searchContent = (
     <TimeblockSearchContent

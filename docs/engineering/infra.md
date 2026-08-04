@@ -103,9 +103,11 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production build（domain 未割当の candidate）
         ↓
-      Production Release workflow（同一 SHA / smoke / audit）
+      Production Release workflow（影響判定 / smoke / audit）
         ↓
-      promote → Production domain
+      promote（affected な project のみ）→ Production domain
+        ↓
+      両 production domain の smoke
 ```
 
 Vercel の正規 deployment source は `Dayopt/dayopt` の GitHub 連携だけとする。
@@ -131,10 +133,18 @@ workflow は次を満たした時だけ promote する。
 `targets.production` は production target の**最新** deployment を指し、build 中でもその値になるため
 使えない（merge の 8 秒後、build 完了の 60 秒前に新 deployment を指すことを実測した）。
 
-- Product / Web の Production build が **同一 merge SHA** で両方 `READY`
+- **その merge の影響を受ける project**の Production build が対象 SHA で `READY`
 - 各 candidate の unique URL への read-only smoke が成功（Deployment Protection があるため
   Protection Bypass for Automation の secret が必須）
 - live な Vercel metadata に対する Production Config Audit が成功
+- promote 後、`dayopt.app` と `app.dayopt.app` の両方への smoke が成功
+
+**どの project を進めるかは project ごとに判定する。** 基準は「その project が今配信している
+deployment の source SHA」で、そこから対象 SHA までの `git diff` を Impact Resolver
+（`scripts/ci/impact.mjs`）に通す。web が 3 commit 遅れていても、判定は web の live SHA から見た
+差分で行う。判定不能（source SHA 不明 / 履歴が checkout に無い）は affected へ倒す
+（fail closed）。どの app にも影響しない merge では promote を行わず、`Production Release` status は
+**success**（`unaffected`）になる — production の artifact がその commit と等価だから、tag は打てる。
 
 smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
 candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
@@ -143,8 +153,25 @@ smoke と bypass secret の実働テストになる。**bypass secret を登録�
 失敗する**（Production は Auto-assign により更新され続けるので無傷。ただし `Production Release`
 status が failure になるため、その間は tag を打てない）。
 
+promote 後は **両 production domain** を smoke する。片側だけ進んだ production はその組み合わせが
+初めて世に出る状態で、実際に配信している domain の健全性は candidate 単体の smoke では出ないため。
+この smoke には bypass secret を送らない（production domain に Deployment Protection が付く設定事故
+そのものを捕まえる）。失敗した場合は **この run が promote した project だけ**を rollback する。
+promote していない側の失敗でも rollback する — cross-app 破損ではそれが唯一の復旧手段だから。
+
+**検出できるのは smoke check に載っている経路だけ**で、cross-app の破損一般ではない。web から
+product への唯一の入口である signup CTA（`app.dayopt.app/auth/signup`）は product の check に含めて
+あるが、それ以外のリンク切れは検出しない。Force Promote ではこの smoke も skip される（break-glass は
+gate を全て飛ばす）。
+
 promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
-片方だけ公開された状態は残さない。失敗時は Production domain が現行 SHA のまま維持される（fail-safe）。
+この run が promote していない project（前の run から対象 SHA を配信している側など）は戻し先を持たない
+ので rollback 対象にせず、run summary で名指しする。失敗時は Production domain が現行 SHA のまま
+維持される（fail-safe）。
+
+run の結果は `release-manifest` artifact（保持 90 日）に残る。project ごとの deployment ID・source SHA・
+判定理由が入っており、**project 間で live SHA が分かれた時に production の実態を読む一次情報**になる。
+run summary にも同じ JSON が出る。
 
 対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
 を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。
@@ -189,6 +216,30 @@ scope でこの 2 つを読む。environment secret へ移すと Production Conf
 [runbook](../operations/runbook.md) の Playbook 2 を正とする。
 
 Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) を参照する。
+
+### release の並行性モデル
+
+策定日: 2026-08-05（PR #1820 のレビュー 30 ラウンド超を受けて保証境界を確定）
+
+release script は Vercel API への read-modify-write で、API にトランザクションは無い。「読んでから書くまでに状態が変わる」窓（TOCTOU）は原理的にゼロにできないため、窓を潰し続けるのではなく **single-writer 前提 + fail-safe** で守る。
+
+前提（運用で守る）:
+
+- **書き手は同時に 1 つ。** CI は `release.yml` の `concurrency: production-release`（cancel なし）で直列化される
+- **release run の実行中に、人手で Vercel の promote / rollback / alias 操作をしない。** 緊急時も run の完了（または cancel の完了）を待ってから [runbook](../operations/runbook.md) Playbook 2 に従う
+
+script が保証すること（コードで守る）:
+
+- **自分が知らない deployment を上書きしない。** live が「この run の candidate」でも「記録済みの previous」でもなければ `moved-externally` として触らずに fail する。alias 未割当（live なし）も「他者が意図的に外した」として同じ扱いにする
+- **読めない状態では書かない。** live の読み取りに失敗したら rollback せず、人の確認へ回す（fail closed）
+- **観測した外部変更は manifest に載せる。** 分類は単一の観測 map（`observedLive`）から導く
+
+保証しないこと:
+
+- **外部変更の検出の完全性。** 最後の read と write / return の間に起きた変更は検出できない。再読み込みを何回足してもこの窓は消えず 1 段深くなるだけなので、検出のための再読み込みはこれ以上追加しない
+- **manifest の最終正確性。** manifest はベストエフォートの観測記録であって production の正ではない。実態は常に Vercel Dashboard を正とする
+
+この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../.claude/rules/workflow.md#レビュー指摘の必須解決) を参照。
 
 ### トラブルシューティング
 
@@ -235,9 +286,19 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 | `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
+- **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
+  `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
+  affected な project の context だけを success 必須にする。unaffected な project の context
+  欠落は正常。変更ファイル一覧の取得失敗・未知 path・判定不能は両方必須へ倒す（fail closed）。
+  判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
-- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。設定しない
+- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。**現時点では設定しない**。
+  merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
+  Impact Resolver を呼ぶ形に限って解禁する
+- **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
+  GraphQL `reviewThreads` の `isResolved` を数え、取得失敗・100 件超も停止に倒す。
+  解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
@@ -997,7 +1058,7 @@ npm run log:type            # 型別コミット一覧（最新20件）
 
 コミット時に以下が自動で実行される:
 
-1. **lint-staged**: ステージされた `.ts/.tsx` に prettier + eslint
+1. **lint-staged**: ステージされた `.ts/.tsx/.js/.jsx/.mjs/.cjs` に prettier（app 配下なら eslint も）、`.json/.md/.yml/.yaml/.css/.mdx` に prettier
 2. **typecheck**: `.ts/.tsx` ファイルが含まれる場合のみ `tsc --noEmit`
 3. **license:check**: `package.json` 変更時のみライセンスチェック
 

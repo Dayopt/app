@@ -109,6 +109,8 @@ export async function fetchTagsById(
   supabase: ServiceSupabaseClient,
   userId: string,
 ): Promise<Map<string, TagLookupRow>> {
+  // is_active / archived_at では絞らない。過去の Plan / Record はアーカイブ済み
+  // タグを参照し続けるため、統計・過去表示では元の名前・色を解決する必要がある（#1576）
   const { data, error } = await supabase
     .from('tags')
     .select('id, name, color, icon')

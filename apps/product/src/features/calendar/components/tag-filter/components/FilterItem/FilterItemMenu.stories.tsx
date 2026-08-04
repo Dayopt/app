@@ -10,13 +10,14 @@ import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
  *
  * 親（タグが所属するグループ）の有無で表示項目が変わる:
  *
- * | 文脈                | 名前変更 | 色変更 | アイコン | グループ変更 | マージ | 表示のみ | 統計 | 削除 |
- * | ------------------- | :------: | :----: | :------: | :----------: | :----: | :------: | :--: | :--: |
- * | 独立タグ            |    ○     |   ○    |    ○     |      ○       |   ○    |    ○     |  ○   |  ○   |
- * | グループ内タグ(子)  |    ○     |   ×    |    ○     |      ○       |   ○    |    ○     |  ○   |  ○   |
- * | モバイル(簡略)      |    ×     |   ×    |    ×     |      ×       |   ×    |    ○     |  ×   |  ○   |
+ * | 文脈                | 名前変更 | 色変更 | アイコン | グループ変更 | マージ | 表示のみ | 統計 | アーカイブ | 削除 |
+ * | ------------------- | :------: | :----: | :------: | :----------: | :----: | :------: | :--: | :--------: | :--: |
+ * | 独立タグ            |    ○     |   ○    |    ○     |      ○       |   ○    |    ○     |  ○   |     ○      |  ○   |
+ * | グループ内タグ(子)  |    ○     |   ×    |    ○     |      ○       |   ○    |    ○     |  ○   |     ○      |  ○   |
+ * | モバイル(簡略)      |    ×     |   ×    |    ×     |      ×       |   ×    |    ○     |  ×   |     ○      |  ○   |
  *
  * 色変更はグループ単位で統一するため、グループ内タグでは非表示。
+ * アーカイブはこのメニューが唯一の UI 呼び出し元のため、モバイルでも省略しない（#1576）。
  */
 const meta = {
   title: 'Product/Features/Tags/FilterItemMenu',
@@ -108,15 +109,18 @@ export const GroupedTag: Story = {
 };
 
 /**
- * モバイル簡略版。管理系は設定画面に委譲し、「このタグだけ表示」+「削除」のみ。
+ * モバイル簡略版。管理系は設定画面に委譲し、「このタグだけ表示」+「アーカイブ」+「削除」のみ。
+ * アーカイブはこのメニューが唯一の呼び出し元のため、モバイルでも省略しない（#1576）。
  */
 export const Mobile: Story = {
   args: {
     isMobile: true,
+    onArchiveTag: fn(),
   },
   play: async () => {
     const body = within(document.body);
     await expect(body.getByText('このタグだけ表示')).toBeInTheDocument();
+    await expect(body.getByText('アーカイブ')).toBeInTheDocument();
     await expect(body.getByText('削除')).toBeInTheDocument();
     await expect(body.queryByText('名前を変更')).not.toBeInTheDocument();
   },
@@ -225,6 +229,7 @@ export const Comparison: Story = {
             onColorChange={fn()}
             onOpenMergeModal={fn()}
             onShowOnlyTag={fn()}
+            onArchiveTag={fn()}
             onDeleteTag={fn()}
           />
         </DropdownMenu>

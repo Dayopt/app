@@ -24,7 +24,7 @@ export class TagReorderService {
     const tagIds = updates.map((update) => update.id);
     const { data: existingTags, error: fetchError } = await this.supabase
       .from('tags')
-      .select('id,parent_id')
+      .select('id,parent_id,archived_at')
       .eq('user_id', userId)
       .in('id', tagIds);
     if (fetchError) {
@@ -43,15 +43,36 @@ export class TagReorderService {
     }
 
     const currentById = new Map(existingTags?.map((tag) => [tag.id, tag.parent_id ?? null]) ?? []);
+    // アーカイブ判定は tag-mutation-service.ts の update()（archived 親への move 拒否）・
+    // tag-merge-service.ts の merge()（archived target への merge 拒否）と同じ「TS 側で
+    // 早期検証し、意味のある TagServiceError code を返す」方針を踏襲する。batch_reorder_
+    // tags_hierarchy RPC（PL/pgSQL）は凍結資産のため検証を追加しない（architecture.md）。
+    // RPC 内で検証しても TOCTOU 自体は解消できない一方、既存ガードと検証層を揃えることで
+    // 挙動の一貫性を優先する。
+    //
+    // 別タブでアーカイブされた後に古い drag payload が届くと、(a) アーカイブ済みタグ自身の
+    // 並び替え、(b) アクティブなタグがアーカイブ済み親の子になる、の 2 通りで階層が壊れる
+    // ため、reorder 対象タグ自身と親候補の両方を検証する。
+    const archivedById = new Map(
+      existingTags?.map((tag) => [tag.id, Boolean(tag.archived_at)]) ?? [],
+    );
     for (const update of updates) {
       if (update.parent_id === update.id) {
         throw new TagServiceError('INVALID_INPUT', 'A tag cannot be its own parent');
       }
-      if (update.parent_id && currentById.get(update.parent_id) !== null) {
-        throw new TagServiceError(
-          'INVALID_INPUT',
-          'Maximum nesting depth is 1 level. Parent tag cannot be a child of another tag.',
-        );
+      if (archivedById.get(update.id)) {
+        throw new TagServiceError('TAG_ARCHIVED', 'Cannot reorder an archived tag');
+      }
+      if (update.parent_id) {
+        if (currentById.get(update.parent_id) !== null) {
+          throw new TagServiceError(
+            'INVALID_INPUT',
+            'Maximum nesting depth is 1 level. Parent tag cannot be a child of another tag.',
+          );
+        }
+        if (archivedById.get(update.parent_id)) {
+          throw new TagServiceError('TAG_ARCHIVED', 'Cannot move a tag under an archived tag');
+        }
       }
     }
 

@@ -86,6 +86,64 @@ describe('TagService', () => {
       expect(result.targetTag).toMatchObject(targetTag);
     });
 
+    it('should throw TAG_ARCHIVED when target tag is archived', async () => {
+      const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
+      const targetTag = {
+        id: 'tgt',
+        name: 'Target',
+        user_id: userId,
+        parent_id: null,
+        archived_at: '2026-08-01T00:00:00.000Z',
+      };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 0,
+      });
+
+      await expect(
+        service.merge({ userId, sourceTagId: 'src', targetTagId: 'tgt' }),
+      ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
+
+      // RPC は呼ばれない（早期 throw）
+      expect(adminRpc).not.toHaveBeenCalled();
+    });
+
+    it('should allow merging an archived source into an active target', async () => {
+      const sourceTag = {
+        id: 'src',
+        name: 'Source',
+        user_id: userId,
+        parent_id: null,
+        archived_at: '2026-08-01T00:00:00.000Z',
+      };
+      const targetTag = { id: 'tgt', name: 'Target', user_id: userId, parent_id: null };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 0,
+      });
+      adminRpc.mockResolvedValueOnce({
+        data: { migrated: 2, children_reparented: 0 },
+        error: null,
+      });
+
+      const result = await service.merge({
+        userId,
+        sourceTagId: 'src',
+        targetTagId: 'tgt',
+      });
+
+      expect(result.success).toBe(true);
+      expect(adminRpc).toHaveBeenCalledWith('merge_tags_with_hierarchy', {
+        p_user_id: userId,
+        p_source_tag_id: 'src',
+        p_target_tag_id: 'tgt',
+      });
+    });
+
     it('should throw INVALID_INPUT when source has children and target is a child', async () => {
       const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
       // target.parent_id !== null = target は child タグ

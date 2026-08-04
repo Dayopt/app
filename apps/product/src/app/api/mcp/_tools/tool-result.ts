@@ -2,7 +2,14 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import { serializeUntrustedMcpData } from './untrusted-data-serialization';
 
-export const MCP_TOOL_SCHEMA_VERSION = 1 as const;
+// v2 (#1576): review.get の破壊的契約変更（tagId nullable 化、isUncategorized /
+// isArchived の必須field追加、basis.rowFilter literal の active_tagged_start_in_period
+// → active_start_in_period 変更）を機械可読に伝えるための bump。読み取り系 tool の
+// 出力封筒にのみ使う。mutation receipt (plans.create 等) の schemaVersion は DB
+// (mcp_mutation_receipts.envelope_version) に永続化された別系統の値のため、
+// MCP_MUTATION_RECEIPT_SCHEMA_VERSION（features/timeblock/server/mcp-mutation-contract.ts）
+// を使う。混同すると SDK の outputSchema 検証が実際の DB 値と食い違って壊れる。
+export const MCP_TOOL_SCHEMA_VERSION = 2 as const;
 
 /**
  * 成功結果の legacy text は必ず untrusted data として枠付けする。

@@ -117,7 +117,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "happy-dom": "^20.11.0",
     "license-checker": "^25.0.1",
-    "postcss": "^8.5.20",
+    "postcss": "^8.5.23",
     "prettier": "^3.9.5",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",

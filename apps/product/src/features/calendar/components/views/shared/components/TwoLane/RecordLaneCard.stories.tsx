@@ -115,7 +115,11 @@ export const Unplanned: Story = {
   ),
 };
 
-/** タグ未設定。title は表示へフォールバックしない。 */
+/**
+ * タグ未設定（未分類）。title は表示へフォールバックしない。
+ * 実際のカレンダーは tagName=null と同時に tagColor/tagIcon も null になるため、
+ * ここでも両方 null にして中立表示（背景・アイコンとも中立）を確認する。
+ */
 export const NoTag: Story = {
   render: () => (
     <Slot>
@@ -123,7 +127,6 @@ export const NoTag: Story = {
         event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
         tagName={null}
-        tagColor="gray"
       />
     </Slot>
   ),

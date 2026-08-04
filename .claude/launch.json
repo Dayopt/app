@@ -8,6 +8,12 @@
       "port": 6006
     },
     {
+      "name": "storybook-worktree",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@dayopt/storybook", "exec", "storybook", "dev", "-p", "6007"],
+      "port": 6007
+    },
+    {
       "name": "web",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@dayopt/web", "dev", "--port", "3100"],

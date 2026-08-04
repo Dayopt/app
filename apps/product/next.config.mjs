@@ -236,7 +236,6 @@ const nextConfig = {
       // ユーティリティ
       'date-fns',
       'motion',
-      'recharts',
       'clsx',
       'class-variance-authority',
     ],

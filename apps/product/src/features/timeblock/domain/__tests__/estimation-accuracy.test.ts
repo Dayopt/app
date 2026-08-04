@@ -14,6 +14,7 @@ function makeRow(overrides: Partial<EstimationAccuracyDbRow> = {}): EstimationAc
     tag_id: 'tag-1',
     tag_name: 'Deep Work',
     tag_color: 'blue',
+    is_uncategorized: false,
     avg_planned_minutes: 60,
     avg_actual_minutes: 75,
     avg_deviation_minutes: 15,
@@ -33,6 +34,23 @@ describe('transformEstimationAccuracy', () => {
       tagId: 'tag-1',
       tagName: 'Deep Work',
       tagColor: 'blue',
+      isUncategorized: false,
+      avgPlannedMinutes: 60,
+      avgActualMinutes: 75,
+      avgDeviationMinutes: 15,
+      recordCount: 10,
+    });
+  });
+
+  it('is_uncategorized な row は tagColor を null のまま返す（空文字フォールバックを適用しない）', () => {
+    const result = transformEstimationAccuracy([
+      makeRow({ tag_id: null, tag_name: null, tag_color: null, is_uncategorized: true }),
+    ]);
+    expect(result[0]).toEqual({
+      tagId: null,
+      tagName: null,
+      tagColor: null,
+      isUncategorized: true,
       avgPlannedMinutes: 60,
       avgActualMinutes: 75,
       avgDeviationMinutes: 15,
@@ -107,6 +125,7 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
         tag_id: 'tag-1',
         tag_name: 'Deep Work',
         tag_color: 'blue',
+        is_uncategorized: false,
         avg_planned_minutes: 45,
         avg_actual_minutes: 55,
         avg_deviation_minutes: 20,
@@ -154,22 +173,94 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
     expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
   });
 
-  it('tag_id が null の plan は無視する', () => {
-    const plans = [makePlan({ id: 'p1', tag_id: null }), makePlan({ id: 'p2' })];
-    const records = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
+  it('tag_id が null の plan は未分類バケットへ集計する（#1576: タグ削除時の未分類化を見積もり精度からも除外しない）', () => {
+    const plans = [
+      makePlan({ id: 'p1', tag_id: null, planned_minutes: 30 }),
+      makePlan({ id: 'p2', tag_id: null, planned_minutes: 50 }),
+    ];
+    const records = [
+      makeRecord({ plan_id: 'p1', minutes: 40 }),
+      makeRecord({ plan_id: 'p2', minutes: 60 }),
+    ];
 
-    // tag_id null の p1 を除くと tag-1 は 1 件のみ → HAVING で除外
-    expect(aggregatePlanRecordEstimationAccuracy(plans, records, TAGS)).toEqual([]);
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
+
+    expect(result).toEqual([
+      {
+        tag_id: null,
+        tag_name: null,
+        tag_color: null,
+        is_uncategorized: true,
+        avg_planned_minutes: 40,
+        avg_actual_minutes: 50,
+        avg_deviation_minutes: 10,
+        record_count: 2,
+      },
+    ]);
   });
 
-  it('未知の tagId は空文字にフォールバックする', () => {
+  it('tag_id はあるが tagsById に存在しない（削除済みタグ参照）は未分類バケットへ畳む（Time P/L の buildTagPL と同じ扱い）', () => {
     const plans = [
-      makePlan({ id: 'p1', tag_id: 'unknown' }),
-      makePlan({ id: 'p2', tag_id: 'unknown' }),
+      makePlan({ id: 'p1', tag_id: 'deleted-tag-id' }),
+      makePlan({ id: 'p2', tag_id: 'deleted-tag-id' }),
     ];
     const records = [makeRecord({ plan_id: 'p1' }), makeRecord({ plan_id: 'p2' })];
 
     const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
-    expect(result[0]).toMatchObject({ tag_id: 'unknown', tag_name: '', tag_color: '' });
+    expect(result[0]).toMatchObject({
+      tag_id: null,
+      tag_name: null,
+      tag_color: null,
+      is_uncategorized: true,
+    });
+  });
+
+  it('tag_id null と異なる削除済みタグ参照はすべて同じ未分類バケットへ合流する', () => {
+    const plans = [
+      makePlan({ id: 'p1', tag_id: null }),
+      makePlan({ id: 'p2', tag_id: 'deleted-a' }),
+      makePlan({ id: 'p3', tag_id: 'deleted-b' }),
+    ];
+    const records = [
+      makeRecord({ plan_id: 'p1' }),
+      makeRecord({ plan_id: 'p2' }),
+      makeRecord({ plan_id: 'p3' }),
+    ];
+
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ tag_id: null, is_uncategorized: true, record_count: 3 });
+  });
+
+  it('タグ付き plan と未分類 plan が混在する場合、それぞれ別バケットとして独立に集計する', () => {
+    const plans = [
+      makePlan({ id: 'p1', tag_id: 'tag-1' }),
+      makePlan({ id: 'p2', tag_id: 'tag-1' }),
+      makePlan({ id: 'p3', tag_id: null }),
+      makePlan({ id: 'p4', tag_id: null }),
+    ];
+    const records = [
+      makeRecord({ plan_id: 'p1' }),
+      makeRecord({ plan_id: 'p2' }),
+      makeRecord({ plan_id: 'p3' }),
+      makeRecord({ plan_id: 'p4' }),
+    ];
+
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, TAGS);
+
+    expect(result).toHaveLength(2);
+    const tagged = result.find((row) => row.tag_id === 'tag-1');
+    const uncategorized = result.find((row) => row.tag_id === null);
+    expect(tagged).toMatchObject({
+      tag_name: 'Deep Work',
+      is_uncategorized: false,
+      record_count: 2,
+    });
+    expect(uncategorized).toMatchObject({
+      tag_name: null,
+      is_uncategorized: true,
+      record_count: 2,
+    });
   });
 });

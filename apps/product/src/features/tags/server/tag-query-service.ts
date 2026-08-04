@@ -17,6 +17,7 @@ function transformDbTag(dbTag: DbTagRow): Tag {
     color: dbTag.color,
     icon: dbTag.icon,
     is_active: dbTag.is_active,
+    archived_at: dbTag.archived_at,
     parent_id: dbTag.parent_id ?? null,
     sort_order: dbTag.sort_order,
     created_at: dbTag.created_at,
@@ -32,7 +33,8 @@ export class TagQueryService {
       .from('tags')
       .select('*')
       .eq('user_id', userId)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .is('archived_at', null);
     if (error) {
       const original = captureUnexpectedDatabaseError(error, {
         feature: 'tags',
@@ -56,6 +58,7 @@ export class TagQueryService {
       .select('*')
       .eq('user_id', options.userId)
       .eq('is_active', true)
+      .is('archived_at', null)
       .order(options.sortField, {
         ascending: (options.sortOrder ?? 'asc') === 'asc',
         nullsFirst: false,
@@ -67,6 +70,31 @@ export class TagQueryService {
         operation: 'list_tags',
       });
       throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tags', { cause: original });
+    }
+    return data.map(transformDbTag);
+  }
+
+  /**
+   * アーカイブ済みタグの一覧（新しくアーカイブした順）
+   *
+   * `is_active = false`（マージ済みの墓標）は含めない。
+   */
+  async listArchived(userId: string): Promise<Tag[]> {
+    const { data, error } = await this.supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false });
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'tags',
+        operation: 'list_archived_tags',
+      });
+      throw new TagServiceError('FETCH_FAILED', 'Failed to fetch archived tags', {
+        cause: original,
+      });
     }
     return data.map(transformDbTag);
   }

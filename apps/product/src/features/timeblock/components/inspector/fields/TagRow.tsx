@@ -54,7 +54,7 @@ interface TagRowProps {
 
 /** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
 export function TagRow({
-  tagId: _tagId,
+  tagId,
   tagName,
   tagColorClasses: colorClasses,
   tagIcon,
@@ -103,6 +103,7 @@ export function TagRow({
             color={tagColor ?? colorClasses?.cssVar}
             size="md"
             className="flex-shrink-0"
+            isUncategorized={tagId === null}
           />
           <span className="text-foreground truncate">{tagName}</span>
           <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />

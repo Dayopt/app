@@ -113,6 +113,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
         parent_id: input.parentId ?? null,
         sort_order: 0,
         is_active: true,
+        archived_at: null,
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -268,6 +269,9 @@ export function useDeleteTag() {
     onSettled: (_data, _err, input) => {
       void utils.tags.list.invalidate();
       void utils.tags.listHierarchy.invalidate();
+      // アーカイブ済み一覧から削除した場合も対象。invalidate しないと staleTime 5分の間
+      // 削除済みタグが一覧に残り、再クリックで not-found になる（#1576）。
+      void utils.tags.listArchived.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.plans.list.invalidate();
       void utils.records.list.invalidate();

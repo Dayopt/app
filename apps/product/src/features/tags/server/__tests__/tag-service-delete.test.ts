@@ -1,7 +1,8 @@
 /**
- * Tag Service Unit Tests — 削除（delete / strategy 付き delete）
+ * Tag Service Unit Tests — 削除
  *
- * TagServiceのビジネスロジックをモックを使用してテスト
+ * タグ削除はタグ行の DELETE のみ行い、関連 Plan / Record には触れない
+ * （FK ON DELETE SET NULL による未分類化が契約。#1576）
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,7 +19,6 @@ vi.mock('@/lib/supabase/oauth', () => ({
 import { createTagService, TagService, TagServiceError } from '../tag-service';
 import {
   mockArrayResponse,
-  mockCountResponse,
   mockSingleResponse,
   setupMockDeleteQuery,
   setupMockSingleQuery,
@@ -59,87 +59,38 @@ describe('TagService', () => {
         TagServiceError,
       );
     });
-  });
 
-  describe('delete (with strategy)', () => {
-    const existingTag = { id: 'tag-1', name: 'To Delete', user_id: userId, parent_id: null };
+    it('should not touch plans / records（FK の SET NULL に任せる）', async () => {
+      setupMockDeleteQuery(mockSupabase.from, existingTag);
 
-    it('should throw INVALID_INPUT when tag has entries and no strategy is given', async () => {
-      // 1: getById(tagId) → existingTag
-      // 2: select children → []
-      // 3: select entries count → 3
-      mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
-        .mockReturnValueOnce(mockCountResponse(3));
+      await service.delete({ userId, tagId: 'tag-1' });
 
-      await expect(service.delete({ userId, tagId: 'tag-1' })).rejects.toMatchObject({
-        code: 'INVALID_INPUT',
-      });
+      // service role client（plans / records の書き換え経路）が呼ばれないこと
+      expect(adminFrom).not.toHaveBeenCalled();
+      expect(adminRpc).not.toHaveBeenCalled();
     });
 
-    it('should throw INVALID_INPUT when reassign strategy lacks targetTagId', async () => {
-      mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]));
+    it('should promote active children to root before deleting parent', async () => {
+      const parentTag = { id: 'parent-1', name: 'Parent', user_id: userId, parent_id: null };
+      const children = [{ id: 'child-1' }, { id: 'child-2' }];
 
-      await expect(
-        service.delete({ userId, tagId: 'tag-1', strategy: 'reassign' }),
-      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
-    });
-
-    it('reassign strategy: should update plans / records tag_id', async () => {
-      const targetTag = { id: 'tag-2', name: 'Target', user_id: userId, parent_id: null };
-
-      // 1: getById(tagId)
-      // 2: select children
-      // 3: getById(targetTagId)
-      const updateMock = createChainableMock(null);
-      const deleteMock = createChainableMock(null);
-      adminFrom.mockReturnValue(updateMock);
-
-      mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
-        .mockReturnValueOnce(mockSingleResponse(targetTag))
-        .mockReturnValueOnce(deleteMock);
-
-      const result = await service.delete({
-        userId,
-        tagId: 'tag-1',
-        strategy: 'reassign',
-        targetTagId: 'tag-2',
-      });
-
-      expect(updateMock.update).toHaveBeenCalledWith({ tag_id: 'tag-2' });
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'records']);
-      expect(deleteMock.delete).toHaveBeenCalled();
-      expect(result).toMatchObject(existingTag);
-    });
-
-    it('delete_blocks strategy: should delete records / plans before deleting the tag', async () => {
-      const planLookupMock = createChainableMock([]);
-      const dataDeleteMock = createChainableMock(null);
+      const childUpdateMock = createChainableMock(null);
       const tagDeleteMock = createChainableMock(null);
-      adminFrom
-        .mockReturnValueOnce(planLookupMock)
-        .mockReturnValueOnce(dataDeleteMock)
-        .mockReturnValueOnce(dataDeleteMock)
-        .mockReturnValueOnce(dataDeleteMock);
 
+      // 1: getById → parent, 2: children select, 3: getNextSortOrder(sibling select),
+      // 4-5: child updates, 6: tag delete
       mockSupabase.from
-        .mockReturnValueOnce(mockSingleResponse(existingTag))
-        .mockReturnValueOnce(mockArrayResponse([]))
+        .mockReturnValueOnce(mockSingleResponse(parentTag))
+        .mockReturnValueOnce(mockArrayResponse(children))
+        .mockReturnValueOnce(mockArrayResponse([{ sort_order: 4 }]))
+        .mockReturnValueOnce(childUpdateMock)
+        .mockReturnValueOnce(childUpdateMock)
         .mockReturnValueOnce(tagDeleteMock);
 
-      await service.delete({
-        userId,
-        tagId: 'tag-1',
-        strategy: 'delete_blocks',
-      });
+      await service.delete({ userId, tagId: 'parent-1' });
 
-      expect(adminFrom.mock.calls.map(([table]) => table)).toEqual(['plans', 'records', 'plans']);
-      expect(dataDeleteMock.delete).toHaveBeenCalled();
+      expect(childUpdateMock.update).toHaveBeenCalledWith({ parent_id: null, sort_order: 5 });
+      expect(childUpdateMock.update).toHaveBeenCalledWith({ parent_id: null, sort_order: 6 });
       expect(tagDeleteMock.delete).toHaveBeenCalled();
     });
   });

@@ -84,6 +84,10 @@ export function PlanLaneCard({
   const t = useTranslations();
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const borderClass = colorClasses?.border ?? 'border-border';
+  // tagName は「タグが実在するか」の source of truth（Tag.name は非nullのため、
+  // 実在すれば必ず文字列になる）。tagColor/tagIcon の null 判定は、既存タグの
+  // color=null（DB上は許容）と区別できないため使わない。
+  const isUncategorized = tagName === null;
   const displayName = tagName ?? t('common.tags.noTag');
 
   const isSkipped = event.status === 'skipped';
@@ -154,7 +158,13 @@ export function PlanLaneCard({
       }
     >
       <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-        <TagIcon icon={tagIcon} color={tagColor ?? undefined} size="sm" className="shrink-0" />
+        <TagIcon
+          icon={tagIcon}
+          color={tagColor ?? undefined}
+          size="sm"
+          className="shrink-0"
+          isUncategorized={isUncategorized}
+        />
         <span className="truncate">{displayName}</span>
       </p>
       {showDetails && (
