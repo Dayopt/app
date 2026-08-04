@@ -734,23 +734,24 @@ export function buildManifest({
       const restored = rolled
         ? { id: entry.previous?.id ?? null, sha: entry.previous?.sha ?? null }
         : null;
-      // この run の promote 後に他者が別 deployment を live にした分。rollback せず
-      // 残しているので、我々の candidate ではなく観測した live を載せる。
-      const moved = entry && !rolled ? (movedAway.get(project.name) ?? null) : null;
+      // **この run が置いたのではない deployment が live** と観測された分。待機中の
+      // 外部 promote でも、我々の promote 後の hotfix でも入る。実際に配信している
+      // ものを載せるのが目的なので、他のどの推定よりも優先する。
+      const moved = rolled ? null : (movedAway.get(project.name) ?? null);
       // 外部 actor が先に promote した分。この run は動かしていないが live ではある。
       const external = entry ? null : (externallyLive.get(project.name) ?? null);
 
-      const action = entry
-        ? rolled
-          ? 'rolled-back'
-          : moved
-            ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+      const action = moved
+        ? 'moved-externally' // 他者の deployment が live。**戻す対象ではない**
+        : entry
+          ? rolled
+            ? 'rolled-back'
             : 'promoted'
-        : external || live?.sha === sha
-          ? 'already-serving'
-          : decision?.affected
-            ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
-            : 'skipped';
+          : external || live?.sha === sha
+            ? 'already-serving'
+            : decision?.affected
+              ? 'pending' // affected だが promote へ到達しなかった（先行 gate で停止）
+              : 'skipped';
 
       return {
         name: project.name,
@@ -1121,6 +1122,18 @@ export async function runProductionRelease({
         );
       })
       .join('; ');
+
+    // 観測した実 deployment を manifest へ載せる。run 開始時点の値のままだと
+    // 「未着手（pending）」に見え、復旧手順が実際の live を取り違える。
+    for (const { project } of movedElsewhere) {
+      const now = current.get(project.name);
+      if (now) movedAway.set(project.name, { id: now.id, sha: now.sha });
+    }
+
+    // 外部の promote は auto-assign を true へ戻す（vercel/vercel#15095）。
+    // ここで掃かずに抜けると、次の main merge が gate を通らず直接公開される。
+    reportSweepDrift(await sweepSettings());
+
     throw Object.assign(
       new ReleaseError(
         `Production moved while waiting for candidates; refusing to promote over it (${detail})`,

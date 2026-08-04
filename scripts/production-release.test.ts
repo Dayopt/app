@@ -696,10 +696,24 @@ describe('runProductionRelease', () => {
       webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
     });
 
-    await expect(release({ fetchImpl: world.fetchImpl })).rejects.toThrow(
-      /Production moved while waiting/,
+    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
     );
+
+    expect(error.message).toMatch(/Production moved while waiting/);
     expect(world.promoted()).toEqual([]);
+    // 外部 promote は auto-assign を true へ戻す。ここで掃かずに抜けると次の
+    // main merge が gate を通らず直接公開される。
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+    expect(world.autoAssign).toEqual({ web: false, product: false });
+    // 復旧手順は manifest を一次情報にする。run 開始時点の値では live を取り違える。
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'web',
+        action: 'moved-externally',
+        deploymentId: 'dpl_web_hotfix',
+      }),
+    );
   });
 
   it('still checks the setting when both projects already serve the SHA', async () => {
