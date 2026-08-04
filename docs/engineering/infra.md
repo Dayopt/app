@@ -1009,7 +1009,7 @@ npm run log:type            # 型別コミット一覧（最新20件）
 
 コミット時に以下が自動で実行される:
 
-1. **lint-staged**: ステージされた `.ts/.tsx` に prettier + eslint
+1. **lint-staged**: ステージされた `.ts/.tsx/.js/.jsx/.mjs/.cjs` に prettier（app 配下なら eslint も）、`.json/.md/.yml/.yaml/.css/.mdx` に prettier
 2. **typecheck**: `.ts/.tsx` ファイルが含まれる場合のみ `tsc --noEmit`
 3. **license:check**: `package.json` 変更時のみライセンスチェック
 
