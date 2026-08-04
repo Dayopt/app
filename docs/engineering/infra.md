@@ -667,11 +667,11 @@ src/app/
 
 ### providers / shell / overlays
 
-| Path                                 | 責務                                                                          |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| `(app)/_providers/Providers.tsx`     | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層 |
-| `(app)/_shell/base-layout.tsx`       | sidebar + header + main の UI shell                                           |
-| `(app)/_overlays/GlobalOverlays.tsx` | ContactDialog / SettingsDialog / TimeblockInspector / Toasterを集約マウント   |
+| Path                                 | 責務                                                                                                                                                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `(app)/_providers/Providers.tsx`     | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層                                                                                                                                                                 |
+| `(app)/_shell/base-layout.tsx`       | sidebar + header + main の UI shell                                                                                                                                                                                                           |
+| `(app)/_overlays/GlobalOverlays.tsx` | ContactDialog / SettingsDialog / TimeblockSearchDialog / ShortcutCheatSheetDialog / TimeblockInspector / Toaster を集約マウント。keyboard shortcut の global listener（`useShortcutRegistry` / `useTimeblockSearchShortcut`）もここで購読する |
 
 ### Auth 境界の確認
 
