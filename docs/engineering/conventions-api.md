@@ -361,6 +361,28 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - error: `TagServiceError(MERGE_FAILED | SAME_TAG_MERGE | INVALID_INPUT | FETCH_FAILED)`
 - side effect: DB write（RPC `merge_tags_with_hierarchy`）
 
+##### `listArchived(options)` — L129
+
+- input: `{ userId }`
+- output: `Promise<Tag[]>`（アーカイブ済み一覧、`archived_at` 降順、全件）
+- error: `TagServiceError(FETCH_FAILED)`
+- pagination: N/A（全件仕様）
+- 注: `is_active = false`（マージ済みの墓標）は含まない
+
+##### `archive(options)` — L136
+
+- input: `{ userId, tagId }`
+- output: `Promise<{ tag: Tag; archivedChildCount: number }>`
+- error: `TagServiceError(UPDATE_FAILED | NOT_FOUND)`
+- side effect: DB write。親タグの場合は未アーカイブの子タグも同一 timestamp でアーカイブする（道連れ）。`archivedChildCount` は道連れになった子タグの件数。既にアーカイブ済みの場合は no-op で `archivedChildCount: 0` を返す
+
+##### `restore(options)` — L146
+
+- input: `{ userId, tagId }`
+- output: `Promise<{ tag: Tag; restoredChildCount: number; conflictedChildCount: number }>`
+- error: `TagServiceError(FETCH_FAILED | DUPLICATE_NAME | UPDATE_FAILED)`
+- side effect: DB write。親タグの復元は同一 timestamp でアーカイブされた子タグも道連れで復元する。子タグを個別復元する時、親がアーカイブ中・マージ済み・消滅済みなら root タグとして復元する。復元先と同名のアクティブなタグが既に存在する場合は `DUPLICATE_NAME` で拒否する。道連れ復元時の子タグの同名衝突は個別にスキップし `conflictedChildCount` でカウントする（親の復元自体は継続）
+
 ##### `delete(options)` — L158
 
 - input: `{ userId, tagId }`（`strategy` / `targetTagId` は廃止済み。#1576 で `delete_blocks` / `reassign` の 2 strategy を撤去し、タグ行の DELETE のみに簡素化）
@@ -381,10 +403,6 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 
 - グループの rename/ungroup 相当の操作は無い。親タグの改名は通常の `update`、階層の組み替えも `parentId` を含む `update` で行う
 - タグ別の集計は `TagService` の外、`features/timeblock/server/statistics-service.ts`（`StatisticsService.getStatsOverview` / `getStatsPageData`、tRPC `statistics.getStatsPageData` 等）と pure reducer `features/timeblock/domain/tag-stats.ts` が担う
-
-##### この節に未収録の method
-
-`listArchived(options)` / `archive(options)` / `restore(options)` は #1576 で追加された現行 method だが、本節はまだ追従できていない。挙動は [`docs/product/specs/tags.md`](../product/specs/tags.md) を参照。
 
 #### UserService
 
