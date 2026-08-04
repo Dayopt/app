@@ -13,7 +13,10 @@ const relativeToWorkspace = (files, workspace) =>
     .map((file) => toPosixPath(path.relative(path.join(process.cwd(), workspace), file)));
 
 export default {
-  '*.{ts,tsx,js,jsx}': (files) => {
+  // `.mjs` / `.cjs` を含める。これらが抜けていた間、root の `scripts/**` や各 app の
+  // 設定ファイル・build gate は commit hook でも CI でも整形されず、規約から静かに
+  // ずれていた（2026-08-04 に 7 ファイルで実測）。
+  '*.{ts,tsx,js,jsx,mjs,cjs}': (files) => {
     const rootFiles = relativeToRoot(files);
     const productFiles = relativeToWorkspace(files, 'apps/product');
     const webFiles = relativeToWorkspace(files, 'apps/web');
