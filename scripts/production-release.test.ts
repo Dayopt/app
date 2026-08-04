@@ -1662,6 +1662,41 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.autoAssign).toEqual({ web: false, product: false });
   });
 
+  it('keeps its own delayed promote out of moved-externally', async () => {
+    // 遅れて着地したのが自分の candidate なら、manifest を moved-externally に
+    // しない。runbook が「戻さない」と案内するのに、エラーは MANUAL ROLLBACK
+    // REQUIRED を出す矛盾になる。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    let readsAfterRollback = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 503 });
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return new Response(null, { status: 202 });
+      }
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        if (readsAfterRollback === 1) return Response.json({ deploymentId: 'dpl_web_old' });
+        return Response.json({ deploymentId: 'dpl_web_new' }); // 自分の promote が着地
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
+    );
+
+    expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
+    const web = error.manifest?.projects.find((p) => p.name === 'web');
+    expect(web?.action).not.toBe('moved-externally');
+    expect(web).toMatchObject({ action: 'promoted', previousDeploymentId: 'dpl_web_old' });
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。

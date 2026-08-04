@@ -162,6 +162,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 - [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
+- [ ] `action: unassigned` は「production domain にどの deployment も割り当たっていない」状態（= その domain は配信されていない）。**最優先で復旧する。** `previousDeploymentId` が割り当て直す先で、Vercel Dashboard → Deployments → その deployment の "..." → Promote to Production。`deploymentId` は null なので戻し先の判断には使えない
 
 #### ケースA: CI失敗（lint / typecheck）
 

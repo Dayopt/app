@@ -1516,10 +1516,21 @@ export async function runProductionRelease({
     try {
       await verifyLiveState(finalCandidates);
     } catch (error) {
+      // ここは sweep で包んだ本体の外側。外部 promote は auto-assign を戻すので、
+      // 掃かずに抜けると次の main merge が gate を迂回する。
+      reportSweepDrift(await sweepSettings());
       throw Object.assign(error, {
         manifest: manifestFor('failed', { promoted: result.promoted ?? [] }),
       });
     }
+
+    // 検証が許した移動（target SHA の別 deployment）は externallyLive に反映されている。
+    // manifest は検証より前に作られているため、ここで作り直さないと run 開始時点の
+    // deployment ID を載せた artifact を上げてしまう。
+    result.manifest = manifestFor(result.status, {
+      promoted: result.promoted ?? [],
+      rolledBack: result.rolledBack ?? [],
+    });
   }
 
   return result;
@@ -1628,8 +1639,11 @@ async function rollbackPromoted({
           observed = true;
           if (settled?.id !== entry.previous.id) {
             landed = settled ?? { id: null, sha: null };
-            // 観測結果は分類に関わらず manifest へ載せる（alias 未割当も含む）。
-            observedLive.push({ entry, live: landed });
+            // **自分の candidate が遅れて着地した場合は記録しない。** manifest で
+            // `moved-externally` になると runbook が「戻さない」と案内するのに、
+            // エラーは MANUAL ROLLBACK REQUIRED を出す矛盾になる。第三の deployment と
+            // alias 未割当だけを載せる。
+            if (landed.id !== entry.deployment.id) observedLive.push({ entry, live: landed });
             break;
           }
         }
