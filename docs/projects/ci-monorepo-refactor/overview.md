@@ -70,6 +70,33 @@ code: scripts/ci
 
 依存グラフは pnpm workspace の manifest（`dependencies` / `devDependencies` の `@dayopt/*`）から実行時に解決する。ハードコードした対応表は持たない（package 追加時に判定が自動追従する）。
 
+### consumer ごとの変更ファイル一覧の取り方
+
+Resolver の規則は共有し、**入力の作り方だけが consumer で違う**。
+
+| consumer                                                                                | 変更ファイル一覧                                                               | 判定不能時                    |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------- |
+| merge gate（[finish-branch.sh](../../../scripts/git/finish-branch.sh)）                 | PR の files API（rename 元も含む。件数不一致は truncation として棄却）         | 両 project の context を必須  |
+| Production Release（[production-release.mjs](../../../scripts/production-release.mjs)） | **project ごとに** `git diff --no-renames <その project の live SHA> <target>` | その project を affected 扱い |
+
+release の基準が project ごとに違うのが要点。web が 3 commit 遅れた状態で product だけ進んでいれば、web の判定は「web が今配信している SHA から target まで」で行う。merge 単位で判定すると、前の run で取りこぼした変更が二度と release されない。
+
+`git diff` が空（0 件）で正常終了したのは「差分なし」の確定的な答えなので unaffected とする。一覧が取れなかった場合（shallow clone、gc 済み、source SHA 不明）とは区別する。前者は skip してよく、後者は fail closed。
+
+### Production Release の状態
+
+| status             | 意味                                          | commit status |
+| ------------------ | --------------------------------------------- | ------------- |
+| `promoted`         | affected な project を promote した           | success       |
+| `already-released` | 全 project が既に target を配信している       | success       |
+| `unaffected`       | どの app にも影響しない merge（promote 0 件） | success       |
+| `superseded`       | より新しい deployment が既に live             | failure       |
+| `failed`           | gate 失敗 / rollback 実施                     | failure       |
+
+`unaffected` を success にするのは、production の artifact がその commit と等価だから（docs / CI 設定の merge に tag を打てなくする理由が無い）。`superseded` との違いは「production が古いままか、新しくなっているか」ではなく「**この commit の内容が live か**」で決まる。
+
+promote 後は `dayopt.app` と `app.dayopt.app` の**両方**を smoke する。片側だけ進んだ production はその組み合わせが初めて世に出る状態で、cross-app の破損は candidate 単体の smoke では出ない。この smoke は bypass secret を送らず、production domain 側の Deployment Protection 設定事故も同時に見る。rollback 対象は **この run が promote した project だけ**とする。
+
 ## 6. Phase 構成と PR の対応
 
 Step 分割は作業単位、PR は機能のまとまり（[workflow.md §PR 粒度](../../../.claude/rules/workflow.md)）。

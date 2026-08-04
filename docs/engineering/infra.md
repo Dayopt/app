@@ -103,9 +103,11 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production build（domain 未割当の candidate）
         ↓
-      Production Release workflow（同一 SHA / smoke / audit）
+      Production Release workflow（影響判定 / smoke / audit）
         ↓
-      promote → Production domain
+      promote（affected な project のみ）→ Production domain
+        ↓
+      両 production domain の smoke
 ```
 
 Vercel の正規 deployment source は `Dayopt/dayopt` の GitHub 連携だけとする。
@@ -131,10 +133,18 @@ workflow は次を満たした時だけ promote する。
 `targets.production` は production target の**最新** deployment を指し、build 中でもその値になるため
 使えない（merge の 8 秒後、build 完了の 60 秒前に新 deployment を指すことを実測した）。
 
-- Product / Web の Production build が **同一 merge SHA** で両方 `READY`
+- **その merge の影響を受ける project**の Production build が対象 SHA で `READY`
 - 各 candidate の unique URL への read-only smoke が成功（Deployment Protection があるため
   Protection Bypass for Automation の secret が必須）
 - live な Vercel metadata に対する Production Config Audit が成功
+- promote 後、`dayopt.app` と `app.dayopt.app` の両方への smoke が成功
+
+**どの project を進めるかは project ごとに判定する。** 基準は「その project が今配信している
+deployment の source SHA」で、そこから対象 SHA までの `git diff` を Impact Resolver
+（`scripts/ci/impact.mjs`）に通す。web が 3 commit 遅れていても、判定は web の live SHA から見た
+差分で行う。判定不能（source SHA 不明 / 履歴が checkout に無い）は affected へ倒す
+（fail closed）。どの app にも影響しない merge では promote を行わず、`Production Release` status は
+**success**（`unaffected`）になる — production の artifact がその commit と等価だから、tag は打てる。
 
 smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
 candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
@@ -143,8 +153,20 @@ smoke と bypass secret の実働テストになる。**bypass secret を登録�
 失敗する**（Production は Auto-assign により更新され続けるので無傷。ただし `Production Release`
 status が failure になるため、その間は tag を打てない）。
 
+promote 後は **両 production domain** を smoke する。片側だけ進んだ production はその組み合わせが
+初めて世に出る状態で、cross-app の破損（web の CTA が product の消えた route を指す等）は
+candidate 単体の smoke では出ないため。この smoke には bypass secret を送らない（production domain に
+Deployment Protection が付く設定事故そのものを捕まえる）。失敗した場合は **この run が promote した
+project だけ**を rollback する。
+
 promote 順は web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
-片方だけ公開された状態は残さない。失敗時は Production domain が現行 SHA のまま維持される（fail-safe）。
+この run が promote していない project（前の run から対象 SHA を配信している側など）は戻し先を持たない
+ので rollback 対象にせず、run summary で名指しする。失敗時は Production domain が現行 SHA のまま
+維持される（fail-safe）。
+
+run の結果は `release-manifest` artifact（保持 90 日）に残る。project ごとの deployment ID・source SHA・
+判定理由が入っており、**project 間で live SHA が分かれた時に production の実態を読む一次情報**になる。
+run summary にも同じ JSON が出る。
 
 対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
 を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。
