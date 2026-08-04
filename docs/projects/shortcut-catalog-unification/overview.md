@@ -1,10 +1,10 @@
 ---
-status: active
+status: done
 last_verified: 2026-08-04
 code:
-  - apps/product/src/features/calendar/hooks/keyboard/shortcut-registry.ts
-  - apps/product/src/features/calendar/hooks/keyboard/shortcut-key-label.ts
-  - apps/product/src/features/calendar/components/ShortcutCheatSheetDialog.tsx
+  - apps/product/src/lib/keyboard/shortcut-registry.ts
+  - apps/product/src/lib/keyboard/shortcut-catalog.ts
+  - apps/product/src/components/ui/overlays/shortcut-cheat-sheet-dialog.tsx
   - apps/product/src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx
   - apps/product/src/lib/stores/useShellStore.ts
 ---
