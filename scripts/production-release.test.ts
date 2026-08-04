@@ -1170,7 +1170,7 @@ describe('runProductionRelease (affected-aware)', () => {
 
     await expect(
       release({ fetchImpl: world.fetchImpl, diffFilesImpl: () => ['docs/x.md'] }),
-    ).rejects.toThrow(/web: production moved to .* refusing to report/);
+    ).rejects.toThrow(/web: production moved to dpl_web_hotfix after the gates ran/);
     expect(world.pointCalls).toEqual([]);
   });
 
@@ -1260,7 +1260,7 @@ describe('runProductionRelease (affected-aware)', () => {
         fetchImpl: world.fetchImpl,
         diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
       }),
-    ).rejects.toThrow(/web: production moved to .* refusing to report/);
+    ).rejects.toThrow(/web: production moved to dpl_web_hotfix after the gates ran/);
   });
 
   it('checks deployment identity even under Force Promote', async () => {
@@ -1292,19 +1292,7 @@ describe('runProductionRelease (affected-aware)', () => {
         fetchImpl: world.fetchImpl,
         diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
       }),
-    ).rejects.toThrow(/web: production moved to .* refusing to report/);
-  });
-
-  it('tolerates a skipped project that moved to the target itself', async () => {
-    // 判定より進んだだけなので success の主張は崩れない。
-    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_new'] });
-
-    const result = await release({
-      fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
-    });
-
-    expect(result.status).toBe('promoted');
+    ).rejects.toThrow(/web: production moved to dpl_web_other after the gates ran/);
   });
 
   it('sweeps auto-assign again after the already-live gates', async () => {
@@ -1698,47 +1686,6 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(web).toMatchObject({ action: 'promoted', previousDeploymentId: 'dpl_web_old' });
   });
 
-  it('sweeps again after accepting a move during final verification', async () => {
-    // 検証が許した移動でも、その promote は auto-assign を戻している。掃きと検証を
-    // 交互に回して両方が満たされた状態で success を出す。
-    // 1回目=before、2回目以降=別 deployment（同一 SHA なので受理される）。
-    const world = createReleaseWorld({
-      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
-    });
-
-    const result = await release({
-      fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
-    });
-
-    expect(result.status).toBe('promoted');
-    // 受理した移動の promote が戻した設定を掃き直している。
-    expect(world.autoAssign).toEqual({ web: false, product: false });
-    expect(world.patches).toContainEqual({ project: 'web', value: false });
-    // manifest は最後に観測した deployment を載せる。
-    expect(result.manifest.projects).toContainEqual(
-      expect.objectContaining({ name: 'web', deploymentId: 'dpl_web_hotfix' }),
-    );
-  });
-
-  it('drops an accepted move that reverts before the final read', async () => {
-    // 一時的に動いただけの deployment を live として載せ続けない。
-    // 2回目=別 deployment（受理・記録）、3回目以降=run 開始時点へ戻る。
-    const world = createReleaseWorld({
-      webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix', 'dpl_web_old'],
-    });
-
-    const result = await release({
-      fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
-    });
-
-    expect(result.status).toBe('promoted');
-    expect(result.manifest.projects).toContainEqual(
-      expect.objectContaining({ name: 'web', action: 'skipped', deploymentId: 'dpl_web_old' }),
-    );
-  });
-
   it('fails when the web page drops its signup CTA', async () => {
     // product 側の /auth/signup が生きていても、web からの導線が消えれば入口は失われる。
     const world = createReleaseWorld({
@@ -1767,6 +1714,54 @@ describe('runProductionRelease (affected-aware)', () => {
     const result = await release({ fetchImpl, expectedAutoAssign: false });
 
     expect(result.status).toBe('superseded');
+  });
+
+  it('refuses to certify a replacement deployment that the gates never tested', async () => {
+    // 同じ commit の別 deployment でも build 時の設定は違いうるし、smoke も audit も
+    // 通っていない。`READY` と source SHA は gate が証明している内容ではない。
+    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'] });
+
+    await expect(
+      release({
+        fetchImpl: world.fetchImpl,
+        diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+      }),
+    ).rejects.toThrow(/never smoked or audited/);
+  });
+
+  it('keeps watching after a hotfix appears during the settle window', async () => {
+    // hotfix を見た時点で打ち切ると、その後に自分の promote が着地して hotfix を
+    // 上書きしても「他者が動かしたので触らない」と記録したまま run が終わる。
+    const world = createReleaseWorld();
+    let rolledBackWeb = false;
+    let readsAfterRollback = 0;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        return new Response(null, { status: 503 }); // 受理されたが response を失った
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_old')) {
+        rolledBackWeb = true;
+        return new Response(null, { status: 202 });
+      }
+      if (rolledBackWeb && url.includes('/v4/aliases/dayopt.app')) {
+        readsAfterRollback += 1;
+        // 1=rollback の反映確認 → 2=他者の hotfix → 3=自分の promote が遅れて着地
+        if (readsAfterRollback === 1) return Response.json({ deploymentId: 'dpl_web_old' });
+        if (readsAfterRollback === 2) return Response.json({ deploymentId: 'dpl_web_hotfix' });
+        return Response.json({ deploymentId: 'dpl_web_new' });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error) => thrown,
+    );
+
+    // hotfix で打ち切らず、最後に着地した自分の candidate を手動確認へ回す。
+    expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
+    expect(error.message).not.toMatch(/Left alone because another actor/);
   });
 
   it('sends no bypass secret to the production domains', async () => {

@@ -86,12 +86,6 @@ const DEFINITIVE_REJECTIONS = new Set([400, 401, 403, 404, 429]);
 const AMBIGUOUS_SETTLE_MS = ASSIGN_TIMEOUT_MS;
 
 /**
- * 設定の掃きと live 状態の検証を交互に回す上限。外部 actor が promote を続ける限り
- * 収束しないので有限で打ち切り、最後の検証が通った時点の観測を根拠にする。
- */
-const STABILIZE_ATTEMPTS = 3;
-
-/**
  * この script が費やしうる最悪時間。workflow の `timeout-minutes` がこれを
  * 下回ると、rollback の途中で job が kill され、片方だけ promote された
  * production が手動 rollback の手掛かりごと失われる。
@@ -998,9 +992,6 @@ export async function runProductionRelease({
     const expectedId = new Map(
       candidateEntries.map(({ project, deployment }) => [project.name, deployment.id]),
     );
-    // 受理した移動の件数。呼び出し側は「受理があった = 設定が飛んでいるかもしれない」
-    // として掃き直しの判断に使う。
-    let accepted = 0;
 
     for (const project of projects) {
       const live = await getLiveProduction({
@@ -1026,24 +1017,24 @@ export async function runProductionRelease({
         continue;
       }
 
-      const wantedSha = alreadyServingNames.has(project.name)
-        ? sha
-        : (before.get(project.name)?.sha ?? null);
-      // 許した移動（target SHA の別 deployment）も manifest へ反映する。run 開始時点の
-      // ID を残すと、成功した run の manifest が既に live でない deployment を指す。
-      // 検証は複数回走るので、**run 開始時点へ戻っていたら記録を消す**（消さないと
-      // 一時的に動いただけの deployment を live として載せ続ける）。
-      if (live && live.id !== before.get(project.name)?.id) {
-        externallyLive.set(project.name, { id: live.id, sha: live.sha });
-        accepted += 1;
-      } else if (!expectedId.has(project.name)) {
-        externallyLive.delete(project.name);
+      // **deployment ID が run 開始時点から変わっていたら認証しない。**
+      // 同じ commit の別 deployment でも build 時の設定は違いうるし、gate（smoke /
+      // config audit）を一度も通っていない。`READY` と source SHA は gate が
+      // 証明している内容ではないので、「SHA が同じなら受理」は認証の穴になる。
+      const startId = before.get(project.name)?.id ?? null;
+      if (live?.id !== startId) {
+        movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+        throw new ReleaseError(
+          `${project.name}: production moved to ${live?.id ?? 'no deployment'} after the gates ran; ` +
+            `that deployment was never smoked or audited, so ${sha} is not certified`,
+        );
       }
 
       // 基準 SHA が観測できていない project は affected へ倒っているのでここには来ない。
-      // target SHA へ動いていた場合は許す（判定より進んだだけで、success の主張は
-      // むしろ強くなる）。それ以外の SHA は判定の前提が崩れている。
-      if (wantedSha && live?.sha !== wantedSha && live?.sha !== sha) {
+      const wantedSha = alreadyServingNames.has(project.name)
+        ? sha
+        : (before.get(project.name)?.sha ?? null);
+      if (wantedSha && live?.sha !== wantedSha) {
         movedAway.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
         throw new ReleaseError(
           `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
@@ -1051,17 +1042,11 @@ export async function runProductionRelease({
         );
       }
     }
-
-    return accepted;
   };
 
   /**
-   * **sweep と verify を、両方が同時に満たされるまで交互に回す。**
-   *
-   * 片方を直すともう片方が崩れうる（promote は auto-assign を戻し、alias も動かす）。
-   * 「検証してから掃く」「掃いてから検証する」のどちらでも、その後に起きた promote を
-   * 見逃す隙間が残る。有限回のループで「最後に見た時点で両方満たされている」ことを
-   * 確かめ、それを success の主張の根拠にする。
+   * **設定を掃いた後に live 状態を検証する。** この順序が要点で、逆にすると掃きが
+   * 設定を直せてしまうために、検証後・掃き中に起きた promote が失敗として現れない。
    *
    * verify が不受理の移動を見つけたら throw する。**この関数は rollback で保護された
    * 領域の中から呼ぶ**こと（呼び出し側の catch が rollback と manifest を担う）。
@@ -1069,15 +1054,12 @@ export async function runProductionRelease({
    * @returns 残っている drift（空でなければ設定復元が失敗している）
    */
   const stabilize = async (candidateEntries) => {
-    let drift = [];
-    for (let attempt = 1; attempt <= STABILIZE_ATTEMPTS; attempt += 1) {
-      drift = await sweepSettings();
-      const accepted = await verifyLiveState(candidateEntries);
-      if (drift.length === 0 && accepted === 0) return drift;
-      if (attempt < STABILIZE_ATTEMPTS) {
-        logger.log(`Production state moved during verification; re-checking (attempt ${attempt}).`);
-      }
-    }
+    const drift = await sweepSettings();
+    // 検証を掃きの**後**に置く。逆順だと、掃きが設定を直せてしまうために、その間に
+    // 起きた promote が失敗として現れない。verifyLiveState は run 開始時点から
+    // deployment が変わっていれば throw するので、反復は要らない（動いていたら
+    // 認証せず失敗させる）。
+    await verifyLiveState(candidateEntries);
     return drift;
   };
 
@@ -1646,7 +1628,8 @@ async function rollbackPromoted({
       // 手動確認へ回す。
       if (entry.ambiguous) {
         const deadline = nowImpl() + AMBIGUOUS_SETTLE_MS;
-        let landed = null;
+        let landed = null; // 我々の candidate が遅れて着地した
+        let foreign = null; // 第三の deployment / alias 未割当
         let observed = false;
         while (nowImpl() < deadline) {
           await sleepImpl(ASSIGN_POLL_MS);
@@ -1664,16 +1647,25 @@ async function rollbackPromoted({
             continue; // 読めない回で判断しない。窓の残りで見直す
           }
           observed = true;
+
+          // **第三の deployment を見ても打ち切らない。** 受理済みの promote は同じ窓の
+          // 中でまだ着地しうる。ここで抜けると、その後に自分の candidate が hotfix を
+          // 上書きしても「他者が動かしたので触らない」と記録したまま run が終わる。
+          if (settled?.id === entry.deployment.id) {
+            landed = settled;
+            break; // 自分の promote が着地した。これは決定的
+          }
           if (settled?.id !== entry.previous.id) {
-            landed = settled ?? { id: null, sha: null };
-            // **自分の candidate が遅れて着地した場合は記録しない。** manifest で
-            // `moved-externally` になると runbook が「戻さない」と案内するのに、
-            // エラーは MANUAL ROLLBACK REQUIRED を出す矛盾になる。第三の deployment と
-            // alias 未割当だけを載せる。
-            if (landed.id !== entry.deployment.id) observedLive.push({ entry, live: landed });
-            break;
+            foreign = settled ?? { id: null, sha: null };
+          } else {
+            foreign = null; // previous へ戻っている
           }
         }
+
+        // 自分の candidate は manifest に記録しない（`moved-externally` になると
+        // runbook が「戻さない」と案内するのに、エラーは MANUAL ROLLBACK REQUIRED を
+        // 出す矛盾になる）。第三の deployment と alias 未割当だけを載せる。
+        if (foreign) observedLive.push({ entry, live: foreign });
 
         // 窓の間 1 度も読めなかった場合、「previous のままだった」は観測に基づかない。
         // 読めない間に遅れた promote が着地していても分からないので、戻ったと宣言しない。
@@ -1685,20 +1677,21 @@ async function rollbackPromoted({
           continue;
         }
 
-        // 窓の間に現れたのが **我々の candidate でない** なら、それは他者の選択
-        // （典型は緊急 hotfix）。戻すと上書きになるので触らず、名指しだけする。
-        if (landed?.id && landed.id !== entry.deployment.id) {
-          movedExternally.push({ entry, live: landed });
-          logger.log(
-            `${entry.project.name}: production moved to ${landed.id} during the settle window; leaving it alone`,
+        // 自分の promote が着地していたら手動確認へ。窓の最後まで見た上での判断なので、
+        // 第三の deployment より優先する（後から上書きしているため）。
+        if (landed) {
+          stranded.push(
+            `${entry.project.name} -> ${entry.previous.id} (a delayed promote landed on ${landed.id})`,
           );
           continue;
         }
 
-        if (landed) {
-          stranded.push(
-            `${entry.project.name} -> ${entry.previous.id} ` +
-              `(a delayed promote landed on ${landed.id ?? 'no deployment'})`,
+        // 窓の終わりに残っていたのが他者の選択（典型は緊急 hotfix）や未割当なら、
+        // 戻すと上書きになるので触らず名指しする。
+        if (foreign) {
+          movedExternally.push({ entry, live: foreign });
+          logger.log(
+            `${entry.project.name}: production moved to ${foreign.id ?? 'no deployment'} during the settle window; leaving it alone`,
           );
           continue;
         }
