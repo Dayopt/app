@@ -905,6 +905,92 @@ export async function runProductionRelease({
       movedAway,
     });
 
+  // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
+  // 飛ばしている可能性があるため、失敗して抜けるどの経路でも最後に呼ぶ。
+  // restoreAll は project 単位で失敗を握るので、この呼び出し自体は throw しない。
+  const sweepSettings = () =>
+    restoreAll({
+      entries: projects.map((project) => ({
+        project,
+        projectId: projectIds.get(project.name),
+        autoAssignCustomDomains: expectedFor(project.name),
+      })),
+      token,
+      teamId,
+      fetchImpl,
+      logger,
+    });
+
+  // 掃きで復元に失敗した project は、元の失敗と別に名指しする。放置すると次の
+  // merge が gate を迂回するのに、run の失敗理由には現れないため。
+  const reportSweepDrift = (drifted) => {
+    if (drifted.length === 0) return;
+    const message =
+      `autoAssignCustomDomains could not be restored for ${drifted.join(', ')}. ` +
+      `Set it back before the next merge or the release gate is bypassed.`;
+    logger.log(message);
+    writeStepSummary(['', `> ${message}`]);
+  };
+
+  const alreadyServingNames = new Set(alreadyServing.map((project) => project.name));
+
+  /**
+   * **success を出す前に、判定の前提が今も成り立っているかを live 状態で確認する。**
+   *
+   * この run が置いた deployment だけを見ても足りない。release の success は
+   * 「この commit が live」という主張で、tag gate（create-release.yml）がそれを信じる。
+   * gate の実行中は数分あり、その間に人や Auto-assign が任意の project を動かせる。
+   * project ごとに「何を期待するか」は判定の種類で決まる:
+   *
+   * - candidate を出した project … その deployment が live であること
+   * - 既に target を配信していた project … 今も target SHA であること
+   * - skip した project … 判定の基準にした SHA のままであること（変わっていれば
+   *   「影響なし」の判定自体が別の基準で下されたことになり、陳腐化している）
+   *
+   * force でも実行する。Force Promote が免除するのは health / config の gate であって、
+   * 「promote した SHA が今も live」という主張そのものではない。
+   */
+  const verifyLiveState = async (candidateEntries) => {
+    const expectedId = new Map(
+      candidateEntries.map(({ project, deployment }) => [project.name, deployment.id]),
+    );
+
+    for (const project of projects) {
+      const live = await getLiveProduction({
+        projectName: project.name,
+        productionDomain: project.productionDomain,
+        projectId: projectIds.get(project.name),
+        token,
+        teamId,
+        fetchImpl,
+      });
+
+      const wanted = expectedId.get(project.name);
+      if (wanted) {
+        if (live?.id !== wanted) {
+          throw new ReleaseError(
+            `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
+              `${wanted}; refusing to report ${sha} as live`,
+          );
+        }
+        continue;
+      }
+
+      const wantedSha = alreadyServingNames.has(project.name)
+        ? sha
+        : (before.get(project.name)?.sha ?? null);
+      // 基準 SHA が観測できていない project は affected へ倒っているのでここには来ない。
+      // target SHA へ動いていた場合は許す（判定より進んだだけで、success の主張は
+      // むしろ強くなる）。それ以外の SHA は判定の前提が崩れている。
+      if (wantedSha && live?.sha !== wantedSha && live?.sha !== sha) {
+        throw new ReleaseError(
+          `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
+            `gate was running; refusing to report ${sha} as live`,
+        );
+      }
+    }
+  };
+
   // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
   // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
   // promote する予定が無い run には rollback scope 自体が無いので警告しない。
@@ -928,17 +1014,7 @@ export async function runProductionRelease({
         : `No project is affected by ${sha}; nothing to promote.`,
     );
     // 前回 run が復元に失敗して終わっている可能性があるため、設定だけは見に行く。
-    const drifted = await restoreAll({
-      entries: projects.map((project) => ({
-        project,
-        projectId: projectIds.get(project.name),
-        autoAssignCustomDomains: expectedFor(project.name),
-      })),
-      token,
-      teamId,
-      fetchImpl,
-      logger,
-    });
+    const drifted = await sweepSettings();
     if (drifted.length > 0)
       throw Object.assign(driftError(sha, drifted), { manifest: manifestFor('failed') });
 
@@ -947,8 +1023,12 @@ export async function runProductionRelease({
     // Auto-assign や中断した run が gate を通さずに live にした可能性があるため、
     // 認証する前に実際の production domain を見る。ここを素通りさせると、
     // smoke も audit も一度も通っていない build に tag を打ててしまう。
-    if (!force && alreadyServing.length > 0) {
-      try {
+    //
+    // gate の実行中に外部の promote が起きると auto-assign が再び true へ戻る。
+    // 上の復元は gate より前なので、**抜ける経路すべてで掃き直す**（finally）。
+    // 掃き忘れると次の main merge が gate を迂回して直接公開される。
+    try {
+      if (!force && alreadyServing.length > 0) {
         for (const project of alreadyServing) {
           assertSimulationPoint(simulateFailure, `production-smoke:${project.name}`);
           await smokeDeployment({
@@ -962,30 +1042,18 @@ export async function runProductionRelease({
         }
         await runProductionConfigAudit({ token, teamId, fetchImpl });
         logger.log('Production Config Audit passed against live Vercel metadata.');
-
-        // smoke と audit で数分かかる。その間に人が Instant Rollback すると、
-        // 「この commit が live」という success の主張が嘘になる。この経路は promote を
-        // 行わないので candidate の ID 突き合わせ（後段）を通らない。ここで確認する。
-        for (const project of alreadyServing) {
-          const live = await getLiveProduction({
-            projectName: project.name,
-            productionDomain: project.productionDomain,
-            projectId: projectIds.get(project.name),
-            token,
-            teamId,
-            fetchImpl,
-          });
-          if (live?.sha !== sha) {
-            throw new ReleaseError(
-              `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
-                `gate was running; refusing to report ${sha} as live`,
-            );
-          }
-        }
-      } catch (error) {
-        // promote していないので戻す先は無い。設定は上で復元済み。
-        throw Object.assign(error, { manifest: manifestFor('failed') });
       }
+
+      // promote していなくても「この commit が live」を主張する以上、前提を確認する。
+      await verifyLiveState([]);
+    } catch (error) {
+      reportSweepDrift(await sweepSettings());
+      throw Object.assign(error, { manifest: manifestFor('failed') });
+    }
+
+    const sweptAfterGates = await sweepSettings();
+    if (sweptAfterGates.length > 0) {
+      throw Object.assign(driftError(sha, sweptAfterGates), { manifest: manifestFor('failed') });
     }
 
     return {
@@ -1090,33 +1158,6 @@ export async function runProductionRelease({
   const pending = candidates.filter(
     ({ project, deployment }) => current.get(project.name)?.id !== deployment.id,
   );
-
-  // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
-  // 飛ばしている可能性があるため、失敗して抜けるどの経路でも最後に呼ぶ。
-  // restoreAll は project 単位で失敗を握るので、この呼び出し自体は throw しない。
-  const sweepSettings = () =>
-    restoreAll({
-      entries: projects.map((project) => ({
-        project,
-        projectId: projectIds.get(project.name),
-        autoAssignCustomDomains: expectedFor(project.name),
-      })),
-      token,
-      teamId,
-      fetchImpl,
-      logger,
-    });
-
-  // 掃きで復元に失敗した project は、元の失敗と別に名指しする。放置すると次の
-  // merge が gate を迂回するのに、run の失敗理由には現れないため。
-  const reportSweepDrift = (drifted) => {
-    if (drifted.length === 0) return;
-    const message =
-      `autoAssignCustomDomains could not be restored for ${drifted.join(', ')}. ` +
-      `Set it back before the next merge or the release gate is bypassed.`;
-    logger.log(message);
-    writeStepSummary(['', `> ${message}`]);
-  };
 
   if (force) {
     logger.log('Force Promote: skipping smoke and Production Config Audit.');
@@ -1276,48 +1317,13 @@ export async function runProductionRelease({
           logger,
         });
       }
-
-      // smoke は「domain が健全か」しか見ない。**どの deployment が応答したかは見ない**。
-      // 待機中に自動割当された candidate は promote loop を通らないため、その後に
-      // 誰かが rollback しても誰も気づかず、health だけ通って success になる。
-      // それは「live でない SHA に tag を打てる」を意味するので、最後に ID を突き合わせる。
-      for (const { project, deployment } of candidates) {
-        const live = await getLiveProduction({
-          projectName: project.name,
-          productionDomain: project.productionDomain,
-          projectId: projectIds.get(project.name),
-          token,
-          teamId,
-          fetchImpl,
-        });
-        if (live?.id !== deployment.id) {
-          throw new ReleaseError(
-            `${project.name}: production serves ${live?.id ?? 'none'}, not the released ` +
-              `${deployment.id}; refusing to report ${sha} as live`,
-          );
-        }
-      }
-
-      // 混在 release（片方は run 開始時点で既に target を配信）では、その project は
-      // candidates に入らないため上の loop を通らない。gate の実行中に動かされると
-      // 「全 affected project が target を配信」という success の主張が嘘になる。
-      for (const project of alreadyServing) {
-        const live = await getLiveProduction({
-          projectName: project.name,
-          productionDomain: project.productionDomain,
-          projectId: projectIds.get(project.name),
-          token,
-          teamId,
-          fetchImpl,
-        });
-        if (live?.sha !== sha) {
-          throw new ReleaseError(
-            `${project.name}: production moved to ${live?.sha ?? 'an unknown commit'} while the ` +
-              `gate was running; refusing to report ${sha} as live`,
-          );
-        }
-      }
     }
+
+    // smoke は「domain が健全か」しか見ず、**どの deployment が応答したかは見ない**。
+    // 全 project について「判定の前提が今も成り立つか」を確認する（§verifyLiveState）。
+    // force でも実行する。Force Promote が免除するのは health / config の gate であって、
+    // 「promote した SHA が今も live」という主張そのものではない。
+    await verifyLiveState(candidates);
   } catch (error) {
     // promote 済みの側を戻す。対象は **この run が promote した project だけ**で、
     // 前から target を配信していた側（preexistingSplit）には戻し先が無い。

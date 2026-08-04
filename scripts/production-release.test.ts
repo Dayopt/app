@@ -19,6 +19,7 @@ import {
 
 const SHA = 'a'.repeat(40);
 const OLD_SHA = 'b'.repeat(40);
+const OTHER_SHA = 'c'.repeat(40);
 const TOKEN = 'vercel-token-must-not-appear';
 const BYPASS = 'bypass-secret-must-not-appear';
 
@@ -142,6 +143,8 @@ function createReleaseWorld(
     dpl_web_new: deploymentRecord('dpl_web_new', SHA, 2000),
     dpl_product_new: deploymentRecord('dpl_product_new', SHA, 2000),
     dpl_web_hotfix: deploymentRecord('dpl_web_hotfix', OLD_SHA, 1500),
+    // 判定の基準 SHA でも target でもない第三の commit。
+    dpl_web_other: deploymentRecord('dpl_web_other', OTHER_SHA, 1600),
   };
   // promote endpoint は autoAssignCustomDomains を true に戻す（vercel/vercel#15095）。
   const autoAssign: Record<string, boolean | null> = {
@@ -1242,6 +1245,72 @@ describe('runProductionRelease (affected-aware)', () => {
         diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
       }),
     ).rejects.toThrow(/web: production moved to .* refusing to report/);
+  });
+
+  it('checks deployment identity even under Force Promote', async () => {
+    // Force Promote が免除するのは health / config の gate であって、
+    // 「promote した SHA が今も live」という主張そのものではない。
+    const world = createReleaseWorld({
+      webAliasSequence: [
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_old',
+        'dpl_web_new',
+        'dpl_web_hotfix',
+      ],
+    });
+
+    await expect(release({ fetchImpl: world.fetchImpl, force: true })).rejects.toThrow(
+      /web: production serves dpl_web_hotfix, not the released dpl_web_new/,
+    );
+  });
+
+  it('rechecks a skipped project before publishing success', async () => {
+    // unaffected と判定した project が run 中に別 commit へ動くと、その判定は
+    // 別の基準で下されたことになり陳腐化する。candidates にも alreadyServing にも
+    // 入らないため、以前はどの確認も通らなかった。
+    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_other'] });
+
+    await expect(
+      release({
+        fetchImpl: world.fetchImpl,
+        diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+      }),
+    ).rejects.toThrow(/web: production moved to .* refusing to report/);
+  });
+
+  it('tolerates a skipped project that moved to the target itself', async () => {
+    // 判定より進んだだけなので success の主張は崩れない。
+    const world = createReleaseWorld({ webAliasSequence: ['dpl_web_old', 'dpl_web_new'] });
+
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
+    });
+
+    expect(result.status).toBe('promoted');
+  });
+
+  it('sweeps auto-assign again after the already-live gates', async () => {
+    // gate の実行中に外部 promote が設定を飛ばすと、gate 前の復元は無効になる。
+    // 掃き直さないと次の main merge が gate を迂回して直接公開される。
+    const world = createReleaseWorld({ productionSha: SHA, autoAssign: false });
+    let flipped = false;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      // 最初の smoke（= gate 実行中）で外部 promote が起きたことにする。
+      if (!url.startsWith('https://api.vercel.com') && !flipped) {
+        flipped = true;
+        world.autoAssign.web = true;
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl, diffFilesImpl: () => ['docs/x.md'] });
+
+    expect(result.status).toBe('already-released');
+    expect(world.patches).toContainEqual({ project: 'web', value: false });
+    expect(world.autoAssign).toEqual({ web: false, product: false });
   });
 
   it('sends no bypass secret to the production domains', async () => {

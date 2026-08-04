@@ -135,6 +135,11 @@ jobs:
 
       - name: Upload release manifest
         if: always()
+        # 診断用 artifact であって gate ではない。ここで job を落とすと、後続の
+        # status step は success を publish したまま run だけが赤くなり、
+        # 「run は失敗しているが create-release は同じ commit を live と認める」
+        # という食い違いを作る。script 側の書き込み失敗を握るのと同じ扱いにする。
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-manifest
