@@ -159,7 +159,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] run log で `rolled back to <deployment id>` を確認する
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
 - [ ] **まず manifest の `status` を見る。** `settings-drift` なら production は正しい SHA を配信しており、失敗の理由は `autoAssignCustomDomains` の復元だけ。**deployment は戻さず**、Vercel Dashboard で該当 project の Auto-assign を無効へ戻す（放置すると次の merge が gate を迂回する）
-- [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`
+- [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`。**`null` の場合は run 開始時点で domain が未割当だった**ので戻し先が manifest に無い。Deployments 履歴から直前に production を配信していた正常な deployment を選ぶ
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 - [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
 - [ ] `action: uncertified` は「この run が promote していないのに target が live」状態。待機中に Vercel の Auto-assign か他者の promote が先に live にし、その後 gate（smoke / audit）が落ちた場合に出る。**production は認証を通っていない build を配信している。** 自動 rollback の対象外なので、run summary のエラーを読んで戻すかどうかを判断する。戻す場合の先は `previousDeploymentId`。**これが `null` の時は run 開始時点から同じ deployment が live だった**（= 戻し先が manifest に無い）ので、Vercel Dashboard の Deployments 履歴から直前の正常な production deployment を選ぶ

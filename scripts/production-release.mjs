@@ -1404,6 +1404,9 @@ export async function runProductionRelease({
       logger.log(
         `Skipping promote: production already serves ${names} from a commit that is not an ancestor of ${sha}.`,
       );
+      // skip した project の alias が待機中に動いていても、ここまで誰も読み直して
+      // いない（待機後の再取得は targets だけ）。manifest を作る前に揃える。
+      await refreshObservedLive();
       // 外部の promote が auto-assign を戻している可能性があるため、抜ける前に掃く。
       // **drift があっても superseded のままにする。** ここは「より新しい deployment が
       // live」と証明した経路で、settings-drift（= 正しい SHA が live）へ塗り替えると
@@ -1775,6 +1778,26 @@ async function rollbackPromoted({
 
   for (const entry of [...promoted].reverse()) {
     if (!entry.previous?.id) {
+      // 戻し先が無い（run 開始時点で未割当）。rollback はできないが、**受理が不確かな
+      // promote は後から着地しうる**ので窓は見届ける。見届けずに「未割当」と報告すると、
+      // その後に gate 未通過の candidate が live になったことを誰も知らない。
+      if (entry.ambiguous) {
+        const { observed, last } = await observeUntilSettled(entry);
+        if (!observed) {
+          stranded.push(
+            `${entry.project.name} (no previous deployment; live state unreadable during the settle window)`,
+          );
+          continue;
+        }
+        const finalState = last ?? { id: null, sha: null };
+        observedLive.push({ entry, live: finalState });
+        stranded.push(
+          finalState.id
+            ? `${entry.project.name} (no previous deployment; ${finalState.id} is live and ungated)`
+            : `${entry.project.name} (no previous deployment; the domain is unassigned)`,
+        );
+        continue;
+      }
       stranded.push(`${entry.project.name} (no previous production deployment recorded)`);
       continue;
     }
@@ -1817,8 +1840,17 @@ async function rollbackPromoted({
       // （撃てば我々が上書きすることになる）が、着地するかどうかは見届ける。
       if (entry.ambiguous) {
         const { observed: settledObserved, last: settledLive } = await observeUntilSettled(entry);
-        const finalState = settledObserved ? (settledLive ?? { id: null, sha: null }) : live;
-        if (settledObserved && finalState.id === entry.deployment.id) {
+        // **窓の間 1 度も読めなければ、窓に入る前の値で判断しない。** 読めない間に
+        // 受理済みの promote が着地していても分からないので、「他者の deployment を
+        // 触らなかった」と報告すると gate 未通過の candidate を見逃す。
+        if (!settledObserved) {
+          stranded.push(
+            `${entry.project.name} -> ${entry.previous.id} (live state unreadable during the settle window)`,
+          );
+          continue;
+        }
+        const finalState = settledLive ?? { id: null, sha: null };
+        if (finalState.id === entry.deployment.id) {
           stranded.push(
             `${entry.project.name} -> ${entry.previous.id} (a delayed promote landed on ${finalState.id})`,
           );

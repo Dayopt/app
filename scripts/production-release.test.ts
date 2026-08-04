@@ -2006,6 +2006,36 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
   });
 
+  it('watches an ambiguous promote even when there is nothing to roll back to', async () => {
+    // run 開始時点で未割当だと戻し先が無く、rollback loop は即 stranded にしていた。
+    // 受理が不確かな promote は後から着地しうるので、窓は見届ける。
+    const world = createReleaseWorld();
+    let webPromoteFailed = false;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      const url = String(input);
+      // web は最初から未割当。
+      if (url.includes('/v4/aliases/dayopt.app') && !webPromoteFailed) {
+        return Response.json({});
+      }
+      if ((init?.method ?? 'GET') === 'POST' && url.includes('/promote/dpl_web_new')) {
+        webPromoteFailed = true;
+        return new Response(null, { status: 503 }); // 受理されたが response を失った
+      }
+      // 窓の中で着地する。
+      if (webPromoteFailed && url.includes('/v4/aliases/dayopt.app')) {
+        return Response.json({ deploymentId: 'dpl_web_new' });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    let clock = 0;
+    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+      (thrown: Error) => thrown,
+    );
+
+    expect(error.message).toMatch(/dpl_web_new is live and ungated/);
+  });
+
   it('sends no bypass secret to the production domains', async () => {
     // production domain に Deployment Protection が付く設定事故を捕まえるための
     // smoke なので、bypass header で迂回してはいけない。
