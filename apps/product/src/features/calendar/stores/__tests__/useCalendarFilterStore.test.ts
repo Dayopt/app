@@ -174,6 +174,29 @@ describe('useCalendarFilterStore', () => {
       expect(ids.has('real-2')).toBe(true);
       expect(ids.has('temp-2')).toBe(false);
     });
+
+    it('アーカイブ済みタグの ID を含めれば visibleTagIds から消えない（#1576 P1回帰）', () => {
+      // 初回: tag-1（通常）と tag-archived（後にアーカイブされる想定）を表示
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
+      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(true);
+
+      // tag-archived をアーカイブした後も、呼び出し元がアーカイブ済み ID を含めて
+      // syncWithTags を呼べば orphan 扱いされず visible のまま残る。
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
+      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      expect(ids.has('tag-1')).toBe(true);
+      expect(ids.has('tag-archived')).toBe(true);
+    });
+
+    it('アーカイブ済み ID を含めずに sync すると orphan として除去される（regressionの再現）', () => {
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
+      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(true);
+
+      // tags.list（アクティブのみ）由来の ID だけで sync すると、
+      // アーカイブ済みタグは orphan として消えてしまう。これが #1576 で起きたバグ。
+      useCalendarFilterStore.getState().syncWithTags(['tag-1']);
+      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(false);
+    });
   });
 
   describe('removeTag', () => {

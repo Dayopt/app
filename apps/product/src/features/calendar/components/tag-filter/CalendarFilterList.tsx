@@ -16,6 +16,7 @@ import {
   TagDeleteConfirmDialog,
   TagIcon,
   tagKeys,
+  useArchivedTags,
   useArchiveTag,
   useDeleteTag,
   useTagsHierarchy,
@@ -42,6 +43,8 @@ export function CalendarFilterList() {
   const { data: nodes, isLoading: tagsLoading } = useTagsHierarchy();
   const { data: tagStats, isError: isTagStatsError } = api.statistics.getTagStats.useQuery();
   const tags = useMemo(() => flattenTagTree(nodes ?? []), [nodes]);
+  // syncWithTags にアーカイブ済み ID も含めるための取得（表示は従来どおり nodes/tags のみ使う）。
+  const { data: archivedTags } = useArchivedTags();
 
   // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）
   const tagPlanCounts = useMemo(
@@ -69,15 +72,19 @@ export function CalendarFilterList() {
   // hierarchy フェッチ中はフィルター初期化をスキップ（Race Condition防止）
   const isTagsFetching = useIsFetching({ queryKey: tagKeys.hierarchy() }) > 0;
 
-  // タグ一覧と filter state を同期（新規は visible 追加、削除済みは orphan として除去）
+  // タグ一覧と filter state を同期（新規は visible 追加、削除済みは orphan として除去）。
+  // アーカイブ済み ID も含めないと、archived タグを持つ過去ブロックが orphan 扱いされ
+  // visibleTagIds から消えてカレンダーから消えてしまう（#1576 の回帰）。
+  // TagFlatList へ渡す表示用の nodes/tags 自体はアーカイブ除外のまま変えない。
   // フェッチ中は競合防止のためスキップ
   useEffect(() => {
     if (isTagsFetching) return;
 
-    if (tags && tags.length > 0) {
-      syncWithTags(tags.map((tag) => tag.id));
+    const allTagIds = [...tags.map((tag) => tag.id), ...(archivedTags ?? []).map((tag) => tag.id)];
+    if (allTagIds.length > 0) {
+      syncWithTags(allTagIds);
     }
-  }, [tags, syncWithTags, isTagsFetching]);
+  }, [tags, archivedTags, syncWithTags, isTagsFetching]);
 
   const isLoading = tagsLoading;
 

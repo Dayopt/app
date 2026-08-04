@@ -11,6 +11,7 @@ const mockRecordsUseQuery = vi.fn();
 const mockPlanRefetch = vi.fn();
 const mockRecordRefetch = vi.fn();
 const mockTagsRefetch = vi.fn();
+const mockArchivedTagsRefetch = vi.fn();
 
 const PLAN_ROW = {
   id: 'plan-1',
@@ -52,6 +53,20 @@ vi.mock('@/features/tags', () => ({
     isFetching: false,
     isError: false,
     refetch: mockTagsRefetch,
+  }),
+  useArchivedTags: () => ({
+    data: [
+      {
+        id: 'tag-archived',
+        name: 'Retired Project',
+        color: 'rose',
+        icon: 'archive',
+      },
+    ],
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    refetch: mockArchivedTagsRefetch,
   }),
 }));
 
@@ -125,6 +140,36 @@ describe('TimeblockSearchDialog', () => {
       expect.objectContaining({ search: 'work' }),
       expect.objectContaining({ enabled: true, gcTime: 0, meta: { persist: false } }),
     );
+  });
+
+  it('アーカイブ済みタグのブロックも正しいタグ名で表示する（タグなしに落ちない、#1576）', async () => {
+    const archivedTagPlan = {
+      id: 'plan-2',
+      title: 'Old archived project',
+      note: null,
+      tag_id: 'tag-archived',
+      start_at: '2026-05-01T00:00:00.000Z',
+      end_at: '2026-05-01T01:00:00.000Z',
+      skipped_at: null,
+    };
+    mockPlansUseQuery.mockImplementation(() => ({
+      data: [archivedTagPlan],
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: mockPlanRefetch,
+    }));
+
+    renderDialog();
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'archived' } });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(screen.getByText('Retired Project')).toBeInTheDocument();
+    expect(screen.queryByText('common.tags.noTag')).not.toBeInTheDocument();
   });
 
   it('結果を選ぶとopen callbackを呼び、検索語をリセットして閉じる', async () => {
