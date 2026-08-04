@@ -809,10 +809,15 @@ export function buildManifest({
         // 復旧先として残す（promote entry があればそちらが優先）。
         // 復旧先。promote entry があればその previous、`uncertified` / `unassigned` では
         // run 開始時点の deployment（それが唯一の戻し先）。
+        // 復旧先。**今 live なものと同じ ID は戻し先にならない。** run 開始時点で既に
+        // target が live だった project が gate に落ちた場合、run 開始時点の deployment は
+        // まさにその落ちた deployment なので、戻し先としては使えない（null にして
+        // runbook 側で deployment 履歴を辿らせる）。
         previousDeploymentId:
           entry?.previous?.id ??
-          (uncertified || (moved && !moved.id) ? (live?.id ?? null) : null) ??
-          null,
+          ((uncertified || (moved && !moved.id)) && live?.id && live.id !== effective?.id
+            ? live.id
+            : null),
         // この run が観測していない project の値は run 開始時点のもの。candidate 待機
         // （最大 25 分）の間に人が Instant Rollback していれば実態とズレる。復旧時に
         // 「いつ観測した値か」を取り違えないよう、出所を値と一緒に残す。

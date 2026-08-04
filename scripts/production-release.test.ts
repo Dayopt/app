@@ -1995,8 +1995,22 @@ describe('buildManifest', () => {
     expect(ungated.projects[0]).toMatchObject({
       action: 'uncertified',
       deploymentId: 'dpl_web_new',
-      // 戻し先を残す（自動 rollback の対象外なので手動復旧の手掛かりになる）。
-      previousDeploymentId: 'dpl_web_new',
+      // run 開始時点から live なものが落ちた場合、その deployment 自身は戻し先に
+      // ならない。null にして runbook 側で deployment 履歴を辿らせる。
+      previousDeploymentId: null,
+    });
+
+    // 待機中に live になった場合は run 開始時点の deployment が実際の戻し先になる。
+    const midRun = buildManifest({
+      ...base,
+      before: new Map([[project.name, { id: 'dpl_web_old', sha: OLD_SHA }]]),
+      externallyLive: new Map([[project.name, { id: 'dpl_web_new', sha: SHA }]]),
+      gatesPassed: new Set(),
+    });
+    expect(midRun.projects[0]).toMatchObject({
+      action: 'uncertified',
+      deploymentId: 'dpl_web_new',
+      previousDeploymentId: 'dpl_web_old',
     });
 
     const gated = buildManifest({ ...atTarget, gatesPassed: new Set([project.name]) });
