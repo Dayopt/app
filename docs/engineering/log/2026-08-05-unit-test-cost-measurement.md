@@ -119,9 +119,24 @@ CI ログの vitest 内訳（308 files、job 全体が 420s だった run）:
 3. `turbo --affected` は採らない — 影響判定が二重になり、
    [overview.md §4 原則 1](../../projects/ci-monorepo-refactor/overview.md) に自ら反する
 
+## CI 実測（PR #1840、2026-08-05）
+
+ローカル 1 worker の予測 −27% に対し、**CI 実測は −26%** でほぼ一致した。
+
+| 対象                    | 変更前（直近 15 run 中央値） | 変更後                | 差       |
+| ----------------------- | ---------------------------- | --------------------- | -------- |
+| Unit job 合計           | 208s（課金 4 分）            | **154s（課金 3 分）** | **−26%** |
+| Product unit tests step | 131s                         | **99s**               | −24%     |
+
+変更後の step 内訳（154s）: Product unit tests 99s / contracts 18s / setup 14s /
+build:packages 10s / web + i18n + observability 8s。
+
+private 化後は core 半減で概ね倍になるため、**Unit は push あたり 7 分 → 5 分**の見込み。
+
 ## 未確認
 
-- **CI での実効果は次の PR の run で確認する。** 上の −27% はローカル 1 worker の値で、
-  CI（public 4 core / 将来 private 2 core）での実測ではない
-- private 化後の実数値は 9 月まで測れない。本ログの private 見積もりは
+- private 化後の実数値は 9 月まで測れない。上の見積もりは
   「core 数から worker 数が半減する」という推論に基づく
+- **`productUnit=false` で実際に skip される経路は未検証。** PR #1840 は
+  `apps/product/**` を触るため `productUnit=true` になり、skip 側を通らない。
+  `apps/product/**` を触らない次の PR が検証台になる
