@@ -264,12 +264,13 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - セキュリティ静的解析はGitHub CodeQLを継続する
 - **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにする。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。したがって「外部の目」は Codex の 1 系統だけで、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計する
-- Copilot を再開する場合は、org の Copilot seat 割り当てから必要（Settings → Copilot → Access）。seat が 0 のままでは workflow が登録されていてもレビューは出ない
+- **repo ruleset「Copilot automatic first review」は 2026-08-05 に削除した。** 上記の「外した」後も ruleset 自体は active で残っており、seat 付与後に復活したのか直近 PR（#1832）へ実際にレビューを投稿し、PR ごとに約 3 課金分の Actions 実行を発生させていた。private 化後の課金源かつ Codex 一本化方針と二重のため ruleset ごと削除。再開する場合は org の Copilot seat 割り当て（Settings → Copilot → Access）と ruleset の再作成の両方が必要
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
 
 判断と2026-07-21時点の外部設定証跡は[判断ログ](./log/2026-07-21-github-code-quality-disabled.md)に記録する。
 
+- Edge Function（`supabase/functions/**`）の型検査は Static Checks job の `deno check` step（`pnpm functions:check`）が担う。tsconfig / `pnpm typecheck` の対象外（別ランタイム）で、`supabase/functions/**` を変更した PR でだけ走る（#1822）
 - `Production Contract`は安全なdummy値だけを使い、Product / WebのProduction build gateがResend、Upstash、Web Turnstileを要求することを検査する
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
@@ -297,8 +298,10 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
   Impact Resolver を呼ぶ形に限って解禁する
 - **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
-  GraphQL `reviewThreads` の `isResolved` を数え、取得失敗・100 件超も停止に倒す。
-  解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
+  GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
+  `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
+  101 件・未解決 0 の PR #1820 を偽陰性で止めた）。取得失敗・20 ページ（2000 件）超は
+  従来どおり停止に倒す（fail closed）。解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
