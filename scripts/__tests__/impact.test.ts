@@ -1,9 +1,18 @@
-import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
 import {
@@ -11,6 +20,7 @@ import {
   formatSummary,
   readWorkspaceGraph,
   resolveImpact,
+  resolveVercelIgnore,
 } from '../ci/impact.mjs';
 
 /**
@@ -167,6 +177,11 @@ describe('app とその依存', () => {
 describe('中立 path（app 成果物に影響しない）', () => {
   it.each([
     [['scripts/git/finish-branch.sh', 'scripts/__tests__/finish-branch.test.ts']],
+    // impact.mjs 自身も中立。トレードオフを明示して固定する: ignoreCommand の実動作
+    // （shallow clone / exit code 変換）を変えた PR は実 Vercel 経路を通らずに merge
+    // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
+    // 崩れない。wrong-skip 方向の regression は本ファイルの unit test が防波堤になる。
+    [['scripts/ci/impact.mjs', 'scripts/__tests__/impact.test.ts']],
     [['.claude/hooks/pre-tool-guard.sh', '.claude/settings.json']],
     [['.github/workflows/ci.yml']],
     [['.husky/pre-push', '.vscode/settings.json']],
@@ -226,6 +241,35 @@ describe('Vercel の build が実行する root script', () => {
     expect(referenced.size).toBeGreaterThan(0);
     expect([...referenced].sort()).toEqual([...(PRODUCT_BUILD_SCRIPTS as Set<string>)].sort());
   });
+});
+
+describe('vercel.json ignoreCommand contract（Vercel Ignored Build Step）', () => {
+  // apps/{product,web}/vercel.json の `ignoreCommand` が壊れると、Vercel の build container が
+  // その project の全 deployment を無条件 build（コマンド解決失敗は exit != 0 = build 継続なので
+  // 安全側だが Impact Resolver の判定が一切効かなくなる）に倒れる。path は Root Directory 基準の
+  // 相対 path（`../../scripts/ci/impact.mjs`）で書く必要があり、CLI 引数は project 名と一致する
+  // 必要がある。この 2 点を固定する。
+  it.each([
+    ['apps/product/vercel.json', 'apps/product', 'product'],
+    ['apps/web/vercel.json', 'apps/web', 'web'],
+  ])(
+    '%s は scripts/ci/impact.mjs --vercel %s を正しい相対 path で呼ぶ',
+    (configPath, appDir, projectKey) => {
+      const config = JSON.parse(readFileSync(join(rootDir, configPath), 'utf8')) as {
+        ignoreCommand?: string;
+      };
+
+      expect(config.ignoreCommand).toBe(`node ../../scripts/ci/impact.mjs --vercel ${projectKey}`);
+
+      // Root Directory（appDir）が build container の cwd になる前提で相対 path を組んでいる。
+      // ここから実際に解決した絶対 path が scripts/ci/impact.mjs と一致することを確認する
+      // （深さがずれる、あるいは app を追加して階層が変わった時に drift を検出する）。
+      const match = config.ignoreCommand?.match(/^node (\S+) --vercel \S+$/);
+      expect(match).not.toBeNull();
+      const resolvedScriptPath = resolve(join(rootDir, appDir), match![1]);
+      expect(resolvedScriptPath).toBe(join(rootDir, 'scripts/ci/impact.mjs'));
+    },
+  );
 });
 
 describe('fail closed', () => {
@@ -316,5 +360,220 @@ describe('formatSummary', () => {
     ]) {
       expect(summary).toContain(key);
     }
+  });
+});
+
+/**
+ * `resolveVercelIgnore` の純粋ロジック部分。`diffFilesImpl` を差し替えて git を
+ * spawn せずに fail open / fail closed の分岐だけを検証する（CLI 全体の実地検証は
+ * 下の「Vercel Ignored Build Step CLI（実 git fixture）」で行う）。
+ */
+describe('resolveVercelIgnore（純粋ロジック）', () => {
+  it('VERCEL_GIT_PREVIOUS_SHA が無い場合は build に倒す（fail open）', () => {
+    const result = resolveVercelIgnore({ projectKey: 'product', prevSha: undefined });
+    expect(result.shouldBuild).toBe(true);
+    expect(result.reason).toContain('VERCEL_GIT_PREVIOUS_SHA');
+  });
+
+  it('未知の project key は build に倒す（fail open）', () => {
+    const result = resolveVercelIgnore({ projectKey: 'storybook', prevSha: 'deadbeef' });
+    expect(result.shouldBuild).toBe(true);
+    expect(result.reason).toContain('unknown Vercel project key');
+  });
+
+  it('git diff が失敗したら build に倒す（fail open。shallow clone で SHA が無い場合を模す）', () => {
+    const result = resolveVercelIgnore({
+      projectKey: 'product',
+      prevSha: 'deadbeef',
+      diffFilesImpl: () => {
+        throw new Error('fatal: bad object deadbeef');
+      },
+    });
+    expect(result.shouldBuild).toBe(true);
+    expect(result.reason).toContain('fail open');
+  });
+
+  it('resolver が例外を投げたら build に倒す（fail open）', () => {
+    const result = resolveVercelIgnore({
+      projectKey: 'product',
+      prevSha: 'deadbeef',
+      diffFilesImpl: () => ['apps/product/x.ts'],
+      resolveImpactImpl: () => {
+        throw new Error('boom');
+      },
+    });
+    expect(result.shouldBuild).toBe(true);
+    expect(result.reason).toContain('fail open');
+  });
+
+  it('差分 0 件は skip に倒す（変更が無いという確定的な答え）', () => {
+    const result = resolveVercelIgnore({
+      projectKey: 'product',
+      prevSha: 'deadbeef',
+      diffFilesImpl: () => [],
+    });
+    expect(result.shouldBuild).toBe(false);
+    expect(result.reason).toContain('no file changes');
+  });
+
+  it('product のみ変更 → product は build、web は skip', () => {
+    const diffFilesImpl = () => ['apps/product/src/foo.ts'];
+    expect(
+      resolveVercelIgnore({ projectKey: 'product', prevSha: 'deadbeef', diffFilesImpl })
+        .shouldBuild,
+    ).toBe(true);
+    expect(
+      resolveVercelIgnore({ projectKey: 'web', prevSha: 'deadbeef', diffFilesImpl }).shouldBuild,
+    ).toBe(false);
+  });
+
+  it('共有 package（packages/config）の変更 → product / web ともに build', () => {
+    const diffFilesImpl = () => ['packages/config/src/env.ts'];
+    expect(
+      resolveVercelIgnore({ projectKey: 'product', prevSha: 'deadbeef', diffFilesImpl })
+        .shouldBuild,
+    ).toBe(true);
+    expect(
+      resolveVercelIgnore({ projectKey: 'web', prevSha: 'deadbeef', diffFilesImpl }).shouldBuild,
+    ).toBe(true);
+  });
+});
+
+/**
+ * `--vercel <product|web>` CLI モードの実地検証。実 git repo fixture 上で実 CLI
+ * process を spawn し、`apps/{product,web}/vercel.json` の `ignoreCommand` が呼ぶのと
+ * 同じ経路（env 読み取り → git diff → resolveImpact → exit code）を通す。
+ *
+ * fixture は `os.tmpdir()` を `realpathSync` で解決してから作る。macOS は `/tmp` が
+ * `/private/tmp` への symlink で、解決前の path を渡すと `resolve(process.argv[1])`
+ * と `fileURLToPath(import.meta.url)`（Node が実 path で解決する）が食い違い、
+ * 本体側の `isDirectRun` 判定が false になって CLI 分岐が丸ごと無反応になる
+ * （出力なし・exit 0 のまま）。実 CI コンテナではこの症状は出ないが、ローカル
+ * macOS での再現性を保つために先に解決しておく。
+ */
+describe('Vercel Ignored Build Step CLI（実 git fixture）', () => {
+  let fixtureDir: string;
+  let scriptPath: string;
+  let initSha: string;
+  let productOnlySha: string;
+  let sharedPackageSha: string;
+
+  function git(args: string[], cwd: string) {
+    return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  }
+
+  function commit(cwd: string, message: string) {
+    git(['add', '-A'], cwd);
+    git(['-c', 'user.email=t@t.com', '-c', 'user.name=t', 'commit', '-q', '-m', message], cwd);
+    return git(['rev-parse', 'HEAD'], cwd);
+  }
+
+  function runCli(projectKey: string, cwd: string, env: Record<string, string | undefined>) {
+    return spawnSync('node', [scriptPath, '--vercel', projectKey], {
+      cwd,
+      encoding: 'utf8',
+      env: { ...process.env, ...env },
+    });
+  }
+
+  beforeAll(() => {
+    const rawTmp = mkdtempSync(join(tmpdir(), 'impact-vercel-fixture-'));
+    fixtureDir = realpathSync(rawTmp);
+    scriptPath = join(fixtureDir, 'scripts/ci/impact.mjs');
+
+    mkdirSync(join(fixtureDir, 'scripts/ci'), { recursive: true });
+    mkdirSync(join(fixtureDir, 'apps/product'), { recursive: true });
+    mkdirSync(join(fixtureDir, 'apps/web'), { recursive: true });
+    mkdirSync(join(fixtureDir, 'packages/config'), { recursive: true });
+    mkdirSync(join(fixtureDir, 'packages/domain'), { recursive: true });
+    cpSync(join(rootDir, 'scripts/ci/impact.mjs'), scriptPath);
+
+    writeFileSync(join(fixtureDir, 'package.json'), JSON.stringify({ name: 'fixture-root' }));
+    writeFileSync(
+      join(fixtureDir, 'apps/product/package.json'),
+      JSON.stringify({
+        name: '@dayopt/product',
+        dependencies: { '@dayopt/config': 'workspace:*', '@dayopt/domain': 'workspace:*' },
+      }),
+    );
+    writeFileSync(
+      join(fixtureDir, 'apps/web/package.json'),
+      JSON.stringify({ name: '@dayopt/web', dependencies: { '@dayopt/config': 'workspace:*' } }),
+    );
+    writeFileSync(
+      join(fixtureDir, 'packages/config/package.json'),
+      JSON.stringify({ name: '@dayopt/config' }),
+    );
+    writeFileSync(
+      join(fixtureDir, 'packages/domain/package.json'),
+      JSON.stringify({ name: '@dayopt/domain' }),
+    );
+    writeFileSync(join(fixtureDir, 'apps/product/a.txt'), 'a');
+    writeFileSync(join(fixtureDir, 'apps/web/b.txt'), 'b');
+    writeFileSync(join(fixtureDir, 'packages/config/index.ts'), 'export const config = 1;');
+    writeFileSync(join(fixtureDir, 'packages/domain/index.ts'), 'export const domain = 1;');
+
+    git(['init', '-q'], fixtureDir);
+    initSha = commit(fixtureDir, 'init');
+
+    writeFileSync(join(fixtureDir, 'apps/product/a.txt'), 'a2');
+    productOnlySha = commit(fixtureDir, 'product only change');
+
+    writeFileSync(join(fixtureDir, 'packages/config/index.ts'), 'export const config = 2;');
+    sharedPackageSha = commit(fixtureDir, 'shared package change');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureDir, { recursive: true, force: true });
+  });
+
+  it('product のみ変更 → product は build（exit 1）、web は skip（exit 0）', () => {
+    git(['checkout', '-q', productOnlySha], fixtureDir);
+
+    const productResult = runCli('product', join(fixtureDir, 'apps/product'), {
+      VERCEL_GIT_PREVIOUS_SHA: initSha,
+    });
+    expect(productResult.status).toBe(1);
+    expect(productResult.stdout).toContain('BUILD');
+
+    const webResult = runCli('web', join(fixtureDir, 'apps/web'), {
+      VERCEL_GIT_PREVIOUS_SHA: initSha,
+    });
+    expect(webResult.status).toBe(0);
+    expect(webResult.stdout).toContain('SKIP');
+  });
+
+  it('packages 共有変更（packages/config）→ product / web ともに build（exit 1）', () => {
+    git(['checkout', '-q', sharedPackageSha], fixtureDir);
+
+    const productResult = runCli('product', join(fixtureDir, 'apps/product'), {
+      VERCEL_GIT_PREVIOUS_SHA: productOnlySha,
+    });
+    expect(productResult.status).toBe(1);
+
+    const webResult = runCli('web', join(fixtureDir, 'apps/web'), {
+      VERCEL_GIT_PREVIOUS_SHA: productOnlySha,
+    });
+    expect(webResult.status).toBe(1);
+  });
+
+  it('VERCEL_GIT_PREVIOUS_SHA が未設定 → build（exit 1、fail open）', () => {
+    git(['checkout', '-q', productOnlySha], fixtureDir);
+
+    const result = runCli('product', join(fixtureDir, 'apps/product'), {
+      VERCEL_GIT_PREVIOUS_SHA: undefined,
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('VERCEL_GIT_PREVIOUS_SHA');
+  });
+
+  it('checkout の履歴に無い SHA → build（exit 1、fail open。shallow clone 相当）', () => {
+    git(['checkout', '-q', productOnlySha], fixtureDir);
+
+    const result = runCli('product', join(fixtureDir, 'apps/product'), {
+      VERCEL_GIT_PREVIOUS_SHA: '0000000000000000000000000000000000dead',
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('fail open');
   });
 });

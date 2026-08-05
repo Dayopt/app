@@ -11,6 +11,9 @@
  *   printf '%s\n' file1 file2 | node scripts/ci/impact.mjs --stdin
  *   node scripts/ci/impact.mjs apps/product/src/foo.ts docs/README.md
  *   ... --summary を付けると GITHUB_STEP_SUMMARY 向けの Markdown を出す
+ *   node scripts/ci/impact.mjs --vercel <product|web>
+ *   ... Vercel の Ignored Build Step（`ignoreCommand`）から呼ぶ専用モード。
+ *       `apps/{product,web}/vercel.json` を参照。詳細は §Vercel Ignored Build Step。
  *
  * 出力キーは固定: product / web / integration / productJourney / webPreviewSmoke / docsOnly。
  *
@@ -26,6 +29,7 @@
  * - 変更ファイルが 1 件も無い入力は判定不能として fail closed（全 affected）に倒す
  */
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -385,6 +389,129 @@ export function formatSummary(impact) {
   return `${lines.join('\n')}\n`;
 }
 
+// ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
+//
+// `apps/{product,web}/vercel.json` の `ignoreCommand` から呼ばれる。build container の
+// cwd は Root Directory（`apps/product` / `apps/web`）だが、git は checkout のどこから
+// 実行しても repo-root 相対の path を返すため（実測済み）、追加の path 変換は不要。
+//
+// exit code の意味は Vercel の契約: **exit 1 = build 続行、exit 0 = build を skip**。
+// 基準は `VERCEL_GIT_PREVIOUS_SHA`（その project + branch の直前の**成功** deployment
+// の SHA。Ignored Build Step 設定時のみ露出）〜 HEAD。merge の親コミットとの diff では
+// ない（docs/projects/ci-monorepo-refactor/overview.md §8「Phase 4 への制約」。merge 単位
+// で判定すると、失敗した release が取りこぼした変更を Vercel 側だけ永久に skip し続ける）。
+//
+// **fail open を徹底する**（= build 側に倒す）。env 欠落、対象 SHA が checkout の履歴に
+// 無い（shallow clone。build container は `git clone --depth=10`）、git 呼び出し失敗、
+// resolver が判定不能・想定外の例外 — これらは全て exit 1。exit 0（skip）に倒れるのは
+// 「diff が取れて resolveImpact が明確に false を返した」場合だけ。
+
+const VERCEL_PROJECT_KEYS = new Set(['product', 'web']);
+
+const shortSha = (sha) =>
+  typeof sha === 'string' && sha.length > 0 ? sha.slice(0, 7) : String(sha);
+
+/**
+ * `baseSha`〜`targetSha` 間の変更ファイル一覧。scripts/production-release.mjs の
+ * `gitDiffFiles` と同じ規則（`--no-renames` で rename 元も拾う、`-z` で non-ASCII path の
+ * エスケープを避ける）。対象 commit が checkout に無ければ git が非 0 で終了し、
+ * throw して呼び出し側の fail open 経路へ落ちる。
+ */
+export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
+  const stdout = execFileSync(
+    'git',
+    ['diff', '--name-only', '--no-renames', '-z', baseSha, targetSha],
+    {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+      // 失敗は戻り値（throw）で扱う。stderr をそのまま build log へ流すと、
+      // fail open の正常な分岐が事故のように見える。
+      stdio: ['ignore', 'pipe', 'ignore'],
+    },
+  );
+  return stdout.split('\0').filter(Boolean);
+}
+
+/**
+ * Vercel Ignored Build Step の判定本体。env 読み取りと副作用（stdout / exit code）を
+ * 持たない純粋な形にして、CLI からも test からも同じ経路を通す。
+ *
+ * @param {{
+ *   projectKey: string,
+ *   prevSha: string | undefined,
+ *   targetSha?: string,
+ *   cwd?: string,
+ *   diffFilesImpl?: typeof gitDiffFiles,
+ *   resolveImpactImpl?: typeof resolveImpact,
+ * }} params
+ * @returns {{ shouldBuild: boolean, reason: string }}
+ */
+export function resolveVercelIgnore({
+  projectKey,
+  prevSha,
+  targetSha = 'HEAD',
+  cwd = ROOT,
+  diffFilesImpl = gitDiffFiles,
+  resolveImpactImpl = resolveImpact,
+}) {
+  if (!VERCEL_PROJECT_KEYS.has(projectKey)) {
+    return { shouldBuild: true, reason: `unknown Vercel project key "${projectKey}" (fail open)` };
+  }
+
+  if (!prevSha) {
+    return {
+      shouldBuild: true,
+      reason:
+        'VERCEL_GIT_PREVIOUS_SHA is not set (fail open — first deployment, or Ignored Build Step not active for this project)',
+    };
+  }
+
+  let files;
+  try {
+    files = diffFilesImpl(prevSha, targetSha, { cwd });
+  } catch (error) {
+    return {
+      shouldBuild: true,
+      reason: `git diff ${shortSha(prevSha)}..${shortSha(targetSha)} failed, likely a shallow clone without the previous SHA (fail open): ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+
+  // 差分 0 件は「変更が無い」という確定的な答え（production-release.mjs の
+  // resolveProjectImpact と同じ扱い）。resolveImpact へ空配列を渡すと「判定不能」として
+  // fail closed（全 affected）になってしまうため、ここで先に確定させる。
+  if (files.length === 0) {
+    return { shouldBuild: false, reason: `no file changes since ${shortSha(prevSha)}` };
+  }
+
+  let impact;
+  try {
+    impact = resolveImpactImpl(files);
+  } catch (error) {
+    return {
+      shouldBuild: true,
+      reason: `impact resolver threw (fail open): ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+
+  const affected = impact?.[projectKey];
+  if (typeof affected !== 'boolean') {
+    return {
+      shouldBuild: true,
+      reason: `resolver returned no verdict for "${projectKey}" (fail open)`,
+    };
+  }
+
+  if (affected) {
+    const trigger = impact.reasons?.[projectKey] ?? impact.unknown?.[0] ?? 'affected';
+    return { shouldBuild: true, reason: `${projectKey} affected — ${trigger}` };
+  }
+
+  return { shouldBuild: false, reason: `no ${projectKey} impact since ${shortSha(prevSha)}` };
+}
+
 // ─── CLI ────────────────────────────────────────────────────────────
 
 async function readStdinLines() {
@@ -397,16 +524,30 @@ const isDirectRun = process.argv[1] && resolve(process.argv[1]) === fileURLToPat
 
 if (isDirectRun) {
   const args = process.argv.slice(2);
-  const useStdin = args.includes('--stdin');
-  const summary = args.includes('--summary');
-  const fileArgs = args.filter((a) => !a.startsWith('--'));
+  const vercelIndex = args.indexOf('--vercel');
 
-  const files = useStdin ? await readStdinLines() : fileArgs;
-  const impact = resolveImpact(files);
-
-  if (summary) {
-    process.stdout.write(formatSummary(impact));
+  if (vercelIndex !== -1) {
+    const projectKey = args[vercelIndex + 1];
+    const { shouldBuild, reason } = resolveVercelIgnore({
+      projectKey,
+      prevSha: process.env.VERCEL_GIT_PREVIOUS_SHA,
+    });
+    process.stdout.write(
+      `[impact] --vercel ${projectKey}: ${shouldBuild ? 'BUILD' : 'SKIP'} — ${reason}\n`,
+    );
+    process.exitCode = shouldBuild ? 1 : 0;
   } else {
-    process.stdout.write(`${JSON.stringify(impact, null, 2)}\n`);
+    const useStdin = args.includes('--stdin');
+    const summary = args.includes('--summary');
+    const fileArgs = args.filter((a) => !a.startsWith('--'));
+
+    const files = useStdin ? await readStdinLines() : fileArgs;
+    const impact = resolveImpact(files);
+
+    if (summary) {
+      process.stdout.write(formatSummary(impact));
+    } else {
+      process.stdout.write(`${JSON.stringify(impact, null, 2)}\n`);
+    }
   }
 }
