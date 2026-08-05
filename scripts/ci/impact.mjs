@@ -44,6 +44,7 @@ export const IMPACT_KEYS = [
   'integration',
   'productJourney',
   'productUnit',
+  'webCi',
   'webPreviewSmoke',
   'docsOnly',
 ];
@@ -268,6 +269,7 @@ const ALL_AFFECTED = {
   integration: true,
   productJourney: true,
   productUnit: true,
+  webCi: true,
   webPreviewSmoke: true,
   docsOnly: false,
 };
@@ -399,6 +401,11 @@ export function resolveImpact(changedFiles, options = {}) {
     // 変更でも true にする（§CI の toolchain）。Vercel / release は `product` を見るため、
     // toolchain 変更が preview build を誘発しない。
     productUnit: product || ciToolchain,
+    // Actions 上で web の build + E2E job を走らせるか。productUnit と同じ理由で
+    // `web` から分ける: この job も同じ setup action（Node / pnpm のバージョン）で
+    // 動くため toolchain 変更でも走らせたいが、`web` に倒すと Vercel の web preview
+    // build まで誘発してしまう（Phase 4 で止めたもの）。
+    webCi: web || ciToolchain,
     webPreviewSmoke: web,
     docsOnly,
     reasons,
@@ -454,8 +461,8 @@ export function formatSummary(impact) {
 export function formatGithubOutput(impact) {
   const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
   const productUnit = impact?.productUnit === false ? 'false' : 'true';
-  const web = impact?.web === false ? 'false' : 'true';
-  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb=${web}\n`;
+  const webCi = impact?.webCi === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb_ci=${webCi}\n`;
 }
 
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────

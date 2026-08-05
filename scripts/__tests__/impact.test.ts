@@ -39,6 +39,7 @@ type Impact = {
   integration: boolean;
   productJourney: boolean;
   productUnit: boolean;
+  webCi: boolean;
   webPreviewSmoke: boolean;
   docsOnly: boolean;
   unknown: string[];
@@ -46,8 +47,8 @@ type Impact = {
 
 /**
  * 期待値を書きやすくする省略形。省略キーは false 扱い。
- * ただし `productUnit` の既定だけは `product` と同値にする（両者がずれるのは
- * CI toolchain の変更だけなので、そのケースだけ明示的に書けばよい）。
+ * ただし `productUnit` / `webCi` の既定だけは `product` / `web` と同値にする
+ * （ずれるのは CI toolchain の変更だけなので、そのケースだけ明示的に書けばよい）。
  */
 function expectImpact(files: string[], expected: Partial<Impact>) {
   const impact = resolveImpact(files) as Impact;
@@ -57,6 +58,7 @@ function expectImpact(files: string[], expected: Partial<Impact>) {
     integration: false,
     productJourney: false,
     productUnit: expected.product === true,
+    webCi: expected.web === true,
     webPreviewSmoke: false,
     docsOnly: false,
     ...expected,
@@ -67,6 +69,7 @@ function expectImpact(files: string[], expected: Partial<Impact>) {
     integration: impact.integration,
     productJourney: impact.productJourney,
     productUnit: impact.productUnit,
+    webCi: impact.webCi,
     webPreviewSmoke: impact.webPreviewSmoke,
     docsOnly: impact.docsOnly,
   }).toEqual(full);
@@ -201,8 +204,12 @@ describe('中立 path（app 成果物に影響しない）', () => {
   });
 
   it('.github の integration 対象（setup action）は integration を要求する', () => {
-    // productUnit も true になる（下の「CI toolchain」describe が理由を固定する）。
-    expectImpact(['.github/actions/setup/action.yml'], { integration: true, productUnit: true });
+    // productUnit / webCi も true になる（下の「CI toolchain」describe が理由を固定する）。
+    expectImpact(['.github/actions/setup/action.yml'], {
+      integration: true,
+      productUnit: true,
+      webCi: true,
+    });
   });
 });
 
@@ -211,11 +218,12 @@ describe('中立 path（app 成果物に影響しない）', () => {
  * `product`（Vercel build / release を走らせるか）とは別物。CI の toolchain を
  * 変えた PR で **前者だけ** true になることを固定する。
  */
-describe('CI toolchain（productUnit と product の分離）', () => {
-  it('setup action は productUnit だけを要求し、Vercel build は誘発しない', () => {
+describe('CI toolchain（productUnit / webCi と product / web の分離）', () => {
+  it('setup action は Actions 側の実行キーだけを要求し、Vercel build は誘発しない', () => {
     const impact = expectImpact(['.github/actions/setup/action.yml'], {
       integration: true,
       productUnit: true,
+      webCi: true,
     });
     // product が false のままであることが要点。true にすると merge gate が
     // `Vercel – product` context を要求し、Phase 4 で止めた preview build が復活する。
@@ -235,6 +243,7 @@ describe('CI toolchain（productUnit と product の分離）', () => {
       product: true,
       productJourney: true,
       productUnit: true,
+      webCi: true,
       integration: true,
     });
   });
@@ -397,7 +406,7 @@ describe('CLI', () => {
       { input: 'scripts/ci/impact.mjs\n', encoding: 'utf8' },
     );
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe('docs_only=false\nproduct_unit=false\nweb=false\n');
+    expect(result.stdout).toBe('docs_only=false\nproduct_unit=false\nweb_ci=false\n');
   });
 });
 
@@ -408,51 +417,60 @@ describe('CLI', () => {
  * required check が success」になるため、両方向を固定する。
  */
 describe('formatGithubOutput', () => {
-  it('product に影響する変更では product=true / web=false', () => {
+  it('product に影響する変更では product=true / web_ci=false', () => {
     expect(formatGithubOutput(resolveImpact(['apps/product/src/foo.ts']))).toBe(
-      'docs_only=false\nproduct_unit=true\nweb=false\n',
+      'docs_only=false\nproduct_unit=true\nweb_ci=false\n',
     );
   });
 
-  it('web に影響する変更では web=true / product=false', () => {
+  it('web に影響する変更では web_ci=true / product=false', () => {
     expect(formatGithubOutput(resolveImpact(['apps/web/src/foo.ts']))).toBe(
-      'docs_only=false\nproduct_unit=false\nweb=true\n',
+      'docs_only=false\nproduct_unit=false\nweb_ci=true\n',
     );
   });
 
-  it('公開コンテンツ（apps/web/content）の変更は web=true', () => {
+  it('CI toolchain の変更は web_ci=true（web は false のまま）', () => {
+    // productUnit と同じ非対称。web:job も同じ setup action で動くため Actions 上の
+    // build + E2E は走らせたいが、`web` に倒すと Vercel の web preview build まで
+    // 誘発してしまう（Phase 4 で止めたもの）。
+    const impact = resolveImpact(['.github/actions/setup/action.yml']) as Impact;
+    expect(impact.web).toBe(false);
+    expect(formatGithubOutput(impact)).toBe('docs_only=false\nproduct_unit=true\nweb_ci=true\n');
+  });
+
+  it('公開コンテンツ（apps/web/content）の変更は web_ci=true', () => {
     expect(formatGithubOutput(resolveImpact(['apps/web/content/blog/en/foo.mdx']))).toBe(
-      'docs_only=false\nproduct_unit=false\nweb=true\n',
+      'docs_only=false\nproduct_unit=false\nweb_ci=true\n',
     );
   });
 
   it('中立 path のみの変更では product=false（Unit の product test を skip できる）', () => {
     expect(formatGithubOutput(resolveImpact(['scripts/git/finish-branch.sh']))).toBe(
-      'docs_only=false\nproduct_unit=false\nweb=false\n',
+      'docs_only=false\nproduct_unit=false\nweb_ci=false\n',
     );
   });
 
   it('docs のみの変更では docs_only=true', () => {
     expect(formatGithubOutput(resolveImpact(['docs/README.md']))).toBe(
-      'docs_only=true\nproduct_unit=false\nweb=false\n',
+      'docs_only=true\nproduct_unit=false\nweb_ci=false\n',
     );
   });
 
   it('判定不能（変更ファイル一覧が空）は全キーとも実行側に倒す', () => {
     expect(formatGithubOutput(resolveImpact([]))).toBe(
-      'docs_only=false\nproduct_unit=true\nweb=true\n',
+      'docs_only=false\nproduct_unit=true\nweb_ci=true\n',
     );
   });
 
   it('未知 path を含む変更は全キーとも実行側に倒す', () => {
     expect(formatGithubOutput(resolveImpact(['mystery.config.xyz']))).toBe(
-      'docs_only=false\nproduct_unit=true\nweb=true\n',
+      'docs_only=false\nproduct_unit=true\nweb_ci=true\n',
     );
   });
 
   it('impact が壊れていても実行側に倒す（fail closed）', () => {
-    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct_unit=true\nweb=true\n');
-    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct_unit=true\nweb=true\n');
+    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct_unit=true\nweb_ci=true\n');
+    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct_unit=true\nweb_ci=true\n');
   });
 });
 
