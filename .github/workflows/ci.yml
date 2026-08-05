@@ -57,11 +57,12 @@ jobs:
     timeout-minutes: 5
     outputs:
       docs_only: ${{ steps.impact.outputs.docs_only }}
+      product: ${{ steps.impact.outputs.product }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # 失敗しても job は落とさず、docs_only を空のままにする（下流は空を
-      # 「docs-only ではない」として全 job 実行に倒す = fail closed）。
+      # 失敗しても job は落とさず、output を空のままにする。下流は空を
+      # 「docs-only ではない」「product は affected」として実行側に倒す（fail closed）。
       - name: Resolve impact
         id: impact
         if: github.event_name == 'pull_request'
@@ -71,19 +72,12 @@ jobs:
         run: |
           files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             --jq '.[] | .filename, (.previous_filename // empty)')"
-          docs_only="$(printf '%s\n' "$files" | node scripts/ci/impact.mjs --stdin | node -e '
-            let raw = "";
-            process.stdin.on("data", (c) => (raw += c));
-            process.stdin.on("end", () => {
-              try {
-                process.stdout.write(JSON.parse(raw).docsOnly === true ? "true" : "false");
-              } catch {
-                process.stdout.write("false");
-              }
-            });
-          ')"
-          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-          echo "docs_only=$docs_only" >> "$GITHUB_STEP_SUMMARY"
+          # gh が失敗して files が空でも fail closed に倒れる: impact.mjs は
+          # 「変更ファイル一覧が空 = 判定不能」を全 affected として返す。
+          # key=value への変換（fail closed の既定値を含む）は impact.mjs の
+          # --github-output が持つ。YAML に分岐を書くと test に載らないため。
+          node scripts/ci/impact.mjs --stdin --github-output <<<"$files" \
+            | tee -a "$GITHUB_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
 
   static:
     name: "\U0001F50D Static Checks"
@@ -239,13 +233,25 @@ jobs:
 
       # coverage は計測しない。閾値 gate（vitest の coverage.thresholds）も
       # artifact upload も無いため、istanbul 計装のコストをかけて作ったレポートは
-      # runner 破棄とともに捨てられていた。実行するテストは完全に同一
-      # （どちらも --project unit run。実測 243 files / 2278 tests で一致）。
+      # runner 破棄とともに捨てられていた。実行するテストは完全に同一。
       # コスト削減は期待しないこと。CI 実測では課金分に差が出ず（7 → 7 分）、step 時間も
       # 215 → 259 秒と逆に増えた（runner 変動が計装コストを上回る）。
       # 目的は「誰も読まないレポートを作るのをやめる」ことだけ。
       # coverage を見たい時はローカルで pnpm test:coverage を実行する。
+      #
+      # Unit job の中でここだけが重い（実測 131s / job 全体 188s）。product に影響が
+      # 無い PR ではまるごと skip する。判定は gate job の Impact Resolver が正本で、
+      # CI・merge gate・Vercel・release がすべて同じ規則を共有する
+      # （docs/projects/ci-monorepo-refactor/overview.md §4 原則 1）。
+      # `!= 'false'` にするのは fail closed のため: gate が落ちて output が空でも実行側へ倒す。
+      #
+      # skip して安全な根拠: product の unit test は apps/product/** と packages/**
+      # だけを参照し、`product=false` になる path（scripts/ .github/ .claude/
+      # apps/storybook/ 等）へ到達しない（`@dayopt/storybook` / root `scripts/` への
+      # 参照が 0 件であることを確認済み）。scripts/ 側の契約は上の
+      # `pnpm test:scripts` が常時実行で受け持つ。
       - name: Product unit tests
+        if: needs.gate.outputs.product != 'false'
         run: pnpm --filter @dayopt/product test:run
 
       - name: Web unit tests

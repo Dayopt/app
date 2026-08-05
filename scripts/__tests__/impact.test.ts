@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
 import {
   PRODUCT_BUILD_SCRIPTS,
+  formatGithubOutput,
   formatSummary,
   readWorkspaceGraph,
   resolveImpact,
@@ -344,6 +345,57 @@ describe('CLI', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('## Impact Resolver');
     expect(result.stdout).toContain('未知の path');
+  });
+
+  it('--github-output は GITHUB_OUTPUT 向けの key=value を返す', () => {
+    const result = spawnSync(
+      'node',
+      [join(rootDir, 'scripts/ci/impact.mjs'), '--stdin', '--github-output'],
+      { input: 'scripts/ci/impact.mjs\n', encoding: 'utf8' },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('docs_only=false\nproduct=false\n');
+  });
+});
+
+/**
+ * ci.yml の gate job が各 job / step の `if:` に配る値。**skip 側の真偽が
+ * キーごとに逆**（docs_only は true が skip、product は false が skip）なので、
+ * 判定できない時の既定値も逆向きになる。この対称性が崩れると「検証せずに
+ * required check が success」になるため、両方向を固定する。
+ */
+describe('formatGithubOutput', () => {
+  it('product に影響する変更では product=true', () => {
+    expect(formatGithubOutput(resolveImpact(['apps/product/src/foo.ts']))).toBe(
+      'docs_only=false\nproduct=true\n',
+    );
+  });
+
+  it('中立 path のみの変更では product=false（Unit の product test を skip できる）', () => {
+    expect(formatGithubOutput(resolveImpact(['scripts/git/finish-branch.sh']))).toBe(
+      'docs_only=false\nproduct=false\n',
+    );
+  });
+
+  it('docs のみの変更では docs_only=true', () => {
+    expect(formatGithubOutput(resolveImpact(['docs/README.md']))).toBe(
+      'docs_only=true\nproduct=false\n',
+    );
+  });
+
+  it('判定不能（変更ファイル一覧が空）は両キーとも実行側に倒す', () => {
+    expect(formatGithubOutput(resolveImpact([]))).toBe('docs_only=false\nproduct=true\n');
+  });
+
+  it('未知 path を含む変更は両キーとも実行側に倒す', () => {
+    expect(formatGithubOutput(resolveImpact(['mystery.config.xyz']))).toBe(
+      'docs_only=false\nproduct=true\n',
+    );
+  });
+
+  it('impact が壊れていても実行側に倒す（fail closed）', () => {
+    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct=true\n');
+    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct=true\n');
   });
 });
 

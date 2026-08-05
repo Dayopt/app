@@ -11,6 +11,7 @@
  *   printf '%s\n' file1 file2 | node scripts/ci/impact.mjs --stdin
  *   node scripts/ci/impact.mjs apps/product/src/foo.ts docs/README.md
  *   ... --summary を付けると GITHUB_STEP_SUMMARY 向けの Markdown を出す
+ *   ... --github-output を付けると GITHUB_OUTPUT 向けの `key=value` 行を出す
  *   node scripts/ci/impact.mjs --vercel <product|web>
  *   ... Vercel の Ignored Build Step（`ignoreCommand`）から呼ぶ専用モード。
  *       `apps/{product,web}/vercel.json` を参照。詳細は §Vercel Ignored Build Step。
@@ -389,6 +390,25 @@ export function formatSummary(impact) {
   return `${lines.join('\n')}\n`;
 }
 
+// ─── GitHub Actions の job output（`--github-output`）─────────────────
+//
+// ci.yml の gate job が各 job / step の `if:` に配る値。**判定の既定値を YAML の
+// shell one-liner ではなくここに置く**のは、YAML に書いた分岐は test に載らないため
+// （実際に「テストを足しても CI に載らない」形の穴が過去にあった）。
+//
+// キーごとに fail closed の向きが逆になる点に注意する:
+// - `docs_only` は true が skip 側なので、確信が持てない時は false
+// - `product` は false が skip 側なので、確信が持てない時は true
+//
+// このコマンド自体が落ちた場合は stdout が空になり、GITHUB_OUTPUT に何も書かれない。
+// 下流は空文字を `!= 'true'` / `!= 'false'` で受けて実行側に倒すため、やはり fail closed。
+
+export function formatGithubOutput(impact) {
+  const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
+  const product = impact?.product === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct=${product}\n`;
+}
+
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
 //
 // `apps/{product,web}/vercel.json` の `ignoreCommand` から呼ばれる。build container の
@@ -559,12 +579,15 @@ if (isDirectRun) {
   } else {
     const useStdin = args.includes('--stdin');
     const summary = args.includes('--summary');
+    const githubOutput = args.includes('--github-output');
     const fileArgs = args.filter((a) => !a.startsWith('--'));
 
     const files = useStdin ? await readStdinLines() : fileArgs;
     const impact = resolveImpact(files);
 
-    if (summary) {
+    if (githubOutput) {
+      process.stdout.write(formatGithubOutput(impact));
+    } else if (summary) {
       process.stdout.write(formatSummary(impact));
     } else {
       process.stdout.write(`${JSON.stringify(impact, null, 2)}\n`);
