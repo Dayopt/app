@@ -366,7 +366,12 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   Codex レビューと Claude の内部レビュー（`.claude/rules/ai-behavior.md` §Read-only delegation の
   `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化する。判定基準だった
   不変条件カタログは [invariants.md](./invariants.md) に残っている
-- `ci.yml` は docs / rules のみの変更では `paths-ignore` で skip され、4 job の status 自体が付かない。private + Free plan では GitHub 側の required check 強制が効かず、マージ可否は `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。ruleset の required 指定を強制できる plan へ移行する場合は、skip される job の扱いを先に設計する
+- `ci.yml` は docs / rules のみの変更でも **workflow 自体は起動し**、`gate` job（Impact Resolver）の
+  判定を各 job の `if:` に配って skip する。**skip された job は required status check として success
+  扱いになる**ため、実行コストを避けつつ merge gate も満たせる。`paths-ignore` は 2026-08-05 に撤去した
+  （workflow ごと起動しなくなり、ruleset が required にしている 4 check が永久に "expected" のまま残って
+  docs のみの PR が構造的に merge 不能になったため。PR #1836 で実測）。マージ可否は
+  `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）
 - **判定は `statusCheckRollup` を畳んでから行う。** rollup は同名 check を畳まないため
   （`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled が
   残り続け、再実行で解決してもマージ不能になる。畳む単位は `gh pr checks` に合わせて

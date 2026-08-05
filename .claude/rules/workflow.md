@@ -243,7 +243,36 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 [PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
 
-## 2 段階 CI（draft 運用）
+## PR と issue の紐づけ
+
+策定日: 2026-08-05
+
+**PR 本文に closing keyword を書き、merge で issue が自動で閉じる状態にする。** 手で閉じて回るのをやめ、「閉じ忘れた issue」が残らないようにする。
+
+```markdown
+Closes #1816
+Closes #1808
+Refs #1812
+```
+
+### 書き方の規則
+
+- **キーワードは issue 番号ごとに繰り返す。** `Closes #1816, #1808` は **#1816 しか閉じない**（GitHub の仕様）。`Closes #1816, closes #1808` のように 1 件ずつ書く。行を分けるのが安全
+- 使えるキーワードは `close / closes / closed`、`fix / fixes / fixed`、`resolve / resolves / resolved`。Dayopt では **`Closes` に統一**する（type ごとに使い分けても挙動は同じなので、揃えて grep しやすくする）
+- **閉じてはいけない issue には `Refs #N` を使う。** キーワードが無ければ参照リンクだけが張られる。対象は主に次の 2 つ
+  - **epic**（例 #1812）— sub-issue が全部終わってから閉じる。1 PR で閉じない
+  - **部分対応**の issue — その PR で全部は終わらないもの
+- **複数 issue を束ねた PR では `Closes` を人数分並べる。** [§PR 粒度](#pr-粒度) のとおり束ねるのが既定なので、これが普通の姿になる
+
+### 効く条件（満たしている）
+
+closing keyword が発火するのは **default branch へ merge した時**だけ。Dayopt は default branch が `main`、`branch:finish` も `main` へ merge するので条件を満たす。merge 方式（merge commit）も影響しない。
+
+**PR 本文に書く。** commit message に書いても default branch へ入れば閉じるが、本文なら PR ページで紐づけが一目で見え、後から編集もできる。
+
+### issue が無い作業
+
+typo 修正など issue を切っていない作業では省略してよい。ただし `dispatch` skill の規約に沿って起票した issue がある作業では必ず書く。「issue はあるが紐づけない」は無し。
 
 策定日: 2026-08-03
 

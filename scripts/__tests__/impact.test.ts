@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
 import {
   PRODUCT_BUILD_SCRIPTS,
+  formatGithubOutput,
   formatSummary,
   readWorkspaceGraph,
   resolveImpact,
@@ -36,12 +37,17 @@ type Impact = {
   web: boolean;
   integration: boolean;
   productJourney: boolean;
+  productUnit: boolean;
   webPreviewSmoke: boolean;
   docsOnly: boolean;
   unknown: string[];
 };
 
-/** 期待値を書きやすくする省略形。省略キーは false 扱い。 */
+/**
+ * 期待値を書きやすくする省略形。省略キーは false 扱い。
+ * ただし `productUnit` の既定だけは `product` と同値にする（両者がずれるのは
+ * CI toolchain の変更だけなので、そのケースだけ明示的に書けばよい）。
+ */
 function expectImpact(files: string[], expected: Partial<Impact>) {
   const impact = resolveImpact(files) as Impact;
   const full: Omit<Impact, 'unknown'> = {
@@ -49,6 +55,7 @@ function expectImpact(files: string[], expected: Partial<Impact>) {
     web: false,
     integration: false,
     productJourney: false,
+    productUnit: expected.product === true,
     webPreviewSmoke: false,
     docsOnly: false,
     ...expected,
@@ -58,6 +65,7 @@ function expectImpact(files: string[], expected: Partial<Impact>) {
     web: impact.web,
     integration: impact.integration,
     productJourney: impact.productJourney,
+    productUnit: impact.productUnit,
     webPreviewSmoke: impact.webPreviewSmoke,
     docsOnly: impact.docsOnly,
   }).toEqual(full);
@@ -192,7 +200,42 @@ describe('中立 path（app 成果物に影響しない）', () => {
   });
 
   it('.github の integration 対象（setup action）は integration を要求する', () => {
-    expectImpact(['.github/actions/setup/action.yml'], { integration: true });
+    // productUnit も true になる（下の「CI toolchain」describe が理由を固定する）。
+    expectImpact(['.github/actions/setup/action.yml'], { integration: true, productUnit: true });
+  });
+});
+
+/**
+ * `productUnit` は「Actions 上で product の unit test を走らせるか」で、
+ * `product`（Vercel build / release を走らせるか）とは別物。CI の toolchain を
+ * 変えた PR で **前者だけ** true になることを固定する。
+ */
+describe('CI toolchain（productUnit と product の分離）', () => {
+  it('setup action は productUnit だけを要求し、Vercel build は誘発しない', () => {
+    const impact = expectImpact(['.github/actions/setup/action.yml'], {
+      integration: true,
+      productUnit: true,
+    });
+    // product が false のままであることが要点。true にすると merge gate が
+    // `Vercel – product` context を要求し、Phase 4 で止めた preview build が復活する。
+    expect(impact.product).toBe(false);
+    expect(impact.web).toBe(false);
+  });
+
+  it('ci.yml はあえて productUnit を要求しない（意図的な線引き）', () => {
+    // ci.yml を変えた PR ではその新しい ci.yml 自体が実行されるため、gate 判定・
+    // job 構成・無条件 step は検証される。ここを productUnit に含めると
+    // product=false な PR の 1/3（実測 19 件中 7 件）で skip できなくなる。
+    expectImpact(['.github/workflows/ci.yml'], {});
+  });
+
+  it('product 変更と同時なら productUnit も当然 true', () => {
+    expectImpact(['.github/actions/setup/action.yml', 'apps/product/src/app/layout.tsx'], {
+      product: true,
+      productJourney: true,
+      productUnit: true,
+      integration: true,
+    });
   });
 });
 
@@ -344,6 +387,57 @@ describe('CLI', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('## Impact Resolver');
     expect(result.stdout).toContain('未知の path');
+  });
+
+  it('--github-output は GITHUB_OUTPUT 向けの key=value を返す', () => {
+    const result = spawnSync(
+      'node',
+      [join(rootDir, 'scripts/ci/impact.mjs'), '--stdin', '--github-output'],
+      { input: 'scripts/ci/impact.mjs\n', encoding: 'utf8' },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('docs_only=false\nproduct_unit=false\n');
+  });
+});
+
+/**
+ * ci.yml の gate job が各 job / step の `if:` に配る値。**skip 側の真偽が
+ * キーごとに逆**（docs_only は true が skip、product は false が skip）なので、
+ * 判定できない時の既定値も逆向きになる。この対称性が崩れると「検証せずに
+ * required check が success」になるため、両方向を固定する。
+ */
+describe('formatGithubOutput', () => {
+  it('product に影響する変更では product=true', () => {
+    expect(formatGithubOutput(resolveImpact(['apps/product/src/foo.ts']))).toBe(
+      'docs_only=false\nproduct_unit=true\n',
+    );
+  });
+
+  it('中立 path のみの変更では product=false（Unit の product test を skip できる）', () => {
+    expect(formatGithubOutput(resolveImpact(['scripts/git/finish-branch.sh']))).toBe(
+      'docs_only=false\nproduct_unit=false\n',
+    );
+  });
+
+  it('docs のみの変更では docs_only=true', () => {
+    expect(formatGithubOutput(resolveImpact(['docs/README.md']))).toBe(
+      'docs_only=true\nproduct_unit=false\n',
+    );
+  });
+
+  it('判定不能（変更ファイル一覧が空）は両キーとも実行側に倒す', () => {
+    expect(formatGithubOutput(resolveImpact([]))).toBe('docs_only=false\nproduct_unit=true\n');
+  });
+
+  it('未知 path を含む変更は両キーとも実行側に倒す', () => {
+    expect(formatGithubOutput(resolveImpact(['mystery.config.xyz']))).toBe(
+      'docs_only=false\nproduct_unit=true\n',
+    );
+  });
+
+  it('impact が壊れていても実行側に倒す（fail closed）', () => {
+    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct_unit=true\n');
+    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct_unit=true\n');
   });
 });
 

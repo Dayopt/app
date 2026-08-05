@@ -1,37 +1,14 @@
+/**
+ * DOM を必要とする unit test（`unit-dom` project、`environment: 'happy-dom'`）の setup。
+ *
+ * module mock は `setup-node.ts` と共有する（片方だけに mock を足すと、node 側の
+ * test だけが静かに素の実装を掴む）。ここには **DOM が存在する前提の処理だけ**を書く。
+ */
+import './setup-node';
+
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { afterEach, vi } from 'vitest';
-
-// server-only: テスト環境ではサーバーコンポーネント制約を無効化
-vi.mock('server-only', () => ({}));
-
-// next/navigation のモック（next-intl が内部で依存）
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
-  usePathname: () => '/',
-  useParams: () => ({}),
-  useSearchParams: () => new URLSearchParams(),
-  redirect: vi.fn(),
-  permanentRedirect: vi.fn(),
-  notFound: vi.fn(),
-}));
-
-// next-intl のモック
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-  useLocale: () => 'en',
-  useMessages: () => ({}),
-  useNow: () => new Date(),
-  useTimeZone: () => 'UTC',
-  useFormatter: () => ({
-    dateTime: (date: Date) => date.toISOString(),
-    number: (num: number) => num.toString(),
-    relativeTime: () => '',
-  }),
-  // テストでNextIntlClientProviderを直接使うファイル用
-  NextIntlClientProvider: ({ children }: { children: ReactNode }) => children,
-}));
+import { afterEach } from 'vitest';
 
 // テスト後のクリーンアップ
 afterEach(() => {

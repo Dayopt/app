@@ -107,7 +107,7 @@ Step 分割は作業単位、PR は機能のまとまり（[workflow.md §PR 粒
 | B   | Phase 3（Production Release の affected-aware 化）                                                                    | production release 経路は独立して検証・revert したい変更                                                                                                      |
 | C   | Phase 4（Vercel skip 有効化 + Config Audit への metadata 監査追加）                                                   | 外部設定変更が主体。B より先に出さない（§8）                                                                                                                  |
 | D   | Phase 5（CI 重複整理: Actions の Web build 削除、Web E2E → Preview smoke 化）                                         | #1808 / #1809 の Local Supabase 基盤・journey 完成に依存                                                                                                      |
-| E   | Phase 6（計測後に Unit を `turbo --affected` 化）                                                                     | 現行 full Unit の時間と検出内容を基準計測してから。現状 [turbo.json](../../../turbo.json) に `test:run` の inputs / 依存定義が無く、turbo.json 整備が前提     |
+| E   | Phase 6（Unit の実行環境分割 + Impact Resolver での skip）                                                            | 基準計測の結果 `turbo --affected` は採らなかった（§Phase 6 実施形態）                                                                                         |
 
 Phase 1 の Step Summary 表示は既存 static job 内の 1 step に相乗りさせる（job 新設は課金分 +1/run になるため）。
 
@@ -152,6 +152,25 @@ skip の対象は **preview build（PR の push）だけ**とし、production bu
 - **preview build の基準 SHA は `VERCEL_GIT_PREVIOUS_SHA` を使う。** 「その project + branch の直前の成功 deployment の SHA」で、Ignored Build Step 設定時のみ build container に露出する。preview は release gate と無関係なので「成功 build 基準」で十分（最終 push だけ unaffected の場合の merge gate 側の扱いは infra.md §merge gate を参照）
 - **fail open を徹底する。** exit 1 = build 続行、exit 0 = build skip という Vercel の契約に対し、env 欠落・shallow clone（`git clone --depth=10`）で SHA が履歴に無い・git 失敗・resolver 判定不能はすべて exit 1（build）に倒す。skip は「diff が取れて Impact Resolver が明確に false を返した」場合のみ
 - **product の「Skip deployments (no changes to root directory)」（`enableAffectedProjectsDeployments`）は merge より前に Disabled へ戻す。** 順序が必須なのは、この PR が audit contract 保護対象を変更するため merge に trusted dispatch（branch code で project 設定監査あり）の success が要り、Enabled のままだと dispatch が audit failure で落ちて merge できないため。先に Disabled へ戻しても現 main には ignoreCommand が無いので、影響は「全 push で build される = 従来どおりの課金」だけで安全。§8 補足で検出済みの残タスク（2026-08-01 から Enabled のまま）をこの手順で解消する。この機能を有効なままにすると、workspace 依存グラフを見ない自動 skip が `ignoreCommand`（依存グラフを見る）と二重に判定することになり、どちらが実際に skip を決めたか切り分けられなくなる。`scripts/production-config-audit.mjs` の project 設定監査が定常状態でこのフィールドを `false` に固定し、再度 Enabled に戻る drift を検出する
+
+### Phase 6 実施形態（2026-08-05）
+
+`#1816` は「turbo.json に `test:run` の inputs を定義して `turbo --affected` 化」と書いていたが、**基準計測の結果この案は採らなかった**。計測の詳細は [2026-08-05 のログ](../../engineering/log/2026-08-05-unit-test-cost-measurement.md)。
+
+判断の骨子は 2 つ。
+
+- **Unit の重さは「対象範囲」ではなく「1 ファイルあたりの実行環境コスト」だった。** CI 実測（308 files）で `tests` は 15.2s、対して `environment` 85.4s / `import` 123.0s / `setup` 45.3s。テスト本体は全体の 5% しかない。原因は [vitest.config.ts](../../../apps/product/vitest.config.ts) が全 test に `happy-dom` を掛けていたことで、実際に DOM が要るのは約 1/4 だけだった。**既定を `node` にして DOM が要るものだけ opt-in する** 分割が、affected 化とは独立に、かつ無条件に効く（実測 −27%）
+- **affected 化に turbo は要らない。** CI の `gate` job は既に `scripts/ci/impact.mjs` を実行している。`turbo --affected` を足すと影響判定の仕組みが 2 つになり、§4 設計原則 1「影響判定を一か所に集約する」に自ら反する。gate job の output に `product` を足し、Unit job の該当 step を `if:` で落とす形にした
+
+`turbo.json` は触っていない。Remote Cache も採用していない（維持コストを上回る便益が計測で出なかった）。
+
+**判定キーは `product` ではなく `productUnit` を新設した。** push 前の反証レビュー（behavior-verifier）が、`.github/` を丸ごと中立扱いする `isNeutralPath` のせいで **`.github/actions/setup/action.yml` だけを変えた PR で product の unit test が skip される**穴を指摘した。この file は Node / pnpm のバージョン、つまり **Actions 上で product の test が動く runtime そのもの**を決めるので、skip すると「runtime を変えたのにその runtime で一度も test を走らせずに merge」になる（実際に `chore(node): ランタイムをNode.js 24へ統一` という commit が存在する）。
+
+ただしこれを `product=true` に倒すのは誤り。この file は Vercel の build env には影響しないため、merge gate が `Vercel – product` context を要求し、Phase 4 で止めた preview build が復活する。**「CI で test を走らせるか」と「Vercel で build するか」は別の問い**なので、`productJourney` / `webPreviewSmoke` と同じく consumer ごとの独立キーに分けた。
+
+`.github/workflows/ci.yml` は**あえて含めない**。ci.yml を変えた PR ではその新しい ci.yml 自体が実行されるため、gate 判定・job 構成・無条件 step は検証される。検証されずに残るのは skip された step の中身だけで、それを拾うために `product=false` な PR の 1/3（実測 19 件中 7 件）で skip を諦めるのは割に合わない。
+
+なお `pnpm test:scripts`（root の CI / release / script contract test）は **product の affected 判定によらず常時実行する**。`product=false` になるのは `scripts/**` や `.github/**` を触った時なので、そこを skip すると変更した当の検証が走らない。
 
 ## 9. 非目標
 
