@@ -25,10 +25,6 @@ vi.mock('@/components/ui/navigation/DateNavigator', () => ({
   DateNavigator: () => null,
 }));
 
-vi.mock('@/lib/hooks/useInlineBanner', () => ({
-  useInlineBanner: () => ({}),
-}));
-
 vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => false,
 }));

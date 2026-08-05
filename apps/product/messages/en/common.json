@@ -234,9 +234,7 @@
       "paymentError": "There is a payment issue",
       "checkPayment": "Check payment info",
       "conflict": "Changes were made elsewhere",
-      "reload": "Reload",
-      "updateAvailable": "A new version is available",
-      "update": "Update"
+      "reload": "Reload"
     },
     "pwa": {
       "installTitle": "Install Dayopt",
