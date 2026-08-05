@@ -131,6 +131,13 @@ export class TagService {
   }
 
   /**
+   * 通常タグとアーカイブ済みタグを 1 スナップショットで取得する（#1825）
+   */
+  async listWithArchived(options: { userId: string }): Promise<{ active: Tag[]; archived: Tag[] }> {
+    return this.queryService.listWithArchived(options.userId);
+  }
+
+  /**
    * タグをアーカイブする（親タグは子タグを道連れにする）
    */
   async archive(options: {
