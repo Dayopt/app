@@ -16,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 // @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
 import {
+  INTEGRATION_GLOBS,
   PRODUCT_BUILD_SCRIPTS,
   formatGithubOutput,
   formatSummary,
@@ -454,6 +455,32 @@ describe('formatSummary', () => {
     ]) {
       expect(summary).toContain(key);
     }
+  });
+});
+
+/**
+ * .github/workflows/integration.yml の paths と scripts/ci/impact.mjs の
+ * INTEGRATION_GLOBS は意図的に二重管理している（gate job 化して一本化する案は
+ * 検討したが、workflow が常時起動になり 1 課金分/push が新規発生するため、
+ * drift ゼロ〈実測〉の現状では見送った。理由は impact.mjs の INTEGRATION_GLOBS
+ * 直上のコメント参照）。二重管理そのものは許容するが、片方だけ編集して drift
+ * するのは防ぐ。YAML parser は追加せず（node-version-contract.test.ts と同じ
+ * 手法）実ファイルをテキストとして読む。
+ */
+describe('integration.yml の paths と INTEGRATION_GLOBS の同期契約', () => {
+  it('.github/workflows/integration.yml の paths リストが INTEGRATION_GLOBS と完全一致する', () => {
+    const workflowYml = readFileSync(join(rootDir, '.github/workflows/integration.yml'), 'utf8');
+    const pathsBlock = workflowYml.match(/paths:\n((?:\s+-\s+'[^']*'\n)+)/);
+    expect(
+      pathsBlock,
+      'integration.yml の pull_request.paths ブロックを抽出できませんでした（YAML 構造が変わった可能性）',
+    ).not.toBeNull();
+    const workflowPaths = [...pathsBlock![1].matchAll(/-\s+'([^']*)'/g)].map((m) => m[1]);
+
+    // 順序差・件数差・1 文字差のいずれでも fail する（配列の deep equal は要素の
+    // 順序・件数・内容すべてを見るため）。実際に 3 パターンとも壊して確認済み
+    // （報告参照）。
+    expect(workflowPaths).toEqual(INTEGRATION_GLOBS);
   });
 });
 
