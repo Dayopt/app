@@ -225,7 +225,16 @@ function createReleaseWorld(
       return Response.json(store[id] ?? deploymentRecord(id, OLD_SHA, 1000));
     }
     if (url.includes('/v9/projects/')) {
-      return Response.json({ id: `prj_${project}`, autoAssignCustomDomains: autoAssign[project] });
+      // #1817 Phase 4: Production Config Audit がこの同じ endpoint を project 設定監査
+      // （rootDirectory / commandForIgnoringBuildStep / enableAffectedProjectsDeployments）
+      // にも使う。監査対象外の release テストを壊さないよう、契約に沿う既定値を返す。
+      return Response.json({
+        id: `prj_${project}`,
+        autoAssignCustomDomains: autoAssign[project],
+        rootDirectory: `apps/${project}`,
+        commandForIgnoringBuildStep: null,
+        enableAffectedProjectsDeployments: false,
+      });
     }
     throw new Error(`Unhandled request: ${url}`);
   });

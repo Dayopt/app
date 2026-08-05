@@ -1319,7 +1319,12 @@ export async function runProductionRelease({
               logger,
             });
           }
-          await runProductionConfigAudit({ token, teamId, fetchImpl });
+          // checkProjectSettings: false — project 設定監査（rootDirectory /
+          // autoAssignCustomDomains 等、#1817 Phase 4）は release 中の一時的な状態
+          // （外部 promote による auto-assign 復帰）と衝突する。release の gate は
+          // 従来どおり env metadata のみを見る（scripts/production-config-audit.mjs
+          // の runProductionConfigAudit 冒頭コメント参照）。
+          await runProductionConfigAudit({ token, teamId, fetchImpl, checkProjectSettings: false });
           logger.log('Production Config Audit passed against live Vercel metadata.');
         }
 
@@ -1530,7 +1535,8 @@ export async function runProductionRelease({
           });
         }
 
-        await runProductionConfigAudit({ token, teamId, fetchImpl });
+        // checkProjectSettings: false — 上の already-serving 分岐と同じ理由。
+        await runProductionConfigAudit({ token, teamId, fetchImpl, checkProjectSettings: false });
         logger.log('Production Config Audit passed against live Vercel metadata.');
       } catch (error) {
         // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
