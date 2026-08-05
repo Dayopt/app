@@ -440,6 +440,7 @@ export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
  * @param {{
  *   projectKey: string,
  *   prevSha: string | undefined,
+ *   vercelEnv?: string | undefined,
  *   targetSha?: string,
  *   cwd?: string,
  *   diffFilesImpl?: typeof gitDiffFiles,
@@ -450,6 +451,7 @@ export function gitDiffFiles(baseSha, targetSha, { cwd = ROOT } = {}) {
 export function resolveVercelIgnore({
   projectKey,
   prevSha,
+  vercelEnv,
   targetSha = 'HEAD',
   cwd = ROOT,
   diffFilesImpl = gitDiffFiles,
@@ -457,6 +459,23 @@ export function resolveVercelIgnore({
 }) {
   if (!VERCEL_PROJECT_KEYS.has(projectKey)) {
     return { shouldBuild: true, reason: `unknown Vercel project key "${projectKey}" (fail open)` };
+  }
+
+  // **production build（main への merge が作る candidate）は skip しない。**
+  // `VERCEL_GIT_PREVIOUS_SHA` は「その project + branch で前回**成功した build**」であり
+  // 「live に promote された SHA」ではない。Auto-assign 無効化後は「candidate の build は
+  // 成功したが release が smoke / audit で失敗し、未 promote のまま」が正常に起こりうる。
+  // その candidate を基準に skip すると、次の merge で production-release.mjs（live SHA
+  // 基準で affected 判定）が存在しない candidate を WORST_CASE まで待ち続け、release が
+  // 詰まる（PR #1835 Codex P1）。live SHA を ignoreCommand から取るには VERCEL_TOKEN の
+  // build env 配布が要り、secrets 方針（automation 専用）に反するため採らない。
+  // 削減の主戦場は push 回数の多い preview 側なので、production を常時 build しても
+  // 失うものは merge あたり最大 2 build（従来と同じ）だけ。
+  if (vercelEnv === 'production') {
+    return {
+      shouldBuild: true,
+      reason: 'production build is never skipped (release gate depends on candidates existing)',
+    };
   }
 
   if (!prevSha) {
@@ -531,6 +550,7 @@ if (isDirectRun) {
     const { shouldBuild, reason } = resolveVercelIgnore({
       projectKey,
       prevSha: process.env.VERCEL_GIT_PREVIOUS_SHA,
+      vercelEnv: process.env.VERCEL_ENV,
     });
     process.stdout.write(
       `[impact] --vercel ${projectKey}: ${shouldBuild ? 'BUILD' : 'SKIP'} — ${reason}\n`,

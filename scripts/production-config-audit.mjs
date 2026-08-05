@@ -172,6 +172,20 @@ export function auditProjectSettings(projectName, project) {
     );
   }
 
+  // "Include source files outside of the Root Directory in the Build Step"。false に drift
+  // すると root 外の scripts/ が build container から消え、ignoreCommand（../../scripts/ci/
+  // impact.mjs）が毎回 module not found で exit 非 0 = fail open になり、skip が静かに全滅
+  // する（PR #1835 Codex P2）。既定は有効なので、不在は compliant・false のみ drift とする
+  // （enableAffectedProjectsDeployments と同じ「未操作トグルは応答に現れない」前提）。
+  if (
+    project.sourceFilesOutsideRootDirectory !== undefined &&
+    project.sourceFilesOutsideRootDirectory !== true
+  ) {
+    errors.push(
+      `${projectName}: sourceFilesOutsideRootDirectory ("Include source files outside of the Root Directory") must stay enabled — the vercel.json ignoreCommand runs scripts/ci/impact.mjs from outside the Root Directory`,
+    );
+  }
+
   return errors;
 }
 

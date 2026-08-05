@@ -185,6 +185,24 @@ describe('Production Config Audit — project settings (rootDirectory / autoAssi
     expect(auditProjectSettings('product', settings)).toEqual([]);
   });
 
+  it('fails when sourceFilesOutsideRootDirectory is disabled', () => {
+    // false だと root 外の scripts/ が build container に無く、ignoreCommand が毎回
+    // exit 非 0 = fail open になり skip が静かに全滅する（PR #1835 Codex P2）。
+    const errors = auditProjectSettings('product', {
+      ...compliantProductSettings(),
+      sourceFilesOutsideRootDirectory: false,
+    });
+    expect(errors).toContain(
+      'product: sourceFilesOutsideRootDirectory ("Include source files outside of the Root Directory") must stay enabled — the vercel.json ignoreCommand runs scripts/ci/impact.mjs from outside the Root Directory',
+    );
+  });
+
+  it('treats a missing sourceFilesOutsideRootDirectory as compliant (default is enabled)', () => {
+    const settings = compliantProductSettings() as Record<string, unknown>;
+    delete settings.sourceFilesOutsideRootDirectory;
+    expect(auditProjectSettings('product', settings)).toEqual([]);
+  });
+
   it('fails closed when the response is not an object', () => {
     expect(auditProjectSettings('product', null)).toEqual([
       'product: project metadata response is invalid',

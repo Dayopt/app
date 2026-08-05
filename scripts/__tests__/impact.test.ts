@@ -369,6 +369,23 @@ describe('formatSummary', () => {
  * 下の「Vercel Ignored Build Step CLI（実 git fixture）」で行う）。
  */
 describe('resolveVercelIgnore（純粋ロジック）', () => {
+  it('production build は変更内容によらず skip しない', () => {
+    // VERCEL_GIT_PREVIOUS_SHA は「前回成功した build」であって live SHA ではない。
+    // 未 promote の candidate を基準に skip すると、release（live SHA 基準）が存在
+    // しない candidate を待ち続けて詰まる（PR #1835 Codex P1）。diff や resolver に
+    // 到達する前に build へ倒れることを固定する。
+    const result = resolveVercelIgnore({
+      projectKey: 'product',
+      prevSha: 'deadbeef',
+      vercelEnv: 'production',
+      diffFilesImpl: () => {
+        throw new Error('must not be called for production builds');
+      },
+    });
+    expect(result.shouldBuild).toBe(true);
+    expect(result.reason).toContain('production build is never skipped');
+  });
+
   it('VERCEL_GIT_PREVIOUS_SHA が無い場合は build に倒す（fail open）', () => {
     const result = resolveVercelIgnore({ projectKey: 'product', prevSha: undefined });
     expect(result.shouldBuild).toBe(true);

@@ -319,11 +319,13 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   `node ../../scripts/ci/impact.mjs --vercel <product|web>`（`../../` は Root Directory＝
   `apps/product` / `apps/web` からの相対 path）。exit 1 = build 続行、exit 0 = build skip という
   Vercel の契約に合わせ、Impact Resolver の判定結果を exit code へ変換する
-  - 基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の**成功**
-    deployment の SHA。Ignored Build Step 設定時のみ露出）。merge の親コミットとの diff では
-    ない。[ci-monorepo-refactor overview §8](../projects/ci-monorepo-refactor/overview.md#8-移行順序安全制約)
-    が要求する「その project の live SHA を基準にする」制約に合わせるため（merge 単位で
-    判定すると、失敗した release が取りこぼした変更を Vercel 側だけ永久に skip し続ける）
+  - **skip するのは preview build だけ。production build（`VERCEL_ENV=production`）は
+    変更内容によらず常に build する。** `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
+    build**」であって live SHA ではなく、未 promote candidate を基準に skip すると
+    Production Release が存在しない candidate を待ち続けて詰まるため
+    （[ci-monorepo-refactor overview §8](../projects/ci-monorepo-refactor/overview.md#8-移行順序安全制約) 実施形態）
+  - preview の基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の
+    成功 deployment の SHA。Ignored Build Step 設定時のみ露出）
   - **fail open を徹底する**（= build 側に倒す）。env 欠落、shallow clone（build container は
     `git clone --depth=10`）で SHA が履歴に無い、git 失敗、resolver 判定不能はすべて build。
     skip に倒れるのは「diff が取れて Impact Resolver が明確に false を返した」場合だけ
