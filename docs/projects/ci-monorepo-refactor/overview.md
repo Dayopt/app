@@ -164,6 +164,12 @@ skip の対象は **preview build（PR の push）だけ**とし、production bu
 
 `turbo.json` は触っていない。Remote Cache も採用していない（維持コストを上回る便益が計測で出なかった）。
 
+**判定キーは `product` ではなく `productUnit` を新設した。** push 前の反証レビュー（behavior-verifier）が、`.github/` を丸ごと中立扱いする `isNeutralPath` のせいで **`.github/actions/setup/action.yml` だけを変えた PR で product の unit test が skip される**穴を指摘した。この file は Node / pnpm のバージョン、つまり **Actions 上で product の test が動く runtime そのもの**を決めるので、skip すると「runtime を変えたのにその runtime で一度も test を走らせずに merge」になる（実際に `chore(node): ランタイムをNode.js 24へ統一` という commit が存在する）。
+
+ただしこれを `product=true` に倒すのは誤り。この file は Vercel の build env には影響しないため、merge gate が `Vercel – product` context を要求し、Phase 4 で止めた preview build が復活する。**「CI で test を走らせるか」と「Vercel で build するか」は別の問い**なので、`productJourney` / `webPreviewSmoke` と同じく consumer ごとの独立キーに分けた。
+
+`.github/workflows/ci.yml` は**あえて含めない**。ci.yml を変えた PR ではその新しい ci.yml 自体が実行されるため、gate 判定・job 構成・無条件 step は検証される。検証されずに残るのは skip された step の中身だけで、それを拾うために `product=false` な PR の 1/3（実測 19 件中 7 件）で skip を諦めるのは割に合わない。
+
 なお `pnpm test:scripts`（root の CI / release / script contract test）は **product の affected 判定によらず常時実行する**。`product=false` になるのは `scripts/**` や `.github/**` を触った時なので、そこを skip すると変更した当の検証が走らない。
 
 ## 9. 非目標

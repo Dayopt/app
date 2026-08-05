@@ -43,6 +43,7 @@ export const IMPACT_KEYS = [
   'web',
   'integration',
   'productJourney',
+  'productUnit',
   'webPreviewSmoke',
   'docsOnly',
 ];
@@ -139,6 +140,24 @@ export const PRODUCT_BUILD_SCRIPTS = new Set([
 // web の buildCommand（`pnpm generate:search-index && pnpm build`）が呼ぶのは
 // `apps/web/scripts/generate-search-index.ts` で、`apps/web/` prefix で既に拾える。
 
+// ─── CI の toolchain（Actions 上で test が動く runtime を決める）──────
+//
+// `.github/` は下の isNeutralPath で丸ごと中立扱いになるが、setup action だけは
+// **Actions 上で product の unit test が動く Node / pnpm のバージョンそのもの**を決める。
+// ここを中立にすると、Node を上げる PR で product の unit test が skip され、
+// 「runtime を変えたのに、その runtime で product の test を一度も走らせないまま merge」
+// になる（実際に `chore(node): ランタイムをNode.js 24へ統一` という commit が存在する）。
+//
+// **`product` ではなく専用キー（`productUnit`）に倒すのが要点。** この file は Vercel の
+// build env には一切影響しないため、`product=true` にすると merge gate が
+// `Vercel – product` context を要求し、Phase 4 で止めた preview build を復活させてしまう。
+//
+// `.github/workflows/ci.yml` は**あえて含めない**。ci.yml を変更した PR ではその新しい
+// ci.yml 自体が実行されるので、gate 判定・job 構成・無条件 step は全て検証される。
+// 検証されずに残るのは skip された step の中身（1 行の pnpm 呼び出し）だけで、
+// これを拾うために product=false な PR の 1/3（実測 19 件中 7 件）で skip を諦めるのは割に合わない。
+const CI_TOOLCHAIN_FILES = new Set(['.github/actions/setup/action.yml']);
+
 // ─── 中立（appの成果物に影響しない既知の path）──────────────────────
 // ここに入れてよいのは「app の build 成果物・runtime 挙動を変えない」ものだけ。
 // 迷ったら入れない（未知扱い = fail closed の側に倒れる）。
@@ -234,6 +253,7 @@ const ALL_AFFECTED = {
   web: true,
   integration: true,
   productJourney: true,
+  productUnit: true,
   webPreviewSmoke: true,
   docsOnly: false,
 };
@@ -259,6 +279,7 @@ export function resolveImpact(changedFiles, options = {}) {
   let product = false;
   let web = false;
   let integration = false;
+  let ciToolchain = false;
   let docsOnly = true;
   /** @type {Record<string, string>} 各キーを最初に true にしたファイル（説明用） */
   const reasons = {};
@@ -275,6 +296,12 @@ export function resolveImpact(changedFiles, options = {}) {
     if (isIntegrationPath(file)) {
       integration = true;
       mark('integration', file);
+    }
+
+    // CI toolchain も docs / app とは独立に判定する（`.github/` は下で中立に落ちるため先に見る）。
+    if (CI_TOOLCHAIN_FILES.has(file)) {
+      ciToolchain = true;
+      mark('productUnit', file);
     }
 
     if (isDocsPath(file)) continue; // docsOnly を維持
@@ -354,6 +381,10 @@ export function resolveImpact(changedFiles, options = {}) {
     // journey / smoke は現状 app 影響と同値。Phase 5 で E2E の実行判定に使う
     // 独立キーとして先に固定しておく（消費側の contract を後から変えない）。
     productJourney: product,
+    // Actions 上で product の unit test を走らせるか。app 影響に加えて CI toolchain の
+    // 変更でも true にする（§CI の toolchain）。Vercel / release は `product` を見るため、
+    // toolchain 変更が preview build を誘発しない。
+    productUnit: product || ciToolchain,
     webPreviewSmoke: web,
     docsOnly,
     reasons,
@@ -398,15 +429,18 @@ export function formatSummary(impact) {
 //
 // キーごとに fail closed の向きが逆になる点に注意する:
 // - `docs_only` は true が skip 側なので、確信が持てない時は false
-// - `product` は false が skip 側なので、確信が持てない時は true
+// - `product_unit` は false が skip 側なので、確信が持てない時は true
+//
+// 出すのは `productUnit` であって `product` ではない。CI の unit test を走らせるかは
+// Vercel の build を走らせるかとは別問題で、CI toolchain の変更で前者だけが true になる。
 //
 // このコマンド自体が落ちた場合は stdout が空になり、GITHUB_OUTPUT に何も書かれない。
 // 下流は空文字を `!= 'true'` / `!= 'false'` で受けて実行側に倒すため、やはり fail closed。
 
 export function formatGithubOutput(impact) {
   const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
-  const product = impact?.product === false ? 'false' : 'true';
-  return `docs_only=${docsOnly}\nproduct=${product}\n`;
+  const productUnit = impact?.productUnit === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\n`;
 }
 
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
