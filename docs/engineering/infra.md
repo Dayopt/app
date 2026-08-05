@@ -119,11 +119,14 @@ Marketplace integration、v0 から新規 Production deployment を作らない�
 gate が機能する前提は **Product / Web の Auto-assign Custom Production Domains が無効**であること。
 これを無効化するまで main merge は従来どおり直接公開され、release workflow は素通りする。
 
+**この移行は 2026-08-05 に完了した**（#1817 の project 設定監査が「`RELEASE_EXPECT_AUTO_ASSIGN: ''`
+のまま live が true に固定され、素通り状態が続いていた」未完了を検出したのを受けて実施。
+手順は次の 3 段で、再度必要になった場合も同じ順序で行う。Production 設定の変更なので
+ユーザーの明示承認下で行う）:
+
 1. Vercel Dashboard → product / web → Settings → Git
 2. Auto-assign Custom Production Domains を OFF にする（web を先に、動作確認後 product）
 3. 両方 OFF にしたら `.github/workflows/release.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
-
-Production 設定の変更なので、実施はユーザーの明示承認下で行う。
 
 無効化後は、main への merge が作るのは domain 未割当の Production build だけになり、Production domain の
 切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。
@@ -169,9 +172,10 @@ promote 順は web → product に固定し、2 つ目が失敗した場合は 1
 ので rollback 対象にせず、run summary で名指しする。失敗時は Production domain が現行 SHA のまま
 維持される（fail-safe）。
 
-run の結果は `release-manifest` artifact（保持 90 日）に残る。project ごとの deployment ID・source SHA・
-判定理由が入っており、**project 間で live SHA が分かれた時に production の実態を読む一次情報**になる。
-run summary にも同じ JSON が出る。
+run の結果は `release-manifest-<attempt>` artifact（保持 90 日、`github.run_attempt` で名前を分ける。
+同名 artifact は同一 run 内で 2 度 upload できないため、re-run した run でも attempt ごとに manifest が残る）
+に残る。project ごとの deployment ID・source SHA・判定理由が入っており、**project 間で live SHA が
+分かれた時に production の実態を読む一次情報**になる。run summary にも同じ JSON が出る。
 
 対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
 を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。
@@ -264,16 +268,32 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - セキュリティ静的解析はGitHub CodeQLを継続する
 - **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにする。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。したがって「外部の目」は Codex の 1 系統だけで、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計する
-- Copilot を再開する場合は、org の Copilot seat 割り当てから必要（Settings → Copilot → Access）。seat が 0 のままでは workflow が登録されていてもレビューは出ない
+- **repo ruleset「Copilot automatic first review」は 2026-08-05 に削除した。** 上記の「外した」後も ruleset 自体は active で残っており、seat 付与後に復活したのか直近 PR（#1832）へ実際にレビューを投稿し、PR ごとに約 3 課金分の Actions 実行を発生させていた。private 化後の課金源かつ Codex 一本化方針と二重のため ruleset ごと削除。再開する場合は org の Copilot seat 割り当て（Settings → Copilot → Access）と ruleset の再作成の両方が必要
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
 
 判断と2026-07-21時点の外部設定証跡は[判断ログ](./log/2026-07-21-github-code-quality-disabled.md)に記録する。
 
+- Edge Function（`supabase/functions/**`）の型検査は Static Checks job の `deno check` step（`pnpm functions:check`）が担う。tsconfig / `pnpm typecheck` の対象外（別ランタイム）で、`supabase/functions/**` を変更した PR でだけ走る（#1822）
 - `Production Contract`は安全なdummy値だけを使い、Product / WebのProduction build gateがResend、Upstash、Web Turnstileを要求することを検査する
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
+- **project 設定 4 項目も監査対象（2026-08-05、#1817 Phase 4）。** `GET /v9/projects/{idOrName}`
+  （`scripts/production-release.mjs`の`getProjectMeta`と同系API）を追加で叩き、`rootDirectory`
+  （product=`apps/product`、web=`apps/web`）・`autoAssignCustomDomains`（false）・
+  `commandForIgnoringBuildStep`（null/未設定。vercel.jsonの`ignoreCommand`が正本で、dashboard側に
+  別コマンドが残っていたらdrift）・`enableAffectedProjectsDeployments`（"Skip deployments"、無効）
+  を照合する。フィールドが応答に無い場合もfailure（fail closed）。値そのものは出力しない
+  （env監査と同じ方針）。フィールド名はVercelの公開OpenAPIスペック
+  （<https://openapi.vercel.sh>）で確認した
+  - **`scripts/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
+    `checkProjectSettings: false`で呼び、この4項目監査をスキップする。** `autoAssignCustomDomains`
+    はrelease中に一時的にtrueへ戻りうる（Vercelのpromote endpointの既知挙動、
+    vercel/vercel#15095）。production-release.mjs側はsweep/stabilizeで自前管理しており
+    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、4項目監査は
+    「定常状態のdrift検出」が目的の静的チェックなのでrelease実行中の一時的な状態と衝突する。
+    env監査（key/target/type）はrelease gateでも従来どおり実行する
 
 ### merge gate の required checks
 
@@ -293,12 +313,42 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
-- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。**現時点では設定しない**。
-  merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
-  Impact Resolver を呼ぶ形に限って解禁する
+- **Ignored Build Step は `apps/{product,web}/vercel.json` の `ignoreCommand` が正本**（2026-08-05、
+  #1817 Phase 4）。dashboard 側の Ignored Build Step 欄は使わない（`commandForIgnoringBuildStep`
+  は null/未設定が契約。§Production Config Audit 参照）。実体は
+  `node ../../scripts/ci/impact.mjs --vercel <product|web>`（`../../` は Root Directory＝
+  `apps/product` / `apps/web` からの相対 path）。exit 1 = build 続行、exit 0 = build skip という
+  Vercel の契約に合わせ、Impact Resolver の判定結果を exit code へ変換する
+  - **skip するのは preview build だけ。production build（`VERCEL_ENV=production`）は
+    変更内容によらず常に build する。** `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
+    build**」であって live SHA ではなく、未 promote candidate を基準に skip すると
+    Production Release が存在しない candidate を待ち続けて詰まるため
+    （[ci-monorepo-refactor overview §8](../projects/ci-monorepo-refactor/overview.md#8-移行順序安全制約) 実施形態）
+  - preview の基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の
+    成功 deployment の SHA。Ignored Build Step 設定時のみ露出）
+  - **fail open を徹底する**（= build 側に倒す）。env 欠落、shallow clone（build container は
+    `git clone --depth=10`）で SHA が履歴に無い、git 失敗、resolver 判定不能はすべて build。
+    skip に倒れるのは「diff が取れて Impact Resolver が明確に false を返した」場合だけ
+  - product の Vercel project 標準機能「Skip deployments (no changes to root directory)」
+    （API: `enableAffectedProjectsDeployments`）は無効化しておく。workspace 依存グラフを
+    見ないため `ignoreCommand`（依存グラフを見る）と競合する。無効化は **ignoreCommand を
+    含む PR の merge より前**に行う（トグル → trusted dispatch → merge の順。逆だと
+    dispatch の project 設定監査が落ちて merge できない）
+  - **実 PR で検証済み**（2026-08-05、PR #1836。記録は
+    [log/2026-08-05-vercel-skip-verification.md](./log/2026-08-05-vercel-skip-verification.md)）。
+    docs-only push で両 project とも build されず、head SHA には
+    `Vercel – web` / `Vercel – product` が **`success`（description は
+    `Canceled by Ignored Build Step`）で付く**。したがって「PR 全体では affected だが最終 push
+    だけ unaffected（例: レビュー対応の docs 修正）」でも context は欠落せず、merge gate は
+    止まらない。merge gate 側の fallback は不要
+  - 検証時の注意: skip が観測できるのは **`ignoreCommand` を持つ成功 deployment が基準に
+    なった後の push** から。`ignoreCommand` 導入前の main から切った branch や、それを取り込む
+    merge commit（`apps/*/vercel.json` を含む）は当然 build される
 - **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
-  GraphQL `reviewThreads` の `isResolved` を数え、取得失敗・100 件超も停止に倒す。
-  解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
+  GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
+  `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
+  101 件・未解決 0 の PR #1820 を偽陰性で止めた）。取得失敗・20 ページ（2000 件）超は
+  従来どおり停止に倒す（fail closed）。解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
@@ -675,8 +725,7 @@ src/app/
     │   ├── layout.tsx          ← IntlProvider (auth namespace) + AuthClientLayout
     │   ├── loading.tsx
     │   └── auth/{login,signup,password,reset-password,mfa-verify}/page.tsx
-    ├── playground/             ← dev playground（locale 直下）
-    └── test-email/             ← email template preview
+    └── playground/             ← dev playground（locale 直下）
 ```
 
 ### (app) Group: 認証必須ページ
@@ -729,11 +778,11 @@ src/app/
 
 ### providers / shell / overlays
 
-| Path                                 | 責務                                                                          |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| `(app)/_providers/Providers.tsx`     | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層 |
-| `(app)/_shell/base-layout.tsx`       | sidebar + header + main の UI shell                                           |
-| `(app)/_overlays/GlobalOverlays.tsx` | ContactDialog / SettingsDialog / TimeblockInspector / Toasterを集約マウント   |
+| Path                                 | 責務                                                                                                                                                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `(app)/_providers/Providers.tsx`     | tRPC / TanStack Query / Auth Store / Calendar Settings / Theme などのデータ層                                                                                                                                                                 |
+| `(app)/_shell/base-layout.tsx`       | sidebar + header + main の UI shell                                                                                                                                                                                                           |
+| `(app)/_overlays/GlobalOverlays.tsx` | ContactDialog / SettingsDialog / TimeblockSearchDialog / ShortcutCheatSheetDialog / TimeblockInspector / Toaster を集約マウント。keyboard shortcut の global listener（`useShortcutRegistry` / `useTimeblockSearchShortcut`）もここで購読する |
 
 ### Auth 境界の確認
 
@@ -778,7 +827,6 @@ locale ルーティングの境界。HTML lang / dir、metadata、redirect を�
 | `[locale]/page.tsx`                        | page (server)   | `/{locale}` → `/{locale}/week` redirect。`force-dynamic`                                      |
 | `[locale]/error.tsx`                       | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
 | `[locale]/playground/dnd-multi-container/` | dev             | dnd-kit Multiple Containers の検証用                                                          |
-| `[locale]/test-email/`                     | dev             | email template の preview ページ                                                              |
 
 ### ルート直下（src/app/）
 

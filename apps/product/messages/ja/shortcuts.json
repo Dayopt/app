@@ -1,0 +1,17 @@
+{
+  "shortcuts": {
+    "title": "キーボードショートカット",
+    "groups": {
+      "general": "基本",
+      "navigation": "移動",
+      "views": "表示",
+      "blocks": "ブロック"
+    },
+    "searchPlaceholder": "ショートカットを検索",
+    "searchLabel": "ショートカットを検索",
+    "noResults": "該当するショートカットがありません",
+    "scopeHint": {
+      "calendar": "カレンダー画面で使えます"
+    }
+  }
+}

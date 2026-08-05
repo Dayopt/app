@@ -266,14 +266,14 @@ export const Destructive: Story = {
 └──────────┴──────────────────────────────────────┘
 ```
 
-| パーツ             | 説明                                                                                                                                                                                                                                                                   |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層（例: `Shared/Components/Actions/Button`）で構成される。Dayopt では top-level を所有境界で分け（ADR-023）、`Welcome > Shared(Foundations/Components/Patterns) > Product(Components/Features/Emails) > Web` の順に並べている。 |
-| **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                                                                                                          |
-| **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。                                                                                           |
-| **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                                                                                                                       |
-| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                                                                                                                        |
-| **Addons panel**   | 下部のタブ切替パネル。Controls、Accessibility、Vitest など、有効な addon の UI が表示される。                                                                                                                                                                          |
+| パーツ             | 説明                                                                                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層（例: `Shared/Components/Actions/Button`）で構成される。Dayopt では top-level を所有境界で分け（ADR-023）、`Shared(Foundations/Components/Patterns) > Product(Components/Features/Emails) > Web` の順に並べている。 |
+| **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                                                                                                |
+| **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。                                                                                 |
+| **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                                                                                                             |
+| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                                                                                                              |
+| **Addons panel**   | 下部のタブ切替パネル。Controls、Accessibility、Vitest など、有効な addon の UI が表示される。                                                                                                                                                                |
 
 ### 4. インフラ（設定ファイル）
 

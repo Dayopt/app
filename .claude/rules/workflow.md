@@ -304,7 +304,7 @@ gh pr merge <PR番号> --merge --delete-branch
 
 策定日: 2026-08-04
 
-**PR の review thread は全件 resolve してから merge する。** `branch:finish` が機械的に強制する: GraphQL `reviewThreads` の `isResolved=false` が 1 件でもあれば merge を停止し、取得失敗・100 件超も停止に倒す（fail closed）。
+**PR の review thread は全件 resolve してから merge する。** `branch:finish` が機械的に強制する: GraphQL `reviewThreads` を全ページ走査し、`isResolved=false` が 1 件でもあれば merge を停止する。取得失敗・20 ページ（2000 件）超は停止に倒す（fail closed、#1831 でページング対応）。
 
 「解決」は次の 3 択のいずれか。いずれの場合も thread を resolve して閉じる:
 

@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { handleGlobalKeyDown } from '@/lib/keyboard/shortcut-registry';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
-import { handleGlobalKeyDown } from '../shortcut-registry';
 import { useTimeblockSearchShortcut } from '../useTimeblockSearchShortcut';
 
 function dispatchSearchShortcut(target: EventTarget, overrides: KeyboardEventInit = {}) {

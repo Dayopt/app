@@ -19,6 +19,7 @@ import { ConfirmEmail } from './ConfirmEmail.tsx';
 import { EmailChangeEmail } from './EmailChangeEmail.tsx';
 import { MagicLinkEmail } from './MagicLinkEmail.tsx';
 import { PasswordResetEmail } from './PasswordResetEmail.tsx';
+import { authEmailSubjects } from './subjects.ts';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string).replace('v1,whsec_', '');
@@ -54,23 +55,6 @@ async function getUserLocale(userId: string): Promise<Locale> {
     return 'en';
   }
 }
-
-const i18nSubjects: Record<Locale, Record<string, string>> = {
-  en: {
-    signup: 'Confirm your Dayopt email',
-    recovery: 'Reset your Dayopt password',
-    magic_link: 'Log in to Dayopt',
-    email_change_current: 'Approve your Dayopt email change',
-    email_change_new: 'Confirm your new Dayopt email',
-  },
-  ja: {
-    signup: 'Dayopt メールアドレスの確認',
-    recovery: 'Dayopt パスワードのリセット',
-    magic_link: 'Dayopt にログイン',
-    email_change_current: 'Dayopt メールアドレス変更の承認',
-    email_change_new: 'Dayopt 新しいメールアドレスの確認',
-  },
-};
 
 /**
  * Auth メールタイプに応じた確認URLを構築
@@ -133,7 +117,7 @@ Deno.serve(async (req) => {
     const userName = user.user_metadata.full_name || 'there';
     const confirmUrl = buildConfirmUrl(email_data);
     const locale = await getUserLocale(user.id);
-    const subjects = i18nSubjects[locale];
+    const subjects = authEmailSubjects[locale];
 
     const emails: OutgoingEmail[] = [];
 
@@ -248,11 +232,14 @@ Deno.serve(async (req) => {
       }
     }
   } catch (error) {
+    // catch 変数は unknown。auth hook のエラー契約（http_code / message）に
+    // 載せる 2 プロパティだけを取り出す
+    const { code, message } = error as { code?: number; message?: string };
     return new Response(
       JSON.stringify({
         error: {
-          http_code: error.code,
-          message: error.message,
+          http_code: code,
+          message,
         },
       }),
       {

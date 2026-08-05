@@ -1,10 +1,12 @@
 /**
  * Keyboard Shortcut Registry
  *
- * カレンダー機能のキーボードショートカットを一元管理するレジストリ。
- * - ショートカット定義の集約（ヘルプダイアログ等で参照可能）
+ * app全体のキーボードショートカットを一元管理するレジストリ。
  * - 開発時のコンフリクト検出
  * - 単一のグローバルkeydownリスナーによる処理
+ *
+ * 「何が存在するか」の宣言は shortcut-catalog.ts が持つ。ここはキーとハンドラの
+ * 結び付けだけを持つ。
  */
 
 import { logger } from '@/lib/logger';
@@ -13,54 +15,16 @@ import { logger } from '@/lib/logger';
 // Types
 // =============================================================================
 
-export type ShortcutHelpGroup = 'general' | 'navigation' | 'views' | 'blocks';
-
-export type ShortcutHelpLabelKey =
-  | 'calendar.shortcuts.actions.open'
-  | 'calendar.shortcuts.actions.previousPeriod'
-  | 'calendar.shortcuts.actions.nextPeriod'
-  | 'calendar.shortcuts.actions.today'
-  | 'calendar.shortcuts.actions.dayView'
-  | 'calendar.shortcuts.actions.twoDayView'
-  | 'calendar.shortcuts.actions.threeDayView'
-  | 'calendar.shortcuts.actions.fourDayView'
-  | 'calendar.shortcuts.actions.fiveDayView'
-  | 'calendar.shortcuts.actions.sixDayView'
-  | 'calendar.shortcuts.actions.sevenDayView'
-  | 'calendar.shortcuts.actions.toggleWeekends'
-  | 'calendar.shortcuts.actions.createBlock'
-  | 'calendar.shortcuts.actions.createBlockNow'
-  | 'calendar.shortcuts.actions.copyBlock'
-  | 'calendar.shortcuts.actions.pasteBlock'
-  | 'calendar.shortcuts.actions.deleteBlock'
-  | 'calendar.shortcuts.actions.closeInspector';
-
-export interface ShortcutHelpMetadata {
-  group: ShortcutHelpGroup;
-  labelKey: ShortcutHelpLabelKey;
-  order: number;
-  displayKey?: string;
-}
-
-export interface ShortcutHelpItem {
-  group: ShortcutHelpGroup;
-  labelKey: ShortcutHelpLabelKey;
-  order: number;
-  keys: string[];
-}
-
 /** ショートカット定義 */
 export interface ShortcutDef {
   /** 正規化されたキーコンボ（例: 'D', 'Cmd+W', 'Delete', 'Shift+C'） */
   key: string;
   /** キーイベントハンドラ */
   handler: (event: KeyboardEvent) => void;
-  /** 説明（デバッグ / ヘルプダイアログ用） */
+  /** 説明（デバッグ用） */
   description: string;
   /** 優先度（高い方が優先。デフォルト: 0） */
   priority?: number;
-  /** チートシートへ表示する場合のmetadata */
-  help?: ShortcutHelpMetadata;
 }
 
 interface RegisteredShortcut {
@@ -169,33 +133,6 @@ export function registerShortcuts(defs: ShortcutDef[]): () => void {
       unregister();
     }
   };
-}
-
-/** 現在有効な最優先handlerから、チートシート表示項目を組み立てる。 */
-export function getRegisteredShortcutHelpItems(): ShortcutHelpItem[] {
-  const items = new Map<string, ShortcutHelpItem>();
-
-  for (const [registeredKey, entries] of registry) {
-    const help = entries[0]?.def.help;
-    if (!help) continue;
-
-    const itemKey = `${help.group}:${help.labelKey}`;
-    const displayKey = help.displayKey ?? registeredKey;
-    const existing = items.get(itemKey);
-    if (existing) {
-      if (!existing.keys.includes(displayKey)) existing.keys.push(displayKey);
-      continue;
-    }
-
-    items.set(itemKey, {
-      group: help.group,
-      labelKey: help.labelKey,
-      order: help.order,
-      keys: [displayKey],
-    });
-  }
-
-  return [...items.values()].sort((a, b) => a.order - b.order);
 }
 
 const EDITABLE_SELECTOR = 'input, textarea, select, [role="textbox"], [role="combobox"]';

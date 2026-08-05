@@ -8,6 +8,13 @@
  */
 @import '../../product/src/lib/styles/globals.css';
 
+/* apps/product の component が使う utility class を生成対象に含める。
+ * globals.css 側の自動検出は Vite root（apps/storybook）が基点になるため product 自身が
+ * 走査されず、product にしか出てこない class が Storybook でだけ欠落する。実際に
+ * shortcut-cheat-sheet-dialog の pl-8 が生成されず、検索アイコンと placeholder が
+ * 重なっていた（本番の build では生成されており、Storybook 側だけのズレだった） */
+@source '../../product/src';
+
 /* apps/web の component が使う utility class を生成対象に含める */
 @source '../../web/src';
 

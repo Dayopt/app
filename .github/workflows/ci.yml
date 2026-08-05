@@ -9,23 +9,13 @@ on:
     # 重量 job（§2 段階 CI）が skipped のまま残る。「ready にしたのに E2E が
     # 一度も走らないまま merge できる」状態になる（2026-08-03、PR #1810 で実測）。
     types: [opened, synchronize, reopened, ready_for_review]
-    # コード実行に影響しない path だけの変更では CI を走らせない。
-    # paths-ignore は「変更ファイルが *全て* 該当した時だけ skip」なので、
-    # コードが 1 ファイルでも混ざれば通常どおり 4 job すべて走る。
-    #
-    # 意図的に含めていないもの:
-    # - apps/web/content/** … 公開 MDX。web build / E2E の検証対象
-    # - **/*.md のような広いパターン … 上を巻き込むため使わない
-    # - .claude/** の *.md 以外 … hooks の .sh や設定 JSON が含まれる
-    #
-    # docs のみの PR でも Docs Guard（gitleaks / secrets:check / docs:check）と
-    # Production Config Audit は paths フィルタを持たないので従来どおり走る。
-    paths-ignore:
-      - 'docs/**'
-      - '.claude/**/*.md'
-      - 'AGENTS.md'
-      - 'CLAUDE.md'
-      - 'README.md'
+    # **`paths-ignore` は使わない。** workflow ごと起動しなくなるため、ruleset が
+    # required にしている 4 つの check（Static / Unit / E2E / Web）が永久に
+    # "expected" のまま残り、docs のみの PR が構造的に merge 不能になる
+    # （2026-08-05、PR #1836 で実測: "4 of 7 required status checks are expected"）。
+    # 代わりに gate job で docs-only を判定し、各 job を `if:` で skip する。
+    # **skip された job は required status check として success 扱いになる**ため、
+    # 実行コストを避けつつ merge gate も満たせる。
   # main への push では走らせない。branch:finish が「branch が main 最新を
   # 含み、その状態で CI green」をマージ前に強制するため（up-to-date gate）、
   # マージ後の main は常に PR で検証済みの tree と一致する。
@@ -57,8 +47,51 @@ permissions:
 # 重量 job の guard は `draft != true` で書く: workflow_dispatch では
 # pull_request context が無く null になるため、この形なら全 job が走る。
 jobs:
+  # docs-only 判定だけを行う軽量 job。Impact Resolver（scripts/ci/impact.mjs）は
+  # node 標準モジュールしか使わないため checkout だけで動く（pnpm install 不要、実測数十秒）。
+  # 判定を各 job の `if:` に配ることで、docs のみの PR では重い 4 job が skip され、
+  # かつ required status check は success として報告される。
+  gate:
+    name: "\U0001F6A6 Impact gate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.impact.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 失敗しても job は落とさず、docs_only を空のままにする（下流は空を
+      # 「docs-only ではない」として全 job 実行に倒す = fail closed）。
+      - name: Resolve impact
+        id: impact
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"
+          docs_only="$(printf '%s\n' "$files" | node scripts/ci/impact.mjs --stdin | node -e '
+            let raw = "";
+            process.stdin.on("data", (c) => (raw += c));
+            process.stdin.on("end", () => {
+              try {
+                process.stdout.write(JSON.parse(raw).docsOnly === true ? "true" : "false");
+              } catch {
+                process.stdout.write("false");
+              }
+            });
+          ')"
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$docs_only" >> "$GITHUB_STEP_SUMMARY"
+
   static:
     name: "\U0001F50D Static Checks"
+    needs: gate
+    # `always()` を付けるのは、gate job 自体が落ちた時に下流が skip されると
+    # 「検証なしで required check が success」になる（fail open）ため。
+    # always() なら gate 失敗時も評価され、空の output は != 'true' で実行側に倒れる。
+    if: always() && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -126,8 +159,65 @@ jobs:
             exit 1
           fi
 
+      # ── supabase/functions/** の Deno 型検査（#1822）───────────────
+      # tsconfig / typecheck lane の対象外（別ランタイム）のため、import 欠落等が
+      # すり抜けていた（2026-08-04 incident）。supabase/functions/** を触った PR
+      # でだけ走らせる。判定は Impact summary と同じ gh api の変更ファイル一覧を使う。
+      - name: supabase/functions/** 変更の有無を確認
+        id: functions-changed
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 取得と判定を分離する。gh を grep への pipeline に入れると、gh の失敗や
+          # grep -q 早期終了の SIGPIPE が else（changed=false）へ倒れて fail open に
+          # なる。取得失敗は step 失敗（continue-on-error で outputs.changed 空）に
+          # して、下流の `!= 'false'` 判定で実行側に倒す。判定は herestring で行い
+          # pipe を排除する。既知の限界: files API は 3,000 件で silent truncation
+          # する（finish-branch.sh が件数照合するのと同じ理由）。3,000 件超の PR は
+          # 現実的に発生しないため許容する
+          files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"
+          if grep -q '^supabase/functions/' <<<"$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 変更ファイル取得に失敗した場合（continue-on-error で outputs.changed が
+      # 空のまま）は fail closed で実行側に倒す。workflow_dispatch は
+      # pull_request context が無く上の step 自体が skip される（outputs.changed
+      # も空）ため、同じ条件で常に実行される。
+      - name: Deno インストール
+        if: steps.functions-changed.outputs.changed != 'false'
+        env:
+          # supabase/config.toml の deno_version = 2 系の最新安定版を pin する。
+          # org の Actions 許可リストに denoland/setup-deno が無いため、
+          # gitleaks（docs-guard.yml）と同じく公式バイナリを直接取得し sha256 検証する。
+          # sha256 は https://github.com/denoland/deno/releases/download/v2.9.4/deno-x86_64-unknown-linux-gnu.zip.sha256sum の実測値。
+          DENO_VERSION: '2.9.4'
+          DENO_SHA256: 'c24f955d9fbfe0ea5ae2b501c8e71ae76e31e4c9782390a54a284b3364fda725'
+        run: |
+          curl -sSLO "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip"
+          echo "${DENO_SHA256}  deno-x86_64-unknown-linux-gnu.zip" | sha256sum -c -
+          unzip -q deno-x86_64-unknown-linux-gnu.zip -d "$RUNNER_TEMP/deno-bin"
+          echo "$RUNNER_TEMP/deno-bin" >> "$GITHUB_PATH"
+
+      # import map（npm:/jsr: specifier）の解決でネットワークアクセスが要る。
+      # deno.json の import はすべて exact version 固定（npm:pkg@x.y.z）のため
+      # lock file の追加検証価値が薄く、`deno check` は失敗時に lock を書かない
+      # （実測: type error があると deno.lock が生成されない）ため運用に乗せづらい。
+      # `--no-lock` で明示的に無効化し、ローカル実行（pnpm functions:check）でも
+      # 未追跡の deno.lock が supabase/functions/ に生成されないようにする。
+      - name: deno check (supabase/functions)
+        if: steps.functions-changed.outputs.changed != 'false'
+        run: pnpm functions:check
+
   unit:
     name: "\U0001F4E6 Unit Tests"
+    needs: gate
+    if: always() && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -181,8 +271,10 @@ jobs:
   # PR の rollup に載り、`branch:finish` の失敗判定がそれを数える。
   e2e:
     name: "\U0001F3AD E2E Tests"
-    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
-    if: github.event.pull_request.draft != true
+    needs: gate
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）。
+    # docs-only でも skip する（always() の理由は static job のコメント参照）。
+    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     environment: development
     timeout-minutes: 15
@@ -219,8 +311,10 @@ jobs:
 
   web:
     name: "\U0001F310 Web Build & E2E"
-    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）
-    if: github.event.pull_request.draft != true
+    needs: gate
+    # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）。
+    # docs-only でも skip する（always() の理由は static job のコメント参照）。
+    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

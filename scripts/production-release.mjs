@@ -1029,7 +1029,8 @@ export async function runProductionRelease({
       // 比較対象は「今わかっている期待値」。rollback / promote を行った project は
       // 呼び出し側がその結果を渡す。**飛ばさない**（rollback 済みの project が
       // その後に動いた場合、`rolled-back` のまま古い deployment を案内してしまう）。
-      const expected = overrides.has(project.name)
+      const hasOverride = overrides.has(project.name);
+      const expected = hasOverride
         ? overrides.get(project.name)
         : (observedLive.get(project.name)?.id ?? before.get(project.name)?.id ?? null);
       const live = await getLiveProduction({
@@ -1041,11 +1042,27 @@ export async function runProductionRelease({
         fetchImpl,
       }).catch(() => undefined);
       if (live === undefined) continue; // 読めなかった
-      if ((live?.id ?? null) === expected) continue;
+      const liveId = live?.id ?? null;
+      if (liveId === expected) continue;
+
+      // **baseline（run 開始時点の ID）へ戻っていたら、動きは無かったことにする。**
+      // 待機中や gate 実行中に一時的に別 deployment へ動いた project が、この呼び出しの
+      // 前に baseline へ戻っていた場合、`expected` は前回観測した「移動先」のままなので
+      // ここまでは deviation として引っかかる。しかし戻り先は run 開始時点と同じであり、
+      // 手順上は run 開始時点の deployment（skipped / already-serving）として扱ってよい。
+      // 記録を残すと `deviated` に載って manifest が不要に `failed` へ倒れ、実際には
+      // 解消済みの一時的な外部操作を `moved-externally` として案内してしまう。
+      // override（この run が promote/rollback した project の期待値）がある場合は
+      // 対象外にする ── そこでの baseline 一致は「本来の期待と違う」という実質的な
+      // deviation（例: 我々の promote が外部に巻き戻された）であり、握り潰さない。
+      if (!hasOverride && liveId === (before.get(project.name)?.id ?? null)) {
+        observedLive.delete(project.name);
+        continue;
+      }
 
       // 期待と違う deployment を観測した。target を配信していても gate を通って
       // いなければ `uncertified`、別 SHA なら `moved-externally` に分類される。
-      observedLive.set(project.name, { id: live?.id ?? null, sha: live?.sha ?? null });
+      observedLive.set(project.name, { id: liveId, sha: live?.sha ?? null });
       deviated.push(project.name);
     }
     return deviated;
@@ -1234,6 +1251,18 @@ export async function runProductionRelease({
   const promoted = [];
   let rolledBack = [];
 
+  /**
+   * **settings-drift で throw した時だけ、再試行に必要な文脈をここへ残す。**
+   * wrapper の最終 catch は掃き直しただけで drift が解消したかを確認できるが、
+   * 「production が正しい SHA を配信している」の再確認（alias 込み）には stabilize を
+   * もう一度回す必要があり、そのために candidateEntries が要る。candidateEntries は
+   * 内側の IIFE のローカル変数（例: `candidates`）なので、ここに退避しないと wrapper の
+   * catch から参照できない。settings-drift 以外の throw では設定しない ── wrapper 側は
+   * これが null かどうかで「取り下げてよい失敗か」を判定する（smoke / audit / live
+   * 検証由来の失敗を誤って取り下げないための fail-closed 条件）。
+   */
+  let driftRecovery = null;
+
   const result = await (async () => {
     // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
     // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
@@ -1290,7 +1319,12 @@ export async function runProductionRelease({
               logger,
             });
           }
-          await runProductionConfigAudit({ token, teamId, fetchImpl });
+          // checkProjectSettings: false — project 設定監査（rootDirectory /
+          // autoAssignCustomDomains 等、#1817 Phase 4）は release 中の一時的な状態
+          // （外部 promote による auto-assign 復帰）と衝突する。release の gate は
+          // 従来どおり env metadata のみを見る（scripts/production-config-audit.mjs
+          // の runProductionConfigAudit 冒頭コメント参照）。
+          await runProductionConfigAudit({ token, teamId, fetchImpl, checkProjectSettings: false });
           logger.log('Production Config Audit passed against live Vercel metadata.');
         }
 
@@ -1301,6 +1335,14 @@ export async function runProductionRelease({
         // 「認証された」事実は変わらないので、drift 判定より前に記録する。
         for (const [name, id] of verifiedIds) gatesPassed.set(name, id);
         if (residual.length > 0) {
+          // wrapper の catch がここでの掃きを解決できた場合に再現できるよう、
+          // 取り下げ判定に要る文脈を残す（§driftRecovery）。
+          driftRecovery = {
+            status,
+            candidateEntries: [],
+            preexistingSplit,
+            gateChecksRan: !force && alreadyServing.length > 0,
+          };
           throw Object.assign(driftError(sha, residual), {
             manifest: manifestFor('settings-drift'),
           });
@@ -1493,7 +1535,8 @@ export async function runProductionRelease({
           });
         }
 
-        await runProductionConfigAudit({ token, teamId, fetchImpl });
+        // checkProjectSettings: false — 上の already-serving 分岐と同じ理由。
+        await runProductionConfigAudit({ token, teamId, fetchImpl, checkProjectSettings: false });
         logger.log('Production Config Audit passed against live Vercel metadata.');
       } catch (error) {
         // 外部の promote が待機中に auto-assign を飛ばしていた場合、ここで抜けると
@@ -1726,6 +1769,15 @@ export async function runProductionRelease({
       // production は正しい SHA を配信している。失敗の理由は設定の復元だけなので、
       // manifest の status を分ける。'failed' のままだと runbook の「失敗した run の
       // promoted は戻す」に従って、健全な deployment が不要に巻き戻される。
+      // wrapper の catch がここでの掃きを解決できた場合に再現できるよう、
+      // 取り下げ判定に要る文脈を残す（§driftRecovery）。rollback は起きていない経路
+      // なのでここに来る時点で rolledBack は常に空。
+      driftRecovery = {
+        status: 'promoted',
+        candidateEntries: candidates,
+        preexistingSplit,
+        gateChecksRan: !force,
+      };
       throw Object.assign(driftError(sha, residualDrift), {
         manifest: manifestFor('settings-drift', { promoted }),
       });
@@ -1741,6 +1793,60 @@ export async function runProductionRelease({
       manifest: manifestFor('promoted', { promoted }),
     };
   })().catch(async (error) => {
+    // **settings-drift は取り下げ得る唯一の失敗種別。** driftRecovery は settings-drift の
+    // throw 元（§driftRecovery）だけが設定するので、これが null なら smoke / audit /
+    // live 検証由来の失敗であり対象外（fail closed）。manifest.status も同時に確認する
+    // ── 途中の local catch が観測した外部 drift で既に 'failed' へ塗り替えていれば、
+    // 「production は正しい」の前提自体が崩れているのでここでも取り下げない。
+    if (driftRecovery && error.manifest?.status === 'settings-drift') {
+      const recovery = driftRecovery;
+      try {
+        // stabilize は掃き→検証→掃きを安定するまで繰り返す（§stabilize）。ここで
+        // もう一度回すのは、alias の再検証を伴わない「掃くだけ」では、その間に production
+        // が動いていないことを保証できないため。
+        const residual = await stabilize(recovery.candidateEntries);
+        // gate（live 検証）を通した事実を記録する。
+        for (const [name, id] of verifiedIds) gatesPassed.set(name, id);
+
+        if (residual.length === 0) {
+          // 掃きが直り、live 検証も通った。production は正しい SHA を配信しており
+          // 設定復元も完了しているので、settings-drift の失敗を取り下げる。
+          logger.log(
+            `Settings drift resolved on retry; withdrawing the settings-drift failure for ${sha}.`,
+          );
+          return {
+            status: recovery.status,
+            sha,
+            promoted,
+            rolledBack,
+            preexistingSplit: recovery.preexistingSplit,
+            gateChecksRan: recovery.gateChecksRan,
+            manifest: manifestFor(recovery.status, { promoted, rolledBack }),
+          };
+        }
+
+        // まだ drift が残る。production は正しいままなので 'settings-drift' で失敗させる
+        // （'failed' にすると runbook の「失敗した run の promoted は戻す」で健全な
+        // deployment が不要に巻き戻される）。
+        throw Object.assign(driftError(sha, residual), {
+          manifest: manifestFor('settings-drift', { promoted, rolledBack }),
+        });
+      } catch (retryError) {
+        // stabilize 自体が失敗した（live 状態の再検証に失敗した）場合と、drift が
+        // 残ったまま上で throw した場合の両方をここで受ける。
+        reportSweepDrift((await sweepSettings()).drifted);
+        const deviated = await refreshObservedLive({
+          expected: expectedLiveIds({ promoted, rolledBack }),
+        });
+        if (!retryError.manifest || deviated.length > 0) {
+          // live 検証自体が失敗した、またはその間にも production が動いていた場合は
+          // 「production は正しい」が成り立たないので 'failed' へ倒す。
+          Object.assign(retryError, { manifest: manifestFor('failed', { promoted, rolledBack }) });
+        }
+        throw retryError;
+      }
+    }
+
     // 失敗経路。元の失敗理由を優先し、掃きの結果は報告だけにする。
     reportSweepDrift((await sweepSettings()).drifted);
 

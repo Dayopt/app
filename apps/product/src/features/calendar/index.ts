@@ -11,7 +11,6 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
-export { ShortcutCheatSheetDialog } from './components/ShortcutCheatSheetDialog';
 
 // =============================================================================
 // Layout Components
@@ -66,6 +65,7 @@ export { useTimeblockSearchShortcut } from './hooks/keyboard/useTimeblockSearchS
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
 export { useTimeblockContextActions } from './hooks/operations/useTimeblockContextActions';
 export { useTimeblockOperations } from './hooks/operations/useTimeblockOperations';
+export { CALENDAR_SHORTCUT_CATALOG } from './lib/calendar-shortcut-catalog';
 
 // =============================================================================
 // Domain（Calendar 固有の仕様ルール）

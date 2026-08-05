@@ -23,9 +23,7 @@ import { AppHeader } from '@/components/shell/AppHeader';
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 import { DateNavigator } from '@/components/ui/navigation/DateNavigator';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
-import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { InlineBanner } from '@dayopt/components';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
@@ -134,7 +132,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const t = useTranslations('calendar');
     const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
     const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
-    const banner = useInlineBanner();
     const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
     const [sideRailWidth, setSideRailWidth] = useState(SIDE_RAIL_DEFAULT_WIDTH);
     const [layoutWidth, setLayoutWidth] = useState<number | null>(null);
@@ -432,9 +429,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
               </div>
             </AppHeader>
           </div>
-
-          {/* インラインバナー（同期エラー/オフライン/更新通知） */}
-          <InlineBanner {...banner} />
 
           {/* カレンダーコンテンツ（スワイプ対応） */}
           <div
