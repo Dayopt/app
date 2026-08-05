@@ -397,48 +397,62 @@ describe('CLI', () => {
       { input: 'scripts/ci/impact.mjs\n', encoding: 'utf8' },
     );
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe('docs_only=false\nproduct_unit=false\n');
+    expect(result.stdout).toBe('docs_only=false\nproduct_unit=false\nweb=false\n');
   });
 });
 
 /**
  * ci.yml の gate job が各 job / step の `if:` に配る値。**skip 側の真偽が
- * キーごとに逆**（docs_only は true が skip、product は false が skip）なので、
+ * キーごとに逆**（docs_only は true が skip、product / web は false が skip）なので、
  * 判定できない時の既定値も逆向きになる。この対称性が崩れると「検証せずに
  * required check が success」になるため、両方向を固定する。
  */
 describe('formatGithubOutput', () => {
-  it('product に影響する変更では product=true', () => {
+  it('product に影響する変更では product=true / web=false', () => {
     expect(formatGithubOutput(resolveImpact(['apps/product/src/foo.ts']))).toBe(
-      'docs_only=false\nproduct_unit=true\n',
+      'docs_only=false\nproduct_unit=true\nweb=false\n',
+    );
+  });
+
+  it('web に影響する変更では web=true / product=false', () => {
+    expect(formatGithubOutput(resolveImpact(['apps/web/src/foo.ts']))).toBe(
+      'docs_only=false\nproduct_unit=false\nweb=true\n',
+    );
+  });
+
+  it('公開コンテンツ（apps/web/content）の変更は web=true', () => {
+    expect(formatGithubOutput(resolveImpact(['apps/web/content/blog/en/foo.mdx']))).toBe(
+      'docs_only=false\nproduct_unit=false\nweb=true\n',
     );
   });
 
   it('中立 path のみの変更では product=false（Unit の product test を skip できる）', () => {
     expect(formatGithubOutput(resolveImpact(['scripts/git/finish-branch.sh']))).toBe(
-      'docs_only=false\nproduct_unit=false\n',
+      'docs_only=false\nproduct_unit=false\nweb=false\n',
     );
   });
 
   it('docs のみの変更では docs_only=true', () => {
     expect(formatGithubOutput(resolveImpact(['docs/README.md']))).toBe(
-      'docs_only=true\nproduct_unit=false\n',
+      'docs_only=true\nproduct_unit=false\nweb=false\n',
     );
   });
 
-  it('判定不能（変更ファイル一覧が空）は両キーとも実行側に倒す', () => {
-    expect(formatGithubOutput(resolveImpact([]))).toBe('docs_only=false\nproduct_unit=true\n');
+  it('判定不能（変更ファイル一覧が空）は全キーとも実行側に倒す', () => {
+    expect(formatGithubOutput(resolveImpact([]))).toBe(
+      'docs_only=false\nproduct_unit=true\nweb=true\n',
+    );
   });
 
-  it('未知 path を含む変更は両キーとも実行側に倒す', () => {
+  it('未知 path を含む変更は全キーとも実行側に倒す', () => {
     expect(formatGithubOutput(resolveImpact(['mystery.config.xyz']))).toBe(
-      'docs_only=false\nproduct_unit=true\n',
+      'docs_only=false\nproduct_unit=true\nweb=true\n',
     );
   });
 
   it('impact が壊れていても実行側に倒す（fail closed）', () => {
-    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct_unit=true\n');
-    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct_unit=true\n');
+    expect(formatGithubOutput(undefined)).toBe('docs_only=false\nproduct_unit=true\nweb=true\n');
+    expect(formatGithubOutput({})).toBe('docs_only=false\nproduct_unit=true\nweb=true\n');
   });
 });
 

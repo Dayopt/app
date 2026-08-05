@@ -454,7 +454,8 @@ export function formatSummary(impact) {
 export function formatGithubOutput(impact) {
   const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
   const productUnit = impact?.productUnit === false ? 'false' : 'true';
-  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\n`;
+  const web = impact?.web === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb=${web}\n`;
 }
 
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
