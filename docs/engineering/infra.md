@@ -276,6 +276,21 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
+- **project 設定 4 項目も監査対象（2026-08-05、#1817 Phase 4）。** `GET /v9/projects/{idOrName}`
+  （`scripts/production-release.mjs`の`getProjectMeta`と同系API）を追加で叩き、`rootDirectory`
+  （product=`apps/product`、web=`apps/web`）・`autoAssignCustomDomains`（false）・
+  `commandForIgnoringBuildStep`（null/未設定。vercel.jsonの`ignoreCommand`が正本で、dashboard側に
+  別コマンドが残っていたらdrift）・`enableAffectedProjectsDeployments`（"Skip deployments"、無効）
+  を照合する。フィールドが応答に無い場合もfailure（fail closed）。値そのものは出力しない
+  （env監査と同じ方針）。フィールド名はVercelの公開OpenAPIスペック
+  （<https://openapi.vercel.sh>）で確認した
+  - **`scripts/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
+    `checkProjectSettings: false`で呼び、この4項目監査をスキップする。** `autoAssignCustomDomains`
+    はrelease中に一時的にtrueへ戻りうる（Vercelのpromote endpointの既知挙動、
+    vercel/vercel#15095）。production-release.mjs側はsweep/stabilizeで自前管理しており
+    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、4項目監査は
+    「定常状態のdrift検出」が目的の静的チェックなのでrelease実行中の一時的な状態と衝突する。
+    env監査（key/target/type）はrelease gateでも従来どおり実行する
 
 ### merge gate の required checks
 
@@ -295,9 +310,35 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
-- 同じ理由で、Ignored Build Step を設定すると status 自体が付かなくなる。**現時点では設定しない**。
-  merge gate と Production Release の affected-aware 化が完了した後、#1817（Phase 4）で
-  Impact Resolver を呼ぶ形に限って解禁する
+- **Ignored Build Step は `apps/{product,web}/vercel.json` の `ignoreCommand` が正本**（2026-08-05、
+  #1817 Phase 4）。dashboard 側の Ignored Build Step 欄は使わない（`commandForIgnoringBuildStep`
+  は null/未設定が契約。§Production Config Audit 参照）。実体は
+  `node ../../scripts/ci/impact.mjs --vercel <product|web>`（`../../` は Root Directory＝
+  `apps/product` / `apps/web` からの相対 path）。exit 1 = build 続行、exit 0 = build skip という
+  Vercel の契約に合わせ、Impact Resolver の判定結果を exit code へ変換する
+  - 基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の**成功**
+    deployment の SHA。Ignored Build Step 設定時のみ露出）。merge の親コミットとの diff では
+    ない。[ci-monorepo-refactor overview §8](../projects/ci-monorepo-refactor/overview.md#8-移行順序安全制約)
+    が要求する「その project の live SHA を基準にする」制約に合わせるため（merge 単位で
+    判定すると、失敗した release が取りこぼした変更を Vercel 側だけ永久に skip し続ける）
+  - **fail open を徹底する**（= build 側に倒す）。env 欠落、shallow clone（build container は
+    `git clone --depth=10`）で SHA が履歴に無い、git 失敗、resolver 判定不能はすべて build。
+    skip に倒れるのは「diff が取れて Impact Resolver が明確に false を返した」場合だけ
+  - product の Vercel project 標準機能「Skip deployments (no changes to root directory)」
+    （API: `enableAffectedProjectsDeployments`）は無効化しておく。workspace 依存グラフを
+    見ないため `ignoreCommand`（依存グラフを見る）と競合する。無効化は **ignoreCommand を
+    含む PR の merge より前**に行う（トグル → trusted dispatch → merge の順。逆だと
+    dispatch の project 設定監査が落ちて merge できない）
+  - **実 PR での検証が残っている。** ローカルの fixture git repo での擬似実行は確認済みだが、
+    実際の Vercel build container（shallow clone / Root Directory cwd）上での動作は
+    最初の該当 PR で確認する。特に **skip 時に head SHA へ `Vercel – *` commit status が
+    付くか**は未確定で、付かない場合は「PR 全体では affected だが最終 push だけ unaffected
+    （例: レビュー対応の docs 修正）」の head に context が欠け、merge gate が fail closed で
+    停止する。その場合の復旧: ① affected ファイルに触る commit を積む、または ② Vercel
+    dashboard の Redeploy（「Use project's Ignore Build Step」のチェックを外す）で head の
+    deployment を作る。恒常的に踏むようなら merge gate 側に「context 欠落時、最後に success
+    した context の SHA〜head を Resolver で再判定して unaffected なら合格」の fallback を
+    実装する（ignoreCommand と同じ意味論。実 PR 検証で確定してから着手する）
 - **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
   GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
   `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
