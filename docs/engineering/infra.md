@@ -334,16 +334,16 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
     見ないため `ignoreCommand`（依存グラフを見る）と競合する。無効化は **ignoreCommand を
     含む PR の merge より前**に行う（トグル → trusted dispatch → merge の順。逆だと
     dispatch の project 設定監査が落ちて merge できない）
-  - **実 PR での検証が残っている。** ローカルの fixture git repo での擬似実行は確認済みだが、
-    実際の Vercel build container（shallow clone / Root Directory cwd）上での動作は
-    最初の該当 PR で確認する。特に **skip 時に head SHA へ `Vercel – *` commit status が
-    付くか**は未確定で、付かない場合は「PR 全体では affected だが最終 push だけ unaffected
-    （例: レビュー対応の docs 修正）」の head に context が欠け、merge gate が fail closed で
-    停止する。その場合の復旧: ① affected ファイルに触る commit を積む、または ② Vercel
-    dashboard の Redeploy（「Use project's Ignore Build Step」のチェックを外す）で head の
-    deployment を作る。恒常的に踏むようなら merge gate 側に「context 欠落時、最後に success
-    した context の SHA〜head を Resolver で再判定して unaffected なら合格」の fallback を
-    実装する（ignoreCommand と同じ意味論。実 PR 検証で確定してから着手する）
+  - **実 PR で検証済み**（2026-08-05、PR #1836。記録は
+    [log/2026-08-05-vercel-skip-verification.md](./log/2026-08-05-vercel-skip-verification.md)）。
+    docs-only push で両 project とも build されず、head SHA には
+    `Vercel – web` / `Vercel – product` が **`success`（description は
+    `Canceled by Ignored Build Step`）で付く**。したがって「PR 全体では affected だが最終 push
+    だけ unaffected（例: レビュー対応の docs 修正）」でも context は欠落せず、merge gate は
+    止まらない。merge gate 側の fallback は不要
+  - 検証時の注意: skip が観測できるのは **`ignoreCommand` を持つ成功 deployment が基準に
+    なった後の push** から。`ignoreCommand` 導入前の main から切った branch や、それを取り込む
+    merge commit（`apps/*/vercel.json` を含む）は当然 build される
 - **未解決の review thread が 1 件でもあると `branch:finish` は停止する**（2026-08-04）。
   GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
   `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
