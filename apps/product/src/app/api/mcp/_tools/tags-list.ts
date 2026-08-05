@@ -67,17 +67,12 @@ export function registerTagsListTool(server: McpServer, ctx: McpRequestContext) 
           scopes: ctx.scopes,
           signal: extra.signal,
         });
-        // アーカイブ済みは tags.listArchived が持つ。tRPC の公開契約を変えずに
-        // MCP 側で 2 本を束ねる。両者は archived_at の有無で排他なので重複しない。
-        const [activeResult, archivedRows] = await Promise.all([
-          trpc.tags.list(),
-          input.includeArchived === true ? trpc.tags.listArchived() : [],
-        ]);
-        // 通常タグの並び（階層順）は既定のまま。アーカイブ済みはその後ろへ足す。
-        const tags = [
-          ...activeResult.data.map((tag) => toMcpTag(tag, false)),
-          ...archivedRows.map((tag) => toMcpTag(tag, true)),
-        ];
+        // 通常タグとアーカイブ済みは 1 回の呼び出し = 1 スナップショットで読む。
+        // 2 本に分けると、その間にアーカイブが commit された時に同じタグが両方へ
+        // 現れて ID が重複するか、どちらにも現れず tagId を解決できなくなる（#1825）。
+        // 並びは server 側で「通常タグ（階層順）→ アーカイブ済み（新しい順）」に固定。
+        const { data } = await trpc.tags.list({ includeArchived: input.includeArchived === true });
+        const tags = data.map((tag) => toMcpTag(tag, tag.archived_at !== null));
 
         return createMcpToolSuccess({
           schemaVersion: MCP_TOOL_SCHEMA_VERSION,

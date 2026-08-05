@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { Database, Row } from '@/lib/database';
+import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
@@ -72,6 +73,55 @@ export class TagQueryService {
       throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tags', { cause: original });
     }
     return data.map(transformDbTag);
+  }
+
+  /**
+   * 通常タグとアーカイブ済みタグを **1 回の select** で読む（#1825）
+   *
+   * `list()` と `listArchived()` を並行に呼ぶと 2 つの独立したスナップショット
+   * になり、その間にアーカイブが commit されると同じタグが両方に現れて ID が
+   * 重複するか、どちらにも現れず過去データの tagId を解決できなくなる。
+   * 単一 select なら 1 スナップショットなので、この窓が構造的に消える。
+   *
+   * 並びは 2 本呼びの時と同じ（通常タグは階層順、その後ろにアーカイブ済みを
+   * 新しい順）に保つ。docs/product/specs/tags.md がこの順序を契約にしている。
+   *
+   * `is_active = false`（マージ済みの墓標）はどちらにも含めない。
+   */
+  async listWithArchived(userId: string): Promise<{ active: Tag[]; archived: Tag[] }> {
+    // PostgREST の max_rows（supabase/config.toml）が 1 クエリごとに効くため、
+    // 2 本呼びの時と違って active と archived が同じ上限を分け合う。無言で
+    // 欠けると過去データの tagId が解決できなくなるので、総数と突き合わせて
+    // 切り捨てを検出する。
+    const { data, count, error } = await this.supabase
+      .from('tags')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    if (error) {
+      const original = captureUnexpectedDatabaseError(error, {
+        feature: 'tags',
+        operation: 'list_tags_with_archived',
+      });
+      throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tags', { cause: original });
+    }
+
+    if (count !== null && count > data.length) {
+      logger.warn('Tag read was truncated by the row limit', {
+        feature: 'tags',
+        operation: 'list_tags_with_archived',
+        returned: data.length,
+        total: count,
+      });
+    }
+
+    const tags = data.map(transformDbTag);
+    return {
+      active: flattenTagTree(buildTagTree(tags)),
+      archived: tags
+        .filter((tag) => tag.archived_at !== null)
+        .sort((a, b) => (b.archived_at ?? '').localeCompare(a.archived_at ?? '')),
+    };
   }
 
   /**

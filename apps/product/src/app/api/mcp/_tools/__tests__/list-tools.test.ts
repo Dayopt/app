@@ -415,7 +415,17 @@ describe('MCP list tools public contract', () => {
   it('tags.listは既定でアーカイブ済みを読まず、通常タグをisArchived falseで返す', async () => {
     // 既定でアーカイブ済みを混ぜると、AI が新規付与の候補として選んで
     // mutation 側の TAG_ARCHIVED で弾かれる。既定の候補集合は変えない。
-    const list = vi.fn().mockResolvedValue({ data: [activeTag], count: 1 });
+    // server 側は includeArchived を 1 スナップショットで解決する（#1825）ので、
+    // mock も 1 本の list が入力に応じて返し分ける形に合わせる。
+    const list = vi
+      .fn()
+      .mockImplementation((input?: { includeArchived?: boolean }) =>
+        Promise.resolve(
+          input?.includeArchived === true
+            ? { data: [activeTag, archivedTag], count: 2 }
+            : { data: [activeTag], count: 1 },
+        ),
+      );
     const listArchived = vi.fn().mockResolvedValue([archivedTag]);
     createMcpTrpcCaller.mockReturnValue({ tags: { list, listArchived } });
 
@@ -446,12 +456,13 @@ describe('MCP list tools public contract', () => {
         ],
       });
       expect(parseText(result)).toEqual(result.structuredContent);
+      expect(list).toHaveBeenCalledWith({ includeArchived: false });
     }
     expect(listArchived).not.toHaveBeenCalled();
   });
 
   it('tags.listはincludeArchivedで過去データのtagIdを解決でき、通常タグの後ろへ並べる', async () => {
-    const list = vi.fn().mockResolvedValue({ data: [activeTag], count: 1 });
+    const list = vi.fn().mockResolvedValue({ data: [activeTag, archivedTag], count: 2 });
     const listArchived = vi.fn().mockResolvedValue([archivedTag]);
     createMcpTrpcCaller.mockReturnValue({ tags: { list, listArchived } });
 
@@ -477,7 +488,9 @@ describe('MCP list tools public contract', () => {
         },
       ],
     });
-    expect(listArchived).toHaveBeenCalledOnce();
+    // 1 スナップショットで読むため、2 本目の呼び出しは無い（#1825 の回帰センサー）。
+    expect(list).toHaveBeenCalledExactlyOnceWith({ includeArchived: true });
+    expect(listArchived).not.toHaveBeenCalled();
     expect(parseText(result)).toEqual(result.structuredContent);
   });
 
