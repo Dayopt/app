@@ -31,7 +31,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: process.env.CI ? 'pnpm build && pnpm start:e2e' : 'pnpm dev:e2e',
+    // CI では build を含めない。ci.yml の web job が直前 step で `pnpm build:web` を
+    // 実行済みで、ここに build を書くと同一 job 内で next build が二重に走る
+    // （実測で発覚、2026-08-05）。build 無しで起動した場合は next start が
+    // .next 不在で即 fail するので、壊れ方は「静かに古い build を使う」ではなく明示的。
+    command: process.env.CI ? 'pnpm start:e2e' : 'pnpm dev:e2e',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: (process.env.CI ? 240 : 120) * 1000,
