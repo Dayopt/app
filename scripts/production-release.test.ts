@@ -1314,6 +1314,39 @@ describe('runProductionRelease (affected-aware)', () => {
     ).rejects.toThrow(/web: production moved to dpl_web_other after the gates ran/);
   });
 
+  it('forgets a move that returns to baseline before the manifest is built', async () => {
+    // 待機中に candidate が別 deployment（dpl_web_other）へ動くと movedElsewhere が
+    // 検出し、その project の live を manifest 用に observedLive へ記録する
+    // （読み: #1=初期取得=baseline、#2=待機後の再取得=dpl_web_other）。この run は
+    // movedElsewhere を検出した直後に `refreshObservedLive()` で全 project を
+    // 読み直すが（読み: #3）、その時点で既に baseline（dpl_web_old）へ戻っていた
+    // 場合、`expected` が古い観測（dpl_web_other）のままだと「まだ動いている」と
+    // 誤認する。動きは無かったことにする（§refreshObservedLive）。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_other', 'dpl_web_old'],
+    });
+
+    const error = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/web/src/app/page.tsx'],
+    }).catch(
+      (
+        thrown: Error & {
+          manifest?: { projects: { name: string; action: string; observedAt: string }[] };
+        },
+      ) => thrown,
+    );
+
+    expect(error.message).toMatch(/Production moved while waiting for candidates/);
+    const web = error.manifest?.projects.find((entry) => entry.name === 'web');
+    // moved-externally ではなく run 開始時点の deployment（pending）のまま。
+    expect(web?.action).not.toBe('moved-externally');
+    expect(web?.action).toBe('pending');
+    // 観測を「無かったことにした」証拠: 記録が消え、run 開始時点の値扱いに戻る。
+    // 記録が残っていれば（=動きを引きずっていれば）'this-run' のままになる。
+    expect(web?.observedAt).toBe('run-start');
+  });
+
   it('sweeps auto-assign again after the already-live gates', async () => {
     // gate の実行中に外部 promote が設定を飛ばすと、gate 前の復元は無効になる。
     // 掃き直さないと次の main merge が gate を迂回して直接公開される。
@@ -1469,6 +1502,32 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
     expect(error.manifest?.status).toBe('settings-drift');
     expect(world.rolledBack()).toEqual([]);
+  });
+
+  it('withdraws a settings-only failure once the wrapper cleanup sweep succeeds', async () => {
+    // production は正しい SHA を配信しており、autoAssignCustomDomains の復元だけが
+    // 一時的に失敗した。stabilize() 自身の再試行（PATCH #1-6: promote ループの復元
+    // 2 件 + stabilize 内の掃き 2 周分）は失敗させ続けて settings-drift を throw させ、
+    // wrapper の catch がもう一度 stabilize を回した時点（PATCH #7 以降）で PATCH を
+    // 成功させる。回数は実測値（本 PR の調査で確認済み）。
+    const world = createReleaseWorld();
+    let patchCount = 0;
+    const FAIL_UNTIL = 6;
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'PATCH') {
+        patchCount += 1;
+        if (patchCount <= FAIL_UNTIL) return new Response(null, { status: 500 });
+      }
+      return world.fetchImpl(input, init);
+    });
+
+    const result = await release({ fetchImpl });
+
+    // settings-drift の失敗は取り下げられ、通常の promoted 成功として終わる。
+    expect(result.status).toBe('promoted');
+    expect(result.manifest?.status).toBe('promoted');
+    // 取り下げの条件どおり、alias の再検証（stabilize）を経て設定も実際に復元されている。
+    expect(world.autoAssign).toEqual({ web: false, product: false });
   });
 
   it('rebuilds the failure manifest when an alias moves during the final cleanup', async () => {
