@@ -58,6 +58,7 @@ jobs:
     outputs:
       docs_only: ${{ steps.impact.outputs.docs_only }}
       product_unit: ${{ steps.impact.outputs.product_unit }}
+      web_ci: ${{ steps.impact.outputs.web_ci }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -368,7 +369,17 @@ jobs:
     needs: gate
     # 重量層: draft の間は走らせない（ready 後 + workflow_dispatch で実行）。
     # docs-only でも skip する（always() の理由は static job のコメント参照）。
-    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
+    # web に影響しない PR でも skip する。この job は Actions 上で web を build し直す
+    # ため（Vercel の preview build と重複）、product だけを触る PR で走らせても
+    # 同じ artifact を 2 度作るだけになる（overview.md §Phase 5 実施形態）。
+    #
+    # **見るのは `web` ではなく `web_ci`。** productUnit と同じ理由で、この job は
+    # 同じ setup action（Node / pnpm のバージョン）で動くため toolchain 変更でも
+    # 走らせる必要があるが、`web` に倒すと Vercel の web preview build まで誘発する。
+    if: >-
+      always() && github.event.pull_request.draft != true
+      && needs.gate.outputs.docs_only != 'true'
+      && needs.gate.outputs.web_ci != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

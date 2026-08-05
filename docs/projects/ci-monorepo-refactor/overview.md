@@ -153,6 +153,21 @@ skip の対象は **preview build（PR の push）だけ**とし、production bu
 - **fail open を徹底する。** exit 1 = build 続行、exit 0 = build skip という Vercel の契約に対し、env 欠落・shallow clone（`git clone --depth=10`）で SHA が履歴に無い・git 失敗・resolver 判定不能はすべて exit 1（build）に倒す。skip は「diff が取れて Impact Resolver が明確に false を返した」場合のみ
 - **product の「Skip deployments (no changes to root directory)」（`enableAffectedProjectsDeployments`）は merge より前に Disabled へ戻す。** 順序が必須なのは、この PR が audit contract 保護対象を変更するため merge に trusted dispatch（branch code で project 設定監査あり）の success が要り、Enabled のままだと dispatch が audit failure で落ちて merge できないため。先に Disabled へ戻しても現 main には ignoreCommand が無いので、影響は「全 push で build される = 従来どおりの課金」だけで安全。§8 補足で検出済みの残タスク（2026-08-01 から Enabled のまま）をこの手順で解消する。この機能を有効なままにすると、workspace 依存グラフを見ない自動 skip が `ignoreCommand`（依存グラフを見る）と二重に判定することになり、どちらが実際に skip を決めたか切り分けられなくなる。`scripts/production-config-audit.mjs` の project 設定監査が定常状態でこのフィールドを `false` に固定し、再度 Enabled に戻る drift を検出する
 
+### Phase 5 実施形態（2026-08-05）
+
+`#1815` は「Actions の Web build 削除」「Web E2E を Vercel Preview URL への smoke へ」「integration.yml の paths を Impact Resolver へ集約」と書いていたが、**前 2 つは形を変え、3 つ目は採らなかった**。原則（§4-4「build は配信環境で一度だけ」）は維持したまま、達成手段を安いものに置き換えている。
+
+判断の骨子は 3 つ。
+
+- **Actions の web build は「削除」ではなく「web に影響しない PR で job ごと skip」で足りた。** gate job が web 系のキーを出力しておらず、`web` job の `if:` は `docs_only` しか見ていなかった。つまり product だけを触る PR でも Actions が web を build し直していた（§3 の期待挙動「Web を触らない PR で Web は skip」の未達部分）。gate の output を `if:` に配ると、Vercel の preview build と重複する build は web 影響時だけになる。判定不能は実行側へ倒す（fail closed）
+- **判定キーは `web` ではなく `webCi` を新設した。** push 前の反証レビュー（behavior-verifier）が、Phase 6 の `productUnit` と同型の穴を指摘した: `web` job も `.github/actions/setup/action.yml`（Node / pnpm のバージョン）で動くため、**toolchain を上げる PR で `web=false` になると、その新しい runtime で Actions 上の web build と E2E を一度も走らせないまま merge**できる。かといって `web=true` に倒すと、この file は Vercel の build env に影響しないのに `Vercel – web` context を要求し、Phase 4 で止めた preview build が復活する。`product` / `productUnit` とまったく同じ非対称なので、同じ形で分けた（`webCi = web || ciToolchain`）
+- **Web E2E の Vercel Preview smoke 化は採らなかった。** ci.yml には `VERCEL_TOKEN` が無く、この repo は「`VERCEL_TOKEN` を使う workflow は PR のコードを実行しない」を一貫して守っている（`production-config-audit.yml` は `pull_request_target` で base revision のみ、`release.yml` は `push:main` / `workflow_dispatch`）。`web` job は PR ブランチのコードをそのまま実行するため、ここに token を配ると **その一貫性を初めて破る**。さらに Preview は Deployment Protection が有効で bypass secret の新規配布が要り、URL の決定的構築は Vercel 内部仕様（branch 名の slug 化・長さ制限・衝突時 hash）に依存して repo に前例が無い。得られるものは「Actions 上の web build を 1 回減らす」だけで、それは上の skip 配線で既に得られている。**原則の目的（重複 build の撤去）は達成し、手段だけを安全側に留める**
+- **`integration.yml` の手書き paths は Impact Resolver へ集約しなかった。** Actions は trigger の `paths:` を job 起動前に評価するため、判定を resolver へ寄せるには「workflow を常時起動して gate job で判定する」形しか取れない。gate job は課金が job 単位で切り上がるので **1 課金分/push が新規発生**し、課金削減という Phase 5 の目的に逆行する。一方で drift は実測ゼロ（22 件が byte 一致）で、防ぎたいのは将来の片側編集だけだった。そこで `scripts/__tests__/impact.test.ts` の contract test で同期を強制する形にした（順序差・件数差・1 文字差のいずれでも落ちることを実際に壊して確認済み）。§4 設計原則 1 の趣旨は「判定ロジックが分岐しないこと」であり、test が同期を保証すれば満たされる
+
+`#1815` の残り 4 項目は次のとおり決着した。**Local Supabase 基盤の共有**と **critical journey の skip 解消**は #1808 で達成済み（e2e job に `supabase start` が入り、env 起因の skip は 0 になった）。**journey の merge gate 化**は追加実装が不要だった — journey は `🎭 E2E Tests` job で走り、この job は ruleset の required checks に入っているため、#1808 で CI 実行されるようになった時点で自動的に merge gate になっている。**Web smoke の絞り込み**は法務契約検査の移設（下記）で達成する。
+
+したがって `productJourney` / `webPreviewSmoke` の 2 キーは**消費者が現れないまま残る**。§5 で「Phase 5 で E2E の実行判定に使う独立キーとして先に固定しておく」と書いたが、その Phase 5 が両方とも別の形で決着したため、現状は `formatSummary` の表示にしか使われていない。消さずに残すのは、消費側 contract を後から変えないという当初の意図がそのまま生きているため（将来 Preview smoke を再検討する時にキーの再設計から始めずに済む）。**次に触る人がこの経緯を知らずに「未配線のキー」を配線しないよう、この判断を根拠として残す。**
+
 ### Phase 6 実施形態（2026-08-05）
 
 `#1816` は「turbo.json に `test:run` の inputs を定義して `turbo --affected` 化」と書いていたが、**基準計測の結果この案は採らなかった**。計測の詳細は [2026-08-05 のログ](../../engineering/log/2026-08-05-unit-test-cost-measurement.md)。

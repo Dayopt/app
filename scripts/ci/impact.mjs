@@ -44,6 +44,7 @@ export const IMPACT_KEYS = [
   'integration',
   'productJourney',
   'productUnit',
+  'webCi',
   'webPreviewSmoke',
   'docsOnly',
 ];
@@ -63,9 +64,23 @@ function isDocsPath(file) {
 }
 
 // ─── integration（server contract / DB 境界）────────────────────────
-// .github/workflows/integration.yml の paths と同一集合。あちらの手書き paths は
-// Phase 5 で本ファイルへの参照に置き換える予定（それまで二重管理。変更時は両方を揃える）。
-const INTEGRATION_GLOBS = [
+// .github/workflows/integration.yml の paths と同一集合。同期は
+// scripts/__tests__/impact.test.ts の contract test（describe
+// 'integration.yml の paths と INTEGRATION_GLOBS の同期契約'）が強制する。
+// 片方だけ編集すると test が落ちるため、変更時は両方を揃える。
+//
+// 判定結果自体（resolveImpact().integration）の consumer は現状
+// formatSummary（Step Summary 表示）のみ。finish-branch.sh・
+// production-release.mjs・vercel.json の ignoreCommand はいずれも参照しない
+// （`product` / `web` だけを見る）。CI 側の実行可否は integration.yml 自身の
+// hand-written paths が決めており、この判定結果で job を skip する経路はまだ
+// 無い。gate job 化して一本化する案は検討したが、workflow が常時起動になり
+// 1 課金分/push が新規発生するため、drift ゼロ（実測）の現状では見送った
+// （#1815）。将来 paths が増えて手動同期のコストが上がったら再検討する。
+//
+// export するのは contract test（scripts/__tests__/impact.test.ts）が
+// integration.yml から抽出した実際の paths リストと直接比較するため。
+export const INTEGRATION_GLOBS = [
   '.nvmrc',
   'package.json',
   'pnpm-lock.yaml',
@@ -254,6 +269,7 @@ const ALL_AFFECTED = {
   integration: true,
   productJourney: true,
   productUnit: true,
+  webCi: true,
   webPreviewSmoke: true,
   docsOnly: false,
 };
@@ -385,6 +401,11 @@ export function resolveImpact(changedFiles, options = {}) {
     // 変更でも true にする（§CI の toolchain）。Vercel / release は `product` を見るため、
     // toolchain 変更が preview build を誘発しない。
     productUnit: product || ciToolchain,
+    // Actions 上で web の build + E2E job を走らせるか。productUnit と同じ理由で
+    // `web` から分ける: この job も同じ setup action（Node / pnpm のバージョン）で
+    // 動くため toolchain 変更でも走らせたいが、`web` に倒すと Vercel の web preview
+    // build まで誘発してしまう（Phase 4 で止めたもの）。
+    webCi: web || ciToolchain,
     webPreviewSmoke: web,
     docsOnly,
     reasons,
@@ -440,7 +461,8 @@ export function formatSummary(impact) {
 export function formatGithubOutput(impact) {
   const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
   const productUnit = impact?.productUnit === false ? 'false' : 'true';
-  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\n`;
+  const webCi = impact?.webCi === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb_ci=${webCi}\n`;
 }
 
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
