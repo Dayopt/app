@@ -11,7 +11,6 @@ import {
   getBillingOperationErrorDisposition,
   useStableBillingOperation,
 } from '@/features/settings';
-import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 
 import type { InlineBannerAction } from '@dayopt/components';
 
@@ -24,16 +23,13 @@ interface InlineBannerState {
 /**
  * InlineBanner の app-level composition フック
  *
- * lib 層の Service Worker 更新状態に、
  * feature 層の billing 状態（past_due）を合成する。
  *
  * 優先度（高→低）:
  * 1. 決済エラー（Pro失効リスク）
- * 2. アプリ更新あり（緊急性低）
  */
 export function useAppInlineBanner(): InlineBannerState {
   const t = useTranslations();
-  const base = useInlineBanner();
   const [billingActionClosed, setBillingActionClosed] = useState(false);
   const {
     begin: beginPortalAttempt,
@@ -92,15 +88,6 @@ export function useAppInlineBanner(): InlineBannerState {
       };
     }
 
-    // Priority 2: Service Worker 更新
-    return base;
-  }, [
-    base,
-    beginPortalAttempt,
-    billingActionClosed,
-    createPortal,
-    isPastDue,
-    isPortalAttemptLocked,
-    t,
-  ]);
+    return { visible: false, message: '' };
+  }, [beginPortalAttempt, billingActionClosed, createPortal, isPastDue, isPortalAttemptLocked, t]);
 }

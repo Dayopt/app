@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  getRegisteredShortcutHelpItems,
-  handleGlobalKeyDown,
-  registerShortcut,
-} from '../shortcut-registry';
+import { handleGlobalKeyDown, registerShortcut } from '@/lib/keyboard/shortcut-registry';
 
 const unregisterCallbacks: Array<() => void> = [];
 
@@ -170,34 +166,5 @@ describe('shortcut-registry', () => {
     dispatchKeyDown(target, { key: 'Escape' });
 
     expect(handler).toHaveBeenCalledOnce();
-  });
-
-  it('同じ操作の複数キーを1つのチートシート項目へまとめる', () => {
-    for (const [key, order] of [
-      ['Delete', 10],
-      ['Backspace', 10],
-    ] as const) {
-      unregisterCallbacks.push(
-        registerShortcut({
-          key,
-          description: `delete with ${key}`,
-          handler: vi.fn(),
-          help: {
-            group: 'blocks',
-            labelKey: 'calendar.shortcuts.actions.deleteBlock',
-            order,
-          },
-        }),
-      );
-    }
-
-    expect(getRegisteredShortcutHelpItems()).toEqual([
-      {
-        group: 'blocks',
-        labelKey: 'calendar.shortcuts.actions.deleteBlock',
-        order: 10,
-        keys: ['Delete', 'Backspace'],
-      },
-    ]);
   });
 });

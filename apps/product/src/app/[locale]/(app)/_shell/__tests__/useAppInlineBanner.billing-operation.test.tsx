@@ -24,10 +24,6 @@ vi.mock('@/lib/toast', () => ({
   toast: { error: toastError },
 }));
 
-vi.mock('@/lib/hooks/useInlineBanner', () => ({
-  useInlineBanner: () => ({ message: '', visible: false }),
-}));
-
 vi.mock('@/features/settings', () => ({
   getBillingOperationErrorDisposition: (error: unknown) => {
     const serviceCode =

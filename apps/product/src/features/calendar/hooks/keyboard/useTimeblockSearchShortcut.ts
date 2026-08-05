@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react';
 
+import { registerShortcut } from '@/lib/keyboard/shortcut-registry';
 import { useShellStore } from '@/lib/stores/useShellStore';
-
-import { registerShortcut } from './shortcut-registry';
 
 /** Cmd/Ctrl+K からシェルのブロック検索を開く。 */
 export function useTimeblockSearchShortcut(): void {
