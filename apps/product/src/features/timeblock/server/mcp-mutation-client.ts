@@ -1,10 +1,6 @@
 import 'server-only';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-import type { Database } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import {
   MCP_MUTATION_RECEIPT_SCHEMA_VERSION,
@@ -28,8 +24,6 @@ import {
   type McpRecordUpdateReceipt,
 } from './mcp-mutation-contract';
 import { createMcpMutationDb } from './mcp-mutation-db';
-import { assertTagAssignable } from './tag-assignment-guard';
-import { TimeblockServiceError } from './timeblock-service-error';
 
 interface MutationDatabaseError {
   code?: unknown;
@@ -57,6 +51,7 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
   DT013: 'PLAN_NOT_RECORDABLE',
+  DT014: 'TAG_ARCHIVED',
 };
 
 const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
@@ -242,40 +237,21 @@ function requireDeletedMutationReceipt<TResourceType extends MutationResourceTyp
  * current OAuth binding and typed Plan / Record fields; arbitrary SQL/table
  * access is not exposed.
  *
- * 内部では 2 つの service-role handle を持つ: apply RPC 8 本だけを型で絞った
- * `db` と、tags の archived 判定 1 クエリだけに使う `supabaseAdmin`。後者は
- * 型としては汎用 client だが、読み出しは `assertTagAssignable` の
- * `tags` 1 テーブル・`user_id` 固定に閉じている。
+ * 内部の service-role handle は apply RPC 8 本だけを型で絞った `db` 1 つ。
+ * アーカイブ済みタグの拒否は DB の command 境界が担う
+ * (`assert_active_timeblock_tag_v1` が DT014 を投げる) ため、この adapter は
+ * tags を直接読まない (#1824)。
  */
 export class McpMutationClient {
   /**
-   * `db` は apply RPC 専用の narrow client。archived-tag ownership check
-   * (#1576 の MCP 経路) だけは別の service-role client (`supabaseAdmin`) を使う。
-   * どちらも default 引数はテストで fake に差し替えられるよう constructor に置く。
+   * `db` は apply RPC 専用の narrow client。default 引数はテストで fake に
+   * 差し替えられるよう constructor に置く。
    */
   constructor(
     private readonly db: ReturnType<typeof createMcpMutationDb> = createMcpMutationDb(),
-    private readonly supabaseAdmin: SupabaseClient<Database> = createServiceRoleClient(),
   ) {}
 
-  /**
-   * アーカイブ済みタグの新規付与を拒否する。tagId が未指定/nullの時は
-   * `assertTagAssignable` 内部の early-return に任せ、ここでは何もしない
-   * (update で既存タグを保持する編集や、タグ解除は常に許可される)。
-   */
-  private async assertTagOwned(userId: string, tagId: string | null | undefined): Promise<void> {
-    try {
-      await assertTagAssignable(this.supabaseAdmin, userId, tagId);
-    } catch (error) {
-      if (error instanceof TimeblockServiceError && error.code === 'TAG_ARCHIVED') {
-        throw mutationError('TAG_ARCHIVED');
-      }
-      throw error;
-    }
-  }
-
   async createPlan(input: McpPlanCreateInput): Promise<McpPlanCreateReceipt> {
-    await this.assertTagOwned(input.userId, input.tagId);
     const operation = 'apply_mcp_plan_create';
     const request = () =>
       this.db.applyPlanCreate({
@@ -296,7 +272,6 @@ export class McpMutationClient {
   }
 
   async updatePlan(input: McpPlanUpdateInput): Promise<McpPlanUpdateReceipt> {
-    await this.assertTagOwned(input.userId, input.tagId);
     const operation = 'apply_mcp_plan_update';
     const request = () =>
       this.db.applyPlanUpdate({
@@ -358,7 +333,6 @@ export class McpMutationClient {
   }
 
   async createRecord(input: McpRecordCreateInput): Promise<McpRecordCreateReceipt> {
-    await this.assertTagOwned(input.userId, input.tagId);
     const operation = 'apply_mcp_record_create';
     const request = () =>
       this.db.applyRecordCreate({
@@ -380,7 +354,6 @@ export class McpMutationClient {
   }
 
   async updateRecord(input: McpRecordUpdateInput): Promise<McpRecordUpdateReceipt> {
-    await this.assertTagOwned(input.userId, input.tagId);
     const operation = 'apply_mcp_record_update';
     const request = () =>
       this.db.applyRecordUpdate({

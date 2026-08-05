@@ -7,8 +7,6 @@ interface McpMutationBinding {
 }
 
 export interface McpPlanCreateInput extends McpMutationBinding {
-  /** Tag ownership check only; never forwarded to the RPC as p_user_id. */
-  userId: string;
   title: string;
   note: string | null;
   tagId: string | null;
@@ -23,8 +21,6 @@ interface McpPlanVersionedInput extends McpMutationBinding {
 }
 
 export interface McpPlanUpdateInput extends McpPlanVersionedInput {
-  /** Tag ownership check only; never forwarded to the RPC as p_user_id. */
-  userId: string;
   /** Omitted fields are preserved. An explicit null clears note or tag. */
   title?: string;
   note?: string | null;
@@ -37,8 +33,6 @@ export type McpPlanDeleteInput = McpPlanVersionedInput;
 export type McpPlanRestoreInput = McpPlanVersionedInput;
 
 export interface McpRecordCreateInput extends McpMutationBinding {
-  /** Tag ownership check only; never forwarded to the RPC as p_user_id. */
-  userId: string;
   title: string;
   note: string | null;
   tagId: string | null;
@@ -55,8 +49,6 @@ interface McpRecordVersionedInput extends McpMutationBinding {
 }
 
 export interface McpRecordUpdateInput extends McpRecordVersionedInput {
-  /** Tag ownership check only; never forwarded to the RPC as p_user_id. */
-  userId: string;
   /** Omitted fields are preserved. An explicit null clears note or tag. */
   title?: string;
   note?: string | null;
