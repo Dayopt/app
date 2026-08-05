@@ -1,6 +1,6 @@
 # AGENTS.md
 
-このファイルは OpenAI Codex のクラウドコードレビュー（PR への `@codex review`）専用のレビュー規則。Codex はレビュー専任で、実装は行わない。実装・運用の正本ガイダンスは `CLAUDE.md` と `.claude/rules/` にある（レビューで規約の根拠を確認したい時だけ参照する）。
+このファイルは OpenAI Codex のクラウドコードレビュー（PR への `@codex review`）専用のレビュー規則。Codex はレビュー専任で、実装は行わない。実装・運用の正本ガイダンスは `CLAUDE.md` と `.claude/rules/` にあり、本ファイルの規約要約はそれらを正本とする（レビュー中に根拠が必要なら該当 rule を参照してよい）。
 
 ## Code Review Rules
 
@@ -16,7 +16,8 @@
 
 - `as any` の使用（variance の逃げは `as never`）、本番コードに残る `console.log`（構造化ログは `@/lib/logger`）
 - サーバーデータを tRPC / TanStack Query を通さずに扱う
-- Tailwind semantic token を使わない直接色・任意 spacing・style 属性
+- Tailwind semantic token を使わない直接色・任意 spacing・style 属性（例外: メールテンプレートと OG 画像は hex 直書きを許容 — `.claude/rules/design-system.md`）
+- a11y の客観的な欠落: アイコンボタンの `aria-label` 欠落、画像の `alt` 欠落
 - feature 間の直接 import（Composition Layer / feature barrel を通す）、`features/ -> lib/` の依存方向の逆流
 - UI 文言のハードコード（next-intl の翻訳キーを使う）
 - default export（App Router の特殊ファイル以外）

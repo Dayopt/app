@@ -205,7 +205,7 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 ### Storybook 視覚確認
 
-UI 変更を含む作業では、関連 Story がある場合は Storybook を起動し、Main が視覚確認する。ユーザーと画面を共有できる provider では、同じ browser surface を優先する:
+UI 変更を含む作業では、関連 Story がある場合は Storybook を起動し、Main が視覚確認する。ユーザーと画面を共有できる環境（共有 browser surface / Preview）では、同じ surface を優先する:
 
 - 既存 stories の regression なし
 - 新規 stories の描画確認
@@ -354,12 +354,12 @@ gh pr merge <PR番号> --merge --delete-branch
 
 ### 命名規則
 
-branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する（provider 共通）。
+branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する。
 
-- **agent**: `claude` / `codex` など、作った AI / 人を表す接頭辞
+- **agent**: 作った AI / 人を表す接頭辞。現体制では `claude`（過去の `codex/` branch は履歴にのみ残る。Codex はレビュー専任で branch を作らない）
 - **domain-action**: Project 命名規則（本ファイル §Project 命名規則）と同型の kebab-case。例: `calendar-sync-fix`, `i18n-audit`, `sidebar-routing-unification`
-- **issue 番号**: 対応 issue があれば末尾に付ける。例: `codex/external-calendar-sync-1705`。複数 issue を束ねた PR（§PR 粒度）では代表 issue または epic 番号を使う。例: `claude/external-calendar-1702`
-- 良い例: `claude/calendar-sync-fix` / `codex/i18n-audit-1705`。悪い例: `claude/worktree-branch-strategy-9383e9`（内容が読めないランダム suffix）, `fix-stuff`（domain 不明）
+- **issue 番号**: 対応 issue があれば末尾に付ける。例: `claude/external-calendar-sync-1705`。複数 issue を束ねた PR（§PR 粒度）では代表 issue または epic 番号を使う。例: `claude/external-calendar-1702`
+- 良い例: `claude/calendar-sync-fix` / `claude/i18n-audit-1705`。悪い例: `claude/worktree-branch-strategy-9383e9`（内容が読めないランダム suffix）, `fix-stuff`（domain 不明）
 - **Claude Code が自動生成するランダム suffix 名は、最初の PR を作る前に `git branch -m {agent}/{domain}-{action}` でリネームする**。worktree のディレクトリ名は使い捨てなのでリネーム不要（branch 名だけ直せば PR に正しい名前が乗る）
 
 ### 置き場と作成
