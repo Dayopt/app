@@ -28,11 +28,11 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 | Suite                          | CI       | 現在の役割                                                               |
 | ------------------------------ | -------- | ------------------------------------------------------------------------ |
 | Vitest unit（product / web）   | required | ロジックとcomponentの回帰検知                                            |
-| Playwright `chromium`          | required | `apps/product/src/lib/test/e2e` の全specを実行                           |
+| Playwright `chromium`          | required | 認証必須含む `apps/product/src/lib/test/e2e` の全specをCIで実行          |
 | Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
 
-Mobile ChromeをCIで実行すると、認証必須testは環境変数不足でskipされ、残る未認証testだけがchromiumと重複する。認証fixtureまたはCI専用test userを安全に用意するまではlocal専用とする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
+e2e job は `supabase/setup-cli` + `supabase start` でlocal Supabase stackを立て、`scripts/ci/create-e2e-test-user.mjs` が発行する使い捨てユーザーで `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を満たす（#1808）。これにより認証必須testも含めて全specがCIでskipされずに実行される。Mobile Chromeも同じ認証情報でCI実行は技術的に可能だが、chromiumと同じspecを二重実行するだけなのでlocal専用のままとする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
 
 ### Supabase Project
 

@@ -288,7 +288,9 @@ jobs:
     if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     environment: development
-    timeout-minutes: 15
+    # local Supabase stack（supabase start）が +1〜2 分程度乗るため 15 → 20 分へ
+    # 引き上げる（integration.yml の同型スタックと同じ 20 分に揃える）。
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -297,12 +299,53 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
 
+      - id: supabase-version
+        run: |
+          version=$(node -p "require('./apps/product/package.json').devDependencies.supabase")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          # package.json の Supabase CLI と同じバージョンを使い、ローカルと CI の挙動を揃える
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Get Supabase status
+        id: supabase
+        run: |
+          API_URL=$(supabase status --output json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      # TEST_USER_* 依存の spec（deep-link / review-granularity / smoke 認証部 /
+      # auth 認証部）向けの一時ユーザー。seed 型 spec（critical-path /
+      # plan-record-timeblock / block-search）は service key があれば自前で
+      # ユーザーを作るためここでは対象外（scripts/ci/create-e2e-test-user.mjs 参照）。
+      - name: Create E2E test user
+        id: e2e-user
+        run: node scripts/ci/create-e2e-test-user.mjs
+        env:
+          SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+
       - name: Run E2E tests
         run: pnpm --dir apps/product exec playwright test --project="chromium"
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          TEST_USER_EMAIL: ${{ steps.e2e-user.outputs.email }}
+          TEST_USER_PASSWORD: ${{ steps.e2e-user.outputs.password }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop
 
       - name: Upload report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
