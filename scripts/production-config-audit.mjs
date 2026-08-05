@@ -125,8 +125,10 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  *   自動 skip で、`ignoreCommand`（依存グラフを見る）と競合するため常時 false が前提
  *   （docs/projects/ci-monorepo-refactor/overview.md §8 補足）
  *
- * fail closed: フィールドが応答に存在しない場合も failure とする（`commandForIgnoringBuildStep`
- * だけは nullable が仕様なので、キーが無い/null のどちらも compliant として扱う）。
+ * fail closed: `rootDirectory` / `autoAssignCustomDomains` は応答に存在しない場合も failure
+ * とする。`commandForIgnoringBuildStep`（nullable が仕様）と
+ * `enableAffectedProjectsDeployments`（トグル未操作の project では応答に現れないことを
+ * 2026-08-05 の trusted dispatch で実測）は、キーが無い状態を compliant として扱う。
  * 値そのものは出力しない（既存方針: metadata のみ、secret 値は取得・出力しない）。
  */
 export function auditProjectSettings(projectName, project) {
@@ -157,11 +159,14 @@ export function auditProjectSettings(projectName, project) {
     );
   }
 
-  if (!('enableAffectedProjectsDeployments' in project)) {
-    errors.push(
-      `${projectName}: enableAffectedProjectsDeployments is missing from project metadata`,
-    );
-  } else if (project.enableAffectedProjectsDeployments !== false) {
+  // このフィールドは他と違い「トグルを一度も操作していない project では応答に現れない」
+  // ことを 2026-08-05 の trusted dispatch で実測した（web が該当）。不在 = 未設定 =
+  // 無効と同義なので compliant として扱う。fail closed を緩めるのは意図的で、
+  // 「有効(true)だけを drift とする」以上に厳しくすると未操作 project が恒久 failure になる。
+  if (
+    project.enableAffectedProjectsDeployments !== undefined &&
+    project.enableAffectedProjectsDeployments !== false
+  ) {
     errors.push(
       `${projectName}: enableAffectedProjectsDeployments ("Skip deployments") must be disabled — it ignores the workspace dependency graph and conflicts with vercel.json ignoreCommand`,
     );

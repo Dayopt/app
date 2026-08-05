@@ -119,11 +119,14 @@ Marketplace integration、v0 から新規 Production deployment を作らない�
 gate が機能する前提は **Product / Web の Auto-assign Custom Production Domains が無効**であること。
 これを無効化するまで main merge は従来どおり直接公開され、release workflow は素通りする。
 
+**この移行は 2026-08-05 に完了した**（#1817 の project 設定監査が「`RELEASE_EXPECT_AUTO_ASSIGN: ''`
+のまま live が true に固定され、素通り状態が続いていた」未完了を検出したのを受けて実施。
+手順は次の 3 段で、再度必要になった場合も同じ順序で行う。Production 設定の変更なので
+ユーザーの明示承認下で行う）:
+
 1. Vercel Dashboard → product / web → Settings → Git
 2. Auto-assign Custom Production Domains を OFF にする（web を先に、動作確認後 product）
 3. 両方 OFF にしたら `.github/workflows/release.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
-
-Production 設定の変更なので、実施はユーザーの明示承認下で行う。
 
 無効化後は、main への merge が作るのは domain 未割当の Production build だけになり、Production domain の
 切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。

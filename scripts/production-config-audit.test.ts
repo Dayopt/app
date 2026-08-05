@@ -177,12 +177,12 @@ describe('Production Config Audit — project settings (rootDirectory / autoAssi
     );
   });
 
-  it('fails closed when enableAffectedProjectsDeployments is missing from the response', () => {
+  it('treats a missing enableAffectedProjectsDeployments as compliant (toggle never touched)', () => {
+    // トグルを一度も操作していない project では応答にこのフィールド自体が現れない
+    // （2026-08-05 の trusted dispatch で web が該当することを実測）。不在 = 無効。
     const settings = compliantProductSettings() as Record<string, unknown>;
     delete settings.enableAffectedProjectsDeployments;
-    expect(auditProjectSettings('product', settings)).toContain(
-      'product: enableAffectedProjectsDeployments is missing from project metadata',
-    );
+    expect(auditProjectSettings('product', settings)).toEqual([]);
   });
 
   it('fails closed when the response is not an object', () => {
