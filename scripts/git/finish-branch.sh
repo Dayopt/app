@@ -444,60 +444,144 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #
   # thread の resolve 状態は GraphQL の reviewThreads にしか無い（REST には出ない）。
   # 取得に失敗した場合は「未確認のまま通す」ではなく停止に倒す（fail closed）。
-  # first: 100 を超える場合も全件を確認できないため停止する。
+  #
+  # **`reviewThreads` は `pageInfo` の `hasNextPage` / `endCursor` で全ページを走査する。**
+  # 旧実装は first: 100 を 1 回だけ引き、hasNextPage が true なら「全件確認できない」
+  # として即停止していた。PR #1820（thread 101 件・未解決 0 件）が実際にこれで
+  # 止まり、手動フォールバックを強いられた（issue #1831）。暴走防止の上限は件数
+  # ではなくページ数 MAX_THREAD_PAGES に置く（first:100 × 20 = 最大 2000 件）。
+  # この上限に達してもなお hasNextPage が true の場合だけ「全件確認できない」と
+  # して停止する。
   step "レビュー thread の解決状態を確認"
 
   NAME_WITH_OWNER="$(gh api "repos/{owner}/{repo}" --jq '.full_name' 2>/dev/null || true)"
-  THREADS_JSON=""
+
+  MAX_THREAD_PAGES=20
+  THREAD_FETCH_FAILED=false
+  THREAD_PAGES_TRUNCATED=false
+  THREAD_PAGE_JSONS=()
+
   if [[ "$NAME_WITH_OWNER" == */* ]]; then
-    THREADS_JSON="$(gh api graphql \
-      -f query='query($owner: String!, $name: String!, $number: Int!) {
-        repository(owner: $owner, name: $name) {
-          pullRequest(number: $number) {
-            reviewThreads(first: 100) {
-              pageInfo { hasNextPage }
-              nodes {
-                isResolved
-                path
-                comments(first: 1) { nodes { author { login } } }
+    THREAD_OWNER="${NAME_WITH_OWNER%%/*}"
+    THREAD_NAME="${NAME_WITH_OWNER##*/}"
+    THREAD_CURSOR=""
+    THREAD_PAGE=0
+
+    while true; do
+      THREAD_PAGE=$((THREAD_PAGE + 1))
+
+      # 1 ページ目は cursor 変数を持たないクエリを使う（従来の shape を変えない）。
+      # 2 ページ目以降は `after: $cursor` を持つ別クエリで続きを取る。
+      if [[ -z "$THREAD_CURSOR" ]]; then
+        THREAD_PAGE_JSON="$(gh api graphql \
+          -f query='query($owner: String!, $name: String!, $number: Int!) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    isResolved
+                    path
+                    comments(first: 1) { nodes { author { login } } }
+                  }
+                }
               }
             }
-          }
-        }
-      }' \
-      -f owner="${NAME_WITH_OWNER%%/*}" \
-      -f name="${NAME_WITH_OWNER##*/}" \
-      -F number="$PR_NUMBER" 2>/dev/null || true)"
+          }' \
+          -f owner="$THREAD_OWNER" \
+          -f name="$THREAD_NAME" \
+          -F number="$PR_NUMBER" 2>/dev/null || true)"
+      else
+        THREAD_PAGE_JSON="$(gh api graphql \
+          -f query='query($owner: String!, $name: String!, $number: Int!, $cursor: String!) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100, after: $cursor) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    isResolved
+                    path
+                    comments(first: 1) { nodes { author { login } } }
+                  }
+                }
+              }
+            }
+          }' \
+          -f owner="$THREAD_OWNER" \
+          -f name="$THREAD_NAME" \
+          -F number="$PR_NUMBER" \
+          -f cursor="$THREAD_CURSOR" 2>/dev/null || true)"
+      fi
+
+      # このページの hasNextPage / endCursor だけを取り出す。reviewThreads 自体が
+      # null（pullRequest が見つからない等）なら select が空を返し、fail closed に倒す。
+      THREAD_PAGE_INFO="$(printf '%s' "$THREAD_PAGE_JSON" | jq -r '
+        .data.repository.pullRequest.reviewThreads
+        | select(. != null)
+        | "\(.pageInfo.hasNextPage) \(.pageInfo.endCursor // "")"' 2>/dev/null || true)"
+
+      if [[ -z "$THREAD_PAGE_INFO" ]]; then
+        THREAD_FETCH_FAILED=true
+        break
+      fi
+
+      THREAD_HAS_NEXT="${THREAD_PAGE_INFO%% *}"
+      THREAD_NEXT_CURSOR="${THREAD_PAGE_INFO#* }"
+
+      if [[ "$THREAD_HAS_NEXT" != "true" && "$THREAD_HAS_NEXT" != "false" ]]; then
+        # hasNextPage が欠落した等、想定外の形。停止はするが誤診断のメッセージを出さない。
+        THREAD_FETCH_FAILED=true
+        break
+      fi
+
+      THREAD_PAGE_JSONS+=("$THREAD_PAGE_JSON")
+
+      if [[ "$THREAD_HAS_NEXT" != "true" ]]; then
+        break
+      fi
+
+      if [[ "$THREAD_PAGE" -ge "$MAX_THREAD_PAGES" ]]; then
+        THREAD_PAGES_TRUNCATED=true
+        break
+      fi
+
+      THREAD_CURSOR="$THREAD_NEXT_CURSOR"
+    done
+  else
+    THREAD_FETCH_FAILED=true
   fi
 
-  # 「未解決件数」と「100 件超フラグ」を 1 回の jq で取り出す。JSON が想定形で
-  # なければ（pullRequest が null 等）ここが空になり、fail closed で停止する。
-  THREAD_STATS="$(printf '%s' "$THREADS_JSON" | jq -r '
-    .data.repository.pullRequest.reviewThreads
-    | "\([.nodes[] | select(.isResolved | not)] | length) \(.pageInfo.hasNextPage)"' 2>/dev/null || true)"
-
-  if [[ -z "$THREAD_STATS" ]]; then
+  if [[ "$THREAD_FETCH_FAILED" == true ]]; then
     error "レビュー thread の状態を取得できませんでした。マージを中止します（fail closed）。"
     error "gh の認証とネットワークを確認して再実行してください。"
     exit 1
   fi
 
-  UNRESOLVED_THREADS="${THREAD_STATS%% *}"
-  THREADS_TRUNCATED="${THREAD_STATS##* }"
-
-  if [[ "$THREADS_TRUNCATED" == "true" ]]; then
-    error "レビュー thread が 100 件を超えており全件を確認できません。マージを中止します。"
-    exit 1
-  elif [[ "$THREADS_TRUNCATED" != "false" ]]; then
-    # hasNextPage が欠落した等、想定外の形。停止はするが誤診断のメッセージを出さない。
-    error "レビュー thread の取得結果が想定外の形です。マージを中止します（fail closed）。"
+  if [[ "$THREAD_PAGES_TRUNCATED" == true ]]; then
+    error "レビュー thread が ${MAX_THREAD_PAGES} ページ（最大 $((MAX_THREAD_PAGES * 100)) 件）を超えており全件を確認できません。マージを中止します。"
     exit 1
   fi
 
+  # 全ページの nodes を 1 つの配列へ結合する。個々のページの失敗は上の
+  # THREAD_FETCH_FAILED で既に停止しているため、ここでの失敗は
+  # 「配列を組み立てられない」想定外の形が混入した場合のみで、同じく fail closed にする。
+  # 配列展開は bash 3.2 + set -u の空配列 unbound 対策で ${arr[@]+...} 形にする
+  # （現経路では空で到達しないが、将来の経路追加で壊れないよう既存パターンに揃える）。
+  ALL_THREADS_JSON="$(printf '%s\n' ${THREAD_PAGE_JSONS[@]+"${THREAD_PAGE_JSONS[@]}"} | jq -s '
+    [.[] | .data.repository.pullRequest.reviewThreads.nodes[]]' 2>/dev/null || true)"
+
+  if [[ -z "$ALL_THREADS_JSON" ]]; then
+    error "レビュー thread の状態を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  UNRESOLVED_THREADS="$(printf '%s' "$ALL_THREADS_JSON" | jq -r '[.[] | select(.isResolved | not)] | length')"
+
   if [[ "$UNRESOLVED_THREADS" != "0" ]]; then
     error "未解決のレビュー thread が $UNRESOLVED_THREADS 件あります。マージを中止します。"
-    printf '%s' "$THREADS_JSON" | jq -r '
-      .data.repository.pullRequest.reviewThreads.nodes[]
+    printf '%s' "$ALL_THREADS_JSON" | jq -r '
+      .[]
       | select(.isResolved | not)
       | "    - \(.path // "(general)")（\(.comments.nodes[0].author.login // "unknown")）"' >&2 || true
     error "解決は 3 択: fix を積む / 反論を reply / issue 化して番号を reply。いずれも thread を resolve してから再実行してください。"

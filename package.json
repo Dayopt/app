@@ -42,6 +42,7 @@
     "types:generate:local": "supabase gen types typescript --local > apps/product/src/lib/database/generated/database.types.ts",
     "auth-email:sync": "tsx scripts/sync-auth-email-templates.ts",
     "auth-email:check": "tsx scripts/sync-auth-email-templates.ts --check",
+    "functions:check": "deno check --no-lock --config supabase/functions/deno.json supabase/functions",
     "lint:i18n": "pnpm --filter @dayopt/product lint:i18n",
     "i18n:add-locale": "pnpm --filter @dayopt/product i18n:add-locale",
     "docs:check": "tsx scripts/docs-guard/index.ts",
