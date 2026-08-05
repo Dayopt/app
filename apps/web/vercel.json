@@ -1,5 +1,6 @@
 {
   "buildCommand": "pnpm generate:search-index && pnpm build",
+  "ignoreCommand": "node ../../scripts/ci/impact.mjs --vercel web",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",

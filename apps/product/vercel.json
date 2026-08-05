@@ -3,6 +3,7 @@
   "framework": "nextjs",
   "regions": ["hnd1"],
   "buildCommand": "pnpm build && pnpm verify:bundle",
+  "ignoreCommand": "node ../../scripts/ci/impact.mjs --vercel product",
   "crons": [
     {
       "path": "/api/cron/calendar-sync",

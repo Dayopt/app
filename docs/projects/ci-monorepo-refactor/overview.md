@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-08-04
+last_verified: 2026-08-05
 code: scripts/ci
 ---
 
@@ -142,6 +142,16 @@ Phase 3 の release は影響を **live SHA からの累積** で測る。merge 
 なお現状（skip 未有効）ではこの問題は起きない。Vercel が毎 merge で全 project を build するため、target SHA の candidate は常に存在する。timeout は fail closed（未検証の build を出さない）なので安全性の問題ではなく、可用性の問題。
 
 補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ](../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
+
+### Phase 4 実施形態（2026-08-05）
+
+skip の対象は **preview build（PR の push）だけ**とし、production build は skip しない。上の制約（「その project の live SHA を基準に diff を取る」）は、production では「skip しなければ破りようがない」形で満たす。
+
+- **`turbo-ignore` は不採用。** Vercel 公式の `turbo-ignore` パッケージは turbo の task graph から affected package を判定する専用 CLI だが、判定規則を `scripts/ci/impact.mjs`（本書 §1 の設計原則「影響判定を一か所に集約する」）の外に持つことになり、CI の手書き paths・merge gate・Production Release と三重管理になる。加えて `turbo-ignore` は 2025 年に Vercel の deprecation 対象になっている。代わりに `apps/{product,web}/vercel.json` の `ignoreCommand` から `node ../../scripts/ci/impact.mjs --vercel <product|web>` を直接呼び、既存の Impact Resolver をそのまま再利用する
+- **production build（`VERCEL_ENV=production`）は変更内容によらず skip しない。** 基準に使える `VERCEL_GIT_PREVIOUS_SHA` は「その project + branch の直前の**成功した build**」であって live に promote された SHA ではない。Auto-assign 無効化後は「candidate の build は成功したが release が smoke / audit で失敗し未 promote」が正常に起こりうるため、それを基準に skip すると次の merge で Production Release（live SHA 基準で affected 判定）が存在しない candidate を `WORST_CASE_RELEASE_MS` まで待ち続けて詰まる（PR #1835 の Codex P1 指摘）。live SHA を ignoreCommand から取得するには `VERCEL_TOKEN` の build env 配布が要り secrets 方針に反するため採らず、production を常時 build する（従来と同じ、merge あたり最大 2 build）。課金削減は push 回数の多い preview 側で得る
+- **preview build の基準 SHA は `VERCEL_GIT_PREVIOUS_SHA` を使う。** 「その project + branch の直前の成功 deployment の SHA」で、Ignored Build Step 設定時のみ build container に露出する。preview は release gate と無関係なので「成功 build 基準」で十分（最終 push だけ unaffected の場合の merge gate 側の扱いは infra.md §merge gate を参照）
+- **fail open を徹底する。** exit 1 = build 続行、exit 0 = build skip という Vercel の契約に対し、env 欠落・shallow clone（`git clone --depth=10`）で SHA が履歴に無い・git 失敗・resolver 判定不能はすべて exit 1（build）に倒す。skip は「diff が取れて Impact Resolver が明確に false を返した」場合のみ
+- **product の「Skip deployments (no changes to root directory)」（`enableAffectedProjectsDeployments`）は merge より前に Disabled へ戻す。** 順序が必須なのは、この PR が audit contract 保護対象を変更するため merge に trusted dispatch（branch code で project 設定監査あり）の success が要り、Enabled のままだと dispatch が audit failure で落ちて merge できないため。先に Disabled へ戻しても現 main には ignoreCommand が無いので、影響は「全 push で build される = 従来どおりの課金」だけで安全。§8 補足で検出済みの残タスク（2026-08-01 から Enabled のまま）をこの手順で解消する。この機能を有効なままにすると、workspace 依存グラフを見ない自動 skip が `ignoreCommand`（依存グラフを見る）と二重に判定することになり、どちらが実際に skip を決めたか切り分けられなくなる。`scripts/production-config-audit.mjs` の project 設定監査が定常状態でこのフィールドを `false` に固定し、再度 Enabled に戻る drift を検出する
 
 ## 9. 非目標
 
