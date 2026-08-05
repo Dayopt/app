@@ -65,8 +65,13 @@ apps/product/src/features/{feature}/
 - **component / hook の test は自動で happy-dom 側に入る**（`.tsx` と `use*` の 2 パターン）。
   普通に書いていれば意識しなくてよい
 - **上の 2 パターンに当てはまらない test で DOM が要る場合**は、`apps/product/vitest.config.ts`
-  の `DOM_ONLY_TESTS` に path を追加する。忘れると `document is not defined` 等で落ちるので、
-  静かに壊れることはない
+  の `DOM_ONLY_TESTS` に path を追加する
+- **分類が合っているかはローカルで判断しない。** Node 22 以降は `localStorage` をネイティブに
+  持つため、`environment: 'node'` でも web storage が使えてしまい、**ローカルでは通るのに CI
+  （Node 24）で `ReferenceError: localStorage is not defined` になる**。分類を変えたら CI を
+  oracle にする（2026-08-05 に実際に踏んだ）
+- **DOM 依存は test を読んでも分からないことがある。** test 本体が localStorage に触れて
+  いなくても、**実装側**が触っていれば DOM が要る。迷ったら DOM 側に置く（遅くなるだけで壊れない）
 - **module mock（`server-only` / `next/navigation` / `next-intl`）は両 project 共通**。
   追加する時は `src/lib/test/setup-node.ts` に書く（`setup.ts` はこれを import している）。
   `setup.ts` にだけ足すと node 側の test が静かに素の実装を掴む

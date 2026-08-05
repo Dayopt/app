@@ -20,16 +20,31 @@ const dirname =
 // この 2 つで大半が拾える。残りは DOM_ONLY_TESTS に明示列挙する。
 //
 // **新しく DOM が要る test を足した時**: 上の 2 パターンに当てはまらなければ
-// DOM_ONLY_TESTS に追加する。追加を忘れると `document is not defined` 等で
-// 落ちるので、静かに壊れることはない（fail loud）。逆に純ロジックの test を
-// DOM 側に置いても遅くなるだけで壊れない。
+// DOM_ONLY_TESTS に追加する。逆に純ロジックの test を DOM 側に置いても
+// 遅くなるだけで壊れない。
+//
+// ── 分類を間違えた時にどこで気づくか（2026-08-05 に実際に踏んだ）──────
+//
+// **正しい oracle は CI（Node 24）であって、ローカルではない。** Node 22 以降は
+// `localStorage` をネイティブに持つため、`environment: 'node'` でも web storage が
+// 使えてしまい、**ローカルでは通るのに CI で `ReferenceError: localStorage is not
+// defined` になる**。分類を変えた時はローカルの pass を根拠にしないこと。
+//
+// **DOM 依存は test ファイルを読んでも分からないことがある。** 下の
+// `calendarScrollStore.test.ts` は localStorage に一言も触れていないが、
+// **実装側**（`calendarScrollStore.ts`）が localStorage を使う。test の中身を
+// grep する方式では原理的に拾えないので、迷ったら DOM 側に置く。
 
 /** `.tsx` でも `use*.test.ts` でもないが DOM が要る test。 */
 const DOM_ONLY_TESTS = [
+  // 実装（calendarScrollStore.ts）が localStorage で永続化する
+  'src/features/calendar/stores/__tests__/calendarScrollStore.test.ts',
   'src/features/timeblock/components/editor/__tests__/TimeblockRecordActions.test.ts',
   'src/lib/__tests__/cookie-consent.test.ts',
   'src/lib/keyboard/__tests__/shortcut-registry.test.ts',
   'src/lib/security/__tests__/encryption.test.ts',
+  // 別タブからの storage.clear() まで見る consent lifecycle の test（browser 前提）
+  '__tests__/instrumentation-client.test.ts',
 ];
 
 /** DOM を必要とする test の include パターン。 */

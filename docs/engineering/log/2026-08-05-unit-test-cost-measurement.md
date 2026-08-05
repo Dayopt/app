@@ -69,8 +69,26 @@ CI ログの vitest 内訳（308 files、job 全体が 420s だった run）:
 | 削減                   | **−27%**     | −41%                 |
 
 分割後の `environment` は 28.9s → 9.0s、`setup` は 17.2s → 6.2s。
-**テスト件数（308 files / 3018 tests）と失敗ファイル集合は分割前後で完全に一致**しており、
-取りこぼしは無い（ローカルの 10 件の失敗は node26 環境の既知問題で、CI の node 24 では pass）。
+テスト件数（308 files / 3018 tests）は分割前後で一致しており、収集の取りこぼしは無い。
+
+### ローカルの pass を分類の根拠にしてはいけない（2026-08-05 に踏んだ）
+
+分割直後のローカル実行では失敗ファイル集合が分割前と完全に一致したため「取りこぼし無し」と
+判断したが、**これは誤りだった**。CI（Node 24）では 2 ファイル 9 テストが
+`ReferenceError: localStorage is not defined` で落ちた。
+
+原因は 2 つ重なっている。
+
+1. **Node 22 以降は `localStorage` をネイティブに持つ。** ローカルは Node 26 なので
+   `environment: 'node'` でも web storage が使えてしまい、この失敗が完全に隠れる。
+   **分類の oracle は CI であってローカルではない**
+2. **DOM 依存は test ファイルを読んでも分からないことがある。**
+   `calendarScrollStore.test.ts` は localStorage に一言も触れていないが、**実装側**の
+   `calendarScrollStore.ts` が localStorage で永続化する。test の中身を grep する
+   分類方式では原理的に拾えない
+
+この 2 件は `DOM_ONLY_TESTS` へ移した。分類ミスは CI が 1 run で全件洗い出すので
+（308 files 中どれが落ちるかが一度に分かる）、当て推量で広げるより CI に答えさせる方が速い。
 
 ## 却下: `isolate: false`
 
