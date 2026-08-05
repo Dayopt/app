@@ -44,7 +44,6 @@ const preview: Preview = {
         method: 'alphabetical',
         // top-level は所有境界（package / app）で分ける
         order: [
-          'Welcome',
           // Shared = packages（再利用資産）
           'Shared',
           [

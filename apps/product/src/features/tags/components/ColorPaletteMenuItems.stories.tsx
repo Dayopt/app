@@ -16,7 +16,7 @@ import {
 import { ColorPaletteMenuItems, getColorDisplayName } from './ColorPaletteMenuItems';
 
 const meta = {
-  title: 'Product/Components/ColorPaletteMenuItems',
+  title: 'Product/Components/Inputs/ColorPaletteMenuItems',
   component: ColorPaletteMenuItems,
   tags: ['autodocs'],
   parameters: {

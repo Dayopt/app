@@ -40,6 +40,7 @@ const APP_NAMESPACES = [
   'navigation',
   'settings',
   'sidebar',
+  'shortcuts',
   'error',
   'contact',
 ];
