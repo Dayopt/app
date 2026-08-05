@@ -4,9 +4,16 @@
  *
  * 旧 apps/web/src/test/e2e/i18n-smoke.spec.ts の `legal pages` describe を移設したもの
  * （2026-08 CI monorepo Phase 5, issue #1815）。「本文が勝手に変わっていないこと」を守る
- * のが目的で、ブラウザではなく本番と同じレンダリング部品（getLegalDocument /
- * generateMetadata / next-mdx-remote/serialize / legalMdxComponents）を直接 Vitest 上で
- * 実行して検証する。
+ * のが目的で、ブラウザを起動せず getLegalDocument / generateMetadata /
+ * legalMdxComponents という本番と同一の部品を直接 Vitest 上で実行して検証する。
+ *
+ * **MDX のコンパイル経路だけは本番と異なる。** 本番の LegalDocument.tsx は
+ * `next-mdx-remote/rsc`（Server Component 経路）を使うが、Vitest で RSC は描画できない
+ * ため、ここでは同じ LEGAL_MDX_OPTIONS を渡した `serialize` + 非 RSC の MDXRemote を使う。
+ * 両経路の出力が一致することは、移設元の Playwright（実ブラウザ = 本番経路）が持っていた
+ * hash / 見出し数 / href の期待値と byte 一致することで確認した。**legal component に
+ * RSC 固有の機能（async component、server-only import）を持ち込むとこの前提が崩れ、
+ * テストは通るのに本番の出力だけが変わる**ため、その時はテスト側の経路も見直すこと。
  *
  * MDX ソースはプレーンな Markdown ではなく `<XxxDocument data={{...}} />` という
  * JSX props（object literal）で本文を持つため、見出し数・table・list の構造は
