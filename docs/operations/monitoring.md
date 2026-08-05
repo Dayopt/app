@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-23
+last_verified: 2026-08-05
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -12,17 +12,18 @@ code:
 
 # 監視・アラート
 
-Dayoptのproduction監視はSentry、Vercel、Supabase、`/api/health`を組み合わせる。障害発生後の対応は[runbook](./runbook.md)、error capture実装規約は[error-handling skill](../../.claude/skills/error-handling/SKILL.md)を参照する。
+Dayoptのproduction監視はSentry、Vercel、Supabase、`/api/health`、UptimeRobotを組み合わせる。障害発生後の対応は[runbook](./runbook.md)、error capture実装規約は[error-handling skill](../../.claude/skills/error-handling/SKILL.md)を参照する。
 
 ## Monitoring surfaces
 
-| Surface         | 見るもの                                                      | 正本                                               |
-| --------------- | ------------------------------------------------------------- | -------------------------------------------------- |
-| Sentry          | unexpected error、正規化済みCSP violation、performance trace  | Sentry dashboard + Product / Web の runtime config |
-| Vercel          | deployment、function error / duration、traffic、build failure | Vercel dashboard                                   |
-| Supabase        | database health、connection、API error、storage、Auth         | Supabase dashboard                                 |
-| Health endpoint | app、database、必要な環境設定の疎通                           | `GET /api/health`                                  |
-| GitHub Actions  | type / lint / test / build / docs guard                       | `.github/workflows/`                               |
+| Surface         | 見るもの                                                                          | 正本                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Sentry          | unexpected error、正規化済みCSP violation、performance trace                      | Sentry dashboard + Product / Web の runtime config                                                                                    |
+| Vercel          | deployment、function error / duration、traffic、build failure                     | Vercel dashboard                                                                                                                      |
+| Supabase        | database health、connection、API error、storage、Auth                             | Supabase dashboard                                                                                                                    |
+| Health endpoint | app、database、必要な環境設定の疎通                                               | `GET /api/health`                                                                                                                     |
+| UptimeRobot     | 外形監視（`/api/health` のHTTP status、5分間隔）、uptime、incident、response time | UptimeRobot dashboard + メール通知。AI調査経路は[mcp-usage](../../.claude/rules/mcp-usage.md)のUptimeRobot節（read-onlyオンデマンド） |
+| GitHub Actions  | type / lint / test / build / docs guard                                           | `.github/workflows/`                                                                                                                  |
 
 provider plan、sampling rate、SDK versionなどの値は変わるため、package manifest・runtime config・dashboardを正とする。
 
