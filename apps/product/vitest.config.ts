@@ -26,9 +26,9 @@ const dirname =
 
 /** `.tsx` でも `use*.test.ts` でもないが DOM が要る test。 */
 const DOM_ONLY_TESTS = [
-  'src/features/calendar/hooks/keyboard/__tests__/shortcut-registry.test.ts',
   'src/features/timeblock/components/editor/__tests__/TimeblockRecordActions.test.ts',
   'src/lib/__tests__/cookie-consent.test.ts',
+  'src/lib/keyboard/__tests__/shortcut-registry.test.ts',
   'src/lib/security/__tests__/encryption.test.ts',
 ];
 
