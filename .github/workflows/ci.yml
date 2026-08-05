@@ -126,6 +126,61 @@ jobs:
             exit 1
           fi
 
+      # ── supabase/functions/** の Deno 型検査（#1822）───────────────
+      # tsconfig / typecheck lane の対象外（別ランタイム）のため、import 欠落等が
+      # すり抜けていた（2026-08-04 incident）。supabase/functions/** を触った PR
+      # でだけ走らせる。判定は Impact summary と同じ gh api の変更ファイル一覧を使う。
+      - name: supabase/functions/** 変更の有無を確認
+        id: functions-changed
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 取得と判定を分離する。gh を grep への pipeline に入れると、gh の失敗や
+          # grep -q 早期終了の SIGPIPE が else（changed=false）へ倒れて fail open に
+          # なる。取得失敗は step 失敗（continue-on-error で outputs.changed 空）に
+          # して、下流の `!= 'false'` 判定で実行側に倒す。判定は herestring で行い
+          # pipe を排除する。既知の限界: files API は 3,000 件で silent truncation
+          # する（finish-branch.sh が件数照合するのと同じ理由）。3,000 件超の PR は
+          # 現実的に発生しないため許容する
+          files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"
+          if grep -q '^supabase/functions/' <<<"$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 変更ファイル取得に失敗した場合（continue-on-error で outputs.changed が
+      # 空のまま）は fail closed で実行側に倒す。workflow_dispatch は
+      # pull_request context が無く上の step 自体が skip される（outputs.changed
+      # も空）ため、同じ条件で常に実行される。
+      - name: Deno インストール
+        if: steps.functions-changed.outputs.changed != 'false'
+        env:
+          # supabase/config.toml の deno_version = 2 系の最新安定版を pin する。
+          # org の Actions 許可リストに denoland/setup-deno が無いため、
+          # gitleaks（docs-guard.yml）と同じく公式バイナリを直接取得し sha256 検証する。
+          # sha256 は https://github.com/denoland/deno/releases/download/v2.9.4/deno-x86_64-unknown-linux-gnu.zip.sha256sum の実測値。
+          DENO_VERSION: '2.9.4'
+          DENO_SHA256: 'c24f955d9fbfe0ea5ae2b501c8e71ae76e31e4c9782390a54a284b3364fda725'
+        run: |
+          curl -sSLO "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip"
+          echo "${DENO_SHA256}  deno-x86_64-unknown-linux-gnu.zip" | sha256sum -c -
+          unzip -q deno-x86_64-unknown-linux-gnu.zip -d "$RUNNER_TEMP/deno-bin"
+          echo "$RUNNER_TEMP/deno-bin" >> "$GITHUB_PATH"
+
+      # import map（npm:/jsr: specifier）の解決でネットワークアクセスが要る。
+      # deno.json の import はすべて exact version 固定（npm:pkg@x.y.z）のため
+      # lock file の追加検証価値が薄く、`deno check` は失敗時に lock を書かない
+      # （実測: type error があると deno.lock が生成されない）ため運用に乗せづらい。
+      # `--no-lock` で明示的に無効化し、ローカル実行（pnpm functions:check）でも
+      # 未追跡の deno.lock が supabase/functions/ に生成されないようにする。
+      - name: deno check (supabase/functions)
+        if: steps.functions-changed.outputs.changed != 'false'
+        run: pnpm functions:check
+
   unit:
     name: "\U0001F4E6 Unit Tests"
     runs-on: ubuntu-latest
