@@ -1,6 +1,7 @@
 ---
 title: Vercel Ignored Build Step の受け入れ検証
-status: current
+status: frozen
+date: 2026-08-05
 last_verified: 2026-08-05
 ---
 
@@ -28,4 +29,26 @@ merge commit も `apps/*/vercel.json` を含むので当然 build される。**
 
 ### 結果
 
-（この直下に、docs-only push の観測結果を追記する）
+docs-only push（`e81b4fdc7`）の head SHA に対する commit status:
+
+```
+Vercel – web      success  "Canceled by Ignored Build Step"
+Vercel – product  success  "Canceled by Ignored Build Step"
+```
+
+**確認できたこと**:
+
+1. **両 project とも build を実行せずキャンセルされた**（受け入れ条件 1 を満たす）
+2. **skip 時も commit status は `success` で付く。** これで [infra.md §merge gate](../infra.md) に
+   「未確定・付かない場合は復旧手順が要る」と書いていた懸念が解消した。**「PR 全体では affected
+   だが最終 push だけ unaffected（レビュー対応の docs 修正など）」でも head に context が付くため、
+   merge gate は止まらない。** merge gate 側への fallback 実装は不要
+3. 受け入れ条件 3（unaffected な context 欠落を正常扱いして merge できること）は、**そもそも
+   context が欠落しない**ことが分かったため、この PR の merge 自体では検証対象にならない。
+   Impact Resolver 側の affected 判定と Vercel の skip 判定が食い違った場合の fail closed は
+   `scripts/__tests__/finish-branch.test.ts` が固定している
+
+**Production Release との関係**: `VERCEL_ENV=production` の build は skip しない実装なので、
+main への merge が作る candidate は常に存在する（[overview §8 実施形態](../../projects/ci-monorepo-refactor/overview.md)）。
+2026-08-05 の #1835 merge では Auto-assign 無効化後の初 promote が `Production serves this commit`
+で成功しており、release 経路への悪影響が無いことも同時に確認できた。
