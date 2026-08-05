@@ -11,8 +11,6 @@ const __dirname = dirname(__filename);
 
 const config: StorybookConfig = {
   stories: [
-    // Welcome（top-level 案内ページ）
-    './stories/**/*.mdx',
     '../../product/src/**/*.mdx',
     '../../product/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
     // Web layer（apps/web）— 現状は Web/Overview のみ。今後 component/section/page story を追加する受け皿
