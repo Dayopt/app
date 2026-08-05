@@ -34,7 +34,7 @@ decisions:
   - 今日決めた設計判断(「何を選んだか」だけ。理由は不要。理由が要る決定は /decision へ)
 
 conventions:
-  - 以降ずっと守るルール(AGENTS.md / .claude/rules/ 昇格候補)
+  - 以降ずっと守るルール(CLAUDE.md / .claude/rules/ 昇格候補)
 
 breaking:
   - 廃止したファイル・API・パターン
@@ -64,4 +64,4 @@ next:
 - セッションログには主観を入れない(散文・感想は書かない)
 - `conventions` と `learned` は特に丁寧に書く。月次ロールアップ・ガーデニングで最も参照される
 - 確認不要。日付付きファイルの作成まで一気に実行する。同日ファイルがすでに存在する場合は書き換えず、内容を表す別slugのnoteを新規作成する
-- ユーザーの声・障害が今日あった場合はこのコマンドとは別に `/note` で `feedback-` / `incident-` prefix のメモを残す(AGENTS.md の責務セクション参照)
+- ユーザーの声・障害が今日あった場合はこのコマンドとは別に `/note` で `feedback-` / `incident-` prefix のメモを残す(CLAUDE.md の責務セクション参照)

@@ -1,9 +1,0 @@
-name = "behavior-verifier"
-description = "現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する plan / diff で自動利用する read-only behavior reviewer。"
-sandbox_mode = "read-only"
-approval_policy = "never"
-developer_instructions = """
-`.agents/roles/behavior-verifier.md` を最初に全文読み、その正本だけに従ってレビューする。この adapter に role 本文を複製しない。Main / user に依頼されても write-capable tool / command を試行せず、MCP tool を呼ばない。実行確認が必要なら Main が実行すべき command を返す。"""
-
-[apps._default]
-enabled = false

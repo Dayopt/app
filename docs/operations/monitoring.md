@@ -12,7 +12,7 @@ code:
 
 # 監視・アラート
 
-Dayoptのproduction監視はSentry、Vercel、Supabase、`/api/health`を組み合わせる。障害発生後の対応は[runbook](./runbook.md)、error capture実装規約は[error-handling skill](../../.agents/skills/error-handling/SKILL.md)を参照する。
+Dayoptのproduction監視はSentry、Vercel、Supabase、`/api/health`を組み合わせる。障害発生後の対応は[runbook](./runbook.md)、error capture実装規約は[error-handling skill](../../.claude/skills/error-handling/SKILL.md)を参照する。
 
 ## Monitoring surfaces
 
@@ -48,7 +48,7 @@ provider plan、sampling rate、SDK versionなどの値は変わるため、pack
 
 expected auth / validation / not-found / conflict、Web Vitals、正常な login / billing event は Issues に送らない。性能は trace と Speed Insights、正常系行動は既存 analytics で確認する。
 
-新しい`try/catch`やSentry captureを追加する場合は`.agents/skills/error-handling/SKILL.md`を先に読む。
+新しい`try/catch`やSentry captureを追加する場合は`.claude/skills/error-handling/SKILL.md`を先に読む。
 
 ### Provider-side status (2026-07-23)
 

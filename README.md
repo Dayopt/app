@@ -45,14 +45,14 @@ pnpm test:e2e:smoke     # product + web smoke test
 
 ## Development Contract
 
-- AI / contributorの入口: [`AGENTS.md`](./AGENTS.md)
+- AI / contributorの入口: [`CLAUDE.md`](./CLAUDE.md)（Codexのクラウドレビュー規則は[`AGENTS.md`](./AGENTS.md)）
 - 内部docsの地図: [`docs/README.md`](./docs/README.md)
 - architecture: [`docs/engineering/architecture.md`](./docs/engineering/architecture.md)
 - coding conventions: [`docs/engineering/conventions.md`](./docs/engineering/conventions.md)
 - product behavior: [`docs/product/specs/`](./docs/product/specs/)
 - component contract: `pnpm storybook`
 
-コード変更後は少なくとも`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`を通す。変更種別ごとの追加gateは`AGENTS.md`と`.claude/rules/`に従う。
+コード変更後は少なくとも`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`を通す。変更種別ごとの追加gateは`CLAUDE.md`と`.claude/rules/`に従う。
 
 ## Stack
 

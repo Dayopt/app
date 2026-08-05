@@ -1464,7 +1464,7 @@ npm version prerelease --preid=rc
 
 # 第4部: リリースノート執筆規約
 
-GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・Codex・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
+GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
 
 ## カテゴリ定義（共通・唯一の正）
 

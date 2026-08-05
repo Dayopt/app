@@ -131,4 +131,4 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - `pnpm docs:check` はlink、metadata、path、naming、Project lifecycle、append-onlyを検証する
 - `log/`が50件を超えたら年directoryへ分割してよい。日付prefixは維持する
 
-テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`AGENTS.md`](../AGENTS.md)を参照する。
+テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`CLAUDE.md`](../CLAUDE.md)を参照する。

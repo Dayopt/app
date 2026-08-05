@@ -4,7 +4,7 @@
  * 対象 suite は auth user、profile、user_settings、tag、plan、record を作って
  * 消す。`NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が「揃っている
  * こと」だけを条件にすると、Production の認証情報を持つ shell から起動された
- * 瞬間に Production のデータを mutate する。AGENTS.md の `EXPLICIT AUTHORITY`
+ * 瞬間に Production のデータを mutate する。CLAUDE.md の `EXPLICIT AUTHORITY`
  * （production mutation・データ削除は明示指示が揃うまで実行しない）に反するので、
  * 実行先が安全であることを確認できた場合だけ suite を有効にする。
  *

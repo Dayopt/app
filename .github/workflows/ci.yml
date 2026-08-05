@@ -16,15 +16,13 @@ on:
     # 意図的に含めていないもの:
     # - apps/web/content/** … 公開 MDX。web build / E2E の検証対象
     # - **/*.md のような広いパターン … 上を巻き込むため使わない
-    # - .claude/**, .codex/** の *.md 以外 … hooks の .sh や設定 JSON が含まれる
+    # - .claude/** の *.md 以外 … hooks の .sh や設定 JSON が含まれる
     #
     # docs のみの PR でも Docs Guard（gitleaks / secrets:check / docs:check）と
     # Production Config Audit は paths フィルタを持たないので従来どおり走る。
     paths-ignore:
       - 'docs/**'
       - '.claude/**/*.md'
-      - '.codex/**/*.md'
-      - '.agents/**/*.md'
       - 'AGENTS.md'
       - 'CLAUDE.md'
       - 'README.md'

@@ -1,6 +1,6 @@
 ---
 name: audit-ai-config
-description: AI設定の棚卸し、設定整理、audit、協働設定レビューの明示依頼時に発動。AGENTS・roles・Claude/Codex adapter・skills・rules・commands・hooks・MCP の重複、配置、発火条件、権限を評価する。docs棚卸しやskill新設判断では発動しない。
+description: AI設定の棚卸し、設定整理、audit、協働設定レビューの明示依頼時に発動。CLAUDE.md・AGENTS.md（Codexレビュー規則）・agents・skills・rules・commands・hooks・MCP の重複、配置、発火条件、権限を評価する。docs棚卸しやskill新設判断では発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -14,7 +14,7 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 **明示発動型** — この skill はユーザーの explicit な AI 設定棚卸し意図のみを契機に発動する。
 
 - 「AI設定を棚卸しして」「設定を整理して」など、AI 協働設定全体の audit が明示された時
-- `.claude/`、`.codex/`、`.agents/roles/`、`.agents/skills/`、MCP 設定の重複や配置を点検するよう指示された時
+- `.claude/`（agents / skills / rules / commands / hooks）、`AGENTS.md`、MCP 設定の重複や配置を点検するよう指示された時
 - skill / rules / commands / agents / hooks の使い分けをレビューするよう指示された時
 - AI 設定の削除候補・統合候補・発火条件改善案をまとめるよう指示された時
 
@@ -26,38 +26,43 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 - docs gap の検出・技術ドキュメント更新 → `docs-writing` skill
 - skill 新設・description 書式判断 → `.claude/rules/skill-design.md`
 
+## 前提（現在の構成）
+
+- 実装・運用ガイダンスの正本は `CLAUDE.md` と `.claude/rules/`。ローカルで動く coding agent は Claude のみ
+- 外部レビューは OpenAI Codex のクラウドレビュー（`@codex review`）専任。Codex が repo から読むのは `AGENTS.md` だけで、そこにはレビュー規則のみを置く
+- review subagent の role 本文は `.claude/agents/*.md` に直接置く（間接層を挟まない）
+- 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・AGENTS.md 共通入口）は 2026-08-05 に撤去済み。経緯は `docs/engineering/log/2026-08-05-codex-review-only.md`
+
 ## Inventory
 
 以下を列挙し、件数・責務・最終更新・重複候補を確認する。
 
-- `.claude/skills/*/SKILL.md` と `.agents/skills/*/SKILL.md`
-- `.agents/roles/*.md` と各 provider の agent adapter
-- `.claude/rules/*.md` と `.codex/rules/*.md`
+- `.claude/skills/*/SKILL.md`
+- `.claude/agents/*.md`（read-only reviewer の role 本文を含む）
+- `.claude/rules/*.md`
 - `.claude/commands/*.md`
-- `.claude/agents/*.md` と `.codex/agents/*.toml`
-- `.claude/hooks/*`、`.codex/hooks/*`、`.codex/hooks.json`
-- `.claude/settings.json`、`.codex/config.toml`
-- global MCP 設定（Claude: `~/.claude.json` user scope、Codex: `~/.codex/config.toml`。repo には置かない — `.claude/rules/mcp-usage.md` 参照）
-- `AGENTS.md`
+- `.claude/hooks/*`
+- `.claude/settings.json`
+- global MCP 設定（`~/.claude.json` の user scope。repo には置かない — `.claude/rules/mcp-usage.md` 参照）
+- `CLAUDE.md`
+- `AGENTS.md`（Codex クラウドレビュー規則）
 
-Role は次の対応も確認する。
+Agent と AGENTS.md は次も確認する。
 
-- provider-neutral な本文が `.agents/roles/` に1つだけある
-- `.claude/agents/` / `.codex/agents/` の review adapter が同じ正本を参照し、本文を複製していない
-- Claude review adapter が read-only tool allowlist を持つ
-- Codex review adapter が read-only sandbox / no-approval / apps無効化を持ち、親から継承するMCPの制約とconstrained parentでの検証方法をoverlayに明記している
+- `.claude/agents/` の review agent が read-only tool allowlist（Read / Grep / Glob）を持ち、write 経路・nested delegation が無い
+- `AGENTS.md` がレビュー規則専用に保たれている（実装・運用ガイダンスが逆流していない）。レビュー規則と `.claude/rules/` の規約が食い違っていない
 - purpose-built writer 例外が明示起動・単独 writer・限定 scope になっている
 - 実装委譲の writer 例外が 4 条件（Main と同一 worktree、非重複 scope、commit 前に Main が `git diff` をレビュー、commit / push / external state mutation は Main に残す）を満たしている。とくに diff レビューと commit 境界を省いた運用になっていないか
 
 ## Review Questions
 
-各項目を 4 つの質問で評価する。
+各項目を次の質問で評価する。
 
-1. **使用実績**: 直近の git log、docs、AGENTS、commands から使われた形跡があるか。3か月以上使われた形跡がないものは削除候補にする。
-2. **適材適所**: もっと下位の仕組みで代替できないか。判断不要・毎回実行するものは hooks か package.json script へ、短い常時ルールは AGENTS.md / rules へ、単発 CLI で済む外部連携は MCP ではなく CLI 運用へ寄せる。
-3. **重複**: AGENTS.md、rules、skills、docs、Codex overlay で同じ規約を二重管理していないか。正本を 1 箇所に決め、他は参照に落とす。
+1. **使用実績**: 直近の git log、docs、commands から使われた形跡があるか。3か月以上使われた形跡がないものは削除候補にする。
+2. **適材適所**: もっと下位の仕組みで代替できないか。判断不要・毎回実行するものは hooks か package.json script へ、短い常時ルールは CLAUDE.md / rules へ、単発 CLI で済む外部連携は MCP ではなく CLI 運用へ寄せる。
+3. **重複**: CLAUDE.md、rules、skills、docs で同じ規約を二重管理していないか。正本を 1 箇所に決め、他は参照に落とす。
 4. **トリガー品質**: skill の description / When to Use は発火条件として具体的か。対象ファイル、作業種別、NOT 条件が曖昧なものは書き直し案を出す。
-5. **Agent権限**: review role に write / external mutation / nested delegation の経路がないか。adapterの宣言だけで信用せず、親から継承するtool、platform override、negative testを確認する。
+5. **Agent権限**: review agent に write / external mutation / nested delegation の経路がないか。宣言だけで信用せず、tool allowlist と実際の挙動（negative test）を確認する。
 
 ## Output
 
@@ -66,7 +71,7 @@ Role は次の対応も確認する。
 - 削除提案: 対象、理由、復元方法
 - 移動・統合提案: 移動元、移動先、正本にする理由
 - 改善提案: description / When to Use / NOT 条件の修正文案
-- 権限監査: read-only role、writer例外、未検証のtool surface
+- 権限監査: read-only agent、writer例外、未検証のtool surface
 
 実行まで指示された場合は path-limited add を使い、コミットメッセージは `chore: AI設定の棚卸し(YYYY-MM)` とする。
 
