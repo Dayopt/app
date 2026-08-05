@@ -8,6 +8,7 @@
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/lib/test/setup.ts",
+    "src/lib/test/setup-node.ts",
     "src/lib/test/trpc-test-helpers.ts",
     "src/lib/test/factories/**/*.ts",
     "src/lib/test/e2e/**/*.ts"
