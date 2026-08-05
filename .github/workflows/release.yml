@@ -190,7 +190,10 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: release-manifest
+          # run attempt ごとに分ける。re-run（同一 run 内の再試行）は同名 artifact を
+          # 2 度 upload できず失敗するため、re-run 時に手動 rollback の一次情報である
+          # manifest が 1 つも残らない事故を防ぐ。
+          name: release-manifest-${{ github.run_attempt }}
           path: release-manifest.json
           if-no-files-found: ignore
           retention-days: 90

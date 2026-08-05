@@ -169,9 +169,10 @@ promote 順は web → product に固定し、2 つ目が失敗した場合は 1
 ので rollback 対象にせず、run summary で名指しする。失敗時は Production domain が現行 SHA のまま
 維持される（fail-safe）。
 
-run の結果は `release-manifest` artifact（保持 90 日）に残る。project ごとの deployment ID・source SHA・
-判定理由が入っており、**project 間で live SHA が分かれた時に production の実態を読む一次情報**になる。
-run summary にも同じ JSON が出る。
+run の結果は `release-manifest-<attempt>` artifact（保持 90 日、`github.run_attempt` で名前を分ける。
+同名 artifact は同一 run 内で 2 度 upload できないため、re-run した run でも attempt ごとに manifest が残る）
+に残る。project ごとの deployment ID・source SHA・判定理由が入っており、**project 間で live SHA が
+分かれた時に production の実態を読む一次情報**になる。run summary にも同じ JSON が出る。
 
 対象 SHA より新しい Production deployment が既に live の場合は promote せず、`Production Release` status
 を failure にする。live でない commit に tag を打てないようにするためで、run 自体も失敗として扱う。

@@ -87,6 +87,15 @@ describe('release workflow contract', () => {
     expect(uploadStep).toContain('path: release-manifest.json');
   });
 
+  it('scopes the release manifest artifact name by run attempt', () => {
+    // 同名 artifact は同一 run 内で 2 度 upload できない。re-run（workflow の
+    // 再試行）すると 1 回目の attempt が既に同名を使っているため upload が失敗し、
+    // 手動 rollback の一次情報である manifest が re-run 側では 1 つも残らない。
+    const uploadStep = release.slice(release.indexOf('Upload release manifest'));
+    expect(uploadStep).toContain('name: release-manifest-${{ github.run_attempt }}');
+    expect(uploadStep).not.toMatch(/^\s*name:\s*release-manifest\s*$/m);
+  });
+
   it('refuses to call a superseded commit live', () => {
     // superseded は promote 0 件。success を publish すると create-release.yml の
     // gate を素通りし、live でない commit に Release が作られる。
