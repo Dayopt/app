@@ -118,10 +118,11 @@ jobs:
           VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_AUTOMATION_BYPASS_WEB }}
           RELEASE_SHA: ${{ steps.target.outputs.sha }}
           RELEASE_FORCE: ${{ inputs.force }}
-          # 段階適用が終わり Auto-assign Custom Production Domains を両 project で
-          # 無効化したら 'false' に変える。宣言するまでは「run 開始時点の値へ戻す」
-          # だけになり、前回 run から持ち越したドリフトを検出できない。
-          RELEASE_EXPECT_AUTO_ASSIGN: ''
+          # 2026-08-05 に段階適用が完了（両 project の Auto-assign Custom Production
+          # Domains を無効化。#1817 の project 設定監査が「'' のまま放置され、live が
+          # true に固定されていた」未完了状態を検出したのを受けて実施）。'false' 宣言
+          # により release は run 開始時点の値ではなく false を expected として掃く。
+          RELEASE_EXPECT_AUTO_ASSIGN: 'false'
           RELEASE_SIMULATE_FAILURE: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_failure || '' }}
           # project ごとに live SHA が分かれうるため、「この run の後どこが何を配信
           # しているか」を artifact に残す。部分失敗の復旧で一次情報になる。
