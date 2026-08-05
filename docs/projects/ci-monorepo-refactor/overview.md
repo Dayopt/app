@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 last_verified: 2026-08-05
 code: scripts/ci
 ---
