@@ -14,9 +14,12 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { render } from 'react-email';
 
 import { AccountDeletionEmail } from './AccountDeletionEmail';
+import type { AuthEmailSubjectKey } from './auth-email-subjects.generated';
+import { authEmailSubjects } from './auth-email-subjects.generated';
 import { CancellationConfirmEmail } from './CancellationConfirmEmail';
 import { ConfirmEmail } from './ConfirmEmail';
 import { EmailChangeEmail } from './EmailChangeEmail';
+import { createEmailTranslator } from './i18n';
 import { MagicLinkEmail } from './MagicLinkEmail';
 import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
@@ -39,10 +42,35 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
+type BilingualSubjects = { en: string; ja: string };
+
+const emailTranslators = {
+  en: createEmailTranslator('en'),
+  ja: createEmailTranslator('ja'),
+};
+
+/** アプリメールの件名を messages/{en,ja}/email.json から引く（送信側 router.ts と同じ経路） */
+function appSubjects(key: string): BilingualSubjects {
+  return { en: emailTranslators.en(key), ja: emailTranslators.ja(key) };
+}
+
+/** Auth メールの件名を Edge Function 正本から生成した辞書から引く（送信側 index.ts と同じ辞書） */
+function authSubjects(key: AuthEmailSubjectKey): BilingualSubjects {
+  return { en: authEmailSubjects.en[key], ja: authEmailSubjects.ja[key] };
+}
+
 /**
  * React Email を iframe でプレビュー（render() が async のため state で管理）
  */
-function EmailPreview({ element, title }: { element: React.ReactElement; title: string }) {
+function EmailPreview({
+  element,
+  subject,
+  title,
+}: {
+  element: React.ReactElement;
+  subject: string;
+  title: string;
+}) {
   const [html, setHtml] = useState('');
 
   useEffect(() => {
@@ -55,7 +83,8 @@ function EmailPreview({ element, title }: { element: React.ReactElement; title: 
 
   return (
     <div className="p-4">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+      <h3 className="mb-1 text-sm font-medium">{title}</h3>
+      <p className="text-muted-foreground mb-2 text-sm">件名: {subject}</p>
       <iframe
         title={title}
         srcDoc={html}
@@ -76,16 +105,18 @@ function EmailPreview({ element, title }: { element: React.ReactElement; title: 
 function BilingualEmailPreview({
   enElement,
   jaElement,
+  subjects,
   title,
 }: {
   enElement: React.ReactElement;
   jaElement: React.ReactElement;
+  subjects: BilingualSubjects;
   title: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-0">
-      <EmailPreview element={enElement} title={`${title} (EN)`} />
-      <EmailPreview element={jaElement} title={`${title} (JA)`} />
+      <EmailPreview element={enElement} subject={subjects.en} title={`${title} (EN)`} />
+      <EmailPreview element={jaElement} subject={subjects.ja} title={`${title} (JA)`} />
     </div>
   );
 }
@@ -108,6 +139,7 @@ export const Guidelines: Story = {
           <p>supabase/functions/send-auth-email/</p>
           <p className="pl-4">index.ts — webhook検証 + renderAsync + Resend送信</p>
           <p className="pl-4">styles.tsx — 共通スタイル（tokens/colors.css トークン → hex）</p>
+          <p className="pl-4">subjects.ts — 件名辞書（en/ja、index.ts が送信時に参照）</p>
           <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth signup）</p>
           <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth recovery）</p>
           <p className="pl-4">
@@ -130,8 +162,9 @@ export const Guidelines: Story = {
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
-            ※ Auth テンプレート4つと専用stylesは pnpm auth-email:sync で Edge Function
-            正本から生成。pnpm check がドリフトを検知する。
+            ※ Auth テンプレート4つと専用styles・件名辞書は pnpm auth-email:sync で Edge Function
+            正本から生成。pnpm check がドリフトを検知する。アプリメールの件名は
+            messages/[en|ja]/email.json の *.subject キーが正本。
           </p>
         </div>
       </section>
@@ -249,6 +282,7 @@ export const Welcome: Story = {
     <BilingualEmailPreview
       enElement={WelcomeEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={WelcomeEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('welcome.subject')}
       title="Welcome"
     />
   ),
@@ -268,6 +302,7 @@ export const Confirm: Story = {
         confirmUrl: 'https://app.dayopt.app/auth/confirm?token=abc123',
         locale: 'ja',
       })}
+      subjects={authSubjects('signup')}
       title="Confirm Email"
     />
   ),
@@ -287,6 +322,7 @@ export const PasswordReset: Story = {
         resetUrl: 'https://app.dayopt.app/auth/reset?token=abc123',
         locale: 'ja',
       })}
+      subjects={authSubjects('recovery')}
       title="Password Reset"
     />
   ),
@@ -310,6 +346,7 @@ export const EmailChangeCurrent: Story = {
         variant: 'current',
         locale: 'ja',
       })}
+      subjects={authSubjects('email_change_current')}
       title="Email Change (current address)"
     />
   ),
@@ -333,6 +370,7 @@ export const EmailChangeNew: Story = {
         variant: 'new',
         locale: 'ja',
       })}
+      subjects={authSubjects('email_change_new')}
       title="Email Change (new address)"
     />
   ),
@@ -350,6 +388,7 @@ export const MagicLink: Story = {
         loginUrl: 'https://app.dayopt.app/auth/magic-link?token=abc123',
         locale: 'ja',
       })}
+      subjects={authSubjects('magic_link')}
       title="Magic Link"
     />
   ),
@@ -369,6 +408,7 @@ export const TrialStart: Story = {
         trialEndDate: '2026年3月30日',
         locale: 'ja',
       })}
+      subjects={appSubjects('trialStart.subject')}
       title="Trial Start"
     />
   ),
@@ -388,6 +428,7 @@ export const TrialExpiring: Story = {
         trialEndDate: '2026年3月30日',
         locale: 'ja',
       })}
+      subjects={appSubjects('trialExpiring.subject')}
       title="Trial Expiring"
     />
   ),
@@ -399,6 +440,7 @@ export const TrialExpired: Story = {
     <BilingualEmailPreview
       enElement={TrialExpiredEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={TrialExpiredEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('trialExpired.subject')}
       title="Trial Expired"
     />
   ),
@@ -410,6 +452,7 @@ export const ProStart: Story = {
     <BilingualEmailPreview
       enElement={ProStartEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={ProStartEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('proStart.subject')}
       title="Pro Start"
     />
   ),
@@ -421,6 +464,7 @@ export const PaymentFailed: Story = {
     <BilingualEmailPreview
       enElement={PaymentFailedEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={PaymentFailedEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('paymentFailed.subject')}
       title="Payment Failed"
     />
   ),
@@ -432,6 +476,7 @@ export const PaymentRecovered: Story = {
     <BilingualEmailPreview
       enElement={PaymentRecoveredEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={PaymentRecoveredEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('paymentRecovered.subject')}
       title="Payment Recovered"
     />
   ),
@@ -443,6 +488,7 @@ export const PasswordChanged: Story = {
     <BilingualEmailPreview
       enElement={PasswordChangedEmail({ userName: 'Tomoya', locale: 'en' })}
       jaElement={PasswordChangedEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('passwordChanged.subject')}
       title="Password Changed"
     />
   ),
@@ -462,6 +508,7 @@ export const CancellationConfirm: Story = {
         periodEndDate: '2026年4月23日',
         locale: 'ja',
       })}
+      subjects={appSubjects('cancellationConfirm.subject')}
       title="Cancellation Confirm"
     />
   ),
@@ -481,6 +528,7 @@ export const AccountDeletion: Story = {
         deletionDate: '2026年2月24日',
         locale: 'ja',
       })}
+      subjects={appSubjects('accountDeletion.subject')}
       title="Account Deletion"
     />
   ),

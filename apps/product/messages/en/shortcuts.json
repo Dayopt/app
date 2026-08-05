@@ -1,0 +1,17 @@
+{
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "groups": {
+      "general": "General",
+      "navigation": "Navigation",
+      "views": "Views",
+      "blocks": "Blocks"
+    },
+    "searchPlaceholder": "Search shortcuts",
+    "searchLabel": "Search shortcuts",
+    "noResults": "No matching shortcuts",
+    "scopeHint": {
+      "calendar": "Available on the calendar screen"
+    }
+  }
+}

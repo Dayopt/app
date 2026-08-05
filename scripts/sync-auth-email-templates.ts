@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 type AuthEmailTemplate = {
   componentName?: string;
   destination: string;
-  kind: 'styles' | 'template';
+  kind: 'module' | 'styles' | 'template';
   productAdapters?: readonly {
     expectedOccurrences: number;
     replacement: string;
@@ -70,6 +70,11 @@ export const AUTH_EMAIL_TEMPLATES: readonly AuthEmailTemplate[] = [
     source: 'supabase/functions/send-auth-email/styles.tsx',
     destination: 'apps/product/src/emails/auth-email-styles.generated.ts',
     kind: 'styles',
+  },
+  {
+    source: 'supabase/functions/send-auth-email/subjects.ts',
+    destination: 'apps/product/src/emails/auth-email-subjects.generated.ts',
+    kind: 'module',
   },
 ] as const;
 
