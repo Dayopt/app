@@ -113,7 +113,7 @@ supabase functions deploy --use-api
 
 ### 前提: mergeとProduction公開は分離されている
 
-main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が同一 merge SHA の両 candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。
+main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
 
 このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
 
@@ -129,7 +129,7 @@ production deployment がどの SHA かを Vercel Dashboard で確認する（HT
 
 ### 初動
 
-- [ ] `gh run list --workflow=release.yml --limit 3` で直近の release run を確認
+- [ ] `gh run list --workflow=release.yml --limit 3` で直近の release run を確認。**in_progress の run がある間は、手動の promote / rollback / alias 操作をしない**。release は single-writer 前提で、run 中の手動操作は run の観測・rollback と衝突する（[infra.md §release の並行性モデル](../engineering/infra.md#release-の並行性モデル)）。完了（または cancel の完了）を待ってから以降へ進む
 - [ ] run summary で「どこで止まったか」を特定: candidate build / smoke / audit / promote
 - [ ] 本番 domain が正常応答しているか確認
 
@@ -151,11 +151,20 @@ promote は行われていないので、**Production domain は現行 SHA の�
 
 #### ケース0-B: 片方だけ promote された（部分リリース）
 
-release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+**前提: Product / Web の live SHA が違うこと自体は異常ではない。** release は変更の影響を受ける project だけを promote するため（[infra.md](../engineering/infra.md)）、片方が数 commit 遅れているのは正常な定常状態。「揃っていない」ことを異常と判断しない。
 
+異常なのは「この run が promote を始めて、途中で失敗した」状態。release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
+
+- [ ] **run の `release-manifest` artifact を先に見る**（run の Artifacts、保持 90 日）。project ごとに「今どの deployment / どの SHA を配信しているか」「この run が動かしたか（`observedAt`）」が入っている。ここが復旧判断の一次情報
 - [ ] run log で `rolled back to <deployment id>` を確認する
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
-- [ ] run summary の `previous` deployment id が手動 rollback の戻し先になる
+- [ ] **まず manifest の `status` を見る。** `settings-drift` なら production は正しい SHA を配信しており、失敗の理由は `autoAssignCustomDomains` の復元だけ。**deployment は戻さず**、Vercel Dashboard で該当 project の Auto-assign を無効へ戻す（放置すると次の merge が gate を迂回する）
+- [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`。**`null` の場合は run 開始時点で domain が未割当だった**ので戻し先が manifest に無い。Deployments 履歴から直前に production を配信していた正常な deployment を選ぶ
+- [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
+- [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）
+- [ ] `action: uncertified` は「この run が promote していないのに target が live」状態。待機中に Vercel の Auto-assign か他者の promote が先に live にし、その後 gate（smoke / audit）が落ちた場合に出る。**production は認証を通っていない build を配信している。** 自動 rollback の対象外なので、run summary のエラーを読んで戻すかどうかを判断する。戻す場合の先は `previousDeploymentId`。**これが `null` の時は run 開始時点から同じ deployment が live だった**（= 戻し先が manifest に無い）ので、Vercel Dashboard の Deployments 履歴から直前の正常な production deployment を選ぶ
+- [ ] `action: unassigned` は「production domain にどの deployment も割り当たっていない」状態（= その domain は配信されていない）。**最優先で復旧する。** 割り当て直す先は `previousDeploymentId`（Vercel Dashboard → Deployments → その deployment の "..." → Promote to Production）。`deploymentId` は null なので判断には使えない。**`previousDeploymentId` も `null` の場合は run 開始時点から未割当だった**（= manifest に戻し先が無い）ので、Deployments 履歴から直前に production を配信していた正常な deployment を選ぶ。**この場合 domain は release とは無関係に落ちていた可能性が高い**ので、いつから未割当かを Vercel の activity log で確認する
+- [ ] **手で Promote / Instant Rollback したら、その project の Auto-assign Custom Production Domains を無効へ戻す。** Vercel の promote は毎回この設定を有効化する（[vercel/vercel#15095](https://github.com/vercel/vercel/issues/15095)）。release script は自動で戻すが、手動操作の分は戻らない。放置すると**次の main merge が release gate を通らず直接公開される**。Settings → Git で確認する
 
 #### ケースA: CI失敗（lint / typecheck）
 
@@ -188,8 +197,9 @@ promote 済みの deployment に問題があった場合だけ使う。
 - [ ] 正常に動作していた直前のデプロイを見つける（release run summary の `previous` deployment id が最も確実）
 - [ ] **"..." → "Instant Rollback"（または "Promote to Production"）** で2クリックロールバック
 - [ ] CLI / REST API / Redeploy で新しいProduction buildを作らない
-- [ ] Product / Web の片方だけ戻すと SHA が食い違う。**両方を同じ SHA へ揃える**
-- [ ] ロールバック後: 本番サイトで動作確認
+- [ ] **壊れている project だけを戻す。** Product / Web の SHA を揃えようとしない（release は影響を受ける project だけを進めるので、SHA が違うのは正常）。無関係な側を戻すと、検証済みの build を理由なく巻き戻すことになる
+- [ ] ロールバック後: 本番サイトで動作確認。**両 domain を見る**（`dayopt.app` と `app.dayopt.app`）。web の signup CTA から product へ入れるかは片側だけ戻した時の典型的な壊れ方
+- [ ] ロールバック後: **操作した project の Auto-assign Custom Production Domains を無効へ戻す**（Settings → Git）。Instant Rollback / Promote to Production はどちらもこの設定を有効化するため、戻さないと次の main merge が release gate を通らず直接公開される
 - [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
 
 Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。
@@ -1124,7 +1134,9 @@ npm run analytics:stats
 
 #### 2. ロールバック実行
 
-Vercel Dashboard から Product / Web **両方**を同じ SHA の deployment へ戻す。戻し先は `Production Release` run summary の `previous` deployment id が最も確実。
+**壊れている project だけを戻す。Product / Web を同じ SHA へ揃えようとしない。** release は変更の影響を受ける project だけを進めるため、両者の live SHA が違うのは正常な定常状態であり、揃える先の deployment がそもそも存在しないこともある。
+
+戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。**まず manifest の `status` を見る**（`settings-drift` なら production は正しい SHA を配信しており、deployment は戻さない。判断表は Playbook 2 ケース0-B が正本）。`status: failed` の場合、`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
 
 - https://vercel.com/dayopt/product/deployments
 - https://vercel.com/dayopt/web/deployments

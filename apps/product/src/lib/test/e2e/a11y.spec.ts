@@ -49,7 +49,7 @@ test.describe('A11y: 未認証ページ', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
+    const results = await new AxeBuilder({ page: page as never })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
 
@@ -70,7 +70,7 @@ test.describe('A11y: 認証済みページ', () => {
   test('カレンダーページ（デイビュー）', async ({ page }) => {
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
+    const results = await new AxeBuilder({ page: page as never })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
 
@@ -81,7 +81,7 @@ test.describe('A11y: 認証済みページ', () => {
     await page.goto('/ja/settings/general');
     await page.waitForLoadState('networkidle');
 
-    const results = await new AxeBuilder({ page })
+    const results = await new AxeBuilder({ page: page as never })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
 
@@ -92,7 +92,7 @@ test.describe('A11y: 認証済みページ', () => {
     await page.goto('/ja/stats');
     await page.waitForLoadState('domcontentloaded');
 
-    const results = await new AxeBuilder({ page })
+    const results = await new AxeBuilder({ page: page as never })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze();
 

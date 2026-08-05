@@ -57,6 +57,36 @@ describe('release workflow contract', () => {
     expect(release).not.toContain('statuses/${{ inputs.sha }}');
   });
 
+  it('checks out enough history to diff against the live production SHA', () => {
+    // shallow clone だと過去の production SHA が checkout に無く、影響判定が毎回
+    // fail closed へ落ちる。安全側ではあるが affected-aware 化が無効化される。
+    const checkoutBlock = release.slice(
+      release.indexOf('actions/checkout'),
+      release.indexOf('actions/setup-node'),
+    );
+    expect(checkoutBlock).toMatch(/^\s*fetch-depth:\s*0\s*$/m);
+  });
+
+  it('treats a no-op release as success', () => {
+    // app へ影響しない merge（docs / CI 設定）は promote が 0 件でも live 相当。
+    // ここで failure にすると、その commit へ永久に tag を打てなくなる。
+    const publishStep = release.slice(release.indexOf('Publish Production Release status'));
+    expect(publishStep).toMatch(/RELEASE_STATUS" = "unaffected"[\s\S]{0,200}state=success/);
+    // 合否側でも unaffected を落とさない（superseded だけが失敗）。
+    const enforceStep = release.slice(release.indexOf('Enforce release result'));
+    expect(enforceStep).not.toContain('unaffected');
+    expect(enforceStep).toContain('"$RELEASE_STATUS" = "superseded"');
+  });
+
+  it('keeps the release manifest even when the run fails', () => {
+    // project ごとに live SHA が分かれうるため、部分失敗の復旧では manifest が
+    // 手動 rollback 先の一次情報になる。失敗時に落とすと復旧の手掛かりが消える。
+    expect(release).toContain('RELEASE_MANIFEST_PATH: release-manifest.json');
+    const uploadStep = release.slice(release.indexOf('Upload release manifest'));
+    expect(uploadStep).toMatch(/if:\s*always\(\)/);
+    expect(uploadStep).toContain('path: release-manifest.json');
+  });
+
   it('refuses to call a superseded commit live', () => {
     // superseded は promote 0 件。success を publish すると create-release.yml の
     // gate を素通りし、live でない commit に Release が作られる。

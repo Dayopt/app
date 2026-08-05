@@ -21,7 +21,7 @@ on:
         description: 'Required when force is enabled. Recorded in the commit status.'
         required: false
       simulate_failure:
-        description: 'Drill only: smoke:web | smoke:product | promote:web | promote:product'
+        description: 'Drill only: smoke:<p> | promote:<p> | production-smoke:<p> (p = web | product)'
         required: false
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
     # 下回ると rollback の途中で job が kill され、片方だけ promote された
     # production が手動 rollback の手掛かりごと失われる。
     # scripts/__tests__/release-workflow-contract.test.ts が不等式を守る。
-    timeout-minutes: 70
+    timeout-minutes: 80
     steps:
       # 実行する workflow / script は常に dispatch した ref のものを使う。
       # inputs.sha は release 対象を指す data であって、実行するコードではない。
@@ -58,6 +58,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # 影響判定は「各 project が今配信している SHA → target SHA」の git diff で
+          # 行う。既定の shallow clone では過去の production SHA が checkout に無く、
+          # 判定が毎回 fail closed（= 常に両 project affected）へ落ちる。
+          fetch-depth: 0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -119,6 +123,9 @@ jobs:
           # だけになり、前回 run から持ち越したドリフトを検出できない。
           RELEASE_EXPECT_AUTO_ASSIGN: ''
           RELEASE_SIMULATE_FAILURE: ${{ github.event_name == 'workflow_dispatch' && inputs.simulate_failure || '' }}
+          # project ごとに live SHA が分かれうるため、「この run の後どこが何を配信
+          # しているか」を artifact に残す。部分失敗の復旧で一次情報になる。
+          RELEASE_MANIFEST_PATH: release-manifest.json
         run: |
           set +e
           node scripts/production-release.mjs
@@ -154,6 +161,11 @@ jobs:
             # success を出すと create-release.yml の gate を素通りしてしまう。
             state=failure
             description="Superseded: a newer deployment already serves Production"
+          elif [ "$RELEASE_STATUS" = "unaffected" ]; then
+            # どの app の build 入力も変わらない merge（docs / CI 設定など）。
+            # Production の artifact はこの commit と等価なので tag を許可する。
+            state=success
+            description="No app impact; Production already serves an equivalent build"
           else
             state=success
             description="Production serves this commit"
@@ -168,6 +180,20 @@ jobs:
             -f description="${description:0:140}" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
             >/dev/null
+
+      - name: Upload release manifest
+        if: always()
+        # **status publish の後に置く。** script の最終検証と status publish の間に
+        # step を挟むと、その間の外部 promote を誰も見ないまま success が出る。
+        # また診断用 artifact であって gate ではないので、失敗が status と食い違わない
+        # よう non-gating にする（script 側の書き込み失敗を握るのと同じ扱い）。
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-manifest
+          path: release-manifest.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       - name: Enforce release result
         if: always()

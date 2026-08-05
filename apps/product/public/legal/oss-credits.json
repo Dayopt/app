@@ -1238,7 +1238,7 @@
   },
   {
     "name": "acorn",
-    "version": "8.17.0",
+    "version": "8.18.0",
     "license": "MIT",
     "repository": "https://github.com/acornjs/acorn.git"
   },
@@ -1351,6 +1351,12 @@
     "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
   },
   {
+    "name": "baseline-browser-mapping",
+    "version": "2.11.12",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
+  },
+  {
     "name": "body-parser",
     "version": "2.3.0",
     "license": "MIT",
@@ -1365,6 +1371,13 @@
   {
     "name": "browserslist",
     "version": "4.28.6",
+    "license": "MIT",
+    "repository": "browserslist/browserslist",
+    "publisher": "Andrey Sitnik <andrey@sitnik.es>"
+  },
+  {
+    "name": "browserslist",
+    "version": "4.28.7",
     "license": "MIT",
     "repository": "browserslist/browserslist",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
@@ -1740,6 +1753,13 @@
     "publisher": "Kilian Valkhof"
   },
   {
+    "name": "electron-to-chromium",
+    "version": "1.5.401",
+    "license": "ISC",
+    "repository": "https://github.com/Kilian/electron-to-chromium.git",
+    "publisher": "Kilian Valkhof"
+  },
+  {
     "name": "emoji-regex",
     "version": "8.0.0",
     "license": "MIT",
@@ -1767,7 +1787,7 @@
   },
   {
     "name": "enhanced-resolve",
-    "version": "5.24.2",
+    "version": "5.24.5",
     "license": "MIT",
     "repository": "https://github.com/webpack/enhanced-resolve.git",
     "publisher": "Tobias Koppers @sokra"
@@ -2489,7 +2509,7 @@
   },
   {
     "name": "nanoid",
-    "version": "3.3.16",
+    "version": "3.3.17",
     "license": "MIT",
     "repository": "ai/nanoid",
     "publisher": "Andrey Sitnik <andrey@sitnik.ru>"
@@ -2554,6 +2574,13 @@
   {
     "name": "node-releases",
     "version": "2.0.51",
+    "license": "MIT",
+    "repository": "https://github.com/chicoxyzzy/node-releases.git",
+    "publisher": "Sergey Rubanov <chi187@gmail.com>"
+  },
+  {
+    "name": "node-releases",
+    "version": "2.0.52",
     "license": "MIT",
     "repository": "https://github.com/chicoxyzzy/node-releases.git",
     "publisher": "Sergey Rubanov <chi187@gmail.com>"
@@ -2750,7 +2777,7 @@
   },
   {
     "name": "postcss",
-    "version": "8.5.20",
+    "version": "8.5.25",
     "license": "MIT",
     "repository": "postcss/postcss",
     "publisher": "Andrey Sitnik <andrey@sitnik.es>"
@@ -3242,7 +3269,7 @@
   },
   {
     "name": "terser",
-    "version": "5.49.0",
+    "version": "5.49.1",
     "license": "BSD-2-Clause",
     "repository": "https://github.com/terser/terser",
     "publisher": "Mihai Bazon <mihai.bazon@gmail.com> (http://lisperator.net/)"

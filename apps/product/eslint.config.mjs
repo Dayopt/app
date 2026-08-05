@@ -349,7 +349,8 @@ const eslintConfig = defineConfig([
               // サブディレクトリ列挙だと server/domain/schemas 等の新設パスを
               // 見逃す（Codex review 指摘）。catch-all で deep import 全体を禁止する。
               group: ['@/features/*/**'],
-              message: 'settings は composition feature のため他featureへのimportは許可されるが、deep importは禁止。barrel（@/features/featureName）経由で使用。',
+              message:
+                'settings は composition feature のため他featureへのimportは許可されるが、deep importは禁止。barrel（@/features/featureName）経由で使用。',
             },
           ],
         },

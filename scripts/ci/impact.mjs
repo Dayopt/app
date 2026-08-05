@@ -333,7 +333,11 @@ export function resolveImpact(changedFiles, options = {}) {
     // 「docs のみ」と誤判定して build を skip しないため）。
     return {
       ...ALL_AFFECTED,
-      reasons: { ...reasons, product: reasons.product ?? unknown[0], web: reasons.web ?? unknown[0] },
+      reasons: {
+        ...reasons,
+        product: reasons.product ?? unknown[0],
+        web: reasons.web ?? unknown[0],
+      },
       unknown,
     };
   }
@@ -389,8 +393,7 @@ async function readStdinLines() {
   return data.split('\n');
 }
 
-const isDirectRun =
-  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isDirectRun = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   const args = process.argv.slice(2);
