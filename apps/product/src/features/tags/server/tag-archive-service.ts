@@ -109,28 +109,18 @@ export class TagArchiveService {
       }
     }
 
-    const { error: restoreError } = await this.supabase
-      .from('tags')
-      .update({
-        archived_at: null,
-        parent_id: parentId,
-        ...(sortOrder !== null ? { sort_order: sortOrder } : {}),
-      })
-      .eq('user_id', userId)
-      .eq('id', tagId);
+    // 同名衝突は子へ触れる前に弾く。子を先に復元する構造では、ここで弾かないと
+    // 「子だけ復元済み・親はアーカイブのまま」がユーザーに見える状態として残る。
+    // 一意制約が archived_at IS NULL の行だけを見る partial index なので、
+    // アーカイブ中に同名タグを作れてしまう（tags.md）。つまりこの衝突は稀な
+    // レースではなく通常フローで起こりうる。
+    await this.assertRestoredNameAvailable(userId, tag, parentId);
 
-    if (restoreError) {
-      if (restoreError.code === '23505') {
-        throw new TagServiceError('DUPLICATE_NAME', 'A tag with the same name already exists');
-      }
-      throw createTagDatabaseError(
-        restoreError,
-        'UPDATE_FAILED',
-        'Failed to restore tag',
-        'restore_tag',
-      );
-    }
-
+    // 子 → 親の順で復元する。逆順にすると、親の archived_at が消えた時点で
+    // 「同じアーカイブ操作で道連れになった子」を特定する手がかりが失われ、
+    // 途中で失敗するとリトライしても残りの子を永久に復元できない（#1826）。
+    // この順序なら親が archived_at を保持したままなので、リトライは冒頭の
+    // 早期 return を通過し、復元済みの子は下の select 条件から自然に外れる。
     let restoredChildCount = 0;
     let conflictedChildCount = 0;
     if (!tag.parent_id) {
@@ -153,6 +143,10 @@ export class TagArchiveService {
       // 単一 UPDATE だと子 1 件の同名衝突で statement 全体が失敗し、
       // 道連れになった子タグ全員が黙ってアーカイブに残ってしまう。
       // 子タグ数は小さい前提で 1 件ずつ復元し、衝突した子だけスキップする。
+      //
+      // 書き込むのは archived_at だけに保つ。parent_id を触ると
+      // check_tag_has_children が発火し、さらにこの時点では親がまだ
+      // アーカイブ中なので、子が root タグとして切り離される。
       for (const child of childRows ?? []) {
         const { error: childUpdateError } = await this.supabase
           .from('tags')
@@ -161,7 +155,7 @@ export class TagArchiveService {
           .eq('id', child.id);
 
         if (childUpdateError) {
-          // 親の復元自体は完了している。同名衝突はその子だけアーカイブに残す
+          // 同名衝突はその子だけアーカイブに残し、残りの復元は続ける
           if (childUpdateError.code === '23505') {
             conflictedChildCount += 1;
             continue;
@@ -177,10 +171,75 @@ export class TagArchiveService {
       }
     }
 
+    const { error: restoreError } = await this.supabase
+      .from('tags')
+      .update({
+        archived_at: null,
+        parent_id: parentId,
+        ...(sortOrder !== null ? { sort_order: sortOrder } : {}),
+      })
+      .eq('user_id', userId)
+      .eq('id', tagId);
+
+    if (restoreError) {
+      if (restoreError.code === '23505') {
+        // preflight を通り抜けたレース。子は復元済みで親はアーカイブのまま
+        // 残るが、リネーム後に再復元すれば残りが収束する。
+        throw new TagServiceError('DUPLICATE_NAME', 'A tag with the same name already exists');
+      }
+      throw createTagDatabaseError(
+        restoreError,
+        'UPDATE_FAILED',
+        'Failed to restore tag',
+        'restore_tag',
+      );
+    }
+
     return {
       tag: { ...tag, archived_at: null, parent_id: parentId },
       restoredChildCount,
       conflictedChildCount,
     };
+  }
+
+  /**
+   * 復元後の名前が既存の通常タグとぶつからないかを、どこにも書き込む前に確かめる。
+   *
+   * 一意制約 (`tags_user_root_name_unique` / `tags_user_parent_name_unique`) は
+   * `archived_at IS NULL` の行だけを対象にする partial index なので、対象タグが
+   * アーカイブ中の間に同名タグを新規作成できる。復元時の衝突はその結果であって
+   * 例外的なレースではない。
+   *
+   * これは最終保証ではなく早期リターン。通り抜けたレースは親 UPDATE の 23505 が
+   * 受け止める。
+   */
+  private async assertRestoredNameAvailable(
+    userId: string,
+    tag: Tag,
+    parentId: string | null,
+  ): Promise<void> {
+    const siblings = this.supabase
+      .from('tags')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', tag.name)
+      .eq('is_active', true)
+      .is('archived_at', null);
+
+    const { data: conflict, error } = await (
+      parentId === null ? siblings.is('parent_id', null) : siblings.eq('parent_id', parentId)
+    ).maybeSingle();
+
+    if (error) {
+      throw createTagDatabaseError(
+        error,
+        'FETCH_FAILED',
+        'Failed to inspect restore name conflict',
+        'inspect_restore_name_conflict',
+      );
+    }
+    if (conflict) {
+      throw new TagServiceError('DUPLICATE_NAME', 'A tag with the same name already exists');
+    }
   }
 }

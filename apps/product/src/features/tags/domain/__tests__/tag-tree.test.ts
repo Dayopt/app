@@ -79,6 +79,25 @@ describe('buildTagTree', () => {
     expect(tree[0]!.children).toEqual([]);
   });
 
+  /**
+   * 復元は「子 → 親」の順に走る（#1826）ため、親がまだアーカイブ中で子だけ
+   * 復元済みという中間状態が一時的に見える。ここで root へ落ちる挙動は意図した
+   * もので、tags.md の「親がアーカイブ中の子は root 扱い」と同じ見え方になる。
+   * クラッシュも消失もしないことを固定する。
+   */
+  it('アーカイブ中の親を持つ active な child は root に昇格する', () => {
+    const tags: Tag[] = [
+      makeTag({ id: 'parent', name: 'Parent', archived_at: '2026-08-01T00:00:00.000Z' }),
+      makeTag({ id: 'child', name: 'Child', parent_id: 'parent', archived_at: null }),
+    ];
+
+    const tree = buildTagTree(tags);
+
+    expect(tree).toHaveLength(1);
+    expect(tree[0]!.tag.id).toBe('child');
+    expect(tree[0]!.children).toEqual([]);
+  });
+
   it('空配列を渡すと空配列を返す', () => {
     expect(buildTagTree([])).toEqual([]);
   });
