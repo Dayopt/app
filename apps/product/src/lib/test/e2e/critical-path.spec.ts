@@ -6,15 +6,15 @@ import { resolveServiceRoleTarget } from './service-role-target-guard';
 import { suppressConsentBanner } from './suppress-consent-banner';
 
 /**
- * クリティカルパス E2E — 実 UI 操作で Plan を作り、永続化まで通す
+ * クリティカルパス E2E — 計画 → 実績 → 振り返りの中核ループを実 UI 操作で通す
  *
- * 「作成導線が存在する」ではなく、ドラッグ選択 → タグ選択で実際に Plan を作り、
- * リロード後も残る（= DB へ永続化された）ことを検証する。
+ * 「作成導線が存在する」ではなく、ドラッグ選択 → タグ選択で実際に Plan / Record を作り、
+ * リロード後も残る（= DB へ永続化された）ことと、Review panel の Time P/L へ反映される
+ * ことを検証する。
  *
- * 中核ループの残り 2 段（過去帯ドラッグでの Record 記録、Review panel の
- * Time P/L 反映）は未完成。過去日でパレットが開かず、原因を特定できていない
- * （Plan lane 側の座標でドラッグしているためかを含め未確認）。安定しない
- * まま残すと赤信号が常態化するので、この spec には入れず別途対応する。
+ * 過去帯ドラッグでパレットが開かない症状は、ドラッグ x 座標が Plan lane 側
+ * （`box.width * 0.15`）だったことが原因だった。過去日は Plan 追加が禁止される
+ * （temporal-constraints.md）ため、Record lane 側（`box.width * 0.6`）へ変更して解消した。
  *
  * seed は service role で自前ユーザーを作る（block-search.spec.ts と同型）。
  * 実行先は resolveServiceRoleTarget が安全と判定した時だけ有効になる。
@@ -101,7 +101,7 @@ async function dragSelect(page: Page, hourFrom: number, hourTo: number) {
   const box = await grid.boundingBox();
   if (!box) throw new Error('calendar grid is not visible');
 
-  const x = box.x + box.width * 0.15; // plan lane 側
+  const x = box.x + box.width * 0.6; // record lane 側
   const yFrom = box.y + hourHeight * hourFrom;
   const yTo = box.y + hourHeight * hourTo;
 
@@ -200,5 +200,40 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     await expect(page.locator('[data-plan-lane-card]', { hasText: TAG_NAME }).first()).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test('過去帯をドラッグして Record を記録し、リロード後も残る', async ({ page }) => {
+    await openDay(page, offsetDateParam(-1));
+
+    await dragSelect(page, 9, 10);
+
+    // InlineTagPalette → タグ選択ダイアログ
+    const tagDialog = page.getByRole('dialog', { name: 'タグを選択' });
+    await expect(tagDialog).toBeVisible({ timeout: 10_000 });
+    await tagDialog.getByRole('button', { name: TAG_NAME }).click();
+
+    // Record レーンにカードが現れる（lane カードはタグ名を表示する）
+    const recordCard = page.locator('[data-record-lane-card]', { hasText: TAG_NAME }).first();
+    await expect(recordCard).toBeVisible({ timeout: 10_000 });
+
+    // リロードしても残る = DB へ永続化されている
+    await page.reload();
+    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-record-lane-card]', { hasText: TAG_NAME }).first(),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
+    await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
+
+    // CalendarReviewPanel の section は aria-label のみ持ち、暗黙 role="region" になる
+    const reviewPanel = page.getByRole('region', { name: '振り返り' });
+    await expect(reviewPanel).toBeVisible({ timeout: 10_000 });
+
+    // TimePLRow はタグ名を含む button（day view は単日スコープなので明日の Plan は混入しない）
+    const tagRow = reviewPanel.getByRole('button', { name: new RegExp(TAG_NAME) });
+    await expect(tagRow).toBeVisible({ timeout: 10_000 });
+    await expect(tagRow).toContainText('1h');
   });
 });

@@ -42,6 +42,29 @@ function getSentryIngestOrigin(dsn: string | undefined): string | undefined {
 
 const SENTRY_INGEST_ORIGIN = getSentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
 
+/** ローカル Supabase の loopback hostname。service-role-target-guard.ts の LOCAL_HOSTNAMES と同じ集合。 */
+const LOCAL_SUPABASE_HOSTNAMES = new Set(['127.0.0.1', 'localhost']);
+
+function getLocalSupabaseOrigin(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+
+  try {
+    const parsed = new URL(url);
+    return LOCAL_SUPABASE_HOSTNAMES.has(parsed.hostname) ? parsed.origin : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * NEXT_PUBLIC_SUPABASE_URL が実際に loopback を指す時だけ connect-src へ足す。
+ * NODE_ENV ではなく実際に設定された URL から判定するため、`next build && next start`
+ * （NODE_ENV は常に production）でローカル Supabase を使う E2E でも block されない。
+ * hosted Supabase を指す実デプロイでは常に undefined になり、`*.supabase.co` の
+ * wildcard だけで足りるため connect-src は変わらない。
+ */
+const LOCAL_SUPABASE_ORIGIN = getLocalSupabaseOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
 function createCspNonce(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -59,7 +82,7 @@ function buildContentSecurityPolicy(nonce: string): string {
     'https://api.pwnedpasswords.com',
     'https://challenges.cloudflare.com',
     ...(SENTRY_INGEST_ORIGIN ? [SENTRY_INGEST_ORIGIN] : []),
-    ...(isDevelopment ? ['http://127.0.0.1:54321', 'http://localhost:54321'] : []),
+    ...(LOCAL_SUPABASE_ORIGIN ? [LOCAL_SUPABASE_ORIGIN] : []),
   ].join(' ');
 
   const scriptSrc = [

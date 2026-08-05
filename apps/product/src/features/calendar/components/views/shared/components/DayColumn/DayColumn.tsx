@@ -84,7 +84,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
 
   return (
     <div
-      role="gridcell"
+      role="group"
       className={columnClasses}
       aria-label={t('selectDate', { date: formattedDate })}
     >

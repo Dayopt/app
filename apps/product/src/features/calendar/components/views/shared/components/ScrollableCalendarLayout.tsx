@@ -188,7 +188,7 @@ export const ScrollableCalendarLayout = ({
         onClick={handleGridClick}
         onKeyDown={handleKeyDown}
         tabIndex={enableKeyboardNavigation ? 0 : -1}
-        role={enableKeyboardNavigation ? 'grid' : undefined}
+        role={enableKeyboardNavigation ? 'group' : undefined}
         aria-label={enableKeyboardNavigation ? `${viewMode} view calendar` : undefined}
       >
         {/* 時間軸列 */}
@@ -225,9 +225,7 @@ export const ScrollableCalendarLayout = ({
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
           {/* メインコンテンツ（flex で横並びを維持） */}
-          <div className="relative flex h-full" role={enableKeyboardNavigation ? 'row' : undefined}>
-            {children}
-          </div>
+          <div className="relative flex h-full">{children}</div>
 
           {/* 縦の区切り線 */}
           {displayDates && displayDates.length > 1 && (
