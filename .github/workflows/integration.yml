@@ -3,6 +3,10 @@ name: Integration Tests
 on:
   pull_request:
     branches: [main]
+    # ready_for_review を明示する（ci.yml と同じ根拠）。既定 types に含まれないため、
+    # これが無いと draft → ready の変換で再発火せず、draft 時の skipped が残ったまま
+    # merge できてしまう（.claude/rules/workflow.md §2 段階 CI）。
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.nvmrc'
       - 'package.json'
@@ -49,6 +53,12 @@ permissions:
 jobs:
   integration:
     name: Integration Tests
+    # 重量層: draft の間は走らせない（2 段階 CI、ci.yml の e2e / web job と同じ扱い）。
+    # Supabase 起動込みで 1 run ≈ 4 課金分と単価が全 job 中最も高く、draft push の
+    # たびに走らせる必要はない。`draft != true` の形なのは workflow_dispatch では
+    # pull_request context が null になるためで、この形なら手動実行は常に走る。
+    # skipped のまま残る check は branch:finish の畳み込みが正しく扱う。
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

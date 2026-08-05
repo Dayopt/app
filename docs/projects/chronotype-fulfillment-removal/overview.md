@@ -79,7 +79,7 @@ Phase 1 と Phase 2 は 2026-07-16 に完了した。production の適用結果�
 - `apps/product/src/features/timeblock/server/statistics-service.ts` の TypeScript statistics orchestration
 - `apps/product/src/features/timeblock/server/statistics-service-grouping.ts` の hour / day grouping
 - `scripts/parse-filename.ts` と `scripts/eagle-sync.ts` の feature taxonomy
-- `.agents/skills/supabase/SKILL.md` の destructive change 3段階フロー
+- `.claude/skills/supabase/SKILL.md` の destructive change 3段階フロー
 
 ## What I'm Not Doing
 

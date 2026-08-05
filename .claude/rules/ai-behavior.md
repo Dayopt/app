@@ -1,6 +1,6 @@
 # AI行動規範
 
-協働の関係と判断のテンポ（authority level）の正本は `AGENTS.md` §協働のかたち。本ファイルはその運用機構 — subagent への委任、writer 境界、報告フォーマット、タスク進行の決め方 — の正本。
+協働の関係と判断のテンポ（authority level）の正本は `CLAUDE.md` §協働のかたち。本ファイルはその運用機構 — subagent への委任、writer 境界、報告フォーマット、タスク進行の決め方 — の正本。
 
 ## Read-only delegation
 
@@ -14,7 +14,7 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 
 - 委譲するかは禁止リストではなくコスト判断で決める。Main のコンテキスト（トークン・注意）を節約できるなら小さな作業でも subagent へ委譲してよい。判断はその時点のモデルがその都度の文脈で行う
 - 複数作業を指揮するセッションでは、調査・ドラフト執筆・実装（§Writer ownership の範囲で）の委譲を既定とし、Main には判断・統合・diff レビュー、commit、external state の mutation、ユーザーへの報告を残す
-- **read-only subagent**（上表の 3 role と `.agents/roles/` の reviewer）は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す。実装を委譲する write 可能な subagent は §Writer ownership の条件下で別扱いとする
+- **read-only subagent**（上表の 3 role と `.claude/agents/` の reviewer）は repo / external state を変更せず、write-capable tool / command の試行もしない。Main または user から依頼されても拒否し、nested agent を起動しない。command 実行が必要なら、Main が実行すべき command と確認観点を返す。実装を委譲する write 可能な subagent は §Writer ownership の条件下で別扱いとする
 - Main は agent output を採用する前に、根拠を直接確認する
 
 ## Writer ownership
@@ -72,7 +72,7 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 3. `CHECKPOINT` または `EXPLICIT AUTHORITY` に当たる未決事項だけを、証拠付きの推奨とともにユーザーへ返す
 4. 質問、懸念、仮説を指示や承認へ読み替えない
 
-確信度の一律 threshold は使わない。確認要否は `AGENTS.md` の authority level で決める。
+確信度の一律 threshold は使わない。確認要否は `CLAUDE.md` の authority level で決める。
 
 ## Unattended execution
 

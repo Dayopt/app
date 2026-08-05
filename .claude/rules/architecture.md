@@ -110,7 +110,7 @@ migration churn（pre_drop/post_drop の踊り）の温床にもなる。その�
 
 Supabase project、branch topology、migration / deploy 経路は運用変更が起きやすいため、この architecture rule に固定値を複製しない。Supabase を扱う前に次の正本を読む。
 
-- 手順と安全制約: `.agents/skills/supabase/SKILL.md`
+- 手順と安全制約: `.claude/skills/supabase/SKILL.md`
 - 現行 topology と環境責務: `docs/engineering/infra.md`
 
 agent prompt、plan、review で project ID、branch の有無、table 数などを前提にせず、必要な時点で正本と code / schema を再確認する。

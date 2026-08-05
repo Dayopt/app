@@ -78,13 +78,14 @@ function vercelChecks(): RollupEntry[] {
 function threadsPayload(
   threads: Array<{ isResolved: boolean; path?: string; author?: string }>,
   hasNextPage = false,
+  endCursor: string | null = null,
 ): unknown {
   return {
     data: {
       repository: {
         pullRequest: {
           reviewThreads: {
-            pageInfo: { hasNextPage },
+            pageInfo: { hasNextPage, endCursor },
             nodes: threads.map((thread) => ({
               isResolved: thread.isResolved,
               path: thread.path ?? 'src/example.ts',
@@ -97,6 +98,11 @@ function threadsPayload(
       },
     },
   };
+}
+
+/** N 件の resolve 済み thread を作る（ページング境界の件数合わせ用） */
+function resolvedThreads(count: number): Array<{ isResolved: boolean }> {
+  return Array.from({ length: count }, () => ({ isResolved: true }));
 }
 
 function runScript(
@@ -114,12 +120,22 @@ function runScript(
     filesUnavailable?: boolean;
     /** 一覧を部分的に出力した後で失敗させる（pagination 途中失敗の再現） */
     filesPartialFailure?: boolean;
-    /** レビュー thread の状態。省略時は 0 件（gate を通す） */
+    /** レビュー thread の状態（1 ページ目のみ）。省略時は 0 件（gate を通す） */
     threads?: Array<{ isResolved: boolean; path?: string; author?: string }>;
     /** thread 取得 API を失敗させる（fail closed 経路の検証） */
     threadsUnavailable?: boolean;
-    /** reviewThreads が 100 件を超えている状態にする */
+    /** reviewThreads の 1 ページ目が hasNextPage: true で終わり、2 ページ目を用意しない状態にする */
     threadsTruncated?: boolean;
+    /**
+     * reviewThreads を複数ページに分けてレスポンスを組み立てる。指定時は `threads` /
+     * `threadsTruncated` より優先する。各要素が 1 ページ分。`hasNextPage` を省略した
+     * 要素は「最後の要素以外は true、最後は false」として扱う（20 ページ上限の
+     * テストのように全ページ true にしたい場合だけ明示する）。
+     */
+    threadPages?: Array<{
+      threads?: Array<{ isResolved: boolean; path?: string; author?: string }>;
+      hasNextPage?: boolean;
+    }>;
   } = {},
 ): { status: number | null; stderr: string } {
   // repo 直下ではなく os の temp に作る。プロセスが afterEach 前に落ちると untracked な
@@ -162,13 +178,34 @@ function runScript(
         ].join('\n')}\n`,
   );
 
-  // レビュー thread の GraphQL レスポンス。threadsUnavailable は実在しない path を
-  // 指させて cat を失敗させる（API 不通の再現）。
-  const threadsPath = join(temporaryDirectory, 'threads.json');
-  writeFileSync(
-    threadsPath,
-    JSON.stringify(threadsPayload(options.threads ?? [], options.threadsTruncated ?? false)),
-  );
+  // レビュー thread の GraphQL レスポンス（ページ単位）。gh スタブは cursor 引数
+  // （page-N.json の N）でページを選ぶため、実際のディレクトリに 1..N の
+  // page-*.json を並べる。threadsUnavailable は実在しないディレクトリを指させて
+  // cat を失敗させる（API 不通の再現）。
+  const threadsDirectory = join(temporaryDirectory, 'threads');
+  mkdirSync(threadsDirectory);
+
+  const pages =
+    options.threadPages ??
+    ([
+      { threads: options.threads ?? [], hasNextPage: options.threadsTruncated ?? false },
+    ] satisfies Array<{
+      threads: Array<{ isResolved: boolean; path?: string; author?: string }>;
+      hasNextPage: boolean;
+    }>);
+
+  pages.forEach((page, index) => {
+    const pageNumber = index + 1;
+    const isLast = index === pages.length - 1;
+    const hasNextPage = page.hasNextPage ?? !isLast;
+    // 次ページの cursor はそのページ番号の文字列にする。gh スタブはこの値を
+    // そのまま `page-<cursor>.json` の解決に使う。
+    const endCursor = hasNextPage ? String(pageNumber + 1) : null;
+    writeFileSync(
+      join(threadsDirectory, `page-${pageNumber}.json`),
+      JSON.stringify(threadsPayload(page.threads ?? [], hasNextPage, endCursor)),
+    );
+  });
 
   // `gh` だけ差し替える。git は temp repo 上で本物を動かす（worktree / show-ref の判定を
   // 実挙動に任せる方が、stub の作り込みより契約に近い）。
@@ -186,16 +223,30 @@ case "$1" in
     ;;
   api)
     shift
-    case "$*" in
-      graphql*) cat "$FINISH_BRANCH_THREADS_JSON" ;;
-      *pulls/123/files*)
-        cat "$FINISH_BRANCH_PR_FILES"
-        if [[ "\${FINISH_BRANCH_FILES_EXIT:-0}" != "0" ]]; then exit 1; fi
-        ;;
-      *compare*) echo "$FINISH_BRANCH_COMPARE" ;;
-      *full_name*) echo "Dayopt/dayopt" ;;
-      *) exit 2 ;;
-    esac
+    if [[ "\${1:-}" == graphql ]]; then
+      # cursor 引数（-f cursor=VALUE）を argv から拾う。無ければ 1 ページ目。
+      cursor=""
+      for arg in "$@"; do
+        case "$arg" in
+          cursor=*) cursor="\${arg#cursor=}" ;;
+        esac
+      done
+      if [[ -n "$cursor" ]]; then
+        cat "$FINISH_BRANCH_THREADS_DIR/page-\${cursor}.json"
+      else
+        cat "$FINISH_BRANCH_THREADS_DIR/page-1.json"
+      fi
+    else
+      case "$*" in
+        *pulls/123/files*)
+          cat "$FINISH_BRANCH_PR_FILES"
+          if [[ "\${FINISH_BRANCH_FILES_EXIT:-0}" != "0" ]]; then exit 1; fi
+          ;;
+        *compare*) echo "$FINISH_BRANCH_COMPARE" ;;
+        *full_name*) echo "Dayopt/dayopt" ;;
+        *) exit 2 ;;
+      esac
+    fi
     ;;
   *) exit 2 ;;
 esac
@@ -224,9 +275,9 @@ esac
       FINISH_BRANCH_PR_FILES: options.filesUnavailable
         ? join(temporaryDirectory, 'missing-files.txt')
         : filesPath,
-      FINISH_BRANCH_THREADS_JSON: options.threadsUnavailable
-        ? join(temporaryDirectory, 'missing-threads.json')
-        : threadsPath,
+      FINISH_BRANCH_THREADS_DIR: options.threadsUnavailable
+        ? join(temporaryDirectory, 'missing-threads-dir')
+        : threadsDirectory,
       FINISH_BRANCH_FILES_EXIT: options.filesPartialFailure ? '1' : '0',
     },
   });
@@ -900,13 +951,51 @@ describe('レビュー thread の必須解決 gate', () => {
     expect(status).toBe(1);
   });
 
-  it('thread が 100 件を超えていたら止める（全件確認できないため）', () => {
+  it('101 件（2 ページ）を全走査し、全 resolve 済みなら merge へ進む', () => {
+    // PR #1820 の実測（thread 101 件・未解決 0 件）を再現する。旧実装は
+    // first: 100 の 1 ページ目で hasNextPage=true を見た時点で即停止していた
+    // （issue #1831）。2 ページ目まで走査して初めて「未解決 0 件」と判定できる。
     const { status, stderr } = runScript(greenRollup(), {
-      threads: [{ isResolved: true }],
-      threadsTruncated: true,
+      threadPages: [{ threads: resolvedThreads(100) }, { threads: resolvedThreads(1) }],
     });
-    expect(stderr).toContain('100 件を超えて');
+    expect(stderr).toContain('未解決のレビュー thread はありません');
+    expect(status).toBe(0);
+  });
+
+  it('101 件のうち 2 ページ目に未解決が 1 件あれば止める', () => {
+    // 1 ページ目だけ見て判定を打ち切っていないことを、2 ページ目側の未解決で確認する。
+    const { status, stderr } = runScript(greenRollup(), {
+      threadPages: [
+        { threads: resolvedThreads(100) },
+        { threads: [{ isResolved: false, path: 'scripts/git/finish-branch.sh' }] },
+      ],
+    });
+    expect(stderr).toContain('未解決のレビュー thread が 1 件');
+    expect(stderr).toContain('scripts/git/finish-branch.sh');
     expect(status).toBe(1);
+  });
+
+  it('ページ数が上限（20 ページ）を超えるほど残っていれば止める', () => {
+    // 暴走防止の上限は件数（100 件超）ではなくページ数。first:100 × 20 ページ
+    // 尽くしてもなお hasNextPage が true な場合だけ「全件確認できない」で止める。
+    const { status, stderr } = runScript(greenRollup(), {
+      threadPages: Array.from({ length: 20 }, () => ({
+        threads: resolvedThreads(1),
+        hasNextPage: true,
+      })),
+    });
+    expect(stderr).toContain('20 ページ');
+    expect(stderr).toContain('全件を確認できません');
+    expect(status).toBe(1);
+  });
+
+  it('ちょうど 20 ページ目で hasNextPage: false なら全件確認できたとして進む', () => {
+    // 上限ぎりぎり（2,000 件）でも「確認できないから停止」に倒れないことを確認する。
+    const { status, stderr } = runScript(greenRollup(), {
+      threadPages: Array.from({ length: 20 }, () => ({ threads: resolvedThreads(1) })),
+    });
+    expect(stderr).toContain('未解決のレビュー thread はありません');
+    expect(status).toBe(0);
   });
 });
 

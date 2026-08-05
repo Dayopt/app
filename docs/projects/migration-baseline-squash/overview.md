@@ -359,10 +359,10 @@ supabase migration list --linked   # ローカル 1 件 / production 1 件で一
 
 ### EXPLICIT AUTHORITY の安全策
 
-production の `supabase_migrations.schema_migrations` を書き換えるため、[AGENTS.md](../../../AGENTS.md) の「Authority levels」に従い、**承認だけでは着手条件を満たさない**。
+production の `supabase_migrations.schema_migrations` を書き換えるため、[CLAUDE.md](../../../CLAUDE.md) の「Authority levels」に従い、**承認だけでは着手条件を満たさない**。
 
 - [ ] **承認** — 対象（production project `yvglwblxrnrenfifsnje`）・環境・操作（退避分への `migration repair --status reverted`）を特定した明示指示を得る
-- [ ] **独立レビュー** — `risk-reviewer` に手順書と repair 対象 version 一覧をレビューさせ、結果を実施 issue に貼る（AGENTS.md の Read-only delegation で `migration` は自動委任条件）
+- [ ] **独立レビュー** — `risk-reviewer` に手順書と repair 対象 version 一覧をレビューさせ、結果を実施 issue に貼る（`.claude/rules/ai-behavior.md` の Read-only delegation で `migration` は自動委任条件）
 - [ ] **backup** — 手順 1 の `schema_migrations` 全行スナップショットを取得済みで、実施 issue に貼ってある
 - [ ] **Preview / dry-run** — **production を触る前に**、手順 5 の差分ゼロ（型 / `db diff` / auth トリガー・storage ポリシー・table/routine/column 権限の読み戻し / baseline SQL の bucket 行検査）と**手順 6 の squash PR 自身の Preview branch での通し検証**（signup・アップロード・RLS・`attachments` 読み戻し）を両方通す。各出力を PR に貼る
 - [ ] **merge 順序** — 手順 7（main へ merge）を手順 8（production の repair）より先に済ませ、**同じロック済みウィンドウ内で連続実施する**。逆順は適用済み SQL の再実行を招く。merge 直後の deploy 失敗（`missing-local`）は想定内であり、これを green にすることを手順 8 の前提にしない

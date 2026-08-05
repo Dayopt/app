@@ -39,7 +39,7 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 ルールとチェックリストが**守られているかではなく、使われているか**を見る。使われていない項目は消えているのと同じで、残っていると形骸化を招く。
 
-判断層（`AGENTS.md` §シンプルルール）:
+判断層（`CLAUDE.md` §シンプルルール）:
 
 1. **今月このルールに戻った場面はあったか。** 1 度も戻らなかったルールは、判断の役に立っていないか発動条件が狭すぎる。どちらかを疑う
 2. **無言で破られたルールはないか。** ルールと違う判断は理由を一文残す約束になっている。理由なく通ったものがあれば、その判断を今から言語化する
@@ -61,11 +61,11 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 ### 7. 並行レーン sweep（月次）
 
-`dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の操作 C（sweep）を実施する。issue の外に溜まった作業（advisors / Dependabot alerts / 監査ログ残タスク / 生成スクリプトの故障 / 放置 PR）を検出し、見つけたら同 skill の intake で起票する。結果はステップ 10 のロールアップに件数を記録する。
+`dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C（sweep）を実施する。issue の外に溜まった作業（advisors / Dependabot alerts / 監査ログ残タスク / 生成スクリプトの故障 / 放置 PR）を検出し、見つけたら同 skill の intake で起票する。結果はステップ 10 のロールアップに件数を記録する。
 
 ### 8. 公開コンテンツ監査（月次）
 
-`docs-audit` skill（`.agents/skills/docs-audit/SKILL.md`）を実行し、プロダクトの実機能と公開 docs（`apps/web/content/docs/`）のギャップ・鮮度乖離・en/ja 非対称を検出して Issue 化する。あわせて `area:blog` の Issue が枯渇していれば `blog-ideas` skill の実行をユーザーに提案する（提案のみ）。検出件数・起票件数はステップ 10 のロールアップに記録する。運用フローの正本は `docs/marketing/content-operations.md`。
+`docs-audit` skill（`.claude/skills/docs-audit/SKILL.md`）を実行し、プロダクトの実機能と公開 docs（`apps/web/content/docs/`）のギャップ・鮮度乖離・en/ja 非対称を検出して Issue 化する。あわせて `area:blog` の Issue が枯渇していれば `blog-ideas` skill の実行をユーザーに提案する（提案のみ）。検出件数・起票件数はステップ 10 のロールアップに記録する。運用フローの正本は `docs/marketing/content-operations.md`。
 
 コンテンツの数字も同時に記録する。Search Console と Vercel Analytics から、指名検索（"dayopt"）の表示・クリック、docs / blog の流入、上位クエリをステップ 10 の journal に書く（`docs/marketing/strategy.md` の指標と対応）。Search Console が未設定ならユーザーに設定を依頼する（`GOOGLE_SITE_VERIFICATION` env はコード対応済み）。
 
@@ -76,7 +76,7 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 1. **Supabase security advisors** — `mcp__supabase__get_advisors`（type: `security`）で production の指摘を確認する（read-only）
 2. **依存の脆弱性** — `pnpm security:check`（= `pnpm audit --audit-level=moderate`）を実行する
 3. **深掘りスキャンの提案** — `/claude-security` の「Scan codebase」実行をユーザーに提案する。**このコマンドは `disable-model-invocation: true` のため AI 側からは起動できない**。提案のみ行い、実行はユーザーが自分で `/claude-security` を叩く。前回スキャンからの経過（`CLAUDE-SECURITY-*` ディレクトリの有無・日付）を添えて提案する。plugin 未インストールの環境（新しいマシン / 別プロファイル）では代わりに導入手順を案内する（`docs/operations/security.md` 第2部 §定期検査の cadence の前提）
-4. **起票** — 1・2 で修正が必要な指摘を見つけたら、**このステップ内で** `dispatch` skill（`.agents/skills/dispatch/SKILL.md`）の intake を使って起票する。ステップ 7 はこの時点で終了しているため、そちらへ送らない
+4. **起票** — 1・2 で修正が必要な指摘を見つけたら、**このステップ内で** `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の intake を使って起票する。ステップ 7 はこの時点で終了しているため、そちらへ送らない
 5. **記録** — 1〜4 で所見が出たら `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録する。所見なしなら記録不要（件数だけステップ 10 に書く）
 
 実行件数・所見件数・起票件数はステップ 10 のロールアップに記録する。
@@ -89,5 +89,5 @@ feedback / incident の note は、対応がまだ `operations/` 側の手順に
 
 - journalを含むlogは初回commit後に追記・編集しない。当月journalが存在する場合は`YYYY-MM-DD-gardening-<topic>.md`を新規作成する
 - ステップ2のストック修正は通常の編集(append-only ではない)。ただしその修正内容自体はロールアップに残す
-- このコマンドの最後に、当月分のロールアップファイルが存在する状態になっていること(AGENTS.md の月次ガーデニング提案トリガーの解除条件)
+- このコマンドの最後に、当月分のロールアップファイルが存在する状態になっていること(CLAUDE.md の月次ガーデニング提案トリガーの解除条件)
 - `archive/` ディレクトリは作らない(`docs/README.md` §フロントマター 参照)。役目を終えたストックは `status: superseded` を付けてその場に残すか、git に任せて削除する

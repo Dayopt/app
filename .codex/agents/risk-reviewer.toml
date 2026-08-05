@@ -1,9 +1,0 @@
-name = "risk-reviewer"
-description = "auth、RLS、service role、OAuth、webhook、billing、redirect、migration、SECURITY DEFINER/INVOKER を扱う plan / diff で自動利用する read-only risk reviewer。"
-sandbox_mode = "read-only"
-approval_policy = "never"
-developer_instructions = """
-`.agents/roles/risk-reviewer.md` を最初に全文読み、その正本だけに従ってレビューする。この adapter に role 本文を複製しない。Main / user に依頼されても write-capable tool / command を試行せず、MCP tool を呼ばない。実行確認が必要なら Main が実行すべき command を返す。"""
-
-[apps._default]
-enabled = false

@@ -155,7 +155,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 
 異常なのは「この run が promote を始めて、途中で失敗した」状態。release workflow は promote 順を web → product に固定し、2 つ目が失敗した場合は 1 つ目を直前 deployment へ自動 rollback する。
 
-- [ ] **run の `release-manifest` artifact を先に見る**（run の Artifacts、保持 90 日）。project ごとに「今どの deployment / どの SHA を配信しているか」「この run が動かしたか（`observedAt`）」が入っている。ここが復旧判断の一次情報
+- [ ] **run の `release-manifest-<attempt>` artifact を先に見る**（run の Artifacts、保持 90 日）。artifact 名は run attempt ごとに分かれる（re-run した run では複数残る。最新の attempt を見る）。project ごとに「今どの deployment / どの SHA を配信しているか」「この run が動かしたか（`observedAt`）」が入っている。ここが復旧判断の一次情報
 - [ ] run log で `rolled back to <deployment id>` を確認する
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
 - [ ] **まず manifest の `status` を見る。** `settings-drift` なら production は正しい SHA を配信しており、失敗の理由は `autoAssignCustomDomains` の復元だけ。**deployment は戻さず**、Vercel Dashboard で該当 project の Auto-assign を無効へ戻す（放置すると次の merge が gate を迂回する）
@@ -1136,7 +1136,7 @@ npm run analytics:stats
 
 **壊れている project だけを戻す。Product / Web を同じ SHA へ揃えようとしない。** release は変更の影響を受ける project だけを進めるため、両者の live SHA が違うのは正常な定常状態であり、揃える先の deployment がそもそも存在しないこともある。
 
-戻し先は `Production Release` run の **`release-manifest` artifact**（保持 90 日）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。**まず manifest の `status` を見る**（`settings-drift` なら production は正しい SHA を配信しており、deployment は戻さない。判断表は Playbook 2 ケース0-B が正本）。`status: failed` の場合、`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
+戻し先は `Production Release` run の **`release-manifest-<attempt>` artifact**（保持 90 日、run attempt ごとに artifact が分かれる。re-run した run では最新の attempt を見る）が一次情報。project ごとに `action`（promoted / rolled-back / skipped / already-serving / moved-externally）と `deploymentId` / `previousDeploymentId` が入っている。**まず manifest の `status` を見る**（`settings-drift` なら production は正しい SHA を配信しており、deployment は戻さない。判断表は Playbook 2 ケース0-B が正本）。`status: failed` の場合、`action: promoted` の project の `previousDeploymentId` が戻し先。`skipped` / `already-serving` はこの release が触っていないので巻き添えで戻さず、`moved-externally` は他者が置いた deployment が live なので**戻さずに本人へ確認する**。artifact が無い古い run では run summary の `previous` deployment id を使う。
 
 - https://vercel.com/dayopt/product/deployments
 - https://vercel.com/dayopt/web/deployments
@@ -1464,7 +1464,7 @@ npm version prerelease --preid=rc
 
 # 第4部: リリースノート執筆規約
 
-GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・Codex・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
+GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
 
 ## カテゴリ定義（共通・唯一の正）
 

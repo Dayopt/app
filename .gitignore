@@ -169,5 +169,4 @@ temp/
 .lighthouseci/
 .env*.local
 .op-env.local
-AGENTS.md
 .claude/scheduled_tasks.lock

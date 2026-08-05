@@ -25,7 +25,7 @@ ProductとWebから受け付けた問い合わせを、Production限定で`suppo
 - WebはCSRF、JSON content type、16 KiB body上限、strict schema、honeypot、Turnstile action / Production hostnameを検証する
 - Product / Webは別々の`POST /api/webhooks/resend`と署名secretを使う。source tagと固定Toで所有eventを判定し、processing leaseとprocessed markerでretryを重複排除する
 - 配送failureは問い合わせ本文・氏名・email・raw webhook bodyを含めずにSentryへ記録する。HTTP responseとloggerにも問い合わせPIIを含めない
-- 問い合わせ原文はResendの配送処理とアクセス制限付きGmailで扱う。開発対応が必要な内容だけPIIを除いて通常Issueへ転記し、ユーザーの声はAGENTS.mdに従って日付付きfeedback logへ記録する
+- 問い合わせ原文はResendの配送処理とアクセス制限付きGmailで扱う。開発対応が必要な内容だけPIIを除いて通常Issueへ転記し、ユーザーの声はCLAUDE.mdに従って日付付きfeedback logへ記録する
 
 ## 入力
 

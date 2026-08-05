@@ -232,11 +232,14 @@ Deno.serve(async (req) => {
       }
     }
   } catch (error) {
+    // catch 変数は unknown。auth hook のエラー契約（http_code / message）に
+    // 載せる 2 プロパティだけを取り出す
+    const { code, message } = error as { code?: number; message?: string };
     return new Response(
       JSON.stringify({
         error: {
-          http_code: error.code,
-          message: error.message,
+          http_code: code,
+          message,
         },
       }),
       {
