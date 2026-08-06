@@ -41,10 +41,6 @@
  * - `isLocalizableHref` / `prefixPathname`: next-intl/dist/esm/development/navigation/shared/utils.js
  * - `applyPathnamePrefix` / `getLocaleAsPrefix`: next-intl/dist/esm/development/shared/utils.js
  *
- * next/link（SecurityDocument が直接使う）は next-intl を経由しないため locale prefix ロジックを
- * 持たず、常に素の href をそのまま描画する（既存挙動。#1846 で ja/security の `/legal/privacy`
- * が無プレフィックスのままである理由として起票済み）。
- *
  * `<h1>` / frontmatter description は LegalDocument.tsx がそのまま描画するだけで、
  * どちらも metadata contract（`generateMetadata` の title/description）が同じ値を検証済みのため
  * 別途の検証は追加しない。一方 `lastUpdated`（LegalDocument.tsx:89）は metadata にも hash にも
@@ -78,14 +74,6 @@ const linkLocaleRef = vi.hoisted(() => ({ current: 'en' as 'en' | 'ja' }));
 vi.mock('@dayopt/i18n/navigation', () => ({
   Link: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
     <a href={localizeHref(href, linkLocaleRef.current)} {...rest}>
-      {children}
-    </a>
-  ),
-}));
-// next/link は next-intl を経由しないため locale prefix を持たない。素の <a> で十分。
-vi.mock('next/link', () => ({
-  default: ({ children, href, ...rest }: { children: ReactNode; href: string }) => (
-    <a href={href} {...rest}>
       {children}
     </a>
   ),
@@ -254,9 +242,7 @@ const LEGAL_CONTRACT_CASES: readonly LegalContractCase[] = [
       'https://github.com/Dayopt/dayopt/blob/main/docs/legal/SECURITY.md',
       'https://github.com/Dayopt/dayopt/blob/main/docs/legal/VULNERABILITY_DISCLOSURE.md',
       'https://github.com/Dayopt/dayopt/blob/main/docs/legal/INCIDENT_RESPONSE.md',
-      // SecurityDocument の relatedDocs リンクは next/link を直接使っており locale prefix ロジックを
-      // 持たない（既存挙動。/ja/legal/privacy にはならず常に /legal/privacy のまま。#1846）。
-      '/legal/privacy',
+      '/ja/legal/privacy',
       'mailto:security@dayopt.app',
       'mailto:support@dayopt.app',
     ],

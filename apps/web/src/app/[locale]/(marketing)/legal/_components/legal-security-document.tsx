@@ -1,6 +1,6 @@
 import { dayoptContact } from '@dayopt/config';
+import { Link } from '@dayopt/i18n/navigation';
 import { AlertTriangle, ExternalLink, FileText, Lock, Mail, type LucideIcon } from 'lucide-react';
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { readLegalText, readLegalTree, type LegalContentTree } from './legal-content-tree';
