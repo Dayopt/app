@@ -177,7 +177,7 @@ export function useTimeblockCardLayout({
     [position],
   );
 
-  // hourHeightProp がある && 外部未調整 = DayColumn（グリッド相対配置）→ 位置調整を適用
+  // hourHeightProp がある && 外部未調整 = グリッド相対配置のレンダリング元 → 位置調整を適用
   // hourHeightProp がない or 外部調整済み = WeekContent等 → TimeblockCard内での位置調整は不要
   const applyPositionAdjust = hourHeightProp !== undefined && !overlayPositionApplied;
 
