@@ -8,7 +8,7 @@
  * 座標を出すだけ」で足りる。レーン自体は Plan=左・Record=右の固定幅分割。
  *
  * 呼び出し側は対象日の plans/records だけを渡す想定（日をまたぐ絞り込みは
- * 呼び出し側の責務、既存 DayColumn 系コンポーネントと同じ分担）。
+ * 呼び出し側の責務、TwoLaneDayColumn と同じ分担）。
  */
 
 import type { PlanEvent, RecordEvent } from '@/features/timeblock';
