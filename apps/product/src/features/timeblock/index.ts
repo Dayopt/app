@@ -44,11 +44,6 @@ export type { TimeblockDestination } from './domain/timeblock-destination';
 export { plansToICal } from './lib/plan-to-ical';
 
 // =============================================================================
-// Lib (new timeblock animation tracker)
-// =============================================================================
-export { isNewTimeblock } from './lib/new-timeblock-tracker';
-
-// =============================================================================
 // Lib (timeblock menu items — 右クリック / Inspector メニュー共通の項目定義)
 // =============================================================================
 export { createClipboardTimeblock } from './lib/timeblock-clipboard';
@@ -59,7 +54,6 @@ export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
 // Components (TimeblockCard)
 // =============================================================================
 export { TimeblockCard } from './components/card';
-export type { TimeblockCardPosition } from './components/card';
 
 // =============================================================================
 // Components (記録導線)
