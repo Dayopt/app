@@ -137,7 +137,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
 });
 
 /**
- * 列専用の現在時刻線（DayColumn内で使用）
+ * 列専用の現在時刻線
  */
 export const CurrentTimeLineForColumn = memo<{
   hourHeight?: number;

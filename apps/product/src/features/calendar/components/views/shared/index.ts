@@ -35,4 +35,3 @@ export { sortEventsByDateKeys } from './utils/timeblockSorting';
 export type * from '../../../types/base.types';
 export type * from '../../../types/grid.types';
 export type * from '../../../types/timeblock.types';
-export type * from '../../../types/view.types';
