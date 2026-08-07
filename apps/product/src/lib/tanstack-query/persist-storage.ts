@@ -151,7 +151,7 @@ export const queryPersister: Persister = {
 /**
  * キャッシュ永続化の最大保持期間
  *
- * staticCache の gcTime（2時間）に合わせる。
+ * QueryClient のデフォルト gcTime（`query-client.ts` の `gcTime: PERSIST_MAX_AGE_MS`）と同じ値。
  * QueryClient の gcTime がこの値以上である必要がある（GC 前に復元できるよう）。
  */
 export const PERSIST_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2時間

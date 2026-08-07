@@ -92,7 +92,7 @@ export function ProvidersComposition({ children }: ProvidersCompositionProps) {
       client={queryClient}
       persistOptions={{
         persister: queryPersister,
-        // staticCache の gcTime（2時間）に合わせ、タブを閉じても復元できる期間を確保
+        // QueryClient のデフォルト gcTime（2時間）に合わせ、タブを閉じても復元できる期間を確保
         maxAge: PERSIST_MAX_AGE_MS,
         // デプロイ毎にキャッシュを破棄（stale なキャッシュを本番で表示しないため）
         buster: CACHE_BUSTER,
