@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-08-07
 code: apps/product/src
 ---
 
@@ -286,11 +286,11 @@ tRPC カスタムフックの統一実装パターン。全 Feature 共通で適
 
 ```typescript
 import { api } from '@/lib/trpc';
-import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
+import { CACHE_5_MINUTES } from '@/lib/date';
 
 export function useItems(filters?: ItemFilters, options?: { enabled?: boolean }) {
   return api.items.list.useQuery(filters, {
-    ...cacheStrategies.items,
+    staleTime: CACHE_5_MINUTES,
     retry: 1,
     ...options,
   });
@@ -326,19 +326,13 @@ export function useItemMutations() {
 | 項目               | 説明                         |
 | ------------------ | ---------------------------- |
 | `api` クライアント | `trpc` ではなく `api` を使用 |
-| `cacheStrategies`  | キャッシュ戦略を適用         |
 | `retry: 1`         | リトライを1回に設定          |
 | JSDoc              | パラメータと戻り値を説明     |
 | `void`             | Promiseを明示的に無視        |
 
 ### キャッシュ戦略（hooks 側の目安）
 
-| データ種別       | 戦略             | staleTime |
-| ---------------- | ---------------- | --------- |
-| アクティブデータ | `activeCache`    | 30秒      |
-| 通常のデータ     | `standardCache`  | 5分       |
-| 短期キャッシュ   | `shortTermCache` | 1分       |
-| 静的データ       | `staticCache`    | 1時間     |
+既定値は staleTime 5分 / gcTime 2時間。`QueryClient` 生成時に一度だけ設定する（詳細は後述の「TanStack Query 使用ガイド」内キャッシュ戦略を参照）。hook 側で同じ 5 分を明示したい時は `@/lib/date` の `CACHE_5_MINUTES` を使う。
 
 ### ファイル命名規則
 
@@ -564,38 +558,55 @@ queryClient.invalidateQueries({ queryKey: tagKeys.detail('tag-id') });
 
 ### キャッシュ戦略
 
-#### 機能別キャッシュ設定
+#### デフォルト設定
+
+`staleTime` / `gcTime` は `QueryClient` 生成時（`src/lib/trpc/query-client.ts`）に一度だけ定義する。個別の hook は、デフォルトと違う挙動が必要な時だけ上書きする。
 
 ```typescript
-// src/lib/tanstack-query/cache-config.ts
-export const cacheStrategies = {
-  events: activeCache, // 30秒
-  calendars: activeCache, // 30秒
-  tags: standardCache, // 5分
-  smartFolders: standardCache, // 5分
-  userSettings: staticCache, // 1時間
-};
+// src/lib/trpc/query-client.ts
+new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5分(一般的なデータのデフォルト)
+      gcTime: PERSIST_MAX_AGE_MS, // 2時間(query cache の IndexedDB 永続化)
+    },
+  },
+});
 ```
 
-| 機能              | staleTime | gcTime | 理由                 |
-| ----------------- | --------- | ------ | -------------------- |
-| **Events**        | 30秒      | 2分    | リアルタイム性が重要 |
-| **Calendar**      | 30秒      | 2分    | 同期が重要           |
-| **Tags**          | 5分       | 10分   | 頻繁に変更されない   |
-| **Smart Folders** | 5分       | 10分   | 設定的な性質         |
-| **User Settings** | 1時間     | 2時間  | ほぼ静的             |
+| 設定      | 値    | 理由                                                                                                                         |
+| --------- | ----- | ---------------------------------------------------------------------------------------------------------------------------- |
+| staleTime | 5分   | シングルユーザーアプリでは自分以外がデータを変更しない。楽観的更新で常に最新に保たれるため、長めにして無駄な再フェッチを防ぐ |
+| gcTime    | 2時間 | IndexedDB からの復元前にメモリキャッシュが GC されないよう長めに設定                                                         |
 
-#### 使用例
+#### 個別 hook での上書き
+
+デフォルトと同じ 5 分を明示したい時は `@/lib/date` の `CACHE_5_MINUTES` を使う。
 
 ```typescript
-export function useEvents(filters?: EventFilters) {
-  return useQuery({
-    queryKey: eventKeys.list(filters),
-    queryFn: () => fetchEvents(filters),
-    ...cacheStrategies.events,
+import { CACHE_5_MINUTES } from '@/lib/date';
+
+export function useUserSettings() {
+  return api.userSettings.get.useQuery(undefined, {
+    staleTime: CACHE_5_MINUTES,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 ```
+
+永続化させたくない一時的なクエリ（検索結果など）は `gcTime: 0` を明示する。
+
+```typescript
+// apps/product/src/features/calendar/components/search/TimeblockSearchDialog.tsx
+const plansQuery = api.plans.list.useQuery(searchInput, {
+  enabled: hasDebouncedQuery,
+  gcTime: 0, // 閉じる・検索語変更でmemory cacheにも残さない
+  meta: { persist: false },
+});
+```
+
+機能ごとに `staleTime` / `gcTime` を一元管理する集約レイヤー（`cacheStrategies`）はかつて存在したが、17 キー全部が未使用のまま保守されていただけだったため削除した（#1858）。実際のコールサイトは一貫してデフォルト（5分 / 2時間）を使っている。
 
 ### エラーハンドリング
 
@@ -723,7 +734,6 @@ useEffect(() => {
 const { data, isLoading } = useQuery({
   queryKey: dataKeys.lists(),
   queryFn: () => fetch('/api/data').then((res) => res.json()),
-  ...cacheStrategies.standard,
 });
 ```
 

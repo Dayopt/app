@@ -27,6 +27,7 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 - 共有層から `@/features/*` をimportすると **error**
 - **settings は DAG から除外** — 後述 [Composition Feature: settings](#composition-feature-settings) を参照
 - **`*.stories.tsx` は DAG 除外** — composition プレビュー層として cross-feature import を許容（各 feature の boundary rule で `ignores: ['**/*.stories.{ts,tsx}']`）
+- **Composition Layer からの `next/dynamic` component deep import は例外** — 後述 [Composition Layer からの dynamic import 例外](#composition-layer-からの-dynamic-import-例外) を参照
 
 ## domain は全 feature に作らない
 
@@ -36,6 +37,20 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 - domain を作らない feature: `contact`（pure logic が薄い）、`settings`（composition なので rule は外部）
 
 「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
+
+### domain 配下に barrel を置くかは feature ごとに選ぶ
+
+`domain/index.ts`（および `domain/{sub}/index.ts`）は**必須ではない**。現状 `domain/` を持つ 5 feature のうち barrel があるのは 2 つだけで、これは揃えるべき不統一ではない。
+
+| feature   | domain barrel | 理由                                                                                                                  |
+| --------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| auth      | あり          | consumer が barrel 経由で参照している                                                                                 |
+| timeblock | あり          | 同上（9 export）                                                                                                      |
+| calendar  | **なし**      | consumer が leaf を直接 import しており、barrel が孤児化した（[#1857](https://github.com/Dayopt/dayopt/issues/1857)） |
+| review    | なし          | 同上                                                                                                                  |
+| tags      | なし          | 同上                                                                                                                  |
+
+判断基準は「**barrel 経由の consumer が実際にいるか**」。いなければ置かない。`auth` / `timeblock` に倣って空振りの barrel を足すと、knip が unused file として検出し続ける（実際に #1854 で 4 件検出された）。feature barrel（`features/{name}/index.ts`）は cross-feature の公開 API として必須だが、domain barrel は feature 内部の都合なのでこの制約を受けない。
 
 ## RPC / DB response transformer は domain ではなく server
 
@@ -101,6 +116,16 @@ feature は `@/lib/stores/*` から直接 import する。calendar feature も�
 | Layout Composition   | `apps/product/src/app/**/layout.tsx`                                                                                                                |
 | Provider Composition | `apps/product/src/app/[locale]/(app)/_providers/Providers.tsx`（concern 別 Provider は `apps/product/src/lib/**`、例: `lib/i18n/IntlProvider.tsx`） |
 | Shell State          | `apps/product/src/lib/stores/`（例: `useShellStore`）                                                                                               |
+
+### Composition Layer からの dynamic import 例外
+
+`next/dynamic` による **component の** deep import は、code-splitting 目的に限り barrel 経由の原則から除外する（[#1859](https://github.com/Dayopt/dayopt/issues/1859)）。
+
+- **対象は component の dynamic import のみ**。型・util・store の deep import は従来どおり禁止
+- **理由**: barrel 経由にすると、barrel が re-export する全モジュールが dynamic chunk の起点になる。値 export の多い barrel（例: `calendar/index.ts` は 23 値 export、`CalendarController` を含む）を経由すると、1 つの dialog の chunk に feature 全体を引き込むリスクがある
+- **例外にしない場合**: barrel の値 export が dynamic import 対象そのものだけ（1:1 facade）なら、例外を使わず barrel 経由にする。`contact/index.ts`（値 export は `ContactDialog` のみ）はこれに当たる
+- 適用例: `apps/product/src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx` — `ContactDialog` は 1:1 facade の barrel 経由。`SettingsDialog` / `TimeblockInspector` / `TimeblockSearchDialog` は値 export の多い barrel（feature 全体を引き込むリスクがある）を避け、deep import のまま
+- ESLint の `no-restricted-imports`（`eslint.config.mjs` の `src/app/**` ルール）は `import()` 式を検出しない。この例外を明文化した結果として、現状の挙動（検出しない）は意図どおり
 
 ## Composition Hub
 

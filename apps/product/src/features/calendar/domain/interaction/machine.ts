@@ -1,7 +1,8 @@
 /**
  * Interaction State Machine — 純粋レデューサー
  *
- * React/DOM依存ゼロ。すべての状態遷移とグリッド計算を純粋関数で実装。
+ * React / DOM / Zustand / tRPC 非依存。すべての状態遷移とグリッド計算を純粋関数で実装。
+ * React 接続層は `features/calendar/interaction/` の `useInteraction` / `GhostRenderer` に分離されている。
  * テスト: expect(interactionReducer(state, action, ctx)).toEqual(...)
  *
  * 実装は責務ごとに分割している:

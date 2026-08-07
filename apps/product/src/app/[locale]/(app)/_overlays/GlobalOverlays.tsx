@@ -27,7 +27,7 @@ import { APP_SHORTCUT_CATALOG } from './app-shortcut-catalog';
 
 const ContactDialog = dynamic(
   () =>
-    import('@/features/contact/components/ContactDialog').then((m) => ({
+    import('@/features/contact').then((m) => ({
       default: m.ContactDialog,
     })),
   { ssr: false },
