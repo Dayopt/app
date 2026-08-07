@@ -283,7 +283,7 @@ Sentryの高優先度Issue通知はemailを正規channelとする。認証失敗
 
 ## 関連ドキュメント（セキュリティ監視）
 
-- [Error Handling](../../apps/product/src/lib/errors/index.ts)
+- [Error Handling](../../apps/product/src/lib/trpc/errors.ts)
 - [Rate Limiting](../../apps/product/src/lib/rate-limit/upstash.ts)
 - [Issue #487](https://github.com/Dayopt/dayopt/issues/487)
 
