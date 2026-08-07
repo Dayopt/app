@@ -6,9 +6,10 @@ import 'server-only';
  * Step 0 の Aggregation Source Contract（`docs/projects/time-model-split/step-0-statistics-rpc-policy.md`）
  * に従い、実績系は `records`、予定系は `plans`、予実比較は `plans` LEFT JOIN `records`（`plan_id` 経由）を読む。
  *
- * **dormant**: このクラスは router から未接続。既存 RPC ベースの router
- * (`statistics-general-router.ts` 等) は現状維持のまま、この service は Step 8 の
- * カットオーバーで router 内部の実装として丸ごと差し替えられる前提のシグネチャを持つ。
+ * Step 8 のカットオーバーは完了済みで、**統計 procedure はすべてこのクラス経由**で動く
+ * （`statistics-general-router.ts` / `statistics-kpi-router.ts` / `statistics-summary-router.ts`
+ * の全 procedure が `new StatisticsService(ctx.supabase)` を呼ぶ）。PL/pgSQL の統計 RPC は
+ * 呼ばれていない。
  *
  * 公開 API は facade（このファイル）。実装はドメイン単位の service に分割されている:
  * - General（タグ別統計・時間帯分布・トレンド）: statistics-general-service.ts
