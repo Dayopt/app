@@ -128,6 +128,22 @@ vi.mock('../TimeblockRelationshipSection', () => ({
   TimeblockRelationshipSection: () => null,
 }));
 
+// 作成時フィードフォワードは自身の test が挙動を固定する。ここでは配線
+// （どの destination / tagId / draftMinutes が渡るか）だけを見える化する。
+vi.mock('../EstimationFeedforward', () => ({
+  EstimationFeedforward: ({
+    destination,
+    tagId,
+    draftMinutes,
+  }: {
+    destination: 'plan' | 'record';
+    tagId: string | null;
+    draftMinutes: number;
+  }) => (
+    <output data-testid="feedforward-props">{`${destination}/${tagId ?? 'none'}/${draftMinutes}`}</output>
+  ),
+}));
+
 vi.mock('../TimeblockEditor', () => ({
   isValidTimeModelRange: ({ startAt, endAt }: { startAt: Date; endAt: Date }) =>
     startAt.getTime() < endAt.getTime(),
@@ -289,6 +305,23 @@ describe('TimeblockInspectorForm', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('作成時フィードフォワードへ end ルール基準の保存先と draft の長さを渡す', () => {
+    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+
+    // 13:00-14:00（now は 12:00）→ plan / 60 分
+    expect(screen.getByTestId('feedforward-props')).toHaveTextContent(
+      `plan/${futurePlan.tag_id}/60`,
+    );
+  });
+
+  it('過去 Plan では保存先が record になりフィードフォワードが出ない', () => {
+    render(<TimeblockInspectorForm kind="plan" plan={pastPlan} onDeleted={vi.fn()} />);
+
+    // 保存先は kind ではなく end_at で決まる。過去 Plan は時間が凍結されていて
+    // 見積もりを直す余地が無いため、component 側が null を返す想定の入力になる。
+    expect(screen.getByTestId('feedforward-props')).toHaveTextContent(/^record\//);
   });
 
   it('未来Planの終了を現在以前へ変更せず、保存キューにも送らない', () => {

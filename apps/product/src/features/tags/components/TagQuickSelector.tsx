@@ -66,6 +66,12 @@ interface TagQuickSelectorProps {
   anchorRef?: React.RefObject<HTMLDivElement | HTMLButtonElement | null>;
   /** ヘッダーに表示する日付・時間帯ラベル（例: "3/30 (日) 14:00 – 15:30"） */
   timeLabel?: string | undefined;
+  /**
+   * timeLabel の下に出す補助表示。呼び出し側が組み立てた ReactNode をそのまま描画する。
+   * tags feature は Layer 0 なので上位 feature の component を import できない。
+   * ノードで受け取ることで依存方向を保ったまま合成できる（例: 作成時フィードフォワード）。
+   */
+  hint?: React.ReactNode | undefined;
 }
 
 /**
@@ -206,6 +212,7 @@ export function TagQuickSelector({
   onTagHover,
   anchorRef,
   timeLabel,
+  hint,
 }: TagQuickSelectorProps) {
   const t = useTranslations('calendar');
   const isMobile = useIsMobile();
@@ -287,6 +294,7 @@ export function TagQuickSelector({
           <DrawerHeader>
             <DrawerTitle>{t('tagSelector.title')}</DrawerTitle>
             {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
+            {hint}
           </DrawerHeader>
           <TagQuickSelectorContent
             onSelect={onSelect}
@@ -319,6 +327,7 @@ export function TagQuickSelector({
         <div className="min-w-0">
           <h2 className="font-medium">{t('tagSelector.title')}</h2>
           {timeLabel && <p className="text-muted-foreground truncate text-sm">{timeLabel}</p>}
+          {hint}
         </div>
         <Button
           type="button"

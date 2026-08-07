@@ -18,6 +18,7 @@ import 'server-only';
  * - 行取得: statistics-fetchers.ts / 行組み立て: statistics-row-builders.ts
  */
 
+import { StatisticsFeedforwardService } from './statistics-feedforward-service';
 import type { DateRangeInput } from './statistics-fetchers';
 import { StatisticsGeneralService } from './statistics-general-service';
 import type { BlankRateInput } from './statistics-kpi-service';
@@ -29,12 +30,14 @@ import { StatisticsTagDashboardService } from './statistics-tag-dashboard-servic
 import type { ServiceSupabaseClient } from './types';
 
 export class StatisticsService {
+  private readonly feedforwardService: StatisticsFeedforwardService;
   private readonly generalService: StatisticsGeneralService;
   private readonly kpiService: StatisticsKpiService;
   private readonly summaryService: StatisticsSummaryService;
   private readonly tagDashboardService: StatisticsTagDashboardService;
 
   constructor(supabase: ServiceSupabaseClient) {
+    this.feedforwardService = new StatisticsFeedforwardService(supabase);
     this.generalService = new StatisticsGeneralService(supabase);
     this.kpiService = new StatisticsKpiService(supabase);
     this.summaryService = new StatisticsSummaryService(supabase, this.kpiService);
@@ -90,6 +93,14 @@ export class StatisticsService {
   /** `get_blank_rate` 相当。予定（plans）ベースのスケジュール時間から空白率を算出する。 */
   async getBlankRate(userId: string, input: BlankRateInput) {
     return this.kpiService.getBlankRate(userId, input);
+  }
+
+  /**
+   * 作成時フィードフォワード用のタグ別見積もり係数（直近 4 週の中央値、`n >= 3`）。
+   * 定義は `domain/tag-estimation-factor.ts` を参照。
+   */
+  async getTagEstimationFactors(userId: string) {
+    return this.feedforwardService.getTagEstimationFactors(userId);
   }
 
   // ---------------------------------------------------------------------------

@@ -19,7 +19,11 @@ import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
 import { Button } from '@dayopt/components';
 
-import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
+import {
+  isPlanTimeEditable,
+  resolveTimeblockDestination,
+  type TimeblockDestination,
+} from '../../domain/timeblock-destination';
 import {
   useCoalescedTimeblockSave,
   type TimeblockSavePatch,
@@ -45,6 +49,7 @@ import {
 } from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
 import { TagRow } from '../inspector/fields';
+import { EstimationFeedforward } from './EstimationFeedforward';
 import {
   isValidTimeModelRange,
   TimeblockEditor,
@@ -616,6 +621,17 @@ export function TimeblockInspectorForm({
           isWriteFrozen ||
           isMigrated
         }
+      />
+
+      {/*
+        保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
+        瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 時間が
+        凍結されていて見積もりを直す余地が無いため。
+      */}
+      <EstimationFeedforward
+        destination={resolveTimeblockDestination(value.endAt)}
+        tagId={value.tagId}
+        draftMinutes={(value.endAt.getTime() - value.startAt.getTime()) / 60000}
       />
 
       {duplicateDraft ? (

@@ -18,7 +18,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { getTagColorClasses, TagIcon, TagQuickSelector } from '@/features/tags';
-import { resolveTimeblockDestination } from '@/features/timeblock';
+import { EstimationFeedforward, resolveTimeblockDestination } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -273,6 +273,18 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         onTagHover={handleTagHover}
         anchorRef={highlightRef}
         timeLabel={pickerContextLabel}
+        hint={
+          // 作成時フィードフォワード。hover 中のタグ + ドラッグで決まった長さで引く。
+          // TagBadgeList の hover は onMouseEnter / onMouseLeave なので、これが出るのは
+          // pointer デバイスだけ。mobile の作成時は hover が発生せず出ない（既知の限界）。
+          hoveredTag ? (
+            <EstimationFeedforward
+              destination={destination}
+              tagId={hoveredTag.id}
+              draftMinutes={endMinutes - startMinutes}
+            />
+          ) : null
+        }
       />
     </>
   );

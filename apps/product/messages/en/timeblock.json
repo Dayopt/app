@@ -189,7 +189,10 @@
         "unskipped": "Skip removed",
         "planCreated": "Plan added ✓"
       },
-      "migratedLocked": "Migrated past records cannot be edited"
+      "migratedLocked": "Migrated past records cannot be edited",
+      "feedforward": {
+        "recentActual": "Recent actuals for this tag are around {duration}"
+      }
     }
   }
 }

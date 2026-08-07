@@ -27,6 +27,11 @@ export interface StatRecordRow {
   end_at: string;
 }
 
+/** 見積もり係数用の Plan 行。skip 判定に `skipped_at` を要するため専用 shape にする。 */
+interface EstimationPlanRow extends StatPlanRow {
+  skipped_at: string | null;
+}
+
 export interface TagLookupRow {
   id: string;
   name: string;
@@ -100,6 +105,35 @@ export async function fetchPlans(
     throw captureUnexpectedDatabaseError(error, {
       feature: 'statistics',
       operation: 'fetch_plans',
+    });
+  }
+  return data ?? [];
+}
+
+/**
+ * 見積もり係数用の Plan 取得。`fetchPlans` と違い `skipped_at` を含める。
+ *
+ * `fetchPlans` 側に列を足さないのは、既存 consumer（Time P/L / 空白率 / 見積もり精度）が
+ * skip 状態を見ない設計で、そこへ未使用列を流し込むと「使われている」と誤読されるため。
+ */
+export async function fetchPlansForEstimation(
+  supabase: ServiceSupabaseClient,
+  userId: string,
+  range: DateRangeInput = {},
+): Promise<EstimationPlanRow[]> {
+  let query = supabase
+    .from('plans')
+    .select('id, tag_id, start_at, end_at, skipped_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+  if (range.startDate) query = query.gte('start_at', range.startDate);
+  if (range.endDate) query = query.lt('start_at', range.endDate);
+
+  const { data, error } = await query;
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_plans_for_estimation',
     });
   }
   return data ?? [];
