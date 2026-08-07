@@ -10,10 +10,8 @@ import {
   calculateTimeblockPosition,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
-  filterTimeblocksByDate,
   findOverlapGroups,
   isOverlapping,
-  sortTimedTimeblocks,
 } from '../layout';
 
 // ========================================
@@ -437,67 +435,6 @@ describe('calculateTimeblockPosition', () => {
 
     expect(pos.left).toBe(50);
     expect(pos.width).toBe(50);
-  });
-});
-
-// ========================================
-// sortTimedTimeblocks / filterTimeblocksByDate
-// ========================================
-
-describe('sortTimedTimeblocks', () => {
-  it('開始時刻順にソート', () => {
-    const entries = [
-      createTimedEntry({
-        id: 'b',
-        start: new Date('2026-01-15T14:00'),
-        end: new Date('2026-01-15T15:00'),
-      }),
-      createTimedEntry({
-        id: 'a',
-        start: new Date('2026-01-15T10:00'),
-        end: new Date('2026-01-15T11:00'),
-      }),
-    ];
-    const sorted = sortTimedTimeblocks(entries);
-    expect(sorted[0]!.id).toBe('a');
-    expect(sorted[1]!.id).toBe('b');
-  });
-
-  it('元の配列を変更しない', () => {
-    const entries = [
-      createTimedEntry({
-        id: 'b',
-        start: new Date('2026-01-15T14:00'),
-        end: new Date('2026-01-15T15:00'),
-      }),
-      createTimedEntry({
-        id: 'a',
-        start: new Date('2026-01-15T10:00'),
-        end: new Date('2026-01-15T11:00'),
-      }),
-    ];
-    sortTimedTimeblocks(entries);
-    expect(entries[0]!.id).toBe('b');
-  });
-});
-
-describe('filterTimeblocksByDate', () => {
-  it('指定日のエントリのみ返す', () => {
-    const entries = [
-      createTimedEntry({
-        id: 'a',
-        start: new Date('2026-01-15T10:00'),
-        end: new Date('2026-01-15T11:00'),
-      }),
-      createTimedEntry({
-        id: 'b',
-        start: new Date('2026-01-16T10:00'),
-        end: new Date('2026-01-16T11:00'),
-      }),
-    ];
-    const filtered = filterTimeblocksByDate(entries, new Date('2026-01-15'));
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]!.id).toBe('a');
   });
 });
 

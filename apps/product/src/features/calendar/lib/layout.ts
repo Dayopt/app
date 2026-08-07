@@ -274,29 +274,3 @@ export function calculateTimeblockPosition(
 
   return { top, height, left, width };
 }
-
-/**
- * 時間指定エントリをソート（開始時刻順）
- */
-export function sortTimedTimeblocks(entries: TimedTimeblock[]): TimedTimeblock[] {
-  return [...entries].sort((a, b) => {
-    const timeDiff = a.start.getTime() - b.start.getTime();
-    if (timeDiff !== 0) return timeDiff;
-    return a.end.getTime() - b.end.getTime();
-  });
-}
-
-/**
- * 特定の日のエントリをフィルタリング
- */
-export function filterTimeblocksByDate(entries: TimedTimeblock[], date: Date): TimedTimeblock[] {
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-
-  const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
-
-  return entries.filter((entry) => {
-    return entry.start < dayEnd && entry.end > dayStart;
-  });
-}

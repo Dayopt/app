@@ -119,7 +119,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
 
@@ -136,8 +135,8 @@ describe('TimeblockCard', () => {
       });
       expect(plannedLayer).toHaveClass('rounded-r-lg');
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
-      expect(actualLayer).toHaveStyle({ top: '15px', height: '45px' });
-      expect(contentLayer).toHaveStyle({ top: '15px', height: '45px' });
+      expect(actualLayer).toHaveStyle({ top: '18px', height: '42px' });
+      expect(contentLayer).toHaveStyle({ top: '18px', height: '42px' });
       expect(container.querySelector('[data-entry-actual-accent]')).toBeInTheDocument();
     });
 
@@ -154,7 +153,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
 
@@ -162,32 +160,6 @@ describe('TimeblockCard', () => {
       expect(container.querySelector('[data-entry-actual-accent]')).not.toBeInTheDocument();
       expect(container.querySelector('[data-entry-time-kind="planned"]')).toBeInTheDocument();
       expect(container.querySelector('[data-entry-time-kind="actual"]')).not.toBeInTheDocument();
-    });
-
-    it('actual がない upcoming planned entry はグリッドdurationの高さに揃える', () => {
-      const { container } = render(
-        <TimeblockCard
-          entry={{
-            ...mockEvent,
-            origin: 'planned',
-            timeblockState: 'upcoming',
-            actualStartDate: null,
-            actualEndDate: null,
-          }}
-          position={{ ...mockPosition, height: 58 }}
-          hourHeight={60}
-        />,
-      );
-
-      const root = screen.getByLabelText(/entry: テストイベント/i);
-      const plannedLayer = container.querySelector<HTMLElement>('[data-entry-planned-layer]');
-      const contentLayer = container.querySelector<HTMLElement>('[data-entry-content-layer]');
-      const resizeFrame = container.querySelector<HTMLElement>('[data-entry-resize-frame]');
-
-      expect(root).toHaveStyle({ height: '60px' });
-      expect(plannedLayer).toHaveStyle({ height: '60px' });
-      expect(contentLayer).toHaveStyle({ height: '60px' });
-      expect(resizeFrame).toHaveStyle({ height: '60px' });
     });
 
     it('upcoming planned entry の actual 超過部分も予定外表示を維持する', () => {
@@ -201,7 +173,6 @@ describe('TimeblockCard', () => {
             actualEndDate: new Date('2025-01-15T11:30:00'),
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
 
@@ -210,13 +181,13 @@ describe('TimeblockCard', () => {
       const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
       const overtimeAccent = container.querySelector<HTMLElement>('[data-entry-overtime-accent]');
 
-      expect(root).toHaveStyle({ top: '100px', height: '90px' });
+      expect(root).toHaveStyle({ top: '100px', height: '60px' });
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
-      expect(actualLayer).toHaveStyle({ top: '0px', height: '60px' });
+      expect(actualLayer).toHaveStyle({ top: '0px', height: '24px' });
       expect(overtimeAccent).toBeInTheDocument();
     });
 
-    it('drag preview の relative 配置でも actual 超過分の高さを維持する', () => {
+    it('drag preview の relative 配置でも actual 超過表示を維持する', () => {
       const { container } = render(
         <TimeblockCard
           entry={{
@@ -228,12 +199,11 @@ describe('TimeblockCard', () => {
           }}
           position={mockPosition}
           plannedHeight={mockPosition.height}
-          hourHeight={60}
           style={{ position: 'relative' }}
         />,
       );
 
-      expect(screen.getByLabelText(/entry: テストイベント/i)).toHaveStyle({ height: '90px' });
+      expect(screen.getByLabelText(/entry: テストイベント/i)).toHaveStyle({ height: '60px' });
       expect(container.querySelector('[data-entry-overtime-accent]')).toBeInTheDocument();
     });
 
@@ -247,7 +217,6 @@ describe('TimeblockCard', () => {
             actualEndDate: new Date('2025-01-15T10:45:00'),
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
 
@@ -255,7 +224,7 @@ describe('TimeblockCard', () => {
       const actualLayer = container.querySelector<HTMLElement>('[data-entry-actual-layer]');
 
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '60px' });
-      expect(actualLayer).toHaveStyle({ top: '15px', height: '30px' });
+      expect(actualLayer).toHaveStyle({ top: '18px', height: '24px' });
       expect(container.querySelector('.pattern-hatch')).not.toBeInTheDocument();
     });
 
@@ -270,7 +239,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
           onGapClick={onGapClick}
         />,
       );
@@ -279,7 +247,7 @@ describe('TimeblockCard', () => {
       const gapAction = topGap?.querySelector<HTMLElement>('[data-entry-gap-action]');
 
       expect(topGap).toHaveAttribute('role', 'button');
-      expect(topGap).toHaveStyle({ top: '0px', height: '30px' });
+      expect(topGap).toHaveStyle({ top: '0px', height: '36px' });
       expect(gapAction).toBeInTheDocument();
       expect(gapAction).toHaveStyle({ right: 'calc(25% - 10px)' });
       expect(container.querySelector<HTMLElement>('[data-entry-content-layer]')).toHaveStyle({
@@ -303,7 +271,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
           onGapClick={onGapClick}
           isGapAvailable={() => false}
         />,
@@ -336,7 +303,6 @@ describe('TimeblockCard', () => {
             actualEndDate: new Date('2030-01-15T11:00:00'),
           }}
           position={mockPosition}
-          hourHeight={60}
           onGapClick={onGapClick}
           gapCreationCutoffMs={new Date('2026-01-15T00:00:00').getTime()}
         />,
@@ -365,7 +331,6 @@ describe('TimeblockCard', () => {
             actualEndDate: new Date('2025-01-15T11:30:00'),
           }}
           position={{ ...mockPosition, height: 120 }}
-          hourHeight={60}
         />,
       );
 
@@ -376,8 +341,8 @@ describe('TimeblockCard', () => {
 
       expect(root).toHaveStyle({ top: '100px', height: '120px' });
       expect(plannedLayer).toHaveStyle({ top: '0px', left: '-1px', height: '120px' });
-      expect(actualLayer).toHaveStyle({ top: '30px', height: '60px' });
-      expect(contentLayer).toHaveStyle({ top: '30px', height: '60px' });
+      expect(actualLayer).toHaveStyle({ top: '36px', height: '48px' });
+      expect(contentLayer).toHaveStyle({ top: '36px', height: '48px' });
     });
 
     it('actual が planned を超過した場合は従来の破線オーバーレイを維持する', () => {
@@ -390,7 +355,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
 
@@ -400,9 +364,9 @@ describe('TimeblockCard', () => {
       const actualBody = container.querySelector<HTMLElement>('[data-entry-actual-body]');
       const overtimeAccent = container.querySelector<HTMLElement>('[data-entry-overtime-accent]');
 
-      expect(root).toHaveStyle({ top: '70px', height: '90px' });
-      expect(plannedLayer).toHaveStyle({ top: '30px', left: '-1px', height: '60px' });
-      expect(actualLayer).toHaveStyle({ top: '30px', height: '60px' });
+      expect(root).toHaveStyle({ top: '100px', height: '60px' });
+      expect(plannedLayer).toHaveStyle({ top: '36px', left: '-1px', height: '60px' });
+      expect(actualLayer).toHaveStyle({ top: '36px', height: '24px' });
       expect(actualBody).toHaveStyle({ borderRadius: '0 0 8px 0' });
       expect(overtimeAccent).toBeInTheDocument();
       expect(overtimeAccent).toHaveClass('left-0');
@@ -425,7 +389,6 @@ describe('TimeblockCard', () => {
             actualEndDate: mockEvent.endDate,
           }}
           position={mockPosition}
-          hourHeight={60}
         />,
       );
       const { container: unplannedContainer } = render(
