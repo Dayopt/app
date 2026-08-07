@@ -20,7 +20,7 @@ import {
 
 import type { TimeblockCardPosition, TimeblockCardProps } from './TimeblockCard.types';
 
-/** SSRフォールバック用デフォルトの1時間高さ(px) */
+/** overlay 計算用の1時間高さ(px)。TimeblockCard は live grid 非接続のため固定値。live grid へ再接続する場合は responsive hourHeight（HOUR_HEIGHT_DENSITIES）の受け渡し再導入が必要 */
 const DEFAULT_HOUR_HEIGHT = 72;
 
 /** イベントの最小高さ(px) — 1 分粒度 entry でも視認できる程度に低く設定（PC のみ。mobile は touch target で底上げ） */
@@ -51,8 +51,6 @@ type LayoutParams = Pick<
   | 'isDragging'
   | 'isSelected'
   | 'isActive'
-  | 'isResizing'
-  | 'hourHeight'
   | 'showActualDiff'
   | 'plannedHeight'
   | 'overlayPositionApplied'
@@ -71,8 +69,6 @@ export function useTimeblockCardLayout({
   isDragging = false,
   isSelected = false,
   isActive = false,
-  isResizing = false,
-  hourHeight: hourHeightProp,
   showActualDiff = true,
   plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
@@ -118,10 +114,8 @@ export function useTimeblockCardLayout({
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
     () =>
-      renderAsPlanOnly
-        ? NO_OVERLAY
-        : computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
-    [entry, hourHeightProp, renderAsPlanOnly],
+      renderAsPlanOnly ? NO_OVERLAY : computeActualTimeDiffOverlay(entry, DEFAULT_HOUR_HEIGHT),
+    [entry, renderAsPlanOnly],
   );
   const topGapStartMinutes =
     entry.startDate &&
@@ -177,34 +171,13 @@ export function useTimeblockCardLayout({
     [position],
   );
 
-  // hourHeightProp がある && 外部未調整 = グリッド相対配置のレンダリング元 → 位置調整を適用
-  // hourHeightProp がない or 外部調整済み = WeekContent等 → TimeblockCard内での位置調整は不要
-  const applyPositionAdjust = hourHeightProp !== undefined && !overlayPositionApplied;
-
   // 左アクセントの幅（統一: 3px = --border-indicator トークン相当）
   const accentWidth = 3;
 
   const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
-  const planOnlyGridHeight = useMemo(() => {
-    if (!renderAsPlanOnly || !hourHeightProp || isResizing) return null;
-
-    const start = entry.displayStartDate ?? entry.startDate;
-    const end = entry.displayEndDate ?? entry.endDate;
-    if (!start || !end) return null;
-
-    const startMinutes = toMinutesOfDay(start);
-    const endMinutes = toMinutesOfDay(end);
-    if (endMinutes <= startMinutes) return null;
-
-    return ((endMinutes - startMinutes) * hourHeightProp) / 60;
-  }, [entry, hourHeightProp, isResizing, renderAsPlanOnly]);
-  const visualHeight = Math.max(
-    planOnlyGridHeight ?? safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
-    minHeight,
-  );
+  const visualHeight = Math.max(safePosition.height, minHeight);
   const plannedHeight = Math.max(
-    planOnlyGridHeight ??
-      plannedHeightProp ??
+    plannedHeightProp ??
       (overlayPositionApplied ? safePosition.height - overlay.heightDelta : safePosition.height),
     minHeight,
   );
@@ -229,11 +202,11 @@ export function useTimeblockCardLayout({
   const skippedBackgroundColor = `color-mix(in oklch, ${accentColor} 14%, var(--background))`;
   const skippedHatchImage = `repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in oklch, ${accentColor} 38%, transparent) 5px 7px)`;
 
-  // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
+  // 動的スタイルを計算
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
       position: 'absolute' as const,
-      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
+      top: `${safePosition.top}px`,
       left: renderAsPlanOnly ? `calc(${safePosition.left}% - 1px)` : `${safePosition.left}%`,
       width: `calc(${safePosition.width}% - ${renderAsPlanOnly ? 7 : 8}px)`,
       height: `${visualHeight}px`,
@@ -241,16 +214,7 @@ export function useTimeblockCardLayout({
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
     }),
-    [
-      safePosition,
-      overlay,
-      applyPositionAdjust,
-      isSelected,
-      isDragging,
-      renderAsPlanOnly,
-      style,
-      visualHeight,
-    ],
+    [safePosition, isSelected, isDragging, renderAsPlanOnly, style, visualHeight],
   );
 
   const unplannedBorderStyle: React.CSSProperties = {

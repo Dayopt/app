@@ -51,7 +51,6 @@ export interface TimeblockCardProps {
   onAnchorRect?: ((rect: AnchorRect) => void) | undefined;
   isDragging?: boolean | undefined;
   isSelected?: boolean | undefined;
-  isResizing?: boolean | undefined;
   /** Inspector で開いているエントリかどうか */
   isActive?: boolean | undefined;
   /** モバイルレイアウト */
@@ -59,8 +58,6 @@ export interface TimeblockCardProps {
   className?: string | undefined;
   style?: React.CSSProperties | undefined;
   previewTime?: ({ start: Date; end: Date } | null) | undefined;
-  /** グリッドの1時間あたりの高さ（px）。予定vs記録の差分オーバーレイ計算に使用 */
-  hourHeight?: number | undefined;
   /** 予定と実績の差分レイヤーを表示する（multi-column drag 用） */
   showActualDiff?: boolean | undefined;
   /** day compare Rail に出ている entry の marker を表示する */

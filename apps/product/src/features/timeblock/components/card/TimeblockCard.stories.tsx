@@ -192,7 +192,6 @@ export const UpcomingPlan: Story = {
         tagName="仕事"
         tagColor="blue"
         position={basePosition}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -213,7 +212,6 @@ export const ActivePlan: Story = {
         tagName="仕事"
         tagColor="blue"
         position={basePosition}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -237,7 +235,6 @@ export const PlanToRecordByTime: Story = {
             tagName="仕事"
             tagColor="blue"
             position={basePosition}
-            hourHeight={72}
           />
         </Slot>
       </div>
@@ -255,7 +252,6 @@ export const PlanToRecordByTime: Story = {
             tagName="仕事"
             tagColor="blue"
             position={basePosition}
-            hourHeight={72}
           />
         </Slot>
       </div>
@@ -276,7 +272,6 @@ export const PlanToRecordByTime: Story = {
             tagName="仕事"
             tagColor="blue"
             position={{ ...basePosition, height: 142 }}
-            hourHeight={72}
           />
         </Slot>
       </div>
@@ -303,7 +298,6 @@ export const PlannedActualSame: Story = {
         tagName="仕事"
         tagColor="blue"
         position={basePosition}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -327,7 +321,6 @@ export const PlannedActualShorter: Story = {
         tagName="Deep Work"
         tagColor="blue"
         position={{ ...basePosition, height: 142 }}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -351,7 +344,6 @@ export const PlannedActualShifted: Story = {
         tagName="Deep Work"
         tagColor="blue"
         position={{ ...basePosition, height: 142 }}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -373,7 +365,6 @@ export const OverlayUnexecuted: Story = {
           actualEndDate: new Date('2024-01-15T11:30:00'),
         }}
         position={{ ...basePosition, height: 142 }}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -397,7 +388,6 @@ export const OverlayOvertime: Story = {
         tagName="Deep Work"
         tagColor="blue"
         position={{ ...basePosition, height: 70 }}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -430,7 +420,6 @@ export const OverlayOvertimeOnGrid: Story = {
             width: 100,
             height: 1 * HOUR_HEIGHT - 2,
           }}
-          hourHeight={HOUR_HEIGHT}
         />
       </GridSlot>
     );
@@ -464,7 +453,6 @@ export const PlanOnlyOnGrid: Story = {
             width: 100,
             height: 1 * HOUR_HEIGHT - 2,
           }}
-          hourHeight={HOUR_HEIGHT}
         />
       </GridSlot>
     );
@@ -491,7 +479,6 @@ export const Skipped: Story = {
         tagName="Deep Work"
         tagColor="blue"
         position={basePosition}
-        hourHeight={72}
       />
     </Slot>
   ),
@@ -543,7 +530,6 @@ export const UnplannedOnGrid: Story = {
             width: 100,
             height: 1.5 * HOUR_HEIGHT - 2,
           }}
-          hourHeight={HOUR_HEIGHT}
         />
       </GridSlot>
     );
@@ -579,7 +565,6 @@ export const UnplannedInGap: Story = {
             width: 100,
             height: 2 * HOUR_HEIGHT - 2,
           }}
-          hourHeight={HOUR_HEIGHT}
         />
         {/* 計画外カード: 11:00-12:00（親の空き枠に入れ子） */}
         <TimeblockCard
@@ -603,7 +588,6 @@ export const UnplannedInGap: Story = {
             width: 100,
             height: 1 * HOUR_HEIGHT - 2,
           }}
-          hourHeight={HOUR_HEIGHT}
         />
       </GridSlot>
     );
@@ -718,7 +702,6 @@ export const AllPatterns: Story = {
             tagName="仕事"
             tagColor="blue"
             position={basePosition}
-            hourHeight={72}
           />
         </Slot>
       </section>
@@ -739,7 +722,6 @@ export const AllPatterns: Story = {
             tagName="Deep Work"
             tagColor="blue"
             position={basePosition}
-            hourHeight={72}
           />
         </Slot>
       </section>
@@ -782,7 +764,6 @@ export const AllPatterns: Story = {
               actualEndDate: new Date('2024-01-15T11:30:00'),
             }}
             position={{ ...basePosition, height: 142 }}
-            hourHeight={72}
           />
         </Slot>
       </section>
@@ -806,7 +787,6 @@ export const AllPatterns: Story = {
             tagName="Deep Work"
             tagColor="blue"
             position={{ ...basePosition, height: 70 }}
-            hourHeight={72}
           />
         </Slot>
       </section>
