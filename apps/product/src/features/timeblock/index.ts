@@ -50,10 +50,6 @@ export { createClipboardTimeblock } from './lib/timeblock-clipboard';
 export { createTimeblockDuplicateDraft } from './lib/timeblock-duplicate';
 export { collectTimeblockLaneItems, hasTimeblockLaneConflict } from './lib/timeblock-lane-conflict';
 export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
-// =============================================================================
-// Components (TimeblockCard)
-// =============================================================================
-export { TimeblockCard } from './components/card';
 
 // =============================================================================
 // Components (記録導線)

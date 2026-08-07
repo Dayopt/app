@@ -71,7 +71,7 @@ export const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   {
     pattern: 'rounded(-[a-z]+)?-\\[',
     // rounded-[inherit] は pseudo-element が親の radius を継承する正当な用途
-    // （useTimeblockCardLayout.ts に理由コメント付きで存在）
+    // （初出の useTimeblockCardLayout.ts は 2026-08 に削除済み。現在使用箇所なしだが、再使用時の false positive を防ぐため除外は維持）
     excludePattern: 'rounded(-[a-z]+)?-\\[inherit\\]',
     message: '角丸の任意値は禁止。rounded-lg (8px) / rounded-2xl (16px) を使用',
     suggestion: 'rounded-[8px] → rounded-lg, rounded-[0.25rem] → rounded-lg',

@@ -4,7 +4,6 @@ last_verified: 2026-07-09
 code:
   - apps/product/src/features/calendar/components/views
   - apps/product/src/features/timeblock/types/calendar-event.ts
-  - apps/product/src/features/timeblock/components/card
 ---
 
 # Step 5: Calendar 2レーン表示（read 側）
@@ -39,7 +38,7 @@ plans / logs を Plan レーン + Log レーンとして描画し、差分を数
 ## Existing Code to Reuse
 
 - `apps/product/src/features/calendar/components/views/shared/components/EntryRenderer.tsx` — 時間 → 座標の配置ロジック
-- `apps/product/src/features/timeblock/components/card/TimeblockCard.tsx` / `TimeblockCardContent.tsx` — カードの構造・token 使用の踏襲元
+- `TimeblockCard.tsx` / `TimeblockCardContent.tsx`（当時 `features/timeblock/components/card/`。live 描画が PlanLaneCard / RecordLaneCard へ完全移行したため 2026-08 に削除済み）— カードの構造・token 使用の踏襲元
 - `apps/product/src/features/timeblock/lib/actual-time-overlay.ts` — 旧・差分オーバーレイ（置き換え対象の仕様参照。数字バッジ移行で廃止予定）
 - `apps/product/src/features/calendar/stores/useCalendarFilterStore.ts` — タグ表示切替（レーンとは直交に維持）
 - project skills: `storybook` / `i18n`
