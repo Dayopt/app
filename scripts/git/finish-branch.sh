@@ -79,7 +79,7 @@ if [[ -z "$PR_NUMBER" ]]; then
 fi
 
 if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-  error "PR 番号は数値で指定してください（受け取った値: $PR_NUMBER）"
+  error "PR 番号は数値で指定してください（受け取った値: ${PR_NUMBER}）"
   exit 1
 fi
 
@@ -272,7 +272,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 「main を含まない古い SHA」をマージしてしまい、gate だけがすり抜ける。
   BASE_STATUS="$(gh api "repos/{owner}/{repo}/compare/main...$HEAD_SHA" --jq '.status' 2>/dev/null || echo unknown)"
   if [[ "$BASE_STATUS" != "ahead" && "$BASE_STATUS" != "identical" ]]; then
-    error "branch が main の最新を含んでいません（compare status: $BASE_STATUS）。"
+    error "branch が main の最新を含んでいません（compare status: ${BASE_STATUS}）。"
     error "main を取り込んで push し、CI green を待ってから再実行してください:"
     error "  git fetch origin && git merge origin/main && git push"
     exit 1
@@ -424,10 +424,10 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
       present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
         map(select(((.name // .context // "")) == $name)) | length')"
       if [[ "$present" == "0" ]]; then
-        error "必須 check「$required」が 1 件も見つかりません。マージを中止します。"
+        error "必須 check「${required}」が 1 件も見つかりません。マージを中止します。"
         error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
       else
-        error "必須 check「$required」が success ではありません。マージを中止します。"
+        error "必須 check「${required}」が success ではありません。マージを中止します。"
         error "EXPECTED（status 到着待ち）のまま放置されている可能性があります。"
       fi
       error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
@@ -711,7 +711,7 @@ step "ローカル branch を削除"
 if git -C "$MAIN_ROOT" show-ref --verify --quiet "refs/heads/$BRANCH"; then
   # -d は merge 済みなら成功する。まずこれを試し、通常系の挙動は変えない。
   if [[ "$DRY_RUN" == true ]]; then
-    echo "   [dry-run] git -C \"$MAIN_ROOT\" branch -d $BRANCH（失敗時は main への到達を確認）" >&2
+    echo "   [dry-run] git -C \"$MAIN_ROOT\" branch -d ${BRANCH}（失敗時は main への到達を確認）" >&2
   elif ! git -C "$MAIN_ROOT" branch -d "$BRANCH" 2>"$BRANCH_ERR_FILE"; then
     # `branch -d` は **HEAD に対して** マージ済みかを見る。main checkout が別 branch に
     # いると、main へ完全にマージ済みの branch でも not fully merged で拒否される
@@ -782,8 +782,8 @@ else
   fi
 
   echo "✅ PR #$PR_NUMBER を片付けました:" >&2
-  echo "   - branch: $BRANCH（ローカル / リモートとも削除）" >&2
-  [[ -n "$WORKTREE_PATH" ]] && echo "   - worktree: $WORKTREE_PATH（削除）" >&2
+  echo "   - branch: ${BRANCH}（ローカル / リモートとも削除）" >&2
+  [[ -n "$WORKTREE_PATH" ]] && echo "   - worktree: ${WORKTREE_PATH}（削除）" >&2
 
   # 完了定義⑤: ローカル main ref が origin/main と一致していること。
   # main checkout がどの branch にいるかは問わない（別セッションの作業を尊重する）。
