@@ -93,6 +93,7 @@ describe('billing-router', () => {
         },
         paymentMethod: { brand: 'visa', last4: '4242', expMonth: 12, expYear: 2027 },
         invoices: [],
+        trialEndsAt: null,
       };
       vi.mocked(billingServiceMock.getBillingOverview).mockResolvedValue(mockOverview);
 
@@ -113,6 +114,7 @@ describe('billing-router', () => {
         },
         paymentMethod: null,
         invoices: [],
+        trialEndsAt: null,
       };
       vi.mocked(billingServiceMock.getBillingOverview).mockResolvedValue(mockOverview);
 

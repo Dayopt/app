@@ -629,7 +629,8 @@
             "unlimitedAI": "Unlimited AI + model selection"
           }
         }
-      }
+      },
+      "trialEndsAt": "Your trial runs through {date}"
     }
   }
 }

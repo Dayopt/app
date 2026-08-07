@@ -116,6 +116,7 @@ export function BillingSettings() {
   });
 
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
+  const trialEndsAt = overview.data?.trialEndsAt ?? null;
   const currentPlan = getPlanIdForSubscriptionStatus(subscriptionStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
 
@@ -280,6 +281,14 @@ export function BillingSettings() {
                   ? t('settings.subscription.proPlanDescription')
                   : t('settings.subscription.freePlanDescription')}
             </p>
+            {/* Stripe から期限を取れなかった場合は表示しない（Badge と説明文は従来どおり出る） */}
+            {subscriptionStatus === 'trialing' && trialEndsAt && (
+              <p className="text-muted-foreground text-base md:text-sm">
+                {t('settings.subscription.trialEndsAt', {
+                  date: dateFormatter.format(new Date(trialEndsAt)),
+                })}
+              </p>
+            )}
           </div>
           {canAccessPro && (
             <Button

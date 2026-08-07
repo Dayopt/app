@@ -321,6 +321,11 @@ export interface BillingOverview {
   billingInfo: BillingInfo;
   paymentMethod: PaymentMethod | null;
   invoices: InvoiceItem[];
+  /**
+   * 試用期間の終了時刻（ISO 8601）。`trialing` 以外、subscription 未取得、
+   * Stripe 側の取得失敗ではすべて null になる。
+   */
+  trialEndsAt: string | null;
 }
 
 /**
@@ -356,18 +361,46 @@ export async function getBillingOverview(
 
   // Free ユーザーは Stripe 問い合わせ不要
   if (!billingInfo.stripeCustomerId) {
-    return { billingInfo, paymentMethod: null, invoices: [] };
+    return { billingInfo, paymentMethod: null, invoices: [], trialEndsAt: null };
   }
 
   const stripe = requireStripe();
 
   // Stripe API を並列実行
-  const [paymentMethod, invoiceList] = await Promise.all([
+  const [paymentMethod, invoiceList, trialEndsAt] = await Promise.all([
     getPaymentMethodByCustomerId(stripe, billingInfo.stripeCustomerId),
     getInvoicesByCustomerId(stripe, billingInfo.stripeCustomerId),
+    getTrialEndsAt(stripe, billingInfo),
   ]);
 
-  return { billingInfo, paymentMethod, invoices: invoiceList };
+  return { billingInfo, paymentMethod, invoices: invoiceList, trialEndsAt };
+}
+
+/**
+ * 試用期間の終了時刻を Stripe から取得する（内部用）。
+ *
+ * **この関数は決して reject しない。** 呼び出し元の `Promise.all` は支払い方法・請求書の
+ * 取得と束ねられており、ここで throw すると「試用期限という付加情報」のために
+ * 支払い方法・請求書という既存の表示ごと落ちる。試用期限が出ないのは許容できるが、
+ * Billing 画面が丸ごと壊れるのは許容できないので、失敗は null に畳む。
+ *
+ * 失敗しうる実例: subscription が既に削除されている、Stripe の一時的エラー、
+ * `subscription_status` が profiles 側だけ trialing のまま残っている不整合。
+ */
+async function getTrialEndsAt(stripe: Stripe, billingInfo: BillingInfo): Promise<string | null> {
+  if (billingInfo.subscriptionStatus !== 'trialing') return null;
+  if (!billingInfo.subscriptionId) return null;
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(billingInfo.subscriptionId);
+    // trial_end は unix 秒。trialing でも null になりうる（trial 無しで作られた場合）
+    return subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null;
+  } catch (error) {
+    logger.error('Failed to fetch trial end from Stripe', {
+      errorType: error instanceof Error ? error.name : 'unknown',
+    });
+    return null;
+  }
 }
 
 /**
