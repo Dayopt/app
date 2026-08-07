@@ -55,7 +55,7 @@ apps/product/src/features/entry/server/
 
 ```typescript
 // apps/product/src/features/{feature}/server/{feature}-service.ts
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Db{Entity}Row = Database['public']['Tables']['{entities}']['Row'];
@@ -226,7 +226,7 @@ export const appRouter = createTRPCRouter({
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { logger } from '@/lib/logger';
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@/lib/database';
 ```
 
 ## チェックリスト

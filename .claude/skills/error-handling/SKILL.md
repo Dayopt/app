@@ -1,13 +1,13 @@
 ---
 name: error-handling
-description: try/catch を新規に書く時、tRPC mutation/query の `onError` 実装時、ErrorBoundary の配置・粒度変更時、Sentry 連携コード（`captureException` / scope 設定）編集時、AppError 正規化が漏れている実装を検出した時、ユーザー向けエラー通知が未実装の async 処理を見つけた時に発動。AppError 正規化 → ログ出力 → ユーザー通知 → 自動復旧の4段パターンを適用する。型定義のみ・UI 文言のみの変更では発動しない。
+description: try/catch を新規に書く時、tRPC mutation/query の `onError` 実装時、ErrorBoundary の配置・粒度変更時、Sentry 連携コード（`captureException` / scope 設定）編集時、エラー正規化が漏れている実装を検出した時、ユーザー向けエラー通知が未実装の async 処理を見つけた時に発動。正規化・Sentry 送信・ユーザー通知・自動復旧の4責務を呼び出し側で組み合わせるパターンを適用する。型定義のみ・UI 文言のみの変更では発動しない。
 effort: low
 maxTurns: 10
 ---
 
 # エラーハンドリングスキル
 
-Dayoptでの統一エラー処理パターンを支援するスキル。
+Dayoptのエラー処理パターン（層ごとに分散した4責務を呼び出し側で組み合わせる）を支援するスキル。
 
 ## When to Use
 
@@ -17,70 +17,82 @@ Dayoptでの統一エラー処理パターンを支援するスキル。
 - tRPC mutation/query に `onError` handler を追加する時
 - 新規 ErrorBoundary を配置する時、または既存 ErrorBoundary の粒度を変える時
 - Sentry 連携コード（`captureException` / scope / context 設定）を編集する時
-- try/catch で `console.error` や生の `throw` のみで AppError 正規化が漏れている実装を検出した時
+- try/catch で `console.error` や生の `throw` のみでエラー正規化（`ServiceError` 化 / Sentry 送信）が漏れている実装を検出した時
 - ユーザー向けエラー通知（toast / modal / inline alert）が未実装の mutation / async 処理を見つけた時
 
 ## When NOT to Use
 
-- 型定義のみの変更（エラーフロー未変更、`AppError` 型の export 追加など）
+- 型定義のみの変更（エラーフロー未変更、エラー型の export 追加など）
 - テストの正常系 assertion 追加のみ（エラーパスを触らない）
 - UI 文言のみの error message 修正（`docs/ai/copywriting.md` に従う、ロジック変更なし）
 
 ## エラー処理の全体像
 
+統一パイプライン（単一の `AppError` 型 + 1 関数のハンドラ）は**存在しない**。正規化 / Sentry 送信 / ユーザー通知 / 自動復旧の 4 責務は層ごとに分散しており、呼び出し側がその層の道具を組み合わせる。
+
 ```
-エラー発生
+エラー発生 — どの層で起きたかで経路が分かれる
     ↓
-AppError に正規化
-    ↓
-┌─────────────────────────────────────┐
-│  1. ログ出力（logger + Sentry）      │
-│  2. ユーザー通知（toast/modal）      │
-│  3. 自動復旧（retry/fallback）       │
-│  4. メトリクス更新                   │
-└─────────────────────────────────────┘
+┌─ server（tRPC service 層）────────────────────────────┐
+│ 正規化: ServiceError を throw → handleServiceError が │
+│         ERROR_CODE_MAP で TRPCError へ変換            │
+│ ログ:   想定外は captureUnexpectedError 系で Sentry へ │
+└───────────────────────────────────────────────────────┘
+┌─ client（query / mutation）───────────────────────────┐
+│ 自動復旧: QueryClient に一元設定（query 3回 /         │
+│           mutation 1回。認証エラーと 404 は除外）      │
+│ 通知:     各 mutation の onError で toast.error を     │
+│           呼ぶ（中央ディスパッチャは無い —            │
+│           書き忘れるとユーザーに何も見えない）         │
+└───────────────────────────────────────────────────────┘
+┌─ render（React）──────────────────────────────────────┐
+│ ErrorBoundary → handleReactError → Sentry             │
+│ fallback UI がユーザー通知を担う                       │
+└───────────────────────────────────────────────────────┘
 ```
 
 ## グローバルエラーハンドラー
 
+エラー処理を1関数へ集約する `handleError` のようなグローバルハンドラーは存在しない。ログ出力（Sentry）とユーザー通知（toast）は呼び出し側が個別に組み合わせる。
+
 ```typescript
-import { handleError, handleWithRecovery } from '@/lib/errors';
-import { ERROR_CODES } from '@/lib/errors/error-codes';
+import { captureUnexpectedError } from '@/lib/sentry';
+import { toast } from '@/lib/toast';
 
 // シンプルなエラー処理
 try {
   await riskyOperation();
 } catch (error) {
-  await handleError(error as Error, ERROR_CODES.UNEXPECTED_ERROR, {
-    showUserNotification: true,
+  captureUnexpectedError(error as Error, {
     source: 'component-name',
+    operation: 'risky_operation',
   });
+  toast.error('保存に失敗しました');
 }
+```
 
-// 自動復旧付き
-const result = await handleWithRecovery(() => fetchData(), ERROR_CODES.API_TIMEOUT, {
-  retryEnabled: true,
-});
+自動復旧（リトライ）は呼び出し側が opt-in するラッパー関数ではなく、`QueryClient`（`apps/product/src/lib/trpc/query-client.ts`）に一元設定されている:
 
-if (result.success) {
-  // 成功（復旧含む）
-  console.log(result.data);
-} else {
-  // 失敗
-  console.error(result.error);
-}
+```typescript
+// apps/product/src/lib/trpc/query-client.ts（抜粋）
+retry: (failureCount, error) => {
+  if (isAuthError(error)) return false; // 認証エラーはリトライしない
+  if (error && 'status' in error && error.status === 404) return false;
+  return failureCount < 3;
+},
+retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 ```
 
 ## エラーコード
 
-主要なエラーコードは `@/lib/errors/error-codes` で定義：
+サービスエラーコード → tRPC エラーコードのマッピングは `@/lib/trpc/error-code-map` の `ERROR_CODE_MAP` で定義（カテゴリ enum ではなくフラットな `Record<string, TRPCErrorCode>`）：
 
-| カテゴリ   | コード例                             | 用途       |
-| ---------- | ------------------------------------ | ---------- |
-| AUTH       | `INVALID_TOKEN`, `SESSION_EXPIRED`   | 認証エラー |
-| API        | `API_TIMEOUT`, `RATE_LIMIT_EXCEEDED` | APIエラー  |
-| DATABASE   | `CONNECTION_FAILED`, `DUPLICATE_KEY` | DBエラー   |
-| VALIDATION | `REQUIRED_FIELD`, `INVALID_FORMAT`   | 入力エラー |
+| カテゴリ（ファイル内コメント区分） | コード例                                   | 用途           |
+| ---------------------------------- | ------------------------------------------ | -------------- |
+| 共通エラー                         | `NOT_FOUND`, `VALIDATION_FAILED`           | 汎用エラー     |
+| 認証・認可エラー                   | `UNAUTHORIZED`, `FORBIDDEN`                | 認証エラー     |
+| Billing関連                        | `STRIPE_NOT_CONFIGURED`, `CHECKOUT_FAILED` | 課金エラー     |
+| 外部カレンダー関連                 | `REAUTH_REQUIRED`, `PROVIDER_UNAVAILABLE`  | 外部連携エラー |
 
 ## ErrorBoundary配置
 
@@ -105,9 +117,8 @@ if (result.success) {
 // components/ErrorBoundary.tsx
 'use client';
 
-import { Component, ReactNode } from 'react';
-import { handleError } from '@/lib/errors';
-import { ERROR_CODES } from '@/lib/errors/error-codes';
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { handleReactError } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -127,11 +138,10 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // グローバルエラーハンドラーに報告
-    void handleError(error, ERROR_CODES.RENDER_ERROR, {
+    handleReactError(error, errorInfo, {
       source: 'ErrorBoundary',
-      showUserNotification: false,
     });
 
     this.props.onError?.(error);
@@ -228,31 +238,37 @@ const mutation = api.tags.create.useMutation({
 
 ## Sentry連携
 
-```typescript
-// lib/sentry/integration.ts
-import * as Sentry from '@sentry/nextjs';
-import { AppError } from '@/lib/errors';
+`AppError` 型は存在しない。実装は `Error` をそのまま扱う（`apps/product/src/lib/sentry/integration.ts` 抜粋）:
 
-export function captureAppError(error: AppError) {
-  Sentry.captureException(error, {
-    tags: {
-      category: error.category,
-      code: error.code,
-      severity: error.severity,
-    },
-    extra: {
-      userMessage: error.userMessage,
-      context: error.metadata?.context,
-    },
-    user: error.metadata?.userId ? { id: error.metadata.userId } : undefined,
+```typescript
+// lib/sentry/integration.ts（AppError 型は存在しない）
+import * as Sentry from '@sentry/nextjs';
+
+/** 未処理エラーを一度だけ Sentry に送信する */
+export function captureUnexpectedError(error: Error, context: CaptureErrorContext = {}): void {
+  if (capturedErrors.has(error)) return;
+  capturedErrors.add(error);
+
+  const { userId, componentStack, ...technicalContext } = context;
+  const sanitized = sanitizeTechnicalContext(technicalContext);
+
+  Sentry.withScope((scope) => {
+    scope.setTags(stringTags(sanitized));
+    if (hasErrorCode(error)) scope.setTag('errorCode', error.code);
+    if (userId) scope.setUser({ id: userId });
+    if (componentStack) scope.setContext('react', { componentStack });
+
+    Sentry.captureException(error);
   });
 }
 
-// エラー境界と組み合わせ
-export function reportErrorToSentry(error: Error, componentStack?: string) {
-  Sentry.captureException(error, {
-    extra: { componentStack },
-  });
+// エラー境界と組み合わせ（digest 付き Server Component 失敗は onRequestError に任せる）
+export function captureClientBoundaryError(
+  error: Error & { digest?: string },
+  context: CaptureErrorContext = {},
+): void {
+  if (error.digest) return;
+  captureUnexpectedError(error, context);
 }
 ```
 
@@ -311,9 +327,9 @@ ErrorBoundary配置時：
 ## 関連ファイル
 
 ```
-apps/product/src/lib/errors/                  # エラーコード・パターン定義
-apps/product/src/lib/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
-apps/product/src/lib/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
+apps/product/src/lib/sentry/                  # Sentry連携（integration.ts, scrub-pii.ts）
+apps/product/src/lib/trpc/errors.ts           # tRPCエラーハンドリング（handleServiceError, ServiceError）
+apps/product/src/lib/trpc/error-code-map.ts   # エラーコードマッピング（ERROR_CODE_MAP）
 apps/product/src/lib/tanstack-query/          # TanStack Queryキャッシュ・楽観的更新
 ```
 
