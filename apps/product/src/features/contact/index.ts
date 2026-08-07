@@ -10,7 +10,6 @@
 // --- Components ---
 export { ContactDialog } from './components/ContactDialog';
 
-// --- Types ---
-export type { ContactCategory, ContactFormInput } from './types';
-
-// ここにないものはfeature内部専用
+// ここにないものはfeature内部専用。
+// 型（ContactCategory / ContactFormInput）は feature 内からのみ参照されているため
+// 公開していない。cross-feature の consumer ができた時点で export を足す。
