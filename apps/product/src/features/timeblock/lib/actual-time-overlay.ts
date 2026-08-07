@@ -45,7 +45,7 @@ export const NO_OVERLAY: ActualTimeDiffOverlay = {
   heightDelta: 0,
 };
 
-export function toMinutesOfDay(date: Date): number {
+function toMinutesOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 

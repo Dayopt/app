@@ -579,18 +579,18 @@ Feature 同士は直接 import できない。Composition Layer（`src/app/` の
 
 ```tsx
 // ❌ Calendar から Timeblock を直接 import
-import { TimeblockCard } from '@/features/timeblock/components/card/TimeblockCard';
+import { DateTimeSection } from '@/features/timeblock/components/inspector/fields/DateTimeSection';
 
 // ❌ deep import
 import { useTimeblockInspectorStore } from '@/features/timeblock/stores/useTimeblockInspectorStore';
 
 // ✅ barrel export 経由
-import { TimeblockCard } from '@/features/timeblock';
+import { DateTimeSection } from '@/features/timeblock';
 
 // ✅ ページ層（Composition Layer）で合成
 // src/app/[locale]/(app)/calendar/page.tsx
 import { CalendarController } from '@/features/calendar';
-import { TimeblockInspector } from '@/features/timeblock';
+import { ConfirmDayButton } from '@/features/timeblock';
 ```
 
 **検出**: `npm run lint:boundaries` で違反を検出。
