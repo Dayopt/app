@@ -3,10 +3,6 @@
     "pageNav": {
       "calendar": "カレンダー",
       "stats": "振り返り"
-    },
-    "navBadge": {
-      "new": "NEW",
-      "beta": "β"
     }
   }
 }

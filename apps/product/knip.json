@@ -25,6 +25,8 @@
     "@dayopt/*",
     "sharp",
     "tw-animate-css",
-    "@tailwindcss/typography"
-  ]
+    "@tailwindcss/typography",
+    "postcss-load-config"
+  ],
+  "ignoreBinaries": ["op", "jq", "psql"]
 }
