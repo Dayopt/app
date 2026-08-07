@@ -38,6 +38,20 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 
 「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
 
+### domain 配下に barrel を置くかは feature ごとに選ぶ
+
+`domain/index.ts`（および `domain/{sub}/index.ts`）は**必須ではない**。現状 `domain/` を持つ 5 feature のうち barrel があるのは 2 つだけで、これは揃えるべき不統一ではない。
+
+| feature   | domain barrel | 理由                                                                                                                  |
+| --------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| auth      | あり          | consumer が barrel 経由で参照している                                                                                 |
+| timeblock | あり          | 同上（9 export）                                                                                                      |
+| calendar  | **なし**      | consumer が leaf を直接 import しており、barrel が孤児化した（[#1857](https://github.com/Dayopt/dayopt/issues/1857)） |
+| review    | なし          | 同上                                                                                                                  |
+| tags      | なし          | 同上                                                                                                                  |
+
+判断基準は「**barrel 経由の consumer が実際にいるか**」。いなければ置かない。`auth` / `timeblock` に倣って空振りの barrel を足すと、knip が unused file として検出し続ける（実際に #1854 で 4 件検出された）。feature barrel（`features/{name}/index.ts`）は cross-feature の公開 API として必須だが、domain barrel は feature 内部の都合なのでこの制約を受けない。
+
 ## RPC / DB response transformer は domain ではなく server
 
 RPC row の snake_case shape に密結合した変換（snake → camel rename / null → undefined 変換 / outer key rename など）は **`features/{name}/server/` に server transformer として置く**。
