@@ -65,6 +65,19 @@ describe('EstimationFeedforward', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('draft の長さが負なら表示しない（start > end の不正入力中）', () => {
+    render(<EstimationFeedforward destination="plan" tagId="tag-a" draftMinutes={-30} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('draft の長さが NaN なら表示しない（Invalid Date 由来）', () => {
+    // `NaN <= 0` は false なので、`<= 0` だけのガードでは「NaN 分」を描画してしまう
+    render(<EstimationFeedforward destination="plan" tagId="tag-a" draftMinutes={Number.NaN} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('query が失敗しても ErrorState を出さず静かに消える', () => {
     // 失敗時は data が undefined。受動的なヒントなのでエラー表示はしない
     // （`.claude/rules/quality.md` の ErrorState 必須ルールに対する明示的な例外）

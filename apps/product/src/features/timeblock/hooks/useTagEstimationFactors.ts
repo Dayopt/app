@@ -45,7 +45,10 @@ export function useTagEstimationFactors(): TagEstimationFactors {
   return useMemo(
     () => ({
       project(tagId, draftMinutes) {
-        if (tagId == null || draftMinutes <= 0) return null;
+        // Number.isFinite を先に見る。`NaN <= 0` は false なので、`<= 0` だけだと
+        // Invalid Date 由来の NaN を素通りさせ「NaN 分」を描画してしまう。
+        // Inspector は時刻入力が壊れている間も draft の値をそのまま渡してくる。
+        if (tagId == null || !Number.isFinite(draftMinutes) || draftMinutes <= 0) return null;
         const entry = factorsByTagId.get(tagId);
         if (!entry) return null;
         return {
