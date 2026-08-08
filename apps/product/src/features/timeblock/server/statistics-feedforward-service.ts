@@ -16,7 +16,7 @@ import { fetchPlansForEstimation, fetchRecordsByPlanIds } from './statistics-fet
 import { minutesBetween } from './statistics-service-grouping';
 import type { ServiceSupabaseClient } from './types';
 
-/** ADR-026 の「直近 4 週」。`plans.start_at` に対して切る。 */
+/** ADR-026 の「直近 4 週」。`plans.start_at` の [now - 28 日, now) で切る。 */
 export const ESTIMATION_WINDOW_DAYS = 28;
 
 export class StatisticsFeedforwardService {
@@ -30,7 +30,8 @@ export class StatisticsFeedforwardService {
    */
   async getTagEstimationFactors(userId: string, now = new Date()): Promise<TagEstimationFactor[]> {
     const startDate = new Date(now.getTime() - ESTIMATION_WINDOW_DAYS * MS_PER_DAY).toISOString();
-    const plans = await fetchPlansForEstimation(this.supabase, userId, { startDate });
+    const endDate = now.toISOString();
+    const plans = await fetchPlansForEstimation(this.supabase, userId, { startDate, endDate });
     if (plans.length === 0) return [];
 
     const records = await fetchRecordsByPlanIds(
