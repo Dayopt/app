@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
+import {
+  BillingServiceError,
+  getBillingInfo,
+  getBillingOverview,
+  syncSubscriptionStatus,
+} from '../billing-service';
 
 const stripeMock = vi.hoisted(() => ({
   customers: {
@@ -10,7 +15,7 @@ const stripeMock = vi.hoisted(() => ({
     retrieve: vi.fn(),
   },
   checkout: { sessions: { create: vi.fn() } },
-  subscriptions: { list: vi.fn() },
+  subscriptions: { list: vi.fn(), retrieve: vi.fn() },
   billingPortal: { sessions: { create: vi.fn() } },
   paymentMethods: { retrieve: vi.fn() },
   invoices: { list: vi.fn() },
@@ -218,6 +223,92 @@ describe('billing-service', () => {
           ),
         ).resolves.toBeUndefined();
       }
+    });
+  });
+  describe('getBillingOverview の trialEndsAt', () => {
+    const TRIALING_PROFILE = {
+      id: 'user-1',
+      subscription_status: 'trialing',
+      stripe_customer_id: 'cus_test',
+      subscription_id: 'sub_test',
+    };
+
+    function stubCustomerAndInvoices() {
+      stripeMock.customers.retrieve.mockResolvedValue({
+        deleted: false,
+        invoice_settings: { default_payment_method: null },
+      });
+      stripeMock.invoices.list.mockResolvedValue({ data: [] });
+    }
+
+    it('trialing なら trial_end を ISO へ変換して返す', async () => {
+      stubCustomerAndInvoices();
+      // 2026-08-21T00:00:00Z の unix 秒
+      stripeMock.subscriptions.retrieve.mockResolvedValue({ trial_end: 1787270400 });
+
+      const overview = await getBillingOverview(createProfileSupabase(TRIALING_PROFILE), 'user-1');
+
+      expect(overview.trialEndsAt).toBe('2026-08-21T00:00:00.000Z');
+    });
+
+    it('trial_end が null なら trialEndsAt も null（Stripe の型は number | null）', async () => {
+      stubCustomerAndInvoices();
+      stripeMock.subscriptions.retrieve.mockResolvedValue({ trial_end: null });
+
+      const overview = await getBillingOverview(createProfileSupabase(TRIALING_PROFILE), 'user-1');
+
+      expect(overview.trialEndsAt).toBeNull();
+    });
+
+    it('trialing 以外では subscription を引かない（追加の Stripe 呼び出しをしない）', async () => {
+      stubCustomerAndInvoices();
+
+      const overview = await getBillingOverview(
+        createProfileSupabase({ ...TRIALING_PROFILE, subscription_status: 'active' }),
+        'user-1',
+      );
+
+      expect(overview.trialEndsAt).toBeNull();
+      expect(stripeMock.subscriptions.retrieve).not.toHaveBeenCalled();
+    });
+
+    it('Stripe が失敗しても支払い方法・請求書を巻き添えにせず trialEndsAt だけ null になる', async () => {
+      // この契約が壊れると「試用期限という付加情報」のために Billing 画面が丸ごと落ちる
+      stubCustomerAndInvoices();
+      stripeMock.invoices.list.mockResolvedValue({
+        data: [
+          {
+            id: 'in_1',
+            created: 1787270400,
+            amount_paid: 1000,
+            currency: 'jpy',
+            status: 'paid',
+            hosted_invoice_url: null,
+          },
+        ],
+      });
+      stripeMock.subscriptions.retrieve.mockRejectedValue(new Error('No such subscription'));
+
+      const overview = await getBillingOverview(createProfileSupabase(TRIALING_PROFILE), 'user-1');
+
+      expect(overview.trialEndsAt).toBeNull();
+      expect(overview.invoices).toHaveLength(1);
+    });
+
+    it('Stripe 顧客が無ければ Stripe を一切引かず trialEndsAt は null', async () => {
+      const overview = await getBillingOverview(
+        createProfileSupabase({
+          id: 'user-1',
+          subscription_status: 'free',
+          stripe_customer_id: null,
+          subscription_id: null,
+        }),
+        'user-1',
+      );
+
+      expect(overview.trialEndsAt).toBeNull();
+      expect(stripeMock.subscriptions.retrieve).not.toHaveBeenCalled();
+      expect(stripeMock.customers.retrieve).not.toHaveBeenCalled();
     });
   });
 });

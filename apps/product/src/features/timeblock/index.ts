@@ -57,6 +57,11 @@ export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
 export { ConfirmDayButton } from './components/editor/TimeblockRecordActions';
 
 // =============================================================================
+// Components (作成時フィードフォワード — calendar のドラッグ作成からも使う)
+// =============================================================================
+export { EstimationFeedforward } from './components/editor/EstimationFeedforward';
+
+// =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { DateTimeSection } from './components/inspector/fields/DateTimeSection';

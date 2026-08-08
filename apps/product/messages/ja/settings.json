@@ -629,7 +629,8 @@
             "unlimitedAI": "AI振り返り無制限 + モデル選択"
           }
         }
-      }
+      },
+      "trialEndsAt": "試用期間は {date} までです"
     }
   }
 }

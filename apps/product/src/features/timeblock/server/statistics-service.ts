@@ -6,9 +6,10 @@ import 'server-only';
  * Step 0 の Aggregation Source Contract（`docs/projects/time-model-split/step-0-statistics-rpc-policy.md`）
  * に従い、実績系は `records`、予定系は `plans`、予実比較は `plans` LEFT JOIN `records`（`plan_id` 経由）を読む。
  *
- * **dormant**: このクラスは router から未接続。既存 RPC ベースの router
- * (`statistics-general-router.ts` 等) は現状維持のまま、この service は Step 8 の
- * カットオーバーで router 内部の実装として丸ごと差し替えられる前提のシグネチャを持つ。
+ * Step 8 のカットオーバーは完了済みで、**統計 procedure はすべてこのクラス経由**で動く
+ * （`statistics-general-router.ts` / `statistics-kpi-router.ts` / `statistics-summary-router.ts`
+ * の全 procedure が `new StatisticsService(ctx.supabase)` を呼ぶ）。PL/pgSQL の統計 RPC は
+ * 呼ばれていない。
  *
  * 公開 API は facade（このファイル）。実装はドメイン単位の service に分割されている:
  * - General（タグ別統計・時間帯分布・トレンド）: statistics-general-service.ts
@@ -18,6 +19,7 @@ import 'server-only';
  * - 行取得: statistics-fetchers.ts / 行組み立て: statistics-row-builders.ts
  */
 
+import { StatisticsFeedforwardService } from './statistics-feedforward-service';
 import type { DateRangeInput } from './statistics-fetchers';
 import { StatisticsGeneralService } from './statistics-general-service';
 import type { BlankRateInput } from './statistics-kpi-service';
@@ -29,12 +31,14 @@ import { StatisticsTagDashboardService } from './statistics-tag-dashboard-servic
 import type { ServiceSupabaseClient } from './types';
 
 export class StatisticsService {
+  private readonly feedforwardService: StatisticsFeedforwardService;
   private readonly generalService: StatisticsGeneralService;
   private readonly kpiService: StatisticsKpiService;
   private readonly summaryService: StatisticsSummaryService;
   private readonly tagDashboardService: StatisticsTagDashboardService;
 
   constructor(supabase: ServiceSupabaseClient) {
+    this.feedforwardService = new StatisticsFeedforwardService(supabase);
     this.generalService = new StatisticsGeneralService(supabase);
     this.kpiService = new StatisticsKpiService(supabase);
     this.summaryService = new StatisticsSummaryService(supabase, this.kpiService);
@@ -90,6 +94,14 @@ export class StatisticsService {
   /** `get_blank_rate` 相当。予定（plans）ベースのスケジュール時間から空白率を算出する。 */
   async getBlankRate(userId: string, input: BlankRateInput) {
     return this.kpiService.getBlankRate(userId, input);
+  }
+
+  /**
+   * 作成時フィードフォワード用のタグ別見積もり係数（直近 4 週の中央値、`n >= 3`）。
+   * 定義は `domain/tag-estimation-factor.ts` を参照。
+   */
+  async getTagEstimationFactors(userId: string) {
+    return this.feedforwardService.getTagEstimationFactors(userId);
   }
 
   // ---------------------------------------------------------------------------

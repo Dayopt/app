@@ -189,7 +189,10 @@
         "unskipped": "スキップを解除しました",
         "planCreated": "予定を追加しました ✓"
       },
-      "migratedLocked": "移行された過去の記録は編集できません"
+      "migratedLocked": "移行された過去の記録は編集できません",
+      "feedforward": {
+        "recentActual": "このタグの直近実績は {duration} 前後です"
+      }
     }
   }
 }

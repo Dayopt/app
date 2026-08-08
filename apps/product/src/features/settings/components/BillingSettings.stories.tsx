@@ -100,8 +100,9 @@ function makeBillingMocks(
   billingInfo: BillingInfo,
   paymentMethod: PaymentMethod | null = null,
   invoices: InvoiceItem[] = [],
+  trialEndsAt: string | null = null,
 ) {
-  const overview: BillingOverview = { billingInfo, paymentMethod, invoices };
+  const overview: BillingOverview = { billingInfo, paymentMethod, invoices, trialEndsAt };
   return {
     'billing.getOverview': overview,
     'billing.getInfo': billingInfo,
@@ -151,10 +152,20 @@ export const ProPlan: Story = {
   },
 };
 
-/** トライアル中ユーザー（trialing）。カード情報・請求履歴なし */
+/** トライアル中ユーザー（trialing）。カード情報・請求履歴なし。試用期限を表示する */
 export const TrialingPlan: Story = {
   parameters: {
-    trpcMocks: makeBillingMocks(TRIALING_BILLING_INFO, null, []),
+    trpcMocks: makeBillingMocks(TRIALING_BILLING_INFO, null, [], '2026-08-21T00:00:00.000Z'),
+  },
+};
+
+/**
+ * trialing だが Stripe から試用期限を取得できなかった場合。
+ * Badge と説明文は従来どおり出て、期限の行だけが消える。
+ */
+export const TrialingPlanWithoutEndDate: Story = {
+  parameters: {
+    trpcMocks: makeBillingMocks(TRIALING_BILLING_INFO, null, [], null),
   },
 };
 
