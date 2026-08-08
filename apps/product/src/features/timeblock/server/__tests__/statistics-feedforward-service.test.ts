@@ -55,7 +55,7 @@ function buildPair(index: number, actualMinutes = 90) {
 }
 
 describe('StatisticsFeedforwardService', () => {
-  it('4 週窓は plan.start_at に対して切る（record の発生時刻では切らない）', async () => {
+  it('4 週窓は plan.start_at の [28 日前, now) で切る（record の発生時刻では切らない）', async () => {
     const { plansMock, service } = createService([], []);
 
     await service.getTagEstimationFactors(USER_ID, NOW);
@@ -67,7 +67,9 @@ describe('StatisticsFeedforwardService', () => {
       NOW.getTime() - ESTIMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
     expect(plansMock.gte).toHaveBeenCalledWith('start_at', expectedStart);
+    expect(plansMock.lt).toHaveBeenCalledWith('start_at', NOW.toISOString());
     expect(plansMock.gte).toHaveBeenCalledTimes(1);
+    expect(plansMock.lt).toHaveBeenCalledTimes(1);
   });
 
   it('窓は 28 日（ADR-026 の「直近 4 週」）', () => {
