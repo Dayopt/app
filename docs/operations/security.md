@@ -187,10 +187,17 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 定期検査の正本は `/gardening` §5.7（月次セキュリティ sweep）とする。実施内容:
 
 1. Supabase security advisors の確認（`mcp__supabase__get_advisors`、read-only）
-2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`）
+2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`。後述のローカルパッチ済み advisory は `auditConfig` で除く）
 3. `/claude-security` の全体スキャン実行をユーザーへ提案
 
 2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`.claude/rules/workflow.md` §PR 粒度）でもあるため、月次の手動実行に留める。
+
+`image-size@2.0.2` の
+`GHSA-w3rx-r6r6-pgpr` と `GHSA-5p2g-fcmc-qvqq` は修正版が未リリースのため、
+`pnpm-workspace.yaml` の `patchedDependencies` で上流修正を固定している。
+`security:check` は `pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` で
+この 2 件だけを除外し、局所パッチの回帰は
+`scripts/__tests__/image-size-security-patch.test.ts` で検査する。
 
 secret 検出はこれとは別で、**全 PR で自動実行される**。`docs-guard.yml`（job 名 `docs & secrets guard`、path filter なし）が gitleaks で base ref からの差分を、`pnpm secrets:check` で tracked tree 全体を見る。加えて `ci.yml` がビルド後の client bundle への混入を grep する。ローカルでは `pnpm check` に `secrets:check` が含まれる（CI 側は docs-guard の 1 回のみで、二重実行はしない）。
 
