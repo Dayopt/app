@@ -9,6 +9,11 @@ allowBuilds:
   sharp: true
   supabase: true
   unrs-resolver: true
+auditConfig:
+  # image-size 2.0.2 に未リリースの上流修正を適用済みの advisory だけを除外する
+  ignoreGhsas:
+    - GHSA-w3rx-r6r6-pgpr
+    - GHSA-5p2g-fcmc-qvqq
 overrides:
   tar: '^7.5.4'
   tmp: '^0.2.4'
@@ -17,7 +22,7 @@ overrides:
   # security: Dependabot alerts解消 (#1569)
   # 同一 major に閉じる `^` で上限を付け、意図せぬメジャー更新を防ぐ
   hono: '^4.12.25'
-  dompurify: '^3.4.11'
+  dompurify: '^3.4.13'
   esbuild: '^0.28.1'
   'js-yaml@4.1.1': '^4.2.0'
   'postcss@8.4.31': '^8.5.16'
@@ -27,3 +32,9 @@ overrides:
   'valibot@1.2.0': '^1.4.2'
   'js-yaml@3.14.2': '3.15.1'
   'uuid@8.3.2': '11.1.1'
+  # estimo が 5.1.5 を exact pin しているため、脆弱な v5 だけを置換する
+  'nanoid@5.1.5': '^5.1.16'
+# image-size 2.0.2 の未リリース上流修正を固定する。
+# GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq は patchedDependencies で緩和済み。
+patchedDependencies:
+  image-size@2.0.2: patches/image-size@2.0.2.patch

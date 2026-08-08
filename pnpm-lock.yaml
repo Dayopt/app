@@ -10,7 +10,7 @@ overrides:
   '@types/react': 19.2.17
   '@types/react-dom': 19.2.3
   hono: ^4.12.25
-  dompurify: ^3.4.11
+  dompurify: ^3.4.13
   esbuild: ^0.28.1
   js-yaml@4.1.1: ^4.2.0
   postcss@8.4.31: ^8.5.16
@@ -19,6 +19,10 @@ overrides:
   valibot@1.2.0: ^1.4.2
   js-yaml@3.14.2: 3.15.1
   uuid@8.3.2: 11.1.1
+  nanoid@5.1.5: ^5.1.16
+
+patchedDependencies:
+  image-size@2.0.2: 77c12533e3a635c4066c55da8952f4912e8210416539dc1249550fa639271595
 
 importers:
 
@@ -5681,8 +5685,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.12:
-    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
+  dompurify@3.4.13:
+    resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -7500,8 +7504,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.5:
-    resolution: {integrity: sha512-Ir/+ZpE9fDsNH0hQ3C68uyThDXzYcim2EqcZ8zn8Chtt1iylPT9xXJB0kPCnqzgcEGikO9RxSrh63MsmVCU7Fw==}
+  nanoid@5.1.16:
+    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
     engines: {node: ^18 || >=20}
     hasBin: true
 
@@ -14411,7 +14415,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.12:
+  dompurify@3.4.13:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -15003,7 +15007,7 @@ snapshots:
       '@sitespeed.io/tracium': 0.3.3
       commander: 12.0.0
       find-chrome-bin: 2.0.4
-      nanoid: 5.1.5
+      nanoid: 5.1.16
       puppeteer-core: 24.22.0
     transitivePeerDependencies:
       - bare-abort-controller
@@ -15656,7 +15660,7 @@ snapshots:
 
   ignore@7.0.6: {}
 
-  image-size@2.0.2: {}
+  image-size@2.0.2(patch_hash=77c12533e3a635c4066c55da8952f4912e8210416539dc1249550fa639271595): {}
 
   image-ssim@0.2.0: {}
 
@@ -16529,7 +16533,7 @@ snapshots:
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.21
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       es-toolkit: 1.49.0
       katex: 0.16.47
       khroma: 2.1.0
@@ -16886,7 +16890,7 @@ snapshots:
 
   nanoid@3.3.17: {}
 
-  nanoid@5.1.5: {}
+  nanoid@5.1.16: {}
 
   nanospinner@1.2.2:
     dependencies:
@@ -19124,7 +19128,7 @@ snapshots:
   vite-plugin-storybook-nextjs@3.3.0(next@16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0)):
     dependencies:
       '@next/env': 16.0.0
-      image-size: 2.0.2
+      image-size: 2.0.2(patch_hash=77c12533e3a635c4066c55da8952f4912e8210416539dc1249550fa639271595)
       magic-string: 0.30.21
       module-alias: 2.3.4
       next: 16.2.11(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -19139,7 +19143,7 @@ snapshots:
   vite-plugin-storybook-nextjs@3.3.0(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0)):
     dependencies:
       '@next/env': 16.0.0
-      image-size: 2.0.2
+      image-size: 2.0.2(patch_hash=77c12533e3a635c4066c55da8952f4912e8210416539dc1249550fa639271595)
       magic-string: 0.30.21
       module-alias: 2.3.4
       next: 16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -19154,7 +19158,7 @@ snapshots:
   vite-plugin-storybook-nextjs@3.3.0(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(storybook@10.5.6(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0)):
     dependencies:
       '@next/env': 16.0.0
-      image-size: 2.0.2
+      image-size: 2.0.2(patch_hash=77c12533e3a635c4066c55da8952f4912e8210416539dc1249550fa639271595)
       magic-string: 0.30.21
       module-alias: 2.3.4
       next: 16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
