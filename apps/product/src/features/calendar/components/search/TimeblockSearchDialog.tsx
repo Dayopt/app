@@ -338,8 +338,8 @@ export function TimeblockSearchDialog({
 
   const handleOpenResult = useCallback(
     (result: TimeblockSearchResult) => {
-      onOpenResult(result);
       resetAndClose();
+      onOpenResult(result);
     },
     [onOpenResult, resetAndClose],
   );

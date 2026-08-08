@@ -173,7 +173,9 @@ describe('TimeblockSearchDialog', () => {
   });
 
   it('結果を選ぶとopen callbackを呼び、検索語をリセットして閉じる', async () => {
-    const props = renderDialog();
+    const onOpenChange = vi.fn();
+    const onOpenResult = vi.fn();
+    renderDialog({ onOpenChange, onOpenResult });
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'work' } });
 
     await act(async () => {
@@ -182,10 +184,13 @@ describe('TimeblockSearchDialog', () => {
     expect(screen.queryByText('Legacy deep work title')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Work'));
 
-    expect(props.onOpenResult).toHaveBeenCalledWith(
+    expect(onOpenResult).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'plan-1', kind: 'plan' }),
     );
-    expect(props.onOpenChange).toHaveBeenCalledWith(false);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onOpenChange.mock.invocationCallOrder[0]).toBeLessThan(
+      onOpenResult.mock.invocationCallOrder[0]!,
+    );
     expect(screen.getByRole('combobox')).toHaveValue('');
   });
 
