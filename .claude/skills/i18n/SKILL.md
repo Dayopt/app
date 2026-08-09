@@ -41,6 +41,8 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 1. [`docs/product/glossary.md`](../../../docs/product/glossary.md) — UI で使う言葉の正解（エントリ / 予定 / 記録 / タグ等）
 2. [`docs/product/glossary.md`](../../../docs/product/glossary.md#禁止表記一覧) — 使ってはいけない表現の一覧
 
+用語だけでなく**トーン**（研究者ペルソナ、CTA 階層、数字フレーミング）は [`docs/ai/copywriting.md`](../../../docs/ai/copywriting.md) が正本。UI 文言を書く時はこちらも読む。
+
 新規テキスト追加後に `pnpm copy:check` で禁止表記が含まれていないか確認する。
 
 ## アーキテクチャ（重要）
