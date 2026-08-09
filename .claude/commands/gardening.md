@@ -1,93 +1,49 @@
 ---
-description: 月次ガーデニング — セッションログを月次ロールアップへ蒸留し、ストックの鮮度を検証し、notes の昇格漏れを回収する
+description: 月次ガーデニング — 自動パートは月初の Routine が実施し、このコマンドは Routine の成果物をレビューして価値判断だけを行う
 ---
 
 # /gardening
 
-月次で docs/ 全体の鮮度と一貫性を保守する。10ステップを順に実施し、当月のjournalを1回だけ新規作成して終わる。`docs/engineering/log/YYYY-MM-01-journal.md` がすでに存在する場合は再編集せず、月次ガーデニング済みと報告する。追加監査が必要なら別の日付付きnoteを作る。
+月次で docs/ 全体の鮮度と一貫性を保守する。2026-08-09 に発動アーキテクチャを反転した（経緯は [2026-08-09-gardening-routine-split.md](../../docs/engineering/log/2026-08-09-gardening-routine-split.md)）:
 
-## 手順
+- **自動パート** — 毎月 1 日 09:00 JST に Routine（Claude Code cloud の scheduled trigger）が fresh session で実施する。手順の正本は本ファイル §自動パート。Routine の prompt は「本ファイルの §自動パート に従う」とだけ指しており、手順の変更はこのファイルの編集だけで済む
+- **人間パート** — Routine が作った draft PR とレポートを材料に、ユーザーと Main が価値判断だけを行う。本コマンド（`/gardening`）はこちらを指す
 
-### 1. セッションログ → 月次ロールアップへの蒸留
+機械にできる検出・調査・下書きを人間の記憶に依存させない。人間が使うのは判断だけ、が設計原則（`.claude/rules/workflow.md` §Pause point の「機械で強制できるものは機械へ」と同じ思想）。
 
-先月分の `docs/engineering/log/YYYY-MM-DD-session.md` を全て読み、今回新規作成する当月の`docs/engineering/log/YYYY-MM-01-journal.md`に蒸留する。
+## 自動パート（Routine が実施）
 
-蒸留の観点: できごと / 決定 / 学び / 数値(コミット数、変更規模など)。セッションログの生ログをそのまま転記せず、意味のある単位にまとめる。
+fresh session で以下を順に実施し、成果物を「draft PR + issue + journal 内のレビュー待ちリスト」に着地させる。**価値判断（ルールの足し引き、superseded 判定、機能の削除候補の確定）は実行せず、必ずレビュー待ちリストに列挙して人間パートへ回す。** アプリコードは変更しない。
 
-### 2. ストックの鮮度チェック(上位10件)
+1. **journal 下書き** — 前月の merge commit 履歴（`git log --merges --since`）、closed issue / PR、各ドメイン `log/` の decision・note・feedback・incident ログから、当月 `docs/engineering/log/YYYY-MM-01-journal.md` を下書きする。観点: できごと / 決定 / 学び / 数値（マージ PR 数、変更規模など）。frontmatter は `status: frozen` + `date: YYYY-MM-01`
+2. **ストック鮮度 triage（上位 10 件）** — `docs:check` 対象ディレクトリ（`business/` `product/` `marketing/` `engineering/` `operations/` `company/`）配下の全 `.md`（各 `log/` を除く）を `last_verified` の古い順に並べ、上位 10 件を検証する。問題なければ `last_verified` だけ更新、内容が古ければ修正して更新。**現状に対応する内容が無くなっている場合は `status: superseded` にせず、レビュー待ちリストへ**
+3. **notes 昇格候補の検出** — 前月の各ドメイン `log/`（decision / journal 以外の調査・監査ログ）を確認し、ストックへ反映すべき内容を反映する。feedback / incident の note で `operations/` 側の手順に未反映のものも同様
+4. **スモークテスト（1 問）** — 記憶に頼らず docs のみを根拠にプロダクトの仕組みへの質問に 1 つ答える。答えられなければ穴を `docs/engineering/log/YYYY-MM-DD-gardening-gap-<topic>.md` に記録し、可能ならストック側も直す
+5. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C を実施。発見は同 skill の intake で起票する
+6. **公開コンテンツ監査** — `docs-audit` skill を実行し、実機能と公開 docs のギャップ・鮮度乖離・en/ja 非対称を検出して起票する。`area:blog` issue が枯渇していればレビュー待ちリストに記す。コンテンツの数字（Search Console / Vercel Analytics の指名検索・流入・上位クエリ）は取得できる環境なら journal に記録し、できなければ「未取得」と明記する
+7. **セキュリティ sweep** — `mcp__supabase__get_advisors`（type: security、read-only）と `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録
+8. **四半期チェック** — `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月無ければ、レビュー待ちリストに「AI 設定棚卸し（`audit-ai-config` skill）の実施提案」を記す
+9. **成果物の着地** — branch `claude/gardening-YYYY-MM` を作り、journal（レビュー待ちリスト含む）と鮮度更新を commit して **draft PR** を作成する。issue は各ステップ内で起票済みであること。PR 本文に「実施したステップ / 起票した issue / レビュー待ちリストの件数」を要約する
 
-`docs:check` の対象ディレクトリ(`business/` `product/` `marketing/` `engineering/` `operations/` `company/`)配下の全 `.md`(各ドメインの `log/` を除く)を `last_verified` の古い順に並べ、上位10件を triage する。各ファイルについて:
+## 人間パート（/gardening で実施）
 
-- 検証して問題なければ `last_verified` の日付だけ今日に更新する
-- 内容が古ければ現状に合わせて修正し、`last_verified` を更新する
-- 現状に対応する内容がなくなっていれば `status: superseded` にする(削除するかその場に残すかは内容の性質で判断。`docs/README.md` §フロントマター 参照)
+Routine の draft PR が存在する前提で、ユーザーと Main が以下を行う。所要 30 分以内を目安とする。
 
-### 3. notes からストックへの昇格
+1. **draft PR のレビューと merge** — journal 下書きと鮮度更新を確認し、`pnpm branch:finish` で merge する
+2. **レビュー待ちリストの裁定** — superseded 判定、昇格の採否、AI 設定棚卸しの実施可否を決める
+3. **判断層の検証**（`CLAUDE.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）
+4. **実行層の検証**（`.claude/rules/workflow.md` §Pause point） — ④各チェックは今月何かを捕まえたか ⑤pause point の迂回の痕跡は無いか ⑥機械へ昇格できる項目は無いか
+5. **深掘りスキャン** — `/claude-security` の「Scan codebase」はユーザーのみ起動できる（`disable-model-invocation: true`）。前回スキャンからの経過を添えて実施を判断する
+6. 3・4 で所見が出たら `docs/product/log/YYYY-MM-DD-simple-rules-review.md` に記録する。項目や pause point を変える場合はメタルール（**1 つ足すときは 1 つ削る**）に従い `/decision` で決定ログを残す
 
-先月分の各ドメイン `docs/{domain}/log/YYYY-MM-DD-*.md`(decision / session / journal 以外の調査・監査ログ)を確認し、対応するドメインのストックへ反映すべき内容があれば反映する。反映した場合は「どの note のどの内容を、どのストックファイルへ反映したか」を月次ロールアップ(このコマンドのステップ 10)に記録する。
+## 故障モード
 
-feedback / incident の note は、対応がまだ `operations/` 側の手順に反映されていなければここで反映する。
-
-### 4. スモークテスト(1問)
-
-記憶に頼らず docs のみを根拠に、プロダクトの仕組みについての質問に1つ答えてみる(例:「entries の時間重なり制約はどう実装されているか」「なぜ繰り返し予定を採用しないのか」)。
-
-- 答えられた場合: 特に記録不要
-- 答えられなかった場合、または docs の記述が古くて答えと食い違った場合: その穴を `docs/engineering/log/YYYY-MM-DD-gardening-gap-<topic>.md` に記録し、可能ならその場でストック側も修正する
-
-### 5. 判断層と実行層の検証（月次）
-
-ルールとチェックリストが**守られているかではなく、使われているか**を見る。使われていない項目は消えているのと同じで、残っていると形骸化を招く。
-
-判断層（`CLAUDE.md` §シンプルルール）:
-
-1. **今月このルールに戻った場面はあったか。** 1 度も戻らなかったルールは、判断の役に立っていないか発動条件が狭すぎる。どちらかを疑う
-2. **無言で破られたルールはないか。** ルールと違う判断は理由を一文残す約束になっている。理由なく通ったものがあれば、その判断を今から言語化する
-3. **先月自分が触らなかった機能はどれか（ルール 5）。** 2 週間触っていない機能を挙げる。挙がったら削除候補として起票する（ステップ 7 の sweep がこの後に来るので、そちらへ回してよい）
-
-実行層（`.claude/rules/workflow.md` §Pause point の各発動点）:
-
-4. **各チェックは今月何かを捕まえたか。** 捕まえた項目と、1 度も引っかからなかった項目を分ける。後者は削る候補
-5. **pause point の迂回の痕跡はないか。** 観察できるものだけを見る: `branch:finish` を使わない手動マージ（merge commit の作られ方で分かる）、pre-push を外した push、`--no-verify` のブロック履歴。痕跡があれば機械強制へ昇格できないかを検討する
-6. **機械へ昇格できる項目はないか。** 発話で担保している項目のうち、hooks / CI で止められるものは昇格させる（止まるのが最強。別 issue に切り出してよい）
-
-所見が出たら `docs/product/log/YYYY-MM-DD-simple-rules-review.md` に記録する。所見なしなら記録不要（件数だけステップ 10 に書く）。
-
-項目や pause point を変える判断が出た場合はメタルール（**1 つ足すときは 1 つ削る**）に従い、`/decision` で決定ログを残す。
-
-### 6. AI 設定棚卸しの提案（四半期）
-
-`docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月存在しなければ、`audit-ai-config` skill による AI 設定棚卸しの実施をユーザーに提案する（このステップで実施はしない。提案のみ）。
-
-### 7. 並行レーン sweep（月次）
-
-`dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C（sweep）を実施する。issue の外に溜まった作業（advisors / Dependabot alerts / 監査ログ残タスク / 生成スクリプトの故障 / 放置 PR）を検出し、見つけたら同 skill の intake で起票する。結果はステップ 10 のロールアップに件数を記録する。
-
-### 8. 公開コンテンツ監査（月次）
-
-`docs-audit` skill（`.claude/skills/docs-audit/SKILL.md`）を実行し、プロダクトの実機能と公開 docs（`apps/web/content/docs/`）のギャップ・鮮度乖離・en/ja 非対称を検出して Issue 化する。あわせて `area:blog` の Issue が枯渇していれば `blog-ideas` skill の実行をユーザーに提案する（提案のみ）。検出件数・起票件数はステップ 10 のロールアップに記録する。運用フローの正本は `docs/marketing/content-operations.md`。
-
-コンテンツの数字も同時に記録する。Search Console と Vercel Analytics から、指名検索（"dayopt"）の表示・クリック、docs / blog の流入、上位クエリをステップ 10 の journal に書く（`docs/marketing/strategy.md` の指標と対応）。Search Console が未設定ならユーザーに設定を依頼する（`GOOGLE_SITE_VERIFICATION` env はコード対応済み）。
-
-### 9. セキュリティ sweep（月次）
-
-定期セキュリティ検査の cadence はここが正本（体制の全体像は `docs/operations/security.md` 第2部）。以下を順に実施する。
-
-1. **Supabase security advisors** — `mcp__supabase__get_advisors`（type: `security`）で production の指摘を確認する（read-only）
-2. **依存の脆弱性** — `pnpm security:check`（= `pnpm audit --audit-level=moderate`）を実行する
-3. **深掘りスキャンの提案** — `/claude-security` の「Scan codebase」実行をユーザーに提案する。**このコマンドは `disable-model-invocation: true` のため AI 側からは起動できない**。提案のみ行い、実行はユーザーが自分で `/claude-security` を叩く。前回スキャンからの経過（`CLAUDE-SECURITY-*` ディレクトリの有無・日付）を添えて提案する。plugin 未インストールの環境（新しいマシン / 別プロファイル）では代わりに導入手順を案内する（`docs/operations/security.md` 第2部 §定期検査の cadence の前提）
-4. **起票** — 1・2 で修正が必要な指摘を見つけたら、**このステップ内で** `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の intake を使って起票する。ステップ 7 はこの時点で終了しているため、そちらへ送らない
-5. **記録** — 1〜4 で所見が出たら `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録する。所見なしなら記録不要（件数だけステップ 10 に書く）
-
-実行件数・所見件数・起票件数はステップ 10 のロールアップに記録する。
-
-### 10. 当月journalの作成
-
-ステップ1の蒸留と、今回のガーデニング実施内容(蒸留したセッション件数、triageした上位10件の対応、昇格したnote、スモークテストの結果、判断層・実行層の検証で出た所見件数)をまとめ、当月`docs/engineering/log/YYYY-MM-01-journal.md`を新規作成して終了する。frontmatterは`status: frozen`と`date: YYYY-MM-01`を使う。
+- **当月 5 日を過ぎても journal の draft PR が無い** — Routine の故障を疑う。`list_triggers` で状態を確認し、必要なら手動で自動パートを実施する（CLAUDE.md §Docs 運用責務 の提案トリガー）
+- **Routine が起票だけして PR を作れなかった** — 部分成果として扱い、人間パートで不足分を補う。黙って全部やり直さない（重複起票を防ぐ）
 
 ## 守ること
 
-- journalを含むlogは初回commit後に追記・編集しない。当月journalが存在する場合は`YYYY-MM-DD-gardening-<topic>.md`を新規作成する
-- ステップ2のストック修正は通常の編集(append-only ではない)。ただしその修正内容自体はロールアップに残す
-- このコマンドの最後に、当月分のロールアップファイルが存在する状態になっていること(CLAUDE.md の月次ガーデニング提案トリガーの解除条件)
-- `archive/` ディレクトリは作らない(`docs/README.md` §フロントマター 参照)。役目を終えたストックは `status: superseded` を付けてその場に残すか、git に任せて削除する
+- journal を含む log は初回 commit 後に追記・編集しない。当月 journal が存在する場合は `YYYY-MM-DD-gardening-<topic>.md` を新規作成する
+- 鮮度 triage のストック修正は通常の編集（append-only ではない）。ただし修正内容自体は journal に残す
+- `archive/` ディレクトリは作らない（`docs/README.md` §フロントマター 参照）。役目を終えたストックは `status: superseded` を付けてその場に残すか、git に任せて削除する
+- Routine の出力は必ず issue・draft PR・レビュー待ちリストのいずれかに着地させる。「実施したがどこにも残っていない」を作らない（読まれない在庫の防止）

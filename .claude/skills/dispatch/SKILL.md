@@ -30,7 +30,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ## 操作 A: dispatch — issue を worker に渡す
 
-1. `gh issue list --label status:ready` で候補を選ぶ（ユーザー指定があればそれを優先）。テーマ単位で見たい場合は該当 `scope:epic` issue の sub-issues から絞る
+1. `gh issue list --milestone <現行milestone> --label status:ready` で候補を選ぶ（ユーザー指定があればそれを優先）。milestone 内が空なら `--label status:ready` 全体から。テーマ単位で見たい場合は該当 `scope:epic` issue の sub-issues から絞る
 2. **束ね**: 関連する issue（同一 area / 同一機能系統）は 1 worker セッション・1 branch・1 PR にまとめて渡すのを標準とする（`.claude/rules/workflow.md` §PR 粒度）。1 issue ずつ切り出さない
 3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/time-model-split/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列で処理するのを第一候補**とする（並行させない理由が衝突回避なら、束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
 4. **凍結チェック**: `status:blocked` が付いていないことを確認する（束ねた場合は全 issue について確認する。1 つでも凍結なら、その issue だけ束ねから外す）
@@ -66,6 +66,7 @@ size は**束ねた後の合計**で判定する。
 2. 重複なら既存 issue に本文追記 or コメントで統合。新規なら handoff-quality で起票
 3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `size:*` / `quality:security` / `ops` など。**新ラベルを作らない**
 4. `status:*` で着手可否を表す（着手可なら `status:ready`、前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く
+5. **milestone を判断する**: 現行 milestone（次の minor version。open は常に 1 個、世代交代は releasing skill Phase 3.1）に入れて押し込む作業なら milestone を付ける。付けなければバックログ。「next」milestone は作らない
 
 ## 操作 C: sweep — 定期棚卸しで gap を検出する
 
@@ -77,6 +78,7 @@ size は**束ねた後の合計**で判定する。
 - [ ] NOT_PLANNED で close された issue の中身が、実は未完了のまま受け皿を失っていないか
 - [ ] 生成系スクリプト（`api:spec` / `types:generate` / `rls:snapshot`）が現在も exit 0 で通るか
 - [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
+- [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）
 - [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 
 ## 操作 D: unfreeze — 凍結解除の判定

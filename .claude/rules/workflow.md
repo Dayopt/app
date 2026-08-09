@@ -159,7 +159,6 @@ docs/projects/{project-name}/
 | plan 提示前 | `plan-format.md` の必須セクション + `/plan-review` | 書かないと plan が成立しない               |
 | push 前     | `.husky/pre-push`                                  | commit set ごとに 1 回止まる（下記の注意） |
 | merge 前    | `pnpm branch:finish`                               | 機械。完了定義 5 点を満たさないと止まる    |
-| session end | `/session-end`                                     | ユーザー起動                               |
 | commit 前   | husky `pre-commit` / `commit-msg`                  | 機械                                       |
 
 push 前の pause は git レベルの hook なので Claude / 人間 / wrapper script のすべてに効く。ただし**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。`--no-verify` での迂回は agent には禁止（`.claude/hooks/pre-tool-guard.sh` がブロック）、人間が使う場合は理由を一言残す。

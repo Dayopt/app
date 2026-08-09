@@ -262,6 +262,22 @@ gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 # エラーが急増していないことを確認
 ```
 
+#### Phase 3.1: milestone の締めと次の開設（minor リリース時のみ）
+
+milestone は「次の minor version」を単位に常に 1 個だけ open にする運用（経緯は [2026-08-09-milestone-versioning.md](../../../docs/engineering/log/2026-08-09-milestone-versioning.md)）。minor リリースを出したらここで世代交代する。patch リリースでは何もしない。
+
+```bash
+# リリースした version の milestone を閉じる（open issue が残っていれば次へ移す）
+gh api repos/Dayopt/dayopt/milestones --jq '.[] | select(.title=="vX.Y") | .number'
+gh api -X PATCH repos/Dayopt/dayopt/milestones/<number> -f state=closed
+
+# 次の minor の milestone を開く
+gh api repos/Dayopt/dayopt/milestones -f title="vX.Y+1"
+```
+
+- 閉じる前に open のまま残った issue は、自動で外れないため**明示的に次の milestone へ移すか、milestone を外してバックログへ戻す**
+- 閉じる時に「この束は外部共有（blog release 記事）に値するか」を一言添えてユーザーに判断を仰ぐ。義務ではなく判断ベース（`docs/marketing/content-operations.md` §更新の連鎖）
+
 ## よくある失敗
 
 | 失敗                   | 対策                                           |

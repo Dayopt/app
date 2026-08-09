@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-24
+last_verified: 2026-08-09
 ---
 
 # コンテンツ運用（正本）
@@ -27,13 +27,14 @@ Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/
 
 プロダクトの振る舞いが変わったら、この順で連鎖させる。
 
-| タイミング | 更新するもの                                                  | 担当ルール                         |
-| ---------- | ------------------------------------------------------------- | ---------------------------------- |
-| 実装 PR    | Storybook story を同時更新                                    | `docs/engineering/storybook.md`    |
-| 実装 PR    | `docs/product/specs/` の該当 spec を同じ変更で更新            | `CLAUDE.md` §Docs 運用責務         |
-| リリース   | GitHub Release + blog の `release` 記事（en/ja）              | `releasing` + `docs-writing` skill |
-| リリース   | 公開 docs の該当ページ更新（`draft: true` → レビュー → 公開） | `docs-writing` skill               |
-| リリース   | ブログネタを issue 起票**だけ**する                           | `blog-ideas` skill                 |
+| タイミング     | 更新するもの                                                                                | 担当ルール                                                      |
+| -------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 実装 PR        | Storybook story を同時更新                                                                  | `docs/engineering/storybook.md`                                 |
+| 実装 PR        | `docs/product/specs/` の該当 spec を同じ変更で更新                                          | `CLAUDE.md` §Docs 運用責務                                      |
+| リリース       | GitHub Release（毎リリース）                                                                | `releasing` skill                                               |
+| milestone 締め | blog の `release` 記事（en/ja）を**書くか判断する**。公開ローンチ後に運用開始。義務化しない | `releasing` skill Phase 3.1 が判断を促す → `docs-writing` skill |
+| リリース       | 公開 docs の該当ページ更新（`draft: true` → レビュー → 公開）                               | `docs-writing` skill                                            |
+| リリース       | ブログネタを issue 起票**だけ**する                                                         | `blog-ideas` skill                                              |
 
 ブログは起票までを自動リズムに入れ、執筆は切り離す。docs は網羅性が価値なので更新を義務化し、ブログは `docs/marketing/voice.md` の 3 本柱に合うものだけ選んで書く（義務化すると禁止している「AI 大量生成の没個性コンテンツ」になる）。
 
