@@ -1709,21 +1709,24 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 ### 中（乗り換えは日単位）
 
-| 依存                                   | 浸透                                                                            | 今日捨てたら何が壊れるか                          | 逃げ道                                                                                                                 | 出口検討トリガー                    |
-| -------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status | deploy 経路、PR 検証の一部                        | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線の組み直しが主コスト                              | 価格改定、他ホストでの Next.js 冷遇 |
-| **Stripe**                             | Pro 課金（billing）                                                             | 課金・サブスク管理                                | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）が重い                                                      | 手数料改定、アカウント凍結リスク    |
-| **Google**                             | OAuth ログイン + external-calendar 連携                                         | Google ログインユーザーのアクセス、カレンダー同期 | email ログインが併存、連携は opt-in 機能                                                                               | OAuth / Calendar API の政策変更     |
-| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存                       | 開発運用の全経路                                  | git 自体は分散。CI workflow と運用 script の書き直しが主コスト                                                         | 価格改定、Actions 課金の構造変化    |
-| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                         | 開発テンポ（プロダクトは無傷）                    | 規約はすべて plain markdown で repo 内。AGENTS.md（Codex）と二系統の実績あり。tier 読み替え原則で model 名に固定しない | 価格・品質・提供条件の変化          |
+| 依存                                   | 浸透                                                                                               | 今日捨てたら何が壊れるか                                                                                     | 逃げ道                                                                                                                                                               | 出口検討トリガー                    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status                    | deploy 経路、PR 検証の一部                                                                                   | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線の組み直しが主コスト                                                                            | 価格改定、他ホストでの Next.js 冷遇 |
+| **Stripe**                             | Pro 課金（billing）                                                                                | 課金・サブスク管理                                                                                           | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）が重い                                                                                                    | 手数料改定、アカウント凍結リスク    |
+| **Google**                             | OAuth ログイン + external-calendar 連携                                                            | Google ログインユーザーのアクセス、カレンダー同期                                                            | email ログインが併存、連携は opt-in 機能                                                                                                                             | OAuth / Calendar API の政策変更     |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存                                          | 開発運用の全経路                                                                                             | git 自体は分散。CI workflow と運用 script の書き直しが主コスト                                                                                                       | 価格改定、Actions 課金の構造変化    |
+| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                                            | 開発テンポ（プロダクトは無傷）                                                                               | 規約はすべて plain markdown で repo 内。AGENTS.md（Codex）と二系統の実績あり。tier 読み替え原則で model 名に固定しない                                               | 価格・品質・提供条件の変化          |
+| **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース | production では webhook 処理が停止（`assertWebhookRedisAvailable()` が throw）し、全 rate limit が無効化する | `@upstash/redis` は REST API 前提のため素の Redis へは drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る | 価格改定、REST API の互換性変更     |
+
+**Upstash は「rate limit だけの浅い依存」ではない。** env は optional だが、それが成り立つのは production 以外に限る（`apps/product/src/lib/rate-limit/upstash.ts`）。
 
 ### 浅い（乗り換えは時間単位、単機能で代替容易）
 
-| 依存                     | 役割                     | 逃げ道                                                  |
-| ------------------------ | ------------------------ | ------------------------------------------------------- |
-| **Resend**               | メール送信               | 代替 SMTP / API へ切替。suppression list の持ち出しのみ |
-| **Upstash Redis**        | rate limit               | env が optional 設計。代替 KV へ切替                    |
-| **Cloudflare Turnstile** | Bot 対策                 | 代替 CAPTCHA へ切替                                     |
-| **Sentry**               | エラー監視               | 代替 APM へ切替。履歴は持ち出さない割り切り             |
-| **UptimeRobot**          | 外形監視                 | 代替外形監視へ切替（Read-only API 運用）                |
-| **1Password**            | secrets 注入（`op run`） | `.op-env` スキーマごと他 secrets manager へ             |
+| 依存                     | 役割                                      | 逃げ道                                                  |
+| ------------------------ | ----------------------------------------- | ------------------------------------------------------- |
+| **Resend**               | メール送信                                | 代替 SMTP / API へ切替。suppression list の持ち出しのみ |
+| **Cloudflare Turnstile** | Bot 対策                                  | 代替 CAPTCHA へ切替                                     |
+| **Sentry**               | エラー監視                                | 代替 APM へ切替。履歴は持ち出さない割り切り             |
+| **UptimeRobot**          | 外形監視                                  | 代替外形監視へ切替（Read-only API 運用）                |
+| **1Password**            | secrets 注入（`op run`）                  | `.op-env` スキーマごと他 secrets manager へ             |
+| **Slack**                | billing alert の incoming webhook（任意） | webhook URL 未設定なら no-op。代替通知先へ切替          |
