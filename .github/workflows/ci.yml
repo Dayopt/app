@@ -343,6 +343,7 @@ jobs:
           TEST_USER_EMAIL: ${{ steps.e2e-user.outputs.email }}
           TEST_USER_PASSWORD: ${{ steps.e2e-user.outputs.password }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
 
       - name: Stop Supabase
         if: always()
