@@ -31,5 +31,5 @@ date: 2026-08-09
 
 ## 運用メモ
 
-- 初代 milestone `v0.33` の作成はローカルで実施: `gh api repos/Dayopt/dayopt/milestones -f title=v0.33`（remote 環境に milestone 作成手段が無いため初回のみ手動。以後は Phase 3.1 が作る）
+- 初代 milestone は **`v0.34`**。本規約の導入と同じ流れで v0.33.0 をリリースし（v0.32.1 以降の未リリース 78 merge に名前を付ける記帳リリース。本番は main への merge ごとに継続デプロイ済みだったため deploy を伴わない）、その次の minor から milestone 運用を始めるため。作成コマンドは `gh api repos/Dayopt/dayopt/milestones -f title=v0.34`
 - minor 番号が予定とずれた場合（先に別の minor が出た等）は milestone を rename するだけでよい
