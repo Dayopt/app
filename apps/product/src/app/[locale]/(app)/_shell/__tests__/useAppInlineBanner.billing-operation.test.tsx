@@ -6,6 +6,14 @@ const beginPortalAttempt = vi.hoisted(() => vi.fn(() => OPERATION_ID));
 const portalMutate = vi.hoisted(() => vi.fn());
 const settlePortalAttempt = vi.hoisted(() => vi.fn(() => true));
 const toastError = vi.hoisted(() => vi.fn());
+const billingOverview = vi.hoisted(
+  () =>
+    ({
+      current: { billingInfo: { subscriptionStatus: 'past_due' } },
+    }) as {
+      current: { billingInfo: { subscriptionStatus: string | null } };
+    },
+);
 const mutationOptions = vi.hoisted(
   () =>
     ({ current: null }) as {
@@ -57,7 +65,7 @@ vi.mock('@/lib/trpc', () => ({
       },
       getOverview: {
         useQuery: () => ({
-          data: { billingInfo: { subscriptionStatus: 'past_due' } },
+          data: billingOverview.current,
         }),
       },
     },
@@ -70,6 +78,7 @@ describe('useAppInlineBanner billing operation', () => {
   beforeEach(() => {
     beginPortalAttempt.mockReturnValue(OPERATION_ID);
     settlePortalAttempt.mockReturnValue(true);
+    billingOverview.current = { billingInfo: { subscriptionStatus: 'past_due' } };
   });
 
   afterEach(() => {
@@ -112,5 +121,16 @@ describe('useAppInlineBanner billing operation', () => {
     });
 
     expect(window.location.hash).toBe('');
+  });
+
+  it.each([
+    ['active subscription', 'active'],
+    ['free account', null],
+  ])('hides the billing banner for %s', (_label, subscriptionStatus) => {
+    billingOverview.current = { billingInfo: { subscriptionStatus } };
+
+    const { result } = renderHook(() => useAppInlineBanner());
+
+    expect(result.current).toEqual({ visible: false, message: '' });
   });
 });
