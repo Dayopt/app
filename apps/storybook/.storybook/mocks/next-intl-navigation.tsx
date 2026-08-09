@@ -1,5 +1,6 @@
 import { createContext, useContext, type AnchorHTMLAttributes, type ReactNode } from 'react';
 
+import { useLocale } from 'next-intl';
 import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next/navigation';
 
 /** Storybook で再現する next-intl の最小 routing 設定。 */
@@ -26,6 +27,7 @@ interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'
 }
 
 interface GetPathnameArgs {
+  forcePrefix?: boolean;
   href: NavigationHref;
   locale: string;
 }
@@ -93,7 +95,12 @@ function isExternalHref(href: string): boolean {
 }
 
 /** routing.localePrefix に従って内部URLをlocalizeする。 */
-function localizeHref(href: NavigationHref, locale: string, routing: RoutingConfig): string {
+function localizeHref(
+  href: NavigationHref,
+  locale: string,
+  routing: RoutingConfig,
+  forcePrefix?: boolean,
+): string {
   const resolvedHref = resolveHref(href);
   if (isExternalHref(resolvedHref)) return resolvedHref;
 
@@ -105,7 +112,8 @@ function localizeHref(href: NavigationHref, locale: string, routing: RoutingConf
       : (routing.localePrefix ?? 'always');
   const localeFreeHref = stripLocalePrefix(resolvedHref, locales);
   const needsPrefix =
-    prefixMode === 'always' || (prefixMode === 'as-needed' && locale !== defaultLocale);
+    forcePrefix ??
+    (prefixMode === 'always' || (prefixMode === 'as-needed' && locale !== defaultLocale));
 
   if (!needsPrefix) return localeFreeHref;
 
@@ -115,14 +123,15 @@ function localizeHref(href: NavigationHref, locale: string, routing: RoutingConf
 /** Storybook用 next-intl/navigation モック。 */
 export function createNavigation(routing: RoutingConfig = {}) {
   const locales = routing.locales ?? ['en', 'ja'];
-  const defaultLocale = routing.defaultLocale ?? 'en';
 
   function MockLink({ href, children, locale, ...props }: LinkProps) {
-    const pathname = useStorybookPathname();
-    const currentLocale = locales.find(
-      (candidate) => pathname === `/${candidate}` || pathname.startsWith(`/${candidate}/`),
+    const currentLocale = useLocale();
+    const localizedHref = localizeHref(
+      href,
+      locale ?? currentLocale,
+      routing,
+      locale != null ? true : undefined,
     );
-    const localizedHref = localizeHref(href, locale ?? currentLocale ?? defaultLocale, routing);
 
     return (
       <a href={localizedHref} {...props}>
@@ -137,26 +146,46 @@ export function createNavigation(routing: RoutingConfig = {}) {
     usePathname: () => stripLocalePrefix(useStorybookPathname(), locales),
     useRouter: () => {
       const router = useNextRouter();
-      const pathname = useStorybookPathname();
-      const currentLocale =
-        locales.find(
-          (candidate) => pathname === `/${candidate}` || pathname.startsWith(`/${candidate}/`),
-        ) ?? defaultLocale;
+      const currentLocale = useLocale();
 
       return {
         ...router,
         push: (href: NavigationHref, options?: { locale?: string; scroll?: boolean }) =>
-          router.push(localizeHref(href, options?.locale ?? currentLocale, routing), {
-            scroll: options?.scroll,
-          }),
+          router.push(
+            localizeHref(
+              href,
+              options?.locale ?? currentLocale,
+              routing,
+              options?.locale != null ? true : undefined,
+            ),
+            {
+              scroll: options?.scroll,
+            },
+          ),
         replace: (href: NavigationHref, options?: { locale?: string; scroll?: boolean }) =>
-          router.replace(localizeHref(href, options?.locale ?? currentLocale, routing), {
-            scroll: options?.scroll,
-          }),
+          router.replace(
+            localizeHref(
+              href,
+              options?.locale ?? currentLocale,
+              routing,
+              options?.locale != null ? true : undefined,
+            ),
+            {
+              scroll: options?.scroll,
+            },
+          ),
         prefetch: (href: NavigationHref, options?: { locale?: string }) =>
-          router.prefetch(localizeHref(href, options?.locale ?? currentLocale, routing)),
+          router.prefetch(
+            localizeHref(
+              href,
+              options?.locale ?? currentLocale,
+              routing,
+              options?.locale != null ? true : undefined,
+            ),
+          ),
       };
     },
-    getPathname: ({ href, locale }: GetPathnameArgs) => localizeHref(href, locale, routing),
+    getPathname: ({ forcePrefix, href, locale }: GetPathnameArgs) =>
+      localizeHref(href, locale, routing, forcePrefix),
   };
 }
