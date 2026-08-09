@@ -5,7 +5,9 @@ paths:
   # §技術選定スタンス はベンダー・サービス・ツールの採用面でも発火させる
   # （workflow への action 追加、Vercel / Supabase 設定、運用 script も採用の入口）
   - 'apps/*/package.json'
+  - 'packages/*/package.json'
   - 'apps/product/vercel.json'
+  - 'supabase/**'
   - '.github/workflows/**'
   - 'scripts/**'
 ---
