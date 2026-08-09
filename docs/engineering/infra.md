@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-30
+last_verified: 2026-08-09
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -301,9 +301,12 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
+| `🛡️ docs & secrets guard` | GitHub Actions    | docs lifecycle と secret 漏えい防止の検査が成功すること    |
 | `Production Config Audit` | GitHub Actions    | live な Vercel env metadata が Production 契約を満たすこと |
 | `Vercel – product`        | Vercel GitHub App | Product の Preview build が成功すること                    |
 | `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
+
+`🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
 - **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
