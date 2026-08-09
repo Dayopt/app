@@ -120,19 +120,18 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
 - **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
 - **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
-- **月次ガーデニング** — `docs/engineering/log/` に当月のロールアップファイル（`YYYY-MM-01-journal.md`）が存在しない状態でセッションが始まったら、`/gardening` の実施をユーザーに提案する
+- **月次ガーデニング** — 自動パートは毎月 1 日に Routine が実施し、journal 下書きの draft PR を作る（正本は `.claude/commands/gardening.md`）。当月 5 日を過ぎても `YYYY-MM-01-journal.md` の draft PR も merge 済み journal も無い状態でセッションが始まったら、Routine の故障を疑ってユーザーに報告し、`/gardening`（人間パート + 自動パートの手動代行）を提案する
 
 ## コマンド一覧（.claude/commands/）
 
 `Skill` tool から起動する。
 
-| コマンド       | 内容                                                                               |
-| -------------- | ---------------------------------------------------------------------------------- |
-| `/decision`    | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成               |
-| `/plan-review` | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー       |
-| `/note`        | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応） |
-| `/session-end` | 当日の作業を `docs/engineering/log/YYYY-MM-DD-session.md` に記録                   |
-| `/gardening`   | 月次の docs / ルール / セキュリティ保守（手順 10 ステップは同ファイルが正本）      |
+| コマンド       | 内容                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `/decision`    | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成                                   |
+| `/plan-review` | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー                           |
+| `/note`        | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応）                     |
+| `/gardening`   | 月次ガーデニングの人間パート（Routine の成果物レビューと価値判断。自動パートの手順も同ファイルが正本） |
 
 ## Rule Map
 
