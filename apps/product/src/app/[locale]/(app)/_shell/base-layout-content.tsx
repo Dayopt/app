@@ -1,9 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { useTranslations } from 'next-intl';
-import { usePathname } from 'next/navigation';
 
 import { CalendarNavigationProvider } from '@/features/calendar';
 import {
@@ -35,15 +32,10 @@ interface BaseLayoutContentProps {
  *   カレンダーの searchParams 読み取りは CalendarNavigationProvider 内部で行う。
  */
 export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
-  const pathname = usePathname() || '/';
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const trialDialog = useTrialEndedDialog();
   const paymentDialog = usePaymentErrorDialog();
-
-  const localeFromPath = useMemo(() => {
-    return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
-  }, [pathname]);
 
   return (
     // CalendarNavigationProvider を常にレンダリングしてツリー構造を安定化。
@@ -60,9 +52,9 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
         </a>
 
         {isMobile ? (
-          <MobileLayout locale={localeFromPath}>{children}</MobileLayout>
+          <MobileLayout>{children}</MobileLayout>
         ) : (
-          <DesktopLayout locale={localeFromPath}>{children}</DesktopLayout>
+          <DesktopLayout>{children}</DesktopLayout>
         )}
         {/* Trial終了ダイアログ（全ページ共通、1度だけ表示） */}
         <TrialEndedDialog open={trialDialog.open} onClose={trialDialog.close} />
