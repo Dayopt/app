@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-08-02
+-- 最終同期日: 2026-08-09
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -24,6 +24,7 @@
 --   - 20260730090300_revoke_authenticated_timeblock_dml.sql
 --   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 --   - 20260802013954_add_product_events.sql
+--   - 20260809015344_optimize_soft_delete_rls_initplan.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -31,7 +32,11 @@
 
 -- ■ profiles: id = auth.uid()
 -- ■ plans / records:
---   SELECT: user_id = auth.uid() AND deleted_at IS NULL
+--   SELECT: (SELECT auth.uid()) = user_id AND (
+--     deleted_at IS NULL OR
+--     (SELECT current_setting('dayopt.soft_delete_user_id', true)) = user_id::TEXT
+--   )
+--     soft-delete marker は transaction-local で、InitPlan により statement ごとに 1 回読む。
 --   INSERT/UPDATE/DELETE policy は **grant 層で到達不能**。
 --     Candidate 6 (20260730090300 / 20260730090301) で authenticated の table 権限を
 --     SELECT だけに絞ったため、policy 評価より前に 42501 になる。policy は
