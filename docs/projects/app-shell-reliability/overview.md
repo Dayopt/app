@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 last_verified: 2026-08-09
 code: apps/product/src/app/[locale]/(app)/_shell
 ---
