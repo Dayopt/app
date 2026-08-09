@@ -39,7 +39,7 @@ code:
 
 前提条件: Production の tRPC endpoint で `plans.*` / `records.*` mutation の呼び出しが観測期間中 0 件であること。観測手段は Vercel runtime logs（`/api/trpc/plans.delete` 等の path 単位）を第一候補とする。DB 側の `pg_stat_user_functions` は `track_functions` 設定に依存するため、使う場合は事前に設定値を確認する。
 
-観測期間は「候補 6 merge（2026-08-03）以降の最終 production deploy から 14 日」を推奨する。drain 対象は旧 JS bundle を保持したままのブラウザだけであり、deploy のたびに旧 bundle は無効化される。14 日はシンプルルール 5（2 週間）と揃えた値で、短縮する場合はユーザーが判断する。
+観測期間は「候補 6 merge（2026-08-03）以降の最終 production deploy から 14 日」を推奨する。drain 対象は旧 JS bundle を保持したままのブラウザで、**deploy は新規ロードにしか効かない** — 開きっぱなし・休止中のタブは旧 bundle を期限なく実行し続けられるため、観測期間 0 件でも残存確率は 0 にならない。この残存は許容する判断として記録する: 観測窓を超えて休止していたタブが 8-1 後に旧 mutation を呼ぶと操作は失敗するが、失敗は書き込み前に返り（データ破壊なし）、reload で新 bundle に復帰する。明示的な version rejection / 強制 reload 導線は closed beta 規模ではこの 1 ケースのために作らない（作るなら別 issue）。14 日はシンプルルール 5（2 週間）と揃えた値で、短縮・延長とこの残存許容の最終判断はユーザーが行う。
 
 ## Stage 8-2 — 旧 timeblock RPC の drain migration（不可逆）
 
@@ -66,7 +66,7 @@ DROP しない対象（紛らわしいが現役）:
 
 - 8-1 が Production へ配信済みで、以後の観測期間（推奨 14 日）に旧 RPC の実行 0 件
 - forward restoration migration（`20260729073123` の定義から 3 関数 + restore 2 関数を再作成する SQL）を先に用意し、ephemeral Preview で適用 rehearsal を通す。rollback ではなく forward restoration で戻すのが checklist の要求
-- ephemeral Preview（data-less / non-persistent）で cleanup 適用 → 旧 RPC 呼び出しが `42883`（undefined function）で拒否されること、現行経路（command / MCP write）が無傷であることを確認
+- ephemeral Preview（data-less / non-persistent）で cleanup 適用 → 旧 RPC 呼び出しが関数不存在で拒否されることを確認。`SupabaseClient.rpc` 経由（既存アプリと同じ経路）では PostgREST の schema cache 状態により `PGRST202`（cache 未反映時は `42883`）が返るため、**両方を許容する**か `pg_proc` の catalog 照会で不存在を直接検証する（repo 内の先例: `rls-access.integration.test.ts` は存在しない `merge_tags` の検証を `PGRST202` で固定している）。現行経路（command / MCP write）が無傷であることも同時に確認
 
 ## Stage 8-3 — OAuth connection 契約の確定（不可逆）
 
@@ -80,7 +80,7 @@ DROP しない対象（紛らわしいが現役）:
 
 前提条件:
 
-- Production read-only preflight: `legacy_read_only = true` の行数、`connection_id IS NULL` の codes / tokens 行数、`write_enabled_at IS NOT NULL` の行数を記録する
+- Production read-only preflight: `legacy_read_only = true` の行数、`connection_id IS NULL` の codes / tokens 行数を記録する。`disable_pre_client_gate_write_connections` の対象件数は **migration と同じ predicate**（`write_enabled_at IS NOT NULL AND write_disabled_at IS NULL`）で数える — `write_enabled_at IS NOT NULL` だけで数えると無効化済みの行まで対象候補に含め、実際の UPDATE 対象 0 件でも 8-3 を不要に停止させる。参考値として `write_enabled_at IS NOT NULL` の総数も併記してよいが、停止判定に使うのは前者
 - `connection_id IS NULL` の既存行が残っている場合、`SET NOT NULL` の前に期限切れ削除（retention）での自然消滅を待つか、明示承認の上で終端させるかを決める
 
 ## 実行順序と承認境界

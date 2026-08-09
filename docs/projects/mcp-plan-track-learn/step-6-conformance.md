@@ -60,7 +60,7 @@ closed beta候補のexact SHAで次を満たす。
 1. 現在の公式conformance suiteと対象MCP specificationのversionを固定する
 2. repo内の1 commandで、外部networkへ公開せずにsuiteを再実行できるようにする
 3. active server suiteの結果、warning、既知failure IDを保存する
-4. 既知failureがsuite専用diagnostic toolだけに由来することを確認する
+4. 既知failureが「suite専用diagnostic toolの不在」または「意図的に実装しないoptional capability（Dayopt MCPはtoolsのみを宣言）」だけに由来することを確認する
 5. baselineにないfailure、warning、未実行testを失敗として扱う
 6. suite更新時は、expected failureが実際に実行されていることを人が確認する
 7. ChatGPT、Claude、Cursorの実機でOAuth discovery、resource indicator、tool discovery、tool callを確認する
