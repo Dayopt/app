@@ -1,12 +1,10 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
-
 import { AppHeader } from '@/components/shell/AppHeader';
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { InlineBanner } from '@dayopt/components';
+import { usePathname } from '@dayopt/i18n/navigation';
 
 import { ConnectedMobileAccountButton } from './MobileAccountButton';
 import { useAppInlineBanner } from './useAppInlineBanner';
@@ -15,7 +13,6 @@ import { MainContentWrapper } from './main-content-wrapper';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
-  locale: 'ja' | 'en';
 }
 
 /**
@@ -26,30 +23,17 @@ interface MobileLayoutProps {
  * - MainContent
  * - TagChipRow（Calendar のみ、固定フッター）
  */
-export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
+export function MobileLayout({ children }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
 
   const pathname = usePathname();
 
-  // localePrefix: 'as-needed' により default locale の URL は prefix なし
-  // (例: /day) の場合もあるため、prop の locale ではなく実際の
-  // URL セグメントから /en/ /ja/ のみを剥がす。未知の先頭セグメントは維持する。
-  const pathWithoutLocale = useMemo(
-    () => (pathname ?? '').replace(/^\/(en|ja)(?=\/|$)/, ''),
-    [pathname],
-  );
-
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
-  const hasOwnHeader = useMemo(
-    () =>
-      isCalendarViewPath(pathWithoutLocale) ||
-      pathWithoutLocale === '/settings' ||
-      pathWithoutLocale.startsWith('/settings/'),
-    [pathWithoutLocale],
-  );
+  const hasOwnHeader =
+    isCalendarViewPath(pathname) || pathname === '/settings' || pathname.startsWith('/settings/');
 
-  const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
+  const isCalendarView = isCalendarViewPath(pathname);
 
   return (
     <>
@@ -62,8 +46,8 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
           </AppHeader>
         )}
 
-        {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
-        {!hasOwnHeader && <InlineBanner {...banner} />}
+        {/* インラインバナー（自前ヘッダーを持つ画面を含む全ページ共通） */}
+        <InlineBanner {...banner} />
 
         {/* Main Content（calendar view ではタグフッター分の余白を確保） */}
         {isCalendarView ? (

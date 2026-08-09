@@ -1,8 +1,5 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
-
 import { PanelLeft } from 'lucide-react';
 
 import { AnimatedWidthPanel } from '@/components/shell/AnimatedWidthPanel';
@@ -12,6 +9,7 @@ import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
 import { Button, InlineBanner } from '@dayopt/components';
+import { usePathname } from '@dayopt/i18n/navigation';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
@@ -21,7 +19,6 @@ import { useAppInlineBanner } from './useAppInlineBanner';
 
 interface DesktopLayoutProps {
   children: React.ReactNode;
-  locale: 'ja' | 'en';
 }
 
 /**
@@ -32,7 +29,7 @@ interface DesktopLayoutProps {
  * - PageHeader + MainContent + Inspector
  *
  */
-export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
+export function DesktopLayout({ children }: DesktopLayoutProps) {
   const pathname = usePathname();
   const sidebar = useShellStore.use.sidebar();
   const sidebarSuppressed = useShellStore.use.sidebarSuppressed();
@@ -47,10 +44,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   };
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
-  const hasOwnHeader = useMemo(() => {
-    const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
-    return isCalendarViewPath(pathWithoutLocale);
-  }, [pathname, locale]);
+  const hasOwnHeader = isCalendarViewPath(pathname);
   const sidebarVisible = sidebar.open && !sidebarSuppressed;
 
   // サイドバーが閉じているときに表示するトグルボタン
@@ -91,8 +85,8 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
             </AppHeader>
           )}
 
-          {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
-          {!hasOwnHeader && <InlineBanner {...banner} />}
+          {/* インラインバナー（自前ヘッダーを持つ画面を含む全ページ共通） */}
+          <InlineBanner {...banner} />
 
           {/* Main Content + Inspector（自動的に残りのスペースを使用） */}
           <div className="min-w-0 flex-1 overflow-hidden">
