@@ -1,31 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { Avatar, AvatarFallback, AvatarImage, cn } from '@dayopt/components';
-
-const LOCALE_PREFIX_PATTERN = /^\/(en|ja)(?=\/|$)/;
-
-function getLocaleFromPathname(pathname: string | null | undefined): 'ja' | 'en' {
-  const segments = pathname?.split('/') ?? [];
-  return segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
-    ? segments[1]
-    : 'ja';
-}
+import { getPathname, usePathname } from '@dayopt/i18n/navigation';
 
 function buildSettingsReturnPath(
-  pathname: string | null,
+  pathname: string,
   searchParams: { toString: () => string },
 ): string {
-  const pathWithoutLocale = (pathname ?? '').replace(LOCALE_PREFIX_PATTERN, '') || '/day';
+  const returnPathname = pathname || '/day';
   const query = searchParams.toString();
 
-  return query ? `${pathWithoutLocale}?${query}` : pathWithoutLocale;
+  return query ? `${returnPathname}?${query}` : returnPathname;
 }
 
 interface MobileAccountButtonProps {
@@ -68,13 +60,20 @@ export function ConnectedMobileAccountButton({ className }: { className?: string
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
-  const locale = getLocaleFromPathname(pathname);
+  const locale = useLocale();
   const displayName = getDisplayName(user, 'User');
   const returnPath = buildSettingsReturnPath(pathname, searchParams);
+  const href = getPathname({
+    locale,
+    href: {
+      pathname: '/settings',
+      query: { returnTo: returnPath },
+    },
+  });
 
   return (
     <MobileAccountButton
-      href={`/${locale}/settings?returnTo=${encodeURIComponent(returnPath)}`}
+      href={href}
       displayName={displayName}
       avatarUrl={getAvatarUrl(user)}
       ariaLabel={t('navigation.navUser.account')}
