@@ -13,24 +13,7 @@ description: 各ドメインの log/ に意思決定ログを新規作成する
 1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `marketing` / `engineering` / `operations` / `company`)の判断かを判定する。迷ったら問い返す
 2. slug が指定されていなければ、何を決めたかを 1 フレーズで問い返す
 3. 今日の日付(`YYYY-MM-DD`)を確認する
-4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を [`docs/_templates/decision.md`](../../docs/_templates/decision.md) のテンプレートで作成する:
-
-   ```markdown
-   ---
-   status: frozen
-   date: YYYY-MM-DD
-   ---
-
-   # 決めたこと(1行)
-
-   ## 背景・当時の前提
-
-   ## 決定と理由
-
-   ## 却下した選択肢と、なぜ捨てたか
-
-   ## 影響・やること
-   ```
+4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を [`docs/_templates/decision.md`](../../docs/_templates/decision.md) の本文にある markdown 骨格で作成する
 
 5. 各セクションを対話の文脈から埋める。埋められない箇所はユーザーに問い返す(5分で書ける軽さを保つ。長い散文にしない)
 6. 確認不要。ファイル作成まで一気に実行する

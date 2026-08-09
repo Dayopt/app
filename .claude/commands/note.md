@@ -10,7 +10,7 @@ description: 各ドメインの log/ に時点ものの調査・監査・実験�
 
 ## 命名の特例
 
-以下のカテゴリは接頭辞を固定する(`docs/README.md` §書き方の約束 に準拠):
+以下のカテゴリは接頭辞を固定する(`docs/README.md` §書き方 に準拠):
 
 - ユーザーの声(感想・要望・不具合報告) → `YYYY-MM-DD-feedback-slug.md`(domain は基本 `product`)
 - 障害の記録 → `YYYY-MM-DD-incident-slug.md`(domain は基本 `operations`)

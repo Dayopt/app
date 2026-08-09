@@ -115,7 +115,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ## Docs 運用責務
 
-`docs/README.md` の地図・決定木・書き方の約束に従う。とくに以下は都度・自発的に実施する:
+`docs/README.md` の地図・決定木・書き方に従う。とくに以下は都度・自発的に実施する:
 
 - **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
 - **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する

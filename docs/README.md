@@ -122,6 +122,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - Mermaidを優先し、画像だけに設計情報を閉じ込めない
 - generated fileは生成元とcheck commandを冒頭に明記し、手編集しない
 - file / directory名はkebab-case。`log/`は日付prefixを使う
+- ユーザーの声の記録は `YYYY-MM-DD-feedback-<slug>.md`（基本 `product/log/`）、障害の記録は `YYYY-MM-DD-incident-<slug>.md`（基本 `operations/log/`）と接頭辞を固定する
 
 ## 運用
 
