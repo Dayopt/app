@@ -173,10 +173,28 @@ describeWithEnv('Block search', () => {
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
     expect(new URL(page.url()).searchParams.get('date')).toBe(recordDate);
+    await expect(
+      page
+        .locator('[data-calendar-grid][data-calendar-day-index="0"] [data-record-lane-card]', {
+          hasText: TAG_NAME,
+        })
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
 
-    // Inspector は modal dialog なので、開いたまま背後の検索ボタンは押せない。
-    // 実際の導線どおり一度閉じてから次の検索を開く。
+    // Inspectorを閉じた直後に同じblockを検索し直しても、close時のURL cleanupが
+    // 後着して再オープンを打ち消さない。
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: TAG_NAME })).toHaveCount(0);
+    await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
+    await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(RECORD_NOTE);
+    await page.getByText(RECORD_NOTE).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('timeblock'))
+      .toBe(`record:${recordId}`);
+    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
+
+    // Inspector は modal dialog なので、実際の導線どおり一度閉じてから次の検索を開く。
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: TAG_NAME })).toHaveCount(0);
 
@@ -190,6 +208,13 @@ describeWithEnv('Block search', () => {
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`plan:${planId}`);
     expect(new URL(page.url()).searchParams.get('date')).toBe(planDate);
+    await expect(
+      page
+        .locator('[data-calendar-grid][data-calendar-day-index="0"] [data-plan-lane-card]', {
+          hasText: TAG_NAME,
+        })
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
   });
 

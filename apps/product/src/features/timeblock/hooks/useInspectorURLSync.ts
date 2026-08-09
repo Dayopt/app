@@ -92,7 +92,10 @@ export function useInspectorURLSync() {
         const newUrl = currentParams.toString()
           ? `${currentPathname}?${currentParams.toString()}`
           : currentPathname;
-        router.replace(newUrl, { scroll: false });
+        // 検索overlayから同じblockを即座に選び直しても、古い非同期replaceが
+        // 後着して新しいInspector URLを消さないよう同期的に反映する。
+        previousURLParamRef.current = null;
+        window.history.replaceState(null, '', newUrl);
       }
     }
   }, [isOpen, timeblockId, timeblockKind, pathname, searchParams, router]);

@@ -4,11 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTimeblockInspectorStore } from '../../stores/useTimeblockInspectorStore';
 
 const push = vi.hoisted(() => vi.fn());
-const replace = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/ja/day',
-  useRouter: () => ({ push, replace }),
+  useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
@@ -74,8 +73,25 @@ describe('useInspectorURLSync', () => {
 
     act(() => useTimeblockInspectorStore.getState().closeInspector());
 
-    expect(replace).toHaveBeenLastCalledWith('/ja/day', { scroll: false });
+    expect(window.location.pathname + window.location.search).toBe('/ja/day');
     expect(useTimeblockInspectorStore.getState().isOpen).toBe(false);
+  });
+
+  it('閉じたInspectorと同じURLパラメータを再指定すると開き直す', () => {
+    window.history.replaceState({}, '', '/ja/day?timeblock=record%3Arecord-id');
+    const { rerender } = renderHook(() => useInspectorURLSync());
+
+    act(() => useTimeblockInspectorStore.getState().closeInspector());
+    expect(window.location.pathname + window.location.search).toBe('/ja/day');
+
+    window.history.replaceState({}, '', '/ja/day?timeblock=record%3Arecord-id');
+    rerender();
+
+    expect(useTimeblockInspectorStore.getState()).toMatchObject({
+      timeblockId: 'record-id',
+      timeblockKind: 'record',
+      isOpen: true,
+    });
   });
 
   it('旧log URLは受理しない', () => {

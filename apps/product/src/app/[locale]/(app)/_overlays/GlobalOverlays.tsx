@@ -10,20 +10,18 @@ import { ShortcutCheatSheetDialog } from '@/components/ui/overlays/shortcut-chea
 import {
   CalendarViewType,
   buildCalendarReviewPanelPath,
-  buildTimeblockSearchResultPath,
   isCalendarViewPath,
-  resolveTimeblockSearchResultDate,
   useCalendarNavigation,
   useShortcutRegistry,
   useTimeblockClipboardStore,
   useTimeblockSearchShortcut,
-  type TimeblockSearchResult,
 } from '@/features/calendar';
 import { useTimeblockInspectorStore, type ClipboardTimeblock } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { toast } from '@/lib/toast';
 import { APP_SHORTCUT_CATALOG } from './app-shortcut-catalog';
+import { useTimeblockSearchResultNavigation } from './useTimeblockSearchResultNavigation';
 
 const ContactDialog = dynamic(
   () =>
@@ -153,23 +151,13 @@ export function GlobalOverlays() {
     [closeTimeblockSearch, openTimeblockSearch],
   );
 
-  const handleOpenSearchResult = useCallback(
-    (result: TimeblockSearchResult) => {
-      calendarNavigation?.navigateToDate(
-        resolveTimeblockSearchResultDate(result.startAt, timezone),
-      );
-      router.push(
-        buildTimeblockSearchResultPath({
-          locale,
-          startAt: result.startAt,
-          timezone,
-          timeblockId: result.id,
-          kind: result.kind,
-        }),
-      );
-    },
-    [calendarNavigation, locale, router, timezone],
-  );
+  const handleOpenSearchResult = useTimeblockSearchResultNavigation({
+    calendarNavigation,
+    locale,
+    timezone,
+    timeblockSearchOpen,
+    isInspectorOpen,
+  });
 
   return (
     <>
