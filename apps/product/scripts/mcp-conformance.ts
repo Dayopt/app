@@ -60,6 +60,15 @@ const CONFORMANCE_AUTH_INFO: AuthInfo = {
 };
 
 async function main(): Promise<void> {
+  // `pnpm test:mcp:conformance` は dummy env を inline 代入で固定する。tsx を直接
+  // 実行した shell に実 secret が export されていても実 Supabase へ向かないよう、
+  // dummy 以外の URL では起動を拒否する。
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://dummy.supabase.co') {
+    throw new Error(
+      'Refusing to run: NEXT_PUBLIC_SUPABASE_URL must be the dummy conformance value. Run via `pnpm --filter product test:mcp:conformance`.',
+    );
+  }
+
   const outputDirectory = await mkdtemp(join(tmpdir(), 'dayopt-mcp-conformance-'));
   const server = createServer((request, response) => {
     void handleIncomingRequest(request, response).catch((error: unknown) => {

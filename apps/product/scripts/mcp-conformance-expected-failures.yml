@@ -25,7 +25,7 @@ server:
   - prompts-get-with-image # prompts capability 未実装
 
   # --- suite 専用の診断 tool（test_*）を server が持たない ---
-  # Dayopt の tool 一覧は `_tools/registry.ts` の 17 個（entries/tags/constraints/
+  # Dayopt の tool 一覧は `_tools/registry.ts` の 18 個（entries/tags/constraints/
   # review/plans/records）のみで、conformance suite が要求する固定名の診断 tool
   # （test_image_content 等）は登録していない。McpServer は未知 tool 呼び出しに対して
   # JSON-RPC protocol error ではなく `isError: true` の CallToolResult を返すため、
