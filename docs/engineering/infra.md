@@ -5,7 +5,7 @@ last_verified: 2026-08-09
 
 # インフラ・環境・API/Routing 総覧
 
-環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書。「環境・デプロイ・シークレットは?」の正。
+環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
 
 ---
 
@@ -1692,3 +1692,38 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | **MEDIUM** | #4 (ical token), #9 (email suppressions), #15 (vault helpers), #16 (edge function) |
 | **LOW**    | #1-3, #6, #8, #10-12, #17-18                                                       |
 | **非推奨** | #1 (IDOR fix), #11 (auth.uid() check), #14 (vault extension)                       |
+
+## 出口コスト台帳
+
+策定日: 2026-08-09（経緯は [2026-08-09-antifragility-stance.md](./log/2026-08-09-antifragility-stance.md)）
+
+**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`.claude/rules/code-style.md` §技術選定スタンス）。
+
+更新するのは 2 つの時: ①「深い」「中」級の依存を追加・削除した時、②出口検討トリガーに当たる発表・事象があった時。
+
+### 深い（乗り換えは週単位の大工事）
+
+| 依存         | 浸透                                                                   | 今日捨てたら何が壊れるか                                          | 逃げ道                                                                                                                              | 出口検討トリガー                                     |
+| ------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Supabase** | Auth + DB 本体（RLS / RPC）+ Realtime + Edge Functions。唯一の最深依存 | 認証、全データアクセス、リアルタイム同期、認証メール送信 function | schema / migration は repo に全履歴があり、Postgres 互換先へ dump 移行可能。Auth / RLS / Realtime / Edge Functions の作り直しが本体 | 価格・無料枠の大幅改定、買収・方針転換、障害の常態化 |
+
+### 中（乗り換えは日単位）
+
+| 依存                                   | 浸透                                                                            | 今日捨てたら何が壊れるか                          | 逃げ道                                                                                                                 | 出口検討トリガー                    |
+| -------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status | deploy 経路、PR 検証の一部                        | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線の組み直しが主コスト                              | 価格改定、他ホストでの Next.js 冷遇 |
+| **Stripe**                             | Pro 課金（billing）                                                             | 課金・サブスク管理                                | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）が重い                                                      | 手数料改定、アカウント凍結リスク    |
+| **Google**                             | OAuth ログイン + external-calendar 連携                                         | Google ログインユーザーのアクセス、カレンダー同期 | email ログインが併存、連携は opt-in 機能                                                                               | OAuth / Calendar API の政策変更     |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存                       | 開発運用の全経路                                  | git 自体は分散。CI workflow と運用 script の書き直しが主コスト                                                         | 価格改定、Actions 課金の構造変化    |
+| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                         | 開発テンポ（プロダクトは無傷）                    | 規約はすべて plain markdown で repo 内。AGENTS.md（Codex）と二系統の実績あり。tier 読み替え原則で model 名に固定しない | 価格・品質・提供条件の変化          |
+
+### 浅い（乗り換えは時間単位、単機能で代替容易）
+
+| 依存                     | 役割                     | 逃げ道                                                  |
+| ------------------------ | ------------------------ | ------------------------------------------------------- |
+| **Resend**               | メール送信               | 代替 SMTP / API へ切替。suppression list の持ち出しのみ |
+| **Upstash Redis**        | rate limit               | env が optional 設計。代替 KV へ切替                    |
+| **Cloudflare Turnstile** | Bot 対策                 | 代替 CAPTCHA へ切替                                     |
+| **Sentry**               | エラー監視               | 代替 APM へ切替。履歴は持ち出さない割り切り             |
+| **UptimeRobot**          | 外形監視                 | 代替外形監視へ切替（Read-only API 運用）                |
+| **1Password**            | secrets 注入（`op run`） | `.op-env` スキーマごと他 secrets manager へ             |
