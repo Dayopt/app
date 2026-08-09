@@ -1,8 +1,10 @@
 ---
 status: current
-last_verified: 2026-08-03
+last_verified: 2026-08-10
 code:
   - apps/product/package.json
+  - apps/product/scripts/mcp-conformance.ts
+  - apps/product/scripts/mcp-conformance-expected-failures.yml
   - apps/product/src/app/api/mcp/_protocol-handler.ts
   - apps/product/src/app/api/mcp/__tests__
 ---
@@ -38,7 +40,18 @@ repo testは、protocol handler、route、server、tool registryを通して少�
 
 [2026-07-29の履歴](../../engineering/log/2026-07-29-mcp-2026-07-28-conformance.md)では、integration source branch上のofficial alpha suiteが`server-stateless` 24 / 28、`tools-list` 2 / 2を通った。
 
-そのharnessとv2 runtimeは候補7の選択的移植に含めなかった。現在の`main`には同じ結果を再現するcommandがないため、過去の数字を現在のrelease proofとして扱わない。
+そのharnessとv2 runtimeは候補7の選択的移植に含めなかった。alpha suiteの数字（`server-stateless` 24 / 28等）は現在のsuiteに同名scenarioが存在しないため、過去の数字を現在のrelease proofとして扱わない。
+
+2026-08-10にharnessをv1 SDK向けへ書き直して復活させた（下記 §Current harness）。
+
+## Current harness
+
+- 実行command: `pnpm --filter product test:mcp:conformance`（外部networkへ公開しない。127.0.0.1の一時HTTP serverに`handleMcpProtocolRequest`を載せ、`@modelcontextprotocol/conformance` CLIをchild processで走らせる）
+- suite version: `@modelcontextprotocol/conformance@0.1.16`（exact pin。v2系の分割SDKパッケージには依存しない）
+- 対象spec: `--spec-version 2025-11-25`（`@modelcontextprotocol/sdk` 1.30.0の`LATEST_PROTOCOL_VERSION`と一致）
+- baseline: `apps/product/scripts/mcp-conformance-expected-failures.yml`。許可する failure は「suite専用diagnostic toolの不在」と「意図的に実装しないoptional capability（Dayopt MCPはtoolsのみを宣言）」の2種だけで、各IDに理由をコメントで残す。baseline外のfailure / warningはCLIが非0 exitで落とす
+- 2026-08-10時点の結果: active suite 30 scenario、pass 7（`server-initialize` / `ping` / `tools-list` / `tools-call-simple-text` / `tools-call-error` / `dns-rebinding-protection` / `server-sse-multiple-streams`はwarningのみ）、expected failure 23（resources / prompts / logging / completion等の未宣言capability 13、診断tool不在 10）
+- SDK 1.30の`allowedHosts` / `allowedOrigins`はdeprecatedのため、host / origin検証（DNS rebinding protection）はharness側のadapterが自前実装する
 
 ## Required release evidence
 
@@ -46,7 +59,7 @@ closed beta候補のexact SHAで次を満たす。
 
 1. 現在の公式conformance suiteと対象MCP specificationのversionを固定する
 2. repo内の1 commandで、外部networkへ公開せずにsuiteを再実行できるようにする
-3. `server-stateless`と`tools-list`の結果、warning、既知failure IDを保存する
+3. active server suiteの結果、warning、既知failure IDを保存する
 4. 既知failureがsuite専用diagnostic toolだけに由来することを確認する
 5. baselineにないfailure、warning、未実行testを失敗として扱う
 6. suite更新時は、expected failureが実際に実行されていることを人が確認する

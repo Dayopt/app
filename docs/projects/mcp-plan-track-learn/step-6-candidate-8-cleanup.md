@@ -101,9 +101,9 @@ DROP しない対象（紛らわしいが現役）:
 `step-6-conformance.md` が要求する「repo 内 1 command での再実行」は、#1760 の harness をそのままコピーしても成立しない。harness は v2 世代の分割 SDK（`@modelcontextprotocol/server` / `client` / `node` 各 2.0.0）に依存し、候補 7 で main に入った実装は `@modelcontextprotocol/sdk` v1 系（単一パッケージ）で書かれているため、`toNodeHandler` 等の import が解決できない。
 
 - **Option α: v2 パッケージ 4 点を devDependencies として共存させる** — harness をほぼ無改変で持ち込めるが、本番 v1 / 検証 v2 の 2 世代混在になり、conformance が検証する契約と本番 handler の契約が一致する保証が崩れる
-- **Option β（推奨）: harness を現行実装向けに書き直す** — 現行の `handleMcpProtocolRequest` は `(Request, HandleRequestOptions) => Promise<Response>`（`authInfo` 等を第 2 引数で受ける fetch 相当契約）なので、Node `http` サーバーで Request / Response を仲介し `options.authInfo` を合成する小さな adapter を自前で書き、devDependency の追加は conformance CLI（`@modelcontextprotocol/conformance`）1 点に絞る。expected-failures の YAML（`server-stateless` 4 件）は流用できる。conformance CLI が pin する MCP spec version と v1 SDK が実装する protocol version の一致確認を harness 内の assertion に含める
+- **Option β（採用・実装済み）: harness を現行実装向けに書き直す** — 現行の `handleMcpProtocolRequest` は `(Request, HandleRequestOptions) => Promise<Response>`（`authInfo` 等を第 2 引数で受ける fetch 相当契約）なので、Node `http` サーバーで Request / Response を仲介し `options.authInfo` を合成する adapter を自前で書き、devDependency の追加は conformance CLI（`@modelcontextprotocol/conformance@0.1.16`、v1 SDK 系）1 点に絞った。stable 系 suite には旧 `server-stateless` scenario が存在しないため、active suite 全体を `--spec-version 2025-11-25`（SDK 1.30.0 の `LATEST_PROTOCOL_VERSION` と一致）で走らせ、expected-failures baseline は現行 suite に対して作り直した。詳細は [step-6-conformance.md](./step-6-conformance.md) §Current harness
 
-β を採用する場合、`test:mcp:conformance` script と harness は 8-x とは独立した app-only PR で先に入れられる（可逆・gate 無関係）。client beta 用 Preview を切る前に main へ入れておくと、conformance evidence を candidate SHA に対して取れる。
+harness は 8-x と独立した app-only 変更として先に main へ入れる（可逆・gate 無関係）。client beta 用 Preview を切る前に入れておくと、conformance evidence を candidate SHA に対して取れる。
 
 ## この設計が候補 8 に含めないもの
 

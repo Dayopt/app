@@ -1,0 +1,52 @@
+# Dayopt MCP conformance baseline (`pnpm --filter product test:mcp:conformance`).
+#
+# 各 entry は「suite 専用の診断 tool を server が持たない」または「server が意図的に
+# 実装しない optional capability」に由来する failure のみを許可する。protocol 違反
+# 由来の failure はここに追加せず harness / _protocol-handler の bug として直す。
+#
+# Dayopt MCP は `capabilities: { tools: {} }` のみを宣言する（`_server.ts`）。
+# resources / prompts / completion / logging / sampling / elicitation はどれも
+# 実装しない意図的なスコープ（tools のみを公開する MCP server）。
+
+server:
+  # --- Optional capability を宣言していない（-32601 Method not found） ---
+  - logging-set-level # logging capability 未実装
+  - completion-complete # completions capability 未実装
+  - resources-list # resources capability 未実装
+  - resources-read-text # resources capability 未実装
+  - resources-read-binary # resources capability 未実装
+  - resources-templates-read # resources capability 未実装
+  - resources-subscribe # resources capability 未実装
+  - resources-unsubscribe # resources capability 未実装
+  - prompts-list # prompts capability 未実装
+  - prompts-get-simple # prompts capability 未実装
+  - prompts-get-with-args # prompts capability 未実装
+  - prompts-get-embedded-resource # prompts capability 未実装
+  - prompts-get-with-image # prompts capability 未実装
+
+  # --- suite 専用の診断 tool（test_*）を server が持たない ---
+  # Dayopt の tool 一覧は `_tools/registry.ts` の 17 個（entries/tags/constraints/
+  # review/plans/records）のみで、conformance suite が要求する固定名の診断 tool
+  # （test_image_content 等）は登録していない。McpServer は未知 tool 呼び出しに対して
+  # JSON-RPC protocol error ではなく `isError: true` の CallToolResult を返すため、
+  # 各 scenario は「期待する content type が無い」または「期待する capability 側の
+  # 副作用（progress / sampling / elicitation リクエスト）が発生しない」形で failure
+  # になる。
+  - tools-call-image # test_image_content 未実装
+  - tools-call-audio # test_audio_content 未実装
+  - tools-call-embedded-resource # test_embedded_resource 未実装
+  - tools-call-mixed-content # test_multiple_content_types 未実装
+  - tools-call-with-logging # test_tool_with_logging 未実装 + logging capability 未実装
+  - tools-call-with-progress # progress 通知を発する診断 tool 未実装
+  - tools-call-sampling # test_sampling 未実装 + sampling capability 未実装
+  - tools-call-elicitation # test_elicitation 未実装 + elicitation capability 未実装
+  - elicitation-sep1034-defaults # test_elicitation_sep1034_defaults 未実装（SEP-1034）
+  - elicitation-sep1330-enums # test_elicitation_sep1330_enums 未実装（SEP-1330）
+
+  # --- 意図的に実装しない optional capability（stateless deployment） ---
+  # Dayopt MCP は `WebStandardStreamableHTTPServerTransport` を `sessionIdGenerator`
+  # 未指定（stateless mode）で request ごとに立てる。session ID を発行しないため、
+  # SEP-1699 の session 相関を前提にした multi-stream 検証は「session ID なし」の
+  # WARNING を必ず出す（SUCCESS/FAILURE いずれの check も無いが、この CLI は
+  # WARNING を「baseline 対象の issue」として扱う）。
+  - server-sse-multiple-streams # stateless mode のため session ID を発行しない（SEP-1699）
