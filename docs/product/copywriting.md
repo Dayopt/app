@@ -47,6 +47,25 @@ last_verified: 2026-08-10
 
 ---
 
+## 英語UI文言ルール
+
+人格は言語をまたいで同一である。日本語の「です・ます」に相当する丁寧さは、英語では平易で直接的な文で表す。翻訳ではなく、各言語で自然な文を書く（正本は `apps/product/messages/{en,ja}/`、運用は i18n skill）。
+
+| #   | ルール                          | NG                           | OK                               |
+| --- | ------------------------------- | ---------------------------- | -------------------------------- |
+| 1   | sentence case（文頭のみ大文字） | Delete Event                 | Delete event                     |
+| 2   | ボタンは動詞で始める            | Deletion                     | Delete                           |
+| 3   | 短く直接的に。please で飾らない | Please try again later       | Try again                        |
+| 4   | 主語 your は必要な場合のみ      | Your profile                 | Profile                          |
+| 5   | destructiveボタンに対象を明記   | Delete                       | Delete event                     |
+| 6   | エラーに原因+対処を含める       | An error occurred            | Something went wrong. Try again. |
+| 7   | vague SaaS words 禁止           | Seamlessly optimize your day | See where your time went         |
+
+- 性格ルールと感嘆符の基準は日本語と共通。良い結果は「30 min more than last week」、節目だけ「Personal best!」
+- 7 の禁止語リスト（empower / leverage / seamless / robust / optimize など）は [writing-style.md](../marketing/writing-style.md) §英語のルール と共通
+
+---
+
 ## 感嘆符の使用基準
 
 | 場面               | 使用 | 例                                   |
