@@ -169,13 +169,26 @@
 このリポジトリの migration に一度も登場しない platform 専有 table）。schema 丸ごとの snapshot は
 platform 更新のたびに drift ノイズを生むため対象外にし、avatars / attachments のフォルダ所有権を
 判定する `storage.objects` の policy だけを、migration が定義した名前の allow-list で public
-schema の policy と同じ重みで追跡する。GRANT（テーブル権限）は追跡しない —
-`storage.objects` への `anon` / `authenticated` の table-level GRANT は Supabase Storage 拡張が
-自ら付与する platform 既定値で、アクセス制御は最初から RLS policy 側に委ねられているため。
+schema の policy と同じ重みで追跡する。あわせて bucket の公開フラグも固定する —
+`public = true` の bucket は read が object の RLS を経由しないため、policy だけを見ていると
+`UPDATE storage.buckets SET public = true` の 1 行が無検出で通ってしまう。
+
+**対象外**（この節が見ていないもの）:
+
+- **table-level GRANT** — `storage.objects` への `anon` / `authenticated` の GRANT は Supabase
+  Storage 拡張が自ら付与する platform 既定値で、SELECT / INSERT / UPDATE / DELETE は RLS policy が
+  実効の門番になる。ただし **TRUNCATE は RLS の対象外**なので policy では止まらない（#1715 と同クラス）
+- **`storage.objects` 以外の table の policy**（`buckets` / `prefixes` 等）と、`authorize_owned_storage_*`
+  関数の本体（ACL は追跡するが `prosrc` は見ない）
 
 | table           | RLS enabled | forced |
 | --------------- | ----------- | ------ |
 | storage.objects | ✅          | —      |
+
+| bucket      | public  | file size limit | allowed mime types                                                        |
+| ----------- | ------- | --------------- | ------------------------------------------------------------------------- |
+| attachments | false   | 10485760        | image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain |
+| avatars     | ⚠️ true | 5242880         | image/jpeg, image/png, image/gif, image/webp                              |
 
 | policy                           | cmd    | permissive | roles           | USING                                                                                                                               | WITH CHECK                                                                                                                          |
 | -------------------------------- | ------ | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -190,8 +203,10 @@ schema の policy と同じ重みで追跡する。GRANT（テーブル権限）
 
 ### 想定外の storage.objects policy（allow-list 外）
 
-「なし（0 件）」以外が出た場合、allow-list（`STORAGE_OBJECTS_APP_POLICY_NAMES`）の
-更新漏れか、想定していない policy の追加を意味する。
+allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapshot を生成せず
+エラーで停止する（再生成による追認を防ぐため）。したがってこの節は常に 0 件で、
+0 件でない snapshot は存在しない。正当な追加なら
+`STORAGE_OBJECTS_APP_POLICY_NAMES` を更新してから再生成する。
 
 - なし（0 件）
 

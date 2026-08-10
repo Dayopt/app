@@ -115,6 +115,13 @@ type PolicyRow = {
 };
 
 type RlsRow = { table: string; rls: boolean; forced: boolean };
+
+type StorageBucketRow = {
+  id: string;
+  public: boolean;
+  file_size_limit: number | null;
+  allowed_mime_types: string;
+};
 type GrantRow = { object_type: string; object_name: string; grantee: string; privileges: string };
 /** private schema の GRANT（オブジェクト ACL / function EXECUTE）は owner 以外の grantee だけを機械固定する */
 type PrivateGrantRow = { object_name: string; grantee: string; privileges: string };
@@ -208,6 +215,33 @@ function fetchStorageObjectsRls(): RlsRow[] {
               )), '[]'::json)
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'storage' AND c.relname = 'objects' AND c.relkind = 'r';`,
+    ) ?? []
+  );
+}
+
+/**
+ * bucket の公開フラグと受け入れ制限（#1900 の risk-reviewer 指摘）。
+ *
+ * **policy より先にこちらが到達可否を決める。** `storage.buckets.public = true` の bucket は
+ * read が object の RLS policy を経由しない（このリポジトリ自身が 20260401000000 で
+ * getPublicUrl 整合のため avatars を public 化しているのが一次証拠）。
+ * つまり `UPDATE storage.buckets SET public = true WHERE id = 'attachments'` の 1 行で
+ * 全ユーザーの添付が未認証公開になるが、policy だけを追跡していると snapshot に差分が出ない。
+ * policy を追跡して「storage 境界は pin 済み」と読ませる以上、この行を見ないのは誤導なので
+ * 同じ節で固定する。
+ *
+ * file_size_limit / allowed_mime_types も、緩めると受け入れる内容が変わる境界なので併せて固定する。
+ * いずれも migration と config.toml 由来の決定的なローカル状態。
+ */
+function fetchStorageBuckets(): StorageBucketRow[] {
+  return (
+    queryJson<StorageBucketRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.id), '[]'::json)
+       FROM (
+         SELECT id, public, file_size_limit,
+                coalesce(array_to_string(allowed_mime_types, ', '), '') AS allowed_mime_types
+         FROM storage.buckets
+       ) t;`,
     ) ?? []
   );
 }
@@ -511,6 +545,7 @@ type SnapshotSections = {
   rlsTables: RlsRow[];
   storagePolicies: PolicyRow[];
   storageObjectsRls: RlsRow[];
+  storageBuckets: StorageBucketRow[];
   unexpectedStoragePolicyNames: string[];
   grants: GrantRow[];
   privateOwners: PrivateOwnerRow[];
@@ -528,6 +563,7 @@ function render({
   rlsTables,
   storagePolicies,
   storageObjectsRls,
+  storageBuckets,
   unexpectedStoragePolicyNames,
   grants,
   privateOwners,
@@ -609,18 +645,40 @@ function render({
   lines.push(
     '判定する `storage.objects` の policy だけを、migration が定義した名前の allow-list で public',
   );
-  lines.push('schema の policy と同じ重みで追跡する。GRANT（テーブル権限）は追跡しない — ');
+  lines.push('schema の policy と同じ重みで追跡する。あわせて bucket の公開フラグも固定する —');
   lines.push(
-    '`storage.objects` への `anon` / `authenticated` の table-level GRANT は Supabase Storage 拡張が',
+    '`public = true` の bucket は read が object の RLS を経由しないため、policy だけを見ていると',
+  );
+  lines.push('`UPDATE storage.buckets SET public = true` の 1 行が無検出で通ってしまう。');
+  lines.push('');
+  lines.push('**対象外**（この節が見ていないもの）:');
+  lines.push('');
+  lines.push(
+    '- **table-level GRANT** — `storage.objects` への `anon` / `authenticated` の GRANT は Supabase',
   );
   lines.push(
-    '自ら付与する platform 既定値で、アクセス制御は最初から RLS policy 側に委ねられているため。',
+    '  Storage 拡張が自ら付与する platform 既定値で、SELECT / INSERT / UPDATE / DELETE は RLS policy が',
   );
+  lines.push(
+    '  実効の門番になる。ただし **TRUNCATE は RLS の対象外**なので policy では止まらない（#1715 と同クラス）',
+  );
+  lines.push(
+    '- **`storage.objects` 以外の table の policy**（`buckets` / `prefixes` 等）と、`authorize_owned_storage_*`',
+  );
+  lines.push('  関数の本体（ACL は追跡するが `prosrc` は見ない）');
   lines.push('');
   lines.push('| table | RLS enabled | forced |');
   lines.push('| --- | --- | --- |');
   for (const r of storageObjectsRls) {
     lines.push(`| ${cell(r.table)} | ${r.rls ? '✅' : '❌'} | ${r.forced ? '✅' : '—'} |`);
+  }
+  lines.push('');
+  lines.push('| bucket | public | file size limit | allowed mime types |');
+  lines.push('| --- | --- | --- | --- |');
+  for (const b of storageBuckets) {
+    lines.push(
+      `| ${cell(b.id)} | ${b.public ? '⚠️ true' : 'false'} | ${b.file_size_limit ?? '—'} | ${cell(b.allowed_mime_types || '—')} |`,
+    );
   }
   lines.push('');
   lines.push('| policy | cmd | permissive | roles | USING | WITH CHECK |');
@@ -633,8 +691,10 @@ function render({
   lines.push('');
   lines.push('### 想定外の storage.objects policy（allow-list 外）');
   lines.push('');
-  lines.push('「なし（0 件）」以外が出た場合、allow-list（`STORAGE_OBJECTS_APP_POLICY_NAMES`）の');
-  lines.push('更新漏れか、想定していない policy の追加を意味する。');
+  lines.push('allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapshot を生成せず');
+  lines.push('エラーで停止する（再生成による追認を防ぐため）。したがってこの節は常に 0 件で、');
+  lines.push('0 件でない snapshot は存在しない。正当な追加なら');
+  lines.push('`STORAGE_OBJECTS_APP_POLICY_NAMES` を更新してから再生成する。');
   lines.push('');
   if (unexpectedStoragePolicyNames.length === 0) {
     lines.push('- なし（0 件）');
@@ -818,12 +878,26 @@ async function main(): Promise<void> {
       );
     }
 
+    // allow-list 外の policy が `storage.objects` に付いた状態では snapshot を生成しない。
+    // 描画するだけだと「drift が出た → 再生成して commit」の定型手順で rogue policy が
+    // 追認されてしまい、防御が成果物の目視 diff まで落ちる。生成自体を止めれば、正当な
+    // policy 追加は allow-list（`STORAGE_OBJECTS_APP_POLICY_NAMES`）の編集を強制でき、
+    // レビュー面に必ず乗る。上の timeblock 実効権限チェックと同じ扱い。
+    const unexpectedStoragePolicyNames = fetchUnexpectedStoragePolicyNames();
+    if (unexpectedStoragePolicyNames.length > 0) {
+      throw new Error(
+        `unexpected storage.objects policy: ${unexpectedStoragePolicyNames.join(', ')}. ` +
+          'app 所有なら STORAGE_OBJECTS_APP_POLICY_NAMES へ追加し、そうでなければ policy を削除する。',
+      );
+    }
+
     const raw = render({
       policies: fetchPolicies(),
       rlsTables: fetchRlsTables(),
       storagePolicies: fetchStoragePolicies(),
       storageObjectsRls: fetchStorageObjectsRls(),
-      unexpectedStoragePolicyNames: fetchUnexpectedStoragePolicyNames(),
+      storageBuckets: fetchStorageBuckets(),
+      unexpectedStoragePolicyNames,
       grants: fetchGrants(),
       privateOwners: fetchPrivateOwners(),
       privateRelationGrants: fetchPrivateRelationGrants(),
