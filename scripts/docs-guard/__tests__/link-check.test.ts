@@ -28,6 +28,15 @@ describe('shouldSkipLinkTarget', () => {
     // repo path ではなく apps/web のルート相対 URL。resolve するとファイルシステムの
     // root から探してしまい、必ず存在しないと判定される。
     expect(shouldSkipLinkTarget('/docs/faq/features')).toBe(true);
+    expect(shouldSkipLinkTarget('/blog/ja/some-post')).toBe(true);
+  });
+
+  it('root相対でも.md終わりはrepo pathの書き間違いとして検出対象に残す', () => {
+    // 公開サイトの route は拡張子を持たないので、これはサイト URL ではない。
+    expect(shouldSkipLinkTarget('/docs/foo.md')).toBe(false);
+    expect(shouldSkipLinkTarget('/README.md')).toBe(false);
+    expect(shouldSkipLinkTarget('/apps/web/content/docs/foo.mdx')).toBe(false);
+    expect(shouldSkipLinkTarget('/docs/foo.md#section')).toBe(false);
   });
 
   it('相対pathはスキップしない', () => {

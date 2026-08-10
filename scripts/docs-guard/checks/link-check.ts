@@ -39,22 +39,31 @@ export interface LinkCheckClassification {
   staleAllowlistEntries: FrozenBrokenLink[];
 }
 
+/** 公開サイトの route は拡張子を持たないため、`.md` / `.mdx` 終わりは repo path の意図と見なす。 */
+const MARKDOWN_SUFFIX_RE = /\.mdx?(#.*)?$/;
+
 /**
  * repo path として解決しないリンクを判定する。
  *
- * `/` 始まりは公開サイト（apps/web）の root 相対 URL であって repo path ではない。
- * これを resolve するとファイルシステムの root から探してしまい、必ず存在しないと判定される
+ * `/` 始まりは公開サイト（apps/web）の root 相対 URL であって repo path ではない。これを
+ * resolve するとファイルシステムの root から探してしまい、必ず存在しないと判定される
  * （docs/marketing/log/2026-07-27-docs-faq-url-nesting.md の `/docs/faq/features` で実際に発生）。
+ *
+ * ただし `/docs/foo.md` のように `.md` で終わるものは skip しない。これは公開サイトの URL では
+ * なく repo path の書き間違い（GitHub 上でも解決しない）なので、黙って通すと検出漏れになる。
  */
 export function shouldSkipLinkTarget(raw: string): boolean {
-  return (
+  if (
     raw.startsWith('http://') ||
     raw.startsWith('https://') ||
     raw.startsWith('mailto:') ||
     raw.startsWith('#') ||
-    raw.startsWith('?') ||
-    raw.startsWith('/')
-  );
+    raw.startsWith('?')
+  ) {
+    return true;
+  }
+
+  return raw.startsWith('/') && !MARKDOWN_SUFFIX_RE.test(raw);
 }
 
 export async function runLinkCheck(): Promise<LinkViolation[]> {

@@ -51,7 +51,9 @@ code: scripts/docs-guard
 
 `docs/marketing/log/2026-07-27-docs-faq-url-nesting.md:63` の `/docs/faq/features` は公開サイト（apps/web）の root 相対 URL であって repo path ではない。link-check が `resolve(dirname(file), '/docs/faq/features')` を計算するため、ファイルシステムの `/` から解決されて必ず存在しないと判定されていた。
 
-**これは凍結 log と無関係な checker のバグ**で、同じ書き方を stock doc でしたら fatal の誤検知になる。stock 側に root 相対リンクが 1 本も無かったため露出していなかっただけである。本対応で `/` 始まりを skip 対象に加えて修正した。
+**これは凍結 log と無関係な checker のバグ**で、同じ書き方を stock doc でしたら fatal の誤検知になる。stock 側に root 相対リンクが 1 本も無かったため露出していなかっただけである。
+
+本対応では `/` 始まりを skip 対象に加えたうえで、`.md` / `.mdx` で終わるものは skip から除いた。公開サイトの route は拡張子を持たないため、`/docs/foo.md` はサイト URL ではなく repo path の書き間違い（GitHub 上でも解決しない）であり、一律 skip にすると検出漏れの穴になる。
 
 ## 根本原因
 
