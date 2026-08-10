@@ -6,6 +6,7 @@
 > 再生成で更新すること。
 >
 > 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / Realtime publication 0 件。
+> private スキーマ: schema USAGE 1 件 / table・column ACL 1 件 / function EXECUTE 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -381,6 +382,26 @@
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+
+## GRANT 一覧（private schema）
+
+private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。
+
+### schema USAGE
+
+| grantee      | privileges |
+| ------------ | ---------- |
+| service_role | USAGE      |
+
+### table・column ACL
+
+| object type | object                                 | grantee      | privileges |
+| ----------- | -------------------------------------- | ------------ | ---------- |
+| table       | private.legacy_oauth_bind_observations | service_role | SELECT     |
+
+### function EXECUTE
+
+- なし（owner のみ実行可）
 
 ## Plan / Record effective write境界
 

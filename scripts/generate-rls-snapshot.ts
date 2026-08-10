@@ -50,6 +50,7 @@ type PolicyRow = {
 
 type RlsRow = { table: string; rls: boolean; forced: boolean };
 type GrantRow = { object_type: string; object_name: string; grantee: string; privileges: string };
+type SchemaUsageGrantRow = { grantee: string; privileges: string };
 type RealtimePublicationRow = { schemaname: string; tablename: string };
 type EffectiveTimeblockWritePrivilegeRow = {
   object_type: string;
@@ -92,7 +93,12 @@ function fetchRlsTables(): RlsRow[] {
   );
 }
 
-function fetchGrants(): GrantRow[] {
+/**
+ * schema 単位で relation / column / routine の GRANT を取得する。
+ * `schema` は呼び出し元が固定リテラル（'public' / 'private'）でのみ渡す前提で、
+ * 外部入力を受け付けないため SQL への文字列展開でも injection リスクはない。
+ */
+function fetchGrants(schema: string): GrantRow[] {
   return (
     queryJson<GrantRow[] | null>(
       `WITH relation_grants AS (
@@ -110,7 +116,7 @@ function fetchGrants(): GrantRow[] {
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          CROSS JOIN LATERAL aclexplode(c.relacl) acl
-         WHERE n.nspname = 'public'
+         WHERE n.nspname = '${schema}'
            AND c.relkind IN ('r', 'p', 'v', 'm')
            AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
              IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
@@ -126,7 +132,7 @@ function fetchGrants(): GrantRow[] {
          JOIN pg_class c ON c.oid = a.attrelid
          JOIN pg_namespace n ON n.oid = c.relnamespace
          CROSS JOIN LATERAL aclexplode(a.attacl) acl
-         WHERE n.nspname = 'public'
+         WHERE n.nspname = '${schema}'
            AND c.relkind IN ('r', 'p', 'v', 'm')
            AND a.attnum > 0
            AND NOT a.attisdropped
@@ -143,7 +149,7 @@ function fetchGrants(): GrantRow[] {
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
-         WHERE n.nspname = 'public'
+         WHERE n.nspname = '${schema}'
            AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
              IN ('PUBLIC', 'anon', 'authenticated', 'service_role', 'supabase_auth_admin')
            AND acl.privilege_type = 'EXECUTE'
@@ -156,6 +162,30 @@ function fetchGrants(): GrantRow[] {
          SELECT * FROM relation_grants
          UNION ALL
          SELECT * FROM routine_grants
+       ) t;`,
+    ) ?? []
+  );
+}
+
+/**
+ * schema-level の USAGE 等（`GRANT ... ON SCHEMA` / `pg_namespace.nspacl`）を取得する。
+ * private schema への `GRANT USAGE ON SCHEMA private TO service_role` のような
+ * table/routine 以下では表現できない権限を drift 検出網に含めるために使う。
+ */
+function fetchSchemaUsageGrants(schema: string): SchemaUsageGrantRow[] {
+  return (
+    queryJson<SchemaUsageGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_namespace n
+         CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) acl
+         WHERE n.nspname = '${schema}'
+           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
+             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+         GROUP BY grantee
        ) t;`,
     ) ?? []
   );
@@ -198,7 +228,11 @@ function render(
   grants: GrantRow[],
   realtimePublication: RealtimePublicationRow[],
   effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[],
+  privateSchemaUsage: SchemaUsageGrantRow[],
+  privateGrants: GrantRow[],
 ): string {
+  const privateTableColumnGrants = privateGrants.filter((g) => g.object_type !== 'routine');
+  const privateRoutineGrants = privateGrants.filter((g) => g.object_type === 'routine');
   const policyByTable = new Map<string, PolicyRow[]>();
   for (const p of policies) {
     const list = policyByTable.get(p.tablename) ?? [];
@@ -222,6 +256,9 @@ function render(
   lines.push('>');
   lines.push(
     `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 / Realtime publication ${realtimePublication.length} 件。`,
+  );
+  lines.push(
+    `> private スキーマ: schema USAGE ${privateSchemaUsage.length} 件 / table・column ACL ${privateTableColumnGrants.length} 件 / function EXECUTE ${privateRoutineGrants.length} 件。`,
   );
   lines.push('');
 
@@ -257,6 +294,56 @@ function render(
     lines.push(
       `| ${grant.object_type} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
     );
+  }
+  lines.push('');
+
+  lines.push('## GRANT 一覧（private schema）');
+  lines.push('');
+  lines.push(
+    'private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。',
+  );
+  lines.push('');
+
+  lines.push('### schema USAGE');
+  lines.push('');
+  if (privateSchemaUsage.length === 0) {
+    lines.push('- なし');
+  } else {
+    lines.push('| grantee | privileges |');
+    lines.push('| --- | --- |');
+    for (const grant of privateSchemaUsage) {
+      lines.push(`| ${cell(grant.grantee)} | ${cell(grant.privileges)} |`);
+    }
+  }
+  lines.push('');
+
+  lines.push('### table・column ACL');
+  lines.push('');
+  if (privateTableColumnGrants.length === 0) {
+    lines.push('- なし');
+  } else {
+    lines.push('| object type | object | grantee | privileges |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const grant of privateTableColumnGrants) {
+      lines.push(
+        `| ${grant.object_type} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### function EXECUTE');
+  lines.push('');
+  if (privateRoutineGrants.length === 0) {
+    lines.push('- なし（owner のみ実行可）');
+  } else {
+    lines.push('| object type | object | grantee | privileges |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const grant of privateRoutineGrants) {
+      lines.push(
+        `| ${grant.object_type} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
   }
   lines.push('');
 
@@ -300,9 +387,11 @@ async function main(): Promise<void> {
     const raw = render(
       fetchPolicies(),
       fetchRlsTables(),
-      fetchGrants(),
+      fetchGrants('public'),
       fetchRealtimePublication(),
       effectiveTimeblockWritePrivileges,
+      fetchSchemaUsageGrants('private'),
+      fetchGrants('private'),
     );
     // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
     // （raw のままだと prettier がテーブルを整列して常に差分になる）
