@@ -16,17 +16,32 @@
 
 同じ説明を複数面に置かない。境界を跨ぐ場合は正本へリンクする。
 
+## 構造: 1 ディレクトリ = 1 つの質問
+
+迷ったらこの 4 行で行き先を決める:
+
+| 質問                                 | 行き先                            |
+| ------------------------------------ | --------------------------------- |
+| 変わらない前提・原則の話か           | `strategy.md`（憲法、1 ファイル） |
+| 画面・API・データの振る舞いの話か    | `product/`                        |
+| 外の人に向けた言葉・お金・市場の話か | `business/`                       |
+| コードの作り方 / 本番運用の話か      | `engineering/` / `operations/`    |
+
 ## ドメイン
 
-| ドメイン       | 責務                                      | 主な入口                                                   |
-| -------------- | ----------------------------------------- | ---------------------------------------------------------- |
-| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                                |
-| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`, `copywriting.md` |
-| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`, `writing-style.md` |
-| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md`           |
-| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`               |
-| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                              |
-| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`                      |
+| 場所           | 責務                                                                 | 主な入口                                                   |
+| -------------- | -------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `strategy.md`  | 憲法。コンセプト・原則・変えないもの。全ドメインの上位（ドメイン外） | `strategy.md`                                              |
+| `product/`     | いま何が、どう動くか。原則、仕様、用語、UI 文言                      | `principles.md`, `specs/`, `glossary.md`, `copywriting.md` |
+| `business/`    | 誰に、何と言って、いくらで届けるか。市場・お金・発信のすべて         | `icp.md`, `messaging.md`, `pricing.md`, `growth.md`        |
+| `engineering/` | architecture、規約、infra                                            | `architecture.md`, `conventions*.md`, `infra.md`           |
+| `operations/`  | runbook、monitoring、security、legal                                 | `runbook.md`, `monitoring.md`, `security.md`               |
+| `company/`     | 契約、登記、外部サービス                                             | `accounts.md`                                              |
+| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録                               | `{project}/overview.md`, `summary.md`                      |
+
+`business/` の下位構造: 直下 = 事業判断の正本（icp / messaging / competitors / pricing / business-model / growth）、`content/` = 公開コンテンツの書き方と運用（voice / writing-style / docs-policy / review-checklist / content-operations）、`channels/` = チャネル別の運用（x / reddit / lp）。旧 `marketing/` ドメインは 2026-08-10 に `business/` へ統合した。
+
+ルート直下の `strategy.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う。
 
 ## 現在・Project・履歴
 
@@ -87,24 +102,28 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 
 ## 質問から正本へのルーティング
 
-| 質問                           | 正本                                                         |
-| ------------------------------ | ------------------------------------------------------------ |
-| なぜ作るか / 誰向けか          | `business/strategy.md`, `marketing/icp.md`                   |
-| 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md` |
-| プロダクト原則・不採用方針     | `product/principles.md`                                      |
-| 現在の機能仕様                 | `product/specs/*.md`                                         |
-| UI / code用語                  | `product/glossary.md`                                        |
-| 訴求・コピー                   | `marketing/messaging.md`                                     |
-| 全体 architecture / state flow | `engineering/architecture.md`                                |
-| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`            |
-| env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`              |
-| 障害対応・release              | `operations/runbook.md`                                      |
-| 監視・alert                    | `operations/monitoring.md`                                   |
-| security                       | `operations/security.md`                                     |
-| 契約サービス                   | `company/accounts.md`                                        |
-| 進行中Project                  | `projects/*/overview.md`                                     |
-| 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`              |
-| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                       |
+| 質問                           | 正本                                                          |
+| ------------------------------ | ------------------------------------------------------------- |
+| なぜ作るか / 変えないもの      | `strategy.md`                                                 |
+| 誰向けか                       | `strategy.md` §3、詳細は `business/icp.md`                    |
+| 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md`  |
+| 事業指標の定義                 | `business/business-model.md` §Metrics                         |
+| 広げ方・チャネル               | `business/growth.md`, `business/channels/`                    |
+| 公開コンテンツの書き方・運用   | `business/content/`                                           |
+| プロダクト原則・不採用方針     | `product/principles.md`                                       |
+| 現在の機能仕様                 | `product/specs/*.md`                                          |
+| UI / code用語                  | `product/glossary.md`                                         |
+| 訴求・コピー                   | `business/messaging.md`（UI 文言は `product/copywriting.md`） |
+| 全体 architecture / state flow | `engineering/architecture.md`                                 |
+| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`             |
+| env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`               |
+| 障害対応・release              | `operations/runbook.md`                                       |
+| 監視・alert                    | `operations/monitoring.md`                                    |
+| security                       | `operations/security.md`                                      |
+| 契約サービス                   | `company/accounts.md`                                         |
+| 進行中Project                  | `projects/*/overview.md`                                      |
+| 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`               |
+| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                        |
 
 ## 書く場所の決定木
 

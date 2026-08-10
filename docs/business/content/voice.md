@@ -17,7 +17,7 @@ last_verified: 2026-08-10
 AI時代において価値があるのは「あなたにしか言えないこと」。
 教科書的な情報はAIが生成できる。Dayoptが発信すべきは、実体験とプロセス。
 
-このガイドは、ブログやSNSなどコンテンツの声（創業者の人間臭い声）の正本である。アプリ内UI文言は、別人格「寡黙な研究者」（正本は[`docs/product/copywriting.md`](../product/copywriting.md)）で書く。二つの声は意図的な使い分けである。
+このガイドは、ブログやSNSなどコンテンツの声（創業者の人間臭い声）の正本である。アプリ内UI文言は、別人格「寡黙な研究者」（正本は[`docs/product/copywriting.md`](../../product/copywriting.md)）で書く。二つの声は意図的な使い分けである。
 
 ---
 
@@ -94,7 +94,7 @@ Dayoptの説明は、それに答えた後で十分。
 
 1人創業者だからこそできる「人間臭さ」を活かす。
 
-Dayoptは「内向きの充実」を求める人のためのツール（参照: [icp.md](./icp.md)）。
+Dayoptは「内向きの充実」を求める人のためのツール（参照: [icp.md](../icp.md)）。
 この特性と深津氏の提言は相性が良い。
 
 | 強み             | 活かし方                                                |
@@ -130,7 +130,7 @@ Dayoptは「内向きの充実」を求める人のためのツール（参照: 
 - ユーザーとの対話
 - 問いかけ形式の投稿
 
-※ SNS運用の詳細は [`channels/x.md`](./channels/x.md) と [`channels/reddit.md`](./channels/reddit.md) を参照
+※ SNS運用の詳細は [`channels/x.md`](../channels/x.md) と [`channels/reddit.md`](../channels/reddit.md) を参照
 
 ---
 
@@ -142,6 +142,6 @@ Dayoptは「内向きの充実」を求める人のためのツール（参照: 
 
 ## 🔗 関連ドキュメント
 
-📖 **前提知識・トーン**: [messaging.md](./messaging.md) - コンテンツのトーン・キャラクター、伝える価値(§6-7)
-🔗 **本能マッピング**: [icp.md](./icp.md) - ターゲット層の理解
-🔗 **SNS運用**: [`channels/x.md`](./channels/x.md) / [`channels/reddit.md`](./channels/reddit.md) - 投稿方針
+📖 **前提知識・トーン**: [messaging.md](../messaging.md) - コンテンツのトーン・キャラクター、伝える価値(§6-7)
+🔗 **本能マッピング**: [icp.md](../icp.md) - ターゲット層の理解
+🔗 **SNS運用**: [`channels/x.md`](../channels/x.md) / [`channels/reddit.md`](../channels/reddit.md) - 投稿方針

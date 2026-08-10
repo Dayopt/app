@@ -36,7 +36,7 @@ description: ユーザーが月次ガーデニングの人間パート実施を�
 fresh session で以下を順に実施し、成果物を「draft PR + issue + journal 内のレビュー待ちリスト」に着地させる。**価値判断（ルールの足し引き、superseded 判定、機能の削除候補の確定）は実行せず、必ずレビュー待ちリストに列挙して人間パートへ回す。** アプリコードは変更しない。
 
 1. **journal 下書き** — 前月の merge commit 履歴（`git log --merges --since`）、closed issue / PR、各ドメイン `log/` の decision・note・feedback・incident ログから、当月 `docs/engineering/log/YYYY-MM-01-journal.md` を下書きする。観点: できごと / 決定 / 学び / 数値（マージ PR 数、変更規模など）。frontmatter は `status: frozen` + `date: YYYY-MM-01`
-2. **ストック鮮度 triage（上位 10 件）** — `docs:check` 対象ディレクトリ（`business/` `product/` `marketing/` `engineering/` `operations/` `company/`）配下の全 `.md`（各 `log/` を除く）を `last_verified` の古い順に並べ、上位 10 件を検証する。問題なければ `last_verified` だけ更新、内容が古ければ修正して更新。**現状に対応する内容が無くなっている場合は `status: superseded` にせず、レビュー待ちリストへ**
+2. **ストック鮮度 triage（上位 10 件）** — `docs:check` 対象ディレクトリ（`business/` `product/` `engineering/` `operations/` `company/`）配下の全 `.md`（各 `log/` を除く）を `last_verified` の古い順に並べ、上位 10 件を検証する。問題なければ `last_verified` だけ更新、内容が古ければ修正して更新。**現状に対応する内容が無くなっている場合は `status: superseded` にせず、レビュー待ちリストへ**
 3. **notes 昇格候補の検出** — 前月の各ドメイン `log/`（decision / journal 以外の調査・監査ログ）を確認し、ストックへ反映すべき内容を反映する。feedback / incident の note で `operations/` 側の手順に未反映のものも同様
 4. **スモークテスト（1 問）** — 記憶に頼らず docs のみを根拠にプロダクトの仕組みへの質問に 1 つ答える。答えられなければ穴を `docs/engineering/log/YYYY-MM-DD-gardening-gap-<topic>.md` に記録し、可能ならストック側も直す
 5. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C の**月次 backstop 項目のみ**実施する（日次項目は指揮台の朝編成が吸収済み。`orchestration.md` §1 日サイクル）。発見は同 skill の intake で起票する

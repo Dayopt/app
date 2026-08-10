@@ -1,9 +1,9 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-08-10
 ---
 
-# マーケティング戦略
+# グロース戦略
 
 認知獲得の全体方針とチャネルの役割分担。
 
@@ -33,7 +33,7 @@ Dayoptの成長は「納得」を軸にした循環で回る。運営が見る�
 
 #### 1. 認知 / 気づく
 
-**運営として**: コンテンツ発信(ブログ、SNS)。思想・考え方への共感を軸に。運用フロー(いつ何を書くか)は [content-operations.md](./content-operations.md) を正本とする
+**運営として**: コンテンツ発信(ブログ、SNS)。思想・考え方への共感を軸に。運用フロー(いつ何を書くか)は [content-operations.md](./content/content-operations.md) を正本とする
 
 **ユーザーの状態**: 表面「いいツールないかな」／深層「毎日バタバタ、何に時間使ったかわからない」／感情: モヤモヤ、漠然とした不満
 
@@ -86,9 +86,9 @@ Dayoptの成長は「納得」を軸にした循環で回る。運営が見る�
 
 ## SNS でやらないこと
 
-[business/strategy.md](../business/strategy.md) の原則を発信にも適用する:
+[strategy.md](../strategy.md) の原則を発信にも適用する:
 
-- **煽らない**。「時間を無駄にしていませんか?」型の欠乏訴求・恐怖訴求は使わない(トーンは [copywriting.md](../product/copywriting.md)と [voice.md](./voice.md) に従う)
-- **gamification を訴求しない**。ストリーク・バッジ・ランキングはプロダクトに存在しない(business/strategy.md §4-6)ため、発信でも扱わない
+- **煽らない**。「時間を無駄にしていませんか?」型の欠乏訴求・恐怖訴求は使わない(トーンは [copywriting.md](../product/copywriting.md)と [voice.md](./content/voice.md) に従う)
+- **gamification を訴求しない**。ストリーク・バッジ・ランキングはプロダクトに存在しない([strategy.md](../strategy.md) §4-6)ため、発信でも扱わない
 - **他人との比較を扱わない**。比較対象は常に過去の自分
-- **AI 大量生成の没個性コンテンツを流さない**。人間臭さ・プロセス透明性を優先([voice.md](./voice.md))
+- **AI 大量生成の没個性コンテンツを流さない**。人間臭さ・プロセス透明性を優先([voice.md](./content/voice.md))

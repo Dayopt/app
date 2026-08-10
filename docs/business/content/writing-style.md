@@ -10,9 +10,9 @@ Docs / Blog / Release notes を書くすべての AI と人間が従う文章基
 文章まわりの正本は 4 つに分かれる。**書き方の機械的ルールは本ファイルが正本**。
 
 - 本ファイル — 文の書き方（B1 基準、短文、AI 臭の排除）
-- `docs/marketing/voice.md` — 何を書くか（3 本柱・6 原則）
-- [copywriting.md](../product/copywriting.md) — アプリ内 UI 文言のトーン・CTA 階層
-- [docs/marketing/docs-policy.md](./docs-policy.md) — Docs / Blog / Release notes の役割分担
+- `docs/business/content/voice.md` — 何を書くか（3 本柱・6 原則）
+- [copywriting.md](../../product/copywriting.md) — アプリ内 UI 文言のトーン・CTA 階層
+- [docs/business/content/docs-policy.md](./docs-policy.md) — Docs / Blog / Release notes の役割分担
 
 > Simple, not childish.
 > 短く、具体的で、初見でも迷わない文章にする。
@@ -37,7 +37,7 @@ Docs / Blog / Release notes を書くすべての AI と人間が従う文章基
 - 抽象的なビジネス表現を避ける。「シームレスに連携」「生産性を最大化」は書かない
 - **全角コロン「：」をテキスト中で使わない**（AI 生成テキストの典型パターン）。「〇〇できます：」は「〇〇できます。」で終えてリストを始める。「注意点：」は見出しにする。`（例：2週間ごと）` のような括弧内の補足だけ許容
 - frontmatter の `description` は体言止めで結ぶ（「〇〇のガイド」）。「紹介します」「解説します」のようなメタ宣言を書かない
-- トーン（研究者ペルソナ、感嘆符の扱い）は [copywriting.md](../product/copywriting.md) に従う
+- トーン（研究者ペルソナ、感嘆符の扱い）は [copywriting.md](../../product/copywriting.md) に従う
 
 ## 英語のルール
 

@@ -237,4 +237,68 @@ superseded_by: docs/product/log/2026-08-01-new.md
 
     expect(runAppendOnlyGuard({ baseRef: 'base', root })).toEqual([]);
   });
+
+  it('正常系: 廃止domainのlog/から現行append-onlyディレクトリへの同名rename（内容不変）を許可する', () => {
+    const root = createRepository();
+    const content = '---\nstatus: frozen\ndate: 2026-07-05\n---\n\n# Founder audit\n';
+    const oldPath = 'docs/marketing/log/2026-07-05-founder-audit.md';
+    const newPath = 'docs/business/log/2026-07-05-founder-audit.md';
+
+    write(root, oldPath, content);
+    git(root, 'add', oldPath);
+    git(root, 'commit', '-qm', 'add legacy domain log');
+
+    mkdirSync(dirname(join(root, newPath)), { recursive: true });
+    git(root, 'mv', oldPath, newPath);
+    git(root, 'commit', '-qm', 'move to business log');
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD~1', root })).toEqual([]);
+  });
+
+  it('エラー系: append-onlyディレクトリ間の同名renameでも内容が変わっていれば拒否する', () => {
+    const root = createRepository();
+    const oldPath = 'docs/marketing/log/2026-07-05-founder-audit.md';
+    const newPath = 'docs/business/log/2026-07-05-founder-audit.md';
+
+    write(root, oldPath, '---\nstatus: frozen\ndate: 2026-07-05\n---\n\n# Founder audit\n');
+    git(root, 'add', oldPath);
+    git(root, 'commit', '-qm', 'add legacy domain log');
+
+    mkdirSync(dirname(join(root, newPath)), { recursive: true });
+    git(root, 'mv', oldPath, newPath);
+    write(
+      root,
+      newPath,
+      '---\nstatus: frozen\ndate: 2026-07-05\n---\n\n# Founder audit (edited)\n',
+    );
+    git(root, 'add', newPath);
+    git(root, 'commit', '-qm', 'move and edit');
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD~1', root })).toEqual([
+      {
+        file: oldPath,
+        reason: `凍結済みlogをrenameしている: ${newPath}`,
+      },
+    ]);
+  });
+
+  it('エラー系: append-onlyディレクトリ間でもfilenameが変わるrenameは拒否する', () => {
+    const root = createRepository();
+    const oldPath = 'docs/product/log/2026-07-01-old-name.md';
+    const newPath = 'docs/product/log/2026-07-01-new-name.md';
+
+    write(root, oldPath, '---\nstatus: frozen\ndate: 2026-07-01\n---\n\n# Source\n');
+    git(root, 'add', oldPath);
+    git(root, 'commit', '-qm', 'add log');
+
+    git(root, 'mv', oldPath, newPath);
+    git(root, 'commit', '-qm', 'rename file');
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD~1', root })).toEqual([
+      {
+        file: oldPath,
+        reason: `凍結済みlogをrenameしている: ${newPath}`,
+      },
+    ]);
+  });
 });

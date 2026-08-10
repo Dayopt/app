@@ -13,7 +13,7 @@ last_verified: 2026-08-10
 
 この人格が最優先の判断基準である。本書後半の説得の技法（チャルディーニ6原則・Pre-suasion）は、人格に従属する道具にすぎない。技法と人格が衝突したら、常に人格を優先する。Do / Don'tチェックリストの禁止事項（他人比較、恐怖を煽る訴求、煽情的な表現）は、この序列を具体化したものである。
 
-この人格はプロダクト（UI）の声である。ブログやSNSなどのマーケティングコンテンツは、創業者の人間臭い声で書く。正本は[`docs/marketing/voice.md`](../marketing/voice.md)である。二つの声は意図的な使い分けである。
+この人格はプロダクト（UI）の声である。ブログやSNSなどのマーケティングコンテンツは、創業者の人間臭い声で書く。正本は[`docs/business/content/voice.md`](../business/content/voice.md)である。二つの声は意図的な使い分けである。
 
 ### 性格ルール
 
@@ -62,7 +62,7 @@ last_verified: 2026-08-10
 | 7   | vague SaaS words 禁止           | Seamlessly optimize your day | See where your time went         |
 
 - 性格ルールと感嘆符の基準は日本語と共通。良い結果は「30 min more than last week」、節目だけ「Personal best!」
-- 7 の禁止語リスト（empower / leverage / seamless / robust / optimize など）は [writing-style.md](../marketing/writing-style.md) §英語のルール と共通
+- 7 の禁止語リスト（empower / leverage / seamless / robust / optimize など）は [writing-style.md](../business/content/writing-style.md) §英語のルール と共通
 
 ---
 

@@ -129,6 +129,36 @@ code: apps/missing
     ]);
   });
 
+  it('境界: docsルート直下に昇格したstock file（docs/strategy.md）にもstock契約を適用する', () => {
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: current
+last_verified: 2026-07-14
+---
+`,
+      relativePath: 'docs/strategy.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([]);
+  });
+
+  it('境界: docsルート直下のstock fileもmetadata欠落を報告する', () => {
+    const reasons = validateDocumentMetadata({
+      content: '# Strategy\n',
+      relativePath: 'docs/strategy.md',
+      root: createRoot(),
+      today: '2026-07-14',
+    });
+
+    expect(reasons).toEqual([
+      'frontmatterがない',
+      'frontmatterにstatusがない',
+      'frontmatterにlast_verifiedがない',
+    ]);
+  });
+
   it('エラー系: stockの実在しないカレンダー日付を拒否する', () => {
     const reasons = validateDocumentMetadata({
       content: `---

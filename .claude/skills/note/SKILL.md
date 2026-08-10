@@ -35,7 +35,7 @@ description: ユーザーが調査・実験・監査・障害からの学びな�
 
 ## 手順
 
-1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `marketing` / `engineering` / `operations` / `company`)の記録かを判定する。迷ったら問い返す
+1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `engineering` / `operations` / `company`)の記録かを判定する。迷ったら問い返す
 2. 今日の日付(`YYYY-MM-DD`)を確認する
 3. slug が指定されていなければ、何についてのメモかを問い返す
 4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を以下の骨格で作成する:

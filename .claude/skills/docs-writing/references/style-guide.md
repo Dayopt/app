@@ -1,10 +1,10 @@
 # 執筆スタイルガイド（skill 固有の補足）
 
-文章の書き方そのもの（B1 基準・短文・具体語・AI 臭の排除・description の書き方）は **`docs/marketing/writing-style.md` が正本**。公開前チェックは `docs/marketing/review-checklist.md`、Docs / Blog / Release notes の役割分担は `docs/marketing/docs-policy.md` に従う。本ファイルには docs-writing skill 固有の補足（用語・タグ運用・配置）だけを残す。
+文章の書き方そのもの（B1 基準・短文・具体語・AI 臭の排除・description の書き方）は **`docs/business/content/writing-style.md` が正本**。公開前チェックは `docs/business/content/review-checklist.md`、Docs / Blog / Release notes の役割分担は `docs/business/content/docs-policy.md` に従う。本ファイルには docs-writing skill 固有の補足（用語・タグ運用・配置）だけを残す。
 
 ## 言語
 
-- 種別ごとの言語ポリシーは `docs/marketing/content-operations.md` §言語ポリシーが正本（docs / release 記事は en/ja 必須、blog は主言語のみで可）
+- 種別ごとの言語ポリシーは `docs/business/content/content-operations.md` §言語ポリシーが正本（docs / release 記事は en/ja 必須、blog は主言語のみで可）
 - 両言語で書く場合、`en/` と `ja/` に分離配置し、直訳ではなく各言語で自然な表現にする
 
 ## Dayopt固有の用語

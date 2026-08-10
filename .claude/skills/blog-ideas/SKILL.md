@@ -1,6 +1,6 @@
 ---
 name: blog-ideas
-description: ブログ記事のネタ提案と GitHub Issue 起票の明示依頼時に発動。docs/marketing/voice.md の3本柱と最近の開発・意思決定ログからネタを3-5個提案し、承認後に area:blog ラベルで起票する。記事本文のドラフト作成では発動しない。
+description: ブログ記事のネタ提案と GitHub Issue 起票の明示依頼時に発動。docs/business/content/voice.md の3本柱と最近の開発・意思決定ログからネタを3-5個提案し、承認後に area:blog ラベルで起票する。記事本文のドラフト作成では発動しない。
 user_invocable: true
 ---
 
@@ -13,7 +13,7 @@ user_invocable: true
 **明示発動型** — explicit なネタ出し依頼（`/blog-ideas`、「ブログのネタを出して」）のみを契機とする。
 
 - `/blog-ideas` で手動実行する時
-- リリース後にブログ候補を洗い出したい時（`docs/marketing/content-operations.md` のリリース駆動フロー）
+- リリース後にブログ候補を洗い出したい時（`docs/business/content/content-operations.md` のリリース駆動フロー）
 - 月次ガーデニングでコンテンツバックログを補充する時
 - ネタの重複確認だけを依頼された時
 
@@ -31,16 +31,16 @@ user_invocable: true
 
 以下のソースを並行で読み込む:
 
-1. **コンテンツ原則**: `docs/marketing/voice.md`（3本柱・6原則の正本）と `docs/marketing/strategy.md`
-2. **文章基準**: `docs/marketing/writing-style.md`（提案タイトルもこの基準で書く）
-3. **意思決定ログ**: 各ドメインの `docs/{business,product,marketing,engineering}/log/` の最新 5 件程度の冒頭
+1. **コンテンツ原則**: `docs/business/content/voice.md`（3本柱・6原則の正本）と `docs/business/growth.md`
+2. **文章基準**: `docs/business/content/writing-style.md`（提案タイトルもこの基準で書く）
+3. **意思決定ログ**: 各ドメインの `docs/{business,product,engineering}/log/` の最新 5 件程度の冒頭
 4. **開発の動き**: `git log --oneline -30` と `docs/engineering/log/` の直近 session / journal
 5. **既存ブログ記事**: `apps/web/content/blog/ja/*.mdx` のタイトル一覧（重複チェック用）
 6. **既存 Issue**: `gh issue list --label "area:blog" --state all --limit 50`（重複チェック用）
 
 ### Step 2: ネタ提案
 
-`docs/marketing/voice.md` の **3本柱** に基づいてネタを 3-5 個提案する。プロダクトに係る内容のみ。一般論は書かない。
+`docs/business/content/voice.md` の **3本柱** に基づいてネタを 3-5 個提案する。プロダクトに係る内容のみ。一般論は書かない。
 
 | 柱                           | 内容                                           | 内包する原則                          |
 | ---------------------------- | ---------------------------------------------- | ------------------------------------- |
@@ -99,6 +99,6 @@ EOF
 ## やらないこと
 
 - 記事本文のドラフト作成（`docs-writing` skill の責務）
-- AI 大量生成スパム的なネタ出し（`docs/marketing/strategy.md` で禁止）
-- Wikipedia 的な一般情報のまとめネタ（`docs/marketing/voice.md` の原則違反）
+- AI 大量生成スパム的なネタ出し（`docs/business/growth.md` で禁止）
+- Wikipedia 的な一般情報のまとめネタ（`docs/business/content/voice.md` の原則違反）
 - 過度な宣伝ネタ（同上）
