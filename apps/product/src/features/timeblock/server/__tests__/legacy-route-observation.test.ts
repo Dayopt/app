@@ -4,9 +4,19 @@ import { createMockContext } from '@/lib/test/trpc-test-helpers';
 import { createCallerFactory } from '@/lib/trpc/procedures';
 
 const warn = vi.hoisted(() => vi.fn());
+const captureMessage = vi.hoisted(() => vi.fn());
+const setTag = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/logger', () => ({
   logger: { warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock('@sentry/nextjs', () => ({
+  addBreadcrumb: vi.fn(),
+  captureMessage,
+  withScope: (callback: (scope: { setTag: typeof setTag }) => void) => callback({ setTag }),
+  withIsolationScope: (callback: (scope: { setUser: () => void }) => unknown) =>
+    callback({ setUser: vi.fn() }),
 }));
 
 const planService = vi.hoisted(() => ({
@@ -53,6 +63,15 @@ describe('legacy timeblock route observation (candidate 8 Stage 8-1)', () => {
     });
   });
 
+  it('legacy mutation は永続記録として Sentry warning event を送る', async () => {
+    const caller = callPlans(createMockContext({ userId: 'user-1' }));
+
+    await caller.delete({ id: '00000000-0000-4000-8000-000000000001' });
+
+    expect(setTag).toHaveBeenCalledWith('legacyTimeblockPath', 'plans.delete');
+    expect(captureMessage).toHaveBeenCalledWith('legacy_timeblock_route_invoked', 'warning');
+  });
+
   it('records 側の legacy mutation も同じ観測を通る', async () => {
     const caller = callRecords(createMockContext({ userId: 'user-1' }));
 
@@ -69,5 +88,6 @@ describe('legacy timeblock route observation (candidate 8 Stage 8-1)', () => {
     await caller.list();
 
     expect(warn).not.toHaveBeenCalled();
+    expect(captureMessage).not.toHaveBeenCalled();
   });
 });
