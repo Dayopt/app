@@ -70,7 +70,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 1. `gh search issues` で既存 issue との重複を確認（close 済み含む）
 2. 重複なら既存 issue に本文追記 or コメントで統合。新規なら handoff-quality で起票
-3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `quality:security` / `ops` など。`size:*` は **deprecated**（新規 issue には付けない。既存 issue から剥がしはしない）。新ラベルを作らない
+3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `quality:*` など、掲載一覧（[github-labels.md](../../../docs/operations/github-labels.md)）にあるものだけ。`size:*` は **deprecated**（新規 issue には付けない。既存 issue から剥がしはしない）。新ラベルを作らない
 4. `status:*` で着手可否を表す（着手可なら `status:ready`。`status:ready` を付けられる条件は §`status:ready` の定義（機械判定）に従う。前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く。issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作（production mutation / release / データ削除 / 不可逆 migration / 実課金。`CLAUDE.md` §協働のかたち）が含まれる場合に限り `risk:authority` を付け、朝の編成で User の裁可ポイントを事前提示する（`.claude/rules/orchestration.md` §権限の既定）。可逆な auth / RLS / billing のコード変更には付けない（`risk-reviewer` の自動委任と、必要に応じた `CHECKPOINT` で扱う）
 5. **milestone を判断する**: 現行 milestone（次の minor version。open は常に 1 個、世代交代は releasing skill Phase 3.1）に入れて押し込む作業なら milestone を付ける。付けなければバックログ。「next」milestone は作らない
 
