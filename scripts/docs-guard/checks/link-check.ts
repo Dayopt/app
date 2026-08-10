@@ -1,15 +1,18 @@
 /**
  * Check: リンク切れ
  *
- * docs/ 配下の全 .md から相対リンクを抽出し、リンク先ファイルの存在を検証する。
+ * docs/ 配下の全 .md を markdown parser で AST にし、リンク先ファイルの存在を検証する。
  * 外部URL（http/https）・アンカーのみ（#...）・Storybook deep-link（?path=...）はスキップする。
  *
- * 既知の限界: 抽出は正規表現なので code span / code fence / indented code block の中の
- * markdown 記法も実リンクとして拾う。コード例が「リンク切れ」として報告されるのはこのため。
- * 正しく分けるには markdown parser が必要で、この scope では扱わない。
+ * 抽出に正規表現を使わないのは、コード例と実リンクを区別するため。code span / code fence /
+ * indented code block の中身は `inlineCode` / `code` ノードになりリンクとして現れないので、
+ * 「コード例に書いた markdown 記法をリンク切れとして報告する」誤検知が構造的に起きない。
+ * 手書きで除去しようとすると fence の run 長・indent 上限・blockquote prefix・backtick run の
+ * 一致・4-space indented code と CommonMark の規則を際限なく追う必要があった（PR #1884 で実証）。
  */
 
 import { glob } from 'glob';
+import { fromMarkdown } from 'mdast-util-from-markdown';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import {
@@ -21,10 +24,32 @@ import {
   ROOT,
 } from '../config.ts';
 
-// 通常の [text](path) と、括弧を含むパス用の [text](<path>) の両方に対応
-const LINK_RE = /\[[^\]]*\]\((?:<([^>]+)>|([^)]+))\)/g;
-
 const FROZEN_LINK_INVENTORY = 'docs/engineering/log/2026-08-10-frozen-log-link-inventory.md';
+
+/** url を持つ mdast ノード。`definition` は reference-style リンク（`[ref]: path`）の定義側。 */
+const URL_NODE_TYPES = new Set(['link', 'image', 'definition']);
+
+/**
+ * AST を辿ってリンク先を集める。
+ *
+ * `unknown` + 型ガードで歩くのは、@types/mdast の union を narrowing するより単純で、
+ * 型定義の解決状況に依存しないため（`scripts/` は pnpm typecheck の対象外）。
+ */
+export function collectLinkTargets(node: unknown, out: string[] = []): string[] {
+  if (typeof node !== 'object' || node === null) return out;
+
+  const candidate = node as { type?: unknown; url?: unknown; children?: unknown };
+
+  if (typeof candidate.type === 'string' && URL_NODE_TYPES.has(candidate.type)) {
+    if (typeof candidate.url === 'string') out.push(candidate.url);
+  }
+
+  if (Array.isArray(candidate.children)) {
+    for (const child of candidate.children) collectLinkTargets(child, out);
+  }
+
+  return out;
+}
 
 export interface LinkViolation {
   file: string;
@@ -58,17 +83,16 @@ export async function runLinkCheck(): Promise<LinkViolation[]> {
   const violations: LinkViolation[] = [];
 
   for (const file of files) {
-    const content = readFileSync(file, 'utf-8');
-    let match: RegExpExecArray | null;
+    const tree = fromMarkdown(readFileSync(file, 'utf-8'));
 
-    while ((match = LINK_RE.exec(content)) !== null) {
-      const raw = (match[1] ?? match[2]).trim();
-
+    for (const raw of collectLinkTargets(tree)) {
       if (shouldSkipLinkTarget(raw)) continue;
 
       const target = raw.split('#')[0];
       if (!target) continue;
 
+      // percent-encode された link destination は docs/ に 0 件のため decode しない
+      // （decodeURIComponent は不正な列で throw するので、必要になるまで経路を作らない）。
       const resolved = resolve(dirname(file), target);
       if (!existsSync(resolved)) {
         violations.push({ file, target: raw });

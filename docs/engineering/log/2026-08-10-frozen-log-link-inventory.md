@@ -55,7 +55,13 @@ code: scripts/docs-guard
 
 当初これを「root 相対 URL をファイルシステムの `/` から解決してしまうバグ」と診断し、`/` 始まりを skip する修正を入れたが、これは誤診だった（外部レビューの指摘で判明）。skip は、綴り違いの `/docs/faq/featuers` を実リンクとして書いた場合を黙って通す穴も作っていた。
 
-**この 1 件は除外リストで凌ぎ、code span の分離は別 issue に切り出した。** 正しく分けるには markdown parser（`remark` 等）が必要で、手書きの近似では収束しない — fence の run 長、indent 上限、blockquote prefix、backtick run の一致、4-space indented code block と、対応すべき CommonMark の規則が次々に出てくる。この scope（凍結 log の棚卸し）に parser 導入を混ぜない。
+次に手書きの除去関数を書いたが、これも外部レビューで CommonMark 準拠の穴を 4 件指摘されて撤去した（fence の run 長を見ない / 開始 indent の上限が無い / backtick run の長さ一致を確認しない / blockquote prefix を解釈しない）。うち 2 件は**実リンク切れを飲み込む方向**の穴だった。しかも 4 件を直しても 4-space indented code block が未対応クラスとして残る。
+
+**最終的に markdown parser で抽出することにした。** `mdast-util-from-markdown` で AST にし、`link` / `image` / `definition` ノードの url だけを見る。code span / code fence / indented code block の中身は `inlineCode` / `code` ノードになりリンクとして現れないため、**誤検知が構造的に起きない**。手書き近似のように規則を追い続ける必要がない。
+
+この依存は既に apps/web の MDX 経路から transitive で lockfile に入っていたため、直接依存への昇格で新規ダウンロードは無かった（`pnpm install` が `downloaded 0, added 0`）。出口コストは小さい — 使用箇所は `link-check.ts` 1 ファイルのみの dev script で、捨てる場合は正規表現抽出に戻すだけ。データも runtime も課金も関わらない。
+
+移行時の差分を実測した。抽出リンクは正規表現 682 → AST 669 で、**減った 14 件はすべてコード例**（`docs/operations/runbook.md` の shell 例 8 件、`2026-04-17-session.md` の引用コミットメッセージ 4 件、`2026-06-22-shared-packages-canonical-and-app-shims.md` のツリー図 1 件、上記 marketing log 1 件）。**増えた 1 件**は `docs/engineering/infra.md` の autolink で、正規表現では拾えていなかったもの。検出力の喪失はない。
 
 ## 根本原因
 
@@ -74,7 +80,7 @@ code: scripts/docs-guard
 
 理由は 2 つある。第一に、参照先が実在する 8 件は `../` を 1 つ増やせば直るが、それでも append-only guard の「frontmatter への `superseded_by` 追記だけ許可」を緩める必要があり、guard の diff 解析が行ペアの意味比較まで抱えることになる。第二に、廃止された 4 件は「直す」と**当時存在しなかった文書を指すことになる**。2026-03-10 の決定ログが 2026-07-10 産の principles.md を指すのは機械的修正ではなく編集判断であり、append-only が守っている履歴の保存そのものを壊す。
 
-代わりに、後継先を本 log に一度だけ記録し、docs-guard 側では既知分を除外して**未登録のリンク切れだけを内訳付きで報告**する形にした。除外リストは [config.ts](../../../scripts/docs-guard/config.ts) の `KNOWN_FROZEN_BROKEN_LINKS`（11 ペア / 16 箇所。同じ (source, target) が 1 ファイル内に複数回出るためペア数と箇所数が一致しない）。
+代わりに、後継先を本 log に一度だけ記録し、docs-guard 側では既知分を除外して**未登録のリンク切れだけを内訳付きで報告**する形にした。除外リストは [config.ts](../../../scripts/docs-guard/config.ts) の `KNOWN_FROZEN_BROKEN_LINKS`（10 ペア / 15 箇所。同じ (source, target) が 1 ファイル内に複数回出るためペア数と箇所数が一致しない。§checker の誤検知 の 1 件は parser 化で解消したため除外リストに入っていない）。
 
 検討して採らなかった案:
 
@@ -87,3 +93,4 @@ code: scripts/docs-guard
 - 追加する場合、後継先は `KNOWN_FROZEN_BROKEN_LINKS` のコメントに書く。**本 log には追記しない** — この log 自身が `status: frozen` であり、append-only guard が `superseded_by` 以外の変更を拒否するため `pnpm docs:check` が落ちる。経緯を残す必要があれば新しい日付の log を作る。本 log は 2026-08-10 時点の棚卸しの記録であって、更新し続ける対応表ではない
 - 除外リストのエントリが現在は解決する状態（stock 側の復活など）になったら、docs-guard が「除外リストの陳腐化」として報告する。config から該当行を削除する
 - 未登録分・陳腐化分はいずれも warning のままで、CI の exit code には影響しない。fatal へ上げるかは今後の判断に残す
+- docs に markdown リンク記法をコード例として書いてよくなった。parser が code span / code fence / indented code block を区別するため、リンク切れとして報告されない

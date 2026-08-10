@@ -45,9 +45,8 @@ export interface FrozenBrokenLink {
 /**
  * 凍結 log 内の既知のリンク切れ。append-only 契約により後から直せないため恒久的に除外する。
  *
- * 大半は 2026-07 の docs 再編に由来する（後継先の対応表と経緯は
- * docs/engineering/log/2026-08-10-frozen-log-link-inventory.md が正本）。1 件だけ由来が違い、
- * link-check が code span を除外しないことによる誤検知（末尾のエントリ）。
+ * 全件が 2026-07 の docs 再編に由来する（後継先の対応表と経緯は
+ * docs/engineering/log/2026-08-10-frozen-log-link-inventory.md が正本）。
  *
  * このリストに載っていないリンク切れが log 側に出たら、それは「stock 側の移動で新たに
  * 過去の記録を壊した」合図。除外へ追加する前に、stock 側で移動をやめるか alias を残せない
@@ -99,13 +98,6 @@ export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
   {
     source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
     target: '../../.claude/rules/copywriting.md',
-  },
-  // リンク切れではない。backtick 内のコード例（公開 URL の階層化を説明する際に引用した
-  // `## [機能](/docs/faq/features)`）を link-check が実リンクとして拾っているだけ。
-  // 正しく分けるには markdown parser が必要なため、この 1 件は除外で凌ぐ。
-  {
-    source: 'docs/marketing/log/2026-07-27-docs-faq-url-nesting.md',
-    target: '/docs/faq/features',
   },
 ];
 
