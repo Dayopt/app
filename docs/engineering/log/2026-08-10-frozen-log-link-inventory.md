@@ -47,13 +47,15 @@ code: scripts/docs-guard
 | `2026-06-16-feature-non-adoption.md`                                                | `../strategy/research/competitors/`  | 2026-07-02 の `a849b5d55` でディレクトリ解体。[competitors.md](../../business/competitors.md) と `docs/business/log/2026-06-15-competitor-research-*.md` 9 本へ分割                                                                                                            |
 | `2026-06-16-feature-non-adoption.md`                                                | `../../.claude/rules/copywriting.md` | rules から `docs/ai/copywriting.md` へ移設後もさらに移動が続いており、宛先が安定していない。そのため本 log では固定リンクを張らず、`rg --files \| rg copywriting` で現在地を引く                                                                                               |
 
-### checker の false positive（1 件）
+### checker の誤検知（1 件）
 
-`docs/marketing/log/2026-07-27-docs-faq-url-nesting.md:63` の `/docs/faq/features` は公開サイト（apps/web）の root 相対 URL であって repo path ではない。link-check が `resolve(dirname(file), '/docs/faq/features')` を計算するため、ファイルシステムの `/` から解決されて必ず存在しないと判定されていた。
+`docs/marketing/log/2026-07-27-docs-faq-url-nesting.md:63` の `/docs/faq/features` は**そもそもリンクではない**。公開 URL の階層化を説明する文中で、壊れた構造化データの例として「見出しに markdown リンク記法を書いた行」が backtick 内に引用されており、そのリンク先部分が `/docs/faq/features` になっている。
 
-**これは凍結 log と無関係な checker のバグ**で、同じ書き方を stock doc でしたら fatal の誤検知になる。stock 側に root 相対リンクが 1 本も無かったため露出していなかっただけである。
+**原因は凍結 log と無関係な link-check の限界**で、リンク抽出が正規表現のため code span / code fence / indented code block の中の markdown 記法も実リンクとして拾う。同じ書き方を stock doc でしたら fatal の誤検知になる。
 
-本対応では `/` 始まりを skip 対象に加えたうえで、`.md` / `.mdx` で終わるものは skip から除いた。公開サイトの route は拡張子を持たないため、`/docs/foo.md` はサイト URL ではなく repo path の書き間違い（GitHub 上でも解決しない）であり、一律 skip にすると検出漏れの穴になる。
+当初これを「root 相対 URL をファイルシステムの `/` から解決してしまうバグ」と診断し、`/` 始まりを skip する修正を入れたが、これは誤診だった（外部レビューの指摘で判明）。skip は、綴り違いの `/docs/faq/featuers` を実リンクとして書いた場合を黙って通す穴も作っていた。
+
+**この 1 件は除外リストで凌ぎ、code span の分離は別 issue に切り出した。** 正しく分けるには markdown parser（`remark` 等）が必要で、手書きの近似では収束しない — fence の run 長、indent 上限、blockquote prefix、backtick run の一致、4-space indented code block と、対応すべき CommonMark の規則が次々に出てくる。この scope（凍結 log の棚卸し）に parser 導入を混ぜない。
 
 ## 根本原因
 
@@ -72,7 +74,7 @@ code: scripts/docs-guard
 
 理由は 2 つある。第一に、参照先が実在する 8 件は `../` を 1 つ増やせば直るが、それでも append-only guard の「frontmatter への `superseded_by` 追記だけ許可」を緩める必要があり、guard の diff 解析が行ペアの意味比較まで抱えることになる。第二に、廃止された 4 件は「直す」と**当時存在しなかった文書を指すことになる**。2026-03-10 の決定ログが 2026-07-10 産の principles.md を指すのは機械的修正ではなく編集判断であり、append-only が守っている履歴の保存そのものを壊す。
 
-代わりに、後継先を本 log に一度だけ記録し、docs-guard 側では既知分を除外して**未登録のリンク切れだけを内訳付きで報告**する形にした。除外リストは [config.ts](../../../scripts/docs-guard/config.ts) の `KNOWN_FROZEN_BROKEN_LINKS`（10 ペア / 15 箇所）。
+代わりに、後継先を本 log に一度だけ記録し、docs-guard 側では既知分を除外して**未登録のリンク切れだけを内訳付きで報告**する形にした。除外リストは [config.ts](../../../scripts/docs-guard/config.ts) の `KNOWN_FROZEN_BROKEN_LINKS`（11 ペア / 16 箇所。同じ (source, target) が 1 ファイル内に複数回出るためペア数と箇所数が一致しない）。
 
 検討して採らなかった案:
 

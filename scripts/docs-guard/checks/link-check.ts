@@ -2,8 +2,11 @@
  * Check: リンク切れ
  *
  * docs/ 配下の全 .md から相対リンクを抽出し、リンク先ファイルの存在を検証する。
- * 外部URL（http/https）・アンカーのみ（#...）・Storybook deep-link（?path=...）はスキップし、
- * code fence / inline code span の中身は抽出対象から外す。
+ * 外部URL（http/https）・アンカーのみ（#...）・Storybook deep-link（?path=...）はスキップする。
+ *
+ * 既知の限界: 抽出は正規表現なので code span / code fence / indented code block の中の
+ * markdown 記法も実リンクとして拾う。コード例が「リンク切れ」として報告されるのはこのため。
+ * 正しく分けるには markdown parser が必要で、この scope では扱わない。
  */
 
 import { glob } from 'glob';
@@ -50,50 +53,12 @@ export function shouldSkipLinkTarget(raw: string): boolean {
   );
 }
 
-const FENCE_RE = /^\s*(`{3,}|~{3,})/;
-// 同じ長さの backtick run で閉じる 1 行内の code span。閉じが無い行は何も除去しない。
-const INLINE_CODE_RE = /(`+)[^\n]*?\1/g;
-
-/**
- * code fence と inline code span を除去する。
- *
- * リンク抽出はテキストを正規表現で走るだけなので、コード例の中に書かれた markdown 記法も
- * 実リンクとして拾ってしまう。実例として docs/marketing/log/2026-07-27-docs-faq-url-nesting.md
- * では、公開 URL 設計の説明として backtick 内に `## [機能](/docs/faq/features)` と書かれた
- * コード例が「リンク切れ」として報告されていた（実リンクではない）。
- *
- * 行番号は報告しないため、単純な除去で足りる（置換して桁を保つ必要がない）。
- */
-export function stripCodeSpans(content: string): string {
-  const lines = content.split('\n');
-  const kept: string[] = [];
-  let fenceChar: string | null = null;
-
-  for (const line of lines) {
-    const fence = FENCE_RE.exec(line)?.[1];
-
-    if (fenceChar === null) {
-      if (fence) {
-        fenceChar = fence[0] ?? null;
-        continue;
-      }
-      kept.push(line.replace(INLINE_CODE_RE, ''));
-      continue;
-    }
-
-    // fence 内。同種の文字で始まる行を閉じとみなす。
-    if (fence && fence[0] === fenceChar) fenceChar = null;
-  }
-
-  return kept.join('\n');
-}
-
 export async function runLinkCheck(): Promise<LinkViolation[]> {
   const files = await glob('**/*.md', { cwd: DOCS_DIR, absolute: true });
   const violations: LinkViolation[] = [];
 
   for (const file of files) {
-    const content = stripCodeSpans(readFileSync(file, 'utf-8'));
+    const content = readFileSync(file, 'utf-8');
     let match: RegExpExecArray | null;
 
     while ((match = LINK_RE.exec(content)) !== null) {
