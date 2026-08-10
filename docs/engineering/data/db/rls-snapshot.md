@@ -387,6 +387,7 @@
 `private` schema は PostgREST に公開されない。owner（table / function / schema の所有者。
 下表を参照）が持つ権限は既定でノイズになるため対象外にし、owner 以外の grantee に
 付いている権限だけを機械固定する。「なし（0 件）」はその区分の grant が無いことを表す。
+privileges 列の `*` は WITH GRANT OPTION 付き（psql の `\dp` と同じ表記）。
 
 **この snapshot が保証するのは「migration を素の DB に当てた結果」であって production の実 state
 ではない。** 生成元は migration から構築した local DB で、CI の drift check も同じく ephemeral な
@@ -403,11 +404,110 @@ function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
 
 ### private の owner（ACL 一覧から除外している主体）
 
-| 対象     | owner    | 件数 |
-| -------- | -------- | ---- |
-| function | postgres | 78   |
-| object   | postgres | 24   |
-| schema   | postgres | 1    |
+| 対象     | 名前                                                            | owner    |
+| -------- | --------------------------------------------------------------- | -------- |
+| function | private.abort_billing_mutations_for_account_deletion_v1()       | postgres |
+| function | private.account_deletion_gate_is_active_v1()                    | postgres |
+| function | private.account_is_closing_v1(p_user_id uuid)                   | postgres |
+| function | private.assert_account_deletion_gate_active_v1()                | postgres |
+| function | private.assert_account_not_closing_v1(p_user_id uuid)           | postgres |
+| function | private.assert_calendar_account_not_deleting_v1(p_user_id uuid) | postgres |
+| function | private.assert_timeblock_effective_write_boundary_v1()          | postgres |
+| function | private.assert_timeblock_revision_acl_v1()                      | postgres |
+| function | private.assert_timeblock_service_role_request_v1()              | postgres |
+| function | private.assert_timeblock_writer_row_v1()                        | postgres |
+| function | private.authorize_mcp_mutation_v1(p_connection_id uuid, p_acces | postgres |
+| function | private.begin_calendar_revoke_operation_v1(p_operation_id uuid, | postgres |
+| function | private.bind_timeblock_direct_writer_v1()                       | postgres |
+| function | private.bind_timeblock_supported_writer_lock_v1(p_user_id uuid, | postgres |
+| function | private.bind_timeblock_supported_writer_v1(p_user_id uuid)      | postgres |
+| function | private.bump_timeblock_revision_from_row_v1()                   | postgres |
+| function | private.bump_timeblock_user_revision_v1(p_user_id uuid)         | postgres |
+| function | private.calendar_account_deletion_required_v1(p_user_id uuid)   | postgres |
+| function | private.claim_timeblock_revision_bump_v1(p_user_id uuid)        | postgres |
+| function | private.clamp_calendar_revoke_operation_retention_v1()          | postgres |
+| function | private.clamp_calendar_revoke_outbox_expiry_v1()                | postgres |
+| function | private.cleanup_calendar_authority_retention_internal_v1(p_limi | postgres |
+| function | private.cleanup_product_events_v1(p_limit integer)              | postgres |
+| function | private.cleanup_stale_timeblock_transaction_state_v1()          | postgres |
+| function | private.cleanup_timeblock_user_revision_v1()                    | postgres |
+| function | private.complete_calendar_account_delete_attempt_v1(p_operation | postgres |
+| function | private.confirm_day_plans_unserialized_v1(p_user_id uuid, p_sta | postgres |
+| function | private.consume_calendar_account_delete_source_v1(p_operation_i | postgres |
+| function | private.create_plan_unserialized_v1(p_user_id uuid, p_title tex | postgres |
+| function | private.create_record_unserialized_v1(p_user_id uuid, p_title t | postgres |
+| function | private.current_timeblock_transaction_state_v1()                | postgres |
+| function | private.delete_plan_unserialized_v1(p_user_id uuid, p_plan_id u | postgres |
+| function | private.delete_record_unserialized_v1(p_user_id uuid, p_record_ | postgres |
+| function | private.digest_calendar_authority_operation_v1(p_operation_kind | postgres |
+| function | private.digest_mcp_mutation_envelope_v1(p_tool_name text, p_nor | postgres |
+| function | private.enforce_account_deletion_boundary_v1()                  | postgres |
+| function | private.enforce_account_storage_deletion_boundary_v1()          | postgres |
+| function | private.enforce_billing_account_deletion_boundary_v1()          | postgres |
+| function | private.enforce_calendar_account_delete_boundary_v1()           | postgres |
+| function | private.enforce_calendar_account_deletion_binding_v1()          | postgres |
+| function | private.enforce_mcp_mutation_receipt_lifecycle_v1()             | postgres |
+| function | private.exchange_oauth_authorization_code_v2(p_code_hash text,  | postgres |
+| function | private.expire_calendar_revoke_authority_internal_v2(p_limit in | postgres |
+| function | private.expire_calendar_revoke_ciphertexts_internal_v1(p_projec | postgres |
+| function | private.expire_calendar_revoke_operation_item_v1(p_operation_id | postgres |
+| function | private.expire_calendar_revoke_outbox_internal_v1(p_limit integ | postgres |
+| function | private.expire_calendar_revoke_outbox_legacy_unbound_internal_v | postgres |
+| function | private.finalize_calendar_revoke_guards_internal_v1(p_limit int | postgres |
+| function | private.get_mcp_environment_resource_uri_v1()                   | postgres |
+| function | private.get_or_create_calendar_subject_fence_v1(p_project_key t | postgres |
+| function | private.get_user_data_generation_v1(p_user_id uuid)             | postgres |
+| function | private.guard_direct_timeblock_statement_v1()                   | postgres |
+| function | private.initialize_timeblock_user_revision_v1()                 | postgres |
+| function | private.lock_calendar_authority_fence_pair_v1(p_project_key tex | postgres |
+| function | private.lock_calendar_sync_writer_v1(p_project_key text, p_user | postgres |
+| function | private.lock_mcp_mutation_operation_v1(p_user_id uuid, p_client | postgres |
+| function | private.lock_timeblock_user_before_account_delete_v1()          | postgres |
+| function | private.lock_timeblock_user_write_exclusive_v1(p_user_id uuid)  | postgres |
+| function | private.lock_timeblock_user_write_shared_v1(p_user_id uuid)     | postgres |
+| function | private.merge_tags_with_hierarchy_unserialized_v1(p_user_id uui | postgres |
+| function | private.normalize_calendar_account_deletion_intent_v1(p_user_id | postgres |
+| function | private.prevent_mcp_environment_identity_change_v1()            | postgres |
+| function | private.protect_account_deletion_control_v1()                   | postgres |
+| function | private.record_billing_account_deletion_terminal_v1()           | postgres |
+| function | private.record_plan_unserialized_v1(p_user_id uuid, p_plan_id u | postgres |
+| function | private.reject_mcp_preview_oauth_client_state_v1()              | postgres |
+| function | private.require_mcp_environment_resource_v1(p_resource_uri text | postgres |
+| function | private.resolve_calendar_authority_project_fence_v1(p_project_k | postgres |
+| function | private.resolve_mcp_mutation_replay_v1(p_user_id uuid, p_client | postgres |
+| function | private.restore_plan_unserialized_v1(p_user_id uuid, p_plan_id  | postgres |
+| function | private.restore_record_unserialized_v1(p_user_id uuid, p_record | postgres |
+| function | private.rotate_oauth_refresh_token_v2(p_refresh_hash text, p_cl | postgres |
+| function | private.set_plan_skipped_unserialized_v1(p_user_id uuid, p_plan | postgres |
+| function | private.settle_calendar_revoke_operation_v1(p_operation_id uuid | postgres |
+| function | private.track_product_user_signup_v1()                          | postgres |
+| function | private.update_plan_unserialized_v1(p_user_id uuid, p_plan_id u | postgres |
+| function | private.update_record_unserialized_v1(p_user_id uuid, p_record_ | postgres |
+| object   | private.account_deletion_control                                | postgres |
+| object   | private.account_deletion_operations                             | postgres |
+| object   | private.account_deletion_steps                                  | postgres |
+| object   | private.billing_account_deletion_bindings                       | postgres |
+| object   | private.billing_account_deletion_terminal_receipts              | postgres |
+| object   | private.billing_customer_provisioning_attempts                  | postgres |
+| object   | private.billing_mutation_claims                                 | postgres |
+| object   | private.billing_mutation_responses                              | postgres |
+| object   | private.calendar_account_deletion_bindings                      | postgres |
+| object   | private.calendar_account_deletion_intents                       | postgres |
+| object   | private.calendar_authority_command_receipts                     | postgres |
+| object   | private.calendar_authority_fences                               | postgres |
+| object   | private.calendar_authority_projects                             | postgres |
+| object   | private.calendar_oauth_attempts                                 | postgres |
+| object   | private.calendar_revoke_operations                              | postgres |
+| object   | private.calendar_revoke_outbox                                  | postgres |
+| object   | private.integration_security_events                             | postgres |
+| object   | private.legacy_oauth_bind_observations                          | postgres |
+| object   | private.legacy_oauth_bind_observations_id_seq                   | postgres |
+| object   | private.timeblock_effective_write_privileges_v1                 | postgres |
+| object   | private.timeblock_transaction_revision_bumps                    | postgres |
+| object   | private.timeblock_transaction_states                            | postgres |
+| object   | private.timeblock_user_revisions                                | postgres |
+| object   | private.user_data_controls                                      | postgres |
+| schema   | private                                                         | postgres |
 
 ### private オブジェクト ACL（owner 以外）
 

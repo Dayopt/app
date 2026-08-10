@@ -38,6 +38,15 @@ const LOCAL_SUPABASE_DATABASE_URL = [
 ].join('');
 const DATABASE_URL = process.env.DATABASE_URL ?? LOCAL_SUPABASE_DATABASE_URL;
 
+/**
+ * GRANT OPTION 付きの権限を `*` 付きで出す（psql の `\dp` と同じ表記）。
+ * aclexplode() の is_grantable を捨てると、既存 GRANT を WITH GRANT OPTION 付きへ変えても
+ * snapshot が同一のままになり、付与された側が第三者へ再付与できる状態が drift 検出を
+ * すり抜ける。public / private のすべての ACL クエリで同じ式を使う。
+ */
+const GRANTABLE_PRIVILEGE_SQL =
+  "acl.privilege_type || CASE WHEN acl.is_grantable THEN '*' ELSE '' END";
+
 type PolicyRow = {
   tablename: string;
   policyname: string;
@@ -54,7 +63,7 @@ type GrantRow = { object_type: string; object_name: string; grantee: string; pri
 type PrivateGrantRow = { object_name: string; grantee: string; privileges: string };
 type PrivateColumnGrantRow = PrivateGrantRow & { column_name: string };
 type SchemaGrantRow = { grantee: string; privileges: string };
-type PrivateOwnerRow = { target: string; owner: string; count: number };
+type PrivateOwnerRow = { target: string; object_name: string; owner: string };
 type RealtimePublicationRow = { schemaname: string; tablename: string };
 type EffectiveTimeblockWritePrivilegeRow = {
   object_type: string;
@@ -111,7 +120,7 @@ function fetchGrants(): GrantRow[] {
            END AS object_type,
            n.nspname || '.' || c.relname AS object_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          CROSS JOIN LATERAL aclexplode(c.relacl) acl
@@ -126,7 +135,7 @@ function fetchGrants(): GrantRow[] {
            'column' AS object_type,
            n.nspname || '.' || c.relname || '.' || a.attname AS object_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_attribute a
          JOIN pg_class c ON c.oid = a.attrelid
          JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -144,7 +153,7 @@ function fetchGrants(): GrantRow[] {
            'routine' AS object_type,
            n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
@@ -188,7 +197,7 @@ function fetchPrivateRelationGrants(): GrantRow[] {
            END AS object_type,
            n.nspname || '.' || c.relname AS object_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          CROSS JOIN LATERAL aclexplode(c.relacl) acl
@@ -214,29 +223,31 @@ function fetchPrivateRelationGrants(): GrantRow[] {
  * 「grant 0 件のまま実質フルアクセス」という状態が CI green のまま成立してしまう。
  * owner 名を assert すると環境差（local と production）で壊れるので、assert ではなく
  * 記録する。owner が変われば snapshot が変化し、drift として検出される。
+ *
+ * ロール別の件数に集約すると、件数の変わらない所有権移動（機密オブジェクトと無害な
+ * オブジェクトの owner を入れ替える等）を検出できない。オブジェクト単位で記録する。
  */
 function fetchPrivateOwners(): PrivateOwnerRow[] {
   return (
     queryJson<PrivateOwnerRow[] | null>(
-      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.target, t.owner), '[]'::json)
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.target, t.object_name), '[]'::json)
        FROM (
-         SELECT 'schema' AS target, pg_get_userbyid(n.nspowner) AS owner, count(*)::int AS count
+         SELECT 'schema' AS target, n.nspname AS object_name, pg_get_userbyid(n.nspowner) AS owner
          FROM pg_namespace n
          WHERE n.nspname = 'private'
-         GROUP BY 1, 2
          UNION ALL
-         SELECT 'object', pg_get_userbyid(c.relowner), count(*)::int
+         SELECT 'object', n.nspname || '.' || c.relname, pg_get_userbyid(c.relowner)
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE n.nspname = 'private'
            AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
-         GROUP BY 1, 2
          UNION ALL
-         SELECT 'function', pg_get_userbyid(p.proowner), count(*)::int
+         SELECT 'function',
+                n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+                pg_get_userbyid(p.proowner)
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'private'
-         GROUP BY 1, 2
        ) t;`,
     ) ?? []
   );
@@ -251,7 +262,7 @@ function fetchPrivateColumnGrants(): PrivateColumnGrantRow[] {
            n.nspname || '.' || c.relname AS object_name,
            a.attname AS column_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_attribute a
          JOIN pg_class c ON c.oid = a.attrelid
          JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -274,7 +285,7 @@ function fetchPrivateRoutineGrants(): PrivateGrantRow[] {
          SELECT
            n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          -- proacl が NULL（明示 grant/revoke 未実施）だと Postgres の既定 ACL は PUBLIC に
@@ -297,7 +308,7 @@ function fetchPrivateSchemaUsage(): SchemaGrantRow[] {
        FROM (
          SELECT
            CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
-           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+           string_agg(${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY acl.privilege_type) AS privileges
          FROM pg_namespace n
          CROSS JOIN LATERAL aclexplode(n.nspacl) acl
          WHERE n.nspname = 'private'
@@ -423,6 +434,7 @@ function render(
   lines.push(
     '付いている権限だけを機械固定する。「なし（0 件）」はその区分の grant が無いことを表す。',
   );
+  lines.push('privileges 列の `*` は WITH GRANT OPTION 付き（psql の `\\dp` と同じ表記）。');
   lines.push('');
   lines.push(
     '**この snapshot が保証するのは「migration を素の DB に当てた結果」であって production の実 state',
@@ -454,10 +466,10 @@ function render(
 
   lines.push('### private の owner（ACL 一覧から除外している主体）');
   lines.push('');
-  lines.push('| 対象 | owner | 件数 |');
+  lines.push('| 対象 | 名前 | owner |');
   lines.push('| --- | --- | --- |');
   for (const row of privateOwners) {
-    lines.push(`| ${cell(row.target)} | ${cell(row.owner)} | ${row.count} |`);
+    lines.push(`| ${cell(row.target)} | ${cell(row.object_name)} | ${cell(row.owner)} |`);
   }
   lines.push('');
 
