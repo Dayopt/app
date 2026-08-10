@@ -1190,7 +1190,7 @@ export async function createPortalSession(
   const session = await stripe.billingPortal.sessions.create(
     {
       customer: customerId,
-      return_url: `${appUrl}/settings/billing`,
+      return_url: `${appUrl}/settings/billing?portal_return=true`,
     },
     {
       idempotencyKey: `${IDEMPOTENCY_KEY_PREFIX.portal}-${providerClaim.operationId}`,

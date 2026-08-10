@@ -261,4 +261,21 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
 
     await expect(page.getByText(CHECKOUT_CANCELED_TOAST_TEXT)).toBeVisible({ timeout: 10_000 });
   });
+
+  // Portal からの復帰（?portal_return=true）は課金概要の invalidate だけが目的で、
+  // 通知するイベントではないので toast を出さない。invalidate 自体は
+  // settings/__tests__/routing.test.tsx が assert する。ここでは Checkout の
+  // toast を巻き添えで出していないことと、白紙にならないことを確認する。
+  test('Portal 復帰（?portal_return=true）では toast を出さず画面が壊れない', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), MOBILE_SKIP_REASON);
+
+    await login(page);
+    await page.goto('/ja/settings/billing?portal_return=true');
+
+    await expect(page.locator('main')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(CHECKOUT_SUCCESS_TOAST_TEXT)).toBeHidden();
+    await expect(page.getByText(CHECKOUT_CANCELED_TOAST_TEXT)).toBeHidden();
+  });
 });

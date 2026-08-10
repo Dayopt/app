@@ -22,10 +22,7 @@ import { api } from '@/lib/trpc';
 import { Button } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
-import {
-  parseCheckoutCallbackResult,
-  removeCheckoutCallbackParams,
-} from '../_utils/checkout-callback';
+import { parseBillingReturn, removeBillingReturnParams } from '../_utils/billing-return';
 import {
   buildSettingsReturnQuery,
   DESKTOP_SETTINGS_EXIT_PATH,
@@ -58,13 +55,10 @@ export default function SettingsCategoryPage() {
   const calendarParam = searchParams.get('calendar');
   const reasonParam = searchParams.get('reason');
   const searchParamsString = searchParams.toString();
-  // Stripe Checkout からの復帰。PC は下の openSettings + replace で query が消えるため、
-  // BillingSettings 側ではなくここで先に処理する
+  // Stripe Checkout / Customer Portal からの復帰。PC は下の openSettings + replace で
+  // query が消えるため、BillingSettings 側ではなくここで先に処理する
   // （Calendar の OAuth callback と同じ理由・同じ形）。
-  const checkoutResult =
-    category === 'billing'
-      ? parseCheckoutCallbackResult(searchParams.get('success'), searchParams.get('canceled'))
-      : null;
+  const billingReturn = category === 'billing' ? parseBillingReturn(searchParams) : null;
   const callbackResult = useMemo(() => {
     const callbackParams = new URLSearchParams();
     if (calendarParam) callbackParams.set('calendar', calendarParam);
@@ -100,20 +94,24 @@ export default function SettingsCategoryPage() {
       return;
     }
 
-    if (checkoutResult) {
-      const callbackKey = `checkout:${checkoutResult}`;
+    if (billingReturn) {
+      const callbackKey = `billing:${billingReturn}`;
       if (processedCallback.current === callbackKey) return;
       processedCallback.current = callbackKey;
 
-      toast.success(
-        t(
-          checkoutResult === 'success'
-            ? 'settings.subscription.checkoutSuccess'
-            : 'settings.subscription.checkoutCanceled',
-        ),
-      );
-      // Checkout 直後は subscription_status が変わりうる。既定 staleTime は 5 分なので
-      // invalidate しないと復帰直後の画面が古いプランのままになる
+      // Checkout の結果だけ知らせる。Portal からの復帰は通知するイベントではない
+      if (billingReturn !== 'portal') {
+        toast.success(
+          t(
+            billingReturn === 'checkout_success'
+              ? 'settings.subscription.checkoutSuccess'
+              : 'settings.subscription.checkoutCanceled',
+          ),
+        );
+      }
+      // Checkout / Portal のどちらでも課金状態は変わりうる。query cache は IndexedDB へ
+      // 永続化され staleTime 5 分は fresh 扱いのため、invalidate しないと外部遷移前の
+      // 値がそのまま復元されて解約やプラン変更が反映されない
       void utils.billing.getOverview.invalidate();
 
       if (!isMobile) {
@@ -122,7 +120,7 @@ export default function SettingsCategoryPage() {
         return;
       }
 
-      const cleanParams = removeCheckoutCallbackParams(new URLSearchParams(searchParamsString));
+      const cleanParams = removeBillingReturnParams(new URLSearchParams(searchParamsString));
       const query = cleanParams.size > 0 ? `?${cleanParams.toString()}` : '';
       router.replace(`/settings/billing${query}`);
       return;
@@ -133,10 +131,10 @@ export default function SettingsCategoryPage() {
       router.replace(DESKTOP_SETTINGS_EXIT_PATH);
     }
   }, [
+    billingReturn,
     callbackResult,
     calendarParam,
     category,
-    checkoutResult,
     hasMounted,
     isMobile,
     isValid,

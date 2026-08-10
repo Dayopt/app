@@ -253,6 +253,20 @@ describe('settings route hydration guards', () => {
     expect(mockReplace).toHaveBeenCalledWith('/settings/billing?panel=review');
   });
 
+  it('invalidates the billing overview when returning from the customer portal', () => {
+    mockHasMounted = true;
+    mockIsMobile = false;
+    mockCategory = 'billing';
+    mockSearchParams = new URLSearchParams('portal_return=true');
+
+    render(<SettingsCategoryPage />);
+
+    // Portal からの復帰は通知するイベントではないので toast は出さない
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockInvalidateBillingOverview).toHaveBeenCalled();
+    expect(mockOpenSettings).toHaveBeenCalledWith('billing');
+  });
+
   it('ignores checkout params outside the billing category', () => {
     mockHasMounted = true;
     mockIsMobile = false;

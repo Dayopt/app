@@ -212,7 +212,7 @@ async function createLegacyPortalSession(
   const session = await stripe.billingPortal.sessions.create(
     {
       customer: billingInfo.stripeCustomerId,
-      return_url: `${getAppUrl()}/settings/billing`,
+      return_url: `${getAppUrl()}/settings/billing?portal_return=true`,
     },
     { idempotencyKey: `dayopt-billing-portal-legacy-v1-${operationId}` },
   );
