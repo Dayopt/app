@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-03
+last_verified: 2026-08-10
 code:
   - docs/projects/mcp-plan-track-learn/overview.md
   - docs/projects/mcp-plan-track-learn/step-6-conformance.md
@@ -78,7 +78,7 @@ protocol試験の前に、次のrepo-side blockerも閉じる。
 - 一時停止を維持する場合は、gate再開前に対象connectionを個別revokeし、同じtoken familyが復活しない運用をrehearseする
 - maintenance dispatcherがauthorization code、access token、refresh token、connection、mutation receiptのdue flagを完了判定へ含める（[#1895](https://github.com/Dayopt/dayopt/issues/1895) で実装。5 flagすべてが`hasMore`/`complete`へ入り、backlogがある間はfail closedで不完全と報告する）
 - 各due itemのbounded cleanupを実行し、期限超過をfail closedで報告する
-  - **未達（2026-08-10 確認）**: `receipts_due`に対応する`cleanup_mcp_mutation_receipts_v1`だけが実在し、authorization code / access token / refresh token / connectionの4種はcleanup関数そのものが存在しない。due flagは立つが解消手段が無いため、現状は`complete: false`が恒久化する。[#1898](https://github.com/Dayopt/dayopt/issues/1898) で4本を実装するまで§6 Production beta checkpointの「全retention due flagがfalse」は満たせない
+  - **実装済み（2026-08-10、[#1898](https://github.com/Dayopt/dayopt/issues/1898)）**: authorization code / access token / refresh token / connectionの4種のcleanup RPC（`cleanup_oauth_authorization_codes_v1` / `cleanup_oauth_access_tokens_v1` / `cleanup_oauth_refresh_tokens_v1` / `cleanup_oauth_connections_v1`）を追加し、maintenance dispatcherの`cleanupSteps`へ組み込んだ（`20260810070002_add_oauth_retention_cleanup_rpcs.sql`）。削除predicateは`get_external_authority_maintenance_status_v1`の同名due flagの判定式と一致させてあるため、cleanup実行後は該当due flagがfalseに落ちる（`docs/engineering/invariants.md` §MCP の DB 書き込み境界に不変条件を追記）。§6 Production beta checkpointの「全retention due flagがfalse」を妨げていたcleanup関数の不在は解消済みで、残る前提はcron実行間隔とbacklog量（`p_limit`超過時は複数回のdispatchで解消）だけになった
 - legacy textと`structuredContent`のuntrusted data扱いを3 clientで確認できるtest scenarioを用意する
 
 - 現在のofficial conformance suiteとspec versionを選ぶ

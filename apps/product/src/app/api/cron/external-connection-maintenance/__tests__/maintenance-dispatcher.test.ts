@@ -14,8 +14,14 @@ const envMock = vi.hoisted(
 );
 
 vi.mock('@/env', () => ({ env: envMock }));
+// MIN_RUN_BUDGET_MS は dispatcher が outbox の下限を守るために読む実値（1 batch 分の
+// MIN_BATCH_BUDGET_MS に、claim 前に走る expire RPC の timeout と I/O を伴わない startup の
+// 固定コストを足したもの）。mock で落とすと不変条件のテストが意味を失うので、feature 側の値を
+// そのまま写す。実値は revoke-outbox.test.ts が pin している。
+const MIN_RUN_BUDGET_MS = 27_000;
 vi.mock('@/features/external-calendar/server/revoke-outbox', () => ({
   processCalendarRevokeOutbox,
+  MIN_RUN_BUDGET_MS: 27_000,
 }));
 vi.mock('@/features/settings/server/account-deletion', () => ({
   cleanupBillingAccountDeletionTerminalReceipts,
@@ -34,9 +40,20 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
-import { dispatchExternalConnectionMaintenance } from '../_composition/maintenance-dispatcher';
+import {
+  dispatchExternalConnectionMaintenance,
+  RETENTION_WORST_CASE_MS,
+} from '../_composition/maintenance-dispatcher';
 
 const FAR_DEADLINE = 10 ** 15;
+
+// route.ts の `TIME_BUDGET_MS` と `maxDuration`（秒）。route.ts を import すると mock して
+// いない依存まで引き込むため値を写す。route.test.ts 側で実値を pin してある。
+const CRON_TIME_BUDGET_MS = 50_000;
+const CRON_MAX_DURATION_MS = 60 * 1_000;
+// `external-lifecycle-version.ts` の VERSION_RPC_TIMEOUT_MS。outbox の下限ガードは
+// この RPC の後に現在時刻から測るため、最悪ケースの起点になる。
+const LIFECYCLE_RPC_TIMEOUT_MS = 3_000;
 
 const OUTBOX_SUMMARY = {
   claimed: 4,
@@ -121,6 +138,50 @@ beforeEach(() => {
 });
 
 describe('dispatchExternalConnectionMaintenance', () => {
+  it('deadlineが逼迫していてもoutboxには1 batch分の時間を必ず残す', async () => {
+    // retention の取り分（RETENTION_BUDGET_MS）より短い deadline を渡す。素朴に減算すると
+    // outbox は過去の deadline を受け取り、1 件も claim せずに終わる（= calendar revoke が
+    // 送られない）。dispatcher 側の下限ガードがこれを防ぐ。
+    const startedAt = Date.now();
+    await dispatchExternalConnectionMaintenance({ deadlineAt: startedAt + 10_000 });
+
+    const outboxCall = processCalendarRevokeOutbox.mock.calls[0]?.[0];
+    expect(outboxCall?.deadlineAt).toBeGreaterThanOrEqual(startedAt + MIN_RUN_BUDGET_MS);
+  });
+
+  it('cleanup RPC が未実装の schema でも失敗させず、due を残して不完全と報告する', async () => {
+    // marker（get_external_lifecycle_app_version_v2）は「その RPC 自体の不在」でしか
+    // predecessor を判定しない。app が migration より先に deploy された場合、cleanup RPC は
+    // PGRST202 を返すが lifecycle 分岐は predecessor 側へ落ちない。ここで失敗扱いにすると
+    // cron が毎回 500 になる。
+    rpc.mockImplementation((operation: string) => {
+      const result =
+        operation === 'get_external_lifecycle_app_version_v2'
+          ? { data: 1, error: null }
+          : operation === 'get_external_authority_maintenance_status_v1'
+            ? { data: [{ ...STATUS, authorization_codes_due: true }], error: null }
+            : operation.startsWith('cleanup_oauth_')
+              ? {
+                  data: null,
+                  error: { code: 'PGRST202', message: 'Could not find the function' },
+                }
+              : { data: CLEANUP_COUNTS[operation], error: null };
+      return { abortSignal: vi.fn(async () => result) };
+    });
+
+    const summary = await dispatchExternalConnectionMaintenance({ deadlineAt: FAR_DEADLINE });
+
+    expect(summary.complete).toBe(false);
+    expect(summary.retention.due.authorizationCodes).toBe(true);
+    // 未実装分は 0 件として記録する（例外にしない）。
+    expect(summary.retention.oauthAuthorizationCodesDeleted).toBe(0);
+    expect(summary.retention.oauthConnectionsDeleted).toBe(0);
+    // 実在する cleanup は通常どおり実行される。
+    expect(summary.retention.mcpMutationReceiptsDeleted).toBe(
+      CLEANUP_COUNTS.cleanup_mcp_mutation_receipts_v1,
+    );
+  });
+
   it('outbox後に全retention cleanupとaggregate statusを実行する', async () => {
     const sequence: string[] = [];
     processCalendarRevokeOutbox.mockImplementation(async () => {
@@ -150,13 +211,39 @@ describe('dispatchExternalConnectionMaintenance', () => {
       deadlineAt: FAR_DEADLINE,
     });
 
-    expect(processCalendarRevokeOutbox).toHaveBeenCalledWith({
-      encryptionKey: 'test-key',
-      deadlineAt: FAR_DEADLINE - 23_000,
-    });
+    // outbox へ渡す deadline は 2 つの不変条件に挟まれている。数値を直書きすると
+    // 「cleanup step を足したのに予算が据え置かれる」「retention の取り分を増やしたら
+    // outbox が 1 batch も回せなくなる」の両方を静かに踏む（#1898 で実際に両方踏んだ）。
+    const outboxCall = processCalendarRevokeOutbox.mock.calls[0]?.[0];
+    // Composition Layer が env の暗号鍵を outbox へ配線しているかを見る唯一の assertion。
+    // 引数型が `string | undefined` なので、落としても typecheck では捕まらない。
+    expect(outboxCall?.encryptionKey).toBe('test-key');
+    const retentionReservationMs = FAR_DEADLINE - (outboxCall?.deadlineAt ?? 0);
+    // 本番で outbox が実際に持てる時間は route の予算から retention の取り分を引いた分。
+    const outboxWindowMs = CRON_TIME_BUDGET_MS - retentionReservationMs;
+
+    // (1) outbox は claim 前に expire RPC を 1 本走らせた上で、残り時間が 1 batch 分を
+    //     割ると 0 件で break する。取り分がこれを下回ると calendar revoke request が
+    //     永久に送られない。
+    expect(outboxWindowMs).toBeGreaterThanOrEqual(MIN_RUN_BUDGET_MS);
+
+    // (2) outbox の取り分 + retention の worst case が maxDuration を超えると、retention の
+    //     途中で関数が kill される。step を足して worst case が伸びるとここが落ちる。
+    expect(outboxWindowMs + RETENTION_WORST_CASE_MS).toBeLessThanOrEqual(CRON_MAX_DURATION_MS);
+
+    // (3) 下限ガードが効いた時（lifecycle RPC が timeout 一杯かかった最悪ケース）でも
+    //     (2) を満たす。ガードは outbox の取り分を押し上げる方向に働くため、こちらが
+    //     実質の上限になる。
+    expect(
+      LIFECYCLE_RPC_TIMEOUT_MS + MIN_RUN_BUDGET_MS + RETENTION_WORST_CASE_MS,
+    ).toBeLessThanOrEqual(CRON_MAX_DURATION_MS);
     expect(sequence).toEqual([
       'get_external_lifecycle_app_version_v2',
       'outbox',
+      'cleanup_oauth_authorization_codes_v1',
+      'cleanup_oauth_access_tokens_v1',
+      'cleanup_oauth_refresh_tokens_v1',
+      'cleanup_oauth_connections_v1',
       'cleanup_integration_security_events_v1',
       'cleanup_mcp_mutation_receipts_v1',
       'cleanup_billing_mutation_claims_v2',
@@ -178,13 +265,17 @@ describe('dispatchExternalConnectionMaintenance', () => {
         revokeUnavailable: false,
       },
       retention: {
+        oauthAuthorizationCodesDeleted: 1,
+        oauthAccessTokensDeleted: 2,
+        oauthRefreshTokensDeleted: 3,
+        oauthConnectionsDeleted: 4,
         billingClaimsDeleted: 2,
         billingDeletionReceiptsDeleted: 4,
         billingProviderResponsesRedacted: 3,
         securityEventsDeleted: 6,
         mcpMutationReceiptsDeleted: 5,
         // STATUS.refresh_tokens_due = true なので、他の retention 種別に backlog が
-        // 無くても hasMore は true になる（5 due flag を hasMore に組み込んだ回帰確認）。
+        // 無くても hasMore は true になる（8 due flag を hasMore に組み込んだ回帰確認）。
         hasMore: true,
       },
     });
@@ -203,7 +294,14 @@ describe('dispatchExternalConnectionMaintenance', () => {
     ).resolves.toMatchObject({
       complete: true,
       outbox: { claimed: 0, total: 0 },
-      retention: { securityEventsDeleted: 0, hasMore: false },
+      retention: {
+        oauthAuthorizationCodesDeleted: 0,
+        oauthAccessTokensDeleted: 0,
+        oauthRefreshTokensDeleted: 0,
+        oauthConnectionsDeleted: 0,
+        securityEventsDeleted: 0,
+        hasMore: false,
+      },
     });
     expect(processCalendarRevokeOutbox).not.toHaveBeenCalled();
     expect(cleanupBillingMutationClaims).not.toHaveBeenCalled();
@@ -317,7 +415,8 @@ describe('dispatchExternalConnectionMaintenance', () => {
       message: 'External connection maintenance failed',
     });
     await expect(operation).rejects.not.toThrow(sensitive);
-    expect(rpc).toHaveBeenCalledTimes(4);
+    // version(1) + cleanup(6) + status(1) = 8
+    expect(rpc).toHaveBeenCalledTimes(8);
   });
 
   it('1つのcleanup失敗でも残りのcleanupとstatusを続ける', async () => {
@@ -339,7 +438,8 @@ describe('dispatchExternalConnectionMaintenance', () => {
       name: 'ExternalConnectionMaintenanceError',
       message: 'External connection maintenance failed',
     });
-    expect(rpc).toHaveBeenCalledTimes(4);
+    // version(1) + cleanup(6、失敗した1本も含めて全部呼ばれる) + status(1) = 8
+    expect(rpc).toHaveBeenCalledTimes(8);
   });
 
   it('ログと返却値はaggregateだけで秘密情報やIDを含まない', async () => {
