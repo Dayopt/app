@@ -12,7 +12,12 @@ import {
   removeCalendarCallbackParams,
   type CalendarCallbackError,
 } from '@/features/external-calendar';
-import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
+import {
+  isValidCategory,
+  SETTINGS_CATEGORIES,
+  SettingsContent,
+  useBillingPollStore,
+} from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
@@ -113,6 +118,14 @@ export default function SettingsCategoryPage() {
       // 永続化され staleTime 5 分は fresh 扱いのため、invalidate しないと外部遷移前の
       // 値がそのまま復元されて解約やプラン変更が反映されない
       void utils.billing.getOverview.invalidate();
+
+      // Checkout 成功直後は subscription_status の webhook 反映が invalidate に
+      // 追いつかず、再取得しても古い free が返りうる（issue #1887）。この場合だけ
+      // 有限ポーリングを開始する（useAppInlineBanner 側の billing.getOverview query
+      // が startedAt を見て refetchInterval を有効化する）。
+      if (billingReturn === 'checkout_success') {
+        useBillingPollStore.getState().start();
+      }
 
       if (!isMobile) {
         openSettings(category);

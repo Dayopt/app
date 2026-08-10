@@ -47,6 +47,16 @@ export { TrialEndedDialog } from './components/TrialEndedDialog';
 // Utils
 // =============================================================================
 export { getBillingOperationErrorDisposition } from './lib/billing-operation';
+export {
+  BILLING_POLL_INTERVAL_MS,
+  BILLING_POLL_MAX_DURATION_MS,
+  shouldContinueBillingPoll,
+} from './lib/billing-poll';
+
+// =============================================================================
+// Stores (Composition Layer 向け)
+// =============================================================================
+export { useBillingPollStore } from './stores/useBillingPollStore';
 
 // タイムゾーン等のserver stateはuseUserPreferences経由でquery cacheから取得する。
 
