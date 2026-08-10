@@ -1,12 +1,12 @@
 {
   "error": {
     "global": {
-      "title": "Application Error",
+      "title": "Application error",
       "description": "We're sorry. An unexpected problem has occurred.",
       "errorId": "Error ID",
       "showDetails": "Show error details",
       "retry": "Retry",
-      "goHome": "Go Home",
+      "goHome": "Go home",
       "sentryReport": "Try again or reload the page."
     },
     "boundary": {
@@ -14,8 +14,8 @@
       "description": "We're sorry. An error occurred in the application.",
       "autoReport": "Try again or reload the page.",
       "retry": "Retry",
-      "reload": "Reload Page",
-      "devTitle": "Development - Component Error",
+      "reload": "Reload page",
+      "devTitle": "Development - component error",
       "component": "Component",
       "unknown": "Unknown",
       "checkConsole": "Check the browser console for details.",
@@ -29,7 +29,7 @@
     "notFound": {
       "title": "Page not found",
       "description": "The page you are looking for does not exist or has been moved.",
-      "goHome": "Go Home"
+      "goHome": "Go home"
     }
   }
 }

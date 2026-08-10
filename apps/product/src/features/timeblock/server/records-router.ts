@@ -8,6 +8,7 @@ import {
   recordIdSchema,
   updateRecordSchema,
 } from '../schemas/timeblock';
+import { legacyTimeblockMutationProcedure } from './legacy-route-observation';
 import { createRecordService } from './service-index';
 
 export const recordsRouter = createTRPCRouter({
@@ -35,7 +36,7 @@ export const recordsRouter = createTRPCRouter({
       }
     }),
 
-  create: protectedProcedure
+  create: legacyTimeblockMutationProcedure
     .meta({ description: 'Create past record' })
     .input(createRecordSchema)
     .mutation(async ({ ctx, input }) => {
@@ -47,7 +48,7 @@ export const recordsRouter = createTRPCRouter({
       }
     }),
 
-  update: protectedProcedure
+  update: legacyTimeblockMutationProcedure
     .meta({ description: 'Update record with optimistic lock support' })
     .input(
       recordIdSchema.extend({
@@ -69,7 +70,7 @@ export const recordsRouter = createTRPCRouter({
       }
     }),
 
-  delete: protectedProcedure
+  delete: legacyTimeblockMutationProcedure
     .meta({ description: 'Soft delete record' })
     .input(recordIdSchema)
     .mutation(async ({ ctx, input }) => {
@@ -81,7 +82,7 @@ export const recordsRouter = createTRPCRouter({
       }
     }),
 
-  restore: protectedProcedure
+  restore: legacyTimeblockMutationProcedure
     .meta({ description: 'Restore soft-deleted record' })
     .input(recordIdSchema)
     .mutation(async ({ ctx, input }) => {

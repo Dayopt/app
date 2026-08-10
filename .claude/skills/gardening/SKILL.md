@@ -1,15 +1,33 @@
 ---
-description: 月次ガーデニング — 自動パートは月初の Routine が実施し、このコマンドは Routine の成果物をレビューして価値判断だけを行う
+name: gardening
+description: ユーザーが月次ガーデニングの人間パート実施を明示依頼した時、または `/gardening` として明示起動された時に発動。Routine（自動パート）の draft PR とレポートを材料に、ルールの足し引き・superseded 判定・機能削除候補の確定など価値判断だけを行う。自動パートの実行契機は月初 Routine の scheduled trigger であり、この skill の invocation 契機ではない。
 ---
 
 # /gardening
 
-月次で docs/ 全体の鮮度と一貫性を保守する。2026-08-09 に発動アーキテクチャを反転した（経緯は [2026-08-09-gardening-routine-split.md](../../docs/engineering/log/2026-08-09-gardening-routine-split.md)）:
+月次で docs/ 全体の鮮度と一貫性を保守する。2026-08-09 に発動アーキテクチャを反転した（経緯は [2026-08-09-gardening-routine-split.md](../../../docs/engineering/log/2026-08-09-gardening-routine-split.md)）:
 
 - **自動パート** — 毎月 1 日 09:00 JST に Routine（Claude Code cloud の scheduled trigger）が fresh session で実施する。手順の正本は本ファイル §自動パート。Routine の prompt は「本ファイルの §自動パート に従う」とだけ指しており、手順の変更はこのファイルの編集だけで済む
 - **人間パート** — Routine が作った draft PR とレポートを材料に、ユーザーと Main が価値判断だけを行う。本コマンド（`/gardening`）はこちらを指す
 
 機械にできる検出・調査・下書きを人間の記憶に依存させない。人間が使うのは判断だけ、が設計原則（`.claude/rules/workflow.md` §Pause point の「機械で強制できるものは機械へ」と同じ思想）。
+
+## When to Use
+
+**明示発動型** — この skill はユーザーの explicit な人間パート実施意図のみを契機に発動する（Routine の scheduled trigger による自動パート実行はこの skill の invocation 経路ではない）。
+
+- 「ガーデニングやろう」「月次レビューして」など、月次ガーデニングの人間パート実施が明示依頼された時
+- `/gardening` として明示的に起動された時
+- Routine の draft PR が既に存在し、レビュー待ちリストの裁定を求められた時
+- 当月 5 日を過ぎても journal の draft PR が無く、Routine の故障を疑って手動代行を提案・実施する時
+
+## When NOT to Use
+
+この skill は **explicit 人間パート実施意図のみを契機とする**。暗黙的な invocation ケースは該当なし（型の穴埋めとして明記）。参考として近接するが発動しないケース:
+
+- 個別の意思決定ログ作成 → `decision` skill
+- 個別の調査・監査ログ作成 → `note` skill
+- 公開 docs の監査そのもの（gardening の自動パート内から呼ばれる） → `docs-audit` skill
 
 ## 自動パート（Routine が実施）
 

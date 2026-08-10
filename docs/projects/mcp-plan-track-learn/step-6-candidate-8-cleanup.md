@@ -19,11 +19,11 @@ code:
 
 候補 8 は 1 つの塊ではなく、drain 証拠が独立した 3 つの stage に分ける。
 
-| Stage | 内容                                                                              | 可逆性                                             | 独立した zero-use 証拠                                              |
-| ----- | --------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
-| 8-1   | 旧 tRPC route / service method / compat test の app code 削除                     | `[minutes]`                                        | `api.plans.*` / `api.records.*` mutation の Production 呼び出し 0   |
-| 8-2   | 旧 timeblock RPC の REVOKE → DROP（drain migration）                              | `[irreversible]`（forward restoration で復元可能） | 8-1 配信後の観測期間で旧 RPC 呼び出し 0                             |
-| 8-3   | OAuth connection 契約の確定（legacy trigger drop + `connection_id SET NOT NULL`） | `[irreversible]`                                   | 観測窓内の trigger 補完実行 0（観測 counter、§8-3）+ 既存 NULL 行 0 |
+| Stage | 内容                                                                              | 可逆性                                             | 独立した zero-use 証拠                                                       |
+| ----- | --------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 8-1   | 旧 tRPC route / service method / compat test の app code 削除                     | `[minutes]`                                        | 観測窓内の `legacy_timeblock_route_invoked` Sentry event 0（直接計測、§8-1） |
+| 8-2   | 旧 timeblock RPC の REVOKE → DROP（drain migration）                              | `[irreversible]`（forward restoration で復元可能） | 8-1 配信後の観測期間で旧 RPC 呼び出し 0                                      |
+| 8-3   | OAuth connection 契約の確定（legacy trigger drop + `connection_id SET NOT NULL`） | `[irreversible]`                                   | 観測窓内の trigger 補完実行 0（観測 counter、§8-3）+ 既存 NULL 行 0          |
 
 分割の根拠は [workflow.md §PR 粒度](../../../.claude/rules/workflow.md#pr-粒度) の「code removal と destructive migration の混在回避」。8-1 は git revert で戻せる純粋な code 削除、8-2 / 8-3 は破壊的 migration で、承認境界を分ける。
 
@@ -31,7 +31,7 @@ code:
 
 ## Stage 8-1 — app code 削除（可逆）
 
-削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../time-model-split/step-3-server-layer.md) / [step-6](../time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
+削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../_archive/time-model-split/step-3-server-layer.md) / [step-6](../_archive/time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
 
 - `plansRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore` / `skip` / `unskip` / `record` / `confirmDay`（`apps/product/src/features/timeblock/server/plans-router.ts`）
 - `recordsRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore`（`records-router.ts`）
@@ -39,7 +39,11 @@ code:
 - compat test: `mcp-stage1-rollout-compat.integration.test.ts` / `mcp-stage1-writer-fence.integration.test.ts` のうち旧 RPC・旧 route を直接検証する部分、`plan-record-service.test.ts` の該当 assertion
 - `rls-access.integration.test.ts` の旧 RPC 直呼び部分は、8-2 で関数が消えるまでは「まだ存在する境界」の検証として有効。8-1 では触らず 8-2 と同時に更新する
 
-前提条件: Production の tRPC endpoint で `plans.*` / `records.*` mutation の呼び出しが観測期間中 0 件であること。観測手段は Vercel runtime logs を第一候補とするが、**path の完全一致では数えない** — client は `httpBatchLink`（`browser-client.ts`）を使うため、同一 tick の複数操作は `/api/trpc/plans.update,records.update?batch=1` のようなカンマ結合 path になる。検索条件は対象 procedure 名（`plans.create` / `plans.update` / `plans.delete` / `plans.restore` / `plans.skip` / `plans.unskip` / `plans.record` / `plans.confirmDay` / `records.create` / `records.update` / `records.delete` / `records.restore`）が **path 内の部分文字列として現れるか**で評価する。DB 側の `pg_stat_user_functions` は `track_functions` 設定に依存するため、使う場合は事前に設定値を確認する。
+前提条件: Production の tRPC endpoint で `plans.*` / `records.*` mutation の呼び出しが観測期間中 0 件であること。
+
+観測手段（主指標）: **legacy mutation 自体が発する Sentry warning event**（`legacy_timeblock_route_invoked`、`legacy-route-observation.ts` の tRPC middleware。8-3 の trigger counter と同じ「DROP 対象そのものの利用を直接計測する」原則）。永続記録は Sentry event が担う — 保持 90 日 > 観測窓 14 日で、issue の event 件数がそのまま累積 counter になる。Vercel runtime logs 側の warn 行は即時確認用で、retention が 14 日窓を覆う保証が無いため最終判定には使わない。観測窓はこの middleware が Production へ配信された時点から開き、停止条件は「窓内の `legacy_timeblock_route_invoked` Sentry event 累積 0 件」。event は handler 実行前に出るため計測は **invocation 件数**であり成功件数ではない（validation 失敗も 1 件と数える。過剰計数側 = 「使われていない」と誤判定しない側に倒れる保守的指標）。request path 検索を主指標にしないのは、**無出力の tRPC request が Vercel runtime logs に現れない**ため — 2026-08-10 の実測で、直近 24h の production runtime logs に `/api/trpc` の requestPath は 1 行も無かった（health / cron / auth のみ）。利用ゼロと記録欠落を区別できない指標は主指標に使えない。
+
+副指標（相互検証用）: runtime logs の path 検索。使う場合は**完全一致では数えない** — client は `httpBatchLink`（`browser-client.ts`）を使うため、同一 tick の複数操作は `/api/trpc/plans.update,records.update?batch=1` のようなカンマ結合 path になる。対象 procedure 名（`plans.create` / `plans.update` / `plans.delete` / `plans.restore` / `plans.skip` / `plans.unskip` / `plans.record` / `plans.confirmDay` / `records.create` / `records.update` / `records.delete` / `records.restore`）が **path 内の部分文字列として現れるか**で評価する。DB 側の `pg_stat_user_functions` は `track_functions` 設定に依存するため、使う場合は事前に設定値を確認する。
 
 観測期間は「候補 6 merge（2026-08-03）以降の最終 production deploy から 14 日」を推奨する。drain 対象は旧 JS bundle を保持したままのブラウザで、**deploy は新規ロードにしか効かない** — 開きっぱなし・休止中のタブは旧 bundle を期限なく実行し続けられるため、観測期間 0 件でも残存確率は 0 にならない。この残存は許容する判断として記録する: 観測窓を超えて休止していたタブが 8-1 後に旧 mutation を呼ぶと操作は失敗するが、失敗は書き込み前に返り（データ破壊なし）、reload で新 bundle に復帰する。明示的な version rejection / 強制 reload 導線は closed beta 規模ではこの 1 ケースのために作らない（作るなら別 issue）。14 日はシンプルルール 5（2 週間）と揃えた値で、短縮・延長とこの残存許容の最終判断はユーザーが行う。
 
@@ -84,7 +88,7 @@ DROP しない対象（紛らわしいが現役）:
 
 前提条件:
 
-- **旧 writer 継続利用の停止条件（主指標: trigger 実行の直接計測）**: 観測窓を開く前に、`bind_legacy_oauth_insert_to_connection()` に「補完を実行したら append-only の観測 counter（専用 1 行テーブルまたは構造化 LOG）へ記録する」を足す軽量 expand migration を入れる（挙動不変・可逆 `[hours]`）。停止条件は「観測窓内の trigger 補完実行が累積 0 件」。旧 writer の発行は定義上すべて `connection_id IS NULL` の INSERT であり、この trigger を必ず通るため、**DROP 対象そのものの利用を測ることになり、proxy 指標（行の join / フラグ / retention 生存）の盲点をクラスごと閉じる**。counter は cleanup の削除対象外なので retention 競合も無い
+- **旧 writer 継続利用の停止条件（主指標: trigger 実行の直接計測）**: 観測窓を開く前に、`bind_legacy_oauth_insert_to_connection()` に「補完を実行したら append-only の観測 counter（専用 1 行テーブルまたは構造化 LOG）へ記録する」を足す軽量 expand migration を入れる（挙動不変・可逆 `[hours]`。`20260810013820_observe_legacy_oauth_bind.sql` の `private.legacy_oauth_bind_observations` として実装済み — append-only、redacted、`service_role` SELECT のみ）。停止条件は「観測窓内の trigger 補完実行が累積 0 件」。旧 writer の発行は定義上すべて `connection_id IS NULL` の INSERT であり、この trigger を必ず通るため、**DROP 対象そのものの利用を測ることになり、proxy 指標（行の join / フラグ / retention 生存）の盲点をクラスごと閉じる**。counter は cleanup の削除対象外なので retention 競合も無い
 - 副指標（counter 導入前の参考・相互検証用）: `legacy_read_only = true` の connection に紐づく codes / tokens の新規発行行数を **12 時間以下の間隔**（cleanup の 24h フロアに対し margin を確保）で read-only snapshot した累積、および `oauth_connections` の `created_at` / `last_used_at` / `last_refreshed_at` が窓内に入る legacy connection 数。**単独では停止条件にしない** — 使えない・不十分な指標 3 つ: ① codes / tokens の `connection_id IS NULL` 行数（trigger が NULL を書き換えるため常に 0 になりうる）② legacy connection の新規作成数単独（rebind 経路は新規 connection を作らない）③ `legacy_read_only` join 自体（`20260729073125` の `parent_token_id` 分岐は親の legacy フラグを確認せず補完するため、非 legacy connection へ紐づく旧 writer 発行を見落とす）。観測終了時の一発 count も不可（窓中の発行が cleanup で消える）
 - **`SET NOT NULL` の可否判定**: 既存の `connection_id IS NULL` の codes / tokens 行数を記録する（これは過去に trigger を経ずに残った行の是正対象の把握であり、上の停止条件とは別物）。残っている場合、`SET NOT NULL` の前に期限切れ削除（retention）での自然消滅を待つか、明示承認の上で終端させるかを決める
 - schema 成果物の同期（8-2 と同じ同一 PR 要件）: `supabase/schemas/017_tables_oauth.sql` の `connection_id` を NOT NULL へ揃え、`pnpm types:generate` で `database.types.ts` を再生成する。放置すると新しい server writer が `connection_id` 省略のまま型検査を通り、本番で not-null violation になる

@@ -150,5 +150,5 @@ timeout後の再送やbounce / complaintを実在する第三者addressへ故意
 - [Contact仕様](../product/specs/contact.md)
 - [Secrets](./secrets.md)
 - [Environment Secrets](./security/environment-secrets.md)
-- [Project overview](../projects/contact-delivery-migration/overview.md)
+- [Project overview](../projects/_archive/contact-delivery-migration/overview.md)
 - [Incident](./log/2026-07-21-incident-contact-delivery-outage.md)

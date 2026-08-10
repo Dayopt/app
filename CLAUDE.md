@@ -14,7 +14,7 @@ Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.cl
 | 4   | **不可逆だけ遅く、可逆は速く**                     | タイミング |
 | 5   | **2 週間、自分が触らなかった機能は削除候補にする** | 停止       |
 
-この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/commands/gardening.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、協働の分担とテンポは次節が正本。
+この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/skills/gardening/SKILL.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、協働の分担とテンポは次節が正本。
 
 ## 協働のかたち
 
@@ -105,26 +105,26 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
 
-- `docs/ai/writing-style.md` — 文体（B1 相当の読みやすさ）
-- `docs/ai/docs-policy.md` — Docs / Blog / Release notes の役割分担
-- `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
+- `docs/marketing/writing-style.md` — 文体（B1 相当の読みやすさ）
+- `docs/marketing/docs-policy.md` — Docs / Blog / Release notes の役割分担
+- `docs/marketing/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
-アプリ内 UI 文言を書く時は `docs/ai/copywriting.md` を読む。
+アプリ内 UI 文言を書く時は `docs/product/copywriting.md` を読む。
 
 公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
 
 ## Docs 運用責務
 
-`docs/README.md` の地図・決定木・書き方の約束に従う。とくに以下は都度・自発的に実施する:
+`docs/README.md` の地図・決定木・書き方に従う。とくに以下は都度・自発的に実施する:
 
-- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`/note` コマンド参照）
+- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`note` skill 参照）
 - **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
 - **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
-- **月次ガーデニング** — 自動パートは毎月 1 日に Routine が実施し、journal 下書きの draft PR を作る（正本は `.claude/commands/gardening.md`）。当月 5 日を過ぎても `YYYY-MM-01-journal.md` の draft PR も merge 済み journal も無い状態でセッションが始まったら、Routine の故障を疑ってユーザーに報告し、`/gardening`（人間パート + 自動パートの手動代行）を提案する
+- **月次ガーデニング** — 自動パートは毎月 1 日に Routine が実施し、journal 下書きの draft PR を作る（正本は `.claude/skills/gardening/SKILL.md`）。当月 5 日を過ぎても `YYYY-MM-01-journal.md` の draft PR も merge 済み journal も無い状態でセッションが始まったら、Routine の故障を疑ってユーザーに報告し、`/gardening`（人間パート + 自動パートの手動代行）を提案する
 
-## コマンド一覧（.claude/commands/）
+## スラッシュ起動 skill（.claude/skills/）
 
-`Skill` tool から起動する。
+明示的なユーザー依頼（`/name` またはそれに相当する発話）のみを契機に発動する skill。公式の commands 形式は skills へ統合済みのため、`.claude/commands/` は存在しない。`Skill` tool から起動する。
 
 | コマンド       | 内容                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------ |
@@ -143,7 +143,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 | `.claude/rules/architecture.md`         | tRPC、状態管理、ロジック配置                               |
 | `.claude/rules/code-style.md`           | 型、ログ、依存追加、ベンダー・サービス選定、eslint-disable |
 | `.claude/rules/design-system.md`        | UI、token、spacing、icon                                   |
-| `docs/ai/copywriting.md`                | UI 文言、トーン、CTA                                       |
+| `docs/product/copywriting.md`           | UI 文言、トーン、CTA                                       |
 | `.claude/rules/feature-boundaries.md`   | feature DAG、Composition Layer                             |
 | `.claude/rules/quality.md`              | test、a11y、performance                                    |
 | `.claude/rules/temporal-constraints.md` | 過去ブロック編集制約                                       |

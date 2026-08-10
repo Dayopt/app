@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 /** 基本表示 */
 export const Default: Story = {
   args: {
-    label: 'Plan Rate',
+    label: 'Plan rate',
     valueParts: { primary: '72', unit: '%' },
     icon: Target,
     progress: 0.72,
@@ -52,7 +52,7 @@ export const TrendDownPositive: Story = {
 /** トレンド: 上昇（悪い方向 — contextSwitches のように up が negative） */
 export const TrendUpNegative: Story = {
   args: {
-    label: 'Context Switches',
+    label: 'Context switches',
     valueParts: { primary: '5.8', unit: '' },
     icon: ArrowLeftRight,
     trend: { direction: 'up', delta: 0.25, isPositive: false },
@@ -62,7 +62,7 @@ export const TrendUpNegative: Story = {
 /** トレンド: 下降（悪い方向） */
 export const TrendDownNegative: Story = {
   args: {
-    label: 'Plan Rate',
+    label: 'Plan rate',
     valueParts: { primary: '35', unit: '%' },
     icon: Target,
     trend: { direction: 'down', delta: -0.15, isPositive: false },
@@ -72,7 +72,7 @@ export const TrendDownNegative: Story = {
 /** トレンド: 横ばい */
 export const TrendFlat: Story = {
   args: {
-    label: 'Context Switches',
+    label: 'Context switches',
     valueParts: { primary: '3.2', unit: '' },
     icon: ArrowLeftRight,
     trend: { direction: 'flat', delta: 0.02, isPositive: true },
@@ -82,7 +82,7 @@ export const TrendFlat: Story = {
 /** ローディング状態 */
 export const Loading: Story = {
   args: {
-    label: 'Plan Rate',
+    label: 'Plan rate',
     valueParts: { primary: '-', unit: '' },
     isLoading: true,
   },
@@ -91,7 +91,7 @@ export const Loading: Story = {
 /** データなし */
 export const NoData: Story = {
   args: {
-    label: 'Estimation Accuracy',
+    label: 'Estimation accuracy',
     valueParts: { primary: '-', unit: '' },
     icon: Timer,
   },
@@ -100,7 +100,7 @@ export const NoData: Story = {
 /** 時間表示（分） */
 export const MinutesValue: Story = {
   args: {
-    label: 'Estimation Accuracy',
+    label: 'Estimation accuracy',
     valueParts: { primary: '12', unit: 'm' },
     icon: Timer,
     trend: { direction: 'down', delta: -0.15, isPositive: true },
@@ -110,7 +110,7 @@ export const MinutesValue: Story = {
 /** 時間表示（時間+分） — secondary で分を表示 */
 export const HoursMinutesValue: Story = {
   args: {
-    label: 'Estimation Accuracy',
+    label: 'Estimation accuracy',
     valueParts: { primary: '1', unit: 'h', secondary: '30', secondaryUnit: 'm' },
     icon: Timer,
   },
@@ -119,7 +119,7 @@ export const HoursMinutesValue: Story = {
 /** Hero: 合計時間（col-span-2） */
 export const HeroTotalTime: Story = {
   args: {
-    label: 'Total Time',
+    label: 'Total time',
     valueParts: { primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' },
     icon: Clock,
     variant: 'hero',
@@ -146,14 +146,14 @@ export const GridPreview: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <MetricCard
-        label="Total Time"
+        label="Total time"
         valueParts={{ primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' }}
         icon={Clock}
         variant="hero"
         trend={{ direction: 'up', delta: 0.12, isPositive: true }}
       />
       <MetricCard
-        label="Plan Rate"
+        label="Plan rate"
         valueParts={{ primary: '72', unit: '%' }}
         icon={Target}
         trend={{ direction: 'up', delta: 0.05, isPositive: true }}
@@ -167,7 +167,7 @@ export const GridPreview: Story = {
         variant="hero"
       />
       <MetricCard
-        label="Estimation Accuracy"
+        label="Estimation accuracy"
         valueParts={{ primary: '12', unit: 'm' }}
         icon={Timer}
         trend={{ direction: 'down', delta: -0.15, isPositive: true }}
@@ -183,7 +183,7 @@ export const GridPreview: Story = {
         progressStatus="good"
       />
       <MetricCard
-        label="Context Switches"
+        label="Context switches"
         valueParts={{ primary: '3.2', unit: '' }}
         icon={ArrowLeftRight}
         trend={{ direction: 'flat', delta: 0.01, isPositive: true }}
@@ -209,16 +209,16 @@ export const GridLoading: Story = {
   render: () => (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <MetricCard
-        label="Total Time"
+        label="Total time"
         valueParts={{ primary: '-', unit: '' }}
         variant="hero"
         isLoading
       />
-      <MetricCard label="Plan Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
+      <MetricCard label="Plan rate" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Streak" valueParts={{ primary: '-', unit: '' }} variant="hero" isLoading />
-      <MetricCard label="Estimation Accuracy" valueParts={{ primary: '-', unit: '' }} isLoading />
+      <MetricCard label="Estimation accuracy" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Deep Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
-      <MetricCard label="Context Switches" valueParts={{ primary: '-', unit: '' }} isLoading />
+      <MetricCard label="Context switches" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Blank Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
     </div>
   ),
@@ -232,7 +232,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">Default（基本表示）</p>
         <MetricCard
-          label="Plan Rate"
+          label="Plan rate"
           valueParts={{ primary: '72', unit: '%' }}
           icon={Target}
           progress={0.72}
@@ -262,7 +262,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">TrendUpNegative（上昇・悪い変化）</p>
         <MetricCard
-          label="Context Switches"
+          label="Context switches"
           valueParts={{ primary: '5.8', unit: '' }}
           icon={ArrowLeftRight}
           trend={{ direction: 'up', delta: 0.25, isPositive: false }}
@@ -271,7 +271,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">TrendDownNegative（下降・悪い変化）</p>
         <MetricCard
-          label="Plan Rate"
+          label="Plan rate"
           valueParts={{ primary: '35', unit: '%' }}
           icon={Target}
           trend={{ direction: 'down', delta: -0.15, isPositive: false }}
@@ -280,7 +280,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">TrendFlat（横ばい）</p>
         <MetricCard
-          label="Context Switches"
+          label="Context switches"
           valueParts={{ primary: '3.2', unit: '' }}
           icon={ArrowLeftRight}
           trend={{ direction: 'flat', delta: 0.02, isPositive: true }}
@@ -288,12 +288,12 @@ export const AllPatterns: Story = {
       </div>
       <div>
         <p className="text-muted-foreground mb-4 text-xs">Loading（ローディング状態）</p>
-        <MetricCard label="Plan Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
+        <MetricCard label="Plan rate" valueParts={{ primary: '-', unit: '' }} isLoading />
       </div>
       <div>
         <p className="text-muted-foreground mb-4 text-xs">NoData（データなし）</p>
         <MetricCard
-          label="Estimation Accuracy"
+          label="Estimation accuracy"
           valueParts={{ primary: '-', unit: '' }}
           icon={Timer}
         />
@@ -301,7 +301,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">MinutesValue（時間表示・分）</p>
         <MetricCard
-          label="Estimation Accuracy"
+          label="Estimation accuracy"
           valueParts={{ primary: '12', unit: 'm' }}
           icon={Timer}
           trend={{ direction: 'down', delta: -0.15, isPositive: true }}
@@ -310,7 +310,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">HoursMinutesValue（時間表示・時間+分）</p>
         <MetricCard
-          label="Estimation Accuracy"
+          label="Estimation accuracy"
           valueParts={{ primary: '1', unit: 'h', secondary: '30', secondaryUnit: 'm' }}
           icon={Timer}
         />
@@ -318,7 +318,7 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-4 text-xs">HeroTotalTime（Hero: 合計時間）</p>
         <MetricCard
-          label="Total Time"
+          label="Total time"
           valueParts={{ primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' }}
           icon={Clock}
           variant="hero"
@@ -338,14 +338,14 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-4 text-xs">GridPreview（7カード横並び）</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MetricCard
-            label="Total Time"
+            label="Total time"
             valueParts={{ primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' }}
             icon={Clock}
             variant="hero"
             trend={{ direction: 'up', delta: 0.12, isPositive: true }}
           />
           <MetricCard
-            label="Plan Rate"
+            label="Plan rate"
             valueParts={{ primary: '72', unit: '%' }}
             icon={Target}
             trend={{ direction: 'up', delta: 0.05, isPositive: true }}
@@ -359,7 +359,7 @@ export const AllPatterns: Story = {
             variant="hero"
           />
           <MetricCard
-            label="Estimation Accuracy"
+            label="Estimation accuracy"
             valueParts={{ primary: '12', unit: 'm' }}
             icon={Timer}
             trend={{ direction: 'down', delta: -0.15, isPositive: true }}
@@ -375,7 +375,7 @@ export const AllPatterns: Story = {
             progressStatus="good"
           />
           <MetricCard
-            label="Context Switches"
+            label="Context switches"
             valueParts={{ primary: '3.2', unit: '' }}
             icon={ArrowLeftRight}
             trend={{ direction: 'flat', delta: 0.01, isPositive: true }}
@@ -394,12 +394,12 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-4 text-xs">GridLoading（全ローディング状態）</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MetricCard
-            label="Total Time"
+            label="Total time"
             valueParts={{ primary: '-', unit: '' }}
             variant="hero"
             isLoading
           />
-          <MetricCard label="Plan Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
+          <MetricCard label="Plan rate" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard
             label="Streak"
             valueParts={{ primary: '-', unit: '' }}
@@ -407,12 +407,12 @@ export const AllPatterns: Story = {
             isLoading
           />
           <MetricCard
-            label="Estimation Accuracy"
+            label="Estimation accuracy"
             valueParts={{ primary: '-', unit: '' }}
             isLoading
           />
           <MetricCard label="Deep Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
-          <MetricCard label="Context Switches" valueParts={{ primary: '-', unit: '' }} isLoading />
+          <MetricCard label="Context switches" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard label="Blank Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
         </div>
       </div>

@@ -313,7 +313,7 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context
   欠落は正常。変更ファイル一覧の取得失敗・未知 path・判定不能は両方必須へ倒す（fail closed）。
-  判定仕様は [ci-monorepo-refactor overview §5](../projects/ci-monorepo-refactor/overview.md)
+  判定仕様は [ci-monorepo-refactor overview §5](../projects/_archive/ci-monorepo-refactor/overview.md)
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
 - **Ignored Build Step は `apps/{product,web}/vercel.json` の `ignoreCommand` が正本**（2026-08-05、
@@ -326,7 +326,7 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
     変更内容によらず常に build する。** `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
     build**」であって live SHA ではなく、未 promote candidate を基準に skip すると
     Production Release が存在しない candidate を待ち続けて詰まるため
-    （[ci-monorepo-refactor overview §8](../projects/ci-monorepo-refactor/overview.md#8-移行順序安全制約) 実施形態）
+    （[ci-monorepo-refactor overview §8](../projects/_archive/ci-monorepo-refactor/overview.md#8-移行順序安全制約) 実施形態）
   - preview の基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の
     成功 deployment の SHA。Ignored Build Step 設定時のみ露出）
   - **fail open を徹底する**（= build 側に倒す）。env 欠落、shallow clone（build container は
@@ -1740,7 +1740,6 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | 依存                  | 役割                                         | 逃げ道                                                        |
 | --------------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | **UptimeRobot**       | 外形監視                                     | 代替外形監視へ切替（Read-only API 運用）                      |
-| **Slack**             | billing alert の incoming webhook（任意）    | webhook URL 未設定なら no-op。代替通知先へ切替                |
 | **Have I Been Pwned** | signup / password 変更時の漏洩パスワード検査 | 停止時は fail-open（検査を通す）。代替 breach API / corpus へ |
 
 **Turnstile と Sentry はこの層に無い。** Turnstile は Cloudflare 行（中）に、Sentry は production build gate を握るため中層に含めた。

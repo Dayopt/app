@@ -1,11 +1,11 @@
 {
   "contact": {
-    "title": "Contact Us",
+    "title": "Contact us",
     "description": "Send us your feedback, report a bug, or request a feature. You can also email us directly at",
     "category": {
       "label": "Category",
-      "bug": "Bug Report",
-      "feature": "Feature Request",
+      "bug": "Bug report",
+      "feature": "Feature request",
       "question": "Question",
       "other": "Other"
     },

@@ -17,7 +17,7 @@ last_verified: 2026-08-09
 
 Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/web/content/docs` が担う（同じ説明の二重管理を避ける。`docs/README.md` §情報面の責務）。
 
-公開 content 内の 3 種類の役割分担は [docs/ai/docs-policy.md](../ai/docs-policy.md)、文章基準は [docs/ai/writing-style.md](../ai/writing-style.md) を正とする。
+公開 content 内の 3 種類の役割分担は [docs/marketing/docs-policy.md](./docs-policy.md)、文章基準は [docs/marketing/writing-style.md](./writing-style.md) を正とする。
 
 ## リリースノートは blog の release カテゴリ
 

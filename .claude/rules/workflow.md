@@ -125,21 +125,20 @@ docs/projects/{project-name}/
 
 ### 完了後
 
-Project 完了時も同じ `docs/projects/{project-name}/` に置いたまま `summary.md` を追加:
+完了時は `overview.md` を `status: done` にし、`summary.md` を `status: current` で追加する。`done` と `summary.md` は常に同じ変更に含める。その上でディレクトリごと `docs/projects/_archive/{project-name}/` へ git mv する:
 
 ```
-
-完了時は `overview.md` を `status: done` にし、`summary.md` を `status: current` で追加する。`done` と `summary.md` は常に同じ変更に含める。
-docs/projects/{project-name}/
-├── overview.md
+docs/projects/_archive/{project-name}/
+├── overview.md         — status: done
 ├── step-X-detail.md
-└── summary.md         — 完了時に追加（達成した成果）
+└── summary.md          — 完了時に追加（達成した成果）
 ```
 
 移動時の作業:
 
 - git mv で履歴追跡
 - 内部リンクの path 修正
+- 他 docs からこの Project を指す参照（stock）を `_archive/` 配下の新 path へ更新
 - `summary.md` を新規追加（Project 完了サマリー）
 
 ### src/ にはコロケーションしない
@@ -232,7 +231,7 @@ UI 変更を含む作業では、関連 Story がある場合は Storybook を�
 ### 分割してよい理由（これ以外では分割しない）
 
 - 不可逆 migration を含む変更の隔離
-- code removal と destructive migration の混在回避（[time-model-split step-9](../../docs/projects/time-model-split/step-9-cleanup.md) の教訓）
+- code removal と destructive migration の混在回避（[time-model-split step-9](../../docs/projects/_archive/time-model-split/step-9-cleanup.md) の教訓）
 - 独立して検証・revert したい変更（production release 経路など、壊れた時の影響が他と切り離される変更）
 
 「レビューしやすいから」「1 issue だから」「大きいから」は分割理由にならない。

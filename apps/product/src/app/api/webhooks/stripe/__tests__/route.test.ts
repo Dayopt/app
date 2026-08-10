@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const envMock = vi.hoisted(() => ({
   RESEND_API_KEY: undefined,
   RESEND_FROM_EMAIL: undefined,
-  SLACK_BILLING_WEBHOOK_URL: undefined,
   STRIPE_ACCOUNT_ID: 'acct_dayopt',
   STRIPE_LIVEMODE: 'false',
   STRIPE_WEBHOOK_SECRET: 'fixture',

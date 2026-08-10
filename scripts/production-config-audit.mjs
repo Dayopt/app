@@ -27,7 +27,7 @@ const NON_PRODUCTION_TARGETS = new Set(['preview', 'development']);
 // ものを使う（#1817 Phase 4）。`rootDirectory` は Vercel dashboard 側の Root Directory 設定
 // — vercel.json の `ignoreCommand`（`node ../../scripts/ci/impact.mjs --vercel <project>`）は
 // build container の cwd がこの値になる前提で相対 path を組んでいるため、drift すると
-// ignoreCommand 自体が壊れる（docs/projects/ci-monorepo-refactor/overview.md §8）。
+// ignoreCommand 自体が壊れる（docs/projects/_archive/ci-monorepo-refactor/overview.md §8）。
 const PROJECT_METADATA_CONTRACTS = {
   product: { rootDirectory: 'apps/product' },
   web: { rootDirectory: 'apps/web' },
@@ -123,7 +123,7 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  * - `enableAffectedProjectsDeployments`（OpenAPI boolean。dashboard 表記は
  *   "Skip deployments (no changes to root directory)"） — workspace 依存グラフを見ない
  *   自動 skip で、`ignoreCommand`（依存グラフを見る）と競合するため常時 false が前提
- *   （docs/projects/ci-monorepo-refactor/overview.md §8 補足）
+ *   （docs/projects/_archive/ci-monorepo-refactor/overview.md §8 補足）
  *
  * fail closed: `rootDirectory` / `autoAssignCustomDomains` は応答に存在しない場合も failure
  * とする。`commandForIgnoringBuildStep`（nullable が仕様）と
