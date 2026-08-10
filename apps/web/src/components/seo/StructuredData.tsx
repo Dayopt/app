@@ -32,5 +32,3 @@ export function StructuredData({
     />
   );
 }
-
-export default StructuredData;

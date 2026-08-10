@@ -10,7 +10,7 @@ export const metadata = generateSEOMetadata({
   noindex: true,
 });
 
-export default function Forbidden() {
+export function Forbidden() {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center">
       <Container>

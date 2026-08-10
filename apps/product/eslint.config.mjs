@@ -80,6 +80,64 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // 客観的に判定できる a11y 欠落はコードレビューではなく CI で止める。
+  // Story / test は意図的にラベルを省略した fixture を含むため対象外。
+  {
+    files: ['src/**/*.{jsx,tsx}'],
+    ignores: [
+      '**/*.test.{jsx,tsx}',
+      '**/*.spec.{jsx,tsx}',
+      '**/*.stories.{jsx,tsx}',
+      '**/__tests__/**',
+    ],
+    rules: {
+      'jsx-a11y/alt-text': 'error',
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          controlComponents: ['Button'],
+          // table cell 自体は interactive control ではなく、列見出しで名前が決まる。
+          ignoreElements: ['td'],
+          depth: 5,
+        },
+      ],
+    },
+  },
+
+  // 本番コードは将来追加されるディレクトリも含めて named export に統一する。
+  // framework / tooling が default export を契約に含めるentrypointだけを明示除外する。
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
+    ignores: [
+      '**/*.test.{ts,tsx,js,jsx}',
+      '**/*.spec.{ts,tsx,js,jsx}',
+      '**/*.stories.{ts,tsx,js,jsx}',
+      '**/__tests__/**',
+      'src/app/**/{page,layout,loading,error,not-found,template,default}.{ts,tsx,js,jsx}',
+      'src/app/{global-error,global-not-found,forbidden,unauthorized}.{ts,tsx,js,jsx}',
+      'src/app/**/{icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx,js,jsx}',
+      'src/app/**/sitemap.{ts,js}',
+      'src/app/{robots,manifest}.{ts,js}',
+      // React Email CLI はtemplateのdefault exportをpreview entrypointとして扱う。
+      'src/emails/**/*Email.{tsx,jsx}',
+      'src/lib/i18n/request.ts',
+    ],
+    rules: {
+      'no-restricted-exports': [
+        'error',
+        {
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
+        },
+      ],
+    },
+  },
+
   // =========================================================================
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //

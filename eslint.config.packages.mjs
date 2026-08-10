@@ -16,6 +16,7 @@
 // @see docs/engineering/log/2026-07-23-packages-components-no-arbitrary-value.md
 
 import nextTs from 'eslint-config-next/typescript';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import storybook from 'eslint-plugin-storybook';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
@@ -45,6 +46,54 @@ const packagesConfig = defineConfig([
       // `interface Props extends ComponentProps<'x'>, VariantProps<...> {}` は
       // packages/components の shadcn 由来 props pattern。interface 形式は許容する
       '@typescript-eslint/no-empty-object-type': ['warn', { allowInterfaces: 'always' }],
+    },
+  },
+
+  {
+    files: ['src/**/*.{jsx,tsx}'],
+    ignores: [
+      '**/*.test.{jsx,tsx}',
+      '**/*.spec.{jsx,tsx}',
+      '**/*.stories.{jsx,tsx}',
+      '**/__tests__/**',
+    ],
+    plugins: {
+      'jsx-a11y': jsxA11y,
+    },
+    rules: {
+      'jsx-a11y/alt-text': 'error',
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          controlComponents: ['Button'],
+          ignoreElements: ['td'],
+          depth: 5,
+        },
+      ],
+    },
+  },
+
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
+    ignores: [
+      '**/*.test.{ts,tsx,js,jsx}',
+      '**/*.spec.{ts,tsx,js,jsx}',
+      '**/*.stories.{ts,tsx,js,jsx}',
+      '**/__tests__/**',
+    ],
+    rules: {
+      'no-restricted-exports': [
+        'error',
+        {
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
+        },
+      ],
     },
   },
 

@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { CheckIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import {
   computeDuration,
@@ -32,6 +33,8 @@ import {
 import { ClockTimePicker } from './ClockTimePicker';
 
 interface TimeInputProps {
+  /** 開始・終了どちらの時刻入力か。accessible name の翻訳キー選択に使う。 */
+  kind: 'start' | 'end';
   /** HH:mm 文字列。空文字は未設定。 */
   value: string;
   onChange: (time: string) => void;
@@ -73,6 +76,7 @@ function timeToMinutes(time: string): number {
  * @see docs/projects/timeline-precision-redesign/overview.md
  */
 export function TimeInput({
+  kind,
   value,
   onChange,
   disabled = false,
@@ -80,6 +84,7 @@ export function TimeInput({
   minTime,
   testId,
 }: TimeInputProps) {
+  const t = useTranslations('common');
   const isMobile = useIsMobile();
   const timeFormat = useUserPreferences((s) => s.timeFormat);
   const [draft, setDraft] = useState(value);
@@ -94,6 +99,7 @@ export function TimeInput({
    * commitDraft が古い draft で再 commit するのを防ぐ（Codex P1）
    */
   const skipBlurCommitRef = useRef(false);
+  const ariaLabel = kind === 'start' ? t('aria.startTime') : t('aria.endTime');
 
   useEffect(() => {
     // 上流から不正値（NaN:NaN 等）が来た時に input が崩れるのを防ぐ防御層
@@ -143,6 +149,9 @@ export function TimeInput({
 
   if (isMobile) {
     const triggerLabel = value || '--:--';
+    const triggerAriaLabel = value
+      ? t('aria.timeInputValue', { label: ariaLabel, time: value })
+      : t('aria.timeInputNotSelected', { label: ariaLabel });
     return (
       <>
         <button
@@ -150,7 +159,7 @@ export function TimeInput({
           data-testid={testId}
           onClick={() => setPickerOpen(true)}
           disabled={disabled}
-          aria-label={value ? `${value} を編集` : '時刻を入力'}
+          aria-label={triggerAriaLabel}
           className={cn(
             baseClasses,
             'cursor-pointer text-right',
@@ -287,6 +296,7 @@ export function TimeInput({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           disabled={disabled}
+          aria-label={ariaLabel}
           aria-invalid={hasError}
           aria-expanded={popoverOpen}
           aria-controls="time-input-listbox"
