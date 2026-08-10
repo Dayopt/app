@@ -51,7 +51,7 @@ Routine の draft PR が存在する前提で、ユーザーと Main が以下�
 
 1. **draft PR のレビューと merge** — journal 下書きと鮮度更新を確認し、`pnpm branch:finish` で merge する
 2. **レビュー待ちリストの裁定** — superseded 判定、昇格の採否、AI 設定棚卸しの実施可否を決める
-3. **判断層の検証**（`CLAUDE.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）④**判断ジャーナル集計** — `gh search issues --label judgment:diverged` で当月の分岐事例を集計し、`.claude/rules/orchestration.md` §権限の既定 の境界を実測で更新する（可逆な采配を Fable 決定 + opt-out にする試行運用の恒久化 / 巻き戻しの判定もここで行う）
+3. **判断層の検証**（`CLAUDE.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）④**判断ジャーナル集計** — `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs --limit 200` で現在ラベルが付く全分岐（issue / PR）を取得し、結果を観測できた事例に判定コメントを追記してラベルを外す。判定済み事例だけを母集団に `.claude/rules/orchestration.md` §権限の既定 の境界を実測で更新する（可逆な采配を Fable 決定 + opt-out にする試行運用の恒久化 / 巻き戻しの判定もここで行う）
 4. **実行層の検証**（`.claude/rules/workflow.md` §Pause point） — ⑤各チェックは今月何かを捕まえたか ⑥pause point の迂回の痕跡は無いか ⑦機械へ昇格できる項目は無いか
 5. **深掘りスキャン** — `/claude-security` の「Scan codebase」はユーザーのみ起動できる（`disable-model-invocation: true`）。前回スキャンからの経過を添えて実施を判断する
 6. 3・4 で所見が出たら `docs/product/log/YYYY-MM-DD-simple-rules-review.md` に記録する。項目や pause point を変える場合はメタルール（**1 つ足すときは 1 つ削る**）に従い `/decision` で決定ログを残す

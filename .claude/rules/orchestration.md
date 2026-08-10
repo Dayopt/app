@@ -8,7 +8,7 @@
 
 指揮台セッションは main checkout（`~/Desktop/dayopt`）に常駐する最上位 tier（Fable / Opus）のセッションで、`workflow.md` §main checkout の役割（指揮台モデル）が定める「コードを変えない場所」を AI が担う形。
 
-- **一切書かない**: コード・docs とも変更は worktree ルールを維持する（`workflow.md` 準拠。1 行の typo 修正も worktree）。指揮台セッションが例外的に行ってよい書き込みは memory への保存と、external state への指示（`gh` コマンド、`SendMessage` によるレーンへの介入）だけ
+- **作業ツリーを書かない**: コード・docs の変更は worktree ルールを維持する（`workflow.md` 準拠。1 行の typo 修正も worktree）。指揮台セッションが行ってよいのは、memory への保存、external state への指示（`gh` コマンド、`SendMessage` によるレーンへの介入）、および `workflow.md` が指揮台に割り当てる Git 管理操作（`pnpm branch:finish`、`git worktree remove` / `git worktree prune`、`git fetch` / `git pull --ff-only`）
 - 仕事は 7 つ: 編成 / 監視 / 介入 / issue 起票 / レビュー / マージ / 締め。実装そのものは worktree 上のレーンに委ねる
 
 ## 権限の既定（試行運用）
@@ -36,11 +36,11 @@
 
 ## 1 日サイクル
 
-- **朝: 編成** — 盤面レポート（Haiku 蒸留）とトークン残量（SessionStart hook `.claude/hooks/session-token-usage.py` の構成比）を並べて User と合意し、レーンを起動する。`dispatch` skill 操作 C の日次項目（stale PR / worktree 残骸 / milestone 乖離 / `status:in-progress` 棚卸し）もここで確認する
+- **朝: 編成** — 盤面レポート（Haiku 蒸留）と直近のモデル別消費構成（SessionStart hook `.claude/hooks/session-token-usage.py`。上限・残量は取得できないため、その日どこまで使うかは User が持つ判断材料として扱う）を並べて User と合意し、レーンを起動する。`dispatch` skill 操作 C の日次項目（stale PR / worktree 残骸 / milestone 乖離 / `status:in-progress` 棚卸し）もここで確認する
 - **日中: 例外駆動** — レーンからの質問を一次仕分けし、証拠で答えられるものは指揮台が直接返答、価値判断だけを User へ `CHECKPOINT` report 形式で上げる
 - **夕方: 収束** — diff レビュー + クロスレビュー、マージ順の采配、`pnpm branch:finish`、issue への反映、翌日への引き継ぎを書いてセッションを畳む
 - 寿命は 1 日 1 セッション。数日跨ぐ常駐はしない（transcript 肥大で判断が鈍る）
 
 ## 判断ジャーナル
 
-Fable の推奨と User の判断が分かれた時、該当 issue / PR に分岐コメント（推奨・User 判断・理由）を 1 つ残し、`judgment:diverged` ラベルを付ける。月次 gardening が `gh search issues --label judgment:diverged` で集計し、勝率に基づいて本ファイル §権限の既定 の境界を更新する（`.claude/skills/gardening/SKILL.md` 人間パート参照）。
+Fable の推奨と User の判断が分かれた時、該当 issue / PR に分岐コメント（推奨・User 判断・理由・**何をもって正否を判定するかの観点**）を 1 つ残し、`judgment:diverged` ラベルを付ける。月次 gardening は**現在ラベルが付いている全件**を `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs --limit 200` で取得し、結果を観測できた事例に判定コメント（どちらの判断が正しかったか）を追記して**ラベルを外す**。未観測の事例はラベルを残して翌月へ持ち越す。境界の更新（本ファイル §権限の既定）は判定済み事例だけを母集団にする（`.claude/skills/gardening/SKILL.md` 人間パート参照）。
