@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { logger } from '@/lib/logger';
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { McpConnectionsService, McpConnectionsServiceError } from '../mcp-connections-service';
 
 const USER_ID = 'user-1';
 const CONNECTION_ID = 'connection-1';
+// mcp-connections-service.ts の MCP_LIST_PAGE_SIZE / MCP_LIST_MAX_PAGES と同じ値。
+// service 側の定数は re-export していないため、ページング境界を確かめるテストは
+// この値をここで固定する。
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 10;
 
 const connectionRow = {
   id: CONNECTION_ID,
@@ -27,6 +33,34 @@ function createService(
   };
 }
 
+/** `id-{start}` .. `id-{start + count - 1}` の一意な connection 行を生成する。 */
+function buildRows(start: number, count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `id-${start + i}`,
+    client_id: 'claude-ai',
+    scopes: ['read:entries'],
+    authorized_at: `2026-08-01T00:00:${String(start + i).padStart(2, '0')}.000Z`,
+    last_used_at: null,
+  }));
+}
+
+/**
+ * ページごとに異なる `{ data, count }` を返す chainable mock。
+ * `list()` はページごとに新しいクエリチェーンを組むが、テスト側の `from` は
+ * 同じクエリオブジェクトを使い回す（`createService` 参照）ため、`.then()` の
+ * 呼び出し回数でページを進める。
+ */
+function createPagedChainableMock(pages: Array<{ data: unknown[]; count: number | null }>) {
+  const query = createChainableMock(pages[0]?.data ?? []);
+  let call = 0;
+  query.then = vi.fn().mockImplementation((resolve: (value: unknown) => void) => {
+    const page = pages[Math.min(call, pages.length - 1)];
+    call += 1;
+    resolve({ data: page?.data ?? [], count: page?.count ?? null, error: null });
+  });
+  return query;
+}
+
 describe('McpConnectionsService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,10 +77,19 @@ describe('McpConnectionsService', () => {
       expect(from).toHaveBeenCalledWith('oauth_connections');
       expect(query.select).toHaveBeenCalledWith(
         'id, client_id, scopes, authorized_at, last_used_at',
+        {
+          count: 'exact',
+        },
       );
       expect(query.eq).toHaveBeenCalledWith('user_id', USER_ID);
       expect(query.is).toHaveBeenCalledWith('revoked_at', null);
       expect(query.order).toHaveBeenCalledWith('authorized_at', { ascending: false });
+      // `authorized_at` は一意でないため、tiebreaker が無いと offset ページングで
+      // page 境界の tie が入れ替わり行を取りこぼす。全順序であることを固定する。
+      expect(query.order).toHaveBeenCalledWith('id', { ascending: false });
+      expect(query.range).toHaveBeenCalledWith(0, PAGE_SIZE - 1);
+      // count が page size を下回れば 1 回の select で終わる。
+      expect(from).toHaveBeenCalledOnce();
     });
 
     it('該当行が無ければ空配列を返す', async () => {
@@ -65,6 +108,113 @@ describe('McpConnectionsService', () => {
         code: 'FETCH_FAILED',
         message: 'Failed to fetch MCP connections',
       });
+    });
+
+    it('count が null の場合でも壊れずに取得済み分を返す', async () => {
+      const rows = buildRows(0, 3);
+      const query = createPagedChainableMock([{ data: rows, count: null }]);
+      const { service } = createService(query);
+
+      await expect(service.list(USER_ID)).resolves.toEqual(rows);
+    });
+
+    it('count が page size を超えるとき、複数ページを取得して全件返す', async () => {
+      const page1 = buildRows(0, PAGE_SIZE);
+      const page2 = buildRows(PAGE_SIZE, 500);
+      const query = createPagedChainableMock([
+        { data: page1, count: PAGE_SIZE + 500 },
+        { data: page2, count: PAGE_SIZE + 500 },
+      ]);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(PAGE_SIZE + 500);
+      expect(result.map((row) => row.id)).toEqual([...page1, ...page2].map((row) => row.id));
+      expect(query.range).toHaveBeenNthCalledWith(1, 0, PAGE_SIZE - 1);
+      expect(query.range).toHaveBeenNthCalledWith(2, PAGE_SIZE, 2 * PAGE_SIZE - 1);
+    });
+
+    it('重複で件数が水増しされても、総数に達するまでページを進める', async () => {
+      // 重複込みの累計で総数判定すると「取得済み」が水増しされ、未取得の行を残したまま
+      // break する（= 見えない connection が残り revoke できない）。dedupe 後の件数で
+      // 判定していることを固定する。
+      const page1 = buildRows(0, PAGE_SIZE); // id-0 .. id-999
+      // page2 は半分が page1 との重複。重複込みなら 2000 件で総数 1500 を超えるが、
+      // 一意な件数は 1500 に届いていない。
+      const page2 = [...page1.slice(0, PAGE_SIZE / 2), ...buildRows(PAGE_SIZE, PAGE_SIZE / 2)];
+      const page3 = buildRows(PAGE_SIZE + PAGE_SIZE / 2, 500);
+      const total = PAGE_SIZE + PAGE_SIZE / 2 + 500;
+      const query = createPagedChainableMock([
+        { data: page1, count: total },
+        { data: page2, count: total },
+        { data: page3, count: total },
+      ]);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(query.range).toHaveBeenCalledTimes(3);
+      expect(result).toHaveLength(total);
+      expect(new Set(result.map((row) => row.id)).size).toBe(total);
+    });
+
+    it('ページを跨いで重複した id は dedupe される', async () => {
+      // 並行 INSERT で offset がずれ、page2 の先頭に page1 最終行と同じ id が
+      // 再度現れるケースを模す。
+      const page1 = buildRows(0, PAGE_SIZE); // id-0 .. id-999
+      const overlappingRow = page1[page1.length - 1]!;
+      const newRow = buildRows(PAGE_SIZE, 1)[0]!; // id-1000
+      const page2 = [overlappingRow, newRow];
+      const query = createPagedChainableMock([
+        { data: page1, count: PAGE_SIZE + 1 },
+        { data: page2, count: PAGE_SIZE + 1 },
+      ]);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(PAGE_SIZE + 1);
+      const ids = result.map((row) => row.id);
+      expect(new Set(ids).size).toBe(ids.length); // 重複なし
+      expect(ids.filter((id) => id === overlappingRow.id)).toHaveLength(1);
+      expect(ids).toContain(newRow.id);
+    });
+
+    it('cap に到達したら logger.warn を出しつつ取得済み分をそのまま返す', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const pages = Array.from({ length: MAX_PAGES }, (_, page) => ({
+        data: buildRows(page * PAGE_SIZE, PAGE_SIZE),
+        // 総数は cap（MAX_PAGES * PAGE_SIZE）よりずっと多い＝cap まで取っても届かない。
+        count: MAX_PAGES * PAGE_SIZE * 2,
+      }));
+      const query = createPagedChainableMock(pages);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(MAX_PAGES * PAGE_SIZE);
+      expect(query.range).toHaveBeenCalledTimes(MAX_PAGES);
+      expect(warn).toHaveBeenCalledWith(
+        'MCP connection list hit the page cap',
+        expect.objectContaining({
+          feature: 'mcp_connections',
+          operation: 'list_connections',
+          returned: MAX_PAGES * PAGE_SIZE,
+          total: MAX_PAGES * PAGE_SIZE * 2,
+          cap: MAX_PAGES * PAGE_SIZE,
+        }),
+      );
+    });
+
+    it('cap に到達しなければ logger.warn を出さない', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      const query = createPagedChainableMock([{ data: [connectionRow], count: 1 }]);
+      const { service } = createService(query);
+
+      await service.list(USER_ID);
+
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 
