@@ -66,7 +66,7 @@ DROP しない対象（紛らわしいが現役）:
 - `apply_mcp_plan_*_v1` / `apply_mcp_record_*_v1` 系 — 現行 MCP write の唯一の経路
 - `create_plan_command_v1` / `update_plan_command_v1` 等の command_v1 系 — 現行 UI の経路
 - `enforce_active_record_plan_v1()` — 経路非依存の整合性 trigger。コメントに cutover 期の記述が残るが機能は恒常
-- `private.lock_timeblock_global_supported_write_v1()` — no-op 互換 shim。lifecycle command の呼び出し元リネームとセットでないと消せないため候補 8 の scope 外とし、別 issue に切り出す
+- ~~`private.lock_timeblock_global_supported_write_v1()` — no-op 互換 shim。lifecycle command の呼び出し元リネームとセットでないと消せないため候補 8 の scope 外とし、別 issue に切り出す~~ → [#1896](https://github.com/Dayopt/dayopt/issues/1896) で解消済み（`20260810041210_drop_lock_timeblock_global_write_shim.sql`）。呼び出し元 6 関数から shim 呼び出しを除去した上で DROP FUNCTION 済みのため、DROP しない対象リストから外れた
 
 前提条件:
 
