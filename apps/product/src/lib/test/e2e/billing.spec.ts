@@ -14,11 +14,14 @@ import {
 } from './trpc-response-mock';
 
 /**
- * Billing E2E — Checkout / Customer Portal への遷移導線を検証する。
+ * Billing E2E — Checkout / Customer Portal への遷移導線と、Stripe Checkout からの
+ * 復帰導線（`?success=true` / `?canceled=true`）を検証する。
  *
- * Stripe からの復帰導線（`?success=true` / `?canceled=true`）は対象外。遷移先の
- * `/settings/subscription` が有効な設定カテゴリではなく白紙になるため検証できない
- * （#1881）。修正後にここへ追加する。
+ * 復帰先は `/settings/billing`（#1881 で `/settings/subscription` から変更。旧 URL は
+ * 有効な設定カテゴリでないため白紙になっていた）。`settings/[category]/page.tsx` が
+ * 復帰 query を検出して toast 表示 + `billing.getOverview` invalidate を行い、desktop
+ * は SettingsDialog を再度開いて `/` へ replace、mobile は query を除いた
+ * `/settings/billing` へ replace する。
  *
  * Stripe 自体は叩かない。`billing.createCheckoutSession` / `billing.createPortalSession`
  * の tRPC レスポンスを `page.route` で intercept し、client が実際に
@@ -49,6 +52,12 @@ const TEST_PASSWORD = 'test-password-123';
 
 const DUMMY_CHECKOUT_URL = 'https://checkout.stripe.com/c/pay/e2e-dummy';
 const DUMMY_PORTAL_URL = 'https://billing.stripe.com/p/session/e2e-dummy';
+
+// 両方 toast.success のため type では区別できない。文言で区別する
+// （messages/ja/settings.json の settings.subscription.checkoutSuccess / checkoutCanceled と同期）。
+const CHECKOUT_SUCCESS_TOAST_TEXT = 'Proプランへようこそ！サブスクリプションが有効になりました。';
+const CHECKOUT_CANCELED_TOAST_TEXT =
+  'チェックアウトがキャンセルされました。いつでもアップグレードできます。';
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -225,5 +234,31 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
 
     const stripeRequest = await stripeRequestPromise;
     expect(stripeRequest.url()).toBe(DUMMY_PORTAL_URL);
+  });
+
+  // Checkout からの復帰導線（#1881）。Stripe は経由しないため mock 不要。
+  // settings/[category]/page.tsx が `?success=true` / `?canceled=true` を検出して
+  // toast を出すことだけを確認する（PC は openSettings + router.replace('/') で
+  // SettingsDialog を開くため、home へ遷移した後も toast は Toaster ごと残る）。
+  test('Checkout 成功復帰（?success=true）で成功 toast が表示される', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), MOBILE_SKIP_REASON);
+
+    await login(page);
+    await page.goto('/ja/settings/billing?success=true');
+
+    await expect(page.getByText(CHECKOUT_SUCCESS_TOAST_TEXT)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('Checkout キャンセル復帰（?canceled=true）でキャンセル toast が表示される', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), MOBILE_SKIP_REASON);
+
+    await login(page);
+    await page.goto('/ja/settings/billing?canceled=true');
+
+    await expect(page.getByText(CHECKOUT_CANCELED_TOAST_TEXT)).toBeVisible({ timeout: 10_000 });
   });
 });

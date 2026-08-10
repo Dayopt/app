@@ -1025,7 +1025,7 @@ async function createCheckoutProviderSession(
     assertProviderRetryWindow(input.providerRetryDeadlineAt);
     session = await stripe.checkout.sessions.create(
       {
-        cancel_url: `${input.appUrl}/settings/subscription?canceled=true`,
+        cancel_url: `${input.appUrl}/settings/billing?canceled=true`,
         client_reference_id: input.operationId,
         customer: input.customerId,
         expires_at: getCheckoutExpiresAt(input.providerRetryDeadlineAt),
@@ -1042,7 +1042,7 @@ async function createCheckoutProviderSession(
               },
             }
           : {}),
-        success_url: `${input.appUrl}/settings/subscription?success=true`,
+        success_url: `${input.appUrl}/settings/billing?success=true`,
       },
       {
         idempotencyKey: `${IDEMPOTENCY_KEY_PREFIX.checkout}-${input.operationId}`,
@@ -1190,7 +1190,7 @@ export async function createPortalSession(
   const session = await stripe.billingPortal.sessions.create(
     {
       customer: customerId,
-      return_url: `${appUrl}/settings/subscription`,
+      return_url: `${appUrl}/settings/billing`,
     },
     {
       idempotencyKey: `${IDEMPOTENCY_KEY_PREFIX.portal}-${providerClaim.operationId}`,

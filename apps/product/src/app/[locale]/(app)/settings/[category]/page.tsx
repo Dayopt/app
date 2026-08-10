@@ -22,7 +22,21 @@ import { api } from '@/lib/trpc';
 import { Button } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
+import {
+  parseCheckoutCallbackResult,
+  removeCheckoutCallbackParams,
+} from '../_utils/checkout-callback';
 import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
+
+/**
+ * PC で設定を閉じてワークスペースへ戻る時の遷移先。
+ *
+ * `/` にしてはいけない。`[locale]/page.tsx` は `(app)` route group の外にあり
+ * `/{locale}/week` へサーバー redirect するため、`/` を経由すると `(app)/layout.tsx`
+ * 配下の `GlobalOverlays`（`Toaster` の mount 元）が一度 unmount される。
+ * 直前に積んだ toast は描画前に失われる。最終到達先は同じなので直接指す。
+ */
+const DESKTOP_SETTINGS_EXIT_PATH = '/week';
 
 /**
  * 設定カテゴリページ
@@ -50,6 +64,13 @@ export default function SettingsCategoryPage() {
   const calendarParam = searchParams.get('calendar');
   const reasonParam = searchParams.get('reason');
   const searchParamsString = searchParams.toString();
+  // Stripe Checkout からの復帰。PC は下の openSettings + replace で query が消えるため、
+  // BillingSettings 側ではなくここで先に処理する
+  // （Calendar の OAuth callback と同じ理由・同じ形）。
+  const checkoutResult =
+    category === 'billing'
+      ? parseCheckoutCallbackResult(searchParams.get('success'), searchParams.get('canceled'))
+      : null;
   const callbackResult = useMemo(() => {
     const callbackParams = new URLSearchParams();
     if (calendarParam) callbackParams.set('calendar', calendarParam);
@@ -75,7 +96,7 @@ export default function SettingsCategoryPage() {
 
       if (!isMobile) {
         openSettings('integrations');
-        router.replace('/');
+        router.replace(DESKTOP_SETTINGS_EXIT_PATH);
         return;
       }
 
@@ -85,14 +106,43 @@ export default function SettingsCategoryPage() {
       return;
     }
 
+    if (checkoutResult) {
+      const callbackKey = `checkout:${checkoutResult}`;
+      if (processedCallback.current === callbackKey) return;
+      processedCallback.current = callbackKey;
+
+      toast.success(
+        t(
+          checkoutResult === 'success'
+            ? 'settings.subscription.checkoutSuccess'
+            : 'settings.subscription.checkoutCanceled',
+        ),
+      );
+      // Checkout 直後は subscription_status が変わりうる。既定 staleTime は 5 分なので
+      // invalidate しないと復帰直後の画面が古いプランのままになる
+      void utils.billing.getOverview.invalidate();
+
+      if (!isMobile) {
+        openSettings(category);
+        router.replace(DESKTOP_SETTINGS_EXIT_PATH);
+        return;
+      }
+
+      const cleanParams = removeCheckoutCallbackParams(new URLSearchParams(searchParamsString));
+      const query = cleanParams.size > 0 ? `?${cleanParams.toString()}` : '';
+      router.replace(`/settings/billing${query}`);
+      return;
+    }
+
     if (!isMobile) {
       openSettings(category);
-      router.replace('/');
+      router.replace(DESKTOP_SETTINGS_EXIT_PATH);
     }
   }, [
     callbackResult,
     calendarParam,
     category,
+    checkoutResult,
     hasMounted,
     isMobile,
     isValid,
@@ -101,6 +151,7 @@ export default function SettingsCategoryPage() {
     router,
     searchParamsString,
     t,
+    utils.billing.getOverview,
     utils.externalCalendar.listConnections,
   ]);
 

@@ -123,7 +123,7 @@ describe('billing lifecycle compatibility', () => {
     expect(portalCreate).toHaveBeenCalledWith(
       {
         customer: 'cus_existing',
-        return_url: 'https://app.dayopt.test/settings/subscription',
+        return_url: 'https://app.dayopt.test/settings/billing',
       },
       { idempotencyKey: `dayopt-billing-portal-legacy-v1-${OPERATION_ID}` },
     );
