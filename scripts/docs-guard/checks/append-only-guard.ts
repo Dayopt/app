@@ -88,8 +88,17 @@ export function runAppendOnlyGuard({
   const violations: AppendOnlyViolation[] = [];
 
   for (const change of listGitChanges('docs', { baseRef, root })) {
+    // rename検出と同じ理由で、deleteされた側（change.path）にも構造ベースの判定を使う。
+    // `--find-renames` の類似度が閾値（既定50%）を下回ると、git は 1 回の move を
+    // 「旧pathのD + 新pathのA」に分解して返す。isLogPath だけで判定すると、旧domainの
+    // log dir が APPEND_ONLY_DIRS から既に外れている場合（例: 廃止domainのlog/）に
+    // D側がtouchesLog=falseとしてスキップされ、A側は新規fileとして無条件許可される。
+    // 結果、大幅に書き換えた内容を「move」に偽装して凍結logを改変できてしまう
+    // （バイト一致するrenameは常に閾値を超えて `R` として検出されるため、この抜け道は
+    // 内容が実際に変わったケースにしか成立せず、構造判定を広げても正当なrenameは壊れない）。
     const touchesLog =
-      isLogPath(change.path) || (change.oldPath ? isLogPath(change.oldPath) : false);
+      looksLikeDomainLogPath(change.path) ||
+      (change.oldPath ? looksLikeDomainLogPath(change.oldPath) : false);
     if (!touchesLog) continue;
 
     if (change.status === 'added') continue;

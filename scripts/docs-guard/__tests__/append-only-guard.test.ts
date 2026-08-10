@@ -282,6 +282,48 @@ superseded_by: docs/product/log/2026-08-01-new.md
     ]);
   });
 
+  it('エラー系: 廃止domainのlog/からの類似度閾値割れdelete+addでrename検出をバイパスできない', () => {
+    // git の `--find-renames` は類似度（既定50%）を下回ると1回のmoveを
+    // 「旧pathのD + 新pathのA」に分解する。旧domainのlog dirがAPPEND_ONLY_DIRSから
+    // 既に外れている場合、D側をisLogPathだけで判定すると見逃され、A側は新規fileとして
+    // 無条件許可されるため、大幅に書き換えた内容を「move」に偽装して凍結logを改変できて
+    // しまう（append-only-guard.ts の touchesLog 修正で closes）。
+    const root = createRepository();
+    const oldPath = 'docs/marketing/log/2026-07-05-founder-audit.md';
+    const newPath = 'docs/business/log/2026-07-05-founder-audit.md';
+
+    write(
+      root,
+      oldPath,
+      '---\nstatus: frozen\ndate: 2026-07-05\n---\n\n# Founder audit\n\nオリジナルの内容がここに書かれている。\n',
+    );
+    git(root, 'add', oldPath);
+    git(root, 'commit', '-qm', 'add legacy domain log');
+
+    // git mv は使わない。rename検出を経由しない delete+add を意図的に再現するため、
+    // 内容を完全に別物へ書き換えてから別pathとして追加する。
+    git(root, 'rm', '-q', oldPath);
+    write(
+      root,
+      newPath,
+      '---\nstatus: frozen\ndate: 2026-08-10\n---\n\n# Completely different content\n\nまったく別の調査結果をここに新規追加した。\n類似度が閾値を下回るよう十分に長い別内容を積む。\nこの行も元のfileには存在しない。\n',
+    );
+    git(root, 'add', newPath);
+    git(root, 'commit', '-qm', 'rewrite as new file under different domain');
+
+    // 前提確認: git自体がrenameではなくdelete+addとして分解していること。
+    expect(
+      execFileSync('git', ['diff', '--name-status', '--find-renames', 'HEAD~1', 'HEAD'], {
+        cwd: root,
+        encoding: 'utf8',
+      }),
+    ).toBe(`A\t${newPath}\nD\t${oldPath}\n`);
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD~1', root })).toEqual([
+      { file: oldPath, reason: '凍結済みlogを削除している' },
+    ]);
+  });
+
   it('エラー系: append-onlyディレクトリ間でもfilenameが変わるrenameは拒否する', () => {
     const root = createRepository();
     const oldPath = 'docs/product/log/2026-07-01-old-name.md';
