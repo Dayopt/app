@@ -10,6 +10,15 @@ import { expect, test } from '@playwright/test';
  * - features/auth/components/__tests__/PasswordResetForm.test.tsx
  * 未認証リダイレクトとログイン導線の重複は smoke.spec.ts が正。
  *
+ * MFA（TOTP）/ リカバリーコードのログイン経路は E2E では持たない（#1873 の判断）:
+ * - AAL2 昇格の分岐・redirect は LoginForm.test.tsx / proxy の unit test がモックで検証済み、
+ *   recovery code の crypto / DB 層は unit + integration（rls-access.integration.test.ts）が正
+ * - Supabase Admin API に MFA enroll のショートカットが無く事前 seed 不可、TOTP 生成の
+ *   新規依存と 30 秒ウィンドウの clock skew が恒常的 flaky 要因になり、E2E 化のコストが
+ *   検証価値（残 gap は実 Cookie 経由の AAL2 受け渡しのみ）に見合わない
+ * - 手薄なのは client UI 層の component test（useMFA / MFAVerifyForm / MFASection）で、
+ *   これは本コメント冒頭の原則どおり component test の領域（別 issue で追跡）
+ *
  * @see Storybook → Features/Auth/* でUI詳細を確認
  */
 
