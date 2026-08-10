@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-03
+last_verified: 2026-08-10
 ---
 
 # Dayopt 不変条件カタログ
@@ -98,6 +98,15 @@ docs へ残している。
   receiptはDB-authored user-data generationに結び、削除世代を越えたreplayを拒否する
 - Plan / Record の同一lane重複は、通常UIのdirect DMLとMCP applyの両方に効く
   PostgreSQL exclusion constraintを最終authorityとする
+- connection revokeは、connection本体と同一`connection_id`の全tokenを同一transactionで
+  失効させる。revoke後は同じtoken familyがrefresh rotationで復活しない。revokeの権限判定は
+  `revoke_oauth_connection`内の`auth.uid()`一致が正本で、他人・不在のconnectionはどちらも
+  `false`を返して区別しない（列挙で存在確認をさせない）。app層のuser scopingは二重化であり、
+  正本の代替にしない
+- client停止は「durable gate除外で新規発行を止める + 対象connectionを個別revokeして既存
+  tokenを失効させる」の2手を運用契約とする。恒久失効を1 transactionで行うDB commandは
+  持たない。gate再開時に旧connectionがwrite能力を取り戻さないことは、この2手目を実行した
+  事実で担保する（[step-6-execution-checklist.md](../projects/mcp-plan-track-learn/step-6-execution-checklist.md) §3 の決定、2026-08-10）
 - `public.plans` / `public.records` へのdirect DMLは `service_role` だけが持つ。
   `authenticated` は `SELECT` のみで、`TRUNCATE` を含む書き込み系privilegeを一切
   持たない（Candidate 6）。INSERT/UPDATE/DELETE policyはgrant層で到達不能になり、
