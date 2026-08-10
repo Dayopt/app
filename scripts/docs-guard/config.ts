@@ -98,6 +98,40 @@ export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
     source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
     target: '../../.claude/rules/copywriting.md',
   },
+  // 2026-08-10 の完了 project の docs/projects/_archive/ 移設によるもの。
+  // 後継はいずれも docs/projects/_archive/{name}/ 配下の同名ファイル。
+  {
+    source: 'docs/product/log/2026-07-16-feedback-mobile-block-search-sheet.md',
+    target: '../../projects/block-search/overview.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-15-feedback-block-search.md',
+    target: '../../projects/block-search/overview.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-15-feedback-block-search-tag-note.md',
+    target: '../../projects/block-search/overview.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-15-feedback-block-search-open-only.md',
+    target: '../../projects/block-search/overview.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-15-feedback-block-search-duplicate-inspector.md',
+    target: '../../projects/block-search/overview.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-09-time-model-split.md',
+    target: '../../projects/time-model-split/overview.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-08-05-vercel-skip-verification.md',
+    target: '../../projects/ci-monorepo-refactor/overview.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-08-05-unit-test-cost-measurement.md',
+    target: '../../projects/ci-monorepo-refactor/overview.md',
+  },
 ];
 
 // 手書きfrontmatterを付けないgenerated file。完全一致だけを例外にする。
