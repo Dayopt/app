@@ -13,17 +13,27 @@ import { McpConnectionRowView, McpConnectionsSettingsView } from './McpConnectio
 
 // router の戻り値から推論する。手書きの型 + `as` cast にすると、server 側の shape が
 // 変わっても型エラーにならず UI が黙って古い前提のまま動く。
-type McpConnectionSummary = inferRouterOutputs<AppRouter>['mcpConnections']['list'][number];
+type McpConnectionSummary =
+  inferRouterOutputs<AppRouter>['mcpConnections']['list']['items'][number];
 
 export function McpConnectionsSettings() {
   const t = useTranslations('settings.integrations.mcpConnections');
   const utils = api.useUtils();
-  const connections = api.mcpConnections.list.useQuery(undefined, {
-    retry: false,
-    refetchOnMount: 'always',
-  });
+  // keyset cursor pagination（#1909）。1 ページ 50 件で、全件到達は「もっと見る」が担う。
+  // refetch / invalidate 時、TanStack Query は 1 ページ目から順に取り直し、各ページの
+  // cursor を新しいレスポンスから `getNextPageParam` で計算し直す（cursor を再利用しない）。
+  // そのため revoke で行が減っても、ページ跨ぎの重複・欠落は生じない。
+  const connections = api.mcpConnections.list.useInfiniteQuery(
+    {},
+    {
+      retry: false,
+      refetchOnMount: 'always',
+      initialCursor: null,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    },
+  );
 
-  const rows = connections.data ?? [];
+  const rows = connections.data?.pages.flatMap((page) => page.items) ?? [];
 
   // dialog と mutation は行数分ではなく 1 つだけ mount する（#1909: N 行 = N ConfirmDialog +
   // N useMutation の解消）。「どの connection を対象にしているか」(revokeTarget) と「dialog が
@@ -64,6 +74,12 @@ export function McpConnectionsSettings() {
         error={connections.isError}
         hasConnections={rows.length > 0}
         onRetry={() => void connections.refetch()}
+        hasNextPage={connections.hasNextPage}
+        loadingMore={connections.isFetchingNextPage}
+        // 追加読み込みの失敗はページ全体を ErrorState にしない（既に読めている行の
+        // revoke 導線を殺さないため）。導線の下に inline 文言で出して再試行させる。
+        loadMoreError={connections.isFetchNextPageError}
+        onLoadMore={() => void connections.fetchNextPage()}
       >
         {rows.map((connection) => (
           <McpConnectionRow

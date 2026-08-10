@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,13 +40,27 @@ const CURSOR_CONNECTION: ConnectionFixture = {
   last_used_at: '2026-08-08T00:00:00.000Z',
 };
 
-const rowsState = vi.hoisted(() => ({ value: [] as ConnectionFixture[] }));
+// pages は `[{ items: [...] }, { items: [...] }]` の形（`useInfiniteQuery` の shape）。
+// 大半のテストは 1 ページだけを使うので、setRows で 1 ページ扱いにする。
+const pagesState = vi.hoisted(() => ({
+  value: [] as Array<{ items: ConnectionFixture[]; nextCursor: unknown }>,
+}));
+const infiniteQueryState = vi.hoisted(() => ({
+  hasNextPage: false,
+  isFetchingNextPage: false,
+  isFetchNextPageError: false,
+}));
+const fetchNextPage = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
 const revokeUseMutationCallCount = vi.hoisted(() => ({ value: 0 }));
 const revokeMutateAsync = vi.hoisted(() => vi.fn());
 const listCancel = vi.hoisted(() => vi.fn());
 const listInvalidate = vi.hoisted(() => vi.fn());
 const listRefetch = vi.hoisted(() => vi.fn());
+
+function setRows(items: ConnectionFixture[]): void {
+  pagesState.value = [{ items, nextCursor: null }];
+}
 const revokeMutationOptions = vi.hoisted(
   () =>
     ({ current: null }) as {
@@ -84,10 +98,14 @@ vi.mock('@/lib/trpc', () => ({
     }),
     mcpConnections: {
       list: {
-        useQuery: () => ({
-          data: rowsState.value,
+        useInfiniteQuery: () => ({
+          data: { pages: pagesState.value },
           isLoading: false,
           isError: false,
+          hasNextPage: infiniteQueryState.hasNextPage,
+          isFetchingNextPage: infiniteQueryState.isFetchingNextPage,
+          isFetchNextPageError: infiniteQueryState.isFetchNextPageError,
+          fetchNextPage,
           refetch: listRefetch,
         }),
       },
@@ -112,7 +130,10 @@ import { McpConnectionsSettings } from '../McpConnectionsSettings';
 describe('McpConnectionsSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    rowsState.value = [CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION];
+    setRows([CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION]);
+    infiniteQueryState.hasNextPage = false;
+    infiniteQueryState.isFetchingNextPage = false;
+    infiniteQueryState.isFetchNextPageError = false;
     mutationState.isPending = false;
     revokeUseMutationCallCount.value = 0;
     revokeMutationOptions.current = null;
@@ -303,5 +324,64 @@ describe('McpConnectionsSettings', () => {
     // onError は setRevokeOpen(false) を呼ばない。dialog は開いたままユーザーが
     // 再試行やキャンセルを選べる状態を保つ。
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('複数ページを pages.flatMap で 1 つの行リストとして描画し、「もっと見る」で fetchNextPage を呼ぶ', () => {
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+      { items: [CURSOR_CONNECTION], nextCursor: null },
+    ];
+    infiniteQueryState.hasNextPage = true;
+    render(<McpConnectionsSettings />);
+
+    // 2 ページ分の行がすべて描画されている（flatMap による結合）。
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.cursor)' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'loadMore' }));
+    expect(fetchNextPage).toHaveBeenCalledOnce();
+  });
+
+  it('2 ページ既読の状態で 1 ページ目の行を revoke しても、再取得後に重複・欠落が起きない', () => {
+    // revoke 前: 2 ページ既読（claude, chatgpt | cursor）。
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+      { items: [CURSOR_CONNECTION], nextCursor: null },
+    ];
+    const { rerender } = render(<McpConnectionsSettings />);
+
+    // revoke 後の再取得（refetchOnMount: 'always' 相当）は 1 ページ目から取り直し、
+    // TanStack Query が各ページの cursor を新しいレスポンスから再計算する
+    // （context7 で確認済み: 「no direction = refetch」は pageParams を再利用せず、
+    // 1 ページ目から順に getNextPageParam で計算し直す）。claude が消えた分、
+    // chatgpt が 1 ページ目へ繰り上がり、cursor が新しい行を指すよう更新される。
+    pagesState.value = [{ items: [CHATGPT_CONNECTION, CURSOR_CONNECTION], nextCursor: null }];
+    rerender(<McpConnectionsSettings />);
+
+    const chatgptButtons = screen.getAllByRole('button', {
+      name: 'revokeAriaLabel(client=clients.chatgpt)',
+    });
+    const cursorButtons = screen.getAllByRole('button', {
+      name: 'revokeAriaLabel(client=clients.cursor)',
+    });
+    // 重複描画されていない（各 client 1 行だけ）。
+    expect(chatgptButtons).toHaveLength(1);
+    expect(cursorButtons).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).not.toBeInTheDocument();
   });
 });

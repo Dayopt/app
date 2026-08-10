@@ -56,11 +56,17 @@ function SettingsState({
   loading = false,
   error = false,
   rows = [],
+  hasNextPage = false,
+  loadingMore = false,
+  loadMoreError = false,
   children,
 }: {
   loading?: boolean;
   error?: boolean;
   rows?: McpConnectionRowViewProps[];
+  hasNextPage?: boolean;
+  loadingMore?: boolean;
+  loadMoreError?: boolean;
   /** rows とは別に並べたい要素（例: revoke 確認ダイアログ）。 */
   children?: ReactNode;
 }) {
@@ -71,6 +77,10 @@ function SettingsState({
         error={error}
         hasConnections={rows.length > 0}
         onRetry={fn()}
+        hasNextPage={hasNextPage}
+        loadingMore={loadingMore}
+        loadMoreError={loadMoreError}
+        onLoadMore={fn()}
       >
         {rows.map((row) => (
           <McpConnectionRowView key={row.clientLabel} {...row} />
@@ -87,6 +97,35 @@ function SingleConnectionState() {
 
 function MultipleConnectionsState() {
   return <SettingsState rows={[CLAUDE_ROW, CHATGPT_ROW, CURSOR_ROW, UNKNOWN_CLIENT_ROW]} />;
+}
+
+/** 「もっと見る」導線が出ている状態（#1909: keyset cursor の次ページあり）。 */
+function HasMorePagesState() {
+  return (
+    <SettingsState rows={[CLAUDE_ROW, CHATGPT_ROW, CURSOR_ROW, UNKNOWN_CLIENT_ROW]} hasNextPage />
+  );
+}
+
+/** 「もっと見る」を押して次ページ取得中の状態。 */
+function LoadingMoreState() {
+  return (
+    <SettingsState
+      rows={[CLAUDE_ROW, CHATGPT_ROW, CURSOR_ROW, UNKNOWN_CLIENT_ROW]}
+      hasNextPage
+      loadingMore
+    />
+  );
+}
+
+/** 追加読み込みが失敗した状態。既に読めている行は残したまま inline 文言で再試行を促す。 */
+function LoadMoreFailedState() {
+  return (
+    <SettingsState
+      rows={[CLAUDE_ROW, CHATGPT_ROW, CURSOR_ROW, UNKNOWN_CLIENT_ROW]}
+      hasNextPage
+      loadMoreError
+    />
+  );
 }
 
 /**
@@ -177,6 +216,18 @@ export const MultipleConnections: Story = {
   render: () => <MultipleConnectionsState />,
 };
 
+export const HasMorePages: Story = {
+  render: () => <HasMorePagesState />,
+};
+
+export const LoadingMore: Story = {
+  render: () => <LoadingMoreState />,
+};
+
+export const LoadMoreFailed: Story = {
+  render: () => <LoadMoreFailedState />,
+};
+
 export const RevokingBlocksOtherRows: Story = {
   render: () => <RevokingBlocksOtherRowsState />,
 };
@@ -199,6 +250,9 @@ export const AllPatterns: Story = {
       <MultipleConnectionsState />
       <RevokeConfirmationState />
       <RevokingBlocksOtherRowsState />
+      <HasMorePagesState />
+      <LoadingMoreState />
+      <LoadMoreFailedState />
     </div>
   ),
 };

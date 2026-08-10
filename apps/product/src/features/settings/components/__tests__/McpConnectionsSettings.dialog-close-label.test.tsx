@@ -94,10 +94,14 @@ vi.mock('@/lib/trpc', () => ({
     }),
     mcpConnections: {
       list: {
-        useQuery: () => ({
-          data: rowsState.value,
+        useInfiniteQuery: () => ({
+          data: { pages: [{ items: rowsState.value, nextCursor: null }] },
           isLoading: false,
           isError: false,
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          isFetchNextPageError: false,
+          fetchNextPage: vi.fn(),
           refetch: listRefetch,
         }),
       },
