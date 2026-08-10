@@ -161,6 +161,5 @@ describe('ContactForm retry contract', () => {
     const edited = mocks.submitContactRequest.mock.calls[1]?.[0] as { submissionId: string };
     expect(first.submissionId).toBe('550e8400-e29b-41d4-a716-446655440000');
     expect(edited.submissionId).toBe('650e8400-e29b-41d4-a716-446655440000');
-    expect(edited.submissionId).not.toBe(first.submissionId);
   });
 });

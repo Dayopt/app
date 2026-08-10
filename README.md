@@ -41,7 +41,7 @@ pnpm test:integration   # local Supabaseを使うintegration test
 pnpm test:e2e:smoke     # product + web smoke test
 ```
 
-個別commandの正本はroot [`package.json`](./package.json)。exact framework / library versionも各`package.json`とlockfileを参照する。
+個別commandの正本はrootの [`package.json`](./package.json)。exact framework / library versionも各`package.json`とlockfileを参照する。
 
 ## Development Contract
 
