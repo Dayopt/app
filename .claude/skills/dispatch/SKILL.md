@@ -11,6 +11,8 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 **rollup tracking issue は廃止した**（2026-08-01、#1788 を close。経緯は [2026-08-01-issue-state-labels-epics.md](../../../docs/engineering/log/2026-08-01-issue-state-labels-epics.md)）。後継 rollup は作らない。本ファイルは「手順」、issue とラベルが「状態」。
 
+**履歴もコメントに落とす。** dispatch の記録（操作 A 手順 6）に加えて、checkpoint report、判断分岐（`judgment:diverged`。`.claude/rules/orchestration.md` §判断ジャーナル）、レーンからの完了報告も、該当 issue のコメントとして残す。指揮台セッションは transcript に状態を持たないため（`orchestration.md` §盤面の正本は issue + open PR）、issue コメントが唯一の永続履歴になる。
+
 ## When to Use
 
 以下の状況で発動:
@@ -50,13 +52,17 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 ## 検証 — pass すべきコマンド（pnpm check 等）と確認観点
 ```
 
-### 規模別の渡し方
+### `status:ready` の定義（機械判定）
 
-size は**束ねた後の合計**で判定する。
+**上記 4 セクションがすべて埋まっていない issue には `status:ready` を付けられない。** 空見出しや「TBD」のまま残っている issue は `status:blocked` または無ラベルのままにする。この判定は主観の運用ルールではなく、`status:ready` を付けるすべての操作(操作 B 手順 4、操作 D 手順 2、sweep での戻し)の前提条件として扱う。
 
-- size s/xs: 直接実装でよい。plan 不要
-- size m/l: worker に plan を先に出させ、`/plan-review` を通してから実装。複数 issue を束ねた PR は merge 前の read-only subagent クロスレビューが必須（`.claude/rules/workflow.md` §PR 粒度）
-- spike / 設計判断を含む issue: worker に渡さない。最上位ティア（`.claude/rules/ai-behavior.md` のティア表参照）のセッションで実施
+### 渡し方の判断（束ねた後の内容で毎回判定する）
+
+`size:*` ラベルには依存しない（`size:*` は deprecated。操作 B 手順 3 参照）。編成のたびに issue 本文の内容から次の 3 区分のいずれかを判定する:
+
+- **直接実装**: 手順が既存パターンの追従で完結する。plan 不要
+- **plan 先行**: 複数ファイル・複数 Step にまたがる、または既存 contract に触れる。worker に plan を先に出させ `/plan-review` を通してから実装。複数 issue を束ねた PR は merge 前の read-only subagent クロスレビューが必須（`.claude/rules/workflow.md` §PR 粒度）
+- **最上位 tier 専用**: spike / 設計判断を含む issue、または `risk:authority` が付いた issue。worker に渡さず、最上位ティア（`.claude/rules/ai-behavior.md` のティア表参照）のセッションで実施
 
 ## 操作 B: intake — 新しい作業を issue 化する
 
@@ -64,22 +70,30 @@ size は**束ねた後の合計**で判定する。
 
 1. `gh search issues` で既存 issue との重複を確認（close 済み含む）
 2. 重複なら既存 issue に本文追記 or コメントで統合。新規なら handoff-quality で起票
-3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `size:*` / `quality:security` / `ops` など。**新ラベルを作らない**
-4. `status:*` で着手可否を表す（着手可なら `status:ready`、前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く
+3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `quality:security` / `ops` など。`size:*` は **deprecated**（新規 issue には付けない。既存 issue から剥がしはしない）。新ラベルを作らない
+4. `status:*` で着手可否を表す（着手可なら `status:ready`。`status:ready` を付けられる条件は §`status:ready` の定義（機械判定）に従う。前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く。`EXPLICIT AUTHORITY` の引き金（auth / RLS / migration / billing / 不可逆）を含む issue には `risk:authority` を付け、朝の編成で User の裁可ポイントを事前提示する（`.claude/rules/orchestration.md` §権限の既定）
 5. **milestone を判断する**: 現行 milestone（次の minor version。open は常に 1 個、世代交代は releasing skill Phase 3.1）に入れて押し込む作業なら milestone を付ける。付けなければバックログ。「next」milestone は作らない
 
 ## 操作 C: sweep — 定期棚卸しで gap を検出する
 
-月次（`/gardening` と同時期）または大きな節目に実施。以下の「issue の外に作業が溜まりやすい場所」を機械的に確認し、見つけたら操作 B で起票する:
+指揮台の朝の編成（`.claude/rules/orchestration.md` §1 日サイクル）が動くようになったため、頻度の高い項目は日次で吸収する。頻度が低い・外部サービス往復を要する項目だけ月次 backstop として `/gardening` に残す。同じ項目を両方に重複させない。
+
+### 日次（指揮台の朝編成が吸収）
+
+- [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
+- [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
+- [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）
+- [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
+
+### 月次 backstop（`/gardening` と同時期に実施）
+
+以下の「issue の外に作業が溜まりやすい場所」を機械的に確認し、見つけたら操作 B で起票する:
 
 - [ ] Supabase advisors: `get_advisors`（security / performance）の WARN が issue 化されているか
 - [ ] Dependabot security alerts: `gh api repos/Dayopt/dayopt/dependabot/alerts?state=open` が 0 件か
 - [ ] `docs/operations/log/` の監査・incident ログ末尾の「残タスク」が issue 化されているか
 - [ ] NOT_PLANNED で close された issue の中身が、実は未完了のまま受け皿を失っていないか
 - [ ] 生成系スクリプト（`api:spec` / `types:generate` / `rls:snapshot`）が現在も exit 0 で通るか
-- [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
-- [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）
-- [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 
 ## 操作 D: unfreeze — 凍結解除の判定
 
