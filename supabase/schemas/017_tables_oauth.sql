@@ -5,7 +5,7 @@
 -- 既存行まで含めて検証済みにした。
 -- MCP write tool はまだ公開せず、global gate OFF + client list empty が停止条件。
 -- 実際のマイグレーションは migrations/ を参照。
--- 最終同期日: 2026-07-30
+-- 最終同期日: 2026-08-10
 -- Candidate 5 terminal migration: 20260730090200_validate_mcp_oauth_scope_constraints.sql
 -- 同期対象 migration:
 --   - 20260501000000_oauth_tokens_from_api_keys.sql
@@ -28,6 +28,7 @@
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --   - 20260730090100_mcp_oauth_scope_constraints_not_valid.sql
 --   - 20260730090200_validate_mcp_oauth_scope_constraints.sql
+--   - 20260810013820_observe_legacy_oauth_bind.sql
 --
 -- 下記3 CHECKはCandidate 4がNOT VALIDで追加し、Candidate 5が読み取り専用preflightの後に
 -- VALIDATE CONSTRAINTで検証済みへ進めた。この宣言スキーマは読み物なので、
@@ -204,3 +205,21 @@ CREATE TABLE public.mcp_mutation_receipts (
 --   writes_enabled = false AND enabled_client_ids = []
 -- 旧UI direct UPDATE、tag merge lock順、legacy confirm-dayとの未解決raceはStage 2で
 -- app command移行と競合testを終えるまで到達不能にする。
+
+-- private.legacy_oauth_bind_observations: Stage 8-3（candidate 8 destructive
+-- cleanup、docs/projects/mcp-plan-track-learn/step-6-candidate-8-cleanup.md）の
+-- 主停止指標。bind_legacy_oauth_insert_to_connection() が connection_id を
+-- 補完実行するたびに1行append-onlyで記録する（20260810013820）。
+-- user_id/token id/client_id等の識別子は持たず、件数・trigger種別・時刻のみ。
+-- REVOKE ALLがdefaultで、service_roleにSELECTのみ（read-only preflight用。
+-- private schemaのUSAGEもこのmigrationでservice_roleへ再GRANTした — 他の
+-- private tableは個別にREVOKE ALL FROM service_roleを維持するため露出は増えない）。
+-- 停止条件は「観測窓内のこのtable行数が累積0件」。cleanup drop対象には含めない
+-- （trigger drop後の証跡として残す）。
+CREATE TABLE private.legacy_oauth_bind_observations (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  source_table TEXT NOT NULL
+    CHECK (source_table IN ('oauth_authorization_codes', 'oauth_tokens')),
+  had_parent BOOLEAN NOT NULL,
+  observed_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.now()
+);
