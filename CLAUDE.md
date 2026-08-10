@@ -135,20 +135,20 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ## Rule Map
 
-| ファイル                                | 使う場面                                               |
-| --------------------------------------- | ------------------------------------------------------ |
-| `.claude/rules/ai-behavior.md`          | subagent 委任、writer 境界、報告フォーマット、曖昧指示 |
-| `.claude/rules/workflow.md`             | 作業規模、設計書、PR 粒度、git / merge 運用            |
-| `.claude/rules/plan-format.md`          | 実装 plan を提示する時                                 |
-| `.claude/rules/architecture.md`         | tRPC、状態管理、ロジック配置                           |
-| `.claude/rules/code-style.md`           | 型、ログ、依存追加、eslint-disable                     |
-| `.claude/rules/design-system.md`        | UI、token、spacing、icon                               |
-| `docs/product/copywriting.md`           | UI 文言、トーン、CTA                                   |
-| `.claude/rules/feature-boundaries.md`   | feature DAG、Composition Layer                         |
-| `.claude/rules/quality.md`              | test、a11y、performance                                |
-| `.claude/rules/temporal-constraints.md` | 過去ブロック編集制約                                   |
-| `.claude/rules/mcp-usage.md`            | Sentry / Supabase / Context7 / Vercel / Eagle          |
-| `.claude/rules/skill-design.md`         | project skill の設計・更新                             |
+| ファイル                                | 使う場面                                                   |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `.claude/rules/ai-behavior.md`          | subagent 委任、writer 境界、報告フォーマット、曖昧指示     |
+| `.claude/rules/workflow.md`             | 作業規模、設計書、PR 粒度、git / merge 運用                |
+| `.claude/rules/plan-format.md`          | 実装 plan を提示する時                                     |
+| `.claude/rules/architecture.md`         | tRPC、状態管理、ロジック配置                               |
+| `.claude/rules/code-style.md`           | 型、ログ、依存追加、ベンダー・サービス選定、eslint-disable |
+| `.claude/rules/design-system.md`        | UI、token、spacing、icon                                   |
+| `docs/product/copywriting.md`           | UI 文言、トーン、CTA                                       |
+| `.claude/rules/feature-boundaries.md`   | feature DAG、Composition Layer                             |
+| `.claude/rules/quality.md`              | test、a11y、performance                                    |
+| `.claude/rules/temporal-constraints.md` | 過去ブロック編集制約                                       |
+| `.claude/rules/mcp-usage.md`            | Sentry / Supabase / Context7 / Vercel / Eagle              |
+| `.claude/rules/skill-design.md`         | project skill の設計・更新                                 |
 
 ## Skills
 

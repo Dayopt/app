@@ -34,6 +34,72 @@ export const FORBIDDEN_LOG_ALIASES = ['docs/engineering/log/latest.md'];
 // リンク切れチェックで「凍結された過去の記録」として warning 扱いにするディレクトリ。
 export const LINK_CHECK_SOFT_DIRS = [...APPEND_ONLY_DIRS];
 
+export interface FrozenBrokenLink {
+  /** リンク元の凍結 log（repo root からの相対 path）。 */
+  source: string;
+  /** log 本文に書かれているリンク先の文字列そのまま。 */
+  target: string;
+}
+
+/**
+ * 凍結 log 内の既知のリンク切れ。append-only 契約により後から直せないため恒久的に除外する。
+ *
+ * 全件が 2026-07 の docs 再編に由来する（後継先の対応表と経緯は
+ * docs/engineering/log/2026-08-10-frozen-log-link-inventory.md が正本）。
+ *
+ * このリストに載っていないリンク切れが log 側に出たら、それは「stock 側の移動で新たに
+ * 過去の記録を壊した」合図。除外へ追加する前に、stock 側で移動をやめるか alias を残せない
+ * かを先に検討する。追加する場合は後継先をこのリストのコメントに書く（上記 inventory は
+ * status: frozen なので追記できない。経緯を残す必要があれば新しい日付の log を作る）。
+ */
+export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
+  // ログ自身が docs/decisions/ から docs/{domain}/log/ へ 1 階層深く移動した際に、
+  // 相対リンクの `../` が据え置かれたもの。参照先自体は今も実在する。
+  {
+    source: 'docs/engineering/log/2026-04-17-positive-framing-coding-norms.md',
+    target: '../../CLAUDE.md',
+  },
+  {
+    source: 'docs/product/log/2026-03-10-time-immutability-principle.md',
+    target: '../business/strategy.md',
+  },
+  {
+    source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
+    target: '../business/strategy.md',
+  },
+  {
+    source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
+    target: '../../supabase/migrations/20260319130001_remove_recurrence.sql',
+  },
+  // 参照先が別ファイルへ統合されたもの。
+  // docs/architecture/api/ は docs/engineering/conventions-api.md へ合流した。
+  {
+    source: 'docs/engineering/log/2026-05-01-api-first-audit.md',
+    target: '../architecture/api/shape.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-05-12-service-audit.md',
+    target: '../architecture/api/contracts.md',
+  },
+  // 参照先が廃止され、単一の後継が無いもの。
+  {
+    source: 'docs/product/log/2026-03-10-time-immutability-principle.md',
+    target: '../roadmap.md',
+  },
+  {
+    source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
+    target: '../roadmap.md',
+  },
+  {
+    source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
+    target: '../strategy/research/competitors/',
+  },
+  {
+    source: 'docs/product/log/2026-06-16-feature-non-adoption.md',
+    target: '../../.claude/rules/copywriting.md',
+  },
+];
+
 // 手書きfrontmatterを付けないgenerated file。完全一致だけを例外にする。
 export const GENERATED_DOCS = ['docs/engineering/data/db/rls-snapshot.md'];
 

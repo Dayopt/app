@@ -5,7 +5,7 @@ last_verified: 2026-08-09
 
 # インフラ・環境・API/Routing 総覧
 
-環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書。「環境・デプロイ・シークレットは?」の正。
+環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
 
 ---
 
@@ -1692,3 +1692,55 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | **MEDIUM** | #4 (ical token), #9 (email suppressions), #15 (vault helpers), #16 (edge function) |
 | **LOW**    | #1-3, #6, #8, #10-12, #17-18                                                       |
 | **非推奨** | #1 (IDOR fix), #11 (auth.uid() check), #14 (vault extension)                       |
+
+## 出口コスト台帳
+
+策定日: 2026-08-09（経緯は [2026-08-09-antifragility-stance.md](./log/2026-08-09-antifragility-stance.md)）
+
+**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`.claude/rules/code-style.md` §技術選定スタンス）。
+
+更新するのは 3 つの時: ①「深い」「中」級の依存を追加・削除した時、②**既存依存の用途・浸透範囲が変わった時**（新しい呼び出し面を足す、cron を増やす、必須 env に昇格させる等。依存の増減が無くても「今日捨てたら何が壊れるか」は変わる）、③出口検討トリガーに当たる発表・事象があった時。
+
+### 台帳の粒度（保証境界）
+
+策定日: 2026-08-09（[PR #1880](https://github.com/Dayopt/dayopt/pull/1880) のレビュー 2 ラウンド目で境界を明文化）
+
+**この台帳が保証するのは「どの外部サービスに依存していて、捨てたら何が壊れ、どの層か」まで。** 粒度の下限は **その依存を捨てる／続ける判断が変わる情報**とする。
+
+- **対象内**: 依存の列挙漏れ、層の誤り、「捨てたら壊れるもの」の誤り。これらは判断そのものを誤らせる
+- **対象外**: 既に列挙済みの依存について、移行手順を 1 段細かくする記述（オブジェクト搬出に加えた URL 書き換え、DNS レコードの移行順序など）。**台帳は移行手順書ではない**
+
+実際に乗り換える時は、その時点で対象サービスの棚卸しをやり直す前提とする。台帳は「どこから調べ始めるか」の起点であって、網羅した移行チェックリストではない。この境界を引かないと、列挙済みの依存を無限に細分化する指摘が構成でき、防災マップとしての可読性が先に死ぬ（同型指摘の打ち切りは [workflow.md §同型指摘の打ち切り](../../.claude/rules/workflow.md)）。
+
+### 深い（乗り換えは週単位の大工事）
+
+| 依存         | 浸透                                                                                     | 今日捨てたら何が壊れるか                                             | 逃げ道                                                                                                                                                                                       | 出口検討トリガー                                     |
+| ------------ | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Supabase** | Auth + DB 本体（RLS / RPC）+ Storage（`avatars` bucket）+ Edge Functions。唯一の最深依存 | 認証、全データアクセス、avatar の保存・配信、認証メール送信 function | schema / migration は repo に全履歴があり Postgres 互換先へ dump 移行できるが、**Storage オブジェクトは DB dump に入らないので別途搬出が要る**。Auth / RLS / Edge Functions の作り直しが本体 | 価格・無料枠の大幅改定、買収・方針転換、障害の常態化 |
+
+**Realtime は現状の浸透に含めない。** `supabase_realtime` publication は production / local ともに空で、アプリ側にも `postgres_changes` 購読が無い（本ファイル §Supabase 型自動生成 の Realtime publication 手動確認 SQL）。再導入したらこの行を更新する。
+
+### 中（乗り換えは日単位）
+
+| 依存                                   | 浸透                                                                                                                                                                                                                                                               | 今日捨てたら何が壊れるか                                                                                                         | 逃げ道                                                                                                                                                                                                                             | 出口検討トリガー                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status、**Cron**（`calendar-sync` / `external-connection-maintenance` を 15 分毎）、**host 別 rewrite**（`mcp.dayopt.app` → `/api/mcp`）、**`dayopt.app` の registrar**                   | deploy 経路、PR 検証の一部、**カレンダー同期と接続メンテナンスの定期実行**、**MCP の入口 routing**、**ドメインの更新・移管権限** | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線に加え **scheduler と host routing の移植**（`apps/product/vercel.json`）と **registrar 移管**が要る。ホスティングだけ移して account を閉じるとドメインを失う | 価格改定、他ホストでの Next.js 冷遇 |
+| **Stripe**                             | Pro 課金（billing）+ **アカウント削除フロー**（subscription cancel → customer 削除）                                                                                                                                                                               | 課金・サブスク管理に加え、`stripe_customer_id` を持つユーザーの**アカウント削除が完了しなくなる**                                | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）と**削除フローの customer cleanup 差し替え**が要る                                                                                                                      | 手数料改定、アカウント凍結リスク    |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`release.yml` が production domain promote の唯一経路） | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                        | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                    | 価格改定、Actions 課金の構造変化    |
+| **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース                                                                                                                                                                 | **operational 環境ではアプリが起動しない**（env 検証が失敗）。起動しても webhook 処理が fail-closed になる                       | `@upstash/redis` は REST API 前提のため素の Redis へ drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る                                                                 | 価格改定、REST API の互換性変更     |
+| **Google**                             | OAuth ログイン + external-calendar 連携 + **`support@dayopt.app` の最終受信箱**（Gmail destination と Send mail as）                                                                                                                                               | Google ログインユーザーのアクセス、カレンダー同期、**問い合わせの受信と返信**                                                    | ログインは email 併存、連携は opt-in。ただし**受信箱は代替が要る**（destination 変更・履歴移行・返信経路の再設定。`docs/operations/contact-email.md`）                                                                             | OAuth / Calendar API の政策変更     |
+| **Cloudflare**                         | `dayopt.app` の **authoritative DNS**（`app` / `mcp` / `www` を含む）、**Email Routing**（`support@` → Gmail）、Turnstile（Bot 対策）                                                                                                                              | **全ドメインの名前解決**と**問い合わせの受信**、Bot 対策                                                                         | nameserver を別 DNS へ委譲し直し、MX / SPF / DKIM と転送先を再設定、CAPTCHA を差し替える。DNS の切替は伝播待ちを伴う                                                                                                               | 価格改定、無料枠の縮小              |
+| **Sentry**                             | エラー監視（runtime capture / sanitizer / CSP report）+ **production build gate**（`assertProductionSentryBuildEnv` が資格情報欠落で build を失敗させる。product / web 両方）                                                                                      | 監視に加え、**次の production build が止まる**                                                                                   | 代替 APM への移植は build 配線・sanitizer・CSP・運用 runbook を含むため日単位。履歴は持ち出さない割り切り                                                                                                                          | 価格改定、無料枠の縮小              |
+| **Resend**                             | メール送信 + **bounce / complaint webhook**（svix 署名検証 → `email_suppressions` 更新）                                                                                                                                                                           | 送信に加え、**新規 bounce / complaint が記録されなくなり、抑止対象へ送り続ける**                                                 | 代替 SMTP / API へ切替。suppression list の持ち出しに加え、**webhook 署名検証・イベント変換・冪等性の再実装**が要る                                                                                                                | 価格改定、到達率の劣化              |
+| **1Password**                          | 長寿命 secret の **master**（Vercel / GitHub / Supabase は replica）、`op run` 注入、GitHub SSH 鍵、各サービスの password / TOTP / recovery code、ドメイン管理情報                                                                                                 | secret の rotation 元と**アカウント復旧手段**（TOTP / recovery code / SSH 鍵）                                                   | `.op-env` スキーマだけでなく、**master secret・外部 replica の同期元・SSH agent・login / recovery item** をまとめて別 manager へ移す必要がある（`docs/operations/secrets.md`）                                                     | 価格改定、desktop 統合の劣化        |
+| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                                                                                                                                                                                                            | 開発テンポ（プロダクトは無傷）。**実装・運用を引き継ぐ agent が現行ポリシー上いない**ため、修正と release が止まる               | 規約はすべて plain markdown で repo 内。ただし AGENTS.md は Codex を**レビュー専任**と定めるため二系統は代替経路にならない。出口作業は「規約と workflow を別の実装系へ移植する」こと。tier 読み替え原則で model 名には固定しない   | 価格・品質・提供条件の変化          |
+
+### 浅い（乗り換えは時間単位、単機能で代替容易）
+
+| 依存                  | 役割                                         | 逃げ道                                                        |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------- |
+| **UptimeRobot**       | 外形監視                                     | 代替外形監視へ切替（Read-only API 運用）                      |
+| **Slack**             | billing alert の incoming webhook（任意）    | webhook URL 未設定なら no-op。代替通知先へ切替                |
+| **Have I Been Pwned** | signup / password 変更時の漏洩パスワード検査 | 停止時は fail-open（検査を通す）。代替 breach API / corpus へ |
+
+**Turnstile と Sentry はこの層に無い。** Turnstile は Cloudflare 行（中）に、Sentry は production build gate を握るため中層に含めた。
