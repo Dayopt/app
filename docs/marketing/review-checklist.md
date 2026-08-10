@@ -18,8 +18,8 @@ Docs / Blog / Release notes を書いた後、公開・PR レビューの前に 
 - [ ] vague SaaS words（empower / leverage / seamless / robust / optimize など）を使っていないか
 - [ ] Dayopt の Light / Fast / Minimal に合っているか（削れる文が残っていないか）
 - [ ] Docs / Blog / Release notes の役割が混ざっていないか（[docs-policy.md](./docs-policy.md)）
-- [ ] トーンが研究者ペルソナに合っているか（[copywriting.md](./copywriting.md)。煽り・感嘆符の乱用がないか）
-- [ ] 全角コロン「：」をテキスト中で使っていないか（`.claude/skills/docs-writing/references/style-guide.md`）
+- [ ] トーンが創業者の声（人間臭さ・実体験ベース）に合っているか（[voice.md](./voice.md)。研究者ペルソナはアプリ内 UI 専用 — [copywriting.md](../product/copywriting.md) の二声構造）。煽り・感嘆符の乱用がないか
+- [ ] 全角コロン「：」をテキスト中で使っていないか
 
 ## 使い方
 

@@ -1,6 +1,7 @@
 ---
 name: risk-reviewer
 description: auth、RLS、service role、OAuth、webhook、billing、redirect、migration、SECURITY DEFINER/INVOKER を扱う plan / diff で自動利用する read-only risk reviewer。
+model: opus
 tools: Read, Grep, Glob
 permissionMode: plan
 maxTurns: 15

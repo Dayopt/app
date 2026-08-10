@@ -1,5 +1,6 @@
 ---
-description: 各ドメインの log/ に時点ものの調査・監査・実験ログを新規作成する
+name: note
+description: ユーザーが調査・実験・監査・障害からの学びなど時点ものの記録作成を明示依頼した時、または `/note` として明示起動された時に発動。domain と slug から `docs/{domain}/log/YYYY-MM-DD-slug.md` を作成する。feedback / incident は接頭辞固定の命名特例を適用する。意思決定ログの作成（decision skill の領域）では発動しない。
 ---
 
 # /note
@@ -8,9 +9,24 @@ description: 各ドメインの log/ に時点ものの調査・監査・実験�
 
 引数: `$ARGUMENTS`(domain と slug。例: `/note engineering bundle-size-audit` → `docs/engineering/log/2026-07-02-bundle-size-audit.md`)
 
+## When to Use
+
+**明示発動型** — この skill はユーザーの explicit な時点ものログ作成意図のみを契機に発動する（コード変化のみでは発動しない）。
+
+- 「メモを残して」「調査ログを作って」など、時点ものの記録作成が明示依頼された時
+- `/note` として明示的に起動された時
+- ユーザーの声や障害の記録を feedback- / incident- prefix で残すよう指示された時
+
+## When NOT to Use
+
+この skill は **explicit 時点ものログ作成意図のみを契機とする**。暗黙的な invocation ケースは該当なし（型の穴埋めとして明記）。参考として近接するが発動しないケース:
+
+- 恒久的な意思決定の記録 → `decision` skill
+- 月次の docs 鮮度・一貫性の保守 → `gardening` skill
+
 ## 命名の特例
 
-以下のカテゴリは接頭辞を固定する(`docs/README.md` §書き方の約束 に準拠):
+以下のカテゴリは接頭辞を固定する(`docs/README.md` §書き方 に準拠):
 
 - ユーザーの声(感想・要望・不具合報告) → `YYYY-MM-DD-feedback-slug.md`(domain は基本 `product`)
 - 障害の記録 → `YYYY-MM-DD-incident-slug.md`(domain は基本 `operations`)

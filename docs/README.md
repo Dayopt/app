@@ -18,16 +18,15 @@
 
 ## ドメイン
 
-| ドメイン       | 責務                                      | 主な入口                                                                      |
-| -------------- | ----------------------------------------- | ----------------------------------------------------------------------------- |
-| `ai/`          | AI が文章を書く時の共通基準               | `writing-style.md`, `copywriting.md`, `docs-policy.md`, `review-checklist.md` |
-| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                                                   |
-| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`                                      |
-| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`                                        |
-| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md`                              |
-| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`                                  |
-| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                                                 |
-| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`                                         |
+| ドメイン       | 責務                                      | 主な入口                                                   |
+| -------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `business/`    | 事業の Why、対象、価格、指標              | `strategy.md`, `pricing.md`                                |
+| `product/`     | プロダクトの What / Why、原則、仕様、用語 | `principles.md`, `specs/`, `glossary.md`, `copywriting.md` |
+| `marketing/`   | 広げ方、チャネル、トーン                  | `strategy.md`, `voice.md`, `channels/`, `writing-style.md` |
+| `engineering/` | architecture、規約、infra                 | `architecture.md`, `conventions*.md`, `infra.md`           |
+| `operations/`  | runbook、monitoring、security、legal      | `runbook.md`, `monitoring.md`, `security.md`               |
+| `company/`     | 契約、登記、外部サービス                  | `accounts.md`                                              |
+| `projects/`    | 複数領域を跨ぐ有限の実装計画と完了記録    | `{project}/overview.md`, `summary.md`                      |
 
 ## 現在・Project・履歴
 
@@ -64,7 +63,7 @@ code:
 
 - `active`: 実装または検証が進行中
 - `paused`: 意図的に停止中
-- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須
+- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須で、ディレクトリごと `docs/projects/_archive/{name}/` へ移す
 - step / summary は通常の stock metadata（`current | superseded`）を使う
 
 ### Log — 当時の記録
@@ -103,7 +102,8 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 監視・alert                    | `operations/monitoring.md`                                   |
 | security                       | `operations/security.md`                                     |
 | 契約サービス                   | `company/accounts.md`                                        |
-| 進行中・完了Project            | `projects/*/overview.md`, `summary.md`                       |
+| 進行中Project                  | `projects/*/overview.md`                                     |
+| 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`              |
 | なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                       |
 
 ## 書く場所の決定木
@@ -123,6 +123,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - Mermaidを優先し、画像だけに設計情報を閉じ込めない
 - generated fileは生成元とcheck commandを冒頭に明記し、手編集しない
 - file / directory名はkebab-case。`log/`は日付prefixを使う
+- ユーザーの声の記録は `YYYY-MM-DD-feedback-<slug>.md`（基本 `product/log/`）、障害の記録は `YYYY-MM-DD-incident-<slug>.md`（基本 `operations/log/`）と接頭辞を固定する
 
 ## 運用
 

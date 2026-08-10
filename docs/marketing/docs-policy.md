@@ -24,4 +24,4 @@ last_verified: 2026-07-23
 
 - 文章基準: [writing-style.md](./writing-style.md)
 - 公開前チェック: [review-checklist.md](./review-checklist.md)
-- 運用フロー（いつ何を書くか）: [docs/marketing/content-operations.md](../marketing/content-operations.md)
+- 運用フロー（いつ何を書くか）: [docs/marketing/content-operations.md](./content-operations.md)

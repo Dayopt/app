@@ -14,7 +14,7 @@
     "heading": "Welcome to Dayopt",
     "body": "Thanks for joining Dayopt. Your account is ready.",
     "valueProp": "Dayopt combines task planning, time tracking, and calendar views in one place — so you can see where your time actually goes.",
-    "ctaButton": "Get Started"
+    "ctaButton": "Get started"
   },
   "passwordChanged": {
     "subject": "Your password has been changed",
@@ -52,7 +52,7 @@
     "heading": "Your Pro trial ends in 3 days",
     "body": "Your Pro trial ends on {trialEndDate}. After that, your account will move to the Free plan automatically.",
     "keepProHint": "If you'd like to keep Pro features, you can subscribe anytime from your account settings.",
-    "ctaButton": "View Plans",
+    "ctaButton": "View plans",
     "freePlanNote": "No pressure — the Free plan still gives you full access to timeboxing, time tracking, and calendar views."
   },
   "trialExpired": {
@@ -84,7 +84,7 @@
     "heading": "Action needed: payment failed",
     "body": "We weren't able to process your latest payment for Dayopt Pro.",
     "urgencyNote": "Your Pro features are still active for now, but please update your payment method to avoid any interruption.",
-    "ctaButton": "Update Payment Method",
+    "ctaButton": "Update payment method",
     "helpLine": "If you believe this is an error, or if you need help, contact us at {supportEmail}"
   },
   "paymentRecovered": {
@@ -101,7 +101,7 @@
     "labelProAccessUntil": "Pro access until",
     "afterPeriodNote": "After that, your account will move to the Free plan. Your data will be preserved — nothing is deleted.",
     "resubscribeHint": "You can resubscribe anytime from Settings → Billing.",
-    "ctaButton": "Manage Account",
+    "ctaButton": "Manage account",
     "thankYou": "Thank you for being a Pro member."
   }
 }

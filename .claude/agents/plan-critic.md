@@ -1,6 +1,7 @@
 ---
 name: plan-critic
 description: 実装 plan の不可逆判断、本番故障モード、過剰・不足エンジニアリングを検出する。/plan-review から plan-fact-checker と並列利用する read-only critic。
+model: opus
 tools: Read, Grep, Glob
 permissionMode: plan
 maxTurns: 15

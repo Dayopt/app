@@ -52,31 +52,6 @@ import {
 } from './stripe-webhook-idempotency';
 import { parseStripeWebhookIdentity, verifyStripeWebhookIdentity } from './stripe-webhook-identity';
 
-// ─── Slack 通知 ──────────────────────────────────────
-
-/**
- * 課金イベントをSlackに通知する（fire-and-forget）
- *
- * SLACK_BILLING_WEBHOOK_URL が未設定の場合は何もしない。
- */
-async function notifySlack(text: string): Promise<void> {
-  const webhookUrl = env.SLACK_BILLING_WEBHOOK_URL;
-  if (!webhookUrl) return;
-
-  try {
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (!response.ok) throw new Error('Slack billing notification returned a non-success status');
-  } catch (error) {
-    // Slack通知失敗はWebhook処理をブロックしない
-    logger.warn('Slack billing notification failed');
-    captureStripeWebhookFailure(error, 'notify_billing_slack');
-  }
-}
-
 // ─── トランザクションメール送信 ─────────────────────────
 
 const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
@@ -348,9 +323,6 @@ export async function POST(request: NextRequest) {
 
           await syncSubscriptionStatus(supabase, customerId, subscriptionId, status);
           logger.info('Checkout completed', { customerId, subscriptionId, status });
-          await notifySlack(
-            `🎉 新規サブスクリプション開始\nCustomer: ${customerId}\nStatus: ${status}`,
-          );
 
           const profile = await getBillingProfileByCustomerId(supabase, customerId);
           subscriptionStartedUserId = profile?.id ?? null;
@@ -412,7 +384,6 @@ export async function POST(request: NextRequest) {
           status,
           previousStatus,
         });
-        await notifySlack(`📝 サブスクリプション更新: ${status}\nCustomer: ${customerId}`);
 
         // trialing → active: Pro開始メール
         if (previousStatus === 'trialing' && status === 'active') {
@@ -469,8 +440,6 @@ export async function POST(request: NextRequest) {
         logger.info('Subscription deleted', { outcome: syncOutcome });
 
         if (syncOutcome === 'updated') {
-          await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
-
           // 解約確認メール
           const cancelUser = await getUserByCustomerId(supabase, customerId);
           if (cancelUser) {
@@ -514,7 +483,6 @@ export async function POST(request: NextRequest) {
           }
         }
         logger.warn('Payment failed', { customerId });
-        await notifySlack(`🚨 支払い失敗\nCustomer: ${customerId ?? 'unknown'}`);
 
         // 支払い失敗メール
         const paymentUser = customerId ? await getUserByCustomerId(supabase, customerId) : null;

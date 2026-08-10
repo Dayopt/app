@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-12
+last_verified: 2026-08-10
 ---
 
 # spec テンプレ
@@ -12,6 +12,8 @@ last_verified: 2026-07-12
 status: current
 last_verified: YYYY-MM-DD
 code: apps/product/src/features/<feature> # 対応する実装コードのパス
+public_docs: [] # 対応する公開docs（apps/web/content/docs）のslug配列。無ければ空配列
+lp: [] # LPがこの機能について約束している文言の配列。言及が無ければ空配列
 ---
 
 # 機能名
