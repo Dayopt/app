@@ -36,6 +36,7 @@ import {
 
 import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
 import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+import { useBillingPollStore } from '../stores/useBillingPollStore';
 
 interface Plan {
   id: DayoptPlanId;
@@ -98,10 +99,14 @@ export function BillingSettings() {
   // openSettings + router.replace('/') で query が消えるため、ここで searchParams を
   // 読んでも間に合わない。
 
-  // 統合エンドポイントで一括取得（N+1 解消）
+  // 統合エンドポイントで一括取得（N+1 解消）。refetchInterval は useAppInlineBanner
+  // 側で有効化される（app shell に常駐し、settings modal の開閉に依存しないため）。
   const overview = api.billing.getOverview.useQuery(undefined, {
     retry: false,
   });
+  // Checkout 成功復帰直後のポーリング中は、まだ Free のまま見えていても
+  // 「反映中」であることをユーザーに伝える（issue #1887）。
+  const isPollingAfterCheckout = useBillingPollStore.use.startedAt() !== null;
 
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
   const trialEndsAt = overview.data?.trialEndsAt ?? null;
@@ -269,6 +274,12 @@ export function BillingSettings() {
                   ? t('settings.subscription.proPlanDescription')
                   : t('settings.subscription.freePlanDescription')}
             </p>
+            {/* Checkout 成功直後、webhook 反映待ちでまだ Free に見えている間の一時表示 */}
+            {isPollingAfterCheckout && !canAccessPro && (
+              <p className="text-muted-foreground text-base md:text-sm">
+                {t('settings.subscription.syncingPlan')}
+              </p>
+            )}
             {/* Stripe から期限を取れなかった場合は表示しない（Badge と説明文は従来どおり出る） */}
             {subscriptionStatus === 'trialing' && trialEndsAt && (
               <p className="text-muted-foreground text-base md:text-sm">

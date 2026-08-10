@@ -630,7 +630,8 @@
           }
         }
       },
-      "trialEndsAt": "Your trial runs through {date}"
+      "trialEndsAt": "Your trial runs through {date}",
+      "syncingPlan": "Confirming your update… your Pro plan will show up shortly"
     }
   }
 }
