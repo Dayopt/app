@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    // scripts/ は `#!/usr/bin/env node` で直接実行される（tsx 経由ではない呼び出しも
+    // ある）。Node の native ESM resolver は相対 import に拡張子を要求するため、
+    // scripts/ 配下は一貫して `./foo.ts` 形式で書かれている。bundler 系の apps/product
+    // が拡張子なし import なのとは実行モデルが異なるため、ここだけ明示的に許可する。
+    "allowImportingTsExtensions": true,
+    // scripts/__tests__ の一部が同階層の .mjs（production-config-audit.mjs 等）を
+    // import している。allowJs は解決のためだけで、checkJs は既定 off のまま
+    // （.mjs 自体の内容は checkJs 対象外＝型検査しない。誤って any 化した箇所を
+    // 拾う場合はあるが、strict化はこの gate の scope 外）。
+    "allowJs": true
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": [
+    // generate-api-spec.ts は `../apps/product/src/lib/trpc/{procedures,root}` を
+    // 型 import/動的 import する。procedures.ts 側は `@/lib/...` alias で 10 箇所、
+    // root.ts は `@/app/api/trpc/_server/app-router` で 1 箇所参照しており、
+    // tsconfig.scripts.json（`@/*` 非対応、Next.js 非依存、Node 向け）では
+    // 解決できない。apps/product 側の paths を複製すると app-router 経由で
+    // apps/product/src 全体の compile graph を引き込むため（DO NOT touch
+    // apps/product/src/** の制約もあり）採用しない。apps/product/tsconfig.json も
+    // 元々 `../../scripts/**` を除外しており、この 2 ファイルはどちらの gate にも
+    // 入っていなかった（今回の追加で新たに欠落するわけではない）。
+    // generate-api-spec.ts 側には独立の latent bug もある: `ProcedureMeta` は
+    // procedures.ts ではなく router.ts の非 export interface で、import 元も
+    // 名前も誤っている。将来ここへ型を通すなら、apps/product 側で
+    // ProcedureMeta を export するか、scripts 側に構造的に等価な型を複製する
+    // 設計判断とセットで行う。
+    "scripts/generate-api-spec.ts",
+    "scripts/__tests__/generate-api-spec.test.ts"
+  ]
+}

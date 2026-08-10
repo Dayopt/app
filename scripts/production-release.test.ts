@@ -97,7 +97,13 @@ function projectFromUrl(url: string): 'web' | 'product' {
   return 'web';
 }
 
-const noop = { log: () => {} };
+/**
+ * `runProductionRelease` の `logger = console` 既定引数により、production-release.mjs
+ * 側の型推論（allowJs 由来、checkJs は off）は `logger` を `Console` 型と見なす。
+ * 実際に呼ばれるのは `.log()` のみなので、ここでは意図的に最小 stub を用意し、
+ * `Console` として扱う（他メソッドを呼ぶコードパスが増えれば実行時に気付ける）。
+ */
+const noop = { log: () => {} } as unknown as Console;
 const noSleep = () => Promise.resolve();
 
 /**
@@ -105,7 +111,9 @@ const noSleep = () => Promise.resolve();
  * deployment も指すため使えない（実測で確認済み）。
  */
 function createVercelMock(handlers: Record<string, () => unknown>) {
-  const fetchImpl = vi.fn(async (input: URL | string) => {
+  // 一部の呼び出し元は PATCH 等を横取りするラッパーから (input, init) の 2 引数で
+  // 委譲してくる。init 自体は使わないが、受け取れないと呼び出し側が型エラーになる。
+  const fetchImpl = vi.fn(async (input: URL | string, _init?: RequestInit) => {
     const url = String(input);
     if (new URL(url).origin !== 'https://api.vercel.com') return smokeResponse(url);
     const key = Object.keys(handlers).find((pattern) => url.includes(pattern));
@@ -250,6 +258,42 @@ function createReleaseWorld(
 /** 両 app に影響する差分（root 設定）。project 別の影響は各 test で上書きする。 */
 const AFFECTS_BOTH = () => ['pnpm-lock.yaml'];
 
+/**
+ * production-release.mjs の buildManifest() が実際に返す形（同ファイル参照）。
+ * `runProductionRelease` は untyped な .mjs（checkJs off）なので、成功時の
+ * resolve 値・失敗時に Object.assign で Error へ付与する値のどちらも
+ * allowJs のベストエフォート推論に依存し、精度が粗い。テスト側で読む形を
+ * ここに 1 箇所へ集約し、各 test の inline 型のバラつき・欠落を防ぐ。
+ */
+type ReleaseManifestProject = {
+  name: string;
+  productionDomain: string;
+  affected: boolean | null;
+  reason: string | null;
+  action:
+    | 'unassigned'
+    | 'promoted'
+    | 'rolled-back'
+    | 'already-serving'
+    | 'uncertified'
+    | 'pending'
+    | 'skipped'
+    | 'moved-externally';
+  deploymentId: string | null;
+  sourceSha: string | null;
+  previousDeploymentId: string | null;
+  observedAt: 'this-run' | 'run-start';
+};
+
+type ReleaseManifest = {
+  sha: string;
+  status: string;
+  projects: ReleaseManifestProject[];
+};
+
+/** release() が reject する時に Object.assign で manifest を付与した Error。 */
+type ReleaseError = Error & { manifest?: ReleaseManifest };
+
 function release(overrides: Record<string, unknown> = {}) {
   return runProductionRelease({
     sha: SHA,
@@ -353,7 +397,10 @@ describe('waitForReadyCandidates', () => {
       logger: noop,
     });
 
-    expect(ready.map((entry) => entry.deployment.id)).toEqual(['dpl_web', 'dpl_product']);
+    expect(ready.map((entry: { deployment: { id: string } }) => entry.deployment.id)).toEqual([
+      'dpl_web',
+      'dpl_product',
+    ]);
   });
 
   it('fails fast when a build ends in ERROR', async () => {
@@ -398,7 +445,11 @@ describe('waitForReadyCandidates', () => {
 });
 
 describe('smokeDeployment', () => {
-  const okBody = () => smokeResponse('https://dpl.vercel.app/');
+  // fetchImpl として vi.fn() に渡すため、実際には (url, init) の 2 引数で呼ばれる。
+  // 0 引数のままだと vi.fn() の mock 型が呼び出し引数を [] tuple と推論し、
+  // `.mock.calls[n]?.[1]` が「index 1 は存在しない」型エラーになる。
+  const okBody = (_url?: string, _init?: { headers?: Record<string, string> }) =>
+    smokeResponse('https://dpl.vercel.app/');
 
   it('sends the bypass header only when a secret is configured', async () => {
     const withSecret = vi.fn(okBody);
@@ -532,7 +583,7 @@ describe('smokeDeployment', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
 
     const failing = vi.fn(async () => new Response('internal detail', { status: 503 }));
-    const error = await smokeDeployment({
+    const error = (await smokeDeployment({
       projectName: 'product',
       deploymentUrl: 'dpl.vercel.app',
       checks: [{ path: '/api/health', contains: '"status":"healthy"' }],
@@ -540,7 +591,7 @@ describe('smokeDeployment', () => {
       fetchImpl: failing,
       sleepImpl: noSleep,
       logger: noop,
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toContain('503');
     expect(error.message).not.toContain(BYPASS);
@@ -628,10 +679,10 @@ describe('runProductionRelease', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => (clock += 60_000),
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toMatch(/promote did not take effect/);
     expect(world.rolledBack()).toEqual(['web']);
@@ -650,11 +701,11 @@ describe('runProductionRelease', () => {
 
     // rollback POST が 5xx = 受理されたか不明なので着地待ちへ入る。窓を進める。
     let clock = 0;
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => (clock += 60_000),
       simulateFailure: 'promote:product',
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toContain('dpl_web_old');
@@ -699,7 +750,7 @@ describe('runProductionRelease', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl }).catch((thrown: Error) => thrown);
+    const error = (await release({ fetchImpl }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
     expect(world.promoted()).toEqual(['web', 'product']);
@@ -726,9 +777,9 @@ describe('runProductionRelease', () => {
       webAliasSequence: ['dpl_web_old', 'dpl_web_hotfix'],
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/Production moved while waiting/);
     expect(world.promoted()).toEqual([]);
@@ -1216,7 +1267,9 @@ describe('runProductionRelease (affected-aware)', () => {
       ],
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch((thrown: Error) => thrown);
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
+      (thrown: Error) => thrown,
+    )) as Error;
 
     expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
     // web は外部の hotfix が乗っているので触らない。product だけ戻す。
@@ -1236,9 +1289,9 @@ describe('runProductionRelease (affected-aware)', () => {
       ],
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.manifest?.projects).toContainEqual(
       expect.objectContaining({
@@ -1264,9 +1317,9 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+    const error = (await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toMatch(/live deployment unreadable/);
@@ -1335,7 +1388,7 @@ describe('runProductionRelease (affected-aware)', () => {
       webAliasSequence: ['dpl_web_old', 'dpl_web_other', 'dpl_web_old'],
     });
 
-    const error = await release({
+    const error = (await release({
       fetchImpl: world.fetchImpl,
       diffFilesImpl: () => ['apps/web/src/app/page.tsx'],
     }).catch(
@@ -1344,7 +1397,7 @@ describe('runProductionRelease (affected-aware)', () => {
           manifest?: { projects: { name: string; action: string; observedAt: string }[] };
         },
       ) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/Production moved while waiting for candidates/);
     const web = error.manifest?.projects.find((entry) => entry.name === 'web');
@@ -1464,9 +1517,9 @@ describe('runProductionRelease (affected-aware)', () => {
       webAliasSequence: ['dpl_web_old', 'dpl_web_old', 'dpl_web_hotfix'],
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/production moved to dpl_web_hotfix/);
     expect(error.manifest?.projects).toContainEqual(
@@ -1504,9 +1557,9 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl }).catch(
+    const error = (await release({ fetchImpl }).catch(
       (thrown: Error & { manifest?: { status: string } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/autoAssignCustomDomains could not be restored/);
     expect(error.manifest?.status).toBe('settings-drift');
@@ -1562,13 +1615,13 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl }).catch(
+    const error = (await release({ fetchImpl }).catch(
       (
         thrown: Error & {
           manifest?: { status: string; projects: { name: string; action: string }[] };
         },
       ) => thrown,
-    );
+    )) as ReleaseError;
 
     // production が動いた以上「設定だけの失敗」ではない。
     expect(error.manifest?.status).toBe('failed');
@@ -1592,9 +1645,9 @@ describe('runProductionRelease (affected-aware)', () => {
       webAliasSequence: ['dpl_web_old', 'dpl_web_new', 'dpl_web_hotfix'],
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.manifest?.projects).toContainEqual(
       expect.objectContaining({
@@ -1648,9 +1701,9 @@ describe('runProductionRelease (affected-aware)', () => {
 
     // 着地待ちは窓の最後まで見るので clock を進める。
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
@@ -1705,9 +1758,9 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(error.message).toMatch(/unreadable throughout the settle window/);
@@ -1736,9 +1789,9 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
     expect(error.manifest?.projects).toContainEqual(
@@ -1813,9 +1866,9 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     const web = error.manifest?.projects.find((p) => p.name === 'web');
@@ -1892,9 +1945,9 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     // hotfix で打ち切らず、最後に着地した自分の candidate を手動確認へ回す。
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
@@ -1910,9 +1963,9 @@ describe('runProductionRelease (affected-aware)', () => {
       smokeBody: '{"status":"degraded"}', // product の smoke を落とす
     });
 
-    const error = await release({ fetchImpl: world.fetchImpl }).catch(
+    const error = (await release({ fetchImpl: world.fetchImpl }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/without the expected content/);
     expect(error.manifest?.projects).toContainEqual(
@@ -1944,9 +1997,9 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
+    const error = (await release({ fetchImpl, simulateFailure: 'promote:product' }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
     // 未割当の domain へ promote を撃っていない。
@@ -1962,10 +2015,12 @@ describe('runProductionRelease (affected-aware)', () => {
       smokeBody: '{"status":"degraded"}', // product の smoke を落とす
     });
 
-    const error = await release({
+    const error = (await release({
       fetchImpl: world.fetchImpl,
       diffFilesImpl: () => ['apps/product/src/app/page.tsx'],
-    }).catch((thrown: Error & { manifest?: { projects: { name: string }[] } }) => thrown);
+    }).catch(
+      (thrown: Error & { manifest?: { projects: { name: string }[] } }) => thrown,
+    )) as ReleaseError;
 
     expect(error.message).toMatch(/without the expected content/);
     expect(error.manifest?.projects).toContainEqual(
@@ -2039,11 +2094,11 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => (clock += 60_000),
       simulateFailure: 'promote:product',
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toMatch(/Left alone because another actor moved production first: web/);
     expect(error.message).not.toMatch(/MANUAL ROLLBACK REQUIRED/);
@@ -2069,12 +2124,12 @@ describe('runProductionRelease (affected-aware)', () => {
       return world.fetchImpl(input, init);
     });
 
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       simulateFailure: 'promote:product',
     }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.manifest?.projects).toContainEqual(
       expect.objectContaining({
@@ -2107,14 +2162,14 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => {
         clock += 60_000;
         if (clock > 120_000) world.live.settled = 'yes'; // 窓の途中で着地
         return clock;
       },
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     // hotfix を「触らない」で終わらせず、着地した candidate を手動確認へ回す。
     expect(error.message).toMatch(/a delayed promote landed on dpl_web_new/);
@@ -2143,9 +2198,9 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
+    const error = (await release({ fetchImpl, nowImpl: () => (clock += 60_000) }).catch(
       (thrown: Error) => thrown,
-    );
+    )) as Error;
 
     expect(error.message).toMatch(/dpl_web_new is live and ungated/);
   });
@@ -2190,10 +2245,10 @@ describe('runProductionRelease (affected-aware)', () => {
     // 名指しだけして人の判断に委ねる。
     const world = createReleaseWorld({ webAlreadyAtTarget: true });
 
-    const error = await release({
+    const error = (await release({
       fetchImpl: world.fetchImpl,
       simulateFailure: 'promote:product',
-    }).catch((thrown: Error) => thrown);
+    }).catch((thrown: Error) => thrown)) as Error;
 
     expect(error.message).toMatch(/Simulated failure at promote:product/);
     expect(world.rolledBack()).toEqual([]);
@@ -2239,13 +2294,13 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => (clock += 60_000),
       simulateFailure: 'production-smoke:web',
     }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.message).toContain('MANUAL ROLLBACK REQUIRED');
     expect(world.rolledBack()).toEqual(['product']);
@@ -2292,13 +2347,13 @@ describe('runProductionRelease (affected-aware)', () => {
     });
 
     let clock = 0;
-    const error = await release({
+    const error = (await release({
       fetchImpl,
       nowImpl: () => (clock += 60_000),
       simulateFailure: 'promote:product',
     }).catch(
       (thrown: Error & { manifest?: { projects: { name: string; action: string }[] } }) => thrown,
-    );
+    )) as ReleaseError;
 
     expect(error.manifest?.status).toBe('failed');
     expect(error.manifest?.projects).toContainEqual(
