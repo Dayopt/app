@@ -56,8 +56,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     if (!summary.complete) {
-      // どの区分が残っているかを添える。#1898 未了の間 OAuth retention の due flag は
-      // 恒久的に立ちうるため、理由なしの warn だと calendar outbox の滞留と区別できない。
+      // どの区分が残っているかを添える。理由なしの warn だと OAuth retention の cleanup 失敗
+      // (または単に backlog が batch size を超えている状態) と calendar outbox の滞留を
+      // 区別できない。
       logger.warn('[external-connection-maintenance] work remains after dispatch', {
         retentionDue: summary.retention.due,
         outboxTotal: summary.outbox.total,

@@ -1425,6 +1425,22 @@ export type Database = {
         Args: { p_limit?: number };
         Returns: number;
       };
+      cleanup_oauth_access_tokens_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_authorization_codes_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_connections_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      cleanup_oauth_refresh_tokens_v1: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
       clear_calendar_sync_cursor_command_v1: {
         Args: {
           p_calendar_selection_id: string;

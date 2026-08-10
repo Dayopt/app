@@ -26,7 +26,35 @@ const PROVIDER_SETTLEMENT_BUDGET_MS = 19_000;
  * Google revoke の timeout は 15 秒。締切直前に claim して lease だけ残さないため、
  * provider request と completion RPC の余白を確保できる時だけ次の batch を取る。
  */
-const MIN_BATCH_BUDGET_MS = 23_000;
+/**
+ * 1 batch を安全に回すのに必要な残り時間。`deadlineAt` までがこれを割ると 1 件も claim
+ * せずに終わるため、呼び出し側（cron の Composition Layer）は**これを下回る deadline を
+ * 渡してはいけない**。渡すと revoke request が provider へ永久に送られない。
+ */
+export const MIN_BATCH_BUDGET_MS = 23_000;
+
+/**
+ * claim ループへ入る前に消えうる時間のうち、**I/O ではない**分の見積もり。
+ * service-role client の構築と Promise の再開だけで、外部待ちを含まない。
+ */
+const PRE_CLAIM_STARTUP_ALLOWANCE_MS = 1_000;
+
+/**
+ * `processCalendarRevokeOutbox` が 1 batch でも claim できる最小の deadline 窓。
+ * 呼び出し側（cron の Composition Layer）はこの値を下限として使う。
+ *
+ * claim ループへ入る前に ciphertext 24h 上限の expire RPC を 1 本必ず実行するため、
+ * `MIN_BATCH_BUDGET_MS` ちょうどしか渡されないと、その RPC が遅れた分だけ最初の
+ * claim 判定時に残りが下限を割り、毎回 0 件で終わる。
+ *
+ * **保証境界**: ここで見積もるのは (a) expire RPC の上限 = その timeout と、
+ * (b) client 構築・Promise 再開といった I/O を伴わない固定コストの 2 つ。
+ * event loop の飢餓や process 停止など**上限の無い遅延は模型に入れない**
+ * （入れても次に「その余白の余白」が要るだけで収束しない）。この境界を破る事象は
+ * 遅延ではなく障害として扱い、cron の再実行に委ねる。
+ */
+export const MIN_RUN_BUDGET_MS =
+  MIN_BATCH_BUDGET_MS + DB_RPC_TIMEOUT_MS + PRE_CLAIM_STARTUP_ALLOWANCE_MS;
 
 type ClaimedRevoke = {
   outbox_id: string;
