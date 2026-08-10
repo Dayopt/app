@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   AuthMFAChallengeTOTPResponse,
@@ -155,6 +155,13 @@ async function renderAndWaitForInit() {
 function getOtpInput() {
   return screen.getByLabelText('auth.mfaVerify.verificationCode');
 }
+
+// input-otp v1.4.2 は mount 時の setTimeout(0/10/50ms) を unmount で clear しない。
+// 環境 teardown 後に発火すると React が window を参照して unhandled error になる
+// （CI でのみ顕在化）ため、teardown 前に leak した timer を発火させ切る。
+afterAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 60));
+});
 
 describe('MFAVerifyPage', () => {
   beforeEach(() => {

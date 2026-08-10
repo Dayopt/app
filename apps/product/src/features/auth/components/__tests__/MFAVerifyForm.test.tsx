@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { MFAVerifyForm } from '../MFAVerifyForm';
 
@@ -67,6 +67,13 @@ function ControlledTotpForm({ onVerifyTotp }: { onVerifyTotp: () => void }) {
     />
   );
 }
+
+// input-otp v1.4.2 は mount 時の setTimeout(0/10/50ms) を unmount で clear しない。
+// 環境 teardown 後に発火すると React が window を参照して unhandled error になる
+// （CI でのみ顕在化）ため、teardown 前に leak した timer を発火させ切る。
+afterAll(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 60));
+});
 
 describe('MFAVerifyForm', () => {
   describe('TOTPモード', () => {
