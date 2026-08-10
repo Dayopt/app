@@ -138,9 +138,12 @@ export function reportLinkCheck(violations: LinkViolation[]): boolean {
     classifyLinkViolations(violations);
 
   if (knownFrozen.length > 0) {
+    // 同じ (source, target) が 1 ファイル内に複数回出るため、箇所数と除外リストの
+    // エントリ数は一致しない。両方出さないと「除外リストが 15 件ある」と誤読される。
+    const pairs = new Set(knownFrozen.map((v) => `${relative(ROOT, v.file)} ${v.target}`)).size;
     console.log(
-      `${colors.yellow}⚠${colors.reset} リンク切れ（append-only・既知の凍結分）: ${knownFrozen.length}件` +
-        `（後継先は ${FROZEN_LINK_INVENTORY}）`,
+      `${colors.yellow}⚠${colors.reset} リンク切れ（append-only・既知の凍結分）: ` +
+        `${knownFrozen.length}箇所 / 除外リスト ${pairs}ペア（後継先は ${FROZEN_LINK_INVENTORY}）`,
     );
   }
 

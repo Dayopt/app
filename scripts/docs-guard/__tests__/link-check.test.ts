@@ -90,6 +90,34 @@ describe('classifyLinkViolations', () => {
     expect(unregisteredFrozen).toHaveLength(1);
   });
 
+  it('同一ペアが複数箇所に出ても全てknownFrozenに数える', () => {
+    if (firstKnown === undefined) throw new Error('KNOWN_FROZEN_BROKEN_LINKS が空');
+    // 除外リストはペア単位、violations は出現箇所単位。件数がずれるのは仕様。
+    const violations = [
+      violation(firstKnown.source, firstKnown.target),
+      violation(firstKnown.source, firstKnown.target),
+    ];
+
+    const { knownFrozen, unregisteredFrozen, staleAllowlistEntries } =
+      classifyLinkViolations(violations);
+
+    expect(knownFrozen).toHaveLength(2);
+    expect(unregisteredFrozen).toHaveLength(0);
+    expect(staleAllowlistEntries).not.toContainEqual(firstKnown);
+  });
+
+  it('anchor付きtargetは除外リストのanchor無しエントリと一致しない', () => {
+    if (firstKnown === undefined) throw new Error('KNOWN_FROZEN_BROKEN_LINKS が空');
+    // 存在確認は anchor を除いた path で行うが、一致判定は raw 文字列。この非対称のため
+    // 除外リストへ anchor 付きを足す時は log 本文の raw をそのままコピーする必要がある。
+    const violations = [violation(firstKnown.source, `${firstKnown.target}#section`)];
+
+    const { knownFrozen, unregisteredFrozen } = classifyLinkViolations(violations);
+
+    expect(knownFrozen).toHaveLength(0);
+    expect(unregisteredFrozen).toHaveLength(1);
+  });
+
   it('現在解決する除外リストのエントリをstaleとして報告する', () => {
     const { staleAllowlistEntries } = classifyLinkViolations([]);
 
