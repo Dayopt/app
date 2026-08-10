@@ -26,7 +26,7 @@ description: ユーザーが意思決定ログの作成を明示依頼した時�
 
 ## 手順
 
-1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `marketing` / `engineering` / `operations` / `company`)の判断かを判定する。迷ったら問い返す
+1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `engineering` / `operations` / `company`)の判断かを判定する。迷ったら問い返す
 2. slug が指定されていなければ、何を決めたかを 1 フレーズで問い返す
 3. 今日の日付(`YYYY-MM-DD`)を確認する
 4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を [`docs/_templates/decision.md`](../../../docs/_templates/decision.md) の本文にある markdown 骨格で作成する

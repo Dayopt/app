@@ -9,20 +9,19 @@ export const ROOT = resolve(__dirname, '../..');
 export const DOCS_DIR = resolve(ROOT, 'docs');
 
 // status / last_verified が必須の stock domain。
-export const STOCK_DIRS = [
-  'business',
-  'product',
-  'marketing',
-  'engineering',
-  'operations',
-  'company',
-];
+// 2026-08-10: marketing ドメインは廃止し business へ統合したため削除
+// （docs/marketing/* は git mv 済みで docs/business/* 配下に存在しない）。
+export const STOCK_DIRS = ['business', 'product', 'engineering', 'operations', 'company'];
+
+// STOCK_DIRS はドメインサブディレクトリ単位で stock 契約を適用するための allowlist。
+// docs ルート直下へ昇格した個別ファイルはドメインを持たないため、ここに明示する。
+export const ROOT_STOCK_FILES = ['docs/strategy.md'];
 
 // 書き換え禁止対象。新規追加後は frozen とし、supersede metadata 以外を変更しない。
+// 2026-08-10: docs/marketing/log は docs/business/log へ git mv 済みのため削除。
 export const APPEND_ONLY_DIRS = [
   'docs/business/log',
   'docs/product/log',
-  'docs/marketing/log',
   'docs/engineering/log',
   'docs/operations/log',
   'docs/company/log',
@@ -131,6 +130,44 @@ export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
   {
     source: 'docs/engineering/log/2026-08-05-unit-test-cost-measurement.md',
     target: '../../projects/ci-monorepo-refactor/overview.md',
+  },
+  // 2026-08-10 の docs/marketing 廃止・business 統合、および docs/business/strategy.md の
+  // docs/strategy.md への昇格によるもの。マッピング全体は同日付コミットの
+  // docs domain 再編で決定（このリストはコード側の allowlist なので日付ログは別途作らない）。
+  {
+    source: 'docs/product/log/2026-07-10-analytics-expression-policy.md',
+    target: '../../business/strategy.md',
+  },
+  {
+    source: 'docs/product/log/2026-07-09-time-model-split.md',
+    target: '../../business/strategy.md',
+  },
+  // 後継: docs/strategy.md（docs/business/strategy.md から昇格）。
+  // competitor-matrix-snapshot.md は本 PR で新規作成した log のため、凍結前にリンクを
+  // ../../strategy.md へ修正済み（allowlist 対象外）。founder-audit.md は本 PR 以前から
+  // 存在する凍結 log なので、旧パス参照のまま allowlist を維持する。
+  {
+    source: 'docs/business/log/2026-07-05-founder-audit.md',
+    target: '../strategy.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-08-10-frozen-log-link-inventory.md',
+    target: '../../business/strategy.md',
+  },
+  // 後継: docs/business/content/content-operations.md
+  // （docs/marketing/content-operations.md → docs/business/content/同名）。
+  {
+    source: 'docs/business/log/2026-07-24-docs-lp-coverage-audit.md',
+    target: '../content-operations.md',
+  },
+  {
+    source: 'docs/business/log/2026-07-23-content-operations.md',
+    target: '../content-operations.md',
+  },
+  // 後継: docs/business/channels/x.md（docs/marketing/channels/x.md → docs/business/channels/同名）。
+  {
+    source: 'docs/business/log/2026-07-05-founder-audit.md',
+    target: '../../marketing/channels/x.md',
   },
 ];
 

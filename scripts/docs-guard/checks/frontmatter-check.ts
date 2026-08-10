@@ -19,6 +19,7 @@ import {
   FORBIDDEN_LOG_ALIASES,
   GENERATED_DOCS,
   ROOT,
+  ROOT_STOCK_FILES,
   STOCK_DIRS,
 } from '../config.ts';
 import { listGitChanges, toRepoPath } from '../git-changes.ts';
@@ -205,6 +206,7 @@ export function classifyDocument(
   }
 
   if (relativePath.startsWith('docs/_templates/')) return 'stock';
+  if (ROOT_STOCK_FILES.includes(relativePath)) return 'stock';
   const domain = relativePath.split('/').at(1);
   if (domain && STOCK_DIRS.includes(domain)) return 'stock';
   return undefined;

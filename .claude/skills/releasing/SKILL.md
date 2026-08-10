@@ -276,7 +276,7 @@ gh api repos/Dayopt/dayopt/milestones -f title="vX.Y+1"
 ```
 
 - 閉じる前に open のまま残った issue は、自動で外れないため**明示的に次の milestone へ移すか、milestone を外してバックログへ戻す**
-- 閉じる時に「この束は外部共有（blog release 記事）に値するか」を一言添えてユーザーに判断を仰ぐ。義務ではなく判断ベース（`docs/marketing/content-operations.md` §更新の連鎖）
+- 閉じる時に「この束は外部共有（blog release 記事）に値するか」を一言添えてユーザーに判断を仰ぐ。義務ではなく判断ベース（`docs/business/content/content-operations.md` §更新の連鎖）
 
 ## よくある失敗
 

@@ -7,7 +7,7 @@
 
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 import {
   APPEND_ONLY_DIRS,
@@ -68,6 +68,16 @@ function isLogPath(path: string): boolean {
   return APPEND_ONLY_DIRS.some((directory) => path.startsWith(`${directory}/`));
 }
 
+// rename元がdomain再編で削除されたappend-onlyディレクトリ（例: 廃止domainのlog/）である
+// ケースを許可するため、現在のAPPEND_ONLY_DIRSに依存しない構造ベースの判定を使う。
+// 「docs/<domain>/log/」配下という形はappend-only logの命名規約そのものなので、
+// 現在有効なdirectory一覧に無くてもrename元としては安全に判定できる。
+const DOMAIN_LOG_DIR_RE = /^docs\/[^/]+\/log\//;
+
+function looksLikeDomainLogPath(path: string): boolean {
+  return DOMAIN_LOG_DIR_RE.test(path);
+}
+
 export function runAppendOnlyGuard({
   baseRef = resolveBaseRef(),
   root = ROOT,
@@ -78,8 +88,17 @@ export function runAppendOnlyGuard({
   const violations: AppendOnlyViolation[] = [];
 
   for (const change of listGitChanges('docs', { baseRef, root })) {
+    // rename検出と同じ理由で、deleteされた側（change.path）にも構造ベースの判定を使う。
+    // `--find-renames` の類似度が閾値（既定50%）を下回ると、git は 1 回の move を
+    // 「旧pathのD + 新pathのA」に分解して返す。isLogPath だけで判定すると、旧domainの
+    // log dir が APPEND_ONLY_DIRS から既に外れている場合（例: 廃止domainのlog/）に
+    // D側がtouchesLog=falseとしてスキップされ、A側は新規fileとして無条件許可される。
+    // 結果、大幅に書き換えた内容を「move」に偽装して凍結logを改変できてしまう
+    // （バイト一致するrenameは常に閾値を超えて `R` として検出されるため、この抜け道は
+    // 内容が実際に変わったケースにしか成立せず、構造判定を広げても正当なrenameは壊れない）。
     const touchesLog =
-      isLogPath(change.path) || (change.oldPath ? isLogPath(change.oldPath) : false);
+      looksLikeDomainLogPath(change.path) ||
+      (change.oldPath ? looksLikeDomainLogPath(change.oldPath) : false);
     if (!touchesLog) continue;
 
     if (change.status === 'added') continue;
@@ -94,6 +113,22 @@ export function runAppendOnlyGuard({
     }
 
     if (change.status === 'renamed') {
+      // append-only ディレクトリ間の同名 rename（domain 再編での git mv 等）は、
+      // 中身が1バイトも変わっていない場合に限り許可する。ファイル名変更や内容変更を
+      // 伴う rename は従来どおり拒否する（append-only の目的＝本文の書き換え禁止を保つ）。
+      const oldPath = change.oldPath;
+      const isSameNameAppendOnlyRename =
+        oldPath !== undefined &&
+        looksLikeDomainLogPath(oldPath) &&
+        isLogPath(change.path) &&
+        basename(oldPath) === basename(change.path);
+
+      if (isSameNameAppendOnlyRename && oldPath !== undefined) {
+        const previousContent = runGit(`show ${mergeBase}:"${oldPath}"`);
+        const currentContent = readFileSync(resolve(root, change.path), 'utf8');
+        if (previousContent === currentContent) continue;
+      }
+
       violations.push({
         file: change.oldPath ?? change.path,
         reason: `凍結済みlogをrenameしている: ${change.path}`,

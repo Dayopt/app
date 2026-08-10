@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-08-10
 ---
 
 # Dayopt コンセプト
@@ -16,7 +16,7 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 この文書には**変わらないもの（コンセプトと原則）だけ**を置く。更新され続けるものは分冊する:
 
-- **画面・操作への翻訳と v1 の未決事項**: [`principles.md`](../product/principles.md) — 体験設計。設計が進むたび更新される。未決事項は末尾の「設計上の未決リスト」で扱う
+- **画面・操作への翻訳と v1 の未決事項**: [`principles.md`](./product/principles.md) — 体験設計。設計が進むたび更新される。未決事項は末尾の「設計上の未決リスト」で扱う
 
 この文書は「僕（創業者）と AI がこのプロダクトで作りたいものを同じ解像度で理解する」ために書かれている。実装判断で迷ったら §4 の原則に戻ること。
 
@@ -64,11 +64,11 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 7. **通知はユーザーの計画に仕える。アプリの都合で鳴らさない。** ブロック開始・終了の合図（opt-in）は「自分が頼んだ合図」であり OK。streak 煽り・離脱メール・re-engagement push は永久に禁止
 8. **AI は外にいる。** in-app の AI 機能は作らない（少なくとも初期は）。MCP / API であらゆるデータを読み書きできるようにし、ユーザーが自分の AI（Claude / ChatGPT）を接続する。統計的なフィードバック（見積もり実績の提示、週次の補正提案）はルールベースの計算で十分成立し、AI を必要としない
 9. **軽い・早い・少ない。** 速度・起動の速さ・操作数・画面の少なさは機能要件。Sunsama を重さで、Motion を「勝手に動かされる不信」で相対化するための武器
-10. **ズレは部屋ではなく、瞬間に置く。** レビュー専用ページ・独立した分析画面を作らない。ズレは体験の中の瞬間（カレンダーの上、脇のパネル、次のブロックを置く瞬間）に分散して現れる。分析を「行き先」にすると分析が目的化し、Toggl/RescueTime のレポート領土に入る。具体的な分散先の設計は [`principles.md`](../product/principles.md)
+10. **ズレは部屋ではなく、瞬間に置く。** レビュー専用ページ・独立した分析画面を作らない。ズレは体験の中の瞬間（カレンダーの上、脇のパネル、次のブロックを置く瞬間）に分散して現れる。分析を「行き先」にすると分析が目的化し、Toggl/RescueTime のレポート領土に入る。具体的な分散先の設計は [`principles.md`](./product/principles.md)
 
 ## 5. 変えないもの
 
-1. **予定と実績が同じタイムラインで対になる設計**（[ADR-011](../engineering/log/2026-03-05-unified-block-model.md) → [ADR-025](../product/log/2026-07-09-time-model-split.md)） — 計画と実績を1画面で突き合わせられることが本物の差別化。実装モデルは 1 Entry から Plan / Record 分割（1予定:N記録）へ発展したが、この本質は変わらない
+1. **予定と実績が同じタイムラインで対になる設計**（[ADR-011](./engineering/log/2026-03-05-unified-block-model.md) → [ADR-025](./product/log/2026-07-09-time-model-split.md)） — 計画と実績を1画面で突き合わせられることが本物の差別化。実装モデルは 1 Entry から Plan / Record 分割（1予定:N記録）へ発展したが、この本質は変わらない
 2. **Todo エンジンを作らない** — サブタスク・優先度・期限・ボード・テーブルは作らない（一度作って捨てた）
 3. **他人と比較しない・gamification をしない**
 4. **$5 価格帯** — 「AI と連携できて、全体感が見えて、カレンダーと紐づく」なら $5 は払う。$10-20 だと微妙。この感覚を維持する
@@ -76,9 +76,9 @@ Dayopt のすべての判断（機能追加、UI、LP、コピー、API 設計�
 
 ## 関連文書
 
-- [`principles.md`](../product/principles.md) — 本コンセプトの画面・操作への翻訳（体験設計）と未決事項
-- [`decisions/010-feature-non-adoption.md`](../product/log/2026-06-16-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
-- [ADR-025 時間モデル分割](../product/log/2026-07-09-time-model-split.md) / [decisions/015 時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
-- [競合調査(2026-06-15)](./log/2026-06-15-competitor-research-overview.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
-- [`pricing.md`](./pricing.md) — 価格戦略
-- [`docs/product/copywriting.md`](../product/copywriting.md) / [`glossary`](../product/glossary.md) — トーン・用語
+- [`principles.md`](./product/principles.md) — 本コンセプトの画面・操作への翻訳（体験設計）と未決事項
+- [`decisions/010-feature-non-adoption.md`](./product/log/2026-06-16-feature-non-adoption.md) — 非採用機能と条件付き採用（提案型ルーティン・通知）の経緯
+- [ADR-025 時間モデル分割](./product/log/2026-07-09-time-model-split.md) / [decisions/015 時間不変原則](./product/log/2026-03-10-time-immutability-principle.md)
+- [競合調査(2026-06-15)](./business/log/2026-06-15-competitor-research-overview.md) — 競合深掘り（勝ち筋 = より短い儀式・より軽い入力・直接差分）
+- [`pricing.md`](./business/pricing.md) — 価格戦略
+- [`docs/product/copywriting.md`](./product/copywriting.md) / [`glossary`](./product/glossary.md) — トーン・用語
