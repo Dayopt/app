@@ -58,12 +58,16 @@ export class McpConnectionsService {
   async list(userId: string): Promise<McpConnectionSummary[]> {
     const byId = new Map<string, McpConnectionSummary>();
     let totalCount: number | null = null;
-    // ページ上限まで回り切った場合だけ true のまま残る。0 件ページ・総数到達・
-    // 未充足ページのいずれかで正常終了した場合は false になる。
+    // ページ上限まで回り切った場合だけ true のまま残る。
     let cappedByPageLimit = true;
+    // offset は「要求した件数」ではなく「実際に受け取った件数」で進める。
+    // PostgREST の row cap が MCP_LIST_PAGE_SIZE より小さいと 1 ページの返却が
+    // 要求より少なくなるため、固定 stride で進めると受け取れなかった範囲を丸ごと
+    // 飛ばしてしまう（= #1903 と同じ silent 切り捨てが別経路で再発する）。
+    let fetched = 0;
 
     for (let page = 0; page < MCP_LIST_MAX_PAGES; page++) {
-      const from = page * MCP_LIST_PAGE_SIZE;
+      const from = fetched;
       const to = from + MCP_LIST_PAGE_SIZE - 1;
 
       const { data, count, error } = await this.supabase
@@ -91,10 +95,12 @@ export class McpConnectionsService {
       }
 
       // 1 ページ目の count を総数として採用する（以降のページの count は無視してよい、
-      // PostgREST は毎回同じ集計を返す）。
-      if (totalCount === null) totalCount = count;
+      // PostgREST は毎回同じ集計を返す）。`?? null` は必須: undefined が入ると
+      // 「count がある」側の分岐へ落ちて、以降の総数判定が全て偽になる。
+      if (totalCount === null) totalCount = count ?? null;
 
       const pageRows = data ?? [];
+      fetched += pageRows.length;
       // 重複を含んだ件数で総数判定すると、重複の分だけ「取得済み」が水増しされて
       // 未取得の行を残したまま break する。dedupe 後の件数で判定する。
       for (const row of pageRows) {
@@ -109,23 +115,29 @@ export class McpConnectionsService {
         cappedByPageLimit = false;
         break; // 総数まで取得済み
       }
-      if (pageRows.length < MCP_LIST_PAGE_SIZE) {
+      if (totalCount === null && pageRows.length < MCP_LIST_PAGE_SIZE) {
+        // count が取れなかった時だけ、未充足ページを最終ページと見なす。count がある時に
+        // これで打ち切ると、row cap 由来の短いページを最終ページと誤認して切り捨てる。
         cappedByPageLimit = false;
-        break; // count が信頼できなくても、ページが未充足なら最終ページ
+        break;
       }
     }
 
     const deduped = [...byId.values()];
+    const incomplete = totalCount !== null && deduped.length < totalCount;
 
-    if (cappedByPageLimit) {
-      // cap に到達してもなお切り捨てず、取得済み分は返す（例外にしない ＝ revoke 導線を
-      // 殺さない）。まだ残っている行があることだけをログで可視化する。
-      logger.warn('MCP connection list hit the page cap', {
+    if (cappedByPageLimit || incomplete) {
+      // 取り切れなくても例外にせず、取得済み分は返す（エラーにすると revoke 導線ごと
+      // 殺してしまい劣化が悪化する）。「まだ残っている」ことだけをログで可視化する。
+      // 判定を cap 到達だけに絞らないのは、row cap や並行変更で総数へ届かなかった場合も
+      // silent にしないため（tags の listWithArchived と同じ方針）。
+      logger.warn('MCP connection list did not reach the reported total', {
         feature: 'mcp_connections',
         operation: 'list_connections',
         returned: deduped.length,
         total: totalCount,
         cap: MCP_LIST_MAX_PAGES * MCP_LIST_PAGE_SIZE,
+        cappedByPageLimit,
       });
     }
 

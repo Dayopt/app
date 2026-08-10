@@ -159,6 +159,52 @@ describe('McpConnectionsService', () => {
       expect(new Set(result.map((row) => row.id)).size).toBe(total);
     });
 
+    it('サーバー側 row cap が page size より小さくても全件取得する', async () => {
+      // production の PostgREST row cap は repo からは検証できない（supabase/config.toml は
+      // local stack の設定）。cap が page size 未満だと 1 ページの返却が要求より少なくなる。
+      // ここで「短いページ = 最終ページ」と決め打つと、要求したのに返らなかった範囲を
+      // offset ごと飛ばして silent に切り捨てる（#1903 と同じ故障の別経路）。
+      const serverCap = 400;
+      const total = 1_000;
+      const all = buildRows(0, total);
+      const pages = [
+        { data: all.slice(0, serverCap), count: total },
+        { data: all.slice(serverCap, serverCap * 2), count: total },
+        { data: all.slice(serverCap * 2, total), count: total },
+      ];
+      const query = createPagedChainableMock(pages);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(total);
+      expect(result.map((row) => row.id)).toEqual(all.map((row) => row.id));
+      // offset は「要求した件数」ではなく「実際に受け取った件数」で進む。
+      expect(query.range).toHaveBeenNthCalledWith(1, 0, PAGE_SIZE - 1);
+      expect(query.range).toHaveBeenNthCalledWith(2, serverCap, serverCap + PAGE_SIZE - 1);
+      expect(query.range).toHaveBeenNthCalledWith(3, serverCap * 2, serverCap * 2 + PAGE_SIZE - 1);
+    });
+
+    it('総数へ届かないまま終わったら logger.warn で可視化する', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      // 並行 revoke などで count（総数）に届かないまま 0 件ページに当たるケース。
+      // cap 未到達でも silent に返さない。
+      const query = createPagedChainableMock([
+        { data: buildRows(0, 3), count: 10 },
+        { data: [], count: 10 },
+      ]);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(3);
+      expect(warn).toHaveBeenCalledWith(
+        'MCP connection list did not reach the reported total',
+        expect.objectContaining({ returned: 3, total: 10, cappedByPageLimit: false }),
+      );
+      warn.mockRestore();
+    });
+
     it('ページを跨いで重複した id は dedupe される', async () => {
       // 並行 INSERT で offset がずれ、page2 の先頭に page1 最終行と同じ id が
       // 再度現れるケースを模す。
@@ -196,7 +242,7 @@ describe('McpConnectionsService', () => {
       expect(result).toHaveLength(MAX_PAGES * PAGE_SIZE);
       expect(query.range).toHaveBeenCalledTimes(MAX_PAGES);
       expect(warn).toHaveBeenCalledWith(
-        'MCP connection list hit the page cap',
+        'MCP connection list did not reach the reported total',
         expect.objectContaining({
           feature: 'mcp_connections',
           operation: 'list_connections',
