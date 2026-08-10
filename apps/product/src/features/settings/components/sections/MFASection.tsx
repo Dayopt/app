@@ -164,7 +164,11 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                 {/* QRコードは白背景必須（読み取り精度のため） */}
                 <div className="flex justify-center rounded-2xl bg-white p-4">
                   {/* eslint-disable-next-line @next/next/no-img-element -- qrCode は動的生成の data URL。next/image の最適化対象外で利点がなく img で十分 */}
-                  <img src={qrCode} alt="QR Code" className="h-48 w-48" />
+                  <img
+                    src={qrCode}
+                    alt={t('settings.account.mfa.setup.qrCodeAlt')}
+                    className="h-48 w-48"
+                  />
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">
                   {t('settings.account.mfa.setup.step1Desc')}
@@ -189,7 +193,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                     maxLength={6}
                     value={verificationCode}
                     onChange={setVerificationCode}
-                    aria-label="Verification code"
+                    aria-label={t('settings.account.mfa.setup.verificationCodeLabel')}
                   >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
@@ -303,7 +307,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               value={disableCode}
               onChange={setDisableCode}
               onComplete={handleConfirmDisable}
-              aria-label="Disable MFA code"
+              aria-label={t('settings.account.mfa.disableDialog.codeLabel')}
             >
               <InputOTPGroup>
                 <InputOTPSlot index={0} />

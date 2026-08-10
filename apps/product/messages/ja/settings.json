@@ -93,7 +93,9 @@
           "step1": "1. QRコードをスキャン",
           "step1Desc": "Google Authenticator、Microsoft Authenticator、Authyなどの認証アプリでスキャンしてください",
           "manualEntry": "またはこのコードを手動で入力:",
-          "step2": "2. 認証アプリに表示された6桁のコードを入力"
+          "step2": "2. 認証アプリに表示された6桁のコードを入力",
+          "qrCodeAlt": "QRコード",
+          "verificationCodeLabel": "認証コード"
         },
         "enabled": {
           "title": "2段階認証が有効",
@@ -114,7 +116,8 @@
         },
         "disableDialog": {
           "title": "2段階認証を無効にする",
-          "description": "2段階認証を無効にするには、認証アプリの6桁のコードを入力してください。"
+          "description": "2段階認証を無効にするには、認証アプリの6桁のコードを入力してください。",
+          "codeLabel": "2段階認証を無効にするための認証コード"
         },
         "regenerateDialog": {
           "title": "リカバリーコードを再生成",
