@@ -154,7 +154,7 @@ token 交換・API 呼び出しで `invalid_grant` を検知したら `status = 
 
 - GCP project の OAuth consent screen 設定、redirect URI 3 系統（production / preview / dev）
 - **sensitive scope（calendar.readonly）の Google 審査**。未審査の間は 100 user cap + 警告画面で動作するため pre-launch には十分。公開前に審査を通す
-- env 追加: `GOOGLE_CALENDAR_CLIENT_ID` / `GOOGLE_CALENDAR_CLIENT_SECRET` / `CALENDAR_TOKEN_ENCRYPTION_KEY` / `CRON_SECRET` を `apps/product/src/env.ts` に optional で追加し、Stripe と同じ「Vercel production ではペア必須」refine を付ける
+- env 追加: `GOOGLE_CALENDAR_CLIENT_ID` / `GOOGLE_CALENDAR_CLIENT_SECRET` / `CALENDAR_TOKEN_ENCRYPTION_KEY` を `apps/product/src/env.ts` に optional で追加し、Stripe と同じ「Vercel production ではペア必須」refine を付ける。`CRON_SECRET` は意図的にこの refine から除外する。理由は `CRON_SECRET` が `Dayopt-Production/supabase` item の汎用 secret（`scripts/env/schema.ts` 参照）で、`google-calendar` item とはライフサイクルが別だから。`CRON_SECRET` をペア必須に含めると、現実的な状態「`CRON_SECRET` だけ既に設定済み + calendar 未設定」で env 検証が落ち、cron どころかアプリ全体が起動不能になる。代わりに cron route は secret 未設定時に 503 を返して静かに無効化される（`apps/product/src/app/api/cron/calendar-sync/route.ts`）。この graceful degradation で足りる。（PR #1731 で試行・revert されているため、同じ refine は再提案しない）
 
 ## 6. 同期ジョブ設計
 

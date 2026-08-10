@@ -817,13 +817,12 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
             .select();
         }
 
-        const { data, error } = await query;
-        if (testCase.table === 'oauth_authorization_codes') {
-          expect(error?.code).toBe('42501');
-          return;
-        }
-        expect(error).toBeNull();
-        expect(data).toEqual([]);
+        // #1715: serviceRoleCases の全テーブルが anon/authenticated への table grant を
+        // 持たない（oauth_authorization_codes は 20260729062428、stripe_webhook_events /
+        // email_suppressions は 20260810085344 で REVOKE ALL 済み）。RLS policy まで
+        // 到達せず GRANT 層で 42501 になるので、"empty result, no error" の分岐は無い。
+        const { error } = await query;
+        expect(error?.code).toBe('42501');
       },
     );
   });
