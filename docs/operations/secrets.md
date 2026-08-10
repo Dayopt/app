@@ -40,6 +40,20 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`、MCP の自己解決起動など）で値を見ずに secret を使う。これが 1Password 移行後の設計であり、実値ファイルを読める必要はない。
 
+### API 経由の設定読戻し
+
+上記はファイルの読み書きを対象とする。別経路として、設定系 API（Supabase Management API、Vercel Env API、Stripe API 等）の GET レスポンスに secret が同梱されるケースがある。**レスポンスをそのまま表示しない**。`jq` で必要フィールドだけに射影してから表示する（allowlist 方式）。`*_secret` / `*_key` / `*_token` / `*password*` を含むキーは射影に含めない。
+
+射影を書けない・レスポンス構造が不明な場合は、まず `jq 'keys'` でキー一覧だけを確認してから射影を組む。
+
+例: Supabase Auth config から bot protection の有効状態だけを確認する（`security_captcha_secret` のような `*_secret` フィールドは射影から除外する）:
+
+```bash
+curl -s "https://api.supabase.com/v1/projects/{ref}/config/auth" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | jq '{security_captcha_enabled, external_email_enabled, disable_signup}'
+```
+
 ---
 
 ## 保管対象
