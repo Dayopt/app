@@ -81,7 +81,7 @@ test.describe('Auth: 認証フロー', () => {
   });
 
   test('誤った認証情報でエラー表示', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/ja/auth/login');
 
     await page
       .locator('input[type="email"], input[name="email"]')
@@ -90,9 +90,21 @@ test.describe('Auth: 認証フロー', () => {
     await page.locator('input[type="password"]').first().fill('WrongPassword123');
     await page.locator('button[type="submit"]').first().click();
 
-    // エラーメッセージが表示される（ユーザー列挙を防ぐ汎用メッセージ）
-    await expect(
-      page.locator('[role="alert"], [data-field-error], .text-destructive').first(),
-    ).toBeVisible({ timeout: 10000 });
+    // エラーメッセージが表示される（ユーザー列挙を防ぐ汎用メッセージ）。
+    //
+    // 待つ対象はサーバーエラーの FieldError と invalidCredentials の文言に限定する。
+    // `.text-destructive` を含む複合 locator では、必須ラベルの「＊」マーカー
+    // （field.tsx が required に付ける）が送信前から可視なため即座に一致してしまい、
+    // 認証エラーが実際には出ていない regression でもテストが green になる
+    // （account-deletion.spec.ts の再ログイン検証と同型の偽陽性、#1883）。
+    // role="alert" が付くのは announceImmediately の FieldError（= サーバーエラー）
+    // だけだが、Next.js の route announcer も role="alert" を持つため
+    // data-slot でさらに絞る。
+    await expect(page.locator('[role="alert"][data-slot="field-error"]')).toContainText(
+      'メールアドレスまたはパスワードが正しくありません',
+      { timeout: 10000 },
+    );
+    // 認証が通っていないこと自体も確認する（成功していれば /day 等へ抜ける）
+    await expect(page).toHaveURL(/\/auth\/login/);
   });
 });
