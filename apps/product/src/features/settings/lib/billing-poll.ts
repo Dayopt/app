@@ -41,7 +41,7 @@ export function shouldContinueBillingPoll({
   now = Date.now(),
 }: ShouldContinueBillingPollParams): boolean {
   if (startedAt === null) return false;
-  if (subscriptionStatus === undefined) return false;
-  if (getPlanIdForSubscriptionStatus(subscriptionStatus) !== dayoptPlanIds.free) return false;
+  const currentPlanId = getPlanIdForSubscriptionStatus(subscriptionStatus);
+  if (currentPlanId !== dayoptPlanIds.free) return false;
   return now - startedAt < BILLING_POLL_MAX_DURATION_MS;
 }
