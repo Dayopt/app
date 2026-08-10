@@ -143,10 +143,9 @@ export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
     target: '../../business/strategy.md',
   },
   // 後継: docs/strategy.md（docs/business/strategy.md から昇格）。
-  {
-    source: 'docs/business/log/2026-08-10-competitor-matrix-snapshot.md',
-    target: '../strategy.md',
-  },
+  // competitor-matrix-snapshot.md は本 PR で新規作成した log のため、凍結前にリンクを
+  // ../../strategy.md へ修正済み（allowlist 対象外）。founder-audit.md は本 PR 以前から
+  // 存在する凍結 log なので、旧パス参照のまま allowlist を維持する。
   {
     source: 'docs/business/log/2026-07-05-founder-audit.md',
     target: '../strategy.md',

@@ -9,7 +9,7 @@ date: 2026-08-10
 出自: `docs/business/competitors.md` の詳細調査部分を、business/ 簡素化の際に時点ものとして退避した。現在のポジショニングの正本は [competitors.md](../competitors.md)。
 
 - 調査時点: 2026年3月。価格・Free枠のみ 2026-07-14 に各社公式ページで再確認
-- 自社（Dayopt）の行は**当時のコンセプト表記のまま**（"Your day is a canvas" / Schedule Allocation カテゴリ等）。2026-07-02 の [strategy.md](../strategy.md) 策定より前の表現であり、現在の言い方は strategy.md §2 を正とする
+- 自社（Dayopt）の行は**当時のコンセプト表記のまま**（"Your day is a canvas" / Schedule Allocation カテゴリ等）。2026-07-02 の [strategy.md](../../strategy.md) 策定より前の表現であり、現在の言い方は strategy.md §2 を正とする
 - 資金調達・チーム規模・売上はすべて調査時点のスナップショット。意思決定前に再確認する
 
 ---
@@ -176,7 +176,7 @@ date: 2026-08-10
 | Amie       | "Joyful productivity"     | 美しいデザインで生産性を楽しく。Meeting Intelligenceに軸足 | Design Calendar             |
 | Structured | "Optimize your time"      | シンプルさが最高の生産性。ミニマリズムとルーティン         | Minimalist Planner          |
 
-※ 調査当時の表記。現在は "Plan days you can actually keep."（[strategy.md §2](../strategy.md)）
+※ 調査当時の表記。現在は "Plan days you can actually keep."（[strategy.md §2](../../strategy.md)）
 
 ## ERRCグリッド（Blue Ocean 4アクション）
 
@@ -257,7 +257,7 @@ date: 2026-08-10
 | Platform coverage      | Web（PWA）         | Morgen（Win/Mac/Linux/iOS/Android）  | 大       |
 | ネイティブモバイル体験 | PWA                | Structured（Apple Watch対応）        | 中       |
 
-※ 外部カレンダーは調査後に「ゴースト経由の取り込み」として採用済み（[strategy.md §4-3](../strategy.md)）。現状の判断は [competitors.md](../competitors.md) を正とする。
+※ 外部カレンダーは調査後に「ゴースト経由の取り込み」として採用済み（[strategy.md §4-3](../../strategy.md)）。現状の判断は [competitors.md](../competitors.md) を正とする。
 
 ## 戦略的示唆（調査当時の分析）
 
