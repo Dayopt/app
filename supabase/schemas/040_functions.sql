@@ -1,7 +1,7 @@
 -- ============================================================
 -- 関数一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-08-02
+-- 最終同期日: 2026-08-10
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -39,6 +39,7 @@
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 --   - 20260802013954_add_product_events.sql
+--   - 20260810013820_observe_legacy_oauth_bind.sql
 -- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
 -- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
@@ -49,6 +50,11 @@
 --   private.track_product_user_signup_v1()    — auth.users INSERT → payload-free signup event
 --   check_tag_hierarchy()                     — tags の root -> child 最大2階層を強制
 --   check_tag_has_children()                  — active child を持つ tag の child 化を禁止
+--   bind_legacy_oauth_insert_to_connection()  — oauth codes/tokens の connection_id NULL insert を
+--       legacy connection へ補完する互換 trigger（WHEN 句で NULL 時のみ発火、SECURITY DEFINER）。
+--       20260810013820 で補完実行を private.legacy_oauth_bind_observations へ append-only 記録する
+--       観測 INSERT を追加（候補8 Stage 8-3 の停止条件。現行定義の正本は 20260810013820）。
+--       Stage 8-3 の forward restoration は観測 INSERT の無い 20260729073125 の定義へ戻す
 -- ■ RPC 関数
 --   update_personalization(user_id, key, value) — user_settings.personalization 更新
 --   merge_tags_with_hierarchy(user_id, source, target) — plans / records 対応の atomic タグマージ
