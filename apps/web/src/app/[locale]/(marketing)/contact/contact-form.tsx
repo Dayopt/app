@@ -14,7 +14,7 @@ import { submitContactRequest } from './contact-client';
 
 const CATEGORY_OPTIONS = ['bug', 'feature', 'question', 'other'] as const;
 
-function createContactSchema(t: (key: string) => string) {
+function createContactSchema(t: ReturnType<typeof useTranslations<'marketing.contact'>>) {
   return z.object({
     name: z.string().trim().min(1, t('form.name.required')).max(50, t('form.name.maxLength')),
     email: z

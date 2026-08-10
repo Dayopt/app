@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-// @ts-expect-error -- .mjs に型定義は無いが、contract test は実装そのものを読む
 import {
   INTEGRATION_GLOBS,
   PRODUCT_BUILD_SCRIPTS,

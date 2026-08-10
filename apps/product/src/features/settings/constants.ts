@@ -8,6 +8,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+import type { MessageKey } from '@/lib/i18n';
+
 import type { SettingsCategory } from './types';
 
 /**
@@ -17,8 +19,8 @@ import type { SettingsCategory } from './types';
 interface SettingsCategoryMeta {
   id: SettingsCategory;
   icon: LucideIcon;
-  labelKey: string;
-  descKey: string;
+  labelKey: MessageKey;
+  descKey: MessageKey;
 }
 
 /**

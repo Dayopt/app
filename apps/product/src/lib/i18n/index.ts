@@ -2,6 +2,7 @@
  * i18nモジュールのエントリポイント
  */
 export { IntlProvider } from './IntlProvider';
+export type { MessageKey, ScopedMessageKey } from './message-keys';
 
 /**
  * メッセージオブジェクトから指定したnamespaceだけを抽出する

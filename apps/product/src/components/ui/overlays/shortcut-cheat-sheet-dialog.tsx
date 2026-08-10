@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import type { ScopedMessageKey } from '@/lib/i18n';
 import type { ShortcutCatalog, ShortcutCatalogGroup } from '@/lib/keyboard/shortcut-catalog';
 import { formatShortcutKey, type ShortcutPlatform } from '@/lib/keyboard/shortcut-key-label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Input } from '@dayopt/components';
@@ -43,6 +44,22 @@ function getShortcutScopeRank(group: ShortcutCatalogGroup, activeScope: string):
   if (group.scope === activeScope) return 0;
   if (group.scope === 'global') return 1;
   return 2;
+}
+
+/**
+ * 「他ページ専用」group の但し書き（例: 'Available on the calendar screen'）。
+ *
+ * `ShortcutCatalogGroup.scope` はカタログ合成側の都合で closed union にしていない
+ * （新しい catalog が任意の scope 文字列を宣言できる設計、shortcut-catalog.ts 参照）。
+ * そのため `scopeHint.${scope}` の存在は静的に証明できず、`t.has()` で実在確認して
+ * から翻訳する（存在しない scope は但し書きを出さないだけで、生キーは表示しない）。
+ */
+function scopeHint(
+  tShortcuts: ReturnType<typeof useTranslations<'shortcuts'>>,
+  scope: string,
+): string | null {
+  const key = `scopeHint.${scope}` as ScopedMessageKey<'shortcuts'>;
+  return tShortcuts.has(key) ? tShortcuts(key) : null;
 }
 
 /** app全体で現在有効なキーボードショートカットを、検索とscopeに応じて並び替えて表示する。 */
@@ -122,9 +139,7 @@ export function ShortcutCheatSheetDialog({
                   >
                     {t(group.labelKey)}
                     {isActive ? null : (
-                      <span className="ml-2 font-normal">
-                        {tShortcuts(`scopeHint.${group.scope}`)}
-                      </span>
+                      <span className="ml-2 font-normal">{scopeHint(tShortcuts, group.scope)}</span>
                     )}
                   </h3>
                   <dl className={isActive ? undefined : 'opacity-60'}>

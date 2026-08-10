@@ -293,14 +293,17 @@ function formatLastSync(value: string | null, locale: string, fallback: string):
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
-function statusLabel(t: ReturnType<typeof useTranslations>, status: string): string {
+function statusLabel(
+  t: ReturnType<typeof useTranslations<'settings.integrations.googleCalendar'>>,
+  status: string,
+): string {
   if (status === 'active') return t('status.connected');
   if (status === 'reauth_required') return t('status.reauthRequired');
   return t('status.issue');
 }
 
 function persistedErrorMessage(
-  t: ReturnType<typeof useTranslations>,
+  t: ReturnType<typeof useTranslations<'settings.integrations.googleCalendar'>>,
   error: string | null,
 ): string | null {
   if (!error) return null;
@@ -320,7 +323,10 @@ function persistedErrorMessage(
   }
 }
 
-function showSyncOutcomeToast(t: ReturnType<typeof useTranslations>, outcome: SyncOutcome): void {
+function showSyncOutcomeToast(
+  t: ReturnType<typeof useTranslations<'settings.integrations.googleCalendar'>>,
+  outcome: SyncOutcome,
+): void {
   switch (outcome) {
     case 'synced':
       toast.success(t('outcomes.synced'));

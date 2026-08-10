@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getLocale, getTranslations } from 'next-intl/server';
 
+import type { ScopedMessageKey } from '@/lib/i18n';
 import { validateAuthorizeInput, type AuthorizeValidationError } from '@/lib/oauth-server';
 import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
 import { redirect } from '@dayopt/i18n/navigation';
@@ -29,7 +30,7 @@ interface AuthorizePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
+const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, ScopedMessageKey<'oauth.error'>> = {
   unsupported_response_type: 'unsupportedResponseType',
   invalid_client: 'invalidClient',
   invalid_redirect_uri: 'invalidRedirectUri',
