@@ -21,7 +21,6 @@
         "RESEND_*",
         "SENTRY_*",
         "SKIP_AUTH_IN_DEV",
-        "SLACK_*",
         "STRIPE_*",
         "SUPABASE_*",
         "TURNSTILE_*",

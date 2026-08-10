@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-08-10
 code:
   - packages/billing/src/pricing.ts
   - apps/product/src/app/api/webhooks/stripe/route.ts
@@ -32,7 +32,6 @@ Dayoptは個人向けFreemium subscriptionとして運営する。この文書�
 ## 明示的に含めない原価
 
 - in-app AI / LLM API: 提供していない。外部AIはユーザー側のMCP / API clientから利用する
-- Slack: optionalなbilling webhookの通知先であり、課金機能の必須依存ではない
 - OSS library: SaaS契約費ではない。licenseは別途管理する
 
 `ANTHROPIC_API_KEY`やlegacy DB fieldがrepo内に残っていても、それだけで現行サービス原価に含めない。runtime dependencyは実際のconsumerを確認して判断する。

@@ -38,7 +38,6 @@ const PATTERNS = [
   'UPSTASH_REDIS_REST_TOKEN',
   'RESEND_API_KEY',
   'RECAPTCHA_SECRET_KEY',
-  'SLACK_BILLING_WEBHOOK',
   'GITHUB_TOKEN',
   'sk_live_',
   'sk_test_',
