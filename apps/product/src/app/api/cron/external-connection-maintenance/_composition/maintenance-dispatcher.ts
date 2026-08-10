@@ -203,8 +203,13 @@ export async function dispatchExternalConnectionMaintenance(params: {
   // するため、ここでは実在する cleanup_mcp_mutation_receipts_v1 だけを足す。4 種の due flag
   // は hasMore / complete へ組み込んで fail closed にする（complete: true と due flag: true
   // が同時に立つのは step-6-execution-checklist.md の Stop condition に当たる）。
-  // #1898 が入るまで complete は false のまま固着しうるため、どの区分が残っているかを
-  // retention.due として summary に出し、warn ログを識別可能に保つ。
+  //
+  // 固着は「起こりうる」ではなく「revoke を使えば確実に起こる」。Settings の revoke は
+  // 対象 connection の全 token に revoked_at を刻むため、その 24 時間後に
+  // access_tokens_due、30 日後に refresh_tokens_due が立ち、消す手段が無いまま
+  // complete: false が恒久化する。#1898 が入るまでこれを前提に運用する。
+  // どの区分が残っているかを retention.due として summary に出し、warn ログで
+  // 「既知の retention backlog」と「calendar outbox の滞留」を区別できるようにする。
   const cleanupSteps: ReadonlyArray<{
     key: keyof typeof retention;
     operation: CleanupFunction;

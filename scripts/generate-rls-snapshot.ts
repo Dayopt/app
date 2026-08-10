@@ -93,12 +93,28 @@ function fetchRlsTables(): RlsRow[] {
   );
 }
 
+type SnapshotSchema = 'public' | 'private';
+
+/**
+ * grantee の絞り込み条件を schema ごとに決める。
+ *
+ * public は「Data API から到達しうる role」を列挙する既存方針を維持する（出力を変えない）。
+ * private は逆に **owner 以外のすべて**を出す。private は RLS を持たず GRANT が唯一の
+ * アクセス境界なので、列挙外の role へ GRANT された時に snapshot が無反応だと
+ * drift 検出をすり抜ける（その role が authenticated へ継承されていれば実質公開になる）。
+ */
+function granteeFilter(schema: SnapshotSchema, alias: string): string {
+  const grantee = `(CASE WHEN ${alias}.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(${alias}.grantee) END)`;
+  return schema === 'private'
+    ? `${grantee} <> (SELECT pg_get_userbyid(owner.nspowner) FROM pg_namespace owner WHERE owner.nspname = 'private')`
+    : `${grantee} IN ('PUBLIC', 'anon', 'authenticated', 'service_role', 'supabase_auth_admin')`;
+}
+
 /**
  * schema 単位で relation / column / routine の GRANT を取得する。
- * `schema` は呼び出し元が固定リテラル（'public' / 'private'）でのみ渡す前提で、
- * 外部入力を受け付けないため SQL への文字列展開でも injection リスクはない。
+ * `schema` はリテラル union に固定してあり、外部入力が SQL へ届く経路は型で塞いである。
  */
-function fetchGrants(schema: string): GrantRow[] {
+function fetchGrants(schema: SnapshotSchema): GrantRow[] {
   return (
     queryJson<GrantRow[] | null>(
       `WITH relation_grants AS (
@@ -118,8 +134,7 @@ function fetchGrants(schema: string): GrantRow[] {
          CROSS JOIN LATERAL aclexplode(c.relacl) acl
          WHERE n.nspname = '${schema}'
            AND c.relkind IN ('r', 'p', 'v', 'm')
-           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
-             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+           AND ${granteeFilter(schema, 'acl')}
          GROUP BY object_type, object_name, grantee
        ),
        column_grants AS (
@@ -136,8 +151,7 @@ function fetchGrants(schema: string): GrantRow[] {
            AND c.relkind IN ('r', 'p', 'v', 'm')
            AND a.attnum > 0
            AND NOT a.attisdropped
-           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
-             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+           AND ${granteeFilter(schema, 'acl')}
          GROUP BY object_type, object_name, grantee
        ),
        routine_grants AS (
@@ -150,8 +164,7 @@ function fetchGrants(schema: string): GrantRow[] {
          JOIN pg_namespace n ON n.oid = p.pronamespace
          CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
          WHERE n.nspname = '${schema}'
-           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
-             IN ('PUBLIC', 'anon', 'authenticated', 'service_role', 'supabase_auth_admin')
+           AND ${granteeFilter(schema, 'acl')}
            AND acl.privilege_type = 'EXECUTE'
          GROUP BY object_type, object_name, grantee
        )
@@ -172,7 +185,7 @@ function fetchGrants(schema: string): GrantRow[] {
  * private schema への `GRANT USAGE ON SCHEMA private TO service_role` のような
  * table/routine 以下では表現できない権限を drift 検出網に含めるために使う。
  */
-function fetchSchemaUsageGrants(schema: string): SchemaUsageGrantRow[] {
+function fetchSchemaUsageGrants(schema: SnapshotSchema): SchemaUsageGrantRow[] {
   return (
     queryJson<SchemaUsageGrantRow[] | null>(
       `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.grantee), '[]'::json)
@@ -183,8 +196,7 @@ function fetchSchemaUsageGrants(schema: string): SchemaUsageGrantRow[] {
          FROM pg_namespace n
          CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) acl
          WHERE n.nspname = '${schema}'
-           AND (CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END)
-             IN ('PUBLIC', 'anon', 'authenticated', 'service_role')
+           AND ${granteeFilter(schema, 'acl')}
          GROUP BY grantee
        ) t;`,
     ) ?? []
@@ -300,7 +312,7 @@ function render(
   lines.push('## GRANT 一覧（private schema）');
   lines.push('');
   lines.push(
-    'private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。',
+    'private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。public 節が role を列挙して絞るのに対し、**private 節は schema owner 以外のすべての grantee を出す**（列挙外の role へ GRANT された時に無反応で drift 検出をすり抜けないため）。',
   );
   lines.push('');
 

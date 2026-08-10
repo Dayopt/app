@@ -385,7 +385,7 @@
 
 ## GRANT 一覧（private schema）
 
-private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。
+private schema は RLS を持たないため、GRANT / ACL が唯一のアクセス境界。schema USAGE / table・column ACL / function EXECUTE を分けて明示し、0 件を「取得漏れ」と区別できるようにする。public 節が role を列挙して絞るのに対し、**private 節は schema owner 以外のすべての grantee を出す**（列挙外の role へ GRANT された時に無反応で drift 検出をすり抜けないため）。
 
 ### schema USAGE
 
