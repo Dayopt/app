@@ -41,6 +41,8 @@ Issue本文の割合や「次の1件」は古くなるため、実行状態は#1
 
 ### 1. Candidate 8 scopeを現在のmainから再定義する
 
+repo 内列挙と object signature 単位の対象固定は [Candidate 8 cleanup scope](./step-6-candidate-8-cleanup.md) が成果物として持つ（2026-08-10 実施）。Production read-only 観測は未実施のまま残る。
+
 - latest `origin/main`から専用branchを作る
 - 旧ブランチのmigrationやcommitを機械的にcherry-pickしない
 - repo内の旧input型、旧route、旧RPC caller、compatibility testを列挙する
