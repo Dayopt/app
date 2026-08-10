@@ -138,6 +138,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-storybook": "^10.5.2",
     "eslint-plugin-tailwindcss": "^4.2.0",
     "glob": "^13.0.6",
