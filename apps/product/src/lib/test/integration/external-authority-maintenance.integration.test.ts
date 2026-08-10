@@ -709,6 +709,56 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
     expect(countDue()).toBe(0);
   });
 
+  it('残存する子行を持つ connection は排出が終わるまで削除しない', async () => {
+    // p_limit が縛るのは親の件数だけで、ON DELETE CASCADE の子行削除は無制限に走る。
+    // 子を抱えた親を消さないことで、1 回の DELETE が RPC timeout を超えるのを防ぐ。
+    const connectionId = crypto.randomUUID();
+    const tokenId = crypto.randomUUID();
+
+    ownerSql(`
+      INSERT INTO public.oauth_connections (
+        id, user_id, client_id, resource_uri, scopes,
+        authorized_at, reauth_required_at
+      ) VALUES (
+        '${connectionId}'::UUID, '${userId}'::UUID, 'cursor', '${resourceUri}',
+        ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp() - INTERVAL '200 days',
+        pg_catalog.clock_timestamp() - INTERVAL '110 days'
+      );
+
+      -- 親は due（110 日前に reauth 期限切れ）だが、子の access token がまだ残っている。
+      INSERT INTO public.oauth_tokens (
+        id, user_id, token_hash, token_type, client_id, scopes,
+        expires_at, connection_id, resource_uri
+      ) VALUES (
+        '${tokenId}'::UUID, '${userId}'::UUID, 'guard-access-${crypto.randomUUID()}',
+        'access', 'cursor', ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp() - INTERVAL '109 days',
+        '${connectionId}'::UUID, '${resourceUri}'
+      );
+    `);
+
+    const blocked = await admin.rpc('cleanup_oauth_connections_v1', { p_limit: 1000 });
+    expect(blocked.error).toBeNull();
+    expect(
+      ownerSql(
+        `SELECT EXISTS (SELECT 1 FROM public.oauth_connections WHERE id = '${connectionId}'::UUID);`,
+      ),
+    ).toBe('t');
+
+    // 子を排出すると、次の実行で親も消える（収束の保証）。
+    const drained = await admin.rpc('cleanup_oauth_access_tokens_v1', { p_limit: 1000 });
+    expect(drained.error).toBeNull();
+
+    const removed = await admin.rpc('cleanup_oauth_connections_v1', { p_limit: 1000 });
+    expect(removed.error).toBeNull();
+    expect(
+      ownerSql(
+        `SELECT EXISTS (SELECT 1 FROM public.oauth_connections WHERE id = '${connectionId}'::UUID);`,
+      ),
+    ).toBe('f');
+  });
+
   it('does not expose maintenance RPCs to browser roles', async () => {
     for (const client of [anonymous, authenticated]) {
       const results = await Promise.all([

@@ -138,6 +138,14 @@ docs へ残している。
     Settingsのconnection一覧（`revoked_at IS NULL`）に見えている行を消しうる。これは
     status RPCの`connections_due`契約どおりの挙動であり、retention期間の変更はこの
     predicateを直す別issueのscope
+  - 例外は`cleanup_oauth_connections_v1`の**子行ガード**だけ。時刻の述語は逐語一致のまま、
+    残存する`oauth_tokens` / `oauth_authorization_codes`を持つ親を候補から外す
+    （`20260810085241_bound_oauth_connection_cleanup_cascade.sql`）。`p_limit`は親の件数しか
+    縛らず、`ON DELETE CASCADE`の子行削除は無制限に走るため、太った親1個でRPC timeoutを超えて
+    transactionごとrollbackしうる。**収束は保証される**: tokenの`expires_at`は発行時に
+    `connection.reauth_required_at`でクランプされる（`20260729062430`）ので、親が90日超過で
+    dueになる時点で子は自身の期限をとうに過ぎており、先行stepが排出し終えた次の実行で親も消える。
+    排出が終わるまでdue flagは残るのでfail closedの報告は維持される
   - connection削除は`oauth_tokens` / `oauth_authorization_codes`の複合FK
     （`ON DELETE CASCADE`）で残存token/codeを巻き込み、
     `mcp_mutation_receipts.origin_connection_id`（`ON DELETE SET NULL`）をdetachする。
