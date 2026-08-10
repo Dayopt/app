@@ -80,6 +80,55 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // 客観的に判定できる a11y 欠落はコードレビューではなく CI で止める。
+  // Story / test は意図的にラベルを省略した fixture を含むため対象外。
+  {
+    files: ['src/**/*.{jsx,tsx}'],
+    ignores: [
+      '**/*.test.{jsx,tsx}',
+      '**/*.spec.{jsx,tsx}',
+      '**/*.stories.{jsx,tsx}',
+      '**/__tests__/**',
+    ],
+    rules: {
+      'jsx-a11y/alt-text': 'error',
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          controlComponents: ['Button'],
+          // table cell 自体は interactive control ではなく、列見出しで名前が決まる。
+          ignoreElements: ['td'],
+          depth: 5,
+        },
+      ],
+    },
+  },
+
+  // App Router の特殊ファイルやメール等を除く通常のモジュールは named export に統一。
+  {
+    files: [
+      'src/components/**/*.{ts,tsx,js,jsx}',
+      'src/features/**/*.{ts,tsx,js,jsx}',
+      'src/lib/**/*.{ts,tsx,js,jsx}',
+    ],
+    ignores: [
+      '**/*.test.{ts,tsx,js,jsx}',
+      '**/*.spec.{ts,tsx,js,jsx}',
+      '**/*.stories.{ts,tsx,js,jsx}',
+      '**/__tests__/**',
+      'src/lib/i18n/request.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportDefaultDeclaration',
+          message: '通常モジュールでは default export を使わず named export を使用してください。',
+        },
+      ],
+    },
+  },
+
   // =========================================================================
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
