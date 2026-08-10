@@ -149,6 +149,9 @@ export function TimeInput({
 
   if (isMobile) {
     const triggerLabel = value || '--:--';
+    const triggerAriaLabel = value
+      ? t('aria.timeInputValue', { label: ariaLabel, time: value })
+      : t('aria.timeInputNotSelected', { label: ariaLabel });
     return (
       <>
         <button
@@ -156,7 +159,7 @@ export function TimeInput({
           data-testid={testId}
           onClick={() => setPickerOpen(true)}
           disabled={disabled}
-          aria-label={ariaLabel}
+          aria-label={triggerAriaLabel}
           className={cn(
             baseClasses,
             'cursor-pointer text-right',

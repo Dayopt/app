@@ -143,6 +143,8 @@
       "timeNotSelected": "時刻選択: 未選択",
       "startTime": "開始時刻",
       "endTime": "終了時刻",
+      "timeInputValue": "{label}: {time}",
+      "timeInputNotSelected": "{label}: 未選択",
       "switchToKeyboardInput": "キーボード入力に切替",
       "switchToClockInput": "時計に切替",
       "addPlan": "タップして追加",
