@@ -29,6 +29,7 @@
 --   - 20260730090100_mcp_oauth_scope_constraints_not_valid.sql
 --   - 20260730090200_validate_mcp_oauth_scope_constraints.sql
 --   - 20260810013820_observe_legacy_oauth_bind.sql
+--   - 20260810070002_add_oauth_retention_cleanup_rpcs.sql
 --
 -- 下記3 CHECKはCandidate 4がNOT VALIDで追加し、Candidate 5が読み取り専用preflightの後に
 -- VALIDATE CONSTRAINTで検証済みへ進めた。この宣言スキーマは読み物なので、

@@ -65,6 +65,13 @@ docs へ残している。
   generic upsert で削除済み接続を復活させず、切断との競合では切断を勝たせる
 - iCal feed token は URL を知るだけで購読できる bearer-style credential として扱い、client query を
   永続 cache へ保存しない。Settings を開く時と focus 復帰時は再取得し、取得中の cached URL は操作させない
+- `external-connection-maintenance` cron は calendar revoke outbox に **`MIN_BATCH_BUDGET_MS`
+  以上の残り時間**を必ず渡す。outbox はこれを割ると 1 件も claim せずに break するため、retention の
+  取り分を増やしすぎると provider への revoke request が永久に送られない（DB からは接続が消えている
+  のに provider 側の token は生きたまま残る）。時間予算は `route.ts`（`TIME_BUDGET_MS` / `maxDuration`）
+  / `maintenance-dispatcher.ts`（`RETENTION_BUDGET_MS`）/ `revoke-outbox.ts`（`MIN_BATCH_BUDGET_MS`）の
+  3 module に分かれているので、**どれか 1 つを動かす時は残り 2 つとの不等式を確認する**
+  （dispatcher の `Math.max` と `maintenance-dispatcher.test.ts` / `route.test.ts` が機械で守る）
 
 ## Export
 
@@ -119,6 +126,24 @@ docs へ残している。
     read-onlyのconnection / authorization code / tokenは新規発行できる。侵害clientへの
     読み取りアクセスまで止めるには、この2手では足りない（別途clientをOAuth client登録から
     外すか、全発行を止める手順が要る）
+- OAuth retentionのbounded cleanup RPC（`cleanup_oauth_authorization_codes_v1` /
+  `cleanup_oauth_access_tokens_v1` / `cleanup_oauth_refresh_tokens_v1` /
+  `cleanup_oauth_connections_v1`）の削除predicateは、
+  `get_external_authority_maintenance_status_v1()` の同名due flagの判定式と一字一句
+  一致させる（`20260810070002_add_oauth_retention_cleanup_rpcs.sql`）。ずれると
+  「cleanup後もdueが残る」無限ループになるため、predicateを変更する時は必ず両方を
+  同じPRで直す
+  - `cleanup_oauth_connections_v1` の削除対象は revoke済みconnectionだけでなく、
+    **未revokeのまま`reauth_required_at`が90日超過したconnectionも含む**。つまり
+    Settingsのconnection一覧（`revoked_at IS NULL`）に見えている行を消しうる。これは
+    status RPCの`connections_due`契約どおりの挙動であり、retention期間の変更はこの
+    predicateを直す別issueのscope
+  - connection削除は`oauth_tokens` / `oauth_authorization_codes`の複合FK
+    （`ON DELETE CASCADE`）で残存token/codeを巻き込み、
+    `mcp_mutation_receipts.origin_connection_id`（`ON DELETE SET NULL`）をdetachする。
+    このdetachは`private.enforce_mcp_mutation_receipt_lifecycle_v1()`が明示的に
+    許可している遷移（`origin_connection_id`のNULL化のみ）で、それ以外のreceipt
+    列変更は引き続き拒否される
 - `public.plans` / `public.records` へのdirect DMLは `service_role` だけが持つ。
   `authenticated` は `SELECT` のみで、`TRUNCATE` を含む書き込み系privilegeを一切
   持たない（Candidate 6）。INSERT/UPDATE/DELETE policyはgrant層で到達不能になり、

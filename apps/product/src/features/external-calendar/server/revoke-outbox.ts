@@ -26,7 +26,12 @@ const PROVIDER_SETTLEMENT_BUDGET_MS = 19_000;
  * Google revoke の timeout は 15 秒。締切直前に claim して lease だけ残さないため、
  * provider request と completion RPC の余白を確保できる時だけ次の batch を取る。
  */
-const MIN_BATCH_BUDGET_MS = 23_000;
+/**
+ * 1 batch を安全に回すのに必要な残り時間。`deadlineAt` までがこれを割ると 1 件も claim
+ * せずに終わるため、呼び出し側（cron の Composition Layer）は**これを下回る deadline を
+ * 渡してはいけない**。渡すと revoke request が provider へ永久に送られない。
+ */
+export const MIN_BATCH_BUDGET_MS = 23_000;
 
 type ClaimedRevoke = {
   outbox_id: string;

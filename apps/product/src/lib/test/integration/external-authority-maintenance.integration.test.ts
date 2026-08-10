@@ -329,7 +329,7 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
     ).toBe('* * * * *|SELECT private.expire_calendar_revoke_outbox_internal_v1(1000)');
   });
 
-  it('cleans only payload-free security events and leaves OAuth retention deferred', async () => {
+  it('cleans OAuth retention and payload-free security events', async () => {
     const activeConnectionId = crypto.randomUUID();
     const dueConnectionId = crypto.randomUUID();
     const oldCodeHash = `old-code-${crypto.randomUUID()}`;
@@ -338,6 +338,7 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
     const freshAccessId = crypto.randomUUID();
     const oldRefreshId = crypto.randomUUID();
     const freshRefreshId = crypto.randomUUID();
+    const dueConnectionReceiptOperationId = crypto.randomUUID();
 
     ownerSql(`
       INSERT INTO public.oauth_connections (
@@ -495,6 +496,30 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
         'user_data_purged',
         pg_catalog.clock_timestamp() - INTERVAL '89 days'
       );
+
+      INSERT INTO public.mcp_mutation_receipts (
+        user_id,
+        client_id,
+        operation_id,
+        origin_connection_id,
+        envelope_version,
+        tool_name,
+        request_digest,
+        resource_type,
+        resource_id,
+        resource_version
+      ) VALUES (
+        '${userId}'::UUID,
+        'cursor',
+        '${dueConnectionReceiptOperationId}'::UUID,
+        '${dueConnectionId}'::UUID,
+        1,
+        'plans.create',
+        decode(repeat('00', 32), 'hex'),
+        'plan',
+        gen_random_uuid(),
+        pg_catalog.clock_timestamp()
+      );
     `);
 
     const { data: before, error: beforeError } = await admin.rpc(
@@ -509,9 +534,29 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
       security_events_due: true,
     });
 
-    const cleanup = await admin.rpc('cleanup_integration_security_events_v1', { p_limit: 1 });
-    expect(cleanup.error).toBeNull();
-    expect(cleanup.data).toBe(1);
+    const codeCleanup = await admin.rpc('cleanup_oauth_authorization_codes_v1', {
+      p_limit: 100,
+    });
+    expect(codeCleanup.error).toBeNull();
+    expect(codeCleanup.data).toBe(1);
+
+    const accessCleanup = await admin.rpc('cleanup_oauth_access_tokens_v1', { p_limit: 100 });
+    expect(accessCleanup.error).toBeNull();
+    expect(accessCleanup.data).toBe(1);
+
+    const refreshCleanup = await admin.rpc('cleanup_oauth_refresh_tokens_v1', { p_limit: 100 });
+    expect(refreshCleanup.error).toBeNull();
+    expect(refreshCleanup.data).toBe(1);
+
+    const connectionCleanup = await admin.rpc('cleanup_oauth_connections_v1', { p_limit: 100 });
+    expect(connectionCleanup.error).toBeNull();
+    expect(connectionCleanup.data).toBe(1);
+
+    const securityEventCleanup = await admin.rpc('cleanup_integration_security_events_v1', {
+      p_limit: 1,
+    });
+    expect(securityEventCleanup.error).toBeNull();
+    expect(securityEventCleanup.data).toBe(1);
 
     expect(
       ownerSql(`
@@ -547,9 +592,19 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
           EXISTS (
             SELECT 1 FROM public.oauth_connections
             WHERE id = '${activeConnectionId}'::UUID
+          ),
+          (
+            -- 回帰確認: due connection の cleanup は紐づく receipt を削除せず
+            -- origin_connection_id だけを NULL 化する(private.enforce_mcp_mutation_receipt_
+            -- lifecycle_v1() が明示的に許可している detach)。この trigger の許可が将来壊れると
+            -- cleanup_oauth_connections_v1 の DELETE 自体が例外で失敗するので、その回帰は
+            -- ここでしか検出できない。
+            SELECT origin_connection_id IS NULL
+            FROM public.mcp_mutation_receipts
+            WHERE operation_id = '${dueConnectionReceiptOperationId}'::UUID
           );
       `),
-    ).toBe('t|t|t|t|t|t|t|t');
+    ).toBe('f|t|f|t|f|t|f|t|t');
 
     expect(
       ownerSql(`
@@ -570,12 +625,88 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
     );
     expect(afterError).toBeNull();
     expect(after[0]).toMatchObject({
-      authorization_codes_due: true,
-      access_tokens_due: true,
-      refresh_tokens_due: true,
-      connections_due: true,
+      authorization_codes_due: false,
+      access_tokens_due: false,
+      refresh_tokens_due: false,
+      connections_due: false,
       security_events_due: false,
     });
+  });
+
+  it('p_limit を超える backlog は1回の呼び出しでp_limit件だけ削除して止まる', async () => {
+    const connectionId = crypto.randomUUID();
+    const dueRefreshIds = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+
+    ownerSql(`
+      INSERT INTO public.oauth_connections (
+        id, user_id, client_id, resource_uri, scopes,
+        authorized_at, reauth_required_at
+      ) VALUES (
+        '${connectionId}'::UUID, '${userId}'::UUID, 'chatgpt', '${resourceUri}',
+        ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp() + INTERVAL '89 days'
+      );
+
+      INSERT INTO public.oauth_tokens (
+        id, user_id, token_hash, token_type, client_id, scopes,
+        expires_at, revoked_at, rotated_at, connection_id, resource_uri
+      ) VALUES
+      -- oauth_tokens_rotation_shape（20260729062430）は rotated_at を立てた refresh token に
+      -- revoked_at も要求する。rotation は旧 token の失効を伴うため、fixture もその形にする。
+      -- refresh の due 判定は LEAST(expires_at, rotated_at, revoked_at) なので、両者を同値に
+      -- しておけば cutoff 判定と削除順は rotated_at の値のまま決まる。
+      (
+        '${dueRefreshIds[0]}'::UUID, '${userId}'::UUID, 'limit-refresh-0-${crypto.randomUUID()}',
+        'refresh', 'chatgpt', ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp() + INTERVAL '1 day',
+        pg_catalog.clock_timestamp() - INTERVAL '31 days',
+        pg_catalog.clock_timestamp() - INTERVAL '31 days',
+        '${connectionId}'::UUID, '${resourceUri}'
+      ),
+      (
+        '${dueRefreshIds[1]}'::UUID, '${userId}'::UUID, 'limit-refresh-1-${crypto.randomUUID()}',
+        'refresh', 'chatgpt', ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp() + INTERVAL '1 day',
+        pg_catalog.clock_timestamp() - INTERVAL '32 days',
+        pg_catalog.clock_timestamp() - INTERVAL '32 days',
+        '${connectionId}'::UUID, '${resourceUri}'
+      ),
+      (
+        '${dueRefreshIds[2]}'::UUID, '${userId}'::UUID, 'limit-refresh-2-${crypto.randomUUID()}',
+        'refresh', 'chatgpt', ARRAY['read:entries']::TEXT[],
+        pg_catalog.clock_timestamp() + INTERVAL '1 day',
+        pg_catalog.clock_timestamp() - INTERVAL '33 days',
+        pg_catalog.clock_timestamp() - INTERVAL '33 days',
+        '${connectionId}'::UUID, '${resourceUri}'
+      );
+    `);
+
+    const countDue = (): number =>
+      Number(
+        ownerSql(`
+          SELECT pg_catalog.count(*)
+          FROM public.oauth_tokens
+          WHERE token_type = 'refresh'
+            AND id = ANY(ARRAY[${dueRefreshIds.map((id) => `'${id}'::UUID`).join(', ')}]);
+        `),
+      );
+
+    expect(countDue()).toBe(3);
+
+    const first = await admin.rpc('cleanup_oauth_refresh_tokens_v1', { p_limit: 1 });
+    expect(first.error).toBeNull();
+    expect(first.data).toBe(1);
+    expect(countDue()).toBe(2);
+
+    const second = await admin.rpc('cleanup_oauth_refresh_tokens_v1', { p_limit: 1 });
+    expect(second.error).toBeNull();
+    expect(second.data).toBe(1);
+    expect(countDue()).toBe(1);
+
+    const rest = await admin.rpc('cleanup_oauth_refresh_tokens_v1', { p_limit: 100 });
+    expect(rest.error).toBeNull();
+    expect(rest.data).toBe(1);
+    expect(countDue()).toBe(0);
   });
 
   it('does not expose maintenance RPCs to browser roles', async () => {
@@ -599,8 +730,11 @@ describe.skipIf(!RUN_LOCAL)('external authority maintenance', () => {
         client.rpc('get_external_authority_maintenance_status_v1'),
       ]);
 
+      // '42501' を厳密に見る。関数が存在しない場合の PGRST202 でも result.error は非
+      // null になるため、緩い not.toBeNull() だと「関数が無いから落ちている」偽陽性を
+      // service-role ガードの拒否と区別できない。
       for (const result of results) {
-        expect(result.error).not.toBeNull();
+        expect(result.error?.code).toBe('42501');
       }
     }
   });

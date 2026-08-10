@@ -25,7 +25,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import type { dispatchExternalConnectionMaintenance as dispatchType } from '../_composition/maintenance-dispatcher';
-import { GET } from '../route';
+import { GET, maxDuration } from '../route';
 
 const URL = 'https://app.dayopt.app/api/cron/external-connection-maintenance';
 
@@ -49,6 +49,10 @@ const SUMMARY: Awaited<ReturnType<typeof dispatchType>> = {
     revokeUnavailable: false,
   },
   retention: {
+    oauthAuthorizationCodesDeleted: 1,
+    oauthAccessTokensDeleted: 2,
+    oauthRefreshTokensDeleted: 3,
+    oauthConnectionsDeleted: 4,
     billingClaimsDeleted: 1,
     billingDeletionReceiptsDeleted: 2,
     billingProviderResponsesRedacted: 3,
@@ -82,6 +86,21 @@ beforeEach(() => {
 });
 
 describe('external connection maintenance cron', () => {
+  // maintenance-dispatcher.test.ts の時間予算の不変条件はこの 2 値を写して検査している
+  // （route.ts を import すると mock していない依存を引き込むため）。ここで実値を pin し、
+  // 片方だけ変わった時に必ず落ちるようにする。
+  it('cron の時間予算を pin する', async () => {
+    expect(maxDuration).toBe(60);
+
+    const before = Date.now();
+    await GET(request('Bearer super-secret-cron'));
+    const after = Date.now();
+
+    const passed = dispatchExternalConnectionMaintenance.mock.calls[0]?.[0];
+    expect(passed?.deadlineAt).toBeGreaterThanOrEqual(before + 50_000);
+    expect(passed?.deadlineAt).toBeLessThanOrEqual(after + 50_000);
+  });
+
   it('CRON_SECRET未設定なら503でdispatcherを呼ばない', async () => {
     envMock.CRON_SECRET = undefined;
 
@@ -120,8 +139,8 @@ describe('external connection maintenance cron', () => {
     expect(dispatchExternalConnectionMaintenance).toHaveBeenCalledWith({
       deadlineAt: expect.any(Number),
     });
-    // warn には「何が残っているか」を添える。理由なしだと OAuth retention の恒久 backlog と
-    // calendar outbox の滞留を区別できない（#1898 が入るまで前者は常時 true になりうる）。
+    // warn には「何が残っているか」を添える。理由なしだと OAuth retention の cleanup 失敗と
+    // calendar outbox の単純な滞留を区別できない。
     expect(loggerWarn).toHaveBeenCalledWith(
       '[external-connection-maintenance] work remains after dispatch',
       {
