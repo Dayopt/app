@@ -10,6 +10,7 @@ import {
   recordPlanSchema,
   updatePlanSchema,
 } from '../schemas/timeblock';
+import { legacyTimeblockMutationProcedure } from './legacy-route-observation';
 import { createPlanService } from './service-index';
 
 export const plansRouter = createTRPCRouter({
@@ -37,7 +38,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  create: protectedProcedure
+  create: legacyTimeblockMutationProcedure
     .meta({ description: 'Create future plan' })
     .input(createPlanSchema)
     .mutation(async ({ ctx, input }) => {
@@ -49,7 +50,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  update: protectedProcedure
+  update: legacyTimeblockMutationProcedure
     .meta({ description: 'Update plan with optimistic lock support' })
     .input(
       planIdSchema.extend({
@@ -71,7 +72,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  delete: protectedProcedure
+  delete: legacyTimeblockMutationProcedure
     .meta({ description: 'Soft delete plan' })
     .input(planIdSchema)
     .mutation(async ({ ctx, input }) => {
@@ -83,7 +84,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  restore: protectedProcedure
+  restore: legacyTimeblockMutationProcedure
     .meta({ description: 'Restore soft-deleted plan' })
     .input(planIdSchema)
     .mutation(async ({ ctx, input }) => {
@@ -95,7 +96,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  skip: protectedProcedure
+  skip: legacyTimeblockMutationProcedure
     .meta({ description: 'Skip past plan' })
     .input(planIdSchema)
     .mutation(async ({ ctx, input }) => {
@@ -107,7 +108,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  unskip: protectedProcedure
+  unskip: legacyTimeblockMutationProcedure
     .meta({ description: 'Unskip plan' })
     .input(planIdSchema)
     .mutation(async ({ ctx, input }) => {
@@ -119,7 +120,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  record: protectedProcedure
+  record: legacyTimeblockMutationProcedure
     .meta({ description: 'Create a record from a past plan' })
     .input(recordPlanSchema)
     .mutation(async ({ ctx, input }) => {
@@ -131,7 +132,7 @@ export const plansRouter = createTRPCRouter({
       }
     }),
 
-  confirmDay: protectedProcedure
+  confirmDay: legacyTimeblockMutationProcedure
     .meta({ description: 'Record unskipped past plans in a day range as records' })
     .input(confirmDaySchema)
     .mutation(async ({ ctx, input }) => {
