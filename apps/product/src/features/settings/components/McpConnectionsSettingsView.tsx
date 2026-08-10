@@ -16,7 +16,14 @@ export type McpConnectionRowViewProps = {
   scopes: string[];
   connectedAtLabel: string;
   lastUsedAtLabel: string;
+  /** この行自身が revoke 対象か。true の時だけボタンに「取り消し中」ラベルを出す。 */
   revoking: boolean;
+  /**
+   * ボタンをクリック不可にするか。revoking な行はもちろん、mutation / dialog を
+   * 全行で共有しているため、他行が revoke 中の間もこちらを true にして再入を防ぐ。
+   * revoking との違いはラベル表示の有無だけ（disabled は全行、revoking は対象行のみ）。
+   */
+  disabled: boolean;
   onRevoke: () => void;
 };
 
@@ -68,6 +75,7 @@ export function McpConnectionRowView({
   connectedAtLabel,
   lastUsedAtLabel,
   revoking,
+  disabled,
   onRevoke,
 }: McpConnectionRowViewProps) {
   const t = useTranslations('settings.integrations.mcpConnections');
@@ -104,12 +112,12 @@ export function McpConnectionRowView({
         variant="ghost"
         size="sm"
         onClick={onRevoke}
-        disabled={revoking}
+        disabled={disabled}
         className="text-destructive shrink-0"
         aria-label={t('revokeAriaLabel', { client: clientLabel })}
       >
         <Unplug className="size-4" />
-        {t('revoke')}
+        {revoking ? t('revoking') : t('revoke')}
       </Button>
     </div>
   );

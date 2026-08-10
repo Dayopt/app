@@ -105,6 +105,8 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+import { toast } from '@/lib/toast';
+
 import { McpConnectionsSettings } from '../McpConnectionsSettings';
 
 describe('McpConnectionsSettings', () => {
@@ -125,7 +127,7 @@ describe('McpConnectionsSettings', () => {
     expect(revokeUseMutationCallCount.value).toBe(1);
   });
 
-  it('行ごとの revoke ボタンは、クリックした connection の名前で単一 dialog を開く', async () => {
+  it('行ごとの revoke ボタンは、クリックした connection の名前を dialog に表示する（先頭行に固定されない）', async () => {
     const user = userEvent.setup();
     render(<McpConnectionsSettings />);
 
@@ -135,7 +137,10 @@ describe('McpConnectionsSettings', () => {
       screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
     );
 
-    // getByRole は一致が複数あると throw するため、これ自体が「dialog は 1 つだけ」の証跡になる。
+    // dialog インスタンスが 1 つだけであることは「revoke mutation は行数によらず 1 インスタンス
+    // だけ生成される」で別途検証済み（getByRole が複数一致で throw する性質は、旧・行ごとの
+    // dialog 実装でも closed な dialog は DOM に出ないため「1 つだけ」の証明にはならない）。
+    // ここではクリックした行（chatgpt、先頭ではない）の名前が正しく表示されるかだけを見る。
     const dialog = screen.getByRole('alertdialog');
     expect(
       within(dialog).getByText('revokeDialog.title(client=clients.chatgpt)'),
@@ -175,7 +180,7 @@ describe('McpConnectionsSettings', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
-  it('revoke 中は対象行だけ pending になり、他行は操作可能なまま（全行 pending への回帰防止）', async () => {
+  it('revoke 中は全行が disabled になるが、「取り消し中」ラベルは対象行だけに出る（他行に波及しない）', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<McpConnectionsSettings />);
 
@@ -192,21 +197,66 @@ describe('McpConnectionsSettings', () => {
     // dialog が open の間、背後の行は Radix によって aria-hidden になる（フォーカストラップ /
     // スクリーンリーダー除外の正しい挙動）。disabled 属性そのものは意味を持ち続けるため
     // `hidden: true` で accessibility tree から見えない要素も対象に含める。
-    expect(
-      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)', hidden: true }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', {
-        name: 'revokeAriaLabel(client=clients.claudeAi)',
-        hidden: true,
-      }),
-    ).not.toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.cursor)', hidden: true }),
-    ).not.toBeDisabled();
+    const chatgptButton = screen.getByRole('button', {
+      name: 'revokeAriaLabel(client=clients.chatgpt)',
+      hidden: true,
+    });
+    const claudeButton = screen.getByRole('button', {
+      name: 'revokeAriaLabel(client=clients.claudeAi)',
+      hidden: true,
+    });
+    const cursorButton = screen.getByRole('button', {
+      name: 'revokeAriaLabel(client=clients.cursor)',
+      hidden: true,
+    });
+
+    // mutation は 1 インスタンスを全行で共有しているため、revoke 中は再入防止のため
+    // 全行 disabled になる（対象行だけを disabled にすると、他行から新しい revoke を
+    // 開始でき、同じ dialog インスタンスが古い isLoading を抱えたまま再オープンされる）。
+    expect(chatgptButton).toBeDisabled();
+    expect(claudeButton).toBeDisabled();
+    expect(cursorButton).toBeDisabled();
+
+    // ただし「取り消し中」ラベルは対象行（chatgpt）だけに出る。他行にまで表示すると、
+    // 実際には何も起きていない行が処理中であるかのように誤解させる。
+    // getByText は既定で完全一致なので 'revoke' が 'revoking' に部分一致することはない。
+    expect(within(chatgptButton).getByText('revoking')).toBeInTheDocument();
+    expect(within(claudeButton).getByText('revoke')).toBeInTheDocument();
+    expect(within(cursorButton).getByText('revoke')).toBeInTheDocument();
   });
 
-  it('revoke 成功時は toast を出し dialog を閉じ、一覧を invalidate する', async () => {
+  it('revoke settle 待ち（dialog は既に閉じたが isPending はまだ true）の間、他行は disabled のままで押しても dialog が開かない（再入防止の回帰テスト）', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<McpConnectionsSettings />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
+    );
+
+    // 実際の TanStack Query は onSuccess の後も、onSettled の invalidate（network refetch）が
+    // 終わるまで isPending を true のまま保つ。ここでは dialog を閉じる onSuccess だけ発火させ、
+    // onSettled は呼ばずに isPending=true を維持したまま、そのギャップ区間を再現する。
+    mutationState.isPending = true;
+    revokeMutationOptions.current?.onSuccess();
+    rerender(<McpConnectionsSettings />);
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    const claudeButton = screen.getByRole('button', {
+      name: 'revokeAriaLabel(client=clients.claudeAi)',
+    });
+    const cursorButton = screen.getByRole('button', {
+      name: 'revokeAriaLabel(client=clients.cursor)',
+    });
+    expect(claudeButton).toBeDisabled();
+    expect(cursorButton).toBeDisabled();
+
+    // disabled ボタンなので押しても dialog は開かない（新しい対象で再入できない）。
+    await user.click(claudeButton);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('revoke 成功時は toast.success を出し dialog を閉じ、一覧を invalidate する', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<McpConnectionsSettings />);
 
@@ -224,7 +274,34 @@ describe('McpConnectionsSettings', () => {
     await revokeMutationOptions.current?.onSettled();
     rerender(<McpConnectionsSettings />);
 
+    expect(toast.success).toHaveBeenCalledWith('revokeSuccess');
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(listInvalidate).toHaveBeenCalledOnce();
+  });
+
+  it('revoke 失敗時は dialog を閉じずにエラー toast を出す', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<McpConnectionsSettings />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    );
+    await user.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'revoke' }),
+    );
+
+    // 実際は mutateAsync が reject して onError が呼ばれる。mock は TanStack Query 内部の
+    // コールバック配線までは再現しないため options.onError を明示的に発火させる
+    // （onSuccess の既存 test と同じ技法）。setRevokeOpen(false) を onError が呼んでいたら
+    // 確実に検出できるよう、明示的に rerender してから DOM を見る
+    // （rerender を省くと直近の commit 前の DOM を読んでしまい、この assertion が
+    // vacuous になる ── 実際にこの回帰を仕込んで確認済み）。
+    revokeMutationOptions.current?.onError();
+    rerender(<McpConnectionsSettings />);
+
+    expect(toast.error).toHaveBeenCalledWith('revokeFailed');
+    // onError は setRevokeOpen(false) を呼ばない。dialog は開いたままユーザーが
+    // 再試行やキャンセルを選べる状態を保つ。
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 });

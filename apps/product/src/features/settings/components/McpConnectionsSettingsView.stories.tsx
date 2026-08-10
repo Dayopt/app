@@ -18,6 +18,7 @@ const CLAUDE_ROW: McpConnectionRowViewProps = {
   connectedAtLabel: '2026年8月1日 9:00',
   lastUsedAtLabel: '2026年8月9日 15:24',
   revoking: false,
+  disabled: false,
   onRevoke: fn(),
 };
 
@@ -27,6 +28,7 @@ const CHATGPT_ROW: McpConnectionRowViewProps = {
   connectedAtLabel: '2026年7月20日 14:15',
   lastUsedAtLabel: '未使用',
   revoking: false,
+  disabled: false,
   onRevoke: fn(),
 };
 
@@ -36,6 +38,7 @@ const CURSOR_ROW: McpConnectionRowViewProps = {
   connectedAtLabel: '2026年6月2日 11:40',
   lastUsedAtLabel: '2026年8月8日 8:05',
   revoking: false,
+  disabled: false,
   onRevoke: fn(),
 };
 
@@ -45,6 +48,7 @@ const UNKNOWN_CLIENT_ROW: McpConnectionRowViewProps = {
   connectedAtLabel: '2026年5月14日 18:30',
   lastUsedAtLabel: '2026年5月15日 9:12',
   revoking: false,
+  disabled: false,
   onRevoke: fn(),
 };
 
@@ -83,6 +87,24 @@ function SingleConnectionState() {
 
 function MultipleConnectionsState() {
   return <SettingsState rows={[CLAUDE_ROW, CHATGPT_ROW, CURSOR_ROW, UNKNOWN_CLIENT_ROW]} />;
+}
+
+/**
+ * revoke 確認後、対象行（Claude）だけ「取り消し中」ラベルになり、他行は disabled になる。
+ * mutation / dialog は全行で共有する 1 インスタンスのため、settle するまで他行から新しい
+ * revoke を開始できないことを表す状態（#1909 フォローアップで見つかった再入バグの防止）。
+ */
+function RevokingBlocksOtherRowsState() {
+  return (
+    <SettingsState
+      rows={[
+        { ...CLAUDE_ROW, revoking: true, disabled: true },
+        { ...CHATGPT_ROW, disabled: true },
+        { ...CURSOR_ROW, disabled: true },
+        { ...UNKNOWN_CLIENT_ROW, disabled: true },
+      ]}
+    />
+  );
 }
 
 /** revoke ボタン押下で開く確認ダイアログ。不可逆操作のため destructive variant + 楽観的更新なし。 */
@@ -155,6 +177,10 @@ export const MultipleConnections: Story = {
   render: () => <MultipleConnectionsState />,
 };
 
+export const RevokingBlocksOtherRows: Story = {
+  render: () => <RevokingBlocksOtherRowsState />,
+};
+
 export const RevokeConfirmation: Story = {
   render: () => <RevokeConfirmationState />,
   play: async () => {
@@ -172,6 +198,7 @@ export const AllPatterns: Story = {
       <SingleConnectionState />
       <MultipleConnectionsState />
       <RevokeConfirmationState />
+      <RevokingBlocksOtherRowsState />
     </div>
   ),
 };

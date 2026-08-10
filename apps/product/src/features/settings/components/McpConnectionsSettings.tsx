@@ -70,7 +70,15 @@ export function McpConnectionsSettings() {
             key={connection.id}
             connection={connection}
             revoking={revoke.isPending && revokeTarget?.id === connection.id}
+            // mutation は 1 インスタンスを全行で共有している。isPending の間は対象行以外も
+            // disabled にして再入を防ぐ： onSuccess は dialog を閉じるが、isPending は
+            // onSettled の invalidate（network refetch）が終わるまで true のまま残る
+            // （TanStack Query の mutation 実行順）。このギャップで他行を開けると、
+            // 同じ ConfirmDialog インスタンスの内部 isLoading がまだ true のまま新しい
+            // 対象で再オープンされ、両ボタンとも disabled の閉じられないダイアログになる。
+            disabled={revoke.isPending}
             onRevoke={() => {
+              if (revoke.isPending) return; // ボタン自体も disabled だが、再入防止を二重化する
               setRevokeTarget(connection);
               setRevokeOpen(true);
             }}
@@ -97,10 +105,12 @@ export function McpConnectionsSettings() {
 function McpConnectionRow({
   connection,
   revoking,
+  disabled,
   onRevoke,
 }: {
   connection: McpConnectionSummary;
   revoking: boolean;
+  disabled: boolean;
   onRevoke: () => void;
 }) {
   const locale = useLocale();
@@ -118,6 +128,7 @@ function McpConnectionRow({
           : t('neverUsed')
       }
       revoking={revoking}
+      disabled={disabled}
       onRevoke={onRevoke}
     />
   );
