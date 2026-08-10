@@ -32,7 +32,7 @@ user_invocable: true
 以下のソースを並行で読み込む:
 
 1. **コンテンツ原則**: `docs/marketing/voice.md`（3本柱・6原則の正本）と `docs/marketing/strategy.md`
-2. **文章基準**: `docs/ai/writing-style.md`（提案タイトルもこの基準で書く）
+2. **文章基準**: `docs/marketing/writing-style.md`（提案タイトルもこの基準で書く）
 3. **意思決定ログ**: 各ドメインの `docs/{business,product,marketing,engineering}/log/` の最新 5 件程度の冒頭
 4. **開発の動き**: `git log --oneline -30` と `docs/engineering/log/` の直近 session / journal
 5. **既存ブログ記事**: `apps/web/content/blog/ja/*.mdx` のタイトル一覧（重複チェック用）

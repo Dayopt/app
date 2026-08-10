@@ -24,7 +24,7 @@ Dayoptのエラー処理パターン（層ごとに分散した4責務を呼び�
 
 - 型定義のみの変更（エラーフロー未変更、エラー型の export 追加など）
 - テストの正常系 assertion 追加のみ（エラーパスを触らない）
-- UI 文言のみの error message 修正（`docs/ai/copywriting.md` に従う、ロジック変更なし）
+- UI 文言のみの error message 修正（`docs/product/copywriting.md` に従う、ロジック変更なし）
 
 ## エラー処理の全体像
 

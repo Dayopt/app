@@ -105,11 +105,11 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
 
-- `docs/ai/writing-style.md` — 文体（B1 相当の読みやすさ）
-- `docs/ai/docs-policy.md` — Docs / Blog / Release notes の役割分担
-- `docs/ai/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
+- `docs/marketing/writing-style.md` — 文体（B1 相当の読みやすさ）
+- `docs/marketing/docs-policy.md` — Docs / Blog / Release notes の役割分担
+- `docs/marketing/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
-アプリ内 UI 文言を書く時は `docs/ai/copywriting.md` を読む。
+アプリ内 UI 文言を書く時は `docs/product/copywriting.md` を読む。
 
 公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
 
@@ -143,7 +143,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 | `.claude/rules/architecture.md`         | tRPC、状態管理、ロジック配置                           |
 | `.claude/rules/code-style.md`           | 型、ログ、依存追加、eslint-disable                     |
 | `.claude/rules/design-system.md`        | UI、token、spacing、icon                               |
-| `docs/ai/copywriting.md`                | UI 文言、トーン、CTA                                   |
+| `docs/product/copywriting.md`           | UI 文言、トーン、CTA                                   |
 | `.claude/rules/feature-boundaries.md`   | feature DAG、Composition Layer                         |
 | `.claude/rules/quality.md`              | test、a11y、performance                                |
 | `.claude/rules/temporal-constraints.md` | 過去ブロック編集制約                                   |

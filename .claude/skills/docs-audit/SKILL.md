@@ -123,7 +123,7 @@ EOF
 
 ## docs の運用方針
 
-- **薄く書く**: 各機能の概要 + 主要な使い方のみ（文章基準は `docs/ai/writing-style.md`、役割分担は `docs/ai/docs-policy.md`）
+- **薄く書く**: 各機能の概要 + 主要な使い方のみ（文章基準は `docs/marketing/writing-style.md`、役割分担は `docs/marketing/docs-policy.md`）
 - **都度更新**: プロダクトの振る舞いを変えたら同じ流れで docs も更新する（`docs/marketing/content-operations.md`）
 - **AI 更新**: 執筆は `docs-writing` skill が `draft: true` で行い、開発者レビュー後に公開する
 
