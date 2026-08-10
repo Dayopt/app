@@ -118,19 +118,21 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
   test.afterAll(async () => {
     if (!adminSupabase) return;
 
-    const { error: settingsError, status: settingsStatus } = await adminSupabase
+    // PostgREST の DELETE は 0 行一致でも 204 を返すため、対象が既に無いことは
+    // error にならない。error が立つのは実際の失敗だけなので、そのまま記録する。
+    const { error: settingsError } = await adminSupabase
       .from('user_settings')
       .delete()
       .eq('user_id', TEST_USER_ID);
-    if (settingsError && settingsStatus !== 404) {
+    if (settingsError) {
       console.error('[billing.spec] user_settings cleanup failed', settingsError);
     }
 
-    const { error: profileError, status: profileStatus } = await adminSupabase
+    const { error: profileError } = await adminSupabase
       .from('profiles')
       .delete()
       .eq('id', TEST_USER_ID);
-    if (profileError && profileStatus !== 404) {
+    if (profileError) {
       console.error('[billing.spec] profiles cleanup failed', profileError);
     }
 

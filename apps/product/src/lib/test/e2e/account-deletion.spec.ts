@@ -111,21 +111,22 @@ describeWithEnv('Account Deletion: 削除 → セッション失効 → 再ロ�
   test.afterAll(async () => {
     if (!adminSupabase) return;
 
-    // テストが成功していれば auth.users 削除の CASCADE DELETE で既に消えているため、
-    // 以下はすべて「0 rows / not found」を成功として扱う冪等な後始末になる。
-    const { error: settingsError, status: settingsStatus } = await adminSupabase
+    // テストが成功していれば auth.users 削除の CASCADE DELETE で既に消えている。
+    // PostgREST の DELETE は 0 行一致でも 204 を返すため、対象が既に無いことは
+    // error にならない。error が立つのは実際の失敗だけなので、そのまま記録する。
+    const { error: settingsError } = await adminSupabase
       .from('user_settings')
       .delete()
       .eq('user_id', TEST_USER_ID);
-    if (settingsError && settingsStatus !== 404) {
+    if (settingsError) {
       console.error('[account-deletion.spec] user_settings cleanup failed', settingsError);
     }
 
-    const { error: profileError, status: profileStatus } = await adminSupabase
+    const { error: profileError } = await adminSupabase
       .from('profiles')
       .delete()
       .eq('id', TEST_USER_ID);
-    if (profileError && profileStatus !== 404) {
+    if (profileError) {
       console.error('[account-deletion.spec] profiles cleanup failed', profileError);
     }
 
