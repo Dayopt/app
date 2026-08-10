@@ -177,6 +177,9 @@ describe('dispatchExternalConnectionMaintenance', () => {
     // 「cleanup step を足したのに予算が据え置かれる」「retention の取り分を増やしたら
     // outbox が 1 batch も回せなくなる」の両方を静かに踏む（#1898 で実際に両方踏んだ）。
     const outboxCall = processCalendarRevokeOutbox.mock.calls[0]?.[0];
+    // Composition Layer が env の暗号鍵を outbox へ配線しているかを見る唯一の assertion。
+    // 引数型が `string | undefined` なので、落としても typecheck では捕まらない。
+    expect(outboxCall?.encryptionKey).toBe('test-key');
     const retentionReservationMs = FAR_DEADLINE - (outboxCall?.deadlineAt ?? 0);
     // 本番で outbox が実際に持てる時間は route の予算から retention の取り分を引いた分。
     const outboxWindowMs = CRON_TIME_BUDGET_MS - retentionReservationMs;

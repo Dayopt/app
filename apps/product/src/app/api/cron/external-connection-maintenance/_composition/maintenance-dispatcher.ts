@@ -251,9 +251,12 @@ export async function dispatchExternalConnectionMaintenance(params: {
   // retention の取り分を増やした結果 outbox が 1 batch も回せなくなる（= calendar revoke が
   // 永久に送られない）事故を機械的に防ぐ。retention 側の予算計算が将来変わっても、outbox の
   // 下限だけは必ず残す。
+  // 下限は `startedAt` ではなく現在時刻から測る。`startedAt` 以降に lifecycle version の
+  // RPC が 1 本走っているため、`startedAt` 基準だとガードが効いた時に実残時間が
+  // MIN_BATCH_BUDGET_MS へ届かず、防ごうとした「0 件 claim」がそのまま起きる。
   const outboxDeadlineAt = Math.max(
     params.deadlineAt - RETENTION_BUDGET_MS,
-    startedAt + MIN_BATCH_BUDGET_MS,
+    Date.now() + MIN_BATCH_BUDGET_MS,
   );
 
   try {
