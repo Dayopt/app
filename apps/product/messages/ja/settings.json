@@ -630,7 +630,8 @@
           }
         }
       },
-      "trialEndsAt": "試用期間は {date} までです"
+      "trialEndsAt": "試用期間は {date} までです",
+      "syncingPlan": "反映を確認しています…しばらくすると Pro プランが表示されます"
     }
   }
 }

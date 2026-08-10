@@ -33,6 +33,10 @@ vi.mock('@/lib/toast', () => ({
 }));
 
 vi.mock('@/features/settings', () => ({
+  // 課金 checkout 復帰の有限ポーリング（issue #1887）。この test では復帰を
+  // 起こさないため startedAt は常に null（= ポーリング非アクティブ）。
+  BILLING_POLL_INTERVAL_MS: 2500,
+  BILLING_POLL_MAX_DURATION_MS: 30_000,
   getBillingOperationErrorDisposition: (error: unknown) => {
     const serviceCode =
       typeof error === 'object' &&
@@ -46,6 +50,13 @@ vi.mock('@/features/settings', () => ({
     if (serviceCode === 'BILLING_ACCOUNT_CLOSING') return 'account_closing';
     if (serviceCode === 'BILLING_RESPONSE_EXPIRED') return 'terminal';
     return 'retryable';
+  },
+  shouldContinueBillingPoll: () => false,
+  useBillingPollStore: {
+    use: {
+      startedAt: () => null,
+      stop: () => vi.fn(),
+    },
   },
   useStableBillingOperation: () => ({
     begin: beginPortalAttempt,
