@@ -1740,7 +1740,6 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | 依存                  | 役割                                         | 逃げ道                                                        |
 | --------------------- | -------------------------------------------- | ------------------------------------------------------------- |
 | **UptimeRobot**       | 外形監視                                     | 代替外形監視へ切替（Read-only API 運用）                      |
-| **Slack**             | billing alert の incoming webhook（任意）    | webhook URL 未設定なら no-op。代替通知先へ切替                |
 | **Have I Been Pwned** | signup / password 変更時の漏洩パスワード検査 | 停止時は fail-open（検査を通す）。代替 breach API / corpus へ |
 
 **Turnstile と Sentry はこの層に無い。** Turnstile は Cloudflare 行（中）に、Sentry は production build gate を握るため中層に含めた。

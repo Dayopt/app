@@ -16,12 +16,12 @@ code: scripts/ci
 
 ## 2. 現状の問題（2026-08-04 検証済み）
 
-- [ci.yml(../../../../.github/workflows/ci.yml) の `Web Build & E2E` は paths フィルタを持たず、Web を触らない PR でも ready 後に必ず走る
-- Web build は 3 重: Actions の `pnpm build:web` + Playwright webServer の `pnpm build && pnpm start:e2e`（[playwright.config.ts(../../../../apps/web/playwright.config.ts) の CI 分岐）+ Vercel preview
+- [ci.yml](../../../../.github/workflows/ci.yml) の `Web Build & E2E` は paths フィルタを持たず、Web を触らない PR でも ready 後に必ず走る
+- Web build は 3 重: Actions の `pnpm build:web` + Playwright webServer の `pnpm build && pnpm start:e2e`（[playwright.config.ts](../../../../apps/web/playwright.config.ts) の CI 分岐）+ Vercel preview
 - Vercel の Product / Web project は、各 app へ影響しない変更でも両方 deployment を作る
-- [finish-branch.sh(../../../../scripts/git/finish-branch.sh) は `REQUIRED_CONTEXTS=("Vercel – product" "Vercel – web")` を無条件に要求し、片方の deployment を skip すると merge できない
-- [production-release.mjs(../../../../scripts/production-release.mjs) は `RELEASE_PROJECTS` 両方の同一 SHA candidate を待つため、片方だけ変更した release でも両方の build が必要
-- [integration.yml(../../../../.github/workflows/integration.yml) は 28 行の手書き paths を持ち、影響判定の規則が workflow ごとに散らばっている
+- [finish-branch.sh](../../../../scripts/git/finish-branch.sh) は `REQUIRED_CONTEXTS=("Vercel – product" "Vercel – web")` を無条件に要求し、片方の deployment を skip すると merge できない
+- [production-release.mjs](../../../../scripts/production-release.mjs) は `RELEASE_PROJECTS` 両方の同一 SHA candidate を待つため、片方だけ変更した release でも両方の build が必要
+- [integration.yml](../../../../.github/workflows/integration.yml) は 28 行の手書き paths を持ち、影響判定の規則が workflow ごとに散らばっている
 - Product E2E は認証・service role が必要な重要 spec を CI で skip している（#1808）。中核 journey の未完成分は #1809
 
 ## 3. 期待する挙動
@@ -38,7 +38,7 @@ code: scripts/ci
 
 1. **影響判定を一か所に集約する。** `scripts/ci/impact.mjs` を正本とし、GitHub Actions の手書き paths、Vercel の skip、merge gate、release が別々の規則を持たない
 2. **Vercel の skip は最適化であり、正しさの基準にはしない。** Dayopt 側で `web=true` なのに `Vercel – web` が無い場合は fail closed。`web=false` なら Web context が無くても正常
-3. **Draft は軽く、Ready 後に重い検証を行う**（[workflow.md §2 段階 CI(../../../../.claude/rules/workflow.md) の既存方針を維持）
+3. **Draft は軽く、Ready 後に重い検証を行う**（[workflow.md §2 段階 CI](../../../../.claude/rules/workflow.md) の既存方針を維持）
 4. **build は配信環境で一度だけ行う。** Product / Web の本番相当 build は Vercel を正とし、Actions 内の重複 build を撤去する
 5. **E2E は存在確認ではなく中核 journey を守る。** Product は Local Supabase で実データ操作、Web は Vercel Preview URL で最小 smoke。重要 spec の skip を green として扱わない
 6. **DB migration は artifact rollback と分離する。** expand / contract で後方互換期間を確保する
@@ -60,10 +60,10 @@ code: scripts/ci
 
 判定規則:
 
-- **docsOnly** — 変更ファイルの**全て**が docs 系パターン（`docs/**`、`.claude/**/*.md`、`AGENTS.md`、`CLAUDE.md`、`README.md`）に該当する時のみ true。[ci.yml(../../../../.github/workflows/ci.yml) の paths-ignore と同一規則
+- **docsOnly** — 変更ファイルの**全て**が docs 系パターン（`docs/**`、`.claude/**/*.md`、`AGENTS.md`、`CLAUDE.md`、`README.md`）に該当する時のみ true。[ci.yml](../../../../.github/workflows/ci.yml) の paths-ignore と同一規則
 - **product** — `apps/product/**`、`packages/**`（product は全 7 package に依存）、`supabase/**`、root 設定（`package.json` / `pnpm-lock.yaml` / `pnpm-workspace.yaml` / `turbo.json` / `tsconfig.base.json` / `.nvmrc`）のいずれかに触れた時 true
 - **web** — `apps/web/**`、`packages/**` のうち web が依存するもの（`packages/domain` 以外）、root 設定に触れた時 true
-- **integration** — [integration.yml(../../../../.github/workflows/integration.yml) の現行 paths と同一集合（server contract / DB / migration / MCP / tRPC 境界）
+- **integration** — [integration.yml](../../../../.github/workflows/integration.yml) の現行 paths と同一集合（server contract / DB / migration / MCP / tRPC 境界）
 - **productJourney** — `product` が true かつコード変更を含む時 true（E2E spec / config 自体の変更も含む）
 - **webPreviewSmoke** — `web` と同値
 - **未知の path は fail closed** — どの規則にも該当しないファイル（新しい root ファイル等）は「全て affected」として扱う。判定漏れが検証漏れに化けるのを防ぐ
@@ -74,10 +74,10 @@ code: scripts/ci
 
 Resolver の規則は共有し、**入力の作り方だけが consumer で違う**。
 
-| consumer                                                                                  | 変更ファイル一覧                                                               | 判定不能時                    |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------- |
-| merge gate（[finish-branch.sh(../../../../scripts/git/finish-branch.sh)）                 | PR の files API（rename 元も含む。件数不一致は truncation として棄却）         | 両 project の context を必須  |
-| Production Release（[production-release.mjs(../../../../scripts/production-release.mjs)） | **project ごとに** `git diff --no-renames <その project の live SHA> <target>` | その project を affected 扱い |
+| consumer                                                                                   | 変更ファイル一覧                                                               | 判定不能時                    |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ----------------------------- |
+| merge gate（[finish-branch.sh](../../../../scripts/git/finish-branch.sh)）                 | PR の files API（rename 元も含む。件数不一致は truncation として棄却）         | 両 project の context を必須  |
+| Production Release（[production-release.mjs](../../../../scripts/production-release.mjs)） | **project ごとに** `git diff --no-renames <その project の live SHA> <target>` | その project を affected 扱い |
 
 release の基準が project ごとに違うのが要点。web が 3 commit 遅れた状態で product だけ進んでいれば、web の判定は「web が今配信している SHA から target まで」で行う。merge 単位で判定すると、前の run で取りこぼした変更が二度と release されない。
 
@@ -99,7 +99,7 @@ promote 後は `dayopt.app` と `app.dayopt.app` の**両方**を smoke する�
 
 ## 6. Phase 構成と PR の対応
 
-Step 分割は作業単位、PR は機能のまとまり（[workflow.md §PR 粒度(../../../../.claude/rules/workflow.md)）。
+Step 分割は作業単位、PR は機能のまとまり（[workflow.md §PR 粒度](../../../../.claude/rules/workflow.md)）。
 
 | PR  | 内容                                                                                                                  | 分割理由                                                                                                                                                      |
 | --- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -121,7 +121,7 @@ Phase 1 の Step Summary 表示は既存 static job 内の 1 step に相乗り�
 2. 反論・根拠を reply して resolve
 3. 別 issue へ切り出し、issue 番号を reply して resolve
 
-外部レビュー（Codex）の的中率実績を踏まえ、黙殺での merge を機械的に塞ぐ。運用ルールの正本は [workflow.md(../../../../.claude/rules/workflow.md) §マージ方式 に置く。
+外部レビュー（Codex）の的中率実績を踏まえ、黙殺での merge を機械的に塞ぐ。運用ルールの正本は [workflow.md](../../../../.claude/rules/workflow.md) §マージ方式 に置く。
 
 ## 8. 移行順序（安全制約）
 
@@ -141,7 +141,7 @@ Phase 3 の release は影響を **live SHA からの累積** で測る。merge 
 
 なお現状（skip 未有効）ではこの問題は起きない。Vercel が毎 merge で全 project を build するため、target SHA の candidate は常に存在する。timeout は fail closed（未検証の build を出さない）なので安全性の問題ではなく、可用性の問題。
 
-補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ(../../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
+補足（2026-08-04 リスクレビューでの検出）: product の Vercel project は 2026-08-01 から標準機能の **Skip deployments（Root Directory 外の変更で skip）が Enabled** のまま（[当時のログ](../../../engineering/log/2026-08-01-vercel-root-directory-flip-product.md)の残タスク未消化）。この機能は workspace 依存グラフを見ないため、`packages/**` のみの PR では Impact Resolver が `product=true` で context を要求する一方、Vercel は deployment を skip して context が付かず、**fail closed で merge が止まりうる**（安全側だが可用性の問題）。merge gate の affected-aware 化が main に入った後、最初の `packages/**` 限定 PR で `Vercel – product` context が付くかを確認し、付かなければ同トグルを Disabled に戻す。
 
 ### Phase 4 実施形態（2026-08-05）
 
@@ -170,11 +170,11 @@ skip の対象は **preview build（PR の push）だけ**とし、production bu
 
 ### Phase 6 実施形態（2026-08-05）
 
-`#1816` は「turbo.json に `test:run` の inputs を定義して `turbo --affected` 化」と書いていたが、**基準計測の結果この案は採らなかった**。計測の詳細は [2026-08-05 のログ(../../../engineering/log/2026-08-05-unit-test-cost-measurement.md)。
+`#1816` は「turbo.json に `test:run` の inputs を定義して `turbo --affected` 化」と書いていたが、**基準計測の結果この案は採らなかった**。計測の詳細は [2026-08-05 のログ](../../../engineering/log/2026-08-05-unit-test-cost-measurement.md)。
 
 判断の骨子は 2 つ。
 
-- **Unit の重さは「対象範囲」ではなく「1 ファイルあたりの実行環境コスト」だった。** CI 実測（308 files）で `tests` は 15.2s、対して `environment` 85.4s / `import` 123.0s / `setup` 45.3s。テスト本体は全体の 5% しかない。原因は [vitest.config.ts(../../../../apps/product/vitest.config.ts) が全 test に `happy-dom` を掛けていたことで、実際に DOM が要るのは約 1/4 だけだった。**既定を `node` にして DOM が要るものだけ opt-in する** 分割が、affected 化とは独立に、かつ無条件に効く（実測 −27%）
+- **Unit の重さは「対象範囲」ではなく「1 ファイルあたりの実行環境コスト」だった。** CI 実測（308 files）で `tests` は 15.2s、対して `environment` 85.4s / `import` 123.0s / `setup` 45.3s。テスト本体は全体の 5% しかない。原因は [vitest.config.ts](../../../../apps/product/vitest.config.ts) が全 test に `happy-dom` を掛けていたことで、実際に DOM が要るのは約 1/4 だけだった。**既定を `node` にして DOM が要るものだけ opt-in する** 分割が、affected 化とは独立に、かつ無条件に効く（実測 −27%）
 - **affected 化に turbo は要らない。** CI の `gate` job は既に `scripts/ci/impact.mjs` を実行している。`turbo --affected` を足すと影響判定の仕組みが 2 つになり、§4 設計原則 1「影響判定を一か所に集約する」に自ら反する。gate job の output に `product` を足し、Unit job の該当 step を `if:` で落とす形にした
 
 `turbo.json` は触っていない。Remote Cache も採用していない（維持コストを上回る便益が計測で出なかった）。
