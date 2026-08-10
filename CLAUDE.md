@@ -14,7 +14,7 @@ Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.cl
 | 4   | **不可逆だけ遅く、可逆は速く**                     | タイミング |
 | 5   | **2 週間、自分が触らなかった機能は削除候補にする** | 停止       |
 
-この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/skills/gardening/SKILL.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/business/strategy.md) §4、協働の分担とテンポは次節が正本。
+この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/skills/gardening/SKILL.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/strategy.md) §4、協働の分担とテンポは次節が正本。
 
 ## 協働のかたち
 
@@ -105,13 +105,13 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 ユーザー向けの Docs / Blog / Release notes を書く・編集する前に、次の 3 ファイルを読む:
 
-- `docs/marketing/writing-style.md` — 文体（B1 相当の読みやすさ）
-- `docs/marketing/docs-policy.md` — Docs / Blog / Release notes の役割分担
-- `docs/marketing/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
+- `docs/business/content/writing-style.md` — 文体（B1 相当の読みやすさ）
+- `docs/business/content/docs-policy.md` — Docs / Blog / Release notes の役割分担
+- `docs/business/content/review-checklist.md` — 生成直後・PR レビュー時の最終チェック
 
 アプリ内 UI 文言を書く時は `docs/product/copywriting.md` を読む。
 
-公開コンテンツの運用フロー（いつ何を書くか）は `docs/marketing/content-operations.md` を正本とする。
+公開コンテンツの運用フロー（いつ何を書くか）は `docs/business/content/content-operations.md` を正本とする。
 
 ## Docs 運用責務
 

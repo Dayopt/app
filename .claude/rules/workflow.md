@@ -332,7 +332,7 @@ gh pr merge <PR番号> --merge --delete-branch
 
 ただし `gh pr merge --delete-branch` は **削除対象 branch を checkout している worktree を main へ切り替える**。worktree の中から実行しない（[#1771](https://github.com/Dayopt/dayopt/issues/1771)）。`branch:finish` はこれを避けるため REST を直叩きする。
 
-`--squash` / `--rebase` は使わない。GitHub 設定でハード無効化済みで、`--admin` でも merge method 制限は迂回できない。**release 手順も merge commit に統一**（[releases/process.mdx](../../apps/storybook/docs/operations/releases/process.mdx)）。squash が必要になる稀なケースでは repo 設定の変更が前提になる。
+`--squash` / `--rebase` は使わない。GitHub 設定でハード無効化済みで、`--admin` でも merge method 制限は迂回できない。**release 手順も merge commit に統一**（正本は [releasing skill](../skills/releasing/SKILL.md)）。squash が必要になる稀なケースでは repo 設定の変更が前提になる。
 
 ### 運用上の含意
 

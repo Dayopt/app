@@ -89,7 +89,7 @@ describe('workspace 依存グラフ', () => {
 
 describe('docs のみの変更', () => {
   it.each([
-    [['docs/business/strategy.md']],
+    [['docs/strategy.md']],
     [['AGENTS.md', 'CLAUDE.md', 'README.md']],
     [['.claude/rules/workflow.md', '.claude/skills/dispatch/SKILL.md']],
     [['docs/projects/ci-monorepo-refactor/overview.md', 'docs/README.md']],

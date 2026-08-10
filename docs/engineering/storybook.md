@@ -176,7 +176,7 @@ Story作成時に確認：
 
 | 順番 | ドキュメント                                        | 内容                                       |
 | ---- | --------------------------------------------------- | ------------------------------------------ |
-| 1    | [Dayopt コンセプト](../business/strategy.md)        | Dayoptとは何か、ジョブ、プロダクト原則     |
+| 1    | [Dayopt コンセプト](../strategy.md)                 | Dayoptとは何か、ジョブ、プロダクト原則     |
 | 2    | [Domain Glossary](../product/glossary.md)           | Plan, Record, Tag 等のドメイン用語         |
 | 3    | [Architecture](./architecture.md)                   | monorepo packages の責務境界とデータフロー |
 | 4    | [Common Pitfalls](./conventions.md#common-pitfalls) | よくある間違いと正しいパターン             |

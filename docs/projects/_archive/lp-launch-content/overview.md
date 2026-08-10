@@ -6,7 +6,7 @@ code: apps/web/src/features/marketing
 
 # lp-launch-content — LP 監査・ローンチ前コンテンツ設計
 
-ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [marketing/channels/lp.md](../../../marketing/channels/lp.md)、訴求方針は [business/messaging.md](../../../business/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
+ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [business/channels/lp.md](../../../business/channels/lp.md)、訴求方針は [business/messaging.md](../../../business/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
 
 ---
 
@@ -29,7 +29,7 @@ code: apps/web/src/features/marketing
 
 ## 2. 設計方針
 
-- **一文コンセプト（[business/strategy.md](../../../business/strategy.md)）を LP の背骨にする:** 「予定と実績のズレを毎日の学習に変え、『守れる計画』を立てられるようにする、いちばん軽いタイムボクシングツール」
+- **一文コンセプト（[strategy.md](../../../strategy.md)）を LP の背骨にする:** 「予定と実績のズレを毎日の学習に変え、『守れる計画』を立てられるようにする、いちばん軽いタイムボクシングツール」
 - **messaging.md の二層構造に従う:** 表層（Hero）= 上位ジョブ「守れる計画」を平易に。深層（Problem〜How〜API/MCP）= ツール断片化・計画と実績の統合・開かれたデータ構造。
 - **実装に存在するものだけを書く。** 架空機能・誇張・AI 前面化を全廃する。
 - **AI の向きを逆にする:** 「Dayopt に AI が入っている」ではなく「あなたの AI エージェントから Dayopt のデータを扱える」（MCP）。
