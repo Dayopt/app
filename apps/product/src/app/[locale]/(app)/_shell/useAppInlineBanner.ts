@@ -9,6 +9,7 @@ import { api } from '@/lib/trpc';
 
 import {
   BILLING_POLL_INTERVAL_MS,
+  BILLING_POLL_MAX_DURATION_MS,
   getBillingOperationErrorDisposition,
   shouldContinueBillingPoll,
   useBillingPollStore,
