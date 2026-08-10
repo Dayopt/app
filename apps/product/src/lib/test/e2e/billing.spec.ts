@@ -74,7 +74,7 @@ async function login(page: Page) {
  * 設定 > 課金カテゴリへ遷移する。
  *
  * desktop は `/settings/[category]/page.tsx` が `openSettings(category)` +
- * `router.replace('/')` するため、ホームへ戻った上で SettingsDialog が開く
+ * `router.replace(DESKTOP_SETTINGS_EXIT_PATH)` するため、workspace へ戻った上で SettingsDialog が開く
  * （GlobalOverlays.tsx に常駐）。mobile はページ遷移のまま留まる。
  */
 async function openBillingSettings(page: Page) {
@@ -238,8 +238,8 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
 
   // Checkout からの復帰導線（#1881）。Stripe は経由しないため mock 不要。
   // settings/[category]/page.tsx が `?success=true` / `?canceled=true` を検出して
-  // toast を出すことだけを確認する（PC は openSettings + router.replace('/') で
-  // SettingsDialog を開くため、home へ遷移した後も toast は Toaster ごと残る）。
+  // toast を出すことだけを確認する。PC は openSettings + workspace への replace が
+  // 続くが、遷移先が (app) 内に留まるので Toaster は unmount されず toast は残る。
   test('Checkout 成功復帰（?success=true）で成功 toast が表示される', async ({
     page,
   }, testInfo) => {

@@ -26,17 +26,11 @@ import {
   parseCheckoutCallbackResult,
   removeCheckoutCallbackParams,
 } from '../_utils/checkout-callback';
-import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
-
-/**
- * PC で設定を閉じてワークスペースへ戻る時の遷移先。
- *
- * `/` にしてはいけない。`[locale]/page.tsx` は `(app)` route group の外にあり
- * `/{locale}/week` へサーバー redirect するため、`/` を経由すると `(app)/layout.tsx`
- * 配下の `GlobalOverlays`（`Toaster` の mount 元）が一度 unmount される。
- * 直前に積んだ toast は描画前に失われる。最終到達先は同じなので直接指す。
- */
-const DESKTOP_SETTINGS_EXIT_PATH = '/week';
+import {
+  buildSettingsReturnQuery,
+  DESKTOP_SETTINGS_EXIT_PATH,
+  normalizeSettingsReturnPath,
+} from '../_utils/settings-return';
 
 /**
  * 設定カテゴリページ

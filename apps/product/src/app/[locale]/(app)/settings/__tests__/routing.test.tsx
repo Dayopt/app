@@ -170,7 +170,7 @@ describe('settings route hydration guards', () => {
     render(<SettingsPage />);
 
     expect(mockOpenSettings).toHaveBeenCalledWith('profile');
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/week');
   });
 
   it('renders mobile settings content without redirect', () => {

@@ -16,7 +16,11 @@ import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
-import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
+import {
+  buildSettingsReturnQuery,
+  DESKTOP_SETTINGS_EXIT_PATH,
+  normalizeSettingsReturnPath,
+} from '../_utils/settings-return';
 
 export function SettingsRoute() {
   const hasMounted = useHasMounted();
@@ -33,7 +37,7 @@ export function SettingsRoute() {
   useEffect(() => {
     if (hasMounted && !isMobile) {
       openSettings('profile');
-      router.replace('/');
+      router.replace(DESKTOP_SETTINGS_EXIT_PATH);
     }
   }, [hasMounted, isMobile, openSettings, router]);
 
