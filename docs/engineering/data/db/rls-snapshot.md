@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -381,6 +381,53 @@
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+
+## GRANT 一覧（private schema、owner 以外）
+
+`private` schema は PostgREST に公開されない。owner（table / function / schema の所有者。
+下表を参照）が持つ権限は既定でノイズになるため対象外にし、owner 以外の grantee に
+付いている権限だけを機械固定する。「なし（0 件）」はその区分の grant が無いことを表す。
+
+**この snapshot が保証するのは「migration を素の DB に当てた結果」であって production の実 state
+ではない。** 生成元は migration から構築した local DB で、CI の drift check も同じく ephemeral な
+local DB に対してのみ走る。production に対する同等のチェックは存在しないため、production で
+migration を経由しない手動変更が行われた場合、その差分はここに現れない。
+
+対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/
+function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
+
+- **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、
+  扱いは #1715 が決める（現時点で private の default ACL は 0 件）
+- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ
+  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）
+
+### private の owner（ACL 一覧から除外している主体）
+
+| 対象     | owner    | 件数 |
+| -------- | -------- | ---- |
+| function | postgres | 78   |
+| object   | postgres | 24   |
+| schema   | postgres | 1    |
+
+### private オブジェクト ACL（owner 以外）
+
+| object_type | object                                 | grantee      | privileges |
+| ----------- | -------------------------------------- | ------------ | ---------- |
+| table       | private.legacy_oauth_bind_observations | service_role | SELECT     |
+
+### private 列レベル ACL（owner 以外）
+
+- なし（0 件）
+
+### private function EXECUTE（owner 以外）
+
+- なし（0 件）
+
+### private schema USAGE（owner 以外）
+
+| grantee      | privileges |
+| ------------ | ---------- |
+| service_role | USAGE      |
 
 ## Plan / Record effective write境界
 

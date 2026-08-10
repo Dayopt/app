@@ -50,6 +50,11 @@ type PolicyRow = {
 
 type RlsRow = { table: string; rls: boolean; forced: boolean };
 type GrantRow = { object_type: string; object_name: string; grantee: string; privileges: string };
+/** private schema の GRANT（オブジェクト ACL / function EXECUTE）は owner 以外の grantee だけを機械固定する */
+type PrivateGrantRow = { object_name: string; grantee: string; privileges: string };
+type PrivateColumnGrantRow = PrivateGrantRow & { column_name: string };
+type SchemaGrantRow = { grantee: string; privileges: string };
+type PrivateOwnerRow = { target: string; owner: string; count: number };
 type RealtimePublicationRow = { schemaname: string; tablename: string };
 type EffectiveTimeblockWritePrivilegeRow = {
   object_type: string;
@@ -161,6 +166,148 @@ function fetchGrants(): GrantRow[] {
   );
 }
 
+/**
+ * private schema は PostgREST に公開されないため、public 向け fetchGrants() のような
+ * role allow-list（anon/authenticated/service_role 等）は使わない。owner（table/function/
+ * schema の所有者、local では `postgres`）が持つ権限は既定でノイズになるので除外し、
+ * 「owner 以外の grantee が持つ権限」だけを機械固定する。
+ */
+function fetchPrivateRelationGrants(): GrantRow[] {
+  return (
+    queryJson<GrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           CASE c.relkind
+             WHEN 'r' THEN 'table'
+             WHEN 'p' THEN 'partitioned table'
+             WHEN 'v' THEN 'view'
+             WHEN 'm' THEN 'materialized view'
+             WHEN 'S' THEN 'sequence'
+             WHEN 'f' THEN 'foreign table'
+           END AS object_type,
+           n.nspname || '.' || c.relname AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN LATERAL aclexplode(c.relacl) acl
+         WHERE n.nspname = 'private'
+           -- ACL を持ちうる relkind を網羅する。sequence('S') を落とすと
+           -- GRANT USAGE ON SEQUENCE が drift 検出をすり抜ける（private に sequence は実在する）。
+           AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+           AND acl.grantee <> c.relowner
+         GROUP BY object_type, object_name, grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
+/**
+ * 列レベル ACL（`pg_attribute.attacl`）は table ACL が空でも独立に成立する。public 側では
+ * calendar_connections の秘匿列で実際に使っている pattern なので、private でも 0 件を機械固定して
+ * おかないと `GRANT SELECT (col) ON private.t TO ...` が drift 検出をすり抜ける。
+ */
+/**
+ * owner を ACL 一覧から除外する以上、その owner が誰かを記録しないと除外の範囲が無制限になる。
+ * ownership は ACL の外側にあり REVOKE で剥がせないため、owner が低信頼ロールへ変わると
+ * 「grant 0 件のまま実質フルアクセス」という状態が CI green のまま成立してしまう。
+ * owner 名を assert すると環境差（local と production）で壊れるので、assert ではなく
+ * 記録する。owner が変われば snapshot が変化し、drift として検出される。
+ */
+function fetchPrivateOwners(): PrivateOwnerRow[] {
+  return (
+    queryJson<PrivateOwnerRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.target, t.owner), '[]'::json)
+       FROM (
+         SELECT 'schema' AS target, pg_get_userbyid(n.nspowner) AS owner, count(*)::int AS count
+         FROM pg_namespace n
+         WHERE n.nspname = 'private'
+         GROUP BY 1, 2
+         UNION ALL
+         SELECT 'object', pg_get_userbyid(c.relowner), count(*)::int
+         FROM pg_class c
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'private'
+           AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
+         GROUP BY 1, 2
+         UNION ALL
+         SELECT 'function', pg_get_userbyid(p.proowner), count(*)::int
+         FROM pg_proc p
+         JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'private'
+         GROUP BY 1, 2
+       ) t;`,
+    ) ?? []
+  );
+}
+
+function fetchPrivateColumnGrants(): PrivateColumnGrantRow[] {
+  return (
+    queryJson<PrivateColumnGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_name, t.column_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           n.nspname || '.' || c.relname AS object_name,
+           a.attname AS column_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_attribute a
+         JOIN pg_class c ON c.oid = a.attrelid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN LATERAL aclexplode(a.attacl) acl
+         WHERE n.nspname = 'private'
+           AND a.attnum > 0
+           AND NOT a.attisdropped
+           AND acl.grantee <> c.relowner
+         GROUP BY object_name, column_name, grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
+function fetchPrivateRoutineGrants(): PrivateGrantRow[] {
+  return (
+    queryJson<PrivateGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_proc p
+         JOIN pg_namespace n ON n.oid = p.pronamespace
+         -- proacl が NULL（明示 grant/revoke 未実施）だと Postgres の既定 ACL は PUBLIC に
+         -- EXECUTE を与える。acldefault で明示化してから aclexplode しないとその既定 EXECUTE を
+         -- 見落とす（既存 public 向け routine_grants と同じ理由）。
+         CROSS JOIN LATERAL aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+         WHERE n.nspname = 'private'
+           AND acl.privilege_type = 'EXECUTE'
+           AND acl.grantee <> p.proowner
+         GROUP BY object_name, grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
+function fetchPrivateSchemaUsage(): SchemaGrantRow[] {
+  return (
+    queryJson<SchemaGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(acl.privilege_type, ', ' ORDER BY acl.privilege_type) AS privileges
+         FROM pg_namespace n
+         CROSS JOIN LATERAL aclexplode(n.nspacl) acl
+         WHERE n.nspname = 'private'
+           AND acl.grantee <> n.nspowner
+         GROUP BY grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
 function fetchRealtimePublication(): RealtimePublicationRow[] {
   return (
     queryJson<RealtimePublicationRow[] | null>(
@@ -196,6 +343,11 @@ function render(
   policies: PolicyRow[],
   rlsTables: RlsRow[],
   grants: GrantRow[],
+  privateOwners: PrivateOwnerRow[],
+  privateRelationGrants: GrantRow[],
+  privateColumnGrants: PrivateColumnGrantRow[],
+  privateRoutineGrants: PrivateGrantRow[],
+  privateSchemaUsage: SchemaGrantRow[],
   realtimePublication: RealtimePublicationRow[],
   effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[],
 ): string {
@@ -221,7 +373,9 @@ function render(
   lines.push('> 再生成で更新すること。');
   lines.push('>');
   lines.push(
-    `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 / Realtime publication ${realtimePublication.length} 件。`,
+    `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 /` +
+      ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
+      ` Realtime publication ${realtimePublication.length} 件。`,
   );
   lines.push('');
 
@@ -257,6 +411,111 @@ function render(
     lines.push(
       `| ${grant.object_type} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
     );
+  }
+  lines.push('');
+
+  lines.push('## GRANT 一覧（private schema、owner 以外）');
+  lines.push('');
+  lines.push(
+    '`private` schema は PostgREST に公開されない。owner（table / function / schema の所有者。',
+  );
+  lines.push('下表を参照）が持つ権限は既定でノイズになるため対象外にし、owner 以外の grantee に');
+  lines.push(
+    '付いている権限だけを機械固定する。「なし（0 件）」はその区分の grant が無いことを表す。',
+  );
+  lines.push('');
+  lines.push(
+    '**この snapshot が保証するのは「migration を素の DB に当てた結果」であって production の実 state',
+  );
+  lines.push(
+    'ではない。** 生成元は migration から構築した local DB で、CI の drift check も同じく ephemeral な',
+  );
+  lines.push(
+    'local DB に対してのみ走る。production に対する同等のチェックは存在しないため、production で',
+  );
+  lines.push('migration を経由しない手動変更が行われた場合、その差分はここに現れない。');
+  lines.push('');
+  lines.push(
+    '対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/',
+  );
+  lines.push('function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:');
+  lines.push('');
+  lines.push(
+    '- **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、',
+  );
+  lines.push('  扱いは #1715 が決める（現時点で private の default ACL は 0 件）');
+  lines.push(
+    '- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ',
+  );
+  lines.push(
+    '  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）',
+  );
+  lines.push('');
+
+  lines.push('### private の owner（ACL 一覧から除外している主体）');
+  lines.push('');
+  lines.push('| 対象 | owner | 件数 |');
+  lines.push('| --- | --- | --- |');
+  for (const row of privateOwners) {
+    lines.push(`| ${cell(row.target)} | ${cell(row.owner)} | ${row.count} |`);
+  }
+  lines.push('');
+
+  lines.push('### private オブジェクト ACL（owner 以外）');
+  lines.push('');
+  if (privateRelationGrants.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| object_type | object | grantee | privileges |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const grant of privateRelationGrants) {
+      lines.push(
+        `| ${cell(grant.object_type)} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### private 列レベル ACL（owner 以外）');
+  lines.push('');
+  if (privateColumnGrants.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| object | column | grantee | privileges |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const grant of privateColumnGrants) {
+      lines.push(
+        `| ${cell(grant.object_name)} | ${cell(grant.column_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### private function EXECUTE（owner 以外）');
+  lines.push('');
+  if (privateRoutineGrants.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| function | grantee | privileges |');
+    lines.push('| --- | --- | --- |');
+    for (const grant of privateRoutineGrants) {
+      lines.push(
+        `| ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### private schema USAGE（owner 以外）');
+  lines.push('');
+  if (privateSchemaUsage.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| grantee | privileges |');
+    lines.push('| --- | --- |');
+    for (const row of privateSchemaUsage) {
+      lines.push(`| ${cell(row.grantee)} | ${cell(row.privileges)} |`);
+    }
   }
   lines.push('');
 
@@ -301,6 +560,11 @@ async function main(): Promise<void> {
       fetchPolicies(),
       fetchRlsTables(),
       fetchGrants(),
+      fetchPrivateOwners(),
+      fetchPrivateRelationGrants(),
+      fetchPrivateColumnGrants(),
+      fetchPrivateRoutineGrants(),
+      fetchPrivateSchemaUsage(),
       fetchRealtimePublication(),
       effectiveTimeblockWritePrivileges,
     );
