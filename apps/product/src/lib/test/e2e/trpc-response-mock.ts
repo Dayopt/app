@@ -21,7 +21,7 @@ import superjson from 'superjson';
  * `T` を呼び出し元で procedure の実際の出力型に合わせて指定すると、
  * router 側の返り値型が変わった時に mock 呼び出し側で型エラーとして検出できる。
  */
-export function buildTrpcBatchResponseBody<T>(data: T): string {
+function buildTrpcBatchResponseBody<T>(data: T): string {
   return JSON.stringify([
     {
       result: {
