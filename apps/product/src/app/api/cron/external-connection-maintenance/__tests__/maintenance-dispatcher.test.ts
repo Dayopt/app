@@ -14,12 +14,14 @@ const envMock = vi.hoisted(
 );
 
 vi.mock('@/env', () => ({ env: envMock }));
-// MIN_BATCH_BUDGET_MS は dispatcher が outbox の下限を守るために読む実値。mock で落とすと
-// 不変条件のテストが意味を失うので、feature 側の値をそのまま写す。
-const MIN_BATCH_BUDGET_MS = 23_000;
+// MIN_RUN_BUDGET_MS は dispatcher が outbox の下限を守るために読む実値（1 batch 分の
+// MIN_BATCH_BUDGET_MS に、claim 前に走る expire RPC の timeout を足したもの）。mock で
+// 落とすと不変条件のテストが意味を失うので、feature 側の値をそのまま写す。
+// 実値は revoke-outbox.test.ts が pin している。
+const MIN_RUN_BUDGET_MS = 26_000;
 vi.mock('@/features/external-calendar/server/revoke-outbox', () => ({
   processCalendarRevokeOutbox,
-  MIN_BATCH_BUDGET_MS: 23_000,
+  MIN_RUN_BUDGET_MS: 26_000,
 }));
 vi.mock('@/features/settings/server/account-deletion', () => ({
   cleanupBillingAccountDeletionTerminalReceipts,
@@ -49,6 +51,9 @@ const FAR_DEADLINE = 10 ** 15;
 // いない依存まで引き込むため値を写す。route.test.ts 側で実値を pin してある。
 const CRON_TIME_BUDGET_MS = 50_000;
 const CRON_MAX_DURATION_MS = 60 * 1_000;
+// `external-lifecycle-version.ts` の VERSION_RPC_TIMEOUT_MS。outbox の下限ガードは
+// この RPC の後に現在時刻から測るため、最悪ケースの起点になる。
+const LIFECYCLE_RPC_TIMEOUT_MS = 3_000;
 
 const OUTBOX_SUMMARY = {
   claimed: 4,
@@ -141,7 +146,40 @@ describe('dispatchExternalConnectionMaintenance', () => {
     await dispatchExternalConnectionMaintenance({ deadlineAt: startedAt + 10_000 });
 
     const outboxCall = processCalendarRevokeOutbox.mock.calls[0]?.[0];
-    expect(outboxCall?.deadlineAt).toBeGreaterThanOrEqual(startedAt + MIN_BATCH_BUDGET_MS);
+    expect(outboxCall?.deadlineAt).toBeGreaterThanOrEqual(startedAt + MIN_RUN_BUDGET_MS);
+  });
+
+  it('cleanup RPC が未実装の schema でも失敗させず、due を残して不完全と報告する', async () => {
+    // marker（get_external_lifecycle_app_version_v2）は「その RPC 自体の不在」でしか
+    // predecessor を判定しない。app が migration より先に deploy された場合、cleanup RPC は
+    // PGRST202 を返すが lifecycle 分岐は predecessor 側へ落ちない。ここで失敗扱いにすると
+    // cron が毎回 500 になる。
+    rpc.mockImplementation((operation: string) => {
+      const result =
+        operation === 'get_external_lifecycle_app_version_v2'
+          ? { data: 1, error: null }
+          : operation === 'get_external_authority_maintenance_status_v1'
+            ? { data: [{ ...STATUS, authorization_codes_due: true }], error: null }
+            : operation.startsWith('cleanup_oauth_')
+              ? {
+                  data: null,
+                  error: { code: 'PGRST202', message: 'Could not find the function' },
+                }
+              : { data: CLEANUP_COUNTS[operation], error: null };
+      return { abortSignal: vi.fn(async () => result) };
+    });
+
+    const summary = await dispatchExternalConnectionMaintenance({ deadlineAt: FAR_DEADLINE });
+
+    expect(summary.complete).toBe(false);
+    expect(summary.retention.due.authorizationCodes).toBe(true);
+    // 未実装分は 0 件として記録する（例外にしない）。
+    expect(summary.retention.oauthAuthorizationCodesDeleted).toBe(0);
+    expect(summary.retention.oauthConnectionsDeleted).toBe(0);
+    // 実在する cleanup は通常どおり実行される。
+    expect(summary.retention.mcpMutationReceiptsDeleted).toBe(
+      CLEANUP_COUNTS.cleanup_mcp_mutation_receipts_v1,
+    );
   });
 
   it('outbox後に全retention cleanupとaggregate statusを実行する', async () => {
@@ -184,13 +222,21 @@ describe('dispatchExternalConnectionMaintenance', () => {
     // 本番で outbox が実際に持てる時間は route の予算から retention の取り分を引いた分。
     const outboxWindowMs = CRON_TIME_BUDGET_MS - retentionReservationMs;
 
-    // (1) outbox は残り時間が MIN_BATCH_BUDGET_MS を割ると 1 件も claim せずに break する。
-    //     取り分がこれを下回ると calendar revoke request が永久に送られない。
-    expect(outboxWindowMs).toBeGreaterThanOrEqual(MIN_BATCH_BUDGET_MS);
+    // (1) outbox は claim 前に expire RPC を 1 本走らせた上で、残り時間が 1 batch 分を
+    //     割ると 0 件で break する。取り分がこれを下回ると calendar revoke request が
+    //     永久に送られない。
+    expect(outboxWindowMs).toBeGreaterThanOrEqual(MIN_RUN_BUDGET_MS);
 
     // (2) outbox の取り分 + retention の worst case が maxDuration を超えると、retention の
     //     途中で関数が kill される。step を足して worst case が伸びるとここが落ちる。
     expect(outboxWindowMs + RETENTION_WORST_CASE_MS).toBeLessThanOrEqual(CRON_MAX_DURATION_MS);
+
+    // (3) 下限ガードが効いた時（lifecycle RPC が timeout 一杯かかった最悪ケース）でも
+    //     (2) を満たす。ガードは outbox の取り分を押し上げる方向に働くため、こちらが
+    //     実質の上限になる。
+    expect(
+      LIFECYCLE_RPC_TIMEOUT_MS + MIN_RUN_BUDGET_MS + RETENTION_WORST_CASE_MS,
+    ).toBeLessThanOrEqual(CRON_MAX_DURATION_MS);
     expect(sequence).toEqual([
       'get_external_lifecycle_app_version_v2',
       'outbox',

@@ -12,7 +12,11 @@ vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('../providers/google', () => ({ googleCalendarAdapter: { revoke } }));
 vi.mock('../token-crypto', () => ({ decryptToken, isValidEncryptionKey }));
 
-import { MIN_BATCH_BUDGET_MS, processCalendarRevokeOutbox } from '../revoke-outbox';
+import {
+  MIN_BATCH_BUDGET_MS,
+  MIN_RUN_BUDGET_MS,
+  processCalendarRevokeOutbox,
+} from '../revoke-outbox';
 
 const VALID_KEY = 'valid-test-key';
 const CIPHERTEXT = 'v1.secret-ciphertext';
@@ -75,8 +79,11 @@ describe('processCalendarRevokeOutbox', () => {
   // cron の時間予算はこの値を含む 3 module の不等式で成立している。
   // `maintenance-dispatcher.test.ts` は値を写して不等式を検査しているので、
   // ここで実値を pin して片側だけ動いた時に必ず落ちるようにする。
-  it('MIN_BATCH_BUDGET_MS を pin する', () => {
+  it('MIN_BATCH_BUDGET_MS / MIN_RUN_BUDGET_MS を pin する', () => {
     expect(MIN_BATCH_BUDGET_MS).toBe(23_000);
+    // 呼び出し側（cron の Composition Layer）が下限として使う値。claim 前に走る
+    // expire RPC の timeout を含む。
+    expect(MIN_RUN_BUDGET_MS).toBe(26_000);
   });
 
   it('hard expiryを先に実行し、復号・provider revoke・lease付きcompleteを行う', async () => {

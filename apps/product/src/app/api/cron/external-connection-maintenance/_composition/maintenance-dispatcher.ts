@@ -4,13 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
 import {
-  MIN_BATCH_BUDGET_MS,
+  MIN_RUN_BUDGET_MS,
   processCalendarRevokeOutbox,
   type CalendarRevokeOutboxSummary,
 } from '@/features/external-calendar/server/revoke-outbox';
 import { cleanupBillingAccountDeletionTerminalReceipts } from '@/features/settings/server/account-deletion';
 import { cleanupBillingMutationClaims } from '@/features/settings/server/billing-mutation-service';
-import { getExternalLifecycleAppVersion } from '@/lib/database/external-lifecycle-version';
+import {
+  getExternalLifecycleAppVersion,
+  isPredecessorMissingFunction,
+} from '@/lib/database/external-lifecycle-version';
 import type { Database } from '@/lib/database/generated/database.types';
 import { logger } from '@/lib/logger';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -151,17 +154,37 @@ class ExternalConnectionMaintenanceError extends Error {
   }
 }
 
-async function cleanup(db: SupabaseClient<Database>, operation: CleanupFunction): Promise<number> {
+/**
+ * cleanup RPC を 1 本呼ぶ。関数がまだ存在しない schema では `null` を返す。
+ *
+ * `get_external_lifecycle_app_version_v2` の marker は **その RPC 自体の不在**でしか
+ * predecessor を判定しないため、marker を返す schema（= 現 production）にこの PR の
+ * migration が未適用でも lifecycle の分岐は predecessor 側へ落ちない。app が migration
+ * より先に deploy された場合や DB を直前版へ復元した場合、存在しない RPC の
+ * `PGRST202` / `42883` を failure として扱うと cron が毎回 500 になる。
+ *
+ * 未実装は failure ではなく「まだ実行できない」として扱う。削除は起きないので due flag は
+ * 立ったままになり、`hasMore` → `complete: false` で fail closed の報告は維持される。
+ */
+async function cleanup(
+  db: SupabaseClient<Database>,
+  operation: CleanupFunction,
+): Promise<number | null> {
   try {
     const { data, error } = await db
       .rpc(operation, { p_limit: CLEANUP_BATCH_SIZE })
       .abortSignal(AbortSignal.timeout(DB_RPC_TIMEOUT_MS));
-    if (error || typeof data !== 'number') {
+    if (error) {
+      if (isPredecessorMissingFunction(error)) return null;
+      throw new ExternalConnectionMaintenanceError(operation);
+    }
+    if (typeof data !== 'number') {
       throw new ExternalConnectionMaintenanceError(operation);
     }
     return data;
   } catch (error) {
     if (error instanceof ExternalConnectionMaintenanceError) throw error;
+    if (isPredecessorMissingFunction(error)) return null;
     throw new ExternalConnectionMaintenanceError(operation);
   }
 }
@@ -252,11 +275,13 @@ export async function dispatchExternalConnectionMaintenance(params: {
   // 永久に送られない）事故を機械的に防ぐ。retention 側の予算計算が将来変わっても、outbox の
   // 下限だけは必ず残す。
   // 下限は `startedAt` ではなく現在時刻から測る。`startedAt` 以降に lifecycle version の
-  // RPC が 1 本走っているため、`startedAt` 基準だとガードが効いた時に実残時間が
-  // MIN_BATCH_BUDGET_MS へ届かず、防ごうとした「0 件 claim」がそのまま起きる。
+  // RPC が 1 本走っているため、`startedAt` 基準だとガードが効いた時に実残時間が下限へ
+  // 届かず、防ごうとした「0 件 claim」がそのまま起きる。下限に使うのは 1 batch 分
+  // （MIN_BATCH_BUDGET_MS）ではなく MIN_RUN_BUDGET_MS で、outbox が claim 前に走らせる
+  // expire RPC の分を含んでいる。
   const outboxDeadlineAt = Math.max(
     params.deadlineAt - RETENTION_BUDGET_MS,
-    Date.now() + MIN_BATCH_BUDGET_MS,
+    Date.now() + MIN_RUN_BUDGET_MS,
   );
 
   try {
@@ -284,7 +309,9 @@ export async function dispatchExternalConnectionMaintenance(params: {
 
   for (const step of CLEANUP_STEPS) {
     try {
-      retention[step.key] = await cleanup(db, step.operation);
+      // null は「その schema に関数がまだ無い」。件数 0 のまま進めれば due flag が残り、
+      // complete: false として報告される（migration 適用後に自然に解消する）。
+      retention[step.key] = (await cleanup(db, step.operation)) ?? 0;
     } catch (error) {
       firstFailure ??=
         error instanceof Error ? error : new ExternalConnectionMaintenanceError(step.operation);

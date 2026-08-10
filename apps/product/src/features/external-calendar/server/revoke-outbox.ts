@@ -33,6 +33,16 @@ const PROVIDER_SETTLEMENT_BUDGET_MS = 19_000;
  */
 export const MIN_BATCH_BUDGET_MS = 23_000;
 
+/**
+ * `processCalendarRevokeOutbox` が 1 batch でも claim できる最小の deadline 窓。
+ *
+ * claim ループへ入る前に ciphertext 24h 上限の expire RPC を 1 本必ず実行するため、
+ * 呼び出し側が `MIN_BATCH_BUDGET_MS` ちょうどしか渡さないと、その RPC が遅れた分だけ
+ * 最初の claim 判定時に残りが下限を割り、毎回 0 件で終わる。呼び出し側はこの値を
+ * 下限として使う。
+ */
+export const MIN_RUN_BUDGET_MS = MIN_BATCH_BUDGET_MS + DB_RPC_TIMEOUT_MS;
+
 type ClaimedRevoke = {
   outbox_id: string;
   lease_id: string;
