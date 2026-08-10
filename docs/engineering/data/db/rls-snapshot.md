@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 219 件 / storage schema の policy（objects/buckets）8 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type・domain ACL（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -162,6 +162,26 @@
 | Users can view own settings   | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
 | Users can update own settings | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
 
+## ポリシー一覧（storage schema、objects/buckets）
+
+`storage.objects` / `storage.buckets` は Supabase storage extension が提供する schema で、
+avatars / attachments バケットの folder-ownership 判定はここに実装されている。public schema の
+policy と同じ重みで drift 検出する（#1900）。`storage.prefixes` 等 extension 自身が管理する
+内部テーブルは対象外にし、app が実際に policy を持つ objects / buckets の 2 table に限定する。
+
+### storage.objects
+
+| policy                           | cmd    | permissive | roles           | USING                                                                                                                               | WITH CHECK                                                                                                                          |
+| -------------------------------- | ------ | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Users can delete own attachments | DELETE | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) | —                                                                                                                                   |
+| Users can delete own avatar      | DELETE | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     | —                                                                                                                                   |
+| Users can upload own attachments | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                   | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) |
+| Users can upload own avatar      | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                   | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     |
+| Users can view own attachments   | SELECT | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_read_v1())  | —                                                                                                                                   |
+| Users can view own avatar        | SELECT | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_read_v1())      | —                                                                                                                                   |
+| Users can update own attachments | UPDATE | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) |
+| Users can update own avatar      | UPDATE | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     |
+
 ## GRANT 一覧（public schema）
 
 | object type | object                                                                                                                                                                                                                                                                                                                                                                                                                                           | grantee             | privileges                                                              |
@@ -239,6 +259,10 @@
 | routine     | public.cleanup_calendar_revoke_operations_v1(p_project_key text, p_limit integer)                                                                                                                                                                                                                                                                                                                                                                | service_role        | EXECUTE                                                                 |
 | routine     | public.cleanup_integration_security_events_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                   | service_role        | EXECUTE                                                                 |
 | routine     | public.cleanup_mcp_mutation_receipts_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                         | service_role        | EXECUTE                                                                 |
+| routine     | public.cleanup_oauth_access_tokens_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                           | service_role        | EXECUTE                                                                 |
+| routine     | public.cleanup_oauth_authorization_codes_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                     | service_role        | EXECUTE                                                                 |
+| routine     | public.cleanup_oauth_connections_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                             | service_role        | EXECUTE                                                                 |
+| routine     | public.cleanup_oauth_refresh_tokens_v1(p_limit integer)                                                                                                                                                                                                                                                                                                                                                                                          | service_role        | EXECUTE                                                                 |
 | routine     | public.clear_calendar_sync_cursor_command_v1(p_project_key text, p_user_id uuid, p_connection_id uuid, p_expected_generation bigint, p_expected_authority_fence_id uuid, p_expected_authority_epoch bigint, p_expected_sync_sequence bigint, p_calendar_selection_id uuid, p_provider_calendar_id text, p_expected_sync_token text)                                                                                                              | service_role        | EXECUTE                                                                 |
 | routine     | public.complete_account_deletion_step_v1(p_deletion_id uuid, p_lease_id uuid, p_step text, p_user_id uuid)                                                                                                                                                                                                                                                                                                                                       | service_role        | EXECUTE                                                                 |
 | routine     | public.complete_billing_customer_provisioning_v2(p_operation_id uuid, p_provider_customer_id text, p_user_id uuid)                                                                                                                                                                                                                                                                                                                               | service_role        | EXECUTE                                                                 |
@@ -395,12 +419,11 @@ local DB に対してのみ走る。production に対する同等のチェック
 migration を経由しない手動変更が行われた場合、その差分はここに現れない。
 
 対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/
-function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
+function EXECUTE（`proacl`）/ custom type・domain の USAGE（`typacl`）の 5 catalog。
+次の 1 つは対象外:
 
 - **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、
   扱いは #1715 が決める（現時点で private の default ACL は 0 件）
-- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ
-  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）
 
 ### private の owner（ACL 一覧から除外している主体）
 
@@ -520,6 +543,10 @@ function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
 - なし（0 件）
 
 ### private function EXECUTE（owner 以外）
+
+- なし（0 件）
+
+### private custom type / domain ACL（owner 以外）
 
 - なし（0 件）
 

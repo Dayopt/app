@@ -75,6 +75,13 @@ type EffectiveTimeblockWritePrivilegeRow = {
   object_name: string;
   privilege_type: string;
 };
+/** custom type / domain は table('type') と domain('domain') を区別して記録する */
+type PrivateTypeGrantRow = {
+  object_type: 'type' | 'domain';
+  object_name: string;
+  grantee: string;
+  privileges: string;
+};
 
 /** psql で 1 行 JSON を取り出す（複数行・特殊文字に強い） */
 function queryJson<T>(sql: string): T {
@@ -93,6 +100,29 @@ function fetchPolicies(): PolicyRow[] {
          SELECT tablename, policyname, cmd, permissive, roles::text AS roles,
                 coalesce(qual, '') AS using_expr, coalesce(with_check, '') AS check_expr
          FROM pg_policies WHERE schemaname = 'public'
+       ) t;`,
+    ) ?? []
+  );
+}
+
+/**
+ * storage.objects / storage.buckets の policy は avatars / attachments バケットの
+ * folder-ownership 判定を持ち、public schema の policy と同じ重みで drift 検出したい
+ * 境界（#1900）。storage schema には `storage.prefixes` / `storage.migrations` /
+ * `storage.s3_multipart_uploads*` など Supabase storage extension 自身が管理する
+ * 内部テーブルもあるため、schema 丸ごとではなく app が実際に CREATE POLICY している
+ * objects / buckets の 2 table だけに対象を絞る。storage extension のバージョン更新で
+ * 内部テーブルの構成が変わっても、この 2 table 以外の変化は drift として現れない。
+ */
+function fetchStoragePolicies(): PolicyRow[] {
+  return (
+    queryJson<PolicyRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.tablename, t.cmd, t.policyname), '[]'::json)
+       FROM (
+         SELECT tablename, policyname, cmd, permissive, roles::text AS roles,
+                coalesce(qual, '') AS using_expr, coalesce(with_check, '') AS check_expr
+         FROM pg_policies
+         WHERE schemaname = 'storage' AND tablename IN ('objects', 'buckets')
        ) t;`,
     ) ?? []
   );
@@ -309,6 +339,46 @@ function fetchPrivateRoutineGrants(): PrivateGrantRow[] {
   );
 }
 
+/**
+ * custom type / domain は function の EXECUTE と同じく PUBLIC への既定 USAGE 付与クラス（#1900）。
+ * typacl が NULL（明示 grant/revoke 未実施）だと Postgres の既定 ACL は PUBLIC に USAGE を
+ * 与えるため、acldefault('T', typowner) で明示化してから aclexplode する
+ * （fetchPrivateRoutineGrants() の proacl と同じ理由）。
+ *
+ * フィルタは psql `\dT` と同じ判定式を使う: typrelid=0（base/domain/enum/range）または
+ * typrelid が指す relkind が 'c'（明示 CREATE TYPE ... AS の複合型）に限定し、
+ * table の暗黙 row type（typrelid の relkind が 'r'/'p' 等）を除外する。これが無いと
+ * private の全 table・view・sequence が「custom type」として二重に現れる。
+ * 併せて配列型（他 type の typarray として存在する型）も除外する。
+ */
+function fetchPrivateTypeGrants(): PrivateTypeGrantRow[] {
+  return (
+    queryJson<PrivateTypeGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_type, t.object_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           CASE WHEN ty.typtype = 'd' THEN 'domain' ELSE 'type' END AS object_type,
+           n.nspname || '.' || ty.typname AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(DISTINCT ${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY ${GRANTABLE_PRIVILEGE_SQL}) AS privileges
+         FROM pg_type ty
+         JOIN pg_namespace n ON n.oid = ty.typnamespace
+         CROSS JOIN LATERAL aclexplode(coalesce(ty.typacl, acldefault('T', ty.typowner))) acl
+         WHERE n.nspname = 'private'
+           AND (
+             ty.typrelid = 0
+             OR (SELECT c.relkind = 'c' FROM pg_class c WHERE c.oid = ty.typrelid)
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM pg_type el WHERE el.oid = ty.typelem AND el.typarray = ty.oid
+           )
+           AND acl.grantee <> ty.typowner
+         GROUP BY object_type, object_name, grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
 function fetchPrivateSchemaUsage(): SchemaGrantRow[] {
   return (
     queryJson<SchemaGrantRow[] | null>(
@@ -362,10 +432,12 @@ function render(
   policies: PolicyRow[],
   rlsTables: RlsRow[],
   grants: GrantRow[],
+  storagePolicies: PolicyRow[],
   privateOwners: PrivateOwnerRow[],
   privateRelationGrants: GrantRow[],
   privateColumnGrants: PrivateColumnGrantRow[],
   privateRoutineGrants: PrivateGrantRow[],
+  privateTypeGrants: PrivateTypeGrantRow[],
   privateSchemaUsage: SchemaGrantRow[],
   realtimePublication: RealtimePublicationRow[],
   effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[],
@@ -393,7 +465,8 @@ function render(
   lines.push('>');
   lines.push(
     `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 /` +
-      ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
+      ` storage schema の policy（objects/buckets）${storagePolicies.length} 件 /` +
+      ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / custom type・domain ACL（owner 以外）${privateTypeGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
       ` Realtime publication ${realtimePublication.length} 件。`,
   );
   lines.push('');
@@ -420,6 +493,45 @@ function render(
       );
     }
     lines.push('');
+  }
+
+  lines.push('## ポリシー一覧（storage schema、objects/buckets）');
+  lines.push('');
+  lines.push(
+    '`storage.objects` / `storage.buckets` は Supabase storage extension が提供する schema で、',
+  );
+  lines.push(
+    'avatars / attachments バケットの folder-ownership 判定はここに実装されている。public schema の',
+  );
+  lines.push(
+    'policy と同じ重みで drift 検出する（#1900）。`storage.prefixes` 等 extension 自身が管理する',
+  );
+  lines.push(
+    '内部テーブルは対象外にし、app が実際に policy を持つ objects / buckets の 2 table に限定する。',
+  );
+  lines.push('');
+  const storagePolicyByTable = new Map<string, PolicyRow[]>();
+  for (const p of storagePolicies) {
+    const list = storagePolicyByTable.get(p.tablename) ?? [];
+    list.push(p);
+    storagePolicyByTable.set(p.tablename, list);
+  }
+  if (storagePolicies.length === 0) {
+    lines.push('- なし（0 件）');
+    lines.push('');
+  } else {
+    for (const table of [...storagePolicyByTable.keys()].sort()) {
+      lines.push(`### storage.${table}`);
+      lines.push('');
+      lines.push('| policy | cmd | permissive | roles | USING | WITH CHECK |');
+      lines.push('| --- | --- | --- | --- | --- | --- |');
+      for (const p of storagePolicyByTable.get(table) ?? []) {
+        lines.push(
+          `| ${cell(p.policyname)} | ${p.cmd} | ${p.permissive} | ${cell(p.roles)} | ${cell(p.using_expr)} | ${cell(p.check_expr)} |`,
+        );
+      }
+      lines.push('');
+    }
   }
 
   lines.push('## GRANT 一覧（public schema）');
@@ -458,18 +570,15 @@ function render(
   lines.push(
     '対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/',
   );
-  lines.push('function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:');
+  lines.push(
+    'function EXECUTE（`proacl`）/ custom type・domain の USAGE（`typacl`）の 5 catalog。',
+  );
+  lines.push('次の 1 つは対象外:');
   lines.push('');
   lines.push(
     '- **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、',
   );
   lines.push('  扱いは #1715 が決める（現時点で private の default ACL は 0 件）');
-  lines.push(
-    '- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ',
-  );
-  lines.push(
-    '  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）',
-  );
   lines.push('');
 
   lines.push('### private の owner（ACL 一覧から除外している主体）');
@@ -521,6 +630,21 @@ function render(
     for (const grant of privateRoutineGrants) {
       lines.push(
         `| ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### private custom type / domain ACL（owner 以外）');
+  lines.push('');
+  if (privateTypeGrants.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| object_type | object | grantee | privileges |');
+    lines.push('| --- | --- | --- | --- |');
+    for (const grant of privateTypeGrants) {
+      lines.push(
+        `| ${cell(grant.object_type)} | ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
       );
     }
   }
@@ -580,10 +704,12 @@ async function main(): Promise<void> {
       fetchPolicies(),
       fetchRlsTables(),
       fetchGrants(),
+      fetchStoragePolicies(),
       fetchPrivateOwners(),
       fetchPrivateRelationGrants(),
       fetchPrivateColumnGrants(),
       fetchPrivateRoutineGrants(),
+      fetchPrivateTypeGrants(),
       fetchPrivateSchemaUsage(),
       fetchRealtimePublication(),
       effectiveTimeblockWritePrivileges,
