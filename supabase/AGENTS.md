@@ -2,12 +2,12 @@
 
 このファイルの追加規則は `supabase/` 配下の変更にだけ適用する。通常の不具合レビューは維持し、ルート `AGENTS.md` の高精度方針に従って各規則の適用条件に該当する場合だけ以下を追加確認する。
 
-## DB-1: RLS・policy・GRANT・snapshot
+## DB-1: RLS・policy・GRANT
 
 - **適用条件**: table、view、RPC、RLS policy、GRANT、またはRealtime publicationを追加・変更した場合。
-- **Failure scenario**: view / RPC のGRANTやsecurity属性がtableのpolicyを迂回して別ユーザーのデータへ到達する、必要なpolicy/grantを欠いて本番操作が全拒否される、またはsnapshot未更新で有効権限のdriftをレビューできない。
-- **Safe path**: RLS、policy、`anon` / `authenticated` / `service_role` のGRANTを1セットで明示し、該当するRLS snapshot・生成物を同じ変更で更新する。Realtime追加時は購読対象とRLS意図も確認する。
-- **例外**: access boundaryに影響しないcomment等のmetadata変更。snapshot生成対象外なら、その根拠が既存設定から確認できる場合。
+- **Failure scenario**: view / RPC のGRANTやsecurity属性がtableのpolicyを迂回して別ユーザーのデータへ到達する、必要なpolicy / GRANTを欠いて本番操作が全拒否される、またはRealtime購読から所有権外の行が届く。
+- **Safe path**: RLS、policy、`anon` / `authenticated` / `service_role` のGRANTを1セットで確認し、caller roleとresource所有権の両方を制限する。viewは`security_invoker`または公開roleからのREVOKEで境界を保ち、Realtime追加時は購読対象とRLS意図も確認する。
+- **例外**: access boundaryに影響しないcomment等のmetadata変更。
 
 ## DB-2: SECURITY DEFINER
 

@@ -82,11 +82,16 @@ const packagesConfig = defineConfig([
       '**/__tests__/**',
     ],
     rules: {
-      'no-restricted-syntax': [
+      'no-restricted-exports': [
         'error',
         {
-          selector: 'ExportDefaultDeclaration',
-          message: '通常モジュールでは default export を使わず named export を使用してください。',
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
         },
       ],
     },

@@ -66,26 +66,33 @@ export default [
       ],
     },
   },
+  // 本番コードは将来追加されるディレクトリも含めて named export に統一する。
+  // Next.js / next-intl が default export を要求するentrypointだけを明示除外する。
   {
-    files: [
-      'src/components/**/*.{ts,tsx,js,jsx}',
-      'src/features/**/*.{ts,tsx,js,jsx}',
-      'src/shell/**/*.{ts,tsx,js,jsx}',
-      'src/platform/**/*.{ts,tsx,js,jsx}',
-    ],
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
     ignores: [
       '**/*.test.{ts,tsx,js,jsx}',
       '**/*.spec.{ts,tsx,js,jsx}',
       '**/*.stories.{ts,tsx,js,jsx}',
       '**/__tests__/**',
+      'src/app/**/{page,layout,loading,error,not-found,template,default}.{ts,tsx,js,jsx}',
+      'src/app/{global-error,global-not-found,forbidden,unauthorized}.{ts,tsx,js,jsx}',
+      'src/app/**/{icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx,js,jsx}',
+      'src/app/**/sitemap.{ts,js}',
+      'src/app/{robots,manifest}.{ts,js}',
       'src/platform/i18n/request.ts',
     ],
     rules: {
-      'no-restricted-syntax': [
+      'no-restricted-exports': [
         'error',
         {
-          selector: 'ExportDefaultDeclaration',
-          message: '通常モジュールでは default export を使わず named export を使用してください。',
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
         },
       ],
     },
