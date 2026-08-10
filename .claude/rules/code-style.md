@@ -2,6 +2,14 @@
 paths:
   - 'apps/product/src/**/*.{ts,tsx}'
   - 'package.json'
+  # §技術選定スタンス はベンダー・サービス・ツールの採用面でも発火させる
+  # （workflow への action 追加、Vercel / Supabase 設定、運用 script も採用の入口）
+  - 'apps/*/package.json'
+  - 'packages/*/package.json'
+  - 'apps/product/vercel.json'
+  - 'supabase/**'
+  - '.github/workflows/**'
+  - 'scripts/**'
 ---
 
 # コーディング規約
@@ -63,6 +71,15 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 2. 既存の依存で代替できないか？
 3. GitHub Stars >= 1000、最終コミット6ヶ月以内か？
 4. 1つの機能のためだけに大きなライブラリを追加しない
+5. 出口コストを言えるか？ — 捨てる・乗り換える時に何が壊れるか（API の浸透範囲、データの持ち出し、継続課金）を 1 文で言えない依存は採用前に調べる
+
+### 技術選定スタンス（依存・ベンダー・ツール共通）
+
+選定の巧拙より「ダメになった時に捨てられること」を重視する（反脆弱性・脱固定化・可逆性。経緯は [2026-08-09-antifragility-stance.md](../../docs/engineering/log/2026-08-09-antifragility-stance.md)）:
+
+- **出口コストを見る**: 深く浸透する依存（DB / 認証 / 決済級）は [infra.md §出口コスト台帳](../../docs/engineering/infra.md#出口コスト台帳) に浸透の深さ・逃げ道・出口検討トリガーを登録する
+- **小さく試してから広げる**: 本採用の前に限定 scope で検証する。全面導入を初手にしない
+- **単一固定を可視化する**: 単一ベンダー・単一手段が構造上不可避な場合（例: DB）は、回避ではなく固定した事実と出口を台帳で見えるようにする。「念のため adapter 層」は作らない（YAGNI）
 
 ## eslint-disable の運用
 
