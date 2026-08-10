@@ -1,6 +1,7 @@
 ---
 name: architecture-guard
 description: cross-feature import、barrel、Composition Layer、file move、ownership、依存方向を変更する plan / diff で自動利用する read-only architecture reviewer。
+model: sonnet
 tools: Read, Grep, Glob
 permissionMode: plan
 maxTurns: 12
