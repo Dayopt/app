@@ -22,7 +22,12 @@ import { api } from '@/lib/trpc';
 import { Button } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
-import { buildSettingsReturnQuery, normalizeSettingsReturnPath } from '../_utils/settings-return';
+import { parseBillingReturn, removeBillingReturnParams } from '../_utils/billing-return';
+import {
+  buildSettingsReturnQuery,
+  DESKTOP_SETTINGS_EXIT_PATH,
+  normalizeSettingsReturnPath,
+} from '../_utils/settings-return';
 
 /**
  * 設定カテゴリページ
@@ -50,6 +55,10 @@ export default function SettingsCategoryPage() {
   const calendarParam = searchParams.get('calendar');
   const reasonParam = searchParams.get('reason');
   const searchParamsString = searchParams.toString();
+  // Stripe Checkout / Customer Portal からの復帰。PC は下の openSettings + replace で
+  // query が消えるため、BillingSettings 側ではなくここで先に処理する
+  // （Calendar の OAuth callback と同じ理由・同じ形）。
+  const billingReturn = category === 'billing' ? parseBillingReturn(searchParams) : null;
   const callbackResult = useMemo(() => {
     const callbackParams = new URLSearchParams();
     if (calendarParam) callbackParams.set('calendar', calendarParam);
@@ -75,7 +84,7 @@ export default function SettingsCategoryPage() {
 
       if (!isMobile) {
         openSettings('integrations');
-        router.replace('/');
+        router.replace(DESKTOP_SETTINGS_EXIT_PATH);
         return;
       }
 
@@ -85,11 +94,44 @@ export default function SettingsCategoryPage() {
       return;
     }
 
+    if (billingReturn) {
+      const callbackKey = `billing:${billingReturn}`;
+      if (processedCallback.current === callbackKey) return;
+      processedCallback.current = callbackKey;
+
+      // Checkout の結果だけ知らせる。Portal からの復帰は通知するイベントではない
+      if (billingReturn !== 'portal') {
+        toast.success(
+          t(
+            billingReturn === 'checkout_success'
+              ? 'settings.subscription.checkoutSuccess'
+              : 'settings.subscription.checkoutCanceled',
+          ),
+        );
+      }
+      // Checkout / Portal のどちらでも課金状態は変わりうる。query cache は IndexedDB へ
+      // 永続化され staleTime 5 分は fresh 扱いのため、invalidate しないと外部遷移前の
+      // 値がそのまま復元されて解約やプラン変更が反映されない
+      void utils.billing.getOverview.invalidate();
+
+      if (!isMobile) {
+        openSettings(category);
+        router.replace(DESKTOP_SETTINGS_EXIT_PATH);
+        return;
+      }
+
+      const cleanParams = removeBillingReturnParams(new URLSearchParams(searchParamsString));
+      const query = cleanParams.size > 0 ? `?${cleanParams.toString()}` : '';
+      router.replace(`/settings/billing${query}`);
+      return;
+    }
+
     if (!isMobile) {
       openSettings(category);
-      router.replace('/');
+      router.replace(DESKTOP_SETTINGS_EXIT_PATH);
     }
   }, [
+    billingReturn,
     callbackResult,
     calendarParam,
     category,
@@ -101,6 +143,7 @@ export default function SettingsCategoryPage() {
     router,
     searchParamsString,
     t,
+    utils.billing.getOverview,
     utils.externalCalendar.listConnections,
   ]);
 

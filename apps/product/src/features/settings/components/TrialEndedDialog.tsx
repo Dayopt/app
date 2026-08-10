@@ -25,7 +25,7 @@ interface TrialEndedDialogProps {
  * Trial終了告知ダイアログ
  *
  * Trial終了と同時に1度だけ表示。ESC/overlay/×では閉じられない。
- * 「Freeで続ける」でフラグ保存して閉じ、「Proを続ける」で /settings/subscription へ遷移。
+ * 「Freeで続ける」でフラグ保存して閉じ、「Proを続ける」で /settings/billing へ遷移。
  */
 function TrialEndedDialog({ open, onClose }: TrialEndedDialogProps) {
   const t = useTranslations('common.trialEnded');
@@ -38,7 +38,7 @@ function TrialEndedDialog({ open, onClose }: TrialEndedDialogProps) {
 
   const handleContinuePro = () => {
     onClose();
-    router.push('/settings/subscription');
+    router.push('/settings/billing');
   };
 
   return (
