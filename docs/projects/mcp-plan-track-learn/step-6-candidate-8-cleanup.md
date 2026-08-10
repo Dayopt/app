@@ -19,11 +19,11 @@ code:
 
 候補 8 は 1 つの塊ではなく、drain 証拠が独立した 3 つの stage に分ける。
 
-| Stage | 内容                                                                              | 可逆性                                             | 独立した zero-use 証拠                                            |
-| ----- | --------------------------------------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------- |
-| 8-1   | 旧 tRPC route / service method / compat test の app code 削除                     | `[minutes]`                                        | `api.plans.*` / `api.records.*` mutation の Production 呼び出し 0 |
-| 8-2   | 旧 timeblock RPC の REVOKE → DROP（drain migration）                              | `[irreversible]`（forward restoration で復元可能） | 8-1 配信後の観測期間で旧 RPC 呼び出し 0                           |
-| 8-3   | OAuth connection 契約の確定（legacy trigger drop + `connection_id SET NOT NULL`） | `[irreversible]`                                   | `connection_id IS NULL` の新規 insert 0 + 既存 NULL 行 0          |
+| Stage | 内容                                                                              | 可逆性                                             | 独立した zero-use 証拠                                                                         |
+| ----- | --------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 8-1   | 旧 tRPC route / service method / compat test の app code 削除                     | `[minutes]`                                        | `api.plans.*` / `api.records.*` mutation の Production 呼び出し 0                              |
+| 8-2   | 旧 timeblock RPC の REVOKE → DROP（drain migration）                              | `[irreversible]`（forward restoration で復元可能） | 8-1 配信後の観測期間で旧 RPC 呼び出し 0                                                        |
+| 8-3   | OAuth connection 契約の確定（legacy trigger drop + `connection_id SET NOT NULL`） | `[irreversible]`                                   | 観測窓内の legacy connection への新規発行 0（≤24h 間隔 snapshot の累積、§8-3）+ 既存 NULL 行 0 |
 
 分割の根拠は [workflow.md §PR 粒度](../../../.claude/rules/workflow.md#pr-粒度) の「code removal と destructive migration の混在回避」。8-1 は git revert で戻せる純粋な code 削除、8-2 / 8-3 は破壊的 migration で、承認境界を分ける。
 
@@ -81,7 +81,7 @@ DROP しない対象（紛らわしいが現役）:
 
 前提条件:
 
-- **旧 writer 継続利用の停止条件**: 観測期間内に新規発行された codes / tokens のうち `legacy_read_only = true` の connection に紐づく行数（`oauth_authorization_codes` / `oauth_tokens` の `created_at` で絞り、`oauth_connections` へ join）を数え、1 件でもあれば 8-3 を適用しない。あわせて観測期間内に新規作成された legacy connection 行数も記録する。この 2 つで発行経路を全数覆う: legacy 発行はすべて codes / tokens への INSERT として現れ、新規 connection を作る経路（`bind_legacy_oauth_insert_to_connection` の新規紐付け）も既存 family への rebind 経路（`parent_token_id` 経由で既存 connection に結び直す `20260729062433` の trigger 分岐）も、発行行自体は必ず legacy connection に bind されて残る。**使えない指標 2 つ**: codes / tokens の `connection_id IS NULL` 行数（`BEFORE INSERT` trigger が NULL を書き換えるため常に 0 になりうる）、legacy connection の新規作成数単独（既存 refresh family の継続利用を見落とす）
+- **旧 writer 継続利用の停止条件**: 観測期間中、**24 時間以下の間隔**で「`legacy_read_only = true` の connection に紐づく codes / tokens の新規発行行数（`created_at` で絞り `oauth_connections` へ join）」を read-only で snapshot し、**累積** 1 件でもあれば 8-3 を適用しない。間隔の根拠: maintenance cleanup は consumed / expired の 24 時間後から削除対象にする（`20260730090002` の `INTERVAL '24 hours'`）ため、発行行はどの経路でも最低 24 時間は可視であり、≤24h 間隔の snapshot 累積は全発行を決定的に捕捉する。**観測終了時の一発 count は使えない** — 窓の途中で発行された code が交換されないまま cleanup されると終了時 join は 0 になる。耐久補助指標として `oauth_connections` の `created_at` / `last_used_at` / `last_refreshed_at`（refresh 発行時に更新され retention で消えない）が窓内に入る legacy connection 数も併記する。**使えない指標 2 つ**: codes / tokens の `connection_id IS NULL` 行数（`BEFORE INSERT` trigger が NULL を書き換えるため常に 0 になりうる）、legacy connection の新規作成数単独（`parent_token_id` 経由の rebind 経路は新規 connection を作らないため refresh family の継続利用を見落とす）
 - **`SET NOT NULL` の可否判定**: 既存の `connection_id IS NULL` の codes / tokens 行数を記録する（これは過去に trigger を経ずに残った行の是正対象の把握であり、上の停止条件とは別物）。残っている場合、`SET NOT NULL` の前に期限切れ削除（retention）での自然消滅を待つか、明示承認の上で終端させるかを決める
 - `disable_pre_client_gate_write_connections` の対象件数は **migration と同じ predicate**（`write_enabled_at IS NOT NULL AND write_disabled_at IS NULL`）で数える — `write_enabled_at IS NOT NULL` だけで数えると無効化済みの行まで対象候補に含め、実際の UPDATE 対象 0 件でも 8-3 を不要に停止させる。参考値として `write_enabled_at IS NOT NULL` の総数も併記してよいが、停止判定に使うのは前者
 
