@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 219 件 / storage schema の policy（objects/buckets）8 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type・domain ACL（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 219 件 / storage schema の policy（objects/buckets）8 件 / RLS 有効状態（objects/buckets）2 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type・domain ACL（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -161,6 +161,16 @@
 | Users can insert own settings | INSERT | PERMISSIVE | {authenticated} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own settings   | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
 | Users can update own settings | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
+## RLS 有効状態（storage schema、objects/buckets）
+
+policy 行が残っていても RLS 自体が無効化されると folder-ownership 判定は適用されない（#1900）。
+ポリシー一覧とは独立に `relrowsecurity` / `relforcerowsecurity` を記録し、無効化を drift として検出する。
+
+| table           | RLS enabled | forced |
+| --------------- | ----------- | ------ |
+| storage.buckets | ✅          | —      |
+| storage.objects | ✅          | —      |
 
 ## ポリシー一覧（storage schema、objects/buckets）
 

@@ -140,6 +140,25 @@ function fetchRlsTables(): RlsRow[] {
   );
 }
 
+/**
+ * fetchStoragePolicies() が記録するのは pg_policies の行だけで、policy 行が残ったまま
+ * `ALTER TABLE storage.objects DISABLE ROW LEVEL SECURITY` が実行されても snapshot も
+ * drift check も変化しない（#1900）。fetchRlsTables() と同じ relrowsecurity /
+ * relforcerowsecurity を objects / buckets の 2 table に限って記録し、RLS 自体が
+ * 無効化される変更を検出できるようにする。対象を絞る理由は fetchStoragePolicies() と同じ。
+ */
+function fetchStorageRlsTables(): RlsRow[] {
+  return (
+    queryJson<RlsRow[] | null>(
+      `SELECT coalesce(json_agg(json_build_object(
+                'table', c.relname, 'rls', c.relrowsecurity, 'forced', c.relforcerowsecurity
+              ) ORDER BY c.relname), '[]'::json)
+       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'storage' AND c.relname IN ('objects', 'buckets');`,
+    ) ?? []
+  );
+}
+
 function fetchGrants(): GrantRow[] {
   return (
     queryJson<GrantRow[] | null>(
@@ -260,6 +279,11 @@ function fetchPrivateRelationGrants(): GrantRow[] {
  *
  * ロール別の件数に集約すると、件数の変わらない所有権移動（機密オブジェクトと無害な
  * オブジェクトの owner を入れ替える等）を検出できない。オブジェクト単位で記録する。
+ *
+ * schema / table 系 object / function に加え、custom type・domain（`pg_type.typowner`）の
+ * owner も記録する（#1900）。fetchPrivateTypeGrants() は owner 以外の grantee だけを ACL 一覧
+ * に載せる設計なので、owner 自身を別途記録しておかないと owner を低信頼 role へ変更する
+ * drift（既定 PUBLIC USAGE 行はそのままなので ACL 一覧は無変化）を検出できない。
  */
 function fetchPrivateOwners(): PrivateOwnerRow[] {
   return (
@@ -286,6 +310,24 @@ function fetchPrivateOwners(): PrivateOwnerRow[] {
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'private'
+         UNION ALL
+         -- fetchPrivateTypeGrants() と同じフィルタ（typrelid=0 または関連 relkind='c' の
+         -- 明示 CREATE TYPE ... AS、かつ配列型を除外）を使い、table/view/sequence 等の
+         -- 暗黙 row type（'object' branch が relkind='r' 等で既に拾っている）を二重に
+         -- owner 一覧へ載せない。
+         SELECT 'type',
+                (n.nspname || '.' || ty.typname)::text,
+                pg_get_userbyid(ty.typowner)
+         FROM pg_type ty
+         JOIN pg_namespace n ON n.oid = ty.typnamespace
+         WHERE n.nspname = 'private'
+           AND (
+             ty.typrelid = 0
+             OR (SELECT c.relkind = 'c' FROM pg_class c WHERE c.oid = ty.typrelid)
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM pg_type el WHERE el.oid = ty.typelem AND el.typarray = ty.oid
+           )
        ) t;`,
     ) ?? []
   );
@@ -431,6 +473,7 @@ function fetchEffectiveTimeblockWritePrivileges(): EffectiveTimeblockWritePrivil
 function render(
   policies: PolicyRow[],
   rlsTables: RlsRow[],
+  storageRlsTables: RlsRow[],
   grants: GrantRow[],
   storagePolicies: PolicyRow[],
   privateOwners: PrivateOwnerRow[],
@@ -465,7 +508,7 @@ function render(
   lines.push('>');
   lines.push(
     `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 /` +
-      ` storage schema の policy（objects/buckets）${storagePolicies.length} 件 /` +
+      ` storage schema の policy（objects/buckets）${storagePolicies.length} 件 / RLS 有効状態（objects/buckets）${storageRlsTables.length} 件 /` +
       ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / custom type・domain ACL（owner 以外）${privateTypeGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
       ` Realtime publication ${realtimePublication.length} 件。`,
   );
@@ -494,6 +537,22 @@ function render(
     }
     lines.push('');
   }
+
+  lines.push('## RLS 有効状態（storage schema、objects/buckets）');
+  lines.push('');
+  lines.push(
+    'policy 行が残っていても RLS 自体が無効化されると folder-ownership 判定は適用されない（#1900）。',
+  );
+  lines.push(
+    'ポリシー一覧とは独立に `relrowsecurity` / `relforcerowsecurity` を記録し、無効化を drift として検出する。',
+  );
+  lines.push('');
+  lines.push('| table | RLS enabled | forced |');
+  lines.push('| --- | --- | --- |');
+  for (const r of storageRlsTables) {
+    lines.push(`| storage.${r.table} | ${r.rls ? '✅' : '❌'} | ${r.forced ? '✅' : '—'} |`);
+  }
+  lines.push('');
 
   lines.push('## ポリシー一覧（storage schema、objects/buckets）');
   lines.push('');
@@ -703,6 +762,7 @@ async function main(): Promise<void> {
     const raw = render(
       fetchPolicies(),
       fetchRlsTables(),
+      fetchStorageRlsTables(),
       fetchGrants(),
       fetchStoragePolicies(),
       fetchPrivateOwners(),
