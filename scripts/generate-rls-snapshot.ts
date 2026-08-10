@@ -236,18 +236,22 @@ function fetchPrivateOwners(): PrivateOwnerRow[] {
     queryJson<PrivateOwnerRow[] | null>(
       `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.target, t.object_name), '[]'::json)
        FROM (
-         SELECT 'schema' AS target, n.nspname AS object_name, pg_get_userbyid(n.nspowner) AS owner
+         -- 各 branch の object_name を text へ明示キャストする。先頭 branch の nspname は
+         -- name 型（63 byte）で、UNION の型がそちらに寄ると関数の identity arguments が
+         -- 途中で切れる。切断位置より後だけが異なる overload 間で owner を入れ替えても
+         -- 行集合が変わらず、所有権 drift の検出をすり抜ける。
+         SELECT 'schema' AS target, n.nspname::text AS object_name, pg_get_userbyid(n.nspowner) AS owner
          FROM pg_namespace n
          WHERE n.nspname = 'private'
          UNION ALL
-         SELECT 'object', n.nspname || '.' || c.relname, pg_get_userbyid(c.relowner)
+         SELECT 'object', (n.nspname || '.' || c.relname)::text, pg_get_userbyid(c.relowner)
          FROM pg_class c
          JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE n.nspname = 'private'
            AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
          UNION ALL
          SELECT 'function',
-                n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+                (n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')')::text,
                 pg_get_userbyid(p.proowner)
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
