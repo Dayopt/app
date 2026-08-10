@@ -41,6 +41,8 @@
 --   - 20260802013954_add_product_events.sql
 --   - 20260810013820_observe_legacy_oauth_bind.sql
 --   - 20260810041210_drop_lock_timeblock_global_write_shim.sql
+--   - 20260810070002_add_oauth_retention_cleanup_rpcs.sql
+--   - 20260810085241_bound_oauth_connection_cleanup_cascade.sql
 -- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
 -- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
@@ -106,6 +108,12 @@
 --   apply_mcp_plan_create/update/delete/restore_v1(...)
 --   apply_mcp_record_create/update/delete/restore_v1(...)
 --     — authority再検証、domain write、receipt作成を同一transactionで行う（service-role only）
+--   cleanup_oauth_authorization_codes_v1(...)  — 24時間超authorization codeのbounded cleanup（service-role only）
+--   cleanup_oauth_access_tokens_v1(...)        — 24時間超access tokenのbounded cleanup（service-role only）
+--   cleanup_oauth_refresh_tokens_v1(...)       — 30日超refresh tokenのbounded cleanup（service-role only）
+--   cleanup_oauth_connections_v1(...)          — 90日超connectionのbounded cleanup。残存token/codeを
+--       持つ親は候補から外し（cascadeを無制限に走らせない）、
+--       mcp_mutation_receipts.origin_connection_idをdetach（service-role only）
 --   cleanup_mcp_mutation_receipts_v1(...)      — 90日超receiptのbounded cleanup（service-role only）
 --   save_calendar_connection_command_v1(...)   — purge世代を再検証してCalendar接続を保存
 --   rotate_or_enqueue_calendar_refresh_token_command_v2(...)
