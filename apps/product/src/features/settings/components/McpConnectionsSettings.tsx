@@ -16,6 +16,8 @@ import { McpConnectionRowView, McpConnectionsSettingsView } from './McpConnectio
 type McpConnectionSummary = inferRouterOutputs<AppRouter>['mcpConnections']['list'][number];
 
 export function McpConnectionsSettings() {
+  const t = useTranslations('settings.integrations.mcpConnections');
+  const utils = api.useUtils();
   const connections = api.mcpConnections.list.useQuery(undefined, {
     retry: false,
     refetchOnMount: 'always',
@@ -23,24 +25,18 @@ export function McpConnectionsSettings() {
 
   const rows = connections.data ?? [];
 
-  return (
-    <McpConnectionsSettingsView
-      loading={connections.isLoading}
-      error={connections.isError}
-      hasConnections={rows.length > 0}
-      onRetry={() => void connections.refetch()}
-    >
-      {rows.map((connection) => (
-        <McpConnectionRow key={connection.id} connection={connection} />
-      ))}
-    </McpConnectionsSettingsView>
-  );
-}
-
-function McpConnectionRow({ connection }: { connection: McpConnectionSummary }) {
-  const locale = useLocale();
-  const t = useTranslations('settings.integrations.mcpConnections');
-  const utils = api.useUtils();
+  // dialog と mutation は行数分ではなく 1 つだけ mount する（#1909: N 行 = N ConfirmDialog +
+  // N useMutation の解消）。「どの connection を対象にしているか」(revokeTarget) と「dialog が
+  // 開いているか」(revokeOpen) は別 state に分ける。
+  //
+  // revokeTarget は close 時（cancel・success のどちらでも）に意図的に null へ戻さない。
+  // ConfirmDialog の AlertDialogContent は Radix Presence の仕組みで、open が false になった
+  // 瞬間ではなく data-[state=closed] の exit animation（fade-out + zoom-out、
+  // packages/components/src/overlays/alert-dialog.tsx）が終わるまでマウントされ続ける。
+  // close と同時に revokeTarget も消すと、そのフェードアウトの間タイトル/説明が空の
+  // client 名（「」）で再描画されてしまう。revokeTarget は「次にどの行を開くか」で
+  // 上書きされるだけにし、表示中の対象名はフェードアウトが終わるまで正しい値を保つ。
+  const [revokeTarget, setRevokeTarget] = useState<McpConnectionSummary | null>(null);
   const [revokeOpen, setRevokeOpen] = useState(false);
 
   const revoke = api.mcpConnections.revoke.useMutation({
@@ -59,35 +55,71 @@ function McpConnectionRow({ connection }: { connection: McpConnectionSummary }) 
     },
   });
 
-  const clientLabel = clientLabelFor(t, connection.client_id);
+  const revokeTargetLabel = revokeTarget ? clientLabelFor(t, revokeTarget.client_id) : '';
 
   return (
     <>
-      <McpConnectionRowView
-        clientLabel={clientLabel}
-        scopes={connection.scopes.map((scope) => scopeLabelFor(t, scope))}
-        connectedAtLabel={formatConnectionDate(connection.authorized_at, locale)}
-        lastUsedAtLabel={
-          connection.last_used_at
-            ? formatConnectionDate(connection.last_used_at, locale)
-            : t('neverUsed')
-        }
-        revoking={revoke.isPending}
-        onRevoke={() => setRevokeOpen(true)}
-      />
+      <McpConnectionsSettingsView
+        loading={connections.isLoading}
+        error={connections.isError}
+        hasConnections={rows.length > 0}
+        onRetry={() => void connections.refetch()}
+      >
+        {rows.map((connection) => (
+          <McpConnectionRow
+            key={connection.id}
+            connection={connection}
+            revoking={revoke.isPending && revokeTarget?.id === connection.id}
+            onRevoke={() => {
+              setRevokeTarget(connection);
+              setRevokeOpen(true);
+            }}
+          />
+        ))}
+      </McpConnectionsSettingsView>
       <ConfirmDialog
         open={revokeOpen}
         onClose={() => setRevokeOpen(false)}
         onConfirm={async () => {
-          await revoke.mutateAsync({ connectionId: connection.id }).catch(() => undefined);
+          if (!revokeTarget) return;
+          await revoke.mutateAsync({ connectionId: revokeTarget.id }).catch(() => undefined);
         }}
-        title={t('revokeDialog.title', { client: clientLabel })}
-        description={t('revokeDialog.description', { client: clientLabel })}
+        title={t('revokeDialog.title', { client: revokeTargetLabel })}
+        description={t('revokeDialog.description', { client: revokeTargetLabel })}
         confirmLabel={t('revoke')}
         loadingLabel={t('revoking')}
         variant="destructive"
       />
     </>
+  );
+}
+
+function McpConnectionRow({
+  connection,
+  revoking,
+  onRevoke,
+}: {
+  connection: McpConnectionSummary;
+  revoking: boolean;
+  onRevoke: () => void;
+}) {
+  const locale = useLocale();
+  const t = useTranslations('settings.integrations.mcpConnections');
+  const clientLabel = clientLabelFor(t, connection.client_id);
+
+  return (
+    <McpConnectionRowView
+      clientLabel={clientLabel}
+      scopes={connection.scopes.map((scope) => scopeLabelFor(t, scope))}
+      connectedAtLabel={formatConnectionDate(connection.authorized_at, locale)}
+      lastUsedAtLabel={
+        connection.last_used_at
+          ? formatConnectionDate(connection.last_used_at, locale)
+          : t('neverUsed')
+      }
+      revoking={revoking}
+      onRevoke={onRevoke}
+    />
   );
 }
 
