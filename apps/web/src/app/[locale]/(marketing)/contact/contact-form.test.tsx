@@ -155,9 +155,12 @@ describe('ContactForm retry contract', () => {
     fireEvent.click(screen.getByRole('button', { name: 'verify-turnstile' }));
     fireEvent.click(screen.getByRole('button', { name: 'form.submit' }));
 
-    expect(screen.getByRole('button', { name: 'form.submitting' })).toHaveProperty(
-      'disabled',
-      true,
-    );
+    await waitFor(() => expect(mocks.submitContactRequest).toHaveBeenCalledTimes(2));
+
+    const first = mocks.submitContactRequest.mock.calls[0]?.[0] as { submissionId: string };
+    const edited = mocks.submitContactRequest.mock.calls[1]?.[0] as { submissionId: string };
+    expect(first.submissionId).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(edited.submissionId).toBe('650e8400-e29b-41d4-a716-446655440000');
+    expect(edited.submissionId).not.toBe(first.submissionId);
   });
 });

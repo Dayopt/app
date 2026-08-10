@@ -9,6 +9,11 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
+  IF COALESCE(auth.jwt() ->> 'role', '') <> 'service_role'
+    AND p_user_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'Access denied: user_id mismatch';
+  END IF;
+
   UPDATE public.user_settings
   SET personalization = CASE
     WHEN personalization IS NULL THEN pg_catalog.jsonb_build_object(p_path, p_value)
