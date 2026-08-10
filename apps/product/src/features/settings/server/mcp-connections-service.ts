@@ -37,6 +37,14 @@ type McpConnectionSummary = Pick<
   'id' | 'client_id' | 'scopes' | 'authorized_at' | 'last_used_at'
 >;
 
+/**
+ * PostgREST が offset を総数超過と判断した時のエラー（HTTP 416）。ページ取得中に
+ * 他所で行が消えると 2 ページ目以降で起きる。
+ */
+function isRangeOutOfBounds(error: { code?: string | null }): boolean {
+  return error.code === 'PGRST103';
+}
+
 export class McpConnectionsServiceError extends ServiceError {
   constructor(code: string, message: string, options?: ErrorOptions) {
     super(code, message, options);
@@ -85,6 +93,13 @@ export class McpConnectionsService {
         .range(from, to);
 
       if (error) {
+        // 2 ページ目以降の range-out-of-bounds は「他タブの revoke / cron の cleanup で
+        // 母集合が縮んだ」だけなので、失敗ではなく終端として扱う。ここで throw すると
+        // 一覧全体が出せなくなり、1 件も revoke できない（切り捨てより劣化が悪い）。
+        if (page > 0 && isRangeOutOfBounds(error)) {
+          cappedByPageLimit = false;
+          break;
+        }
         const original = captureUnexpectedDatabaseError(error, {
           feature: 'mcp_connections',
           operation: 'list_connections',

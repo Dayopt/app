@@ -50,13 +50,23 @@ function buildRows(start: number, count: number) {
  * 同じクエリオブジェクトを使い回す（`createService` 参照）ため、`.then()` の
  * 呼び出し回数でページを進める。
  */
-function createPagedChainableMock(pages: Array<{ data: unknown[]; count: number | null }>) {
+function createPagedChainableMock(
+  pages: Array<{
+    data: unknown[] | null;
+    count: number | null;
+    error?: { code: string; message: string };
+  }>,
+) {
   const query = createChainableMock(pages[0]?.data ?? []);
   let call = 0;
   query.then = vi.fn().mockImplementation((resolve: (value: unknown) => void) => {
     const page = pages[Math.min(call, pages.length - 1)];
     call += 1;
-    resolve({ data: page?.data ?? [], count: page?.count ?? null, error: null });
+    resolve({
+      data: page?.data ?? [],
+      count: page?.count ?? null,
+      error: page?.error ?? null,
+    });
   });
   return query;
 }
@@ -183,6 +193,41 @@ describe('McpConnectionsService', () => {
       expect(query.range).toHaveBeenNthCalledWith(1, 0, PAGE_SIZE - 1);
       expect(query.range).toHaveBeenNthCalledWith(2, serverCap, serverCap + PAGE_SIZE - 1);
       expect(query.range).toHaveBeenNthCalledWith(3, serverCap * 2, serverCap * 2 + PAGE_SIZE - 1);
+    });
+
+    it('ページ途中で母集合が縮んで range 範囲外になっても取得済み分を返す', async () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      // 1 ページ目の後に他タブの revoke / cron の cleanup で行が消えると、次の
+      // .range(1000, 1999) が PostgREST の 416（PGRST103）になる。ここで throw すると
+      // 一覧全体が出せず 1 件も revoke できない（切り捨てより劣化が悪い）。
+      const page1 = buildRows(0, PAGE_SIZE);
+      const query = createPagedChainableMock([
+        { data: page1, count: PAGE_SIZE + 1 },
+        {
+          data: null,
+          count: null,
+          error: { code: 'PGRST103', message: 'Requested range not satisfiable' },
+        },
+      ]);
+      const { service } = createService(query);
+
+      const result = await service.list(USER_ID);
+
+      expect(result).toHaveLength(PAGE_SIZE);
+      expect(warn).toHaveBeenCalledWith(
+        'MCP connection list did not reach the reported total',
+        expect.objectContaining({ returned: PAGE_SIZE, total: PAGE_SIZE + 1 }),
+      );
+      warn.mockRestore();
+    });
+
+    it('1 ページ目の range 範囲外は握りつぶさず FETCH_FAILED にする', async () => {
+      // 1 ページ目は offset 0 なので、範囲外エラーは「母集合が縮んだ」では説明できない。
+      // 未知の異常として扱う。
+      const query = createChainableMock(null, { code: 'PGRST103', message: 'boom' });
+      const { service } = createService(query);
+
+      await expect(service.list(USER_ID)).rejects.toMatchObject({ code: 'FETCH_FAILED' });
     });
 
     it('総数へ届かないまま終わったら logger.warn で可視化する', async () => {
