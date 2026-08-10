@@ -243,7 +243,7 @@ jobs:
       # Unit job の中でここだけが重い（実測 131s / job 全体 188s）。影響が無い PR では
       # まるごと skip する。判定は gate job の Impact Resolver が正本で、CI・merge gate・
       # Vercel・release がすべて同じ規則を共有する
-      # （docs/projects/ci-monorepo-refactor/overview.md §4 原則 1）。
+      # （docs/projects/_archive/ci-monorepo-refactor/overview.md §4 原則 1）。
       # `!= 'false'` にするのは fail closed のため: gate が落ちて output が空でも実行側へ倒す。
       #
       # **見るのは `product` ではなく `productUnit`。** 前者は Vercel build / release を

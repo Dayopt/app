@@ -64,5 +64,5 @@ event追加時はTypeScript allowlistだけを広げない。database check cons
 
 ## 関連
 
-- [Project overview](../projects/minimal-product-analytics/overview.md)
+- [Project overview](../projects/_archive/minimal-product-analytics/overview.md)
 - [Supabase運用](../engineering/infra.md)

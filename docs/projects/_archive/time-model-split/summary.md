@@ -50,6 +50,6 @@ Step 9c migration は、Step 9b 直後からの upgrade と全 migration の fre
 
 - [全体設計](./overview.md)
 - [Step 9 cleanup](./step-9-cleanup.md)
-- [ADR-025: time-model-split](../../product/log/2026-07-09-time-model-split.md)
-- [Plan / Record 仕様](../../product/specs/plan-record.md)
+- [ADR-025: time-model-split(../../../product/log/2026-07-09-time-model-split.md)
+- [Plan / Record 仕様(../../../product/specs/plan-record.md)
 - [GitHub Issue #1580](https://github.com/Dayopt/dayopt/issues/1580)

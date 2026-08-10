@@ -166,6 +166,28 @@ code: apps/product
     expect(validateDocumentMetadata(options)).toEqual([]);
   });
 
+  it('境界: _archive/ 配下の done Projectにも同じcontractを適用する', () => {
+    const root = createRoot();
+    createFile(root, 'apps/product/index.ts');
+    const content = `---
+status: done
+last_verified: 2026-07-14
+code: apps/product
+---
+`;
+    const options = {
+      content,
+      relativePath: 'docs/projects/_archive/example/overview.md',
+      root,
+      today: '2026-07-14',
+    } as const;
+
+    expect(validateDocumentMetadata(options)).toContain('done Projectにsummary.mdがない');
+
+    createFile(root, 'docs/projects/_archive/example/summary.md');
+    expect(validateDocumentMetadata(options)).toEqual([]);
+  });
+
   it('エラー系: 新規logはfrozenとfilenameに一致するdateを要求する', () => {
     const reasons = validateDocumentMetadata({
       content: `---

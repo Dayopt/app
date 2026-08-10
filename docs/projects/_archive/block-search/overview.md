@@ -57,6 +57,6 @@ Calendarを主役のまま保ち、必要なときだけ全期間のPlan / Recor
 
 ## Related Documents
 
-- [検索対象と表示をtag・メモに揃える決定](../../product/log/2026-07-15-feedback-block-search-tag-note.md)
-- [Calendar仕様](../../product/specs/calendar.md)
-- [Plan / Record仕様](../../product/specs/plan-record.md)
+- [検索対象と表示をtag・メモに揃える決定(../../../product/log/2026-07-15-feedback-block-search-tag-note.md)
+- [Calendar仕様(../../../product/specs/calendar.md)
+- [Plan / Record仕様(../../../product/specs/plan-record.md)

@@ -5,7 +5,7 @@
  *
  * CI の手書き paths、merge gate（finish-branch.sh）、Production Release、Vercel の
  * Ignored Build Step が**同じ規則**を共有するための単一の正本
- * （docs/projects/ci-monorepo-refactor/overview.md §5）。
+ * （docs/projects/_archive/ci-monorepo-refactor/overview.md §5）。
  *
  * 使い方:
  *   printf '%s\n' file1 file2 | node scripts/ci/impact.mjs --stdin
@@ -474,7 +474,7 @@ export function formatGithubOutput(impact) {
 // exit code の意味は Vercel の契約: **exit 1 = build 続行、exit 0 = build を skip**。
 // 基準は `VERCEL_GIT_PREVIOUS_SHA`（その project + branch の直前の**成功** deployment
 // の SHA。Ignored Build Step 設定時のみ露出）〜 HEAD。merge の親コミットとの diff では
-// ない（docs/projects/ci-monorepo-refactor/overview.md §8「Phase 4 への制約」。merge 単位
+// ない（docs/projects/_archive/ci-monorepo-refactor/overview.md §8「Phase 4 への制約」。merge 単位
 // で判定すると、失敗した release が取りこぼした変更を Vercel 側だけ永久に skip し続ける）。
 //
 // **fail open を徹底する**（= build 側に倒す）。env 欠落、対象 SHA が checkout の履歴に

@@ -25,6 +25,6 @@ Product / Web の問い合わせ配送を、削除済みの private GitHub repo 
 
 ## 運用
 
-受信・返信の実際の経路は [contact-email.md](../../operations/contact-email.md) を正本とする。追跡 issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) は COMPLETED で close 済み。
+受信・返信の実際の経路は [contact-email.md(../../../operations/contact-email.md) を正本とする。追跡 issue [#1646](https://github.com/Dayopt/dayopt/issues/1646) は COMPLETED で close 済み。
 
 詳細な設計と受入条件は [overview](./overview.md) を参照する。

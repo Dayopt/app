@@ -10,7 +10,7 @@ epic [#1812](https://github.com/Dayopt/dayopt/issues/1812)（2026-08-04 起票 �
 
 ## 達成したこと
 
-**変更ファイルから影響範囲を一度だけ判定し、CI・merge gate・Vercel・Production Release がその結果を共有する構成になった。** 判定の正本は [`scripts/ci/impact.mjs`](../../../scripts/ci/impact.mjs) 一箇所で、workflow の手書き paths・Vercel の skip・merge gate・release が別々の規則を持たない。
+**変更ファイルから影響範囲を一度だけ判定し、CI・merge gate・Vercel・Production Release がその結果を共有する構成になった。** 判定の正本は [`scripts/ci/impact.mjs`(../../../../scripts/ci/impact.mjs) 一箇所で、workflow の手書き paths・Vercel の skip・merge gate・release が別々の規則を持たない。
 
 overview §3 の期待挙動は次のとおり満たされた。
 
@@ -46,7 +46,7 @@ Web 側は「Vercel Preview URL への smoke」ではなく「Actions 上の bui
 
 ## 数値
 
-- **Unit test の実行環境分割で −27%**（2026-08-05 実測。詳細は [計測ログ](../../engineering/log/2026-08-05-unit-test-cost-measurement.md)）
+- **Unit test の実行環境分割で −27%**（2026-08-05 実測。詳細は [計測ログ(../../../engineering/log/2026-08-05-unit-test-cost-measurement.md)）
 - **e2e job は Supabase stack 込みで 4m44s**（timeout 20 分に対し十分な余裕。Supabase 起動は image pull 込み 1m38s）
 - **法務契約検査は 184 行の E2E → 0.5 秒の Vitest 10 ケース**へ。ブラウザ起動が不要になった
 

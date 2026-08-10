@@ -21,7 +21,7 @@ Product / Web の問い合わせを削除済みの private GitHub repository か
 
 ## 結果
 
-完了済み。達成した内容は [summary](./summary.md)、実際の受信・返信経路は [contact-email.md](../../operations/contact-email.md) を参照する。
+完了済み。達成した内容は [summary](./summary.md)、実際の受信・返信経路は [contact-email.md(../../../operations/contact-email.md) を参照する。
 
 ## Delivery
 
@@ -29,7 +29,7 @@ Product / Web の問い合わせを削除済みの private GitHub repository か
 2. **Abuse / privacy** — per-userまたはper-IPと全体quotaをfail-closedで適用し、問い合わせPIIをlogger / Sentry / HTTP responseへ記録しない。
 3. **Webhook** — Product / Web別の署名secretとsource tagを使い、processing leaseからprocessed markerへ遷移させる。
 4. **Production contract** — Production buildにResend・Upstash・Web Turnstileを要求し、Preview / Developmentの送信credentialをmetadata auditで拒否する。
-5. **Operations** — Cloudflare受信、Gmail返信、同一SHA deploy、送受信smoke、観察、旧経路cleanupを[runbook](../../operations/contact-email.md)どおりに行う。
+5. **Operations** — Cloudflare受信、Gmail返信、同一SHA deploy、送受信smoke、観察、旧経路cleanupを[runbook(../../../operations/contact-email.md)どおりに行う。
 
 ## Acceptance Criteria
 

@@ -6,7 +6,7 @@ code: apps/web/src/features/marketing
 
 # lp-launch-content — LP 監査・ローンチ前コンテンツ設計
 
-ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [marketing/channels/lp.md](../../marketing/channels/lp.md)、訴求方針は [business/messaging.md](../../business/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
+ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [marketing/channels/lp.md(../../../marketing/channels/lp.md)、訴求方針は [business/messaging.md(../../../business/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
 
 ---
 
@@ -16,20 +16,20 @@ code: apps/web/src/features/marketing
 
 **ローンチ前必須修正:**
 
-| #   | 問題                                                                                                                                                  | 根拠                                                                                        |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| A   | Hero「Own your time.」が確定戦略の既定ヘッドライン「Plan days you can actually keep.」と乖離                                                          | [business/messaging.md](../../business/messaging.md) §7                                     |
-| B   | Pricing の機能表記が架空（「最大3プロジェクト」「1GB/100GB ストレージ」「コミュニティサポート」— Dayopt に存在しない概念）                            | `packages/billing/src/plans.ts`、[product/specs/billing.md](../../product/specs/billing.md) |
-| C   | How の Learn pillar「AIがパターンを検出し、時間のP&Lを表示」— 実装はルールベース所見で、戦略も AI 非主軸。P&L メタファーは messaging.md §2 で深層限定 | `apps/product/src/features/review/lib/microInsights.ts`                                     |
-| D   | 「Free for 14 days」表記 — 実装は `dayoptProTrialDays = 7`（Pro のみ）。Free に試用期間の概念はない                                                   | `packages/billing/src/pricing.ts`                                                           |
-| E   | Free プランに「API アクセス」と記載 — 実装は MCP/API が Pro-gated                                                                                     | `apps/product/src/app/api/mcp/`（proProcedure）                                             |
-| F   | Problem / FAQ / Final CTA が LP に不在。差別化（vs Google Calendar / Todo / トラッカー）と誤解解消の場がない                                          | page.tsx は Hero + How + Pricing のみ                                                       |
-| G   | 実在する MCP サーバー（OAuth + entries.list）・iCalendar フィードが LP で一切訴求されていない                                                         | `apps/product/src/app/api/mcp/`、`/api/v1/calendar/[token]`                                 |
-| H   | CTA 遷移先が不統一（Hero → `https://app.dayopt.com/signup` 外部、Pricing/Header → `/signup` web 内部。後者の実在性要検証）                            | `HeroSection.tsx` / `PricingSection.tsx`                                                    |
+| #   | 問題                                                                                                                                                  | 根拠                                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| A   | Hero「Own your time.」が確定戦略の既定ヘッドライン「Plan days you can actually keep.」と乖離                                                          | [business/messaging.md(../../../business/messaging.md) §7                                     |
+| B   | Pricing の機能表記が架空（「最大3プロジェクト」「1GB/100GB ストレージ」「コミュニティサポート」— Dayopt に存在しない概念）                            | `packages/billing/src/plans.ts`、[product/specs/billing.md(../../../product/specs/billing.md) |
+| C   | How の Learn pillar「AIがパターンを検出し、時間のP&Lを表示」— 実装はルールベース所見で、戦略も AI 非主軸。P&L メタファーは messaging.md §2 で深層限定 | `apps/product/src/features/review/lib/microInsights.ts`                                       |
+| D   | 「Free for 14 days」表記 — 実装は `dayoptProTrialDays = 7`（Pro のみ）。Free に試用期間の概念はない                                                   | `packages/billing/src/pricing.ts`                                                             |
+| E   | Free プランに「API アクセス」と記載 — 実装は MCP/API が Pro-gated                                                                                     | `apps/product/src/app/api/mcp/`（proProcedure）                                               |
+| F   | Problem / FAQ / Final CTA が LP に不在。差別化（vs Google Calendar / Todo / トラッカー）と誤解解消の場がない                                          | page.tsx は Hero + How + Pricing のみ                                                         |
+| G   | 実在する MCP サーバー（OAuth + entries.list）・iCalendar フィードが LP で一切訴求されていない                                                         | `apps/product/src/app/api/mcp/`、`/api/v1/calendar/[token]`                                   |
+| H   | CTA 遷移先が不統一（Hero → `https://app.dayopt.com/signup` 外部、Pricing/Header → `/signup` web 内部。後者の実在性要検証）                            | `HeroSection.tsx` / `PricingSection.tsx`                                                      |
 
 ## 2. 設計方針
 
-- **一文コンセプト（[business/strategy.md](../../business/strategy.md)）を LP の背骨にする:** 「予定と実績のズレを毎日の学習に変え、『守れる計画』を立てられるようにする、いちばん軽いタイムボクシングツール」
+- **一文コンセプト（[business/strategy.md(../../../business/strategy.md)）を LP の背骨にする:** 「予定と実績のズレを毎日の学習に変え、『守れる計画』を立てられるようにする、いちばん軽いタイムボクシングツール」
 - **messaging.md の二層構造に従う:** 表層（Hero）= 上位ジョブ「守れる計画」を平易に。深層（Problem〜How〜API/MCP）= ツール断片化・計画と実績の統合・開かれたデータ構造。
 - **実装に存在するものだけを書く。** 架空機能・誇張・AI 前面化を全廃する。
 - **AI の向きを逆にする:** 「Dayopt に AI が入っている」ではなく「あなたの AI エージェントから Dayopt のデータを扱える」（MCP）。
@@ -91,7 +91,7 @@ code: apps/web/src/features/marketing
 
 ### Pricing
 
-- Free（最終リストは実装時に [product/specs/billing.md](../../product/specs/billing.md) / proProcedure ゲートと照合）:
+- Free（最終リストは実装時に [product/specs/billing.md(../../../product/specs/billing.md) / proProcedure ゲートと照合）:
   - カレンダー（日・週・複数日ビュー）/ 計画と実績の記録 / 基本指標のレビュー / タグ
   - description ja: 「基本的な記録と振り返りは、ずっと無料でお使いいただけます」
 - Pro（$5/月、年払い $48）:

@@ -39,7 +39,7 @@ Stripe verified + deduplicated ───┘                  │
 2. 1秒で打ち切るbest-effort helperを作り、失敗をproduct mutationへ伝播させない
 3. 各featureのserver境界で成功後にeventを記録する。tRPC batch checkoutだけはapp compositionで成功responseを判定し、`after()`へ渡す
 4. allowlist、空payload、失敗非伝播、重複抑止、route / service接続をtestで固定する
-5. 日次数とretentionの運用契約を[product analytics運用](../../operations/product-analytics.md)へ残す
+5. 日次数とretentionの運用契約を[product analytics運用(../../../operations/product-analytics.md)へ残す
 
 ## Acceptance Criteria
 

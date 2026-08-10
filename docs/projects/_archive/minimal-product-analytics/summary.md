@@ -20,7 +20,7 @@ code:
 - `product_events`は6つのevent nameと空の`properties`だけを許可する。browser roleには権限を与えず、applicationの`service_role`はINSERTだけを持つ
 - signupは`auth.users`のadditiveな`AFTER INSERT` trigger、Plan / Record / Reviewは認証済みserver境界、checkoutはtRPC responseの成功index、subscriptionはStripeの処理済みmarker後に記録する
 - application helperは1秒で打ち切るbest-effort処理とし、分析障害を本処理へ伝播させない。signup triggerも例外を吸収してaccount作成を継続する
-- 90日より古いeventは、1回最大10,000件のowner-only functionを日次cronから実行して削除する。件数確認とretention backlogの診断queryは[運用手順](../../operations/product-analytics.md)に集約した
+- 90日より古いeventは、1回最大10,000件のowner-only functionを日次cronから実行して削除する。件数確認とretention backlogの診断queryは[運用手順(../../../operations/product-analytics.md)に集約した
 - タグ未設定と削除済みtag IDは同じsyntheticな未分類bucketへ集約し、実体タグとして選択できないneutral表示にした。タグ別内訳の合計は総記録時間と一致する
 - Webの全7 API routeが静的な`maxDuration`を宣言し、`vercel.json`の競合しうる`functions` globを撤去した。Resendの15秒contractは維持した
 

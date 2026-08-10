@@ -191,10 +191,12 @@ export function classifyDocument(
   if (GENERATED_DOCS.includes(relativePath)) return 'generated';
   if (relativePath === 'docs/README.md' || isReadme(relativePath)) return undefined;
 
-  if (/^docs\/projects\/[^/]+\/overview\.md$/.test(relativePath)) {
+  // `_archive/` は完了 Project の移設先（§設計書の保存場所）。同じ contract を
+  // そのまま適用する（archive 後も status: done + summary.md の要件は変わらない）。
+  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/overview\.md$/.test(relativePath)) {
     return 'project-overview';
   }
-  if (/^docs\/projects\/[^/]+\/[^/]+\.md$/.test(relativePath)) {
+  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/[^/]+\.md$/.test(relativePath)) {
     return 'project-document';
   }
 

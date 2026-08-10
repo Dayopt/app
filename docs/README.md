@@ -63,7 +63,7 @@ code:
 
 - `active`: 実装または検証が進行中
 - `paused`: 意図的に停止中
-- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須
+- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須で、ディレクトリごと `docs/projects/_archive/{name}/` へ移す
 - step / summary は通常の stock metadata（`current | superseded`）を使う
 
 ### Log — 当時の記録
@@ -101,7 +101,8 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 監視・alert                    | `operations/monitoring.md`                                   |
 | security                       | `operations/security.md`                                     |
 | 契約サービス                   | `company/accounts.md`                                        |
-| 進行中・完了Project            | `projects/*/overview.md`, `summary.md`                       |
+| 進行中Project                  | `projects/*/overview.md`                                     |
+| 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`              |
 | なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                       |
 
 ## 書く場所の決定木
