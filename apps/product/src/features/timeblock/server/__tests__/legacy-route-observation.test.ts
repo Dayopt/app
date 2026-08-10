@@ -68,7 +68,7 @@ describe('legacy timeblock route observation (candidate 8 Stage 8-1)', () => {
 
     await caller.delete({ id: '00000000-0000-4000-8000-000000000001' });
 
-    expect(setTag).toHaveBeenCalledWith('legacyTimeblockPath', 'plans.delete');
+    expect(setTag).toHaveBeenCalledWith('operation', 'plans.delete');
     expect(captureMessage).toHaveBeenCalledWith('legacy_timeblock_route_invoked', 'warning');
   });
 

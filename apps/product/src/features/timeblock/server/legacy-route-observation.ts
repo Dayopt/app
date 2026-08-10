@@ -18,7 +18,10 @@ import { protectedProcedure } from '@/lib/trpc/procedures';
 export const legacyTimeblockMutationProcedure = protectedProcedure.use(async ({ path, next }) => {
   logger.warn('legacy_timeblock_route_invoked', { path });
   Sentry.withScope((scope) => {
-    scope.setTag('legacyTimeblockPath', path);
+    // tag key は observability の allowlist（sanitizeTags）に載っている
+    // `operation` を使う。allowlist 外の独自 key は production の beforeSend で
+    // 削除され、procedure 別の絞り込みができなくなる。
+    scope.setTag('operation', path);
     Sentry.captureMessage('legacy_timeblock_route_invoked', 'warning');
   });
   return next();
