@@ -194,6 +194,7 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 - [ ] 適切な RLS ポリシーを設定したか
 - [ ] `authenticated` への `GRANT` を明示したか（RLS + policy + GRANT をセットで。Data API 自動公開に依存しない）
 - [ ] `anon` に過剰な権限を付与していないか（公開読み取りが必要なテーブルのみ `SELECT` を個別付与）
+- [ ] 新規テーブルで不要な grant を `REVOKE ALL ON TABLE ... FROM PUBLIC, anon, authenticated` で明示的に閉じたか（**production の `pg_default_acl` は新規 public テーブルに anon/authenticated へ `arwdDxtm`（ほぼ全権限）を既定付与するが、local/Preview は `Dxtm` のみ**。REVOKE を書き忘れると production でだけテーブルが開き、local と CI では再現しない。#1715）
 - [ ] Realtime が必要な場合だけ `supabase_realtime` publication に追加したか
 - [ ] `user_id` カラムがあるか(ユーザーデータの場合)
 - [ ] `ON DELETE CASCADE` を設定したか
