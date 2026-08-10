@@ -52,6 +52,8 @@ repo testは、protocol handler、route、server、tool registryを通して少�
 - baseline: `apps/product/scripts/mcp-conformance-expected-failures.yml`。許可する failure は「suite専用diagnostic toolの不在」と「意図的に実装しないoptional capability（Dayopt MCPはtoolsのみを宣言）」の2種だけで、各IDに理由をコメントで残す。baseline外のfailure / warningはCLIが非0 exitで落とす
 - 2026-08-10時点の結果: active suite 30 scenario、pass 7（`server-initialize` / `ping` / `tools-list` / `tools-call-simple-text` / `tools-call-error` / `dns-rebinding-protection` / `server-sse-multiple-streams`はwarningのみ）、expected failure 23（resources / prompts / logging / completion等の未宣言capability 13、診断tool不在 10）
 - SDK 1.30の`allowedHosts` / `allowedOrigins`はdeprecatedのため、host / origin検証（DNS rebinding protection）はharness側のadapterが自前実装する
+- **`dns-rebinding-protection`のpassはadapter境界の検証であり、production routeの検証ではない**。`route.ts`は`rejectUnexpectedOAuthHost`（request URLのhost固定）とbearer認証で境界を張り、Origin headerは意図的に拒否しない — browser上で動くMCP client（web版のChatGPT / Claude等）は正当なcross-origin fetchでOriginを送るため、Origin拒否はclosed betaの対象clientを壊しうる。DNS rebindingはlocalhost dev serverを標的にする攻撃で、公開HTTPS + bearer必須のremote endpointでは「Host固定 + token無しは401」が同じ攻撃を終端する。この判断を変える場合（Origin allowlistの導入等）は3 client実機検証とセットで行う
+- harness contextはregistryの全requiredScope（read 4 + write / delete 4）を持つfull-scope固定。read-onlyだとwrite系toolが`tools/list`に現れずschemaのspec準拠が未検証のままpassする。scope filterの挙動自体（read-only contextでwrite toolが見えない）はunit testが固定しており、conformanceの責務にしない
 
 ## Required release evidence
 

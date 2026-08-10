@@ -81,7 +81,7 @@ DROP しない対象（紛らわしいが現役）:
 
 前提条件:
 
-- **旧 writer 継続利用の停止条件**: 観測期間内に新規作成された `legacy_read_only = true` の connection 行数（`oauth_connections` の `created_at` で絞る）を数え、1 件でもあれば 8-3 を適用しない。codes / tokens の `connection_id IS NULL` 行数は**この証拠に使えない** — `bind_legacy_oauth_insert_to_connection` は `BEFORE INSERT` で NULL を非 NULL に書き換えるため、旧 writer の発行が継続していても NULL 行は常に 0 になりうる。trigger 実行を直接計測できる場合はそれを優先する
+- **旧 writer 継続利用の停止条件**: 観測期間内に新規発行された codes / tokens のうち `legacy_read_only = true` の connection に紐づく行数（`oauth_authorization_codes` / `oauth_tokens` の `created_at` で絞り、`oauth_connections` へ join）を数え、1 件でもあれば 8-3 を適用しない。あわせて観測期間内に新規作成された legacy connection 行数も記録する。この 2 つで発行経路を全数覆う: legacy 発行はすべて codes / tokens への INSERT として現れ、新規 connection を作る経路（`bind_legacy_oauth_insert_to_connection` の新規紐付け）も既存 family への rebind 経路（`parent_token_id` 経由で既存 connection に結び直す `20260729062433` の trigger 分岐）も、発行行自体は必ず legacy connection に bind されて残る。**使えない指標 2 つ**: codes / tokens の `connection_id IS NULL` 行数（`BEFORE INSERT` trigger が NULL を書き換えるため常に 0 になりうる）、legacy connection の新規作成数単独（既存 refresh family の継続利用を見落とす）
 - **`SET NOT NULL` の可否判定**: 既存の `connection_id IS NULL` の codes / tokens 行数を記録する（これは過去に trigger を経ずに残った行の是正対象の把握であり、上の停止条件とは別物）。残っている場合、`SET NOT NULL` の前に期限切れ削除（retention）での自然消滅を待つか、明示承認の上で終端させるかを決める
 - `disable_pre_client_gate_write_connections` の対象件数は **migration と同じ predicate**（`write_enabled_at IS NOT NULL AND write_disabled_at IS NULL`）で数える — `write_enabled_at IS NOT NULL` だけで数えると無効化済みの行まで対象候補に含め、実際の UPDATE 対象 0 件でも 8-3 を不要に停止させる。参考値として `write_enabled_at IS NOT NULL` の総数も併記してよいが、停止判定に使うのは前者
 

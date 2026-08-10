@@ -46,10 +46,22 @@ const CONFORMANCE_CHILD_ENV_KEYS = [
 /** localhost 判定は DNS rebinding protection の対象を host/origin どちらでも同一基準にする。 */
 const LOCALHOST_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 
+// registry の全 requiredScope を持つ full-scope context。read-only context だと
+// write / delete 系 tool が tools/list に一度も現れず、その schema の spec 準拠が
+// 検証されないまま pass してしまう（scope filter 自体は unit test が固定する）。
 const CONFORMANCE_AUTH_INFO: AuthInfo = {
   token: '<redacted>',
   clientId: 'chatgpt',
-  scopes: ['read:entries', 'read:tags', 'read:constraints', 'read:stats'],
+  scopes: [
+    'read:entries',
+    'read:tags',
+    'read:constraints',
+    'read:stats',
+    'write:plans',
+    'delete:plans',
+    'write:records',
+    'delete:records',
+  ],
   resource: new URL('https://mcp.dayopt.app'),
   extra: {
     tokenId: 'conformance-token',
