@@ -71,7 +71,16 @@ export function McpConnectionsSettings() {
     <>
       <McpConnectionsSettingsView
         loading={connections.isLoading}
-        error={connections.isError}
+        // `isError` をそのまま渡してはいけない。TanStack Query の
+        // `isFetchNextPageError` は `isError && fetchDirection === 'forward'`（
+        // query-core の infiniteQueryObserver）で、**`isError` の部分集合**になる。
+        // つまり「もっと見る」の失敗でも `isError` は true になり、これを全体エラーの
+        // 条件にすると既読の行と revoke 導線ごと ErrorState に差し替わって、下の
+        // inline エラーには到達しない（追加読み込み失敗で一覧が消える）。
+        // 全体を潰してよいのは初回取得失敗（isLoadingError）と、次ページ以外の
+        // refetch 失敗（isRefetchError。infinite query では fetchNextPage /
+        // fetchPreviousPage 方向が除外済み）だけ。
+        error={connections.isLoadingError || connections.isRefetchError}
         hasConnections={rows.length > 0}
         onRetry={() => void connections.refetch()}
         hasNextPage={connections.hasNextPage}

@@ -45,11 +45,42 @@ const CURSOR_CONNECTION: ConnectionFixture = {
 const pagesState = vi.hoisted(() => ({
   value: [] as Array<{ items: ConnectionFixture[]; nextCursor: unknown }>,
 }));
-const infiniteQueryState = vi.hoisted(() => ({
-  hasNextPage: false,
-  isFetchingNextPage: false,
-  isFetchNextPageError: false,
-}));
+// エラー状態は個別の boolean ではなく「どこで失敗したか」の 1 値で持つ。
+// TanStack Query の各 flag は独立ではなく、query-core の実装上
+//   isError          = status === 'error'
+//   isFetchNextPageError = isError && fetchDirection === 'forward'   ← isError の部分集合
+//   isLoadingError   = isError && !hasData
+//   isRefetchError   = isError && hasData && !isFetchNextPageError && !isFetchPreviousPageError
+// という従属関係にある。flag を個別に立てられる mock だと
+// 「isFetchNextPageError だけ true で isError は false」という現実には存在しない状態を
+// 書けてしまい、実際にそれで追加読み込み失敗時に一覧が丸ごと消えるバグを見逃した。
+// ここでは失敗地点だけを指定させ、flag は下の deriveQueryFlags が実装と同じ式で導出する。
+const infiniteQueryState = vi.hoisted(
+  () =>
+    ({
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      failure: null,
+    }) as {
+      hasNextPage: boolean;
+      isFetchingNextPage: boolean;
+      /** null = 成功 / 'initial' = 初回取得失敗 / 'refetch' = 再取得失敗 / 'nextPage' = 「もっと見る」失敗 */
+      failure: null | 'initial' | 'refetch' | 'nextPage';
+    },
+);
+
+/** query-core と同じ従属関係で flag を導出する（個別に立てさせない）。 */
+function deriveQueryFlags(failure: typeof infiniteQueryState.failure) {
+  const isError = failure !== null;
+  const hasData = failure !== 'initial';
+  const isFetchNextPageError = failure === 'nextPage';
+  return {
+    isError,
+    isFetchNextPageError,
+    isLoadingError: isError && !hasData,
+    isRefetchError: isError && hasData && !isFetchNextPageError,
+  };
+}
 const fetchNextPage = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
 const revokeUseMutationCallCount = vi.hoisted(() => ({ value: 0 }));
@@ -101,10 +132,9 @@ vi.mock('@/lib/trpc', () => ({
         useInfiniteQuery: () => ({
           data: { pages: pagesState.value },
           isLoading: false,
-          isError: false,
           hasNextPage: infiniteQueryState.hasNextPage,
           isFetchingNextPage: infiniteQueryState.isFetchingNextPage,
-          isFetchNextPageError: infiniteQueryState.isFetchNextPageError,
+          ...deriveQueryFlags(infiniteQueryState.failure),
           fetchNextPage,
           refetch: listRefetch,
         }),
@@ -133,7 +163,7 @@ describe('McpConnectionsSettings', () => {
     setRows([CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION]);
     infiniteQueryState.hasNextPage = false;
     infiniteQueryState.isFetchingNextPage = false;
-    infiniteQueryState.isFetchNextPageError = false;
+    infiniteQueryState.failure = null;
     mutationState.isPending = false;
     revokeUseMutationCallCount.value = 0;
     revokeMutationOptions.current = null;
@@ -383,5 +413,54 @@ describe('McpConnectionsSettings', () => {
     expect(
       screen.queryByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('「もっと見る」が失敗しても既読の行と revoke 導線は残り、inline エラーだけが増える', () => {
+    // Codex レビュー指摘（P2）の回帰テスト。query-core では
+    // `isFetchNextPageError = isError && fetchDirection === 'forward'` なので、
+    // 次ページ失敗時は isError も true になる。全体エラーの条件に isError を使うと
+    // 既読の行ごと ErrorState に差し替わり、revoke 導線が消える（＝ #1909 が
+    // 閉じようとしている「revoke できない」状態が別経路で復活する）。
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+    ];
+    infiniteQueryState.hasNextPage = true;
+    infiniteQueryState.failure = 'nextPage';
+    render(<McpConnectionsSettings />);
+
+    // 既読の行と revoke 導線が生きている（ErrorState に差し替わっていない）。
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('loadError')).not.toBeInTheDocument();
+
+    // 失敗は「もっと見る」導線のそばの inline 文言だけで伝える。
+    expect(screen.getByText('loadMoreError')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'loadMore' })).toBeInTheDocument();
+  });
+
+  it('初回取得の失敗はページ全体を ErrorState にする', () => {
+    pagesState.value = [];
+    infiniteQueryState.failure = 'initial';
+    render(<McpConnectionsSettings />);
+
+    expect(screen.getByText('loadError')).toBeInTheDocument();
+    expect(screen.queryByText('loadMoreError')).not.toBeInTheDocument();
+  });
+
+  it('次ページ以外の再取得失敗は、従来どおりページ全体を ErrorState にする', () => {
+    // useQuery だった頃の挙動（isError → ErrorState）を次ページ以外では維持する。
+    // design-system.md の「UI を描画する全 query は isError を ErrorState で扱う」に従う。
+    setRows([CLAUDE_CONNECTION]);
+    infiniteQueryState.failure = 'refetch';
+    render(<McpConnectionsSettings />);
+
+    expect(screen.getByText('loadError')).toBeInTheDocument();
   });
 });
