@@ -36,7 +36,9 @@ Dayoptは個人向けFreemium subscriptionとして運営する。この文書�
 
 `ANTHROPIC_API_KEY`やlegacy DB fieldがrepo内に残っていても、それだけで現行サービス原価に含めない。runtime dependencyは実際のconsumerを確認して判断する。
 
-## Metrics
+## Metrics（指標定義のSSOT）
+
+Dayoptが追う指標の定義。同じ名前の指標が文書によって違う定義で使われることを防ぐため、ここを正本とする（旧 `kpi.md` を吸収、2026-08-10）。
 
 ```text
 MRR = active paid subscribers × monthly price
@@ -46,7 +48,30 @@ conversion = new paid subscribers / eligible trial or free users
 churn = canceled paid subscribers / paid subscribers at period start
 ```
 
-推定値ではなくStripe、Vercel、Supabase等のdashboardから同じ期間の実数を取得する。secretや個人情報はdocsへ転記しない。
+推定値ではなくStripe、Vercel、Supabase等のdashboardから同じ期間の実数を取得する。secretや個人情報はdocsへ転記しない。実数の定期取得は月次ガーデニング（`.claude/skills/gardening/SKILL.md` §自動パート）がjournalに記録する。
+
+### 成長ファネルの計測指標
+
+グロースサイクル（認知 → 登録 → 定着 → 課金）の各ステップに1指標。運用は[marketing/strategy.md](../marketing/strategy.md)を参照。
+
+| 名前                         | 定義式                                                                  | データソース                                             | なぜこの定義か                                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **指名検索数**               | Dayopt / dayopt を含む検索語のクエリ数（月次）                          | Google Search Console                                    | 認知ステップの計測指標。有料広告を使わない前提で、口コミ・コンテンツ発信の効果を唯一測れる先行指標           |
+| **CVR（登録CVR）**           | LP訪問者数のうち登録完了に至った割合                                    | Vercel Analytics + Supabase `profiles`                   | 登録ステップの計測指標。「試してみよう」への転換を見る                                                       |
+| **WAU**                      | 直近7日間に1件以上 Plan または Record を作成/編集したユニークユーザー数 | Supabase `plans` / `records` テーブル                    | 定着ステップの計測指標。週次にするのは、時間管理アプリの利用が毎日ではなく数日おきになりうるため             |
+| **課金率（Free→Pro転換率）** | 一定期間内にProへアップグレードしたFreeユーザーの割合                   | Stripe + Supabase `profiles.subscription_status`         | 課金ステップの計測指標。目標値は実データの母数ができてから置く（過去のBEP試算の5-10%は未検証でGit履歴扱い）  |
+| **月次解約率（チャーン）**   | 当月中に解約した Pro ユーザー数 ÷ 月初の Pro ユーザー数                 | Stripe                                                   | 事業の持続可能性を見る2指標の1つ。コホート別リテンション曲線はユーザー数が少ないうちは追わない（2026-07-03） |
+| **粗利率**                   | (売上 − インフラ・ツールコスト) / 売上                                  | Stripe売上 + [accounts.md](../company/accounts.md)の実費 | 持続可能性のもう1つの指標。コスト構造はスケールで変わるため実invoiceで定期的に再計算する                     |
+
+### 意図的に追わないもの
+
+- **共有・口コミ数** — 計測困難なため意図的に追わない（自然に任せる）
+- **他社との比較指標**（業界平均等） — 非交差のvalue curveを取る戦略のため、競合とのKPI比較は意味を持たない（[competitors.md](./competitors.md)）
+- **LTV / CAC** — 有料広告を使わない前提のためCACは実質0であり、比率管理は意味を持たない。持続可能性は粗利率とチャーン率で見る
+
+### プロダクト内で見せる指標との関係
+
+ユーザーに見せる進捗指標は事業KPIとは別系統。一次証拠は**見積もり精度の推移**（過去の自分との事実比較。[strategy.md §4-6](./strategy.md)）であり、ストリーク・点数・ランク等のgamification指標はプロダクトにも事業KPIにも存在しない。
 
 ## Scale decision triggers
 

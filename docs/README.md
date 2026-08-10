@@ -89,12 +89,12 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 
 | 質問                           | 正本                                                         |
 | ------------------------------ | ------------------------------------------------------------ |
-| なぜ作るか / 誰向けか          | `business/strategy.md`, `business/icp.md`                    |
+| なぜ作るか / 誰向けか          | `business/strategy.md`, `marketing/icp.md`                   |
 | 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md` |
 | プロダクト原則・不採用方針     | `product/principles.md`                                      |
 | 現在の機能仕様                 | `product/specs/*.md`                                         |
 | UI / code用語                  | `product/glossary.md`                                        |
-| 訴求・コピー                   | `business/messaging.md`                                      |
+| 訴求・コピー                   | `marketing/messaging.md`                                     |
 | 全体 architecture / state flow | `engineering/architecture.md`                                |
 | coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`            |
 | env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`              |

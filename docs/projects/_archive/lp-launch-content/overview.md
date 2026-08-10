@@ -6,7 +6,7 @@ code: apps/web/src/features/marketing
 
 # lp-launch-content — LP 監査・ローンチ前コンテンツ設計
 
-ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [marketing/channels/lp.md](../../../marketing/channels/lp.md)、訴求方針は [business/messaging.md](../../../business/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
+ローンチ前 LP（apps/web トップページ）の監査結果と、確定コピー・セクション構成の設計書。実装 Issue（GitHub）の正となるドキュメント。ビジュアル方向性は [marketing/channels/lp.md](../../../marketing/channels/lp.md)、訴求方針は [marketing/messaging.md](../../../marketing/messaging.md) が正で、本書はそれらを LP のコンテンツ仕様に落とす。
 
 ---
 
@@ -18,7 +18,7 @@ code: apps/web/src/features/marketing
 
 | #   | 問題                                                                                                                                                  | 根拠                                                                                           |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| A   | Hero「Own your time.」が確定戦略の既定ヘッドライン「Plan days you can actually keep.」と乖離                                                          | [business/messaging.md](../../../business/messaging.md) §7                                     |
+| A   | Hero「Own your time.」が確定戦略の既定ヘッドライン「Plan days you can actually keep.」と乖離                                                          | [marketing/messaging.md](../../../marketing/messaging.md) §7                                   |
 | B   | Pricing の機能表記が架空（「最大3プロジェクト」「1GB/100GB ストレージ」「コミュニティサポート」— Dayopt に存在しない概念）                            | `packages/billing/src/plans.ts`、[product/specs/billing.md](../../../product/specs/billing.md) |
 | C   | How の Learn pillar「AIがパターンを検出し、時間のP&Lを表示」— 実装はルールベース所見で、戦略も AI 非主軸。P&L メタファーは messaging.md §2 で深層限定 | `apps/product/src/features/review/lib/microInsights.ts`                                        |
 | D   | 「Free for 14 days」表記 — 実装は `dayoptProTrialDays = 7`（Pro のみ）。Free に試用期間の概念はない                                                   | `packages/billing/src/pricing.ts`                                                              |

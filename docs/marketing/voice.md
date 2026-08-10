@@ -94,7 +94,7 @@ Dayoptの説明は、それに答えた後で十分。
 
 1人創業者だからこそできる「人間臭さ」を活かす。
 
-Dayoptは「内向きの充実」を求める人のためのツール（参照: [icp.md](../business/icp.md)）。
+Dayoptは「内向きの充実」を求める人のためのツール（参照: [icp.md](./icp.md)）。
 この特性と深津氏の提言は相性が良い。
 
 | 強み             | 活かし方                                                |
@@ -142,6 +142,6 @@ Dayoptは「内向きの充実」を求める人のためのツール（参照: 
 
 ## 🔗 関連ドキュメント
 
-📖 **前提知識・トーン**: [messaging.md](../business/messaging.md) - コンテンツのトーン・キャラクター、伝える価値(§6-7)
-🔗 **本能マッピング**: [icp.md](../business/icp.md) - ターゲット層の理解
+📖 **前提知識・トーン**: [messaging.md](./messaging.md) - コンテンツのトーン・キャラクター、伝える価値(§6-7)
+🔗 **本能マッピング**: [icp.md](./icp.md) - ターゲット層の理解
 🔗 **SNS運用**: [`channels/x.md`](./channels/x.md) / [`channels/reddit.md`](./channels/reddit.md) - 投稿方針
