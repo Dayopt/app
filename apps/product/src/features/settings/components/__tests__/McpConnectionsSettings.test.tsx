@@ -155,7 +155,7 @@ vi.mock('@/lib/trpc', () => ({
 
 import { toast } from '@/lib/toast';
 
-import { McpConnectionsSettings } from '../McpConnectionsSettings';
+import { getMcpConnectionsNextPageParam, McpConnectionsSettings } from '../McpConnectionsSettings';
 
 describe('McpConnectionsSettings', () => {
   beforeEach(() => {
@@ -382,8 +382,13 @@ describe('McpConnectionsSettings', () => {
     expect(fetchNextPage).toHaveBeenCalledOnce();
   });
 
-  it('2 ページ既読の状態で 1 ページ目の行を revoke しても、再取得後に重複・欠落が起きない', () => {
-    // revoke 前: 2 ページ既読（claude, chatgpt | cursor）。
+  it('再取得で pages が入れ替わったら、描画も新しい pages だけになる（古い行が残らない）', () => {
+    // このテストが証明するのは **描画側だけ**（cache に載っている pages を
+    // flatMap して描くこと、古い pages が残留しないこと）。
+    // 「revoke → invalidate → 1 ページ目から再取得 → 更新後 cursor で 2 ページ目」という
+    // 実際の往復とページ再構築は、component を丸ごと mock した test では観測できないため
+    // ここでは主張しない。cursor による全件走査（重複・欠落なし）は実 PostgREST に対する
+    // mcp-connections-list-cursor.integration.test.ts が担保する。
     pagesState.value = [
       {
         items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
@@ -393,11 +398,7 @@ describe('McpConnectionsSettings', () => {
     ];
     const { rerender } = render(<McpConnectionsSettings />);
 
-    // revoke 後の再取得（refetchOnMount: 'always' 相当）は 1 ページ目から取り直し、
-    // TanStack Query が各ページの cursor を新しいレスポンスから再計算する
-    // （context7 で確認済み: 「no direction = refetch」は pageParams を再利用せず、
-    // 1 ページ目から順に getNextPageParam で計算し直す）。claude が消えた分、
-    // chatgpt が 1 ページ目へ繰り上がり、cursor が新しい行を指すよう更新される。
+    // 再取得後の cache 状態（claude が revoke され、1 ページに収まった）に差し替える。
     pagesState.value = [{ items: [CHATGPT_CONNECTION, CURSOR_CONNECTION], nextCursor: null }];
     rerender(<McpConnectionsSettings />);
 
@@ -452,6 +453,24 @@ describe('McpConnectionsSettings', () => {
 
     expect(screen.getByText('loadError')).toBeInTheDocument();
     expect(screen.queryByText('loadMoreError')).not.toBeInTheDocument();
+  });
+
+  it('getNextPageParam は nextCursor をそのまま次ページ要求へ渡す', () => {
+    // 「もっと見る」で server に送る cursor そのもの。field 名を取り違えたり、
+    // 生値を Date 経由で作り直したりすると、同一ミリ秒内の行が欠落・重複する。
+    const nextCursor = { authorizedAt: '2026-08-01T00:00:00.123456Z', id: 'conn-claude' };
+
+    expect(getMcpConnectionsNextPageParam({ items: [CLAUDE_CONNECTION], nextCursor })).toEqual(
+      nextCursor,
+    );
+  });
+
+  it('getNextPageParam は最終ページで undefined を返す（hasNextPage を false にする）', () => {
+    // null をそのまま返しても query-core の `!= null` 判定では同義だが、
+    // 「次は無い」を undefined で表す tRPC の契約に合わせる。
+    expect(
+      getMcpConnectionsNextPageParam({ items: [CLAUDE_CONNECTION], nextCursor: null }),
+    ).toBeUndefined();
   });
 
   it('次ページ以外の再取得失敗は、従来どおりページ全体を ErrorState にする', () => {

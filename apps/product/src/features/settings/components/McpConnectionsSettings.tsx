@@ -13,8 +13,23 @@ import { McpConnectionRowView, McpConnectionsSettingsView } from './McpConnectio
 
 // router の戻り値から推論する。手書きの型 + `as` cast にすると、server 側の shape が
 // 変わっても型エラーにならず UI が黙って古い前提のまま動く。
-type McpConnectionSummary =
-  inferRouterOutputs<AppRouter>['mcpConnections']['list']['items'][number];
+type McpConnectionsListPage = inferRouterOutputs<AppRouter>['mcpConnections']['list'];
+type McpConnectionSummary = McpConnectionsListPage['items'][number];
+
+/**
+ * 次ページの cursor を TanStack Query へ渡す。最終ページ（`nextCursor === null`）は
+ * undefined へ畳む（query-core の `hasNextPage` は `getNextPageParam(...) != null` で
+ * 判定するため null / undefined は同義。tRPC の docs に合わせて undefined を返す）。
+ *
+ * inline lambda のままだと、field 名の取り違えや null の扱いといった「配線」を
+ * test で固定できない（component 越しでは cache に載った pages を描くだけで、
+ * 次ページ要求の中身は観測できない）。named export にして直接検証する。
+ */
+export function getMcpConnectionsNextPageParam(
+  lastPage: McpConnectionsListPage,
+): McpConnectionsListPage['nextCursor'] | undefined {
+  return lastPage.nextCursor ?? undefined;
+}
 
 export function McpConnectionsSettings() {
   const t = useTranslations('settings.integrations.mcpConnections');
@@ -29,7 +44,7 @@ export function McpConnectionsSettings() {
       retry: false,
       refetchOnMount: 'always',
       initialCursor: null,
-      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      getNextPageParam: getMcpConnectionsNextPageParam,
     },
   );
 
