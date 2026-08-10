@@ -380,13 +380,15 @@ WHERE operation.operation_id IN (
   :'second_operation_id'::UUID
 );
 
+-- outbox の expires_at は未来に保つ（#1866）。この列を読むのは pg_cron の
+-- ハード期限切れ掃除（expire-calendar-revoke-outbox、毎分、FOR UPDATE SKIP LOCKED、
+-- operation の state / lock を見ない）だけで、テスト対象の
+-- expire_calendar_revoke_authority_v3 経路は operations 側の expires_at のみ参照する。
+-- ここを過去に倒すと、setup〜assertion の間に cron tick が挟まった時だけ
+-- deferred 行の outbox まで消えて '0|1' 期待が '0|0' になる（CI flake の原因）。
 UPDATE private.calendar_revoke_outbox AS queued
 SET created_at = pg_catalog.clock_timestamp() - INTERVAL '2 hours',
-    expires_at = CASE
-      WHEN queued.id = :'first_operation_id'::UUID
-        THEN pg_catalog.clock_timestamp() - INTERVAL '2 minutes'
-      ELSE pg_catalog.clock_timestamp() - INTERVAL '1 minute'
-    END
+    expires_at = pg_catalog.clock_timestamp() + INTERVAL '1 hour'
 WHERE queued.id IN (
   :'first_operation_id'::UUID,
   :'second_operation_id'::UUID
