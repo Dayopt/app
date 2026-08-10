@@ -2,6 +2,7 @@
 import nextPlugin from '@next/eslint-plugin-next';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default [
   {
@@ -40,6 +41,60 @@ export default [
       // any型禁止（CLAUDE.md準拠）
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['src/**/*.{jsx,tsx}'],
+    ignores: [
+      '**/*.test.{jsx,tsx}',
+      '**/*.spec.{jsx,tsx}',
+      '**/*.stories.{jsx,tsx}',
+      '**/__tests__/**',
+    ],
+    plugins: {
+      'jsx-a11y': jsxA11y,
+    },
+    rules: {
+      'jsx-a11y/alt-text': 'error',
+      'jsx-a11y/control-has-associated-label': [
+        'error',
+        {
+          controlComponents: ['Button'],
+          ignoreElements: ['td'],
+          depth: 5,
+        },
+      ],
+    },
+  },
+  // 本番コードは将来追加されるディレクトリも含めて named export に統一する。
+  // Next.js / next-intl が default export を要求するentrypointだけを明示除外する。
+  {
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
+    ignores: [
+      '**/*.test.{ts,tsx,js,jsx}',
+      '**/*.spec.{ts,tsx,js,jsx}',
+      '**/*.stories.{ts,tsx,js,jsx}',
+      '**/__tests__/**',
+      'src/app/**/{page,layout,loading,error,not-found,template,default}.{ts,tsx,js,jsx}',
+      'src/app/{global-error,global-not-found,forbidden,unauthorized}.{ts,tsx,js,jsx}',
+      'src/app/**/{icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx,js,jsx}',
+      'src/app/**/sitemap.{ts,js}',
+      'src/app/{robots,manifest}.{ts,js}',
+      'src/platform/i18n/request.ts',
+    ],
+    rules: {
+      'no-restricted-exports': [
+        'error',
+        {
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
+        },
+      ],
     },
   },
   // テスト用グローバル変数

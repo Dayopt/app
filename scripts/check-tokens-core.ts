@@ -147,7 +147,6 @@ export const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
       '(text|bg|border)-(gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]',
     message: '直接カラークラスは禁止。semantic token を使用',
     suggestion: 'text-gray-500 → text-muted-foreground, bg-blue-500 → bg-primary',
-    warnOnly: true, // stories のドキュメント例を含むため段階移行
   },
   // z-index 準拠
   {

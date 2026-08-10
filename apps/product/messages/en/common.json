@@ -143,6 +143,8 @@
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
       "endTime": "End time",
+      "timeInputValue": "{label}: {time}",
+      "timeInputNotSelected": "{label}: Not selected",
       "switchToKeyboardInput": "Switch to keyboard input",
       "switchToClockInput": "Switch to clock input",
       "addPlan": "Tap to add timeblock",

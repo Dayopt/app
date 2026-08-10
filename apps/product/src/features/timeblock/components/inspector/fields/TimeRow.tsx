@@ -57,6 +57,7 @@ export function TimeRow({
       </div>
       <div className="-mr-2 flex items-center gap-1">
         <TimeInput
+          kind="start"
           value={startTime}
           onChange={onStartChange}
           disabled={disabled}
@@ -67,6 +68,7 @@ export function TimeRow({
           <ArrowRight className="text-muted-foreground size-3.5 flex-shrink-0 leading-none" />
         </span>
         <TimeInput
+          kind="end"
           value={endTime}
           onChange={onEndChange}
           disabled={disabled || !startTime}
