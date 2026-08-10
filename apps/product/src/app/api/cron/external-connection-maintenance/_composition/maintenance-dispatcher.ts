@@ -18,12 +18,40 @@ const CLEANUP_BATCH_SIZE = 250;
 const DB_RPC_TIMEOUT_MS = 3_000;
 const RETENTION_BUDGET_MS = 23_000;
 
+/**
+ * どの retention 区分に期限超過 backlog が残っているか。`hasMore` が true の時に
+ * 「何が残っているか」を ID 抜きで示し、cron の warn ログを識別可能にする。
+ */
+type RetentionDueSummary = {
+  authorizationCodes: boolean;
+  accessTokens: boolean;
+  refreshTokens: boolean;
+  connections: boolean;
+  receipts: boolean;
+  securityEvents: boolean;
+  billingClaims: boolean;
+  billingDeletionReceipts: boolean;
+};
+
 type RetentionSummary = {
   billingClaimsDeleted: number;
   billingDeletionReceiptsDeleted: number;
   billingProviderResponsesRedacted: number;
   securityEventsDeleted: number;
+  mcpMutationReceiptsDeleted: number;
+  due: RetentionDueSummary;
   hasMore: boolean;
+};
+
+const NO_RETENTION_DUE: RetentionDueSummary = {
+  authorizationCodes: false,
+  accessTokens: false,
+  refreshTokens: false,
+  connections: false,
+  receipts: false,
+  securityEvents: false,
+  billingClaims: false,
+  billingDeletionReceipts: false,
 };
 
 type PublicOutboxSummary = Omit<
@@ -44,7 +72,8 @@ type ExternalConnectionMaintenanceSummary = {
   durationMs: number;
 };
 
-type CleanupFunction = 'cleanup_integration_security_events_v1';
+type CleanupFunction =
+  'cleanup_integration_security_events_v1' | 'cleanup_mcp_mutation_receipts_v1';
 
 class ExternalConnectionMaintenanceError extends Error {
   readonly code: string;
@@ -125,6 +154,8 @@ export async function dispatchExternalConnectionMaintenance(params: {
         billingDeletionReceiptsDeleted: 0,
         billingProviderResponsesRedacted: 0,
         securityEventsDeleted: 0,
+        mcpMutationReceiptsDeleted: 0,
+        due: NO_RETENTION_DUE,
         hasMore: false,
       },
       durationMs: Date.now() - startedAt,
@@ -158,13 +189,22 @@ export async function dispatchExternalConnectionMaintenance(params: {
     firstFailure = new ExternalConnectionMaintenanceError('outbox');
   }
 
-  const retention: Omit<RetentionSummary, 'hasMore'> = {
+  const retention: Omit<RetentionSummary, 'due' | 'hasMore'> = {
     billingClaimsDeleted: 0,
     billingDeletionReceiptsDeleted: 0,
     billingProviderResponsesRedacted: 0,
     securityEventsDeleted: 0,
+    mcpMutationReceiptsDeleted: 0,
   };
 
+  // NOTE: authorization_codes / access_tokens / refresh_tokens / connections 用の
+  // cleanup_oauth_*_v1 RPC はまだ存在しない（status RPC が due flag を返すだけで、対応する
+  // cleanup 関数が未実装。#1898 で実装する）。存在しない RPC を呼ぶと cron が恒久的に失敗
+  // するため、ここでは実在する cleanup_mcp_mutation_receipts_v1 だけを足す。4 種の due flag
+  // は hasMore / complete へ組み込んで fail closed にする（complete: true と due flag: true
+  // が同時に立つのは step-6-execution-checklist.md の Stop condition に当たる）。
+  // #1898 が入るまで complete は false のまま固着しうるため、どの区分が残っているかを
+  // retention.due として summary に出し、warn ログを識別可能に保つ。
   const cleanupSteps: ReadonlyArray<{
     key: keyof typeof retention;
     operation: CleanupFunction;
@@ -172,6 +212,10 @@ export async function dispatchExternalConnectionMaintenance(params: {
     {
       key: 'securityEventsDeleted',
       operation: 'cleanup_integration_security_events_v1',
+    },
+    {
+      key: 'mcpMutationReceiptsDeleted',
+      operation: 'cleanup_mcp_mutation_receipts_v1',
     },
   ];
 
@@ -218,8 +262,17 @@ export async function dispatchExternalConnectionMaintenance(params: {
 
   if (firstFailure !== null) throw firstFailure;
 
-  const hasMore =
-    status.security_events_due || billingMutationHasMore || billingDeletionReceiptsHaveMore;
+  const due: RetentionDueSummary = {
+    authorizationCodes: status.authorization_codes_due,
+    accessTokens: status.access_tokens_due,
+    refreshTokens: status.refresh_tokens_due,
+    connections: status.connections_due,
+    receipts: status.receipts_due,
+    securityEvents: status.security_events_due,
+    billingClaims: billingMutationHasMore,
+    billingDeletionReceipts: billingDeletionReceiptsHaveMore,
+  };
+  const hasMore = Object.values(due).some(Boolean);
   const revokeUnavailable = !outbox.encryptionAvailable && status.calendar_revoke_total > 0;
   const complete =
     outbox.expired === 0 &&
@@ -244,6 +297,7 @@ export async function dispatchExternalConnectionMaintenance(params: {
     },
     retention: {
       ...retention,
+      due,
       hasMore,
     },
     durationMs: Date.now() - startedAt,

@@ -56,7 +56,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     if (!summary.complete) {
-      logger.warn('[external-connection-maintenance] work remains after dispatch');
+      // どの区分が残っているかを添える。#1898 未了の間 OAuth retention の due flag は
+      // 恒久的に立ちうるため、理由なしの warn だと calendar outbox の滞留と区別できない。
+      logger.warn('[external-connection-maintenance] work remains after dispatch', {
+        retentionDue: summary.retention.due,
+        outboxTotal: summary.outbox.total,
+        outboxExpired: summary.outbox.expired,
+        outboxRetried: summary.outbox.retried,
+      });
 
       if (summary.outbox.expired > 0) {
         captureUnexpectedError(new Error('Calendar revoke expired before confirmation'), {

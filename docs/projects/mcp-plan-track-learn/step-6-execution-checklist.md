@@ -73,9 +73,11 @@ protocol試験の前に、次のrepo-side blockerも閉じる。
 
 - Settingsに認証済みuser自身のconnection一覧と個別revoke導線を追加し、別user / 別connectionを変更できないことを検証する
 - client gate OFFが一時停止にすぎない現状を維持するか、対象clientの既存write connectionを同じtransactionで恒久失効するDB commandを追加するかを決める
+  - **決定（2026-08-10、[#1895](https://github.com/Dayopt/dayopt/issues/1895)）: 一時停止 + 個別revokeを運用契約として固定する。** 恒久失効のtransaction化DB commandは追加しない。根拠: ①個別revoke（`revoke_oauth_connection`）が同一transactionでconnectionとtoken familyを失効させる既存基盤として動作し、Settings導線とintegration testで固定された ②client停止は「gate除外（新規発行停止）→対象connectionの個別revoke（既存tokenの失効）」の2手で恒久失効と同じ終端状態に到達できる ③command新設は新しいservice-role surfaceとEXPLICIT AUTHORITY境界を増やす。この契約はdocs-onlyで可逆であり、将来command化した場合だけ正本を切り替える（§6の取り決めと同じ）
 - 一時停止を維持する場合は、gate再開前に対象connectionを個別revokeし、同じtoken familyが復活しない運用をrehearseする
-- maintenance dispatcherがauthorization code、access token、refresh token、connection、mutation receiptのdue flagを完了判定へ含める
+- maintenance dispatcherがauthorization code、access token、refresh token、connection、mutation receiptのdue flagを完了判定へ含める（[#1895](https://github.com/Dayopt/dayopt/issues/1895) で実装。5 flagすべてが`hasMore`/`complete`へ入り、backlogがある間はfail closedで不完全と報告する）
 - 各due itemのbounded cleanupを実行し、期限超過をfail closedで報告する
+  - **未達（2026-08-10 確認）**: `receipts_due`に対応する`cleanup_mcp_mutation_receipts_v1`だけが実在し、authorization code / access token / refresh token / connectionの4種はcleanup関数そのものが存在しない。due flagは立つが解消手段が無いため、現状は`complete: false`が恒久化する。[#1898](https://github.com/Dayopt/dayopt/issues/1898) で4本を実装するまで§6 Production beta checkpointの「全retention due flagがfalse」は満たせない
 - legacy textと`structuredContent`のuntrusted data扱いを3 clientで確認できるtest scenarioを用意する
 
 - 現在のofficial conformance suiteとspec versionを選ぶ

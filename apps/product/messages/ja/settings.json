@@ -311,7 +311,7 @@
         "dataControls": "データ管理",
         "dataControlsDesc": "エクスポート、インポート、バックアップ設定",
         "integrations": "連携",
-        "integrationsDesc": "Google CalendarとiCalフィード",
+        "integrationsDesc": "Google Calendar、iCalフィード、MCP接続",
         "profile": "プロフィール",
         "profileDesc": "名前、メール",
         "display": "表示",
@@ -510,6 +510,42 @@
         "regenerateSuccess": "新しいフィードURLを生成しました",
         "regenerateFailed": "フィードURLを生成できませんでした",
         "noToken": "他のカレンダーアプリから購読するための非公開フィードURLを生成できます。"
+      },
+      "mcpConnections": {
+        "title": "MCP接続",
+        "description": "MCP経由でDayoptアカウントに接続しているAIアシスタントです。使わなくなったアクセスは取り消せます。",
+        "loading": "MCP接続を読み込み中",
+        "loadError": "MCP接続を読み込めませんでした",
+        "empty": "ClaudeやChatGPTなどのMCPクライアントをDayoptに接続すると、ここに表示されます。",
+        "scopesLabel": "付与された権限",
+        "connectedAt": "接続日時: {value}",
+        "lastUsedAt": "最終利用: {value}",
+        "neverUsed": "未使用",
+        "revoke": "アクセスを取り消し",
+        "revoking": "取り消し中...",
+        "revokeAriaLabel": "{client}のアクセスを取り消し",
+        "revokeSuccess": "アクセスを取り消しました",
+        "revokeFailed": "アクセスを取り消せませんでした",
+        "revokeDialog": {
+          "title": "{client}のアクセスを取り消しますか？",
+          "description": "{client}はDayoptのデータにアクセスできなくなります。再度使うには、{client}側から接続し直してください。"
+        },
+        "clients": {
+          "claudeAi": "Claude",
+          "chatgpt": "ChatGPT",
+          "cursor": "Cursor",
+          "unknown": "不明なクライアント"
+        },
+        "scopes": {
+          "readEntries": "予定と実績を読む",
+          "readTags": "タグを読む",
+          "readConstraints": "時間の制約を読む",
+          "readStats": "ふりかえりを読む",
+          "writePlans": "予定を作成・編集する",
+          "deletePlans": "予定を削除する",
+          "writeRecords": "実績を作成・編集する",
+          "deleteRecords": "実績を削除する"
+        }
       }
     },
     "legal": {
