@@ -15,13 +15,13 @@ const envMock = vi.hoisted(
 
 vi.mock('@/env', () => ({ env: envMock }));
 // MIN_RUN_BUDGET_MS は dispatcher が outbox の下限を守るために読む実値（1 batch 分の
-// MIN_BATCH_BUDGET_MS に、claim 前に走る expire RPC の timeout を足したもの）。mock で
-// 落とすと不変条件のテストが意味を失うので、feature 側の値をそのまま写す。
-// 実値は revoke-outbox.test.ts が pin している。
-const MIN_RUN_BUDGET_MS = 26_000;
+// MIN_BATCH_BUDGET_MS に、claim 前に走る expire RPC の timeout と I/O を伴わない startup の
+// 固定コストを足したもの）。mock で落とすと不変条件のテストが意味を失うので、feature 側の値を
+// そのまま写す。実値は revoke-outbox.test.ts が pin している。
+const MIN_RUN_BUDGET_MS = 27_000;
 vi.mock('@/features/external-calendar/server/revoke-outbox', () => ({
   processCalendarRevokeOutbox,
-  MIN_RUN_BUDGET_MS: 26_000,
+  MIN_RUN_BUDGET_MS: 27_000,
 }));
 vi.mock('@/features/settings/server/account-deletion', () => ({
   cleanupBillingAccountDeletionTerminalReceipts,

@@ -82,8 +82,8 @@ describe('processCalendarRevokeOutbox', () => {
   it('MIN_BATCH_BUDGET_MS / MIN_RUN_BUDGET_MS を pin する', () => {
     expect(MIN_BATCH_BUDGET_MS).toBe(23_000);
     // 呼び出し側（cron の Composition Layer）が下限として使う値。claim 前に走る
-    // expire RPC の timeout を含む。
-    expect(MIN_RUN_BUDGET_MS).toBe(26_000);
+    // expire RPC の timeout と、I/O を伴わない startup の固定コストを含む。
+    expect(MIN_RUN_BUDGET_MS).toBe(27_000);
   });
 
   it('hard expiryを先に実行し、復号・provider revoke・lease付きcompleteを行う', async () => {
