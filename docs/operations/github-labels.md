@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-10
+last_verified: 2026-08-11
 code: .github/dependabot.yml
 ---
 
@@ -17,6 +17,7 @@ code: .github/dependabot.yml
 - `risk:` は 0/1 個。`judgment:` は複数の issue / PR に付くが 1 件あたり 1 個。
 - `type:`、`area:`、`quality:` は複数可。
 - 技術名、担当者名、Workflow名、Phase、実装ファイル種別をラベル化しない。
+- namespace の無い裸のラベルを作らない。`ops` は 2026-08-11（#1915）に `area:operations` へ付け替えたうえで削除した。
 - 新しいラベルが必要な場合は、既存 namespace（`type` / `priority` / `status` / `area` / `scope` / `quality` / `risk` / `judgment`）では表現できないことを確認したうえで判断する。
 
 ## 正規ラベル一覧
@@ -64,6 +65,10 @@ code: .github/dependabot.yml
 - `area:analytics`
 - `area:billing`
 - `area:deployment`
+- `area:tooling`
+- `area:github`
+- `area:blog`
+- `area:docs`
 
 ### size（deprecated）
 
