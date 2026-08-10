@@ -10,7 +10,7 @@ export const metadata = generateSEOMetadata({
   noindex: true,
 });
 
-export default function InternalServerError() {
+export function InternalServerError() {
   return (
     <div className="bg-background flex min-h-screen items-center justify-center">
       <Container>
