@@ -96,7 +96,7 @@ export const AllPatterns: StoryObj = {
       >
         <div className="text-muted-foreground py-4 text-center text-sm">No tags yet</div>
       </SectionCard>
-      <SectionCard title="Danger Zone">
+      <SectionCard title="Danger zone">
         <LabeledRow label="Delete account" variant="action" onClick={() => {}} />
       </SectionCard>
     </div>

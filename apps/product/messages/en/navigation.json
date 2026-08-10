@@ -9,10 +9,10 @@
       "views": "Views",
       "quickCreate": "Create",
       "theme": "Theme",
-      "getHelp": "Get Help",
-      "toggleSidebar": "Toggle Sidebar",
-      "closeSidebar": "Close Sidebar",
-      "openSidebar": "Open Sidebar",
+      "getHelp": "Get help",
+      "toggleSidebar": "Toggle sidebar",
+      "closeSidebar": "Close sidebar",
+      "openSidebar": "Open sidebar",
       "resize": "Resize",
       "navigation": {
         "calendar": "Calendar",
@@ -25,22 +25,22 @@
       }
     },
     "navUser": {
-      "myAccount": "My Account",
+      "myAccount": "My account",
       "account": "Account",
-      "upgradePlan": "Upgrade Plan",
+      "upgradePlan": "Upgrade plan",
       "personalize": "Personalize",
       "settings": "Settings",
       "help": "Help",
       "helpSubmenu": {
-        "helpCenter": "Help Center",
+        "helpCenter": "Help center",
         "keyboardShortcuts": "Keyboard shortcuts",
-        "releaseNotes": "Release Notes",
+        "releaseNotes": "Release notes",
         "documentation": "Documentation",
         "termsOfService": "Terms of Service",
         "privacyPolicy": "Privacy Policy",
         "tokushoho": "Commercial Disclosure",
         "security": "Security",
-        "contact": "Contact Us"
+        "contact": "Contact us"
       },
       "accountMenuLabel": "Open account menu for {name}",
       "logout": "Log out",
