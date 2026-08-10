@@ -5,11 +5,13 @@
  * キーとハンドラの結び付けは shortcut-registry.ts が持ち、ここでは扱わない。
  */
 
+import type { MessageKey } from '@/lib/i18n';
+
 export interface ShortcutCatalogGroup {
   /** カタログ内で一意なグループ識別子 */
   id: string;
   /** グループ見出しのi18nフルキー */
-  labelKey: string;
+  labelKey: MessageKey;
   /** このグループが有効な範囲（例: 'global' | 'calendar'） */
   scope: string;
   /** グループの表示順（昇順） */
@@ -20,7 +22,7 @@ export interface ShortcutCatalogEntry {
   /** 所属する ShortcutCatalogGroup.id */
   groupId: string;
   /** 操作説明のi18nフルキー */
-  labelKey: string;
+  labelKey: MessageKey;
   /** 表示するキー。複数ある操作は複数要素（例: ['Cmd+1', '1']） */
   keys: string[];
   /** グループ内での表示順（昇順） */

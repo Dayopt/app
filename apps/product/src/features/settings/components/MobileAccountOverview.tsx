@@ -38,6 +38,7 @@ import { AppHeader } from '@/components/shell/AppHeader';
 import { useAuthStore } from '@/features/auth';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { useLogout } from '@/lib/hooks/useLogout';
+import type { MessageKey } from '@/lib/i18n';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { api } from '@/lib/trpc';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
@@ -77,7 +78,7 @@ export function MobileAccountOverview({
   const isLoadingBilling = billingOverview.isLoading;
 
   const helpLinks: Array<{
-    labelKey: string;
+    labelKey: MessageKey;
     href: string;
     icon: typeof FileText;
     external?: boolean;
@@ -104,7 +105,7 @@ export function MobileAccountOverview({
   ];
 
   const legalLinks: Array<{
-    labelKey: string;
+    labelKey: MessageKey;
     href: string;
   }> = [
     {

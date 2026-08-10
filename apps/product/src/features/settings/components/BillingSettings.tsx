@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
+import type { MessageKey } from '@/lib/i18n';
 import { api } from '@/lib/trpc';
 import {
   AlertDialog,
@@ -40,8 +41,8 @@ import { useBillingPollStore } from '../stores/useBillingPollStore';
 
 interface Plan {
   id: DayoptPlanId;
-  nameKey: string;
-  featureKeys: string[];
+  nameKey: MessageKey;
+  featureKeys: MessageKey[];
   recommended?: boolean;
 }
 

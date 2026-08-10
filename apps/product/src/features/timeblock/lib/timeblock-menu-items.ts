@@ -19,6 +19,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
+import type { MessageKey } from '@/lib/i18n';
 import type { TimeblockOrigin } from '@dayopt/domain';
 
 export type TimeblockMenuItemKey =
@@ -34,7 +35,7 @@ export type TimeblockMenuItemKey =
 export interface TimeblockMenuItem {
   key: TimeblockMenuItemKey;
   /** next-intl の translation key */
-  labelKey: string;
+  labelKey: MessageKey;
   icon: LucideIcon;
   dangerous: boolean;
   onSelect: () => void;
@@ -115,7 +116,7 @@ export function getTimeblockMenuItems({
     onMarkUnplanned && isPlanned && !isUpcoming
       ? {
           key: 'markUnplanned',
-          labelKey: 'entry.inspector.markUnplanned',
+          labelKey: 'timeblock.inspector.markUnplanned',
           icon: CalendarOff,
           dangerous: false,
           onSelect: onMarkUnplanned,
@@ -124,7 +125,7 @@ export function getTimeblockMenuItems({
     onRestorePlanned && isUnplanned
       ? {
           key: 'restorePlanned',
-          labelKey: 'entry.inspector.restorePlanned',
+          labelKey: 'timeblock.inspector.restorePlanned',
           icon: RotateCcw,
           dangerous: false,
           onSelect: onRestorePlanned,
@@ -134,7 +135,7 @@ export function getTimeblockMenuItems({
     onSkip && isPlanned && isPast && !isSkipped
       ? {
           key: 'skip',
-          labelKey: 'entry.inspector.skip',
+          labelKey: 'timeblock.inspector.skip',
           icon: CircleSlash,
           dangerous: false,
           onSelect: onSkip,
@@ -143,7 +144,7 @@ export function getTimeblockMenuItems({
     onUnskip && isPlanned && isSkipped
       ? {
           key: 'unskip',
-          labelKey: 'entry.inspector.unskip',
+          labelKey: 'timeblock.inspector.unskip',
           icon: RotateCcw,
           dangerous: false,
           onSelect: onUnskip,

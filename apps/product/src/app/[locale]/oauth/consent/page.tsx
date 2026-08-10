@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import type { ScopedMessageKey } from '@/lib/i18n';
 import {
   hasWriteScope,
   validateAuthorizeInput,
@@ -25,7 +26,7 @@ interface ConsentPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
+const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, ScopedMessageKey<'oauth.error'>> = {
   unsupported_response_type: 'unsupportedResponseType',
   invalid_client: 'invalidClient',
   invalid_redirect_uri: 'invalidRedirectUri',
@@ -117,6 +118,9 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
   );
 }
 
-function scopeLabel(t: (key: string) => string, scope: SupportedScope): string {
+function scopeLabel(
+  t: Awaited<ReturnType<typeof getTranslations<'oauth.consent'>>>,
+  scope: SupportedScope,
+): string {
   return t(`scope.${scope}`);
 }

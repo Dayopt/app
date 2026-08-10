@@ -12,9 +12,12 @@ import type { TagColorName } from '../lib/tag-colors';
  * 翻訳済みの色表示名を取得する
  *
  * @param color - タグカラー名
- * @param t - useTranslations() の返り値（'common' namespace）
+ * @param t - useTranslations('common') の返り値
  */
-export function getColorDisplayName(color: TagColorName, t: (key: string) => string): string {
+export function getColorDisplayName(
+  color: TagColorName,
+  t: ReturnType<typeof useTranslations<'common'>>,
+): string {
   return t(`colors.${color}`);
 }
 

@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react';
 
+import type { useTranslations } from 'next-intl';
+
 import { api } from '@/lib/trpc';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
@@ -61,7 +63,7 @@ interface UseStatsMetricsResult {
  * 8 メトリクスをカード用に正規化する。
  */
 export function useReviewMetrics(
-  t: (key: string) => string,
+  t: ReturnType<typeof useTranslations<'calendar.stats.metrics'>>,
   pageData: StatsPageData | undefined,
 ): UseStatsMetricsResult {
   const streakQuery = api.statistics.getStreak.useQuery();

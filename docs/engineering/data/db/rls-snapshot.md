@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -161,6 +161,54 @@
 | Users can insert own settings | INSERT | PERMISSIVE | {authenticated} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own settings   | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
 | Users can update own settings | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
+## storage.objects ポリシー一覧（app 所有）
+
+`storage` schema は Supabase platform 自身も所有し、バージョンアップで内容が変わりうる
+（buckets_analytics / buckets_vectors / iceberg_namespaces / iceberg_tables / vector_indexes は
+このリポジトリの migration に一度も登場しない platform 専有 table）。schema 丸ごとの snapshot は
+platform 更新のたびに drift ノイズを生むため対象外にし、avatars / attachments のフォルダ所有権を
+判定する `storage.objects` の policy だけを、migration が定義した名前の allow-list で public
+schema の policy と同じ重みで追跡する。あわせて bucket の公開フラグも固定する —
+`public = true` の bucket は read が object の RLS を経由しないため、policy だけを見ていると
+`UPDATE storage.buckets SET public = true` の 1 行が無検出で通ってしまう。
+
+**対象外**（この節が見ていないもの）:
+
+- **table-level GRANT** — `storage.objects` への `anon` / `authenticated` の GRANT は Supabase
+  Storage 拡張が自ら付与する platform 既定値で、SELECT / INSERT / UPDATE / DELETE は RLS policy が
+  実効の門番になる。ただし **TRUNCATE は RLS の対象外**なので policy では止まらない（#1715 と同クラス）
+- **`storage.objects` 以外の table の policy**（`buckets` / `prefixes` 等）と、`authorize_owned_storage_*`
+  関数の本体（ACL は追跡するが `prosrc` は見ない）
+
+| table           | RLS enabled | forced |
+| --------------- | ----------- | ------ |
+| storage.objects | ✅          | —      |
+
+| bucket      | public  | file size limit | allowed mime types                                                        |
+| ----------- | ------- | --------------- | ------------------------------------------------------------------------- |
+| attachments | false   | 10485760        | image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain |
+| avatars     | ⚠️ true | 5242880         | image/jpeg, image/png, image/gif, image/webp                              |
+
+| policy                           | cmd    | permissive | roles           | USING                                                                                                                               | WITH CHECK                                                                                                                          |
+| -------------------------------- | ------ | ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Users can delete own attachments | DELETE | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) | —                                                                                                                                   |
+| Users can delete own avatar      | DELETE | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     | —                                                                                                                                   |
+| Users can upload own attachments | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                   | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) |
+| Users can upload own avatar      | INSERT | PERMISSIVE | {authenticated} | —                                                                                                                                   | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     |
+| Users can view own attachments   | SELECT | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_read_v1())  | —                                                                                                                                   |
+| Users can view own avatar        | SELECT | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_read_v1())      | —                                                                                                                                   |
+| Users can update own attachments | UPDATE | PERMISSIVE | {authenticated} | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) | ((bucket_id = 'attachments'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1()) |
+| Users can update own avatar      | UPDATE | PERMISSIVE | {authenticated} | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     | ((bucket_id = 'avatars'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text) AND authorize_owned_storage_write_v1())     |
+
+### 想定外の storage.objects policy（allow-list 外）
+
+allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapshot を生成せず
+エラーで停止する（再生成による追認を防ぐため）。したがってこの節は常に 0 件で、
+0 件でない snapshot は存在しない。正当な追加なら
+`STORAGE_OBJECTS_APP_POLICY_NAMES` を更新してから再生成する。
+
+- なし（0 件）
 
 ## GRANT 一覧（public schema）
 
@@ -395,12 +443,10 @@ local DB に対してのみ走る。production に対する同等のチェック
 migration を経由しない手動変更が行われた場合、その差分はここに現れない。
 
 対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/
-function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
+function EXECUTE（`proacl`）/ custom type・domain USAGE（`typacl`）の 5 catalog。次の 1 つは対象外:
 
 - **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、
   扱いは #1715 が決める（現時点で private の default ACL は 0 件）
-- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ
-  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）
 
 ### private の owner（ACL 一覧から除外している主体）
 
@@ -520,6 +566,14 @@ function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:
 - なし（0 件）
 
 ### private function EXECUTE（owner 以外）
+
+- なし（0 件）
+
+### private custom type / domain USAGE（owner 以外）
+
+implicit array type（`_型名`）と implicit row type（table / view の自動生成複合型）は
+対象外（psql `\dT` と同じ判定）。除外しないと private の全 table が「PUBLIC が USAGE を
+持つ」行を生成し、0 件の基準線が意味をなさなくなる。
 
 - なし（0 件）
 

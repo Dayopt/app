@@ -5,6 +5,8 @@
  * 動的な評価関数は現状未使用のため定義していない。
  */
 
+import type { ScopedMessageKey } from '@/lib/i18n';
+
 /** マイクロインサイトの種別（見積もり精度 / ピーク時間帯） */
 export type MicroInsightType = 'estimation_bias' | 'deep_hour';
 
@@ -12,7 +14,7 @@ export type MicroInsightType = 'estimation_bias' | 'deep_hour';
 export interface MicroInsight {
   type: MicroInsightType;
   /** i18n メッセージキー（calendar.stats.insights 配下） */
-  messageKey: string;
+  messageKey: ScopedMessageKey<'calendar.stats.insights'>;
   /** メッセージの動的パラメータ */
   messageParams?: Record<string, string | number>;
 }
