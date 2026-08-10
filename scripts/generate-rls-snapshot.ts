@@ -51,6 +51,59 @@ const DATABASE_URL = process.env.DATABASE_URL ?? LOCAL_SUPABASE_DATABASE_URL;
 const GRANTABLE_PRIVILEGE_SQL =
   "acl.privilege_type || CASE WHEN acl.is_grantable THEN '*' ELSE '' END";
 
+/**
+ * `storage.objects` の RLS policy のうち、このリポジトリの migration が定義したものだけを
+ * snapshot 対象にする allow-list（signal / noise 分離。#1900）。
+ *
+ * `storage` schema は Supabase platform 自身も所有し、バージョンアップで内容が変わりうる
+ * （このリポジトリの migration に一度も登場しない buckets_analytics / buckets_vectors /
+ * iceberg_namespaces / iceberg_tables / vector_indexes が現に存在するのが証拠）。
+ * schema 丸ごとを snapshot すると platform 更新のたびに無関係な drift が出るため、
+ * まず対象 table を `storage.objects` 1 つに絞り（buckets 等の platform 専有 table を除外）、
+ * その上でこの名前リストに合致する policy だけを「app 所有」として public 相当の重みで
+ * 追跡する。リスト外の policy 名が現れた場合は `fetchUnexpectedStoragePolicyNames()` が
+ * 別枠で拾い、0 件を機械固定する（allow-list が古くなって新しい policy を静かに
+ * 見逃す事態を防ぐ）。
+ *
+ * 出典: supabase/migrations/20260730090027_fence_account_storage.sql（現行定義）。
+ * この配列を変える時は同じ PR でその migration の変更を伴う。名前を変えずに
+ * USING / WITH CHECK 句だけを変更した場合は、配列に触れなくても内容差分として drift 検出される。
+ */
+const STORAGE_OBJECTS_APP_POLICY_NAMES = [
+  'Users can delete own attachments',
+  'Users can delete own avatar',
+  'Users can update own attachments',
+  'Users can update own avatar',
+  'Users can upload own attachments',
+  'Users can upload own avatar',
+  'Users can view own attachments',
+  'Users can view own avatar',
+] as const;
+
+/** SQL の文字列リテラルリスト（`IN (...)` 用）を組み立てる。値は上の const 配列のみで外部入力は通さない。 */
+function sqlStringList(values: readonly string[]): string {
+  return values.map((v) => `'${v.replace(/'/g, "''")}'`).join(', ');
+}
+
+/**
+ * 「本物の custom type / domain」だけを `pg_type` から拾うための絞り込み条件（#1900）。
+ * psql `\dT`（list of user-visible data types）と同じ判定式で、以下を除外する:
+ * - implicit array type（あらゆる型に自動生成される `_型名`。typelem/typarray の自己参照で判定）
+ * - implicit row type（CREATE TABLE / VIEW のたびに自動生成される複合型。typrelid が指す
+ *   pg_class の relkind が 'c'（複合型そのもの）でなければテーブル等の row type と判定）
+ *
+ * 除外しないと、`acldefault('T', owner)` は implicit type にも PUBLIC USAGE を既定付与するため、
+ * private の全 table が「PUBLIC が USAGE を持つ」行を毎回生成し、0 件の基準線が意味をなさなくなる
+ * （ローカル DB で実測: private の 23 table 分・46 件の implicit type が該当し、フィルタなしでは
+ * 「0 件」の主張が成立しない）。
+ */
+const PRIVATE_CUSTOM_TYPE_WHERE_SQL = `(ty.typrelid = 0 OR EXISTS (
+             SELECT 1 FROM pg_class c2 WHERE c2.oid = ty.typrelid AND c2.relkind = 'c'
+           ))
+           AND NOT EXISTS (
+             SELECT 1 FROM pg_type el WHERE el.oid = ty.typelem AND el.typarray = ty.oid
+           )`;
+
 type PolicyRow = {
   tablename: string;
   policyname: string;
@@ -106,6 +159,55 @@ function fetchRlsTables(): RlsRow[] {
               ) ORDER BY c.relname), '[]'::json)
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relkind = 'r';`,
+    ) ?? []
+  );
+}
+
+/** app 所有と確認済みの `storage.objects` policy（allow-list 内）だけを public 相当の粒度で取得する */
+function fetchStoragePolicies(): PolicyRow[] {
+  return (
+    queryJson<PolicyRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.cmd, t.policyname), '[]'::json)
+       FROM (
+         SELECT tablename, policyname, cmd, permissive, roles::text AS roles,
+                coalesce(qual, '') AS using_expr, coalesce(with_check, '') AS check_expr
+         FROM pg_policies
+         WHERE schemaname = 'storage' AND tablename = 'objects'
+           AND policyname IN (${sqlStringList(STORAGE_OBJECTS_APP_POLICY_NAMES)})
+       ) t;`,
+    ) ?? []
+  );
+}
+
+/**
+ * allow-list に無い `storage.objects` policy 名を検出する。0 件を機械固定することで、
+ * allow-list の更新漏れ（新しい policy が静かに snapshot から漏れる事態）を drift として拾う。
+ */
+function fetchUnexpectedStoragePolicyNames(): string[] {
+  return (
+    queryJson<string[] | null>(
+      `SELECT coalesce(json_agg(policyname ORDER BY policyname), '[]'::json)
+       FROM pg_policies
+       WHERE schemaname = 'storage' AND tablename = 'objects'
+         AND policyname NOT IN (${sqlStringList(STORAGE_OBJECTS_APP_POLICY_NAMES)});`,
+    ) ?? []
+  );
+}
+
+/**
+ * `storage.objects` の RLS 有効状態。policy の内容だけでなく「RLS 自体が外れていないか」も
+ * public テーブルと同じ重みで見る（policy は残っていても ENABLE ROW LEVEL SECURITY が
+ * 外れれば無力化されるため、policy 一覧だけでは検出できない）。
+ */
+function fetchStorageObjectsRls(): RlsRow[] {
+  return (
+    queryJson<RlsRow[] | null>(
+      `SELECT coalesce(json_agg(json_build_object(
+                'table', n.nspname || '.' || c.relname,
+                'rls', c.relrowsecurity, 'forced', c.relforcerowsecurity
+              )), '[]'::json)
+       FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'storage' AND c.relname = 'objects' AND c.relkind = 'r';`,
     ) ?? []
   );
 }
@@ -256,6 +358,13 @@ function fetchPrivateOwners(): PrivateOwnerRow[] {
          FROM pg_proc p
          JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'private'
+         UNION ALL
+         -- custom type / domain（implicit row/array type は除外。fetchPrivateTypeGrants() と同じ判定）
+         SELECT 'type', (n.nspname || '.' || ty.typname)::text, pg_get_userbyid(ty.typowner)
+         FROM pg_type ty
+         JOIN pg_namespace n ON n.oid = ty.typnamespace
+         WHERE n.nspname = 'private'
+           AND ${PRIVATE_CUSTOM_TYPE_WHERE_SQL}
        ) t;`,
     ) ?? []
   );
@@ -303,6 +412,37 @@ function fetchPrivateRoutineGrants(): PrivateGrantRow[] {
          WHERE n.nspname = 'private'
            AND acl.privilege_type = 'EXECUTE'
            AND acl.grantee <> p.proowner
+         GROUP BY object_name, grantee
+       ) t;`,
+    ) ?? []
+  );
+}
+
+/**
+ * private schema の custom type / domain の USAGE ACL（`pg_type.typacl`）。function の EXECUTE と
+ * 同じく Postgres は既定で PUBLIC に USAGE を付与するクラスなので、`proacl` と同型で
+ * `coalesce(t.typacl, acldefault('T', t.typowner))` により既定 ACL を明示化してから explode する
+ * （fetchPrivateRoutineGrants() と同型。#1900）。
+ *
+ * implicit array type / implicit row type は PRIVATE_CUSTOM_TYPE_WHERE_SQL で除外する。
+ * 除外しないと CREATE TABLE のたびに自動生成される型が「PUBLIC が USAGE を持つ」行を
+ * 生成し続け、0 件の基準線が意味をなさなくなる。
+ */
+function fetchPrivateTypeGrants(): PrivateGrantRow[] {
+  return (
+    queryJson<PrivateGrantRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(t) ORDER BY t.object_name, t.grantee), '[]'::json)
+       FROM (
+         SELECT
+           n.nspname || '.' || ty.typname AS object_name,
+           CASE WHEN acl.grantee = 0 THEN 'PUBLIC' ELSE pg_get_userbyid(acl.grantee) END AS grantee,
+           string_agg(DISTINCT ${GRANTABLE_PRIVILEGE_SQL}, ', ' ORDER BY ${GRANTABLE_PRIVILEGE_SQL}) AS privileges
+         FROM pg_type ty
+         JOIN pg_namespace n ON n.oid = ty.typnamespace
+         CROSS JOIN LATERAL aclexplode(coalesce(ty.typacl, acldefault('T', ty.typowner))) acl
+         WHERE n.nspname = 'private'
+           AND ${PRIVATE_CUSTOM_TYPE_WHERE_SQL}
+           AND acl.grantee <> ty.typowner
          GROUP BY object_name, grantee
        ) t;`,
     ) ?? []
@@ -358,18 +498,47 @@ function fetchEffectiveTimeblockWritePrivileges(): EffectiveTimeblockWritePrivil
   );
 }
 
-function render(
-  policies: PolicyRow[],
-  rlsTables: RlsRow[],
-  grants: GrantRow[],
-  privateOwners: PrivateOwnerRow[],
-  privateRelationGrants: GrantRow[],
-  privateColumnGrants: PrivateColumnGrantRow[],
-  privateRoutineGrants: PrivateGrantRow[],
-  privateSchemaUsage: SchemaGrantRow[],
-  realtimePublication: RealtimePublicationRow[],
-  effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[],
-): string {
+/**
+ * render() の入力。**位置引数ではなく名前付きで渡す**。
+ * 同じ型の section が複数あるため（public / storage の PolicyRow[]・RlsRow[]、
+ * function / custom type の PrivateGrantRow[]、public / private の GrantRow[]）、
+ * 位置引数だと取り違えても型検査を通ってしまい、「public の policy が storage の見出しで
+ * 描画された snapshot」が drift 無しとして通る。security artifact でこれは致命的なので、
+ * section を足す時も必ずこの型へフィールドとして足す。
+ */
+type SnapshotSections = {
+  policies: PolicyRow[];
+  rlsTables: RlsRow[];
+  storagePolicies: PolicyRow[];
+  storageObjectsRls: RlsRow[];
+  unexpectedStoragePolicyNames: string[];
+  grants: GrantRow[];
+  privateOwners: PrivateOwnerRow[];
+  privateRelationGrants: GrantRow[];
+  privateColumnGrants: PrivateColumnGrantRow[];
+  privateRoutineGrants: PrivateGrantRow[];
+  privateTypeGrants: PrivateGrantRow[];
+  privateSchemaUsage: SchemaGrantRow[];
+  realtimePublication: RealtimePublicationRow[];
+  effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[];
+};
+
+function render({
+  policies,
+  rlsTables,
+  storagePolicies,
+  storageObjectsRls,
+  unexpectedStoragePolicyNames,
+  grants,
+  privateOwners,
+  privateRelationGrants,
+  privateColumnGrants,
+  privateRoutineGrants,
+  privateTypeGrants,
+  privateSchemaUsage,
+  realtimePublication,
+  effectiveTimeblockWritePrivileges,
+}: SnapshotSections): string {
   const policyByTable = new Map<string, PolicyRow[]>();
   for (const p of policies) {
     const list = policyByTable.get(p.tablename) ?? [];
@@ -393,7 +562,8 @@ function render(
   lines.push('>');
   lines.push(
     `> 集計: public スキーマの policy ${policies.length} 件 / RLS 対象テーブル ${rlsTables.length} 件 / GRANT ${grants.length} 件 /` +
-      ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
+      ` storage.objects の policy（app 所有）${storagePolicies.length} 件 / 想定外 policy ${unexpectedStoragePolicyNames.length} 件 /` +
+      ` private schema のオブジェクト ACL（owner 以外）${privateRelationGrants.length} 件 / 列レベル ACL（owner 以外）${privateColumnGrants.length} 件 / function EXECUTE（owner 以外）${privateRoutineGrants.length} 件 / custom type USAGE（owner 以外）${privateTypeGrants.length} 件 / schema USAGE（owner 以外）${privateSchemaUsage.length} 件 /` +
       ` Realtime publication ${realtimePublication.length} 件。`,
   );
   lines.push('');
@@ -421,6 +591,59 @@ function render(
     }
     lines.push('');
   }
+
+  lines.push('## storage.objects ポリシー一覧（app 所有）');
+  lines.push('');
+  lines.push(
+    '`storage` schema は Supabase platform 自身も所有し、バージョンアップで内容が変わりうる',
+  );
+  lines.push(
+    '（buckets_analytics / buckets_vectors / iceberg_namespaces / iceberg_tables / vector_indexes は',
+  );
+  lines.push(
+    'このリポジトリの migration に一度も登場しない platform 専有 table）。schema 丸ごとの snapshot は',
+  );
+  lines.push(
+    'platform 更新のたびに drift ノイズを生むため対象外にし、avatars / attachments のフォルダ所有権を',
+  );
+  lines.push(
+    '判定する `storage.objects` の policy だけを、migration が定義した名前の allow-list で public',
+  );
+  lines.push('schema の policy と同じ重みで追跡する。GRANT（テーブル権限）は追跡しない — ');
+  lines.push(
+    '`storage.objects` への `anon` / `authenticated` の table-level GRANT は Supabase Storage 拡張が',
+  );
+  lines.push(
+    '自ら付与する platform 既定値で、アクセス制御は最初から RLS policy 側に委ねられているため。',
+  );
+  lines.push('');
+  lines.push('| table | RLS enabled | forced |');
+  lines.push('| --- | --- | --- |');
+  for (const r of storageObjectsRls) {
+    lines.push(`| ${cell(r.table)} | ${r.rls ? '✅' : '❌'} | ${r.forced ? '✅' : '—'} |`);
+  }
+  lines.push('');
+  lines.push('| policy | cmd | permissive | roles | USING | WITH CHECK |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
+  for (const p of storagePolicies) {
+    lines.push(
+      `| ${cell(p.policyname)} | ${p.cmd} | ${p.permissive} | ${cell(p.roles)} | ${cell(p.using_expr)} | ${cell(p.check_expr)} |`,
+    );
+  }
+  lines.push('');
+  lines.push('### 想定外の storage.objects policy（allow-list 外）');
+  lines.push('');
+  lines.push('「なし（0 件）」以外が出た場合、allow-list（`STORAGE_OBJECTS_APP_POLICY_NAMES`）の');
+  lines.push('更新漏れか、想定していない policy の追加を意味する。');
+  lines.push('');
+  if (unexpectedStoragePolicyNames.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    for (const name of unexpectedStoragePolicyNames) {
+      lines.push(`- ${cell(name)}`);
+    }
+  }
+  lines.push('');
 
   lines.push('## GRANT 一覧（public schema）');
   lines.push('');
@@ -458,18 +681,14 @@ function render(
   lines.push(
     '対象は schema USAGE（`nspacl`）/ オブジェクト ACL（`relacl`）/ 列レベル ACL（`attacl`）/',
   );
-  lines.push('function EXECUTE（`proacl`）の 4 catalog。次の 2 つは対象外:');
+  lines.push(
+    'function EXECUTE（`proacl`）/ custom type・domain USAGE（`typacl`）の 5 catalog。次の 1 つは対象外:',
+  );
   lines.push('');
   lines.push(
     '- **default privileges（`pg_default_acl`）** — local と production で非対称なことが分かっており、',
   );
   lines.push('  扱いは #1715 が決める（現時点で private の default ACL は 0 件）');
-  lines.push(
-    '- **custom type / domain の ACL（`pg_type.typacl`）** — function の EXECUTE と同じく PUBLIC へ',
-  );
-  lines.push(
-    '  既定 USAGE が付くクラスだが、private に custom type / domain は現時点で 0 件（#1900）',
-  );
   lines.push('');
 
   lines.push('### private の owner（ACL 一覧から除外している主体）');
@@ -519,6 +738,29 @@ function render(
     lines.push('| function | grantee | privileges |');
     lines.push('| --- | --- | --- |');
     for (const grant of privateRoutineGrants) {
+      lines.push(
+        `| ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
+      );
+    }
+  }
+  lines.push('');
+
+  lines.push('### private custom type / domain USAGE（owner 以外）');
+  lines.push('');
+  lines.push(
+    'implicit array type（`_型名`）と implicit row type（table / view の自動生成複合型）は',
+  );
+  lines.push(
+    '対象外（psql `\\dT` と同じ判定）。除外しないと private の全 table が「PUBLIC が USAGE を',
+  );
+  lines.push('持つ」行を生成し、0 件の基準線が意味をなさなくなる。');
+  lines.push('');
+  if (privateTypeGrants.length === 0) {
+    lines.push('- なし（0 件）');
+  } else {
+    lines.push('| type | grantee | privileges |');
+    lines.push('| --- | --- | --- |');
+    for (const grant of privateTypeGrants) {
       lines.push(
         `| ${cell(grant.object_name)} | ${cell(grant.grantee)} | ${cell(grant.privileges)} |`,
       );
@@ -576,18 +818,22 @@ async function main(): Promise<void> {
       );
     }
 
-    const raw = render(
-      fetchPolicies(),
-      fetchRlsTables(),
-      fetchGrants(),
-      fetchPrivateOwners(),
-      fetchPrivateRelationGrants(),
-      fetchPrivateColumnGrants(),
-      fetchPrivateRoutineGrants(),
-      fetchPrivateSchemaUsage(),
-      fetchRealtimePublication(),
+    const raw = render({
+      policies: fetchPolicies(),
+      rlsTables: fetchRlsTables(),
+      storagePolicies: fetchStoragePolicies(),
+      storageObjectsRls: fetchStorageObjectsRls(),
+      unexpectedStoragePolicyNames: fetchUnexpectedStoragePolicyNames(),
+      grants: fetchGrants(),
+      privateOwners: fetchPrivateOwners(),
+      privateRelationGrants: fetchPrivateRelationGrants(),
+      privateColumnGrants: fetchPrivateColumnGrants(),
+      privateRoutineGrants: fetchPrivateRoutineGrants(),
+      privateTypeGrants: fetchPrivateTypeGrants(),
+      privateSchemaUsage: fetchPrivateSchemaUsage(),
+      realtimePublication: fetchRealtimePublication(),
       effectiveTimeblockWritePrivileges,
-    );
+    });
     // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
     // （raw のままだと prettier がテーブルを整列して常に差分になる）
     content = await formatWithPrettier(raw, { parser: 'markdown', printWidth: 100 });
