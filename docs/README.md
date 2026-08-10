@@ -84,6 +84,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - `superseded_by` がある log を現在の判断根拠として引用しない
 - 旧契約で作られた log は移行しない。path と Git 履歴によって過去資料として扱う
 - `latest.md` のような上書き alias は作らない。必要なら日付順に検索する
+- 凍結 log からのリンク切れは直さない（仕様）。既知分の後継先は [2026-08-10-frozen-log-link-inventory.md](engineering/log/2026-08-10-frozen-log-link-inventory.md) を見る。未登録のリンク切れは docs-guard が内訳付きで報告するので、stock 側の移動を見直すか同 log へ追記する
 
 ## 質問から正本へのルーティング
 
