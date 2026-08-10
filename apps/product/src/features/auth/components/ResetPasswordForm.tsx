@@ -21,6 +21,7 @@ import {
 } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 
+import { resolveSchemaMessageKey } from '../lib/resolve-schema-message-key';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -60,7 +61,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
       // signup / パスワード変更と同一のポリシー（8-64文字）を適用する
       const parsed = passwordSchema.safeParse(password);
       if (!parsed.success) {
-        setError(t(parsed.error.issues[0]?.message ?? 'auth.errors.unexpectedError'));
+        setError(t(resolveSchemaMessageKey(parsed.error.issues[0]?.message)));
         setLoading(false);
         return;
       }

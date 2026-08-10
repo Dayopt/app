@@ -1,4 +1,5 @@
 import { getAllContent } from '@web/lib/mdx';
+import type { ScopedMessageKey } from '@web/platform/i18n/message-keys';
 import type { ContentData } from '@web/types/content';
 import { getTranslations } from 'next-intl/server';
 
@@ -53,6 +54,16 @@ function toTitleCase(slug: string): string {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+/**
+ * カテゴリー表示名を i18n キーから解決する。カテゴリーは `content/docs/` の
+ * 実ディレクトリ名から動的に決まる（docs.categories.* に対応キーが無いことがある）ため、
+ * `t.has()` で実在確認してから翻訳する。無ければ `toTitleCase` にフォールバックする。
+ */
+function categoryLabel(t: Awaited<ReturnType<typeof getTranslations<'docs'>>>, slug: string) {
+  const key = `categories.${slug}` as ScopedMessageKey<'docs'>;
+  return t.has(key) ? t(key) : toTitleCase(slug);
 }
 
 /**
@@ -132,7 +143,7 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
       let groupItem = groups.get(group);
       if (!groupItem) {
         groupItem = {
-          title: t.has(`categories.${group}`) ? t(`categories.${group}`) : toTitleCase(group),
+          title: categoryLabel(t, group),
           items: [],
         };
         groups.set(group, groupItem);
@@ -144,9 +155,7 @@ export async function generateDocsNavigation(locale: string): Promise<Navigation
       else groupItem.items?.push(item);
     }
 
-    const sectionTitle = t.has(`categories.${category}`)
-      ? t(`categories.${category}`)
-      : toTitleCase(category);
+    const sectionTitle = categoryLabel(t, category);
 
     return { title: sectionTitle, items };
   });

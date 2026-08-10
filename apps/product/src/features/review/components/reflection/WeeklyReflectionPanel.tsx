@@ -310,7 +310,7 @@ function deriveReflectionSignal({
   skipSummary,
   blankSummary,
 }: {
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'calendar.stats'>>;
   estimationRows: readonly WeeklyReflectionEstimationRow[];
   skipSummary?: WeeklyReflectionSkipSummary | null | undefined;
   blankSummary?: WeeklyReflectionBlankSummary | null | undefined;

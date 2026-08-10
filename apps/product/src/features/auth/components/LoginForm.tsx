@@ -10,6 +10,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Link } from '@dayopt/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
+import type { MessageKey } from '@/lib/i18n';
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedAuthError, observeAuthOperation } from '@/lib/sentry';
@@ -32,6 +33,7 @@ import {
 } from '@dayopt/components';
 import { useAuthStore } from '../stores/useAuthStore';
 
+import { resolveSchemaMessageKey } from '../lib/resolve-schema-message-key';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { loginSchema, type LoginFormData } from '../schemas/auth.schema';
 
@@ -79,7 +81,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   const queryError = useMemo(() => {
     const errorParam = searchParams?.get('error');
     if (!errorParam) return null;
-    const errorKeyMap: Record<string, string> = {
+    const errorKeyMap: Record<string, MessageKey> = {
       auth_callback_error: 'auth.errors.oauthCallbackError',
       auth_callback_missing_code: 'auth.errors.oauthCallbackMissingCode',
     };
@@ -229,7 +231,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                   {...register('email')}
                 />
                 {errors.email?.message && (
-                  <FieldError id="email-error">{t(errors.email.message)}</FieldError>
+                  <FieldError id="email-error">
+                    {t(resolveSchemaMessageKey(errors.email.message))}
+                  </FieldError>
                 )}
               </Field>
 
@@ -289,7 +293,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                   </HoverTooltip>
                 </div>
                 {errors.password?.message && (
-                  <FieldError id="password-error">{t(errors.password.message)}</FieldError>
+                  <FieldError id="password-error">
+                    {t(resolveSchemaMessageKey(errors.password.message))}
+                  </FieldError>
                 )}
               </Field>
 

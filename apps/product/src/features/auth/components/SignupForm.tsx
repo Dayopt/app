@@ -30,6 +30,7 @@ import {
 } from '@dayopt/components';
 import { useAuthStore } from '../stores/useAuthStore';
 
+import { resolveSchemaMessageKey } from '../lib/resolve-schema-message-key';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { signupSchema, type SignupFormData } from '../schemas/auth.schema';
 
@@ -223,7 +224,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                   {...register('email')}
                 />
                 {errors.email?.message && (
-                  <FieldError id="email-error">{t(errors.email.message)}</FieldError>
+                  <FieldError id="email-error">
+                    {t(resolveSchemaMessageKey(errors.email.message))}
+                  </FieldError>
                 )}
               </Field>
 
@@ -275,7 +278,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                   </HoverTooltip>
                 </div>
                 {errors.password?.message && (
-                  <FieldError id="password-error">{t(errors.password.message)}</FieldError>
+                  <FieldError id="password-error">
+                    {t(resolveSchemaMessageKey(errors.password.message))}
+                  </FieldError>
                 )}
               </Field>
 

@@ -26,7 +26,7 @@ const generateRangeText = (
   date: Date,
   endDate: Date,
   dateFnsLocale: Locale,
-  tCommon: (key: string, params?: Record<string, string | number>) => string,
+  tCommon: ReturnType<typeof useTranslations<'common'>>,
 ): string => {
   const sameMonth = date.getMonth() === endDate.getMonth();
   const sameYear = date.getFullYear() === endDate.getFullYear();

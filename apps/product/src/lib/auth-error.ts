@@ -12,6 +12,7 @@
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
  */
 
+import type { MessageKey } from '@/lib/i18n';
 import { logger } from '@/lib/logger';
 import { SupabaseConfigError } from '@/lib/supabase/client';
 
@@ -24,7 +25,7 @@ type AuthContext = 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'oa
  * context に関わらずそのまま返す（login context の「非rate-limitは全て
  * invalidCredentialsに丸める」ルールに巻き込まれて意味が変わるのを防ぐ）。
  */
-const RESOLVED_KEYS = new Set(['auth.errors.unexpectedError']);
+const RESOLVED_KEYS = ['auth.errors.unexpectedError'] as const satisfies readonly MessageKey[];
 
 /**
  * Supabase の AuthError メッセージを安全な i18n キーに変換
@@ -34,9 +35,15 @@ const RESOLVED_KEYS = new Set(['auth.errors.unexpectedError']);
  * - signup: ユーザーの存在を漏洩しない汎用メッセージを返す
  * - resetPassword: 常に成功メッセージ（Supabase 側で処理済み）
  */
-export function getAuthErrorKey(errorMessage: string, context: AuthContext): string {
-  if (RESOLVED_KEYS.has(errorMessage)) {
-    return errorMessage;
+export function getAuthErrorKey(errorMessage: string, context: AuthContext): MessageKey {
+  // RESOLVED_KEYS に含まれる場合、呼び出し元は既に解決済みの i18n キーを
+  // errorMessage として渡している（上記コメント参照）。errorMessage は素の string で
+  // literal 型を持たないため、find で「一致した要素そのもの」を返して MessageKey 型を保つ。
+  // 一致した literal を返すので、RESOLVED_KEYS にキーを足しても対応は自動で正しいままになる
+  // （特定 literal を決め打ちで返すと、2 つ目のキーを足した瞬間に別のキーへ化ける）。
+  const alreadyResolved = RESOLVED_KEYS.find((key) => key === errorMessage);
+  if (alreadyResolved !== undefined) {
+    return alreadyResolved;
   }
 
   const normalizedMessage = errorMessage.toLowerCase();
@@ -98,7 +105,7 @@ export function getAuthErrorKey(errorMessage: string, context: AuthContext): str
  * コンポーネントが再度 getAuthErrorKey に通しても意味が変わらないようにする。
  * 実メッセージ（env未設定の詳細）は logger.error で常に出力する。
  */
-export function resolveAuthErrorKey(err: unknown, context: AuthContext): string {
+export function resolveAuthErrorKey(err: unknown, context: AuthContext): MessageKey {
   if (err instanceof SupabaseConfigError) {
     logger.error('[Auth] Supabase設定エラー:', err.message);
     return 'auth.errors.unexpectedError';

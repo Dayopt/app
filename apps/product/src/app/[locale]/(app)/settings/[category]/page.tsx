@@ -191,7 +191,7 @@ export default function SettingsCategoryPage() {
 }
 
 function calendarCallbackErrorMessage(
-  t: ReturnType<typeof useTranslations>,
+  t: ReturnType<typeof useTranslations<never>>,
   error: CalendarCallbackError,
 ): string {
   switch (error) {

@@ -33,8 +33,11 @@ import { useTags } from '../hooks/useTagsQuery';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';
 
+/** サンプルタグの i18n キー（calendar.tagSelector.sampleTags 配下）候補 */
+type SampleTagNameKey = 'work' | 'study' | 'exercise' | 'break' | 'meal';
+
 /** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
-const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: string; icon: string }> = [
+const SAMPLE_TAG_CHIPS: Array<{ nameKey: SampleTagNameKey; color: string; icon: string }> = [
   { nameKey: 'work', color: 'blue', icon: 'briefcase' },
   { nameKey: 'study', color: 'indigo', icon: 'book-open' },
   { nameKey: 'exercise', color: 'green', icon: 'dumbbell' },

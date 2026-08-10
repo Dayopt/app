@@ -254,7 +254,10 @@ function DiffBadge({ item }: { item: ReviewDiffItem }) {
   );
 }
 
-function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: ReviewDiffItem): string {
+function diffBadgeLabel(
+  t: ReturnType<typeof useTranslations<never>>,
+  item: ReviewDiffItem,
+): string {
   if (item.kind === 'unplanned') return formatSignedDuration(t, item.actualMinutes);
   if (item.kind === 'missed' || item.kind === 'skipped' || item.kind === 'unrecorded') {
     return formatSignedDuration(t, -item.plannedMinutes);
@@ -270,7 +273,7 @@ function diffBadgeLabel(t: ReturnType<typeof useTranslations>, item: ReviewDiffI
   return formatSignedDuration(t, item.diffMinutes);
 }
 
-function kindLabel(t: ReturnType<typeof useTranslations>, kind: ReviewDiffKind): string {
+function kindLabel(t: ReturnType<typeof useTranslations<never>>, kind: ReviewDiffKind): string {
   switch (kind) {
     case 'unplanned':
       return t('calendar.compare.rail.kind.unplanned');
@@ -289,12 +292,15 @@ function kindLabel(t: ReturnType<typeof useTranslations>, kind: ReviewDiffKind):
   }
 }
 
-function formatSignedDuration(t: ReturnType<typeof useTranslations>, minutes: number): string {
+function formatSignedDuration(
+  t: ReturnType<typeof useTranslations<never>>,
+  minutes: number,
+): string {
   if (minutes === 0) return formatDuration(t, 0);
   return `${minutes > 0 ? '+' : '-'}${formatDuration(t, Math.abs(minutes))}`;
 }
 
-function formatDuration(t: ReturnType<typeof useTranslations>, minutes: number): string {
+function formatDuration(t: ReturnType<typeof useTranslations<never>>, minutes: number): string {
   const abs = Math.abs(minutes);
   const hours = Math.floor(abs / 60);
   const rest = abs % 60;

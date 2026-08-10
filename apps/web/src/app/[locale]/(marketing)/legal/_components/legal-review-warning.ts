@@ -7,6 +7,11 @@ export function shouldShowLegalReviewWarning(
   return nodeEnv === 'development' && slug !== 'security';
 }
 
-export function getLegalReviewWarningItemKeys(slug: LegalDocumentSlug): string[] {
+/** legal.reviewWarning.items 配下の item key（`legal.json` の実キーと一致させる） */
+type LegalReviewWarningItemKey = 'lawyer' | 'update' | 'placeholder';
+
+export function getLegalReviewWarningItemKeys(
+  slug: LegalDocumentSlug,
+): LegalReviewWarningItemKey[] {
   return slug === 'tokushoho' ? ['lawyer', 'update', 'placeholder'] : ['lawyer', 'update'];
 }
