@@ -55,7 +55,7 @@ production だけを見ていると気づけない種類の欠落である点が
 以下 3 条件が同時に揃う最初のリリース境界で実施する。
 
 1. **migration を含む open PR がゼロ** — PR ごとの Supabase Preview branch は親（production）の migration 履歴を基に作られるため、squash 中に開いている PR は履歴不整合になる
-2. **進行中の大規模スキーマ変更 project がない** — [time-model-split](../time-model-split/summary.md) は 2026-07-13 に `done`。同種の大規模変更が走っていないこと
+2. **進行中の大規模スキーマ変更 project がない** — [time-model-split](../_archive/time-model-split/summary.md) は 2026-07-13 に `done`。同種の大規模変更が走っていないこと
 3. **リリース直後の静穏期** — 直近リリースが production で安定し、次のリリースまで間があること。squash 直後に hotfix migration を打つ状況を避ける
 
 さらに実施ウィンドウ中は、**squash PR 以外の main への merge を、migration を含むか否かに関わらず止める**。手順 7（merge）と手順 8（repair）の順序が前提を成すため。

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-08-10
 ---
 
 # Runbook（障害対応・リリース手順）
@@ -234,7 +234,6 @@ gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate �
 
 - [ ] Stripe Dashboard → Webhooks → エンドポイントに失敗マーク
 - [ ] Sentry: `tags.source:stripe_webhook` のエラー
-- [ ] Slack課金通知チャンネルに通知が来なくなった
 
 ### 初動
 

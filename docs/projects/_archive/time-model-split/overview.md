@@ -6,7 +6,7 @@ code: apps/product/src/features/timeblock
 
 # time-model-split — entries を Plan / Record / 外部カレンダーミラーに分割する
 
-[ADR-025](../../product/log/2026-07-09-time-model-split.md) で決定した時間管理モデル分割の全体設計書。決定の経緯・却下案は ADR-025 が正で、本書はそれをスキーマ・UI 方針・移行・影響範囲・Phase 構成に落とす。**大規模判定**（新テーブル・blast radius が entry/calendar/review/stats/API 横断）。
+[ADR-025](../../../product/log/2026-07-09-time-model-split.md) で決定した時間管理モデル分割の全体設計書。決定の経緯・却下案は ADR-025 が正で、本書はそれをスキーマ・UI 方針・移行・影響範囲・Phase 構成に落とす。**大規模判定**（新テーブル・blast radius が entry/calendar/review/stats/API 横断）。
 
 ---
 

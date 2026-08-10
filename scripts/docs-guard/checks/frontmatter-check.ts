@@ -191,10 +191,12 @@ export function classifyDocument(
   if (GENERATED_DOCS.includes(relativePath)) return 'generated';
   if (relativePath === 'docs/README.md' || isReadme(relativePath)) return undefined;
 
-  if (/^docs\/projects\/[^/]+\/overview\.md$/.test(relativePath)) {
+  // `_archive/` は完了 Project の移設先（§設計書の保存場所）。同じ contract を
+  // そのまま適用する（archive 後も status: done + summary.md の要件は変わらない）。
+  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/overview\.md$/.test(relativePath)) {
     return 'project-overview';
   }
-  if (/^docs\/projects\/[^/]+\/[^/]+\.md$/.test(relativePath)) {
+  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/[^/]+\.md$/.test(relativePath)) {
     return 'project-document';
   }
 
@@ -246,6 +248,12 @@ function validateProjectOverview(
 
   if (!status) reasons.push('frontmatterにstatusがない');
   else if (!PROJECT_STATUSES.has(status)) reasons.push(`Projectのstatusが不正: ${status}`);
+  else if (relativePath.startsWith('docs/projects/_archive/') && status !== 'done') {
+    // _archive/ は完了 Project の移設先（workflow.md §完了後）。done 以外の配置は契約違反。
+    reasons.push(`_archive/ 配下のProjectはstatus: doneに限る: ${status}`);
+  } else if (!relativePath.startsWith('docs/projects/_archive/') && status === 'done') {
+    reasons.push('done Projectは docs/projects/_archive/ へ移す（workflow.md §完了後）');
+  }
 
   if (!lastVerified) reasons.push('frontmatterにlast_verifiedがない');
   else if (!isValidDate(lastVerified, today)) {

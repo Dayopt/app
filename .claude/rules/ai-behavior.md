@@ -37,6 +37,7 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 - 迷ったら 1 tier 下から始める。足りずに上げ直す方が、最初から上位 tier を使うより安い
 - provider / model 名が変わったら tier の役割定義を正とし、名前を読み替える
 - 実際の構成比は SessionStart hook（`.claude/hooks/session-token-usage.py`）が毎回出す。下位 tier の比率が上がらないなら委譲が機能していない
+- `.claude/agents/` の agent は frontmatter の `model:` を正とする（未指定継承を禁止）。省略すると呼び出し元と同じ tier が継承され、上表の tiering が実運用されない
 
 ## Checkpoint / 完了報告
 

@@ -6,7 +6,7 @@ code: apps/product/src/features/external-calendar/server/sync-service.ts
 
 # external-calendar-import — 外部カレンダーを one-way で取り込む
 
-[time-model-split](../time-model-split/overview.md)（Phase 1、2026-07-13 完了）に続く Phase 2 の全体設計書。決定の経緯・却下案は [ADR-025](../../product/log/2026-07-09-time-model-split.md) が正で、本書は「外部カレンダー取り込み」を connection 設計・OAuth・同期ジョブ・アプリ構造・Step 構成に落とす。**大規模判定**（新 feature 新設・新テーブル・外部 OAuth・cron 横断）。Issue #1562 の成果物。
+[time-model-split](../_archive/time-model-split/overview.md)（Phase 1、2026-07-13 完了）に続く Phase 2 の全体設計書。決定の経緯・却下案は [ADR-025](../../product/log/2026-07-09-time-model-split.md) が正で、本書は「外部カレンダー取り込み」を connection 設計・OAuth・同期ジョブ・アプリ構造・Step 構成に落とす。**大規模判定**（新 feature 新設・新テーブル・外部 OAuth・cron 横断）。Issue #1562 の成果物。
 
 Phase 1 から継承する拘束（本書で再決定しない）:
 

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-05
+last_verified: 2026-08-10
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -95,7 +95,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - Supabase database size、connection、slow query: 週次
 - provider usage / plan limit: 月次
 
-通知channelはprovider dashboardとemailを基本とする。SentryからSlackへの転送は現行の必須運用ではない。`SLACK_BILLING_WEBHOOK_URL`はStripe課金イベント専用のoptional通知で、監視基盤やsecret schemaの必須項目にはしない。
+通知channelはprovider dashboardとemailを基本とする。
 
 ## Incident triage
 

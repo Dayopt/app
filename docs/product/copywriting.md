@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-23
+last_verified: 2026-08-10
 ---
 
 # Dayopt Copywriting Tone Guide v3
@@ -9,7 +9,11 @@ last_verified: 2026-07-23
 
 > **「あなたの時間に関心を持っている、寡黙な研究者」**
 
-Dayoptはチャルディーニのように語る。データで示し、感情で煽らない。ユーザーの知性を信頼し、結論を押しつけない。普段は数字だけを静かに見せる。ただし節目（自己ベスト更新など、過去の自分を超えた瞬間）では一言だけ踏み込む。その一言に温かさと重みがある。
+データで示し、感情で煽らない。ユーザーの知性を信頼し、結論を押しつけない。普段は数字だけを静かに見せる。ただし節目（自己ベスト更新など、過去の自分を超えた瞬間）では一言だけ踏み込む。その一言に温かさと重みがある。
+
+この人格が最優先の判断基準である。本書後半の説得の技法（チャルディーニ6原則・Pre-suasion）は、人格に従属する道具にすぎない。技法と人格が衝突したら、常に人格を優先する。Do / Don'tチェックリストの禁止事項（他人比較、恐怖を煽る訴求、煽情的な表現）は、この序列を具体化したものである。
+
+この人格はプロダクト（UI）の声である。ブログやSNSなどのマーケティングコンテンツは、創業者の人間臭い声で書く。正本は[`docs/marketing/voice.md`](../marketing/voice.md)である。二つの声は意図的な使い分けである。
 
 ### 性格ルール
 
@@ -43,6 +47,25 @@ Dayoptはチャルディーニのように語る。データで示し、感情�
 
 ---
 
+## 英語UI文言ルール
+
+人格は言語をまたいで同一である。日本語の「です・ます」に相当する丁寧さは、英語では平易で直接的な文で表す。翻訳ではなく、各言語で自然な文を書く（正本は `apps/product/messages/{en,ja}/`、運用は i18n skill）。
+
+| #   | ルール                          | NG                           | OK                               |
+| --- | ------------------------------- | ---------------------------- | -------------------------------- |
+| 1   | sentence case（文頭のみ大文字） | Delete Event                 | Delete event                     |
+| 2   | ボタンは動詞で始める            | Deletion                     | Delete                           |
+| 3   | 短く直接的に。please で飾らない | Please try again later       | Try again                        |
+| 4   | 主語 your は必要な場合のみ      | Your profile                 | Profile                          |
+| 5   | destructiveボタンに対象を明記   | Delete                       | Delete event                     |
+| 6   | エラーに原因+対処を含める       | An error occurred            | Something went wrong. Try again. |
+| 7   | vague SaaS words 禁止           | Seamlessly optimize your day | See where your time went         |
+
+- 性格ルールと感嘆符の基準は日本語と共通。良い結果は「30 min more than last week」、節目だけ「Personal best!」
+- 7 の禁止語リスト（empower / leverage / seamless / robust / optimize など）は [writing-style.md](../marketing/writing-style.md) §英語のルール と共通
+
+---
+
 ## 感嘆符の使用基準
 
 | 場面               | 使用 | 例                                   |
@@ -58,6 +81,8 @@ Dayoptはチャルディーニのように語る。データで示し、感情�
 ---
 
 ## チャルディーニ6原則の適用
+
+Dayoptは、押しつけずデータで示す影響力の研究者としてチャルディーニのように語る。以下の原則は、人格定義の序列に従う道具である。
 
 ### 原則1: 一貫性（Commitment & Consistency）
 
@@ -310,7 +335,7 @@ Dayopt全体で「地図」のメタファーを一貫して使う。地図は�
 
 事実ベース。過剰な歓迎はしない。「前回の記録」を見せることで一貫性が働く。
 
-離脱メールやプッシュ通知での追い立ては行わない（[`docs/product/log/2026-06-16-feature-non-adoption.md`](../product/log/2026-06-16-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
+離脱メールやプッシュ通知での追い立ては行わない（[`docs/product/log/2026-06-16-feature-non-adoption.md`](./log/2026-06-16-feature-non-adoption.md)）。復帰はユーザーが自発的に戻った時のこのバナーのみで迎える。
 
 ---
 

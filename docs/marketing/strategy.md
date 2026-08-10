@@ -88,7 +88,7 @@ Dayoptの成長は「納得」を軸にした循環で回る。運営が見る�
 
 [business/strategy.md](../business/strategy.md) の原則を発信にも適用する:
 
-- **煽らない**。「時間を無駄にしていませんか?」型の欠乏訴求・恐怖訴求は使わない(トーンは [copywriting.md](../ai/copywriting.md)と [voice.md](./voice.md) に従う)
+- **煽らない**。「時間を無駄にしていませんか?」型の欠乏訴求・恐怖訴求は使わない(トーンは [copywriting.md](../product/copywriting.md)と [voice.md](./voice.md) に従う)
 - **gamification を訴求しない**。ストリーク・バッジ・ランキングはプロダクトに存在しない(business/strategy.md §4-6)ため、発信でも扱わない
 - **他人との比較を扱わない**。比較対象は常に過去の自分
 - **AI 大量生成の没個性コンテンツを流さない**。人間臭さ・プロセス透明性を優先([voice.md](./voice.md))

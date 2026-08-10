@@ -134,9 +134,6 @@ const serverSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: z.string().optional(),
 
-    // Slack
-    SLACK_BILLING_WEBHOOK_URL: z.string().url().optional(),
-
     // App
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),

@@ -1,6 +1,6 @@
 # 執筆スタイルガイド（skill 固有の補足）
 
-文章の書き方そのもの（B1 基準・短文・具体語・AI 臭の排除・description の書き方）は **`docs/ai/writing-style.md` が正本**。公開前チェックは `docs/ai/review-checklist.md`、Docs / Blog / Release notes の役割分担は `docs/ai/docs-policy.md` に従う。本ファイルには docs-writing skill 固有の補足（用語・タグ運用・配置）だけを残す。
+文章の書き方そのもの（B1 基準・短文・具体語・AI 臭の排除・description の書き方）は **`docs/marketing/writing-style.md` が正本**。公開前チェックは `docs/marketing/review-checklist.md`、Docs / Blog / Release notes の役割分担は `docs/marketing/docs-policy.md` に従う。本ファイルには docs-writing skill 固有の補足（用語・タグ運用・配置）だけを残す。
 
 ## 言語
 

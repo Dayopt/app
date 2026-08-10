@@ -31,7 +31,7 @@ code:
 
 ## Stage 8-1 — app code 削除（可逆）
 
-削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../time-model-split/step-3-server-layer.md) / [step-6](../time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
+削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../_archive/time-model-split/step-3-server-layer.md) / [step-6](../_archive/time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
 
 - `plansRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore` / `skip` / `unskip` / `record` / `confirmDay`（`apps/product/src/features/timeblock/server/plans-router.ts`）
 - `recordsRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore`（`records-router.ts`）

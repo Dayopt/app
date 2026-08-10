@@ -1,6 +1,6 @@
 ---
 name: audit-ai-config
-description: AI設定の棚卸し、設定整理、audit、協働設定レビューの明示依頼時に発動。CLAUDE.md・AGENTS.md（Codexレビュー規則）・agents・skills・rules・commands・hooks・MCP の重複、配置、発火条件、権限を評価する。docs棚卸しやskill新設判断では発動しない。
+description: AI設定の棚卸し、設定整理、audit、協働設定レビューの明示依頼時に発動。CLAUDE.md・AGENTS.md（Codexレビュー規則）・agents・skills・rules・hooks・MCP の重複、配置、発火条件、権限を評価する。docs棚卸しやskill新設判断では発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -14,8 +14,8 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 **明示発動型** — この skill はユーザーの explicit な AI 設定棚卸し意図のみを契機に発動する。
 
 - 「AI設定を棚卸しして」「設定を整理して」など、AI 協働設定全体の audit が明示された時
-- `.claude/`（agents / skills / rules / commands / hooks）、`AGENTS.md`、MCP 設定の重複や配置を点検するよう指示された時
-- skill / rules / commands / agents / hooks の使い分けをレビューするよう指示された時
+- `.claude/`（agents / skills / rules / hooks）、`AGENTS.md`、MCP 設定の重複や配置を点検するよう指示された時
+- skill / rules / agents / hooks の使い分けをレビューするよう指示された時
 - AI 設定の削除候補・統合候補・発火条件改善案をまとめるよう指示された時
 
 ## When NOT to Use
@@ -32,15 +32,15 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 - 外部レビューは OpenAI Codex のクラウドレビュー（`@codex review`）専任。Codex が repo から読むのは `AGENTS.md` だけで、そこにはレビュー規則のみを置く
 - review subagent の role 本文は `.claude/agents/*.md` に直接置く（間接層を挟まない）
 - 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・AGENTS.md 共通入口）は 2026-08-05 に撤去済み。経緯は `docs/engineering/log/2026-08-05-codex-review-only.md`
+- 旧 `.claude/commands/*.md` は 2026-08 に `.claude/skills/{name}/SKILL.md`（明示発動型）へ統合済み。`.claude/commands/` ディレクトリは存在しない
 
 ## Inventory
 
 以下を列挙し、件数・責務・最終更新・重複候補を確認する。
 
-- `.claude/skills/*/SKILL.md`
+- `.claude/skills/*/SKILL.md`（明示発動型を含む、旧 commands 相当）
 - `.claude/agents/*.md`（read-only reviewer の role 本文を含む）
 - `.claude/rules/*.md`
-- `.claude/commands/*.md`
 - `.claude/hooks/*`
 - `.claude/settings.json`
 - global MCP 設定（`~/.claude.json` の user scope。repo には置かない — `.claude/rules/mcp-usage.md` 参照）

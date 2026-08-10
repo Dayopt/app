@@ -1,6 +1,7 @@
 ---
 name: behavior-verifier
 description: 現在挙動、公開契約、state transition、query cache、temporal contract、bug regression を変更・検証する plan / diff で自動利用する read-only behavior reviewer。
+model: sonnet
 tools: Read, Grep, Glob
 permissionMode: plan
 maxTurns: 12
