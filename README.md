@@ -61,3 +61,5 @@ Next.js App Router、React、TypeScript strict、Tailwind CSS、Zustand、TanSta
 ## License and Credits
 
 依存ライセンスの正本は生成済みcreditsと`pnpm license:check`。第三者資産の帰属は[`docs/operations/legal.md`](./docs/operations/legal.md)を参照する。
+
+<!-- Disposable Codex review evaluation: documentation-only unrelated change. -->
