@@ -29,7 +29,7 @@ code:
 
 ## Stage 8-1 — app code 削除（可逆）
 
-削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。
+削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../time-model-split/step-3-server-layer.md) / [step-6](../time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
 
 - `plansRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore` / `skip` / `unskip` / `record` / `confirmDay`（`apps/product/src/features/timeblock/server/plans-router.ts`）
 - `recordsRouter` の mutation procedure 群: `create` / `update` / `delete` / `restore`（`records-router.ts`）
@@ -37,7 +37,7 @@ code:
 - compat test: `mcp-stage1-rollout-compat.integration.test.ts` / `mcp-stage1-writer-fence.integration.test.ts` のうち旧 RPC・旧 route を直接検証する部分、`plan-record-service.test.ts` の該当 assertion
 - `rls-access.integration.test.ts` の旧 RPC 直呼び部分は、8-2 で関数が消えるまでは「まだ存在する境界」の検証として有効。8-1 では触らず 8-2 と同時に更新する
 
-前提条件: Production の tRPC endpoint で `plans.*` / `records.*` mutation の呼び出しが観測期間中 0 件であること。観測手段は Vercel runtime logs（`/api/trpc/plans.delete` 等の path 単位）を第一候補とする。DB 側の `pg_stat_user_functions` は `track_functions` 設定に依存するため、使う場合は事前に設定値を確認する。
+前提条件: Production の tRPC endpoint で `plans.*` / `records.*` mutation の呼び出しが観測期間中 0 件であること。観測手段は Vercel runtime logs を第一候補とするが、**path の完全一致では数えない** — client は `httpBatchLink`（`browser-client.ts`）を使うため、同一 tick の複数操作は `/api/trpc/plans.update,records.update?batch=1` のようなカンマ結合 path になる。検索条件は対象 procedure 名（`plans.create` / `plans.update` / `plans.delete` / `plans.restore` / `plans.skip` / `plans.unskip` / `plans.record` / `plans.confirmDay` / `records.create` / `records.update` / `records.delete` / `records.restore`）が **path 内の部分文字列として現れるか**で評価する。DB 側の `pg_stat_user_functions` は `track_functions` 設定に依存するため、使う場合は事前に設定値を確認する。
 
 観測期間は「候補 6 merge（2026-08-03）以降の最終 production deploy から 14 日」を推奨する。drain 対象は旧 JS bundle を保持したままのブラウザで、**deploy は新規ロードにしか効かない** — 開きっぱなし・休止中のタブは旧 bundle を期限なく実行し続けられるため、観測期間 0 件でも残存確率は 0 にならない。この残存は許容する判断として記録する: 観測窓を超えて休止していたタブが 8-1 後に旧 mutation を呼ぶと操作は失敗するが、失敗は書き込み前に返り（データ破壊なし）、reload で新 bundle に復帰する。明示的な version rejection / 強制 reload 導線は closed beta 規模ではこの 1 ケースのために作らない（作るなら別 issue）。14 日はシンプルルール 5（2 週間）と揃えた値で、短縮・延長とこの残存許容の最終判断はユーザーが行う。
 
@@ -67,6 +67,7 @@ DROP しない対象（紛らわしいが現役）:
 - 8-1 が Production へ配信済みで、以後の観測期間（推奨 14 日）に旧 RPC の実行 0 件
 - forward restoration migration（`20260729073123` の定義から 3 関数 + restore 2 関数を再作成する SQL）を先に用意し、ephemeral Preview で適用 rehearsal を通す。rollback ではなく forward restoration で戻すのが checklist の要求
 - 権限正本の追随更新: [docs/operations/security.md](../../operations/security.md) の §RPC 判断表が DROP 対象 5 関数（`soft_delete_plan` / `soft_delete_record` / `confirm_day_plans_to_records` / `restore_plan` / `restore_record`）を現役 RPC として caller・EXECUTE role・復旧用途まで記載している。migration と同じ PR でこの表から削除（または DROP 済みと明記）しないと、障害対応で operator が削除済みの `restore_plan` / `restore_record` を復旧手段として選ぶ
+- schema 成果物の同期（`supabase/schemas/README.md` の同一 PR 同期要求）: `supabase/schemas/040_functions.sql`（該当すれば `030_rls_policies.sql` も）から 5 関数を除去し、`pnpm types:generate` で `database.types.ts` を再生成する。放置すると手動スナップショットを見た人や AI が削除済み RPC を選び、Supabase client が型エラーなしで受け入れて本番 `PGRST202` になる
 - ephemeral Preview（data-less / non-persistent）で cleanup 適用 → 旧 RPC 呼び出しが関数不存在で拒否されることを確認。`SupabaseClient.rpc` 経由（既存アプリと同じ経路）では PostgREST の schema cache 状態により `PGRST202`（cache 未反映時は `42883`）が返るため、**両方を許容する**か `pg_proc` の catalog 照会で不存在を直接検証する（repo 内の先例: `rls-access.integration.test.ts` は存在しない `merge_tags` の検証を `PGRST202` で固定している）。現行経路（command / MCP write）が無傷であることも同時に確認
 
 ## Stage 8-3 — OAuth connection 契約の確定（不可逆）

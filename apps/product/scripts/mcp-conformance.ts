@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 
 import { handleMcpProtocolRequest } from '../src/app/api/mcp/_protocol-handler';
+import { MCP_TOOL_DESCRIPTORS } from '../src/app/api/mcp/_tools/registry';
 
 /**
  * MCP protocol conformance の repo 内再実行。
@@ -46,22 +47,15 @@ const CONFORMANCE_CHILD_ENV_KEYS = [
 /** localhost 判定は DNS rebinding protection の対象を host/origin どちらでも同一基準にする。 */
 const LOCALHOST_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 
-// registry の全 requiredScope を持つ full-scope context。read-only context だと
+// registry の全 requiredScope を導出した full-scope context。read-only context だと
 // write / delete 系 tool が tools/list に一度も現れず、その schema の spec 準拠が
 // 検証されないまま pass してしまう（scope filter 自体は unit test が固定する）。
+// 手書き配列にしないのは、将来 registry へ新 scope の tool が増えた時に検証から
+// 静かに欠落するのを防ぐため。
 const CONFORMANCE_AUTH_INFO: AuthInfo = {
   token: '<redacted>',
   clientId: 'chatgpt',
-  scopes: [
-    'read:entries',
-    'read:tags',
-    'read:constraints',
-    'read:stats',
-    'write:plans',
-    'delete:plans',
-    'write:records',
-    'delete:records',
-  ],
+  scopes: [...new Set(MCP_TOOL_DESCRIPTORS.map((descriptor) => descriptor.requiredScope))],
   resource: new URL('https://mcp.dayopt.app'),
   extra: {
     tokenId: 'conformance-token',
