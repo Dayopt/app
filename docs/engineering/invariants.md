@@ -99,14 +99,26 @@ docs へ残している。
 - Plan / Record の同一lane重複は、通常UIのdirect DMLとMCP applyの両方に効く
   PostgreSQL exclusion constraintを最終authorityとする
 - connection revokeは、connection本体と同一`connection_id`の全tokenを同一transactionで
-  失効させる。revoke後は同じtoken familyがrefresh rotationで復活しない。revokeの権限判定は
+  失効させる。revoke後は`rotate_oauth_refresh_token_v2`経由でtoken familyが復活しない
+  （rotationはconnectionの失効を検査して`invalid_grant`を返す）。revokeの権限判定は
   `revoke_oauth_connection`内の`auth.uid()`一致が正本で、他人・不在のconnectionはどちらも
   `false`を返して区別しない（列挙で存在確認をさせない）。app層のuser scopingは二重化であり、
   正本の代替にしない
-- client停止は「durable gate除外で新規発行を止める + 対象connectionを個別revokeして既存
-  tokenを失効させる」の2手を運用契約とする。恒久失効を1 transactionで行うDB commandは
-  持たない。gate再開時に旧connectionがwrite能力を取り戻さないことは、この2手目を実行した
-  事実で担保する（[step-6-execution-checklist.md](../projects/mcp-plan-track-learn/step-6-execution-checklist.md) §3 の決定、2026-08-10）
+  - **row-levelの終端状態は保証していない。** legacyの直接発行経路
+    `issue_oauth_token_pair(..., p_parent_refresh_id)`（`service_role`のみ）は
+    connectionをロックせず`revoked_at`も再検査しないため、revokeのUPDATE確定後に
+    同じ`connection_id`へ`revoked_at IS NULL`のtoken行が増えうる。アクセスは
+    connection側の失効検査で拒否されるので上の保証は崩れないが、「revoked connectionに
+    未revoke tokenが存在しない」を前提にした監査・cleanupを書いてはいけない。この経路は
+    候補8のdrain対象で、撤去後にこの但し書きも消す
+- client停止は「durable gate除外 + 対象connectionを個別revoke」の2手を運用契約とする。
+  恒久失効を1 transactionで行うDB commandは持たない
+  （[step-6-execution-checklist.md](../projects/mcp-plan-track-learn/step-6-execution-checklist.md) §3 の決定、2026-08-10）
+  - **gate除外が止めるのは新規のwrite grantだけ。** `create_oauth_authorization_grant_v2`は
+    write scopeを要求された時にだけ`enabled_client_ids`を検査するため、gate除外後も
+    read-onlyのconnection / authorization code / tokenは新規発行できる。侵害clientへの
+    読み取りアクセスまで止めるには、この2手では足りない（別途clientをOAuth client登録から
+    外すか、全発行を止める手順が要る）
 - `public.plans` / `public.records` へのdirect DMLは `service_role` だけが持つ。
   `authenticated` は `SELECT` のみで、`TRUNCATE` を含む書き込み系privilegeを一切
   持たない（Candidate 6）。INSERT/UPDATE/DELETE policyはgrant層で到達不能になり、

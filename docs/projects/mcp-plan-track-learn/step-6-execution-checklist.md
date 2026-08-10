@@ -73,7 +73,8 @@ protocol試験の前に、次のrepo-side blockerも閉じる。
 
 - Settingsに認証済みuser自身のconnection一覧と個別revoke導線を追加し、別user / 別connectionを変更できないことを検証する
 - client gate OFFが一時停止にすぎない現状を維持するか、対象clientの既存write connectionを同じtransactionで恒久失効するDB commandを追加するかを決める
-  - **決定（2026-08-10、[#1895](https://github.com/Dayopt/dayopt/issues/1895)）: 一時停止 + 個別revokeを運用契約として固定する。** 恒久失効のtransaction化DB commandは追加しない。根拠: ①個別revoke（`revoke_oauth_connection`）が同一transactionでconnectionとtoken familyを失効させる既存基盤として動作し、Settings導線とintegration testで固定された ②client停止は「gate除外（新規発行停止）→対象connectionの個別revoke（既存tokenの失効）」の2手で恒久失効と同じ終端状態に到達できる ③command新設は新しいservice-role surfaceとEXPLICIT AUTHORITY境界を増やす。この契約はdocs-onlyで可逆であり、将来command化した場合だけ正本を切り替える（§6の取り決めと同じ）
+  - **決定（2026-08-10、[#1895](https://github.com/Dayopt/dayopt/issues/1895)）: 一時停止 + 個別revokeを運用契約として固定する。** 恒久失効のtransaction化DB commandは追加しない。根拠: ①個別revoke（`revoke_oauth_connection`）が同一transactionでconnectionとtoken familyを失効させる既存基盤として動作し、Settings導線とintegration testで固定された ②client停止は「gate除外（新規write grantの停止）→対象connectionの個別revoke（既存tokenの失効）」の2手で、**writeについては**恒久失効と同じ終端状態に到達できる ③command新設は新しいservice-role surfaceとEXPLICIT AUTHORITY境界を増やす。この契約はdocs-onlyで可逆であり、将来command化した場合だけ正本を切り替える（§6の取り決めと同じ）
+  - **この2手はread-onlyアクセスを止めない**（2026-08-10、外部レビュー指摘で確認）。`create_oauth_authorization_grant_v2`はwrite scopeを要求された時にだけ`enabled_client_ids`を検査するため、gate除外後もread-onlyのconnection / code / tokenは新規発行できる。侵害clientの読み取りまで遮断する必要が生じたら、この契約では足りず別手順（clientをOAuth client登録から外す等）が要る。Production betaの停止条件としてはwrite境界を対象にしているため現時点の契約は成立するが、incident対応でこの2手を「clientを完全に切る手順」と読まないこと
 - 一時停止を維持する場合は、gate再開前に対象connectionを個別revokeし、同じtoken familyが復活しない運用をrehearseする
 - maintenance dispatcherがauthorization code、access token、refresh token、connection、mutation receiptのdue flagを完了判定へ含める（[#1895](https://github.com/Dayopt/dayopt/issues/1895) で実装。5 flagすべてが`hasMore`/`complete`へ入り、backlogがある間はfail closedで不完全と報告する）
 - 各due itemのbounded cleanupを実行し、期限超過をfail closedで報告する
