@@ -10,6 +10,7 @@ import { contactRouter } from '@/features/contact/server/router';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
 import { reviewRouter } from '@/features/review/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
+import { mcpConnectionsRouter } from '@/features/settings/server/mcp-connections-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { tagsRouter } from '@/features/tags/server/router';
 import { planCommandsRouter } from '@/features/timeblock/server/plan-commands-router';
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
   contact: contactRouter,
   email: emailRouter,
   externalCalendar: externalCalendarRouter,
+  mcpConnections: mcpConnectionsRouter,
   planCommands: planCommandsRouter,
   recordCommands: recordCommandsRouter,
   records: recordsRouter,

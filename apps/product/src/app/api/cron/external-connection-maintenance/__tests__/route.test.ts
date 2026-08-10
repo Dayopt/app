@@ -24,11 +24,17 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
+import type { dispatchExternalConnectionMaintenance as dispatchType } from '../_composition/maintenance-dispatcher';
 import { GET } from '../route';
 
 const URL = 'https://app.dayopt.app/api/cron/external-connection-maintenance';
 
-const SUMMARY = {
+/**
+ * dispatcher の戻り値型で固定する。型注釈が無いと、実型に存在しないフィールド名の
+ * fixture でも mock が受け取ってしまい、route 層の test が retention の shape を
+ * 何もロックしない状態になる（実際に旧 fixture は実型と一度も一致していなかった）。
+ */
+const SUMMARY: Awaited<ReturnType<typeof dispatchType>> = {
   complete: false,
   outbox: {
     claimed: 2,
@@ -43,12 +49,21 @@ const SUMMARY = {
     revokeUnavailable: false,
   },
   retention: {
-    authorizationCodesDeleted: 1,
-    accessTokensDeleted: 2,
-    refreshTokensDeleted: 3,
-    connectionsDeleted: 4,
-    receiptsDeleted: 5,
+    billingClaimsDeleted: 1,
+    billingDeletionReceiptsDeleted: 2,
+    billingProviderResponsesRedacted: 3,
     securityEventsDeleted: 6,
+    mcpMutationReceiptsDeleted: 5,
+    due: {
+      authorizationCodes: false,
+      accessTokens: false,
+      refreshTokens: false,
+      connections: false,
+      receipts: false,
+      securityEvents: false,
+      billingClaims: false,
+      billingDeletionReceipts: false,
+    },
     hasMore: false,
   },
   durationMs: 120,
@@ -105,8 +120,16 @@ describe('external connection maintenance cron', () => {
     expect(dispatchExternalConnectionMaintenance).toHaveBeenCalledWith({
       deadlineAt: expect.any(Number),
     });
+    // warn には「何が残っているか」を添える。理由なしだと OAuth retention の恒久 backlog と
+    // calendar outbox の滞留を区別できない（#1898 が入るまで前者は常時 true になりうる）。
     expect(loggerWarn).toHaveBeenCalledWith(
       '[external-connection-maintenance] work remains after dispatch',
+      {
+        retentionDue: SUMMARY.retention.due,
+        outboxTotal: SUMMARY.outbox.total,
+        outboxExpired: SUMMARY.outbox.expired,
+        outboxRetried: SUMMARY.outbox.retried,
+      },
     );
   });
 

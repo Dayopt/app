@@ -314,7 +314,7 @@
         "dataControls": "Data controls",
         "dataControlsDesc": "Export, import, and backup settings",
         "integrations": "Integrations",
-        "integrationsDesc": "Google Calendar and iCal feeds",
+        "integrationsDesc": "Google Calendar, iCal feeds, and MCP connections",
         "profile": "Profile",
         "profileDesc": "Name and email",
         "display": "Display",
@@ -513,6 +513,42 @@
         "regenerateSuccess": "New feed URL generated",
         "regenerateFailed": "Feed URL could not be generated",
         "noToken": "Generate a private feed URL to subscribe from another calendar app."
+      },
+      "mcpConnections": {
+        "title": "MCP connections",
+        "description": "AI assistants connected to your Dayopt account through MCP. Revoke access you no longer use.",
+        "loading": "Loading MCP connections",
+        "loadError": "MCP connections could not be loaded",
+        "empty": "Connect Claude, ChatGPT, or another MCP client to Dayopt to see it listed here.",
+        "scopesLabel": "Granted access",
+        "connectedAt": "Connected: {value}",
+        "lastUsedAt": "Last used: {value}",
+        "neverUsed": "Never used",
+        "revoke": "Revoke access",
+        "revoking": "Revoking...",
+        "revokeAriaLabel": "Revoke access for {client}",
+        "revokeSuccess": "Access revoked",
+        "revokeFailed": "Access could not be revoked",
+        "revokeDialog": {
+          "title": "Revoke access for {client}?",
+          "description": "{client} will no longer be able to access your Dayopt data. To use it again, reconnect from {client}."
+        },
+        "clients": {
+          "claudeAi": "Claude",
+          "chatgpt": "ChatGPT",
+          "cursor": "Cursor",
+          "unknown": "Unknown client"
+        },
+        "scopes": {
+          "readEntries": "Read plans and records",
+          "readTags": "Read tags",
+          "readConstraints": "Read time constraints",
+          "readStats": "Read review data",
+          "writePlans": "Create and edit plans",
+          "deletePlans": "Delete plans",
+          "writeRecords": "Create and edit records",
+          "deleteRecords": "Delete records"
+        }
       }
     },
     "legal": {

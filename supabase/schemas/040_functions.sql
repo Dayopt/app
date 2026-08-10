@@ -40,6 +40,7 @@
 --   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 --   - 20260802013954_add_product_events.sql
 --   - 20260810013820_observe_legacy_oauth_bind.sql
+--   - 20260810041210_drop_lock_timeblock_global_write_shim.sql
 -- Browser-facing 関数は authenticated、DB owner の command / OAuth / MCP apply は
 -- service_role にだけ明示 GRANT。PUBLIC/anon への EXECUTE は revoke 済み。
 -- ============================================================
@@ -143,8 +144,6 @@
 --   resolve_mcp_mutation_replay_v1(...)        — digest/resource/generation replay判定
 --   enforce_mcp_mutation_receipt_lifecycle_v1() — receipt immutable / DB-authored generation
 --   get/require_mcp_environment_resource_v1(...) — DB identity先行resource fence
---   lock_timeblock_global_supported_write_v1() — mixed-version用no-op。
---     実際の排他はuser単位shared/exclusive lockが担う
 
 -- ■ 削除済み RPC
 --   get_tag_cumulative_time / get_tag_avg_fulfillment / get_tag_plan_rate /
