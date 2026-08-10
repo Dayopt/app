@@ -93,7 +93,9 @@
           "step1": "1. Scan QR code",
           "step1Desc": "Scan with Google Authenticator, Microsoft Authenticator, Authy, or another authenticator app",
           "manualEntry": "Or enter this code manually:",
-          "step2": "2. Enter the 6-digit code from your authenticator app"
+          "step2": "2. Enter the 6-digit code from your authenticator app",
+          "qrCodeAlt": "QR code",
+          "verificationCodeLabel": "Verification code"
         },
         "enabled": {
           "title": "Two-factor authentication is enabled",
@@ -114,7 +116,8 @@
         },
         "disableDialog": {
           "title": "Disable two-factor authentication",
-          "description": "Enter the 6-digit code from your authenticator app to disable two-factor authentication."
+          "description": "Enter the 6-digit code from your authenticator app to disable two-factor authentication.",
+          "codeLabel": "Code to disable two-factor authentication"
         },
         "regenerateDialog": {
           "title": "Regenerate recovery codes",

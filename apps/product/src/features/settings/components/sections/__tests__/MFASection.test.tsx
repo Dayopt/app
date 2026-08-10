@@ -58,7 +58,7 @@ describe('MFASection', () => {
       expect(
         screen.getByRole('button', { name: 'settings.account.mfa.enableMFA' }),
       ).toBeInTheDocument();
-      expect(screen.queryByAltText('QR Code')).not.toBeInTheDocument();
+      expect(screen.queryByAltText('settings.account.mfa.setup.qrCodeAlt')).not.toBeInTheDocument();
     });
 
     it('setup中はQRコード・InputOTP・確認/キャンセルボタンを表示する', () => {
@@ -69,8 +69,10 @@ describe('MFASection', () => {
         factorId: 'factor-1',
       });
 
-      expect(screen.getByAltText('QR Code')).toBeInTheDocument();
-      expect(screen.getByLabelText('Verification code')).toBeInTheDocument();
+      expect(screen.getByAltText('settings.account.mfa.setup.qrCodeAlt')).toBeInTheDocument();
+      expect(
+        screen.getByLabelText('settings.account.mfa.setup.verificationCodeLabel'),
+      ).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'settings.account.mfa.verify' }),
       ).toBeInTheDocument();
@@ -207,7 +209,7 @@ describe('MFASection', () => {
         confirmDisableMFA,
       });
 
-      const otpInput = screen.getByLabelText('Disable MFA code');
+      const otpInput = screen.getByLabelText('settings.account.mfa.disableDialog.codeLabel');
       fireEvent.change(otpInput, { target: { value: '123456' } });
 
       expect(confirmDisableMFA).toHaveBeenCalledWith('123456');
