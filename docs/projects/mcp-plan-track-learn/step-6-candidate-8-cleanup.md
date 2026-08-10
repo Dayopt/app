@@ -27,6 +27,8 @@ code:
 
 分割の根拠は [workflow.md §PR 粒度](../../../.claude/rules/workflow.md#pr-粒度) の「code removal と destructive migration の混在回避」。8-1 は git revert で戻せる純粋な code 削除、8-2 / 8-3 は破壊的 migration で、承認境界を分ける。
 
+**追随更新の正はファイル列挙ではなく残存参照の全数検索。** 8-1 / 8-2 / 8-3 の各 PR で、削除・変更対象の symbol 名（route procedure 名・RPC 関数名・カラム名）を `rg --hidden --glob '!.git/**'` で全数検索し、ヒットした current 文書・schema snapshot・生成型をすべて同一 PR で追随させる（CLAUDE.md Non-Negotiable の残存参照検索。`supabase/schemas/README.md` も migration が触れた領域の同一 PR 同期を要求する）。本書に登場する追随ファイル名は調査時点のヒットの**例示**であり、実施時の正は rg の結果とする。調査時点で判明している current 正本の追加ヒット: `docs/product/specs/plan-record.md` / `docs/engineering/architecture.md` / `docs/engineering/conventions-api.md` / `docs/engineering/invariants.md`。
+
 ## Stage 8-1 — app code 削除（可逆）
 
 削除対象。いずれも app code（`apps/product/src/`）内の client caller 0 件を `rg` で確認済み（現行 UI は `planCommands` / `recordCommands`、MCP write は `mcp-mutation-client.ts` 経由の `apply_mcp_plan_*_v1` 系で、どちらも旧 route を経由しない）。ただし docs のコード例 2 ファイル（`docs/engineering/conventions.md` / `docs/engineering/architecture.md`）が `api.plans.*` mutation を例示しており、route 削除後は存在しない経路の例になるため、8-1 の追随作業として現行の `planCommands` / `recordCommands` の例へ書き換える。同様に `status: current` の [time-model-split step-3](../time-model-split/step-3-server-layer.md) / [step-6](../time-model-split/step-6-create-edit-flows.md) が `plans.record` / `plans.confirmDay` を現役契約として案内しているため、現行契約へ更新するか履歴文書として明示する。
@@ -84,6 +86,7 @@ DROP しない対象（紛らわしいが現役）:
 
 - **旧 writer 継続利用の停止条件**: 観測期間中、**24 時間以下の間隔**で「`legacy_read_only = true` の connection に紐づく codes / tokens の新規発行行数（`created_at` で絞り `oauth_connections` へ join）」を read-only で snapshot し、**累積** 1 件でもあれば 8-3 を適用しない。間隔の根拠: maintenance cleanup は consumed / expired の 24 時間後から削除対象にする（`20260730090002` の `INTERVAL '24 hours'`）ため、発行行はどの経路でも最低 24 時間は可視であり、≤24h 間隔の snapshot 累積は全発行を決定的に捕捉する。**観測終了時の一発 count は使えない** — 窓の途中で発行された code が交換されないまま cleanup されると終了時 join は 0 になる。耐久補助指標として `oauth_connections` の `created_at` / `last_used_at` / `last_refreshed_at`（refresh 発行時に更新され retention で消えない）が窓内に入る legacy connection 数も併記する。**使えない指標 2 つ**: codes / tokens の `connection_id IS NULL` 行数（`BEFORE INSERT` trigger が NULL を書き換えるため常に 0 になりうる）、legacy connection の新規作成数単独（`parent_token_id` 経由の rebind 経路は新規 connection を作らないため refresh family の継続利用を見落とす）
 - **`SET NOT NULL` の可否判定**: 既存の `connection_id IS NULL` の codes / tokens 行数を記録する（これは過去に trigger を経ずに残った行の是正対象の把握であり、上の停止条件とは別物）。残っている場合、`SET NOT NULL` の前に期限切れ削除（retention）での自然消滅を待つか、明示承認の上で終端させるかを決める
+- schema 成果物の同期（8-2 と同じ同一 PR 要件）: `supabase/schemas/017_tables_oauth.sql` の `connection_id` を NOT NULL へ揃え、`pnpm types:generate` で `database.types.ts` を再生成する。放置すると新しい server writer が `connection_id` 省略のまま型検査を通り、本番で not-null violation になる
 - `disable_pre_client_gate_write_connections` の対象件数は **migration と同じ predicate**（`write_enabled_at IS NOT NULL AND write_disabled_at IS NULL`）で数える — `write_enabled_at IS NOT NULL` だけで数えると無効化済みの行まで対象候補に含め、実際の UPDATE 対象 0 件でも 8-3 を不要に停止させる。参考値として `write_enabled_at IS NOT NULL` の総数も併記してよいが、停止判定に使うのは前者
 
 ## 実行順序と承認境界
