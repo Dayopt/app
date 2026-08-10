@@ -10,8 +10,14 @@ const mockReplace = vi.fn();
 const mockPush = vi.fn();
 const mockOpenSettings = vi.fn();
 const mockLogout = vi.fn();
-const { mockInvalidateConnections, mockToastSuccess, mockToastError } = vi.hoisted(() => ({
+const {
+  mockInvalidateConnections,
+  mockInvalidateBillingOverview,
+  mockToastSuccess,
+  mockToastError,
+} = vi.hoisted(() => ({
   mockInvalidateConnections: vi.fn(),
+  mockInvalidateBillingOverview: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
 }));
@@ -102,6 +108,9 @@ vi.mock('@dayopt/components', async (importOriginal) => ({
 vi.mock('@/lib/trpc', () => ({
   api: {
     useUtils: () => ({
+      billing: {
+        getOverview: { invalidate: mockInvalidateBillingOverview },
+      },
       externalCalendar: {
         listConnections: { invalidate: mockInvalidateConnections },
       },
@@ -161,7 +170,7 @@ describe('settings route hydration guards', () => {
     render(<SettingsPage />);
 
     expect(mockOpenSettings).toHaveBeenCalledWith('profile');
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/week');
   });
 
   it('renders mobile settings content without redirect', () => {
@@ -200,7 +209,7 @@ describe('settings route hydration guards', () => {
     render(<SettingsCategoryPage />);
 
     expect(mockOpenSettings).toHaveBeenCalledWith('billing');
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/week');
   });
 
   it('handles a desktop calendar callback before opening Integrations', () => {
@@ -215,7 +224,59 @@ describe('settings route hydration guards', () => {
     );
     expect(mockInvalidateConnections).toHaveBeenCalled();
     expect(mockOpenSettings).toHaveBeenCalledWith('integrations');
-    expect(mockReplace).toHaveBeenCalledWith('/');
+    expect(mockReplace).toHaveBeenCalledWith('/week');
+  });
+
+  it('handles a desktop checkout return before reopening Billing', () => {
+    mockHasMounted = true;
+    mockIsMobile = false;
+    mockCategory = 'billing';
+    mockSearchParams = new URLSearchParams('success=true');
+
+    render(<SettingsCategoryPage />);
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('settings.subscription.checkoutSuccess');
+    expect(mockInvalidateBillingOverview).toHaveBeenCalled();
+    expect(mockOpenSettings).toHaveBeenCalledWith('billing');
+    expect(mockReplace).toHaveBeenCalledWith('/week');
+  });
+
+  it('cleans only checkout callback params on mobile', () => {
+    mockHasMounted = true;
+    mockIsMobile = true;
+    mockCategory = 'billing';
+    mockSearchParams = new URLSearchParams('canceled=true&panel=review');
+
+    render(<SettingsCategoryPage />);
+
+    expect(mockToastSuccess).toHaveBeenCalledWith('settings.subscription.checkoutCanceled');
+    expect(mockReplace).toHaveBeenCalledWith('/settings/billing?panel=review');
+  });
+
+  it('invalidates the billing overview when returning from the customer portal', () => {
+    mockHasMounted = true;
+    mockIsMobile = false;
+    mockCategory = 'billing';
+    mockSearchParams = new URLSearchParams('portal_return=true');
+
+    render(<SettingsCategoryPage />);
+
+    // Portal からの復帰は通知するイベントではないので toast は出さない
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockInvalidateBillingOverview).toHaveBeenCalled();
+    expect(mockOpenSettings).toHaveBeenCalledWith('billing');
+  });
+
+  it('ignores checkout params outside the billing category', () => {
+    mockHasMounted = true;
+    mockIsMobile = false;
+    mockCategory = 'profile';
+    mockSearchParams = new URLSearchParams('success=true');
+
+    render(<SettingsCategoryPage />);
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockOpenSettings).toHaveBeenCalledWith('profile');
   });
 
   it('cleans only calendar callback params on mobile', () => {

@@ -54,8 +54,15 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     <IntlProvider namespaces={APP_NAMESPACES}>
       <Providers>
         <BaseLayout>
-          {children}
+          {/*
+           * GlobalOverlays は children より先に置く。React は effect を tree 順に実行するため、
+           * 後ろに置くと page の mount effect が Toaster の購読より先に走る。sonner は購読前に
+           * publish された toast を再生しないので、初回ロード時に page 側で出した toast が
+           * そのまま失われる（Stripe Checkout や Google Calendar OAuth の復帰はフルロードなので
+           * 必ずこの経路に当たる）。Toaster は fixed、dialog は portal なので描画順に依存しない。
+           */}
           <GlobalOverlays />
+          {children}
         </BaseLayout>
       </Providers>
     </IntlProvider>
