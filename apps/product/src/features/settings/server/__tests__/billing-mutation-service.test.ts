@@ -620,7 +620,7 @@ describe('billing-mutation-service', () => {
     expect(stripeMock.billingPortal.sessions.create).toHaveBeenCalledWith(
       {
         customer: 'cus_existing',
-        return_url: 'https://app.dayopt.test/settings/subscription',
+        return_url: 'https://app.dayopt.test/settings/billing?portal_return=true',
       },
       {
         idempotencyKey: `dayopt-billing-portal-v1-${OPERATION_ID}`,

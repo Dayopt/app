@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import {
@@ -15,7 +15,6 @@ import {
 import { Badge, cn } from '@dayopt/components';
 import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
@@ -37,6 +36,7 @@ import {
 
 import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
 import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+import { useBillingPollStore } from '../stores/useBillingPollStore';
 
 interface Plan {
   id: DayoptPlanId;
@@ -81,8 +81,6 @@ const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? '';
 /** 請求・サブスクリプション設定コンポーネント。プラン変更・支払方法・請求履歴・キャンセルを管理 */
 export function BillingSettings() {
   const t = useTranslations();
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [billingActionsClosed, setBillingActionsClosed] = useState(false);
   const {
@@ -96,24 +94,19 @@ export function BillingSettings() {
     settle: settlePortalAttempt,
   } = useStableBillingOperation();
 
-  // チェックアウト結果のフィードバック（URL params処理、データfetchではない）
-  useEffect(() => {
-    const success = searchParams.get('success');
-    const canceled = searchParams.get('canceled');
+  // Checkout 復帰（?success=true / ?canceled=true）の toast は
+  // settings/[category]/page.tsx が処理する。PC ではこの component が mount される前に
+  // openSettings + router.replace('/') で query が消えるため、ここで searchParams を
+  // 読んでも間に合わない。
 
-    if (success === 'true') {
-      toast.success(t('settings.subscription.checkoutSuccess'));
-      router.replace('/settings/subscription', { scroll: false });
-    } else if (canceled === 'true') {
-      toast.success(t('settings.subscription.checkoutCanceled'));
-      router.replace('/settings/subscription', { scroll: false });
-    }
-  }, [searchParams, router, t]);
-
-  // 統合エンドポイントで一括取得（N+1 解消）
+  // 統合エンドポイントで一括取得（N+1 解消）。refetchInterval は useAppInlineBanner
+  // 側で有効化される（app shell に常駐し、settings modal の開閉に依存しないため）。
   const overview = api.billing.getOverview.useQuery(undefined, {
     retry: false,
   });
+  // Checkout 成功復帰直後のポーリング中は、まだ Free のまま見えていても
+  // 「反映中」であることをユーザーに伝える（issue #1887）。
+  const isPollingAfterCheckout = useBillingPollStore.use.startedAt() !== null;
 
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
   const trialEndsAt = overview.data?.trialEndsAt ?? null;
@@ -281,6 +274,12 @@ export function BillingSettings() {
                   ? t('settings.subscription.proPlanDescription')
                   : t('settings.subscription.freePlanDescription')}
             </p>
+            {/* Checkout 成功直後、webhook 反映待ちでまだ Free に見えている間の一時表示 */}
+            {isPollingAfterCheckout && !canAccessPro && (
+              <p className="text-muted-foreground text-base md:text-sm">
+                {t('settings.subscription.syncingPlan')}
+              </p>
+            )}
             {/* Stripe から期限を取れなかった場合は表示しない（Badge と説明文は従来どおり出る） */}
             {subscriptionStatus === 'trialing' && trialEndsAt && (
               <p className="text-muted-foreground text-base md:text-sm">

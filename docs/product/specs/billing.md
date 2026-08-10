@@ -135,7 +135,12 @@ Candidate 3のDB機能が揃ったことと、実際に新経路を使うこと�
     → 同じ namespaced idempotency key で Checkout Session を作成・復旧
     → Session ID と短命 URL を DB で reconcile
   → ブラウザを Stripe Checkout ページへリダイレクト
-  → 決済完了後 → success_url (/settings/subscription?success=true)
+  → 決済完了後 → success_url (/settings/billing?success=true) / キャンセル時 → cancel_url (/settings/billing?canceled=true)
+  → settings/[category]/page.tsx が復帰 query を検出 → toast 表示 + billing.getOverview invalidate
+    → PC は SettingsDialog を再度開いて query を消す / モバイルは query を除いた /settings/billing に留まる
+    → Portal も return_url (/settings/billing?portal_return=true) で同じ経路に入る。
+      印を付けないと復帰を検出できず、IndexedDB へ永続化された課金概要が
+      staleTime の間そのまま復元され、解約やプラン変更が画面へ反映されない
   → Stripe が Webhook を送信 → DB更新（次セクション参照）
 ```
 
@@ -301,19 +306,21 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 関連ファイル
 
-| ファイル                                                                           | 役割                                                       |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `apps/product/src/lib/stripe/client.ts`                                            | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
-| `apps/product/src/features/settings/server/billing-service.ts`                     | 課金ビジネスロジック（Service層）                          |
-| `apps/product/src/features/settings/server/billing-router.ts`                      | tRPC Router（Router層）                                    |
-| `apps/product/src/app/api/webhooks/stripe/route.ts`                                | Webhook エンドポイント                                     |
-| `apps/product/src/app/api/webhooks/stripe/stripe-webhook-identity.ts`              | Webhook secretとAPI accountのprovider照合                  |
-| `apps/product/src/lib/trpc/procedures.ts`                                          | `proProcedure` 定義                                        |
-| `apps/product/src/features/settings/components/BillingSettings.tsx`                | 課金設定UI                                                 |
-| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql`                | DBマイグレーション                                         |
-| `supabase/migrations/20260730090049_preserve_billing_webhook_terminal_receipt.sql` | account削除後Webhookの短期receipt                          |
-| `supabase/migrations/20260730090050_close_billing_webhook_races.sql`               | 削除中通知抑止とcleanup残件判定                            |
-| `supabase/migrations/20260730090051_remove_legacy_billing_receipt_cleanup.sql`     | count-only cleanup RPCの撤去                               |
-| `supabase/migrations/20260730090055_report_billing_cleanup_backlog.sql`            | Billing cleanupの残件判定                                  |
-| `packages/billing/src/pricing.ts`                                                  | Free / Pro の表示価格と7日トライアル                       |
-| `packages/billing/src/entitlement.ts`                                              | `pro_access` entitlement                                   |
+| ファイル                                                                           | 役割                                                                   |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `apps/product/src/lib/stripe/client.ts`                                            | Stripe クライアント初期化（`getStripe` / `requireStripe`）             |
+| `apps/product/src/features/settings/server/billing-service.ts`                     | 課金ビジネスロジック（Service層）                                      |
+| `apps/product/src/features/settings/server/billing-router.ts`                      | tRPC Router（Router層）                                                |
+| `apps/product/src/app/api/webhooks/stripe/route.ts`                                | Webhook エンドポイント                                                 |
+| `apps/product/src/app/api/webhooks/stripe/stripe-webhook-identity.ts`              | Webhook secretとAPI accountのprovider照合                              |
+| `apps/product/src/lib/trpc/procedures.ts`                                          | `proProcedure` 定義                                                    |
+| `apps/product/src/features/settings/components/BillingSettings.tsx`                | 課金設定UI                                                             |
+| `apps/product/src/app/[locale]/(app)/settings/[category]/page.tsx`                 | Checkout 復帰 query（`?success=true` / `?canceled=true`）の toast 表示 |
+| `apps/product/src/app/[locale]/(app)/settings/_utils/billing-return.ts`            | Checkout / Portal 復帰 query の解釈（parse / remove）                  |
+| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql`                | DBマイグレーション                                                     |
+| `supabase/migrations/20260730090049_preserve_billing_webhook_terminal_receipt.sql` | account削除後Webhookの短期receipt                                      |
+| `supabase/migrations/20260730090050_close_billing_webhook_races.sql`               | 削除中通知抑止とcleanup残件判定                                        |
+| `supabase/migrations/20260730090051_remove_legacy_billing_receipt_cleanup.sql`     | count-only cleanup RPCの撤去                                           |
+| `supabase/migrations/20260730090055_report_billing_cleanup_backlog.sql`            | Billing cleanupの残件判定                                              |
+| `packages/billing/src/pricing.ts`                                                  | Free / Pro の表示価格と7日トライアル                                   |
+| `packages/billing/src/entitlement.ts`                                              | `pro_access` entitlement                                               |

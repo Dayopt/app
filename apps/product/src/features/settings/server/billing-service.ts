@@ -180,14 +180,14 @@ async function createLegacyCheckoutSession(
   const appUrl = getAppUrl();
   const session = await stripe.checkout.sessions.create(
     {
-      cancel_url: `${appUrl}/settings/subscription?canceled=true`,
+      cancel_url: `${appUrl}/settings/billing?canceled=true`,
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: { supabase_user_id: userId },
       mode: 'subscription',
       subscription_data:
         existingSubscriptions.data.length > 0 ? {} : { trial_period_days: dayoptProTrialDays },
-      success_url: `${appUrl}/settings/subscription?success=true`,
+      success_url: `${appUrl}/settings/billing?success=true`,
     },
     { idempotencyKey: `dayopt-billing-checkout-legacy-v1-${operationId}` },
   );
@@ -212,7 +212,7 @@ async function createLegacyPortalSession(
   const session = await stripe.billingPortal.sessions.create(
     {
       customer: billingInfo.stripeCustomerId,
-      return_url: `${getAppUrl()}/settings/subscription`,
+      return_url: `${getAppUrl()}/settings/billing?portal_return=true`,
     },
     { idempotencyKey: `dayopt-billing-portal-legacy-v1-${operationId}` },
   );
