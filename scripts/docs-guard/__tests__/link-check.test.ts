@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyLinkViolations,
   shouldSkipLinkTarget,
+  stripCodeSpans,
   type LinkViolation,
 } from '../checks/link-check.ts';
 import { KNOWN_FROZEN_BROKEN_LINKS, ROOT } from '../config.ts';
@@ -24,25 +25,62 @@ describe('shouldSkipLinkTarget', () => {
     expect(shouldSkipLinkTarget('?path=/docs/foo')).toBe(true);
   });
 
-  it('公開サイトのroot相対URLをスキップする', () => {
-    // repo path ではなく apps/web のルート相対 URL。resolve するとファイルシステムの
-    // root から探してしまい、必ず存在しないと判定される。
-    expect(shouldSkipLinkTarget('/docs/faq/features')).toBe(true);
-    expect(shouldSkipLinkTarget('/blog/ja/some-post')).toBe(true);
-  });
-
-  it('root相対でも.md終わりはrepo pathの書き間違いとして検出対象に残す', () => {
-    // 公開サイトの route は拡張子を持たないので、これはサイト URL ではない。
+  it('root相対リンクはスキップしない', () => {
+    // GitHub 上でも公開サイトでも repo path として解決しないので、書かれていたら報告する。
+    // 実リンクとして書かれた例は docs/ 全体で 0 件（唯一の出現はコード例で、stripCodeSpans が除く）。
+    expect(shouldSkipLinkTarget('/docs/faq/features')).toBe(false);
     expect(shouldSkipLinkTarget('/docs/foo.md')).toBe(false);
-    expect(shouldSkipLinkTarget('/README.md')).toBe(false);
-    expect(shouldSkipLinkTarget('/apps/web/content/docs/foo.mdx')).toBe(false);
-    expect(shouldSkipLinkTarget('/docs/foo.md#section')).toBe(false);
   });
 
   it('相対pathはスキップしない', () => {
     expect(shouldSkipLinkTarget('./sibling.md')).toBe(false);
     expect(shouldSkipLinkTarget('../parent.md')).toBe(false);
     expect(shouldSkipLinkTarget('nested/child.md')).toBe(false);
+  });
+});
+
+describe('stripCodeSpans', () => {
+  it('inline code span内のリンク記法を除去する', () => {
+    const content = 'index を `## [機能](/docs/faq/features)` の形で書いたところ壊れた。';
+
+    expect(stripCodeSpans(content)).not.toContain('/docs/faq/features');
+  });
+
+  it('code fence内のリンク記法を除去する', () => {
+    const content = ['前文', '```markdown', '[例](../does-not-exist.md)', '```', '後文'].join('\n');
+
+    const stripped = stripCodeSpans(content);
+
+    expect(stripped).not.toContain('does-not-exist.md');
+    expect(stripped).toContain('前文');
+    expect(stripped).toContain('後文');
+  });
+
+  it('~~~ fenceも除去する', () => {
+    const content = ['~~~', '[例](../gone.md)', '~~~'].join('\n');
+
+    expect(stripCodeSpans(content)).not.toContain('gone.md');
+  });
+
+  it('code span外の実リンクは残す', () => {
+    const content = '`config.ts` の [設定](../conventions.md) を見る。';
+
+    const stripped = stripCodeSpans(content);
+
+    expect(stripped).toContain('../conventions.md');
+    expect(stripped).not.toContain('config.ts');
+  });
+
+  it('同一行に複数のcode spanがあっても間のリンクを残す', () => {
+    const content = '`a` と [link](../x.md) と `b`';
+
+    expect(stripCodeSpans(content)).toContain('../x.md');
+  });
+
+  it('閉じないbacktickでは何も除去しない', () => {
+    const content = 'backtick ` ひとつだけ [link](../y.md)';
+
+    expect(stripCodeSpans(content)).toContain('../y.md');
   });
 });
 

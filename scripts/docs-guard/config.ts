@@ -50,7 +50,8 @@ export interface FrozenBrokenLink {
  *
  * このリストに載っていないリンク切れが log 側に出たら、それは「stock 側の移動で新たに
  * 過去の記録を壊した」合図。除外へ追加する前に、stock 側で移動をやめるか alias を残せない
- * かを先に検討し、追加する場合は上記 inventory にも後継先を追記する。
+ * かを先に検討する。追加する場合は後継先をこのリストのコメントに書く（上記 inventory は
+ * status: frozen なので追記できない。経緯を残す必要があれば新しい日付の log を作る）。
  */
 export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
   // ログ自身が docs/decisions/ から docs/{domain}/log/ へ 1 階層深く移動した際に、

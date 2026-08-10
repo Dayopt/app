@@ -2,8 +2,8 @@
  * Check: リンク切れ
  *
  * docs/ 配下の全 .md から相対リンクを抽出し、リンク先ファイルの存在を検証する。
- * 外部URL（http/https）・アンカーのみ（#...）・Storybook deep-link（?path=...）・
- * 公開サイトの root 相対 URL（/docs/...）はスキップする。
+ * 外部URL（http/https）・アンカーのみ（#...）・Storybook deep-link（?path=...）はスキップし、
+ * code fence / inline code span の中身は抽出対象から外す。
  */
 
 import { glob } from 'glob';
@@ -39,31 +39,53 @@ export interface LinkCheckClassification {
   staleAllowlistEntries: FrozenBrokenLink[];
 }
 
-/** 公開サイトの route は拡張子を持たないため、`.md` / `.mdx` 終わりは repo path の意図と見なす。 */
-const MARKDOWN_SUFFIX_RE = /\.mdx?(#.*)?$/;
-
-/**
- * repo path として解決しないリンクを判定する。
- *
- * `/` 始まりは公開サイト（apps/web）の root 相対 URL であって repo path ではない。これを
- * resolve するとファイルシステムの root から探してしまい、必ず存在しないと判定される
- * （docs/marketing/log/2026-07-27-docs-faq-url-nesting.md の `/docs/faq/features` で実際に発生）。
- *
- * ただし `/docs/foo.md` のように `.md` で終わるものは skip しない。これは公開サイトの URL では
- * なく repo path の書き間違い（GitHub 上でも解決しない）なので、黙って通すと検出漏れになる。
- */
+/** repo path として解決しないリンクを判定する。 */
 export function shouldSkipLinkTarget(raw: string): boolean {
-  if (
+  return (
     raw.startsWith('http://') ||
     raw.startsWith('https://') ||
     raw.startsWith('mailto:') ||
     raw.startsWith('#') ||
     raw.startsWith('?')
-  ) {
-    return true;
+  );
+}
+
+const FENCE_RE = /^\s*(`{3,}|~{3,})/;
+// 同じ長さの backtick run で閉じる 1 行内の code span。閉じが無い行は何も除去しない。
+const INLINE_CODE_RE = /(`+)[^\n]*?\1/g;
+
+/**
+ * code fence と inline code span を除去する。
+ *
+ * リンク抽出はテキストを正規表現で走るだけなので、コード例の中に書かれた markdown 記法も
+ * 実リンクとして拾ってしまう。実例として docs/marketing/log/2026-07-27-docs-faq-url-nesting.md
+ * では、公開 URL 設計の説明として backtick 内に `## [機能](/docs/faq/features)` と書かれた
+ * コード例が「リンク切れ」として報告されていた（実リンクではない）。
+ *
+ * 行番号は報告しないため、単純な除去で足りる（置換して桁を保つ必要がない）。
+ */
+export function stripCodeSpans(content: string): string {
+  const lines = content.split('\n');
+  const kept: string[] = [];
+  let fenceChar: string | null = null;
+
+  for (const line of lines) {
+    const fence = FENCE_RE.exec(line)?.[1];
+
+    if (fenceChar === null) {
+      if (fence) {
+        fenceChar = fence[0] ?? null;
+        continue;
+      }
+      kept.push(line.replace(INLINE_CODE_RE, ''));
+      continue;
+    }
+
+    // fence 内。同種の文字で始まる行を閉じとみなす。
+    if (fence && fence[0] === fenceChar) fenceChar = null;
   }
 
-  return raw.startsWith('/') && !MARKDOWN_SUFFIX_RE.test(raw);
+  return kept.join('\n');
 }
 
 export async function runLinkCheck(): Promise<LinkViolation[]> {
@@ -71,7 +93,7 @@ export async function runLinkCheck(): Promise<LinkViolation[]> {
   const violations: LinkViolation[] = [];
 
   for (const file of files) {
-    const content = readFileSync(file, 'utf-8');
+    const content = stripCodeSpans(readFileSync(file, 'utf-8'));
     let match: RegExpExecArray | null;
 
     while ((match = LINK_RE.exec(content)) !== null) {
