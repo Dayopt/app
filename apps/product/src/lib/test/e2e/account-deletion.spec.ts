@@ -172,13 +172,24 @@ describeWithEnv('Account Deletion: 削除 → セッション失効 → 再ロ�
     await page.goto('/ja/day');
     await expect(page).toHaveURL(/\/ja\/auth\/login/, { timeout: 10_000 });
 
-    // 同一資格情報で再ログインするとエラー表示になる（ユーザー列挙を防ぐ汎用メッセージ）
+    // 同一資格情報で再ログインすると失敗する。
+    //
+    // 待つ対象はサーバーエラーの FieldError と invalidCredentials の文言に限定する。
+    // `.text-destructive` を含む複合 locator では、必須ラベルの「＊」マーカー
+    // （field.tsx が required に付ける）が送信前から可視なため即座に一致してしまい、
+    // 削除が効かず再ログインが成功する regression でもテストが green になる。
+    // role="alert" が付くのは announceImmediately の FieldError（= サーバーエラー）
+    // だけだが、Next.js の route announcer も role="alert" を持つため
+    // data-slot でさらに絞る。
     await page.goto('/ja/auth/login');
     await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
     await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
-    await expect(
-      page.locator('[role="alert"], [data-field-error], .text-destructive').first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[role="alert"][data-slot="field-error"]')).toContainText(
+      'メールアドレスまたはパスワードが正しくありません',
+      { timeout: 10_000 },
+    );
+    // 認証が通っていないこと自体も確認する（成功していれば /ja/day 等へ抜ける）
+    await expect(page).toHaveURL(/\/auth\/login/);
   });
 });

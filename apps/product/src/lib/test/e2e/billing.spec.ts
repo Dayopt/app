@@ -143,15 +143,15 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
     }
   });
 
-  test.beforeEach(async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name.includes('Mobile'),
-      'desktop-only（Stripe host route intercept と SettingsDialog 前提の検証）',
-    );
-    await login(page);
-  });
+  // login() は各 test が route 登録を終えてから呼ぶ。desktop shell の
+  // useAppInlineBanner がログイン直後に billing.getOverview を取得し、
+  // QueryClient の既定 staleTime（5 分）でキャッシュするため、後から route を
+  // 登録すると BillingSettings がキャッシュを再利用して mock 対象のリクエストを
+  // 送らない。
+  const MOBILE_SKIP_REASON = 'desktop-only（Stripe host route intercept と SettingsDialog 前提）';
 
-  test('アップグレード操作で Stripe Checkout へ遷移しようとする', async ({ page }) => {
+  test('アップグレード操作で Stripe Checkout へ遷移しようとする', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), MOBILE_SKIP_REASON);
     test.skip(
       !process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
       'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID 未設定（未設定だとアップグレードボタンが disabled のまま）',
@@ -163,6 +163,7 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
     // Stripe 自体は叩かない。遷移が試みられたことだけを確認して即 abort する
     await page.route('https://checkout.stripe.com/**', (route) => route.abort());
 
+    await login(page);
     await openBillingSettings(page);
 
     const upgradeButton = page.getByRole('button', { name: 'アップグレード' });
@@ -179,7 +180,8 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
     expect(stripeRequest.url()).toBe(DUMMY_CHECKOUT_URL);
   });
 
-  test('プラン調整操作で Stripe Customer Portal へ遷移しようとする', async ({ page }) => {
+  test('プラン調整操作で Stripe Customer Portal へ遷移しようとする', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), MOBILE_SKIP_REASON);
     // "プランを調整" ボタンは canAccessPro 限定なので、Pro ユーザーの overview を返す。
     //
     // profiles.stripe_customer_id を実 DB に upsert する案は採れない。getBillingOverview は
@@ -208,6 +210,7 @@ describeWithEnv('Billing: Checkout / Portal 導線', () => {
     // Stripe 自体は叩かない。遷移が試みられたことだけを確認して即 abort する
     await page.route('https://billing.stripe.com/**', (route) => route.abort());
 
+    await login(page);
     await openBillingSettings(page);
 
     const adjustPlanButton = page.getByRole('button', { name: 'プランを調整' });
