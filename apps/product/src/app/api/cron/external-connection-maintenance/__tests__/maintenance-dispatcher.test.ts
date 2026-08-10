@@ -158,6 +158,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       'get_external_lifecycle_app_version_v2',
       'outbox',
       'cleanup_integration_security_events_v1',
+      'cleanup_mcp_mutation_receipts_v1',
       'cleanup_billing_mutation_claims_v2',
       'cleanup_billing_account_deletion_terminal_receipts_v2',
       'get_external_authority_maintenance_status_v1',
@@ -181,7 +182,10 @@ describe('dispatchExternalConnectionMaintenance', () => {
         billingDeletionReceiptsDeleted: 4,
         billingProviderResponsesRedacted: 3,
         securityEventsDeleted: 6,
-        hasMore: false,
+        mcpMutationReceiptsDeleted: 5,
+        // STATUS.refresh_tokens_due = true なので、他の retention 種別に backlog が
+        // 無くても hasMore は true になる（5 due flag を hasMore に組み込んだ回帰確認）。
+        hasMore: true,
       },
     });
   });
@@ -249,6 +253,26 @@ describe('dispatchExternalConnectionMaintenance', () => {
       { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, calendar_revoke_total: 1 } },
     ],
     [
+      'authorization code retention',
+      { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, authorization_codes_due: true } },
+    ],
+    [
+      'access token retention',
+      { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, access_tokens_due: true } },
+    ],
+    [
+      'refresh token retention',
+      { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, refresh_tokens_due: true } },
+    ],
+    [
+      'connection retention',
+      { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, connections_due: true } },
+    ],
+    [
+      'mutation receipt retention',
+      { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, receipts_due: true } },
+    ],
+    [
       'security event retention',
       { outbox: CLEAN_OUTBOX, status: { ...CLEAN_STATUS, security_events_due: true } },
     ],
@@ -293,7 +317,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       message: 'External connection maintenance failed',
     });
     await expect(operation).rejects.not.toThrow(sensitive);
-    expect(rpc).toHaveBeenCalledTimes(3);
+    expect(rpc).toHaveBeenCalledTimes(4);
   });
 
   it('1つのcleanup失敗でも残りのcleanupとstatusを続ける', async () => {
@@ -315,7 +339,7 @@ describe('dispatchExternalConnectionMaintenance', () => {
       name: 'ExternalConnectionMaintenanceError',
       message: 'External connection maintenance failed',
     });
-    expect(rpc).toHaveBeenCalledTimes(3);
+    expect(rpc).toHaveBeenCalledTimes(4);
   });
 
   it('ログと返却値はaggregateだけで秘密情報やIDを含まない', async () => {
