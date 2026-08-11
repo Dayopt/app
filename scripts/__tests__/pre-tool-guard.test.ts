@@ -4,6 +4,15 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+// security guard の test は、正常系の確認ではなく **敵対的な試行を先に列挙する**。
+// 「許可すべき形が通る / 明らかに違う形が落ちる」だけを書くと、境界の 1 文字ずらし・
+// 区切りの省略・類似名が抜ける。実際 2026-08-11 に guard の正規表現へ 2 回続けて
+// 穴が空き（basename 判定、optional group による区切りの任意化）、どちらもこの
+// file の test では捕まらず外部レビューが見つけた。判定を足す時は、
+// まず「どう書けば通ってしまうか」を数え上げてから allow 側を書く。
+//
+// guard 実装側の対の教訓は「許可形を省略記法で組み立てず選択肢で列挙する」
+// （.claude/hooks/pre-tool-guard.sh のコメント参照）。
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const guardPath = resolve(rootDir, '.claude/hooks/pre-tool-guard.sh');
 
