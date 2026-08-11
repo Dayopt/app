@@ -10,7 +10,7 @@ import { api } from '@/lib/trpc';
 import {
   BILLING_POLL_INTERVAL_MS,
   BILLING_POLL_MAX_DURATION_MS,
-  getBillingOperationErrorDisposition,
+  getBillingOperationErrorPresentation,
   shouldContinueBillingPoll,
   useBillingPollStore,
   useStableBillingOperation,
@@ -82,21 +82,16 @@ export function useAppInlineBanner(): InlineBannerState {
     },
     onError(error, variables) {
       if (!variables) return;
-      const disposition = getBillingOperationErrorDisposition(error);
+      const { closesBillingActions, messageKey, retryable } =
+        getBillingOperationErrorPresentation(error);
       const isCurrent = settlePortalAttempt(
         variables.operationId,
-        disposition === 'retryable' ? 'retryable' : 'terminal',
+        retryable ? 'retryable' : 'terminal',
       );
       if (!isCurrent) return;
 
-      if (disposition === 'account_closing') {
-        setBillingActionClosed(true);
-        toast.error(t('common.billingOperation.accountClosing'));
-      } else if (disposition === 'terminal') {
-        toast.error(t('common.billingOperation.restart'));
-      } else {
-        toast.error(t('common.billingOperation.retryable'));
-      }
+      if (closesBillingActions) setBillingActionClosed(true);
+      toast.error(t(messageKey));
     },
   });
 

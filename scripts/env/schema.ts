@@ -17,6 +17,14 @@ export type OperationalItem = {
   required: boolean;
 };
 
+/** 実在してはいけない field。存在すれば 1password:check を失敗させる。 */
+export type ForbiddenField = {
+  vault: string;
+  item: string;
+  field: string;
+  reason: string;
+};
+
 const staging = 'Dayopt-Staging';
 const production = 'Dayopt-Production';
 const shared = 'Dayopt-Shared';
@@ -34,11 +42,11 @@ function envEntry(
 }
 
 export const envSchema: EnvSchemaEntry[] = [
-  envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'local', staging, 'supabase'),
-  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'local', staging, 'supabase'),
-  envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'local', staging, 'supabase'),
+  // Supabase の接続情報（URL / anon key / service role key / DB password）は
+  // Dayopt-Staging に置かない。常設 staging が存在せず、この 4 field は
+  // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
+  // supabase status -o env から注入するため 1Password を経由しない。
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'staging', staging, 'supabase'),
-  envEntry('SUPABASE_DB_PASSWORD', false, 'secret', 'staging', staging, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'staging', staging, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'staging', staging, 'supabase'),
 
@@ -97,11 +105,17 @@ export const envSchema: EnvSchemaEntry[] = [
 ];
 
 export const productionEnvSchema: EnvSchemaEntry[] = [
-  envEntry('NEXT_PUBLIC_SUPABASE_URL', false, 'public', 'production', production, 'supabase'),
-  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', false, 'public', 'production', production, 'supabase'),
-  envEntry('SUPABASE_SERVICE_ROLE_KEY', false, 'secret', 'production', production, 'supabase'),
+  // Supabase の接続情報はここが唯一の master。Staging 側の複製を撤去した分の
+  // required 検査をこちらへ移す。欠けると production の runtime に加えて、
+  // .op-env.admin 経由の管理者運用（緊急時のユーザー復旧）が op run の
+  // 参照解決で止まる。
+  envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'production', production, 'supabase'),
+  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'production', production, 'supabase'),
+  envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'production', production, 'supabase'),
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', production, 'supabase'),
-  envEntry('SUPABASE_DB_PASSWORD', false, 'secret', 'production', production, 'supabase'),
+  // .op-env.admin 経由の `supabase db query --linked` が要求する。欠けると
+  // seed が user 作成だけ成功して DB 投入で止まり、部分適用になる。
+  envEntry('SUPABASE_DB_PASSWORD', true, 'secret', 'production', production, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'production', production, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'production', production, 'supabase'),
   envEntry('UPSTASH_REDIS_REST_URL', false, 'secret', 'production', production, 'upstash'),
@@ -183,6 +197,21 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'google-calendar',
   ),
 ];
+
+// schema から entry を消しても、実 vault に field が残っていれば
+// Dayopt-Staging へのアクセスだけで production の接続情報が取れてしまう。
+// schema の不在（envSchema 側）と実在の禁止（ここ）は別物なので両方を持つ。
+export const forbiddenFields: ForbiddenField[] = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_DB_PASSWORD',
+].map((field) => ({
+  vault: staging,
+  item: 'supabase',
+  field,
+  reason: '常設 staging が無いため、この field は production の複製にしかならない',
+}));
 
 export const operationalItems: OperationalItem[] = [
   { vault: shared, item: 'github-login', required: true },

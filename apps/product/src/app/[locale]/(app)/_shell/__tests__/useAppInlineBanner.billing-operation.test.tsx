@@ -32,25 +32,15 @@ vi.mock('@/lib/toast', () => ({
   toast: { error: toastError },
 }));
 
-vi.mock('@/features/settings', () => ({
+vi.mock('@/features/settings', async () => ({
   // 課金 checkout 復帰の有限ポーリング（issue #1887）。この test では復帰を
   // 起こさないため startedAt は常に null（= ポーリング非アクティブ）。
   BILLING_POLL_INTERVAL_MS: 2500,
   BILLING_POLL_MAX_DURATION_MS: 30_000,
-  getBillingOperationErrorDisposition: (error: unknown) => {
-    const serviceCode =
-      typeof error === 'object' &&
-      error !== null &&
-      'data' in error &&
-      typeof error.data === 'object' &&
-      error.data !== null &&
-      'serviceCode' in error.data
-        ? error.data.serviceCode
-        : null;
-    if (serviceCode === 'BILLING_ACCOUNT_CLOSING') return 'account_closing';
-    if (serviceCode === 'BILLING_RESPONSE_EXPIRED') return 'terminal';
-    return 'retryable';
-  },
+  // 分岐そのものは再実装せず実物を使う。ここで写すと分岐の変化を test が追えない（#1937）。
+  ...(await vi.importActual<typeof import('@/features/settings/lib/billing-operation')>(
+    '@/features/settings/lib/billing-operation',
+  )),
   shouldContinueBillingPoll: () => false,
   useBillingPollStore: {
     use: {

@@ -17,7 +17,7 @@ import {
 } from '@dayopt/components';
 
 import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
-import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+import { getBillingOperationErrorPresentation } from '../lib/billing-operation';
 
 interface PaymentErrorDialogProps {
   open: boolean;
@@ -55,22 +55,17 @@ function OpenPaymentErrorDialog({ onClose }: Pick<PaymentErrorDialogProps, 'onCl
     },
     onError: (error, variables) => {
       if (!variables) return;
-      const disposition = getBillingOperationErrorDisposition(error);
+      const { closesBillingActions, messageKey, retryable } =
+        getBillingOperationErrorPresentation(error);
       const isCurrent = settlePortalAttempt(
         variables.operationId,
-        disposition === 'retryable' ? 'retryable' : 'terminal',
+        retryable ? 'retryable' : 'terminal',
       );
       if (!isCurrent) return;
 
       setIsRedirecting(false);
-      if (disposition === 'account_closing') {
-        setBillingActionClosed(true);
-        toast.error(t('common.billingOperation.accountClosing'));
-      } else if (disposition === 'terminal') {
-        toast.error(t('common.billingOperation.restart'));
-      } else {
-        toast.error(t('common.billingOperation.retryable'));
-      }
+      if (closesBillingActions) setBillingActionClosed(true);
+      toast.error(t(messageKey));
     },
   });
 
