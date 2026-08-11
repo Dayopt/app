@@ -60,6 +60,8 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 **service role key を回転する、または新形式（`sb_secret_`）へ移行する場合、この経路の再検証を先に行う。** 新形式は Bearer として送られないため admin と解釈されず、captcha 免除が成立しなくなって削除が止まる。Supabase の legacy JWT key 廃止は外部の都合で動き、アプリ側の canary は**事後にしか鳴らない**。検証はローカルで `supabase/config.toml` の `[auth.captcha]` を有効化し、user-scoped 経路が失敗し service-role 経路が成功することを確認する。
 
+この再検証は人間の手順だけに委ねず、**production build gate が鍵の形式を機械的に検査する**（`apps/product/production-build-gate.mjs`、[#1952](https://github.com/Dayopt/dayopt/issues/1952)）。legacy JWT 形式でない値が入った production build は失敗し、error message が削除フローへの影響と対処（Turnstile 方式への切替 = [#1925](https://github.com/Dayopt/dayopt/issues/1925) の (c) 案）を示す。日次 audit ではなく build gate に置いたのは、`production-auth-config-audit.mjs` の cron job に service role key を配ると RLS 全バイパスの鍵の配布先が増えるため（build env には値が既にあり、新たな配布が要らない）。検知は「鍵を差し替えた次の deploy」= 変更が効き始める瞬間になる。**検査するのは値が入っている時の形式だけで、欠落は見ない** — 回転は変数を消さないため。
+
 **上 2 行（メールアドレス変更・パスワード変更）は code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
 
 - `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる
