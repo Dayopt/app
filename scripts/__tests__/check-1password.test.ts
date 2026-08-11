@@ -208,4 +208,33 @@ describe('check-1password.ts', () => {
     // 権限不足や一時エラーを「不在を確認できた」と読み替えない
     expect(result.stdout).not.toContain('Dayopt-Staging / supabase / SUPABASE_DB_PASSWORD: ABSENT');
   });
+
+  it('item を取得できない時も禁止 field の不在を確認できないので失敗する', () => {
+    // Dayopt-Staging/supabase の通常 entry はすべて optional なので、
+    // 禁止 field 検査が通してしまうと checker 全体が exit 0 になりうる
+    const result = runCheck({ missingItem: 'supabase' });
+
+    expect(result.status).toBe(1);
+    for (const entry of forbiddenFields.filter((f) => f.item === 'supabase')) {
+      expect(result.stdout, entry.field).toContain(
+        `${entry.vault} / ${entry.item} / ${entry.field}: UNVERIFIABLE`,
+      );
+      expect(result.stdout, entry.field).not.toContain(
+        `${entry.vault} / ${entry.item} / ${entry.field}: ABSENT`,
+      );
+    }
+  });
+
+  it('op が壊れた応答を返す時も禁止 field を ABSENT と判定しない', () => {
+    for (const mode of ['error', 'invalid-json'] as const) {
+      const result = runCheck({ mode });
+
+      expect(result.status, mode).toBe(1);
+      for (const entry of forbiddenFields) {
+        expect(result.stdout, `${mode}/${entry.field}`).not.toContain(
+          `${entry.vault} / ${entry.item} / ${entry.field}: ABSENT`,
+        );
+      }
+    }
+  });
 });
