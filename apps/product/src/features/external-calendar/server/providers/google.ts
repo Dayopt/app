@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { logger } from '@/lib/logger';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 import {
   googleApiErrorSchema,
@@ -221,19 +222,37 @@ type NormalizedPage = {
   events: NormalizedExternalEvent[];
   cancelledEventIds: string[];
   skippedEventIds: string[];
+  /** parse できずに落とした件数。呼び出し側が run 単位で合算して報告する。 */
+  unparsableCount: number;
 };
+
+/**
+ * 静かに欠けたことを alert に回す。
+ *
+ * **件数や上限値は context に入れない。** `CaptureErrorContext`（`@dayopt/observability` の
+ * `TechnicalErrorContext`）は feature / operation など 8 個の string キーしか持たず、
+ * 数値キーは型に無い。仮に通しても `sanitizeTechnicalContext` の allowlist で捨てられる。
+ * 具体的な件数は logger 側に出し、Sentry は「起きた」ことと operation だけを運ぶ。
+ */
+function reportSilentLoss(message: string, operation: string): void {
+  captureUnexpectedError(new Error(message), {
+    feature: 'external_calendar',
+    operation,
+  });
+}
 
 function normalizeEvents(items: unknown[]): NormalizedPage {
   const events: NormalizedExternalEvent[] = [];
   const cancelledEventIds: string[] = [];
   const skippedEventIds: string[] = [];
+  let unparsableCount = 0;
 
   for (const item of items) {
     // 1 件ずつ parse する。想定外の 1 件でページ全体を落とすと、そのカレンダーが
     // 永久に同期できなくなる。
     const parsed = googleEventSchema.safeParse(item);
     if (!parsed.success) {
-      logger.warn('[google-calendar] skipped an unparsable event');
+      unparsableCount += 1;
       continue;
     }
 
@@ -275,7 +294,7 @@ function normalizeEvents(items: unknown[]): NormalizedPage {
     });
   }
 
-  return { events, cancelledEventIds, skippedEventIds };
+  return { events, cancelledEventIds, skippedEventIds, unparsableCount };
 }
 
 /** GoogleOAuthError を provider 共通の分類に落とす。 */
@@ -307,6 +326,9 @@ async function syncCalendar(
   const usedFullSync = params.cursor === null;
   let pageToken: string | null = null;
   let nextCursor: string | null = null;
+  // ページごとに撃つと、schema drift のような全ページに及ぶ異常で 1 run から
+  // 最大 MAX_EVENT_PAGES 件の alert が出る。run 単位で合算して 1 件にする。
+  let unparsableEvents = 0;
 
   for (let page = 0; page < MAX_EVENT_PAGES; page += 1) {
     const url = buildEventsListUrl({ ...params, pageToken });
@@ -317,7 +339,8 @@ async function syncCalendar(
     } catch (error) {
       if (error instanceof CalendarProviderError && error.kind === 'cursor_invalid') {
         // 呼び出し側が cursor を捨てて full sync をやり直す。途中まで集めた分は
-        // 捨てる（cursor 失効時の部分結果は信用できない）。
+        // 捨てる（cursor 失効時の部分結果は信用できない）が、落とした件数は報告する。
+        reportUnparsableEvents(unparsableEvents);
         return {
           events: [],
           cancelledEventIds: [],
@@ -339,11 +362,13 @@ async function syncCalendar(
     events.push(...normalized.events);
     cancelledEventIds.push(...normalized.cancelledEventIds);
     skippedEventIds.push(...normalized.skippedEventIds);
+    unparsableEvents += normalized.unparsableCount;
 
     // 終了条件は nextPageToken の有無だけ。Google は要求より少ない件数を返すことがあるので、
     // 件数で打ち切ってはいけない。nextSyncToken は最終ページにしか来ない。
     if (parsed.data.nextPageToken === undefined) {
       nextCursor = parsed.data.nextSyncToken ?? null;
+      reportUnparsableEvents(unparsableEvents);
       return {
         events,
         cancelledEventIds,
@@ -358,8 +383,12 @@ async function syncCalendar(
   }
 
   // ページ上限に当たった。cursor を返さないことで、次回また先頭からやり直させる
-  // （upsert は冪等なので破壊は起きない）。黙って打ち切ったことにしない。
+  // （upsert は冪等なので破壊は起きない）。黙って打ち切ったことにしない。この上限は
+  // ±90 日 window の現実的な件数を大きく超えるので、到達自体が provider 側の異常か
+  // ページングのバグであり、log だけでは誰も気づかない。
   logger.warn('[google-calendar] stopped paging at the page limit', { pages: MAX_EVENT_PAGES });
+  reportSilentLoss('google calendar events paging hit the page limit', 'sync_calendar');
+  reportUnparsableEvents(unparsableEvents);
 
   return {
     events,
@@ -371,9 +400,18 @@ async function syncCalendar(
   };
 }
 
+/** schema と Google のレスポンスがずれた合図。event の中身は載せず件数だけログに出す。 */
+function reportUnparsableEvents(unparsableCount: number): void {
+  if (unparsableCount === 0) return;
+
+  logger.warn('[google-calendar] skipped unparsable events', { count: unparsableCount });
+  reportSilentLoss('google calendar returned unparsable events', 'normalize_events');
+}
+
 async function listCalendars(session: ProviderSession): Promise<ProviderCalendar[]> {
   const calendars: ProviderCalendar[] = [];
   let pageToken: string | null = null;
+  let unparsableCount = 0;
 
   for (let page = 0; page < MAX_CALENDAR_LIST_PAGES; page += 1) {
     const url = new URL(`${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`);
@@ -391,7 +429,7 @@ async function listCalendars(session: ProviderSession): Promise<ProviderCalendar
     for (const item of parsed.data.items) {
       const entry = googleCalendarListEntrySchema.safeParse(item);
       if (!entry.success) {
-        logger.warn('[google-calendar] skipped an unparsable calendar list entry');
+        unparsableCount += 1;
         continue;
       }
 
@@ -403,14 +441,31 @@ async function listCalendars(session: ProviderSession): Promise<ProviderCalendar
       });
     }
 
-    if (parsed.data.nextPageToken === undefined) return calendars;
+    if (parsed.data.nextPageToken === undefined) {
+      reportUnparsableCalendars(unparsableCount);
+      return calendars;
+    }
     pageToken = parsed.data.nextPageToken;
   }
 
+  // 上限に当たるということは、こちらのページングか provider 側が壊れている。カレンダーが
+  // 一覧から静かに欠けると、ユーザーは「選べないカレンダーがある」としか認識できない。
   logger.warn('[google-calendar] stopped listing calendars at the page limit', {
     pages: MAX_CALENDAR_LIST_PAGES,
   });
+  reportSilentLoss('google calendar list paging hit the page limit', 'list_calendars');
+  reportUnparsableCalendars(unparsableCount);
   return calendars;
+}
+
+/** 一覧から静かに落ちた件数をログに出し、落ちた事実を alert に回す。0 件なら何もしない。 */
+function reportUnparsableCalendars(unparsableCount: number): void {
+  if (unparsableCount === 0) return;
+
+  logger.warn('[google-calendar] skipped unparsable calendar list entries', {
+    count: unparsableCount,
+  });
+  reportSilentLoss('google calendar returned unparsable calendar list entries', 'list_calendars');
 }
 
 export const googleCalendarAdapter: CalendarProviderAdapter = {

@@ -488,6 +488,7 @@
           "connected": "Google アカウントを接続しました",
           "accessDenied": "Google カレンダーへのアクセスが許可されませんでした",
           "accountMismatch": "再接続が必要なものと同じGoogle アカウントを選んでください",
+          "authorizationExpired": "接続用のリンクの有効期限が切れました。もう一度お試しください。",
           "proRequired": "Google カレンダーとの接続にはProプランが必要です",
           "rateLimited": "接続の試行回数が多すぎます。時間をおいてお試しください。",
           "reconnectTargetInvalid": "この接続は再接続できなくなりました。更新して、もう一度お試しください。",
