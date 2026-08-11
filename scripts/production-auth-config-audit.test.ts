@@ -79,6 +79,29 @@ describe('auditSupabaseAuthConfig', () => {
     expect(errors[0]).toContain('[fail-closed]');
   });
 
+  it('契約にも除外リストにも無い security_* キーは failure にする', () => {
+    // 契約は「知っているキー」しか守れない。未知の設定が現れたら 1 度止めて、
+    // pin するか除外リストへ入れるかの判断を強制する（2026-08-11 に
+    // security_update_password_require_current_password を取りこぼした事故の構造対策）。
+    const config = { ...compliantAuthConfig(), security_brand_new_toggle: false };
+
+    const errors = auditSupabaseAuthConfig(config);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('security_brand_new_toggle');
+  });
+
+  it('除外リストに載せた security_* キーは failure にしない', () => {
+    const config = {
+      ...compliantAuthConfig(),
+      security_captcha_secret: 'must-not-appear',
+      security_refresh_token_reuse_interval: 10,
+      security_sb_forwarded_for_enabled: false,
+    };
+
+    expect(auditSupabaseAuthConfig(config)).toEqual([]);
+  });
+
   it('全 key に故障の向きが分類されている', () => {
     for (const { key, failureMode } of AUTH_CONFIG_CONTRACT) {
       expect(['fail-open', 'fail-closed'], key).toContain(failureMode);

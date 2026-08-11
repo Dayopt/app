@@ -29,6 +29,7 @@ describe('production auth config audit contract', () => {
     // する層がここ以外に無い。値を変える PR は必ずこの test の diff を伴わせる。
     expect(AUTH_CONFIG_CONTRACT.map(({ key, expected }) => [key, expected])).toEqual([
       ['security_update_password_require_reauthentication', false],
+      ['security_update_password_require_current_password', true],
       ['mailer_secure_email_change_enabled', true],
       ['security_captcha_enabled', true],
       ['security_captcha_provider', 'turnstile'],

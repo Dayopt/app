@@ -40,6 +40,18 @@ export const SUPABASE_PRODUCTION_PROJECT_REF = 'yvglwblxrnrenfifsnje';
  * 「Dashboard を変えたから contract を追従させる」のではなく、**変更が意図したもので
  * あることを PR で示してから**追従させる。
  *
+ * ## 監視対象は公開 OpenAPI spec から導出しない
+ *
+ * `https://api.supabase.com/api/v1-json` の `AuthConfigResponse` は **live 応答の完全な
+ * 記述ではない**。2026-08-11 実測で live 242 キーに対し spec 237 キーで、6 キーが spec に
+ * 存在しなかった。その 1 つが `security_update_password_require_current_password` で、
+ * **app のパスワード変更が実際に依存している値**だった。
+ *
+ * spec を根拠に「そのフィールドは存在しない」と判断し、さらに live の確認も spec 由来の
+ * キー名だけを射影したため、同じ盲点を二度通って誤りを検出できなかった（同日の事故）。
+ * **監視対象は必ず live 応答の `keys` 列挙から起こす。** その規律を人手に頼らないため、
+ * §未分類キーの検出 で「契約にも除外リストにも無い `security_*` キー」を failure にする。
+ *
  * ## 故障の向き（`failureMode`）
  *
  * 「設定が緩む方向に変わったら警報」という片方向の設計にしない。**判定は期待値との
@@ -55,23 +67,29 @@ export const AUTH_CONFIG_CONTRACT = [
   {
     key: 'security_update_password_require_reauthentication',
     expected: false,
-    // `supabase/config.toml:200` の `secure_password_change = true` に対応する production 値。
-    // **production では現在 off** で、config.toml との drift が既に存在する（2026-08-11 実測）。
-    // GoTrue で `updateUser({ password, current_password })` の `current_password` を有効に
-    // するのはこの 1 設定で、off の間はサーバー側で検証されない。
+    // 再認証 nonce（`reauthenticate()`）を要求するかどうかの設定で、`current_password` の
+    // 検証を司るのは下の `..._require_current_password` の方（両者は別設定）。
+    // Dayopt は nonce フローを実装していないので false が正しい。
     //
-    // 注意: `PasswordChangeDialog.tsx` は `security_update_password_require_current_password`
-    // が true であることを根拠に client 側の事前検証を持たない実装になっているが、その名前の
-    // 設定は Management API に存在しない（`AuthConfigResponse` を走査して確認）。この矛盾は
-    // 本 audit の scope 外として auth レーン（#1928 / #1925、`docs/product/specs/auth.md` の
-    // writer）へ回した。
-    //
-    // true への引き上げは password reset 経路（`useAuthStore.ts` の `updatePassword` は
-    // `current_password` 無しで `updateUser` を呼ぶ）への影響検証と production 変更を伴う
-    // ため、まず現在値を固定して無自覚な変化を検出できるようにする。false -> true は
-    // 「安全側」に見えるが上記 reset 経路が止まりうるので fail-closed に分類する。
+    // false -> true は「安全側」に見えるが、nonce 無しの `updateUser` が拒否されるように
+    // なり、パスワード変更と reset 経路（`useAuthStore.ts` の `updatePassword` は
+    // `current_password` 無しで呼ぶ）が止まりうるので fail-closed に分類する。
     failureMode: 'fail-closed',
-    why: '現在パスワードのサーバー側検証の有無。変化は password 変更フローの保証を変える',
+    why: '再認証 nonce の要求有無。true になると nonce 未実装のフローが止まる',
+  },
+  {
+    key: 'security_update_password_require_current_password',
+    expected: true,
+    // `updateUser({ password, current_password })` の `current_password` をサーバー側で
+    // 検証させる設定。**app のパスワード変更はこの値に単独で依存している** —
+    // `PasswordChangeDialog.tsx` は client 側の事前検証を持たない（公開 Auth endpoint は
+    // Bot Protection 有効時に CAPTCHA token を要求され、認証済み画面から呼ぶと必ず失敗する
+    // ため。#1917 / #1931）。off になると `current_password` はエラーも返さず黙って無視され、
+    // 現在パスワードを知らないままパスワードを変更できる。
+    //
+    // このキーは公開 OpenAPI spec に載っていない（§監視対象は公開 OpenAPI spec から導出しない）。
+    failureMode: 'fail-open',
+    why: '現在パスワードのサーバー側検証。off で現在パスワード無しの変更が黙って通る',
   },
   {
     key: 'mailer_secure_email_change_enabled',
@@ -123,6 +141,47 @@ export const AUTH_CONFIG_CONTRACT = [
   },
 ];
 
+/**
+ * 契約に載せないと決めた `security_*` キー。**キー名だけを列挙し、値は読まない。**
+ *
+ * §未分類キーの検出 の除外リスト。ここに書くことは「見た上で pin しないと決めた」の
+ * 意思表示で、書き忘れ・未知の新設定と区別がつく状態を保つ。
+ */
+const ACKNOWLEDGED_UNPINNED_SECURITY_KEYS = [
+  // secret 値そのもの。値を読まない方針なので pin の対象にしない。
+  'security_captcha_secret',
+  // refresh token 再利用の猶予秒数。安全性の on/off ではなくチューニング値。
+  'security_refresh_token_reuse_interval',
+  // 信頼する forwarded-for ヘッダの扱い。Dayopt の現在の構成では判断材料になっていない。
+  'security_sb_forwarded_for_enabled',
+];
+
+/**
+ * 契約にも除外リストにも無い `security_*` キーを failure にする。
+ *
+ * 契約は「知っているキー」しか守れない。Supabase 側の設定追加や、spec に載らないキーの
+ * 見落としは、片方向の drift 検出では**永久に可視化されない**（2026-08-11 に
+ * `security_update_password_require_current_password` で実際に起きた）。未知のキーが
+ * 現れたら 1 度 failure にして、pin するか除外リストへ入れるかの判断を強制する。
+ *
+ * キー名のみを扱い、値は読まない。
+ */
+function auditSecurityKeyCoverage(config) {
+  const contracted = new Set(AUTH_CONFIG_CONTRACT.map(({ key }) => key));
+  const acknowledged = new Set(ACKNOWLEDGED_UNPINNED_SECURITY_KEYS);
+
+  const unclassified = Object.keys(config)
+    .filter((key) => key.startsWith('security_'))
+    .filter((key) => !contracted.has(key) && !acknowledged.has(key))
+    .sort();
+
+  if (unclassified.length === 0) return [];
+
+  return [
+    `unclassified security settings appeared: ${unclassified.join(', ')} — pin them in AUTH_CONFIG_CONTRACT or list them in ACKNOWLEDGED_UNPINNED_SECURITY_KEYS`,
+  ];
+}
+
 function describeValue(value) {
   return typeof value === 'string' ? JSON.stringify(value) : String(value);
 }
@@ -157,6 +216,8 @@ export function auditSupabaseAuthConfig(config) {
       );
     }
   }
+
+  errors.push(...auditSecurityKeyCoverage(config));
 
   return errors;
 }
