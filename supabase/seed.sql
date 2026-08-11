@@ -227,5 +227,3 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
-
--- preview branch opt-in marker (#1461 検証中。方式確定後に整理する)

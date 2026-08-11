@@ -122,6 +122,65 @@ git push
 # → staging Supabase branch に自動適用
 ```
 
+### Preview branch の作られ方（2026-08-11 実測）
+
+上のフローで「Supabase preview branch 自動生成」が起きるのは、**PR の diff に migration（schema に実影響する変更）が含まれる時だけ**。この条件は誤解しやすいので、実測で確かめた事実を残す。
+
+**bot の文言は実態と一致しない。** PR に branch が作られない時、bot は次のように書く:
+
+> This pull request has been ignored ... because there are no changes detected in `supabase` directory.
+
+「directory の変更」と読めるが、**ディレクトリ単位ではない**。`supabase/` 直下に任意のファイルを置いても、実在する `supabase/seed.sql` を編集しても発火しない（dot 始まり / 非 dot / seed.sql コメントの 3 パターンで `Supabase Preview` check が `skipped` を確認）。「適当なファイルを触って Preview 用の branch を出す」opt-in は成立しない。
+
+**帰結**: `supabase/` を触らない PR の Vercel Preview には Supabase env が注入されない。その Preview で auth など DB 接続が要る挙動は検証できない（env validation で 500 になる）。**Preview での実挙動確認に依存した検証計画を立てない。** local + production 確認で回すのが既定（経緯は [#1461](https://github.com/Dayopt/dayopt/issues/1461)）。
+
+### CLI から preview branch を作る時
+
+調査目的などで手動に作る場合、次の 2 点を外すと確実に失敗する。
+
+**1. `--git-branch` は必須。**
+
+```bash
+supabase --experimental branches create <name> \
+  --project-ref yvglwblxrnrenfifsnje \
+  --region ap-northeast-1 --size micro \
+  --git-branch <実在する git branch>
+```
+
+省略すると action run の `git_config.ref` が空になり、`migrate` step が `DEAD` で停止する。git `main` への紐付けは **409 で拒否される**（default branch が占有済み）。実在する feature branch に紐付ければ全 migration が適用される。
+
+**2. 手動 branch の credential は Vercel へ同期されない。** 同期は integration が自分で branch を作る経路でしか走らないため、手動で作った branch は Vercel Preview から見えない。Preview を実際に動かす目的では使えない。
+
+**削除は 2 段階**（persistent の場合）:
+
+```bash
+supabase --experimental branches update <id> --project-ref <ref> --persistent=false
+supabase --experimental branches delete <id> --project-ref <ref>
+```
+
+### migration 失敗時の誤診の罠
+
+**`supabase_migrations.schema_migrations` の記録を信用しない。** branch 作成が失敗した状態でも、baseline (`00000000000000`) と次の 1 件が applied として**記録されるのに、スキーマは空**になることがある。`supabase migration list` の remote 列もこの 2 件を applied と表示する。
+
+この状態では 3 個目の migration が `relation "public.xxx" does not exist` で落ちるため、**その migration 固有の問題に見える**。実際はテーブルが 1 つも無いのが原因。
+
+実体の確認はこちらを使う:
+
+```sql
+select count(*) from pg_tables where schemaname = 'public';
+```
+
+失敗理由の調べ方（公開 Management API に branch-action log 本文の endpoint は無い。`/v1/projects/{ref}/actions/{run_id}/logs` は失敗 run では log stream 自体が作られず 400 になる）:
+
+```bash
+# git_config.ref が空なら --git-branch 未指定が原因
+curl -s "https://api.supabase.com/v1/projects/<branch-ref>/actions" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | jq '[.[] | {git_config, run_steps: [.run_steps[] | {name, status}]}]'
+```
+
+**API / CLI の出力は `jq` の allowlist 射影だけを表示する。** `supabase branches get` は credential を返す command なので、状態確認には metadata しか返さない `branches list` を使う（[#1920](https://github.com/Dayopt/dayopt/issues/1920)、[2026-08-11 incident](../../../docs/operations/log/2026-08-11-incident-supabase-branch-password-exposure.md)）。
+
 ### 機能削除の順序（destructive change）
 
 column / table の削除を伴う機能撤去は 3 段階に分け、1 PR に混ぜない:
