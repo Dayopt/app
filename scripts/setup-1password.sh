@@ -86,16 +86,13 @@ echo "── Phase 2: Item 作成 (値は空、NOTES テンプレ付き) ──�
 # ----- Dayopt-Staging -----
 echo "  [Dayopt-Staging]"
 
+# 接続情報（URL / anon key / service role key / DB password / project-ref）は
+# 意図的に作らない。常設 staging が無いため、置けば production の複製になる。
 run item create --category=apicredential --vault=Dayopt-Staging --title=supabase \
   --tags=dayopt,staging notesPlain="$NOTES" \
-  'NEXT_PUBLIC_SUPABASE_URL[text]=' \
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY[concealed]=' \
-  'SUPABASE_SERVICE_ROLE_KEY[concealed]=' \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
   'CRON_SECRET[concealed]=' \
-  'SUPABASE_DB_PASSWORD[concealed]=' \
-  'SUPABASE_ACCESS_TOKEN[concealed]=' \
-  'project-ref[text]='
+  'SUPABASE_ACCESS_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=upstash \
   --tags=dayopt,staging notesPlain="$NOTES" \

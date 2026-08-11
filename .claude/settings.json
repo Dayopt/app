@@ -126,6 +126,8 @@
       "Read(**/.env.production)",
       "Read(**/supabase/.env*)",
       "Read(**/.envrc)",
+      "Write(**/.op-env.admin)",
+      "Edit(**/.op-env.admin)",
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
       "Bash(sudo:*)",

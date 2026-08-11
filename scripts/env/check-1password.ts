@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { onePasswordEnvSchema, operationalItems } from './schema';
+import { forbiddenFields, onePasswordEnvSchema, operationalItems } from './schema';
 
 type CommandResult = {
   ok: boolean;
@@ -157,6 +157,48 @@ for (const item of operationalItems) {
 
   console.log(`${item.vault} / ${item.item}: ${status}`);
   if (item.required && status !== 'OK') hasFailure = true;
+}
+
+// 禁止 field は「存在しないこと」が期待値。schema から entry を消しただけでは
+// 実 vault に残った field を誰も検査しないため、ここで実在を落とす。
+//
+// 保証境界: ABSENT は「正常応答から不在を確認できた」時だけ出す。op の応答は
+// vault / item / field の 3 段しかなく、そのすべてで確認不能を UNVERIFIABLE として
+// 失敗に倒すため、「確認できないまま pass する」経路はこのループには残らない。
+function reportForbidden(label: string, detail: string): void {
+  console.log(label);
+  console.log(`  └ ${detail}`);
+  hasFailure = true;
+}
+
+for (const forbidden of forbiddenFields) {
+  const label = `${forbidden.vault} / ${forbidden.item} / ${forbidden.field}`;
+
+  // vault を取得できない理由（不在 / 権限不足 / 一時エラー）は区別できない
+  if (!hasVault(forbidden.vault)) {
+    reportForbidden(`${label}: UNVERIFIABLE`, 'vault を取得できないため不在を確認できません');
+    continue;
+  }
+
+  const itemResult = getItem(forbidden.vault, forbidden.item);
+  if (itemResult.status === 'OP_TIMEOUT') {
+    console.log(`1Password: OP_TIMEOUT`);
+    process.exit(1);
+  }
+  // getItem は item 不在・権限エラー・一時エラー・不正 JSON をすべて MISSING_ITEM へ
+  // 畳むため、取得失敗を不在の証拠として使えない
+  if (itemResult.status !== 'OK') {
+    reportForbidden(`${label}: UNVERIFIABLE`, 'item を取得できないため不在を確認できません');
+    continue;
+  }
+
+  // ここだけが不在の positive evidence。値が空でも field 自体は存在する
+  if (getField(itemResult.item, forbidden.field)) {
+    reportForbidden(`${label}: FORBIDDEN_PRESENT`, `削除してください: ${forbidden.reason}`);
+    continue;
+  }
+
+  console.log(`${label}: ABSENT`);
 }
 
 if (hasFailure) {

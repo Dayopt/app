@@ -10,7 +10,7 @@
 # 経由作成では trigger が firing しないケース等) の補修用。
 #
 # 使い方:
-#   op run --env-file=.op-env.local -- \
+#   op run --env-file=.op-env.admin -- \
 #     env USER_EMAIL=foo@example.com \
 #     bash scripts/admin-ensure-profile.sh
 # ========================================
