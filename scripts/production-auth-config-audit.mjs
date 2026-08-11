@@ -54,6 +54,10 @@ import { pathToFileURL } from 'node:url';
  * error message に含めてよい（`docs/operations/secrets.md` §API 経由の設定読戻し の射影
  * 規則における明示 allowlist に当たる）。`*_secrets` / `*_key` / `*_token` / `*_pass` /
  * `*_credentials` は契約へ入れない（contract test が名前で弾く）。
+ *
+ * ただし **URI 型の値は名前で判定できない**。Dashboard で任意の URI を設定でき、query /
+ * userinfo / path のどこにでも credential が入りうるので、`redact: 'url'` を付けた契約は
+ * 失敗時に実測値を一切出さない（期待値と不一致の事実だけを出す）。
  */
 
 /** production project（`docs/engineering/infra.md`）。secret ではない。 */
@@ -293,8 +297,8 @@ export const AUTH_CONFIG_CONTRACT = [
     // 通り、攻撃者がメールを転送すれば利用者からも気づけない。uri_allow_list より blast
     // radius が広い（あちらは redirect 先を制限するだけだが、こちらは token 本体を渡す）。
     // 2026-08-11 実測で query も userinfo も持たない自 project の Edge Function URL。
-    // drift 先が query に何を積んでいるかは不明なので、失敗時は実測値の全文を出さず
-    // origin + pathname だけを出す（`redact: 'url'`）。
+    // drift 先は Dashboard で任意に設定できるため、失敗時に実測値を一切出さない
+    // （`redact: 'url'`）。query / userinfo / path のいずれにも secret が入りうる。
     redact: 'url',
     failureMode: 'fail-open',
     why: '認証メール hook の配送先。書き換えで全認証 token が第三者へ渡る',
@@ -455,19 +459,20 @@ function describeValue(value) {
 }
 
 /**
- * 失敗時に出す実測値。`redact: 'url'` の契約では origin + pathname までに落とす。
- * drift 先の URL は攻撃者が組み立てうるため、query を CI ログへ持ち込まない。
+ * 失敗時に出す実測値。`redact: 'url'` の契約では**一切出さない**。
+ *
+ * 当初は origin + pathname まで出していたが、drift 先の URI は Dashboard で任意に
+ * 設定できるので、署名付き query・userinfo・path に埋め込まれた secret のいずれもが
+ * Actions ログへ永続化されうる（Codex #3755024756）。契約名が `*_secret` でなくても
+ * **値の中身が credential になりうる**ので、名前ベースの test では防げない。
+ *
+ * 出すのは期待値（自 project の公開 URL）と不一致の事実だけにする。drift 先の確認は
+ * Supabase Dashboard か、`docs/operations/secrets.md` §API 経由の設定読戻し に従った
+ * 手元の射影で行う。
  */
 function describeActual(value, redact) {
   if (redact !== 'url') return describeValue(value);
-  if (typeof value !== 'string') return `(${typeof value})`;
-  try {
-    const url = new URL(value);
-    const suffix = url.search === '' ? '' : ' (query redacted)';
-    return `${JSON.stringify(`${url.origin}${url.pathname}`)}${suffix}`;
-  } catch {
-    return '(unparsable url, redacted)';
-  }
+  return '(redacted — Supabase Dashboard で実際の値を確認する)';
 }
 
 /** `compare: 'set'` の契約用。順序と重複の揺れで誤検出しないよう集合として比べる。 */

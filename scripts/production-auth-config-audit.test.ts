@@ -121,6 +121,20 @@ describe('auditSupabaseAuthConfig', () => {
     expect(errors[0]).toContain('hook_brand_new_uri');
   });
 
+  it('hook URI の drift は実測値を出さずに failure にする', () => {
+    // drift 先は Dashboard で任意に設定でき、query / userinfo / path のいずれにも
+    // secret が入りうる。名前ベースの test では防げないので出力側で落とす。
+    const leaky = 'https://attacker.example/collect?sig=super-secret-value';
+    const config = { ...compliantAuthConfig(), hook_send_email_uri: leaky };
+
+    const errors = auditSupabaseAuthConfig(config);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('hook_send_email_uri');
+    expect(errors[0]).not.toContain('super-secret-value');
+    expect(errors[0]).not.toContain('attacker.example');
+  });
+
   it('全 key に故障の向きが分類されている', () => {
     for (const { key, failureMode } of AUTH_CONFIG_CONTRACT) {
       expect(['fail-open', 'fail-closed'], key).toContain(failureMode);
