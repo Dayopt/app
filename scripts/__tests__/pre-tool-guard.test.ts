@@ -36,12 +36,12 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
   // .op-env.admin があると op run で production の service role key が解決され、
   // admin script が本番へ書き込める。作成と消費の両方を止める必要がある。
   it.each([
-    [`cp ${ADMIN_EXAMPLE} ${ADMIN}`, '雛形からのコピー'],
-    [`cat > ${ADMIN}`, 'リダイレクトでの作成'],
-    [`echo x >> ${ADMIN}`, '追記'],
-    [`touch ${ADMIN}`, 'touch'],
-    [`pnpm i && cp a ${ADMIN}`, 'セパレータ後の cp'],
-  ])('作成を止める: %s', (command) => {
+    ['雛形からのコピー', `cp ${ADMIN_EXAMPLE} ${ADMIN}`],
+    ['リダイレクトでの作成', `cat > ${ADMIN}`],
+    ['追記', `echo x >> ${ADMIN}`],
+    ['touch', `touch ${ADMIN}`],
+    ['セパレータ後の cp', `pnpm i && cp a ${ADMIN}`],
+  ])('作成を止める: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
 
@@ -52,21 +52,21 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
 
   // 作成だけ止めても、雛形をそのまま op run に渡せば同じ権限が解決される。
   it.each([
-    [`op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`, '雛形の直接実行'],
-    [`op run --env-file=${ADMIN} -- bash scripts/admin-show-user.sh`, '実ファイル'],
-    [`op run --env-file ${ADMIN_EXAMPLE} -- sh -c true`, '空白区切り'],
-    [`cd /tmp && op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`, 'セパレータ後'],
-  ])('op run による消費を止める: %s', (command) => {
+    ['雛形の直接実行', `op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
+    ['実ファイル', `op run --env-file=${ADMIN} -- bash scripts/admin-show-user.sh`],
+    ['空白区切りの --env-file', `op run --env-file ${ADMIN_EXAMPLE} -- sh -c true`],
+    ['セパレータ後の op run', `cd /tmp && op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
+  ])('op run による消費を止める: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
 
   it.each([
-    [`op run --env-file=${LOCAL} -- pnpm env:check`, '通常 local dev の op run'],
-    [`cat ${ADMIN_EXAMPLE}`, '雛形の読み取り'],
-    [`rg -n ${ADMIN} docs/`, '名前の grep'],
-    [`cp .op-env.local.example ${LOCAL}`, 'local の作り直し'],
-    ['git status', '無関係コマンド'],
-  ])('正当な操作は通す: %s', (command) => {
+    ['通常 local dev の op run', `op run --env-file=${LOCAL} -- pnpm env:check`],
+    ['雛形の読み取り', `cat ${ADMIN_EXAMPLE}`],
+    ['名前の grep', `rg -n ${ADMIN} docs/`],
+    ['local の作り直し', `cp .op-env.local.example ${LOCAL}`],
+    ['無関係コマンド', 'git status'],
+  ])('正当な操作は通す: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('allow');
   });
 
