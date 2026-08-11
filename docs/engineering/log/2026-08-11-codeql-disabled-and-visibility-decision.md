@@ -84,10 +84,19 @@ repo 内に変更するファイルは無い。
 これで [2026-07-27 の監査](../../operations/log/2026-07-27-security-architecture-review.md)の
 「採らなかった選択肢」と矛盾しなくなる。
 
-**凍結 log は本文を触らない。** [2026-07-21 の Code Quality 判断ログ](./2026-07-21-github-code-quality-disabled.md)にも
-「セキュリティ静的解析は CodeQL を継続する」とあるが、これは**当時そう判断した記録として正しい**ため
-`superseded_by` は付けない（Code Quality を採用しないという同ログの主題は現在も有効で、
-`superseded_by` を付けると主題ごと引用不可になってしまう）。現在の正は stock である infra.md 側が持つ。
+**凍結 log は本文を触らない。** [2026-07-21 の Code Quality 判断ログ](./2026-07-21-github-code-quality-disabled.md)には
+「セキュリティ静的解析はCodeQLを継続する」という一文があり、**この 1 行は本ログをもって誤りになった**。
+それでも `superseded_by` は付けない。Code Quality を品質ゲートに採用しないという同ログの主題は現在も有効で、
+`superseded_by` を付けると主題ごと「現在の判断根拠として引用しない」扱いになってしまうため。
+
+この扱いには**穴がある**。`docs/README.md` の Log 契約は log 全体の supersede しか想定しておらず、
+「主題は生きているが 1 行だけ誤りになった」場合の表現手段が無い。結果として、
+`rg 'セキュリティ静的解析はCodeQLを継続する'` は今後も 2026-07-21 のログにヒットし続ける
+（上の引用によって本ログにも同時にヒットするので、誤りだと分かる導線だけは確保した）。
+同じパターンは [2026-07-26 のコスト実測ログ](./2026-07-26-pr-granularity-actions-cost.md)の「要確認（外部設定）」と
+[2026-08-05 の Unit 計測ログ](./2026-08-05-unit-test-cost-measurement.md)の「未確認」にもあり、
+どちらも本ログで回答したが凍結 log 側からは辿れない。**現在の正は常に stock（infra.md）が持つ**という
+原則で運用は成立しているが、Log 契約に部分訂正の表現を足すかは別途 docs 規約の議論に委ねる。
 
 ### 3. private 化は保留し、public を維持する
 
@@ -166,7 +175,17 @@ update-branch の run が cancelled になり、#1932 では E2E 実行中の ru
   `🚦 Impact gate → static / unit / e2e / web` という `needs` 構造上、run 開始直後は下流 4 job が
   rollup に現れないため、起動途中を「発火していない」と誤読しやすい
 - **close→reopen を復旧儀式として使わない。** 1 回で private 換算 ~13 分（重量層を含む CI 1 run）を捨てる
-- 完走を待っても解消しない事象が観測された場合に限り、**run ID と rollup 状態を添えて**再調査する
+- **「本当に未発火」の判定は待ち時間ではなくコマンドで行う。** 次を実行し、update-branch 後の head SHA に
+  対応する行が 1 件も無ければ未発火、1 件でもあれば起動済みなので待つ。
+
+  ```bash
+  gh run list --branch <branch> --limit 20 --json headSha,event,status,conclusion,createdAt
+  ```
+
+  行があるのに終わらない場合の上限は [ci.yml](../../../.github/workflows/ci.yml) の `timeout-minutes`
+  （重量 job が 20 分）。**head SHA の run が 20 分を超えて `in_progress` のまま**、または
+  **未発火が確認できた**時に限り、run ID と rollup 状態（`gh pr checks <N>`）を添えて再調査する
+
 - **[ci.yml](../../../.github/workflows/ci.yml) の `types:` は変更しない。** `synchronize` は既に含まれ、
   実測でも発火している。ここを触ると 2026-08-03 に `ready_for_review` を明示追加した際の設計意図を壊す
 
@@ -198,9 +217,15 @@ advanced setup（`.github/workflows/codeql.yml` の新規作成と恒久的な�
 private にする事業上の理由が記録されていない。理由が出た時点で改めて判断する。
 
 **`🚦 Impact gate` job の削除**: waste 率 87.6%（実測 7 秒で 1 分課金）で削減候補に見えるが、
-CI 70 run のサンプル実測でコスト 69 分に対し Static / Unit の docs-only skip だけで 90 分以上を節約しており純減。
-[ci-monorepo-refactor/overview.md §Phase 5](../../projects/_archive/ci-monorepo-refactor/overview.md) が
-gate job の 1 分課金を明示的に織り込んで設計している。
+[#1934](https://github.com/Dayopt/dayopt/issues/1934) の調査が CI 70 run をサンプル実測した結果、
+コスト 69 分に対し Static / Unit の docs-only skip だけで 90 分以上を節約しており**純減**だった
+（E2E / Web の skip を数えればさらに効く）。この数値の一次情報は #1934 の本文で、他の docs には無い。
+
+なお [ci-monorepo-refactor/overview.md §Phase 5](../../projects/_archive/ci-monorepo-refactor/overview.md) は
+**この既存 gate job の是非を扱っていない**。同節が「gate job は課金が job 単位で切り上がるので
+1 課金分/push が新規発生する」と書いているのは、`integration.yml` に**新規** gate job を足さない理由であって、
+`ci.yml` の既存 gate を容認した記録ではない。gate job 一般のコスト構造として同じ性質を指しているだけなので、
+既存 gate の純減判断の根拠には使えない。
 
 **Production Config Audit の push:main（~224 分/月）の廃止**: `create-release.yml` が
 `Production Config Audit` status を gate に使っているため、外すには release 経路への影響検証が要る。
