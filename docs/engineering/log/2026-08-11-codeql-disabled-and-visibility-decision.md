@@ -32,8 +32,8 @@ gh api 'repos/Dayopt/dayopt/code-scanning/analyses?per_page=20' --jq '.[]|.categ
 これは [#1425](https://github.com/Dayopt/dayopt/issues/1425)（`Verify and enable CodeQL analysis`）の
 Done 条件「JavaScript / TypeScript が対象になっていることを確認する」が
 **満たされないまま `COMPLETED` で close されていた**（2026-06-29）ことを意味する。
-チェックボックスを埋めずに close した結果、以後 1 年近く「CodeQL が有効になっている」という
-誤った前提が docs に残り続けた。**外部設定の Done 条件は、設定画面を開いた事実ではなく
+チェックボックスを埋めずに close した結果、close（2026-06-29）から本ログ（2026-08-11）までの
+**約 6 週間**、「CodeQL が JS / TS を解析している」という誤った前提が docs に残り続けた。**外部設定の Done 条件は、設定画面を開いた事実ではなく
 API の応答で確認する。**
 
 ### docs が 2 箇所で矛盾していた
@@ -67,8 +67,14 @@ private 換算は「public 4 core / private 2 core で CPU 依存 job は概ね 
 GitHub の default setup を disable にする（Settings → Code security → Code scanning → CodeQL analysis）。
 repo 内に変更するファイルは無い。
 
-- **失うのは workflow YAML の静的解析だけ。** アプリコードは元から対象外だったため、
-  無効化によって新たに失われる検査は存在しない
+- **失うのは workflow YAML の静的解析。これは実在する損失として受容する。** アプリコードは元から
+  対象外なので JS / TS の検査は増減しないが、`.github/workflows/**` に対する PR ごとの自動解析
+  （危険な式展開・untrusted input の注入など、`actions` クエリスイートが見る層）は**この無効化で消える**。
+  代替の自動検査は置かない。受容する根拠は、workflow を触る PR がそもそも少なく、
+  触る時は必ず内部の反証レビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー）と
+  Codex の外部レビューが乗ること、および `production-config-audit.yml` が trusted base revision の
+  script だけを実行する構造を保っていること。**workflow の改変が増える局面が来たら、
+  この受容を再評価する**（advanced setup で `actions` だけ残す形も選べる）
 - secret / 依存の検出は gitleaks・`pnpm secrets:check`（ともに [docs-guard.yml](../../../.github/workflows/docs-guard.yml)）・
   Dependabot が担い、深掘り SAST の席は `/claude-security` が埋める。
   [2026-07-27 の監査](../../operations/log/2026-07-27-security-architecture-review.md)の 4 層構造は CodeQL に依存していない
@@ -242,8 +248,13 @@ private にする事業上の理由が記録されていない。理由が出た
 無効化後の確認:
 
 ```bash
-# 新規 analysis が増えないこと（数日おいてから）
-gh run list --limit 300 --json workflowName --jq '[.[]|select(.workflowName=="CodeQL")]|length'
+# 1. 設定が実際に落ちたこと（これが一次の判定。not-configured を返せば無効）
+gh api repos/Dayopt/dayopt/code-scanning/default-setup --jq '.state'
+
+# 2. 無効化日時「以降」に CodeQL run が 1 件も無いこと（0 なら停止）。
+#    --limit は取得件数の上限で期間指定ではないため、--created で窓を切る
+gh run list --created '>=YYYY-MM-DD' --limit 300 --json workflowName \
+  --jq '[.[]|select(.workflowName=="CodeQL")]|length'
 
 # required checks が 8 件のまま変わっていないこと
 gh api repos/Dayopt/dayopt/rulesets/6790553 \
