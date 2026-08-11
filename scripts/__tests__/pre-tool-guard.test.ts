@@ -114,12 +114,18 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     ],
     ['home 配下の同名ファイル', 'op run --env-file=~/.op-env.local -- sh -c true'],
     ['深い相対 path の同名ファイル', 'op run --env-file=../../../tmp/.op-env.local -- sh -c true'],
+    // 許可形を optional group で組み立てると区切りの / が任意になり、
+    // 下のような類似名まで通る。省略記法を使わず選択肢で列挙する。
+    ['区切りなしの類似名', 'op run --env-file=..op-env.local -- bash scripts/admin-delete-user.sh'],
+    ['ドットを増やした類似名', 'op run --env-file=../...op-env.local -- sh -c true'],
+    ['1 階層だけ上の同名ファイル', 'op run --env-file=../.op-env.local -- sh -c true'],
   ])('許可外の env-file を落とす: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
 
   it.each([
     ['repo root の local', `op run --env-file=${LOCAL} -- pnpm typecheck`],
+    ['明示的な ./ 付き', `op run --env-file=./${LOCAL} -- pnpm typecheck`],
     ['workspace からの相対 local', `op run --env-file=../../${LOCAL} -- pnpm typecheck`],
   ])('許可された env-file は通す: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('allow');

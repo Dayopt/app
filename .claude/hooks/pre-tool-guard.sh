@@ -110,11 +110,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     # 代償として、flag のあとに何か語が続く文字列は散文でも落ちる。
     # basename で判定すると任意ディレクトリの同名ファイルが通る
     # （cp 雛形 /tmp/.op-env.local → その path を渡す）。path 文字列そのものを
-    # allowlist にする。許可するのは repo 直下と workspace からの相対の 2 形式だけ。
+    # allowlist にする。
+    # 許可形は選択肢で列挙する。optional group（`(\.|\.\./\.\.)?/?` のような形）で
+    # 組み立てると区切りの / が任意になり、..op-env.local のような別名まで
+    # 通してしまう。省略記法を使わず 3 通りを直接書く。
     disallowed=$(echo "$COMMAND" \
       | grep -oE '\-\-env-file[=[:space:]]+[^[:space:];&|]+' \
       | sed -E 's/^--env-file[=[:space:]]+//' \
-      | grep -vxE '(\.|\.\./\.\.)?/?\.op-env\.local' || true)
+      | grep -vxE '(\.op-env\.local|\./\.op-env\.local|\.\./\.\./\.op-env\.local)' || true)
     if [ -n "$disallowed" ]; then
       echo "BLOCKED: op run --env-file に渡してよいのは .op-env.local だけです（指定: $(echo "$disallowed" | tr '\n' ' ')）。別名へ複製した env-file 経由で production credential を解決する迂回を塞ぐためで、必要なら User に実行を依頼してください" >&2
       exit 2
