@@ -40,6 +40,27 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`、MCP の自己解決起動など）で値を見ずに secret を使う。これが 1Password 移行後の設計であり、実値ファイルを読める必要はない。
 
+### API 経由の設定読戻し
+
+上記はファイルの読み書きを対象とする。別経路として、設定系 API（Supabase Management API、Vercel Env API、Stripe API 等）の GET レスポンスに secret が同梱されるケースがある。**レスポンスをそのまま表示しない**。`jq` で必要フィールドだけに射影してから表示する（allowlist 方式）。`*_secret` / `*_key` / `*_token` / `*password*` を含むキーは射影に含めない。
+
+射影を書けない・レスポンス構造が不明な場合は、まずキー一覧だけを確認してから射影を組む。**素の `jq 'keys'` は使わない** — レスポンスが scalar（secret 文字列そのもの）だと `jq` がエラーメッセージに値を含めて stderr へ出す。type を先に判定する:
+
+```bash
+... | jq 'if type == "object" then keys else type end'
+```
+
+例: Supabase Auth config から bot protection の有効状態だけを確認する（`security_captcha_secret` のような `*_secret` フィールドは射影から除外する）:
+
+```bash
+curl -sS --fail "https://api.supabase.com/v1/projects/{ref}/config/auth" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  | jq -e '{security_captcha_enabled, external_email_enabled, disable_signup}
+           | select(all(.[]; type == "boolean"))'
+```
+
+取得できていない状態を「確認できた」と誤読しないため、失敗を 2 段で落とす。`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` になる）。`select(all(...))` は 2xx でも期待フィールドを欠くレスポンス（API バージョン差など）を落とし、`jq -e` が出力なしとして非ゼロを返す。
+
 ---
 
 ## 保管対象

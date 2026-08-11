@@ -99,7 +99,7 @@ claude mcp remove uptimerobot -s user
 - **Before use**:
   - `supabase-local`: Docker Desktop 起動後に `npx supabase status`、`nc -vz 127.0.0.1 54321` で待ち受け確認。`list_tables` が通れば利用可
   - `supabase`(cloud): **既定では登録されていない**。§`supabase`(cloud) はオンデマンド登録する の `claude mcp add` で登録し、再起動してから使う。起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
-- **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
+- **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。Management API を MCP 経由でなく直叩きする場合は、レスポンス全文を表示せず `docs/operations/secrets.md` §API 経由の設定読戻し の jq 射影規則に従う。
 - **境界ケース**: `pnpm types:generate` を走らせる前に、スキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
 ### Vercel (`mcp__vercel__*`)
@@ -111,7 +111,7 @@ claude mcp remove uptimerobot -s user
 - **Before use**:
   - OAuth 方式（`https://mcp.vercel.com`）。未承認 / 期限切れなら `/mcp` で承認する。token 管理は不要
   - 疎通は `list_projects` で確認する
-- **境界ケース**: 単純な単一 API 取得は `vercel` CLI（`vercel api ...`）で十分。デプロイ横断の状態確認やログ調査で MCP を使う。
+- **境界ケース**: 単純な単一 API 取得は `vercel` CLI（`vercel api ...`）で十分。デプロイ横断の状態確認やログ調査で MCP を使う。env 系エンドポイント（`/v10/projects/{project}/env` 等）のレスポンスは `value` に実値を含むため、全文を表示せず `docs/operations/secrets.md` §API 経由の設定読戻し の jq 射影規則に従う。
 
 ### Context7 (`mcp__context7__*`)
 
