@@ -72,7 +72,8 @@ export function createClient() {
   ) {
     throw new SupabaseConfigError(
       '❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です:\n\n' +
-        '.op-env.local を作成し、op run 経由で起動してください。詳細は docs/operations/secrets.md を参照してください。',
+        'これらは pnpm dev が Supabase local（supabase status -o env）から注入します。' +
+        'pnpm dev で起動してください。詳細は docs/operations/secrets.md を参照してください。',
     );
   }
 
