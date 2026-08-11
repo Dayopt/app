@@ -425,7 +425,15 @@ gh pr merge <PR番号> --merge --delete-branch
 
 1 経路だけ見ると、その裏側の結果を「無応答」と誤判定する。自分や他 bot のコメントは痕跡に数えない（数えると gate が空洞化する）。
 
-escape hatch は §外部レビューが動かない時 の無応答注記だけ。**この判定は意図的に厳しい**: コメント本文の 1 行目が `[no-external-review]` で始まり、かつ書き手が OWNER / MEMBER / COLLABORATOR であることを要求する。素朴な部分一致にすると、gate 自身の停止メッセージや本節の規約文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の貼り付けは日常操作で踏む）。
+**comment 経路は allowlist で数える。** Codex は「レビューできなかった」ことも comment で返すため（実測 23 件: usage limit 通知 19 / `Something went wrong` 2 / `Unknown error` 2）、author だけで数えると **Codex が使えない時ほど gate が通ってしまい**、注記が最も必要な状況で注記を求められなくなる。失敗文言を denylist で除く形は次の文言が出るたびに穴が空くので、「完了した」と分かる定型（`Codex Review: Didn't find any major issues`）だけを通す。文言が変われば注記を要求する側（fail closed）に倒れるので気づける。
+
+escape hatch は §外部レビューが動かない時 の無応答注記だけ。**この判定は意図的に厳しい**。3 点すべてを要求する:
+
+1. コメント本文の 1 行目が `[no-external-review]` で始まる（引用行は `>` で始まるので落ちる）
+2. 書き手が OWNER / MEMBER / COLLABORATOR（bot と第三者は `NONE`。この repo は public なので任意のユーザーがコメントできる）
+3. marker を除いた本文が空でない（タグだけで通せると監査記録が空のまま merge できる）
+
+素朴な部分一致にすると、gate 自身の停止メッセージや本節の規約文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の貼り付けは日常操作で踏む）。
 
 通過時は**どの経路で通ったかを出力する**。「Codex が実際に見た」と「無応答注記で飛ばした」が同じ 1 行に潰れると、§外部レビューが動かない時 が求める「レビューが無いまま merge した PR を後から識別できる状態」を gate 側が満たさないため。取得失敗は停止に倒す（fail closed）。契約は `scripts/__tests__/finish-branch.test.ts` §外部レビューの痕跡 gate が固定する。
 

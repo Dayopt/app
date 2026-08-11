@@ -1263,6 +1263,43 @@ describe('外部レビューの痕跡 gate', () => {
     expect(status).toBe(0);
   });
 
+  it('Codex の usage limit 通知は痕跡に数えない（allowlist で数える）', () => {
+    // 実測 23 件: usage limit 19 / "Something went wrong" 2 / "Unknown error" 2。
+    // author だけで数えると、Codex が使えない時ほど gate が通ってしまい、注記が
+    // 必要な状況で注記を求められなくなる。
+    for (const body of [
+      'You have reached your Codex usage limits for code reviews. You can see your limits in the Codex usage dashboard.',
+      'Codex Review: Something went wrong. Try again later by commenting \u201c@codex review\u201d.',
+      'Unknown error',
+    ]) {
+      const { status, stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          reviews: [],
+          comments: [
+            { author: 't3-nico', body: '@codex review' },
+            { author: 'chatgpt-codex-connector', body },
+          ],
+        },
+      });
+      expect(stderr).toContain('外部レビューの痕跡がありません');
+      expect(status).toBe(1);
+    }
+  });
+
+  it('marker だけで中身が無いコメントは通さない', () => {
+    // 規約は「応答しなかった事実と代替の検証内容」を要求する。タグだけで通せると
+    // 監査記録が空のまま merge できてしまう。
+    for (const body of ['[no-external-review]', '[no-external-review]   \n  ']) {
+      const { status, stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: { reviews: [], comments: [{ author: 't3-nico', body }] },
+      });
+      expect(stderr).toContain('外部レビューの痕跡がありません');
+      expect(status).toBe(1);
+    }
+  });
+
   it('痕跡の取得に失敗したら止める（fail closed）', () => {
     const { status, stderr } = runScript(greenRollup(), { reviewEvidenceUnavailable: true });
     expect(stderr).toContain('外部レビューの痕跡を取得できませんでした');

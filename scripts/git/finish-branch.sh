@@ -641,15 +641,31 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # reviews / comments のどちらかが null（pullRequest 不在・権限不足など）なら
   # 判定材料が欠けているので、空配列に潰さずそのまま停止させる。
   # Codex 本人の応答（review / comment）の件数。
+  #
+  # **comment 経路は allowlist で数える。** Codex は「レビューできなかった」ことも
+  # comment で返す（実測 23 件: "You have reached your Codex usage limits" 19 /
+  # "Codex Review: Something went wrong" 2 / "Unknown error" 2）。author だけで数える
+  # と、**Codex が使えない時ほど gate が通ってしまい**、注記が必要な状況で注記を
+  # 求められなくなる。失敗文言を denylist で除くのは次の文言が出るたびに穴が空くので、
+  # 「完了した」と分かる形だけを通す。
+  #
+  # comment 経路が要るのは指摘ゼロの時だけ（指摘ありは review / reviewThreads に出る）
+  # なので、allowlist は指摘ゼロの定型 1 種で足りる。文言が変わったら fail closed 側
+  # （注記を要求）に倒れるので、気づける。
+  CODEX_NO_FINDINGS_PREFIX="Codex Review: Didn't find any major issues"
+
   REVIEW_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
     --arg login "$EXTERNAL_REVIEWER_LOGIN" \
-    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" '
+    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" \
+    --arg okPrefix "$CODEX_NO_FINDINGS_PREFIX" '
     .data.repository.pullRequest
     | select(. != null)
     | select(.reviews != null and .comments != null)
     | [
         (.reviews.nodes[] | select(.author.login == $login or .author.login == $loginBot)),
-        (.comments.nodes[] | select(.author.login == $login or .author.login == $loginBot))
+        (.comments.nodes[]
+          | select(.author.login == $login or .author.login == $loginBot)
+          | select((.body // "") | startswith($okPrefix)))
       ]
     | length' 2>/dev/null || true)"
 
@@ -660,6 +676,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #   1. コメント**本文の先頭**が marker であること（引用行は `>` で始まるので落ちる）
   #   2. 書き手が OWNER / MEMBER / COLLABORATOR であること（bot と第三者は NONE。
   #      この repo は public なので、任意のユーザーがコメントできる）
+  #   3. marker を除いた本文が空でないこと。規約（workflow.md §外部レビューが動かない
+  #      時）は「応答しなかった事実と代替の検証内容」を要求しており、タグだけの
+  #      コメントで通せると監査記録が空のまま merge できてしまう
   MARKER_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
     --arg marker "$NO_EXTERNAL_REVIEW_MARKER" '
     .data.repository.pullRequest
@@ -670,7 +689,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
         | select(.authorAssociation == "OWNER"
                  or .authorAssociation == "MEMBER"
                  or .authorAssociation == "COLLABORATOR")
-        | select(((.body // "") | ltrimstr(" ") | ltrimstr("\n")) | startswith($marker))
+        | ((.body // "") | ltrimstr(" ") | ltrimstr("\n"))
+        | select(startswith($marker))
+        | select(ltrimstr($marker) | test("[^[:space:]]"))
       ]
     | length' 2>/dev/null || true)"
 
@@ -709,6 +730,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     error "draft のまま PR に「@codex review」とコメントし、レビューが一巡してから再実行してください。"
     error "Codex が usage limit や障害で応答しない場合は、代わりに次の形のコメントを残してください:"
     error "  1 行目を「${NO_EXTERNAL_REVIEW_MARKER}」で始め、応答しなかった事実と代替の検証内容を続ける"
+    error "  （タグだけのコメントは通らない。Codex の usage limit 通知も痕跡には数えない）"
     error "（.claude/rules/workflow.md §外部レビューが動かない時）"
     if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
       error "なお、この PR は reviews / comments が 100 件を超えており、直近 100 件しか見ていません。"
