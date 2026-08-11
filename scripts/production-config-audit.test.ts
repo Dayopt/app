@@ -16,6 +16,7 @@ function completeProductMetadata() {
       productionEntry('RESEND_API_KEY', 'sensitive'),
       productionEntry('RESEND_FROM_EMAIL'),
       productionEntry('RESEND_WEBHOOK_SECRET', 'sensitive'),
+      productionEntry('NEXT_PUBLIC_TURNSTILE_SITE_KEY'),
       productionEntry('UPSTASH_REDIS_REST_URL'),
       productionEntry('UPSTASH_REDIS_REST_TOKEN', 'sensitive'),
     ],
