@@ -1,0 +1,12 @@
+# Preview branch opt-in marker
+#
+# このファイルを PR で変更すると、Supabase GitHub integration が
+# 「supabase/ に変更あり」と判定して preview branch を作成する。
+# branch の credential は Vercel Preview へ自動同期されるため、
+# Preview で auth などの実挙動を検証できるようになる。
+#
+# 使い方・削除方針は docs/operations/ を参照する。
+# DB schema には一切影響しない（migration でも seed でもない）。
+#
+# 検証履歴:
+# - 2026-08-11: #1461 で opt-in 方式の実測用に追加
