@@ -111,7 +111,9 @@ supabase functions deploy --use-api
 - [ ] **pg_cron も止める。メンテナンスモードは app 層しか止めない**（cron は Postgres 内部で走り続ける）
 
 ```sql
-SELECT jobid, jobname, active FROM cron.job;
+-- ① 先に控えて保存する（Dashboard 設定が正本で migration から戻せない）
+SELECT jobid, jobname, schedule, command, active FROM cron.job ORDER BY jobname;
+-- ② 控えてから止める
 SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 ```
 

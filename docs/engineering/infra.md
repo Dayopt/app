@@ -1311,10 +1311,15 @@ ORDER BY schemaname, tablename;
 **メンテナンスモード（`NEXT_PUBLIC_MAINTENANCE_MODE`）は Next.js app 層しか止めない。** pg_cron の job は Postgres 内部で独立に走り続けるため、「書き込みを止めた」つもりで復元しても cron 起因の書き込みは続く。
 
 ```sql
--- 対象 job を確認してから止める
-SELECT jobid, jobname, active FROM cron.job;
+-- ① 先に控える。production の cron は Dashboard 設定が正本で、
+--    migration から再生成できない。控えずに止めると復旧手段が消える
+SELECT jobid, jobname, schedule, command, active FROM cron.job ORDER BY jobname;
+
+-- ② 控えた内容を保存してから止める
 SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 ```
+
+**①を飛ばさない。** 止めた job は復旧後に手で戻すことになり、控えが無いとスケジュールも command も分からなくなる。
 
 §DB Migration Rollback 手順書 の緊急対応フローチャートには pg_cron 停止ステップがあるが、災害復旧でも同じことが要る。
 
