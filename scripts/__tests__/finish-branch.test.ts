@@ -100,6 +100,46 @@ function threadsPayload(
   };
 }
 
+/**
+ * 外部レビュー痕跡クエリ（reviews + comments）のレスポンスを組み立てる。
+ *
+ * Codex は結果によって出力先を変えるため、gate は 3 経路すべてを見る必要がある:
+ * 指摘ありは review + reviewThreads に出るが、**指摘なしは issue comment にしか
+ * 出ない**（PR #1932 が "Didn't find any major issues" を comment だけで返した）。
+ */
+function reviewEvidencePayload(evidence: {
+  reviews?: string[];
+  comments?: Array<{ author: string; body?: string; association?: string }>;
+  /** 窓（last: 100）より多い総件数を申告させる。省略時は nodes 件数 = 切り詰めなし */
+  reviewsTotalCount?: number;
+  commentsTotalCount?: number;
+}): unknown {
+  const reviews = evidence.reviews ?? [];
+  const comments = evidence.comments ?? [];
+  return {
+    data: {
+      repository: {
+        pullRequest: {
+          reviews: {
+            totalCount: evidence.reviewsTotalCount ?? reviews.length,
+            nodes: reviews.map((login) => ({ author: { login } })),
+          },
+          comments: {
+            totalCount: evidence.commentsTotalCount ?? comments.length,
+            nodes: comments.map((comment) => ({
+              author: { login: comment.author },
+              // 実測: 人間の repo member は MEMBER、bot は NONE を返す。
+              authorAssociation:
+                comment.association ?? (comment.author === 't3-nico' ? 'MEMBER' : 'NONE'),
+              body: comment.body ?? '',
+            })),
+          },
+        },
+      },
+    },
+  };
+}
+
 /** N 件の resolve 済み thread を作る（ページング境界の件数合わせ用） */
 function resolvedThreads(count: number): Array<{ isResolved: boolean }> {
   return Array.from({ length: count }, () => ({ isResolved: true }));
@@ -136,6 +176,18 @@ function runScript(
       threads?: Array<{ isResolved: boolean; path?: string; author?: string }>;
       hasNextPage?: boolean;
     }>;
+    /**
+     * 外部レビューの痕跡（reviews / comments）。省略時は Codex の review が 1 件ある
+     * 状態にして gate を通す（既存ケースの前提を変えないため）。
+     */
+    reviewEvidence?: {
+      reviews?: string[];
+      comments?: Array<{ author: string; body?: string; association?: string }>;
+      reviewsTotalCount?: number;
+      commentsTotalCount?: number;
+    };
+    /** 痕跡クエリを失敗させる（fail closed 経路の検証） */
+    reviewEvidenceUnavailable?: boolean;
   } = {},
 ): { status: number | null; stderr: string } {
   // repo 直下ではなく os の temp に作る。プロセスが afterEach 前に落ちると untracked な
@@ -207,6 +259,15 @@ function runScript(
     );
   });
 
+  // 外部レビュー痕跡クエリのレスポンス。既定は Codex の review が 1 件ある状態。
+  const reviewEvidencePath = join(temporaryDirectory, 'review-evidence.json');
+  writeFileSync(
+    reviewEvidencePath,
+    JSON.stringify(
+      reviewEvidencePayload(options.reviewEvidence ?? { reviews: ['chatgpt-codex-connector'] }),
+    ),
+  );
+
   // `gh` だけ差し替える。git は temp repo 上で本物を動かす（worktree / show-ref の判定を
   // 実挙動に任せる方が、stub の作り込みより契約に近い）。
   const ghStub = join(binDirectory, 'gh');
@@ -224,6 +285,12 @@ case "$1" in
   api)
     shift
     if [[ "\${1:-}" == graphql ]]; then
+      # graphql は 2 用途ある。reviewThreads のページングと、外部レビュー痕跡の
+      # 一括取得（reviews + comments）。クエリ本文で振り分ける。
+      if [[ "$*" == *"reviews(last:"* ]]; then
+        cat "$FINISH_BRANCH_REVIEW_EVIDENCE"
+        exit 0
+      fi
       # cursor 引数（-f cursor=VALUE）を argv から拾う。無ければ 1 ページ目。
       cursor=""
       for arg in "$@"; do
@@ -279,6 +346,9 @@ esac
         ? join(temporaryDirectory, 'missing-threads-dir')
         : threadsDirectory,
       FINISH_BRANCH_FILES_EXIT: options.filesPartialFailure ? '1' : '0',
+      FINISH_BRANCH_REVIEW_EVIDENCE: options.reviewEvidenceUnavailable
+        ? join(temporaryDirectory, 'missing-review-evidence.json')
+        : reviewEvidencePath,
     },
   });
 
@@ -407,6 +477,7 @@ case "$1" in
       exit 2
     fi
     case "$*" in
+      *"reviews(last:"*) echo '{"data":{"repository":{"pullRequest":{"reviews":{"nodes":[{"author":{"login":"chatgpt-codex-connector"}}]},"comments":{"nodes":[]}}}}}' ;;
       *graphql*) echo '{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}' ;;
       *full_name*) echo "Dayopt/dayopt" ;;
       *pulls/123/files*) printf 'F\\tapps/product/src/x.ts\\nF\\tapps/web/src/y.ts\\n' ;;
@@ -996,6 +1067,252 @@ describe('レビュー thread の必須解決 gate', () => {
     });
     expect(stderr).toContain('未解決のレビュー thread はありません');
     expect(status).toBe(0);
+  });
+});
+
+describe('外部レビューの痕跡 gate', () => {
+  const greenRollup = () => [checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'), ...vercelChecks()];
+
+  it('痕跡が 1 つも無ければ止める（レビューの投げ忘れ）', () => {
+    // thread の必須解決 gate は「存在する指摘」しか見ないため、thread 0 件の PR は
+    // 「レビュー済みで指摘ゼロ」と「投げ忘れ」を区別できない。ここが本 gate の主目的。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: [], comments: [{ author: 't3-nico', body: '@codex review' }] },
+    });
+    expect(stderr).toContain('外部レビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('指摘ゼロを issue comment だけで返した Codex を痕跡として認める（PR #1932）', () => {
+    // 実測: Codex は指摘が無いと reviews / reviewThreads に一切出さず、
+    // "Didn't find any major issues" を issue comment だけで返す。comment 経路を
+    // 見落とすと、正しくレビューされた PR を「投げ忘れ」として止めてしまう。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: [],
+        comments: [
+          { author: 't3-nico', body: '@codex review' },
+          {
+            author: 'chatgpt-codex-connector',
+            body: "Codex Review: Didn't find any major issues. Breezy!",
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('外部レビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('指摘ありの Codex review を痕跡として認める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: ['chatgpt-codex-connector'] },
+    });
+    expect(stderr).toContain('外部レビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('resolve 済み thread が Codex 由来なら reviews / comments が空でも認める', () => {
+    // 指摘に fix を積んで resolve した後の PR。thread だけが痕跡として残る。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [{ isResolved: true, author: 'chatgpt-codex-connector' }],
+      reviewEvidence: { reviews: [], comments: [] },
+    });
+    expect(stderr).toContain('外部レビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('Codex 以外の thread / comment だけでは痕跡と認めない', () => {
+    // 自分で付けた thread や bot の通知コメントを痕跡に数えると、gate が空洞化する。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [{ isResolved: true, author: 't3-nico' }],
+      reviewEvidence: {
+        reviews: ['t3-nico'],
+        comments: [
+          { author: 'vercel', body: '[vc]: deployment' },
+          { author: 'supabase', body: '[supa]: ignored' },
+        ],
+      },
+    });
+    expect(stderr).toContain('外部レビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('無応答注記（1 行目が marker）があれば escape hatch として通す', () => {
+    // workflow.md §外部レビューが動かない時 が既に要求している記録を、そのまま
+    // 唯一の escape hatch にする。新しい抜け道を発明しない。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: [],
+        comments: [
+          {
+            author: 't3-nico',
+            body: '[no-external-review] Codex が usage limit で無応答。代替として risk-reviewer の反証レビューを実施した。',
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('無応答注記');
+    expect(status).toBe(0);
+  });
+
+  it('通過経路を出し分ける（Codex の応答と無応答注記を同じ 1 行に潰さない）', () => {
+    // 「レビューが無いまま merge した PR を後から識別できる状態」（workflow.md
+    // §外部レビューが動かない時）を gate 側でも満たす。
+    const viaCodex = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: ['chatgpt-codex-connector'] },
+    });
+    expect(viaCodex.stderr).toContain('Codex の応答あり');
+    expect(viaCodex.stderr).not.toContain('無応答注記');
+
+    const viaMarker = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: [],
+        comments: [{ author: 't3-nico', body: '[no-external-review] limit のため無応答。' }],
+      },
+    });
+    expect(viaMarker.stderr).toContain('外部レビューを経ずに merge した');
+    expect(viaMarker.stderr).not.toContain('Codex の応答あり');
+  });
+
+  it('引用された marker では通さない（stderr / 規約文の貼り付けで空洞化しない）', () => {
+    // gate 自身の停止メッセージと workflow.md の規約本文には marker が平文で載る。
+    // 素朴な部分一致だと、それを PR コメントへ貼るだけで gate が黙って無効化される。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: [],
+        comments: [
+          {
+            author: 't3-nico',
+            body: 'gate に止められた。メッセージは以下:\n\n> [no-external-review] 応答しなかった事実と代替の検証内容を続ける\n\nどう対応する？',
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('外部レビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('第三者（association が NONE）の marker では通さない', () => {
+    // public repo なので任意のユーザーが PR にコメントできる。書き手を絞らないと
+    // 外部から 1 コメントで gate を無効化できてしまう。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: [],
+        comments: [
+          {
+            author: 'random-passerby',
+            association: 'NONE',
+            body: '[no-external-review] 通してよいと思います',
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('外部レビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('login に [bot] サフィックスが付いていても痕跡と認める', () => {
+    // 実測（PR #1938 / #1932 / #1927 / #1922 / #1918）では suffix 無しだが、取り違えると
+    // gate が全 PR を永久に止める側へ倒れる。両表記を受けることを契約として固定する。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: ['chatgpt-codex-connector[bot]'] },
+    });
+    expect(stderr).toContain('外部レビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('似た login を痕跡と誤認しない（前方一致で緩めない）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: ['chatgpt-codex-connector-fake'] },
+    });
+    expect(stderr).toContain('外部レビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('reviews / comments が 100 件超なら、止める時に窓の切り詰めを伝える', () => {
+    // last: 100 の窓から古い痕跡が落ちうる。判定は緩めず（切り詰めを理由に通すと
+    // fail open になる）、なぜ止まったかだけを説明する。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: [], comments: [], commentsTotalCount: 140 },
+    });
+    expect(stderr).toContain('直近 100 件しか見ていません');
+    expect(status).toBe(1);
+  });
+
+  it('100 件超でも痕跡があれば通す（切り詰めの説明は出さない）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        reviews: ['chatgpt-codex-connector'],
+        commentsTotalCount: 140,
+      },
+    });
+    expect(stderr).toContain('外部レビューの痕跡を確認しました');
+    expect(stderr).not.toContain('直近 100 件しか見ていません');
+    expect(status).toBe(0);
+  });
+
+  it('Codex の usage limit 通知は痕跡に数えない（allowlist で数える）', () => {
+    // 実測 23 件: usage limit 19 / "Something went wrong" 2 / "Unknown error" 2。
+    // author だけで数えると、Codex が使えない時ほど gate が通ってしまい、注記が
+    // 必要な状況で注記を求められなくなる。
+    for (const body of [
+      'You have reached your Codex usage limits for code reviews. You can see your limits in the Codex usage dashboard.',
+      'Codex Review: Something went wrong. Try again later by commenting \u201c@codex review\u201d.',
+      'Unknown error',
+    ]) {
+      const { status, stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          reviews: [],
+          comments: [
+            { author: 't3-nico', body: '@codex review' },
+            { author: 'chatgpt-codex-connector', body },
+          ],
+        },
+      });
+      expect(stderr).toContain('外部レビューの痕跡がありません');
+      expect(status).toBe(1);
+    }
+  });
+
+  it('marker だけで中身が無いコメントは通さない', () => {
+    // 規約は「応答しなかった事実と代替の検証内容」を要求する。タグだけで通せると
+    // 監査記録が空のまま merge できてしまう。
+    for (const body of ['[no-external-review]', '[no-external-review]   \n  ']) {
+      const { status, stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: { reviews: [], comments: [{ author: 't3-nico', body }] },
+      });
+      expect(stderr).toContain('外部レビューの痕跡がありません');
+      expect(status).toBe(1);
+    }
+  });
+
+  it('痕跡の取得に失敗したら止める（fail closed）', () => {
+    const { status, stderr } = runScript(greenRollup(), { reviewEvidenceUnavailable: true });
+    expect(stderr).toContain('外部レビューの痕跡を取得できませんでした');
+    expect(status).toBe(1);
+  });
+
+  it('止める時は要求コメントと無応答注記の両方の直し方を出す', () => {
+    const { stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { reviews: [], comments: [] },
+    });
+    expect(stderr).toContain('@codex review');
+    expect(stderr).toContain('[no-external-review]');
   });
 });
 
