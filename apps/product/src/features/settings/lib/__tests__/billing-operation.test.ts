@@ -14,7 +14,7 @@ import { formatTrpcError } from '@/lib/trpc/router';
 
 import {
   BILLING_OPERATION_SERVICE_CODES,
-  getBillingOperationErrorDisposition,
+  getBillingOperationErrorPresentation,
 } from '../billing-operation';
 
 // allowlist外のcodeはINTERNAL_SERVER_ERRORへ落ちてSentryへ送られる。送信自体はこのtestの対象外。
@@ -46,27 +46,62 @@ function toClientError(code: string): ClientError {
   throw new Error('handleServiceError must throw');
 }
 
-const EXPECTED_DISPOSITIONS: Record<
+const GENERIC_RETRY = {
+  closesBillingActions: false,
+  messageKey: 'common.billingOperation.retryable',
+  needsBillingPortal: false,
+  retryable: true,
+} as const;
+
+const EXPECTED_PRESENTATIONS: Record<
   (typeof BILLING_OPERATION_SERVICE_CODES)[keyof typeof BILLING_OPERATION_SERVICE_CODES],
-  ReturnType<typeof getBillingOperationErrorDisposition>
+  ReturnType<typeof getBillingOperationErrorPresentation>
 > = {
-  BILLING_ACCOUNT_CLOSING: 'account_closing',
-  BILLING_CHECKOUT_NOT_AVAILABLE: 'terminal',
-  BILLING_OPERATION_CONFLICT: 'retryable',
-  BILLING_OPERATION_INVALIDATED: 'terminal',
-  BILLING_RECOVERY_EXHAUSTED: 'terminal',
-  BILLING_RESPONSE_EXPIRED: 'terminal',
+  BILLING_ACCOUNT_CLOSING: {
+    closesBillingActions: true,
+    messageKey: 'common.billingOperation.accountClosing',
+    needsBillingPortal: false,
+    retryable: false,
+  },
+  // 再試行しても必ず同じ失敗を返すので、portal を出口として案内する（#1945）
+  BILLING_CHECKOUT_NOT_AVAILABLE: {
+    closesBillingActions: false,
+    messageKey: 'common.billingOperation.checkoutNotAvailable',
+    needsBillingPortal: true,
+    retryable: false,
+  },
+  BILLING_OPERATION_CONFLICT: GENERIC_RETRY,
+  BILLING_OPERATION_INVALIDATED: {
+    closesBillingActions: false,
+    messageKey: 'common.billingOperation.restart',
+    needsBillingPortal: false,
+    retryable: false,
+  },
+  BILLING_RECOVERY_EXHAUSTED: {
+    closesBillingActions: false,
+    messageKey: 'common.billingOperation.restart',
+    needsBillingPortal: false,
+    retryable: false,
+  },
+  BILLING_RESPONSE_EXPIRED: {
+    closesBillingActions: false,
+    messageKey: 'common.billingOperation.restart',
+    needsBillingPortal: false,
+    retryable: false,
+  },
 };
 
 describe('billing operationのserviceCode分岐', () => {
   it.each(Object.values(BILLING_OPERATION_SERVICE_CODES))(
-    '%s はclientまで届き、対応するdispositionへ分岐する',
+    '%s はclientまで届き、対応する提示内容へ分岐する',
     (code) => {
       const clientError = toClientError(code);
 
       // allowlist未登録ならここでundefinedになり、分岐は既定枝へ落ちる
       expect(clientError.data.serviceCode).toBe(code);
-      expect(getBillingOperationErrorDisposition(clientError)).toBe(EXPECTED_DISPOSITIONS[code]);
+      expect(getBillingOperationErrorPresentation(clientError)).toEqual(
+        EXPECTED_PRESENTATIONS[code],
+      );
     },
   );
 
@@ -74,11 +109,17 @@ describe('billing operationのserviceCode分岐', () => {
     const clientError = toClientError('BILLING_COMMAND_FAILED');
 
     expect(clientError.data.serviceCode).toBeUndefined();
-    expect(getBillingOperationErrorDisposition(clientError)).toBe('retryable');
+    expect(getBillingOperationErrorPresentation(clientError)).toEqual(GENERIC_RETRY);
   });
 
   it('serviceCodeを持たないerrorはretryableへ落とす', () => {
-    expect(getBillingOperationErrorDisposition(new Error('network down'))).toBe('retryable');
-    expect(getBillingOperationErrorDisposition({ data: {} })).toBe('retryable');
+    expect(getBillingOperationErrorPresentation(new Error('network down'))).toEqual(GENERIC_RETRY);
+    expect(getBillingOperationErrorPresentation({ data: {} })).toEqual(GENERIC_RETRY);
+  });
+
+  it('文言キーがdispositionごとに重複しない（terminal系は共有する）', () => {
+    const keys = Object.values(EXPECTED_PRESENTATIONS).map((p) => p.messageKey);
+
+    expect(new Set(keys).size).toBe(4);
   });
 });

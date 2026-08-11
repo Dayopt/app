@@ -210,4 +210,35 @@ describe('BillingSettings billing operation', () => {
     expect(upgrade).toBeDisabled();
     expect(toastError).toHaveBeenCalledWith('common.billingOperation.accountClosing');
   });
+
+  // Stripe が unpaid / paused でも profiles 上は free 扱いになるため、Pro 向けの
+  // portal ボタンは canAccessPro で隠れている。checkout をやり直しても必ず同じ
+  // 失敗を返すので、toast の action が唯一の出口になる（#1945）
+  it('offers the billing portal when a subscription already exists', async () => {
+    const user = userEvent.setup();
+    render(<BillingSettings />);
+    const upgrade = screen.getByRole('button', {
+      name: 'settings.subscription.upgrade',
+    });
+
+    await user.click(upgrade);
+    act(() => {
+      checkoutOptions.current?.onError(
+        { data: { serviceCode: 'BILLING_CHECKOUT_NOT_AVAILABLE' } },
+        { operationId: FIRST_OPERATION_ID },
+      );
+    });
+
+    expect(toastError).toHaveBeenCalledWith('common.billingOperation.checkoutNotAvailable', {
+      action: { label: 'settings.subscription.managePlan', onClick: expect.any(Function) },
+    });
+
+    // action を押すと portal が開く。checkout の再試行ではない
+    expect(portalMutate).not.toHaveBeenCalled();
+    const [, options] = toastError.mock.calls.at(-1) ?? [];
+    act(() => {
+      (options as { action: { onClick: () => void } }).action.onClick();
+    });
+    expect(portalMutate).toHaveBeenCalledWith({ operationId: SECOND_OPERATION_ID });
+  });
 });

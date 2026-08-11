@@ -46,7 +46,7 @@ export { TrialEndedDialog } from './components/TrialEndedDialog';
 // =============================================================================
 // Utils
 // =============================================================================
-export { getBillingOperationErrorDisposition } from './lib/billing-operation';
+export { getBillingOperationErrorPresentation } from './lib/billing-operation';
 export {
   BILLING_POLL_INTERVAL_MS,
   BILLING_POLL_MAX_DURATION_MS,
