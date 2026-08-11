@@ -80,9 +80,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 雛形の直接実行。.op-env.admin.example は op://Dayopt-Production/... の参照を
   # そのまま持つため、コピーせず op run に食わせるだけで同じ本番権限が解決される。
   # 作成だけ止めても迂回できるので、消費側も塞ぐ（.example も対象に含める）。
-  # git push --no-verify と同じくコマンド位置に限定する。部分一致だと docs に
-  # この command を書くだけで発火する（実際に発火させた）。
-  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*op[[:space:]]+run[^;&|]*--env-file[=[:space:]][^[:space:];&|]*\.op-env\.admin'; then
+  #
+  # コマンド名ではなく「危険な引数」で判定する。op がコマンド位置に来る形だけを
+  # 見ると env / command / 絶対パス / sh -c ... と迂回形をいくらでも作れるため、
+  # 位置に依存せず --env-file が admin を指すこと自体を落とす。
+  # 代償として、この flag と path を並べた文字列を Bash 引数に含めるだけでも
+  # 発火する（docs に書く時は Write/Edit で file に書いてから渡す）。
+  #
+  # 保証境界: これは literal な引数を渡す形すべてを塞ぐが、path を動的に
+  # 組み立てる形（変数連結・base64 など）までは追わない。そこは hook ではなく
+  # CLAUDE.md の EXPLICIT AUTHORITY と 1Password の承認が担う。
+  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.admin'; then
     echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため）" >&2
     exit 2
   fi

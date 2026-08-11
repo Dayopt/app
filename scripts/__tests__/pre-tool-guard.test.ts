@@ -51,11 +51,18 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
   });
 
   // 作成だけ止めても、雛形をそのまま op run に渡せば同じ権限が解決される。
+  // コマンド名ではなく --env-file の指す先で判定するので、op をどう起動しても落ちる。
   it.each([
     ['雛形の直接実行', `op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
     ['実ファイル', `op run --env-file=${ADMIN} -- bash scripts/admin-show-user.sh`],
     ['空白区切りの --env-file', `op run --env-file ${ADMIN_EXAMPLE} -- sh -c true`],
     ['セパレータ後の op run', `cd /tmp && op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
+    ['env 経由', `env op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
+    ['command 経由', `command op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
+    ['絶対パス', `/opt/homebrew/bin/op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
+    ['sh -c でくるむ', `sh -c "op run --env-file=${ADMIN_EXAMPLE} -- sh -c true"`],
+    ['環境変数代入を前置', `FOO=1 op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
+    ['xargs 経由', `echo x | xargs -I{} op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
   ])('op run による消費を止める: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
@@ -75,10 +82,18 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     expect(runGuard({ tool_name: 'Edit', tool_input: { file_path: `/x/${LOCAL}` } })).toBe('allow');
   });
 
-  // 部分一致でガードすると docs や PR 本文にこの command を書くだけで発火する
-  // （実際に発火させた）。git push --no-verify と同じくコマンド位置に限定する。
-  it('command を文字列として書くだけなら通す', () => {
-    const mention = `gh pr edit 1935 --body 'コピーせず op run --env-file=${ADMIN_EXAMPLE} -- bash x.sh とするだけで本番権限が解決される'`;
-    expect(runGuard(bash(mention))).toBe('allow');
+  // 引数で判定する代償として、この flag と path を並べた文字列を Bash 引数へ
+  // 含めるだけでも落ちる。docs に書く時は Write/Edit で file に書いてから渡す。
+  // 迂回形を数え上げる方式では env / command / 絶対パス / sh -c と際限がないため、
+  // 誤検知を受け入れて class ごと閉じる方を選んでいる。
+  it('flag と path を並べた文字列は、引用符の中でも落とす', () => {
+    const mention = `gh pr edit 1935 --body 'op run --env-file=${ADMIN_EXAMPLE} -- bash x.sh で本番権限が解決される'`;
+    expect(runGuard(bash(mention))).toBe('block');
+  });
+
+  it('flag を伴わない名前の言及は通す', () => {
+    expect(
+      runGuard(bash(`gh pr edit 1935 --body '${ADMIN_EXAMPLE} は production を参照する'`)),
+    ).toBe('allow');
   });
 });
