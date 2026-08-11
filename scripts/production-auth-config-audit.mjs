@@ -57,15 +57,19 @@ export const AUTH_CONFIG_CONTRACT = [
     expected: false,
     // `supabase/config.toml:200` の `secure_password_change = true` に対応する production 値。
     // **production では現在 off** で、config.toml との drift が既に存在する（2026-08-11 実測）。
-    // off の間、`updateUser({ password, current_password })` の `current_password` は
-    // サーバー側で検証されない（`PasswordChangeDialog.tsx:122-123` のコメントは production
-    // では成立しない）。Dayopt の実質的な保証は同 dialog Step 1 の `signInWithPassword` に
-    // よる client 側の再検証で、この設定はセッション奪取後の直接 API 呼び出しに対する
-    // 多層防御にあたる。true への引き上げは password reset 経路（`useAuthStore.ts:329` は
+    // GoTrue で `updateUser({ password, current_password })` の `current_password` を有効に
+    // するのはこの 1 設定で、off の間はサーバー側で検証されない。
+    //
+    // 注意: `PasswordChangeDialog.tsx` は `security_update_password_require_current_password`
+    // が true であることを根拠に client 側の事前検証を持たない実装になっているが、その名前の
+    // 設定は Management API に存在しない（`AuthConfigResponse` を走査して確認）。この矛盾は
+    // 本 audit の scope 外として auth レーン（#1928 / #1925、`docs/product/specs/auth.md` の
+    // writer）へ回した。
+    //
+    // true への引き上げは password reset 経路（`useAuthStore.ts` の `updatePassword` は
     // `current_password` 無しで `updateUser` を呼ぶ）への影響検証と production 変更を伴う
-    // ため本 audit の scope 外とし、まず現在値を固定して無自覚な変化を検出できるようにする。
-    // false -> true は「安全側」に見えるが、reset 経路（`current_password` 無しの
-    // `updateUser`）が再認証要求で止まりうるので fail-closed に分類する。
+    // ため、まず現在値を固定して無自覚な変化を検出できるようにする。false -> true は
+    // 「安全側」に見えるが上記 reset 経路が止まりうるので fail-closed に分類する。
     failureMode: 'fail-closed',
     why: '現在パスワードのサーバー側検証の有無。変化は password 変更フローの保証を変える',
   },
