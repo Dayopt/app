@@ -19,6 +19,17 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
       ;;
   esac
 
+  # .op-env.admin は Dayopt-Production の service role key を op run で解決する
+  # 実行経路そのもの。中身は op:// 参照だけだが、存在するだけで production を
+  # 触れる状態になるため作成は User の明示操作に限る。雛形の更新は許可する。
+  case "$FILE_PATH" in
+    *.op-env.admin.example) ;;
+    *.op-env.admin)
+      echo "BLOCKED: .op-env.admin は production の service role key を解決する実行経路です。作成は User の明示操作に限ります（雛形の .op-env.admin.example は編集可）" >&2
+      exit 2
+      ;;
+  esac
+
   # 既存マイグレーションファイルの変更（新規作成は許可）
   if echo "$FILE_PATH" | grep -q "supabase/migrations/"; then
     if [ -f "$FILE_PATH" ]; then
@@ -50,6 +61,19 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # grep / echo で言及しただけで発火してしまう。
   if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*git[[:space:]]+push[^;&|]*--no-verify'; then
     echo "BLOCKED: git push --no-verify は禁止です。pre-push の pause point に答えてから push してください" >&2
+    exit 2
+  fi
+
+  # .op-env.admin の作成（Write/Edit ガードの Bash 側の穴を塞ぐ）。
+  # 末尾の ([^.]|$) が .op-env.admin.example への一致を防ぐので、
+  # 雛形のコピー元指定や op run --env-file=....example は素通りする。
+  # 読み取り側（rg / cat など）は対象にしない。
+  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*(cp|mv|touch|tee|install|ln)[[:space:]][^;&|]*\.op-env\.admin([^.]|$)'; then
+    echo "BLOCKED: .op-env.admin の作成は User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
+    exit 2
+  fi
+  if echo "$COMMAND" | grep -qE '>>?[[:space:]]*[^[:space:];&|]*\.op-env\.admin([^.]|$)'; then
+    echo "BLOCKED: .op-env.admin への書き込みは User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
     exit 2
   fi
 fi

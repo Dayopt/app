@@ -37,7 +37,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 **作らない**:
 
-- `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める
+- `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める。**規約だけでなく enforcement も入れてある**: `.claude/settings.json` の deny（`Write` / `Edit`）と、`pre-tool-guard.sh` の Bash 側ガード（`cp` / `mv` / `touch` / `tee` / `install` / `ln` とリダイレクトによる作成をブロック）。雛形の読み書きと `op run --env-file=.op-env.admin.example` は通す
 
 **触らない（読みも書きもしない）**:
 
