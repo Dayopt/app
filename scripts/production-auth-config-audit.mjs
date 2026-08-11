@@ -24,9 +24,11 @@ import { pathToFileURL } from 'node:url';
  *
  * 応答には `security_captcha_secret` や SMTP 認証情報などの secret が同梱される。
  * allowlist（`AUTH_CONFIG_CONTRACT`）に列挙した key 以外は**読まないし出力しない**。
- * 列挙した key は boolean と enum だけで、値そのものが credential になり得ないため、
- * 失敗時の原因特定のために実測値を error message に含める（`docs/operations/secrets.md`
- * §API 経由の設定読戻し の射影規則における明示 allowlist に当たる）。
+ * 列挙した key は **値そのものが credential になり得ない設定値**（boolean / enum / 数値 /
+ * 自 project の URL / redirect allowlist）に限る。だから失敗時の原因特定のために実測値を
+ * error message に含めてよい（`docs/operations/secrets.md` §API 経由の設定読戻し の射影
+ * 規則における明示 allowlist に当たる）。`*_secrets` / `*_key` / `*_token` / `*_pass` /
+ * `*_credentials` は契約へ入れない（contract test が名前で弾く）。
  */
 
 /** production project（`docs/engineering/infra.md`）。secret ではない。 */
@@ -214,7 +216,7 @@ export const AUTH_CONFIG_CONTRACT = [
     key: 'hook_custom_access_token_enabled',
     expected: false,
     failureMode: 'fail-open',
-    why: 'JWT へ claim を注入する hook。意図せず on になると claim の出所が増える',
+    why: 'JWT へ entitlement claim を注入する hook。on にすると解約後の暴露窓が jwt_exp まで開く',
   },
   {
     key: 'mfa_totp_verify_enabled',
@@ -250,6 +252,82 @@ export const AUTH_CONFIG_CONTRACT = [
     failureMode: 'fail-open',
     why: 'パスワードの文字種要件。緩めると英数字混在の要求が消える',
   },
+  {
+    key: 'hook_send_email_uri',
+    expected: 'https://yvglwblxrnrenfifsnje.supabase.co/functions/v1/send-auth-email',
+    // **全認証メールの token 配送先。** hook payload は token / token_hash / redirect_to を
+    // そのまま含む（`supabase/functions/_shared/types.ts`）ため、URI を書き換えられると
+    // 確認・リセット・メール変更の生 token が第三者エンドポイントへ POST される。
+    // hook_send_email_enabled は true のままなので、enabled だけ見ていると audit は green で
+    // 通り、攻撃者がメールを転送すれば利用者からも気づけない。uri_allow_list より blast
+    // radius が広い（あちらは redirect 先を制限するだけだが、こちらは token 本体を渡す）。
+    // 2026-08-11 実測で query も userinfo も持たない自 project の Edge Function URL。
+    failureMode: 'fail-open',
+    why: '認証メール hook の配送先。書き換えで全認証 token が第三者へ渡る',
+  },
+  {
+    key: 'mfa_totp_enroll_enabled',
+    expected: true,
+    // app は MFA 登録 UI をフル実装している（`docs/product/specs/auth.md`）。off にすると
+    // 「UI は出るが登録できない」= 静かに消える安全性そのもの。
+    failureMode: 'fail-closed',
+    why: 'TOTP の新規登録。off で MFA 登録 UI が機能しなくなる',
+  },
+  {
+    key: 'jwt_exp',
+    expected: 3600,
+    // access token の寿命。最大 604800 まで上げられ、伸ばすほど「盗まれた token が
+    // 使える時間」と「解約後に entitlement claim が残る窓」が伸びる。
+    // security_refresh_token_reuse_interval を pin した論理と同一クラス。
+    failureMode: 'fail-open',
+    why: 'access token の寿命。伸ばすと盗難 token の有効時間が伸びる',
+  },
+  {
+    key: 'mailer_otp_exp',
+    expected: 3600,
+    failureMode: 'fail-open',
+    why: '認証メールの OTP / リンクの有効時間。伸ばすとリセットリンクが長く生き残る',
+  },
+  {
+    key: 'rate_limit_email_sent',
+    expected: 30,
+    // security_sb_forwarded_for_enabled の pin は「per-IP rate limit が UI 経路の唯一の
+    // backstop」を根拠にしている。偽装経路を塞いでも閾値が緩めば同じことなので、
+    // backstop の大きさも固定する。
+    failureMode: 'fail-open',
+    why: '認証メールの送信上限。緩めるとメール爆撃とコスト増幅が通る',
+  },
+  {
+    key: 'rate_limit_token_refresh',
+    expected: 150,
+    failureMode: 'fail-open',
+    why: 'token refresh の上限。緩めると総当たり的な refresh が通る',
+  },
+  {
+    key: 'sessions_timebox',
+    expected: 0,
+    // 0 は無効。有効化は UX 判断だが、値の変化は再ログインを強制するため意図を確認する。
+    failureMode: 'fail-closed',
+    why: 'セッションの強制失効。有効化すると全利用者に再ログインが要る',
+  },
+  {
+    key: 'sessions_inactivity_timeout',
+    expected: 0,
+    failureMode: 'fail-closed',
+    why: '無操作でのセッション失効。有効化すると利用者が予期せず切断される',
+  },
+  {
+    key: 'disable_signup',
+    expected: false,
+    failureMode: 'fail-closed',
+    why: '新規登録の可否。true になると signup が全滅する',
+  },
+  {
+    key: 'external_email_enabled',
+    expected: true,
+    failureMode: 'fail-closed',
+    why: 'email provider の有効状態。off になると login が全滅する',
+  },
 ];
 
 /**
@@ -271,22 +349,40 @@ const GUARDED_KEY_PREFIXES = ['security_', 'hook_', 'mfa_', 'sessions_', 'passwo
  * （export しているのはそのため）。
  */
 export const ACKNOWLEDGED_UNPINNED_KEYS = [
-  // 未使用の hook。有効化されたら pin する判断へ回す。
+  // 未使用の hook。有効化されたら pin する判断へ回す（enabled / uri / secrets の 3 点セット）。
   'hook_after_user_created_enabled',
+  'hook_after_user_created_secrets',
+  'hook_after_user_created_uri',
   'hook_before_user_created_enabled',
+  'hook_before_user_created_secrets',
+  'hook_before_user_created_uri',
+  'hook_custom_access_token_secrets',
+  'hook_custom_access_token_uri',
   'hook_mfa_verification_attempt_enabled',
+  'hook_mfa_verification_attempt_secrets',
+  'hook_mfa_verification_attempt_uri',
   'hook_password_verification_attempt_enabled',
+  'hook_password_verification_attempt_secrets',
+  'hook_password_verification_attempt_uri',
   'hook_send_sms_enabled',
+  'hook_send_sms_secrets',
+  'hook_send_sms_uri',
+  // 使用中 hook の署名 secret。値を読まない方針なので pin の対象にしない。
+  'hook_send_email_secrets',
+  'security_captcha_secret',
   // SMS / WebAuthn は未提供。有効化は機能追加であって drift ではない。
   'mfa_phone_enroll_enabled',
   'mfa_phone_verify_enabled',
+  'mfa_phone_max_frequency',
+  'mfa_phone_otp_length',
+  'mfa_phone_template',
   'mfa_web_authn_enroll_enabled',
   'mfa_web_authn_verify_enabled',
-  // TOTP の新規登録可否。締めても既存利用者は締め出されず、開けても検証は
-  // `mfa_totp_verify_enabled` が担保する。
-  'mfa_totp_enroll_enabled',
+  // 登録可能な MFA 要素の上限。安全性の gate ではなく上限値。
+  'mfa_max_enrolled_factors',
   // 同時セッション数の制限。現在は無効で、有効化は UX 判断（安全性の後退ではない）。
   'sessions_single_per_user',
+  'sessions_tags',
 ];
 
 /**
@@ -297,9 +393,10 @@ export const ACKNOWLEDGED_UNPINNED_KEYS = [
  * `security_update_password_require_current_password` で実際に起きた）。未知のキーが
  * 現れたら 1 度 failure にして、pin するか除外リストへ入れるかの判断を強制する。
  *
- * **boolean だけを見る。** 安全性が静かに消えるのは on/off の gate で、同じ名前空間の
- * string / number（`*_uri` / `*_secrets` / `*_template` / timeout 類）まで対象にすると
- * 除外リストが肥大して形骸化する。triage 済みの非 boolean は個別に pin してある。
+ * **boolean 以外も見る。** 当初は on/off の gate だけを対象にしたが、それでは
+ * `hook_send_email_uri`（全認証メールの token 配送先）のような string の危険値が構造的に
+ * 見えなくなる。5 prefix 配下の非 boolean は 26 件と現実的な数なので、全キーを対象にして
+ * 一度 triage する方が安い。
  *
  * キー名のみを扱い、値は出力しない。
  */
@@ -307,11 +404,9 @@ function auditKeyCoverage(config) {
   const contracted = new Set(AUTH_CONFIG_CONTRACT.map(({ key }) => key));
   const acknowledged = new Set(ACKNOWLEDGED_UNPINNED_KEYS);
 
-  const unclassified = Object.entries(config)
-    .filter(([key, value]) => typeof value === 'boolean' && !contracted.has(key))
-    .map(([key]) => key)
+  const unclassified = Object.keys(config)
     .filter((key) => GUARDED_KEY_PREFIXES.some((prefix) => key.startsWith(prefix)))
-    .filter((key) => !acknowledged.has(key))
+    .filter((key) => !contracted.has(key) && !acknowledged.has(key))
     .sort();
 
   if (unclassified.length === 0) return [];
@@ -344,9 +439,10 @@ function describeSetDiff(expected, actual) {
   const added = [...b].filter((item) => !a.has(item)).sort();
   const removed = [...a].filter((item) => !b.has(item)).sort();
   const parts = [];
+  // `setsDiffer` はサイズ一致 + 片側包含で判定するので、差分が出る時は必ずどちらかが非空。
   if (added.length > 0) parts.push(`added: ${added.join(' ')}`);
   if (removed.length > 0) parts.push(`removed: ${removed.join(' ')}`);
-  return parts.join(' / ') || 'order or duplicates only';
+  return parts.join(' / ');
 }
 
 /**

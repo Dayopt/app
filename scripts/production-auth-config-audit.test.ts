@@ -91,22 +91,34 @@ describe('auditSupabaseAuthConfig', () => {
     expect(errors[0]).toContain('security_brand_new_toggle');
   });
 
-  it('除外リストに載せた boolean キーは failure にしない', () => {
-    const config = { ...compliantAuthConfig(), sessions_single_per_user: false };
+  it('除外リストに載せたキーは boolean 以外でも failure にしない', () => {
+    const config = {
+      ...compliantAuthConfig(),
+      sessions_single_per_user: false,
+      security_captcha_secret: 'must-not-appear',
+      mfa_phone_template: 'ignored',
+    };
 
     expect(auditSupabaseAuthConfig(config)).toEqual([]);
   });
 
-  it('guard 対象外の名前空間と非 boolean は未分類にしない', () => {
-    // external_* / mailer_* は形骸化を避けて対象外。string / number は個別 pin で扱う。
-    const config = {
-      ...compliantAuthConfig(),
-      external_zoom_enabled: false,
-      hook_send_email_uri: 'https://example.com/hook',
-      security_captcha_secret: 'must-not-appear',
-    };
+  it('guard 対象外の名前空間は未分類にしない', () => {
+    // external_*(95) / mailer_*(40) は provider や template が増えるたびにキーが増え、
+    // キーの存在自体は危険ではない。入れると誤検出が主成分になり形骸化する。
+    const config = { ...compliantAuthConfig(), external_zoom_enabled: false };
 
     expect(auditSupabaseAuthConfig(config)).toEqual([]);
+  });
+
+  it('guard 対象の非 boolean な新設キーも failure にする', () => {
+    // hook_send_email_uri（全認証メールの token 配送先）のような string の危険値を
+    // 構造的に見落とさないため、boolean 限定にしない。
+    const config = { ...compliantAuthConfig(), hook_brand_new_uri: 'https://example.com/hook' };
+
+    const errors = auditSupabaseAuthConfig(config);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('hook_brand_new_uri');
   });
 
   it('全 key に故障の向きが分類されている', () => {
@@ -115,7 +127,7 @@ describe('auditSupabaseAuthConfig', () => {
     }
   });
 
-  it('契約は boolean と enum だけを扱う（値が credential になり得ない型に限る）', () => {
+  it('契約は値が credential になり得ない設定値に限る', () => {
     for (const { key, expected } of AUTH_CONFIG_CONTRACT) {
       expect(['boolean', 'string', 'number', 'object'], key).toContain(typeof expected);
       // 値を出力するキーが契約へ紛れ込まないための唯一の層。複数形・中置も落とす。

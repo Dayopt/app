@@ -52,6 +52,16 @@ describe('production auth config audit contract', () => {
       'password_hibp_enabled',
       'password_min_length',
       'password_required_characters',
+      'hook_send_email_uri',
+      'mfa_totp_enroll_enabled',
+      'jwt_exp',
+      'mailer_otp_exp',
+      'rate_limit_email_sent',
+      'rate_limit_token_refresh',
+      'sessions_timebox',
+      'sessions_inactivity_timeout',
+      'disable_signup',
+      'external_email_enabled',
     ]);
   });
 
@@ -59,16 +69,34 @@ describe('production auth config audit contract', () => {
     // guard の唯一の抜け道。export していないと 1 行足すだけで無言で新キーを黙らせられる。
     expect(ACKNOWLEDGED_UNPINNED_KEYS).toEqual([
       'hook_after_user_created_enabled',
+      'hook_after_user_created_secrets',
+      'hook_after_user_created_uri',
       'hook_before_user_created_enabled',
+      'hook_before_user_created_secrets',
+      'hook_before_user_created_uri',
+      'hook_custom_access_token_secrets',
+      'hook_custom_access_token_uri',
       'hook_mfa_verification_attempt_enabled',
+      'hook_mfa_verification_attempt_secrets',
+      'hook_mfa_verification_attempt_uri',
       'hook_password_verification_attempt_enabled',
+      'hook_password_verification_attempt_secrets',
+      'hook_password_verification_attempt_uri',
       'hook_send_sms_enabled',
+      'hook_send_sms_secrets',
+      'hook_send_sms_uri',
+      'hook_send_email_secrets',
+      'security_captcha_secret',
       'mfa_phone_enroll_enabled',
       'mfa_phone_verify_enabled',
+      'mfa_phone_max_frequency',
+      'mfa_phone_otp_length',
+      'mfa_phone_template',
       'mfa_web_authn_enroll_enabled',
       'mfa_web_authn_verify_enabled',
-      'mfa_totp_enroll_enabled',
+      'mfa_max_enrolled_factors',
       'sessions_single_per_user',
+      'sessions_tags',
     ]);
   });
 
@@ -122,7 +150,10 @@ describe('production auth config audit contract', () => {
     // status context「Production Config Audit」は finish-branch.sh が merge gate の
     // 解除判定に使う。auth audit（PR diff と無関係な Dashboard 由来の drift）の
     // 失敗をここへ載せると、全 PR の merge が止まる。
-    const authJob = workflow.slice(workflow.indexOf('auth-config:'));
+    const jobIndex = workflow.indexOf('auth-config:');
+    // -1 だと slice(-1) が末尾 1 文字になり、下の assertion が真空で pass する。
+    expect(jobIndex).toBeGreaterThanOrEqual(0);
+    const authJob = workflow.slice(jobIndex);
     expect(authJob).not.toContain('statuses/');
   });
 });
