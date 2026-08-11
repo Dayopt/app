@@ -19,6 +19,7 @@ function completeProductionEnv() {
     RESEND_API_KEY: 'safe-dummy-key',
     RESEND_FROM_EMAIL: 'noreply@dayopt.app',
     RESEND_WEBHOOK_SECRET: 'safe-dummy-webhook-secret',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'safe-dummy-site-key',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-token',
   };
