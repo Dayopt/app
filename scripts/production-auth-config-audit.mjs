@@ -241,6 +241,12 @@ export const AUTH_CONFIG_CONTRACT = [
     key: 'hook_custom_access_token_enabled',
     expected: false,
     failureMode: 'fail-open',
+    // **repo の記述と production 実態が食い違っている。** `scripts/enable-auth-hook.sh` は
+    // production へ `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: true` を PATCH する手順で、
+    // `supabase/config.toml` も enabled だが、2026-08-11 の実測では production は false。
+    // 手順が未実行か、実行後に戻されたかのどちらか。ここは実測値を pin する（true を置くと
+    // audit が恒久 failure になる）。**この矛盾の解消は本 audit の scope 外**で、enable 手順を
+    // 生かすなら script 実行と同じ変更でこの期待値も true にする必要がある。
     why: 'JWT へ entitlement claim を注入する hook。on にすると解約後の暴露窓が jwt_exp まで開く',
   },
   {
@@ -287,6 +293,9 @@ export const AUTH_CONFIG_CONTRACT = [
     // 通り、攻撃者がメールを転送すれば利用者からも気づけない。uri_allow_list より blast
     // radius が広い（あちらは redirect 先を制限するだけだが、こちらは token 本体を渡す）。
     // 2026-08-11 実測で query も userinfo も持たない自 project の Edge Function URL。
+    // drift 先が query に何を積んでいるかは不明なので、失敗時は実測値の全文を出さず
+    // origin + pathname だけを出す（`redact: 'url'`）。
+    redact: 'url',
     failureMode: 'fail-open',
     why: '認証メール hook の配送先。書き換えで全認証 token が第三者へ渡る',
   },
@@ -445,6 +454,22 @@ function describeValue(value) {
   return typeof value === 'string' ? JSON.stringify(value) : String(value);
 }
 
+/**
+ * 失敗時に出す実測値。`redact: 'url'` の契約では origin + pathname までに落とす。
+ * drift 先の URL は攻撃者が組み立てうるため、query を CI ログへ持ち込まない。
+ */
+function describeActual(value, redact) {
+  if (redact !== 'url') return describeValue(value);
+  if (typeof value !== 'string') return `(${typeof value})`;
+  try {
+    const url = new URL(value);
+    const suffix = url.search === '' ? '' : ' (query redacted)';
+    return `${JSON.stringify(`${url.origin}${url.pathname}`)}${suffix}`;
+  } catch {
+    return '(unparsable url, redacted)';
+  }
+}
+
 /** `compare: 'set'` の契約用。順序と重複の揺れで誤検出しないよう集合として比べる。 */
 function toEntrySet(value) {
   const items = Array.isArray(value) ? value : String(value).split(',');
@@ -480,7 +505,7 @@ export function auditSupabaseAuthConfig(config) {
   }
 
   const errors = [];
-  for (const { key, expected, compare, failureMode, why } of AUTH_CONFIG_CONTRACT) {
+  for (const { key, expected, compare, redact, failureMode, why } of AUTH_CONFIG_CONTRACT) {
     if (!(key in config)) {
       errors.push(`${key} is missing from the Supabase Auth config response (${why})`);
       continue;
@@ -507,7 +532,7 @@ export function auditSupabaseAuthConfig(config) {
 
     if (actual !== expected) {
       errors.push(
-        `${key} must be ${describeValue(expected)}, got ${describeValue(actual)} [${failureMode}] — ${why}`,
+        `${key} must be ${describeValue(expected)}, got ${describeActual(actual, redact)} [${failureMode}] — ${why}`,
       );
     }
   }
