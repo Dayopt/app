@@ -39,6 +39,17 @@ export const SUPABASE_PRODUCTION_PROJECT_REF = 'yvglwblxrnrenfifsnje';
  * 置くと audit が恒久 failure になり、drift 検出そのものが止まる）。値を変える時は
  * 「Dashboard を変えたから contract を追従させる」のではなく、**変更が意図したもので
  * あることを PR で示してから**追従させる。
+ *
+ * ## 故障の向き（`failureMode`）
+ *
+ * 「設定が緩む方向に変わったら警報」という片方向の設計にしない。**判定は期待値との
+ * 等値**なので、緩む方向（fail-open: 本来止まる操作が黙って通る）と締まる方向
+ * （fail-closed: 本来通る操作が黙ってできなくなる）の**どちらの drift も検出する**。
+ *
+ * `failureMode` はその値が drift した時に起きる故障の向きの分類で、警報条件ではなく
+ * 失敗時の読み解きに使う。実際 `security_captcha_provider` と
+ * `security_update_password_require_reauthentication` は fail-closed 側で、
+ * 「安全側に倒れる変更」に見えて login やパスワードリセットを止めうる。
  */
 export const AUTH_CONFIG_CONTRACT = [
   {
@@ -53,6 +64,9 @@ export const AUTH_CONFIG_CONTRACT = [
     // 多層防御にあたる。true への引き上げは password reset 経路（`useAuthStore.ts:329` は
     // `current_password` 無しで `updateUser` を呼ぶ）への影響検証と production 変更を伴う
     // ため本 audit の scope 外とし、まず現在値を固定して無自覚な変化を検出できるようにする。
+    // false -> true は「安全側」に見えるが、reset 経路（`current_password` 無しの
+    // `updateUser`）が再認証要求で止まりうるので fail-closed に分類する。
+    failureMode: 'fail-closed',
     why: '現在パスワードのサーバー側検証の有無。変化は password 変更フローの保証を変える',
   },
   {
@@ -61,6 +75,7 @@ export const AUTH_CONFIG_CONTRACT = [
     // `supabase/config.toml:196` の `double_confirm_changes = true` に対応。off になると
     // メール変更が旧アドレスの確認なしで通り、アカウント乗っ取りの経路になる。#1917 の
     // 修正後、メール変更の本人確認はこの値への単独依存になっている。
+    failureMode: 'fail-open',
     why: 'メール変更時に旧アドレスの確認を要求する。off でアカウント乗っ取りが成立する',
   },
   {
@@ -68,32 +83,38 @@ export const AUTH_CONFIG_CONTRACT = [
     expected: true,
     // off になると signup / login の captcha 検証が消える。app 側は widget を出し続ける
     // ため、UI からは無効化に気づけない。
+    failureMode: 'fail-open',
     why: 'Bot Protection の有効状態。off で captcha 検証が消える',
   },
   {
     key: 'security_captcha_provider',
     expected: 'turnstile',
     // app が埋め込むのは Turnstile widget 固定（`docs/engineering/infra.md` §Bot Protection）。
-    // provider が変わると Turnstile の token が拒否され、login / signup が全滅する。#1924 と
-    // 同じ故障クラスで、外形監視（`/api/health`）では検出できない。
+    // provider が変わると captcha は「有効なまま」なのに token が拒否され、login / signup が
+    // 全滅する。緩む方向ではなく操作が止まる方向の故障で、#1924 と同じ故障クラス。
+    // 外形監視（`/api/health`）では検出できない。
+    failureMode: 'fail-closed',
     why: 'captcha provider。app の Turnstile widget と不一致だと login が全滅する',
   },
   {
     key: 'security_manual_linking_enabled',
     expected: false,
     // `supabase/config.toml:160` の `enable_manual_linking = false` に対応。
+    failureMode: 'fail-open',
     why: '手動 identity linking。on になると任意 identity の結合が可能になる',
   },
   {
     key: 'external_anonymous_users_enabled',
     expected: false,
     // `supabase/config.toml:158` の `enable_anonymous_sign_ins = false` に対応。
+    failureMode: 'fail-open',
     why: '匿名サインイン。on になると認証なしの user 行が作られる',
   },
   {
     key: 'mailer_autoconfirm',
     expected: false,
     // on になるとメール確認が省略され、他人のアドレスでの signup がそのまま確定する。
+    failureMode: 'fail-open',
     why: 'メール確認の省略。on で未確認アドレスの signup が成立する',
   },
 ];
@@ -112,7 +133,7 @@ export function auditSupabaseAuthConfig(config) {
   }
 
   const errors = [];
-  for (const { key, expected, why } of AUTH_CONFIG_CONTRACT) {
+  for (const { key, expected, failureMode, why } of AUTH_CONFIG_CONTRACT) {
     if (!(key in config)) {
       errors.push(`${key} is missing from the Supabase Auth config response (${why})`);
       continue;
@@ -128,7 +149,7 @@ export function auditSupabaseAuthConfig(config) {
 
     if (actual !== expected) {
       errors.push(
-        `${key} must be ${describeValue(expected)}, got ${describeValue(actual)} — ${why}`,
+        `${key} must be ${describeValue(expected)}, got ${describeValue(actual)} [${failureMode}] — ${why}`,
       );
     }
   }

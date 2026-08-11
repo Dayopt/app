@@ -132,6 +132,7 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 - PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write（`POST /v1/projects/{ref}/database/query` で production DB への任意 SQL を含む）で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
 - GitHub secret 名は `SUPABASE_ACCESS_TOKEN` と分けて `SUPABASE_AUTH_AUDIT_TOKEN` にする。同名だと、別 workflow が「その名前を参照するだけ」で PR 側 code の実行経路へ token が配られる（`integration.yml` が実際にこの形の workflow レベル env を持っていた。2026-08-11 に削除）
 - 応答には `security_captcha_secret` などの secret が同梱される。audit は `AUTH_CONFIG_CONTRACT` に列挙した boolean / enum だけを読み、それ以外は出力しない
+- **判定は期待値との等値**にしてあり、片方向の警報にしない。設定が緩む方向（fail-open: 本来止まる操作が黙って通る）と締まる方向（fail-closed: 本来通る操作が黙ってできなくなる）の**どちらの drift も failure にする**。各値の `failureMode` はこの分類で、警報条件ではなく失敗時の読み解きに使う。`security_captcha_provider` と `security_update_password_require_reauthentication` は fail-closed 側で、「安全側に倒れる変更」に見えて login やパスワードリセットを止めうる
 
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 

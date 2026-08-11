@@ -64,6 +64,27 @@ describe('auditSupabaseAuthConfig', () => {
     expect(auditSupabaseAuthConfig([])).toEqual(['Supabase Auth config response is invalid']);
   });
 
+  it('締まる方向（fail-closed）の drift も検出する', () => {
+    // 「緩んだら警報」の片方向設計にしない。security_captcha_provider の変更や
+    // 再認証要求の有効化は、安全側に倒れるように見えて login / password reset を
+    // 止めうる。判定を等値にしてあるので両方向が failure になることを固定する。
+    const config = {
+      ...compliantAuthConfig(),
+      security_update_password_require_reauthentication: true,
+    };
+
+    const errors = auditSupabaseAuthConfig(config);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('[fail-closed]');
+  });
+
+  it('全 key に故障の向きが分類されている', () => {
+    for (const { key, failureMode } of AUTH_CONFIG_CONTRACT) {
+      expect(['fail-open', 'fail-closed'], key).toContain(failureMode);
+    }
+  });
+
   it('契約は boolean と enum だけを扱う（値が credential になり得ない型に限る）', () => {
     for (const { key, expected } of AUTH_CONFIG_CONTRACT) {
       expect(['boolean', 'string'], key).toContain(typeof expected);
