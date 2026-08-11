@@ -524,6 +524,38 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // signInWithPassword の呼び出し点を固定する（#1917 / #1925）
+  //
+  // 認証済み画面から公開 Auth endpoint で再認証すると、production の Bot Protection 下で
+  // 必ず captcha_failed になる（#1917 で設定画面の 2 ダイアログから撤去済み）。新しい
+  // 呼び出しが増えると同じ故障を再導入するため、許可した場所以外では書けなくする。
+  //
+  // AST ベースなので doc comment 内のコード例（src/lib/supabase/client.ts）は一致しない。
+  // 既存の呼び出しが消えることは検出しない（superset 検査）— 守るのは「増やさないこと」。
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      'src/lib/test/integration/**',
+      '**/__tests__/**',
+      // ログイン（ブラウザから captcha token 付きで呼ぶ）
+      'src/features/auth/stores/useAuthStore.ts',
+      // 公開 REST endpoint
+      'src/app/api/auth/route.ts',
+      // アカウント削除の本人確認。service-role 経由で captcha を意図的に免除している
+      'src/features/auth/server/password-reauthentication.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='signInWithPassword']",
+          message:
+            'signInWithPassword の新規呼び出しは禁止。認証済み画面からの再認証は Bot Protection 下で必ず失敗する（#1917）。削除フローの本人確認は features/auth/server/password-reauthentication.ts を使う。',
+        },
+      ],
+    },
+  },
+
   // Storybook
   ...storybook.configs['flat/recommended'],
 ]);
