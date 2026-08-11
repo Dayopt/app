@@ -621,9 +621,9 @@ op run --env-file=.op-env.admin -- \
 
 ## 関連スクリプト
 
-| スクリプト            | 用途                                                                                       | 必須 env                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `enable-auth-hook.sh` | Production project の `custom_access_token` hook を有効化する                              | `SUPABASE_ACCESS_TOKEN`                                                                       |
-| `verify-login.sh`     | email + password の組合せで直接 `/auth/v1/token` を叩き、login 可否を確認する（read-only） | `USER_EMAIL`, `PASSWORD_ITEM_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| スクリプト            | 用途                                                                                                                                                                                                                                                                                                                             | 必須 env                                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `enable-auth-hook.sh` | Production project の `custom_access_token` hook を有効化する。**実行すると `Production Auth Config Audit` が失敗する**（`scripts/production-auth-config-audit.mjs` は現在の production 値 `false` を pin している）。実行するなら同じ変更で期待値も `true` にする。経緯は [#1946](https://github.com/Dayopt/dayopt/issues/1946) | `SUPABASE_ACCESS_TOKEN`                                                                       |
+| `verify-login.sh`     | email + password の組合せで直接 `/auth/v1/token` を叩き、login 可否を確認する（read-only）                                                                                                                                                                                                                                       | `USER_EMAIL`, `PASSWORD_ITEM_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 
 `verify-login.sh` が成功すれば password 自体は正しい（UI / CSP / form 側の問題）。失敗すれば `admin-set-user-password.sh` で password を再設定する。
