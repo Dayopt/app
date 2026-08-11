@@ -111,7 +111,7 @@ claude mcp remove uptimerobot -s user
 - **Before use**:
   - OAuth 方式（`https://mcp.vercel.com`）。未承認 / 期限切れなら `/mcp` で承認する。token 管理は不要
   - 疎通は `list_projects` で確認する
-- **境界ケース**: 単純な単一 API 取得は `vercel` CLI（`vercel api ...`）で十分。デプロイ横断の状態確認やログ調査で MCP を使う。
+- **境界ケース**: 単純な単一 API 取得は `vercel` CLI（`vercel api ...`）で十分。デプロイ横断の状態確認やログ調査で MCP を使う。env 系エンドポイント（`/v10/projects/{project}/env` 等）のレスポンスは `value` に実値を含むため、全文を表示せず `docs/operations/secrets.md` §API 経由の設定読戻し の jq 射影規則に従う。
 
 ### Context7 (`mcp__context7__*`)
 

@@ -44,15 +44,21 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 
 上記はファイルの読み書きを対象とする。別経路として、設定系 API（Supabase Management API、Vercel Env API、Stripe API 等）の GET レスポンスに secret が同梱されるケースがある。**レスポンスをそのまま表示しない**。`jq` で必要フィールドだけに射影してから表示する（allowlist 方式）。`*_secret` / `*_key` / `*_token` / `*password*` を含むキーは射影に含めない。
 
-射影を書けない・レスポンス構造が不明な場合は、まず `jq 'keys'` でキー一覧だけを確認してから射影を組む。
+射影を書けない・レスポンス構造が不明な場合は、まずキー一覧だけを確認してから射影を組む。**素の `jq 'keys'` は使わない** — レスポンスが scalar（secret 文字列そのもの）だと `jq` がエラーメッセージに値を含めて stderr へ出す。type を先に判定する:
+
+```bash
+... | jq 'if type == "object" then keys else type end'
+```
 
 例: Supabase Auth config から bot protection の有効状態だけを確認する（`security_captcha_secret` のような `*_secret` フィールドは射影から除外する）:
 
 ```bash
-curl -s "https://api.supabase.com/v1/projects/{ref}/config/auth" \
+curl -sS --fail "https://api.supabase.com/v1/projects/{ref}/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-  | jq '{security_captcha_enabled, external_email_enabled, disable_signup}'
+  | jq -e '{security_captcha_enabled, external_email_enabled, disable_signup}'
 ```
+
+`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` で「確認できた」ように見える）。`jq -e` は空入力を非ゼロで返すため、取得失敗が後続判断へ素通りしない。
 
 ---
 
