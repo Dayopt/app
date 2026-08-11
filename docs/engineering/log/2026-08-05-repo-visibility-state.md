@@ -3,6 +3,7 @@ title: repo が public に戻っている（private 化の記録との食い違�
 status: frozen
 date: 2026-08-05
 last_verified: 2026-08-05
+superseded_by: docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md
 ---
 
 # repo が public に戻っている（private 化の記録との食い違い）
