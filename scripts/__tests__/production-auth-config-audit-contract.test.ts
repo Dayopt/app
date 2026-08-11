@@ -56,7 +56,6 @@ describe('production auth config audit contract', () => {
         [
           'https://app.dayopt.app/**',
           'https://product-*-dayopt.vercel.app/**',
-          'http://localhost:3000/**',
           'https://product-dayopt.vercel.app/',
           'https://product-dayopt.vercel.app/**',
           'https://product-*-dayopt.vercel.app',

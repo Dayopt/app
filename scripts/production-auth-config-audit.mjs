@@ -191,7 +191,6 @@ export const AUTH_CONFIG_CONTRACT = [
     expected: [
       'https://app.dayopt.app/**',
       'https://product-*-dayopt.vercel.app/**',
-      'http://localhost:3000/**',
       'https://product-dayopt.vercel.app/',
       'https://product-dayopt.vercel.app/**',
       'https://product-*-dayopt.vercel.app',
@@ -202,10 +201,17 @@ export const AUTH_CONFIG_CONTRACT = [
     // Dashboard が正本で、`supabase/config.toml` の `additional_redirect_urls` は
     // production に効かないため repo 側に代替の検証手段が無い。
     //
-    // **この値は暫定。** #1935 で production から `http://localhost:3000/**` を除去する
-    // 予定があり（User の Dashboard 操作）、#1936 の最終追従で live を再測して上書きする
-    // 段取りになっている。production を変えたら同じ変更でこの期待値も更新する — それを
-    // 強制するのがこの pin の目的で、忘れると merge 後の push:main で main が赤くなる。
+    // 意図: production の auth redirect 先は production origin と Vercel preview の
+    // ワイルドカードに限る。`http://localhost:3000/**` は local dev から production へ
+    // 接続する escape hatch が存在した時代の残骸で、#1929 で hatch を廃止したことで根拠が
+    // 失われたため 2026-08-11 に除去した（依存経路ゼロを実測確認済み）。除去後の値を
+    // live 再測して pin してある（除去前後の集合差分が localhost の 1 件だけであることを
+    // 確認済み）。
+    //
+    // 残る 5 件のうち `https://product-dayopt.vercel.app/` 系と `/**` 無しの
+    // ワイルドカードは重複・冗長に見えるが、preview の実 URL 形への依存が未調査のため
+    // 現状維持とした（整理は別途）。production を変えたら同じ変更でこの期待値も更新する
+    // — それを強制するのがこの pin の目的で、忘れると push:main で main が赤くなる。
     failureMode: 'fail-open',
     why: 'redirect allowlist。緩めるとリセットリンクと OAuth code が第三者へ渡る',
   },
