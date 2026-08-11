@@ -4,7 +4,6 @@ last_verified: 2026-08-11
 code:
   - apps/product/src/features/settings/components/EmailChangeDialog.tsx
   - apps/product/src/features/settings/components/PasswordChangeDialog.tsx
-  - apps/product/src/app/api/auth/route.ts
   - apps/product/src/lib/trpc/session-auth-context.ts
   - apps/product/src/lib/trpc/procedures.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
@@ -91,7 +90,7 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 **この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。パスワード総当たりの上限にもならない（GoTrue の rate limit は IP 単位で、サーバー呼び出しでは全ユーザーが 1 バケットを共有する）。**削除を守っているのはパスワード再認証そのもの**であり、captcha ではない。
 
-**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有し、公開 `/api/auth` のサーバー側ログインとも同じバケットを使う。したがって:
+**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有する。したがって:
 
 - セッションを握った攻撃者は、captcha にもアプリ側 throttle にも妨げられずパスワード試行を続けられる
 - その試行が 429 を誘発すると、**他ユーザーの削除再認証まで巻き添えで失敗する**（fail-closed なので削除が通ることは無い）
@@ -129,17 +128,13 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 
 「すべてのデータを削除」の公開入力は、従来どおり`{ confirmText: 'DELETE' }`を維持する。世代番号を使う新しいDB処理は配置するが、このPRでは画面から使わない。
 
-## Auth REST API rate limit
+## Auth REST API は存在しない
 
-公開 `/api/auth` route は、signin / signup に 5 回 / 15 分、reset-password に 3 回 / 1 時間の制限を持つ。
+かつて公開 REST route `/api/auth`（signin / signup / signout / reset-password）があり、独自の rate limit を持っていた。**[#1942](https://github.com/Dayopt/dayopt/issues/1942) で削除した**（2026-08-12）。
 
-- 接続元は Vercel edge が上書きする `X-Real-IP` だけを検証して使い、`X-Forwarded-For` は解析しない。Vercel IP が欠落・不正なら全 request を共有 `ip:unknown` bucket に入れて fail closed にする
-- signin と reset-password は IP bucket を先に確認し、通過後に `trim().toLowerCase()` した email の独立 bucket を確認する。IP と email の結合キーにはしない
-- signup は既存どおり IP bucket だけを使う
-- Redis key は `ip:` / `email:` の purpose prefix を付けて HMAC 化し、raw IP / email を保存・記録しない
-- email bucket は同一アカウントへの攻撃を絞る一方、第三者が signin を 15 分、reset を 1 時間制限できる。IP-first の短絡で遮断済み IP から多数の email bucket を消費する攻撃を抑える
+削除の理由は、呼び出し元がゼロのまま公開されていたため。通常 UI は `useAuthStore` が Supabase Auth を直接呼ぶ経路を使っており、この route は「守るもの」ではなく**未認証の credential 受け口という攻撃面**だった。加えて signin 分岐は captcha token を渡しておらず、production の Bot Protection 下では `captcha_failed` で必ず失敗する状態だった（[#1917](https://github.com/Dayopt/dayopt/issues/1917) / [#1925](https://github.com/Dayopt/dayopt/issues/1925) と同じ故障クラス）。
 
-Product の通常 UI は現在この route を使わず Supabase Auth を直接呼ぶため、この制限は公開 route の defense-in-depth であり UI 全体の app-side rate limit ではない。Supabase Auth 自身の project-level rate limit は別の backstop として働く。
+**したがって現在、認証操作の rate limit は Supabase Auth 自身の project-level rate limit だけが担う**（`rate_limit_email_sent` などは `scripts/production-auth-config-audit.mjs` が pin して drift を検出する）。アプリ側に認証の rate limit 層は無い。将来 server-side の anti-abuse を挟む必要が出たら、その時点で route と limiter を設計し直す。
 
 ## tRPC API auth policy
 
