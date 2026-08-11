@@ -32,6 +32,13 @@ type McpConnectionsSettingsViewProps = {
   error: boolean;
   hasConnections: boolean;
   onRetry: () => void;
+  /** 次ページが存在するか。false / undefined なら「もっと見る」を出さない。 */
+  hasNextPage?: boolean;
+  /** 追加読み込み中か。true の間はボタンを loading 表示にする。 */
+  loadingMore?: boolean;
+  /** 直近の追加読み込みが失敗したか。ページ全体は壊さず導線の下に inline 文言を出す。 */
+  loadMoreError?: boolean;
+  onLoadMore?: () => void;
   children?: ReactNode;
 };
 
@@ -44,6 +51,10 @@ export function McpConnectionsSettingsView({
   error,
   hasConnections,
   onRetry,
+  hasNextPage = false,
+  loadingMore = false,
+  loadMoreError = false,
+  onLoadMore,
   children,
 }: McpConnectionsSettingsViewProps) {
   const t = useTranslations('settings.integrations.mcpConnections');
@@ -60,7 +71,27 @@ export function McpConnectionsSettingsView({
       ) : error ? (
         <ErrorState title={t('loadError')} onRetry={onRetry} size="sm" />
       ) : hasConnections ? (
-        <div className="divide-border divide-y">{children}</div>
+        <>
+          <div className="divide-border divide-y">{children}</div>
+          {hasNextPage ? (
+            <div className="mt-4 flex flex-col items-start gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadMore}
+                loading={loadingMore}
+                loadingText={t('loadingMore')}
+              >
+                {t('loadMore')}
+              </Button>
+              {loadMoreError ? (
+                <p className="text-destructive text-xs" role="alert">
+                  {t('loadMoreError')}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </>
       ) : (
         <EmptyState title={t('empty')} size="sm" />
       )}
