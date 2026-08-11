@@ -65,8 +65,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   fi
 
   # .op-env.admin の作成（Write/Edit ガードの Bash 側の穴を塞ぐ）。
-  # 末尾の ([^.]|$) が .op-env.admin.example への一致を防ぐので、
-  # 雛形のコピー元指定や op run --env-file=....example は素通りする。
+  # 末尾の ([^.]|$) で .op-env.admin.example への一致を防ぐ。雛形を
+  # コピー「元」に指定する形（cp .op-env.admin.example .op-env.admin）は
+  # コピー「先」の方で落ちる。雛形の消費は下の引数ガードが別途止める。
   # 読み取り側（rg / cat など）は対象にしない。
   if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*(cp|mv|touch|tee|install|ln)[[:space:]][^;&|]*\.op-env\.admin([^.]|$)'; then
     echo "BLOCKED: .op-env.admin の作成は User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
