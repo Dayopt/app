@@ -34,11 +34,11 @@ function envEntry(
 }
 
 export const envSchema: EnvSchemaEntry[] = [
-  envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'local', staging, 'supabase'),
-  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'local', staging, 'supabase'),
-  envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'local', staging, 'supabase'),
+  // Supabase の接続情報（URL / anon key / service role key / DB password）は
+  // Dayopt-Staging に置かない。常設 staging が存在せず、この 4 field は
+  // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
+  // supabase status -o env から注入するため 1Password を経由しない。
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'staging', staging, 'supabase'),
-  envEntry('SUPABASE_DB_PASSWORD', false, 'secret', 'staging', staging, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'staging', staging, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'staging', staging, 'supabase'),
 

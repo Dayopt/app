@@ -113,6 +113,22 @@ describe('dev-with-op.sh', () => {
     expect(result.stderr).toContain(
       '❌ Supabase local を起動できませんでした。Docker の状態を確認してください。',
     );
-    expect(result.stderr).toContain('DAYOPT_SUPABASE_TARGET=op pnpm dev');
+    expect(result.stderr).toContain('supabase start');
+    expect(result.stderr).not.toContain('DAYOPT_SUPABASE_TARGET=op');
+  });
+
+  it('DAYOPT_SUPABASE_TARGET=op は廃止されており、起動せずに失敗する', () => {
+    const { callsPath, env } = createTestEnvironment();
+
+    const result = spawnSync('bash', ['scripts/dev-with-op.sh'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      env: { ...env, DAYOPT_SUPABASE_TARGET: 'op' },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('❌ DAYOPT_SUPABASE_TARGET は廃止されました');
+    // 1Password 参照だけで product dev が起動する経路が残っていないこと
+    expect(readFileSync(callsPath, 'utf8')).toBe('');
   });
 });

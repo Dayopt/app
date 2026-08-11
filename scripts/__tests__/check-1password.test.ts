@@ -88,7 +88,7 @@ describe('check-1password.ts', () => {
     const result = runCheck();
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('Dayopt-Staging / supabase / SUPABASE_SERVICE_ROLE_KEY: OK');
+    expect(result.stdout).toContain('Dayopt-Production / supabase / SUPABASE_SERVICE_ROLE_KEY: OK');
     expect(result.stdout).not.toContain(sentinelSecret);
     expect(result.stderr).not.toContain(sentinelSecret);
   });
