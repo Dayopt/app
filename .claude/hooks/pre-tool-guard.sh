@@ -80,7 +80,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 雛形の直接実行。.op-env.admin.example は op://Dayopt-Production/... の参照を
   # そのまま持つため、コピーせず op run に食わせるだけで同じ本番権限が解決される。
   # 作成だけ止めても迂回できるので、消費側も塞ぐ（.example も対象に含める）。
-  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]][^[:space:];&|]*\.op-env\.admin'; then
+  # git push --no-verify と同じくコマンド位置に限定する。部分一致だと docs に
+  # この command を書くだけで発火する（実際に発火させた）。
+  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*op[[:space:]]+run[^;&|]*--env-file[=[:space:]][^[:space:];&|]*\.op-env\.admin'; then
     echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため）" >&2
     exit 2
   fi
