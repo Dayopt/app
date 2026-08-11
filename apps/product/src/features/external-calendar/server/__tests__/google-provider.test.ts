@@ -317,9 +317,12 @@ describe('googleCalendarAdapter.syncCalendar', () => {
       window: WINDOW,
     });
 
+    expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('unparsable events'), {
+      count: 2,
+    });
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ operation: 'normalize_events', count: 2 }),
+      expect.objectContaining({ operation: 'normalize_events' }),
     );
   });
 
@@ -342,14 +345,13 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     });
 
     expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
-    expect(captureUnexpectedError).toHaveBeenCalledWith(
-      expect.any(Error),
-      expect.objectContaining({ count: 3 }),
-    );
+    expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('unparsable events'), {
+      count: 3,
+    });
   });
 
-  // allowlist 外のキーは sanitize で黙って捨てられ、message しか Sentry に残らない
-  it('送る context が sanitize を通過して件数まで届く', async () => {
+  // context に数値キーを足しても sanitize が捨てるので、Sentry に残る形を固定する
+  it('Sentry へ送る context が sanitize を素通りする', async () => {
     fetchMock().mockResolvedValue(
       jsonResponse({ items: [{ noIdHere: true }], nextSyncToken: 'sync-token-1' }),
     );
@@ -361,11 +363,7 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     });
 
     const context = captureUnexpectedError.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(sanitizeTechnicalContext(context)).toEqual({
-      feature: 'external_calendar',
-      operation: 'normalize_events',
-      count: 1,
-    });
+    expect(sanitizeTechnicalContext(context)).toEqual(context);
   });
 
   it('全件 parse できた時は Sentry へ送らない', async () => {
@@ -398,7 +396,7 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     expect(result.nextCursor).toBeNull();
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ operation: 'sync_calendar', limit: 20 }),
+      expect.objectContaining({ operation: 'sync_calendar' }),
     );
   });
 
