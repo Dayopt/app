@@ -29,8 +29,22 @@ interface PasswordChangeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function isCurrentPasswordError(error: Error): boolean {
-  const message = error.message.toLowerCase();
+/**
+ * GoTrue が「現在のパスワードが違う」を示しているか。
+ *
+ * 構造化された error code を第一候補にする。GoTrue の文言が変わっても判定が
+ * 外れないため。code を持たない古いレスポンス向けに substring 判定を fallback
+ * として残す（code が別値でも fallback は試す。判定漏れは生メッセージ露出では
+ * なく汎用エラー表示に落ちるが、意味のある文言を優先したい）。
+ */
+function isCurrentPasswordError(error: unknown): boolean {
+  const code =
+    error !== null && typeof error === 'object' && 'code' in error
+      ? (error as { code?: unknown }).code
+      : undefined;
+  if (code === 'invalid_credentials') return true;
+
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (
     message.includes('current_password') ||
     message.includes('current password') ||
@@ -121,7 +135,10 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           if (isCurrentPasswordError(updateError)) {
             throw new Error(t('settings.account.passwordIncorrect'));
           }
-          throw new Error(updateError.message);
+          // 生の英語メッセージを画面に出さない（i18n 破れと内部文言の露出を防ぐ）。
+          // 原因の特定はログ側に残す。
+          logger.error('Password update failed:', updateError);
+          throw new Error(t('settings.account.passwordUpdateFailed'));
         }
 
         // Step 3: Sign out other sessions

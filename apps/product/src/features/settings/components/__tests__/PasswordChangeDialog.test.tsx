@@ -137,8 +137,32 @@ describe('PasswordChangeDialog', () => {
     });
 
     // #1917: captcha 由来の失敗を「パスワードが正しくありません」に化けさせない。
-    // isCurrentPasswordError の 4 パターンはこのメッセージに一致しない。
+    // あわせて GoTrue の生の英語メッセージを画面へ出さないことも固定する。
+    expect(screen.getByRole('alert')).toHaveTextContent('settings.account.passwordUpdateFailed');
     expect(screen.getByRole('alert')).not.toHaveTextContent('settings.account.passwordIncorrect');
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSendPasswordChangedEmail).not.toHaveBeenCalled();
+  });
+
+  it('treats a structured invalid_credentials code as a wrong current password', async () => {
+    const user = userEvent.setup();
+    // GoTrue は理由を文言ではなく code で返す。文言が変わっても判定が外れないことを固定する。
+    mockUpdateUser.mockResolvedValue({
+      data: { user: null },
+      error: Object.assign(new Error('Some future wording'), { code: 'invalid_credentials' }),
+    });
+
+    renderDialog();
+
+    await user.type(screen.getByLabelText('settings.account.currentPassword'), 'wrong-password');
+    await user.type(screen.getByLabelText('settings.account.newPassword'), 'new-password-1');
+    await user.type(screen.getByLabelText('settings.account.confirmPassword'), 'new-password-1');
+    await user.click(screen.getByRole('button', { name: 'settings.account.updatePassword' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('settings.account.passwordIncorrect');
+    });
+
     expect(mockSignOut).not.toHaveBeenCalled();
     expect(mockSendPasswordChangedEmail).not.toHaveBeenCalled();
   });
