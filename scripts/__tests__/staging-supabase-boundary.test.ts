@@ -67,6 +67,9 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
 
   it('1Password bootstrap が Staging の supabase item に接続 field を作らない', () => {
     const block = stagingSupabaseItemBlock();
+    // 切り出しが空振りすると not.toContain が素通りするため、残す field で掴めていることを先に示す
+    expect(block).toContain("'SUPABASE_ACCESS_TOKEN[concealed]='");
+    expect(block).not.toContain('Dayopt-Production');
     for (const field of SUPABASE_CONNECTION_FIELDS) {
       expect(block, field).not.toContain(field);
     }
