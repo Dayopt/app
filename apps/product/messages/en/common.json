@@ -230,7 +230,8 @@
     "billingOperation": {
       "retryable": "The billing page could not be opened. Try again.",
       "restart": "The previous billing request ended. Try again.",
-      "accountClosing": "Billing changes are unavailable while account deletion is in progress."
+      "accountClosing": "Billing changes are unavailable while account deletion is in progress.",
+      "checkoutNotAvailable": "You already have a subscription. Change it from the billing portal."
     },
     "inlineBanner": {
       "paymentError": "There is a payment issue",
