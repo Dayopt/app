@@ -26,13 +26,21 @@ interface EmailChangeDialogProps {
   currentEmail: string;
 }
 
-/** メールアドレス変更ダイアログ。現在のパスワードで再認証後、確認メールを送信する */
+/**
+ * メールアドレス変更ダイアログ。
+ *
+ * 本人確認は Supabase Auth の Secure Email Change（旧・新アドレス双方への確認メール）が担う。
+ * ここで `signInWithPassword` による再認証はしない。公開 Auth endpoint なので Bot Protection
+ * 有効時は CAPTCHA token を要求され、認証済みの設定画面から呼ぶと必ず失敗する（#1917）。
+ *
+ * この画面の本人確認は production の `mailer_secure_email_change_enabled` に単独で依存する。
+ * 保証境界は docs/product/specs/auth.md を参照。
+ */
 export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailChangeDialogProps) {
   const t = useTranslations('settings.account.emailChange');
   const tErrors = useTranslations('common.errors');
   const tRoot = useTranslations();
   const [newEmail, setNewEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -45,16 +53,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
     setIsLoading(true);
 
     try {
-      // 1. パスワード確認（現在のメールアドレスで再認証）
-      const { error: signInError } = await observeAuthOperation('reauthenticate_email_change', () =>
-        supabase.auth.signInWithPassword({ email: currentEmail, password }),
-      );
-
-      if (signInError) {
-        throw new Error(tErrors('auth.wrongPassword'));
-      }
-
-      // 2. メールアドレス更新（確認メール送信）
+      // メールアドレス更新（Secure Email Change により旧・新アドレスの双方へ確認メールが飛ぶ）
       // リンクは send-auth-email hook が /auth/confirm 経由の URL に変換し、
       // verifyOtp 成功後にこの emailRedirectTo の path へ着地する
       const { error: updateError } = await observeAuthOperation('update_email', () =>
@@ -82,7 +81,6 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
 
   const handleClose = () => {
     setNewEmail('');
-    setPassword('');
     setError(null);
     setSuccess(false);
     onOpenChange(false);
@@ -123,7 +121,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   id="new-email"
                   type="email"
                   inputMode="email"
-                  enterKeyHint="next"
+                  enterKeyHint="go"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="new@example.com"
@@ -131,20 +129,6 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   autoComplete="email"
                   aria-invalid={!!error}
                   aria-describedby={error ? 'email-change-error' : undefined}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('passwordConfirm')}</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  enterKeyHint="go"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t('passwordPlaceholder')}
-                  required
-                  autoComplete="current-password"
                 />
               </div>
 

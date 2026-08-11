@@ -389,7 +389,6 @@
         "disabled": "2FA has been disabled"
       },
       "auth": {
-        "wrongPassword": "Incorrect password",
         "emailUpdateFailed": "Failed to update email address",
         "emailNotFound": "Email address not found",
         "userIdNotFound": "User ID not found",

@@ -68,7 +68,7 @@ describe('PasswordChangeDialog', () => {
     mockSignOut.mockResolvedValue({ error: null });
   });
 
-  it('verifies the current password and updates password with current_password', async () => {
+  it('passes current_password to the server and never calls signInWithPassword', async () => {
     const user = userEvent.setup();
     renderDialog();
 
@@ -78,16 +78,17 @@ describe('PasswordChangeDialog', () => {
     await user.click(screen.getByRole('button', { name: 'settings.account.updatePassword' }));
 
     await waitFor(() => {
-      expect(mockSignInWithPassword).toHaveBeenCalledWith({
-        email: 'user@example.com',
-        password: 'old-password',
-      });
       expect(mockUpdateUser).toHaveBeenCalledWith({
         password: 'new-password-1',
         current_password: 'old-password',
       });
     });
 
+    // #1917: 公開 Auth endpoint での再認証はしない（Bot Protection 有効時に必ず失敗するため）。
+    // 現在パスワードの検証は production の security_update_password_require_current_password が
+    // 有効な GoTrue 側が担う（docs/product/specs/auth.md）。
+    expect(mockSignInWithPassword).not.toHaveBeenCalled();
+    expect(mockUpdateUser).toHaveBeenCalledTimes(1);
     expect(mockSignOut).toHaveBeenCalledWith({ scope: 'others' });
     expect(mockSendPasswordChangedEmail).toHaveBeenCalledWith({
       email: 'user@example.com',
@@ -117,11 +118,38 @@ describe('PasswordChangeDialog', () => {
     expect(mockSendPasswordChangedEmail).not.toHaveBeenCalled();
   });
 
-  it('does not update the password when explicit current password verification fails', async () => {
+  it('does not mistake a captcha failure for a wrong current password', async () => {
     const user = userEvent.setup();
-    mockSignInWithPassword.mockResolvedValue({
+    mockUpdateUser.mockResolvedValue({
       data: { user: null },
-      error: new Error('Invalid login credentials'),
+      error: new Error('captcha protection: request disallowed (no captcha_token found)'),
+    });
+
+    renderDialog();
+
+    await user.type(screen.getByLabelText('settings.account.currentPassword'), 'old-password');
+    await user.type(screen.getByLabelText('settings.account.newPassword'), 'new-password-1');
+    await user.type(screen.getByLabelText('settings.account.confirmPassword'), 'new-password-1');
+    await user.click(screen.getByRole('button', { name: 'settings.account.updatePassword' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+
+    // #1917: captcha 由来の失敗を「パスワードが正しくありません」に化けさせない。
+    // あわせて GoTrue の生の英語メッセージを画面へ出さないことも固定する。
+    expect(screen.getByRole('alert')).toHaveTextContent('settings.account.passwordUpdateFailed');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('settings.account.passwordIncorrect');
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSendPasswordChangedEmail).not.toHaveBeenCalled();
+  });
+
+  it('treats a structured invalid_credentials code as a wrong current password', async () => {
+    const user = userEvent.setup();
+    // GoTrue は理由を文言ではなく code で返す。文言が変わっても判定が外れないことを固定する。
+    mockUpdateUser.mockResolvedValue({
+      data: { user: null },
+      error: Object.assign(new Error('Some future wording'), { code: 'invalid_credentials' }),
     });
 
     renderDialog();
@@ -135,7 +163,6 @@ describe('PasswordChangeDialog', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('settings.account.passwordIncorrect');
     });
 
-    expect(mockUpdateUser).not.toHaveBeenCalled();
     expect(mockSignOut).not.toHaveBeenCalled();
     expect(mockSendPasswordChangedEmail).not.toHaveBeenCalled();
   });

@@ -389,7 +389,6 @@
         "disabled": "2段階認証を無効にしました"
       },
       "auth": {
-        "wrongPassword": "パスワードが正しくありません",
         "emailUpdateFailed": "メールアドレスを更新できませんでした。もう一度お試しください",
         "emailNotFound": "メールアドレスが見つかりません",
         "userIdNotFound": "ユーザーIDが見つかりません",
