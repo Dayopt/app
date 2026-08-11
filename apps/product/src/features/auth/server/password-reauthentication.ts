@@ -23,6 +23,8 @@ import 'server-only';
  * - client を**返さない・外へ漏らさない・他の操作に使わない**
  *
  * これを破ると、warm container 上で以後の admin 操作が他ユーザーのトークンで走る。
+ * なお検証後の `signOut` で session が消えると client は service_role へ戻るが、
+ * 降格している窓が存在する事実は変わらないので、いずれにせよ関数外へ出さない。
  *
  * ## 依存
  *
@@ -31,6 +33,7 @@ import 'server-only';
  * （その場合は削除が fail-closed で止まる。鍵の回転前に再検証すること）。
  */
 
+import { logger } from '@/lib/logger';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
@@ -91,10 +94,18 @@ export async function verifyPasswordWithCaptchaBypass({
     //
     // scope の明示は必須。省略時の既定は 'global' で、**ユーザーの全端末が強制
     // ログアウトされる**（削除が中断した場合、巻き添えでログアウトだけが起きる）
+    //
+    // auth-js の失敗は throw ではなく**戻り値の error** で来る（network 失敗も
+    // AuthRetryableFetchError に畳まれる）。await の結果を捨てると本命の失敗経路が
+    // 無言で消え、孤児 session が残っても観測できない
     try {
-      await adminClient.auth.signOut({ scope: 'local' });
-    } catch {
-      // 後始末の失敗で削除を止めない
+      const { error: signOutError } = await adminClient.auth.signOut({ scope: 'local' });
+      if (signOutError) {
+        logger.warn('Failed to revoke reauthentication session', signOutError.message);
+      }
+    } catch (cause) {
+      // 後始末の失敗で削除は止めない
+      logger.warn('Failed to revoke reauthentication session', cause);
     }
     return { outcome: 'verified' };
   }

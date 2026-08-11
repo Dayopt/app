@@ -83,6 +83,10 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 そこで削除は `signInWithPassword` を使い続け、**service-role client から呼ぶことで captcha を構造的に免除する**（[#1925](https://github.com/Dayopt/dayopt/issues/1925)）。実装と契約は `features/auth/server/password-reauthentication.ts`。
 
+この経路の副作用として、**再認証が成功するたび GoTrue に session が 1 本発行される**ため、検証直後に `scope: 'local'` で破棄する。`scope` の省略は既定 `global` で、**ユーザーの全端末が強制ログアウトされる**ため必ず明示する。2026-08-11 時点の production は `sessions_single_per_user: false`（実測）なので、再認証そのものがユーザーの既存セッションを終了させることは無い。この値が true に変わると、削除が後段で失敗した場合に「削除できず、かつ全端末からログアウト」になる。
+
+パスワード誤りは `FORBIDDEN` で返す。`UNAUTHORIZED` にすると client の共通ハンドラが session 失効とみなしてログイン画面へ遷移させ、エラー文言がユーザーに届かない。
+
 **この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。パスワード総当たりの上限にもならない（GoTrue の rate limit は IP 単位で、サーバー呼び出しでは全ユーザーが 1 バケットを共有する）。**削除を守っているのはパスワード再認証そのもの**であり、captcha ではない。
 
 **アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有し、公開 `/api/auth` のサーバー側ログインとも同じバケットを使う。したがって:

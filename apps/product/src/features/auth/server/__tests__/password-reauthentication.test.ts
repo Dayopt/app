@@ -4,9 +4,11 @@ const signInWithPassword = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());
 const createServiceRoleClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const loggerWarn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
+vi.mock('@/lib/logger', () => ({ logger: { warn: loggerWarn } }));
 
 import { verifyPasswordWithCaptchaBypass } from '../password-reauthentication';
 
@@ -37,12 +39,23 @@ describe('verifyPasswordWithCaptchaBypass', () => {
     expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
-  it('session の破棄に失敗しても検証結果は verified のまま返す', async () => {
+  // auth-js の失敗は throw ではなく戻り値の error で来るので、両方を固定する
+  it('session の破棄が error を返しても検証結果は verified のまま返す', async () => {
+    signOut.mockResolvedValue({ error: { message: 'revoke failed' } });
+
+    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+
+    expect(result).toEqual({ outcome: 'verified' });
+    expect(loggerWarn).toHaveBeenCalled();
+  });
+
+  it('session の破棄が throw しても検証結果は verified のまま返す', async () => {
     signOut.mockRejectedValue(new Error('network'));
 
     const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
 
     expect(result).toEqual({ outcome: 'verified' });
+    expect(loggerWarn).toHaveBeenCalled();
   });
 
   it('検証に失敗した時は session が発行されないので signOut しない', async () => {
