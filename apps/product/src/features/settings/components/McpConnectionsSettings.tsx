@@ -13,17 +13,42 @@ import { McpConnectionRowView, McpConnectionsSettingsView } from './McpConnectio
 
 // router の戻り値から推論する。手書きの型 + `as` cast にすると、server 側の shape が
 // 変わっても型エラーにならず UI が黙って古い前提のまま動く。
-type McpConnectionSummary = inferRouterOutputs<AppRouter>['mcpConnections']['list'][number];
+type McpConnectionsListPage = inferRouterOutputs<AppRouter>['mcpConnections']['list'];
+type McpConnectionSummary = McpConnectionsListPage['items'][number];
+
+/**
+ * 次ページの cursor を TanStack Query へ渡す。最終ページ（`nextCursor === null`）は
+ * undefined へ畳む（query-core の `hasNextPage` は `getNextPageParam(...) != null` で
+ * 判定するため null / undefined は同義。tRPC の docs に合わせて undefined を返す）。
+ *
+ * inline lambda のままだと、field 名の取り違えや null の扱いといった「配線」を
+ * test で固定できない（component 越しでは cache に載った pages を描くだけで、
+ * 次ページ要求の中身は観測できない）。named export にして直接検証する。
+ */
+export function getMcpConnectionsNextPageParam(
+  lastPage: McpConnectionsListPage,
+): McpConnectionsListPage['nextCursor'] | undefined {
+  return lastPage.nextCursor ?? undefined;
+}
 
 export function McpConnectionsSettings() {
   const t = useTranslations('settings.integrations.mcpConnections');
   const utils = api.useUtils();
-  const connections = api.mcpConnections.list.useQuery(undefined, {
-    retry: false,
-    refetchOnMount: 'always',
-  });
+  // keyset cursor pagination（#1909）。1 ページ 50 件で、全件到達は「もっと見る」が担う。
+  // refetch / invalidate 時、TanStack Query は 1 ページ目から順に取り直し、各ページの
+  // cursor を新しいレスポンスから `getNextPageParam` で計算し直す（cursor を再利用しない）。
+  // そのため revoke で行が減っても、ページ跨ぎの重複・欠落は生じない。
+  const connections = api.mcpConnections.list.useInfiniteQuery(
+    {},
+    {
+      retry: false,
+      refetchOnMount: 'always',
+      initialCursor: null,
+      getNextPageParam: getMcpConnectionsNextPageParam,
+    },
+  );
 
-  const rows = connections.data ?? [];
+  const rows = connections.data?.pages.flatMap((page) => page.items) ?? [];
 
   // dialog と mutation は行数分ではなく 1 つだけ mount する（#1909: N 行 = N ConfirmDialog +
   // N useMutation の解消）。「どの connection を対象にしているか」(revokeTarget) と「dialog が
@@ -61,9 +86,24 @@ export function McpConnectionsSettings() {
     <>
       <McpConnectionsSettingsView
         loading={connections.isLoading}
-        error={connections.isError}
+        // `isError` をそのまま渡してはいけない。TanStack Query の
+        // `isFetchNextPageError` は `isError && fetchDirection === 'forward'`（
+        // query-core の infiniteQueryObserver）で、**`isError` の部分集合**になる。
+        // つまり「もっと見る」の失敗でも `isError` は true になり、これを全体エラーの
+        // 条件にすると既読の行と revoke 導線ごと ErrorState に差し替わって、下の
+        // inline エラーには到達しない（追加読み込み失敗で一覧が消える）。
+        // 全体を潰してよいのは初回取得失敗（isLoadingError）と、次ページ以外の
+        // refetch 失敗（isRefetchError。infinite query では fetchNextPage /
+        // fetchPreviousPage 方向が除外済み）だけ。
+        error={connections.isLoadingError || connections.isRefetchError}
         hasConnections={rows.length > 0}
         onRetry={() => void connections.refetch()}
+        hasNextPage={connections.hasNextPage}
+        loadingMore={connections.isFetchingNextPage}
+        // 追加読み込みの失敗はページ全体を ErrorState にしない（既に読めている行の
+        // revoke 導線を殺さないため）。導線の下に inline 文言で出して再試行させる。
+        loadMoreError={connections.isFetchNextPageError}
+        onLoadMore={() => void connections.fetchNextPage()}
       >
         {rows.map((connection) => (
           <McpConnectionRow
