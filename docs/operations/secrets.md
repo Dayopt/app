@@ -181,6 +181,8 @@ pnpm dev
 
 **Supabase の接続先を 1Password 参照へ切り替える手段は無い。** かつての `DAYOPT_SUPABASE_TARGET=op` は `Dayopt-Staging/supabase` の接続情報を使う escape hatch だったが、その中身が production だったため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。設定しても `pnpm dev` は起動せずエラーで止まる。Supabase local が上がらない時は Docker Desktop を確認し `supabase start` を手動実行する。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
 
+**`.op-env.local.example` から参照を消しても、各自の `.op-env.local` は自動では追従しない。** `op run` は解決できない `op://` 参照があると起動前に失敗するため、1Password 側の field を削除したら `.op-env.local` の該当行も消す必要がある。`cp .op-env.local.example .op-env.local` で作り直すのが確実。
+
 Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
 `.op-env.local` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
@@ -254,7 +256,7 @@ Supabase Auth Bot Protection、Auth hooks、Edge Functions、Vault secrets は S
 存在確認の例:
 
 ```bash
-op read "op://Dayopt-Staging/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
+op read "op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
 ```
 
 ---
