@@ -87,13 +87,34 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 位置に依存せず --env-file が admin を指すこと自体を落とす。
   # 代償として、この flag と path を並べた文字列を Bash 引数に含めるだけでも
   # 発火する（docs に書く時は Write/Edit で file に書いてから渡す）。
-  #
-  # 保証境界: これは literal な引数を渡す形すべてを塞ぐが、path を動的に
-  # 組み立てる形（変数連結・base64 など）までは追わない。そこは hook ではなく
-  # CLAUDE.md の EXPLICIT AUTHORITY と 1Password の承認が担う。
   if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.admin'; then
     echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため）" >&2
     exit 2
+  fi
+
+  # 上の禁止 path 判定だけでは、雛形を別名へ複製されると破れる
+  # （cp .op-env.admin.example /tmp/foo → op run --env-file=/tmp/foo）。
+  # path 名から中身は判別できないので、禁止を数え上げるのをやめて allowlist に
+  # する。通常の local dev が使う .op-env.local だけを許可し、それ以外は
+  # 中身を問わず落とす。新しい env-file を足す時はここも更新する（増やすこと
+  # 自体を意図的な判断にする）。
+  #
+  # 保証境界: op run へ literal な path を渡す形はこれで閉じる。path を実行時に
+  # 組み立てる形（変数展開・base64 など）は追わない。そこは hook ではなく
+  # CLAUDE.md の EXPLICIT AUTHORITY と 1Password の承認が担う。
+  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]'; then
+    # 抽出した token が path らしい ASCII の時だけ判定する。散文で flag に
+    # 言及しただけ（`--env-file に渡してよいのは …`）で落ちるのを避ける。
+    disallowed=$(echo "$COMMAND" \
+      | grep -oE '\-\-env-file[=[:space:]]+[^[:space:];&|]+' \
+      | sed -E 's/^--env-file[=[:space:]]+//' \
+      | grep -xE "[A-Za-z0-9._/~\$\"'-]+" \
+      | sed -E 's#.*/##' \
+      | grep -vxE '\.op-env\.local' || true)
+    if [ -n "$disallowed" ]; then
+      echo "BLOCKED: op run --env-file に渡してよいのは .op-env.local だけです（指定: $(echo "$disallowed" | tr '\n' ' ')）。別名へ複製した env-file 経由で production credential を解決する迂回を塞ぐためで、必要なら User に実行を依頼してください" >&2
+      exit 2
+    fi
   fi
 fi
 

@@ -39,11 +39,15 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 - `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める。**規約だけでなく enforcement も入れてある**: `.claude/settings.json` の deny（`Write` / `Edit`）と、`pre-tool-guard.sh` の Bash 側ガード。後者は **作成と消費の両方**を止める — `cp` / `mv` / `touch` / `tee` / `install` / `ln` とリダイレクトによる作成に加え、`--env-file` が `.op-env.admin` 系を指す実行も拒否する。**雛形も消費側の対象に含める**（`.op-env.admin.example` は `op://Dayopt-Production/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決され、作成だけ止めても迂回できる）。雛形の読み書き自体は通すので、agent は schema の更新まではできる。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する
 
-**このガードの保証境界。** 消費側は **コマンド名ではなく引数で判定する**。`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` と迂回形をいくらでも作れるため、位置に依存せず `--env-file` が `.op-env.admin` 系を指すこと自体を落とす。これで **literal な引数を渡す形はすべて閉じる**。
+**このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.local` だけで、それ以外は中身を問わず落とす。
 
-閉じないのは、path を動的に組み立てる形（変数連結・base64 など）。ここは意図的な回避であり、hook で追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.admin` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.admin.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
-代償として、この flag と path を並べた文字列は Bash 引数に含めるだけで落ちる（引用符の中でも同じ）。docs にこのコマンド例を書く時は、Write / Edit で file に書いてから渡す。迂回形を数え上げる方式は際限がないため、誤検知を受け入れて class ごと閉じる側を選んでいる
+これで **`--env-file` へ path を literal に渡す形は、起動方法・path 名を問わず閉じる**。変数展開（`--env-file="$SOMEVAR"`）も allowlist に一致しないため落ちる。
+
+閉じないのは、flag をコマンド文字列から隠す間接化（wrapper script を書いてそれを実行する、`eval`、base64 など）。これは事故ではなく意図的な回避であり、hook では追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+
+代償として、`--env-file` と path を並べた文字列は Bash 引数に含めるだけで落ちる（引用符の中でも同じ）。docs にこのコマンド例を書く時は、Write / Edit で file に書いてから渡す
 
 **触らない（読みも書きもしない）**:
 

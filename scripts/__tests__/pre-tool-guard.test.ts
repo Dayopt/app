@@ -91,6 +91,32 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     expect(runGuard(bash(mention))).toBe('block');
   });
 
+  // 禁止 path を数え上げる方式は、雛形を別名へ複製されると破れる
+  // （cp .op-env.admin.example /tmp/foo → その別名を op run へ）。
+  // path 名から中身は判別できないので allowlist にして、中身を問わず落とす。
+  it.each([
+    ['別名へ複製した env-file', 'op run --env-file=/tmp/foo -- bash scripts/admin-delete-user.sh'],
+    ['相対の別名', 'op run --env-file=./tmp-env -- sh -c true'],
+    ['変数展開', 'op run --env-file="$OP_ENV_PATH" -- sh -c true'],
+    ['local の雛形', 'op run --env-file=.op-env.local.example -- sh -c true'],
+  ])('許可外の env-file を落とす: %s', (_label, command) => {
+    expect(runGuard(bash(command))).toBe('block');
+  });
+
+  it.each([
+    ['repo root の local', `op run --env-file=${LOCAL} -- pnpm typecheck`],
+    ['workspace からの相対 local', `op run --env-file=../../${LOCAL} -- pnpm typecheck`],
+  ])('許可された env-file は通す: %s', (_label, command) => {
+    expect(runGuard(bash(command))).toBe('allow');
+  });
+
+  // 判定は「path らしい ASCII token」に限る。日本語の散文で flag に言及した
+  // だけで落ちると、コミットメッセージや PR 本文が書けなくなる。
+  it('日本語の散文で flag に言及するだけなら通す', () => {
+    const prose = 'git commit -m "--env-file に渡してよいのは通常の local だけにする"';
+    expect(runGuard(bash(prose))).toBe('allow');
+  });
+
   it('flag を伴わない名前の言及は通す', () => {
     expect(
       runGuard(bash(`gh pr edit 1935 --body '${ADMIN_EXAMPLE} は production を参照する'`)),
