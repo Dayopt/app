@@ -527,6 +527,9 @@
         "revoke": "Revoke access",
         "revoking": "Revoking...",
         "revokeAriaLabel": "Revoke access for {client}",
+        "loadMore": "Show more",
+        "loadingMore": "Loading...",
+        "loadMoreError": "Couldn't load more connections. Try again.",
         "revokeSuccess": "Access revoked",
         "revokeFailed": "Access could not be revoked",
         "revokeDialog": {
