@@ -119,8 +119,8 @@ const serverSchema = z
         'GOOGLE_CALENDAR_REDIRECT_URIS は完全な redirect URI のカンマ区切りで指定してください',
     }),
     // Vercel cron（/api/cron/calendar-sync）の Bearer 認証。Vercel が cron リクエストの
-    // Authorization ヘッダに載せる値と route 側で timingSafeEqual 照合する。calendar 連携の
-    // 一部なので、下の「全部揃うか無いか」refine に含める（feature を有効化する prod でだけ必須）。
+    // Authorization ヘッダに載せる値と route 側で timingSafeEqual 照合する。calendar 連携で
+    // 使うが、下の「全部揃うか無いか」refine には含めない（理由は refine 側のコメント）。
     CRON_SECRET: z.string().optional(),
 
     // Stripe
