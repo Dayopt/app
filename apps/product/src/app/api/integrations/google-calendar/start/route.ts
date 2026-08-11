@@ -107,12 +107,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Reconnect target is invalid' }, { status: 400 });
   }
 
+  // 再接続では、選び直すべきアカウントを同意画面に示唆する（`sub` の一致検査は callback 側）。
+  let loginHint: string | undefined;
+
   if (reconnectConnectionId?.success) {
     try {
       const target = await getReconnectTarget(user.id, reconnectConnectionId.data);
       if (!target) {
         return NextResponse.json({ error: 'Reconnect target is invalid' }, { status: 400 });
       }
+      loginHint = target.providerAccountEmail ?? undefined;
     } catch (error) {
       captureUnexpectedError(
         error instanceof Error ? error : new Error('failed to load reconnect target'),
@@ -131,7 +135,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const locale = normalizeLocale(requestUrl.searchParams.get('locale') ?? undefined);
 
   const response = NextResponse.redirect(
-    buildAuthorizationUrl({ redirectUri, state, codeChallenge: challenge }),
+    buildAuthorizationUrl({
+      redirectUri,
+      state,
+      codeChallenge: challenge,
+      ...(loginHint ? { loginHint } : {}),
+    }),
   );
 
   setConnectFlowCookie(

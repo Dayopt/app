@@ -199,6 +199,8 @@ function calendarCallbackErrorMessage(
       return t('settings.integrations.googleCalendar.callback.accessDenied');
     case 'account_mismatch':
       return t('settings.integrations.googleCalendar.callback.accountMismatch');
+    case 'authorization_expired':
+      return t('settings.integrations.googleCalendar.callback.authorizationExpired');
     case 'pro_required':
       return t('settings.integrations.googleCalendar.callback.proRequired');
     case 'rate_limited':

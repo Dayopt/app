@@ -11,6 +11,7 @@ const deleteUnreferencedEvents = vi.hoisted(() => vi.fn());
 const startSession = vi.hoisted(() => vi.fn());
 const listCalendars = vi.hoisted(() => vi.fn());
 const revoke = vi.hoisted(() => vi.fn());
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const decryptToken = vi.hoisted(() => vi.fn());
 const encryptToken = vi.hoisted(() => vi.fn());
 const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
@@ -41,6 +42,10 @@ vi.mock('@/lib/database/external-lifecycle-version', () => ({
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('@/lib/sentry', () => ({
+  captureUnexpectedError,
+  captureUnexpectedDatabaseError: vi.fn(),
+}));
 
 import {
   disconnect,
@@ -59,7 +64,11 @@ type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] 
 
 type Config = {
   connection?: { data_generation?: number; status: string; refresh_token_enc: string } | null;
-  reconnectTarget?: { id: string; provider_account_id: string } | null;
+  reconnectTarget?: {
+    id: string;
+    provider_account_id: string;
+    provider_account_email: string | null;
+  } | null;
   reconnectUpdate?: { id: string } | null;
   childRows?: Array<{ provider_calendar_id: string }>;
 };
@@ -74,7 +83,7 @@ function setupServiceRoleDb(config: Config) {
         if (methods.includes('update'))
           return { data: config.reconnectUpdate ?? null, error: null };
         const select = recorder.chain.find((entry) => entry.method === 'select')?.args[0];
-        if (select === 'id, provider_account_id') {
+        if (select === 'id, provider_account_id, provider_account_email') {
           return { data: config.reconnectTarget ?? null, error: null };
         }
         return { data: config.connection ?? null, error: null };
@@ -185,12 +194,18 @@ describe('getSyncStatus', () => {
 describe('reconnect contract', () => {
   it('対象読取を id / user / provider / reauth_required で限定する', async () => {
     const { calls } = setupServiceRoleDb({
-      reconnectTarget: { id: CONNECTION_ID, provider_account_id: 'google-sub-123' },
+      reconnectTarget: {
+        id: CONNECTION_ID,
+        provider_account_id: 'google-sub-123',
+        provider_account_email: 'owner@example.com',
+      },
     });
 
+    // email は同意画面の login_hint に載せるためだけに返す（一致判定は sub が担う）。
     await expect(getReconnectTarget(USER_ID, CONNECTION_ID)).resolves.toEqual({
       id: CONNECTION_ID,
       providerAccountId: 'google-sub-123',
+      providerAccountEmail: 'owner@example.com',
     });
 
     const query = findWith(calls, 'calendar_connections', 'maybeSingle');
@@ -503,6 +518,39 @@ describe('disconnect', () => {
 
     expect(revoke).not.toHaveBeenCalled();
     expect(deleteUnreferencedEvents).not.toHaveBeenCalled();
+  });
+
+  // 失効しなかった grant =「切ったつもりなのに Google 側は生きている」。log だけでは
+  // 誰も気づけないので alert に回す（Step 7）
+  it.each([
+    ['revoke が確定しない', () => revoke.mockResolvedValue(false)],
+    [
+      'revoke が例外で落ちる',
+      () => revoke.mockRejectedValue(new Error('revoke endpoint unreachable')),
+    ],
+  ])('%s 時は切断を続けつつ Sentry へ送る', async (_label, arrange) => {
+    const { calls } = setupServiceRoleDb({
+      connection: { status: 'active', refresh_token_enc: 'enc' },
+    });
+    arrange();
+
+    await disconnect(USER_ID, CONNECTION_ID);
+
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'disconnect_revoke' }),
+    );
+    // 切断そのものはユーザーの意思なので止めない
+    expect(deleteUnreferencedEvents).toHaveBeenCalled();
+    expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+  });
+
+  it('revoke が確定した切断では Sentry へ送らない', async () => {
+    setupServiceRoleDb({ connection: { status: 'active', refresh_token_enc: 'enc' } });
+
+    await disconnect(USER_ID, CONNECTION_ID);
+
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
   });
 
   it('復号に失敗しても切断を続行する（revoke は諦める）', async () => {

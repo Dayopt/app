@@ -1,7 +1,9 @@
 ---
 status: current
-last_verified: 2026-08-04
+last_verified: 2026-08-11
 code:
+  - apps/product/src/features/settings/components/EmailChangeDialog.tsx
+  - apps/product/src/features/settings/components/PasswordChangeDialog.tsx
   - apps/product/src/app/api/auth/route.ts
   - apps/product/src/lib/trpc/session-auth-context.ts
   - apps/product/src/lib/trpc/procedures.ts
@@ -35,14 +37,32 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 | 操作               | パスワードあり                 | Google のみ                                          |
 | ------------------ | ------------------------------ | ---------------------------------------------------- |
 | ログイン方法の表示 | 出さない（自明なため）         | 「Google」を表示する                                 |
-| メールアドレス変更 | 現パスワードで再認証して変更   | **変更させない**。Google 側が正本である旨を案内する  |
-| パスワード変更     | 現パスワードで再認証して変更   | 項目ごと出さない                                     |
+| メールアドレス変更 | Secure Email Change で確認     | **変更させない**。Google 側が正本である旨を案内する  |
+| パスワード変更     | 現パスワードをサーバー側で検証 | 項目ごと出さない                                     |
 | アカウント削除     | 現パスワード + `DELETE` の入力 | MFA があれば TOTP + `DELETE`、無ければ `DELETE` のみ |
 
 - 削除時の `requiresPassword` はクライアント申告ではなく server 側の `app_metadata` から判定する
 - MFA factor の一覧を取得できない場合は fail closed で削除を止める
 - 削除の通知メールは auth.users の削除が今回確定した後に送る。送信失敗では削除結果を戻さない
 - ログイン画面の「パスワードを忘れた」から Google ユーザーがリセットするとパスワードが新規設定される（Supabase の仕様）。サーバー側ではブロックせず、リセット画面の案内文で誘導する
+
+## 設定画面の本人確認と保証境界
+
+設定画面のメールアドレス変更・パスワード変更は、公開 Auth endpoint での再認証（`signInWithPassword`）を行わない。Bot Protection が有効な production では CAPTCHA token を要求されて必ず失敗するため（[#1917](https://github.com/Dayopt/dayopt/issues/1917)）。本人確認は Supabase Auth 側の専用機構に委ねる。
+
+| 操作               | 本人確認の担い手                                    | 依存する production 設定                            |
+| ------------------ | --------------------------------------------------- | --------------------------------------------------- |
+| メールアドレス変更 | Secure Email Change（旧・新双方への確認メール）     | `mailer_secure_email_change_enabled`                |
+| パスワード変更     | `updateUser({ password, current_password })` の検証 | `security_update_password_require_current_password` |
+
+**この 2 つは code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
+
+- `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる
+- `security_update_password_require_current_password` が false になると、`current_password` は**エラーも返さず黙って無視され**、現在パスワードを知らなくてもパスワードを変更できる
+
+2026-08-11 時点の production 実測値は両方 `true`。値の監視は [#1926](https://github.com/Dayopt/dayopt/issues/1926) が担う。
+
+再認証 nonce（`reauthenticate()`）は**現在の設定値では不要**。`security_update_password_require_reauthentication` が false のため GoTrue が nonce を要求しない。この設定が true に変われば nonce フローの実装が要る。
 
 ## アカウント削除
 
