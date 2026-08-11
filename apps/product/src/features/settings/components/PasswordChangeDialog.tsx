@@ -98,29 +98,18 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           throw new Error(t('common.errors.auth.emailNotFound'));
         }
 
-        // Step 1: Verify current password explicitly so preview/local
-        // environments stay safe even if Auth config has not been synced yet.
-        const { error: reAuthError } = await observeAuthOperation(
-          'reauthenticate_password_change',
-          () =>
-            supabase.auth.signInWithPassword({
-              email: user.email!,
-              password: currentPassword,
-            }),
-        );
-
-        if (reAuthError) {
-          throw new Error(t('settings.account.passwordIncorrect'));
-        }
-
-        // Step 2: Pwned password check (NIST)
+        // Step 1: Pwned password check (NIST)
         const isPwned = await checkPasswordPwned(newPassword);
         if (isPwned) {
           throw new Error(t('settings.account.passwordPwned'));
         }
 
-        // Step 3: Update password. Supabase secure password change validates
-        // the current password server-side when `current_password` is provided.
+        // Step 2: Update password. 現在パスワードの検証はサーバー側が行う。
+        // production の `security_update_password_require_current_password` が true のため、
+        // `current_password` が一致しなければ GoTrue が拒否する（保証境界は
+        // docs/product/specs/auth.md）。client 側で signInWithPassword による事前確認はしない
+        // — 公開 Auth endpoint なので Bot Protection 有効時に CAPTCHA token を要求され、
+        // 認証済みの設定画面から呼ぶと必ず失敗する（#1917）。
         const { error: updateError } = await observeAuthOperation('update_password', () =>
           supabase.auth.updateUser({
             password: newPassword,
@@ -135,12 +124,12 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           throw new Error(updateError.message);
         }
 
-        // Step 4: Sign out other sessions
+        // Step 3: Sign out other sessions
         await observeAuthOperation('sign_out_other_sessions', () =>
           supabase.auth.signOut({ scope: 'others' }),
         );
 
-        // Step 5: Send password changed notification email (fire-and-forget)
+        // Step 4: Send password changed notification email (fire-and-forget)
         sendPasswordChangedEmail({
           email: user.email,
           userName: getDisplayName(user, 'there'),
