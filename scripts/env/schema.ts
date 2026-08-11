@@ -105,9 +105,13 @@ export const envSchema: EnvSchemaEntry[] = [
 ];
 
 export const productionEnvSchema: EnvSchemaEntry[] = [
-  envEntry('NEXT_PUBLIC_SUPABASE_URL', false, 'public', 'production', production, 'supabase'),
-  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', false, 'public', 'production', production, 'supabase'),
-  envEntry('SUPABASE_SERVICE_ROLE_KEY', false, 'secret', 'production', production, 'supabase'),
+  // Supabase の接続情報はここが唯一の master。Staging 側の複製を撤去した分の
+  // required 検査をこちらへ移す。欠けると production の runtime に加えて、
+  // .op-env.admin 経由の管理者運用（緊急時のユーザー復旧）が op run の
+  // 参照解決で止まる。
+  envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'production', production, 'supabase'),
+  envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'production', production, 'supabase'),
+  envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'production', production, 'supabase'),
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', production, 'supabase'),
   envEntry('SUPABASE_DB_PASSWORD', false, 'secret', 'production', production, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'production', production, 'supabase'),

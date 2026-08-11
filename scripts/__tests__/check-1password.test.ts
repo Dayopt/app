@@ -225,6 +225,19 @@ describe('check-1password.ts', () => {
     }
   });
 
+  it.each([
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+  ])('production の Supabase %s が欠けたら失敗する', (field) => {
+    // Staging 側の複製を撤去した分の required 検査は production へ移した。
+    // 欠けると runtime だけでなく .op-env.admin 経由の管理者運用も止まる。
+    const result = runCheck({ emptyField: field });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`Dayopt-Production / supabase / ${field}: EMPTY`);
+  });
+
   it('op が壊れた応答を返す時も禁止 field を ABSENT と判定しない', () => {
     for (const mode of ['error', 'invalid-json'] as const) {
       const result = runCheck({ mode });

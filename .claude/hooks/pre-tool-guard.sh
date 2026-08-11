@@ -76,6 +76,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     echo "BLOCKED: .op-env.admin への書き込みは User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
     exit 2
   fi
+
+  # 雛形の直接実行。.op-env.admin.example は op://Dayopt-Production/... の参照を
+  # そのまま持つため、コピーせず op run に食わせるだけで同じ本番権限が解決される。
+  # 作成だけ止めても迂回できるので、消費側も塞ぐ（.example も対象に含める）。
+  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]][^[:space:];&|]*\.op-env\.admin'; then
+    echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため）" >&2
+    exit 2
+  fi
 fi
 
 exit 0
