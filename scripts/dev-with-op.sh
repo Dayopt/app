@@ -62,78 +62,80 @@ EOF
   exit 1
 fi
 
-SUPABASE_TARGET="${DAYOPT_SUPABASE_TARGET:-local}"
+# Supabase の接続先は local 固定。1Password の op:// 参照をそのまま使う
+# DAYOPT_SUPABASE_TARGET=op は production を指していたため廃止した。
+if [[ -n "${DAYOPT_SUPABASE_TARGET:-}" && "${DAYOPT_SUPABASE_TARGET}" != "local" ]]; then
+  error "DAYOPT_SUPABASE_TARGET は廃止されました（Supabase local 固定）。"
+  cat >&2 <<EOF
 
-if [[ "$SUPABASE_TARGET" == "local" ]]; then
-  if ! command -v supabase >/dev/null 2>&1; then
-    error "Supabase CLI が見つかりません。"
+local dev の Supabase 接続は supabase status -o env が供給します。
+1Password 参照で Supabase へ繋ぐ経路は production を指していたため削除しました。
+詳細: docs/operations/secrets.md
+EOF
+  exit 1
+fi
+
+if ! command -v supabase >/dev/null 2>&1; then
+  error "Supabase CLI が見つかりません。"
+  exit 1
+fi
+
+if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
+  echo "Supabase local を起動します..." >&2
+  if ! supabase start >/dev/null; then
+    error "Supabase local を起動できませんでした。Docker の状態を確認してください。"
+    cat >&2 <<EOF
+
+Docker Desktop を起動してから supabase start を手動で実行し、エラー内容を確認してください:
+  supabase start
+EOF
     exit 1
   fi
 
   if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
-    echo "Supabase local を起動します..." >&2
-    if ! supabase start >/dev/null; then
-      error "Supabase local を起動できませんでした。Docker の状態を確認してください。"
-      cat >&2 <<EOF
-
-一時的に 1Password の Supabase refs をそのまま使う場合:
-  DAYOPT_SUPABASE_TARGET=op pnpm dev
-EOF
-      exit 1
-    fi
-
-    if ! local_supabase_env="$(supabase status -o env 2>/dev/null)"; then
-      error "起動後の Supabase local から URL / key を取得できませんでした。"
-      exit 1
-    fi
-  fi
-
-  get_local_supabase_env() {
-    local key="$1"
-    printf '%s\n' "$local_supabase_env" | awk -F= -v key="$key" '
-      $1 == key {
-        value = substr($0, index($0, "=") + 1)
-        gsub(/^"/, "", value)
-        gsub(/"$/, "", value)
-        print value
-        exit
-      }
-    '
-  }
-
-  # ローカル OAuth token flow に必要な MCP environment identity を冪等に投入する
-  # （supabase/local/mcp-identity-seed.sql。接続先は 127.0.0.1:54322 固定で
-  # hosted では実行不能）。seed が無くても困るのは OAuth route（503）だけ
-  # なので、失敗時は警告して dev は止めない。
-  if command -v psql >/dev/null 2>&1; then
-    if ! psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
-        -v ON_ERROR_STOP=1 -q \
-        -f "$ROOT_DIR/supabase/local/mcp-identity-seed.sql" >/dev/null 2>&1; then
-      echo "⚠️  MCP environment identity seed を適用できませんでした。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で再試行）" >&2
-    fi
-  else
-    echo "⚠️  psql が見つからないため MCP environment identity seed をスキップしました。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で適用）" >&2
-  fi
-
-  LOCAL_SUPABASE_URL="$(get_local_supabase_env API_URL)"
-  LOCAL_SUPABASE_ANON_KEY="$(get_local_supabase_env ANON_KEY)"
-  LOCAL_SUPABASE_SERVICE_ROLE_KEY="$(get_local_supabase_env SERVICE_ROLE_KEY)"
-
-  if [[ -z "$LOCAL_SUPABASE_URL" || -z "$LOCAL_SUPABASE_ANON_KEY" || -z "$LOCAL_SUPABASE_SERVICE_ROLE_KEY" ]]; then
-    error "Supabase local の URL / key を取得できませんでした。"
+    error "起動後の Supabase local から URL / key を取得できませんでした。"
     exit 1
   fi
-
-  exec op run --env-file="$OP_ENV_PATH" -- env \
-    NEXT_PUBLIC_SUPABASE_URL="$LOCAL_SUPABASE_URL" \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY="$LOCAL_SUPABASE_ANON_KEY" \
-    SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SUPABASE_SERVICE_ROLE_KEY" \
-    pnpm --filter @dayopt/product dev:raw
 fi
 
-if [[ "$SUPABASE_TARGET" != "op" ]]; then
-  error "DAYOPT_SUPABASE_TARGET は local または op を指定してください。"
+get_local_supabase_env() {
+  local key="$1"
+  printf '%s\n' "$local_supabase_env" | awk -F= -v key="$key" '
+    $1 == key {
+      value = substr($0, index($0, "=") + 1)
+      gsub(/^"/, "", value)
+      gsub(/"$/, "", value)
+      print value
+      exit
+    }
+  '
+}
+
+# ローカル OAuth token flow に必要な MCP environment identity を冪等に投入する
+# （supabase/local/mcp-identity-seed.sql。接続先は 127.0.0.1:54322 固定で
+# hosted では実行不能）。seed が無くても困るのは OAuth route（503）だけ
+# なので、失敗時は警告して dev は止めない。
+if command -v psql >/dev/null 2>&1; then
+  if ! psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+      -v ON_ERROR_STOP=1 -q \
+      -f "$ROOT_DIR/supabase/local/mcp-identity-seed.sql" >/dev/null 2>&1; then
+    echo "⚠️  MCP environment identity seed を適用できませんでした。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で再試行）" >&2
+  fi
+else
+  echo "⚠️  psql が見つからないため MCP environment identity seed をスキップしました。ローカルの OAuth token 発行は 503 になります（pnpm db:seed:identity で適用）" >&2
+fi
+
+LOCAL_SUPABASE_URL="$(get_local_supabase_env API_URL)"
+LOCAL_SUPABASE_ANON_KEY="$(get_local_supabase_env ANON_KEY)"
+LOCAL_SUPABASE_SERVICE_ROLE_KEY="$(get_local_supabase_env SERVICE_ROLE_KEY)"
+
+if [[ -z "$LOCAL_SUPABASE_URL" || -z "$LOCAL_SUPABASE_ANON_KEY" || -z "$LOCAL_SUPABASE_SERVICE_ROLE_KEY" ]]; then
+  error "Supabase local の URL / key を取得できませんでした。"
   exit 1
 fi
 
-exec op run --env-file="$OP_ENV_PATH" -- pnpm --filter @dayopt/product dev:raw
+exec op run --env-file="$OP_ENV_PATH" -- env \
+  NEXT_PUBLIC_SUPABASE_URL="$LOCAL_SUPABASE_URL" \
+  NEXT_PUBLIC_SUPABASE_ANON_KEY="$LOCAL_SUPABASE_ANON_KEY" \
+  SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SUPABASE_SERVICE_ROLE_KEY" \
+  pnpm --filter @dayopt/product dev:raw

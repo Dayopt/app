@@ -69,13 +69,9 @@ supabase start
 pnpm dev
 ```
 
-`pnpm dev` は `op run` 経由のまま。デフォルトでは Supabase local が停止中なら自動起動し、`supabase status -o env` から URL / anon key / service role key を取得して、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
+`pnpm dev` は `op run` 経由のまま。Supabase local が停止中なら自動起動し、`supabase status -o env` から URL / anon key / service role key を取得して、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
 
-一時的に `.op-env.local` の Supabase refs をそのまま使う場合だけ、明示的に切り替える。
-
-```bash
-DAYOPT_SUPABASE_TARGET=op pnpm dev
-```
+**Supabase の接続先は local 固定で、切り替え手段は無い。** かつて存在した `DAYOPT_SUPABASE_TARGET=op` は `.op-env.local` の `op://Dayopt-Staging/supabase/...` を使う escape hatch だったが、その参照先が production を指していたため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。Supabase local が起動しない時は Docker Desktop を確認し、`supabase start` を手動で実行してエラーを読む。
 
 ### Migration
 
@@ -980,7 +976,7 @@ npm run test:run            # ユニットテスト実行
 npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。`pnpm dev` は通常 Supabase local を参照する。素の起動が必要な一時作業だけ `pnpm dev:raw`、`.op-env.local` の Supabase refs をそのまま使う時だけ `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。詳細は `docs/operations/secrets.md`。
+> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。`pnpm dev` の Supabase 接続先は local 固定。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。詳細は `docs/operations/secrets.md`。
 > 開発サーバー（`pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ### 全コマンド一覧

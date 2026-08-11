@@ -10,7 +10,7 @@
 # 通常の password reset flow が使えない / bypass したい時のみ使用。
 #
 # 前提:
-#   - .op-env.local が存在し、以下を含む:
+#   - .op-env.admin が存在し、以下を含む:
 #       NEXT_PUBLIC_SUPABASE_URL=op://...
 #       SUPABASE_SERVICE_ROLE_KEY=op://...
 #   - 1Password CLI (op) に signin 済み (op signin)
@@ -18,13 +18,13 @@
 #   - 対象 user の auth.users エントリが既に存在する
 #
 # 使い方:
-#   op run --env-file=.op-env.local -- \
+#   op run --env-file=.op-env.admin -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
 #     bash scripts/admin-set-user-password.sh
 #
 # 環境:
-#   `.op-env.local` で注入された Supabase project に対して実行される。
-#   通常は local / PR Preview の検証用。Production で使う場合は手動作業ログを残す。
+#   `.op-env.admin` は Dayopt-Production を参照するため、実行は production への操作になる。
+#   実行したら手動作業ログを残す（docs/operations/tooling.md 第4部）。
 # ========================================
 
 set -euo pipefail
