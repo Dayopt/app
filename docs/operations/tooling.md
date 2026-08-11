@@ -596,12 +596,15 @@ Designer / Critic / User の 3-agent design review を仮に実装する場合�
 ## 実行方法
 
 ```bash
-op run --env-file=.op-env.local -- \
+cp .op-env.admin.example .op-env.admin   # 初回だけ
+op run --env-file=.op-env.admin -- \
   env USER_EMAIL=foo@example.com \
   bash scripts/admin-show-user.sh
 ```
 
-`.op-env.local` に `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定し、`op run --env-file=.op-env.local` 経由で実行する。Production project に対して実行する場合は手動作業ログを残す。
+**`.op-env.local`（通常の local dev 用）ではなく `.op-env.admin` を使う。** `pnpm dev` の Supabase 接続先は local 固定で、`.op-env.local` は Supabase の接続情報を持たない（[secrets.md](./secrets.md) の `Dayopt-Staging` 節）。admin script は Supabase Auth Admin API を service role で叩くため、専用の env-file を分けている。
+
+`.op-env.admin.example` は `Dayopt-Production/supabase` を参照する。**つまりこれらの script の実行は production への操作**であり、実行したら手動作業ログを残す。local の Supabase を対象にしたい場合は `supabase status -o env` の値を `env` で直接渡す。
 
 ## スクリプト一覧
 

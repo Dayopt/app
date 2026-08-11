@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { envSchema, productionEnvSchema } from '../env/schema';
+import { envSchema, forbiddenFields, productionEnvSchema } from '../env/schema';
 
 // Dayopt-Staging には常設 staging が無く、置けば production の複製になる 4 field。
 const SUPABASE_CONNECTION_FIELDS = [
@@ -27,6 +27,13 @@ const devWithOpScript = readFileSync(
   fileURLToPath(new URL('../dev-with-op.sh', import.meta.url)),
   'utf8',
 );
+
+const adminEnvExample = readFileSync(
+  fileURLToPath(new URL('../../.op-env.admin.example', import.meta.url)),
+  'utf8',
+);
+
+const gitignore = readFileSync(fileURLToPath(new URL('../../.gitignore', import.meta.url)), 'utf8');
 
 /** setup-1password.sh から Staging の supabase item を作る 1 コマンドだけを切り出す。 */
 function stagingSupabaseItemBlock(): string {
@@ -78,5 +85,24 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
   it('dev script に 1Password 参照で Supabase へ繋ぐ経路が残っていない', () => {
     expect(devWithOpScript).not.toContain('SUPABASE_TARGET" == "op"');
     expect(devWithOpScript).toContain('DAYOPT_SUPABASE_TARGET は廃止されました');
+  });
+
+  it('禁止 field の実在検査が接続 4 field を網羅する', () => {
+    const covered = forbiddenFields
+      .filter((entry) => entry.vault === 'Dayopt-Staging' && entry.item === 'supabase')
+      .map((entry) => entry.field);
+    expect(covered.sort()).toEqual([...SUPABASE_CONNECTION_FIELDS].sort());
+  });
+
+  it('admin script 用の env 参照は Production を指し、Staging を経由しない', () => {
+    for (const field of SUPABASE_CONNECTION_FIELDS) {
+      expect(adminEnvExample, field).not.toContain(`op://Dayopt-Staging/supabase/${field}`);
+    }
+    // 管理者運用は production 相手なので、参照先が Production であること自体を固定する
+    expect(adminEnvExample).toContain(
+      'SUPABASE_SERVICE_ROLE_KEY=op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY',
+    );
+    // 実値が入る .op-env.admin を commit させない
+    expect(gitignore).toMatch(/^\.op-env\.admin$/mu);
   });
 });

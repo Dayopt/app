@@ -183,6 +183,17 @@ pnpm dev
 
 **`.op-env.local.example` から参照を消しても、各自の `.op-env.local` は自動では追従しない。** `op run` は解決できない `op://` 参照があると起動前に失敗するため、1Password 側の field を削除したら `.op-env.local` の該当行も消す必要がある。`cp .op-env.local.example .op-env.local` で作り直すのが確実。
 
+### 管理者運用の env（`.op-env.admin`）
+
+`scripts/admin-*.sh` / `verify-login.sh` / `USE_LINKED_DB=true` の `seed-dev-data.sh` は Supabase Auth Admin API を service role で叩くため、Supabase の接続情報を必要とする。これらは `.op-env.local` ではなく **`.op-env.admin`**（`.op-env.admin.example` から作る、gitignore 済み）を使う。
+
+```bash
+cp .op-env.admin.example .op-env.admin
+op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
+```
+
+参照先は `Dayopt-Production/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。
+
 Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
 `.op-env.local` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
@@ -205,6 +216,7 @@ pnpm 1password:check
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
+- `1password:check` は **禁止 field の実在**も検査する（`scripts/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`Dayopt-Staging/supabase` の接続 4 field はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
 
