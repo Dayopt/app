@@ -60,6 +60,7 @@ type DbConfig = {
   connection?: Record<string, unknown> | null;
   connectionError?: unknown;
   calendars?: Array<Record<string, unknown>>;
+  calendarsError?: unknown;
   pruneCandidates?: Array<{ id: string }>;
   referencedByPlans?: Array<{ external_calendar_event_id: string | null }>;
   referencedByRecords?: Array<{ external_calendar_event_id: string | null }>;
@@ -83,7 +84,7 @@ function setupDb(config: DbConfig) {
     }
     if (table === 'calendar_connection_calendars') {
       if (methods.includes('update')) return { data: null, error: null };
-      return { data: config.calendars ?? [], error: null };
+      return { data: config.calendars ?? [], error: config.calendarsError ?? null };
     }
     if (table === 'external_calendar_events') {
       if (methods.includes('upsert')) return { data: null, error: config.upsertError ?? null };
@@ -491,6 +492,39 @@ describe('syncConnection — 認可と鍵', () => {
     expect(patch.last_sync_error).toBe('encryption_key_invalid');
     // 鍵の設定ミスで全ユーザーを再同意に追い込まない
     expect(patch.status).toBeUndefined();
+  });
+
+  // 空配列に畳むと「0 件を同期して成功」になり、last_synced_at だけが進む（Step 7）
+  it('選択カレンダーを読めなかったら成功として記録しない', async () => {
+    const { calls } = setupDb({
+      connection: activeConnection(),
+      calendarsError: { code: '57014', message: 'canceling statement' },
+    });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_failure');
+    expect(syncCalendar).not.toHaveBeenCalled();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+
+    const update = findCall(calls, 'calendar_connections', 'update')!;
+    const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
+    expect(patch.last_sync_error).toBe('partial_failure');
+    // last_synced_at は「最後に試した時刻」。他の失敗経路（鍵不正 / startSession 失敗）と
+    // 揃える。進めないと dispatcher の due 判定（last_synced_at < staleBefore）に毎 tick
+    // 引っかかり、この接続だけが backoff 無しで回り続ける。
+    expect(patch.last_synced_at).toBe(RUN_ISO);
+  });
+
+  it('選択カレンダーが 0 件なら成功として記録する', async () => {
+    const { calls } = setupDb({ connection: activeConnection(), calendars: [] });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('synced');
+    const update = findCall(calls, 'calendar_connections', 'update')!;
+    const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
+    expect(patch.last_sync_error).toBeNull();
   });
 
   it('reauth_required の接続は skip する', async () => {

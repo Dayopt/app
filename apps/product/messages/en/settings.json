@@ -486,6 +486,7 @@
           "connected": "Google account connected",
           "accessDenied": "Google Calendar access was not granted",
           "accountMismatch": "Choose the same Google account that needs to be reconnected",
+          "authorizationExpired": "This connection link expired. Try again.",
           "proRequired": "A Pro plan is required to connect Google Calendar",
           "rateLimited": "Too many connection attempts. Try again later.",
           "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",
@@ -525,6 +526,9 @@
         "revoke": "Revoke access",
         "revoking": "Revoking...",
         "revokeAriaLabel": "Revoke access for {client}",
+        "loadMore": "Show more",
+        "loadingMore": "Loading...",
+        "loadMoreError": "Couldn't load more connections. Try again.",
         "revokeSuccess": "Access revoked",
         "revokeFailed": "Access could not be revoked",
         "revokeDialog": {

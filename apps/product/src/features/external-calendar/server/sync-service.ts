@@ -231,6 +231,12 @@ export async function syncConnection(params: {
   }
 
   const calendars = await loadSelectedCalendars(db, connectionId, userId);
+  if (calendars === null) {
+    // Sentry には既に出ている。ここでは「成功として last_synced_at を進めない」ことと、
+    // ユーザーに見える形でエラーを残すことが要る。
+    await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);
+    return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+  }
 
   const window: SyncWindow = {
     timeMin: new Date(runStartedAt.getTime() - WINDOW_RADIUS_MS).toISOString(),
@@ -415,11 +421,18 @@ async function loadConnection(
   return data;
 }
 
+/**
+ * 選択済みカレンダーを読む。読めなければ `null`（空の選択と区別する）。
+ *
+ * 失敗を空配列に畳むと、呼び出し側が「0 件を同期して成功」と解釈して
+ * `last_synced_at` を進めてしまう。ユーザーからは「同期済みなのに何も入っていない」に
+ * しか見えず、しかも次の run も同じ結果になるので永久に気づけない。
+ */
 async function loadSelectedCalendars(
   db: SyncClient,
   connectionId: string,
   userId: string,
-): Promise<CalendarRow[]> {
+): Promise<CalendarRow[] | null> {
   const { data, error } = await db
     .from(databaseTables.calendarConnectionCalendars)
     .select('provider_calendar_id, calendar_name, sync_token')
@@ -428,7 +441,7 @@ async function loadSelectedCalendars(
 
   if (error) {
     captureDatabaseError(error, 'load_selected_calendars');
-    return [];
+    return null;
   }
   return data ?? [];
 }

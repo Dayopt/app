@@ -1,6 +1,8 @@
+import { sanitizeTechnicalContext } from '@dayopt/observability';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loggerWarn = vi.hoisted(() => vi.fn());
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -10,6 +12,7 @@ vi.mock('@/env', () => ({ env: envMock }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 
 import { googleCalendarAdapter } from '../providers/google';
 import { CalendarProviderError, type ProviderSession } from '../providers/types';
@@ -297,7 +300,104 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     });
 
     expect(result.events.map((event) => event.providerEventId)).toEqual(['alive-1']);
-    expect(loggerWarn).toHaveBeenCalled();
+  });
+
+  // schema drift は 1 件ずつの warn だと量に流されて誰も気づかない（Step 7）
+  it('parse できない item があったら run 単位で件数を Sentry へ送る', async () => {
+    fetchMock().mockResolvedValue(
+      jsonResponse({
+        items: [{ noIdHere: true }, { alsoBroken: true }, timedEvent({ id: 'alive-1' })],
+        nextSyncToken: 'sync-token-1',
+      }),
+    );
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('unparsable events'), {
+      count: 2,
+    });
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'normalize_events' }),
+    );
+  });
+
+  // ページごとに撃つと schema drift で 1 run から 20 件の alert が出て quota を焼く
+  it('複数ページに跨る parse 失敗を 1 件に合算する', async () => {
+    const brokenPage = (nextPageToken?: string) =>
+      jsonResponse({
+        items: [{ noIdHere: true }, timedEvent({ id: 'alive-1' })],
+        ...(nextPageToken ? { nextPageToken } : { nextSyncToken: 'sync-token-1' }),
+      });
+    fetchMock()
+      .mockResolvedValueOnce(brokenPage('page-2'))
+      .mockResolvedValueOnce(brokenPage('page-3'))
+      .mockResolvedValueOnce(brokenPage());
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
+    expect(loggerWarn).toHaveBeenCalledWith(expect.stringContaining('unparsable events'), {
+      count: 3,
+    });
+  });
+
+  // context に数値キーを足しても sanitize が捨てるので、Sentry に残る形を固定する
+  it('Sentry へ送る context が sanitize を素通りする', async () => {
+    fetchMock().mockResolvedValue(
+      jsonResponse({ items: [{ noIdHere: true }], nextSyncToken: 'sync-token-1' }),
+    );
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    const context = captureUnexpectedError.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(sanitizeTechnicalContext(context)).toEqual(context);
+  });
+
+  it('全件 parse できた時は Sentry へ送らない', async () => {
+    fetchMock().mockResolvedValue(
+      jsonResponse({ items: [timedEvent()], nextSyncToken: 'sync-token-1' }),
+    );
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  // 上限到達は provider 側の異常かページングのバグ。log だけでは気づけない（Step 7）
+  it('ページ上限で打ち切ったら cursor を捨てて Sentry へ送る', async () => {
+    // Response の body は 1 回しか読めないので、ページごとに作り直す。
+    fetchMock().mockImplementation(() =>
+      Promise.resolve(jsonResponse({ items: [timedEvent()], nextPageToken: 'never-ending' })),
+    );
+
+    const result = await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(result.nextCursor).toBeNull();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'sync_calendar' }),
+    );
   });
 
   it.each([
