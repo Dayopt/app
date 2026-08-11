@@ -171,8 +171,10 @@ export const AUTH_CONFIG_CONTRACT = [
     // Dashboard が正本で、`supabase/config.toml` の `additional_redirect_urls` は
     // production に効かないため repo 側に代替の検証手段が無い。
     //
-    // 注意: #1935 が localhost の除去を予定している。production を変えたら同じ変更で
-    // この期待値も更新する（それを強制するのがこの pin の目的）。
+    // **この値は暫定。** #1935 で production から `http://localhost:3000/**` を除去する
+    // 予定があり（User の Dashboard 操作）、#1936 の最終追従で live を再測して上書きする
+    // 段取りになっている。production を変えたら同じ変更でこの期待値も更新する — それを
+    // 強制するのがこの pin の目的で、忘れると merge 後の push:main で main が赤くなる。
     failureMode: 'fail-open',
     why: 'redirect allowlist。緩めるとリセットリンクと OAuth code が第三者へ渡る',
   },
