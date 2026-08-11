@@ -510,6 +510,10 @@ describe('syncConnection — 認可と鍵', () => {
     const update = findCall(calls, 'calendar_connections', 'update')!;
     const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
     expect(patch.last_sync_error).toBe('partial_failure');
+    // last_synced_at は「最後に試した時刻」。他の失敗経路（鍵不正 / startSession 失敗）と
+    // 揃える。進めないと dispatcher の due 判定（last_synced_at < staleBefore）に毎 tick
+    // 引っかかり、この接続だけが backoff 無しで回り続ける。
+    expect(patch.last_synced_at).toBe(RUN_ISO);
   });
 
   it('選択カレンダーが 0 件なら成功として記録する', async () => {
