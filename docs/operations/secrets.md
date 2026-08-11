@@ -33,6 +33,11 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 - `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
 - `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
+- `.op-env.admin.example` — 同じく `op://` 参照のみ。管理者運用スクリプト用の雛形（§管理者運用の env）
+
+**作らない**:
+
+- `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める
 
 **触らない（読みも書きもしない）**:
 

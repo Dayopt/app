@@ -102,7 +102,7 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
     expect(adminEnvExample).toContain(
       'SUPABASE_SERVICE_ROLE_KEY=op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY',
     );
-    // 実値が入る .op-env.admin を commit させない
+    // .op-env.admin は各自が作る実行用ファイルなので commit させない
     expect(gitignore).toMatch(/^\.op-env\.admin$/mu);
   });
 });

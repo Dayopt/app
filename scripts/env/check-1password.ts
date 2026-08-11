@@ -162,8 +162,12 @@ for (const item of operationalItems) {
 // 禁止 field は「存在しないこと」が期待値。schema から entry を消しただけでは
 // 実 vault に残った field を誰も検査しないため、ここで実在を落とす。
 for (const forbidden of forbiddenFields) {
+  // vault を取得できない理由（不在 / 権限不足 / 一時エラー）は区別できない。
+  // 「不在を確認できた時だけ pass」にするため、確認不能は失敗に倒す。
   if (!hasVault(forbidden.vault)) {
-    console.log(`${forbidden.vault} / ${forbidden.item} / ${forbidden.field}: ABSENT (no vault)`);
+    console.log(`${forbidden.vault} / ${forbidden.item} / ${forbidden.field}: UNVERIFIABLE`);
+    console.log(`  └ vault を取得できないため、禁止 field の不在を確認できません`);
+    hasFailure = true;
     continue;
   }
 

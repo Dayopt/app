@@ -20,6 +20,10 @@ case "$1" in
     printf '%s\n' '[]'
     ;;
   vault)
+    # op vault get <vault> → $3=vault
+    if [ -n "$FAKE_OP_MISSING_VAULT" ] && [ "$3" = "$FAKE_OP_MISSING_VAULT" ]; then
+      exit 1
+    fi
     exit 0
     ;;
   item)
@@ -60,6 +64,8 @@ interface CheckOptions {
   mode?: 'error' | 'invalid-json';
   /** true にすると Dayopt-Staging/supabase が禁止 field を持ったまま残っている状態を再現する */
   leakForbidden?: boolean;
+  /** op vault get を失敗させる vault 名（不在 / 権限不足 / 一時エラーの再現） */
+  missingVault?: string;
 }
 
 function runCheck(options: CheckOptions = {}) {
@@ -87,6 +93,7 @@ function runCheck(options: CheckOptions = {}) {
       ...process.env,
       FAKE_OP_ITEM_JSON: JSON.stringify({ fields }),
       FAKE_OP_MISSING_ITEM: options.missingItem ?? '',
+      FAKE_OP_MISSING_VAULT: options.missingVault ?? '',
       FAKE_OP_MODE: options.mode ?? '',
       FAKE_OP_SENTINEL: sentinelSecret,
       FAKE_OP_STAGING_SUPABASE_JSON: JSON.stringify({ fields: stagingSupabaseFields }),
@@ -187,5 +194,18 @@ describe('check-1password.ts', () => {
         `${entry.vault} / ${entry.item} / ${entry.field}: ABSENT`,
       );
     }
+  });
+
+  it('vault を取得できない時は禁止 field の不在を確認できないので失敗する', () => {
+    const result = runCheck({ missingVault: 'Dayopt-Staging' });
+
+    expect(result.status).toBe(1);
+    for (const entry of forbiddenFields.filter((f) => f.vault === 'Dayopt-Staging')) {
+      expect(result.stdout, entry.field).toContain(
+        `${entry.vault} / ${entry.item} / ${entry.field}: UNVERIFIABLE`,
+      );
+    }
+    // 権限不足や一時エラーを「不在を確認できた」と読み替えない
+    expect(result.stdout).not.toContain('Dayopt-Staging / supabase / SUPABASE_DB_PASSWORD: ABSENT');
   });
 });
