@@ -43,11 +43,15 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.admin` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.admin.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
-これで **`--env-file` へ path を literal に渡す形は、起動方法・path 名を問わず閉じる**。変数展開（`--env-file="$SOMEVAR"`）も allowlist に一致しないため落ちる。
+**判定は fail closed にする。** 「path らしくない token は無視する」という例外を置くと、そこが穴になる（quote や backslash escape を含む path が検査対象から外れ、空白入りの別名で迂回できた）。token を分類しようとせず、`.op-env.local` だと言い切れる形以外はすべて落とす。
+
+これで **`--env-file` に渡す path が `.op-env.local` 以外である形は、起動方法・quote / escape の有無を問わず閉じる**。変数展開（`--env-file="$SOMEVAR"`）も落ちる。
+
+**検証しているのは path であって中身ではない。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/...` を書き足してから `op run --env-file=.op-env.local` を実行すれば、この guard は通る。したがって guard が保証するのは「admin 用の env-file とその別名を経由しないこと」までで、「production credential に到達しないこと」ではない。中身の検査は [#1949](https://github.com/Dayopt/dayopt/issues/1949) で扱う。
 
 閉じないのは、flag をコマンド文字列から隠す間接化（wrapper script を書いてそれを実行する、`eval`、base64 など）。これは事故ではなく意図的な回避であり、hook では追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
 
-代償として、`--env-file` と path を並べた文字列は Bash 引数に含めるだけで落ちる（引用符の中でも同じ）。docs にこのコマンド例を書く時は、Write / Edit で file に書いてから渡す
+代償として、`--env-file` のあとに何か語が続く文字列は Bash 引数に含めるだけで落ちる（引用符の中でも、散文でも同じ）。docs や commit message にこのコマンド例を書く時は、Write / Edit で file に書いてから `--body-file` / `-F` で渡す
 
 **触らない（読みも書きもしない）**:
 
@@ -208,6 +212,8 @@ op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/a
 ```
 
 参照先は `Dayopt-Production/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。
+
+雛形は接続 3 field に加えて `SUPABASE_DB_PASSWORD` を持つ。`USE_LINKED_DB=true` の `seed-dev-data.sh` が最後に `supabase db query --linked` を実行するためで、**欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の user が production に残る**（部分適用）。同じ理由で `Dayopt-Production/supabase/SUPABASE_DB_PASSWORD` は `required` にしてある。
 
 Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 

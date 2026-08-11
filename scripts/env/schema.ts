@@ -113,7 +113,9 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'production', production, 'supabase'),
   envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'production', production, 'supabase'),
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', production, 'supabase'),
-  envEntry('SUPABASE_DB_PASSWORD', false, 'secret', 'production', production, 'supabase'),
+  // .op-env.admin 経由の `supabase db query --linked` が要求する。欠けると
+  // seed が user 作成だけ成功して DB 投入で止まり、部分適用になる。
+  envEntry('SUPABASE_DB_PASSWORD', true, 'secret', 'production', production, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'production', production, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'production', production, 'supabase'),
   envEntry('UPSTASH_REDIS_REST_URL', false, 'secret', 'production', production, 'upstash'),

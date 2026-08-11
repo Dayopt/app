@@ -12,3 +12,7 @@
 NEXT_PUBLIC_SUPABASE_URL=op://Dayopt-Production/supabase/NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=op://Dayopt-Production/supabase/NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY
+# USE_LINKED_DB=true の seed-dev-data.sh が使う supabase db query --linked に要る。
+# 欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の
+# user が production に残る（部分適用）。
+SUPABASE_DB_PASSWORD=op://Dayopt-Production/supabase/SUPABASE_DB_PASSWORD

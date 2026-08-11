@@ -99,6 +99,13 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     ['相対の別名', 'op run --env-file=./tmp-env -- sh -c true'],
     ['変数展開', 'op run --env-file="$OP_ENV_PATH" -- sh -c true'],
     ['local の雛形', 'op run --env-file=.op-env.local.example -- sh -c true'],
+    // 「path らしくない token は無視する」例外を置くと、escape を含む path が
+    // 検査対象から外れて空白入りの別名で迂回できた。分類せず落とす。
+    [
+      '空白を escape した別名',
+      'op run --env-file=/tmp/foo\\ bar -- bash scripts/admin-delete-user.sh',
+    ],
+    ['引用符で囲んだ別名', 'op run --env-file="/tmp/foo bar" -- sh -c true'],
   ])('許可外の env-file を落とす: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
@@ -110,11 +117,12 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     expect(runGuard(bash(command))).toBe('allow');
   });
 
-  // 判定は「path らしい ASCII token」に限る。日本語の散文で flag に言及した
-  // だけで落ちると、コミットメッセージや PR 本文が書けなくなる。
-  it('日本語の散文で flag に言及するだけなら通す', () => {
+  // 判定は fail closed。token を分類して例外を作ると、そこが穴になる
+  // （escape を含む path が「path らしくない」として素通りした）。
+  // 代償として散文も落ちる。docs に書く時は Write/Edit で file へ書いてから渡す。
+  it('散文で flag に言及しただけでも落とす（fail closed の代償）', () => {
     const prose = 'git commit -m "--env-file に渡してよいのは通常の local だけにする"';
-    expect(runGuard(bash(prose))).toBe('allow');
+    expect(runGuard(bash(prose))).toBe('block');
   });
 
   it('flag を伴わない名前の言及は通す', () => {

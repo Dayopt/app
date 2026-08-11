@@ -103,12 +103,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 組み立てる形（変数展開・base64 など）は追わない。そこは hook ではなく
   # CLAUDE.md の EXPLICIT AUTHORITY と 1Password の承認が担う。
   if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]'; then
-    # 抽出した token が path らしい ASCII の時だけ判定する。散文で flag に
-    # 言及しただけ（`--env-file に渡してよいのは …`）で落ちるのを避ける。
+    # 判定は fail closed にする。「path らしくない token は無視する」という
+    # 例外を置くと、そこが穴になる（quote / backslash escape を含む path が
+    # 検査対象から外れ、空白入りの別名で迂回できた）。token を分類しようと
+    # せず、.op-env.local だと言い切れる形以外はすべて落とす。
+    # 代償として、flag のあとに何か語が続く文字列は散文でも落ちる。
     disallowed=$(echo "$COMMAND" \
       | grep -oE '\-\-env-file[=[:space:]]+[^[:space:];&|]+' \
       | sed -E 's/^--env-file[=[:space:]]+//' \
-      | grep -xE "[A-Za-z0-9._/~\$\"'-]+" \
       | sed -E 's#.*/##' \
       | grep -vxE '\.op-env\.local' || true)
     if [ -n "$disallowed" ]; then
