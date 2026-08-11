@@ -590,6 +590,143 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   info "未解決のレビュー thread はありません。"
 
+  # ── 外部レビューが実際に回ったことを要求する ──────────────────────────
+  #
+  # 上の gate は「**存在する** 指摘 thread が resolve 済みか」しか見ない。thread が
+  # 0 件の PR は素通りするため、「レビューされて指摘ゼロだった PR」と「レビューを
+  # 投げ忘れた PR」が機械には同じに見える。draft 運用（`.claude/rules/workflow.md`
+  # §2 段階 CI）で Codex の自動発火（open / ready 化）を意図的に外している以上、
+  # `@codex review` は手で打つ以外に発火経路が無く、投げ忘れても何も止まらなかった。
+  #
+  # **痕跡の検出は 3 経路すべてを見る。** Codex は結果によって出力先を変える:
+  #   - 指摘あり → review + reviewThreads に出る（PR #1938 / #1927）
+  #   - 指摘なし → **issue comment にしか出ない**（PR #1932 は "Didn't find any
+  #     major issues" を comment で返し、reviews / reviewThreads は 0 件だった）
+  # どれか 1 経路だけを見ると、その裏側の結果を「無応答」と誤判定する。
+  #
+  # Codex が usage limit や障害で応答しない期間は `workflow.md` §外部レビューが
+  # 動かない時 が「応答しなかった事実と代替検証を PR にコメントで残す」ことを
+  # 既に要求している。そのコメントに $NO_EXTERNAL_REVIEW_MARKER を含めることを
+  # 唯一の escape hatch とし、新しい抜け道は作らない。
+  step "外部レビューの痕跡を確認"
+
+  # login は実測では `chatgpt-codex-connector`（PR #1938 / #1932 / #1927 / #1922 /
+  # #1918 の GraphQL author.login を確認）だが、GitHub の bot account は `[bot]`
+  # サフィックス付きで返る系統もあり、docs 側に両表記が混在している。取り違えると
+  # **全 PR を永久に止める** 側に倒れるため両方を受ける。前方一致にはしない
+  # （`chatgpt-codex-connector-fake` のような偽装 login を通さないため）。
+  EXTERNAL_REVIEWER_LOGIN="chatgpt-codex-connector"
+  EXTERNAL_REVIEWER_LOGIN_BOT="chatgpt-codex-connector[bot]"
+  NO_EXTERNAL_REVIEW_MARKER="[no-external-review]"
+
+  # reviews / comments は `last:` で引く。無応答注記は merge 直前に置かれ、Codex の
+  # 応答も直近に寄るため、古い側を切り落とす `first:` より取りこぼしにくい。
+  # それでも 100 件を超える PR では古い痕跡が窓から落ちうるので totalCount も取り、
+  # 「痕跡なし」で止める時に窓の切り詰めが起きていたかを伝える（thread 側は全ページ
+  # 走査済みなので、この窓落ちが単独で停止を招くのは thread が 1 件も無い PR に限る）。
+  # 取得失敗は「未確認のまま通す」ではなく停止に倒す（fail closed）。
+  REVIEW_EVIDENCE_JSON="$(gh api graphql \
+    -f query='query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          reviews(last: 100) { totalCount nodes { author { login } } }
+          comments(last: 100) { totalCount nodes { author { login } authorAssociation body } }
+        }
+      }
+    }' \
+    -f owner="$THREAD_OWNER" \
+    -f name="$THREAD_NAME" \
+    -F number="$PR_NUMBER" 2>/dev/null || true)"
+
+  # reviews / comments のどちらかが null（pullRequest 不在・権限不足など）なら
+  # 判定材料が欠けているので、空配列に潰さずそのまま停止させる。
+  # Codex 本人の応答（review / comment）の件数。
+  REVIEW_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+    --arg login "$EXTERNAL_REVIEWER_LOGIN" \
+    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" '
+    .data.repository.pullRequest
+    | select(. != null)
+    | select(.reviews != null and .comments != null)
+    | [
+        (.reviews.nodes[] | select(.author.login == $login or .author.login == $loginBot)),
+        (.comments.nodes[] | select(.author.login == $login or .author.login == $loginBot))
+      ]
+    | length' 2>/dev/null || true)"
+
+  # 無応答注記（escape hatch）の件数。**この判定は意図的に厳しくする。**
+  # 素朴な「body に marker を含む」だと、gate 自身が出す停止メッセージや workflow.md
+  # の規約本文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の
+  # 貼り付け・この diff のレビュー依頼など、日常操作で踏む）。そこで 2 点で絞る:
+  #   1. コメント**本文の先頭**が marker であること（引用行は `>` で始まるので落ちる）
+  #   2. 書き手が OWNER / MEMBER / COLLABORATOR であること（bot と第三者は NONE。
+  #      この repo は public なので、任意のユーザーがコメントできる）
+  MARKER_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+    --arg marker "$NO_EXTERNAL_REVIEW_MARKER" '
+    .data.repository.pullRequest
+    | select(. != null)
+    | select(.comments != null)
+    | [
+        .comments.nodes[]
+        | select(.authorAssociation == "OWNER"
+                 or .authorAssociation == "MEMBER"
+                 or .authorAssociation == "COLLABORATOR")
+        | select(((.body // "") | ltrimstr(" ") | ltrimstr("\n")) | startswith($marker))
+      ]
+    | length' 2>/dev/null || true)"
+
+  # 窓（last: 100）より多い reviews / comments を持つ PR かどうか。停止時の説明にだけ
+  # 使い、判定そのものは緩めない（切り詰めを理由に通すと fail open になる）。
+  REVIEW_WINDOW_TRUNCATED="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r '
+    .data.repository.pullRequest
+    | select(. != null)
+    | ((.reviews.totalCount // 0) > 100 or (.comments.totalCount // 0) > 100)' 2>/dev/null || true)"
+
+  # 数値以外（取得失敗・null 混入・部分出力）は「痕跡あり」に読み替えられないよう
+  # 停止に倒す。`-z` だけの判定にすると、想定外の文字列が "0 でない" として
+  # 素通りしてしまう。
+  if [[ ! "$REVIEW_EVIDENCE_COUNT" =~ ^[0-9]+$ || ! "$MARKER_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
+    error "外部レビューの痕跡を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  # thread は既に全ページ取得済みなので再取得しない。指摘ありの Codex レビューは
+  # thread の 1 コメント目に現れる。数値以外（jq の失敗・部分出力）は 0 件と区別が
+  # つかないため、痕跡なし側に倒して停止させる。
+  THREAD_EVIDENCE_COUNT="$(printf '%s' "$ALL_THREADS_JSON" | jq -r \
+    --arg login "$EXTERNAL_REVIEWER_LOGIN" \
+    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" '
+    [.[] | select(.comments.nodes[0].author.login == $login
+                  or .comments.nodes[0].author.login == $loginBot)] | length' 2>/dev/null || true)"
+
+  if [[ ! "$THREAD_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
+    THREAD_EVIDENCE_COUNT=0
+  fi
+
+  if [[ "$REVIEW_EVIDENCE_COUNT" == "0" && "$THREAD_EVIDENCE_COUNT" == "0" &&
+    "$MARKER_EVIDENCE_COUNT" == "0" ]]; then
+    error "この PR には外部レビューの痕跡がありません。マージを中止します。"
+    error "draft のまま PR に「@codex review」とコメントし、レビューが一巡してから再実行してください。"
+    error "Codex が usage limit や障害で応答しない場合は、代わりに次の形のコメントを残してください:"
+    error "  1 行目を「${NO_EXTERNAL_REVIEW_MARKER}」で始め、応答しなかった事実と代替の検証内容を続ける"
+    error "（.claude/rules/workflow.md §外部レビューが動かない時）"
+    if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
+      error "なお、この PR は reviews / comments が 100 件を超えており、直近 100 件しか見ていません。"
+      error "実際にはレビュー済みで、痕跡が窓の外に落ちている可能性があります。"
+    fi
+    exit 1
+  fi
+
+  # **どの経路で通ったかを必ず出す。** 「Codex が実際に見た」と「無応答注記で飛ばした」を
+  # 同じ 1 行に潰すと、workflow.md §外部レビューが動かない時 が求める
+  # 「レビューが無いまま merge した PR を後から識別できる状態」を gate 側が満たさない。
+  if [[ "$REVIEW_EVIDENCE_COUNT" != "0" || "$THREAD_EVIDENCE_COUNT" != "0" ]]; then
+    info "外部レビューの痕跡を確認しました（Codex の応答あり）。"
+  else
+    info "外部レビューの応答はありません。無応答注記（${NO_EXTERNAL_REVIEW_MARKER}）で通します。"
+    info "この PR は「外部レビューを経ずに merge した」ものとして扱ってください。"
+  fi
+
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、
   # 並行セッション環境では実行元の足元と main checkout を壊す（#1771 の症状①）。
