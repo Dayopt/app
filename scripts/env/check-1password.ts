@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-import { onePasswordEnvSchema, operationalItems } from './schema';
+import { forbiddenFields, onePasswordEnvSchema, operationalItems } from './schema';
 
 type CommandResult = {
   ok: boolean;
@@ -157,6 +157,25 @@ for (const item of operationalItems) {
 
   console.log(`${item.vault} / ${item.item}: ${status}`);
   if (item.required && status !== 'OK') hasFailure = true;
+}
+
+// 禁止 field は「存在しないこと」が期待値。schema から entry を消しただけでは
+// 実 vault に残った field を誰も検査しないため、ここで実在を落とす。
+for (const forbidden of forbiddenFields) {
+  if (!hasVault(forbidden.vault)) {
+    console.log(`${forbidden.vault} / ${forbidden.item} / ${forbidden.field}: ABSENT (no vault)`);
+    continue;
+  }
+
+  const status = checkField(forbidden.vault, forbidden.item, forbidden.field);
+  const isAbsent = status === 'MISSING_ITEM' || status === 'MISSING_FIELD';
+  console.log(
+    `${forbidden.vault} / ${forbidden.item} / ${forbidden.field}: ${isAbsent ? 'ABSENT' : 'FORBIDDEN_PRESENT'}`,
+  );
+  if (!isAbsent) {
+    console.log(`  └ 削除してください: ${forbidden.reason}`);
+    hasFailure = true;
+  }
 }
 
 if (hasFailure) {

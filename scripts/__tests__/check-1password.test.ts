@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { onePasswordEnvSchema } from '../env/schema';
+import { forbiddenFields, onePasswordEnvSchema } from '../env/schema';
 
 const rootDir = resolve(import.meta.dirname, '../..');
 const temporaryDirectories: string[] = [];
@@ -35,7 +35,12 @@ case "$1" in
         printf '%s\n' "$FAKE_OP_SENTINEL"
         ;;
       *)
-        printf '%s\n' "$FAKE_OP_ITEM_JSON"
+        # op item get <item> --vault <vault> --format=json → $3=item, $5=vault
+        if [ "$3" = "supabase" ] && [ "$5" = "Dayopt-Staging" ]; then
+          printf '%s\n' "$FAKE_OP_STAGING_SUPABASE_JSON"
+        else
+          printf '%s\n' "$FAKE_OP_ITEM_JSON"
+        fi
         ;;
     esac
     ;;
@@ -53,6 +58,8 @@ interface CheckOptions {
   emptyField?: string;
   missingItem?: string;
   mode?: 'error' | 'invalid-json';
+  /** true にすると Dayopt-Staging/supabase が禁止 field を持ったまま残っている状態を再現する */
+  leakForbidden?: boolean;
 }
 
 function runCheck(options: CheckOptions = {}) {
@@ -63,6 +70,16 @@ function runCheck(options: CheckOptions = {}) {
     value: field === options.emptyField ? '' : sentinelSecret,
   }));
 
+  // 既定の Dayopt-Staging/supabase は禁止 field を持たない（是正済みの状態）
+  const forbiddenNames = new Set(
+    forbiddenFields
+      .filter((entry) => entry.vault === 'Dayopt-Staging' && entry.item === 'supabase')
+      .map((entry) => entry.field),
+  );
+  const stagingSupabaseFields = options.leakForbidden
+    ? fields
+    : fields.filter((field) => !forbiddenNames.has(field.id));
+
   return spawnSync('pnpm', ['exec', 'tsx', 'scripts/env/check-1password.ts'], {
     cwd: rootDir,
     encoding: 'utf8',
@@ -72,6 +89,7 @@ function runCheck(options: CheckOptions = {}) {
       FAKE_OP_MISSING_ITEM: options.missingItem ?? '',
       FAKE_OP_MODE: options.mode ?? '',
       FAKE_OP_SENTINEL: sentinelSecret,
+      FAKE_OP_STAGING_SUPABASE_JSON: JSON.stringify({ fields: stagingSupabaseFields }),
       PATH: `${fakeOpDirectory}:${process.env.PATH ?? ''}`,
     },
   });
@@ -146,5 +164,28 @@ describe('check-1password.ts', () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('Dayopt-Shared / recovery-codes: MISSING_ITEM');
+  });
+
+  it('禁止 field が実 vault に残っていたら失敗する', () => {
+    const result = runCheck({ leakForbidden: true });
+
+    expect(result.status).toBe(1);
+    for (const entry of forbiddenFields) {
+      expect(result.stdout, entry.field).toContain(
+        `${entry.vault} / ${entry.item} / ${entry.field}: FORBIDDEN_PRESENT`,
+      );
+    }
+    expect(result.stdout).not.toContain(sentinelSecret);
+  });
+
+  it('禁止 field が削除済みなら ABSENT を表示して成功する', () => {
+    const result = runCheck();
+
+    expect(result.status, result.stderr).toBe(0);
+    for (const entry of forbiddenFields) {
+      expect(result.stdout, entry.field).toContain(
+        `${entry.vault} / ${entry.item} / ${entry.field}: ABSENT`,
+      );
+    }
   });
 });

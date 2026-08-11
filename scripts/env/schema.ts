@@ -17,6 +17,14 @@ export type OperationalItem = {
   required: boolean;
 };
 
+/** 実在してはいけない field。存在すれば 1password:check を失敗させる。 */
+export type ForbiddenField = {
+  vault: string;
+  item: string;
+  field: string;
+  reason: string;
+};
+
 const staging = 'Dayopt-Staging';
 const production = 'Dayopt-Production';
 const shared = 'Dayopt-Shared';
@@ -183,6 +191,21 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'google-calendar',
   ),
 ];
+
+// schema から entry を消しても、実 vault に field が残っていれば
+// Dayopt-Staging へのアクセスだけで production の接続情報が取れてしまう。
+// schema の不在（envSchema 側）と実在の禁止（ここ）は別物なので両方を持つ。
+export const forbiddenFields: ForbiddenField[] = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_DB_PASSWORD',
+].map((field) => ({
+  vault: staging,
+  item: 'supabase',
+  field,
+  reason: '常設 staging が無いため、この field は production の複製にしかならない',
+}));
 
 export const operationalItems: OperationalItem[] = [
   { vault: shared, item: 'github-login', required: true },
