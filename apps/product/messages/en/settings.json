@@ -488,6 +488,7 @@
           "connected": "Google account connected",
           "accessDenied": "Google Calendar access was not granted",
           "accountMismatch": "Choose the same Google account that needs to be reconnected",
+          "authorizationExpired": "This connection link expired. Try again.",
           "proRequired": "A Pro plan is required to connect Google Calendar",
           "rateLimited": "Too many connection attempts. Try again later.",
           "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",

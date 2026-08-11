@@ -18,6 +18,15 @@ describe('parseCalendarCallbackResult', () => {
     ).toEqual({ type: 'error', error: 'account_mismatch' });
   });
 
+  // 二度押しや戻るボタンで普通に起きる。汎用文言に畳むと「やり直せば済む」が伝わらない
+  it('使用済み code の失敗をやり直せる文言へ振り分ける', () => {
+    expect(
+      parseCalendarCallbackResult(
+        new URLSearchParams('calendar=error&reason=authorization_expired'),
+      ),
+    ).toEqual({ type: 'error', error: 'authorization_expired' });
+  });
+
   it('未知の provider reason を UI に露出しない', () => {
     expect(
       parseCalendarCallbackResult(new URLSearchParams('calendar=error&reason=raw-provider-detail')),

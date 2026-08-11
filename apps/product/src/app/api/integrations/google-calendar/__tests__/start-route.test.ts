@@ -50,6 +50,7 @@ describe('google calendar start route', () => {
     getReconnectTarget.mockResolvedValue({
       id: '00000000-0000-4000-8000-0000000000c1',
       providerAccountId: 'google-sub-123',
+      providerAccountEmail: 'owner@example.com',
     });
   });
 
@@ -141,6 +142,47 @@ describe('google calendar start route', () => {
     const cookie = response.cookies.get('__Host-dayopt-calendar-connect');
     const flowState = JSON.parse(decodeURIComponent(cookie?.value ?? '{}'));
     expect(flowState).toMatchObject({ locale: 'ja', reconnectConnectionId: connectionId });
+  });
+
+  // 違うアカウントを選ぶと callback の sub 一致検査で弾かれてやり直しになる（Step 7）
+  it('再接続では対象アカウントを login_hint で示唆する', async () => {
+    const response = await GET(
+      request(
+        'https://app.dayopt.app/api/integrations/google-calendar/start?reconnectConnectionId=00000000-0000-4000-8000-0000000000c1',
+      ),
+    );
+
+    const location = new URL(response.headers.get('location') ?? '');
+    expect(location.searchParams.get('login_hint')).toBe('owner@example.com');
+    // hint はあくまで示唆。毎回アカウントを選ばせる prompt は外さない。
+    expect(location.searchParams.get('prompt')).toBe('consent select_account');
+  });
+
+  it('email 未記録の再接続でも login_hint 無しで続行する', async () => {
+    getReconnectTarget.mockResolvedValue({
+      id: '00000000-0000-4000-8000-0000000000c1',
+      providerAccountId: 'google-sub-123',
+      providerAccountEmail: null,
+    });
+
+    const response = await GET(
+      request(
+        'https://app.dayopt.app/api/integrations/google-calendar/start?reconnectConnectionId=00000000-0000-4000-8000-0000000000c1',
+      ),
+    );
+
+    expect(response.status).toBe(307);
+    expect(
+      new URL(response.headers.get('location') ?? '').searchParams.get('login_hint'),
+    ).toBeNull();
+  });
+
+  it('新規接続では login_hint を付けない', async () => {
+    const response = await GET(request());
+
+    expect(
+      new URL(response.headers.get('location') ?? '').searchParams.get('login_hint'),
+    ).toBeNull();
   });
 
   it.each([

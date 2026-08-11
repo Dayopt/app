@@ -1,6 +1,7 @@
 export type CalendarCallbackError =
   | 'access_denied'
   | 'account_mismatch'
+  | 'authorization_expired'
   | 'pro_required'
   | 'rate_limited'
   | 'reconnect_target_invalid'
@@ -15,6 +16,9 @@ type SearchParamsReader = Pick<URLSearchParams, 'get'>;
 const CALLBACK_ERROR_GROUPS: Readonly<Record<string, CalendarCallbackError>> = {
   access_denied: 'access_denied',
   account_mismatch: 'account_mismatch',
+  // 使用済み / 期限切れ code。二度押しや戻るボタンで普通に起きるので、汎用の失敗文言に
+  // 畳まず「やり直せば済む」と分かる文言へ回す。
+  authorization_expired: 'authorization_expired',
   pro_required: 'pro_required',
   rate_limited: 'rate_limited',
   reconnect_target_invalid: 'reconnect_target_invalid',

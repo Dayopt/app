@@ -121,11 +121,19 @@ export function generateState(): string {
   return randomBytes(ENTROPY_BYTES).toString('base64url');
 }
 
-/** 同意画面の URL。refresh token を取り直し、接続する Google アカウントを毎回選ばせる。 */
+/**
+ * 同意画面の URL。refresh token を取り直し、接続する Google アカウントを毎回選ばせる。
+ *
+ * 再接続では `loginHint` に対象アカウントのアドレスを渡す。複数の Google アカウントに
+ * ログインしている人は、どれを選び直すべきかを画面から知る術が無く、違うアカウントを
+ * 選ぶと callback の `sub` 一致検査で `account_mismatch` になってやり直しになる。
+ * hint は表示上の示唆でしかなく、実際に何を選んだかは常に `sub` で検証する。
+ */
 export function buildAuthorizationUrl(params: {
   redirectUri: string;
   state: string;
   codeChallenge: string;
+  loginHint?: string;
 }): string {
   const url = new URL(GOOGLE_AUTHORIZE_ENDPOINT);
 
@@ -140,6 +148,7 @@ export function buildAuthorizationUrl(params: {
   // 範囲を超えた権限を持ちうる。callback は calendar.readonly の有無しか見ないので、
   // 余分な scope はそのまま通ってしまう。必要な scope は最初から
   // GOOGLE_AUTHORIZATION_SCOPES で全部要求しており、incremental auth は使っていない。
+  if (params.loginHint) url.searchParams.set('login_hint', params.loginHint);
   url.searchParams.set('state', params.state);
   url.searchParams.set('code_challenge', params.codeChallenge);
   url.searchParams.set('code_challenge_method', 'S256');

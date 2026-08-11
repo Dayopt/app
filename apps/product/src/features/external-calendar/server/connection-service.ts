@@ -8,8 +8,8 @@ import { env } from '@/env';
 import type { Database } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
 import { getConfiguredExternalLifecycleAppVersion } from '@/lib/database/external-lifecycle-version';
-
 import { logger } from '@/lib/logger';
+import { captureUnexpectedError } from '@/lib/sentry';
 
 import { deleteUnreferencedEvents } from './event-pruning';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
@@ -74,6 +74,8 @@ type SaveConnectionInput = {
 type ReconnectTarget = {
   id: string;
   providerAccountId: string;
+  /** 同意画面の `login_hint` に載せる表示用アドレス。判定には使わない（判定は `sub`）。 */
+  providerAccountEmail: string | null;
 };
 
 type ReconnectExistingConnectionInput = SaveConnectionInput & {
@@ -123,7 +125,7 @@ export async function getReconnectTarget(
   const db = createCalendarConnectionDbClient();
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
-    .select('id, provider_account_id')
+    .select('id, provider_account_id, provider_account_email')
     .eq('id', connectionId)
     .eq('user_id', userId)
     .eq('provider', GOOGLE_PROVIDER)
@@ -136,7 +138,11 @@ export async function getReconnectTarget(
     });
   }
   if (!data) return null;
-  return { id: data.id, providerAccountId: data.provider_account_id };
+  return {
+    id: data.id,
+    providerAccountId: data.provider_account_id,
+    providerAccountEmail: data.provider_account_email,
+  };
 }
 
 /**
@@ -561,6 +567,22 @@ export async function updateSelectedCalendars(
 }
 
 /**
+ * revoke できなかった refresh token を alert に回す。
+ *
+ * 切断自体は best-effort で続行する（ユーザーの意思を DB 側で止めない）が、失効しなかった
+ * grant は「ユーザーは切ったつもりなのに Google 側は生きている」状態そのものなので、log
+ * だけに残すと誰も気づけない。token rotation の補償（`token-rotation.ts`）が同じ条件で
+ * capture しているのと揃える。message には token も connection id も載せない。
+ */
+function reportUnrevokedGrant(reason: string): void {
+  logger.warn(`[calendar-connection] ${reason}; continuing disconnect`);
+  captureUnexpectedError(new Error(`calendar disconnect left a provider grant alive: ${reason}`), {
+    feature: 'external_calendar',
+    operation: 'disconnect_revoke',
+  });
+}
+
+/**
  * 接続を切断する（overview.md §8 の 3 段。順序が重要）。
  *
  * 1. provider の revoke を best-effort で呼ぶ（失敗しても続行）
@@ -584,9 +606,9 @@ export async function disconnect(userId: string, connectionId: string): Promise<
       env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
     );
     const revoked = await googleCalendarAdapter.revoke(refreshToken);
-    if (!revoked) logger.warn('[calendar-connection] provider revoke was not confirmed');
+    if (!revoked) reportUnrevokedGrant('provider revoke was not confirmed');
   } catch {
-    logger.warn('[calendar-connection] could not revoke the provider grant; continuing disconnect');
+    reportUnrevokedGrant('could not revoke the provider grant');
   }
 
   // 2. connection 削除より先にミラーを掃除する。
