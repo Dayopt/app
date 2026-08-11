@@ -29,8 +29,22 @@ interface PasswordChangeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function isCurrentPasswordError(error: Error): boolean {
-  const message = error.message.toLowerCase();
+/**
+ * GoTrue が「現在のパスワードが違う」を示しているか。
+ *
+ * 構造化された error code を第一候補にする。GoTrue の文言が変わっても判定が
+ * 外れないため。code を持たない古いレスポンス向けに substring 判定を fallback
+ * として残す（code が別値でも fallback は試す。判定漏れは生メッセージ露出では
+ * なく汎用エラー表示に落ちるが、意味のある文言を優先したい）。
+ */
+function isCurrentPasswordError(error: unknown): boolean {
+  const code =
+    error !== null && typeof error === 'object' && 'code' in error
+      ? (error as { code?: unknown }).code
+      : undefined;
+  if (code === 'invalid_credentials') return true;
+
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
   return (
     message.includes('current_password') ||
     message.includes('current password') ||
@@ -98,29 +112,18 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           throw new Error(t('common.errors.auth.emailNotFound'));
         }
 
-        // Step 1: Verify current password explicitly so preview/local
-        // environments stay safe even if Auth config has not been synced yet.
-        const { error: reAuthError } = await observeAuthOperation(
-          'reauthenticate_password_change',
-          () =>
-            supabase.auth.signInWithPassword({
-              email: user.email!,
-              password: currentPassword,
-            }),
-        );
-
-        if (reAuthError) {
-          throw new Error(t('settings.account.passwordIncorrect'));
-        }
-
-        // Step 2: Pwned password check (NIST)
+        // Step 1: Pwned password check (NIST)
         const isPwned = await checkPasswordPwned(newPassword);
         if (isPwned) {
           throw new Error(t('settings.account.passwordPwned'));
         }
 
-        // Step 3: Update password. Supabase secure password change validates
-        // the current password server-side when `current_password` is provided.
+        // Step 2: Update password. 現在パスワードの検証はサーバー側が行う。
+        // production の `security_update_password_require_current_password` が true のため、
+        // `current_password` が一致しなければ GoTrue が拒否する（保証境界は
+        // docs/product/specs/auth.md）。client 側で signInWithPassword による事前確認はしない
+        // — 公開 Auth endpoint なので Bot Protection 有効時に CAPTCHA token を要求され、
+        // 認証済みの設定画面から呼ぶと必ず失敗する（#1917）。
         const { error: updateError } = await observeAuthOperation('update_password', () =>
           supabase.auth.updateUser({
             password: newPassword,
@@ -132,15 +135,18 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           if (isCurrentPasswordError(updateError)) {
             throw new Error(t('settings.account.passwordIncorrect'));
           }
-          throw new Error(updateError.message);
+          // 生の英語メッセージを画面に出さない（i18n 破れと内部文言の露出を防ぐ）。
+          // 原因の特定はログ側に残す。
+          logger.error('Password update failed:', updateError);
+          throw new Error(t('settings.account.passwordUpdateFailed'));
         }
 
-        // Step 4: Sign out other sessions
+        // Step 3: Sign out other sessions
         await observeAuthOperation('sign_out_other_sessions', () =>
           supabase.auth.signOut({ scope: 'others' }),
         );
 
-        // Step 5: Send password changed notification email (fire-and-forget)
+        // Step 4: Send password changed notification email (fire-and-forget)
         sendPasswordChangedEmail({
           email: user.email,
           userName: getDisplayName(user, 'there'),
