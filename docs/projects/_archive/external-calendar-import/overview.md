@@ -1,12 +1,12 @@
 ---
-status: active
-last_verified: 2026-08-02
+status: done
+last_verified: 2026-08-11
 code: apps/product/src/features/external-calendar/server/sync-service.ts
 ---
 
 # external-calendar-import — 外部カレンダーを one-way で取り込む
 
-[time-model-split](../_archive/time-model-split/overview.md)（Phase 1、2026-07-13 完了）に続く Phase 2 の全体設計書。決定の経緯・却下案は [ADR-025](../../product/log/2026-07-09-time-model-split.md) が正で、本書は「外部カレンダー取り込み」を connection 設計・OAuth・同期ジョブ・アプリ構造・Step 構成に落とす。**大規模判定**（新 feature 新設・新テーブル・外部 OAuth・cron 横断）。Issue #1562 の成果物。
+[time-model-split](../time-model-split/overview.md)（Phase 1、2026-07-13 完了）に続く Phase 2 の全体設計書。決定の経緯・却下案は [ADR-025](../../../product/log/2026-07-09-time-model-split.md) が正で、本書は「外部カレンダー取り込み」を connection 設計・OAuth・同期ジョブ・アプリ構造・Step 構成に落とす。**大規模判定**（新 feature 新設・新テーブル・外部 OAuth・cron 横断）。Issue #1562 の成果物。
 
 Phase 1 から継承する拘束（本書で再決定しない）:
 
@@ -92,7 +92,7 @@ Phase 1 から継承する拘束（本書で再決定しない）:
 
 sync cursor を connection ではなく calendar 行に置く理由: Google の `syncToken` は events collection（= カレンダー）単位で発行される。connection 単位に置くと複数カレンダー選択で破綻する。Microsoft Graph の deltaLink も resource 単位なので同じ形に収まる。
 
-owner 整合は **複合 FK** で担保する（Step 1 実装時の変更。当初案は constraint trigger）。親に `UNIQUE (id, user_id)` を置き、子は `FOREIGN KEY (connection_id, user_id) REFERENCES calendar_connections (id, user_id) ON DELETE CASCADE` を持つ。constraint trigger は子側の `AFTER INSERT OR UPDATE` しか見ないため、親の `UPDATE calendar_connections SET user_id` を素通りさせる（repo はこの穴の backfill を [`20260706120100_backfill_entry_tag_owner_mismatch.sql`](../../../supabase/migrations/20260706120100_backfill_entry_tag_owner_mismatch.sql) で実際に払っている）。加えて trigger の存在確認 SELECT は lock を取らないが、RI は参照行に `FOR KEY SHARE` を取る。コストは冗長 index 1 本で、trigger 関数と REVOKE / GRANT EXECUTE の定型が不要になる。
+owner 整合は **複合 FK** で担保する（Step 1 実装時の変更。当初案は constraint trigger）。親に `UNIQUE (id, user_id)` を置き、子は `FOREIGN KEY (connection_id, user_id) REFERENCES calendar_connections (id, user_id) ON DELETE CASCADE` を持つ。constraint trigger は子側の `AFTER INSERT OR UPDATE` しか見ないため、親の `UPDATE calendar_connections SET user_id` を素通りさせる（repo はこの穴の backfill を [`20260706120100_backfill_entry_tag_owner_mismatch.sql`](../../../../supabase/migrations/20260706120100_backfill_entry_tag_owner_mismatch.sql) で実際に払っている）。加えて trigger の存在確認 SELECT は lock を取らないが、RI は参照行に `FOR KEY SHARE` を取る。コストは冗長 index 1 本で、trigger 関数と REVOKE / GRANT EXECUTE の定型が不要になる。
 
 ### 4-2b. ミラーへの connection_id 追加（Step 1 実装時の追加）
 
@@ -124,7 +124,7 @@ owner 整合は **複合 FK** で担保する（Step 1 実装時の変更。当�
 - `user_id` を grant に含めた理由（Step 1 実装時の変更）: JWT で既に既知なので開示はゼロ。除外すると repo 内で 81 箇所使われている `.eq('user_id', …)` idiom が 42501 になる。ローカル検証で「RLS の `USING` 句は呼び出し側の列権限チェックを受けない」ことは実証済み（未 grant の `user_id` を参照する policy が正しく行を絞った）ため grant は必須ではないが、次に触る人の地雷を消すために含める
 - §4-3 が挙げる「前例 2 件」はいずれも書き込み側の grant であり、**column-scoped SELECT は本 project が repo 初**
 - `pnpm rls:snapshot` を再生成し、drift を CI で検出する。ただし snapshot は SELECT / INSERT / UPDATE / DELETE しか記録せず、しかも生成元は local DB である。production の `pg_default_acl` は新規 public テーブルに anon / authenticated へ `arwdDxtm` を撒く（local は `Dxtm` のみ）ため、**REVOKE 漏れは snapshot でも CI でも検出できない**。migration 自身に `has_table_privilege` / `has_column_privilege` の invariant を書き、production 適用時に落ちるようにする
-- 2026-07-16 の [iCal schema drift incident](../../operations/log/2026-07-16-incident-production-ical-schema-drift.md) の規律に従う: 明示 transaction + `lock_timeout = '5s'`、local reset → Supabase Preview Branch 検証 → merge の経路のみ。Dashboard SQL Editor と手動 `db push` は使わない
+- 2026-07-16 の [iCal schema drift incident](../../../operations/log/2026-07-16-incident-production-ical-schema-drift.md) の規律に従う: 明示 transaction + `lock_timeout = '5s'`、local reset → Supabase Preview Branch 検証 → merge の経路のみ。Dashboard SQL Editor と手動 `db push` は使わない
 
 ## 5. OAuth フロー（Google）
 
