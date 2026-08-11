@@ -1,3 +1,4 @@
+import { sanitizeTechnicalContext } from '@dayopt/observability';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const loggerWarn = vi.hoisted(() => vi.fn());
@@ -302,7 +303,7 @@ describe('googleCalendarAdapter.syncCalendar', () => {
   });
 
   // schema drift は 1 件ずつの warn だと量に流されて誰も気づかない（Step 7）
-  it('parse できない item があったらページ単位で件数を Sentry へ送る', async () => {
+  it('parse できない item があったら run 単位で件数を Sentry へ送る', async () => {
     fetchMock().mockResolvedValue(
       jsonResponse({
         items: [{ noIdHere: true }, { alsoBroken: true }, timedEvent({ id: 'alive-1' })],
@@ -318,8 +319,53 @@ describe('googleCalendarAdapter.syncCalendar', () => {
 
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ operation: 'normalize_events', unparsableCount: 2 }),
+      expect.objectContaining({ operation: 'normalize_events', count: 2 }),
     );
+  });
+
+  // ページごとに撃つと schema drift で 1 run から 20 件の alert が出て quota を焼く
+  it('複数ページに跨る parse 失敗を 1 件に合算する', async () => {
+    const brokenPage = (nextPageToken?: string) =>
+      jsonResponse({
+        items: [{ noIdHere: true }, timedEvent({ id: 'alive-1' })],
+        ...(nextPageToken ? { nextPageToken } : { nextSyncToken: 'sync-token-1' }),
+      });
+    fetchMock()
+      .mockResolvedValueOnce(brokenPage('page-2'))
+      .mockResolvedValueOnce(brokenPage('page-3'))
+      .mockResolvedValueOnce(brokenPage());
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ count: 3 }),
+    );
+  });
+
+  // allowlist 外のキーは sanitize で黙って捨てられ、message しか Sentry に残らない
+  it('送る context が sanitize を通過して件数まで届く', async () => {
+    fetchMock().mockResolvedValue(
+      jsonResponse({ items: [{ noIdHere: true }], nextSyncToken: 'sync-token-1' }),
+    );
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    const context = captureUnexpectedError.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(sanitizeTechnicalContext(context)).toEqual({
+      feature: 'external_calendar',
+      operation: 'normalize_events',
+      count: 1,
+    });
   });
 
   it('全件 parse できた時は Sentry へ送らない', async () => {
@@ -352,7 +398,7 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     expect(result.nextCursor).toBeNull();
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ operation: 'sync_calendar', pages: 20 }),
+      expect.objectContaining({ operation: 'sync_calendar', limit: 20 }),
     );
   });
 

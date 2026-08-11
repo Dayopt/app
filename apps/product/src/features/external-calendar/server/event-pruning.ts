@@ -177,10 +177,12 @@ export async function deleteUnreferencedEvents(params: {
   // 壊れている時だけ。掃除が途中で止まった事実は、次の run が黙って同じ所で止まるので
   // log だけでは見えない。
   logger.warn('[calendar-prune] stopped at the batch limit', { batches: MAX_PRUNE_BATCHES });
+  // context のキーは `@dayopt/observability` の allowlist に載っているものだけ使う。
+  // 載っていないキー（`batches` など）は sanitize で黙って捨てられる。
   captureUnexpectedError(new Error('calendar event pruning hit the batch limit'), {
     feature: 'external_calendar',
     operation: 'prune_batch_limit',
-    batches: MAX_PRUNE_BATCHES,
+    limit: MAX_PRUNE_BATCHES,
   });
 }
 
