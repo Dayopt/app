@@ -43,11 +43,15 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.admin` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.admin.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
-**判定は fail closed にする。** 「path らしくない token は無視する」という例外を置くと、そこが穴になる（quote や backslash escape を含む path が検査対象から外れ、空白入りの別名で迂回できた）。token を分類しようとせず、`.op-env.local` だと言い切れる形以外はすべて落とす。
+**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.local`）と workspace からの相対（`../../.op-env.local`）の 2 形式だけ。
 
-これで **`--env-file` に渡す path が `.op-env.local` 以外である形は、起動方法・quote / escape の有無を問わず閉じる**。変数展開（`--env-file="$SOMEVAR"`）も落ちる。
+ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.admin.example /tmp/.op-env.local`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
 
-**検証しているのは path であって中身ではない。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/...` を書き足してから `op run --env-file=.op-env.local` を実行すれば、この guard は通る。したがって guard が保証するのは「admin 用の env-file とその別名を経由しないこと」までで、「production credential に到達しないこと」ではない。中身の検査は [#1949](https://github.com/Dayopt/dayopt/issues/1949) で扱う。
+これで **path の形を変えて回り込む経路は閉じ切った**。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、変数展開、別ディレクトリの同名ファイル — いずれも許可形の literal に一致しないため落ちる。
+
+**残るのは 1 つだけで、それは path ではなく中身。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/...` を書き足してから通常どおり実行すれば guard は通る。したがって guard が保証するのは「admin 用の env-file と、その別名・別置き場を経由しないこと」までで、「production credential に到達しないこと」ではない。中身の検査は [#1949](https://github.com/Dayopt/dayopt/issues/1949) で扱う。
+
+**この経路は本節の変更が新設したものではない。** 以前の `.op-env.local.example` は Supabase の接続情報を `op://Dayopt-Staging/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
 
 閉じないのは、flag をコマンド文字列から隠す間接化（wrapper script を書いてそれを実行する、`eval`、base64 など）。これは事故ではなく意図的な回避であり、hook では追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
 

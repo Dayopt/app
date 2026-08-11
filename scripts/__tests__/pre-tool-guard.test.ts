@@ -106,6 +106,14 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
       'op run --env-file=/tmp/foo\\ bar -- bash scripts/admin-delete-user.sh',
     ],
     ['引用符で囲んだ別名', 'op run --env-file="/tmp/foo bar" -- sh -c true'],
+    // basename で判定すると、任意ディレクトリに同名で置くだけで通ってしまう。
+    // path 文字列そのものを allowlist にして塞ぐ。
+    [
+      '別ディレクトリの同名ファイル',
+      'op run --env-file=/tmp/.op-env.local -- bash scripts/admin-delete-user.sh',
+    ],
+    ['home 配下の同名ファイル', 'op run --env-file=~/.op-env.local -- sh -c true'],
+    ['深い相対 path の同名ファイル', 'op run --env-file=../../../tmp/.op-env.local -- sh -c true'],
   ])('許可外の env-file を落とす: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
