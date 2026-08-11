@@ -146,7 +146,15 @@ async function fetchAuthConfig(projectRef, token, fetchImpl) {
   if (!response.ok) {
     throw new Error(`Supabase Auth config request failed for project: ${projectRef}`);
   }
-  return response.json();
+
+  // 2xx でも本文が JSON でないことがある（proxy の HTML など）。`response.json()` の
+  // parse error は本文の先頭を message に含めるため、そのまま投げると「本文を出力しない」
+  // 不変条件が破れる。固定文言へ置き換える。
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(`Supabase Auth config response was not JSON for project: ${projectRef}`);
+  }
 }
 
 export async function runProductionAuthConfigAudit({
@@ -155,7 +163,7 @@ export async function runProductionAuthConfigAudit({
   fetchImpl = fetch,
 }) {
   if (!token) {
-    throw new Error('SUPABASE_ACCESS_TOKEN is required for Production Auth Config Audit');
+    throw new Error('SUPABASE_AUTH_AUDIT_TOKEN is required for Production Auth Config Audit');
   }
 
   const config = await fetchAuthConfig(projectRef, token, fetchImpl);
@@ -186,7 +194,7 @@ function isDirectExecution() {
 }
 
 if (isDirectExecution()) {
-  runProductionAuthConfigAudit({ token: process.env.SUPABASE_ACCESS_TOKEN })
+  runProductionAuthConfigAudit({ token: process.env.SUPABASE_AUTH_AUDIT_TOKEN })
     .then(() => {
       console.log('Production Auth Config Audit passed (allowlisted enforcement values only).');
     })

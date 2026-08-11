@@ -75,7 +75,7 @@ describe('auditSupabaseAuthConfig', () => {
 describe('runProductionAuthConfigAudit', () => {
   it('token 未設定は実行前に落とす', async () => {
     await expect(runProductionAuthConfigAudit({ token: '' })).rejects.toThrow(
-      'SUPABASE_ACCESS_TOKEN is required',
+      'SUPABASE_AUTH_AUDIT_TOKEN is required',
     );
   });
 

@@ -166,7 +166,17 @@ jobs:
         with:
           node-version: 24
 
+      # secret 名は `SUPABASE_ACCESS_TOKEN` と分ける。同名だと、別 workflow が
+      # 「その名前の secret を参照するだけ」で PR code の実行経路へ token が配られる
+      # （integration.yml がまさにその形の env を持っていた）。名前を分けておけば、
+      # audit 用 token の配布先はこの step だけに閉じる。
+      #
+      # 出力の grep は positive proof。CLI guard が何らかの理由で発火しないと
+      # 「何も実行せず exit 0」になり、audit が静かに死ぬ。
       - name: Audit Supabase Auth enforcement values
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: node scripts/production-auth-config-audit.mjs
+          SUPABASE_AUTH_AUDIT_TOKEN: ${{ secrets.SUPABASE_AUTH_AUDIT_TOKEN }}
+        run: |
+          set -o pipefail
+          node scripts/production-auth-config-audit.mjs | tee audit-output.txt
+          grep -q 'Production Auth Config Audit passed' audit-output.txt

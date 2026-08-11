@@ -27,7 +27,8 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 | ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                                                                 |
 | `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                                                                 |
-| `SUPABASE_ACCESS_TOKEN`            | Production Auth Config Audit / emergency     | Auth 設定の read 専用。通常 migration flow では使わない                                       |
+| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                                                              |
+| `SUPABASE_AUTH_AUDIT_TOKEN`        | Production Auth Config Audit                 | Supabase Management API の PAT。auth-config job の 1 step だけへ渡す                          |
 | `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
 | `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
@@ -128,13 +129,14 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 
 期待値の正本は [`scripts/production-auth-config-audit.mjs`](../../../scripts/production-auth-config-audit.mjs) の `AUTH_CONFIG_CONTRACT` に置く。docs は CI を fail させられないため正本にしない。監視は `Production Config Audit` workflow の `auth-config` job が担い、**push:main と日次 cron でだけ**走る。
 
-- PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
+- PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write（`POST /v1/projects/{ref}/database/query` で production DB への任意 SQL を含む）で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
+- GitHub secret 名は `SUPABASE_ACCESS_TOKEN` と分けて `SUPABASE_AUTH_AUDIT_TOKEN` にする。同名だと、別 workflow が「その名前を参照するだけ」で PR 側 code の実行経路へ token が配られる（`integration.yml` が実際にこの形の workflow レベル env を持っていた。2026-08-11 に削除）
 - 応答には `security_captcha_secret` などの secret が同梱される。audit は `AUTH_CONFIG_CONTRACT` に列挙した boolean / enum だけを読み、それ以外は出力しない
 
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash
-SUPABASE_ACCESS_TOKEN="op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+SUPABASE_AUTH_AUDIT_TOKEN="op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
 ```
 
 #### Pre-deploy dry run
