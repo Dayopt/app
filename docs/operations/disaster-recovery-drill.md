@@ -39,6 +39,7 @@ code:
 | production の cron job の実数                                    | baseline に「本番は Dashboard で設定」とあり、repo が正本でない                              | Step 0 で控える   |
 | `auth` schema が復元対象に入るか（経路により異なる）             | 物理復元は cluster 単位なので入るはず。論理 dump は既定で除外                                | 演習中の実測      |
 | production DB の実サイズ                                         | RTO はサイズにほぼ比例する                                                                   | Step 0 で計測     |
+| **別 project へ復元した時に Vault の secrets が復号できるか**    | 暗号鍵は project 単位。復号できないと 9 件を手で再投入することになる                         | 演習中の実測      |
 
 **空欄のまま infra.md へ数値を書かない。** 測っていない RTO / RPO を復旧手順書に書くのは、無いより危険（障害中にその数値を信じて判断される）。
 
@@ -156,6 +157,8 @@ pnpm db:reset          # 空の local DB
 
 **production の restore ボタンは押さない。** in-place restore は破壊的で、実行中プロジェクトは停止する。
 
+**production の pg_cron は止めない。** [infra.md §復元前に止めるもの](../engineering/infra.md#復元前に止めるもの) は**実際の障害時**に production を復元する場合の手順で、演習では production に触れない。演習中に止めてよいのは復元先だけ。
+
 ---
 
 ## 復元後チェックリスト
@@ -178,7 +181,6 @@ pnpm rls:snapshot:check  # drift ゼロが合格
 期待値は [rls-snapshot.md](../engineering/data/db/rls-snapshot.md) の現行値（policy 43 / RLS 有効テーブル 20 / GRANT 215 / storage policy 8 / Realtime publication 0）。**演習日に本番側の数値を取り直してから比較する**（この数値は 2026-08-12 時点）。
 
 - [ ] `authenticated` に余分な権限が復活していない
-- [ ] custom role の password は**復元されない**（仕様）。必要なら再設定する
 
 ### RPC
 
@@ -217,6 +219,8 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 ### Edge Functions（**復元対象外。手動で戻す**）
 
 - [ ] `send-auth-email` を再デプロイする（`--use-api` 必須）
+- [ ] **secrets を再投入する。** コードの再デプロイでは戻らない（`RESEND_API_KEY` / `SEND_EMAIL_HOOK_SECRET` 等）。新規 project へ復元した場合は確実に空
+- [ ] 再デプロイ後に**実際に認証メールが 1 通届く**ことを確認する（secrets 未投入だと、デプロイは成功するのにメールだけが送れない）
 
 **正本は `supabase/functions/` と `supabase/config.toml` の `[functions.*]` 宣言。** 現在の実体は `send-auth-email` の 1 本だけ。
 
@@ -226,10 +230,14 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 - [ ] **オブジェクト本体は空**であることを確認する。これは異常ではなく仕様
 - [ ] オブジェクトの搬出・復元は S3 互換エンドポイント経由（`rclone copy` 等）。**Storage には versioning が無く、削除は復元不可**
 
-### Vault / 秘密情報
+### Vault / 秘密情報（**案β で最も壊れやすい箇所**）
 
-- [ ] `vault.secrets` の値が読めるか確認する。同一 project 内の復元は暗号鍵が同じなので読めるはず。別 project へ復元した場合は要確認
+`vault.secrets` には production の要である 9 件が入っている（`stripe_secret_key` / `stripe_webhook_secret` / `resend_api_key` / `resend_webhook_secret` / `service_role_key` / `cron_secret` / `recovery_code_pepper` / `anthropic_api_key` / `supabase_url`）。**暗号鍵は project 単位で管理されるため、案β（別 project への復元）では復号できない可能性が高い。**
+
+- [ ] `vault.secrets` の**値が実際に復号できるか**確認する（行の存在確認だけでは不十分）
 - [ ] `PLACEHOLDER_REPLACE_ME` のままの行が無いか確認する（migration の seed 値）
+- [ ] **復号できなかった場合**: 1Password から再投入する。手順は `20260319000002_vault_seed_secrets.sql` の冒頭コメント（Dashboard の SQL Editor で `UPDATE vault.secrets SET secret = '<値>' WHERE name = '<名前>'`）。**値を標準出力・セッションへ表示しない**
+- [ ] 復号可否と、再投入が要ったかどうかを実測記録へ残す（この結果次第で「復元されないもの」の表が変わる）
 
 ### 課金（Stripe / **test mode で行う**）
 
@@ -252,13 +260,15 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 
 演習で覆るまで、**以下は「戻らない」前提で運用する**。
 
-| 対象                        | 状態                                      | 戻し方                      |
-| --------------------------- | ----------------------------------------- | --------------------------- |
-| **Storage オブジェクト**    | どの DB backup にも入らない               | S3 互換経由で別途搬出・復元 |
-| **Edge Functions**          | 復元対象外                                | `--use-api` で再デプロイ    |
-| **custom role の password** | 復元されない（仕様）                      | 再設定                      |
-| **Realtime publication**    | 別 project へ復元した場合は再有効化が必要 | 現状は空なので影響なし      |
-| **extension の有効化**      | 別 project へ復元した場合は再有効化が必要 | 演習で実測する              |
+| 対象                              | 状態                                                          | 戻し方                                    |
+| --------------------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| **Storage オブジェクト**          | どの DB backup にも入らない                                   | S3 互換経由で別途搬出・復元               |
+| **Edge Functions とその secrets** | 復元対象外。コードを戻しても secrets は戻らない               | `--use-api` で再デプロイ + secrets 再投入 |
+| **Vault の secrets**              | 別 project へ復元すると復号できない可能性が高い（演習で確定） | 1Password から再投入                      |
+| **Realtime publication**          | 別 project へ復元した場合は再有効化が必要                     | 現状は空なので影響なし                    |
+| **extension の有効化**            | 別 project へ復元した場合は再有効化が必要                     | 演習で実測する                            |
+
+custom role の password も backup に含まれないが、**現状 Dayopt に custom role は無い**（migration に `CREATE ROLE` / `CREATE USER` が 0 件）。追加したらこの表に足す。
 
 ---
 
@@ -279,7 +289,9 @@ edge_functions_redeployed: ['send-auth-email']
 cron_jobs_before: '<復元前に控えた production の job 数と名前>'
 cron_jobs_after: '<復元後の job 数と名前>'
 auth_users_restored: '<yes|no>'
-vault_secrets_readable: '<yes|no>'
+vault_secrets_decryptable: '<yes|no>'
+vault_secrets_reinjected: '<yes|no>'
+edge_function_secrets_reinjected: '<yes|no>'
 failures: []
 operator: '<name>'
 ```

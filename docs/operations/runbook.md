@@ -108,6 +108,13 @@ supabase functions deploy --use-api
 **ケース A〜C はサービスが止まっているだけでデータは無事。データそのものが失われた場合はここへ来る。**
 
 - [ ] **まず書き込みを止める**（メンテナンスモード有効化）。復元しても、その後の書き込みは失われる
+- [ ] **pg_cron も止める。メンテナンスモードは app 層しか止めない**（cron は Postgres 内部で走り続ける）
+
+```sql
+SELECT jobid, jobname, active FROM cron.job;
+SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
+```
+
 - [ ] 原因が自分の migration なら [infra.md §DB Migration Rollback 手順書](../engineering/infra.md#db-migration-rollback-手順書) へ
 - [ ] データ消失・オペミスなら [infra.md §災害復旧手順](../engineering/infra.md#災害復旧手順) へ
 - [ ] Supabase Dashboard → Database → Backups で **backup の存在と時刻を確認する**（「あるはず」で進めない）

@@ -464,7 +464,7 @@ npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
 - デプロイは必ず `--use-api` フラグ付きで実行
 - production の secrets を preview / staging にコピーしない
 - `RESEND_API_KEY` の live key は production のみ
-- cron function(`check-reminders` / `daily-insights`)は preview にデプロイしない
+- cron function は preview にデプロイしない（現状そのような function は無い）
 
 ### Secrets
 

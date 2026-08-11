@@ -1295,14 +1295,28 @@ ORDER BY schemaname, tablename;
 
 障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
 
-| 対象                        | なぜ                                             | 戻し方                                                     |
-| --------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| **Storage オブジェクト**    | どの DB backup にも含まれない（Supabase の仕様） | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し |
-| **Edge Functions**          | 復元対象外                                       | `supabase functions deploy <slug> --use-api` で再デプロイ  |
-| **custom role の password** | backup に含まれない                              | 再設定                                                     |
-| **Realtime publication**    | 別 project へ復元した場合は再有効化が必要        | 現状 publication は空なので影響なし                        |
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し                                                                                      |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）    |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                             |
 
 **production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
+
+> custom role の password も backup に含まれないが、**現状 Dayopt に custom role は無い**（migration に `CREATE ROLE` / `CREATE USER` が 0 件）。追加したらこの表に足す。
+
+### 復元前に止めるもの
+
+**メンテナンスモード（`NEXT_PUBLIC_MAINTENANCE_MODE`）は Next.js app 層しか止めない。** pg_cron の job は Postgres 内部で独立に走り続けるため、「書き込みを止めた」つもりで復元しても cron 起因の書き込みは続く。
+
+```sql
+-- 対象 job を確認してから止める
+SELECT jobid, jobname, active FROM cron.job;
+SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
+```
+
+§DB Migration Rollback 手順書 の緊急対応フローチャートには pg_cron 停止ステップがあるが、災害復旧でも同じことが要る。
 
 ### 復旧経路の選択
 
