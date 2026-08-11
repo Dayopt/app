@@ -55,10 +55,11 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 ```bash
 curl -sS --fail "https://api.supabase.com/v1/projects/{ref}/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-  | jq -e '{security_captcha_enabled, external_email_enabled, disable_signup}'
+  | jq -e '{security_captcha_enabled, external_email_enabled, disable_signup}
+           | select(all(.[]; type == "boolean"))'
 ```
 
-`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` で「確認できた」ように見える）。`jq -e` は空入力を非ゼロで返すため、取得失敗が後続判断へ素通りしない。
+取得できていない状態を「確認できた」と誤読しないため、失敗を 2 段で落とす。`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` になる）。`select(all(...))` は 2xx でも期待フィールドを欠くレスポンス（API バージョン差など）を落とし、`jq -e` が出力なしとして非ゼロを返す。
 
 ---
 
