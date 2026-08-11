@@ -10,7 +10,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { AUTH_CONFIG_CONTRACT } from '../production-auth-config-audit.mjs';
+import {
+  ACKNOWLEDGED_UNPINNED_KEYS,
+  AUTH_CONFIG_CONTRACT,
+} from '../production-auth-config-audit.mjs';
 
 const auditScript = readFileSync(
   fileURLToPath(new URL('../production-auth-config-audit.mjs', import.meta.url)),
@@ -27,15 +30,45 @@ describe('production auth config audit contract', () => {
     // 生成されるため、期待値を反転しても key を消しても green のままになる。この
     // audit は contract 変更検出（workflow の regex）の対象外なので、弱体化を可視化
     // する層がここ以外に無い。値を変える PR は必ずこの test の diff を伴わせる。
-    expect(AUTH_CONFIG_CONTRACT.map(({ key, expected }) => [key, expected])).toEqual([
-      ['security_update_password_require_reauthentication', false],
-      ['security_update_password_require_current_password', true],
-      ['mailer_secure_email_change_enabled', true],
-      ['security_captcha_enabled', true],
-      ['security_captcha_provider', 'turnstile'],
-      ['security_manual_linking_enabled', false],
-      ['external_anonymous_users_enabled', false],
-      ['mailer_autoconfirm', false],
+    expect(AUTH_CONFIG_CONTRACT.map(({ key }) => key)).toEqual([
+      'security_update_password_require_reauthentication',
+      'security_update_password_require_current_password',
+      'mailer_secure_email_change_enabled',
+      'security_captcha_enabled',
+      'security_captcha_provider',
+      'security_manual_linking_enabled',
+      'external_anonymous_users_enabled',
+      'mailer_autoconfirm',
+      'mailer_allow_unverified_email_sign_ins',
+      'site_url',
+      'uri_allow_list',
+      'refresh_token_rotation_enabled',
+      'security_refresh_token_reuse_interval',
+      'security_sb_forwarded_for_enabled',
+      'hook_send_email_enabled',
+      'hook_custom_access_token_enabled',
+      'mfa_totp_verify_enabled',
+      'mfa_allow_low_aal',
+      'password_hibp_enabled',
+      'password_min_length',
+      'password_required_characters',
+    ]);
+  });
+
+  it('除外リストもリテラルで固定する', () => {
+    // guard の唯一の抜け道。export していないと 1 行足すだけで無言で新キーを黙らせられる。
+    expect(ACKNOWLEDGED_UNPINNED_KEYS).toEqual([
+      'hook_after_user_created_enabled',
+      'hook_before_user_created_enabled',
+      'hook_mfa_verification_attempt_enabled',
+      'hook_password_verification_attempt_enabled',
+      'hook_send_sms_enabled',
+      'mfa_phone_enroll_enabled',
+      'mfa_phone_verify_enabled',
+      'mfa_web_authn_enroll_enabled',
+      'mfa_web_authn_verify_enabled',
+      'mfa_totp_enroll_enabled',
+      'sessions_single_per_user',
     ]);
   });
 

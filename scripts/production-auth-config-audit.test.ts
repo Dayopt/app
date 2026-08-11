@@ -14,8 +14,8 @@ function compliantAuthConfig(): Record<string, unknown> {
     smtp_pass: 'must-not-appear',
     site_url: 'https://app.dayopt.app',
   };
-  for (const { key, expected } of AUTH_CONFIG_CONTRACT) {
-    config[key] = expected;
+  for (const { key, expected, compare } of AUTH_CONFIG_CONTRACT) {
+    config[key] = compare === 'set' ? (expected as string[]).join(',') : expected;
   }
   return config;
 }
@@ -91,12 +91,19 @@ describe('auditSupabaseAuthConfig', () => {
     expect(errors[0]).toContain('security_brand_new_toggle');
   });
 
-  it('除外リストに載せた security_* キーは failure にしない', () => {
+  it('除外リストに載せた boolean キーは failure にしない', () => {
+    const config = { ...compliantAuthConfig(), sessions_single_per_user: false };
+
+    expect(auditSupabaseAuthConfig(config)).toEqual([]);
+  });
+
+  it('guard 対象外の名前空間と非 boolean は未分類にしない', () => {
+    // external_* / mailer_* は形骸化を避けて対象外。string / number は個別 pin で扱う。
     const config = {
       ...compliantAuthConfig(),
+      external_zoom_enabled: false,
+      hook_send_email_uri: 'https://example.com/hook',
       security_captcha_secret: 'must-not-appear',
-      security_refresh_token_reuse_interval: 10,
-      security_sb_forwarded_for_enabled: false,
     };
 
     expect(auditSupabaseAuthConfig(config)).toEqual([]);
@@ -110,8 +117,9 @@ describe('auditSupabaseAuthConfig', () => {
 
   it('契約は boolean と enum だけを扱う（値が credential になり得ない型に限る）', () => {
     for (const { key, expected } of AUTH_CONFIG_CONTRACT) {
-      expect(['boolean', 'string'], key).toContain(typeof expected);
-      expect(key, key).not.toMatch(/_secret$|_key$|_token$/u);
+      expect(['boolean', 'string', 'number', 'object'], key).toContain(typeof expected);
+      // 値を出力するキーが契約へ紛れ込まないための唯一の層。複数形・中置も落とす。
+      expect(key, key).not.toMatch(/_secrets?$|_keys?$|_tokens?$|_pass$|_credentials?$/u);
     }
   });
 });
