@@ -137,6 +137,8 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 - **監視対象は公開 OpenAPI spec から導出しない。** `https://api.supabase.com/api/v1-json` の `AuthConfigResponse` は live 応答の完全な記述ではなく、2026-08-11 実測で live 242 キーに対し spec 237 キー、6 キーが spec に無かった。その 1 つがパスワード変更が依存する `security_update_password_require_current_password` で、spec を根拠に「存在しない」と誤断した事故がある。監視対象は必ず **live 応答の `keys` 列挙**から起こす。規律を人手に頼らないため、契約にも除外リストにも無い `security_*` キーが現れたら audit が failure になる
 - **判定は期待値との等値**にしてあり、片方向の警報にしない。設定が緩む方向（fail-open: 本来止まる操作が黙って通る）と締まる方向（fail-closed: 本来通る操作が黙ってできなくなる）の**どちらの drift も failure にする**。各値の `failureMode` はこの分類で、警報条件ではなく失敗時の読み解きに使う。`security_captcha_provider` と `security_update_password_require_reauthentication` は fail-closed 側で、「安全側に倒れる変更」に見えて login やパスワードリセットを止めうる
 
+**保証境界**（`.claude/rules/workflow.md` §同型指摘の打ち切り に従い明文化）。守るのは ① `security_` / `hook_` / `mfa_` / `sessions_` / `password_` 配下の**網羅性**（契約にも除外リストにも無いキーは型を問わず failure）② その外側は 2026-08-11 の全数トリアージで選んだ個別 pin ③ pin した値の**両方向**の drift。守らないのは `external_*` / `mailer_*` / `smtp_*` / `sms_*` に新しく増えるキー（キーの存在自体は危険ではなく、guard に入れると形骸化する）、値の意味の検証（死活監視ではない）、Dashboard 以外の経路で生じた状態。境界の外側に未 pin の値があるという指摘は、境界の更新提案として別 issue で扱う。
+
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash

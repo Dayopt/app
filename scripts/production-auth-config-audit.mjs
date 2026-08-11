@@ -13,6 +13,31 @@ import { pathToFileURL } from 'node:url';
  * この script は Supabase Management API の `GET /v1/projects/{ref}/config/auth` を読み、
  * 契約に列挙した値だけを期待値と突き合わせる。**production の設定は一切変更しない。**
  *
+ * ## 保証境界（どこまでを守り、どこからを守らないか）
+ *
+ * 「まだ pin されていない危険な値」はレビューを重ねればいくらでも構成できるため、守る
+ * 範囲を先に宣言する（`.claude/rules/workflow.md` §同型指摘の打ち切り）。
+ *
+ * **守る**:
+ *
+ * 1. `GUARDED_KEY_PREFIXES` 配下は**網羅的**。契約にも除外リストにも無いキーが現れたら
+ *    failure になるので、pin 漏れが黙って残ることはない（型を問わない）
+ * 2. その外側は `AUTH_CONFIG_CONTRACT` に個別 pin した値だけ。選定は 2026-08-11 に live
+ *    242 キーを全数トリアージして決めた
+ * 3. pin した値は**両方向**（fail-open / fail-closed）の drift を検出する
+ *
+ * **守らない**:
+ *
+ * - `external_*`(95) / `mailer_*`(40) / `smtp_*` / `sms_*` に**新しく増えるキー**。
+ *   provider や mail template が増えるたびにキーが増える一方、キーの存在自体は危険では
+ *   ないため、guard に入れると誤検出が主成分になり形骸化する。危険な値は個別 pin で拾う
+ * - 値の**意味**の検証。`site_url` が実在するか、`hook_send_email_uri` が生きているかは
+ *   見ない。drift の検出であって死活監視ではない
+ * - Dashboard 以外の経路（DB 直変更など）で生じた状態
+ *
+ * この境界を破る指摘（= 上記 1-3 のいずれかが成立していない）は修正対象。境界の外側に
+ * 「まだ pin していない値がある」という指摘は、境界の更新提案として別 issue で扱う。
+ *
  * ## 依存を持たない
  *
  * 本 script は repo 内の他ファイルを import しない（定数はこのファイルに閉じる）。CI で
