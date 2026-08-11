@@ -64,16 +64,25 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     exit 2
   fi
 
+  # 以降の env-file 系検査は行継続を畳んだ文字列で行う。bash は実行前に
+  # `\` + 改行を除去するため、複数行に整形しただけで行単位の grep は
+  # 分断されて検出できない（敵対的な回避ではなく通常の整形で起きる）。
+  # 残る改行は空白へ寄せる。過剰に一致する方向なので安全側。
+  # 上の force-push / reset ガードには適用しない（あちらは行頭 `^` を
+  # 前提にしており、畳むと検出が弱くなる）。
+  COMMAND_JOINED=${COMMAND//\\$'\n'/}
+  COMMAND_JOINED=${COMMAND_JOINED//$'\n'/ }
+
   # .op-env.admin の作成（Write/Edit ガードの Bash 側の穴を塞ぐ）。
   # 末尾の ([^.]|$) で .op-env.admin.example への一致を防ぐ。雛形を
   # コピー「元」に指定する形（cp .op-env.admin.example .op-env.admin）は
   # コピー「先」の方で落ちる。雛形の消費は下の引数ガードが別途止める。
   # 読み取り側（rg / cat など）は対象にしない。
-  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*(cp|mv|touch|tee|install|ln)[[:space:]][^;&|]*\.op-env\.admin([^.]|$)'; then
+  if echo "$COMMAND_JOINED" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*(cp|mv|touch|tee|install|ln)[[:space:]][^;&|]*\.op-env\.admin([^.]|$)'; then
     echo "BLOCKED: .op-env.admin の作成は User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
     exit 2
   fi
-  if echo "$COMMAND" | grep -qE '>>?[[:space:]]*[^[:space:];&|]*\.op-env\.admin([^.]|$)'; then
+  if echo "$COMMAND_JOINED" | grep -qE '>>?[[:space:]]*[^[:space:];&|]*\.op-env\.admin([^.]|$)'; then
     echo "BLOCKED: .op-env.admin への書き込みは User の明示操作に限ります（production の service role key を解決する実行経路になるため）" >&2
     exit 2
   fi
@@ -87,7 +96,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 位置に依存せず --env-file が admin を指すこと自体を落とす。
   # 代償として、この flag と path を並べた文字列を Bash 引数に含めるだけでも
   # 発火する（docs に書く時は Write/Edit で file に書いてから渡す）。
-  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.admin'; then
+  if echo "$COMMAND_JOINED" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.admin'; then
     echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため）" >&2
     exit 2
   fi
@@ -102,7 +111,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 保証境界: op run へ literal な path を渡す形はこれで閉じる。path を実行時に
   # 組み立てる形（変数展開・base64 など）は追わない。そこは hook ではなく
   # CLAUDE.md の EXPLICIT AUTHORITY と 1Password の承認が担う。
-  if echo "$COMMAND" | grep -qE '\-\-env-file[=[:space:]]'; then
+  if echo "$COMMAND_JOINED" | grep -qE '\-\-env-file[=[:space:]]'; then
     # 判定は fail closed にする。「path らしくない token は無視する」という
     # 例外を置くと、そこが穴になる（quote / backslash escape を含む path が
     # 検査対象から外れ、空白入りの別名で迂回できた）。token を分類しようと
@@ -114,7 +123,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     # 許可形は選択肢で列挙する。optional group（`(\.|\.\./\.\.)?/?` のような形）で
     # 組み立てると区切りの / が任意になり、..op-env.local のような別名まで
     # 通してしまう。省略記法を使わず 3 通りを直接書く。
-    disallowed=$(echo "$COMMAND" \
+    disallowed=$(echo "$COMMAND_JOINED" \
       | grep -oE '\-\-env-file[=[:space:]]+[^[:space:];&|]+' \
       | sed -E 's/^--env-file[=[:space:]]+//' \
       | grep -vxE '(\.op-env\.local|\./\.op-env\.local|\.\./\.\./\.op-env\.local)' || true)

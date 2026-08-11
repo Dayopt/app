@@ -128,8 +128,19 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     ['区切りなしの類似名', 'op run --env-file=..op-env.local -- bash scripts/admin-delete-user.sh'],
     ['ドットを増やした類似名', 'op run --env-file=../...op-env.local -- sh -c true'],
     ['1 階層だけ上の同名ファイル', 'op run --env-file=../.op-env.local -- sh -c true'],
+    // bash は実行前に `\` + 改行を除去するため、複数行に整形しただけで
+    // 行単位の grep は分断される。敵対的な回避ではなく通常の整形で起きる。
+    [
+      '行継続で分断した flag',
+      `op run --env-file\\\n=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`,
+    ],
+    ['行継続で分断した path', `op run --env-file=\\\n${ADMIN_EXAMPLE} -- sh -c true`],
   ])('許可外の env-file を落とす: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
+  });
+
+  it('作成側も行継続で分断されない', () => {
+    expect(runGuard(bash(`cp ${ADMIN_EXAMPLE}\\\n ${ADMIN}`))).toBe('block');
   });
 
   it.each([
