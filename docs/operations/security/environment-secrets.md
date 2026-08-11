@@ -27,7 +27,7 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 | ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                                                                 |
 | `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                                                                 |
-| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                                                              |
+| `SUPABASE_ACCESS_TOKEN`            | Production Auth Config Audit / emergency     | Auth 設定の read 専用。通常 migration flow では使わない                                       |
 | `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
 | `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
@@ -114,6 +114,28 @@ Previewは`RECOVERY_CODE_PEPPER`を維持する。production modeのenv validati
 
 `NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` は public key なので、`sensitive` のままでも事故ではないが必須ではない。
+
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は **product / web の両 Production に必須**とする（#1924）。secret ではないが、欠落すると product 側は widget を描画しないまま signIn し、production の Supabase Auth Bot Protection が全リクエストを `captcha_failed` で拒否して login / signup / password reset が全滅する。build は成功してしまうため、`apps/product/production-build-gate.mjs` / `apps/web/production-build-gate.mjs` の必須 env と `Production Config Audit` の両方で欠落を検知する。
+
+| Project   | Metadata                         | 契約                                            |
+| --------- | -------------------------------- | ----------------------------------------------- |
+| `product` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Production に必須。`sensitive` である必要はない |
+| `web`     | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | 同上                                            |
+
+## Supabase Auth config
+
+production の Auth 設定（Bot Protection、メール変更の二重確認、匿名サインインの可否など）は **Supabase Dashboard が正本**で、`supabase/config.toml` の `[auth.*]` は local と PR Preview branch にしか効かない。GitHub integration の Deploy to production も Auth 設定を同期しない。そのため Dashboard 側でトグルが 1 つ変わると、テストも build も通ったまま安全性が消える。
+
+期待値の正本は [`scripts/production-auth-config-audit.mjs`](../../../scripts/production-auth-config-audit.mjs) の `AUTH_CONFIG_CONTRACT` に置く。docs は CI を fail させられないため正本にしない。監視は `Production Config Audit` workflow の `auth-config` job が担い、**push:main と日次 cron でだけ**走る。
+
+- PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
+- 応答には `security_captcha_secret` などの secret が同梱される。audit は `AUTH_CONFIG_CONTRACT` に列挙した boolean / enum だけを読み、それ以外は出力しない
+
+手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
+
+```bash
+SUPABASE_ACCESS_TOKEN="op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+```
 
 #### Pre-deploy dry run
 
