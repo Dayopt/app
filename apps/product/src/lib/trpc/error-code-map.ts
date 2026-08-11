@@ -27,7 +27,11 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== 認証・認可エラー =====
   UNAUTHORIZED: 'UNAUTHORIZED',
   FORBIDDEN: 'FORBIDDEN',
-  INVALID_PASSWORD: 'UNAUTHORIZED',
+  // 再認証の資格情報が違う（削除フローのパスワード / TOTP）。UNAUTHORIZED にすると
+  // query-client の isAuthError が session 失効とみなしてログイン画面へ飛ばし、
+  // 「パスワードが正しくありません」がユーザーに届かない。request 自体は認証済みなので
+  // FORBIDDEN が正しい（#1925）
+  INVALID_PASSWORD: 'FORBIDDEN',
   // 再認証手段そのものが使えない（#1925）。EXPECTED_TRPC_CODES に載る code へ写像し、
   // handleServiceError 側で Sentry へ二重報告されるのを避ける（報告は呼び出し側の canary 1 本）
   REAUTH_UNAVAILABLE: 'BAD_REQUEST',

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const signInWithPassword = vi.hoisted(() => vi.fn());
+const signOut = vi.hoisted(() => vi.fn());
 const createServiceRoleClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 
@@ -14,8 +15,9 @@ const PASSWORD = 'current-password';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  createServiceRoleClient.mockImplementation(() => ({ auth: { signInWithPassword } }));
+  createServiceRoleClient.mockImplementation(() => ({ auth: { signInWithPassword, signOut } }));
   signInWithPassword.mockResolvedValue({ error: null });
+  signOut.mockResolvedValue({ error: null });
 });
 
 describe('verifyPasswordWithCaptchaBypass', () => {
@@ -26,6 +28,29 @@ describe('verifyPasswordWithCaptchaBypass', () => {
     expect(createServiceRoleClient).toHaveBeenCalledTimes(1);
     expect(signInWithPassword).toHaveBeenCalledWith({ email: EMAIL, password: PASSWORD });
     expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  // scope を省くと既定 'global' でユーザーの全端末が強制ログアウトされる
+  it('検証のために発行した session を local scope で破棄する', async () => {
+    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+
+    expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('session の破棄に失敗しても検証結果は verified のまま返す', async () => {
+    signOut.mockRejectedValue(new Error('network'));
+
+    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+
+    expect(result).toEqual({ outcome: 'verified' });
+  });
+
+  it('検証に失敗した時は session が発行されないので signOut しない', async () => {
+    signInWithPassword.mockResolvedValue({ error: { code: 'invalid_credentials', status: 400 } });
+
+    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+
+    expect(signOut).not.toHaveBeenCalled();
   });
 
   it('client を呼び出しごとに生成する（module スコープに保持すると権限が降格したまま再利用される）', async () => {

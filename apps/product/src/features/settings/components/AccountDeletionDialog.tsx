@@ -47,6 +47,9 @@ export function AccountDeletionDialog() {
   const requiresTotp = hasVerifiedMfaFactor(user) || needsTotp;
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
+    // 不可逆操作なので自動リトライしない。既定（auth error 以外は 1 回リトライ）のままだと
+    // レート制限で詰まっている最中にもう 1 発撃ち、GoTrue の共有バケットを二重に消費する
+    retry: false,
     onSuccess: async () => {
       toast.success(t('settings.account.deletion.success'));
       setIsOpen(false);

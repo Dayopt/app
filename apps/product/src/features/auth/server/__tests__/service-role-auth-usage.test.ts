@@ -19,8 +19,16 @@ import { describe, expect, it } from 'vitest';
  *
  * - **検出する**: 同一ファイル内で `createServiceRoleClient()` を代入した識別子に対する
  *   `X.auth.<admin 以外>`、および `createServiceRoleClient().auth.<admin 以外>` の直接 chain
- * - **検出しない（盲点）**: ファイルを跨いで client を受け渡すケース。引数で受け取った
- *   `SupabaseClient` が service-role かどうかは静的に追えない
+ * - **検出しない（盲点）**:
+ *   - ファイルを跨いで client を受け渡すケース。引数で受け取った `SupabaseClient` が
+ *     service-role かどうかは静的に追えない
+ *   - 1 段の中間束縛（`const { auth } = createServiceRoleClient()` / `const a = admin.auth`）
+ *   - computed access（`admin.auth['signUp'](...)`）と分割代入（`const { signUp } = admin.auth`）
+ *   - **`supabase/functions/**`（Edge Functions）**。service role key を常用する領域だが
+ *     この走査は `apps/product/src` に閉じている
+ *
+ * いずれも「故意の回避」であり、guard の目的（**無自覚な**再導入の阻止）には足りている。
+ * 網羅と誤認しないよう明記しておく。
  *
  * ファイル単位のナイーブな判定（「`createServiceRoleClient` を含み、かつ `.auth.` を含む」）
  * にはしない。user-service.ts は user-scoped の `supabase.auth.mfa.*` と

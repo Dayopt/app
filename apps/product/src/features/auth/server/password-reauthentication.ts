@@ -84,7 +84,20 @@ export async function verifyPasswordWithCaptchaBypass({
   // 1 本に集約し、同一事象で Sentry issue が二重に立つのを避ける
   const { error } = await adminClient.auth.signInWithPassword({ email, password });
 
-  if (!error) return { outcome: 'verified' };
+  if (!error) {
+    // 検証のためだけに発行された session を残さない。削除まで到達すれば CASCADE で
+    // 消えるが、後段（beforeIdentityDeletion の contention 等）で中断すると
+    // 有効な refresh token だけが孤児として残る。
+    //
+    // scope の明示は必須。省略時の既定は 'global' で、**ユーザーの全端末が強制
+    // ログアウトされる**（削除が中断した場合、巻き添えでログアウトだけが起きる）
+    try {
+      await adminClient.auth.signOut({ scope: 'local' });
+    } catch {
+      // 後始末の失敗で削除を止めない
+    }
+    return { outcome: 'verified' };
+  }
 
   if (error.code === 'invalid_credentials') return { outcome: 'invalid_password' };
 
