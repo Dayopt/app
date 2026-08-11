@@ -50,12 +50,17 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 設定画面のメールアドレス変更・パスワード変更は、公開 Auth endpoint での再認証（`signInWithPassword`）を行わない。Bot Protection が有効な production では CAPTCHA token を要求されて必ず失敗するため（[#1917](https://github.com/Dayopt/dayopt/issues/1917)）。本人確認は Supabase Auth 側の専用機構に委ねる。
 
-| 操作               | 本人確認の担い手                                    | 依存する production 設定                            |
-| ------------------ | --------------------------------------------------- | --------------------------------------------------- |
-| メールアドレス変更 | Secure Email Change（旧・新双方への確認メール）     | `mailer_secure_email_change_enabled`                |
-| パスワード変更     | `updateUser({ password, current_password })` の検証 | `security_update_password_require_current_password` |
+| 操作               | 本人確認の担い手                                         | 依存する production 設定                            | 設定が崩れた時の向き |
+| ------------------ | -------------------------------------------------------- | --------------------------------------------------- | -------------------- |
+| メールアドレス変更 | Secure Email Change（旧・新双方への確認メール）          | `mailer_secure_email_change_enabled`                | **fail-open**        |
+| パスワード変更     | `updateUser({ password, current_password })` の検証      | `security_update_password_require_current_password` | **fail-open**        |
+| アカウント削除     | service-role 経由の `signInWithPassword`（captcha 免除） | `SUPABASE_SERVICE_ROLE_KEY` が **legacy JWT 形式**  | **fail-closed**      |
 
-**この 2 つは code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
+**故障の向きが逆のものが同じ表に並んでいる。** 上 2 行は設定が false になると**本人確認が黙って消える**（fail-open）。削除行は依存が崩れると**削除が黙ってできなくなる**（fail-closed）。監視を設計する時に「値が false になったら警報」の一方向だけで組むと、削除経路の故障を永久に検出できない（[#1926](https://github.com/Dayopt/dayopt/issues/1926)）。
+
+**service role key を回転する、または新形式（`sb_secret_`）へ移行する場合、この経路の再検証を先に行う。** 新形式は Bearer として送られないため admin と解釈されず、captcha 免除が成立しなくなって削除が止まる。Supabase の legacy JWT key 廃止は外部の都合で動き、アプリ側の canary は**事後にしか鳴らない**。検証はローカルで `supabase/config.toml` の `[auth.captcha]` を有効化し、user-scoped 経路が失敗し service-role 経路が成功することを確認する。
+
+**上 2 行（メールアドレス変更・パスワード変更）は code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
 
 - `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる
 - `security_update_password_require_current_password` が false になると、`current_password` は**エラーも返さず黙って無視され**、現在パスワードを知らなくてもパスワードを変更できる
@@ -63,6 +68,46 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 2026-08-11 時点の production 実測値は両方 `true`。値の監視は [#1926](https://github.com/Dayopt/dayopt/issues/1926) が担う。
 
 再認証 nonce（`reauthenticate()`）は**現在の設定値では不要**。`security_update_password_require_reauthentication` が false のため GoTrue が nonce を要求しない。この設定が true に変われば nonce フローの実装が要る。
+
+### アカウント削除だけ公開 Auth endpoint を使う理由
+
+上 2 行は #1917 で「公開 Auth endpoint での再認証をやめる」方向に倒したが、**削除だけは倒せない**。GoTrue 側に代替の検証機構が無いため:
+
+| 操作           | 乗り換え先                                          |
+| -------------- | --------------------------------------------------- |
+| パスワード変更 | `updateUser({ current_password })` の GoTrue 内検証 |
+| メール変更     | Secure Email Change                                 |
+| **削除**       | **無い**                                            |
+
+`current_password` は `params.Password != nil` の内側でしか読まれず、パスワードだけを検証する endpoint も存在しない。`reauthenticate()` が発行する nonce を消費するのも `PUT /user` のパスワード変更だけで、削除の本人確認には転用できない。
+
+そこで削除は `signInWithPassword` を使い続け、**service-role client から呼ぶことで captcha を構造的に免除する**（[#1925](https://github.com/Dayopt/dayopt/issues/1925)）。実装と契約は `features/auth/server/password-reauthentication.ts`。
+
+この経路の副作用として、**再認証が成功するたび GoTrue に session が 1 本発行される**ため、検証直後に `scope: 'local'` で破棄する。`scope` の省略は既定 `global` で、**ユーザーの全端末が強制ログアウトされる**ため必ず明示する。2026-08-11 時点の production は `sessions_single_per_user: false`（実測）なので、再認証そのものがユーザーの既存セッションを終了させることは無い。この値が true に変わると、削除が後段で失敗した場合に「削除できず、かつ全端末からログアウト」になる。
+
+パスワード誤りは `FORBIDDEN` で返す。`UNAUTHORIZED` にすると client の共通ハンドラが session 失効とみなしてログイン画面へ遷移させ、エラー文言がユーザーに届かない。
+
+**この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。パスワード総当たりの上限にもならない（GoTrue の rate limit は IP 単位で、サーバー呼び出しでは全ユーザーが 1 バケットを共有する）。**削除を守っているのはパスワード再認証そのもの**であり、captcha ではない。
+
+**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有し、公開 `/api/auth` のサーバー側ログインとも同じバケットを使う。したがって:
+
+- セッションを握った攻撃者は、captcha にもアプリ側 throttle にも妨げられずパスワード試行を続けられる
+- その試行が 429 を誘発すると、**他ユーザーの削除再認証まで巻き添えで失敗する**（fail-closed なので削除が通ることは無い）
+
+削除を守っているのはパスワードの知識のみで、試行回数の上限は現状どこにも無い。上限を設けるかは別途判断する。
+
+**不正な削除に対する事後の統制は削除通知メールだけで、soft-delete の猶予期間は存在しない。** 削除は CASCADE で回復不能。
+
+### captcha 起因で削除できない場合の代替経路
+
+削除は法的義務なので、fail-closed で詰まった時の逃げ道を用意する。窓口は `support@dayopt.app`（`packages/config/src/constants.ts`）。product の問い合わせダイアログは Turnstile を使わないため、この経路は captcha に依存しない。
+
+本人確認は次の 2 点で行う。根拠は「メールアドレスの支配」で、Secure Email Change と同じ強度に揃えている。
+
+1. 依頼は**アカウントに登録されたメールアドレスからの送信**に限る
+2. 実行前に**登録アドレス宛の確認メールを送り、返信を得てから**削除する
+
+この経路を案内するため、削除失敗時の画面文言には問い合わせ先を含める（`settings.account.deletion.error`）。
 
 ## アカウント削除
 

@@ -1,11 +1,28 @@
 import { ServiceError } from './errors';
 
+/**
+ * UIが分岐に使うことを許可したServiceError code。
+ *
+ * ここに無いcodeはclientへ載らず、UI側の分岐は既定枝へ落ちる。分岐を足す時は
+ * 必ずここへ登録する（登録漏れは分岐を丸ごと殺す。#1937）。逆に、内部構成や
+ * 失敗した内部commandが読み取れるcodeは登録せず、汎用エラー表示のままにする。
+ */
 const CLIENT_SAFE_SERVICE_CODES = new Set([
+  // Timeblock: 競合・楽観ロックの解決手段を出し分ける
   'RETRYABLE_CONTENTION',
   'STALE_TARGET',
   'STALE_VERSION',
   'TEMPORARY_FAILURE',
   'TIME_OVERLAP',
+  // Billing: 支払い操作の失敗を「再試行 / やり直し / 削除中」へ畳む。いずれも
+  // ユーザー自身の操作状態だけを表し、決済ベンダーの構成や内部commandの失敗
+  // （BILLING_COMMAND_FAILED / BILLING_CONTRACT_INVALID / STRIPE_NOT_CONFIGURED 等）は含まない。
+  'BILLING_ACCOUNT_CLOSING',
+  'BILLING_CHECKOUT_NOT_AVAILABLE',
+  'BILLING_OPERATION_CONFLICT',
+  'BILLING_OPERATION_INVALIDATED',
+  'BILLING_RECOVERY_EXHAUSTED',
+  'BILLING_RESPONSE_EXPIRED',
 ]);
 
 /** UIが分岐に使うことを許可したServiceError codeだけを公開する。 */

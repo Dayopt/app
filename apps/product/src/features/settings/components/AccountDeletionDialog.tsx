@@ -47,6 +47,9 @@ export function AccountDeletionDialog() {
   const requiresTotp = hasVerifiedMfaFactor(user) || needsTotp;
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
+    // 不可逆操作なので自動リトライしない。既定（auth error 以外は 1 回リトライ）のままだと
+    // レート制限で詰まっている最中にもう 1 発撃ち、GoTrue の共有バケットを二重に消費する
+    retry: false,
     onSuccess: async () => {
       toast.success(t('settings.account.deletion.success'));
       setIsOpen(false);
@@ -80,7 +83,10 @@ export function AccountDeletionDialog() {
       } else if (error.message.includes('Invalid password')) {
         toast.error(t('settings.account.deletion.invalidPassword'));
       } else {
-        toast.error(error.message || t('settings.account.deletion.error'));
+        // 生の英語メッセージを画面に出さない（i18n 破れと内部文言の露出を防ぐ）。
+        // 原因は上の logger.error に残る。再認証手段が使えない場合（REAUTH_UNAVAILABLE）も
+        // ここに落ちるため、文言には問い合わせ先を含めている
+        toast.error(t('settings.account.deletion.error'));
       }
     },
   });

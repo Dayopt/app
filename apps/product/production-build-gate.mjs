@@ -1,7 +1,16 @@
+/**
+ * `NEXT_PUBLIC_TURNSTILE_SITE_KEY` は Turnstile widget の描画に必須。欠けても
+ * `src/lib/turnstile/config.ts` の `|| ''` により build は通るが、`isTurnstileEnabled()`
+ * が false になって widget が描画されず、captchaToken 無しで signIn する。production の
+ * Supabase Auth Bot Protection は全リクエストを captcha_failed で拒否するため、login /
+ * signup / password reset が全滅する（#1924）。値の欠落を検知する手段が他に無いので
+ * production build の必須 env に含める。
+ */
 export const REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV = [
   'RESEND_API_KEY',
   'RESEND_FROM_EMAIL',
   'RESEND_WEBHOOK_SECRET',
+  'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
 ];

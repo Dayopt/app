@@ -230,7 +230,8 @@
     "billingOperation": {
       "retryable": "支払いページを開けませんでした。もう一度お試しください。",
       "restart": "前の支払い処理は終了しました。もう一度お試しください。",
-      "accountClosing": "アカウントを削除中のため、支払い情報は変更できません。"
+      "accountClosing": "アカウントを削除中のため、支払い情報は変更できません。",
+      "checkoutNotAvailable": "すでにサブスクリプションがあります。サブスクリプション管理から変更してください。"
     },
     "inlineBanner": {
       "paymentError": "お支払いに問題があります",

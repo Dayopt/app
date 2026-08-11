@@ -33,6 +33,29 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 - `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
 - `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
+- `.op-env.admin.example` — 同じく `op://` 参照のみ。管理者運用スクリプト用の雛形（§管理者運用の env）
+
+**作らない**:
+
+- `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める。**規約だけでなく enforcement も入れてある**: `.claude/settings.json` の deny（`Write` / `Edit`）と、`pre-tool-guard.sh` の Bash 側ガード。後者は **作成と消費の両方**を止める — `cp` / `mv` / `touch` / `tee` / `install` / `ln` とリダイレクトによる作成に加え、`--env-file` が `.op-env.admin` 系を指す実行も拒否する。**雛形も消費側の対象に含める**（`.op-env.admin.example` は `op://Dayopt-Production/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決され、作成だけ止めても迂回できる）。雛形の読み書き自体は通すので、agent は schema の更新まではできる。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する
+
+**このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.local` だけで、それ以外は中身を問わず落とす。
+
+禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.admin` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.admin.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
+
+**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.local`）と workspace からの相対（`../../.op-env.local`）の 2 形式だけ。
+
+ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.admin.example /tmp/.op-env.local`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
+
+これで **path の形を変えて回り込む経路は閉じ切った**。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、変数展開、別ディレクトリの同名ファイル — いずれも許可形の literal に一致しないため落ちる。
+
+**残るのは 1 つだけで、それは path ではなく中身。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/...` を書き足してから通常どおり実行すれば guard は通る。したがって guard が保証するのは「admin 用の env-file と、その別名・別置き場を経由しないこと」までで、「production credential に到達しないこと」ではない。中身の検査は [#1949](https://github.com/Dayopt/dayopt/issues/1949) で扱う。
+
+**この経路は本節の変更が新設したものではない。** 以前の `.op-env.local.example` は Supabase の接続情報を `op://Dayopt-Staging/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
+
+閉じないのは、flag をコマンド文字列から隠す間接化（wrapper script を書いてそれを実行する、`eval`、base64 など）。これは事故ではなく意図的な回避であり、hook では追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+
+代償として、`--env-file` のあとに何か語が続く文字列は Bash 引数に含めるだけで落ちる（引用符の中でも、散文でも同じ）。docs や commit message にこのコマンド例を書く時は、Write / Edit で file に書いてから `--body-file` / `-F` で渡す
 
 **触らない（読みも書きもしない）**:
 
@@ -43,6 +66,8 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 ### API 経由の設定読戻し
 
 上記はファイルの読み書きを対象とする。別経路として、設定系 API（Supabase Management API、Vercel Env API、Stripe API 等）の GET レスポンスに secret が同梱されるケースがある。**レスポンスをそのまま表示しない**。`jq` で必要フィールドだけに射影してから表示する（allowlist 方式）。`*_secret` / `*_key` / `*_token` / `*password*` を含むキーは射影に含めない。
+
+このキー名パターンは secret を取りこぼさないための deny 規則であって、名前に反応しているだけなので偽陽性が出る。**値が credential になり得ない boolean / enum の policy flag に限り、キー名を 1 つずつ明示列挙する形で例外を認める**（例: `security_update_password_require_reauthentication` は `password` を含むが真偽値の設定フラグ）。パターン一致による一括許可と、射影に載せていないキーの値を出力することは引き続き禁止。
 
 射影を書けない・レスポンス構造が不明な場合は、まずキー一覧だけを確認してから射影を組む。**素の `jq 'keys'` は使わない** — レスポンスが scalar（secret 文字列そのもの）だと `jq` がエラーメッセージに値を含めて stderr へ出す。type を先に判定する:
 
@@ -96,20 +121,24 @@ Google OAuth client secret、Apple Developer `.p8`、証明書、service account
 
 field 名は可能な限り current code の env 名と一致させる。`.op-env.local.example` はこの schema の参照だけを持つ。
 
-以下は期待schemaであり、2026-07-16時点では1Password CLIが未認証のため、各item / fieldの実在とempty状態を再確認できていない。Vercel Production replicaは確認済みだが、1Password masterの是正はblocked中の[#1558](https://github.com/Dayopt/dayopt/issues/1558)を所有者とし、確認前に重複変更しない。
+以下は期待 schema で、`scripts/env/schema.ts` が正本。`pnpm 1password:check` が item / field の実在と empty 状態を値を表示せずに検証する。2026-08-11 に 1Password CLI で全 entry を実測し、schema と実態の乖離は [#1929](https://github.com/Dayopt/dayopt/issues/1929) / [#1930](https://github.com/Dayopt/dayopt/issues/1930) で解消した（旧記述が所有者としていた #1558 は closed のため、受け皿は #1930 が引き継いだ）。
 
 ### `Dayopt-Staging`
 
-通常の PR Preview では使わない。persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
+**test mode credential と、local dev が使う app 設定を置く。** 通常の PR Preview では使わず、persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
+
+**常設 staging 環境は存在しない**（Supabase の branch は `main` のみ）。そのため Supabase の接続情報（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_DB_PASSWORD`）はこの vault に置かない。置けば production の複製にしかならず、実際 2026-08-11 まで 4 field とも `Dayopt-Production/supabase` と同一値だった（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。local dev の Supabase 接続は `scripts/dev-with-op.sh` が `supabase status -o env` から注入し、1Password を経由しない。この境界は `scripts/__tests__/staging-supabase-boundary.test.ts` が固定する。
 
 | Item              | Fields                                                                                                                                                                                                                                                                                                                                               | 用途                                                  |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `supabase`        | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET`                                                                                                                                                                   | Supabase local / preview 相当の接続                   |
+| `supabase`        | `SUPABASE_ACCESS_TOKEN`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET`                                                                                                                                                                                                                                                                                     | Management API token と staging 用 optional secret    |
 | `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                                                                                                                                                                                                 | Redis rate limit / cache                              |
 | `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_ACCOUNT_ID`, `STRIPE_LIVEMODE`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                                                                                                                                              | Stripe test mode                                      |
 | `resend`          | `RESEND_WEBHOOK_SECRET`                                                                                                                                                                                                                                                                                                                              | optional stagingのProduct webhook署名                 |
 | `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`, `OAUTH_CLAUDE_REDIRECT_URIS`, `OAUTH_CHATGPT_REDIRECT_URIS`, `OAUTH_CURSOR_REDIRECT_URIS`, `MCP_OAUTH_ENVIRONMENT`, `OAUTH_AUTHORIZATION_SERVER_URI`, `MCP_CANONICAL_RESOURCE_URI`, `MCP_OAUTH_PREVIEW_BRANCH`, `MCP_OAUTH_PREVIEW_UPSTASH_HOST`, `MCP_WRITE_ENABLED_CLIENTS` | App URL / recovery code HMAC pepper / MCP OAuth beta  |
 | `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_PROJECT_NUMBER`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                                                                                                                                                     | 外部カレンダー取り込みの OAuth client（local dev 用） |
+
+`supabase` item に残る `SUPABASE_ACCESS_TOKEN` は Supabase Management API 用で、cloud の `supabase` MCP server（production project に固定）と `scripts/enable-auth-hook.sh` が使う。これも `Dayopt-Production/supabase` と同一値のため、正本を production 側へ一本化して item ごと整理するかは [#1933](https://github.com/Dayopt/dayopt/issues/1933) で扱う。
 
 ### `Dayopt-Production`
 
@@ -175,7 +204,22 @@ pnpm dev
 
 `pnpm dev` は `.op-env.local` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、停止中なら自動起動してから `supabase status -o env` の結果を URL / key として値表示なしで注入する。
 
-`.op-env.local` の Supabase refs をそのまま使う一時作業だけ `DAYOPT_SUPABASE_TARGET=op pnpm dev` を使う。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
+**Supabase の接続先を 1Password 参照へ切り替える手段は無い。** かつての `DAYOPT_SUPABASE_TARGET=op` は `Dayopt-Staging/supabase` の接続情報を使う escape hatch だったが、その中身が production だったため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。設定しても `pnpm dev` は起動せずエラーで止まる。Supabase local が上がらない時は Docker Desktop を確認し `supabase start` を手動実行する。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
+
+**`.op-env.local.example` から参照を消しても、各自の `.op-env.local` は自動では追従しない。** `op run` は解決できない `op://` 参照があると起動前に失敗するため、1Password 側の field を削除したら `.op-env.local` の該当行も消す必要がある。`cp .op-env.local.example .op-env.local` で作り直すのが確実。
+
+### 管理者運用の env（`.op-env.admin`）
+
+`scripts/admin-*.sh` / `verify-login.sh` / `USE_LINKED_DB=true` の `seed-dev-data.sh` は Supabase Auth Admin API を service role で叩くため、Supabase の接続情報を必要とする。これらは `.op-env.local` ではなく **`.op-env.admin`**（`.op-env.admin.example` から作る、gitignore 済み）を使う。
+
+```bash
+cp .op-env.admin.example .op-env.admin
+op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
+```
+
+参照先は `Dayopt-Production/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。
+
+雛形は接続 3 field に加えて `SUPABASE_DB_PASSWORD` を持つ。`USE_LINKED_DB=true` の `seed-dev-data.sh` が最後に `supabase db query --linked` を実行するためで、**欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の user が production に残る**（部分適用）。同じ理由で `Dayopt-Production/supabase/SUPABASE_DB_PASSWORD` は `required` にしてある。
 
 Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
@@ -199,8 +243,24 @@ pnpm 1password:check
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
+- `1password:check` は **禁止 field の実在**も検査する（`scripts/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`Dayopt-Staging/supabase` の接続 4 field はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する
+
+この検査の**保証境界**は「正常応答から不在を確認できた時だけ `ABSENT` にする」。`op` の応答は vault / item / field の 3 段しかなく、そのどこで確認不能になっても `UNVERIFIABLE` として失敗させる。`op item get` は item 不在・権限エラー・一時エラー・不正 JSON をすべて同じ非ゼロ終了に畳むため、取得失敗を不在の証拠に使えないのが理由。3 段すべてを塞いだので「確認できないまま pass する」経路はこの検査には残らない。
+
+この境界の帰結として、`forbiddenFields` に登録した item は実在し続ける必要がある。item ごと廃止する時は `forbiddenFields` の該当 entry も同時に外す（`Dayopt-Staging/supabase` の廃止可否は [#1933](https://github.com/Dayopt/dayopt/issues/1933) で扱う）。
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
+
+### `1password:check` が失敗した時
+
+失敗は「master に無い」ことしか意味しない。**schema を緩めて黙らせる前に、その env を誰が必要としているかを先に確かめる。** 判定は 2 通りに分かれる。
+
+- **本当の欠落** — code が実際に要求している。replica（Vercel Production Env / Supabase Dashboard）には値があり、master だけが無い。この場合は replica から master へ値を戻す。§Change Procedure の逆流だが、master 不在の是正としては正しい向き。`required` は維持する
+- **schema の乖離** — 機能が未有効などで item / field が無いのが正しい。この場合は `scripts/env/schema.ts` を `required: false` にする
+
+「code が要求しているか」は build gate が正本になる。Sentry の 4 env（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT`）は `packages/observability/build-gate.mjs` が product / web 双方の Vercel Production build で必須にしているため、`Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` は両方とも実在が要る。
+
+master へ値を戻す時は GUI か対象を限定した `op item create` / `op item edit` を使う。`scripts/setup-1password.sh` は 3 vault が空の時だけの初回 bootstrap 専用で、既存 vault には使わない。`recovery-codes` のような再発行できない情報を扱う item では、**既存情報の集約だけを行い、値の生成・再発行はしない**。
 
 ---
 
@@ -224,6 +284,8 @@ GitHub Actions Secrets は CI/CD 用の replica。build / e2e 用 public env な
 
 Supabase Auth Bot Protection、Auth hooks、Edge Functions、Vault secrets は Supabase Dashboard 側の replica。Turnstile secret などは 1Password から値をコピーし、Dashboard 側だけで変更しない。PR Preview Branch credentials は Supabase が短命に発行するため 1Password 管理外。
 
+production の Auth `uri_allow_list` に **localhost を入れない**。かつて `http://localhost:3000/**` が入っていたのは、local dev から production Supabase へ繋ぐ escape hatch（`DAYOPT_SUPABASE_TARGET=op`）が `window.location.origin` を `redirectTo` に渡していたためで、その hatch を廃止した今は依存する経路が無い（[#1929](https://github.com/Dayopt/dayopt/issues/1929)。local dev の redirect は `supabase/config.toml` の local 設定、Preview は ephemeral Preview Branch がそれぞれ持つ）。
+
 ---
 
 ## Change Procedure
@@ -239,7 +301,7 @@ Supabase Auth Bot Protection、Auth hooks、Edge Functions、Vault secrets は S
 存在確認の例:
 
 ```bash
-op read "op://Dayopt-Staging/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
+op read "op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
 ```
 
 ---

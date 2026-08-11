@@ -36,7 +36,7 @@ import {
 } from '@dayopt/components';
 
 import { useStableBillingOperation } from '../hooks/useStableBillingOperation';
-import { getBillingOperationErrorDisposition } from '../lib/billing-operation';
+import { getBillingOperationErrorPresentation } from '../lib/billing-operation';
 import { useBillingPollStore } from '../stores/useBillingPollStore';
 
 interface Plan {
@@ -114,6 +114,29 @@ export function BillingSettings() {
   const currentPlan = getPlanIdForSubscriptionStatus(subscriptionStatus);
   const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
 
+  // Portal Session 作成（checkout 失敗時の出口としても使うため checkout より先に定義する）
+  const createPortal = api.billing.createPortalSession.useMutation({
+    onSuccess(data, variables) {
+      if (!variables) return;
+      if (settlePortalAttempt(variables.operationId, 'terminal')) {
+        window.location.href = data.url;
+      }
+    },
+    onError(error, variables) {
+      if (!variables) return;
+      const { closesBillingActions, messageKey, retryable } =
+        getBillingOperationErrorPresentation(error);
+      const isCurrent = settlePortalAttempt(
+        variables.operationId,
+        retryable ? 'retryable' : 'terminal',
+      );
+      if (!isCurrent) return;
+
+      if (closesBillingActions) setBillingActionsClosed(true);
+      toast.error(t(messageKey));
+    },
+  });
+
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
     onSuccess(data, variables) {
@@ -124,49 +147,33 @@ export function BillingSettings() {
     },
     onError(error, variables) {
       if (!variables) return;
-      const disposition = getBillingOperationErrorDisposition(error);
+      const { closesBillingActions, messageKey, needsBillingPortal, retryable } =
+        getBillingOperationErrorPresentation(error);
       const isCurrent = settleCheckoutAttempt(
         variables.operationId,
-        disposition === 'retryable' ? 'retryable' : 'terminal',
+        retryable ? 'retryable' : 'terminal',
       );
       if (!isCurrent) return;
 
-      if (disposition === 'account_closing') {
-        setBillingActionsClosed(true);
-        toast.error(t('common.billingOperation.accountClosing'));
-      } else if (disposition === 'terminal') {
-        toast.error(t('common.billingOperation.restart'));
-      } else {
-        toast.error(t('common.billingOperation.retryable'));
-      }
-    },
-  });
+      if (closesBillingActions) setBillingActionsClosed(true);
 
-  // Portal Session 作成
-  const createPortal = api.billing.createPortalSession.useMutation({
-    onSuccess(data, variables) {
-      if (!variables) return;
-      if (settlePortalAttempt(variables.operationId, 'terminal')) {
-        window.location.href = data.url;
+      // 既にサブスクリプションがある場合、Pro 向けの portal ボタンは canAccessPro で
+      // 隠れている（Stripe が unpaid / paused でも profiles 上は free 扱いになるため）。
+      // 再試行しても必ず同じ失敗を返すので、唯一の出口を toast の action で渡す。
+      if (needsBillingPortal) {
+        toast.error(t(messageKey), {
+          action: {
+            label: t('settings.subscription.managePlan'),
+            onClick: () => {
+              const portalOperationId = beginPortalAttempt();
+              if (portalOperationId) createPortal.mutate({ operationId: portalOperationId });
+            },
+          },
+        });
+        return;
       }
-    },
-    onError(error, variables) {
-      if (!variables) return;
-      const disposition = getBillingOperationErrorDisposition(error);
-      const isCurrent = settlePortalAttempt(
-        variables.operationId,
-        disposition === 'retryable' ? 'retryable' : 'terminal',
-      );
-      if (!isCurrent) return;
 
-      if (disposition === 'account_closing') {
-        setBillingActionsClosed(true);
-        toast.error(t('common.billingOperation.accountClosing'));
-      } else if (disposition === 'terminal') {
-        toast.error(t('common.billingOperation.restart'));
-      } else {
-        toast.error(t('common.billingOperation.retryable'));
-      }
+      toast.error(t(messageKey));
     },
   });
 

@@ -175,7 +175,7 @@
         "cancel": "Cancel",
         "confirm": "Execute deletion",
         "success": "Your account has been deleted.",
-        "error": "Failed to delete account"
+        "error": "Could not delete your account. If this keeps happening, email support@dayopt.app and we will delete it for you."
       },
       "loginMethod": {
         "title": "Login method",

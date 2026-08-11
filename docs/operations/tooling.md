@@ -596,12 +596,15 @@ Designer / Critic / User の 3-agent design review を仮に実装する場合�
 ## 実行方法
 
 ```bash
-op run --env-file=.op-env.local -- \
+cp .op-env.admin.example .op-env.admin   # 初回だけ
+op run --env-file=.op-env.admin -- \
   env USER_EMAIL=foo@example.com \
   bash scripts/admin-show-user.sh
 ```
 
-`.op-env.local` に `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定し、`op run --env-file=.op-env.local` 経由で実行する。Production project に対して実行する場合は手動作業ログを残す。
+**`.op-env.local`（通常の local dev 用）ではなく `.op-env.admin` を使う。** `pnpm dev` の Supabase 接続先は local 固定で、`.op-env.local` は Supabase の接続情報を持たない（[secrets.md](./secrets.md) の `Dayopt-Staging` 節）。admin script は Supabase Auth Admin API を service role で叩くため、専用の env-file を分けている。
+
+`.op-env.admin.example` は `Dayopt-Production/supabase` を参照する。**つまりこれらの script の実行は production への操作**であり、実行したら手動作業ログを残す。local の Supabase を対象にしたい場合は `supabase status -o env` の値を `env` で直接渡す。
 
 ## スクリプト一覧
 
@@ -618,9 +621,9 @@ op run --env-file=.op-env.local -- \
 
 ## 関連スクリプト
 
-| スクリプト            | 用途                                                                                       | 必須 env                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `enable-auth-hook.sh` | Production project の `custom_access_token` hook を有効化する                              | `SUPABASE_ACCESS_TOKEN`                                                                       |
-| `verify-login.sh`     | email + password の組合せで直接 `/auth/v1/token` を叩き、login 可否を確認する（read-only） | `USER_EMAIL`, `PASSWORD_ITEM_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| スクリプト            | 用途                                                                                                                                                                                                                                                                                                                             | 必須 env                                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `enable-auth-hook.sh` | Production project の `custom_access_token` hook を有効化する。**実行すると `Production Auth Config Audit` が失敗する**（`scripts/production-auth-config-audit.mjs` は現在の production 値 `false` を pin している）。実行するなら同じ変更で期待値も `true` にする。経緯は [#1946](https://github.com/Dayopt/dayopt/issues/1946) | `SUPABASE_ACCESS_TOKEN`                                                                       |
+| `verify-login.sh`     | email + password の組合せで直接 `/auth/v1/token` を叩き、login 可否を確認する（read-only）                                                                                                                                                                                                                                       | `USER_EMAIL`, `PASSWORD_ITEM_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 
 `verify-login.sh` が成功すれば password 自体は正しい（UI / CSP / form 側の問題）。失敗すれば `admin-set-user-password.sh` で password を再設定する。

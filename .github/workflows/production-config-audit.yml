@@ -53,6 +53,12 @@ jobs:
         run: |
           # Check both sides of a rename so a protected contract cannot evade
           # the trusted-head checkpoint by moving to a new path.
+          #
+          # production-auth-config-audit.mjs is deliberately NOT protected here: it
+          # never runs in a PR or dispatch context (see the auth-config job), so a PR
+          # editing it cannot produce a misleading green from a base-revision run.
+          # Forcing a trusted dispatch for it would add friction without verification,
+          # because the dispatch skips that job by design.
           changed_files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] | .filename, (.previous_filename // empty)')
           if printf '%s\n' "$changed_files" | grep -Eq '^(scripts/production-config-audit\.mjs|apps/product/production-build-gate\.mjs|apps/web/production-build-gate\.mjs|\.github/workflows/production-config-audit\.yml)$'; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -128,3 +134,49 @@ jobs:
             exit 1
           fi
           exit "$AUDIT_EXIT"
+
+  # Supabase Auth の enforcement 値の drift 検出（#1926）。Vercel の audit と分けて
+  # いる理由は 2 つ。
+  #
+  # 1. **token を branch code へ渡さない。** Supabase Management API の PAT は account
+  #    単位 read-write で、Vercel token（deploy / env metadata）より blast radius が広い。
+  #    上の job は `pull_request_target`（base.sha を checkout）に加えて
+  #    `workflow_dispatch --ref <branch>`（**branch head を checkout**）でも走り、後者は
+  #    trusted dispatch の運用上ほぼ毎回使われる。PAT をそこへ乗せない。
+  # 2. **merge gate を巻き込まない。** commit status「Production Config Audit」は
+  #    finish-branch.sh が解除判定に使う。auth 設定の drift は PR の diff と無関係
+  #    （Dashboard 由来）なので、これを status に載せると無関係な全 PR の merge が止まる。
+  #
+  # 検出経路は push:main（merge 直後）と日次 cron。失敗は workflow failure として
+  # 通知される。手元での単発確認は `op run` 経由の CLI 実行
+  # （`docs/operations/security/environment-secrets.md` §Supabase Auth config）。
+  auth-config:
+    name: Audit Supabase Auth config (trusted)
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # secret 名は `SUPABASE_ACCESS_TOKEN` と分ける。同名だと、別 workflow が
+      # 「その名前の secret を参照するだけ」で PR code の実行経路へ token が配られる
+      # （integration.yml がまさにその形の env を持っていた）。名前を分けておけば、
+      # audit 用 token の配布先はこの step だけに閉じる。
+      #
+      # 出力の grep は positive proof。CLI guard が何らかの理由で発火しないと
+      # 「何も実行せず exit 0」になり、audit が静かに死ぬ。
+      - name: Audit Supabase Auth enforcement values
+        env:
+          SUPABASE_AUTH_AUDIT_TOKEN: ${{ secrets.SUPABASE_AUTH_AUDIT_TOKEN }}
+        run: |
+          set -o pipefail
+          node scripts/production-auth-config-audit.mjs | tee audit-output.txt
+          grep -q 'Production Auth Config Audit passed' audit-output.txt

@@ -84,6 +84,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 - [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
+- [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
 
 ### 月次 backstop（`/gardening` と同時期に実施）
 
