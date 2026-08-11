@@ -381,13 +381,15 @@ export function useEntityRealtime(onUpdate: () => void) {
 
 ### 構成
 
-| Function          | 用途                                 | Preview | Staging | Production |
-| ----------------- | ------------------------------------ | ------- | ------- | ---------- |
-| `send-auth-email` | Supabase Auth メール送信(Resend経由) | ✅      | ✅      | ✅         |
-| `check-reminders` | リマインダー通知(cron)               | ❌      | ✅      | ✅         |
-| `daily-insights`  | 日次AI洞察(cron)                     | ❌      | ✅      | ✅         |
+**正本は `supabase/functions/` の実体と `supabase/config.toml` の `[functions.*]` 宣言。** この表ではなく、そちらを確認する。
 
-**方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、Anthropic API 等のコスト要因になるため除外。
+| Function          | 用途                                 | Preview | Production |
+| ----------------- | ------------------------------------ | ------- | ---------- |
+| `send-auth-email` | Supabase Auth メール送信(Resend経由) | ✅      | ✅         |
+
+**方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、コスト要因になるため除外。
+
+かつて `check-reminders` / `daily-insights` を運用していたが、実体・宣言とも既に無く、DB 側の cron 登録も `20260425000000_unschedule_removed_edge_function_cron_jobs.sql` で解除済み。
 
 ### Auth Hook を Edge Function で受ける時の verify_jwt
 
@@ -409,15 +411,8 @@ export function useEntityRealtime(onUpdate: () => void) {
 # preview branch
 npx supabase functions deploy send-auth-email --use-api --project-ref=<PREVIEW_REF>
 
-# staging
-for fn in send-auth-email check-reminders daily-insights; do
-  npx supabase functions deploy $fn --use-api --project-ref=<STAGING_REF>
-done
-
 # production
-for fn in send-auth-email check-reminders daily-insights; do
-  npx supabase functions deploy $fn --use-api --project-ref=<PROD_REF>
-done
+npx supabase functions deploy send-auth-email --use-api --project-ref=<PROD_REF>
 ```
 
 通常は GitHub Actions で自動実行される。手動デプロイは緊急時のみ。

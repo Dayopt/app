@@ -103,6 +103,18 @@ supabase functions deploy --use-api
 
 - [ ] デプロイ後: Edge Functionsのログで正常動作を確認
 
+#### ケースD: データ消失・DB破損（backup からの復元が要る）
+
+**ケース A〜C はサービスが止まっているだけでデータは無事。データそのものが失われた場合はここへ来る。**
+
+- [ ] **まず書き込みを止める**（メンテナンスモード有効化）。復元しても、その後の書き込みは失われる
+- [ ] 原因が自分の migration なら [infra.md §DB Migration Rollback 手順書](../engineering/infra.md#db-migration-rollback-手順書) へ
+- [ ] データ消失・オペミスなら [infra.md §災害復旧手順](../engineering/infra.md#災害復旧手順) へ
+- [ ] Supabase Dashboard → Database → Backups で **backup の存在と時刻を確認する**（「あるはず」で進めない）
+- [ ] 復元しても **Storage オブジェクト・Edge Functions・custom role の password は戻らない**（§災害復旧手順 の一覧）
+
+> **RTO / RPO は未実測**（復元演習が未実施）。復旧時間を約束できる状態にない。手順と確認観点は [復元演習手順書](./disaster-recovery-drill.md)。
+
 ### 振り返り
 
 - [ ] 根本原因を記録
