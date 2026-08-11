@@ -28,6 +28,7 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 | `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                                                                 |
 | `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                                                                 |
 | `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                                                              |
+| `SUPABASE_AUTH_AUDIT_TOKEN`        | Production Auth Config Audit                 | Supabase Management API の PAT。auth-config job の 1 step だけへ渡す                          |
 | `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
 | `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
@@ -114,6 +115,37 @@ Previewは`RECOVERY_CODE_PEPPER`を維持する。production modeのenv validati
 
 `NEXT_PUBLIC_*` と repository 名などの公開 metadata は secret 扱いにしない。
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` は public key なので、`sensitive` のままでも事故ではないが必須ではない。
+
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` は **product / web の両 Production に必須**とする（#1924）。secret ではないが、欠落すると product 側は widget を描画しないまま signIn し、production の Supabase Auth Bot Protection が全リクエストを `captcha_failed` で拒否して login / signup / password reset が全滅する。build は成功してしまうため、`apps/product/production-build-gate.mjs` / `apps/web/production-build-gate.mjs` の必須 env と `Production Config Audit` の両方で欠落を検知する。
+
+| Project   | Metadata                         | 契約                                            |
+| --------- | -------------------------------- | ----------------------------------------------- |
+| `product` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Production に必須。`sensitive` である必要はない |
+| `web`     | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | 同上                                            |
+
+## Supabase Auth config
+
+production の Auth 設定（Bot Protection、メール変更の二重確認、匿名サインインの可否など）は **Supabase Dashboard が正本**で、`supabase/config.toml` の `[auth.*]` は local と PR Preview branch にしか効かない。GitHub integration の Deploy to production も Auth 設定を同期しない。そのため Dashboard 側でトグルが 1 つ変わると、テストも build も通ったまま安全性が消える。
+
+期待値の正本は [`scripts/production-auth-config-audit.mjs`](../../../scripts/production-auth-config-audit.mjs) の `AUTH_CONFIG_CONTRACT` に置く。docs は CI を fail させられないため正本にしない。監視は `Production Config Audit` workflow の `auth-config` job が担い、**push:main と日次 cron でだけ**走る。
+
+- PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write（`POST /v1/projects/{ref}/database/query` で production DB への任意 SQL を含む）で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
+- GitHub secret 名は `SUPABASE_ACCESS_TOKEN` と分けて `SUPABASE_AUTH_AUDIT_TOKEN` にする。同名だと、別 workflow が「その名前を参照するだけ」で PR 側 code の実行経路へ token が配られる（`integration.yml` が実際にこの形の workflow レベル env を持っていた。2026-08-11 に削除）
+- 応答には `security_captcha_secret` などの secret が同梱される。audit は `AUTH_CONFIG_CONTRACT` に列挙した **値そのものが credential になり得ない設定値**だけを読み、それ以外は出力しない。`*_secrets` / `*_key` / `*_token` / `*_pass` / `*_credentials` は契約へ入れない（contract test が名前で弾く）
+- **監視対象は live 応答の全数トリアージから起こす。** 現在 31 件を pin し、`security_` / `hook_` / `mfa_` / `sessions_` / `password_` 配下で契約にも除外リストにも無いキーが現れたら failure にする（boolean に限らない — `hook_send_email_uri` は全認証メールの token 配送先で、string だが最大級の危険値）。`external_*`（95 キー）と `mailer_*`（40 キー）は provider / template が増えるたびにキーが増え、キーの存在自体は危険ではないため guard の対象外にし、危険な値だけ個別に pin する
+- **audit が「unclassified」で赤くなった時の解除手順**: ① 期待値は必ず live 実測から起こす（推測を置くと恒久 failure になる）② 契約か除外リストに足したら、`scripts/__tests__/production-auth-config-audit-contract.test.ts` のリテラル固定を**同じ PR で**更新する（更新しないと無関係に見える test が落ちる）
+- **監視対象は公開 OpenAPI spec から導出しない。** `https://api.supabase.com/api/v1-json` の `AuthConfigResponse` は live 応答の完全な記述ではなく、2026-08-11 実測で live 242 キーに対し spec 237 キー、6 キーが spec に無かった。その 1 つがパスワード変更が依存する `security_update_password_require_current_password` で、spec を根拠に「存在しない」と誤断した事故がある。監視対象は必ず **live 応答の `keys` 列挙**から起こす。規律を人手に頼らないため、契約にも除外リストにも無い `security_*` キーが現れたら audit が failure になる
+- **判定は期待値との等値**にしてあり、片方向の警報にしない。設定が緩む方向（fail-open: 本来止まる操作が黙って通る）と締まる方向（fail-closed: 本来通る操作が黙ってできなくなる）の**どちらの drift も failure にする**。各値の `failureMode` はこの分類で、警報条件ではなく失敗時の読み解きに使う。`security_captcha_provider` と `security_update_password_require_reauthentication` は fail-closed 側で、「安全側に倒れる変更」に見えて login やパスワードリセットを止めうる
+
+**保証境界**（`.claude/rules/workflow.md` §同型指摘の打ち切り に従い明文化）。守るのは ① `security_` / `hook_` / `mfa_` / `sessions_` / `password_` 配下の**網羅性**（契約にも除外リストにも無いキーは型を問わず failure）② その外側は 2026-08-11 の全数トリアージで選んだ個別 pin ③ pin した値の**両方向**の drift。守らないのは `external_*` / `mailer_*` / `smtp_*` / `sms_*` に新しく増えるキー（キーの存在自体は危険ではなく、guard に入れると形骸化する）、値の意味の検証（死活監視ではない）、Dashboard 以外の経路で生じた状態。境界の外側に未 pin の値があるという指摘は、境界の更新提案として別 issue で扱う。
+
+**「守らない」側は放置すると静かに腐る**（除外した名前空間に、後から安全性に効くキーが増えても気づけない）。次のどちらかを契機に再トリアージする: **月次ガーデニング**、または **Supabase の Auth 新機能を認知した時点**。手順は live 応答の `keys` 列挙を取り直し、除外名前空間に増えたキーが無いかを見るだけでよい（`security_` / `hook_` / `mfa_` / `sessions_` / `password_` 配下は audit 自身が落ちるので確認不要）。
+
+手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
+
+```bash
+SUPABASE_AUTH_AUDIT_TOKEN="op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+```
 
 #### Pre-deploy dry run
 

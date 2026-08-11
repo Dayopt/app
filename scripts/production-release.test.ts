@@ -131,14 +131,12 @@ function auditMetadata(project: 'product' | 'web') {
     sensitive('RESEND_API_KEY'),
     plain('RESEND_FROM_EMAIL'),
     sensitive('RESEND_WEBHOOK_SECRET'),
+    plain('NEXT_PUBLIC_TURNSTILE_SITE_KEY'),
     plain('UPSTASH_REDIS_REST_URL'),
     sensitive('UPSTASH_REDIS_REST_TOKEN'),
   ];
   return {
-    envs:
-      project === 'web'
-        ? [...shared, plain('NEXT_PUBLIC_TURNSTILE_SITE_KEY'), sensitive('TURNSTILE_SECRET_KEY')]
-        : shared,
+    envs: project === 'web' ? [...shared, sensitive('TURNSTILE_SECRET_KEY')] : shared,
   };
 }
 

@@ -19,6 +19,7 @@ function completeProductionEnv() {
     RESEND_API_KEY: 'safe-dummy-key',
     RESEND_FROM_EMAIL: 'noreply@dayopt.app',
     RESEND_WEBHOOK_SECRET: 'safe-dummy-webhook-secret',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'safe-dummy-site-key',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-token',
   };
@@ -68,6 +69,18 @@ describe('Product operational production build gate', () => {
       assertProductOperationalProductionBuildEnv({ VERCEL_ENV: 'production', CI: 'true' }),
     ).toThrow(
       `Product production build requires: ${REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV.join(', ')}`,
+    );
+  });
+
+  // 必須 env を 1 つずつ落として、どれも単独で build を止めることを固定する。
+  // 全欠落だけを見る test では、fixture 側に値を足した時に「実は誰も要求していない
+  // env」が混ざっても気づけない（#1924 で Turnstile site key を足した際に顕在化）。
+  it.each(REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV)('rejects a build missing only %s', (name) => {
+    const env = completeProductionEnv();
+    delete env[name];
+
+    expect(() => assertProductOperationalProductionBuildEnv(env)).toThrow(
+      `Product production build requires: ${name}`,
     );
   });
 
