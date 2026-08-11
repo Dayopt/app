@@ -33,6 +33,8 @@ import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+/** Supabase auth + Pro entitlement 確認 + rate limit + Google token exchange（外部 IdP 往復）の合算。 */
+export const maxDuration = 60;
 
 /**
  * Settings への戻り先。

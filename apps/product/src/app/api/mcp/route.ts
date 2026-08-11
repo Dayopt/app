@@ -30,6 +30,8 @@ import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/regis
  */
 
 export const dynamic = 'force-dynamic';
+/** 認証・rate limit・tool dispatch の合算。tool 呼び出しは外部リソース I/O を伴いうるため余裕を見る。 */
+export const maxDuration = 60;
 
 const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 

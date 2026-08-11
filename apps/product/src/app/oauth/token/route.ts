@@ -7,5 +7,7 @@
  * 旧 public path の `/api/oauth/token` は互換のため同じ handler を公開し続ける。
  */
 export const dynamic = 'force-dynamic';
+/** `@/app/api/oauth/token/route` の同一 handler を re-export するだけなので、同じ予算を適用する。 */
+export const maxDuration = 60;
 
 export { POST } from '@/app/api/oauth/token/route';

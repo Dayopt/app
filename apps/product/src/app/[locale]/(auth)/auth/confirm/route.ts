@@ -17,6 +17,9 @@ import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
+/** verifyOtp は Supabase Auth API 呼び出し 1 回のみ。redirect 前提の同期フローに余裕を見る。 */
+export const maxDuration = 60;
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tokenHash = searchParams.get('token_hash');

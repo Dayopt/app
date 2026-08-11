@@ -28,6 +28,9 @@ import {
 } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
+/** getUser 15s + getSession 15s + rate limit 2s = 32s。graceful error を返す余地を残す。 */
+export const maxDuration = 60;
+
 const authPostSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('signin'),

@@ -29,6 +29,8 @@ import { captureUnexpectedError } from '@/lib/sentry';
  * が本 handler を re-export）。この `/api/oauth/token` は互換のため残す。
  */
 export const dynamic = 'force-dynamic';
+/** 外部 IdP 往復は無いが、DB 読み書き + rate limit チェックを含めて余裕を見る。 */
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const hostRejection = rejectUnexpectedOAuthHost(request);
