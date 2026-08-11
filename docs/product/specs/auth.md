@@ -4,6 +4,8 @@ last_verified: 2026-08-11
 code:
   - apps/product/src/features/settings/components/EmailChangeDialog.tsx
   - apps/product/src/features/settings/components/PasswordChangeDialog.tsx
+  - apps/product/src/app/[locale]/(auth)/auth/confirm/route.ts
+  - apps/product/src/app/[locale]/(auth)/auth/confirmed/page.tsx
   - apps/product/src/lib/trpc/session-auth-context.ts
   - apps/product/src/lib/trpc/procedures.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
@@ -127,6 +129,22 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 このPRではgateを有効にしない。旧アプリが動いていないことと外部サービスのidentityをPreviewで確認した後、別の明示承認で有効にする。
 
 「すべてのデータを削除」の公開入力は、従来どおり`{ confirmText: 'DELETE' }`を維持する。世代番号を使う新しいDB処理は配置するが、このPRでは画面から使わない。
+
+## メール確認リンクの着地先
+
+`/auth/confirm` は token を検証したあと、**session が確立できた時だけ** `next`（保護ページ）へ送る。できなかった場合と検証に失敗した場合は `/auth/confirmed?status=...` へ送り、何が起きたか・次に何をすべきかを表示する（[#1956](https://github.com/Dayopt/dayopt/issues/1956)）。
+
+| status                   | いつ                                                           | 伝えること                               |
+| ------------------------ | -------------------------------------------------------------- | ---------------------------------------- |
+| `email_change_confirmed` | `type=email_change` の検証成功、session 無し                   | もう一方のアドレスの確認も要ること       |
+| `email_confirmed`        | それ以外の type の検証成功、session 無し                       | 確認済みなのでログインすればよいこと     |
+| `failed`                 | 検証失敗、token / type の欠落、未知の status（fail closed 先） | リンクが期限切れ・使用済みでありうること |
+
+**「検証成功 ⇒ session あり」は成り立たない。** `double_confirm_changes = true` により email_change は新旧両方のリンクで完了する 2 段フローで、片側の検証だけでは session が立たない。メールクライアントが開く browser がアプリの session cookie を持たない場合も同じで、これは type を問わない。session の有無で分岐するのはこのため。
+
+判定は `data.session?.access_token` で行う。auth-js は `access_token` を伴う session だけを保存する（cookie が書かれる）ので、truthy 判定だと token 無しの session オブジェクトで保護ページへ送ってしまう。
+
+**着地先を login ページにはしない。** `proxy.ts` は認証済みユーザーが auth 系 path に来ると `/week` へ送るため、ログイン中の browser で確認リンクを開くとメッセージが出る前に弾かれる。`/auth/confirmed` は `authPathsAllowedWhileAuthenticated`（`lib/auth/domain/access-policy.ts`）に登録してあり、認証済み・未認証のどちらでも表示できる。**このページを allowlist から外すと本件が再発する。**
 
 ## Auth REST API は存在しない
 
