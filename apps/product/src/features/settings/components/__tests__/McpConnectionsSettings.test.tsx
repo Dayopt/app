@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,13 +40,58 @@ const CURSOR_CONNECTION: ConnectionFixture = {
   last_used_at: '2026-08-08T00:00:00.000Z',
 };
 
-const rowsState = vi.hoisted(() => ({ value: [] as ConnectionFixture[] }));
+// pages は `[{ items: [...] }, { items: [...] }]` の形（`useInfiniteQuery` の shape）。
+// 大半のテストは 1 ページだけを使うので、setRows で 1 ページ扱いにする。
+const pagesState = vi.hoisted(() => ({
+  value: [] as Array<{ items: ConnectionFixture[]; nextCursor: unknown }>,
+}));
+// エラー状態は個別の boolean ではなく「どこで失敗したか」の 1 値で持つ。
+// TanStack Query の各 flag は独立ではなく、query-core の実装上
+//   isError          = status === 'error'
+//   isFetchNextPageError = isError && fetchDirection === 'forward'   ← isError の部分集合
+//   isLoadingError   = isError && !hasData
+//   isRefetchError   = isError && hasData && !isFetchNextPageError && !isFetchPreviousPageError
+// という従属関係にある。flag を個別に立てられる mock だと
+// 「isFetchNextPageError だけ true で isError は false」という現実には存在しない状態を
+// 書けてしまい、実際にそれで追加読み込み失敗時に一覧が丸ごと消えるバグを見逃した。
+// ここでは失敗地点だけを指定させ、flag は下の deriveQueryFlags が実装と同じ式で導出する。
+const infiniteQueryState = vi.hoisted(
+  () =>
+    ({
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      failure: null,
+    }) as {
+      hasNextPage: boolean;
+      isFetchingNextPage: boolean;
+      /** null = 成功 / 'initial' = 初回取得失敗 / 'refetch' = 再取得失敗 / 'nextPage' = 「もっと見る」失敗 */
+      failure: null | 'initial' | 'refetch' | 'nextPage';
+    },
+);
+
+/** query-core と同じ従属関係で flag を導出する（個別に立てさせない）。 */
+function deriveQueryFlags(failure: typeof infiniteQueryState.failure) {
+  const isError = failure !== null;
+  const hasData = failure !== 'initial';
+  const isFetchNextPageError = failure === 'nextPage';
+  return {
+    isError,
+    isFetchNextPageError,
+    isLoadingError: isError && !hasData,
+    isRefetchError: isError && hasData && !isFetchNextPageError,
+  };
+}
+const fetchNextPage = vi.hoisted(() => vi.fn());
 const mutationState = vi.hoisted(() => ({ isPending: false }));
 const revokeUseMutationCallCount = vi.hoisted(() => ({ value: 0 }));
 const revokeMutateAsync = vi.hoisted(() => vi.fn());
 const listCancel = vi.hoisted(() => vi.fn());
 const listInvalidate = vi.hoisted(() => vi.fn());
 const listRefetch = vi.hoisted(() => vi.fn());
+
+function setRows(items: ConnectionFixture[]): void {
+  pagesState.value = [{ items, nextCursor: null }];
+}
 const revokeMutationOptions = vi.hoisted(
   () =>
     ({ current: null }) as {
@@ -84,10 +129,13 @@ vi.mock('@/lib/trpc', () => ({
     }),
     mcpConnections: {
       list: {
-        useQuery: () => ({
-          data: rowsState.value,
+        useInfiniteQuery: () => ({
+          data: { pages: pagesState.value },
           isLoading: false,
-          isError: false,
+          hasNextPage: infiniteQueryState.hasNextPage,
+          isFetchingNextPage: infiniteQueryState.isFetchingNextPage,
+          ...deriveQueryFlags(infiniteQueryState.failure),
+          fetchNextPage,
           refetch: listRefetch,
         }),
       },
@@ -107,12 +155,15 @@ vi.mock('@/lib/trpc', () => ({
 
 import { toast } from '@/lib/toast';
 
-import { McpConnectionsSettings } from '../McpConnectionsSettings';
+import { getMcpConnectionsNextPageParam, McpConnectionsSettings } from '../McpConnectionsSettings';
 
 describe('McpConnectionsSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    rowsState.value = [CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION];
+    setRows([CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION]);
+    infiniteQueryState.hasNextPage = false;
+    infiniteQueryState.isFetchingNextPage = false;
+    infiniteQueryState.failure = null;
     mutationState.isPending = false;
     revokeUseMutationCallCount.value = 0;
     revokeMutationOptions.current = null;
@@ -303,5 +354,132 @@ describe('McpConnectionsSettings', () => {
     // onError は setRevokeOpen(false) を呼ばない。dialog は開いたままユーザーが
     // 再試行やキャンセルを選べる状態を保つ。
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('複数ページを pages.flatMap で 1 つの行リストとして描画し、「もっと見る」で fetchNextPage を呼ぶ', () => {
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+      { items: [CURSOR_CONNECTION], nextCursor: null },
+    ];
+    infiniteQueryState.hasNextPage = true;
+    render(<McpConnectionsSettings />);
+
+    // 2 ページ分の行がすべて描画されている（flatMap による結合）。
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.cursor)' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'loadMore' }));
+    expect(fetchNextPage).toHaveBeenCalledOnce();
+  });
+
+  it('再取得で pages が入れ替わったら、描画も新しい pages だけになる（古い行が残らない）', () => {
+    // このテストが証明するのは **描画側だけ**（cache に載っている pages を
+    // flatMap して描くこと、古い pages が残留しないこと）。
+    // 「revoke → invalidate → 1 ページ目から再取得 → 更新後 cursor で 2 ページ目」という
+    // 実際の往復とページ再構築は、component を丸ごと mock した test では観測できないため
+    // ここでは主張しない。cursor による全件走査（重複・欠落なし）は実 PostgREST に対する
+    // mcp-connections-list-cursor.integration.test.ts が担保する。
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+      { items: [CURSOR_CONNECTION], nextCursor: null },
+    ];
+    const { rerender } = render(<McpConnectionsSettings />);
+
+    // 再取得後の cache 状態（claude が revoke され、1 ページに収まった）に差し替える。
+    pagesState.value = [{ items: [CHATGPT_CONNECTION, CURSOR_CONNECTION], nextCursor: null }];
+    rerender(<McpConnectionsSettings />);
+
+    const chatgptButtons = screen.getAllByRole('button', {
+      name: 'revokeAriaLabel(client=clients.chatgpt)',
+    });
+    const cursorButtons = screen.getAllByRole('button', {
+      name: 'revokeAriaLabel(client=clients.cursor)',
+    });
+    // 重複描画されていない（各 client 1 行だけ）。
+    expect(chatgptButtons).toHaveLength(1);
+    expect(cursorButtons).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('「もっと見る」が失敗しても既読の行と revoke 導線は残り、inline エラーだけが増える', () => {
+    // Codex レビュー指摘（P2）の回帰テスト。query-core では
+    // `isFetchNextPageError = isError && fetchDirection === 'forward'` なので、
+    // 次ページ失敗時は isError も true になる。全体エラーの条件に isError を使うと
+    // 既読の行ごと ErrorState に差し替わり、revoke 導線が消える（＝ #1909 が
+    // 閉じようとしている「revoke できない」状態が別経路で復活する）。
+    pagesState.value = [
+      {
+        items: [CLAUDE_CONNECTION, CHATGPT_CONNECTION],
+        nextCursor: { authorizedAt: 'x', id: 'y' },
+      },
+    ];
+    infiniteQueryState.hasNextPage = true;
+    infiniteQueryState.failure = 'nextPage';
+    render(<McpConnectionsSettings />);
+
+    // 既読の行と revoke 導線が生きている（ErrorState に差し替わっていない）。
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.claudeAi)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'revokeAriaLabel(client=clients.chatgpt)' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('loadError')).not.toBeInTheDocument();
+
+    // 失敗は「もっと見る」導線のそばの inline 文言だけで伝える。
+    expect(screen.getByText('loadMoreError')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'loadMore' })).toBeInTheDocument();
+  });
+
+  it('初回取得の失敗はページ全体を ErrorState にする', () => {
+    pagesState.value = [];
+    infiniteQueryState.failure = 'initial';
+    render(<McpConnectionsSettings />);
+
+    expect(screen.getByText('loadError')).toBeInTheDocument();
+    expect(screen.queryByText('loadMoreError')).not.toBeInTheDocument();
+  });
+
+  it('getNextPageParam は nextCursor をそのまま次ページ要求へ渡す', () => {
+    // 「もっと見る」で server に送る cursor そのもの。field 名を取り違えたり、
+    // 生値を Date 経由で作り直したりすると、同一ミリ秒内の行が欠落・重複する。
+    const nextCursor = { authorizedAt: '2026-08-01T00:00:00.123456Z', id: 'conn-claude' };
+
+    expect(getMcpConnectionsNextPageParam({ items: [CLAUDE_CONNECTION], nextCursor })).toEqual(
+      nextCursor,
+    );
+  });
+
+  it('getNextPageParam は最終ページで undefined を返す（hasNextPage を false にする）', () => {
+    // null をそのまま返しても query-core の `!= null` 判定では同義だが、
+    // 「次は無い」を undefined で表す tRPC の契約に合わせる。
+    expect(
+      getMcpConnectionsNextPageParam({ items: [CLAUDE_CONNECTION], nextCursor: null }),
+    ).toBeUndefined();
+  });
+
+  it('次ページ以外の再取得失敗は、従来どおりページ全体を ErrorState にする', () => {
+    // useQuery だった頃の挙動（isError → ErrorState）を次ページ以外では維持する。
+    // design-system.md の「UI を描画する全 query は isError を ErrorState で扱う」に従う。
+    setRows([CLAUDE_CONNECTION]);
+    infiniteQueryState.failure = 'refetch';
+    render(<McpConnectionsSettings />);
+
+    expect(screen.getByText('loadError')).toBeInTheDocument();
   });
 });

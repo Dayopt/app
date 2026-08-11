@@ -94,10 +94,19 @@ vi.mock('@/lib/trpc', () => ({
     }),
     mcpConnections: {
       list: {
-        useQuery: () => ({
-          data: rowsState.value,
+        useInfiniteQuery: () => ({
+          data: { pages: [{ items: rowsState.value, nextCursor: null }] },
           isLoading: false,
           isError: false,
+          // このテストは dialog の label 保持だけを見るので、query は常に成功状態にする。
+          // 各 error flag の従属関係（isFetchNextPageError ⊂ isError）は
+          // McpConnectionsSettings.test.tsx の deriveQueryFlags 側で固定している。
+          isLoadingError: false,
+          isRefetchError: false,
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          isFetchNextPageError: false,
+          fetchNextPage: vi.fn(),
           refetch: listRefetch,
         }),
       },
