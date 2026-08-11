@@ -5,7 +5,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { env } from '@/env';
 import { databaseTables, type Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
-import { captureUnexpectedDatabaseError } from '@/lib/sentry';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 
 /**
  * ミラー（`external_calendar_events`）から「plans / records に参照されていない行」だけを
@@ -173,7 +173,15 @@ export async function deleteUnreferencedEvents(params: {
     if (candidates.length < PRUNE_BATCH_SIZE) return;
   }
 
+  // 1 接続の ±90 日 window でこの上限（6,000 行）に当たるのは、prune 条件かページングが
+  // 壊れている時だけ。掃除が途中で止まった事実は、次の run が黙って同じ所で止まるので
+  // log だけでは見えない。
   logger.warn('[calendar-prune] stopped at the batch limit', { batches: MAX_PRUNE_BATCHES });
+  captureUnexpectedError(new Error('calendar event pruning hit the batch limit'), {
+    feature: 'external_calendar',
+    operation: 'prune_batch_limit',
+    batches: MAX_PRUNE_BATCHES,
+  });
 }
 
 function captureDatabaseError(error: unknown, operation: string): void {
