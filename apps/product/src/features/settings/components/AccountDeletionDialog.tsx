@@ -80,7 +80,10 @@ export function AccountDeletionDialog() {
       } else if (error.message.includes('Invalid password')) {
         toast.error(t('settings.account.deletion.invalidPassword'));
       } else {
-        toast.error(error.message || t('settings.account.deletion.error'));
+        // 生の英語メッセージを画面に出さない（i18n 破れと内部文言の露出を防ぐ）。
+        // 原因は上の logger.error に残る。再認証手段が使えない場合（REAUTH_UNAVAILABLE）も
+        // ここに落ちるため、文言には問い合わせ先を含めている
+        toast.error(t('settings.account.deletion.error'));
       }
     },
   });

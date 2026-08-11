@@ -22,6 +22,8 @@ import {
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
+import { verifyPasswordWithCaptchaBypass } from './password-reauthentication';
+
 /**
  * User Service エラー
  */
@@ -33,6 +35,7 @@ export class UserServiceError extends ServiceError {
       | 'EXPORT_FAILED'
       | 'UNAUTHORIZED'
       | 'INVALID_PASSWORD'
+      | 'REAUTH_UNAVAILABLE'
       | 'INVALID_INPUT'
       | 'CONFLICT',
     message: string,
@@ -128,17 +131,23 @@ export function createUserService(
           throw new UserServiceError('INVALID_INPUT', 'Password is required');
         }
 
-        const { error: signInError } = await observeAuthOperation(
-          'delete_account_reauthenticate',
-          () =>
-            supabase.auth.signInWithPassword({
-              email: userEmail,
-              password,
-            }),
-        );
+        // 公開 Auth endpoint を user-scoped client で叩くと production の Bot Protection で
+        // 必ず captcha_failed になる（#1917 と同じ故障クラス）。削除には current_password や
+        // Secure Email Change に相当する GoTrue 側の代替機構が無いため、service-role 経由で
+        // captcha を免除する。免除の意味と契約は password-reauthentication.ts を読むこと
+        const reauthentication = await verifyPasswordWithCaptchaBypass({
+          email: userEmail,
+          password,
+        });
 
-        if (signInError) {
+        if (reauthentication.outcome === 'invalid_password') {
           throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
+        }
+
+        if (reauthentication.outcome !== 'verified') {
+          // 検証手段が使えない時は削除を通さない（fail closed）。原因は
+          // password-reauthentication.ts 側で Sentry へ送っているので message には載せない
+          throw new UserServiceError('REAUTH_UNAVAILABLE', 'Reauthentication unavailable');
         }
       } else {
         // パスワードを持たないユーザーは、MFA があれば TOTP で再認証する

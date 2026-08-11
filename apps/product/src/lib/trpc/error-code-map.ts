@@ -28,6 +28,9 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
   FORBIDDEN: 'FORBIDDEN',
   INVALID_PASSWORD: 'UNAUTHORIZED',
+  // 再認証手段そのものが使えない（#1925）。EXPECTED_TRPC_CODES に載る code へ写像し、
+  // handleServiceError 側で Sentry へ二重報告されるのを避ける（報告は呼び出し側の canary 1 本）
+  REAUTH_UNAVAILABLE: 'BAD_REQUEST',
   RECOVERY_EXHAUSTED: 'BAD_REQUEST',
   RECOVERY_INVALID: 'BAD_REQUEST',
   RECOVERY_FAILED: 'INTERNAL_SERVER_ERROR',

@@ -4,6 +4,9 @@ import { publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 const deleteUser = vi.hoisted(() => vi.fn());
+// 再認証は service-role 経由の専用モジュールへ移した（#1925）。ここでは契約だけを固定し、
+// 迂回そのものの挙動は password-reauthentication.test.ts が担う
+const verifyPasswordWithCaptchaBypass = vi.hoisted(() => vi.fn());
 const beforeIdentityDeletion = vi.hoisted(() => vi.fn());
 const loggerInfo = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
@@ -18,6 +21,7 @@ vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail, getUserLocale }
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({ auth: { admin: { deleteUser } }, from: adminFrom }),
 }));
+vi.mock('../password-reauthentication', () => ({ verifyPasswordWithCaptchaBypass }));
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
 }));
@@ -144,6 +148,7 @@ function googleUserDeleteOptions(overrides?: Partial<{ totpCode: string; confirm
 describe('createUserService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    verifyPasswordWithCaptchaBypass.mockResolvedValue({ outcome: 'verified' });
     beforeIdentityDeletion.mockResolvedValue({ status: 'completed' });
     sendAccountDeletionEmail.mockResolvedValue({ success: true });
     getUserLocale.mockResolvedValue('ja');
@@ -156,12 +161,12 @@ describe('createUserService', () => {
 
   describe('deleteAccount', () => {
     it('パスワードを持つユーザーでpasswordが空ならINVALID_INPUTを投げる', async () => {
-      const { service, signInWithPassword } = createSupabase();
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions({ password: '' }))).rejects.toMatchObject({
         code: 'INVALID_INPUT',
       });
-      expect(signInWithPassword).not.toHaveBeenCalled();
+      expect(verifyPasswordWithCaptchaBypass).not.toHaveBeenCalled();
     });
 
     it('確認文字列がDELETEでなければINVALID_INPUTを投げる', async () => {
@@ -172,11 +177,23 @@ describe('createUserService', () => {
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     });
 
-    it('再認証に失敗したらINVALID_PASSWORDを投げる', async () => {
-      const { service } = createSupabase({ signInError: { message: 'invalid credentials' } });
+    it('パスワードが違えばINVALID_PASSWORDを投げる', async () => {
+      verifyPasswordWithCaptchaBypass.mockResolvedValue({ outcome: 'invalid_password' });
+      const { service } = createSupabase();
 
       await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
         code: 'INVALID_PASSWORD',
+      });
+      expect(deleteUser).not.toHaveBeenCalled();
+    });
+
+    // 迂回が壊れた時に「パスワードが違います」と誤って伝えない。削除も通さない（fail closed）
+    it('再認証手段が使えなければREAUTH_UNAVAILABLEを投げて削除しない', async () => {
+      verifyPasswordWithCaptchaBypass.mockResolvedValue({ outcome: 'unavailable' });
+      const { service } = createSupabase();
+
+      await expect(service.deleteAccount(deleteOptions())).rejects.toMatchObject({
+        code: 'REAUTH_UNAVAILABLE',
       });
       expect(deleteUser).not.toHaveBeenCalled();
     });
@@ -259,12 +276,12 @@ describe('createUserService', () => {
 
     describe('パスワードを持たないユーザー（Google のみ）', () => {
       it('MFA が無ければ確認テキストだけで削除できる', async () => {
-        const { service, signInWithPassword } = createSupabase();
+        const { service } = createSupabase();
 
         await expect(service.deleteAccount(googleUserDeleteOptions())).resolves.toEqual({
           success: true,
         });
-        expect(signInWithPassword).not.toHaveBeenCalled();
+        expect(verifyPasswordWithCaptchaBypass).not.toHaveBeenCalled();
         expect(deleteUser).toHaveBeenCalledWith(USER_ID);
       });
 
