@@ -130,10 +130,10 @@ const LEGAL_CONTRACT_CASES: readonly LegalContractCase[] = [
     slug: 'privacy',
     metadataTitle: 'Privacy Policy - Dayopt',
     metadataDescription: 'How Dayopt handles your personal information',
-    lastUpdated: 'Last Updated: 2026-07-21',
-    bodyHash: '2458fee563cfd793663f7acef25c12f16a986f700528f0a0f562c02cc7df3e74',
+    lastUpdated: 'Last Updated: 2026-08-12',
+    bodyHash: 'a5178a8ffba814639f73ac4fe019fe619945def61a1de8f06ad70aad2e62c6fc',
     hrefs: ['/legal/cookies'],
-    counts: { h2: 19, h3: 0, tables: 0, lists: 15 },
+    counts: { h2: 20, h3: 0, tables: 0, lists: 16 },
   },
   {
     locale: 'en',
@@ -191,12 +191,12 @@ const LEGAL_CONTRACT_CASES: readonly LegalContractCase[] = [
     slug: 'privacy',
     metadataTitle: 'プライバシーポリシー - Dayopt',
     metadataDescription: 'Dayoptにおける個人情報の取り扱いについて',
-    lastUpdated: '最終更新日: 2026-07-21',
-    bodyHash: '65f771fd0c89ac5c012260d1093b97e362b10b20d348a89461448d5dbe9139a9',
+    lastUpdated: '最終更新日: 2026-08-12',
+    bodyHash: 'b9f01979cfa3be67906091d3f7a98d70bb17b8288fb9817cdbbfd6c6c784e09f',
     // PrivacyDocument の Link は @dayopt/i18n/navigation 経由（localizeHref 対象）。
     // as-needed prefix により ja は /ja が付く。
     hrefs: ['/ja/legal/cookies'],
-    counts: { h2: 19, h3: 0, tables: 0, lists: 15 },
+    counts: { h2: 20, h3: 0, tables: 0, lists: 16 },
   },
   {
     locale: 'ja',
