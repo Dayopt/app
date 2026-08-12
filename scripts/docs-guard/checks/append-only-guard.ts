@@ -51,10 +51,10 @@ interface SupersedeDiffOptions {
   allowLegacyStatus?: boolean;
 }
 
-export function isSupersedeOnlyDiff(
-  diff: string,
-  { allowLegacyStatus = true }: SupersedeDiffOptions = {},
-): boolean {
+// diffが「削除行なしで、追加行がちょうど1本」の形かを判定し、その1本を返す。
+// 形に合わなければundefined（isSupersedeOnlyDiff / isPartialCorrectionDiffの両方が
+// 同じ形の判定を共有するための抽出）。
+function extractSingleAddition(diff: string): string | undefined {
   const lines = diff.split('\n');
   const additions: string[] = [];
   let inHunk = false;
@@ -65,18 +65,34 @@ export function isSupersedeOnlyDiff(
       continue;
     }
     if (!inHunk) continue;
-    if (line.startsWith('-')) return false;
+    if (line.startsWith('-')) return undefined;
 
     if (line.startsWith('+')) additions.push(line);
   }
 
-  if (additions.length !== 1) return false;
-  const [addition] = additions;
+  return additions.length === 1 ? additions[0] : undefined;
+}
+
+export function isSupersedeOnlyDiff(
+  diff: string,
+  { allowLegacyStatus = true }: SupersedeDiffOptions = {},
+): boolean {
+  const addition = extractSingleAddition(diff);
+  if (addition === undefined) return false;
   return (
-    (addition !== undefined && SUPERSEDED_BY_LINE_RE.test(addition)) ||
-    (addition !== undefined && PARTIAL_CORRECTION_LINE_RE.test(addition)) ||
-    (allowLegacyStatus && addition !== undefined && LEGACY_STATUS_LINE_RE.test(addition))
+    SUPERSEDED_BY_LINE_RE.test(addition) ||
+    PARTIAL_CORRECTION_LINE_RE.test(addition) ||
+    (allowLegacyStatus && LEGACY_STATUS_LINE_RE.test(addition))
   );
+}
+
+// 部分訂正のkeyパターンで許可された diff かどうか。legacy log でも frontmatter 内の
+// 新規key追加であることまで確認させるため、isSupersedeOnlyDiffとは別に判定する
+// （#1939のP2、Codexレビューで検出: diff shapeの正規表現だけで許可すると、
+// legacy logの本文へ同じ形の行を足すだけで append-only を迂回できた）。
+function isPartialCorrectionDiff(diff: string): boolean {
+  const addition = extractSingleAddition(diff);
+  return addition !== undefined && PARTIAL_CORRECTION_LINE_RE.test(addition);
 }
 
 function isLogPath(path: string): boolean {
@@ -158,15 +174,19 @@ export function runAppendOnlyGuard({
       allowLegacyStatus: !usesFrozenContract,
     });
 
-    if (hasAllowedDiff && !usesFrozenContract) continue;
+    if (hasAllowedDiff) {
+      const isPartialCorrection = isPartialCorrectionDiff(diff);
 
-    if (hasAllowedDiff && usesFrozenContract) {
-      const currentContent = readFileSync(resolve(root, change.path), 'utf8');
-      if (
-        isFrontmatterSupersededByAddition(previousContent, currentContent) ||
-        isFrontmatterPartialCorrectionAddition(previousContent, currentContent)
-      ) {
+      if (isPartialCorrection) {
+        // 部分訂正は新契約・旧契約を問わず、frontmatter内の新規keyであることまで
+        // 確認する（legacy logのshortcutに乗せない）。
+        const currentContent = readFileSync(resolve(root, change.path), 'utf8');
+        if (isFrontmatterPartialCorrectionAddition(previousContent, currentContent)) continue;
+      } else if (!usesFrozenContract) {
         continue;
+      } else {
+        const currentContent = readFileSync(resolve(root, change.path), 'utf8');
+        if (isFrontmatterSupersededByAddition(previousContent, currentContent)) continue;
       }
     }
 

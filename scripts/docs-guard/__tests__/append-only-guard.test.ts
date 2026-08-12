@@ -183,6 +183,36 @@ superseded_by: docs/product/log/2026-08-01-new.md
     expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
   });
 
+  it('正常系: legacy logのfrontmatterへの部分訂正key追記も許可する（#1939）', () => {
+    const root = createRepository();
+    write(
+      root,
+      'docs/product/log/2026-07-01-source.md',
+      '---\ntitle: Source\npartially_superseded_2026_08_11_note: docs/product/log/2026-08-11-fix.md\n---\n',
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('エラー系: legacy logの本文への部分訂正key偽装追記を拒否する（Codexレビュー指摘）', () => {
+    // isSupersedeOnlyDiffはdiffの行shapeしか見ないため、frontmatter外（本文末尾）への
+    // 追記でも「1行追加」という形だけで通ってしまっていた（#1939のP2）。legacy logの
+    // shortcutに部分訂正を素通りさせず、frontmatter内かどうかまで確認することを固定する。
+    const root = createRepository();
+    write(
+      root,
+      'docs/product/log/2026-07-01-source.md',
+      '---\ntitle: Source\n---\n\n# Source\n\npartially_superseded_2026_08_11_note: docs/product/log/2026-08-11-fix.md\n',
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: 'docs/product/log/2026-07-01-source.md',
+        reason: 'legacy logの変更はsuperseded_byまたはstatus: supersededの単一行追記だけ許可',
+      },
+    ]);
+  });
+
   it('エラー系: 新契約logへのlegacy status追記を拒否する', () => {
     const root = createRepository();
     const path = addFrozenLog(root);
