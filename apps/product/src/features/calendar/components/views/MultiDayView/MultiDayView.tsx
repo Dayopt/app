@@ -29,6 +29,7 @@ export function MultiDayView({
   dateRange: _dateRange,
   entries,
   allTimeblocks,
+  externalEvents,
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
@@ -135,6 +136,7 @@ export function MultiDayView({
                 <CalendarGridContent
                   date={date}
                   entries={dayEntries}
+                  externalEvents={externalEvents}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
                   allEventsForOverlapCheck={allTimeblocks ?? entries}

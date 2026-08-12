@@ -11,6 +11,7 @@ import { useEffect, useMemo } from 'react';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '@/features/calendar';
 import { useCalendarData } from '@/features/calendar';
+import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -29,6 +30,8 @@ interface CalendarDataLayerResult {
   viewDateRange: ViewDateRange;
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
+  /** 外部カレンダーの未変換予定（ghost）。取得失敗時は空配列で、calendar 全体は落とさない */
+  externalEvents: ExternalCalendarEvent[];
   /** バックグラウンド再取得を含む取得中フラグ */
   isFetching: boolean;
   /** ナビゲーション方向に対応する日付範囲を事前取得する */
@@ -52,6 +55,7 @@ export function useCalendarDataLayer({
     viewDateRange,
     filteredEvents,
     allCalendarEvents,
+    externalEvents,
     timeblocksError,
     isTimeblocksFetching,
     refetchTimeblocks,
@@ -83,6 +87,7 @@ export function useCalendarDataLayer({
       viewDateRange,
       filteredEvents,
       allCalendarEvents,
+      externalEvents,
       isFetching: isTimeblocksFetching,
       prefetchDirection,
       prefetchForView,
@@ -91,6 +96,7 @@ export function useCalendarDataLayer({
       viewDateRange,
       filteredEvents,
       allCalendarEvents,
+      externalEvents,
       isTimeblocksFetching,
       prefetchDirection,
       prefetchForView,
