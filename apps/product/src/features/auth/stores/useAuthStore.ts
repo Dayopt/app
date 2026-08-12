@@ -337,9 +337,15 @@ export const useAuthStore = create<AuthState>()(
             // アカウント乗っ取り被害者が最も自然に取る回復操作（パスワードリセット）で
             // 攻撃者の refresh token を道連れにする。失敗してもパスワード更新自体は
             // 成功しているため、結果は分岐させない（PasswordChangeDialog と同じ扱い）。
-            await observeAuthOperation('sign_out_other_sessions', () =>
-              supabase.auth.signOut({ scope: 'others' }),
-            );
+            // `observeAuthOperation` は catch した例外を re-throw する契約なので、ここで
+            // 握り潰さないと外側の catch に落ち、成功した更新が失敗として返ってしまう。
+            try {
+              await observeAuthOperation('sign_out_other_sessions', () =>
+                supabase.auth.signOut({ scope: 'others' }),
+              );
+            } catch {
+              // 上記コメントの通り、他端末の失効に失敗しても更新自体の成功は変えない。
+            }
             set({ loading: false });
           }
 

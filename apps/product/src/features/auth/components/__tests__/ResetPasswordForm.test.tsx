@@ -81,21 +81,23 @@ describe('ResetPasswordForm', () => {
 
   // ブロック側: recovery session でないセッション（直接アクセス等）で current_password_required
   // が返った場合は、セッション再取得を促すメッセージを出す。
-  it.each(['current_password_required', 'current_password_mismatch', 'reauthentication_needed'])(
-    '%s はセッション再取得を促すメッセージを表示する',
-    async (code) => {
-      mockUpdatePassword.mockResolvedValue({
-        data: { user: null },
-        error: Object.assign(new Error('rejected'), { code }),
-      });
+  it.each([
+    'current_password_required',
+    'current_password_invalid',
+    'invalid_credentials',
+    'reauthentication_needed',
+  ])('%s はセッション再取得を促すメッセージを表示する', async (code) => {
+    mockUpdatePassword.mockResolvedValue({
+      data: { user: null },
+      error: Object.assign(new Error('rejected'), { code }),
+    });
 
-      await submitValidPassword();
+    await submitValidPassword();
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent('auth.errors.recoverySessionInvalid');
-      });
-    },
-  );
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('auth.errors.recoverySessionInvalid');
+    });
+  });
 
   // 既存挙動の固定: 構造化 code を持たない・未知の code のエラーは従来どおり
   // getAuthErrorKey の汎用判定（message の weak/short 判定）にフォールバックする。

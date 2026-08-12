@@ -31,8 +31,13 @@ import { useAuthStore } from '../stores/useAuthStore';
  *
  * - `insufficient_aal`: アカウントに MFA(TOTP) が有効。recovery session は aal1 止まりで、
  *   GoTrue が config に関わらず更新を拒否する（step-up 検証の実装は #2013 で別途追う）
- * - `current_password_required` / `current_password_mismatch`: recovery session でない
- *   セッション（通常ログイン中の直接アクセス等）でこの画面に来た
+ * - `current_password_required` / `current_password_invalid`: recovery session でない
+ *   セッション（通常ログイン中の直接アクセス等）でこの画面に来た。GoTrue ソース
+ *   （`apierrors.ErrorCodeCurrentPasswordRequired` / `ErrorCodeCurrentPasswordMismatch`）で
+ *   実際の文字列値を確認済み（後者は定数名に反し `current_password_invalid` を返す）
+ * - `invalid_credentials`: `PasswordChangeDialog.tsx` の `isCurrentPasswordError` が同じ
+ *   GoTrue 経路で観測している code。上と重複する可能性があるが、どちらが実際に返るかを
+ *   確定できていないため両方を検知対象にする
  * - `reauthentication_needed`: production では現状発生しないが、設定 drift への保険
  *
  * 汎用の「時間をおいて再試行」に畳むと、再試行しても直らない状況で誤った案内になる。
@@ -41,7 +46,8 @@ import { useAuthStore } from '../stores/useAuthStore';
  */
 const RECOVERY_UPDATE_BLOCKED_CODES = new Set([
   'current_password_required',
-  'current_password_mismatch',
+  'current_password_invalid',
+  'invalid_credentials',
   'reauthentication_needed',
 ]);
 

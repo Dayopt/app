@@ -45,4 +45,18 @@ describe('useAuthStore.updatePassword', () => {
 
     expect(mockSignOut).not.toHaveBeenCalled();
   });
+
+  // risk-reviewer 指摘: observeAuthOperation は catch した例外を re-throw する契約
+  // （lib/sentry/integration.ts）。signOut の失敗を握り潰さないと、外側の try/catch に
+  // 落ちて「パスワード更新は成功しているのに失敗として返る」誤報告になる。
+  it('signOut が失敗しても更新成功の結果は失敗に変わらない', async () => {
+    const updateResult = { data: { user: { id: 'user-1' } }, error: null };
+    mockUpdateUser.mockResolvedValue(updateResult);
+    mockSignOut.mockRejectedValue(new Error('network error'));
+
+    const result = await useAuthStore.getState().updatePassword('NewPassw0rd!23');
+
+    expect(result).toEqual(updateResult);
+    expect(useAuthStore.getState().error).toBeNull();
+  });
 });

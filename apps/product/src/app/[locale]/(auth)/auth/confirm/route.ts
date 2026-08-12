@@ -78,11 +78,11 @@ export async function GET(request: NextRequest) {
       // token を伴わない session オブジェクトでは cookie が書かれない。truthy 判定だと
       // その場合に保護ページへ送ってしまい、直したはずの無言バウンスが再現する。
       if (data.session?.access_token) {
-        // recovery だけ next を無視して固定 path へ送る（#1928）。`next` はメール送信経路
-        // （Edge Function の redirect_to 構築、または Supabase 側の Redirect URLs allowlist）
-        // の欠落で付かないことがあり、その場合 fallback の `/week` へ落ちてパスワード設定
-        // フォームに到達できない。recovery の着地先は固定で問題なく、`next` の生成経路に
-        // 依存しない形にする方が壊れにくい。
+        // recovery だけ next を無視して固定 path へ送る（#1928）。実際の発生原因は
+        // production の Redirect URLs allowlist に `/auth/reset-password` が未登録で、
+        // GoTrue が `redirect_to` を拒否して `next` が付かないまま fallback の `/week` へ
+        // 落ちていたこと（allowlist は User が追加済み）。recovery の着地先は固定で問題
+        // ないため、allowlist が再びドリフトしても壊れない形にしておく（防御層）。
         const target = type === 'recovery' ? '/auth/reset-password' : next;
         return NextResponse.redirect(new URL(target, request.url));
       }
