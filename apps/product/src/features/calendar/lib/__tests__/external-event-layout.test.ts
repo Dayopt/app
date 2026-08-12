@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculateExternalEventLayout } from '../external-event-layout';
+import { calculateExternalEventLayout, toZonedExternalEvents } from '../external-event-layout';
 
 const HOUR_HEIGHT = 60;
 const LANE_WIDTH = 38;
@@ -160,5 +160,62 @@ describe('calculateExternalEventLayout / レーン幅', () => {
     );
 
     expect(positions).toEqual({});
+  });
+});
+
+describe('toZonedExternalEvents', () => {
+  it('ユーザー TZ の壁時計をローカルフィールドへ移す', () => {
+    // UTC 00:00 は Asia/Tokyo の 09:00。grid は getHours() 基準で座標を出すため、
+    // 変換後の Date のローカル時刻が 9 時になっていないと plan / record とずれる。
+    const [zoned] = toZonedExternalEvents(
+      [
+        {
+          id: 'a',
+          startDate: new Date('2026-08-11T00:00:00.000Z'),
+          endDate: new Date('2026-08-11T01:00:00.000Z'),
+        },
+      ],
+      'Asia/Tokyo',
+    );
+
+    expect(zoned?.startDate.getHours()).toBe(9);
+    expect(zoned?.endDate.getHours()).toBe(10);
+  });
+
+  it('変換した日時を layout に通すと壁時計どおりの座標になる', () => {
+    const zoned = toZonedExternalEvents(
+      [
+        {
+          id: 'a',
+          startDate: new Date('2026-08-11T00:00:00.000Z'),
+          endDate: new Date('2026-08-11T01:00:00.000Z'),
+        },
+      ],
+      'Asia/Tokyo',
+    );
+
+    const positions = calculateExternalEventLayout(zoned, {
+      dayStart: DAY_START,
+      hourHeight: HOUR_HEIGHT,
+      laneWidthPercent: LANE_WIDTH,
+    });
+
+    expect(positions.a).toMatchObject({ top: 9 * HOUR_HEIGHT, height: HOUR_HEIGHT });
+  });
+
+  it('id 以外のフィールドを保持する', () => {
+    const [zoned] = toZonedExternalEvents(
+      [
+        {
+          id: 'a',
+          title: 'Standup',
+          startDate: new Date('2026-08-11T00:00:00.000Z'),
+          endDate: new Date('2026-08-11T01:00:00.000Z'),
+        },
+      ],
+      'Asia/Tokyo',
+    );
+
+    expect(zoned?.title).toBe('Standup');
   });
 });

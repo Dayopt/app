@@ -23,7 +23,10 @@ import {
   calendarEventToRecordEvent,
 } from '../../../../lib/calendar-event-to-lane-event';
 import { selectExternalEventsForDate } from '../../../../lib/external-event-day-selection';
-import { calculateExternalEventLayout } from '../../../../lib/external-event-layout';
+import {
+  calculateExternalEventLayout,
+  toZonedExternalEvents,
+} from '../../../../lib/external-event-layout';
 import { buildPlanRecordDropInput } from '../../../../lib/plan-record-drop';
 import {
   calculateTwoLaneStylesForCalendarEvents,
@@ -208,8 +211,16 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // ghost（#1962）。Plan レーンの領域を使うので、`laneDisplayMode === 'record'` では
   // planLaneWidthPercent が 0 になり結果的に描かれない（外部予定は実績ではない）。
+  // 日の選別は生の instant + ユーザー TZ の日付キーで行い、座標とカードの時刻表示は
+  // グリッドと同じ壁時計空間（toZonedTime 済み）に揃える。
   const dayExternalEvents = React.useMemo(
-    () => (externalEvents ? selectExternalEventsForDate(externalEvents, date, timezone) : []),
+    () =>
+      externalEvents
+        ? toZonedExternalEvents(
+            selectExternalEventsForDate(externalEvents, date, timezone),
+            timezone,
+          )
+        : [],
     [externalEvents, date, timezone],
   );
   const externalEventPositions = React.useMemo(

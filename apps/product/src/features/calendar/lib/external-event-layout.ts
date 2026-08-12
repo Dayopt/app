@@ -14,6 +14,8 @@
  * `two-lane-layout.ts` と同じ分担）。
  */
 
+import { convertToTimezone } from '@/lib/date/timezone';
+
 import type { TwoLanePosition } from './two-lane-layout';
 
 const DAY_MINUTES = 24 * 60;
@@ -23,6 +25,25 @@ interface ExternalEventLayoutInput {
   id: string;
   startDate: Date;
   endDate: Date;
+}
+
+/**
+ * ghost をグリッドと同じ「壁時計」空間へ移す。
+ *
+ * plan / record は `applyTimezoneToDisplayDates` で `toZonedTime` 済みの表示用日時を持ち、
+ * `two-lane-layout` はその **ローカルフィールド**（getHours / getMinutes）から座標を出す。ghost に
+ * 生の UTC instant を渡すと、ユーザー TZ ≠ ブラウザ TZ のときに ghost だけが時差分ずれて描かれる。
+ * 表示に使う日時（座標とカード内の時刻表示）はここを通したものに揃える。
+ */
+export function toZonedExternalEvents<T extends ExternalEventLayoutInput>(
+  events: ReadonlyArray<T>,
+  timezone: string,
+): T[] {
+  return events.map((event) => ({
+    ...event,
+    startDate: convertToTimezone(event.startDate, timezone),
+    endDate: convertToTimezone(event.endDate, timezone),
+  }));
 }
 
 interface CalculateExternalEventLayoutOptions {
