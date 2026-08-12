@@ -1,7 +1,7 @@
 ---
 title: 'Privacy Policy'
 description: 'How Dayopt handles your personal information'
-lastUpdated: 'Last Updated: 2026-07-21'
+lastUpdated: 'Last Updated: 2026-08-12'
 ---
 
 <PrivacyDocument
@@ -120,6 +120,33 @@ lastUpdated: 'Last Updated: 2026-07-21'
           'AI-generated content is provided for informational purposes only. We do not guarantee the accuracy, completeness, or reliability of AI outputs. You should review all AI-generated suggestions before acting on them.',
         optOut:
           'AI features are optional. You can use the Service without enabling any AI functionality. Free tier users are limited to 30 AI interactions per month.',
+      },
+      googleCalendar: {
+        title: 'Google Calendar Integration',
+        intro:
+          'If you connect a Google account, Dayopt reads your calendars so you can plan your day around commitments you already have. This is optional and one-way: Dayopt never creates, modifies, or deletes anything in your Google Calendar.',
+        whatWeAccess:
+          'What we access — the email address and account identifier of the Google account you connect, the list of your calendars so you can choose which ones to import, and the events on the calendars you select.',
+        connectedAccount:
+          "The connected account — we store the account's email address and its stable Google account identifier. We show you the email address so you can tell your connected accounts apart, and we use the identifier to confirm a reconnection is for the same account. Both are deleted when you disconnect the account.",
+        whatWeStore:
+          "What we store — for each imported event, only its identifier, title, description, start and end time, whether it is active or cancelled, and the identifier and name of the calendar it came from. For a calendar someone shared with you, that identifier may be the sharing account's email address. Attendees, guest email addresses, locations, conferencing links, and attachments are never used, stored, or logged.",
+        calendarSelection:
+          "Your calendar selection — separately from the events, we store which calendars you chose (each one's Google identifier and name) along with a sync token that lets the next sync fetch only what changed. This is deleted when you deselect the calendar, disconnect the account, or delete your Dayopt account.",
+        howMuchWeRead:
+          'How much we read — the 90 days before and after now. Most syncs only ask Google what changed since the last one; about once a day we re-read the whole window, so the range keeps up with the current date. All-day events are not imported.',
+        howWeUseIt:
+          'How we use it — only to show these events inside your own Dayopt timeline. Imported events are visible only to you, and we never share them with anyone else unless you set up a way for us to.',
+        howProtected:
+          'How it is protected — the credentials that let Dayopt read your calendar are encrypted before they are stored.',
+        howToStop:
+          "How to stop it — disconnect the account at any time from Settings. We ask Google to revoke our access, and we delete the stored credentials, the connected account's email address and identifier, and every imported event you have not built on. If you have already turned an imported event into an entry of your own, we keep both, so we are not deleting part of your history without asking.",
+        accountDeletion:
+          'If you delete your Dayopt account — everything above is deleted, including imported events we would otherwise have kept. For up to 90 days we keep a record that the revocation happened, so we can confirm it was carried out and notice if it silently failed. That record is deleted automatically afterward.',
+        revokeFromGoogle:
+          "Revoking from Google's side — you can remove Dayopt's access directly from your Google account's security settings at any time, without going through us.",
+        limitedUse:
+          "Dayopt's use of information received from Google APIs adheres to the Google API Services User Data Policy (https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. We do not sell this data, do not use it for advertising, and do not use it to train AI or machine learning models.",
       },
       dataProcessing: {
         title: 'Data Processing Details',
