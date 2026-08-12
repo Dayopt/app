@@ -122,11 +122,13 @@ account, and the user chooses exactly which of their calendars are imported.
 ### Scope justification — `calendar.calendarlist.readonly`（narrow pair を採用する場合）
 
 ```
-Dayopt calls calendarList.list once, immediately after the user connects their
-Google account, to show the user the list of their calendars so they can choose
-which ones to import. Only the calendar identifier, the calendar name, and the
-primary flag are used. The identifier and the name are stored alongside imported
-events so the user can tell which calendar an entry came from.
+Dayopt calls calendarList.list to show the user the list of their calendars so
+they can choose which ones to import. It is called on demand, when the user opens
+the integration settings screen for a connected account and after they change
+their selection, so that the list they see is current. Only the calendar
+identifier, the calendar name, and the primary flag are used. The identifier and
+the name are stored alongside imported events so the user can tell which calendar
+an entry came from.
 
 This is the narrowest scope that authorizes calendarList.list. Dayopt does not
 create, modify, or delete calendars, and does not read calendar ACLs or settings.
@@ -155,8 +157,11 @@ From each event, Dayopt stores only these fields:
     and for a calendar another person shared with them it may be that person's
     email address.
 
-Dayopt does not read or store attendees, guest email addresses, locations,
-conferencing links, attachments, organizers, or any other event field.
+Dayopt does not request a partial response, so the events.list reply it receives
+is the standard Event resource. Every field Dayopt does not need is discarded at
+the parsing boundary: attendees, guest email addresses, locations, conferencing
+links, attachments, and organizers are never used, never stored, and never
+written to logs.
 
 This is the narrowest scope that authorizes events.list. Dayopt does not create,
 modify, or delete events, and does not access free/busy information for calendars
@@ -170,8 +175,10 @@ the user has not selected.
 ```
 Dayopt uses this scope for exactly two API calls:
 
-  - calendarList.list, called once after the user connects their Google account,
-    so the user can choose which of their calendars to import.
+  - calendarList.list, called on demand when the user opens the integration
+    settings screen for a connected account and after they change their
+    selection, so the user can choose which of their calendars to import and
+    always sees a current list.
   - events.list, called on the calendars the user explicitly selected, to import
     their existing commitments into the user's Dayopt timeline.
 
@@ -183,8 +190,11 @@ From each event, Dayopt stores only the event ID, the title, the description, th
 start and end times, and the Google-assigned identifier and name of the calendar
 the event came from. Note that a calendar identifier is typically an email address:
 the user's own for their own calendar, and the sharing person's for a calendar
-shared with them. Attendees, guest email addresses, locations, conferencing links,
-attachments, and organizers are never read or stored.
+shared with them. Dayopt does not request a partial response, so the events.list
+reply it receives is the standard Event resource; every field it does not need is
+discarded at the parsing boundary. Attendees, guest email addresses, locations,
+conferencing links, attachments, and organizers are never used, never stored, and
+never written to logs.
 
 Dayopt never writes to Google Calendar. It does not create, modify, or delete
 calendars or events.
@@ -200,9 +210,12 @@ authentication requests. Dayopt uses the stable "sub" identifier from that ID to
 to tell which Google account a connection belongs to, and to detect when a user
 reconnects with a different account than the one originally connected.
 
-email is used only to display which Google account is connected, in the app's
-integration settings screen, so a user with more than one connected account can
-tell them apart.
+email is used for two things. It is displayed in the app's integration settings
+screen so that a user with more than one connected account can tell them apart.
+It is also passed back to Google as the login_hint when the user reconnects an
+account whose access has expired, so the consent screen suggests the same account
+they connected originally. Dayopt does not rely on the email address for identity;
+the account match is verified against the "sub" identifier described above.
 ```
 
 ### Data handling summary（別途聞かれた場合）
@@ -238,15 +251,15 @@ all of it.
 
 ### 撮影条件
 
-| 条件         | 内容                                                   | 理由                                                         |
-| ------------ | ------------------------------------------------------ | ------------------------------------------------------------ |
-| 言語         | **UI を英語にする**（`https://app.dayopt.app/en/...`） | Google が "in English" を明示要求                            |
-| アドレスバー | ブラウザのアドレスバーを**常に画面内に入れる**         | 同意画面 URL に含まれる client ID を審査官が確認する         |
-| アカウント   | 実際の Google アカウント。予定が数件入っているもの     | 空カレンダーだと機能を見せられない                           |
-| 環境         | production（`https://app.dayopt.app`）                 | 審査対象の client ID で動く必要がある。Preview は OAuth 無効 |
-| 事前状態     | 対象アカウントを**一度 disconnect しておく**           | 接続フローを頭から見せるため                                 |
-| 公開設定     | YouTube に**限定公開（unlisted）**でアップロード       | Google の要求。非公開だと審査官が見られない                  |
-| 音声         | 不要。字幕・キャプションがあると親切                   | 要求はされていない                                           |
+| 条件         | 内容                                                                                                         | 理由                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 言語         | **UI を英語にする**（`https://app.dayopt.app/en/...`）                                                       | Google が "in English" を明示要求                                                                                                                                |
+| アドレスバー | ブラウザのアドレスバーを**常に画面内に入れる**                                                               | 同意画面 URL に含まれる client ID を審査官が確認する                                                                                                             |
+| アカウント   | 実際の Google アカウント。撮影で選ぶカレンダーに、**現在日時の前後 90 日以内の時刻指定の予定**が数件あること | 取り込み範囲が ±90 日で、終日予定は除外される。祝日・誕生日のような終日予定や範囲外の予定しか無いと、Apply も同期も成功するのにシーン 9 で何も出ず撮り直しになる |
+| 環境         | production（`https://app.dayopt.app`）                                                                       | 審査対象の client ID で動く必要がある。Preview は OAuth 無効                                                                                                     |
+| 事前状態     | 対象アカウントを**一度 disconnect しておく**                                                                 | 接続フローを頭から見せるため                                                                                                                                     |
+| 公開設定     | YouTube に**限定公開（unlisted）**でアップロード                                                             | Google の要求。非公開だと審査官が見られない                                                                                                                      |
+| 音声         | 不要。字幕・キャプションがあると親切                                                                         | 要求はされていない                                                                                                                                               |
 
 ### シーン構成
 
@@ -292,7 +305,7 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 
 1. **アプリ名**が `Dayopt` になっている（動画に映る名前と完全一致させる）
 2. **ユーザーサポートメール**が現行の連絡先になっている
-3. **アプリのロゴ**が登録されている。未登録なら `apps/product/public/icons/icon-512.png` を使う（120×120 以上、正方形、透過不可の要件に注意）
+3. **アプリのロゴ**が登録されている。未登録なら `apps/product/public/icons/icon-512.png` を使う。Google が公開している要件は **正方形・120×120px 推奨・1MB 以下・JPG / PNG / BMP** で、この画像は 512×512 の PNG（48KB）なので満たす。**ブランドを一意に識別できること**も要件なので、汎用アイコンや他社ロゴに似たものは使わない。透過の可否は公開ドキュメントに記載が無いため、Console のアップロード時の検証に従う（弾かれたら不透明な背景を敷いた版を作る）
 4. **アプリケーションのホームページ** = `https://dayopt.app`
 5. **プライバシーポリシー** = `https://dayopt.app/legal/privacy`
 6. **利用規約** = `https://dayopt.app/legal/terms`
@@ -363,9 +376,10 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 > - **What we store**: for each imported event, only its identifier, title,
 >   description, and start and end times, together with the identifier and name of
 >   the calendar it came from. For a calendar someone shared with you, that
->   calendar identifier may be the sharing account's email address. We do not read
->   or store attendees, guest email addresses, locations, conferencing links, or
->   attachments.
+>   calendar identifier may be the sharing account's email address. Google's reply
+>   contains more than this, but we discard everything else as we read it:
+>   attendees, guest email addresses, locations, conferencing links, and
+>   attachments are never used, never stored, and never written to our logs.
 > - **How much we read**: a window of 90 days before and after the current date.
 >   All-day events are not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
