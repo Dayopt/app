@@ -225,6 +225,57 @@ INSERT INTO private.calendar_oauth_attempts (
     ).toBe('0|1|0|0');
   });
 
+  // regression（Codex round 3 指摘、#2000）: cron は hourly なので、delete_after が
+  // ちょうど到来した直後の行は次の run まで最大 ~1h + 取りこぼし分だけ約束を超過しうる。
+  // 4 時間の safety margin 内の行は delete_after 到来前でも削除し、margin 外の行は残す。
+  it('safety margin 内の未到来行は前倒しで削除し、margin 外は残す', async () => {
+    const { projectFenceId } = provisionProject();
+    const subjectFenceId = createSubjectFence('retention-subject-margin');
+    const connectionId = crypto.randomUUID();
+
+    const withinMarginId = crypto.randomUUID();
+    const beyondMarginId = crypto.randomUUID();
+
+    ownerSql(
+      `INSERT INTO private.calendar_revoke_operations (
+  operation_id, project_fence_id, subject_fence_id, subject_fence_epoch, source_connection_id,
+  operation_kind, request_digest, state, initial_result, settled_at, delete_after
+) VALUES
+(
+  :'within_margin_id'::UUID, :'project_fence_id'::UUID, :'subject_fence_id'::UUID, 0,
+  :'connection_id'::UUID, 'disconnect', decode(repeat('66', 32), 'hex'), 'revoked', 'queued',
+  pg_catalog.clock_timestamp() - INTERVAL '90 days',
+  -- margin は 4 時間。3 時間後は margin 内なので削除対象。
+  pg_catalog.clock_timestamp() + INTERVAL '3 hours'
+),
+(
+  :'beyond_margin_id'::UUID, :'project_fence_id'::UUID, :'subject_fence_id'::UUID, 0,
+  :'connection_id'::UUID, 'disconnect', decode(repeat('77', 32), 'hex'), 'revoked', 'queued',
+  pg_catalog.clock_timestamp() - INTERVAL '80 days',
+  -- 5 時間後は margin 外なので残る。
+  pg_catalog.clock_timestamp() + INTERVAL '5 hours'
+);`,
+      {
+        beyond_margin_id: beyondMarginId,
+        connection_id: connectionId,
+        project_fence_id: projectFenceId,
+        subject_fence_id: subjectFenceId,
+        within_margin_id: withinMarginId,
+      },
+    );
+
+    runCleanup();
+
+    expect(
+      ownerSql(
+        `SELECT
+  (SELECT pg_catalog.count(*) FROM private.calendar_revoke_operations WHERE operation_id = :'within_margin_id'::UUID) || '|' ||
+  (SELECT pg_catalog.count(*) FROM private.calendar_revoke_operations WHERE operation_id = :'beyond_margin_id'::UUID);`,
+        { beyond_margin_id: beyondMarginId, within_margin_id: withinMarginId },
+      ),
+    ).toBe('0|1');
+  });
+
   it('参照が無い ready subject fence を削除し、参照が残るものは残す', async () => {
     const { projectFenceId } = provisionProject();
     const orphanFenceId = createSubjectFence('retention-subject-orphan');
