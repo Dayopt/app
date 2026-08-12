@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 code:
   - supabase/config.toml
   - supabase/migrations
@@ -96,6 +96,15 @@ supabase branches create --help
 | `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions            |
 | `rclone` または S3 クライアント     | 共通       | Storage オブジェクトの搬出（案による） |
 | Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                  |
+
+### 0-5. Cloudflare DNS レコードの控え（Supabase 復元とは独立、推奨）
+
+`dayopt.app` の DNS ゾーン（Cloudflare が権威。[infra.md §DNS 管理](../engineering/infra.md#dns-管理cloudflare)）は Supabase の backup 対象に含まれない別リソースで、**失うと復元手段が無い**。**pg_cron の控え（0-1）と同格の扱いとして**、演習日に合わせて次を行う。
+
+- [ ] Cloudflare dashboard → `dayopt.app` → DNS → Export（BIND 形式）で全レコードを export する、または API（`GET /zones/{zone_id}/dns_records`）で取得する
+- [ ] export ファイルを演習記録と同じ場所に保管する（値は非公開情報ではないが、共有ディレクトリへの放置は避ける）
+
+Supabase 復元の成否には影響しないため、Step 1 / Step 2 の RTO 計測には含めない。
 
 ---
 
