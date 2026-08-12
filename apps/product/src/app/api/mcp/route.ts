@@ -30,8 +30,17 @@ import { getRequiredScopeForTool, mergeMcpChallengeScopes } from './_tools/regis
  */
 
 export const dynamic = 'force-dynamic';
-/** 認証・rate limit・tool dispatch の合算。tool 呼び出しは外部リソース I/O を伴いうるため余裕を見る。 */
-export const maxDuration = 60;
+/**
+ * 認証だけで逐次 5 問い合わせ（identity RPC → token → connection → write gate →
+ * profile）。`lib/mcp/access-db.ts` の 15 秒 × 5 = 75 秒あるので、段の 60 では
+ * **認証を通り切る前に kill されて handler の 503 すら返せない**。tool dispatch の
+ * 分も乗るため 120 にする。
+ *
+ * 上の callback（#1990）と違い one-time grant は消費しないので失敗は再試行可能だが、
+ * 全 tool 呼び出しが 504 になる点は同じく避けたい。dispatch 数自体に上限は無いので、
+ * 120 も「全依存同時ハング時の完走保証」ではない（infra.md §Function 実行時間の上限）。
+ */
+export const maxDuration = 120;
 
 const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 

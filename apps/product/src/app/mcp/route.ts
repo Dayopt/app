@@ -11,6 +11,6 @@
  */
 export const dynamic = 'force-dynamic';
 /** `@/app/api/mcp/route` の同一 handler を re-export するだけなので、同じ予算を適用する。 */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export { DELETE, GET, POST } from '@/app/api/mcp/route';

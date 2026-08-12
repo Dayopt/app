@@ -54,13 +54,18 @@ const ROUTE_DURATION_CONTRACT = {
   'src/app/[locale]/(auth)/auth/confirm/route.ts': 60,
   'src/app/api/cron/calendar-sync/route.ts': 60,
   'src/app/api/cron/external-connection-maintenance/route.ts': 60,
-  'src/app/api/integrations/google-calendar/callback/route.ts': 60,
   'src/app/api/integrations/google-calendar/start/route.ts': 60,
-  'src/app/api/mcp/route.ts': 60,
   'src/app/api/oauth/token/route.ts': 60,
   'src/app/api/v1/calendar/[token]/route.ts': 60,
-  'src/app/mcp/route.ts': 60,
   'src/app/oauth/token/route.ts': 60,
+
+  // 逐次 worst path が 60 を超えるため段から外した 2 route。値の根拠は各 route の
+  // コメント（callback = 77s / MCP 認証 = 75s）。どちらも 60 のままだと handler が
+  // 自前の応答を返す前に kill される。callback は #1990（code 消費前の予算検査）が
+  // 入れば 60 へ戻せる
+  'src/app/api/integrations/google-calendar/callback/route.ts': 120,
+  'src/app/api/mcp/route.ts': 120,
+  'src/app/mcp/route.ts': 120,
 
   // 構造的に上限が無い（下記 §tRPC を参照）
   'src/app/api/trpc/[trpc]/route.ts': 300,
