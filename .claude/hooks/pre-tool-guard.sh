@@ -98,6 +98,48 @@ is_single_simple_command() {
   return 0
 }
 
+# --- MCP: レーンからのチップ起票をブロック ---
+# チップ起票（spawn_task）は指揮台セッションの専権。レーン（worktree の作業
+# セッション）が直接 User へチップを出すと、triage の判断が User へ飛んでしまう。
+# レーンは「issue 化 + 指揮台へ send_message」に一本化する
+# （.claude/rules/orchestration.md §盤面の正本は issue + open PR、§レーンの連絡規律）。
+#
+# 判定は「指揮台にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
+# path の慣習では見ない — 慣習の外に置かれた worktree が main checkout と区別
+# できず素通りするため。git の linked worktree かどうかで見る。
+#
+# 見ているのは **worktree の構造** であって branch ではない。主 clone で feature
+# branch を直接 checkout していても「指揮台」と判定する。これは意図的で、
+# その状態は `.claude/rules/workflow.md` §main checkout の役割 が既に禁じている
+# 別の規律違反であり、このガードの担当範囲ではない。
+if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
+  # main checkout では両者が同じ .git を指す。linked worktree では
+  # --absolute-git-dir が <main>/.git/worktrees/<name> になる。
+  # --git-common-dir は main checkout だと相対（.git）で返るので絶対化して比べる。
+  # 「指揮台だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /
+  # 解決失敗）はブロックへ倒す。
+  guard_is_main_checkout=0
+  guard_git_dir=$(git rev-parse --absolute-git-dir 2> /dev/null || true)
+  guard_common_dir=$(git rev-parse --git-common-dir 2> /dev/null || true)
+  # 空のまま cd に渡さないこと。`cd ""` は bash では成功してカレントに留まるため、
+  # 両方が同じ cwd に解決されて「一致＝指揮台」と誤判定する（実測で踏んだ）。
+  if [ -n "$guard_git_dir" ] && [ -n "$guard_common_dir" ]; then
+    case "$guard_common_dir" in
+      /*) ;;
+      *) guard_common_dir="$PWD/$guard_common_dir" ;;
+    esac
+    guard_git_dir=$(cd "$guard_git_dir" 2> /dev/null && pwd -P)
+    guard_common_dir=$(cd "$guard_common_dir" 2> /dev/null && pwd -P)
+    if [ -n "$guard_git_dir" ] && [ "$guard_git_dir" = "$guard_common_dir" ]; then
+      guard_is_main_checkout=1
+    fi
+  fi
+  if [ "$guard_is_main_checkout" -ne 1 ]; then
+    echo "BLOCKED: チップ起票（spawn_task）は指揮台セッションの専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) 指揮台へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（.claude/rules/orchestration.md §レーンの連絡規律）" >&2
+    exit 2
+  fi
+fi
+
 # heredoc の本文はコマンドではなくデータなので、行頭一致するコマンド検査から外す。
 # 本文を落とすのは次の 2 条件を **両方** 満たす時だけ:
 #   1. 導入部（<< より前）が本文を data として読むと分かっているコマンド

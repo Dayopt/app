@@ -43,6 +43,19 @@ function bash(command: string): Record<string, unknown> {
   return { tool_name: 'Bash', tool_input: { command } };
 }
 
+function mcp(toolName: string): Record<string, unknown> {
+  return { tool_name: toolName, tool_input: { title: 'x', prompt: 'y' } };
+}
+
+// setup が黙って失敗すると、以降の assert が「たまたま通る」形で緑になる。
+// 失敗は即座に投げる。
+function git(args: string[], cwd: string): void {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(' ')} failed in ${cwd}: ${result.stderr}`);
+  }
+}
+
 function write(filePath: string, content = ''): Record<string, unknown> {
   return { tool_name: 'Write', tool_input: { file_path: filePath, content } };
 }
@@ -446,5 +459,76 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     ['docs への言及', write('/x/notes.md', `${PROD_REF} を参照する運用`)],
   ])('正当な書き込みは通す: %s', (_label, input) => {
     expect(runGuard(input)).toBe('allow');
+  });
+});
+
+// #1959: チップ起票（spawn_task）は指揮台セッションの専権。レーンが直接 User へ
+// チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + 指揮台へ
+// send_message に一本化する（.claude/rules/orchestration.md §レーンの連絡規律）。
+describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
+  const SPAWN = 'mcp__ccd_session__spawn_task';
+  let fixtureRoot: string;
+  let mainDir: string;
+  let worktreeDir: string;
+  let plainDir: string;
+
+  beforeAll(() => {
+    // 判定は git の linked worktree かどうか。実環境の worktree に依存させると
+    // CI（plain clone）で結果が変わるので、fixture で両方を作る。
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-git-'));
+    mainDir = join(fixtureRoot, 'main');
+    worktreeDir = join(fixtureRoot, 'lane');
+    plainDir = join(fixtureRoot, 'plain');
+    mkdirSync(mainDir);
+    mkdirSync(plainDir);
+    git(['init', '-q', '.'], mainDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      mainDir,
+    );
+    git(['worktree', 'add', '-q', worktreeDir, '-b', 'lane'], mainDir);
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('linked worktree からは落とす', () => {
+    expect(runGuard(mcp(SPAWN), worktreeDir)).toBe('block');
+  });
+
+  it('main checkout からは通す（指揮台のレーン編成は正規手段）', () => {
+    expect(runGuard(mcp(SPAWN), mainDir)).toBe('allow');
+  });
+
+  // 判定は「指揮台だと言い切れた時だけ通す」allowlist。git が使えない・repo 外は
+  // 落とす。`cd ""` は bash では成功してカレントに留まるため、空値を素通りさせると
+  // 両者が同じ cwd に解決されて「一致＝指揮台」と誤判定する（実装中に踏んだ）。
+  it('git 管理外のディレクトリからは落とす（fail closed）', () => {
+    expect(runGuard(mcp(SPAWN), plainDir)).toBe('block');
+  });
+
+  // path の慣習（.claude/worktrees/ 配下）で判定していないことの裏取り。
+  // fixture の worktree は慣習の外にあるが、それでも落ちる。
+  it('慣習外の場所にある worktree でも落とす', () => {
+    expect(worktreeDir).not.toContain('.claude/worktrees');
+    expect(runGuard(mcp(SPAWN), worktreeDir)).toBe('block');
+  });
+
+  it.each([
+    ['章立て', 'mcp__ccd_session__mark_chapter'],
+    ['指揮台への連絡', 'mcp__ccd_session_mgmt__send_message'],
+  ])('worktree でも他の tool は通す: %s', (_label, toolName) => {
+    expect(runGuard(mcp(toolName), worktreeDir)).toBe('allow');
   });
 });
