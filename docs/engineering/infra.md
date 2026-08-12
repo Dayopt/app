@@ -613,6 +613,7 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 | 内側 timeout                            | 値         | 場所                                                               |
 | --------------------------------------- | ---------- | ------------------------------------------------------------------ |
 | Supabase server / OAuth client の fetch | 15s        | `lib/supabase/server.ts` / `lib/supabase/oauth.ts`                 |
+| OAuth 用 service-role client の fetch   | 15s        | `lib/oauth-server/db.ts` の `OAUTH_DB_TIMEOUT_MS`                  |
 | Google token / API 呼び出し             | 15s        | `external-calendar/server/google-oauth.ts` / `providers/google.ts` |
 | Rate limit（Upstash）                   | 2s         | `lib/rate-limit/upstash.ts`                                        |
 | Health の DB check                      | 5s ×2 逐次 | `api/health/route.ts`                                              |
@@ -627,6 +628,10 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 | D   | 構造的に上限が無い  | 300（理由と解除 issue を route のコメントに書く） |
 
 product の contract test は「外部 I/O をする route は **Supabase 1 往復 + rate limit 1 回**（現状 17s）を必ず上回る」という不等式も検査する。内側 timeout を後から伸ばした変更が route を黙って kill 側へ倒すのを、ここで落とす。
+
+**Supabase client は 3 種類あり、不等式チェックが読むのは `lib/supabase/server.ts` の 1 つだけ。** 別の client を使う route は、その client に上限があるかを個別に確認する。実際 `lib/oauth-server/db.ts` は上限を持っておらず、`/api/oauth/token` を 60 秒にした時点では**内側が無制限のまま route 側だけ縮んでいた**（2026-08-12、外部レビュー P2 で検出。同 commit で `OAUTH_DB_TIMEOUT_MS` を追加して解消）。
+
+この経路が特に危ないのは、token endpoint が消費する grant が **1 回しか使えない**ため。「サーバー側では成功したがレスポンスが返らない」状態を作ると、client は再試行しても使用済みエラーで詰む。**内側で先に切って正規の OAuth エラーを返す**方が回復可能で、これが「内側 timeout を先に発火させる」規律の実利。
 
 **ただし test が保証するのは下限であって worst path ではない。** 依存が全部同時にそれぞれの timeout まで張り付くケースは、一部の route で予算を超える（`api/integrations/google-calendar/callback` は getUser 15 + rate limit 2 + Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s > 60s。`api/mcp` と `api/trpc/[trpc]` は dispatch 数に上限が無い）。
 
