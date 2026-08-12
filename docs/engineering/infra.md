@@ -594,7 +594,7 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 ### 共通方針
 
 - **Runtime**: Product endpoint と Web の通常routeは`nodejs`。Web `/api/og`だけは画像生成用の`edge` runtime
-- **Timeout**: Web API route 7件は各routeの静的`maxDuration`を正本とし、`vercel.json`のfunctions globは使わない。Default Function TimeoutのDashboard値はdeploy前後に運用確認する
+- **Timeout**: product / web とも**各 route の静的 `maxDuration` が正本**で、`vercel.json` の functions glob は使わない。契約は `apps/{product,web}/src/app/route-duration-contract.test.ts` が固定する（詳細は下記 §Function 実行時間の上限）
 - **エラーログ**: `@/lib/logger` で構造化ログ。webhook / 認証のうち予期しない障害だけをSentryへ一度送信し、認証失敗などの想定内レスポンスはIssue化しない
 - **入力バリデーション**: Zod (`@/lib/zod`) を全ハンドラで使用
 - **Supabase アクセス**: Productの一般endpointは`@/lib/supabase/server`の`createClient`（Cookieベース、RLS適用）。DB書込が必要なProduct webhookとiCal feedだけ`createServiceRoleClient`を使う。Web contact webhookはDBへ書かない
@@ -608,9 +608,89 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
   - Web `/api/contact`: 未認証のmarketing siteから送る公開formであり、CSRF / Turnstile / body上限をroute境界で扱う
   - `/api/webhooks/*`: 外部サービスが直接 POST、レスポンス形式が tRPC と合わない
 
+### Function 実行時間の上限
+
+策定日: 2026-08-12（#1701 Phase 2）
+
+**正本は各 route の静的 `export const maxDuration`。** `vercel.json` の `functions` glob と Dashboard の Default Function Timeout はどちらも正本にしない。契約は `apps/product/src/app/route-duration-contract.test.ts` と `apps/web/src/app/route-duration-contract.test.ts` が固定する（allowlist 方式なので、**契約表に無い route を足すと test が落ちる**）。
+
+#### 値は内側 timeout から導出する
+
+`maxDuration` は「速そうだから短く」ではなく、**その route が呼ぶ外部 I/O の timeout の worst path より大きく**取る。下回ると handler が自前のエラー応答を返す前に kill され、**graceful failure（4xx/5xx の JSON）が Vercel の 504 に化ける**。既存の cron が `maxDuration 60` に対して内部予算 `TIME_BUDGET_MS = 50_000` を持つのと同じ規律。
+
+| 内側 timeout                            | 値         | 場所                                                               |
+| --------------------------------------- | ---------- | ------------------------------------------------------------------ |
+| Supabase server / OAuth client の fetch | 15s        | `lib/supabase/server.ts` / `lib/supabase/oauth.ts`                 |
+| OAuth 用 service-role client の fetch   | 15s        | `lib/oauth-server/db.ts` の `OAUTH_DB_TIMEOUT_MS`                  |
+| Google token / API 呼び出し             | 15s        | `external-calendar/server/google-oauth.ts` / `providers/google.ts` |
+| Rate limit（Upstash）                   | 2s         | `lib/rate-limit/upstash.ts`                                        |
+| Health の DB check                      | 5s ×2 逐次 | `api/health/route.ts`                                              |
+
+段は 4 つに畳む。段を増やすと drift 保守が増えるだけで、上限の役目は blast radius の固定であって最適化ではない。
+
+| 段  | 条件                | 値                                                |
+| --- | ------------------- | ------------------------------------------------- |
+| A   | 外部 I/O 無し       | 5–15                                              |
+| B   | 外部 I/O 1–2 本     | 30                                                |
+| C   | 外部 I/O が複数逐次 | 60                                                |
+| D   | 構造的に上限が無い  | 300（理由と解除 issue を route のコメントに書く） |
+
+product の contract test は「外部 I/O をする route は **Supabase 1 往復 + rate limit 1 回**（現状 17s）を必ず上回る」という不等式も検査する。内側 timeout を後から伸ばした変更が route を黙って kill 側へ倒すのを、ここで落とす。
+
+**Supabase client は 3 種類あり、不等式チェックが読むのは `lib/supabase/server.ts` の 1 つだけ。** 別の client を使う route は、その client に上限があるかを個別に確認する。実際 `lib/oauth-server/db.ts` は上限を持っておらず、`/api/oauth/token` を 60 秒にした時点では**内側が無制限のまま route 側だけ縮んでいた**（2026-08-12、外部レビュー P2 で検出。同 commit で `OAUTH_DB_TIMEOUT_MS` を追加して解消）。
+
+この経路が特に危ないのは、token endpoint が消費する grant が **1 回しか使えない**ため。「サーバー側では成功したがレスポンスが返らない」状態を作ると、client は再試行しても使用済みエラーで詰む。**内側で先に切って正規の OAuth エラーを返す**方が回復可能で、これが「内側 timeout を先に発火させる」規律の実利。
+
+**ただし test が保証するのは下限であって worst path ではない。** 依存が全部同時にそれぞれの timeout まで張り付くケースは、`api/trpc/[trpc]` のように dispatch 数へ上限が無い route では原理的にカバーできない。そこまでカバーする値へ引き上げると 300 に近づき、**障害半径を絞るという目的そのものを失う**。**「test が通る＝安全」と読まないこと。** 新規 route では worst path を自分で数える。
+
+#### 例外を作る基準は「失敗の質」
+
+とはいえ **全部を「上限は保証ではない」で流してよいわけではない**。逐次 worst path が段を超える route のうち、**失敗が不可逆なもの**は段から外して値を上げる。
+
+| route                                       | 逐次 worst path                | 値      | 失敗したら何が起きるか                                                                                                                                                                                   |
+| ------------------------------------------- | ------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/integrations/google-calendar/callback` | 77s（再接続分岐）              | **120** | Google の authorization code は token 交換で消費される。その後の DB 書き込み中に kill されると、接続は保存されないまま code だけ使用済みになり、再試行は `invalid_grant`。**ユーザーは認可からやり直し** |
+| `api/mcp` / `mcp`                           | 認証だけで 75s（15s × 5 逐次） | **120** | 認証を通り切る前に kill され、handler が返すはずの 503 すら出せず**全 tool 呼び出しが 504**                                                                                                              |
+
+判断基準は「504 で済むか、ユーザーが取り返せない状態になるか」。前者なら段どおりでよく、後者なら値を上げる。2026-08-12 に外部レビューが 3 ラウンドかけてこの 2 件を指摘し、当初 60 に置いていたのを訂正した。
+
+**値を上げるのは暫定対応。** より良いのは「**不可逆な操作を始める前に残り予算を検査する**」設計で、cron が `maxDuration 60` に対し `TIME_BUDGET_MS = 50_000` を持つのと同じ形。callback については #1990 で扱い、入れば 60 へ戻せる。
+
+#### `/api/health` を 30 にしたことの監視上の含意
+
+UptimeRobot は 5 分間隔の HTTP status 監視で、**503 も 504 も同じく DOWN 扱い**なので alert の発火条件は変わらない。変わるのは**原因の記録**で、`checkRedis` の `redis.ping()` に timeout が無いため（#1967）、Upstash の応答が 30 秒を超える帯では従来の `logger.error('[health] dependency check failed', ...)` が出ず 504 になり、**どの依存が落ちたかが残らない**。
+
+alert policy の文言は「`/api/health` が 503 を返す」なので、**504 も unhealthy と読む**。#1967 が入れば `checkRedis` が自分で timeout して 503 + 構造化ログを返すようになり、この窓は閉じる。
+
+#### tRPC だけ 300 の理由
+
+`/api/trpc/[trpc]` は**全 procedure を 1 function で捌く**ため、最長 procedure に律速される。`externalCalendar` の `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」でしか判定されない）ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。**#1965 で予算を入れてから 60 へ落とす。**
+
+#### Dashboard の Default Function Timeout（未実施）
+
+route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**。
+
+60 秒への引き下げは production デリバリーに直結するため User が Dashboard で実施する。**flip 前に次を満たすこと**:
+
+1. Vercel Observability で直近 30 日の route 別 p99 duration を見て、**60 秒超がゼロ**であること。repo の静的解析では「実際に長い経路」は分からない
+2. **product と web を別々に判断する。** web には ISR（`revalidate = 3600` の RSS feed）があり、再生成 function は route handler の契約表に載らない
+3. flip 後に **`/api/trpc/[trpc]` が 300 のままであることを実測する。** route 側の明示値が project 既定を上書きする仕様だが、既定より大きい値を要求する形になるのは flip 後が初めて。ここが 60 に落ちていたら上記 hard kill が現実になる
+4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）
+
+flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production-config-audit.mjs` へ `functionDefaultTimeout` を pin）。**pin は flip 完了後にしか入れられない**（先に入れると audit が failure になり全 PR の merge gate が止まる）。
+
+#### 「実際に適用された」ことの証拠
+
+**Vercel の deployment API は per-function の `maxDuration` を返さない**（実測: `GET /v13/deployments/{id}` → `functions: null` / `lambdas[].maxDuration: null`）。API 経由の自動検証はできないので、証拠は次の順で取る:
+
+1. contract test — 宣言が存在し値が契約どおりであること（build が宣言を尊重したかは証明しない）
+2. Vercel Dashboard の Functions タブ — Preview で目視
+3. build 成果物（未実装）— Next.js 16 は `functions-config-manifest.json` を出力する。`apps/product` は Vercel build で既に `verify:bundle` を走らせているので、ここに assertion を足せば毎 build で機械検証できる。manifest の正確な path と shape を確認してから入れる
+
 ### 変更ガイドライン
 
 - 新規 endpoint を追加する前に、tRPC procedure で済まないか検討する（`features/*/server/router.ts`）
+- **新規 route handler を追加したら、`route-duration-contract.test.ts` の契約表に 1 行足す**（足さないと test が落ちる）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
 - 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する

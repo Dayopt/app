@@ -11,6 +11,9 @@
 
 import { NextResponse } from 'next/server';
 
+/** 静的 HTML 文字列を返すのみで外部 I/O 無し。 */
+export const maxDuration = 15;
+
 export async function GET() {
   const html = `<!DOCTYPE html>
 <html lang="en">
