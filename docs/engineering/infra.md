@@ -543,7 +543,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 - `src/lib/turnstile/`（app / web 両方）
 - `src/features/auth/components/SignupForm.tsx`（app）
 - `src/features/auth/stores/useAuthStore.ts`（app、`captchaToken` option 追加）
-- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除）
+- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除。この route 自体は #1942 で削除済み）
 - `src/app/[locale]/(auth)/client-layout.tsx`（app、`RecaptchaScript` 削除）
 - `src/app/[locale]/(marketing)/contact/contact-form.tsx`（web）
 - `src/app/api/contact/route.ts`（web、`verifyTurnstile` 挿入）
@@ -605,8 +605,9 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 - 新規 endpoint を追加する前に、tRPC procedure で済まないか検討する（`features/*/server/router.ts`）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
-- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / Auth / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
-- AuthのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`、signin / resetはIP-firstで独立した正規化email bucketも確認する。この前提はVercel単独topologyに依存する
+- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
+- rate limitのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`に入れてfail closedにする。この前提はVercel単独topologyに依存する
+- **認証操作にapp側のrate limit層は無い**。かつて`/api/auth`が持っていたが、呼び出し元ゼロの攻撃面だったため#1942で削除した。現在はSupabase Auth のproject-level rate limitだけが担う（期待値は`scripts/production-auth-config-audit.mjs`がpinする）。server側のanti-abuseが要るなら、その時点でrouteとlimiterを新設する
 - 副作用はloggerで技術状態だけを追跡し、問い合わせ本文・氏名・email・raw webhook bodyを記録しない
 
 ### 関連ドキュメント
