@@ -283,11 +283,21 @@ export async function syncConnection(params: {
   // 参照されていない window 外行を掃除する。connection 単位で 1 回だけ（calendar ごとに
   // 回すと他カレンダーの行も対象になり、無駄に N 回走る）。window 境界は provider へ渡したのと
   // 同じ値を使う。anti-join の本体は event-pruning.ts に集約している。
-  await deleteUnreferencedEvents({
-    userId,
-    connectionId,
-    scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
-  });
+  // best-effort — 失敗しても sync 自体は成功として扱う（fail-closed にすると cleanup 失敗が
+  // 同期結果全体を巻き込む）。拾いきれなかった行は次回の sync か disconnect の prune が回収する。
+  try {
+    await deleteUnreferencedEvents({
+      userId,
+      connectionId,
+      scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
+    });
+  } catch (error) {
+    logger.warn('[calendar-sync] failed to prune out-of-window events');
+    captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+      feature: 'external_calendar',
+      operation: 'sync_window_prune',
+    });
+  }
 
   if (calendarsFailed > 0) {
     await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);

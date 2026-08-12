@@ -75,6 +75,21 @@ const RATE_LIMIT_REASONS = new Set(['rateLimitExceeded', 'userRateLimitExceeded'
 const RATE_LIMIT_RETRY_BASE_MS = 1_000;
 const RATE_LIMIT_RETRY_JITTER_MS = 1_000;
 
+/**
+ * `events.list` の partial response mask（Google の `fields` パラメータ）。
+ *
+ * Google の Limited Use ポリシー「必要なデータだけを扱う」に沿い、attendees / location /
+ * organizer 等を受信自体しない（保存もしていないが、マスク無しだと受信はしてしまう）。
+ * `id, status, summary, description, start, end` は `googleEventSchema` が実際に parse する
+ * 列と一致させる。
+ *
+ * **`nextPageToken` / `nextSyncToken` を落とすと増分同期が黙って壊れる**（syncToken を
+ * 受け取れず、次回から毎回 full sync になる）。ページング系は必ず含める
+ * （google-provider.test.ts で固定）。
+ */
+const EVENTS_LIST_FIELDS_MASK =
+  'items(id,status,summary,description,start,end),nextPageToken,nextSyncToken';
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -187,6 +202,7 @@ function buildEventsListUrl(params: {
 
   url.searchParams.set('singleEvents', 'true');
   url.searchParams.set('maxResults', String(MAX_RESULTS_PER_PAGE));
+  url.searchParams.set('fields', EVENTS_LIST_FIELDS_MASK);
 
   if (params.cursor === null) {
     url.searchParams.set('timeMin', params.window.timeMin);

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-09
+last_verified: 2026-08-12
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -1437,7 +1437,8 @@ SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 **止めたものは戻さないと恒久的に止まったままになる。** 特に backup 復元をせず rollback 経路へ抜けた場合、cron を止めたことだけが残る。
 
 - [ ] **pg_cron を再登録する。** 控えた `jobname` / `schedule` / `command` から `SELECT cron.schedule('<name>', '<schedule>', '<command>');` で戻し、名前・schedule・command・`active` の一致を確認する
-  - 戻し忘れると `expire-calendar-revoke-outbox`（期限切れ revoke の処理）などが恒久停止する
+  - 対象は「止める前に控えた一覧の全件」。特定の job 名を思い出そうとしない — 個別列挙は増えるたびに更新漏れが起きる（2026-08-12、`cleanup-calendar-authority-retention` 追加時に本節が `expire-calendar-revoke-outbox` しか挙げていないことが指摘された）
+  - 戻し忘れの実害の例: `expire-calendar-revoke-outbox`（期限切れ revoke の処理）が止まる、`cleanup-calendar-authority-retention`（90 日保持期限の cleanup、#1994）が止まって privacy policy の保持期間の約束を実装が満たさなくなる
 - [ ] Edge Function とその secrets（別 project へ復元した場合）
 - [ ] Auth Hook の登録（別 project へ復元した場合。§復元でも戻らないもの）
 - [ ] 最後にメンテナンスモードを解除する

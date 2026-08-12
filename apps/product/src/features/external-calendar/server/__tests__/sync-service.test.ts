@@ -62,6 +62,7 @@ type DbConfig = {
   calendars?: Array<Record<string, unknown>>;
   calendarsError?: unknown;
   pruneCandidates?: Array<{ id: string }>;
+  pruneSelectError?: unknown;
   referencedByPlans?: Array<{ external_calendar_event_id: string | null }>;
   referencedByRecords?: Array<{ external_calendar_event_id: string | null }>;
   upsertError?: unknown;
@@ -93,6 +94,9 @@ function setupDb(config: DbConfig) {
       // prune candidate select. keyset ページングを 1 バッチで終わらせる。
       const batch = counters.pruneSelect;
       counters.pruneSelect += 1;
+      if (batch === 0 && config.pruneSelectError) {
+        return { data: null, error: config.pruneSelectError };
+      }
       return { data: batch === 0 ? (config.pruneCandidates ?? []) : [], error: null };
     }
     if (table === 'plans') return { data: config.referencedByPlans ?? [], error: null };
@@ -308,6 +312,28 @@ describe('syncConnection — prune 委譲', () => {
     const del = findCall(calls, 'external_calendar_events', 'delete');
     expect(del).toBeDefined();
     expect(argsOf(del!, 'in')[1]).toEqual(['ev-2']);
+  });
+
+  // regression（#1988）: event-pruning.ts は select 失敗を throw するようになった
+  // （event-pruning.test.ts 参照）。sync 経路はこれを best-effort として吸収し、window prune
+  // の失敗だけで sync 全体を失敗扱いにしない。
+  it('window prune が失敗しても sync 自体は synced のまま完了する', async () => {
+    const { calls } = setupDb({
+      connection: activeConnection(),
+      calendars: oneCalendar(),
+      pruneSelectError: { code: '42501' },
+    });
+    syncCalendar.mockResolvedValue(syncResult());
+
+    await expect(
+      syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID }),
+    ).resolves.toMatchObject({ outcome: 'synced' });
+
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ operation: 'sync_window_prune' }),
+    );
+    expect(findCall(calls, 'external_calendar_events', 'delete')).toBeUndefined();
   });
 });
 
