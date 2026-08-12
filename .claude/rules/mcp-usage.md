@@ -29,6 +29,16 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 
 **トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、**Claude 起動に zsh の `op run` ラッパーは不要**（過去の `.op-env.mcp` / wrapper 方式は廃止）。前提は `op` CLI + 1Password desktop 統合が使えること。`op run` は stdout / stderr の secret masking が既定で有効なので、MCP server へ env token を渡す用途では `--no-masking` を付けない。
 
+### claude.ai コネクタ方式は使わない（策定日: 2026-08-12）
+
+上記 3 方式とは別に、**claude.ai 自体の connector 設定画面**から MCP サーバーを接続する第 4 の経路が存在する。この経路は `~/.claude.json` の global `mcpServers` を経由せず、リポジトリ側のどのルール（`--read-only` 固定、`op run` によるオンデマンド登録、scope 制限）も通さずにセッションへツールを公開する。
+
+2026-08-12、`https://mcp.supabase.com/mcp` がこの経路で常駐接続されているのを検出した。`apply_migration` / `create_branch` / `restore_project` など **production を破壊しうる write tool** が全セッションに公開されており、本ファイルの cloud Supabase 規約（`--read-only` 固定 + オンデマンド登録）と食い違っていた（詳細は #1879 経由で発見、#1969 で対応）。
+
+**決定: claude.ai コネクタ方式は使わない。** 該当 Supabase コネクタは User が claude.ai の connector 設定から切断済み（2026-08-12、切断を指揮台セッションが実測確認）。外部サービスへ新たに繋ぐ必要が出た場合も、この経路ではなく本ファイルが定める 3 方式（OAuth 承認 / `op run` 自己解決 / `headersHelper`）で global 設定へ登録する。理由は、read-only 固定や登録・解除のタイミングをこのファイルで inspect・強制できるのがこの 3 方式だけであるため。
+
+**棚卸し結果**: 2026-08-12 時点で claude.ai コネクタは 0 件（`list_connectors` で空を確認）。他コネクタでの規約乖離は見つからなかった。今後 claude.ai コネクタが再び現れたら、この節を根拠に切断または規約への合流を判断する。
+
 ## 運用方針
 
 - **常時使う**: `context7` / `sentry` / `github` / `vercel`
