@@ -131,7 +131,7 @@ const LEGAL_CONTRACT_CASES: readonly LegalContractCase[] = [
     metadataTitle: 'Privacy Policy - Dayopt',
     metadataDescription: 'How Dayopt handles your personal information',
     lastUpdated: 'Last Updated: 2026-08-12',
-    bodyHash: '211933e74ebdcd4fe731d176a153f72e5379eba2ee2f08b9e22886bc96837edf',
+    bodyHash: 'e226b3b5555e4556157029c5beb3d7ec3999deb839ce8dfdaa015ae2fcc5b2d3',
     hrefs: ['/legal/cookies'],
     counts: { h2: 20, h3: 0, tables: 0, lists: 16 },
   },
@@ -192,7 +192,7 @@ const LEGAL_CONTRACT_CASES: readonly LegalContractCase[] = [
     metadataTitle: 'プライバシーポリシー - Dayopt',
     metadataDescription: 'Dayoptにおける個人情報の取り扱いについて',
     lastUpdated: '最終更新日: 2026-08-12',
-    bodyHash: 'c42bdef5658221fc7a2458d5fd6b07524a283f36854f4d460cb8d25cb53dec0e',
+    bodyHash: '580f19cf258a6f865452cf9b19e44b92a6407693aa96083b9352635c24897582',
     // PrivacyDocument の Link は @dayopt/i18n/navigation 経由（localizeHref 対象）。
     // as-needed prefix により ja は /ja が付く。
     hrefs: ['/ja/legal/cookies'],

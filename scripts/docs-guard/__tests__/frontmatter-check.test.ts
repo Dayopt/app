@@ -335,6 +335,27 @@ partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-m
     ]);
   });
 
+  it('エラー系: 部分訂正keyが実在するがlogではないfileを指す場合は拒否する（Codexレビュー指摘）', () => {
+    const root = createRoot();
+    createFile(root, 'docs/engineering/architecture.md');
+
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/architecture.md
+---
+`,
+      relativePath: 'docs/product/log/2026-07-14-old.md',
+      root,
+      today: '2026-08-11',
+    });
+
+    expect(reasons).toEqual([
+      'partially_superseded_2026_08_11_codeql-statusはdocs/<domain>/log/配下の訂正logを指す（実在するだけでは不十分）: docs/engineering/architecture.md',
+    ]);
+  });
+
   it('境界: secrets.mdはstock契約の検証対象にする', () => {
     const reasons = validateDocumentMetadata({
       content: '# Secrets\n',

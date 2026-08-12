@@ -192,6 +192,23 @@ export function isPartialCorrectionKey(key: string): boolean {
   return PARTIAL_CORRECTION_KEY_RE.test(key);
 }
 
+// 部分訂正の値は「実在するpath」だけでなく「実際に訂正logであること」まで確認する。
+// validateRepoPathだけだと、無関係な既存file（typoで別pathを指す等）でも
+// docs:checkが通り、凍結logには訂正済みの印だけが付いて「何が誤りだったか」へ
+// 到達できない状態になる（Codexレビューで検出）。
+function validatePartialCorrectionTarget(
+  root: string,
+  value: string,
+  field: string,
+): string | undefined {
+  const pathReason = validateRepoPath(root, value, field);
+  if (pathReason) return pathReason;
+  if (!isLogDocument(value)) {
+    return `${field}はdocs/<domain>/log/配下の訂正logを指す（実在するだけでは不十分）: ${value}`;
+  }
+  return undefined;
+}
+
 /**
  * 部分訂正（#1939）: 既存の凍結logへ、日付+slug付きの新規keyが1本だけ増えているかを
  * 検証する。isSupersedeOnlyDiffの行レベル判定に加え、frontmatter全体をparseした上で
@@ -371,7 +388,7 @@ export function validateExistingLogSupersededBy(content: string, root = ROOT): s
   for (const match of partialCorrectionMatches) {
     const [, key, value] = match;
     if (!key || !value) continue;
-    const reason = validateRepoPath(root, value, key);
+    const reason = validatePartialCorrectionTarget(root, value, key);
     if (reason) reasons.push(reason);
   }
 
@@ -432,7 +449,7 @@ export function validateDocumentMetadata({
     if (typeof value !== 'string' || value.length === 0) {
       reasons.push(`${key}はscalarのrepo-relative pathで指定する`);
     } else {
-      const reason = validateRepoPath(root, value, key);
+      const reason = validatePartialCorrectionTarget(root, value, key);
       if (reason) reasons.push(reason);
     }
   }
