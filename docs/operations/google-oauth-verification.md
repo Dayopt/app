@@ -155,8 +155,10 @@ their existing commitments into the user's Dayopt timeline. This is the feature
 users connect the integration for: it lets them plan their day around meetings they
 already have, instead of retyping each meeting into Dayopt by hand.
 
-Dayopt requests a fixed, limited window of plus or minus 90 days around the current
-date, and uses incremental sync tokens afterwards so it only fetches what changed.
+The first sync for a calendar requests a window of 90 days before and after that
+moment. After that, Dayopt sends the sync token Google issued and receives only
+what changed; the token tracks the set established by that first request rather
+than re-applying a moving window, so the range does not slide forward on its own.
 Timed events are imported; all-day events are skipped.
 
 From each event, Dayopt stores only these fields:
@@ -164,6 +166,9 @@ From each event, Dayopt stores only these fields:
   - the title
   - the description
   - the start and end times
+  - whether the event is still active or has been cancelled. This is Dayopt's own
+    flag, set from whether Google reported the event as cancelled, so that an event
+    the user cancelled in Google stops being shown as a live commitment.
   - the Google-assigned identifier and the name of the calendar the event came
     from, so the user can tell which calendar an entry belongs to. Note that for
     a user's own calendar this identifier is typically their own email address,
@@ -195,13 +200,15 @@ Dayopt uses this scope for exactly two API calls:
   - events.list, called on the calendars the user explicitly selected, to import
     their existing commitments into the user's Dayopt timeline.
 
-Dayopt requests a fixed window of plus or minus 90 days around the current date,
-and uses incremental sync tokens afterwards. Timed events are imported; all-day
-events are skipped.
+The first sync for a calendar requests a window of 90 days before and after that
+moment. Afterwards Dayopt sends Google's sync token and receives only what changed
+in that set; the range does not slide forward on its own. Timed events are
+imported; all-day events are skipped.
 
 From each event, Dayopt stores only the event ID, the title, the description, the
-start and end times, and the Google-assigned identifier and name of the calendar
-the event came from. Note that a calendar identifier is typically an email address:
+start and end times, a flag of its own recording whether the event is still active
+or has been cancelled (set from whether Google reported it as cancelled), and the
+Google-assigned identifier and name of the calendar the event came from. Note that a calendar identifier is typically an email address:
 the user's own for their own calendar, and the sharing person's for a calendar
 shared with them. Dayopt does not request a partial response, so the events.list
 reply it receives is the standard Event resource; every field it does not need is
@@ -452,8 +459,8 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   reconnection is for the same account you connected originally. Both are deleted
 >   when you disconnect the account.
 > - **What we store**: for each imported event, only its identifier, title,
->   description, and start and end times, together with the identifier and name of
->   the calendar it came from. For a calendar someone shared with you, that
+>   description, and start and end times, whether it is still active or has been
+>   cancelled, together with the identifier and name of the calendar it came from. For a calendar someone shared with you, that
 >   calendar identifier may be the sharing account's email address. Google's reply
 >   contains more than this, but we discard everything else as we read it:
 >   attendees, guest email addresses, locations, conferencing links, and
@@ -464,7 +471,9 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   as soon as you choose, so it exists even if a calendar turns out to have no
 >   events we import. It is deleted when you deselect the calendar, disconnect the
 >   account, or delete your Dayopt account.
-> - **How much we read**: a window of 90 days before and after the current date.
+> - **How much we read**: when a calendar is first synced, we ask for the 90 days
+>   before and after that moment. From then on we ask Google only for what has
+>   changed in that set, so the range does not keep sliding forward by itself.
 >   All-day events are not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
 >   timeline. Imported events are visible only to you, and we never share them with
