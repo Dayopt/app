@@ -18,7 +18,11 @@ import {
   ROOT,
 } from '../config.ts';
 import { listGitChanges } from '../git-changes.ts';
-import { isFrontmatterSupersededByAddition, usesFrozenLogContract } from './frontmatter-check.ts';
+import {
+  isFrontmatterPartialCorrectionAddition,
+  isFrontmatterSupersededByAddition,
+  usesFrozenLogContract,
+} from './frontmatter-check.ts';
 
 export interface AppendOnlyViolation {
   file: string;
@@ -32,6 +36,16 @@ interface RunAppendOnlyGuardOptions {
 
 const SUPERSEDED_BY_LINE_RE = /^\+superseded_by:\s*\S+\s*$/;
 const LEGACY_STATUS_LINE_RE = /^\+status:\s*superseded\s*$/;
+// 部分訂正: 主題は生きているが1行/1節だけが後の変更で誤りになったケース用
+// （#1939）。superseded_byは「log全体を後継へ差し替え」専用で、部分訂正には強すぎる
+// （全体が引用不可になる）ため、日付+slug付きの新規keyを都度1本追記する形にする。
+// key自体が呼ぶたびに変わるので、追記のたびに新しい行を1本足すだけで済み、
+// 既存keyの上書き（削除+追加）はisSupersedeOnlyDiffの「削除行があれば拒否」で防げる。
+export const PARTIAL_CORRECTION_KEY_RE =
+  /^partially_superseded_\d{4}_\d{2}_\d{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PARTIAL_CORRECTION_LINE_RE = new RegExp(
+  `^\\+${PARTIAL_CORRECTION_KEY_RE.source.slice(1, -1)}:\\s*\\S+\\s*$`,
+);
 
 interface SupersedeDiffOptions {
   allowLegacyStatus?: boolean;
@@ -60,6 +74,7 @@ export function isSupersedeOnlyDiff(
   const [addition] = additions;
   return (
     (addition !== undefined && SUPERSEDED_BY_LINE_RE.test(addition)) ||
+    (addition !== undefined && PARTIAL_CORRECTION_LINE_RE.test(addition)) ||
     (allowLegacyStatus && addition !== undefined && LEGACY_STATUS_LINE_RE.test(addition))
   );
 }
@@ -147,7 +162,12 @@ export function runAppendOnlyGuard({
 
     if (hasAllowedDiff && usesFrozenContract) {
       const currentContent = readFileSync(resolve(root, change.path), 'utf8');
-      if (isFrontmatterSupersededByAddition(previousContent, currentContent)) continue;
+      if (
+        isFrontmatterSupersededByAddition(previousContent, currentContent) ||
+        isFrontmatterPartialCorrectionAddition(previousContent, currentContent)
+      ) {
+        continue;
+      }
     }
 
     violations.push({

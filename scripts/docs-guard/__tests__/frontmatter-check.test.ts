@@ -298,6 +298,43 @@ superseded_by:
     expect(reasons).toEqual(['superseded_byはscalarのrepo-relative pathで指定する']);
   });
 
+  it('正常系: 部分訂正keyが実在するrepo-relative pathなら受理する（#1939）', () => {
+    const root = createRoot();
+    createFile(root, 'docs/engineering/log/2026-08-11-fix.md');
+
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+---
+`,
+      relativePath: 'docs/product/log/2026-07-14-old.md',
+      root,
+      today: '2026-08-11',
+    });
+
+    expect(reasons).toEqual([]);
+  });
+
+  it('エラー系: 部分訂正keyが指す先が存在しなければ拒否する（#1939）', () => {
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-missing.md
+---
+`,
+      relativePath: 'docs/product/log/2026-07-14-old.md',
+      root: createRoot(),
+      today: '2026-08-11',
+    });
+
+    expect(reasons).toEqual([
+      'partially_superseded_2026_08_11_codeql-statusのpathが存在しない: docs/engineering/log/2026-08-11-missing.md',
+    ]);
+  });
+
   it('境界: secrets.mdはstock契約の検証対象にする', () => {
     const reasons = validateDocumentMetadata({
       content: '# Secrets\n',
@@ -366,6 +403,29 @@ describe('validateExistingLogSupersededBy', () => {
 
   it('境界: legacyのstatus追記だけならsuperseded_by検証を要求しない', () => {
     expect(validateExistingLogSupersededBy('status: superseded\n', createRoot())).toEqual([]);
+  });
+
+  it('正常系: 既存logに追記した部分訂正keyの実在pathを受理する（#1939）', () => {
+    const root = createRoot();
+    createFile(root, 'docs/engineering/log/2026-08-11-fix.md');
+
+    const reasons = validateExistingLogSupersededBy(
+      `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md\n`,
+      root,
+    );
+
+    expect(reasons).toEqual([]);
+  });
+
+  it('エラー系: 既存logに追記した部分訂正keyの不在pathを拒否する（#1939）', () => {
+    const reasons = validateExistingLogSupersededBy(
+      `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-missing.md\n`,
+      createRoot(),
+    );
+
+    expect(reasons).toEqual([
+      'partially_superseded_2026_08_11_codeql-statusのpathが存在しない: docs/engineering/log/2026-08-11-missing.md',
+    ]);
   });
 });
 

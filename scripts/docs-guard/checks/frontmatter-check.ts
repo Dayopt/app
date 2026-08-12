@@ -185,6 +185,36 @@ export function isFrontmatterSupersededByAddition(
   );
 }
 
+const PARTIAL_CORRECTION_KEY_RE =
+  /^partially_superseded_\d{4}_\d{2}_\d{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function isPartialCorrectionKey(key: string): boolean {
+  return PARTIAL_CORRECTION_KEY_RE.test(key);
+}
+
+/**
+ * 部分訂正（#1939）: 既存の凍結logへ、日付+slug付きの新規keyが1本だけ増えているかを
+ * 検証する。isSupersedeOnlyDiffの行レベル判定に加え、frontmatter全体をparseした上で
+ * 「そのkeyが以前は無かった」ことまで確認する（superseded_by用のisFrontmatterSupersededByAdditionと対）。
+ */
+export function isFrontmatterPartialCorrectionAddition(
+  previousContent: string,
+  currentContent: string,
+): boolean {
+  const previous = parseFrontmatter(previousContent);
+  const current = parseFrontmatter(currentContent);
+  if (previous.errors.length > 0 || current.errors.length > 0) return false;
+
+  const newPartialCorrectionKeys = [...current.fields.keys()].filter(
+    (key) => isPartialCorrectionKey(key) && !previous.fields.has(key),
+  );
+  if (newPartialCorrectionKeys.length !== 1) return false;
+
+  const [key] = newPartialCorrectionKeys;
+  const value = key !== undefined ? current.fields.get(key) : undefined;
+  return typeof value === 'string' && value.length > 0;
+}
+
 export function classifyDocument(
   relativePath: string,
   isAddedLog: boolean,
@@ -335,6 +365,16 @@ export function validateExistingLogSupersededBy(content: string, root = ROOT): s
     if (reason) reasons.push(reason);
   }
 
+  const partialCorrectionMatches = [
+    ...content.matchAll(/^(partially_superseded_\d{4}_\d{2}_\d{2}_[a-z0-9-]+):\s*(\S+)\s*$/gm),
+  ];
+  for (const match of partialCorrectionMatches) {
+    const [, key, value] = match;
+    if (!key || !value) continue;
+    const reason = validateRepoPath(root, value, key);
+    if (reason) reasons.push(reason);
+  }
+
   return reasons;
 }
 
@@ -383,6 +423,16 @@ export function validateDocumentMetadata({
       reasons.push('superseded_byはscalarのrepo-relative pathで指定する');
     } else {
       const reason = validateRepoPath(root, supersededBy, 'superseded_by');
+      if (reason) reasons.push(reason);
+    }
+  }
+
+  for (const [key, value] of parsed.fields) {
+    if (!isPartialCorrectionKey(key)) continue;
+    if (typeof value !== 'string' || value.length === 0) {
+      reasons.push(`${key}はscalarのrepo-relative pathで指定する`);
+    } else {
+      const reason = validateRepoPath(root, value, key);
       if (reason) reasons.push(reason);
     }
   }
