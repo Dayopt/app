@@ -21,6 +21,15 @@ type McpAccessDatabase = {
 
 type McpAccessSupabaseClient = SupabaseClient<McpAccessDatabase>;
 
+/**
+ * 外部呼び出しの上限。他の service-role client と同値。
+ *
+ * token 検証は identity RPC → token → connection → write gate → profile を逐次で引く。
+ * 上限が無いと route の `maxDuration` が先に発火し、handler が返すはずの 503 すら
+ * 出せずに全 tool 呼び出しが 504 になる。
+ */
+const MCP_ACCESS_DB_TIMEOUT_MS = 15_000;
+
 export function createMcpAccessDbClient(): McpAccessSupabaseClient {
   return createClient<McpAccessDatabase>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -29,6 +38,14 @@ export function createMcpAccessDbClient(): McpAccessSupabaseClient {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            signal: options?.signal ?? AbortSignal.timeout(MCP_ACCESS_DB_TIMEOUT_MS),
+          });
+        },
       },
     },
   );
