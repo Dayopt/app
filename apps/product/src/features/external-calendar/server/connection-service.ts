@@ -574,12 +574,22 @@ export async function updateSelectedCalendars(
       });
     }
 
-    // 外したカレンダーの未参照ミラー行を即時掃除する。
-    await deleteUnreferencedEvents({
-      userId,
-      connectionId,
-      scope: { kind: 'calendars', providerCalendarIds: removedIds },
-    });
+    // 外したカレンダーの未参照ミラー行を即時掃除する。best-effort — 失敗しても選択変更
+    // 自体は成功として扱う（fail-closed にすると cleanup 失敗がユーザー操作全体を巻き込む）。
+    // 拾いきれなかった行は次回の window prune か disconnect の prune が回収する。
+    try {
+      await deleteUnreferencedEvents({
+        userId,
+        connectionId,
+        scope: { kind: 'calendars', providerCalendarIds: removedIds },
+      });
+    } catch (error) {
+      logger.warn('[calendar-connection] failed to prune events for removed calendars');
+      captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+        feature: 'external_calendar',
+        operation: 'update_selected_calendars_prune',
+      });
+    }
   }
 }
 
@@ -604,7 +614,10 @@ function reportUnrevokedGrant(reason: string): void {
  *
  * 1. provider の revoke を best-effort で呼ぶ（失敗しても続行）
  * 2. connection を消す前に、未参照ミラー行を anti-join で掃除する（削除後は FK が
- *    connection_id を NULL 化してスコープを失う）
+ *    connection_id を NULL 化してスコープを失う）。**fail-closed**: 掃除が失敗したら
+ *    connection は消さず throw する。ここだけは best-effort にしない — 削除後は FK が
+ *    connection_id を NULL 化し、その未参照ミラー行を回収する経路が無くなる（#1988）。
+ *    切断は冪等なので、ユーザーがもう一度実行すれば prune からやり直せる
  * 3. `calendar_connections` を hard delete（子は CASCADE、参照済みミラーは connection_id が
  *    SET NULL され歴史的アンカーとして残る）
  *
@@ -628,8 +641,16 @@ export async function disconnect(userId: string, connectionId: string): Promise<
     reportUnrevokedGrant('could not revoke the provider grant');
   }
 
-  // 2. connection 削除より先にミラーを掃除する。
-  await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  // 2. connection 削除より先にミラーを掃除する。失敗したら connection を消さない。
+  try {
+    await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  } catch (error) {
+    throw new ExternalCalendarServiceError(
+      'DELETE_FAILED',
+      'failed to clean up calendar events before disconnecting',
+      { cause: error },
+    );
+  }
 
   // 3. connection を hard delete。子テーブルは CASCADE。
   const { error } = await db

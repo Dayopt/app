@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
+const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/env', () => ({
@@ -18,7 +19,7 @@ vi.mock('@/env', () => ({
   },
 }));
 vi.mock('@supabase/supabase-js', () => ({ createClient }));
-vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError }));
+vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError, captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
@@ -28,6 +29,9 @@ import { deleteUnreferencedEvents } from '../event-pruning';
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
 
+// event-pruning.ts の PRUNE_BATCH_SIZE と同値。batch 上限テストで全バッチを満杯にするために使う。
+const PRUNE_BATCH_SIZE = 150;
+
 type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] }> };
 
 type Config = {
@@ -35,7 +39,10 @@ type Config = {
   referencedByPlans?: Array<{ external_calendar_event_id: string | null }>;
   referencedByRecords?: Array<{ external_calendar_event_id: string | null }>;
   selectError?: unknown;
+  referencedError?: unknown;
   deleteError?: unknown;
+  /** 常に PRUNE_BATCH_SIZE 件満杯を返し続ける（batch 上限に到達させる）。 */
+  alwaysFullBatch?: boolean;
 };
 
 function setupDb(config: Config) {
@@ -48,12 +55,22 @@ function setupDb(config: Config) {
       if (methods.includes('delete')) return { data: null, error: config.deleteError ?? null };
       const batch = candidateBatch;
       candidateBatch += 1;
+      if (config.alwaysFullBatch) {
+        return {
+          data: Array.from({ length: PRUNE_BATCH_SIZE }, (_, i) => ({ id: `ev-${batch}-${i}` })),
+          error: null,
+        };
+      }
       return {
         data: batch === 0 ? (config.candidates ?? []) : [],
         error: config.selectError ?? null,
       };
     }
-    if (recorder.table === 'plans') return { data: config.referencedByPlans ?? [], error: null };
+    if (recorder.table === 'plans')
+      return {
+        data: config.referencedError ? null : (config.referencedByPlans ?? []),
+        error: config.referencedError ?? null,
+      };
     if (recorder.table === 'records')
       return { data: config.referencedByRecords ?? [], error: null };
     return { data: [], error: null };
@@ -166,8 +183,66 @@ describe('deleteUnreferencedEvents — anti-join', () => {
     expect(deleteCall(calls)).toBeUndefined();
   });
 
-  it('select 失敗では throw せず記録して中断する', async () => {
+  // regression（#1988）: select / 参照読み取りの失敗を静かに飲み込むと、呼び出し元
+  // （disconnect）は掃除が成功したと誤解して connection を消してしまう。fail-closed で throw する。
+  it('select 失敗では throw して中断する（呼び出し元に fail-closed を選ばせる）', async () => {
     const { calls } = setupDb({ selectError: { code: '42501' } });
+
+    await expect(
+      deleteUnreferencedEvents({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        scope: { kind: 'connection' },
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+
+    expect(deleteCall(calls)).toBeUndefined();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+  });
+
+  it('参照読み取りの失敗も throw して中断する', async () => {
+    const { calls } = setupDb({
+      candidates: [{ id: 'ev-1' }],
+      referencedError: { code: '57014' },
+    });
+
+    await expect(
+      deleteUnreferencedEvents({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        scope: { kind: 'connection' },
+      }),
+    ).rejects.toMatchObject({ code: '57014' });
+
+    expect(deleteCall(calls)).toBeUndefined();
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+  });
+
+  // regression（risk-reviewer 指摘）: 23503（select と delete の間の参照レース）以外の delete
+  // 失敗を warn だけで飲み込むと、disconnect の fail-closed が効かず連鎖する未参照行を
+  // 永久に見失う。23503 以外は throw する。
+  it('23503 以外の delete 失敗は throw する', async () => {
+    setupDb({
+      candidates: [{ id: 'ev-1' }],
+      deleteError: { code: '42501' },
+    });
+
+    await expect(
+      deleteUnreferencedEvents({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        scope: { kind: 'connection' },
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+
+    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+  });
+
+  it('23503（参照レース）の delete 失敗は throw せず warn に留める', async () => {
+    setupDb({
+      candidates: [{ id: 'ev-1' }],
+      deleteError: { code: '23503' },
+    });
 
     await expect(
       deleteUnreferencedEvents({
@@ -177,8 +252,52 @@ describe('deleteUnreferencedEvents — anti-join', () => {
       }),
     ).resolves.toBeUndefined();
 
-    expect(deleteCall(calls)).toBeUndefined();
-    expect(captureUnexpectedDatabaseError).toHaveBeenCalled();
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.stringContaining('skipped some rows due to a reference race'),
+    );
+  });
+});
+
+describe('deleteUnreferencedEvents — batch 上限', () => {
+  // regression（risk-reviewer 指摘）: 上限到達を warn だけで return すると、disconnect の
+  // fail-closed が効かず、上限を超えた残り行が connection 削除で永久に回収不能になる。
+  it('batch 上限に到達したら部分結果のまま return せず throw する', async () => {
+    setupDb({ alwaysFullBatch: true });
+
+    await expect(
+      deleteUnreferencedEvents({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        scope: { kind: 'connection' },
+      }),
+    ).rejects.toThrow('calendar event pruning hit the batch limit');
+
+    expect(loggerWarn).toHaveBeenCalledWith(
+      expect.stringContaining('stopped at the batch limit'),
+      expect.any(Object),
+    );
+  });
+});
+
+describe('deleteUnreferencedEvents — keyset ページング', () => {
+  // regression（#1996）: id は UUID 列。空文字を .gt('id', '') に渡すと PostgREST が
+  // invalid UUID で落ちる。初回バッチでは cursor 条件そのものを送らない。
+  //
+  // このテストは fake table が文字列比較で `.gt` を素通りさせる mock ベースなので、
+  // 実際の UUID キャストエラーは再現できない（それを再現するのが calendar-event-pruning
+  // integration test の役目）。ここは「初回に .gt('id', …) を呼んでいないこと」という
+  // 配線の契約だけを固定する。
+  it('初回バッチでは id の cursor 条件を送らない', async () => {
+    const { calls } = setupDb({ candidates: [{ id: 'ev-1' }] });
+
+    await deleteUnreferencedEvents({
+      userId: USER_ID,
+      connectionId: CONNECTION_ID,
+      scope: { kind: 'connection' },
+    });
+
+    const select = candidateSelect(calls)!;
+    expect(select.chain.some((e) => e.method === 'gt' && e.args[0] === 'id')).toBe(false);
   });
 });
 

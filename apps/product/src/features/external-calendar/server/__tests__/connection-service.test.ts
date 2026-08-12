@@ -479,6 +479,27 @@ describe('updateSelectedCalendars', () => {
 
     expect(deleteUnreferencedEvents).not.toHaveBeenCalled();
   });
+
+  // regression（#1988）: ミラー掃除は best-effort。fail-closed にすると、選択解除自体は
+  // 成功しているのに transient な cleanup 失敗でユーザー操作全体が失敗して見えてしまう。
+  it('ミラー掃除が失敗しても選択変更自体は成功として扱う', async () => {
+    setupServiceRoleDb({
+      connection: { status: 'active', refresh_token_enc: 'enc' },
+      childRows: [{ provider_calendar_id: 'cal-a' }, { provider_calendar_id: 'cal-b' }],
+    });
+    deleteUnreferencedEvents.mockRejectedValue(new Error('prune failed'));
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).resolves.toBeUndefined();
+
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'update_selected_calendars_prune' }),
+    );
+  });
 });
 
 // =============================================================================
@@ -566,6 +587,41 @@ describe('disconnect', () => {
     expect(revoke).not.toHaveBeenCalled();
     expect(deleteUnreferencedEvents).toHaveBeenCalled();
     expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+  });
+
+  // regression（#1988）: prune 失敗を検知せず connection を hard delete すると、FK が
+  // connection_id を NULL 化して未参照ミラー行を二度と回収できなくなる。fail-closed に直す。
+  describe('ミラー掃除の fail-closed（#1988）', () => {
+    it('ミラー掃除が失敗したら connection を削除せず throw する', async () => {
+      const { calls } = setupServiceRoleDb({
+        connection: { status: 'active', refresh_token_enc: 'enc' },
+      });
+      deleteUnreferencedEvents.mockRejectedValue({ code: '42501' });
+
+      await expect(disconnect(USER_ID, CONNECTION_ID)).rejects.toBeInstanceOf(
+        ExternalCalendarServiceError,
+      );
+
+      expect(findWith(calls, 'calendar_connections', 'delete')).toBeUndefined();
+    });
+
+    it('再試行時にミラー掃除が成功すれば connection を削除できる（冪等な収束）', async () => {
+      const { calls } = setupServiceRoleDb({
+        connection: { status: 'active', refresh_token_enc: 'enc' },
+      });
+      deleteUnreferencedEvents.mockRejectedValueOnce({ code: '42501' });
+
+      await expect(disconnect(USER_ID, CONNECTION_ID)).rejects.toBeInstanceOf(
+        ExternalCalendarServiceError,
+      );
+      expect(findWith(calls, 'calendar_connections', 'delete')).toBeUndefined();
+
+      // 2 回目は prune が成功する想定（deleteUnreferencedEvents の既定 resolve に戻る）。
+      deleteUnreferencedEvents.mockResolvedValue(undefined);
+      await disconnect(USER_ID, CONNECTION_ID);
+
+      expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+    });
   });
 
   it('接続削除の DB 失敗は ExternalCalendarServiceError を投げる', async () => {
