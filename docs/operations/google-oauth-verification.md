@@ -247,34 +247,38 @@ transferred to third parties, with two exceptions:
     on. Every such destination is one the user chose and can turn off again; Dayopt
     does not send data anywhere the user has not set up.
 
-When a user disconnects, Dayopt asks Google to revoke the refresh token on a
-best-effort basis; if Google cannot be reached, Dayopt records the failure and
-still completes the disconnect rather than leaving the user connected. It then
-deletes the previously imported events and the stored credentials. Deleting the
-Dayopt account deletes the user's Google Calendar data in the same way.
+There are two ways a user ends the connection, and they differ in what is kept.
 
-Two things outlive that deletion, and Dayopt does not claim otherwise:
+Disconnecting the account from Dayopt's settings: Dayopt asks Google to revoke the
+refresh token on a best-effort basis, and completes the disconnect even if Google
+cannot be reached, rather than leaving the user connected against their wishes. It
+deletes the stored credentials, the connected account's email address and account
+identifier, and every imported event the user has not built on. An imported event
+the user has already turned into an entry of their own is kept, because deleting it
+would remove part of the user's own history; the entry and the imported event it
+came from both remain, and the imported event keeps the fields listed above.
 
-  - Entries the user has already incorporated into their own records are kept, as
-    part of the user's own history, rather than removed from under them.
-  - A record that the revocation was carried out, including the Google account
-    identifier it applied to, is retained for up to 90 days so that Dayopt can
-    show a revocation was performed and can detect one that silently failed. It is
-    deleted automatically after that period.
+Deleting the Dayopt account: everything above is deleted, including the imported
+events that were kept in the disconnect case. A record that the revocation was
+carried out, including the Google account identifier it applied to, is retained for
+up to 90 days so that Dayopt can show a revocation was performed and can detect one
+that silently failed. That record is deleted automatically at the end of that
+period.
 
-Deletion is performed at the time of the request. If an individual deletion step
-fails because of a transient infrastructure error, the disconnect still completes
-so the user is not left connected, and the failure is reported to Dayopt's error
-monitoring for follow-up.
+In both cases the user can also revoke Dayopt's access directly from their Google
+account settings at any time, independently of Dayopt.
 ```
 
-**この段落は 4 箇所で実装に合わせてある。書き換えるときに戻さない。**
+**この段落は 7 箇所で実装に合わせてある。書き換えるときに戻さない。**
 
 **書き換えの原則: データの削除を無条件で保証する形に戻さない。** 実装には「消えない場合」が複数あり（下の 4 点）、1 つずつ潰す書き方をすると次の例外が見つかるたびに申告と実装がずれる。削除の方針と、その**例外の範囲**を書く形を維持する。
 
 - **revoke は best-effort。** `revokeRefreshToken()`（`server/google-oauth.ts:299-322`）はネットワーク失敗や想定外のエラーで `false` を返し、`disconnect()`（`server/connection-service.ts:596-633`）はそれでも切断を続行する（`reportUnrevokedGrant` で Sentry に送る）。「revokes」と断定形で書くと、実際には失敗しうる動作を保証したことになる。アプリ内の確認ダイアログも "Dayopt will **try to** revoke Google access" と書いてある
 - **削除されるのは参照されていないミラー行だけ。** ユーザーが自分の Plan / Record に紐づけた予定は履歴として残る（`connection_id` が NULL になる）。実際の順序は revoke → 未参照イベントの削除 → 接続行（= 認証情報）の削除
 - **Google の `sub` はアカウント削除後も最大 90 日残る。** revoke operation が `delete_after = settled_at + INTERVAL '90 days'` で保持され（`supabase/migrations/20260730090013_calendar_authority_fence_commands.sql:479`）、その FK が `provider_account_id` を持つ subject fence の削除を阻む。「即座に全部消える」と書くとこれと食い違う
+- **その 90 日記録が作られるのは*アカウント削除経路だけ*。** Settings からの通常切断は `disconnect()` が revoke と接続行削除を直接行うだけで、`calendar_revoke_operations` を作る RPC を呼ばない（この機構に触れるのは `server/account-deletion.ts` のみ）。90 日保持を切断一般の説明として書くと、存在しない処理を申告することになる
+- **参照済みミラー行は「ユーザーの entry」とは別に残る。** 切断で消えるのは未参照行だけで、Plan / Record から参照されている行は `connection_id` が NULL になるだけ。**行自体は provider event ID・タイトル・説明・calendar ID / name・時刻を保持したまま残る**ので、「imported events を消して own history だけが残る」と書くと保持内容と食い違う
+- **削除失敗を「監視に上がる」と書かない。** `event-pruning.ts` の DELETE 失敗分岐は `logger.warn` だけで Sentry へ送らない（select / 参照読み取りの失敗は `captureDatabaseError` を通るが、DELETE は通らない）。分岐ごとに監視の有無が違うので、一律に「失敗は報告される」と書くと成立しない
 - **prune が失敗しても切断は成功として返る。** `deleteUnreferencedEvents()` は select / 参照読み取りの失敗で throw せず return し（`server/event-pruning.ts:141-169`）、`disconnect()` はそのまま接続行を hard delete する。残ったミラー行は `connection_id` が NULL になり、**この接続をキーにした回収経路が無くなる**（`connection-service.ts:590` のコメント自身がこの scope 喪失を認めている）。孤児行を掃除する経路は現時点で存在しない。**これは申告の問題ではなく実装の穴**なので、別 issue として指揮台へ上げた。塞がるまでは「必ず消える」と書かない
 
 ## デモ動画の台本
@@ -432,15 +436,19 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   have not set up.
 > - **How it is protected**: the credentials that let Dayopt read your calendar are
 >   encrypted before they are stored.
-> - **How to stop it**: disconnect the account at any time from Settings. Dayopt
->   asks Google to revoke its access, deletes the stored credentials, and deletes
->   the imported events. Entries you have already incorporated into your own
->   records remain as part of your own history. For up to 90 days afterwards we
->   keep a record that the revocation happened, including the identifier of the
->   Google account it applied to, so that we can show it was carried out and notice
->   if it silently failed; that record is deleted automatically. You can also revoke
->   Dayopt's access directly from your Google account's security settings at any
->   time.
+> - **How to stop it**: disconnect the account at any time from Settings. We ask
+>   Google to revoke our access, and we delete the stored credentials, the
+>   connected account's email address and identifier, and every imported event you
+>   have not built on. If you have already turned an imported event into an entry of
+>   your own, we keep both your entry and the imported event behind it, so that we
+>   are not deleting part of your own history without asking.
+> - **If you delete your Dayopt account**: everything above is deleted, including
+>   the imported events we would otherwise have kept. For up to 90 days we keep a
+>   record that the revocation happened, including the identifier of the Google
+>   account it applied to, so that we can show it was carried out and notice if it
+>   silently failed. That record is deleted automatically at the end of that period.
+> - **Revoking from Google's side**: you can remove Dayopt's access directly from
+>   your Google account's security settings at any time, without going through us.
 >
 > Dayopt's use of information received from Google APIs adheres to the
 > [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
