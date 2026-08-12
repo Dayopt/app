@@ -22,6 +22,14 @@ const ROUTE_DURATION_CONTRACT = {
   // 外部 I/O 1-2 本
   'src/app/api/csp-report/route.ts': 30,
   'src/app/api/health/route.ts': 30,
+
+  // 既存値（この PR 以前から production で稼働している値。導出段に当てはめ直していない）。
+  //
+  // webhooks/stripe は durable lifecycle の worst path が Stripe API 2 本 + DB 数往復 +
+  // Resend + analytics の約 9 逐次 hop あり、段の分類としては「複数逐次」に近い。それでも
+  // 30 を据え置くのは、(1) この値自体は本 PR の変更ではなく production 実績がある、
+  // (2) timeout 時は Stripe 側が再送し、`claimStripeWebhookEvent` の冪等性が二重処理を防ぐ、
+  // の 2 点による。引き上げるかどうかは実測（p99）を見てから別途判断する。
   'src/app/api/webhooks/resend/route.ts': 30,
   'src/app/api/webhooks/stripe/route.ts': 30,
 
