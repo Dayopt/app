@@ -585,7 +585,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 
 Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総覧。tRPC procedureは`/api/trpc/[procedure-path]`に集約され、procedure単位の仕様は各featureの`server/router.ts`を参照すること。
 
-策定日: 2026-04-26、最終照合: 2026-08-12（route ファイルの実在を双方向で機械照合）
+策定日: 2026-04-26。下記 §一覧 と実装 route の双方向照合は `scripts/__tests__/infra-api-routes-contract.test.ts` が機械的に固定する（[#1981](https://github.com/Dayopt/dayopt/issues/1981)。route の追加・削除と表の更新漏れの両方で fail する）。人手の「最終照合」日付には依存しない。
 
 ### 一覧
 
@@ -712,6 +712,7 @@ flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production
 
 - 新規 endpoint を追加する前に、tRPC procedure で済まないか検討する（`features/*/server/router.ts`）
 - **新規 route handler を追加したら、`route-duration-contract.test.ts` の契約表に 1 行足す**（足さないと test が落ちる）
+- **endpoint を追加・削除したら、上記 §一覧 の表も同じ PR で更新する**（`infra-api-routes-contract.test.ts` が表と実装 route の食い違いを検出して test を落とす）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
 - 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
