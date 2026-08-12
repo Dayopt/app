@@ -128,7 +128,7 @@ lastUpdated: 'Last Updated: 2026-08-12'
         whatWeAccess:
           'What we access — the email address and account identifier of the Google account you connect, the list of your calendars so you can choose which ones to import, and the events on the calendars you select.',
         connectedAccount:
-          "The connected account — we store the account's email address and its stable Google account identifier. We show you the email address so you can tell your connected accounts apart, and we use the identifier to confirm a reconnection is for the same account. Both are deleted when you disconnect the account.",
+          "The connected account — we store the account's email address and its stable Google account identifier. We show you the email address so you can tell your connected accounts apart, and we use the identifier to confirm a reconnection is for the same account. The email address is deleted when you disconnect the account. The identifier may be retained beyond disconnection as part of how we manage the connection securely.",
         whatWeStore:
           "What we store — for each imported event, only its identifier, title, description, start and end time, whether it is active or cancelled, and the identifier and name of the calendar it came from. For a calendar someone shared with you, that identifier may be the sharing account's email address. Attendees, guest email addresses, locations, conferencing links, and attachments are never used, stored, or logged.",
         calendarSelection:
@@ -136,13 +136,13 @@ lastUpdated: 'Last Updated: 2026-08-12'
         howMuchWeRead:
           'How much we read — the 90 days before and after now. Most syncs only ask Google what changed since the last one; about once a day we re-read the whole window, so the range keeps up with the current date. All-day events are not imported.',
         howWeUseIt:
-          'How we use it — only to show these events inside your own Dayopt timeline. Imported events are visible only to you, and we never share them with anyone else unless you set up a way for us to — for example by granting another application permission to read your entries, or by turning on a calendar feed you subscribe to from another calendar app.',
+          'How we use it — to help you plan around commitments you already have. We store the events you import so we can show them alongside your own plan; that view is not live in the app yet, so today the events are stored but not yet displayed anywhere else. Imported events are visible only to you, and we never share them with anyone else unless you set up a way for us to — for example by granting another application permission to read your entries, or by turning on a calendar feed you subscribe to from another calendar app.',
         howProtected:
           'How it is protected — the credentials that let Dayopt read your calendar are encrypted before they are stored.',
         howToStop:
-          "How to stop it — disconnect the account at any time from Settings. We ask Google to revoke our access, and we delete the stored credentials, the connected account's email address and identifier, and every imported event you have not built on. If Google had just issued us a replacement key, that replacement stays in an internal queue, encrypted, for up to 24 hours so that we can revoke it as well. If you have already turned an imported event into an entry of your own, we keep both, so we are not deleting part of your history without asking.",
+          "How to stop it — disconnect the account at any time from Settings. We ask Google to revoke our access, and we delete the stored credentials and the connected account's email address, along with every imported event you have not built on, other than in the rare case a temporary error interrupts that step. If Google had just issued us a replacement key, that replacement stays in an internal queue, encrypted, for up to 24 hours so that we can revoke it as well. If you have already turned an imported event into an entry of your own, we keep both, so we are not deleting part of your history without asking.",
         accountDeletion:
-          'If you delete your Dayopt account — everything above is deleted, including imported events we would otherwise have kept. We keep a record that the revocation happened, including the identifier of the Google account it applied to, so that we can confirm it was carried out and notice if it silently failed. We do not keep that record beyond 90 days.',
+          'If you delete your Dayopt account — everything above is deleted, including imported events we would otherwise have kept. We keep a record that the revocation happened, including the identifier of the Google account it applied to, for up to 90 days, so that we can confirm it was carried out and notice if it silently failed.',
         revokeFromGoogle:
           "Revoking from Google's side — you can remove Dayopt's access directly from your Google account's security settings at any time, without going through us.",
         limitedUse:
