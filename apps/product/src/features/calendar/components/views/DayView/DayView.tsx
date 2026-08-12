@@ -21,6 +21,7 @@ export const DayView = ({
   dateRange: _dateRange,
   entries,
   allTimeblocks,
+  externalEvents,
   currentDate,
   showWeekends: _showWeekends = true,
   showActualDiff: _showActualDiff = false,
@@ -145,6 +146,7 @@ export const DayView = ({
           <CalendarGridContent
             date={date}
             entries={dayEvents}
+            externalEvents={externalEvents}
             viewMode="day"
             dayIndex={0}
             allEventsForOverlapCheck={allTimeblocks ?? entries}

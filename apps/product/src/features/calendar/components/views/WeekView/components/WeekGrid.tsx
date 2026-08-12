@@ -38,6 +38,7 @@ export const WeekGrid = ({
   weekDates,
   events,
   allTimeblocks,
+  externalEvents,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
   disabledTimeblockId,
@@ -152,6 +153,7 @@ export const WeekGrid = ({
               <CalendarGridContent
                 date={date}
                 entries={dayEvents}
+                externalEvents={externalEvents}
                 viewMode="week"
                 dayIndex={dayIndex}
                 allEventsForOverlapCheck={allTimeblocks ?? events}

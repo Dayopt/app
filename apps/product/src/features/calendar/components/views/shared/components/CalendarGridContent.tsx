@@ -2,8 +2,9 @@
 
 import React, { useCallback } from 'react';
 
-import { isSameDay } from 'date-fns';
+import { isSameDay, startOfDay } from 'date-fns';
 
+import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import { useTagsMap } from '@/features/tags';
 import {
   isPlanRecordDrop,
@@ -21,6 +22,8 @@ import {
   calendarEventToPlanEvent,
   calendarEventToRecordEvent,
 } from '../../../../lib/calendar-event-to-lane-event';
+import { selectExternalEventsForDate } from '../../../../lib/external-event-day-selection';
+import { calculateExternalEventLayout } from '../../../../lib/external-event-layout';
 import { buildPlanRecordDropInput } from '../../../../lib/plan-record-drop';
 import {
   calculateTwoLaneStylesForCalendarEvents,
@@ -34,6 +37,7 @@ import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
 import { DraftTimeblock } from './DraftTimeblock';
 import { InlineTagPalette } from './InlineTagPalette';
+import { ExternalEventCard } from './TwoLane/ExternalEventCard';
 import { PlanLaneCard } from './TwoLane/PlanLaneCard';
 import { RecordLaneCard } from './TwoLane/RecordLaneCard';
 import { TwoLaneTimeblockRenderer } from './TwoLaneTimeblockRenderer';
@@ -126,6 +130,8 @@ interface CalendarGridContentProps {
   dayDiffEntryIds?: ReadonlySet<string> | undefined;
   /** モバイルWeekで表示するレーン。選択レーンは日カラム全幅で表示する */
   laneDisplayMode?: 'both' | 'plan' | 'record' | undefined;
+  /** 表示範囲分の外部カレンダー予定（ghost）。この日に出す分はここで絞る */
+  externalEvents?: ExternalCalendarEvent[] | undefined;
   className?: string | undefined;
 }
 
@@ -171,11 +177,13 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   disabledTimeblockId,
   dayDiffEntryIds,
   laneDisplayMode = 'both',
+  externalEvents,
   className,
 }: CalendarGridContentProps) {
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const { defaultDuration, timeFormat } = useUserPreferences();
+  const timezone = useUserPreferences((state) => state.timezone);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
@@ -197,6 +205,22 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       return kind === laneDisplayMode;
     });
   }, [entries, laneDisplayMode]);
+
+  // ghost（#1962）。Plan レーンの領域を使うので、`laneDisplayMode === 'record'` では
+  // planLaneWidthPercent が 0 になり結果的に描かれない（外部予定は実績ではない）。
+  const dayExternalEvents = React.useMemo(
+    () => (externalEvents ? selectExternalEventsForDate(externalEvents, date, timezone) : []),
+    [externalEvents, date, timezone],
+  );
+  const externalEventPositions = React.useMemo(
+    () =>
+      calculateExternalEventLayout(dayExternalEvents, {
+        dayStart: startOfDay(date),
+        hourHeight: HOUR_HEIGHT,
+        laneWidthPercent: planLaneWidthPercent,
+      }),
+    [dayExternalEvents, date, HOUR_HEIGHT, planLaneWidthPercent],
+  );
 
   const wrappedOnEventUpdate = useCallback(
     (
@@ -367,6 +391,22 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           内側の zIndex（grid.constants.ts の Z_INDEX: 10-40）はグローバルな
           z-index トークン（z-dropdown: 50 等）と数値空間が別になる。意図的な分離 */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
+        {/* ghost はここで最初に描く。新しい z-index を作らず、後の兄弟（plan / record カード）が
+            DOM 順で上に塗られることで重ね順を担保する */}
+        {dayExternalEvents.map((event) => {
+          const position = externalEventPositions[event.id];
+          if (!position) return null;
+
+          return (
+            <ExternalEventCard
+              key={event.id}
+              event={event}
+              position={position}
+              timeFormat={timeFormat}
+              compact={compactCards}
+            />
+          );
+        })}
         {visibleEntries.map((entry) => {
           const position = twoLaneStyles[entry.id];
           if (!position) return null;

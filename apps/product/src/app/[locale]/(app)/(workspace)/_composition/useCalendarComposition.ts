@@ -49,6 +49,7 @@ interface CalendarCompositionResult {
   viewDateRange: ReturnType<typeof useCalendarDataLayer>['viewDateRange'];
   filteredEvents: ReturnType<typeof useCalendarDataLayer>['filteredEvents'];
   allCalendarEvents: ReturnType<typeof useCalendarDataLayer>['allCalendarEvents'];
+  externalEvents: ReturnType<typeof useCalendarDataLayer>['externalEvents'];
   prefetchDirection: ReturnType<typeof useCalendarDataLayer>['prefetchDirection'];
 
   // === Settings ===

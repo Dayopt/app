@@ -210,6 +210,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           viewDateRange={composition.viewDateRange}
           filteredTimeblocks={composition.filteredEvents}
           allTimeblocks={composition.allCalendarEvents}
+          externalEvents={composition.externalEvents}
           showWeekends={composition.showWeekends}
           showActualDiff={isDiffPanelActive && isCalendarDiffView(viewType)}
           disabledTimeblockId={composition.disabledTimeblockId}
