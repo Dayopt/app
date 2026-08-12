@@ -1308,7 +1308,31 @@ ORDER BY schemaname, tablename;
 
 ### 復元前に止めるもの
 
-**メンテナンスモード（`NEXT_PUBLIC_MAINTENANCE_MODE`）は Next.js app 層しか止めない。** pg_cron の job は Postgres 内部で独立に走り続けるため、「書き込みを止めた」つもりで復元しても cron 起因の書き込みは続く。
+**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。ところが**現状 Dayopt に「書き込みを止める」手段は無い**。
+
+#### メンテナンスモードは書き込みを止めない（2026-08-12 実測）
+
+`NEXT_PUBLIC_MAINTENANCE_MODE=true` が止めるのは**画面遷移だけ**。
+
+- `apps/product/src/proxy.ts` はメンテナンス判定（`isMaintenanceMode`）より**前に** `pathname.startsWith('/api')` で早期 return する
+- さらに `config.matcher` が `api` を除外しているので、`/api/trpc` と `/api/webhooks/*` は proxy を通らない
+
+結果として、**既に画面を開いているユーザーの mutation と Stripe / Resend の webhook は、メンテナンスモード中も DB を更新し続ける**。「メンテナンスモードにしたから止まった」と判断すると、その間の書き込みを失う。
+
+#### いま実際に止められるもの
+
+| 対象                   | 手段                                                         | 影響                                       |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 画面からの操作         | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
+| API / webhook 書き込み | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止。webhook は再送に頼る） |
+| MCP 経由の書き込み     | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
+| pg_cron                | 下記 SQL                                                     | cron 処理の停止                            |
+
+**恒久対応（API 層の write fence）は [#1972](https://github.com/Dayopt/dayopt/issues/1972) で追う。** それまでは「メンテナンスモード + deployment 停止」でしか write を止められない前提で判断する。
+
+#### pg_cron を止める
+
+pg_cron の job は Postgres 内部で独立に走るため、app 側を何をしても止まらない。
 
 ```sql
 -- ① 先に控える。production の cron は Dashboard 設定が正本で、
@@ -1320,6 +1344,16 @@ SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 ```
 
 **①を飛ばさない。** 止めた job は復旧後に手で戻すことになり、控えが無いとスケジュールも command も分からなくなる。
+
+### 復旧後に戻すもの（サービス再開前に確認する）
+
+**止めたものは戻さないと恒久的に止まったままになる。** 特に backup 復元をせず rollback 経路へ抜けた場合、cron を止めたことだけが残る。
+
+- [ ] **pg_cron を再登録する。** 控えた `jobname` / `schedule` / `command` から `SELECT cron.schedule('<name>', '<schedule>', '<command>');` で戻し、名前・schedule・command・`active` の一致を確認する
+  - 戻し忘れると `expire-calendar-revoke-outbox`（期限切れ revoke の処理）などが恒久停止する
+- [ ] Edge Function とその secrets（別 project へ復元した場合）
+- [ ] Auth Hook の登録（別 project へ復元した場合。§復元でも戻らないもの）
+- [ ] 最後にメンテナンスモードを解除する
 
 §DB Migration Rollback 手順書 の緊急対応フローチャートには pg_cron 停止ステップがあるが、災害復旧でも同じことが要る。
 

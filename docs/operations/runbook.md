@@ -107,8 +107,10 @@ supabase functions deploy --use-api
 
 **ケース A〜C はサービスが止まっているだけでデータは無事。データそのものが失われた場合はここへ来る。**
 
-- [ ] **まず書き込みを止める**（メンテナンスモード有効化）。復元しても、その後の書き込みは失われる
-- [ ] **pg_cron も止める。メンテナンスモードは app 層しか止めない**（cron は Postgres 内部で走り続ける）
+- [ ] **書き込みを止める。ただしメンテナンスモードでは止まらない**（[infra.md §復元前に止めるもの](../engineering/infra.md#復元前に止めるもの)）
+  - `NEXT_PUBLIC_MAINTENANCE_MODE` が止めるのは**画面遷移だけ**。`/api/trpc` の mutation と Stripe / Resend webhook は proxy を通らず**書き込み続ける**
+  - API まで止めるには deployment を止めるしかない（[#1972](https://github.com/Dayopt/dayopt/issues/1972) で恒久対応）。**止めた／止めていないを自覚したうえで復元する**
+- [ ] **pg_cron も止める**（Postgres 内部で走るので app 側の操作では止まらない）
 
 ```sql
 -- ① 先に控えて保存する（Dashboard 設定が正本で migration から戻せない）
@@ -120,7 +122,8 @@ SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 - [ ] 原因が自分の migration なら [infra.md §DB Migration Rollback 手順書](../engineering/infra.md#db-migration-rollback-手順書) へ
 - [ ] データ消失・オペミスなら [infra.md §災害復旧手順](../engineering/infra.md#災害復旧手順) へ
 - [ ] Supabase Dashboard → Database → Backups で **backup の存在と時刻を確認する**（「あるはず」で進めない）
-- [ ] 復元しても **Storage オブジェクト・Edge Functions・custom role の password は戻らない**（§災害復旧手順 の一覧）
+- [ ] 復元しても **Storage オブジェクト・Edge Functions とその secrets・Vault の secrets・Auth Hook 登録は戻らない**（[infra.md §復元でも戻らないもの](../engineering/infra.md#復元でも戻らないもの)）
+- [ ] **サービス再開前に、止めた pg_cron を再登録する**（[infra.md §復旧後に戻すもの](../engineering/infra.md#復旧後に戻すもの)）。戻し忘れると期限切れ revoke の処理などが恒久停止する
 
 > **RTO / RPO は未実測**（復元演習が未実施）。復旧時間を約束できる状態にない。手順と確認観点は [復元演習手順書](./disaster-recovery-drill.md)。
 

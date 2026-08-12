@@ -114,7 +114,7 @@ supabase branches create --help
 **γ を synthetic データで先に通し（= dry run）、その後 β を本番経路の証明として 1 回実行する。**
 
 - α は前提が 2 つとも壊れている（`--with-data` 未確認 + branch が migration に失敗する既知不具合）ので**初回演習では採らない**。#1461 が解決したら再評価する
-- γ を**実データで**回すのは既定で採らない。schema + roles だけを実データから取り、データ本体は `pnpm db:fresh` の seed で代用する。実データ複製が要ると判断した場合は User の明示判断とし、演習後に dump ファイルを削除するところまで手順に含める
+- γ を**実データで**回すのは既定で採らない。production から取るのは schema と roles だけで、データ本体は復元先で seed から作る（Step 1-1 / 1-2）。実データ複製が要ると判断した場合は User の明示判断とし、演習後に dump ファイルと復元先 DB を削除するところまで手順に含める
 - β は「本当に戻せるか」を答える唯一の案なので、**最終的に 1 回は通す**
 
 ---
@@ -123,24 +123,54 @@ supabase branches create --help
 
 目的は**手順を枯らすこと**。ここで詰まった箇所は Step 2 でも詰まる。
 
-### 1-1. 論理 dump を取る
+### 1-1. 論理 dump を取る（**既定では production のデータを取らない**）
 
-`supabase db dump` は既定で **schema のみ**、かつ `auth` / `storage` / extension 由来 schema を**除外**する。完全な論理バックアップは 3 本に分かれる。
+`supabase db dump` は既定で **schema のみ**、かつ `auth` / `storage` / extension 由来 schema を**除外**する。完全な論理バックアップは 3 本に分かれるが、**dry run で production から取るのは roles と schema の 2 本だけ**にする。
 
 ```bash
-supabase db dump --db-url "$DB_URL" --role-only -f roles.sql
-supabase db dump --db-url "$DB_URL" -f schema.sql
-supabase db dump --db-url "$DB_URL" --data-only --use-copy -f data.sql
+# production から取ってよいのはこの 2 本だけ（データを含まない）
+supabase db dump --db-url "$PROD_DB_URL" --role-only -f roles.sql
+supabase db dump --db-url "$PROD_DB_URL" -f schema.sql
 ```
+
+データ本体は **local の seed から作る**（後述 1-2）。production の `--data-only` は `plans` / `records` / `profiles` を平文の SQL としてローカルへ落とすため、**実行した時点で顧客 PII のローカル複製が成立する**。
+
+<details>
+<summary><strong>実データで回す必要が出た場合（User の明示判断が要る）</strong></summary>
+
+RTO はデータ量にほぼ比例するため、synthetic では所要時間が実態とずれる。実測が要ると判断した場合だけ、次を**セットで**満たす。
+
+```bash
+supabase db dump --db-url "$PROD_DB_URL" --data-only --use-copy -f data.sql
+```
+
+- [ ] User の明示判断を得た（「PII をローカルへ複製してよい」）
+- [ ] 保存先を決めた（暗号化されたディスク上。共有ディレクトリ・クラウド同期フォルダに置かない）
+- [ ] 演習終了後に `data.sql` と復元先 DB を**削除した**ことを確認した
+- [ ] 実測記録へ「実データを使った」と残した
+
+これを満たせないなら synthetic で回し、RTO は「データ量に比例して伸びる」と注記して残す。
+
+</details>
 
 > **credential を標準出力へ出さない。** 接続文字列は環境変数へ直接読み込み、値を echo しない。Management API / CLI の出力を見る時は [secrets.md §API 経由の設定読戻し](./secrets.md) の **allowlist 射影**に従う。denylist（危なそうな名前を隠す）方式は 2026-08-11 に実際に破綻している（判定語が `password` で実キー名が `db_pass` だった）。`supabase branches get` は credential を JSON で返す command なので、状態確認には `branches list` を使う。
 
-### 1-2. local へ復元して確認する
+### 1-2. 復元先を用意する（**`pnpm db:reset` は使わない**）
+
+`pnpm db:reset` は `supabase db reset --local` で、`config.toml` の `[db.migrations] enabled = true` と `[db.seed] enabled = true` により **migration と seed を適用した状態**を作る。ここへ `schema.sql` を流すと既存 object の再作成で失敗し、`data.sql` を入れれば seed と主キーが衝突する。**復元先は空でなければならない。**
 
 ```bash
-pnpm db:reset          # 空の local DB
-# roles.sql → schema.sql → data.sql の順に適用
+# local Supabase は起動しておく（Postgres だけ使う）
+createdb -h 127.0.0.1 -p 54322 -U postgres restore_drill
+
+DRILL_URL="postgresql://postgres:postgres@127.0.0.1:54322/restore_drill"
+psql -v ON_ERROR_STOP=1 -d "$DRILL_URL" -f roles.sql     # role は cluster 共有。既存なら skip されうる
+psql -v ON_ERROR_STOP=1 -d "$DRILL_URL" -f schema.sql
 ```
+
+`ON_ERROR_STOP=1` を必ず付ける。付けないと途中のエラーを無視して進み、**壊れた復元を「成功」と誤認する**。
+
+synthetic データは、この復元先に対して `supabase/seed.sql` と手動作成のテストユーザーで作る。**演習後に `dropdb` する。**
 
 ### 1-3. 観測ポイント（Step 2 でも同じものを見る）
 
@@ -167,16 +197,23 @@ pnpm db:reset          # 空の local DB
 
 ### データ
 
-- [ ] `plans` / `records` / `tags` / `profiles` の行数が復元元と一致する
-- [ ] 最新行の `created_at` を見て、**実際に失われた時間幅（RPO）** を算出する
+- [ ] `plans` / `records` / `tags` / `profiles` の行数が Step 0 で控えた値と一致する
 - [ ] `mcp_mutation_receipts` / `oauth_connections` など MCP 系テーブルが揃っている
+
+**RPO は最新 `created_at` では測れない。** backup 以降に「更新・削除しかなかった」場合、最新 `created_at` は一致するのに変更は失われている。逆に新規作成が長期間なければ、損失ゼロでも大きな RPO を算出してしまう。**sentinel を使う。**
+
+- [ ] backup 取得時刻の**前後に** sentinel 行（既知の内容の Plan など）を作っておき、復元先にどちらが存在するかで境界を挟む
+- [ ] あわせて `updated_at` を持つ既知の更新系列と、backup の recovery timestamp を突き合わせる
+- [ ] 算出した RPO と、その根拠（どの sentinel が残り／消えたか）を記録する
 
 ### 権限（機械判定できる）
 
 ```bash
-pnpm rls:snapshot        # 復元先に対して再生成
-pnpm rls:snapshot:check  # drift ゼロが合格
+# 復元先を指して check だけを走らせる。exit 0 が合格
+DATABASE_URL="$DRILL_URL" pnpm rls:snapshot:check
 ```
+
+> **`pnpm rls:snapshot`（`--check` なし）を先に実行しない。** `scripts/generate-rls-snapshot.ts` は checked-in の `rls-snapshot.md` を**上書きする**ため、その直後の `:check` は自分が今書いた内容と比較して必ず一致する。backup から policy や GRANT が欠落していても合格になり、**演習の権限検証がまるごと無意味になる**。比較対象は常に main の golden snapshot に保つ。
 
 期待値は [rls-snapshot.md](../engineering/data/db/rls-snapshot.md) の現行値（policy 43 / RLS 有効テーブル 20 / GRANT 215 / storage policy 8 / Realtime publication 0）。**演習日に本番側の数値を取り直してから比較する**（この数値は 2026-08-12 時点）。
 
@@ -214,7 +251,15 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 
 - [ ] `auth.users` の件数が一致する（**経路依存**: 物理復元は cluster 単位なので入るはず、論理 dump は既定で除外）
 - [ ] ログインが実際に通る
-- [ ] `send-auth-email` の Auth Hook 設定（`verify_jwt = false`）が保たれている
+
+#### Auth Hook（**別 project へ復元すると失われる。project 単位の GoTrue 設定**）
+
+DB 内の hook function が戻っても、**GoTrue 側の hook 登録は引き継がれない**。`config.toml` は 2 つの hook を定義している。
+
+- [ ] `[auth.hook.send_email]` を再登録する（URI + 署名 secret）。落ちていると**認証メールが 1 通も送れない**
+- [ ] `[auth.hook.custom_access_token]`（`pg-functions://postgres/public/custom_access_token_hook`）を再登録する。落ちていると **JWT に `subscription_status` が乗らず有料機能が壊れる**
+- [ ] `send-auth-email` の `verify_jwt = false` が保たれている（`true` だと入口で弾かれる）
+- [ ] **実際にサインアップ／パスワード再設定のメールが届くところまで確認する**（設定の見た目だけで判定しない）
 
 ### Edge Functions（**復元対象外。手動で戻す**）
 
@@ -228,7 +273,12 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 
 - [ ] `avatars` / `attachments` バケットが存在する（バケット定義は migration に入っているので schema と一緒に戻る）
 - [ ] **オブジェクト本体は空**であることを確認する。これは異常ではなく仕様
-- [ ] オブジェクトの搬出・復元は S3 互換エンドポイント経由（`rclone copy` 等）。**Storage には versioning が無く、削除は復元不可**
+
+> **⚠ 現状、Storage には復元元が存在しない。** オブジェクトは DB backup に含まれず、Supabase の S3 互換 endpoint には versioning も無い（削除は恒久）。**定期搬出の仕組みが無いため、`avatars` / `attachments` が削除・破損した事故では復旧手段が無い。** 障害後に live の bucket から `rclone copy` しても、失われたファイルはそこにもう無い。
+>
+> これは手順で埋まる穴ではなく**未実装の機能**なので、[#1971](https://github.com/Dayopt/dayopt/issues/1971) で追う。**paid billing のゲート条件に含めるかは User 判断**（現状 avatar と添付が恒久消失しうる状態で課金を開始してよいか）。
+>
+> 演習では「オブジェクトが空で戻る」ことの確認までを行い、versioned backup からの restore は [#1971](https://github.com/Dayopt/dayopt/issues/1971) の実装後に演習項目へ足す。
 
 ### Vault / 秘密情報（**案β で最も壊れやすい箇所**）
 
