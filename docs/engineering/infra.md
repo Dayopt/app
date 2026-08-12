@@ -5,7 +5,7 @@ last_verified: 2026-08-09
 
 # インフラ・環境・API/Routing 総覧
 
-環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
+環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、災害復旧手順、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
 
 ---
 
@@ -1283,9 +1283,106 @@ ORDER BY schemaname, tablename;
 
 ---
 
+## 災害復旧手順
+
+策定日: 2026-08-12（[#1879](https://github.com/Dayopt/dayopt/issues/1879)）
+
+**次節の §DB Migration Rollback 手順書 が「判断の巻き戻し」（自分が適用した migration を戻す）なのに対し、本節は「事故からの復旧」（データ消失・オペミス・DB 破損）を扱う。** 原因が自分の変更なら次節、失われたデータを取り戻すなら本節。
+
+> **⚠ 本節の RTO / RPO はまだ実測されていない。** 復元演習は未実施で、手順は [復元演習手順書](../operations/disaster-recovery-drill.md) に用意済み。**演習を通していない経路を障害中にぶっつけで走らせることになる**前提で判断する。演習後にここへ実測値を書く。
+
+### 復元でも戻らないもの
+
+障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
+
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し                                                                                      |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）    |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                             |
+
+**production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
+
+> custom role の password も backup に含まれないが、**現状 Dayopt に custom role は無い**（migration に `CREATE ROLE` / `CREATE USER` が 0 件）。追加したらこの表に足す。
+
+### 復元前に止めるもの
+
+**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。ところが**現状 Dayopt に「書き込みを止める」手段は無い**。
+
+#### メンテナンスモードは書き込みを止めない（2026-08-12 実測）
+
+`NEXT_PUBLIC_MAINTENANCE_MODE=true` が止めるのは**画面遷移だけ**。
+
+- `apps/product/src/proxy.ts` はメンテナンス判定（`isMaintenanceMode`）より**前に** `pathname.startsWith('/api')` で早期 return する
+- さらに `config.matcher` が `api` を除外しているので、`/api/trpc` と `/api/webhooks/*` は proxy を通らない
+
+結果として、**既に画面を開いているユーザーの mutation と Stripe / Resend の webhook は、メンテナンスモード中も DB を更新し続ける**。「メンテナンスモードにしたから止まった」と判断すると、その間の書き込みを失う。
+
+#### いま実際に止められるもの
+
+| 対象                   | 手段                                                         | 影響                                       |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 画面からの操作         | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
+| API / webhook 書き込み | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止。webhook は再送に頼る） |
+| MCP 経由の書き込み     | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
+| pg_cron                | 下記 SQL                                                     | cron 処理の停止                            |
+
+**恒久対応（API 層の write fence）は [#1972](https://github.com/Dayopt/dayopt/issues/1972) で追う。** それまでは「メンテナンスモード + deployment 停止」でしか write を止められない前提で判断する。
+
+#### pg_cron を止める
+
+pg_cron の job は Postgres 内部で独立に走るため、app 側を何をしても止まらない。
+
+```sql
+-- ① 先に控える。production の cron は Dashboard 設定が正本で、
+--    migration から再生成できない。控えずに止めると復旧手段が消える
+SELECT jobid, jobname, schedule, command, active FROM cron.job ORDER BY jobname;
+
+-- ② 控えた内容を保存してから止める
+SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
+```
+
+**①を飛ばさない。** 止めた job は復旧後に手で戻すことになり、控えが無いとスケジュールも command も分からなくなる。
+
+### 復旧後に戻すもの（サービス再開前に確認する）
+
+**止めたものは戻さないと恒久的に止まったままになる。** 特に backup 復元をせず rollback 経路へ抜けた場合、cron を止めたことだけが残る。
+
+- [ ] **pg_cron を再登録する。** 控えた `jobname` / `schedule` / `command` から `SELECT cron.schedule('<name>', '<schedule>', '<command>');` で戻し、名前・schedule・command・`active` の一致を確認する
+  - 戻し忘れると `expire-calendar-revoke-outbox`（期限切れ revoke の処理）などが恒久停止する
+- [ ] Edge Function とその secrets（別 project へ復元した場合）
+- [ ] Auth Hook の登録（別 project へ復元した場合。§復元でも戻らないもの）
+- [ ] 最後にメンテナンスモードを解除する
+
+§DB Migration Rollback 手順書 の緊急対応フローチャートには pg_cron 停止ステップがあるが、災害復旧でも同じことが要る。
+
+### 復旧経路の選択
+
+| 状況                       | 経路                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 自分の migration が原因    | §DB Migration Rollback 手順書（逆 SQL を新 migration として適用）                                       |
+| データ消失・破損・オペミス | backup / PITR から復元。**production への in-place restore は破壊的で、実行中はプロジェクトが停止する** |
+| schema だけ壊れた          | forward restoration migration（削除済みデータは戻らない）                                               |
+
+**backup の保持期間と PITR の有効・無効は Dashboard でしか確認できない**（Management API の project endpoint は backup 情報を返さない。2026-08-12 実測）。障害中に「backup があるはず」で動かず、まず Dashboard で存在を確認する。
+
+### 実測値
+
+| 指標                             | 値                                                            |
+| -------------------------------- | ------------------------------------------------------------- |
+| RTO（復元開始 → 主要フロー通過） | **未実測**                                                    |
+| RPO（失う最大時間幅）            | **未実測**（daily backup なら最大 24 時間、PITR なら約 2 分） |
+
+手順の詳細・確認観点・中止条件は [復元演習手順書](../operations/disaster-recovery-drill.md) が正本。本節は結論と「戻らないもの」だけを持つ。
+
+---
+
 ## DB Migration Rollback 手順書
 
 本番デプロイ事故時の逆マイグレーションSQL集。Supabaseはネイティブのrollback機構を持たないため、**逆SQLを新しいマイグレーションとして適用する**方式で対応する。
+
+**データ消失・オペミスからの復旧は本節の対象外。** その場合は §災害復旧手順 を読む。
 
 > **対象**: `supabase/migrations/` 配下の全17マイグレーション（baseline除く）
 
