@@ -46,6 +46,15 @@ type CalendarConnectionDatabase = {
 
 type CalendarConnectionClient = SupabaseClient<CalendarConnectionDatabase>;
 
+/**
+ * 外部呼び出しの上限。他の service-role client と同値。
+ *
+ * OAuth callback は一度きりの Google authorization code を消費してから接続を保存する。
+ * 上限が無いと route の `maxDuration` が先に発火し、保存結果を返す前に kill された
+ * 再試行が使用済み code の `invalid_grant` になって、ユーザーは認可からやり直しになる。
+ */
+const CALENDAR_CONNECTION_DB_TIMEOUT_MS = 15_000;
+
 function createCalendarConnectionDbClient(): CalendarConnectionClient {
   return createClient<CalendarConnectionDatabase>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -54,6 +63,14 @@ function createCalendarConnectionDbClient(): CalendarConnectionClient {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            signal: options?.signal ?? AbortSignal.timeout(CALENDAR_CONNECTION_DB_TIMEOUT_MS),
+          });
+        },
       },
     },
   );
