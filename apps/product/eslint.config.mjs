@@ -539,8 +539,6 @@ const eslintConfig = defineConfig([
       '**/__tests__/**',
       // ログイン（ブラウザから captcha token 付きで呼ぶ）
       'src/features/auth/stores/useAuthStore.ts',
-      // 公開 REST endpoint
-      'src/app/api/auth/route.ts',
       // アカウント削除の本人確認。service-role 経由で captcha を意図的に免除している
       'src/features/auth/server/password-reauthentication.ts',
     ],

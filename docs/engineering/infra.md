@@ -543,7 +543,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 - `src/lib/turnstile/`（app / web 両方）
 - `src/features/auth/components/SignupForm.tsx`（app）
 - `src/features/auth/stores/useAuthStore.ts`（app、`captchaToken` option 追加）
-- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除）
+- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除。この route 自体は #1942 で削除済み）
 - `src/app/[locale]/(auth)/client-layout.tsx`（app、`RecaptchaScript` 削除）
 - `src/app/[locale]/(marketing)/contact/contact-form.tsx`（web）
 - `src/app/api/contact/route.ts`（web、`verifyTurnstile` 挿入）
@@ -554,7 +554,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 
 ### 今後の拡張余地
 
-- **app の API route 化**: 現状 signup は client-side Supabase 直呼び。将来 server-side で追加の anti-abuse（IP 評価、メールドメイン検査など）を挟むなら `/api/auth/signup` route に統一する。route 側の Turnstile 検証は既に schema 上で受け付け可能な形に残してある
+- **app の API route 化**: signup / signin は client-side Supabase 直呼び。将来 server-side で追加の anti-abuse（IP 評価、メールドメイン検査など）を挟むなら、その時点で route と rate limiter を新設する。かつて存在した `/api/auth` route は呼び出し元ゼロの攻撃面だったため #1942 で削除済みで、再利用できる残骸は無い
 - **Turnstile analytics 活用**: Cloudflare dashboard の challenge 通過率 / 失敗率を週次で確認する運用を確立する
 - **ログイン flow への適用**: ブルートフォース対策として login にも Turnstile を追加する余地あり（現状は rate limit のみ）
 
@@ -568,29 +568,28 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 
 ### 一覧
 
-| App     | Path                                         | Method               | 認証                               | Rate Limit                                                        | Runtime                  | 副作用 / 説明                                                                                                              |
-| ------- | -------------------------------------------- | -------------------- | ---------------------------------- | ----------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| Product | `/api/health`                                | GET                  | なし                               | なし                                                              | nodejs                   | DB / Upstash Redisの疎通をcheckし`healthy / degraded / unhealthy`を返す。Productionは`{ status }`だけを公開                |
-| Product | `/api/csp-report`                            | POST                 | なし                               | IP 20/分 + 全体120/分                                             | nodejs                   | Product originの16 KiB以下のCSP reportだけを検証し、URL queryを除去してSentryへ送信                                        |
-| Product | `/api/trpc/[trpc]`                           | GET / POST           | procedure依存                      | procedure依存                                                     | nodejs                   | tRPC procedureのルーティング本体。Contactは認証済み`contact.submit`を使う                                                  |
-| Product | `/api/auth`                                  | GET / POST           | mixed                              | signin IP+email 各5/15分、signup IP 5/15分、reset IP+email 各3/時 | nodejs                   | Supabase認証管理。通常UIは現在Supabase Authを直接利用                                                                      |
-| Product | `/api/oauth/token`                           | POST                 | OAuth client（PKCE）               | IP 10/分 + 全体120/分                                             | nodejs                   | MCP client向けにaccess / refresh tokenを発行・回転する（`authorization_code` / `refresh_token`）。公開pathは`/oauth/token` |
-| Product | `/api/mcp`                                   | GET / POST / DELETE  | Bearer access token                | 認証前IP 1,200/分 + user 120/分                                   | nodejs                   | MCP Streamable HTTP transport本体。公開pathは`/mcp`と`mcp.dayopt.app`                                                      |
-| Product | `/api/v1/calendar/[token]`                   | GET                  | token (URL)                        | `icalFeedRateLimit`                                               | nodejs                   | Service Roleで対象userのplansをiCalendar形式へ変換                                                                         |
-| Product | `/api/integrations/google-calendar/start`    | GET                  | Supabase Auth (Cookie) + Proゲート | user 10/時                                                        | nodejs                   | Google OAuth同意画面へのredirectを組み立て、state / verifierをcookieへ置く                                                 |
-| Product | `/api/integrations/google-calendar/callback` | GET                  | Supabase Auth (Cookie) + Proゲート | user 10/時（startと同一key）                                      | nodejs                   | 認可codeをtokenへ交換し接続を保存する。startを踏まずに到達できるためProゲートとstate照合をここでも通す                     |
-| Product | `/api/cron/calendar-sync`                    | GET                  | `CRON_SECRET` (Bearer)             | なし                                                              | nodejs (maxDuration 60s) | Vercel cronが15分毎に叩く。dueな接続を時間予算（50秒）内で同期する                                                         |
-| Product | `/api/cron/external-connection-maintenance`  | GET                  | `CRON_SECRET` (Bearer)             | なし                                                              | nodejs (maxDuration 60s) | Vercel cronが15分毎に叩く。失効・revoke待ちの外部接続を掃く                                                                |
-| Product | `/api/v1/system/*`                           | GET / POST / OPTIONS | なし                               | なし                                                              | nodejs                   | 廃止済みsystem APIを常に404にするretirement boundary（Web側と同型）                                                        |
-| Product | `/api/webhooks/resend`                       | POST                 | Product Resend signature           | Redis processing lease                                            | nodejs (maxDuration 30s) | Product contact failureをPIIなしでSentryへ通知し、既存transactional mailのbounce / complaint suppressionも維持             |
-| Product | `/api/webhooks/stripe`                       | POST                 | Stripe signature                   | なし                                                              | nodejs (maxDuration 30s) | subscription stateを反映しtransactional emailを送る                                                                        |
-| Web     | `/api/compass-docs`                          | GET                  | なし                               | なし                                                              | nodejs (maxDuration 30s) | Compass内の公開ドキュメントを検索                                                                                          |
-| Web     | `/api/contact`                               | POST                 | CSRF + Turnstile                   | IP + Web全体                                                      | nodejs (maxDuration 30s) | 16 KiB以下のstrict inputをProduction限定でResendへ配送。成功形式は`{ success: true }`                                      |
-| Web     | `/api/csp-report`                            | POST                 | なし                               | IP + Web全体                                                      | nodejs (maxDuration 30s) | Web originのCSP reportを検証・正規化してSentryへ送信                                                                       |
-| Web     | `/api/search`                                | GET                  | なし                               | IP                                                                | nodejs (maxDuration 30s) | build済み検索indexをlocale別に検索                                                                                         |
-| Web     | `/api/og`                                    | GET                  | なし                               | なし                                                              | edge (maxDuration 25s)   | SNS向けOG画像を動的生成                                                                                                    |
-| Web     | `/api/v1/system/*`                           | GET / POST / OPTIONS | なし                               | なし                                                              | nodejs (maxDuration 5s)  | 廃止済みsystem APIを常に404にするretirement boundary                                                                       |
-| Web     | `/api/webhooks/resend`                       | POST                 | Web Resend signature               | Redis processing lease                                            | nodejs (maxDuration 15s) | Web contact failureだけをsource tagで所有判定し、PIIなしでSentryへ通知                                                     |
+| App     | Path                                         | Method               | 認証                               | Rate Limit                      | Runtime                  | 副作用 / 説明                                                                                                              |
+| ------- | -------------------------------------------- | -------------------- | ---------------------------------- | ------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Product | `/api/health`                                | GET                  | なし                               | なし                            | nodejs                   | DB / Upstash Redisの疎通をcheckし`healthy / degraded / unhealthy`を返す。Productionは`{ status }`だけを公開                |
+| Product | `/api/csp-report`                            | POST                 | なし                               | IP 20/分 + 全体120/分           | nodejs                   | Product originの16 KiB以下のCSP reportだけを検証し、URL queryを除去してSentryへ送信                                        |
+| Product | `/api/trpc/[trpc]`                           | GET / POST           | procedure依存                      | procedure依存                   | nodejs                   | tRPC procedureのルーティング本体。Contactは認証済み`contact.submit`を使う                                                  |
+| Product | `/api/oauth/token`                           | POST                 | OAuth client（PKCE）               | IP 10/分 + 全体120/分           | nodejs                   | MCP client向けにaccess / refresh tokenを発行・回転する（`authorization_code` / `refresh_token`）。公開pathは`/oauth/token` |
+| Product | `/api/mcp`                                   | GET / POST / DELETE  | Bearer access token                | 認証前IP 1,200/分 + user 120/分 | nodejs                   | MCP Streamable HTTP transport本体。公開pathは`/mcp`と`mcp.dayopt.app`                                                      |
+| Product | `/api/v1/calendar/[token]`                   | GET                  | token (URL)                        | `icalFeedRateLimit`             | nodejs                   | Service Roleで対象userのplansをiCalendar形式へ変換                                                                         |
+| Product | `/api/integrations/google-calendar/start`    | GET                  | Supabase Auth (Cookie) + Proゲート | user 10/時                      | nodejs                   | Google OAuth同意画面へのredirectを組み立て、state / verifierをcookieへ置く                                                 |
+| Product | `/api/integrations/google-calendar/callback` | GET                  | Supabase Auth (Cookie) + Proゲート | user 10/時（startと同一key）    | nodejs                   | 認可codeをtokenへ交換し接続を保存する。startを踏まずに到達できるためProゲートとstate照合をここでも通す                     |
+| Product | `/api/cron/calendar-sync`                    | GET                  | `CRON_SECRET` (Bearer)             | なし                            | nodejs (maxDuration 60s) | Vercel cronが15分毎に叩く。dueな接続を時間予算（50秒）内で同期する                                                         |
+| Product | `/api/cron/external-connection-maintenance`  | GET                  | `CRON_SECRET` (Bearer)             | なし                            | nodejs (maxDuration 60s) | Vercel cronが15分毎に叩く。失効・revoke待ちの外部接続を掃く                                                                |
+| Product | `/api/v1/system/*`                           | GET / POST / OPTIONS | なし                               | なし                            | nodejs                   | 廃止済みsystem APIを常に404にするretirement boundary（Web側と同型）                                                        |
+| Product | `/api/webhooks/resend`                       | POST                 | Product Resend signature           | Redis processing lease          | nodejs (maxDuration 30s) | Product contact failureをPIIなしでSentryへ通知し、既存transactional mailのbounce / complaint suppressionも維持             |
+| Product | `/api/webhooks/stripe`                       | POST                 | Stripe signature                   | なし                            | nodejs (maxDuration 30s) | subscription stateを反映しtransactional emailを送る                                                                        |
+| Web     | `/api/compass-docs`                          | GET                  | なし                               | なし                            | nodejs (maxDuration 30s) | Compass内の公開ドキュメントを検索                                                                                          |
+| Web     | `/api/contact`                               | POST                 | CSRF + Turnstile                   | IP + Web全体                    | nodejs (maxDuration 30s) | 16 KiB以下のstrict inputをProduction限定でResendへ配送。成功形式は`{ success: true }`                                      |
+| Web     | `/api/csp-report`                            | POST                 | なし                               | IP + Web全体                    | nodejs (maxDuration 30s) | Web originのCSP reportを検証・正規化してSentryへ送信                                                                       |
+| Web     | `/api/search`                                | GET                  | なし                               | IP                              | nodejs (maxDuration 30s) | build済み検索indexをlocale別に検索                                                                                         |
+| Web     | `/api/og`                                    | GET                  | なし                               | なし                            | edge (maxDuration 25s)   | SNS向けOG画像を動的生成                                                                                                    |
+| Web     | `/api/v1/system/*`                           | GET / POST / OPTIONS | なし                               | なし                            | nodejs (maxDuration 5s)  | 廃止済みsystem APIを常に404にするretirement boundary                                                                       |
+| Web     | `/api/webhooks/resend`                       | POST                 | Web Resend signature               | Redis processing lease          | nodejs (maxDuration 15s) | Web contact failureだけをsource tagで所有判定し、PIIなしでSentryへ通知                                                     |
 
 ### 共通方針
 
@@ -602,7 +601,6 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 - **REST 維持の理由**: tRPC を主軸としつつ、以下は REST のままにする:
   - `/api/health`: 単純な GET、外部監視ツール対応
   - `/api/csp-report`: ブラウザが直接 POST する CSP report-uri
-  - `/api/auth`: Supabase Auth と密接、Cookie 設定の都合
   - `/api/v1/calendar/[token]`: 外部カレンダーアプリが直接 GET、tRPC 形式不可
   - `/api/mcp` / `/api/oauth/token`: MCP と OAuth 2.0 の外部プロトコルで、リクエスト形式が仕様側で決まっている
   - `/api/cron/*`: Vercel cron が `Authorization: Bearer $CRON_SECRET` 付きの GET で叩く
@@ -615,8 +613,9 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 - 新規 endpoint を追加する前に、tRPC procedure で済まないか検討する（`features/*/server/router.ts`）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
-- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / Auth / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
-- AuthのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`、signin / resetはIP-firstで独立した正規化email bucketも確認する。この前提はVercel単独topologyに依存する
+- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
+- rate limitのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`に入れてfail closedにする。この前提はVercel単独topologyに依存する
+- **認証操作にapp側のrate limit層は無い**。かつて`/api/auth`が持っていたが、呼び出し元ゼロの攻撃面だったため#1942で削除した。現在はSupabase Auth のproject-level rate limitだけが担う（期待値は`scripts/production-auth-config-audit.mjs`がpinする）。server側のanti-abuseが要るなら、その時点でrouteとlimiterを新設する
 - 副作用はloggerで技術状態だけを追跡し、問い合わせ本文・氏名・email・raw webhook bodyを記録しない
 
 ### 関連ドキュメント

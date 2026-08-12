@@ -36,8 +36,8 @@ docs へ残している。
 ## 公開 HTTP エンドポイント
 
 - 公開エンドポイント（OAuth callback / webhook / contact）は rate limit を持つ
-- `/api/auth` のIP rate limitはVercel由来の`X-Real-IP`だけを使い、`X-Forwarded-For`へfallbackしない。欠落・不正値は共有`ip:unknown`でfail closedにする
-- `/api/auth` のsignin / resetはIP-firstで、正規化emailの独立bucketも同じquotaで確認する。IP / emailはpurpose prefix付きでHMAC化し、生値を保存・記録しない。signupはIP-onlyを維持する
+- `withUpstashRateLimit` のIP rate limitはVercel由来の`X-Real-IP`だけを使い、`X-Forwarded-For`へfallbackしない。欠落・不正値は共有`ip:unknown`でfail closedにする
+- rate limitのRedis keyは`ip:` / `email:`のpurpose prefixを付けてHMAC化し、生のIP / emailを保存・記録しない。account bucketを併用する場合はIP-firstで短絡し、IP bucketが拒否したらaccount bucketを消費しない
 - cron ルート（`app/api/cron/**`）は `CRON_SECRET` を検証する
 - redirect 先はユーザー入力をそのまま使わず、`lib/safe-redirect.ts` の検証を通す
 

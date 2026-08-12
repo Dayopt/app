@@ -6,6 +6,28 @@
 # custom_access_token hook を Supabase プロジェクトで有効化する。
 # JWTに subscription_status を埋め込み、proProcedureの毎リクエストDBクエリを排除。
 #
+# ========================================
+# ⚠ production では現在このスクリプトを実行しない（#1946 で決着、2026-08-12）
+# ========================================
+# production の hook は**意図的に無効**にしてある。実測値 false を
+# scripts/production-auth-config-audit.mjs が期待値として pin している。
+#
+# 無効のままにする理由: この hook は課金 gate の性能最適化であって機能要件ではない。
+# BILLING_ENFORCED が未設定の間、proProcedure は購読チェック自体を skip する
+# （apps/product/src/lib/trpc/procedures.ts）ため、claim を載せても消せる DB クエリが
+# 無い。claim が無い場合も context.ts → proProcedure の DB fallback で正しく動く。
+#
+# 実行してよい条件（すべて満たすこと）:
+#   1. BILLING_ENFORCED=true で課金 gate が実際に効いている
+#   2. proProcedure の DB fallback が実測で負荷になっている
+#   3. 解約後の暴露窓が jwt_exp（現在 3600 秒）まで開くのを許容できる
+#      — claim は token refresh まで更新されないため。OAuth 経路は設計上つねに
+#        DB を読むので影響しない（docs/projects/mcp-server/overview.md Decision 1）
+#
+# 実行する時は**同じ変更で** production-auth-config-audit.mjs の
+# `hook_custom_access_token_enabled` の expected を true にする。片方だけ変えると
+# 日次 audit が恒久 failure になり、drift 検出そのものが止まる。
+#
 # 前提:
 #   - マイグレーション適用済み（custom_access_token_hook 関数が存在すること）
 #     ※ 通常は Supabase GitHub integration が migration を適用する。
