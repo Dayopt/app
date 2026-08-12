@@ -337,14 +337,25 @@ export const useAuthStore = create<AuthState>()(
             // アカウント乗っ取り被害者が最も自然に取る回復操作（パスワードリセット）で
             // 攻撃者の refresh token を道連れにする。失敗してもパスワード更新自体は
             // 成功しているため、結果は分岐させない（PasswordChangeDialog と同じ扱い）。
-            // `observeAuthOperation` は catch した例外を re-throw する契約なので、ここで
-            // 握り潰さないと外側の catch に落ち、成功した更新が失敗として返ってしまう。
-            try {
-              await observeAuthOperation('sign_out_other_sessions', () =>
-                supabase.auth.signOut({ scope: 'others' }),
-              );
-            } catch {
-              // 上記コメントの通り、他端末の失効に失敗しても更新自体の成功は変えない。
+            //
+            // 失敗は throw だけでなく `{ error }` の resolve でも起こる（auth-js の
+            // `signOut` はネットワーク/HTTP 失敗を返り値エラーとして返す設計）ため両方
+            // 見る。一時的な失敗を想定して 1 回だけ再試行する。store は component 跨ぎの
+            // i18n 文言を持てずユーザー通知ができないため、再試行後も失敗したら諦める
+            // （`observeAuthOperation` 内の `captureUnexpectedAuthError` で Sentry には残る）。
+            let signOutSucceeded = false;
+            for (let attempt = 0; attempt < 2 && !signOutSucceeded; attempt++) {
+              try {
+                const { error: signOutError } = await observeAuthOperation(
+                  'sign_out_other_sessions',
+                  () => supabase.auth.signOut({ scope: 'others' }),
+                );
+                signOutSucceeded = !signOutError;
+              } catch {
+                // `observeAuthOperation` は catch した例外を re-throw する契約なので、
+                // ここで握り潰さないと外側の catch に落ち、成功した更新が失敗として
+                // 返ってしまう。次の attempt へ（最終 attempt なら諦める）。
+              }
             }
             set({ loading: false });
           }

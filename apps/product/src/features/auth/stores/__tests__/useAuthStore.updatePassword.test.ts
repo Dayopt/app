@@ -49,13 +49,50 @@ describe('useAuthStore.updatePassword', () => {
   // risk-reviewer 指摘: observeAuthOperation は catch した例外を re-throw する契約
   // （lib/sentry/integration.ts）。signOut の失敗を握り潰さないと、外側の try/catch に
   // 落ちて「パスワード更新は成功しているのに失敗として返る」誤報告になる。
-  it('signOut が失敗しても更新成功の結果は失敗に変わらない', async () => {
+  it('signOut が throw しても更新成功の結果は失敗に変わらない', async () => {
     const updateResult = { data: { user: { id: 'user-1' } }, error: null };
     mockUpdateUser.mockResolvedValue(updateResult);
     mockSignOut.mockRejectedValue(new Error('network error'));
 
     const result = await useAuthStore.getState().updatePassword('NewPassw0rd!23');
 
+    expect(result).toEqual(updateResult);
+    expect(useAuthStore.getState().error).toBeNull();
+  });
+
+  // Codex round1 P1: auth-js の signOut は throw せず `{ error }` の resolve でも
+  // 失敗を返す（本番で実際に起こりうる経路）。throw だけを見るテストではこれを
+  // 検出できないため、resolve 経路を別途固定する。
+  it('signOut が resolved error を返しても更新成功の結果は失敗に変わらない', async () => {
+    const updateResult = { data: { user: { id: 'user-1' } }, error: null };
+    mockUpdateUser.mockResolvedValue(updateResult);
+    mockSignOut.mockResolvedValue({ error: new Error('sign out failed') });
+
+    const result = await useAuthStore.getState().updatePassword('NewPassw0rd!23');
+
+    expect(result).toEqual(updateResult);
+    expect(useAuthStore.getState().error).toBeNull();
+  });
+
+  it('resolved error の場合は 1 回だけ再試行し、再試行が成功すればそこで止める', async () => {
+    mockUpdateUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    mockSignOut
+      .mockResolvedValueOnce({ error: new Error('sign out failed') })
+      .mockResolvedValueOnce({ error: null });
+
+    await useAuthStore.getState().updatePassword('NewPassw0rd!23');
+
+    expect(mockSignOut).toHaveBeenCalledTimes(2);
+  });
+
+  it('再試行後も失敗する場合は 2 回で諦め、更新成功の結果は失敗に変わらない', async () => {
+    const updateResult = { data: { user: { id: 'user-1' } }, error: null };
+    mockUpdateUser.mockResolvedValue(updateResult);
+    mockSignOut.mockResolvedValue({ error: new Error('sign out failed') });
+
+    const result = await useAuthStore.getState().updatePassword('NewPassw0rd!23');
+
+    expect(mockSignOut).toHaveBeenCalledTimes(2);
     expect(result).toEqual(updateResult);
     expect(useAuthStore.getState().error).toBeNull();
   });
