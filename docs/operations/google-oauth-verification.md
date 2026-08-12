@@ -250,16 +250,32 @@ transferred to third parties, with two exceptions:
 When a user disconnects, Dayopt asks Google to revoke the refresh token on a
 best-effort basis; if Google cannot be reached, Dayopt records the failure and
 still completes the disconnect rather than leaving the user connected. It then
-deletes the previously imported events, except for entries the user has already
-incorporated into their own records, which remain as part of the user's own
-history, and deletes the stored credentials. Deleting the Dayopt account removes
-all of it.
+deletes the previously imported events and the stored credentials. Deleting the
+Dayopt account deletes the user's Google Calendar data in the same way.
+
+Two things outlive that deletion, and Dayopt does not claim otherwise:
+
+  - Entries the user has already incorporated into their own records are kept, as
+    part of the user's own history, rather than removed from under them.
+  - A record that the revocation was carried out, including the Google account
+    identifier it applied to, is retained for up to 90 days so that Dayopt can
+    show a revocation was performed and can detect one that silently failed. It is
+    deleted automatically after that period.
+
+Deletion is performed at the time of the request. If an individual deletion step
+fails because of a transient infrastructure error, the disconnect still completes
+so the user is not left connected, and the failure is reported to Dayopt's error
+monitoring for follow-up.
 ```
 
-**この段落は 2 箇所で実装に合わせてある。書き換えるときに戻さない。**
+**この段落は 4 箇所で実装に合わせてある。書き換えるときに戻さない。**
+
+**書き換えの原則: データの削除を無条件で保証する形に戻さない。** 実装には「消えない場合」が複数あり（下の 4 点）、1 つずつ潰す書き方をすると次の例外が見つかるたびに申告と実装がずれる。削除の方針と、その**例外の範囲**を書く形を維持する。
 
 - **revoke は best-effort。** `revokeRefreshToken()`（`server/google-oauth.ts:299-322`）はネットワーク失敗や想定外のエラーで `false` を返し、`disconnect()`（`server/connection-service.ts:596-633`）はそれでも切断を続行する（`reportUnrevokedGrant` で Sentry に送る）。「revokes」と断定形で書くと、実際には失敗しうる動作を保証したことになる。アプリ内の確認ダイアログも "Dayopt will **try to** revoke Google access" と書いてある
 - **削除されるのは参照されていないミラー行だけ。** ユーザーが自分の Plan / Record に紐づけた予定は履歴として残る（`connection_id` が NULL になる）。実際の順序は revoke → 未参照イベントの削除 → 接続行（= 認証情報）の削除
+- **Google の `sub` はアカウント削除後も最大 90 日残る。** revoke operation が `delete_after = settled_at + INTERVAL '90 days'` で保持され（`supabase/migrations/20260730090013_calendar_authority_fence_commands.sql:479`）、その FK が `provider_account_id` を持つ subject fence の削除を阻む。「即座に全部消える」と書くとこれと食い違う
+- **prune が失敗しても切断は成功として返る。** `deleteUnreferencedEvents()` は select / 参照読み取りの失敗で throw せず return し（`server/event-pruning.ts:141-169`）、`disconnect()` はそのまま接続行を hard delete する。残ったミラー行は `connection_id` が NULL になり、**この接続をキーにした回収経路が無くなる**（`connection-service.ts:590` のコメント自身がこの scope 喪失を認めている）。孤児行を掃除する経路は現時点で存在しない。**これは申告の問題ではなく実装の穴**なので、別 issue として指揮台へ上げた。塞がるまでは「必ず消える」と書かない
 
 ## デモ動画の台本
 
@@ -419,8 +435,12 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 > - **How to stop it**: disconnect the account at any time from Settings. Dayopt
 >   asks Google to revoke its access, deletes the stored credentials, and deletes
 >   the imported events. Entries you have already incorporated into your own
->   records remain as part of your own history. You can also revoke Dayopt's access
->   directly from your Google account's security settings at any time.
+>   records remain as part of your own history. For up to 90 days afterwards we
+>   keep a record that the revocation happened, including the identifier of the
+>   Google account it applied to, so that we can show it was carried out and notice
+>   if it silently failed; that record is deleted automatically. You can also revoke
+>   Dayopt's access directly from your Google account's security settings at any
+>   time.
 >
 > Dayopt's use of information received from Google APIs adheres to the
 > [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
