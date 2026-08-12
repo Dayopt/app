@@ -5,9 +5,8 @@
  * 呼び出す cron が存在せず、`calendar_revoke_operations` / `calendar_authority_command_receipts`
  * / `calendar_oauth_attempts` の `delete_after` 超過行と孤立 subject fence が際限なく
  * 蓄積していた。20260812041309_schedule_calendar_authority_retention_cleanup.sql で
- * pg_cron に配線した。ここでは配線ではなく関数の削除対象そのものを固定する
- * （cron が正しい関数名・引数で登録されていることは migration のリテラル比較で足りるため、
- * 別途 cron.job テストは作らない）。
+ * pg_cron に配線した。ここでは関数の削除対象そのものを固定し、cron 登録の schedule/command
+ * が migration のリテラルと一致していることも別途 assert する（risk-reviewer 指摘で追加）。
  *
  * 関数は `REVOKE ALL ... FROM PUBLIC, anon, authenticated, service_role` されており、
  * pg_cron が実行する owner 権限でしか呼べない設計（overview.md 相当の owner-only 契約）。
@@ -321,6 +320,6 @@ SELECT private.cleanup_calendar_authority_retention_internal_v1(10);`,
 FROM cron.job
 WHERE jobname = 'cleanup-calendar-authority-retention';`,
       ),
-    ).toBe('50 3 * * *|SELECT private.cleanup_calendar_authority_retention_internal_v1(1000)');
+    ).toBe('50 * * * *|SELECT private.cleanup_calendar_authority_retention_internal_v1(1000)');
   });
 });

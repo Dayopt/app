@@ -621,6 +621,12 @@ function reportUnrevokedGrant(reason: string): void {
  *    掃除が失敗した時に「token は失効済みなのに connection は active のまま」という
  *    authoritative state の食い違いが残る（Codex 指摘、#2000）。掃除を確実に終えてから
  *    revoke することでこの食い違いを避ける
+ * 2.5. revoke の間（provider への network round-trip）に別プロセスの sync が新しい
+ *    ミラー行を書き込む可能性が残る（sync-service.ts は disconnect 中の connection を
+ *    CAS 検証せず書き込める。Codex 指摘、#2000。完全に閉じるには sync 側の fencing が要る
+ *    — #2003 で追跡）。ここでは delete 直前にもう一度掃除して race window を「revoke の
+ *    所要時間」から「この 2 回目の DB 往復」まで縮める。**best-effort** — 1 回目の
+ *    fail-closed で主要な保証は既に成立しているため、ここの失敗で切断全体を止めない
  * 3. `calendar_connections` を hard delete（子は CASCADE、参照済みミラーは connection_id が
  *    SET NULL され歴史的アンカーとして残る）
  *
@@ -653,6 +659,17 @@ export async function disconnect(userId: string, connectionId: string): Promise<
     if (!revoked) reportUnrevokedGrant('provider revoke was not confirmed');
   } catch {
     reportUnrevokedGrant('could not revoke the provider grant');
+  }
+
+  // 2.5. revoke 中に新規発生した差分を拾う best-effort な 2 回目の掃除。
+  try {
+    await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  } catch (error) {
+    logger.warn('[calendar-connection] failed to re-prune events right before disconnect delete');
+    captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+      feature: 'external_calendar',
+      operation: 'disconnect_reprune',
+    });
   }
 
   // 3. connection を hard delete。子テーブルは CASCADE。

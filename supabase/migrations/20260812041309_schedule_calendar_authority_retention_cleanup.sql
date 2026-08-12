@@ -45,13 +45,15 @@ BEGIN
     PERFORM cron.unschedule(v_job.jobid);
   END LOOP;
 
-  -- Daily, staggered after the other retention cleanups registered in
-  -- 00000000000000_baseline.sql (:00/:10/:20/:30) and
-  -- 20260802013954_add_product_events.sql (:40). This is a 90-day retention
-  -- window, not a latency-sensitive purge, so daily is sufficient.
+  -- Hourly, at :50 past the hour. delete_after is capped at exactly
+  -- created_at/settled_at + 90 days (retention CHECK constraints on the
+  -- target tables). A daily cadence could leave a row up to ~24h past its
+  -- delete_after before the next run catches it (Codex review, #2000) —
+  -- hourly keeps the overshoot to at most ~1h, negligible against a 90-day
+  -- promise, at the cost of a bounded (LIMIT 1000/table), cheap query.
   PERFORM cron.schedule(
     'cleanup-calendar-authority-retention',
-    '50 3 * * *',
+    '50 * * * *',
     'SELECT private.cleanup_calendar_authority_retention_internal_v1(1000)'
   );
 END;

@@ -507,20 +507,24 @@ describe('updateSelectedCalendars', () => {
 // =============================================================================
 
 describe('disconnect', () => {
-  // 順序は prune → revoke → connection 削除（#2000 で Codex 指摘を受けて revoke を
-  // prune の後に動かした）。先に revoke すると、prune が失敗して connection を消せなかった
-  // 場合に「token は失効済みなのに connection は active のまま」という食い違いが残るため。
-  it('prune → revoke → connection 削除 の順で実行する', async () => {
+  // 順序は prune → revoke → 2 回目の prune（best-effort）→ connection 削除
+  // （#2000 で Codex 指摘を受けて revoke を prune の後に動かし、revoke 中に新規発生した
+  // 差分を拾うための 2 回目の prune を delete 直前に追加した）。先に revoke すると、
+  // prune が失敗して connection を消せなかった場合に「token は失効済みなのに connection
+  // は active のまま」という食い違いが残るため、prune を先に行う。
+  it('1 回目の prune → revoke → 2 回目の prune → connection 削除 の順で実行する', async () => {
     const { calls } = setupServiceRoleDb({
       connection: { status: 'active', refresh_token_enc: 'enc' },
     });
 
-    let prunedBeforeRevoke = false;
-    let prunedBeforeConnectionDelete = false;
-    deleteUnreferencedEvents.mockImplementation(async () => {
-      prunedBeforeRevoke = revoke.mock.calls.length === 0;
-      // prune 呼び出し時点で connection の delete はまだ発行されていないはず（§8 順序）
-      prunedBeforeConnectionDelete = !calls.some(
+    let firstPruneBeforeRevoke = false;
+    deleteUnreferencedEvents.mockImplementationOnce(async () => {
+      firstPruneBeforeRevoke = revoke.mock.calls.length === 0;
+    });
+    let secondPruneBeforeConnectionDelete = false;
+    deleteUnreferencedEvents.mockImplementationOnce(async () => {
+      // 2 回目の prune 呼び出し時点で connection の delete はまだ発行されていないはず
+      secondPruneBeforeConnectionDelete = !calls.some(
         (r) => r.table === 'calendar_connections' && r.chain.some((e) => e.method === 'delete'),
       );
     });
@@ -528,14 +532,40 @@ describe('disconnect', () => {
     await disconnect(USER_ID, CONNECTION_ID);
 
     expect(revoke).toHaveBeenCalledWith('refresh-token');
-    expect(deleteUnreferencedEvents).toHaveBeenCalledWith({
+    expect(deleteUnreferencedEvents).toHaveBeenCalledTimes(2);
+    expect(deleteUnreferencedEvents).toHaveBeenNthCalledWith(1, {
       userId: USER_ID,
       connectionId: CONNECTION_ID,
       scope: { kind: 'connection' },
     });
-    expect(prunedBeforeRevoke).toBe(true);
-    expect(prunedBeforeConnectionDelete).toBe(true);
+    expect(deleteUnreferencedEvents).toHaveBeenNthCalledWith(2, {
+      userId: USER_ID,
+      connectionId: CONNECTION_ID,
+      scope: { kind: 'connection' },
+    });
+    expect(firstPruneBeforeRevoke).toBe(true);
+    expect(secondPruneBeforeConnectionDelete).toBe(true);
     expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+  });
+
+  // regression（Codex 指摘、#2000）: revoke の間に発生した新規差分を拾う 2 回目の prune は
+  // best-effort。ここで失敗しても connection 削除まで進む（1 回目の fail-closed で主要な
+  // 保証は既に成立しているため、2 回目の失敗で切断全体を止めない）。
+  it('2 回目の prune が失敗しても connection 削除まで進む', async () => {
+    const { calls } = setupServiceRoleDb({
+      connection: { status: 'active', refresh_token_enc: 'enc' },
+    });
+    deleteUnreferencedEvents.mockResolvedValueOnce(undefined);
+    deleteUnreferencedEvents.mockRejectedValueOnce({ code: '42501' });
+
+    await disconnect(USER_ID, CONNECTION_ID);
+
+    expect(deleteUnreferencedEvents).toHaveBeenCalledTimes(2);
+    expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'disconnect_reprune' }),
+    );
   });
 
   // regression（Codex 指摘、#2000）: revoke が prune より先だと、prune 失敗時に token だけ
