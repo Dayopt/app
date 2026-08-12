@@ -112,6 +112,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 障害対応・release              | `operations/runbook.md`                                       |
 | 監視・alert                    | `operations/monitoring.md`                                    |
 | security                       | `operations/security.md`                                      |
+| 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                     |
 | 契約サービス                   | `company/accounts.md`                                         |
 | 進行中Project                  | `projects/*/overview.md`                                      |
 | 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`               |
