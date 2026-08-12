@@ -118,19 +118,52 @@ function calendarSelectionKey(connectionId: string, providerCalendarId: string):
 }
 
 /**
+ * ユーザーの `active` な接続 id を返す。
+ *
+ * `reauth_required` の接続は同期が止まっているため、そのミラーは最後に成功した時点のまま
+ * 更新されなくなる。selection の allowlist をこの集合で絞ることで、再認証待ちの接続に属する
+ * 古い ghost を fail closed で隠す。
+ */
+async function loadActiveConnectionIds(
+  supabase: EventQueryClient,
+  userId: string,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from(databaseTables.calendarConnections)
+    .select('id')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (error) {
+    throw new ExternalCalendarServiceError(
+      'FETCH_FAILED',
+      'Failed to load active calendar connections for ghost filtering',
+      { cause: error },
+    );
+  }
+
+  return new Set((data ?? []).map((row) => row.id));
+}
+
+/**
  * ユーザーが現在選択しているカレンダーの `(connection_id, provider_calendar_id)` 集合を返す。
  *
  * `calendar_connection_calendars` は 1 接続あたり最大 50 件・ユーザーの接続数も少数なので、
- * バッチごとではなく `listGhostEvents` 呼び出しにつき 1 回だけ読む。
+ * バッチごとではなく `listGhostEvents` 呼び出しにつき 1 回だけ読む。`active` でない接続の選択行は
+ * 含めない（`loadActiveConnectionIds` 参照）。
  */
 async function loadSelectedCalendarKeys(
   supabase: EventQueryClient,
   userId: string,
 ): Promise<Set<string>> {
+  const activeConnectionIds = await loadActiveConnectionIds(supabase, userId);
+  if (activeConnectionIds.size === 0) return new Set();
+
   const { data, error } = await supabase
     .from(databaseTables.calendarConnectionCalendars)
     .select('connection_id, provider_calendar_id')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .in('connection_id', [...activeConnectionIds]);
 
   if (error) {
     throw new ExternalCalendarServiceError(

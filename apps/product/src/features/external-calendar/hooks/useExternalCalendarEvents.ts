@@ -2,8 +2,11 @@
 
 import { useMemo } from 'react';
 
-import { CACHE_5_MINUTES } from '@/lib/date';
+import { CACHE_5_MINUTES, MS_PER_MINUTE } from '@/lib/date';
 import { api } from '@/lib/trpc';
+
+/** cron 同期の周期（`sync-dispatcher.ts` と同値）。この間隔で開いたままの画面も追従させる。 */
+const REFETCH_INTERVAL_MS = MS_PER_MINUTE * 15;
 
 /**
  * calendar 画面が ghost として描く外部予定。
@@ -54,7 +57,9 @@ function toExternalCalendarEvent(event: {
  *
  * 接続の有無を先に確かめると waterfall になるので、`enabled` ゲートは置かず常に撃つ。未接続の
  * ユーザーには `(user_id, start_at, end_at)` index で即 0 件が返る。`staleTime` は cron の同期
- * 間隔（15 分）に対して 5 分。
+ * 間隔（15 分）に対して 5 分。**`refetchInterval` を cron 周期に合わせる**— `staleTime` だけでは
+ * 画面を開いてフォーカスを維持したまま放置した場合に再取得が始まらず、ミラーが更新されても
+ * 反映されない。
  *
  * **失敗しても calendar 全体を落とさない**（ghost を描かないだけ）。plans / records が健全なのに
  * 外部予定の失敗で画面を潰すのは、ghost が主データではないという位置づけと矛盾する。エラー自体は
@@ -71,7 +76,7 @@ export function useExternalCalendarEvents({
 }: UseExternalCalendarEventsOptions): UseExternalCalendarEventsResult {
   const { data, isError, isLoading } = api.externalCalendar.listEvents.useQuery(
     { startDate, endDate },
-    { staleTime: CACHE_5_MINUTES, retry: false },
+    { staleTime: CACHE_5_MINUTES, refetchInterval: REFETCH_INTERVAL_MS, retry: false },
   );
 
   const events = useMemo(

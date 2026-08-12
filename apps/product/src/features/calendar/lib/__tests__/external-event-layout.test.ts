@@ -27,6 +27,8 @@ describe('calculateExternalEventLayout / 基本の座標', () => {
       height: 1.5 * HOUR_HEIGHT,
       left: 0,
       width: LANE_WIDTH,
+      displayStartDate: at(9),
+      displayEndDate: at(10, 30),
     });
   });
 
@@ -132,6 +134,22 @@ describe('calculateExternalEventLayout / 日跨ぎのクリップ', () => {
     const positions = layout([{ id: 'a', startDate: at(22, 0, -1), endDate: at(0) }]);
 
     expect(positions.a).toBeUndefined();
+  });
+
+  it('前日から続く予定は表示用の開始時刻も 00:00 にクリップする（座標とラベルを揃える）', () => {
+    // 元の event.startDate は前日 22:00 だが、当日カラムの座標は top=0（00:00）から描く。
+    // カード内の時刻ラベルが元の 22:00 のままだと、座標と食い違って見える。
+    const positions = layout([{ id: 'a', startDate: at(22, 0, -1), endDate: at(2) }]);
+
+    expect(positions.a?.displayStartDate).toEqual(at(0));
+    expect(positions.a?.displayEndDate).toEqual(at(2));
+  });
+
+  it('翌日へ続く予定は表示用の終了時刻も 24:00（＝翌日 00:00）にクリップする', () => {
+    const positions = layout([{ id: 'a', startDate: at(23), endDate: at(1, 0, 1) }]);
+
+    expect(positions.a?.displayStartDate).toEqual(at(23));
+    expect(positions.a?.displayEndDate).toEqual(at(0, 0, 1));
   });
 });
 

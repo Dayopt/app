@@ -14,14 +14,14 @@ let mockQuery: {
   isLoading: boolean;
 } = { data: undefined, isError: false, isLoading: false };
 
-vi.mock('@/lib/date', () => ({ CACHE_5_MINUTES: 5 * 60 * 1000 }));
+vi.mock('@/lib/date', () => ({ CACHE_5_MINUTES: 5 * 60 * 1000, MS_PER_MINUTE: 60 * 1000 }));
+
+const useQuery = vi.hoisted(() => vi.fn((_input: unknown, _options: unknown) => mockQuery));
 
 vi.mock('@/lib/trpc', () => ({
   api: {
     externalCalendar: {
-      listEvents: {
-        useQuery: () => mockQuery,
-      },
+      listEvents: { useQuery },
     },
   },
 }));
@@ -105,5 +105,14 @@ describe('useExternalCalendarEvents', () => {
     const { result } = renderHook(() => useExternalCalendarEvents(RANGE));
 
     expect(result.current.isLoading).toBe(true);
+  });
+
+  it('cron 周期に合わせて refetchInterval を設定する（開いたまま放置しても追従させる）', () => {
+    mockQuery = { data: undefined, isError: false, isLoading: false };
+
+    renderHook(() => useExternalCalendarEvents(RANGE));
+
+    const options = useQuery.mock.calls[0]?.[1] as { refetchInterval?: number };
+    expect(options.refetchInterval).toBe(15 * 60 * 1000);
   });
 });

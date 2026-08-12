@@ -6,7 +6,7 @@ import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
-import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
+import type { ExternalEventPosition } from '../../../../../lib/external-event-layout';
 
 /**
  * 外部カレンダーの予定を表す読み取り専用カード（ghost）。
@@ -33,7 +33,7 @@ interface ExternalEventCardProps {
     startDate: Date;
     endDate: Date;
   };
-  position: TwoLanePosition;
+  position: ExternalEventPosition;
   timeFormat?: TimeFormat;
   compact?: boolean;
   className?: string;
@@ -66,6 +66,11 @@ export function ExternalEventCard({
         top: `${position.top}px`,
         left: `${position.left}%`,
         width: `calc(${position.width}% - 4px)`,
+        // 選択カレンダー数が多い週表示などで重複が増えると `position.width` が数 % まで
+        // 縮む。固定 4px を引くと `width` が 0 以下になり不可視化するため、`min-width` で
+        // 必ず見える幅を保証する（`width: max(4px, calc(...))` は避ける — テスト環境の
+        // happy-dom が inline style の CSS `max()` を解釈できず style 自体が丸ごと無視される）。
+        minWidth: '4px',
         height: `${Math.max(position.height, MIN_HEIGHT)}px`,
       }}
     >
@@ -75,7 +80,7 @@ export function ExternalEventCard({
       </p>
       {showDetails && (
         <p className="truncate">
-          {formatTimeRange(event.startDate, event.endDate, timeFormat)}
+          {formatTimeRange(position.displayStartDate, position.displayEndDate, timeFormat)}
           {event.calendarName ? ` · ${event.calendarName}` : ''}
         </p>
       )}

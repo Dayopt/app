@@ -54,10 +54,30 @@ interface CalculateExternalEventLayoutOptions {
   laneWidthPercent: number;
 }
 
+/**
+ * `TwoLanePosition` に、対象日の 00:00/24:00 でクリップした表示用の開始・終了時刻を足したもの。
+ *
+ * 日跨ぎの予定は座標（top/height）を日の範囲へクリップするが、カード内の時刻表示に元の
+ * `event.startDate`/`endDate` をそのまま使うと、座標とラベルが食い違う（例: 前日 23:00〜当日
+ * 02:00 の予定が当日カラムでは 00:00〜02:00 の位置にあるのに「23:00–02:00」と表示される）。
+ * 表示側もこの座標計算と同じクリップ結果を使うよう、ここで一緒に返す。
+ */
+export interface ExternalEventPosition extends TwoLanePosition {
+  displayStartDate: Date;
+  displayEndDate: Date;
+}
+
 interface ClippedEvent {
   id: string;
   topMinutes: number;
   bottomMinutes: number;
+}
+
+/** `day` の暦日 + 分（0-1440）から、表示用のローカル Date を組み立てる。 */
+function minutesToLocalDate(day: Date, minutes: number): Date {
+  const result = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0, 0);
+  result.setMinutes(minutes);
+  return result;
 }
 
 /** `two-lane-layout` の同名関数と同じ、ローカルフィールドからの分換算。 */
@@ -144,8 +164,8 @@ function assignColumns(group: ClippedEvent[]): { columnOf: Map<string, number>; 
 export function calculateExternalEventLayout(
   events: ReadonlyArray<ExternalEventLayoutInput>,
   { day, hourHeight, laneWidthPercent }: CalculateExternalEventLayoutOptions,
-): Record<string, TwoLanePosition> {
-  const positions: Record<string, TwoLanePosition> = {};
+): Record<string, ExternalEventPosition> {
+  const positions: Record<string, ExternalEventPosition> = {};
   if (laneWidthPercent <= 0) return positions;
 
   const clipped = events
@@ -164,6 +184,8 @@ export function calculateExternalEventLayout(
         height: ((event.bottomMinutes - event.topMinutes) / 60) * hourHeight,
         left: column * columnWidth,
         width: columnWidth,
+        displayStartDate: minutesToLocalDate(day, event.topMinutes),
+        displayEndDate: minutesToLocalDate(day, event.bottomMinutes),
       };
     }
   }

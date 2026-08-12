@@ -8,8 +8,19 @@ function event(id: string, startIso: string, endIso: string) {
   return { id, startDate: new Date(startIso), endDate: new Date(endIso) };
 }
 
-/** 2026-08-11 のカラム（Asia/Tokyo）。 */
-const TARGET_DAY = new Date('2026-08-11T03:00:00.000Z');
+/**
+ * `date`（カラム）は `useDateUtilities` が `date-fns` のローカルフィールド演算で作る壁時計
+ * Date を想定する。`selectExternalEventsForDate` はこれを `timezone` 抜きの `getDateKey`
+ * （実行環境のローカル TZ 依存のフィールド読み取り）で扱うため、テストでは UTC ISO 文字列では
+ * なくローカルコンポーネント指定の `new Date(y, m, d)` で構築する
+ * （実行環境の TZ に関わらず意図した日付を再現するため。`two-lane-layout.test.ts` と同じ理由）。
+ */
+function localDay(day: number): Date {
+  return new Date(2026, 7, day);
+}
+
+/** 2026-08-11 のカラム。 */
+const TARGET_DAY = localDay(11);
 
 describe('selectExternalEventsForDate', () => {
   it('その日に始まって終わる予定を選ぶ', () => {
@@ -30,7 +41,7 @@ describe('selectExternalEventsForDate', () => {
   it('日を跨ぐ予定は開始日にも終了日にも出す', () => {
     // Tokyo で 8/10 23:00 → 8/11 01:00
     const spanning = event('spanning', '2026-08-10T14:00:00.000Z', '2026-08-10T16:00:00.000Z');
-    const previousDay = new Date('2026-08-10T03:00:00.000Z');
+    const previousDay = localDay(10);
 
     expect(selectExternalEventsForDate([spanning], previousDay, TOKYO).map((e) => e.id)).toEqual([
       'spanning',
@@ -48,7 +59,7 @@ describe('selectExternalEventsForDate', () => {
     ]);
   });
 
-  it('日境界の判定はユーザー TZ で行う', () => {
+  it('日境界の判定は予定側だけユーザー TZ で行う（カラム側は固定）', () => {
     // UTC で 8/11 20:00 は Tokyo では 8/12 05:00。Tokyo のユーザーには翌日の予定として出る。
     const events = [event('late', '2026-08-11T20:00:00.000Z', '2026-08-11T21:00:00.000Z')];
 

@@ -37,6 +37,12 @@ interface SelectedCalendarRow {
   provider_calendar_id: string;
 }
 
+interface ConnectionRow {
+  id: string;
+  user_id: string;
+  status: string;
+}
+
 function mirrorRow(overrides: Partial<MirrorRow> & { id: string }): MirrorRow {
   return {
     user_id: USER_ID,
@@ -67,6 +73,22 @@ function selectionFromEvents(events: MirrorRow[]): SelectedCalendarRow[] {
       connection_id: row.connection_id,
       provider_calendar_id: row.provider_calendar_id,
     });
+  }
+
+  return rows;
+}
+
+/** `events` に出てくる `connection_id` を「すべて active」として自動導出する。 */
+function activeConnectionsFromEvents(events: MirrorRow[]): ConnectionRow[] {
+  const seen = new Set<string>();
+  const rows: ConnectionRow[] = [];
+
+  for (const row of events) {
+    if (row.connection_id === null) continue;
+    const key = `${row.user_id} ${row.connection_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ id: row.connection_id, user_id: row.user_id, status: 'active' });
   }
 
   return rows;
@@ -148,11 +170,15 @@ function createSupabase(options: {
   records?: ReferenceRow[];
   /** 省略時は `events` に出てくる組を全て「選択中」として扱う（既存テストの前提を変えない）。 */
   selectedCalendars?: SelectedCalendarRow[];
+  /** 省略時は `events` に出てくる connection_id を全て active として扱う（既存テストの前提を変えない）。 */
+  connections?: ConnectionRow[];
 }) {
   const eventTables: ReturnType<typeof createFakeTable<MirrorRow>>[] = [];
   const referenceTables: ReturnType<typeof createFakeTable<ReferenceRow>>[] = [];
   const selectionTables: ReturnType<typeof createFakeTable<SelectedCalendarRow>>[] = [];
+  const connectionTables: ReturnType<typeof createFakeTable<ConnectionRow>>[] = [];
   const selectedCalendars = options.selectedCalendars ?? selectionFromEvents(options.events);
+  const connections = options.connections ?? activeConnectionsFromEvents(options.events);
 
   const from = vi.fn((table: string) => {
     if (table === 'external_calendar_events') {
@@ -163,6 +189,11 @@ function createSupabase(options: {
     if (table === 'calendar_connection_calendars') {
       const fake = createFakeTable(selectedCalendars);
       selectionTables.push(fake);
+      return fake;
+    }
+    if (table === 'calendar_connections') {
+      const fake = createFakeTable(connections);
+      connectionTables.push(fake);
       return fake;
     }
     const fake = createFakeTable(
@@ -178,6 +209,7 @@ function createSupabase(options: {
     eventTables,
     referenceTables,
     selectionTables,
+    connectionTables,
   };
 }
 
@@ -426,6 +458,58 @@ describe('listGhostEvents / 選択解除済みカレンダーの historical anch
 
     expect(selectionTables).toHaveLength(1);
     expect(selectionTables[0]?.eq).toHaveBeenCalledWith('user_id', USER_ID);
+  });
+});
+
+describe('listGhostEvents / 再認証待ちの接続', () => {
+  it('reauth_required の接続に属する選択カレンダーの行は返さない', async () => {
+    // 同期が止まった接続のミラーは最後に成功した時点のまま更新されなくなる。
+    // 古い ghost を fail closed で隠す。
+    const { supabase } = createSupabase({
+      events: [mirrorRow({ id: 'a' })],
+      connections: [{ id: 'connection-1', user_id: USER_ID, status: 'reauth_required' }],
+    });
+
+    await expect(listGhostEvents(supabase, USER_ID, RANGE)).resolves.toEqual([]);
+  });
+
+  it('active な接続が 1 件も無ければ選択集合の read をスキップする', async () => {
+    const { supabase, selectionTables } = createSupabase({
+      events: [mirrorRow({ id: 'a' })],
+      connections: [{ id: 'connection-1', user_id: USER_ID, status: 'reauth_required' }],
+    });
+
+    await listGhostEvents(supabase, USER_ID, RANGE);
+
+    expect(selectionTables).toHaveLength(0);
+  });
+
+  it('一部の接続だけ reauth_required でも、他の active な接続の行は巻き込まず返す', async () => {
+    const { supabase } = createSupabase({
+      events: [
+        mirrorRow({ id: 'active-event', connection_id: 'connection-active' }),
+        mirrorRow({ id: 'reauth-event', connection_id: 'connection-reauth' }),
+      ],
+      connections: [
+        { id: 'connection-active', user_id: USER_ID, status: 'active' },
+        { id: 'connection-reauth', user_id: USER_ID, status: 'reauth_required' },
+      ],
+    });
+
+    const events = await listGhostEvents(supabase, USER_ID, RANGE);
+    expect(events.map((event) => event.id)).toEqual(['active-event']);
+  });
+
+  it('active な接続の read にも user_id を明示する', async () => {
+    const { supabase, connectionTables } = createSupabase({
+      events: [mirrorRow({ id: 'a' })],
+    });
+
+    await listGhostEvents(supabase, USER_ID, RANGE);
+
+    expect(connectionTables).toHaveLength(1);
+    expect(connectionTables[0]?.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(connectionTables[0]?.eq).toHaveBeenCalledWith('status', 'active');
   });
 });
 

@@ -92,7 +92,14 @@ const meta = {
   tags: ['autodocs'],
   args: {
     event: ghost({ id: 'single' }),
-    position: { top: 8, height: 60, left: 0, width: 92 },
+    position: {
+      top: 8,
+      height: 60,
+      left: 0,
+      width: 92,
+      displayStartDate: at(10),
+      displayEndDate: at(11),
+    },
   },
 } satisfies Meta<typeof ExternalEventCard>;
 
@@ -104,7 +111,14 @@ export const Single: Story = {
     <DayColumn>
       <ExternalEventCard
         {...args}
-        position={{ top: 10 * HOUR_HEIGHT, height: 60, left: 0, width: 38 }}
+        position={{
+          top: 10 * HOUR_HEIGHT,
+          height: 60,
+          left: 0,
+          width: 38,
+          displayStartDate: at(10),
+          displayEndDate: at(11),
+        }}
       />
     </DayColumn>
   ),
