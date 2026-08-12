@@ -106,24 +106,6 @@ function createRateLimiter(
 }
 
 /**
- * ログイン用レート制限（より厳格）
- * 5リクエスト / 15分（Sliding Window）
- */
-export const loginRateLimit = createRateLimiter(
-  Ratelimit.slidingWindow(5, '15 m'),
-  'ratelimit:product:login',
-);
-
-/**
- * パスワードリセット用レート制限
- * 3リクエスト / 1時間
- */
-export const passwordResetRateLimit = createRateLimiter(
-  Ratelimit.slidingWindow(3, '1 h'),
-  'ratelimit:product:password-reset',
-);
-
-/**
  * お問い合わせ用レート制限
  * 5リクエスト / 1時間（Sliding Window）
  */
@@ -308,7 +290,7 @@ export const cspReportGlobalRateLimit = createRateLimiter(
  * import { withUpstashRateLimit } from '@/lib/rate-limit/upstash'
  *
  * export async function POST(request: Request) {
- *   const result = await withUpstashRateLimit(request, loginRateLimit)
+ *   const result = await withUpstashRateLimit(request, contactRateLimit)
  *
  *   if (result.state === 'unavailable') return new Response('Unavailable', { status: 503 })
  *   if (result.state === 'checked' && !result.success) {

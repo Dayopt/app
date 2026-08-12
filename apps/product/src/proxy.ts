@@ -188,7 +188,6 @@ export async function proxy(request: NextRequest) {
 
   // 静的ファイル、API、_nextファイルはスキップ
   // API routes は middleware 認証をスキップ — 各ルートが自前で認証:
-  // - /api/auth: レート制限 + Zod検証
   // - /api/trpc: protectedProcedure で ctx.userId チェック
   // - /api/chat: 内部認証チェック
   // - /api/webhooks: Stripe/Resend署名検証

@@ -4,7 +4,8 @@ last_verified: 2026-08-11
 code:
   - apps/product/src/features/settings/components/EmailChangeDialog.tsx
   - apps/product/src/features/settings/components/PasswordChangeDialog.tsx
-  - apps/product/src/app/api/auth/route.ts
+  - apps/product/src/app/[locale]/(auth)/auth/confirm/route.ts
+  - apps/product/src/app/[locale]/(auth)/auth/confirmed/page.tsx
   - apps/product/src/lib/trpc/session-auth-context.ts
   - apps/product/src/lib/trpc/procedures.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
@@ -60,6 +61,8 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 **service role key を回転する、または新形式（`sb_secret_`）へ移行する場合、この経路の再検証を先に行う。** 新形式は Bearer として送られないため admin と解釈されず、captcha 免除が成立しなくなって削除が止まる。Supabase の legacy JWT key 廃止は外部の都合で動き、アプリ側の canary は**事後にしか鳴らない**。検証はローカルで `supabase/config.toml` の `[auth.captcha]` を有効化し、user-scoped 経路が失敗し service-role 経路が成功することを確認する。
 
+この再検証は人間の手順だけに委ねず、**production build gate が鍵の形式を機械的に検査する**（`apps/product/production-build-gate.mjs`、[#1952](https://github.com/Dayopt/dayopt/issues/1952)）。legacy JWT 形式でない値が入った production build は失敗し、error message が削除フローへの影響と対処（Turnstile 方式への切替 = [#1925](https://github.com/Dayopt/dayopt/issues/1925) の (c) 案）を示す。日次 audit ではなく build gate に置いたのは、`production-auth-config-audit.mjs` の cron job に service role key を配ると RLS 全バイパスの鍵の配布先が増えるため（build env には値が既にあり、新たな配布が要らない）。検知は「鍵を差し替えた次の deploy」= 変更が効き始める瞬間になる。**検査するのは値が入っている時の形式だけで、欠落は見ない** — 回転は変数を消さないため。
+
 **上 2 行（メールアドレス変更・パスワード変更）は code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
 
 - `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる
@@ -89,7 +92,7 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 **この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。パスワード総当たりの上限にもならない（GoTrue の rate limit は IP 単位で、サーバー呼び出しでは全ユーザーが 1 バケットを共有する）。**削除を守っているのはパスワード再認証そのもの**であり、captcha ではない。
 
-**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有し、公開 `/api/auth` のサーバー側ログインとも同じバケットを使う。したがって:
+**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有する。したがって:
 
 - セッションを握った攻撃者は、captcha にもアプリ側 throttle にも妨げられずパスワード試行を続けられる
 - その試行が 429 を誘発すると、**他ユーザーの削除再認証まで巻き添えで失敗する**（fail-closed なので削除が通ることは無い）
@@ -127,17 +130,29 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 
 「すべてのデータを削除」の公開入力は、従来どおり`{ confirmText: 'DELETE' }`を維持する。世代番号を使う新しいDB処理は配置するが、このPRでは画面から使わない。
 
-## Auth REST API rate limit
+## メール確認リンクの着地先
 
-公開 `/api/auth` route は、signin / signup に 5 回 / 15 分、reset-password に 3 回 / 1 時間の制限を持つ。
+`/auth/confirm` は token を検証したあと、**session が確立できた時だけ** `next`（保護ページ）へ送る。できなかった場合と検証に失敗した場合は `/auth/confirmed?status=...` へ送り、何が起きたか・次に何をすべきかを表示する（[#1956](https://github.com/Dayopt/dayopt/issues/1956)）。
 
-- 接続元は Vercel edge が上書きする `X-Real-IP` だけを検証して使い、`X-Forwarded-For` は解析しない。Vercel IP が欠落・不正なら全 request を共有 `ip:unknown` bucket に入れて fail closed にする
-- signin と reset-password は IP bucket を先に確認し、通過後に `trim().toLowerCase()` した email の独立 bucket を確認する。IP と email の結合キーにはしない
-- signup は既存どおり IP bucket だけを使う
-- Redis key は `ip:` / `email:` の purpose prefix を付けて HMAC 化し、raw IP / email を保存・記録しない
-- email bucket は同一アカウントへの攻撃を絞る一方、第三者が signin を 15 分、reset を 1 時間制限できる。IP-first の短絡で遮断済み IP から多数の email bucket を消費する攻撃を抑える
+| status                   | いつ                                                           | 伝えること                               |
+| ------------------------ | -------------------------------------------------------------- | ---------------------------------------- |
+| `email_change_confirmed` | `type=email_change` の検証成功、session 無し                   | もう一方のアドレスの確認も要ること       |
+| `email_confirmed`        | それ以外の type の検証成功、session 無し                       | 確認済みなのでログインすればよいこと     |
+| `failed`                 | 検証失敗、token / type の欠落、未知の status（fail closed 先） | リンクが期限切れ・使用済みでありうること |
 
-Product の通常 UI は現在この route を使わず Supabase Auth を直接呼ぶため、この制限は公開 route の defense-in-depth であり UI 全体の app-side rate limit ではない。Supabase Auth 自身の project-level rate limit は別の backstop として働く。
+**「検証成功 ⇒ session あり」は成り立たない。** `double_confirm_changes = true` により email_change は新旧両方のリンクで完了する 2 段フローで、片側の検証だけでは session が立たない。メールクライアントが開く browser がアプリの session cookie を持たない場合も同じで、これは type を問わない。session の有無で分岐するのはこのため。
+
+判定は `data.session?.access_token` で行う。auth-js は `access_token` を伴う session だけを保存する（cookie が書かれる）ので、truthy 判定だと token 無しの session オブジェクトで保護ページへ送ってしまう。
+
+**着地先を login ページにはしない。** `proxy.ts` は認証済みユーザーが auth 系 path に来ると `/week` へ送るため、ログイン中の browser で確認リンクを開くとメッセージが出る前に弾かれる。`/auth/confirmed` は `authPathsAllowedWhileAuthenticated`（`lib/auth/domain/access-policy.ts`）に登録してあり、認証済み・未認証のどちらでも表示できる。**このページを allowlist から外すと本件が再発する。**
+
+## Auth REST API は存在しない
+
+かつて公開 REST route `/api/auth`（signin / signup / signout / reset-password）があり、独自の rate limit を持っていた。**[#1942](https://github.com/Dayopt/dayopt/issues/1942) で削除した**（2026-08-12）。
+
+削除の理由は、呼び出し元がゼロのまま公開されていたため。通常 UI は `useAuthStore` が Supabase Auth を直接呼ぶ経路を使っており、この route は「守るもの」ではなく**未認証の credential 受け口という攻撃面**だった。加えて signin 分岐は captcha token を渡しておらず、production の Bot Protection 下では `captcha_failed` で必ず失敗する状態だった（[#1917](https://github.com/Dayopt/dayopt/issues/1917) / [#1925](https://github.com/Dayopt/dayopt/issues/1925) と同じ故障クラス）。
+
+**したがって現在、認証操作の rate limit は Supabase Auth 自身の project-level rate limit だけが担う**（`rate_limit_email_sent` などは `scripts/production-auth-config-audit.mjs` が pin して drift を検出する）。アプリ側に認証の rate limit 層は無い。将来 server-side の anti-abuse を挟む必要が出たら、その時点で route と limiter を設計し直す。
 
 ## tRPC API auth policy
 
