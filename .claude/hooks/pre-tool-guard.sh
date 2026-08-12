@@ -140,47 +140,30 @@ if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
   fi
 fi
 
-# heredoc の本文はコマンドではなくデータなので、行頭一致するコマンド検査から外す。
-# 本文を落とすのは次の 2 条件を **両方** 満たす時だけ:
-#   1. 導入部（<< より前）が本文を data として読むと分かっているコマンド
-#   2. 導入行が単一の単純コマンド（is_single_simple_command）
-# 条件 2 が要るのは、導入部だけ見ると data 消費でも本文が実行される形があるため:
-#   cat <<EOF | bash                     … pipe の先で実行される
-#   cat <<EOF > /tmp/x.sh; bash /tmp/x.sh … 同じ行の後続コマンドが実行する
-#   eval "$(cat <<EOF                    … コマンド置換の結果が実行される
-#   bash <(cat <<EOF                     … プロセス置換の中身が実行される
-# 条件 1 だけで落とすと、今ブロックできている形が通るようになる（実測: 上記の
-# うち pipe 以外の 3 形が main では block、条件 2 無しでは allow になった）。
-# 差し込み方を 1 つずつ潰すのではなく、判定を is_single_simple_command に寄せて
-# いるのは、そちらが shell の文法側で閉じているため。認識できない形は本文を残す側
-# （＝誤検知が残る安全側）へ倒れる。
-strip_heredoc_bodies() {
-  local input="$1" out="" line trimmed intro delim=""
-  local in_body=0
-  local sq="'"
-  # 正規表現は変数へ置いてから使う。[[ ]] の中へ直接書くと bash の tokenizer が
-  # 引用符や括弧を先に解釈して構文エラーになる（2026-08-12 に踏んだ）。
-  # .* を貪欲に取ることで、行内に複数ある場合は最後の << を見る。
-  # <<< (here-string) は << の直後が語ではないので一致しない。
-  local heredoc_re="(.*)<<-?[[:space:]]*[\"$sq]?([A-Za-z_][A-Za-z0-9_]*)"
-  local data_consumer_re='(^|[[:space:];&(])(cat|tee|git|gh|jq)([[:space:]]|$)'
-  while IFS= read -r line; do
-    if [ "$in_body" -eq 1 ]; then
-      trimmed="${line#"${line%%[![:space:]]*}"}"
-      if [ "$trimmed" = "$delim" ]; then in_body=0; fi
-      continue
-    fi
-    out+="$line"$'\n'
-    if [[ $line =~ $heredoc_re ]]; then
-      intro="${BASH_REMATCH[1]}"
-      delim="${BASH_REMATCH[2]}"
-      if is_single_simple_command "$line" && [[ $intro =~ $data_consumer_re ]]; then
-        in_body=1
-      fi
-    fi
-  done <<<"$input"
-  printf '%s' "$out"
-}
+# heredoc 本文の除外は入れない（#1944 は未解決のまま。判断の記録）。
+#
+# 「heredoc の本文はデータだから危険コマンド検査から外す」は正しい直感だが、
+# **どの行が本当に heredoc を開いていて、本文がどこへ行くのかは、shell の
+# 引用状態とコマンド位置を解釈しないと決まらない。** 正規表現では決まらない。
+# 実装を試み、外部レビュー 3 巡で次の 4 通りの取りこぼしが実測で見つかった。
+# いずれも **変更前はブロックできていた形が通るようになる** 方向:
+#
+#   cat <<EOF | bash                       pipe の先で本文が実行される
+#   cat <<EOF > /tmp/x.sh; bash /tmp/x.sh  同じ行の後続コマンドが実行する
+#   eval "$(cat <<EOF" / bash <(cat <<EOF  置換の中身が実行される
+#   bash -s git <<EOF                      consumer 名が引数で、実際は bash が実行
+#   echo "x cat <<EOF" / # cat <<EOF       引用符やコメントの中の << を誤認
+#
+# 直すたびに次の形が出るのは、判定に必要な情報（引用状態・コマンド位置）が
+# 文字列の見た目に無いため。**この class は regex では閉じられない。**
+#
+# 一方で #1944 が直したかったのは P3 の誤検知で、実害は「コミットメッセージの
+# 文面を少し変えれば通る」程度。force-push / reset ガードは agent 自身の逸脱を
+# 止めるためのもの（`CLAUDE.md` 由来の禁止）なので、**ブロック側の後退と
+# P3 の煩わしさなら、煩わしさを取る。** 誤検知は受け入れて docs に書く。
+#
+# 実装するなら hook が構造化された入力（argv や AST）を受け取れる層が要る。
+# 詳細は #1944 のコメント。
 
 # 許可する env-file の path。選択肢で列挙する（optional group で組み立てると
 # 区切りの / が任意になり、..op-env.local のような別名まで通る）。
@@ -216,20 +199,15 @@ conforming_env_file_paths() {
 
 # --- Bash: 危険コマンドのブロック ---
 if [ "$TOOL_NAME" = "Bash" ]; then
-  # 位置ベースの検査は heredoc 本文を落とした写しに対して行う。行頭 ^ が
-  # heredoc 本文の行頭にも一致するため、コミットメッセージへ書いただけで
-  # 発火していた。
-  COMMAND_SCANNED=$(strip_heredoc_bodies "$COMMAND")
-
   # git push --force (--force-with-lease は許可)
-  if echo "$COMMAND_SCANNED" | grep -qE 'git\s+push\s+.*--force[^-]|git\s+push\s+.*--force$'; then
-    echo "BLOCKED: git push --force は禁止です。--force-with-lease を使ってください" >&2
+  if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force[^-]|git\s+push\s+.*--force$'; then
+    echo "BLOCKED: git push --force は禁止です。--force-with-lease を使ってください（この文字列に言及しただけでも落ちます。commit message や PR 本文に書く時は文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）" >&2
     exit 2
   fi
 
   # git reset --hard
-  if echo "$COMMAND_SCANNED" | grep -qE 'git\s+reset\s+--hard'; then
-    echo "BLOCKED: git reset --hard は危険です。確認してください" >&2
+  if echo "$COMMAND" | grep -qE 'git\s+reset\s+--hard'; then
+    echo "BLOCKED: git reset --hard は危険です。確認してください（この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
     exit 2
   fi
 
@@ -239,8 +217,11 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 「理由付き override」として許容するが、agent は使わない。
   # コマンド位置（先頭 or セパレータ直後）に限定する。部分一致だと
   # grep / echo で言及しただけで発火してしまう。
-  if echo "$COMMAND_SCANNED" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*git[[:space:]]+push[^;&|]*--no-verify'; then
-    echo "BLOCKED: git push --no-verify は禁止です。pre-push の pause point に答えてから push してください" >&2
+  # 行頭 ^ は heredoc 本文の行頭にも一致するため、コミットメッセージにこの
+  # 文字列を書いただけでも落ちる（#1944 の誤検知。上のコメントの判断により
+  # 受け入れる。文面を変えるか、Write / Edit で file に書いてから渡す）。
+  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*git[[:space:]]+push[^;&|]*--no-verify'; then
+    echo "BLOCKED: git push --no-verify は禁止です。pre-push の pause point に答えてから push してください（heredoc の本文など、この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）" >&2
     exit 2
   fi
 

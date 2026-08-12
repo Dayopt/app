@@ -244,29 +244,34 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
   });
 });
 
-// #1944: heredoc の本文はコマンドではなくデータなので、行頭一致する検査から外す。
-// ただし本文が実行される形（導入行に pipe がある）は外さない。
-describe('pre-tool-guard.sh: heredoc 本文の誤検知', () => {
+// #1944: heredoc 本文も危険コマンド検査の対象に**残す**（誤検知を受け入れる）。
+//
+// 「本文はデータだから外す」を実装したが、**どの行が本当に heredoc を開いていて
+// 本文がどこへ行くのかは、shell の引用状態とコマンド位置を解釈しないと決まらない。**
+// 外部レビュー 3 巡で 4 通りの取りこぼしが実測で見つかり、いずれも変更前は
+// ブロックできていた形が通るようになる方向だった。下の block ケース群は、
+// その実測で見つかった形をそのまま回帰テストとして残したもの。
+//
+// force-push / reset ガードは agent 自身の逸脱を止めるためのもので、ブロック側の
+// 後退は P3 の誤検知より重い。誤検知（コミットメッセージに文字列を書くと落ちる）は
+// 受け入れて docs に書く。判断の記録は .claude/hooks/pre-tool-guard.sh のコメントと
+// #1944 のコメント。
+describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
   const heredoc = (intro: string, body: string, delim = 'EOF') => `${intro}\n${body}\n${delim}`;
 
+  // 受け入れる誤検知。回避策は文面を変えるか、Write / Edit で file へ書いてから渡す。
   it.each([
     [
-      'commit message 本文',
+      'commit message 本文での言及',
       heredoc(
         "git commit -F - <<'EOF'",
         'fix: guard\n\ngit push --no-verify を禁止する規約に触れた',
       ),
     ],
     ['cat のリダイレクト', heredoc('cat <<EOF > /tmp/note.md', 'git push --force は禁止')],
-    [
-      'gh の PR 本文',
-      heredoc("gh pr create --body-file - <<'EOF'", 'git push --force-with-lease を使う'),
-    ],
     ['reset --hard の言及', heredoc("git commit -F - <<'EOF'", 'docs: git reset --hard の注意')],
-    // <<- は終端のインデントを許す
-    ['インデント付き終端', 'git commit -F - <<-EOF\n\tgit push --no-verify\n\tEOF'],
-  ])('本文を data として読む形は通す: %s', (_label, command) => {
-    expect(runGuard(bash(command))).toBe('allow');
+  ])('本文での言及も落ちる（受け入れる誤検知）: %s', (_label, command) => {
+    expect(runGuard(bash(command))).toBe('block');
   });
 
   it.each([
@@ -275,38 +280,28 @@ describe('pre-tool-guard.sh: heredoc 本文の誤検知', () => {
     ['セパレータ後の no-verify', 'pnpm check && git push --no-verify'],
     ['sh -c でくるむ force', 'sh -c "git push --force"'],
     ['素の reset --hard', 'git reset --hard origin/main'],
-    // heredoc を shell へ食わせる形は本文が実行されるので落とし続ける
+    // 以下は heredoc 除外を実装した時に「通るようになっていた」形。除外を
+    // やめたので素直に落ちる。除外を再導入するなら、まずここが緑のままかを見る。
     ['heredoc を bash へ食わせる', heredoc('bash <<EOF', 'git push --no-verify')],
-    // 導入部だけ見ると cat / jq だが、pipe の先で本文が実行される。
-    // consumer の allowlist だけで判定すると、今ブロックできている形が通る。
     ['cat heredoc を bash へ pipe', heredoc('cat <<EOF | bash', 'git reset --hard')],
-    ['cat heredoc を sh へ pipe', heredoc("cat <<'EOF' | sh", 'git push --no-verify')],
-    ['jq heredoc を bash へ pipe', heredoc('jq -r .cmd <<EOF | bash', 'git reset --hard')],
-    ['heredoc を xargs へ pipe', heredoc('cat <<EOF | xargs -I{} sh -c {}', 'git push --force')],
-    // コマンド置換も本文の行き先を読めなくする。導入部は cat でも、置換結果が
-    // eval / 変数経由で実行されうる。pipe だけを条件にしていた時、この 2 形は
-    // 変更前ブロックできていたのに通るようになっていた（実測して塞いだ）。
     ['eval + heredoc', 'eval "$(cat <<\'EOF\'\ngit push --no-verify\nEOF\n)"'],
     ['コマンド置換 + heredoc', 'x=$(cat <<EOF\ngit reset --hard\nEOF\n)'],
-    ['backtick + heredoc', 'x=`cat <<EOF\ngit reset --hard\nEOF\n`'],
-    // 導入行の後続コマンドが本文を実行する形。pipe / コマンド置換だけを条件に
-    // していた時、この 3 形は変更前ブロックできていたのに通るようになっていた。
-    // 差し込み方を 1 つずつ潰すのをやめ、導入行が単一の単純コマンドであることを
-    // 要求する形に畳んで塞いだ。
+    ['プロセス置換', 'bash <(cat <<EOF\ngit push --no-verify\nEOF\n)'],
     [
       '導入行の ; で後続実行',
       'cat <<EOF > /tmp/run.sh; bash /tmp/run.sh\ngit push --force origin main\nEOF',
     ],
+    // consumer 名が実行コマンドではなく引数の位置にある形。実際は bash が stdin を実行する
     [
-      '導入行の && で後続実行',
-      'cat <<EOF > /tmp/run.sh && bash /tmp/run.sh\ngit reset --hard\nEOF',
+      'bash -s に consumer 名を混ぜる',
+      heredoc('bash -s git <<EOF', 'git push --force origin main'),
     ],
-    ['プロセス置換', 'bash <(cat <<EOF\ngit push --no-verify\nEOF\n)'],
-    // 本文の後に続く実コマンドは検査対象に戻る
+    // 引用符やコメントの中の << は heredoc ではない。次行は普通に実行される
+    ['引用文字列の中の <<EOF', 'echo "x cat <<EOF"\ngit push --force origin main\nEOF'],
+    ['コメント内の <<EOF', '# cat <<EOF\ngit push --force origin main\nEOF'],
     ['heredoc の後続行', `${heredoc("git commit -F - <<'EOF'", 'msg')}\ngit push --no-verify`],
-    // <<< は here-string であって heredoc ではない
     ['here-string の後の実コマンド', 'cat <<< "x"; git push --no-verify'],
-  ])('実コマンドは落とし続ける: %s', (_label, command) => {
+  ])('実コマンドは落とす: %s', (_label, command) => {
     expect(runGuard(bash(command))).toBe('block');
   });
 
