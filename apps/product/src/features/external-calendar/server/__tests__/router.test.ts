@@ -8,6 +8,7 @@ const getSyncStatus = vi.hoisted(() => vi.fn());
 const listProviderCalendars = vi.hoisted(() => vi.fn());
 const updateSelectedCalendars = vi.hoisted(() => vi.fn());
 const disconnect = vi.hoisted(() => vi.fn());
+const listGhostEvents = vi.hoisted(() => vi.fn());
 const syncConnection = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
@@ -22,6 +23,7 @@ vi.mock('../connection-service', () => ({
   disconnect,
 }));
 vi.mock('../sync-service', () => ({ syncConnection }));
+vi.mock('../event-query-service', () => ({ listGhostEvents }));
 vi.mock('../google-oauth', () => ({ isGoogleCalendarConfigured, resolveRedirectUri }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
   calendarSyncNowRateLimit: { limit: rateLimit },
@@ -51,6 +53,7 @@ beforeEach(() => {
   listProviderCalendars.mockResolvedValue([]);
   updateSelectedCalendars.mockResolvedValue(undefined);
   disconnect.mockResolvedValue(undefined);
+  listGhostEvents.mockResolvedValue([]);
   isGoogleCalendarConfigured.mockReturnValue(true);
   resolveRedirectUri.mockReturnValue(
     'https://app.dayopt.app/api/integrations/google-calendar/callback',
@@ -163,5 +166,55 @@ describe('externalCalendarRouter — 入力バリデーション', () => {
     await expect(caller().getSyncStatus({ connectionId: 'not-a-uuid' })).rejects.toMatchObject({
       code: 'BAD_REQUEST',
     });
+  });
+});
+
+describe('externalCalendarRouter — listEvents', () => {
+  const RANGE = {
+    startDate: '2026-08-10T00:00:00.000Z',
+    endDate: '2026-08-17T00:00:00.000Z',
+  };
+
+  it('範囲を service へそのまま渡す', async () => {
+    await expect(caller().listEvents(RANGE)).resolves.toEqual([]);
+
+    expect(listGhostEvents).toHaveBeenCalledWith(expect.anything(), USER_ID, {
+      startAt: RANGE.startDate,
+      endAt: RANGE.endDate,
+    });
+  });
+
+  it('proProcedure なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
+    isBillingEnforced.mockReturnValue(true);
+
+    await expect(caller().listEvents(RANGE)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(listGhostEvents).not.toHaveBeenCalled();
+  });
+
+  it('未認証は弾かれる', async () => {
+    const unauth = createCaller(createMockContext({}));
+    await expect(unauth.listEvents(RANGE)).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it.each([
+    ['終了が開始より前', { startDate: RANGE.endDate, endDate: RANGE.startDate }],
+    ['開始と終了が同じ', { startDate: RANGE.startDate, endDate: RANGE.startDate }],
+    [
+      '62 日を超える',
+      { startDate: '2026-01-01T00:00:00.000Z', endDate: '2026-06-01T00:00:00.000Z' },
+    ],
+    ['日時として不正', { startDate: 'not-a-date', endDate: RANGE.endDate }],
+  ])('%s 範囲は BAD_REQUEST', async (_label, input) => {
+    await expect(caller().listEvents(input)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(listGhostEvents).not.toHaveBeenCalled();
+  });
+
+  it('62 日ちょうどは通す', async () => {
+    await expect(
+      caller().listEvents({
+        startDate: '2026-01-01T00:00:00.000Z',
+        endDate: '2026-03-04T00:00:00.000Z',
+      }),
+    ).resolves.toEqual([]);
   });
 });

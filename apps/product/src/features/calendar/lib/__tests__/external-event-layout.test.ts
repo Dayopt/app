@@ -12,7 +12,7 @@ function at(hour: number, minute = 0, dayOffset = 0): Date {
 
 function layout(events: Array<{ id: string; startDate: Date; endDate: Date }>) {
   return calculateExternalEventLayout(events, {
-    dayStart: DAY_START,
+    day: DAY_START,
     hourHeight: HOUR_HEIGHT,
     laneWidthPercent: LANE_WIDTH,
   });
@@ -140,7 +140,7 @@ describe('calculateExternalEventLayout / レーン幅', () => {
     const positions = calculateExternalEventLayout(
       [{ id: 'a', startDate: at(9), endDate: at(10) }],
       {
-        dayStart: DAY_START,
+        day: DAY_START,
         hourHeight: HOUR_HEIGHT,
         laneWidthPercent: 100,
       },
@@ -153,7 +153,7 @@ describe('calculateExternalEventLayout / レーン幅', () => {
     const positions = calculateExternalEventLayout(
       [{ id: 'a', startDate: at(9), endDate: at(10) }],
       {
-        dayStart: DAY_START,
+        day: DAY_START,
         hourHeight: HOUR_HEIGHT,
         laneWidthPercent: 0,
       },
@@ -195,7 +195,7 @@ describe('toZonedExternalEvents', () => {
     );
 
     const positions = calculateExternalEventLayout(zoned, {
-      dayStart: DAY_START,
+      day: DAY_START,
       hourHeight: HOUR_HEIGHT,
       laneWidthPercent: LANE_WIDTH,
     });

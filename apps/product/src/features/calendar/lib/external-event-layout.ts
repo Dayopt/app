@@ -8,7 +8,7 @@
  *    完全に重なった 2 件が読めなくなる
  * 2. **対象日を跨ぐ**。two-lane の `timeToPosition` は `top` をイベント自身の開始時刻（local）
  *    から出すため、前日から続く予定を翌日のカラムに置くと前日の時刻から座標が引かれる。ここは
- *    対象日の 00:00 を原点にした相対計算にして、両端でクリップする
+ *    対象日の暦日と突き合わせて、両端を 00:00 / 24:00 でクリップする
  *
  * 呼び出し側は対象日の ghost だけを渡す（日をまたぐ絞り込みは呼び出し側の責務。
  * `two-lane-layout.ts` と同じ分担）。
@@ -19,7 +19,6 @@ import { convertToTimezone } from '@/lib/date/timezone';
 import type { TwoLanePosition } from './two-lane-layout';
 
 const DAY_MINUTES = 24 * 60;
-const MS_PER_MINUTE = 60 * 1000;
 
 interface ExternalEventLayoutInput {
   id: string;
@@ -47,8 +46,8 @@ export function toZonedExternalEvents<T extends ExternalEventLayoutInput>(
 }
 
 interface CalculateExternalEventLayoutOptions {
-  /** 対象日の 00:00（ローカル）。ここを原点に top を出す。 */
-  dayStart: Date;
+  /** このカラムが担当する日。時刻は見ず、ローカルの暦日だけを使う。 */
+  day: Date;
   /** 1 時間あたりの px。 */
   hourHeight: number;
   /** ghost が使える横幅（%）。Plan レーン幅と同じ値を呼び出し側が渡す。 */
@@ -61,13 +60,41 @@ interface ClippedEvent {
   bottomMinutes: number;
 }
 
-/** 対象日の範囲へ切り詰める。両端が日の外なら 00:00 / 24:00 に寄せる。 */
-function clipToDay(event: ExternalEventLayoutInput, dayStart: Date): ClippedEvent | null {
-  const startMinutes = (event.startDate.getTime() - dayStart.getTime()) / MS_PER_MINUTE;
-  const endMinutes = (event.endDate.getTime() - dayStart.getTime()) / MS_PER_MINUTE;
+/** `two-lane-layout` の同名関数と同じ、ローカルフィールドからの分換算。 */
+function minutesSinceMidnight(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
+}
 
-  const topMinutes = Math.max(startMinutes, 0);
-  const bottomMinutes = Math.min(endMinutes, DAY_MINUTES);
+/** ローカルの暦日を比較する（-1 / 0 / 1）。 */
+function compareLocalDay(a: Date, b: Date): number {
+  const dayA = [a.getFullYear(), a.getMonth(), a.getDate()] as const;
+  const dayB = [b.getFullYear(), b.getMonth(), b.getDate()] as const;
+
+  for (let i = 0; i < dayA.length; i += 1) {
+    const left = dayA[i] as number;
+    const right = dayB[i] as number;
+    if (left !== right) return left < right ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * 対象日の範囲へ切り詰める。両端が日の外なら 00:00 / 24:00 に寄せる。
+ *
+ * **epoch の引き算を使わない。** 分の算出は `two-lane-layout` と同じくローカルフィールドの
+ * 読み取りだけで行い、日の内外は暦日の比較で決める。epoch 差で分を出すと、対象日が
+ * システム TZ の DST 切替日に当たった時に日の長さが 24h でなくなり、plan / record（フィールド
+ * 読み取り）との間に最大 1 時間のズレが生まれる。同じ方式に揃えて、その差自体を無くす。
+ */
+function clipToDay(event: ExternalEventLayoutInput, day: Date): ClippedEvent | null {
+  const startCompare = compareLocalDay(event.startDate, day);
+  const endCompare = compareLocalDay(event.endDate, day);
+
+  // 対象日より後に始まる / 対象日より前に終わるものは、この日のカラムに出ない。
+  if (startCompare > 0 || endCompare < 0) return null;
+
+  const topMinutes = startCompare < 0 ? 0 : minutesSinceMidnight(event.startDate);
+  const bottomMinutes = endCompare > 0 ? DAY_MINUTES : minutesSinceMidnight(event.endDate);
 
   if (bottomMinutes <= topMinutes) return null;
   return { id: event.id, topMinutes, bottomMinutes };
@@ -116,13 +143,13 @@ function assignColumns(group: ClippedEvent[]): { columnOf: Map<string, number>; 
 
 export function calculateExternalEventLayout(
   events: ReadonlyArray<ExternalEventLayoutInput>,
-  { dayStart, hourHeight, laneWidthPercent }: CalculateExternalEventLayoutOptions,
+  { day, hourHeight, laneWidthPercent }: CalculateExternalEventLayoutOptions,
 ): Record<string, TwoLanePosition> {
   const positions: Record<string, TwoLanePosition> = {};
   if (laneWidthPercent <= 0) return positions;
 
   const clipped = events
-    .map((event) => clipToDay(event, dayStart))
+    .map((event) => clipToDay(event, day))
     .filter((event): event is ClippedEvent => event !== null)
     .sort((a, b) => a.topMinutes - b.topMinutes || a.id.localeCompare(b.id));
 

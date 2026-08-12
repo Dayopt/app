@@ -61,7 +61,7 @@ function Ghosts({
   compact?: boolean;
 }) {
   const positions = calculateExternalEventLayout(events, {
-    dayStart: DAY_START,
+    day: DAY_START,
     hourHeight: HOUR_HEIGHT,
     laneWidthPercent,
   });

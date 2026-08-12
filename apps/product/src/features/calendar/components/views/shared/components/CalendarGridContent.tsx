@@ -2,7 +2,7 @@
 
 import React, { useCallback } from 'react';
 
-import { isSameDay, startOfDay } from 'date-fns';
+import { isSameDay } from 'date-fns';
 
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import { useTagsMap } from '@/features/tags';
@@ -226,7 +226,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const externalEventPositions = React.useMemo(
     () =>
       calculateExternalEventLayout(dayExternalEvents, {
-        dayStart: startOfDay(date),
+        day: date,
         hourHeight: HOUR_HEIGHT,
         laneWidthPercent: planLaneWidthPercent,
       }),
