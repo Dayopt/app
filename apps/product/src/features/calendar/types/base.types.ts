@@ -5,6 +5,8 @@
 
 // CalendarEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
 export type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
+import type { ExternalCalendarEvent } from '@/features/external-calendar';
+
 import type { DateTimeSelection } from '../components/views/shared';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
 
@@ -34,6 +36,11 @@ export interface GridViewProps extends BaseViewProps {
   dateRange: ViewDateRange;
   /** 全エントリ（期限切れ未完了表示用、日付フィルタリング前） */
   allTimeblocks?: CalendarEvent[] | undefined;
+  /**
+   * 外部カレンダーの未変換予定（ghost、#1962）。読み取り専用で `entries` とは別に持つ。
+   * plan / record と違い DB の EXCLUDE 制約が無いため重なり、座標計算も別系統になる。
+   */
+  externalEvents?: ExternalCalendarEvent[] | undefined;
 
   // Display options
   showWeekends?: boolean | undefined;

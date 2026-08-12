@@ -574,12 +574,22 @@ export async function updateSelectedCalendars(
       });
     }
 
-    // 外したカレンダーの未参照ミラー行を即時掃除する。
-    await deleteUnreferencedEvents({
-      userId,
-      connectionId,
-      scope: { kind: 'calendars', providerCalendarIds: removedIds },
-    });
+    // 外したカレンダーの未参照ミラー行を即時掃除する。best-effort — 失敗しても選択変更
+    // 自体は成功として扱う（fail-closed にすると cleanup 失敗がユーザー操作全体を巻き込む）。
+    // 拾いきれなかった行は次回の window prune か disconnect の prune が回収する。
+    try {
+      await deleteUnreferencedEvents({
+        userId,
+        connectionId,
+        scope: { kind: 'calendars', providerCalendarIds: removedIds },
+      });
+    } catch (error) {
+      logger.warn('[calendar-connection] failed to prune events for removed calendars');
+      captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+        feature: 'external_calendar',
+        operation: 'update_selected_calendars_prune',
+      });
+    }
   }
 }
 
@@ -602,9 +612,21 @@ function reportUnrevokedGrant(reason: string): void {
 /**
  * 接続を切断する（overview.md §8 の 3 段。順序が重要）。
  *
- * 1. provider の revoke を best-effort で呼ぶ（失敗しても続行）
- * 2. connection を消す前に、未参照ミラー行を anti-join で掃除する（削除後は FK が
- *    connection_id を NULL 化してスコープを失う）
+ * 1. 未参照ミラー行を anti-join で掃除する（connection を消す前に。削除後は FK が
+ *    connection_id を NULL 化してスコープを失う）。**fail-closed**: 掃除が失敗したら
+ *    revoke も connection 削除もせず throw する。ここだけは best-effort にしない — 削除後は
+ *    FK が connection_id を NULL 化し、その未参照ミラー行を回収する経路が無くなる（#1988）。
+ *    切断は冪等なので、ユーザーがもう一度実行すれば prune からやり直せる
+ * 2. provider の revoke を best-effort で呼ぶ（失敗しても続行）。掃除より先に revoke すると、
+ *    掃除が失敗した時に「token は失効済みなのに connection は active のまま」という
+ *    authoritative state の食い違いが残る（Codex 指摘、#2000）。掃除を確実に終えてから
+ *    revoke することでこの食い違いを避ける
+ * 2.5. revoke の間（provider への network round-trip）に別プロセスの sync が新しい
+ *    ミラー行を書き込む可能性が残る（sync-service.ts は disconnect 中の connection を
+ *    CAS 検証せず書き込める。Codex 指摘、#2000。完全に閉じるには sync 側の fencing が要る
+ *    — #2003 で追跡）。ここでは delete 直前にもう一度掃除して race window を「revoke の
+ *    所要時間」から「この 2 回目の DB 往復」まで縮める。**best-effort** — 1 回目の
+ *    fail-closed で主要な保証は既に成立しているため、ここの失敗で切断全体を止めない
  * 3. `calendar_connections` を hard delete（子は CASCADE、参照済みミラーは connection_id が
  *    SET NULL され歴史的アンカーとして残る）
  *
@@ -616,7 +638,18 @@ export async function disconnect(userId: string, connectionId: string): Promise<
   const secret = await loadConnectionSecret(db, userId, connectionId);
   if (!secret) return; // 既に切断済み。冪等。
 
-  // 1. revoke（best-effort）。復号に失敗しても切断自体は続行する。
+  // 1. revoke より先にミラーを掃除する。失敗したら revoke も connection 削除もしない。
+  try {
+    await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  } catch (error) {
+    throw new ExternalCalendarServiceError(
+      'DELETE_FAILED',
+      'failed to clean up calendar events before disconnecting',
+      { cause: error },
+    );
+  }
+
+  // 2. revoke（best-effort）。復号に失敗しても切断自体は続行する。
   try {
     const refreshToken = decryptToken(
       secret.refreshTokenEnc,
@@ -628,8 +661,16 @@ export async function disconnect(userId: string, connectionId: string): Promise<
     reportUnrevokedGrant('could not revoke the provider grant');
   }
 
-  // 2. connection 削除より先にミラーを掃除する。
-  await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  // 2.5. revoke 中に新規発生した差分を拾う best-effort な 2 回目の掃除。
+  try {
+    await deleteUnreferencedEvents({ userId, connectionId, scope: { kind: 'connection' } });
+  } catch (error) {
+    logger.warn('[calendar-connection] failed to re-prune events right before disconnect delete');
+    captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+      feature: 'external_calendar',
+      operation: 'disconnect_reprune',
+    });
+  }
 
   // 3. connection を hard delete。子テーブルは CASCADE。
   const { error } = await db

@@ -5,3 +5,8 @@ export {
 } from './lib/calendar-callback-result';
 
 export { GoogleCalendarSettings } from './components/GoogleCalendarSettings';
+
+export {
+  useExternalCalendarEvents,
+  type ExternalCalendarEvent,
+} from './hooks/useExternalCalendarEvents';

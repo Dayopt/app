@@ -12,18 +12,40 @@ import {
   listProviderCalendars,
   updateSelectedCalendars,
 } from './connection-service';
+import { listGhostEvents } from './event-query-service';
 import { isGoogleCalendarConfigured, resolveRedirectUri } from './google-oauth';
 import { syncConnection } from './sync-service';
 
 /**
  * 外部カレンダー接続の tRPC router（overview.md §7-2）。
  *
- * 読み取り 4 本は protectedProcedure、provider を叩く / 書き込む 3 本は proProcedure
- * （課金ゲート。`BILLING_ENFORCED` off の間は素通り）。ghost 用 `listEvents` / `dismiss` は
- * 次 project の予約席なのでここには置かない。
+ * 接続状態の読み取り 4 本は protectedProcedure、provider を叩く / 書き込む 3 本は proProcedure
+ * （課金ゲート。`BILLING_ENFORCED` off の間は素通り）。
+ *
+ * ghost 表示の `listEvents` は **proProcedure 側**に置く（#1962）。接続状態の読み取りが
+ * protected なのは「解約済みでも状態が見えて必ず切断できる」ためで、ghost 表示にその理由は
+ * 当てはまらない。protected にすると課金を有効化した日に「Pro を切っても外部予定は見え続ける」が
+ * 既定になり、しかも同期は止まるのでミラーが凍結して古い予定が恒久的に出続ける。
  */
 
 const connectionIdInput = z.object({ connectionId: z.string().uuid() });
+
+/** ghost 表示の取得範囲。上限は calendar の最長ビュー（multi-day）に対して十分な余裕を取る。 */
+const MAX_EVENT_RANGE_DAYS = 62;
+const MAX_EVENT_RANGE_MS = MAX_EVENT_RANGE_DAYS * 24 * 60 * 60 * 1000;
+
+const listEventsInput = z
+  .object({
+    startDate: z.string().datetime({ offset: true }),
+    endDate: z.string().datetime({ offset: true }),
+  })
+  .refine(
+    ({ startDate, endDate }) => {
+      const span = new Date(endDate).getTime() - new Date(startDate).getTime();
+      return span > 0 && span <= MAX_EVENT_RANGE_MS;
+    },
+    { message: `range must be positive and at most ${MAX_EVENT_RANGE_DAYS} days` },
+  );
 
 const connectionAvailabilityInput = z.object({
   origin: z
@@ -103,6 +125,20 @@ export const externalCalendarRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         return await getSyncStatus(ctx.supabase, ctx.userId, input.connectionId);
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  listEvents: proProcedure
+    .meta({ description: 'calendar 画面に出す ghost（未変換の外部予定）' })
+    .input(listEventsInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await listGhostEvents(ctx.supabase, ctx.userId, {
+          startAt: input.startDate,
+          endAt: input.endDate,
+        });
       } catch (error) {
         return handleServiceError(error);
       }

@@ -89,6 +89,29 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     expect(result.nextCursor).toBe('sync-token-1');
   });
 
+  // regression（#1989）: 保存もしないフィールド（attendees / location / organizer 等）を
+  // 受信自体しないよう `fields` partial response mask を送る。マスク文字列に
+  // nextSyncToken / nextPageToken が抜けると増分同期が黙って壊れる（syncToken を受け取れず
+  // 毎回 full sync になる）ので、ページング系が入っていることも合わせて固定する。
+  it('events.list に保存列 + ページング系だけの fields mask を送る', async () => {
+    fetchMock().mockResolvedValue(
+      jsonResponse({ items: [timedEvent()], nextSyncToken: 'sync-token-1' }),
+    );
+
+    await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    const fields = requestedUrl(0).searchParams.get('fields');
+    expect(fields).toBe(
+      'items(id,status,summary,description,start,end),nextPageToken,nextSyncToken',
+    );
+    expect(fields).toContain('nextSyncToken');
+    expect(fields).toContain('nextPageToken');
+  });
+
   // timeMin / timeMax は syncToken と併用禁止で、送ると 410 ではなく 400 が返る
   it('増分 sync では syncToken だけを送り、timeMin / timeMax を送らない', async () => {
     fetchMock().mockResolvedValue(jsonResponse({ items: [], nextSyncToken: 'sync-token-2' }));

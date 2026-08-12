@@ -35,6 +35,7 @@ export const WeekView = ({
   dateRange,
   entries,
   allTimeblocks,
+  externalEvents,
   showWeekends = true,
   weekStartsOn: weekStartsOnProp,
   showActualDiff = false,
@@ -70,6 +71,7 @@ export const WeekView = ({
         weekDates={displayDates}
         events={entries}
         allTimeblocks={allTimeblocks}
+        externalEvents={externalEvents}
         eventsByDate={eventsByDate}
         todayIndex={todayIndex}
         disabledTimeblockId={disabledTimeblockId}

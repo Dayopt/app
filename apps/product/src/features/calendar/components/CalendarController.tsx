@@ -14,6 +14,7 @@ import { useCallback, useMemo } from 'react';
 
 import { isWeekend } from 'date-fns';
 
+import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import {
   createTimeblockDuplicateDraft,
   resolveTimeblockDestination,
@@ -59,6 +60,8 @@ interface CalendarControllerProps {
   viewDateRange: ViewDateRange;
   filteredTimeblocks: CalendarEvent[];
   allTimeblocks: CalendarEvent[];
+  /** 外部カレンダーの未変換予定（ghost）。読み取り専用で tag フィルタの対象外 */
+  externalEvents?: ExternalCalendarEvent[] | undefined;
 
   // --- Settings ---
   showWeekends: boolean;
@@ -146,6 +149,7 @@ export function CalendarController({
   viewDateRange,
   filteredTimeblocks,
   allTimeblocks,
+  externalEvents,
   showWeekends,
   showActualDiff = false,
   disabledTimeblockId,
@@ -358,6 +362,7 @@ export function CalendarController({
       dateRange: viewDateRange,
       entries: filteredTimeblocks,
       allTimeblocks,
+      externalEvents,
       currentDate,
       showWeekends,
       showActualDiff,
@@ -377,6 +382,7 @@ export function CalendarController({
       viewDateRange,
       filteredTimeblocks,
       allTimeblocks,
+      externalEvents,
       currentDate,
       showWeekends,
       showActualDiff,
