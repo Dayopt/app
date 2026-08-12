@@ -130,6 +130,26 @@ describe('isSupersedeOnlyDiff', () => {
 `),
     ).toBe(false);
   });
+
+  it('正常系: 部分訂正key（日付+slug）の追記を許可する', () => {
+    expect(
+      isSupersedeOnlyDiff(`--- a/log.md
++++ b/log.md
+@@ -2,0 +3 @@
++partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+`),
+    ).toBe(true);
+  });
+
+  it('エラー系: 部分訂正keyの形式に合わない追記（slugが無い）を拒否する', () => {
+    expect(
+      isSupersedeOnlyDiff(`--- a/log.md
++++ b/log.md
+@@ -2,0 +3 @@
++partially_superseded_2026_08_11: docs/engineering/log/2026-08-11-fix.md
+`),
+    ).toBe(false);
+  });
 });
 
 describe('runAppendOnlyGuard', () => {
@@ -163,6 +183,36 @@ superseded_by: docs/product/log/2026-08-01-new.md
     expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
   });
 
+  it('正常系: legacy logのfrontmatterへの部分訂正key追記も許可する（#1939）', () => {
+    const root = createRepository();
+    write(
+      root,
+      'docs/product/log/2026-07-01-source.md',
+      '---\ntitle: Source\npartially_superseded_2026_08_11_note: docs/product/log/2026-08-11-fix.md\n---\n',
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('エラー系: legacy logの本文への部分訂正key偽装追記を拒否する（Codexレビュー指摘）', () => {
+    // isSupersedeOnlyDiffはdiffの行shapeしか見ないため、frontmatter外（本文末尾）への
+    // 追記でも「1行追加」という形だけで通ってしまっていた（#1939のP2）。legacy logの
+    // shortcutに部分訂正を素通りさせず、frontmatter内かどうかまで確認することを固定する。
+    const root = createRepository();
+    write(
+      root,
+      'docs/product/log/2026-07-01-source.md',
+      '---\ntitle: Source\n---\n\n# Source\n\npartially_superseded_2026_08_11_note: docs/product/log/2026-08-11-fix.md\n',
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: 'docs/product/log/2026-07-01-source.md',
+        reason: 'legacy logの変更はsuperseded_byまたはstatus: supersededの単一行追記だけ許可',
+      },
+    ]);
+  });
+
   it('エラー系: 新契約logへのlegacy status追記を拒否する', () => {
     const root = createRepository();
     const path = addFrozenLog(root);
@@ -173,6 +223,123 @@ superseded_by: docs/product/log/2026-08-01-new.md
 status: frozen
 status: superseded
 date: 2026-07-14
+---
+
+# Frozen log
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: path,
+        reason: '新契約logの変更はfrontmatterへのsuperseded_by追記だけ許可',
+      },
+    ]);
+  });
+
+  it('正常系: 新契約logのfrontmatterへの部分訂正key追記を許可する（#1939）', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+---
+
+# Frozen log
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('正常系: 同一logへの2回目の部分訂正（別日付+別slug）も追記だけで許可する（#1939）', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+---
+
+# Frozen log
+`,
+    );
+    git(root, 'add', path);
+    git(root, 'commit', '-qm', 'first partial correction');
+
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+partially_superseded_2026_08_20_retention: docs/engineering/log/2026-08-20-retention-fix.md
+---
+
+# Frozen log
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([]);
+  });
+
+  it('エラー系: 部分訂正を装った本文の改変を拒否する（#1939）', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+---
+
+# Frozen log (改変済み)
+`,
+    );
+
+    expect(runAppendOnlyGuard({ baseRef: 'HEAD', root })).toEqual([
+      {
+        file: path,
+        reason: '新契約logの変更はfrontmatterへのsuperseded_by追記だけ許可',
+      },
+    ]);
+  });
+
+  it('エラー系: 部分訂正keyの上書き（既存keyの値変更）を拒否する（#1939）', () => {
+    const root = createRepository();
+    const path = addFrozenLog(root);
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
+---
+
+# Frozen log
+`,
+    );
+    git(root, 'add', path);
+    git(root, 'commit', '-qm', 'first partial correction');
+
+    write(
+      root,
+      path,
+      `---
+status: frozen
+date: 2026-07-14
+partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-20-different.md
 ---
 
 # Frozen log

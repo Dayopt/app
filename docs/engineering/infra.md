@@ -404,6 +404,15 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 
 段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
 
+### PR の Vercel check が詰まった時の切り分け（策定日: 2026-08-12）
+
+`Vercel – product` / `Vercel – web` が green にならない時、**先に「deployment が存在して失敗しているか、そもそも存在しないか」を分ける。** ここを分けずにコード修正へ走ると、原因が CI 側の一過性障害でも実装を疑って時間を溶かす。2026-08-12 に実測した 2 型:
+
+1. **branch 選択的な Vercel webhook 欠落（deployment が「存在しない」型）**: 特定 branch への push だけ Vercel 側に deployment が作られず、GitHub 上の check が pending のまま進まない。**空コミットで再 push しても直らない**（commit [`1f3e1bb58`](https://github.com/Dayopt/dayopt/commit/1f3e1bb58931258097a72ea6ef92064935e7e716) は再発火を狙った空コミットだが、根治には至らなかった。deployment 一覧に当該 commit の記録が無いことを実測確認済み）。復旧は Vercel Dashboard の **Create Deployment** で該当 branch / commit を手動指定する。**cancel された build でも status は success で付く**ため、手動 deployment を取り消しても check 自体は green のまま残る（取り消し操作と check 状態が一致しない点に注意する）
+2. **turbopack ビルドキャッシュの腐敗**: build script 自体は turbopack を指定していないのに、ビルドログに turbopack path 由来の `module not found` とキャッシュ復元ログが同時に出る。これが「turbopack を使っていないはずなのに turbopack のログが出る」という不一致が診断根拠になる。復旧は `vercel redeploy`（既存 build のキャッシュを使わない再実行）
+
+どちらも Vercel 側のビルドインフラの一過性障害で、アプリケーションコードの回帰ではない。切り分けの第一手は常に「そもそも deployment ができているか」の確認（Vercel Dashboard の Deployments 一覧）で、無ければ型 1、あるが失敗していれば型 2 を疑う。
+
 ---
 
 ## Bot 対策（Cloudflare Turnstile）

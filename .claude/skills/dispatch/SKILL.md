@@ -32,12 +32,12 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ## 操作 A: dispatch — issue を worker に渡す
 
-1. `gh issue list --milestone <現行milestone> --label status:ready` で候補を選ぶ（ユーザー指定があればそれを優先）。milestone 内が空なら `--label status:ready` 全体から。テーマ単位で見たい場合は該当 `scope:epic` issue の sub-issues から絞る
+1. `gh issue list --milestone <現行milestone> --label status:ready --state open` で候補を選ぶ（ユーザー指定があればそれを優先）。milestone 内が空なら `--label status:ready --state open` 全体から。テーマ単位で見たい場合は該当 `scope:epic` issue の sub-issues から絞る。**`gh issue list` は既定で open のみ返すためこの経路では実害が薄いが、epic issue のコメント経由・issue 番号の直指定など一覧以外の経路で候補を得た場合はこの既定に頼れない。** リスト以外の経路で得た候補ほど、次の state 確認（手順 4）を必ず通す
 2. **束ね**: 関連する issue（同一 area / 同一機能系統）は 1 worker セッション・1 branch・1 PR にまとめて渡すのを標準とする（`.claude/rules/workflow.md` §PR 粒度）。1 issue ずつ切り出さない
 3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/mcp-plan-track-learn/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列で処理するのを第一候補**とする（並行させない理由が衝突回避なら、束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
-4. **凍結チェック**: `status:blocked` が付いていないことを確認する（束ねた場合は全 issue について確認する。1 つでも凍結なら、その issue だけ束ねから外す）
+4. **凍結・state チェック**: `status:blocked` が付いていないこと、かつ候補 issue の `state` が OPEN であることを確認する。state は `gh issue view <N> --json state` の実測を根拠にする（close 済み issue にも `status:ready` 等のラベルが残留しうるため、**ラベルは state の代わりにならない**）。束ねた場合は全 issue について両方確認する。1 つでも凍結 or close 済みなら、その issue だけ束ねから外す（2026-08-12、close 済み #1895 への誤 dispatch を受けて state 確認を追加。経緯は #1957）
 5. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする
+6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（2026-08-12。編成時（操作 B 手順 5）の「押し込むか」の判断とは独立に、着手 = 付与を機械的に行う。経緯は #2006）
 7. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素）
@@ -82,7 +82,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 - [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
 - [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
-- [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）
+- [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）。**検査基準（2026-08-12）: open PR の Closes 対象 issue と `status:in-progress` issue はすべて現行 milestone に入っているか**
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
 

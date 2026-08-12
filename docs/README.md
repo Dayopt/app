@@ -88,6 +88,8 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 
 - 訂正は新しい log を作り、古い log には `superseded_by` だけを追加する
 - `superseded_by` がある log を現在の判断根拠として引用しない
+- **部分訂正**（主題は今も生きているが、1 文だけが後の変更で誤りになった場合）は `superseded_by` を使わない。`superseded_by` を付けると log 全体が引用不可になり、まだ有効な主題まで巻き添えで凍結される。代わりに `partially_superseded_YYYY_MM_DD_slug: <訂正logへのrepo-relative path>` という形式の frontmatter key を追記する（例: `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-codeql-reenable-plan.md`）。key 自体に日付と対象を表す slug を埋め込むため、同じ log に複数回の部分訂正が入っても行を追記するだけで済み、過去の訂正 key を書き換える必要がない（docs-guard は削除を伴う diff を一律で拒否するため、既存 key の上書きはできない）
+- `partially_superseded_*` の値は訂正の中身そのものではなく、訂正 log への path。**「何が」誤りだったかは訂正 log 側に書く**（部分訂正 key は「どこに訂正があるか」を示す道標で、本体には触れない）
 - 旧契約で作られた log は移行しない。path と Git 履歴によって過去資料として扱う
 - `latest.md` のような上書き alias は作らない。必要なら日付順に検索する
 - 凍結 log からのリンク切れは直さない（仕様）。2026-08-10 時点の既知分と後継先は [2026-08-10-frozen-log-link-inventory.md](engineering/log/2026-08-10-frozen-log-link-inventory.md) にある。未登録のリンク切れは docs-guard が内訳付きで報告するので、stock 側の移動を見直すか、`KNOWN_FROZEN_BROKEN_LINKS` へ後継先付きで追加する（凍結 log 側には追記しない）

@@ -123,6 +123,28 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
     ],
   },
   {
+    key: 'googleCalendar',
+    blocks: [
+      { type: 'paragraph', key: 'intro', position: 'before' },
+      {
+        type: 'list',
+        keys: [
+          'whatWeAccess',
+          'connectedAccount',
+          'whatWeStore',
+          'calendarSelection',
+          'howMuchWeRead',
+          'howWeUseIt',
+          'howProtected',
+          'howToStop',
+          'accountDeletion',
+          'revokeFromGoogle',
+        ],
+      },
+      { type: 'paragraph', key: 'limitedUse', position: 'after' },
+    ],
+  },
+  {
     key: 'dataRetention',
     blocks: [{ type: 'list', keys: ['active', 'deleted', 'contact', 'legal'] }],
   },
