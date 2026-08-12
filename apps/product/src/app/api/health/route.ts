@@ -10,6 +10,13 @@ import {
 import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
 /**
+ * DB check 5s ×2（identity RPC → profiles select の逐次）+ Redis ping + env チェック。
+ * `checkRedis` の `redis.ping()` だけ timeout が無く、Upstash 無応答時はここまで張り付く
+ * （根治は #1967）。外形監視の信号を「timeout」に化けさせないため短めに抑える。
+ */
+export const maxDuration = 30;
+
+/**
  * Health Check API エンドポイント
  *
  * アプリケーションの稼働状況を確認するためのヘルスチェック

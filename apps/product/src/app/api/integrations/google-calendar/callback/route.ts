@@ -33,6 +33,20 @@ import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+/**
+ * 逐次 worst path は再接続分岐が最長で、getUser 15 + rate limit 2 + Pro 判定 15 +
+ * Google token 交換 15 + `getReconnectTarget` 15 + `reconnectExistingConnection` 15
+ * = 77 秒。段の 60 では足りないので、応答を返す余裕を含めて 120 にする。
+ *
+ * ここだけ段から外す理由は失敗の質。**Google の authorization code は token 交換の
+ * 時点で消費される**ので、その後の DB 書き込み中に kill されると接続は保存されない
+ * まま code だけ使用済みになり、再試行は `invalid_grant`。ユーザーは認可からやり直し
+ * になる。単なる 504 より重い。
+ *
+ * より良い解は「code を消費する前に残り予算を検査して、足りなければ手前で諦める」
+ * 設計への転換で、これは #1990 で別途扱う。それが入れば 60 へ戻せる。
+ */
+export const maxDuration = 120;
 
 /**
  * Settings への戻り先。

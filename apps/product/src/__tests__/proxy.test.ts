@@ -85,3 +85,52 @@ describe('proxy MFA gate', () => {
     expect(response.headers.get('location')).toBeNull();
   });
 });
+
+// #1956: メール確認の結果ページは、認証済みの browser で開かれても表示できないといけない。
+// helper 単体（access-policy.test.ts）では「locale を剥がした path なら allowlist に一致する」
+// までしか固定できず、proxy が生の pathname を渡すよう変わっても検出できない。
+// その場合に壊れるのは日本語ユーザーだけなので、proxy を通した実挙動をここで固定する。
+describe('proxy auth-path allowlist', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_MAINTENANCE_MODE', 'false');
+    vi.stubEnv('SKIP_AUTH_IN_DEV', 'false');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    [
+      'locale prefix あり',
+      'https://app.dayopt.app/ja/auth/confirmed?status=email_change_confirmed',
+    ],
+    ['locale prefix なし', 'https://app.dayopt.app/auth/confirmed?status=email_change_confirmed'],
+  ])('%s の確認結果ページは認証済みでも /week へ送らない', async (_label, url) => {
+    mockAuthenticatedSession({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null });
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  // 対の確認。allowlist に無い auth path は従来どおり /week へ送る（allowlist を
+  // 広げすぎていないこと、この test が常に 200 を返すだけの空振りでないことの両方を示す）。
+  it.each([
+    [
+      'locale prefix あり',
+      'https://app.dayopt.app/ja/auth/login',
+      'https://app.dayopt.app/ja/week',
+    ],
+    ['locale prefix なし', 'https://app.dayopt.app/auth/login', 'https://app.dayopt.app/week'],
+  ])('%s の login は認証済みなら /week へ送る', async (_label, url, expected) => {
+    mockAuthenticatedSession({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null });
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(expected);
+  });
+});

@@ -22,12 +22,10 @@ import {
   cspReportRateLimit,
   hashRateLimitIdentifier,
   isUpstashEnabled,
-  loginRateLimit,
   mcpPreAuthRateLimit,
   mcpUserRateLimit,
   oauthTokenGlobalRateLimit,
   oauthTokenIpRateLimit,
-  passwordResetRateLimit,
   RATE_LIMIT_PRESETS,
   RATE_LIMIT_TIMEOUT_MS,
   RateLimitUnavailableError,
@@ -60,8 +58,6 @@ describe('Upstash Rate Limit', () => {
 
   it('keeps local/test limiters disabled when credentials are absent', () => {
     expect(isUpstashEnabled).toBe(false);
-    expect(loginRateLimit).toBeNull();
-    expect(passwordResetRateLimit).toBeNull();
     expect(contactRateLimit).toBeNull();
     expect(contactGlobalRateLimit).toBeNull();
     expect(trpcUserRateLimit).toBeNull();
@@ -110,7 +106,7 @@ describe('Upstash Rate Limit', () => {
   });
 
   it('distinguishes disabled, checked, and unavailable checks and captures the original error once', async () => {
-    const request = new Request('https://app.dayopt.app/api/auth', {
+    const request = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '203.0.113.10' },
     });
     await expect(withUpstashRateLimit(request, null)).resolves.toEqual({ state: 'disabled' });
@@ -140,13 +136,13 @@ describe('Upstash Rate Limit', () => {
 
   it('uses only the Vercel platform IP and ignores spoofed forwarded chains', async () => {
     const limiter = { limit: vi.fn().mockResolvedValue(allowedResult) };
-    const firstRequest = new Request('https://app.dayopt.app/api/auth', {
+    const firstRequest = new Request('https://app.dayopt.app/api/csp-report', {
       headers: {
         'x-real-ip': '203.0.113.10',
         'x-forwarded-for': '198.51.100.1',
       },
     });
-    const secondRequest = new Request('https://app.dayopt.app/api/auth', {
+    const secondRequest = new Request('https://app.dayopt.app/api/csp-report', {
       headers: {
         'x-real-ip': '203.0.113.10',
         'x-forwarded-for': '192.0.2.55',
@@ -162,10 +158,10 @@ describe('Upstash Rate Limit', () => {
 
   it('uses one shared unknown bucket when the platform IP is missing or invalid', async () => {
     const limiter = { limit: vi.fn().mockResolvedValue(allowedResult) };
-    const forwardedOnly = new Request('https://app.dayopt.app/api/auth', {
+    const forwardedOnly = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-forwarded-for': '203.0.113.10' },
     });
-    const invalidPlatformIp = new Request('https://app.dayopt.app/api/auth', {
+    const invalidPlatformIp = new Request('https://app.dayopt.app/api/csp-report', {
       headers: {
         'x-real-ip': 'invalid',
         'x-forwarded-for': '198.51.100.20',
@@ -181,7 +177,7 @@ describe('Upstash Rate Limit', () => {
 
   it('checks an independent account bucket only after the IP bucket allows the request', async () => {
     const limiter = { limit: vi.fn().mockResolvedValue(allowedResult) };
-    const request = new Request('https://app.dayopt.app/api/auth', {
+    const request = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '203.0.113.10' },
     });
 
@@ -201,10 +197,10 @@ describe('Upstash Rate Limit', () => {
         .mockResolvedValueOnce(allowedResult)
         .mockResolvedValueOnce(deniedResult),
     };
-    const firstRequest = new Request('https://app.dayopt.app/api/auth', {
+    const firstRequest = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '203.0.113.10' },
     });
-    const secondRequest = new Request('https://app.dayopt.app/api/auth', {
+    const secondRequest = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '198.51.100.20' },
     });
 
@@ -222,7 +218,7 @@ describe('Upstash Rate Limit', () => {
   it('does not consume the account bucket after the IP bucket denies the request', async () => {
     const deniedResult = { ...allowedResult, success: false, remaining: 0 };
     const limiter = { limit: vi.fn().mockResolvedValue(deniedResult) };
-    const request = new Request('https://app.dayopt.app/api/auth', {
+    const request = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '203.0.113.10' },
     });
 
@@ -237,7 +233,7 @@ describe('Upstash Rate Limit', () => {
     const limiter = {
       limit: vi.fn().mockResolvedValueOnce(allowedResult).mockRejectedValueOnce(backendError),
     };
-    const request = new Request('https://app.dayopt.app/api/auth', {
+    const request = new Request('https://app.dayopt.app/api/csp-report', {
       headers: { 'x-real-ip': '203.0.113.10' },
     });
 
@@ -278,19 +274,19 @@ describe('Upstash Rate Limit', () => {
     }));
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(15);
+    expect(constructorOptions).toHaveLength(13);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);
       expect(options.prefix).toMatch(/^ratelimit:product:/u);
     }
 
-    await enabledModule.loginRateLimit?.limit('ip:203.0.113.10');
+    await enabledModule.contactRateLimit?.limit('ip:203.0.113.10');
     const persistedIpIdentifier = limit.mock.calls.at(-1)?.[0];
     expect(persistedIpIdentifier).toMatch(/^[a-f0-9]{64}$/u);
     expect(persistedIpIdentifier).not.toContain('203.0.113.10');
 
-    await enabledModule.loginRateLimit?.limit('email:person@example.com');
+    await enabledModule.contactRateLimit?.limit('email:person@example.com');
     const persistedEmailIdentifier = limit.mock.calls.at(-1)?.[0];
     expect(persistedEmailIdentifier).toMatch(/^[a-f0-9]{64}$/u);
     expect(persistedEmailIdentifier).not.toContain('person@example.com');
