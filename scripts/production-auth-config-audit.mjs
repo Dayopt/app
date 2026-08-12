@@ -66,10 +66,11 @@ export const SUPABASE_PRODUCTION_PROJECT_REF = 'yvglwblxrnrenfifsnje';
 /**
  * 監視対象と期待値の正本。
  *
- * `expected` はすべて 2026-08-11 に production の実値を読み取って確定した（推測値を
- * 置くと audit が恒久 failure になり、drift 検出そのものが止まる）。値を変える時は
- * 「Dashboard を変えたから contract を追従させる」のではなく、**変更が意図したもので
- * あることを PR で示してから**追従させる。
+ * `expected` はすべて production の実値を読み取って確定した（推測値を置くと audit が
+ * 恒久 failure になり、drift 検出そのものが止まる）。基準時点は 2026-08-11（`uri_allow_list`
+ * の `/auth/reset-password` のみ 2026-08-12 の Dashboard 変更後に実測して追加、#2023）。
+ * 値を変える時は「Dashboard を変えたから contract を追従させる」のではなく、**変更が
+ * 意図したものであることを PR で示してから**追従させる。
  *
  * ## 監視対象は公開 OpenAPI spec から導出しない
  *
@@ -212,7 +213,9 @@ export const AUTH_CONFIG_CONTRACT = [
     // `https://app.dayopt.app/auth/reset-password` は 2026-08-12、#1928 の production
     // パスワードリセット復旧時に User が Dashboard へ明示追加した（#1928 コメント
     // 2026-08-12T06:56Z）。同オリジンの `https://app.dayopt.app/**` ワイルドカードが既に
-    // あるにもかかわらず明示エントリでないと復旧しなかった実測に基づく（#2023）。
+    // あった上での追加で、明示追加後に復旧した（同 issue で `confirm/route.ts` の
+    // recovery 遷移先固定化も同時に入っており、復旧の因果をこの追加だけに切り分けては
+    // いない）。pin はいずれにせよ production の実値集合に追従させる（#2023）。
     //
     // 残る 5 件のうち `https://product-dayopt.vercel.app/` 系と `/**` 無しの
     // ワイルドカードは重複・冗長に見えるが、preview の実 URL 形への依存が未調査のため
