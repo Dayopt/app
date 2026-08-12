@@ -27,6 +27,46 @@ import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
 
 /**
+ * GoTrue が「本人確認が recovery session だけでは足りない」を示しているか。
+ *
+ * - `insufficient_aal`: アカウントに MFA(TOTP) が有効。recovery session は aal1 止まりで、
+ *   GoTrue が config に関わらず更新を拒否する（step-up 検証の実装は #2013 で別途追う）
+ * - `current_password_required` / `current_password_invalid`: recovery session でない
+ *   セッション（通常ログイン中の直接アクセス等）でこの画面に来た。GoTrue ソース
+ *   （`apierrors.ErrorCodeCurrentPasswordRequired` / `ErrorCodeCurrentPasswordMismatch`）で
+ *   実際の文字列値を確認済み（後者は定数名に反し `current_password_invalid` を返す）
+ * - `invalid_credentials`: `PasswordChangeDialog.tsx` の `isCurrentPasswordError` が同じ
+ *   GoTrue 経路で観測している code。上と重複する可能性があるが、どちらが実際に返るかを
+ *   確定できていないため両方を検知対象にする
+ * - `reauthentication_needed`: production では現状発生しないが、設定 drift への保険
+ *
+ * 汎用の「時間をおいて再試行」に畳むと、再試行しても直らない状況で誤った案内になる。
+ * 構造化 code を優先し、message の substring 判定は使わない（`PasswordChangeDialog.tsx`
+ * の `isCurrentPasswordError` と同じ設計）。
+ */
+const RECOVERY_UPDATE_BLOCKED_CODES = new Set([
+  'current_password_required',
+  'current_password_invalid',
+  'invalid_credentials',
+  'reauthentication_needed',
+]);
+
+function errorCode(error: unknown): string | undefined {
+  return error !== null && typeof error === 'object' && 'code' in error
+    ? ((error as { code?: unknown }).code as string | undefined)
+    : undefined;
+}
+
+function isMfaBlocked(error: unknown): boolean {
+  return errorCode(error) === 'insufficient_aal';
+}
+
+function isRecoverySessionInvalid(error: unknown): boolean {
+  const code = errorCode(error);
+  return typeof code === 'string' && RECOVERY_UPDATE_BLOCKED_CODES.has(code);
+}
+
+/**
  * 新しいパスワード設定フォーム。
  * recovery リンクは /auth/confirm の verifyOtp でセッション確立済みで着地する前提
  * （セッション無しの直接アクセスは page.tsx がサーバー側で弾く）
@@ -70,7 +110,11 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         const { error } = await updatePassword(password);
 
         if (error) {
-          const errorKey = getAuthErrorKey(error.message, 'updatePassword');
+          const errorKey = isMfaBlocked(error)
+            ? 'auth.errors.recoveryMfaBlocked'
+            : isRecoverySessionInvalid(error)
+              ? 'auth.errors.recoverySessionInvalid'
+              : getAuthErrorKey(error.message, 'updatePassword');
           setError(t(errorKey));
         } else {
           setSuccess(true);

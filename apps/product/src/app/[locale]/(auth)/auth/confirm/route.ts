@@ -78,7 +78,13 @@ export async function GET(request: NextRequest) {
       // token を伴わない session オブジェクトでは cookie が書かれない。truthy 判定だと
       // その場合に保護ページへ送ってしまい、直したはずの無言バウンスが再現する。
       if (data.session?.access_token) {
-        return NextResponse.redirect(new URL(next, request.url));
+        // recovery だけ next を無視して固定 path へ送る（#1928）。実際の発生原因は
+        // production の Redirect URLs allowlist に `/auth/reset-password` が未登録で、
+        // GoTrue が `redirect_to` を拒否して `next` が付かないまま fallback の `/week` へ
+        // 落ちていたこと（allowlist は User が追加済み）。recovery の着地先は固定で問題
+        // ないため、allowlist が再びドリフトしても壊れない形にしておく（防御層）。
+        const target = type === 'recovery' ? '/auth/reset-password' : next;
+        return NextResponse.redirect(new URL(target, request.url));
       }
 
       return NextResponse.redirect(confirmedUrl(statusForType(type), request));

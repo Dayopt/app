@@ -13,6 +13,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
     pathname?.includes('/auth/login') ||
     pathname?.includes('/auth/signup') ||
     pathname?.includes('/auth/password') ||
+    pathname?.includes('/auth/reset-password') ||
     pathname?.includes('/auth/mfa-verify')
   ) {
     return <>{children}</>;
