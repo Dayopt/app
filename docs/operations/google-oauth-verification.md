@@ -34,6 +34,7 @@ GCP project 側の設定手順（API 有効化・scope 登録・client 作成・
 | 同意画面に scope が登録済み                                                       | `openid` / `email` / `calendar.readonly` を登録済み（#1702 手順書 v2 ステップ 2） | ✅                  |
 | Authorized domains が Search Console で検証済み                                   | 外形から確認できない                                                              | ❓ **要確認**       |
 | デモ動画が **scope を使う app の機能**を見せる                                    | 見せられる画面が存在しない                                                        | ❌ **ブロッカー 2** |
+| 保持期間 90 日の約束が実際に執行されている                                        | cleanup がどこからも呼ばれていない                                                | ❌ **ブロッカー 3** |
 | 要求する scope が最小である                                                       | より狭い組み合わせが存在する                                                      | ⚠️ **要判断**       |
 
 ### ブロッカー 1: プライバシーポリシーに Google user data の記述が無い
@@ -61,6 +62,17 @@ Google はデモ動画に "The app functionalities that utilize the requested OA
 
 **#1962（ミラーの UI 接続 / ghost 表示）を production に出してから提出する。** 審査の外部待ちを先に消化したくなるが、この状態で出して reject されると出し直しでかえって遅くなる。
 
+### ブロッカー 3: 90 日の保持期限が実際には執行されていない
+
+申請文と privacy 素案は「revoke の記録は 90 日で自動削除される」と書いている。**この文が真であるためには、期限切れを消す処理が実際に定期実行されている必要がある。現状は実行されていない。**
+
+- 期限切れの `calendar_revoke_operations` と subject fence を消すのは `private.cleanup_calendar_authority_retention_internal_v1`（`supabase/migrations/20260730090015_fenced_calendar_revoke_worker.sql:1084`）
+- この関数を呼ぶものが repo 内に無い。calendar 関連で唯一 migration が登録する cron `expire-calendar-revoke-outbox`（`20260730090003_harden_calendar_revoke_expiry.sql:158-162`）が実行するのは `expire_calendar_revoke_outbox_internal_v1` で、別物
+
+つまり `delete_after` は設定されるが、それを見て消す人がいない。**アカウント削除から 90 日を過ぎても Google の `sub` が残り続ける。**
+
+privacy policy に書いた保持期間は守る前提の約束なので、**提出前に cleanup を定期実行に載せる**（pg_cron から `cleanup_calendar_authority_retention_v1` を呼ぶ）。載せられないなら、申請文と privacy 素案から自動削除の記述を外す。**どちらかを選ぶまで提出しない。** 本 PR は docs のみなので実装は入れておらず、指揮台へ issue 候補として上げた。
+
 ### 要判断: `calendar.readonly` はこのアプリにとって最小ではない
 
 Google は "Request only the **narrowest** scope(s) needed" と要求し、justification 欄で「なぜより狭い scope では不十分か」を問う。
@@ -79,7 +91,7 @@ Dayopt が呼ぶ Calendar API は 2 つだけで、それぞれをより狭い s
 **推奨: 提出前に narrow pair へ切り替える。** 変更は小さい:
 
 1. `apps/product/src/features/external-calendar/schemas/google.ts` の `GOOGLE_AUTHORIZATION_SCOPES` を 2 本立てに変える
-2. `hasCalendarReadonlyScope()`（`server/google-oauth.ts:372`）は現在 `calendar.readonly` の完全一致を要求する。新 scope を受け付けるよう広げる。**既存の接続済みユーザーは `calendar.readonly` で grant 済み**なので、旧 scope も引き続き通す（この検査は callback 時にしか走らないため保存済み接続は壊れないが、再接続で落ちる）
+2. `hasCalendarReadonlyScope()`（`server/google-oauth.ts:372`）は現在 `calendar.readonly` の完全一致を要求する。判定を **`calendar.readonly || (calendar.calendarlist.readonly && calendar.events.readonly)`** に広げる。**narrow pair は AND であって OR ではない** — Google の granular consent で片方だけ許可されうるので、いずれか 1 つで通す OR 判定にすると、接続は active として保存されたのに `calendarList.list` か `events.list` が恒久的に 403 になり「Connected なのに一覧が出ない / 同期されない」状態が残る。**narrow scope が片方欠けた callback を拒否する test も一緒に入れる。** 旧 `calendar.readonly` を残すのは既存の接続済みユーザーがそれで grant 済みだから（この検査は callback 時にしか走らないため保存済み接続は壊れないが、再接続で落ちる）
 3. GCP の同意画面で 2 本を追加登録する（`calendar.readonly` は削除する）
 4. **既存の接続を移行する。** 1〜3 が変えるのは以後の認可リクエストと callback の判定だけで、**すでに発行済みの grant は縮まない**。`syncConnection()` は保存済み refresh token をそのまま `startSession()` に渡し、`granted_scopes` を再検査しない（`server/sync-service.ts:179`）。放置すると既存ユーザーの token は `calendar.readonly` の権限で動き続け、「ユーザーに渡す権限を用途に合わせる」という目的を達成できない。既存接続を revoke して再接続させるか、期限を切って強制再認証する
 
@@ -232,6 +244,14 @@ Dayopt also stores the email address and the stable account identifier ("sub") o
 the connected Google account, so that it can show the user which account is
 connected and confirm that a reconnection is for the same account. Both are deleted
 when the user disconnects the account or deletes their Dayopt account.
+
+Separately from the events themselves, Dayopt stores the user's calendar selection:
+for each calendar the user chose to import, its Google-assigned identifier and its
+name, and the sync token Google issues so the next sync only fetches what changed.
+This is stored as soon as the user makes the selection and does not depend on any
+event being imported, so it exists even for a calendar that turns out to have no
+events in range. It is deleted when the user deselects the calendar, disconnects
+the account, or deletes their Dayopt account.
 
 Imported events are stored per user. Google user data is not sold, is not used for
 advertising, and is not used to train any AI or machine learning model. It is not
@@ -423,6 +443,12 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   contains more than this, but we discard everything else as we read it:
 >   attendees, guest email addresses, locations, conferencing links, and
 >   attachments are never used, never stored, and never written to our logs.
+> - **Your calendar selection**: separately from the events, we store which
+>   calendars you chose — each one's Google identifier and name — along with a sync
+>   token from Google that lets the next sync fetch only what changed. We store this
+>   as soon as you choose, so it exists even if a calendar turns out to have no
+>   events we import. It is deleted when you deselect the calendar, disconnect the
+>   account, or delete your Dayopt account.
 > - **How much we read**: a window of 90 days before and after the current date.
 >   All-day events are not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
