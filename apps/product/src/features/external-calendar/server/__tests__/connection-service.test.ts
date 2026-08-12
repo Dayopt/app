@@ -507,13 +507,18 @@ describe('updateSelectedCalendars', () => {
 // =============================================================================
 
 describe('disconnect', () => {
-  it('revoke → prune → connection 削除 の順で実行する', async () => {
+  // 順序は prune → revoke → connection 削除（#2000 で Codex 指摘を受けて revoke を
+  // prune の後に動かした）。先に revoke すると、prune が失敗して connection を消せなかった
+  // 場合に「token は失効済みなのに connection は active のまま」という食い違いが残るため。
+  it('prune → revoke → connection 削除 の順で実行する', async () => {
     const { calls } = setupServiceRoleDb({
       connection: { status: 'active', refresh_token_enc: 'enc' },
     });
 
+    let prunedBeforeRevoke = false;
     let prunedBeforeConnectionDelete = false;
     deleteUnreferencedEvents.mockImplementation(async () => {
+      prunedBeforeRevoke = revoke.mock.calls.length === 0;
       // prune 呼び出し時点で connection の delete はまだ発行されていないはず（§8 順序）
       prunedBeforeConnectionDelete = !calls.some(
         (r) => r.table === 'calendar_connections' && r.chain.some((e) => e.method === 'delete'),
@@ -528,8 +533,24 @@ describe('disconnect', () => {
       connectionId: CONNECTION_ID,
       scope: { kind: 'connection' },
     });
+    expect(prunedBeforeRevoke).toBe(true);
     expect(prunedBeforeConnectionDelete).toBe(true);
     expect(findWith(calls, 'calendar_connections', 'delete')).toBeDefined();
+  });
+
+  // regression（Codex 指摘、#2000）: revoke が prune より先だと、prune 失敗時に token だけ
+  // 失効させてしまい connection は active のまま残る（UI は接続中と見せつつ実際は壊れている）。
+  it('prune が失敗したら revoke も connection 削除も行わない', async () => {
+    setupServiceRoleDb({
+      connection: { status: 'active', refresh_token_enc: 'enc' },
+    });
+    deleteUnreferencedEvents.mockRejectedValue({ code: '42501' });
+
+    await expect(disconnect(USER_ID, CONNECTION_ID)).rejects.toBeInstanceOf(
+      ExternalCalendarServiceError,
+    );
+
+    expect(revoke).not.toHaveBeenCalled();
   });
 
   it('接続が既に無ければ冪等に何もしない', async () => {

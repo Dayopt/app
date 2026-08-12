@@ -28,8 +28,21 @@ const DB_REQUEST_TIMEOUT_MS = 15_000;
 /** 1 バッチあたり件数。max_rows=1000 と URL 長 8192B に触れない。 */
 const PRUNE_BATCH_SIZE = 150;
 
-/** バッチ上限。150 × 40 = 6,000 件で ±90 日 window / 1 接続の想定を大きく超える。 */
+/**
+ * window / calendars scope のバッチ上限。150 × 40 = 6,000 件で ±90 日 window の想定を
+ * 大きく超える。到達は prune 条件かページングが壊れている異常のサインとして扱い throw する。
+ */
 const MAX_PRUNE_BATCHES = 40;
+
+/**
+ * connection scope（disconnect の全削除）のバッチ上限。この経路は時間窓を持たない
+ * 一回限りの終端操作なので、参照済み行（歴史的アンカー）が大量に混ざっていても
+ * 最終的に完走できる必要がある。上限到達時に throw するようになった結果（#1988）、
+ * 上限が低いと再試行しても同じ場所で毎回止まり、connection を永久に切断できなくなる
+ * （Codex 指摘、#2000）。150 × 4,000 = 600,000 件は現実的な接続では到達しない値にし、
+ * 真のページングバグに対する backstop としてだけ機能させる。
+ */
+const MAX_PRUNE_BATCHES_CONNECTION_SCOPE = 4_000;
 
 /**
  * 掃除する行の絞り込み条件。
@@ -124,8 +137,10 @@ export async function deleteUnreferencedEvents(params: {
 
   const db = createEventPruningClient();
   let cursor: string | null = null;
+  const batchLimit =
+    scope.kind === 'connection' ? MAX_PRUNE_BATCHES_CONNECTION_SCOPE : MAX_PRUNE_BATCHES;
 
-  for (let batch = 0; batch < MAX_PRUNE_BATCHES; batch += 1) {
+  for (let batch = 0; batch < batchLimit; batch += 1) {
     let query = db
       .from(databaseTables.externalCalendarEvents)
       .select('id')
@@ -192,10 +207,11 @@ export async function deleteUnreferencedEvents(params: {
     if (candidates.length < PRUNE_BATCH_SIZE) return;
   }
 
-  // 1 接続の ±90 日 window でこの上限（6,000 行）に当たるのは、prune 条件かページングが
-  // 壊れている時だけ。掃除が途中で止まった事実は、次の run が黙って同じ所で止まるので
-  // log だけでは見えない。
-  logger.warn('[calendar-prune] stopped at the batch limit', { batches: MAX_PRUNE_BATCHES });
+  // window / calendars scope でこの上限に当たるのは、prune 条件かページングが壊れている
+  // 時だけ。connection scope は上限をずっと高く取っているので、正規の接続がここに来る
+  // ことは実質無い（真のページングバグの backstop）。掃除が途中で止まった事実は、次の run
+  // が黙って同じ所で止まるので log だけでは見えない。
+  logger.warn('[calendar-prune] stopped at the batch limit', { batches: batchLimit });
   // 上限値は logger 側にだけ出す。`CaptureErrorContext` は string キーしか持たず、
   // 数値を足しても型で弾かれ、通っても sanitize の allowlist で捨てられる。
   const batchLimitError = new Error('calendar event pruning hit the batch limit');

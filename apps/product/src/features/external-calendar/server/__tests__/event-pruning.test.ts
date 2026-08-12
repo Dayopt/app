@@ -43,6 +43,11 @@ type Config = {
   deleteError?: unknown;
   /** 常に PRUNE_BATCH_SIZE 件満杯を返し続ける（batch 上限に到達させる）。 */
   alwaysFullBatch?: boolean;
+  /**
+   * 指定バッチ数だけ満杯を返し、その次のバッチで空を返して自然終了させる
+   * （connection scope の高い上限でも throw せず完走することを確認するために使う）。
+   */
+  fullBatchesThenStop?: number;
 };
 
 function setupDb(config: Config) {
@@ -58,6 +63,15 @@ function setupDb(config: Config) {
       if (config.alwaysFullBatch) {
         return {
           data: Array.from({ length: PRUNE_BATCH_SIZE }, (_, i) => ({ id: `ev-${batch}-${i}` })),
+          error: null,
+        };
+      }
+      if (config.fullBatchesThenStop !== undefined) {
+        return {
+          data:
+            batch < config.fullBatchesThenStop
+              ? Array.from({ length: PRUNE_BATCH_SIZE }, (_, i) => ({ id: `ev-${batch}-${i}` }))
+              : [],
           error: null,
         };
       }
@@ -261,14 +275,19 @@ describe('deleteUnreferencedEvents — anti-join', () => {
 describe('deleteUnreferencedEvents — batch 上限', () => {
   // regression（risk-reviewer 指摘）: 上限到達を warn だけで return すると、disconnect の
   // fail-closed が効かず、上限を超えた残り行が connection 削除で永久に回収不能になる。
-  it('batch 上限に到達したら部分結果のまま return せず throw する', async () => {
+  // window / calendars scope は時間窓が有限なので、上限到達は異常のサインとして throw する。
+  it('window scope は batch 上限に到達したら部分結果のまま return せず throw する', async () => {
     setupDb({ alwaysFullBatch: true });
 
     await expect(
       deleteUnreferencedEvents({
         userId: USER_ID,
         connectionId: CONNECTION_ID,
-        scope: { kind: 'connection' },
+        scope: {
+          kind: 'window',
+          notBefore: '2026-01-01T00:00:00.000Z',
+          notAfter: '2026-12-31T00:00:00.000Z',
+        },
       }),
     ).rejects.toThrow('calendar event pruning hit the batch limit');
 
@@ -276,6 +295,23 @@ describe('deleteUnreferencedEvents — batch 上限', () => {
       expect.stringContaining('stopped at the batch limit'),
       expect.any(Object),
     );
+  });
+
+  // regression（Codex 指摘、#2000）: window scope と同じ低い上限を connection scope
+  // （disconnect の全削除）にも適用すると、参照済み行（歴史的アンカー）が大量に混ざる
+  // 接続で再試行しても毎回同じ場所で止まり、二度と切断できなくなる。connection scope は
+  // 高い上限を持ち、window scope の上限（40 batch）を超えても throw せず完走する。
+  it('connection scope は window scope の上限を超えても throw せず完走する', async () => {
+    // 41 batch 満杯（旧上限 40 を超える）の後に自然終了させる。
+    setupDb({ fullBatchesThenStop: 41 });
+
+    await expect(
+      deleteUnreferencedEvents({
+        userId: USER_ID,
+        connectionId: CONNECTION_ID,
+        scope: { kind: 'connection' },
+      }),
+    ).resolves.toBeUndefined();
   });
 });
 
