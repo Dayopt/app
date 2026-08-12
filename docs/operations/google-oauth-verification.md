@@ -222,14 +222,27 @@ the account match is verified against the "sub" identifier described above.
 
 ```
 Refresh tokens are encrypted with AES-256-GCM at the application layer before being
-stored. Access tokens are never persisted; they are obtained per sync run and held
-in memory only.
+stored. Access tokens are never persisted: one is obtained whenever Dayopt needs to
+call Google on the user's behalf — when the account is first connected, when the
+user's calendar list is loaded, and on each sync run — and is held in memory only
+for the duration of that operation.
 
-Imported events are stored per user and are only ever shown to that user. Google
-user data is not sold, is not used for advertising, is not used to train any AI or
-machine learning model, and is not transferred to any third party other than the
-infrastructure providers that host the application (documented in the privacy
-policy).
+Dayopt also stores the email address and the stable account identifier ("sub") of
+the connected Google account, so that it can show the user which account is
+connected and confirm that a reconnection is for the same account. Both are deleted
+when the user disconnects the account or deletes their Dayopt account.
+
+Imported events are stored per user. Google user data is not sold, is not used for
+advertising, and is not used to train any AI or machine learning model. It is not
+transferred to third parties, with two exceptions:
+
+  - the infrastructure providers that host the application, documented in the
+    privacy policy;
+  - applications that the user has themselves explicitly authorized to read their
+    Dayopt entries through Dayopt's own API. This transfer happens only at the
+    user's direction, only to a client the user approved, and only for entries the
+    user has incorporated into their own timeline. The user can revoke that
+    authorization at any time.
 
 When a user disconnects, Dayopt asks Google to revoke the refresh token on a
 best-effort basis; if Google cannot be reached, Dayopt records the failure and
@@ -371,8 +384,15 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 > and one-way: Dayopt never creates, modifies, or deletes anything in your Google
 > Calendar.
 >
-> - **What we access**: the list of your calendars, so you can choose which ones to
->   import, and the events on the calendars you select.
+> - **What we access**: the email address and account identifier of the Google
+>   account you connect, the list of your calendars, so you can choose which ones
+>   to import, and the events on the calendars you select.
+> - **The connected account**: we store the account's email address and its stable
+>   Google account identifier. We show you the email address so you can tell your
+>   connected accounts apart, and we use it to suggest the right account if you
+>   ever need to reconnect. We use the account identifier to confirm that a
+>   reconnection is for the same account you connected originally. Both are deleted
+>   when you disconnect the account.
 > - **What we store**: for each imported event, only its identifier, title,
 >   description, and start and end times, together with the identifier and name of
 >   the calendar it came from. For a calendar someone shared with you, that
@@ -383,7 +403,12 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 > - **How much we read**: a window of 90 days before and after the current date.
 >   All-day events are not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
->   timeline. Imported events are visible only to you.
+>   timeline. Imported events are visible only to you, and we never share them with
+>   anyone else unless you ask us to. The one case where you can ask us to is
+>   Dayopt's own API: if you connect another application and grant it permission to
+>   read your Dayopt entries, that application will receive the entries you have
+>   built from your calendar. That only happens for applications you have
+>   authorized yourself, and you can revoke the permission at any time.
 > - **How it is protected**: the credentials that let Dayopt read your calendar are
 >   encrypted before they are stored.
 > - **How to stop it**: disconnect the account at any time from Settings. Dayopt
