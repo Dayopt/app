@@ -55,6 +55,7 @@ describe('production auth config audit contract', () => {
         'uri_allow_list',
         [
           'https://app.dayopt.app/**',
+          'https://app.dayopt.app/auth/reset-password',
           'https://product-*-dayopt.vercel.app/**',
           'https://product-dayopt.vercel.app/',
           'https://product-dayopt.vercel.app/**',

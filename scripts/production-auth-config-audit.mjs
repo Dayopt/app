@@ -190,6 +190,7 @@ export const AUTH_CONFIG_CONTRACT = [
     // **`security_captcha_secret` などと違い redirect URL は secret ではない。**
     expected: [
       'https://app.dayopt.app/**',
+      'https://app.dayopt.app/auth/reset-password',
       'https://product-*-dayopt.vercel.app/**',
       'https://product-dayopt.vercel.app/',
       'https://product-dayopt.vercel.app/**',
@@ -207,6 +208,11 @@ export const AUTH_CONFIG_CONTRACT = [
     // 失われたため 2026-08-11 に除去した（依存経路ゼロを実測確認済み）。除去後の値を
     // live 再測して pin してある（除去前後の集合差分が localhost の 1 件だけであることを
     // 確認済み）。
+    //
+    // `https://app.dayopt.app/auth/reset-password` は 2026-08-12、#1928 の production
+    // パスワードリセット復旧時に User が Dashboard へ明示追加した（#1928 コメント
+    // 2026-08-12T06:56Z）。同オリジンの `https://app.dayopt.app/**` ワイルドカードが既に
+    // あるにもかかわらず明示エントリでないと復旧しなかった実測に基づく（#2023）。
     //
     // 残る 5 件のうち `https://product-dayopt.vercel.app/` 系と `/**` 無しの
     // ワイルドカードは重複・冗長に見えるが、preview の実 URL 形への依存が未調査のため
