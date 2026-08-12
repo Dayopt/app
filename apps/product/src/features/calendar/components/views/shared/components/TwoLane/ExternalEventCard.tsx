@@ -6,7 +6,10 @@ import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
 import type { TimeFormat } from '@dayopt/domain';
 
-import type { ExternalEventPosition } from '../../../../../lib/external-event-layout';
+import {
+  MIN_CARD_HEIGHT_PX,
+  type ExternalEventPosition,
+} from '../../../../../lib/external-event-layout';
 
 /**
  * 外部カレンダーの予定を表す読み取り専用カード（ghost）。
@@ -22,7 +25,6 @@ import type { ExternalEventPosition } from '../../../../../lib/external-event-la
  * シグナルとして使用済みなので、左のインジケータ線と減光で区別する。
  */
 
-const MIN_HEIGHT = 20;
 const DETAIL_HEIGHT_THRESHOLD = 40;
 
 interface ExternalEventCardProps {
@@ -71,7 +73,7 @@ export function ExternalEventCard({
         // 必ず見える幅を保証する（`width: max(4px, calc(...))` は避ける — テスト環境の
         // happy-dom が inline style の CSS `max()` を解釈できず style 自体が丸ごと無視される）。
         minWidth: '4px',
-        height: `${Math.max(position.height, MIN_HEIGHT)}px`,
+        height: `${Math.max(position.height, MIN_CARD_HEIGHT_PX)}px`,
       }}
     >
       <p className="truncate font-medium">

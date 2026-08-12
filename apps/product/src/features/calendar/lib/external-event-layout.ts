@@ -20,10 +20,28 @@ import type { TwoLanePosition } from './two-lane-layout';
 
 const DAY_MINUTES = 24 * 60;
 
+/**
+ * カード最小描画高さ（px）。`ExternalEventCard` が `Math.max(position.height, MIN_CARD_HEIGHT_PX)`
+ * で使うのと同じ値をここでも使う（single source of truth）。短い予定が連続する時、実時間の高さで
+ * 列を割り当てるとこの最小高さ分だけ次の予定へ食い込んで重なるため、列の占有判定にも
+ * 織り込む（下記 `minOccupiedMinutes` 参照）。
+ */
+export const MIN_CARD_HEIGHT_PX = 20;
+
 interface ExternalEventLayoutInput {
   id: string;
   startDate: Date;
   endDate: Date;
+  /**
+   * ゾーン変換前の実経過分。省略時は `startDate`/`endDate` の epoch 差から算出する。
+   *
+   * DST の fall back（繰り返し時刻）をまたぐ予定は、ゾーン変換後の `startDate`/`endDate` の
+   * ローカルフィールドが同値・逆順になりうる（例: `05:30Z`–`06:30Z` の 1 時間の予定が
+   * America/New_York では変換後どちらも壁時計 `01:30` になる）。`toZonedExternalEvents` は
+   * 変換前にこの値を確定させて引き継ぐため、`clipToDay` はフィールド読み取りが破綻した時に
+   * epoch 差（同じくゾーン変換後の値なので不正確）ではなくこちらを信頼できる。
+   */
+  durationMinutes?: number;
 }
 
 /**
@@ -37,9 +55,11 @@ interface ExternalEventLayoutInput {
 export function toZonedExternalEvents<T extends ExternalEventLayoutInput>(
   events: ReadonlyArray<T>,
   timezone: string,
-): T[] {
+): (T & { durationMinutes: number })[] {
   return events.map((event) => ({
     ...event,
+    // 変換前（生の instant）の経過分をここで確定させる。DST fold 対策（上記 doc 参照）。
+    durationMinutes: (event.endDate.getTime() - event.startDate.getTime()) / 60_000,
     startDate: convertToTimezone(event.startDate, timezone),
     endDate: convertToTimezone(event.endDate, timezone),
   }));
@@ -114,16 +134,37 @@ function clipToDay(event: ExternalEventLayoutInput, day: Date): ClippedEvent | n
   if (startCompare > 0 || endCompare < 0) return null;
 
   const topMinutes = startCompare < 0 ? 0 : minutesSinceMidnight(event.startDate);
-  const bottomMinutes = endCompare > 0 ? DAY_MINUTES : minutesSinceMidnight(event.endDate);
+  let bottomMinutes = endCompare > 0 ? DAY_MINUTES : minutesSinceMidnight(event.endDate);
+
+  // DST の fall back で start/end が同じ壁時計（または逆順）に変換された場合だけ、
+  // ゾーン変換前に確定させた実経過分（`durationMinutes`）から復元する。日を跨がない
+  // （startCompare/endCompare が両方 0 の）場合に限る — 日を跨ぐ側は既に 00:00/24:00 で
+  // クリップ済みで、この復元が意味を持たない。
+  if (bottomMinutes <= topMinutes && startCompare === 0 && endCompare === 0) {
+    const durationMinutes =
+      event.durationMinutes ?? (event.endDate.getTime() - event.startDate.getTime()) / 60_000;
+    if (durationMinutes > 0) {
+      bottomMinutes = Math.min(DAY_MINUTES, topMinutes + durationMinutes);
+    }
+  }
 
   if (bottomMinutes <= topMinutes) return null;
   return { id: event.id, topMinutes, bottomMinutes };
 }
 
 /**
+ * カードが実際に占有する下端（分）。`event.bottomMinutes`（実時間）と、最小描画高さ分だけ
+ * `topMinutes` から確保した下端の、大きい方を使う。実時間の短い予定を早くカラム再利用させると、
+ * 描画時に `MIN_CARD_HEIGHT_PX` へ拡張されたカードが次の予定へ食い込んで重なるため。
+ */
+function occupiedBottomMinutes(event: ClippedEvent, minOccupiedMinutes: number): number {
+  return Math.max(event.bottomMinutes, event.topMinutes + minOccupiedMinutes);
+}
+
+/**
  * 重なるものどうしを 1 グループにまとめる（sweep-line）。グループ内は等分カラムに割る。
  */
-function groupOverlapping(events: ClippedEvent[]): ClippedEvent[][] {
+function groupOverlapping(events: ClippedEvent[], minOccupiedMinutes: number): ClippedEvent[][] {
   const groups: ClippedEvent[][] = [];
   let current: ClippedEvent[] = [];
   let groupBottom = -Infinity;
@@ -135,7 +176,7 @@ function groupOverlapping(events: ClippedEvent[]): ClippedEvent[][] {
       groupBottom = -Infinity;
     }
     current.push(event);
-    groupBottom = Math.max(groupBottom, event.bottomMinutes);
+    groupBottom = Math.max(groupBottom, occupiedBottomMinutes(event, minOccupiedMinutes));
   }
 
   if (current.length > 0) groups.push(current);
@@ -143,17 +184,21 @@ function groupOverlapping(events: ClippedEvent[]): ClippedEvent[][] {
 }
 
 /** グループ内でカラム番号を割り当て、使ったカラム数を返す。 */
-function assignColumns(group: ClippedEvent[]): { columnOf: Map<string, number>; columns: number } {
+function assignColumns(
+  group: ClippedEvent[],
+  minOccupiedMinutes: number,
+): { columnOf: Map<string, number>; columns: number } {
   const columnBottoms: number[] = [];
   const columnOf = new Map<string, number>();
 
   for (const event of group) {
     let column = columnBottoms.findIndex((bottom) => bottom <= event.topMinutes);
+    const bottom = occupiedBottomMinutes(event, minOccupiedMinutes);
     if (column === -1) {
       column = columnBottoms.length;
-      columnBottoms.push(event.bottomMinutes);
+      columnBottoms.push(bottom);
     } else {
-      columnBottoms[column] = event.bottomMinutes;
+      columnBottoms[column] = bottom;
     }
     columnOf.set(event.id, column);
   }
@@ -173,8 +218,10 @@ export function calculateExternalEventLayout(
     .filter((event): event is ClippedEvent => event !== null)
     .sort((a, b) => a.topMinutes - b.topMinutes || a.id.localeCompare(b.id));
 
-  for (const group of groupOverlapping(clipped)) {
-    const { columnOf, columns } = assignColumns(group);
+  const minOccupiedMinutes = (MIN_CARD_HEIGHT_PX / hourHeight) * 60;
+
+  for (const group of groupOverlapping(clipped, minOccupiedMinutes)) {
+    const { columnOf, columns } = assignColumns(group, minOccupiedMinutes);
     const columnWidth = laneWidthPercent / columns;
 
     for (const event of group) {

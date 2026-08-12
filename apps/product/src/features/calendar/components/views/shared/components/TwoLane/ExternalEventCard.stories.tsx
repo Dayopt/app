@@ -190,6 +190,23 @@ export const Compact: Story = {
   ),
 };
 
+/**
+ * 実時間では重ならない短い予定でも、最小描画高さの分だけ近ければ別カラムへ分ける。
+ * 同じカラムに積むと、最小高さまで拡張されたカードが次の予定の開始位置へ食い込んで見える。
+ */
+export const AdjacentShortEvents: Story = {
+  render: () => (
+    <DayColumn fromHour={10} hours={1}>
+      <Ghosts
+        events={[
+          ghost({ id: 'a', title: '朝会', startDate: at(10, 0), endDate: at(10, 10) }),
+          ghost({ id: 'b', title: '1on1', startDate: at(10, 10), endDate: at(10, 20) }),
+        ]}
+      />
+    </DayColumn>
+  ),
+};
+
 /** 短い予定は最小高さで潰れない。 */
 export const ShortEvent: Story = {
   render: () => (
