@@ -128,6 +128,12 @@ function isRetryableAdapterFailure(error: unknown): boolean {
   );
 }
 
+/**
+ * factory 側の床。個別 query の `.abortSignal(DB_RPC_TIMEOUT_MS)` はこれより短い
+ * 上書きで、**両方あってよい**。付け忘れた query が無制限にならないようにする。
+ */
+const CLIENT_FLOOR_TIMEOUT_MS = 15_000;
+
 function createCalendarAccountDeletionClient(): CalendarAccountDeletionClient {
   return createClient<CalendarAccountDeletionDatabase>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -136,6 +142,13 @@ function createCalendarAccountDeletionClient(): CalendarAccountDeletionClient {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: (url, options) =>
+          fetch(url, {
+            ...options,
+            signal: options?.signal ?? AbortSignal.timeout(CLIENT_FLOOR_TIMEOUT_MS),
+          }),
       },
     },
   );

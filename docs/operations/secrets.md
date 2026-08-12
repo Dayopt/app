@@ -49,13 +49,36 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 これで **path の形を変えて回り込む経路は閉じ切った**。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、変数展開、別ディレクトリの同名ファイル — いずれも許可形の literal に一致しないため落ちる。
 
-**残るのは 1 つだけで、それは path ではなく中身。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/...` を書き足してから通常どおり実行すれば guard は通る。したがって guard が保証するのは「admin 用の env-file と、その別名・別置き場を経由しないこと」までで、「production credential に到達しないこと」ではない。中身の検査は [#1949](https://github.com/Dayopt/dayopt/issues/1949) で扱う。
+**flag の書き方も allowlist で判定する。** path を allowlist にしても、**flag と path の書き方を変えれば照合に入らない**（`--env-file"=…"` のように `=` の前へ引用符を刺すと、トリガーの正規表現に一致せず素通りした）。regex でコマンド文字列を見る限り shell の引数解釈は再現できず、同じ argv に落ちる書き方は無数にあるので、変形を数え上げるのをやめた。**`-env-file` という言及が 1 つでもあれば、その言及が全部「flag + `=`/空白 + 許可 literal + 区切り」でない限り落とす。** 加えて引用符と backslash を除いた写しでも同じ判定を行い、どちらかが落ちたら落とす（flag 名の内側へ引用符を刺す `--env-f"ile"=…` はこの写しでしか捕まらない）。
+
+**path が allowlist を通っても、中身を検査する。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/…` を書き足せば path トリックなしで production credential に届く。そこで **`op://` の vault を allowlist で判定する** — 通すのは `Dayopt-Staging` / `Dayopt-Shared` / `Dayopt-Local` だけで、それ以外を参照する env-file は落とす。`Dayopt-Production` だけを禁止する形にしないのは、vault が増えた時に穴が開くため。検査は 3 層に置く:
+
+1. **実行時** — 許可形を通った env-file の実ファイルを読み、許可外 vault があれば落とす。ファイルが無ければ解決される参照も無いので通す
+2. **消費は単一の単純コマンドに限る** — hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、同じコマンドの中で先に書き換えられると 1 が**書き換え前**を読む（`echo … >> <env-file> && op run …`）。書き手を数え上げる方式は閉じない（`cp` / `tee` / `sed` / リダイレクトを列挙した実装を、`python3` / `node` / `>|` がすり抜けることを実測した）。**書き手ではなく「別のことが起きる余地」を落とす** — 区切り（`;` `&` `|` 改行）、コマンド置換（`$( )` / backtick）、プロセス置換（`<( )` / `>( )`）、`eval` のいずれかがあれば拒否する。リダイレクトは別のコマンドを走らせないので許す。この列挙は書き手やコマンド名と違って **shell の文法側で閉じている**。flag の言及判定・path の抽出・この単一コマンド判定は、生の文字列と引用符を除いた写しの**両方**で行う（片方だけだと `--env-f"ile"=…` がどの検査にも載らない）
+3. **書き込み時（Write / Edit）** — `.op-env.local` / `.op-env.local.example` へ許可外 vault を書くこと自体を落とす。1 は agent が `op run` を直接打つ場面でしか発火しない（`pnpm typecheck:op` などは npm script の内側で `op run` するので hook から見えない）ため、書き足しを発生源で止める。**これは best-effort で、権威は 1 の方**。この層が見るのは書き込まれるテキストだけなので、`Dayopt-Staging` → `Dayopt-Production` のように **`op://` を含まない部分置換の Edit は捕まらない**（[#1986](https://github.com/Dayopt/dayopt/issues/1986)）
 
 **この経路は本節の変更が新設したものではない。** 以前の `.op-env.local.example` は Supabase の接続情報を `op://Dayopt-Staging/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
 
-閉じないのは、flag をコマンド文字列から隠す間接化（wrapper script を書いてそれを実行する、`eval`、base64 など）。これは事故ではなく意図的な回避であり、hook では追わない。**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+**閉じない境界**（意図的に追わない。書かない境界は「閉じているはず」と誤読される方が危険なので明記する）:
 
-代償として、`--env-file` のあとに何か語が続く文字列は Bash 引数に含めるだけで落ちる（引用符の中でも、散文でも同じ）。docs や commit message にこのコマンド例を書く時は、Write / Edit で file に書いてから `--body-file` / `-F` で渡す
+- **実行時に文字列を組み立てる形** — 変数展開（`op run --env-$X=…`）、shell の escape 展開（`$'\x6c\x65'` / `$'\154\145'` のような ANSI-C escape）、base64、wrapper script を書いてそれを実行する。これは事故ではなく意図的な回避（`eval` とコマンド置換は、flag を言及するコマンドでは上記 2 が落とす）。
+
+  **この集合は数え上げられない。** guard が見るのはコマンド文字列で、そこから shell の解釈を再現することはできない。静的に決まる quote 形式（`"` `'` `\`、`$'…'` / `$"…"` の literal）は正規化して追うが、**中身を展開しないと `--env-file` にならない形は追わない**。1 つ塞いでも同じ到達が別の形で作れる — 実測で、escape 展開を塞いでも `X=file; op run --env-$X=…` と wrapper script はどちらも通る。したがって escape 展開だけを塞ぐことに意味は無い。
+
+  **ここから先の権威は 2 つ**。実行時の中身検査（上記 1）が、どの書き方で辿り着いても最後に実ファイルを読む。そして `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と 1Password 側の承認が、production への操作そのものを止める。**hook はそこへ至る前のスピードバンプ**であって、意図的な回避の最終的な境界ではない。
+
+- **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
+- **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
+
+**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+
+**guard script 自体が壊れた時の挙動は未決。** bash は構文エラーでも `exit 2` を返すため、guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。fail open へ倒すかは [#1961](https://github.com/Dayopt/dayopt/issues/1961) で決める。当面の予防として、`scripts/__tests__/pre-tool-guard.test.ts` が `bash -n` を通ることを test 1 ケースとして固定している。
+
+**受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
+
+- `-env-file` のあとに何か語や引用符が続く文字列は、Bash 引数に含めるだけで落ちる（引用符の中でも散文でも同じ。`rg -- '--env-file' .claude/hooks/` のような自己検索も含む）。docs や commit message にコマンド例を書く時は Write / Edit で file に書いてから `--body-file` / `-F` で渡す。名前を検索したいだけなら **leading dash を外す**（`rg env-file .claude/hooks/` は通る）
+- `op run` の行に他のコマンドを繋げられない。雛形のコピーと実行を 1 行に畳む形（`cp .op-env.local.example .op-env.local && op run …`）、`cd` してからの実行、実行結果のリダイレクトによるログ取りが該当する。**分けて実行すれば通る**
+- 単一コマンド判定は文字単位なので、**引用済み引数の中の区切り記号でも落ちる**（`op run --env-file=… -- node -e "console.log('a|b')"`）。この形は分けても回避できない。判定範囲を絞れるかは [#1987](https://github.com/Dayopt/dayopt/issues/1987) で検討する
 
 **触らない（読みも書きもしない）**:
 

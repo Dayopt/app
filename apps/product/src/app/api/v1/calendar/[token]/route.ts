@@ -17,6 +17,9 @@ import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+/** DB からのトークン解決 + 最大1000件のプラン取得 + iCal 変換の合算。 */
+export const maxDuration = 60;
+
 /**
  * トークンからユーザーIDを取得
  */
