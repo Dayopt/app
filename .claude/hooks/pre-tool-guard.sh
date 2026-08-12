@@ -80,14 +80,19 @@ fi
 # heredoc の本文はコマンドではなくデータなので、行頭一致するコマンド検査から外す。
 # 本文を落とすのは次の 2 条件を **両方** 満たす時だけ:
 #   1. 導入部（<< より前）が本文を data として読むと分かっているコマンド
-#   2. 導入行に pipe が無い
-# 条件 2 が要るのは `cat <<EOF | bash` のように、導入部だけ見ると data 消費でも
-# 本文が実行される形があるため。条件 1 だけで落とすと、今ブロックできている形が
-# 通るようになる。認識できない形は本文を残す側（＝誤検知が残る安全側）へ倒れる。
+#   2. 導入行に「本文の行き先が読めなくなる要素」が無い（pipe / コマンド置換 / eval）
+# 条件 2 が要るのは、導入部だけ見ると data 消費でも本文が実行される形があるため:
+#   cat <<EOF | bash   … pipe の先で実行される
+#   eval "$(cat <<EOF  … コマンド置換の結果が実行される
+#   x=$(cat <<EOF      … 変数へ入り、後で実行されうる
+# 条件 1 だけで落とすと、今ブロックできている形が通るようになる（実測: eval と
+# $( ) の 2 形が main では block、条件 2 無しでは allow になった）。認識できない
+# 形は本文を残す側（＝誤検知が残る安全側）へ倒れる。
 strip_heredoc_bodies() {
   local input="$1" out="" line trimmed intro delim=""
   local in_body=0
   local sq="'"
+  local bt='`'
   # 正規表現は変数へ置いてから使う。[[ ]] の中へ直接書くと bash の tokenizer が
   # 引用符や括弧を先に解釈して構文エラーになる（2026-08-12 に踏んだ）。
   # .* を貪欲に取ることで、行内に複数ある場合は最後の << を見る。
@@ -104,7 +109,8 @@ strip_heredoc_bodies() {
     if [[ $line =~ $heredoc_re ]]; then
       intro="${BASH_REMATCH[1]}"
       delim="${BASH_REMATCH[2]}"
-      if [[ $line != *"|"* ]] && [[ $intro =~ $data_consumer_re ]]; then
+      if [[ $line != *"|"* ]] && [[ $line != *'$('* ]] && [[ $line != *"$bt"* ]] \
+        && [[ $line != *"eval"* ]] && [[ $intro =~ $data_consumer_re ]]; then
         in_body=1
       fi
     fi
@@ -237,15 +243,29 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     fi
   done
 
-  # 同一コマンド内で env-file を書き換えてから消費する形。hook は Bash 呼び出し
-  # ごとに実行前 1 回しか発火しないため、下の中身検査は **書き換え前** の内容を
-  # 読む（echo '...' >> <env-file> && op run --env-file=<env-file> -- ... が素通り
-  # する）。検査できない中身について判断はしないので、この組み合わせは落とす。
-  # 書き込みの検出は .op-env.admin 側と同じ idiom を使う。
+  # env-file を消費するコマンドは、**単一の単純コマンド**であることを要求する。
+  #
+  # hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、下の中身検査は
+  # コマンド実行前のファイルを読む。同じコマンドの中で先に書き換えられると、
+  # 検査した中身と実際に解決される中身が別物になる
+  # （echo '…' >> <env-file> && op run --env-file=<env-file> -- … ）。
+  #
+  # 書き込み手段を列挙する方式では閉じない。python3 / node / perl / awk の
+  # ファイル書き込み、`>|` のような別形のリダイレクト、コマンド置換の中に隠す形と
+  # 際限がなく、実測でも python3 / node / `>|` が列挙をすり抜けた。**書き手を
+  # 数え上げるのをやめ、「別のことが起きる余地」自体を落とす。** 区切り
+  # （; & | 改行）とコマンド置換（$( ) と backtick）のいずれかがあれば拒否する。
+  #
+  # 副作用として、cd で移動してから消費する形も落ちる。中身検査は hook の cwd から
+  # path を解決するので、これが通ると検査対象と実際のファイルがずれていた。
+  #
+  # 代償: op run の行に他のコマンドを繋げられない（リダイレクトでのログ取りを含む）。
+  # 分けて実行すれば通る。
   if echo "$COMMAND_JOINED" | grep -qE -- '-env-file'; then
-    if echo "$COMMAND_JOINED" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*(cp|mv|touch|tee|install|ln|sed)[[:space:]][^;&|]*\.op-env\.local' \
-      || echo "$COMMAND_JOINED" | grep -qE '>>?[[:space:]]*[^[:space:];&|]*\.op-env\.local'; then
-      echo "BLOCKED: 同一コマンド内で env-file を書き換えてから op run へ渡す形は、書き換え後の中身を検査できないため落とします。書き込みと実行を別のコマンドに分けてください" >&2
+    bt='`'
+    if [[ "$COMMAND" == *";"* ]] || [[ "$COMMAND" == *"&"* ]] || [[ "$COMMAND" == *"|"* ]] \
+      || [[ "$COMMAND" == *'$('* ]] || [[ "$COMMAND" == *"$bt"* ]] || [[ "$COMMAND" == *$'\n'* ]]; then
+      echo "BLOCKED: env-file を op run へ渡すコマンドは、単一の単純コマンドにしてください（区切り ; & | 改行 とコマンド置換 \$( ) は不可）。同じコマンドの中で env-file を書き換えられると、guard が検査した中身と実際に解決される中身が別物になるためです。書き込みや cd は別のコマンドに分けてください" >&2
       exit 2
     fi
   fi

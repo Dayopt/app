@@ -270,6 +270,12 @@ describe('pre-tool-guard.sh: heredoc 本文の誤検知', () => {
     ['cat heredoc を sh へ pipe', heredoc("cat <<'EOF' | sh", 'git push --no-verify')],
     ['jq heredoc を bash へ pipe', heredoc('jq -r .cmd <<EOF | bash', 'git reset --hard')],
     ['heredoc を xargs へ pipe', heredoc('cat <<EOF | xargs -I{} sh -c {}', 'git push --force')],
+    // コマンド置換も本文の行き先を読めなくする。導入部は cat でも、置換結果が
+    // eval / 変数経由で実行されうる。pipe だけを条件にしていた時、この 2 形は
+    // 変更前ブロックできていたのに通るようになっていた（実測して塞いだ）。
+    ['eval + heredoc', 'eval "$(cat <<\'EOF\'\ngit push --no-verify\nEOF\n)"'],
+    ['コマンド置換 + heredoc', 'x=$(cat <<EOF\ngit reset --hard\nEOF\n)'],
+    ['backtick + heredoc', 'x=`cat <<EOF\ngit reset --hard\nEOF\n`'],
     // 本文の後に続く実コマンドは検査対象に戻る
     ['heredoc の後続行', `${heredoc("git commit -F - <<'EOF'", 'msg')}\ngit push --no-verify`],
     // <<< は here-string であって heredoc ではない
@@ -344,8 +350,12 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
   });
 
   // hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、同一コマンド内で
-  // 書き換えられると上の中身検査は書き換え前を読む。検査できない中身について
-  // 判断しない。
+  // 書き換えられると上の中身検査は書き換え前を読む。検査した中身と実際に解決
+  // される中身が別物になるため、そういう余地のあるコマンド形自体を落とす。
+  //
+  // 書き手を列挙する方式では閉じない。列挙（cp / mv / tee / sed / リダイレクト）を
+  // 実装した時点で python3 / node / `>|` がすり抜けることを実測した。区切りと
+  // コマンド置換という「別のことが起きる余地」の方を落とす。
   it.each([
     [
       '追記してから消費',
@@ -357,7 +367,34 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     ],
     ['sed -i してから消費', `sed -i '' s/a/b/ ${LOCAL}; op run --env-file=${LOCAL} -- sh -c true`],
     ['tee してから消費', `echo x | tee ${LOCAL} && op run --env-file=${LOCAL} -- sh -c true`],
-  ])('同一コマンド内の書き換え + 消費は落とす: %s', (_label, command) => {
+    // 列挙方式をすり抜けた書き手たち
+    [
+      'python3 で追記してから消費',
+      `python3 -c "open('${LOCAL}','a').write('X=${PROD_REF}')" && op run --env-file=${LOCAL} -- sh -c true`,
+    ],
+    [
+      'node で追記してから消費',
+      `node -e "require('fs').appendFileSync('${LOCAL}','X=${PROD_REF}')" && op run --env-file=${LOCAL} -- sh -c true`,
+    ],
+    [
+      'awk で書いてから消費',
+      `awk 'BEGIN{print "X" > "${LOCAL}"}' && op run --env-file=${LOCAL} -- sh -c true`,
+    ],
+    // >| は > の別形。除外文字クラスに | を入れていたリダイレクト検出をすり抜けた
+    [
+      '>| で上書きしてから消費',
+      `echo 'X=${PROD_REF}' >| ${LOCAL} && op run --env-file=${LOCAL} -- sh -c true`,
+    ],
+    // 改行も区切り。COMMAND_JOINED は改行を空白へ寄せるので、生の文字列側で見る
+    [
+      '改行で繋いだ書き換え + 消費',
+      `echo 'X=${PROD_REF}' >> ${LOCAL}\nop run --env-file=${LOCAL} -- sh -c true`,
+    ],
+    // コマンド置換の中に書き手を隠す形
+    ['コマンド置換を含む消費', `op run --env-file=${LOCAL} -- sh -c "$(printf x)"`],
+    // cd は中身検査の path 解決をずらす。同じ規則で落ちる
+    ['cd してから消費', `cd /tmp && op run --env-file=${LOCAL} -- sh -c true`],
+  ])('env-file の消費は単一の単純コマンドに限る: %s', (_label, command) => {
     expect(runGuard(bash(command), cleanDir)).toBe('block');
   });
 

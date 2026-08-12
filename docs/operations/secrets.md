@@ -54,15 +54,15 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 **path が allowlist を通っても、中身を検査する。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://Dayopt-Production/…` を書き足せば path トリックなしで production credential に届く。そこで **`op://` の vault を allowlist で判定する** — 通すのは `Dayopt-Staging` / `Dayopt-Shared` / `Dayopt-Local` だけで、それ以外を参照する env-file は落とす。`Dayopt-Production` だけを禁止する形にしないのは、vault が増えた時に穴が開くため。検査は 3 層に置く:
 
 1. **実行時** — 許可形を通った env-file の実ファイルを読み、許可外 vault があれば落とす。ファイルが無ければ解決される参照も無いので通す
-2. **同一コマンド内の書き換え + 消費** — hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、`echo … >> <env-file> && op run …` のような形では 1 が**書き換え前**を読む。検査できない中身について判断はせず、この組み合わせは落とす
+2. **消費は単一の単純コマンドに限る** — hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、同じコマンドの中で先に書き換えられると 1 が**書き換え前**を読む（`echo … >> <env-file> && op run …`）。書き手を数え上げる方式は閉じない（`cp` / `tee` / `sed` / リダイレクトを列挙した実装を、`python3` / `node` / `>|` がすり抜けることを実測した）。**書き手ではなく「別のことが起きる余地」を落とす** — flag を言及するコマンドに区切り（`;` `&` `|` 改行）かコマンド置換（`$( )` / backtick）があれば拒否する
 3. **書き込み時（Write / Edit）** — `.op-env.local` / `.op-env.local.example` へ許可外 vault を書くこと自体を落とす。1 は agent が `op run` を直接打つ場面でしか発火しない（`pnpm typecheck:op` などは npm script の内側で `op run` するので hook から見えない）ため、書き足しを発生源で止める
 
 **この経路は本節の変更が新設したものではない。** 以前の `.op-env.local.example` は Supabase の接続情報を `op://Dayopt-Staging/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
 
 **閉じない境界**（意図的に追わない。書かない境界は「閉じているはず」と誤読される方が危険なので明記する）:
 
-- **実行時に文字列を組み立てる形** — 変数展開、`eval`、base64、wrapper script を書いてそれを実行する、`--env-$X` のように flag 名を組み立てる。これは事故ではなく意図的な回避
-- **コマンド自身が cwd を変える形** — 中身の検査は hook の cwd から path を解決するので、`cd /tmp && op run --env-file=<同名ファイル> -- …` では別のファイルが解決される。上と同じ class
+- **実行時に文字列を組み立てる形** — 変数展開、base64、wrapper script を書いてそれを実行する、`--env-$X` のように flag 名を組み立てる。これは事故ではなく意図的な回避（`eval` とコマンド置換は、flag を言及するコマンドでは上記 2 が落とす）
+- **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
 - **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
 
 **hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
@@ -72,7 +72,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 **受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
 
 - `-env-file` のあとに何か語や引用符が続く文字列は、Bash 引数に含めるだけで落ちる（引用符の中でも散文でも同じ。`rg -- '--env-file' .claude/hooks/` のような自己検索も含む）。docs や commit message にコマンド例を書く時は Write / Edit で file に書いてから `--body-file` / `-F` で渡す。名前を検索したいだけなら **leading dash を外す**（`rg env-file .claude/hooks/` は通る）
-- 雛形のコピーと実行を 1 行に畳んだ形（`cp .op-env.local.example .op-env.local && op run --env-file=… -- …`）は落ちる。2 つのコマンドに分ければ通る
+- `op run` の行に他のコマンドを繋げられない。雛形のコピーと実行を 1 行に畳む形（`cp .op-env.local.example .op-env.local && op run …`）、`cd` してからの実行、実行結果のリダイレクトによるログ取りが該当する。**分けて実行すれば通る**
 
 **触らない（読みも書きもしない）**:
 
