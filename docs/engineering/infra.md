@@ -5,7 +5,7 @@ last_verified: 2026-08-09
 
 # インフラ・環境・API/Routing 総覧
 
-環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
+環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、災害復旧手順、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
 
 ---
 
@@ -543,7 +543,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 - `src/lib/turnstile/`（app / web 両方）
 - `src/features/auth/components/SignupForm.tsx`（app）
 - `src/features/auth/stores/useAuthStore.ts`（app、`captchaToken` option 追加）
-- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除）
+- `src/app/api/auth/route.ts`（app、reCAPTCHA 分岐削除。この route 自体は #1942 で削除済み）
 - `src/app/[locale]/(auth)/client-layout.tsx`（app、`RecaptchaScript` 削除）
 - `src/app/[locale]/(marketing)/contact/contact-form.tsx`（web）
 - `src/app/api/contact/route.ts`（web、`verifyTurnstile` 挿入）
@@ -554,7 +554,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 
 ### 今後の拡張余地
 
-- **app の API route 化**: 現状 signup は client-side Supabase 直呼び。将来 server-side で追加の anti-abuse（IP 評価、メールドメイン検査など）を挟むなら `/api/auth/signup` route に統一する。route 側の Turnstile 検証は既に schema 上で受け付け可能な形に残してある
+- **app の API route 化**: signup / signin は client-side Supabase 直呼び。将来 server-side で追加の anti-abuse（IP 評価、メールドメイン検査など）を挟むなら、その時点で route と rate limiter を新設する。かつて存在した `/api/auth` route は呼び出し元ゼロの攻撃面だったため #1942 で削除済みで、再利用できる残骸は無い
 - **Turnstile analytics 活用**: Cloudflare dashboard の challenge 通過率 / 失敗率を週次で確認する運用を確立する
 - **ログイン flow への適用**: ブルートフォース対策として login にも Turnstile を追加する余地あり（現状は rate limit のみ）
 
@@ -568,23 +568,22 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 
 ### 一覧
 
-| App     | Path                       | Method               | 認証                     | Rate Limit                                                        | Runtime                  | 副作用 / 説明                                                                                                  |
-| ------- | -------------------------- | -------------------- | ------------------------ | ----------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Product | `/api/health`              | GET                  | なし                     | なし                                                              | nodejs                   | DB / Upstash Redisの疎通をcheckし`healthy / degraded / unhealthy`を返す。Productionは`{ status }`だけを公開    |
-| Product | `/api/csp-report`          | POST                 | なし                     | IP 20/分 + 全体120/分                                             | nodejs                   | Product originの16 KiB以下のCSP reportだけを検証し、URL queryを除去してSentryへ送信                            |
-| Product | `/api/trpc/[trpc]`         | GET / POST           | procedure依存            | procedure依存                                                     | nodejs                   | tRPC procedureのルーティング本体。Contactは認証済み`contact.submit`を使う                                      |
-| Product | `/api/beacon/entry-save`   | POST                 | Supabase Auth (Cookie)   | なし                                                              | nodejs                   | `navigator.sendBeacon()`経由のentry緊急保存                                                                    |
-| Product | `/api/auth`                | GET / POST           | mixed                    | signin IP+email 各5/15分、signup IP 5/15分、reset IP+email 各3/時 | nodejs                   | Supabase認証管理。通常UIは現在Supabase Authを直接利用                                                          |
-| Product | `/api/v1/calendar/[token]` | GET                  | token (URL)              | `icalFeedRateLimit`                                               | nodejs                   | Service Roleで対象userのplansをiCalendar形式へ変換                                                             |
-| Product | `/api/webhooks/resend`     | POST                 | Product Resend signature | Redis processing lease                                            | nodejs (maxDuration 30s) | Product contact failureをPIIなしでSentryへ通知し、既存transactional mailのbounce / complaint suppressionも維持 |
-| Product | `/api/webhooks/stripe`     | POST                 | Stripe signature         | なし                                                              | nodejs (maxDuration 30s) | subscription stateを反映しtransactional emailを送る                                                            |
-| Web     | `/api/compass-docs`        | GET                  | なし                     | なし                                                              | nodejs (maxDuration 30s) | Compass内の公開ドキュメントを検索                                                                              |
-| Web     | `/api/contact`             | POST                 | CSRF + Turnstile         | IP + Web全体                                                      | nodejs (maxDuration 30s) | 16 KiB以下のstrict inputをProduction限定でResendへ配送。成功形式は`{ success: true }`                          |
-| Web     | `/api/csp-report`          | POST                 | なし                     | IP + Web全体                                                      | nodejs (maxDuration 30s) | Web originのCSP reportを検証・正規化してSentryへ送信                                                           |
-| Web     | `/api/search`              | GET                  | なし                     | IP                                                                | nodejs (maxDuration 30s) | build済み検索indexをlocale別に検索                                                                             |
-| Web     | `/api/og`                  | GET                  | なし                     | なし                                                              | edge (maxDuration 25s)   | SNS向けOG画像を動的生成                                                                                        |
-| Web     | `/api/v1/system/*`         | GET / POST / OPTIONS | なし                     | なし                                                              | nodejs (maxDuration 5s)  | 廃止済みsystem APIを常に404にするretirement boundary                                                           |
-| Web     | `/api/webhooks/resend`     | POST                 | Web Resend signature     | Redis processing lease                                            | nodejs (maxDuration 15s) | Web contact failureだけをsource tagで所有判定し、PIIなしでSentryへ通知                                         |
+| App     | Path                       | Method               | 認証                     | Rate Limit             | Runtime                  | 副作用 / 説明                                                                                                  |
+| ------- | -------------------------- | -------------------- | ------------------------ | ---------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Product | `/api/health`              | GET                  | なし                     | なし                   | nodejs                   | DB / Upstash Redisの疎通をcheckし`healthy / degraded / unhealthy`を返す。Productionは`{ status }`だけを公開    |
+| Product | `/api/csp-report`          | POST                 | なし                     | IP 20/分 + 全体120/分  | nodejs                   | Product originの16 KiB以下のCSP reportだけを検証し、URL queryを除去してSentryへ送信                            |
+| Product | `/api/trpc/[trpc]`         | GET / POST           | procedure依存            | procedure依存          | nodejs                   | tRPC procedureのルーティング本体。Contactは認証済み`contact.submit`を使う                                      |
+| Product | `/api/beacon/entry-save`   | POST                 | Supabase Auth (Cookie)   | なし                   | nodejs                   | `navigator.sendBeacon()`経由のentry緊急保存                                                                    |
+| Product | `/api/v1/calendar/[token]` | GET                  | token (URL)              | `icalFeedRateLimit`    | nodejs                   | Service Roleで対象userのplansをiCalendar形式へ変換                                                             |
+| Product | `/api/webhooks/resend`     | POST                 | Product Resend signature | Redis processing lease | nodejs (maxDuration 30s) | Product contact failureをPIIなしでSentryへ通知し、既存transactional mailのbounce / complaint suppressionも維持 |
+| Product | `/api/webhooks/stripe`     | POST                 | Stripe signature         | なし                   | nodejs (maxDuration 30s) | subscription stateを反映しtransactional emailを送る                                                            |
+| Web     | `/api/compass-docs`        | GET                  | なし                     | なし                   | nodejs (maxDuration 30s) | Compass内の公開ドキュメントを検索                                                                              |
+| Web     | `/api/contact`             | POST                 | CSRF + Turnstile         | IP + Web全体           | nodejs (maxDuration 30s) | 16 KiB以下のstrict inputをProduction限定でResendへ配送。成功形式は`{ success: true }`                          |
+| Web     | `/api/csp-report`          | POST                 | なし                     | IP + Web全体           | nodejs (maxDuration 30s) | Web originのCSP reportを検証・正規化してSentryへ送信                                                           |
+| Web     | `/api/search`              | GET                  | なし                     | IP                     | nodejs (maxDuration 30s) | build済み検索indexをlocale別に検索                                                                             |
+| Web     | `/api/og`                  | GET                  | なし                     | なし                   | edge (maxDuration 25s)   | SNS向けOG画像を動的生成                                                                                        |
+| Web     | `/api/v1/system/*`         | GET / POST / OPTIONS | なし                     | なし                   | nodejs (maxDuration 5s)  | 廃止済みsystem APIを常に404にするretirement boundary                                                           |
+| Web     | `/api/webhooks/resend`     | POST                 | Web Resend signature     | Redis processing lease | nodejs (maxDuration 15s) | Web contact failureだけをsource tagで所有判定し、PIIなしでSentryへ通知                                         |
 
 ### 共通方針
 
@@ -597,7 +596,6 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
   - `/api/health`: 単純な GET、外部監視ツール対応
   - `/api/csp-report`: ブラウザが直接 POST する CSP report-uri
   - `/api/beacon/entry-save`: `navigator.sendBeacon()` は tRPC client を使えない
-  - `/api/auth`: Supabase Auth と密接、Cookie 設定の都合
   - `/api/v1/calendar/[token]`: 外部カレンダーアプリが直接 GET、tRPC 形式不可
   - Web `/api/contact`: 未認証のmarketing siteから送る公開formであり、CSRF / Turnstile / body上限をroute境界で扱う
   - `/api/webhooks/*`: 外部サービスが直接 POST、レスポンス形式が tRPC と合わない
@@ -671,8 +669,9 @@ flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production
 - **新規 route handler を追加したら、`route-duration-contract.test.ts` の契約表に 1 行足す**（足さないと test が落ちる）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
-- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / Auth / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
-- AuthのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`、signin / resetはIP-firstで独立した正規化email bucketも確認する。この前提はVercel単独topologyに依存する
+- 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
+- rate limitのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`に入れてfail closedにする。この前提はVercel単独topologyに依存する
+- **認証操作にapp側のrate limit層は無い**。かつて`/api/auth`が持っていたが、呼び出し元ゼロの攻撃面だったため#1942で削除した。現在はSupabase Auth のproject-level rate limitだけが担う（期待値は`scripts/production-auth-config-audit.mjs`がpinする）。server側のanti-abuseが要るなら、その時点でrouteとlimiterを新設する
 - 副作用はloggerで技術状態だけを追跡し、問い合わせ本文・氏名・email・raw webhook bodyを記録しない
 
 ### 関連ドキュメント
@@ -1347,9 +1346,106 @@ ORDER BY schemaname, tablename;
 
 ---
 
+## 災害復旧手順
+
+策定日: 2026-08-12（[#1879](https://github.com/Dayopt/dayopt/issues/1879)）
+
+**次節の §DB Migration Rollback 手順書 が「判断の巻き戻し」（自分が適用した migration を戻す）なのに対し、本節は「事故からの復旧」（データ消失・オペミス・DB 破損）を扱う。** 原因が自分の変更なら次節、失われたデータを取り戻すなら本節。
+
+> **⚠ 本節の RTO / RPO はまだ実測されていない。** 復元演習は未実施で、手順は [復元演習手順書](../operations/disaster-recovery-drill.md) に用意済み。**演習を通していない経路を障害中にぶっつけで走らせることになる**前提で判断する。演習後にここへ実測値を書く。
+
+### 復元でも戻らないもの
+
+障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
+
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し                                                                                      |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）    |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                             |
+
+**production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
+
+> custom role の password も backup に含まれないが、**現状 Dayopt に custom role は無い**（migration に `CREATE ROLE` / `CREATE USER` が 0 件）。追加したらこの表に足す。
+
+### 復元前に止めるもの
+
+**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。ところが**現状 Dayopt に「書き込みを止める」手段は無い**。
+
+#### メンテナンスモードは書き込みを止めない（2026-08-12 実測）
+
+`NEXT_PUBLIC_MAINTENANCE_MODE=true` が止めるのは**画面遷移だけ**。
+
+- `apps/product/src/proxy.ts` はメンテナンス判定（`isMaintenanceMode`）より**前に** `pathname.startsWith('/api')` で早期 return する
+- さらに `config.matcher` が `api` を除外しているので、`/api/trpc` と `/api/webhooks/*` は proxy を通らない
+
+結果として、**既に画面を開いているユーザーの mutation と Stripe / Resend の webhook は、メンテナンスモード中も DB を更新し続ける**。「メンテナンスモードにしたから止まった」と判断すると、その間の書き込みを失う。
+
+#### いま実際に止められるもの
+
+| 対象                   | 手段                                                         | 影響                                       |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 画面からの操作         | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
+| API / webhook 書き込み | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止。webhook は再送に頼る） |
+| MCP 経由の書き込み     | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
+| pg_cron                | 下記 SQL                                                     | cron 処理の停止                            |
+
+**恒久対応（API 層の write fence）は [#1972](https://github.com/Dayopt/dayopt/issues/1972) で追う。** それまでは「メンテナンスモード + deployment 停止」でしか write を止められない前提で判断する。
+
+#### pg_cron を止める
+
+pg_cron の job は Postgres 内部で独立に走るため、app 側を何をしても止まらない。
+
+```sql
+-- ① 先に控える。production の cron は Dashboard 設定が正本で、
+--    migration から再生成できない。控えずに止めると復旧手段が消える
+SELECT jobid, jobname, schedule, command, active FROM cron.job ORDER BY jobname;
+
+-- ② 控えた内容を保存してから止める
+SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
+```
+
+**①を飛ばさない。** 止めた job は復旧後に手で戻すことになり、控えが無いとスケジュールも command も分からなくなる。
+
+### 復旧後に戻すもの（サービス再開前に確認する）
+
+**止めたものは戻さないと恒久的に止まったままになる。** 特に backup 復元をせず rollback 経路へ抜けた場合、cron を止めたことだけが残る。
+
+- [ ] **pg_cron を再登録する。** 控えた `jobname` / `schedule` / `command` から `SELECT cron.schedule('<name>', '<schedule>', '<command>');` で戻し、名前・schedule・command・`active` の一致を確認する
+  - 戻し忘れると `expire-calendar-revoke-outbox`（期限切れ revoke の処理）などが恒久停止する
+- [ ] Edge Function とその secrets（別 project へ復元した場合）
+- [ ] Auth Hook の登録（別 project へ復元した場合。§復元でも戻らないもの）
+- [ ] 最後にメンテナンスモードを解除する
+
+§DB Migration Rollback 手順書 の緊急対応フローチャートには pg_cron 停止ステップがあるが、災害復旧でも同じことが要る。
+
+### 復旧経路の選択
+
+| 状況                       | 経路                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 自分の migration が原因    | §DB Migration Rollback 手順書（逆 SQL を新 migration として適用）                                       |
+| データ消失・破損・オペミス | backup / PITR から復元。**production への in-place restore は破壊的で、実行中はプロジェクトが停止する** |
+| schema だけ壊れた          | forward restoration migration（削除済みデータは戻らない）                                               |
+
+**backup の保持期間と PITR の有効・無効は Dashboard でしか確認できない**（Management API の project endpoint は backup 情報を返さない。2026-08-12 実測）。障害中に「backup があるはず」で動かず、まず Dashboard で存在を確認する。
+
+### 実測値
+
+| 指標                             | 値                                                            |
+| -------------------------------- | ------------------------------------------------------------- |
+| RTO（復元開始 → 主要フロー通過） | **未実測**                                                    |
+| RPO（失う最大時間幅）            | **未実測**（daily backup なら最大 24 時間、PITR なら約 2 分） |
+
+手順の詳細・確認観点・中止条件は [復元演習手順書](../operations/disaster-recovery-drill.md) が正本。本節は結論と「戻らないもの」だけを持つ。
+
+---
+
 ## DB Migration Rollback 手順書
 
 本番デプロイ事故時の逆マイグレーションSQL集。Supabaseはネイティブのrollback機構を持たないため、**逆SQLを新しいマイグレーションとして適用する**方式で対応する。
+
+**データ消失・オペミスからの復旧は本節の対象外。** その場合は §災害復旧手順 を読む。
 
 > **対象**: `supabase/migrations/` 配下の全17マイグレーション（baseline除く）
 

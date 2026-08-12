@@ -20,7 +20,7 @@ const data = await serverHelpers.plans.list.fetch();
 useEffect(() => { fetch('/api/plans').then(...) }, []);
 ```
 
-REST維持: `/api/auth/*`, `/api/health/*`, `/api/v1/system/*`, `/api/config/*`, `/api/integrations/*`
+REST維持: `/api/health/*`, `/api/v1/system/*`, `/api/config/*`, `/api/integrations/*`
 
 `/api/integrations/*` は外部 IdP との redirect flow（OAuth の start / callback）なので tRPC 化できない。302 と cookie を返す必要があり、呼び出し元がブラウザのナビゲーションだから。
 

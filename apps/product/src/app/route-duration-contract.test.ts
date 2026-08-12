@@ -52,7 +52,6 @@ const ROUTE_DURATION_CONTRACT = {
   // 外部 I/O が複数逐次
   'src/app/[locale]/(auth)/auth/callback/route.ts': 60,
   'src/app/[locale]/(auth)/auth/confirm/route.ts': 60,
-  'src/app/api/auth/route.ts': 60,
   'src/app/api/cron/calendar-sync/route.ts': 60,
   'src/app/api/cron/external-connection-maintenance/route.ts': 60,
   'src/app/api/integrations/google-calendar/callback/route.ts': 60,

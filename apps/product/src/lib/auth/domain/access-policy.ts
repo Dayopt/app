@@ -32,6 +32,9 @@ const authProductPaths = ['/login', '/signup', '/auth'] as const;
 const authPathsAllowedWhileAuthenticated = [
   '/auth/mfa-verify',
   '/auth/confirm',
+  // メール確認の結果ページ（#1956）。確認リンクはログイン中の browser でも開かれるため、
+  // 認証済みで弾くと「確認できたのか分からないまま /week へ飛ぶ」無言バウンスになる。
+  '/auth/confirmed',
   '/auth/callback',
   '/auth/reset-password',
 ] as const;

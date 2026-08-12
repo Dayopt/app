@@ -251,12 +251,19 @@ export const AUTH_CONFIG_CONTRACT = [
     key: 'hook_custom_access_token_enabled',
     expected: false,
     failureMode: 'fail-open',
-    // **repo の記述と production 実態が食い違っている。** `scripts/enable-auth-hook.sh` は
-    // production へ `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: true` を PATCH する手順で、
-    // `supabase/config.toml` も enabled だが、2026-08-11 の実測では production は false。
-    // 手順が未実行か、実行後に戻されたかのどちらか。ここは実測値を pin する（true を置くと
-    // audit が恒久 failure になる）。**この矛盾の解消は本 audit の scope 外**で、enable 手順を
-    // 生かすなら script 実行と同じ変更でこの期待値も true にする必要がある。
+    // **production では意図的に無効**（#1946 で決着、2026-08-12）。`scripts/enable-auth-hook.sh`
+    // は有効化の手順を持ち `supabase/config.toml` も enabled だが、前者は「実行してよい条件」を
+    // 満たすまで実行しない手順書、後者は local / PR Preview にしか効かないので、いずれも
+    // production の false と矛盾しない。
+    //
+    // 無効のままにする根拠: この hook は entitlement claim を JWT に載せて proProcedure の
+    // DB 参照を消す性能最適化で、機能要件ではない。BILLING_ENFORCED が未設定の間 proProcedure
+    // は購読チェックごと skip する（`apps/product/src/lib/trpc/procedures.ts`）ため、有効化して
+    // も消せるクエリが無い。一方 on にすると解約後の暴露窓が jwt_exp まで開くので、得るものが
+    // 無いまま fail-open 側のリスクだけ増える。
+    //
+    // 有効化する時は script のヘッダにある条件を満たした上で、**script 実行と同じ変更で**この
+    // expected を true にする（片方だけ変えると audit が恒久 failure になり drift 検出が止まる）。
     why: 'JWT へ entitlement claim を注入する hook。on にすると解約後の暴露窓が jwt_exp まで開く',
   },
   {
