@@ -58,6 +58,67 @@ export const FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV = [
   'CRON_SECRET',
 ];
 
+/**
+ * アカウント削除の本人確認は service-role client 経由の `signInWithPassword` で captcha を
+ * 免除する（`src/features/auth/server/password-reauthentication.ts`）。この免除は
+ * `SUPABASE_SERVICE_ROLE_KEY` が **legacy JWT 形式**である間だけ成立し、新形式
+ * （`sb_secret_`）は Bearer として送られないため admin と解釈されず、**削除が fail-closed で
+ * 止まる**。
+ *
+ * 既存の担保は事後検知しかない。ラッパー内の canary は壊れた後の初回試行で鳴り、
+ * `production-auth-config-audit.mjs` が見るのは fail-open 依存（off になると防御が黙って
+ * 消える値）で、向きが逆のこの依存は設計上その contract に載らない。Supabase の legacy key
+ * 廃止は**外部クロックで動く**ので、事後検知では「削除できない」瞬間が先に来る。
+ */
+const LEGACY_SERVICE_ROLE_KEY_PREFIX = 'eyJ';
+
+/**
+ * 鍵の形式を build で検査する（#1952）。
+ *
+ * ## なぜ build gate か（日次 cron ではなく）
+ *
+ * `production-auth-config-audit.mjs` の cron job に渡る secret は
+ * `SUPABASE_AUTH_AUDIT_TOKEN` だけで、そこへ service role key を配ると RLS 全バイパスの鍵の
+ * 配布先が 1 つ増える。prefix 3 文字を読むために払う代償として釣り合わない
+ * （`.github/workflows/production-config-audit.yml` の auth-config job が「token の配布先を
+ * この step に閉じる」を設計理由として明記している）。build env には値が既にあるので、
+ * こちらは**新たな配布がゼロ**で、検知は「鍵を差し替えた次の deploy」= 変更が効き始める
+ * 瞬間になる。
+ *
+ * ## 止めるのが正しい
+ *
+ * 削除フローが黙って壊れた deploy を出荷するより、止めて #1925 の (c) 案（Turnstile 方式）
+ * への切替判断に戻す方がよい。鍵を回す人はどのみちその判断をする。
+ *
+ * ## 保証境界
+ *
+ * 見るのは**値が入っている時の形式だけ**。欠落は検査しない — この gate が守るのは「鍵の
+ * 回転で形式が変わる」経路で、回転は変数を消さないため。欠落は service-role を使う全経路が
+ * runtime で落ちる別クラスの故障で、`env.ts` の検証（build phase では skip される）と
+ * runtime error が担当する。
+ */
+function assertLegacyJwtServiceRoleKey(env) {
+  const value = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (typeof value !== 'string') return;
+
+  // runtime が実際に使う文字列と同じ正規化で判定する。`src/env.ts` は Vercel env pull が
+  // 付ける literal な `\n` の除去と trim を通してから検証しており、そこと judge が食い違うと
+  // 「runtime では通るのに build だけ落ちる」偽陽性になる。偽陽性は production deploy を
+  // 止める側の誤りなので、寄せる先は runtime。
+  const normalized = value.replace(/\\n/gu, '').trim();
+  if (normalized === '') return;
+
+  if (!normalized.startsWith(LEGACY_SERVICE_ROLE_KEY_PREFIX)) {
+    throw new Error(
+      'Product production build requires a legacy JWT SUPABASE_SERVICE_ROLE_KEY: ' +
+        'the account deletion flow verifies the password through a service-role client to bypass ' +
+        'captcha, and a non-legacy key is not interpreted as admin, so deletion fails closed. ' +
+        'Switch the re-authentication path to the Turnstile approach (issue #1925 option c) before ' +
+        'rotating the key to the new format.',
+    );
+  }
+}
+
 export const PRODUCT_PRODUCTION_ORIGIN = 'https://app.dayopt.app';
 export const MCP_PRODUCTION_ORIGIN = 'https://mcp.dayopt.app';
 const PRODUCTION_SUPABASE_HOST = 'yvglwblxrnrenfifsnje.supabase.co';
@@ -151,6 +212,8 @@ export function assertProductOperationalProductionBuildEnv(env) {
   } catch {
     throw new Error('Product production build requires a valid UPSTASH_REDIS_REST_URL');
   }
+
+  assertLegacyJwtServiceRoleKey(env);
 
   return true;
 }

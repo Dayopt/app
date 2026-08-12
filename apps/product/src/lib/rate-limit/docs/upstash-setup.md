@@ -17,7 +17,7 @@ ProductのProduction build gateは、どちらかの値がない場合、URLがH
 - Upstash Ratelimit Analyticsは無効にし、raw IP、user ID、calendar tokenを送らない
 - identifierはProduct固有namespace prefixを加えてSHA-256化してからUpstash keyへ渡す
 - SDK timeoutは`success: true`を返すため、2秒で`RateLimitUnavailableError`へ変換する
-- AuthとCSPはbackend unavailable時に503でfail-closedにする
+- CSPはbackend unavailable時に503でfail-closedにする
 - tRPCとiCalの既存インメモリfallbackは可用性方針として維持する
 - 429は想定内レスポンスでありSentry Issue化しない。backend障害だけを元のError付きで一度captureする
 
@@ -25,8 +25,6 @@ ProductのProduction build gateは、どちらかの値がない場合、URLがH
 
 | 境界                 | quota          |
 | -------------------- | -------------- |
-| signin / signup      | 5回 / 15分     |
-| password reset       | 3回 / 1時間    |
 | contact              | 5回 / 1時間    |
 | protected tRPC       | 100回 / 1分    |
 | timeblock作成        | 500回 / 24時間 |
@@ -38,7 +36,6 @@ ProductのProduction build gateは、どちらかの値がない場合、URLがH
 
 ```bash
 pnpm --filter @dayopt/product exec vitest --project unit run src/lib/rate-limit/__tests__/upstash.test.ts
-pnpm --filter @dayopt/product exec vitest --project unit run src/app/api/auth/route.test.ts
 pnpm --filter @dayopt/product exec vitest --project unit run src/app/api/csp-report/__tests__/route.test.ts
 ```
 

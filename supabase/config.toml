@@ -250,7 +250,16 @@ inactivity_timeout = "720h"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# JWTにsubscription_statusを埋め込み、proProcedureでの毎リクエストDBクエリを排除
+# JWTにsubscription_statusを埋め込み、proProcedureでの毎リクエストDBクエリを排除する性能最適化。
+#
+# **このファイルの [auth.*] は local と PR Preview branch にしか効かない。production の Auth
+# 設定は Supabase Dashboard が正本**（scripts/production-auth-config-audit.mjs の docstring）。
+# production では意図的に無効のままにしてある（#1946 で決着、2026-08-12）。BILLING_ENFORCED が
+# 未設定の間 proProcedure は購読チェック自体を skip するため、有効化しても消せる DB クエリが
+# 無い。有効化する条件と手順は scripts/enable-auth-hook.sh のヘッダを読む。
+#
+# local は enabled のままにする。claim がある側の経路（lib/trpc/context.ts の claim 読み取り）を
+# 開発時に実際に通しておくため。claim が無い側は production が担保している。
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
