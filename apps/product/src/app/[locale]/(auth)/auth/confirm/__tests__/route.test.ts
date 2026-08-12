@@ -82,14 +82,35 @@ describe('auth confirm route', () => {
     },
   );
 
-  // signup / recovery は confirm route を共用する。session が立つ通常経路で
+  // signup は confirm route を共用する。session が立つ通常経路で
   // next へ行く挙動が変わっていないことを固定する（regression 対象）。
-  it.each(['signup', 'recovery'])('%s は session が立てば従来どおり next へ送る', async (type) => {
+  it('signup は session が立てば従来どおり next へ送る', async () => {
     verifyOtp.mockResolvedValue({ data: { session: SESSION }, error: null });
 
-    const response = await GET(request(`token_hash=hash&type=${type}&next=%2Fcalendar`));
+    const response = await GET(request('token_hash=hash&type=signup&next=%2Fcalendar'));
 
     expect(locationOf(response).pathname).toBe('/calendar');
+  });
+
+  // #1928: recovery は next を無視して固定で /auth/reset-password へ送る。メール送信経路
+  // （Edge Function の redirect_to 構築、または Redirect URLs allowlist）の欠落で next が
+  // 付かないと fallback の /week へ落ち、パスワード設定フォームに到達できない事故があった。
+  it('recovery は session が立てば next を無視して /auth/reset-password へ送る', async () => {
+    verifyOtp.mockResolvedValue({ data: { session: SESSION }, error: null });
+
+    const response = await GET(request('token_hash=hash&type=recovery&next=%2Fcalendar'));
+
+    expect(locationOf(response).pathname).toBe('/auth/reset-password');
+  });
+
+  // recovery で next が無い（当初の #1928 症状: next 自体が付与されなかった）場合も
+  // 固定 path へ送る。next の値に依存しない設計であることを確認する。
+  it('recovery は next が無くても /auth/reset-password へ送る', async () => {
+    verifyOtp.mockResolvedValue({ data: { session: SESSION }, error: null });
+
+    const response = await GET(request('token_hash=hash&type=recovery'));
+
+    expect(locationOf(response).pathname).toBe('/auth/reset-password');
   });
 
   // 失敗も同じ結果ページへ送る。login へ送ると、認証済み browser では proxy が /week へ

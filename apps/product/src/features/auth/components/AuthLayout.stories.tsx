@@ -102,6 +102,37 @@ export const LoginPathSkipped: Story = {
   ),
 };
 
+/**
+ * パスワード設定ページ相当のパス — ラップをスキップ（#2009 の回帰確認）。
+ *
+ * `/auth/reset-password` は自前で全画面センタリング wrapper（`max-w-sm`）を持つため、
+ * allowlist から漏れていると AuthLayout 自身の `max-w-sm` カードに二重ネストされ、
+ * カード幅が極端に狭くなる（1 行 7〜8 文字で縦折り返し）。allowlist 追加後は
+ * LoginPathSkipped と同じく children がそのまま返る。
+ */
+export const ResetPasswordPathSkipped: Story = {
+  parameters: {
+    nextjs: {
+      navigation: {
+        pathname: '/ja/auth/reset-password',
+      },
+    },
+  },
+  render: () => (
+    <div className="bg-surface-container flex min-h-svh flex-col items-center justify-center p-4 md:p-8">
+      <div className="w-full max-w-sm">
+        <AuthLayout>
+          <div className="bg-card rounded-lg border p-6">
+            <p className="text-muted-foreground text-sm">
+              パスワード設定フォーム相当（ページ自前の wrapper のみ、二重ネストなし）
+            </p>
+          </div>
+        </AuthLayout>
+      </div>
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -115,6 +146,7 @@ export const AllPatterns: Story = {
           <li>Default — メール確認完了ページ</li>
           <li>ErrorPage — リンク期限切れページ</li>
           <li>LoginPathSkipped — /auth/login パスではラップなし</li>
+          <li>ResetPasswordPathSkipped — /auth/reset-password パスではラップなし（#2009）</li>
         </ul>
       </section>
     </div>

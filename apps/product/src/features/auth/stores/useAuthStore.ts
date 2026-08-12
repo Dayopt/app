@@ -333,6 +333,13 @@ export const useAuthStore = create<AuthState>()(
             const safeError = getAuthErrorKey(result.error.message, 'updatePassword');
             set({ error: safeError, loading: false });
           } else {
+            // recovery でパスワードを変更した後は他端末の session を失効させる。
+            // アカウント乗っ取り被害者が最も自然に取る回復操作（パスワードリセット）で
+            // 攻撃者の refresh token を道連れにする。失敗してもパスワード更新自体は
+            // 成功しているため、結果は分岐させない（PasswordChangeDialog と同じ扱い）。
+            await observeAuthOperation('sign_out_other_sessions', () =>
+              supabase.auth.signOut({ scope: 'others' }),
+            );
             set({ loading: false });
           }
 
