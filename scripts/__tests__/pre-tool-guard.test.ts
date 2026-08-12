@@ -276,6 +276,19 @@ describe('pre-tool-guard.sh: heredoc 本文の誤検知', () => {
     ['eval + heredoc', 'eval "$(cat <<\'EOF\'\ngit push --no-verify\nEOF\n)"'],
     ['コマンド置換 + heredoc', 'x=$(cat <<EOF\ngit reset --hard\nEOF\n)'],
     ['backtick + heredoc', 'x=`cat <<EOF\ngit reset --hard\nEOF\n`'],
+    // 導入行の後続コマンドが本文を実行する形。pipe / コマンド置換だけを条件に
+    // していた時、この 3 形は変更前ブロックできていたのに通るようになっていた。
+    // 差し込み方を 1 つずつ潰すのをやめ、導入行が単一の単純コマンドであることを
+    // 要求する形に畳んで塞いだ。
+    [
+      '導入行の ; で後続実行',
+      'cat <<EOF > /tmp/run.sh; bash /tmp/run.sh\ngit push --force origin main\nEOF',
+    ],
+    [
+      '導入行の && で後続実行',
+      'cat <<EOF > /tmp/run.sh && bash /tmp/run.sh\ngit reset --hard\nEOF',
+    ],
+    ['プロセス置換', 'bash <(cat <<EOF\ngit push --no-verify\nEOF\n)'],
     // 本文の後に続く実コマンドは検査対象に戻る
     ['heredoc の後続行', `${heredoc("git commit -F - <<'EOF'", 'msg')}\ngit push --no-verify`],
     // <<< は here-string であって heredoc ではない
@@ -344,6 +357,13 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     );
   });
 
+  // quote を除いた写しにしか -env-file が現れない形。path の抽出も言及の検出も
+  // 生の写しだけを見ていた時、この形は中身検査にも単一コマンド制約にも載らず、
+  // production 参照を持つ env-file をそのまま解決できていた。
+  it('flag 名の内側に引用符があっても中身を見る', () => {
+    expect(runGuard(bash(`op run --env-f"ile"=${LOCAL} -- sh -c true`), prodDir)).toBe('block');
+  });
+
   // 存在しない file は「解決される参照が無い」ので通す。op run 側が失敗する。
   it('env-file が存在しなければ通す', () => {
     expect(runGuard(bash(`op run --env-file=${LOCAL} -- pnpm typecheck`), emptyDir)).toBe('allow');
@@ -394,6 +414,9 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     ['コマンド置換を含む消費', `op run --env-file=${LOCAL} -- sh -c "$(printf x)"`],
     // cd は中身検査の path 解決をずらす。同じ規則で落ちる
     ['cd してから消費', `cd /tmp && op run --env-file=${LOCAL} -- sh -c true`],
+    // 言及の検出を生の写しだけで行っていた時、この形は制約から外れていた
+    ['flag 名の内側に引用符 + 区切り', `cd /tmp && op run --env-f"ile"=${LOCAL} -- sh -c true`],
+    ['プロセス置換を含む消費', `op run --env-file=${LOCAL} -- diff <(echo a) <(echo b)`],
   ])('env-file の消費は単一の単純コマンドに限る: %s', (_label, command) => {
     expect(runGuard(bash(command), cleanDir)).toBe('block');
   });

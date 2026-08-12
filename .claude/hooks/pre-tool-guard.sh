@@ -77,22 +77,45 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   fi
 fi
 
+# 渡された文字列が「1 つのことしかしないコマンド」かを判定する。
+#
+# guard が「この文字列はこう動く」と読めるのは、コマンドが 1 つで、実行前に別の
+# ものが差し込まれない時だけ。危険な差し込み方を数え上げると尽きないので
+# （実測で python3 / node / `>|` / `;` 後続 / プロセス置換がそれぞれ列挙をすり
+# 抜けた）、**shell の文法上「複数のことが起きる」印**を列挙する。こちらは
+# 書き手やコマンド名と違って有限で閉じている:
+#   区切り            ; & | 改行
+#   コマンド置換      $( ) と backtick
+#   プロセス置換      <( ) と >( )
+#   実行への横流し    eval
+# リダイレクト（> >> <）は別のコマンドを走らせないので許す。
+is_single_simple_command() {
+  local s="$1" bt='`'
+  case "$s" in
+    *";"* | *"&"* | *"|"* | *'$('* | *"$bt"* | *'<('* | *'>('* | *"eval"*) return 1 ;;
+  esac
+  [[ "$s" == *$'\n'* ]] && return 1
+  return 0
+}
+
 # heredoc の本文はコマンドではなくデータなので、行頭一致するコマンド検査から外す。
 # 本文を落とすのは次の 2 条件を **両方** 満たす時だけ:
 #   1. 導入部（<< より前）が本文を data として読むと分かっているコマンド
-#   2. 導入行に「本文の行き先が読めなくなる要素」が無い（pipe / コマンド置換 / eval）
+#   2. 導入行が単一の単純コマンド（is_single_simple_command）
 # 条件 2 が要るのは、導入部だけ見ると data 消費でも本文が実行される形があるため:
-#   cat <<EOF | bash   … pipe の先で実行される
-#   eval "$(cat <<EOF  … コマンド置換の結果が実行される
-#   x=$(cat <<EOF      … 変数へ入り、後で実行されうる
-# 条件 1 だけで落とすと、今ブロックできている形が通るようになる（実測: eval と
-# $( ) の 2 形が main では block、条件 2 無しでは allow になった）。認識できない
-# 形は本文を残す側（＝誤検知が残る安全側）へ倒れる。
+#   cat <<EOF | bash                     … pipe の先で実行される
+#   cat <<EOF > /tmp/x.sh; bash /tmp/x.sh … 同じ行の後続コマンドが実行する
+#   eval "$(cat <<EOF                    … コマンド置換の結果が実行される
+#   bash <(cat <<EOF                     … プロセス置換の中身が実行される
+# 条件 1 だけで落とすと、今ブロックできている形が通るようになる（実測: 上記の
+# うち pipe 以外の 3 形が main では block、条件 2 無しでは allow になった）。
+# 差し込み方を 1 つずつ潰すのではなく、判定を is_single_simple_command に寄せて
+# いるのは、そちらが shell の文法側で閉じているため。認識できない形は本文を残す側
+# （＝誤検知が残る安全側）へ倒れる。
 strip_heredoc_bodies() {
   local input="$1" out="" line trimmed intro delim=""
   local in_body=0
   local sq="'"
-  local bt='`'
   # 正規表現は変数へ置いてから使う。[[ ]] の中へ直接書くと bash の tokenizer が
   # 引用符や括弧を先に解釈して構文エラーになる（2026-08-12 に踏んだ）。
   # .* を貪欲に取ることで、行内に複数ある場合は最後の << を見る。
@@ -109,8 +132,7 @@ strip_heredoc_bodies() {
     if [[ $line =~ $heredoc_re ]]; then
       intro="${BASH_REMATCH[1]}"
       delim="${BASH_REMATCH[2]}"
-      if [[ $line != *"|"* ]] && [[ $line != *'$('* ]] && [[ $line != *"$bt"* ]] \
-        && [[ $line != *"eval"* ]] && [[ $intro =~ $data_consumer_re ]]; then
+      if is_single_simple_command "$line" && [[ $intro =~ $data_consumer_re ]]; then
         in_body=1
       fi
     fi
@@ -253,19 +275,25 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 書き込み手段を列挙する方式では閉じない。python3 / node / perl / awk の
   # ファイル書き込み、`>|` のような別形のリダイレクト、コマンド置換の中に隠す形と
   # 際限がなく、実測でも python3 / node / `>|` が列挙をすり抜けた。**書き手を
-  # 数え上げるのをやめ、「別のことが起きる余地」自体を落とす。** 区切り
-  # （; & | 改行）とコマンド置換（$( ) と backtick）のいずれかがあれば拒否する。
+  # 数え上げるのをやめ、「別のことが起きる余地」自体を落とす**（判定は
+  # is_single_simple_command）。
+  #
+  # 言及の有無は生の写しと quote を除いた写しの両方で見る。片方だけだと
+  # --env-f"ile"=... のように flag 名の内側へ quote を刺した形が
+  # 「言及なし」と判定され、この制約も下の中身検査も素通りする。
+  #
+  # 判定対象は生の $COMMAND。区切りは引用符の中にあっても文字としては存在するので、
+  # 生の文字列で見る方が広く落ちる（安全側）。
   #
   # 副作用として、cd で移動してから消費する形も落ちる。中身検査は hook の cwd から
   # path を解決するので、これが通ると検査対象と実際のファイルがずれていた。
   #
   # 代償: op run の行に他のコマンドを繋げられない（リダイレクトでのログ取りを含む）。
   # 分けて実行すれば通る。
-  if echo "$COMMAND_JOINED" | grep -qE -- '-env-file'; then
-    bt='`'
-    if [[ "$COMMAND" == *";"* ]] || [[ "$COMMAND" == *"&"* ]] || [[ "$COMMAND" == *"|"* ]] \
-      || [[ "$COMMAND" == *'$('* ]] || [[ "$COMMAND" == *"$bt"* ]] || [[ "$COMMAND" == *$'\n'* ]]; then
-      echo "BLOCKED: env-file を op run へ渡すコマンドは、単一の単純コマンドにしてください（区切り ; & | 改行 とコマンド置換 \$( ) は不可）。同じコマンドの中で env-file を書き換えられると、guard が検査した中身と実際に解決される中身が別物になるためです。書き込みや cd は別のコマンドに分けてください" >&2
+  if printf '%s' "$COMMAND_JOINED" | grep -q -- '-env-file' \
+    || printf '%s' "$COMMAND_UNQUOTED" | grep -q -- '-env-file'; then
+    if ! is_single_simple_command "$COMMAND"; then
+      echo "BLOCKED: env-file を op run へ渡すコマンドは、単一の単純コマンドにしてください（区切り ; & | 改行、コマンド置換 \$( )、プロセス置換 <( )、eval は不可）。同じコマンドの中で env-file を書き換えられると、guard が検査した中身と実際に解決される中身が別物になるためです。書き込みや cd は別のコマンドに分けてください" >&2
       exit 2
     fi
   fi
@@ -285,7 +313,13 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       echo "BLOCKED: $env_file_path が許可外 vault の op:// 参照を持っています（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。op run に渡すと production credential が解決されます。管理者運用は .op-env.admin 側の経路と User の明示操作で行ってください" >&2
       exit 2
     fi
-  done < <(conforming_env_file_paths "$COMMAND_JOINED")
+  done < <(
+    {
+      conforming_env_file_paths "$COMMAND_JOINED"
+      # quote を除いた写しからも拾う。--env-f"ile"=... は生の写しに現れない。
+      conforming_env_file_paths "$COMMAND_UNQUOTED"
+    } | sort -u
+  )
 fi
 
 exit 0
