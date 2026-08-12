@@ -81,8 +81,9 @@ Dayopt が呼ぶ Calendar API は 2 つだけで、それぞれをより狭い s
 1. `apps/product/src/features/external-calendar/schemas/google.ts` の `GOOGLE_AUTHORIZATION_SCOPES` を 2 本立てに変える
 2. `hasCalendarReadonlyScope()`（`server/google-oauth.ts:372`）は現在 `calendar.readonly` の完全一致を要求する。新 scope を受け付けるよう広げる。**既存の接続済みユーザーは `calendar.readonly` で grant 済み**なので、旧 scope も引き続き通す（この検査は callback 時にしか走らないため保存済み接続は壊れないが、再接続で落ちる）
 3. GCP の同意画面で 2 本を追加登録する（`calendar.readonly` は削除する）
+4. **既存の接続を移行する。** 1〜3 が変えるのは以後の認可リクエストと callback の判定だけで、**すでに発行済みの grant は縮まない**。`syncConnection()` は保存済み refresh token をそのまま `startSession()` に渡し、`granted_scopes` を再検査しない（`server/sync-service.ts:179`）。放置すると既存ユーザーの token は `calendar.readonly` の権限で動き続け、「ユーザーに渡す権限を用途に合わせる」という目的を達成できない。既存接続を revoke して再接続させるか、期限を切って強制再認証する
 
-どちらも sensitive scope なので審査が不要になるわけではない。狭くする目的は、審査を通しやすくすることと、ユーザーに渡す権限を実際の用途に合わせることの 2 つ。
+どちらも sensitive scope なので審査が不要になるわけではない。狭くする目的は、審査を通しやすくすることと、ユーザーに渡す権限を実際の用途に合わせることの 2 つ。**後者は 4 まで実施して初めて達成される**（1〜3 だけだと新規ユーザーにしか効かない）。現時点の接続数は少ないので、移行のコストは低いうちに済む。
 
 **切り替えないと決めた場合**、justification は「narrower scopes are insufficient」と書かず、§申請文 の fallback を使う。reject または追加質問のリスクは上がる。
 
@@ -238,11 +239,13 @@ transferred to third parties, with two exceptions:
 
   - the infrastructure providers that host the application, documented in the
     privacy policy;
-  - applications that the user has themselves explicitly authorized to read their
-    Dayopt entries through Dayopt's own API. This transfer happens only at the
-    user's direction, only to a client the user approved, and only for entries the
-    user has incorporated into their own timeline. The user can revoke that
-    authorization at any time.
+  - destinations the user themselves sets up. Dayopt lets a user share their own
+    Dayopt entries outward — today by authorizing another application to read them
+    through Dayopt's API, and by enabling a calendar feed URL they can subscribe to
+    from another calendar app. Where a user has built an entry from an imported
+    Google event, that entry travels over whichever of these the user has turned
+    on. Every such destination is one the user chose and can turn off again; Dayopt
+    does not send data anywhere the user has not set up.
 
 When a user disconnects, Dayopt asks Google to revoke the refresh token on a
 best-effort basis; if Google cannot be reached, Dayopt records the failure and
@@ -264,15 +267,15 @@ all of it.
 
 ### 撮影条件
 
-| 条件         | 内容                                                                                                         | 理由                                                                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 言語         | **UI を英語にする**（`https://app.dayopt.app/en/...`）                                                       | Google が "in English" を明示要求                                                                                                                                |
-| アドレスバー | ブラウザのアドレスバーを**常に画面内に入れる**                                                               | 同意画面 URL に含まれる client ID を審査官が確認する                                                                                                             |
-| アカウント   | 実際の Google アカウント。撮影で選ぶカレンダーに、**現在日時の前後 90 日以内の時刻指定の予定**が数件あること | 取り込み範囲が ±90 日で、終日予定は除外される。祝日・誕生日のような終日予定や範囲外の予定しか無いと、Apply も同期も成功するのにシーン 9 で何も出ず撮り直しになる |
-| 環境         | production（`https://app.dayopt.app`）                                                                       | 審査対象の client ID で動く必要がある。Preview は OAuth 無効                                                                                                     |
-| 事前状態     | 対象アカウントを**一度 disconnect しておく**                                                                 | 接続フローを頭から見せるため                                                                                                                                     |
-| 公開設定     | YouTube に**限定公開（unlisted）**でアップロード                                                             | Google の要求。非公開だと審査官が見られない                                                                                                                      |
-| 音声         | 不要。字幕・キャプションがあると親切                                                                         | 要求はされていない                                                                                                                                               |
+| 条件         | 内容                                                                                                                                                                                                                                                          | 理由                                                                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 言語         | **Dayopt の UI（`https://app.dayopt.app/en/...`）と Google 同意画面の両方を英語にする。** 後者は URL の `/en/` では変わらない — 撮影用 Google アカウントかブラウザの表示言語を英語にし、**録画前にシーン 5 まで一度通して同意画面が英語で出ることを確認する** | Google が "in English" を明示要求。`/en/` が効くのは Dayopt 側だけで、`accounts.google.com` の言語はアカウント / ブラウザ設定に従う。Dayopt だけ英語にして撮ると、同意画面が日本語のまま録れて撮り直しになる |
+| アドレスバー | ブラウザのアドレスバーを**常に画面内に入れる**                                                                                                                                                                                                                | 同意画面 URL に含まれる client ID を審査官が確認する                                                                                                                                                         |
+| アカウント   | 実際の Google アカウント。撮影で選ぶカレンダーに、**現在日時の前後 90 日以内の時刻指定の予定**が数件あること                                                                                                                                                  | 取り込み範囲が ±90 日で、終日予定は除外される。祝日・誕生日のような終日予定や範囲外の予定しか無いと、Apply も同期も成功するのにシーン 9 で何も出ず撮り直しになる                                             |
+| 環境         | production（`https://app.dayopt.app`）                                                                                                                                                                                                                        | 審査対象の client ID で動く必要がある。Preview は OAuth 無効                                                                                                                                                 |
+| 事前状態     | 対象アカウントを**一度 disconnect しておく**                                                                                                                                                                                                                  | 接続フローを頭から見せるため                                                                                                                                                                                 |
+| 公開設定     | YouTube に**限定公開（unlisted）**でアップロード                                                                                                                                                                                                              | Google の要求。非公開だと審査官が見られない                                                                                                                                                                  |
+| 音声         | 不要。字幕・キャプションがあると親切                                                                                                                                                                                                                          | 要求はされていない                                                                                                                                                                                           |
 
 ### シーン構成
 
@@ -404,11 +407,13 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   All-day events are not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
 >   timeline. Imported events are visible only to you, and we never share them with
->   anyone else unless you ask us to. The one case where you can ask us to is
->   Dayopt's own API: if you connect another application and grant it permission to
->   read your Dayopt entries, that application will receive the entries you have
->   built from your calendar. That only happens for applications you have
->   authorized yourself, and you can revoke the permission at any time.
+>   anyone else unless you set up a way for us to. Dayopt has features that send
+>   your own entries outward at your request — granting another application
+>   permission to read your entries, or turning on a calendar feed you subscribe to
+>   from another calendar app. If you have built an entry from an imported event, it
+>   travels over whichever of those you have switched on. Each one is something you
+>   turn on yourself and can turn off again; we do not send your data anywhere you
+>   have not set up.
 > - **How it is protected**: the credentials that let Dayopt read your calendar are
 >   encrypted before they are stored.
 > - **How to stop it**: disconnect the account at any time from Settings. Dayopt
