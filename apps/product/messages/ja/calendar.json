@@ -452,6 +452,10 @@
     "timeGrid": {
       "ariaLabel": "カレンダータイムグリッド - クリックまたはEnterキーでイベントを作成"
     },
+    "external": {
+      "untitled": "タイトルなしの予定",
+      "screenReaderPrefix": "外部カレンダーの予定: "
+    },
     "error": {
       "title": "カレンダーを読み込めませんでした",
       "description": "ネットワーク接続を確認してもう一度お試しください",

@@ -1,3 +1,5 @@
+import type { ExternalCalendarEvent } from '@/features/external-calendar';
+
 import type { BaseEntryPosition, GridViewProps } from './base.types';
 import type { CalendarEvent } from './calendar.types';
 
@@ -14,6 +16,8 @@ export interface WeekGridProps {
   events: CalendarEvent[];
   /** 全エントリ（期限切れ未完了表示用） */
   allTimeblocks?: CalendarEvent[] | undefined;
+  /** 外部カレンダーの未変換予定（ghost、読み取り専用） */
+  externalEvents?: ExternalCalendarEvent[] | undefined;
   eventsByDate: Record<string, CalendarEvent[]>;
   todayIndex: number;
   /** DnDを無効化するTimeblock ID（Inspector表示中のTimeblock など） */

@@ -452,6 +452,10 @@
     "timeGrid": {
       "ariaLabel": "Calendar time grid - click or press Enter to create event"
     },
+    "external": {
+      "untitled": "Untitled event",
+      "screenReaderPrefix": "External calendar event: "
+    },
     "error": {
       "title": "Failed to load calendar",
       "description": "Please check your network connection and try again.",

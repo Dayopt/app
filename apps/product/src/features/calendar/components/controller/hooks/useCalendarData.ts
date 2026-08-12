@@ -5,6 +5,10 @@ import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import { addDays, subDays } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
+import {
+  useExternalCalendarEvents,
+  type ExternalCalendarEvent,
+} from '@/features/external-calendar';
 import { useArchivedTags, useTags } from '@/features/tags';
 import { getDateKey } from '@/lib/date';
 import { tzIsSameDay } from '@/lib/date/timezone';
@@ -27,27 +31,22 @@ import { isMultiDayView } from '../../../types/calendar.types';
 /**
  * ローカル日付の 00:00:00 をユーザーTZのUTC ISO文字列に変換
  * サーバーのprefetchと同じクエリキーを生成するため使用する
+ *
+ * **`date` は `date-fns` のローカルフィールド演算で作られる壁時計 Date**（`calculateViewDateRange`
+ * が `setHours` で組み立てる、カレンダーが「表示中の日」として扱う値）。`Intl.DateTimeFormat` で
+ * `timeZone` を指定して `format(date)` すると `date` を instant として `timezone` へ再解釈してしまい、
+ * ブラウザ TZ ≠ ユーザー設定 TZ の時に日付がずれる（`external-event-day-selection.ts` と同型の
+ * バグ）。`getDateKey(date)`（timezone なし、ローカルフィールド読み取り）で `date` 自身が表す日付を
+ * そのまま取り出し、その日の 00:00/23:59:59.999 を `fromZonedTime` でユーザー TZ の instant へ変換する。
  */
-function toTZStartISO(date: Date, timezone: string): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const localDateStr = formatter.format(date);
+export function toTZStartISO(date: Date, timezone: string): string {
+  const localDateStr = getDateKey(date);
   return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
 }
 
-/** ローカル日付の 23:59:59.999 をユーザーTZのUTC ISO文字列に変換 */
-function toTZEndISO(date: Date, timezone: string): string {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const localDateStr = formatter.format(date);
+/** ローカル日付の 23:59:59.999 をユーザーTZのUTC ISO文字列に変換（`toTZStartISO` 参照）。 */
+export function toTZEndISO(date: Date, timezone: string): string {
+  const localDateStr = getDateKey(date);
   return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
 }
 
@@ -72,6 +71,11 @@ interface UseCalendarDataResult {
   viewDateRange: ViewDateRange;
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
+  /**
+   * 外部カレンダーの未変換予定（ghost）。読み取り専用で、タグフィルタの対象にしない
+   * （外部予定にタグは無い）。取得に失敗しても空配列になるだけで、calendar 全体は落とさない。
+   */
+  externalEvents: ExternalCalendarEvent[];
   /** time model 取得エラー */
   timeblocksError: unknown | null;
   /** time model 取得中かどうか（初回のみ true） */
@@ -128,6 +132,10 @@ export function useCalendarData({
     sortOrder: 'asc',
     limit: 100,
   });
+
+  // 外部カレンダーの ghost（#1962）。接続の有無を先に確かめると waterfall になるので、
+  // enabled ゲートは置かず plans / records と同じ範囲で常に撃つ。未接続なら即 0 件が返る。
+  const { events: externalEvents } = useExternalCalendarEvents(dateFilter);
 
   // Calendar の表示範囲外に分割された Record も 1:N 集計へ含める。
   // 1 query のID配列を100件以内に保つため、表示中Planと、表示中Recordだけが参照する
@@ -230,7 +238,16 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
+      void Promise.all([
+        utils.plans.list.prefetch(input),
+        utils.records.list.prefetch(input),
+        // ghost も一緒に温める。載せないと日送りのたびに plan / record だけ即出て、
+        // 外部予定が後追いでポップインする。
+        utils.externalCalendar.listEvents.prefetch({
+          startDate: input.startDate,
+          endDate: input.endDate,
+        }),
+      ]);
     };
 
     if (viewType === 'day') {
@@ -256,6 +273,7 @@ export function useCalendarData({
     timezone,
     utils.records.list,
     utils.plans.list,
+    utils.externalCalendar.listEvents,
   ]);
 
   // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
@@ -293,7 +311,16 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
+      void Promise.all([
+        utils.plans.list.prefetch(input),
+        utils.records.list.prefetch(input),
+        // ghost も一緒に温める。載せないと日送りのたびに plan / record だけ即出て、
+        // 外部予定が後追いでポップインする。
+        utils.externalCalendar.listEvents.prefetch({
+          startDate: input.startDate,
+          endDate: input.endDate,
+        }),
+      ]);
     },
     [
       currentDate,
@@ -303,6 +330,7 @@ export function useCalendarData({
       timezone,
       utils.records.list,
       utils.plans.list,
+      utils.externalCalendar.listEvents,
     ],
   );
 
@@ -317,9 +345,26 @@ export function useCalendarData({
         sortOrder: 'asc' as const,
         limit: 100,
       };
-      void Promise.all([utils.plans.list.prefetch(input), utils.records.list.prefetch(input)]);
+      void Promise.all([
+        utils.plans.list.prefetch(input),
+        utils.records.list.prefetch(input),
+        // ghost も一緒に温める。載せないと日送りのたびに plan / record だけ即出て、
+        // 外部予定が後追いでポップインする。
+        utils.externalCalendar.listEvents.prefetch({
+          startDate: input.startDate,
+          endDate: input.endDate,
+        }),
+      ]);
     },
-    [currentDate, weekStartsOn, showWeekends, timezone, utils.records.list, utils.plans.list],
+    [
+      currentDate,
+      weekStartsOn,
+      showWeekends,
+      timezone,
+      utils.records.list,
+      utils.plans.list,
+      utils.externalCalendar.listEvents,
+    ],
   );
 
   // フィルター関数と状態を取得（ストアに統一）
@@ -465,6 +510,7 @@ export function useCalendarData({
     viewDateRange,
     filteredEvents,
     allCalendarEvents,
+    externalEvents,
     timeblocksError,
     isTimeblocksLoading,
     isTimeblocksFetching,

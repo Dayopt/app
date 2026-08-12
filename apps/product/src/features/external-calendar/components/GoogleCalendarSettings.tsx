@@ -172,6 +172,9 @@ function GoogleCalendarConnection({
         utils.externalCalendar.listConnections.invalidate(),
         utils.externalCalendar.listProviderCalendars.invalidate(queryInput),
         utils.externalCalendar.getSyncStatus.invalidate(queryInput),
+        // 選択解除・再選択でミラー内容が変わる。calendar 画面がどの範囲を開いているか
+        // ここからは分からないので範囲を限定せず invalidate する。
+        utils.externalCalendar.listEvents.invalidate(),
       ]);
     },
   });
@@ -185,6 +188,8 @@ function GoogleCalendarConnection({
       await Promise.all([
         utils.externalCalendar.listConnections.invalidate(),
         utils.externalCalendar.getSyncStatus.invalidate(queryInput),
+        // 手動同期でミラーが更新される。同上、範囲を限定せず invalidate する。
+        utils.externalCalendar.listEvents.invalidate(),
       ]);
     },
   });
@@ -206,6 +211,8 @@ function GoogleCalendarConnection({
         utils.externalCalendar.listConnections.invalidate(),
         utils.externalCalendar.listProviderCalendars.invalidate(queryInput),
         utils.externalCalendar.getSyncStatus.invalidate(queryInput),
+        // 切断で未参照ミラーが即掃除される。同上、範囲を限定せず invalidate する。
+        utils.externalCalendar.listEvents.invalidate(),
       ]);
     },
   });
