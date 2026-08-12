@@ -217,6 +217,11 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
     // quote / backslash を除いた写しでのみ捕まる。
     ['flag 名の内側に二重引用符', `op run --env-f"ile"=${ADMIN} -- sh -c true`],
     ['flag 名の内側に単引用符', `op run --env-'file'=${ADMIN} -- sh -c true`],
+    // ANSI-C / locale 形式の quote も shell が引数から取り除く。導入の $ を
+    // 落としてから通常の quote 除去に合流させないと、どちらの写しにも
+    // -env-file が現れない。
+    ['ANSI-C quote で flag を分断', `op run --env-fi$'le'=${ADMIN} -- sh -c true`],
+    ['locale quote で flag を分断', `op run --env-fi$"le"=${ADMIN} -- sh -c true`],
     // = が無い形・変数が挟まる形も「許可形ではない言及」として落ちる。
     [
       'flag と = の間に変数',
@@ -370,6 +375,12 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
   // production 参照を持つ env-file をそのまま解決できていた。
   it('flag 名の内側に引用符があっても中身を見る', () => {
     expect(runGuard(bash(`op run --env-f"ile"=${LOCAL} -- sh -c true`), prodDir)).toBe('block');
+  });
+
+  // ANSI-C quote は生の写しにも通常の quote 除去後の写しにも -env-file を
+  // 残さない。$ を落としてから合流させないと、中身検査まで素通りする。
+  it('ANSI-C quote で分断された flag でも中身を見る', () => {
+    expect(runGuard(bash(`op run --env-fi$'le'=${LOCAL} -- sh -c true`), prodDir)).toBe('block');
   });
 
   // 存在しない file は「解決される参照が無い」ので通す。op run 側が失敗する。

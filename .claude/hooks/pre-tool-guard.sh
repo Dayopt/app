@@ -238,7 +238,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # flag 名の内側へ quote を刺す形（--env-f"ile"=...）は生の文字列に -env-file が
   # 現れず、この写しでしか捕まらない。両方の写しで検査してどちらかが落ちたら
   # 落とすので、判定は生の文字列だけを見る時より狭くならない。
-  COMMAND_UNQUOTED=${COMMAND_JOINED//\"/}
+  # ANSI-C / locale 形式の quote（$'…' / $"…"）も shell が引数から取り除く。
+  # 導入の $ を落としてから通常の quote 除去に合流させる。これが無いと
+  # --env-fi$'le'=… が生の写しにも除去後の写しにも -env-file として現れない。
+  guard_sq="'"
+  guard_dq='"'
+  COMMAND_UNQUOTED=${COMMAND_JOINED//\$$guard_sq/$guard_sq}
+  COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\$$guard_dq/$guard_dq}
+  COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\"/}
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\'/}
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\\/}
 
