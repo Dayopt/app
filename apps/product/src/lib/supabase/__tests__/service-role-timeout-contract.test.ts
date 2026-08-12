@@ -23,17 +23,21 @@ import { describe, expect, it } from 'vitest';
  * 実際に漏れていた。1 件ずつ潰すのではなく class ごと閉じるためにこの test を置く
  * （`.claude/rules/workflow.md` §同型指摘の打ち切り「点の追加ではなく class ごと閉じる」）。
  *
- * ## この test の限界
+ * ## 判定は factory の `global.fetch` を見る
  *
- * 判定は **file 単位**で「service-role client を作っていて `AbortSignal.timeout` が
- * 1 つも無い」を落とすだけ。同じ file 内に timeout 付きの呼び出しと timeout 無しの
- * client が同居するケースは検出できない。狙いは「新しい factory を timeout 無しで
- * 足す」を止めることで、そこは確実に落ちる。
+ * 当初は「file 内に `AbortSignal.timeout` が 1 つでもあれば合格」にしていたが、
+ * **それでは足りない**と外部レビューが指摘した。`token-rotation.ts` は一部 RPC にだけ
+ * `.abortSignal()` があり、legacy 分岐の `.update().maybeSingle()` と
+ * `readLegacyConnection()` は無制限のまま合格していた（2026-08-12 実測）。
+ *
+ * そこで **client 生成時の `global.fetch` に上限があること**を要求する。ここに床が
+ * あれば、個別 query に `.abortSignal()` を付け忘れても無制限にはならない。個別の
+ * `.abortSignal()` はより短い上書きとして併用してよい。
  */
 const SERVICE_ROLE_KEY_REFERENCE = 'SUPABASE_SERVICE_ROLE_KEY';
 
 describe('service-role client timeout contract', () => {
-  it('service-role client を作る module は必ず外部呼び出しの上限を持つ', () => {
+  it('service-role client の factory は global.fetch に上限を持つ', () => {
     const sources = globSync('src/**/*.ts', {
       cwd: process.cwd(),
       dot: true,
@@ -51,7 +55,14 @@ describe('service-role client timeout contract', () => {
       if (!createsServiceRoleClient) continue;
 
       inspected.push(relativePath);
-      if (!source.includes('AbortSignal.timeout')) offenders.push(relativePath);
+
+      // `createClient(...)` の options に `global.fetch` があり、その中で timeout を
+      // 張っていることを要求する。file のどこかに `AbortSignal.timeout` があるだけでは
+      // 通さない（個別 query にだけ付いていて factory は無制限、を弾くため）。
+      const hasFetchFloor = /global:\s*\{[\s\S]*?fetch:[\s\S]*?AbortSignal\.timeout\(/u.test(
+        source,
+      );
+      if (!hasFetchFloor) offenders.push(relativePath);
     }
 
     // 対象ゼロで緑になる（glob や判定条件が壊れた）のを防ぐ。
@@ -62,7 +73,7 @@ describe('service-role client timeout contract', () => {
 
     expect(
       offenders,
-      'service-role client に外部呼び出しの上限が無い。`global.fetch` で AbortSignal.timeout を設定するか、全 query へ .abortSignal(AbortSignal.timeout(...)) を渡すこと',
+      'service-role client の factory に上限が無い。createClient の options へ `global: { fetch: (url, options) => fetch(url, { ...options, signal: options?.signal ?? AbortSignal.timeout(...) }) }` を足すこと（個別 query の .abortSignal() は併用可だが、付け忘れを防ぐ床にはならない）',
     ).toEqual([]);
   });
 });
