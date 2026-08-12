@@ -26,6 +26,10 @@ import { ExternalCalendarServiceError } from './external-calendar-service-error'
  *   同じ意味論を持ち込むと、ゴミ箱に入れた plan / record が ghost を永久に隠す
  * - **keyset ページングで範囲を取り切る**。単発 `.limit()` は PostgREST が order 無しで順序を
  *   保証しないため、上限に当たった瞬間「範囲内の予定がランダムに消える」形になる
+ * - **選択解除済みカレンダーの historical anchor も除外する**。`updateSelectedCalendars` は
+ *   参照済み（soft-delete 済み含む）ミラー行を `connection_id` 付きのまま残すため、
+ *   `connection_id IS NOT NULL` だけでは選択解除後も ghost として復活しうる。現在も
+ *   `calendar_connection_calendars` に存在する `(connection_id, provider_calendar_id)` だけを通す
  */
 
 /** 1 バッチあたり件数。`event-pruning` と同値で、max_rows=1000 と URL 長 8192B に触れない。 */
@@ -57,6 +61,8 @@ interface CandidateRow {
   id: string;
   title: string | null;
   calendar_name: string | null;
+  connection_id: string | null;
+  provider_calendar_id: string;
   start_at: string | null;
   end_at: string | null;
 }
@@ -107,31 +113,73 @@ function hasTimeRange(
   return row.start_at !== null && row.end_at !== null;
 }
 
+function calendarSelectionKey(connectionId: string, providerCalendarId: string): string {
+  return `${connectionId} ${providerCalendarId}`;
+}
+
+/**
+ * ユーザーが現在選択しているカレンダーの `(connection_id, provider_calendar_id)` 集合を返す。
+ *
+ * `calendar_connection_calendars` は 1 接続あたり最大 50 件・ユーザーの接続数も少数なので、
+ * バッチごとではなく `listGhostEvents` 呼び出しにつき 1 回だけ読む。
+ */
+async function loadSelectedCalendarKeys(
+  supabase: EventQueryClient,
+  userId: string,
+): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from(databaseTables.calendarConnectionCalendars)
+    .select('connection_id, provider_calendar_id')
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new ExternalCalendarServiceError(
+      'FETCH_FAILED',
+      'Failed to load selected calendars for ghost filtering',
+      { cause: error },
+    );
+  }
+
+  return new Set(
+    (data ?? []).map((row) => calendarSelectionKey(row.connection_id, row.provider_calendar_id)),
+  );
+}
+
 /**
  * 表示範囲に重なる ghost 候補を返す。範囲は半開区間で扱う。
  *
- * batch 上限に達した場合は **取れた分まで返す**（Sentry には出す）。3,000 件は現実的に届かない
- * ので、到達は prune かページングが壊れているサインとして扱う。
+ * batch 上限に達した場合は **エラーにする**（部分結果を返さない。Sentry にも出す）。
+ * 3,000 件は共有・会議室カレンダーを多数選ぶと届きうるため、到達は「異常」ではなく
+ * fail closed で扱う既知の上限として位置づける。
  */
 export async function listGhostEvents(
   supabase: EventQueryClient,
   userId: string,
   range: EventRangeInput,
 ): Promise<ExternalCalendarEventSummary[]> {
+  const selectedCalendarKeys = await loadSelectedCalendarKeys(supabase, userId);
+
   const events: ExternalCalendarEventSummary[] = [];
-  let cursor = '';
+  let cursor: string | null = null;
 
   for (let batch = 0; batch < MAX_EVENT_QUERY_BATCHES; batch += 1) {
-    const { data, error } = await supabase
+    let query = supabase
       .from(databaseTables.externalCalendarEvents)
-      .select('id, title, calendar_name, start_at, end_at')
+      .select('id, title, calendar_name, connection_id, provider_calendar_id, start_at, end_at')
       .eq('user_id', userId)
       .eq('status', ACTIVE_EVENT_STATUS)
       .is('dismissed_at', null)
       .not('connection_id', 'is', null)
       .lt('start_at', range.endAt)
-      .gt('end_at', range.startAt)
-      .gt('id', cursor)
+      .gt('end_at', range.startAt);
+
+    // 初回ページは cursor が無い。UUID 列に空文字を渡すと PostgREST 側で invalid UUID になり
+    // 予定の有無にかかわらず取得が丸ごと失敗するため、2 ページ目以降にだけ条件を足す。
+    if (cursor !== null) {
+      query = query.gt('id', cursor);
+    }
+
+    const { data, error } = await query
       .order('id', { ascending: true })
       .limit(EVENT_QUERY_BATCH_SIZE);
 
@@ -155,6 +203,11 @@ export async function listGhostEvents(
     for (const row of candidates) {
       if (referenced.has(row.id)) continue;
       if (!hasTimeRange(row)) continue;
+      if (row.connection_id === null) continue;
+      if (
+        !selectedCalendarKeys.has(calendarSelectionKey(row.connection_id, row.provider_calendar_id))
+      )
+        continue;
 
       events.push({
         id: row.id,
@@ -175,5 +228,10 @@ export async function listGhostEvents(
     feature: 'external_calendar',
     operation: 'ghost_query_batch_limit',
   });
-  return events;
+  // 黙って部分結果を返すと「範囲内の予定が UUID 順で再現性なく欠落する」形になる。fail closed で
+  // 明示エラーにし、client 側は空表示に倒す（`useExternalCalendarEvents` の isError 分岐）。
+  throw new ExternalCalendarServiceError(
+    'FETCH_FAILED',
+    'external calendar ghost query hit the batch limit',
+  );
 }

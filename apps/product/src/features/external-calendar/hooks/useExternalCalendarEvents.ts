@@ -59,17 +59,25 @@ function toExternalCalendarEvent(event: {
  * **失敗しても calendar 全体を落とさない**（ghost を描かないだけ）。plans / records が健全なのに
  * 外部予定の失敗で画面を潰すのは、ghost が主データではないという位置づけと矛盾する。エラー自体は
  * server 側の tRPC capture 経路が Sentry へ送るので、ここで握り潰すのは描画だけ。
+ *
+ * **エラー時は必ず空配列にする**（前回成功時の `data` にフォールバックしない）。TanStack Query は
+ * refetch が失敗しても直前の成功 `data` を保持し続けるため、`data ?? []` のままだと
+ * `proProcedure` の課金ゲートが `FORBIDDEN` を返すようになった後も解約前の外部予定を描画し続ける
+ * （fail closed。`apps/product/src/AGENTS.md` EXT-1）。
  */
 export function useExternalCalendarEvents({
   startDate,
   endDate,
 }: UseExternalCalendarEventsOptions): UseExternalCalendarEventsResult {
-  const { data, isLoading } = api.externalCalendar.listEvents.useQuery(
+  const { data, isError, isLoading } = api.externalCalendar.listEvents.useQuery(
     { startDate, endDate },
     { staleTime: CACHE_5_MINUTES, retry: false },
   );
 
-  const events = useMemo(() => (data ?? []).map(toExternalCalendarEvent), [data]);
+  const events = useMemo(
+    () => (isError ? [] : (data ?? []).map(toExternalCalendarEvent)),
+    [data, isError],
+  );
 
   return { events, isLoading };
 }

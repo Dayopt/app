@@ -59,6 +59,7 @@ const mocks = vi.hoisted(() => ({
   statusGetData: vi.fn(),
   statusSetData: vi.fn(),
   statusInvalidate: vi.fn(),
+  listEventsInvalidate: vi.fn(),
 }));
 
 vi.mock('next-intl', () => ({
@@ -94,6 +95,9 @@ vi.mock('@/lib/trpc', () => ({
           getData: mocks.statusGetData,
           setData: mocks.statusSetData,
           invalidate: mocks.statusInvalidate,
+        },
+        listEvents: {
+          invalidate: mocks.listEventsInvalidate,
         },
       },
     }),
@@ -161,6 +165,7 @@ describe('GoogleCalendarSettings mutation contracts', () => {
       mocks.listInvalidate,
       mocks.providerInvalidate,
       mocks.statusInvalidate,
+      mocks.listEventsInvalidate,
     ]) {
       invalidate.mockResolvedValue(undefined);
     }
@@ -208,6 +213,7 @@ describe('GoogleCalendarSettings mutation contracts', () => {
     expect(mocks.listInvalidate).toHaveBeenCalledOnce();
     expect(mocks.providerInvalidate).toHaveBeenCalledWith(QUERY_INPUT);
     expect(mocks.statusInvalidate).toHaveBeenCalledWith(QUERY_INPUT);
+    expect(mocks.listEventsInvalidate).toHaveBeenCalledOnce();
   });
 
   it('手動同期は settled 後に connection と sync status を再取得する', async () => {
@@ -219,6 +225,7 @@ describe('GoogleCalendarSettings mutation contracts', () => {
 
     expect(mocks.listInvalidate).toHaveBeenCalledOnce();
     expect(mocks.statusInvalidate).toHaveBeenCalledWith(QUERY_INPUT);
+    expect(mocks.listEventsInvalidate).toHaveBeenCalledOnce();
   });
 
   it('切断は一覧を楽観削除せず、settled 後に全関連 query を再取得する', async () => {
@@ -236,5 +243,6 @@ describe('GoogleCalendarSettings mutation contracts', () => {
     expect(mocks.listInvalidate).toHaveBeenCalledOnce();
     expect(mocks.providerInvalidate).toHaveBeenCalledWith(QUERY_INPUT);
     expect(mocks.statusInvalidate).toHaveBeenCalledWith(QUERY_INPUT);
+    expect(mocks.listEventsInvalidate).toHaveBeenCalledOnce();
   });
 });

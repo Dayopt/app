@@ -18,6 +18,7 @@ interface MirrorRow {
   status: string;
   dismissed_at: string | null;
   connection_id: string | null;
+  provider_calendar_id: string;
   title: string | null;
   calendar_name: string | null;
   start_at: string | null;
@@ -30,18 +31,45 @@ interface ReferenceRow {
   deleted_at: string | null;
 }
 
+interface SelectedCalendarRow {
+  user_id: string;
+  connection_id: string;
+  provider_calendar_id: string;
+}
+
 function mirrorRow(overrides: Partial<MirrorRow> & { id: string }): MirrorRow {
   return {
     user_id: USER_ID,
     status: 'confirmed',
     dismissed_at: null,
     connection_id: 'connection-1',
+    provider_calendar_id: 'calendar-1',
     title: 'Standup',
     calendar_name: 'Work',
     start_at: '2026-08-11T09:00:00.000Z',
     end_at: '2026-08-11T09:30:00.000Z',
     ...overrides,
   };
+}
+
+/** `events` に出てくる `(connection_id, provider_calendar_id)` を「現在も選択中」として自動導出する。 */
+function selectionFromEvents(events: MirrorRow[]): SelectedCalendarRow[] {
+  const seen = new Set<string>();
+  const rows: SelectedCalendarRow[] = [];
+
+  for (const row of events) {
+    if (row.connection_id === null) continue;
+    const key = `${row.user_id} ${row.connection_id} ${row.provider_calendar_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      user_id: row.user_id,
+      connection_id: row.connection_id,
+      provider_calendar_id: row.provider_calendar_id,
+    });
+  }
+
+  return rows;
 }
 
 /**
@@ -118,14 +146,23 @@ function createSupabase(options: {
   events: MirrorRow[];
   plans?: ReferenceRow[];
   records?: ReferenceRow[];
+  /** 省略時は `events` に出てくる組を全て「選択中」として扱う（既存テストの前提を変えない）。 */
+  selectedCalendars?: SelectedCalendarRow[];
 }) {
   const eventTables: ReturnType<typeof createFakeTable<MirrorRow>>[] = [];
   const referenceTables: ReturnType<typeof createFakeTable<ReferenceRow>>[] = [];
+  const selectionTables: ReturnType<typeof createFakeTable<SelectedCalendarRow>>[] = [];
+  const selectedCalendars = options.selectedCalendars ?? selectionFromEvents(options.events);
 
   const from = vi.fn((table: string) => {
     if (table === 'external_calendar_events') {
       const fake = createFakeTable(options.events);
       eventTables.push(fake);
+      return fake;
+    }
+    if (table === 'calendar_connection_calendars') {
+      const fake = createFakeTable(selectedCalendars);
+      selectionTables.push(fake);
       return fake;
     }
     const fake = createFakeTable(
@@ -140,6 +177,7 @@ function createSupabase(options: {
     from,
     eventTables,
     referenceTables,
+    selectionTables,
   };
 }
 
@@ -297,20 +335,97 @@ describe('listGhostEvents / ページング', () => {
     expect(eventTables[0]?.order).toHaveBeenCalledWith('id', { ascending: true });
   });
 
-  it('batch 上限に達したら取れた分を返し Sentry へ送る', async () => {
+  it('初回ページでは id の cursor 条件を送らない（空文字を UUID 列に渡すと invalid UUID になる）', async () => {
+    const { supabase, eventTables } = createSupabase({ events: [mirrorRow({ id: 'a' })] });
+
+    await listGhostEvents(supabase, USER_ID, RANGE);
+
+    const idCursorCalls = eventTables[0]?.calls.filter(
+      ([name, column]) => name === 'gt' && column === 'id',
+    );
+    expect(idCursorCalls).toEqual([]);
+  });
+
+  it('2 ページ目以降は前バッチ最後の id を cursor に使う', async () => {
+    const rows = manyRows(BATCH_SIZE + 10);
+    const { supabase, eventTables } = createSupabase({ events: rows });
+
+    await listGhostEvents(supabase, USER_ID, RANGE);
+
+    const firstBatchIdCursor = eventTables[0]?.calls.find(
+      ([name, column]) => name === 'gt' && column === 'id',
+    );
+    expect(firstBatchIdCursor).toBeUndefined();
+
+    const secondBatchCursor = eventTables[1]?.calls.find(
+      ([name, column]) => name === 'gt' && column === 'id',
+    );
+    expect(secondBatchCursor?.[2]).toBe(rows[BATCH_SIZE - 1]?.id);
+  });
+
+  it('batch 上限に達したら部分結果を返さず例外を投げ、Sentry へ送る', async () => {
     const MAX_BATCHES = 20;
     const { supabase, eventTables } = createSupabase({
       events: manyRows(BATCH_SIZE * MAX_BATCHES + 1),
     });
 
-    const events = await listGhostEvents(supabase, USER_ID, RANGE);
+    await expect(listGhostEvents(supabase, USER_ID, RANGE)).rejects.toMatchObject({
+      code: 'FETCH_FAILED',
+    });
 
     expect(eventTables).toHaveLength(MAX_BATCHES);
-    expect(events).toHaveLength(BATCH_SIZE * MAX_BATCHES);
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ operation: 'ghost_query_batch_limit' }),
     );
+  });
+});
+
+describe('listGhostEvents / 選択解除済みカレンダーの historical anchor', () => {
+  it('現在選択されていない (connection_id, provider_calendar_id) の行は返さない', async () => {
+    const { supabase } = createSupabase({
+      events: [mirrorRow({ id: 'a', provider_calendar_id: 'calendar-removed' })],
+      selectedCalendars: [],
+    });
+
+    await expect(listGhostEvents(supabase, USER_ID, RANGE)).resolves.toEqual([]);
+  });
+
+  it('soft-delete 済み参照が anti-join を通しても、選択解除済みなら ghost に戻さない', async () => {
+    // plans が soft-delete 済みだと anti-join は「未参照」扱いにする（既存挙動、上のテスト参照）が、
+    // カレンダー自体が選択解除済みなら historical anchor として ghost には出さない。
+    const { supabase } = createSupabase({
+      events: [mirrorRow({ id: 'a', provider_calendar_id: 'calendar-removed' })],
+      plans: [reference('a', '2026-08-11T12:00:00.000Z')],
+      selectedCalendars: [],
+    });
+
+    await expect(listGhostEvents(supabase, USER_ID, RANGE)).resolves.toEqual([]);
+  });
+
+  it('選択中のカレンダーの行は引き続き返す', async () => {
+    const { supabase } = createSupabase({
+      events: [
+        mirrorRow({ id: 'a', connection_id: 'connection-1', provider_calendar_id: 'calendar-1' }),
+      ],
+      selectedCalendars: [
+        { user_id: USER_ID, connection_id: 'connection-1', provider_calendar_id: 'calendar-1' },
+      ],
+    });
+
+    const events = await listGhostEvents(supabase, USER_ID, RANGE);
+    expect(events.map((event) => event.id)).toEqual(['a']);
+  });
+
+  it('選択集合の読み取りにも user_id を明示する', async () => {
+    const { supabase, selectionTables } = createSupabase({
+      events: [mirrorRow({ id: 'a' })],
+    });
+
+    await listGhostEvents(supabase, USER_ID, RANGE);
+
+    expect(selectionTables).toHaveLength(1);
+    expect(selectionTables[0]?.eq).toHaveBeenCalledWith('user_id', USER_ID);
   });
 });
 
