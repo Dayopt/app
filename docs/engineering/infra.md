@@ -630,6 +630,16 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 
 product の contract test は「外部 I/O をする route は **Supabase 1 往復 + rate limit 1 回**（現状 17s）を必ず上回る」という不等式も検査する。内側 timeout を後から伸ばした変更が route を黙って kill 側へ倒すのを、ここで落とす。
 
+**ただし test が保証するのは下限であって worst path ではない。** 依存が全部同時にそれぞれの timeout まで張り付くケースは、一部の route で予算を超える（`api/integrations/google-calendar/callback` は getUser 15 + rate limit 2 + Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s > 60s。`api/mcp` と `api/trpc/[trpc]` は dispatch 数に上限が無い）。
+
+そこまでカバーする値へ引き上げると 300 に近づき、**障害半径を絞るという目的そのものを失う**。予算は blast radius の上限であって全依存同時ハング時の完走保証ではない、という位置づけで運用する。その状況では処理はどのみち失敗しており、504 と graceful error の差は小さい。**「test が通る＝安全」と読まないこと。** 新規 route では worst path を自分で数える。
+
+#### `/api/health` を 30 にしたことの監視上の含意
+
+UptimeRobot は 5 分間隔の HTTP status 監視で、**503 も 504 も同じく DOWN 扱い**なので alert の発火条件は変わらない。変わるのは**原因の記録**で、`checkRedis` の `redis.ping()` に timeout が無いため（#1967）、Upstash の応答が 30 秒を超える帯では従来の `logger.error('[health] dependency check failed', ...)` が出ず 504 になり、**どの依存が落ちたかが残らない**。
+
+alert policy の文言は「`/api/health` が 503 を返す」なので、**504 も unhealthy と読む**。#1967 が入れば `checkRedis` が自分で timeout して 503 + 構造化ログを返すようになり、この窓は閉じる。
+
 #### tRPC だけ 300 の理由
 
 `/api/trpc/[trpc]` は**全 procedure を 1 function で捌く**ため、最長 procedure に律速される。`externalCalendar` の `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」でしか判定されない）ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。**#1965 で予算を入れてから 60 へ落とす。**
