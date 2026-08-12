@@ -155,11 +155,12 @@ their existing commitments into the user's Dayopt timeline. This is the feature
 users connect the integration for: it lets them plan their day around meetings they
 already have, instead of retyping each meeting into Dayopt by hand.
 
-The first sync for a calendar requests a window of 90 days before and after that
-moment. After that, Dayopt sends the sync token Google issued and receives only
-what changed; the token tracks the set established by that first request rather
-than re-applying a moving window, so the range does not slide forward on its own.
-Timed events are imported; all-day events are skipped.
+Every sync run computes a window of 90 days before and after the moment it runs.
+Most runs do not send that window: they send the sync token Google issued and
+receive only what changed in the set the last full request established. Once a day,
+each connection is resynced in full, and that run does send the freshly computed
+window. So the range does move forward with the current date, in daily steps rather
+than continuously. Timed events are imported; all-day events are skipped.
 
 From each event, Dayopt stores only these fields:
   - the event ID (to match the same event across syncs)
@@ -200,10 +201,11 @@ Dayopt uses this scope for exactly two API calls:
   - events.list, called on the calendars the user explicitly selected, to import
     their existing commitments into the user's Dayopt timeline.
 
-The first sync for a calendar requests a window of 90 days before and after that
-moment. Afterwards Dayopt sends Google's sync token and receives only what changed
-in that set; the range does not slide forward on its own. Timed events are
-imported; all-day events are skipped.
+Every sync run computes a window of 90 days before and after the moment it runs.
+Most runs send Google's sync token instead and receive only what changed in the set
+the last full request established; once a day each connection is resynced in full
+using the freshly computed window, so the range moves forward with the current date
+in daily steps. Timed events are imported; all-day events are skipped.
 
 From each event, Dayopt stores only the event ID, the title, the description, the
 start and end times, a flag of its own recording whether the event is still active
@@ -280,7 +282,10 @@ Disconnecting the account from Dayopt's settings: Dayopt asks Google to revoke t
 refresh token on a best-effort basis, and completes the disconnect even if Google
 cannot be reached, rather than leaving the user connected against their wishes. It
 deletes the stored credentials, the connected account's email address and account
-identifier, and every imported event the user has not built on. An imported event
+identifier, and every imported event the user has not built on. If Google issued a
+replacement refresh token shortly before the disconnect, that replacement is held
+encrypted in an internal queue for up to 24 hours, precisely so that Dayopt can
+revoke it too; it is removed once revoked or when it expires. An imported event
 the user has already turned into an entry of their own is kept, because deleting it
 would remove part of the user's own history; the entry and the imported event it
 came from both remain, and the imported event keeps the fields listed above.
@@ -471,10 +476,10 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 >   as soon as you choose, so it exists even if a calendar turns out to have no
 >   events we import. It is deleted when you deselect the calendar, disconnect the
 >   account, or delete your Dayopt account.
-> - **How much we read**: when a calendar is first synced, we ask for the 90 days
->   before and after that moment. From then on we ask Google only for what has
->   changed in that set, so the range does not keep sliding forward by itself.
->   All-day events are not imported.
+> - **How much we read**: the 90 days before and after now. Most syncs only ask
+>   Google what has changed since the last one; about once a day we re-read the
+>   whole window, so the range keeps up with the current date. All-day events are
+>   not imported.
 > - **How we use it**: only to show you those events inside your own Dayopt
 >   timeline. Imported events are visible only to you, and we never share them with
 >   anyone else unless you set up a way for us to. Dayopt has features that send
@@ -489,7 +494,9 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 > - **How to stop it**: disconnect the account at any time from Settings. We ask
 >   Google to revoke our access, and we delete the stored credentials, the
 >   connected account's email address and identifier, and every imported event you
->   have not built on. If you have already turned an imported event into an entry of
+>   have not built on. If Google had just issued us a replacement key, that
+>   replacement stays in an internal queue, encrypted, for up to 24 hours so that we
+>   can revoke it as well; it goes as soon as that is done. If you have already turned an imported event into an entry of
 >   your own, we keep both your entry and the imported event behind it, so that we
 >   are not deleting part of your own history without asking.
 > - **If you delete your Dayopt account**: everything above is deleted, including
