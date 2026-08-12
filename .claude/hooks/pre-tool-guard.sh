@@ -282,8 +282,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # --env-f"ile"=... のように flag 名の内側へ quote を刺した形が
   # 「言及なし」と判定され、この制約も下の中身検査も素通りする。
   #
-  # 判定対象は生の $COMMAND。区切りは引用符の中にあっても文字としては存在するので、
-  # 生の文字列で見る方が広く落ちる（安全側）。
+  # 判定は生の $COMMAND と quote を除いた写しの両方で行う。区切りは引用符の中に
+  # あっても文字としては残るので生の写しで足りるが、`e''val` のように quote で
+  # 語を分断する形は除いた写しでしか見えない。
   #
   # 副作用として、cd で移動してから消費する形も落ちる。中身検査は hook の cwd から
   # path を解決するので、これが通ると検査対象と実際のファイルがずれていた。
@@ -292,7 +293,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 分けて実行すれば通る。
   if printf '%s' "$COMMAND_JOINED" | grep -q -- '-env-file' \
     || printf '%s' "$COMMAND_UNQUOTED" | grep -q -- '-env-file'; then
-    if ! is_single_simple_command "$COMMAND"; then
+    if ! is_single_simple_command "$COMMAND" || ! is_single_simple_command "$COMMAND_UNQUOTED"; then
       echo "BLOCKED: env-file を op run へ渡すコマンドは、単一の単純コマンドにしてください（区切り ; & | 改行、コマンド置換 \$( )、プロセス置換 <( )、eval は不可）。同じコマンドの中で env-file を書き換えられると、guard が検査した中身と実際に解決される中身が別物になるためです。書き込みや cd は別のコマンドに分けてください" >&2
       exit 2
     fi
