@@ -45,6 +45,9 @@ import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
+/** verifyOtp は Supabase Auth API 呼び出し 1 回のみ。redirect 前提の同期フローに余裕を見る。 */
+export const maxDuration = 60;
+
 /** 結果ページへ渡す status。値の集合は `auth/confirmed/page.tsx` と対で維持する。 */
 function statusForType(type: EmailOtpType): string {
   return type === 'email_change' ? 'email_change_confirmed' : 'email_confirmed';

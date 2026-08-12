@@ -29,6 +29,14 @@ import { captureUnexpectedError } from '@/lib/sentry';
  * が本 handler を re-export）。この `/api/oauth/token` は互換のため残す。
  */
 export const dynamic = 'force-dynamic';
+/**
+ * rate limit 2s + identity 15s + grant 消費 RPC 15s = 32s。
+ *
+ * 内側の上限は `lib/oauth-server/db.ts` の `OAUTH_DB_TIMEOUT_MS`。**そちらを先に発火
+ * させる**のが要点で、ここが先に切れると 1 回しか使えない grant を消費したまま
+ * レスポンスが返らず、client は再試行しても使用済みエラーで詰む。
+ */
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const hostRejection = rejectUnexpectedOAuthHost(request);

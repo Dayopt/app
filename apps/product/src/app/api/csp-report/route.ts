@@ -12,6 +12,9 @@ import {
 } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 
+/** レポート受信のみで外部 I/O は rate limit チェックと Sentry capture のみ。 */
+export const maxDuration = 30;
+
 const MAX_REPORT_BYTES = 16 * 1024;
 const MAX_URI_LENGTH = 4096;
 const MAX_POLICY_LENGTH = 12_000;

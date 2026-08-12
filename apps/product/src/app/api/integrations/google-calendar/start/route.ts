@@ -23,6 +23,8 @@ import { z } from 'zod';
 /** AES-256-GCM に node:crypto が要る。Edge では動かない。 */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+/** Supabase auth + Pro entitlement 確認 + rate limit + reconnect target 取得の合算。Google への redirect のみで外部往復は無い。 */
+export const maxDuration = 60;
 
 /**
  * Google カレンダー接続の開始。

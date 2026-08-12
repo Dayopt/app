@@ -21,6 +21,13 @@ import { createFetchTRPCContext } from '@/lib/trpc/context';
 import { captureUnexpectedTrpcAdapterError } from '@/lib/trpc/errors';
 
 export const runtime = 'nodejs';
+/**
+ * 全 procedure を 1 function で捌くため、最長 procedure に律速される。`externalCalendar` の
+ * `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」にしか効かない）
+ * ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。#1965 で予算を
+ * 入れてから 60 へ落とす。
+ */
+export const maxDuration = 300;
 
 function handler(req: Request) {
   return fetchRequestHandler({

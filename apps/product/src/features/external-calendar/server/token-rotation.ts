@@ -89,6 +89,16 @@ type MarkCalendarConnectionReauthInput = {
     }
 );
 
+/**
+ * factory 側の床。個別 query の `.abortSignal(TOKEN_RPC_TIMEOUT_MS)` はこれより短い
+ * 上書きで、**両方あってよい**。
+ *
+ * 床が要るのは、`.abortSignal()` が付いていない query が実際に残っていたため
+ * （legacy 分岐の `.update().maybeSingle()` と `readLegacyConnection()`）。個別に
+ * 付けて回ると付け忘れが検出できないので、client 生成時に必ず効く上限を置く。
+ */
+const CLIENT_FLOOR_TIMEOUT_MS = 15_000;
+
 function createCalendarTokenRotationClient(): CalendarTokenRotationClient {
   return createClient<CalendarTokenRotationDatabase>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -97,6 +107,13 @@ function createCalendarTokenRotationClient(): CalendarTokenRotationClient {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: (url, options) =>
+          fetch(url, {
+            ...options,
+            signal: options?.signal ?? AbortSignal.timeout(CLIENT_FLOOR_TIMEOUT_MS),
+          }),
       },
     },
   );
