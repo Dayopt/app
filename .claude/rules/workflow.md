@@ -271,9 +271,11 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 [PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
 
-### Actions 経済の規律（策定日: 2026-08-12）
+### Actions 経済の規律（策定日: 2026-08-12、根拠は 2026-08-11 の private 化保留決定を反映）
 
-**2026-09 の private 化で無料枠が月 2,000 分になる。** private repo に切り替わると push 回数が直接の予算制約になるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
+**private 化は保留し、public を維持する**（[2026-08-11 の決定ログ](../../docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md)）。当初想定していた「2026-09 に private 化して無料枠が月 2,000 分になる」という前提は撤回済み。決め手は算術: private 換算コストは ~17,000 分/月に対し Free 枠は 2,000 分で 88% の削減が要るが、CodeQL・Docs Guard を全廃しても CI 単体が ~11,900 分を占めるため「CI 削減が完了したら private 化する」という条件が成立しない。public を維持する限り GitHub-hosted runner は実質無制限で、push 回数それ自体が無料枠の予算制約にはならない。
+
+それでも本節の規律は変えない。public のままでも CI run 自体の待ち時間・`concurrency: cancel-in-progress` による手戻り（§なぜ束ねるか）は push 回数に比例して増えるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
 
 - **レビューの指摘対応は round 単位で 1 push に束ねる。** 1 push = 軽量 CI 1 run なので、指摘が来るたびに 1 件ずつ直して push すると round 数だけ CI run が増える。ある PR では指摘対応が 8 巡 = 8 run になった実例がある。1 round で出た指摘をすべて拾ってから push する
 - **軽微な fix の追い push をしない。** typo や 1 行修正を見つけても即 push せず、次の round（レビュー対応や機能追加）に同乗させる
@@ -336,7 +338,7 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 
 ### なぜ 2 段階か
 
-2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペース（Free 枠 2,000 分の 5 倍超）だった。検証の量は減らさず、走るタイミングを merge 前 1 回に寄せる。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。
+2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペースだった（この試算時点では private 化後の Free 枠 2,000 分/月を基準に「5 倍超」と評価していたが、private 化は 2026-08-11 に保留決定済み。§Actions 経済の規律 参照。public 維持下でも CI run の待ち時間・concurrency cancel の手戻りは push 回数に比例するため、検証の量は減らさず走るタイミングを merge 前 1 回に寄せる判断自体は変えていない）。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。
 
 ## マージ方式
 
