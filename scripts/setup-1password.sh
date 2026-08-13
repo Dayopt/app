@@ -212,7 +212,7 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=turnstile
   'TURNSTILE_SECRET_KEY[concealed]='
 
 run item create --category=login --vault=Dayopt-Shared --title=github-login \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
+  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
   'username=' \
   'password[concealed]=' \
   'recovery-codes[concealed]=' \
@@ -236,7 +236,7 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=google \
   'YAHOO_VERIFICATION[text]='
 
 run item create --category=login --vault=Dayopt-Shared --title=domain \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
+  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
   'username=' \
   'password[concealed]=' \
   'registrar-url[url]=' \

@@ -137,7 +137,7 @@ Google OAuth client secret、Apple Developer `.p8`、証明書、service account
 
 ### ⑤ リカバリー系
 
-再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置く。該当 item に 1Password タグ `recovery` を付け、横断確認は `op item list --tags recovery --format=json`（値は表示されない）で行う（2026-08-14、索引 secure note 方式から変更。索引 note は手動維持が必要で腐るため、item 側にコロケーションするタグ方式へ切り替えた。経緯は #2069）。
+再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置く。該当 item に 1Password タグ `recovery` を付け、横断確認は `op item list --tags recovery --format=json`（値は表示されない）で行う（2026-08-14、索引 secure note 方式から変更。索引 note は手動維持が必要で腐るため、item 側にコロケーションするタグ方式へ切り替えた。経緯は #2069）。**`op item list --tags recovery` の空リストは「recovery 情報が無い」ではなく「タグ未付与」の可能性を含む。** 既知の保持 item（`github-login` / `domain` / 各サービス Login item）と突き合わせて確認する。
 
 ---
 
