@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // guard 実装側の対の教訓は「許可形を省略記法で組み立てず選択肢で列挙する」
 // （.claude/hooks/pre-tool-guard.sh のコメント参照）。
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+// pre-tool-guard.sh は #1961 以降、薄い loader。実際のロジックは
+// pre-tool-guard-impl.sh にある（settings.json の hooks 登録は loader のまま
+// 変更していないので、通常の test はすべて guardPath 経由で書ける）。
 const guardPath = resolve(rootDir, '.claude/hooks/pre-tool-guard.sh');
+const implPath = resolve(rootDir, '.claude/hooks/pre-tool-guard-impl.sh');
 
 // path を組み立てるのは、この test file 自体を編集する Write が
 // guard の file path 検査に引っかからないようにするため。
@@ -70,32 +74,124 @@ function edit(filePath: string, newString = ''): Record<string, unknown> {
 // 必要になった）。bash は構文エラーで exit 2 を返し、hook はそれを block と解釈する。
 // エディタ上の規律ではなく test で固定する。
 describe('pre-tool-guard.sh: script 自体の健全性', () => {
-  it('bash の構文チェックを通る', () => {
+  it('loader の bash 構文チェックを通る', () => {
     const result = spawnSync('bash', ['-n', guardPath], { encoding: 'utf8' });
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
+  it('impl の bash 構文チェックを通る', () => {
+    const result = spawnSync('bash', ['-n', implPath], { encoding: 'utf8' });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
 });
 
+// #1961: guard 自体（impl）が壊れた時、loader は fail closed を既定にしつつ、
+// **impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。1 ファイル
+// 構成では自己検査コードごと構文エラーで実行されなくなるため、loader/impl の
+// 2 ファイル分離だけがこの中間案を実装できる（#1961 コメント参照）。
+describe('pre-tool-guard.sh: loader/impl 分離（#1961）', () => {
+  let fixtureRoot: string;
+  let healthyLoader: string;
+  let degradedLoader: string;
+  let degradedImpl: string;
+  let badExitLoader: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-loader-'));
+
+    // loader は sibling を実ファイル名（pre-tool-guard-impl.sh）で探すため、
+    // 検証も同じファイル名関係で組む。
+    const healthyDir = join(fixtureRoot, 'healthy');
+    mkdirSync(healthyDir);
+    writeFileSync(join(healthyDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
+    writeFileSync(join(healthyDir, 'pre-tool-guard-impl.sh'), readFileSync(implPath, 'utf8'));
+    healthyLoader = join(healthyDir, 'pre-tool-guard.sh');
+
+    const degradedDir = join(fixtureRoot, 'degraded');
+    mkdirSync(degradedDir);
+    writeFileSync(join(degradedDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
+    // 構文エラーを注入（未閉じの [[ ）。2026-08-12 の実障害と同型。
+    writeFileSync(
+      join(degradedDir, 'pre-tool-guard-impl.sh'),
+      `${readFileSync(implPath, 'utf8')}\nif [[ "x" =~ "unclosed\n`,
+    );
+    degradedLoader = join(degradedDir, 'pre-tool-guard.sh');
+    degradedImpl = join(degradedDir, 'pre-tool-guard-impl.sh');
+
+    const badExitDir = join(fixtureRoot, 'bad-exit');
+    mkdirSync(badExitDir);
+    writeFileSync(join(badExitDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
+    // 構文は健全だが実行時に想定外の非 0 を返す impl（block 以外の理由での失敗）
+    writeFileSync(
+      join(badExitDir, 'pre-tool-guard-impl.sh'),
+      '#!/bin/bash\ncat >/dev/null\nexit 1\n',
+    );
+    badExitLoader = join(badExitDir, 'pre-tool-guard.sh');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  function runVia(loaderPath: string, input: Record<string, unknown>): Decision {
+    const result = spawnSync('bash', [loaderPath], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: JSON.stringify(input),
+    });
+    return result.status === 2 ? 'block' : 'allow';
+  }
+
+  it('impl が健全なら loader は通常どおり委譲する（stdin forward が正しい）', () => {
+    expect(runVia(healthyLoader, write('/x/.op-env.admin'))).toBe('allow');
+    expect(runVia(healthyLoader, write('/x/.env'))).toBe('block');
+    expect(runVia(healthyLoader, bash('git status'))).toBe('allow');
+  });
+
+  it('impl が構文エラーの時、無関係な Bash 操作は fail closed', () => {
+    expect(runVia(degradedLoader, bash('git status'))).toBe('block');
+  });
+
+  it('impl が構文エラーの時、impl 以外への Write/Edit は fail closed', () => {
+    expect(runVia(degradedLoader, write('/x/notes.md'))).toBe('block');
+  });
+
+  it('impl が構文エラーの時、impl ファイル自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(degradedLoader, write(degradedImpl))).toBe('allow');
+    expect(runVia(degradedLoader, edit(degradedImpl))).toBe('allow');
+  });
+
+  it('loader 自身への Write は例外対象外（fail closed のまま）', () => {
+    expect(runVia(degradedLoader, write(degradedLoader))).toBe('block');
+  });
+
+  it('impl の構文は健全でも非 0 で終了したら fail closed（exit code を 2 へ写す）', () => {
+    expect(runVia(badExitLoader, bash('git status'))).toBe('block');
+  });
+});
+
 describe('pre-tool-guard.sh: .op-env.admin', () => {
-  // .op-env.admin があると op run で production の service role key が解決され、
-  // admin script が本番へ書き込める。作成と消費の両方を止める必要がある。
+  // .op-env.admin は op:// 参照だけで実秘密を含まない。2026-08-13、User 決定
+  // （#1993）で境界を「読み書き可・消費のみ禁止」へ変更した。作成・Write/Edit は
+  // 解禁し、op run で production の service role key を解決する消費だけを止める。
   it.each([
     ['雛形からのコピー', `cp ${ADMIN_EXAMPLE} ${ADMIN}`],
     ['リダイレクトでの作成', `cat > ${ADMIN}`],
     ['追記', `echo x >> ${ADMIN}`],
     ['touch', `touch ${ADMIN}`],
     ['セパレータ後の cp', `pnpm i && cp a ${ADMIN}`],
-  ])('作成を止める: %s', (_label, command) => {
-    expect(runGuard(bash(command))).toBe('block');
+  ])('作成は通す（#1993）: %s', (_label, command) => {
+    expect(runGuard(bash(command))).toBe('allow');
   });
 
-  it('Write / Edit でも作成を止める', () => {
-    expect(runGuard(write(`/x/${ADMIN}`))).toBe('block');
-    expect(runGuard(edit(`/x/${ADMIN}`))).toBe('block');
+  it('Write / Edit でも作成・編集を通す（#1993）', () => {
+    expect(runGuard(write(`/x/${ADMIN}`))).toBe('allow');
+    expect(runGuard(edit(`/x/${ADMIN}`))).toBe('allow');
   });
 
-  // 作成だけ止めても、雛形をそのまま op run に渡せば同じ権限が解決される。
+  // 作成を解禁しても、雛形をそのまま op run に渡せば同じ権限が解決される。
   // コマンド名ではなく --env-file の指す先で判定するので、op をどう起動しても落ちる。
   it.each([
     ['雛形の直接実行', `op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
@@ -175,10 +271,6 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     expect(runGuard(bash(command))).toBe('block');
   });
 
-  it('作成側も行継続で分断されない', () => {
-    expect(runGuard(bash(`cp ${ADMIN_EXAMPLE}\\\n ${ADMIN}`))).toBe('block');
-  });
-
   it.each([
     ['repo root の local', `op run --env-file=${LOCAL} -- pnpm typecheck`],
     ['明示的な ./ 付き', `op run --env-file=./${LOCAL} -- pnpm typecheck`],
@@ -199,6 +291,19 @@ describe('pre-tool-guard.sh: .op-env.admin', () => {
     expect(
       runGuard(bash(`gh pr edit 1935 --body '${ADMIN_EXAMPLE} は production を参照する'`)),
     ).toBe('allow');
+  });
+
+  // #1993 の受け入れ条件: 「agent が admin ファイルに書ける = 消費できる」では
+  // ないことを、書いた直後の消費が落ちることで固定する。
+  it('書いた直後の消費は落ちる（作成解禁は消費解禁ではない）', () => {
+    const fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-admin-'));
+    try {
+      expect(runGuard(write(join(fixtureRoot, ADMIN), `A=${PROD_REF}`))).toBe('allow');
+      writeFileSync(join(fixtureRoot, ADMIN), `A=${PROD_REF}`);
+      expect(runGuard(bash(`op run --env-file=${ADMIN} -- sh -c true`), fixtureRoot)).toBe('block');
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 });
 
