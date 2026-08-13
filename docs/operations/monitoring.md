@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-10
+last_verified: 2026-08-13
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -31,6 +31,7 @@ provider plan、sampling rate、SDK versionなどの値は変わるため、pack
 
 - Product と Web は別 Sentry project とし、quota、alert、release、DSN を分離する
 - server / edge は Production だけで常時初期化する。browser SDK、Analytics、Speed Insights は analytics consent 後だけ初期化する
+- **認証未完了フロー（`/auth/*`）は client telemetry の対象外**。同意バナーは LCP 最適化のため `/auth/*` では表示されず（認証後に表示）、その配下では分析同意を得る機会が一度も無い。つまり signup / login 失敗など認証未完了中に起きたエラーは browser Sentry に届かない（#2029）。この窓の一次証跡は Supabase Auth logs（dashboard）を見る。privacy 境界（analytics 同意後だけ browser telemetry を有効化する）を崩してまでこの窓を埋めることはしない — 2026-07-16 の frozen 決定（`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md`）を優先する
 - browser telemetryの同意撤回時はclientを即時無効化してページを再読込し、SDK integration、active span、breadcrumb scopeを残さない
 - Session Replayは、現行SDKではRRWeb metadataとReplay envelopeのraw URL queryを通常sanitizerで除去できないため無効にする
 - build integration と source map upload は Vercel Production build だけで実行する。CI / Preview / Development に `SENTRY_AUTH_TOKEN` を置かない
@@ -94,6 +95,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - Vercel function duration、bandwidth、build trend: 週次
 - Supabase database size、connection、slow query: 週次
 - provider usage / plan limit: 月次
+- **browser client telemetry の生死確認: 月次**（#2029）。Sentry で `environment:production has:browser.name` を直近30日で検索し、件数が0でないことを確認する。0件なら consent gate・DSN・CSP・SDK 初期化のどこかが壊れている可能性が高く、`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md` の contract に沿って client 側の初期化パス（`instrumentation-client.ts` / `packages/observability/src/consent.ts`）を調査する。新しい常設 canary surface は作らない（2026-07-16〜23 に一時追加した operator smoke surface は複雑さに見合わず撤去済み）
 
 通知channelはprovider dashboardとemailを基本とする。
 

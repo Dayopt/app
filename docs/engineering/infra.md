@@ -679,9 +679,9 @@ product の contract test は「外部 I/O をする route は **Supabase 1 往�
 
 #### `/api/health` を 30 にしたことの監視上の含意
 
-UptimeRobot は 5 分間隔の HTTP status 監視で、**503 も 504 も同じく DOWN 扱い**なので alert の発火条件は変わらない。変わるのは**原因の記録**で、`checkRedis` の `redis.ping()` に timeout が無いため（#1967）、Upstash の応答が 30 秒を超える帯では従来の `logger.error('[health] dependency check failed', ...)` が出ず 504 になり、**どの依存が落ちたかが残らない**。
+UptimeRobot は 5 分間隔の HTTP status 監視で、**503 も 504 も同じく DOWN 扱い**なので alert の発火条件は変わらない。`checkRedis` の `redis.ping()` は #1967（2026-08-13）で `AbortSignal.timeout(REDIS_CHECK_TIMEOUT_MS = 5_000)` を fetch レイヤの signal として渡すようになり、Upstash が無応答でも 5 秒で abort して `logger.error('[health] dependency check failed', ...)` + 503 を返す。maxDuration 30 秒まで張り付いて 504 になる窓は閉じた。
 
-alert policy の文言は「`/api/health` が 503 を返す」なので、**504 も unhealthy と読む**。#1967 が入れば `checkRedis` が自分で timeout して 503 + 構造化ログを返すようになり、この窓は閉じる。
+alert policy の文言は「`/api/health` が 503 を返す」なので、504 が出た場合も unhealthy と読む（原因不明の 504 が出たら `checkRedis` 以外の予期しない hang を疑う）。
 
 #### tRPC だけ 300 の理由
 
