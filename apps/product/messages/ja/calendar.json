@@ -454,7 +454,24 @@
     },
     "external": {
       "untitled": "タイトルなしの予定",
-      "screenReaderPrefix": "外部カレンダーの予定: "
+      "screenReaderPrefix": "外部カレンダーの予定: ",
+      "convert": {
+        "hint": "タップして追加"
+      },
+      "dismiss": {
+        "ariaLabel": "非表示にする",
+        "confirmTitle": "この予定を非表示にしますか？",
+        "confirmDescription": "以後この予定はカレンダーに表示されません。",
+        "confirmLabel": "非表示",
+        "loadingLabel": "非表示にしています"
+      },
+      "toast": {
+        "convertedToPlan": "計画に追加しました",
+        "convertedToRecord": "実績として記録しました",
+        "convertUndone": "元に戻しました",
+        "convertFailed": "追加できませんでした。もう一度お試しください",
+        "dismissFailed": "非表示にできませんでした。もう一度お試しください"
+      }
     },
     "error": {
       "title": "カレンダーを読み込めませんでした",
