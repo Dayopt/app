@@ -198,7 +198,7 @@ describe('Upstash Rate Limit', () => {
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(13);
+    expect(constructorOptions).toHaveLength(15);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

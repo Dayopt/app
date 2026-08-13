@@ -5,6 +5,7 @@ export type CalendarCallbackError =
   | 'pro_required'
   | 'rate_limited'
   | 'reconnect_target_invalid'
+  | 'mfa_verification_required'
   | 'unavailable'
   | 'generic';
 
@@ -22,6 +23,8 @@ const CALLBACK_ERROR_GROUPS: Readonly<Record<string, CalendarCallbackError>> = {
   pro_required: 'pro_required',
   rate_limited: 'rate_limited',
   reconnect_target_invalid: 'reconnect_target_invalid',
+  mfa_verification_required: 'mfa_verification_required',
+  assurance_lookup_failed: 'unavailable',
   unsupported_environment: 'unavailable',
   token_endpoint_unreachable: 'unavailable',
   token_exchange_rejected: 'unavailable',

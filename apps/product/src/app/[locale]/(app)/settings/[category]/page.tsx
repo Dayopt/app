@@ -207,6 +207,8 @@ function calendarCallbackErrorMessage(
       return t('settings.integrations.googleCalendar.callback.rateLimited');
     case 'reconnect_target_invalid':
       return t('settings.integrations.googleCalendar.callback.reconnectTargetInvalid');
+    case 'mfa_verification_required':
+      return t('settings.integrations.googleCalendar.callback.mfaVerificationRequired');
     case 'unavailable':
       return t('settings.integrations.googleCalendar.callback.unavailable');
     case 'generic':
