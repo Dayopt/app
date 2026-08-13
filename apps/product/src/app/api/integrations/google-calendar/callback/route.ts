@@ -123,10 +123,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // rate limit の後に置く。fence 判定は service-role の DB 読取を伴うため、認証・
-  // rate limit より前に置くと未認証/連打リクエストがそれを無制限に駆動できてしまう
-  // （増幅経路）。Google の authorization code は token 交換（exchangeAuthorizationCode）
-  // の時点で消費されるので、ここに置けば code を使う前という要件も満たす。
+  // rate limit の後に置く。ここでは既に認証済みの user-scope client（supabase）を
+  // 使うが、認証・rate limit より前に置くと未認証/連打リクエストが DB 読取を無制限に
+  // 駆動できてしまう（増幅経路）ため、その手前には置かない。Google の authorization
+  // code は token 交換（exchangeAuthorizationCode）の時点で消費されるので、ここに
+  // 置けば code を使う前という要件も満たす。
   if (await isWriteFenceEnabled(supabase)) {
     logger.warn('[calendar-callback] write fence is enabled; rejecting connection');
     return fail('write_fenced');

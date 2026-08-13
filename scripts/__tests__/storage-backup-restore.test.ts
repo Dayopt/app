@@ -96,6 +96,39 @@ describe('storage-backup.sh', () => {
     expect(result.status).toBe(0);
     expect(readCallLog(binDir)[0]).toContain('sync prod-source:avatars r2-backup:avatars');
   });
+
+  it('DRY_RUN=true 以外では --dry-run を付けない', () => {
+    const binDir = makeStubBin('record');
+
+    const result = run(backupScript, binDir, { STORAGE_BACKUP_BUCKETS: 'avatars' });
+
+    expect(result.status).toBe(0);
+    expect(readCallLog(binDir)[0]).not.toContain('--dry-run');
+  });
+
+  it('DRY_RUN=true で --dry-run を付ける', () => {
+    const binDir = makeStubBin('record');
+
+    const result = run(backupScript, binDir, {
+      DRY_RUN: 'true',
+      STORAGE_BACKUP_BUCKETS: 'avatars',
+    });
+
+    expect(result.status).toBe(0);
+    expect(readCallLog(binDir)[0]).toContain('--dry-run');
+  });
+
+  it('macOS 標準の bash 3.2 でも unbound variable にならない（DRY_RUN 未設定）', () => {
+    const binDir = makeStubBin('record');
+
+    const result = spawnSync('/bin/bash', [backupScript], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${binDir}:/usr/bin:/bin`, STORAGE_BACKUP_BUCKETS: 'avatars' },
+    });
+
+    expect(result.stderr).not.toContain('unbound variable');
+    expect(result.status).toBe(0);
+  });
 });
 
 describe('storage-restore.sh', () => {
@@ -114,5 +147,29 @@ describe('storage-restore.sh', () => {
     const result = run(restoreScript, binDir);
 
     expect(result.status).not.toBe(0);
+  });
+
+  it('DRY_RUN=true で --dry-run を付ける', () => {
+    const binDir = makeStubBin('record');
+
+    const result = run(restoreScript, binDir, {
+      DRY_RUN: 'true',
+      STORAGE_BACKUP_BUCKETS: 'avatars',
+    });
+
+    expect(result.status).toBe(0);
+    expect(readCallLog(binDir)[0]).toContain('--dry-run');
+  });
+
+  it('macOS 標準の bash 3.2 でも unbound variable にならない（DRY_RUN 未設定）', () => {
+    const binDir = makeStubBin('record');
+
+    const result = spawnSync('/bin/bash', [restoreScript], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${binDir}:/usr/bin:/bin`, STORAGE_BACKUP_BUCKETS: 'avatars' },
+    });
+
+    expect(result.stderr).not.toContain('unbound variable');
+    expect(result.status).toBe(0);
   });
 });

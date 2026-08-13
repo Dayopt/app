@@ -57,18 +57,19 @@ backup からの復元前など、**API 層の書き込みを止める**必要�
 
 #### どこに効くか
 
-| 対象                                                                                                                  | 効くか                  | 影響                                                                   |
-| --------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
-| tRPC mutation（全て）                                                                                                 | 効く                    | `SERVICE_UNAVAILABLE`（503）                                           |
-| Stripe / Resend webhook                                                                                               | 効く                    | 503 + `Retry-After: 30`。再送で拾われる                                |
-| `/api/cron/calendar-sync`、`/api/cron/external-connection-maintenance`                                                | 効く                    | 503（cron は次回実行を待つ）                                           |
-| `/api/oauth/token`                                                                                                    | 効く                    | 503（`temporarily_unavailable`）                                       |
-| `/api/integrations/google-calendar/callback`                                                                          | 効く                    | 接続作成前に拒否（Google の一度きりの認可 code を消費する前）          |
-| MFA リカバリーコード再生成（`recovery-code-actions.ts`）、OAuth consent（`oauth/consent/actions.ts`）の Server Action | 効く                    | 通常のエラー応答（`codes: null` / `temporarily_unavailable` redirect） |
-| **client 直叩きの Supabase Auth**（signUp / updateUser / resetPasswordForEmail、`useAuthStore.ts`）                   | **効かない**            | `auth.users` は直接更新される                                          |
-| **client 直叩きの Storage**（avatar アップロード/削除、`lib/supabase/storage.ts`）                                    | **効かない**            | Storage オブジェクトは直接更新される                                   |
-| pg_cron                                                                                                               | **効かない**            | 別途 pg_cron を止める（下記）                                          |
-| MCP write gate（`mcp_mutation_control`）                                                                              | **効かない**（別 gate） | MCP 経由の書き込みは別途 toggle が必要                                 |
+| 対象                                                                                                                  | 効くか                  | 影響                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tRPC mutation（全て）                                                                                                 | 効く                    | `SERVICE_UNAVAILABLE`（503）                                                                                                                      |
+| Stripe / Resend webhook                                                                                               | 効く                    | 503 + `Retry-After: 30`。再送で拾われる                                                                                                           |
+| `/api/cron/calendar-sync`、`/api/cron/external-connection-maintenance`                                                | 効く                    | 503（cron は次回実行を待つ）                                                                                                                      |
+| `/api/oauth/token`                                                                                                    | 効く                    | 503（`temporarily_unavailable`）                                                                                                                  |
+| `/api/integrations/google-calendar/callback`                                                                          | 効く                    | 接続作成前に拒否（Google の一度きりの認可 code を消費する前）                                                                                     |
+| MFA リカバリーコード再生成（`recovery-code-actions.ts`）、OAuth consent（`oauth/consent/actions.ts`）の Server Action | 効く                    | 通常のエラー応答（`codes: null` / `temporarily_unavailable` redirect）                                                                            |
+| **client 直叩きの Supabase Auth**（signUp / updateUser / resetPasswordForEmail、`useAuthStore.ts`）                   | **効かない**            | `auth.users` は直接更新される                                                                                                                     |
+| **client 直叩きの Storage**（avatar アップロード/削除、`lib/supabase/storage.ts`）                                    | **効かない**            | Storage オブジェクトは直接更新される                                                                                                              |
+| pg_cron                                                                                                               | **効かない**            | 別途 pg_cron を止める（下記）                                                                                                                     |
+| MCP write gate（`mcp_mutation_control`）                                                                              | **効かない**（別 gate） | MCP 経由の書き込みは別途 toggle が必要                                                                                                            |
+| **復元先が `write_fence_control` migration（2026-08-12）より前の snapshot**                                           | **効かない**            | relation 不在で fence が disabled 扱いになる（`write-fence.ts` の fail-open 例外）。メンテナンスモード + deployment 停止 + pg_cron 停止で代替する |
 
 **「fence を上げれば全書き込みが止まる」わけではない。** 上表の「効かない」経路が残っている前提で復元判断をする。
 
@@ -80,8 +81,9 @@ Supabase Dashboard → SQL Editor で実行（`service_role` にも UPDATE 権�
 UPDATE public.write_fence_control SET fence_enabled = true WHERE singleton_key = true;
 ```
 
+- [ ] **UPDATE 後 10 秒待ってから次の手順（確認・復元）に進む**: allow 判定は in-process で最大 5 秒キャッシュされ、かつ Vercel の各 instance が個別にキャッシュを持つため、UPDATE 直後は instance ごとに最大 5 秒のずれで新しい値へ切り替わる。実行中リクエストの完走分も含め、10 秒を目安の下限にする
 - [ ] **効いていることを目視で確認する**: production の任意の mutation を 1 回実行し（例: 自分のアカウントで tag を 1 件更新）、`SERVICE_UNAVAILABLE`（503）が返ることを確認する
-- [ ] **drain を待つ**: tRPC route の `maxDuration=300s`、webhook の `maxDuration=30s` を上限に、これらの秒数だけ待てば有効化前に開始した書き込みは完了しているはず。加えて allow 判定は最大 5 秒キャッシュされるため、有効化直後の数秒は旧判定が残りうる（+5 秒を見込む）
+- [ ] **drain を待つ**: tRPC route の `maxDuration=300s`、webhook の `maxDuration=30s` を上限に、これらの秒数だけ待てば有効化前に開始した書き込みは完了しているはず
 - [ ] **pg_cron も別途止める**（上表のとおり fence は効かない）。手順は Playbook 1 ケースD参照
 
 #### 解除
