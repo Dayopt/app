@@ -61,6 +61,7 @@
       "showPassword": "パスワードを表示",
       "hidePassword": "パスワードを隠す",
       "passwordUpdateFailed": "パスワードを更新できませんでした。もう一度お試しください",
+      "signOutOthersFailed": "パスワードは変更されましたが、他の端末のログアウトに失敗しました。設定から再試行してください",
       "passwordIncorrect": "現在のパスワードが正しくありません",
       "passwordReused": "過去5回分のパスワードは使用できません。別のパスワードを入力してください。",
       "passwordPwned": "このパスワードは過去に漏洩しています。より安全なパスワードを使ってください。",
