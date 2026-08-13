@@ -318,6 +318,7 @@ typo 修正など issue を切っていない作業では省略してよい。�
 
 **PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
 
+- **draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。手順は `dispatch` skill 操作 A 手順 6 が正本。経緯は #2065）
 - **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
 - **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
 - flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
