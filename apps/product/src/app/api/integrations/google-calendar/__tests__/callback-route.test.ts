@@ -37,7 +37,11 @@ import { GET } from '../callback/route';
 const USER_ID = '00000000-0000-4000-8000-000000000001';
 const OTHER_USER_ID = '00000000-0000-4000-8000-000000000002';
 const STATE = 'state-value';
+/** 旧・広い scope。既存接続の後方互換を確認する test で使う（#1982）。 */
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+/** narrow pair。新規の認可リクエストはこの 2 本を要求する（#1982）。 */
+const CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
 
 function idToken(overrides: Record<string, unknown> = {}): string {
   const payload = {
@@ -271,7 +275,7 @@ describe('google calendar callback route', () => {
     expect(saveConnection).not.toHaveBeenCalled();
   });
 
-  it('calendar.readonly が付与されなければ接続を作らない', async () => {
+  it('カレンダー scope が一つも付与されなければ接続を作らない', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -290,6 +294,56 @@ describe('google calendar callback route', () => {
 
     expect(reasonOf(response)).toBe('scope_not_granted');
     expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  // narrow pair は AND 判定。片方だけでは calendarList.list か events.list のどちらかが
+  // 恒久的に 403 になり「接続済みなのに同期されない」状態が残るため、両方揃うまで拒否する（#1982）
+  it.each([
+    ['calendarlist だけ', CALENDAR_LIST_SCOPE],
+    ['events だけ', CALENDAR_EVENTS_SCOPE],
+  ])('narrow pair の片方（%s）しか付与されなければ接続を作らない', async (_label, scope) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify(tokenResponse({ scope })), { status: 200 })),
+      ),
+    );
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('scope_not_granted');
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('narrow pair が両方付与されれば calendar.readonly が無くても接続できる', async () => {
+    const scope = `${CALENDAR_LIST_SCOPE} ${CALENDAR_EVENTS_SCOPE}`;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify(tokenResponse({ scope })), { status: 200 })),
+      ),
+    );
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(saveConnection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        grantedScopes: [CALENDAR_LIST_SCOPE, CALENDAR_EVENTS_SCOPE],
+      }),
+    );
+  });
+
+  // 既存接続は旧 scope のまま grant 済みのことがあるため、新規の認可リクエストはもう
+  // 要求しなくても callback の判定は引き続き通す（#1982、削除条件は hasRequiredCalendarScopes
+  // の doc comment を参照）
+  it('旧 calendar.readonly のみでも後方互換で接続できる', async () => {
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(saveConnection).toHaveBeenCalledWith(
+      expect.objectContaining({ grantedScopes: [CALENDAR_SCOPE] }),
+    );
   });
 
   it('refresh_token が返らなければ既存接続を触らない', async () => {

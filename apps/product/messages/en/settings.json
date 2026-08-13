@@ -494,6 +494,7 @@
           "rateLimited": "Too many connection attempts. Try again later.",
           "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",
           "mfaVerificationRequired": "Two-factor verification is required. Verify and try again.",
+          "scopeNotGranted": "Some required permissions weren't granted. Allow all the permissions shown, then try again.",
           "unavailable": "Google Calendar connection is temporarily unavailable",
           "genericError": "Google Calendar could not be connected"
         }

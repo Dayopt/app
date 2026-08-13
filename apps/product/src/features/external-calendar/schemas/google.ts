@@ -7,8 +7,22 @@ import { z } from 'zod';
  * 全 string に `.max()` を置く。googleapis SDK は入れず素の fetch + zod で扱う（overview.md §5-2）。
  */
 
-/** 取り込みに必要な唯一の Calendar API scope。 */
+/**
+ * 旧・広い Calendar API scope。
+ *
+ * 新規の認可リクエストではもう要求しない（GCP 審査の最小権限要件、#1963）。ただし
+ * 既に grant 済みの既存接続はこの scope のまま動き続けるため、`hasRequiredCalendarScopes`
+ * の判定からは削除しない。削除条件は同関数の doc comment を参照。
+ */
 export const GOOGLE_CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+
+/** カレンダー一覧の取得（`calendarList.list`）に必要な最小 scope。 */
+export const GOOGLE_CALENDAR_LIST_READONLY_SCOPE =
+  'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+
+/** 選択済みカレンダーの予定取得（`events.list`）に必要な最小 scope。 */
+export const GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE =
+  'https://www.googleapis.com/auth/calendar.events.readonly';
 
 /**
  * 認可リクエストで要求する scope。
@@ -19,12 +33,18 @@ export const GOOGLE_CALENDAR_READONLY_SCOPE = 'https://www.googleapis.com/auth/c
  * 取れないため、これが無いと connect が必ず失敗する。
  * `email` は表示用の `provider_account_email` のため。
  *
+ * Calendar scope は narrow pair（`calendarList.list` + `events.list` の 2 本）に絞る。
+ * `calendar.readonly` が追加で持つ権限（ACL・設定・任意カレンダーの freebusy 等）は
+ * このアプリでは一つも使っていない（審査要件、docs/operations/google-oauth-verification.md
+ * §要判断 参照）。
+ *
  * @see https://developers.google.com/identity/openid-connect/openid-connect#scope-param
  */
 export const GOOGLE_AUTHORIZATION_SCOPES = [
   'openid',
   'email',
-  GOOGLE_CALENDAR_READONLY_SCOPE,
+  GOOGLE_CALENDAR_LIST_READONLY_SCOPE,
+  GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE,
 ] as const;
 
 /** Google が id_token の `iss` に入れる 2 形式。片方だけ許すと本番でランダムに落ちる。 */

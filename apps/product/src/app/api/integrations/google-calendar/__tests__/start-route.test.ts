@@ -164,9 +164,10 @@ describe('google calendar start route', () => {
     expect(location.origin + location.pathname).toBe(
       'https://accounts.google.com/o/oauth2/v2/auth',
     );
-    // openid が無いと Google は id_token を返さず、接続の同定に使う sub が取れない
+    // openid が無いと Google は id_token を返さず、接続の同定に使う sub が取れない。
+    // Calendar scope は narrow pair（#1982、GCP 審査の最小権限要件）
     expect(location.searchParams.get('scope')).toBe(
-      'openid email https://www.googleapis.com/auth/calendar.readonly',
+      'openid email https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events.readonly',
     );
     expect(location.searchParams.get('access_type')).toBe('offline');
     expect(location.searchParams.get('prompt')).toBe('consent select_account');
