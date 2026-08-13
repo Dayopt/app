@@ -646,6 +646,7 @@ Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総�
 | Google token / API 呼び出し             | 15s        | `external-calendar/server/google-oauth.ts` / `providers/google.ts` |
 | Rate limit（Upstash）                   | 2s         | `lib/rate-limit/upstash.ts`                                        |
 | Health の DB check                      | 5s ×2 逐次 | `api/health/route.ts`                                              |
+| Health の Redis check                   | 5s         | `api/health/route.ts` の `REDIS_CHECK_TIMEOUT_MS`（#1967）         |
 
 段は 4 つに畳む。段を増やすと drift 保守が増えるだけで、上限の役目は blast radius の固定であって最適化ではない。
 

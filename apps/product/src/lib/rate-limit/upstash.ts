@@ -22,6 +22,13 @@ import { captureUnexpectedError } from '@/lib/sentry';
  * 経由するどの route も import 時点で無関係に crash していた（#2011）。Upstash 側は本来
  * `UPSTASH_REDIS_REST_URL` / `_TOKEN` の2変数しか要らないので、`process.env` を直接読む
  * （schema 全体の fail-fast は他の operational-only module 経由で production では変わらず効く）。
+ *
+ * `\n` 除去 + trim は `@/env` の Proxy が既に行っている正規化（Vercel env pull が付与しうる
+ * 末尾 `\n` / 空文字対策）を意図的に踏襲したもので、main の zod 検証経路には無かった追加分では
+ * ない。一方で zod の `.url()` / `.min(1)` format 検証は失う——不正値の失敗タイミングが
+ * 「import 時の起動時 crash」から「Redis client 生成・接続を試みる初回リクエスト時」へ
+ * 後ろ倒しになるのは #2011 の修正意図どおり（無関係な route を巻き込む早期 crash を避けるのが
+ * 目的なので、この後退は許容する）。
  */
 function readTrimmedEnv(name: string): string | undefined {
   const trimmed = process.env[name]?.replace(/\\n/g, '').trim();
