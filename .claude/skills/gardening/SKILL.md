@@ -43,7 +43,7 @@ fresh session で以下を順に実施し、成果物を「draft PR + issue + jo
 6. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C の**月次 backstop 項目のみ**実施する（日次項目は指揮台の朝編成が吸収済み。`orchestration.md` §1 日サイクル）。発見は同 skill の intake で起票する
 7. **公開コンテンツ監査** — `docs-audit` skill を実行し、実機能と公開 docs のギャップ・鮮度乖離・en/ja 非対称を検出して起票する。`area:blog` issue が枯渇していればレビュー待ちリストに記す。コンテンツの数字（Search Console / Vercel Analytics の指名検索・流入・上位クエリ）と事業指標（`docs/business/business-model.md` §Metrics の定義に従う WAU・課金率・チャーン。Stripe / Supabase から read-only で取得）は、取得できる環境なら journal に記録し、できなければ「未取得」と明記する。事業の現在地はこの月次記録を正とし、常設の進捗文書は作らない
 8. **セキュリティ sweep** — `mcp__supabase__get_advisors`（type: security、read-only）と `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録
-9. **四半期チェック** — `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月無ければ、レビュー待ちリストに「AI 設定棚卸し（`audit-ai-config` skill）の実施提案」を記す
+9. **四半期チェック** — `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月無ければ、レビュー待ちリストに「AI 設定棚卸し（`audit-ai-config` skill）の実施提案」を記す。**skill / rules ファイルの鮮度を git log で判定する時は `audit-ai-config` skill §Review Questions 1 の shallow-clone 注意（`.git/shallow` 境界が 2026-07-15 に付き `git log -1` が汚染される）に従う**
 10. **成果物の着地** — branch `claude/gardening-YYYY-MM` を作り、journal（レビュー待ちリスト含む）と鮮度更新を commit して **draft PR** を作成する。issue は各ステップ内で起票済みであること。PR 本文に「実施したステップ / 起票した issue / レビュー待ちリストの件数」を要約する
 
 ## 人間パート（/gardening で実施）

@@ -69,6 +69,19 @@ pnpm quality:deadcode
 pnpm docs:check               # link/metadata/path/project/命名/append-only を検証（CI と同一）
 ```
 
+### 紛らわしい script 名（2026-08、#2067 棚卸しで整理）
+
+似た名前だが別物、または既存 script のサブセットになっている root script。使う前に確認する:
+
+| script                         | 実体                                                                                                                                                                                                                 | 混同しやすい相手                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `pnpm docs:check:claude-links` | `apps/product` の CLAUDE.md 内リンク・参照ファイル存在検証                                                                                                                                                           | `pnpm docs:check`（別物。こちらは `docs/` 配下の link/metadata/path 等を検証）                       |
+| `pnpm check:workspace`         | `typecheck` + `lint` + `build:packages` + `build-storybook` の packages 検証                                                                                                                                         | `pnpm check`（別物。こちらは secrets/lint/test まで含む CI Stage 1 相当）                            |
+| `pnpm typecheck:scripts`       | `scripts/` 配下だけの型検査（`tsc -p tsconfig.scripts.json`）                                                                                                                                                        | `pnpm typecheck`（`typecheck:scripts` を内包する上位コマンド。単体実行は scripts/ のみ確認したい時） |
+| `pnpm copy:check`              | UI 文言（Copy System）の禁止表記スキャナー（`scripts/i18n/check-glossary.ts`）                                                                                                                                       | 名前からは「ファイルコピー」の検証に見えるが無関係                                                   |
+| `pnpm db:seed:identity`        | MCP environment identity（ローカル固定 OAuth token 発行用 tuple）投入                                                                                                                                                | `pnpm db:seed`（別スクリプト。`db:fresh` に含まれる）                                                |
+| license 系 5 script            | `license:check`＝互換性チェック / `license:check-risks`＝risk 分類チェック / `license:audit`＝監査レポート出力 / `license:credits:check`＝表示用クレジット一覧の鮮度確認 / `generate-licenses`＝クレジット一覧再生成 | 名前だけでは役割が読み分けにくい 5 兄弟                                                              |
+
 ## Non-Negotiables
 
 - 既存コードを検索してから変更する。`rg` / `rg --files` を優先する
