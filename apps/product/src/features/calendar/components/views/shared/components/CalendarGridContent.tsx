@@ -16,6 +16,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 
+import { useConvertGhostEvent } from '../../../../hooks/operations/useConvertGhostEvent';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import {
@@ -191,6 +192,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
   const { createRecord } = useTimeblockWriteMutations();
+  const { convertGhost, dismissGhost } = useConvertGhostEvent();
 
   // Tag タップで開いている draft entry（同日のときだけ block を描画）
   const tagDraft = useTagDraftStore((s) => s.draft);
@@ -415,6 +417,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               position={position}
               timeFormat={timeFormat}
               compact={compactCards}
+              onConvert={() => convertGhost(event)}
+              onDismiss={() => dismissGhost(event)}
             />
           );
         })}

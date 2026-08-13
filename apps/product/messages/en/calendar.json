@@ -454,7 +454,24 @@
     },
     "external": {
       "untitled": "Untitled event",
-      "screenReaderPrefix": "External calendar event: "
+      "screenReaderPrefix": "External calendar event: ",
+      "convert": {
+        "hint": "Tap to add"
+      },
+      "dismiss": {
+        "ariaLabel": "Dismiss",
+        "confirmTitle": "Dismiss this event?",
+        "confirmDescription": "This event will no longer appear on your calendar.",
+        "confirmLabel": "Dismiss",
+        "loadingLabel": "Dismissing"
+      },
+      "toast": {
+        "convertedToPlan": "Added to Plan",
+        "convertedToRecord": "Recorded",
+        "convertUndone": "Undone",
+        "convertFailed": "Couldn't add this. Try again.",
+        "dismissFailed": "Couldn't dismiss this. Try again."
+      }
     },
     "error": {
       "title": "Failed to load calendar",

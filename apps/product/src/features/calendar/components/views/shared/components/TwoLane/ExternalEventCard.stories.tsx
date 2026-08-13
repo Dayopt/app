@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { expect, fn, userEvent, within } from 'storybook/test';
 
 import { calculateExternalEventLayout } from '../../../../../lib/external-event-layout';
 import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-layout';
@@ -80,7 +81,7 @@ function Ghosts({
 }
 
 /**
- * 外部カレンダーの読み取り専用 ghost カード（#1962）。
+ * 外部カレンダーの ghost カード（#1962、変換・dismiss 対応は #1985 / #1984）。
  *
  * Dayopt の Plan / Record と違い DB の EXCLUDE 制約が無いので重なる。座標は
  * `calculateExternalEventLayout` が出すため、Story も同じ関数を通して現実の見え方を再現する。
@@ -290,6 +291,64 @@ export const LaneDisplayModes: Story = {
   ),
 };
 
+/**
+ * 変換可能な ghost（#1985）。カード全体がクリック対象になり、隅に dismiss アイコンが出る。
+ * Plan / Record どちらに変換されるかは呼び出し側（`useConvertGhostEvent`）が判定するため、
+ * このカード自体は onConvert を呼ぶだけ。
+ */
+export const Convertible: Story = {
+  render: () => (
+    <DayColumn>
+      <Ghosts events={[]} />
+      <ExternalEventCard
+        event={ghost({ id: 'convertible' })}
+        position={{
+          top: 10 * HOUR_HEIGHT,
+          height: 60,
+          left: 0,
+          width: 38,
+          displayStartDate: at(10),
+          displayEndDate: at(11),
+        }}
+        onConvert={fn()}
+        onDismiss={fn()}
+      />
+    </DayColumn>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole('button', { name: /週次ミーティング/ })).toBeVisible();
+  },
+};
+
+/** dismiss アイコンを押すと確認ダイアログが開く（design-system.md のアーカイブ相当、確認必須）。 */
+export const DismissConfirm: Story = {
+  render: () => (
+    <DayColumn>
+      <ExternalEventCard
+        event={ghost({ id: 'dismissible' })}
+        position={{
+          top: 10 * HOUR_HEIGHT,
+          height: 60,
+          left: 0,
+          width: 38,
+          displayStartDate: at(10),
+          displayEndDate: at(11),
+        }}
+        onConvert={fn()}
+        onDismiss={fn()}
+      />
+    </DayColumn>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: '非表示にする' }));
+
+    const dialog = await within(document.body).findByRole('alertdialog');
+    await expect(within(dialog).getByText('この予定を非表示にしますか？')).toBeInTheDocument();
+  },
+};
+
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap gap-6">
@@ -370,6 +429,24 @@ export const AllPatterns: Story = {
             events={[
               ghost({ id: 'p8', title: '夜通しの遠征', startDate: at(22, 0, -1), endDate: at(3) }),
             ]}
+          />
+        </DayColumn>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-xs">変換可能（#1985）</p>
+        <DayColumn hours={3}>
+          <ExternalEventCard
+            event={ghost({ id: 'p9' })}
+            position={{
+              top: 10 * HOUR_HEIGHT,
+              height: 60,
+              left: 0,
+              width: 38,
+              displayStartDate: at(10),
+              displayEndDate: at(11),
+            }}
+            onConvert={fn()}
+            onDismiss={fn()}
           />
         </DayColumn>
       </div>
