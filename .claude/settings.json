@@ -115,7 +115,17 @@
       "Skill(code-review:code-review)",
       "Skill(feature-dev:feature-dev)",
       "Skill(review)",
-      "Skill(security-review)"
+      "Skill(security-review)",
+      "Bash(git push:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm lint:boundaries)",
+      "Bash(pnpm test:run:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm check)",
+      "Bash(pnpm docs:check)",
+      "Bash(pnpm vitest:*)",
+      "Bash(pnpm exec tsc:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -135,13 +145,7 @@
       "Bash(shutdown:*)",
       "Bash(reboot:*)"
     ],
-    "ask": [
-      "Bash(git push:*)",
-      "Bash(git pull:*)",
-      "Bash(git reset:*)",
-      "Bash(curl:*)",
-      "Bash(wget:*)"
-    ]
+    "ask": ["Bash(git pull:*)", "Bash(git reset:*)", "Bash(curl:*)", "Bash(wget:*)"]
   },
   "hooks": {
     "SessionStart": [
