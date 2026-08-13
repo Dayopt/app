@@ -255,7 +255,7 @@ SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;
 
 - [ ] **復元する前に production 側の `cron.job` を控える**（これをやらないと比較対象が無い）
 - [ ] 復元後の job 一覧が、控えた production 側と一致するか記録する
-- [ ] repo の migration から導ける active job は **3 本**（`cleanup-product-events` / `expire-calendar-revoke-outbox` / `cleanup-calendar-authority-retention`）。baseline の 4 本はいずれも後続 migration で unschedule 済み。**production の実数がこれと違っても異常ではない** — Dashboard 設定分の差なので、その差自体を記録する
+- [ ] repo の migration から導ける active job は **5 本**（`cleanup-product-events` / `expire-calendar-revoke-outbox` / `cleanup-calendar-authority-retention` / `expire-calendar-revoke-authority` / `finalize-calendar-revoke-guards`）。baseline の 4 本はいずれも後続 migration で unschedule 済み。**production の実数がこれと違っても異常ではない** — Dashboard 設定分の差なので、その差自体を記録する
 - [ ] 残っていない場合、再作成の手順を本文書へ追記する
 
 ### Auth

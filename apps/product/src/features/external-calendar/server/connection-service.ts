@@ -624,8 +624,9 @@ function reportUnrevokedGrant(reason: string): void {
  * 2.5. revoke の間（provider への network round-trip）に別プロセスの sync が新しい
  *    ミラー行を書き込む可能性が残る（sync-service.ts は disconnect 中の connection を
  *    CAS 検証せず書き込める。Codex 指摘、#2000。完全に閉じるには sync 側の fencing が要る
- *    — #2003 で追跡）。ここでは delete 直前にもう一度掃除して race window を「revoke の
- *    所要時間」から「この 2 回目の DB 往復」まで縮める。**best-effort** — 1 回目の
+ *    — #2050 で追跡。fenced sync writer RPC 群の採用に一本化し、disconnect window の
+ *    fencing もその受け入れ条件に含める）。ここでは delete 直前にもう一度掃除して race
+ *    window を「revoke の所要時間」から「この 2 回目の DB 往復」まで縮める。**best-effort** — 1 回目の
  *    fail-closed で主要な保証は既に成立しているため、ここの失敗で切断全体を止めない
  * 3. `calendar_connections` を hard delete（子は CASCADE、参照済みミラーは connection_id が
  *    SET NULL され歴史的アンカーとして残る）

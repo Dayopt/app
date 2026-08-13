@@ -31,6 +31,7 @@ import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
+import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -97,6 +98,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (authError || !user) {
     return NextResponse.redirect(new URL('/auth/login', requestUrl));
+  }
+
+  // cookie は自作できるため start を踏まずに callback を直接叩ける。MFA登録済みでaal2未検証の
+  // セッションでは、token交換・DB書き込みより前に止める。
+  //
+  // lookupFailed はセッション自体のAAL claim(自分のcookie由来)から到達しうるため、
+  // captureすると攻撃者が任意回数Sentry quotaを焼ける増幅経路になる（invalid_grantを
+  // 下のcatchでcaptureしないのと同じ理由）。captureせずlogger.warnに留める。
+  const mfaAssurance = await resolveMfaAssurance(supabase, 'calendar_connect');
+  if (mfaAssurance.lookupFailed) {
+    logger.warn('[calendar-callback] MFA assurance lookup failed');
+    return fail('assurance_lookup_failed');
+  }
+  if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
+    logger.warn('[calendar-callback] MFA verification required');
+    return fail('mfa_verification_required');
   }
 
   // start と同じ理由でここにも要る。cookie が自作できる以上、start を踏まずに callback を

@@ -263,6 +263,24 @@ export const icalFeedRateLimit = createRateLimiter(
 );
 
 /**
+ * iCalフィードの事前認証集約上限（IP単位）。per-token上限より前に評価する。
+ *
+ * Google/Apple/Outlook等のフェッチャーは共有IPプールから購読を取得するため、上限は
+ * 30/minのような厳しい値にせず60/minに緩めている（暫定値。本番トラフィック未計測）。
+ * 到達時はSentryへcaptureし運用中に観測・調整する前提。
+ */
+export const icalFeedIpRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(60, '1 m'),
+  'ratelimit:product:ical-feed-ip',
+);
+
+/** iCalフィード全体の集約上限（暫定値）。service-role DB lookupを保護する。 */
+export const icalFeedGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(600, '1 m'),
+  'ratelimit:product:ical-feed-global',
+);
+
+/**
  * 外部カレンダー接続用レート制限（start / callback 共通）
  * 10リクエスト / 1時間 per user（OAuth 接続は人間の操作なので低頻度で足りる）
  *
