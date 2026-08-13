@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { getAuthErrorKey } from '../sanitize-auth-error';
+import { getAuthErrorKey, RESOLVED_KEYS } from '../sanitize-auth-error';
 
 function err(message: string, code?: string) {
   return { message, code };
 }
+
+const ALL_CONTEXTS = ['login', 'signup', 'resetPassword', 'updatePassword', 'oauth'] as const;
 
 describe('sanitize-auth-error', () => {
   describe('login', () => {
@@ -117,53 +119,17 @@ describe('sanitize-auth-error', () => {
   describe('RESOLVED_KEYS の二重解決耐性', () => {
     // useAuthStore の catch 経路（resolveAuthErrorKey）は解決済みキーを message に詰めて
     // 返す。呼び出し元コンポーネントがこれを再度 getAuthErrorKey に通しても、
-    // 同じキーがそのまま返らなければならない（auth-error.ts の RESOLVED_KEYS コメント参照）
-    it('signupUnavailable を再投入しても signupUnavailable のまま', () => {
-      expect(getAuthErrorKey(err('auth.errors.signupUnavailable'), 'signup')).toBe(
-        'auth.errors.signupUnavailable',
-      );
-    });
-
-    it('captchaFailed を再投入しても captchaFailed のまま', () => {
-      expect(getAuthErrorKey(err('auth.errors.captchaFailed'), 'signup')).toBe(
-        'auth.errors.captchaFailed',
-      );
-      expect(getAuthErrorKey(err('auth.errors.captchaFailed'), 'login')).toBe(
-        'auth.errors.captchaFailed',
-      );
-    });
-
-    it('unexpectedError を再投入しても unexpectedError のまま', () => {
-      expect(getAuthErrorKey(err('auth.errors.unexpectedError'), 'signup')).toBe(
-        'auth.errors.unexpectedError',
-      );
-    });
-
-    // useAuthStore.signIn/signUp の catch 経路（resolveAuthErrorKey）は rate-limit系の
-    // キーも返しうる。RESOLVED_KEYS に無いと、再投入時に別のキーへ黙って化ける
-    // （accountLocked → invalidCredentials、tooManyRequests → signupUnavailable）
-    it('accountLocked を再投入しても accountLocked のまま（login）', () => {
-      expect(getAuthErrorKey(err('auth.errors.accountLocked'), 'login')).toBe(
-        'auth.errors.accountLocked',
-      );
-    });
-
-    it('tooManyRequests を再投入しても tooManyRequests のまま（signup）', () => {
-      expect(getAuthErrorKey(err('auth.errors.tooManyRequests'), 'signup')).toBe(
-        'auth.errors.tooManyRequests',
-      );
-    });
-
-    it('weakPassword を再投入しても weakPassword のまま（signup）', () => {
-      expect(getAuthErrorKey(err('auth.errors.weakPassword'), 'signup')).toBe(
-        'auth.errors.weakPassword',
-      );
-    });
-
-    it('invalidCredentials を再投入しても invalidCredentials のまま（login）', () => {
-      expect(getAuthErrorKey(err('auth.errors.invalidCredentials'), 'login')).toBe(
-        'auth.errors.invalidCredentials',
-      );
-    });
+    // 同じキーがそのまま返らなければならない（auth-error.ts の RESOLVED_KEYS コメント参照）。
+    //
+    // RESOLVED_KEYS の判定は message 一致のみで context を見ないため（auth-error.ts の
+    // 実装上、context分岐より前でreturnする）、この不変条件は「どの key」×「どの context」
+    // の組み合わせでも成り立たなければならない。手書きの個別列挙だとキー追加時に
+    // テストが追従し忘れて漏れるため、RESOLVED_KEYS 自体を it.each で総当たりする
+    it.each(RESOLVED_KEYS.flatMap((key) => ALL_CONTEXTS.map((context) => [key, context] as const)))(
+      '%s は context=%s で再投入しても自身を返す',
+      (key, context) => {
+        expect(getAuthErrorKey(err(key), context)).toBe(key);
+      },
+    );
   });
 });

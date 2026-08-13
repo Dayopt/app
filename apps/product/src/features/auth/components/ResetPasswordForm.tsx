@@ -128,13 +128,17 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         () => supabase.auth.mfa.listFactors(),
       );
       if (factorsError) {
-        setMfaError(t('common.errors.mfa.verifyFailed'));
+        // 初期化自体ができない状態でMFA画面に留めても操作できない。password画面へ戻す
+        // （insufficient_aalは変わらないので再送信は同じstartMfaStepUpへ再度入る=自然なretry）
+        setMfaStepUp(false);
+        setError(t('auth.errors.unexpectedError'));
         return;
       }
 
       const verifiedFactor = factors?.totp?.find((factor) => factor.status === 'verified');
       if (!verifiedFactor) {
-        setMfaError(t('common.errors.mfa.verifyFailed'));
+        setMfaStepUp(false);
+        setError(t('auth.errors.unexpectedError'));
         return;
       }
       setMfaFactorId(verifiedFactor.id);
@@ -144,14 +148,16 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         () => supabase.auth.mfa.challenge({ factorId: verifiedFactor.id }),
       );
       if (challengeError) {
-        setMfaError(t('common.errors.mfa.challengeFailed'));
+        setMfaStepUp(false);
+        setError(t('auth.errors.unexpectedError'));
         return;
       }
       if (challengeData) setMfaChallengeId(challengeData.id);
     } catch (err) {
       const original = err instanceof Error ? err : new Error('Reset password MFA init failed');
       captureUnexpectedError(original, { feature: 'auth', operation: 'reset_password_mfa_init' });
-      setMfaError(t('common.errors.mfa.verifyFailed'));
+      setMfaStepUp(false);
+      setError(t('auth.errors.unexpectedError'));
     }
   }, [supabase, t]);
 

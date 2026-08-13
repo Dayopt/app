@@ -215,6 +215,31 @@ describe('ResetPasswordForm', () => {
       expect(screen.queryByText('auth.errors.recoveryMfaBlocked')).not.toBeInTheDocument();
     });
 
+    it('MFA step-upの初期化に失敗したら（listFactorsエラー）、MFA画面に詰めずpassword入力画面へ戻す', async () => {
+      mockInsufficientAal();
+      mockListFactors.mockResolvedValueOnce({
+        data: null,
+        error: new Error('network error'),
+      });
+
+      await submitValidPassword();
+
+      await waitFor(() => {
+        expect(mockListFactors).toHaveBeenCalled();
+      });
+      // challengeまでは進まず、MFA画面（backToPasswordReset）に留まらない
+      expect(mockChallenge).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: 'auth.resetPasswordForm.updateButton' }),
+        ).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('auth.errors.unexpectedError');
+    });
+
     it('TOTPコード検証成功後、保持していたpasswordでupdatePasswordを再実行し成功画面へ遷移する', async () => {
       mockInsufficientAal();
       mockVerify.mockResolvedValue({

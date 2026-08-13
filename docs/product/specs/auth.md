@@ -35,6 +35,14 @@ Supabase Auth ベースの認証機能。
 - MFA登録済みで session assurance level が `aal1` のブラウザセッションは、画面遷移だけでなく HTTP / RSC の両 tRPC context でも protected procedure を拒否する
 - RLS（Row Level Security）によるDBレベルでの認可を併用する
 
+## Signup のユーザー列挙防止と保証境界
+
+`getAuthErrorKey`（`apps/product/src/lib/auth-error.ts`）は signup context の「既登録」エラーと「未分類の失敗」を同一キー（`auth.errors.signupUnavailable`）に収束させ、エラーメッセージの文言差からアカウントの存在を推測できないようにしている。
+
+ただしこれは**エラーメッセージ内の文言差**だけを防ぐ設計であり、**画面遷移そのものの差**は別の保証に依存する。`SignupForm.tsx` は `result.data.session` の有無で「そのままアプリへ」（session あり）と「確認メール待ち画面」（session なし）を分岐する。GoTrue は email confirmation が必須（`enable_confirmations = true` 相当）の場合、**新規登録でも既登録でも** confirmation 待ちの obfuscated レスポンス（session なし）を返す設計になっており、この対称性があって初めて「新規登録者と既登録者で画面遷移が区別できない」という列挙防止が成立する。
+
+**もし production の email confirmation 必須設定が drift して無効化されると**、新規登録は即座に session ありで成功する一方、既登録アドレスへの signup は `getAuthErrorKey` のエラー画面（`signupUnavailable`）に落ちるため、**エラー文言を丸めていても画面遷移の有無で存在が判別可能になる**。この設定（GoTrue の `mailer_autoconfirm`、`expected: false`）は `scripts/production-auth-config-audit.mjs` が既に pin しており、`true`（確認省略）への drift は fail-open として検出される。
+
 ## ログイン手段によるアカウント操作の分岐
 
 Google でのみ登録したユーザーはパスワードを持たない。これを異常扱いせず、**ユーザーが実際に持っている手段で再認証する**。判定は `hasPasswordIdentity`（`lib/auth/domain/login-method.ts`）が `app_metadata.providers` から行い、UI もサーバーも同じ関数を使う。

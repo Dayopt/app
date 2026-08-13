@@ -33,7 +33,7 @@ interface AuthErrorInput {
  * 新キーを足す時は、同じ二重解決経路（store の catch → 呼び出し元コンポーネントの
  * 再解決）を通るキーをここにも足すこと。忘れると別のキーへ黙って化ける。
  */
-const RESOLVED_KEYS = [
+export const RESOLVED_KEYS = [
   'auth.errors.unexpectedError',
   'auth.errors.signupUnavailable',
   'auth.errors.captchaFailed',
