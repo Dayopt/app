@@ -87,7 +87,11 @@ P1/P2 の review comment とは別に、**1 件の summary comment** を issue �
 
 指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
 
+**書式を誤った marker は窓内に残ると gate を塞ぎ続ける。** gate は「最新の marker」だけでなく窓内の**全 marker を any 判定**する（`scripts/git/finish-branch.sh` の `INTERNAL_REVIEW_CLAIMS_FINDINGS`）ため、正しい書式の新しい marker を投稿しても、窓内に残る誤書式の古い marker 1 件（例: §投稿フォーマット の zerolike 判定に落ちる注釈付き `P1: なし（…）`）が非ゼロ申告と誤認され続け、対応する review comment が無いまま停止する。復旧は当該コメントの削除または編集のみ（新しい marker の追加投稿では解決しない）。PR [#2053](https://github.com/Dayopt/dayopt/pull/2053) の初運用でこの型で 2 度停止し、汚染 marker を削除してから通過した。
+
 ## 投稿フォーマット
+
+**P1/P2 行でゼロ件を申告する時は、値を `なし` / `0` / `0件` / `0 件` / `None` のいずれかのみにする。同一行に注釈・括弧書きを付けない。**gate の zerolike 判定（`scripts/git/finish-branch.sh` の `zerolike`）は完全一致の正規表現のため、`P1: なし（注釈…）` のような括弧注釈付きはゼロ件と認識されず非ゼロ申告と誤認され、対応する review comment が見つからず gate が停止する。ゼロ件の理由や補足を書きたい場合は別行にするか P3 / 経緯欄へ書く（非ゼロ件数を申告する行は下の例の P2 のように注釈を付けてよい。zerolike 判定の対象外なので gate 判定に影響しない）。
 
 ```
 [internal-review]
