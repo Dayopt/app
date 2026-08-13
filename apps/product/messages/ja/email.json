@@ -22,6 +22,12 @@
     "body": "Dayopt のパスワードが正常に変更されました。",
     "securityWarning": "この変更に覚えがない場合は、すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
   },
+  "mfaDisabled": {
+    "subject": "2段階認証が無効になりました",
+    "heading": "2段階認証が無効になりました",
+    "body": "{disabledAt}、リカバリーコードを使用して Dayopt アカウントの2段階認証が無効になりました。",
+    "securityWarning": "この操作に覚えがない場合、アカウントが第三者にアクセスされている可能性があります。すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
+  },
   "accountDeletion": {
     "subject": "アカウントが削除されました",
     "heading": "アカウントが削除されました",
