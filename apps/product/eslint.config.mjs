@@ -530,14 +530,18 @@ const eslintConfig = defineConfig([
   // 追加する時は、既存 selector を上書きしないことを確認する。
   {
     files: ['src/**/*.{ts,tsx}'],
+    // ignores はこの config object 内の全 selector（signInWithPassword / toZonedTime）に
+    // 無差別適用される。新しい ignore を足す時は、対象外にしたい selector をコメントで明記する。
     ignores: [
+      // signInWithPassword selector 用
       'src/lib/test/integration/**',
       '**/__tests__/**',
-      // ログイン（ブラウザから captcha token 付きで呼ぶ）
+      // signInWithPassword selector 用: ログイン（ブラウザから captcha token 付きで呼ぶ）
       'src/features/auth/stores/useAuthStore.ts',
-      // アカウント削除の本人確認。service-role 経由で captcha を意図的に免除している
+      // signInWithPassword selector 用: アカウント削除の本人確認。
+      // service-role 経由で captcha を意図的に免除している
       'src/features/auth/server/password-reauthentication.ts',
-      // toZonedTime の集約先そのもの（下記 selector の許可場所）
+      // toZonedTime selector 用: 集約先そのもの（selector の許可場所）
       'src/lib/date/timezone.ts',
     ],
     rules: {
@@ -568,7 +572,7 @@ const eslintConfig = defineConfig([
           selector:
             "ImportDeclaration[source.value='date-fns-tz'] ImportSpecifier[imported.name='toZonedTime']",
           message:
-            'toZonedTime の直接 import は禁止（壁時計 Date への誤適用で日付がずれるバグ class、#2017）。@/lib/date/timezone の集約 helper（toTZStartISO 等）を使う。',
+            'toZonedTime の直接 import は禁止（壁時計 Date への誤適用で日付がずれるバグ class、#2017）。@/lib/date/timezone の集約 helper（toTZStartISO / toTZEndISO / tzIsSameDay / isTodayInTimezone 等）を使う。',
         },
       ],
     },
