@@ -13,7 +13,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { plansToICal } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
-import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
+import {
+  icalFeedGlobalRateLimit,
+  icalFeedIpRateLimit,
+  icalFeedRateLimit,
+} from '@/lib/rate-limit/upstash';
+import { extractClientIp } from '@/lib/security/ip-validation';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
@@ -115,6 +120,8 @@ function isValidUUID(str: string): boolean {
  */
 const TOKEN_RATE_LIMIT = 10;
 const TOKEN_RATE_WINDOW_MS = 60 * 1000;
+/** hard cardinality 上限。超過分は挿入順(≒最古アクセス順)で捨てる。 */
+const TOKEN_RATE_LOG_MAX_ENTRIES = 500;
 const tokenRequestLog = new Map<string, number[]>();
 
 function isRateLimitedInMemory(token: string): boolean {
@@ -122,15 +129,14 @@ function isRateLimitedInMemory(token: string): boolean {
   const timestamps = tokenRequestLog.get(token) ?? [];
   const recent = timestamps.filter((t) => now - t < TOKEN_RATE_WINDOW_MS);
   recent.push(now);
+  // 既存キーの再設定はMapの挿入順を末尾へ更新する(擬似LRU)。
+  tokenRequestLog.delete(token);
   tokenRequestLog.set(token, recent);
 
-  // メモリリーク防止: 古いエントリを定期的にクリーン
-  if (tokenRequestLog.size > 1000) {
-    for (const [key, ts] of tokenRequestLog) {
-      if (ts.every((t) => now - t > TOKEN_RATE_WINDOW_MS)) {
-        tokenRequestLog.delete(key);
-      }
-    }
+  while (tokenRequestLog.size > TOKEN_RATE_LOG_MAX_ENTRIES) {
+    const oldestKey = tokenRequestLog.keys().next().value;
+    if (oldestKey === undefined) break;
+    tokenRequestLog.delete(oldestKey);
   }
 
   return recent.length > TOKEN_RATE_LIMIT;
@@ -185,11 +191,73 @@ async function checkRateLimit(token: string): Promise<{
   return { limited: false };
 }
 
+type AggregateRateLimitState = 'allowed' | 'limited' | 'unavailable';
+
+/**
+ * platform-trusted IP → global の順で評価する事前認証集約上限。
+ *
+ * per-token 上限より前に置き、token 解決(DB lookup)の手前で高cardinalityな
+ * 未認証trafficを弾く。`lib/oauth-server/token-rate-limit.ts` の
+ * `checkOAuthTokenRateLimit` と同型の fail-closed 方針: limiter未設定は
+ * production では unavailable、それ以外は allowed。例外は常に unavailable
+ * (可用性優先フォールバックにしない。集約層はDB保護が目的のため)。
+ */
+async function checkAggregateRateLimit(
+  limiter: typeof icalFeedIpRateLimit,
+  identifier: string,
+  operation: string,
+): Promise<AggregateRateLimitState> {
+  if (!limiter) {
+    return process.env.VERCEL_ENV === 'production' ? 'unavailable' : 'allowed';
+  }
+
+  try {
+    const { success } = await limiter.limit(identifier);
+    return success ? 'allowed' : 'limited';
+  } catch (error) {
+    const original =
+      error instanceof Error ? error : new Error('iCal feed aggregate rate limit check failed');
+    captureUnexpectedError(original, {
+      feature: 'calendar_feed',
+      operation,
+      route: '/api/v1/calendar/[token]',
+      source: 'upstash',
+    });
+    logger.error('iCal feed aggregate rate limit check failed');
+    return 'unavailable';
+  }
+}
+
+async function checkAggregatePreAuthCeiling(
+  request: NextRequest,
+): Promise<AggregateRateLimitState> {
+  const ip = extractClientIp(request.headers.get('x-real-ip'));
+  const ipState = await checkAggregateRateLimit(
+    icalFeedIpRateLimit,
+    `ip:${ip}`,
+    'check_ip_rate_limit',
+  );
+  if (ipState !== 'allowed') return ipState;
+
+  return checkAggregateRateLimit(icalFeedGlobalRateLimit, 'global', 'check_global_rate_limit');
+}
+
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
+    const aggregateState = await checkAggregatePreAuthCeiling(request);
+    if (aggregateState === 'limited') {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': '60' } },
+      );
+    }
+    if (aggregateState === 'unavailable') {
+      return NextResponse.json({ error: 'Calendar feed unavailable' }, { status: 503 });
+    }
+
     const { token: rawToken } = await params;
 
     // .ics 拡張子を除去
