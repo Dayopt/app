@@ -88,6 +88,8 @@
 > **User へ直接質問・判断依頼をしない**（2026-08-12 追記） — 価値判断が必要な論点は指揮台へ送り、指揮台が束ねて濃縮した形で User に出す。チップ起票を自分でしないのと同じ構図で、レーンは判断の代行者ではなく証拠と推奨の提供者に留まる
 >
 > **節目で担当 issue のコメントを読み直す**（2026-08-12 追記） — 実装の節目（plan 凍結後・PR 作成前・merge 可能報告前）に、自分の担当 issue のコメントを読み直す。send_message はレーンの turn 実行中に配信されないため、scope 追加・裁可が issue コメントとして先に届いていることがある（§裁可・指示の経路 参照）
+>
+> **確定後は ready 化 → 重量 watch → green 報告**（2026-08-13 追記） — 指揮台からクロスレビュー収束の確定伝達を受けたら、レーンは §指揮台の merge シーケンス の前提条件（確定・merge 順で先頭・追従済み・直前 push の軽量 CI 起動完了）を確認した上で ready 化し、重量 CI を watch して green を指揮台へ報告する。保護対象該当時の trusted dispatch 実行は指揮台のまま。branch:finish は指揮台が実行する
 
 - 報告を送ると宣言したら必ず送る。宣言だけして送信漏れするのが典型的な失敗（2026-08-11 に実発生）
 - 連絡を受けた指揮台は §1 日サイクル の「日中: 例外駆動」で仕分ける。証拠で答えられるものは指揮台が返し、価値判断だけを User へ上げる
@@ -122,21 +124,24 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 - push の実行はレーン自身が行う（branch の writer のまま）。指揮台が采配するのはタイミングだけ
 - 待ちが増えるのは許容する（待ち中は他作業を続けてよい）
 - 既存ルール（追い push 禁止・round 単位で 1 回に束ねる・追従担当は 1 者）は不変。本節はその上に「push の実行タイミング」の采配を積む
+- **ready 化も同じ確定伝達の合図に従う**（2026-08-13 追記、[#2042](https://github.com/Dayopt/dayopt/issues/2042)）。ready 化は push そのものではないが同じ性質（盤面を知らない側が起こすと merge 前に main が動いてやり直しになる、高価な Actions イベントを起動する）を持つため、§指揮台の merge シーケンス の「確定伝達」を経てから行う
 
 **2026-08-13 追記**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。これにより push 前の permission prompt という偶発的な機械 gate は無くなった。**本節が定める「合図を待ってから push する」の抑止は、以後は規律のみで担保する。** force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める（本節の対象は通常 push のタイミングで、それらとは別の話）。
 
 ## 指揮台の merge シーケンス
 
-策定日: 2026-08-12
+策定日: 2026-08-12（2026-08-13 改訂: ready 化・重量 watch をレーンへ移管、[#2042](https://github.com/Dayopt/dayopt/issues/2042)）
 
 1 本の PR を merge へ運ぶ手順を実行順で固定する。個々の step の詳細は `.claude/rules/workflow.md` §2 段階 CI・§Worktree 運用・[infra.md §CI 品質ゲート](../../docs/engineering/infra.md#ci-品質ゲート)が正本で、ここでは指揮台が踏む順序と判断点だけをまとめる（重複させない）。
 
-1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）
+1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）。**これは以後の手順すべての前提**: ready 化はこの追従が済み、かつ merge 順で先頭であることが確定してから行う（手順 6 参照）
 2. **軽量 green** — draft 中に走る Static Checks / Unit Tests / Docs Guard の green を確認する
-3. **保護対象の機械確認（ready 化前）** — audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に PR が触れているかを確認する。**この確認は ready 化の前に済ませる。** ready 化してから気づくと、重量層が動き出した後に trusted dispatch を後追いで挟むことになり、Production Config Audit のやり直しが 1 回増える
-4. **ready 化** — draft を解除し重量層（E2E / Web E2E / Production Config Audit）を起動する
-5. **重量 green（該当すれば trusted dispatch を挟む）** — 手順 3 で保護対象該当と分かっていた場合、Production Config Audit は設計上 failure になる（`infra.md` §CI 品質ゲート「audit contract 変更 PR の guard failure は trusted dispatch で解除する」）。**push ごとに** `gh workflow run production-config-audit.yml --ref <branch>` を実行してから green を待つ
-6. **branch:finish** — `pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する
+3. **保護対象の検出・報告（レーン）** — audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に PR が触れているかをレーンが検出し、指揮台へ報告する。**レーンは検出・報告のみを行う。** `gh workflow run production-config-audit.yml` の trusted dispatch 実行は、diff レビュー後にユーザーの明示指示を得て指揮台が行う（変更しない。`workflow.md` §build と bundle 検査は Vercel 側で走る 参照）。この確認は ready 化の前に済ませる — ready 化してから気づくと、重量層が動き出した後に trusted dispatch を後追いで挟むことになり、Production Config Audit のやり直しが 1 回増える
+4. **クロスレビュー** — レーンが軽量 green を指揮台へ報告した後、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行し、収束させる。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う
+5. **確定伝達** — 指揮台がクロスレビューの収束を確認したら、「確定」としてレーンへ伝える。この時点で **「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも合わせて宣言する**。レーンはこの条件を自己判定しない（レーンは盤面を持たないため。§push タイミングの一元化 と同じ理由）
+6. **ready 化 + 重量 watch（レーン実行）** — レーンが確定伝達を受けたら ready 化し、重量層（E2E / Web E2E / Production Config Audit）を watch する。ready 化は**直前 push が起こした軽量 CI が起動・完了していることを確認してから**行う（push イベントと ready_for_review イベントの二重トリガーで concurrency の cancel-in-progress が古い run を cancelled にし、`branch:finish` の rollup 判定を止める事故が実際に起きた。cancelled run は削除して復旧する）。手順 3 で保護対象該当と分かっていた場合、Production Config Audit は設計上 failure になる（`infra.md` §CI 品質ゲート「audit contract 変更 PR の guard failure は trusted dispatch で解除する」）ため、**push ごとに**指揮台へ trusted dispatch の実行を依頼してから green を待つ。**依頼は PR 側の audit run が完了してから出す**（`workflow.md` §マージ後の掃除 と同じ順序制約: 先に dispatch を流すと、後から完了した PR 側 run の failure が dispatch の success を上書きする。この確認はレーン watch → 依頼のタイミングで担保する）
+7. **green 報告** — レーンが重量 green を確認し、指揮台へ報告する
+8. **branch:finish** — `pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台）
 
 **レーンの merge 可能報告は draft 時点（手順 2 の軽量 green 確認後）でよい。** ただし**保護対象 PR に該当する場合は、trusted dispatch が必要になることを報告に明記する**（レーンの連絡規律の「推奨を必ず持って上げる」の一部）。指揮台が手順 3 を ready 化前に済ませられるかは、この申し送りの有無で決まる。
 
@@ -146,7 +151,7 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 - **同時レーン上限は 3（実装 2 + docs/ops 1 が目安）**（策定日: 2026-08-12、1 日運用の振り返りから）。merge は直列 1 本（§追従とマージ順の采配）のため、4 本目以降のレーンは merge queue で寝るだけで並列の利得が無い一方、send_message の queue 滞留による情報欠落（同日 4 回実測）と指揮台の負荷（stale 報告往復 3 回・番号ミス 1 回）は並列数に比例して増える。上限を超える作業は起票して翌編成へ回す
 - **User 操作枠は 1 日 2 回の固定窓（朝の編成直後 / 夕方収束時）**（策定日: 2026-08-12、User 承認。経緯は #2008）。指揮台がクリック単位まで準備した checklist をこの窓に載せる。窓で消化しきれない項目は「後回し」を明示宣言し、盤面（issue / PR）に期限つきで記録する
 - **画面操作は指揮台が実行する**（策定日: 2026-08-12、User 決定。経緯は #2019）。User 操作枠は「User が画面を触る」前提でリスト化していたが、画面操作の大半は指揮台が Browser / Claude in Chrome（ログイン済みセッション）/ Gmail 経由で実行できる。アプリ検証・Dashboard read 系・コンソール確認・デモ操作の運転は指揮台が行い、User の実働は次の人間ゲートだけに絞る: (1) パスワード等の入力（1Password 承認含む）(2) form 送信・公開・購入の最終クリック承認 (3) attended 必須セッションへの同席 (4) 録画・アップロード・審査提出。窓の checklist はこの人間ゲートまで「押すだけ」に分解して渡す。制約: User 本人以外のメールボックス宛てのリンクは開封だけ User に渡す（または転送設定）
-- **日中: 例外駆動** — レーンからの質問を一次仕分けし、証拠で答えられるものは指揮台が直接返答、価値判断だけを User へ `CHECKPOINT` report 形式で上げる。加えて**外部レビューの往復の収束は指揮台が主導する**。往復の中にいるレーンは「本体はもう確定した」と判断しにくく、放っておくと防御の上乗せで往復が倍に伸びる。外から見ている指揮台が能動的に打ち切りを出す（判断基準は `.claude/rules/workflow.md` §同型指摘の打ち切り）
+- **日中: 例外駆動** — レーンからの質問を一次仕分けし、証拠で答えられるものは指揮台が直接返答、価値判断だけを User へ `CHECKPOINT` report 形式で上げる。加えて**内製クロスレビューの往復の収束は指揮台が主導する**。往復の中にいるレーンは「本体はもう確定した」と判断しにくく、放っておくと防御の上乗せで往復が倍に伸びる。外から見ている指揮台が能動的に打ち切りを出す（判断基準は `.claude/rules/workflow.md` §同型指摘の打ち切り）
 - **夕方: 収束** — diff レビュー + クロスレビュー、マージ順の采配、`pnpm branch:finish`、issue への反映、翌日への引き継ぎを書いてセッションを畳む
 - 寿命は 1 日 1 セッション。数日跨ぐ常駐はしない（transcript 肥大で判断が鈍る）
 
