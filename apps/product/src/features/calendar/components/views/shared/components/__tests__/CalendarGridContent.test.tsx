@@ -26,6 +26,17 @@ vi.mock('@/features/timeblock', () => ({
   useTimeblockWriteMutations: () => ({ createRecord: { mutate: vi.fn() } }),
 }));
 
+// ghost 変換ロジック自体は useConvertGhostEvent.test.ts が検証する。ここでは
+// CalendarGridContent が tRPC / QueryClient context を必要とせず render できることだけを担保する。
+vi.mock('../../../../../hooks/operations/useConvertGhostEvent', () => ({
+  useConvertGhostEvent: () => ({
+    convertGhost: vi.fn(),
+    dismissGhost: vi.fn(),
+    isConverting: false,
+    isDismissing: false,
+  }),
+}));
+
 vi.mock('@/lib/hooks/useMediaQuery', () => ({ useMediaQuery: () => false }));
 vi.mock('@/lib/hooks/useUserPreferences', () => ({
   useUserPreferences: () => ({ defaultDuration: 30, timeFormat: '24h' }),
