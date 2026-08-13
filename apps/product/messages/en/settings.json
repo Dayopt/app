@@ -25,7 +25,7 @@
       "emailPlaceholder": "Enter email address",
       "emailChange": {
         "title": "Change email address",
-        "description": "Enter a new email address",
+        "description": "Enter your current password and a new email address",
         "currentEmail": "Current email address",
         "newEmail": "New email address",
         "cancel": "Cancel",
@@ -34,7 +34,9 @@
         "close": "Close",
         "successTitle": "Confirmation emails sent",
         "successMessage": "We sent confirmation emails to {email} and your current address.",
-        "successHint": "Click the link in both emails to finish. One alone won't complete the change."
+        "successHint": "Click the link in both emails to finish. One alone won't complete the change.",
+        "invalidPassword": "Invalid password",
+        "rateLimited": "Too many attempts. Please try again later."
       },
       "profilePicture": "Profile picture",
       "avatar": "Avatar",

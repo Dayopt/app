@@ -29,6 +29,7 @@ import {
   RATE_LIMIT_PRESETS,
   RATE_LIMIT_TIMEOUT_MS,
   RateLimitUnavailableError,
+  reauthRateLimit,
   releaseResendWebhookEvent,
   requireAvailableRateLimitResult,
   RESEND_WEBHOOK_PROCESSED_SECONDS,
@@ -61,6 +62,7 @@ describe('Upstash Rate Limit', () => {
     expect(contactRateLimit).toBeNull();
     expect(contactGlobalRateLimit).toBeNull();
     expect(trpcUserRateLimit).toBeNull();
+    expect(reauthRateLimit).toBeNull();
     expect(mcpPreAuthRateLimit).toBeNull();
     expect(mcpUserRateLimit).toBeNull();
     expect(oauthTokenIpRateLimit).toBeNull();
@@ -198,7 +200,8 @@ describe('Upstash Rate Limit', () => {
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
 
     const enabledModule = await import('../upstash');
-    expect(constructorOptions).toHaveLength(15);
+    // #2024 で reauthRateLimit を追加（15 → 16）
+    expect(constructorOptions).toHaveLength(16);
     for (const options of constructorOptions) {
       expect(options.analytics).toBe(false);
       expect(options.timeout).toBe(RATE_LIMIT_TIMEOUT_MS);

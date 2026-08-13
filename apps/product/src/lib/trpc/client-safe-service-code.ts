@@ -8,6 +8,10 @@ import { ServiceError } from './errors';
  * 失敗した内部commandが読み取れるcodeは登録せず、汎用エラー表示のままにする。
  */
 const CLIENT_SAFE_SERVICE_CODES = new Set([
+  // Auth: パスワード再認証の失敗理由を出し分ける（account 削除・メールアドレス変更）。
+  // 生のメッセージは既に FORBIDDEN として client へ届いていた値（#1925）で、
+  // code 経由に揃えるだけであり新規の情報開示ではない
+  'INVALID_PASSWORD',
   // Timeblock: 競合・楽観ロックの解決手段を出し分ける
   'RETRYABLE_CONTENTION',
   'STALE_TARGET',

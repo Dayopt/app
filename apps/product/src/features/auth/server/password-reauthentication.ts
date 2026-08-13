@@ -1,7 +1,10 @@
 import 'server-only';
 
 /**
- * アカウント削除の本人確認（パスワード再認証）
+ * パスワード再認証（captcha 免除の service-role signInWithPassword）
+ *
+ * 呼び出しはアカウント削除・メールアドレス変更の2箇所（`user-service.ts`）。増やす場合は
+ * 以下の契約と `docs/product/specs/auth.md` の保証境界を先に読むこと。
  *
  * ⚠ このモジュールは **captcha を意図的に免除している**（#1925）。
  *
@@ -33,9 +36,58 @@ import 'server-only';
  * （その場合は削除が fail-closed で止まる。鍵の回転前に再検証すること）。
  */
 
+import { TRPCError } from '@trpc/server';
+
 import { logger } from '@/lib/logger';
+import { reauthRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
+
+/** 再認証の用途。GoTrue 呼び出しの Sentry tag と rate limit の bucket 分離に使う */
+type ReauthContext = 'account_deletion' | 'email_change';
+
+/**
+ * 再認証専用の rate limit を強制する。呼び出し側（`user-service.ts` の各メソッド）が
+ * `verifyPasswordWithCaptchaBypass` の**直前**に明示的に呼ぶ。
+ *
+ * 目的は2つ:
+ * 1. captcha 免除・副作用ゼロの `signInWithPassword` を、盗まれた session からの
+ *    オンライン総当たりに使わせない（tRPC 既定の 100/min/user だけでは緩すぎる）
+ * 2. GoTrue 側の IP 共有バケット（全ユーザー・全 context で共有）の消費を頭打ちにする
+ *
+ * bucket は `context` ごとに分離する（`${context}:${userId}` をキーにする）。同一 bucket
+ * にすると、例えば email 変更でパスワードを打ち間違えたユーザーが、無関係の account 削除
+ * まで fail-closed で巻き添えになる。
+ *
+ * `contact/server/router.ts` の `enforceContactRateLimit` と同型: Upstash 障害時は
+ * `SERVICE_UNAVAILABLE`、超過時は `TOO_MANY_REQUESTS` を TRPCError として直接 throw する。
+ * service 層内で throw しても `handleServiceError` は既存 TRPCError を素通しするため、
+ * router の catch とそのまま整合する。
+ */
+export async function enforceReauthRateLimit(
+  userId: string,
+  context: ReauthContext,
+): Promise<void> {
+  if (!reauthRateLimit) return;
+
+  let success: boolean;
+  try {
+    ({ success } = await reauthRateLimit.limit(`${context}:${userId}`));
+  } catch (error) {
+    throw new TRPCError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Reauthentication rate-limit service is unavailable',
+      cause: error,
+    });
+  }
+
+  if (!success) {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many reauthentication attempts. Please try again later.',
+    });
+  }
+}
 
 /**
  * alert を鳴らさない GoTrue error code。
@@ -68,17 +120,20 @@ interface VerifyPasswordInput {
   /** server 側の session から取得したアドレス。クライアント入力を渡さないこと */
   email: string;
   password: string;
+  /** Sentry tag の分岐に使う。呼び出し元を canary メッセージだけで判別できるようにする */
+  context: ReauthContext;
 }
 
 /**
  * captcha を迂回してパスワードを検証する。
  *
- * 呼び出しはアカウント削除フローの 1 箇所のみ。増やす場合は上記の契約と
- * `docs/product/specs/auth.md` の保証境界を先に読むこと。
+ * rate limit は持たない（呼び出し側が `enforceReauthRateLimit` を先に呼ぶ設計。
+ * この関数自体は「パスワードが合っているか」の判定に専念する）。
  */
 export async function verifyPasswordWithCaptchaBypass({
   email,
   password,
+  context,
 }: VerifyPasswordInput): Promise<PasswordReauthenticationResult> {
   // 呼び出しごとに生成する。返さない・使い回さない（上記の契約）
   const adminClient = createServiceRoleClient();
@@ -119,15 +174,14 @@ export async function verifyPasswordWithCaptchaBypass({
 
   // ここに来るのは captcha_failed / bad_jwt / 未知の code。いずれも迂回が
   // 壊れたことを示すので alert に乗せる（captureUnexpectedError は
-  // isExpectedAuthError を経由せず無条件に Sentry へ送る）
-  captureUnexpectedError(
-    new Error('Account deletion reauthentication unavailable', { cause: error }),
-    {
-      feature: 'account_deletion',
-      operation: 'delete_account_reauthenticate',
-      source: 'captcha_bypass',
-    },
-  );
+  // isExpectedAuthError を経由せず無条件に Sentry へ送る）。
+  // feature/operation を context で分岐し、email 変更側の構成故障が
+  // account 削除の alert に混入しないようにする（呼び出し元を canary から判別できる）
+  captureUnexpectedError(new Error(`${context} reauthentication unavailable`, { cause: error }), {
+    feature: context,
+    operation: `${context}_reauthenticate`,
+    source: 'captcha_bypass',
+  });
 
   return { outcome: 'unavailable' };
 }

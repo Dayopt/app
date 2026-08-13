@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 
+import { Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { getAuthErrorKey } from '@/lib/auth-error';
-import { observeAuthOperation } from '@/lib/sentry';
-import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 import {
   Button,
   Dialog,
@@ -27,75 +26,82 @@ interface EmailChangeDialogProps {
 }
 
 /**
+ * サービスエラーコードを取り出す。`formatTrpcError`（`lib/trpc/router.ts`）が付与する
+ * `error.data.serviceCode` は tRPC の標準型に含まれないため、runtime で型ガードする
+ * （`useTimeblockWriteMutations.ts` の `getTimeblockServiceCode` と同型）。
+ */
+function getEmailChangeServiceCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('data' in error)) return undefined;
+  const data = error.data;
+  if (!data || typeof data !== 'object' || !('serviceCode' in data)) return undefined;
+  return typeof data.serviceCode === 'string' ? data.serviceCode : undefined;
+}
+
+/**
  * メールアドレス変更ダイアログ。
  *
- * 本人確認は Supabase Auth の Secure Email Change（旧・新アドレス双方への確認メール）が担う。
- * ここで `signInWithPassword` による再認証はしない。公開 Auth endpoint なので Bot Protection
- * 有効時は CAPTCHA token を要求され、認証済みの設定画面から呼ぶと必ず失敗する（#1917）。
+ * 本人確認は Secure Email Change（旧・新アドレス双方への確認メール）に**加えて**、
+ * 変更前パスワード再認証を要求する（#2024 の中間案。双方確認は手放さない）。
  *
- * この画面の本人確認は production の `mailer_secure_email_change_enabled` に単独で依存する。
- * 保証境界は docs/product/specs/auth.md を参照。
+ * パスワード検証と `updateUser` 実行は `user.requestEmailChange` procedure が
+ * server 側で一体的に行う（`features/auth/server/router.ts`。service-role 経由の
+ * captcha 免除で、client 側 `signInWithPassword` は使わない — #1917 の captcha_failed
+ * 回帰を避けるため）。この dialog は結果を受け取るだけで、GoTrue の `updateUser` を
+ * 直接呼ぶ経路は持たない。
  */
 export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailChangeDialogProps) {
   const t = useTranslations('settings.account.emailChange');
-  const tErrors = useTranslations('common.errors');
   const tRoot = useTranslations();
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const supabase = createClient();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      // メールアドレス更新（Secure Email Change により旧・新アドレスの双方へ確認メールが飛ぶ）
-      // リンクは send-auth-email hook が /auth/confirm 経由の URL に変換し、
-      // verifyOtp 成功後にこの emailRedirectTo の path へ着地する
-      const { error: updateError } = await observeAuthOperation('update_email', () =>
-        supabase.auth.updateUser(
-          { email: newEmail },
-          {
-            emailRedirectTo: `${window.location.origin}/settings/account`,
-          },
-        ),
-      );
-
-      if (updateError) {
-        // 生のエラーメッセージは出さず、OWASP 準拠のサニタイズ済みキーへ変換する。
-        // context は 'updatePassword' を使う（signup 固有の actionable な文言
-        // （#2027、「既にアカウントをお持ちの場合はログイン」等）は email 更新には合わない。
-        // updatePassword は weak/short 以外を全て unexpectedError に畳むため、
-        // email 衝突エラーも含めて汎用文言のまま隠せる）
-        throw new Error(
-          tRoot(
-            getAuthErrorKey(
-              { message: updateError.message, code: updateError.code },
-              'updatePassword',
-            ),
-          ),
-        );
+  const requestEmailChangeMutation = api.user.requestEmailChange.useMutation({
+    // 不可逆操作ではないが、自動リトライすると reauth の専用 rate limit（5回/10分）を
+    // パスワード誤り 1 回で 2 消費し、GoTrue の共有 IP バケットも二重に叩く
+    // （AccountDeletionDialog.tsx の retry: false と同じ理由。#1925 / #2024）
+    retry: false,
+    onSuccess: () => {
+      setError(null);
+      setSuccess(true);
+    },
+    onError: (mutationError) => {
+      if (mutationError.data?.code === 'TOO_MANY_REQUESTS') {
+        setError(tRoot('settings.account.emailChange.rateLimited'));
+        return;
       }
 
-      // 成功
-      setSuccess(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : tErrors('generic'));
-    } finally {
-      setIsLoading(false);
-    }
+      const serviceCode = getEmailChangeServiceCode(mutationError);
+      if (serviceCode === 'INVALID_PASSWORD') {
+        setError(tRoot('settings.account.emailChange.invalidPassword'));
+        return;
+      }
+
+      // REAUTH_UNAVAILABLE（パスワード identity が無い。本来 UI で弾いている）/
+      // EMAIL_UPDATE_FAILED はすべて汎用文言に畳む。
+      // 生の GoTrue エラー文言はここに出さない（OWASP サニタイズ）
+      setError(tRoot('common.errors.generic'));
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    requestEmailChangeMutation.mutate({ password, newEmail });
   };
 
   const handleClose = () => {
+    setPassword('');
+    setShowPassword(false);
     setNewEmail('');
     setError(null);
     setSuccess(false);
     onOpenChange(false);
   };
+
+  const isLoading = requestEmailChangeMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -124,6 +130,40 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   disabled
                   className="bg-muted"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email-change-password">
+                  {tRoot('settings.account.currentPassword')}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="email-change-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="pr-8"
+                    aria-invalid={!!error}
+                    aria-describedby={error ? 'email-change-error' : undefined}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    icon
+                    className="absolute top-1/2 right-1 -translate-y-1/2"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={
+                      showPassword
+                        ? tRoot('settings.account.hidePassword')
+                        : tRoot('settings.account.showPassword')
+                    }
+                  >
+                    {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">

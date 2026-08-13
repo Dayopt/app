@@ -35,6 +35,9 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // 再認証手段そのものが使えない（#1925）。EXPECTED_TRPC_CODES に載る code へ写像し、
   // handleServiceError 側で Sentry へ二重報告されるのを避ける（報告は呼び出し側の canary 1 本）
   REAUTH_UNAVAILABLE: 'BAD_REQUEST',
+  // メールアドレス変更の GoTrue updateUser 失敗（衝突等）。ユーザー起因の想定内失敗なので
+  // BAD_REQUEST（EXPECTED_TRPC_CODES に含まれ、handleServiceError の自動 Sentry 報告対象外）
+  EMAIL_UPDATE_FAILED: 'BAD_REQUEST',
   RECOVERY_EXHAUSTED: 'BAD_REQUEST',
   RECOVERY_INVALID: 'BAD_REQUEST',
   RECOVERY_FAILED: 'INTERNAL_SERVER_ERROR',

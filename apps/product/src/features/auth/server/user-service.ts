@@ -10,6 +10,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { EmailLocale } from '@/emails/i18n';
+import { getAppUrl } from '@/lib/app-url';
 import type { Database, PublicRecordRow, PublicUserSettingsRow, Row } from '@/lib/database';
 import { databaseTables, publicRecordSelect, publicUserSettingsSelect } from '@/lib/database';
 import { getUserLocale, sendAccountDeletionEmail } from '@/lib/email/router';
@@ -22,7 +23,10 @@ import {
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
-import { verifyPasswordWithCaptchaBypass } from './password-reauthentication';
+import {
+  enforceReauthRateLimit,
+  verifyPasswordWithCaptchaBypass,
+} from './password-reauthentication';
 
 /**
  * User Service エラー
@@ -37,7 +41,8 @@ export class UserServiceError extends ServiceError {
       | 'INVALID_PASSWORD'
       | 'REAUTH_UNAVAILABLE'
       | 'INVALID_INPUT'
-      | 'CONFLICT',
+      | 'CONFLICT'
+      | 'EMAIL_UPDATE_FAILED',
     message: string,
     options?: ErrorOptions,
   ) {
@@ -75,9 +80,27 @@ interface ExportDataOptions {
 }
 
 /**
+ * メールアドレス変更オプション
+ */
+interface RequestEmailChangeOptions {
+  userId: string;
+  /** server 側の session から取得したアドレス。クライアント入力を渡さないこと */
+  currentEmail: string;
+  newEmail: string;
+  password: string;
+}
+
+/**
  * アカウント削除レスポンス
  */
 interface DeleteAccountResult {
+  success: true;
+}
+
+/**
+ * メールアドレス変更レスポンス
+ */
+interface RequestEmailChangeResult {
   success: true;
 }
 
@@ -135,9 +158,14 @@ export function createUserService(
         // 必ず captcha_failed になる（#1917 と同じ故障クラス）。削除には current_password や
         // Secure Email Change に相当する GoTrue 側の代替機構が無いため、service-role 経由で
         // captcha を免除する。免除の意味と契約は password-reauthentication.ts を読むこと
+        //
+        // rate limit は verifyPasswordWithCaptchaBypass の直前で明示的に強制する
+        // （email 変更フローと bucket を分離し、GoTrue の IP 共有バケット消費も頭打ちにする）
+        await enforceReauthRateLimit(userId, 'account_deletion');
         const reauthentication = await verifyPasswordWithCaptchaBypass({
           email: userEmail,
           password,
+          context: 'account_deletion',
         });
 
         if (reauthentication.outcome === 'invalid_password') {
@@ -243,6 +271,70 @@ export function createUserService(
           feature: 'account_deletion',
           operation: 'send_deletion_email',
           source: 'resend',
+        });
+      }
+
+      return { success: true };
+    },
+
+    /**
+     * メールアドレス変更（変更前パスワード再認証つき）
+     *
+     * 本人確認は Secure Email Change（`supabase/config.toml` の `double_confirm_changes = true`、
+     * server 強制ゲート）に**加えて**、変更前パスワード再認証（service-role 経由 captcha 免除、
+     * app 層の追加防御）を要求する。#2024 の中間案 — 双方確認は手放さない。
+     *
+     * `updateUser` はユーザー自身の session-scoped client（service-role ではない）で呼ぶ。
+     * パスワード検証だけが captcha 免除の service-role 経由で、email 変更の実行主体は
+     * 引き続き本人のまま。double_confirm_changes が true のため、この呼び出しは今までどおり
+     * 新旧両アドレスへ確認メールを送る。
+     */
+    async requestEmailChange(
+      options: RequestEmailChangeOptions,
+    ): Promise<RequestEmailChangeResult> {
+      const { userId, currentEmail, newEmail, password } = options;
+
+      // 大文字小文字・前後空白だけが違う「同じアドレス」もここで弾く（GoTrue は正規化して
+      // 扱うため、これを見逃すと reauth rate limit と GoTrue の共有 IP バケットを
+      // 無駄に消費したうえで実質 no-op の変更が通ってしまう）。newEmail 自体は
+      // 正規化せずそのまま updateUser に渡す（ユーザーの入力をサイレントに書き換えない）
+      if (newEmail.trim().toLowerCase() === currentEmail.trim().toLowerCase()) {
+        throw new UserServiceError('INVALID_INPUT', 'New email must differ from current email');
+      }
+
+      // rate limit は verifyPasswordWithCaptchaBypass の直前で明示的に強制する。
+      // account 削除と bucket を分離するため context を渡す（同じパターンは deleteAccount 参照）
+      await enforceReauthRateLimit(userId, 'email_change');
+      const reauthentication = await verifyPasswordWithCaptchaBypass({
+        email: currentEmail,
+        password,
+        context: 'email_change',
+      });
+
+      if (reauthentication.outcome === 'invalid_password') {
+        throw new UserServiceError('INVALID_PASSWORD', 'Invalid password');
+      }
+
+      if (reauthentication.outcome !== 'verified') {
+        // 検証手段が使えない時は変更を通さない（fail closed）。原因は
+        // password-reauthentication.ts 側で Sentry へ送っているので message には載せない
+        throw new UserServiceError('REAUTH_UNAVAILABLE', 'Reauthentication unavailable');
+      }
+
+      const { error: updateError } = await observeAuthOperation('update_email', () =>
+        supabase.auth.updateUser(
+          { email: newEmail },
+          { emailRedirectTo: `${getAppUrl()}/settings/account` },
+        ),
+      );
+
+      if (updateError) {
+        // OWASP準拠のサニタイズは client 側（EmailChangeDialog.tsx）が汎用文言で行う。
+        // ここでは生の GoTrue エラーを Sentry へ送らない — email 衝突等はユーザー起因の
+        // 想定内失敗で、BAD_REQUEST は EXPECTED_TRPC_CODES に含まれるため
+        // handleServiceError も自動報告しない
+        throw new UserServiceError('EMAIL_UPDATE_FAILED', 'Email update failed', {
+          cause: updateError,
         });
       }
 

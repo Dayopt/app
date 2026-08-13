@@ -2,7 +2,9 @@
  * EmailChangeDialog Stories
  *
  * メールアドレス変更ダイアログのストーリー。
- * Supabase Auth を直接呼ぶため、内部状態でUIの各フェーズを表現する。
+ * 本人確認（パスワード再認証 + Secure Email Change）は
+ * `user.requestEmailChange` tRPC procedure が server 側で行う（#2024）。
+ * ここでは mutation を実行せず、内部状態でUIの各フェーズを表現する。
  */
 
 import { useState } from 'react';

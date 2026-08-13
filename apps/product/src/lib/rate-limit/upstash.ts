@@ -220,6 +220,21 @@ export const trpcUserRateLimit = createRateLimiter(
   'ratelimit:product:trpc:user',
 );
 
+/**
+ * パスワード再認証（captcha 免除の service-role signInWithPassword）用レート制限
+ * 5リクエスト / 10分。呼び出し側が identifier に `${context}:${userId}` を渡し、
+ * account 削除・メールアドレス変更など用途ごとにバケットを分離する
+ * （同一 bucket にすると、一方の再認証ミスがもう一方を fail-closed で巻き添えにする）。
+ *
+ * GoTrue 側の signInWithPassword rate limit は呼び出し元（Vercel egress IP）単位で
+ * 全ユーザー共有のため、ここで先に頭打ちにして共有バケットの枯渇を遅らせる
+ * （`features/auth/server/password-reauthentication.ts` 参照）。
+ */
+export const reauthRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(5, '10 m'),
+  'ratelimit:product:reauth',
+);
+
 /** MCP token検証前のcoarse IP ceiling。認証後は別のuser limitで絞る。 */
 export const mcpPreAuthRateLimit = createRateLimiter(
   Ratelimit.slidingWindow(1_200, '1 m'),

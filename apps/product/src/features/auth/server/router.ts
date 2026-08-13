@@ -6,6 +6,7 @@
  *
  * エンドポイント:
  * - user.deleteAccount: アカウント即時削除
+ * - user.requestEmailChange: メールアドレス変更（パスワード再認証 + Secure Email Change）
  * - user.deleteBlocks: 全ブロック（エントリ）を削除
  * - user.deleteAllData: 全データを削除（アカウント保持）
  * - user.exportData: ユーザーデータエクスポート
@@ -68,6 +69,57 @@ export function createUserRouter(dependencies: UserServiceDependencies) {
           });
 
           return result;
+        } catch (error) {
+          return handleServiceError(error);
+        }
+      }),
+
+    /**
+     * メールアドレス変更（変更前パスワード再認証つき）
+     *
+     * 双方確認（Secure Email Change）は維持したまま、変更前パスワード再認証を追加する
+     * 中間案（#2024）。パスワード検証と `updateUser` 実行を同一 server call 内で完結させ、
+     * client がこの2つの間に割り込めないようにする（TOCTOU/gate-bypass 対策）。
+     */
+    requestEmailChange: protectedProcedure
+      .meta({ description: 'メールアドレス変更（パスワード再認証 + Secure Email Change）' })
+      .input(
+        z.object({
+          password: z.string().min(1),
+          newEmail: z.string().email(),
+        }),
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const {
+            data: { user },
+            error: authError,
+          } = await observeAuthOperation('request_email_change_get_user', () =>
+            ctx.supabase.auth.getUser(),
+          );
+
+          if (authError || !user || !user.email) {
+            throw new UserServiceError('UNAUTHORIZED', 'Authentication required');
+          }
+
+          // Google のみのユーザーはパスワードを持たない（変更させない仕様。
+          // AccountSettings.tsx の canUsePassword 分岐が UI 導線を既にゲートしているが、
+          // devtools からの直接呼び出しに対する defense-in-depth として server 側にも置く。
+          //
+          // code は UNAUTHORIZED ではなく REAUTH_UNAVAILABLE にする（authn ではなく authz の
+          // 失敗であるため）。UNAUTHORIZED は query-client.ts の isAuthError に拾われ、
+          // エラー文言が出る前に /auth/login へ強制遷移してしまう
+          if (!hasPasswordIdentity(user)) {
+            throw new UserServiceError('REAUTH_UNAVAILABLE', 'Password identity required');
+          }
+
+          const service = createUserService(ctx.supabase, dependencies);
+          return await service.requestEmailChange({
+            userId: ctx.userId!,
+            currentEmail: user.email,
+            newEmail: input.newEmail,
+            password: input.password,
+          });
         } catch (error) {
           return handleServiceError(error);
         }
