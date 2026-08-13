@@ -169,10 +169,11 @@ pnpm security:check
 3. **`handleServiceError()` を使用** - 直接TRPCErrorをthrowしない
 4. **守るべき前提を作ったら `docs/engineering/invariants.md` を同じ PR で更新** - 新しい
    Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。カタログは
-   `risk-reviewer` と Codex レビューが「あるべき検査の不在」を判定する時の照合先なので、
-   更新を怠ると新機能の穴が構造的に見えなくなる。**判定は自動では走らない**（外部モデルの
-   自動レビュー ai-review は 2026-08-03 に撤去済み）。危険クラスの diff では
-   `risk-reviewer` を明示的に起動する
+   `risk-reviewer` と内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
+   「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
+   見えなくなる。**判定は自動では走らない**（外部モデルの自動レビュー ai-review は
+   2026-08-03 に撤去済み、外部レビュー（Codex）も 2026-08-13 に運用停止）。危険クラスの
+   diff では `risk-reviewer` を明示的に起動する
 
 ## 関連エージェント
 
