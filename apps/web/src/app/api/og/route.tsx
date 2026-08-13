@@ -77,6 +77,24 @@ function truncate(value: string | null, maxLength: number): string {
 }
 
 /**
+ * IPv6は/128(フルアドレス)のままidentifierにすると、攻撃者が/64割り当て内の
+ * 2^64通りのアドレスを使い分けてIP単位のrate limitを素通りできる(#1978と同じ
+ * 理由)。/64プレフィックスまで丸めてから hash する。IPv4はそのまま。
+ */
+function roundIpv6ToPrefix64(ip: string): string {
+  if (!ip.includes(':')) return ip;
+
+  const [head, tail] = ip.split('::');
+  const headGroups = head ? head.split(':') : [];
+  const prefixGroups =
+    tail === undefined
+      ? headGroups.slice(0, 4)
+      : [...headGroups, ...Array(Math.max(0, 4 - headGroups.length)).fill('0')].slice(0, 4);
+
+  return prefixGroups.join(':');
+}
+
+/**
  * Upstash障害中、request単位でSentry captureすると無制限にquotaを焼く
  * (低頻度なcontact/csp-reportと違い、本routeはblog記事のhero画像として
  * 高頻度に叩かれる)。時間窓で1件だけcaptureする。
@@ -126,7 +144,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 他routeと同様、raw IPはUpstashへ残さずhashed identifierだけを渡す。
-  const identifier = await hashRateLimitIdentifier(getClientIp(request));
+  const identifier = await hashRateLimitIdentifier(roundIpv6ToPrefix64(getClientIp(request)));
 
   // IP → global の順で評価する（IP単位quotaは個々のIPだけを罰し、globalはrender
   // コスト全体の天井を守る）。limiter障害時はhero画像を壊さないfallbackへdegrade

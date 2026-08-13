@@ -217,6 +217,12 @@ function aggregateIpIdentifier(ip: string): string {
 /** Upstash障害中のcapture floodを抑えるサンプリング窓(#1979と同じ理由)。 */
 const AGGREGATE_FAILURE_CAPTURE_WINDOW_MS = 60_000;
 let lastAggregateFailureCaptureAt = 0;
+/**
+ * 429到達(limited)用の別窓。障害(exception)と閾値到達(limited)は意味が違う
+ * ため別々にサンプリングし、片方の連発がもう片方の観測を握り潰さないようにする。
+ */
+const AGGREGATE_LIMIT_HIT_CAPTURE_WINDOW_MS = 60_000;
+let lastAggregateLimitHitCaptureAt = 0;
 
 /**
  * platform-trusted IP → global の順で評価する事前認証集約上限。
@@ -238,7 +244,19 @@ async function checkAggregateRateLimit(
 
   try {
     const { success } = await limiter.limit(identifier);
-    if (!success) logger.warn(`iCal feed aggregate rate limit exceeded: ${operation}`);
+    if (!success) {
+      logger.warn(`iCal feed aggregate rate limit exceeded: ${operation}`);
+      const now = Date.now();
+      if (now - lastAggregateLimitHitCaptureAt >= AGGREGATE_LIMIT_HIT_CAPTURE_WINDOW_MS) {
+        lastAggregateLimitHitCaptureAt = now;
+        captureUnexpectedError(new Error(`iCal feed aggregate rate limit exceeded: ${operation}`), {
+          feature: 'calendar_feed',
+          operation,
+          route: '/api/v1/calendar/[token]',
+          source: 'upstash',
+        });
+      }
+    }
     return success ? 'allowed' : 'limited';
   } catch (error) {
     const now = Date.now();

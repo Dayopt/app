@@ -62,14 +62,24 @@ describe('iCal feed route', () => {
     );
   });
 
-  it('IP集約上限をtoken解決より前に評価する', async () => {
-    ipLimit.mockResolvedValueOnce({ success: false });
+  it('IP集約上限をtoken解決より前に評価し、到達をSentryへcaptureする(サンプリング付き)', async () => {
+    ipLimit.mockResolvedValue({ success: false });
 
     const response = await GET(request(), context());
 
     expect(response.status).toBe(429);
     expect(createServiceRoleClient).not.toHaveBeenCalled();
     expect(globalLimit).not.toHaveBeenCalled();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'check_ip_rate_limit', source: 'upstash' }),
+    );
+
+    // sampling windowはmodule scopeで永続するため、同一テスト内で連続到達を再現する。
+    await GET(request(), context());
+    await GET(request(), context());
+
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
   });
 
   it('global集約上限超過時もtoken解決より前で止める', async () => {

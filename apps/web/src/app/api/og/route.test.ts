@@ -73,6 +73,31 @@ describe('OG image route', () => {
     expect(rateLimit.ogImageRateLimit.limit).toHaveBeenCalledWith('hashed-client-ip');
   });
 
+  it.each([
+    ['2001:db8::1', '2001:db8::2', '2001:db8:0:0'],
+    ['fe80::abcd:1234:5678:9abc', 'fe80::dead:beef:0:1', 'fe80:0:0:0'],
+  ])(
+    '同一/64内の異なるIPv6アドレス(%s, %s)は/64プレフィックス(%s)へ丸めてからhashする(#1978と同じ理由)',
+    async (ipA, ipB, expectedPrefix) => {
+      rateLimit.getClientIp.mockReturnValueOnce(ipA);
+      await GET(request());
+      expect(rateLimit.hashRateLimitIdentifier).toHaveBeenCalledWith(expectedPrefix);
+
+      rateLimit.hashRateLimitIdentifier.mockClear();
+      rateLimit.getClientIp.mockReturnValueOnce(ipB);
+      await GET(request());
+      expect(rateLimit.hashRateLimitIdentifier).toHaveBeenCalledWith(expectedPrefix);
+    },
+  );
+
+  it('IPv4アドレスはそのままhashする(IPv6のような丸めをしない)', async () => {
+    rateLimit.getClientIp.mockReturnValueOnce('203.0.113.10');
+
+    await GET(request());
+
+    expect(rateLimit.hashRateLimitIdentifier).toHaveBeenCalledWith('203.0.113.10');
+  });
+
   it('IP → global の順で評価する', async () => {
     await GET(request());
 

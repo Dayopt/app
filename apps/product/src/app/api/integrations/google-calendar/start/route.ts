@@ -19,6 +19,7 @@ import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
+import { getLocalizedPath } from '@/proxy';
 import { z } from 'zod';
 
 /** AES-256-GCM に node:crypto が要る。Edge では動かない。 */
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
   if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
     const locale = normalizeLocale(requestUrl.searchParams.get('locale') ?? undefined);
-    return NextResponse.redirect(new URL(`/${locale}/auth/mfa-verify`, requestUrl));
+    return NextResponse.redirect(new URL(getLocalizedPath('/auth/mfa-verify', locale), requestUrl));
   }
 
   const proAccess = await checkProAccessForUser(supabase, user.id);

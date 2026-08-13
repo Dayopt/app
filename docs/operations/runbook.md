@@ -34,6 +34,8 @@ last_verified: 2026-08-10
 - [ ] 直近のデプロイ有無を確認（Vercel Dashboard / `git log --oneline -5`）
 - [ ] 影響範囲を判断 → P0/P1なら次の「メンテナンスモード判断」へ
 
+**iCal feed（`/api/v1/calendar/[token]`）の503急増は、Upstash未設定/障害時にproductionでfail-closed（service-role DB保護のため）になる既知挙動**。IP/global集約rate limit層はfail-closedで503を返す一方、per-token層のみin-memory fallback（fail-open）を持つため、Upstash障害時は全購読者が一時的に503になる。Sentryで`operation: check_ip_rate_limit` / `check_global_rate_limit`、`source: upstash`のcaptureが同時多発していればこのケース。復旧はUpstash側の障害解消を待つ（アプリ側の対処は不要）。
+
 ### メンテナンスモード有効化
 
 P0またはP1で復旧に時間がかかる場合:

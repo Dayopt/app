@@ -97,6 +97,26 @@ describe('google calendar start route', () => {
     expect(checkProAccessForUser).not.toHaveBeenCalled();
   });
 
+  // proxy.tsのgetLocalizedPath(as-needed prefix)に揃える。default localeは
+  // プレフィックス無し、それ以外は付く(proxy.test.ts側は/ja/auth/mfa-verifyを固定済み)
+  it('mfa-verify redirectはdefault locale(en)ではlocale prefixを付けない', async () => {
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal2' });
+
+    const response = await GET(request());
+
+    expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/auth/mfa-verify');
+  });
+
+  it('mfa-verify redirectは非default localeでlocale prefixを付ける', async () => {
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal2' });
+
+    const response = await GET(
+      request('https://app.dayopt.app/api/integrations/google-calendar/start?locale=ja'),
+    );
+
+    expect(new URL(response.headers.get('location') ?? '').pathname).toBe('/ja/auth/mfa-verify');
+  });
+
   // lookupFailed は自分のcookie由来のAAL claimから攻撃者が繰り返し到達できるため、
   // captureすると無制限にSentry quotaを焼ける増幅経路になる。captureしないことを固定する。
   it('MFA assurance lookup 失敗は 500 で止め、Sentryへcaptureせず、認可URLへも進まない', async () => {
