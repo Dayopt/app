@@ -10,9 +10,8 @@ import {
 import { resolveHealthStatus, type OverallHealthStatus } from './health-status';
 
 /**
- * DB check 5s ×2（identity RPC → profiles select の逐次）+ Redis ping + env チェック。
- * `checkRedis` の `redis.ping()` だけ timeout が無く、Upstash 無応答時はここまで張り付く
- * （根治は #1967）。外形監視の信号を「timeout」に化けさせないため短めに抑える。
+ * DB check 5s ×2（identity RPC → profiles select の逐次）+ Redis ping（5s）+ env チェック。
+ * 外形監視の信号を「timeout」に化けさせないため短めに抑える。
  */
 export const maxDuration = 30;
 
@@ -41,6 +40,9 @@ interface HealthStatus {
 
 /** DB疎通タイムアウト（ms） */
 const DB_CHECK_TIMEOUT_MS = 5_000;
+
+/** Redis疎通タイムアウト（ms） */
+const REDIS_CHECK_TIMEOUT_MS = 5_000;
 
 /**
  * production で必須の環境変数が揃っていることを確認する。
@@ -123,6 +125,9 @@ async function checkRedis(): Promise<'ok' | 'error' | 'warning' | 'skipped'> {
     const redis = new Redis({
       url: redisUrl!,
       token: redisToken!,
+      // fetch レイヤの signal で下位 HTTP 呼び出し自体を abort する（Promise.race で
+      // 見かけ上打ち切るだけだと裏の fetch が生き続け、Function の張り付きが解消しない）。
+      signal: () => AbortSignal.timeout(REDIS_CHECK_TIMEOUT_MS),
     });
 
     const pong = await redis.ping();

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   select: vi.fn(),
   limit: vi.fn(),
   redisPing: vi.fn(),
+  redisConstructorOptions: [] as Array<{ url: string; token: string; signal?: () => AbortSignal }>,
   loggerError: vi.fn(),
   loggerWarn: vi.fn(),
   envValidationError: false,
@@ -18,6 +19,9 @@ vi.mock('@supabase/supabase-js', () => ({
 
 vi.mock('@upstash/redis', () => ({
   Redis: class Redis {
+    constructor(options: { url: string; token: string; signal?: () => AbortSignal }) {
+      mocks.redisConstructorOptions.push(options);
+    }
     ping() {
       return mocks.redisPing();
     }
@@ -62,6 +66,7 @@ describe('GET /api/health', () => {
     vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '');
 
     mocks.envValidationError = false;
+    mocks.redisConstructorOptions = [];
     mocks.rpc.mockImplementation(() =>
       Promise.resolve({
         data: [
@@ -342,6 +347,20 @@ describe('GET /api/health', () => {
     expect(body.status).toBe('degraded');
     expect(body.checks).toEqual({ database: 'ok', redis: 'warning' });
     expect(mocks.loggerWarn).toHaveBeenCalledOnce();
+  });
+
+  it('Redis client を下位 fetch を abort できる signal factory 付きで生成する', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'redis-token-sentinel');
+
+    await GET();
+
+    expect(mocks.redisConstructorOptions).toHaveLength(1);
+    const { signal } = mocks.redisConstructorOptions[0]!;
+    expect(typeof signal).toBe('function');
+    // Promise.race での見かけ上の打ち切りではなく、fetch レイヤの signal で abort する
+    // 実装であることを固定する（呼ぶたびに実 AbortSignal を返す = 下位 fetch へ渡せる形）。
+    expect(signal!()).toBeInstanceOf(AbortSignal);
   });
 
   it('Redis errorをunhealthyとして扱う', async () => {
