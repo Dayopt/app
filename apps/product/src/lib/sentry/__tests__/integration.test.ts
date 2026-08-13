@@ -154,6 +154,22 @@ describe('Product Sentry capture helpers', () => {
     ).toBe(false);
   });
 
+  // user-service.ts の requestEmailChange（#2064）は、handleServiceError の自動報告が
+  // isExpectedAuthError でゲートされるため email_address_not_authorized をこの経路に
+  // 乗せられないという前提の上で、captureUnexpectedError を直接呼ぶ設計にしている。
+  // status を fallback 対象外（500）にして code 単独の判定であることを固定し、この
+  // 前提が将来の EXPECTED_AUTH_ERROR_CODES 編集で静かに崩れないようにする
+  it('classifies email_address_not_authorized as expected via code alone (status outside the 4xx fallback)', () => {
+    expect(
+      isExpectedAuthError(
+        Object.assign(new Error('email address not authorized'), {
+          status: 500,
+          code: 'email_address_not_authorized',
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it('captures returned database errors regardless of an auth-like status and preserves them as cause', () => {
     const returnedFailure = {
       code: 'PGRST404',

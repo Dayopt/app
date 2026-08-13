@@ -80,7 +80,8 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
       }
 
       // REAUTH_UNAVAILABLE（パスワード identity が無い。本来 UI で弾いている）/
-      // EMAIL_UPDATE_FAILED はすべて汎用文言に畳む。
+      // EMAIL_UPDATE_FAILED / EMAIL_UPDATE_UNAVAILABLE（#2064、構成故障。server 側で
+      // Sentry へは別途報告済み）はすべて汎用文言に畳む。
       // 生の GoTrue エラー文言はここに出さない（OWASP サニタイズ）
       setError(tRoot('common.errors.generic'));
     },

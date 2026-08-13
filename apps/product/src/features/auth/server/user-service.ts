@@ -29,6 +29,46 @@ import {
 } from './password-reauthentication';
 
 /**
+ * `updateUser({ email })` が alert を鳴らさない GoTrue error code（#2064）。
+ *
+ * ユーザー起因で正常に起こりうるものだけを列挙する。ここに無いものは構成故障として扱い
+ * Sentry へ報告する（既定を fail-loud にする。`password-reauthentication.ts` の
+ * `NON_ALERTING_ERROR_CODES` と同型のパターン）。
+ *
+ * `email_address_not_authorized` を意図的に含めない: GoTrue の既定 SMTP は組織メンバー
+ * 以外への送信を拒否するため、production で custom SMTP が正しく設定されていれば
+ * 個々のユーザー操作では原則発生しない。発生したら SMTP 設定が意図せず外れている
+ * signal として扱い、メール変更が全滅していても気づけるようにする。
+ *
+ * ⚠ この判定だけでは Sentry 報告は保証されない。`lib/sentry` の
+ * `EXPECTED_AUTH_ERROR_CODES`（`isExpectedAuthError`）に `email_address_not_authorized`
+ * 自体が含まれており、`handleServiceError` の自動報告（INTERNAL_SERVER_ERROR /
+ * TIMEOUT のみに掛かる）は `!isExpectedAuthError(original)` でゲートされる。つまり
+ * TRPCErrorCode を何に写像しても、この code は自動報告経路を通らない。だから下の
+ * throw 直前で `captureUnexpectedError` を直接呼び、`isExpectedAuthError` を経由しない
+ * 経路で報告する（`password-reauthentication.ts` L168-186 の canary と同型）。
+ *
+ * `updateUser` 呼び出しは `observeAuthOperation` で包んだままにしている（下記）ため、
+ * expected でない code（未知 code や 5xx 等）は observeAuthOperation 側が先に
+ * `updateError` を capture 済みのことがある。二重 issue を避けるため、下の直接呼び出しは
+ * **必ず `updateError` そのもの**（新しい Error でラップしない）を渡す —
+ * `captureUnexpectedError` の WeakSet dedup は同一 instance にしか効かない
+ */
+const EMAIL_UPDATE_NON_ALERTING_CODES = new Set([
+  'email_exists',
+  'email_address_invalid',
+  'email_conflict_identity_not_deletable',
+  'validation_failed',
+]);
+
+/**
+ * GoTrue の rate limit。`password-reauthentication.ts` の `RATE_LIMITED_STATUS` と同型。
+ * 単発は静音のまま `EMAIL_UPDATE_FAILED` に畳むが、頻発時に追えるよう warn ログは残す
+ * （over_email_send_rate_limit 等は構成故障とユーザー集中アクセスの両方であり得るため）
+ */
+const EMAIL_UPDATE_RATE_LIMITED_STATUS = 429;
+
+/**
  * User Service エラー
  */
 export class UserServiceError extends ServiceError {
@@ -42,7 +82,8 @@ export class UserServiceError extends ServiceError {
       | 'REAUTH_UNAVAILABLE'
       | 'INVALID_INPUT'
       | 'CONFLICT'
-      | 'EMAIL_UPDATE_FAILED',
+      | 'EMAIL_UPDATE_FAILED'
+      | 'EMAIL_UPDATE_UNAVAILABLE',
     message: string,
     options?: ErrorOptions,
   ) {
@@ -321,19 +362,50 @@ export function createUserService(
         throw new UserServiceError('REAUTH_UNAVAILABLE', 'Reauthentication unavailable');
       }
 
-      const { error: updateError } = await observeAuthOperation('update_email', () =>
-        supabase.auth.updateUser(
-          { email: newEmail },
-          { emailRedirectTo: `${getAppUrl()}/settings/account` },
-        ),
+      const { error: updateError } = await observeAuthOperation(
+        'update_email',
+        () =>
+          supabase.auth.updateUser(
+            { email: newEmail },
+            { emailRedirectTo: `${getAppUrl()}/settings/account` },
+          ),
+        { feature: 'email_change' },
       );
 
       if (updateError) {
-        // OWASP準拠のサニタイズは client 側（EmailChangeDialog.tsx）が汎用文言で行う。
-        // ここでは生の GoTrue エラーを Sentry へ送らない — email 衝突等はユーザー起因の
-        // 想定内失敗で、BAD_REQUEST は EXPECTED_TRPC_CODES に含まれるため
-        // handleServiceError も自動報告しない
-        throw new UserServiceError('EMAIL_UPDATE_FAILED', 'Email update failed', {
+        const isRateLimited = updateError.status === EMAIL_UPDATE_RATE_LIMITED_STATUS;
+        const isKnownUserCause =
+          updateError.code !== undefined && EMAIL_UPDATE_NON_ALERTING_CODES.has(updateError.code);
+
+        if (isRateLimited) {
+          // 単発は静音のまま畳むが、頻発は目視で追えるよう warn ログだけ残す
+          // （Sentry へは送らない。rate limit は正常なユーザー集中アクセスでも起こる）
+          logger.warn('Email update rate limited by GoTrue', updateError.message);
+        }
+
+        if (isKnownUserCause || isRateLimited) {
+          // OWASP準拠のサニタイズは client 側（EmailChangeDialog.tsx）が汎用文言で行う。
+          // ここでは生の GoTrue エラーを Sentry へ送らない — email 衝突等はユーザー起因の
+          // 想定内失敗で、BAD_REQUEST は EXPECTED_TRPC_CODES に含まれるため
+          // handleServiceError も自動報告しない
+          throw new UserServiceError('EMAIL_UPDATE_FAILED', 'Email update failed', {
+            cause: updateError,
+          });
+        }
+
+        // 未知 / 構成故障の code（#2064）。handleServiceError の自動報告には乗せない
+        // （`lib/sentry` の EXPECTED_AUTH_ERROR_CODES に email_address_not_authorized
+        // 等が既に含まれ、isExpectedAuthError がその自動報告経路を無条件でスキップ
+        // するため、写像先を変えても効かない）。REAUTH_UNAVAILABLE と同じ「呼び出し側の
+        // canary 1 本」パターンで、ここから直接 Sentry へ送る。updateError をラップせず
+        // そのまま渡す — observeAuthOperation が先に同じ instance を capture 済みの
+        // ケース（未知 code や 5xx）では WeakSet dedup が効いて 1 本に収まる
+        captureUnexpectedError(updateError, {
+          feature: 'email_change',
+          operation: 'update_email',
+          source: 'supabase_auth',
+        });
+        throw new UserServiceError('EMAIL_UPDATE_UNAVAILABLE', 'Email update unavailable', {
           cause: updateError,
         });
       }
