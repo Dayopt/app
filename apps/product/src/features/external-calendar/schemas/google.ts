@@ -36,7 +36,7 @@ export const GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE =
  * Calendar scope は narrow pair（`calendarList.list` + `events.list` の 2 本）に絞る。
  * `calendar.readonly` が追加で持つ権限（ACL・設定・任意カレンダーの freebusy 等）は
  * このアプリでは一つも使っていない（審査要件、docs/operations/google-oauth-verification.md
- * §要判断 参照）。
+ * §narrow pair の対応状況 参照）。
  *
  * @see https://developers.google.com/identity/openid-connect/openid-connect#scope-param
  */

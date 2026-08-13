@@ -25,17 +25,17 @@ GCP project 側の設定手順（API 有効化・scope 登録・client 作成・
 
 ## 現状と、提出前に閉じるべきもの
 
-| 審査要件                                                                          | 現状                                                                                                                                                                                                                                                                  | 判定                |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| App name / developer contact                                                      | GCP Console に登録済み                                                                                                                                                                                                                                                | ✅                  |
-| Homepage が検証済みドメイン上にあり機能を説明している                             | `https://dayopt.app`（200 を確認）                                                                                                                                                                                                                                    | ✅                  |
-| プライバシーポリシーが homepage と同一ドメインにある                              | `https://dayopt.app/legal/privacy`（200 を確認）                                                                                                                                                                                                                      | ✅                  |
-| プライバシーポリシーが **Google user data の扱いを開示**し Limited Use に準拠する | 記述が無い                                                                                                                                                                                                                                                            | ❌ **ブロッカー 1** |
-| 同意画面に scope が登録済み                                                       | `openid` / `email` / `calendar.readonly` のみ登録済み（#1702 手順書 v2 ステップ 2）。**narrow pair 2 本は未登録**（下記 §narrow pair の対応状況 参照、#1982 でコードは narrow pair 済みだが GCP console 側の登録がまだ。§提出前チェックリスト ステップ 3 で確認する） | ❌ **要対応**       |
-| Authorized domains が Search Console で検証済み                                   | 外形から確認できない                                                                                                                                                                                                                                                  | ❓ **要確認**       |
-| デモ動画が **scope を使う app の機能**を見せる                                    | 見せられる画面が存在しない                                                                                                                                                                                                                                            | ❌ **ブロッカー 2** |
-| 保持期間 90 日の約束が実際に執行されている                                        | cron 配線済み（2026-08-12 / 2026-08-13、account_delete 種別の settle 経路の配線確認は #2055 で追跡中）                                                                                                                                                                | ✅                  |
-| 要求する scope が最小である                                                       | narrow pair へのコード切り替えは完了（#1982、下記 §narrow pair の対応状況 参照）。GCP console 登録と既存接続の移行が未完了                                                                                                                                            | ⚠️ **一部実施**     |
+| 審査要件                                                                          | 現状                                                                                                                                                                                                                                         | 判定                |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| App name / developer contact                                                      | GCP Console に登録済み                                                                                                                                                                                                                       | ✅                  |
+| Homepage が検証済みドメイン上にあり機能を説明している                             | `https://dayopt.app`（200 を確認）                                                                                                                                                                                                           | ✅                  |
+| プライバシーポリシーが homepage と同一ドメインにある                              | `https://dayopt.app/legal/privacy`（200 を確認）                                                                                                                                                                                             | ✅                  |
+| プライバシーポリシーが **Google user data の扱いを開示**し Limited Use に準拠する | 記述が無い                                                                                                                                                                                                                                   | ❌ **ブロッカー 1** |
+| 同意画面に scope が登録済み                                                       | `openid` / `email` / narrow pair（`calendar.calendarlist.readonly` / `calendar.events.readonly`）を登録済み。旧 `calendar.readonly` は未削除のまま残っている（2026-08-14、指揮台が console で登録・実測確認。#1982 の 5-1 完了コメント参照） | ✅                  |
+| Authorized domains が Search Console で検証済み                                   | 外形から確認できない                                                                                                                                                                                                                         | ❓ **要確認**       |
+| デモ動画が **scope を使う app の機能**を見せる                                    | 見せられる画面が存在しない                                                                                                                                                                                                                   | ❌ **ブロッカー 2** |
+| 保持期間 90 日の約束が実際に執行されている                                        | cron 配線済み（2026-08-12 / 2026-08-13、account_delete 種別の settle 経路の配線確認は #2055 で追跡中）                                                                                                                                       | ✅                  |
+| 要求する scope が最小である                                                       | narrow pair へのコード切り替え（#1982）と GCP console 登録（2026-08-14）が完了。既存接続は 0 行のため移行対象なし（#1982 実測）。旧 `calendar.readonly` の console 登録削除だけが未完了（§提出前チェックリスト ステップ 3）                  | ⚠️ **一部実施**     |
 
 ### ブロッカー 1: プライバシーポリシーに Google user data の記述が無い
 
@@ -88,16 +88,14 @@ Dayopt が呼ぶ Calendar API は 2 つだけで、それぞれをより狭い s
 
 これは「落ちるかもしれない」以前に、**justification 欄に正直に書けない**ことを意味する。より狭い選択肢が実在する以上、「より狭い scope では不十分」と書けば虚偽になる。
 
-**提出前に narrow pair へ切り替える。** 4 ステップのうち 1〜2（コード）は #1982 で完了。3〜4 は未着手。
+**narrow pair へ切り替えた。** 4 ステップのうち 1〜3 が完了、4 は不要と判明した（#1982）。
 
 1. ✅ `apps/product/src/features/external-calendar/schemas/google.ts` の `GOOGLE_AUTHORIZATION_SCOPES` を 2 本立てに変えた
-2. ✅ `hasRequiredCalendarScopes()`（旧 `hasCalendarReadonlyScope()`、`server/google-oauth.ts`）の判定を **`(calendar.calendarlist.readonly && calendar.events.readonly) || calendar.readonly`** に広げた。**narrow pair は AND であって OR ではない** — Google の granular consent で片方だけ許可されうるので、いずれか 1 つで通す OR 判定にすると、接続は active として保存されたのに `calendarList.list` か `events.list` が恒久的に 403 になり「Connected なのに一覧が出ない / 同期されない」状態が残る。narrow scope が片方欠けた callback を拒否する test も入れた。旧 `calendar.readonly` を残すのは既存の接続済みユーザーがそれで grant 済みだから（この検査は callback 時にしか走らないため保存済み接続は壊れないが、再接続で落ちる）
-3. ❌ **未着手。** GCP の同意画面で 2 本を追加登録する（`calendar.readonly` は削除する）。§提出前チェックリスト ステップ 3 を参照。コードは deploy 済みでも console 側が未登録だと、`/start` を踏んだ全ユーザーが同意画面でエラーになる（登録されていない scope を要求しているため）。**登録が先、コードの deploy が後**の順を守る
-4. ❌ **未着手。** 既存の接続を移行する。1〜3 が変えるのは以後の認可リクエストと callback の判定だけで、**すでに発行済みの grant は縮まない**。`syncConnection()` は保存済み refresh token をそのまま `startSession()` に渡し、`granted_scopes` を再検査しない（`server/sync-service.ts:179`）。放置すると既存ユーザーの token は `calendar.readonly` の権限で動き続け、「ユーザーに渡す権限を用途に合わせる」という目的を達成できない。既存接続を revoke して再接続させるか、期限を切って強制再認証する。**着手判断は #1982 に記録した既存接続の scope 分布実測（`calendar_connections` の `granted_scopes` 集計）が出てから行う**
+2. ✅ `hasRequiredCalendarScopes()`（旧 `hasCalendarReadonlyScope()`、`server/google-oauth.ts`）の判定を **`(calendar.calendarlist.readonly && calendar.events.readonly) || calendar.readonly`** に広げた。**narrow pair は AND であって OR ではない** — Google の granular consent で片方だけ許可されうるので、いずれか 1 つで通す OR 判定にすると、接続は active として保存されたのに `calendarList.list` か `events.list` が恒久的に 403 になり「Connected なのに一覧が出ない / 同期されない」状態が残る。narrow scope が片方欠けた callback を拒否する test も入れた。旧 `calendar.readonly` を残すのは既存の接続済みユーザーがそれで grant 済みだから（この検査は callback 時にしか走らないため保存済み接続は壊れないが、再接続で落ちる）。削除条件は [#2072](https://github.com/Dayopt/dayopt/issues/2072) に記録した
+3. ✅ **narrow pair 2 本の追加登録は完了**（2026-08-14、指揮台が console で実施・実測確認）。**旧 `calendar.readonly` の削除だけ未完了。** §提出前チェックリスト ステップ 3 を参照
+4. ✅ **不要と判明した。** production の `calendar_connections` を実測した結果 0 行（既存接続ゼロ、#1982 で確認）だったため、移行対象そのものが存在しない。`syncConnection()` が `granted_scopes` を再検査しない設計（`server/sync-service.ts:179`）自体は変わらないが、新規接続はすべて narrow pair で作られるため実害は無い
 
-どちらも sensitive scope なので審査が不要になるわけではない。狭くする目的は、審査を通しやすくすることと、ユーザーに渡す権限を実際の用途に合わせることの 2 つ。**後者は 4 まで実施して初めて達成される**（1〜3 だけだと新規ユーザーにしか効かない）。現時点の接続数は少ないので、移行のコストは低いうちに済む。
-
-**切り替えないと決めた場合**、justification は「narrower scopes are insufficient」と書かず、§申請文 の fallback を使う。reject または追加質問のリスクは上がる。
+狭くする目的は、審査を通しやすくすることと、ユーザーに渡す権限を実際の用途に合わせることの 2 つ。既存接続が 0 行だったため、**両方とも 1〜3 の完了時点で達成済み**。
 
 ### 要確認: ドメイン検証
 
@@ -187,7 +185,9 @@ modify, or delete events, and does not access free/busy information for calendar
 the user has not selected.
 ```
 
-### Scope justification — `calendar.readonly`（narrow pair へ切り替えない場合の fallback）
+### Scope justification — `calendar.readonly`（fallback、#1982 で不採用）
+
+**#1982 で narrow pair への切り替えを実施したため、この fallback は不採用。提出には使わない。** 記録として残すのみ（GCP console から `calendar.readonly` の登録を削除する前に、旧 justification が誤って再利用されないようにするため）。
 
 より狭い scope が存在する以上、「不十分だ」とは書かない。**採用する場合はこの弱さを承知の上で出す**（§narrow pair の対応状況 参照）。
 
@@ -386,8 +386,9 @@ User が GCP Console / Search Console で操作する項目。**上から順に�
 
 `https://console.cloud.google.com/auth/scopes?project=dayopt-503623`
 
-- narrow pair へ切り替えた場合: `openid` / `email` / `calendar.calendarlist.readonly` / `calendar.events.readonly` の 4 本。**`calendar.readonly` は削除する**
-- 切り替えない場合: `openid` / `email` / `calendar.readonly` の 3 本
+**目標**: `openid` / `email` / `calendar.calendarlist.readonly` / `calendar.events.readonly` の 4 本のみ。**`calendar.readonly` は削除する**（fallback は #1982 で不採用済み、§Scope justification — `calendar.readonly` 参照）。
+
+**現状（2026-08-14 実測）**: narrow pair 2 本の追加登録は完了。旧 `calendar.readonly` はまだ削除していない（5 本登録されている状態）。production の既存接続は 0 行（#1982 実測）なので同期を壊す心配は無いが、**削除は [#2072](https://github.com/Dayopt/dayopt/issues/2072) の OR 分岐削除条件（開発者個人アカウント等、production DB に載らない旧 grant が残っていないことの確認を含む）を満たしてから行う**。
 
 **アプリ側が要求する scope と完全に一致させる**（`GOOGLE_AUTHORIZATION_SCOPES`）。ここに登録されていない scope を要求すると同意画面でエラーになり、逆に余分に登録すると審査官に「使っていない scope を要求している」と見なされる。
 

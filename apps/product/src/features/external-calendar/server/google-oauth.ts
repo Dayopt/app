@@ -380,9 +380,9 @@ export function parseGrantedScopes(scope: string): string[] {
  *
  * 旧・広い `calendar.readonly` は OR で残す。新規の認可リクエストではもう要求しない
  * （`GOOGLE_AUTHORIZATION_SCOPES`）が、既に grant 済みの既存接続はこの scope のまま
- * 動き続けるため、ここで弾くと既存ユーザー全員が再認証を要求される。削除できるのは
- * 既存接続の narrow pair 移行が完了した後（#1982 plan v4 §5-3 の完了条件、follow-up
- * issue で扱う）。
+ * 動き続けるため、ここで弾くと既存ユーザー全員が再認証を要求される。削除条件は #2072
+ * に記録した（production の `calendar_connections` に旧 scope の行が無いこと・GCP
+ * console から旧 scope の登録を削除済みであること）。
  */
 export function hasRequiredCalendarScopes(grantedScopes: string[]): boolean {
   const granted = new Set(grantedScopes);

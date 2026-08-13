@@ -37,11 +37,13 @@ import { GET } from '../callback/route';
 const USER_ID = '00000000-0000-4000-8000-000000000001';
 const OTHER_USER_ID = '00000000-0000-4000-8000-000000000002';
 const STATE = 'state-value';
-/** 旧・広い scope。既存接続の後方互換を確認する test で使う（#1982）。 */
+/** 旧・広い scope。既存接続の後方互換を確認する test でだけ明示的に使う（#1982）。 */
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 /** narrow pair。新規の認可リクエストはこの 2 本を要求する（#1982）。 */
 const CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
 const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
+/** `tokenResponse()` の既定 scope。production で実際に走る主経路（#1982）。 */
+const NARROW_PAIR_SCOPE = `${CALENDAR_LIST_SCOPE} ${CALENDAR_EVENTS_SCOPE}`;
 
 function idToken(overrides: Record<string, unknown> = {}): string {
   const payload = {
@@ -59,7 +61,7 @@ function tokenResponse(overrides: Record<string, unknown> = {}) {
   return {
     access_token: 'access-token',
     refresh_token: 'refresh-token',
-    scope: CALENDAR_SCOPE,
+    scope: NARROW_PAIR_SCOPE,
     id_token: idToken(),
     ...overrides,
   };
@@ -315,15 +317,8 @@ describe('google calendar callback route', () => {
     expect(saveConnection).not.toHaveBeenCalled();
   });
 
+  // beforeEach の既定 fetch mock がすでに narrow pair を返す（production の主経路）
   it('narrow pair が両方付与されれば calendar.readonly が無くても接続できる', async () => {
-    const scope = `${CALENDAR_LIST_SCOPE} ${CALENDAR_EVENTS_SCOPE}`;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve(new Response(JSON.stringify(tokenResponse({ scope })), { status: 200 })),
-      ),
-    );
-
     const response = await GET(withCookie(request()));
 
     expect(reasonOf(response)).toBeNull();
@@ -362,6 +357,15 @@ describe('google calendar callback route', () => {
   // 要求しなくても callback の判定は引き続き通す（#1982、削除条件は hasRequiredCalendarScopes
   // の doc comment を参照）
   it('旧 calendar.readonly のみでも後方互換で接続できる', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(tokenResponse({ scope: CALENDAR_SCOPE })), { status: 200 }),
+        ),
+      ),
+    );
+
     const response = await GET(withCookie(request()));
 
     expect(reasonOf(response)).toBeNull();
@@ -433,7 +437,7 @@ describe('google calendar callback route', () => {
         userId: USER_ID,
         providerAccountId: 'google-sub-123',
         providerAccountEmail: 'user@example.com',
-        grantedScopes: [CALENDAR_SCOPE],
+        grantedScopes: [CALENDAR_LIST_SCOPE, CALENDAR_EVENTS_SCOPE],
         refreshToken: 'refresh-token',
       }),
     );
@@ -492,6 +496,30 @@ describe('google calendar callback route', () => {
 
     const failure = await GET(withCookie(request({ state: 'forged-state' })));
     expect(failure.cookies.get('__Host-dayopt-calendar-connect')?.maxAge).toBe(0);
+  });
+
+  // scope 検査は reconnect 分岐より前に走る。reconnect flow でも narrow pair の片方が
+  // 欠けていれば同じ scope_not_granted で拒否し、reconnect 対象の照会にも進まない
+  // （behavior-verifier 指摘のギャップ、#1982）
+  it('再接続 flow でも narrow pair の片方が欠ければ scope_not_granted で拒否する', async () => {
+    const connectionId = '00000000-0000-4000-8000-0000000000c1';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify(tokenResponse({ scope: CALENDAR_LIST_SCOPE })), {
+            status: 200,
+          }),
+        ),
+      ),
+    );
+
+    const response = await GET(withCookie(request(), { reconnectConnectionId: connectionId }));
+
+    expect(reasonOf(response)).toBe('scope_not_granted');
+    expect(getReconnectTarget).not.toHaveBeenCalled();
+    expect(reconnectExistingConnection).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
   });
 
   it('再接続は同じ Google sub の既存行だけを条件付き更新する', async () => {
