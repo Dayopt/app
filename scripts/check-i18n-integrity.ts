@@ -38,6 +38,7 @@ const MULTI_KEY_EXCEPTIONS: Record<string, string[]> = {
     'emailCommon',
     'welcome',
     'passwordChanged',
+    'mfaDisabled',
     'accountDeletion',
     'trialStart',
     'trialExpiring',

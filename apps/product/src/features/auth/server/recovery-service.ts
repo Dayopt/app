@@ -4,10 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { verifyRecoveryCode } from '@/lib/auth/recovery-codes';
 import type { Database } from '@/lib/database';
+import { getUserLocale, sendMfaDisabledEmail } from '@/lib/email/router';
 import { logger } from '@/lib/logger';
-import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
+import {
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
+import { getDisplayName } from '@/lib/user';
 
 class RecoveryServiceError extends ServiceError {
   constructor(
@@ -53,22 +59,12 @@ export class RecoveryService {
     }
 
     const adminClient = createServiceRoleClient();
-    const { data: used, error: rpcError } = await adminClient.rpc('use_recovery_code', {
-      p_user_id: userId,
-      p_code_hash: matchedCode.code_hash,
-    });
 
-    if (rpcError || !used) {
-      logger.error('Failed to mark recovery code as used');
-      const original = captureUnexpectedDatabaseError(
-        rpcError ?? new Error('Recovery code RPC returned an unsuccessful result'),
-        { feature: 'mfa_recovery', operation: 'consume_recovery_code' },
-      );
-      throw new RecoveryServiceError('RECOVERY_FAILED', 'Failed to use recovery code', {
-        cause: original,
-      });
-    }
-
+    // factor削除 → コード消費の順で実行する（#2039）。逆順だと factor削除失敗時に
+    // 「コードは消費済みだが MFA は有効なまま」というロックアウト方向の中途状態が残る。
+    // この順序なら factor削除の失敗時はコード未消費のまま再試行でき、逆に factor削除
+    // 成功後にコード消費が失敗しても実害は「そのコードが将来もう一度使える」だけに留まる。
+    let mfaDisabled = false;
     try {
       const { data: factors, error: listFactorsError } = await observeAuthOperation(
         'recovery_list_mfa_factors',
@@ -86,6 +82,7 @@ export class RecoveryService {
               { feature: 'mfa_recovery' },
             );
             if (deleteFactorError) throw deleteFactorError;
+            mfaDisabled = true;
           }
         }
       }
@@ -94,6 +91,76 @@ export class RecoveryService {
       throw new RecoveryServiceError('RECOVERY_FAILED', 'Failed to unenroll MFA factor', {
         cause: error instanceof Error ? error : undefined,
       });
+    }
+
+    const { data: used, error: rpcError } = await adminClient.rpc('use_recovery_code', {
+      p_user_id: userId,
+      p_code_hash: matchedCode.code_hash,
+    });
+
+    // MFA解除（ユーザーに必要な副作用）は既に確定している。コード消費の失敗は
+    // 「同じコードが将来もう一度使える状態で残る」だけなので、ここでは失敗として
+    // 返さない（#2039）。次にこのコードで verify() が呼ばれた時点では factor は
+    // 既に存在しないため、単に消費だけが行われて収束する。
+    if (rpcError) {
+      logger.error('Failed to mark recovery code as used');
+      captureUnexpectedDatabaseError(rpcError, {
+        feature: 'mfa_recovery',
+        operation: 'consume_recovery_code',
+      });
+    } else if (!used) {
+      // rpcError が無いのに used=false は、並行リクエストが同じコードを先に消費した
+      // 良性のレース（このリクエスト到達時点で対象行が既に used_at 済み）。異常ではないので
+      // Sentry へは上げない
+      logger.info('Recovery code already consumed by a concurrent request');
+    }
+
+    if (mfaDisabled) {
+      // MFA無効化の通知メール（#2033）。送信失敗で検証成功自体は取り消さない。
+      try {
+        const { data: userData, error: getUserError } = await observeAuthOperation(
+          'recovery_get_user_for_notification',
+          () => adminClient.auth.admin.getUserById(userId),
+          { feature: 'mfa_recovery' },
+        );
+        if (getUserError || !userData?.user?.email) {
+          throw getUserError ?? new Error('User email not found for MFA disabled notification');
+        }
+
+        const locale = await getUserLocale(this.supabase, userId).catch(() => 'en' as const);
+
+        try {
+          await sendMfaDisabledEmail({
+            email: userData.user.email,
+            userName: getDisplayName(userData.user, 'there'),
+            locale,
+          });
+        } catch (error) {
+          const original =
+            error instanceof Error
+              ? error
+              : new Error('MFA disabled notification email failed', { cause: error });
+          captureUnexpectedError(original, {
+            feature: 'mfa_recovery',
+            operation: 'send_mfa_disabled_email',
+            source: 'resend',
+          });
+        }
+      } catch (error) {
+        // getUserById 自体の失敗は observeAuthOperation が既に 'supabase_auth' として
+        // capture 済み（同一 Error インスタンスなら capturedErrors の重複排除が効く）。
+        // ここは「email が見つからない」など observeAuthOperation を経由しない失敗を、
+        // 誤って 'resend' 起因のように見せずに拾うためのフォールバック
+        const original =
+          error instanceof Error
+            ? error
+            : new Error('Failed to resolve user for MFA disabled notification', { cause: error });
+        captureUnexpectedError(original, {
+          feature: 'mfa_recovery',
+          operation: 'recovery_get_user_for_notification',
+          source: 'supabase_auth',
+        });
+      }
     }
 
     const { data: remainingCount, error: countError } = await this.supabase.rpc(

@@ -21,6 +21,7 @@ import { ConfirmEmail } from './ConfirmEmail';
 import { EmailChangeEmail } from './EmailChangeEmail';
 import { createEmailTranslator } from './i18n';
 import { MagicLinkEmail } from './MagicLinkEmail';
+import { MfaDisabledEmail } from './MfaDisabledEmail';
 import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
 import { PaymentFailedEmail } from './PaymentFailedEmail';
@@ -159,6 +160,7 @@ export const Guidelines: Story = {
           <p className="pl-4">PaymentFailedEmail.tsx — 支払い失敗</p>
           <p className="pl-4">PaymentRecoveredEmail.tsx — 支払い復旧</p>
           <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
+          <p className="pl-4">MfaDisabledEmail.tsx — 2段階認証無効化通知</p>
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
@@ -218,6 +220,7 @@ export const Guidelines: Story = {
                 ['PaymentFailedEmail', '支払い失敗', 'email.sendPaymentFailed'],
                 ['PaymentRecoveredEmail', '支払い復旧', 'email.sendPaymentRecovered'],
                 ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
+                ['MfaDisabledEmail', '2段階認証無効化通知', 'RecoveryService.verify()'],
                 ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
@@ -490,6 +493,18 @@ export const PasswordChanged: Story = {
       jaElement={PasswordChangedEmail({ userName: 'Tomoya', locale: 'ja' })}
       subjects={appSubjects('passwordChanged.subject')}
       title="Password Changed"
+    />
+  ),
+};
+
+/** 2段階認証無効化通知 */
+export const MfaDisabled: Story = {
+  render: () => (
+    <BilingualEmailPreview
+      enElement={MfaDisabledEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={MfaDisabledEmail({ userName: 'Tomoya', locale: 'ja' })}
+      subjects={appSubjects('mfaDisabled.subject')}
+      title="MFA Disabled"
     />
   ),
 };
