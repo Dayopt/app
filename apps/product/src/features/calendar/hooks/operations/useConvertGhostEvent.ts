@@ -23,6 +23,14 @@ import { api } from '@/lib/trpc';
  * Plan / Record の判定は `event.endDate` と現在時刻だけで一意に決まる
  * （`ensurePlanCanBeCreated` は `end_at > now`、`ensureRecordCanBeCreated` は `end_at <= now`
  * を要求し、互いに排他的）。メニュー UI は不要。
+ *
+ * **二重変換防止は `external_calendar_event_id` 専用の unique 制約ではなく、
+ * `plans_no_overlap` / `records_no_overlap` EXCLUDE 制約（`user_id` + 時間帯の重複防止）の
+ * 副作用として成立している**（risk-reviewer 指摘、PR review）。同じ ghost を変換すると常に
+ * 同じ `start_at`/`end_at` を複製するため、同時に複数リクエストが飛んでも後発は必ず時間帯が
+ * 重複し `TIME_OVERLAP` で弾かれる。ただし overlap 制約の意味論が将来変わると、この副作用も
+ * 静かに失われる。恒久的な保証にする場合は `external_calendar_event_id` への
+ * partial unique index（`deleted_at IS NULL`）を別途検討する。
  */
 function isPastGhost(event: ExternalCalendarEvent): boolean {
   return event.endDate.getTime() <= Date.now();

@@ -130,7 +130,7 @@ export function ExternalEventCard({
         <>
           <button
             type="button"
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover pointer-events-auto absolute top-0.5 right-0.5 rounded-full p-1"
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover pointer-events-auto absolute top-1 right-1 rounded-full p-1"
             aria-label={t('dismiss.ariaLabel')}
             onClick={(e) => {
               e.stopPropagation();
