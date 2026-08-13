@@ -17,9 +17,17 @@ import {
 } from '@dayopt/components';
 
 type VerifyMode = 'totp' | 'recovery';
+/**
+ * 呼び出し元の文脈。footer のラベル/リンクとリカバリーコードの説明文がここで分岐する
+ * （login: `/auth/mfa-verify` からのログイン時 MFA 認証。passwordReset: `ResetPasswordForm`
+ * からの MFA 有効アカウントの自己復旧、#2013）。「ログインに戻る」を reset 文脈にそのまま
+ * 出すと、パスワードを忘れて reset に来たユーザーへの終端として誤りになるため分ける
+ */
+type VerifyFlow = 'login' | 'passwordReset';
 
 interface MFAVerifyFormProps {
   mode: VerifyMode;
+  flow: VerifyFlow;
   verificationCode: string;
   onVerificationCodeChange: (value: string) => void;
   recoveryCode: string;
@@ -29,11 +37,13 @@ interface MFAVerifyFormProps {
   onVerifyTotp: () => void;
   onVerifyRecovery: () => void;
   onSwitchMode: (mode: VerifyMode) => void;
-  loginHref: string;
+  /** flow==='login' なら「ログインに戻る」、'passwordReset' なら「パスワードリセットに戻る」のリンク先 */
+  backHref: string;
 }
 
 export function MFAVerifyForm({
   mode,
+  flow,
   verificationCode,
   onVerificationCodeChange,
   recoveryCode,
@@ -43,7 +53,7 @@ export function MFAVerifyForm({
   onVerifyTotp,
   onVerifyRecovery,
   onSwitchMode,
-  loginHref,
+  backHref,
 }: MFAVerifyFormProps) {
   const t = useTranslations();
 
@@ -75,7 +85,9 @@ export function MFAVerifyForm({
                 <p className="text-muted-foreground text-balance">
                   {mode === 'totp'
                     ? t('auth.mfaVerify.description')
-                    : t('auth.mfaVerify.recoveryCodeDescription')}
+                    : flow === 'login'
+                      ? t('auth.mfaVerify.recoveryCodeDescription')
+                      : t('auth.mfaVerify.recoveryCodeDescriptionPasswordReset')}
                 </p>
               </div>
 
@@ -180,8 +192,10 @@ export function MFAVerifyForm({
               )}
 
               <FieldDescription className="text-center">
-                <a href={loginHref} className="hover:text-primary hover:underline">
-                  {t('auth.mfaVerify.backToLogin')}
+                <a href={backHref} className="hover:text-primary hover:underline">
+                  {flow === 'login'
+                    ? t('auth.mfaVerify.backToLogin')
+                    : t('auth.mfaVerify.backToPasswordReset')}
                 </a>
               </FieldDescription>
             </FieldGroup>

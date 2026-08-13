@@ -510,6 +510,7 @@ function MFADemo() {
     <div className="mx-auto max-w-md">
       <MFAVerifyForm
         mode={mode}
+        flow="login"
         verificationCode={verificationCode}
         onVerificationCodeChange={setVerificationCode}
         recoveryCode={recoveryCode}
@@ -523,7 +524,7 @@ function MFADemo() {
           setVerificationCode('');
           setRecoveryCode('');
         }}
-        loginHref="/ja/auth/login"
+        backHref="/ja/auth/login"
       />
     </div>
   );
