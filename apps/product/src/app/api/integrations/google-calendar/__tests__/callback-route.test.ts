@@ -334,6 +334,30 @@ describe('google calendar callback route', () => {
     );
   });
 
+  // Google は要求した短縮形（openid/email）を返す時も、実際には正準 URL 形（userinfo.email 等）
+  // を含めて返す（`request()` 直上の既存ケースが同じ形を使っている）。narrow pair だけの mock で
+  // 通ることを確認しても、実レスポンス形で通らなければ意味が無い（.claude/rules/quality.md
+  // §外部 API 統合の検証、PR #1721 の教訓）
+  it('openid / userinfo.email を含む実レスポンス形でも narrow pair で接続できる', async () => {
+    const scope = [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      CALENDAR_LIST_SCOPE,
+      CALENDAR_EVENTS_SCOPE,
+    ].join(' ');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify(tokenResponse({ scope })), { status: 200 })),
+      ),
+    );
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(saveConnection).toHaveBeenCalled();
+  });
+
   // 既存接続は旧 scope のまま grant 済みのことがあるため、新規の認可リクエストはもう
   // 要求しなくても callback の判定は引き続き通す（#1982、削除条件は hasRequiredCalendarScopes
   // の doc comment を参照）
