@@ -142,7 +142,9 @@ describe('google calendar callback route', () => {
     expect(saveConnection).not.toHaveBeenCalled();
   });
 
-  it('MFA assurance lookup 失敗は token 交換に到達しない', async () => {
+  // lookupFailed は自分のcookie由来のAAL claimから攻撃者が繰り返し到達できるため、
+  // captureすると無制限にSentry quotaを焼ける増幅経路になる。captureしないことを固定する。
+  it('MFA assurance lookup 失敗は token 交換に到達せず、Sentryへcaptureしない', async () => {
     resolveMfaAssurance.mockResolvedValue({
       currentLevel: null,
       nextLevel: null,
@@ -154,7 +156,8 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('assurance_lookup_failed');
     expect(fetch).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
-    expect(captureUnexpectedError).toHaveBeenCalled();
+    expect(rateLimit).not.toHaveBeenCalled();
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
   });
 
   // cookie は署名しておらず HttpOnly は JS を止めるだけなので、ユーザー自身は devtools や

@@ -89,6 +89,11 @@ export async function resolveSessionAuthContext(
 /**
  * MFA assurance level のみを解決する。`resolveSessionAuthContext` の一部を、
  * userId/sessionId 抽出を伴わずに呼びたい呼び出し元(Route Handler 等)向けに切り出したもの。
+ *
+ * `getAuthenticatorAssuranceLevel()` を jwt 引数なしで呼ぶため、AAL claim は
+ * server 未検証の session storage（cookie 由来）から読まれる。`proxy.ts` の
+ * MFA redirect 判定・`protectedProcedure` の tRPC guard も同じ trust 前提を
+ * 共有しており、本関数もそれを継承する（新規に開けた穴ではない）。
  */
 export async function resolveMfaAssurance(
   supabase: SupabaseClient<Database>,

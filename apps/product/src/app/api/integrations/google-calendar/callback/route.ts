@@ -102,13 +102,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // cookie は自作できるため start を踏まずに callback を直接叩ける。MFA登録済みでaal2未検証の
   // セッションでは、token交換・DB書き込みより前に止める。
+  //
+  // lookupFailed はセッション自体のAAL claim(自分のcookie由来)から到達しうるため、
+  // captureすると攻撃者が任意回数Sentry quotaを焼ける増幅経路になる（invalid_grantを
+  // 下のcatchでcaptureしないのと同じ理由）。captureせずlogger.warnに留める。
   const mfaAssurance = await resolveMfaAssurance(supabase, 'calendar_connect');
   if (mfaAssurance.lookupFailed) {
-    captureUnexpectedError(new Error('calendar connect MFA assurance lookup failed'), {
-      feature: 'external_calendar',
-      operation: 'check_mfa_assurance',
-      route: '/api/integrations/google-calendar/callback',
-    });
+    logger.warn('[calendar-callback] MFA assurance lookup failed');
     return fail('assurance_lookup_failed');
   }
   if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {

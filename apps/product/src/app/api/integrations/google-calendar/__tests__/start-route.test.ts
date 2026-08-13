@@ -97,7 +97,9 @@ describe('google calendar start route', () => {
     expect(checkProAccessForUser).not.toHaveBeenCalled();
   });
 
-  it('MFA assurance lookup 失敗は 500 で止め、認可URLへは進まない', async () => {
+  // lookupFailed は自分のcookie由来のAAL claimから攻撃者が繰り返し到達できるため、
+  // captureすると無制限にSentry quotaを焼ける増幅経路になる。captureしないことを固定する。
+  it('MFA assurance lookup 失敗は 500 で止め、Sentryへcaptureせず、認可URLへも進まない', async () => {
     resolveMfaAssurance.mockResolvedValue({
       currentLevel: null,
       nextLevel: null,
@@ -107,8 +109,9 @@ describe('google calendar start route', () => {
     const response = await GET(request());
 
     expect(response.status).toBe(500);
-    expect(captureUnexpectedError).toHaveBeenCalled();
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
     expect(checkProAccessForUser).not.toHaveBeenCalled();
+    expect(rateLimit).not.toHaveBeenCalled();
   });
 
   it('aal2セッションでは通常どおり認可URLへ進む', async () => {
