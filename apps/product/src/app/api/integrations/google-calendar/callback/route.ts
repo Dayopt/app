@@ -31,6 +31,7 @@ import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
+import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -97,6 +98,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (authError || !user) {
     return NextResponse.redirect(new URL('/auth/login', requestUrl));
+  }
+
+  // cookie は自作できるため start を踏まずに callback を直接叩ける。MFA登録済みでaal2未検証の
+  // セッションでは、token交換・DB書き込みより前に止める。
+  const mfaAssurance = await resolveMfaAssurance(supabase, 'calendar_connect');
+  if (mfaAssurance.lookupFailed) {
+    captureUnexpectedError(new Error('calendar connect MFA assurance lookup failed'), {
+      feature: 'external_calendar',
+      operation: 'check_mfa_assurance',
+      route: '/api/integrations/google-calendar/callback',
+    });
+    return fail('assurance_lookup_failed');
+  }
+  if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
+    logger.warn('[calendar-callback] MFA verification required');
+    return fail('mfa_verification_required');
   }
 
   // start と同じ理由でここにも要る。cookie が自作できる以上、start を踏まずに callback を

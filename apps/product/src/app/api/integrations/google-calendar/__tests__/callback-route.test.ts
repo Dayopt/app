@@ -10,6 +10,7 @@ const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const isWriteFenceEnabled = vi.hoisted(() => vi.fn());
+const resolveMfaAssurance = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -29,6 +30,7 @@ vi.mock('@/features/external-calendar/server/connection-service', () => ({
 }));
 vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
+vi.mock('@/lib/trpc/session-auth-context', () => ({ resolveMfaAssurance }));
 
 import { GET } from '../callback/route';
 
@@ -102,6 +104,7 @@ describe('google calendar callback route', () => {
     });
     reconnectExistingConnection.mockResolvedValue('updated');
     checkProAccessForUser.mockResolvedValue('allowed');
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal1' });
     rateLimit.mockResolvedValue({ success: true });
     isWriteFenceEnabled.mockResolvedValue(false);
     vi.stubGlobal(
@@ -126,6 +129,32 @@ describe('google calendar callback route', () => {
 
     expect(response.headers.get('location')).toContain('/auth/login');
     expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  // start と同じ理由。cookie が自作できる以上、start を踏まずに callback へ直接来られる
+  it('MFA登録済みでaal2未検証のセッションは token 交換に到達しない', async () => {
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal2' });
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('mfa_verification_required');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('MFA assurance lookup 失敗は token 交換に到達しない', async () => {
+    resolveMfaAssurance.mockResolvedValue({
+      currentLevel: null,
+      nextLevel: null,
+      lookupFailed: true,
+    });
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('assurance_lookup_failed');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+    expect(captureUnexpectedError).toHaveBeenCalled();
   });
 
   // cookie は署名しておらず HttpOnly は JS を止めるだけなので、ユーザー自身は devtools や

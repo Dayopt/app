@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
+import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 import { z } from 'zod';
 
 /** AES-256-GCM に node:crypto が要る。Edge では動かない。 */
@@ -51,6 +52,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (authError || !user) {
     return NextResponse.redirect(new URL('/auth/login', requestUrl));
+  }
+
+  // MFA登録済みでaal2未検証のセッションは、認可URLもcookieも発行せず止める。
+  // Pro判定やrate limitより前に置くのは、AAL不足を理由に拒否する場合にそれらの
+  // 消費・DB読取を発生させないため。
+  const mfaAssurance = await resolveMfaAssurance(supabase, 'calendar_connect');
+  if (mfaAssurance.lookupFailed) {
+    captureUnexpectedError(new Error('calendar connect MFA assurance lookup failed'), {
+      feature: 'external_calendar',
+      operation: 'check_mfa_assurance',
+      route: '/api/integrations/google-calendar/start',
+    });
+    return NextResponse.json({ error: 'Failed to verify session' }, { status: 500 });
+  }
+  if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
+    return NextResponse.redirect(new URL('/auth/mfa-verify', requestUrl));
   }
 
   const proAccess = await checkProAccessForUser(supabase, user.id);

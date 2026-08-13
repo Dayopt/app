@@ -491,6 +491,7 @@
           "proRequired": "Google カレンダーとの接続にはProプランが必要です",
           "rateLimited": "接続の試行回数が多すぎます。時間をおいてお試しください。",
           "reconnectTargetInvalid": "この接続は再接続できなくなりました。更新して、もう一度お試しください。",
+          "mfaVerificationRequired": "2段階認証の確認が必要です。確認後にもう一度お試しください。",
           "unavailable": "Google カレンダーに一時的に接続できません",
           "genericError": "Google カレンダーに接続できませんでした"
         }

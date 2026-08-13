@@ -20,7 +20,7 @@ interface SessionAuthContext {
   mfaAssurance?: MfaAssurance | undefined;
 }
 
-type SessionAuthOperationPrefix = 'trpc_context' | 'rsc_trpc';
+type SessionAuthOperationPrefix = 'trpc_context' | 'rsc_trpc' | 'calendar_connect';
 
 function createFailedMfaAssurance(): MfaAssurance {
   return {
@@ -81,7 +81,19 @@ export async function resolveSessionAuthContext(
     logger.warn('Session token lookup threw');
   }
 
-  let mfaAssurance: MfaAssurance;
+  const mfaAssurance = await resolveMfaAssurance(supabase, operationPrefix);
+
+  return { userId, sessionId, mfaAssurance };
+}
+
+/**
+ * MFA assurance level のみを解決する。`resolveSessionAuthContext` の一部を、
+ * userId/sessionId 抽出を伴わずに呼びたい呼び出し元(Route Handler 等)向けに切り出したもの。
+ */
+export async function resolveMfaAssurance(
+  supabase: SupabaseClient<Database>,
+  operationPrefix: SessionAuthOperationPrefix,
+): Promise<MfaAssurance> {
   try {
     const { data: aalData, error: aalError } = await observeAuthOperation(
       `${operationPrefix}_get_authenticator_assurance_level`,
@@ -97,14 +109,12 @@ export async function resolveSessionAuthContext(
       !isValidMfaAssuranceTransition(currentLevel, nextLevel)
     ) {
       logger.warn('MFA assurance lookup failed');
-      mfaAssurance = createFailedMfaAssurance();
-    } else {
-      mfaAssurance = { currentLevel, nextLevel };
+      return createFailedMfaAssurance();
     }
+
+    return { currentLevel, nextLevel };
   } catch {
     logger.warn('MFA assurance lookup threw');
-    mfaAssurance = createFailedMfaAssurance();
+    return createFailedMfaAssurance();
   }
-
-  return { userId, sessionId, mfaAssurance };
 }

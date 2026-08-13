@@ -8,6 +8,7 @@ const rateLimit = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const getReconnectTarget = vi.hoisted(() => vi.fn());
+const resolveMfaAssurance = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -24,6 +25,7 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/features/external-calendar/server/connection-service', () => ({ getReconnectTarget }));
+vi.mock('@/lib/trpc/session-auth-context', () => ({ resolveMfaAssurance }));
 
 import { GET } from '../start/route';
 
@@ -45,6 +47,7 @@ describe('google calendar start route', () => {
     });
     getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     createClient.mockResolvedValue({ auth: { getUser }, from });
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal1' });
     rateLimit.mockResolvedValue({ success: true });
     checkProAccessForUser.mockResolvedValue('allowed');
     getReconnectTarget.mockResolvedValue({
@@ -82,6 +85,41 @@ describe('google calendar start route', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('/auth/login');
+  });
+
+  it('MFA登録済みでaal2未検証のセッションは mfa-verify へ redirect し、認可URLへは進まない', async () => {
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal2' });
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/auth/mfa-verify');
+    expect(checkProAccessForUser).not.toHaveBeenCalled();
+  });
+
+  it('MFA assurance lookup 失敗は 500 で止め、認可URLへは進まない', async () => {
+    resolveMfaAssurance.mockResolvedValue({
+      currentLevel: null,
+      nextLevel: null,
+      lookupFailed: true,
+    });
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(500);
+    expect(captureUnexpectedError).toHaveBeenCalled();
+    expect(checkProAccessForUser).not.toHaveBeenCalled();
+  });
+
+  it('aal2セッションでは通常どおり認可URLへ進む', async () => {
+    resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal2', nextLevel: 'aal2' });
+
+    const response = await GET(request());
+
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get('location') ?? '').origin).toBe(
+      'https://accounts.google.com',
+    );
   });
 
   it('allowlist に無い host では 400 で接続を始めない', async () => {
