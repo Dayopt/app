@@ -170,6 +170,31 @@ describe('Product Sentry capture helpers', () => {
     ).toBe(true);
   });
 
+  // user-service.ts の requestEmailChange（#2064）が依存する dedup 契約を固定する:
+  // observeAuthOperation が先に capture した error instance を、呼び出し側が同一
+  // instance のまま captureUnexpectedError へ渡しても Sentry.captureException は
+  // 1 回だけ。unexpected な code（EXPECTED_AUTH_ERROR_CODES に無い）で検証する —
+  // expected な code だと observeAuthOperation 側が最初から capture しないため、
+  // dedup の成立を検証できない
+  it('dedups when observeAuthOperation captures an error and the caller then passes the same instance directly', async () => {
+    const updateError = Object.assign(new Error('gotrue internal error'), {
+      status: 500,
+      code: 'unexpected_failure',
+    });
+
+    await observeAuthOperation('update_email', async () => ({ error: updateError }), {
+      feature: 'email_change',
+    });
+    captureUnexpectedError(updateError, {
+      feature: 'email_change',
+      operation: 'update_email',
+      source: 'supabase_auth',
+    });
+
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(sentry.captureException).toHaveBeenCalledWith(updateError);
+  });
+
   it('captures returned database errors regardless of an auth-like status and preserves them as cause', () => {
     const returnedFailure = {
       code: 'PGRST404',

@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger';
 import {
   captureUnexpectedDatabaseError,
   captureUnexpectedError,
+  isExpectedAuthError,
   observeAuthOperation,
 } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
@@ -29,42 +30,52 @@ import {
 } from './password-reauthentication';
 
 /**
- * `updateUser({ email })` が alert を鳴らさない GoTrue error code（#2064）。
+ * `updateUser({ email })` の失敗のうち、`isExpectedAuthError` が expected と判定しても
+ * なお Sentry へ alert したい GoTrue error code（#2064）。allowlist 方式（class ごと閉じる）。
  *
- * ユーザー起因で正常に起こりうるものだけを列挙する。ここに無いものは構成故障として扱い
- * Sentry へ報告する（既定を fail-loud にする。`password-reauthentication.ts` の
- * `NON_ALERTING_ERROR_CODES` と同型のパターン）。
+ * 判定は `!isExpectedAuthError(updateError) || EMAIL_UPDATE_ALERTING_CODES.has(code)`
+ * — つまり既定は「`isExpectedAuthError` に従う」（false=expected=静音、true=alert）で、
+ * このリストは「expected 判定を上書きしてでも alert したい」例外だけを持つ。
  *
- * `email_address_not_authorized` を意図的に含めない: GoTrue の既定 SMTP は組織メンバー
- * 以外への送信を拒否するため、production で custom SMTP が正しく設定されていれば
- * 個々のユーザー操作では原則発生しない。発生したら SMTP 設定が意図せず外れている
- * signal として扱い、メール変更が全滅していても気づけるようにする。
+ * ⚠ silence 側の列挙（`isExpectedAuthError` が false を返す code だけ静音化し、それ以外を
+ * 一律 alert）は採らない。`updateUser` はユーザー自身の session-scoped client で呼ぶため、
+ * `session_expired` / `bad_jwt` / `no_authorization` / `user_banned` / `user_not_found` /
+ * `insufficient_aal` / `conflict` 等の session/権限系 expected code がユーザーフローの
+ * 正常な帰結として頻発しうる（`password-reauthentication.ts` の移植元は service-role
+ * client なのでこれらが構造的に発生せず、silence 3 件で足りていた — 前提が異なる）。
+ * silence 列挙だとこれら全てが誤 alert のノイズ源になる。allowlist 反転なら
+ * `EXPECTED_AUTH_ERROR_CODES` が将来増えても追随不要で、狙った code だけを確実に拾える。
  *
- * ⚠ この判定だけでは Sentry 報告は保証されない。`lib/sentry` の
- * `EXPECTED_AUTH_ERROR_CODES`（`isExpectedAuthError`）に `email_address_not_authorized`
- * 自体が含まれており、`handleServiceError` の自動報告（INTERNAL_SERVER_ERROR /
- * TIMEOUT のみに掛かる）は `!isExpectedAuthError(original)` でゲートされる。つまり
- * TRPCErrorCode を何に写像しても、この code は自動報告経路を通らない。だから下の
- * throw 直前で `captureUnexpectedError` を直接呼び、`isExpectedAuthError` を経由しない
- * 経路で報告する（`password-reauthentication.ts` L168-186 の canary と同型）。
+ * `email_address_not_authorized` を含める: GoTrue の既定 SMTP は組織メンバー以外への
+ * 送信を拒否するため、production で custom SMTP が正しく設定されていれば個々の
+ * ユーザー操作では原則発生しない。発生したら SMTP 設定が意図せず外れている signal
+ * として扱い、メール変更が全滅していても気づけるようにする。
  *
- * `updateUser` 呼び出しは `observeAuthOperation` で包んだままにしている（下記）ため、
+ * `validation_failed` は含めない（`EXPECTED_AUTH_ERROR_CODES` に従い静音）が両義的:
+ * router 側で `z.string().email()` により newEmail の形式は事前検証済みなので、
+ * 典型的にはユーザー起因のタイプミスではなく GoTrue 側の追加バリデーション（Zod より
+ * 厳格な規則）差分を指す可能性の方が高い。ただし `emailRedirectTo` 等こちら側の
+ * payload 不整合（#2064 が拾いたい「全滅」パターン）でも同じ code で返りうるため、
+ * 判別できない。現時点でこの code が実運用で問題になった実績が無いため静音を維持するが、
+ * 頻発が疑われたら allowlist へ昇格させる
+ *
+ * `handleServiceError` の自動報告（`!isExpectedAuthError(original)` でゲート）はこの
+ * allowlist を知らないため、alert 対象でも自動報告経路には乗らない。だから throw 直前で
+ * `captureUnexpectedError` を直接呼ぶ（`password-reauthentication.ts` L168-186 の canary
+ * と同型）。`updateUser` 呼び出しは `observeAuthOperation` で包んだままのため、
  * expected でない code（未知 code や 5xx 等）は observeAuthOperation 側が先に
- * `updateError` を capture 済みのことがある。二重 issue を避けるため、下の直接呼び出しは
+ * `updateError` を capture 済みのことがある。二重 issue を避けるため、直接呼び出しは
  * **必ず `updateError` そのもの**（新しい Error でラップしない）を渡す —
  * `captureUnexpectedError` の WeakSet dedup は同一 instance にしか効かない
  */
-const EMAIL_UPDATE_NON_ALERTING_CODES = new Set([
-  'email_exists',
-  'email_address_invalid',
-  'email_conflict_identity_not_deletable',
-  'validation_failed',
-]);
+const EMAIL_UPDATE_ALERTING_CODES = new Set(['email_address_not_authorized']);
 
 /**
  * GoTrue の rate limit。`password-reauthentication.ts` の `RATE_LIMITED_STATUS` と同型。
- * 単発は静音のまま `EMAIL_UPDATE_FAILED` に畳むが、頻発時に追えるよう warn ログは残す
- * （over_email_send_rate_limit 等は構成故障とユーザー集中アクセスの両方であり得るため）
+ * `over_email_send_rate_limit` / `over_request_rate_limit` は `EXPECTED_AUTH_ERROR_CODES`
+ * 側で既に expected（status 429 の fallback も掛かる）なので alert 判定には関与しない。
+ * ここでは頻発時に追えるよう warn ログだけ残す（rate limit は構成故障とユーザー集中
+ * アクセスの両方であり得るため、Sentry へは送らない）
  */
 const EMAIL_UPDATE_RATE_LIMITED_STATUS = 429;
 
@@ -373,17 +384,25 @@ export function createUserService(
       );
 
       if (updateError) {
-        const isRateLimited = updateError.status === EMAIL_UPDATE_RATE_LIMITED_STATUS;
-        const isKnownUserCause =
-          updateError.code !== undefined && EMAIL_UPDATE_NON_ALERTING_CODES.has(updateError.code);
-
-        if (isRateLimited) {
+        if (updateError.status === EMAIL_UPDATE_RATE_LIMITED_STATUS) {
           // 単発は静音のまま畳むが、頻発は目視で追えるよう warn ログだけ残す
-          // （Sentry へは送らない。rate limit は正常なユーザー集中アクセスでも起こる）
-          logger.warn('Email update rate limited by GoTrue', updateError.message);
+          // （Sentry へは送らない。rate limit は正常なユーザー集中アクセスでも起こる）。
+          // userId を構造化引数で渡す — 単一ユーザーの連打か全体枯渇かを切り分けるため
+          // （breadcrumb には固定文言のみ乗り、userId は含まれない。logger.ts 参照）
+          logger.warn('Email update rate limited by GoTrue', {
+            userId,
+            message: updateError.message,
+          });
         }
 
-        if (isKnownUserCause || isRateLimited) {
+        // allowlist 方式（#2064）: 既定は isExpectedAuthError に従う（false=expected=静音）。
+        // EMAIL_UPDATE_ALERTING_CODES は「expected 判定を上書きしてでも alert したい」
+        // 例外だけを持つ（詳細は同定数の doc comment）
+        const shouldAlert =
+          !isExpectedAuthError(updateError) ||
+          (updateError.code !== undefined && EMAIL_UPDATE_ALERTING_CODES.has(updateError.code));
+
+        if (!shouldAlert) {
           // OWASP準拠のサニタイズは client 側（EmailChangeDialog.tsx）が汎用文言で行う。
           // ここでは生の GoTrue エラーを Sentry へ送らない — email 衝突等はユーザー起因の
           // 想定内失敗で、BAD_REQUEST は EXPECTED_TRPC_CODES に含まれるため
@@ -393,13 +412,12 @@ export function createUserService(
           });
         }
 
-        // 未知 / 構成故障の code（#2064）。handleServiceError の自動報告には乗せない
-        // （`lib/sentry` の EXPECTED_AUTH_ERROR_CODES に email_address_not_authorized
-        // 等が既に含まれ、isExpectedAuthError がその自動報告経路を無条件でスキップ
-        // するため、写像先を変えても効かない）。REAUTH_UNAVAILABLE と同じ「呼び出し側の
-        // canary 1 本」パターンで、ここから直接 Sentry へ送る。updateError をラップせず
-        // そのまま渡す — observeAuthOperation が先に同じ instance を capture 済みの
-        // ケース（未知 code や 5xx）では WeakSet dedup が効いて 1 本に収まる
+        // alert 対象（#2064）。handleServiceError の自動報告には乗せない（あちらは
+        // isExpectedAuthError のみでゲートされ、この allowlist を知らないため）。
+        // REAUTH_UNAVAILABLE と同じ「呼び出し側の canary 1 本」パターンで、ここから
+        // 直接 Sentry へ送る。updateError をラップせずそのまま渡す — observeAuthOperation
+        // が先に同じ instance を capture 済みのケース（未知 code や 5xx）では
+        // WeakSet dedup が効いて 1 本に収まる
         captureUnexpectedError(updateError, {
           feature: 'email_change',
           operation: 'update_email',

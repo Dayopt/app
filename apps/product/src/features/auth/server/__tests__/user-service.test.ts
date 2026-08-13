@@ -37,11 +37,17 @@ vi.mock('@/lib/app-url', () => ({ getAppUrl: () => 'https://app.example.test' })
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
 }));
-vi.mock('@/lib/sentry', () => ({
-  captureUnexpectedDatabaseError,
-  captureUnexpectedError,
-  observeAuthOperation,
-}));
+// isExpectedAuthError は実装をそのまま使う（requestEmailChange の allowlist 判定が
+// 実際の EXPECTED_AUTH_ERROR_CODES と正しく組み合わさることを検証するため。#2064）
+vi.mock('@/lib/sentry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/sentry')>();
+  return {
+    ...actual,
+    captureUnexpectedDatabaseError,
+    captureUnexpectedError,
+    observeAuthOperation,
+  };
+});
 
 import { createUserService } from '../user-service';
 
@@ -504,7 +510,32 @@ describe('createUserService', () => {
       expect(loggerWarn).not.toHaveBeenCalled();
     });
 
-    it('rate limit（status 429）はcodeによらずEMAIL_UPDATE_FAILEDに変換し、warnログだけ残す', async () => {
+    // #2064 P2-1: updateUser はユーザー自身の session-scoped client で呼ぶため、session /
+    // 権限系の expected code（EXPECTED_AUTH_ERROR_CODES 所属）がユーザーフローの正常な
+    // 帰結として起こりうる。silence 列挙（旧実装）だとこれらが軒並み誤 alert になっていた
+    // ことを固定する — allowlist 反転後は EMAIL_UPDATE_ALERTING_CODES に無い限り静音
+    it.each([
+      ['session_expired', 'session expired'],
+      ['bad_jwt', 'invalid jwt'],
+      ['no_authorization', 'no authorization header'],
+      ['user_banned', 'user is banned'],
+      ['user_not_found', 'user not found'],
+      ['insufficient_aal', 'insufficient assurance level'],
+      ['conflict', 'conflict'],
+    ])(
+      'session/権限系の想定内code(%s)は誤alertせずEMAIL_UPDATE_FAILEDに変換する（P2-1）',
+      async (code, message) => {
+        const updateError = Object.assign(new Error(message), { code });
+        const { service } = createSupabase({ updateUserError: updateError });
+
+        await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject(
+          { code: 'EMAIL_UPDATE_FAILED', cause: updateError },
+        );
+        expect(captureUnexpectedError).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rate limit（status 429）はcodeによらずEMAIL_UPDATE_FAILEDに変換し、userId付きでwarnログだけ残す', async () => {
       const updateError = Object.assign(new Error('too many requests'), { status: 429 });
       const { service } = createSupabase({ updateUserError: updateError });
 
@@ -512,20 +543,19 @@ describe('createUserService', () => {
         code: 'EMAIL_UPDATE_FAILED',
       });
       expect(captureUnexpectedError).not.toHaveBeenCalled();
-      expect(loggerWarn).toHaveBeenCalledWith(
-        'Email update rate limited by GoTrue',
-        updateError.message,
-      );
+      expect(loggerWarn).toHaveBeenCalledWith('Email update rate limited by GoTrue', {
+        userId: USER_ID,
+        message: updateError.message,
+      });
     });
 
-    // #2064: email_address_not_authorized は `lib/sentry` の EXPECTED_AUTH_ERROR_CODES に
-    // 既に含まれているため、handleServiceError の自動報告（isExpectedAuthError でゲート
-    // される）に乗せても静音化されたままになる。だから user-service.ts 側が
-    // handleServiceError を経由せず captureUnexpectedError を直接呼ぶことを固定する
-    // （REAUTH_UNAVAILABLE の canary と同型）。この直接呼び出しこそが報告の実体であり、
-    // service code が何にマッピングされるかは無関係。updateError をラップせずそのまま
-    // 渡すこと自体も固定する（observeAuthOperation が既に捕捉済みの instance と
-    // 同一でないと WeakSet dedup が効かず、想定外 code で issue が二重に立つ）
+    // #2064: email_address_not_authorized は EMAIL_UPDATE_ALERTING_CODES の allowlist に
+    // 載っているため、isExpectedAuthError が true でも alert 対象になる。
+    // handleServiceError の自動報告はこの allowlist を知らないので、user-service.ts 側が
+    // captureUnexpectedError を直接呼ぶことを固定する（REAUTH_UNAVAILABLE の canary と
+    // 同型）。updateError をラップせずそのまま渡すことも固定する（observeAuthOperation が
+    // 既に捕捉済みの instance と同一でないと WeakSet dedup が効かず、想定外 code で issue
+    // が二重に立つ）
     it('email_address_not_authorizedはEMAIL_UPDATE_UNAVAILABLEに変換し、captureUnexpectedErrorをupdateError本体で直接呼ぶ', async () => {
       const updateError = Object.assign(new Error('email address not authorized'), {
         code: 'email_address_not_authorized',
