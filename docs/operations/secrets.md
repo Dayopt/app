@@ -137,7 +137,7 @@ Google OAuth client secret、Apple Developer `.p8`、証明書、service account
 
 ### ⑤ リカバリー系
 
-再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置き、横断確認用に `Dayopt-Shared/recovery-codes` を使う。
+再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置く。該当 item に 1Password タグ `recovery` を付け、横断確認は `op item list --tags recovery --format=json`（値は表示されない）で行う（2026-08-14、索引 secure note 方式から変更。索引 note は手動維持が必要で腐るため、item 側にコロケーションするタグ方式へ切り替えた。経緯は #2069）。
 
 ---
 
@@ -211,7 +211,6 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 | `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata |
 | `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                          |
 | `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                                 |
-| `recovery-codes`         | service-specific recovery code index                                                          | 横断確認用。正本は各 Login item 側                              |
 
 `VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
 
@@ -284,7 +283,7 @@ secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この P
 
 「code が要求しているか」は build gate が正本になる。Sentry の 4 env（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT`）は `packages/observability/build-gate.mjs` が product / web 双方の Vercel Production build で必須にしているため、`Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` は両方とも実在が要る。
 
-master へ値を戻す時は GUI か対象を限定した `op item create` / `op item edit` を使う。`scripts/setup-1password.sh` は 3 vault が空の時だけの初回 bootstrap 専用で、既存 vault には使わない。`recovery-codes` のような再発行できない情報を扱う item では、**既存情報の集約だけを行い、値の生成・再発行はしない**。
+master へ値を戻す時は GUI か対象を限定した `op item create` / `op item edit` を使う。`scripts/setup-1password.sh` は 3 vault が空の時だけの初回 bootstrap 専用で、既存 vault には使わない。`recovery` タグの付いた item のような再発行できない情報を扱う item では、**既存情報の集約だけを行い、値の生成・再発行はしない**。
 
 ---
 
