@@ -3,7 +3,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 
 import { addDays, subDays } from 'date-fns';
-import { fromZonedTime } from 'date-fns-tz';
 
 import {
   useExternalCalendarEvents,
@@ -11,7 +10,7 @@ import {
 } from '@/features/external-calendar';
 import { useArchivedTags, useTags } from '@/features/tags';
 import { getDateKey } from '@/lib/date';
-import { tzIsSameDay } from '@/lib/date/timezone';
+import { toTZEndISO, toTZStartISO, tzIsSameDay } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 
@@ -27,28 +26,6 @@ import { expandRecordRowsToRecordEvents } from '../../../lib/record-event-adapte
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
-
-/**
- * ローカル日付の 00:00:00 をユーザーTZのUTC ISO文字列に変換
- * サーバーのprefetchと同じクエリキーを生成するため使用する
- *
- * **`date` は `date-fns` のローカルフィールド演算で作られる壁時計 Date**（`calculateViewDateRange`
- * が `setHours` で組み立てる、カレンダーが「表示中の日」として扱う値）。`Intl.DateTimeFormat` で
- * `timeZone` を指定して `format(date)` すると `date` を instant として `timezone` へ再解釈してしまい、
- * ブラウザ TZ ≠ ユーザー設定 TZ の時に日付がずれる（`external-event-day-selection.ts` と同型の
- * バグ）。`getDateKey(date)`（timezone なし、ローカルフィールド読み取り）で `date` 自身が表す日付を
- * そのまま取り出し、その日の 00:00/23:59:59.999 を `fromZonedTime` でユーザー TZ の instant へ変換する。
- */
-export function toTZStartISO(date: Date, timezone: string): string {
-  const localDateStr = getDateKey(date);
-  return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
-}
-
-/** ローカル日付の 23:59:59.999 をユーザーTZのUTC ISO文字列に変換（`toTZStartISO` 参照）。 */
-export function toTZEndISO(date: Date, timezone: string): string {
-  const localDateStr = getDateKey(date);
-  return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
-}
 
 /** 表示範囲の行を先頭に保ったまま、関連取得で得た同一行を id 単位で統合する。 */
 function mergeRowsById<T extends { id: string }>(

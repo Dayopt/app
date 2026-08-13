@@ -9,8 +9,6 @@ interface ServiceWorkerState {
   isSupported: boolean;
   /** 登録済みか */
   isRegistered: boolean;
-  /** 更新が利用可能か */
-  updateAvailable: boolean;
   /** 登録中か */
   isRegistering: boolean;
   /** エラー */
@@ -18,8 +16,6 @@ interface ServiceWorkerState {
 }
 
 interface UseServiceWorkerResult extends ServiceWorkerState {
-  /** 手動で更新を適用 */
-  applyUpdate: () => void;
   /** キャッシュをクリア */
   clearCache: () => Promise<void>;
 }
@@ -27,20 +23,18 @@ interface UseServiceWorkerResult extends ServiceWorkerState {
 /**
  * Service Worker を管理するフック
  *
+ * sw.js は install 時に skipWaiting するため新バージョンは検出後すぐ有効化される。
+ * 更新の適用は次回リロードで反映される既存挙動に委ね、このフックは更新通知 UI を持たない。
+ *
  * @example
  * ```tsx
- * const { isRegistered, updateAvailable, applyUpdate } = useServiceWorker()
- *
- * if (updateAvailable) {
- *   return <button onClick={applyUpdate}>アップデートを適用</button>
- * }
+ * const { isRegistered, clearCache } = useServiceWorker()
  * ```
  */
 export function useServiceWorker(): UseServiceWorkerResult {
   const [state, setState] = useState<ServiceWorkerState>({
     isSupported: false,
     isRegistered: false,
-    updateAvailable: false,
     isRegistering: false,
     error: null,
   });
@@ -83,19 +77,9 @@ export function useServiceWorker(): UseServiceWorkerResult {
           isRegistering: false,
         }));
 
-        // 更新チェック
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
+        // 定期的に更新チェック（1時間ごと）。sw.js は install 時に skipWaiting するため、
+        // 検出した新バージョンは次回リロードで自動的に有効化される（通知 UI は持たない）
 
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              setState((prev) => ({ ...prev, updateAvailable: true }));
-            }
-          });
-        });
-
-        // 定期的に更新チェック（1時間ごと）
         setInterval(
           () => {
             reg.update();
@@ -122,14 +106,6 @@ export function useServiceWorker(): UseServiceWorkerResult {
     return () => window.removeEventListener('load', registerSW);
   }, []);
 
-  // 更新適用
-  const applyUpdate = useCallback(() => {
-    if (!registration?.waiting) return;
-
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    window.location.reload();
-  }, [registration]);
-
   // キャッシュクリア
   const clearCache = useCallback(async () => {
     if (!registration?.active) return;
@@ -147,7 +123,6 @@ export function useServiceWorker(): UseServiceWorkerResult {
 
   return {
     ...state,
-    applyUpdate,
     clearCache,
   };
 }

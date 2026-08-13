@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-08-13
 code: apps/product/src/lib/pwa
 ---
 
@@ -11,15 +11,15 @@ Dayopt の PWA は、ホーム画面へのインストール、静的キャッ�
 
 ## Supported Capabilities
 
-| Capability                              | Implementation                                          |
-| --------------------------------------- | ------------------------------------------------------- |
-| Web App Manifest                        | `public/manifest.json`                                  |
-| Service Worker registration and updates | `src/lib/hooks/useServiceWorker.ts`                     |
-| Static and navigation cache             | `public/sw.js`                                          |
-| Offline fallback page                   | `src/app/offline/page.tsx`                              |
-| Android/Chrome install prompt           | `src/lib/pwa/install-prompt.ts`, `InstallBanner.tsx`    |
-| iOS install guide and workarounds       | `src/lib/pwa/ios-workarounds.ts`, `IOSInstallGuide.tsx` |
-| Query cache persistence                 | `src/lib/tanstack-query/persist-storage.ts`             |
+| Capability                                        | Implementation                                          |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| Web App Manifest                                  | `public/manifest.json`                                  |
+| Service Worker registration and automatic updates | `src/lib/hooks/useServiceWorker.ts`                     |
+| Static and navigation cache                       | `public/sw.js`                                          |
+| Offline fallback page                             | `src/app/offline/page.tsx`                              |
+| Android/Chrome install prompt                     | `src/lib/pwa/install-prompt.ts`, `InstallBanner.tsx`    |
+| iOS install guide and workarounds                 | `src/lib/pwa/ios-workarounds.ts`, `IOSInstallGuide.tsx` |
+| Query cache persistence                           | `src/lib/tanstack-query/persist-storage.ts`             |
 
 Query cache persistence only restores previously fetched data. It does not persist, queue, or replay
 mutations.
@@ -52,11 +52,14 @@ keep-alive workarounds.
 
 `ServiceWorkerProvider` owns only:
 
-- Service Worker registration and update notification
+- Service Worker registration
 - install prompt and iOS install guide
 - iOS PWA initialization
 
-It does not initialize a mutation processor or display synchronization status.
+It does not initialize a mutation processor or display synchronization status. It also does not
+display an update-available notification: `public/sw.js` calls `self.skipWaiting()` on install, so a
+new Service Worker version activates automatically and takes effect on the next page load. There is
+no user-facing "update" action to trigger.
 
 ## Offline Writes Decision
 

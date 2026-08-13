@@ -16,6 +16,8 @@
 import { startOfWeek as dfStartOfWeek, format } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
+import { getDateKey } from './core';
+
 // ========================================
 // タイムゾーン変換
 // ========================================
@@ -215,4 +217,30 @@ export function tzIsSameDay(a: Date, b: Date, timezone: string): boolean {
  */
 export function isTodayInTimezone(date: Date, timezone: string, now: Date = new Date()): boolean {
   return tzIsSameDay(date, now, timezone);
+}
+
+/**
+ * 壁時計 Date から、指定 TZ でのその日の 00:00:00.000 を表す UTC ISO 文字列を返す。
+ *
+ * **`date` は `date-fns` のローカルフィールド演算（`setHours` / `startOfDay` / `addDays` 等）で
+ * 作られた壁時計 Date を想定する**（instant ではない）。`toZonedTime` や `formatInTimeZone` /
+ * `Intl.DateTimeFormat({ timeZone })` を `date` に直接掛けると、`date` を instant として
+ * `timezone` へ再解釈してしまい、実行環境の system TZ と `timezone` が食い違う時に日付がずれる
+ * （`external-event-day-selection.ts` と `useCalendarData.ts` で実際に発生した同型バグ、#2017）。
+ * 正しい手順は `getDateKey(date)`（timezone なし、ローカルフィールド読み取り）で `date` が表す
+ * 暦日をそのまま取り出し、その日の境界を `fromZonedTime` で `timezone` の instant へ変換すること。
+ *
+ * 壁時計 Date → TZ instant の変換はこの module（`@/lib/date/timezone`）に集約し、feature code
+ * から `date-fns-tz` の `toZonedTime` を直接 import することは ESLint で禁止している
+ * （`eslint.config.mjs` の `no-restricted-syntax`）。
+ */
+export function toTZStartISO(date: Date, timezone: string): string {
+  const localDateStr = getDateKey(date);
+  return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
+}
+
+/** 壁時計 Date から、指定 TZ でのその日の 23:59:59.999 を表す UTC ISO 文字列を返す（`toTZStartISO` 参照）。 */
+export function toTZEndISO(date: Date, timezone: string): string {
+  const localDateStr = getDateKey(date);
+  return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
 }
