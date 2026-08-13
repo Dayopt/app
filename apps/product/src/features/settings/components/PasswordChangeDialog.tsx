@@ -73,6 +73,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [signOutOthersFailed, setSignOutOthersFailed] = useState(false);
 
   const resetForm = useCallback(() => {
     setCurrentPassword('');
@@ -83,6 +84,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
     setShowConfirmPassword(false);
     setError(null);
     setSuccess(false);
+    setSignOutOthersFailed(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -141,10 +143,26 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
           throw new Error(t('settings.account.passwordUpdateFailed'));
         }
 
-        // Step 3: Sign out other sessions
-        await observeAuthOperation('sign_out_other_sessions', () =>
-          supabase.auth.signOut({ scope: 'others' }),
-        );
+        // Step 3: Sign out other sessions. パスワード更新（Step 2）は既に成功しているため、
+        // ここで throw すると外側の catch に落ちて成功が失敗として表示されてしまう
+        // （#1928 で useAuthStore.updatePassword に入れたのと同じ罠、#2015）。
+        // ローカルで try/catch して握り潰し、1 回だけ再試行する。store と異なりこの
+        // component は useTranslations を持つため、最終失敗は無言にせず success 画面に
+        // 警告として表示する。
+        let signOutSucceeded = false;
+        for (let attempt = 0; attempt < 2 && !signOutSucceeded; attempt++) {
+          try {
+            const { error: signOutError } = await observeAuthOperation(
+              'sign_out_other_sessions',
+              () => supabase.auth.signOut({ scope: 'others' }),
+            );
+            signOutSucceeded = !signOutError;
+          } catch {
+            // observeAuthOperation は catch した例外を re-throw する契約なので、
+            // ここで握り潰さないと外側の catch に落ちる。次の attempt へ。
+          }
+        }
+        setSignOutOthersFailed(!signOutSucceeded);
 
         // Step 4: Send password changed notification email (fire-and-forget)
         sendPasswordChangedEmail({
@@ -182,6 +200,13 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                 {t('settings.account.passwordUpdated')}
               </p>
             </div>
+            {signOutOthersFailed && (
+              <div className="border-warning bg-warning-tint rounded-2xl p-4" role="alert">
+                <p className="text-warning text-base font-normal md:text-sm">
+                  {t('settings.account.signOutOthersFailed')}
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

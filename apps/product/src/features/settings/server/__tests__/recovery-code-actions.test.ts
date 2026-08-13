@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetWriteFenceCacheForTestsOnly } from '@/lib/ops/write-fence';
+
 const mocks = vi.hoisted(() => ({
   captureUnexpectedDatabaseError: vi.fn(),
   createClient: vi.fn(),
@@ -11,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   hashRecoveryCode: vi.fn(),
   insertRows: vi.fn(),
   observeAuthOperation: vi.fn(),
+  writeFenceMaybeSingle: vi.fn(),
 }));
 
 vi.mock('@/lib/auth/recovery-codes', () => ({
@@ -35,6 +38,7 @@ const FIXED_FAILURE = 'Failed to generate recovery codes';
 describe('generateAndSaveRecoveryCodesAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetWriteFenceCacheForTestsOnly();
     mocks.generateRecoveryCodes.mockReturnValue(['recovery-a', 'recovery-b']);
     mocks.hashRecoveryCode.mockImplementation((code: string) => `hash:${code}`);
     mocks.getUser.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
@@ -44,7 +48,12 @@ describe('generateAndSaveRecoveryCodesAction', () => {
     mocks.deleteRows.mockReturnValue({ eq: mocks.deleteEq });
     mocks.deleteEq.mockResolvedValue({ error: null });
     mocks.insertRows.mockResolvedValue({ error: null });
-    mocks.from.mockReturnValue({ delete: mocks.deleteRows, insert: mocks.insertRows });
+    mocks.writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: false }, error: null });
+    mocks.from.mockImplementation((table: string) =>
+      table === 'write_fence_control'
+        ? { select: () => ({ eq: () => ({ maybeSingle: mocks.writeFenceMaybeSingle }) }) }
+        : { delete: mocks.deleteRows, insert: mocks.insertRows },
+    );
     mocks.createClient.mockResolvedValue({ auth: { getUser: mocks.getUser }, from: mocks.from });
   });
 
@@ -116,5 +125,18 @@ describe('generateAndSaveRecoveryCodesAction', () => {
       error: 'User not found',
     });
     expect(mocks.captureUnexpectedDatabaseError).not.toHaveBeenCalled();
+  });
+
+  it('write fence が有効な時は既存コードを削除せずに拒否する', async () => {
+    mocks.writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: true }, error: null });
+
+    const result = await generateAndSaveRecoveryCodesAction();
+
+    expect(result).toEqual({
+      codes: null,
+      error: 'Writes are temporarily paused for maintenance',
+    });
+    expect(mocks.deleteRows).not.toHaveBeenCalled();
+    expect(mocks.insertRows).not.toHaveBeenCalled();
   });
 });

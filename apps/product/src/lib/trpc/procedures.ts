@@ -12,6 +12,7 @@ import { canAccessProFeatures } from '@/lib/auth/domain';
 import { isBillingEnforced } from '@/lib/billing/enforcement';
 import { databaseTables } from '@/lib/database';
 import { type SupportedScope } from '@/lib/oauth-server';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { ServiceError } from '@/lib/trpc/errors';
@@ -82,7 +83,7 @@ async function isUserRateLimited(userId: string): Promise<boolean> {
  */
 export const protectedProcedure = t.procedure
   .meta({ auth: 'protected' })
-  .use(async ({ ctx, next, path }) => {
+  .use(async ({ ctx, next, path, type }) => {
     if (!ctx.userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
@@ -135,6 +136,17 @@ export const protectedProcedure = t.procedure
           cause: new ServiceError('FORBIDDEN', 'MFA AAL2 required'),
         });
       }
+    }
+
+    // write fence は rate limit 消費より前に確認する。fenced request が
+    // ユーザー自身の rate limit budget を消費して、復旧直後に自分をロック
+    // アウトする事態を避けるため。
+    if (type === 'mutation' && (await isWriteFenceEnabled(ctx.supabase))) {
+      throw new TRPCError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Writes are temporarily paused for maintenance',
+        cause: new ServiceError('WRITE_FENCED', 'Write fence is enabled'),
+      });
     }
 
     // OAuth internal callerは認証済みMCP endpointの専用user limiterで一度だけ制限する。

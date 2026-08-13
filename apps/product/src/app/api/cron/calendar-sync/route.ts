@@ -5,7 +5,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { env } from '@/env';
 import { dispatchCalendarSync } from '@/features/external-calendar/server/sync-dispatcher';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedError } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
  * 外部カレンダー同期の Vercel cron エンドポイント（overview.md §6-1）。
@@ -48,6 +50,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const authorization = request.headers.get('authorization') ?? '';
   if (!safeEquals(authorization, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (await isWriteFenceEnabled(createServiceRoleClient())) {
+    logger.warn('[calendar-cron] write fence is enabled; skipping dispatch');
+    return NextResponse.json(
+      { error: 'Writes are temporarily paused for maintenance' },
+      { status: 503, headers: { 'retry-after': '900' } },
+    );
   }
 
   try {

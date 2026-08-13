@@ -125,6 +125,8 @@ describe('SignupForm', () => {
       });
     });
 
+    // #2027: 既登録も未分類の失敗も同一の signupUnavailable に収束させる
+    // （分岐ごとに違う文言を返すと、その文言差自体が enumeration oracle になるため）
     it('サインアップ失敗時にエラーメッセージが表示される', async () => {
       const user = userEvent.setup();
       mockSignUp.mockResolvedValue({
@@ -140,7 +142,7 @@ describe('SignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
 
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent('auth.errors.unexpectedError');
+        expect(screen.getByRole('alert')).toHaveTextContent('auth.errors.signupUnavailable');
       });
     });
 

@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 43 件 / RLS 対象テーブル 20 件 / GRANT 215 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 44 件 / RLS 対象テーブル 21 件 / GRANT 217 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -31,6 +31,7 @@
 | stripe_webhook_events         | ✅          | —      |
 | tags                          | ✅          | —      |
 | user_settings                 | ✅          | —      |
+| write_fence_control           | ✅          | —      |
 
 ## ポリシー一覧（table 別）
 
@@ -161,6 +162,12 @@
 | Users can insert own settings | INSERT | PERMISSIVE | {authenticated} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own settings   | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
 | Users can update own settings | UPDATE | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
+### write_fence_control
+
+| policy                     | cmd    | permissive | roles                        | USING | WITH CHECK |
+| -------------------------- | ------ | ---------- | ---------------------------- | ----- | ---------- |
+| write_fence_control_select | SELECT | PERMISSIVE | {authenticated,service_role} | true  | —          |
 
 ## storage.objects ポリシー一覧（app 所有）
 
@@ -429,6 +436,8 @@ allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapsho
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                             | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.write_fence_control                                                                                                                                                                                                                                                                                                                                                                                                                       | authenticated       | SELECT                                                                  |
+| table       | public.write_fence_control                                                                                                                                                                                                                                                                                                                                                                                                                       | service_role        | SELECT                                                                  |
 
 ## GRANT 一覧（private schema、owner 以外）
 

@@ -15,11 +15,12 @@ const meta = {
   tags: ['autodocs'],
   args: {
     mode: 'totp',
+    flow: 'login',
     verificationCode: '',
     recoveryCode: '',
     isVerifying: false,
     error: null,
-    loginHref: '/ja/auth/login',
+    backHref: '/ja/auth/login',
     onVerificationCodeChange: () => undefined,
     onRecoveryCodeChange: () => undefined,
     onVerifyTotp: () => undefined,
@@ -52,6 +53,7 @@ function MFAVerifyFormStory({
   return (
     <MFAVerifyForm
       mode={mode}
+      flow="login"
       verificationCode={verificationCode}
       onVerificationCodeChange={setVerificationCode}
       recoveryCode={recoveryCode}
@@ -66,7 +68,7 @@ function MFAVerifyFormStory({
         setVerificationCode('');
         setRecoveryCode('');
       }}
-      loginHref="/ja/auth/login"
+      backHref="/ja/auth/login"
     />
   );
 }

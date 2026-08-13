@@ -13,7 +13,9 @@ import {
   checkOAuthTokenRateLimit,
   type OAuthTokenRateLimitState,
 } from '@/lib/oauth-server/token-rate-limit';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedError } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
  * RFC 6749 §3.2 - Token Endpoint
@@ -44,6 +46,12 @@ export async function POST(request: NextRequest) {
 
   const rateLimitState = await checkOAuthTokenRateLimit(request);
   if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
+
+  // rate limit の後に置く。fence 判定は service-role の DB 読取を伴うため、rate limit
+  // より前に置くと未認証リクエストがそれを無制限に駆動できてしまう（増幅経路）。
+  if (await isWriteFenceEnabled(createServiceRoleClient())) {
+    return writeFencedErrorResponse();
+  }
 
   try {
     const form = await readFormBody(request);
@@ -171,6 +179,23 @@ function errorResponse(err: OAuthServerError) {
       headers: {
         'cache-control': 'no-store',
         pragma: 'no-cache',
+      },
+    },
+  );
+}
+
+function writeFencedErrorResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      error: 'temporarily_unavailable',
+      error_description: 'Writes are temporarily paused for maintenance',
+    },
+    {
+      status: 503,
+      headers: {
+        'cache-control': 'no-store',
+        pragma: 'no-cache',
+        'retry-after': '30',
       },
     },
   );

@@ -16,6 +16,7 @@ export const databaseTables = {
   stripeWebhookEvents: 'stripe_webhook_events',
   tags: 'tags',
   userSettings: 'user_settings',
+  writeFenceControl: 'write_fence_control',
 } as const;
 
 export type DatabaseTableAlias = keyof typeof databaseTables;

@@ -116,7 +116,10 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
 
       if (signInError) {
         // ログイン失敗時: OWASP準拠でサニタイズ済みメッセージを表示
-        const errorKey = getAuthErrorKey(signInError.message, 'login');
+        const errorKey = getAuthErrorKey(
+          { message: signInError.message, code: signInError.code },
+          'login',
+        );
         setSubmitError(t(errorKey));
         // Turnstile token は single-use / short-lived。失敗時は widget を reset して
         // 次の retry で新しい challenge token を取得させる

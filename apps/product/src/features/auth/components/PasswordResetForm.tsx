@@ -53,7 +53,10 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
         : await resetPassword(email);
 
       if (error) {
-        const errorKey = getAuthErrorKey(error.message, 'resetPassword');
+        const errorKey = getAuthErrorKey(
+          { message: error.message, code: error.code },
+          'resetPassword',
+        );
         setError(t(errorKey));
         // Turnstile token は single-use。失敗時は widget を reset して次の retry で
         // 新しい challenge token を取得させる
