@@ -9,11 +9,13 @@ import { MFAVerifyForm } from '../MFAVerifyForm';
 // next-intl はグローバル setup（src/lib/test/setup-node.ts）で key passthrough 済み。
 
 type VerifyMode = 'totp' | 'recovery';
+type VerifyFlow = 'login' | 'passwordReset';
 
 const noop = () => {};
 
 interface RenderOverrides {
   mode?: VerifyMode;
+  flow?: VerifyFlow;
   verificationCode?: string;
   recoveryCode?: string;
   isVerifying?: boolean;
@@ -30,6 +32,7 @@ function renderForm(overrides: RenderOverrides = {}) {
   return render(
     <MFAVerifyForm
       mode={overrides.mode ?? 'totp'}
+      flow={overrides.flow ?? 'login'}
       verificationCode={overrides.verificationCode ?? ''}
       onVerificationCodeChange={overrides.onVerificationCodeChange ?? noop}
       recoveryCode={overrides.recoveryCode ?? ''}
@@ -39,7 +42,7 @@ function renderForm(overrides: RenderOverrides = {}) {
       onVerifyTotp={overrides.onVerifyTotp ?? noop}
       onVerifyRecovery={overrides.onVerifyRecovery ?? noop}
       onSwitchMode={overrides.onSwitchMode ?? noop}
-      loginHref="/ja/auth/login"
+      backHref="/ja/auth/login"
     />,
   );
 }
@@ -54,6 +57,7 @@ function ControlledTotpForm({ onVerifyTotp }: { onVerifyTotp: () => void }) {
   return (
     <MFAVerifyForm
       mode="totp"
+      flow="login"
       verificationCode={verificationCode}
       onVerificationCodeChange={setVerificationCode}
       recoveryCode=""
@@ -63,7 +67,7 @@ function ControlledTotpForm({ onVerifyTotp }: { onVerifyTotp: () => void }) {
       onVerifyTotp={onVerifyTotp}
       onVerifyRecovery={noop}
       onSwitchMode={noop}
-      loginHref="/ja/auth/login"
+      backHref="/ja/auth/login"
     />
   );
 }
@@ -179,6 +183,34 @@ describe('MFAVerifyForm', () => {
       const button = screen.getByRole('button', { name: 'auth.mfaVerify.verifying' });
       expect(button).toBeDisabled();
       expect(button).toHaveAttribute('aria-busy', 'true');
+    });
+  });
+
+  describe('flow分岐（#2013: passwordResetからの再利用）', () => {
+    it("flow='login'ではbackToLoginラベルとlogin用hrefを出す", () => {
+      renderForm({ flow: 'login' });
+
+      const link = screen.getByRole('link', { name: 'auth.mfaVerify.backToLogin' });
+      expect(link).toHaveAttribute('href', '/ja/auth/login');
+    });
+
+    it("flow='passwordReset'ではbackToPasswordResetラベルを出す（ログインへの誤誘導をしない）", () => {
+      renderForm({ flow: 'passwordReset' });
+
+      expect(
+        screen.getByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'auth.mfaVerify.backToLogin' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("flow='passwordReset'かつrecoveryモードでは、ログインを前提としない説明文を出す", () => {
+      renderForm({ flow: 'passwordReset', mode: 'recovery' });
+
+      expect(
+        screen.getByText('auth.mfaVerify.recoveryCodeDescriptionPasswordReset'),
+      ).toBeInTheDocument();
     });
   });
 

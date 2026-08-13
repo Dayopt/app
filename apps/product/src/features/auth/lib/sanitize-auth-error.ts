@@ -6,4 +6,4 @@
  *
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
  */
-export { getAuthErrorKey } from '@/lib/auth-error';
+export { RESOLVED_KEYS, getAuthErrorKey } from '@/lib/auth-error';

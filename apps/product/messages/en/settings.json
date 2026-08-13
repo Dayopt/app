@@ -61,6 +61,7 @@
       "showPassword": "Show password",
       "hidePassword": "Hide password",
       "passwordUpdateFailed": "Failed to update password",
+      "signOutOthersFailed": "Your password was changed, but we couldn't sign out your other devices. Please try again from settings.",
       "passwordIncorrect": "Current password is incorrect",
       "passwordReused": "Cannot reuse any of your last 5 passwords. Please choose a different password.",
       "passwordPwned": "This password has been exposed in a data breach. Please use a more secure password.",

@@ -168,7 +168,10 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.error) {
             captureUnexpectedAuthError(result.error, { operation: 'sign_up' });
-            const safeError = getAuthErrorKey(result.error.message, 'signup');
+            const safeError = getAuthErrorKey(
+              { message: result.error.message, code: result.error.code },
+              'signup',
+            );
             set({ error: safeError, loading: false });
           } else {
             set({
@@ -208,7 +211,10 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.error) {
             captureUnexpectedAuthError(result.error, { operation: 'sign_in' });
-            const safeError = getAuthErrorKey(result.error.message, 'login');
+            const safeError = getAuthErrorKey(
+              { message: result.error.message, code: result.error.code },
+              'login',
+            );
             set({ error: safeError, loading: false });
           } else {
             set({
@@ -246,7 +252,10 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.error) {
             captureUnexpectedAuthError(result.error, { operation: 'sign_in_oauth' });
-            const safeError = getAuthErrorKey(result.error.message, 'oauth');
+            const safeError = getAuthErrorKey(
+              { message: result.error.message, code: result.error.code },
+              'oauth',
+            );
             set({ error: safeError, loading: false });
           }
 
@@ -306,7 +315,10 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.error) {
             captureUnexpectedAuthError(result.error, { operation: 'reset_password' });
-            const safeError = getAuthErrorKey(result.error.message, 'resetPassword');
+            const safeError = getAuthErrorKey(
+              { message: result.error.message, code: result.error.code },
+              'resetPassword',
+            );
             set({ error: safeError, loading: false });
           } else {
             set({ loading: false });
@@ -330,7 +342,10 @@ export const useAuthStore = create<AuthState>()(
 
           if (result.error) {
             captureUnexpectedAuthError(result.error, { operation: 'update_password' });
-            const safeError = getAuthErrorKey(result.error.message, 'updatePassword');
+            const safeError = getAuthErrorKey(
+              { message: result.error.message, code: result.error.code },
+              'updatePassword',
+            );
             set({ error: safeError, loading: false });
           } else {
             // recovery でパスワードを変更した後は他端末の session を失効させる。

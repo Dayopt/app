@@ -66,8 +66,19 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
       );
 
       if (updateError) {
-        // 生のエラーメッセージは出さず、OWASP 準拠のサニタイズ済みキーへ変換する
-        throw new Error(tRoot(getAuthErrorKey(updateError.message, 'signup')));
+        // 生のエラーメッセージは出さず、OWASP 準拠のサニタイズ済みキーへ変換する。
+        // context は 'updatePassword' を使う（signup 固有の actionable な文言
+        // （#2027、「既にアカウントをお持ちの場合はログイン」等）は email 更新には合わない。
+        // updatePassword は weak/short 以外を全て unexpectedError に畳むため、
+        // email 衝突エラーも含めて汎用文言のまま隠せる）
+        throw new Error(
+          tRoot(
+            getAuthErrorKey(
+              { message: updateError.message, code: updateError.code },
+              'updatePassword',
+            ),
+          ),
+        );
       }
 
       // 成功

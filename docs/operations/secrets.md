@@ -33,11 +33,8 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 - `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
 - `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
-- `.op-env.admin.example` — 同じく `op://` 参照のみ。管理者運用スクリプト用の雛形（§管理者運用の env）
-
-**作らない**:
-
-- `.op-env.admin` — 中身は `op://` 参照だけで実秘密は含まないが、これを作ると `op run` 経由で production の service role key を持つ実行経路が用意される。作成は User の明示的な操作に限る。agent は雛形（`.op-env.admin.example`）の更新までで止める。**規約だけでなく enforcement も入れてある**: `.claude/settings.json` の deny（`Write` / `Edit`）と、`pre-tool-guard.sh` の Bash 側ガード。後者は **作成と消費の両方**を止める — `cp` / `mv` / `touch` / `tee` / `install` / `ln` とリダイレクトによる作成に加え、`--env-file` が `.op-env.admin` 系を指す実行も拒否する。**雛形も消費側の対象に含める**（`.op-env.admin.example` は `op://Dayopt-Production/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決され、作成だけ止めても迂回できる）。雛形の読み書き自体は通すので、agent は schema の更新まではできる。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する
+- `.op-env.admin` / `.op-env.admin.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.admin.example` の編集）だけでなく、`.op-env.admin` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard.sh` の Bash 側ガードが、`--env-file` が `.op-env.admin` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
+  - **雛形も消費側の対象に含める**（`.op-env.admin.example` は `op://Dayopt-Production/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
 
 **このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.local` だけで、それ以外は中身を問わず落とす。
 
@@ -72,7 +69,11 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 **hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
 
-**guard script 自体が壊れた時の挙動は未決。** bash は構文エラーでも `exit 2` を返すため、guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。fail open へ倒すかは [#1961](https://github.com/Dayopt/dayopt/issues/1961) で決める。当面の予防として、`scripts/__tests__/pre-tool-guard.test.ts` が `bash -n` を通ることを test 1 ケースとして固定している。
+**guard script 自体が壊れた時の挙動は決定済み（2026-08-13、User 決定。[#1961](https://github.com/Dayopt/dayopt/issues/1961)）。** bash は構文エラーでも `exit 2` を返すため、単一ファイル構成では guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。
+
+採ったのは純粋な fail open でも fail closed 全面維持でもなく、**中間案**: `.claude/hooks/pre-tool-guard.sh` を薄い loader に変え、実ロジックを `pre-tool-guard-impl.sh` へ分離した。loader は毎回 `bash -n` で impl の構文を検査し、健全なら委譲する（impl の exit code は 0 のみ 0、他はすべて 2 へ写す — 実行時エラーで想定外の非 0 を返しても fail closed を保つ）。impl が壊れていたら fail closed を既定にしつつ、**impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。他のすべての操作（Bash 全般、他ファイルの Write/Edit、spawn_task）は引き続きブロックする。
+
+1 ファイル構成では、自己検査コードを含めファイル内のどのコードも構文エラーで実行されなくなるため（bash はスクリプト全体をパースしてから実行する）、この中間案は loader/impl の 2 ファイル分離でのみ実装できる。fail open 全面採用は復旧経路以外の全保護（force-push・env-file 消費・spawn_task ブロック）まで無効化する過剰な倒し方であり、fail closed 全面維持は復旧に別セッションを要求し続ける。中間案は問題の scope（復旧経路が塞がること）と対応の scope を一致させる。契約は `scripts/__tests__/pre-tool-guard.test.ts` の「loader/impl 分離」describe が固定する。
 
 **受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
 
@@ -240,7 +241,7 @@ cp .op-env.admin.example .op-env.admin
 op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
 ```
 
-参照先は `Dayopt-Production/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。
+参照先は `Dayopt-Production/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。用が済んだら `.op-env.admin` は削除する（gitignore 済みで残しても secret は含まないが、消費だけが hook でブロックされる設計なので、残置は次に触る人の判断を増やすだけで益がない）。
 
 雛形は接続 3 field に加えて `SUPABASE_DB_PASSWORD` を持つ。`USE_LINKED_DB=true` の `seed-dev-data.sh` が最後に `supabase db query --linked` を実行するためで、**欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の user が production に残る**（部分適用）。同じ理由で `Dayopt-Production/supabase/SUPABASE_DB_PASSWORD` は `required` にしてある。
 

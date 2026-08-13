@@ -181,6 +181,7 @@ export default function MFAVerifyPage() {
       <div className="w-full max-w-sm">
         <MFAVerifyForm
           mode={mode}
+          flow="login"
           verificationCode={verificationCode}
           onVerificationCodeChange={setVerificationCode}
           recoveryCode={recoveryCode}
@@ -190,7 +191,7 @@ export default function MFAVerifyPage() {
           onVerifyTotp={handleVerifyTotp}
           onVerifyRecovery={handleVerifyRecovery}
           onSwitchMode={handleSwitchMode}
-          loginHref={`/${locale}/auth/login`}
+          backHref={`/${locale}/auth/login`}
         />
         {/* MFA初期化失敗時のリトライ（challengeId未取得 = フォーム操作不可） */}
         {error && !challengeId && (
