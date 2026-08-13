@@ -358,6 +358,32 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(data.user).toBeNull();
       deleteTestUserDeleted = true;
     });
+
+    // #2028: 「削除→同メール再登録失敗」の production 報告を調査した結果、原因は
+    // 削除フローとは無関係な production incident（#2031、Turnstile secret 無効化）と
+    // 判明し、削除フロー自体のバグは無かった（ローカル実測でも再現せず）。
+    // 診断目的ではなく、削除済みメールアドレスが再利用可能という現状の保証を
+    // 契約として固定するために追加する（直前のテストで対象ユーザーは削除済み）。
+    it('削除済みメールアドレスは同一アドレスで signup できる（#2028）', async () => {
+      expect(deleteTestUserDeleted).toBe(true);
+
+      const freshSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const { data, error } = await freshSupabase.auth.signUp({
+        email: deleteTestEmail,
+        password: 'new-password-456',
+      });
+
+      expect(error).toBeNull();
+      expect(data.user).not.toBeNull();
+      expect(data.user?.id).not.toBe(deleteTestUserId);
+
+      if (data.user?.id) {
+        await adminSupabase.auth.admin.deleteUser(data.user.id);
+      }
+    });
   });
 
   describe('Data Export Format', () => {
