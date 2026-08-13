@@ -11,13 +11,25 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-import { env } from '@/env';
 import { logger } from '@/lib/logger';
 import { extractClientIp } from '@/lib/security/ip-validation';
 import { captureUnexpectedError } from '@/lib/sentry';
 
-const UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN;
+/**
+ * `@/env` の `env.X` は初回アクセス時に schema 全体（Supabase 必須3変数を含む）を検証する
+ * all-or-nothing Proxy（`src/env.ts`）。generic Preview deployment は `SUPABASE_SERVICE_ROLE_KEY`
+ * を持たない（`docs/operations/log/2026-07-14-vercel-env-scope-audit.md`）ため、この module を
+ * 経由するどの route も import 時点で無関係に crash していた（#2011）。Upstash 側は本来
+ * `UPSTASH_REDIS_REST_URL` / `_TOKEN` の2変数しか要らないので、`process.env` を直接読む
+ * （schema 全体の fail-fast は他の operational-only module 経由で production では変わらず効く）。
+ */
+function readTrimmedEnv(name: string): string | undefined {
+  const trimmed = process.env[name]?.replace(/\\n/g, '').trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
+const UPSTASH_REDIS_REST_URL = readTrimmedEnv('UPSTASH_REDIS_REST_URL');
+const UPSTASH_REDIS_REST_TOKEN = readTrimmedEnv('UPSTASH_REDIS_REST_TOKEN');
 
 /** Upstash Redisが有効かどうか（環境変数が設定されている場合のみtrue） */
 export const isUpstashEnabled = Boolean(UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN);
@@ -320,7 +332,6 @@ type RateLimitCheckResult =
 export async function withUpstashRateLimit(
   request: Request,
   rateLimit: ProductRateLimiter | null,
-  additionalIdentifier?: string,
 ): Promise<RateLimitCheckResult> {
   if (!rateLimit) {
     return { state: 'disabled' };
@@ -329,12 +340,7 @@ export async function withUpstashRateLimit(
   const ipIdentifier = getClientIdentifier(request);
 
   try {
-    // IPを先に評価し、遮断済みIPからaccount bucketを消費させない。
-    const ipResult = toCheckedRateLimitResult(await rateLimit.limit(ipIdentifier));
-    if (!ipResult.success || additionalIdentifier === undefined) return ipResult;
-
-    // IPとaccount/emailは結合せず、独立したbucketとして同じquotaを適用する。
-    return toCheckedRateLimitResult(await rateLimit.limit(additionalIdentifier));
+    return toCheckedRateLimitResult(await rateLimit.limit(ipIdentifier));
   } catch (error) {
     logger.error('[RateLimit] Upstash rate limit check failed');
     const original = error instanceof Error ? error : new Error('Upstash rate limit check failed');
