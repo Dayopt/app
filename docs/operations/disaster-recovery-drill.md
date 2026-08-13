@@ -5,6 +5,8 @@ code:
   - supabase/config.toml
   - supabase/migrations
   - scripts/generate-rls-snapshot.ts
+  - scripts/storage-backup.sh
+  - scripts/storage-restore.sh
   - docs/engineering/infra.md
 ---
 
@@ -87,15 +89,15 @@ supabase branches create --help
 
 ### 0-4. 必要な権限・準備物
 
-| 要るもの                            | 誰が持つか | 用途                                   |
-| ----------------------------------- | ---------- | -------------------------------------- |
-| Supabase Dashboard のログイン       | User       | backup 状態確認、restore 実行          |
-| Supabase 組織の課金設定へのアクセス | User       | PITR 有効化の判断・実行                |
-| production の DB 接続情報           | User       | 案γ で dump を取る時だけ               |
-| 1Password `Dayopt-Production`       | User       | 上記 credential の取り出し             |
-| `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions            |
-| `rclone` または S3 クライアント     | 共通       | Storage オブジェクトの搬出（案による） |
-| Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                  |
+| 要るもの                            | 誰が持つか | 用途                                                                                           |
+| ----------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| Supabase Dashboard のログイン       | User       | backup 状態確認、restore 実行                                                                  |
+| Supabase 組織の課金設定へのアクセス | User       | PITR 有効化の判断・実行                                                                        |
+| production の DB 接続情報           | User       | 案γ で dump を取る時だけ                                                                       |
+| 1Password `Dayopt-Production`       | User       | 上記 credential の取り出し                                                                     |
+| `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions                                                                    |
+| `rclone`（brew 等でローカル導入）   | 共通       | Storage オブジェクトの搬出・復元（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`） |
+| Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                                                                          |
 
 ### 0-5. Cloudflare DNS レコードの控え（Supabase 復元とは独立、推奨）
 
@@ -283,11 +285,11 @@ DB 内の hook function が戻っても、**GoTrue 側の hook 登録は引き�
 - [ ] `avatars` / `attachments` バケットが存在する（バケット定義は migration に入っているので schema と一緒に戻る）
 - [ ] **オブジェクト本体は空**であることを確認する。これは異常ではなく仕様
 
-> **⚠ 現状、Storage には復元元が存在しない。** オブジェクトは DB backup に含まれず、Supabase の S3 互換 endpoint には versioning も無い（削除は恒久）。**定期搬出の仕組みが無いため、`avatars` / `attachments` が削除・破損した事故では復旧手段が無い。** 障害後に live の bucket から `rclone copy` しても、失われたファイルはそこにもう無い。
+> **⚠ 機構（script）は実装済みだが、実運用の搬出実績はゼロ。依然として復元元は実質存在しない。** `scripts/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。ただし destination（backup 先。Cloudflare R2 を推奨、User 裁可済み）の実プロビジョニングと credential 投入、production に対する初回搬出、日次 cron workflow の追加はまだ行われていない。**それが揃うまでは production の `avatars` / `attachments` が削除・破損した事故では復旧手段が無い**のと実質同じ。
 >
-> これは手順で埋まる穴ではなく**未実装の機能**なので、[#1971](https://github.com/Dayopt/dayopt/issues/1971) で追う。**paid billing のゲート条件に含めるかは User 判断**（現状 avatar と添付が恒久消失しうる状態で課金を開始してよいか）。
+> 実運用化（destination 確定・credential 投入・初回搬出・日次 workflow 追加）は [#2026](https://github.com/Dayopt/dayopt/issues/2026) で追う。**paid billing のゲート条件に含める判断は #2026 の完了を待つ**（現状 avatar と添付が恒久消失しうる状態で課金を開始してよいか）。
 >
-> 演習では「オブジェクトが空で戻る」ことの確認までを行い、versioned backup からの restore は [#1971](https://github.com/Dayopt/dayopt/issues/1971) の実装後に演習項目へ足す。
+> 演習では「オブジェクトが空で戻る」ことの確認までを行い、実 destination からの restore は [#2026](https://github.com/Dayopt/dayopt/issues/2026) の実装後に演習項目へ足す。
 
 ### Vault / 秘密情報（**案β で最も壊れやすい箇所**）
 

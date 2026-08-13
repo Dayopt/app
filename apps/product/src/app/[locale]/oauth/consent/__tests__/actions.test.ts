@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetWriteFenceCacheForTestsOnly } from '@/lib/ops/write-fence';
+
 const redirect = vi.hoisted(() =>
   vi.fn((url: string): never => {
     throw new RedirectSignal(url);
@@ -9,6 +11,7 @@ const validateAuthorizeInput = vi.hoisted(() => vi.fn());
 const assertTokenIssuanceDatabaseIdentity = vi.hoisted(() => vi.fn());
 const grantRpc = vi.hoisted(() => vi.fn());
 const getUser = vi.hoisted(() => vi.fn());
+const writeFenceMaybeSingle = vi.hoisted(() => vi.fn());
 
 /** `next/navigation` の redirect と同様に throw で制御を打ち切るテスト用シグナル。 */
 class RedirectSignal extends Error {
@@ -26,7 +29,13 @@ vi.mock('@/lib/sentry', () => ({
   captureUnexpectedDatabaseError: vi.fn((error: unknown) => error),
 }));
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => ({ auth: { getUser } }),
+  createClient: async () => ({
+    auth: { getUser },
+    from: (table: string) =>
+      table === 'write_fence_control'
+        ? { select: () => ({ eq: () => ({ maybeSingle: writeFenceMaybeSingle }) }) }
+        : undefined,
+  }),
 }));
 vi.mock('@/lib/oauth-server/authorization-request-host', () => ({
   assertOAuthAuthorizationRequestHost: vi.fn().mockResolvedValue(undefined),
@@ -57,6 +66,8 @@ function createConsentFormData(): FormData {
 describe('processConsent database identity gate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetWriteFenceCacheForTestsOnly();
+    writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: false }, error: null });
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
     validateAuthorizeInput.mockReturnValue({
       ok: true,
@@ -100,5 +111,16 @@ describe('processConsent database identity gate', () => {
     const redirectedTo = new URL(redirect.mock.calls.at(-1)![0]);
     expect(redirectedTo.searchParams.get('code')).toBe('issued-code');
     expect(redirectedTo.searchParams.get('error')).toBeNull();
+  });
+
+  it('write fence が有効な時は grant RPC へ到達せず temporarily_unavailable でredirectする', async () => {
+    writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: true }, error: null });
+
+    await expect(processConsent(createConsentFormData())).rejects.toBeInstanceOf(RedirectSignal);
+
+    expect(grantRpc).not.toHaveBeenCalled();
+    const redirectedTo = new URL(redirect.mock.calls.at(-1)![0]);
+    expect(redirectedTo.searchParams.get('error')).toBe('temporarily_unavailable');
+    expect(redirectedTo.searchParams.get('code')).toBeNull();
   });
 });

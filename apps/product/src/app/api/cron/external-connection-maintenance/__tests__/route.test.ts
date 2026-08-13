@@ -5,6 +5,7 @@ const dispatchExternalConnectionMaintenance = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const loggerError = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
+const isWriteFenceEnabled = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(
   () => ({ CRON_SECRET: 'super-secret-cron' }) as { CRON_SECRET?: string | undefined },
 );
@@ -23,6 +24,8 @@ vi.mock('@/lib/logger', () => ({
     debug: vi.fn(),
   },
 }));
+vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
+vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 
 import type { dispatchExternalConnectionMaintenance as dispatchType } from '../_composition/maintenance-dispatcher';
 import { GET, maxDuration } from '../route';
@@ -83,6 +86,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   envMock.CRON_SECRET = 'super-secret-cron';
   dispatchExternalConnectionMaintenance.mockResolvedValue(SUMMARY);
+  isWriteFenceEnabled.mockResolvedValue(false);
 });
 
 describe('external connection maintenance cron', () => {
@@ -210,5 +214,14 @@ describe('external connection maintenance cron', () => {
     });
     const captured = captureUnexpectedError.mock.calls[0]?.[0] as Error;
     expect(captured.message).toBe('Calendar revoke expired before confirmation');
+  });
+
+  it('write fence が有効な時は 503 を返し dispatcher を呼ばない', async () => {
+    isWriteFenceEnabled.mockResolvedValue(true);
+
+    const response = await GET(request('Bearer super-secret-cron'));
+
+    expect(response.status).toBe(503);
+    expect(dispatchExternalConnectionMaintenance).not.toHaveBeenCalled();
   });
 });

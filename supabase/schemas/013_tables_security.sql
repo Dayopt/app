@@ -1,7 +1,7 @@
 -- ============================================================
 -- セキュリティ関連テーブル（読み物用 — CLIでは使用しない）
 -- ============================================================
--- 最終同期日: 2026-07-30
+-- 最終同期日: 2026-08-13
 -- 同期対象 migration:
 --   - 20260730090000_expand_external_lifecycle_foundation.sql
 --   - 20260730090002_add_external_authority_maintenance.sql
@@ -11,10 +11,20 @@
 --   - 20260730090042_fence_billing_customer_provisioning.sql
 --   - 20260730090049_preserve_billing_webhook_terminal_receipt.sql
 --   - 20260730090053_preserve_user_scoped_lifecycle_locking.sql
+--   - 20260812232852_write_fence_control.sql
 --
 
 -- login_attempts: 削除済み（20260414150000_drop_login_attempts_and_auth_audit_logs.sql）
 -- auth_audit_logs: 削除済み（同上）
+
+-- write_fence_control: API層（tRPC mutation + webhook）の緊急書き込み停止 singleton gate。
+-- toggle 用 RPC は無い。Dashboard SQL Editor（postgres superuser）からの直接 UPDATE のみ。
+-- CAS/revision 列も無い（並行 writer が存在しない運用のため不要）。
+CREATE TABLE public.write_fence_control (
+  singleton_key BOOLEAN PRIMARY KEY DEFAULT true CHECK (singleton_key),
+  fence_enabled BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT pg_catalog.now()
+);
 
 -- mfa_recovery_codes: MFAリカバリーコード
 -- code_hash のみ保存（平文は保存しない）

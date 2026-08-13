@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetWriteFenceCacheForTestsOnly } from '@/lib/ops/write-fence';
+
 const envMock = vi.hoisted(() => ({
   RESEND_API_KEY: undefined,
   RESEND_FROM_EMAIL: undefined,
@@ -34,13 +36,14 @@ const markStripeWebhookEventProcessed = vi.hoisted(() => vi.fn());
 const releaseStripeWebhookEvent = vi.hoisted(() => vi.fn());
 const rpc = vi.hoisted(() => vi.fn());
 const profileMaybeSingle = vi.hoisted(() => vi.fn());
+const writeFenceMaybeSingle = vi.hoisted(() => vi.fn());
 const getUserById = vi.hoisted(() => vi.fn());
 const trackProductEvent = vi.hoisted(() => vi.fn());
 const from = vi.hoisted(() =>
-  vi.fn(() => ({
+  vi.fn((table: string) => ({
     select: vi.fn(() => ({
       eq: vi.fn(() => ({
-        maybeSingle: profileMaybeSingle,
+        maybeSingle: table === 'write_fence_control' ? writeFenceMaybeSingle : profileMaybeSingle,
       })),
     })),
   })),
@@ -104,6 +107,7 @@ function request(): NextRequest {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetWriteFenceCacheForTestsOnly();
   eventMock.account = null;
   eventMock.livemode = false;
   eventMock.type = 'customer.subscription.deleted';
@@ -118,6 +122,7 @@ beforeEach(() => {
   markStripeWebhookEventProcessed.mockResolvedValue(undefined);
   releaseStripeWebhookEvent.mockResolvedValue(undefined);
   profileMaybeSingle.mockResolvedValue({ data: null, error: null });
+  writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: false }, error: null });
   getUserById.mockResolvedValue({ data: { user: null }, error: null });
   trackProductEvent.mockResolvedValue(undefined);
   classifyBillingCustomerEvent.mockResolvedValue('live');
@@ -183,7 +188,9 @@ describe('Stripe webhook route', () => {
       'cus_test123',
       'sub_test456',
     );
-    expect(from).not.toHaveBeenCalled();
+    // fence check は毎回 write_fence_control を読むが、profile lookup（通知用）は
+    // 起きていないことだけを確認する。
+    expect(from).not.toHaveBeenCalledWith('profiles');
     expect(markStripeWebhookEventProcessed).toHaveBeenCalledWith(expect.anything(), 'evt_test123');
     expect(releaseStripeWebhookEvent).not.toHaveBeenCalled();
   });
@@ -209,7 +216,9 @@ describe('Stripe webhook route', () => {
 
     expect(response.status).toBe(200);
     expect(classifyBillingCustomerEvent).toHaveBeenCalledWith(expect.anything(), 'cus_test123');
-    expect(from).not.toHaveBeenCalled();
+    // fence check は毎回 write_fence_control を読むが、profile lookup（通知用）は
+    // 起きていないことだけを確認する。
+    expect(from).not.toHaveBeenCalledWith('profiles');
     expect(markStripeWebhookEventProcessed).toHaveBeenCalled();
   });
 
@@ -320,5 +329,16 @@ describe('Stripe webhook route', () => {
     expect(response.status).toBe(500);
     expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
     expect(syncDeletedSubscriptionStatus).not.toHaveBeenCalled();
+  });
+
+  it('write fence が有効な時は claim 前に 503 を返す（予約の滞留を避ける）', async () => {
+    writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: true }, error: null });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('Retry-After')).toBe('30');
+    expect(claimStripeWebhookEvent).not.toHaveBeenCalled();
+    expect(syncSubscriptionStatus).not.toHaveBeenCalled();
   });
 });

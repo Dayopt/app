@@ -31,8 +31,21 @@ const EXPECTED_TRPC_CODES = new Set<TRPCError['code']>([
 export function isExpectedTrpcError(error: TRPCError): boolean {
   return (
     EXPECTED_TRPC_CODES.has(error.code) ||
-    (error.code === 'CLIENT_CLOSED_REQUEST' && isExplicitUserCancellation(getOriginalError(error)))
+    (error.code === 'CLIENT_CLOSED_REQUEST' &&
+      isExplicitUserCancellation(getOriginalError(error))) ||
+    (error.code === 'SERVICE_UNAVAILABLE' && isWriteFencedError(error))
   );
+}
+
+/**
+ * Narrows SERVICE_UNAVAILABLE to the write-fence case specifically, so other existing
+ * SERVICE_UNAVAILABLE throws (e.g. rate-limit backend outages) keep reporting to Sentry as
+ * genuine anomalies. The fence is an operator-triggered, high-frequency event during an
+ * active incident — reporting every blocked mutation as "unexpected" would flood Sentry
+ * exactly when it is being used to observe the incident itself.
+ */
+function isWriteFencedError(error: TRPCError): boolean {
+  return error.cause instanceof ServiceError && error.cause.code === 'WRITE_FENCED';
 }
 
 /** Return the deepest Error cause so Sentry retains the original stack. */

@@ -1404,12 +1404,12 @@ ORDER BY schemaname, tablename;
 
 障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
 
-| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                          |
-| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し                                                                                      |
-| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない |
-| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）    |
-| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                             |
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`、rclone ベース）は実装済み。**destination 未決定・実搬出実績ゼロのため、依然として実運用上の復元元は存在しない**（[#2026](https://github.com/Dayopt/dayopt/issues/2026) で実運用化を追跡） |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                         |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                            |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                     |
 
 **production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
 
@@ -1417,7 +1417,7 @@ ORDER BY schemaname, tablename;
 
 ### 復元前に止めるもの
 
-**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。ところが**現状 Dayopt に「書き込みを止める」手段は無い**。
+**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。
 
 #### メンテナンスモードは書き込みを止めない（2026-08-12 実測）
 
@@ -1428,16 +1428,27 @@ ORDER BY schemaname, tablename;
 
 結果として、**既に画面を開いているユーザーの mutation と Stripe / Resend の webhook は、メンテナンスモード中も DB を更新し続ける**。「メンテナンスモードにしたから止まった」と判断すると、その間の書き込みを失う。
 
+#### Write Fence（API層の書き込み停止、2026-08-13 実装、[#1972](https://github.com/Dayopt/dayopt/issues/1972)）
+
+`public.write_fence_control`（singleton テーブル）を Dashboard SQL Editor から直接 `UPDATE` して on/off する。toggle 用の RPC / API は無い（app runtime に UPDATE 権限を与えると自己解除の穴になるため、postgres superuser 限定）。
+
+```sql
+UPDATE public.write_fence_control SET fence_enabled = true WHERE singleton_key = true;
+```
+
+fail-closed: `write_fence_control` の読み取りに失敗すると mutation は block 側に倒れる。ただし relation 自体が無い場合（migration 適用直後の deploy 競合窓）は disabled 扱いにして自己 DoS を避ける。読み取りは呼び出し元の client（tRPC = `ctx.supabase`、webhook = service role client）で行うため、fence の読み取り失敗は「その書き込みが元々失敗する状況」と一致する。
+
+**fence が届く経路 / 届かない経路の一覧、toggle・drain・復旧手順は [runbook.md §Write Fence 有効化](../operations/runbook.md#write-fence-有効化api層の書き込み停止) が正本。** 要点だけ書くと、tRPC mutation・webhook 2 本・cron 2 本・oauth token・google-calendar callback には効くが、**client 直叩きの Supabase Auth / Storage、pg_cron、MCP write gate には効かない**。
+
 #### いま実際に止められるもの
 
-| 対象                   | 手段                                                         | 影響                                       |
-| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ |
-| 画面からの操作         | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
-| API / webhook 書き込み | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止。webhook は再送に頼る） |
-| MCP 経由の書き込み     | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
-| pg_cron                | 下記 SQL                                                     | cron 処理の停止                            |
-
-**恒久対応（API 層の write fence）は [#1972](https://github.com/Dayopt/dayopt/issues/1972) で追う。** それまでは「メンテナンスモード + deployment 停止」でしか write を止められない前提で判断する。
+| 対象                                                                 | 手段                                                         | 影響                                       |
+| -------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 画面からの操作                                                       | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
+| tRPC mutation / webhook / cron 2本 / oauth token / calendar callback | Write Fence（上記）                                          | 中（read は通る。client 直叩き経路は残る） |
+| MCP 経由の書き込み                                                   | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
+| pg_cron                                                              | 下記 SQL                                                     | cron 処理の停止                            |
+| client 直叩きの Supabase Auth / Storage                              | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止）                       |
 
 #### pg_cron を止める
 

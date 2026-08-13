@@ -26,6 +26,7 @@ import {
 } from '@/features/external-calendar/server/google-oauth';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
@@ -120,6 +121,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
       logger.warn('[calendar-callback] rate limit unavailable; continuing');
     }
+  }
+
+  // rate limit の後に置く。ここでは既に認証済みの user-scope client（supabase）を
+  // 使うが、認証・rate limit より前に置くと未認証/連打リクエストが DB 読取を無制限に
+  // 駆動できてしまう（増幅経路）ため、その手前には置かない。Google の authorization
+  // code は token 交換（exchangeAuthorizationCode）の時点で消費されるので、ここに
+  // 置けば code を使う前という要件も満たす。
+  if (await isWriteFenceEnabled(supabase)) {
+    logger.warn('[calendar-callback] write fence is enabled; rejecting connection');
+    return fail('write_fenced');
   }
 
   // start と同じ Pro ゲートをここでも通す。cookie は署名しておらず HttpOnly は JS を

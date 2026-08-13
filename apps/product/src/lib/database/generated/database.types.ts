@@ -954,6 +954,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      write_fence_control: {
+        Row: {
+          fence_enabled: boolean;
+          singleton_key: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          fence_enabled?: boolean;
+          singleton_key?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          fence_enabled?: boolean;
+          singleton_key?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

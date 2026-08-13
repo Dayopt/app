@@ -25,6 +25,7 @@
 --   - 20260730090301_harden_authenticated_timeblock_write_boundary.sql
 --   - 20260802013954_add_product_events.sql
 --   - 20260809015344_optimize_soft_delete_rls_initplan.sql
+--   - 20260812232852_write_fence_control.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -67,6 +68,10 @@
 --   RLS 有効、browser policy なし。service_role も direct mutation は不可
 --   （identityはgetter/provision RPC、controlはCAS RPC、
 --     receiptはapply / cleanupと将来のpurge lifecycleだけが更新）
+-- ■ write_fence_control: SELECT のみ authenticated / service_role 両方（USING true、
+--   秘匿性のない boolean 1 個）。INSERT/UPDATE/DELETE の GRANT は誰にも与えない
+--   （toggle は Dashboard SQL Editor の postgres superuser 限定、app runtime からの
+--   自己解除を防ぐ）
 -- ■ private.timeblock_user_revisions / transaction state / user_data_controls:
 --   Data APIへ公開せず、PUBLIC/anon/authenticated/service_roleのtable権限なし
 -- ■ stripe_webhook_events / email_suppressions: browser client は全拒否（service-role のみ）
