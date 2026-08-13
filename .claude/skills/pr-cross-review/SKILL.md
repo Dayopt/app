@@ -1,0 +1,121 @@
+---
+name: pr-cross-review
+description: 指揮台がレーンから merge 可能報告を受けた時、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。risk-reviewer / behavior-verifier を並列実行し `[internal-review]` marker 付きで指摘を PR へ投稿する。実装では発動しない。
+effort: medium
+maxTurns: 20
+---
+
+# PR クロスレビュー スキル
+
+指揮台が merge 前に実行する内製クロスレビューの標準手順。外部レビュー（Codex）廃止（2026-08-13、`AGENTS.md` 冒頭の凍結注記参照）に伴い、`.claude/rules/workflow.md` §レビュー指摘の必須解決 が要求するレビュー痕跡はこのスキルが生成する `[internal-review]` marker 付きコメント + inline review comment で満たす。
+
+## When to Use
+
+**副次トリガー型** — 「コード変化」ではなく「レーンから merge 可能報告を受けた」という上位イベント確定後に発動する。
+
+**上位イベント起点:**
+
+- レーンが軽量 CI green を確認し merge 可能報告を指揮台へ送った時（`.claude/rules/orchestration.md` §指揮台の merge シーケンス）
+- 複数 issue / 複数 Step を束ねた PR が merge 前クロスレビュー必須の対象になった時（`.claude/rules/workflow.md` §束ねた PR のレビュー）
+
+**診断起点:**
+
+- `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件（auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` / 現在挙動・公開契約・state transition・query cache・temporal contract・bug regression / cross-feature import・barrel・Composition Layer・file move・依存方向）に該当する diff を merge 前に見つけた時
+
+## When NOT to Use
+
+- push 前の自己反証レビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー の領域。レーン自身が担当し、subagent も同じだが実行主体と目的が異なる — このスキルは merge 前の指揮台側レビュー）
+- plan 段階のレビュー（`/plan-review` skill の領域）
+- 実装そのもの（write 可能な subagent への委譲は `.claude/rules/ai-behavior.md` §Writer ownership に従う。このスキルは read-only）
+
+## 手順
+
+### 1. 対象 diff を読み取り可能な形にする
+
+**指揮台（Main）自身が** `gh pr diff <PR番号>` を実行し、出力を絶対パスのファイル（例: スクラッチパス配下）へ書き出す。subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）は `Read` / `Grep` / `Glob` しか持たず `Bash` が無いため、subagent 自身に `gh pr diff` を叩かせることはできない。
+
+- subagent へは、この絶対パスファイルを一次情報として渡す。cwd 相対の `Read` に頼った実装は禁止（指揮台は main checkout 常駐のため、経路を明示しないと main の内容を読んでしまう）
+- PR の worktree（`.claude/worktrees/<name>/`）が存在し、かつ `git -C <worktree> status --porcelain` が空、かつ HEAD が対象 PR の `headRefOid` と一致する場合に限り、worktree 直読みを補助的な追加コンテキストとして使ってよい（diff ファイルの代替にはしない）
+
+### 2. subagent を選ぶ
+
+`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件表に照らして選ぶ:
+
+- auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` → `risk-reviewer`
+- 現在挙動 / 公開契約 / state transition / query cache / temporal contract / bug regression → `behavior-verifier`
+- cross-feature import / barrel / Composition Layer / file move / 依存方向 → `architecture-guard`
+- いずれにも該当しない場合（docs-only 等）、subagent は起動しない。§投稿フォーマット の「対象外 diff」形式で記録する
+
+### 3. 並列実行する
+
+該当する subagent を同一メッセージ内で並列起動する（`Agent` tool、model は Sonnet 既定。`.claude/rules/ai-behavior.md` §委譲時の model 指定 に従う）。各 subagent には手順 1 の diff ファイルの絶対パスと「反証」観点（配線漏れ・定数間の不等式・直前修正が開けた穴）を明示する。
+
+**subagent の書き出し省略癖への対処**: 応答が tool 呼び出しのみで終わり結論の書き出しが無い場合、同一 agent へ SendMessage で「見つけた findings を P1/P2/P3 分類で文章として書き出してください」と明示的に追加要求する。促す際に「追加調査は不要」とは書かない（未確認のまま停止するため）。
+
+### 4. 指摘を分類する
+
+- **P1**: 本番でユーザー影響、データ破壊、認可漏れ、または誤課金が起きる
+- **P2**: 現実的なエッジケースで誤動作し、修正せずに出荷すべきでない
+- **P3**: P1/P2 に満たないが記録に値する指摘（軽微な改善、将来の技術的負債）。**単独では merge を止めない。review comment 化せず、summary コメント本文にだけ書く**（thread 必須解決の対象外。原則 issue 化するか、記録のみで放置してよい）
+
+P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、この skill が生きた正本。`AGENTS.md` 側は変更しない。
+
+### 5. P1/P2 は review comment として投稿する（thread を生成させる）
+
+**`[internal-review]` marker 付きの単一 issue コメントだけでは、既存の thread-resolve gate（`scripts/git/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`.claude/rules/workflow.md` §レビュー指摘の必須解決）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
+
+- P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
+- diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
+- PR 作成者本人（指揮台と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、指揮台へ状況を報告してから手動で対応する
+- 投稿後は `.claude/rules/workflow.md` §レビュー指摘の必須解決 の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
+
+### 6. summary コメントを投稿する（marker、gate 証跡）
+
+P1/P2 の review comment とは別に、**1 件の summary comment** を issue コメントとして投稿する。1 行目を `[internal-review]` で始め、以下を含める（`scripts/git/finish-branch.sh` の gate 判定に必要な必須フィールド）:
+
+- `head: <PR の現在の HEAD SHA、40 桁 hex>`
+- `agent: <実行した subagent 名をカンマ区切り、または docs-only>`
+- P1/P2/P3 の件数サマリー（inline review comment の一覧を指す旨も添える）
+
+`agent:` の値は自己申告であり、gate は非空であることしか検証しない（機械的な docs-only 判定はしない）。この trust boundary は marker を OWNER / MEMBER / COLLABORATOR しか投稿できない、という既存の権限境界に依っている。
+
+### 7. 収束後、確定伝達する
+
+指摘の 3 択対応が済み thread が全件 resolve されたら、`.claude/rules/orchestration.md` §指揮台の merge シーケンス の「確定伝達」手順でレーンへ通知する。確定伝達には「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも含めて宣言する。
+
+### 8. HEAD が動いたら delta re-review する
+
+指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
+
+## 投稿フォーマット
+
+```
+[internal-review]
+head: 4f2a1c9e8b0d3f6a7c5e2b1d9a8f7c6e5d4b3a2f
+agent: risk-reviewer, behavior-verifier
+P1: なし
+P2: 2 件（review comment 参照）
+P3: 1 件（型安全性の軽微な改善余地。issue化検討）
+```
+
+対象外 diff（docs のみ等、いずれの subagent の自動委任条件にも非該当）の場合:
+
+```
+[internal-review]
+head: 4f2a1c9e8b0d3f6a7c5e2b1d9a8f7c6e5d4b3a2f
+agent: docs-only
+対象外 diff（risk-reviewer / behavior-verifier / architecture-guard の自動委任条件に非該当）。
+一次情報照合: 記述した path / symbol の実在を rg で確認した。
+```
+
+タグだけで中身が空、`head:` 欠落・不一致、`agent:` 欠落のいずれかがあるコメントは gate を通過しない（`scripts/git/finish-branch.sh` §内製クロスレビューの実施を要求する gate）。
+
+## 参考ファイル
+
+| ファイル                                                    | 用途                                                  |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
+| `.claude/rules/ai-behavior.md`                              | subagent 選定基準、model tiering                      |
+| `.claude/rules/workflow.md` §レビュー指摘の必須解決         | 指摘後の 3 択・resolve 運用                           |
+| `.claude/rules/orchestration.md` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達            |
+| `AGENTS.md`                                                 | 凍結された P1/P2 定義の由来（このスキルが生きた正本） |
+| `scripts/git/finish-branch.sh`                              | `[internal-review]` marker の gate 判定ロジック       |

@@ -194,25 +194,16 @@ commit 前に必ず `git diff --cached` で index 内容を確認する。Edit �
 
 ### push 前の敵対的セルフレビュー
 
-**この節は外部レビューの稼働に依存しない。** 内部の反証レビューは「外部レビューのラウンドを減らす前倒し」ではなく、**それ自体が merge 前の品質ゲート**とする。外部レビューが動いていれば往復コストの削減にもなる、という関係。
+**内部の反証レビューはそれ自体が merge 前の品質ゲートである。** 外部レビュー（Codex）廃止（2026-08-13、`AGENTS.md` 冒頭の凍結注記）に伴い、push 前の反証と `.claude/skills/pr-cross-review/SKILL.md` による merge 前クロスレビューが実質的にレビュー層のすべてになる。
 
-（この位置づけは 2026-08-07 に明確化した。それまでは「外部レビューの指摘 → 修正 push のラウンドを削る」ことを根拠に書かれていたため、外部レビューが止まると根拠ごと消えるように読めた。実際 Codex は #1850 以降 8 PR 連続で usage limit により応答せず、レビューが 1 件も走らない期間が発生した。）
+（この位置づけは 2026-08-07 に明確化した。それまでは「外部レビューの指摘 → 修正 push のラウンドを削る」ことを根拠に書かれていたため、外部レビューが止まると根拠ごと消えるように読めた。実際 Codex は #1850 以降 8 PR 連続で usage limit により応答せず、レビューが 1 件も走らない期間が発生していた。独立レビューを前提にしない設計だったことが、結果として 2026-08-13 の内製一本化への移行を裏付けている。）
 
 effort で拾える層は push 前に自分で拾う:
 
 - `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当する diff（auth / RLS / billing / migration / 公開契約 / cross-feature）は、**初回 push 前に**該当 subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）へ反証レビューをかける
 - 観点は「反証」に固定する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴
-- 指摘対応の push 前にも同じ確認を行う。外部レビューの指摘を直すコミット自体が新しい回帰を作る事例が繰り返し起きている（PR #1712 / #1738）
+- 指摘対応の push 前にも同じ確認を行う。レビューの指摘を直すコミット自体が新しい回帰を作る事例が繰り返し起きている（PR #1712 / #1738）
 - §束ねた PR のレビュー の merge 前クロスレビューは別途維持する（あちらは束ね PR の最終確認、こちらは push 前ゲート）
-
-### 外部レビューが動かない時
-
-外部レビュー（Codex）が usage limit・障害・設定変更で応答しないことがある。この時:
-
-- **上記の内部反証レビューは変わらず必須。** 外部レビューの有無で発火条件を変えない
-- **応答しなかった事実と、代替として何を検証したかを PR にコメントで残す**。レビューが無いまま merge した PR を後から識別できるようにする（「誰も見ていない変更」を無自覚に積み上げない）。**このコメントは 1 行目を `[no-external-review]` で始める** — §外部レビューの実施を要求する gate はこれを唯一の escape hatch として読む（引用や貼り付けで誤爆しないよう、先頭行かつ書き手が OWNER / MEMBER / COLLABORATOR であることを要求する）。タグだけ書いて中身を空にするのは、内容のない「対応済み」reply で thread を resolve するのと同じ違反にあたる
-- 該当条件に当たらない diff（docs のみ等）でも、外部レビューが止まっている期間は**一次情報の照合を明示的に書く**。docs なら「記述した path / symbol が実在することを `rg` で確認した」まで含める
-- 外部レビューの停止が続く場合、復旧させるか委譲先を変えるかはユーザーの判断領域。Main は状況を報告し、勝手に「レビュー無しで進める運用」を既定化しない
 
 ### Storybook 視覚確認
 
@@ -248,9 +239,23 @@ UI 変更を含む作業では、関連 Story がある場合は Storybook を�
 
 「レビューしやすいから」「1 issue だから」「大きいから」は分割理由にならない。
 
+### 判定 3 問
+
+策定日: 2026-08-13
+
+サイズ（行数・issue 数）ではなく境界で判定する。束の適正は次の 3 問で決める。
+
+1. **同じレーンが書いたか** — 1 レーン = 1 branch = 1 PR を機械的に固定する。2 レーンの成果を 1 PR に混ぜない、1 レーンの束を複数 PR に割らない。束の大きさは編成時のレーン設計の問題に一本化する
+2. **壊れたら一緒に戻すか** — PR は revert の単位。片方だけ戻したくなる関係が混ざるならそこが分割線。§分割してよい理由 の 3 例はこの問いの具体例（正の基準として言い直したもの。3 例はそのまま残る）
+3. **クロスレビュー 1 巡で読み切れるか** — 上限ガード。merge 前クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が 1 巡で domain 文脈を保って読めない束は編成時点で大きすぎる。走行中に割らず、次の編成で直す
+
+**単位の対応**: issue = 約束の単位（`Closes` を 1 行ずつ）/ PR = 出荷と revert の単位 / レーン = writer の単位。N issue : 1 PR : 1 レーンが基本形で、部分完了は `Refs`（実例: [#1971](https://github.com/Dayopt/dayopt/issues/1971) → `Refs` + follow-up [#2026](https://github.com/Dayopt/dayopt/issues/2026)）。
+
+**目安（数字は目安に留める）**: 束は 4〜8 issue、cross-review 1 巡。実測キャリブレーション: [PR #2032](https://github.com/Dayopt/dayopt/pull/2032) は 6 issue・diff 約 400 行（+357/-45）で 1 巡問題なし。PR 1 本の固定費 ≈ 44 課金分（§なぜ束ねるか 参照）。束ねるタイミングそのものは §束ねるのは編成の段階 が正本で、本節はその判定基準を補う。
+
 ### 束ねた PR のレビュー
 
-複数 issue / 複数 Step を束ねた PR は、**merge 前に read-only subagent のクロスレビューを必須**とする。対象は `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当するもの（`architecture-guard` / `behavior-verifier` / `risk-reviewer`）。PR が大きい分、人間の目視レビューだけに依存しない。
+複数 issue / 複数 Step を束ねた PR は、**merge 前に read-only subagent のクロスレビューを必須**とする。対象は `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件に該当するもの（`architecture-guard` / `behavior-verifier` / `risk-reviewer`）。PR が大きい分、人間の目視レビューだけに依存しない。実施手順は `.claude/skills/pr-cross-review/SKILL.md` が正本。
 
 ### なぜ束ねるか
 
@@ -270,7 +275,7 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 **2026-09 の private 化で無料枠が月 2,000 分になる。** private repo に切り替わると push 回数が直接の予算制約になるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
 
-- **外部レビューの指摘対応は round 単位で 1 push に束ねる。** 1 push = 軽量 CI 1 run なので、指摘が来るたびに 1 件ずつ直して push すると round 数だけ CI run が増える。ある PR では指摘対応が 8 巡 = 8 run になった実例がある。1 round で出た指摘をすべて拾ってから push する
+- **レビューの指摘対応は round 単位で 1 push に束ねる。** 1 push = 軽量 CI 1 run なので、指摘が来るたびに 1 件ずつ直して push すると round 数だけ CI run が増える。ある PR では指摘対応が 8 巡 = 8 run になった実例がある。1 round で出た指摘をすべて拾ってから push する
 - **軽微な fix の追い push をしない。** typo や 1 行修正を見つけても即 push せず、次の round（レビュー対応や機能追加）に同乗させる
 - **CI/deploy のインフラ flake にコード側で対処しない。** 空コミットでの再 push は最後の手段で、まず Vercel Dashboard の手動 deploy / redeploy を試す（[infra.md §PR の Vercel check が詰まった時の切り分け](../../docs/engineering/infra.md#pr-の-vercel-check-が詰まった時の切り分け策定日-2026-08-12)）。インフラ側の一過性障害をコード修正で「直そう」とすると、直っていないのに push だけ増える
 
@@ -315,7 +320,7 @@ typo 修正など issue を切っていない作業では省略してよい。�
 - **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
 - flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
 - ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
-- **外部レビューは draft のまま `@codex review` コメントで回す**（2026-08-04 に PR #1818 で実測）。Codex の自動レビューは「review 用に open」「draft を ready 化」で発火するため、これを待つとレビュー 1 ラウンドごとに ready 化が要り、そのたびに重量層が丸ごと再走する。`@codex review` は PR の状態に依存しない独立トリガーで、draft のまま 👀 → レビュー投稿まで通る。指摘が尽きてから ready 化すれば、重量層は merge 前の 1 回に収まる
+- **クロスレビューは draft のまま `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）で回す。** 指揮台がレーンから merge 可能報告を受けた後に発火し、PR の状態に依存せず draft のまま実行できる。収束後の ready 化タイミングは `.claude/rules/orchestration.md` §指揮台の merge シーケンス が正本で、指摘が尽きてから ready 化すれば重量層は merge 前の 1 回に収まる
 - **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
 
@@ -374,11 +379,9 @@ gh pr merge <PR番号> --merge --delete-branch
 2. **反論を reply** — 採用しない根拠を thread に書いて resolve（黙って resolve しない）
 3. **issue 化** — エッジケース等を別 issue へ切り出し、issue 番号を reply して resolve
 
-レビューを起こすタイミングは §2 段階 CI の `@codex review`（draft のまま回す）に従う。
+レビューを起こすタイミングは §2 段階 CI の `pr-cross-review` スキル（draft のまま回す）に従う。P1/P2 の指摘は inline review comment として投稿され、この thread gate に直接接続される（`[internal-review]` marker 自体は別建てのサマリーで、実施の証跡のみを担う。二層構造は `scripts/git/finish-branch.sh` §内製クロスレビューの実施を要求する gate 参照）。
 
-外部レビュー（Codex）の指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
-
-**外部レビューが応答しない場合、この 3 択は適用対象が無いだけで、merge 条件が緩むわけではない。** §push 前の敵対的セルフレビュー の内部反証は独立して必須で、その扱いは同節 §外部レビューが動かない時 に従う。
+内製クロスレビューの指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
 
 このルールの狙いは「指摘の黙殺を構造的に不可能にする」こと。resolve の作業自体を目的化しない — 中身のない「対応済み」reply で resolve するのは 2 の違反にあたる。
 
@@ -416,7 +419,7 @@ gh pr merge <PR番号> --merge --delete-branch
 
 これは §同型指摘の打ち切り と同じ趣旨を plan フェーズへ適用したもの。あちらが「指摘が構成し続けられる」PR レビューの往復を止めるのに対し、こちらは plan の反復を止める。どちらも到達不能なゴールへの追走だけを止める規約で、レビューの徹底度を下げるものではない — 毎巡 _異なる_ 実欠陥が出ている間は生産的な多巡なので、巡数を理由に止めない。
 
-**凍結は検証の放棄ではなく、検証の場を plan から実装へ移す判断。** そのため凍結とセットで、実装フェーズの網を確実に通すことを条件にする: §push 前の敵対的セルフレビュー の該当 subagent、外部レビュー（§レビュー指摘の必須解決）、実環境ゲート、および merge 前の diff レビュー。この網を通さずに凍結するのは、単に検証を飛ばしたのと同じ。
+**凍結は検証の放棄ではなく、検証の場を plan から実装へ移す判断。** そのため凍結とセットで、実装フェーズの網を確実に通すことを条件にする: §push 前の敵対的セルフレビュー の該当 subagent、レビュー（§レビュー指摘の必須解決）、実環境ゲート、および merge 前の diff レビュー。この網を通さずに凍結するのは、単に検証を飛ばしたのと同じ。
 
 #### 教訓コメント方式（同じ誤りの再発を止める）
 
@@ -424,34 +427,27 @@ gh pr merge <PR番号> --merge --delete-branch
 
 **一度直した failure scenario が次の修正ラウンドで再発したら、追加修正を続ける前に該当 issue / PR へ教訓コメントを 1 つ書く。** 内容は「守る契約」「再現手順」「直した方法」「なぜ戻ったか」「変更後にだけ成立する検証」の 5 点。以後の修正指示はこのコメントを参照し、reviewer ごとの文言を個別に満たすことを目的にしない。
 
-§同型指摘の打ち切り が「指摘が構成し続けられる」レビューの往復を止めるのに対し、こちらは Claude 自身が自己レビューと Codex の間で翻弄されて同じバグを再発させる時に使う。修正の writer は Claude の 1 レーンに固定し、Codex は外部レビュー専任のまま競合させない。回帰テストは対象操作後にだけ生じるユーザー可視結果・永続状態を assert する（操作前から存在する要素や generic な状態を assert しない）。
+§同型指摘の打ち切り が「指摘が構成し続けられる」レビューの往復を止めるのに対し、こちらは Claude 自身が自己レビューと外部/内製レビューの間で翻弄されて同じバグを再発させる時に使う。修正の writer は Claude の 1 レーンに固定し、レビュー役（内製クロスレビューの subagent）は read-only のまま competing writer にしない。回帰テストは対象操作後にだけ生じるユーザー可視結果・永続状態を assert する（操作前から存在する要素や generic な状態を assert しない）。
 
-### 外部レビューの実施を要求する gate
+### 内製クロスレビューの実施を要求する gate
 
-策定日: 2026-08-11
+策定日: 2026-08-11（2026-08-13 内製クロスレビューへ全面改訂）
 
-**そもそも外部レビューが回ったことを `branch:finish` が要求する。** §レビュー指摘の必須解決 の thread gate は「**存在する**指摘が resolve 済みか」しか見ないため、thread 0 件の PR は素通りする。つまり「レビューされて指摘ゼロだった PR」と「レビューを投げ忘れた PR」が機械には同じに見えていた。§2 段階 CI の draft 運用で Codex の自動発火を意図的に外している以上、`@codex review` は手で打つ以外に発火経路が無く、忘れても何も止まらなかった（2026-08-11 に実測。merge 済み PR に痕跡ゼロのものが実在した）。
+**そもそもレビューが回ったことを `branch:finish` が要求する。** §レビュー指摘の必須解決 の thread gate は「**存在する**指摘が resolve 済みか」しか見ないため、thread 0 件の PR は素通りする。つまり「レビューされて指摘ゼロだった PR」と「レビューを投げ忘れた PR」が機械には同じに見えていた。外部レビュー（Codex）廃止後は `.claude/skills/pr-cross-review/SKILL.md` が指揮台の発火でこれを担う。
 
-痕跡は Codex（login `chatgpt-codex-connector`。`[bot]` サフィックス付きも受ける）の応答が次のどこかにあること。**3 経路すべてを見る**のは、Codex が結果によって出力先を変えるため:
+**二層構造**: `[internal-review]` marker 付き comment は「実施したという証跡」のみを担う 1 層目。P1/P2 の実質的な指摘は inline review comment として投稿され、上記の thread gate（変更なし）で resolve を強制される 2 層目。marker だけを見て「指摘が実際に出たか」までは判定しない — それは thread gate の役目。
 
-| Codex の結果 | どこに出るか                                                    |
-| ------------ | --------------------------------------------------------------- |
-| 指摘あり     | review + reviewThreads                                          |
-| **指摘なし** | **issue comment だけ**（reviews / reviewThreads は 0 件のまま） |
+marker の判定は 5 点:
 
-1 経路だけ見ると、その裏側の結果を「無応答」と誤判定する。自分や他 bot のコメントは痕跡に数えない（数えると gate が空洞化する）。
-
-**comment 経路は allowlist で数える。** Codex は「レビューできなかった」ことも comment で返すため（実測 23 件: usage limit 通知 19 / `Something went wrong` 2 / `Unknown error` 2）、author だけで数えると **Codex が使えない時ほど gate が通ってしまい**、注記が最も必要な状況で注記を求められなくなる。失敗文言を denylist で除く形は次の文言が出るたびに穴が空くので、「完了した」と分かる定型（`Codex Review: Didn't find any major issues`）だけを通す。文言が変われば注記を要求する側（fail closed）に倒れるので気づける。
-
-escape hatch は §外部レビューが動かない時 の無応答注記だけ。**この判定は意図的に厳しい**。3 点すべてを要求する:
-
-1. コメント本文の 1 行目が `[no-external-review]` で始まる（引用行は `>` で始まるので落ちる）
+1. コメント本文の 1 行目が `[internal-review]` で始まる（引用行は `>` で始まるので落ちる）
 2. 書き手が OWNER / MEMBER / COLLABORATOR（bot と第三者は `NONE`。この repo は public なので任意のユーザーがコメントできる）
-3. marker を除いた本文が空でない（タグだけで通せると監査記録が空のまま merge できる）
+3. marker を除いた本文が空でない
+4. `head: <sha>` 行があり、値が今回の merge に使う HEAD SHA と完全一致する。早い段階で貼った marker を使い回し、その後の未レビュー push を素通りさせる抜け道を塞ぐ。HEAD が動いたら（指摘対応の fix push など）`pr-cross-review` スキルが delta re-review を行い、新しい HEAD を指す marker を投稿し直す
+5. `agent: <値>` 行があり非空である。値は自己申告であり機械検証しない（OWNER/MEMBER/COLLABORATOR しか投稿できないことが唯一の担保）
 
-素朴な部分一致にすると、gate 自身の停止メッセージや本節の規約文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の貼り付けは日常操作で踏む）。
+素朴な部分一致にすると、gate 自身の停止メッセージや本節の規約文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の貼り付けは日常操作で踏む）。5 点のうち 1 つでも欠ければ痕跡なし扱いにする。取得失敗は停止に倒す（fail closed）。契約は `scripts/__tests__/finish-branch.test.ts` §内製クロスレビューの痕跡 gate が固定する。
 
-通過時は**どの経路で通ったかを出力する**。「Codex が実際に見た」と「無応答注記で飛ばした」が同じ 1 行に潰れると、§外部レビューが動かない時 が求める「レビューが無いまま merge した PR を後から識別できる状態」を gate 側が満たさないため。取得失敗は停止に倒す（fail closed）。契約は `scripts/__tests__/finish-branch.test.ts` §外部レビューの痕跡 gate が固定する。
+**独立性の後退を認識する。** 旧設計（Codex）は「結果によって出力先を変える第三者の挙動」に対応するため review / reviewThreads / comment の 3 経路を見ていたが、これは同時に「別主体の応答」という偽造しにくい証拠でもあった。内製 marker は同一 agent 系列の自己申告であり、SHA 拘束による監査性は旧設計より強くなった一方、独立性は後退している。この判断の背景と戻す条件は `docs/engineering/log/2026-08-13-internal-review-standardization.md` を参照。
 
 **この gate は `branch:finish` 経由でしか効かない。** GitHub の merge ボタンや手動 `gh pr merge` は素通りする（§マージ手順 の手動フォールバックを含む）。ローカル script 以外の強制手段は別途検討する。
 
