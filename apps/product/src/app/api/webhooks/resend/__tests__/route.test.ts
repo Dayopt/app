@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetWriteFenceCacheForTestsOnly } from '@/lib/ops/write-fence';
+
 const mocks = vi.hoisted(() => ({
   verifyWebhook: vi.fn(),
   createServiceRoleClient: vi.fn(),
@@ -9,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   claimResendWebhookEvent: vi.fn(),
   completeResendWebhookEvent: vi.fn(),
   releaseResendWebhookEvent: vi.fn(),
+  writeFenceMaybeSingle: vi.fn(),
   env: {
     RESEND_API_KEY: 'test-key' as string | undefined,
     RESEND_WEBHOOK_SECRET: 'test-secret' as string | undefined,
@@ -19,6 +22,19 @@ const mocks = vi.hoisted(() => ({
     warn: vi.fn(),
   },
 }));
+
+/**
+ * fence check は claim より前に必ず write_fence_control を読む。他テーブル向けの
+ * from() 実装（upsert 等）を保ったまま、fence だけ既定で disabled を返す table-aware
+ * mock を組み立てる。
+ */
+function fromWithWriteFence(otherTableFrom: (table: string) => unknown) {
+  return vi.fn((table: string) =>
+    table === 'write_fence_control'
+      ? { select: () => ({ eq: () => ({ maybeSingle: mocks.writeFenceMaybeSingle }) }) }
+      : otherTableFrom(table),
+  );
+}
 
 vi.mock('resend', () => ({
   Resend: class MockResend {
@@ -61,6 +77,11 @@ describe('Product Resend webhook', () => {
     mocks.claimResendWebhookEvent.mockResolvedValue({ status: 'claimed', token: 'lease-1' });
     mocks.completeResendWebhookEvent.mockResolvedValue(undefined);
     mocks.releaseResendWebhookEvent.mockResolvedValue(undefined);
+    mocks.writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: false }, error: null });
+    mocks.createServiceRoleClient.mockReturnValue({
+      from: fromWithWriteFence(() => undefined),
+    });
+    resetWriteFenceCacheForTestsOnly();
     mocks.captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
       error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
     );
@@ -68,7 +89,7 @@ describe('Product Resend webhook', () => {
 
   it('records transactional bounce suppression with the schema unique key', async () => {
     const upsert = vi.fn().mockResolvedValue({ error: null });
-    mocks.createServiceRoleClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
+    mocks.createServiceRoleClient.mockReturnValue({ from: fromWithWriteFence(() => ({ upsert })) });
     mocks.verifyWebhook.mockReturnValue({
       type: 'email.bounced',
       data: { to: ['private@example.com'], email_id: 'email-1' },
@@ -92,7 +113,7 @@ describe('Product Resend webhook', () => {
   it('captures a suppression DB failure once without address PII and releases the lease', async () => {
     const dbError = { code: 'PGRST500', message: 'database unavailable' };
     const upsert = vi.fn().mockResolvedValue({ error: dbError });
-    mocks.createServiceRoleClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
+    mocks.createServiceRoleClient.mockReturnValue({ from: fromWithWriteFence(() => ({ upsert })) });
     mocks.verifyWebhook.mockReturnValue({
       type: 'email.complained',
       data: { to: ['private@example.com'], email_id: 'email-2' },
@@ -116,7 +137,9 @@ describe('Product Resend webhook', () => {
     'captures Product contact %s without adding support to suppression',
     async (type) => {
       const upsert = vi.fn();
-      mocks.createServiceRoleClient.mockReturnValue({ from: vi.fn(() => ({ upsert })) });
+      mocks.createServiceRoleClient.mockReturnValue({
+        from: fromWithWriteFence(() => ({ upsert })),
+      });
       mocks.verifyWebhook.mockReturnValue({
         type,
         data: {
@@ -252,5 +275,36 @@ describe('Product Resend webhook', () => {
     expect(JSON.stringify(mocks.captureUnexpectedError.mock.calls)).not.toContain(
       'private@example.com',
     );
+  });
+
+  it('write fence が有効な時は claim 前に 503 を返す（lease の滞留を避ける）', async () => {
+    mocks.writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: true }, error: null });
+    mocks.verifyWebhook.mockReturnValue({
+      type: 'email.delivered',
+      data: { to: ['private@example.com'], email_id: 'email-fenced' },
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('Retry-After')).toBe('30');
+    expect(mocks.claimResendWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it('Web contact の早期return分岐は書き込みが無いため fence の影響を受けない', async () => {
+    mocks.writeFenceMaybeSingle.mockResolvedValue({ data: { fence_enabled: true }, error: null });
+    mocks.verifyWebhook.mockReturnValue({
+      type: 'email.bounced',
+      data: {
+        to: ['support@dayopt.app'],
+        email_id: 'web-contact-during-fence',
+        tags: { source: 'contact-web' },
+      },
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.claimResendWebhookEvent).not.toHaveBeenCalled();
   });
 });

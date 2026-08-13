@@ -12,6 +12,7 @@ import { Resend } from 'resend';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import {
   claimResendWebhookEvent,
   completeResendWebhookEvent,
@@ -188,6 +189,18 @@ export async function POST(request: NextRequest) {
       isContactDelivery(event.data, dayoptContactDeliverySources.web)
     ) {
       return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    // claim（Redis lease）より前に確認する。claim 後に 503 を返すと lease が残ったまま
+    // 残り、Resend の再送が「処理中」で弾かれ続ける。この分岐より前（署名検証だけで
+    // 済む早期 return）には書き込みが無いので fence は不要 — むしろ手前で 503 にすると
+    // 無意味な再送で Resend の backoff 予算を消費させてしまう。
+    if (await isWriteFenceEnabled(createServiceRoleClient())) {
+      logger.warn('Resend webhook rejected: write fence is enabled');
+      return NextResponse.json(
+        { error: 'Webhook processing is temporarily paused for maintenance' },
+        { status: 503, headers: { 'Retry-After': '30' } },
+      );
     }
 
     const claim = await claimResendWebhookEvent(svixId);

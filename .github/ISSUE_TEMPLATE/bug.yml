@@ -1,0 +1,32 @@
+name: バグ報告
+description: 想定と異なる挙動の報告
+title: 'bug: '
+labels: ['type:bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `priority:` / `area:` は [github-labels.md](https://github.com/Dayopt/dayopt/blob/main/docs/operations/github-labels.md) の一覧から選んで追加する。**milestone は付けない**（着手時に指揮台が付与する。`.claude/skills/dispatch/SKILL.md` 操作 A）。
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 何が起きたか。再現手順、期待した挙動と実際の挙動、関連 issue / PR へのリンク
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+      description: 番号付き手順。分かる範囲で対象ファイル path を明記
+  - type: textarea
+    id: caution
+    attributes:
+      label: 注意
+      description: 既知の罠、触ってはいけない領域、関連 skill（例 supabase skill のフロー）
+  - type: textarea
+    id: verification
+    attributes:
+      label: 検証
+      description: pass すべきコマンドと確認観点
+      placeholder: pnpm check / pnpm test:run など

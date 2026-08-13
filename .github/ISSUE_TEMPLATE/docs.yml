@@ -1,0 +1,40 @@
+name: Docs
+description: ドキュメントの新規作成・更新・監査での発見事項
+title: 'docs: '
+labels: ['type:docs']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `priority:` / `area:` は [github-labels.md](https://github.com/Dayopt/dayopt/blob/main/docs/operations/github-labels.md) の一覧から選んで追加する。**milestone は付けない**（着手時に指揮台が付与する。`.claude/skills/dispatch/SKILL.md` 操作 A）。
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: なぜやるか。関連 issue / docs / 過去 PR へのリンク
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+      description: 番号付き手順。対象ファイル path を明記
+    validations:
+      required: true
+  - type: textarea
+    id: caution
+    attributes:
+      label: 注意
+      description: 既知の罠、触ってはいけない領域
+  - type: input
+    id: bundle
+    attributes:
+      label: 相乗り先の docs 束
+      description: docs-only の小粒 issue は単独 PR を立てず束ねる（`.claude/rules/workflow.md` §PR 粒度）。相乗り先が決まっていなければ空欄でよい（指揮台が編成時に束ねる）
+      placeholder: 例 次の docs 束、または既存の代表 issue 番号
+  - type: textarea
+    id: verification
+    attributes:
+      label: 検証
+      description: pass すべきコマンドと確認観点
+      placeholder: pnpm docs:check など

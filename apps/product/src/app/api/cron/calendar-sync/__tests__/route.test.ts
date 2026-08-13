@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dispatchCalendarSync = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
+const isWriteFenceEnabled = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(
   () => ({ CRON_SECRET: 'super-secret-cron' }) as { CRON_SECRET?: string | undefined },
 );
@@ -13,6 +14,8 @@ vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
+vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
+vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 
 import { GET } from '../route';
 
@@ -28,6 +31,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   envMock.CRON_SECRET = 'super-secret-cron';
   dispatchCalendarSync.mockResolvedValue({ due: 2, processed: 2, skippedNonPro: 0, deferred: 0 });
+  isWriteFenceEnabled.mockResolvedValue(false);
 });
 
 describe('calendar-sync cron route', () => {
@@ -72,5 +76,14 @@ describe('calendar-sync cron route', () => {
 
     expect(response.status).toBe(500);
     expect(captureUnexpectedError).toHaveBeenCalled();
+  });
+
+  it('write fence が有効な時は 503 を返し dispatcher を呼ばない', async () => {
+    isWriteFenceEnabled.mockResolvedValue(true);
+
+    const response = await GET(request('Bearer super-secret-cron'));
+
+    expect(response.status).toBe(503);
+    expect(dispatchCalendarSync).not.toHaveBeenCalled();
   });
 });

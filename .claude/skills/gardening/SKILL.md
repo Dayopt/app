@@ -35,15 +35,16 @@ description: ユーザーが月次ガーデニングの人間パート実施を�
 
 fresh session で以下を順に実施し、成果物を「draft PR + issue + journal 内のレビュー待ちリスト」に着地させる。**価値判断（ルールの足し引き、superseded 判定、機能の削除候補の確定）は実行せず、必ずレビュー待ちリストに列挙して人間パートへ回す。** アプリコードは変更しない。
 
-1. **journal 下書き** — 前月の merge commit 履歴（`git log --merges --since`）、closed issue / PR、各ドメイン `log/` の decision・note・feedback・incident ログから、当月 `docs/engineering/log/YYYY-MM-01-journal.md` を下書きする。観点: できごと / 決定 / 学び / 数値（マージ PR 数、変更規模など）。frontmatter は `status: frozen` + `date: YYYY-MM-01`
-2. **ストック鮮度 triage（上位 10 件）** — `docs:check` 対象ディレクトリ（`business/` `product/` `engineering/` `operations/` `company/`）配下の全 `.md`（各 `log/` を除く）と、ドメイン外ルートへ昇格した `docs/strategy.md` を候補に含め、`last_verified` の古い順に並べて上位 10 件を検証する。問題なければ `last_verified` だけ更新、内容が古ければ修正して更新。**現状に対応する内容が無くなっている場合は `status: superseded` にせず、レビュー待ちリストへ**
-3. **notes 昇格候補の検出** — 前月の各ドメイン `log/`（decision / journal 以外の調査・監査ログ）を確認し、ストックへ反映すべき内容を反映する。feedback / incident の note で `operations/` 側の手順に未反映のものも同様
-4. **スモークテスト（1 問）** — 記憶に頼らず docs のみを根拠にプロダクトの仕組みへの質問に 1 つ答える。答えられなければ穴を `docs/engineering/log/YYYY-MM-DD-gardening-gap-<topic>.md` に記録し、可能ならストック側も直す
-5. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C の**月次 backstop 項目のみ**実施する（日次項目は指揮台の朝編成が吸収済み。`orchestration.md` §1 日サイクル）。発見は同 skill の intake で起票する
-6. **公開コンテンツ監査** — `docs-audit` skill を実行し、実機能と公開 docs のギャップ・鮮度乖離・en/ja 非対称を検出して起票する。`area:blog` issue が枯渇していればレビュー待ちリストに記す。コンテンツの数字（Search Console / Vercel Analytics の指名検索・流入・上位クエリ）と事業指標（`docs/business/business-model.md` §Metrics の定義に従う WAU・課金率・チャーン。Stripe / Supabase から read-only で取得）は、取得できる環境なら journal に記録し、できなければ「未取得」と明記する。事業の現在地はこの月次記録を正とし、常設の進捗文書は作らない
-7. **セキュリティ sweep** — `mcp__supabase__get_advisors`（type: security、read-only）と `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録
-8. **四半期チェック** — `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月無ければ、レビュー待ちリストに「AI 設定棚卸し（`audit-ai-config` skill）の実施提案」を記す
-9. **成果物の着地** — branch `claude/gardening-YYYY-MM` を作り、journal（レビュー待ちリスト含む）と鮮度更新を commit して **draft PR** を作成する。issue は各ステップ内で起票済みであること。PR 本文に「実施したステップ / 起票した issue / レビュー待ちリストの件数」を要約する
+1. **journal 下書き** — 前月の merge commit 履歴（`git log --merges --since`）、closed issue / PR、各ドメイン `log/` の decision・note・feedback・incident ログから、当月 `docs/engineering/log/YYYY-MM-01-journal.md` を下書きする。観点: できごと / 決定 / 学び / 数値（マージ PR 数、変更規模、**Actions 経済メトリクス**: 当月の merge PR 数 / push 回数 / CI 課金分（概算で可）など。2026-09 の private 化以降、予算判断の基礎になる）。frontmatter は `status: frozen` + `date: YYYY-MM-01`
+2. **外部レビュー指摘の class 分類 → 機械化変換**（策定日: 2026-08-13、[#2018](https://github.com/Dayopt/dayopt/issues/2018)） — 当月 merge した PR の外部レビュー指摘（reviews / reviewThreads）を走査し、指摘を class（繰り返す構造の型。例: 壁時計/instant の TZ 再解釈、期限・予算の不等式マージン、docs と実装のドリフト）に分類する。**同一 class が当月 2 回以上、または過去月と通算 2 回以上**出ていたら、機械化（test / lint / CI 検査）の issue を起票する（起票時に機械化の形の仮説まで書く）。機械化済み class は翌月、再発ゼロを確認する（機械が効いている証拠）
+3. **ストック鮮度 triage（上位 10 件）** — `docs:check` 対象ディレクトリ（`business/` `product/` `engineering/` `operations/` `company/`）配下の全 `.md`（各 `log/` を除く）と、ドメイン外ルートへ昇格した `docs/strategy.md` を候補に含め、`last_verified` の古い順に並べて上位 10 件を検証する。問題なければ `last_verified` だけ更新、内容が古ければ修正して更新。**現状に対応する内容が無くなっている場合は `status: superseded` にせず、レビュー待ちリストへ**
+4. **notes 昇格候補の検出** — 前月の各ドメイン `log/`（decision / journal 以外の調査・監査ログ）を確認し、ストックへ反映すべき内容を反映する。feedback / incident の note で `operations/` 側の手順に未反映のものも同様
+5. **スモークテスト（1 問）** — 記憶に頼らず docs のみを根拠にプロダクトの仕組みへの質問に 1 つ答える。答えられなければ穴を `docs/engineering/log/YYYY-MM-DD-gardening-gap-<topic>.md` に記録し、可能ならストック側も直す
+6. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C の**月次 backstop 項目のみ**実施する（日次項目は指揮台の朝編成が吸収済み。`orchestration.md` §1 日サイクル）。発見は同 skill の intake で起票する
+7. **公開コンテンツ監査** — `docs-audit` skill を実行し、実機能と公開 docs のギャップ・鮮度乖離・en/ja 非対称を検出して起票する。`area:blog` issue が枯渇していればレビュー待ちリストに記す。コンテンツの数字（Search Console / Vercel Analytics の指名検索・流入・上位クエリ）と事業指標（`docs/business/business-model.md` §Metrics の定義に従う WAU・課金率・チャーン。Stripe / Supabase から read-only で取得）は、取得できる環境なら journal に記録し、できなければ「未取得」と明記する。事業の現在地はこの月次記録を正とし、常設の進捗文書は作らない
+8. **セキュリティ sweep** — `mcp__supabase__get_advisors`（type: security、read-only）と `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録
+9. **四半期チェック** — `docs/engineering/log/` に `*-ai-config-audit.md` が直近 3 ヶ月無ければ、レビュー待ちリストに「AI 設定棚卸し（`audit-ai-config` skill）の実施提案」を記す
+10. **成果物の着地** — branch `claude/gardening-YYYY-MM` を作り、journal（レビュー待ちリスト含む）と鮮度更新を commit して **draft PR** を作成する。issue は各ステップ内で起票済みであること。PR 本文に「実施したステップ / 起票した issue / レビュー待ちリストの件数」を要約する
 
 ## 人間パート（/gardening で実施）
 

@@ -1,11 +1,11 @@
 ---
 status: current
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 ---
 
 # インフラ・環境・API/Routing 総覧
 
-環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、災害復旧手順、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
+環境構成（Local / PR Preview / Production）、CI品質ゲートのロードマップ、DNS 管理（Cloudflare）、Bot 対策（Turnstile）、API endpoints 総覧、Supabase 型自動生成、App Router routing 総覧、パフォーマンス監視の原則、開発コマンド一覧、マイグレーション/リリースチェックリスト、災害復旧手順、DB Migration Rollback 手順書、出口コスト台帳。「環境・デプロイ・シークレットは?」の正。
 
 ---
 
@@ -415,6 +415,18 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 
 ---
 
+## DNS 管理（Cloudflare）
+
+策定日: 2026-08-13（[#2001](https://github.com/Dayopt/dayopt/issues/2001)。2026-08-12、Search Console のドメイン検証作業中に指揮台が実測で発見）
+
+`dayopt.app` は **registrar が Vercel（Vercel Registrar）、権威 DNS が Cloudflare** という分離構成になっている（`dig NS dayopt.app` は `keira.ns.cloudflare.com` / `colin.ns.cloudflare.com` を返す。移管手順は [contact-email.md §1 DNS と受信の準備](../operations/contact-email.md#1-dnsと受信の準備ユーザー作業)）。
+
+**DNS レコードの変更は Cloudflare dashboard で行う。Vercel の Domains 画面で DNS レコードを追加しても権威側には反映されない**（2026-08-12、実際に Vercel 側へレコードを追加 → 権威側に出ないことを確認 → 削除する事象が発生した）。Vercel の Domains 画面が持つのは registrar 機能（更新・移管・nameserver 設定）だけで、DNS レコードの実体は Cloudflare zone が持つ。
+
+この運用手順は §出口コスト台帳 の粒度（同節参照）には含めない。台帳は「捨てたら何が壊れるか」だけを持ち、日々の変更手順はここに置く。
+
+---
+
 ## Bot 対策（Cloudflare Turnstile）
 
 Dayopt は bot 対策として **Cloudflare Turnstile** を使う。reCAPTCHA v3 + v2 fallback から 2026-04 に乗り換え、マーケティングサイトとアプリの両方で同じ仕組みに統一した。
@@ -573,7 +585,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 
 Product / Webの`src/app/api/**`配下にある主要REST / Webhook endpoint総覧。tRPC procedureは`/api/trpc/[procedure-path]`に集約され、procedure単位の仕様は各featureの`server/router.ts`を参照すること。
 
-策定日: 2026-04-26、最終照合: 2026-08-12（route ファイルの実在を双方向で機械照合）
+策定日: 2026-04-26。下記 §一覧 と実装 route の双方向照合は `scripts/__tests__/infra-api-routes-contract.test.ts` が機械的に固定する（[#1981](https://github.com/Dayopt/dayopt/issues/1981)。route の追加・削除と表の更新漏れの両方で fail する）。人手の「最終照合」日付には依存しない。
 
 ### 一覧
 
@@ -700,6 +712,7 @@ flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production
 
 - 新規 endpoint を追加する前に、tRPC procedure で済まないか検討する（`features/*/server/router.ts`）
 - **新規 route handler を追加したら、`route-duration-contract.test.ts` の契約表に 1 行足す**（足さないと test が落ちる）
+- **endpoint を追加・削除したら、上記 §一覧 の表も同じ PR で更新する**（`infra-api-routes-contract.test.ts` が表と実装 route の食い違いを検出して test を落とす）
 - REST 維持の理由に該当しない場合は tRPC を採用
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
 - 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
@@ -1391,12 +1404,12 @@ ORDER BY schemaname, tablename;
 
 障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
 
-| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                          |
-| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | S3 互換エンドポイント経由で別途搬出・復元。versioning 無し                                                                                      |
-| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない |
-| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）    |
-| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                             |
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`、rclone ベース）は実装済み。**destination 未決定・実搬出実績ゼロのため、依然として実運用上の復元元は存在しない**（[#2026](https://github.com/Dayopt/dayopt/issues/2026) で実運用化を追跡） |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                         |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                            |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                     |
 
 **production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
 
@@ -1404,7 +1417,7 @@ ORDER BY schemaname, tablename;
 
 ### 復元前に止めるもの
 
-**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。ところが**現状 Dayopt に「書き込みを止める」手段は無い**。
+**復元より前に書き込みを止める。** 止まっていないと、backup 時刻以降の書き込みが復元で丸ごと消える。
 
 #### メンテナンスモードは書き込みを止めない（2026-08-12 実測）
 
@@ -1415,16 +1428,27 @@ ORDER BY schemaname, tablename;
 
 結果として、**既に画面を開いているユーザーの mutation と Stripe / Resend の webhook は、メンテナンスモード中も DB を更新し続ける**。「メンテナンスモードにしたから止まった」と判断すると、その間の書き込みを失う。
 
+#### Write Fence（API層の書き込み停止、2026-08-13 実装、[#1972](https://github.com/Dayopt/dayopt/issues/1972)）
+
+`public.write_fence_control`（singleton テーブル）を Dashboard SQL Editor から直接 `UPDATE` して on/off する。toggle 用の RPC / API は無い（app runtime に UPDATE 権限を与えると自己解除の穴になるため、postgres superuser 限定）。
+
+```sql
+UPDATE public.write_fence_control SET fence_enabled = true WHERE singleton_key = true;
+```
+
+fail-closed: `write_fence_control` の読み取りに失敗すると mutation は block 側に倒れる。ただし relation 自体が無い場合（migration 適用直後の deploy 競合窓）は disabled 扱いにして自己 DoS を避ける。読み取りは呼び出し元の client（tRPC = `ctx.supabase`、webhook = service role client）で行うため、fence の読み取り失敗は「その書き込みが元々失敗する状況」と一致する。
+
+**fence が届く経路 / 届かない経路の一覧、toggle・drain・復旧手順は [runbook.md §Write Fence 有効化](../operations/runbook.md#write-fence-有効化api層の書き込み停止) が正本。** 要点だけ書くと、tRPC mutation・webhook 2 本・cron 2 本・oauth token・google-calendar callback には効くが、**client 直叩きの Supabase Auth / Storage、pg_cron、MCP write gate には効かない**。
+
 #### いま実際に止められるもの
 
-| 対象                   | 手段                                                         | 影響                                       |
-| ---------------------- | ------------------------------------------------------------ | ------------------------------------------ |
-| 画面からの操作         | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
-| API / webhook 書き込み | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止。webhook は再送に頼る） |
-| MCP 経由の書き込み     | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
-| pg_cron                | 下記 SQL                                                     | cron 処理の停止                            |
-
-**恒久対応（API 層の write fence）は [#1972](https://github.com/Dayopt/dayopt/issues/1972) で追う。** それまでは「メンテナンスモード + deployment 停止」でしか write を止められない前提で判断する。
+| 対象                                                                 | 手段                                                         | 影響                                       |
+| -------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------ |
+| 画面からの操作                                                       | `NEXT_PUBLIC_MAINTENANCE_MODE=true`                          | 小                                         |
+| tRPC mutation / webhook / cron 2本 / oauth token / calendar callback | Write Fence（上記）                                          | 中（read は通る。client 直叩き経路は残る） |
+| MCP 経由の書き込み                                                   | 既存の write gate（`writes_enabled` / `enabled_client_ids`） | MCP 利用者のみ                             |
+| pg_cron                                                              | 下記 SQL                                                     | cron 処理の停止                            |
+| client 直叩きの Supabase Auth / Storage                              | **専用の手段が無い。** deployment を止めるしかない           | 大（サービス全停止）                       |
 
 #### pg_cron を止める
 
@@ -1912,18 +1936,18 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 ### 中（乗り換えは日単位）
 
-| 依存                                   | 浸透                                                                                                                                                                                                                                                               | 今日捨てたら何が壊れるか                                                                                                         | 逃げ道                                                                                                                                                                                                                             | 出口検討トリガー                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status、**Cron**（`calendar-sync` / `external-connection-maintenance` を 15 分毎）、**host 別 rewrite**（`mcp.dayopt.app` → `/api/mcp`）、**`dayopt.app` の registrar**                   | deploy 経路、PR 検証の一部、**カレンダー同期と接続メンテナンスの定期実行**、**MCP の入口 routing**、**ドメインの更新・移管権限** | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線に加え **scheduler と host routing の移植**（`apps/product/vercel.json`）と **registrar 移管**が要る。ホスティングだけ移して account を閉じるとドメインを失う | 価格改定、他ホストでの Next.js 冷遇 |
-| **Stripe**                             | Pro 課金（billing）+ **アカウント削除フロー**（subscription cancel → customer 削除）                                                                                                                                                                               | 課金・サブスク管理に加え、`stripe_customer_id` を持つユーザーの**アカウント削除が完了しなくなる**                                | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）と**削除フローの customer cleanup 差し替え**が要る                                                                                                                      | 手数料改定、アカウント凍結リスク    |
-| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`release.yml` が production domain promote の唯一経路） | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                        | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                    | 価格改定、Actions 課金の構造変化    |
-| **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース                                                                                                                                                                 | **operational 環境ではアプリが起動しない**（env 検証が失敗）。起動しても webhook 処理が fail-closed になる                       | `@upstash/redis` は REST API 前提のため素の Redis へ drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る                                                                 | 価格改定、REST API の互換性変更     |
-| **Google**                             | OAuth ログイン + external-calendar 連携 + **`support@dayopt.app` の最終受信箱**（Gmail destination と Send mail as）                                                                                                                                               | Google ログインユーザーのアクセス、カレンダー同期、**問い合わせの受信と返信**                                                    | ログインは email 併存、連携は opt-in。ただし**受信箱は代替が要る**（destination 変更・履歴移行・返信経路の再設定。`docs/operations/contact-email.md`）                                                                             | OAuth / Calendar API の政策変更     |
-| **Cloudflare**                         | `dayopt.app` の **authoritative DNS**（`app` / `mcp` / `www` を含む）、**Email Routing**（`support@` → Gmail）、Turnstile（Bot 対策）                                                                                                                              | **全ドメインの名前解決**と**問い合わせの受信**、Bot 対策                                                                         | nameserver を別 DNS へ委譲し直し、MX / SPF / DKIM と転送先を再設定、CAPTCHA を差し替える。DNS の切替は伝播待ちを伴う                                                                                                               | 価格改定、無料枠の縮小              |
-| **Sentry**                             | エラー監視（runtime capture / sanitizer / CSP report）+ **production build gate**（`assertProductionSentryBuildEnv` が資格情報欠落で build を失敗させる。product / web 両方）                                                                                      | 監視に加え、**次の production build が止まる**                                                                                   | 代替 APM への移植は build 配線・sanitizer・CSP・運用 runbook を含むため日単位。履歴は持ち出さない割り切り                                                                                                                          | 価格改定、無料枠の縮小              |
-| **Resend**                             | メール送信 + **bounce / complaint webhook**（svix 署名検証 → `email_suppressions` 更新）                                                                                                                                                                           | 送信に加え、**新規 bounce / complaint が記録されなくなり、抑止対象へ送り続ける**                                                 | 代替 SMTP / API へ切替。suppression list の持ち出しに加え、**webhook 署名検証・イベント変換・冪等性の再実装**が要る                                                                                                                | 価格改定、到達率の劣化              |
-| **1Password**                          | 長寿命 secret の **master**（Vercel / GitHub / Supabase は replica）、`op run` 注入、GitHub SSH 鍵、各サービスの password / TOTP / recovery code、ドメイン管理情報                                                                                                 | secret の rotation 元と**アカウント復旧手段**（TOTP / recovery code / SSH 鍵）                                                   | `.op-env` スキーマだけでなく、**master secret・外部 replica の同期元・SSH agent・login / recovery item** をまとめて別 manager へ移す必要がある（`docs/operations/secrets.md`）                                                     | 価格改定、desktop 統合の劣化        |
-| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                                                                                                                                                                                                            | 開発テンポ（プロダクトは無傷）。**実装・運用を引き継ぐ agent が現行ポリシー上いない**ため、修正と release が止まる               | 規約はすべて plain markdown で repo 内。ただし AGENTS.md は Codex を**レビュー専任**と定めるため二系統は代替経路にならない。出口作業は「規約と workflow を別の実装系へ移植する」こと。tier 読み替え原則で model 名には固定しない   | 価格・品質・提供条件の変化          |
+| 依存                                   | 浸透                                                                                                                                                                                                                                                                                                                                          | 今日捨てたら何が壊れるか                                                                                                                                               | 逃げ道                                                                                                                                                                                                                             | 出口検討トリガー                    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status、**Cron**（`calendar-sync` / `external-connection-maintenance` を 15 分毎）、**host 別 rewrite**（`mcp.dayopt.app` → `/api/mcp`）、**`dayopt.app` の registrar**（DNS zone 自体は Cloudflare へ委任済み。次項の Cloudflare 行、§DNS 管理（Cloudflare） 参照） | deploy 経路、PR 検証の一部、**カレンダー同期と接続メンテナンスの定期実行**、**MCP の入口 routing**、**ドメインの更新・移管権限**（DNS レコードそのものへの影響は無い） | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線に加え **scheduler と host routing の移植**（`apps/product/vercel.json`）と **registrar 移管**が要る。ホスティングだけ移して account を閉じるとドメインを失う | 価格改定、他ホストでの Next.js 冷遇 |
+| **Stripe**                             | Pro 課金（billing）+ **アカウント削除フロー**（subscription cancel → customer 削除）                                                                                                                                                                                                                                                          | 課金・サブスク管理に加え、`stripe_customer_id` を持つユーザーの**アカウント削除が完了しなくなる**                                                                      | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）と**削除フローの customer cleanup 差し替え**が要る                                                                                                                      | 手数料改定、アカウント凍結リスク    |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`release.yml` が production domain promote の唯一経路）                                                                            | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                                                              | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                    | 価格改定、Actions 課金の構造変化    |
+| **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース                                                                                                                                                                                                                                            | **operational 環境ではアプリが起動しない**（env 検証が失敗）。起動しても webhook 処理が fail-closed になる                                                             | `@upstash/redis` は REST API 前提のため素の Redis へ drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る                                                                 | 価格改定、REST API の互換性変更     |
+| **Google**                             | OAuth ログイン + external-calendar 連携 + **`support@dayopt.app` の最終受信箱**（Gmail destination と Send mail as）                                                                                                                                                                                                                          | Google ログインユーザーのアクセス、カレンダー同期、**問い合わせの受信と返信**                                                                                          | ログインは email 併存、連携は opt-in。ただし**受信箱は代替が要る**（destination 変更・履歴移行・返信経路の再設定。`docs/operations/contact-email.md`）                                                                             | OAuth / Calendar API の政策変更     |
+| **Cloudflare**                         | `dayopt.app` の **authoritative DNS**（`app` / `mcp` / `www` を含む）、**Email Routing**（`support@` → Gmail）、Turnstile（Bot 対策）                                                                                                                                                                                                         | **全ドメインの名前解決**と**問い合わせの受信**、Bot 対策                                                                                                               | nameserver を別 DNS へ委譲し直し、MX / SPF / DKIM と転送先を再設定、CAPTCHA を差し替える。DNS の切替は伝播待ちを伴う                                                                                                               | 価格改定、無料枠の縮小              |
+| **Sentry**                             | エラー監視（runtime capture / sanitizer / CSP report）+ **production build gate**（`assertProductionSentryBuildEnv` が資格情報欠落で build を失敗させる。product / web 両方）                                                                                                                                                                 | 監視に加え、**次の production build が止まる**                                                                                                                         | 代替 APM への移植は build 配線・sanitizer・CSP・運用 runbook を含むため日単位。履歴は持ち出さない割り切り                                                                                                                          | 価格改定、無料枠の縮小              |
+| **Resend**                             | メール送信 + **bounce / complaint webhook**（svix 署名検証 → `email_suppressions` 更新）                                                                                                                                                                                                                                                      | 送信に加え、**新規 bounce / complaint が記録されなくなり、抑止対象へ送り続ける**                                                                                       | 代替 SMTP / API へ切替。suppression list の持ち出しに加え、**webhook 署名検証・イベント変換・冪等性の再実装**が要る                                                                                                                | 価格改定、到達率の劣化              |
+| **1Password**                          | 長寿命 secret の **master**（Vercel / GitHub / Supabase は replica）、`op run` 注入、GitHub SSH 鍵、各サービスの password / TOTP / recovery code、ドメイン管理情報                                                                                                                                                                            | secret の rotation 元と**アカウント復旧手段**（TOTP / recovery code / SSH 鍵）                                                                                         | `.op-env` スキーマだけでなく、**master secret・外部 replica の同期元・SSH agent・login / recovery item** をまとめて別 manager へ移す必要がある（`docs/operations/secrets.md`）                                                     | 価格改定、desktop 統合の劣化        |
+| **Anthropic / Claude**（開発プロセス） | CLAUDE.md / rules / skills / agents が Claude Code 前提                                                                                                                                                                                                                                                                                       | 開発テンポ（プロダクトは無傷）。**実装・運用を引き継ぐ agent が現行ポリシー上いない**ため、修正と release が止まる                                                     | 規約はすべて plain markdown で repo 内。ただし AGENTS.md は Codex を**レビュー専任**と定めるため二系統は代替経路にならない。出口作業は「規約と workflow を別の実装系へ移植する」こと。tier 読み替え原則で model 名には固定しない   | 価格・品質・提供条件の変化          |
 
 ### 浅い（乗り換えは時間単位、単機能で代替容易）
 

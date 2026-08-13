@@ -60,7 +60,7 @@ interface MockSupabaseClient {
  * モックSupabaseクライアントを作成
  */
 export function createMockSupabase(overrides?: Partial<MockSupabaseClient>): MockSupabaseClient {
-  const mockFrom = vi.fn().mockReturnValue({
+  const defaultChainable = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
@@ -76,6 +76,22 @@ export function createMockSupabase(overrides?: Partial<MockSupabaseClient>): Moc
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     then: vi.fn().mockImplementation((resolve) => resolve({ data: [], error: null })),
+  };
+
+  // write_fence_control は他テーブルと違う既定値が要る: maybeSingle() の既定
+  // { data: null } は isWriteFenceEnabled() では「行欠損 → fail closed」と解釈され、
+  // 明示的に mock していない全 mutation テストが fence block で失敗してしまう。
+  // 既定は本番の初期状態（fence 無効）に合わせ、fence 挙動を検証するテストだけ
+  // supabaseOverrides で個別に上書きする。
+  const writeFenceChainable = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { fence_enabled: false }, error: null }),
+  };
+
+  const mockFrom = vi.fn((table: string) => {
+    if (table === 'write_fence_control') return writeFenceChainable;
+    return defaultChainable;
   });
 
   return {

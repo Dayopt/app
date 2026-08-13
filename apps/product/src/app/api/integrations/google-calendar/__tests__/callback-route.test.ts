@@ -9,6 +9,7 @@ const reconnectExistingConnection = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
+const isWriteFenceEnabled = vi.hoisted(() => vi.fn());
 const envMock = vi.hoisted(() => ({
   GOOGLE_CALENDAR_CLIENT_ID: 'client-id.apps.googleusercontent.com',
   GOOGLE_CALENDAR_CLIENT_SECRET: 'client-secret',
@@ -26,6 +27,8 @@ vi.mock('@/features/external-calendar/server/connection-service', () => ({
   getReconnectTarget,
   reconnectExistingConnection,
 }));
+vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
+vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 
 import { GET } from '../callback/route';
 
@@ -100,6 +103,7 @@ describe('google calendar callback route', () => {
     reconnectExistingConnection.mockResolvedValue('updated');
     checkProAccessForUser.mockResolvedValue('allowed');
     rateLimit.mockResolvedValue({ success: true });
+    isWriteFenceEnabled.mockResolvedValue(false);
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.resolve(new Response(JSON.stringify(tokenResponse()), { status: 200 }))),
@@ -422,6 +426,18 @@ describe('google calendar callback route', () => {
     const response = await GET(withCookie(request(), { reconnectConnectionId: connectionId }));
 
     expect(reasonOf(response)).toBe('reconnect_target_invalid');
+    expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  it('write fence が有効な時は Google の code を消費する前に拒否する', async () => {
+    isWriteFenceEnabled.mockResolvedValue(true);
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('write_fenced');
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
   });
 });

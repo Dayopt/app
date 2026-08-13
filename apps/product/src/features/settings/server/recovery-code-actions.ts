@@ -1,6 +1,7 @@
 'use server';
 
 import { generateRecoveryCodes, hashRecoveryCode } from '@/lib/auth/recovery-codes';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
@@ -31,6 +32,10 @@ export async function generateAndSaveRecoveryCodesAction(): Promise<{
 
     if (!user) {
       return { codes: null, error: 'User not found' };
+    }
+
+    if (await isWriteFenceEnabled(supabase)) {
+      return { codes: null, error: 'Writes are temporarily paused for maintenance' };
     }
 
     const codes = generateRecoveryCodes();

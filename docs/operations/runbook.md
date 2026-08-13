@@ -47,6 +47,56 @@ NEXT_PUBLIC_MAINTENANCE_MODE=true
 - `src/proxy.ts` がフラグを検知し、全リクエストを `/maintenance` にリダイレクト
 - `/maintenance` は静的HTML（503 + Retry-After: 3600）を返す
 - 復旧後は `NEXT_PUBLIC_MAINTENANCE_MODE=false` に戻す（または削除）
+- **⚠ これは画面遷移だけを止める。API 層（tRPC mutation / webhook）の書き込みは止まらない。** 復元前に書き込みを止めるには次の Write Fence を使う
+
+### Write Fence 有効化（API層の書き込み停止）
+
+策定日: 2026-08-13（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）
+
+backup からの復元前など、**API 層の書き込みを止める**必要がある時に使う。読み取りは通したまま書き込みだけ止められる（全停止より影響が小さい）。
+
+#### どこに効くか
+
+| 対象                                                                                                                  | 効くか                  | 影響                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| tRPC mutation（全て）                                                                                                 | 効く                    | `SERVICE_UNAVAILABLE`（503）                                                                                                                      |
+| Stripe / Resend webhook                                                                                               | 効く                    | 503 + `Retry-After: 30`。再送で拾われる                                                                                                           |
+| `/api/cron/calendar-sync`、`/api/cron/external-connection-maintenance`                                                | 効く                    | 503（cron は次回実行を待つ）                                                                                                                      |
+| `/api/oauth/token`                                                                                                    | 効く                    | 503（`temporarily_unavailable`）                                                                                                                  |
+| `/api/integrations/google-calendar/callback`                                                                          | 効く                    | 接続作成前に拒否（Google の一度きりの認可 code を消費する前）                                                                                     |
+| MFA リカバリーコード再生成（`recovery-code-actions.ts`）、OAuth consent（`oauth/consent/actions.ts`）の Server Action | 効く                    | 通常のエラー応答（`codes: null` / `temporarily_unavailable` redirect）                                                                            |
+| **client 直叩きの Supabase Auth**（signUp / updateUser / resetPasswordForEmail、`useAuthStore.ts`）                   | **効かない**            | `auth.users` は直接更新される                                                                                                                     |
+| **client 直叩きの Storage**（avatar アップロード/削除、`lib/supabase/storage.ts`）                                    | **効かない**            | Storage オブジェクトは直接更新される                                                                                                              |
+| pg_cron                                                                                                               | **効かない**            | 別途 pg_cron を止める（下記）                                                                                                                     |
+| MCP write gate（`mcp_mutation_control`）                                                                              | **効かない**（別 gate） | MCP 経由の書き込みは別途 toggle が必要                                                                                                            |
+| **復元先が `write_fence_control` migration（2026-08-12）より前の snapshot**                                           | **効かない**            | relation 不在で fence が disabled 扱いになる（`write-fence.ts` の fail-open 例外）。メンテナンスモード + deployment 停止 + pg_cron 停止で代替する |
+
+**「fence を上げれば全書き込みが止まる」わけではない。** 上表の「効かない」経路が残っている前提で復元判断をする。
+
+#### 有効化
+
+Supabase Dashboard → SQL Editor で実行（`service_role` にも UPDATE 権限は無い。postgres superuser のみ実行可能）:
+
+```sql
+UPDATE public.write_fence_control SET fence_enabled = true WHERE singleton_key = true;
+```
+
+- [ ] **UPDATE 後 10 秒待ってから次の手順（確認・復元）に進む**: allow 判定は in-process で最大 5 秒キャッシュされ、かつ Vercel の各 instance が個別にキャッシュを持つため、UPDATE 直後は instance ごとに最大 5 秒のずれで新しい値へ切り替わる。実行中リクエストの完走分も含め、10 秒を目安の下限にする
+- [ ] **効いていることを目視で確認する**: production の任意の mutation を 1 回実行し（例: 自分のアカウントで tag を 1 件更新）、`SERVICE_UNAVAILABLE`（503）が返ることを確認する
+- [ ] **drain を待つ**: tRPC route の `maxDuration=300s`、webhook の `maxDuration=30s` を上限に、これらの秒数だけ待てば有効化前に開始した書き込みは完了しているはず
+- [ ] **pg_cron も別途止める**（上表のとおり fence は効かない）。手順は Playbook 1 ケースD参照
+
+#### 解除
+
+```sql
+UPDATE public.write_fence_control SET fence_enabled = false WHERE singleton_key = true;
+```
+
+- [ ] メンテナンスモードも解除する（`NEXT_PUBLIC_MAINTENANCE_MODE=false`）
+- [ ] pg_cron を再登録する（[infra.md §復旧後に戻すもの](../engineering/infra.md#復旧後に戻すもの)）
+- [ ] **fence を再送窓を超えて上げていた場合**:
+  - Stripe: Dashboard → Webhooks → 失敗イベントの「Resend」で手動再送する
+  - Resend: **再送は自動（5s/5m/30m/2h/5h/10h/10h backoff）だが、失敗が続くと endpoint 自体が無効化されメール通知が届く。** Dashboard で endpoint が無効化されていないか確認し、必要なら再有効化する（無効化されたまま気づかないと、bounce/complaint の取り込みが恒久的に止まる）
 
 ### 重要ダッシュボードURL
 
@@ -107,10 +157,8 @@ supabase functions deploy --use-api
 
 **ケース A〜C はサービスが止まっているだけでデータは無事。データそのものが失われた場合はここへ来る。**
 
-- [ ] **書き込みを止める。ただしメンテナンスモードでは止まらない**（[infra.md §復元前に止めるもの](../engineering/infra.md#復元前に止めるもの)）
-  - `NEXT_PUBLIC_MAINTENANCE_MODE` が止めるのは**画面遷移だけ**。`/api/trpc` の mutation と Stripe / Resend webhook は proxy を通らず**書き込み続ける**
-  - API まで止めるには deployment を止めるしかない（[#1972](https://github.com/Dayopt/dayopt/issues/1972) で恒久対応）。**止めた／止めていないを自覚したうえで復元する**
-- [ ] **pg_cron も止める**（Postgres 内部で走るので app 側の操作では止まらない）
+- [ ] **書き込みを止める**: メンテナンスモード（画面遷移）+ Write Fence（API層）の両方を有効化する（上記「Write Fence 有効化」参照）。**Write Fence が届かない経路（client 直叩き Auth/Storage、pg_cron、MCP gate）が残る**ことを自覚したうえで復元する（[infra.md §復元前に止めるもの](../engineering/infra.md#復元前に止めるもの)）
+- [ ] **pg_cron も止める**（Write Fence は効かない。Postgres 内部で走るので app 側の操作では止まらない）
 
 ```sql
 -- ① 先に控えて保存する（Dashboard 設定が正本で migration から戻せない）
@@ -266,6 +314,7 @@ gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate �
   - **401** → 署名検証失敗 → **ケースA**
   - **500** → 処理エラー → **ケースB**
   - **Timeout** → `maxDuration=30` 超過 → **ケースB**
+  - **503（`Retry-After: 30`）** → Write Fence が意図的に有効化されている可能性がある（上記「Write Fence 有効化」参照）。障害ではなく復元作業中の想定挙動なので、まず fence の状態を確認する
 
 ### 復旧
 
