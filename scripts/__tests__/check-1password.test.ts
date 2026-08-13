@@ -167,10 +167,10 @@ describe('check-1password.ts', () => {
   });
 
   it('required operational item が未作成なら失敗する', () => {
-    const result = runCheck({ missingItem: 'recovery-codes' });
+    const result = runCheck({ missingItem: 'github-ssh' });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('Dayopt-Shared / recovery-codes: MISSING_ITEM');
+    expect(result.stdout).toContain('Dayopt-Shared / github-ssh: MISSING_ITEM');
   });
 
   it('禁止 field が実 vault に残っていたら失敗する', () => {
