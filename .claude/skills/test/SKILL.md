@@ -217,6 +217,15 @@ describe('calculateTotal', () => {
 });
 ```
 
+## Assert 対象の規約（正本）
+
+**対象操作後にだけ生じるユーザー可視の結果または永続状態を assert する。** 操作前から存在する要素、generic な alert / class、または発火していない mock を確認しただけで test が成功すると、本番では対象操作が失敗しても回帰を検出できない（failure scenario）。
+
+- network mock は login / render / cache warm より前に登録し、必要なら request の発生と最終 UI の両方を確認する
+- **例外**: pure function の unit test など、入力と直接の返り値だけで契約を完全に証明できる場合はこの限りでない
+
+この規約は `AGENTS.md` の TEST-1（凍結前の定義）を踏襲しているが、**この skill が生きた正本**。`AGENTS.md` 側は変更しない。`.claude/rules/workflow.md` §教訓コメント方式 の回帰テスト言及もここを参照する。
+
 ## Dayopt固有のパターン
 
 ### tRPCエンドポイントのテスト

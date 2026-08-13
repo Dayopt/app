@@ -318,6 +318,7 @@ typo 修正など issue を切っていない作業では省略してよい。�
 
 **PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
 
+- **draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。手順は `dispatch` skill 操作 A 手順 6 が正本。経緯は #2065）
 - **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
 - **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
 - flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
@@ -429,7 +430,7 @@ gh pr merge <PR番号> --merge --delete-branch
 
 **一度直した failure scenario が次の修正ラウンドで再発したら、追加修正を続ける前に該当 issue / PR へ教訓コメントを 1 つ書く。** 内容は「守る契約」「再現手順」「直した方法」「なぜ戻ったか」「変更後にだけ成立する検証」の 5 点。以後の修正指示はこのコメントを参照し、reviewer ごとの文言を個別に満たすことを目的にしない。
 
-§同型指摘の打ち切り が「指摘が構成し続けられる」レビューの往復を止めるのに対し、こちらは Claude 自身が自己レビューと外部/内製レビューの間で翻弄されて同じバグを再発させる時に使う。修正の writer は Claude の 1 レーンに固定し、レビュー役（内製クロスレビューの subagent）は read-only のまま competing writer にしない。回帰テストは対象操作後にだけ生じるユーザー可視結果・永続状態を assert する（操作前から存在する要素や generic な状態を assert しない）。
+§同型指摘の打ち切り が「指摘が構成し続けられる」レビューの往復を止めるのに対し、こちらは Claude 自身が自己レビューと外部/内製レビューの間で翻弄されて同じバグを再発させる時に使う。修正の writer は Claude の 1 レーンに固定し、レビュー役（内製クロスレビューの subagent）は read-only のまま competing writer にしない。回帰テストの assert 対象は `test` skill §Assert 対象の規約（正本）に従う。
 
 ### 内製クロスレビューの実施を要求する gate
 

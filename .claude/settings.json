@@ -91,7 +91,6 @@
       "mcp__github__get_issue",
       "Bash(env)",
       "Bash(sort:*)",
-      "Bash(security find-generic-password:*)",
       "Edit(.claude/skills/**)",
       "Write(.claude/skills/**)",
       "Skill(error-handling)",
