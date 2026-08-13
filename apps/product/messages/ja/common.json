@@ -209,12 +209,6 @@
       "description": "インターネットに接続されていません。接続を確認してもう一度お試しください",
       "reload": "再読み込み"
     },
-    "serviceWorker": {
-      "updateAvailable": "アップデートがあります",
-      "updateDescription": "再読み込みして最新版を適用しましょう",
-      "later": "後で",
-      "update": "更新"
-    },
     "trialEnded": {
       "title": "14日間のトライアルが終了しました",
       "description": "これからはFreeプランでご利用いただけます。AI提案、全期間の履歴、無制限のテンプレートはProプランの機能です。",

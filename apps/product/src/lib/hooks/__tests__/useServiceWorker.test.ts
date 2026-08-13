@@ -110,22 +110,6 @@ describe('useServiceWorker', () => {
     });
   });
 
-  describe('更新機能', () => {
-    it('updateAvailable が true の時、applyUpdate が利用可能', async () => {
-      mockRegistration.waiting = mockServiceWorker as ServiceWorker;
-
-      const { result } = renderHook(() => useServiceWorker());
-
-      await waitFor(() => {
-        expect(result.current.isRegistered).toBe(true);
-      });
-
-      // 手動で updateAvailable を設定するのは難しいので、
-      // applyUpdate が関数として存在することを確認
-      expect(typeof result.current.applyUpdate).toBe('function');
-    });
-  });
-
   describe('キャッシュクリア', () => {
     it('clearCache が dayopt- プレフィックスのキャッシュを削除', async () => {
       vi.mocked(window.caches.keys).mockResolvedValue([

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { toTZEndISO, toTZStartISO } from '../useCalendarData';
+import { toTZEndISO, toTZStartISO } from '../timezone';
 
 /**
- * `date` は `calculateViewDateRange` が作るローカル壁時計 Date（実行環境の system TZ で
- * 2026-08-11 を表す）。`toTZStartISO`/`toTZEndISO` は system TZ に関わらずこの「日付」を
- * そのまま使うべきで、出力は指定した `timezone` の 2026-08-11 境界に固定される。
+ * `date` はカレンダーの `calculateViewDateRange` が作るローカル壁時計 Date（実行環境の system TZ
+ * で 2026-08-11 を表す）を想定する。`toTZStartISO`/`toTZEndISO` は system TZ に関わらずこの
+ * 「日付」をそのまま使うべきで、出力は指定した `timezone` の 2026-08-11 境界に固定される。
  *
  * 回帰: 旧実装は `Intl.DateTimeFormat({ timeZone: timezone })` で `date` を instant として
  * `timezone` へ再解釈していたため、実行環境の system TZ と `timezone` が食い違うと日付が
- * ずれた（ブラウザ TZ ≠ ユーザー設定 TZ で発生する、この PR の Codex round 3 指摘）。
+ * ずれた（PR #1991 round 3 指摘。同型バグの class 化は #2017）。
  */
 const LOCAL_AUG_11 = new Date(2026, 7, 11, 0, 0, 0, 0);
 

@@ -524,14 +524,10 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // signInWithPassword の呼び出し点を固定する（#1917 / #1925）
-  //
-  // 認証済み画面から公開 Auth endpoint で再認証すると、production の Bot Protection 下で
-  // 必ず captcha_failed になる（#1917 で設定画面の 2 ダイアログから撤去済み）。新しい
-  // 呼び出しが増えると同じ故障を再導入するため、許可した場所以外では書けなくする。
-  //
-  // AST ベースなので doc comment 内のコード例（src/lib/supabase/client.ts）は一致しない。
-  // 既存の呼び出しが消えることは検出しない（superset 検査）— 守るのは「増やさないこと」。
+  // no-restricted-syntax は同一 files glob に複数 config を並べると、flat config が
+  // ルールキー単位で丸ごと上書きする（配列マージされない）ため、`src/**/*.{ts,tsx}` を
+  // 対象にする selector は 1 つの config object の配列にまとめる。ここに selector を
+  // 追加する時は、既存 selector を上書きしないことを確認する。
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: [
@@ -541,14 +537,38 @@ const eslintConfig = defineConfig([
       'src/features/auth/stores/useAuthStore.ts',
       // アカウント削除の本人確認。service-role 経由で captcha を意図的に免除している
       'src/features/auth/server/password-reauthentication.ts',
+      // toZonedTime の集約先そのもの（下記 selector の許可場所）
+      'src/lib/date/timezone.ts',
     ],
     rules: {
       'no-restricted-syntax': [
         'error',
         {
+          // signInWithPassword の呼び出し点を固定する（#1917 / #1925）
+          //
+          // 認証済み画面から公開 Auth endpoint で再認証すると、production の Bot Protection 下で
+          // 必ず captcha_failed になる（#1917 で設定画面の 2 ダイアログから撤去済み）。新しい
+          // 呼び出しが増えると同じ故障を再導入するため、許可した場所以外では書けなくする。
+          //
+          // AST ベースなので doc comment 内のコード例（src/lib/supabase/client.ts）は一致しない。
+          // 既存の呼び出しが消えることは検出しない（superset 検査）— 守るのは「増やさないこと」。
           selector: "MemberExpression[property.name='signInWithPassword']",
           message:
             'signInWithPassword の新規呼び出しは禁止。認証済み画面からの再認証は Bot Protection 下で必ず失敗する（#1917）。削除フローの本人確認は features/auth/server/password-reauthentication.ts を使う。',
+        },
+        {
+          // 壁時計 Date の TZ 再解釈ミスを class ごと封じる（#2017）
+          //
+          // toZonedTime は「instant → 指定TZの壁時計フィールド」変換。date-fns のローカル
+          // フィールド演算（setHours 等）で作った壁時計 Date に直接掛けると instant として
+          // 誤って再解釈され、ブラウザ TZ ≠ ユーザー設定 TZ の時に日付がずれる
+          // （external-event-day-selection.ts と useCalendarData.ts で実際に発生した同型バグ）。
+          // 変換は @/lib/date/timezone に集約済み（toTZStartISO 等）なので、feature/app 層からの
+          // 直接 import を禁止し、集約 helper 経由を強制する。
+          selector:
+            "ImportDeclaration[source.value='date-fns-tz'] ImportSpecifier[imported.name='toZonedTime']",
+          message:
+            'toZonedTime の直接 import は禁止（壁時計 Date への誤適用で日付がずれるバグ class、#2017）。@/lib/date/timezone の集約 helper（toTZStartISO 等）を使う。',
         },
       ],
     },
