@@ -876,6 +876,47 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(error).toBeNull();
       expect(data?.description).toBe('body text that must never reach a browser client');
     });
+
+    // #1984: dismissEvent は service_role を経由せず authenticated client で直接 UPDATE する。
+    // ここで検証するのは migration 20260708232500 の GRANT UPDATE(dismissed_at) と
+    // "Users can dismiss own external calendar events" policy の組み合わせそのもの。
+    it('ownerは自分のdismissed_atを更新でき、nullへも戻せる', async () => {
+      const { data: dismissed, error: dismissError } = await supabaseA
+        .from('external_calendar_events')
+        .update({ dismissed_at: '2026-06-22T09:30:00.000Z' })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .eq('user_id', TEST_USER_A_ID)
+        .select('dismissed_at');
+
+      expect(dismissError).toBeNull();
+      expect(dismissed).toHaveLength(1);
+      // PostgREST は +00:00 offset で返す（Z suffix ではない）ため Date 比較する
+      expect(new Date(dismissed?.[0]?.dismissed_at ?? '').toISOString()).toBe(
+        '2026-06-22T09:30:00.000Z',
+      );
+
+      const { data: undone, error: undoError } = await supabaseA
+        .from('external_calendar_events')
+        .update({ dismissed_at: null })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .eq('user_id', TEST_USER_A_ID)
+        .select('dismissed_at');
+
+      expect(undoError).toBeNull();
+      expect(undone).toHaveLength(1);
+      expect(undone?.[0]?.dismissed_at).toBeNull();
+    });
+
+    it('他ユーザーはdismissed_atを更新できない（RLSで0件）', async () => {
+      const { data, error } = await supabaseB
+        .from('external_calendar_events')
+        .update({ dismissed_at: '2026-06-22T09:30:00.000Z' })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .select('dismissed_at');
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
   });
 
   describe.each(serviceRoleCases)('$table', (testCase) => {
