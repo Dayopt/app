@@ -294,7 +294,11 @@ export function createUserService(
     ): Promise<RequestEmailChangeResult> {
       const { userId, currentEmail, newEmail, password } = options;
 
-      if (newEmail === currentEmail) {
+      // 大文字小文字・前後空白だけが違う「同じアドレス」もここで弾く（GoTrue は正規化して
+      // 扱うため、これを見逃すと reauth rate limit と GoTrue の共有 IP バケットを
+      // 無駄に消費したうえで実質 no-op の変更が通ってしまう）。newEmail 自体は
+      // 正規化せずそのまま updateUser に渡す（ユーザーの入力をサイレントに書き換えない）
+      if (newEmail.trim().toLowerCase() === currentEmail.trim().toLowerCase()) {
         throw new UserServiceError('INVALID_INPUT', 'New email must differ from current email');
       }
 

@@ -414,6 +414,19 @@ describe('createUserService', () => {
       expect(verifyPasswordWithCaptchaBypass).not.toHaveBeenCalled();
     });
 
+    // 大文字小文字・前後空白だけが違う「同じアドレス」も弾く。見逃すと reauth rate limit と
+    // GoTrue の共有 IP バケットを無駄に消費したうえで実質 no-op の変更が通ってしまう
+    it('大文字小文字・前後空白だけが違う同一アドレスもINVALID_INPUTを投げる', async () => {
+      const { service } = createSupabase();
+
+      await expect(
+        service.requestEmailChange(
+          requestEmailChangeOptions({ newEmail: `  ${USER_EMAIL.toUpperCase()}  ` }),
+        ),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+      expect(enforceReauthRateLimit).not.toHaveBeenCalled();
+    });
+
     it('verifyPasswordWithCaptchaBypassの直前にaccount_deletionとは別bucketでrate limitを強制する', async () => {
       const { service } = createSupabase();
 

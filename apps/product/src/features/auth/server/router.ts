@@ -104,9 +104,13 @@ export function createUserRouter(dependencies: UserServiceDependencies) {
 
           // Google のみのユーザーはパスワードを持たない（変更させない仕様。
           // AccountSettings.tsx の canUsePassword 分岐が UI 導線を既にゲートしているが、
-          // devtools からの直接呼び出しに対する defense-in-depth として server 側にも置く
+          // devtools からの直接呼び出しに対する defense-in-depth として server 側にも置く。
+          //
+          // code は UNAUTHORIZED ではなく REAUTH_UNAVAILABLE にする（authn ではなく authz の
+          // 失敗であるため）。UNAUTHORIZED は query-client.ts の isAuthError に拾われ、
+          // エラー文言が出る前に /auth/login へ強制遷移してしまう
           if (!hasPasswordIdentity(user)) {
-            throw new UserServiceError('UNAUTHORIZED', 'Password identity required');
+            throw new UserServiceError('REAUTH_UNAVAILABLE', 'Password identity required');
           }
 
           const service = createUserService(ctx.supabase, dependencies);

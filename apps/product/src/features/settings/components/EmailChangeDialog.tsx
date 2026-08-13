@@ -59,6 +59,10 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
   const [success, setSuccess] = useState(false);
 
   const requestEmailChangeMutation = api.user.requestEmailChange.useMutation({
+    // 不可逆操作ではないが、自動リトライすると reauth の専用 rate limit（5回/10分）を
+    // パスワード誤り 1 回で 2 消費し、GoTrue の共有 IP バケットも二重に叩く
+    // （AccountDeletionDialog.tsx の retry: false と同じ理由。#1925 / #2024）
+    retry: false,
     onSuccess: () => {
       setError(null);
       setSuccess(true);
@@ -75,8 +79,8 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
         return;
       }
 
-      // UNAUTHORIZED（本来 UI でパスワード非保有ユーザーを弾いている）/
-      // REAUTH_UNAVAILABLE / EMAIL_UPDATE_FAILED はすべて汎用文言に畳む。
+      // REAUTH_UNAVAILABLE（パスワード identity が無い。本来 UI で弾いている）/
+      // EMAIL_UPDATE_FAILED はすべて汎用文言に畳む。
       // 生の GoTrue エラー文言はここに出さない（OWASP サニタイズ）
       setError(tRoot('common.errors.generic'));
     },
