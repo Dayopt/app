@@ -169,7 +169,9 @@ async function checkRateLimit(token: string): Promise<{
       }
       return { limited: false };
     } catch (error) {
-      // Redis障害時はインメモリにフォールバック（可用性優先）
+      // Redis障害時はインメモリにフォールバック(可用性優先)。ただしIP/global集約層が
+      // 先に例外→unavailable(503)を返すため、ここに到達するのは集約層は生きていて
+      // per-tokenだけ失敗する部分障害の場合に限る。
       const original =
         error instanceof Error
           ? error
@@ -194,6 +196,29 @@ async function checkRateLimit(token: string): Promise<{
 type AggregateRateLimitState = 'allowed' | 'limited' | 'unavailable';
 
 /**
+ * IPv6は/128(フルアドレス)のまま bucket key にすると、攻撃者が/64割り当て内の
+ * 2^64通りのアドレスを使い分けてIP単位の上限を素通りできる(残る防壁がglobalの
+ * 共有バケットだけになり、単一攻撃者が全購読者を巻き込める)。/64プレフィックス
+ * まで丸めてbucket化する。IPv4はそのまま(ホスト単位の粒度で問題ない)。
+ */
+function aggregateIpIdentifier(ip: string): string {
+  if (!ip.includes(':')) return `ip:${ip}`;
+
+  const [head, tail] = ip.split('::');
+  const headGroups = head ? head.split(':') : [];
+  const prefixGroups =
+    tail === undefined
+      ? headGroups.slice(0, 4)
+      : [...headGroups, ...Array(Math.max(0, 4 - headGroups.length)).fill('0')].slice(0, 4);
+
+  return `ip6:${prefixGroups.join(':')}`;
+}
+
+/** Upstash障害中のcapture floodを抑えるサンプリング窓(#1979と同じ理由)。 */
+const AGGREGATE_FAILURE_CAPTURE_WINDOW_MS = 60_000;
+let lastAggregateFailureCaptureAt = 0;
+
+/**
  * platform-trusted IP → global の順で評価する事前認証集約上限。
  *
  * per-token 上限より前に置き、token 解決(DB lookup)の手前で高cardinalityな
@@ -213,16 +238,21 @@ async function checkAggregateRateLimit(
 
   try {
     const { success } = await limiter.limit(identifier);
+    if (!success) logger.warn(`iCal feed aggregate rate limit exceeded: ${operation}`);
     return success ? 'allowed' : 'limited';
   } catch (error) {
-    const original =
-      error instanceof Error ? error : new Error('iCal feed aggregate rate limit check failed');
-    captureUnexpectedError(original, {
-      feature: 'calendar_feed',
-      operation,
-      route: '/api/v1/calendar/[token]',
-      source: 'upstash',
-    });
+    const now = Date.now();
+    if (now - lastAggregateFailureCaptureAt >= AGGREGATE_FAILURE_CAPTURE_WINDOW_MS) {
+      lastAggregateFailureCaptureAt = now;
+      const original =
+        error instanceof Error ? error : new Error('iCal feed aggregate rate limit check failed');
+      captureUnexpectedError(original, {
+        feature: 'calendar_feed',
+        operation,
+        route: '/api/v1/calendar/[token]',
+        source: 'upstash',
+      });
+    }
     logger.error('iCal feed aggregate rate limit check failed');
     return 'unavailable';
   }
@@ -234,7 +264,7 @@ async function checkAggregatePreAuthCeiling(
   const ip = extractClientIp(request.headers.get('x-real-ip'));
   const ipState = await checkAggregateRateLimit(
     icalFeedIpRateLimit,
-    `ip:${ip}`,
+    aggregateIpIdentifier(ip),
     'check_ip_rate_limit',
   );
   if (ipState !== 'allowed') return ipState;
@@ -247,6 +277,17 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
+    const { token: rawToken } = await params;
+
+    // .ics 拡張子を除去
+    const token = rawToken.replace(/\.ics$/, '');
+
+    // UUID形式チェックはI/Oを伴わず無料で弾けるため、集約rate limit(Redis呼び出し)
+    // より前に置く。形式不正なjunk requestにRedis呼び出しやcaptureを消費させない。
+    if (!isValidUUID(token)) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
+    }
+
     const aggregateState = await checkAggregatePreAuthCeiling(request);
     if (aggregateState === 'limited') {
       return NextResponse.json(
@@ -256,16 +297,6 @@ export async function GET(
     }
     if (aggregateState === 'unavailable') {
       return NextResponse.json({ error: 'Calendar feed unavailable' }, { status: 503 });
-    }
-
-    const { token: rawToken } = await params;
-
-    // .ics 拡張子を除去
-    const token = rawToken.replace(/\.ics$/, '');
-
-    // UUIDバリデーション
-    if (!isValidUUID(token)) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
     }
 
     // per-token レート制限（Upstash優先、インメモリフォールバック）

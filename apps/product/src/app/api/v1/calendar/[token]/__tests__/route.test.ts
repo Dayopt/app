@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
@@ -92,8 +92,42 @@ describe('iCal feed route', () => {
     );
   });
 
-  it('集約limiterの例外はfail closed(503)にし、token解決を行わない', async () => {
-    ipLimit.mockRejectedValueOnce(new Error('redis unavailable'));
+  it('形式不正なtokenは集約rate limitより前に400で弾き、Redisを消費しない', async () => {
+    const response = await GET(request(), { params: Promise.resolve({ token: 'not-a-uuid' }) });
+
+    expect(response.status).toBe(400);
+    expect(ipLimit).not.toHaveBeenCalled();
+    expect(globalLimit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['2001:db8::1', '2001:db8::2', 'ip6:2001:db8:0:0'],
+    ['fe80::abcd:1234:5678:9abc', 'fe80::dead:beef:0:1', 'ip6:fe80:0:0:0'],
+  ])('同一/64内の異なるIPv6アドレス(%s, %s)は同じbucketを共有する(%s)', async (ipA, ipB) => {
+    mockTokenLookup();
+    await GET(request(ipA), context());
+    const identifierA = ipLimit.mock.calls[0]?.[0];
+
+    ipLimit.mockClear();
+    globalLimit.mockClear();
+    mockTokenLookup();
+    await GET(request(ipB), context());
+    const identifierB = ipLimit.mock.calls[0]?.[0];
+
+    expect(identifierA).toBe(identifierB);
+  });
+
+  it('IPv4アドレスはそのままbucket keyになる(IPv6のような丸めをしない)', async () => {
+    mockTokenLookup();
+
+    await GET(request('203.0.113.10'), context());
+
+    expect(ipLimit).toHaveBeenCalledWith('ip:203.0.113.10');
+  });
+
+  it('集約limiterの例外はfail closed(503)にし、token解決を行わず、captureはサンプリングして連続失敗でquotaを焼かない', async () => {
+    const backendError = new Error('redis unavailable');
+    ipLimit.mockRejectedValue(backendError);
 
     const response = await GET(request(), context());
 
@@ -103,6 +137,12 @@ describe('iCal feed route', () => {
       expect.any(Error),
       expect.objectContaining({ operation: 'check_ip_rate_limit', source: 'upstash' }),
     );
+
+    // sampling windowはmodule scopeで永続するため、同一テスト内で連続失敗を再現する。
+    await GET(request(), context());
+    await GET(request(), context());
+
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
   });
 
   it('存在しないtokenは401で、Issue化しない', async () => {
@@ -168,5 +208,33 @@ describe('iCal feed route', () => {
       route: '/api/v1/calendar/[token]',
       source: 'upstash',
     });
+  });
+});
+
+describe('iCal feed route (aggregate limiter未設定)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock('@/lib/rate-limit/upstash');
+    vi.resetModules();
+  });
+
+  it.each([
+    ['production', 503],
+    ['preview', 200],
+  ])('VERCEL_ENV=%s の時、limiter未設定はstatus %iになる', async (vercelEnv, expectedStatus) => {
+    vi.stubEnv('VERCEL_ENV', vercelEnv);
+    vi.doMock('@/lib/rate-limit/upstash', () => ({
+      icalFeedRateLimit: { limit: rateLimit },
+      icalFeedIpRateLimit: null,
+      icalFeedGlobalRateLimit: null,
+    }));
+    vi.resetModules();
+    const { GET: freshGet } = await import('../route');
+    mockTokenLookup();
+    rateLimit.mockResolvedValue({ success: true, limit: 10, remaining: 9, reset: Date.now() });
+
+    const response = await freshGet(request(), context());
+
+    expect(response.status).toBe(expectedStatus);
   });
 });
