@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { Check, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -21,16 +21,26 @@ import {
 } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 
+import { logger } from '@/lib/logger';
+import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
+import { createClient } from '@/lib/supabase/client';
+import { vanillaTrpc } from '@/lib/trpc/client';
+import { captureUnexpectedTrpcClientFailure } from '@/lib/trpc/client-errors';
+
 import { resolveSchemaMessageKey } from '../lib/resolve-schema-message-key';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
+import { MFAVerifyForm } from './MFAVerifyForm';
+
+type MfaVerifyMode = 'totp' | 'recovery';
 
 /**
  * GoTrue が「本人確認が recovery session だけでは足りない」を示しているか。
  *
  * - `insufficient_aal`: アカウントに MFA(TOTP) が有効。recovery session は aal1 止まりで、
- *   GoTrue が config に関わらず更新を拒否する（step-up 検証の実装は #2013 で別途追う）
+ *   GoTrue が config に関わらず更新を拒否する。#2013 で TOTP step-up / リカバリーコードに
+ *   よる自己復旧を追加した（下記 startMfaStepUp 以降）
  * - `current_password_required` / `current_password_invalid`: recovery session でない
  *   セッション（通常ログイン中の直接アクセス等）でこの画面に来た。GoTrue ソース
  *   （`apierrors.ErrorCodeCurrentPasswordRequired` / `ErrorCodeCurrentPasswordMismatch`）で
@@ -77,6 +87,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   const locale = (params?.locale as string) || 'ja';
   const t = useTranslations();
   const updatePassword = useAuthStore((state) => state.updatePassword);
+  const supabase = createClient();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -85,6 +96,170 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // MFA step-up state（#2013: MFA有効アカウントの自己復旧）。
+  // recovery session は aal1 止まりのため、TOTP challenge/verify で aal2 へ昇格するか、
+  // リカバリーコード（`user.verifyRecoveryCode`、成功時に factor を admin 権限で削除する
+  // 既存副作用）でMFA自体を解除してから updatePassword を再試行する
+  const [mfaStepUp, setMfaStepUp] = useState(false);
+  const [mfaMode, setMfaMode] = useState<MfaVerifyMode>('totp');
+  const [mfaVerificationCode, setMfaVerificationCode] = useState('');
+  const [mfaRecoveryCode, setMfaRecoveryCode] = useState('');
+  const [mfaVerifying, setMfaVerifying] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChallengeId, setMfaChallengeId] = useState<string | null>(null);
+  // リカバリーコード経路は成功時にMFAを恒久無効化する（recovery-service.ts の既存副作用）。
+  // 共有の汎用成功画面ではなく、その旨を明示する専用の警告を出す。
+  // finishAfterStepUp の updatePassword が失敗してパスワード入力画面へ戻った後の
+  // 再送信でも警告を正しく出すため、成功画面へ入る直前ではなくリカバリーコード検証
+  // 成功時点で立てる。useState だと setMfaAlreadyDisabled(true) の直後に
+  // finishAfterStepUp を呼ぶ際、同一 tick 内では再レンダーが挟まらず
+  // enterSuccessState が古い closure の値を読んでしまうため useRef を使う
+  const mfaAlreadyDisabledRef = useRef(false);
+  const [mfaDisabledOnSuccess, setMfaDisabledOnSuccess] = useState(false);
+
+  const startMfaStepUp = useCallback(async () => {
+    setMfaStepUp(true);
+    setMfaError(null);
+    try {
+      const { data: factors, error: factorsError } = await observeAuthOperation(
+        'reset_password_mfa_list_factors',
+        () => supabase.auth.mfa.listFactors(),
+      );
+      if (factorsError) {
+        setMfaError(t('common.errors.mfa.verifyFailed'));
+        return;
+      }
+
+      const verifiedFactor = factors?.totp?.find((factor) => factor.status === 'verified');
+      if (!verifiedFactor) {
+        setMfaError(t('common.errors.mfa.verifyFailed'));
+        return;
+      }
+      setMfaFactorId(verifiedFactor.id);
+
+      const { data: challengeData, error: challengeError } = await observeAuthOperation(
+        'reset_password_mfa_challenge',
+        () => supabase.auth.mfa.challenge({ factorId: verifiedFactor.id }),
+      );
+      if (challengeError) {
+        setMfaError(t('common.errors.mfa.challengeFailed'));
+        return;
+      }
+      if (challengeData) setMfaChallengeId(challengeData.id);
+    } catch (err) {
+      const original = err instanceof Error ? err : new Error('Reset password MFA init failed');
+      captureUnexpectedError(original, { feature: 'auth', operation: 'reset_password_mfa_init' });
+      setMfaError(t('common.errors.mfa.verifyFailed'));
+    }
+  }, [supabase, t]);
+
+  const enterSuccessState = useCallback(() => {
+    setMfaDisabledOnSuccess(mfaAlreadyDisabledRef.current);
+    setSuccess(true);
+    setTimeout(() => {
+      router.push(`/${locale}/auth/login`);
+    }, 3000);
+  }, [router, locale]);
+
+  const finishAfterStepUp = useCallback(async () => {
+    const { error: updateError } = await updatePassword(password);
+    if (updateError) {
+      // 昇格/リカバリー自体は成功したのに update が失敗した場合、MFA 検証はやり直せない
+      // （TOTP challenge は使い切り、リカバリーコードは消費済み）。session は既に
+      // 昇格済み/MFA解除済みのはずなので、password 入力画面へ戻して再送信すれば
+      // MFA を経由せず updatePassword だけで成功する。MFA画面に留めて詰ませない
+      setMfaStepUp(false);
+      setError(
+        t(
+          getAuthErrorKey(
+            { message: updateError.message, code: errorCode(updateError) },
+            'updatePassword',
+          ),
+        ),
+      );
+      return;
+    }
+    enterSuccessState();
+  }, [password, updatePassword, t, enterSuccessState]);
+
+  const handleVerifyTotp = useCallback(async () => {
+    if (!mfaFactorId || !mfaChallengeId || !mfaVerificationCode) {
+      setMfaError(t('common.errors.mfa.enterCode'));
+      return;
+    }
+    if (mfaVerificationCode.length !== 6) {
+      setMfaError(t('common.errors.mfa.codeLength'));
+      return;
+    }
+
+    setMfaVerifying(true);
+    setMfaError(null);
+
+    try {
+      const { error: verifyError } = await observeAuthOperation('reset_password_mfa_verify', () =>
+        supabase.auth.mfa.verify({
+          factorId: mfaFactorId,
+          challengeId: mfaChallengeId,
+          code: mfaVerificationCode,
+        }),
+      );
+      if (verifyError) {
+        throw new Error(verifyError.message);
+      }
+      await finishAfterStepUp();
+    } catch (err) {
+      setMfaError(err instanceof Error ? err.message : t('common.errors.mfa.codeInvalid'));
+      setMfaVerificationCode('');
+    } finally {
+      setMfaVerifying(false);
+    }
+  }, [mfaFactorId, mfaChallengeId, mfaVerificationCode, supabase, finishAfterStepUp, t]);
+
+  const handleVerifyRecovery = useCallback(async () => {
+    const trimmed = mfaRecoveryCode.trim().toUpperCase();
+    if (!trimmed) {
+      setMfaError(t('auth.mfaVerify.recoveryInvalid'));
+      return;
+    }
+
+    setMfaVerifying(true);
+    setMfaError(null);
+
+    try {
+      await vanillaTrpc.user.verifyRecoveryCode.mutate({ code: trimmed });
+      // 検証成功時点でMFAは既に無効化されている（recovery-service.ts の既存副作用）。
+      // 直後の updatePassword が失敗して password フォームへ戻っても、この事実は
+      // 変わらないので finishAfterStepUp より前に確定させる
+      mfaAlreadyDisabledRef.current = true;
+      await finishAfterStepUp();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('RECOVERY_EXHAUSTED')) {
+        setMfaError(t('auth.mfaVerify.recoveryExhausted'));
+      } else if (message.includes('RECOVERY_INVALID')) {
+        setMfaError(t('auth.mfaVerify.recoveryInvalid'));
+      } else {
+        const captured = captureUnexpectedTrpcClientFailure(err, {
+          feature: 'auth',
+          operation: 'reset_password_verify_recovery_code',
+        });
+        if (captured) logger.error('Reset password MFA recovery transport failed');
+        setMfaError(t('common.errors.generic'));
+      }
+      setMfaRecoveryCode('');
+    } finally {
+      setMfaVerifying(false);
+    }
+  }, [mfaRecoveryCode, finishAfterStepUp, t]);
+
+  const handleSwitchMfaMode = useCallback((newMode: MfaVerifyMode) => {
+    setMfaMode(newMode);
+    setMfaError(null);
+    setMfaVerificationCode('');
+    setMfaRecoveryCode('');
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -110,17 +285,19 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         const { error } = await updatePassword(password);
 
         if (error) {
-          const errorKey = isMfaBlocked(error)
-            ? 'auth.errors.recoveryMfaBlocked'
-            : isRecoverySessionInvalid(error)
+          if (isMfaBlocked(error)) {
+            await startMfaStepUp();
+          } else {
+            const errorKey = isRecoverySessionInvalid(error)
               ? 'auth.errors.recoverySessionInvalid'
-              : getAuthErrorKey(error.message, 'updatePassword');
-          setError(t(errorKey));
+              : getAuthErrorKey(
+                  { message: error.message, code: errorCode(error) },
+                  'updatePassword',
+                );
+            setError(t(errorKey));
+          }
         } else {
-          setSuccess(true);
-          setTimeout(() => {
-            router.push(`/${locale}/auth/login`);
-          }, 3000);
+          enterSuccessState();
         }
       } catch {
         setError(t('auth.resetPasswordForm.updateError'));
@@ -128,7 +305,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
         setLoading(false);
       }
     },
-    [password, confirmPassword, updatePassword, router, locale, t],
+    [password, confirmPassword, updatePassword, t, startMfaStepUp, enterSuccessState],
   );
 
   if (success) {
@@ -149,10 +326,38 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
                     {t('auth.resetPasswordForm.successMessage')}
                   </p>
                 </div>
+                {mfaDisabledOnSuccess && (
+                  <div className="border-warning bg-warning-tint rounded-2xl p-4" role="alert">
+                    <p className="text-warning text-base font-normal md:text-sm">
+                      {t('auth.resetPasswordForm.mfaDisabledWarning')}
+                    </p>
+                  </div>
+                )}
               </FieldGroup>
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (mfaStepUp) {
+    return (
+      <div className={cn('flex flex-col gap-6', className)} {...props}>
+        <MFAVerifyForm
+          mode={mfaMode}
+          flow="passwordReset"
+          verificationCode={mfaVerificationCode}
+          onVerificationCodeChange={setMfaVerificationCode}
+          recoveryCode={mfaRecoveryCode}
+          onRecoveryCodeChange={setMfaRecoveryCode}
+          isVerifying={mfaVerifying}
+          error={mfaError}
+          onVerifyTotp={handleVerifyTotp}
+          onVerifyRecovery={handleVerifyRecovery}
+          onSwitchMode={handleSwitchMfaMode}
+          backHref={`/${locale}/auth/password`}
+        />
       </div>
     );
   }

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-11
+last_verified: 2026-08-13
 code:
   - apps/product/src/features/settings/components/EmailChangeDialog.tsx
   - apps/product/src/features/settings/components/PasswordChangeDialog.tsx
@@ -8,9 +8,13 @@ code:
   - apps/product/src/app/[locale]/(auth)/auth/confirmed/page.tsx
   - apps/product/src/lib/trpc/session-auth-context.ts
   - apps/product/src/lib/trpc/procedures.ts
+  - apps/product/src/lib/auth-error.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-coordinator.ts
   - apps/product/src/features/auth/server/user-service.ts
+  - apps/product/src/features/auth/server/recovery-service.ts
+  - apps/product/src/features/auth/components/ResetPasswordForm.tsx
+  - apps/product/src/features/auth/components/MFAVerifyForm.tsx
   - apps/product/src/features/external-calendar/server/account-deletion.ts
   - apps/product/src/features/settings/server/account-deletion.ts
 public_docs:
@@ -161,7 +165,7 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 - Session cookie mode: HTTP / RSC の両 context が共通 resolver を使い、Supabase Auth の `getUser()` でユーザーを検証してから session token と MFA AAL を独立して取得する。session token 取得に失敗しても MFA lookup は続行する
 - AAL claim がない有効な従来 session は Supabase の契約どおり `aal1` として扱う。API error / throw、未知値、不正な AAL 遷移、または認証済み context で assurance 自体が欠けた場合は fail closed として `FORBIDDEN` を返す
 - MFA登録済み `aal1 -> aal2` の状態は `FORBIDDEN`、MFA未登録 `aal1 -> aal1` と検証済み `aal2 -> aal2` は通過する
-- `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する
+- `user.verifyRecoveryCode` は recovery-code 検証により MFA factor を解除するため、既知の `aal1 -> aal2` 状態でも通過を許可する。呼び出し元はログインフロー（`/auth/mfa-verify`）と password-reset flow（`ResetPasswordForm.tsx`、MFA有効アカウントの自己復旧、#2013）の2箇所。password-reset 経路はメールボックス制御のみで到達できるため、login 経路（パスワード保有が前提）より広い攻撃者集合に開かれることを明示的に引き受けている（判断根拠は [2026-08-13-mfa-recovery-password-reset-boundary.md](../log/2026-08-13-mfa-recovery-password-reset-boundary.md)）。password-reset の別経路として、TOTP の `mfa.challenge`+`mfa.verify` によるセッション昇格（MFAは無効化しない）も両方許可している
 - OAuth bearer mode: token を `oauth_tokens` で検証し、`client_id` と `scopes` を tRPC context に保持する
 - OAuth token は **MCP endpoint（`/api/mcp`）内部からの実行だけ**が tRPC に到達できる。公開 tRPC endpoint（`/api/trpc`）へ同じ token を投げても、scope 判定より手前で `FORBIDDEN` になる（context の `oauthExecution: 'mcp_internal'` が無いため）
 - MCP 内部実行でも、procedure path ごとの allowlist（`MCP_TRPC_SCOPE_REQUIREMENTS`、`apps/product/src/lib/trpc/procedures.ts`）と scope が一致した場合だけ許可する。現在の集合:
