@@ -209,12 +209,6 @@
       "description": "No internet connection. Check your connection and try again.",
       "reload": "Reload"
     },
-    "serviceWorker": {
-      "updateAvailable": "Update available",
-      "updateDescription": "Reload to apply the latest version",
-      "later": "Later",
-      "update": "Update"
-    },
     "trialEnded": {
       "title": "Your 14-day trial has ended",
       "description": "You can continue using the Free plan. AI suggestions, full history, and unlimited templates are Pro features.",
