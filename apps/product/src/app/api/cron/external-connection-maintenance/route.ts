@@ -4,7 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedError } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { dispatchExternalConnectionMaintenance } from './_composition/maintenance-dispatcher';
 
@@ -43,6 +45,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const authorization = request.headers.get('authorization') ?? '';
   if (!safeEquals(authorization, `Bearer ${cronSecret}`)) {
     return noStoreJson({ error: 'Unauthorized' }, 401);
+  }
+
+  if (await isWriteFenceEnabled(createServiceRoleClient())) {
+    logger.warn('[external-connection-maintenance] write fence is enabled; skipping dispatch');
+    return NextResponse.json(
+      { error: 'Writes are temporarily paused for maintenance' },
+      { status: 503, headers: { ...NO_STORE_HEADERS, 'retry-after': '900' } },
+    );
   }
 
   try {

@@ -35,6 +35,7 @@ import {
 import { trackProductEvent } from '@/lib/analytics/product-events';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import {
   captureUnexpectedDatabaseError,
   captureUnexpectedError,
@@ -241,6 +242,16 @@ export async function POST(request: NextRequest) {
     logger.error('Stripe webhook database client is not configured');
     captureStripeWebhookFailure(error, 'create_database_client', event);
     return NextResponse.json({ error: 'Webhook processing unavailable' }, { status: 500 });
+  }
+
+  // claim（冪等性の予約）より前に確認する。claim 後に 503 を返すと予約が滞留したまま
+  // 残り、Stripe の再送が「処理中」で弾かれ続ける。
+  if (await isWriteFenceEnabled(supabase)) {
+    logger.warn('Stripe webhook rejected: write fence is enabled');
+    return NextResponse.json(
+      { error: 'Webhook processing is temporarily paused for maintenance' },
+      { status: 503, headers: { 'Retry-After': '30' } },
+    );
   }
 
   let lifecycleMode: 'durable' | 'legacy';

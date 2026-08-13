@@ -26,9 +26,11 @@ import {
 } from '@/features/external-calendar/server/google-oauth';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -82,6 +84,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     clearConnectFlowCookie(response, secure);
     return response;
   };
+
+  // Google の authorization code は token 交換の時点で消費される（この handler の
+  // maxDuration コメント参照）ので、fence は code を使う前・できるだけ早い段階で
+  // 確認する。ここではまだ user session が要らないので service role で読む。
+  if (await isWriteFenceEnabled(createServiceRoleClient())) {
+    logger.warn('[calendar-callback] write fence is enabled; rejecting connection');
+    return fail('write_fenced');
+  }
 
   if (!isGoogleCalendarConfigured()) {
     logger.warn('[calendar-callback] google calendar integration is not configured');

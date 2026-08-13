@@ -13,7 +13,9 @@ import {
   checkOAuthTokenRateLimit,
   type OAuthTokenRateLimitState,
 } from '@/lib/oauth-server/token-rate-limit';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedError } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
  * RFC 6749 §3.2 - Token Endpoint
@@ -41,6 +43,10 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   const hostRejection = rejectUnexpectedOAuthHost(request);
   if (hostRejection) return hostRejection;
+
+  if (await isWriteFenceEnabled(createServiceRoleClient())) {
+    return writeFencedErrorResponse();
+  }
 
   const rateLimitState = await checkOAuthTokenRateLimit(request);
   if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
@@ -171,6 +177,23 @@ function errorResponse(err: OAuthServerError) {
       headers: {
         'cache-control': 'no-store',
         pragma: 'no-cache',
+      },
+    },
+  );
+}
+
+function writeFencedErrorResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      error: 'temporarily_unavailable',
+      error_description: 'Writes are temporarily paused for maintenance',
+    },
+    {
+      status: 503,
+      headers: {
+        'cache-control': 'no-store',
+        pragma: 'no-cache',
+        'retry-after': '30',
       },
     },
   );
