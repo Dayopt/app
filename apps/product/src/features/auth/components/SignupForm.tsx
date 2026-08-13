@@ -119,7 +119,10 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
         ? await signUp(data.email, data.password, { captchaToken: turnstileToken })
         : await signUp(data.email, data.password);
       if (result.error) {
-        const errorKey = getAuthErrorKey(result.error.message, 'signup');
+        const errorKey = getAuthErrorKey(
+          { message: result.error.message, code: result.error.code },
+          'signup',
+        );
         setServerError(t(errorKey));
         // Turnstile token は single-use / short-lived。失敗時は widget を reset して次の retry で
         // 新しい challenge token を取得させる（captcha 使い回しによる連続失敗を防ぐ）
