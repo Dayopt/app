@@ -1,3 +1,4 @@
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const signInWithPassword = vi.hoisted(() => vi.fn());
@@ -5,26 +6,45 @@ const signOut = vi.hoisted(() => vi.fn());
 const createServiceRoleClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
+const reauthRateLimitMock = vi.hoisted(() => ({ limit: vi.fn() }));
+// null に差し替えるテスト用の可変参照。vi.mock のファクトリはホイストされるため
+// モジュールレベルの let を経由して後から切り替える
+let reauthRateLimit: { limit: ReturnType<typeof vi.fn> } | null = reauthRateLimitMock;
 
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({ logger: { warn: loggerWarn } }));
+vi.mock('@/lib/rate-limit/upstash', () => ({
+  get reauthRateLimit() {
+    return reauthRateLimit;
+  },
+}));
 
-import { verifyPasswordWithCaptchaBypass } from '../password-reauthentication';
+import {
+  enforceReauthRateLimit,
+  verifyPasswordWithCaptchaBypass,
+} from '../password-reauthentication';
 
 const EMAIL = 'user@example.com';
 const PASSWORD = 'current-password';
+const USER_ID = 'user-123';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  reauthRateLimit = reauthRateLimitMock;
   createServiceRoleClient.mockImplementation(() => ({ auth: { signInWithPassword, signOut } }));
   signInWithPassword.mockResolvedValue({ error: null });
   signOut.mockResolvedValue({ error: null });
+  reauthRateLimitMock.limit.mockResolvedValue({ success: true });
 });
 
 describe('verifyPasswordWithCaptchaBypass', () => {
   it('service-role client の signInWithPassword で検証する（user-scoped client を使うと captcha で必ず失敗する）', async () => {
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'verified' });
     expect(createServiceRoleClient).toHaveBeenCalledTimes(1);
@@ -34,7 +54,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
 
   // scope を省くと既定 'global' でユーザーの全端末が強制ログアウトされる
   it('検証のために発行した session を local scope で破棄する', async () => {
-    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
@@ -43,7 +67,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   it('session の破棄が error を返しても検証結果は verified のまま返す', async () => {
     signOut.mockResolvedValue({ error: { message: 'revoke failed' } });
 
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'verified' });
     expect(loggerWarn).toHaveBeenCalled();
@@ -52,7 +80,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   it('session の破棄が throw しても検証結果は verified のまま返す', async () => {
     signOut.mockRejectedValue(new Error('network'));
 
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'verified' });
     expect(loggerWarn).toHaveBeenCalled();
@@ -61,14 +93,26 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   it('検証に失敗した時は session が発行されないので signOut しない', async () => {
     signInWithPassword.mockResolvedValue({ error: { code: 'invalid_credentials', status: 400 } });
 
-    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(signOut).not.toHaveBeenCalled();
   });
 
   it('client を呼び出しごとに生成する（module スコープに保持すると権限が降格したまま再利用される）', async () => {
-    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
-    await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
+    await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(createServiceRoleClient).toHaveBeenCalledTimes(2);
   });
@@ -76,7 +120,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   it('invalid_credentials はパスワード誤りとして扱い alert を鳴らさない', async () => {
     signInWithPassword.mockResolvedValue({ error: { code: 'invalid_credentials', status: 400 } });
 
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'invalid_password' });
     expect(captureUnexpectedError).not.toHaveBeenCalled();
@@ -92,7 +140,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   ])('%s は削除を通さないが alert は鳴らさない', async (_label, error) => {
     signInWithPassword.mockResolvedValue({ error });
 
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'unavailable' });
     expect(captureUnexpectedError).not.toHaveBeenCalled();
@@ -108,7 +160,11 @@ describe('verifyPasswordWithCaptchaBypass', () => {
   ])('%s は構成故障として alert を鳴らす', async (_label, error) => {
     signInWithPassword.mockResolvedValue({ error });
 
-    const result = await verifyPasswordWithCaptchaBypass({ email: EMAIL, password: PASSWORD });
+    const result = await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'account_deletion',
+    });
 
     expect(result).toEqual({ outcome: 'unavailable' });
     expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
@@ -118,8 +174,67 @@ describe('verifyPasswordWithCaptchaBypass', () => {
     expect((reported as Error).cause).toBe(error);
     expect(context).toMatchObject({
       feature: 'account_deletion',
-      operation: 'delete_account_reauthenticate',
+      operation: 'account_deletion_reauthenticate',
       source: 'captcha_bypass',
     });
+  });
+
+  // email 変更側の構成故障が削除フローの alert に混入しないことを固定する
+  it('context: email_change の構成故障は email_change の feature/operation で報告する', async () => {
+    signInWithPassword.mockResolvedValue({ error: { code: 'bad_jwt', status: 401 } });
+
+    await verifyPasswordWithCaptchaBypass({
+      email: EMAIL,
+      password: PASSWORD,
+      context: 'email_change',
+    });
+
+    const [, context] = captureUnexpectedError.mock.calls[0] ?? [];
+    expect(context).toMatchObject({
+      feature: 'email_change',
+      operation: 'email_change_reauthenticate',
+      source: 'captcha_bypass',
+    });
+  });
+});
+
+describe('enforceReauthRateLimit', () => {
+  it('Upstash 未設定（reauthRateLimit が null）なら素通りする', async () => {
+    reauthRateLimit = null;
+
+    await expect(enforceReauthRateLimit(USER_ID, 'account_deletion')).resolves.toBeUndefined();
+    expect(reauthRateLimitMock.limit).not.toHaveBeenCalled();
+  });
+
+  it('制限内なら通過し、identifier は `${context}:${userId}` になる', async () => {
+    await enforceReauthRateLimit(USER_ID, 'email_change');
+
+    expect(reauthRateLimitMock.limit).toHaveBeenCalledWith(`email_change:${USER_ID}`);
+  });
+
+  // 同一 userId でも context が違えば別 bucket を消費する。これが無いと、email 変更で
+  // パスワードを打ち間違えたユーザーが無関係の account 削除まで巻き添えで止まる
+  it('account_deletion と email_change で identifier（bucket）が分離される', async () => {
+    await enforceReauthRateLimit(USER_ID, 'account_deletion');
+    await enforceReauthRateLimit(USER_ID, 'email_change');
+
+    expect(reauthRateLimitMock.limit).toHaveBeenNthCalledWith(1, `account_deletion:${USER_ID}`);
+    expect(reauthRateLimitMock.limit).toHaveBeenNthCalledWith(2, `email_change:${USER_ID}`);
+  });
+
+  it('制限超過なら TOO_MANY_REQUESTS の TRPCError を throw する', async () => {
+    reauthRateLimitMock.limit.mockResolvedValue({ success: false });
+
+    const rejection = expect(enforceReauthRateLimit(USER_ID, 'account_deletion')).rejects;
+    await rejection.toBeInstanceOf(TRPCError);
+    await rejection.toMatchObject({ code: 'TOO_MANY_REQUESTS' });
+  });
+
+  it('Upstash 障害（limit が throw）なら SERVICE_UNAVAILABLE の TRPCError を throw する', async () => {
+    reauthRateLimitMock.limit.mockRejectedValue(new Error('upstash timeout'));
+
+    const rejection = expect(enforceReauthRateLimit(USER_ID, 'account_deletion')).rejects;
+    await rejection.toBeInstanceOf(TRPCError);
+    await rejection.toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
   });
 });

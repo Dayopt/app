@@ -11,7 +11,9 @@ code:
   - apps/product/src/lib/auth-error.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-selector.ts
   - apps/product/src/app/api/trpc/_server/_composition/account-deletion-coordinator.ts
+  - apps/product/src/features/auth/server/router.ts
   - apps/product/src/features/auth/server/user-service.ts
+  - apps/product/src/features/auth/server/password-reauthentication.ts
   - apps/product/src/features/auth/server/recovery-service.ts
   - apps/product/src/features/auth/components/ResetPasswordForm.tsx
   - apps/product/src/features/auth/components/MFAVerifyForm.tsx
@@ -61,55 +63,63 @@ Google でのみ登録したユーザーはパスワードを持たない。こ�
 
 ## 設定画面の本人確認と保証境界
 
-設定画面のメールアドレス変更・パスワード変更は、公開 Auth endpoint での再認証（`signInWithPassword`）を行わない。Bot Protection が有効な production では CAPTCHA token を要求されて必ず失敗するため（[#1917](https://github.com/Dayopt/dayopt/issues/1917)）。本人確認は Supabase Auth 側の専用機構に委ねる。
+設定画面のメールアドレス変更・パスワード変更は、**公開** Auth endpoint での再認証（`signInWithPassword`）を行わない。Bot Protection が有効な production では CAPTCHA token を要求されて必ず失敗するため（[#1917](https://github.com/Dayopt/dayopt/issues/1917)）。パスワード変更の本人確認は Supabase Auth 側の専用機構（`current_password` の GoTrue 内検証）に委ねる。
 
-| 操作               | 本人確認の担い手                                         | 依存する production 設定                            | 設定が崩れた時の向き |
-| ------------------ | -------------------------------------------------------- | --------------------------------------------------- | -------------------- |
-| メールアドレス変更 | Secure Email Change（旧・新双方への確認メール）          | `mailer_secure_email_change_enabled`                | **fail-open**        |
-| パスワード変更     | `updateUser({ password, current_password })` の検証      | `security_update_password_require_current_password` | **fail-open**        |
-| アカウント削除     | service-role 経由の `signInWithPassword`（captcha 免除） | `SUPABASE_SERVICE_ROLE_KEY` が **legacy JWT 形式**  | **fail-closed**      |
+**メールアドレス変更は2層になっている**（#2024、中間案）。Secure Email Change（GoTrue が server 側で強制する、config 依存の層）に加えて、変更前パスワード再認証（アプリ側が明示的に要求する、code 依存の層）を課す。後者はアカウント削除と同じ service-role 経由 `signInWithPassword`（captcha 免除）で、公開 endpoint は使わない。
 
-**故障の向きが逆のものが同じ表に並んでいる。** 上 2 行は設定が false になると**本人確認が黙って消える**（fail-open）。削除行は依存が崩れると**削除が黙ってできなくなる**（fail-closed）。監視を設計する時に「値が false になったら警報」の一方向だけで組むと、削除経路の故障を永久に検出できない（[#1926](https://github.com/Dayopt/dayopt/issues/1926)）。
+| 操作               | 本人確認の担い手                                                                                                  | 依存する production 設定                                                                      | 設定が崩れた時の向き                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------- |
+| メールアドレス変更 | (a) Secure Email Change（旧・新双方への確認メール）+ (b) 変更前パスワード再認証（service-role 経由 captcha 免除） | (a) `mailer_secure_email_change_enabled` / (b) `SUPABASE_SERVICE_ROLE_KEY` が legacy JWT 形式 | (a) **fail-open** / (b) **fail-closed** |
+| パスワード変更     | `updateUser({ password, current_password })` の検証                                                               | `security_update_password_require_current_password`                                           | **fail-open**                           |
+| アカウント削除     | service-role 経由の `signInWithPassword`（captcha 免除）                                                          | `SUPABASE_SERVICE_ROLE_KEY` が **legacy JWT 形式**                                            | **fail-closed**                         |
+
+**故障の向きが逆のものが同じ表に並んでいる。** 設定依存の層（メールアドレス変更(a)・パスワード変更）は設定が false になると**本人確認が黙って消える**（fail-open）。service-role 依存の層（メールアドレス変更(b)・アカウント削除）は依存が崩れると**操作が黙ってできなくなる**（fail-closed）。監視を設計する時に「値が false になったら警報」の一方向だけで組むと、fail-closed 側の故障を永久に検出できない（[#1926](https://github.com/Dayopt/dayopt/issues/1926)）。
+
+**メールアドレス変更は fail-closed 側が壊れても fail-open 側（Secure Email Change）が生きている限り、乗っ取りには直結しない。** (b) が壊れて `unavailable` になれば変更自体が止まる（fail closed）。(a) が壊れて false になると、正規ユーザー経由の申請でもパスワード再認証さえ突破すれば片側確認で通ってしまうが、盗まれた session からの直接 API 呼び出しに対する防御は元々 (b) 止まりだった（下記「アカウント削除・メールアドレス変更が service-role 経由 `signInWithPassword` を使う理由」参照）。
 
 **service role key を回転する、または新形式（`sb_secret_`）へ移行する場合、この経路の再検証を先に行う。** 新形式は Bearer として送られないため admin と解釈されず、captcha 免除が成立しなくなって削除が止まる。Supabase の legacy JWT key 廃止は外部の都合で動き、アプリ側の canary は**事後にしか鳴らない**。検証はローカルで `supabase/config.toml` の `[auth.captcha]` を有効化し、user-scoped 経路が失敗し service-role 経路が成功することを確認する。
 
 この再検証は人間の手順だけに委ねず、**production build gate が鍵の形式を機械的に検査する**（`apps/product/production-build-gate.mjs`、[#1952](https://github.com/Dayopt/dayopt/issues/1952)）。legacy JWT 形式でない値が入った production build は失敗し、error message が削除フローへの影響と対処（Turnstile 方式への切替 = [#1925](https://github.com/Dayopt/dayopt/issues/1925) の (c) 案）を示す。日次 audit ではなく build gate に置いたのは、`production-auth-config-audit.mjs` の cron job に service role key を配ると RLS 全バイパスの鍵の配布先が増えるため（build env には値が既にあり、新たな配布が要らない）。検知は「鍵を差し替えた次の deploy」= 変更が効き始める瞬間になる。**検査するのは値が入っている時の形式だけで、欠落は見ない** — 回転は変数を消さないため。
 
-**上 2 行（メールアドレス変更・パスワード変更）は code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
+**設定依存の層（メールアドレス変更(a)・パスワード変更）は code では担保できない。** 設定が production で無効化されると、アプリ側は何も変わらないまま本人確認だけが消える。
 
-- `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる
+- `mailer_secure_email_change_enabled` が false になると、旧アドレスの持ち主の同意なしにメールアドレスを変更できる（ただしメールアドレス変更は (b) のパスワード再認証が別途必要なため、正規 UI 経由の申請はこれだけでは通らない。盗まれた session からの直接 API 呼び出しは元々 (b) の防御対象外——後述）
 - `security_update_password_require_current_password` が false になると、`current_password` は**エラーも返さず黙って無視され**、現在パスワードを知らなくてもパスワードを変更できる
 
 2026-08-11 時点の production 実測値は両方 `true`。値の監視は [#1926](https://github.com/Dayopt/dayopt/issues/1926) が担う。
 
 再認証 nonce（`reauthenticate()`）は**現在の設定値では不要**。`security_update_password_require_reauthentication` が false のため GoTrue が nonce を要求しない。この設定が true に変われば nonce フローの実装が要る。
 
-### アカウント削除だけ公開 Auth endpoint を使う理由
+### アカウント削除・メールアドレス変更が service-role 経由 `signInWithPassword` を使う理由
 
-上 2 行は #1917 で「公開 Auth endpoint での再認証をやめる」方向に倒したが、**削除だけは倒せない**。GoTrue 側に代替の検証機構が無いため:
+#1917 で公開 Auth endpoint での再認証をやめる方向に倒したが、**GoTrue 側に代替の検証機構が無い操作は倒せない**:
 
-| 操作           | 乗り換え先                                          |
-| -------------- | --------------------------------------------------- |
-| パスワード変更 | `updateUser({ current_password })` の GoTrue 内検証 |
-| メール変更     | Secure Email Change                                 |
-| **削除**       | **無い**                                            |
+| 操作               | GoTrue 内蔵の代替検証機構                              |
+| ------------------ | ------------------------------------------------------ |
+| パスワード変更     | `updateUser({ current_password })` の GoTrue 内検証    |
+| メールアドレス変更 | **無い**（Secure Email Change は代替にならない。後述） |
+| アカウント削除     | **無い**                                               |
 
-`current_password` は `params.Password != nil` の内側でしか読まれず、パスワードだけを検証する endpoint も存在しない。`reauthenticate()` が発行する nonce を消費するのも `PUT /user` のパスワード変更だけで、削除の本人確認には転用できない。
+`current_password` は `params.Password != nil` の内側でしか読まれず、パスワードだけを検証する endpoint も存在しない。`reauthenticate()` が発行する nonce を消費するのも `PUT /user` のパスワード変更だけで、メール変更・削除の本人確認には転用できない。
 
-そこで削除は `signInWithPassword` を使い続け、**service-role client から呼ぶことで captcha を構造的に免除する**（[#1925](https://github.com/Dayopt/dayopt/issues/1925)）。実装と契約は `features/auth/server/password-reauthentication.ts`。
+**Secure Email Change が「メールアドレス変更版の `current_password` 検証」に見えるが、性質が違う。** `current_password` 検証は GoTrue が **API 呼び出しの直前**にパスワードを検証する（呼び出しが本人でなければそもそも通らない）。Secure Email Change は API 呼び出し自体は誰でも通し、**変更の確定を旧アドレスの受信箱制御**に委ねる（[#2024](https://github.com/Dayopt/dayopt/issues/2024) の調査で判明: GoTrue に email change を呼び出し前に強制ゲートする hook は無い）。つまりメールアドレス変更は削除と同じく「GoTrue 内蔵の事前検証」を欠いており、アプリ側が明示的にパスワード再認証を課さない限り、盗まれた session からの `updateUser({ email })` 呼び出しに対する事前の壁が無い。
+
+そこでメールアドレス変更・削除はどちらも `signInWithPassword` を使い、**service-role client から呼ぶことで captcha を構造的に免除する**（[#1925](https://github.com/Dayopt/dayopt/issues/1925)、メールアドレス変更は [#2024](https://github.com/Dayopt/dayopt/issues/2024)）。実装と契約は `features/auth/server/password-reauthentication.ts`（`verifyPasswordWithCaptchaBypass`、呼び出しは2箇所）。
+
+**この防御にも限界がある。** アプリ側のパスワード再認証は「正規 UI/tRPC 経由の申請」を検証するだけで、盗まれた session を持つ攻撃者が Supabase Auth の公開 `PUT /user` を直接叩けば迂回できる（GoTrue 側に「アプリの reauth を通過したか」を見る仕組みが無いため）。メールアドレス変更でこの迂回が致命傷にならないのは、**Secure Email Change が別レイヤーとして生きているから**——迂回されても旧アドレスの確認が必須のままなので、乗っ取りは完了しない。削除にはこの二重化が無い（Secure Email Change に相当する「もう1つの独立した server 強制ゲート」が存在しない）ため、パスワード再認証だけが唯一の壁になる。
 
 この経路の副作用として、**再認証が成功するたび GoTrue に session が 1 本発行される**ため、検証直後に `scope: 'local'` で破棄する。`scope` の省略は既定 `global` で、**ユーザーの全端末が強制ログアウトされる**ため必ず明示する。2026-08-11 時点の production は `sessions_single_per_user: false`（実測）なので、再認証そのものがユーザーの既存セッションを終了させることは無い。この値が true に変わると、削除が後段で失敗した場合に「削除できず、かつ全端末からログアウト」になる。
 
 パスワード誤りは `FORBIDDEN` で返す。`UNAUTHORIZED` にすると client の共通ハンドラが session 失効とみなしてログイン画面へ遷移させ、エラー文言がユーザーに届かない。
 
-**この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。パスワード総当たりの上限にもならない（GoTrue の rate limit は IP 単位で、サーバー呼び出しでは全ユーザーが 1 バケットを共有する）。**削除を守っているのはパスワード再認証そのもの**であり、captcha ではない。
+**この経路の captcha は bot 対策として数えない。** 免除している以上 Bot Protection 設定を変えても影響を受けず、そもそも captcha は本件の本命脅威（セッションを盗んだ攻撃者による削除）を止めない — 攻撃者は victim のブラウザ文脈を握っているので challenge を解ける。GoTrue 自体の rate limit も IP 単位で、サーバー呼び出しでは全ユーザー・全 context（削除・メール変更）が 1 バケットを共有する。**削除・メール変更を守っているのはパスワード再認証そのもの**であり、captcha ではない。
 
-**アプリ側にも試行回数の上限は無い。** `protectedProcedure` に per-user の throttle は無く、GoTrue の `sign_in_sign_ups` は IP 単位。この経路はサーバーから呼ぶため、全ユーザーの再認証が Vercel egress IP の 1 バケットを共有する。したがって:
+**アプリ側の専用 rate limit**（`enforceReauthRateLimit`、`features/auth/server/password-reauthentication.ts`、#2024）が `verifyPasswordWithCaptchaBypass` の直前で 5 回 / 10 分 / user を強制する。identifier は `${context}:${userId}`（`account_deletion` / `email_change`）で分離し、一方の再認証ミスがもう一方を巻き添えにしない。この limiter が無かった時期は次の状態だった:
 
-- セッションを握った攻撃者は、captcha にもアプリ側 throttle にも妨げられずパスワード試行を続けられる
-- その試行が 429 を誘発すると、**他ユーザーの削除再認証まで巻き添えで失敗する**（fail-closed なので削除が通ることは無い）
+- セッションを握った攻撃者は、captcha にもアプリ側 throttle にも妨げられずパスワード試行を続けられた
+- その試行が GoTrue の 429 を誘発すると、**他ユーザーの再認証まで巻き添えで失敗しうる**（fail-closed なので不正な削除・メール変更が通ることは無いが、正規ユーザーの操作も止まる）
 
-削除を守っているのはパスワードの知識のみで、試行回数の上限は現状どこにも無い。上限を設けるかは別途判断する。
+**この limiter は個々のユーザーの過剰消費に頭打ちを掛けるだけで、GoTrue 側の IP 共有バケットそのものを無くすわけではない。** 複数の異なるユーザーが同時に正規の再認証を行えば、GoTrue の集約バケットへの負荷は理論上まだ積み上がりうる（Upstash 未設定環境では `reauthRateLimit` が `null` になりこの防御自体が無効化される点にも注意）。
 
 **不正な削除に対する事後の統制は削除通知メールだけで、soft-delete の猶予期間は存在しない。** 削除は CASCADE で回復不能。
 

@@ -7,6 +7,9 @@ const deleteUser = vi.hoisted(() => vi.fn());
 // 再認証は service-role 経由の専用モジュールへ移した（#1925）。ここでは契約だけを固定し、
 // 迂回そのものの挙動は password-reauthentication.test.ts が担う
 const verifyPasswordWithCaptchaBypass = vi.hoisted(() => vi.fn());
+// rate limit の enforcement 自体も password-reauthentication.test.ts が担う。
+// ここでは deleteAccount / requestEmailChange が「呼ぶこと」「順序」「context」だけを固定する
+const enforceReauthRateLimit = vi.hoisted(() => vi.fn());
 const beforeIdentityDeletion = vi.hoisted(() => vi.fn());
 const loggerInfo = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
@@ -21,7 +24,11 @@ vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail, getUserLocale }
 vi.mock('@/lib/supabase/oauth', () => ({
   createServiceRoleClient: () => ({ auth: { admin: { deleteUser } }, from: adminFrom }),
 }));
-vi.mock('../password-reauthentication', () => ({ verifyPasswordWithCaptchaBypass }));
+vi.mock('../password-reauthentication', () => ({
+  verifyPasswordWithCaptchaBypass,
+  enforceReauthRateLimit,
+}));
+vi.mock('@/lib/app-url', () => ({ getAppUrl: () => 'https://app.example.test' }));
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
 }));
@@ -50,6 +57,7 @@ function createSupabase(options?: {
   totpFactors?: Array<{ id: string; status: string }>;
   listFactorsError?: { message: string } | null;
   verifyTotpError?: { message: string } | null;
+  updateUserError?: { message: string; code?: string } | null;
 }) {
   const queries = new Map(
     Object.entries(options?.tables ?? {}).map(([table, result]) => [
@@ -79,12 +87,16 @@ function createSupabase(options?: {
     data: null,
     error: options?.verifyTotpError ?? null,
   });
+  const updateUser = vi.fn().mockResolvedValue({
+    data: {},
+    error: options?.updateUserError ?? null,
+  });
 
   return {
     service: createUserService(
       {
         from,
-        auth: { signInWithPassword, mfa: { listFactors, challengeAndVerify } },
+        auth: { signInWithPassword, mfa: { listFactors, challengeAndVerify }, updateUser },
         storage: { from: vi.fn(() => ({ list, remove })) },
       } as never,
       { beforeIdentityDeletion },
@@ -95,6 +107,7 @@ function createSupabase(options?: {
     signInWithPassword,
     listFactors,
     challengeAndVerify,
+    updateUser,
     query: (table: string) => queries.get(table)!,
   };
 }
@@ -145,6 +158,25 @@ function googleUserDeleteOptions(overrides?: Partial<{ totpCode: string; confirm
   };
 }
 
+const NEW_EMAIL = 'new@example.com';
+
+function requestEmailChangeOptions(
+  overrides?: Partial<{
+    userId: string;
+    currentEmail: string;
+    newEmail: string;
+    password: string;
+  }>,
+) {
+  return {
+    userId: USER_ID,
+    currentEmail: USER_EMAIL,
+    newEmail: NEW_EMAIL,
+    password: 'correct-password',
+    ...overrides,
+  };
+}
+
 describe('createUserService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -175,6 +207,24 @@ describe('createUserService', () => {
       await expect(
         service.deleteAccount(deleteOptions({ confirmText: 'delete' })),
       ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    });
+
+    // email 変更（'email_change'）とは別 bucket を使う（password-reauthentication.test.ts の
+    // context 分離テストと対）。ここでは deleteAccount 側が正しい context を渡すことだけ固定する
+    it('verifyPasswordWithCaptchaBypassの直前にaccount_deletion contextでrate limitを強制する', async () => {
+      const { service } = createSupabase();
+
+      await service.deleteAccount(deleteOptions());
+
+      expect(enforceReauthRateLimit).toHaveBeenCalledWith(USER_ID, 'account_deletion');
+      expect(verifyPasswordWithCaptchaBypass).toHaveBeenCalledWith({
+        email: USER_EMAIL,
+        password: 'correct-password',
+        context: 'account_deletion',
+      });
+      const [rateLimitOrder] = enforceReauthRateLimit.mock.invocationCallOrder;
+      const [verifyOrder] = verifyPasswordWithCaptchaBypass.mock.invocationCallOrder;
+      expect(rateLimitOrder).toBeLessThan(verifyOrder!);
     });
 
     it('パスワードが違えばINVALID_PASSWORDを投げる', async () => {
@@ -349,6 +399,76 @@ describe('createUserService', () => {
         code: 'DELETE_FAILED',
         message: 'Failed to delete account',
         cause: deleteError,
+      });
+    });
+  });
+
+  describe('requestEmailChange', () => {
+    it('新旧アドレスが同じならINVALID_INPUTを投げ、再認証も試みない', async () => {
+      const { service } = createSupabase();
+
+      await expect(
+        service.requestEmailChange(requestEmailChangeOptions({ newEmail: USER_EMAIL })),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+      expect(enforceReauthRateLimit).not.toHaveBeenCalled();
+      expect(verifyPasswordWithCaptchaBypass).not.toHaveBeenCalled();
+    });
+
+    it('verifyPasswordWithCaptchaBypassの直前にaccount_deletionとは別bucketでrate limitを強制する', async () => {
+      const { service } = createSupabase();
+
+      await service.requestEmailChange(requestEmailChangeOptions());
+
+      expect(enforceReauthRateLimit).toHaveBeenCalledWith(USER_ID, 'email_change');
+      expect(verifyPasswordWithCaptchaBypass).toHaveBeenCalledWith({
+        email: USER_EMAIL,
+        password: 'correct-password',
+        context: 'email_change',
+      });
+      const [rateLimitOrder] = enforceReauthRateLimit.mock.invocationCallOrder;
+      const [verifyOrder] = verifyPasswordWithCaptchaBypass.mock.invocationCallOrder;
+      expect(rateLimitOrder).toBeLessThan(verifyOrder!);
+    });
+
+    it('パスワードが違えばINVALID_PASSWORDを投げ、updateUserを呼ばない', async () => {
+      verifyPasswordWithCaptchaBypass.mockResolvedValue({ outcome: 'invalid_password' });
+      const { service, updateUser } = createSupabase();
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'INVALID_PASSWORD',
+      });
+      expect(updateUser).not.toHaveBeenCalled();
+    });
+
+    // 迂回が壊れた時にfail closedで変更しない（deleteAccountと同型の契約）
+    it('再認証手段が使えなければREAUTH_UNAVAILABLEを投げ、updateUserを呼ばない', async () => {
+      verifyPasswordWithCaptchaBypass.mockResolvedValue({ outcome: 'unavailable' });
+      const { service, updateUser } = createSupabase();
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'REAUTH_UNAVAILABLE',
+      });
+      expect(updateUser).not.toHaveBeenCalled();
+    });
+
+    it('検証成功後、ユーザー自身のsession-scoped clientでupdateUserを呼ぶ（service-roleではない）', async () => {
+      const { service, updateUser } = createSupabase();
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).resolves.toEqual({
+        success: true,
+      });
+      expect(updateUser).toHaveBeenCalledWith(
+        { email: NEW_EMAIL },
+        { emailRedirectTo: 'https://app.example.test/settings/account' },
+      );
+    });
+
+    it('updateUserの失敗をEMAIL_UPDATE_FAILEDに変換する', async () => {
+      const updateError = { message: 'email already registered', code: 'email_exists' };
+      const { service } = createSupabase({ updateUserError: updateError });
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'EMAIL_UPDATE_FAILED',
       });
     });
   });

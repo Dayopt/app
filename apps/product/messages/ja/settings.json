@@ -25,7 +25,7 @@
       "emailPlaceholder": "メールアドレスを入力",
       "emailChange": {
         "title": "メールアドレスを変更",
-        "description": "新しいメールアドレスを入力してください",
+        "description": "現在のパスワードと新しいメールアドレスを入力してください",
         "currentEmail": "現在のメールアドレス",
         "newEmail": "新しいメールアドレス",
         "cancel": "キャンセル",
@@ -34,7 +34,9 @@
         "close": "閉じる",
         "successTitle": "確認メールを送信しました",
         "successMessage": "{email} と現在のメールアドレスの両方に確認メールを送信しました。",
-        "successHint": "両方のリンクをクリックすると完了します。片方だけでは変更されません。"
+        "successHint": "両方のリンクをクリックすると完了します。片方だけでは変更されません。",
+        "invalidPassword": "パスワードが正しくありません",
+        "rateLimited": "試行回数が多すぎます。しばらくしてからお試しください。"
       },
       "profilePicture": "プロフィール画像",
       "avatar": "アバター",
