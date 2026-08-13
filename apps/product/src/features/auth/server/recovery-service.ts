@@ -88,6 +88,20 @@ export class RecoveryService {
       }
     } catch (error) {
       logger.error('Failed to unenroll MFA factor:', error);
+      if (mfaDisabled) {
+        // 複数 verified factor のうち1つ以上は既に削除済み（MFAは実質的に弱体化/無効化
+        // 済み）で、この後の factor で失敗して例外を投げる直前の状態。ここで通知せずに
+        // throw すると、通知ブロック（この関数の後段）まで到達せず、攻撃者が無通知・
+        // コード未消費のまま factor を剥がせる経路になる。RECOVERY_FAILED を投げる前に
+        // 通知だけは送っておく
+        captureUnexpectedError(
+          error instanceof Error
+            ? error
+            : new Error('Partial MFA factor unenrollment failure', { cause: error }),
+          { feature: 'mfa_recovery', operation: 'partial_mfa_factor_unenrollment' },
+        );
+        await this.notifyMfaDisabled(adminClient, userId);
+      }
       throw new RecoveryServiceError('RECOVERY_FAILED', 'Failed to unenroll MFA factor', {
         cause: error instanceof Error ? error : undefined,
       });
@@ -117,50 +131,7 @@ export class RecoveryService {
 
     if (mfaDisabled) {
       // MFA無効化の通知メール（#2033）。送信失敗で検証成功自体は取り消さない。
-      try {
-        const { data: userData, error: getUserError } = await observeAuthOperation(
-          'recovery_get_user_for_notification',
-          () => adminClient.auth.admin.getUserById(userId),
-          { feature: 'mfa_recovery' },
-        );
-        if (getUserError || !userData?.user?.email) {
-          throw getUserError ?? new Error('User email not found for MFA disabled notification');
-        }
-
-        const locale = await getUserLocale(this.supabase, userId).catch(() => 'en' as const);
-
-        try {
-          await sendMfaDisabledEmail({
-            email: userData.user.email,
-            userName: getDisplayName(userData.user, 'there'),
-            locale,
-          });
-        } catch (error) {
-          const original =
-            error instanceof Error
-              ? error
-              : new Error('MFA disabled notification email failed', { cause: error });
-          captureUnexpectedError(original, {
-            feature: 'mfa_recovery',
-            operation: 'send_mfa_disabled_email',
-            source: 'resend',
-          });
-        }
-      } catch (error) {
-        // getUserById 自体の失敗は observeAuthOperation が既に 'supabase_auth' として
-        // capture 済み（同一 Error インスタンスなら capturedErrors の重複排除が効く）。
-        // ここは「email が見つからない」など observeAuthOperation を経由しない失敗を、
-        // 誤って 'resend' 起因のように見せずに拾うためのフォールバック
-        const original =
-          error instanceof Error
-            ? error
-            : new Error('Failed to resolve user for MFA disabled notification', { cause: error });
-        captureUnexpectedError(original, {
-          feature: 'mfa_recovery',
-          operation: 'recovery_get_user_for_notification',
-          source: 'supabase_auth',
-        });
-      }
+      await this.notifyMfaDisabled(adminClient, userId);
     }
 
     const { data: remainingCount, error: countError } = await this.supabase.rpc(
@@ -176,10 +147,67 @@ export class RecoveryService {
       });
     }
 
+    // 契約: success=true は「factorが解除された」ことの保証であり、「コードが消費された」
+    // ことの保証ではない（#2039）。呼び出し元（mfa-verify page / ResetPasswordForm）は
+    // MFAが解除されたことだけを前提にすればよく、remainingCodes はベストエフォートの参考値
     return {
       success: true as const,
       remainingCodes: typeof remainingCount === 'number' ? remainingCount : 0,
     };
+  }
+
+  /**
+   * MFA無効化通知メールの送信（#2033）。factor削除が確定した経路（成功パス /
+   * 途中で失敗した部分削除パスの両方）から呼ぶ。失敗しても呼び出し元の処理は続行する。
+   */
+  private async notifyMfaDisabled(
+    adminClient: ReturnType<typeof createServiceRoleClient>,
+    userId: string,
+  ): Promise<void> {
+    try {
+      const { data: userData, error: getUserError } = await observeAuthOperation(
+        'recovery_get_user_for_notification',
+        () => adminClient.auth.admin.getUserById(userId),
+        { feature: 'mfa_recovery' },
+      );
+      if (getUserError || !userData?.user?.email) {
+        throw getUserError ?? new Error('User email not found for MFA disabled notification');
+      }
+
+      const locale = await getUserLocale(this.supabase, userId).catch(() => 'en' as const);
+
+      try {
+        await sendMfaDisabledEmail({
+          email: userData.user.email,
+          userName: getDisplayName(userData.user, 'there'),
+          locale,
+        });
+      } catch (error) {
+        const original =
+          error instanceof Error
+            ? error
+            : new Error('MFA disabled notification email failed', { cause: error });
+        captureUnexpectedError(original, {
+          feature: 'mfa_recovery',
+          operation: 'send_mfa_disabled_email',
+          source: 'resend',
+        });
+      }
+    } catch (error) {
+      // getUserById 自体の失敗は observeAuthOperation が既に 'supabase_auth' として
+      // capture 済み（同一 Error インスタンスなら capturedErrors の重複排除が効く）。
+      // ここは「email が見つからない」など observeAuthOperation を経由しない失敗を、
+      // 誤って 'resend' 起因のように見せずに拾うためのフォールバック
+      const original =
+        error instanceof Error
+          ? error
+          : new Error('Failed to resolve user for MFA disabled notification', { cause: error });
+      captureUnexpectedError(original, {
+        feature: 'mfa_recovery',
+        operation: 'recovery_get_user_for_notification',
+        source: 'supabase_auth',
+      });
+    }
   }
 }
 

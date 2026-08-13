@@ -25,7 +25,7 @@
   "mfaDisabled": {
     "subject": "2段階認証が無効になりました",
     "heading": "2段階認証が無効になりました",
-    "body": "リカバリーコードを使用して、Dayopt アカウントの2段階認証が無効になりました。",
+    "body": "{disabledAt}、リカバリーコードを使用して Dayopt アカウントの2段階認証が無効になりました。",
     "securityWarning": "この操作に覚えがない場合、アカウントが第三者にアクセスされている可能性があります。すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
   },
   "accountDeletion": {

@@ -217,11 +217,20 @@ export async function sendMfaDisabledEmail({
 }) {
   const t = createEmailTranslator(locale);
 
+  const disabledAt = new Date().toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
   return sendEmail({
     to: email,
     subject: t('mfaDisabled.subject'),
     react: MfaDisabledEmail({
       userName,
+      disabledAt,
       locale,
       appUrl: APP_URL,
     }),

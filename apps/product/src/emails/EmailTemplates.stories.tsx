@@ -501,8 +501,16 @@ export const PasswordChanged: Story = {
 export const MfaDisabled: Story = {
   render: () => (
     <BilingualEmailPreview
-      enElement={MfaDisabledEmail({ userName: 'Tomoya', locale: 'en' })}
-      jaElement={MfaDisabledEmail({ userName: 'Tomoya', locale: 'ja' })}
+      enElement={MfaDisabledEmail({
+        userName: 'Tomoya',
+        disabledAt: 'February 24, 2026, 3:45 PM',
+        locale: 'en',
+      })}
+      jaElement={MfaDisabledEmail({
+        userName: 'Tomoya',
+        disabledAt: '2026年2月24日 15:45',
+        locale: 'ja',
+      })}
       subjects={appSubjects('mfaDisabled.subject')}
       title="MFA Disabled"
     />

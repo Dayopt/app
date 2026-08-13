@@ -173,6 +173,36 @@ describe('RecoveryService', () => {
     expect(sendMfaDisabledEmail).not.toHaveBeenCalled();
   });
 
+  it('複数verified factorのうち一部だけ削除できた場合でも、例外を投げる前に通知を送る（部分削除の無通知を防ぐ）', async () => {
+    const { service } = createService({
+      codes: [{ id: 'code-1', code_hash: 'matching-hash' }],
+    });
+    listFactors.mockResolvedValue({
+      data: {
+        factors: [
+          { id: 'verified-1', status: 'verified' },
+          { id: 'verified-2', status: 'verified' },
+        ],
+      },
+      error: null,
+    });
+    deleteFactor
+      .mockResolvedValueOnce({ data: {}, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'unenroll failed' } });
+
+    await expect(service.verify({ userId: USER_ID, code: CODE })).rejects.toMatchObject({
+      code: 'RECOVERY_FAILED',
+      message: 'Failed to unenroll MFA factor',
+    });
+    expect(deleteFactor).toHaveBeenCalledTimes(2);
+    expect(adminRpc).not.toHaveBeenCalled();
+    expect(sendMfaDisabledEmail).toHaveBeenCalledOnce();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(expect.any(Error), {
+      feature: 'mfa_recovery',
+      operation: 'partial_mfa_factor_unenrollment',
+    });
+  });
+
   it('factor削除後にコード消費RPCが実エラーを返しても成功として扱う（#2039、実害はコードの将来的な再利用可能性のみ）', async () => {
     const rpcError = { message: 'connection reset' };
     const { service } = createService({
