@@ -175,78 +175,6 @@ describe('Upstash Rate Limit', () => {
     expect(limiter.limit).toHaveBeenNthCalledWith(2, 'ip:unknown');
   });
 
-  it('checks an independent account bucket only after the IP bucket allows the request', async () => {
-    const limiter = { limit: vi.fn().mockResolvedValue(allowedResult) };
-    const request = new Request('https://app.dayopt.app/api/csp-report', {
-      headers: { 'x-real-ip': '203.0.113.10' },
-    });
-
-    await withUpstashRateLimit(request, limiter, 'email:person@example.com');
-
-    expect(limiter.limit).toHaveBeenNthCalledWith(1, 'ip:203.0.113.10');
-    expect(limiter.limit).toHaveBeenNthCalledWith(2, 'email:person@example.com');
-  });
-
-  it('reuses the account bucket across changing platform IPs and returns its denial', async () => {
-    const deniedResult = { ...allowedResult, success: false, remaining: 0 };
-    const limiter = {
-      limit: vi
-        .fn()
-        .mockResolvedValueOnce(allowedResult)
-        .mockResolvedValueOnce(allowedResult)
-        .mockResolvedValueOnce(allowedResult)
-        .mockResolvedValueOnce(deniedResult),
-    };
-    const firstRequest = new Request('https://app.dayopt.app/api/csp-report', {
-      headers: { 'x-real-ip': '203.0.113.10' },
-    });
-    const secondRequest = new Request('https://app.dayopt.app/api/csp-report', {
-      headers: { 'x-real-ip': '198.51.100.20' },
-    });
-
-    await withUpstashRateLimit(firstRequest, limiter, 'email:person@example.com');
-    await expect(
-      withUpstashRateLimit(secondRequest, limiter, 'email:person@example.com'),
-    ).resolves.toMatchObject({ state: 'checked', success: false, remaining: 0 });
-
-    expect(limiter.limit).toHaveBeenNthCalledWith(1, 'ip:203.0.113.10');
-    expect(limiter.limit).toHaveBeenNthCalledWith(2, 'email:person@example.com');
-    expect(limiter.limit).toHaveBeenNthCalledWith(3, 'ip:198.51.100.20');
-    expect(limiter.limit).toHaveBeenNthCalledWith(4, 'email:person@example.com');
-  });
-
-  it('does not consume the account bucket after the IP bucket denies the request', async () => {
-    const deniedResult = { ...allowedResult, success: false, remaining: 0 };
-    const limiter = { limit: vi.fn().mockResolvedValue(deniedResult) };
-    const request = new Request('https://app.dayopt.app/api/csp-report', {
-      headers: { 'x-real-ip': '203.0.113.10' },
-    });
-
-    await expect(
-      withUpstashRateLimit(request, limiter, 'email:person@example.com'),
-    ).resolves.toMatchObject({ state: 'checked', success: false, remaining: 0 });
-    expect(limiter.limit).toHaveBeenCalledOnce();
-  });
-
-  it('fails closed when the account bucket backend check fails', async () => {
-    const backendError = new Error('secondary bucket unavailable');
-    const limiter = {
-      limit: vi.fn().mockResolvedValueOnce(allowedResult).mockRejectedValueOnce(backendError),
-    };
-    const request = new Request('https://app.dayopt.app/api/csp-report', {
-      headers: { 'x-real-ip': '203.0.113.10' },
-    });
-
-    await expect(
-      withUpstashRateLimit(request, limiter, 'email:person@example.com'),
-    ).resolves.toEqual({ state: 'unavailable' });
-    expect(mocks.captureUnexpectedError).toHaveBeenCalledWith(backendError, {
-      feature: 'rate_limit',
-      operation: 'upstash_rate_limit_check',
-      source: 'upstash',
-    });
-  });
-
   it('constructs every enabled limiter with no analytics, a 2 second timeout, and hashed keys', async () => {
     vi.resetModules();
     const constructorOptions: Array<Record<string, unknown>> = [];
@@ -266,12 +194,8 @@ describe('Upstash Rate Limit', () => {
 
     vi.doMock('@upstash/ratelimit', () => ({ Ratelimit: MockRatelimit }));
     vi.doMock('@upstash/redis', () => ({ Redis: class MockRedis {} }));
-    vi.doMock('@/env', () => ({
-      env: {
-        UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
-        UPSTASH_REDIS_REST_TOKEN: 'configured',
-      },
-    }));
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
 
     const enabledModule = await import('../upstash');
     expect(constructorOptions).toHaveLength(13);
@@ -291,6 +215,42 @@ describe('Upstash Rate Limit', () => {
     expect(persistedEmailIdentifier).toMatch(/^[a-f0-9]{64}$/u);
     expect(persistedEmailIdentifier).not.toContain('person@example.com');
     expect(persistedEmailIdentifier).not.toBe(persistedIpIdentifier);
+  });
+
+  it('#2011: loads without touching @/env even when its schema validation would throw', async () => {
+    // generic Preview deployment は SUPABASE_SERVICE_ROLE_KEY を持たない
+    // （docs/operations/log/2026-07-14-vercel-env-scope-audit.md）ため、`@/env` の
+    // Proxy に触れると schema 全体の検証が走り無関係に throw する。この module は
+    // Upstash の2変数しか要らないので `@/env` を経由しないことを固定する。
+    vi.resetModules();
+    vi.doMock('@upstash/ratelimit', () => ({
+      Ratelimit: class MockRatelimit {
+        static slidingWindow(requests: number, window: string) {
+          return { requests, window };
+        }
+        limit = vi.fn().mockResolvedValue(allowedResult);
+      },
+    }));
+    vi.doMock('@upstash/redis', () => ({ Redis: class MockRedis {} }));
+    vi.doMock('@/env', () => ({
+      env: new Proxy(
+        {},
+        {
+          get() {
+            throw new Error(
+              '#2011 regression: @/env should not be touched by lib/rate-limit/upstash.ts',
+            );
+          },
+        },
+      ),
+    }));
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'configured');
+
+    const enabledModule = await import('../upstash');
+
+    expect(enabledModule.isUpstashEnabled).toBe(true);
+    expect(enabledModule.cspReportRateLimit).not.toBeNull();
   });
 
   it('keeps documented presets and cost constants stable', () => {

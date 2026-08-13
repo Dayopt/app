@@ -123,6 +123,8 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 - 待ちが増えるのは許容する（待ち中は他作業を続けてよい）
 - 既存ルール（追い push 禁止・round 単位で 1 回に束ねる・追従担当は 1 者）は不変。本節はその上に「push の実行タイミング」の采配を積む
 
+**2026-08-13 追記**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。これにより push 前の permission prompt という偶発的な機械 gate は無くなった。**本節が定める「合図を待ってから push する」の抑止は、以後は規律のみで担保する。** force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める（本節の対象は通常 push のタイミングで、それらとは別の話）。
+
 ## 指揮台の merge シーケンス
 
 策定日: 2026-08-12
