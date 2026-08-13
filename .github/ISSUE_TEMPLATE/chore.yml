@@ -1,0 +1,34 @@
+name: Chore / Tooling
+description: リファクタ、ツール整備、運用改善など機能追加ではない作業
+title: 'chore: '
+labels: ['type:chore']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        `priority:` / `area:` は [github-labels.md](https://github.com/Dayopt/dayopt/blob/main/docs/operations/github-labels.md) の一覧から選んで追加する。**milestone は付けない**（着手時に指揮台が付与する。`.claude/skills/dispatch/SKILL.md` 操作 A）。
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: なぜやるか。関連 issue / docs / 過去 PR へのリンク
+    validations:
+      required: true
+  - type: textarea
+    id: todo
+    attributes:
+      label: やること
+      description: 番号付き手順。対象ファイル path を明記
+    validations:
+      required: true
+  - type: textarea
+    id: caution
+    attributes:
+      label: 注意
+      description: 既知の罠、触ってはいけない領域、単独 PR にしない場合の相乗り先
+  - type: textarea
+    id: verification
+    attributes:
+      label: 検証
+      description: pass すべきコマンドと確認観点
+      placeholder: pnpm check など
