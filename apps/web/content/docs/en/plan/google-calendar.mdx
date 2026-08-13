@@ -1,0 +1,94 @@
+---
+title: 'Connect Google Calendar'
+description: 'How to bring Google Calendar events into Dayopt — connect an account, see how sync works, turn events into plans or records, disconnect, and fix common issues.'
+tags: ['calendar', 'integration', 'google-calendar', 'sync', 'tutorial']
+author: 'Dayopt Team'
+publishedAt: '2026-08-13'
+updatedAt: '2026-08-13'
+order: 3
+featured: false
+draft: true
+category: 'plan'
+slug: 'google-calendar'
+
+ai:
+  relatedQuestions:
+    - 'How do I connect Google Calendar to Dayopt?'
+    - 'How often does Google Calendar sync?'
+    - 'How do I turn an external event into a plan or record?'
+    - 'What happens when I disconnect Google Calendar?'
+    - 'What does "reconnect required" mean?'
+  prerequisites:
+    - 'Signed up for a Dayopt account'
+    - 'Signed in to Dayopt'
+    - 'Have a Google account'
+  relatedDocs:
+    - '/docs/plans'
+    - '/docs/records'
+  chunkStrategy: 'h2'
+  searchable: true
+  difficulty: 'beginner'
+  contentType: 'tutorial'
+---
+
+# Connect Google Calendar
+
+Connect Google Calendar and its events show up faintly on your Dayopt calendar. They are not plans or records yet — just a reference. You can see work and personal events side by side, then pull in only the ones you care about.
+
+## Connecting an account
+
+1. Open **Settings**, then the **Integrations** tab
+2. Under Google Calendar, click **Connect Google account**
+3. Sign in with your Google account and grant access
+4. Check the calendars you want to bring in, then click **Apply**
+
+While Google review is in progress, the sign-in screen may show an "unverified app" warning. Click **Advanced**, then choose to continue to Dayopt to finish connecting.
+
+## How sync works
+
+- Sync is **read-only**. Dayopt never changes anything on the Google Calendar side
+- Events sync automatically every 15 minutes. Click **Sync now** for an immediate update
+- Only events from the calendars you selected are brought in
+- You cannot edit an event's title or time while it stays external. Turn it into a plan or record first (see below)
+
+## Turning an event into a plan or record
+
+Tap an external event to convert it.
+
+- Events ending in the future become a **plan**
+- Events that already ended become a **record**
+
+You can undo this. Tap **Undo** in the confirmation that appears.
+
+To get rid of an event you don't need, use the dismiss icon in its corner. Confirm and it stops showing up on your calendar.
+
+## Connecting more than one account
+
+Click **Add Google account** to connect another one — for example, a work account alongside a personal one.
+
+## Disconnecting
+
+Go to the Integrations tab in Settings and click **Disconnect** on the account.
+
+- Dayopt deletes its stored tokens and connection completely
+- External events you never converted disappear
+- Events you already turned into plans or records stay untouched
+
+## Troubleshooting
+
+### "Reconnect required"
+
+Your Google access has expired. Click **Reconnect** with the same Google account. Sync for that connection pauses until you do.
+
+### Calendar isn't syncing
+
+If you see a sync error, wait a moment and click **Sync now**. If that doesn't help, disconnect and reconnect the account.
+
+### An event disappeared
+
+If you never converted an external event and it changes or gets deleted in Google Calendar, it disappears at the next sync. Events you already converted to a plan or record are not affected.
+
+## Next Steps
+
+1. **[Create Plans](/docs/plans)** — how to plan your day in Dayopt
+2. **[Record your time](/docs/records)** — how to log what you actually did

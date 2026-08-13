@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
 import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
 import { createEmailTranslator, type EmailLocale } from '@/emails/i18n';
+import { MfaDisabledEmail } from '@/emails/MfaDisabledEmail';
 import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
 import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
@@ -194,6 +195,46 @@ export async function sendAccountDeletionEmail({
       appUrl: APP_URL,
     }),
     context: 'Account deletion email',
+  });
+}
+
+/**
+ * MFA無効化（リカバリーコードによる二段階認証解除）の通知メールを送る
+ *
+ * `features/auth/server/recovery-service.ts` の `RecoveryService.verify()` からのみ呼ぶ。
+ * 攻撃者がクライアントを制御していても迂回できないよう、procedure ではなく
+ * サーバー側の呼び出し元固定の関数として公開する（PasswordChangeDialog のような
+ * client mutation 起点にしない）。送信失敗で検証成功自体は取り消さない。
+ */
+export async function sendMfaDisabledEmail({
+  email,
+  userName,
+  locale,
+}: {
+  email: string;
+  userName: string;
+  locale: EmailLocale;
+}) {
+  const t = createEmailTranslator(locale);
+
+  const disabledAt = new Date().toLocaleString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return sendEmail({
+    to: email,
+    subject: t('mfaDisabled.subject'),
+    react: MfaDisabledEmail({
+      userName,
+      disabledAt,
+      locale,
+      appUrl: APP_URL,
+    }),
+    context: 'MFA disabled email',
   });
 }
 

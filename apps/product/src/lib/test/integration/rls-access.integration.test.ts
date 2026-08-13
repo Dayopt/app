@@ -58,6 +58,25 @@ const CALENDAR_CONNECTION_WITHHELD_COLUMNS = [
   'granted_scopes',
   'provider_account_id',
 ] as const;
+const EXTERNAL_CALENDAR_EVENT_ID = crypto.randomUUID();
+/** external_calendar_events で authenticated に GRANT SELECT されている列（migration 20260813120000 と対応） */
+const EXTERNAL_CALENDAR_EVENT_GRANTED_COLUMNS = [
+  'id',
+  'user_id',
+  'provider',
+  'provider_calendar_id',
+  'provider_event_id',
+  'title',
+  'calendar_name',
+  'start_at',
+  'end_at',
+  'status',
+  'dismissed_at',
+  'last_synced_at',
+  'connection_id',
+  'created_at',
+  'updated_at',
+] as const;
 const TEST_EMAIL_A = `test-rls-a-${TEST_USER_A_ID}@example.com`;
 const TEST_EMAIL_B = `test-rls-b-${TEST_USER_B_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
@@ -787,6 +806,116 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
 
       expect(error).toBeNull();
       expect(data?.refresh_token_enc).toBe('rls-ciphertext');
+    });
+  });
+
+  // #1992: description は risk-reviewer 指摘（PR #1991）を受けて column-scoped SELECT にした。
+  // calendar_connections と同じ理由でここを独立させる（userOwnedCases / serviceRoleCases の
+  // どちらの共通ブロックにも当てはまらない）。
+  describe('external calendar event column grants', () => {
+    beforeAll(async () => {
+      const { error } = await adminSupabase.from('external_calendar_events').insert({
+        id: EXTERNAL_CALENDAR_EVENT_ID,
+        user_id: TEST_USER_A_ID,
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-grant-${EXTERNAL_CALENDAR_EVENT_ID}`,
+        title: 'grant column test',
+        description: 'body text that must never reach a browser client',
+        start_at: '2026-06-22T09:00:00.000Z',
+        end_at: '2026-06-22T10:00:00.000Z',
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+    });
+
+    afterAll(async () => {
+      await adminSupabase
+        .from('external_calendar_events')
+        .delete()
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID);
+    });
+
+    it('ownerはgrant済みの列だけを明示指定して自分のミラー行を読める', async () => {
+      const { data, error } = await supabaseA
+        .from('external_calendar_events')
+        .select(EXTERNAL_CALENDAR_EVENT_GRANTED_COLUMNS.join(', '))
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID);
+
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+    });
+
+    it("ownerでもselect('*')は列権限で拒否される", async () => {
+      const { error } = await supabaseA
+        .from('external_calendar_events')
+        .select('*')
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    it('ownerでもdescription列は読めない', async () => {
+      const { error } = await supabaseA
+        .from('external_calendar_events')
+        .select('description')
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID);
+
+      expect(error?.code).toBe('42501');
+    });
+
+    // service_role は rolbypassrls = t なので、これは policy ではなく GRANT の証明
+    it('service_roleはdescription列を読める', async () => {
+      const { data, error } = await adminSupabase
+        .from('external_calendar_events')
+        .select('description')
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .single();
+
+      expect(error).toBeNull();
+      expect(data?.description).toBe('body text that must never reach a browser client');
+    });
+
+    // #1984: dismissEvent は service_role を経由せず authenticated client で直接 UPDATE する。
+    // ここで検証するのは migration 20260708232500 の GRANT UPDATE(dismissed_at) と
+    // "Users can dismiss own external calendar events" policy の組み合わせそのもの。
+    it('ownerは自分のdismissed_atを更新でき、nullへも戻せる', async () => {
+      const { data: dismissed, error: dismissError } = await supabaseA
+        .from('external_calendar_events')
+        .update({ dismissed_at: '2026-06-22T09:30:00.000Z' })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .eq('user_id', TEST_USER_A_ID)
+        .select('dismissed_at');
+
+      expect(dismissError).toBeNull();
+      expect(dismissed).toHaveLength(1);
+      // PostgREST は +00:00 offset で返す（Z suffix ではない）ため Date 比較する
+      expect(new Date(dismissed?.[0]?.dismissed_at ?? '').toISOString()).toBe(
+        '2026-06-22T09:30:00.000Z',
+      );
+
+      const { data: undone, error: undoError } = await supabaseA
+        .from('external_calendar_events')
+        .update({ dismissed_at: null })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .eq('user_id', TEST_USER_A_ID)
+        .select('dismissed_at');
+
+      expect(undoError).toBeNull();
+      expect(undone).toHaveLength(1);
+      expect(undone?.[0]?.dismissed_at).toBeNull();
+    });
+
+    it('他ユーザーはdismissed_atを更新できない（RLSで0件）', async () => {
+      const { data, error } = await supabaseB
+        .from('external_calendar_events')
+        .update({ dismissed_at: '2026-06-22T09:30:00.000Z' })
+        .eq('id', EXTERNAL_CALENDAR_EVENT_ID)
+        .select('dismissed_at');
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
     });
   });
 

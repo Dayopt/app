@@ -1,9 +1,15 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ExternalEventPosition } from '../../../../../../lib/external-event-layout';
 
 import { ExternalEventCard } from '../ExternalEventCard';
+
+vi.mock('next-intl', () => ({
+  useLocale: () => 'ja',
+  useTranslations: () => (key: string) => key,
+}));
 
 const startDate = new Date('2026-07-14T09:00:00.000Z');
 const endDate = new Date('2026-07-14T10:00:00.000Z');
@@ -52,5 +58,91 @@ describe('ExternalEventCard', () => {
     );
 
     expect(screen.getByText('00:00–02:00', { exact: false })).toBeInTheDocument();
+  });
+});
+
+describe('ExternalEventCard — 変換（onConvert）', () => {
+  it('onConvert 未指定なら role=button を持たない読み取り専用のまま', () => {
+    render(<ExternalEventCard event={event} position={position()} />);
+
+    expect(screen.queryByRole('button', { name: /週次ミーティング/ })).not.toBeInTheDocument();
+  });
+
+  it('onConvert 指定時、カード全体クリックで呼ばれる', async () => {
+    const user = userEvent.setup();
+    const onConvert = vi.fn();
+    render(<ExternalEventCard event={event} position={position()} onConvert={onConvert} />);
+
+    await user.click(screen.getByRole('button', { name: /週次ミーティング/ }));
+
+    expect(onConvert).toHaveBeenCalledTimes(1);
+  });
+
+  it('Enter / Space キーでも変換を呼ぶ', async () => {
+    const user = userEvent.setup();
+    const onConvert = vi.fn();
+    render(<ExternalEventCard event={event} position={position()} onConvert={onConvert} />);
+
+    const card = screen.getByRole('button', { name: /週次ミーティング/ });
+    card.focus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+
+    expect(onConvert).toHaveBeenCalledTimes(2);
+  });
+
+  it('onConvert 指定時のみ sr-only の hint テキストを添える', () => {
+    const { rerender } = render(<ExternalEventCard event={event} position={position()} />);
+    expect(screen.queryByText('convert.hint', { exact: false })).not.toBeInTheDocument();
+
+    rerender(<ExternalEventCard event={event} position={position()} onConvert={vi.fn()} />);
+    expect(screen.getByText('convert.hint', { exact: false })).toBeInTheDocument();
+  });
+});
+
+describe('ExternalEventCard — dismiss', () => {
+  it('onDismiss 未指定なら dismiss アイコンを描かない', () => {
+    render(<ExternalEventCard event={event} position={position()} onConvert={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: 'dismiss.ariaLabel' })).not.toBeInTheDocument();
+  });
+
+  it('dismiss アイコン押下で確認ダイアログが開く。確認で onDismiss を呼ぶ', async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ExternalEventCard
+        event={event}
+        position={position()}
+        onConvert={vi.fn()}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'dismiss.ariaLabel' }));
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('dismiss.confirmTitle');
+
+    await user.click(within(dialog).getByRole('button', { name: 'dismiss.confirmLabel' }));
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismiss アイコンのクリックはカードの onConvert を発火させない', async () => {
+    const user = userEvent.setup();
+    const onConvert = vi.fn();
+    render(
+      <ExternalEventCard
+        event={event}
+        position={position()}
+        onConvert={onConvert}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'dismiss.ariaLabel' }));
+
+    expect(onConvert).not.toHaveBeenCalled();
   });
 });

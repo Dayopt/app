@@ -9,6 +9,7 @@ const listProviderCalendars = vi.hoisted(() => vi.fn());
 const updateSelectedCalendars = vi.hoisted(() => vi.fn());
 const disconnect = vi.hoisted(() => vi.fn());
 const listGhostEvents = vi.hoisted(() => vi.fn());
+const setEventDismissed = vi.hoisted(() => vi.fn());
 const syncConnection = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
@@ -24,6 +25,7 @@ vi.mock('../connection-service', () => ({
 }));
 vi.mock('../sync-service', () => ({ syncConnection }));
 vi.mock('../event-query-service', () => ({ listGhostEvents }));
+vi.mock('../event-command-service', () => ({ setEventDismissed }));
 vi.mock('../google-oauth', () => ({ isGoogleCalendarConfigured, resolveRedirectUri }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
   calendarSyncNowRateLimit: { limit: rateLimit },
@@ -36,6 +38,7 @@ import { externalCalendarRouter } from '../router';
 
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
+const EVENT_ID = '00000000-0000-4000-8000-0000000000e1';
 
 const createCaller = createCallerFactory(externalCalendarRouter);
 
@@ -54,6 +57,7 @@ beforeEach(() => {
   updateSelectedCalendars.mockResolvedValue(undefined);
   disconnect.mockResolvedValue(undefined);
   listGhostEvents.mockResolvedValue([]);
+  setEventDismissed.mockResolvedValue(undefined);
   isGoogleCalendarConfigured.mockReturnValue(true);
   resolveRedirectUri.mockReturnValue(
     'https://app.dayopt.app/api/integrations/google-calendar/callback',
@@ -216,5 +220,56 @@ describe('externalCalendarRouter — listEvents', () => {
         endDate: '2026-03-04T00:00:00.000Z',
       }),
     ).resolves.toEqual([]);
+  });
+});
+
+describe('externalCalendarRouter — dismissEvent', () => {
+  it('dismissed=true で service へそのまま渡す', async () => {
+    await expect(caller().dismissEvent({ eventId: EVENT_ID, dismissed: true })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(setEventDismissed).toHaveBeenCalledWith(expect.anything(), USER_ID, EVENT_ID, true);
+  });
+
+  it('dismissed=false で undo を渡す', async () => {
+    await expect(caller().dismissEvent({ eventId: EVENT_ID, dismissed: false })).resolves.toEqual({
+      success: true,
+    });
+
+    expect(setEventDismissed).toHaveBeenCalledWith(expect.anything(), USER_ID, EVENT_ID, false);
+  });
+
+  it('proProcedure なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
+    isBillingEnforced.mockReturnValue(true);
+
+    await expect(
+      caller().dismissEvent({ eventId: EVENT_ID, dismissed: true }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(setEventDismissed).not.toHaveBeenCalled();
+  });
+
+  it('未認証は弾かれる', async () => {
+    const unauth = createCaller(createMockContext({}));
+    await expect(unauth.dismissEvent({ eventId: EVENT_ID, dismissed: true })).rejects.toMatchObject(
+      { code: 'UNAUTHORIZED' },
+    );
+  });
+
+  it('eventId が uuid でなければ BAD_REQUEST', async () => {
+    await expect(
+      caller().dismissEvent({ eventId: 'not-a-uuid', dismissed: true }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(setEventDismissed).not.toHaveBeenCalled();
+  });
+
+  it('対象が見つからない場合は NOT_FOUND', async () => {
+    setEventDismissed.mockRejectedValueOnce(
+      Object.assign(new Error('not found'), { code: 'NOT_FOUND' }),
+    );
+
+    await expect(
+      caller().dismissEvent({ eventId: EVENT_ID, dismissed: true }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

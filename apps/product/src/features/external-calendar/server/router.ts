@@ -12,6 +12,7 @@ import {
   listProviderCalendars,
   updateSelectedCalendars,
 } from './connection-service';
+import { setEventDismissed } from './event-command-service';
 import { listGhostEvents } from './event-query-service';
 import { isGoogleCalendarConfigured, resolveRedirectUri } from './google-oauth';
 import { syncConnection } from './sync-service';
@@ -26,9 +27,17 @@ import { syncConnection } from './sync-service';
  * protected なのは「解約済みでも状態が見えて必ず切断できる」ためで、ghost 表示にその理由は
  * 当てはまらない。protected にすると課金を有効化した日に「Pro を切っても外部予定は見え続ける」が
  * 既定になり、しかも同期は止まるのでミラーが凍結して古い予定が恒久的に出続ける。
+ *
+ * `dismissEvent`（#1984）も同じ理由で **proProcedure 側**に置く。protected にすると
+ * 解約済みユーザーが「見えないはずの ghost を dismiss/undo できる」非対称なゲートになる。
  */
 
 const connectionIdInput = z.object({ connectionId: z.string().uuid() });
+
+const dismissEventInput = z.object({
+  eventId: z.string().uuid(),
+  dismissed: z.boolean(),
+});
 
 /** ghost 表示の取得範囲。上限は calendar の最長ビュー（multi-day）に対して十分な余裕を取る。 */
 const MAX_EVENT_RANGE_DAYS = 62;
@@ -139,6 +148,18 @@ export const externalCalendarRouter = createTRPCRouter({
           startAt: input.startDate,
           endAt: input.endDate,
         });
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  dismissEvent: proProcedure
+    .meta({ description: 'ghost の非表示状態を切り替える（dismissed: false で取り消し）' })
+    .input(dismissEventInput)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await setEventDismissed(ctx.supabase, ctx.userId, input.eventId, input.dismissed);
+        return { success: true as const };
       } catch (error) {
         return handleServiceError(error);
       }

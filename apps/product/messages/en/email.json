@@ -22,6 +22,12 @@
     "body": "Your Dayopt password was successfully changed.",
     "securityWarning": "If you didn't make this change, please reset your password immediately at {resetLink} and contact us at {supportEmail}"
   },
+  "mfaDisabled": {
+    "subject": "Two-factor authentication has been disabled",
+    "heading": "Two-factor authentication has been disabled",
+    "body": "Two-factor authentication on your Dayopt account was disabled using a recovery code on {disabledAt}.",
+    "securityWarning": "If you didn't do this, someone may have access to your account. Please reset your password immediately at {resetLink} and contact us at {supportEmail}"
+  },
   "accountDeletion": {
     "subject": "Account deleted",
     "heading": "Account deleted",

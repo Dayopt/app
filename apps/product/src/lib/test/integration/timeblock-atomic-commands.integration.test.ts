@@ -282,6 +282,67 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     expect(new Date(adjacent.start_at).getTime()).toBe(new Date(endAt).getTime());
   });
 
+  // #1985: useConvertGhostEvent はタップのたびに ghost の同じ start_at/end_at を複製して
+  // create_plan_command_v1 / create_record_command_v1 を呼ぶ。external_calendar_event_id に
+  // 専用の unique 制約は無いため、二重変換の防止は plans_no_overlap（時間帯 EXCLUDE 制約）の
+  // 副作用に過ぎない（risk-reviewer 指摘）。この副作用が実際に効くことをここで固定する。
+  it('lets only one of two simultaneous conversions of the same ghost create a Plan', async () => {
+    const startAt = at(8 * 60 * 60_000);
+    const endAt = at(9 * 60 * 60_000);
+
+    const { data: ghost, error: ghostError } = await admin
+      .from('external_calendar_events')
+      .insert({
+        user_id: userId,
+        provider: 'google',
+        provider_calendar_id: 'primary',
+        provider_event_id: `evt-double-convert-${crypto.randomUUID()}`,
+        title: 'Ghost double-convert race',
+        start_at: startAt,
+        end_at: endAt,
+        status: 'confirmed',
+        last_synced_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+    if (ghostError) throw ghostError;
+
+    try {
+      const base = {
+        p_user_id: userId,
+        p_note: dbNull,
+        p_tag_id: dbNull,
+        p_external_calendar_event_id: ghost.id,
+        p_start_at: startAt,
+        p_end_at: endAt,
+      };
+
+      const attempts = await Promise.all([
+        admin
+          .rpc('create_plan_command_v1', {
+            ...base,
+            p_title: 'Ghost title',
+            p_source: 'external_calendar',
+          })
+          .single(),
+        admin
+          .rpc('create_plan_command_v1', {
+            ...base,
+            p_title: 'Ghost title',
+            p_source: 'external_calendar',
+          })
+          .single(),
+      ]);
+
+      expect(attempts.filter(({ error }) => error === null)).toHaveLength(1);
+      expect(
+        attempts.filter(({ error }) => ['23P01', '40P01'].includes(error?.code ?? '')),
+      ).toHaveLength(1);
+    } finally {
+      await admin.from('external_calendar_events').delete().eq('id', ghost.id);
+    }
+  });
+
   it('allows either Plan restore or an overlapping create, never both', async () => {
     const startAt = at(10 * 60 * 60_000);
     const endAt = at(11 * 60 * 60_000);
