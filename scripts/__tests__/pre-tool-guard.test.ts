@@ -468,6 +468,35 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
   });
 });
 
+// #1986: 書き込み時検査は「書き込まれるテキスト」だけを見る。op:// を含まない
+// 部分置換の Edit（vault 名だけの差し替え）はこの層をすり抜ける。
+//
+// これは regression ではなく、既知の受け入れ済みギャップとして固定する。権威は
+// 実行時層（op run 直前に実ファイルを読む）で、書き込み時はあくまで early
+// feedback の best-effort。境界は docs/operations/secrets.md L58 に記載済み。
+// (a) 適用後の文字列再構成、(b) PostToolUse での事後検査はどちらも見送った
+// （(a) は bash の literal 置換が壊れやすく静かな fail open になりうる、
+// (b) は権威層が既にこのケースを捕まえるため複雑さに見合わない）。
+describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
+  it('op:// を含まない部分置換 Edit は書き込み時検査を通る（権威は実行時層）', () => {
+    expect(runGuard(edit(`/x/${LOCAL}`, 'Dayopt-Production'))).toBe('allow');
+  });
+});
+
+// #1987: 単一コマンド判定は文字単位なので、引用済み引数の中の区切り記号でも
+// 落ちる。「env-file 言及より前だけを判定範囲にする」narrowing 案は、
+// コマンド置換が位置によらず先に評価される点は分離できても、区切り文字が
+// quote の中かどうかは追えないままで、#1944（heredoc）と同型の
+// 「shell の引用状態は regex で再現できない」という結論に当たる。
+// 確信が持てない narrowing は行わず、過剰ブロックを維持する。
+describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、受け入れる誤検知）', () => {
+  it('op run の子プロセス引数に quote された | があっても落ちる', () => {
+    expect(runGuard(bash(`op run --env-file=${LOCAL} -- node -e "console.log('a|b')"`))).toBe(
+      'block',
+    );
+  });
+});
+
 // #1959: チップ起票（spawn_task）は指揮台セッションの専権。レーンが直接 User へ
 // チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + 指揮台へ
 // send_message に一本化する（.claude/rules/orchestration.md §レーンの連絡規律）。
