@@ -13,13 +13,19 @@
 #
 # 対象バケットの正本は supabase/migrations/00000000000000_baseline.sql の
 # storage.buckets INSERT（avatars / attachments）。
+#
+# ⚠ sync は destination を source に合わせるため、SOURCE_REMOTE の設定ミス・読み取り
+# 失敗（空を返す等）が起きると destination 側の既存オブジェクトを削除しうる。実運用化
+# （#2026）では destination 側の versioning / object lock を必須にするか、
+# `--max-delete` で削除上限を設ける。
 
 set -euo pipefail
 
 SOURCE_REMOTE="${SOURCE_REMOTE:-source}"
 DEST_REMOTE="${DEST_REMOTE:-dest}"
-# shellcheck disable=SC2206 # 意図的な word splitting（空白区切りのバケット一覧）
-BUCKETS=(${STORAGE_BACKUP_BUCKETS:-avatars attachments})
+# `read -a` は IFS で分割するだけで pathname expansion をしない（unquoted `()` 展開だと
+# STORAGE_BACKUP_BUCKETS にワイルドカードが混ざった時 cwd のファイル名に化ける）。
+IFS=' ' read -r -a BUCKETS <<< "${STORAGE_BACKUP_BUCKETS:-avatars attachments}"
 
 command -v rclone >/dev/null 2>&1 || {
   echo "❌ rclone が見つかりません。公式配布（https://rclone.org/downloads/）からインストールしてください" >&2

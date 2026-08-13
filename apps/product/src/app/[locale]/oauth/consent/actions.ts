@@ -12,6 +12,7 @@ import {
   validateAuthorizeInput,
 } from '@/lib/oauth-server';
 import { assertOAuthAuthorizationRequestHost } from '@/lib/oauth-server/authorization-request-host';
+import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/server';
 
@@ -65,6 +66,12 @@ export async function processConsent(formData: FormData) {
 
   if (decision !== 'approve') {
     redirectUrl.searchParams.set('error', 'access_denied');
+    redirect(redirectUrl.toString());
+  }
+
+  if (await isWriteFenceEnabled(supabase)) {
+    logger.warn('[oauth] consent grant blocked by write fence');
+    redirectUrl.searchParams.set('error', 'temporarily_unavailable');
     redirect(redirectUrl.toString());
   }
 

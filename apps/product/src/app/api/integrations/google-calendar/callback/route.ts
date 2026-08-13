@@ -30,7 +30,6 @@ import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { captureUnexpectedError } from '@/lib/sentry';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -85,14 +84,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return response;
   };
 
-  // Google の authorization code は token 交換の時点で消費される（この handler の
-  // maxDuration コメント参照）ので、fence は code を使う前・できるだけ早い段階で
-  // 確認する。ここではまだ user session が要らないので service role で読む。
-  if (await isWriteFenceEnabled(createServiceRoleClient())) {
-    logger.warn('[calendar-callback] write fence is enabled; rejecting connection');
-    return fail('write_fenced');
-  }
-
   if (!isGoogleCalendarConfigured()) {
     logger.warn('[calendar-callback] google calendar integration is not configured');
     return NextResponse.json({ error: 'Integration is not configured' }, { status: 503 });
@@ -130,6 +121,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
       logger.warn('[calendar-callback] rate limit unavailable; continuing');
     }
+  }
+
+  // rate limit の後に置く。fence 判定は service-role の DB 読取を伴うため、認証・
+  // rate limit より前に置くと未認証/連打リクエストがそれを無制限に駆動できてしまう
+  // （増幅経路）。Google の authorization code は token 交換（exchangeAuthorizationCode）
+  // の時点で消費されるので、ここに置けば code を使う前という要件も満たす。
+  if (await isWriteFenceEnabled(supabase)) {
+    logger.warn('[calendar-callback] write fence is enabled; rejecting connection');
+    return fail('write_fenced');
   }
 
   // start と同じ Pro ゲートをここでも通す。cookie は署名しておらず HttpOnly は JS を

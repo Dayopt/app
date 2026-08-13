@@ -34,46 +34,57 @@ function hasPostgrestCode(error: unknown): error is { code: string } {
  * relation itself does not exist yet (PGRST205 / 42P01) — that state occurs only during the
  * brief migration/deploy race window before this table exists, and treating it as blocking
  * would take down all mutations on every deploy that adds a new migration.
+ *
+ * Never throws: call sites (webhooks, cron routes, server actions) have inconsistent
+ * try/catch coverage around this call, so a thrown network/client exception here would
+ * skip fail-closed entirely and crash out of the caller uncaptured. Any unexpected throw
+ * is treated the same as a returned PostgREST error (fail-closed, captured).
  */
 export async function isWriteFenceEnabled(supabase: SupabaseClient<Database>): Promise<boolean> {
   if (Date.now() < allowCacheExpiresAt) return false;
 
-  const { data, error } = await supabase
-    .from(databaseTables.writeFenceControl)
-    .select('fence_enabled')
-    .eq('singleton_key', true)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from(databaseTables.writeFenceControl)
+      .select('fence_enabled')
+      .eq('singleton_key', true)
+      .maybeSingle();
 
-  if (error) {
-    if (hasPostgrestCode(error) && RELATION_MISSING_CODES.has(error.code)) {
-      captureUnexpectedDatabaseError(error, {
+    if (error) {
+      if (hasPostgrestCode(error) && RELATION_MISSING_CODES.has(error.code)) {
+        captureUnexpectedDatabaseError(error, {
+          feature: 'ops',
+          operation: 'check_write_fence_relation_missing',
+        });
+        logger.warn('write_fence_control relation does not exist yet; treating fence as disabled');
+        return false;
+      }
+
+      captureUnexpectedDatabaseError(error, { feature: 'ops', operation: 'check_write_fence' });
+      logger.error('Write fence check failed; failing closed (blocking writes)');
+      return true;
+    }
+
+    if (!data) {
+      captureUnexpectedDatabaseError(new Error('write_fence_control row is missing'), {
         feature: 'ops',
-        operation: 'check_write_fence_relation_missing',
+        operation: 'check_write_fence',
       });
-      logger.warn('write_fence_control relation does not exist yet; treating fence as disabled');
+      logger.error('write_fence_control row is missing; failing closed (blocking writes)');
+      return true;
+    }
+
+    if (!data.fence_enabled) {
+      allowCacheExpiresAt = Date.now() + ALLOW_CACHE_TTL_MS;
       return false;
     }
 
-    captureUnexpectedDatabaseError(error, { feature: 'ops', operation: 'check_write_fence' });
-    logger.error('Write fence check failed; failing closed (blocking writes)');
+    return true;
+  } catch (thrown) {
+    captureUnexpectedDatabaseError(thrown, { feature: 'ops', operation: 'check_write_fence' });
+    logger.error('Write fence check threw unexpectedly; failing closed (blocking writes)');
     return true;
   }
-
-  if (!data) {
-    captureUnexpectedDatabaseError(new Error('write_fence_control row is missing'), {
-      feature: 'ops',
-      operation: 'check_write_fence',
-    });
-    logger.error('write_fence_control row is missing; failing closed (blocking writes)');
-    return true;
-  }
-
-  if (!data.fence_enabled) {
-    allowCacheExpiresAt = Date.now() + ALLOW_CACHE_TTL_MS;
-    return false;
-  }
-
-  return true;
 }
 
 /** Test-only: clears the in-process allow cache so test cases don't leak state into each other. */

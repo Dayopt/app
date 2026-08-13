@@ -15,8 +15,9 @@ set -euo pipefail
 
 DEST_REMOTE="${DEST_REMOTE:-dest}"
 RESTORE_TARGET_REMOTE="${RESTORE_TARGET_REMOTE:-restore_target}"
-# shellcheck disable=SC2206 # 意図的な word splitting（空白区切りのバケット一覧）
-BUCKETS=(${STORAGE_BACKUP_BUCKETS:-avatars attachments})
+# `read -a` は IFS で分割するだけで pathname expansion をしない（unquoted `()` 展開だと
+# STORAGE_BACKUP_BUCKETS にワイルドカードが混ざった時 cwd のファイル名に化ける）。
+IFS=' ' read -r -a BUCKETS <<< "${STORAGE_BACKUP_BUCKETS:-avatars attachments}"
 
 command -v rclone >/dev/null 2>&1 || {
   echo "❌ rclone が見つかりません。公式配布（https://rclone.org/downloads/）からインストールしてください" >&2

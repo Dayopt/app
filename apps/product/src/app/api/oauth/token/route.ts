@@ -44,12 +44,14 @@ export async function POST(request: NextRequest) {
   const hostRejection = rejectUnexpectedOAuthHost(request);
   if (hostRejection) return hostRejection;
 
+  const rateLimitState = await checkOAuthTokenRateLimit(request);
+  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
+
+  // rate limit の後に置く。fence 判定は service-role の DB 読取を伴うため、rate limit
+  // より前に置くと未認証リクエストがそれを無制限に駆動できてしまう（増幅経路）。
   if (await isWriteFenceEnabled(createServiceRoleClient())) {
     return writeFencedErrorResponse();
   }
-
-  const rateLimitState = await checkOAuthTokenRateLimit(request);
-  if (rateLimitState !== 'allowed') return rateLimitErrorResponse(rateLimitState);
 
   try {
     const form = await readFormBody(request);
