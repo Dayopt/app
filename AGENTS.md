@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> **凍結（2026-08-13）**: この外部レビュー運用は停止中。レビューは内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）が担う。severity 定義（P1/P2/P3）の生きた正本も `pr-cross-review` skill 側に移した。以下は将来 Codex レビューを再開する場合のために残す。再開判断は実測の振り返り（[#2040](https://github.com/Dayopt/dayopt/issues/2040)）を経て行う。詳細は `docs/engineering/log/2026-08-13-internal-review-standardization.md`。
+
 このファイルは OpenAI Codex のクラウドコードレビュー（PR への `@codex review`）専用のレビュー規則。Codex はレビュー専任で、実装は行わない。実装・運用の正本ガイダンスは `CLAUDE.md` と `.claude/rules/` にあり、対象ディレクトリに `AGENTS.md` がある場合はそのスコープ固有のレビュー規則も適用する。
 
 ## Code Review Rules
