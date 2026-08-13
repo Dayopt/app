@@ -143,7 +143,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   fi
 
   # head SHA は check 判定と compare gate の基準に使う。取れなければ何も判定できない。
-  if [[ -z "$HEAD_SHA" || "$HEAD_SHA" == "null" ]]; then
+  # 40 桁 hex であることも検証する（内製クロスレビュー gate の head: 行と正規表現で
+  # 突き合わせるため、想定外の値が紛れ込むと判定そのものが壊れる）。
+  if [[ -z "$HEAD_SHA" || "$HEAD_SHA" == "null" || ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
     error "PR #$PR_NUMBER の head SHA を取得できませんでした。マージを中止します。"
     exit 1
   fi
@@ -651,7 +653,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
         | select(.authorAssociation == "OWNER"
                  or .authorAssociation == "MEMBER"
                  or .authorAssociation == "COLLABORATOR")
-        | ((.body // "") | sub("^[[:space:]]+"; ""))
+        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
         | select(startswith($marker))
         | select(ltrimstr($marker) | test("[^[:space:]]"))
         | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
@@ -687,6 +689,51 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     fi
     error "push 直後で marker がまだ最新 commit を指していない場合は、delta re-review を行い"
     error "新しい HEAD SHA を指す marker を投稿し直してください（HEAD が変わると古い marker は無効になります）。"
+    exit 1
+  fi
+
+  # ── marker の申告と review thread の実在を突き合わせる（二層 AND の機械強制） ──
+  #
+  # marker 自体は自己申告であり、`P1: 3 件` と書いて実際には review comment を
+  # 1 件も投稿しないことを機械的には防げない（gate は marker の 5 点チェックしか
+  # 見ないため）。marker が P1 または P2 で非ゼロ件数を申告しているのに review
+  # thread が 1 件も存在しない場合は、指摘を投稿し忘れている疑いが強いため停止する。
+  # thread は既に全ページ取得済み（$ALL_THREADS_JSON）なので再取得しない。
+  INTERNAL_REVIEW_CLAIMS_FINDINGS="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+    --arg marker "$INTERNAL_REVIEW_MARKER" \
+    --arg headSha "$HEAD_SHA" '
+    def zerolike:
+      gsub("^[ \t]+|[ \t]+$"; "")
+      | test("^(0|0件|0 件|なし|[Nn]one)$");
+    .data.repository.pullRequest
+    | select(. != null)
+    | select(.comments != null)
+    | [
+        .comments.nodes[]
+        | select(.authorAssociation == "OWNER"
+                 or .authorAssociation == "MEMBER"
+                 or .authorAssociation == "COLLABORATOR")
+        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
+        | select(startswith($marker))
+        | select(ltrimstr($marker) | test("[^[:space:]]"))
+        | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
+        | select(test("(?m)^agent:[ \\t]*\\S"))
+        | ( (capture("(?m)^P1:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p1
+        | ( (capture("(?m)^P2:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p2
+        | [$p1, $p2] | any(. != "" and (zerolike | not))
+      ]
+    | any' 2>/dev/null || true)"
+
+  ALL_THREADS_COUNT="$(printf '%s' "$ALL_THREADS_JSON" | jq -r 'length' 2>/dev/null || true)"
+  if [[ ! "$ALL_THREADS_COUNT" =~ ^[0-9]+$ ]]; then
+    ALL_THREADS_COUNT=0
+  fi
+
+  if [[ "$INTERNAL_REVIEW_CLAIMS_FINDINGS" == "true" && "$ALL_THREADS_COUNT" == "0" ]]; then
+    error "marker が P1 または P2 の指摘ありと申告していますが、review thread が 1 件もありません。マージを中止します。"
+    error "P1/P2 は inline review comment として投稿し review thread を生成する必要があります"
+    error "（.claude/skills/pr-cross-review/SKILL.md 手順 5）。summary コメントに件数だけ書いて"
+    error "review comment の投稿を忘れていないか確認してください。"
     exit 1
   fi
 

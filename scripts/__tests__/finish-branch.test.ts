@@ -104,10 +104,14 @@ function threadsPayload(
 const DEFAULT_HEAD_SHA = '0'.repeat(40);
 
 /** 通過する `[internal-review]` marker 本文を組み立てる（head / agent 行込み） */
-function internalReviewMarkerBody(overrides: { head?: string; agent?: string } = {}): string {
+function internalReviewMarkerBody(
+  overrides: { head?: string; agent?: string; p1?: string; p2?: string } = {},
+): string {
   const head = overrides.head ?? DEFAULT_HEAD_SHA;
   const agent = overrides.agent ?? 'risk-reviewer';
-  return `[internal-review]\nhead: ${head}\nagent: ${agent}\nP1: none\nP2: none`;
+  const p1 = overrides.p1 ?? 'none';
+  const p2 = overrides.p2 ?? 'none';
+  return `[internal-review]\nhead: ${head}\nagent: ${agent}\nP1: ${p1}\nP2: ${p2}`;
 }
 
 /**
@@ -1099,6 +1103,90 @@ describe('内製クロスレビューの痕跡 gate', () => {
     });
     expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
     expect(status).toBe(0);
+  });
+
+  it('P1/P2 が「なし」の申告なら review thread が 0 件でも通す', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ p1: 'なし', p2: '0' }) }],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('marker が P1 で指摘ありと申告しているのに review thread が 0 件なら止める（申告と実体の突き合わせ）', () => {
+    // marker は自己申告であり、review comment を投稿し忘れても marker 自体の
+    // 5 点チェックは通ってしまう。P1/P2 の非ゼロ申告と thread の実在を
+    // 突き合わせることで、この抜け道を塞ぐ。
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody({ p1: '2 件', p2: 'none' }) },
+        ],
+      },
+    });
+    expect(stderr).toContain('review thread が 1 件もありません');
+    expect(status).toBe(1);
+  });
+
+  it('marker が P1 で指摘ありと申告していても review thread が 1 件あれば通す', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [{ isResolved: true }],
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody({ p1: '2 件', p2: 'none' }) },
+        ],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('CRLF 改行の marker でも head / agent 行を認識する', () => {
+    const crlfBody = internalReviewMarkerBody().replace(/\n/g, '\r\n');
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: { comments: [{ author: 't3-nico', body: crlfBody }] },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('association が CONTRIBUTOR の marker では通さない', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        comments: [
+          {
+            author: 'some-contributor',
+            association: 'CONTRIBUTOR',
+            body: internalReviewMarkerBody(),
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('github-actions[bot]（association NONE）の marker では通さない', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        comments: [
+          {
+            author: 'github-actions[bot]',
+            association: 'NONE',
+            body: internalReviewMarkerBody(),
+          },
+        ],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
   });
 
   it('head 行が現在の HEAD SHA と一致しなければ止める（marker の使い回し防止）', () => {

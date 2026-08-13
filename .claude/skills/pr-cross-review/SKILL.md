@@ -85,7 +85,7 @@ P1/P2 の review comment とは別に、**1 件の summary comment** を issue �
 
 ### 8. HEAD が動いたら delta re-review する
 
-指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は常に**最新の** `[internal-review]` comment の `head:` が現在の HEAD と一致するかだけを見るため、古い marker は自動的に無効化される。
+指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
 
 ## 投稿フォーマット
 
