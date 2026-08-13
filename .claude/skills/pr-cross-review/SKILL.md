@@ -66,7 +66,7 @@ P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、�
 
 - P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
 - diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
-- PR 作成者本人（指揮台と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できるかは実装時に一度実地検証する。**フォールバックも inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、指揮台へ状況を報告してから手動で対応する
+- PR 作成者本人（指揮台と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、指揮台へ状況を報告してから手動で対応する
 - 投稿後は `.claude/rules/workflow.md` §レビュー指摘の必須解決 の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
 
 ### 6. summary コメントを投稿する（marker、gate 証跡）
