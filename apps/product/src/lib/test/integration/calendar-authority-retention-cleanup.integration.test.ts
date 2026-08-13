@@ -311,6 +311,136 @@ INSERT INTO private.calendar_oauth_attempts (
     ).toBe('false|true');
   });
 
+  // #2003（縮小 scope）: disconnect() は calendar_authority_fences に一切触れず
+  // calendar_connections を hard delete するだけ（connection-service.ts の disconnect()）。
+  // 2026-08-13 の指揮台セッションでローカル実証済みの挙動を regression test として固定する:
+  // 通常の disconnect 経路で孤児化した subject fence（他の connection / revoke operation /
+  // receipt から一切参照されない）を、本 cleanup がカバーすることを確認する。
+  it('disconnect() 相当の操作（connection 削除のみ、fence 側は無変更）で孤児化した subject fence を回収する', () => {
+    const { projectFenceId } = provisionProject();
+    const subjectFenceId = createSubjectFence('retention-subject-disconnect-orphan');
+    const connectionId = crypto.randomUUID();
+
+    ownerSql(
+      `INSERT INTO public.calendar_connections (
+  id, user_id, provider, provider_account_id, granted_scopes, refresh_token_enc, status,
+  data_generation, authority_fence_id, authority_epoch
+) VALUES (
+  :'connection_id'::UUID, :'user_id'::UUID, 'google', 'retention-subject-disconnect-orphan',
+  ARRAY['calendar.readonly']::TEXT[], 'v1.integration-ciphertext', 'active', 0,
+  :'subject_fence_id'::UUID, 0
+);
+
+-- disconnect() が実際に行うのはこれだけ（fence 側には触れない）。
+DELETE FROM public.calendar_connections WHERE id = :'connection_id'::UUID;`,
+      {
+        connection_id: connectionId,
+        subject_fence_id: subjectFenceId,
+        user_id: userId,
+      },
+    );
+
+    expect(
+      ownerSql(
+        `SELECT state FROM private.calendar_authority_fences WHERE id = :'subject_fence_id'::UUID;`,
+        { subject_fence_id: subjectFenceId },
+      ),
+    ).toBe('ready');
+
+    const deletedCount = runCleanup();
+    expect(deletedCount).toBeGreaterThanOrEqual(1);
+
+    expect(
+      ownerSql(
+        `SELECT EXISTS(SELECT 1 FROM private.calendar_authority_fences WHERE id = :'subject_fence_id'::UUID);`,
+        { subject_fence_id: subjectFenceId },
+      ),
+    ).toBe('f');
+  });
+
+  // #2003 の元 test 設計は「#2002 の finalize 配線後に pending 詰まりが解消される」と
+  // 主張していたが、これは事実誤認だった（plan-review、2026-08-13）。
+  // finalize_calendar_revoke_guards_internal_v1 は state IN ('revoke_guarded','expiry_guarded')
+  // にしか作用せず、pending には一切触れない。pending → 終端状態への遷移は
+  // expire_calendar_revoke_ciphertexts_internal_v1（#2002 で新規配線）が担う。
+  // 正しい連鎖は pending → (expire) → 終端状態 → (cleanup) の3段。
+  // cleanup 単体では pending 行に触れないことを確認した上で、expire を挟むと
+  // 同じ行が回収されることを固定する（calendar-revoke-authority-lifecycle-cron.integration.test.ts
+  // が expire/finalize 単体の state 遷移を、本 test が cleanup までの通しを担当する）。
+  it('pending のまま留まる行は cleanup 単体では回収されず、expire を経て初めて回収される', () => {
+    const { projectFenceId } = provisionProject();
+    const subjectFenceId = createSubjectFence('retention-subject-pending-chain');
+    const operationId = crypto.randomUUID();
+
+    ownerSql(
+      `UPDATE private.calendar_authority_fences
+SET pending_operation_count = pending_operation_count + 1, state = 'pending'
+WHERE id = :'subject_fence_id'::UUID;
+
+INSERT INTO private.calendar_revoke_operations (
+  operation_id, project_fence_id, subject_fence_id, subject_fence_epoch, source_user_id,
+  source_connection_id, operation_kind, request_digest, state, initial_result, created_at, expires_at
+) VALUES (
+  :'operation_id'::UUID, :'project_fence_id'::UUID, :'subject_fence_id'::UUID, 0,
+  :'user_id'::UUID, gen_random_uuid(), 'disconnect', decode(repeat('aa', 32), 'hex'), 'pending',
+  'queued', pg_catalog.clock_timestamp() - INTERVAL '10 minutes',
+  pg_catalog.clock_timestamp() - INTERVAL '1 second'
+);`,
+      {
+        operation_id: operationId,
+        project_fence_id: projectFenceId,
+        subject_fence_id: subjectFenceId,
+        user_id: userId,
+      },
+    );
+
+    // cleanup 単体では pending 行に触れない（state IN ('revoked','expired') しか対象にしない）。
+    runCleanup();
+    expect(
+      ownerSql(
+        `SELECT state FROM private.calendar_revoke_operations WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: operationId },
+      ),
+    ).toBe('pending');
+
+    // expire を挟むと終端状態（このケースは進行中 attempt が無いので expired 直行）へ進み、
+    // delete_after が settled_at + 90 日で確定する。
+    ownerSql(
+      `SELECT result.ciphertexts_deleted
+FROM private.calendar_authority_fences AS fence,
+  LATERAL private.expire_calendar_revoke_ciphertexts_internal_v1(fence.id, 1000) AS result
+WHERE fence.id = :'project_fence_id'::UUID;`,
+      { project_fence_id: projectFenceId },
+    );
+
+    expect(
+      ownerSql(
+        `SELECT state || '|' || (delete_after IS NOT NULL)
+FROM private.calendar_revoke_operations WHERE operation_id = :'operation_id'::UUID;`,
+        { operation_id: operationId },
+      ),
+    ).toBe('expired|true');
+
+    // 90 日先の delete_after のままでは cleanup 対象外（safety margin 4 時間を超える）。
+    // 実運用では 90 日後に回収されるのと同じ状態を、margin 内へ前倒しして確認する
+    // （このテストの主張は「expire が delete_after を確定させ、cleanup がそれを見て回収する」
+    // という接続そのものであって、90 日の実待ちではない）。
+    ownerSql(
+      `UPDATE private.calendar_revoke_operations
+SET delete_after = pg_catalog.clock_timestamp() + INTERVAL '1 hour'
+WHERE operation_id = :'operation_id'::UUID;`,
+      { operation_id: operationId },
+    );
+
+    runCleanup();
+    expect(
+      ownerSql(
+        `SELECT EXISTS(SELECT 1 FROM private.calendar_revoke_operations WHERE operation_id = :'operation_id'::UUID);`,
+        { operation_id: operationId },
+      ),
+    ).toBe('f');
+  });
+
   // グローバルな戻り値が 0 であることには依存しない。cleanup 関数は project 非スコープで
   // 動くため（overview 相当のコメント参照）、ローカル共有 DB に他 worktree / 他 test の
   // due 行が残っていると 0 という assertion 自体が flaky になる（risk-reviewer 指摘）。

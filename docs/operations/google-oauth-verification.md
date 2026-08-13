@@ -25,17 +25,17 @@ GCP project 側の設定手順（API 有効化・scope 登録・client 作成・
 
 ## 現状と、提出前に閉じるべきもの
 
-| 審査要件                                                                          | 現状                                                                              | 判定                |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------- |
-| App name / developer contact                                                      | GCP Console に登録済み                                                            | ✅                  |
-| Homepage が検証済みドメイン上にあり機能を説明している                             | `https://dayopt.app`（200 を確認）                                                | ✅                  |
-| プライバシーポリシーが homepage と同一ドメインにある                              | `https://dayopt.app/legal/privacy`（200 を確認）                                  | ✅                  |
-| プライバシーポリシーが **Google user data の扱いを開示**し Limited Use に準拠する | 記述が無い                                                                        | ❌ **ブロッカー 1** |
-| 同意画面に scope が登録済み                                                       | `openid` / `email` / `calendar.readonly` を登録済み（#1702 手順書 v2 ステップ 2） | ✅                  |
-| Authorized domains が Search Console で検証済み                                   | 外形から確認できない                                                              | ❓ **要確認**       |
-| デモ動画が **scope を使う app の機能**を見せる                                    | 見せられる画面が存在しない                                                        | ❌ **ブロッカー 2** |
-| 保持期間 90 日の約束が実際に執行されている                                        | cleanup がどこからも呼ばれていない                                                | ❌ **ブロッカー 3** |
-| 要求する scope が最小である                                                       | より狭い組み合わせが存在する                                                      | ⚠️ **要判断**       |
+| 審査要件                                                                          | 現状                                                                                                   | 判定                |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------- |
+| App name / developer contact                                                      | GCP Console に登録済み                                                                                 | ✅                  |
+| Homepage が検証済みドメイン上にあり機能を説明している                             | `https://dayopt.app`（200 を確認）                                                                     | ✅                  |
+| プライバシーポリシーが homepage と同一ドメインにある                              | `https://dayopt.app/legal/privacy`（200 を確認）                                                       | ✅                  |
+| プライバシーポリシーが **Google user data の扱いを開示**し Limited Use に準拠する | 記述が無い                                                                                             | ❌ **ブロッカー 1** |
+| 同意画面に scope が登録済み                                                       | `openid` / `email` / `calendar.readonly` を登録済み（#1702 手順書 v2 ステップ 2）                      | ✅                  |
+| Authorized domains が Search Console で検証済み                                   | 外形から確認できない                                                                                   | ❓ **要確認**       |
+| デモ動画が **scope を使う app の機能**を見せる                                    | 見せられる画面が存在しない                                                                             | ❌ **ブロッカー 2** |
+| 保持期間 90 日の約束が実際に執行されている                                        | cron 配線済み（2026-08-12 / 2026-08-13、account_delete 種別の settle 経路の配線確認は #2055 で追跡中） | ✅                  |
+| 要求する scope が最小である                                                       | より狭い組み合わせが存在する                                                                           | ⚠️ **要判断**       |
 
 ### ブロッカー 1: プライバシーポリシーに Google user data の記述が無い
 
@@ -62,16 +62,16 @@ Google はデモ動画に "The app functionalities that utilize the requested OA
 
 **#1962（ミラーの UI 接続 / ghost 表示）を production に出してから提出する。** 審査の外部待ちを先に消化したくなるが、この状態で出して reject されると出し直しでかえって遅くなる。
 
-### ブロッカー 3: 90 日の保持期限が実際には執行されていない
+### 解消済み: 90 日の保持期限の執行（旧ブロッカー 3）
 
-申請文と privacy 素案は「revoke の記録は 90 日で自動削除される」と書いている。**この文が真であるためには、期限切れを消す処理が実際に定期実行されている必要がある。現状は実行されていない。**
+申請文と privacy 素案は「revoke の記録は 90 日で自動削除される」と書いている。この文が真であるには、期限切れを消す処理が実際に定期実行されている必要がある。当初（本ファイル `last_verified: 2026-08-12` 時点）は実行されておらず、`delete_after` は設定されるが誰も見に来ない状態だった。
 
-- 期限切れの `calendar_revoke_operations` と subject fence を消すのは `private.cleanup_calendar_authority_retention_internal_v1`（`supabase/migrations/20260730090015_fenced_calendar_revoke_worker.sql:1084`）
-- この関数を呼ぶものが repo 内に無い。calendar 関連で唯一 migration が登録する cron `expire-calendar-revoke-outbox`（`20260730090003_harden_calendar_revoke_expiry.sql:158-162`）が実行するのは `expire_calendar_revoke_outbox_internal_v1` で、別物
+2 段の cron 配線で解消した:
 
-つまり `delete_after` は設定されるが、それを見て消す人がいない。**アカウント削除から 90 日を過ぎても Google の `sub` が残り続ける。**
+- `private.cleanup_calendar_authority_retention_internal_v1`（`calendar_revoke_operations` / `calendar_authority_command_receipts` / `calendar_oauth_attempts` の `delete_after` 超過行と孤立 subject fence を削除）を `cleanup-calendar-authority-retention`（hourly, :50）に配線（`20260812041309`、`20260812071342` で 4 時間の safety margin を追加、#1994）
+- `delete_after` は `pending` の間は常に NULL（`calendar_revoke_operations_state_shape` CHECK）で、`pending` → 終端状態（`revoked`/`expired`）への遷移は cleanup とは別の 2 関数（`private.expire_calendar_revoke_ciphertexts_internal_v1` と `private.finalize_calendar_revoke_guards_internal_v1`）が担う。この 2 本も未配線だったため、上の cleanup を配線しただけでは `pending` のまま滞留する行が解消されなかった（#2002）。`expire-calendar-revoke-authority`（:10）/ `finalize-calendar-revoke-guards`（:15）として配線し、`pending → 終端状態 → cleanup` の 3 段が全て駆動されるようにした（`20260813130000`、`20260813130100`）
 
-privacy policy に書いた保持期間は守る前提の約束なので、**提出前に cleanup を定期実行に載せる**（pg_cron から `cleanup_calendar_authority_retention_v1` を呼ぶ）。載せられないなら、申請文と privacy 素案から自動削除の記述を外す。**どちらかを選ぶまで提出しない。** 本 PR は docs のみなので実装は入れておらず、指揮台へ issue 候補として上げた。
+**アカウント削除から 90 日を過ぎると Google の `sub` を含む記録は実際に削除される状態になっている。**
 
 ### 要判断: `calendar.readonly` はこのアプリにとって最小ではない
 
