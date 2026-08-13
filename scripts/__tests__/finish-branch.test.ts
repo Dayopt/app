@@ -1347,6 +1347,101 @@ describe('内製クロスレビューの痕跡 gate', () => {
     expect(stderr).toContain('head:');
     expect(stderr).toContain('agent:');
   });
+
+  it('通過時のログに agent 値を含める', () => {
+    const { stderr } = runScript(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody({ agent: 'behavior-verifier' }) },
+        ],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました（agent: behavior-verifier）');
+  });
+
+  describe('痕跡ゼロ時の原因区別（5 点判定のどれで落ちたかをヒントで示す）', () => {
+    it('marker で始まるコメントが 1 件も無ければ原因 1 を示す', () => {
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: { comments: [{ author: 't3-nico', body: 'よろしくお願いします' }] },
+      });
+      expect(stderr).toContain(
+        '原因: 「[internal-review]」で本文が始まるコメントが 1 件もありません。',
+      );
+    });
+
+    it('association が不足しているだけなら原因 2 を示す', () => {
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          comments: [
+            { author: 'random-passerby', association: 'NONE', body: internalReviewMarkerBody() },
+          ],
+        },
+      });
+      expect(stderr).toContain(
+        '原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません',
+      );
+    });
+
+    it('marker だけで中身が無ければ原因 3 を示す', () => {
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: { comments: [{ author: 't3-nico', body: '[internal-review]   \n  ' }] },
+      });
+      expect(stderr).toContain(
+        '原因: marker の後に本文が続いていません（marker だけのコメントは無効です）。',
+      );
+    });
+
+    it('head SHA が不一致なら原因 4 を示す（delta re-review の示唆）', () => {
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          comments: [
+            { author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) },
+          ],
+        },
+      });
+      expect(stderr).toContain('原因: marker はありますが `head: <sha>` が現在の HEAD SHA');
+    });
+
+    it('agent 行が欠落していれば原因 5 を示す', () => {
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          comments: [
+            { author: 't3-nico', body: `[internal-review]\nhead: ${DEFAULT_HEAD_SHA}\nP1: none` },
+          ],
+        },
+      });
+      expect(stderr).toContain(
+        '原因: marker と head SHA は一致していますが `agent:` 行が空または欠落しています。',
+      );
+    });
+
+    it('複数条件が同時に不足していても、判定順で最初の原因だけを示す', () => {
+      // association 不足（原因 2）と head 不一致（原因 4）が同時に起きているケース。
+      // 判定順（1→5）で最初の不足である原因 2 だけを示し、原因 4 は出さない。
+      const { stderr } = runScript(greenRollup(), {
+        threads: [],
+        reviewEvidence: {
+          comments: [
+            {
+              author: 'random-passerby',
+              association: 'NONE',
+              body: internalReviewMarkerBody({ head: '1'.repeat(40) }),
+            },
+          ],
+        },
+      });
+      expect(stderr).toContain(
+        '原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません',
+      );
+      expect(stderr).not.toContain('原因: marker はありますが `head:');
+    });
+  });
 });
 
 describe('gate は REST 直叩きでも緩まない', () => {

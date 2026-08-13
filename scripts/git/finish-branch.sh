@@ -642,24 +642,34 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #   5. `agent: <値>` 行があり非空であること。値そのものは自己申告であり機械
   #      検証しない（OWNER/MEMBER/COLLABORATOR しか投稿できないことが唯一の
   #      担保。`pr-cross-review` スキル参照）
-  INTERNAL_REVIEW_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+  # count（痕跡数）と agents（agent 値の一覧）を 1 回の jq で同時に取得する。
+  # 5 点チェックを段階（step1〜step5）に分解し、各 step は「1 つ前の step を
+  # 満たした上でその条件も満たす」候補数にする。痕跡ゼロ時にどの条件で落ちたかを
+  # 特定するのに使う（下記の停止メッセージ参照）。agent 値の抽出は count と
+  # 同じフィルタ（$step5）から行い、マッチ用フィルタを二重に書かない。
+  INTERNAL_REVIEW_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
     --arg marker "$INTERNAL_REVIEW_MARKER" \
     --arg headSha "$HEAD_SHA" '
-    .data.repository.pullRequest
-    | select(. != null)
-    | select(.comments != null)
-    | [
-        .comments.nodes[]
-        | select(.authorAssociation == "OWNER"
-                 or .authorAssociation == "MEMBER"
-                 or .authorAssociation == "COLLABORATOR")
-        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
-        | select(startswith($marker))
-        | select(ltrimstr($marker) | test("[^[:space:]]"))
-        | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
-        | select(test("(?m)^agent:[ \\t]*\\S"))
-      ]
-    | length' 2>/dev/null || true)"
+    def trimmedBody: (.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; "");
+    (.data.repository.pullRequest.comments.nodes // []) as $nodes
+    | ($nodes | map(select(trimmedBody | startswith($marker)))) as $step1
+    | ($step1 | map(select(.authorAssociation == "OWNER"
+                           or .authorAssociation == "MEMBER"
+                           or .authorAssociation == "COLLABORATOR"))) as $step2
+    | ($step2 | map(select(trimmedBody | ltrimstr($marker) | test("[^[:space:]]")))) as $step3
+    | ($step3 | map(select(trimmedBody | test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$")))) as $step4
+    | ($step4 | map(select(trimmedBody | test("(?m)^agent:[ \\t]*\\S")))) as $step5
+    | {
+        count: ($step5 | length),
+        agents: ($step5 | map(trimmedBody | capture("(?m)^agent:[ \\t]*(?<v>\\S.*)$").v)),
+        step1: ($step1 | length),
+        step2: ($step2 | length),
+        step3: ($step3 | length),
+        step4: ($step4 | length),
+        step5: ($step5 | length)
+      }' 2>/dev/null || true)"
+
+  INTERNAL_REVIEW_EVIDENCE_COUNT="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 
   # 窓（last: 100）より多い comments を持つ PR かどうか。停止時の説明にだけ使い、
   # 判定そのものは緩めない（切り詰めを理由に通すと fail open になる）。
@@ -683,6 +693,29 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     error "「${INTERNAL_REVIEW_MARKER}」で始めるコメントを投稿してから再実行してください。"
     error "コメントには \`head: <現在の HEAD SHA>\` 行と \`agent: <実行 agent 名>\` 行が必要です。"
     error "（.claude/skills/pr-cross-review/SKILL.md、.claude/rules/workflow.md §内製クロスレビューの実施を要求する gate）"
+
+    # 5 点判定のどの条件で落ちたかを、段階的に絞り込んだ step1〜step5 の候補数
+    # から特定する。最初に 0 になった step が原因（複数条件が同時に不足して
+    # いても、判定順で最初の条件だけをヒントとして示す）。100 件超過時の
+    # window truncation ヒントとの非対称を解消する追加ヒント。
+    REVIEW_STEP1="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
+    REVIEW_STEP2="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
+    REVIEW_STEP3="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step3 // 0' 2>/dev/null || echo 0)"
+    REVIEW_STEP4="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step4 // 0' 2>/dev/null || echo 0)"
+    REVIEW_STEP5="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step5 // 0' 2>/dev/null || echo 0)"
+
+    if [[ "$REVIEW_STEP1" == "0" ]]; then
+      error "原因: 「${INTERNAL_REVIEW_MARKER}」で本文が始まるコメントが 1 件もありません。"
+    elif [[ "$REVIEW_STEP2" == "0" ]]; then
+      error "原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません（bot や第三者のコメントは無効です）。"
+    elif [[ "$REVIEW_STEP3" == "0" ]]; then
+      error "原因: marker の後に本文が続いていません（marker だけのコメントは無効です）。"
+    elif [[ "$REVIEW_STEP4" == "0" ]]; then
+      error "原因: marker はありますが \`head: <sha>\` が現在の HEAD SHA（${HEAD_SHA}）と一致しません。"
+    elif [[ "$REVIEW_STEP5" == "0" ]]; then
+      error "原因: marker と head SHA は一致していますが \`agent:\` 行が空または欠落しています。"
+    fi
+
     if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
       error "なお、この PR は comments が 100 件を超えており、直近 100 件しか見ていません。"
       error "実際にはレビュー済みで、痕跡が窓の外に落ちている可能性があります。"
@@ -737,7 +770,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  info "内製クロスレビューの痕跡を確認しました。"
+  # 通過時のログに agent 値を含める（「どの経路で通ったかを出力する」旧設計の
+  # 踏襲）。count と同じ $step5 フィルタから抽出済みの agents を使う。
+  INTERNAL_REVIEW_AGENTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '(.agents // []) | map(select(. != null and . != "")) | unique | join(", ")' 2>/dev/null || true)"
+
+  info "内製クロスレビューの痕跡を確認しました（agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、
