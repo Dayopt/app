@@ -1,6 +1,6 @@
 # pre-push: main 保護 + push 前の pause point（provider 非依存）
 #
-# git レベルの hook なので Claude / Codex / 人間 / wrapper script のすべてに効く。
+# git レベルの hook なので Claude / 人間 / wrapper script のすべてに効く。
 # stdin には push される ref が <local_ref> <local_sha> <remote_ref> <remote_sha>
 # の形で 1 行ずつ渡される。
 

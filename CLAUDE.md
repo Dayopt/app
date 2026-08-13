@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.claude/rules/` を canonical source とする。外部レビューは OpenAI Codex のクラウドレビュー（PR への `@codex review`）だけが担い、そのレビュー規則は `AGENTS.md` に置く。Codex が repo から読むのは `AGENTS.md` のみで、実装・運用のガイダンスを provider 別に二重管理しない。
+Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.claude/rules/` を canonical source とする。外部レビュー（OpenAI Codex のクラウドレビュー）は 2026-08-13 時点で運用停止しており、レビューは内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）が担う。Codex 向けのレビュー規則は `AGENTS.md` に凍結保存してあり、再開時はそこから読み替える。実装・運用のガイダンスを provider 別に二重管理しない方針は不変。
 
 ## シンプルルール（判断層）
 
@@ -80,7 +80,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す
 - コミットメッセージは日本語 Conventional Commits 形式にする（type は commitlint が強制。subject を Latin 大文字語で始めると `subject-case` で弾かれるため日本語で始める）
-- PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度）
+- PR は機能のまとまり単位で束ねる。サイズを理由に分割しない（`.claude/rules/workflow.md` §PR 粒度・判定 3 問）
 - PR は draft で作成する（`gh pr create --draft`）。ready 化は merge 直前に 1 回だけ行い、重量 CI（E2E / Web E2E / Production Config Audit）を merge 前 1 回に寄せる（`.claude/rules/workflow.md` §2 段階 CI）
 - PR 本文に `Closes #N` を issue ごとに 1 行ずつ書き、merge で自動クローズさせる。`Closes #1, #2` は先頭しか閉じない。epic と部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
 - PR は枝分かれを履歴に残すため merge commit でマージする。**マージ〜掃除は同一セッション内で `pnpm branch:finish <PR番号>` をワンセットで実行する**（マージ→worktree削除→ローカル/リモート branch 削除→main 最新化まで。完了定義 5 点と手動フォールバックは `.claude/rules/workflow.md` §Worktree 運用）
@@ -155,7 +155,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 Project skills は `.claude/skills/` に置く。該当する作業では `SKILL.md` を先に読む。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit / pr-cross-review
 
 ## Deploy / Release
 

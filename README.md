@@ -45,7 +45,7 @@ pnpm test:e2e:smoke     # product + web smoke test
 
 ## Development Contract
 
-- AI / contributorの入口: [`CLAUDE.md`](./CLAUDE.md)（Codexのクラウドレビュー規則は[`AGENTS.md`](./AGENTS.md)）
+- AI / contributorの入口: [`CLAUDE.md`](./CLAUDE.md)（外部レビュー規則は[`AGENTS.md`](./AGENTS.md)に凍結保存。現在は内製クロスレビューが担う）
 - 内部docsの地図: [`docs/README.md`](./docs/README.md)
 - architecture: [`docs/engineering/architecture.md`](./docs/engineering/architecture.md)
 - coding conventions: [`docs/engineering/conventions.md`](./docs/engineering/conventions.md)

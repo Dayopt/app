@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PR のマージ〜掃除をワンセットで行う共通スクリプト。
-# Claude / Codex / 人間が同じコマンドで実行できる。
+# Claude / 人間が同じコマンドで実行できる。
 #
 #   pnpm branch:finish <PR番号> [--dry-run]
 #
@@ -143,7 +143,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   fi
 
   # head SHA は check 判定と compare gate の基準に使う。取れなければ何も判定できない。
-  if [[ -z "$HEAD_SHA" || "$HEAD_SHA" == "null" ]]; then
+  # 40 桁 hex であることも検証する（内製クロスレビュー gate の head: 行と正規表現で
+  # 突き合わせるため、想定外の値が紛れ込むと判定そのものが壊れる）。
+  if [[ -z "$HEAD_SHA" || "$HEAD_SHA" == "null" || ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
     error "PR #$PR_NUMBER の head SHA を取得できませんでした。マージを中止します。"
     exit 1
   fi
@@ -437,7 +439,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   # ── レビュー thread の解決を要求する ────────────────────────────────
   #
-  # 外部レビュー（Codex 等）の指摘 thread が未解決のまま merge できると、指摘の
+  # レビュー（内製クロスレビュー等）の指摘 thread が未解決のまま merge できると、指摘の
   # 黙殺が構造的に可能になる。「解決」は 3 択のいずれか: ① fix を積んで resolve、
   # ② 反論・根拠を reply して resolve、③ 別 issue へ切り出し番号を reply して
   # resolve（`.claude/rules/workflow.md` §レビュー指摘の必須解決）。
@@ -590,46 +592,33 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   info "未解決のレビュー thread はありません。"
 
-  # ── 外部レビューが実際に回ったことを要求する ──────────────────────────
+  # ── 内製クロスレビューが実際に回ったことを要求する ──────────────────────
   #
-  # 上の gate は「**存在する** 指摘 thread が resolve 済みか」しか見ない。thread が
-  # 0 件の PR は素通りするため、「レビューされて指摘ゼロだった PR」と「レビューを
-  # 投げ忘れた PR」が機械には同じに見える。draft 運用（`.claude/rules/workflow.md`
-  # §2 段階 CI）で Codex の自動発火（open / ready 化）を意図的に外している以上、
-  # `@codex review` は手で打つ以外に発火経路が無く、投げ忘れても何も止まらなかった。
+  # 上の thread gate は「**存在する** 指摘 thread が resolve 済みか」しか見ない。
+  # thread が 0 件の PR は素通りするため、「レビューされて指摘ゼロだった PR」と
+  # 「レビューを投げ忘れた PR」が機械には同じに見える。外部レビュー（Codex）廃止
+  # （2026-08-13、`AGENTS.md` 冒頭の凍結注記）により、レビューは指揮台が発火する
+  # `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）が担う。
   #
-  # **痕跡の検出は 3 経路すべてを見る。** Codex は結果によって出力先を変える:
-  #   - 指摘あり → review + reviewThreads に出る（PR #1938 / #1927）
-  #   - 指摘なし → **issue comment にしか出ない**（PR #1932 は "Didn't find any
-  #     major issues" を comment で返し、reviews / reviewThreads は 0 件だった）
-  # どれか 1 経路だけを見ると、その裏側の結果を「無応答」と誤判定する。
-  #
-  # Codex が usage limit や障害で応答しない期間は `workflow.md` §外部レビューが
-  # 動かない時 が「応答しなかった事実と代替検証を PR にコメントで残す」ことを
-  # 既に要求している。そのコメントに $NO_EXTERNAL_REVIEW_MARKER を含めることを
-  # 唯一の escape hatch とし、新しい抜け道は作らない。
-  step "外部レビューの痕跡を確認"
+  # **痕跡は `[internal-review]` marker 付き comment 1 経路のみで判定する。**
+  # 旧設計（Codex 応答）は「結果によって出力先が変わる第三者の挙動」に対応する
+  # ため review / reviewThreads / comment の 3 経路を見ていたが、内製レビューは
+  # 自分で出力先を決められるため経路分岐の理由が消える。P1/P2 指摘そのものは
+  # pr-cross-review スキルが inline review comment として投稿し、上の thread gate
+  # で resolve を強制される。ここで見る `[internal-review]` comment は「実施した
+  # という証跡」のみを担う、二層構造の 1 層目。
+  step "内製クロスレビューの痕跡を確認"
 
-  # login は実測では `chatgpt-codex-connector`（PR #1938 / #1932 / #1927 / #1922 /
-  # #1918 の GraphQL author.login を確認）だが、GitHub の bot account は `[bot]`
-  # サフィックス付きで返る系統もあり、docs 側に両表記が混在している。取り違えると
-  # **全 PR を永久に止める** 側に倒れるため両方を受ける。前方一致にはしない
-  # （`chatgpt-codex-connector-fake` のような偽装 login を通さないため）。
-  EXTERNAL_REVIEWER_LOGIN="chatgpt-codex-connector"
-  EXTERNAL_REVIEWER_LOGIN_BOT="chatgpt-codex-connector[bot]"
-  NO_EXTERNAL_REVIEW_MARKER="[no-external-review]"
+  INTERNAL_REVIEW_MARKER="[internal-review]"
 
-  # reviews / comments は `last:` で引く。無応答注記は merge 直前に置かれ、Codex の
-  # 応答も直近に寄るため、古い側を切り落とす `first:` より取りこぼしにくい。
-  # それでも 100 件を超える PR では古い痕跡が窓から落ちうるので totalCount も取り、
-  # 「痕跡なし」で止める時に窓の切り詰めが起きていたかを伝える（thread 側は全ページ
-  # 走査済みなので、この窓落ちが単独で停止を招くのは thread が 1 件も無い PR に限る）。
-  # 取得失敗は「未確認のまま通す」ではなく停止に倒す（fail closed）。
+  # comment は `last:` で引く。marker は merge 直前に置かれるため、古い側を切り
+  # 落とす `first:` より取りこぼしにくい。100 件を超える PR では古い痕跡が窓から
+  # 落ちうるので totalCount も取り、「痕跡なし」で止める時に窓の切り詰めが起きて
+  # いたかを伝える。取得失敗は「未確認のまま通す」ではなく停止に倒す（fail closed）。
   REVIEW_EVIDENCE_JSON="$(gh api graphql \
     -f query='query($owner: String!, $name: String!, $number: Int!) {
       repository(owner: $owner, name: $name) {
         pullRequest(number: $number) {
-          reviews(last: 100) { totalCount nodes { author { login } } }
           comments(last: 100) { totalCount nodes { author { login } authorAssociation body } }
         }
       }
@@ -638,49 +627,24 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     -f name="$THREAD_NAME" \
     -F number="$PR_NUMBER" 2>/dev/null || true)"
 
-  # reviews / comments のどちらかが null（pullRequest 不在・権限不足など）なら
-  # 判定材料が欠けているので、空配列に潰さずそのまま停止させる。
-  # Codex 本人の応答（review / comment）の件数。
-  #
-  # **comment 経路は allowlist で数える。** Codex は「レビューできなかった」ことも
-  # comment で返す（実測 23 件: "You have reached your Codex usage limits" 19 /
-  # "Codex Review: Something went wrong" 2 / "Unknown error" 2）。author だけで数える
-  # と、**Codex が使えない時ほど gate が通ってしまい**、注記が必要な状況で注記を
-  # 求められなくなる。失敗文言を denylist で除くのは次の文言が出るたびに穴が空くので、
-  # 「完了した」と分かる形だけを通す。
-  #
-  # comment 経路が要るのは指摘ゼロの時だけ（指摘ありは review / reviewThreads に出る）
-  # なので、allowlist は指摘ゼロの定型 1 種で足りる。文言が変わったら fail closed 側
-  # （注記を要求）に倒れるので、気づける。
-  CODEX_NO_FINDINGS_PREFIX="Codex Review: Didn't find any major issues"
-
-  REVIEW_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
-    --arg login "$EXTERNAL_REVIEWER_LOGIN" \
-    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" \
-    --arg okPrefix "$CODEX_NO_FINDINGS_PREFIX" '
-    .data.repository.pullRequest
-    | select(. != null)
-    | select(.reviews != null and .comments != null)
-    | [
-        (.reviews.nodes[] | select(.author.login == $login or .author.login == $loginBot)),
-        (.comments.nodes[]
-          | select(.author.login == $login or .author.login == $loginBot)
-          | select((.body // "") | startswith($okPrefix)))
-      ]
-    | length' 2>/dev/null || true)"
-
-  # 無応答注記（escape hatch）の件数。**この判定は意図的に厳しくする。**
-  # 素朴な「body に marker を含む」だと、gate 自身が出す停止メッセージや workflow.md
-  # の規約本文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の
-  # 貼り付け・この diff のレビュー依頼など、日常操作で踏む）。そこで 2 点で絞る:
+  # marker の 5 点チェック。**この判定は意図的に厳しくする。**
+  # 素朴な「body に marker を含む」だと、gate 自身が出す停止メッセージや
+  # workflow.md の規約本文を PR コメントへ貼っただけで gate が黙って無効化される
+  # （引用・stderr の貼り付け・この diff のレビュー依頼など、日常操作で踏む）。
   #   1. コメント**本文の先頭**が marker であること（引用行は `>` で始まるので落ちる）
   #   2. 書き手が OWNER / MEMBER / COLLABORATOR であること（bot と第三者は NONE。
   #      この repo は public なので、任意のユーザーがコメントできる）
-  #   3. marker を除いた本文が空でないこと。規約（workflow.md §外部レビューが動かない
-  #      時）は「応答しなかった事実と代替の検証内容」を要求しており、タグだけの
-  #      コメントで通せると監査記録が空のまま merge できてしまう
-  MARKER_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
-    --arg marker "$NO_EXTERNAL_REVIEW_MARKER" '
+  #   3. marker を除いた本文が空でないこと
+  #   4. `head: <sha>` 行があり、値が今回の merge に使う $HEAD_SHA と完全一致する
+  #      こと。早い段階で貼った marker を使い回し、その後の未レビュー push を
+  #      素通りさせる抜け道を塞ぐ（$HEAD_SHA は L120 で取得し、merge 実行時にも
+  #      同じ変数を使う。§マージ実行 参照）
+  #   5. `agent: <値>` 行があり非空であること。値そのものは自己申告であり機械
+  #      検証しない（OWNER/MEMBER/COLLABORATOR しか投稿できないことが唯一の
+  #      担保。`pr-cross-review` スキル参照）
+  INTERNAL_REVIEW_EVIDENCE_COUNT="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+    --arg marker "$INTERNAL_REVIEW_MARKER" \
+    --arg headSha "$HEAD_SHA" '
     .data.repository.pullRequest
     | select(. != null)
     | select(.comments != null)
@@ -689,65 +653,91 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
         | select(.authorAssociation == "OWNER"
                  or .authorAssociation == "MEMBER"
                  or .authorAssociation == "COLLABORATOR")
-        | ((.body // "") | ltrimstr(" ") | ltrimstr("\n"))
+        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
         | select(startswith($marker))
         | select(ltrimstr($marker) | test("[^[:space:]]"))
+        | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
+        | select(test("(?m)^agent:[ \\t]*\\S"))
       ]
     | length' 2>/dev/null || true)"
 
-  # 窓（last: 100）より多い reviews / comments を持つ PR かどうか。停止時の説明にだけ
-  # 使い、判定そのものは緩めない（切り詰めを理由に通すと fail open になる）。
+  # 窓（last: 100）より多い comments を持つ PR かどうか。停止時の説明にだけ使い、
+  # 判定そのものは緩めない（切り詰めを理由に通すと fail open になる）。
   REVIEW_WINDOW_TRUNCATED="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r '
     .data.repository.pullRequest
     | select(. != null)
-    | ((.reviews.totalCount // 0) > 100 or (.comments.totalCount // 0) > 100)' 2>/dev/null || true)"
+    | ((.comments.totalCount // 0) > 100)' 2>/dev/null || true)"
 
   # 数値以外（取得失敗・null 混入・部分出力）は「痕跡あり」に読み替えられないよう
   # 停止に倒す。`-z` だけの判定にすると、想定外の文字列が "0 でない" として
   # 素通りしてしまう。
-  if [[ ! "$REVIEW_EVIDENCE_COUNT" =~ ^[0-9]+$ || ! "$MARKER_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
-    error "外部レビューの痕跡を取得できませんでした。マージを中止します（fail closed）。"
+  if [[ ! "$INTERNAL_REVIEW_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
+    error "内製クロスレビューの痕跡を取得できませんでした。マージを中止します（fail closed）。"
     error "gh の認証とネットワークを確認して再実行してください。"
     exit 1
   fi
 
-  # thread は既に全ページ取得済みなので再取得しない。指摘ありの Codex レビューは
-  # thread の 1 コメント目に現れる。数値以外（jq の失敗・部分出力）は 0 件と区別が
-  # つかないため、痕跡なし側に倒して停止させる。
-  THREAD_EVIDENCE_COUNT="$(printf '%s' "$ALL_THREADS_JSON" | jq -r \
-    --arg login "$EXTERNAL_REVIEWER_LOGIN" \
-    --arg loginBot "$EXTERNAL_REVIEWER_LOGIN_BOT" '
-    [.[] | select(.comments.nodes[0].author.login == $login
-                  or .comments.nodes[0].author.login == $loginBot)] | length' 2>/dev/null || true)"
-
-  if [[ ! "$THREAD_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
-    THREAD_EVIDENCE_COUNT=0
-  fi
-
-  if [[ "$REVIEW_EVIDENCE_COUNT" == "0" && "$THREAD_EVIDENCE_COUNT" == "0" &&
-    "$MARKER_EVIDENCE_COUNT" == "0" ]]; then
-    error "この PR には外部レビューの痕跡がありません。マージを中止します。"
-    error "draft のまま PR に「@codex review」とコメントし、レビューが一巡してから再実行してください。"
-    error "Codex が usage limit や障害で応答しない場合は、代わりに次の形のコメントを残してください:"
-    error "  1 行目を「${NO_EXTERNAL_REVIEW_MARKER}」で始め、応答しなかった事実と代替の検証内容を続ける"
-    error "  （タグだけのコメントは通らない。Codex の usage limit 通知も痕跡には数えない）"
-    error "（.claude/rules/workflow.md §外部レビューが動かない時）"
+  if [[ "$INTERNAL_REVIEW_EVIDENCE_COUNT" == "0" ]]; then
+    error "この PR には内製クロスレビューの痕跡がありません。マージを中止します。"
+    error "指揮台が pr-cross-review スキルでクロスレビューを実行し、1 行目を"
+    error "「${INTERNAL_REVIEW_MARKER}」で始めるコメントを投稿してから再実行してください。"
+    error "コメントには \`head: <現在の HEAD SHA>\` 行と \`agent: <実行 agent 名>\` 行が必要です。"
+    error "（.claude/skills/pr-cross-review/SKILL.md、.claude/rules/workflow.md §内製クロスレビューの実施を要求する gate）"
     if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
-      error "なお、この PR は reviews / comments が 100 件を超えており、直近 100 件しか見ていません。"
+      error "なお、この PR は comments が 100 件を超えており、直近 100 件しか見ていません。"
       error "実際にはレビュー済みで、痕跡が窓の外に落ちている可能性があります。"
     fi
+    error "push 直後で marker がまだ最新 commit を指していない場合は、delta re-review を行い"
+    error "新しい HEAD SHA を指す marker を投稿し直してください（HEAD が変わると古い marker は無効になります）。"
     exit 1
   fi
 
-  # **どの経路で通ったかを必ず出す。** 「Codex が実際に見た」と「無応答注記で飛ばした」を
-  # 同じ 1 行に潰すと、workflow.md §外部レビューが動かない時 が求める
-  # 「レビューが無いまま merge した PR を後から識別できる状態」を gate 側が満たさない。
-  if [[ "$REVIEW_EVIDENCE_COUNT" != "0" || "$THREAD_EVIDENCE_COUNT" != "0" ]]; then
-    info "外部レビューの痕跡を確認しました（Codex の応答あり）。"
-  else
-    info "外部レビューの応答はありません。無応答注記（${NO_EXTERNAL_REVIEW_MARKER}）で通します。"
-    info "この PR は「外部レビューを経ずに merge した」ものとして扱ってください。"
+  # ── marker の申告と review thread の実在を突き合わせる（二層 AND の機械強制） ──
+  #
+  # marker 自体は自己申告であり、`P1: 3 件` と書いて実際には review comment を
+  # 1 件も投稿しないことを機械的には防げない（gate は marker の 5 点チェックしか
+  # 見ないため）。marker が P1 または P2 で非ゼロ件数を申告しているのに review
+  # thread が 1 件も存在しない場合は、指摘を投稿し忘れている疑いが強いため停止する。
+  # thread は既に全ページ取得済み（$ALL_THREADS_JSON）なので再取得しない。
+  INTERNAL_REVIEW_CLAIMS_FINDINGS="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
+    --arg marker "$INTERNAL_REVIEW_MARKER" \
+    --arg headSha "$HEAD_SHA" '
+    def zerolike:
+      gsub("^[ \t]+|[ \t]+$"; "")
+      | test("^(0|0件|0 件|なし|[Nn]one)$");
+    .data.repository.pullRequest
+    | select(. != null)
+    | select(.comments != null)
+    | [
+        .comments.nodes[]
+        | select(.authorAssociation == "OWNER"
+                 or .authorAssociation == "MEMBER"
+                 or .authorAssociation == "COLLABORATOR")
+        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
+        | select(startswith($marker))
+        | select(ltrimstr($marker) | test("[^[:space:]]"))
+        | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
+        | select(test("(?m)^agent:[ \\t]*\\S"))
+        | ( (capture("(?m)^P1:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p1
+        | ( (capture("(?m)^P2:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p2
+        | [$p1, $p2] | any(. != "" and (zerolike | not))
+      ]
+    | any' 2>/dev/null || true)"
+
+  ALL_THREADS_COUNT="$(printf '%s' "$ALL_THREADS_JSON" | jq -r 'length' 2>/dev/null || true)"
+  if [[ ! "$ALL_THREADS_COUNT" =~ ^[0-9]+$ ]]; then
+    ALL_THREADS_COUNT=0
   fi
+
+  if [[ "$INTERNAL_REVIEW_CLAIMS_FINDINGS" == "true" && "$ALL_THREADS_COUNT" == "0" ]]; then
+    error "marker が P1 または P2 の指摘ありと申告していますが、review thread が 1 件もありません。マージを中止します。"
+    error "P1/P2 は inline review comment として投稿し review thread を生成する必要があります"
+    error "（.claude/skills/pr-cross-review/SKILL.md 手順 5）。summary コメントに件数だけ書いて"
+    error "review comment の投稿を忘れていないか確認してください。"
+    exit 1
+  fi
+
+  info "内製クロスレビューの痕跡を確認しました。"
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、

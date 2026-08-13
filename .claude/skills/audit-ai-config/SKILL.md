@@ -29,7 +29,7 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 ## 前提（現在の構成）
 
 - 実装・運用ガイダンスの正本は `CLAUDE.md` と `.claude/rules/`。ローカルで動く coding agent は Claude のみ
-- 外部レビューは OpenAI Codex のクラウドレビュー（`@codex review`）専任。Codex が repo から読むのは `AGENTS.md` だけで、そこにはレビュー規則のみを置く
+- 外部レビュー（OpenAI Codex のクラウドレビュー、`@codex review`）は 2026-08-13 時点で運用停止中。レビューは内製クロスレビュー（`pr-cross-review` skill）が担う。Codex 向けレビュー規則は `AGENTS.md` に凍結保存してあり、再開時のために残す
 - review subagent の role 本文は `.claude/agents/*.md` に直接置く（間接層を挟まない）
 - 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・AGENTS.md 共通入口）は 2026-08-05 に撤去済み。経緯は `docs/engineering/log/2026-08-05-codex-review-only.md`
 - 旧 `.claude/commands/*.md` は 2026-08 に `.claude/skills/{name}/SKILL.md`（明示発動型）へ統合済み。`.claude/commands/` ディレクトリは存在しない

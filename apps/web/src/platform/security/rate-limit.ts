@@ -130,6 +130,23 @@ export const cspReportGlobalRateLimit = createRateLimiter(
   'ratelimit:web:csp-report-global',
 );
 
+/**
+ * OG画像生成用レート制限（IP単位）
+ *
+ * blog記事のhero画像としても配信されるため緩め。異常なIPだけを絞る目的で、
+ * render costの主な保護は入力長の上限(route側)とglobal quotaが担う。
+ */
+export const ogImageRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(60, '1 m'),
+  'ratelimit:web:og-image',
+);
+
+/** OG画像生成の全体quota。edge compute費用の天井を守る（暫定値）。 */
+export const ogImageGlobalRateLimit = createRateLimiter(
+  Ratelimit.slidingWindow(600, '1 m'),
+  'ratelimit:web:og-image-global',
+);
+
 function bytesToHex(bytes: ArrayBuffer): string {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

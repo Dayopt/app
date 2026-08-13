@@ -3,8 +3,49 @@ import { OG_COLORS } from '@dayopt/foundations/og-colors';
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 
+import { captureUnexpectedWebError } from '@web/platform/observability/capture-unexpected-error';
+import {
+  getClientIp,
+  hashRateLimitIdentifier,
+  ogImageGlobalRateLimit,
+  ogImageRateLimit,
+} from '@web/platform/security/rate-limit';
+
 export const maxDuration = 25;
 export const runtime = 'edge';
+
+/**
+ * 成功レスポンスの正規cache契約。長寿命(内容はpost frontmatterから決定的に導出される)。
+ * `s-maxage` を明示しないとVercel Edge NetworkでCDNキャッシュされる保証が無く、
+ * hero画像の全アクセスが毎回この関数とUpstash 2往復を経由してしまう。
+ */
+const OG_IMAGE_CACHE_CONTROL = 'public, max-age=31536000, s-maxage=31536000, immutable';
+/** global quota超過時・limiter障害時のfallbackはすぐ回復させたいので短命にする。 */
+const OG_IMAGE_FALLBACK_CACHE_CONTROL = 'public, max-age=300, s-maxage=300';
+/** reject応答はCDN/共有cacheに載せない。 */
+const NO_STORE_HEADERS: HeadersInit = { 'Cache-Control': 'no-store' };
+
+/**
+ * 各 query field の描画前 upper bound。
+ *
+ * 400 で reject せず truncate するのは、本 route が blog 記事の hero 画像
+ * (`page.tsx` の `heroImage`、cover 画像未設定時に `priority` 付き `<Image>` で
+ * 直接配信される)としても使われており、既に公開・SNSシェア済みのリンクを
+ * 壊さないため。上限は Satori layout コストを頭打ちにする目的で足りる。
+ *
+ * title は line-clamp を持たないため、630px canvas を溢れさせない実用的な値に
+ * 絞る(既存blog記事のtitleは概算100字以下、`docs/engineering/log/` 未参照)。
+ */
+const MAX_TITLE_LENGTH = 120;
+const MAX_DESCRIPTION_LENGTH = 500;
+const MAX_CATEGORY_LENGTH = 60;
+const MAX_AUTHOR_LENGTH = 100;
+const MAX_DATE_LENGTH = 40;
+/** query string 全体がこれを超えたら、truncateでは吸収しない明らかな異常として reject する。 */
+const MAX_QUERY_STRING_LENGTH = 4_096;
+/** Upstash障害中のcapture floodを抑えるサンプリング窓。低頻度な他routeのcapture方針とは前提が違う(hero画像として高頻度に叩かれる)。 */
+const RATE_LIMIT_FAILURE_CAPTURE_WINDOW_MS = 60_000;
+let lastRateLimitFailureCaptureAt = 0;
 
 /**
  * マーケティングサイトの OG 画像
@@ -27,18 +68,115 @@ const TYPE_LABELS: Record<string, string> = {
   default: dayoptBrand.name,
 };
 
+const ALLOWED_TYPES: ReadonlySet<string> = new Set(Object.keys(TYPE_LABELS));
+
+/** サロゲートペアを`slice`で分断しない(絵文字混じりのtitle等で文字化けさせない)。 */
+function truncate(value: string | null, maxLength: number): string {
+  if (!value) return '';
+  return Array.from(value).slice(0, maxLength).join('');
+}
+
+/**
+ * IPv6は/128(フルアドレス)のままidentifierにすると、攻撃者が/64割り当て内の
+ * 2^64通りのアドレスを使い分けてIP単位のrate limitを素通りできる(#1978と同じ
+ * 理由)。/64プレフィックスまで丸めてから hash する。IPv4はそのまま。
+ */
+function roundIpv6ToPrefix64(ip: string): string {
+  if (!ip.includes(':')) return ip;
+
+  const [head, tail] = ip.split('::');
+  const headGroups = head ? head.split(':') : [];
+  const prefixGroups =
+    tail === undefined
+      ? headGroups.slice(0, 4)
+      : [...headGroups, ...Array(Math.max(0, 4 - headGroups.length)).fill('0')].slice(0, 4);
+
+  return prefixGroups.join(':');
+}
+
+/**
+ * Upstash障害中、request単位でSentry captureすると無制限にquotaを焼く
+ * (低頻度なcontact/csp-reportと違い、本routeはblog記事のhero画像として
+ * 高頻度に叩かれる)。時間窓で1件だけcaptureする。
+ */
+function captureRateLimitFailureSampled(error: unknown): void {
+  const now = Date.now();
+  if (now - lastRateLimitFailureCaptureAt < RATE_LIMIT_FAILURE_CAPTURE_WINDOW_MS) return;
+  lastRateLimitFailureCaptureAt = now;
+  captureUnexpectedWebError(error, {
+    feature: 'og_image',
+    operation: 'check_rate_limit',
+    route: '/api/og',
+  });
+}
+
+/**
+ * global quota超過時・rate limit backend障害時に、blog記事のhero画像
+ * (`page.tsx`の`heroImage`)を壊さず200を返すための代替画像。動的入力は
+ * 含まないため既知サイズのSatori renderで済み、通常描画より軽いが、
+ * 1200x630のラスタライズ自体は避けられない(compute costがゼロになる
+ * わけではない。真にゼロにするには静的アセットの配信が必要、#1979 follow-up)。
+ */
+function renderFallbackImage(): ImageResponse {
+  return new ImageResponse(
+    <div
+      style={{
+        height: '100%',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: OG_COLORS.background,
+      }}
+    >
+      <div style={{ display: 'flex', fontSize: 40, fontWeight: 500, color: OG_COLORS.foreground }}>
+        {dayoptBrand.name}
+      </div>
+    </div>,
+    { width: 1200, height: 630, headers: { 'Cache-Control': OG_IMAGE_FALLBACK_CACHE_CONTROL } },
+  );
+}
+
 export async function GET(request: NextRequest) {
+  // 明らかに異常なquery string全体長は、truncateでは吸収しないためrender前にreject。
+  if (request.url.length > MAX_QUERY_STRING_LENGTH) {
+    return new Response('Request too large', { status: 400, headers: NO_STORE_HEADERS });
+  }
+
+  // 他routeと同様、raw IPはUpstashへ残さずhashed identifierだけを渡す。
+  const identifier = await hashRateLimitIdentifier(roundIpv6ToPrefix64(getClientIp(request)));
+
+  // IP → global の順で評価する（IP単位quotaは個々のIPだけを罰し、globalはrender
+  // コスト全体の天井を守る）。limiter障害時はhero画像を壊さないfallbackへdegrade
+  // する(503を返すとblog記事のhero画像が読者全員から見えなくなる)。
+  try {
+    const ipResult = await ogImageRateLimit.limit(identifier);
+    if (!ipResult.success) {
+      return new Response('Too many requests', { status: 429, headers: NO_STORE_HEADERS });
+    }
+
+    const globalResult = await ogImageGlobalRateLimit.limit('global');
+    if (!globalResult.success) {
+      return renderFallbackImage();
+    }
+  } catch (error) {
+    captureRateLimitFailureSampled(error);
+    return renderFallbackImage();
+  }
+
   try {
     const { searchParams } = new URL(request.url);
 
-    const title = searchParams.get('title') || '守れる計画を、立てられるように。';
+    const title =
+      truncate(searchParams.get('title'), MAX_TITLE_LENGTH) || '守れる計画を、立てられるように。';
     const description =
-      searchParams.get('description') ||
+      truncate(searchParams.get('description'), MAX_DESCRIPTION_LENGTH) ||
       '計画と実績を、ひとつのタイムラインに。ズレが見えるから、明日の計画がうまくなる。';
-    const type = searchParams.get('type') || 'default';
-    const category = searchParams.get('category');
-    const author = searchParams.get('author');
-    const date = searchParams.get('date');
+    const rawType = searchParams.get('type');
+    const type = rawType && ALLOWED_TYPES.has(rawType) ? rawType : 'default';
+    const category = truncate(searchParams.get('category'), MAX_CATEGORY_LENGTH);
+    const author = truncate(searchParams.get('author'), MAX_AUTHOR_LENGTH);
+    const date = truncate(searchParams.get('date'), MAX_DATE_LENGTH);
 
     const typeLabel = TYPE_LABELS[type] ?? TYPE_LABELS.default;
 
@@ -221,9 +359,10 @@ export async function GET(request: NextRequest) {
       {
         width: 1200,
         height: 630,
+        headers: { 'Cache-Control': OG_IMAGE_CACHE_CONTROL },
       },
     );
   } catch {
-    return new Response('Failed to generate image', { status: 500 });
+    return new Response('Failed to generate image', { status: 500, headers: NO_STORE_HEADERS });
   }
 }

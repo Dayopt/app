@@ -166,7 +166,7 @@ function getCurrentLocale(pathname: string): string {
 
 // ロケールプレフィックス付きパスを生成
 // as-needed設定: デフォルト言語(en)はプレフィックスなし
-function getLocalizedPath(path: string, locale: string): string {
+export function getLocalizedPath(path: string, locale: string): string {
   if (locale === routing.defaultLocale) {
     // デフォルト言語はプレフィックスなし
     return path;
