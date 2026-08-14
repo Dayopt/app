@@ -58,6 +58,7 @@
     "deps:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx src/",
     "size:budget": "tsx ../../scripts/check-bundle-budget.ts",
     "verify:bundle": "node ../../scripts/check-client-bundle-secrets.mjs && tsx ../../scripts/check-bundle-budget.ts --fail",
+    "probe:setup": "tsx src/lib/test/e2e/usability-probe-setup.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "security:check": "pnpm audit --audit-level=moderate",
