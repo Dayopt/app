@@ -92,8 +92,28 @@ claude mcp remove uptimerobot -s user
   - 未承認 / 期限切れなら `/mcp` で `sentry` を承認する（github / vercel と同じフロー）。承認後の OAuth トークンは Claude 側にキャッシュされ、desktop アプリ起動・zsh ターミナル起動のどちらでも動く。
   - 疎通確認は `whoami` または `find_organizations`（`dayopt` org が返れば OK。OAuth ではログインユーザー権限で org/project が見えるため、旧 integration token 時代の「`find_organizations` が `[]`」制約は解消）。
 - **`Authorization Expired` / 401 が出たら**: `/mcp` で `sentry` を再承認する。OAuth トークンの失効サイン。env トークン (`SENTRY_ACCESS_TOKEN`) 注入経路はもう使わない（hosted OAuth へ移行済み）。
-- **フォールバック**: MCP が通らない間は Sentry Web UI / `sentry-cli` を使う。
+- **フォールバック**: MCP が通らない間は Sentry Web UI、または下記の Sentry CLI を使う。
 - **境界ケース**: 「再現できますか？」とユーザーに尋ねる前に Sentry で対象 issue を探す。ヒットすればスタックトレースから直接原因を特定できるので、ユーザーの手間を省ける。
+
+### Sentry CLI（`sentry` コマンド、cli.sentry.dev）
+
+エージェント向けの issue 閲覧・Seer 分析ツール（2026-08-14 評価、#2073）。**既存の `sentry-cli`（sourcemap upload 等のビルドツール、npm package）とは別物。** コマンド名が紛らわしいため区別する。
+
+MCP（上記）との分担は `github`（gh CLI + github MCP）と同型: **メインセッションの構造化・横断調査は MCP、subagent・レーン・script からの単発参照は CLI**（MCP は session 単位の配線が要るため届かない場所を CLI が埋める）。**この併用は暫定で、月次 gardening が Sentry MCP の実利用を検証し、CLI で足りていれば MCP 撤去（完全 CLI 化）を再検討する**（User の元々の意向は CLI 寄せ）。
+
+- **Invoke when**:
+  - MCP の配線が無い場所（subagent 内、script、CI）から Sentry issue を参照したい時
+  - 単純な単発取得（1 issue の閲覧、org/project 一覧）で MCP を起動するほどではない時
+- **Before use**:
+  - インストール: `curl -fsS https://cli.sentry.dev/install | bash`（初回のみ。install script は getsentry/cli 公式 GitHub Release からバイナリを取得し、Sentry 自身の DSN への匿名エラーテレメトリのみを送る正規パターンと確認済み）
+  - **認証は env var 方式のみを使う。`sentry auth login`（ブラウザ OAuth）は使わない**:
+    ```bash
+    SENTRY_AUTH_TOKEN="op://Dayopt-Shared/sentry-cli-readonly/credential" op run -- sentry <command>
+    ```
+    token は read-only scope（project:read, org:read, event:read, member:read, team:read）で発行済み。env var 方式では token がディスクに一切残らないことを実測確認済み（`~/.sentry/cli.db` の `auth` table は 0 rows）
+  - `~/.sentry/cli.db`（SQLite）はローカル cache DB。token は保存されないが、repo のディレクトリツリー構造（monorepo 検出用）はキャッシュされる。secret ではないが認識しておく
+- **主要コマンド**: `sentry issue list [org/project] --query "<query>"` / `sentry issue view <id>` / `sentry issue explain <id>`（Seer root cause）/ `sentry org list` / `sentry project list` / `sentry release list`。対応表は issue #2073 のコメントを参照
+- **境界ケース**: write 系コマンド（`issue resolve` 等）はこの token では想定運用外（read-only scope のため拒否される想定、未実測）。write が必要な場面は Sentry Web UI を使う
 
 ### Supabase（`supabase-local`=ローカル / `supabase`=cloud）
 
