@@ -6,6 +6,7 @@ export type CalendarCallbackError =
   | 'rate_limited'
   | 'reconnect_target_invalid'
   | 'mfa_verification_required'
+  | 'scope_not_granted'
   | 'unavailable'
   | 'generic';
 
@@ -24,6 +25,9 @@ const CALLBACK_ERROR_GROUPS: Readonly<Record<string, CalendarCallbackError>> = {
   rate_limited: 'rate_limited',
   reconnect_target_invalid: 'reconnect_target_invalid',
   mfa_verification_required: 'mfa_verification_required',
+  // narrow pair の granular consent で片方だけ許可された場合。汎用の失敗文言に畳むと
+  // 「2 つの権限を両方許可すればよい」が伝わらない。
+  scope_not_granted: 'scope_not_granted',
   assurance_lookup_failed: 'unavailable',
   unsupported_environment: 'unavailable',
   token_endpoint_unreachable: 'unavailable',

@@ -18,6 +18,11 @@ const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn());
 const sendAccountDeletionEmail = vi.hoisted(() => vi.fn());
 const getUserLocale = vi.hoisted(() => vi.fn());
+// spy 化して context 引数（例: requestEmailChange の { feature: 'email_change' }）を
+// 検証できるようにしつつ、pass-through 動作は維持する（他 caller の挙動は変えない）
+const observeAuthOperation = vi.hoisted(() =>
+  vi.fn(async (_operation: string, call: () => PromiseLike<unknown>) => call()),
+);
 
 vi.mock('@/lib/email/router', () => ({ sendAccountDeletionEmail, getUserLocale }));
 
@@ -32,11 +37,17 @@ vi.mock('@/lib/app-url', () => ({ getAppUrl: () => 'https://app.example.test' })
 vi.mock('@/lib/logger', () => ({
   logger: { info: loggerInfo, warn: loggerWarn },
 }));
-vi.mock('@/lib/sentry', () => ({
-  captureUnexpectedDatabaseError,
-  captureUnexpectedError,
-  observeAuthOperation: async (_operation: string, call: () => PromiseLike<unknown>) => call(),
-}));
+// isExpectedAuthError は実装をそのまま使う（requestEmailChange の allowlist 判定が
+// 実際の EXPECTED_AUTH_ERROR_CODES と正しく組み合わさることを検証するため。#2064）
+vi.mock('@/lib/sentry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/sentry')>();
+  return {
+    ...actual,
+    captureUnexpectedDatabaseError,
+    captureUnexpectedError,
+    observeAuthOperation,
+  };
+});
 
 import { createUserService } from '../user-service';
 
@@ -57,7 +68,7 @@ function createSupabase(options?: {
   totpFactors?: Array<{ id: string; status: string }>;
   listFactorsError?: { message: string } | null;
   verifyTotpError?: { message: string } | null;
-  updateUserError?: { message: string; code?: string } | null;
+  updateUserError?: { message: string; code?: string; status?: number } | null;
 }) {
   const queries = new Map(
     Object.entries(options?.tables ?? {}).map(([table, result]) => [
@@ -474,14 +485,107 @@ describe('createUserService', () => {
         { email: NEW_EMAIL },
         { emailRedirectTo: 'https://app.example.test/settings/account' },
       );
+      // observeAuthOperation の tag が feature: 'auth' 既定へ落ちない（#2064）ことを固定する
+      expect(observeAuthOperation).toHaveBeenCalledWith('update_email', expect.any(Function), {
+        feature: 'email_change',
+      });
     });
 
-    it('updateUserの失敗をEMAIL_UPDATE_FAILEDに変換する', async () => {
-      const updateError = { message: 'email already registered', code: 'email_exists' };
+    it.each([
+      ['email_exists', 'email already registered'],
+      ['email_address_invalid', 'invalid email address'],
+      ['email_conflict_identity_not_deletable', 'identity conflict'],
+      ['validation_failed', 'malformed request'],
+    ])('想定内code(%s)はEMAIL_UPDATE_FAILEDに変換し、Sentryへ送らない', async (code, message) => {
+      // 実際の GoTrue AuthError（Error 継承）の形に寄せる。dedup が依存する
+      // instanceof Error 分岐を plain object では通せない
+      const updateError = Object.assign(new Error(message), { code });
       const { service } = createSupabase({ updateUserError: updateError });
 
       await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
         code: 'EMAIL_UPDATE_FAILED',
+        cause: updateError,
+      });
+      expect(captureUnexpectedError).not.toHaveBeenCalled();
+      expect(loggerWarn).not.toHaveBeenCalled();
+    });
+
+    // #2064 P2-1: updateUser はユーザー自身の session-scoped client で呼ぶため、session /
+    // 権限系の expected code（EXPECTED_AUTH_ERROR_CODES 所属）がユーザーフローの正常な
+    // 帰結として起こりうる。silence 列挙（旧実装）だとこれらが軒並み誤 alert になっていた
+    // ことを固定する — allowlist 反転後は EMAIL_UPDATE_ALERTING_CODES に無い限り静音
+    it.each([
+      ['session_expired', 'session expired'],
+      ['bad_jwt', 'invalid jwt'],
+      ['no_authorization', 'no authorization header'],
+      ['user_banned', 'user is banned'],
+      ['user_not_found', 'user not found'],
+      ['insufficient_aal', 'insufficient assurance level'],
+      ['conflict', 'conflict'],
+    ])(
+      'session/権限系の想定内code(%s)は誤alertせずEMAIL_UPDATE_FAILEDに変換する（P2-1）',
+      async (code, message) => {
+        const updateError = Object.assign(new Error(message), { code });
+        const { service } = createSupabase({ updateUserError: updateError });
+
+        await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject(
+          { code: 'EMAIL_UPDATE_FAILED', cause: updateError },
+        );
+        expect(captureUnexpectedError).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rate limit（status 429）はcodeによらずEMAIL_UPDATE_FAILEDに変換し、userId付きでwarnログだけ残す', async () => {
+      const updateError = Object.assign(new Error('too many requests'), { status: 429 });
+      const { service } = createSupabase({ updateUserError: updateError });
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'EMAIL_UPDATE_FAILED',
+      });
+      expect(captureUnexpectedError).not.toHaveBeenCalled();
+      expect(loggerWarn).toHaveBeenCalledWith('Email update rate limited by GoTrue', {
+        userId: USER_ID,
+        message: updateError.message,
+      });
+    });
+
+    // #2064: email_address_not_authorized は EMAIL_UPDATE_ALERTING_CODES の allowlist に
+    // 載っているため、isExpectedAuthError が true でも alert 対象になる。
+    // handleServiceError の自動報告はこの allowlist を知らないので、user-service.ts 側が
+    // captureUnexpectedError を直接呼ぶことを固定する（REAUTH_UNAVAILABLE の canary と
+    // 同型）。updateError をラップせずそのまま渡すことも固定する（observeAuthOperation が
+    // 既に捕捉済みの instance と同一でないと WeakSet dedup が効かず、想定外 code で issue
+    // が二重に立つ）
+    it('email_address_not_authorizedはEMAIL_UPDATE_UNAVAILABLEに変換し、captureUnexpectedErrorをupdateError本体で直接呼ぶ', async () => {
+      const updateError = Object.assign(new Error('email address not authorized'), {
+        code: 'email_address_not_authorized',
+      });
+      const { service } = createSupabase({ updateUserError: updateError });
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'EMAIL_UPDATE_UNAVAILABLE',
+        cause: updateError,
+      });
+      expect(captureUnexpectedError).toHaveBeenCalledWith(updateError, {
+        feature: 'email_change',
+        operation: 'update_email',
+        source: 'supabase_auth',
+      });
+    });
+
+    it('未知のcodeもEMAIL_UPDATE_UNAVAILABLEに変換し、captureUnexpectedErrorを直接呼ぶ（fail-loudが既定）', async () => {
+      const updateError = Object.assign(new Error('gotrue internal error'), {
+        code: 'unexpected_failure',
+      });
+      const { service } = createSupabase({ updateUserError: updateError });
+
+      await expect(service.requestEmailChange(requestEmailChangeOptions())).rejects.toMatchObject({
+        code: 'EMAIL_UPDATE_UNAVAILABLE',
+      });
+      expect(captureUnexpectedError).toHaveBeenCalledWith(updateError, {
+        feature: 'email_change',
+        operation: 'update_email',
+        source: 'supabase_auth',
       });
     });
   });

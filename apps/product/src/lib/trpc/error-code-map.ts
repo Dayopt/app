@@ -38,6 +38,13 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // メールアドレス変更の GoTrue updateUser 失敗（衝突等）。ユーザー起因の想定内失敗なので
   // BAD_REQUEST（EXPECTED_TRPC_CODES に含まれ、handleServiceError の自動 Sentry 報告対象外）
   EMAIL_UPDATE_FAILED: 'BAD_REQUEST',
+  // メールアドレス変更の GoTrue updateUser 失敗のうち、想定内 code に当てはまらないもの
+  // （#2064）。REAUTH_UNAVAILABLE と同型: EXPECTED_TRPC_CODES に載る code へ写像し、
+  // handleServiceError 側の自動報告と二重にならないようにする（報告は user-service.ts
+  // 側の呼び出し元 canary 1 本。email_address_not_authorized 等は `lib/sentry` の
+  // EXPECTED_AUTH_ERROR_CODES に既に含まれ、INTERNAL_SERVER_ERROR にしても
+  // handleServiceError の自動報告は isExpectedAuthError でスキップされるため意味が無い）
+  EMAIL_UPDATE_UNAVAILABLE: 'BAD_REQUEST',
   RECOVERY_EXHAUSTED: 'BAD_REQUEST',
   RECOVERY_INVALID: 'BAD_REQUEST',
   RECOVERY_FAILED: 'INTERNAL_SERVER_ERROR',

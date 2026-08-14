@@ -18,7 +18,7 @@ import {
 import {
   exchangeAuthorizationCode,
   GoogleOAuthError,
-  hasCalendarReadonlyScope,
+  hasRequiredCalendarScopes,
   isGoogleCalendarConfigured,
   parseGrantedScopes,
   parseIdToken,
@@ -215,10 +215,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     const grantedScopes = parseGrantedScopes(tokens.scope);
-    if (!hasCalendarReadonlyScope(grantedScopes)) {
-      // granular consent でカレンダーだけ外された場合。active な接続を作ると
+    if (!hasRequiredCalendarScopes(grantedScopes)) {
+      // granular consent でカレンダー scope の一部だけ外された場合。active な接続を作ると
       // 同期が毎回 403 になり「接続済みなのに同期されない」状態が残る。
-      logger.warn('[calendar-callback] calendar.readonly scope was not granted');
+      logger.warn('[calendar-callback] required calendar scopes were not granted');
       return fail('scope_not_granted');
     }
 

@@ -55,15 +55,6 @@ export type SyncCalendarResult = {
   usedFullSync: boolean;
 };
 
-/** 接続時に provider から得る同定情報。 */
-export type ProviderConnectionIdentity = {
-  refreshToken: string;
-  /** provider の安定 id（Google なら id_token の `sub`）。email は可変なので使わない。 */
-  accountId: string;
-  accountEmail: string | null;
-  grantedScopes: string[];
-};
-
 /** 取り込み候補として提示するカレンダー。 */
 export type ProviderCalendar = {
   id: string;
@@ -130,12 +121,13 @@ export interface CalendarProviderAdapter {
   /** `calendar_connections.provider` に入る値。 */
   readonly provider: string;
 
-  /** OAuth の code を接続情報に交換する。 */
-  exchangeCode(params: {
-    code: string;
-    redirectUri: string;
-    codeVerifier: string;
-  }): Promise<ProviderConnectionIdentity>;
+  /**
+   * OAuth の code を接続情報に交換する処理は、この interface からは意図的に外している。
+   * 唯一の呼び出し元は `callback/route.ts` の本番 connect 経路で、`exchangeAuthorizationCode`
+   * / `hasRequiredCalendarScopes`（`server/google-oauth.ts`）を直接呼ぶ。adapter 経由の
+   * `exchangeCode` は呼び出し元ゼロの死んだ経路だったため #1982 で削除した
+   * （plan v4 step 2、二重保守を避ける）。
+   */
 
   /** run の先頭で 1 回だけ呼ぶ。 */
   startSession(refreshToken: string): Promise<ProviderSession>;
