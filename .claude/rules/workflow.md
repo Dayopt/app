@@ -335,7 +335,7 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 - secret 混入検査は Vercel の方が強い。Actions の build env は placeholder しか持たないため「ハードコードされた literal」しか検出できなかった。Vercel の build は実 env を持つので、値プレフィックス（`sk_live_` 等）が実際に client へ漏れた場合も捕まる
 - merge gate は維持される。build 失敗は commit status `Vercel – product` として PR の rollup に載り、`branch:finish` の失敗判定が数える
 - bundle budget は報告のみだったのを `--fail` で強制に変えた。閾値は現状値に対して余裕がある（route 652/960 KB、CSS 87.5/95 KB）ので、発火するのは実際の regression の時だけ
-- CSS budget の強制は `size-limit` から `check-bundle-budget.ts` へ移した。`@size-limit/preset-app` は headless Chrome を起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が使える保証も無い）。`pnpm size` はローカル調査用に残っている
+- CSS budget の強制は `size-limit` から `check-bundle-budget.ts` へ移した。`@size-limit/preset-app` は headless Chrome を起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が使える保証も無い）。`pnpm size` はローカル調査用に残っていたが、2026-08-14 に `size-limit` / `@size-limit/preset-app` ごと撤去した（[#2066](https://github.com/Dayopt/dayopt/issues/2066)。Dependabot HIGH alert `extract-zip`（patch 未提供）の依存経路の一つがこのパッケージ経由だったため。CI 未使用・強制は既に `check-bundle-budget.ts` へ移設済みで実害は無かった）。`@lhci/cli`（`perf:lighthouse`）は別経路で extract-zip を引くが、`lighthouserc.cjs` を伴う実運用中のツールのため維持し、upstream の patch を待つ
 
 ### なぜ 2 段階か
 
