@@ -324,7 +324,12 @@ function toProviderError(error: unknown, fallbackMessage: string): CalendarProvi
 
 async function syncCalendar(
   session: ProviderSession,
-  params: { calendarId: string; cursor: string | null; window: SyncWindow },
+  params: {
+    calendarId: string;
+    cursor: string | null;
+    window: SyncWindow;
+    deadlineAt?: number;
+  },
 ): Promise<SyncCalendarResult> {
   const events: NormalizedExternalEvent[] = [];
   const cancelledEventIds: string[] = [];
@@ -338,6 +343,23 @@ async function syncCalendar(
   let unparsableEvents = 0;
 
   for (let page = 0; page < MAX_EVENT_PAGES; page += 1) {
+    // wall-clock 予算チェック（#1965）。次ページを取りに行く前に判定するので、ここで
+    // 打ち切っても Google へは 1 リクエストも送らない。MAX_EVENT_PAGES 到達時と同じ
+    // 「cursor を確定しない安全な部分完了」の形で返す — 予算切れは想定内の日常挙動なので
+    // reportSilentLoss は撃たない（あちらは異常検知用）。
+    if (params.deadlineAt !== undefined && Date.now() >= params.deadlineAt) {
+      reportUnparsableEvents(unparsableEvents);
+      return {
+        events,
+        cancelledEventIds,
+        skippedEventIds,
+        nextCursor: null,
+        cursorInvalid: false,
+        usedFullSync,
+        deadlineExceeded: true,
+      };
+    }
+
     const url = buildEventsListUrl({ ...params, pageToken });
 
     let payload: unknown;
@@ -355,6 +377,7 @@ async function syncCalendar(
           nextCursor: null,
           cursorInvalid: true,
           usedFullSync,
+          deadlineExceeded: false,
         };
       }
       throw error;
@@ -383,6 +406,7 @@ async function syncCalendar(
         nextCursor,
         cursorInvalid: false,
         usedFullSync,
+        deadlineExceeded: false,
       };
     }
 
@@ -404,6 +428,7 @@ async function syncCalendar(
     nextCursor: null,
     cursorInvalid: false,
     usedFullSync,
+    deadlineExceeded: false,
   };
 }
 

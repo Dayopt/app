@@ -470,6 +470,7 @@
           "providerUnavailable": "Google Calendar is temporarily unavailable. Try again later.",
           "encryptionKeyInvalid": "This connection cannot be read securely. Reconnect the account.",
           "partialFailure": "Some calendars could not be synced. Review the selection and try again.",
+          "partialTimeout": "Syncing is taking longer than expected. Try again.",
           "generic": "This connection has a sync issue. Try again or reconnect it."
         },
         "outcomes": {
@@ -477,6 +478,7 @@
           "reauthRequired": "Reconnect this Google account before syncing",
           "encryptionKeyInvalid": "This connection cannot be read securely. Reconnect it.",
           "partialFailure": "Some calendars could not be synced",
+          "partialTimeout": "Sync did not finish. Try again",
           "notConfigured": "Google Calendar connection is not configured",
           "updateFailed": "Calendar selection could not be applied",
           "syncFailed": "Google Calendar could not be synced"
@@ -495,6 +497,7 @@
           "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",
           "mfaVerificationRequired": "Two-factor verification is required. Verify and try again.",
           "scopeNotGranted": "Some required permissions weren't granted. Allow all the permissions shown, then try again.",
+          "budgetExhausted": "Connecting took too long. Try again.",
           "unavailable": "Google Calendar connection is temporarily unavailable",
           "genericError": "Google Calendar could not be connected"
         }

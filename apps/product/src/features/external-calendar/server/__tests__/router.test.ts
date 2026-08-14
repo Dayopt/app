@@ -129,6 +129,17 @@ describe('externalCalendarRouter — syncNow rate limit', () => {
       code: 'SERVICE_UNAVAILABLE',
     });
   });
+
+  // tRPC route の maxDuration に対する予算を syncConnection へ渡す（#1965）。
+  it('deadlineAt を付けて syncConnection を呼ぶ', async () => {
+    await caller().syncNow({ connectionId: CONNECTION_ID });
+
+    expect(syncConnection).toHaveBeenCalledWith({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: expect.any(Number),
+    });
+  });
 });
 
 describe('externalCalendarRouter — updateSelectedCalendars', () => {
@@ -141,7 +152,12 @@ describe('externalCalendarRouter — updateSelectedCalendars', () => {
     expect(updateSelectedCalendars).toHaveBeenCalledWith(USER_ID, CONNECTION_ID, [
       { providerCalendarId: 'cal-a', calendarName: 'A' },
     ]);
-    expect(syncConnection).toHaveBeenCalledWith({ connectionId: CONNECTION_ID, userId: USER_ID });
+    // deadlineAt は Date.now() 由来なので厳密値ではなく型と存在だけ確認する（#1965）。
+    expect(syncConnection).toHaveBeenCalledWith({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: expect.any(Number),
+    });
   });
 
   it('calendarName 省略は null に正規化して渡す', async () => {

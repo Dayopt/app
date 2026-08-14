@@ -164,6 +164,7 @@ function syncResult(overrides: Record<string, unknown> = {}) {
     nextCursor: 'next-sync-token',
     cursorInvalid: false,
     usedFullSync: false,
+    deadlineExceeded: false,
     ...overrides,
   };
 }
@@ -552,7 +553,91 @@ describe('syncConnection — 認可と鍵', () => {
     const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
     expect(patch.last_sync_error).toBeNull();
   });
+});
 
+describe('syncConnection — 予算切れ（#1965）', () => {
+  it('deadlineAt を adapter.syncCalendar へ渡す', async () => {
+    setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult());
+    const deadlineAt = Date.now() + 30_000;
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID, deadlineAt });
+
+    expect(syncCalendar).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ deadlineAt }),
+    );
+  });
+
+  it('カレンダーが予算切れで打ち切られたら outcome は partial_timeout になる', async () => {
+    const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ deadlineExceeded: true, nextCursor: null }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_timeout');
+    expect(result.calendarsSynced).toBe(0);
+    expect(result.calendarsFailed).toBe(0);
+    const update = findCall(calls, 'calendar_connections', 'update')!;
+    const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
+    // partial_failure（実際の失敗）とは別コードにする。次回 sync で前進する見込みがあり、
+    // リトライ導線の文言が異なる。
+    expect(patch.last_sync_error).toBe('partial_timeout');
+  });
+
+  it('予算切れ前に完走したカレンダーの進捗（sync_token）は保存される', async () => {
+    const CALENDAR_B = 'secondary';
+    const { calls } = setupDb({
+      connection: activeConnection(),
+      calendars: [
+        { provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: null },
+        { provider_calendar_id: CALENDAR_B, calendar_name: 'Personal', sync_token: null },
+      ],
+    });
+    syncCalendar
+      .mockResolvedValueOnce(syncResult({ nextCursor: 'completed-token' }))
+      .mockResolvedValueOnce(syncResult({ deadlineExceeded: true, nextCursor: null }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_timeout');
+    expect(result.calendarsSynced).toBe(1);
+    const tokenUpdates = recordersFor(calls, 'calendar_connection_calendars').filter((recorder) =>
+      recorder.chain.some((entry) => entry.method === 'update'),
+    );
+    // 完走した 1 カレンダー分だけ sync_token が確定する。打ち切られた方は更新されない
+    // （cursor を確定しない契約は #1965 でも変わらない）。
+    expect(tokenUpdates).toHaveLength(1);
+    expect(argsOf(tokenUpdates[0]!, 'update')[0]).toMatchObject({ sync_token: 'completed-token' });
+  });
+
+  // reauth_required と deadline_exceeded が同一 run で両方起きた場合、reauth を優先する
+  // （behavior-verifier 指摘、#1965）。データは失われない — 予算切れ側の進捗は
+  // syncOneCalendar 内で既に永続化済み（ループ後の分岐より前）で、単に outcome/last_sync_error
+  // として表に出るのが 'reauth_required' 側になるだけ。ユーザーはどのみち再接続が要る。
+  it('同一 run で reauth_required と deadline_exceeded が両方起きたら reauth_required を優先する', async () => {
+    const CALENDAR_B = 'secondary';
+    setupDb({
+      connection: activeConnection(),
+      calendars: [
+        { provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: null },
+        { provider_calendar_id: CALENDAR_B, calendar_name: 'Personal', sync_token: null },
+      ],
+    });
+    syncCalendar
+      .mockRejectedValueOnce(
+        new CalendarProviderError('revoked', 'reauth_required', 'invalid_grant', 401),
+      )
+      .mockResolvedValueOnce(syncResult({ deadlineExceeded: true, nextCursor: null }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('reauth_required');
+    expect(markCalendarConnectionReauth).toHaveBeenCalled();
+  });
+});
+
+describe('syncConnection — 認可の再確認', () => {
   it('reauth_required の接続は skip する', async () => {
     setupDb({
       connection: { ...activeConnection(), status: 'reauth_required' },

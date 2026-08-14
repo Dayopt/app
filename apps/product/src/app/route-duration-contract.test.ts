@@ -17,13 +17,19 @@ import { describe, expect, it } from 'vitest';
  * それぞれの timeout まで張り付く理論上の worst path は、一部の route で予算を超える:
  *
  * - `api/integrations/google-calendar/callback`（60）— getUser 15 + rate limit 2 +
- *   Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s
- * - `api/mcp`（60）/ `api/trpc/[trpc]`（300）— tool / procedure の dispatch 数に上限が無い
+ *   Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s。ただし #1990 で
+ *   token 交換（code 消費）の直前に残り予算を検査するようになったため、消費後に 60 秒を
+ *   超えて kill される経路自体が塞がれている（予算不足なら code を使わず安全に失敗する）
+ * - `api/mcp`（120）— 認証フェーズが逐次 getUser 15 × 5 ≒ 75s で 60 を超えるため、
+ *   段の値には戻せていない（#1990 の「検討する」項目、未着手）
+ * - `api/trpc/[trpc]`（60）— #1965 で `externalCalendar.syncConnection`（procedure の
+ *   dispatch 数に上限が無い理由だった唯一の既知の要因）に wall-clock 予算を持たせたため
+ *   段の値まで下げられた。他 procedure の worst path を全数監査した上での値ではない
  *
- * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると 300 に近づき、
- * 障害半径を絞るという目的そのものを失う。**予算は blast radius の上限であって、
- * 全依存同時ハング時の完走保証ではない**、という位置づけで運用する。その状況では接続は
- * どのみち失敗しており、504 と graceful error の差は小さい。
+ * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると障害半径を絞る
+ * という目的そのものを失う。**予算は blast radius の上限であって、全依存同時ハング時の
+ * 完走保証ではない**、という位置づけで運用する。その状況では接続はどのみち失敗しており、
+ * 504 と graceful error の差は小さい。
  *
  * したがって **test が通ること＝安全、ではない**。新しい route を足す時は、この表の値を
  * 埋めるだけでなく、その route の worst path を自分で数えること。
@@ -58,17 +64,18 @@ const ROUTE_DURATION_CONTRACT = {
   'src/app/api/oauth/token/route.ts': 60,
   'src/app/api/v1/calendar/[token]/route.ts': 60,
   'src/app/oauth/token/route.ts': 60,
+  // #1990: token 交換（code 消費）の直前で残り予算を検査するようになったため、逐次 worst
+  // path（77s）が 60 を超えていても kill 時の失敗の質が変わり、段の値へ戻せた。
+  'src/app/api/integrations/google-calendar/callback/route.ts': 60,
+  // #1965: externalCalendar.syncConnection に wall-clock 予算を持たせたため、procedure の
+  // dispatch 数に上限が無いという構造的な理由がなくなり、段の値へ戻せた。
+  'src/app/api/trpc/[trpc]/route.ts': 60,
 
-  // 逐次 worst path が 60 を超えるため段から外した 2 route。値の根拠は各 route の
-  // コメント（callback = 77s / MCP 認証 = 75s）。どちらも 60 のままだと handler が
-  // 自前の応答を返す前に kill される。callback は #1990（code 消費前の予算検査）が
-  // 入れば 60 へ戻せる
-  'src/app/api/integrations/google-calendar/callback/route.ts': 120,
+  // 逐次 worst path が 60 を超えるため段から外した route。MCP の認証フェーズは
+  // getUser 15 × 5 ≒ 75s で、#1990 のような「不可逆操作の前に予算検査」で吸収できる形の
+  // 失敗点が無い（認証自体が worst path の大半を占める）ため未着手。
   'src/app/api/mcp/route.ts': 120,
   'src/app/mcp/route.ts': 120,
-
-  // 構造的に上限が無い（下記 §tRPC を参照）
-  'src/app/api/trpc/[trpc]/route.ts': 300,
 } as const;
 
 /**

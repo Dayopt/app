@@ -423,6 +423,64 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     );
   });
 
+  // wall-clock 予算（#1965）。ページ上限到達と同じ「cursor を確定しない安全な部分完了」の
+  // 形で返すが、これは想定内の日常挙動なので Sentry へは送らない（ページ上限到達との違い）。
+  it('wall-clock 予算を超えたら次ページを取りに行かず、取得済み分を保存する', async () => {
+    fetchMock().mockResolvedValueOnce(
+      jsonResponse({ items: [timedEvent({ id: 'event-1' })], nextPageToken: 'page-2' }),
+    );
+    const deadlineAt = 1_000;
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // 1 ページ目の判定: まだ余裕がある
+      .mockReturnValueOnce(deadlineAt); // 2 ページ目の判定: 締切に達した
+
+    const result = await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+      deadlineAt,
+    });
+
+    expect(fetchMock()).toHaveBeenCalledTimes(1);
+    expect(result.events.map((event) => event.providerEventId)).toEqual(['event-1']);
+    expect(result.nextCursor).toBeNull();
+    expect(result.cursorInvalid).toBe(false);
+    expect(result.deadlineExceeded).toBe(true);
+    expect(captureUnexpectedError).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it('deadlineAt が既に過ぎていれば最初のページも取得しない', async () => {
+    const result = await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+      deadlineAt: Date.now() - 1,
+    });
+
+    expect(fetchMock()).not.toHaveBeenCalled();
+    expect(result.events).toEqual([]);
+    expect(result.nextCursor).toBeNull();
+    expect(result.deadlineExceeded).toBe(true);
+  });
+
+  it('deadlineAt を省略すれば従来どおり無制限にページングする', async () => {
+    fetchMock().mockResolvedValueOnce(
+      jsonResponse({ items: [timedEvent()], nextSyncToken: 'sync-token-1' }),
+    );
+
+    const result = await googleCalendarAdapter.syncCalendar(SESSION, {
+      calendarId: CALENDAR_ID,
+      cursor: null,
+      window: WINDOW,
+    });
+
+    expect(result.deadlineExceeded).toBe(false);
+    expect(result.nextCursor).toBe('sync-token-1');
+  });
+
   it.each([
     ['401 は再認証が要る', 401, 'authError', 'reauth_required'],
     ['403 rateLimitExceeded は一時エラー', 403, 'rateLimitExceeded', 'rate_limited'],

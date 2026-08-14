@@ -104,10 +104,13 @@ export async function dispatchCalendarSync(params: {
     const forceFullSync = isDailyFullSyncSlot(connection.id, now);
 
     try {
+      // 同じ deadline を接続の内側（カレンダー / ページ単位のループ）にも渡す。この check
+      // だけでは接続と接続の「間」にしか効かないため（#1965、issue の背景を参照）。
       await syncConnection({
         connectionId: connection.id,
         userId: connection.user_id,
         forceFullSync,
+        deadlineAt,
       });
     } catch {
       // token authorityやDB応答が未確定でも、1接続で後続due接続をstarveさせない。

@@ -7,6 +7,7 @@ export type CalendarCallbackError =
   | 'reconnect_target_invalid'
   | 'mfa_verification_required'
   | 'scope_not_granted'
+  | 'budget_exhausted'
   | 'unavailable'
   | 'generic';
 
@@ -28,6 +29,9 @@ const CALLBACK_ERROR_GROUPS: Readonly<Record<string, CalendarCallbackError>> = {
   // narrow pair の granular consent で片方だけ許可された場合。汎用の失敗文言に畳むと
   // 「2 つの権限を両方許可すればよい」が伝わらない。
   scope_not_granted: 'scope_not_granted',
+  // code 消費（token 交換）前に残り予算が足りないと判断して手前で諦めた場合（#1990）。
+  // code は未消費なので、汎用文言ではなく「もう一度お試しください」で再試行を促す。
+  budget_exhausted: 'budget_exhausted',
   assurance_lookup_failed: 'unavailable',
   unsupported_environment: 'unavailable',
   token_endpoint_unreachable: 'unavailable',

@@ -52,8 +52,11 @@ type CalendarConnectionClient = SupabaseClient<CalendarConnectionDatabase>;
  * OAuth callback は一度きりの Google authorization code を消費してから接続を保存する。
  * 上限が無いと route の `maxDuration` が先に発火し、保存結果を返す前に kill された
  * 再試行が使用済み code の `invalid_grant` になって、ユーザーは認可からやり直しになる。
+ *
+ * export するのは、callback route（#1990）が「code 消費後の DB 書き込みに要する
+ * worst case」を導出するのに使うため。手書きの数値を二重管理しない。
  */
-const CALENDAR_CONNECTION_DB_TIMEOUT_MS = 15_000;
+export const CALENDAR_CONNECTION_DB_TIMEOUT_MS = 15_000;
 
 function createCalendarConnectionDbClient(): CalendarConnectionClient {
   return createClient<CalendarConnectionDatabase>(

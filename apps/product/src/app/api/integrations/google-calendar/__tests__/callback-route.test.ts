@@ -27,6 +27,8 @@ vi.mock('@/features/external-calendar/server/connection-service', () => ({
   saveConnection,
   getReconnectTarget,
   reconnectExistingConnection,
+  // route.ts が POST_EXCHANGE_BUDGET_MS の導出に使う（#1990）。実値をそのまま使う。
+  CALENDAR_CONNECTION_DB_TIMEOUT_MS: 15_000,
 }));
 vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
@@ -577,5 +579,38 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('write_fenced');
     expect(fetchMock).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  // #1990: token 交換（= code 消費）の直前で残り予算を検査する。route 入口の
+  // `Date.now()`（deadlineAt 算出）と消費直前の `Date.now()`（残り予算判定）の 2 回だけを
+  // 制御し、他のロジックは全てモック経由なので実時間に依存しない。
+  it('code 消費前に残り予算が不足していれば token 交換に到達しない', async () => {
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // route 入口: deadlineAt = 0 + TIME_BUDGET_MS(50_000)
+      .mockReturnValueOnce(49_999); // 消費直前: 残り 1ms（POST_EXCHANGE_BUDGET_MS=45_000 未満）
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('budget_exhausted');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it('残り予算が十分なら通常どおり token 交換へ進む', async () => {
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // route 入口
+      .mockReturnValueOnce(4_999); // 消費直前: 残り 45_001ms（POST_EXCHANGE_BUDGET_MS を上回る）
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(fetch).toHaveBeenCalled();
+    expect(saveConnection).toHaveBeenCalled();
+
+    nowSpy.mockRestore();
   });
 });

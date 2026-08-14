@@ -53,7 +53,10 @@ type SyncErrorCode =
   | 'rate_limited'
   | 'provider_unavailable'
   | 'encryption_key_invalid'
-  | 'partial_failure';
+  | 'partial_failure'
+  /** wall-clock 予算切れで一部カレンダーへ着手できなかった（#1965）。`partial_failure`
+   * （provider / DB が実際に失敗した）とは区別する — こちらは次回 sync で前進する見込みがある。 */
+  | 'partial_timeout';
 
 // Step 4（tRPC）/ Step 5（cron）が消費者になるまで export しない。呼び出し側は
 // Awaited<ReturnType<typeof syncConnection>> で受け、必要になった時点で export する。
@@ -63,6 +66,7 @@ type SyncOutcome =
   | 'reauth_required'
   | 'encryption_key_invalid'
   | 'partial_failure'
+  | 'partial_timeout'
   | 'not_configured';
 
 type SyncConnectionResult = {
@@ -135,8 +139,14 @@ export async function syncConnection(params: {
   userId: string;
   /** true なら全カレンダーの sync_token を無視して full sync する（overview.md §6-2 の定期 full resync 機構）。 */
   forceFullSync?: boolean;
+  /**
+   * `Date.now()` 換算の締切（ms）（#1965）。省略時は無制限（既存呼び出し互換）。
+   * カレンダー単位・ページ単位の両方のループで尊重される — 呼び出し側は自分の
+   * maxDuration に対する安全マージンを引いた値を渡す（cron の `TIME_BUDGET_MS` と同じ形）。
+   */
+  deadlineAt?: number | undefined;
 }): Promise<SyncConnectionResult> {
-  const { connectionId, userId, forceFullSync = false } = params;
+  const { connectionId, userId, forceFullSync = false, deadlineAt } = params;
   const adapter: CalendarProviderAdapter = googleCalendarAdapter;
   const db = createSyncDbClient();
   const lifecycleVersion = await getConfiguredExternalLifecycleAppVersion();
@@ -245,6 +255,9 @@ export async function syncConnection(params: {
 
   let calendarsSynced = 0;
   let calendarsFailed = 0;
+  // 予算切れで着手できなかった／完走できなかったカレンダー数。calendarsFailed とは区別する
+  // （こちらは provider / DB が実際に失敗したわけではなく、次回 sync で前進する見込みがある）。
+  let calendarsIncomplete = 0;
   let reauthRequired = false;
 
   for (const calendar of calendars) {
@@ -257,10 +270,12 @@ export async function syncConnection(params: {
       window,
       runStartedAtIso,
       forceFullSync,
+      deadlineAt,
     });
 
     if (outcome === 'synced') calendarsSynced += 1;
     else if (outcome === 'reauth_required') reauthRequired = true;
+    else if (outcome === 'deadline_exceeded') calendarsIncomplete += 1;
     else calendarsFailed += 1;
   }
 
@@ -299,6 +314,15 @@ export async function syncConnection(params: {
     });
   }
 
+  if (calendarsIncomplete > 0) {
+    // 予算切れで一部カレンダーへ着手できなかった／完走できなかった。完走した分の進捗
+    // （calendarsSynced、sync_token）は既に保存済みなので、次回 sync はこのカレンダーから
+    // 再開する。calendarsFailed（実際の失敗）も同時に起きうるが、リトライ導線は共通なので
+    // ここでは区別しない — 予算内で再試行すれば実際の失敗だけが残る形で次回報告される。
+    await writeConnectionError(db, connectionId, userId, 'partial_timeout', runStartedAtIso);
+    return { outcome: 'partial_timeout', calendarsSynced, calendarsFailed };
+  }
+
   if (calendarsFailed > 0) {
     await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);
     return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
@@ -308,7 +332,7 @@ export async function syncConnection(params: {
   return { outcome: 'synced', calendarsSynced, calendarsFailed };
 }
 
-type CalendarSyncOutcome = 'synced' | 'reauth_required' | 'failed';
+type CalendarSyncOutcome = 'synced' | 'reauth_required' | 'deadline_exceeded' | 'failed';
 
 async function syncOneCalendar(args: {
   db: SyncClient;
@@ -319,9 +343,19 @@ async function syncOneCalendar(args: {
   window: SyncWindow;
   runStartedAtIso: string;
   forceFullSync: boolean;
+  deadlineAt?: number | undefined;
 }): Promise<CalendarSyncOutcome> {
-  const { db, adapter, session, connection, calendar, window, runStartedAtIso, forceFullSync } =
-    args;
+  const {
+    db,
+    adapter,
+    session,
+    connection,
+    calendar,
+    window,
+    runStartedAtIso,
+    forceFullSync,
+    deadlineAt,
+  } = args;
 
   const cursor = forceFullSync ? null : calendar.sync_token;
 
@@ -331,6 +365,7 @@ async function syncOneCalendar(args: {
       calendarId: calendar.provider_calendar_id,
       cursor,
       window,
+      deadlineAt,
     });
 
     if (result.cursorInvalid) {
@@ -340,6 +375,7 @@ async function syncOneCalendar(args: {
         calendarId: calendar.provider_calendar_id,
         cursor: null,
         window,
+        deadlineAt,
       });
     }
   } catch (error) {
@@ -372,6 +408,10 @@ async function syncOneCalendar(args: {
     if (result.nextCursor !== null) {
       await saveSyncToken(db, connection, calendar, result.nextCursor, runStartedAtIso);
     }
+
+    // 予算切れで打ち切られた（events/tombstone は取得できた分だけ保存済み）。'synced' に
+    // 含めると、次回 sync が要ることが呼び出し側から見えなくなる。
+    if (result.deadlineExceeded) return 'deadline_exceeded';
 
     return 'synced';
   } catch (error) {

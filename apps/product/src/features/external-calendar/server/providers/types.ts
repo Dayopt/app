@@ -53,6 +53,14 @@ export type SyncCalendarResult = {
   cursorInvalid: boolean;
   /** この呼び出しが full sync だったか。sweep を撃ってよいかの判断に使う。 */
   usedFullSync: boolean;
+  /**
+   * `deadlineAt` の wall-clock 予算超過でページングを打ち切った（#1965）。
+   *
+   * `nextCursor` は `MAX_EVENT_PAGES` 到達時と同じ理由で null のまま返す — カレンダー単位で
+   * 完走した分だけ cursor を確定する契約（呼び出し側の sync-service.ts）を壊さない。呼び出し側は
+   * これを見て「実際に失敗した」と区別し、次回 sync で前進する見込みがあることを outcome に反映する。
+   */
+  deadlineExceeded: boolean;
 };
 
 /** 取り込み候補として提示するカレンダー。 */
@@ -141,6 +149,8 @@ export interface CalendarProviderAdapter {
       /** null なら full sync。 */
       cursor: string | null;
       window: SyncWindow;
+      /** `Date.now()` 換算の締切（ms）。省略時は無制限（既存呼び出し互換）。 */
+      deadlineAt?: number | undefined;
     },
   ): Promise<SyncCalendarResult>;
 
