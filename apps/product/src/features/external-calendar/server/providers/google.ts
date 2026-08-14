@@ -446,12 +446,27 @@ function reportUnparsableEvents(unparsableCount: number): void {
   reportSilentLoss('google calendar returned unparsable events', 'normalize_events');
 }
 
-async function listCalendars(session: ProviderSession): Promise<ProviderCalendar[]> {
+async function listCalendars(
+  session: ProviderSession,
+  deadlineAt?: number,
+): Promise<ProviderCalendar[]> {
   const calendars: ProviderCalendar[] = [];
   let pageToken: string | null = null;
   let unparsableCount = 0;
 
   for (let page = 0; page < MAX_CALENDAR_LIST_PAGES; page += 1) {
+    // wall-clock 予算チェック（#2079。syncCalendar の deadlineAt チェックと同型）。次ページを
+    // 取りに行く前に判定するので、ここで打ち切っても Google へは 1 リクエストも送らない。
+    // syncCalendar と違い、ここは throw する — 一覧取得は「取得済み分だけ返して黙って完了」に
+    // すると、ユーザーが「これが全カレンダーだ」と誤認するリスクがあるため（types.ts 参照）。
+    if (deadlineAt !== undefined && Date.now() >= deadlineAt) {
+      reportUnparsableCalendars(unparsableCount);
+      throw new CalendarProviderError(
+        'google calendar list paging exceeded the wall-clock budget',
+        'deadline_exceeded',
+      );
+    }
+
     const url = new URL(`${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`);
     if (pageToken !== null) url.searchParams.set('pageToken', pageToken);
 

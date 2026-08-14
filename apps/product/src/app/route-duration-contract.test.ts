@@ -26,9 +26,10 @@ import { describe, expect, it } from 'vitest';
  *   段の値には戻せていない（#1990 の「検討する」項目、未着手）
  * - `api/trpc/[trpc]`（60）— #1965 で `externalCalendar.syncNow` / `updateSelectedCalendars`
  *   が呼ぶ `syncConnection`（procedure の dispatch 数に上限が無い理由だった最大の既知
- *   要因）に wall-clock 予算を持たせたため段の値まで下げられた。同じ理由で
- *   `listProviderCalendars` / `disconnect` も本来は予算化が要る（follow-up issue で
- *   追跡、下記参照）が、この PR の scope は #1965/#1990 に限定し、他 procedure の
+ *   要因）に wall-clock 予算を持たせたため段の値まで下げられた。#2079 で
+ *   `listProviderCalendars` にも同型の予算を持たせて hard kill 圏から救った。`disconnect`
+ *   は同じ issue で検討した上で導入しない結論（`connection-service.ts` の `disconnect()`
+ *   docstring 参照 — idempotent な retry と fail-closed 保証を優先）。他 procedure の
  *   worst path 全数監査はしていない
  *
  * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると障害半径を絞る

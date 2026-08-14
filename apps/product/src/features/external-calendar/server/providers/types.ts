@@ -110,7 +110,16 @@ export type CalendarProviderErrorKind =
   /** provider 側の一時障害・ネットワーク断 */
   | 'transient'
   /** こちらの実装バグを含む、回復しない失敗 */
-  | 'permanent';
+  | 'permanent'
+  /**
+   * `listCalendars` のページングが wall-clock 予算（#2079）を超えた。
+   *
+   * `syncCalendar` の `deadlineExceeded` フラグ（部分結果を「安全な部分完了」として返す）とは
+   * 扱いを変える — こちらはユーザーが選択肢を見て選ぶ一覧取得なので、一部だけ返して黙って
+   * 成功扱いにすると「これが全カレンダーだ」という誤認を招く。error として投げ、呼び出し側
+   * （connection-service.ts）に判断を委ねる。
+   */
+  | 'deadline_exceeded';
 
 export class CalendarProviderError extends Error {
   constructor(
@@ -140,7 +149,14 @@ export interface CalendarProviderAdapter {
   /** run の先頭で 1 回だけ呼ぶ。 */
   startSession(refreshToken: string): Promise<ProviderSession>;
 
-  listCalendars(session: ProviderSession): Promise<ProviderCalendar[]>;
+  /**
+   * @param deadlineAt `Date.now()` 換算の締切（ms）。省略時は無制限（既存呼び出し互換）。
+   *   超過したら `CalendarProviderError('deadline_exceeded')` を throw する（#2079）。
+   */
+  listCalendars(
+    session: ProviderSession,
+    deadlineAt?: number | undefined,
+  ): Promise<ProviderCalendar[]>;
 
   syncCalendar(
     session: ProviderSession,

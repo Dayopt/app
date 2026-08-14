@@ -391,6 +391,12 @@ function throwForReauthOutcome(
 export async function listProviderCalendars(
   userId: string,
   connectionId: string,
+  /**
+   * `Date.now()` 換算の締切（ms）（#2079）。省略時は無制限（既存呼び出し互換）。
+   * `sync-service.ts` の `syncConnection` と同じ形 — 呼び出し側（router.ts）が自分の
+   * maxDuration に対する安全マージンを引いた値を渡す。
+   */
+  deadlineAt?: number | undefined,
 ): Promise<ProviderCalendarOption[]> {
   const db = createCalendarConnectionDbClient();
 
@@ -469,7 +475,7 @@ export async function listProviderCalendars(
 
   let providerCalendars;
   try {
-    providerCalendars = await googleCalendarAdapter.listCalendars(session);
+    providerCalendars = await googleCalendarAdapter.listCalendars(session, deadlineAt);
   } catch (error) {
     if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
       const reauthOutcome =
@@ -482,6 +488,16 @@ export async function listProviderCalendars(
             })
           : await markReauthAfterRotation();
       throwForReauthOutcome(reauthOutcome, error);
+    }
+    // 予算切れは想定内の日常挙動（rate limit / 大量カレンダーで起きうる）だが、一覧取得は
+    // 部分結果を黙って返すと「これが全カレンダーだ」という誤認を招くため、明示的エラーへ
+    // 変換する（types.ts の CalendarProviderErrorKind 'deadline_exceeded' 参照、#2079）。
+    if (error instanceof CalendarProviderError && error.kind === 'deadline_exceeded') {
+      throw new ExternalCalendarServiceError(
+        'DEADLINE_EXCEEDED',
+        'listing provider calendars exceeded the wall-clock budget',
+        { cause: error },
+      );
     }
     throw error;
   }
@@ -635,6 +651,22 @@ function reportUnrevokedGrant(reason: string): void {
  *    SET NULL され歴史的アンカーとして残る）
  *
  * 解約済みユーザーも切断できるよう protectedProcedure から呼ぶ。接続が既に無ければ冪等に成功。
+ *
+ * **wall-clock 予算（deadline）は意図的に持たせていない**（#2079 で検討し、導入しない結論。
+ * listProviderCalendars とは扱いを変える）:
+ *
+ * 1. 上記 1 の `deleteUnreferencedEvents` は idempotent。tRPC route の maxDuration=60 で
+ *    kill されても、ユーザーが再実行すれば prune は続きから前進する。revoke は掃除完了後
+ *    にしか呼ばれないため、kill 時に「token は生きているが connection は消えている」ような
+ *    不整合状態は生まれない
+ * 2. 現実的な行数（±90 日 window に収まる複数カレンダー分のミラー行）では所要時間は
+ *    数秒〜十数秒に収まり、通常 60s 予算内に収まる
+ * 3. `MAX_PRUNE_BATCHES_CONNECTION_SCOPE`（600,000 行）に到達する worst case は、
+ *    `route-duration-contract.test.ts` が他 route で既に「全依存同時ハング」として受容して
+ *    いる tail と同種で、そこだけ deadline を持たせても得る価値が小さい
+ * 4. deadline を導入すると「未完了のまま revoke/削除してよいか」という、上記 1 の
+ *    fail-closed 保証（掃除失敗時は revoke も削除もしない）を弱める再設計になる。
+ *    「未完了」を「失敗」と区別しない現在の設計をそのまま保つ
  */
 export async function disconnect(userId: string, connectionId: string): Promise<void> {
   const db = createCalendarConnectionDbClient();

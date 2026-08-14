@@ -638,4 +638,42 @@ describe('googleCalendarAdapter.listCalendars', () => {
       { id: 'other', name: 'My team', primary: false },
     ]);
   });
+
+  // wall-clock 予算（#2079）。syncCalendar と違い、こちらは throw する — 一覧取得で部分結果を
+  // 黙って返すと「これが全カレンダーだ」という誤認を招くため（types.ts の
+  // CalendarProviderErrorKind 'deadline_exceeded' 参照）。
+  it('wall-clock 予算を超えたら次ページを取りに行かず deadline_exceeded を throw する', async () => {
+    fetchMock().mockResolvedValueOnce(
+      jsonResponse({ items: [{ id: 'primary', summary: 'Work' }], nextPageToken: 'page-2' }),
+    );
+    const deadlineAt = 1_000;
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // 1 ページ目の判定: まだ余裕がある
+      .mockReturnValueOnce(deadlineAt); // 2 ページ目の判定: 締切に達した
+
+    await expect(googleCalendarAdapter.listCalendars(SESSION, deadlineAt)).rejects.toMatchObject({
+      kind: 'deadline_exceeded',
+    });
+    expect(fetchMock()).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockRestore();
+  });
+
+  it('deadlineAt が既に過ぎていれば最初のページも取得しない', async () => {
+    await expect(
+      googleCalendarAdapter.listCalendars(SESSION, Date.now() - 1),
+    ).rejects.toBeInstanceOf(CalendarProviderError);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it('deadlineAt を省略すれば従来どおり無制限にページングする', async () => {
+    fetchMock().mockResolvedValueOnce(
+      jsonResponse({ items: [{ id: 'primary', summary: 'Work' }] }),
+    );
+
+    const calendars = await googleCalendarAdapter.listCalendars(SESSION);
+
+    expect(calendars).toEqual([{ id: 'primary', name: 'Work', primary: false }]);
+  });
 });
