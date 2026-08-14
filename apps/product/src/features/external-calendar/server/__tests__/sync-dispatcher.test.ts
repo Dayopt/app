@@ -104,10 +104,12 @@ describe('dispatchCalendarSync — 逐次同期', () => {
     const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
 
     expect(syncConnection).toHaveBeenCalledTimes(3);
+    // deadlineAt は接続と接続の「間」だけでなく接続の内側にも渡す（#1965）。
     expect(syncConnection).toHaveBeenCalledWith({
       connectionId: connections(1)[0]!.id,
       userId: connections(1)[0]!.user_id,
       forceFullSync: false,
+      deadlineAt: FAR_DEADLINE,
     });
     expect(summary).toMatchObject({
       due: 3,

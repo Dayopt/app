@@ -28,6 +28,7 @@ export function createMcpTrpcCaller(input: McpTrpcContextInput) {
       ...(input.signal ? { signal: input.signal } : {}),
     },
     res: {},
+    requestStartedAt: Date.now(),
     userId: input.userId,
     oauthClientId: input.clientId,
     oauthScopes: input.scopes,
