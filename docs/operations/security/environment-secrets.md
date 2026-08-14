@@ -25,14 +25,13 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 
 | Secret                             | 用途                                         | 方針                                                                                          |
 | ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `CODECOV_TOKEN`                    | coverage upload                              | CI 用 replica                                                                                 |
-| `LHCI_GITHUB_APP_TOKEN`            | Lighthouse CI                                | CI 用 replica                                                                                 |
-| `SUPABASE_ACCESS_TOKEN`            | emergency / manual operation                 | 通常 migration flow では使わない                                                              |
 | `SUPABASE_AUTH_AUDIT_TOKEN`        | Production Auth Config Audit                 | Supabase Management API の PAT。auth-config job の 1 step だけへ渡す                          |
 | `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
 | `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
 | `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                       |
+
+この表は「workflow が参照する実在 secret」と 1:1 を意図する（2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。実在するが workflow 未参照・表未掲載の 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は [#2090](https://github.com/Dayopt/dayopt/issues/2090) で処遇判断中で、確定後にこの表へ反映する。
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
