@@ -27,10 +27,13 @@ import { describe, expect, it } from 'vitest';
  * - `api/trpc/[trpc]`（60）— #1965 で `externalCalendar.syncNow` / `updateSelectedCalendars`
  *   が呼ぶ `syncConnection`（procedure の dispatch 数に上限が無い理由だった最大の既知
  *   要因）に wall-clock 予算を持たせたため段の値まで下げられた。#2079 で
- *   `listProviderCalendars` にも同型の予算を持たせて hard kill 圏から救った。`disconnect`
- *   は同じ issue で検討した上で導入しない結論（`connection-service.ts` の `disconnect()`
- *   docstring 参照 — idempotent な retry と fail-closed 保証を優先）。他 procedure の
- *   worst path 全数監査はしていない
+ *   `listProviderCalendars` にも同型の予算を持たせ、ページ開始前の判定で pagination ループ
+ *   自体は有界化した。**ただし in-flight 1 リクエストの overshoot は残る**（#2089 で追跡、
+ *   未着手） — 判定通過直後にそのリクエストが rate limit されて retry すると、
+ *   `GOOGLE_API_TIMEOUT_MS`（15s）× 2 + backoff の分だけ deadline を超えて走りうる。
+ *   `disconnect` は同じ issue（#2079）で検討した上で導入しない結論
+ *   （`connection-service.ts` の `disconnect()` docstring 参照 — idempotent な retry と
+ *   fail-closed 保証を優先）。他 procedure の worst path 全数監査はしていない
  *
  * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると障害半径を絞る
  * という目的そのものを失う。**予算は blast radius の上限であって、全依存同時ハング時の
@@ -76,8 +79,10 @@ const ROUTE_DURATION_CONTRACT = {
   // （指揮台決定、PR #2075 クロスレビュー。詳細は maxDuration 直上のコメント）。
   'src/app/api/integrations/google-calendar/callback/route.ts': 90,
   // #1965: externalCalendar.syncConnection に wall-clock 予算を持たせたため、procedure の
-  // dispatch 数に上限が無いという構造的な理由がなくなり、段の値へ戻せた。
-  // listProviderCalendars / disconnect の予算化は follow-up issue で追跡（未着手）。
+  // dispatch 数に上限が無いという構造的な理由がなくなり、段の値へ戻せた。#2079 で
+  // listProviderCalendars にも同型の予算を追加済み（in-flight overshoot の残余は #2089）。
+  // disconnect は #2079 で検討の上、導入しない結論（connection-service.ts の disconnect()
+  // docstring 参照）。
   'src/app/api/trpc/[trpc]/route.ts': 60,
 
   // 逐次 worst path が 60 を超えるため段から外した route。MCP の認証フェーズは
