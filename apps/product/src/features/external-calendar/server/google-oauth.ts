@@ -6,6 +6,8 @@ import { env } from '@/env';
 
 import {
   GOOGLE_AUTHORIZATION_SCOPES,
+  GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE,
+  GOOGLE_CALENDAR_LIST_READONLY_SCOPE,
   GOOGLE_CALENDAR_READONLY_SCOPE,
   googleIdTokenPayloadSchema,
   googleTokenResponseSchema,
@@ -145,7 +147,7 @@ export function buildAuthorizationUrl(params: {
   url.searchParams.set('prompt', 'consent select_account');
   // `include_granted_scopes` は付けない。付けると、この client が過去にそのユーザーへ
   // 得ていた scope まで今回の認可へ畳み込まれ、保存する refresh token が本機能に必要な
-  // 範囲を超えた権限を持ちうる。callback は calendar.readonly の有無しか見ないので、
+  // 範囲を超えた権限を持ちうる。callback は hasRequiredCalendarScopes の判定しか見ないので、
   // 余分な scope はそのまま通ってしまう。必要な scope は最初から
   // GOOGLE_AUTHORIZATION_SCOPES で全部要求しており、incremental auth は使っていない。
   if (params.loginHint) url.searchParams.set('login_hint', params.loginHint);
@@ -368,7 +370,25 @@ export function parseGrantedScopes(scope: string): string[] {
   return scope.split(' ').filter(Boolean);
 }
 
-/** granular consent で calendar だけ外されていないか。 */
-export function hasCalendarReadonlyScope(grantedScopes: string[]): boolean {
-  return grantedScopes.includes(GOOGLE_CALENDAR_READONLY_SCOPE);
+/**
+ * 同期に必要な Calendar scope が揃っているか。
+ *
+ * narrow pair（`calendarList.list` + `events.list`）は AND 判定にする。Google の
+ * granular consent で片方だけ許可されうるため、いずれか 1 つで通す OR 判定にすると、
+ * 接続は active として保存されたのに一方が恒久的に 403 になり「Connected なのに
+ * 一覧が出ない / 同期されない」状態が残る。
+ *
+ * 旧・広い `calendar.readonly` は OR で残す。新規の認可リクエストではもう要求しない
+ * （`GOOGLE_AUTHORIZATION_SCOPES`）が、既に grant 済みの既存接続はこの scope のまま
+ * 動き続けるため、ここで弾くと既存ユーザー全員が再認証を要求される。削除条件は #2072
+ * に記録した（production の `calendar_connections` に旧 scope の行が無いこと・GCP
+ * console から旧 scope の登録を削除済みであること）。
+ */
+export function hasRequiredCalendarScopes(grantedScopes: string[]): boolean {
+  const granted = new Set(grantedScopes);
+  const hasNarrowPair =
+    granted.has(GOOGLE_CALENDAR_LIST_READONLY_SCOPE) &&
+    granted.has(GOOGLE_CALENDAR_EVENTS_READONLY_SCOPE);
+
+  return hasNarrowPair || granted.has(GOOGLE_CALENDAR_READONLY_SCOPE);
 }
