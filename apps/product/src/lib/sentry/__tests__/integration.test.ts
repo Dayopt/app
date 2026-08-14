@@ -154,6 +154,47 @@ describe('Product Sentry capture helpers', () => {
     ).toBe(false);
   });
 
+  // user-service.ts の requestEmailChange（#2064）は、handleServiceError の自動報告が
+  // isExpectedAuthError でゲートされるため email_address_not_authorized をこの経路に
+  // 乗せられないという前提の上で、captureUnexpectedError を直接呼ぶ設計にしている。
+  // status を fallback 対象外（500）にして code 単独の判定であることを固定し、この
+  // 前提が将来の EXPECTED_AUTH_ERROR_CODES 編集で静かに崩れないようにする
+  it('classifies email_address_not_authorized as expected via code alone (status outside the 4xx fallback)', () => {
+    expect(
+      isExpectedAuthError(
+        Object.assign(new Error('email address not authorized'), {
+          status: 500,
+          code: 'email_address_not_authorized',
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  // user-service.ts の requestEmailChange（#2064）が依存する dedup 契約を固定する:
+  // observeAuthOperation が先に capture した error instance を、呼び出し側が同一
+  // instance のまま captureUnexpectedError へ渡しても Sentry.captureException は
+  // 1 回だけ。unexpected な code（EXPECTED_AUTH_ERROR_CODES に無い）で検証する —
+  // expected な code だと observeAuthOperation 側が最初から capture しないため、
+  // dedup の成立を検証できない
+  it('dedups when observeAuthOperation captures an error and the caller then passes the same instance directly', async () => {
+    const updateError = Object.assign(new Error('gotrue internal error'), {
+      status: 500,
+      code: 'unexpected_failure',
+    });
+
+    await observeAuthOperation('update_email', async () => ({ error: updateError }), {
+      feature: 'email_change',
+    });
+    captureUnexpectedError(updateError, {
+      feature: 'email_change',
+      operation: 'update_email',
+      source: 'supabase_auth',
+    });
+
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+    expect(sentry.captureException).toHaveBeenCalledWith(updateError);
+  });
+
   it('captures returned database errors regardless of an auth-like status and preserves them as cause', () => {
     const returnedFailure = {
       code: 'PGRST404',

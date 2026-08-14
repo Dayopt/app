@@ -113,10 +113,13 @@ describe('EmailChangeDialog', () => {
     });
   });
 
-  // EMAIL_UPDATE_FAILED / REAUTH_UNAVAILABLE / 未知のエラーはすべて汎用文言に畳む
-  // （生の GoTrue エラー文言をここに出さない。OWASP サニタイズ）
+  // EMAIL_UPDATE_FAILED / EMAIL_UPDATE_UNAVAILABLE / REAUTH_UNAVAILABLE / 未知のエラーは
+  // すべて汎用文言に畳む（生の GoTrue エラー文言をここに出さない。OWASP サニタイズ）。
+  // EMAIL_UPDATE_UNAVAILABLE（#2064、構成故障。server 側で Sentry へは別途報告済み）も
+  // 特別扱いしないことをここで固定する
   it.each([
     ['EMAIL_UPDATE_FAILED', { data: { serviceCode: 'EMAIL_UPDATE_FAILED' } }],
+    ['EMAIL_UPDATE_UNAVAILABLE', { data: { serviceCode: 'EMAIL_UPDATE_UNAVAILABLE' } }],
     ['REAUTH_UNAVAILABLE', { data: { serviceCode: 'REAUTH_UNAVAILABLE' } }],
     ['serviceCode を持たない未知のエラー', { data: {} }],
   ])('falls back to a generic error for %s', async (_label, error) => {
