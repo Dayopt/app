@@ -139,6 +139,9 @@ for (const entry of onePasswordEnvSchema) {
   }
 
   console.log(`${entry.vault} / ${entry.item} / ${entry.field}: ${status}`);
+  if (status !== 'OK' && entry.pendingReason) {
+    console.log(`  └ pending: ${entry.pendingReason}`);
+  }
   if (entry.required && status !== 'OK') hasFailure = true;
 }
 

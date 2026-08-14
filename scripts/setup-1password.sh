@@ -88,11 +88,12 @@ echo "  [Dayopt-Staging]"
 
 # 接続情報（URL / anon key / service role key / DB password / project-ref）は
 # 意図的に作らない。常設 staging が無いため、置けば production の複製になる。
+# SUPABASE_ACCESS_TOKEN は置かない。Dayopt-Production/supabase を正本に
+# 一本化した（#1933）。
 run item create --category=apicredential --vault=Dayopt-Staging --title=supabase \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
-  'CRON_SECRET[concealed]=' \
-  'SUPABASE_ACCESS_TOKEN[concealed]='
+  'CRON_SECRET[concealed]='
 
 run item create --category=apicredential --vault=Dayopt-Staging --title=upstash \
   --tags=dayopt,staging notesPlain="$NOTES" \
@@ -202,7 +203,9 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=resend-su
   --tags=dayopt,shared notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \
   'RESEND_SMTP_API_KEY[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=sentry \
+# 実 item 名は sentry-login（Sentry の login 情報と同居。#2063 で判明した命名 drift、
+# schema.ts と揃える）
+run item create --category=apicredential --vault=Dayopt-Shared --title=sentry-login \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'SENTRY_AUTH_TOKEN[concealed]='
 

@@ -18,6 +18,7 @@ code: scripts/env/schema.ts
 4. **値を表示しない** — 確認は存在確認だけにし、secret 本体を terminal / docs / issue / chat に出さない
 5. **Turnstile is canonical** — bot protection は Cloudflare Turnstile を正とし、reCAPTCHA は旧方式として扱う
 6. **contact credentials are separated** — app配送、app別webhook署名、Gmail返信SMTPの権限を共用しない
+7. **値がどこに存在していようと、必ず 1Password にもある** — 1Password は消費元ではなく完全な台帳（インデックス）。消費は直接参照でも replica でもよいが、replica にしか無い値が存在してはならない（2026-08-13、User との認識合わせ。経緯は #1933）
 
 PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel integration が作る ephemeral replica であり、1Password には保存しない。
 
@@ -153,16 +154,18 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 
 **常設 staging 環境は存在しない**（Supabase の branch は `main` のみ）。そのため Supabase の接続情報（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_DB_PASSWORD`）はこの vault に置かない。置けば production の複製にしかならず、実際 2026-08-11 まで 4 field とも `Dayopt-Production/supabase` と同一値だった（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。local dev の Supabase 接続は `scripts/dev-with-op.sh` が `supabase status -o env` から注入し、1Password を経由しない。この境界は `scripts/__tests__/staging-supabase-boundary.test.ts` が固定する。
 
-| Item              | Fields                                                                                                                                                                                                                                                                                                                                               | 用途                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `supabase`        | `SUPABASE_ACCESS_TOKEN`, `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET`                                                                                                                                                                                                                                                                                     | Management API token と staging 用 optional secret    |
-| `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                                                                                                                                                                                                 | Redis rate limit / cache                              |
-| `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_ACCOUNT_ID`, `STRIPE_LIVEMODE`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                                                                                                                                              | Stripe test mode                                      |
-| `resend`          | `RESEND_WEBHOOK_SECRET`                                                                                                                                                                                                                                                                                                                              | optional stagingのProduct webhook署名                 |
-| `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`, `OAUTH_CLAUDE_REDIRECT_URIS`, `OAUTH_CHATGPT_REDIRECT_URIS`, `OAUTH_CURSOR_REDIRECT_URIS`, `MCP_OAUTH_ENVIRONMENT`, `OAUTH_AUTHORIZATION_SERVER_URI`, `MCP_CANONICAL_RESOURCE_URI`, `MCP_OAUTH_PREVIEW_BRANCH`, `MCP_OAUTH_PREVIEW_UPSTASH_HOST`, `MCP_WRITE_ENABLED_CLIENTS` | App URL / recovery code HMAC pepper / MCP OAuth beta  |
-| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_PROJECT_NUMBER`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                                                                                                                                                     | 外部カレンダー取り込みの OAuth client（local dev 用） |
+| Item              | Fields                                                                                                                                                                                                                                                                                                                                               | 用途                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `supabase`        | `CRON_SECRET`, `SEND_EMAIL_HOOK_SECRET`                                                                                                                                                                                                                                                                                                              | staging 用 optional secret（cron / send-email hook の local dev 検証） |
+| `upstash`         | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                                                                                                                                                                                                                                                                                                 | Redis rate limit / cache                                               |
+| `stripe-test`     | `STRIPE_SECRET_KEY`, `STRIPE_ACCOUNT_ID`, `STRIPE_LIVEMODE`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`                                                                                                                                                                                                                              | Stripe test mode                                                       |
+| `resend`          | `RESEND_WEBHOOK_SECRET`                                                                                                                                                                                                                                                                                                                              | optional stagingのProduct webhook署名                                  |
+| `app`             | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `RECOVERY_CODE_PEPPER`, `OAUTH_CLAUDE_REDIRECT_URIS`, `OAUTH_CHATGPT_REDIRECT_URIS`, `OAUTH_CURSOR_REDIRECT_URIS`, `MCP_OAUTH_ENVIRONMENT`, `OAUTH_AUTHORIZATION_SERVER_URI`, `MCP_CANONICAL_RESOURCE_URI`, `MCP_OAUTH_PREVIEW_BRANCH`, `MCP_OAUTH_PREVIEW_UPSTASH_HOST`, `MCP_WRITE_ENABLED_CLIENTS` | App URL / recovery code HMAC pepper / MCP OAuth beta                   |
+| `google-calendar` | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_PROJECT_NUMBER`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CALENDAR_TOKEN_ENCRYPTION_KEY`, `GOOGLE_CALENDAR_REDIRECT_URIS`                                                                                                                                                                                     | 外部カレンダー取り込みの OAuth client（local dev 用）                  |
 
-`supabase` item に残る `SUPABASE_ACCESS_TOKEN` は Supabase Management API 用で、cloud の `supabase` MCP server（production project に固定）と `scripts/enable-auth-hook.sh` が使う。これも `Dayopt-Production/supabase` と同一値のため、正本を production 側へ一本化して item ごと整理するかは [#1933](https://github.com/Dayopt/dayopt/issues/1933) で扱う。
+`SUPABASE_ACCESS_TOKEN`（Supabase Management API 用。cloud の `supabase` MCP server と `scripts/enable-auth-hook.sh` が使う）は `Dayopt-Production/supabase` を正本に一本化した（[#1933](https://github.com/Dayopt/dayopt/issues/1933)）。以前は `Dayopt-Production/supabase` と同一値のまま `Dayopt-Staging/supabase` にも複製されていたが、production を指す token を staging item から読む理由が無いため repo 側の参照はすべて production へ切り替えた。**item 自体は残す**（`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` は cron / send-email hook の local dev 検証に使うため、廃止しない）。1Password 側の field 削除は User の手作業。
+
+`google-calendar` item は 2026-08-14 実測時点で **1Password に存在しない**（#2063）。`.op-env.local.example` の該当行はコメントアウト済みで、`pnpm dev` の正規ルートはブロックされない。外部カレンダー連携を local dev で検証するには、test mode の Google OAuth client を作成した上で item を作る必要がある（User 手作業）。
 
 ### `Dayopt-Production`
 
@@ -199,18 +202,18 @@ field 名は可能な限り current code の env 名と一致させる。`.op-en
 
 ### `Dayopt-Shared`
 
-| Item                     | Fields                                                                                        | 用途                                                            |
-| ------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                            |
-| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし                 |
-| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master                  |
-| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定             |
-| `sentry`                 | `SENTRY_AUTH_TOKEN`                                                                           | Product / Web の Production release upload                      |
-| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                            |
-| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                                |
-| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata |
-| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                          |
-| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                                 |
+| Item                     | Fields                                                                                        | 用途                                                                    |
+| ------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `turnstile`              | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`                                      | Cloudflare Turnstile                                                    |
+| `anthropic`              | `ANTHROPIC_API_KEY`                                                                           | optional / legacy key。現行runtime consumerなし                         |
+| `resend`                 | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`                                                         | Product / WebのProduction email sending master                          |
+| `resend-support-replies` | `RESEND_SMTP_API_KEY`                                                                         | Gmail Send mail as専用。Sending access / domain限定                     |
+| `sentry-login`           | `SENTRY_AUTH_TOKEN`                                                                           | Sentry account login と同居。Product / Web の Production release upload |
+| `github-login`           | password, TOTP, recovery codes                                                                | GitHub account login                                                    |
+| `github-ssh`             | SSH private key                                                                               | GitHub SSH Agent                                                        |
+| `vercel`                 | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata         |
+| `google`                 | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                       | Webmaster verification                                                  |
+| `domain`                 | registrar login, TOTP, recovery codes                                                         | dayopt.app 管理                                                         |
 
 `VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。
 
@@ -244,7 +247,7 @@ op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/a
 
 雛形は接続 3 field に加えて `SUPABASE_DB_PASSWORD` を持つ。`USE_LINKED_DB=true` の `seed-dev-data.sh` が最後に `supabase db query --linked` を実行するためで、**欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の user が production に残る**（部分適用）。同じ理由で `Dayopt-Production/supabase/SUPABASE_DB_PASSWORD` は `required` にしてある。
 
-Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
+Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `Dayopt-Production/sentry` と `Dayopt-Production/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `Dayopt-Shared/sentry-login` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
 `.op-env.local` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
 
@@ -266,11 +269,11 @@ pnpm 1password:check
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
-- `1password:check` は **禁止 field の実在**も検査する（`scripts/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`Dayopt-Staging/supabase` の接続 4 field はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する
+- `1password:check` は **禁止 field の実在**も検査する（`scripts/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`Dayopt-Staging/supabase` の接続 4 field と `SUPABASE_ACCESS_TOKEN`（production 正本への一本化後、#1933）はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する。`SUPABASE_ACCESS_TOKEN` field の実削除（1Password 側、User 手作業）が済むまで `1password:check` は意図どおり red になる（fail-closed。接続 4 field の時と同型）
 
 この検査の**保証境界**は「正常応答から不在を確認できた時だけ `ABSENT` にする」。`op` の応答は vault / item / field の 3 段しかなく、そのどこで確認不能になっても `UNVERIFIABLE` として失敗させる。`op item get` は item 不在・権限エラー・一時エラー・不正 JSON をすべて同じ非ゼロ終了に畳むため、取得失敗を不在の証拠に使えないのが理由。3 段すべてを塞いだので「確認できないまま pass する」経路はこの検査には残らない。
 
-この境界の帰結として、`forbiddenFields` に登録した item は実在し続ける必要がある。item ごと廃止する時は `forbiddenFields` の該当 entry も同時に外す（`Dayopt-Staging/supabase` の廃止可否は [#1933](https://github.com/Dayopt/dayopt/issues/1933) で扱う）。
+この境界の帰結として、`forbiddenFields` に登録した item は実在し続ける必要がある。item ごと廃止する時は `forbiddenFields` の該当 entry も同時に外す。`Dayopt-Staging/supabase` は [#1933](https://github.com/Dayopt/dayopt/issues/1933) で検討したが、`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` が local dev 検証に使われているため item ごとの廃止はしない（`SUPABASE_ACCESS_TOKEN` だけを production へ一本化した）。
 
 `.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
 
