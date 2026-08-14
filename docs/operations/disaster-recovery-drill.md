@@ -94,7 +94,7 @@ supabase branches create --help
 | Supabase Dashboard のログイン       | User       | backup 状態確認、restore 実行                                                                  |
 | Supabase 組織の課金設定へのアクセス | User       | PITR 有効化の判断・実行                                                                        |
 | production の DB 接続情報           | User       | 案γ で dump を取る時だけ                                                                       |
-| 1Password `Dayopt-Production`       | User       | 上記 credential の取り出し                                                                     |
+| 1Password `human`                   | User       | 上記 credential の取り出し                                                                     |
 | `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions                                                                    |
 | `rclone`（brew 等でローカル導入）   | 共通       | Storage オブジェクトの搬出・復元（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`） |
 | Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                                                                          |

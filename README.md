@@ -21,13 +21,13 @@ Dayoptは、予定（Plan）と記録（Record）を同じCalendarで扱う個�
 
 ```bash
 pnpm install
-cp .op-env.local.example .op-env.local
+cp .op-env.agent.example .op-env.agent
 pnpm 1password:check
 pnpm env:check
 pnpm dev
 ```
 
-`.op-env.local`には実値ではなく`op://`参照だけを書く。詳細は[Secrets Management](./docs/operations/secrets.md)を参照する。AIは`pnpm dev`を実行しない。
+`.op-env.agent`には実値ではなく`op://`参照だけを書く。詳細は[Secrets Management](./docs/operations/secrets.md)を参照する。AIは`pnpm dev`を実行しない。
 
 ## Main Commands
 

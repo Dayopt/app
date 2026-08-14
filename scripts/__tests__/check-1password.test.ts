@@ -40,7 +40,7 @@ case "$1" in
         ;;
       *)
         # op item get <item> --vault <vault> --format=json → $3=item, $5=vault
-        if [ "$3" = "supabase" ] && [ "$5" = "Dayopt-Staging" ]; then
+        if [ "$3" = "supabase" ] && [ "$5" = "agent" ]; then
           printf '%s\n' "$FAKE_OP_STAGING_SUPABASE_JSON"
         else
           printf '%s\n' "$FAKE_OP_ITEM_JSON"
@@ -62,7 +62,7 @@ interface CheckOptions {
   emptyField?: string;
   missingItem?: string;
   mode?: 'error' | 'invalid-json';
-  /** true にすると Dayopt-Staging/supabase が禁止 field を持ったまま残っている状態を再現する */
+  /** true にすると agent/supabase が禁止 field を持ったまま残っている状態を再現する */
   leakForbidden?: boolean;
   /** op vault get を失敗させる vault 名（不在 / 権限不足 / 一時エラーの再現） */
   missingVault?: string;
@@ -76,10 +76,10 @@ function runCheck(options: CheckOptions = {}) {
     value: field === options.emptyField ? '' : sentinelSecret,
   }));
 
-  // 既定の Dayopt-Staging/supabase は禁止 field を持たない（是正済みの状態）
+  // 既定の agent/supabase は禁止 field を持たない（是正済みの状態）
   const forbiddenNames = new Set(
     forbiddenFields
-      .filter((entry) => entry.vault === 'Dayopt-Staging' && entry.item === 'supabase')
+      .filter((entry) => entry.vault === 'agent' && entry.item === 'supabase')
       .map((entry) => entry.field),
   );
   const stagingSupabaseFields = options.leakForbidden
@@ -113,7 +113,7 @@ describe('check-1password.ts', () => {
     const result = runCheck();
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('Dayopt-Production / supabase / SUPABASE_SERVICE_ROLE_KEY: OK');
+    expect(result.stdout).toContain('human / supabase / SUPABASE_SERVICE_ROLE_KEY: OK');
     expect(result.stdout).not.toContain(sentinelSecret);
     expect(result.stderr).not.toContain(sentinelSecret);
   });
@@ -140,23 +140,21 @@ describe('check-1password.ts', () => {
     const result = runCheck({ missingItem: 'google' });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain(
-      'Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: MISSING_ITEM',
-    );
+    expect(result.stdout).toContain('agent / google / GOOGLE_SITE_VERIFICATION: MISSING_ITEM');
   });
 
   it('optional field が空でも状態を表示して成功する', () => {
     const result = runCheck({ emptyField: 'GOOGLE_SITE_VERIFICATION' });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: EMPTY');
+    expect(result.stdout).toContain('agent / google / GOOGLE_SITE_VERIFICATION: EMPTY');
   });
 
   it('pendingReason を持つ entry が非 OK の時、理由を添えて表示する', () => {
     const result = runCheck({ emptyField: 'STRIPE_ACCOUNT_ID' });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain('Dayopt-Production / stripe-live / STRIPE_ACCOUNT_ID: EMPTY');
+    expect(result.stdout).toContain('human / stripe-live / STRIPE_ACCOUNT_ID: EMPTY');
     expect(result.stdout).toContain('  └ pending: 課金未有効化のため未設定');
   });
 
@@ -171,21 +169,21 @@ describe('check-1password.ts', () => {
     const result = runCheck({ missingItem: 'sentry-web' });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('Dayopt-Production / sentry-web / SENTRY_DSN: MISSING_ITEM');
+    expect(result.stdout).toContain('human / sentry-web / SENTRY_DSN: MISSING_ITEM');
   });
 
   it('required field が空なら失敗する', () => {
     const result = runCheck({ emptyField: 'SENTRY_DSN' });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('Dayopt-Production / sentry / SENTRY_DSN: EMPTY');
+    expect(result.stdout).toContain('human / sentry / SENTRY_DSN: EMPTY');
   });
 
   it('required operational item が未作成なら失敗する', () => {
     const result = runCheck({ missingItem: 'github-ssh' });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('Dayopt-Shared / github-ssh: MISSING_ITEM');
+    expect(result.stdout).toContain('human / github-ssh: MISSING_ITEM');
   });
 
   it('禁止 field が実 vault に残っていたら失敗する', () => {
@@ -212,20 +210,20 @@ describe('check-1password.ts', () => {
   });
 
   it('vault を取得できない時は禁止 field の不在を確認できないので失敗する', () => {
-    const result = runCheck({ missingVault: 'Dayopt-Staging' });
+    const result = runCheck({ missingVault: 'agent' });
 
     expect(result.status).toBe(1);
-    for (const entry of forbiddenFields.filter((f) => f.vault === 'Dayopt-Staging')) {
+    for (const entry of forbiddenFields.filter((f) => f.vault === 'agent')) {
       expect(result.stdout, entry.field).toContain(
         `${entry.vault} / ${entry.item} / ${entry.field}: UNVERIFIABLE`,
       );
     }
     // 権限不足や一時エラーを「不在を確認できた」と読み替えない
-    expect(result.stdout).not.toContain('Dayopt-Staging / supabase / SUPABASE_DB_PASSWORD: ABSENT');
+    expect(result.stdout).not.toContain('agent / supabase / SUPABASE_DB_PASSWORD: ABSENT');
   });
 
   it('item を取得できない時も禁止 field の不在を確認できないので失敗する', () => {
-    // Dayopt-Staging/supabase の通常 entry はすべて optional なので、
+    // agent/supabase の通常 entry はすべて optional なので、
     // 禁止 field 検査が通してしまうと checker 全体が exit 0 になりうる
     const result = runCheck({ missingItem: 'supabase' });
 
@@ -246,11 +244,11 @@ describe('check-1password.ts', () => {
     'SUPABASE_SERVICE_ROLE_KEY',
   ])('production の Supabase %s が欠けたら失敗する', (field) => {
     // Staging 側の複製を撤去した分の required 検査は production へ移した。
-    // 欠けると runtime だけでなく .op-env.admin 経由の管理者運用も止まる。
+    // 欠けると runtime だけでなく .op-env.human 経由の管理者運用も止まる。
     const result = runCheck({ emptyField: field });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain(`Dayopt-Production / supabase / ${field}: EMPTY`);
+    expect(result.stdout).toContain(`human / supabase / ${field}: EMPTY`);
   });
 
   it('op が壊れた応答を返す時も禁止 field を ABSENT と判定しない', () => {

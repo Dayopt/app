@@ -11,7 +11,7 @@
 #   - このスクリプトが失敗 → password が期待値と違う (admin-set-user-password の問題)
 #
 # 使い方:
-#   op run --env-file=.op-env.admin -- \
+#   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
 #     bash scripts/verify-login.sh
 # ========================================

@@ -10,19 +10,19 @@
 # 使えない / bypass したい時のみ使用。
 #
 # 前提:
-#   - .op-env.admin が存在し、以下を含む:
+#   - .op-env.human が存在し、以下を含む:
 #       NEXT_PUBLIC_SUPABASE_URL=op://...
 #       SUPABASE_SERVICE_ROLE_KEY=op://...
 #   - 1Password CLI (op) に signin 済み (op signin)
 #   - password を保存する 1Password item を事前に作成済み
 #
 # 使い方:
-#   op run --env-file=.op-env.admin -- \
+#   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
 #     bash scripts/admin-create-user.sh
 #
 # 環境:
-#   `.op-env.admin` は Dayopt-Production を参照するため、実行は production への操作になる。
+#   `.op-env.human` は human vault（本番キー）を参照するため、実行は production への操作になる。
 #   実行したら手動作業ログを残す（docs/operations/tooling.md 第4部）。
 # ========================================
 

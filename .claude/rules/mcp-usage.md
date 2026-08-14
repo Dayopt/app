@@ -15,8 +15,8 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 | `vercel`                  | http (OAuth)         | `https://mcp.vercel.com`                                                                                                                                                                                                                                                                                                                    |
 | `context7`                | stdio                | `npx -y @upstash/context7-mcp@latest`                                                                                                                                                                                                                                                                                                       |
 | `playwright`              | stdio                | `npx -y @playwright/mcp@latest`                                                                                                                                                                                                                                                                                                             |
-| `supabase` (cloud)        | stdio                | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN`                                                            |
-| `github`                  | stdio                | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                                                                                                                                       |
+| `supabase` (cloud)        | stdio                | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://human/supabase/SUPABASE_ACCESS_TOKEN`                                                                        |
+| `github`                  | stdio                | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://agent/github-mcp-pat/credential`                                                                                                                                                                                                                               |
 | `uptimerobot`             | http (headersHelper) | **常駐登録しない**（使う時だけ登録。下記 §`uptimerobot` はオンデマンド登録する）。`https://mcp.uptimerobot.com/mcp` / `headersHelper: ~/.claude/scripts/uptimerobot-headers.sh`（spawn 時に 1Password の Read-only API Key を解決）                                                                                                         |
 | `usability-probe-browser` | stdio                | **常駐登録しない**（Haiku ユーザビリティプローブ実行時だけ登録。下記 §`usability-probe-browser` はオンデマンド登録する）。`npx -y @playwright/mcp@latest --storage-state=<storageState のパス> --allowed-origins=<probe 対象 origin>`。token 不要（`--storage-state` は `usability-probe-setup.ts` が事前生成したファイルへのローカルパス） |
 
@@ -59,7 +59,7 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 
 ```bash
 # 使う時（-e で SUPABASE_ACCESS_TOKEN の op:// 参照を渡す。op run がこれを解決する）
-claude mcp add supabase -s user -e SUPABASE_ACCESS_TOKEN=op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN -- op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje
+claude mcp add supabase -s user -e SUPABASE_ACCESS_TOKEN=op://human/supabase/SUPABASE_ACCESS_TOKEN -- op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje
 
 # 使い終わったら
 claude mcp remove supabase -s user
@@ -79,7 +79,7 @@ claude mcp add-json uptimerobot "{\"type\":\"http\",\"url\":\"https://mcp.uptime
 claude mcp remove uptimerobot -s user
 ```
 
-前提: `~/.claude/scripts/uptimerobot-headers.sh`（repo 外の user-global script）が存在すること。中身は `op read "op://Dayopt-Shared/<item-id>/credential"` で **Read-only API Key** を取り出し `{"Authorization": "Bearer <token>"}` を echo するだけ。新しいマシンでは 1Password の item `UptimeRobot Read-only API Key`（Dayopt-Shared）を参照して script を作り直す。
+前提: `~/.claude/scripts/uptimerobot-headers.sh`（repo 外の user-global script）が存在すること。中身は `op read "op://agent/<item-id>/credential"` で **Read-only API Key** を取り出し `{"Authorization": "Bearer <token>"}` を echo するだけ。新しいマシンでは 1Password の item `UptimeRobot Read-only API Key`（agent）を参照して script を作り直す。
 
 ### `usability-probe-browser` はオンデマンド登録する
 
@@ -128,7 +128,7 @@ MCP（上記）との分担は `github`（gh CLI + github MCP）と同型: **メ
   - インストール: `curl -fsS https://cli.sentry.dev/install | bash`（初回のみ。install script は getsentry/cli 公式 GitHub Release からバイナリを取得し、Sentry 自身の DSN への匿名エラーテレメトリのみを送る正規パターンと確認済み）
   - **認証は env var 方式のみを使う。`sentry auth login`（ブラウザ OAuth）は使わない**:
     ```bash
-    SENTRY_AUTH_TOKEN="op://Dayopt-Shared/sentry-cli-readonly/credential" op run -- sentry <command>
+    SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry <command>
     ```
     token は read-only scope（project:read, org:read, event:read, member:read, team:read）で発行済み。env var 方式では token がディスクに一切残らないことを実測確認済み（`~/.sentry/cli.db` の `auth` table は 0 rows）
   - `~/.sentry/cli.db`（SQLite）はローカル cache DB。token は保存されないが、repo のディレクトリツリー構造（monorepo 検出用）はキャッシュされる。secret ではないが認識しておく
@@ -148,7 +148,7 @@ MCP（上記）との分担は `github`（gh CLI + github MCP）と同型: **メ
   - ローカルを起動せずに本番テーブル構成を素早く参照したい時
 - **Before use**:
   - `supabase-local`: Docker Desktop 起動後に `npx supabase status`、`nc -vz 127.0.0.1 54321` で待ち受け確認。`list_tables` が通れば利用可
-  - `supabase`(cloud): **既定では登録されていない**。§`supabase`(cloud) はオンデマンド登録する の `claude mcp add` で登録し、再起動してから使う。起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
+  - `supabase`(cloud): **既定では登録されていない**。§`supabase`(cloud) はオンデマンド登録する の `claude mcp add` で登録し、再起動してから使う。起動コマンドが `op run -- npx ...` でラップされ、spawn 時に `op://human/supabase/SUPABASE_ACCESS_TOKEN` を自己解決する（zsh ラッパー起動に依存しない）。`op` CLI + 1Password desktop 統合が前提。`list_tables` で疎通確認。失敗時は 1Password 未起動 or `op` が PATH に無いことを疑う
 - **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + `--project-ref=yvglwblxrnrenfifsnje`（production）に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。Management API を MCP 経由でなく直叩きする場合は、レスポンス全文を表示せず `docs/operations/secrets.md` §API 経由の設定読戻し の jq 射影規則に従う。
 - **境界ケース**: `pnpm types:generate` を走らせる前に、スキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
@@ -229,7 +229,7 @@ Eagle は「目で見て判断する素材」の視覚検索ライブラリ。�
   - リリースノート作成時にマージ済み PR 一覧を構造化データで取得する
   - 複数 PR や issue の横断集計を行う時
 - **Before use**:
-  - **stdio + op run 自己解決方式**（2026-06-16 移行）。global 設定の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://Dayopt-Shared/github-mcp-pat/credential`（PAT）を `GITHUB_PERSONAL_ACCESS_TOKEN` に解決する。zsh ラッパー起動に依存しない。
+  - **stdio + op run 自己解決方式**（2026-06-16 移行）。global 設定の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://agent/github-mcp-pat/credential`（PAT）を `GITHUB_PERSONAL_ACCESS_TOKEN` に解決する。zsh ラッパー起動に依存しない。
   - 前提: 公式バイナリ `github-mcp-server`（`brew install github-mcp-server`）+ `op` CLI + 1Password desktop 統合。`claude mcp get github` が `✔ Connected` なら利用可。
   - GitHub の remote MCP (`api.githubcopilot.com`) は OAuth(DCR) 非対応のため OAuth 方式は使えない（#1142 で確認、2026-06 時点でも未対応）。ローカル stdio 版 + op run がトークン管理を repo に漏らさない最善手。
 - **境界ケース**: 単純な単一取得（`gh pr view N`）は `gh` CLI で十分。構造化抽出や横断集計が必要なときに MCP を使う。

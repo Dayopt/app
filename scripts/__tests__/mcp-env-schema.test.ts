@@ -21,12 +21,7 @@ const MCP_PREVIEW_ENV_NAMES = [
 ] as const;
 
 const opEnvExample = readFileSync(
-  fileURLToPath(new URL('../../.op-env.local.example', import.meta.url)),
-  'utf8',
-);
-
-const productEnvExample = readFileSync(
-  fileURLToPath(new URL('../../apps/product/.env.example', import.meta.url)),
+  fileURLToPath(new URL('../../.op-env.agent.example', import.meta.url)),
   'utf8',
 );
 
@@ -51,13 +46,13 @@ describe('MCP OAuth env inventory', () => {
     {
       environment: 'staging' as const,
       schema: envSchema,
-      vault: 'Dayopt-Staging',
+      vault: 'agent',
       pendingReason: undefined,
     },
     {
       environment: 'production' as const,
       schema: productionEnvSchema,
-      vault: 'Dayopt-Production',
+      vault: 'human',
       // production の MCP app 変数は #1754（MCP OAuth epic、status:watching）の
       // 未展開分として pendingReason を持つ（#2063）。staging は local dev
       // 直接消費のため schema先行ではなく pendingReason を付けない。
@@ -86,18 +81,15 @@ describe('MCP OAuth env inventory', () => {
   it('local 1Password referenceにMCP app変数をexactly once置く', () => {
     for (const envName of [...MCP_APP_ENV_NAMES, ...MCP_PREVIEW_ENV_NAMES]) {
       const matches = opEnvExample.match(
-        new RegExp(`^${envName}=op://Dayopt-Staging/app/${envName}$`, 'gmu'),
+        new RegExp(`^${envName}=op://agent/app/${envName}$`, 'gmu'),
       );
       expect(matches, envName).toHaveLength(1);
     }
   });
 
-  it('Product env exampleにMCPの空変数をexactly once置く', () => {
-    for (const envName of [...MCP_APP_ENV_NAMES, ...MCP_PREVIEW_ENV_NAMES]) {
-      const matches = productEnvExample.match(new RegExp(`^${envName}=$`, 'gmu'));
-      expect(matches, envName).toHaveLength(1);
-    }
-  });
+  // .env.example（app ごとの変数名一覧）は 2026-08-14 に廃止（#2086 の env
+  // ファイル境界再編。schema.ts と重複する手動維持コピーで drift 源だった）。
+  // 対応する inventory 検査もここから外した。
 
   it('Preview専用変数をStagingのapp itemだけに登録する', () => {
     for (const envName of MCP_PREVIEW_ENV_NAMES) {
@@ -106,7 +98,7 @@ describe('MCP OAuth env inventory', () => {
         required: false,
         visibility: 'public',
         environment: 'staging',
-        vault: 'Dayopt-Staging',
+        vault: 'agent',
         item: 'app',
         field: envName,
       });

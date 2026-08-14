@@ -23,7 +23,7 @@ require_user_email_and_password_item() {
     echo "エラー: USER_EMAIL と PASSWORD_ITEM_ID を環境変数で指定してください" >&2
     echo "" >&2
     echo "使い方:" >&2
-    echo "  op run --env-file=.op-env.admin -- \\" >&2
+    echo "  op run --env-file=.op-env.human -- \\" >&2
     echo "    env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \\" >&2
     echo "    bash scripts/${script_name}" >&2
     exit 1
@@ -41,12 +41,12 @@ require_supabase_env() {
 # URL / key を個別にチェックし、op run 経由での実行を促す詳細メッセージを出す。
 require_supabase_env_verbose() {
   if [[ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]]; then
-    echo "エラー: NEXT_PUBLIC_SUPABASE_URL が未設定です (op run --env-file=.op-env.admin 経由で実行してください)" >&2
+    echo "エラー: NEXT_PUBLIC_SUPABASE_URL が未設定です (op run --env-file=.op-env.human 経由で実行してください)" >&2
     exit 1
   fi
 
   if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-    echo "エラー: SUPABASE_SERVICE_ROLE_KEY が未設定です (op run --env-file=.op-env.admin 経由で実行してください)" >&2
+    echo "エラー: SUPABASE_SERVICE_ROLE_KEY が未設定です (op run --env-file=.op-env.human 経由で実行してください)" >&2
     exit 1
   fi
 }

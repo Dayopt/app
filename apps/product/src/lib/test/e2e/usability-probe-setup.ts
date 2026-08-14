@@ -26,7 +26,7 @@
  *
  * 後始末: 作成した test user は自動で消さない。標準出力に出る email とホストを
  * 見て `USER_EMAIL=<email> bash scripts/admin-delete-user.sh` で削除する。
- * **`.op-env.admin` 経由では実行しない**（`docs/operations/tooling.md` の通り
+ * **`.op-env.human` 経由では実行しない**（`docs/operations/tooling.md` の通り
  * production 専用の env file のため）。local を対象にした本スクリプトの
  * cleanup は `supabase status -o env` の値を `NEXT_PUBLIC_SUPABASE_URL` /
  * `SUPABASE_SERVICE_ROLE_KEY` として渡す。専用の cleanup script は書かない

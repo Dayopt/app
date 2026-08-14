@@ -10,7 +10,7 @@
 # UI form 側に bug がある時に。生成された URL をブラウザで開けば login 完了。
 #
 # 使い方:
-#   op run --env-file=.op-env.admin -- \
+#   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
 #     bash scripts/admin-generate-magiclink.sh
 # ========================================

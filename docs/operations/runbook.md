@@ -260,7 +260,7 @@ npm run lint:boundaries  # feature境界違反
   - 環境変数の追加忘れ（`src/env.ts` の Zod バリデーション失敗）
   - 依存パッケージのバージョン不整合
   - Next.js App Router の規約違反
-- [ ] `.env.example` と Vercel環境変数を照合
+- [ ] `scripts/env/schema.ts` と Vercel 環境変数を照合（`pnpm replica:check`）
 - [ ] 修正 → push → 自動デプロイ
 
 #### ケースC: 緊急ロールバック（本番が壊れている場合）
@@ -298,7 +298,7 @@ gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate �
 ### 振り返り
 
 - [ ] pre-commitフック（typecheck/lint）がスキップされていなかったか
-- [ ] `.env.example` に新しい環境変数が追加されているか
+- [ ] `scripts/env/schema.ts` に新しい環境変数が追加されているか
 - [ ] ビルドエラーの場合: ローカルで `npm run build` を実行してから push するフローに
 - [ ] Force Promote を使った場合: gate 側の欠陥が issue 化されているか
 
@@ -510,7 +510,7 @@ ORDER BY created_at DESC;
 - [ ] Stripe: Webhookエンドポイントの成功率確認
 - [ ] Supabase: Edge Functionsのエラーログ確認
 - [ ] Vercel: ビルド時間のトレンド確認（異常な増加がないか）
-- [ ] 環境変数: `.env.example` と本番/ステージングの差分確認
+- [ ] 環境変数: `scripts/env/schema.ts` と本番の差分確認（`pnpm 1password:check` / `pnpm replica:check`）
 - [ ] 依存パッケージ: `npm audit` でセキュリティ脆弱性チェック
 
 ## インシデント対応 関連ドキュメント
