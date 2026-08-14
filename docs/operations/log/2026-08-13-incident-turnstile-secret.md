@@ -3,6 +3,7 @@ status: frozen
 date: 2026-08-13
 last_verified: 2026-08-13
 issue: 2031
+partially_superseded_2026_08_14_turnstile-timing: docs/operations/log/2026-08-14-incident-turnstile-secret-timing-correction.md
 ---
 
 # production の Turnstile secret が invalid で signup が全滅した
