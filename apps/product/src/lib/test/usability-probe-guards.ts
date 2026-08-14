@@ -17,7 +17,7 @@ const PRODUCTION_APP_HOST = 'app.dayopt.app';
 const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
 const VERCEL_PREVIEW_SUFFIX = '.vercel.app';
 
-export type BaseUrlTarget = { safe: true } | { safe: false; reason: string };
+type BaseUrlTarget = { safe: true } | { safe: false; reason: string };
 
 export function resolveBaseUrlTarget(
   baseUrl: string,
