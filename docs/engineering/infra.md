@@ -689,18 +689,18 @@ alert policy の文言は「`/api/health` が 503 を返す」なので、504 �
 
 `/api/trpc/[trpc]` は**全 procedure を 1 function で捌く**ため、最長 procedure に律速される。`externalCalendar` の `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」でしか判定されない）ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。**#1965 で予算を入れてから 60 へ落とす。**
 
-#### Dashboard の Default Function Timeout（未実施）
+#### Dashboard の Default Function Timeout（実施済み・pin 済み）
 
-route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**。
+route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**だったところを、同日 User が Dashboard で 60 秒へ flip した（flip 前チェック 4 点は下記に記録として残す）。2026-08-14、product / web とも Dashboard Functions タブの Default Max Duration = 60 を目視再確認済み。
 
-60 秒への引き下げは production デリバリーに直結するため User が Dashboard で実施する。**flip 前に次を満たすこと**:
+flip 前に満たしていたチェック（記録として保持）:
 
 1. Vercel Observability で直近 30 日の route 別 p99 duration を見て、**60 秒超がゼロ**であること。repo の静的解析では「実際に長い経路」は分からない
 2. **product と web を別々に判断する。** web には ISR（`revalidate = 3600` の RSS feed）があり、再生成 function は route handler の契約表に載らない
-3. flip 後に **`/api/trpc/[trpc]` が 300 のままであることを実測する。** route 側の明示値が project 既定を上書きする仕様だが、既定より大きい値を要求する形になるのは flip 後が初めて。ここが 60 に落ちていたら上記 hard kill が現実になる
+3. flip 後に **`/api/trpc/[trpc]` が 300 のままであることを実測する。** route 側の明示値が project 既定を上書きする仕様だが、既定より大きい値を要求する形になるのは flip 後が初めて。ここが 60 に落ちていたら上記 hard kill が現実になる（2026-08-14 実測: `apps/product/src/app/api/trpc/[trpc]/route.ts` の `export const maxDuration = 300` は健在）
 4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）
 
-flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production-config-audit.mjs` へ `functionDefaultTimeout` を pin）。**pin は flip 完了後にしか入れられない**（先に入れると audit が failure になり全 PR の merge gate が止まる）。
+flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。
 
 #### 「実際に適用された」ことの証拠
 

@@ -43,6 +43,7 @@ function compliantProductSettings() {
     autoAssignCustomDomains: false,
     commandForIgnoringBuildStep: null,
     enableAffectedProjectsDeployments: false,
+    resourceConfig: { functionDefaultTimeout: 60 },
   };
 }
 
@@ -52,6 +53,7 @@ function compliantWebSettings() {
     autoAssignCustomDomains: false,
     commandForIgnoringBuildStep: null,
     enableAffectedProjectsDeployments: false,
+    resourceConfig: { functionDefaultTimeout: 60 },
   };
 }
 
@@ -114,7 +116,7 @@ describe('Production Config Audit', () => {
   });
 });
 
-describe('Production Config Audit — project settings (rootDirectory / autoAssignCustomDomains / Ignored Build Step)', () => {
+describe('Production Config Audit — project settings (rootDirectory / autoAssignCustomDomains / Ignored Build Step / Default Function Timeout)', () => {
   it('accepts a fully compliant project (Phase 4 defaults)', () => {
     expect(auditProjectSettings('product', compliantProductSettings())).toEqual([]);
     expect(auditProjectSettings('web', compliantWebSettings())).toEqual([]);
@@ -202,6 +204,30 @@ describe('Production Config Audit — project settings (rootDirectory / autoAssi
     const settings = compliantProductSettings() as Record<string, unknown>;
     delete settings.sourceFilesOutsideRootDirectory;
     expect(auditProjectSettings('product', settings)).toEqual([]);
+  });
+
+  it('fails when resourceConfig.functionDefaultTimeout drifts from the 60s flip', () => {
+    const errors = auditProjectSettings('product', {
+      ...compliantProductSettings(),
+      resourceConfig: { functionDefaultTimeout: 300 },
+    });
+    expect(errors).toContain('product: resourceConfig.functionDefaultTimeout must be 60');
+  });
+
+  it('fails closed when resourceConfig.functionDefaultTimeout is missing from resourceConfig', () => {
+    const settings = compliantProductSettings();
+    settings.resourceConfig = {} as { functionDefaultTimeout: number };
+    expect(auditProjectSettings('product', settings)).toContain(
+      'product: resourceConfig.functionDefaultTimeout is missing from project metadata',
+    );
+  });
+
+  it('fails closed when resourceConfig itself is missing from the response', () => {
+    const settings = compliantProductSettings() as Record<string, unknown>;
+    delete settings.resourceConfig;
+    expect(auditProjectSettings('product', settings)).toContain(
+      'product: resourceConfig.functionDefaultTimeout is missing from project metadata',
+    );
   });
 
   it('fails closed when the response is not an object', () => {

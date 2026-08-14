@@ -29,8 +29,8 @@ const NON_PRODUCTION_TARGETS = new Set(['preview', 'development']);
 // build container の cwd がこの値になる前提で相対 path を組んでいるため、drift すると
 // ignoreCommand 自体が壊れる（docs/projects/_archive/ci-monorepo-refactor/overview.md §8）。
 const PROJECT_METADATA_CONTRACTS = {
-  product: { rootDirectory: 'apps/product' },
-  web: { rootDirectory: 'apps/web' },
+  product: { rootDirectory: 'apps/product', functionDefaultTimeout: 60 },
+  web: { rootDirectory: 'apps/web', functionDefaultTimeout: 60 },
 };
 
 function targetsOf(entry) {
@@ -124,12 +124,22 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  *   "Skip deployments (no changes to root directory)"） — workspace 依存グラフを見ない
  *   自動 skip で、`ignoreCommand`（依存グラフを見る）と競合するため常時 false が前提
  *   （docs/projects/_archive/ci-monorepo-refactor/overview.md §8 補足）
+ * - `resourceConfig.functionDefaultTimeout`（dashboard 表記は Functions タブの
+ *   "Default Max Duration"） — 契約表に載らない経路（dynamic page の SSR、Server Action、
+ *   ISR 再生成）が継承する Default Function Timeout。300 秒のままだと `/api/trpc/[trpc]` の
+ *   意図的な 300 秒設定（tRPC だけ 300 の理由は infra.md §Function 実行時間の上限 参照）と
+ *   区別が付かず drift を検知できないため、60 への flip 後にだけ pin できる（#1966）。
+ *   フィールドは `GetProjectResponseBody` のトップレベルではなく `resourceConfig` object
+ *   配下（`vercel/sdk` の `getprojectsresponsebodyresourceconfig.md` で確認、2026-08-14）。
+ *   Vercel Dashboard の実測値（product / web とも 60）と一致することを同日 Functions タブ
+ *   目視で確認済み
  *
- * fail closed: `rootDirectory` / `autoAssignCustomDomains` は応答に存在しない場合も failure
- * とする。`commandForIgnoringBuildStep`（nullable が仕様）と
- * `enableAffectedProjectsDeployments`（トグル未操作の project では応答に現れないことを
- * 2026-08-05 の trusted dispatch で実測）は、キーが無い状態を compliant として扱う。
- * 値そのものは出力しない（既存方針: metadata のみ、secret 値は取得・出力しない）。
+ * fail closed: `rootDirectory` / `autoAssignCustomDomains` / `resourceConfig.
+ * functionDefaultTimeout` は応答に存在しない場合も failure とする。
+ * `commandForIgnoringBuildStep`（nullable が仕様）と `enableAffectedProjectsDeployments`
+ * （トグル未操作の project では応答に現れないことを 2026-08-05 の trusted dispatch で実測）は、
+ * キーが無い状態を compliant として扱う。値そのものは出力しない（既存方針: metadata のみ、
+ * secret 値は取得・出力しない）。
  */
 export function auditProjectSettings(projectName, project) {
   const contract = PROJECT_METADATA_CONTRACTS[projectName];
@@ -151,6 +161,20 @@ export function auditProjectSettings(projectName, project) {
     errors.push(`${projectName}: autoAssignCustomDomains is missing from project metadata`);
   } else if (project.autoAssignCustomDomains !== false) {
     errors.push(`${projectName}: autoAssignCustomDomains must be false`);
+  }
+
+  if (
+    !project.resourceConfig ||
+    typeof project.resourceConfig !== 'object' ||
+    !('functionDefaultTimeout' in project.resourceConfig)
+  ) {
+    errors.push(
+      `${projectName}: resourceConfig.functionDefaultTimeout is missing from project metadata`,
+    );
+  } else if (project.resourceConfig.functionDefaultTimeout !== contract.functionDefaultTimeout) {
+    errors.push(
+      `${projectName}: resourceConfig.functionDefaultTimeout must be ${contract.functionDefaultTimeout}`,
+    );
   }
 
   if ('commandForIgnoringBuildStep' in project && project.commandForIgnoringBuildStep != null) {
