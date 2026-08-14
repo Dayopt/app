@@ -35,6 +35,7 @@
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "prepare": "husky",
     "branch:finish": "bash scripts/git/finish-branch.sh",
+    "gardening:judgment-journal": "bash scripts/gardening/collect-judgment-journal.sh",
     "migration:create": "supabase migration new",
     "migration:list": "supabase migration list",
     "migration:status": "supabase db diff",

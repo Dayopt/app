@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-08-14
 ---
 
 # 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers / 管理者スクリプト）
@@ -141,6 +141,9 @@ pnpm generate-licenses
 # 3. コンプライアンスチェック
 pnpm license:check
 
+# 4. リスク分類チェック（GPL/AGPL/LGPL・Dual License・不明ライセンスの検出）
+pnpm license:check-risks
+
 # ✅ 合格なら完了
 # ❌ 違反があればパッケージを削除して代替を探す
 ```
@@ -229,6 +232,23 @@ pnpm license:check
 - ✅ 許可ライセンス: 16種類（MIT, Apache-2.0, ISC等）
 - ❌ 制限ライセンス: 自動検出（.licensrc.json の onlyAllow に含まれないライセンス）
 
+### リスク分類チェック
+
+```bash
+pnpm license:check-risks
+```
+
+`license:check` の allowlist 判定とは別軸の検出（`scripts/check-license-risks.ts`。CI では未実行、依存追加時の手動実行を想定）:
+
+- **禁止ライセンスパターン**: GPL / AGPL / LGPL / EUPL / CDDL / EPL のバージョン表記を正規表現で検出
+- **Dual License のリスクパターン**: `(MIT OR GPL)` のような表記は文字列に `MIT` を含むため allowlist の部分一致だけでは見逃しうる。括弧内に禁止ライセンス名を含む dual license 表記を個別に検出する
+- **MIT\* ワイルドカードの詳細**: `MIT*` のような曖昧な表記を明示的にフラグする
+- **ライセンス不明パッケージ**: license フィールドが取得できないパッケージを列挙する
+
+`license:check` が通っていても、上記のパターンは allowlist の設計次第ですり抜ける可能性があるため、依存追加時は両方を実行する。
+
+**既知のノイズ**: `[4] Unknown Licenses` は workspace 内部パッケージ（`@dayopt/*`、`UNLICENSED`）を毎回検出し、非ゼロ終了する。これは private package の性質上正しい判定で、新規依存の追加有無に関わらず出続ける。実際に確認すべきは新規追加した外部パッケージがこのリストに現れていないかであり、`@dayopt/*` の行は無視してよい。
+
 ### ライセンス統計表示
 
 ```bash
@@ -263,7 +283,10 @@ pnpm generate-licenses
 # Step 3: コンプライアンスチェック
 pnpm license:check
 
-# Step 4: ライセンス詳細確認（必要に応じて）
+# Step 4: リスク分類チェック（GPL/AGPL/LGPL・Dual License・不明ライセンスの検出）
+pnpm license:check-risks
+
+# Step 5: ライセンス詳細確認（必要に応じて）
 pnpm --filter @dayopt/product licenses list --prod --json --long \
   | jq '.[] | .[] | select(.name | contains("lodash"))'
 ```

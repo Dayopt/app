@@ -48,7 +48,6 @@
     "cleanup:console": "node src/scripts/cleanup-console.js",
     "prepare:production": "pnpm cleanup:console && pnpm lint && pnpm type-check && pnpm build",
     "license:check": "pnpm exec license-checker --production --excludePackages \"@dayopt/web@$(node -p 'require(\\\"./package.json\\\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
-    "license:check-risks": "tsx scripts/check-license-risks.ts",
     "license:audit": "pnpm exec license-checker --production --summary",
     "license:credits:check": "tsx scripts/generate-licenses.ts --check",
     "generate-licenses": "tsx scripts/generate-licenses.ts",
