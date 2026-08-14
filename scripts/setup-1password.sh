@@ -107,10 +107,8 @@ run item create --category=apicredential --vault=agent --title=stripe-test \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
-run item create --category=apicredential --vault=agent --title=resend \
-  --tags=dayopt,staging notesPlain="$NOTES" \
-  'RESEND_WEBHOOK_SECRET[concealed]='
-
+# resend は旧 Staging（RESEND_WEBHOOK_SECRET）と旧 Shared（API_KEY / FROM_EMAIL）
+# の 2 item を agent へ統合済み（#2086 cutover）。create は後段の 1 回にまとめる
 run item create --category=apicredential --vault=agent --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
@@ -197,7 +195,8 @@ run item create --category=apicredential --vault=agent --title=anthropic \
 run item create --category=apicredential --vault=agent --title=resend \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Product=resend / Web=resend-web として環境ごとに分離' \
   'RESEND_API_KEY[concealed]=' \
-  'RESEND_FROM_EMAIL[text]='
+  'RESEND_FROM_EMAIL[text]=' \
+  'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=human --title=resend-support-replies \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \

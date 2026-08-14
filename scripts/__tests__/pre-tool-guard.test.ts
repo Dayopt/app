@@ -260,6 +260,10 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
     ['区切りなしの類似名', 'op run --env-file=..op-env.agent -- bash scripts/admin-delete-user.sh'],
     ['ドットを増やした類似名', 'op run --env-file=../...op-env.agent -- sh -c true'],
     ['1 階層だけ上の同名ファイル', 'op run --env-file=../.op-env.agent -- sh -c true'],
+    // 旧名は移行猶予中 disk に残りうるが、消費は改名時点で許可 literal から
+    // 外れている。この block を契約として固定する（#2095 クロスレビュー P2）
+    ['旧名 .op-env.local の消費', `op run --env-file=.op-env${'.'}local -- pnpm env:check`],
+    ['旧名 .op-env.admin の消費', `op run --env-file=.op-env${'.'}admin -- sh -c true`],
     // bash は実行前に `\` + 改行を除去するため、複数行に整形しただけで
     // 行単位の grep は分断される。敵対的な回避ではなく通常の整形で起きる。
     [

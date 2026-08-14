@@ -64,7 +64,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
   **ここから先の権威は 2 つ**。実行時の中身検査（上記 1）が、どの書き方で辿り着いても最後に実ファイルを読む。そして `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と 1Password 側の承認が、production への操作そのものを止める。**hook はそこへ至る前のスピードバンプ**であって、意図的な回避の最終的な境界ではない。
 
-- **inline env var 経由の `op://` 解決** — `VAR="op://…" op run -- <cmd>` の形は、env-file を経由しないため vault allowlist（env-file の中身検査）の対象外。`op run` は process env 中の参照も解決する。この形で human / ci を読むのは User の明示操作に限る（docs の実行例に User 実行と明記する）
+- **inline env var 経由の `op://` 解決** — `VAR="op://…" op run -- <cmd>` の形は、env-file を経由しないため vault allowlist（env-file の中身検査）の対象外。`op run` は process env 中の参照も解決する。**これは意図的な受容**（機械で閉じるには hook がコマンド中の全 env 代入を解釈する必要があり、env-file 検査と同じ「regex で shell を再現できない」壁に当たる）。この形で human / ci を読むのは User の明示操作に限り、実効的な抑止は 1Password 側の承認プロンプトが担う。Service Account 導入の設計（[#2086](https://github.com/Dayopt/dayopt/issues/2086)）で機械的に閉じられるかを再訪する
 - **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
 - **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
 
