@@ -127,8 +127,9 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  * - `resourceConfig.functionDefaultTimeout`（dashboard 表記は Functions タブの
  *   "Default Max Duration"） — 契約表に載らない経路（dynamic page の SSR、Server Action、
  *   ISR 再生成）が継承する Default Function Timeout。project 既定値と各 route の静的
- *   `maxDuration`（`/api/trpc/[trpc]` の意図的な 300 秒設定など）は別フィールドで、
- *   Vercel API は route 側の値を返さないため両者は独立に扱ってよい。60 への flip 前に
+ *   `maxDuration`（`api/integrations/google-calendar/callback` の 90 秒、`api/mcp` の
+ *   120 秒など）は別フィールドで、Vercel API は route 側の値を返さないため両者は
+ *   独立に扱ってよい。60 への flip 前に
  *   この pin を先に入れると、Dashboard 実測値 300 が契約値 60 と食い違い audit が即
  *   failure になり全 merge が止まるため、flip 完了後にだけ pin できる（#1966）。
  *   フィールドは `GetProjectResponseBody` のトップレベルではなく `resourceConfig` object
