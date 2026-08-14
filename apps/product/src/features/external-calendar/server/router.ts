@@ -82,7 +82,7 @@ const updateSelectedCalendarsInput = z.object({
 });
 
 /**
- * `syncConnection` に渡す wall-clock 予算（#1965）。
+ * この router の procedure に渡す wall-clock 予算（#1965、#2079 で listProviderCalendars へ拡張）。
  *
  * tRPC route（`api/trpc/[trpc]/route.ts`）の `maxDuration=60` に対する安全マージン。
  * cron（`api/cron/calendar-sync/route.ts` の `TIME_BUDGET_MS`）と同じ導出 — 60s の
@@ -92,8 +92,11 @@ const updateSelectedCalendarsInput = z.object({
  * 内で呼ぶと、そこに至るまでの auth 解決・rate limit・DB 更新（`updateSelectedCalendars`
  * は `connection-service.ts` の複数回の DB 往復を先に行う）の所要時間が抜け落ち、
  * 実際の残り時間より長い予算を計算してしまう（risk-reviewer 指摘、PR #2075）。
+ *
+ * 元は `SYNC_TIME_BUDGET_MS`（sync 専用）だったが、`listProviderCalendars` も同じ route の
+ * 同じ 60s 予算を共有するため命名を一般化した（#2079）。
  */
-export const SYNC_TIME_BUDGET_MS = 50_000;
+export const TRPC_TIME_BUDGET_MS = 50_000;
 
 /** 手動同期の per-user rate limit。upstash 未設定なら素通り（fallback は route 側に無い）。 */
 async function enforceSyncNowRateLimit(userId: string): Promise<void> {
@@ -184,7 +187,11 @@ export const externalCalendarRouter = createTRPCRouter({
     .input(connectionIdInput)
     .query(async ({ ctx, input }) => {
       try {
-        return await listProviderCalendars(ctx.userId, input.connectionId);
+        return await listProviderCalendars(
+          ctx.userId,
+          input.connectionId,
+          ctx.requestStartedAt + TRPC_TIME_BUDGET_MS,
+        );
       } catch (error) {
         return handleServiceError(error);
       }
@@ -207,7 +214,7 @@ export const externalCalendarRouter = createTRPCRouter({
         return await syncConnection({
           connectionId: input.connectionId,
           userId: ctx.userId,
-          deadlineAt: ctx.requestStartedAt + SYNC_TIME_BUDGET_MS,
+          deadlineAt: ctx.requestStartedAt + TRPC_TIME_BUDGET_MS,
         });
       } catch (error) {
         return handleServiceError(error);
@@ -223,7 +230,7 @@ export const externalCalendarRouter = createTRPCRouter({
         return await syncConnection({
           connectionId: input.connectionId,
           userId: ctx.userId,
-          deadlineAt: ctx.requestStartedAt + SYNC_TIME_BUDGET_MS,
+          deadlineAt: ctx.requestStartedAt + TRPC_TIME_BUDGET_MS,
         });
       } catch (error) {
         return handleServiceError(error);

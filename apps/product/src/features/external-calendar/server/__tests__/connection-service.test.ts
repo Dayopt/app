@@ -419,6 +419,30 @@ describe('listProviderCalendars', () => {
     });
     expect(listCalendars).not.toHaveBeenCalled();
   });
+
+  // wall-clock 予算（#2079）。router.ts の anchor（ctx.requestStartedAt）から渡された
+  // deadlineAt をそのまま adapter へ通す。
+  it('deadlineAt を listCalendars へそのまま渡す', async () => {
+    setupServiceRoleDb({ connection: { status: 'active', refresh_token_enc: 'enc' } });
+
+    await listProviderCalendars(USER_ID, CONNECTION_ID, 12_345);
+
+    expect(listCalendars).toHaveBeenCalledWith(expect.anything(), 12_345);
+  });
+
+  // 一覧取得の予算超過は syncCalendar の「部分結果を安全に返す」とは扱いを変え、明示的な
+  // エラーへ変換する（一部だけ見せて黙って完了扱いにすると誤認を招くため、types.ts 参照）。
+  it('listCalendars の deadline_exceeded を DEADLINE_EXCEEDED へ変換する', async () => {
+    setupServiceRoleDb({ connection: { status: 'active', refresh_token_enc: 'enc' } });
+    const { CalendarProviderError } = await import('../providers/types');
+    listCalendars.mockRejectedValue(
+      new CalendarProviderError('exceeded budget', 'deadline_exceeded'),
+    );
+
+    await expect(listProviderCalendars(USER_ID, CONNECTION_ID)).rejects.toMatchObject({
+      code: 'DEADLINE_EXCEEDED',
+    });
+  });
 });
 
 // =============================================================================
