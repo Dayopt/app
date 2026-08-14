@@ -266,7 +266,10 @@ function main(): void {
   // CSS も route と同じく --fail の対象にする。CSS 予算はかつて size-limit が
   // 別途強制していたが、あれは @size-limit/preset-app 経由で headless Chrome を
   // 起動する（CSS に実行時間の測定は無意味で、Vercel の build 環境で browser が
-  // 使える保証も無い）。強制はここへ寄せ、size-limit はローカル調査用に残す。
+  // 使える保証も無い）。強制はここへ寄せた上で、size-limit / @size-limit/preset-app
+  // 自体を撤去した（#2066、extract-zip HIGH の依存経路①を断つため。CI 未使用で
+  // 強制も既にここへ移設済みだったため実害なし）。
+
   if (failOnBudget && (overCount > 0 || cssStatus === 'over')) {
     if (overCount > 0) {
       console.log(`\nBudget exceeded: ${overCount} route(s) over budget.`);
