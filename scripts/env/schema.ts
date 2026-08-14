@@ -111,19 +111,28 @@ export const envSchema: EnvSchemaEntry[] = [
   envEntry('YANDEX_VERIFICATION', false, 'public', 'shared', shared, 'google'),
   envEntry('YAHOO_VERIFICATION', false, 'public', 'shared', shared, 'google'),
 
-  // 外部カレンダー取り込み用の専用 OAuth client（Supabase Auth の Google provider とは別物）
-  envEntry('GOOGLE_CALENDAR_CLIENT_ID', false, 'public', 'staging', staging, 'google-calendar'),
-  envEntry(
-    'GOOGLE_CALENDAR_PROJECT_NUMBER',
-    false,
-    'public',
-    'staging',
-    staging,
-    'google-calendar',
+  // 外部カレンダー取り込み用の専用 OAuth client（Supabase Auth の Google provider とは別物）。
+  // Dayopt-Staging/google-calendar item は 2026-08-14 実測時点で 1Password に
+  // 存在しない（#2063）。test mode の Google OAuth client 作成後に item を
+  // 作れば解消する見込みの pending なので pendingReason を付ける。
+  ...(
+    [
+      ['GOOGLE_CALENDAR_CLIENT_ID', 'public'],
+      ['GOOGLE_CALENDAR_PROJECT_NUMBER', 'public'],
+      ['GOOGLE_CALENDAR_CLIENT_SECRET', 'secret'],
+      ['CALENDAR_TOKEN_ENCRYPTION_KEY', 'secret'],
+      ['GOOGLE_CALENDAR_REDIRECT_URIS', 'public'],
+    ] as const
+  ).map(([field, visibility]) =>
+    pendingEnvEntry(
+      field,
+      visibility,
+      'staging',
+      staging,
+      'google-calendar',
+      'item 未作成（2026-08-14 実測、#2063）。test mode の Google OAuth client 作成後に解消',
+    ),
   ),
-  envEntry('GOOGLE_CALENDAR_CLIENT_SECRET', false, 'secret', 'staging', staging, 'google-calendar'),
-  envEntry('CALENDAR_TOKEN_ENCRYPTION_KEY', false, 'secret', 'staging', staging, 'google-calendar'),
-  envEntry('GOOGLE_CALENDAR_REDIRECT_URIS', false, 'public', 'staging', staging, 'google-calendar'),
 ];
 
 export const productionEnvSchema: EnvSchemaEntry[] = [
@@ -149,7 +158,7 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'production',
     production,
     'stripe-live',
-    '課金未有効化のため未設定（2026-08-11 実測）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
+    '課金未有効化のため未設定（2026-08-11 実測、#1669）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
   ),
   pendingEnvEntry(
     'STRIPE_LIVEMODE',
@@ -157,7 +166,7 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'production',
     production,
     'stripe-live',
-    '課金未有効化のため未設定（2026-08-11 実測）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
+    '課金未有効化のため未設定（2026-08-11 実測、#1669）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
   ),
   pendingEnvEntry(
     'STRIPE_WEBHOOK_SECRET',
@@ -165,7 +174,7 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'production',
     production,
     'stripe-live',
-    '課金未有効化のため未設定（2026-08-11 実測）',
+    '課金未有効化のため未設定（2026-08-11 実測、#1669）',
   ),
   pendingEnvEntry(
     'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID',
@@ -173,7 +182,7 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     'production',
     production,
     'stripe-live',
-    '課金未有効化のため未設定（2026-08-11 実測）',
+    '課金未有効化のため未設定（2026-08-11 実測、#1669）',
   ),
   envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend'),
   envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend-web'),
@@ -218,6 +227,8 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
     ),
   ),
 
+  // production 側は 2026-08-14 実測ですべて OK（値が揃っている）。pending な
+  // 状態ではないため pendingReason は付けない。
   envEntry(
     'GOOGLE_CALENDAR_CLIENT_ID',
     false,
@@ -266,16 +277,29 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
 // Dayopt-Staging へのアクセスだけで production の接続情報が取れてしまう。
 // schema の不在（envSchema 側）と実在の禁止（ここ）は別物なので両方を持つ。
 export const forbiddenFields: ForbiddenField[] = [
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'SUPABASE_DB_PASSWORD',
-].map((field) => ({
-  vault: staging,
-  item: 'supabase',
-  field,
-  reason: '常設 staging が無いため、この field は production の複製にしかならない',
-}));
+  ...[
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SUPABASE_DB_PASSWORD',
+  ].map((field) => ({
+    vault: staging,
+    item: 'supabase',
+    field,
+    reason: '常設 staging が無いため、この field は production の複製にしかならない',
+  })),
+  // SUPABASE_ACCESS_TOKEN は production 正本へ一本化済み（#1933）。schema から
+  // entry を消しただけでは staging vault 経由で production Management API
+  // token が取得できる状態を検出できないため、接続 4 field と同じ理由で
+  // forbiddenFields に登録する。field 削除（1Password 側、User 手作業）が
+  // 済むまで 1password:check は意図どおり red になる（fail-closed）。
+  {
+    vault: staging,
+    item: 'supabase',
+    field: 'SUPABASE_ACCESS_TOKEN',
+    reason: 'production 正本へ一本化済み（#1933）',
+  },
+];
 
 export const operationalItems: OperationalItem[] = [
   { vault: shared, item: 'github-login', required: true },

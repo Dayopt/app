@@ -144,7 +144,7 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash
-SUPABASE_AUTH_AUDIT_TOKEN="op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+SUPABASE_AUTH_AUDIT_TOKEN="op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
 ```
 
 #### Pre-deploy dry run

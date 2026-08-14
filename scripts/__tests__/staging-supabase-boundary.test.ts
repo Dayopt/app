@@ -110,11 +110,11 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
     expect(devWithOpScript).toContain('DAYOPT_SUPABASE_TARGET は廃止されました');
   });
 
-  it('禁止 field の実在検査が接続 4 field を網羅する', () => {
+  it('禁止 field の実在検査が接続 4 field + SUPABASE_ACCESS_TOKEN を網羅する', () => {
     const covered = forbiddenFields
       .filter((entry) => entry.vault === 'Dayopt-Staging' && entry.item === 'supabase')
       .map((entry) => entry.field);
-    expect(covered.sort()).toEqual([...SUPABASE_CONNECTION_FIELDS].sort());
+    expect(covered.sort()).toEqual([...SUPABASE_CONNECTION_FIELDS, 'SUPABASE_ACCESS_TOKEN'].sort());
   });
 
   it('admin script 用の env 参照は Production を指し、Staging を経由しない', () => {

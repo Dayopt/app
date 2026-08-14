@@ -58,8 +58,8 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 `op run` 方式のため、常駐させるとセッション起動ごとに 1Password 承認が 1 回増える。production schema を実際に見る時だけ登録し、終わったら外す。
 
 ```bash
-# 使う時
-claude mcp add supabase -s user -- op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje
+# 使う時（-e で SUPABASE_ACCESS_TOKEN の op:// 参照を渡す。op run がこれを解決する）
+claude mcp add supabase -s user -e SUPABASE_ACCESS_TOKEN=op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN -- op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje
 
 # 使い終わったら
 claude mcp remove supabase -s user

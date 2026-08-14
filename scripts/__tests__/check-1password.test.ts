@@ -152,6 +152,21 @@ describe('check-1password.ts', () => {
     expect(result.stdout).toContain('Dayopt-Shared / google / GOOGLE_SITE_VERIFICATION: EMPTY');
   });
 
+  it('pendingReason を持つ entry が非 OK の時、理由を添えて表示する', () => {
+    const result = runCheck({ emptyField: 'STRIPE_ACCOUNT_ID' });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('Dayopt-Production / stripe-live / STRIPE_ACCOUNT_ID: EMPTY');
+    expect(result.stdout).toContain('  └ pending: 課金未有効化のため未設定');
+  });
+
+  it('pendingReason を持つ entry でも OK の時は理由を表示しない', () => {
+    const result = runCheck();
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).not.toContain('  └ pending:');
+  });
+
   it('required item が未作成なら失敗する', () => {
     const result = runCheck({ missingItem: 'sentry-web' });
 

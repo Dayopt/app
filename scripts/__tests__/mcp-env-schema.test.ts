@@ -52,15 +52,20 @@ describe('MCP OAuth env inventory', () => {
       environment: 'staging' as const,
       schema: envSchema,
       vault: 'Dayopt-Staging',
+      pendingReason: undefined,
     },
     {
       environment: 'production' as const,
       schema: productionEnvSchema,
       vault: 'Dayopt-Production',
+      // production の MCP app 変数は #1754（MCP OAuth epic、status:watching）の
+      // 未展開分として pendingReason を持つ（#2063）。staging は local dev
+      // 直接消費のため schema先行ではなく pendingReason を付けない。
+      pendingReason: '#1754（MCP OAuth epic、status:watching）の production 未展開分',
     },
   ])(
     '$environmentのapp itemにclient redirect、OAuth identity、MCP gateをexactly once登録する',
-    ({ environment, schema, vault }) => {
+    ({ environment, schema, vault, pendingReason }) => {
       for (const envName of MCP_APP_ENV_NAMES) {
         expect(findExactEntry(schema, envName)).toEqual({
           envName,
@@ -72,6 +77,7 @@ describe('MCP OAuth env inventory', () => {
           vault,
           item: 'app',
           field: envName,
+          ...(pendingReason ? { pendingReason } : {}),
         });
       }
     },
