@@ -1,3 +1,8 @@
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+
+import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../../apps/product/production-build-gate.mjs';
+import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../../apps/web/production-build-gate.mjs';
 import { onePasswordEnvSchema } from './schema';
 
 /**
@@ -15,10 +20,24 @@ import { onePasswordEnvSchema } from './schema';
  *
  * fetch / 射影は production-config-audit.mjs と同型だが import しない。
  * あちらは audit contract 保護対象（変更すると PR ごとに trusted dispatch が
- * 要る）のため、export 追加を避けてこの script に閉じる。
+ * 要る）のため、export 追加を避けてこの script に閉じる。build-gate の
+ * REQUIRED_*_OPERATIONAL_BUILD_ENV は既存 export の import のみで、保護対象
+ * ファイルの変更は伴わない。
  */
 
 const PROJECTS = ['product', 'web'] as const;
+
+/**
+ * 検査方向が「未台帳 key の検出 = 検出ゼロが green」なので、応答の欠落
+ * （pagination の途中打ち切り、target 表現の変更、空応答）がそのまま
+ * 偽グリーンになる。build gate が Vercel Production に必ず要求する key を
+ * 床（sanity floor）とし、これを下回る応答は検査結果ではなく取得失敗として
+ * throw する。
+ */
+const REQUIRED_PRODUCTION_FLOOR: Record<(typeof PROJECTS)[number], readonly string[]> = {
+  product: REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV,
+  web: REQUIRED_WEB_OPERATIONAL_BUILD_ENV,
+};
 
 /**
  * 台帳（schema）に無いが Vercel Production に存在してよい key。
@@ -39,6 +58,19 @@ export function normalizeEnvKeys(response: unknown): EnvKeyEntry[] {
     throw new Error('Vercel environment metadata response is invalid');
   }
 
+  // 複数ページに割れた応答を 1 ページ目だけで「全量」と誤読しない。
+  // 実装当時の実測（2026-08-14、product 39 entry）では pagination は返らな
+  // かったが、件数が増えて next が現れた時に黙って偽グリーンへ倒れないよう
+  // fail closed にしておく。
+  const pagination = (response as { pagination?: unknown }).pagination;
+  if (
+    pagination &&
+    typeof pagination === 'object' &&
+    (pagination as { next?: unknown }).next != null
+  ) {
+    throw new Error('Vercel environment metadata response is paginated; refusing partial results');
+  }
+
   return (response as { envs: unknown[] }).envs.flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return [];
     const { key, target } = entry as { key?: unknown; target?: unknown };
@@ -52,6 +84,26 @@ export function normalizeEnvKeys(response: unknown): EnvKeyEntry[] {
 
 export function buildLedger(): ReadonlySet<string> {
   return new Set(onePasswordEnvSchema.map((entry) => entry.envName));
+}
+
+/**
+ * sanity floor: production target の key 集合が build gate の必須集合を
+ * 含まなければ、応答の欠落（truncation / target 形状 drift / 空応答）と
+ * みなして throw する。key 名しか扱わない。
+ */
+export function assertProductionFloor(
+  projectName: (typeof PROJECTS)[number],
+  entries: readonly EnvKeyEntry[],
+): void {
+  const productionKeys = new Set(
+    entries.filter((entry) => entry.targets.includes('production')).map((entry) => entry.key),
+  );
+  const missing = REQUIRED_PRODUCTION_FLOOR[projectName].filter((key) => !productionKeys.has(key));
+  if (missing.length > 0) {
+    throw new Error(
+      `Vercel environment metadata for ${projectName} is missing required production keys (${missing.join(', ')}); response looks truncated or malformed`,
+    );
+  }
 }
 
 /** Production target の key のうち、台帳にも allowlist にも無いものを返す（重複除去・sort 済み）。 */
@@ -85,7 +137,15 @@ async function fetchEnvMetadata(
       `Vercel environment metadata request failed for project: ${projectName} (status ${response.status})`,
     );
   }
-  return response.json();
+  try {
+    return await response.json();
+  } catch {
+    // JSON.parse の SyntaxError は message に本文断片を埋め込むため、
+    // そのまま投げ直さず固定文言に差し替える
+    throw new Error(
+      `Vercel environment metadata response was not JSON for project: ${projectName}`,
+    );
+  }
 }
 
 export async function runReplicaCheck({
@@ -104,7 +164,9 @@ export async function runReplicaCheck({
   const findings: string[] = [];
   for (const projectName of PROJECTS) {
     const response = await fetchEnvMetadata(projectName, token, teamId, fetchImpl);
-    for (const key of findUnlistedKeys(normalizeEnvKeys(response), ledger)) {
+    const entries = normalizeEnvKeys(response);
+    assertProductionFloor(projectName, entries);
+    for (const key of findUnlistedKeys(entries, ledger)) {
       findings.push(
         `${projectName}: ${key} は Vercel Production にあるが 1Password 台帳（scripts/env/schema.ts）に無い`,
       );
@@ -113,7 +175,20 @@ export async function runReplicaCheck({
   return findings;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// 素の `import.meta.url === file://argv[1]` は symlink（macOS の /tmp →
+// /private/tmp 等）や percent-encoding で一致せず「無出力で exit 0」に
+// 倒れる fail open を、この repo は 2026-08-11 に実測済み
+// （production-auth-config-audit.mjs と同修正。契約は
+// scripts/__tests__/check-vercel-replica.test.ts が固定する）。
+function isDirectExecution(): boolean {
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
   runReplicaCheck({
     token: process.env.VERCEL_TOKEN,
     teamId: process.env.VERCEL_TEAM_ID,

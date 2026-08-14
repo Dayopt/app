@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-22
+last_verified: 2026-08-14
 ---
 
 # Environment Secrets
@@ -31,11 +31,11 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
 | `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                       |
 
-この表は「workflow が参照する実在 secret」と 1:1 を意図する（2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。実在するが workflow 未参照・表未掲載の 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は [#2090](https://github.com/Dayopt/dayopt/issues/2090) で処遇判断中で、確定後にこの表へ反映する。
+この表は「workflow が参照する実在 secret」と 1:1 を意図する（GitHub が自動発行する `secrets.GITHUB_TOKEN` は対象外。2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。workflow 未参照だった 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は同日 User 裁可のうえ削除した（[#2090](https://github.com/Dayopt/dayopt/issues/2090)。`SENTRY_ORG` / `SENTRY_PROJECT` は 1Password の `Dayopt-Production/sentry*` に同名 field が実在、ID 系 3 件は公開 metadata で復元可、`APP_WEB_REPO_TOKEN` は旧 PAT の残骸で発行元 token の失効確認を #2090 に残した）。
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
-`VERCEL_TOKEN`をlocal CLIの`--token`引数へ渡さない。Vercel CLIはpaginationなどの再実行案内に引数値を含める場合がある。localのmetadata確認はconnector、Dashboard、または対話login済みCLIを使う。Production Config AuditとProduction Releaseは1Password masterから同期したGitHub replicaを環境変数で受け取り、process内でAuthorization headerにだけ設定する。Protection Bypass secretも同様に、smoke requestのheaderにだけ設定してlogやerror messageへ出さない。
+`VERCEL_TOKEN`をlocal CLIの`--token`引数へ渡さない。Vercel CLIはpaginationなどの再実行案内に引数値を含める場合がある。localのmetadata確認はconnector、Dashboard、または対話login済みCLIを使う。Production Config AuditとProduction Releaseは1Password masterから同期したGitHub replicaを環境変数で受け取り、process内でAuthorization headerにだけ設定する。Protection Bypass secretも同様に、smoke requestのheaderにだけ設定してlogやerror messageへ出さない。例外: `pnpm replica:check`（[Operations / Secrets](../secrets.md) §Verification）はlocalから`VERCEL_TOKEN`を使うが、1Passwordから環境変数で受け取りAuthorization headerにだけ設定する同じ形であり、`--token`引数には渡さない。
 
 露出が疑われる場合は値を表示・比較せず、replacement作成 → 1Password master更新 → GitHub replica更新 → trusted branchでProduction Config Audit成功確認 → 旧token revokeの順でrotateする。旧tokenを先にrevokeするとauditとProduction Releaseの両方が止まるため、この順序を崩さない。事故記録は[Vercel CLI token出力 incident](../log/2026-07-22-incident-vercel-cli-token-output.md)を参照する。
 
