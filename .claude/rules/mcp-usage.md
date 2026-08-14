@@ -4,26 +4,28 @@
 
 MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.json` の user scope `mcpServers`）。**repo 側に MCP 定義を置かない**。repo と global の両方に同名サーバーがあるとキー単位でマージされ、方式が食い違うと壊れる（2026-07-23 に repo 定義を撤去。経緯は [2026-07-23-mcp-global-consolidation.md](../../docs/engineering/log/2026-07-23-mcp-global-consolidation.md)）。
 
-全 10 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
+全 11 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
 
-| Server             | 種別                 | 登録内容                                                                                                                                                                                                                                                                         |
-| ------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `eagle`            | http                 | `http://127.0.0.1:41596/mcp`                                                                                                                                                                                                                                                     |
-| `supabase-local`   | http                 | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                                                                                     |
-| `storybook`        | http                 | `http://localhost:6006/mcp`                                                                                                                                                                                                                                                      |
-| `sentry`           | http (OAuth)         | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                                                                                     |
-| `vercel`           | http (OAuth)         | `https://mcp.vercel.com`                                                                                                                                                                                                                                                         |
-| `context7`         | stdio                | `npx -y @upstash/context7-mcp@latest`                                                                                                                                                                                                                                            |
-| `playwright`       | stdio                | `npx -y @playwright/mcp@latest`                                                                                                                                                                                                                                                  |
-| `supabase` (cloud) | stdio                | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN` |
-| `github`           | stdio                | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                                                                            |
-| `uptimerobot`      | http (headersHelper) | **常駐登録しない**（使う時だけ登録。下記 §`uptimerobot` はオンデマンド登録する）。`https://mcp.uptimerobot.com/mcp` / `headersHelper: ~/.claude/scripts/uptimerobot-headers.sh`（spawn 時に 1Password の Read-only API Key を解決）                                              |
+| Server                    | 種別                 | 登録内容                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eagle`                   | http                 | `http://127.0.0.1:41596/mcp`                                                                                                                                                                                                                                                                                                                |
+| `supabase-local`          | http                 | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                                                                                                                                                |
+| `storybook`               | http                 | `http://localhost:6006/mcp`                                                                                                                                                                                                                                                                                                                 |
+| `sentry`                  | http (OAuth)         | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                                                                                                                                                |
+| `vercel`                  | http (OAuth)         | `https://mcp.vercel.com`                                                                                                                                                                                                                                                                                                                    |
+| `context7`                | stdio                | `npx -y @upstash/context7-mcp@latest`                                                                                                                                                                                                                                                                                                       |
+| `playwright`              | stdio                | `npx -y @playwright/mcp@latest`                                                                                                                                                                                                                                                                                                             |
+| `supabase` (cloud)        | stdio                | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN`                                                            |
+| `github`                  | stdio                | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://Dayopt-Shared/github-mcp-pat/credential`                                                                                                                                                                                                                       |
+| `uptimerobot`             | http (headersHelper) | **常駐登録しない**（使う時だけ登録。下記 §`uptimerobot` はオンデマンド登録する）。`https://mcp.uptimerobot.com/mcp` / `headersHelper: ~/.claude/scripts/uptimerobot-headers.sh`（spawn 時に 1Password の Read-only API Key を解決）                                                                                                         |
+| `usability-probe-browser` | stdio                | **常駐登録しない**（Haiku ユーザビリティプローブ実行時だけ登録。下記 §`usability-probe-browser` はオンデマンド登録する）。`npx -y @playwright/mcp@latest --storage-state=<storageState のパス> --allowed-origins=<probe 対象 origin>`。token 不要（`--storage-state` は `usability-probe-setup.ts` が事前生成したファイルへのローカルパス） |
 
-認証方式はサーバーごとに 3 通り（#1142 → 2026-06-16 整理、#1758 で headersHelper 方式を追加）:
+認証方式はサーバーごとに 4 通り（#1142 → 2026-06-16 整理、#1758 で headersHelper 方式を追加、#2022 で token 不要方式を追加）:
 
 1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
 2. **global 設定内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。stdio の token 系 MCP はこの方式を標準とする。
 3. **`headersHelper` 方式**（remote http + Bearer token）: `uptimerobot`。設定の `headersHelper` に指定した script を接続時に実行し、stdout の JSON を認証ヘッダーとして使う（Claude Code 2.1.193+）。script 内で `op read` するため設定ファイルに token の平文が残らない。remote http で OAuth の read-only scope が保証されないサーバーはこの方式を使う。
+4. **token 不要方式**（ローカルファイル引数のみ）: `usability-probe-browser`。認証情報は 1Password ではなく `usability-probe-setup.ts` が事前生成したローカルの storageState ファイルで、起動フラグにそのパスを渡すだけ。1Password / OAuth のいずれも介さない。
 
 **`op run` 方式のサーバーは常駐登録を 1 つに保つ。** spawn ごとに 1Password の承認が要求されるため、常駐登録が N 個あるとロック状態からの起動時に承認が N 回出る。常時使う `github` だけを常駐させ、それ以外はオンデマンド登録にする（2026-07-31、承認が 2 回出ていた実測に基づく）。
 
@@ -42,7 +44,7 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 ## 運用方針
 
 - **常時使う**: `context7` / `sentry` / `github` / `vercel`
-- **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud) / `uptimerobot`
+- **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud) / `uptimerobot` / `usability-probe-browser`
 - `context7` はバージョン依存の判断では原則使う。Next.js / React / tRPC / Supabase client / TanStack Query / Zustand などはmanifestでexact versionを確認し、記憶だけで判断しない。
 - `sentry` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
 - `supabase`(cloud) / `github` は global 設定の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
@@ -78,6 +80,24 @@ claude mcp remove uptimerobot -s user
 ```
 
 前提: `~/.claude/scripts/uptimerobot-headers.sh`（repo 外の user-global script）が存在すること。中身は `op read "op://Dayopt-Shared/<item-id>/credential"` で **Read-only API Key** を取り出し `{"Authorization": "Bearer <token>"}` を echo するだけ。新しいマシンでは 1Password の item `UptimeRobot Read-only API Key`（Dayopt-Shared）を参照して script を作り直す。
+
+### `usability-probe-browser` はオンデマンド登録する
+
+Haiku ユーザビリティプローブ（`.claude/skills/usability-probe/SKILL.md`、#2022）専用の Playwright MCP。既存の `playwright`（常時使う共有ブラウザ）とは別名で登録する。理由は 2 つ: (1) `--storage-state` 起動フラグは registration 時に固定されるため、プローブ専用の認証済みセッションを積んだ別プロセスが要る (2) 常駐させると `playwright` と役割が重複し、どちらが「共有」でどちらが「プローブ専用（認証済み）」か区別できなくなる。token は不要（`op run` も headersHelper も無し）だが、`--storage-state` が指すファイルは実セッションの cookie を含むため、使い終わったら登録解除とファイル削除をセットで行う。
+
+**navigation の scope は `--allowed-origins` で宣言するが、これはセキュリティ境界ではない。** `@playwright/mcp --help` に明記: 「does not serve as a security boundary and does not affect redirects」。実際に構造として塞がれているのは `file://` navigation だけ（`--allow-unrestricted-file-access` を渡さない限り既定でブロックされる。本登録コマンドは渡さない）。`--allowed-origins` は誤って `--base-url` と無関係な外部サイトへ迷い込むのを防ぐ宣言的な足場として付ける（probe 対象の origin と一致させる）。
+
+```bash
+# 使う時（storageState は usability-probe-setup.ts が事前生成したパスを指す。
+# --allowed-origins は probe 対象の --base-url と同じ origin に揃える）
+claude mcp add-json usability-probe-browser "{\"command\":\"npx\",\"args\":[\"-y\",\"@playwright/mcp@latest\",\"--storage-state=$(pwd)/apps/product/.probe/storage-state.json\",\"--allowed-origins=http://localhost:3000\"]}" -s user
+
+# 使い終わったら（登録解除 + storageState ファイル削除の両方）
+claude mcp remove usability-probe-browser -s user
+rm -rf "$(git rev-parse --show-toplevel)/apps/product/.probe"
+```
+
+登録前に `usability-probe-setup.ts`（`pnpm --filter @dayopt/product probe:setup`）で storageState を生成しておくこと。生成せずに登録すると `--storage-state` のパスが存在せず、未認証のブラウザが起動する。
 
 ## 接続済み MCP サーバー
 

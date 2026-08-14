@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-13
+last_verified: 2026-08-14
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -275,19 +275,26 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は[
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
-- **project 設定 4 項目も監査対象（2026-08-05、#1817 Phase 4）。** `GET /v9/projects/{idOrName}`
-  （`scripts/production-release.mjs`の`getProjectMeta`と同系API）を追加で叩き、`rootDirectory`
-  （product=`apps/product`、web=`apps/web`）・`autoAssignCustomDomains`（false）・
-  `commandForIgnoringBuildStep`（null/未設定。vercel.jsonの`ignoreCommand`が正本で、dashboard側に
-  別コマンドが残っていたらdrift）・`enableAffectedProjectsDeployments`（"Skip deployments"、無効）
-  を照合する。フィールドが応答に無い場合もfailure（fail closed）。値そのものは出力しない
-  （env監査と同じ方針）。フィールド名はVercelの公開OpenAPIスペック
-  （<https://openapi.vercel.sh>）で確認した
+- **project 設定 6 項目も監査対象（2026-08-05、#1817 Phase 4 で 4 項目導入 → #1835 で
+  `sourceFilesOutsideRootDirectory` 追加 → 2026-08-14、#1966 で `functionDefaultTimeout` 追加）。**
+  `GET /v9/projects/{idOrName}`（`scripts/production-release.mjs`の`getProjectMeta`と同系API）を
+  追加で叩き、`rootDirectory`（product=`apps/product`、web=`apps/web`）・
+  `autoAssignCustomDomains`（false）・`commandForIgnoringBuildStep`（null/未設定。
+  vercel.jsonの`ignoreCommand`が正本で、dashboard側に別コマンドが残っていたらdrift）・
+  `enableAffectedProjectsDeployments`（"Skip deployments"、無効）・
+  `sourceFilesOutsideRootDirectory`（有効。falseだとignoreCommandがfail openになる）・
+  `resourceConfig.functionDefaultTimeout`（60。Dashboard Functions タブの
+  "Default Max Duration"）を照合する。フィールドが応答に無い場合もfailure（fail closed）。
+  値そのものは出力しない（env監査と同じ方針）。前半5項目のフィールド名はVercelの公開OpenAPIスペック
+  （<https://openapi.vercel.sh>）で確認したが、`functionDefaultTimeout`は同スペックに掲載が無く
+  `vercel/sdk`の型定義（`GetProjectResponseBody`の`resourceConfig`配下）で確認した
+  — 実応答での存在は trusted dispatch の green が唯一の実測（詳細は上記
+  §Dashboard の Default Function Timeout 参照）
   - **`scripts/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
-    `checkProjectSettings: false`で呼び、この4項目監査をスキップする。** `autoAssignCustomDomains`
+    `checkProjectSettings: false`で呼び、この6項目監査をスキップする。** `autoAssignCustomDomains`
     はrelease中に一時的にtrueへ戻りうる（Vercelのpromote endpointの既知挙動、
     vercel/vercel#15095）。production-release.mjs側はsweep/stabilizeで自前管理しており
-    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、4項目監査は
+    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、6項目監査は
     「定常状態のdrift検出」が目的の静的チェックなのでrelease実行中の一時的な状態と衝突する。
     env監査（key/target/type）はrelease gateでも従来どおり実行する
 
@@ -670,14 +677,14 @@ product の contract test は「外部 I/O をする route は **Supabase 1 往�
 
 とはいえ **全部を「上限は保証ではない」で流してよいわけではない**。逐次 worst path が段を超える route のうち、**失敗が不可逆なもの**は段から外して値を上げる。
 
-| route                                       | 逐次 worst path                | 値      | 失敗したら何が起きるか                                                                                                                                                                                   |
-| ------------------------------------------- | ------------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api/integrations/google-calendar/callback` | 77s（再接続分岐）              | **120** | Google の authorization code は token 交換で消費される。その後の DB 書き込み中に kill されると、接続は保存されないまま code だけ使用済みになり、再試行は `invalid_grant`。**ユーザーは認可からやり直し** |
-| `api/mcp` / `mcp`                           | 認証だけで 75s（15s × 5 逐次） | **120** | 認証を通り切る前に kill され、handler が返すはずの 503 すら出せず**全 tool 呼び出しが 504**                                                                                                              |
+| route                                       | 逐次 worst path                        | 値      | 失敗したら何が起きるか                                                                                                                                                                                   |
+| ------------------------------------------- | -------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api/integrations/google-calendar/callback` | 80s（消費前スラック 35s + budget 45s） | **90**  | Google の authorization code は token 交換で消費される。その後の DB 書き込み中に kill されると、接続は保存されないまま code だけ使用済みになり、再試行は `invalid_grant`。**ユーザーは認可からやり直し** |
+| `api/mcp` / `mcp`                           | 認証だけで 75s（15s × 5 逐次）         | **120** | 認証を通り切る前に kill され、handler が返すはずの 503 すら出せず**全 tool 呼び出しが 504**                                                                                                              |
 
 判断基準は「504 で済むか、ユーザーが取り返せない状態になるか」。前者なら段どおりでよく、後者なら値を上げる。2026-08-12 に外部レビューが 3 ラウンドかけてこの 2 件を指摘し、当初 60 に置いていたのを訂正した。
 
-**値を上げるのは暫定対応。** より良いのは「**不可逆な操作を始める前に残り予算を検査する**」設計で、cron が `maxDuration 60` に対し `TIME_BUDGET_MS = 50_000` を持つのと同じ形。callback については #1990 で扱い、入れば 60 へ戻せる。
+**「値を上げるのは暫定対応」から始まったが、callback は確定した設計になった。** #1990（PR #2075 に統合）で「不可逆な操作（code 消費）を始める前に残り予算を検査する」設計を callback に入れ、`POST_EXCHANGE_BUDGET_MS = 45_000` 固定の budget check を追加した。当初の想定は maxDuration を 60 へ戻せるというものだったが、budget check の固定予算設計により code 消費前フェーズ（getUser / MFA / rate limit / write fence / Pro 判定の直列 4〜5 ホップ）の予算が `TIME_BUDGET_MS(50s) - POST_EXCHANGE_BUDGET_MS(45s) = 5s` しか残らず、軽微な遅延だけで従来成功していた接続が `budget_exhausted` になる可用性の崖ができていた。2026-08-14、PR #2075 クロスレビューでこれを検出し、**`maxDuration` を 90 へ引き上げて解消した**（`POST_EXCHANGE_BUDGET_MS` は不変、消費前スラック 35s に回復、worst case 総計 80s ≤ 90 で hard kill margin 10s を維持。安全性 = code 消費前後の境界の扱いは変えず、可用性の崖だけを除去した）。60 への到達は見送り、90 が現在の確定値。
 
 #### `/api/health` を 30 にしたことの監視上の含意
 
@@ -685,22 +692,22 @@ UptimeRobot は 5 分間隔の HTTP status 監視で、**503 も 504 も同じ�
 
 alert policy の文言は「`/api/health` が 503 を返す」なので、504 が出た場合も unhealthy と読む（原因不明の 504 が出たら `checkRedis` 以外の予期しない hang を疑う）。
 
-#### tRPC だけ 300 の理由
+#### tRPC が 60 の理由（旧 300 から #1965 で引き下げ）
 
-`/api/trpc/[trpc]` は**全 procedure を 1 function で捌く**ため、最長 procedure に律速される。`externalCalendar` の `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」でしか判定されない）ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。**#1965 で予算を入れてから 60 へ落とす。**
+`/api/trpc/[trpc]` は**全 procedure を 1 function で捌く**ため、最長 procedure に律速される。300 秒だった当時は `externalCalendar` の `syncNow` / `updateSelectedCalendars` が呼ぶ `syncConnection` が wall-clock 予算を持たず（deadline は接続と接続の「間」でしか判定されなかった）、これが 300 に張り付かせていた唯一の既知の理由だった。2026-08-14、PR #2075 で `syncConnection` に wall-clock 予算を持たせ、`router.ts` が `deadlineAt` を渡すようになったため **`maxDuration` を 60 へ引き下げた**（`apps/product/src/app/api/trpc/[trpc]/route.ts`）。
 
-#### Dashboard の Default Function Timeout（未実施）
+#### Dashboard の Default Function Timeout（実施済み・pin 済み）
 
-route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**。
+route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**だったところを、同日 User が Dashboard で 60 秒へ flip した。2026-08-14、product / web とも Dashboard Functions タブの Default Max Duration = 60 を目視再確認済み。
 
-60 秒への引き下げは production デリバリーに直結するため User が Dashboard で実施する。**flip 前に次を満たすこと**:
+flip 前に検討したチェック項目。**証拠が残っていない項目は「未取得」と明記する**（2026-08-14 内製クロスレビューで、証拠の無い項目を「満たしていた」と書いていた点を指摘され訂正）:
 
-1. Vercel Observability で直近 30 日の route 別 p99 duration を見て、**60 秒超がゼロ**であること。repo の静的解析では「実際に長い経路」は分からない
+1. **未取得。** Vercel Observability で直近 30 日の route 別 p99 duration を見て 60 秒超がゼロであることを確認する想定だったが、確認した証跡が残っていない。repo の静的解析では「実際に長い経路」は分からないため、次に同種の flip を検討する際はこの確認を先に行う
 2. **product と web を別々に判断する。** web には ISR（`revalidate = 3600` の RSS feed）があり、再生成 function は route handler の契約表に載らない
-3. flip 後に **`/api/trpc/[trpc]` が 300 のままであることを実測する。** route 側の明示値が project 既定を上書きする仕様だが、既定より大きい値を要求する形になるのは flip 後が初めて。ここが 60 に落ちていたら上記 hard kill が現実になる
-4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）
+3. **flip 実施時点（2026-08-12）では `/api/trpc/[trpc]` が project 既定を上回る 300 秒の明示値を持ち、project 既定を上書きする形で運用されていた。** 2026-08-14、PR #2075（#1965 の wall-clock 予算実装）により `/api/trpc/[trpc]` の `maxDuration` は 60 へ引き下げられた（詳細は上記 §tRPC が 60 の理由）。現時点で project 既定 60 を上回る静的宣言を持つ route は `api/integrations/google-calendar/callback`（90）と `api/mcp` / `mcp`（120）の 2 つのみで、いずれも project 既定を明示的に上書きする設計（上記 §例外を作る基準は「失敗の質」参照）。**runtime 適用の実測（宣言どおり Vercel が適用しているか）は未取得**（下記 §「実際に適用された」ことの証拠 参照。Vercel の deployment API は per-function `maxDuration` を返さないため自動検証はできない）
+4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）。**戻す場合は同一対応で下記 pin の契約値（`PROJECT_METADATA_CONTRACTS` の `functionDefaultTimeout`）も 300 へ戻すこと** — 戻さないと Production Config Audit が failure になり、この rollback を含む hotfix の出荷経路まで全 merge が止まる
 
-flip 忘れ・後日の戻しを検知する仕組みは **#1966**（`production-config-audit.mjs` へ `functionDefaultTimeout` を pin）。**pin は flip 完了後にしか入れられない**（先に入れると audit が failure になり全 PR の merge gate が止まる）。
+flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。**このフィールドパスは `vercel/sdk` の型定義と Dashboard 目視だけが根拠で、`GET /v9/projects/{idOrName}` の実応答での存在は未確認。** この repo には「スキーマに載っているが実応答に無い」前例がある（`enableAffectedProjectsDeployments`、2026-08-05）。唯一の実測は merge シーケンスの trusted dispatch — dispatch が `missing from project metadata` で落ちたら、そのまま fix を重ねず `defaultResourceConfig` 等の別フィールドパスを確認してから修正する。
 
 #### 「実際に適用された」ことの証拠
 
@@ -1188,8 +1195,7 @@ npm run security:audit:actions  # GitHub Actions監査
 #### パフォーマンス
 
 ```bash
-npm run size                # バンドルサイズチェック
-npm run size:why            # バンドルサイズ分析
+npm run size:budget         # バンドルサイズバジェットチェック（check-bundle-budget.ts）
 npm run perf:lighthouse     # Lighthouse CI
 npm run deps:circular       # 循環依存検出
 npm run deps:outdated       # 古いパッケージ一覧

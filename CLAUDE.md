@@ -168,7 +168,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 Project skills は `.claude/skills/` に置く。該当する作業では `SKILL.md` を先に読む。
 
-error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit / pr-cross-review
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update / audit-ai-config / dispatch / blog-ideas / docs-audit / pr-cross-review / usability-probe
 
 ## Deploy / Release
 

@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-13
+last_verified: 2026-08-14
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -16,14 +16,15 @@ Dayoptのproduction監視はSentry、Vercel、Supabase、`/api/health`、UptimeR
 
 ## Monitoring surfaces
 
-| Surface         | 見るもの                                                                          | 正本                                                                                                                                  |
-| --------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Sentry          | unexpected error、正規化済みCSP violation、performance trace                      | Sentry dashboard + Product / Web の runtime config                                                                                    |
-| Vercel          | deployment、function error / duration、traffic、build failure                     | Vercel dashboard                                                                                                                      |
-| Supabase        | database health、connection、API error、storage、Auth                             | Supabase dashboard                                                                                                                    |
-| Health endpoint | app、database、必要な環境設定の疎通                                               | `GET /api/health`                                                                                                                     |
-| UptimeRobot     | 外形監視（`/api/health` のHTTP status、5分間隔）、uptime、incident、response time | UptimeRobot dashboard + メール通知。AI調査経路は[mcp-usage](../../.claude/rules/mcp-usage.md)のUptimeRobot節（read-onlyオンデマンド） |
-| GitHub Actions  | type / lint / test / build / docs guard                                           | `.github/workflows/`                                                                                                                  |
+| Surface         | 見るもの                                                                                | 正本                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Sentry          | unexpected error、正規化済みCSP violation、performance trace                            | Sentry dashboard + Product / Web の runtime config                                                                                    |
+| Vercel          | deployment、function error / duration、traffic、build failure                           | Vercel dashboard                                                                                                                      |
+| Supabase        | database health、connection、API error、storage、Auth                                   | Supabase dashboard                                                                                                                    |
+| Health endpoint | app、database、必要な環境設定の疎通                                                     | `GET /api/health`                                                                                                                     |
+| UptimeRobot     | 外形監視（`/api/health` のHTTP status、5分間隔）、uptime、incident、response time       | UptimeRobot dashboard + メール通知。AI調査経路は[mcp-usage](../../.claude/rules/mcp-usage.md)のUptimeRobot節（read-onlyオンデマンド） |
+| GitHub Actions  | type / lint / test / build / docs guard                                                 | `.github/workflows/`                                                                                                                  |
+| Axiom（未実施） | Vercel Log Drains 経由の runtime / build / static log（契約表に載らない経路も含む全量） | Axiom dashboard（`vercel` dataset）。導入手順は下記 §Log Drains（Axiom）（未実施）                                                    |
 
 provider plan、sampling rate、SDK versionなどの値は変わるため、package manifest・runtime config・dashboardを正とする。
 
@@ -79,6 +80,48 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - 検証traceだけを一時的に100% sampleし、通常のProduct/Web browser・server 10%と両Edge 5% samplingは変えない
 - 対象project、deployment URL、commit SHA、event、alert、削除手順を[#1566](https://github.com/Dayopt/dayopt/issues/1566)相当の運用issueへ記録する
 - flag-off deployの後にcodeと一時envを削除し、canonical URLと記録済み旧deployment URLのGET / POST / OPTIONSが404であることを確認する
+
+## Log Drains（Axiom）（未実施）
+
+策定日: 2026-08-14（#1701 Phase 3 の残作業）。**内製クロスレビュー（2026-08-14）で P1 指摘 2 件を受け、Drain 作成の前提条件を legal 判断とデータ内容確定の 2 段に分離した。**
+
+**目的**: 個別 route の契約表（本ファイル §Monitoring surfaces、`infra.md` §API Endpoints）に載らない経路（Server Action、ISR 再生成、Middleware、ビルドログ）を含む runtime / build ログの全量を、Vercel dashboard の保持期間を超えて横断検索できるようにする。ベンダーは Axiom に確定済み（保存リージョンの固定要件なし、CHECKPOINT で User 承認。決定の経緯は #1701 のコメント参照）。
+
+**権限境界**: 本節は手順書であり、**Drain 作成の実操作、サブプロセッサー追加の意思決定、送信フィールドの確定は User が行う（`EXPLICIT AUTHORITY`）**。repo 側のコード変更は無い（Vercel Marketplace 経由の team-level 設定のみ）。
+
+### 前提: コストと課金体系（確認日 2026-08-14 時点）
+
+- Vercel の Log Drains は **Pro / Enterprise plan 限定**（Dayopt は Pro plan で対象）
+- 課金は **転送量 $0.50/GB、無料枠なし**。計測は圧縮前の JSON serialize サイズで、Axiom 側の "bytes received" 表示より大きく出るのが仕様（Vercel 公式ドキュメント）
+- Axiom 公式ドキュメントは、高 volume な場合は Drains 経由の Marketplace 連携より `next-axiom` ライブラリ（アプリ内 SDK 直接送信）の方が安いと明記している。Dayopt は Drains（Marketplace 連携）を選んだ — 契約表に載らない経路まで無条件に拾える運用の単純さを優先した判断で、`next-axiom` への切替は volume が実際に膨らんでから再検討する（出口コスト: Drain を切って `next-axiom` の instrumentation を各 app に追加するだけなので `[hours]`）
+- 上記の単価・plan 条件は Vercel 側の変更可能性があるため、実施直前に再確認する
+
+### 手順
+
+1. **legal 前提（Drain 作成より先に完了させる）** — Axiom は Dayopt の privacy policy が個別列挙するサブプロセッサーに該当しうる新規追加で、privacy.mdx は「導入の少なくとも 30 日前に通知」を約束している。手順どおり Drain を作るだけでは、この約束を素通りして公開ポリシー違反になる
+   - `apps/web/content/docs` の privacy.mdx（ja / en 両方）へ Axiom をサブプロセッサーとして追記する
+   - 追記から実際の Drain 有効化まで **30 日以上**空ける（通知タイミングの起点は追記 publish 日）
+   - サブプロセッサー追加の意思決定を `docs/operations/legal.md` §改定の記録 に従って decision ログへ残す
+   - この judgment（サブプロセッサーを追加するかどうか）自体が `EXPLICIT AUTHORITY`。下記の技術手順より先に User が判断する
+2. **Drain が送信するフィールドの確定（legal 前提と並行して検討可、Drain 作成より先に確定させる）** — Log Drain はアプリの構造化ログだけでなく **Vercel 自身の request log**（path / query / clientIp / userAgent 等）を運ぶ。既存の `@/lib/logger` sanitize 方針（本ファイル §Sentry runtime contract）はアプリコードが出す構造化ログにしか及ばず、Vercel の request log には適用されない
+   - **具体的な露出**: (a) iCal feed の URL（`/api/v1/calendar/{token}.ics`）は token が URL path に入る長期 bearer credential で、request log に path が含まれる設定だと Drain 経由で Axiom に恒久記録される（= feed 利用者のカレンダー閲覧権が第三者 store に写る） (b) OAuth callback の `code` / `state` が query に入る
+   - Drain 作成時に「request log の path / query を対象に含めるか」を確定する。含める場合は iCal token の扱い（対象からの除外、または Axiom 側 retention とアクセス制限の明記）を先に決める
+   - **上記が確定するまで Drain を作成しない**
+3. **Spend Management の上限設定** — 無料枠なしの従量課金への対策。Vercel team dashboard → **Settings → Billing → Spend Management** を有効化し、USD 上限額を設定する。Owner または Billing role が必要
+   - **上限額の設定は通知のみで、支出を自動的に止めない。** 「production を自動一時停止」オプションを別途有効化しない限り、上限到達後もログ転送と課金は継続する。本番影響が大きいため既定では自動一時停止を有効化せず、通知（50% / 75% / 100%、**Settings → My Notifications** で Web / Email、必要なら SMS を有効化）を受けた人間が手動で対応する運用とする
+   - 閾値通知を受けた時の一次対応は下記 rollback（Drain disable）を参照。solo 運用のため対応までの遅延は保証されない — 上限額は「気づかず膨らむ額」の許容上限として、実コストより余裕を持たせて設定する
+4. **Axiom Marketplace integration の接続** — [Vercel Integrations: Axiom](https://vercel.com/integrations/axiom) から Install し、Dayopt team とリンクする。接続対象 project は `product` / `web` を選択する。Drain 作成時に手順 2 で確定したフィールド設定を反映する
+   - この操作で Axiom 側に Log Drain が自動作成され、ログは Axiom の `vercel` dataset へ即座に流れ始める（Axiom 側での事前の dataset 作成や API token 発行は不要 — integration が自己完結する）
+5. **検証** —
+   - Vercel team dashboard → **Settings → Drains** で、作成された Drain の status が `enabled` であることを確認する
+   - Axiom dashboard → `vercel` dataset で、直近デプロイのログが実際に届いていることを確認する（`vercelProjectName` フィールドで product / web を区別できる）。手順 2 で除外を決めたフィールド（iCal token 等）が実際に含まれていないことも合わせて確認する
+   - Spend Management の **Activity** セクション（team dashboard サイドバー）で、上限設定が反映されていることを確認する
+6. **rollback**（`[hours]`） — Vercel team dashboard → Settings → Drains から該当 Drain を disable、または Integrations 画面から Axiom を uninstall する。課金は停止時点までの転送量分のみ
+
+### 運用上の注意
+
+- Drain は team scope の設定であり、コードや env に新しい secret は増えない（`docs/operations/secrets.md` の対象外）
+- **既存の `@/lib/logger` 構造化ログの sanitize 方針は、アプリコードが出すログにのみ適用される。** Vercel の request log（path / query / clientIp / userAgent）は別経路で Drain に乗るため、上記手順 2 で送信フィールドを確定するまでは「sanitize 方針に従っているから安全」と読まない
 
 ## Alert policy
 

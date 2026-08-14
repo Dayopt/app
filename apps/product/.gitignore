@@ -1,2 +1,5 @@
 .vercel
 .env*.local
+
+# usability-probe-setup.ts の出力（認証済み storageState を含む。生セッションなので commit しない）
+.probe/
