@@ -24,7 +24,7 @@ if [ "${USE_LINKED_DB:-}" = "true" ]; then
 
   if [ -z "$SUPABASE_URL" ] || [ -z "$ANON_KEY" ]; then
     echo "❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です"
-    echo "   op run --env-file=.op-env.admin -- env USE_LINKED_DB=true pnpm db:seed を実行してください"
+    echo "   op run --env-file=.op-env.human -- env USE_LINKED_DB=true pnpm db:seed を実行してください"
     exit 1
   fi
   DB_TARGET="--linked"

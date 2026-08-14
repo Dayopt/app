@@ -18,7 +18,7 @@ function createTestEnvironment({ failStart = false }: { failStart?: boolean } = 
   const binDirectory = join(temporaryDirectory, 'bin');
   const statePath = join(temporaryDirectory, 'supabase-started');
   const callsPath = join(temporaryDirectory, 'calls.log');
-  const opEnvPath = join(temporaryDirectory, '.op-env.local');
+  const opEnvPath = join(temporaryDirectory, '.op-env.agent');
 
   temporaryDirectories.push(temporaryDirectory);
   mkdirSync(binDirectory);

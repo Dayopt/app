@@ -28,7 +28,7 @@ exact commandとdependency versionは[`package.json`](./package.json)を参照�
 
 ## Local Environment
 
-repo rootの`.op-env.local`に`op://`参照だけを置き、通常はroot commandから起動する。実値を`apps/web/.env.local`へ保存しない。
+repo rootの`.op-env.agent`に`op://`参照だけを置き、通常はroot commandから起動する。実値を`apps/web/.env.local`へ保存しない。
 
 - secret運用: [`docs/operations/secrets.md`](../../docs/operations/secrets.md)
 - environment / deployment: [`docs/engineering/infra.md`](../../docs/engineering/infra.md)

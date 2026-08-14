@@ -34,19 +34,19 @@ disallowed_vault_refs() {
 
 # --- Write/Edit: 保護ファイルへの書き込みブロック ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
-  # .env ファイル（.env.example は op:// 参照スキーマの雛形で secret を含まないため許可）
+  # .env ファイルへの書き込みは全面禁止（.env.example は 2026-08-14 に廃止。
+  # 変数一覧の正本は scripts/env/schema.ts）
   case "$FILE_PATH" in
-    *.env.example) ;;
     *.env | *.env.* | *.envrc)
       echo "BLOCKED: .env系ファイルへの書き込みは禁止です" >&2
       exit 2
       ;;
   esac
 
-  # .op-env.admin / .op-env.admin.example は human vault（旧 Dayopt-Production）の service role
+  # .op-env.human / .op-env.human.example は human vault（旧 Dayopt-Production）の service role
   # key を op run で解決する参照 path のみを持ち、実秘密は含まない（#1993）。
   # 読み書き・作成は解禁し、境界は「消費」だけに絞る。消費ブロックは下の Bash
-  # 側（--env-file が .op-env.admin 系を指す実行）が担う。ここで Write/Edit を
+  # 側（--env-file が .op-env.human 系を指す実行）が担う。ここで Write/Edit を
   # 止めても、agent が中身を書けるだけで production へ到達するわけではない。
 
   # local dev 用の env-file へ production vault の参照が混ざるのを発生源で止める。
@@ -55,13 +55,13 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   # 落とすが、そちらは agent が op run を直接打つ場面でしか発火しない
   # （pnpm typecheck:op などは npm script の内側で op run するので hook から見えない）。
   # 書き足しそのものをここで止める。
-  # .op-env.admin.example は設計上 op://human/... を持つので対象外。
+  # .op-env.human.example は設計上 op://human/... を持つので対象外。
   case "$FILE_PATH" in
-    *.op-env.local | *.op-env.local.example)
+    *.op-env.agent | *.op-env.agent.example)
       WRITTEN=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
       bad_vaults=$(disallowed_vault_refs "$WRITTEN")
       if [ -n "$bad_vaults" ]; then
-        echo "BLOCKED: local dev 用の env-file に許可外 vault の op:// 参照は書けません（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。このファイルは op run に渡せるので、production を参照する行を足すと production credential が解決されます。管理者運用の参照は .op-env.admin.example 側に置いてください" >&2
+        echo "BLOCKED: local dev 用の env-file に許可外 vault の op:// 参照は書けません（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。このファイルは op run に渡せるので、production を参照する行を足すと production credential が解決されます。管理者運用の参照は .op-env.human.example 側に置いてください" >&2
         exit 2
       fi
       ;;
@@ -165,8 +165,8 @@ fi
 # 詳細は #1944 のコメント。
 
 # 許可する env-file の path。選択肢で列挙する（optional group で組み立てると
-# 区切りの / が任意になり、..op-env.local のような別名まで通る）。
-ALLOWED_ENV_FILE_RE='(\.op-env\.local|\./\.op-env\.local|\.\./\.\./\.op-env\.local)'
+# 区切りの / が任意になり、..op-env.agent のような別名まで通る）。
+ALLOWED_ENV_FILE_RE='(\.op-env\.agent|\./\.op-env\.agent|\.\./\.\./\.op-env\.agent)'
 CONFORMING_MENTION_RE="-env-file[=[:space:]]+${ALLOWED_ENV_FILE_RE}[[:space:];&|]"
 
 # --env-file の言及がすべて許可形かを判定する。
@@ -249,17 +249,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\\/}
 
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
-    # 雛形の直接実行。.op-env.admin.example は op://human/... の参照を
+    # 雛形の直接実行。.op-env.human.example は op://human/... の参照を
     # そのまま持つため、コピーせず op run に食わせるだけで同じ本番権限が解決される。
-    # .op-env.admin 自体も消費すれば同じ権限が解決される（#1993: 作成・書き込みは
+    # .op-env.human 自体も消費すれば同じ権限が解決される（#1993: 作成・書き込みは
     # 解禁したが消費は引き続き禁止。読み書きできることと消費できることは別）。
     #
     # コマンド名ではなく「危険な引数」で判定する。op がコマンド位置に来る形だけを
     # 見ると env / command / 絶対パス / sh -c ... と迂回形をいくらでも作れるため、
     # 位置に依存せず --env-file が admin を指すこと自体を落とす。
     # 下の allowlist でも落ちるが、admin を名指しした時はこちらの具体的な理由を返す。
-    if echo "$scanned" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.admin'; then
-      echo "BLOCKED: .op-env.admin / .op-env.admin.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため。読み書きは #1993 で解禁済みだが消費は引き続き禁止）" >&2
+    if echo "$scanned" | grep -qE '\-\-env-file[=[:space:]]+[^[:space:];&|]*\.op-env\.human'; then
+      echo "BLOCKED: .op-env.human / .op-env.human.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため。読み書きは #1993 で解禁済みだが消費は引き続き禁止）" >&2
       exit 2
     fi
 
@@ -327,7 +327,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     [ -f "$env_file_path" ] || continue
     bad_vaults=$(disallowed_vault_refs "$(cat "$env_file_path")")
     if [ -n "$bad_vaults" ]; then
-      echo "BLOCKED: $env_file_path が許可外 vault の op:// 参照を持っています（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。op run に渡すと production credential が解決されます。管理者運用は .op-env.admin 側の経路と User の明示操作で行ってください" >&2
+      echo "BLOCKED: $env_file_path が許可外 vault の op:// 参照を持っています（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。op run に渡すと production credential が解決されます。管理者運用は .op-env.human 側の経路と User の明示操作で行ってください" >&2
       exit 2
     fi
   done < <(

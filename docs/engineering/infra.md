@@ -53,14 +53,14 @@ Secrets の正本は `docs/operations/secrets.md`。1Password は production / s
 ```txt
 Production → human の Supabase credentials
 Preview    → Supabase Vercel integration が PR Branch credentials を注入
-Development/local → .op-env.local + op run
+Development/local → .op-env.agent + op run
 ```
 
 Preview environment に production Supabase credentials を手動設定しない。残っている場合は削除または Preview scope から外す。
 
-#### `.op-env.local`
+#### `.op-env.agent`
 
-repository root の `.op-env.local.example` を `.op-env.local` にコピーし、`op://` 参照だけを書く。実値・dummy secret・placeholder secret は書かない。
+repository root の `.op-env.agent.example` を `.op-env.agent` にコピーし、`op://` 参照だけを書く。実値・dummy secret・placeholder secret は書かない。
 
 ### Local Development
 
@@ -71,7 +71,7 @@ pnpm dev
 
 `pnpm dev` は `op run` 経由のまま。Supabase local が停止中なら自動起動し、`supabase status -o env` から URL / anon key / service role key を取得して、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
 
-**Supabase の接続先は local 固定で、切り替え手段は無い。** かつて存在した `DAYOPT_SUPABASE_TARGET=op` は `.op-env.local` の `op://agent/supabase/...` を使う escape hatch だったが、その参照先が production を指していたため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。Supabase local が起動しない時は Docker Desktop を確認し、`supabase start` を手動で実行してエラーを読む。
+**Supabase の接続先は local 固定で、切り替え手段は無い。** かつて存在した `DAYOPT_SUPABASE_TARGET=op` は `.op-env.agent` の `op://agent/supabase/...` を使う escape hatch だったが、その参照先が production を指していたため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。Supabase local が起動しない時は Docker Desktop を確認し、`supabase start` を手動で実行してエラーを読む。
 
 ### Migration
 
@@ -493,12 +493,12 @@ agent/turnstile
 
 #### env 参照
 
-- **app** — `.op-env.local`:
+- **app** — `.op-env.agent`:
   ```
   NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://agent/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
   ```
   （app は secret を持たない）
-- **web** — `.op-env.local`:
+- **web** — `.op-env.agent`:
   ```
   NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://agent/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
   TURNSTILE_SECRET_KEY=op://agent/turnstile/TURNSTILE_SECRET_KEY
@@ -546,7 +546,7 @@ user submit
 
 #### 開発時フォールバック
 
-Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や `.op-env.local.example` には literal 値を書かない。必要な値は Cloudflare docs で確認し、一時作業後は `.op-env.local` を `op://` 参照へ戻す。
+Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や `.op-env.agent.example` には literal 値を書かない。必要な値は Cloudflare docs で確認し、一時作業後は `.op-env.agent` を `op://` 参照へ戻す。
 
 ### 移行経緯
 
@@ -580,7 +580,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 - `src/app/api/contact/route.ts`（web、`verifyTurnstile` 挿入）
 - `src/platform/config/env.ts`（web、env 追加）
 - `src/env.ts`（app、env 置換）
-- `.op-env.local.example`（app / web 両方の参照例）
+- `.op-env.agent.example`（app / web 両方の参照例）
 - `agent/turnstile` item（1Password）
 
 ### 今後の拡張余地
@@ -1096,7 +1096,7 @@ npm run test:run            # ユニットテスト実行
 npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。`pnpm dev` の Supabase 接続先は local 固定。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。詳細は `docs/operations/secrets.md`。
+> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.agent` の `op://` 参照を `pnpm dev` で注入する。`pnpm dev` の Supabase 接続先は local 固定。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。詳細は `docs/operations/secrets.md`。
 > 開発サーバー（`pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ### 全コマンド一覧
@@ -1104,7 +1104,7 @@ npm run check               # typecheck + lint + test:run（一括）
 #### 開発サーバー
 
 ```bash
-pnpm dev                    # .op-env.local + op run 経由で next dev
+pnpm dev                    # .op-env.agent + op run 経由で next dev
 pnpm dev:raw                # 素の next dev（一時作業用）
 npm run storybook           # Storybook（ポート6006）
 ```

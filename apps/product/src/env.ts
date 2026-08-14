@@ -266,7 +266,7 @@ export const env = new Proxy({} as ServerEnv, {
           .join('\n');
         throw new Error(
           `❌ 環境変数のバリデーションに失敗しました:\n${formatted}\n\n` +
-            `.op-env.local を作成し、op run 経由で起動してください。詳細は docs/operations/secrets.md を参照してください。`,
+            `.op-env.agent を作成し、op run 経由で起動してください。詳細は docs/operations/secrets.md を参照してください。`,
         );
       }
       _validated = true;

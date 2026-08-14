@@ -283,7 +283,7 @@ stripe login
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 # 出力される signing secret は 1Password master に保存し、
-# .op-env.local の op:// 参照経由で注入する
+# .op-env.agent の op:// 参照経由で注入する
 ```
 
 ### テストカード

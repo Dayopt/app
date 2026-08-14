@@ -7,7 +7,7 @@
 # login 失敗時の切り分けに使う (email 一致 / email_confirmed / banned / 等)。
 #
 # 使い方:
-#   op run --env-file=.op-env.admin -- \
+#   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
 #     bash scripts/admin-show-user.sh
 # ========================================

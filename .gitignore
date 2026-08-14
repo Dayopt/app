@@ -171,6 +171,6 @@ temp/
 # Lighthouse CI
 .lighthouseci/
 .env*.local
-.op-env.local
-.op-env.admin
+.op-env.agent
+.op-env.human
 .claude/scheduled_tasks.lock

@@ -88,7 +88,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 - **repo 全体を洗う検索は `rg --hidden --glob '!.git/**'` で実行する。** `rg` は既定で dot ディレクトリを飛ばすため、`.claude/` `.github/` が丸ごと検索対象から外れる。撤去・改名の残存参照を探す時にこれを忘れると、AI 設定と workflow の参照だけが取り残される（2026-08-03 に実際に発生）。`--hidden` は `.git/` も対象に含めるため、glob 除外を同時に付ける（付けないと git のメタデータを拾う）
 - issue の起票・worker への作業依頼・`status:blocked` issue への着手判断は `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の規約に従う。凍結 issue には着手しない
 - 既存の未コミット差分はユーザー作業として扱い、勝手に revert / stage しない
-- env ファイルの読み書き境界は `docs/operations/secrets.md` §AI エージェントの env ファイル境界 に従う。`.env.example` / `.op-env.local` は触ってよく、実値が入りうる `.env` / `.env.local` 系は読みも書きもしない
+- env ファイルの読み書き境界は `docs/operations/secrets.md` §AI エージェントの env ファイル境界 に従う。`.op-env.agent` / `.op-env.human` 系（op run 用の参照のみファイル）は触ってよく、実値が入りうる `.env` / `.env.local` 系は読みも書きもしない
 - `git add .` は避ける。必ず path-limited add で scope を固定する
 - コミット前に `git diff --cached` を確認する
 - コード変更後は `pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries` を通す

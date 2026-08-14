@@ -14,7 +14,7 @@ const SUPABASE_CONNECTION_FIELDS = [
 ] as const;
 
 const opEnvExample = readFileSync(
-  fileURLToPath(new URL('../../.op-env.local.example', import.meta.url)),
+  fileURLToPath(new URL('../../.op-env.agent.example', import.meta.url)),
   'utf8',
 );
 
@@ -29,7 +29,7 @@ const devWithOpScript = readFileSync(
 );
 
 const adminEnvExample = readFileSync(
-  fileURLToPath(new URL('../../.op-env.admin.example', import.meta.url)),
+  fileURLToPath(new URL('../../.op-env.human.example', import.meta.url)),
   'utf8',
 );
 
@@ -88,7 +88,7 @@ describe('agent/supabase の接続情報境界', () => {
     );
     expect(matches).toHaveLength(0);
 
-    // .op-env.local.example は guard の vault allowlist（agent /
+    // .op-env.agent.example は guard の vault allowlist（agent /
     // Local のみ）により production 参照を持てない。ここでは staging 参照が
     // 消えたことだけを見る（production 側への repoint はできないし、しない）。
     expect(opEnvExample).not.toContain('op://agent/supabase/SUPABASE_ACCESS_TOKEN');
@@ -125,7 +125,7 @@ describe('agent/supabase の接続情報境界', () => {
     expect(adminEnvExample).toContain(
       'SUPABASE_SERVICE_ROLE_KEY=op://human/supabase/SUPABASE_SERVICE_ROLE_KEY',
     );
-    // .op-env.admin は各自が作る実行用ファイルなので commit させない
-    expect(gitignore).toMatch(/^\.op-env\.admin$/mu);
+    // .op-env.human は各自が作る実行用ファイルなので commit させない
+    expect(gitignore).toMatch(/^\.op-env\.human$/mu);
   });
 });

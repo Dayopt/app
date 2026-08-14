@@ -13,7 +13,7 @@ code: scripts/env/schema.ts
 ## 基本方針
 
 1. **1Password is master** — secret / token / recovery 情報 / 接続情報は 1Password を正とする
-2. **local does not store real secret values** — ローカルに置くのは `.op-env.local` の `op://` 参照だけ
+2. **local does not store real secret values** — ローカルに置くのは `.op-env.agent` の `op://` 参照だけ
 3. **external environments are replicas** — Vercel / GitHub Actions / Supabase Dashboard は 1Password から同期される複製
 4. **値を表示しない** — 確認は存在確認だけにし、secret 本体を terminal / docs / issue / chat に出さない
 5. **Turnstile is canonical** — bot protection は Cloudflare Turnstile を正とし、reCAPTCHA は旧方式として扱う
@@ -32,30 +32,29 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 **触ってよい（読み書き可）**:
 
-- `.env.example` — `op://` 参照スキーマの雛形。secret を含まないため、env var 追加時は agent が雛形更新まで完結する
-- `.op-env.local` / `.op-env.local.example` — 中身は `op://` 参照のみで実秘密なし
-- `.op-env.admin` / `.op-env.admin.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.admin.example` の編集）だけでなく、`.op-env.admin` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard.sh` の Bash 側ガードが、`--env-file` が `.op-env.admin` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
-  - **雛形も消費側の対象に含める**（`.op-env.admin.example` は `op://human/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
+- `.op-env.agent` / `.op-env.agent.example` — 中身は `op://` 参照のみで実秘密なし（app ごとの `.env.example` は 2026-08-14 に廃止した。変数一覧の正本は `scripts/env/schema.ts` で、手動維持の重複コピーは drift 源にしかならないため）
+- `.op-env.human` / `.op-env.human.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.human.example` の編集）だけでなく、`.op-env.human` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard.sh` の Bash 側ガードが、`--env-file` が `.op-env.human` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
+  - **雛形も消費側の対象に含める**（`.op-env.human.example` は `op://human/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
 
-**このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.local` だけで、それ以外は中身を問わず落とす。
+**このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.agent` だけで、それ以外は中身を問わず落とす。
 
-禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.admin` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.admin.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
+禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.human` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.human.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
-**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.local`）と workspace からの相対（`../../.op-env.local`）の 2 形式だけ。
+**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.agent`）と workspace からの相対（`../../.op-env.agent`）の 2 形式だけ。
 
-ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.admin.example /tmp/.op-env.local`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
+ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.human.example /tmp/.op-env.agent`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
 
 これで **path の形を変えて回り込む経路は閉じ切った**。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、変数展開、別ディレクトリの同名ファイル — いずれも許可形の literal に一致しないため落ちる。
 
 **flag の書き方も allowlist で判定する。** path を allowlist にしても、**flag と path の書き方を変えれば照合に入らない**（`--env-file"=…"` のように `=` の前へ引用符を刺すと、トリガーの正規表現に一致せず素通りした）。regex でコマンド文字列を見る限り shell の引数解釈は再現できず、同じ argv に落ちる書き方は無数にあるので、変形を数え上げるのをやめた。**`-env-file` という言及が 1 つでもあれば、その言及が全部「flag + `=`/空白 + 許可 literal + 区切り」でない限り落とす。** 加えて引用符と backslash を除いた写しでも同じ判定を行い、どちらかが落ちたら落とす（flag 名の内側へ引用符を刺す `--env-f"ile"=…` はこの写しでしか捕まらない）。
 
-**path が allowlist を通っても、中身を検査する。** `.op-env.local` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://human/…` を書き足せば path トリックなしで production credential に届く。そこで **`op://` の vault を allowlist で判定する** — 通すのは `agent` だけで、それ以外を参照する env-file は落とす（2026-08-14 の信頼境界軸再編 #2086 で、旧 3 vault の列挙から `agent` 1 つに縮んだ）。`human` / `ci` を禁止する形にしないのは、vault が増えた時に穴が開くため。検査は 3 層に置く:
+**path が allowlist を通っても、中身を検査する。** `.op-env.agent` は agent が書ける（本節の「触ってよい」）ので、そこへ `op://human/…` を書き足せば path トリックなしで production credential に届く。そこで **`op://` の vault を allowlist で判定する** — 通すのは `agent` だけで、それ以外を参照する env-file は落とす（2026-08-14 の信頼境界軸再編 #2086 で、旧 3 vault の列挙から `agent` 1 つに縮んだ）。`human` / `ci` を禁止する形にしないのは、vault が増えた時に穴が開くため。検査は 3 層に置く:
 
 1. **実行時** — 許可形を通った env-file の実ファイルを読み、許可外 vault があれば落とす。ファイルが無ければ解決される参照も無いので通す
 2. **消費は単一の単純コマンドに限る** — hook は Bash 呼び出しごとに実行前 1 回しか発火しないので、同じコマンドの中で先に書き換えられると 1 が**書き換え前**を読む（`echo … >> <env-file> && op run …`）。書き手を数え上げる方式は閉じない（`cp` / `tee` / `sed` / リダイレクトを列挙した実装を、`python3` / `node` / `>|` がすり抜けることを実測した）。**書き手ではなく「別のことが起きる余地」を落とす** — 区切り（`;` `&` `|` 改行）、コマンド置換（`$( )` / backtick）、プロセス置換（`<( )` / `>( )`）、`eval` のいずれかがあれば拒否する。リダイレクトは別のコマンドを走らせないので許す。この列挙は書き手やコマンド名と違って **shell の文法側で閉じている**。flag の言及判定・path の抽出・この単一コマンド判定は、生の文字列と引用符を除いた写しの**両方**で行う（片方だけだと `--env-f"ile"=…` がどの検査にも載らない）
-3. **書き込み時（Write / Edit）** — `.op-env.local` / `.op-env.local.example` へ許可外 vault を書くこと自体を落とす。1 は agent が `op run` を直接打つ場面でしか発火しない（`pnpm typecheck:op` などは npm script の内側で `op run` するので hook から見えない）ため、書き足しを発生源で止める。**これは best-effort で、権威は 1 の方**。この層が見るのは書き込まれるテキストだけなので、`agent` → `human` のように **`op://` を含まない部分置換の Edit は捕まらない**（[#1986](https://github.com/Dayopt/dayopt/issues/1986)）
+3. **書き込み時（Write / Edit）** — `.op-env.agent` / `.op-env.agent.example` へ許可外 vault を書くこと自体を落とす。1 は agent が `op run` を直接打つ場面でしか発火しない（`pnpm typecheck:op` などは npm script の内側で `op run` するので hook から見えない）ため、書き足しを発生源で止める。**これは best-effort で、権威は 1 の方**。この層が見るのは書き込まれるテキストだけなので、`agent` → `human` のように **`op://` を含まない部分置換の Edit は捕まらない**（[#1986](https://github.com/Dayopt/dayopt/issues/1986)）
 
-**この経路は本節の変更が新設したものではない。** 以前の `.op-env.local.example` は Supabase の接続情報を `op://agent/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
+**この経路は本節の変更が新設したものではない。** 以前の `.op-env.agent.example` は Supabase の接続情報を `op://agent/supabase/...`（実測で production と同一値）で持っており、何も書き足さずに同じ到達ができた。
 
 **閉じない境界**（意図的に追わない。書かない境界は「閉じているはず」と誤読される方が危険なので明記する）:
 
@@ -79,7 +78,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 **受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
 
 - `-env-file` のあとに何か語や引用符が続く文字列は、Bash 引数に含めるだけで落ちる（引用符の中でも散文でも同じ。`rg -- '--env-file' .claude/hooks/` のような自己検索も含む）。docs や commit message にコマンド例を書く時は Write / Edit で file に書いてから `--body-file` / `-F` で渡す。名前を検索したいだけなら **leading dash を外す**（`rg env-file .claude/hooks/` は通る）
-- `op run` の行に他のコマンドを繋げられない。雛形のコピーと実行を 1 行に畳む形（`cp .op-env.local.example .op-env.local && op run …`）、`cd` してからの実行、実行結果のリダイレクトによるログ取りが該当する。**分けて実行すれば通る**
+- `op run` の行に他のコマンドを繋げられない。雛形のコピーと実行を 1 行に畳む形（`cp .op-env.agent.example .op-env.agent && op run …`）、`cd` してからの実行、実行結果のリダイレクトによるログ取りが該当する。**分けて実行すれば通る**
 - 単一コマンド判定は文字単位なので、**引用済み引数の中の区切り記号でも落ちる**（`op run --env-file=… -- node -e "console.log('a|b')"`）。この形は分けても回避できない。判定範囲を絞れるかは [#1987](https://github.com/Dayopt/dayopt/issues/1987) で検討する
 
 **触らない（読みも書きもしない）**:
@@ -199,7 +198,7 @@ op item list --format=json | jq -r '.[] | select(.title == "<item名>") | .tags'
 
 ## Vault / Item / Field Schema
 
-field 名は可能な限り current code の env 名と一致させる。`.op-env.local.example` はこの schema の参照だけを持つ。
+field 名は可能な限り current code の env 名と一致させる。`.op-env.agent.example` はこの schema の参照だけを持つ。
 
 以下は期待 schema で、`scripts/env/schema.ts` が正本。`pnpm 1password:check` が item / field の実在と empty 状態を値を表示せずに検証する。2026-08-11 に 1Password CLI で全 entry を実測し、schema と実態の乖離は [#1929](https://github.com/Dayopt/dayopt/issues/1929) / [#1930](https://github.com/Dayopt/dayopt/issues/1930) で解消した（旧記述が所有者としていた #1558 は closed のため、受け皿は #1930 が引き継いだ）。
 
@@ -228,7 +227,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 `SUPABASE_ACCESS_TOKEN`（Supabase Management API 用。cloud の `supabase` MCP server と `scripts/enable-auth-hook.sh` が使う）は `human/supabase` を正本に一本化した（[#1933](https://github.com/Dayopt/dayopt/issues/1933)）。以前は `human/supabase` と同一値のまま `agent/supabase` にも複製されていたが、production を指す token を staging item から読む理由が無いため repo 側の参照はすべて production へ切り替えた。**item 自体は残す**（`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` は cron / send-email hook の local dev 検証に使うため、廃止しない）。1Password 側の field 削除は User の手作業。
 
-`google-calendar` item は 2026-08-14 実測時点で **1Password に存在しない**（#2063）。`.op-env.local.example` の該当行はコメントアウト済みで、`pnpm dev` の正規ルートはブロックされない。外部カレンダー連携を local dev で検証するには、test mode の Google OAuth client を作成した上で item を作る必要がある（User 手作業）。
+`google-calendar` item は 2026-08-14 実測時点で **1Password に存在しない**（#2063）。`.op-env.agent.example` の該当行はコメントアウト済みで、`pnpm dev` の正規ルートはブロックされない。外部カレンダー連携を local dev で検証するには、test mode の Google OAuth client を作成した上で item を作る必要がある（User 手作業）。
 
 ### `human`
 
@@ -286,35 +285,35 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 ## Local Dev
 
-ローカル開発の正規ルートは `.op-env.local` + `op run`。
+ローカル開発の正規ルートは `.op-env.agent` + `op run`。
 
 ```bash
-cp .op-env.local.example .op-env.local
+cp .op-env.agent.example .op-env.agent
 pnpm dev
 ```
 
-`pnpm dev` は `.op-env.local` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、停止中なら自動起動してから `supabase status -o env` の結果を URL / key として値表示なしで注入する。
+`pnpm dev` は `.op-env.agent` の存在を確認し、`.env.local` / `apps/product/.env.local` / `apps/web/.env.local` が残っている場合は fail する。通常は Supabase local を参照し、停止中なら自動起動してから `supabase status -o env` の結果を URL / key として値表示なしで注入する。
 
 **Supabase の接続先を 1Password 参照へ切り替える手段は無い。** かつての `DAYOPT_SUPABASE_TARGET=op` は `agent/supabase` の接続情報を使う escape hatch だったが、その中身が production だったため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。設定しても `pnpm dev` は起動せずエラーで止まる。Supabase local が上がらない時は Docker Desktop を確認し `supabase start` を手動実行する。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。
 
-**`.op-env.local.example` から参照を消しても、各自の `.op-env.local` は自動では追従しない。** `op run` は解決できない `op://` 参照があると起動前に失敗するため、1Password 側の field を削除したら `.op-env.local` の該当行も消す必要がある。`cp .op-env.local.example .op-env.local` で作り直すのが確実。
+**`.op-env.agent.example` から参照を消しても、各自の `.op-env.agent` は自動では追従しない。** `op run` は解決できない `op://` 参照があると起動前に失敗するため、1Password 側の field を削除したら `.op-env.agent` の該当行も消す必要がある。`cp .op-env.agent.example .op-env.agent` で作り直すのが確実。
 
-### 管理者運用の env（`.op-env.admin`）
+### 管理者運用の env（`.op-env.human`）
 
-`scripts/admin-*.sh` / `verify-login.sh` / `USE_LINKED_DB=true` の `seed-dev-data.sh` は Supabase Auth Admin API を service role で叩くため、Supabase の接続情報を必要とする。これらは `.op-env.local` ではなく **`.op-env.admin`**（`.op-env.admin.example` から作る、gitignore 済み）を使う。
+`scripts/admin-*.sh` / `verify-login.sh` / `USE_LINKED_DB=true` の `seed-dev-data.sh` は Supabase Auth Admin API を service role で叩くため、Supabase の接続情報を必要とする。これらは `.op-env.agent` ではなく **`.op-env.human`**（`.op-env.human.example` から作る、gitignore 済み）を使う。
 
 ```bash
-cp .op-env.admin.example .op-env.admin
-op run --env-file=.op-env.admin -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
+cp .op-env.human.example .op-env.human
+op run --env-file=.op-env.human -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
 ```
 
-参照先は `human/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。用が済んだら `.op-env.admin` は削除する（gitignore 済みで残しても secret は含まないが、消費だけが hook でブロックされる設計なので、残置は次に触る人の判断を増やすだけで益がない）。
+参照先は `human/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。用が済んだら `.op-env.human` は削除する（gitignore 済みで残しても secret は含まないが、消費だけが hook でブロックされる設計なので、残置は次に触る人の判断を増やすだけで益がない）。
 
 雛形は接続 3 field に加えて `SUPABASE_DB_PASSWORD` を持つ。`USE_LINKED_DB=true` の `seed-dev-data.sh` が最後に `supabase db query --linked` を実行するためで、**欠けると Auth API での user 作成だけ成功して DB 投入で止まり、既知 password の user が production に残る**（部分適用）。同じ理由で `human/supabase/SUPABASE_DB_PASSWORD` は `required` にしてある。
 
-Sentry runtime と source map upload は Production 限定のため、local の `.op-env.local`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `human/sentry` と `human/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `human/sentry-login` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
+Sentry runtime と source map upload は Production 限定のため、local の `.op-env.agent`、GitHub Actions、Vercel Preview / Development に Sentry env を複製しない。Vercel の `product` と `web` は同じ標準 env 名を使い、それぞれ `human/sentry` と `human/sentry-web` の値を Production target だけへ同期する。`SENTRY_AUTH_TOKEN` は `human/sentry-login` の単一 fieldをmasterとし、両projectのProduction targetへSensitive replicaとして同期する。
 
-`.op-env.local` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
+`.op-env.agent` には `op://` 参照だけを書く。実値、dummy secret、placeholder secret は書かない。
 
 ---
 
@@ -348,7 +347,7 @@ secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この P
 
 この境界の帰結として、`forbiddenFields` に登録した item は実在し続ける必要がある。item ごと廃止する時は `forbiddenFields` の該当 entry も同時に外す。`agent/supabase` は [#1933](https://github.com/Dayopt/dayopt/issues/1933) で検討したが、`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` が local dev 検証に使われているため item ごとの廃止はしない（`SUPABASE_ACCESS_TOKEN` だけを production へ一本化した）。
 
-`.op-env.local.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
+`.op-env.agent.example` の `op://` 参照は正規の local injection schema なので leak として扱わない。
 
 ### `1password:check` が失敗した時
 
@@ -447,14 +446,14 @@ reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加�
 
 ### やっていいこと
 
-- `op://` 参照を `.op-env.local` に書く
+- `op://` 参照を `.op-env.agent` に書く
 - 1Password item / field 名を docs に書く
 - secret の存在確認だけを出力する
 - Vercel Production / GitHub / Supabase Dashboard の長寿命 replica を同期する
 
 ### やらないこと
 
-- 実値を `.env.local` / `.op-env.local.example` / docs に書く
+- 実値を `.env.local` / `.op-env.agent.example` / docs に書く
 - secret を terminal output、Slack、Issue、PR description に貼る
 - `NEXT_PUBLIC_` だから安全、という判断で実値を公開する
 - Production secret を通常の local dev から参照する
@@ -465,7 +464,7 @@ reCAPTCHA 関連 env は旧方式。新規設定・docs・example には追加�
 
 ## 関連
 
-- `.op-env.local.example` — local injection 参照例
+- `.op-env.agent.example` — local injection 参照例
 - `apps/web/src/lib/turnstile/` — Turnstile 実装
 - `docs/engineering/infra.md` — Supabase / deployment 環境構成
 - `docs/operations/security/environment-secrets.md` — GitHub / Vercel / Supabase replica

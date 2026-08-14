@@ -63,8 +63,8 @@ function pendingEnvEntry(
 
 export const envSchema: EnvSchemaEntry[] = [
   // Supabase の接続情報（URL / anon key / service role key / DB password）は
-  // agent（旧 Dayopt-Staging） に置かない。常設 agent が存在せず、この 4 field は
-  // human の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
+  // agent（旧 Dayopt-Staging）に置かない。常設 staging 環境が存在せず、この 4 field は
+  // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
   // supabase status -o env から注入するため 1Password を経由しない。
   // SUPABASE_ACCESS_TOKEN は human（旧 Dayopt-Production）/supabase を正本に一本化した
   // （#1933）。human と同一値の複製を agent から読む理由が無いため、
@@ -147,14 +147,14 @@ export const envSchema: EnvSchemaEntry[] = [
 
 export const productionEnvSchema: EnvSchemaEntry[] = [
   // Supabase の接続情報はここが唯一の master。Staging 側の複製を撤去した分の
-  // required 検査をこちらへ移す。欠けると human の runtime に加えて、
-  // .op-env.admin 経由の管理者運用（緊急時のユーザー復旧）が op run の
+  // required 検査をこちらへ移す。欠けると production の runtime に加えて、
+  // .op-env.human 経由の管理者運用（緊急時のユーザー復旧）が op run の
   // 参照解決で止まる。
   envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'production', human, 'supabase'),
   envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'production', human, 'supabase'),
   envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'production', human, 'supabase'),
   envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', human, 'supabase'),
-  // .op-env.admin 経由の `supabase db query --linked` が要求する。欠けると
+  // .op-env.human 経由の `supabase db query --linked` が要求する。欠けると
   // seed が user 作成だけ成功して DB 投入で止まり、部分適用になる。
   envEntry('SUPABASE_DB_PASSWORD', true, 'secret', 'production', human, 'supabase'),
   envEntry('CRON_SECRET', false, 'secret', 'production', human, 'supabase'),

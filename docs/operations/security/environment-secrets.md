@@ -45,7 +45,7 @@ GitHub Actions の通常 build は release / source map upload を行わない�
 | ----------- | ----------------------------------------------------------- |
 | Production  | `human/supabase` から手動同期した replica                   |
 | Preview     | Supabase Vercel integration が PR branch credentials を注入 |
-| Development | 通常は使わない。local は `.op-env.local` + `op run`         |
+| Development | 通常は使わない。local は `.op-env.agent` + `op run`         |
 
 Preview scope に production Supabase credentials を手動設定しない。
 既に入っている場合は削除するか、Preview から外して Supabase integration 管理に寄せる。

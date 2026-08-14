@@ -244,7 +244,7 @@ describe('check-1password.ts', () => {
     'SUPABASE_SERVICE_ROLE_KEY',
   ])('production の Supabase %s が欠けたら失敗する', (field) => {
     // Staging 側の複製を撤去した分の required 検査は production へ移した。
-    // 欠けると runtime だけでなく .op-env.admin 経由の管理者運用も止まる。
+    // 欠けると runtime だけでなく .op-env.human 経由の管理者運用も止まる。
     const result = runCheck({ emptyField: field });
 
     expect(result.status).toBe(1);
