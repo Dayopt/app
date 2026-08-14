@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-13
+last_verified: 2026-08-14
 code: scripts/env/schema.ts
 ---
 
@@ -138,7 +138,62 @@ Google OAuth client secret、Apple Developer `.p8`、証明書、service account
 
 ### ⑤ リカバリー系
 
-再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置く。該当 item に 1Password タグ `recovery` を付け、横断確認は `op item list --tags recovery --format=json`（値は表示されない）で行う（2026-08-14、索引 secure note 方式から変更。索引 note は手動維持が必要で腐るため、item 側にコロケーションするタグ方式へ切り替えた。経緯は #2069）。**`op item list --tags recovery` の空リストは「recovery 情報が無い」ではなく「タグ未付与」の可能性を含む。** 既知の保持 item（`github-login` / `domain` / 各サービス Login item）と突き合わせて確認する。
+再発行できないもの。各サービスの 2FA recovery codes、TOTP seed、ドメインレジストラ recovery 情報を含む。正本は各 Login item 側に置く。該当 item に 1Password タグ `recovery` を付け、横断確認は `op item list --tags recovery --format=json`（値は表示されない）で行う（2026-08-14、索引 secure note 方式から変更。索引 note は手動維持が必要で腐るため、item 側にコロケーションするタグ方式へ切り替えた。経緯は #2069）。**`op item list --tags recovery` の空リストは「recovery 情報が無い」ではなく「タグ未付与」の可能性を含む。** 既知の保持 item（`github-login` / `domain` / 各サービス Login item）と突き合わせて確認する。タグの命名規約・横断確認コマンドの一般形は次節「タグ体系」を参照（`recovery` はそちらが定める性質軸のトップレベルタグの 1 つ）。
+
+---
+
+## タグ体系
+
+策定日: 2026-08-14（[#2077](https://github.com/Dayopt/dayopt/issues/2077)、User 承認。正本マッピングは同 issue の「正本マッピングの固定 + 適用状態の訂正」コメントを参照）
+
+1Password のタグは vault（環境・権限軸）/ カテゴリ（保管対象の型軸、上記①〜⑤）と直交する第 3 の軸として、**ベンダー軸**（漏洩・乗っ取り・ベンダー exit 時に「このベンダーに紐づく item 一式」を横断列挙する）と**性質軸**（事業・個人領域を横断する重要度フラグ）の 2 種類を運用する。
+
+### ベンダー軸: `dayopt/<vendor>`
+
+- 形式は全小文字・ネスト（`dayopt/<vendor>`）。bare `dayopt` は使わない（親 `dayopt` はネスト包含で暗黙に一致するため、`dayopt` 単独のタグは冗長）
+- **付与するのは次のいずれかに該当する item だけ**（全 item への一律付与はしない）:
+  - (a) 同一ベンダーに紐づく item が複数ある（例: Cloudflare の Login + API token 等が分かれている場合）
+  - (b) 製品名と事業者名が一致せず、タグが無いと同一ベンダーだと気づけない（例: Turnstile は Cloudflare の一機能なので `dayopt/cloudflare` 配下に含める）
+- **単発ログインの長尾はグループタグへ畳む**。個別ベンダータグを作らず、性質が近い長尾をまとめる:
+  - `dayopt/sns` ← X (Twitter) / Bluesky / Reddit / Instagram / TikTok
+  - `dayopt/tools` ← Zed / GitKraken / Tailwind / Recraft AI / Sakana / Grok / OpenAI / ChatGPT
+- **`dayopt/internal` は内部運用 item のグループタグ**（app / local / localhost / Dayopt）。外部ベンダーではなく自社の product/運用環境を指す item のため、ベンダー個別タグではなくこのグループへ畳む
+- **階層は 2 段まで**（`dayopt/<vendor>` 止まり。3 段化は不採用）。中間カテゴリ層を挟むと分類論争と表記揺れを生みやすく、`op item list --tags dayopt` のような親指定で子タグ全体を包含できるため、3 段目を作る実益が無い
+- **種別タグ（login / api 等）は作らない**。上記①〜⑤の保管対象カテゴリと役割が重複する
+- 個人領域（会社契約でない個人アカウント）の item にはこのタグ体系を適用しない
+- Freee は会計（事業基幹システム）のため、長尾グループへ畳まず `dayopt/freee` を単独維持する
+
+正本マッピング（2026-08-14 時点）: `dayopt/<vendor>` = cloudflare / github / google / supabase / sentry / resend / stripe / vercel / upstash / slack / anthropic / uptimerobot / freee。`dayopt/internal` = app・local・localhost・Dayopt。`dayopt/sns` = X・Bluesky・Reddit・Instagram・TikTok。`dayopt/tools` = Zed・GitKraken・Tailwind・Recraft AI・Sakana・Grok・OpenAI・ChatGPT。
+
+### 性質軸: トップレベルタグ
+
+- `recovery` — 再発行不可の recovery 情報を持つ item（詳細は上記§⑤）
+- `critical` — 定期監査の絞り込み対象にする重要 item（事業・個人領域を横断）
+
+いずれも **`dayopt/` 配下にネストしない**トップレベルタグで、ベンダー軸と併用する（1 item に複数タグを付けてよい）。事業・個人領域を横断する性質軸のため、`dayopt` 配下（事業領域限定）に置くと個人 item に付けられなくなる。
+
+### 横断確認コマンド
+
+値を含まない一覧取得のみ。secret 本体を表示しないのは基本方針 4 と同じ。**検収は `--tags` フィルタではなく `op item list --format=json` の生タグ集計で行う**（`--tags` フィルタは実測でネスト状態の誤判定を起こした。2026-08-14、本節末尾「運用注意」参照）:
+
+```bash
+# 全 item のタグを集計し、目視で分類・重複を確認する
+op item list --format=json | jq -r '.[] | .tags[]?' | sort | uniq -c | sort -rn
+
+# 特定 item のタグだけを確認する
+op item list --format=json | jq -r '.[] | select(.title == "<item名>") | .tags'
+```
+
+集計結果に無いタグは「未付与」、複数回同じタグが同一 item に出る場合は「重複汚染」（後述の運用注意を参照）。
+
+### 運用注意
+
+- **`op item edit --tags` はこの環境で置換ではなく和集合＋重複を作る**（2026-08-14 実測。ドキュメント上の仕様は全置換だが、実際には既存タグへ追記され、同一タグを繰り返し edit するたびにコピーが増える）。**タグ編集は 1Password アプリの GUI を正とし、`op item edit --tags` は使わない**
+- **SSO field を持つ item は GUI 編集のみ**。例: Cloudflare は SSO 連携 item のため CLI からのタグ付けができない
+- **SSH Key 型 item も同様に GUI 手動**（field 構成が Login item と異なり、CLI からのタグ編集が通らないケースがある）
+- **日本語ロケールで作成した API Credential 型 item は標準 field id が `credential` になる**。他ロケール・他型との field 名の揺れに注意する
+
+適用状況（2026-08-14 時点、詳細は #2077 のコメント履歴）: CLI で適用した item のうち一部（`domain` / `github-login` / `google` / `Dayopt-Production` の `supabase` / `tailwind`）が上記の `op item edit --tags` 挙動により重複タグを持つ汚染状態にある。SSO / SSH Key 型の GUI 手動対象 15 件と合わせて、GUI での掃除待ち。この汚染は**読み取り専用の横断確認コマンドには影響しない**（`jq` 側で重複を検出できるため）。
 
 ---
 
