@@ -4,13 +4,18 @@
  *
  * 「credential をモデルに触らせない」（#2022）の実装。スローアウェイ test user を
  * service role で作り、このスクリプト自身が headless Playwright でログインフォームへ
- * 入力する。パスワードは probe agent（Haiku）には一切見せず、ログイン後の
- * storageState（cookie）だけをファイルへ書き出す。probe agent は on-demand 登録した
- * 専用 Playwright MCP（`--storage-state=<このファイル>`）経由でこの storageState を
- * 読み込んだブラウザを操作する（agent 自身は storageState ファイルにも触れない）。
+ * 入力する。probe agent（Haiku）に渡るのは実セッション（refresh token を含む
+ * storageState）そのもので、password ではないというだけの話であることに注意
+ * （agent への非露出は `.claude/agents/usability-probe.md` の tools allowlist が
+ * 担保する。このスクリプトが担保するのは password を書き出さないことだけ）。
+ * probe agent は on-demand 登録した専用 Playwright MCP
+ * （`--storage-state=<このファイル>`）経由でこの storageState を読み込んだ
+ * ブラウザを操作する（agent 自身は storageState ファイルにも触れない）。
  *
- * 実行先の安全性は `service-role-target-guard.ts` にそのまま従う（local / preview
- * のみ既定許可、production は opt-in があっても拒否）。
+ * 実行先の安全性は `service-role-target-guard.ts` にそのまま従う（local のみ既定
+ * 許可、非ローカルは `E2E_ALLOW_NONLOCAL_SUPABASE=1` の明示 opt-in が必要、
+ * production は opt-in があっても拒否）。`--base-url` にも同じ判定を掛ける
+ * （下記 `resolveBaseUrlTarget`）。
  *
  * Usage:
  *   pnpm --filter @dayopt/product probe:setup
@@ -18,9 +23,13 @@
  *
  * 前提: 対象アプリが起動していること（ローカルなら `pnpm dev:raw`）。
  *
- * 後始末: 作成した test user は自動で消さない。標準出力に出る email を
- * `USER_EMAIL=<email> bash scripts/admin-delete-user.sh` で削除する。
- * 専用の cleanup script は書かない（既存の管理スクリプトを使い回す）。
+ * 後始末: 作成した test user は自動で消さない。標準出力に出る email とホストを
+ * 見て `USER_EMAIL=<email> bash scripts/admin-delete-user.sh` で削除する。
+ * **`.op-env.admin` 経由では実行しない**（`docs/operations/tooling.md` の通り
+ * production 専用の env file のため）。local を対象にした本スクリプトの
+ * cleanup は `supabase status -o env` の値を `NEXT_PUBLIC_SUPABASE_URL` /
+ * `SUPABASE_SERVICE_ROLE_KEY` として渡す。専用の cleanup script は書かない
+ * （既存の管理スクリプトを使い回す）。
  *
  * @see docs/product/log — プローブの所見はここに記録される（本スクリプトの管轄外）
  * @see .claude/skills/usability-probe/SKILL.md — このスクリプトを呼ぶオーケストレーション
@@ -39,11 +48,47 @@ import { resolveServiceRoleTarget } from './service-role-target-guard';
 import { suppressConsentBanner } from './suppress-consent-banner';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const APP_ROOT = resolve(__dirname, '../../../../..');
+// __dirname: apps/product/src/lib/test/e2e → 4 階層上で apps/product に戻る
+const APP_ROOT = resolve(__dirname, '../../../..');
 const DEFAULT_STORAGE_STATE_PATH = resolve(APP_ROOT, '.probe/storage-state.json');
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+/** Production app host（`docs/engineering/infra.md` の Environment topology）。 */
+const PRODUCTION_APP_HOST = 'app.dayopt.app';
+const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
+
+type BaseUrlTarget = { safe: true } | { safe: false; reason: string };
+
+/**
+ * `service-role-target-guard.ts` の `resolveServiceRoleTarget` と同型の判定を
+ * `--base-url` にも掛ける。opt-in で非ローカル Supabase を許可した状態のまま
+ * `--base-url` だけ production app を指すと、headless browser が実際に
+ * production のログインフォームへ credential を打ち込んでしまうため。
+ */
+function resolveBaseUrlTarget(
+  baseUrl: string,
+  env: NodeJS.ProcessEnv = process.env,
+): BaseUrlTarget {
+  let hostname: string;
+  try {
+    hostname = new URL(baseUrl).hostname;
+  } catch {
+    return { safe: false, reason: `--base-url を URL として解釈できない: ${baseUrl}` };
+  }
+
+  if (hostname === PRODUCTION_APP_HOST) {
+    return { safe: false, reason: `Production app (${PRODUCTION_APP_HOST}) には実行しない` };
+  }
+  if (LOCAL_HOSTNAMES.has(hostname)) return { safe: true };
+  if (env.E2E_ALLOW_NONLOCAL_SUPABASE === '1') return { safe: true };
+
+  return {
+    safe: false,
+    reason: `非ローカルの base-url (${hostname}) には E2E_ALLOW_NONLOCAL_SUPABASE=1 の明示 opt-in が必要`,
+  };
+}
 
 function parseBaseUrl(argv: string[]): string {
   const flag = argv.find((arg) => arg.startsWith('--base-url='));
@@ -64,6 +109,13 @@ async function main() {
   }
 
   const baseUrl = parseBaseUrl(process.argv.slice(2));
+  const baseUrlTarget = resolveBaseUrlTarget(baseUrl);
+  if (!baseUrlTarget.safe) {
+    console.error(`[usability-probe-setup] 実行を中止: ${baseUrlTarget.reason}`);
+    process.exitCode = 1;
+    return;
+  }
+
   const storageStatePath = parseStorageStatePath(process.argv.slice(2));
 
   const runId = crypto.randomUUID();
@@ -84,6 +136,14 @@ async function main() {
     user_metadata: { full_name: 'usability probe' },
   });
   if (authError) throw new Error(`test user 作成に失敗: ${authError.message}`);
+
+  // ここで一度出す: この後 browser 操作が失敗しても、cleanup に必要な email が
+  // 標準出力に残る（作った test user が身元不明のまま残らないようにする）。
+  const cleanupHost = new URL(SUPABASE_URL!).host;
+  console.log(`[usability-probe-setup] test user 作成済み（${cleanupHost}）: ${email}`);
+  console.log(
+    `[usability-probe-setup] cleanup: NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL} SUPABASE_SERVICE_ROLE_KEY=<ローカルの値> USER_EMAIL=${email} bash scripts/admin-delete-user.sh`,
+  );
 
   await adminSupabase.from('profiles').upsert({
     id: userId,
@@ -126,13 +186,13 @@ async function main() {
   );
 
   console.log(`[usability-probe-setup] storageState: ${storageStatePath}`);
-  console.log(`[usability-probe-setup] email (cleanup 用): ${email}`);
-  console.log(
-    `[usability-probe-setup] cleanup: USER_EMAIL=${email} bash scripts/admin-delete-user.sh`,
-  );
 }
 
-main().catch((error) => {
-  console.error('[usability-probe-setup] failed:', error);
-  process.exitCode = 1;
-});
+// tsx で直接実行された時だけ main() を走らせる。unit test から import しても
+// service role の実操作が走らないようにするためのガード。
+if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error('[usability-probe-setup] failed:', error);
+    process.exitCode = 1;
+  });
+}
