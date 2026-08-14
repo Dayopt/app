@@ -83,7 +83,14 @@ export const envSchema: EnvSchemaEntry[] = [
 
   envEntry('RESEND_API_KEY', false, 'secret', 'shared', agent, 'resend'),
   envEntry('RESEND_FROM_EMAIL', false, 'public', 'shared', agent, 'resend'),
-  envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'staging', agent, 'resend'),
+  pendingEnvEntry(
+    'RESEND_WEBHOOK_SECRET',
+    'secret',
+    'staging',
+    agent,
+    'resend',
+    '旧 Staging/resend（human/resend-old-staging に退避中）から agent/resend への field 統合待ち（#2086 cutover）',
+  ),
 
   envEntry('NEXT_PUBLIC_APP_URL', true, 'public', 'local', agent, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'staging', agent, 'app'),

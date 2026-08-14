@@ -7,6 +7,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OP_ENV_FILE="${OP_ENV_FILE:-.op-env.agent}"
+# OP_ENV_FILE の差し替えは basename が .op-env.agent のものに限る（#2086 の
+# 反証レビュー指摘）。任意名への差し替えを許すと、guard の内容検査
+# （.op-env.agent 系のみ対象）を受けないファイルを script 内部の op run に
+# 渡せてしまい、human / ci の参照が解決できる。
+if [ "$(basename "$OP_ENV_FILE")" != ".op-env.agent" ]; then
+  echo "❌ OP_ENV_FILE は basename が .op-env.agent のファイルに限ります（指定: $OP_ENV_FILE）" >&2
+  exit 1
+fi
 OP_ENV_PATH="$ROOT_DIR/$OP_ENV_FILE"
 
 cd "$ROOT_DIR"

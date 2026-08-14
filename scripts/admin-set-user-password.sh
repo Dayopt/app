@@ -23,7 +23,7 @@
 #     bash scripts/admin-set-user-password.sh
 #
 # 環境:
-#   `.op-env.human` は Dayopt-Production を参照するため、実行は production への操作になる。
+#   `.op-env.human` は human（旧 Dayopt-Production） を参照するため、実行は production への操作になる。
 #   実行したら手動作業ログを残す（docs/operations/tooling.md 第4部）。
 # ========================================
 

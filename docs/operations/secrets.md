@@ -40,7 +40,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.human` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.human.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
-**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.agent`）と workspace からの相対（`../../.op-env.agent`）の 2 形式だけ。
+**判定は fail closed で、path 文字列そのものを allowlist にする。** 許可するのは repo 直下（`.op-env.agent`）、明示 `./` 付き（`./.op-env.agent`）、workspace からの相対（`../../.op-env.agent`）の 3 形式だけ。
 
 ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.human.example /tmp/.op-env.agent`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
 
@@ -64,6 +64,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
   **ここから先の権威は 2 つ**。実行時の中身検査（上記 1）が、どの書き方で辿り着いても最後に実ファイルを読む。そして `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と 1Password 側の承認が、production への操作そのものを止める。**hook はそこへ至る前のスピードバンプ**であって、意図的な回避の最終的な境界ではない。
 
+- **inline env var 経由の `op://` 解決** — `VAR="op://…" op run -- <cmd>` の形は、env-file を経由しないため vault allowlist（env-file の中身検査）の対象外。`op run` は process env 中の参照も解決する。この形で human / ci を読むのは User の明示操作に限る（docs の実行例に User 実行と明記する）
 - **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
 - **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
 
@@ -231,7 +232,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 ### `human`
 
-**人間だけが読む box。AI への経路（op:// 参照・env-file）は作らない**（[#2086](https://github.com/Dayopt/dayopt/issues/2086)。ただし desktop 統合経由の到達は承認プロンプト gated であり、機械的遮断は Service Account 導入後）。本番 secret（旧 Dayopt-Production 全部）と、login / SSH / recovery / 個人系（旧 Dayopt-Shared から移動）を置く。
+**人間だけが読む box。AI が消費する経路を作らない**（`.op-env.human` の読み書きは #1993 どおり可、消費だけが gate。参照の解決は User の明示操作に限る）（[#2086](https://github.com/Dayopt/dayopt/issues/2086)。ただし desktop 統合経由の到達は承認プロンプト gated であり、機械的遮断は Service Account 導入後）。本番 secret（旧 Dayopt-Production 全部）と、login / SSH / recovery / 個人系（旧 Dayopt-Shared から移動）を置く。
 
 本番 secret は通常ローカルから参照せず、Vercel / Supabase Dashboard へ replica として同期する。Sentry は Product / Web で project を分離するため、metadata / DSN の item も分ける。
 
@@ -330,7 +331,7 @@ pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
-- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。local 専用で CI には組み込まない。実行例:
+- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。local 専用で CI には組み込まない。**実行は User が行う**（下の実行例は `ci` vault を inline 参照で解決するため、agent はコピペ実行しない。agent 用 token（`agent/vercel`、発行待ち）が入ったら agent も自走できる）。実行例:
 
   ```bash
   VERCEL_TOKEN="op://ci/vercel/VERCEL_TOKEN" VERCEL_TEAM_ID="op://ci/vercel/VERCEL_TEAM_ID" op run -- pnpm replica:check

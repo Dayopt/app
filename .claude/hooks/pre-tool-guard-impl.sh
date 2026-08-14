@@ -56,8 +56,11 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   # （pnpm typecheck:op などは npm script の内側で op run するので hook から見えない）。
   # 書き足しそのものをここで止める。
   # .op-env.human.example は設計上 op://human/... を持つので対象外。
+  # 旧名（.op-env.local 系）も検査対象に残す: User のローカルに手動移行まで
+  # 旧名ファイルが残り、消費は allowlist で落ちるが「許可外 vault を書き込む」
+  # 発生源だけが検査の空白になるため（#2086 反証レビュー）
   case "$FILE_PATH" in
-    *.op-env.agent | *.op-env.agent.example)
+    *.op-env.agent | *.op-env.agent.example | *.op-env.local | *.op-env.local.example)
       WRITTEN=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
       bad_vaults=$(disallowed_vault_refs "$WRITTEN")
       if [ -n "$bad_vaults" ]; then

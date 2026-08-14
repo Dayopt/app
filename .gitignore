@@ -173,4 +173,7 @@ temp/
 .env*.local
 .op-env.agent
 .op-env.human
+# 移行猶予（2026-08-14 の agent/human 改名前の旧名。手動移行完了後に消す）
+.op-env.local
+.op-env.admin
 .claude/scheduled_tasks.lock

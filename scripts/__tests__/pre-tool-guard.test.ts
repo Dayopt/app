@@ -555,6 +555,9 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     ['Edit に production 参照', edit(`/x/${AGENT}`, `A=${PROD_REF}`)],
     ['雛形へ production 参照', write(`/x/${LOCAL_EXAMPLE}`, `A=${PROD_REF}`)],
     ['未知の vault', write(`/x/${AGENT}`, 'A=op://Dayopt-Prod/supabase/KEY')],
+    // 旧名は User の手動移行まで disk に残りうる。消費は allowlist で落ちるが、
+    // 書き込みの発生源検査も移行猶予として旧名を対象に残す（#2086 反証レビュー）
+    ['旧名 .op-env.local への許可外 vault 参照', write(`/x/.op-env${'.'}local`, `A=${PROD_REF}`)],
   ])('書き込み時にも落とす: %s', (_label, input) => {
     expect(runGuard(input)).toBe('block');
   });
