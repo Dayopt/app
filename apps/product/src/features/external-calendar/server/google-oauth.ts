@@ -35,8 +35,13 @@ const GOOGLE_REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 /** `lib/oauth-server/tokens.ts` の ENTROPY_BYTES と同値。独自の桁数を発明しない。 */
 const ENTROPY_BYTES = 32;
 
-/** supabase client（`lib/supabase/oauth.ts`）と同じ外部呼び出しタイムアウト。 */
-const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
+/**
+ * supabase client（`lib/supabase/oauth.ts`）と同じ外部呼び出しタイムアウト。
+ *
+ * export するのは、callback route（#1990）が「code 消費の危険窓（exchange 呼び出しの
+ * 開始から DB 書き込み完了まで）」の worst case を導出するのに使うため。
+ */
+export const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
 
 export class GoogleOAuthError extends Error {
   constructor(

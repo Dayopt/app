@@ -30,6 +30,7 @@ type SyncOutcome =
   | 'reauth_required'
   | 'encryption_key_invalid'
   | 'partial_failure'
+  | 'partial_timeout'
   | 'not_configured';
 
 export function GoogleCalendarSettings() {
@@ -325,6 +326,8 @@ function persistedErrorMessage(
       return t('errors.encryptionKeyInvalid');
     case 'partial_failure':
       return t('errors.partialFailure');
+    case 'partial_timeout':
+      return t('errors.partialTimeout');
     default:
       return t('errors.generic');
   }
@@ -347,6 +350,9 @@ function showSyncOutcomeToast(
       break;
     case 'partial_failure':
       toast.error(t('outcomes.partialFailure'));
+      break;
+    case 'partial_timeout':
+      toast.error(t('outcomes.partialTimeout'));
       break;
     case 'not_configured':
       toast.error(t('outcomes.notConfigured'));

@@ -211,6 +211,8 @@ function calendarCallbackErrorMessage(
       return t('settings.integrations.googleCalendar.callback.mfaVerificationRequired');
     case 'scope_not_granted':
       return t('settings.integrations.googleCalendar.callback.scopeNotGranted');
+    case 'budget_exhausted':
+      return t('settings.integrations.googleCalendar.callback.budgetExhausted');
     case 'unavailable':
       return t('settings.integrations.googleCalendar.callback.unavailable');
     case 'generic':
