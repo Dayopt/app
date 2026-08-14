@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import { TOKEN_REQUEST_TIMEOUT_MS } from './google-oauth';
+import { GOOGLE_API_TIMEOUT_MS } from './providers/google';
 import { DUE_STALENESS_MS, isDailyFullSyncSlot } from './sync-schedule';
 import { syncConnection } from './sync-service';
 
@@ -23,6 +25,16 @@ import { syncConnection } from './sync-service';
 
 /** cron が 1 回で処理する due 接続の上限。時間予算に届く前の安全弁。 */
 const MAX_CONNECTIONS_PER_RUN = 500;
+
+/**
+ * 1 接続に着手する最低所要時間（#1965、risk-reviewer 指摘 PR #2075）。
+ *
+ * 残り予算がこれを下回ったまま `syncConnection` に入ると、`startSession`（token refresh、
+ * 最大 `TOKEN_REQUEST_TIMEOUT_MS`）を 1 回焼いて全カレンダーが即座に予算切れになる
+ * だけの空振り run が起きる。この gate で「着手しても何も進まないと分かっている」
+ * 接続を deferred として次回 cron に譲り、無駄な token refresh を防ぐ。
+ */
+const MIN_CONNECTION_BUDGET_MS = TOKEN_REQUEST_TIMEOUT_MS + GOOGLE_API_TIMEOUT_MS;
 
 type DispatchSummary = {
   /** due として列挙された接続数。 */
@@ -85,9 +97,10 @@ export async function dispatchCalendarSync(params: {
   const billingEnforced = isBillingEnforced();
 
   for (const connection of dueConnections) {
-    // 各接続を始める前に時間予算を確認する。超過分は次回 cron が last_synced_at 昇順で
-    // 最優先に拾う（取りこぼしにはならない）。
-    if (Date.now() >= deadlineAt) {
+    // 各接続を始める前に時間予算を確認する。残り予算が MIN_CONNECTION_BUDGET_MS を
+    // 下回ったら、着手しても空振りになると分かっているので次回に譲る。超過分は次回 cron が
+    // last_synced_at 昇順で最優先に拾う（取りこぼしにはならない）。
+    if (deadlineAt - Date.now() < MIN_CONNECTION_BUDGET_MS) {
       summary.deferred = dueConnections.length - summary.processed - summary.skippedNonPro;
       break;
     }

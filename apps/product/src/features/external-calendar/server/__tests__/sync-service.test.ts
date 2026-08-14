@@ -44,7 +44,7 @@ vi.mock('../providers/google', () => ({
   googleCalendarAdapter: { provider: 'google', startSession, syncCalendar },
 }));
 
-import { syncConnection } from '../sync-service';
+import { PERSIST_RESERVE_MS, syncConnection } from '../sync-service';
 
 const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
@@ -556,20 +556,22 @@ describe('syncConnection — 認可と鍵', () => {
 });
 
 describe('syncConnection — 予算切れ（#1965）', () => {
-  it('deadlineAt を adapter.syncCalendar へ渡す', async () => {
+  it('deadlineAt から PERSIST_RESERVE_MS を引いた値を adapter.syncCalendar へ渡す', async () => {
     setupDb({ connection: activeConnection(), calendars: oneCalendar() });
     syncCalendar.mockResolvedValue(syncResult());
     const deadlineAt = Date.now() + 30_000;
 
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID, deadlineAt });
 
+    // 素の deadlineAt をそのまま渡すと、判定直後に取得したページの永続化（upsert /
+    // tombstone / token 保存）自体が予算を考慮しない（risk-reviewer 指摘、PR #2075）。
     expect(syncCalendar).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ deadlineAt }),
+      expect.objectContaining({ deadlineAt: deadlineAt - PERSIST_RESERVE_MS }),
     );
   });
 
-  it('カレンダーが予算切れで打ち切られたら outcome は partial_timeout になる', async () => {
+  it('カレンダーが予算切れで打ち切られ、他に完走が無ければ last_synced_at を進めない', async () => {
     const { calls } = setupDb({ connection: activeConnection(), calendars: oneCalendar() });
     syncCalendar.mockResolvedValue(syncResult({ deadlineExceeded: true, nextCursor: null }));
 
@@ -578,11 +580,34 @@ describe('syncConnection — 予算切れ（#1965）', () => {
     expect(result.outcome).toBe('partial_timeout');
     expect(result.calendarsSynced).toBe(0);
     expect(result.calendarsFailed).toBe(0);
+    // 完全な空振り run（calendarsSynced === 0）。last_synced_at を進めると due 判定
+    // （昇順）でこの接続が列の最後尾へ回り、starvation 防止の順序が無効化されるため、
+    // 何も書き込まない（risk-reviewer 指摘、PR #2075）。
+    expect(findCall(calls, 'calendar_connections', 'update')).toBeUndefined();
+  });
+
+  it('部分的に進捗があった予算切れは last_sync_error を書いて last_synced_at を進める', async () => {
+    const CALENDAR_B = 'secondary';
+    const { calls } = setupDb({
+      connection: activeConnection(),
+      calendars: [
+        { provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: null },
+        { provider_calendar_id: CALENDAR_B, calendar_name: 'Personal', sync_token: null },
+      ],
+    });
+    syncCalendar
+      .mockResolvedValueOnce(syncResult({ nextCursor: 'completed-token' }))
+      .mockResolvedValueOnce(syncResult({ deadlineExceeded: true, nextCursor: null }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_timeout');
     const update = findCall(calls, 'calendar_connections', 'update')!;
     const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
     // partial_failure（実際の失敗）とは別コードにする。次回 sync で前進する見込みがあり、
     // リトライ導線の文言が異なる。
     expect(patch.last_sync_error).toBe('partial_timeout');
+    expect(patch.last_synced_at).toBe(RUN_ISO);
   });
 
   it('予算切れ前に完走したカレンダーの進捗（sync_token）は保存される', async () => {
@@ -609,6 +634,30 @@ describe('syncConnection — 予算切れ（#1965）', () => {
     // （cursor を確定しない契約は #1965 でも変わらない）。
     expect(tokenUpdates).toHaveLength(1);
     expect(argsOf(tokenUpdates[0]!, 'update')[0]).toMatchObject({ sync_token: 'completed-token' });
+  });
+
+  // 実際の失敗（provider / DB エラー）と予算切れが同一 run で起きた場合、前者を優先報告
+  // する（risk-reviewer 指摘、PR #2075）。partial_timeout が先に返ると「選択を確認して」
+  // という実失敗側の行動喚起が「もう一度お試しください」に隠れてしまう。
+  it('calendarsFailed と calendarsIncomplete が同一 run で両方起きたら partial_failure を優先する', async () => {
+    const CALENDAR_B = 'secondary';
+    const { calls } = setupDb({
+      connection: activeConnection(),
+      calendars: [
+        { provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: null },
+        { provider_calendar_id: CALENDAR_B, calendar_name: 'Personal', sync_token: null },
+      ],
+    });
+    syncCalendar
+      .mockRejectedValueOnce(new CalendarProviderError('shared removed', 'forbidden'))
+      .mockResolvedValueOnce(syncResult({ deadlineExceeded: true, nextCursor: null }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_failure');
+    const update = findCall(calls, 'calendar_connections', 'update')!;
+    const patch = argsOf(update, 'update')[0] as Record<string, unknown>;
+    expect(patch.last_sync_error).toBe('partial_failure');
   });
 
   // reauth_required と deadline_exceeded が同一 run で両方起きた場合、reauth を優先する

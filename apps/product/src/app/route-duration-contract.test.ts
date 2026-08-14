@@ -16,15 +16,20 @@ import { describe, expect, it } from 'vitest';
  * 「Supabase 1 往復 + rate limit 1 回」を下回らないことしか見ない。依存が全部同時に
  * それぞれの timeout まで張り付く理論上の worst path は、一部の route で予算を超える:
  *
- * - `api/integrations/google-calendar/callback`（60）— getUser 15 + rate limit 2 +
- *   Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s。ただし #1990 で
- *   token 交換（code 消費）の直前に残り予算を検査するようになったため、消費後に 60 秒を
- *   超えて kill される経路自体が塞がれている（予算不足なら code を使わず安全に失敗する）
+ * - `api/integrations/google-calendar/callback`（90）— getUser 15 + rate limit 2 +
+ *   Pro 判定 15 + Google token 交換 15 + connection write 15 ≒ 62s。#1990 で token 交換
+ *   （code 消費）の直前に残り予算を検査するようになったため、消費後に kill される経路
+ *   自体は塞がれている（予算不足なら code を使わず安全に失敗する）。maxDuration=90 は
+ *   その予算検査（`POST_EXCHANGE_BUDGET_MS=45s`）を維持したまま、消費前フェーズの
+ *   スラックを確保するための値（指揮台決定、PR #2075 クロスレビュー）
  * - `api/mcp`（120）— 認証フェーズが逐次 getUser 15 × 5 ≒ 75s で 60 を超えるため、
  *   段の値には戻せていない（#1990 の「検討する」項目、未着手）
- * - `api/trpc/[trpc]`（60）— #1965 で `externalCalendar.syncConnection`（procedure の
- *   dispatch 数に上限が無い理由だった唯一の既知の要因）に wall-clock 予算を持たせたため
- *   段の値まで下げられた。他 procedure の worst path を全数監査した上での値ではない
+ * - `api/trpc/[trpc]`（60）— #1965 で `externalCalendar.syncNow` / `updateSelectedCalendars`
+ *   が呼ぶ `syncConnection`（procedure の dispatch 数に上限が無い理由だった最大の既知
+ *   要因）に wall-clock 予算を持たせたため段の値まで下げられた。同じ理由で
+ *   `listProviderCalendars` / `disconnect` も本来は予算化が要る（follow-up issue で
+ *   追跡、下記参照）が、この PR の scope は #1965/#1990 に限定し、他 procedure の
+ *   worst path 全数監査はしていない
  *
  * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると障害半径を絞る
  * という目的そのものを失う。**予算は blast radius の上限であって、全依存同時ハング時の
@@ -65,10 +70,13 @@ const ROUTE_DURATION_CONTRACT = {
   'src/app/api/v1/calendar/[token]/route.ts': 60,
   'src/app/oauth/token/route.ts': 60,
   // #1990: token 交換（code 消費）の直前で残り予算を検査するようになったため、逐次 worst
-  // path（77s）が 60 を超えていても kill 時の失敗の質が変わり、段の値へ戻せた。
-  'src/app/api/integrations/google-calendar/callback/route.ts': 60,
+  // path（77s）を 60 が下回っていても kill 時の失敗の質が変わり安全側になった。90 は
+  // その安全性を保ったまま、消費前フェーズの可用性の崖を除去するための値
+  // （指揮台決定、PR #2075 クロスレビュー。詳細は maxDuration 直上のコメント）。
+  'src/app/api/integrations/google-calendar/callback/route.ts': 90,
   // #1965: externalCalendar.syncConnection に wall-clock 予算を持たせたため、procedure の
   // dispatch 数に上限が無いという構造的な理由がなくなり、段の値へ戻せた。
+  // listProviderCalendars / disconnect の予算化は follow-up issue で追跡（未着手）。
   'src/app/api/trpc/[trpc]/route.ts': 60,
 
   // 逐次 worst path が 60 を超えるため段から外した route。MCP の認証フェーズは

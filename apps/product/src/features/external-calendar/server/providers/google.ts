@@ -29,8 +29,14 @@ import {
 
 const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
-/** supabase client / token endpoint と同じ外部呼び出しタイムアウト。 */
-const GOOGLE_API_TIMEOUT_MS = 15_000;
+/**
+ * supabase client / token endpoint と同じ外部呼び出しタイムアウト。
+ *
+ * export するのは、cron dispatcher（#1965）が「1 接続に着手する最低所要時間」を
+ * `refreshAccessToken`（google-oauth.ts の `TOKEN_REQUEST_TIMEOUT_MS`）と合わせて
+ * 導出するのに使うため。
+ */
+export const GOOGLE_API_TIMEOUT_MS = 15_000;
 
 /**
  * Google の上限ちょうど。既定の 250 のままだと初回 full sync のリクエスト数が 10 倍になる。

@@ -38,16 +38,23 @@ import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 /**
- * #1990: code 消費（token 交換）前に残り予算を検査するようになったので、段の値（60）に
- * 戻せる。逐次 worst path は再接続分岐が最長で getUser 15 + rate limit 2 + Pro 判定 15 +
- * Google token 交換 15 + `getReconnectTarget` 15 + `reconnectExistingConnection` 15 = 77 秒
- * だが、予算検査により「消費後に 60 秒を超えて kill される」経路自体を塞いだ
- * （消費前に予算不足なら code を使わず `budget_exhausted` で戻す）。
+ * #1990 の予算検査により「code 消費後に kill される」経路は塞いだが、その予算検査
+ * 自体の設計（`POST_EXCHANGE_BUDGET_MS = 45_000` 固定）と `maxDuration` の関係を
+ * 指揮台が再検討した（PR #2075 クロスレビュー、risk/behavior 両者一致）。
+ *
+ * maxDuration=60 のままだと `TIME_BUDGET_MS(50s) - POST_EXCHANGE_BUDGET_MS(45s) = 5s` が
+ * code 消費前フェーズ（getUser / MFA / rate limit / write fence / Pro 判定の直列
+ * 4〜5 ホップ）の全予算になる。個別 timeout に達しない軽度の遅延（Supabase 1 往復 2s 級）
+ * だけで、従来成功していた接続が `budget_exhausted` になる可用性の崖ができる。
+ *
+ * **指揮台決定**: maxDuration を 90 へ引き上げる（`POST_EXCHANGE_BUDGET_MS` = 45s は
+ * 不変）。消費前スラックが 35s に回復し、worst case 総計 80s ≤ 90 で hard kill margin
+ * 10s を維持する。安全性（code 消費前後の境界の扱い）は変えず、可用性の崖だけを除去する。
  */
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 /** maxDuration に対する安全マージン。cron（`TIME_BUDGET_MS`）と同じ導出。 */
-const TIME_BUDGET_MS = 50_000;
+const TIME_BUDGET_MS = 80_000;
 
 /**
  * code 消費の危険窓（#1990）。

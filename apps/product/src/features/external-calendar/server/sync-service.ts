@@ -40,6 +40,23 @@ const WINDOW_RADIUS_MS = 90 * 24 * 60 * 60 * 1000;
 /** tombstone UPDATE の 1 バッチあたり件数。URL 長を意識した値。 */
 const TOMBSTONE_BATCH_SIZE = 150;
 
+/**
+ * ページングループ後に確定的に走る永続化（upsert 1 回・tombstone バッチ・token 保存）の
+ * ための予算取り置き（#1965）。adapter へ渡す deadline はこれを引いた値にする — 素の
+ * `deadlineAt` をそのまま渡すと、判定直後に次ページを取りに行かない分岐はあっても、
+ * 直前に取得済みのページの永続化そのものが予算を考慮しないため、大きい応答（cancelled
+ * 集中等）で maxDuration の hard kill に間に合わない run が起きうる
+ * （risk-reviewer 指摘、PR #2075）。
+ *
+ * `2 * DB_REQUEST_TIMEOUT_MS` は「upsert 1 回 + もう 1 回の書き込み（token 保存 or
+ * tombstone 1 バッチ）」の典型ケースを覆う値。tombstone が 1 バッチを超える極端な
+ * cancelled 集中（1 ページに `TOMBSTONE_BATCH_SIZE` を大きく超える cancelled が返る場合）
+ * は、他の worst-case-of-everything 同様に受容する残余リスクとする
+ * （`route-duration-contract.test.ts` の位置づけと同じ — 予算は blast radius の上限で
+ * あって全依存同時ハング時の完走保証ではない）。
+ */
+export const PERSIST_RESERVE_MS = 2 * DB_REQUEST_TIMEOUT_MS;
+
 const PROVIDER = 'google';
 
 /**
@@ -47,6 +64,14 @@ const PROVIDER = 'google';
  *
  * この列は authenticated に SELECT が GRANT されているので、provider の生メッセージや URL を
  * 入れてはいけない（PII / 内部情報の露出）。値域を閉じておき、UI（Step 6）が i18n する。
+ *
+ * **DB 側 allowlist との二重管理に注意**（risk-reviewer 指摘、PR #2075）。fenced sync
+ * writer v1（`supabase/migrations/20260730090017_fenced_calendar_sync_writers.sql` の
+ * `finish_calendar_sync_run_v1`、#2050 系）は `p_last_sync_error` を 5 値
+ * （`encryption_key_invalid` / `partial_failure` / `provider_unavailable` /
+ * `rate_limited` / `reauth_required`）に制限しており、この型の値と自動同期しない。
+ * 現行 sync-service.ts は RPC を経由しない直接書き込みのため今は不発だが、v1 writer へ
+ * 移行する際は allowlist 側にも新値を追加する migration が要る（follow-up issue で追跡）。
  */
 type SyncErrorCode =
   | 'reauth_required'
@@ -300,32 +325,46 @@ export async function syncConnection(params: {
   // 同じ値を使う。anti-join の本体は event-pruning.ts に集約している。
   // best-effort — 失敗しても sync 自体は成功として扱う（fail-closed にすると cleanup 失敗が
   // 同期結果全体を巻き込む）。拾いきれなかった行は次回の sync か disconnect の prune が回収する。
-  try {
-    await deleteUnreferencedEvents({
-      userId,
-      connectionId,
-      scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
-    });
-  } catch (error) {
-    logger.warn('[calendar-sync] failed to prune out-of-window events');
-    captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
-      feature: 'external_calendar',
-      operation: 'sync_window_prune',
-    });
+  //
+  // 予算切れが起きた run ではスキップする。prune は元々 best-effort で必須の後始末ではない
+  // ため、ただでさえ足りない残り予算をここに使うより次回の sync に譲る方が安全（risk-reviewer
+  // 指摘、PR #2075）。
+  if (calendarsIncomplete === 0) {
+    try {
+      await deleteUnreferencedEvents({
+        userId,
+        connectionId,
+        scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
+      });
+    } catch (error) {
+      logger.warn('[calendar-sync] failed to prune out-of-window events');
+      captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+        feature: 'external_calendar',
+        operation: 'sync_window_prune',
+      });
+    }
   }
 
-  if (calendarsIncomplete > 0) {
-    // 予算切れで一部カレンダーへ着手できなかった／完走できなかった。完走した分の進捗
-    // （calendarsSynced、sync_token）は既に保存済みなので、次回 sync はこのカレンダーから
-    // 再開する。calendarsFailed（実際の失敗）も同時に起きうるが、リトライ導線は共通なので
-    // ここでは区別しない — 予算内で再試行すれば実際の失敗だけが残る形で次回報告される。
-    await writeConnectionError(db, connectionId, userId, 'partial_timeout', runStartedAtIso);
-    return { outcome: 'partial_timeout', calendarsSynced, calendarsFailed };
-  }
-
+  // 実際の失敗（provider / DB エラー）を予算切れより先に報告する。両方が同一 run で
+  // 起きた場合、後者を先に返すと「選択を確認して」という実失敗側の行動喚起が
+  // 「もう一度お試しください」に隠れてしまう（risk-reviewer 指摘、PR #2075）。
   if (calendarsFailed > 0) {
     await writeConnectionError(db, connectionId, userId, 'partial_failure', runStartedAtIso);
     return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
+  }
+
+  if (calendarsIncomplete > 0) {
+    // 予算切れで一部カレンダーへ着手できなかった／完走できなかった。
+    if (calendarsSynced > 0) {
+      // 部分的に進捗があった（sync_token は完走した分だけ既に確定済み）。次回 sync は
+      // 残りのカレンダーから再開する。last_synced_at を進めて記録する。
+      await writeConnectionError(db, connectionId, userId, 'partial_timeout', runStartedAtIso);
+    }
+    // else: 完全な空振り（1 カレンダーも完走しなかった）。last_synced_at を進めると
+    // due 判定（last_synced_at 昇順）でこの接続が列の最後尾へ回り、starvation 防止の
+    // 順序が無効化される。次回 run が最優先で再試行できるよう、何も書き込まない
+    // （risk-reviewer 指摘、PR #2075）。
+    return { outcome: 'partial_timeout', calendarsSynced, calendarsFailed };
   }
 
   await writeConnectionSuccess(db, connectionId, userId, runStartedAtIso);
@@ -359,13 +398,18 @@ async function syncOneCalendar(args: {
 
   const cursor = forceFullSync ? null : calendar.sync_token;
 
+  // adapter には PERSIST_RESERVE_MS を引いた締切を渡す。素の deadlineAt をそのまま渡すと、
+  // 判定直後に取得したページの永続化（upsert / tombstone / token 保存）自体が予算を
+  // 考慮しないため、maxDuration の hard kill に間に合わない run が起きうる。
+  const adapterDeadlineAt = deadlineAt === undefined ? undefined : deadlineAt - PERSIST_RESERVE_MS;
+
   let result: Awaited<ReturnType<CalendarProviderAdapter['syncCalendar']>>;
   try {
     result = await adapter.syncCalendar(session, {
       calendarId: calendar.provider_calendar_id,
       cursor,
       window,
-      deadlineAt,
+      deadlineAt: adapterDeadlineAt,
     });
 
     if (result.cursorInvalid) {
@@ -375,7 +419,7 @@ async function syncOneCalendar(args: {
         calendarId: calendar.provider_calendar_id,
         cursor: null,
         window,
-        deadlineAt,
+        deadlineAt: adapterDeadlineAt,
       });
     }
   } catch (error) {
