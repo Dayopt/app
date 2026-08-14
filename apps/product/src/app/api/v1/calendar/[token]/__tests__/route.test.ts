@@ -28,8 +28,8 @@ import { GET } from '../route';
 
 const TOKEN = '00000000-0000-4000-8000-000000000001';
 
-function request(ip = '203.0.113.10') {
-  return new NextRequest(`https://app.dayopt.com/api/v1/calendar/${TOKEN}.ics`, {
+function request(ip = '203.0.113.10', token = TOKEN) {
+  return new NextRequest(`https://app.dayopt.com/api/v1/calendar/${token}.ics`, {
     headers: { 'x-real-ip': ip },
   });
 }
@@ -42,8 +42,8 @@ function mockTokenLookup(userId: string | null = 'user-1') {
     .mockReturnValueOnce({ from: vi.fn(() => createChainableMock([])) });
 }
 
-function context() {
-  return { params: Promise.resolve({ token: `${TOKEN}.ics` }) };
+function context(token = TOKEN) {
+  return { params: Promise.resolve({ token: `${token}.ics` }) };
 }
 
 describe('iCal feed route', () => {
@@ -163,6 +163,35 @@ describe('iCal feed route', () => {
     expect(response.status).toBe(401);
     expect(captureUnexpectedDatabaseError).not.toHaveBeenCalled();
     expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  // token rotate（regenerateICalToken、settings-service.ts）の temporal contract（#2081）。
+  // 1 user 1 token を UPDATE で上書きする設計のため、旧 token は DB 上「存在しない token」
+  // と区別なく lookup が失敗する。410（issue #2081 の当初検証基準）ではなく 401 を維持する
+  // 設計判断は #2081 の plan コメント参照 — revoked token 履歴を持たない現在の設計では
+  // 「一度も存在しなかった token」と「rotate 済みの旧 token」を区別できない。
+  it('rotate後は旧tokenが401、新tokenが200になる', async () => {
+    const OLD_TOKEN = '00000000-0000-4000-8000-0000000000aa';
+    const NEW_TOKEN = '00000000-0000-4000-8000-0000000000bb';
+
+    // 旧token: rotate後のDBには存在しないので lookup は null（「存在しないtoken」と同じ経路）。
+    createServiceRoleClient.mockReturnValue({ from: vi.fn(() => createChainableMock(null)) });
+    const oldResponse = await GET(request(undefined, OLD_TOKEN), context(OLD_TOKEN));
+    expect(oldResponse.status).toBe(401);
+
+    vi.clearAllMocks();
+    rateLimit.mockResolvedValue({ success: true, limit: 10, remaining: 9, reset: Date.now() });
+    ipLimit.mockResolvedValue({ success: true });
+    globalLimit.mockResolvedValue({ success: true });
+
+    // 新token: rotate後に有効な唯一のtoken。
+    const tokenQuery = createChainableMock({ user_id: 'user-1' });
+    const plansQuery = createChainableMock([]);
+    createServiceRoleClient
+      .mockReturnValueOnce({ from: vi.fn(() => tokenQuery) })
+      .mockReturnValueOnce({ from: vi.fn(() => plansQuery) });
+    const newResponse = await GET(request(undefined, NEW_TOKEN), context(NEW_TOKEN));
+    expect(newResponse.status).toBe(200);
   });
 
   it('token lookupのDB障害を500としてcaptureし、401へ丸めない', async () => {
