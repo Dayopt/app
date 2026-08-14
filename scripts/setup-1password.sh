@@ -212,7 +212,7 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=turnstile
   'TURNSTILE_SECRET_KEY[concealed]='
 
 run item create --category=login --vault=Dayopt-Shared --title=github-login \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
+  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
   'username=' \
   'password[concealed]=' \
   'recovery-codes[concealed]=' \
@@ -236,25 +236,17 @@ run item create --category=apicredential --vault=Dayopt-Shared --title=google \
   'YAHOO_VERIFICATION[text]='
 
 run item create --category=login --vault=Dayopt-Shared --title=domain \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
+  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
   'username=' \
   'password[concealed]=' \
   'registrar-url[url]=' \
   'recovery-codes[concealed]=' \
   '2fa-notes[text]='
 
-run item create --category=securenote --vault=Dayopt-Shared --title=recovery-codes \
-  --tags=dayopt,shared \
-  notesPlain="横断 index。正本は各サービスの Login item 側。ここは横串確認用。
-更新時は両方同時に。
-
-stripe:
-supabase:
-vercel:
-github:
-apple:
-google:
-anthropic: "
+# recovery 情報の横断確認は索引 secure note ではなく 1Password タグ方式を使う
+# （2026-08-14、#2069）。各 Login item に `recovery` タグを付け、
+# `op item list --tags recovery --format=json` で横断確認する（タグ付け自体は
+# 各 item 作成後の運用手順で行う。ここでの item 作成は不要）
 
 # github / apple-developer は既存 item move または後日 GUI 作成推奨 (Phase 3 参照)
 echo ""

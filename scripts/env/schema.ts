@@ -218,7 +218,6 @@ export const operationalItems: OperationalItem[] = [
   { vault: shared, item: 'github-ssh', required: true },
   { vault: shared, item: 'domain', required: true },
   { vault: shared, item: 'resend-support-replies', required: true },
-  { vault: shared, item: 'recovery-codes', required: true },
 ];
 
 export const onePasswordEnvSchema = [...envSchema, ...productionEnvSchema];

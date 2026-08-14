@@ -27,6 +27,14 @@ describe('parseCalendarCallbackResult', () => {
     ).toEqual({ type: 'error', error: 'authorization_expired' });
   });
 
+  // narrow pair の granular consent で片方だけ許可された場合。汎用文言に畳むと
+  // 「2 つの権限を両方許可すればよい」が伝わらない
+  it('narrow pair の片方だけ許可された失敗を専用文言へ振り分ける', () => {
+    expect(
+      parseCalendarCallbackResult(new URLSearchParams('calendar=error&reason=scope_not_granted')),
+    ).toEqual({ type: 'error', error: 'scope_not_granted' });
+  });
+
   it('未知の provider reason を UI に露出しない', () => {
     expect(
       parseCalendarCallbackResult(new URLSearchParams('calendar=error&reason=raw-provider-detail')),

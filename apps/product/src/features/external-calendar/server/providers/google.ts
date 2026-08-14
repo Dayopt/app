@@ -11,22 +11,13 @@ import {
   googleEventsListResponseSchema,
   type GoogleEvent,
 } from '../../schemas/google-calendar';
-import {
-  exchangeAuthorizationCode,
-  GoogleOAuthError,
-  hasCalendarReadonlyScope,
-  parseGrantedScopes,
-  parseIdToken,
-  refreshAccessToken,
-  revokeRefreshToken,
-} from '../google-oauth';
+import { GoogleOAuthError, refreshAccessToken, revokeRefreshToken } from '../google-oauth';
 import {
   CalendarProviderError,
   type CalendarProviderAdapter,
   type CalendarProviderErrorKind,
   type NormalizedExternalEvent,
   type ProviderCalendar,
-  type ProviderConnectionIdentity,
   type ProviderSession,
   type SyncCalendarResult,
   type SyncWindow,
@@ -486,33 +477,6 @@ function reportUnparsableCalendars(unparsableCount: number): void {
 
 export const googleCalendarAdapter: CalendarProviderAdapter = {
   provider: 'google',
-
-  async exchangeCode(params): Promise<ProviderConnectionIdentity> {
-    const tokens = await exchangeAuthorizationCode(params);
-    const grantedScopes = parseGrantedScopes(tokens.scope);
-
-    if (!hasCalendarReadonlyScope(grantedScopes)) {
-      // granular consent でカレンダーだけ外された。active な接続を作ると同期が毎回
-      // 403 になり「接続済みなのに同期されない」状態が残る。
-      throw new CalendarProviderError('calendar.readonly scope was not granted', 'forbidden');
-    }
-
-    if (!tokens.refresh_token) {
-      throw new CalendarProviderError(
-        'token response did not include a refresh token',
-        'permanent',
-      );
-    }
-
-    const idToken = parseIdToken(tokens.id_token);
-
-    return {
-      refreshToken: tokens.refresh_token,
-      accountId: idToken.sub,
-      accountEmail: idToken.email ?? null,
-      grantedScopes,
-    };
-  },
 
   async startSession(refreshToken): Promise<ProviderSession> {
     try {
