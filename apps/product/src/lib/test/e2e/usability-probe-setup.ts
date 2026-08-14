@@ -14,8 +14,9 @@
  *
  * 実行先の安全性は `service-role-target-guard.ts` にそのまま従う（local のみ既定
  * 許可、非ローカルは `E2E_ALLOW_NONLOCAL_SUPABASE=1` の明示 opt-in が必要、
- * production は opt-in があっても拒否）。`--base-url` にも同じ判定を掛ける
- * （下記 `resolveBaseUrlTarget`）。
+ * production は opt-in があっても拒否）。`--base-url` にも同型の allowlist 判定
+ * （`../usability-probe-guards.ts` の `resolveBaseUrlTarget`）を掛ける。opt-in
+ * env は Supabase 側と衝突しないよう `USABILITY_PROBE_ALLOW_NONLOCAL` に分離。
  *
  * Usage:
  *   pnpm --filter @dayopt/product probe:setup
@@ -44,60 +45,23 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database';
 
+import { resolveBaseUrlTarget } from '../usability-probe-guards';
 import { resolveServiceRoleTarget } from './service-role-target-guard';
 import { suppressConsentBanner } from './suppress-consent-banner';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // __dirname: apps/product/src/lib/test/e2e → 4 階層上で apps/product に戻る
 const APP_ROOT = resolve(__dirname, '../../../..');
-const DEFAULT_STORAGE_STATE_PATH = resolve(APP_ROOT, '.probe/storage-state.json');
+// storageState の出力先は固定する（可変にすると .probe/ 配下から外れた場所へ
+// 生セッションを書き出せてしまう。#2076 クロスレビュー指摘）。
+const STORAGE_STATE_PATH = resolve(APP_ROOT, '.probe/storage-state.json');
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-/** Production app host（`docs/engineering/infra.md` の Environment topology）。 */
-const PRODUCTION_APP_HOST = 'app.dayopt.app';
-const LOCAL_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
-
-type BaseUrlTarget = { safe: true } | { safe: false; reason: string };
-
-/**
- * `service-role-target-guard.ts` の `resolveServiceRoleTarget` と同型の判定を
- * `--base-url` にも掛ける。opt-in で非ローカル Supabase を許可した状態のまま
- * `--base-url` だけ production app を指すと、headless browser が実際に
- * production のログインフォームへ credential を打ち込んでしまうため。
- */
-function resolveBaseUrlTarget(
-  baseUrl: string,
-  env: NodeJS.ProcessEnv = process.env,
-): BaseUrlTarget {
-  let hostname: string;
-  try {
-    hostname = new URL(baseUrl).hostname;
-  } catch {
-    return { safe: false, reason: `--base-url を URL として解釈できない: ${baseUrl}` };
-  }
-
-  if (hostname === PRODUCTION_APP_HOST) {
-    return { safe: false, reason: `Production app (${PRODUCTION_APP_HOST}) には実行しない` };
-  }
-  if (LOCAL_HOSTNAMES.has(hostname)) return { safe: true };
-  if (env.E2E_ALLOW_NONLOCAL_SUPABASE === '1') return { safe: true };
-
-  return {
-    safe: false,
-    reason: `非ローカルの base-url (${hostname}) には E2E_ALLOW_NONLOCAL_SUPABASE=1 の明示 opt-in が必要`,
-  };
-}
-
 function parseBaseUrl(argv: string[]): string {
   const flag = argv.find((arg) => arg.startsWith('--base-url='));
   return flag ? flag.slice('--base-url='.length) : 'http://localhost:3000';
-}
-
-function parseStorageStatePath(argv: string[]): string {
-  const flag = argv.find((arg) => arg.startsWith('--storage-state='));
-  return flag ? resolve(flag.slice('--storage-state='.length)) : DEFAULT_STORAGE_STATE_PATH;
 }
 
 async function main() {
@@ -115,8 +79,6 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-
-  const storageStatePath = parseStorageStatePath(process.argv.slice(2));
 
   const runId = crypto.randomUUID();
   const userId = crypto.randomUUID();
@@ -145,13 +107,15 @@ async function main() {
     `[usability-probe-setup] cleanup: NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL} SUPABASE_SERVICE_ROLE_KEY=<ローカルの値> USER_EMAIL=${email} bash scripts/admin-delete-user.sh`,
   );
 
-  await adminSupabase.from('profiles').upsert({
+  const { error: profileError } = await adminSupabase.from('profiles').upsert({
     id: userId,
     email,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   });
-  await adminSupabase.from('user_settings').upsert({
+  if (profileError) throw new Error(`profile 作成に失敗: ${profileError.message}`);
+
+  const { error: settingsError } = await adminSupabase.from('user_settings').upsert({
     user_id: userId,
     timezone: 'Asia/Tokyo',
     preferred_locale: 'ja',
@@ -160,6 +124,7 @@ async function main() {
     time_format: '24h',
     week_starts_on: 1,
   });
+  if (settingsError) throw new Error(`user_settings 作成に失敗: ${settingsError.message}`);
 
   const browser = await chromium.launch();
   try {
@@ -172,8 +137,8 @@ async function main() {
     await page.locator('button[type="submit"]').first().click();
     await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
 
-    mkdirSync(dirname(storageStatePath), { recursive: true });
-    await context.storageState({ path: storageStatePath });
+    mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
+    await context.storageState({ path: STORAGE_STATE_PATH });
   } finally {
     await browser.close();
   }
@@ -181,11 +146,11 @@ async function main() {
   // 実行メタデータ（cleanup 用の userId、生成元 runId）を storageState の隣に残す。
   // password は含めない（既にセッション化済みで不要）。
   writeFileSync(
-    resolve(dirname(storageStatePath), 'session-meta.json'),
+    resolve(dirname(STORAGE_STATE_PATH), 'session-meta.json'),
     JSON.stringify({ runId, userId, email, createdAt: new Date().toISOString() }, null, 2) + '\n',
   );
 
-  console.log(`[usability-probe-setup] storageState: ${storageStatePath}`);
+  console.log(`[usability-probe-setup] storageState: ${STORAGE_STATE_PATH}`);
 }
 
 // tsx で直接実行された時だけ main() を走らせる。unit test から import しても
