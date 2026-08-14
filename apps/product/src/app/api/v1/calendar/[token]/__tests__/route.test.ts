@@ -28,8 +28,8 @@ import { GET } from '../route';
 
 const TOKEN = '00000000-0000-4000-8000-000000000001';
 
-function request(ip = '203.0.113.10') {
-  return new NextRequest(`https://app.dayopt.com/api/v1/calendar/${TOKEN}.ics`, {
+function request(ip = '203.0.113.10', token = TOKEN) {
+  return new NextRequest(`https://app.dayopt.com/api/v1/calendar/${token}.ics`, {
     headers: { 'x-real-ip': ip },
   });
 }
@@ -42,8 +42,8 @@ function mockTokenLookup(userId: string | null = 'user-1') {
     .mockReturnValueOnce({ from: vi.fn(() => createChainableMock([])) });
 }
 
-function context() {
-  return { params: Promise.resolve({ token: `${TOKEN}.ics` }) };
+function context(token = TOKEN) {
+  return { params: Promise.resolve({ token: `${token}.ics` }) };
 }
 
 describe('iCal feed route', () => {
@@ -163,6 +163,102 @@ describe('iCal feed route', () => {
     expect(response.status).toBe(401);
     expect(captureUnexpectedDatabaseError).not.toHaveBeenCalled();
     expect(captureUnexpectedError).not.toHaveBeenCalled();
+  });
+
+  // token rotate（regenerateICalToken、settings-service.ts）の temporal contract（#2081）。
+  // クロスレビュー指摘（risk / behavior 一致、指揮台採用）: 旧実装は「mock が null を返す」
+  // ことで 401 を成立させていただけで、regenerateICalToken を一度も呼んでいなかった —
+  // rotate 自体が壊れても（UPDATE を撃たない等）このテストは緑のままだった。
+  //
+  // token → user_id の 1 行ストアを状態として持ち、SettingsService.regenerateICalToken を
+  // 実際に呼び出して token を書き換える。route 側の createServiceRoleClient はこの同じ
+  // 状態を参照するため、(1) rotate 前は旧 token で 200 (2) rotate 実行 (3) rotate 後は
+  // 旧 token 401 / 新 token 200、の 3 点が「rotate の副作用として」成立することを固定する。
+  //
+  // 410（issue #2081 の当初検証基準）ではなく 401 を維持する設計判断は #2081 の plan
+  // コメント参照 — revoked token 履歴を持たない現在の設計では「一度も存在しなかった
+  // token」と「rotate 済みの旧 token」を区別できない。
+  it('rotate前は旧tokenが200、rotate後は旧tokenが401・新tokenが200になる', async () => {
+    const USER_ID = 'user-1';
+    const state = { userId: USER_ID, token: '00000000-0000-4000-8000-0000000000aa' };
+    const OLD_TOKEN = state.token;
+
+    // route 側（service-role client）: user_settings.select().eq('ical_feed_token', token)
+    // が state.token と一致する時だけ user_id を返す。plans は空配列で固定。
+    createServiceRoleClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'plans') return createChainableMock([]);
+        const chain: {
+          select: ReturnType<typeof vi.fn>;
+          eq: ReturnType<typeof vi.fn>;
+          maybeSingle: ReturnType<typeof vi.fn>;
+          matched: boolean;
+        } = {
+          select: vi.fn(),
+          eq: vi.fn(),
+          maybeSingle: vi.fn(),
+          matched: false,
+        };
+        chain.select.mockReturnValue(chain);
+        chain.eq.mockImplementation((_column: string, value: string) => {
+          chain.matched = value === state.token;
+          return chain;
+        });
+        chain.maybeSingle.mockImplementation(() =>
+          Promise.resolve({
+            data: chain.matched ? { user_id: state.userId } : null,
+            error: null,
+          }),
+        );
+        return chain;
+      }),
+    });
+
+    // (1) rotate 前: 旧 token はまだ有効。
+    const beforeResponse = await GET(request(undefined, OLD_TOKEN), context(OLD_TOKEN));
+    expect(beforeResponse.status).toBe(200);
+
+    // (2) rotate 実行: settings-service 側（別 supabase client、同じ state を共有）。
+    // upsert は直接 await される（select/single を挟まない）ので then 可能な Promise を返す。
+    // update は渡された新 token を state.token へ即時反映し、後続の eq/select/single が
+    // その値を返す。
+    const settingsFrom = vi.fn(() => {
+      const chain: {
+        upsert: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        eq: ReturnType<typeof vi.fn>;
+        select: ReturnType<typeof vi.fn>;
+        single: ReturnType<typeof vi.fn>;
+      } = {
+        upsert: vi.fn(() => Promise.resolve({ error: null })),
+        update: vi.fn(),
+        eq: vi.fn(),
+        select: vi.fn(),
+        single: vi.fn(),
+      };
+      chain.update.mockImplementation((patch: { ical_feed_token: string }) => {
+        state.token = patch.ical_feed_token;
+        return chain;
+      });
+      chain.eq.mockReturnValue(chain);
+      chain.select.mockReturnValue(chain);
+      chain.single.mockImplementation(() =>
+        Promise.resolve({ data: { ical_feed_token: state.token }, error: null }),
+      );
+      return chain;
+    });
+    const { SettingsService } = await import('@/features/settings/server/settings-service');
+    const settingsService = new SettingsService({ from: settingsFrom } as never);
+    const { token: newToken } = await settingsService.regenerateICalToken(USER_ID);
+    expect(newToken).not.toBe(OLD_TOKEN);
+    expect(state.token).toBe(newToken);
+
+    // (3) rotate 後: 旧 token は失効、新 token が有効。
+    const oldResponse = await GET(request(undefined, OLD_TOKEN), context(OLD_TOKEN));
+    expect(oldResponse.status).toBe(401);
+
+    const newResponse = await GET(request(undefined, newToken), context(newToken));
+    expect(newResponse.status).toBe(200);
   });
 
   it('token lookupのDB障害を500としてcaptureし、401へ丸めない', async () => {

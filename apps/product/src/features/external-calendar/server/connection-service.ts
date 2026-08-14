@@ -391,6 +391,12 @@ function throwForReauthOutcome(
 export async function listProviderCalendars(
   userId: string,
   connectionId: string,
+  /**
+   * `Date.now()` 換算の締切（ms）（#2079）。省略時は無制限（既存呼び出し互換）。
+   * `sync-service.ts` の `syncConnection` と同じ形 — 呼び出し側（router.ts）が自分の
+   * maxDuration に対する安全マージンを引いた値を渡す。
+   */
+  deadlineAt?: number | undefined,
 ): Promise<ProviderCalendarOption[]> {
   const db = createCalendarConnectionDbClient();
 
@@ -469,7 +475,7 @@ export async function listProviderCalendars(
 
   let providerCalendars;
   try {
-    providerCalendars = await googleCalendarAdapter.listCalendars(session);
+    providerCalendars = await googleCalendarAdapter.listCalendars(session, deadlineAt);
   } catch (error) {
     if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
       const reauthOutcome =
@@ -482,6 +488,18 @@ export async function listProviderCalendars(
             })
           : await markReauthAfterRotation();
       throwForReauthOutcome(reauthOutcome, error);
+    }
+    // 予算切れは稀な異常（MAX_CALENDAR_LIST_PAGES=10 ページ分の calendarList を 60s で
+    // 取り切れないのは、大量カレンダーか provider 側の劣化を示す）。一覧取得は部分結果を
+    // 黙って返すと「これが全カレンダーだ」という誤認を招くため、明示的エラーへ変換する
+    // （types.ts の CalendarProviderErrorKind 'deadline_exceeded' 参照、#2079。error-code-map.ts
+    // の DEADLINE_EXCEEDED も同じ「稀な異常」という性格づけで Sentry 報告に乗せている）。
+    if (error instanceof CalendarProviderError && error.kind === 'deadline_exceeded') {
+      throw new ExternalCalendarServiceError(
+        'DEADLINE_EXCEEDED',
+        'listing provider calendars exceeded the wall-clock budget',
+        { cause: error },
+      );
     }
     throw error;
   }
@@ -635,6 +653,35 @@ function reportUnrevokedGrant(reason: string): void {
  *    SET NULL され歴史的アンカーとして残る）
  *
  * 解約済みユーザーも切断できるよう protectedProcedure から呼ぶ。接続が既に無ければ冪等に成功。
+ *
+ * **wall-clock 予算（deadline）は意図的に持たせていない**（#2079 で検討し、導入しない結論。
+ * listProviderCalendars とは扱いを変える）:
+ *
+ * 1. 上記 1 の `deleteUnreferencedEvents` は idempotent。tRPC route の maxDuration=60 で
+ *    kill されても、ユーザーが再実行すれば prune は続きから前進する。revoke は掃除完了後
+ *    にしか呼ばれないため、kill 時に「token は生きているが connection は消えている」ような
+ *    不整合状態は生まれない
+ * 2. **先に効く制約は batch 上限ではなく wall-clock そのもの**（risk-reviewer 指摘で再導出、
+ *    PR #2087 クロスレビュー）。`MAX_PRUNE_BATCHES_CONNECTION_SCOPE`（4,000）×
+ *    `PRUNE_BATCH_SIZE`（150）＝60万行に到達するには DB 往復 24,000 回超を要し、60s では
+ *    そもそも数百バッチ程度しか進まない。batch 上限は「実際に到達する worst case」では
+ *    なく、真のページングバグに対する backstop でしかない（`event-pruning.ts` の同上限の
+ *    コメント参照）。「±90 日 window で行数が有界」という見立ても誤り —
+ *    `scope: { kind: 'connection' }` は window で絞らず、参照済み（plan/record が指す）行は
+ *    削除対象外の歴史的アンカーとして残り続けるため、接続の生存期間とともに単調増加する
+ * 3. kill された run の再実行は、未参照行が削除で候補集合から抜ける分だけ幾何級数的に
+ *    収束するため安全側に振れる。ただし理論上は「参照済み行が候補の大半を占める」病的な
+ *    ケースで収束しない穴が残る（現実的な行数では到達しないため受容する。誤った境界は
+ *    境界が無いより危険という原則により、この残余を明記する — workflow.md
+ *    §同型指摘の打ち切り 参照）。kill 直後の残骸状態が安全に収束することは個別に確認済み:
+ *    revoke 済み・DB は active のまま connection 削除だけ残った状態でも、次回 cron sync が
+ *    provider から reauth エラーを受けて `reauth_required` へ落とし、再度の disconnect で
+ *    冪等に収束する。re-revoke（既に失効済みの token への 2 回目の revoke 呼び出し）は
+ *    provider が `400 invalid_token` を返すが、`revokeRefreshToken`（google-oauth.ts）は
+ *    これを成功として扱う
+ * 4. deadline を導入すると「未完了のまま revoke/削除してよいか」という、上記 1 の
+ *    fail-closed 保証（掃除失敗時は revoke も削除もしない）を弱める再設計になる。
+ *    「未完了」を「失敗」と区別しない現在の設計をそのまま保つ
  */
 export async function disconnect(userId: string, connectionId: string): Promise<void> {
   const db = createCalendarConnectionDbClient();

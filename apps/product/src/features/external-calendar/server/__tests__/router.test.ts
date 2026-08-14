@@ -34,7 +34,7 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 }));
 vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced }));
 
-import { externalCalendarRouter, SYNC_TIME_BUDGET_MS } from '../router';
+import { externalCalendarRouter, TRPC_TIME_BUDGET_MS } from '../router';
 
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
@@ -77,6 +77,21 @@ describe('externalCalendarRouter — 認可', () => {
   it('未認証（userId なし）は listConnections で弾かれる', async () => {
     const unauth = createCaller(createMockContext({}));
     await expect(unauth.listConnections()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+});
+
+describe('externalCalendarRouter — listProviderCalendars', () => {
+  // tRPC route の maxDuration に対する予算を listProviderCalendars へ渡す（#2079）。
+  // syncNow / updateSelectedCalendars と同じ anchor（ctx.requestStartedAt）を使うことを固定する。
+  it('deadlineAt を ctx.requestStartedAt 起点で計算する', async () => {
+    const requestStartedAt = 1_700_000_000_000;
+    await caller({ requestStartedAt }).listProviderCalendars({ connectionId: CONNECTION_ID });
+
+    expect(listProviderCalendars).toHaveBeenCalledWith(
+      USER_ID,
+      CONNECTION_ID,
+      requestStartedAt + TRPC_TIME_BUDGET_MS,
+    );
   });
 });
 
@@ -141,7 +156,7 @@ describe('externalCalendarRouter — syncNow rate limit', () => {
     expect(syncConnection).toHaveBeenCalledWith({
       connectionId: CONNECTION_ID,
       userId: USER_ID,
-      deadlineAt: requestStartedAt + SYNC_TIME_BUDGET_MS,
+      deadlineAt: requestStartedAt + TRPC_TIME_BUDGET_MS,
     });
   });
 });
@@ -163,7 +178,7 @@ describe('externalCalendarRouter — updateSelectedCalendars', () => {
     expect(syncConnection).toHaveBeenCalledWith({
       connectionId: CONNECTION_ID,
       userId: USER_ID,
-      deadlineAt: requestStartedAt + SYNC_TIME_BUDGET_MS,
+      deadlineAt: requestStartedAt + TRPC_TIME_BUDGET_MS,
     });
   });
 

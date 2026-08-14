@@ -129,6 +129,9 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // 接続が失効し再認証が必要。ユーザー起因の想定内状態なので 500 ではなく 409 にする。
   REAUTH_REQUIRED: 'CONFLICT',
   PROVIDER_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
+  // listProviderCalendars の wall-clock 予算超過（#2079）。発生自体が稀な異常（大量カレンダー
+  // か provider 側の劣化）を示すため、handleServiceError の TIMEOUT 自動 Sentry 報告に乗せる。
+  DEADLINE_EXCEEDED: 'TIMEOUT',
 
   // ===== MCP connection 関連 =====
   REVOKE_FAILED: 'INTERNAL_SERVER_ERROR',
