@@ -22,7 +22,7 @@
 #     bash scripts/admin-create-user.sh
 #
 # 環境:
-#   `.op-env.admin` は Dayopt-Production を参照するため、実行は production への操作になる。
+#   `.op-env.admin` は human vault（本番キー）を参照するため、実行は production への操作になる。
 #   実行したら手動作業ログを残す（docs/operations/tooling.md 第4部）。
 # ========================================
 

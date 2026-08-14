@@ -31,7 +31,7 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 | `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
 | `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                       |
 
-この表は「workflow が参照する実在 secret」と 1:1 を意図する（GitHub が自動発行する `secrets.GITHUB_TOKEN` は対象外。2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。workflow 未参照だった 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は同日 User 裁可のうえ削除した（[#2090](https://github.com/Dayopt/dayopt/issues/2090)。`SENTRY_ORG` / `SENTRY_PROJECT` は 1Password の `Dayopt-Production/sentry*` に同名 field が実在、ID 系 3 件は公開 metadata で復元可、`APP_WEB_REPO_TOKEN` は旧 PAT の残骸で発行元 token の失効確認を #2090 に残した）。
+この表は「workflow が参照する実在 secret」と 1:1 を意図する（GitHub が自動発行する `secrets.GITHUB_TOKEN` は対象外。2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。workflow 未参照だった 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は同日 User 裁可のうえ削除した（[#2090](https://github.com/Dayopt/dayopt/issues/2090)。`SENTRY_ORG` / `SENTRY_PROJECT` は 1Password の `human/sentry*` に同名 field が実在、ID 系 3 件は公開 metadata で復元可、`APP_WEB_REPO_TOKEN` は旧 PAT の残骸で発行元 token の失効確認を #2090 に残した）。
 
 GitHub Actions の通常 build は release / source map upload を行わないため、Sentry metadata と `SENTRY_AUTH_TOKEN` を渡さない。
 
@@ -43,7 +43,7 @@ GitHub Actions の通常 build は release / source map upload を行わない�
 
 | Environment | Supabase credentials                                        |
 | ----------- | ----------------------------------------------------------- |
-| Production  | `Dayopt-Production/supabase` から手動同期した replica       |
+| Production  | `human/supabase` から手動同期した replica                   |
 | Preview     | Supabase Vercel integration が PR branch credentials を注入 |
 | Development | 通常は使わない。local は `.op-env.local` + `op run`         |
 
@@ -60,7 +60,7 @@ Preview scope に production Supabase credentials を手動設定しない。
 | Preview       | 設定しない。runtime、release作成、source map uploadを行わない                   |
 | Development   | 設定しない。localもSentryへ送信しない                                           |
 
-Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Production/sentry-web`をmetadata / DSNのmasterとする。build tokenだけは`Dayopt-Shared/sentry-login`の単一fieldを両projectへ同期する。
+Production replicaはProductが`human/sentry`、Webが`human/sentry-web`をmetadata / DSNのmasterとする。build tokenだけは`human/sentry-login`の単一fieldを両projectへ同期する。
 
 2026-07-16 のVercel確認では、Product / Webとも5変数をProductionだけに設定し、Preview / DevelopmentにはSentry envがないことを確認した。1Password CLIは未認証だったため、上記item / fieldが実在し空でないことは未確認である。master側の確認と不足fieldの整理はblocked中の[#1558](https://github.com/Dayopt/dayopt/issues/1558)で行い、確認前に推測でitemを変更しない。
 
@@ -143,7 +143,7 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash
-SUPABASE_AUTH_AUDIT_TOKEN="op://Dayopt-Production/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+SUPABASE_AUTH_AUDIT_TOKEN="op://human/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
 ```
 
 #### Pre-deploy dry run

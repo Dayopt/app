@@ -32,10 +32,10 @@ Resend delivery failure → app別POST /api/webhooks/resend → PIIなしSentry 
 
 | 用途                | 1Password                                  | Replica / scope                                               |
 | ------------------- | ------------------------------------------ | ------------------------------------------------------------- |
-| Product / Web送信   | `Dayopt-Shared/resend`                     | 各Vercel projectのProductionだけ。Preview / Developmentは禁止 |
-| Product webhook署名 | `Dayopt-Production/resend`                 | Product Productionだけ                                        |
-| Web webhook署名     | `Dayopt-Production/resend-web`             | Web Productionだけ。Productと異なる値                         |
-| Gmail返信SMTP       | `Dayopt-Shared/resend-support-replies`     | Gmail Send mail asだけ。Sending access・`dayopt.app`限定      |
+| Product / Web送信   | `agent/resend`                             | 各Vercel projectのProductionだけ。Preview / Developmentは禁止 |
+| Product webhook署名 | `human/resend`                             | Product Productionだけ                                        |
+| Web webhook署名     | `human/resend-web`                         | Web Productionだけ。Productと異なる値                         |
+| Gmail返信SMTP       | `human/resend-support-replies`             | Gmail Send mail asだけ。Sending access・`dayopt.app`限定      |
 | 受信先Gmail         | Google accountのLogin / MFA / recovery管理 | address自体をrepoへ書かない                                   |
 
 API keyやwebhook secretはchat、Issue、PR、docsへ貼らない。アプリ送信用keyとGmail返信用keyを共用しない。
@@ -61,7 +61,7 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
    - Sending access
    - `dayopt.app`domain限定
    - アプリ送信用keyと分離
-   - 1Password `Dayopt-Shared/resend-support-replies`の`RESEND_SMTP_API_KEY`へ保存
+   - 1Password `human/resend-support-replies`の`RESEND_SMTP_API_KEY`へ保存
 2. Gmailの「アカウントとインポート > 他のメールアドレスとして送信」に`support@dayopt.app`を追加する
    - SMTP: `smtp.resend.com`
    - username: `resend`
@@ -79,10 +79,10 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 
 既存1Password環境では`setup-1password.sh`を実行しない。このscriptは空のvault向け初回bootstrap専用なので、masterを次の順で手動更新する。
 
-1. `Dayopt-Shared/resend`にapp配送用`RESEND_API_KEY` / `RESEND_FROM_EMAIL`があることを確認する
-2. `Dayopt-Production/resend`のProduct用`RESEND_WEBHOOK_SECRET`を確認する
-3. `Dayopt-Production/resend-web`を作成し、Productと異なるWeb用`RESEND_WEBHOOK_SECRET`を保存する
-4. 前節で作成した`Dayopt-Shared/resend-support-replies`を確認する
+1. `agent/resend`にapp配送用`RESEND_API_KEY` / `RESEND_FROM_EMAIL`があることを確認する
+2. `human/resend`のProduct用`RESEND_WEBHOOK_SECRET`を確認する
+3. `human/resend-web`を作成し、Productと異なるWeb用`RESEND_WEBHOOK_SECRET`を保存する
+4. 前節で作成した`human/resend-support-replies`を確認する
 5. `pnpm 1password:check`を実行し、値ではなくitem / fieldの`OK`だけを確認する
 6. master確認後にVercel / GitHubへ必要なreplicaを作る
 

@@ -29,8 +29,8 @@ const ADMIN_EXAMPLE = `${ADMIN}.example`;
 const LOCAL = `.op-env${'.'}local`;
 const LOCAL_EXAMPLE = `${LOCAL}.example`;
 
-const PROD_REF = `op://Dayopt-Production/supabase/SUPABASE_SERVICE_ROLE_KEY`;
-const STAGING_REF = `op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN`;
+const PROD_REF = `op://human/supabase/SUPABASE_SERVICE_ROLE_KEY`;
+const AGENT_REF = `op://agent/supabase/SUPABASE_ACCESS_TOKEN`;
 
 type Decision = 'block' | 'allow';
 
@@ -444,13 +444,11 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     mkdirSync(nestedDir, { recursive: true });
     writeFileSync(
       join(cleanDir, LOCAL),
-      [
-        'A=' + STAGING_REF,
-        'B=op://Dayopt-Shared/resend/RESEND_API_KEY',
-        'C=op://Dayopt-Local/supabase/URL',
-      ].join('\n'),
+      ['A=' + AGENT_REF, 'B=op://agent/resend/RESEND_API_KEY', 'C=op://agent/supabase/URL'].join(
+        '\n',
+      ),
     );
-    writeFileSync(join(prodDir, LOCAL), ['A=' + STAGING_REF, 'B=' + PROD_REF].join('\n'));
+    writeFileSync(join(prodDir, LOCAL), ['A=' + AGENT_REF, 'B=' + PROD_REF].join('\n'));
   });
 
   afterAll(() => {
@@ -546,7 +544,7 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
   });
 
   it('書き換えだけなら通す（消費は次のコマンドで検査される）', () => {
-    expect(runGuard(bash(`echo 'X=${STAGING_REF}' >> ${LOCAL}`), cleanDir)).toBe('allow');
+    expect(runGuard(bash(`echo 'X=${AGENT_REF}' >> ${LOCAL}`), cleanDir)).toBe('allow');
   });
 
   // 発生源でも止める。実行時の検査は agent が op run を直接打つ場面でしか
@@ -562,8 +560,8 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
   });
 
   it.each([
-    ['Write に staging 参照', write(`/x/${LOCAL}`, `A=${STAGING_REF}`)],
-    ['Edit に local 参照', edit(`/x/${LOCAL}`, 'A=op://Dayopt-Local/supabase/URL')],
+    ['Write に staging 参照', write(`/x/${LOCAL}`, `A=${AGENT_REF}`)],
+    ['Edit に local 参照', edit(`/x/${LOCAL}`, 'A=op://agent/supabase/URL')],
     // admin 雛形は設計上 production を参照する。ここを落とすと schema 更新ができない。
     ['admin 雛形への production 参照', write(`/x/${ADMIN_EXAMPLE}`, `A=${PROD_REF}`)],
     // env-file 以外への言及は対象外（docs に vault 名を書けなくなる）
@@ -584,7 +582,7 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
 // (b) は権威層が既にこのケースを捕まえるため複雑さに見合わない）。
 describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
   it('op:// を含まない部分置換 Edit は書き込み時検査を通る（権威は実行時層）', () => {
-    expect(runGuard(edit(`/x/${LOCAL}`, 'Dayopt-Production'))).toBe('allow');
+    expect(runGuard(edit(`/x/${LOCAL}`, 'human'))).toBe('allow');
   });
 });
 

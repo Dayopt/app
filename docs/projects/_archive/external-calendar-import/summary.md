@@ -25,7 +25,7 @@ code:
 
 ## 受入条件との差分
 
-overview §14 の 6 項目のうち、**1（実カレンダーでの production 確認）と 2（cron の 15 分毎の増分同期）は production secret の設定が前提**で、本 project の PR 時点では未実施。secret（`Dayopt-Production/google-calendar` の 4 field と `Dayopt-Production/supabase` の `CRON_SECRET`）は Dashboard 作業として `docs/operations/secrets.md` §Change Procedure に従い別途行う。設定前は cron が 503 を返し続けるのが正常な状態で、アプリ本体には影響しない。
+overview §14 の 6 項目のうち、**1（実カレンダーでの production 確認）と 2（cron の 15 分毎の増分同期）は production secret の設定が前提**で、本 project の PR 時点では未実施。secret（`human/google-calendar` の 4 field と `human/supabase` の `CRON_SECRET`）は Dashboard 作業として `docs/operations/secrets.md` §Change Procedure に従い別途行う。設定前は cron が 503 を返し続けるのが正常な状態で、アプリ本体には影響しない。
 
 Preview 環境では OAuth 接続を意図的に無効にしている（Google が redirect_uri の完全一致を要求し、deploy ごとに変わる Preview URL を GCP に登録できないため。overview §14-1）。そのため reauth の一連動作は Preview ではなく unit test と Storybook（`GoogleCalendarSettingsView.stories.tsx` の `ReauthorizationRequiredState`）で検証した。
 

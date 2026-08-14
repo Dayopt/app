@@ -51,7 +51,7 @@ Secrets の正本は `docs/operations/secrets.md`。1Password は production / s
 #### Vercel environment
 
 ```txt
-Production → Dayopt-Production の Supabase credentials
+Production → human の Supabase credentials
 Preview    → Supabase Vercel integration が PR Branch credentials を注入
 Development/local → .op-env.local + op run
 ```
@@ -71,7 +71,7 @@ pnpm dev
 
 `pnpm dev` は `op run` 経由のまま。Supabase local が停止中なら自動起動し、`supabase status -o env` から URL / anon key / service role key を取得して、値を表示せずに product app へ渡す。`.env.local` の実値保存は禁止。
 
-**Supabase の接続先は local 固定で、切り替え手段は無い。** かつて存在した `DAYOPT_SUPABASE_TARGET=op` は `.op-env.local` の `op://Dayopt-Staging/supabase/...` を使う escape hatch だったが、その参照先が production を指していたため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。Supabase local が起動しない時は Docker Desktop を確認し、`supabase start` を手動で実行してエラーを読む。
+**Supabase の接続先は local 固定で、切り替え手段は無い。** かつて存在した `DAYOPT_SUPABASE_TARGET=op` は `.op-env.local` の `op://agent/supabase/...` を使う escape hatch だったが、その参照先が production を指していたため廃止した（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。Supabase local が起動しない時は Docker Desktop を確認し、`supabase start` を手動で実行してエラーを読む。
 
 ### Migration
 
@@ -448,7 +448,7 @@ Dayopt は bot 対策として **Cloudflare Turnstile** を使う。reCAPTCHA v3
 | `/contact` フォーム | web  | Resendメール配送前     | 自前 siteverify POST           |
 | `/signup` フォーム  | app  | `supabase.auth.signUp` | Supabase Auth (Bot Protection) |
 
-widget は 1 つ（`Dayopt-Shared/turnstile`）で **1 widget 複数 hostname**（`dayopt.app` / `localhost` / `*.vercel.app`）をカバーする。環境別に site-key を分けない。
+widget は 1 つ（`agent/turnstile`）で **1 widget 複数 hostname**（`dayopt.app` / `localhost` / `*.vercel.app`）をカバーする。環境別に site-key を分けない。
 
 ### 実装レイヤー
 
@@ -486,7 +486,7 @@ Secrets 運用の正本は `docs/operations/secrets.md`。1Password が master �
 #### 1Password vault
 
 ```
-Dayopt-Shared/turnstile
+agent/turnstile
 ├── NEXT_PUBLIC_TURNSTILE_SITE_KEY
 └── TURNSTILE_SECRET_KEY
 ```
@@ -495,13 +495,13 @@ Dayopt-Shared/turnstile
 
 - **app** — `.op-env.local`:
   ```
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://agent/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
   ```
   （app は secret を持たない）
 - **web** — `.op-env.local`:
   ```
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
-  TURNSTILE_SECRET_KEY=op://Dayopt-Shared/turnstile/TURNSTILE_SECRET_KEY
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://agent/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  TURNSTILE_SECRET_KEY=op://agent/turnstile/TURNSTILE_SECRET_KEY
   ```
 - **Supabase Auth** — Dashboard → Authentication → Bot & Abuse Protection → Turnstile
   - `TURNSTILE_SECRET_KEY` を 1Password master から手動同期する
@@ -540,7 +540,7 @@ user submit
 #### Rotation
 
 1. Cloudflare dashboard で widget の site/secret を regenerate
-2. 1Password `Dayopt-Shared/turnstile` の fields を更新
+2. 1Password `agent/turnstile` の fields を更新
 3. Supabase Auth dashboard の secret key を差し替え
 4. アプリ再デプロイは**不要**（op 経由で次回起動時に新値が注入される）
 
@@ -581,7 +581,7 @@ Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や
 - `src/platform/config/env.ts`（web、env 追加）
 - `src/env.ts`（app、env 置換）
 - `.op-env.local.example`（app / web 両方の参照例）
-- `Dayopt-Shared/turnstile` item（1Password）
+- `agent/turnstile` item（1Password）
 
 ### 今後の拡張余地
 

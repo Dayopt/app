@@ -38,7 +38,7 @@ fi
 
 # 重複作成防止: 3 vault に item が既に存在していないか確認
 # vault だけ作られて item が無い状態での再実行は許容 (Phase 1 で中断後の続行)
-for vault in Dayopt-Staging Dayopt-Production Dayopt-Shared; do
+for vault in agent ci human; do
   if op vault get "$vault" >/dev/null 2>&1; then
     item_count=$(op item list --vault="$vault" --format=json 2>/dev/null | jq 'length')
     if [ "$item_count" -gt 0 ]; then
@@ -50,7 +50,7 @@ done
 
 # Phase 1 skip 判定: 3 vault 全てが既に存在すれば skip
 SKIP_PHASE1=true
-for vault in Dayopt-Staging Dayopt-Production Dayopt-Shared; do
+for vault in agent ci human; do
   if ! op vault get "$vault" >/dev/null 2>&1; then
     SKIP_PHASE1=false
     break
@@ -72,9 +72,9 @@ if [ "$SKIP_PHASE1" = "true" ]; then
   echo "── Phase 1: Vault 作成 (skip: 3 vault 作成済み) ─────────────"
 else
   echo "── Phase 1: Vault 作成 ─────────────────────────"
-  run vault create Dayopt-Staging --description "Dayopt Staging 環境の API credentials (普段 signin)"
-  run vault create Dayopt-Production --description "Dayopt Production 環境の API credentials (触る時だけ unlock)"
-  run vault create Dayopt-Shared --description "Dayopt 環境非依存の API credentials / SSH / domain"
+  run vault create agent --description "AI が op run で解決してよい credentials（信頼境界軸、#2086）"
+  run vault create human --description "人間専用: 本番キー・login・recovery・個人系。AI 経路なし（#2086）"
+  run vault create ci --description "CI が消費する token の master（SA 導入時に read scope にする、#2086）"
 fi
 echo ""
 
@@ -83,35 +83,35 @@ echo ""
 # =========================================================
 echo "── Phase 2: Item 作成 (値は空、NOTES テンプレ付き) ─────────────"
 
-# ----- Dayopt-Staging -----
-echo "  [Dayopt-Staging]"
+# ----- agent -----
+echo "  [agent]"
 
 # 接続情報（URL / anon key / service role key / DB password / project-ref）は
 # 意図的に作らない。常設 staging が無いため、置けば production の複製になる。
-# SUPABASE_ACCESS_TOKEN は置かない。Dayopt-Production/supabase を正本に
+# SUPABASE_ACCESS_TOKEN は置かない。human/supabase を正本に
 # 一本化した（#1933）。
-run item create --category=apicredential --vault=Dayopt-Staging --title=supabase \
+run item create --category=apicredential --vault=agent --title=supabase \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
   'CRON_SECRET[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=upstash \
+run item create --category=apicredential --vault=agent --title=upstash \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'UPSTASH_REDIS_REST_URL[text]=' \
   'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=stripe-test \
+run item create --category=apicredential --vault=agent --title=stripe-test \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'STRIPE_SECRET_KEY[concealed]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=resend \
+run item create --category=apicredential --vault=agent --title=resend \
   --tags=dayopt,staging notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Staging --title=app \
+run item create --category=apicredential --vault=agent --title=app \
   --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
@@ -126,10 +126,10 @@ run item create --category=apicredential --vault=Dayopt-Staging --title=app \
   'MCP_OAUTH_PREVIEW_UPSTASH_HOST[text]=' \
   'MCP_WRITE_ENABLED_CLIENTS[text]='
 
-# ----- Dayopt-Production -----
-echo "  [Dayopt-Production]"
+# ----- human -----
+echo "  [human]"
 
-run item create --category=apicredential --vault=Dayopt-Production --title=supabase \
+run item create --category=apicredential --vault=human --title=supabase \
   --tags=dayopt,production notesPlain="$NOTES" \
   'NEXT_PUBLIC_SUPABASE_URL[text]=' \
   'NEXT_PUBLIC_SUPABASE_ANON_KEY[concealed]=' \
@@ -140,41 +140,41 @@ run item create --category=apicredential --vault=Dayopt-Production --title=supab
   'SUPABASE_ACCESS_TOKEN[concealed]=' \
   'project-ref[text]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=upstash \
+run item create --category=apicredential --vault=human --title=upstash \
   --tags=dayopt,production notesPlain="$NOTES" \
   'UPSTASH_REDIS_REST_URL[text]=' \
   'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=stripe-live \
+run item create --category=apicredential --vault=human --title=stripe-live \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ 本番 Stripe キー。ローカル .env.local からは参照しない' \
   'STRIPE_SECRET_KEY[concealed]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=resend \
+run item create --category=apicredential --vault=human --title=resend \
   --tags=dayopt,production notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=resend-web \
+run item create --category=apicredential --vault=human --title=resend-web \
   --tags=dayopt,production notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=sentry \
+run item create --category=apicredential --vault=human --title=sentry \
   --tags=dayopt,production notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
   'SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=sentry-web \
+run item create --category=apicredential --vault=human --title=sentry-web \
   --tags=dayopt,production notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
   'SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 
-run item create --category=apicredential --vault=Dayopt-Production --title=app \
+run item create --category=apicredential --vault=human --title=app \
   --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
@@ -187,58 +187,58 @@ run item create --category=apicredential --vault=Dayopt-Production --title=app \
   'MCP_CANONICAL_RESOURCE_URI[text]=' \
   'MCP_WRITE_ENABLED_CLIENTS[text]='
 
-# ----- Dayopt-Shared -----
-echo "  [Dayopt-Shared]"
+# ----- 旧 Dayopt-Shared 分（agent / ci / human へ分配） -----
+echo "  [旧 Dayopt-Shared 分 → agent / ci / human]"
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=anthropic \
+run item create --category=apicredential --vault=agent --title=anthropic \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'ANTHROPIC_API_KEY[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=resend \
+run item create --category=apicredential --vault=agent --title=resend \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Product=resend / Web=resend-web として環境ごとに分離' \
   'RESEND_API_KEY[concealed]=' \
   'RESEND_FROM_EMAIL[text]='
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=resend-support-replies \
+run item create --category=apicredential --vault=human --title=resend-support-replies \
   --tags=dayopt,shared notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \
   'RESEND_SMTP_API_KEY[concealed]='
 
 # 実 item 名は sentry-login（Sentry の login 情報と同居。#2063 で判明した命名 drift、
 # schema.ts と揃える）
-run item create --category=apicredential --vault=Dayopt-Shared --title=sentry-login \
+run item create --category=apicredential --vault=human --title=sentry-login \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'SENTRY_AUTH_TOKEN[concealed]='
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=turnstile \
+run item create --category=apicredential --vault=agent --title=turnstile \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY[text]=' \
   'TURNSTILE_SECRET_KEY[concealed]='
 
-run item create --category=login --vault=Dayopt-Shared --title=github-login \
+run item create --category=login --vault=human --title=github-login \
   --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
   'username=' \
   'password[concealed]=' \
   'recovery-codes[concealed]=' \
   '2fa-notes[text]='
 
-run item create --category=securenote --vault=Dayopt-Shared --title=github-ssh \
+run item create --category=securenote --vault=human --title=github-ssh \
   --tags=dayopt,shared \
   notesPlain="GitHub SSH key operational item. 既存 item がある場合は move + merge する。"
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=vercel \
+run item create --category=apicredential --vault=ci --title=vercel \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'VERCEL_TOKEN[concealed]=' \
   'VERCEL_TEAM_ID[text]=' \
   'VERCEL_PROJECT_ID_STAGING[text]=' \
   'VERCEL_PROJECT_ID_PRODUCTION[text]='
 
-run item create --category=apicredential --vault=Dayopt-Shared --title=google \
+run item create --category=apicredential --vault=agent --title=google \
   --tags=dayopt,shared notesPlain="$NOTES" \
   'GOOGLE_SITE_VERIFICATION[text]=' \
   'YANDEX_VERIFICATION[text]=' \
   'YAHOO_VERIFICATION[text]='
 
-run item create --category=login --vault=Dayopt-Shared --title=domain \
+run item create --category=login --vault=human --title=domain \
   --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
   'username=' \
   'password[concealed]=' \
@@ -260,14 +260,14 @@ echo ""
 cat <<'EOF'
 ── Phase 3: 既存 item の移動 (GUI で手動実施推奨) ─────────────
 
-以下は Development / ワーク vault の既存 item を Dayopt-Shared に移動する候補。
-GUI で item を右クリック → Move → Dayopt-Shared を選択するのが最も安全。
+以下は Development / ワーク vault の既存 item を human に移動する候補。
+GUI で item を右クリック → Move → human を選択するのが最も安全。
 
-  Development/GitHub (SSH_KEY)  →  Dayopt-Shared/github-ssh にリネーム
+  Development/GitHub (SSH_KEY)  →  human/github-ssh にリネーム
       ※ Dayopt commit にこの key を使っているか確認してから移動する
       ※ 別用途でも使っているなら、Dayopt 用に新規 SSH key 発行を推奨
 
-  Development/GitHub (LOGIN)  →  Dayopt-Shared/github-login にリネーム
+  Development/GitHub (LOGIN)  →  human/github-login にリネーム
       ※ skeleton 作成済みの場合は既存 item の値を merge する
 
 以下は移動せず既存 vault に残す (アカウント本体は分散させない方針):

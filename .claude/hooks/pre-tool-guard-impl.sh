@@ -15,10 +15,12 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
-# op run が解決してよい 1Password vault。production の credential を解決する参照が
-# local dev 用の env-file へ混ざるのを止める。禁止側（Dayopt-Production）を数え上げる
-# のではなく許可側を固定するのは、vault が増えた時に穴が開かないようにするため。
-ALLOWED_VAULT_PATTERN='^op://(Dayopt-Staging|Dayopt-Shared|Dayopt-Local)$'
+# op run が解決してよい 1Password vault。human（本番キー・login・recovery）と
+# ci（CI 用 token）の credential を解決する参照が local dev 用の env-file へ
+# 混ざるのを止める。禁止側を数え上げるのではなく許可側を固定するのは、vault が
+# 増えた時に穴が開かないようにするため。信頼境界軸の 3 vault 再編（#2086、
+# 2026-08-14）で allowlist は agent 1 つに縮んだ。
+ALLOWED_VAULT_PATTERN='^op://(agent)$'
 
 # 渡されたテキストに含まれる op:// 参照のうち、allowlist 外の vault を返す。
 # vault 名に空白が入る場合は途中で切れるが、切れた形も allowlist に一致しないので
@@ -41,7 +43,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
       ;;
   esac
 
-  # .op-env.admin / .op-env.admin.example は Dayopt-Production の service role
+  # .op-env.admin / .op-env.admin.example は human vault（旧 Dayopt-Production）の service role
   # key を op run で解決する参照 path のみを持ち、実秘密は含まない（#1993）。
   # 読み書き・作成は解禁し、境界は「消費」だけに絞る。消費ブロックは下の Bash
   # 側（--env-file が .op-env.admin 系を指す実行）が担う。ここで Write/Edit を
@@ -53,7 +55,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   # 落とすが、そちらは agent が op run を直接打つ場面でしか発火しない
   # （pnpm typecheck:op などは npm script の内側で op run するので hook から見えない）。
   # 書き足しそのものをここで止める。
-  # .op-env.admin.example は設計上 op://Dayopt-Production/... を持つので対象外。
+  # .op-env.admin.example は設計上 op://human/... を持つので対象外。
   case "$FILE_PATH" in
     *.op-env.local | *.op-env.local.example)
       WRITTEN=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
@@ -247,7 +249,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\\/}
 
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
-    # 雛形の直接実行。.op-env.admin.example は op://Dayopt-Production/... の参照を
+    # 雛形の直接実行。.op-env.admin.example は op://human/... の参照を
     # そのまま持つため、コピーせず op run に食わせるだけで同じ本番権限が解決される。
     # .op-env.admin 自体も消費すれば同じ権限が解決される（#1993: 作成・書き込みは
     # 解禁したが消費は引き続き禁止。読み書きできることと消費できることは別）。

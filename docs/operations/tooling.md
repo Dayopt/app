@@ -625,9 +625,9 @@ op run --env-file=.op-env.admin -- \
   bash scripts/admin-show-user.sh
 ```
 
-**`.op-env.local`（通常の local dev 用）ではなく `.op-env.admin` を使う。** `pnpm dev` の Supabase 接続先は local 固定で、`.op-env.local` は Supabase の接続情報を持たない（[secrets.md](./secrets.md) の `Dayopt-Staging` 節）。admin script は Supabase Auth Admin API を service role で叩くため、専用の env-file を分けている。
+**`.op-env.local`（通常の local dev 用）ではなく `.op-env.admin` を使う。** `pnpm dev` の Supabase 接続先は local 固定で、`.op-env.local` は Supabase の接続情報を持たない（[secrets.md](./secrets.md) の `agent` 節）。admin script は Supabase Auth Admin API を service role で叩くため、専用の env-file を分けている。
 
-`.op-env.admin.example` は `Dayopt-Production/supabase` を参照する。**つまりこれらの script の実行は production への操作**であり、実行したら手動作業ログを残す。local の Supabase を対象にしたい場合は `supabase status -o env` の値を `env` で直接渡す。
+`.op-env.admin.example` は `human/supabase` を参照する。**つまりこれらの script の実行は production への操作**であり、実行したら手動作業ログを残す。local の Supabase を対象にしたい場合は `supabase status -o env` の値を `env` で直接渡す。
 
 ## スクリプト一覧
 
