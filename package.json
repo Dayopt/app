@@ -15,6 +15,7 @@
     "env:check": "op run --env-file=.op-env.local -- pnpm exec tsx scripts/env/check-env.ts",
     "secrets:check": "pnpm exec tsx scripts/env/check-secrets.ts",
     "1password:check": "pnpm exec tsx scripts/env/check-1password.ts",
+    "replica:check": "pnpm exec tsx scripts/env/check-vercel-replica.ts",
     "build": "pnpm --filter @dayopt/product build",
     "build:product": "pnpm --filter @dayopt/product build",
     "build:packages": "turbo run build --filter='./packages/*'",

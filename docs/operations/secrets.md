@@ -316,10 +316,18 @@ Sentry runtime と source map upload は Production 限定のため、local の 
 pnpm env:check
 pnpm secrets:check
 pnpm 1password:check
+pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
 ```
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
+- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。local 専用で CI には組み込まない。実行例:
+
+  ```bash
+  VERCEL_TOKEN="op://Dayopt-Shared/vercel/VERCEL_TOKEN" VERCEL_TEAM_ID="op://Dayopt-Shared/vercel/VERCEL_TEAM_ID" op run -- pnpm replica:check
+  ```
+
+  検出された key の対応は 2 択: master（1Password）へ登録して schema に entry を足すか、Vercel 側から撤去する。台帳に無いが存在してよい key は script 内 `allowedNonLedgerKeys` に理由付きで載せる（空が正常）。契約は `scripts/__tests__/check-vercel-replica.test.ts` が固定する
 
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
@@ -346,6 +354,22 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 ---
 
 ## External Replicas
+
+### Replica 台帳（実値が 1Password の外に存在する場所）
+
+策定日: 2026-08-14（[#2086](https://github.com/Dayopt/dayopt/issues/2086) やること 3 の初版）
+
+基本方針 7「値がどこに存在していようと、必ず 1Password にもある」を検査可能にするための列挙。**この表に載っていない場所に長寿命の実値が存在したら、それ自体が違反**（発見したら master へ登録するか撤去し、この表を更新する）。
+
+| 場所                                         | master                                                                                                                                   | 機械検証                                                                                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Vercel Production Env（product / web）       | `scripts/env/schema.ts` の各 entry                                                                                                       | `production-config-audit.mjs`（台帳 → replica）+ `pnpm replica:check`（replica → 台帳、§Verification）                                     |
+| Vercel Preview Env（`RECOVERY_CODE_PEPPER`） | `Dayopt-Staging` / `Dayopt-Production` の `app`（Preview 維持の経緯は [Environment Secrets](./security/environment-secrets.md) §Vercel） | 無し                                                                                                                                       |
+| GitHub Secrets                               | 各 entry（[Environment Secrets](./security/environment-secrets.md) §GitHub の表と 1:1。2026-08-14 に未参照 6 件を削除済み）              | 無し（残る機械検証の設計は [#2090](https://github.com/Dayopt/dayopt/issues/2090) / [#2084](https://github.com/Dayopt/dayopt/issues/2084)） |
+| Supabase Dashboard Secrets                   | `Dayopt-Shared/turnstile` 等（下記 §Supabase Dashboard Secrets）                                                                         | 無し                                                                                                                                       |
+| PR Preview Branch credentials                | 1Password 非保存（基本方針の既知の例外。ephemeral）                                                                                      | —                                                                                                                                          |
+
+**未台帳（invariant 違反候補、2026-08-14 実測）**: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` は GitHub Secrets と Vercel（Protection Bypass for Automation）に存在するが、`Dayopt-Shared/vercel` item に対応 field が無い（field label のみ実測、値は未取得）。処遇（1Password への登録、または再生成して登録）は [#2090](https://github.com/Dayopt/dayopt/issues/2090) の判断リストで扱う。
 
 ### Vercel Env
 
