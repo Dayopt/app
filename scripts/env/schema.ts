@@ -9,6 +9,13 @@ export type EnvSchemaEntry = {
   vault: string;
   item: string;
   field: string;
+  /**
+   * schema が実態より先行している optional entry の理由。1password:check が
+   * 非 OK 状態を表示する際、この文言を添えて「機能未展開だから欠けている」ことを
+   * 明示する（#2063）。required entry には付けない（そちらは exit 1 の理由が
+   * すでに status 行だけで自明なため）。
+   */
+  pendingReason?: string;
 };
 
 export type OperationalItem = {
@@ -41,12 +48,27 @@ function envEntry(
   return { envName, required, visibility, environment, vault, item, field };
 }
 
+/** schema先行 entry 用。pendingReason 付きの envEntry。 */
+function pendingEnvEntry(
+  envName: string,
+  visibility: EnvVisibility,
+  environment: EnvEnvironment,
+  vault: string,
+  item: string,
+  pendingReason: string,
+  field = envName,
+): EnvSchemaEntry {
+  return { envName, required: false, visibility, environment, vault, item, field, pendingReason };
+}
+
 export const envSchema: EnvSchemaEntry[] = [
   // Supabase の接続情報（URL / anon key / service role key / DB password）は
   // Dayopt-Staging に置かない。常設 staging が存在せず、この 4 field は
   // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
   // supabase status -o env から注入するため 1Password を経由しない。
-  envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'staging', staging, 'supabase'),
+  // SUPABASE_ACCESS_TOKEN は Dayopt-Production/supabase を正本に一本化した
+  // （#1933）。production と同一値の複製を staging から読む理由が無いため、
+  // ここには entry を置かない。
   envEntry('CRON_SECRET', false, 'secret', 'staging', staging, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'staging', staging, 'supabase'),
 
@@ -121,16 +143,37 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('UPSTASH_REDIS_REST_URL', false, 'secret', 'production', production, 'upstash'),
   envEntry('UPSTASH_REDIS_REST_TOKEN', false, 'secret', 'production', production, 'upstash'),
   envEntry('STRIPE_SECRET_KEY', false, 'secret', 'production', production, 'stripe-live'),
-  envEntry('STRIPE_ACCOUNT_ID', false, 'public', 'production', production, 'stripe-live'),
-  envEntry('STRIPE_LIVEMODE', false, 'public', 'production', production, 'stripe-live'),
-  envEntry('STRIPE_WEBHOOK_SECRET', false, 'secret', 'production', production, 'stripe-live'),
-  envEntry(
-    'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID',
-    false,
+  pendingEnvEntry(
+    'STRIPE_ACCOUNT_ID',
     'public',
     'production',
     production,
     'stripe-live',
+    '課金未有効化のため未設定（2026-08-11 実測）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
+  ),
+  pendingEnvEntry(
+    'STRIPE_LIVEMODE',
+    'public',
+    'production',
+    production,
+    'stripe-live',
+    '課金未有効化のため未設定（2026-08-11 実測）。durable Billing 有効化時に STRIPE_SECRET_KEY と併せて設定する',
+  ),
+  pendingEnvEntry(
+    'STRIPE_WEBHOOK_SECRET',
+    'secret',
+    'production',
+    production,
+    'stripe-live',
+    '課金未有効化のため未設定（2026-08-11 実測）',
+  ),
+  pendingEnvEntry(
+    'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID',
+    'public',
+    'production',
+    production,
+    'stripe-live',
+    '課金未有効化のため未設定（2026-08-11 実測）',
   ),
   envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend'),
   envEntry('RESEND_WEBHOOK_SECRET', false, 'secret', 'production', production, 'resend-web'),
@@ -142,17 +185,38 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('SENTRY_DSN', true, 'public', 'production', production, 'sentry-web'),
   envEntry('SENTRY_ORG', true, 'public', 'production', production, 'sentry-web'),
   envEntry('SENTRY_PROJECT', true, 'public', 'production', production, 'sentry-web'),
-  envEntry('SENTRY_AUTH_TOKEN', true, 'secret', 'production', shared, 'sentry'),
+  // item 名は sentry ではなく sentry-login（2026-08-14 実測の命名 drift、#2063）。
+  // 修正前は op の曖昧解決で偶然通っていたが、1password:check の恒久 red の
+  // 直接原因だった（required entry が MISSING_ITEM で fail）。
+  envEntry('SENTRY_AUTH_TOKEN', true, 'secret', 'production', shared, 'sentry-login'),
+  // NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_SITE_URL / RECOVERY_CODE_PEPPER は
+  // replica（Vercel Production Env）に値がある可能性がある「反映漏れ」枠。
+  // schema先行（機能未展開）ではないため pendingReason は付けない。EMPTY の場合は
+  // docs/operations/secrets.md §1password:check が失敗した時 の「本当の欠落」
+  // 判定に従い、Vercel → master への逆流で埋める（#1940 の枠）。
   envEntry('NEXT_PUBLIC_APP_URL', false, 'public', 'production', production, 'app'),
   envEntry('NEXT_PUBLIC_SITE_URL', false, 'public', 'production', production, 'app'),
   envEntry('RECOVERY_CODE_PEPPER', false, 'secret', 'production', production, 'app'),
-  envEntry('OAUTH_CLAUDE_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
-  envEntry('OAUTH_CHATGPT_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
-  envEntry('OAUTH_CURSOR_REDIRECT_URIS', false, 'public', 'production', production, 'app'),
-  envEntry('MCP_OAUTH_ENVIRONMENT', false, 'public', 'production', production, 'app'),
-  envEntry('OAUTH_AUTHORIZATION_SERVER_URI', false, 'public', 'production', production, 'app'),
-  envEntry('MCP_CANONICAL_RESOURCE_URI', false, 'public', 'production', production, 'app'),
-  envEntry('MCP_WRITE_ENABLED_CLIENTS', false, 'public', 'production', production, 'app'),
+  ...(
+    [
+      'OAUTH_CLAUDE_REDIRECT_URIS',
+      'OAUTH_CHATGPT_REDIRECT_URIS',
+      'OAUTH_CURSOR_REDIRECT_URIS',
+      'MCP_OAUTH_ENVIRONMENT',
+      'OAUTH_AUTHORIZATION_SERVER_URI',
+      'MCP_CANONICAL_RESOURCE_URI',
+      'MCP_WRITE_ENABLED_CLIENTS',
+    ] as const
+  ).map((field) =>
+    pendingEnvEntry(
+      field,
+      'public',
+      'production',
+      production,
+      'app',
+      '#1754（MCP OAuth epic、status:watching）の production 未展開分',
+    ),
+  ),
 
   envEntry(
     'GOOGLE_CALENDAR_CLIENT_ID',

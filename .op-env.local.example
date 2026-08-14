@@ -1,4 +1,3 @@
-SUPABASE_ACCESS_TOKEN=op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN
 CRON_SECRET=op://Dayopt-Staging/supabase/CRON_SECRET
 SEND_EMAIL_HOOK_SECRET=op://Dayopt-Staging/supabase/SEND_EMAIL_HOOK_SECRET
 UPSTASH_REDIS_REST_URL=op://Dayopt-Staging/upstash/UPSTASH_REDIS_REST_URL
@@ -31,7 +30,11 @@ VERCEL_PROJECT_ID_PRODUCTION=op://Dayopt-Shared/vercel/VERCEL_PROJECT_ID_PRODUCT
 GOOGLE_SITE_VERIFICATION=op://Dayopt-Shared/google/GOOGLE_SITE_VERIFICATION
 YANDEX_VERIFICATION=op://Dayopt-Shared/google/YANDEX_VERIFICATION
 YAHOO_VERIFICATION=op://Dayopt-Shared/google/YAHOO_VERIFICATION
-GOOGLE_CALENDAR_CLIENT_ID=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_CLIENT_ID
-GOOGLE_CALENDAR_CLIENT_SECRET=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_CLIENT_SECRET
-CALENDAR_TOKEN_ENCRYPTION_KEY=op://Dayopt-Staging/google-calendar/CALENDAR_TOKEN_ENCRYPTION_KEY
-GOOGLE_CALENDAR_REDIRECT_URIS=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_REDIRECT_URIS
+# Dayopt-Staging/google-calendar item は現在 1Password に存在しない（2026-08-14
+# 実測、#2063）。コメントアウトしたままだと外部カレンダー連携の local dev 検証は
+# できないが、有効な行のまま残すと op run が解決不能参照で起動前に失敗し、
+# pnpm dev の正規ルート全体が止まる。item 作成後にコメントを外す。
+# GOOGLE_CALENDAR_CLIENT_ID=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_CLIENT_ID
+# GOOGLE_CALENDAR_CLIENT_SECRET=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_CLIENT_SECRET
+# CALENDAR_TOKEN_ENCRYPTION_KEY=op://Dayopt-Staging/google-calendar/CALENDAR_TOKEN_ENCRYPTION_KEY
+# GOOGLE_CALENDAR_REDIRECT_URIS=op://Dayopt-Staging/google-calendar/GOOGLE_CALENDAR_REDIRECT_URIS

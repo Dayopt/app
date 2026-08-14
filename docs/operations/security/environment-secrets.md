@@ -61,7 +61,7 @@ Preview scope に production Supabase credentials を手動設定しない。
 | Preview       | 設定しない。runtime、release作成、source map uploadを行わない                   |
 | Development   | 設定しない。localもSentryへ送信しない                                           |
 
-Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Production/sentry-web`をmetadata / DSNのmasterとする。build tokenだけは`Dayopt-Shared/sentry`の単一fieldを両projectへ同期する。
+Production replicaはProductが`Dayopt-Production/sentry`、Webが`Dayopt-Production/sentry-web`をmetadata / DSNのmasterとする。build tokenだけは`Dayopt-Shared/sentry-login`の単一fieldを両projectへ同期する。
 
 2026-07-16 のVercel確認では、Product / Webとも5変数をProductionだけに設定し、Preview / DevelopmentにはSentry envがないことを確認した。1Password CLIは未認証だったため、上記item / fieldが実在し空でないことは未確認である。master側の確認と不足fieldの整理はblocked中の[#1558](https://github.com/Dayopt/dayopt/issues/1558)で行い、確認前に推測でitemを変更しない。
 
