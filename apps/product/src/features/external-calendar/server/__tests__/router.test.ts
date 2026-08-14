@@ -34,7 +34,7 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
 }));
 vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced }));
 
-import { externalCalendarRouter } from '../router';
+import { externalCalendarRouter, SYNC_TIME_BUDGET_MS } from '../router';
 
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
@@ -42,8 +42,8 @@ const EVENT_ID = '00000000-0000-4000-8000-0000000000e1';
 
 const createCaller = createCallerFactory(externalCalendarRouter);
 
-function caller() {
-  return createCaller(createMockContext({ userId: USER_ID }));
+function caller(overrides: { requestStartedAt?: number } = {}) {
+  return createCaller(createMockContext({ userId: USER_ID, ...overrides }));
 }
 
 beforeEach(() => {
@@ -129,11 +129,27 @@ describe('externalCalendarRouter — syncNow rate limit', () => {
       code: 'SERVICE_UNAVAILABLE',
     });
   });
+
+  // tRPC route の maxDuration に対する予算を syncConnection へ渡す（#1965）。anchor は
+  // ctx.requestStartedAt（handler 入口）で、procedure 内で呼んだ Date.now() ではない
+  // ことを固定する — auth 解決・rate limit の所要時間を予算計算から漏らさないため
+  // （risk-reviewer 指摘、PR #2075）。
+  it('deadlineAt を ctx.requestStartedAt 起点で計算する', async () => {
+    const requestStartedAt = 1_700_000_000_000;
+    await caller({ requestStartedAt }).syncNow({ connectionId: CONNECTION_ID });
+
+    expect(syncConnection).toHaveBeenCalledWith({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: requestStartedAt + SYNC_TIME_BUDGET_MS,
+    });
+  });
 });
 
 describe('externalCalendarRouter — updateSelectedCalendars', () => {
   it('選択更新後に同期を kick する', async () => {
-    await caller().updateSelectedCalendars({
+    const requestStartedAt = 1_700_000_000_000;
+    await caller({ requestStartedAt }).updateSelectedCalendars({
       connectionId: CONNECTION_ID,
       calendars: [{ providerCalendarId: 'cal-a', calendarName: 'A' }],
     });
@@ -141,7 +157,14 @@ describe('externalCalendarRouter — updateSelectedCalendars', () => {
     expect(updateSelectedCalendars).toHaveBeenCalledWith(USER_ID, CONNECTION_ID, [
       { providerCalendarId: 'cal-a', calendarName: 'A' },
     ]);
-    expect(syncConnection).toHaveBeenCalledWith({ connectionId: CONNECTION_ID, userId: USER_ID });
+    // deadlineAt は ctx.requestStartedAt 起点（updateSelectedCalendars の DB 書き込みが
+    // 先に完了した後、実際に procedure 内で Date.now() を呼んだ場合より前の値になるはず。
+    // #1965、risk-reviewer 指摘 PR #2075）。
+    expect(syncConnection).toHaveBeenCalledWith({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: requestStartedAt + SYNC_TIME_BUDGET_MS,
+    });
   });
 
   it('calendarName 省略は null に正規化して渡す', async () => {

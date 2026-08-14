@@ -35,6 +35,14 @@ describe('parseCalendarCallbackResult', () => {
     ).toEqual({ type: 'error', error: 'scope_not_granted' });
   });
 
+  // code 消費前に残り予算が不足して手前で諦めた場合（#1990）。code は未消費なので
+  // 汎用文言ではなく「もう一度お試しください」を出す専用文言へ振り分ける
+  it('予算切れの失敗を専用文言へ振り分ける', () => {
+    expect(
+      parseCalendarCallbackResult(new URLSearchParams('calendar=error&reason=budget_exhausted')),
+    ).toEqual({ type: 'error', error: 'budget_exhausted' });
+  });
+
   it('未知の provider reason を UI に露出しない', () => {
     expect(
       parseCalendarCallbackResult(new URLSearchParams('calendar=error&reason=raw-provider-detail')),

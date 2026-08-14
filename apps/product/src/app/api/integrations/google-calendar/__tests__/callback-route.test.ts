@@ -23,11 +23,19 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
 vi.mock('@/lib/rate-limit/upstash', () => ({ calendarConnectRateLimit: { limit: rateLimit } }));
-vi.mock('@/features/external-calendar/server/connection-service', () => ({
-  saveConnection,
-  getReconnectTarget,
-  reconnectExistingConnection,
-}));
+vi.mock('@/features/external-calendar/server/connection-service', async (importOriginal) => {
+  // CALENDAR_CONNECTION_DB_TIMEOUT_MS は実値を使う（route.ts が POST_EXCHANGE_BUDGET_MS の
+  // 導出に使う、#1990）。手書きで複製すると本体側の値が変わった時にテストが追従しない
+  // （risk-reviewer 指摘、PR #2075）。
+  const actual =
+    await importOriginal<typeof import('@/features/external-calendar/server/connection-service')>();
+  return {
+    ...actual,
+    saveConnection,
+    getReconnectTarget,
+    reconnectExistingConnection,
+  };
+});
 vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 vi.mock('@/lib/trpc/session-auth-context', () => ({ resolveMfaAssurance }));
@@ -577,5 +585,49 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('write_fenced');
     expect(fetchMock).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
+  });
+
+  /**
+   * #1990: token 交換（= code 消費）の直前で残り予算を検査する。
+   *
+   * `entryTime` を route 入口の 1 回目の `Date.now()`（`deadlineAt` 算出）に固定し、
+   * それ以降の**全ての** `Date.now()` 呼び出しには `laterTime` を返す。呼び出し回数を
+   * 正確に 2 回だけと決め打ちしない — 将来 route.ts に別の `Date.now()` 呼び出しが増えても
+   * （decoy な呼び出しが割り込んでも）テストの意図（「入口」と「危険窓チェック直前」の
+   * 2 時点だけを制御する）が壊れない（risk-reviewer 指摘、PR #2075）。
+   */
+  function mockClockAfterEntry(entryTime: number, laterTime: number) {
+    let callCount = 0;
+    return vi.spyOn(Date, 'now').mockImplementation(() => {
+      callCount += 1;
+      return callCount === 1 ? entryTime : laterTime;
+    });
+  }
+
+  it('code 消費前に残り予算が不足していれば token 交換に到達しない', async () => {
+    // deadlineAt = 0 + TIME_BUDGET_MS(80_000)。消費直前の残り 1ms（POST_EXCHANGE_BUDGET_MS
+    // =45_000 未満）。
+    const nowSpy = mockClockAfterEntry(0, 79_999);
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('budget_exhausted');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(saveConnection).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it('残り予算が十分なら通常どおり token 交換へ進む', async () => {
+    // 消費直前の残り 45_001ms（POST_EXCHANGE_BUDGET_MS を上回る）。
+    const nowSpy = mockClockAfterEntry(0, 34_999);
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBeNull();
+    expect(fetch).toHaveBeenCalled();
+    expect(saveConnection).toHaveBeenCalled();
+
+    nowSpy.mockRestore();
   });
 });

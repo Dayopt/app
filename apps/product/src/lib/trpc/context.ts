@@ -42,6 +42,15 @@ export interface TrpcResponseLike {
 export interface Context {
   req: TrpcRequestLike;
   res: TrpcResponseLike;
+  /**
+   * この request の handler が呼ばれた時刻（`Date.now()` 換算、ms）。
+   *
+   * `externalCalendar.syncNow` / `updateSelectedCalendars`（#1965）が wall-clock 予算の
+   * anchor に使う。auth 解決・rate limit 等より前に確定させないと、それらの所要時間
+   * （worst case で数十秒）が予算計算から抜け落ち、maxDuration を超過しうる
+   * （risk-reviewer 指摘、PR #2075）。
+   */
+  requestStartedAt: number;
   userId?: string | undefined;
   sessionId?: string | undefined;
   supabase: SupabaseClient<Database>;
@@ -75,8 +84,9 @@ export interface Context {
 async function createTRPCContext(opts: {
   req: TrpcRequestLike;
   res: TrpcResponseLike;
+  requestStartedAt: number;
 }): Promise<Context> {
-  const { req, res } = opts;
+  const { req, res, requestStartedAt } = opts;
 
   // リクエストヘッダーから認証モードを自動検出
   const authMode = detectAuthMode(req.headers as Record<string, string>);
@@ -210,6 +220,7 @@ async function createTRPCContext(opts: {
   return {
     req,
     res,
+    requestStartedAt,
     userId,
     sessionId,
     accessToken,
@@ -224,6 +235,8 @@ async function createTRPCContext(opts: {
 
 /** Fetch API用tRPCコンテキスト作成（App Router Route Handler向け） */
 export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions): Promise<Context> {
+  // handler が呼ばれた直後、auth 解決より前に anchor する（Context.requestStartedAt 参照）。
+  const requestStartedAt = Date.now();
   const req = createRequestLike(opts.req);
   if (detectAuthMode(req.headers as Record<string, string>) === 'oauth') {
     // Dayopt発行のopaque tokenを受理する公開HTTP境界は /api/mcp だけに固定する。
@@ -238,6 +251,7 @@ export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions):
   return createTRPCContext({
     req,
     res: { headers: opts.resHeaders },
+    requestStartedAt,
   });
 }
 

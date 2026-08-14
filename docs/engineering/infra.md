@@ -1197,8 +1197,7 @@ npm run security:audit:actions  # GitHub Actions監査
 #### パフォーマンス
 
 ```bash
-npm run size                # バンドルサイズチェック
-npm run size:why            # バンドルサイズ分析
+npm run size:budget         # バンドルサイズバジェットチェック（check-bundle-budget.ts）
 npm run perf:lighthouse     # Lighthouse CI
 npm run deps:circular       # 循環依存検出
 npm run deps:outdated       # 古いパッケージ一覧

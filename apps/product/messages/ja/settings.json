@@ -470,6 +470,7 @@
           "providerUnavailable": "Google カレンダーを一時的に利用できません。時間をおいてお試しください。",
           "encryptionKeyInvalid": "この接続を安全に読み取れません。アカウントを再接続してください。",
           "partialFailure": "一部のカレンダーを同期できませんでした。選択を確認して、もう一度お試しください。",
+          "partialTimeout": "同期に時間がかかっています。もう一度お試しください。",
           "generic": "この接続で同期の問題が発生しています。もう一度試すか、再接続してください。"
         },
         "outcomes": {
@@ -477,6 +478,7 @@
           "reauthRequired": "同期する前にGoogle アカウントを再接続してください",
           "encryptionKeyInvalid": "この接続を安全に読み取れません。再接続してください。",
           "partialFailure": "一部のカレンダーを同期できませんでした",
+          "partialTimeout": "同期が完了しませんでした。もう一度お試しください",
           "notConfigured": "Google カレンダー接続が設定されていません",
           "updateFailed": "カレンダーの選択を適用できませんでした",
           "syncFailed": "Google カレンダーを同期できませんでした"
@@ -495,6 +497,7 @@
           "reconnectTargetInvalid": "この接続は再接続できなくなりました。更新して、もう一度お試しください。",
           "mfaVerificationRequired": "2段階認証の確認が必要です。確認後にもう一度お試しください。",
           "scopeNotGranted": "必要な権限の一部が許可されませんでした。表示された権限をすべて許可して、もう一度お試しください。",
+          "budgetExhausted": "接続の準備に時間がかかりすぎました。もう一度お試しください。",
           "unavailable": "Google カレンダーに一時的に接続できません",
           "genericError": "Google カレンダーに接続できませんでした"
         }

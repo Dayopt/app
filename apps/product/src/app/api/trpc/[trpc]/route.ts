@@ -23,11 +23,12 @@ import { captureUnexpectedTrpcAdapterError } from '@/lib/trpc/errors';
 export const runtime = 'nodejs';
 /**
  * 全 procedure を 1 function で捌くため、最長 procedure に律速される。`externalCalendar` の
- * `syncConnection` が wall-clock 予算を持たない（deadline は接続と接続の「間」にしか効かない）
- * ので、下げるとカレンダーの大きいユーザーの手動同期が hard kill される。#1965 で予算を
- * 入れてから 60 へ落とす。
+ * `syncNow` / `updateSelectedCalendars` が呼ぶ `syncConnection` は、この route の maxDuration
+ * を 300 に張り付かせていた唯一の既知の理由だった（deadline がカレンダー・ページ単位の
+ * ループを尊重しなかったため）。#1965 で `syncConnection` に wall-clock 予算を持たせ、
+ * router.ts が `deadlineAt` を渡すようになったので 60 へ落とせる。
  */
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 function handler(req: Request) {
   return fetchRequestHandler({

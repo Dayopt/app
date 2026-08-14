@@ -80,6 +80,7 @@ async function createServerContext(): Promise<Context> {
   return {
     req: {} as Context['req'],
     res: {} as Context['res'],
+    requestStartedAt: Date.now(),
     userId,
     sessionId,
     mfaAssurance,

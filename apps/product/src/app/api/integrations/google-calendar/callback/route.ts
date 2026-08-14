@@ -11,6 +11,7 @@ import {
   parseConnectFlowCookie,
 } from '@/features/external-calendar/server/connect-flow';
 import {
+  CALENDAR_CONNECTION_DB_TIMEOUT_MS,
   getReconnectTarget,
   reconnectExistingConnection,
   saveConnection,
@@ -23,6 +24,7 @@ import {
   parseGrantedScopes,
   parseIdToken,
   resolveRedirectUri,
+  TOKEN_REQUEST_TIMEOUT_MS,
 } from '@/features/external-calendar/server/google-oauth';
 import { checkProAccessForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
@@ -36,19 +38,39 @@ import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 /**
- * 逐次 worst path は再接続分岐が最長で、getUser 15 + rate limit 2 + Pro 判定 15 +
- * Google token 交換 15 + `getReconnectTarget` 15 + `reconnectExistingConnection` 15
- * = 77 秒。段の 60 では足りないので、応答を返す余裕を含めて 120 にする。
+ * #1990 の予算検査により「code 消費後に kill される」経路は塞いだが、その予算検査
+ * 自体の設計（`POST_EXCHANGE_BUDGET_MS = 45_000` 固定）と `maxDuration` の関係を
+ * 指揮台が再検討した（PR #2075 クロスレビュー、risk/behavior 両者一致）。
  *
- * ここだけ段から外す理由は失敗の質。**Google の authorization code は token 交換の
- * 時点で消費される**ので、その後の DB 書き込み中に kill されると接続は保存されない
- * まま code だけ使用済みになり、再試行は `invalid_grant`。ユーザーは認可からやり直し
- * になる。単なる 504 より重い。
+ * maxDuration=60 のままだと `TIME_BUDGET_MS(50s) - POST_EXCHANGE_BUDGET_MS(45s) = 5s` が
+ * code 消費前フェーズ（getUser / MFA / rate limit / write fence / Pro 判定の直列
+ * 4〜5 ホップ）の全予算になる。個別 timeout に達しない軽度の遅延（Supabase 1 往復 2s 級）
+ * だけで、従来成功していた接続が `budget_exhausted` になる可用性の崖ができる。
  *
- * より良い解は「code を消費する前に残り予算を検査して、足りなければ手前で諦める」
- * 設計への転換で、これは #1990 で別途扱う。それが入れば 60 へ戻せる。
+ * **指揮台決定**: maxDuration を 90 へ引き上げる（`POST_EXCHANGE_BUDGET_MS` = 45s は
+ * 不変）。消費前スラックが 35s に回復し、worst case 総計 80s ≤ 90 で hard kill margin
+ * 10s を維持する。安全性（code 消費前後の境界の扱い）は変えず、可用性の崖だけを除去する。
  */
-export const maxDuration = 120;
+export const maxDuration = 90;
+
+/** maxDuration に対する安全マージン。cron（`TIME_BUDGET_MS`）と同じ導出。 */
+const TIME_BUDGET_MS = 80_000;
+
+/**
+ * code 消費の危険窓（#1990）。
+ *
+ * 「危険」は token 交換（`exchangeAuthorizationCode`）の呼び出しを**始めた**時点から始まる —
+ * Google が request を受理した後に応答待ちの途中で kill されると、こちらからは成否が
+ * 分からないまま code だけ消費済みになりうるため、交換呼び出し自体の worst case
+ * （`TOKEN_REQUEST_TIMEOUT_MS`）も危険窓に含める（交換が成功で返ってきてから初めて
+ * 危険が始まる、という早合点をしない）。
+ *
+ * 交換後の DB 書き込みは reconnect 経路（`getReconnectTarget` + `reconnectExistingConnection`
+ * の 2 回の DB 往復が直列）を基準にする。新規接続経路（`saveConnection` 1 回）はこれより
+ * 短く、常に安全側。`TOKEN_REQUEST_TIMEOUT_MS` / `CALENDAR_CONNECTION_DB_TIMEOUT_MS` から
+ * 導出し、手書きの数値を二重管理しない。
+ */
+const POST_EXCHANGE_BUDGET_MS = TOKEN_REQUEST_TIMEOUT_MS + 2 * CALENDAR_CONNECTION_DB_TIMEOUT_MS;
 
 /**
  * Settings への戻り先。
@@ -74,6 +96,7 @@ function safeEquals(a: string, b: string): boolean {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const requestUrl = new URL(request.url);
+  const deadlineAt = Date.now() + TIME_BUDGET_MS;
   const secure = isSecureRequest(requestUrl);
   const cookieValue = request.cookies.get(connectFlowCookieName(secure))?.value;
   const flowState = parseConnectFlowCookie(cookieValue);
@@ -208,6 +231,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    // code を消費する（= token 交換を呼ぶ）前に、消費後の DB 書き込みを完走できる見込みが
+    // あるかを検査する（#1990）。ここで諦めれば code は未消費のまま残るので、ユーザーは
+    // Google の認可からやり直さずに再試行できる — 消費後に kill されるより安全側。
+    if (deadlineAt - Date.now() < POST_EXCHANGE_BUDGET_MS) {
+      logger.warn('[calendar-callback] insufficient time budget remaining before code exchange');
+      return fail('budget_exhausted');
+    }
+
     const tokens = await exchangeAuthorizationCode({
       code,
       redirectUri,

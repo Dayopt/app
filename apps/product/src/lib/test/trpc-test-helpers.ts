@@ -42,6 +42,8 @@ interface MockContextOptions {
   oauthExecution?: Context['oauthExecution'];
   mfaAssurance?: Context['mfaAssurance'];
   supabaseOverrides?: Partial<MockSupabaseClient>;
+  /** 省略時は呼び出し時点の `Date.now()`。予算 anchor のテストで固定値を注入する。 */
+  requestStartedAt?: number;
 }
 
 /**
@@ -118,6 +120,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
     oauthExecution,
     mfaAssurance,
     supabaseOverrides,
+    requestStartedAt = Date.now(),
   } = options;
 
   const mockSupabase = createMockSupabase(supabaseOverrides);
@@ -136,6 +139,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
       setHeader: vi.fn(),
       end: vi.fn(),
     } as unknown as Context['res'],
+    requestStartedAt,
     userId,
     sessionId,
     oauthClientId,

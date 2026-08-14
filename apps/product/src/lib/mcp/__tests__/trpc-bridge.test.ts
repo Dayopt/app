@@ -29,6 +29,7 @@ describe('createMcpTrpcCaller', () => {
     expect(createCaller).toHaveBeenCalledWith({
       req: { headers: {}, cookies: {} },
       res: {},
+      requestStartedAt: expect.any(Number),
       userId: 'user-1',
       oauthClientId: 'chatgpt',
       oauthScopes: ['read:entries'],
