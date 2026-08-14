@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-13
+last_verified: 2026-08-14
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -275,19 +275,26 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は[
 - `Production Config Audit`はtrusted base revisionのscriptだけを実行し、Vercel APIからenvのkey / target / typeだけを検査する。secret値は取得・出力せず、PR codeへVercel tokenを渡さない
 - `RESEND_API_KEY`と`RESEND_WEBHOOK_SECRET`はProductionだけをtargetにし、Preview / Developmentへの設定をaudit failureにする
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
-- **project 設定 4 項目も監査対象（2026-08-05、#1817 Phase 4）。** `GET /v9/projects/{idOrName}`
-  （`scripts/production-release.mjs`の`getProjectMeta`と同系API）を追加で叩き、`rootDirectory`
-  （product=`apps/product`、web=`apps/web`）・`autoAssignCustomDomains`（false）・
-  `commandForIgnoringBuildStep`（null/未設定。vercel.jsonの`ignoreCommand`が正本で、dashboard側に
-  別コマンドが残っていたらdrift）・`enableAffectedProjectsDeployments`（"Skip deployments"、無効）
-  を照合する。フィールドが応答に無い場合もfailure（fail closed）。値そのものは出力しない
-  （env監査と同じ方針）。フィールド名はVercelの公開OpenAPIスペック
-  （<https://openapi.vercel.sh>）で確認した
+- **project 設定 6 項目も監査対象（2026-08-05、#1817 Phase 4 で 4 項目導入 → #1835 で
+  `sourceFilesOutsideRootDirectory` 追加 → 2026-08-14、#1966 で `functionDefaultTimeout` 追加）。**
+  `GET /v9/projects/{idOrName}`（`scripts/production-release.mjs`の`getProjectMeta`と同系API）を
+  追加で叩き、`rootDirectory`（product=`apps/product`、web=`apps/web`）・
+  `autoAssignCustomDomains`（false）・`commandForIgnoringBuildStep`（null/未設定。
+  vercel.jsonの`ignoreCommand`が正本で、dashboard側に別コマンドが残っていたらdrift）・
+  `enableAffectedProjectsDeployments`（"Skip deployments"、無効）・
+  `sourceFilesOutsideRootDirectory`（有効。falseだとignoreCommandがfail openになる）・
+  `resourceConfig.functionDefaultTimeout`（60。Dashboard Functions タブの
+  "Default Max Duration"）を照合する。フィールドが応答に無い場合もfailure（fail closed）。
+  値そのものは出力しない（env監査と同じ方針）。前半5項目のフィールド名はVercelの公開OpenAPIスペック
+  （<https://openapi.vercel.sh>）で確認したが、`functionDefaultTimeout`は同スペックに掲載が無く
+  `vercel/sdk`の型定義（`GetProjectResponseBody`の`resourceConfig`配下）で確認した
+  — 実応答での存在は trusted dispatch の green が唯一の実測（詳細は上記
+  §Dashboard の Default Function Timeout 参照）
   - **`scripts/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
-    `checkProjectSettings: false`で呼び、この4項目監査をスキップする。** `autoAssignCustomDomains`
+    `checkProjectSettings: false`で呼び、この6項目監査をスキップする。** `autoAssignCustomDomains`
     はrelease中に一時的にtrueへ戻りうる（Vercelのpromote endpointの既知挙動、
     vercel/vercel#15095）。production-release.mjs側はsweep/stabilizeで自前管理しており
-    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、4項目監査は
+    （gate実行中に外部promoteが起きて再びtrueになってもfinallyで掃き直す設計）、6項目監査は
     「定常状態のdrift検出」が目的の静的チェックなのでrelease実行中の一時的な状態と衝突する。
     env監査（key/target/type）はrelease gateでも従来どおり実行する
 
@@ -691,16 +698,18 @@ alert policy の文言は「`/api/health` が 503 を返す」なので、504 �
 
 #### Dashboard の Default Function Timeout（実施済み・pin 済み）
 
-route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**だったところを、同日 User が Dashboard で 60 秒へ flip した（flip 前チェック 4 点は下記に記録として残す）。2026-08-14、product / web とも Dashboard Functions タブの Default Max Duration = 60 を目視再確認済み。
+route handler の契約表に載らない経路（dynamic page の SSR、Server Action、ISR 再生成、将来追加される route）は project の Default Function Timeout を継承する。2026-08-12 実測で **product / web とも 300 秒**だったところを、同日 User が Dashboard で 60 秒へ flip した。2026-08-14、product / web とも Dashboard Functions タブの Default Max Duration = 60 を目視再確認済み。
 
-flip 前に満たしていたチェック（記録として保持）:
+flip 前に検討したチェック項目。**証拠が残っていない項目は「未取得」と明記する**（2026-08-14 内製クロスレビューで、証拠の無い項目を「満たしていた」と書いていた点を指摘され訂正）:
 
-1. Vercel Observability で直近 30 日の route 別 p99 duration を見て、**60 秒超がゼロ**であること。repo の静的解析では「実際に長い経路」は分からない
+1. **未取得。** Vercel Observability で直近 30 日の route 別 p99 duration を見て 60 秒超がゼロであることを確認する想定だったが、確認した証跡が残っていない。repo の静的解析では「実際に長い経路」は分からないため、次に同種の flip を検討する際はこの確認を先に行う
 2. **product と web を別々に判断する。** web には ISR（`revalidate = 3600` の RSS feed）があり、再生成 function は route handler の契約表に載らない
-3. flip 後に **`/api/trpc/[trpc]` が 300 のままであることを実測する。** route 側の明示値が project 既定を上書きする仕様だが、既定より大きい値を要求する形になるのは flip 後が初めて。ここが 60 に落ちていたら上記 hard kill が現実になる（2026-08-14 実測: `apps/product/src/app/api/trpc/[trpc]/route.ts` の `export const maxDuration = 300` は健在）
-4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）
+3. **route 側の明示値（`maxDuration = 300`）が flip 後も declaration として健在であることは確認済み**（2026-08-14、`apps/product/src/app/api/trpc/[trpc]/route.ts` を直接読んで確認）。**ただしこれは flip 前から自明な事実で、project 既定 60 の下で 300 が実際に runtime 適用されるかどうかは証明しない**（Vercel の deployment API は per-function `maxDuration` を返さない — 下記 §「実際に適用された」ことの証拠 参照）。runtime 適用の実測は未取得
+4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）。**戻す場合は同一対応で下記 pin の契約値（`PROJECT_METADATA_CONTRACTS` の `functionDefaultTimeout`）も 300 へ戻すこと** — 戻さないと Production Config Audit が failure になり、この rollback を含む hotfix の出荷経路まで全 merge が止まる
 
-flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。
+**未反映の依存関係（要 追従時整合）**: PR #2075 は `/api/trpc/[trpc]` の `maxDuration` を 300→60 へ変更中。#2075 が本 PR より先に merge されると、上記チェック 3 の「`maxDuration = 300` が健在」という記述が false になる。merge 順は #2075 → #2076 → 本 PR のため、本 PR の追従 round でこの節の tRPC 言及箇所を実際の値へ合わせて更新すること。
+
+flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。**このフィールドパスは `vercel/sdk` の型定義と Dashboard 目視だけが根拠で、`GET /v9/projects/{idOrName}` の実応答での存在は未確認。** この repo には「スキーマに載っているが実応答に無い」前例がある（`enableAffectedProjectsDeployments`、2026-08-05）。唯一の実測は merge シーケンスの trusted dispatch — dispatch が `missing from project metadata` で落ちたら、そのまま fix を重ねず `defaultResourceConfig` 等の別フィールドパスを確認してから修正する。
 
 #### 「実際に適用された」ことの証拠
 

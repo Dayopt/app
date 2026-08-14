@@ -126,13 +126,20 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  *   （docs/projects/_archive/ci-monorepo-refactor/overview.md §8 補足）
  * - `resourceConfig.functionDefaultTimeout`（dashboard 表記は Functions タブの
  *   "Default Max Duration"） — 契約表に載らない経路（dynamic page の SSR、Server Action、
- *   ISR 再生成）が継承する Default Function Timeout。300 秒のままだと `/api/trpc/[trpc]` の
- *   意図的な 300 秒設定（tRPC だけ 300 の理由は infra.md §Function 実行時間の上限 参照）と
- *   区別が付かず drift を検知できないため、60 への flip 後にだけ pin できる（#1966）。
+ *   ISR 再生成）が継承する Default Function Timeout。project 既定値と各 route の静的
+ *   `maxDuration`（`/api/trpc/[trpc]` の意図的な 300 秒設定など）は別フィールドで、
+ *   Vercel API は route 側の値を返さないため両者は独立に扱ってよい。60 への flip 前に
+ *   この pin を先に入れると、Dashboard 実測値 300 が契約値 60 と食い違い audit が即
+ *   failure になり全 merge が止まるため、flip 完了後にだけ pin できる（#1966）。
  *   フィールドは `GetProjectResponseBody` のトップレベルではなく `resourceConfig` object
  *   配下（`vercel/sdk` の `getprojectsresponsebodyresourceconfig.md` で確認、2026-08-14）。
  *   Vercel Dashboard の実測値（product / web とも 60）と一致することを同日 Functions タブ
- *   目視で確認済み
+ *   目視で確認済み。**ただしこの field path は SDK 型定義と Dashboard 目視が根拠で、
+ *   `GET /v9/projects/{idOrName}` の実応答での存在は未確認**（この repo には「スキーマに
+ *   載っているが実応答に無い」前例がある — `enableAffectedProjectsDeployments`、
+ *   2026-08-05）。唯一の実測は merge シーケンスの trusted dispatch。dispatch が
+ *   `missing from project metadata` で落ちたら、そのまま fix を重ねず `defaultResourceConfig`
+ *   等の別 field path を確認してから修正する
  *
  * fail closed: `rootDirectory` / `autoAssignCustomDomains` / `resourceConfig.
  * functionDefaultTimeout` は応答に存在しない場合も failure とする。
