@@ -75,11 +75,34 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
   it('1Password bootstrap が Staging の supabase item に接続 field を作らない', () => {
     const block = stagingSupabaseItemBlock();
     // 切り出しが空振りすると not.toContain が素通りするため、残す field で掴めていることを先に示す
-    expect(block).toContain("'SUPABASE_ACCESS_TOKEN[concealed]='");
+    expect(block).toContain("'CRON_SECRET[concealed]='");
     expect(block).not.toContain('Dayopt-Production');
     for (const field of SUPABASE_CONNECTION_FIELDS) {
       expect(block, field).not.toContain(field);
     }
+  });
+
+  it('SUPABASE_ACCESS_TOKEN は production へ一本化し、staging には置かない（#1933）', () => {
+    const matches = envSchema.filter(
+      (entry) => entry.item === 'supabase' && entry.field === 'SUPABASE_ACCESS_TOKEN',
+    );
+    expect(matches).toHaveLength(0);
+
+    // .op-env.local.example は guard の vault allowlist（Dayopt-Staging / Shared /
+    // Local のみ）により production 参照を持てない。ここでは staging 参照が
+    // 消えたことだけを見る（production 側への repoint はできないし、しない）。
+    expect(opEnvExample).not.toContain('op://Dayopt-Staging/supabase/SUPABASE_ACCESS_TOKEN');
+
+    const block = stagingSupabaseItemBlock();
+    expect(block).not.toContain('SUPABASE_ACCESS_TOKEN');
+
+    const productionMatches = productionEnvSchema.filter(
+      (entry) =>
+        entry.vault === 'Dayopt-Production' &&
+        entry.item === 'supabase' &&
+        entry.field === 'SUPABASE_ACCESS_TOKEN',
+    );
+    expect(productionMatches.length).toBeGreaterThan(0);
   });
 
   it('dev script に 1Password 参照で Supabase へ繋ぐ経路が残っていない', () => {
@@ -87,11 +110,11 @@ describe('Dayopt-Staging/supabase の接続情報境界', () => {
     expect(devWithOpScript).toContain('DAYOPT_SUPABASE_TARGET は廃止されました');
   });
 
-  it('禁止 field の実在検査が接続 4 field を網羅する', () => {
+  it('禁止 field の実在検査が接続 4 field + SUPABASE_ACCESS_TOKEN を網羅する', () => {
     const covered = forbiddenFields
       .filter((entry) => entry.vault === 'Dayopt-Staging' && entry.item === 'supabase')
       .map((entry) => entry.field);
-    expect(covered.sort()).toEqual([...SUPABASE_CONNECTION_FIELDS].sort());
+    expect(covered.sort()).toEqual([...SUPABASE_CONNECTION_FIELDS, 'SUPABASE_ACCESS_TOKEN'].sort());
   });
 
   it('admin script 用の env 参照は Production を指し、Staging を経由しない', () => {
