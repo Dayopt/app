@@ -685,6 +685,26 @@ describe('googleCalendarAdapter.listCalendars', () => {
     }
   });
 
+  // #2089 内製クロスレビュー指摘: page loop の deadline チェックと実際のリクエスト送信の間に
+  // わずかでも時間が経つと、残り予算が負になりうる。Math.max(0, ...) のクランプが無いと
+  // 負の ms が AbortSignal.timeout に渡ってしまう分岐を直接固定する。
+  it('deadline チェック直後に残り予算が負になっても signal timeout は 0 にクランプする', async () => {
+    fetchMock().mockResolvedValueOnce(jsonResponse({ items: [] }));
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(9_999) // page loop の deadline チェック: まだ通過
+      .mockReturnValueOnce(10_001); // signal timeout 計算時点では既に締切を超過している
+
+    try {
+      await googleCalendarAdapter.listCalendars(SESSION, 10_000);
+      expect(timeoutSpy).toHaveBeenCalledWith(0);
+    } finally {
+      nowSpy.mockRestore();
+      timeoutSpy.mockRestore();
+    }
+  });
+
   it('deadlineAt が無ければ signal の timeout は従来どおり GOOGLE_API_TIMEOUT_MS のまま', async () => {
     fetchMock().mockResolvedValueOnce(jsonResponse({ items: [] }));
     const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');

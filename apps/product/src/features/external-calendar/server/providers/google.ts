@@ -186,10 +186,15 @@ async function requestWithRateLimitRetry(
   } catch (error) {
     if (!(error instanceof CalendarProviderError) || error.kind !== 'rate_limited') throw error;
 
-    // 残り予算が retry の sleep 下限（RATE_LIMIT_RETRY_BASE_MS）にも満たないなら retry しない。
-    // ここで粘っても deadline 超過が確定しているだけなので、次回 run に委ねたほうが良い
-    // （RATE_LIMIT_RETRY_BASE_MS のコメントと同じ「粘るより次回 cron へ」の方針。#2089）。
-    if (deadlineAt !== undefined && deadlineAt - Date.now() <= RATE_LIMIT_RETRY_BASE_MS) {
+    // 残り予算が retry の sleep の最大値（base + jitter 上限）にも満たないなら retry しない。
+    // 閾値を sleep 下限（base）だけにすると、jitter が上振れた場合に sleep だけで deadline を
+    // 最大 jitter 分（~1s）超過しうる（内製クロスレビュー指摘、#2089）。ここで粘っても
+    // deadline 超過が確定しているだけなので、次回 run に委ねたほうが良い
+    // （RATE_LIMIT_RETRY_BASE_MS のコメントと同じ「粘るより次回 cron へ」の方針）。
+    if (
+      deadlineAt !== undefined &&
+      deadlineAt - Date.now() <= RATE_LIMIT_RETRY_BASE_MS + RATE_LIMIT_RETRY_JITTER_MS
+    ) {
       throw error;
     }
 
