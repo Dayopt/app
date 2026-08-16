@@ -140,8 +140,8 @@ describe('buildLedger / allowedNonLedgerKeys（schema との接続）', () => {
     expect(ledger.has('TOTALLY_UNKNOWN_KEY')).toBe(false);
   });
 
-  it('allowlist は空が正常（増やす時は理由必須。docs/operations/secrets.md §Verification）', () => {
-    expect(allowedNonLedgerKeys.size).toBe(0);
+  it('allowlist の各 entry は理由必須（空が既定。#2094 で integration-managed 11 件を例外登録済み。docs/operations/secrets.md §Vercel Production の integration-managed 例外）', () => {
+    expect(allowedNonLedgerKeys.size).toBe(11);
     for (const reason of allowedNonLedgerKeys.values()) {
       expect(reason.length).toBeGreaterThan(0);
     }
