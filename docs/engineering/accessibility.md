@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-03
+last_verified: 2026-08-17
 code: apps/product/src
 ---
 
@@ -12,11 +12,11 @@ Dayopt のアクセシビリティ対応基準と実装パターン。基準ス�
 
 ## 基準スコア
 
-| ツール                 | 基準      | タイミング             |
-| ---------------------- | --------- | ---------------------- |
-| Lighthouse CI          | 95点以上  | mainマージ時にチェック |
-| eslint-plugin-jsx-a11y | エラー0件 | コミット時にチェック   |
-| axe-core               | 警告確認  | 開発時にコンソール表示 |
+| ツール                 | 基準      | タイミング                            |
+| ---------------------- | --------- | ------------------------------------- |
+| Lighthouse CI          | 90点以上  | `pnpm perf:lighthouse`（手動実行）    |
+| eslint-plugin-jsx-a11y | エラー0件 | コミット時（lint-staged）+ CI の lint |
+| axe-core               | 警告確認  | 開発時にコンソール表示                |
 
 ## WCAG AA コントラスト基準
 
@@ -35,21 +35,21 @@ Dayopt のアクセシビリティ対応基準と実装パターン。基準ス�
 - [ ] フォーカス状態が視覚的に明確
 - [ ] キーボードで操作可能（Tab, Enter, Space, Escape）
 - [ ] カラーコントラストがWCAG AA準拠（4.5:1以上）
-- [ ] `npm run a11y:check` がパス
+- [ ] `pnpm lint` がパス（jsx-a11y ルールを含む）
 
 ### PR作成前
 
-- [ ] `npm run lint` がパス
+- [ ] `pnpm lint` がパス
 - [ ] 開発サーバーでaxe-coreの警告を確認
 - [ ] Tabキーで全要素にアクセス可能
 - [ ] スクリーンリーダーでテスト（VoiceOver / NVDA）
 
 ## コマンド
 
-| コマンド             | 説明                            |
-| -------------------- | ------------------------------- |
-| `npm run a11y:check` | ESLint jsx-a11yルールでチェック |
-| `npm run a11y:full`  | 自動修正付きチェック            |
+| コマンド               | 説明                                    |
+| ---------------------- | --------------------------------------- |
+| `pnpm lint`            | ESLint（jsx-a11yルール含む）でチェック  |
+| `pnpm perf:lighthouse` | Lighthouse CI（accessibility 90点以上） |
 
 ## 参考リンク
 
@@ -94,7 +94,7 @@ shadcn/ui（Radix UI）コンポーネントの a11y 対応状況。
 OSの「視覚効果を減らす」設定を検出。
 
 ```tsx
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useReducedMotion } from '@/features/calendar/hooks/accessibility/useReducedMotion';
 
 function AnimatedComponent() {
   const prefersReducedMotion = useReducedMotion();
@@ -189,7 +189,7 @@ className = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 </main>
 ```
 
-> Dayoptでは `src/components/layout/base-layout-content.tsx` で実装済み。
+> Dayoptでは `src/app/[locale]/(app)/_shell/base-layout-content.tsx` で実装済み。
 
 ### 基本キー
 

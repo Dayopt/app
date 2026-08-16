@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-14
+last_verified: 2026-08-17
 code:
   - apps/storybook/.storybook
   - apps/storybook/package.json
