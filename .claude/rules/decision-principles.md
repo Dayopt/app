@@ -50,4 +50,4 @@ Claude は提案・レビュー時にこのルール順で評価し、抵触が�
 
 原則 1（破滅）× 原則 5（非対称）の優先関係は、実例「paid billing 有効化」で検証済み: 誤課金による信頼毀損は「天井のある損失」ではなく原則 1 の判定対象として扱い、破滅面を先に閉じてから（storage backup [#1971](https://github.com/Dayopt/dayopt/issues/1971) をゲート条件にした現行運用と同型）原則 5 で賭ける。番号順の優先 + 「Rule 1 に反しない限り」の文言がこの実判断を再現できることを確認した（[#2099](https://github.com/Dayopt/dayopt/issues/2099) コメント参照）。
 
-見直しサイクルは新しい儀式を作らず、月次ガーデニング（`.claude/skills/gardening/SKILL.md`）へ畳み込む。
+メタルールが定める見直し（四半期ごと・大きな失敗の直後）は、新しい儀式を作らず月次ガーデニング（`.claude/skills/gardening/SKILL.md`）のタイミングに乗せて実施する。
