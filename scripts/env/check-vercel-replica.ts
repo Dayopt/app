@@ -43,8 +43,33 @@ const REQUIRED_PRODUCTION_FLOOR: Record<(typeof PROJECTS)[number], readonly stri
  * 台帳（schema）に無いが Vercel Production に存在してよい key。
  * 追加する時は必ず理由を書く。空にできている状態が正常で、ここが増えるのは
  * 台帳へ登録できない構造的理由がある時だけ。
+ *
+ * 以下 11 件は Supabase↔Vercel Marketplace integration（configurationId
+ * icfg_ZZhIJpCa3ksZJLqBXjg257gb、slug: supabase）が product project の
+ * Production へ自動注入する固定セット。Vercel API の `configurationId` で
+ * integration 由来と確認済み（#2094 調査）。Supabase 公式ドキュメントの
+ * 仕様どおり per-key の選択的無効化はできず（all-or-nothing）、同じ
+ * integration が Preview の PR Preview Branch credentials 注入も担うため
+ * integration 自体の切断もできない。アプリコードからの参照は 0 件
+ * （production runtime / build-gate / env.ts のいずれにも無い）。
+ * 実値は integration が管理し 1Password には置かない。
  */
-export const allowedNonLedgerKeys: ReadonlyMap<string, string> = new Map<string, string>([]);
+export const allowedNonLedgerKeys: ReadonlyMap<string, string> = new Map<string, string>([
+  ['POSTGRES_DATABASE', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_HOST', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_PASSWORD', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_PRISMA_URL', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_URL', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_URL_NON_POOLING', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['POSTGRES_USER', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['SUPABASE_JWT_SECRET', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['SUPABASE_PUBLISHABLE_KEY', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  ['SUPABASE_SECRET_KEY', 'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）'],
+  [
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）',
+  ],
+]);
 
 export type EnvKeyEntry = { key: string; targets: string[] };
 
