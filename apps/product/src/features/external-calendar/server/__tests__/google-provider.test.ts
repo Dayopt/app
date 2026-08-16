@@ -14,7 +14,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 
-import { googleCalendarAdapter } from '../providers/google';
+import { GOOGLE_API_TIMEOUT_MS, googleCalendarAdapter } from '../providers/google';
 import { CalendarProviderError, type ProviderSession } from '../providers/types';
 
 const SESSION: ProviderSession = { accessToken: 'access-token-abc', rotatedRefreshToken: null };
@@ -433,6 +433,7 @@ describe('googleCalendarAdapter.syncCalendar', () => {
     const nowSpy = vi
       .spyOn(Date, 'now')
       .mockReturnValueOnce(0) // 1 ページ目の判定: まだ余裕がある
+      .mockReturnValueOnce(0) // 1 ページ目のリクエストの signal timeout 計算（#2089）
       .mockReturnValueOnce(deadlineAt); // 2 ページ目の判定: 締切に達した
 
     const result = await googleCalendarAdapter.syncCalendar(SESSION, {
@@ -652,6 +653,7 @@ describe('googleCalendarAdapter.listCalendars', () => {
     const nowSpy = vi
       .spyOn(Date, 'now')
       .mockReturnValueOnce(0) // 1 ページ目の判定: まだ余裕がある
+      .mockReturnValueOnce(0) // 1 ページ目のリクエストの signal timeout 計算（#2089）
       .mockReturnValueOnce(deadlineAt); // 2 ページ目の判定: 締切に達した
 
     try {
@@ -662,6 +664,75 @@ describe('googleCalendarAdapter.listCalendars', () => {
     } finally {
       nowSpy.mockRestore();
     }
+  });
+
+  // #2089: 各ページ送信「前」の deadline チェックを通過した直後の 1 リクエストが、固定 15s の
+  // signal timeout のせいで deadline を大きく超えて走り続けないことを固定する。
+  it('deadline 直前では signal の timeout を残り予算まで絞る', async () => {
+    fetchMock().mockResolvedValueOnce(
+      jsonResponse({ items: [{ id: 'primary', summary: 'Work' }] }),
+    );
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(9_900);
+
+    try {
+      await googleCalendarAdapter.listCalendars(SESSION, 10_000);
+      // 残り予算 100ms < GOOGLE_API_TIMEOUT_MS なので、signal の timeout は 100ms に絞られる
+      expect(timeoutSpy).toHaveBeenCalledWith(100);
+    } finally {
+      nowSpy.mockRestore();
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  it('deadlineAt が無ければ signal の timeout は従来どおり GOOGLE_API_TIMEOUT_MS のまま', async () => {
+    fetchMock().mockResolvedValueOnce(jsonResponse({ items: [] }));
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+
+    try {
+      await googleCalendarAdapter.listCalendars(SESSION);
+      expect(timeoutSpy).toHaveBeenCalledWith(GOOGLE_API_TIMEOUT_MS);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  // #2089: 送信前チェックを通過した直後に rate limit された場合、in-flight リクエスト自体は
+  // signal timeout で締切近くに収まるが、retry の sleep（最大 base+jitter=2s）を律儀に待つと
+  // そこで deadline を超過する。残り予算が sleep 下限にも満たないなら retry せず即座に投げ、
+  // 総経過時間を deadline 付近に抑える。
+  it('deadline 直前で rate limit されたら retry の sleep をスキップし、即座にエラーを返す', async () => {
+    fetchMock().mockResolvedValue(googleError('userRateLimitExceeded', 429));
+    vi.useFakeTimers();
+    const deadlineAt = Date.now() + 10; // retry の base sleep（1s）にも満たない残り予算
+
+    const promise = googleCalendarAdapter
+      .listCalendars(SESSION, deadlineAt)
+      .catch((error: unknown) => error);
+
+    // retry の sleep（最大 base+jitter=2s）が仮にスケジュールされていても使い切れる時間だけ
+    // 進める。それでも 2 回目の fetch が起きなければ、sleep 自体がスケジュールされなかった証拠。
+    await vi.advanceTimersByTimeAsync(2_000);
+    const error = await promise;
+
+    expect(fetchMock()).toHaveBeenCalledTimes(1);
+    expect(error).toBeInstanceOf(CalendarProviderError);
+    expect((error as CalendarProviderError).kind).toBe('rate_limited');
+  });
+
+  it('残余予算が十分にあれば、rate limit を従来どおり 1 回リトライする', async () => {
+    fetchMock()
+      .mockResolvedValueOnce(googleError('userRateLimitExceeded', 429))
+      .mockResolvedValueOnce(jsonResponse({ items: [{ id: 'primary', summary: 'Work' }] }));
+    vi.useFakeTimers();
+    const deadlineAt = Date.now() + 60_000; // 十分な残余予算
+
+    const promise = googleCalendarAdapter.listCalendars(SESSION, deadlineAt);
+    await vi.runAllTimersAsync();
+    const calendars = await promise;
+
+    expect(fetchMock()).toHaveBeenCalledTimes(2);
+    expect(calendars).toEqual([{ id: 'primary', name: 'Work', primary: false }]);
   });
 
   it('deadlineAt が既に過ぎていれば最初のページも取得しない', async () => {

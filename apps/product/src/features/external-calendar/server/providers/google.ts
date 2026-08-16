@@ -128,12 +128,28 @@ function classifyStatus(status: number, reason: string | undefined): CalendarPro
   return 'permanent';
 }
 
-async function requestGoogleApi(url: URL, accessToken: string): Promise<unknown> {
+/**
+ * `deadlineAt` までの残り予算と `GOOGLE_API_TIMEOUT_MS` の小さい方を signal の timeout にする。
+ *
+ * page loop の deadline チェック（syncCalendar / listCalendars）は各リクエスト送信「前」にしか
+ * 判定しないため、これが無いとチェック通過直後の 1 リクエストが deadline を大きく超えて
+ * 走り続けうる（#2089）。`deadlineAt` 未指定（無制限呼び出し）では従来どおり固定 15s のまま。
+ */
+function requestTimeoutMs(deadlineAt: number | undefined): number {
+  if (deadlineAt === undefined) return GOOGLE_API_TIMEOUT_MS;
+  return Math.max(0, Math.min(GOOGLE_API_TIMEOUT_MS, deadlineAt - Date.now()));
+}
+
+async function requestGoogleApi(
+  url: URL,
+  accessToken: string,
+  deadlineAt?: number,
+): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(url, {
       headers: { authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(GOOGLE_API_TIMEOUT_MS),
+      signal: AbortSignal.timeout(requestTimeoutMs(deadlineAt)),
     });
   } catch {
     throw new CalendarProviderError('google calendar api is unreachable', 'transient');
@@ -160,14 +176,25 @@ async function requestGoogleApi(url: URL, accessToken: string): Promise<unknown>
 }
 
 /** レート制限のときだけ 1 回リトライする。 */
-async function requestWithRateLimitRetry(url: URL, accessToken: string): Promise<unknown> {
+async function requestWithRateLimitRetry(
+  url: URL,
+  accessToken: string,
+  deadlineAt?: number,
+): Promise<unknown> {
   try {
-    return await requestGoogleApi(url, accessToken);
+    return await requestGoogleApi(url, accessToken, deadlineAt);
   } catch (error) {
     if (!(error instanceof CalendarProviderError) || error.kind !== 'rate_limited') throw error;
 
+    // 残り予算が retry の sleep 下限（RATE_LIMIT_RETRY_BASE_MS）にも満たないなら retry しない。
+    // ここで粘っても deadline 超過が確定しているだけなので、次回 run に委ねたほうが良い
+    // （RATE_LIMIT_RETRY_BASE_MS のコメントと同じ「粘るより次回 cron へ」の方針。#2089）。
+    if (deadlineAt !== undefined && deadlineAt - Date.now() <= RATE_LIMIT_RETRY_BASE_MS) {
+      throw error;
+    }
+
     await sleep(RATE_LIMIT_RETRY_BASE_MS + Math.floor(Math.random() * RATE_LIMIT_RETRY_JITTER_MS));
-    return await requestGoogleApi(url, accessToken);
+    return await requestGoogleApi(url, accessToken, deadlineAt);
   }
 }
 
@@ -370,7 +397,7 @@ async function syncCalendar(
 
     let payload: unknown;
     try {
-      payload = await requestWithRateLimitRetry(url, session.accessToken);
+      payload = await requestWithRateLimitRetry(url, session.accessToken, params.deadlineAt);
     } catch (error) {
       if (error instanceof CalendarProviderError && error.kind === 'cursor_invalid') {
         // 呼び出し側が cursor を捨てて full sync をやり直す。途中まで集めた分は
@@ -470,7 +497,7 @@ async function listCalendars(
     const url = new URL(`${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`);
     if (pageToken !== null) url.searchParams.set('pageToken', pageToken);
 
-    const payload = await requestWithRateLimitRetry(url, session.accessToken);
+    const payload = await requestWithRateLimitRetry(url, session.accessToken, deadlineAt);
     const parsed = googleCalendarListResponseSchema.safeParse(payload);
     if (!parsed.success) {
       throw new CalendarProviderError(
