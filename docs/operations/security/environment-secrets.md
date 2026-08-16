@@ -23,13 +23,13 @@ Supabase migration の production 適用は GitHub Actions ではなく Supabase
 
 GitHub branch protection では、通常の CI check に加えて Supabase integration の Preview Branch check を required にする。
 
-| Secret                             | 用途                                         | 方針                                                                                          |
-| ---------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `SUPABASE_AUTH_AUDIT_TOKEN`        | Production Auth Config Audit                 | Supabase Management API の PAT。auth-config job の 1 step だけへ渡す                          |
-| `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定 |
-| `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                    |
-| `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                   |
-| `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                       |
+| Secret                             | 用途                                         | 方針                                                                                                                                       |
+| ---------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SUPABASE_AUTH_AUDIT_TOKEN`        | Production Auth Config Audit                 | 1Password `ci/supabase-auth-audit`（field `credential`）の replica。Auth の Read のみの scoped token。auth-config job の 1 step だけへ渡す |
+| `VERCEL_TOKEN`                     | Production Config Audit / Production Release | env metadata読取、Production promote / rollback、promoteの副作用で戻るproject設定の復元に限定                                              |
+| `VERCEL_ORG_ID`                    | Production Config Audit / Production Release | 1Password `VERCEL_TEAM_ID`のGitHub replica                                                                                                 |
+| `VERCEL_AUTOMATION_BYPASS_PRODUCT` | Production Release smoke                     | Product の Protection Bypass for Automation                                                                                                |
+| `VERCEL_AUTOMATION_BYPASS_WEB`     | Production Release smoke                     | Web の Protection Bypass for Automation                                                                                                    |
 
 この表は「workflow が参照する実在 secret」と 1:1 を意図する（GitHub が自動発行する `secrets.GITHUB_TOKEN` は対象外。2026-08-14 に実測と突き合わせ、実在しない 3 行 `CODECOV_TOKEN` / `LHCI_GITHUB_APP_TOKEN` / `SUPABASE_ACCESS_TOKEN` を削除した）。workflow 未参照だった 6 件（`APP_WEB_REPO_TOKEN` / `ORG_ID` / `PROJECT_ID` / `VERCEL_PROJECT_ID` / `SENTRY_ORG` / `SENTRY_PROJECT`）は同日 User 裁可のうえ削除した（[#2090](https://github.com/Dayopt/dayopt/issues/2090)。`SENTRY_ORG` / `SENTRY_PROJECT` は 1Password の `human/sentry*` に同名 field が実在、ID 系 3 件は公開 metadata で復元可、`APP_WEB_REPO_TOKEN` は旧 PAT の残骸で発行元 token の失効確認を #2090 に残した）。
 
@@ -143,7 +143,7 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash
-SUPABASE_AUTH_AUDIT_TOKEN="op://human/supabase/SUPABASE_ACCESS_TOKEN" op run -- node scripts/production-auth-config-audit.mjs
+SUPABASE_AUTH_AUDIT_TOKEN="op://ci/supabase-auth-audit/credential" op run -- node scripts/production-auth-config-audit.mjs
 ```
 
 #### Pre-deploy dry run

@@ -16,6 +16,8 @@ Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.cl
 
 この 5 箇条は書き上がった規約ではなく、使いながらブラッシュアップしていく。月次ガーデニング（`.claude/skills/gardening/SKILL.md`）で「使われているか」を検証し、ルールと違う判断をした時は理由を一文残す。**6 個目を足すときは、どれかを削る。** 設計原則の詳細は [strategy.md](docs/strategy.md) §4、協働の分担とテンポは次節が正本。
 
+この 5 箇条で裁けない判断・そもそもの前提を考え直す場面・ルール自体の改訂だけは [.claude/rules/decision-principles.md](.claude/rules/decision-principles.md) の 5 原則へ上がる。Claude は提案・レビュー時にこの原則順で評価し、抵触があれば明示的に指摘する。
+
 ## 協働のかたち
 
 前節の 5 箇条は User と Main が共有する判断層。どちらかがどちらかに従うのではなく、**両者がルールと証拠に従う。**
@@ -163,6 +165,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 | `.claude/rules/mcp-usage.md`            | Sentry / Supabase / Context7 / Vercel / Eagle                        |
 | `.claude/rules/skill-design.md`         | project skill の設計・更新                                           |
 | `.claude/rules/orchestration.md`        | 指揮台セッション、レーン編成、盤面監視、send_message、判断ジャーナル |
+| `.claude/rules/decision-principles.md`  | シンプルルールで裁けない判断、前提の再考、ルール自体の改訂           |
 
 ## Skills
 
