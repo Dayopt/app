@@ -337,7 +337,7 @@ pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
   VERCEL_TOKEN="op://ci/vercel/VERCEL_TOKEN" VERCEL_TEAM_ID="op://ci/vercel/VERCEL_TEAM_ID" op run -- pnpm replica:check
   ```
 
-  検出された key の対応は 2 択: master（1Password）へ登録して schema に entry を足すか、Vercel 側から撤去する。台帳に無いが存在してよい key は script 内 `allowedNonLedgerKeys` に理由付きで載せる（空が正常）。契約は `scripts/__tests__/check-vercel-replica.test.ts` が固定する
+  検出された key の対応は 2 択: master（1Password）へ登録して schema に entry を足すか、Vercel 側から撤去する。台帳に無いが存在してよい key は script 内 `allowedNonLedgerKeys` に理由付きで載せる（空が正常。ただし Supabase↔Vercel integration 由来の 11 件は構造的に台帳登録できないため例外として載せている。詳細は下記 §Vercel Production の integration-managed 例外）。契約は `scripts/__tests__/check-vercel-replica.test.ts` が固定する
 
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
@@ -380,6 +380,17 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 | PR Preview Branch credentials                | 1Password 非保存（基本方針の既知の例外。ephemeral）                                                                         | —                                                                                                                                          |
 
 **未台帳（invariant 違反候補、2026-08-14 実測）**: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` は GitHub Secrets と Vercel（Protection Bypass for Automation）に存在するが、`ci/vercel` item（旧 Dayopt-Shared/vercel）に対応 field が無い（field label のみ実測、値は未取得）。処遇（1Password への登録、または再生成して登録）は [#2090](https://github.com/Dayopt/dayopt/issues/2090) の判断リストで扱う。
+
+### Vercel Production の integration-managed 例外
+
+策定日: 2026-08-17（[#2084](https://github.com/Dayopt/dayopt/issues/2084) 初回実運用で検出した NG 13 件の分類、[#2094](https://github.com/Dayopt/dayopt/issues/2094)）
+
+`pnpm replica:check` は product project の Vercel Production で 13 件の未台帳 key を検出した。Vercel API の `configurationId` で由来を確認したところ、issue の当初想定（13 件すべて integration 注入）とは異なり 2 群に分かれた:
+
+- **integration 注入（11 件）**: `POSTGRES_DATABASE` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` / `SUPABASE_JWT_SECRET` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`。Supabase↔Vercel Marketplace integration（configurationId `icfg_ZZhIJpCa3ksZJLqBXjg257gb`、slug: `supabase`）が Production へ自動注入する固定セットで、Supabase 公式仕様上 per-key の選択的無効化はできない（all-or-nothing）。同じ integration が Preview の PR Preview Branch credentials 注入（本節上部の Vercel Preview 記述）も担うため integration 自体の切断もできない。アプリコードからの参照は 0 件（`rg` で production runtime / build-gate / env.ts を確認）。**master は integration 自身とし、1Password には登録しない**。`scripts/env/check-vercel-replica.ts` の `allowedNonLedgerKeys` に理由付きで台帳化済み
+- **手動残骸（2 件、削除済み）**: `SUPABASE_URL` / `SUPABASE_ANON_KEY`。`configurationId` が無く、257 日前に手動作成された stray entry と判明（integration の 11 件は 73 日前）。既に台帳化済みの `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（human/supabase）と意味的に重複し、アプリコードからの参照も 0 件だったため、2026-08-17 に Vercel Production から削除済み（User 裁可、指揮台実行）
+
+**preview target には同名 `SUPABASE_URL` / `SUPABASE_ANON_KEY` が integration 注入として存在し続ける**（`configurationId` 一致で確認）。production target の手動残骸を削除しただけで、preview 側の integration 注入分は対象外・維持。`replica:check` は production target だけを見る設計のため影響しない。
 
 ### Vercel Env
 
