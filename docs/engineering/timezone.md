@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-13
+last_verified: 2026-08-17
 code: apps/product/src/lib/date
 ---
 
@@ -80,7 +80,7 @@ today.setHours(0, 0, 0, 0); // サーバーTZの0時 ≠ ユーザーの0時
 
 ## Layer 2: Boundary Functions
 
-全て `@/lib/date/timezone` からインポート。**TZ文字列を受け取り、UTC ISO文字列を返す。**
+日付境界・時刻判定は `@/lib/date/timezone` から、日付キー生成（`getDateKey`）は `@/lib/date/core` からインポートする。**TZ文字列を受け取り、UTC ISO文字列を返す。**
 
 ### 時刻変換（入力 ↔ 表示）
 
@@ -94,29 +94,31 @@ today.setHours(0, 0, 0, 0); // サーバーTZの0時 ≠ ユーザーの0時
 
 | 関数                                   | 返り値                                 | 用途         |
 | -------------------------------------- | -------------------------------------- | ------------ |
-| `tzDayStart(date, tz)`                 | UTC ISO (`"2026-03-25T15:00:00.000Z"`) | 日の開始境界 |
-| `tzDayEnd(date, tz)`                   | UTC ISO (`"2026-03-26T14:59:59.999Z"`) | 日の終了境界 |
+| `toTZStartISO(date, tz)`               | UTC ISO (`"2026-03-25T15:00:00.000Z"`) | 日の開始境界 |
+| `toTZEndISO(date, tz)`                 | UTC ISO (`"2026-03-26T14:59:59.999Z"`) | 日の終了境界 |
 | `tzWeekStart(date, tz, weekStartsOn?)` | UTC ISO                                | 週の開始境界 |
 | `tzWeekEnd(date, tz, weekStartsOn?)`   | UTC ISO                                | 週の終了境界 |
-| `tzMonthStart(date, tz)`               | UTC ISO                                | 月の開始境界 |
-| `tzMonthEnd(date, tz)`                 | UTC ISO                                | 月の終了境界 |
+
+`date` は `date-fns` のローカルフィールド演算（`setHours` / `startOfDay` / `addDays` 等）で作った壁時計 Date を渡す（instant ではない）。`toZonedTime` / `formatInTimeZone` を `date` に直接掛けると system TZ とのずれで日付がずれるバグを踏む（#2017 で実際に発生）。月境界の TZ 対応関数は現状無く、月グリッド表示は `@/lib/date/core` の TZ 非依存 `startOfMonth` / `endOfMonth`（ナビゲーション用途のみ、クエリ境界には未使用）を使う。
 
 ### 日付判定
 
-| 関数                     | 返り値         | 用途                             |
-| ------------------------ | -------------- | -------------------------------- |
-| `tzToday(tz)`            | `"2026-03-26"` | ユーザーの「今日」               |
-| `tzIsSameDay(a, b, tz)`  | `boolean`      | 2つのUTC瞬間が同じユーザーTZ日か |
-| `tzGetDateKey(date, tz)` | `"2026-03-26"` | グルーピング用日付キー           |
+| 関数                                | 返り値         | 用途                                                            |
+| ----------------------------------- | -------------- | --------------------------------------------------------------- |
+| `getDateKey(date, tz?)`（`./core`） | `"2026-03-26"` | グルーピング用日付キー。`tz` 省略時はローカルフィールド読み取り |
+| `tzIsSameDay(a, b, tz)`             | `boolean`      | 2つのUTC瞬間が同じユーザーTZ日か                                |
+| `isTodayInTimezone(date, tz, now?)` | `boolean`      | 指定 TZ で「今日」と同じ日か                                    |
+
+ユーザーの「今日」の日付文字列が必要な場合は `getDateKey(new Date(), timezone)` を使う（専用の `tzToday` 関数は無い）。
 
 ### 使用例
 
 ```tsx
-import { tzDayStart, tzDayEnd, tzIsSameDay } from '@/lib/date/timezone';
+import { toTZStartISO, toTZEndISO, tzIsSameDay } from '@/lib/date/timezone';
 
 // ✅ 「今日の全エントリ」を取得するクエリ境界
-const startDate = tzDayStart(new Date(), timezone); // "2026-03-25T15:00:00.000Z" (JST)
-const endDate = tzDayEnd(new Date(), timezone); // "2026-03-26T14:59:59.999Z" (JST)
+const startDate = toTZStartISO(new Date(), timezone); // "2026-03-25T15:00:00.000Z" (JST)
+const endDate = toTZEndISO(new Date(), timezone); // "2026-03-26T14:59:59.999Z" (JST)
 const plans = api.plans.list.useQuery({ startDate, endDate });
 
 // ✅ マルチデイ判定
@@ -175,7 +177,7 @@ const dateRange = {
 
 ```tsx
 // ✅ 正しい: TZ対応の日付キー
-const dateKey = tzGetDateKey(entry.start_time, timezone);
+const dateKey = getDateKey(entry.start_time, timezone);
 
 // ❌ 禁止: ローカルTZの .getDate()
 const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
@@ -185,15 +187,15 @@ const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
 ## 禁止パターン一覧
 
-| パターン                                    | 問題                     | 代替                           |
-| ------------------------------------------- | ------------------------ | ------------------------------ |
-| `date.setHours(0,0,0,0)` + `.toISOString()` | ブラウザTZの0時をUTC変換 | `tzDayStart(date, tz)`         |
-| `new Date().toISOString()` で日境界生成     | TZずれ                   | `tzDayStart` / `tzDayEnd`      |
-| `.getDate()` / `.getDay()` で日付比較       | ブラウザTZ依存           | `tzIsSameDay` / `tzGetDateKey` |
-| `startOfDay()` + `.toISOString()`           | ローカルTZ→UTC変換ずれ   | `tzDayStart(date, tz)`         |
-| `startOfWeek()` + `.toISOString()`          | 同上                     | `tzWeekStart(date, tz)`        |
-| サーバーで `new Date().setHours(0,0,0,0)`   | サーバーTZ依存           | `tzDayStart(date, userTz)`     |
-| `'Asia/Tokyo'` ハードコードフォールバック   | 非日本ユーザーに不正確   | `'UTC'`                        |
+| パターン                                    | 問題                     | 代替                          |
+| ------------------------------------------- | ------------------------ | ----------------------------- |
+| `date.setHours(0,0,0,0)` + `.toISOString()` | ブラウザTZの0時をUTC変換 | `toTZStartISO(date, tz)`      |
+| `new Date().toISOString()` で日境界生成     | TZずれ                   | `toTZStartISO` / `toTZEndISO` |
+| `.getDate()` / `.getDay()` で日付比較       | ブラウザTZ依存           | `tzIsSameDay` / `getDateKey`  |
+| `startOfDay()` + `.toISOString()`           | ローカルTZ→UTC変換ずれ   | `toTZStartISO(date, tz)`      |
+| `startOfWeek()` + `.toISOString()`          | 同上                     | `tzWeekStart(date, tz)`       |
+| サーバーで `new Date().setHours(0,0,0,0)`   | サーバーTZ依存           | `toTZStartISO(date, userTz)`  |
+| `'Asia/Tokyo'` ハードコードフォールバック   | 非日本ユーザーに不正確   | `'UTC'`                       |
 
 ---
 
@@ -233,11 +235,11 @@ WHERE (r.start_at AT TIME ZONE 'UTC')::DATE >= p_start
       (Intl.DateTimeFormat().resolvedOptions().timeZone)
 
 2. 2回目以降の訪問
-   └→ middleware.ts: Cookie読み取り → x-user-timezone ヘッダー
+   └→ proxy.ts（旧 middleware.ts）: Cookie読み取り → x-user-timezone ヘッダー
    └→ Server Component: ヘッダーからTZ取得 → prefetchに使用
 
 3. TZ設定変更時
-   └→ useUserSettings: Cookie更新 + entries全キャッシュ無効化
+   └→ useUpdateUserSettings: Cookie更新 + entries全キャッシュ無効化
 ```
 
 ---
@@ -268,6 +270,6 @@ Layer 2 (`@/lib/date/timezone.ts`) を唯一の変更点として維持。
 | `src/lib/date/timezone.ts`                           | Layer 2: 全TZユーティリティ（唯一のTZライブラリ） |
 | `src/lib/date/core.ts`                               | TZ非依存の日付計算（加算・比較等）                |
 | `src/lib/hooks/useUserPreferences.ts`                | Layer 1: クライアントTZ参照                       |
-| `src/middleware.ts`                                  | SSR: Cookie → ヘッダー転写                        |
+| `src/proxy.ts`                                       | SSR: Cookie → ヘッダー転写（旧 middleware.ts）    |
 | `supabase/migrations/20260326000000_*.sql`           | DB: TZ対応統計関数                                |
 | `src/lib/date/__tests__/timezone-edge-cases.test.ts` | DST・半時間オフセット等のエッジケーステスト       |
