@@ -33,6 +33,8 @@ export interface DocEntry {
   /** apps/web/content/docs からの相対 path */
   path: string;
   state: Exclude<DocState, 'missing'>;
+  /** frontmatter `generic: true`。特定 spec に紐づかない汎用ページ（faq / getting-started 等）を明示 */
+  generic: boolean;
 }
 
 export interface CoverageRow {
@@ -46,8 +48,10 @@ export interface Coverage {
   rows: readonly CoverageRow[];
   /** public_docs / lp 未記入の spec */
   unregisteredSpecs: readonly string[];
-  /** どの spec の public_docs にも現れない実ファイル */
+  /** どの spec の public_docs にも現れない実ファイル（frontmatter generic: true 以外） */
   orphanDocs: readonly DocEntry[];
+  /** どの spec にも紐づかないが frontmatter generic: true で意図的に spec 外と明示された実ファイル */
+  genericDocs: readonly DocEntry[];
   /** どの spec の lp にも対応しない LP の約束 */
   unbackedLpClaims: readonly string[];
   /** spec が lp に書いているが LP には無い文言（LP 側の変更で取り残された記述） */
@@ -143,11 +147,13 @@ export function collectDocs(docsDir: string): DocEntry[] {
       const fields = readFrontmatter(readFileSync(file, 'utf8'));
       const isDraft = fields.get('draft') === 'true';
       const isPlaceholder = fields.get('placeholder') === 'true';
+      const isGeneric = fields.get('generic') === 'true';
       entries.push({
         slug,
         locale,
         path: rel,
         state: isPlaceholder ? 'placeholder' : isDraft ? 'draft' : 'published',
+        generic: isGeneric,
       });
     }
   }
@@ -200,7 +206,8 @@ export function buildCoverage(
   return {
     rows,
     unregisteredSpecs: specs.filter((spec) => !spec.registered).map((spec) => spec.name),
-    orphanDocs: docs.filter((doc) => !claimedSlugs.has(doc.slug)),
+    orphanDocs: docs.filter((doc) => !claimedSlugs.has(doc.slug) && !doc.generic),
+    genericDocs: docs.filter((doc) => !claimedSlugs.has(doc.slug) && doc.generic),
     unbackedLpClaims: lpClaims.filter((claim) => !claimedLp.has(claim)),
     staleLpClaims: specs.flatMap((spec) =>
       spec.lp

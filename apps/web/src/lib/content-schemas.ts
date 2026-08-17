@@ -57,6 +57,10 @@ export const docFrontMatterSchema = z.object({
   // 本文が未執筆の骨格であることを示す。draft: true と併用が必須（validate-content.js が強制）で、
   // カバレッジ集計では「ページはあるが中身は無い」として draft と区別する
   placeholder: z.boolean().default(false),
+  // 特定 spec に紐づかない汎用ページ（faq / getting-started / troubleshooting 系）であることを示す。
+  // pnpm docs:coverage の「どの spec にも紐づかない公開docs」から除外し、意図的な spec 外として別集計する
+  // （判断基準は .claude/skills/docs-audit/SKILL.md 参照）
+  generic: z.boolean().default(false),
   featured: z.boolean().default(false),
   ai: aiMetadataSchema,
 });
