@@ -156,6 +156,21 @@ export async function POST(request: NextRequest) {
     });
   }
   if (!turnstileResult.success) {
+    // 通常の bot 検出（token 不正・期限切れ等）は正常系なので Sentry へ送らないが、
+    // TURNSTILE_SECRET_KEY 自体が無効な場合は siteverify がこの error-code を返す
+    // （#2031 の production incident）。これは client の token に依存しない
+    // システム構成の障害なので、区別して alert する。'invalid-input-secret' は
+    // Cloudflare の公開仕様（siteverify のドキュメント化された error-codes）であり、
+    // product 側（GoTrue 経由）の message substring 判定より安定している。
+    if (turnstileResult['error-codes']?.includes('invalid-input-secret')) {
+      captureContactFailure(
+        new Error(
+          `Turnstile secret invalid (error-codes: ${(turnstileResult['error-codes'] ?? []).join(', ')})`,
+        ),
+        'verify_turnstile_secret_invalid',
+        requestId,
+      );
+    }
     return apiError('Bot verification failed', 403, { code: ErrorCode.BOT_DETECTED });
   }
 

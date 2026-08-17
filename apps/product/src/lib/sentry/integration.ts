@@ -42,12 +42,33 @@ function authErrorCode(error: unknown): string | undefined {
   return typeof code === 'string' ? code : undefined;
 }
 
+function authErrorMessage(error: unknown): string | undefined {
+  if (error === null || typeof error !== 'object' || !('message' in error)) return undefined;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : undefined;
+}
+
+/**
+ * GoTrue は Turnstile secret 自体が無効な時も `code: 'captcha_failed'`（bot を弾いた正常系と
+ * 同じ構造化コード）を返すが、raw message に siteverify の error-codes をそのまま埋め込む
+ * 形式（`captcha protection: request disallowed (invalid-input-secret)`）で区別できる。
+ * #2031 でローカル GoTrue に対して実測確認済み（有効な secret + 不正 token は
+ * `invalid-input-response` になり、この判定には一致しない）。
+ *
+ * この文言は Cloudflare の公開仕様（siteverify error-codes）ではなく GoTrue 実装依存のため、
+ * GoTrue のバージョンアップで静かに変わりうる。`__tests__/integration.test.ts` の
+ * captcha_failed 系 test が現行文言を pin しており、そちらが red になったら本判定も同時に
+ * 壊れている。message 判定が効かなくなった場合、passive instrumentation では検知できなく
+ * なるため能動的な canary（production の GoTrue endpoint へ低頻度で合成 probe を送る設計）
+ * への切替を検討する（検討済みの設計比較は docs/operations/log/2026-08-17-turnstile-secret-detection-design.md 参照）。
+ */
+const TURNSTILE_SECRET_INVALID_MESSAGE = 'invalid-input-secret';
+
 const EXPECTED_AUTH_ERROR_CODES = new Set([
   'bad_code_verifier',
   'bad_jwt',
   'bad_oauth_callback',
   'bad_oauth_state',
-  'captcha_failed',
   'conflict',
   'email_address_invalid',
   'email_address_not_authorized',
@@ -100,6 +121,10 @@ export function isExpectedAuthError(error: unknown): boolean {
   if (isAuthSessionMissingError(error)) return true;
 
   const code = authErrorCode(error);
+  if (code === 'captcha_failed') {
+    // secret 自体が無効なケースはシステム構成の障害であり、bot を弾いた正常系とは区別する
+    return !authErrorMessage(error)?.includes(TURNSTILE_SECRET_INVALID_MESSAGE);
+  }
   if (code && EXPECTED_AUTH_ERROR_CODES.has(code)) return true;
 
   const status = authErrorStatus(error);
