@@ -115,6 +115,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
    - Vercel team dashboard → **Settings → Drains** で、作成された Drain の status が `enabled` であることを確認する
    - Axiom dashboard → `vercel` dataset で、直近デプロイのログが実際に届いていることを確認する（`vercelProjectName` フィールドで product / web を区別できる）。手順 2 で除外を決めたフィールド（iCal token 等）が実際に含まれていないことも合わせて確認する
    - Spend Management の **Activity** セクション（team dashboard サイドバー）で、上限設定が反映されていることを確認する
+   - Axiom は dataset 作成時にリージョンを US East / EU Central の 2 択で選ぶ。privacy.mdx の Axiom サブプロセッサー記載（Data location: United States）を真に保つため、dataset のリージョンが **US East** であることを Axiom dashboard の dataset 設定で確認する
 6. **rollback**（`[hours]`） — Vercel team dashboard → Settings → Drains から該当 Drain を disable、または Integrations 画面から Axiom を uninstall する。課金は停止時点までの転送量分のみ
 
 ### 運用上の注意

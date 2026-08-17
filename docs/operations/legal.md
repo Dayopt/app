@@ -25,7 +25,7 @@ Legal（利用規約・プライバシーポリシー等）の実体パスと改
 
 利用規約・プライバシーポリシー等を改定したら、**なぜ改定したか**を `/decision` で記録する（本文の diff は git history が正本、decision には理由だけ書く）。
 
-例: [ADR-008 cookie consent banner](./log/2026-02-16-cookie-consent-banner.md)、[ADR-009 cookie consent required](./log/2026-02-18-cookie-consent-required.md) は過去の cookie 同意まわりの意思決定記録（このディレクトリ新設以前のもの）。[2026-08-12 privacy Google Calendar 節追加](./log/2026-08-12-privacy-google-calendar-section.md) は GCP sensitive scope 審査（#1963）に向けた最新例。
+例: [ADR-008 cookie consent banner](./log/2026-02-16-cookie-consent-banner.md)、[ADR-009 cookie consent required](./log/2026-02-18-cookie-consent-required.md) は過去の cookie 同意まわりの意思決定記録（このディレクトリ新設以前のもの）。[2026-08-12 privacy Google Calendar 節追加](./log/2026-08-12-privacy-google-calendar-section.md) は GCP sensitive scope 審査（#1963）に向けた最新例。[2026-08-17 Axiom サブプロセッサー追記](./log/2026-08-17-axiom-subprocessor-notice.md) は Vercel Log Drains 導入（#1701 Phase 3）の legal 前提（30 日前通知）に向けた例。
 
 ## このファイルに書かないこと
 
