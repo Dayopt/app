@@ -52,7 +52,8 @@
     "license:credits:check": "tsx scripts/generate-licenses.ts --check",
     "generate-licenses": "tsx scripts/generate-licenses.ts",
     "validate:content": "node scripts/validate-content.js",
-    "generate:search-index": "tsx scripts/generate-search-index.ts"
+    "generate:search-index": "tsx scripts/generate-search-index.ts",
+    "generate:og-fallback": "tsx scripts/generate-og-fallback.tsx"
   },
   "dependencies": {
     "@dayopt/billing": "workspace:*",
