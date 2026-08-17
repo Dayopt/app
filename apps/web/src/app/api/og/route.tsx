@@ -11,6 +11,8 @@ import {
   ogImageRateLimit,
 } from '@web/platform/security/rate-limit';
 
+import { OG_FALLBACK_IMAGE_BASE64 } from './og-fallback-image.generated';
+
 export const maxDuration = 25;
 export const runtime = 'edge';
 
@@ -111,30 +113,24 @@ function captureRateLimitFailureSampled(error: unknown): void {
 }
 
 /**
- * global quota超過時・rate limit backend障害時に、blog記事のhero画像
- * (`page.tsx`の`heroImage`)を壊さず200を返すための代替画像。動的入力は
- * 含まないため既知サイズのSatori renderで済み、通常描画より軽いが、
- * 1200x630のラスタライズ自体は避けられない(compute costがゼロになる
- * わけではない。真にゼロにするには静的アセットの配信が必要、#1979 follow-up)。
+ * global quota超過時・rate limit backend障害時のfallback画像バイト列。
+ * `renderFallbackImage`(旧実装)はここでも毎回Satoriで1200x630をラスタライズ
+ * しており、fallback自体がcompute costを発生させ続けていた(#2052)。
+ * 事前生成した静的PNG(`scripts/generate-og-fallback.tsx`が出力)をbase64で
+ * 埋め込み、module load時に一度だけdecodeして使い回す。以後Satori/next-ogの
+ * コードパスは一切通らない。
  */
-function renderFallbackImage(): ImageResponse {
-  return new ImageResponse(
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: OG_COLORS.background,
-      }}
-    >
-      <div style={{ display: 'flex', fontSize: 40, fontWeight: 500, color: OG_COLORS.foreground }}>
-        {dayoptBrand.name}
-      </div>
-    </div>,
-    { width: 1200, height: 630, headers: { 'Cache-Control': OG_IMAGE_FALLBACK_CACHE_CONTROL } },
-  );
+const FALLBACK_IMAGE_BYTES = Uint8Array.from(atob(OG_FALLBACK_IMAGE_BASE64), (char) =>
+  char.charCodeAt(0),
+);
+
+function renderFallbackImage(): Response {
+  return new Response(FALLBACK_IMAGE_BYTES, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': OG_IMAGE_FALLBACK_CACHE_CONTROL,
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
