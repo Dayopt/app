@@ -272,16 +272,173 @@ export async function runProductionConfigAudit({
   }
 }
 
+// -----------------------------------------------------------------------------
+// production deploy health（#2124）
+// -----------------------------------------------------------------------------
+
+/**
+ * production デプロイの成否そのものを検知する経路が repo に無かったため、production
+ * target の**最新デプロイ**が READY かを確認する（#2121, #2124）。PR の「Vercel –
+ * product」check は preview デプロイの結果であり production の成否とは独立、
+ * `Production Config Audit`（本ファイルの上半分）は env metadata の drift のみを見る、
+ * UptimeRobot 外形監視は稼働中の（古い）デプロイの healthy 状態しか見ない — いずれも
+ * 「新しい deploy が失敗して古いデプロイのまま止まっている」ことを区別できない。
+ *
+ * **main HEAD の SHA には一致させない（意図的）。** 当初案は「main HEAD SHA に対応する
+ * デプロイが READY か」だったが、`vercel.json` の `ignoreCommand`（`scripts/ci/
+ * impact.mjs`）が対象外の変更ではデプロイ自体をスキップするため、SHA 完全一致を要求すると
+ * 「web を触らない merge のたびに web 側が『デプロイが見つからない』で誤検知する」を
+ * 量産する。最新デプロイの状態だけを見れば、意図的スキップ時は前回の READY デプロイが
+ * そのまま「最新」として健全評価され、#2121 で実際に起きた「デプロイが試行され続けて
+ * ERROR になる」パターンは正しく検知できる。トレードオフ: 「webhook が発火せず
+ * デプロイ自体が始まらない」flake（別の既知の flake 型）はこの設計では検出できない
+ * （手動 Create Deployment で復旧する運用のまま、docs/operations 側の既存知見）。
+ *
+ * 誤検知対策: 最新デプロイが進行中（BUILDING 等）の状態は、grace period 内なら許容する
+ * （push 直後は Vercel 側の webhook 処理や build 自体にラグがあるため）。ERROR/CANCELED
+ * は grace period に関わらず即 failure とする（進行中ではなく終端状態のため）。
+ */
+const DEPLOY_HEALTH_GRACE_MINUTES = 20;
+
+/**
+ * @param {{
+ *   deployments: unknown,
+ *   nowMs: number,
+ *   graceMinutes?: number,
+ * }} params
+ */
+export function evaluateProductionDeploymentHealth({
+  deployments,
+  nowMs,
+  graceMinutes = DEPLOY_HEALTH_GRACE_MINUTES,
+}) {
+  if (!Array.isArray(deployments)) {
+    return { ok: false, reason: 'Vercel deployments response is invalid' };
+  }
+  if (deployments.length === 0) {
+    return { ok: false, reason: 'no production deployments found for this project' };
+  }
+
+  const graceMs = graceMinutes * 60 * 1000;
+  const latest = deployments.reduce((newest, candidate) =>
+    (candidate?.created ?? 0) >= (newest?.created ?? 0) ? candidate : newest,
+  );
+  // Vercel API のバージョンにより `state` / `readyState` のどちらで返るか差がありうるため
+  // 両方見る（`resourceConfig.functionDefaultTimeout` と同じ「未実測フィールドは trusted
+  // dispatch で確定する」方針、上記コメント参照）。
+  const state = latest?.state ?? latest?.readyState;
+  const sha = latest?.meta?.githubCommitSha ?? 'unknown sha';
+
+  if (state === 'READY') {
+    return { ok: true, reason: `latest production deployment (${sha}) is READY` };
+  }
+
+  if (state === 'ERROR' || state === 'CANCELED') {
+    return {
+      ok: false,
+      reason: `latest production deployment (${sha}, ${latest?.uid ?? latest?.id ?? 'unknown'}) is ${state}`,
+    };
+  }
+
+  const createdAtMs = typeof latest?.created === 'number' ? latest.created : null;
+  if (createdAtMs !== null && nowMs - createdAtMs < graceMs) {
+    return {
+      ok: true,
+      reason: `latest production deployment (${sha}) is ${state ?? 'unknown'}, within ${graceMinutes}min grace period`,
+    };
+  }
+
+  return {
+    ok: false,
+    reason: `latest production deployment (${sha}) is stuck in ${state ?? 'unknown'} beyond ${graceMinutes}min grace period`,
+  };
+}
+
+async function fetchProductionDeployments(projectName, token, teamId, fetchImpl) {
+  const url = new URL('https://api.vercel.com/v6/deployments');
+  url.searchParams.set('app', projectName);
+  url.searchParams.set('target', 'production');
+  url.searchParams.set('teamId', teamId);
+  url.searchParams.set('limit', '20');
+
+  const response = await fetchImpl(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`Vercel deployments request failed for project: ${projectName}`);
+  }
+  const body = await response.json();
+  if (!body || !Array.isArray(body.deployments)) {
+    throw new Error(`Vercel deployments response is invalid for project: ${projectName}`);
+  }
+  return body.deployments;
+}
+
+/**
+ * @param {{
+ *   token: string,
+ *   teamId: string,
+ *   fetchImpl?: typeof fetch,
+ *   nowMs?: number,
+ * }} params
+ */
+export async function runProductionDeployHealthCheck({
+  token,
+  teamId,
+  fetchImpl = fetch,
+  nowMs = Date.now(),
+}) {
+  if (!token) throw new Error('VERCEL_TOKEN is required for Production Deploy Health check');
+  if (!teamId) throw new Error('VERCEL_TEAM_ID is required for Production Deploy Health check');
+
+  const results = [];
+  for (const projectName of Object.keys(PROJECT_CONTRACTS)) {
+    const deployments = await fetchProductionDeployments(projectName, token, teamId, fetchImpl);
+    const evaluation = evaluateProductionDeploymentHealth({ deployments, nowMs });
+    results.push({ projectName, ...evaluation });
+  }
+
+  const failures = results.filter((result) => !result.ok);
+  if (failures.length > 0) {
+    throw new Error(
+      `Production Deploy Health check failed:\n${failures
+        .map((failure) => `- ${failure.projectName}: ${failure.reason}`)
+        .join('\n')}`,
+    );
+  }
+
+  return results;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runProductionConfigAudit({
-    token: process.env.VERCEL_TOKEN,
-    teamId: process.env.VERCEL_TEAM_ID,
-  })
-    .then(() => {
-      console.log('Production Config Audit passed for product and web (metadata only).');
+  if (process.argv.includes('--deploy-health')) {
+    runProductionDeployHealthCheck({
+      token: process.env.VERCEL_TOKEN,
+      teamId: process.env.VERCEL_TEAM_ID,
     })
-    .catch((error) => {
-      console.error(error instanceof Error ? error.message : 'Production Config Audit failed');
-      process.exitCode = 1;
-    });
+      .then((results) => {
+        for (const result of results) {
+          console.log(`${result.ok ? 'OK' : 'FAIL'}  ${result.projectName}: ${result.reason}`);
+        }
+        console.log('Production Deploy Health check passed for product and web.');
+      })
+      .catch((error) => {
+        console.error(
+          error instanceof Error ? error.message : 'Production Deploy Health check failed',
+        );
+        process.exitCode = 1;
+      });
+  } else {
+    runProductionConfigAudit({
+      token: process.env.VERCEL_TOKEN,
+      teamId: process.env.VERCEL_TEAM_ID,
+    })
+      .then(() => {
+        console.log('Production Config Audit passed for product and web (metadata only).');
+      })
+      .catch((error) => {
+        console.error(error instanceof Error ? error.message : 'Production Config Audit failed');
+        process.exitCode = 1;
+      });
+  }
 }

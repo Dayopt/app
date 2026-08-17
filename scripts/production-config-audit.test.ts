@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   auditProjectMetadata,
   auditProjectSettings,
+  evaluateProductionDeploymentHealth,
   runProductionConfigAudit,
+  runProductionDeployHealthCheck,
 } from './production-config-audit.mjs';
 
 function productionEntry(key: string, type = 'plain') {
@@ -241,5 +243,141 @@ describe('Production Config Audit — project settings (rootDirectory / autoAssi
     expect(() => auditProjectSettings('storybook', compliantProductSettings())).toThrow(
       'Unknown Vercel project contract: storybook',
     );
+  });
+});
+
+describe('Production Deploy Health (#2124)', () => {
+  const SHA = 'b560f84d6b6e5b2f6e5b2f6e5b2f6e5b2f6e5b2f';
+  const NOW = 1_755_400_000_000; // 固定基準時刻
+
+  function deployment(overrides: Record<string, unknown> = {}) {
+    return {
+      uid: 'dpl_1',
+      created: NOW - 5 * 60 * 1000,
+      state: 'READY',
+      meta: { githubCommitSha: SHA },
+      ...overrides,
+    };
+  }
+
+  it('passes when the latest deployment is READY', () => {
+    const result = evaluateProductionDeploymentHealth({ deployments: [deployment()], nowMs: NOW });
+    expect(result).toEqual({ ok: true, reason: expect.stringContaining('READY') });
+  });
+
+  it('fails when the latest deployment is ERROR, even freshly created', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ state: 'ERROR', created: NOW - 1000 })],
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('ERROR');
+  });
+
+  it('fails when the latest deployment is CANCELED', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ state: 'CANCELED', created: NOW })],
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('CANCELED');
+  });
+
+  it('fails closed when no production deployments exist at all (never skip)', () => {
+    // ignoreCommand によるスキップは「前回の READY デプロイがそのまま最新として残る」
+    // だけで deployments 配列自体が空にはならない。空配列は fetch/project 設定の異常。
+    const result = evaluateProductionDeploymentHealth({ deployments: [], nowMs: NOW });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('no production deployments found');
+  });
+
+  it('does not fail when the latest deployment is old (ignoreCommand skip is healthy, not stale)', () => {
+    // web を触らない merge のたびに web 側だけ「最新デプロイが古い main HEAD 用」に
+    // なるのは ignoreCommand の意図的スキップであり、異常ではない。SHA 一致もタイム
+    // スタンプの新しさも判定条件にしない。
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ created: NOW - 5 * 24 * 60 * 60 * 1000 })], // 5日前
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it('tolerates an in-progress (BUILDING) deployment within the grace period', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ state: 'BUILDING', created: NOW - 5 * 60 * 1000 })],
+      nowMs: NOW,
+    });
+    expect(result).toEqual({ ok: true, reason: expect.stringContaining('BUILDING') });
+  });
+
+  it('fails when a deployment is stuck BUILDING beyond the grace period', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ state: 'BUILDING', created: NOW - 40 * 60 * 1000 })],
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('stuck');
+  });
+
+  it('picks the newest deployment when several exist', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [
+        deployment({ uid: 'dpl_old', state: 'ERROR', created: NOW - 10 * 60 * 1000 }),
+        deployment({ uid: 'dpl_new', state: 'READY', created: NOW - 2 * 60 * 1000 }),
+      ],
+      nowMs: NOW,
+    });
+    expect(result).toEqual({ ok: true, reason: expect.stringContaining('READY') });
+  });
+
+  it('reads readyState as a fallback when state is absent', () => {
+    const result = evaluateProductionDeploymentHealth({
+      deployments: [deployment({ state: undefined, readyState: 'ERROR' })],
+      nowMs: NOW,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('ERROR');
+  });
+
+  it('fails closed when the deployments response is not an array', () => {
+    const result = evaluateProductionDeploymentHealth({ deployments: null, nowMs: NOW });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('invalid');
+  });
+
+  it('runProductionDeployHealthCheck resolves when both projects are READY', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ deployments: [deployment()] }))
+      .mockResolvedValueOnce(Response.json({ deployments: [deployment()] }));
+
+    await expect(
+      runProductionDeployHealthCheck({ token: 'token', teamId: 'team', fetchImpl, nowMs: NOW }),
+    ).resolves.toHaveLength(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain('target=production');
+  });
+
+  it('runProductionDeployHealthCheck rejects when any project is unhealthy', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ deployments: [deployment({ state: 'ERROR' })] }))
+      .mockResolvedValueOnce(Response.json({ deployments: [deployment()] }));
+
+    await expect(
+      runProductionDeployHealthCheck({ token: 'token', teamId: 'team', fetchImpl, nowMs: NOW }),
+    ).rejects.toThrow('product');
+  });
+
+  it('throws for missing token or teamId', async () => {
+    const fetchImpl = vi.fn();
+    await expect(
+      // @ts-expect-error 実行時ガードを検証するため意図的に token を省略する
+      runProductionDeployHealthCheck({ teamId: 'team', fetchImpl }),
+    ).rejects.toThrow('VERCEL_TOKEN');
+    await expect(
+      // @ts-expect-error 実行時ガードを検証するため意図的に teamId を省略する
+      runProductionDeployHealthCheck({ token: 'token', fetchImpl }),
+    ).rejects.toThrow('VERCEL_TEAM_ID');
   });
 });
