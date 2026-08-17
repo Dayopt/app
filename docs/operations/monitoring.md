@@ -99,14 +99,13 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 ### 手順
 
 1. **legal 前提（Drain 作成より先に完了させる）** — Axiom は Dayopt の privacy policy が個別列挙するサブプロセッサーに該当しうる新規追加で、privacy.mdx は「導入の少なくとも 30 日前に通知」を約束している。手順どおり Drain を作るだけでは、この約束を素通りして公開ポリシー違反になる
-   - `apps/web/content/docs` の privacy.mdx（ja / en 両方）へ Axiom をサブプロセッサーとして追記する
-   - 追記から実際の Drain 有効化まで **30 日以上**空ける（通知タイミングの起点は追記 publish 日）
-   - サブプロセッサー追加の意思決定を `docs/operations/legal.md` §改定の記録 に従って decision ログへ残す
-   - この judgment（サブプロセッサーを追加するかどうか）自体が `EXPLICIT AUTHORITY`。下記の技術手順より先に User が判断する
+   - **完了（2026-08-17、#1701 コメント参照）**: `apps/web/content/legal/{ja,en}/privacy.mdx` の subProcessors 節へ Axiom を追記済み。決定の記録は `docs/operations/log/2026-08-17-axiom-subprocessor-notice.md`
+   - **30 日時計の起点はこの追記が production へ公開された日**（merge 日ではなく deploy 日）。Drain 作成はその 30 日後以降に行う。公開日は該当 PR の merge 後、Vercel Production deployment のタイムスタンプで確認する
+   - この judgment（サブプロセッサーを追加するかどうか）自体が `EXPLICIT AUTHORITY` で、User 承認済み（#1701 コメント）
 2. **Drain が送信するフィールドの確定（legal 前提と並行して検討可、Drain 作成より先に確定させる）** — Log Drain はアプリの構造化ログだけでなく **Vercel 自身の request log**（path / query / clientIp / userAgent 等）を運ぶ。既存の `@/lib/logger` sanitize 方針（本ファイル §Sentry runtime contract）はアプリコードが出す構造化ログにしか及ばず、Vercel の request log には適用されない
    - **具体的な露出**: (a) iCal feed の URL（`/api/v1/calendar/{token}.ics`）は token が URL path に入る長期 bearer credential で、request log に path が含まれる設定だと Drain 経由で Axiom に恒久記録される（= feed 利用者のカレンダー閲覧権が第三者 store に写る） (b) OAuth callback の `code` / `state` が query に入る
-   - Drain 作成時に「request log の path / query を対象に含めるか」を確定する。含める場合は iCal token の扱い（対象からの除外、または Axiom 側 retention とアクセス制限の明記）を先に決める
-   - **上記が確定するまで Drain を作成しない**
+   - **確定（2026-08-17、#1701 コメント参照）**: request log の path / query は Drain 対象から除外する。iCal feed token・OAuth code/state の Axiom への恒久記録を構造的に避けるための判断で、デバッグ用途は Sentry + アプリ構造化ログでカバーする。不足が実測されたら除外の緩和を別途判断する
+   - **上記の除外設定を Drain 作成時（下記手順 4）に反映する**
 3. **Spend Management の上限設定** — 無料枠なしの従量課金への対策。Vercel team dashboard → **Settings → Billing → Spend Management** を有効化し、USD 上限額を設定する。Owner または Billing role が必要
    - **上限額の設定は通知のみで、支出を自動的に止めない。** 「production を自動一時停止」オプションを別途有効化しない限り、上限到達後もログ転送と課金は継続する。本番影響が大きいため既定では自動一時停止を有効化せず、通知（50% / 75% / 100%、**Settings → My Notifications** で Web / Email、必要なら SMS を有効化）を受けた人間が手動で対応する運用とする
    - 閾値通知を受けた時の一次対応は下記 rollback（Drain disable）を参照。solo 運用のため対応までの遅延は保証されない — 上限額は「気づかず膨らむ額」の許容上限として、実コストより余裕を持たせて設定する

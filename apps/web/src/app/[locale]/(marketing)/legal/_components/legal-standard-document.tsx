@@ -84,6 +84,7 @@ const PRIVACY_SECTIONS: readonly SectionLayout[] = [
           'cloudflareEmail',
           'google',
           'cloudflare',
+          'axiom',
         ],
       },
       { type: 'note', key: 'changes' },
