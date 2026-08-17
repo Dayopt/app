@@ -319,6 +319,10 @@ export const operationalItems: OperationalItem[] = [
   { vault: human, item: 'github-ssh', required: true },
   { vault: human, item: 'domain', required: true },
   { vault: human, item: 'resend-support-replies', required: true },
+  // Supabase Dashboard の GUI ログイン。op:// では参照されない（#2127）。
+  { vault: human, item: 'supabase-login', required: true },
+  // Upstash Console の GUI ログイン。op:// では参照されない（#2127）。
+  { vault: human, item: 'upstash-login', required: true },
 ];
 
 export const onePasswordEnvSchema = [...envSchema, ...productionEnvSchema];
