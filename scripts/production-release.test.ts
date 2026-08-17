@@ -135,8 +135,9 @@ function auditMetadata(project: 'product' | 'web') {
     plain('UPSTASH_REDIS_REST_URL'),
     sensitive('UPSTASH_REDIS_REST_TOKEN'),
   ];
+  const product = [...shared, sensitive('RECOVERY_CODE_PEPPER')];
   return {
-    envs: project === 'web' ? [...shared, sensitive('TURNSTILE_SECRET_KEY')] : shared,
+    envs: project === 'web' ? [...shared, sensitive('TURNSTILE_SECRET_KEY')] : product,
   };
 }
 

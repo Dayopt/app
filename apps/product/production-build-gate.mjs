@@ -5,6 +5,12 @@
  * Supabase Auth Bot Protection は全リクエストを captcha_failed で拒否するため、login /
  * signup / password reset が全滅する（#1924）。値の欠落を検知する手段が他に無いので
  * production build の必須 env に含める。
+ *
+ * `RECOVERY_CODE_PEPPER` は 2026-08-17、production で空文字のまま放置されているのを検出した
+ * （#2115）。Preview 必須リストには元から入っていたが production 側は漏れており、
+ * `src/env.ts` の `NODE_ENV === 'production'` refine は runtime の初回アクセス時にしか評価
+ * されないため、recovery code が実際に使われるまで欠落が顕在化しなかった。build gate は
+ * deploy 前に落ちるため、未使用パスに依存せず検知できる。
  */
 export const REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV = [
   'RESEND_API_KEY',
@@ -13,6 +19,7 @@ export const REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV = [
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  'RECOVERY_CODE_PEPPER',
 ];
 
 export const REQUIRED_PRODUCT_PREVIEW_BUILD_ENV = [

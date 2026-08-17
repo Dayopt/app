@@ -22,6 +22,7 @@ function completeProductionEnv() {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'safe-dummy-site-key',
     UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'safe-dummy-token',
+    RECOVERY_CODE_PEPPER: 'safe-dummy-recovery-pepper',
     // 現行 production と同じ legacy JWT 形式。他の test がこの fixture をそのまま通すことが、
     // 形式チェックが通常経路を塞いでいないことの positive proof になる。
     SUPABASE_SERVICE_ROLE_KEY: 'eyJ-safe-dummy-service-role-key',
@@ -86,6 +87,20 @@ describe('Product operational production build gate', () => {
       `Product production build requires: ${name}`,
     );
   });
+
+  // #2115: RECOVERY_CODE_PEPPER が production で「未設定」ではなく「空文字」のまま
+  // 放置されていた。上の it.each は key を delete するだけなので、空文字という
+  // 実際の故障形も別途固定する。
+  it.each(REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV)(
+    'rejects a build where %s is an empty string',
+    (name) => {
+      const env = { ...completeProductionEnv(), [name]: '' };
+
+      expect(() => assertProductOperationalProductionBuildEnv(env)).toThrow(
+        `Product production build requires: ${name}`,
+      );
+    },
+  );
 
   it('rejects a non-Production identity on a Vercel Production deployment', () => {
     expect(() =>
