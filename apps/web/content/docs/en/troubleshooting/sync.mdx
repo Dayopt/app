@@ -1,0 +1,133 @@
+---
+title: "Sync isn't working or data is missing"
+description: 'Common data storage, Google Calendar sync, and backup problems and how to fix them.'
+tags: ['troubleshooting', 'sync', 'data', 'backup', 'restore']
+author: 'Dayopt Team'
+publishedAt: '2026-08-17'
+updatedAt: '2026-08-17'
+order: 1
+featured: false
+category: 'troubleshooting'
+slug: 'sync'
+draft: true
+
+# === AI/RAG metadata ===
+ai:
+  relatedQuestions:
+    - "My data isn't syncing"
+    - "My changes aren't showing up"
+    - 'My data disappeared'
+    - "I can't see my data on another device"
+    - 'I got a sync error'
+    - "My Google Calendar events aren't showing up"
+  relatedDocs:
+    - '/docs/app'
+    - '/docs'
+  chunkStrategy: 'h2'
+  searchable: true
+  difficulty: 'beginner'
+  contentType: 'troubleshooting'
+---
+
+# Sync isn't working or data is missing
+
+Fixes for problems with saving Plans and Records, Google Calendar sync, and backups.
+
+---
+
+## Plans and Records aren't showing up on another device
+
+Dayopt saves your Plans and Records to the cloud, but doesn't push them in real time. It fetches the latest data when you open the app or interact with it.
+
+### Check
+
+- Wi-Fi or mobile data is on
+- Other apps can reach the internet
+- If you're using a VPN, try turning it off
+- You're signed in to the right account (data doesn't carry over between accounts)
+
+### Restart the app
+
+1. Fully close the app
+2. Wait a few seconds, then reopen it
+3. Reload the screen to fetch the latest data
+
+### If you made changes while offline
+
+You can still view saved data while offline, but **changes made while offline aren't saved.** If you close or reload the screen before reconnecting, that change is lost. Make the same change again once you're back online.
+
+---
+
+## Changes aren't showing up
+
+### Clear your cache
+
+**On the web app:**
+
+1. Clear your browser cache
+2. Reload the page (Ctrl/Cmd + Shift + R)
+
+**On the home screen PWA:**
+
+1. Clear Dayopt's cache from your device settings
+2. Restart the app
+
+### Check on another device
+
+- Confirm you're signed in with the same account on the other device
+- Reload the screen, then check again
+
+---
+
+## Data disappeared or can't be found
+
+### Check these first
+
+1. **Check the date you're viewing.** Are you on a different day or period?
+2. **Check your filters.** Is a tag filter hiding it?
+3. **Check the account.** Are you signed in to a different account?
+
+### Restoring data
+
+Dayopt doesn't have a trash. Use **Undo**, which appears right after you delete something.
+
+Beyond that, restoring from an export is your only option. Go to Settings > Data controls > Export to download a JSON backup — we recommend doing this regularly.
+
+Restoring from a backup file isn't available yet.
+
+---
+
+## Editing the same data at the same time
+
+If you edit the same Plan or Record on two devices at once, there's no confirmation prompt — whichever save happens last wins. If you notice an unexpected overwrite, fix it manually.
+
+---
+
+## Google Calendar sync isn't working
+
+Google Calendar sync runs automatically every 15 minutes. To sync right away, go to the Integrations tab in settings and click "Sync now".
+
+### Common errors and fixes
+
+| Error                                                           | Cause                                      | Fix                                                             |
+| --------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| "Google access has expired. Reconnect the same Google account." | Google's authorization expired             | Click "Reconnect" and re-authorize with the same Google account |
+| "Google Calendar is temporarily rate limited. Try again later." | Temporary limit on Google's side           | Wait and try again                                              |
+| "Google Calendar is temporarily unavailable. Try again later."  | Temporary outage on Google's side          | Wait and try again                                              |
+| "Some calendars could not be synced."                           | Some of the selected calendars failed      | Review which calendars you're syncing and try again             |
+| "Syncing is taking longer than expected."                       | A large number of events slowed processing | Wait and try again                                              |
+
+If none of this helps, disconnect and reconnect the integration.
+
+---
+
+## Still stuck?
+
+If none of this helps, [contact us](/contact) and our support team will help.
+
+Including the following makes it faster:
+
+- Your device and OS
+- The browser you're using
+- The error message, if you got one
+- When the problem happened
