@@ -1,9 +1,11 @@
 ---
 status: current
-last_verified: 2026-07-30
+last_verified: 2026-08-17
 public_docs:
   - faq/pricing
-lp: []
+  - api-mcp
+lp:
+  - 'API and MCP access'
 ---
 
 # Stripe 課金統合
