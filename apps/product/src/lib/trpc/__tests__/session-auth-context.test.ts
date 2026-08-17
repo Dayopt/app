@@ -86,13 +86,44 @@ describe('resolveSessionAuthContext', () => {
     { currentLevel: 'aal1', nextLevel: 'aal2' },
     { currentLevel: 'aal2', nextLevel: 'aal2' },
   ])('returns a valid $currentLevel -> $nextLevel assurance pair', async (mfaData) => {
-    const { client } = createSupabaseMock({ mfaData });
+    const { client, getAuthenticatorAssuranceLevel } = createSupabaseMock({ mfaData });
 
     await expect(resolveSessionAuthContext(client as never, 'trpc_context')).resolves.toEqual({
       userId: 'user-1',
       sessionId: 'session-token',
       mfaAssurance: mfaData,
     });
+    // #2047: server未検証のcookie storageではなくjwt引数付きで呼び、
+    // 内部でgetUser(jwt)によるserver検証済みfactorsを使わせる。
+    expect(getAuthenticatorAssuranceLevel).toHaveBeenCalledWith('session-token');
+  });
+
+  it('fails closed when the session lookup for MFA fails', async () => {
+    const { client, getAuthenticatorAssuranceLevel } = createSupabaseMock({
+      sessionError: { message: 'session lookup failed' },
+    });
+
+    await expect(resolveSessionAuthContext(client as never, 'trpc_context')).resolves.toMatchObject(
+      {
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: null, nextLevel: null, lookupFailed: true },
+      },
+    );
+    expect(getAuthenticatorAssuranceLevel).not.toHaveBeenCalled();
+  });
+
+  it('treats a missing session as aal1 (no AAL claim to normalize)', async () => {
+    const { client, getAuthenticatorAssuranceLevel } = createSupabaseMock({
+      sessionResult: null,
+    });
+
+    await expect(resolveSessionAuthContext(client as never, 'trpc_context')).resolves.toMatchObject(
+      {
+        userId: 'user-1',
+        mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal1' },
+      },
+    );
+    expect(getAuthenticatorAssuranceLevel).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -116,18 +147,22 @@ describe('resolveSessionAuthContext', () => {
     );
   });
 
-  it('continues the MFA lookup after the session token lookup throws', async () => {
+  it('fails closed for both sessionId and MFA lookup when getSession throws', async () => {
+    // #2047: resolveMfaAssurance は AAL 判定に session.access_token(jwt) を要求するため、
+    // sessionIdの抽出に使うgetSession()自体がthrowする状況ではMFA判定も自前で
+    // getSession()に依存し、同じ理由でfail-closedになる（以前は独立したSDK呼び出し
+    // だったため、session token lookupの失敗はMFA判定に影響しなかった）。
     const { client, getAuthenticatorAssuranceLevel } = createSupabaseMock({
       sessionError: new Error('session unavailable'),
       mfaData: { currentLevel: 'aal1', nextLevel: 'aal2' },
     });
 
-    await expect(resolveSessionAuthContext(client as never, 'rsc_trpc')).resolves.toEqual({
+    await expect(resolveSessionAuthContext(client as never, 'rsc_trpc')).resolves.toMatchObject({
       userId: 'user-1',
       sessionId: undefined,
-      mfaAssurance: { currentLevel: 'aal1', nextLevel: 'aal2' },
+      mfaAssurance: { currentLevel: null, nextLevel: null, lookupFailed: true },
     });
-    expect(getAuthenticatorAssuranceLevel).toHaveBeenCalledOnce();
+    expect(getAuthenticatorAssuranceLevel).not.toHaveBeenCalled();
   });
 
   it.each([

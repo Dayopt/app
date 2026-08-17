@@ -33,6 +33,10 @@ function mockAuthenticatedSession(aalResult: {
     user: { id: 'user-1' },
     supabase: {
       auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: 'session-token' } },
+          error: null,
+        }),
         mfa: {
           getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue(aalResult),
         },

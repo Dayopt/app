@@ -16,8 +16,9 @@ import {
   isOAuthSurfacePath,
   resolveOAuthEnvironmentConfig,
 } from '@/lib/oauth-server/identity';
-import { captureUnexpectedError, observeAuthOperation } from '@/lib/sentry';
+import { captureUnexpectedError } from '@/lib/sentry';
 import { updateSession } from '@/lib/supabase/middleware';
+import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 import { routing } from '@dayopt/i18n/routing';
 
 // next-intlのミドルウェアを作成
@@ -286,19 +287,18 @@ export async function proxy(request: NextRequest) {
     }
 
     // MFA AAL強制（認証済みユーザーのみ）
+    // resolveMfaAssurance は procedures.ts の protectedProcedure guard・calendar
+    // 接続 Route Handler と共通の判定源（#2047: 3箇所で判定源が食い違わないよう統一）。
     if (user && isProtectedPath && !isMFAVerifyPath) {
-      const { data: aalData, error: aalError } = await observeAuthOperation(
-        'proxy_get_authenticator_assurance_level',
-        () => supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
-      );
-      if (aalError) {
+      const mfaAssurance = await resolveMfaAssurance(supabase, 'proxy');
+      if (mfaAssurance.lookupFailed) {
         logger.warn('MFA assurance lookup failed; redirecting to login');
         return redirectWithCsp(
           new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
           contentSecurityPolicy,
         );
       }
-      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+      if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
         // MFA有効だがまだ検証していない → mfa-verifyへ強制リダイレクト
         return redirectWithCsp(
           new URL(getLocalizedPath('/auth/mfa-verify', currentLocale), request.url),
