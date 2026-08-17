@@ -32,17 +32,46 @@ const BUDGETS = {
   // 476.5 KB gzip（Vercel production 実測、#2121）で超過し production デプロイが
   // 3 日以上全滅した。原因は NEXT_PUBLIC_SENTRY_DSN が Production にのみスコープされて
   // いるため、preview/ローカル build では Sentry 初期化が dead-code-eliminate され
-  // 全 route 一律 -66〜68 KB 軽くなる非対称（preview 実測 409.1 KB）。この非対称自体の
-  // 解消は #2123（preview/production budget parity）へ送り、まず本予算を実測値 476.5 KB
-  // + 余裕で 500 KB へ引き上げる（一時緩和、可逆・1行）。ResetPasswordForm.tsx の
-  // MFAVerifyForm 遅延ロード（同 #2121）は局所的な削減だが、この非対称の解消にはならない。
-  /** 認証系ルート（/auth/*）: 現状 preview/ローカル ~410 KB・production ~477 KB gzip（#2121, #2123 参照） */
+  // 全 route 一律 -66〜68 KB 軽くなる非対称（preview 実測 409.1 KB）。この非対称自体は
+  // 下記 SENTRY_PREVIEW_COMPENSATION_KB で解消済み（#2123）。本予算は実測値 476.5 KB
+  // + 余裕で 500 KB のまま（一時緩和時の値を継続、再引き締めは別途判断）。
+  // ResetPasswordForm.tsx の MFAVerifyForm 遅延ロード（同 #2121）は局所的な削減。
+  /** 認証系ルート（/auth/*）: production 実測 ~477 KB gzip。#2123 の補正により preview/ローカルも同じ土俵で比較する（#2121, #2123 参照） */
   AUTH_ROUTES_WARN_KB: 500,
   /** アプリ本体ルート: 現状 ~836 KB gzip */
   APP_ROUTES_WARN_KB: 960,
   /** CSS 合計: 現状 ~90 KB gzip */
   CSS_WARN_KB: 95,
 } as const;
+
+/**
+ * preview/production budget parity（#2123）。
+ *
+ * `NEXT_PUBLIC_SENTRY_DSN` は Production にのみスコープされている（意図的、preview
+ * のノイズを Sentry へ送らない設計。`apps/product/production-build-gate.mjs` の
+ * `FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV` が preview への実値混入を禁止する）。
+ * `apps/product/instrumentation-client.ts` の Sentry 初期化はこの値でガードされているため、
+ * preview/ローカル build では Sentry client SDK（browserTracingIntegration 等）が
+ * dead-code-elimination で全 route から一律に消え、production 実測より軽くなる。
+ *
+ * 対応として instrumentation-client.ts 側を変更する案（dummy DSN 注入・lazy load）は
+ * 両方とも見送った: dummy DSN 注入は preview で `Sentry.init()` を実際に呼ぶことになり、
+ * `enabled: false` を渡しても公式ドキュメントが明記する通り「doesn't prevent all overhead」
+ * （fetch/console 等の instrumentation hook は enabled に関わらず動きうる）。lazy load
+ * は同意済みリピーターの hydration 直後〜import 解決までの窓でエラー捕捉が抜ける
+ * リスクがある。どちらも observability の本来目的を bundle 削減と天秤にかける必要が
+ * あるため、ここでは budget check 側の補正で対応する（アプリ実行パスには一切触れない）。
+ *
+ * 実測: Vercel production ビルドは preview/ローカルより全 route 一律 +66〜68 KB gzip
+ * 重い（#2121）。この既知の重量差を preview/ローカル計測値に加算してから budget と
+ * 比較することで、preview の budget check が production 相当の重さを検出できるようにする。
+ *
+ * 更新条件: Sentry SDK のバージョン更新や instrumentation-client.ts の integrations
+ * 構成変更でこの差分が変わったら、対象 PR の Vercel production デプロイログ実測値で
+ * この定数を更新する（ローカル/preview 実測との差分を再計算する）。
+ */
+const SENTRY_PREVIEW_COMPENSATION_KB = 67; // #2121 実測 66〜68 KB の中央値
+const IS_PRODUCTION_BUILD = process.env.VERCEL_ENV === 'production';
 
 /** デザインシステム目標値（段階的に達成） */
 const TARGETS = {
@@ -214,13 +243,21 @@ function main(): void {
   const stats = JSON.parse(readFileSync(STATS_FILE, 'utf8')) as RouteBundleStat[];
 
   console.log(`Checking bundle budgets for ${stats.length} routes...\n`);
+  if (!IS_PRODUCTION_BUILD) {
+    console.log(
+      `  (preview/local build: +${SENTRY_PREVIEW_COMPENSATION_KB} KB Sentry compensation applied per route, #2123)\n`,
+    );
+  }
 
   const routes: RouteResult[] = [];
 
   for (const stat of stats) {
     const rawKB = Math.round(stat.firstLoadUncompressedJsBytes / 1024);
     const gzipBytes = computeRouteGzipBytes(stat.firstLoadChunkPaths);
-    const gzipKB = Math.round((gzipBytes / 1024) * 10) / 10;
+    const measuredGzipKB = Math.round((gzipBytes / 1024) * 10) / 10;
+    const gzipKB = IS_PRODUCTION_BUILD
+      ? measuredGzipKB
+      : Math.round((measuredGzipKB + SENTRY_PREVIEW_COMPENSATION_KB) * 10) / 10;
     const budgetKB = getBudgetForRoute(stat.route);
     const status = getStatus(gzipKB, budgetKB);
 

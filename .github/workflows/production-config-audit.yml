@@ -180,3 +180,108 @@ jobs:
           set -o pipefail
           node scripts/production-auth-config-audit.mjs | tee audit-output.txt
           grep -q 'Production Auth Config Audit passed' audit-output.txt
+
+  # production デプロイの成否そのものを検知する経路が repo に無かった（#2121, #2124）。
+  # PR の「Vercel – product」check は preview デプロイの結果、上の audit job は env
+  # metadata の drift のみ、UptimeRobot は稼働中の（古い）デプロイの healthy 状態しか
+  # 見ないため、いずれも「新しい deploy が失敗して古いデプロイのまま止まっている」ことを
+  # 区別できなかった（2026-08-14〜17、3〜4 日間気づかれず main の merge が production に
+  # 未反映のまま停滞した実績あり）。auth-config job と同じ理由（push:main / 日次 cron の
+  # みで足り、PR の merge gate には巻き込まない）で分離する。
+  deploy-health:
+    name: Check production deploy health (trusted)
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # commit status / issue 本文の参照用（health 判定そのものには使わない。
+      # scripts/production-config-audit.mjs の evaluateProductionDeploymentHealth の
+      # コメント参照: ignoreCommand による意図的スキップと区別できないため main HEAD
+      # SHA との一致は判定条件にしない）。
+      - name: Determine main HEAD SHA
+        id: main_head
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Check production deployment health
+        id: deploy_health
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          set +e
+          node scripts/production-config-audit.mjs --deploy-health
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Production Deploy Health status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXIT_CODE: ${{ steps.deploy_health.outputs.exit_code || '1' }}
+          SHA: ${{ steps.main_head.outputs.sha }}
+        run: |
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Refusing to publish status for an invalid commit SHA"
+            exit 1
+          fi
+
+          if [ "$EXIT_CODE" = "0" ]; then
+            state=success
+            description="Latest production deployment is READY"
+          else
+            state=failure
+            description="Latest production deployment is unhealthy (see run log)"
+          fi
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state="$state" \
+            -f context="Production Deploy Health" \
+            -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            >/dev/null
+
+      # 失敗のたびに新規 issue を乱造しない。既存の未クローズ自動起票 issue があれば
+      # コメントで追記するだけにする（title prefix で判定、dedupe 用の専用ラベルは
+      # 増やさず既存の area:deployment で絞り込む）。
+      - name: File or update incident issue on unhealthy production deployment
+        if: always() && steps.deploy_health.outputs.exit_code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.main_head.outputs.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title_prefix="[auto] production デプロイが unhealthy です"
+          body="production target の最新デプロイが READY ではありません（ERROR / grace period 超過の BUILDING 停滞のいずれか）。検知時点の main HEAD: \`$SHA\`。詳細ログ: $RUN_URL
+
+          このコメントは \`production-config-audit.yml\` の \`deploy-health\` job による自動起票/追記です。詳細: \`docs/operations/log/2026-08-17-incident-production-deploy-freeze.md\`"
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "area:deployment" --state open --json number,title \
+            --jq --arg prefix "$title_prefix" '[.[] | select(.title | startswith($prefix))][0].number // empty')
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$title_prefix" \
+              --label "area:deployment,area:operations,priority:p1" \
+              --body "$body"
+          fi
+
+      - name: Enforce deploy health result
+        if: always()
+        env:
+          EXIT_CODE: ${{ steps.deploy_health.outputs.exit_code || '1' }}
+        run: exit "$EXIT_CODE"
