@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { Check, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 
 import {
@@ -31,7 +32,14 @@ import { resolveSchemaMessageKey } from '../lib/resolve-schema-message-key';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { passwordSchema } from '../schemas/auth.schema';
 import { useAuthStore } from '../stores/useAuthStore';
-import { MFAVerifyForm } from './MFAVerifyForm';
+
+// MFA(TOTP/リカバリーコード) step-up は MFA 有効アカウントの自己復旧経路でのみ表示される
+// （mfaStepUp が true になった時だけ）。大多数の reset-password 訪問者には不要なため、
+// 初回 First Load JS から切り離して bundle budget（#2121）の余地を確保する
+const MFAVerifyForm = dynamic(
+  () => import('./MFAVerifyForm').then((m) => ({ default: m.MFAVerifyForm })),
+  { ssr: false },
+);
 
 type MfaVerifyMode = 'totp' | 'recovery';
 
