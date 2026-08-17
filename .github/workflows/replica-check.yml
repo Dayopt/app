@@ -1,0 +1,48 @@
+name: Replica Check
+
+# `pnpm replica:check`（Vercel Production Env の key 名だけを取得し、1Password 台帳
+# に無い key を検出する。replica ⊆ 台帳、#2084）を定期実行する。
+#
+# production-config-audit.mjs（台帳 → replica、必須 key が揃っているか）とは逆方向で、
+# PR の diff とは無関係な drift 検査のため、production-config-audit.yml の
+# auth-config job と同型に schedule + workflow_dispatch のみへ絞る
+# （pull_request では走らせない。#2111）。
+#
+# 初回実運用（#2084）が NG 13 件を検出した際は分類前だったため local 専用としていたが、
+# #2094 の調査で 11 件が Supabase↔Vercel integration の自動注入（構造的に台帳化不能、
+# allowedNonLedgerKeys へ登録済み）、残り 2 件が手動残骸（#2094 で削除済み）と判明し、
+# #2101 の merge で green になった。定期実行の前提が整ったため CI へ組み込む。
+on:
+  schedule:
+    # 06:30 JST。production-config-audit の 06:00 JST cron と同日に走らせつつ、
+    # 同時実行の Vercel API 呼び出し衝突を避けるため時間をずらす。
+    - cron: '30 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: replica-check
+  cancel-in-progress: true
+
+jobs:
+  replica-check:
+    name: Check Vercel replica against 1Password ledger
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      # VERCEL_TOKEN / VERCEL_ORG_ID は production-config-audit.yml の audit job と
+      # 同じ GitHub Secrets（1Password ci/vercel の replica）を再利用する。新規 token
+      # 発行は不要で、信頼レベルも同一（env metadata の読み取りのみ、値は取得しない）。
+      - name: Run replica check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: pnpm replica:check

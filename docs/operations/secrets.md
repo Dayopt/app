@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-14
+last_verified: 2026-08-17
 code: scripts/env/schema.ts
 ---
 
@@ -110,6 +110,14 @@ curl -sS --fail "https://api.supabase.com/v1/projects/{ref}/config/auth" \
 ```
 
 取得できていない状態を「確認できた」と誤読しないため、失敗を 2 段で落とす。`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` になる）。`select(all(...))` は 2xx でも期待フィールドを欠くレスポンス（API バージョン差など）を落とし、`jq -e` が出力なしとして非ゼロを返す。
+
+### `op item create` / `op item edit` の stdout 抑制
+
+策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope、指揮台采配）。`op run` は stdout / stderr の secret masking が既定で有効だが、`op item create` / `op item edit` に実値をフィールド引数として直接渡す形（`'FIELD[concealed]=実値'`）は masking の対象外で、コマンドの引数そのものが agent の会話ログ・シェル履歴に残る（2026-08-14 に実際に発生した stdout 露出事故、mcp-usage.md 参照）。
+
+**agent は `op item create` / `op item edit` の引数へ実値を直接埋め込んで実行しない。** 値の投入は 1Password GUI で行うか、値を含まないプレースホルダ（`FIELD[concealed]=`、本ページの `scripts/setup-1password.sh` が使う形）だけを扱う。実値を要する item 操作（値の新規投入・更新）は User が行う。
+
+機械的な強制（pre-tool-guard.sh への正規表現追加）は見送る。`.op-env.human` の env-file ガードと同じ理由で「引数の形を数え上げると別の書き方で回り込まれる」壁に当たり、この事故は頻度・被害とも guard の複雑化に見合うほど大きくない。実インシデントが再発したら pre-tool-guard.sh 側の追加を再検討する。
 
 ---
 
@@ -284,6 +292,22 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 ---
 
+## Service Account（無人実行用、設計のみ・未導入）
+
+策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope、User 裁可）。**本節は設計の記録であり、実装は未着手**。1Password 側の Service Account 作成・token 発行は 1Password への実操作を伴うため、このレーンの PR には含めない（merge 後に手作業レーンへ振る）。
+
+**目的**: 夜間自律実行・cron のような無人実行が、人間の 1Password desktop 統合セッションの承認プロンプトを介さずに `op run` を通すための経路。対話的セッション（現行の desktop 統合）はこの節の対象外で、変更しない。
+
+**scope（決定）**: **`agent` vault の read-only のみ**。`human` / `ci` への到達権限は持たせない。これは pre-tool-guard.sh が消費側で強制している vault allowlist（`agent` のみ通す、上記「AI エージェントの env ファイル境界」節）と同じ境界を、1Password 側の権限設定でも二重に持つ形になる。
+
+**認証方式**: `OP_SERVICE_ACCOUNT_TOKEN` 環境変数を設定したプロセスでは `op` CLI が Service Account モードで動作し、desktop 統合を経由しない。SA token が `agent` vault read-only にしか scope されていなければ、そのプロセスから `human` / `ci` を参照する `op://` は 1Password サーバー側で拒否される（hook の正規表現マッチではなく、1Password 自体の権限モデルによる拒否）。
+
+**SA token 自体の保管（循環問題）**: SA token は「1Password を読むための鍵」なので、1Password 自身には保管できない。導入時点で **bootstrap 例外台帳の初件**になる（下記「Bootstrap 例外台帳」を参照）。保管場所（OS keychain、GitHub Secrets、その他）は導入時に手作業レーンが決定する。
+
+**inline `op://` 経路への効果（上記「AI エージェントの env ファイル境界」§閉じない境界 の再訪）**: 無人実行コンテキストに限り、SA が `human` / `ci` への読み取り権限を持たないため、env-file を経由しない `VAR="op://human/…" op run` のような inline 参照も構造的に失敗する。**対話的 desktop 統合セッションでは変更なし**（1Password 側の承認プロンプトが引き続き実効的な抑止点）。
+
+---
+
 ## Local Dev
 
 ローカル開発の正規ルートは `.op-env.agent` + `op run`。
@@ -331,7 +355,7 @@ pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
-- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。local 専用で CI には組み込まない。**実行は User が行う**（下の実行例は `ci` vault を inline 参照で解決するため、agent はコピペ実行しない。agent 用 token（`agent/vercel`、発行待ち）が入ったら agent も自走できる）。実行例:
+- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。**日次 cron（`.github/workflows/replica-check.yml`、06:30 JST）で定期実行する**（[#2111](https://github.com/Dayopt/dayopt/issues/2111)。初回実運用の NG 13 件分類が #2094/#2101 の merge で完了したため、local 専用だった制約は解除した）。token は production-config-audit と同じ GitHub Secrets（`ci/vercel` の replica）を再利用し、新規 token 発行は不要。手元での単発実行も引き続き可能（下の実行例は `ci` vault を inline 参照で解決するため、agent はコピペ実行しない。agent 用 token（`agent/vercel`、発行待ち）が入ったら agent も自走できる）。実行例:
 
   ```bash
   VERCEL_TOKEN="op://ci/vercel/VERCEL_TOKEN" VERCEL_TEAM_ID="op://ci/vercel/VERCEL_TEAM_ID" op run -- pnpm replica:check
@@ -381,6 +405,14 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 
 **未台帳（invariant 違反候補、2026-08-14 実測）**: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` は GitHub Secrets と Vercel（Protection Bypass for Automation）に存在するが、`ci/vercel` item（旧 Dayopt-Shared/vercel）に対応 field が無い（field label のみ実測、値は未取得）。処遇（1Password への登録、または再生成して登録）は [#2090](https://github.com/Dayopt/dayopt/issues/2090) の判断リストで扱う。
 
+### Bootstrap 例外台帳
+
+策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope）。上記の Replica 台帳が「master は 1Password、replica は外部」の対応を列挙するのに対し、こちらは **1Password の外に構造的に実値が存在する場所**（1Password へ登録すること自体ができない値）を列挙する。基本方針 7「値がどこに存在していようと、必ず 1Password にもある」の唯一の意図的な例外群。
+
+**現在 0 件。** 調査の結果、既存の GitHub Secrets 5 件（`SUPABASE_AUTH_AUDIT_TOKEN` / `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）はいずれも 1Password `ci` vault を master に持つ replica であり、真の bootstrap 例外には該当しない（[Environment Secrets](./security/environment-secrets.md) §GitHub の表と 1:1）。
+
+上記「Service Account（無人実行用、設計のみ・未導入）」の SA token が導入されれば、それが最初の例外になる（SA token は「1Password を読むための鍵」であるため、循環問題により 1Password 自身には保管できない）。保管場所は導入時に決定し、その時点でこの台帳に追記する。
+
 ### Vercel Production の integration-managed 例外
 
 策定日: 2026-08-17（[#2084](https://github.com/Dayopt/dayopt/issues/2084) 初回実運用で検出した NG 13 件の分類、[#2094](https://github.com/Dayopt/dayopt/issues/2094)）
@@ -429,6 +461,23 @@ production の Auth `uri_allow_list` に **localhost を入れない**。かつ�
 ```bash
 op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
 ```
+
+### 短命トークンのローテーション（expiry 付き再発行）
+
+策定日: 2026-08-17（[#2112](https://github.com/Dayopt/dayopt/issues/2112)、User 裁可。epic [#2091](https://github.com/Dayopt/dayopt/issues/2091) 残課題「短命トークン手順の文書化」の初事例）。**本節は手順の記録であり、実操作は含まない**（発行・1Password 更新・revoke はすべて 1Password / 外部サービスへの書き込みを伴うため User + 手作業レーンが行う）。
+
+対象は無期限（Never expire）で発行されている常設の広い鍵（原則 3「常設の広い鍵を持つ主体を減らし続ける」に反する既存トークン）。scoped token への分解が構造的に不可能な場合（例: サービス側がアカウント単位でしか scope を切れず、消費者の一部が read だけでなく write を要求する）、次善として **有効期限を切って再発行**し、漏洩時の被害期間を上限化する。
+
+手順（無停止での順序）:
+
+1. 新規 token を **有効期限付き**で発行する（発行元サービスの UI/CLI で expiry を設定。値は表示・記録しない）
+2. 1Password master の該当 item / field を新しい値へ更新する（`op item edit`、実値を argv に直接書かない — 上記「op stdout 抑制」節の規律に従う）
+3. 全消費者（MCP 登録、script の env 参照など）が新 token で動作することを確認する。参照は item / field 名で行われているため、通常は再登録不要（値の差し替えだけで反映される）
+4. 旧 token を revoke する（3 の確認が終わるまで revoke しない — 旧 token が生きている間に新 token の動作確認を済ませる）
+
+**期限管理**: 現状 1Password / 発行元サービスのいずれにも自動リマインダー機構は無い。次回ローテーション（または期限切れによる動作確認）は月次ガーデニングの棚卸し対象に含め、期限が近い token を検出したらこの手順で再発行する。
+
+初事例は Supabase legacy `cli` token（Never expire・full access、[#2112](https://github.com/Dayopt/dayopt/issues/2112)）。消費者（cloud supabase MCP の `--read-only` 起動、`scripts/enable-auth-hook.sh` の Auth config write）のうち後者が write を要求するため、read-only scoped token への完全置換はできず、expiry 付き再発行を選んだ。
 
 ---
 
