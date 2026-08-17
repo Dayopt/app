@@ -717,6 +717,63 @@ describe('googleCalendarAdapter.listCalendars', () => {
     }
   });
 
+  // #2109: 残り予算が GOOGLE_API_TIMEOUT_MS を下回り signal の timeout が締切まで絞られた
+  // 状態での abort は、締切に間に合わなかっただけで Google が遅いわけではない。汎用の
+  // transient と区別し deadline_exceeded に分類する（connection-service.ts の
+  // DEADLINE_EXCEEDED 経路に乗せて可観測性を揃える）。
+  it('締切到達後の TimeoutError abort は deadline_exceeded に分類する', async () => {
+    fetchMock().mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+    const deadlineAt = 1_000;
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(900) // page loop の deadline チェック: まだ余裕がある
+      .mockReturnValueOnce(950) // signal timeout 計算（requestTimeoutMs）
+      .mockReturnValueOnce(deadlineAt); // abort 後の判定: 締切に達している
+
+    try {
+      await expect(googleCalendarAdapter.listCalendars(SESSION, deadlineAt)).rejects.toMatchObject({
+        kind: 'deadline_exceeded',
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  // 残り予算が GOOGLE_API_TIMEOUT_MS より大きく取れている状態（= signal timeout は締切では
+  // なく固定 15s の cap で決まる）での abort は、締切とは無関係な通常の遅延なので transient
+  // のまま扱う。
+  it('締切に余裕がある状態での TimeoutError abort は transient のまま', async () => {
+    fetchMock().mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+    const deadlineAt = 100_000;
+    const nowSpy = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(0) // page loop の deadline チェック
+      .mockReturnValueOnce(0) // signal timeout 計算
+      .mockReturnValueOnce(20_000); // abort 後の判定: まだ締切前
+
+    try {
+      await expect(googleCalendarAdapter.listCalendars(SESSION, deadlineAt)).rejects.toMatchObject({
+        kind: 'transient',
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('deadlineAt が無ければ TimeoutError abort も transient のまま', async () => {
+    fetchMock().mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+
+    await expect(googleCalendarAdapter.listCalendars(SESSION)).rejects.toMatchObject({
+      kind: 'transient',
+    });
+  });
+
   // #2089: 送信前チェックを通過した直後に rate limit された場合、in-flight リクエスト自体は
   // signal timeout で締切近くに収まるが、retry の sleep（最大 base+jitter=2s）を律儀に待つと
   // そこで deadline を超過する。残り予算が sleep 下限にも満たないなら retry せず即座に投げ、

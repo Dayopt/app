@@ -28,11 +28,15 @@ import { describe, expect, it } from 'vitest';
  *   が呼ぶ `syncConnection`（procedure の dispatch 数に上限が無い理由だった最大の既知
  *   要因）に wall-clock 予算を持たせたため段の値まで下げられた。#2079 で
  *   `listProviderCalendars` にも同型の予算を持たせ、ページ開始前の判定で pagination ループ
- *   自体は有界化した。**ただし in-flight 1 リクエストの overshoot は残る**（#2089 で追跡、
- *   未着手） — 判定通過直後にそのリクエストが rate limit されて retry すると、
- *   `GOOGLE_API_TIMEOUT_MS`（15s）× 2 + backoff の分だけ deadline を超えて走りうる。
- *   `disconnect` は同じ issue（#2079）で検討した上で導入しない結論
- *   （`connection-service.ts` の `disconnect()` docstring 参照 — idempotent な retry と
+ *   自体は有界化した。**in-flight 1 リクエストの overshoot も #2102 で解消済み**（#2089 の
+ *   追跡先） — `requestTimeoutMs` が retry の 2 回目リクエストでも `deadlineAt - Date.now()`
+ *   から signal timeout を再計算するため、1 回目のリクエストが rate limit されて retry
+ *   しても、2 回目の signal timeout は固定 `GOOGLE_API_TIMEOUT_MS`（15s）ではなくその時点の
+ *   残り予算まで絞られる。したがって総経過時間は残余予算の大小によらず `deadlineAt` 付近に
+ *   収まる（残余が大きい場合の総経過 ~32s は残余の内側に収まる。特定の残余予算帯だけ
+ *   overshoot が残る、という構造ではない）。maxDuration=60 のマージンは、この
+ *   deadline 側の予算設計が担う。`disconnect` は同じ issue（#2079）で検討した上で導入しない
+ *   結論（`connection-service.ts` の `disconnect()` docstring 参照 — idempotent な retry と
  *   fail-closed 保証を優先）。他 procedure の worst path 全数監査はしていない
  *
  * これらを「全依存が同時に張り付く」ケースまでカバーする値へ引き上げると障害半径を絞る
