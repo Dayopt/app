@@ -19,6 +19,7 @@ import {
   FieldLabel,
   HoverTooltip,
   Input,
+  Spinner,
 } from '@dayopt/components';
 import { Link } from '@dayopt/i18n/navigation';
 
@@ -38,7 +39,14 @@ import { useAuthStore } from '../stores/useAuthStore';
 // 初回 First Load JS から切り離して bundle budget（#2121）の余地を確保する
 const MFAVerifyForm = dynamic(
   () => import('./MFAVerifyForm').then((m) => ({ default: m.MFAVerifyForm })),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex flex-col items-center justify-center gap-6 p-6 md:p-8">
+        <Spinner size="lg" />
+      </div>
+    ),
+  },
 );
 
 type MfaVerifyMode = 'totp' | 'recovery';
