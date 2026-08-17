@@ -49,6 +49,8 @@ user_invocable: true
 
 `apps/product/src/features/` 側にあってレジストリのどこにも現れない機能も洗い出す。判定基準は「ユーザーが操作する主要機能に対応する docs があるか」。内部専用 feature は対象外。
 
+`docs:coverage` の「どの spec にも紐づかない公開docs」に出たページは、機能仕様が欠けているのか、そもそも spec を持たない汎用ページなのかを判定する。**faq / getting-started / troubleshooting のように特定機能ではなく製品全体・操作全般を扱うページは、frontmatter に `generic: true` を付けて意図的な spec 外と明示する**（`pnpm docs:coverage` の「意図的に spec 外の公開docs」節に分離される）。それ以外（特定機能を説明しているのに spec が無い）は spec 側 `public_docs` への登録漏れとして扱い、該当 spec に追記するか新規 spec を起票する。
+
 #### B. 鮮度チェック
 
 既存 docs が説明する機能の product 側コードが docs より後に大きく変わっていないか確認する。

@@ -68,6 +68,7 @@ describe('collectDocs', () => {
     createFile(root, 'en/features/review.mdx', `---\ndraft: true\nplaceholder: true\n---\n`);
     createFile(root, 'en/features/records.mdx', `---\ndraft: true\n---\n`);
     createFile(root, 'ja/getting-started/index.mdx', `---\ntitle: 'はじめに'\n---\n`);
+    createFile(root, 'en/faq/index.mdx', `---\ngeneric: true\ntitle: 'FAQ'\n---\n`);
 
     const docs = collectDocs(root);
 
@@ -76,6 +77,9 @@ describe('collectDocs', () => {
     expect(docs.find((doc) => doc.slug === 'records')?.state).toBe('draft');
     // index.mdx はカテゴリ名が slug になる（apps/web/src/lib/mdx.ts と同じ規則）
     expect(docs.find((doc) => doc.locale === 'ja')?.slug).toBe('getting-started');
+    // generic: true の frontmatter を持つページはフラグが立つ
+    expect(docs.find((doc) => doc.slug === 'faq')?.generic).toBe(true);
+    expect(docs.find((doc) => doc.slug === 'plans')?.generic).toBe(false);
   });
 });
 
@@ -115,8 +119,20 @@ describe('buildCoverage', () => {
     const coverage = buildCoverage(
       specs,
       [
-        { slug: 'tags', locale: 'en', path: 'features/tags.mdx', state: 'published' },
-        { slug: 'tags', locale: 'ja', path: 'features/tags.mdx', state: 'placeholder' },
+        {
+          slug: 'tags',
+          locale: 'en',
+          path: 'features/tags.mdx',
+          state: 'published',
+          generic: false,
+        },
+        {
+          slug: 'tags',
+          locale: 'ja',
+          path: 'features/tags.mdx',
+          state: 'placeholder',
+          generic: false,
+        },
       ],
       ['Tags'],
     );
@@ -130,7 +146,15 @@ describe('buildCoverage', () => {
   it('ファイルが無いlocaleをmissingにする', () => {
     const coverage = buildCoverage(
       specs,
-      [{ slug: 'tags', locale: 'ja', path: 'features/tags.mdx', state: 'published' }],
+      [
+        {
+          slug: 'tags',
+          locale: 'ja',
+          path: 'features/tags.mdx',
+          state: 'published',
+          generic: false,
+        },
+      ],
       ['Tags'],
     );
 
@@ -150,10 +174,39 @@ describe('buildCoverage', () => {
   it('どのspecにも紐づかない公開docsをorphanとして返す', () => {
     const coverage = buildCoverage(
       specs,
-      [{ slug: 'comparison', locale: 'en', path: 'faq/comparison.mdx', state: 'published' }],
+      [
+        {
+          slug: 'comparison',
+          locale: 'en',
+          path: 'faq/comparison.mdx',
+          state: 'published',
+          generic: false,
+        },
+      ],
       [],
     );
 
     expect(coverage.orphanDocs.map((doc) => doc.slug)).toEqual(['comparison']);
+    expect(coverage.genericDocs).toEqual([]);
+  });
+
+  it('generic: trueのdocsはorphanから除外しgenericDocsへ分離する', () => {
+    const coverage = buildCoverage(
+      specs,
+      [
+        { slug: 'faq', locale: 'en', path: 'faq/index.mdx', state: 'published', generic: true },
+        {
+          slug: 'comparison',
+          locale: 'en',
+          path: 'faq/comparison.mdx',
+          state: 'published',
+          generic: false,
+        },
+      ],
+      [],
+    );
+
+    expect(coverage.orphanDocs.map((doc) => doc.slug)).toEqual(['comparison']);
+    expect(coverage.genericDocs.map((doc) => doc.slug)).toEqual(['faq']);
   });
 });

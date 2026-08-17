@@ -75,13 +75,26 @@ function render(coverage: Coverage): string {
     lines.push('');
   }
 
+  const genericByLocale = LOCALES.map((locale) => ({
+    locale,
+    docs: coverage.genericDocs.filter((doc) => doc.locale === locale),
+  })).filter((group) => group.docs.length > 0);
+
+  if (genericByLocale.length > 0) {
+    lines.push('## 意図的に spec 外の公開docs（frontmatter generic: true）', '');
+    for (const { locale, docs } of genericByLocale) {
+      for (const doc of docs) lines.push(`- ${locale}/${doc.path}（/docs/${doc.slug}）`);
+    }
+    lines.push('');
+  }
+
   const asymmetric = coverage.rows.filter(
     (row) =>
       (row.states.en === 'missing') !== (row.states.ja === 'missing') ||
       (row.states.en === 'published') !== (row.states.ja === 'published'),
   );
   const orphanSlugs = new Map<string, Set<string>>();
-  for (const doc of coverage.orphanDocs) {
+  for (const doc of [...coverage.orphanDocs, ...coverage.genericDocs]) {
     if (!orphanSlugs.has(doc.slug)) orphanSlugs.set(doc.slug, new Set());
     orphanSlugs.get(doc.slug)?.add(doc.locale);
   }

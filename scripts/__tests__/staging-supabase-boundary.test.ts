@@ -96,10 +96,11 @@ describe('agent/supabase の接続情報境界', () => {
     const block = stagingSupabaseItemBlock();
     expect(block).not.toContain('SUPABASE_ACCESS_TOKEN');
 
+    // 2026-08-17 に human/supabase-cli へ専用 item として切り出した（#2127）
     const productionMatches = productionEnvSchema.filter(
       (entry) =>
         entry.vault === 'human' &&
-        entry.item === 'supabase' &&
+        entry.item === 'supabase-cli' &&
         entry.field === 'SUPABASE_ACCESS_TOKEN',
     );
     expect(productionMatches.length).toBeGreaterThan(0);

@@ -66,9 +66,9 @@ export const envSchema: EnvSchemaEntry[] = [
   // agent（旧 Dayopt-Staging）に置かない。常設 staging 環境が存在せず、この 4 field は
   // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
   // supabase status -o env から注入するため 1Password を経由しない。
-  // SUPABASE_ACCESS_TOKEN は human（旧 Dayopt-Production）/supabase を正本に一本化した
-  // （#1933）。human と同一値の複製を agent から読む理由が無いため、
-  // ここには entry を置かない。
+  // SUPABASE_ACCESS_TOKEN は human 側を正本に一本化した（#1933、2026-08-17 に
+  // human/supabase-cli へ再切り出し、#2127）。human と同一値の複製を agent から
+  // 読む理由が無いため、ここには entry を置かない。
   envEntry('CRON_SECRET', false, 'secret', 'staging', agent, 'supabase'),
   envEntry('SEND_EMAIL_HOOK_SECRET', false, 'secret', 'staging', agent, 'supabase'),
 
@@ -160,7 +160,10 @@ export const productionEnvSchema: EnvSchemaEntry[] = [
   envEntry('NEXT_PUBLIC_SUPABASE_URL', true, 'public', 'production', human, 'supabase'),
   envEntry('NEXT_PUBLIC_SUPABASE_ANON_KEY', true, 'public', 'production', human, 'supabase'),
   envEntry('SUPABASE_SERVICE_ROLE_KEY', true, 'secret', 'production', human, 'supabase'),
-  envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', human, 'supabase'),
+  // SUPABASE_ACCESS_TOKEN は 2026-08-17 に human/supabase-cli へ専用 item として切り出した
+  // （#2127）。「アプリが env として消費する値の束」と「人間・CLI が使う operational
+  // credential（rotation 対象、有効期限 field 必須）」を分離する命名規約に合わせたもの。
+  envEntry('SUPABASE_ACCESS_TOKEN', false, 'secret', 'production', human, 'supabase-cli'),
   // .op-env.human 経由の `supabase db query --linked` が要求する。欠けると
   // seed が user 作成だけ成功して DB 投入で止まり、部分適用になる。
   envEntry('SUPABASE_DB_PASSWORD', true, 'secret', 'production', human, 'supabase'),

@@ -88,8 +88,8 @@ echo "  [agent]"
 
 # 接続情報（URL / anon key / service role key / DB password / project-ref）は
 # 意図的に作らない。常設 staging が無いため、置けば production の複製になる。
-# SUPABASE_ACCESS_TOKEN は置かない。human/supabase を正本に
-# 一本化した（#1933）。
+# SUPABASE_ACCESS_TOKEN は置かない。human/supabase-cli を正本に
+# 一本化した（#1933、2026-08-17 に supabase-cli へ再切り出し、#2127）。
 run item create --category=apicredential --vault=agent --title=supabase \
   --tags=dayopt/supabase notesPlain="$NOTES" \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
@@ -135,8 +135,15 @@ run item create --category=apicredential --vault=human --title=supabase \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
   'CRON_SECRET[concealed]=' \
   'SUPABASE_DB_PASSWORD[concealed]=' \
-  'SUPABASE_ACCESS_TOKEN[concealed]=' \
   'project-ref[text]='
+
+# operational credential（PAT / CLI token / rotation 対象）はサービス名 item から
+# 分離する専用 item の初例（2026-08-17、#2127）。有効期限 field を必ず設定し、
+# 1Password の expiry アラートに乗せる。
+run item create --category=apicredential --vault=human --title=supabase-cli \
+  --tags=dayopt/supabase notesPlain="$NOTES" \
+  'SUPABASE_ACCESS_TOKEN[concealed]=' \
+  '有効期限[text]='
 
 run item create --category=apicredential --vault=human --title=upstash \
   --tags=dayopt/upstash notesPlain="$NOTES" \
