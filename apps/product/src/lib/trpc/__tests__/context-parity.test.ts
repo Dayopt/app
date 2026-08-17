@@ -112,9 +112,11 @@ describe('HTTP/RSC tRPC context parity', () => {
     expect(mocks.observeAuthOperation.mock.calls.map(([operation]) => operation)).toEqual([
       'trpc_context_get_user',
       'trpc_context_get_session',
+      'trpc_context_get_session_for_mfa',
       'trpc_context_get_authenticator_assurance_level',
       'rsc_trpc_get_user',
       'rsc_trpc_get_session',
+      'rsc_trpc_get_session_for_mfa',
       'rsc_trpc_get_authenticator_assurance_level',
     ]);
   });
