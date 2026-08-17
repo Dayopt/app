@@ -304,6 +304,8 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope、User 裁可）。**本節は設計の記録であり、実装は未着手**。1Password 側の Service Account 作成・token 発行は 1Password への実操作を伴うため、このレーンの PR には含めない（merge 後に手作業レーンへ振る）。
 
+**ただしこの「手作業レーンへ振る」は現時点でプラン制約により保留**（2026-08-17 実測確認）。1Password の Service Account は Business / Teams プラン限定で、現行の Family プランでは作成できない。再検討トリガーはプラン変更（Business/Teams への移行）。
+
 **目的**: 夜間自律実行・cron のような無人実行が、人間の 1Password desktop 統合セッションの承認プロンプトを介さずに `op run` を通すための経路。対話的セッション（現行の desktop 統合）はこの節の対象外で、変更しない。
 
 **scope（決定）**: **`agent` vault の read-only のみ**。`human` / `ci` への到達権限は持たせない。これは pre-tool-guard.sh が消費側で強制している vault allowlist（`agent` のみ通す、上記「AI エージェントの env ファイル境界」節）と同じ境界を、1Password 側の権限設定でも二重に持つ形になる。
