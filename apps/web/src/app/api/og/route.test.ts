@@ -1,5 +1,9 @@
+import fs from 'fs';
 import { NextRequest } from 'next/server';
+import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { OG_FALLBACK_IMAGE_BASE64 } from './og-fallback-image.generated';
 
 const rateLimit = vi.hoisted(() => ({
   ogImageRateLimit: { limit: vi.fn() },
@@ -180,5 +184,13 @@ describe('OG image route', () => {
     expect(response.status).toBe(200);
     const texts = collectTextContent(imageResponseCalls.at(-1)?.element);
     expect(texts).not.toContain('malicious');
+  });
+
+  it('public/og-fallback.pngとroute.tsxへ埋め込んだbase64は同じbyte列である(乖離すると再生成scriptの出力漏れに気づけない、#2052クロスレビュー指摘)', () => {
+    const pngPath = path.join(process.cwd(), 'public', 'og-fallback.png');
+    const pngBytes = fs.readFileSync(pngPath);
+    const embeddedBytes = Buffer.from(OG_FALLBACK_IMAGE_BASE64, 'base64');
+
+    expect(embeddedBytes.equals(pngBytes)).toBe(true);
   });
 });
