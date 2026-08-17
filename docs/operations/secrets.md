@@ -238,7 +238,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 **2026-08-17 に `human/supabase-cli` へ再移動した**（[#2127](https://github.com/Dayopt/dayopt/issues/2127)）。「アプリが env として消費する値の束」と「人間・CLI が使う operational credential（PAT / CLI token / rotation 対象、有効期限 field 必須）」を分離する命名規約に合わせ、`SUPABASE_ACCESS_TOKEN` は専用 item `human/supabase-cli` へ切り出した。`human/supabase` 側の同名 field は **削除済み**（2026-08-17、`op item get` で実測確認）。repo 側の参照はすべて `human/supabase-cli` を正本とする。
 
-同じ整理で `human/supabase-legacy`（値未登録の残骸）・`human/upstash-legacy`（schema 未参照、値未登録）・`human/resend-old-staging`（`resend` / `resend-web` と同一 field 構成の古い複製）を archive した（1Password 側は削除ではなく Archive、復元可能）。`human/upstash-login` は `human/supabase-login` と同型の Upstash Console GUI ログインと判定し、残置のうえ台帳化した。実施記録は [#2127 コメント](https://github.com/Dayopt/dayopt/issues/2127#issuecomment-5312176560)を参照。
+同じ整理で `human/upstash-legacy`（schema 未参照、値未登録の残骸）・`human/resend-old-staging`（`resend` / `resend-web` と同一 field 構成の古い複製）の 2 件を archive した（1Password 側は削除ではなく Archive、復元可能）。`human/supabase-legacy` は #2127 着手前に User が削除済みだったことを実測で確認した。`human/upstash-login` は `human/supabase-login` と同型の Upstash Console GUI ログインと判定し、残置のうえ台帳化した。実施記録は [#2127 コメント](https://github.com/Dayopt/dayopt/issues/2127#issuecomment-5312176560)を参照。
 
 `google-calendar` item は 2026-08-14 実測時点で **1Password に存在しない**（#2063）。`.op-env.agent.example` の該当行はコメントアウト済みで、`pnpm dev` の正規ルートはブロックされない。外部カレンダー連携を local dev で検証するには、test mode の Google OAuth client を作成した上で item を作る必要がある（User 手作業）。
 
