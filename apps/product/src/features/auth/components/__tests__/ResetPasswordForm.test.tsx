@@ -208,9 +208,11 @@ describe('ResetPasswordForm', () => {
       await waitFor(() => {
         expect(mockChallenge).toHaveBeenCalledWith({ factorId: 'factor-1' });
       });
-      // password 入力フォームには戻らず、MFAVerifyForm（passwordReset flow）が出る
+      // password 入力フォームには戻らず、MFAVerifyForm（passwordReset flow）が出る。
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため、このファイル内で
+      // 最初に mount される時だけ import() の非同期解決を待つ必要がある
       expect(
-        screen.getByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
+        await screen.findByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
       ).toBeInTheDocument();
       expect(screen.queryByText('auth.errors.recoveryMfaBlocked')).not.toBeInTheDocument();
     });
