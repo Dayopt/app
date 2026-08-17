@@ -15,9 +15,14 @@
 # storage.buckets INSERT（avatars / attachments）。
 #
 # ⚠ sync は destination を source に合わせるため、SOURCE_REMOTE の設定ミス・読み取り
-# 失敗（空を返す等）が起きると destination 側の既存オブジェクトを削除しうる。実運用化
-# （#2026）では destination 側の versioning / object lock を必須にするか、
-# `--max-delete` で削除上限を設ける。
+# 失敗（空を返す等）が起きると destination 側の既存オブジェクトを削除しうる。
+# --max-delete で 1 回の sync が削除できるオブジェクト数に上限を設け、全消し型の事故を
+# fail loud にする（超過時 rclone は exit code 7 で失敗する）。認証エラー等は
+# 既存の set -euo pipefail で fail loud だが、「エラーにはならないが空リストが返る」型
+# （bucket 誤指定・list 権限欠如等）は --max-delete が無いと無音で進んでしまう
+# （2026-08-18、PR #2151 クロスレビュー risk-reviewer 指摘）。実運用化（#2026）では
+# destination 側の versioning / object lock（Bucket Locks）も defense-in-depth として
+# 検討する。
 
 set -euo pipefail
 
@@ -34,6 +39,12 @@ IFS=' ' read -r -a BUCKETS <<< "${STORAGE_BACKUP_BUCKETS:-avatars attachments}"
 DRY_RUN_FLAG=""
 [[ "${DRY_RUN:-false}" == "true" ]] && DRY_RUN_FLAG="--dry-run"
 
+# 1 回の sync で削除できるオブジェクト数の上限。既定 1000 は現行の avatars/attachments
+# 実データ量に対して十分な余裕を見込んだ暫定値（#2026 の初回搬出後、実オブジェクト数を
+# 見て STORAGE_BACKUP_MAX_DELETE で調整する）。超過時は rclone が exit code 7 で失敗し、
+# sync 自体は中断される（destination は上限に達した時点までの変更しか反映しない）。
+MAX_DELETE="${STORAGE_BACKUP_MAX_DELETE:-1000}"
+
 command -v rclone >/dev/null 2>&1 || {
   echo "❌ rclone が見つかりません。公式配布（https://rclone.org/downloads/）からインストールしてください" >&2
   exit 1
@@ -48,6 +59,7 @@ for bucket in "${BUCKETS[@]}"; do
     "${DEST_REMOTE}:${bucket}" \
     --checksum \
     --create-empty-src-dirs=false \
+    --max-delete "${MAX_DELETE}" \
     --stats-one-line \
     --stats=30s \
     ${DRY_RUN_FLAG}
