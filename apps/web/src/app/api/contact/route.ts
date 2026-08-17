@@ -18,6 +18,27 @@ export const maxDuration = 30;
 
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
+/**
+ * bot が正しく拒否された「正常系」の siteverify error-code（token / client 側の問題、および
+ * このルート独自の action/hostname 検証）。このリストに一致しない失敗は
+ * TURNSTILE_SECRET_KEY 自体の misconfiguration とみなし、Sentry へ alert する。
+ *
+ * denylist（'invalid-input-secret' だけを見る）ではなく allowlist にしている理由: PR #2122
+ * クロスレビューで、denylist だと 'missing-input-secret'（secret が空文字で上書きされた
+ * 場合。2026-08-17 の RECOVERY_CODE_PEPPER 空文字 incident #2115 と同型）のような他の
+ * secret misconfiguration variant が同じ穴で握り潰されると指摘された。Cloudflare
+ * siteverify を直接叩いて実測（`secret=''` → `missing-input-secret`）し、Cloudflare が
+ * 将来追加する未知の error-code も含めて secret 側の異常を安全側（alert）に倒す設計にした。
+ * 設計の詳細は docs/operations/log/2026-08-17-turnstile-secret-detection-design.md 参照。
+ */
+const EXPECTED_TURNSTILE_TOKEN_ISSUE_CODES: ReadonlySet<string> = new Set([
+  'invalid-input-response',
+  'missing-input-response',
+  'timeout-or-duplicate',
+  'action-mismatch', // apps/web/src/lib/turnstile/verify.ts が付与する独自コード
+  'hostname-mismatch', // 同上
+]);
+
 class ContactBodyTooLargeError extends Error {
   constructor() {
     super('Contact request body is too large');
@@ -156,18 +177,18 @@ export async function POST(request: NextRequest) {
     });
   }
   if (!turnstileResult.success) {
-    // 通常の bot 検出（token 不正・期限切れ等）は正常系なので Sentry へ送らないが、
-    // TURNSTILE_SECRET_KEY 自体が無効な場合は siteverify がこの error-code を返す
-    // （#2031 の production incident）。これは client の token に依存しない
-    // システム構成の障害なので、区別して alert する。'invalid-input-secret' は
-    // Cloudflare の公開仕様（siteverify のドキュメント化された error-codes）であり、
-    // product 側（GoTrue 経由）の message substring 判定より安定している。
-    if (turnstileResult['error-codes']?.includes('invalid-input-secret')) {
+    // 通常の bot 検出（token 不正・期限切れ等）は正常系なので Sentry へ送らないが、それ以外
+    // （TURNSTILE_SECRET_KEY 自体の misconfiguration を含む）は区別して alert する。
+    // allowlist にしている理由は EXPECTED_TURNSTILE_TOKEN_ISSUE_CODES のコメント参照。
+    const errorCodes = turnstileResult['error-codes'] ?? [];
+    const isKnownTokenIssue =
+      errorCodes.length > 0 && errorCodes.every((c) => EXPECTED_TURNSTILE_TOKEN_ISSUE_CODES.has(c));
+    if (!isKnownTokenIssue) {
       captureContactFailure(
         new Error(
-          `Turnstile secret invalid (error-codes: ${(turnstileResult['error-codes'] ?? []).join(', ')})`,
+          `Turnstile verification failed unexpectedly (error-codes: ${errorCodes.join(', ') || 'none'})`,
         ),
-        'verify_turnstile_secret_invalid',
+        'verify_turnstile_unexpected',
         requestId,
       );
     }

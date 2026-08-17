@@ -49,11 +49,18 @@ function authErrorMessage(error: unknown): string | undefined {
 }
 
 /**
- * GoTrue は Turnstile secret 自体が無効な時も `code: 'captcha_failed'`（bot を弾いた正常系と
- * 同じ構造化コード）を返すが、raw message に siteverify の error-codes をそのまま埋め込む
- * 形式（`captcha protection: request disallowed (invalid-input-secret)`）で区別できる。
- * #2031 でローカル GoTrue に対して実測確認済み（有効な secret + 不正 token は
- * `invalid-input-response` になり、この判定には一致しない）。
+ * GoTrue は captcha 検証が失敗した時、常に `code: 'captcha_failed'`（構造化コードは単一）を
+ * 返すが、raw message に siteverify の error-codes をそのまま埋め込む形式
+ * （`captcha protection: request disallowed (<error-code>)`）で内訳を区別できる。
+ * #2031 でローカル GoTrue / Cloudflare siteverify に対して実測確認済み。
+ *
+ * denylist（`invalid-input-secret` だけを見る）ではなく allowlist にしている理由: PR #2122
+ * クロスレビューで、denylist だと `missing-input-secret`（secret が空文字で上書きされた場合。
+ * 2026-08-17 の RECOVERY_CODE_PEPPER 空文字 incident #2115 と同型）のような他の secret
+ * misconfiguration variant が同じ穴で握り潰されると指摘された。Cloudflare siteverify を
+ * 直接叩いて実測（`secret=''` → `missing-input-secret`）し、bot を弾いた「正常系」（token 側の
+ * 問題）だけを allowlist 化することで、Cloudflare が将来追加する未知の error-code も含めて
+ * secret 側の異常を安全側（alert）に倒す設計にした。
  *
  * この文言は Cloudflare の公開仕様（siteverify error-codes）ではなく GoTrue 実装依存のため、
  * GoTrue のバージョンアップで静かに変わりうる。`__tests__/integration.test.ts` の
@@ -62,7 +69,14 @@ function authErrorMessage(error: unknown): string | undefined {
  * なるため能動的な canary（production の GoTrue endpoint へ低頻度で合成 probe を送る設計）
  * への切替を検討する（検討済みの設計比較は docs/operations/log/2026-08-17-turnstile-secret-detection-design.md 参照）。
  */
-const TURNSTILE_SECRET_INVALID_MESSAGE = 'invalid-input-secret';
+const EXPECTED_CAPTCHA_TOKEN_ISSUE_MESSAGES = [
+  // Cloudflare siteverify の公開 error-codes（token / client 側の問題）
+  'invalid-input-response',
+  'missing-input-response',
+  'timeout-or-duplicate',
+  // GoTrue 独自の client 側未送信メッセージ（siteverify を呼ぶ前に弾かれる）
+  'no captcha_token found',
+];
 
 const EXPECTED_AUTH_ERROR_CODES = new Set([
   'bad_code_verifier',
@@ -122,8 +136,10 @@ export function isExpectedAuthError(error: unknown): boolean {
 
   const code = authErrorCode(error);
   if (code === 'captcha_failed') {
-    // secret 自体が無効なケースはシステム構成の障害であり、bot を弾いた正常系とは区別する
-    return !authErrorMessage(error)?.includes(TURNSTILE_SECRET_INVALID_MESSAGE);
+    // token 側の既知の正常系だけを許容し、それ以外（secret misconfiguration を含む
+    // 未知の error-code）はシステム構成の障害として扱う
+    const message = authErrorMessage(error) ?? '';
+    return EXPECTED_CAPTCHA_TOKEN_ISSUE_MESSAGES.some((needle) => message.includes(needle));
   }
   if (code && EXPECTED_AUTH_ERROR_CODES.has(code)) return true;
 

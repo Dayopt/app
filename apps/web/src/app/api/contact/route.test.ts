@@ -135,29 +135,36 @@ describe('POST /api/contact', () => {
     expect(mocks.captureUnexpectedWebError).not.toHaveBeenCalled();
   });
 
-  // #2031: siteverify が 'invalid-input-secret' を返すのは TURNSTILE_SECRET_KEY 自体が
-  // 無効な時（client の token 内容に依らないシステム構成の障害）。通常の bot 検出
-  // （上のテストの 'invalid-input-response' 等）とは区別して Sentry へ送る。
-  it('captures a Sentry alert when the Turnstile secret itself is invalid, distinct from normal bot detection', async () => {
-    mocks.verifyTurnstile.mockResolvedValueOnce({
-      success: false,
-      'error-codes': ['invalid-input-secret'],
-    });
+  // #2031: siteverify が 'invalid-input-secret' や 'missing-input-secret'（secret が
+  // 空文字で上書きされた場合。2026-08-17 の RECOVERY_CODE_PEPPER 空文字 incident #2115 と
+  // 同型、PR #2122 クロスレビュー P2）を返すのは TURNSTILE_SECRET_KEY 自体の
+  // misconfiguration（client の token 内容に依らないシステム構成の障害）。通常の bot 検出
+  // （上のテストの 'invalid-input-response' 等）とは区別して Sentry へ送る。allowlist
+  // 方式（EXPECTED_TURNSTILE_TOKEN_ISSUE_CODES）のため、denylist で漏れていた
+  // missing-input-secret も含め未知の error-code はすべて alert される。
+  it.each([
+    ['secret 自体が無効な場合', ['invalid-input-secret']],
+    ['secret が空文字で上書きされた場合', ['missing-input-secret']],
+    ['siteverify が error-codes 無しで失敗を返した場合', []],
+  ])(
+    'captures a Sentry alert distinct from normal bot detection: %s',
+    async (_label, errorCodes) => {
+      mocks.verifyTurnstile.mockResolvedValueOnce({ success: false, 'error-codes': errorCodes });
 
-    const response = await POST(contactRequest());
+      const response = await POST(contactRequest());
 
-    expect(response.status).toBe(403);
-    expect(mocks.sendContactEmail).not.toHaveBeenCalled();
-    expect(mocks.captureUnexpectedWebError).toHaveBeenCalledOnce();
-    const [capturedError, capturedContext] = mocks.captureUnexpectedWebError.mock.calls[0];
-    expect(capturedError).toBeInstanceOf(Error);
-    expect((capturedError as Error).message).toContain('invalid-input-secret');
-    expect(capturedContext).toMatchObject({
-      feature: 'contact',
-      operation: 'verify_turnstile_secret_invalid',
-      route: '/api/contact',
-    });
-  });
+      expect(response.status).toBe(403);
+      expect(mocks.sendContactEmail).not.toHaveBeenCalled();
+      expect(mocks.captureUnexpectedWebError).toHaveBeenCalledOnce();
+      const [capturedError, capturedContext] = mocks.captureUnexpectedWebError.mock.calls[0];
+      expect(capturedError).toBeInstanceOf(Error);
+      expect(capturedContext).toMatchObject({
+        feature: 'contact',
+        operation: 'verify_turnstile_unexpected',
+        route: '/api/contact',
+      });
+    },
+  );
 
   it('consumes the global quota only after schema and bot verification', async () => {
     mocks.contactGlobalRateLimit.limit.mockResolvedValueOnce({

@@ -154,30 +154,55 @@ describe('Product Sentry capture helpers', () => {
     ).toBe(false);
   });
 
-  // #2031: GoTrue は Turnstile secret 自体が無効な時も code: 'captcha_failed' を返す
-  // （bot を弾いた正常系と同じ構造化コード）ため、raw message で区別する必要がある。
-  // ローカル GoTrue に対する実測（config.toml の [auth.captcha] を一時的に有効化して確認、
-  // commit なし）で採取した実際の文言を pin する。GoTrue のバージョンアップでこの文言が
-  // 変わると検知が静かに壊れるため、この test が red になったら
-  // apps/product/src/lib/sentry/integration.ts の TURNSTILE_SECRET_INVALID_MESSAGE 判定も
+  // #2031: GoTrue は captcha 検証が失敗すると常に code: 'captcha_failed'（構造化コードは
+  // 単一）を返すため、raw message の allowlist で secret misconfiguration（このケース）と
+  // token 側の正常系（下のケース群）を区別する必要がある。ローカル GoTrue / Cloudflare
+  // siteverify に対する実測（config.toml の [auth.captcha] を一時的に有効化、または
+  // siteverify を直接叩いて確認。commit なし）で採取した実際の文言を pin する。GoTrue /
+  // Cloudflare 側でこの文言が変わると検知が静かに壊れるため、この test が red になったら
+  // apps/product/src/lib/sentry/integration.ts の EXPECTED_CAPTCHA_TOKEN_ISSUE_MESSAGES を
   // 同時に見直すこと。
-  it('classifies captcha_failed as expected when the token itself is rejected (secret is healthy)', () => {
-    const badToken = Object.assign(
-      new Error('captcha protection: request disallowed (invalid-input-response)'),
+  it.each([
+    ['token 自体が拒否された場合（secret は健全）', 'invalid-input-response'],
+    ['token が未送信の場合', 'missing-input-response'],
+    ['token が使い回された場合', 'timeout-or-duplicate'],
+    [
+      'client が captcha_token を送らなかった場合（GoTrue 独自メッセージ）',
+      'no captcha_token found',
+    ],
+  ])('classifies captcha_failed as expected: %s', (_label, needle) => {
+    const tokenIssue = Object.assign(
+      new Error(`captcha protection: request disallowed (${needle})`),
       { status: 400, code: 'captcha_failed' },
     );
-    expect(isExpectedAuthError(badToken)).toBe(true);
+    expect(isExpectedAuthError(tokenIssue)).toBe(true);
   });
 
-  it('classifies captcha_failed as unexpected when the Turnstile secret itself is invalid', () => {
-    const invalidSecret = Object.assign(
-      new Error('captcha protection: request disallowed (invalid-input-secret)'),
+  // PR #2122 クロスレビュー P2: denylist（invalid-input-secret だけ見る）だと secret が
+  // 空文字で上書きされるケース（missing-input-secret。2026-08-17 の RECOVERY_CODE_PEPPER
+  // 空文字 incident #2115 と同型）が同じ穴で握り潰される。Cloudflare siteverify を直接
+  // `secret=''` で叩いて実測（missing-input-secret を確認）し、allowlist 化で塞いだ。
+  it.each([
+    ['secret 自体が無効な場合', 'invalid-input-secret'],
+    ['secret が空文字の場合', 'missing-input-secret'],
+  ])('classifies captcha_failed as unexpected: %s', (_label, needle) => {
+    const secretIssue = Object.assign(
+      new Error(`captcha protection: request disallowed (${needle})`),
       { status: 400, code: 'captcha_failed' },
     );
-    expect(isExpectedAuthError(invalidSecret)).toBe(false);
+    expect(isExpectedAuthError(secretIssue)).toBe(false);
 
-    captureUnexpectedAuthError(invalidSecret, { operation: 'sign_in' });
-    expect(sentry.captureException).toHaveBeenCalledWith(invalidSecret);
+    captureUnexpectedAuthError(secretIssue, { operation: 'sign_in' });
+    expect(sentry.captureException).toHaveBeenCalledWith(secretIssue);
+  });
+
+  // allowlist の未知 error-code は安全側（alert）に倒す。denylist ならここが漏れる
+  it('classifies captcha_failed as unexpected when the message matches no known token-issue pattern', () => {
+    const unknownIssue = Object.assign(
+      new Error('captcha protection: request disallowed (bad-request)'),
+      { status: 400, code: 'captcha_failed' },
+    );
+    expect(isExpectedAuthError(unknownIssue)).toBe(false);
   });
 
   // user-service.ts の requestEmailChange（#2064）は、handleServiceError の自動報告が
