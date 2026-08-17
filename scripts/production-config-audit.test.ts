@@ -19,6 +19,7 @@ function completeProductMetadata() {
       productionEntry('NEXT_PUBLIC_TURNSTILE_SITE_KEY'),
       productionEntry('UPSTASH_REDIS_REST_URL'),
       productionEntry('UPSTASH_REDIS_REST_TOKEN', 'sensitive'),
+      productionEntry('RECOVERY_CODE_PEPPER', 'sensitive'),
     ],
   };
 }
