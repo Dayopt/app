@@ -285,9 +285,9 @@ DB 内の hook function が戻っても、**GoTrue 側の hook 登録は引き�
 - [ ] `avatars` / `attachments` バケットが存在する（バケット定義は migration に入っているので schema と一緒に戻る）
 - [ ] **オブジェクト本体は空**であることを確認する。これは異常ではなく仕様
 
-> **⚠ 機構（script）は実装済みだが、実運用の搬出実績はゼロ。依然として復元元は実質存在しない。** `scripts/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。ただし destination（backup 先。Cloudflare R2 を推奨、User 裁可済み）の実プロビジョニングと credential 投入、production に対する初回搬出、日次 cron workflow の追加はまだ行われていない。**それが揃うまでは production の `avatars` / `attachments` が削除・破損した事故では復旧手段が無い**のと実質同じ。
+> **⚠ 機構（script + 日次 workflow）は実装済みだが、secrets 未投入のため実運用の搬出実績はゼロ。依然として復元元は実質存在しない。** `scripts/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。日次搬出を実行する [`storage-backup-export.yml`](../../.github/workflows/storage-backup-export.yml) は追加済み（[#2147](https://github.com/Dayopt/dayopt/issues/2147)）で、secrets（`RCLONE_CONFIG_SOURCE_*` / `RCLONE_CONFIG_DEST_*`）が未投入の間は無音成功せず明示 failure になる（fail closed）。ただし destination（backup 先。Cloudflare R2 を推奨、User 裁可済み）の実プロビジョニング・GitHub Secrets への credential 投入・production に対する初回搬出はまだ行われていない。**それが揃うまでは production の `avatars` / `attachments` が削除・破損した事故では復旧手段が無い**のと実質同じ。
 >
-> 実運用化（destination 確定・credential 投入・初回搬出・日次 workflow 追加）は [#2026](https://github.com/Dayopt/dayopt/issues/2026) で追う。**paid billing のゲート条件に含める判断は #2026 の完了を待つ**（現状 avatar と添付が恒久消失しうる状態で課金を開始してよいか）。
+> 実運用化（destination 確定・credential 投入・初回搬出）は [#2026](https://github.com/Dayopt/dayopt/issues/2026) で追う。**paid billing のゲート条件に含める判断は #2026 の完了を待つ**（現状 avatar と添付が恒久消失しうる状態で課金を開始してよいか）。
 >
 > 演習では「オブジェクトが空で戻る」ことの確認までを行い、実 destination からの restore は [#2026](https://github.com/Dayopt/dayopt/issues/2026) の実装後に演習項目へ足す。
 
