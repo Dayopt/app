@@ -465,20 +465,21 @@ op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
 
 ### 短命トークンのローテーション（expiry 付き再発行）
 
-策定日: 2026-08-17（[#2112](https://github.com/Dayopt/dayopt/issues/2112)、User 裁可。epic [#2091](https://github.com/Dayopt/dayopt/issues/2091) 残課題「短命トークン手順の文書化」の初事例）。**本節は手順の記録であり、実操作は含まない**（発行・1Password 更新・revoke はすべて 1Password / 外部サービスへの書き込みを伴うため User + 手作業レーンが行う）。
+策定日: 2026-08-17（[#2112](https://github.com/Dayopt/dayopt/issues/2112)、User 裁可。epic [#2091](https://github.com/Dayopt/dayopt/issues/2091) 残課題「短命トークン手順の文書化」の初事例。2026-08-17 に [#2126](https://github.com/Dayopt/dayopt/issues/2126) で scoped token 前提へ改訂）。**本節は手順の記録であり、実操作は含まない**（発行・1Password 更新・revoke はすべて 1Password / 外部サービスへの書き込みを伴うため User + 手作業レーンが行う）。
 
-対象は無期限（Never expire）で発行されている常設の広い鍵（原則 3「常設の広い鍵を持つ主体を減らし続ける」に反する既存トークン）。scoped token への分解が構造的に不可能な場合（例: サービス側がアカウント単位でしか scope を切れず、消費者の一部が read だけでなく write を要求する）、次善として **有効期限を切って再発行**し、漏洩時の被害期間を上限化する。
+対象は無期限（Never expire）で発行されている常設の広い鍵（原則 3「常設の広い鍵を持つ主体を減らし続ける」に反する既存トークン）。scoped token への分解が構造的に不可能な場合（例: サービス側がアカウント単位でしか scope を切れない場合）、次善として **有効期限を切って再発行**し、漏洩時の被害期間を上限化する。**Supabase は 2026-08-17 時点で Dashboard に scoped project token の発行 UI（機能別 permission 選択 + 有効期限）が新設されており、Auth Config write を含む permission も個別選択できる。** 「アカウント単位でしか scope を切れず write 消費者がいると scoped 化できない」という前提は Supabase については成立しない（[#2126](https://github.com/Dayopt/dayopt/issues/2126)）。他サービスで同種の制約に当たった場合のみ、本節の expiry-only 再発行を使う。
 
 手順（無停止での順序）:
 
-1. 新規 token を **有効期限付き**で発行する（発行元サービスの UI/CLI で expiry を設定。値は表示・記録しない）
+1. 新規 token を **有効期限付き**（scoped 化できるサービスでは permission も必要最小限に絞る）で発行する（発行元サービスの UI/CLI で expiry / scope を設定。値は表示・記録しない）
 2. 1Password master の該当 item / field を新しい値へ更新する（`op item edit`、実値を argv に直接書かない — 上記「op stdout 抑制」節の規律に従う）
 3. 全消費者（MCP 登録、script の env 参照など）が新 token で動作することを確認する。参照は item / field 名で行われているため、通常は再登録不要（値の差し替えだけで反映される）
-4. 旧 token を revoke する（3 の確認が終わるまで revoke しない — 旧 token が生きている間に新 token の動作確認を済ませる）
+4. **新 token の provider 側「Last used」表示が Never から更新されたことを Dashboard で確認してから**、旧 token を revoke する。**疎通確認の 200 は false positive になりうる**: 1Password への保存が実際には反映されていない状態でも、ローカルの env 解決が古い値のまま残っていれば旧 token で 200 が返る。「疎通 200」だけを新 token 動作の証拠にしない — Last used の更新だけが新 token が実際に使われたことの証明になる（2026-08-17、Supabase `cli` token ローテーションで実際に発生: 疎通 200 ×2 が旧値で通り、旧 revoke 後に 401 が顕在化した。詳細は [#2086 の 2026-08-17 コメント](https://github.com/Dayopt/dayopt/issues/2086#issuecomment-5311036784)）
+5. 旧 token を revoke する（4 の Last used 確認が終わるまで revoke しない — 旧 token が生きている間に新 token の動作確認を済ませる）
 
 **期限管理**: 現状 1Password / 発行元サービスのいずれにも自動リマインダー機構は無い。次回ローテーション（または期限切れによる動作確認）は月次ガーデニングの棚卸し対象に含め、期限が近い token を検出したらこの手順で再発行する。
 
-初事例は Supabase legacy `cli` token（Never expire・full access、[#2112](https://github.com/Dayopt/dayopt/issues/2112)）。消費者（cloud supabase MCP の `--read-only` 起動、`scripts/enable-auth-hook.sh` の Auth config write）のうち後者が write を要求するため、read-only scoped token への完全置換はできず、expiry 付き再発行を選んだ。
+初事例は Supabase legacy `cli` token（Never expire・full access、[#2112](https://github.com/Dayopt/dayopt/issues/2112)）。当初裁可時点では消費者（cloud supabase MCP の `--read-only` 起動、`scripts/enable-auth-hook.sh` の Auth config write）のうち後者が write を要求するため read-only scoped token への完全置換はできないと判断していたが、作業中に scoped project token UI を発見し、**scoped token（`dayopt-cli-2026-08b`、90 日期限、Auth Config Write / Advisors・Logs Read / Database・Migrations Read の個別 permission）への切替**へ変更した。`dayopt-auth-config-audit`（[#1951](https://github.com/Dayopt/dayopt/issues/1951)）も次回 rotation 時に scoped + expiry へ寄せる選択肢がある。
 
 ---
 
