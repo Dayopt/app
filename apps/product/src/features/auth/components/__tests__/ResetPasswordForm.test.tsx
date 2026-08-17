@@ -208,9 +208,11 @@ describe('ResetPasswordForm', () => {
       await waitFor(() => {
         expect(mockChallenge).toHaveBeenCalledWith({ factorId: 'factor-1' });
       });
-      // password 入力フォームには戻らず、MFAVerifyForm（passwordReset flow）が出る
+      // password 入力フォームには戻らず、MFAVerifyForm（passwordReset flow）が出る。
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため、このファイル内で
+      // 最初に mount される時だけ import() の非同期解決を待つ必要がある
       expect(
-        screen.getByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
+        await screen.findByRole('link', { name: 'auth.mfaVerify.backToPasswordReset' }),
       ).toBeInTheDocument();
       expect(screen.queryByText('auth.errors.recoveryMfaBlocked')).not.toBeInTheDocument();
     });
@@ -258,7 +260,8 @@ describe('ResetPasswordForm', () => {
       const user = await submitValidPassword();
       await waitFor(() => expect(mockChallenge).toHaveBeenCalled());
 
-      const otpInput = screen.getByLabelText('auth.mfaVerify.verificationCode');
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため findBy で解決を待つ
+      const otpInput = await screen.findByLabelText('auth.mfaVerify.verificationCode');
       await user.type(otpInput, '123456');
 
       await waitFor(() => {
@@ -290,7 +293,10 @@ describe('ResetPasswordForm', () => {
       const user = await submitValidPassword();
       await waitFor(() => expect(mockChallenge).toHaveBeenCalled());
 
-      await user.click(screen.getByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }));
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため findBy で解決を待つ
+      await user.click(
+        await screen.findByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }),
+      );
       const recoveryInput = screen.getByLabelText('auth.mfaVerify.recoveryCodeInput');
       await user.type(recoveryInput, 'abcd-1234');
       await user.click(
@@ -339,7 +345,8 @@ describe('ResetPasswordForm', () => {
       const user = await submitValidPassword();
       await waitFor(() => expect(mockChallenge).toHaveBeenCalled());
 
-      const otpInput = screen.getByLabelText('auth.mfaVerify.verificationCode');
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため findBy で解決を待つ
+      const otpInput = await screen.findByLabelText('auth.mfaVerify.verificationCode');
       await user.type(otpInput, '123456');
 
       await waitFor(() => expect(mockUpdatePassword).toHaveBeenCalledTimes(2));
@@ -383,7 +390,10 @@ describe('ResetPasswordForm', () => {
       const user = await submitValidPassword();
       await waitFor(() => expect(mockChallenge).toHaveBeenCalled());
 
-      await user.click(screen.getByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }));
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため findBy で解決を待つ
+      await user.click(
+        await screen.findByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }),
+      );
       const recoveryInput = screen.getByLabelText('auth.mfaVerify.recoveryCodeInput');
       await user.type(recoveryInput, 'ABCD-1234');
       await user.click(
@@ -418,7 +428,10 @@ describe('ResetPasswordForm', () => {
       const user = await submitValidPassword();
       await waitFor(() => expect(mockChallenge).toHaveBeenCalled());
 
-      await user.click(screen.getByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }));
+      // MFAVerifyForm は next/dynamic の遅延ロード（#2121）のため findBy で解決を待つ
+      await user.click(
+        await screen.findByRole('button', { name: 'auth.mfaVerify.useRecoveryCode' }),
+      );
       const recoveryInput = screen.getByLabelText('auth.mfaVerify.recoveryCodeInput');
       await user.type(recoveryInput, 'ABCD-1234');
       await user.click(
