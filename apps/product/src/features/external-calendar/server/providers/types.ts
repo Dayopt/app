@@ -112,12 +112,17 @@ export type CalendarProviderErrorKind =
   /** こちらの実装バグを含む、回復しない失敗 */
   | 'permanent'
   /**
-   * `listCalendars` のページングが wall-clock 予算（#2079）を超えた。
+   * wall-clock 予算（#2079）を超えた。2 通りの発生源がある:
    *
-   * `syncCalendar` の `deadlineExceeded` フラグ（部分結果を「安全な部分完了」として返す）とは
-   * 扱いを変える — こちらはユーザーが選択肢を見て選ぶ一覧取得なので、一部だけ返して黙って
-   * 成功扱いにすると「これが全カレンダーだ」という誤認を招く。error として投げ、呼び出し側
-   * （connection-service.ts）に判断を委ねる。
+   * - `listCalendars` のページング（各ページ送信前の判定）。`syncCalendar` の
+   *   `deadlineExceeded` フラグ（部分結果を「安全な部分完了」として返す）とは扱いを変える —
+   *   こちらはユーザーが選択肢を見て選ぶ一覧取得なので、一部だけ返して黙って成功扱いにすると
+   *   「これが全カレンダーだ」という誤認を招く。error として投げ、呼び出し側
+   *   （connection-service.ts）に判断を委ねる。
+   * - `requestGoogleApi` の fetch abort が締切到達によるもの（#2109）。残り予算が
+   *   `GOOGLE_API_TIMEOUT_MS` を下回り signal の timeout が締切まで絞られた状態での
+   *   abort は「Google が遅い」のではなく締切に間に合わなかっただけなので、汎用の
+   *   `transient` と区別する。
    */
   | 'deadline_exceeded';
 

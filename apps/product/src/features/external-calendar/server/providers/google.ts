@@ -140,6 +140,20 @@ function requestTimeoutMs(deadlineAt: number | undefined): number {
   return Math.max(0, Math.min(GOOGLE_API_TIMEOUT_MS, deadlineAt - Date.now()));
 }
 
+/**
+ * fetch の abort が「締切到達によるもの」かを判定する（#2109）。
+ *
+ * `requestTimeoutMs` は残り予算が `GOOGLE_API_TIMEOUT_MS` を下回ると signal の timeout を
+ * その残り予算まで絞る。この場合の abort は「Google が遅い」のではなく「こちらの締切に
+ * 間に合わなかった」だけなので、汎用の `transient`（ネットワーク不達等）と区別する。
+ * 残り予算が `GOOGLE_API_TIMEOUT_MS` より大きく取れていた通常の timeout（`deadlineAt` が
+ * 遠い、または未指定）は従来どおり `transient` のまま扱う。
+ */
+function isDeadlineAbort(error: unknown, deadlineAt: number | undefined): boolean {
+  if (deadlineAt === undefined || Date.now() < deadlineAt) return false;
+  return error instanceof DOMException && error.name === 'TimeoutError';
+}
+
 async function requestGoogleApi(
   url: URL,
   accessToken: string,
@@ -151,7 +165,13 @@ async function requestGoogleApi(
       headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(requestTimeoutMs(deadlineAt)),
     });
-  } catch {
+  } catch (error) {
+    if (isDeadlineAbort(error, deadlineAt)) {
+      throw new CalendarProviderError(
+        'google calendar api request aborted at the wall-clock deadline',
+        'deadline_exceeded',
+      );
+    }
     throw new CalendarProviderError('google calendar api is unreachable', 'transient');
   }
 
