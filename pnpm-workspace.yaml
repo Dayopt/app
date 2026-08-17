@@ -34,6 +34,10 @@ overrides:
   'uuid@8.3.2': '11.1.1'
   # estimo が 5.1.5 を exact pin しているため、脆弱な v5 だけを置換する
   'nanoid@5.1.5': '^5.1.16'
+  # postcss 経由の間接依存。ビルド時ツールチェーン経由（devDependency の
+  # Storybook/Tailwind に加え、@sentry/nextjs のビルドプラグイン peer chain を含む。
+  # 実行時 bundle 非搭載）。size=0 での無限ループ DoS (GHSA-2v37-7h3g-55p8) を解消する (#2108)
+  'nanoid@3.3.17': '^3.3.18'
 # image-size 2.0.2 の未リリース上流修正を固定する。
 # GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq は patchedDependencies で緩和済み。
 patchedDependencies:
