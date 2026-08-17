@@ -57,13 +57,14 @@ describe('OG image route', () => {
     rateLimit.ogImageGlobalRateLimit.limit.mockResolvedValue({ success: true });
   });
 
-  it('通常のrequestは200で、CDNキャッシュも効く長寿命cache契約を明示する', async () => {
+  it('通常のrequestは200で、CDNキャッシュも効く長寿命cache契約を明示する。fallback用の静的アセット経路とは別にSatoriで動的レンダリングする', async () => {
     const response = await GET(request());
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe(
       'public, max-age=31536000, s-maxage=31536000, immutable',
     );
+    expect(imageResponseCalls).toHaveLength(1);
   });
 
   it('rate limitはraw IPではなくhashed identifierで評価する', async () => {
@@ -116,25 +117,31 @@ describe('OG image route', () => {
     expect(rateLimit.ogImageGlobalRateLimit.limit).not.toHaveBeenCalled();
   });
 
-  it('global quota超過は503ではなく、動的入力を含まない代替画像を200で返す', async () => {
+  it('global quota超過は503ではなく、静的な代替画像を200で返し、Satori/next-ogのレンダリングを一切経由しない(#2052)', async () => {
     rateLimit.ogImageGlobalRateLimit.limit.mockResolvedValue({ success: false });
 
     const response = await GET(request('https://dayopt.com/api/og?title=Some+Long+Title'));
+    const bytes = new Uint8Array(await response.arrayBuffer());
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=300, s-maxage=300');
-    const fallbackCall = imageResponseCalls.at(-1);
-    expect(collectTextContent(fallbackCall?.element)).not.toContain('Some Long Title');
+    // PNG magic bytes。動的入力(title)が紛れ込んでいないことは、そもそも
+    // ImageResponse(Satori)を経由していない(下のassertion)ことで担保される。
+    expect(Array.from(bytes.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    expect(imageResponseCalls).toHaveLength(0);
   });
 
-  it('rate limit backend障害時も代替画像を200で返してcaptureし、以後はサンプリングして連続失敗でquotaを焼かない', async () => {
+  it('rate limit backend障害時も静的な代替画像を200で返してcaptureし、以後はサンプリングして連続失敗でquotaを焼かない', async () => {
     const backendError = new Error('redis unavailable');
     rateLimit.ogImageRateLimit.limit.mockRejectedValue(backendError);
 
     const response = await GET(request());
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('image/png');
     expect(response.headers.get('Cache-Control')).toBe('public, max-age=300, s-maxage=300');
+    expect(imageResponseCalls).toHaveLength(0);
     expect(captureUnexpectedWebError).toHaveBeenCalledWith(
       backendError,
       expect.objectContaining({ feature: 'og_image', operation: 'check_rate_limit' }),
