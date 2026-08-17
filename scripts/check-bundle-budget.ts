@@ -28,8 +28,16 @@ const STATS_FILE = resolve(APP_ROOT, '.next/diagnostics/route-bundle-stats.json'
 
 /** 回帰防止ライン（現状 + 15% バッファ） */
 const BUDGETS = {
-  /** 認証系ルート（/auth/*）: 現状 ~393 KB gzip */
-  AUTH_ROUTES_WARN_KB: 460,
+  // 認証系ルート（/auth/*）: 2026-08-14〜17、/auth/reset-password が本予算(460KB)を
+  // 476.5 KB gzip（Vercel production 実測、#2121）で超過し production デプロイが
+  // 3 日以上全滅した。原因は NEXT_PUBLIC_SENTRY_DSN が Production にのみスコープされて
+  // いるため、preview/ローカル build では Sentry 初期化が dead-code-eliminate され
+  // 全 route 一律 -66〜68 KB 軽くなる非対称（preview 実測 409.1 KB）。この非対称自体の
+  // 解消は #2123（preview/production budget parity）へ送り、まず本予算を実測値 476.5 KB
+  // + 余裕で 500 KB へ引き上げる（一時緩和、可逆・1行）。ResetPasswordForm.tsx の
+  // MFAVerifyForm 遅延ロード（同 #2121）は局所的な削減だが、この非対称の解消にはならない。
+  /** 認証系ルート（/auth/*）: 現状 preview/ローカル ~410 KB・production ~477 KB gzip（#2121, #2123 参照） */
+  AUTH_ROUTES_WARN_KB: 500,
   /** アプリ本体ルート: 現状 ~836 KB gzip */
   APP_ROUTES_WARN_KB: 960,
   /** CSS 合計: 現状 ~90 KB gzip */
