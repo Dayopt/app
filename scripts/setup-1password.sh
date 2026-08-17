@@ -91,17 +91,17 @@ echo "  [agent]"
 # SUPABASE_ACCESS_TOKEN は置かない。human/supabase を正本に
 # 一本化した（#1933）。
 run item create --category=apicredential --vault=agent --title=supabase \
-  --tags=dayopt,staging notesPlain="$NOTES" \
+  --tags=dayopt/supabase notesPlain="$NOTES" \
   'SEND_EMAIL_HOOK_SECRET[concealed]=' \
   'CRON_SECRET[concealed]='
 
 run item create --category=apicredential --vault=agent --title=upstash \
-  --tags=dayopt,staging notesPlain="$NOTES" \
+  --tags=dayopt/upstash notesPlain="$NOTES" \
   'UPSTASH_REDIS_REST_URL[text]=' \
   'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=agent --title=stripe-test \
-  --tags=dayopt,staging notesPlain="$NOTES" \
+  --tags=dayopt/stripe notesPlain="$NOTES" \
   'STRIPE_SECRET_KEY[concealed]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
@@ -110,7 +110,7 @@ run item create --category=apicredential --vault=agent --title=stripe-test \
 # resend は旧 Staging（RESEND_WEBHOOK_SECRET）と旧 Shared（API_KEY / FROM_EMAIL）
 # の 2 item を agent へ統合済み（#2086 cutover）。create は後段の 1 回にまとめる
 run item create --category=apicredential --vault=agent --title=app \
-  --tags=dayopt,staging notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
+  --tags=dayopt/internal notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
   'RECOVERY_CODE_PEPPER[concealed]=' \
@@ -128,7 +128,7 @@ run item create --category=apicredential --vault=agent --title=app \
 echo "  [human]"
 
 run item create --category=apicredential --vault=human --title=supabase \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/supabase notesPlain="$NOTES" \
   'NEXT_PUBLIC_SUPABASE_URL[text]=' \
   'NEXT_PUBLIC_SUPABASE_ANON_KEY[concealed]=' \
   'SUPABASE_SERVICE_ROLE_KEY[concealed]=' \
@@ -139,41 +139,41 @@ run item create --category=apicredential --vault=human --title=supabase \
   'project-ref[text]='
 
 run item create --category=apicredential --vault=human --title=upstash \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/upstash notesPlain="$NOTES" \
   'UPSTASH_REDIS_REST_URL[text]=' \
   'UPSTASH_REDIS_REST_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=human --title=stripe-live \
-  --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ 本番 Stripe キー。ローカル .env.local からは参照しない' \
+  --tags=dayopt/stripe notesPlain="$NOTES"$'\n⚠️ 本番 Stripe キー。ローカル .env.local からは参照しない' \
   'STRIPE_SECRET_KEY[concealed]=' \
   'STRIPE_WEBHOOK_SECRET[concealed]=' \
   'NEXT_PUBLIC_STRIPE_PRO_PRICE_ID[text]=' \
   'publishable-key[text]='
 
 run item create --category=apicredential --vault=human --title=resend \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/resend notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=human --title=resend-web \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/resend notesPlain="$NOTES" \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=human --title=sentry \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/sentry notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
   'SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 
 run item create --category=apicredential --vault=human --title=sentry-web \
-  --tags=dayopt,production notesPlain="$NOTES" \
+  --tags=dayopt/sentry notesPlain="$NOTES" \
   'NEXT_PUBLIC_SENTRY_DSN[text]=' \
   'SENTRY_DSN[text]=' \
   'SENTRY_ORG[text]=' \
   'SENTRY_PROJECT[text]='
 
 run item create --category=apicredential --vault=human --title=app \
-  --tags=dayopt,production notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
+  --tags=dayopt/internal notesPlain="$NOTES"$'\n⚠️ recovery-code-pepper は失うと全ユーザーの recovery code が復旧不能。別メディアに二重バックアップ必須' \
   'NEXT_PUBLIC_APP_URL[text]=' \
   'NEXT_PUBLIC_SITE_URL[text]=' \
   'RECOVERY_CODE_PEPPER[concealed]=' \
@@ -189,56 +189,56 @@ run item create --category=apicredential --vault=human --title=app \
 echo "  [旧 Dayopt-Shared 分 → agent / ci / human]"
 
 run item create --category=apicredential --vault=agent --title=anthropic \
-  --tags=dayopt,shared notesPlain="$NOTES" \
+  --tags=dayopt/anthropic notesPlain="$NOTES" \
   'ANTHROPIC_API_KEY[concealed]='
 
 run item create --category=apicredential --vault=agent --title=resend \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\nwebhook secret は Product=resend / Web=resend-web として環境ごとに分離' \
+  --tags=dayopt/resend notesPlain="$NOTES"$'\nwebhook secret は Product=resend / Web=resend-web として環境ごとに分離' \
   'RESEND_API_KEY[concealed]=' \
   'RESEND_FROM_EMAIL[text]=' \
   'RESEND_WEBHOOK_SECRET[concealed]='
 
 run item create --category=apicredential --vault=human --title=resend-support-replies \
-  --tags=dayopt,shared notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \
+  --tags=dayopt/resend notesPlain="$NOTES"$'\nGmail Send mail as 専用。Sending access / dayopt.app限定。アプリ用keyと共用しない。' \
   'RESEND_SMTP_API_KEY[concealed]='
 
 # 実 item 名は sentry-login（Sentry の login 情報と同居。#2063 で判明した命名 drift、
 # schema.ts と揃える）
 run item create --category=apicredential --vault=human --title=sentry-login \
-  --tags=dayopt,shared notesPlain="$NOTES" \
+  --tags=dayopt/sentry notesPlain="$NOTES" \
   'SENTRY_AUTH_TOKEN[concealed]='
 
 run item create --category=apicredential --vault=agent --title=turnstile \
-  --tags=dayopt,shared notesPlain="$NOTES" \
+  --tags=dayopt/cloudflare notesPlain="$NOTES" \
   'NEXT_PUBLIC_TURNSTILE_SITE_KEY[text]=' \
   'TURNSTILE_SECRET_KEY[concealed]='
 
 run item create --category=login --vault=human --title=github-login \
-  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
+  --tags=dayopt/github,recovery notesPlain="$NOTES"$'\nGitHub account login item. 既存 item がある場合は move + merge する。' \
   'username=' \
   'password[concealed]=' \
   'recovery-codes[concealed]=' \
   '2fa-notes[text]='
 
 run item create --category=securenote --vault=human --title=github-ssh \
-  --tags=dayopt,shared \
+  --tags=dayopt/github \
   notesPlain="GitHub SSH key operational item. 既存 item がある場合は move + merge する。"
 
 run item create --category=apicredential --vault=ci --title=vercel \
-  --tags=dayopt,shared notesPlain="$NOTES" \
+  --tags=dayopt/vercel notesPlain="$NOTES" \
   'VERCEL_TOKEN[concealed]=' \
   'VERCEL_TEAM_ID[text]=' \
   'VERCEL_PROJECT_ID_STAGING[text]=' \
   'VERCEL_PROJECT_ID_PRODUCTION[text]='
 
 run item create --category=apicredential --vault=agent --title=google \
-  --tags=dayopt,shared notesPlain="$NOTES" \
+  --tags=dayopt/google notesPlain="$NOTES" \
   'GOOGLE_SITE_VERIFICATION[text]=' \
   'YANDEX_VERIFICATION[text]=' \
   'YAHOO_VERIFICATION[text]='
 
 run item create --category=login --vault=human --title=domain \
-  --tags=dayopt,shared,recovery notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
+  --tags=recovery notesPlain="$NOTES"$'\n⚠️ レジストラ乗っ取られたら事業終了。recovery codes を別メディアに二重バックアップ' \
   'username=' \
   'password[concealed]=' \
   'registrar-url[url]=' \
