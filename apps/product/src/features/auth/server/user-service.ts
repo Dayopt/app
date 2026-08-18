@@ -172,6 +172,8 @@ interface ExportDataResult {
     profile: Row<'profiles'> | null;
     plans: Row<'plans'>[];
     records: PublicRecordRow[];
+    categories: Row<'categories'>[];
+    activities: Row<'activities'>[];
     tags: Row<'tags'>[];
     userSettings: PublicUserSettingsRow | null;
   };
@@ -465,14 +467,17 @@ export function createUserService(
 
     /**
      * 全データを削除（アカウントは保持）
-     * plans, records, tags, 設定を全削除
+     * plans, records, activities, categories, tags, 設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
       const adminClient = createServiceRoleClient();
       // FK 依存順。service-role を使うが、全操作を認証済み userId で明示的に制限する。
+      // activities は categories を参照するので先に消す。
       for (const table of [
         databaseTables.records,
         databaseTables.plans,
+        databaseTables.activities,
+        databaseTables.categories,
         databaseTables.tags,
         databaseTables.userSettings,
       ] as const) {
@@ -501,18 +506,27 @@ export function createUserService(
       const { userId } = options;
 
       const adminClient = createServiceRoleClient();
-      const [profileResult, plansResult, recordsResult, tagsResult, userSettingsResult] =
-        await Promise.all([
-          supabase.from('profiles').select('*').eq('id', userId).single(),
-          adminClient.from('plans').select('*').eq('user_id', userId),
-          adminClient.from(databaseTables.records).select(publicRecordSelect).eq('user_id', userId),
-          supabase.from('tags').select('*').eq('user_id', userId),
-          supabase
-            .from('user_settings')
-            .select(publicUserSettingsSelect)
-            .eq('user_id', userId)
-            .single(),
-        ]);
+      const [
+        profileResult,
+        plansResult,
+        recordsResult,
+        categoriesResult,
+        activitiesResult,
+        tagsResult,
+        userSettingsResult,
+      ] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        adminClient.from('plans').select('*').eq('user_id', userId),
+        adminClient.from(databaseTables.records).select(publicRecordSelect).eq('user_id', userId),
+        supabase.from(databaseTables.categories).select('*').eq('user_id', userId),
+        supabase.from(databaseTables.activities).select('*').eq('user_id', userId),
+        supabase.from('tags').select('*').eq('user_id', userId),
+        supabase
+          .from('user_settings')
+          .select(publicUserSettingsSelect)
+          .eq('user_id', userId)
+          .single(),
+      ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {
         const original = captureUnexpectedDatabaseError(profileResult.error, {
@@ -534,6 +548,20 @@ export function createUserService(
           operation: 'fetch_records',
         });
         throw new UserServiceError('EXPORT_FAILED', 'Records fetch failed', { cause: original });
+      }
+      if (categoriesResult.error) {
+        const original = captureUnexpectedDatabaseError(categoriesResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_categories',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Categories fetch failed', { cause: original });
+      }
+      if (activitiesResult.error) {
+        const original = captureUnexpectedDatabaseError(activitiesResult.error, {
+          feature: 'account_export',
+          operation: 'fetch_activities',
+        });
+        throw new UserServiceError('EXPORT_FAILED', 'Activities fetch failed', { cause: original });
       }
       if (tagsResult.error) {
         const original = captureUnexpectedDatabaseError(tagsResult.error, {
@@ -558,6 +586,8 @@ export function createUserService(
           profile: profileResult.data || null,
           plans: plansResult.data || [],
           records: recordsResult.data || [],
+          categories: categoriesResult.data || [],
+          activities: activitiesResult.data || [],
           tags: tagsResult.data || [],
           userSettings: userSettingsResult.data || null,
         },

@@ -1,5 +1,7 @@
 export const databaseTables = {
+  activities: 'activities',
   calendarConnections: 'calendar_connections',
+  categories: 'categories',
   calendarConnectionCalendars: 'calendar_connection_calendars',
   emailSuppressions: 'email_suppressions',
   externalCalendarEvents: 'external_calendar_events',
