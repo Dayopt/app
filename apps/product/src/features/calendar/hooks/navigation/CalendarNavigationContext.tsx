@@ -57,8 +57,14 @@ function readCalendarPanelState(viewType: CalendarViewType): {
 
   const params = new URLSearchParams(window.location.search);
   const rawPanel = params.get('panel');
+  // 'analytics' は統合前（#2149）の旧URL値。恒久 shim として review に読み替える
+  // （削除不可 — 外部共有URLの後方互換のため。CalendarNavigationContext.test.tsx で固定）
   const requestedPanel: CalendarPanelKind | null =
-    rawPanel === 'review' || rawPanel === 'diff' || rawPanel === 'analytics' ? rawPanel : null;
+    rawPanel === 'review' || rawPanel === 'analytics'
+      ? 'review'
+      : rawPanel === 'diff'
+        ? 'diff'
+        : null;
   const panelKind = normalizePanelForView(viewType, requestedPanel);
 
   return {
@@ -207,7 +213,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       startTransition(() => {
         setViewType('day');
         const nextPanelKind = normalizePanelForView('day', panelKindRef.current);
-        const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
+        // reviewTagId は state 上で保持する（タブ以外への遷移で失わない）
+        const nextReviewTagId = reviewTagIdRef.current;
         setPanelKindState(nextPanelKind);
         setReviewTagIdState(nextReviewTagId);
       });
@@ -310,7 +317,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       // モバイルではDay / Weekのみ許可
       if (isMobileRef.current && !isMobileCalendarViewSupported(view)) return;
       const nextPanelKind = normalizePanelForView(view, panelKindRef.current);
-      const nextReviewTagId = nextPanelKind === 'review' ? reviewTagIdRef.current : null;
+      // reviewTagId は state 上で保持する（タブ以外への遷移で失わない）。URL には review 表示時のみ反映
+      const nextReviewTagId = reviewTagIdRef.current;
 
       startTransition(() => {
         setViewType(view);
@@ -333,8 +341,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
             : 'day'
           : viewTypeRef.current;
       const normalizedPanel = normalizePanelForView(nextView, nextPanelKind);
-      const nextReviewTagId =
-        normalizedPanel === 'review' ? (options?.reviewTagId ?? reviewTagIdRef.current) : null;
+      // reviewTagId は state 上で保持する（review タブ以外へ切り替えても失わない。タブ復帰時に復元される）
+      const nextReviewTagId = options?.reviewTagId ?? reviewTagIdRef.current;
 
       startTransition(() => {
         setViewType(nextView);

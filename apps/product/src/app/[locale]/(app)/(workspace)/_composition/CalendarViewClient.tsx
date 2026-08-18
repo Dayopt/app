@@ -10,20 +10,20 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
-import { ChartNoAxesColumnIncreasing, PanelLeft } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
 import {
-  CalendarCompareToggle,
   CalendarController,
+  CalendarPanelToggle,
   isCalendarDiffView,
   useCalendarNavigation,
 } from '@/features/calendar';
-import { CalendarReviewPanel, ReviewDiffPanel, useReviewOpenedTracking } from '@/features/review';
+import { CalendarReviewRail, useReviewOpenedTracking } from '@/features/review';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { Button, HoverTooltip } from '@dayopt/components';
+import { Button } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 import { useCalendarComposition } from './useCalendarComposition';
 
@@ -87,12 +87,9 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <PanelLeft className="size-4" />
     </Button>
   ) : null;
-  const handleReviewPanelToggle = useCallback(() => {
-    setPanelKind(panelKind === 'review' || panelKind === 'analytics' ? null : 'review');
-  }, [panelKind, setPanelKind]);
-  const handleCompareToggle = useCallback(
-    (checked: boolean) => {
-      setPanelKind(checked ? 'diff' : null);
+  const handlePanelTabSelect = useCallback(
+    (tab: 'review' | 'diff') => {
+      setPanelKind(tab);
     },
     [setPanelKind],
   );
@@ -109,6 +106,13 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   );
   const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
   const isDiffPanelActive = panelKind === 'diff';
+  const activePanelTab: 'review' | 'diff' | null = isDiffPanelActive
+    ? 'diff'
+    : isReviewPanelActive
+      ? 'review'
+      : null;
+  const diffTabDisabled = !isCalendarDiffView(viewType);
+  const panelOpen = activePanelTab !== null;
   useReviewOpenedTracking(isReviewPanelActive);
   const reviewDisplayRange = useMemo(
     () => ({
@@ -117,71 +121,21 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     }),
     [composition.showWeekends, composition.viewDateRange],
   );
-  const reviewToggle = (
-    <HoverTooltip content={t('calendar.stats.review.tooltip')} side="bottom">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        icon
-        className={
-          isReviewPanelActive
-            ? 'bg-state-selected text-foreground hover:bg-state-selected'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-        aria-label={t('calendar.stats.review.ariaLabel')}
-        aria-pressed={isReviewPanelActive}
-        onClick={handleReviewPanelToggle}
-      >
-        <ChartNoAxesColumnIncreasing className="size-4" />
-      </Button>
-    </HoverTooltip>
-  );
-  const compareToggle = (
-    <>
-      <CalendarCompareToggle
-        checked={isDiffPanelActive}
-        onCheckedChange={handleCompareToggle}
-        className="-mr-2 hidden md:flex"
-      />
-      <CalendarCompareToggle
-        checked={isDiffPanelActive}
-        onCheckedChange={handleCompareToggle}
-        className="md:hidden"
-      />
-    </>
+  const panelToggle = (
+    <CalendarPanelToggle
+      activeTab={activePanelTab}
+      onSelect={handlePanelTabSelect}
+      diffDisabled={diffTabDisabled}
+    />
   );
   const headerActions = (
     <>
-      {reviewToggle}
-      {compareToggle}
+      {panelToggle}
       <ConnectedMobileAccountButton className="md:hidden" />
     </>
   );
-  const reviewPanel = (
-    <CalendarReviewPanel
-      currentDate={currentDate}
-      displayRange={reviewDisplayRange}
-      selectedTagId={reviewTagId}
-      onSelectedTagIdChange={setReviewTagId}
-      onClose={() => setPanelKind(null)}
-    />
-  );
-  const mobileReviewPanel = (
-    <CalendarReviewPanel
-      currentDate={currentDate}
-      displayRange={reviewDisplayRange}
-      selectedTagId={reviewTagId}
-      onSelectedTagIdChange={setReviewTagId}
-      onClose={() => setPanelKind(null)}
-      variant="sheet"
-    />
-  );
-  const panelRail = isReviewPanelActive ? reviewPanel : null;
-  const mobilePanelRail = isReviewPanelActive ? mobileReviewPanel : null;
-  const panelRailOpen = isReviewPanelActive;
-  const panelRailTitle = t('calendar.views.stats');
-  const panelRailDescription = t('calendar.stats.review.description');
+  const panelTitle = t('calendar.views.stats');
+  const panelDescription = t('calendar.stats.review.description');
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -234,24 +188,28 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
           rightSlot={headerActions}
-          onCompareRailOpenChange={(open) => setPanelKind(open ? 'diff' : null)}
-          renderCompareRail={({ diff, variant, onItemClick, onClose }) => (
-            <ReviewDiffPanel
-              diff={diff}
-              variant={variant}
-              onItemClick={onItemClick}
-              onClose={onClose}
-            />
-          )}
-          panelRail={panelRail}
-          mobilePanelRail={mobilePanelRail}
-          panelRailOpen={panelRailOpen}
-          onPanelRailOpenChange={(open) => {
+          panelOpen={panelOpen}
+          onPanelOpenChange={(open) => {
             if (open) return;
             setPanelKind(null);
           }}
-          panelRailTitle={panelRailTitle}
-          panelRailDescription={panelRailDescription}
+          renderPanelRail={({ diff, variant, onDiffItemClick, onClose }) => (
+            <CalendarReviewRail
+              activeTab={activePanelTab ?? 'review'}
+              onTabChange={handlePanelTabSelect}
+              diffTabDisabled={diffTabDisabled}
+              currentDate={currentDate}
+              displayRange={reviewDisplayRange}
+              selectedTagId={reviewTagId}
+              onSelectedTagIdChange={setReviewTagId}
+              diff={diff}
+              onDiffItemClick={onDiffItemClick}
+              variant={variant}
+              onClose={onClose}
+            />
+          )}
+          panelTitle={panelTitle}
+          panelDescription={panelDescription}
           recoverableSidebarWidth={sidebar.open ? sidebar.width : 0}
           onSideRailSpaceRecoveryChange={handleSideRailSpaceRecoveryChange}
         />

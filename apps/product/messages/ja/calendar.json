@@ -53,19 +53,10 @@
     "panel": {
       "resizeLabel": "右パネルの幅を変更"
     },
-    "analysis": {
-      "tooltip": "分析を表示",
-      "ariaLabel": "分析パネルを切り替え",
-      "panel": {
-        "title": "分析",
-        "description": "期間とタグの分析。",
-        "scopeLabel": "分析対象",
-        "all": "全体"
-      }
-    },
     "compare": {
       "tooltip": "予定と実績を比較",
       "ariaLabel": "予定と実績の比較表示を切り替え",
+      "unavailableTooltip": "このビューでは差分を表示できません",
       "rail": {
         "title": "予定との差分",
         "description": "表示範囲の予定から変わった点。",

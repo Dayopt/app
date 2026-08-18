@@ -148,6 +148,19 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
   });
 
+  it('resolves panel=analytics (旧URL) as review — 恒久 shim による後方互換', () => {
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=analytics');
+    mockPathname = '/ja/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('panel')).toHaveTextContent('review');
+  });
+
   it('syncs diff panel when returning to an already-active day view URL', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
@@ -339,6 +352,30 @@ describe('CalendarNavigationProvider', () => {
     expect(window.location.pathname + window.location.search).toBe(
       '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-2',
     );
+  });
+
+  it('reviewTagId は diff タブへ切り替えても state 上で保持され、review タブ復帰時に復元される', () => {
+    window.history.replaceState(null, '', '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1');
+    mockPathname = '/ja/day';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'diff-on' }));
+    expect(screen.getByTestId('panel')).toHaveTextContent('diff');
+    // URL には review 以外の時 reviewTagId を出さない
+    expect(window.location.search).not.toContain('reviewTagId');
+    // state 上は保持されている
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
+    expect(screen.getByTestId('panel')).toHaveTextContent('review');
+    expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
   });
 
   it('opens review panel as a day view bottom sheet on mobile', () => {
