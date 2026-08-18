@@ -21,6 +21,7 @@ vi.mock('@/lib/supabase/oauth', () => ({
 
 const USER_ID = 'test-user-id';
 const TAG_ID = '72cc49b4-7e57-4a85-9346-0e90b2db78e2';
+const ACTIVITY_ID = '9f1d7c3e-5b2a-4d18-9c64-8a3f0e1b7d55';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -118,19 +119,24 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
 }
 
 describe('PlanService.list', () => {
-  it('同一userのactive tag名をnoteと同じOR条件で検索する', async () => {
-    const plan = createPlan({ tag_id: TAG_ID, title: 'Legacy plan title' });
+  it('同一userの現役アクティビティ名とtag名をnoteと同じOR条件で検索する', async () => {
+    const plan = createPlan({ activity_id: ACTIVITY_ID, title: 'Legacy plan title' });
     const planQuery = createChainableMock([plan]);
     const tagQuery = createChainableMock([{ id: TAG_ID }]);
+    const activityQuery = createChainableMock([{ id: ACTIVITY_ID }]);
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : planQuery,
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : planQuery,
     );
 
     await expect(
       service.list({ userId: USER_ID, search: 'Focus', sortOrder: 'desc', limit: 21 }),
     ).resolves.toEqual([plan]);
 
+    expect(activityQuery.select).toHaveBeenCalledWith('id');
+    expect(activityQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
+    expect(activityQuery.is).toHaveBeenCalledWith('archived_at', null);
+    expect(activityQuery.ilike).toHaveBeenCalledWith('name', '%Focus%');
     expect(tagQuery.select).toHaveBeenCalledWith('id');
     expect(tagQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(tagQuery.eq).toHaveBeenCalledWith('is_active', true);
@@ -138,23 +144,27 @@ describe('PlanService.list', () => {
     expect(planQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(planQuery.is).toHaveBeenCalledWith('deleted_at', null);
     expect(planQuery.is).not.toHaveBeenCalledWith('skipped_at', null);
-    expect(planQuery.or).toHaveBeenCalledWith(`note.ilike.%Focus%,tag_id.in.(${TAG_ID})`);
+    // 旧世代（tag_id）と新世代（activity_id）の和集合。片方だけだと一方が検索から消える
+    expect(planQuery.or).toHaveBeenCalledWith(
+      `note.ilike.%Focus%,activity_id.in.(${ACTIVITY_ID}),tag_id.in.(${TAG_ID})`,
+    );
     expect(planQuery.or).not.toHaveBeenCalledWith(expect.stringContaining('title.ilike'));
     expect(planQuery.order).toHaveBeenCalledWith('start_at', { ascending: false });
     expect(planQuery.limit).toHaveBeenCalledWith(21);
   });
 
-  it('tag検索失敗時は不完全なplan一覧を返さない', async () => {
+  it('分類検索失敗時は不完全なplan一覧を返さない', async () => {
     const planQuery = createChainableMock([createPlan()]);
     const tagQuery = createChainableMock([], { message: 'tag lookup failed' });
+    const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : planQuery,
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : planQuery,
     );
 
     await expect(service.list({ userId: USER_ID, search: 'Focus' })).rejects.toMatchObject({
       code: 'FETCH_FAILED',
-      message: 'Failed to search timeblock tags',
+      message: 'Failed to search timeblock classifications',
     });
 
     expect(planQuery.or).not.toHaveBeenCalled();
@@ -164,9 +174,10 @@ describe('PlanService.list', () => {
     const privateError = 'parse failed near note.ilike.%private words%';
     const recordQuery = createChainableMock([], { message: privateError });
     const tagQuery = createChainableMock([]);
+    const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : recordQuery,
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
     );
 
     const caught = await service
@@ -205,9 +216,10 @@ describe('RecordService.list', () => {
     const record = createRecord({ note: 'Deep work', title: 'Legacy title' });
     const recordQuery = createChainableMock([record]);
     const tagQuery = createChainableMock([]);
+    const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : recordQuery,
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
     );
 
     await expect(
@@ -219,6 +231,7 @@ describe('RecordService.list', () => {
       }),
     ).resolves.toEqual([record]);
 
+    expect(activityQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
     expect(tagQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(tagQuery.eq).toHaveBeenCalledWith('is_active', true);
     expect(tagQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
@@ -254,13 +267,31 @@ describe('RecordService.list', () => {
     expect(result[0]).not.toHaveProperty('fulfillment_score');
   });
 
-  it('tag名一致をrecordのOR条件へ加える', async () => {
+  it('アクティビティ名一致をrecordのOR条件へ加える', async () => {
+    const record = createRecord({ activity_id: ACTIVITY_ID });
+    const recordQuery = createChainableMock([record]);
+    const tagQuery = createChainableMock([]);
+    const activityQuery = createChainableMock([{ id: ACTIVITY_ID }]);
+    const { service, mockSupabase } = createRecordService();
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
+    );
+
+    await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([record]);
+
+    expect(recordQuery.or).toHaveBeenCalledWith(
+      `note.ilike.%Research%,activity_id.in.(${ACTIVITY_ID})`,
+    );
+  });
+
+  it('tag名一致をrecordのOR条件へ加える（cutover 前の旧ブロックを消さない）', async () => {
     const record = createRecord({ tag_id: TAG_ID });
     const recordQuery = createChainableMock([record]);
     const tagQuery = createChainableMock([{ id: TAG_ID }]);
+    const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : recordQuery,
+      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
     );
 
     await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([record]);
