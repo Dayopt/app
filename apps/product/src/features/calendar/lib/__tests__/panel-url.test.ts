@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCalendarReviewPanelPath } from '../panel-url';
+import { buildReportPath } from '../panel-url';
 
-describe('buildCalendarReviewPanelPath', () => {
-  it('builds the canonical calendar review panel URL', () => {
-    expect(buildCalendarReviewPanelPath('ja', new Date(2026, 2, 25))).toBe(
-      '/ja/week?date=2026-03-25&panel=review',
-    );
+describe('buildReportPath', () => {
+  it('builds the canonical /report URL', () => {
+    expect(buildReportPath('ja', new Date(2026, 2, 25))).toBe('/ja/report?date=2026-03-25');
   });
 
-  it('adds reviewTagId without mixing it into calendar tag filters', () => {
-    expect(buildCalendarReviewPanelPath('en', new Date(2026, 2, 25), 'tag-1')).toBe(
-      '/en/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
-    );
+  it('supports the default locale', () => {
+    expect(buildReportPath('en', new Date(2026, 2, 25))).toBe('/en/report?date=2026-03-25');
   });
 });

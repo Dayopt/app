@@ -169,7 +169,7 @@ describeWithEnv('Account Deletion: 削除 → セッション失効 → 再ロ�
     await page.waitForURL(/\/auth\/login/, { timeout: 15_000 });
 
     // セッション失効: 保護ページへ行くと未認証としてログインへ戻される
-    await page.goto('/ja/day');
+    await page.goto('/ja/calendar');
     await expect(page).toHaveURL(/\/ja\/auth\/login/, { timeout: 10_000 });
 
     // 同一資格情報で再ログインすると失敗する。

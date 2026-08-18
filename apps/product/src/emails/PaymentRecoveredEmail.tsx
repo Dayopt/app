@@ -38,7 +38,7 @@ export function PaymentRecoveredEmail({
             </Text>
             <Text style={styles.paragraph}>{t('paymentRecovered.body')}</Text>
             <Text style={styles.paragraph}>{t('paymentRecovered.noActionNote')}</Text>
-            <Button style={styles.button} href={`${appUrl}/week`}>
+            <Button style={styles.button} href={`${appUrl}/calendar`}>
               {t('paymentRecovered.ctaButton')}
             </Button>
             <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>

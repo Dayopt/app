@@ -13,7 +13,7 @@ import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/com
 
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
-import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
+import { buildReportPath } from '../../../lib/panel-url';
 
 import { ActivityRowMenu, type CategoryOption } from './ActivityRowMenu';
 import { ActivityTimeblockCreatePopover } from './ActivityTimeblockCreatePopover';
@@ -104,9 +104,10 @@ export function ActivityRow({
       navigation.setPanelKind('review', { reviewTagId: activity.id });
       return;
     }
-    // ここに来るのは navigation が無い経路だけなので、日付は現在時刻で解決する
+    // ここに来るのは navigation が無い経路だけなので、日付は現在時刻で解決する。
+    // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
     const reviewDate = new Date();
-    router.push(buildCalendarReviewPanelPath(locale, reviewDate, activity.id));
+    router.push(buildReportPath(locale, reviewDate));
   }, [navigation, router, locale, activity.id]);
 
   return (

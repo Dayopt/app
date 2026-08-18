@@ -64,11 +64,11 @@ async function login(page: Page) {
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').first().click();
-  await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+  await page.waitForURL(/\/ja\/calendar/i, { timeout: 15_000 });
 }
 
 async function openDay(page: Page, dateParam: string) {
-  await page.goto(`/ja/day?date=${dateParam}`);
+  await page.goto(`/ja/calendar?view=day&date=${dateParam}`);
   await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
 }
 
@@ -240,6 +240,9 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  // TODO(#2181 Step 4): panel=review は /report へ redirect される（Step 2）。
+  // ここのDOM assertはCalendarReviewPanel（旧shell）を前提にしており、/report
+  // フルページ実装（Step 4）に合わせて更新する。
   test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
     await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
 

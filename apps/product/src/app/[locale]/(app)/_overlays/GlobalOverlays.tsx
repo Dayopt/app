@@ -8,8 +8,7 @@ import { useCallback, useEffect } from 'react';
 import { Toaster } from '@/components/ui/feedback/toast';
 import { ShortcutCheatSheetDialog } from '@/components/ui/overlays/shortcut-cheat-sheet-dialog';
 import {
-  CalendarViewType,
-  buildCalendarReviewPanelPath,
+  buildReportPath,
   isCalendarViewPath,
   useCalendarNavigation,
   useShortcutRegistry,
@@ -111,25 +110,20 @@ export function GlobalOverlays() {
   // 同期更新するため、続く closeInspector の URL 同期（entry 削除）が
   // review panel を打ち消さない。router.push の非同期遷移と closeInspector が
   // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
+  //
+  // calendarNavigation が無い（Calendar タブ外）場合は /report へ遷移する。
+  // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する
+  // （docs/projects/workspace-shell-restructure/overview.md §6-5）。
   const handleViewStats = useCallback(
     (tagId: string) => {
-      const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
-      const currentViewSegment = pathWithoutLocale.split('/')[1]?.split('?')[0] ?? '';
-      const fallbackView: CalendarViewType = isCalendarViewPath(pathWithoutLocale)
-        ? currentViewSegment === 'day' ||
-          currentViewSegment === 'week' ||
-          /^\d+day$/.test(currentViewSegment)
-          ? (currentViewSegment as CalendarViewType)
-          : 'week'
-        : 'week';
       if (calendarNavigation) {
         calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
       } else {
-        router.push(buildCalendarReviewPanelPath(locale, new Date(), tagId, fallbackView));
+        router.push(buildReportPath(locale, new Date()));
       }
       closeInspector();
     },
-    [calendarNavigation, closeInspector, pathname, router, locale],
+    [calendarNavigation, closeInspector, router, locale],
   );
 
   const handleCopy = useCallback(

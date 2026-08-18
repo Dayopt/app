@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const route = vi.hoisted(() => ({
-  pathname: '/day',
+  pathname: '/calendar',
   query: '',
   locale: 'en',
 }));
@@ -35,7 +35,7 @@ import { ConnectedMobileAccountButton, MobileAccountButton } from '../MobileAcco
 
 describe('MobileAccountButton', () => {
   beforeEach(() => {
-    route.pathname = '/day';
+    route.pathname = '/calendar';
     route.query = '';
     route.locale = 'en';
   });
@@ -61,7 +61,7 @@ describe('MobileAccountButton', () => {
     render(<ConnectedMobileAccountButton />);
 
     const link = screen.getByRole('link', { name: 'navigation.navUser.account' });
-    expect(link).toHaveAttribute('href', '/settings?returnTo=%2Fday%3Fdate%3D2026-03-25');
+    expect(link).toHaveAttribute('href', '/settings?returnTo=%2Fcalendar%3Fdate%3D2026-03-25');
     expect(link.getAttribute('href')).not.toContain('%252F');
   });
 

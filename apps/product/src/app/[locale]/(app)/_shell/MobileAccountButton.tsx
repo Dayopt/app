@@ -14,7 +14,7 @@ function buildSettingsReturnPath(
   pathname: string,
   searchParams: { toString: () => string },
 ): string {
-  const returnPathname = pathname || '/day';
+  const returnPathname = pathname || '/calendar';
   const query = searchParams.toString();
 
   return query ? `${returnPathname}?${query}` : returnPathname;

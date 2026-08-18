@@ -60,15 +60,13 @@ describe('useTimeblockContextActions - Review navigation', () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
-  it('Calendar Context外ではweek Review URLへfallbackする', () => {
+  it('Calendar Context外では/reportへfallbackする（tagIdは落ちる。Step5で復元）', () => {
     mocks.useCalendarNavigation.mockReturnValue(null);
     const { result } = renderHook(() => useTimeblockContextActions());
 
     act(() => result.current.handleViewStats(taggedEntry));
 
-    expect(mocks.push).toHaveBeenCalledWith(
-      '/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
-    );
+    expect(mocks.push).toHaveBeenCalledWith('/ja/report?date=2026-03-25');
     expect(mocks.setPanelKind).not.toHaveBeenCalled();
   });
 

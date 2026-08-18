@@ -188,7 +188,7 @@ describe('MFAVerifyPage', () => {
 
       render(<MFAVerifyPage />);
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/week'));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/calendar'));
       expect(mockChallenge).not.toHaveBeenCalled();
     });
   });
@@ -215,7 +215,7 @@ describe('MFAVerifyPage', () => {
 
       fireEvent.change(getOtpInput(), { target: { value: '123456' } });
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/week'));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/calendar'));
       expect(mockRefresh).toHaveBeenCalled();
     });
 
@@ -236,7 +236,7 @@ describe('MFAVerifyPage', () => {
 
       fireEvent.change(getOtpInput(), { target: { value: '123456' } });
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/week'));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/calendar'));
     });
 
     it('verify失敗時、エラーメッセージを表示し入力をクリアする', async () => {
@@ -249,7 +249,7 @@ describe('MFAVerifyPage', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('Invalid code');
       });
       expect(getOtpInput()).toHaveValue('');
-      expect(mockPush).not.toHaveBeenCalledWith('/ja/week');
+      expect(mockPush).not.toHaveBeenCalledWith('/ja/calendar');
     });
   });
 
@@ -268,7 +268,7 @@ describe('MFAVerifyPage', () => {
         expect(mockVerifyRecoveryCode).toHaveBeenCalledWith({ code: 'ABCD-1234' });
       });
       expect(mockToastSuccess).toHaveBeenCalledWith('auth.mfaVerify.recoverySuccess');
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/week'));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/calendar'));
       expect(mockRefresh).toHaveBeenCalled();
     });
 
@@ -286,7 +286,7 @@ describe('MFAVerifyPage', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('auth.mfaVerify.recoveryInvalid');
       });
       expect(mockToastSuccess).not.toHaveBeenCalled();
-      expect(mockPush).not.toHaveBeenCalledWith('/ja/week');
+      expect(mockPush).not.toHaveBeenCalledWith('/ja/calendar');
     });
 
     it('想定外エラー時、genericエラーを表示しSentryへ報告する', async () => {
@@ -303,7 +303,7 @@ describe('MFAVerifyPage', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('common.errors.generic');
       });
       expect(mockCaptureUnexpectedTrpcClientFailure).toHaveBeenCalled();
-      expect(mockPush).not.toHaveBeenCalledWith('/ja/week');
+      expect(mockPush).not.toHaveBeenCalledWith('/ja/calendar');
     });
   });
 });

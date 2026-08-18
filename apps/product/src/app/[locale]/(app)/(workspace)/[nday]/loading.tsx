@@ -1,5 +1,1 @@
-import { CalendarSkeleton } from '../_server/CalendarSkeleton';
-
-export default function CalendarMultiDayLoading() {
-  return <CalendarSkeleton />;
-}
+export { default } from '../calendar/loading';

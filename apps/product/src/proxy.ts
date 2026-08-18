@@ -176,6 +176,46 @@ export function getLocalizedPath(path: string, locale: string): string {
   return `/${locale}${path}`;
 }
 
+// workspace の旧 URL（/day, /week, /2day〜/7day）。/calendar への統一後も
+// workspace-shell-restructure Step 6（旧route削除）まで redirect の入力として残す。
+const LEGACY_WORKSPACE_VIEW_PATTERN = /^\/(day|week|[2-7]day)$/;
+
+interface LegacyWorkspaceRedirect {
+  pathname: '/calendar' | '/report';
+  search: string;
+}
+
+/**
+ * 旧 URL（/day, /week, /Nday、`?panel=` 付き含む）を新 URL契約（/calendar, /report）へ写す。
+ *
+ * `?panel=review|diff|analytics` は `/report` へ、それ以外は `/calendar?view=` へ。
+ * 既存クエリは素通しし、この関数が明示的に扱うキー（panel / reviewTagId / view / range）
+ * だけを置換・削除する（docs/projects/workspace-shell-restructure/overview.md §4-4）。
+ *
+ * `/review`（削除済み旧route）はこの関数の対象外（張らない。§4-4）。
+ */
+function resolveLegacyWorkspaceRedirect(
+  pathWithoutLocale: string,
+  searchParams: URLSearchParams,
+): LegacyWorkspaceRedirect | null {
+  const match = LEGACY_WORKSPACE_VIEW_PATTERN.exec(pathWithoutLocale);
+  if (!match) return null;
+
+  const legacyView = match[1]!;
+  const panel = searchParams.get('panel');
+  const params = new URLSearchParams(searchParams);
+
+  if (panel === 'review' || panel === 'diff' || panel === 'analytics') {
+    params.delete('panel');
+    params.delete('reviewTagId');
+    params.set('range', legacyView === 'day' ? 'day' : 'week');
+    return { pathname: '/report', search: params.toString() };
+  }
+
+  params.set('view', legacyView);
+  return { pathname: '/calendar', search: params.toString() };
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
@@ -239,6 +279,18 @@ export async function proxy(request: NextRequest) {
   const currentLocale = getCurrentLocale(pathname);
   const pathWithoutLocale = getPathWithoutLocale(pathname);
 
+  // 旧URL → /calendar・/report への写像。認証状態を問わないので Supabase への
+  // 往復（updateSession）より前、パス分類より前で返す（overview.md §4-3）。
+  const legacyRedirect = resolveLegacyWorkspaceRedirect(
+    pathWithoutLocale,
+    request.nextUrl.searchParams,
+  );
+  if (legacyRedirect) {
+    const target = new URL(getLocalizedPath(legacyRedirect.pathname, currentLocale), request.url);
+    target.search = legacyRedirect.search;
+    return redirectWithCsp(target, contentSecurityPolicy);
+  }
+
   const isProtectedPath = isProtectedProductPath(pathWithoutLocale);
   const isAuthPath = isAuthProductPath(pathWithoutLocale);
   const isPublicPath = isPublicProductPath(pathWithoutLocale);
@@ -281,7 +333,7 @@ export async function proxy(request: NextRequest) {
 
     if (user && isAuthPath && !isAllowedWhileAuthenticated) {
       return redirectWithCsp(
-        new URL(getLocalizedPath('/week', currentLocale), request.url),
+        new URL(getLocalizedPath('/calendar', currentLocale), request.url),
         contentSecurityPolicy,
       );
     }

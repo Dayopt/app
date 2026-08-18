@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useTimeblockWriteMutations } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 
-import { buildCalendarReviewPanelPath } from '../../lib/panel-url';
+import { buildReportPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
 import { useCalendarNavigation } from '../navigation/CalendarNavigationContext';
 
@@ -45,13 +45,8 @@ export function useTimeblockContextActions() {
         return;
       }
 
-      router.push(
-        buildCalendarReviewPanelPath(
-          locale,
-          entry.startDate ?? entry.actualStartDate ?? new Date(),
-          entry.tagId,
-        ),
-      );
+      // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
+      router.push(buildReportPath(locale, entry.startDate ?? entry.actualStartDate ?? new Date()));
     },
     [navigation, router, locale],
   );
