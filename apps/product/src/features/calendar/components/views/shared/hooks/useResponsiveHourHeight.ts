@@ -11,10 +11,9 @@
 import { useEffect } from 'react';
 
 import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
-import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
 import { create } from 'zustand';
 
-import { HOUR_HEIGHT, HOUR_HEIGHT_DENSITIES } from '../constants/grid.constants';
+import { DENSITY_FACTOR, HOUR_HEIGHT, MIN_LEGIBLE_HOUR_HEIGHT } from '../constants/grid.constants';
 
 // ========================================
 // Store
@@ -41,42 +40,25 @@ export function useResponsiveHourHeight(): number {
 }
 
 /**
- * ウィンドウサイズ → hourHeight を同期するフック
+ * コンテナ実測高 → hourHeight を同期するフック
  *
  * カレンダー内で **1箇所のみ** 呼ぶ（ScrollableCalendarLayout）。
  * 密度設定の変更にも対応。
+ *
+ * hourHeight = max(MIN_LEGIBLE_HOUR_HEIGHT, floor((containerHeight / 24) * DENSITY_FACTOR[density]))
+ * compact(factor=1.0) は 24h が正確に containerHeight へフィットする（スクロールなし）。
+ * default/spacious はその上の倍率で、意図的にスクロールを許容する。
+ * containerHeight が未計測（0）の間は SSR フォールバック（HOUR_HEIGHT）のままにする。
  */
-export function useHourHeightSync(): void {
+export function useHourHeightSync(containerHeight: number): void {
   const density = useCalendarSettings((s) => s.hourHeightDensity);
-  const config = HOUR_HEIGHT_DENSITIES[density];
   const setHourHeight = useHourHeightStore((s) => s.setHourHeight);
 
   useEffect(() => {
-    const update = () => {
-      const width = window.innerWidth;
+    if (containerHeight <= 0) return;
 
-      if (width < BREAKPOINT_VALUES.md) {
-        setHourHeight(config.mobile);
-      } else if (width < BREAKPOINT_VALUES.lg) {
-        setHourHeight(config.tablet);
-      } else {
-        setHourHeight(config.desktop);
-      }
-    };
-
-    update();
-
-    // デバウンス: リサイズ中のカスケード更新 → レイアウトスラッシングを抑制
-    let timerId: ReturnType<typeof setTimeout>;
-    const debouncedUpdate = () => {
-      clearTimeout(timerId);
-      timerId = setTimeout(update, 100);
-    };
-
-    window.addEventListener('resize', debouncedUpdate);
-    return () => {
-      window.removeEventListener('resize', debouncedUpdate);
-      clearTimeout(timerId);
-    };
-  }, [config.mobile, config.tablet, config.desktop, setHourHeight]);
+    const factor = DENSITY_FACTOR[density];
+    const fitHeight = Math.floor((containerHeight / 24) * factor);
+    setHourHeight(Math.max(MIN_LEGIBLE_HOUR_HEIGHT, fitHeight));
+  }, [containerHeight, density, setHourHeight]);
 }
