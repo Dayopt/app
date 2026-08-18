@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { fn } from 'storybook/test';
 
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 
 import { ActivityTimeblockCreatePopover } from './ActivityTimeblockCreatePopover';
 
@@ -33,7 +33,7 @@ function mockTrpc(entries: unknown[] = []) {
  * - 実機 / dev での dogfooding を前提に、Storybook variants は配置確認用の最小セット
  */
 const meta = {
-  title: 'Product/Features/Calendar/Filter/TagFilter/ActivityTimeblockCreatePopover',
+  title: 'Product/Features/Calendar/Sidebar/ActivityTimeblockCreatePopover',
   component: ActivityTimeblockCreatePopover,
   parameters: {
     layout: 'centered',
@@ -69,7 +69,7 @@ function renderPopover(opts: { isMobile?: boolean } = {}) {
           }}
           className="border-border hover:bg-state-hover relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border px-4 text-sm"
         >
-          <TagIcon icon={MOCK_TAG.icon} color={MOCK_TAG.color} size="sm" />
+          <ActivityIcon icon={MOCK_TAG.icon} color={MOCK_TAG.color} size="sm" />
           <span className="truncate">{MOCK_TAG.name}</span>
           <ActivityTimeblockCreatePopover
             open={open}
