@@ -57,6 +57,9 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
         // アクティブも含む全件を返す。素直に全件を Set へ入れると全アクティビティが
         // archived 扱いになり、degrade の向きが安全側から危険側へ反転する。
         const resolveArchivedActivityIds = async (): Promise<Set<string> | null> => {
+          // `read:activities` を持たない接続（`read:stats` のみ等）では呼んでも必ず
+          // scope 拒否になる。往復と warn を無駄に出さず、想定内の欠落として即 degrade する。
+          if (!ctx.scopes.includes('read:activities')) return null;
           try {
             const activities = await trpc.activities.listActivities({ includeArchived: true });
             return new Set(

@@ -126,6 +126,10 @@ export function buildActivityPL(
         activityId: a.activityId,
         activityName: activity?.name ?? null,
         categoryId: activity?.category_id ?? null,
+        // 旧 buildTagPL は色未設定を server 側で 'indigo' へ既定していたが、ここでは
+        // null をそのまま返す（意図的な変更、#2204 クロスレビュー P3-5）。categories.color は
+        // 実 schema で nullable なので、既定色への解決は consumer 側の resolveTagColor に
+        // 統一する（useTimePLData / MCP 双方が同じ関数を通るようにするため）。
         categoryColor: category?.color ?? null,
         categoryIcon: category?.icon ?? null,
         budgetMinutes: a.plannedMinutes,
@@ -137,6 +141,9 @@ export function buildActivityPL(
     .sort((x, y) => y.actualMinutes - x.actualMinutes);
 }
 
+// buildCategoryPL / buildSegmentTotals は本 PR 時点では consumer が無い。
+// #2181（/report ページ）の実装レーンが配線する想定で意図的に export したまま
+// 置いている（knip / CI Static Checks は本 PR head で clean と実測確認済み）。
 export function buildCategoryPL(
   plans: ReadonlyArray<AxisPlanRow>,
   records: ReadonlyArray<AxisRecordRow>,
@@ -165,6 +172,10 @@ export function buildCategoryPL(
       return {
         categoryId: a.categoryId,
         categoryName: category?.name ?? null,
+        // 旧 buildTagPL は色未設定を server 側で 'indigo' へ既定していたが、ここでは
+        // null をそのまま返す（意図的な変更、#2204 クロスレビュー P3-5）。categories.color は
+        // 実 schema で nullable なので、既定色への解決は consumer 側の resolveTagColor に
+        // 統一する（useTimePLData / MCP 双方が同じ関数を通るようにするため）。
         categoryColor: category?.color ?? null,
         categoryIcon: category?.icon ?? null,
         budgetMinutes: a.plannedMinutes,

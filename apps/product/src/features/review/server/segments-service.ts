@@ -136,7 +136,19 @@ class SegmentsService {
       // 残すと「見えない 0 件セグメント」が名前を占有し、ユーザーが同じ名前で
       // 作り直そうとした時に DUPLICATE_NAME で詰む（PostgREST に跨る
       // トランザクションが無いため、補償削除で代替する）。
-      await this.supabase.from('segments').delete().eq('id', data.id).eq('user_id', options.userId);
+      const { error: cleanupError } = await this.supabase
+        .from('segments')
+        .delete()
+        .eq('id', data.id)
+        .eq('user_id', options.userId);
+      if (cleanupError) {
+        // 元の失敗を優先して throw するが、補償削除自体の失敗も黙殺しない。
+        // 残すと幽霊セグメントが残存したまま気づけない（#2204 クロスレビュー P3-3）。
+        captureUnexpectedDatabaseError(cleanupError, {
+          feature: 'segments',
+          operation: 'create_segment_rollback',
+        });
+      }
       throw error;
     }
 

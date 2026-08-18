@@ -270,7 +270,7 @@ describe.skipIf(!RUN_LOCAL)('SegmentsService (#2162)', () => {
       name: `自分-${crypto.randomUUID()}`,
       activityIds: [],
     });
-    await service.create({
+    const foreign = await service.create({
       userId: otherId,
       name: `他人-${crypto.randomUUID()}`,
       activityIds: [],
@@ -278,6 +278,8 @@ describe.skipIf(!RUN_LOCAL)('SegmentsService (#2162)', () => {
 
     const listed = await service.list({ userId: ownerId });
     expect(listed.some((s) => s.id === mine.id)).toBe(true);
-    expect(listed.every((s) => s.id !== otherId)).toBe(true);
+    // 修正前は segment id と userId を比較しており常に真だった（#2204 クロスレビュー P3-2）。
+    // 他ユーザーの segment 実 id が含まれないことを見る。
+    expect(listed.some((s) => s.id === foreign.id)).toBe(false);
   });
 });

@@ -693,15 +693,15 @@ describe('MCP list tools public contract', () => {
     expect(parseText(result)).toEqual(result.structuredContent);
   });
 
-  it('review.getはアーカイブ判定をfalseへ固定し、tagsを一切読まない', async () => {
-    // #2174 で `read:tags` scope ごと廃止したため、旧実装が使っていた
-    // `activities.listActivities` は必ず scope 拒否になる。呼べば review.get のたびに
-    // Sentry へ雑音を出すだけなので呼ばない。activityId 軸をアクティビティ軸へ切り替え、
-    // アーカイブ解決を復活させるのはレーン G（#2173）の scope。
+  it('review.getはactivities.listActivities解決に失敗した時、isArchivedを全行falseへdegradeする', async () => {
+    // #2173 でアーカイブ解決を復活させた（`activities.listActivities` を呼ぶ）。
+    // ここではその呼び出しが失敗するケースを見る: caller に activities router を
+    // 渡さないため呼べば TypeError で落ち、resolveArchivedActivityIds の catch を通る。
     //
-    // degrade の向きは元から安全側（非 archived を archived と誤表示することはなく、
+    // degrade の向きは安全側（非 archived を archived と誤表示することはなく、
     // archived の見落としのみ）で、outputSchema の
     // 「isArchived safely defaults to false」もそのまま成立する。
+    // 成功パス（archived_at の実フィルタで true/false が分岐すること）は次の test で見る。
     const getMcpReview = vi.fn().mockResolvedValue({
       asOf: '2026-07-27T00:00:00.000Z',
       period: {
@@ -750,13 +750,15 @@ describe('MCP list tools public contract', () => {
         },
       ],
     });
-    // tags router を渡さない。呼びに行けば TypeError で落ちるので、
-    // 「呼んでいない」ことが結果ではなく構造で固定される。
+    // activities router を渡さない。呼びに行けば TypeError で落ちるので、
+    // resolveArchivedActivityIds の失敗経路が結果ではなく構造で固定される。
     const caller = { statistics: { getMcpReview } };
     createMcpTrpcCaller.mockReturnValue(caller);
 
     const { handlers, server } = createServerDouble();
-    registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
+    // read:activities も持たせる。scope 自体が無いケースはガードで即 degrade する
+    // 別経路（次の test で確認）なので、ここでは呼び出し失敗（catch）を狙う。
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats', 'read:activities'] });
     const result = await getHandler(handlers, 'review.get')(
       {
         startDate: '2026-07-20T00:00:00+09:00',
@@ -782,6 +784,153 @@ describe('MCP list tools public contract', () => {
       ],
     });
     expect(parseText(result)).toEqual(result.structuredContent);
+  });
+
+  it('review.getはactivities.listActivitiesの解決に成功した時、archived_atで行ごとにisArchivedを分岐する', async () => {
+    // #2173 の成功パス。archived_at != null フィルタを消す・反転する退行が起きると、
+    // review-get.ts 自身が警告している罠（listActivities は全件を返すため、
+    // フィルタを外すと全アクティビティが archived 扱いになり degrade の向きが
+    // 安全側から危険側へ反転する）を検出できないまま緑になる。ここでその退行を捕まえる。
+    const getMcpReview = vi.fn().mockResolvedValue({
+      asOf: '2026-07-27T00:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: { plannedMinutes: 240, recordedMinutes: 200, varianceMinutes: 40 },
+      accuracy: { rate: 0.8333, status: 'fair' },
+      activities: [
+        {
+          activityId: activeActivity.id,
+          isNoActivity: false,
+          plannedMinutes: 180,
+          recordedMinutes: 140,
+          varianceMinutes: 40,
+          variancePercent: 22,
+        },
+        {
+          activityId: archivedActivity.id,
+          isNoActivity: false,
+          plannedMinutes: 60,
+          recordedMinutes: 40,
+          varianceMinutes: 20,
+          variancePercent: 33,
+        },
+      ],
+      signals: [
+        {
+          code: 'largest_activity_variance',
+          activityId: archivedActivity.id,
+          isNoActivity: false,
+          direction: 'recorded_less_than_planned',
+          absoluteMinutes: 20,
+        },
+      ],
+    });
+    // listActivities は全件（アクティブ + アーカイブ済み）を返す。フィルタが
+    // resolveArchivedActivityIds 側にあることを、この mock 自体が強制する形。
+    const listActivities = vi.fn().mockResolvedValue([activeActivity, archivedActivity]);
+    createMcpTrpcCaller.mockReturnValue({
+      statistics: { getMcpReview },
+      activities: { listActivities },
+    });
+
+    const { handlers, server } = createServerDouble();
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats', 'read:activities'] });
+    const result = await getHandler(handlers, 'review.get')(
+      {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+      },
+      { signal: new AbortController().signal },
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(MCP_REVIEW_GET_OUTPUT_SCHEMA.safeParse(result.structuredContent).success).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      activities: [
+        { activityId: activeActivity.id, isArchived: false },
+        { activityId: archivedActivity.id, isArchived: true },
+      ],
+      signals: [
+        {
+          code: 'largest_activity_variance',
+          activityId: archivedActivity.id,
+          isArchived: true,
+        },
+      ],
+    });
+    expect(listActivities).toHaveBeenCalledExactlyOnceWith({ includeArchived: true });
+    expect(parseText(result)).toEqual(result.structuredContent);
+  });
+
+  it('review.getはread:activitiesを持たない接続でlistActivitiesを一切呼ばない', async () => {
+    // #2204 のクロスレビュー P3-1。read:stats のみの接続で listActivities を呼ぶと
+    // 必ず INSUFFICIENT_SCOPE で落ち、review.get のたびに無駄な往復 + warn を出す。
+    // ガードで即 degrade（isArchived 全行 false）し、呼び出し自体を発生させない。
+    const getMcpReview = vi.fn().mockResolvedValue({
+      asOf: '2026-07-27T00:00:00.000Z',
+      period: {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+        endExclusive: true,
+        timezone: 'Asia/Tokyo',
+      },
+      basis: {
+        planMeaning: 'budget',
+        recordMeaning: 'actual',
+        rowFilter: 'active_start_in_period',
+        durationBoundary: 'full_row_not_clipped',
+        periodBoundary: '[)',
+        varianceConvention: 'planned_minus_recorded',
+      },
+      hasData: true,
+      summary: { plannedMinutes: 120, recordedMinutes: 120, varianceMinutes: 0 },
+      accuracy: { rate: 1, status: 'excellent' },
+      activities: [
+        {
+          activityId: activeActivity.id,
+          isNoActivity: false,
+          plannedMinutes: 120,
+          recordedMinutes: 120,
+          varianceMinutes: 0,
+          variancePercent: 0,
+        },
+      ],
+      signals: [{ code: 'plan_accuracy', rate: 1, status: 'excellent' }],
+    });
+    const listActivities = vi.fn().mockResolvedValue([activeActivity]);
+    createMcpTrpcCaller.mockReturnValue({
+      statistics: { getMcpReview },
+      activities: { listActivities },
+    });
+
+    const { handlers, server } = createServerDouble();
+    registerReviewGetTool(server, { ...context, scopes: ['read:stats'] });
+    const result = await getHandler(handlers, 'review.get')(
+      {
+        startDate: '2026-07-20T00:00:00+09:00',
+        endDate: '2026-07-27T00:00:00+09:00',
+      },
+      { signal: new AbortController().signal },
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      activities: [{ activityId: activeActivity.id, isArchived: false }],
+    });
+    expect(listActivities).not.toHaveBeenCalled();
   });
 
   it('read step-up challengeは既存grantと不足scopeだけを保持する', () => {
