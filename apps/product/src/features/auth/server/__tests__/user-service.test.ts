@@ -620,10 +620,13 @@ describe('createUserService', () => {
   });
 
   describe('deleteAllData', () => {
-    it('records、plans、tags、user_settingsの順に削除する', async () => {
+    // activities は categories を参照するため、この順序が FK 依存順であること自体が契約。
+    it('records、plans、activities、categories、tags、user_settingsの順に削除する', async () => {
       mockAdminTables({
         records: { data: [] },
         plans: { data: [] },
+        activities: { data: [] },
+        categories: { data: [] },
         tags: { data: [] },
         user_settings: { data: [] },
       });
@@ -633,6 +636,8 @@ describe('createUserService', () => {
       expect(adminFrom.mock.calls.map(([table]) => table)).toEqual([
         'records',
         'plans',
+        'activities',
+        'categories',
         'tags',
         'user_settings',
       ]);
@@ -654,16 +659,20 @@ describe('createUserService', () => {
   });
 
   describe('exportData', () => {
-    it('plans / records / tags / settings をexportする', async () => {
+    it('plans / records / categories / activities / tags / settings をexportする', async () => {
       const profile = { id: USER_ID, email: USER_EMAIL };
       const plans = [{ id: 'plan-1', user_id: USER_ID }];
       const records = [{ id: 'record-1', user_id: USER_ID }];
+      const categories = [{ id: 'category-1', user_id: USER_ID }];
+      const activities = [{ id: 'activity-1', user_id: USER_ID }];
       const tags = [{ id: 'tag-1', user_id: USER_ID }];
       const settings = { id: 'settings-1', user_id: USER_ID };
       const adminQueries = mockAdminTables({ plans: { data: plans }, records: { data: records } });
       const { service, query } = createSupabase({
         tables: {
           profiles: { data: profile },
+          categories: { data: categories },
+          activities: { data: activities },
           tags: { data: tags },
           user_settings: { data: settings },
         },
@@ -677,6 +686,8 @@ describe('createUserService', () => {
         profile,
         plans,
         records,
+        categories,
+        activities,
         tags,
         userSettings: settings,
       });

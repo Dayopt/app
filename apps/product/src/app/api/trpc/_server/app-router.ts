@@ -5,6 +5,7 @@
 
 import 'server-only';
 
+import { activitiesRouter } from '@/features/activities/server/router';
 import { createUserRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { externalCalendarRouter } from '@/features/external-calendar/server/router';
@@ -29,6 +30,7 @@ const userRouter = createUserRouter({
 });
 
 export const appRouter = createTRPCRouter({
+  activities: activitiesRouter,
   billing: billingRouter,
   contact: contactRouter,
   email: emailRouter,
