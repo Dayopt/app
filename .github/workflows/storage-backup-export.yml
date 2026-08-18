@@ -15,6 +15,11 @@ name: Storage Backup Export
 # repository の Actions 通知設定に従いメール通知される）に乗る。同種の日次 cron
 # （production-config-audit.yml / replica-check.yml）も追加実装をしていないのと同じ判断
 # （#2147 で指揮台へ確認済み）。
+#
+# timeout（30分）で強制終了した場合、destination にはその時点までに同期済みの
+# オブジェクトだけが残り、sync 未処理分は反映されない。rclone sync は冪等な操作
+# （同じ source/destination を再実行すれば差分だけが追いつく）のため、追加対応は
+# 不要——翌日の cron 実行が自然に収束させる（2026-08-18、PR #2151 クロスレビュー P3）。
 
 on:
   schedule:
