@@ -34,7 +34,7 @@ export type TagColorName = (typeof TAG_COLOR_NAMES)[number];
 // ========================================
 
 /** タグカラーのTailwindクラスとCSS変数のマッピング */
-export interface TagColorEntry {
+interface TagColorEntry {
   /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
   border: string;
   /** dot/icon背景用 Tailwindクラス (e.g. 'bg-tag-blue') */
@@ -87,7 +87,7 @@ const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
 // ========================================
 
 /** タグのデフォルトカラー */
-export const DEFAULT_TAG_COLOR: TagColorName = 'blue';
+const DEFAULT_TAG_COLOR: TagColorName = 'blue';
 
 // ========================================
 // ブリッジ関数（HEX / 名前 / null → TagColorName）
