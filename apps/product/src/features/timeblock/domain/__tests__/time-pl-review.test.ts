@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import { aggregateByActivity } from '../activity-axis-aggregation';
 import { deriveTimePLReview, type TimePLReviewSourceRow } from '../time-pl-review';
-import { aggregateTimePLTags } from '../time-pl-tag-aggregation';
 
 const TAG_A = '00000000-0000-4000-8000-000000000001';
 const TAG_B = '00000000-0000-4000-8000-000000000002';
 const TAG_C = '00000000-0000-4000-8000-000000000003';
 
-function row(tagId: string | null, minutes: number, offsetMinutes = 0): TimePLReviewSourceRow {
+function row(activityId: string | null, minutes: number, offsetMinutes = 0): TimePLReviewSourceRow {
   const start = new Date(Date.UTC(2026, 6, 24, 0, offsetMinutes));
   return {
-    tagId,
+    activityId,
     startAt: start.toISOString(),
     endAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
   };
@@ -19,23 +19,23 @@ function row(tagId: string | null, minutes: number, offsetMinutes = 0): TimePLRe
 describe('deriveTimePLReview', () => {
   it('Review UIとMCPが共有するtag集計でpresenceと0.1分丸めを保持する', () => {
     expect(
-      aggregateTimePLTags(
-        [{ tagId: TAG_A, minutes: 0.04 }],
+      aggregateByActivity(
+        [{ activityId: TAG_A, minutes: 0.04 }],
         [
-          { tagId: TAG_A, minutes: 0.06 },
-          { tagId: TAG_B, minutes: 45 },
+          { activityId: TAG_A, minutes: 0.06 },
+          { activityId: TAG_B, minutes: 45 },
         ],
       ),
     ).toEqual([
       {
-        tagId: TAG_A,
+        activityId: TAG_A,
         plannedMinutes: 0,
         recordedMinutes: 0.1,
         hasPlan: true,
         hasRecord: true,
       },
       {
-        tagId: TAG_B,
+        activityId: TAG_B,
         plannedMinutes: 0,
         recordedMinutes: 45,
         hasPlan: false,
@@ -58,26 +58,26 @@ describe('deriveTimePLReview', () => {
         varianceMinutes: -45,
       },
       accuracy: { rate: 0.75, status: 'fair' },
-      tags: [
+      activities: [
         {
-          tagId: TAG_A,
-          isUncategorized: false,
+          activityId: TAG_A,
+          isNoActivity: false,
           plannedMinutes: 120,
           recordedMinutes: 90,
           varianceMinutes: 30,
           variancePercent: 25,
         },
         {
-          tagId: TAG_B,
-          isUncategorized: false,
+          activityId: TAG_B,
+          isNoActivity: false,
           plannedMinutes: 60,
           recordedMinutes: 90,
           varianceMinutes: -30,
           variancePercent: -50,
         },
         {
-          tagId: TAG_C,
-          isUncategorized: false,
+          activityId: TAG_C,
+          isNoActivity: false,
           plannedMinutes: 0,
           recordedMinutes: 45,
           varianceMinutes: -45,
@@ -87,9 +87,9 @@ describe('deriveTimePLReview', () => {
       signals: [
         { code: 'plan_accuracy', rate: 0.75, status: 'fair' },
         {
-          code: 'largest_tag_variance',
-          tagId: TAG_C,
-          isUncategorized: false,
+          code: 'largest_activity_variance',
+          activityId: TAG_C,
+          isNoActivity: false,
           direction: 'recorded_more_than_planned',
           absoluteMinutes: 45,
         },
@@ -97,31 +97,31 @@ describe('deriveTimePLReview', () => {
     });
   });
 
-  it('未分類のPlan / Recordを単一バケットへ畳んでsummaryとaccuracyに含める', () => {
+  it('アクティビティなしのPlan / Recordを単一バケットへ畳んでsummaryとaccuracyに含める', () => {
     const result = deriveTimePLReview(
       [row(TAG_A, 120), row(null, 30), row(null, 30, 60)],
       [row(TAG_A, 90), row(null, 90)],
     );
 
-    expect(result.tags).toEqual([
+    expect(result.activities).toEqual([
       {
-        tagId: TAG_A,
-        isUncategorized: false,
+        activityId: TAG_A,
+        isNoActivity: false,
         plannedMinutes: 120,
         recordedMinutes: 90,
         varianceMinutes: 30,
         variancePercent: 25,
       },
       {
-        tagId: null,
-        isUncategorized: true,
+        activityId: null,
+        isNoActivity: true,
         plannedMinutes: 60,
         recordedMinutes: 90,
         varianceMinutes: -30,
         variancePercent: -50,
       },
     ]);
-    // 未分類を除外していた頃は planned 120 / recorded 90 に目減りしていた
+    // アクティビティなしを除外していた頃は planned 120 / recorded 90 に目減りしていた
     expect(result.summary).toEqual({
       plannedMinutes: 180,
       recordedMinutes: 180,
@@ -130,17 +130,17 @@ describe('deriveTimePLReview', () => {
     expect(result.accuracy).toEqual({ rate: 1, status: 'excellent' });
   });
 
-  it('未分類しか無くてもhasDataを立てて空reviewへ落とさない', () => {
+  it('アクティビティなししか無くてもhasDataを立てて空reviewへ落とさない', () => {
     const result = deriveTimePLReview([row(null, 60)], [row(null, 30)]);
 
     expect(result).toEqual({
       hasData: true,
       summary: { plannedMinutes: 60, recordedMinutes: 30, varianceMinutes: 30 },
       accuracy: { rate: 0.5, status: 'poor' },
-      tags: [
+      activities: [
         {
-          tagId: null,
-          isUncategorized: true,
+          activityId: null,
+          isNoActivity: true,
           plannedMinutes: 60,
           recordedMinutes: 30,
           varianceMinutes: 30,
@@ -150,9 +150,9 @@ describe('deriveTimePLReview', () => {
       signals: [
         { code: 'plan_accuracy', rate: 0.5, status: 'poor' },
         {
-          code: 'largest_tag_variance',
-          tagId: null,
-          isUncategorized: true,
+          code: 'largest_activity_variance',
+          activityId: null,
+          isNoActivity: true,
           direction: 'recorded_less_than_planned',
           absoluteMinutes: 30,
         },
@@ -160,28 +160,28 @@ describe('deriveTimePLReview', () => {
     });
   });
 
-  it('未分類が最大varianceでもtagIdをnullのままsignalへ出す', () => {
+  it('アクティビティなしが最大varianceでもactivityIdをnullのままsignalへ出す', () => {
     const result = deriveTimePLReview([row(TAG_A, 60), row(null, 120)], [row(TAG_A, 50)]);
 
     expect(result.signals).toContainEqual({
-      code: 'largest_tag_variance',
-      tagId: null,
-      isUncategorized: true,
+      code: 'largest_activity_variance',
+      activityId: null,
+      isNoActivity: true,
       direction: 'recorded_less_than_planned',
       absoluteMinutes: 120,
     });
   });
 
-  it('未分類は同点tag のtie-breakでだけ末尾へ回す', () => {
+  it('アクティビティなしは同点tag のtie-breakでだけ末尾へ回す', () => {
     const result = deriveTimePLReview([row(null, 60), row(TAG_A, 60), row(TAG_C, 60)], []);
 
-    expect(result.tags.map(({ tagId }) => tagId)).toEqual([TAG_A, TAG_C, null]);
+    expect(result.activities.map(({ activityId }) => activityId)).toEqual([TAG_A, TAG_C, null]);
   });
 
   it('tagを0.1分へ丸めてからsummaryを作り浮動小数の端数を返さない', () => {
     const result = deriveTimePLReview([row(TAG_A, 0.06), row(TAG_B, 0.06)], []);
 
-    expect(result.tags.map(({ plannedMinutes }) => plannedMinutes)).toEqual([0.1, 0.1]);
+    expect(result.activities.map(({ plannedMinutes }) => plannedMinutes)).toEqual([0.1, 0.1]);
     expect(result.summary).toEqual({
       plannedMinutes: 0.2,
       recordedMinutes: 0,
@@ -196,10 +196,10 @@ describe('deriveTimePLReview', () => {
     expect(result).toMatchObject({
       hasData: true,
       accuracy: { rate: 1, status: 'excellent' },
-      tags: [
+      activities: [
         {
-          tagId: TAG_A,
-          isUncategorized: false,
+          activityId: TAG_A,
+          isNoActivity: false,
           plannedMinutes: 0,
           recordedMinutes: 0,
           varianceMinutes: 0,
@@ -210,7 +210,7 @@ describe('deriveTimePLReview', () => {
     });
   });
 
-  it('同じ絶対varianceはtagIdで決定し相殺時もlargest signalを返す', () => {
+  it('同じ絶対varianceはactivityIdで決定し相殺時もlargest signalを返す', () => {
     const result = deriveTimePLReview(
       [row(TAG_B, 30), row(TAG_A, 60)],
       [row(TAG_B, 60), row(TAG_A, 30)],
@@ -221,9 +221,9 @@ describe('deriveTimePLReview', () => {
     expect(result.signals).toEqual([
       { code: 'plan_accuracy', rate: 1, status: 'excellent' },
       {
-        code: 'largest_tag_variance',
-        tagId: TAG_A,
-        isUncategorized: false,
+        code: 'largest_activity_variance',
+        activityId: TAG_A,
+        isNoActivity: false,
         direction: 'recorded_less_than_planned',
         absoluteMinutes: 30,
       },
@@ -250,7 +250,7 @@ describe('deriveTimePLReview', () => {
         varianceMinutes: 0,
       },
       accuracy: null,
-      tags: [],
+      activities: [],
       signals: [],
     });
   });

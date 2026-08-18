@@ -19,7 +19,7 @@ vi.mock('@/lib/sentry', () => ({
 }));
 
 const USER_ID = '00000000-0000-4000-8000-000000000001';
-const TAG_ID = '00000000-0000-4000-8000-000000000002';
+const ACTIVITY_ID = '00000000-0000-4000-8000-000000000002';
 
 /** PostgRESTのbuilderを模したthenable double。適用されたfilterを記録する。 */
 function createQueryDouble(result: {
@@ -68,8 +68,8 @@ describe('TimeblockReviewClient', () => {
   it('tag有無で絞らず未分類行もreview対象として返す', async () => {
     const page = mockPage({
       data: [
-        { id: 'plan-1', tag_id: TAG_ID, start_at: '2026-07-20T01:00:00Z', end_at: '...' },
-        { id: 'plan-2', tag_id: null, start_at: '2026-07-20T02:00:00Z', end_at: '...' },
+        { id: 'plan-1', activity_id: ACTIVITY_ID, start_at: '2026-07-20T01:00:00Z', end_at: '...' },
+        { id: 'plan-2', activity_id: null, start_at: '2026-07-20T02:00:00Z', end_at: '...' },
       ],
       error: null,
       count: 2,
@@ -77,13 +77,13 @@ describe('TimeblockReviewClient', () => {
 
     await expect(createTimeblockReviewClient().listReviewPage(listInput())).resolves.toEqual({
       rows: [
-        { id: 'plan-1', tagId: TAG_ID, startAt: '2026-07-20T01:00:00Z', endAt: '...' },
-        { id: 'plan-2', tagId: null, startAt: '2026-07-20T02:00:00Z', endAt: '...' },
+        { id: 'plan-1', activityId: ACTIVITY_ID, startAt: '2026-07-20T01:00:00Z', endAt: '...' },
+        { id: 'plan-2', activityId: null, startAt: '2026-07-20T02:00:00Z', endAt: '...' },
       ],
       totalCount: 2,
     });
 
-    // `.not('tag_id', 'is', null)` を戻すと、タグ削除のたびに過去の時間が
+    // `.not('activity_id', 'is', null)` を戻すと、アクティビティ削除のたびに過去の時間が
     // review から目減りする（#1576）。filter 一式を丸ごと固定して回帰を止める。
     expect(page.calls.filter(({ method }) => method === 'not')).toEqual([]);
     expect(page.calls.filter(({ method }) => ['eq', 'is', 'gte', 'lt'].includes(method))).toEqual([
@@ -96,7 +96,9 @@ describe('TimeblockReviewClient', () => {
 
   it('未分類しか無いページでも例外にせずそのまま返す', async () => {
     mockPage({
-      data: [{ id: 'record-1', tag_id: null, start_at: '2026-07-20T01:00:00Z', end_at: '...' }],
+      data: [
+        { id: 'record-1', activity_id: null, start_at: '2026-07-20T01:00:00Z', end_at: '...' },
+      ],
       error: null,
       count: 1,
     });
@@ -104,7 +106,7 @@ describe('TimeblockReviewClient', () => {
     await expect(
       createTimeblockReviewClient().listReviewPage(listInput({ offset: 0 })),
     ).resolves.toMatchObject({
-      rows: [{ id: 'record-1', tagId: null }],
+      rows: [{ id: 'record-1', activityId: null }],
     });
   });
 

@@ -24,4 +24,4 @@ export {
   isTimeblockDateTime,
   timeblockContextRangeSchema,
 } from './timeblock-context-contract';
-export { TIMEBLOCK_REVIEW_MAX_TAGS } from './timeblock-review-contract';
+export { TIMEBLOCK_REVIEW_MAX_ACTIVITIES } from './timeblock-review-contract';

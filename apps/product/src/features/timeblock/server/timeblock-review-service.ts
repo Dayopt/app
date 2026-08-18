@@ -15,7 +15,7 @@ import {
 } from './timeblock-review-client';
 import {
   TIMEBLOCK_REVIEW_BASIS,
-  TIMEBLOCK_REVIEW_MAX_TAGS,
+  TIMEBLOCK_REVIEW_MAX_ACTIVITIES,
   type TimeblockMcpReview,
 } from './timeblock-review-contract';
 import { TimeblockServiceError } from './timeblock-service-error';
@@ -56,10 +56,10 @@ class TimeblockReviewService {
     }
 
     const review = deriveTimePLReview(plans, records);
-    if (review.tags.length > TIMEBLOCK_REVIEW_MAX_TAGS) {
+    if (review.activities.length > TIMEBLOCK_REVIEW_MAX_ACTIVITIES) {
       throw new TimeblockServiceError(
         'RANGE_TOO_DENSE',
-        'Timeblock review range contains too many distinct tags',
+        'Timeblock review range contains too many distinct activities',
       );
     }
 

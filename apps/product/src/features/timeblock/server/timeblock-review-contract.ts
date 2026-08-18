@@ -2,7 +2,7 @@ import type { TimePLReview } from '../domain';
 
 import type { TimeblockContextRange } from './timeblock-context-contract';
 
-export const TIMEBLOCK_REVIEW_MAX_TAGS = 1_000;
+export const TIMEBLOCK_REVIEW_MAX_ACTIVITIES = 1_000;
 
 export const TIMEBLOCK_REVIEW_BASIS = {
   planMeaning: 'budget',

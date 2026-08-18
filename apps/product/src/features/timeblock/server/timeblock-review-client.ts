@@ -15,8 +15,8 @@ type TimeblockReviewLane = 'plans' | 'records';
 
 export interface TimeblockReviewRow {
   id: string;
-  /** 未分類（タグ削除で `tag_id = NULL` になった行）は null */
-  tagId: string | null;
+  /** アクティビティ未設定、および削除で `activity_id = NULL` になった行は null */
+  activityId: string | null;
   startAt: string;
   endAt: string;
 }
@@ -57,9 +57,9 @@ class TimeblockReviewClient implements TimeblockReviewReadClient {
     const tableQuery = this.admin.from(table);
     const query =
       input.offset === 0
-        ? tableQuery.select('id,tag_id,start_at,end_at', { count: 'exact' })
-        : tableQuery.select('id,tag_id,start_at,end_at');
-    // tag_id が null の行も読む。タグ削除で Plan / Record は未分類化されるため、
+        ? tableQuery.select('id,activity_id,start_at,end_at', { count: 'exact' })
+        : tableQuery.select('id,activity_id,start_at,end_at');
+    // activity_id が null の行も読む。アクティビティ削除で Plan / Record は未設定化されるため、
     // 絞ると削除のたびに過去の時間が review から目減りする（#1576）
     query
       .eq('user_id', input.userId)
@@ -88,7 +88,7 @@ class TimeblockReviewClient implements TimeblockReviewReadClient {
     return {
       rows: data.map((row) => ({
         id: row.id,
-        tagId: row.tag_id,
+        activityId: row.activity_id,
         startAt: row.start_at,
         endAt: row.end_at,
       })),
