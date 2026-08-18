@@ -93,18 +93,26 @@ Review で区別する3つの状態:
 
 新規追加するキーは「サインイン/サインアウト」を使う。既存キーはまとめて Phase 2(messages 整理)で移行する。
 
+### スキャン範囲
+
+**LP（`apps/web`）は scanner 対象外。語彙統一は手動レビューで担保する**（2026-08-18 確定）。この用語集が定義するのは製品 UI（`apps/product`）の文言で、LP はブログ / docs のタグ分類のような別ドメインの語彙を多く含む（同じ「タグ」という語が「Dayopt のタグ機能」と「ブログ記事の分類ラベル」の両方を指すため、機械的な置換だと後者を壊す）。範囲を製品 UI 文言に限定するのが概念的に正しく、LP の変更頻度も低いため手動レビューで足りると判断した。
+
 ### 確認コマンド
 
 ```bash
-# 禁止表記が messages に含まれていないか確認
+# 禁止表記が messages に含まれていないか確認（警告のみ）
 pnpm copy:check
+
+# 即座に使用停止すべき語（ACTIVE_FORBIDDEN）だけを CI と同じ基準で検証する
+# （移行中の語 MIGRATION_TARGETS は対象外のまま。CI Static Checks に配線済み）
+pnpm copy:check:strict
 ```
 
 ---
 
 ## 禁止表記一覧
 
-`pnpm copy:check` がスキャンする禁止語の定義。追加した禁止語は `scripts/i18n/check-glossary.ts` がスキャンする。新規追加した messages キーにこれらの語が含まれている場合は**警告**(現在はリファクタリング移行中のため exit 0)。既存の違反は `pnpm copy:check` で確認し、Phase 2(messages 整理)で順次修正する。
+`pnpm copy:check` がスキャンする禁止語の定義。追加した禁止語は `scripts/i18n/check-glossary.ts` がスキャンする。**即座に使用停止すべき語（ACTIVE_FORBIDDEN）は `pnpm copy:check:strict` で CI が強制する**（`pnpm check:static` に配線済み、2026-08-18）。移行中の語（MIGRATION_TARGETS）は新規追加のみ禁止で、既存の違反は警告のまま Phase 2(messages 整理)で順次修正する。スキャン範囲は製品 UI 文言（`apps/product/messages/ja`）のみ（上記 §スキャン範囲）。
 
 ### タスク(UI でのブロック呼称として)
 

@@ -6,12 +6,13 @@
  * docs/product/glossary.md（禁止表記一覧）で定義された禁止語が messages に含まれていないかスキャンする。
  *
  * 動作モード:
- *   - デフォルト: 警告のみ (exit 0)。既存の違反が多いため、現在はリファクタリング移行中。
- *   - --strict: 違反があれば exit 1（Phase 2 messages 整理完了後に CI へ追加予定）
+ *   - デフォルト: 警告のみ (exit 0)
+ *   - --strict: ACTIVE_FORBIDDEN の違反があれば exit 1（MIGRATION_TARGETS は警告のみのまま）。
+ *     pnpm check:static（CI Static Checks）に pnpm copy:check:strict として配線済み（2026-08-18）
  *
  * Usage:
  *   pnpm copy:check
- *   pnpm copy:check --strict
+ *   pnpm copy:check:strict
  */
 
 import { readdirSync, readFileSync } from 'fs';
@@ -21,10 +22,10 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../..');
 
-const MESSAGES_DIRS = [
-  resolve(ROOT, 'apps/product/messages/ja'),
-  resolve(ROOT, 'apps/web/messages/ja'),
-];
+// LP（apps/web）は scanner 対象外。glossary が定義する製品 UI 文言の用語体系とは
+// 別ドメイン（ブログ / docs のタグ分類など）を多く含むため、語彙統一は手動レビューで
+// 担保する（docs/product/glossary.md#スキャン対象外誤検知防止 参照、2026-08-18 確定）。
+const MESSAGES_DIRS = [resolve(ROOT, 'apps/product/messages/ja')];
 
 const STRICT_MODE = process.argv.includes('--strict');
 
@@ -36,6 +37,8 @@ interface ForbiddenTerm {
   migration?: boolean;
   /** 値がこれらのパターンを含む場合は除外（文脈が正当） */
   excludePatterns?: string[];
+  /** このファイル（messages ディレクトリからの相対パス）は対象外にする */
+  excludeFiles?: string[];
 }
 
 /** 即座に使用を停止すべき語 */
@@ -47,6 +50,15 @@ const ACTIVE_FORBIDDEN: ForbiddenTerm[] = [
     // プレビュー / 法的レビュー / コードレビュー / AI インサイトのレビュー等は許容
     excludePatterns: ['プレビュー', '法的レビュー', 'レビューを受ける', 'レビューインサイト'],
   },
+  // 2026-08-18(#2162) に product 側の残存 0 件を確認して strict 対象へ昇格。
+  // tags.json だけは Step 7（tags feature の非破壊 cleanup、#2176）で feature ごと
+  // 撤去される予定のため、それまでの間だけ対象外にする（黙って見逃すのではなく、
+  // 撤去対象であることをここに明記した上での一時的な除外）。
+  {
+    term: 'タグ',
+    preferred: 'アクティビティ / カテゴリー / セグメント',
+    excludeFiles: ['tags.json'],
+  },
 ];
 
 /** 移行中の語（現行 messages での使用はあるが、新規追加は禁止） */
@@ -54,10 +66,6 @@ const MIGRATION_TARGETS: ForbiddenTerm[] = [
   { term: 'タスク', preferred: 'エントリ', migration: true },
   { term: 'ログイン', preferred: 'サインイン', migration: true },
   { term: 'ログアウト', preferred: 'サインアウト', migration: true },
-  // 「カテゴリ」は 2026-08-18(#2162)に禁止語から外した。検出が value.includes() の部分一致であり、
-  // 新しい正解語「カテゴリー」の部分文字列にあたるため、残すと正解語が全件フラグされる。
-  // 詳細は docs/product/glossary.md#スキャン対象外誤検知防止
-  { term: 'タグ', preferred: 'アクティビティ / カテゴリー / セグメント', migration: true },
 ];
 
 // ─── JSON 走査ユーティリティ ───
@@ -118,6 +126,7 @@ for (const messagesDir of MESSAGES_DIRS) {
       for (const forbidden of [...ACTIVE_FORBIDDEN, ...MIGRATION_TARGETS]) {
         if (!value.includes(forbidden.term)) continue;
         if (forbidden.excludePatterns?.some((p) => value.includes(p))) continue;
+        if (forbidden.excludeFiles?.includes(file)) continue;
         findings.push({
           file: relPath,
           keyPath,
