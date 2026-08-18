@@ -431,4 +431,56 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 コストは `[minutes]`。判断が変わっても付け替え先を変えるだけで済む。
 
+### 5-8. Step Count（ユーザー操作数）
+
+`CLAUDE.md` シンプルルール 3 の検算。**この project はユーザー操作フローを変えるので必須**（`plan-format.md` §Step Count）。
+
+| フロー                           | Google Calendar | Toggl | Dayopt（現在）             | Dayopt（この project 後）      |
+| -------------------------------- | --------------- | ----- | -------------------------- | ------------------------------ |
+| 今週のズレを見る（デスクトップ） | —               | 3 手¹ | 1 手（ヘッダーのトグル）   | **1 手**（Sidebar タブ）       |
+| 分析を見た後カレンダーへ戻る     | —               | 2 手² | 1 手（トグルを再度押す）   | **1 手**（Sidebar タブ）       |
+| view を切り替える                | 1 手            | —     | 1 手（`ViewSwitcherList`） | **1 手**（変更なし）           |
+| 今週のズレを見る（モバイル）     | —               | 3 手¹ | 1 手（ヘッダーのトグル）   | **1 手**（同トグルの付け替え） |
+
+¹ Toggl: Reports へ移動 → 期間選択 → レポート種別選択。² Toggl: Timer タブへ戻る → 日付を合わせ直す。
+
+**手数は増えも減りもしない。** この project の狙いは手数の削減ではなく「分析に使える面積」なので、それでよい。**重要なのは増やさないこと**で、上表がそれを担保する。
+
+特に注意した点: パネルからページへ移すと「戻る」が増えがちだが、**Sidebar タブは往復とも 1 手**なので増えない。もし `/report` へ行くのに「メニューを開く → レポート」の 2 手が要る設計にしていたらルール 3 違反になっていた。Sidebar 上部の常設タブという形（epic の確定事項）がこれを構造的に防いでいる。
+
+---
+
 <!-- スライス 3 は凍結に応じて追記する -->
+
+## 10. Existing Code to Reuse
+
+新規実装ではなく既存を使うもの。**「再利用できるのに新規で書く」を避けるための一覧**（`plan-format.md`）。
+
+| 用途                           | 再利用するもの                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Sidebar 外殻・セクション見出し | `components/shell/sidebar/{Sidebar,SidebarSection}.tsx`（変更なしで使える）                        |
+| Sidebar の中身（カレンダー側） | 現 `SidebarContent` の body をそのまま `CalendarSidebar.tsx` へ移すだけ                            |
+| 日付の同期                     | `CalendarNavigationProvider`（既に layout 分岐より上。§5-1）                                       |
+| 日付パラメータの読み書き       | `formatCalendarDateParam` / `parseCalendarDateParam`（`features/calendar/lib/date-param.ts`）      |
+| SSR 安全な search 読み取り     | `resolveCalendarProps` の `typeof window !== 'undefined'` ガード付き `URLSearchParams`（`:95-97`） |
+| redirect + CSP                 | `redirectWithCsp`（`proxy.ts:135-137`）                                                            |
+| ロケール付きパス生成           | `getLocalizedPath` / `getPathWithoutLocale`（`proxy.ts:141`）                                      |
+| 安全な redirect 先の検証       | `getSafeRedirectPath`（`lib/safe-redirect.ts`。fallback 値だけ変える）                             |
+| review / diff の中身           | `CalendarReviewPanel` / `ReviewDiffPanel`（スライス 3 で扱う）                                     |
+| 集計                           | `features/timeblock` の `domain/estimation-accuracy.ts` と `server/statistics-*`（#2162 §6-2）     |
+| モバイルの `/report` 入口      | #2161 が作ったヘッダーのトグル（付け替えるだけ。§5-7）                                             |
+
+## 11. What I'm Not Doing
+
+やらないことと理由。**書く行為そのものが scope creep の自己検出**（`plan-format.md`）。
+
+- **`/report` をレポートビルダーにしない** — 期間指定の複雑なフィルタ、カスタム指標、保存フィルタの入れ子、グルーピングの自由化。§3-2 の歯止めの本体
+- **`defaultView` へのルーティング追従を足さない** — 現行に無い新機能で、tRPC の往復が増え、値空間も合わない（§4-1）。別 issue へ
+- **`emailRedirectTo` を変えない** — Supabase の Redirect URL allowlist に依存する本番専用の故障点。redirect 層に任せれば足りる（§4-6）
+- **308 permanent へ上げない** — 写像が正しいと実測で確認した後の独立判断（§4-5）
+- **`{L}/review` の redirect を復活させない** — 2026-06 に「ローンチ前のため互換 redirect は作らない」と判断済みの route（§4-4）
+- **`BottomTabBar` を復活させない** — 2 度削除された資産で、クイック作成の固定フッターと画面下端を奪い合う（§5-7）
+- **セグメントの並び替え・フォルダ分け・共有を作らない** — §3-2 の歯止めに直接触れる（§5-5）
+- **「ついでに」データ層を触らない** — この project に migration も RPC 変更も無い。#2162 の波と混ぜない
+- **`_shell/` と `features/review/` の作り替えをスライス 1 でやらない** — レーン F / G の writer 境界（§4-9）
+- **`robots.txt` の刷新をこの project の外へ広げない** — `/calendar` `/report` の追加と、それに伴って死んでいる 2 行の除去まで。robots 全体の設計見直しは別問題
