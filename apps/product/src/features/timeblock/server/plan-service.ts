@@ -17,7 +17,7 @@ import {
   validateRange,
 } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertTagAssignable } from './tag-assignment-guard';
+import { assertActivityAssignable, assertTagAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -68,6 +68,7 @@ export class PlanService {
       userId,
       ids,
       tagId,
+      activityId,
       search,
       startDate,
       endDate,
@@ -88,6 +89,7 @@ export class PlanService {
 
     if (ids) query = query.in('id', ids);
     if (tagId) query = query.eq('tag_id', tagId);
+    if (activityId) query = query.eq('activity_id', activityId);
     if (!includeSkipped) query = query.is('skipped_at', null);
 
     if (search) {
@@ -161,6 +163,7 @@ export class PlanService {
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     ensurePlanCanBeCreated(input.end_at);
     await assertTagAssignable(this.supabase, userId, input.tagId);
+    await assertActivityAssignable(this.supabase, userId, input.activityId);
 
     if (preventOverlappingPlans) {
       await ensureNoPlanOverlap(this.overlapService, userId, input.start_at, input.end_at);
@@ -171,6 +174,7 @@ export class PlanService {
       title: input.title,
       note: input.note ?? null,
       tagId: input.tagId ?? null,
+      activityId: input.activityId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
       startAt: input.start_at,
@@ -203,6 +207,7 @@ export class PlanService {
     // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
     if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
       await assertTagAssignable(this.supabase, userId, input.tagId);
+      await assertActivityAssignable(this.supabase, userId, input.activityId);
     }
 
     if (preventOverlappingPlans && updatesTime) {
@@ -222,6 +227,7 @@ export class PlanService {
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
       tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined
           ? existing.external_calendar_event_id

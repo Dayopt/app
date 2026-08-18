@@ -34,6 +34,7 @@ interface CreatePlanCommandInput {
   title: string;
   note: string | null;
   tagId: string | null;
+  activityId: string | null;
   externalCalendarEventId: string | null;
   source: TimeblockSource;
   startAt: string;
@@ -184,6 +185,7 @@ export class TimeblockCommandClient {
   async createPlan(input: CreatePlanCommandInput): Promise<PlanRow> {
     return this.run('create_plan', () =>
       this.admin.rpc('create_plan_command_v1', {
+        p_activity_id: input.activityId as never,
         p_end_at: input.endAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,
         p_note: input.note as never,
@@ -199,6 +201,8 @@ export class TimeblockCommandClient {
   async updatePlan(input: UpdatePlanCommandInput): Promise<PlanRow> {
     return this.run('update_plan', () =>
       this.admin.rpc('update_plan_command_v1', {
+        p_activity_id: input.activityId as never,
+        p_activity_id_present: true,
         p_end_at: input.endAt,
         p_expected_updated_at: input.expectedUpdatedAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,
@@ -266,6 +270,7 @@ export class TimeblockCommandClient {
   async createRecord(input: CreateRecordCommandInput): Promise<RecordRow> {
     return this.run('create_record', () =>
       this.admin.rpc('create_record_command_v1', {
+        p_activity_id: input.activityId as never,
         p_end_at: input.endAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,
         p_note: input.note as never,
@@ -282,6 +287,8 @@ export class TimeblockCommandClient {
   async updateRecord(input: UpdateRecordCommandInput): Promise<RecordRow> {
     return this.run('update_record', () =>
       this.admin.rpc('update_record_command_v1', {
+        p_activity_id: input.activityId as never,
+        p_activity_id_present: true,
         p_end_at: input.endAt,
         p_expected_updated_at: input.expectedUpdatedAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,

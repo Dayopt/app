@@ -11,7 +11,7 @@ import type {
 } from '../schemas/timeblock';
 import { PlanService } from './plan-service';
 import { RecordService } from './record-service';
-import { assertTagAssignable } from './tag-assignment-guard';
+import { assertActivityAssignable, assertTagAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -62,6 +62,7 @@ export class TimeblockCommandService {
       title: input.title,
       note: input.note ?? null,
       tagId: input.tagId ?? null,
+      activityId: input.activityId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
       startAt: input.start_at,
@@ -78,6 +79,9 @@ export class TimeblockCommandService {
     if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
       await assertTagAssignable(this.supabase, userId, input.tagId);
     }
+    if (input.activityId !== undefined && input.activityId !== existing.activity_id) {
+      await assertActivityAssignable(this.supabase, userId, input.activityId);
+    }
     return this.commands.updatePlan({
       userId,
       planId: id,
@@ -85,6 +89,7 @@ export class TimeblockCommandService {
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
       tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined
           ? existing.external_calendar_event_id
@@ -150,6 +155,7 @@ export class TimeblockCommandService {
       title: input.title,
       note: input.note ?? null,
       tagId: input.tagId ?? null,
+      activityId: input.activityId ?? null,
       planId: input.planId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
@@ -167,6 +173,9 @@ export class TimeblockCommandService {
     if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
       await assertTagAssignable(this.supabase, userId, input.tagId);
     }
+    if (input.activityId !== undefined && input.activityId !== existing.activity_id) {
+      await assertActivityAssignable(this.supabase, userId, input.activityId);
+    }
     return this.commands.updateRecord({
       userId,
       recordId: id,
@@ -174,6 +183,7 @@ export class TimeblockCommandService {
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
       tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       planId: input.planId === undefined ? existing.plan_id : input.planId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined
