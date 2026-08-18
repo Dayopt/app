@@ -130,14 +130,23 @@ describe('proxy MFA gate', () => {
   // persistent に throw すると、/auth/session-error 自身へのリクエストでも
   // catch に落ちる。その時に同じ path へ redirect すると自己ループになるため、
   // この path 自身は redirect せず素通しすることを固定する。
-  it('does not redirect the session error page itself when an unexpected proxy error occurs', async () => {
-    mocks.updateSession.mockRejectedValue(new Error('unexpected'));
+  // #2144 P3（クロスレビュー指摘）: catch 内の判定は pathWithoutLocale（locale を
+  // 剥がした path）で行っており、locale prefix ありでも同じ分岐を共有する。
+  // 対称性を崩す変更が入ってもすぐ検出できるよう、両ケースを固定する。
+  it.each([
+    ['locale prefix なし', 'https://app.dayopt.app/auth/session-error'],
+    ['locale prefix あり', 'https://app.dayopt.app/ja/auth/session-error'],
+  ])(
+    '%s: 予期しない例外発生時も session error ページ自身は redirect しない',
+    async (_label, url) => {
+      mocks.updateSession.mockRejectedValue(new Error('unexpected'));
 
-    const response = await proxy(new NextRequest('https://app.dayopt.app/auth/session-error'));
+      const response = await proxy(new NextRequest(url));
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get('location')).toBeNull();
-  });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    },
+  );
 
   it.each([
     { currentLevel: 'aal1', nextLevel: 'aal1' },
