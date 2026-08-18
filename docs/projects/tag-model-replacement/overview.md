@@ -437,7 +437,8 @@ Step 7 の削除後に走らせ、孤児化した barrel / ファイルを拾う
 したがって Step 3 の command RPC 変更は**追加専用に固定する**:
 
 - 新パラメータは `p_activity_id uuid DEFAULT NULL` の形で**足すだけ**。既存の `p_tag_id` を含む既存パラメータの名前・型・順序・既定値を変えない
-- 戻り値の row shape も**列を足すだけ**。`tag_id` 列を消したり rename したりしない（消すのは Step 8）
+- 戻り値の row shape も**列を足すだけ**。`tag_id` 列を消したり rename したりしない（消すのは Step 8）。`create_plan_command_v1` 系は `RETURNS SETOF public.plans` なので、`plans` に列を足せば `DROP FUNCTION` 無しで戻り値に反映される
+- **`private.{create,update}_{plan,record}_unserialized_v1` も同じ制約の対象**。公開 RPC だけ additive にしても、内部関数のシグネチャを置き換えれば同じ窓で壊れる
 - これを守れない設計（引数の置き換えが避けられない）になった場合、Step 3 は `[hours]` ではなく**本番故障の窓を持つ変更**として扱い、「migration 適用完了を確認してから app を deploy する」二段手順を実行手順に足す
 
 この制約が無いと、旧バンドルを開いたまま予定を作成・編集したユーザーの RPC 呼び出しがその窓の間だけ失敗する。§2 が「deploy 間隙のリスクは純追加 → cutover → drop の順序だけで閉じる」と書いているのは Step 1 の話であって、**Step 3 には順序だけでは効かない**。
@@ -447,6 +448,17 @@ Step 7 の削除後に走らせ、孤児化した barrel / ファイルを拾う
 Reversibility Table は各 Step を独立に評価しているが、cutover の revert コストは**後続 Step が積まれるほど上がる**。Step 5（分析軸）や Step 6（公開契約）が production に乗った後は、それらが activity ベースのコードに依存しているため Step 4 だけの `git revert` は conflict する。
 
 つまり `[minutes]` が有効なのは **Step 4 merge 後・Step 5 merge 前**の窓だけ。この窓の間に Sentry と主要動線（カレンダー表示・作成・編集・検索）の確認を済ませる。窓を過ぎたら、戻す単位は「Step 4〜6 をまとめて」になる。
+
+### Step 4 から Step 6 までの窓 — MCP 経由の分類が UI に出ない
+
+Step 3 を additive-only にした帰結として、**Step 6（公開契約の切替）が merge されるまで MCP クライアントは旧 `tags.list` と `tagId` パラメータを使い続けられる**。RPC はまだ `p_tag_id` を受け付けるので書き込みは成功するが、cutover 済み（Step 4）の UI は `activity_id` しか読まない。つまり **MCP 経由で作られたブロックは `tag_id` を持っているのに画面では「アクティビティなし」に見える**。
+
+Step 4 と Step 5 の間の劣化（§前節）と同じ性質だが、**Step 6 はレーン未割当なので窓が無期限に開きうる**点が違う。閉じ方は 2 つ:
+
+- Step 6 を Step 4 の直後に割り当てて窓を有界にする（推奨）
+- 割り当てられない場合は、**Step 4 の PR 本文に「Step 6 merge まで MCP 経由の分類は UI に反映されない」ことを明記する**（Step 4/5 間の劣化と同じ扱い）
+
+どちらも運用の手当てで閉じるので、設計そのものは変えない。
 
 ### Step 4 と Step 5 の間の劣化を許容する理由
 
