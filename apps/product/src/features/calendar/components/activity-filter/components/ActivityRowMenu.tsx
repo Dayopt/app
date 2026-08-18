@@ -1,0 +1,192 @@
+'use client';
+
+import { Archive, BarChart3, Check, Eye, FolderUp, Merge, Pencil, Trash2, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
+import { TagIcon } from '@/features/tags';
+import {
+  cn,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from '@dayopt/components';
+
+/** カテゴリー選択肢（「カテゴリーを変更」ピッカーの 1 行） */
+export interface CategoryOption {
+  id: string;
+  name: string;
+  color: string | null;
+  icon?: string | null;
+}
+
+interface ActivityRowMenuProps {
+  /** 現在の所属カテゴリー ID（null = 未分類） */
+  currentCategoryId: string | null;
+  /** カテゴリー候補一覧 */
+  categoryOptions: CategoryOption[];
+  /** モバイル時: メニュー項目を簡略化（表示切替 + アーカイブ + 削除のみ） */
+  isMobile?: boolean | undefined;
+
+  onOpenRenameDialog: () => void;
+  onChangeCategory: (categoryId: string | null) => void;
+  onOpenMergeModal: () => void;
+  onShowOnlyActivity: () => void;
+  onViewStats?: (() => void) | undefined;
+  onArchiveActivity?: (() => void) | undefined;
+  onDeleteActivity?: (() => void) | undefined;
+}
+
+/**
+ * アクティビティ行のドロップダウンメニュー。
+ *
+ * DnD 廃止に伴い、カテゴリーの付け替えは「カテゴリーを変更」→ ピッカーで行う。
+ * 色・アイコンはカテゴリーだけが持つため、この menu には色/アイコン変更を置かない。
+ */
+export function ActivityRowMenu({
+  currentCategoryId,
+  categoryOptions,
+  isMobile,
+  onOpenRenameDialog,
+  onChangeCategory,
+  onOpenMergeModal,
+  onShowOnlyActivity,
+  onViewStats,
+  onArchiveActivity,
+  onDeleteActivity,
+}: ActivityRowMenuProps) {
+  const t = useTranslations();
+
+  // モバイル: 表示切替 + アーカイブ + 削除のみ。管理系は設定画面へ委譲。
+  // アーカイブはこのメニューが唯一の UI 呼び出し元のため、モバイルでも省略しない（#1576）。
+  if (isMobile) {
+    return (
+      <DropdownMenuContent align="start" side="right">
+        <DropdownMenuItem onClick={onShowOnlyActivity}>
+          <Eye className="mr-2 size-4" />
+          {t('calendar.filter.showOnlyThisActivity')}
+        </DropdownMenuItem>
+        {onArchiveActivity && (
+          <DropdownMenuItem onClick={onArchiveActivity}>
+            <Archive className="mr-2 size-4" />
+            {t('calendar.filter.archive')}
+          </DropdownMenuItem>
+        )}
+        {onDeleteActivity && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDeleteActivity}>
+              <Trash2 className="mr-2 size-4" />
+              {t('common.actions.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    );
+  }
+
+  return (
+    <DropdownMenuContent align="start" side="right">
+      <DropdownMenuItem onClick={onOpenRenameDialog}>
+        <Pencil className="mr-2 size-4" />
+        {t('calendar.filter.rename')}
+      </DropdownMenuItem>
+
+      {/* カテゴリーを変更（DnD の代替導線） */}
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <FolderUp className="mr-2 size-4" />
+          {t('calendar.filter.changeCategory')}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuItem
+            onClick={() => onChangeCategory(null)}
+            className={currentCategoryId === null ? 'bg-state-selected' : undefined}
+          >
+            <X className="text-muted-foreground mr-2 size-4" />
+            <span className="flex-1">{t('calendar.filter.noCategory')}</span>
+            {currentCategoryId === null && <Check className="text-muted-foreground ml-2 size-4" />}
+          </DropdownMenuItem>
+
+          {categoryOptions.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              {categoryOptions.map((category) => {
+                const isCurrent = currentCategoryId === category.id;
+                return (
+                  <DropdownMenuItem
+                    key={category.id}
+                    onClick={() => onChangeCategory(category.id)}
+                    className={cn(isCurrent ? 'bg-state-selected' : undefined)}
+                  >
+                    <TagIcon
+                      icon={category.icon}
+                      color={category.color}
+                      size="sm"
+                      className="mr-2 shrink-0"
+                    />
+                    <span className="flex-1">{category.name}</span>
+                    {isCurrent && <Check className="text-muted-foreground ml-2 size-4" />}
+                  </DropdownMenuItem>
+                );
+              })}
+            </>
+          )}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+
+      <DropdownMenuSeparator />
+
+      <DropdownMenuItem onClick={onOpenMergeModal}>
+        <Merge className="mr-2 size-4" />
+        {t('calendar.filter.merge')}
+      </DropdownMenuItem>
+
+      <DropdownMenuItem onClick={onShowOnlyActivity}>
+        <Eye className="mr-2 size-4" />
+        {t('calendar.filter.showOnlyThisActivity')}
+      </DropdownMenuItem>
+
+      {onViewStats && (
+        <DropdownMenuItem onClick={onViewStats}>
+          <BarChart3 className="mr-2 size-4" />
+          {t('calendar.filter.viewStats')}
+        </DropdownMenuItem>
+      )}
+
+      {/* アーカイブ（可逆なので確認なし） */}
+      {onArchiveActivity && (
+        <DropdownMenuItem onClick={onArchiveActivity}>
+          <Archive className="mr-2 size-4" />
+          {t('calendar.filter.archive')}
+        </DropdownMenuItem>
+      )}
+
+      {onDeleteActivity && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={onDeleteActivity}>
+            <Trash2 className="mr-2 size-4" />
+            {t('common.actions.delete')}
+          </DropdownMenuItem>
+        </>
+      )}
+    </DropdownMenuContent>
+  );
+}
+
+/** アクティビティ未設定ブロック行のシンプルなメニュー */
+export function NoActivityRowMenu({ onShowOnlyThis }: { onShowOnlyThis: () => void }) {
+  const t = useTranslations();
+
+  return (
+    <DropdownMenuContent align="start" side="right">
+      <DropdownMenuItem onClick={onShowOnlyThis}>
+        <Eye className="mr-2 size-4" />
+        {t('calendar.filter.showOnlyNoActivity')}
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
+}

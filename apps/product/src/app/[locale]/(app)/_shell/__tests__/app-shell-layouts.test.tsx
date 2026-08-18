@@ -16,7 +16,7 @@ vi.mock('@/features/auth', () => ({
 
 vi.mock('@/features/calendar', () => ({
   isCalendarViewPath: (pathname: string) => /^\/(?:day|week|[2-7]day)(?:\/|$)/.test(pathname),
-  TagChipRow: () => <div data-testid="tag-chip-row" />,
+  ActivityChipRow: () => <div data-testid="activity-chip-row" />,
 }));
 
 vi.mock('@/lib/user', () => ({
@@ -153,7 +153,9 @@ describe('MobileLayout', () => {
       expect(screen.queryByRole('banner')).not.toBeInTheDocument();
       const alert = expectSingleVisibleBanner(container);
       expectBefore(alert, screen.getByRole('main'));
-      expect(screen.queryAllByTestId('tag-chip-row')).toHaveLength(pathname === '/day' ? 1 : 0);
+      expect(screen.queryAllByTestId('activity-chip-row')).toHaveLength(
+        pathname === '/day' ? 1 : 0,
+      );
     },
   );
 

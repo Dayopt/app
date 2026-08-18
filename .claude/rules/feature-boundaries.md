@@ -133,7 +133,7 @@ feature は `@/lib/stores/*` から直接 import する。calendar feature も�
 
 現在該当する hub:
 
-- `features/calendar` — calendar page 全体の合成（views / tag-filter / navigation / interaction を同居）。191 ファイル、6 サブディレクトリ
+- `features/calendar` — calendar page 全体の合成（views / activity-filter / navigation / interaction を同居）。191 ファイル、6 サブディレクトリ
 
 hub の barrel は「ページから見た public API」のみを export する。hub 内部の sub-component / helper / lib は barrel に出さない（Composition Layer 以外からは触らない）。
 

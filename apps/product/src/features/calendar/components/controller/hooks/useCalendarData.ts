@@ -183,13 +183,13 @@ export function useCalendarData({
 
   // タグマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
   const { data: tagsData } = useTags();
-  // syncWithTags にアーカイブ済み ID も含めるための取得（#1576 回帰防止）。
+  // syncWithActivities にアーカイブ済み ID も含めるための取得（#1576 回帰防止）。
   const { data: archivedTagsData } = useArchivedTags();
-  const syncWithTags = useCalendarFilterStore((state) => state.syncWithTags);
+  const syncWithActivities = useCalendarFilterStore((state) => state.syncWithActivities);
 
   // タグフィルタを tagsData と同期（新規 tag は visible として追加、削除済み tag は orphan として除去）。
   // アーカイブ済み ID を含めないと、archived タグを持つ過去ブロックが orphan 扱いされ
-  // visibleTagIds から消えてカレンダーから消えてしまう。
+  // visibleActivityIds から消えてカレンダーから消えてしまう。
   // モバイルではサイドバーがマウントされないため、ここで保証する
   useEffect(() => {
     const allTagIds = [
@@ -197,9 +197,9 @@ export function useCalendarData({
       ...(archivedTagsData ?? []).map((tag) => tag.id),
     ];
     if (allTagIds.length > 0) {
-      syncWithTags(allTagIds);
+      syncWithActivities(allTagIds);
     }
-  }, [tagsData, archivedTagsData, syncWithTags]);
+  }, [tagsData, archivedTagsData, syncWithActivities]);
 
   // tRPC utils（プリフェッチ用）
   const utils = api.useUtils();
@@ -349,9 +349,11 @@ export function useCalendarData({
   // タグフィルタ変更時に useMemo を再実行させるためのリアクティブ依存
   // useDeferredValue でフィルター変更時のカレンダー再描画を遅延し、
   // チェックボックスUIの即時応答を維持する
-  const visibleTagIds = useDeferredValue(useCalendarFilterStore((state) => state.visibleTagIds));
+  const visibleActivityIds = useDeferredValue(
+    useCalendarFilterStore((state) => state.visibleActivityIds),
+  );
   // 未分類(タグなし)フィルターの表示切替も同様にリアクティブ依存として渡す（#1576）
-  const showUntagged = useDeferredValue(useCalendarFilterStore((state) => state.showUntagged));
+  const showNoActivity = useDeferredValue(useCalendarFilterStore((state) => state.showNoActivity));
 
   // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
   // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
@@ -480,8 +482,15 @@ export function useCalendarData({
     });
 
     return visibilityFiltered;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleTagIds/showUntagged はリアクティブ依存（関数参照は安定のため直接依存不可）
-  }, [viewDateRange, allCalendarEvents, timezone, isEntryVisible, visibleTagIds, showUntagged]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleActivityIds/showNoActivity はリアクティブ依存（関数参照は安定のため直接依存不可）
+  }, [
+    viewDateRange,
+    allCalendarEvents,
+    timezone,
+    isEntryVisible,
+    visibleActivityIds,
+    showNoActivity,
+  ]);
 
   return {
     viewDateRange,
