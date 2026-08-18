@@ -16,7 +16,7 @@ vi.mock('@/features/auth', () => ({
 
 vi.mock('@/features/calendar', () => ({
   isCalendarViewPath: (pathname: string) => /^\/(?:day|week|[2-7]day)(?:\/|$)/.test(pathname),
-  TagChipRow: () => <div data-testid="tag-chip-row" />,
+  ActivityChipRow: () => <div data-testid="tag-chip-row" />,
 }));
 
 vi.mock('@/lib/user', () => ({

@@ -1,7 +1,7 @@
 'use client';
 
 import { AppHeader } from '@/components/shell/AppHeader';
-import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
+import { ActivityChipRow, isCalendarViewPath } from '@/features/calendar';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { InlineBanner } from '@dayopt/components';
 import { usePathname } from '@dayopt/i18n/navigation';
@@ -21,7 +21,7 @@ interface MobileLayoutProps {
  * **構成**:
  * - AppHeader（ナビゲーション）
  * - MainContent
- * - TagChipRow（Calendar のみ、固定フッター）
+ * - ActivityChipRow（Calendar のみ、固定フッター）
  */
 export function MobileLayout({ children }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
@@ -58,7 +58,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       </div>
 
       {/* calendar: タグタップで予定作成 popover */}
-      {isCalendarView && <TagChipRow />}
+      {isCalendarView && <ActivityChipRow />}
     </>
   );
 }

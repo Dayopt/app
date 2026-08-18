@@ -30,7 +30,6 @@ export {
   useCreateTag,
   useDeleteTag,
   useMergeTag,
-  useReorderTags,
   useRestoreTag,
 
   // Tags CRUD
@@ -39,9 +38,6 @@ export {
   useTagsMap,
   useUpdateTag,
 } from './hooks';
-
-// Domain
-export { buildTagHierarchyUpdates, flattenTagTree } from './domain/tag-tree';
 
 // Types
 export type { Tag, TagTreeNode } from './types';

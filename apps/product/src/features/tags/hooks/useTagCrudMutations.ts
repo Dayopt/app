@@ -126,7 +126,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       utils.tags.listHierarchy.setData(undefined, (old) => upsertTagInHierarchyCache(old, tempTag));
 
       // Calendar filter store の sync は useCalendarData / CalendarFilterList の effect が
-      // utils.tags.list 変更を検知して syncWithTags 経由で行う（Layer 0 境界を保つため、
+      // utils.tags.list 変更を検知して syncWithActivities 経由で行う（Layer 0 境界を保つため、
       // tags hook からは calendar store を直接触らない）。
       return {
         previousListQueries,
@@ -276,52 +276,6 @@ export function useDeleteTag() {
       void utils.plans.list.invalidate();
       void utils.records.list.invalidate();
       void utils.statistics.getTagStats.invalidate();
-    },
-  });
-}
-
-/** タグ並び替えフック（楽観的更新付き）。sort_orderをバッチ更新してドラッグ&ドロップに対応 */
-export function useReorderTags() {
-  const utils = trpc.useUtils();
-  const t = useTranslations('tags');
-
-  return trpc.tags.reorder.useMutation({
-    onMutate: async ({ updates }) => {
-      await Promise.all([utils.tags.list.cancel(), utils.tags.listHierarchy.cancel()]);
-
-      const previousList = utils.tags.list.getData();
-      const previousHierarchy = utils.tags.listHierarchy.getData();
-
-      const applyUpdate = (tag: Tag): Tag => {
-        const update = updates.find((u) => u.id === tag.id);
-        if (!update) return tag;
-        return { ...tag, parent_id: update.parent_id, sort_order: update.sort_order };
-      };
-
-      utils.tags.list.setData(undefined, (oldData) => {
-        if (!oldData) return oldData;
-        return { ...oldData, data: oldData.data.map(applyUpdate) };
-      });
-
-      // listHierarchy も楽観更新しないと、onSettled の invalidate → refetch で
-      // 一瞬だけ古い順序が描画され reload のようなチラつきになる
-      utils.tags.listHierarchy.setData(undefined, (oldData) => {
-        if (!oldData) return oldData;
-        const flat = flattenTagTree(oldData).map(applyUpdate);
-        return buildTagTree(flat);
-      });
-
-      return { previousList, previousHierarchy };
-    },
-    onError: (_err, _variables, context) => {
-      if (context?.previousList) utils.tags.list.setData(undefined, context.previousList);
-      if (context?.previousHierarchy)
-        utils.tags.listHierarchy.setData(undefined, context.previousHierarchy);
-      toast.error(t('errors.updateFailed'));
-    },
-    onSettled: () => {
-      void utils.tags.list.invalidate();
-      void utils.tags.listHierarchy.invalidate();
     },
   });
 }
