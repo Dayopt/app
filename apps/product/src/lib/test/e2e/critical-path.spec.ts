@@ -185,7 +185,7 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 9, 10);
 
-    // InlineTagPalette → タグ選択ダイアログ
+    // InlineActivityPalette → アクティビティ選択ダイアログ
     const tagDialog = page.getByRole('dialog', { name: 'タグを選択' });
     await expect(tagDialog).toBeVisible({ timeout: 10_000 });
     await tagDialog.getByRole('button', { name: TAG_NAME }).click();
@@ -207,7 +207,7 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 9, 10);
 
-    // InlineTagPalette → タグ選択ダイアログ
+    // InlineActivityPalette → アクティビティ選択ダイアログ
     const tagDialog = page.getByRole('dialog', { name: 'タグを選択' });
     await expect(tagDialog).toBeVisible({ timeout: 10_000 });
     await tagDialog.getByRole('button', { name: TAG_NAME }).click();

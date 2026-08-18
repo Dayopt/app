@@ -1,10 +1,10 @@
 'use client';
 
 /**
- * インラインタグパレットの entry 作成ロジック
+ * インラインアクティビティパレットの entry 作成ロジック
  *
  * ドラッグ選択（pendingSelection）からの plan / record 作成、
- * 新規タグ作成 → entry 作成、選択範囲の live 競合判定を担う。
+ * 新規アクティビティ作成 → entry 作成、選択範囲の live 競合判定を担う。
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -13,8 +13,8 @@ import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import type { HoveredTagInfo } from '@/features/tags';
-import { resolveTagColor, useCreateTag } from '@/features/tags';
+import type { HoveredActivityInfo } from '@/features/activities';
+import { useCreateActivity } from '@/features/activities';
 import {
   collectTimeblockLaneItems,
   hasTimeblockLaneConflict,
@@ -27,29 +27,29 @@ import { logger } from '@/lib/logger';
 
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
-export function useInlineTagPaletteCreation() {
+export function useInlineActivityPaletteCreation() {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const timezone = useUserPreferences((s) => s.timezone);
-  const t = useTranslations('tags');
+  const t = useTranslations('activities');
   const tEntry = useTranslations('timeblock');
 
   const queryClient = useQueryClient();
   const { createRecord, createPlan } = useTimeblockWriteMutations();
-  const createTagMutation = useCreateTag({ showToast: false });
+  const createActivityMutation = useCreateActivity({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
-  const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
+  const [hoveredActivity, setHoveredActivity] = useState<HoveredActivityInfo | null>(null);
   const lockedRef = useRef(false);
 
   // 選択後はホバークリアを無視（mouseLeaveでちらつかないように）
-  const handleTagHover = useCallback((tag: HoveredTagInfo | null) => {
-    if (tag === null && lockedRef.current) return;
-    setHoveredTag(tag);
+  const handleActivityHover = useCallback((activity: HoveredActivityInfo | null) => {
+    if (activity === null && lockedRef.current) return;
+    setHoveredActivity(activity);
   }, []);
 
-  // plan / record 作成ハンドラー（タグ必須、タグ名をタイトルに設定）
+  // plan / record 作成ハンドラー（アクティビティ必須、その名前をタイトルに設定）
   const handleCreate = useCallback(
-    (tagId: string, tagName: string) => {
+    (activityId: string, activityName: string) => {
       if (!pendingSelection || isCreating) return;
 
       const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
@@ -76,7 +76,7 @@ export function useInlineTagPaletteCreation() {
       // 保存先は end ルールで一意に決める（lane はドラッグ起点の表示ヒントに留める）
       const destination = resolveTimeblockDestination(utcEnd);
 
-      // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
+      // 事前 overlap 判定（セレクタを開いている間の resize / 他クライアント更新による race を回避）
       // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は許可。
       const laneItems = collectTimeblockLaneItems(
         queryClient,
@@ -91,12 +91,12 @@ export function useInlineTagPaletteCreation() {
       lockedRef.current = true;
       setIsCreating(true);
 
-      logger.log('🏷️ InlineTagPalette: Creating', {
+      logger.log('🏷️ InlineActivityPalette: Creating', {
         destination,
         start: utcStart.toISOString(),
         end: utcEnd.toISOString(),
-        tagId,
-        title: tagName,
+        activityId,
+        title: activityName,
       });
 
       // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
@@ -105,10 +105,10 @@ export function useInlineTagPaletteCreation() {
       const mutation = destination === 'plan' ? createPlan : createRecord;
       mutation.mutate(
         {
-          title: tagName,
+          title: activityName,
           start_at: utcStart.toISOString(),
           end_at: utcEnd.toISOString(),
-          tagId,
+          activityId,
         },
         {
           onSuccess: () => {
@@ -135,34 +135,36 @@ export function useInlineTagPaletteCreation() {
     ],
   );
 
-  // 新規タグ作成 → エントリ作成
+  // 新規アクティビティ作成 → エントリ作成
   const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
+    async (
+      name: string,
+      _color?: string | null,
+      _icon?: string | null,
+      categoryId?: string | null,
+    ) => {
       if (!pendingSelection || isCreating) return;
 
       setIsCreating(true);
       try {
-        const newTag = await createTagMutation.mutateAsync({
+        // 色・アイコンはカテゴリーだけが持つ（#2162 §4-6）。アクティビティ側には保存しない
+        const created = await createActivityMutation.mutateAsync({
           name,
-          color: resolveTagColor(color),
-          icon: icon ?? undefined,
-          parentId: parentId ?? undefined,
+          categoryId: categoryId ?? undefined,
         });
         // mutateAsync resolved → handleCreate で続行
-        handleCreate(newTag.id, name);
+        handleCreate(created.id, name);
       } catch (err) {
         setIsCreating(false);
         const message = err instanceof Error ? err.message : String(err);
-        if (message.includes('GROUP_NAME_CONFLICT') || message.includes('group_conflict')) {
-          toast.error(t('errors.groupNameConflict'));
-        } else if (message.includes('duplicate') || message.includes('already exists')) {
-          toast.error(t('errors.duplicateName'));
+        if (message.includes('duplicate') || message.includes('already exists')) {
+          toast.error(t('activity.duplicateName'));
         } else {
-          toast.error(t('errors.createFailed'));
+          toast.error(t('activity.createFailed'));
         }
       }
     },
-    [pendingSelection, isCreating, createTagMutation, handleCreate, t],
+    [pendingSelection, isCreating, createActivityMutation, handleCreate, t],
   );
 
   // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
@@ -201,8 +203,8 @@ export function useInlineTagPaletteCreation() {
 
   return {
     isCreating,
-    hoveredTag,
-    handleTagHover,
+    hoveredActivity,
+    handleActivityHover,
     handleCreate,
     handleCreateAndSelect,
     hasConflict,

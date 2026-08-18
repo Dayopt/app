@@ -23,8 +23,12 @@ export {
 // 確認ダイアログ（作成 / 改名モーダルは Global ラッパー経由でだけ開くので barrel に出さない）
 export { ActivityDeleteConfirmDialog } from './components/ActivityDeleteConfirmDialog';
 
+// 選択ピッカー（Inspector / 作成ポップオーバー / インラインパレットから開く）
+export { ActivityQuickSelector } from './components/ActivityQuickSelector';
+export type { HoveredActivityInfo } from './components/ActivityQuickSelector';
+
 // 色・アイコンの解決
-export { resolveCategoryColor } from './lib/category-colors';
+export { getCategoryColorClasses, resolveCategoryColor } from './lib/category-colors';
 export type { CategoryColorName } from './lib/category-colors';
 
 // 取得
@@ -39,6 +43,7 @@ export {
 // 更新（すべて楽観的更新つき）
 export {
   useArchiveActivity,
+  useCreateActivity,
   useDeleteActivity,
   useRestoreActivity,
   useUpdateActivity,

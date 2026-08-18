@@ -219,6 +219,7 @@
       "noteHint": "ツールチップに表示されます",
       "notePlaceholder": "ノートを追加...",
       "changeCategory": "カテゴリーを変更",
+      "changeActivity": "アクティビティを変更",
       "noCategory": "カテゴリーなし",
       "merge": "他のアクティビティに統合",
       "showOnlyThisActivity": "このアクティビティだけ表示",
@@ -267,27 +268,6 @@
         "name": "名前",
         "namePlaceholder": "新しい名前",
         "duplicateName": "同じ名前の項目が既にあります。別の名前を入力してください"
-      }
-    },
-    "tagSelector": {
-      "title": "タグを選択",
-      "searchPlaceholder": "タグを検索...",
-      "noResults": "タグが見つかりません",
-      "createPlaceholder": "例: 仕事、勉強、運動...",
-      "new": "新規",
-      "create": "作成",
-      "color": "色",
-      "icon": "アイコン",
-      "group": "グループ",
-      "noGroup": "なし",
-      "emptyTitle": "タグで時間を分類しよう",
-      "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
-      "sampleTags": {
-        "work": "仕事",
-        "study": "勉強",
-        "exercise": "運動",
-        "break": "休憩",
-        "meal": "食事"
       }
     },
     "activitySelector": {

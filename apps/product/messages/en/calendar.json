@@ -219,6 +219,7 @@
       "noteHint": "Displayed in tooltip",
       "notePlaceholder": "Add a note...",
       "changeCategory": "Change category",
+      "changeActivity": "Change activity",
       "noCategory": "No category",
       "merge": "Merge into another activity",
       "showOnlyThisActivity": "Show only this activity",
@@ -267,27 +268,6 @@
         "name": "Name",
         "namePlaceholder": "New name",
         "duplicateName": "An item with this name already exists. Please choose a different name."
-      }
-    },
-    "tagSelector": {
-      "title": "Select a tag",
-      "searchPlaceholder": "Search tags...",
-      "noResults": "No tags found",
-      "createPlaceholder": "e.g. Work, Study, Exercise...",
-      "new": "New",
-      "create": "Create",
-      "color": "Color",
-      "icon": "Icon",
-      "group": "Group",
-      "noGroup": "None",
-      "emptyTitle": "Tags categorize your time",
-      "emptyDescription": "Pick one to get started, or create your own below",
-      "sampleTags": {
-        "work": "Work",
-        "study": "Study",
-        "exercise": "Exercise",
-        "break": "Break",
-        "meal": "Meal"
       }
     },
     "activitySelector": {

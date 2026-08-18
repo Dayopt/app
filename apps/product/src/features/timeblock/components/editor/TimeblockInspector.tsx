@@ -16,7 +16,7 @@ import { Suspense, useCallback, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
-import { useTagsMap } from '@/features/tags';
+import { useActivitiesMap } from '@/features/activities';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { api } from '@/lib/trpc';
@@ -50,7 +50,7 @@ const INSPECTOR_FOCUSABLE_SELECTOR =
 export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const { getTagById } = useTagsMap();
+  const { getActivityById } = useActivitiesMap();
 
   const isOpen = useTimeblockInspectorStore((state) => state.isOpen);
   const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
@@ -155,9 +155,10 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   });
 
   // --- コンテンツ（loading / error / empty / form） ---
-  const displayTagId = duplicateDraft?.tagId ?? target?.tag_id;
+  const displayActivityId = duplicateDraft?.activityId ?? target?.activity_id;
   const title =
-    (displayTagId ? getTagById(displayTagId)?.name : undefined) ?? t('common.tags.noTag');
+    (displayActivityId ? getActivityById(displayActivityId)?.name : undefined) ??
+    t('calendar.filter.noActivity');
   let content: React.ReactNode;
 
   if (duplicateDraft) {

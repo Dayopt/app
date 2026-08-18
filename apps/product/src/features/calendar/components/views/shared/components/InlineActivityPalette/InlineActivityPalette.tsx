@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * インラインタグパレット
+ * インラインアクティビティパレット
  *
  * カレンダーグリッド上でドラッグ確定後に表示される。
  * 選択範囲のハイライトをグリッド上に描画し、
- * TagQuickSelector（Drawer/Dialog）でタグ選択 → エントリ作成。
+ * ActivityQuickSelector（Drawer/Dialog）でアクティビティ選択 → エントリ作成。
  *
- * entry 作成・競合判定は useInlineTagPaletteCreation、
+ * entry 作成・競合判定は useInlineActivityPaletteCreation、
  * リサイズ / long-press 移動は inline-selection-gestures に分離している。
  */
 
@@ -17,8 +17,12 @@ import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { getTagColorClasses, TagIcon, TagQuickSelector } from '@/features/tags';
-import { EstimationFeedforward, resolveTimeblockDestination } from '@/features/timeblock';
+import {
+  ActivityIcon,
+  ActivityQuickSelector,
+  getCategoryColorClasses,
+} from '@/features/activities';
+import { resolveTimeblockDestination } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -35,18 +39,18 @@ import {
   createBodyPointerDownHandler,
   createResizeStartHandler,
 } from './inline-selection-gestures';
-import { useInlineTagPaletteCreation } from './useInlineTagPaletteCreation';
+import { useInlineActivityPaletteCreation } from './useInlineActivityPaletteCreation';
 
-/** InlineTagPalette コンポーネントのプロパティ */
-interface InlineTagPaletteProps {
+/** InlineActivityPalette コンポーネントのプロパティ */
+interface InlineActivityPaletteProps {
   /** 1時間あたりの高さ（px） */
   hourHeight: number;
   /** このカラムの日付（複数日ビューで対象カラムのみ表示するため） */
   date?: Date | undefined;
 }
 
-/** ドラッグ選択後にカレンダーグリッド上でタグ選択してエントリ作成するコンポーネント */
-export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
+/** ドラッグ選択後にカレンダーグリッド上でアクティビティを選んでエントリ作成するコンポーネント */
+export function InlineActivityPalette({ hourHeight, date }: InlineActivityPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
@@ -58,8 +62,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   const highlightRef = useRef<HTMLDivElement>(null);
 
-  const { hoveredTag, handleTagHover, handleCreate, handleCreateAndSelect, hasConflict } =
-    useInlineTagPaletteCreation();
+  const { hoveredActivity, handleActivityHover, handleCreate, handleCreateAndSelect, hasConflict } =
+    useInlineActivityPaletteCreation();
 
   // selector の open は pendingSelection と分離する。
   // 「+」で modal に遷移する時は selector を閉じつつ pendingSelection を保持する必要がある
@@ -120,7 +124,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   // 時間ラベル + 合計時間
   const timeLabel = `${formatTimeString(startHour, startMinute, timeFormat)} – ${formatTimeString(endHour, endMinute, timeFormat)}`;
 
-  // タグピッカーヘッダー用の日付+時間ラベル（例: "3/30 (日) 14:00 – 15:30"）
+  // ピッカーヘッダー用の日付+時間ラベル（例: "3/30 (日) 14:00 – 15:30"）
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
   const datePattern = locale === 'ja' ? 'M/d (E)' : 'E, MMM d';
   const pickerTimeLabel = `${format(pendingSelection.date, datePattern, { locale: dateFnsLocale })} ${timeLabel}`;
@@ -141,11 +145,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     ? DEFAULT_PLAN_LANE_WIDTH_PERCENT
     : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
 
-  // ホバー中タグの色を解決
-  const hoveredColorClasses = hoveredTag ? getTagColorClasses(hoveredTag.color) : null;
+  // ホバー中アクティビティが継承する色を解決
+  const hoveredColorClasses = hoveredActivity
+    ? getCategoryColorClasses(hoveredActivity.color)
+    : null;
   const planBorderClass = hoveredColorClasses?.border ?? 'border-border';
   const recordSurfaceClass = hoveredColorClasses?.tint ?? 'bg-card';
-  const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
+  const displayName = hoveredActivity?.name ?? tCalendar('activitySelector.title');
 
   const handleResizeStart = createResizeStartHandler({
     hourHeight,
@@ -168,7 +174,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     <>
       {/* 選択範囲ハイライト（カレンダーグリッド上） */}
       <div
-        data-tag-palette
+        data-activity-palette
         className="pointer-events-none absolute right-0 left-0"
         style={{ zIndex: Z_INDEX.POPOVER }}
       >
@@ -196,17 +202,17 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             />
           ) : selectionHeight < 40 ? (
             <div className="flex min-w-0 items-center gap-1">
-              {hoveredTag?.icon && (
-                <TagIcon
-                  icon={hoveredTag.icon}
-                  color={hoveredTag.color}
+              {hoveredActivity?.icon && (
+                <ActivityIcon
+                  icon={hoveredActivity.icon}
+                  color={hoveredActivity.color}
                   size="sm"
                   className="shrink-0"
                 />
               )}
               <span className="truncate font-medium">
-                {hoveredTag ? displayName : destinationLabel}
-                {!hoveredTag && (
+                {hoveredActivity ? displayName : destinationLabel}
+                {!hoveredActivity && (
                   <>
                     {' · '}
                     <span className="tabular-nums">{timeLabel}</span>
@@ -218,10 +224,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             <>
               <div className="flex min-h-0 items-start justify-between gap-1">
                 <div className="flex min-w-0 items-center gap-1">
-                  {hoveredTag?.icon && (
-                    <TagIcon
-                      icon={hoveredTag.icon}
-                      color={hoveredTag.color}
+                  {hoveredActivity?.icon && (
+                    <ActivityIcon
+                      icon={hoveredActivity.icon}
+                      color={hoveredActivity.color}
                       size="sm"
                       className="shrink-0"
                     />
@@ -264,27 +270,15 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         </div>
       </div>
 
-      {/* タグ選択パネル */}
-      <TagQuickSelector
+      {/* アクティビティ選択パネル */}
+      <ActivityQuickSelector
         open={selectorOpen}
         onOpenChange={handleOpenChange}
         onSelect={handleCreate}
         onCreateAndSelect={handleCreateAndSelect}
-        onTagHover={handleTagHover}
+        onActivityHover={handleActivityHover}
         anchorRef={highlightRef}
         timeLabel={pickerContextLabel}
-        hint={
-          // 作成時フィードフォワード。hover 中のタグ + ドラッグで決まった長さで引く。
-          // TagBadgeList の hover は onMouseEnter / onMouseLeave なので、これが出るのは
-          // pointer デバイスだけ。mobile の作成時は hover が発生せず出ない（既知の限界）。
-          hoveredTag ? (
-            <EstimationFeedforward
-              destination={destination}
-              tagId={hoveredTag.id}
-              draftMinutes={endMinutes - startMinutes}
-            />
-          ) : null
-        }
       />
     </>
   );

@@ -6,7 +6,7 @@ import { createSelectors } from '@/lib/zustand/createSelectors';
 /**
  * ドラッグ選択によるインライン作成の状態管理
  *
- * ドラッグ終了 → pendingSelection セット → InlineTagPalette 表示
+ * ドラッグ終了 → pendingSelection セット → InlineActivityPalette 表示
  * タグ選択 or 外部クリック → clearPendingSelection
  */
 

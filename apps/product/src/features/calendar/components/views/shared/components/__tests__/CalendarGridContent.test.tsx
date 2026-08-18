@@ -13,10 +13,10 @@ const ghostMock = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/features/tags', () => ({
-  useTagsMap: () => ({ getTagById: () => null }),
-  getTagColorClasses: () => null,
-  TagIcon: () => null,
+vi.mock('@/features/activities', () => ({
+  useActivitiesMap: () => ({ getActivityById: () => null }),
+  getCategoryColorClasses: () => null,
+  ActivityIcon: () => null,
 }));
 
 vi.mock('@/features/timeblock', () => ({
@@ -70,8 +70,9 @@ vi.mock('@/features/calendar/interaction/GhostRenderer', () => ({
       : null,
 }));
 
-vi.mock('@/features/calendar/stores/useTagDraftStore', () => ({
-  useTagDraftStore: (selector: (state: { draft: null }) => unknown) => selector({ draft: null }),
+vi.mock('@/features/calendar/stores/useActivityDraftStore', () => ({
+  useActivityDraftStore: (selector: (state: { draft: null }) => unknown) =>
+    selector({ draft: null }),
 }));
 
 vi.mock('@/features/calendar/components/views/shared/hooks/useResponsiveHourHeight', () => ({
@@ -83,7 +84,7 @@ vi.mock('../CalendarDragSelection', () => ({
 }));
 
 vi.mock('../DraftTimeblock', () => ({ DraftTimeblock: () => null }));
-vi.mock('../InlineTagPalette', () => ({ InlineTagPalette: () => null }));
+vi.mock('../InlineActivityPalette', () => ({ InlineActivityPalette: () => null }));
 
 vi.mock('../TwoLaneTimeblockRenderer', () => ({
   TwoLaneTimeblockRenderer: ({

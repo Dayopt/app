@@ -1,18 +1,18 @@
 /**
- * InlineTagPalette Stories
+ * InlineActivityPalette Stories
  *
  * カレンダーグリッド上でのドラッグ確定後に表示される
- * インラインタグ選択パレット。
+ * インラインアクティビティ選択パレット。
  *
  * useInlineCreateStore で pendingSelection をセットして表示状態を再現。
- * tRPC で tags.list をモックして TagQuickSelector にタグ一覧を供給。
+ * tRPC で activities.listTree をモックして ActivityQuickSelector に一覧を供給。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { Tag } from '@/features/tags';
+import type { ActivityTree } from '@/features/activities';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
-import { InlineTagPalette } from './InlineTagPalette';
+import { InlineActivityPalette } from './InlineActivityPalette';
 
 // ─────────────────────────────────────────────────────────
 // モックデータ
@@ -30,62 +30,72 @@ const FUTURE_DAY = new Date('2099-01-01T00:00:00.000Z');
 /** 過去日付（Record レーンの塗りカードを確認する用） */
 const PAST_DAY = new Date('2020-01-01T00:00:00.000Z');
 
-const GROUPED_TAGS = [
-  {
-    id: 'work',
-    user_id: 'storybook-user',
-    name: '仕事',
-    color: 'blue',
-    icon: 'briefcase',
-    parent_id: null,
-    sort_order: 0,
-    is_active: true,
-    archived_at: null,
-    created_at: '2026-07-14T00:00:00.000Z',
-    updated_at: '2026-07-14T00:00:00.000Z',
-  },
-  {
-    id: 'development',
-    user_id: 'storybook-user',
-    name: '開発',
-    color: 'indigo',
-    icon: 'code',
-    parent_id: 'work',
-    sort_order: 0,
-    is_active: true,
-    archived_at: null,
-    created_at: '2026-07-14T00:00:00.000Z',
-    updated_at: '2026-07-14T00:00:00.000Z',
-  },
-  {
-    id: 'meeting',
-    user_id: 'storybook-user',
-    name: '会議',
-    color: 'violet',
-    icon: 'users',
-    parent_id: 'work',
-    sort_order: 1,
-    is_active: true,
-    archived_at: null,
-    created_at: '2026-07-14T00:00:00.000Z',
-    updated_at: '2026-07-14T00:00:00.000Z',
-  },
-] satisfies Tag[];
+const TIMESTAMPS = {
+  created_at: '2026-07-14T00:00:00.000Z',
+  updated_at: '2026-07-14T00:00:00.000Z',
+};
+
+/** カテゴリー配下にアクティビティがネストした listTree の形 */
+const ACTIVITY_TREE = {
+  categories: [
+    {
+      category: {
+        id: 'work',
+        user_id: 'storybook-user',
+        name: '仕事',
+        color: 'blue',
+        icon: 'briefcase',
+        archived_at: null,
+        ...TIMESTAMPS,
+      },
+      activities: [
+        {
+          id: 'development',
+          user_id: 'storybook-user',
+          name: '開発',
+          category_id: 'work',
+          archived_at: null,
+          ...TIMESTAMPS,
+        },
+        {
+          id: 'meeting',
+          user_id: 'storybook-user',
+          name: '会議',
+          category_id: 'work',
+          archived_at: null,
+          ...TIMESTAMPS,
+        },
+      ],
+    },
+  ],
+  uncategorized: [
+    {
+      id: 'workout',
+      user_id: 'storybook-user',
+      name: '運動',
+      category_id: null,
+      archived_at: null,
+      ...TIMESTAMPS,
+    },
+  ],
+} satisfies ActivityTree;
+
+const EMPTY_ACTIVITY_TREE = { categories: [], uncategorized: [] } satisfies ActivityTree;
 
 // ─────────────────────────────────────────────────────────
 // Meta
 // ─────────────────────────────────────────────────────────
 
 /**
- * InlineTagPalette — カレンダードラッグ後のインラインタグ選択パレット
+ * InlineActivityPalette — カレンダードラッグ後のインラインアクティビティ選択パレット
  *
  * pendingSelection がある場合のみ表示される。
  * カレンダーグリッドの相対位置に配置されることを想定しているため、
  * fullscreen レイアウトで相対コンテナ内に配置して確認する。
  */
 const meta = {
-  title: 'Product/Features/Calendar/Interaction/InlineTagPalette',
-  component: InlineTagPalette,
+  title: 'Product/Features/Calendar/Interaction/InlineActivityPalette',
+  component: InlineActivityPalette,
   parameters: {
     layout: 'fullscreen',
   },
@@ -93,7 +103,7 @@ const meta = {
   args: {
     hourHeight: DEFAULT_HOUR_HEIGHT,
   },
-} satisfies Meta<typeof InlineTagPalette>;
+} satisfies Meta<typeof InlineActivityPalette>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -105,7 +115,7 @@ type Story = StoryObj<typeof meta>;
 /**
  * デフォルト状態（09:00–10:00 の選択範囲）
  *
- * タグあり状態。選択ハイライトとタグ選択パネルが表示される。
+ * アクティビティあり状態。選択ハイライトと選択パネルが表示される。
  */
 export const Default: Story = {
   decorators: [
@@ -128,10 +138,10 @@ export const Default: Story = {
   ],
 };
 
-/** 親タグの直下に小タグを展開する表示。 */
-export const GroupedTags: Story = {
+/** カテゴリー見出しの下に所属アクティビティを展開する表示。 */
+export const GroupedActivities: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: GROUPED_TAGS } },
+    trpcMocks: { 'activities.listTree': ACTIVITY_TREE },
   },
   decorators: [
     (Story) => {
@@ -209,13 +219,13 @@ export const LongSelection: Story = {
 };
 
 /**
- * タグなし状態（新規ユーザー）
+ * アクティビティなし状態（新規ユーザー）
  *
- * タグが存在しない場合、サンプルタグ候補が表示される。
+ * 1 件も無い場合、サンプル候補が表示される。
  */
-export const EmptyTags: Story = {
+export const EmptyActivities: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: [] } },
+    trpcMocks: { 'activities.listTree': EMPTY_ACTIVITY_TREE },
   },
   decorators: [
     (Story) => {
@@ -284,7 +294,7 @@ export const NoPendingSelection: Story = {
 /** 全パターンの基準となるインタラクティブ表示。 */
 export const AllPatterns: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: GROUPED_TAGS } },
+    trpcMocks: { 'activities.listTree': ACTIVITY_TREE },
   },
   decorators: [
     (Story) => {

@@ -44,9 +44,7 @@ import type { Activity, ActivityTree } from '../types';
 /**
  * サンプルアクティビティの i18n キー（`calendar.activitySelector.sampleActivities` 配下）。
  *
- * 移植元は `calendar.tagSelector.*` を読んでいたが、あちらの文言には「タグを選択」等の
- * 禁止表記が残っている。新 namespace を別に置き、旧 namespace は旧ピッカーの撤去と
- * 同時に消す（#2162）。
+ * 移植元が読んでいた `calendar.tagSelector.*` は旧ピッカーの撤去と同時に削除済み（#2162）。
  */
 type SampleActivityNameKey = 'work' | 'study' | 'exercise' | 'break' | 'meal';
 

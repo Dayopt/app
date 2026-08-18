@@ -3,11 +3,11 @@
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { DateTimeSection, TagRow, TimeConflictAlert } from '@/features/timeblock';
+import { ActivityFieldRow, DateTimeSection, TimeConflictAlert } from '@/features/timeblock';
 import { Button, cn } from '@dayopt/components';
 
 export interface ActivityEntryCreateFormProps {
-  tag: {
+  activity: {
     id: string;
     name: string;
     color: string | null;
@@ -23,29 +23,29 @@ export interface ActivityEntryCreateFormProps {
   onCancel: () => void;
   isSubmitting?: boolean;
   hasError?: boolean;
-  onTagChange: (tagId: string | null) => void;
+  onActivityChange: (activityId: string | null) => void;
   onCreateAndSelect: (
     name: string,
     color?: string | null,
     icon?: string | null,
-    parentId?: string | null,
+    categoryId?: string | null,
   ) => Promise<void> | void;
   surface?: 'card' | 'sheet';
   className?: string;
 }
 
 /**
- * タグエントリ作成フォーム body。
+ * アクティビティのブロック作成フォーム body。
  *
  * レイアウト:
- * 1. タグアイコン + 名前ヘッダー
+ * 1. アクティビティアイコン + 名前ヘッダー
  * 2. 日付行 (`DateRow`) と予定行 (`TimeRow` = 開始 → 終了)
  * 3. キャンセル / 作成 ボタン
  *
  * PC popover では Inspector と同じカード面、mobile sheet では sheet の地色を使う。
  */
 export function ActivityTimeblockCreateForm({
-  tag,
+  activity,
   selectedDate,
   onDateSelect,
   startTime,
@@ -54,7 +54,7 @@ export function ActivityTimeblockCreateForm({
   onEndTimeChange,
   onSubmit,
   onCancel,
-  onTagChange,
+  onActivityChange,
   onCreateAndSelect,
   isSubmitting = false,
   hasError = false,
@@ -74,14 +74,15 @@ export function ActivityTimeblockCreateForm({
       className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Row 0: 詳細と同様に TagRow を使ってタグを切り替え可能にする */}
+      {/* Row 0: 詳細と同様に ActivityFieldRow を使ってアクティビティを切り替え可能にする */}
       <div className="mb-2 flex items-center justify-between gap-2">
-        <TagRow
-          tagId={tag.id}
-          tagName={tag.name}
-          tagIcon={tag.icon}
-          tagColor={tag.color}
-          onTagChange={onTagChange}
+        <ActivityFieldRow
+          activityId={activity.id}
+          activityName={activity.name}
+          activityIcon={activity.icon}
+          activityColor={activity.color}
+          uncategorized={activity.color === null}
+          onActivityChange={onActivityChange}
           onCreateAndSelect={onCreateAndSelect}
         />
         <button
@@ -110,7 +111,7 @@ export function ActivityTimeblockCreateForm({
             endTime={endTime}
             onEndChange={onEndTimeChange}
             hasError={hasError}
-            testId="tag-entry-create-planned-time"
+            testId="activity-entry-create-planned-time"
           />
         </div>
       </div>
