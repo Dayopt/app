@@ -10,12 +10,18 @@ import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 
 import { aggregateMonthlyTrend, getMonthlyStartDate, transformEstimationAccuracy } from '../domain';
 
-import { fetchPlans, fetchRecords, fetchTagsById } from './statistics-fetchers';
+import { buildActivityPL } from './statistics-activity-axis-builders';
+import {
+  fetchActivitiesById,
+  fetchCategoriesById,
+  fetchPlans,
+  fetchRecords,
+  fetchTagsById,
+} from './statistics-fetchers';
 import type { BlankRateInput, StatisticsKpiService } from './statistics-kpi-service';
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
 import {
   buildOverviewSection,
-  buildTagPL,
   buildTimeByTagRows,
   filterRowsByVisibleDateKeys,
 } from './statistics-row-builders';
@@ -114,7 +120,7 @@ export class StatisticsSummaryService {
     });
   }
 
-  /** `get_time_pl_data` 相当。タグ別の予実（budget/actual）+ 日次ポイント。 */
+  /** アクティビティ別の予実（budget/actual）+ 日次ポイント（#2162。旧タグ軸から移行）。 */
   async getTimePLData(userId: string, input: TimePLInput): Promise<TimePLResponse> {
     const {
       startDate,
@@ -128,16 +134,19 @@ export class StatisticsSummaryService {
     } = input;
     const timezone = await getUserTimezone(this.supabase, userId);
 
-    const [rangePlans, rangeRecords, tagsById] = await Promise.all([
+    const [rangePlans, rangeRecords, activitiesById, categoriesById] = await Promise.all([
       fetchPlans(this.supabase, userId, { startDate, endDate }),
       fetchRecords(this.supabase, userId, { startDate, endDate }),
-      fetchTagsById(this.supabase, userId),
+      fetchActivitiesById(this.supabase, userId),
+      fetchCategoriesById(this.supabase, userId),
     ]);
     const plans = filterRowsByVisibleDateKeys(rangePlans, visibleDateKeys, timezone);
     const records = filterRowsByVisibleDateKeys(rangeRecords, visibleDateKeys, timezone);
-    const tags = buildTagPL(plans, records, tagsById);
+    const activities = buildActivityPL(plans, records, activitiesById, categoriesById).map(
+      toTimePLResponseRow,
+    );
 
-    let prevTags: TimePLResponse['prevTags'] = [];
+    let prevActivities: TimePLResponse['prevActivities'] = [];
     if (prevStart && prevEnd) {
       const [rangePrevPlans, rangePrevRecords] = await Promise.all([
         fetchPlans(this.supabase, userId, { startDate: prevStart, endDate: prevEnd }),
@@ -149,7 +158,9 @@ export class StatisticsSummaryService {
         prevVisibleDateKeys,
         timezone,
       );
-      prevTags = buildTagPL(prevPlans, prevRecords, tagsById);
+      prevActivities = buildActivityPL(prevPlans, prevRecords, activitiesById, categoriesById).map(
+        toTimePLResponseRow,
+      );
     }
 
     const availableMinutes = computeAvailableMinutesInclusive({
@@ -161,7 +172,7 @@ export class StatisticsSummaryService {
       visibleDayCount: visibleDateKeys?.length,
     });
 
-    return { tags, prevTags, availableMinutes };
+    return { activities, prevActivities, availableMinutes };
   }
 
   /** `get_stats_page_data` 相当。Review panel 用データを一括構築する。 */
@@ -277,4 +288,25 @@ export class StatisticsSummaryService {
       monthlyTrend,
     };
   }
+}
+
+/**
+ * `buildActivityPL` の出力から公開契約（`TimePLResponse`）にだけ絞る。
+ *
+ * `categoryId` は集計の途中経路で使う内部結線用の join key で、Time P/L の
+ * consumer が必要とする情報ではないため公開しない。
+ */
+function toTimePLResponseRow(
+  row: ReturnType<typeof buildActivityPL>[number],
+): TimePLResponse['activities'][number] {
+  return {
+    activityId: row.activityId,
+    activityName: row.activityName,
+    categoryColor: row.categoryColor,
+    categoryIcon: row.categoryIcon,
+    budgetMinutes: row.budgetMinutes,
+    actualMinutes: row.actualMinutes,
+    isPlanned: row.isPlanned,
+    isNoActivity: row.isNoActivity,
+  };
 }

@@ -25,6 +25,7 @@ function createVisibleDaysReviewService() {
     {
       id: 'visible-thursday',
       tag_id: 'tag-1',
+      activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
       start_at: '2026-01-15T09:00:00Z',
@@ -33,6 +34,7 @@ function createVisibleDaysReviewService() {
     {
       id: 'hidden-saturday',
       tag_id: 'tag-1',
+      activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
       start_at: '2026-01-17T09:00:00Z',
@@ -41,6 +43,7 @@ function createVisibleDaysReviewService() {
     {
       id: 'visible-monday',
       tag_id: 'tag-1',
+      activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
       start_at: '2026-01-19T09:00:00Z',
@@ -49,6 +52,7 @@ function createVisibleDaysReviewService() {
     {
       id: 'previous-monday',
       tag_id: 'tag-1',
+      activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
       start_at: '2026-01-12T09:00:00Z',
@@ -61,6 +65,12 @@ function createVisibleDaysReviewService() {
     records: createChainableMock(timeblocks),
     plans: createChainableMock(timeblocks),
     tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }]),
+    activities: createChainableMock([
+      { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
+    ]),
+    categories: createChainableMock([
+      { id: 'category-1', name: '仕事', color: 'blue', icon: 'brain' },
+    ]),
   });
 }
 
@@ -444,44 +454,50 @@ describe('StatisticsService Review visible days', () => {
 
     const result = await service.getTimePLData(USER_ID, rangeInput);
 
-    expect(result.tags).toEqual([
+    expect(result.activities).toEqual([
       {
-        tagId: 'tag-1',
-        tagName: 'Deep Work',
-        tagColor: 'blue',
-        tagIcon: 'brain',
+        activityId: 'activity-1',
+        activityName: 'Deep Work',
+        categoryColor: 'blue',
+        categoryIcon: 'brain',
         budgetMinutes: 105,
         actualMinutes: 105,
         isPlanned: true,
-        isUncategorized: false,
+        isNoActivity: false,
       },
     ]);
-    expect(result.prevTags).toEqual([
+    expect(result.prevActivities).toEqual([
       expect.objectContaining({ budgetMinutes: 30, actualMinutes: 30 }),
     ]);
     expect(result.availableMinutes).toBe(3 * 16 * 60);
   });
 
-  it('Time P/L は未設定と削除済みタグの Plan / Record を同じ未分類 bucket に含める', async () => {
+  it('Time P/L は未設定と削除済みアクティビティの Plan / Record を同じアクティビティなし bucket に含める', async () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
-      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }]),
+      tags: createChainableMock([]),
+      activities: createChainableMock([
+        { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
+      ]),
+      categories: createChainableMock([
+        { id: 'category-1', name: '仕事', color: 'blue', icon: 'brain' },
+      ]),
       plans: createChainableMock([
         {
           id: 'plan-known',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-01-15T09:00:00Z',
           end_at: '2026-01-15T10:00:00Z',
         },
         {
           id: 'plan-unset',
-          tag_id: null,
+          activity_id: null,
           start_at: '2026-01-15T10:00:00Z',
           end_at: '2026-01-15T10:30:00Z',
         },
         {
           id: 'plan-deleted',
-          tag_id: 'deleted-tag-id',
+          activity_id: 'deleted-activity-id',
           start_at: '2026-01-15T11:00:00Z',
           end_at: '2026-01-15T11:45:00Z',
         },
@@ -489,7 +505,7 @@ describe('StatisticsService Review visible days', () => {
       records: createChainableMock([
         {
           id: 'record-known',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: null,
           source: 'manual',
           start_at: '2026-01-15T09:00:00Z',
@@ -497,7 +513,7 @@ describe('StatisticsService Review visible days', () => {
         },
         {
           id: 'record-unset',
-          tag_id: null,
+          activity_id: null,
           plan_id: null,
           source: 'manual',
           start_at: '2026-01-15T10:00:00Z',
@@ -505,7 +521,7 @@ describe('StatisticsService Review visible days', () => {
         },
         {
           id: 'record-deleted',
-          tag_id: 'deleted-tag-id',
+          activity_id: 'deleted-activity-id',
           plan_id: null,
           source: 'manual',
           start_at: '2026-01-15T11:00:00Z',
@@ -521,26 +537,26 @@ describe('StatisticsService Review visible days', () => {
       sleepHour: 23,
     });
 
-    expect(result.tags).toEqual([
+    expect(result.activities).toEqual([
       {
-        tagId: null,
-        tagName: null,
-        tagColor: null,
-        tagIcon: null,
+        activityId: null,
+        activityName: null,
+        categoryColor: null,
+        categoryIcon: null,
         budgetMinutes: 75,
         actualMinutes: 60,
         isPlanned: true,
-        isUncategorized: true,
+        isNoActivity: true,
       },
       {
-        tagId: 'tag-1',
-        tagName: 'Deep Work',
-        tagColor: 'blue',
-        tagIcon: 'brain',
+        activityId: 'activity-1',
+        activityName: 'Deep Work',
+        categoryColor: 'blue',
+        categoryIcon: 'brain',
         budgetMinutes: 60,
         actualMinutes: 50,
         isPlanned: true,
-        isUncategorized: false,
+        isNoActivity: false,
       },
     ]);
   });

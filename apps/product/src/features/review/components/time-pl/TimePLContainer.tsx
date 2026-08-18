@@ -20,7 +20,7 @@ const VIEW_TITLE = '予実比較';
  * 1つの TimePLInput から予実比較データを導出し、Shell でラップして描画する。
  */
 export function TimePLContainer({ input, isLoading, className }: TimePLContainerProps) {
-  const isEmpty = !input || input.tags.length === 0;
+  const isEmpty = !input || input.activities.length === 0;
 
   if (isLoading || isEmpty) {
     return (

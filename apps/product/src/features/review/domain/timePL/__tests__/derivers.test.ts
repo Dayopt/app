@@ -30,7 +30,7 @@ describe('getAccuracyStatus', () => {
 });
 
 describe('deriveAccuracy', () => {
-  it('calculates accuracy rate from tags', () => {
+  it('calculates accuracy rate from activities', () => {
     const result = deriveAccuracy(MOCK_WEEK_GOOD);
     expect(result.rate).toBeGreaterThan(0.8);
     expect(result.rate).toBeLessThanOrEqual(1);
@@ -40,28 +40,28 @@ describe('deriveAccuracy', () => {
   it('returns 1 when budget and actual are both 0', () => {
     const result = deriveAccuracy({
       ...MOCK_MINIMAL,
-      tags: [
+      activities: [
         {
-          tagId: '1',
-          tagName: 'X',
-          tagColor: 'blue',
+          activityId: '1',
+          activityName: 'X',
+          categoryColor: 'blue',
           budgetMinutes: 0,
           actualMinutes: 0,
           isPlanned: true,
-          isUncategorized: false,
+          isNoActivity: false,
         },
       ],
     });
     expect(result.rate).toBe(1);
   });
 
-  it('calculates prevRate when prevTags provided', () => {
+  it('calculates prevRate when prevActivities provided', () => {
     const result = deriveAccuracy(MOCK_WEEK_GOOD);
     expect(result.prevRate).toBeDefined();
     expect(result.prevRate).toBeGreaterThan(0);
   });
 
-  it('returns undefined prevRate when prevTags not provided', () => {
+  it('returns undefined prevRate when prevActivities not provided', () => {
     const result = deriveAccuracy(MOCK_DAY_EXCELLENT);
     expect(result.prevRate).toBeUndefined();
   });
@@ -70,8 +70,8 @@ describe('deriveAccuracy', () => {
 describe('deriveStatement', () => {
   it('calculates budget and actual totals', () => {
     const result = deriveStatement(MOCK_WEEK_GOOD);
-    const expectedBudget = MOCK_WEEK_GOOD.tags.reduce((s, t) => s + t.budgetMinutes, 0);
-    const expectedActual = MOCK_WEEK_GOOD.tags.reduce((s, t) => s + t.actualMinutes, 0);
+    const expectedBudget = MOCK_WEEK_GOOD.activities.reduce((s, t) => s + t.budgetMinutes, 0);
+    const expectedActual = MOCK_WEEK_GOOD.activities.reduce((s, t) => s + t.actualMinutes, 0);
     expect(result.budgetTotal).toBe(expectedBudget);
     expect(result.actualTotal).toBe(expectedActual);
     expect(result.netVarianceMinutes).toBe(expectedBudget - expectedActual);
@@ -91,19 +91,19 @@ describe('deriveStatement', () => {
     }
   });
 
-  it('marks unplanned tags with null variancePercent', () => {
+  it('marks unplanned activities with null variancePercent', () => {
     const result = deriveStatement(MOCK_WITH_UNPLANNED);
-    const unplanned = result.varianceRows.find((r) => r.tagId === '6');
+    const unplanned = result.varianceRows.find((r) => r.activityId === '6');
     expect(unplanned).toBeDefined();
     expect(unplanned!.variancePercent).toBeNull();
   });
 });
 
 describe('deriveBarComparison', () => {
-  it('includes all tags with non-zero time', () => {
+  it('includes all activities with non-zero time', () => {
     const rows = deriveBarComparison(MOCK_WEEK_GOOD);
     expect(rows.length).toBe(
-      MOCK_WEEK_GOOD.tags.filter((t) => t.budgetMinutes > 0 || t.actualMinutes > 0).length,
+      MOCK_WEEK_GOOD.activities.filter((t) => t.budgetMinutes > 0 || t.actualMinutes > 0).length,
     );
   });
 

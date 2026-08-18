@@ -14,7 +14,7 @@ interface BarComparisonViewProps {
   rows: BarComparisonRow[];
 }
 
-/** 横棒 予実比較 — タグごとに Budget vs Actual を横棒で比較 */
+/** 横棒 予実比較 — アクティビティごとに Budget vs Actual を横棒で比較 */
 export function BarComparisonView({ rows }: BarComparisonViewProps) {
   const t = useTranslations('calendar.stats.overview');
   const maxMinutes = Math.max(...rows.map((r) => Math.max(r.budgetMinutes, r.actualMinutes)), 1);
@@ -22,7 +22,7 @@ export function BarComparisonView({ rows }: BarComparisonViewProps) {
   return (
     <div className="flex flex-col gap-4">
       {rows.map((row) => (
-        <ComparisonRow key={row.tagId ?? 'uncategorized'} row={row} maxMinutes={maxMinutes} />
+        <ComparisonRow key={row.activityId ?? 'no-activity'} row={row} maxMinutes={maxMinutes} />
       ))}
       <div className="mt-2 flex justify-center gap-4">
         <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
@@ -43,18 +43,18 @@ function ComparisonRow({ row, maxMinutes }: { row: BarComparisonRow; maxMinutes:
   const budgetPct = (row.budgetMinutes / maxMinutes) * 100;
   const actualPct = (row.actualMinutes / maxMinutes) * 100;
   const varianceColor = getVarianceColor(row.variancePercent);
-  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
+  const activityName = row.isNoActivity ? t('uncategorized') : row.activityName;
 
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
         <span className="inline-flex items-center gap-1 text-sm">
           <TimePLTagMarker
-            isUncategorized={row.isUncategorized}
-            tagIcon={row.tagIcon}
-            tagColor={row.tagColor}
+            isNoActivity={row.isNoActivity}
+            categoryIcon={row.categoryIcon}
+            categoryColor={row.categoryColor}
           />
-          <span className="text-foreground truncate">{tagName}</span>
+          <span className="text-foreground truncate">{activityName}</span>
         </span>
         <span className={cn('text-xs tabular-nums', varianceColor)}>
           {row.variancePercent !== null ? formatVariance(row.varianceMinutes) : t('unplanned')}

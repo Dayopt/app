@@ -73,20 +73,20 @@ const MOCK_PAGE_DATA: StatsPageData = {
 };
 
 const MOCK_TIME_PL_RESPONSE = {
-  tags: [
-    ...MOCK_WEEK_GOOD.tags,
+  activities: [
+    ...MOCK_WEEK_GOOD.activities,
     {
-      tagId: null,
-      tagName: null,
-      tagColor: null,
-      tagIcon: null,
+      activityId: null,
+      activityName: null,
+      categoryColor: null,
+      categoryIcon: null,
       budgetMinutes: 540,
       actualMinutes: 600,
       isPlanned: true,
-      isUncategorized: true,
+      isNoActivity: true,
     },
   ],
-  prevTags: MOCK_WEEK_GOOD.prevTags ?? [],
+  prevActivities: MOCK_WEEK_GOOD.prevActivities ?? [],
   availableMinutes: MOCK_WEEK_GOOD.availableMinutes,
 };
 

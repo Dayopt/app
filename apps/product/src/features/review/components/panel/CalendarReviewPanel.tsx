@@ -69,7 +69,9 @@ export function CalendarReviewPanel({
   const barRows = useMemo(() => (timePLData ? deriveBarComparison(timePLData) : []), [timePLData]);
   const selectedRow = useMemo(
     () =>
-      selectedTagId == null ? null : (barRows.find((row) => row.tagId === selectedTagId) ?? null),
+      selectedTagId == null
+        ? null
+        : (barRows.find((row) => row.activityId === selectedTagId) ?? null),
     [barRows, selectedTagId],
   );
 
@@ -80,9 +82,9 @@ export function CalendarReviewPanel({
   const selectedTag = selectedTagId
     ? (activeTags.find((tag) => tag.id === selectedTagId) ?? null)
     : null;
-  const selectedTagName = selectedRow?.tagName ?? selectedTag?.name ?? t('tag');
-  const selectedTagIcon = selectedRow?.tagIcon ?? selectedTag?.icon ?? null;
-  const selectedTagColor = selectedRow?.tagColor ?? selectedTag?.color ?? null;
+  const selectedTagName = selectedRow?.activityName ?? selectedTag?.name ?? t('tag');
+  const selectedTagIcon = selectedRow?.categoryIcon ?? selectedTag?.icon ?? null;
+  const selectedTagColor = selectedRow?.categoryColor ?? selectedTag?.color ?? null;
   const isSheet = variant === 'sheet';
 
   return (

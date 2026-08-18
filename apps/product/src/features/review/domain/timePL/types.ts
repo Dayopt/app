@@ -13,20 +13,24 @@ export type TimePLGranularity = 'day' | 'week' | 'range' | 'month' | 'year';
 /** 予算精度のステータス（±0が理想） */
 export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
 
-/** タグ別の予実データ（正規化された入力） */
-export interface TimePLTagTimeblock {
-  tagId: string | null;
-  tagName: string | null;
-  tagColor: TagColorName | null;
-  tagIcon?: string | null | undefined;
+/**
+ * アクティビティ別の予実データ（正規化された入力）。
+ *
+ * 色・アイコンはカテゴリー由来（アクティビティ自身は持たず継承する。#2162）。
+ */
+export interface TimePLActivityTimeblock {
+  activityId: string | null;
+  activityName: string | null;
+  categoryColor: TagColorName | null;
+  categoryIcon?: string | null | undefined;
   /** 予定時間（分） */
   budgetMinutes: number;
   /** 記録時間（分） */
   actualMinutes: number;
-  /** 予算があったか（false = 計画外のみのタグ） */
+  /** 予算があったか（false = 計画外のみのアクティビティ） */
   isPlanned: boolean;
-  /** 削除済み・未設定のタグをまとめた synthetic bucket */
-  isUncategorized: boolean;
+  /** 削除済み・未設定のアクティビティをまとめた synthetic bucket */
+  isNoActivity: boolean;
 }
 
 /** 全ビュー共通の入力型 */
@@ -39,10 +43,10 @@ export interface TimePLInput {
   };
   /** 可処分時間（起床〜就寝 × 日数、分） */
   availableMinutes: number;
-  /** タグ別の予実データ */
-  tags: TimePLTagTimeblock[];
-  /** 前期間のタグ別データ（トレンド比較用） */
-  prevTags?: TimePLTagTimeblock[] | undefined;
+  /** アクティビティ別の予実データ */
+  activities: TimePLActivityTimeblock[];
+  /** 前期間のアクティビティ別データ（トレンド比較用） */
+  prevActivities?: TimePLActivityTimeblock[] | undefined;
 }
 
 // ── Derived types（derivers の出力型）──
@@ -56,24 +60,24 @@ export interface TimePLAccuracy {
 
 /** Statement / Section 用の行 */
 export interface TimePLRow {
-  tagId: string | null;
-  tagName: string | null;
-  tagColor: TagColorName | null;
-  tagIcon?: string | null | undefined;
-  isUncategorized: boolean;
+  activityId: string | null;
+  activityName: string | null;
+  categoryColor: TagColorName | null;
+  categoryIcon?: string | null | undefined;
+  isNoActivity: boolean;
   minutes: number;
   percentage: number;
 }
 
 /** Statement 用の差異行 */
 export interface TimePLVarianceRow {
-  tagId: string | null;
-  tagName: string | null;
-  tagColor: TagColorName | null;
-  tagIcon?: string | null | undefined;
-  isUncategorized: boolean;
+  activityId: string | null;
+  activityName: string | null;
+  categoryColor: TagColorName | null;
+  categoryIcon?: string | null | undefined;
+  isNoActivity: boolean;
   varianceMinutes: number;
-  /** 乖離率。予算0のタグは null */
+  /** 乖離率。予算0のアクティビティは null */
   variancePercent: number | null;
 }
 
@@ -89,11 +93,11 @@ export interface StatementViewData {
 
 /** BarComparison の行 */
 export interface BarComparisonRow {
-  tagId: string | null;
-  tagName: string | null;
-  tagColor: TagColorName | null;
-  tagIcon?: string | null | undefined;
-  isUncategorized: boolean;
+  activityId: string | null;
+  activityName: string | null;
+  categoryColor: TagColorName | null;
+  categoryIcon?: string | null | undefined;
+  isNoActivity: boolean;
   budgetMinutes: number;
   actualMinutes: number;
   varianceMinutes: number;

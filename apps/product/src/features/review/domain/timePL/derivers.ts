@@ -28,8 +28,8 @@ export function getAccuracyStatus(rate: number): AccuracyStatus {
 
 /** 精度を算出 */
 export function deriveAccuracy(input: TimePLInput): TimePLAccuracy {
-  const budgetTotal = input.tags.reduce((s, t) => s + t.budgetMinutes, 0);
-  const actualTotal = input.tags.reduce((s, t) => s + t.actualMinutes, 0);
+  const budgetTotal = input.activities.reduce((s, t) => s + t.budgetMinutes, 0);
+  const actualTotal = input.activities.reduce((s, t) => s + t.actualMinutes, 0);
 
   const rate =
     budgetTotal === 0
@@ -39,9 +39,9 @@ export function deriveAccuracy(input: TimePLInput): TimePLAccuracy {
       : Math.max(0, Math.min(1, 1 - Math.abs(budgetTotal - actualTotal) / budgetTotal));
 
   let prevRate: number | undefined;
-  if (input.prevTags) {
-    const prevBudget = input.prevTags.reduce((s, t) => s + t.budgetMinutes, 0);
-    const prevActual = input.prevTags.reduce((s, t) => s + t.actualMinutes, 0);
+  if (input.prevActivities) {
+    const prevBudget = input.prevActivities.reduce((s, t) => s + t.budgetMinutes, 0);
+    const prevActual = input.prevActivities.reduce((s, t) => s + t.actualMinutes, 0);
     prevRate =
       prevBudget === 0
         ? prevActual === 0
@@ -53,22 +53,22 @@ export function deriveAccuracy(input: TimePLInput): TimePLAccuracy {
   return { rate, status: getAccuracyStatus(rate), prevRate };
 }
 
-/** タグ配列 → ソート済みの行配列 + 合計 */
+/** アクティビティ配列 → ソート済みの行配列 + 合計 */
 function toRows(
-  tags: TimePLInput['tags'],
-  getMinutes: (t: TimePLInput['tags'][0]) => number,
+  activities: TimePLInput['activities'],
+  getMinutes: (t: TimePLInput['activities'][0]) => number,
 ): { rows: TimePLRow[]; total: number } {
-  const items = tags
+  const items = activities
     .map((t) => ({ ...t, minutes: getMinutes(t) }))
     .filter((t) => t.minutes > 0)
     .sort((a, b) => b.minutes - a.minutes);
   const total = items.reduce((s, t) => s + t.minutes, 0);
   const rows: TimePLRow[] = items.map((t) => ({
-    tagId: t.tagId,
-    tagName: t.tagName,
-    tagColor: t.tagColor,
-    tagIcon: t.tagIcon,
-    isUncategorized: t.isUncategorized,
+    activityId: t.activityId,
+    activityName: t.activityName,
+    categoryColor: t.categoryColor,
+    categoryIcon: t.categoryIcon,
+    isNoActivity: t.isNoActivity,
     minutes: t.minutes,
     percentage: total > 0 ? Math.round((t.minutes / total) * 100) : 0,
   }));
@@ -77,25 +77,25 @@ function toRows(
 
 /** Statement ビュー用データを導出 */
 export function deriveStatement(input: TimePLInput): StatementViewData {
-  const budget = toRows(input.tags, (t) => t.budgetMinutes);
-  const actual = toRows(input.tags, (t) => t.actualMinutes);
+  const budget = toRows(input.activities, (t) => t.budgetMinutes);
+  const actual = toRows(input.activities, (t) => t.actualMinutes);
 
   const varianceRows: TimePLVarianceRow[] = [];
-  const allTagIds = new Set(input.tags.map((t) => t.tagId));
-  for (const tagId of allTagIds) {
-    const tag = input.tags.find((t) => t.tagId === tagId)!;
-    if (tag.budgetMinutes === 0 && tag.actualMinutes === 0) continue;
+  const allActivityIds = new Set(input.activities.map((t) => t.activityId));
+  for (const activityId of allActivityIds) {
+    const activity = input.activities.find((t) => t.activityId === activityId)!;
+    if (activity.budgetMinutes === 0 && activity.actualMinutes === 0) continue;
     const { varianceMinutes, variancePercent } = computeVariance(
-      tag.budgetMinutes,
-      tag.actualMinutes,
-      tag.isPlanned,
+      activity.budgetMinutes,
+      activity.actualMinutes,
+      activity.isPlanned,
     );
     varianceRows.push({
-      tagId: tag.tagId,
-      tagName: tag.tagName,
-      tagColor: tag.tagColor,
-      tagIcon: tag.tagIcon,
-      isUncategorized: tag.isUncategorized,
+      activityId: activity.activityId,
+      activityName: activity.activityName,
+      categoryColor: activity.categoryColor,
+      categoryIcon: activity.categoryIcon,
+      isNoActivity: activity.isNoActivity,
       varianceMinutes,
       variancePercent,
     });
@@ -115,7 +115,7 @@ export function deriveStatement(input: TimePLInput): StatementViewData {
 
 /** BarComparison 行を導出 */
 export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
-  return input.tags
+  return input.activities
     .filter((t) => t.budgetMinutes > 0 || t.actualMinutes > 0)
     .map((t) => {
       const { varianceMinutes, variancePercent } = computeVariance(
@@ -124,11 +124,11 @@ export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
         t.isPlanned,
       );
       return {
-        tagId: t.tagId,
-        tagName: t.tagName,
-        tagColor: t.tagColor,
-        tagIcon: t.tagIcon,
-        isUncategorized: t.isUncategorized,
+        activityId: t.activityId,
+        activityName: t.activityName,
+        categoryColor: t.categoryColor,
+        categoryIcon: t.categoryIcon,
+        isNoActivity: t.isNoActivity,
         budgetMinutes: t.budgetMinutes,
         actualMinutes: t.actualMinutes,
         varianceMinutes,

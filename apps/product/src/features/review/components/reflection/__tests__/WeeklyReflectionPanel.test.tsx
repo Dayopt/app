@@ -10,15 +10,15 @@ import {
 
 const timePLRows: BarComparisonRow[] = [
   {
-    tagId: 'tag-1',
-    tagName: 'Deep Work',
-    tagColor: 'blue',
-    tagIcon: null,
+    activityId: 'activity-1',
+    activityName: 'Deep Work',
+    categoryColor: 'blue',
+    categoryIcon: null,
     budgetMinutes: 120,
     actualMinutes: 150,
     varianceMinutes: 30,
     variancePercent: 25,
-    isUncategorized: false,
+    isNoActivity: false,
   },
 ];
 
@@ -75,7 +75,7 @@ describe('WeeklyReflectionPanel', () => {
     expect(screen.getByText('review.blankTitle')).toBeInTheDocument();
   });
 
-  it('Time P/L row click で tagId を渡す', async () => {
+  it('Time P/L row click で activityId を渡す', async () => {
     const user = userEvent.setup();
     const onTagClick = vi.fn();
 
@@ -93,21 +93,21 @@ describe('WeeklyReflectionPanel', () => {
 
     await user.click(screen.getByRole('button', { name: /Deep Work/ }));
 
-    expect(onTagClick).toHaveBeenCalledWith('tag-1');
+    expect(onTagClick).toHaveBeenCalledWith('activity-1');
   });
 
   it('未分類を neutral marker で表示し、実体タグの選択操作にはしない', () => {
     const onTagClick = vi.fn();
     const uncategorizedRow: BarComparisonRow = {
-      tagId: null,
-      tagName: null,
-      tagColor: null,
-      tagIcon: null,
+      activityId: null,
+      activityName: null,
+      categoryColor: null,
+      categoryIcon: null,
       budgetMinutes: 60,
       actualMinutes: 45,
       varianceMinutes: 15,
       variancePercent: 25,
-      isUncategorized: true,
+      isNoActivity: true,
     };
 
     const { container } = render(

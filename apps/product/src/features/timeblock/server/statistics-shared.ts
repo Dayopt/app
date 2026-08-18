@@ -145,27 +145,31 @@ export interface StatsPageData {
   }>;
 }
 
-/** get_time_pl_data DB関数のレスポンス型 */
+/**
+ * Time P/L のレスポンス型。旧タグ軸から移行（#2162）。
+ *
+ * 色・アイコンはカテゴリー由来（アクティビティ自身は持たず継承する）。
+ */
 export interface TimePLResponse {
-  tags: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
-    tagIcon: string | null;
+  activities: Array<{
+    activityId: string | null;
+    activityName: string | null;
+    categoryColor: string | null;
+    categoryIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
-    isUncategorized: boolean;
+    isNoActivity: boolean;
   }>;
-  prevTags: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
-    tagIcon: string | null;
+  prevActivities: Array<{
+    activityId: string | null;
+    activityName: string | null;
+    categoryColor: string | null;
+    categoryIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
-    isUncategorized: boolean;
+    isNoActivity: boolean;
   }>;
   availableMinutes: number;
 }
