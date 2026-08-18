@@ -3,10 +3,11 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DEFAULT_SCOPES, hasWriteScope, type SupportedScope } from '@/lib/oauth-server';
 
 import type { McpRequestContext } from '../_context';
+import { registerActivitiesListTool } from './activities-list';
+import { registerCategoriesListTool } from './categories-list';
 import { registerConstraintsGetTool } from './constraints-get';
 import { registerEntriesListTool } from './entries-list';
 import { registerReviewGetTool } from './review-get';
-import { registerTagsListTool } from './tags-list';
 import {
   registerPlansGetTool,
   registerPlansTrashListTool,
@@ -39,9 +40,14 @@ export const MCP_TOOL_DESCRIPTORS = [
     register: registerEntriesListTool,
   },
   {
-    name: 'tags.list',
-    requiredScope: 'read:tags',
-    register: registerTagsListTool,
+    name: 'activities.list',
+    requiredScope: 'read:activities',
+    register: registerActivitiesListTool,
+  },
+  {
+    name: 'categories.list',
+    requiredScope: 'read:activities',
+    register: registerCategoriesListTool,
   },
   {
     name: 'constraints.get',
