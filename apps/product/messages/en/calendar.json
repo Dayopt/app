@@ -283,6 +283,19 @@
         "meal": "Meal"
       }
     },
+    "activitySelector": {
+      "title": "Select an activity",
+      "new": "New",
+      "emptyTitle": "Activities categorize your time",
+      "emptyDescription": "Tap one, or create your own below",
+      "sampleActivities": {
+        "work": "Work",
+        "study": "Study",
+        "exercise": "Exercise",
+        "break": "Break",
+        "meal": "Meal"
+      }
+    },
     "stats": {
       "today": "Today",
       "vsLastWeek": "vs last week",

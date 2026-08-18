@@ -283,6 +283,19 @@
         "meal": "食事"
       }
     },
+    "activitySelector": {
+      "title": "アクティビティを選択",
+      "new": "新規",
+      "emptyTitle": "アクティビティで時間を分類しよう",
+      "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
+      "sampleActivities": {
+        "work": "仕事",
+        "study": "勉強",
+        "exercise": "運動",
+        "break": "休憩",
+        "meal": "食事"
+      }
+    },
     "stats": {
       "today": "今日",
       "vsLastWeek": "先週比",
