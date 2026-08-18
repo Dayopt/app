@@ -6,30 +6,35 @@ import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
-import { useShellStore } from '@/lib/stores/useShellStore';
-
-import { useIsFetching } from '@tanstack/react-query';
 
 import { SidebarSection } from '@/components/shell/sidebar';
+import type { ActivityTree } from '@/features/activities';
 import {
-  TagDeleteConfirmDialog,
-  tagKeys,
-  useArchivedTags,
-  useArchiveTag,
-  useDeleteTag,
-  useTagsHierarchy,
-} from '@/features/tags';
+  ActivityDeleteConfirmDialog,
+  collectActivitiesFromTree,
+  collectActivityIdsFromTree,
+  useActivityTree,
+  useArchiveActivity,
+  useArchiveCategory,
+  useArchivedActivities,
+  useDeleteActivity,
+  useDeleteCategory,
+} from '@/features/activities';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { api } from '@/lib/trpc';
 import { Button, HoverTooltip, Skeleton } from '@dayopt/components';
 
+import { useActivityModalNavigation } from '../../hooks/useActivityModalNavigation';
+
 import { mergeActivityDeleteCounts } from './activity-delete-counts';
-import { partitionActivityTree } from './activity-tree';
 import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
 import { CategoryGroup } from './components/CategoryGroup';
 import { NoActivityRow } from './components/NoActivityRow';
+
+const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
+const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
 
 /**
  * サイドバーのアクティビティ一覧。
@@ -40,27 +45,34 @@ import { NoActivityRow } from './components/NoActivityRow';
  * 3. 「アクティビティなし」行 → アクティビティ未設定のブロックの表示切替
  * 4. 「アーカイブ済み」折りたたみ
  *
+ * 並び順はサーバーの `listTree` が名前順で返す（`sort_order` は持たない）。
  * DnD は廃止した。カテゴリーの付け替えは行メニューの「カテゴリーを変更」で行う。
  */
 export function ActivityFilterList() {
   const t = useTranslations();
   const isMobile = useIsMobile();
-  const { data: nodes, isLoading } = useTagsHierarchy();
-  const { data: stats, isError: isStatsError } = api.statistics.getTagStats.useQuery();
-  const { data: archived } = useArchivedTags();
+  const { data: tree, isLoading, isFetching } = useActivityTree();
+  const { data: stats, isError: isStatsError } = api.statistics.getActivityStats.useQuery();
+  const { data: archivedActivities } = useArchivedActivities();
 
-  const model = useMemo(() => partitionActivityTree(nodes ?? []), [nodes]);
+  // `?? []` を直接書くと毎 render で新しい配列になり、下流の useMemo /
+  // useCallback の依存が毎回変わる。空配列を定数に固定して安定させる
+  const categories = useMemo(() => tree?.categories ?? EMPTY_CATEGORIES, [tree]);
+  const uncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
 
   const categoryOptions = useMemo<CategoryOption[]>(
     () =>
-      model.categories.map(({ category }) => ({
+      categories.map(({ category }) => ({
         id: category.id,
         name: category.name,
         color: category.color,
         icon: category.icon,
       })),
-    [model.categories],
+    [categories],
   );
+
+  /** 「カテゴリーを変更」ピッカーと同名衝突の検出に使う全アクティビティ */
+  const allActivities = useMemo(() => collectActivitiesFromTree(tree), [tree]);
 
   // 削除判定・確認ダイアログ用: records + plans の合計件数。
   // エラー時は null にして削除確認ダイアログを常に表示する（誤削除防止）。
@@ -69,9 +81,11 @@ export function ActivityFilterList() {
     [stats, isStatsError],
   );
 
-  const deleteMutation = useDeleteTag();
-  const archiveMutation = useArchiveTag();
-  const openActivityCreateModal = useShellStore.use.openTagCreateModal();
+  const deleteActivityMutation = useDeleteActivity();
+  const deleteCategoryMutation = useDeleteCategory();
+  const archiveActivityMutation = useArchiveActivity();
+  const archiveCategoryMutation = useArchiveCategory();
+  const { openActivityCreateModal } = useActivityModalNavigation();
 
   const visibleActivityIds = useCalendarFilterStore((s) => s.visibleActivityIds);
   const toggleActivity = useCalendarFilterStore((s) => s.toggleActivity);
@@ -83,20 +97,27 @@ export function ActivityFilterList() {
   const toggleShowNoActivity = useCalendarFilterStore((s) => s.toggleShowNoActivity);
   const showOnlyNoActivity = useCalendarFilterStore((s) => s.showOnlyNoActivity);
 
-  // hierarchy フェッチ中はフィルター初期化をスキップ（Race Condition 防止）
-  const isFetching = useIsFetching({ queryKey: tagKeys.hierarchy() }) > 0;
-
   // 一覧と filter state を同期（新規は visible 追加、削除済みは orphan として除去）。
-  // アーカイブ済み ID も含めないと、archived を参照する過去ブロックが orphan 扱いされ
-  // visibleActivityIds から消えてカレンダーから消えてしまう（#1576 の回帰）。
+  //
+  // アーカイブ済み ID も含める。含めないと、アーカイブ済みアクティビティを参照する
+  // 過去ブロックが orphan 扱いで visibleActivityIds から消え、カレンダーから見えなくなる
+  // （#1576 の回帰）。フェッチ中はスキップして、途中の集合で orphan 除去が走るのを防ぐ。
+  //
+  // `useCalendarData` も同じ store を sync するので、**渡す ID 集合を揃える**こと。
+  // ズレると後から走った方が相手の ID を orphan として消す。
+  const allFilterableIds = useMemo(
+    () => [
+      ...collectActivityIdsFromTree(tree),
+      ...(archivedActivities ?? []).map((activity) => activity.id),
+    ],
+    [tree, archivedActivities],
+  );
+
   useEffect(() => {
     if (isFetching) return;
-
-    const allIds = [...model.allFilterableIds, ...(archived ?? []).map((item) => item.id)];
-    if (allIds.length > 0) {
-      syncWithActivities(allIds);
-    }
-  }, [model.allFilterableIds, archived, syncWithActivities, isFetching]);
+    if (allFilterableIds.length === 0) return;
+    syncWithActivities(allFilterableIds);
+  }, [allFilterableIds, syncWithActivities, isFetching]);
 
   // 既定は展開。折りたたんだカテゴリーだけを集合で持つ
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -112,42 +133,69 @@ export function ActivityFilterList() {
   }, []);
 
   const [deleteTarget, setDeleteTarget] = useState<{
+    kind: 'activity' | 'category';
     id: string;
     name: string;
-    recordCount: number;
+    affectedCount: number;
   } | null>(null);
 
-  // 未使用（Plan/Record 合計 0 件）は即削除、使用済みは未分類化の説明つき確認を挟む。
-  // stats 未取得/エラー時は安全側に倒して常に確認ダイアログを表示する
-  const handleDelete = useCallback(
+  // 未使用（Plan / Record 合計 0 件）は即削除、使用済みは「アクティビティなしになる」
+  // 説明つきの確認を挟む。stats 未取得 / エラー時は安全側に倒して常に確認する
+  const handleDeleteActivity = useCallback(
     (id: string, name: string) => {
       const affectedCount = deleteCounts === null ? 1 : (deleteCounts[id] ?? 0);
       if (affectedCount === 0) {
-        deleteMutation.mutate({ id });
-      } else {
-        setDeleteTarget({ id, name, recordCount: affectedCount });
+        deleteActivityMutation.mutate({ id });
+        return;
       }
+      setDeleteTarget({ kind: 'activity', id, name, affectedCount });
     },
-    [deleteCounts, deleteMutation],
+    [deleteCounts, deleteActivityMutation],
   );
 
-  const handleArchive = useCallback(
-    (id: string) => {
-      archiveMutation.mutate({ id });
+  // カテゴリー削除は予定・記録に触れない。影響するのは所属アクティビティが
+  // 未分類へ移ることだけなので、件数は tree から数える（stats は使わない）
+  const handleDeleteCategory = useCallback(
+    (id: string, name: string) => {
+      const memberCount =
+        categories.find((node) => node.category.id === id)?.activities.length ?? 0;
+      if (memberCount === 0) {
+        deleteCategoryMutation.mutate({ id });
+        return;
+      }
+      setDeleteTarget({ kind: 'category', id, name, affectedCount: memberCount });
     },
-    [archiveMutation],
+    [categories, deleteCategoryMutation],
+  );
+
+  const handleArchiveActivity = useCallback(
+    (id: string) => {
+      archiveActivityMutation.mutate({ id });
+    },
+    [archiveActivityMutation],
+  );
+
+  const handleArchiveCategory = useCallback(
+    (id: string) => {
+      archiveCategoryMutation.mutate({ id });
+    },
+    [archiveCategoryMutation],
   );
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await deleteMutation.mutateAsync({ id: deleteTarget.id });
+      if (deleteTarget.kind === 'category') {
+        await deleteCategoryMutation.mutateAsync({ id: deleteTarget.id });
+      } else {
+        await deleteActivityMutation.mutateAsync({ id: deleteTarget.id });
+      }
     } finally {
       setDeleteTarget(null);
     }
   };
 
-  const hasAnyActivity = model.categories.length > 0 || model.uncategorizedActivities.length > 0;
+  const hasAnyActivity = categories.length > 0 || uncategorized.length > 0;
 
   return (
     <>
@@ -161,14 +209,14 @@ export function ActivityFilterList() {
         ) : (
           <>
             {/* カテゴリー群 */}
-            {model.categories.length > 0 ? (
+            {categories.length > 0 ? (
               <div className="space-y-1">
-                {model.categories.map(({ category, activities }) => (
+                {categories.map(({ category, activities }) => (
                   <CategoryGroup
                     key={category.id}
                     category={category}
                     activities={activities}
-                    allActivities={model.allActivities}
+                    allActivities={allActivities}
                     visibleActivityIds={visibleActivityIds}
                     categoryOptions={categoryOptions}
                     collapsed={collapsedCategories.has(category.id)}
@@ -178,8 +226,10 @@ export function ActivityFilterList() {
                     onShowOnlyActivity={showOnlyActivity}
                     onShowOnlyCategoryActivities={showOnlyCategoryActivities}
                     getCategoryVisibility={getCategoryVisibility}
-                    onArchive={handleArchive}
-                    onDelete={handleDelete}
+                    onArchiveCategory={handleArchiveCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                    onArchiveActivity={handleArchiveActivity}
+                    onDeleteActivity={handleDeleteActivity}
                     openPopoverActivityId={openPopoverActivityId}
                     onOpenPopover={setOpenPopoverActivityId}
                   />
@@ -206,11 +256,11 @@ export function ActivityFilterList() {
               }
             >
               <div role="list" className="space-y-1">
-                {model.uncategorizedActivities.map((activity) => (
+                {uncategorized.map((activity) => (
                   <ActivityRow
                     key={activity.id}
                     activity={activity}
-                    allActivities={model.allActivities}
+                    allActivities={allActivities}
                     checked={visibleActivityIds.has(activity.id)}
                     categoryId={null}
                     inheritedColor={null}
@@ -218,8 +268,8 @@ export function ActivityFilterList() {
                     categoryOptions={categoryOptions}
                     isMobile={isMobile}
                     onToggle={() => toggleActivity(activity.id)}
-                    onArchiveActivity={() => handleArchive(activity.id)}
-                    onDeleteActivity={() => handleDelete(activity.id, activity.name)}
+                    onArchiveActivity={() => handleArchiveActivity(activity.id)}
+                    onDeleteActivity={() => handleDeleteActivity(activity.id, activity.name)}
                     onShowOnlyActivity={() => showOnlyActivity(activity.id)}
                     openPopoverActivityId={openPopoverActivityId}
                     onOpenPopover={setOpenPopoverActivityId}
@@ -246,16 +296,20 @@ export function ActivityFilterList() {
         )}
 
         {/* アーカイブ済み（参照・復元・完全削除の入口） */}
-        <ArchivedActivityList onDelete={handleDelete} />
+        <ArchivedActivityList
+          onDeleteActivity={handleDeleteActivity}
+          onDeleteCategory={handleDeleteCategory}
+        />
       </div>
 
       {/* 完全削除の確認ダイアログ（関連 Plan / Record はアクティビティなしになる） */}
-      <TagDeleteConfirmDialog
+      <ActivityDeleteConfirmDialog
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
-        tagName={deleteTarget?.name ?? ''}
-        recordCount={deleteTarget?.recordCount ?? 0}
+        kind={deleteTarget?.kind ?? 'activity'}
+        name={deleteTarget?.name ?? ''}
+        affectedCount={deleteTarget?.affectedCount ?? 0}
       />
     </>
   );

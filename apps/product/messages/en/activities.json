@@ -28,6 +28,12 @@
       "duplicateName": "A category with this name already exists",
       "restoreDuplicateName": "A category with the same name already exists. Rename it before restoring"
     },
+    "delete": {
+      "confirmTitle": "Delete \"{name}\"",
+      "confirmButton": "Delete",
+      "activityDescription": "This can't be undone. The {count} plans and records that use it aren't deleted — they become blocks with no activity.",
+      "categoryDescription": "This can't be undone. The {count} activities in it aren't deleted — they become uncategorized."
+    },
     "undo": "Undo"
   }
 }

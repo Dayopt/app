@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 import { cn, DropdownMenu, DropdownMenuTrigger } from '@dayopt/components';
 
 import { NoActivityRowMenu } from './ActivityRowMenu';
@@ -38,7 +38,7 @@ export function NoActivityRow({ checked, isMobile, onToggle, onShowOnlyThis }: N
         onClick={onToggle}
       >
         <span className="ml-2 shrink-0">
-          <TagIcon icon={null} color={null} size="sm" isUncategorized />
+          <ActivityIcon icon={null} color={null} size="sm" neutral />
         </span>
 
         <span className={cn('ml-2 min-w-0 flex-1 truncate', !checked && 'text-muted-foreground')}>

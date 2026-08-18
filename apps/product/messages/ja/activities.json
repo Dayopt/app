@@ -28,6 +28,12 @@
       "duplicateName": "この名前のカテゴリーは既にあります",
       "restoreDuplicateName": "同じ名前のカテゴリーが既にあります。名前を変えてから復元してください"
     },
+    "delete": {
+      "confirmTitle": "「{name}」を削除",
+      "confirmButton": "削除",
+      "activityDescription": "この操作は取り消せません。関連する {count} 件の予定・記録は削除されず、アクティビティなしになります。",
+      "categoryDescription": "この操作は取り消せません。所属する {count} 件のアクティビティは削除されず、未分類になります。"
+    },
     "undo": "元に戻す"
   }
 }

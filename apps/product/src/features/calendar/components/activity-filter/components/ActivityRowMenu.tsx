@@ -1,9 +1,9 @@
 'use client';
 
-import { Archive, BarChart3, Check, Eye, FolderUp, Merge, Pencil, Trash2, X } from 'lucide-react';
+import { Archive, BarChart3, Check, Eye, FolderUp, Pencil, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 import {
   cn,
   DropdownMenuContent,
@@ -32,7 +32,6 @@ interface ActivityRowMenuProps {
 
   onOpenRenameDialog: () => void;
   onChangeCategory: (categoryId: string | null) => void;
-  onOpenMergeModal: () => void;
   onShowOnlyActivity: () => void;
   onViewStats?: (() => void) | undefined;
   onArchiveActivity?: (() => void) | undefined;
@@ -44,6 +43,7 @@ interface ActivityRowMenuProps {
  *
  * DnD 廃止に伴い、カテゴリーの付け替えは「カテゴリーを変更」→ ピッカーで行う。
  * 色・アイコンはカテゴリーだけが持つため、この menu には色/アイコン変更を置かない。
+ * 統合（マージ）も v1 では持たない（#2162 §4-8）。
  */
 export function ActivityRowMenu({
   currentCategoryId,
@@ -51,7 +51,6 @@ export function ActivityRowMenu({
   isMobile,
   onOpenRenameDialog,
   onChangeCategory,
-  onOpenMergeModal,
   onShowOnlyActivity,
   onViewStats,
   onArchiveActivity,
@@ -121,7 +120,7 @@ export function ActivityRowMenu({
                     onClick={() => onChangeCategory(category.id)}
                     className={cn(isCurrent ? 'bg-state-selected' : undefined)}
                   >
-                    <TagIcon
+                    <ActivityIcon
                       icon={category.icon}
                       color={category.color}
                       size="sm"
@@ -139,11 +138,7 @@ export function ActivityRowMenu({
 
       <DropdownMenuSeparator />
 
-      <DropdownMenuItem onClick={onOpenMergeModal}>
-        <Merge className="mr-2 size-4" />
-        {t('calendar.filter.merge')}
-      </DropdownMenuItem>
-
+      {/* 統合（マージ）は v1 で持たない（#2162 §4-8）。重複は改名 + アーカイブで代替する */}
       <DropdownMenuItem onClick={onShowOnlyActivity}>
         <Eye className="mr-2 size-4" />
         {t('calendar.filter.showOnlyThisActivity')}

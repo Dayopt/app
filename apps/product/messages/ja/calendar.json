@@ -251,7 +251,9 @@
         "selectIcon": "アイコンを選択",
         "selectCategory": "カテゴリーを選択",
         "noCategory": "カテゴリーなし",
-        "duplicateName": "同じ名前のアクティビティが既にあります。別の名前を入力してください"
+        "duplicateName": "同じ名前のアクティビティが既にあります。別の名前を入力してください",
+        "categoryName": "カテゴリー名",
+        "categoryNamePlaceholder": "例: 仕事、プライベート"
       },
       "renamePopover": {
         "title": "名前を変更",

@@ -66,16 +66,16 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   // (open={!!pendingSelection} だと selector が閉じず modal と nest してしまう)。
   const [waitingForModal, setWaitingForModal] = useState(false);
   const activeSheetType = useShellStore((s) => s.activeSheet?.type ?? null);
-  const isTagCreateModalOpen = activeSheetType === 'tagCreate';
+  const isActivityCreateModalOpen = activeSheetType === 'activityCreate';
 
   // 派生 state: pending あり && modal が前にも後にもいない時だけ open
-  const selectorOpen = !!pendingSelection && !isTagCreateModalOpen && !waitingForModal;
+  const selectorOpen = !!pendingSelection && !isActivityCreateModalOpen && !waitingForModal;
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (open) return;
       queueMicrotask(() => {
-        if (useShellStore.getState().activeSheet?.type === 'tagCreate') {
+        if (useShellStore.getState().activeSheet?.type === 'activityCreate') {
           // modal 遷移中: pendingSelection を保持し、selector を非表示にする flag を立てる
           setWaitingForModal(true);
         } else {
@@ -87,13 +87,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [clearPendingSelection],
   );
 
-  // modal close 検知: activeSheet が tagCreate から離れたら waitingForModal を解除する。
+  // modal close 検知: activeSheet が activityCreate から離れたら waitingForModal を解除する。
   // 外部 store (Zustand) の変化に追随する subscribe 相当のため setState を許可する。
   useEffect(() => {
     if (!waitingForModal) return;
-    if (isTagCreateModalOpen) return;
+    if (isActivityCreateModalOpen) return;
     queueMicrotask(() => setWaitingForModal(false));
-  }, [waitingForModal, isTagCreateModalOpen]);
+  }, [waitingForModal, isActivityCreateModalOpen]);
 
   // pending を modal-pending 状態で抱えている間、unmount または waitingForModal の解除で
   // 必ず pending を解放する (calendar 離脱で stale selection が残らないように)。

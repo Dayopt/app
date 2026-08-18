@@ -137,10 +137,11 @@ const setSerializer = {
 };
 
 /**
- * v7 以前（タグモデル）の永続化データは全て破棄して初期状態へ落とす。
+ * v8 以前の永続化データは全て破棄して初期状態へ落とす。
  *
- * v7 の `visibleTagIds` はタグ ID の集合で、アクティビティ ID とは値空間が異なる。
- * そのまま `visibleActivityIds` として読むと全 ID が未知になり、初回 sync までの間
+ * v8 は state 名だけをアクティビティ語彙へ変えた段階で、**中身はまだタグ ID** だった
+ * （データ源が tags のままだったため）。v9 で実データが activities へ切り替わり、
+ * ID の値空間が変わる。そのまま読むと全 ID が未知になり、初回 sync までの間
  * 「カレンダーに何も表示されない」状態でアプリが開く。ID を引き継がず捨てることで、
  * 次の `syncWithActivities` が「初回」として全アクティビティを表示状態にする。
  */
@@ -148,7 +149,7 @@ export function migrateCalendarFilterState(
   persistedState: unknown,
   version: number,
 ): CalendarFilterState {
-  if (version < 8 || typeof persistedState !== 'object' || persistedState === null) {
+  if (version < 9 || typeof persistedState !== 'object' || persistedState === null) {
     return createInitialFilterState();
   }
 
@@ -298,9 +299,11 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // v6: showUntagged 復活。未分類(tag_id=null)ブロックのフィルター対応（#1576）
         // v7: knownTagIds 追加。syncWithTags が「新規タグ」と「意図的に非表示にした
         //     既知タグ」を区別するための基準集合（#1576フォローアップ）
-        // v8: タグモデル廃止。visibleTagIds→visibleActivityIds / showUntagged→showNoActivity /
-        //     knownTagIds→knownActivityIds。旧タグ ID は値空間が違うため migrate で全破棄する
-        version: 8,
+        // v8: 状態名をアクティビティ語彙へ改名（visibleTagIds→visibleActivityIds /
+        //     showUntagged→showNoActivity / knownTagIds→knownActivityIds）。
+        //     ただしこの時点のデータ源はまだ tags で、中身はタグ ID だった
+        // v9: データ源を activities へ切替。ID の値空間が変わるため migrate で全破棄する
+        version: 9,
         storage: createPlatformStorage<CalendarFilterState>({
           serialize: setSerializer.serialize,
           deserialize: setSerializer.deserialize,

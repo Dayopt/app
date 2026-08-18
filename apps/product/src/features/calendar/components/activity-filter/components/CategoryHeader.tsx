@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import type { TagColorName } from '@/features/tags';
-import { ColorPaletteMenuItems, IconPickerDropdownItems, TagIcon } from '@/features/tags';
+import type { CategoryColorName } from '@/features/activities';
+import { ActivityIcon, CategoryColorMenuItems, CategoryIconMenuItems } from '@/features/activities';
 import {
   cn,
   DropdownMenu,
@@ -41,7 +41,7 @@ interface CategoryHeaderProps {
   isMobile?: boolean;
   onToggleCollapse: () => void;
   onShowOnlyCategory: () => void;
-  onColorChange: (color: TagColorName) => void;
+  onColorChange: (color: CategoryColorName) => void;
   onIconChange?: ((icon: string | null) => void) | undefined;
   onAddActivityToCategory?: (() => void) | undefined;
   onRenameCategory?: (() => void) | undefined;
@@ -114,7 +114,7 @@ export function CategoryHeader({
       onContextMenu={handleContextMenu}
     >
       <span className="ml-2 shrink-0">
-        <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
+        <ActivityIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
       </span>
       <span
         className={cn(
@@ -190,7 +190,7 @@ export function CategoryHeader({
                   {t('calendar.filter.changeColor')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
-                  <ColorPaletteMenuItems
+                  <CategoryColorMenuItems
                     selectedColor={displayColor}
                     onColorSelect={onColorChange}
                   />
@@ -203,7 +203,7 @@ export function CategoryHeader({
                     {t('calendar.filter.changeIcon')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
-                    <IconPickerDropdownItems value={currentIcon ?? null} onChange={onIconChange} />
+                    <CategoryIconMenuItems value={currentIcon ?? null} onChange={onIconChange} />
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
               )}

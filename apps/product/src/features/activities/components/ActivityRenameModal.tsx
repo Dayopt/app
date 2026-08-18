@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * タグリネームモーダル
+ * アクティビティリネームモーダル
  *
- * `TagMergeModal` と同じく `useShellStore.activeSheet` で管理され、
- * どこからでも `useTagModalNavigation().openTagRenameModal(tag)` で開ける。
- * 名前だけを変更する軽量フォーム（色 / アイコン / グループは別 UI で変更）。
+ * `useShellStore.activeSheet` で管理され、どこからでも
+ * `useShellStore.use.openActivityRenameModal(activity)` で開ける。
+ * 名前だけを変更する軽量フォーム（所属カテゴリーの付け替えは行メニューの
+ * 「カテゴリーを変更」が担当するので、ここには置かない）。
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -22,34 +23,36 @@ import {
   FieldError,
   Input,
 } from '@dayopt/components';
-import { TAG_NAME_MAX_LENGTH } from '../lib/tag-colors';
 
-import { useUpdateTag } from '../hooks/useTagCrudMutations';
-import { useTags } from '../hooks/useTagsQuery';
+import { useActivities } from '../hooks/useActivitiesQuery';
+import { useUpdateActivity } from '../hooks/useActivityMutations';
+import { ACTIVITY_NAME_MAX_LENGTH } from '../lib/category-colors';
 
-import type { TagRenameTarget } from '@/lib/stores/useShellStore';
+import type { ActivityRenameTarget } from '@/lib/stores/useShellStore';
 
-interface TagRenameModalProps {
+interface ActivityRenameModalProps {
   open: boolean;
   onClose: () => void;
-  tag: TagRenameTarget;
+  activity: ActivityRenameTarget;
 }
 
-export function TagRenameModal({ open, onClose, tag }: TagRenameModalProps) {
-  const formKey = open ? `${tag.id}:${tag.name}` : 'closed';
+export function ActivityRenameModal({ open, onClose, activity }: ActivityRenameModalProps) {
+  const formKey = open ? `${activity.id}:${activity.name}` : 'closed';
 
-  return <TagRenameModalForm key={formKey} open={open} onClose={onClose} tag={tag} />;
+  return (
+    <ActivityRenameModalForm key={formKey} open={open} onClose={onClose} activity={activity} />
+  );
 }
 
-function TagRenameModalForm({ open, onClose, tag }: TagRenameModalProps) {
+function ActivityRenameModalForm({ open, onClose, activity }: ActivityRenameModalProps) {
   const t = useTranslations('calendar.filter.renamePopover');
   const tCommon = useTranslations('common');
 
-  const { data: existingTags } = useTags();
-  const updateTagMutation = useUpdateTag();
+  const { data: existingActivities } = useActivities();
+  const updateActivityMutation = useUpdateActivity();
 
-  const [name, setName] = useState(tag.name);
-  const [debouncedName, setDebouncedName] = useState(tag.name);
+  const [name, setName] = useState(activity.name);
+  const [debouncedName, setDebouncedName] = useState(activity.name);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -59,19 +62,26 @@ function TagRenameModalForm({ open, onClose, tag }: TagRenameModalProps) {
 
   const trimmedDebounced = debouncedName.trim();
 
+  // ActivityRenameTarget は id/name しか持たないので、重複チェックに使う
+  // category_id は現在の一覧から引く（見つからなければ未分類扱い）
+  const currentCategoryId = useMemo(
+    () => existingActivities?.find((other) => other.id === activity.id)?.category_id ?? null,
+    [existingActivities, activity.id],
+  );
+
   const duplicate = useMemo(() => {
     if (!trimmedDebounced) return false;
     const lower = trimmedDebounced.toLowerCase();
-    return (existingTags ?? []).some(
+    return (existingActivities ?? []).some(
       (other) =>
-        other.id !== tag.id &&
-        (other.parent_id ?? null) === (tag.parent_id ?? null) &&
+        other.id !== activity.id &&
+        (other.category_id ?? null) === currentCategoryId &&
         other.name.toLowerCase() === lower,
     );
-  }, [existingTags, tag.id, tag.parent_id, trimmedDebounced]);
+  }, [existingActivities, activity.id, currentCategoryId, trimmedDebounced]);
 
   const trimmedLive = name.trim();
-  const unchanged = trimmedLive === tag.name;
+  const unchanged = trimmedLive === activity.name;
   const canSubmit = trimmedLive.length > 0 && !duplicate && !unchanged && !submitting;
 
   const errorMessage = duplicate ? t('duplicateName') : null;
@@ -80,12 +90,12 @@ function TagRenameModalForm({ open, onClose, tag }: TagRenameModalProps) {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await updateTagMutation.mutateAsync({ id: tag.id, name: trimmedLive });
+      await updateActivityMutation.mutateAsync({ id: activity.id, name: trimmedLive });
       onClose();
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, updateTagMutation, tag.id, trimmedLive, onClose]);
+  }, [canSubmit, updateActivityMutation, activity.id, trimmedLive, onClose]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -114,7 +124,7 @@ function TagRenameModalForm({ open, onClose, tag }: TagRenameModalProps) {
             placeholder={t('namePlaceholder')}
             aria-label={t('name')}
             aria-invalid={duplicate || undefined}
-            maxLength={TAG_NAME_MAX_LENGTH}
+            maxLength={ACTIVITY_NAME_MAX_LENGTH}
             disabled={submitting}
           />
           {errorMessage ? <FieldError announceImmediately>{errorMessage}</FieldError> : null}

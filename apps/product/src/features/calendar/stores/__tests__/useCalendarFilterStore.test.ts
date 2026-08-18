@@ -35,32 +35,40 @@ describe('useCalendarFilterStore', () => {
       });
     });
 
-    // v8 はタグモデルからアクティビティモデルへの切り替え。旧 state の ID はタグ ID で
-    // 値空間が違うため、引き継ぐと全 ID が未知になり「カレンダーに何も表示されない」
-    // 状態でアプリが開く。v7 以前は中身によらず初期状態へ落とすのが契約。
-    it.each([4, 5, 6, 7])('v%i（タグモデル）の永続化データは初期状態へ落とす', (version) => {
-      expect(
-        migrateCalendarFilterState(
-          {
-            visibleTagIds: new Set(['tag-1', 'tag-2']),
-            initialized: true,
-            showUntagged: false,
-            knownTagIds: new Set(['tag-1', 'tag-2']),
-          },
-          version,
-        ),
-      ).toEqual({
-        visibleActivityIds: new Set<string>(),
-        initialized: false,
-        showNoActivity: true,
-        knownActivityIds: new Set<string>(),
-      });
-    });
+    // v9 でデータ源が tags から activities へ切り替わり、ID の値空間が変わる。
+    // v8 は state 名だけを改名した段階で中身はまだタグ ID だったため、v8 も含めて
+    // 引き継がない。引き継ぐと全 ID が未知になり「カレンダーに何も表示されない」
+    // 状態でアプリが開く。v8 以前は中身によらず初期状態へ落とすのが契約。
+    it.each([4, 5, 6, 7, 8])(
+      'v%i（タグ ID を持つ世代）の永続化データは初期状態へ落とす',
+      (version) => {
+        expect(
+          migrateCalendarFilterState(
+            {
+              visibleTagIds: new Set(['tag-1', 'tag-2']),
+              initialized: true,
+              showUntagged: false,
+              knownTagIds: new Set(['tag-1', 'tag-2']),
+            },
+            version,
+          ),
+        ).toEqual({
+          visibleActivityIds: new Set<string>(),
+          initialized: false,
+          showNoActivity: true,
+          knownActivityIds: new Set<string>(),
+        });
+      },
+    );
 
-    it('v7 から移行した直後の sync は「初回」として全アクティビティを表示する', () => {
+    it('v8 から移行した直後の sync は「初回」として全アクティビティを表示する', () => {
       const migrated = migrateCalendarFilterState(
-        { visibleTagIds: new Set(['tag-1']), initialized: true, knownTagIds: new Set(['tag-1']) },
-        7,
+        {
+          visibleActivityIds: new Set(['tag-1']),
+          initialized: true,
+          knownActivityIds: new Set(['tag-1']),
+        },
+        8,
       );
       useCalendarFilterStore.setState(migrated);
 
@@ -72,7 +80,7 @@ describe('useCalendarFilterStore', () => {
       expect(state.visibleActivityIds.has('tag-1')).toBe(false);
     });
 
-    it('v8 の永続化データはそのまま保持する', () => {
+    it('v9 の永続化データはそのまま保持する', () => {
       expect(
         migrateCalendarFilterState(
           {
@@ -81,7 +89,7 @@ describe('useCalendarFilterStore', () => {
             showNoActivity: false,
             knownActivityIds: new Set(['activity-1', 'activity-2']),
           },
-          8,
+          9,
         ),
       ).toEqual({
         visibleActivityIds: new Set(['activity-1']),
@@ -91,11 +99,11 @@ describe('useCalendarFilterStore', () => {
       });
     });
 
-    it('v8 で showNoActivity キーが無ければ表示(true)を既定にする', () => {
+    it('v9 で showNoActivity キーが無ければ表示(true)を既定にする', () => {
       expect(
         migrateCalendarFilterState(
           { visibleActivityIds: new Set(['activity-1']), initialized: true },
-          8,
+          9,
         ),
       ).toEqual({
         visibleActivityIds: new Set(['activity-1']),

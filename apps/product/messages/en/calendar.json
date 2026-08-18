@@ -251,7 +251,9 @@
         "selectIcon": "Select icon",
         "selectCategory": "Select category",
         "noCategory": "No category",
-        "duplicateName": "An activity with this name already exists. Please choose a different name."
+        "duplicateName": "An activity with this name already exists. Please choose a different name.",
+        "categoryName": "Category name",
+        "categoryNamePlaceholder": "e.g. Work, Personal"
       },
       "renamePopover": {
         "title": "Rename",

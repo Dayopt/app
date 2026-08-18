@@ -21,6 +21,12 @@ export {
   getColorDisplayName,
 } from './components/CategoryAppearanceMenuItems';
 
+// モーダル / 確認ダイアログ
+export { ActivityCreateModal } from './components/ActivityCreateModal';
+export { ActivityDeleteConfirmDialog } from './components/ActivityDeleteConfirmDialog';
+export { ActivityRenameModal } from './components/ActivityRenameModal';
+export { CategoryRenameModal } from './components/CategoryRenameModal';
+
 // 色・アイコンの解決
 export {
   ACTIVITY_NAME_MAX_LENGTH,

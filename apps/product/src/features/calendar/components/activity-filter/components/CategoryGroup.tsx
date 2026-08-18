@@ -5,10 +5,10 @@ import { useCallback, useMemo } from 'react';
 
 import { useLocale } from 'next-intl';
 
-import type { Tag } from '@/features/tags';
+import type { Activity, Category } from '@/features/activities';
 
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
-import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
+import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
 import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
 
 import { ActivityRow } from './ActivityRow';
@@ -17,9 +17,9 @@ import { CategoryHeader } from './CategoryHeader';
 import { useCategoryAppearanceEdit } from './useCategoryAppearanceEdit';
 
 interface CategoryGroupProps {
-  category: Tag;
-  activities: Tag[];
-  allActivities: Tag[];
+  category: Category;
+  activities: Activity[];
+  allActivities: Activity[];
   visibleActivityIds: Set<string>;
   categoryOptions: CategoryOption[];
   collapsed: boolean;
@@ -29,8 +29,10 @@ interface CategoryGroupProps {
   onShowOnlyActivity: (activityId: string) => void;
   onShowOnlyCategoryActivities: (activityIds: string[]) => void;
   getCategoryVisibility: (activityIds: string[]) => 'all' | 'none' | 'some';
-  onArchive: (id: string) => void;
-  onDelete: (id: string, name: string) => void;
+  onArchiveCategory: (id: string) => void;
+  onDeleteCategory: (id: string, name: string) => void;
+  onArchiveActivity: (id: string) => void;
+  onDeleteActivity: (id: string, name: string) => void;
   openPopoverActivityId: string | null;
   onOpenPopover: (activityId: string | null) => void;
 }
@@ -55,15 +57,17 @@ export function CategoryGroup({
   onShowOnlyActivity,
   onShowOnlyCategoryActivities,
   getCategoryVisibility,
-  onArchive,
-  onDelete,
+  onArchiveCategory,
+  onDeleteCategory,
+  onArchiveActivity,
+  onDeleteActivity,
   openPopoverActivityId,
   onOpenPopover,
 }: CategoryGroupProps) {
   const locale = useLocale();
   const router = useRouter();
   const navigation = useCalendarNavigation();
-  const { openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
+  const { openActivityCreateModal, openCategoryRenameModal } = useActivityModalNavigation();
   const { displayColor, handleColorChange, handleIconChange } = useCategoryAppearanceEdit({
     categoryId: category.id,
     initialColor: category.color ?? undefined,
@@ -95,17 +99,11 @@ export function CategoryGroup({
         onShowOnlyCategory={() => onShowOnlyCategoryActivities(activityIds)}
         onColorChange={handleColorChange}
         onIconChange={handleIconChange}
-        onAddActivityToCategory={() => openTagCreateModal({ initialParentId: category.id })}
-        onRenameCategory={() =>
-          openTagRenameModal({
-            id: category.id,
-            name: category.name,
-            parent_id: category.parent_id ?? null,
-          })
-        }
+        onAddActivityToCategory={() => openActivityCreateModal({ initialCategoryId: category.id })}
+        onRenameCategory={() => openCategoryRenameModal({ id: category.id, name: category.name })}
         onViewStats={handleViewStats}
-        onArchiveCategory={() => onArchive(category.id)}
-        onDeleteCategory={() => onDelete(category.id, category.name)}
+        onArchiveCategory={() => onArchiveCategory(category.id)}
+        onDeleteCategory={() => onDeleteCategory(category.id, category.name)}
       />
 
       {!collapsed ? (
@@ -122,8 +120,8 @@ export function CategoryGroup({
               categoryOptions={categoryOptions.filter((option) => option.id !== category.id)}
               isMobile={isMobile}
               onToggle={() => onToggleActivity(activity.id)}
-              onArchiveActivity={() => onArchive(activity.id)}
-              onDeleteActivity={() => onDelete(activity.id, activity.name)}
+              onArchiveActivity={() => onArchiveActivity(activity.id)}
+              onDeleteActivity={() => onDeleteActivity(activity.id, activity.name)}
               onShowOnlyActivity={() => onShowOnlyActivity(activity.id)}
               openPopoverActivityId={openPopoverActivityId}
               onOpenPopover={onOpenPopover}

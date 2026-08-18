@@ -103,7 +103,7 @@ function TagQuickSelectorContent({
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const openTagCreateModal = useShellStore.use.openTagCreateModal();
+  const openActivityCreateModal = useShellStore.use.openActivityCreateModal();
 
   const sortedTags = useMemo(() => (tags ?? []).filter((tag) => tag.is_active !== false), [tags]);
 
@@ -117,14 +117,14 @@ function TagQuickSelectorContent({
 
   const handleOpenCreate = useCallback(() => {
     closeSelf();
-    openTagCreateModal({
-      onCreated: (tag) => {
-        // tag は modal 側で作成済み。caller の onCreateAndSelect は再度 mutation
+    openActivityCreateModal({
+      onCreated: (activity) => {
+        // 作成は modal 側で済んでいる。caller の onCreateAndSelect は再度 mutation
         // を呼んで duplicate-name で fail するので、id を直接 onSelect に渡す。
-        onSelect(tag.id, tag.name);
+        onSelect(activity.id, activity.name);
       },
     });
-  }, [closeSelf, openTagCreateModal, onSelect]);
+  }, [closeSelf, openActivityCreateModal, onSelect]);
 
   const isTagZero = sortedTags.length === 0;
 
