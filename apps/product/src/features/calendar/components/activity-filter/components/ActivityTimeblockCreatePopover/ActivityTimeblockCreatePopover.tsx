@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
-import { resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
+import { resolveCategoryColor, useActivitiesMap, useCreateActivity } from '@/features/activities';
 import {
   collectTimeblockLaneItems,
   hasTimeblockLaneConflict,
@@ -23,7 +23,7 @@ import {
   PopoverContent,
 } from '@dayopt/components';
 
-import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
+import { useActivityDraftStore } from '../../../../stores/useActivityDraftStore';
 import {
   ActivityTimeblockCreateForm,
   type ActivityEntryCreateFormProps,
@@ -45,7 +45,7 @@ function defaultStartHHMM(forDate: Date): string {
 interface ActivityEntryCreatePopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activity: ActivityEntryCreateFormProps['tag'];
+  activity: ActivityEntryCreateFormProps['activity'];
   /** モバイル時は bottom sheet (vaul Drawer)、PC 時は Popover。指定なしは PC 扱い */
   isMobile?: boolean;
 }
@@ -73,10 +73,10 @@ const FALLBACK_DURATION_MINUTES = 60;
 /**
  * sidebar アクティビティ行クリック → エントリ作成ポップアップ。
  *
- * state は {@link useTagDraftStore} に持つため、calendar 上の draft block の resize と
+ * state は {@link useActivityDraftStore} に持つため、calendar 上の draft block の resize と
  * popover の time input の双方が同じ store を経由して相互反映する。
  *
- * - tap 時に呼び出し側が `openDraft({ tag, date, startTime, endTime })` を call
+ * - tap 時に呼び出し側が `openDraft({ activity, date, startTime, endTime })` を call
  * - popover はその draft を read/write
  * - 作成成功で `closeDraft()` + 5s undo トースト、失敗時は popover 維持
  */
@@ -89,16 +89,16 @@ export function ActivityTimeblockCreatePopover({
   const t = useTranslations();
   const { createRecord, createPlan, deleteRecord, deletePlan } = useTimeblockWriteMutations();
   const queryClient = useQueryClient();
-  const createTagMutation = useCreateTag({ showToast: false });
-  const { getTagById } = useTagsMap();
+  const createActivityMutation = useCreateActivity({ showToast: false });
+  const { getActivityById } = useActivitiesMap();
 
-  const draft = useTagDraftStore((s) => s.draft);
-  const openDraft = useTagDraftStore((s) => s.openDraft);
-  const updateTimes = useTagDraftStore((s) => s.updateTimes);
-  const updateTag = useTagDraftStore((s) => s.updateTag);
-  const closeDraft = useTagDraftStore((s) => s.closeDraft);
+  const draft = useActivityDraftStore((s) => s.draft);
+  const openDraft = useActivityDraftStore((s) => s.openDraft);
+  const updateTimes = useActivityDraftStore((s) => s.updateTimes);
+  const updateActivity = useActivityDraftStore((s) => s.updateActivity);
+  const closeDraft = useActivityDraftStore((s) => s.closeDraft);
 
-  const currentTag = draft?.tag ?? activity;
+  const currentActivity = draft?.activity ?? activity;
   const selectedDate = draft ? draft.date : startOfDay(new Date());
   const startTime = draft ? draft.startTime : '09:00';
   const endTime = draft ? draft.endTime : '10:00';
@@ -111,7 +111,7 @@ export function ActivityTimeblockCreatePopover({
     const date = startOfDay(new Date());
     const seedStart = defaultStartHHMM(date);
     openDraft({
-      tag: activity,
+      activity,
       date,
       startTime: seedStart,
       endTime: addMinutesToHHMM(seedStart, FALLBACK_DURATION_MINUTES),
@@ -157,45 +157,48 @@ export function ActivityTimeblockCreatePopover({
     closeDraft();
   }, [closeDraft, onOpenChange]);
 
-  const handleTagChange = useCallback(
-    (nextTagId: string | null) => {
-      if (!nextTagId) return;
-      const nextTag = getTagById(nextTagId);
-      if (!nextTag) return;
+  const handleActivityChange = useCallback(
+    (nextActivityId: string | null) => {
+      if (!nextActivityId) return;
+      const nextActivity = getActivityById(nextActivityId);
+      if (!nextActivity) return;
 
-      const normalizedColor = resolveTagColor(nextTag.color);
-      const nextDraftTag = {
-        id: nextTag.id,
-        name: nextTag.name,
-        color: normalizedColor,
-        icon: nextTag.icon ?? null,
-      };
-
-      updateTag(nextDraftTag);
+      updateActivity({
+        id: nextActivity.id,
+        name: nextActivity.name,
+        // 色・アイコンは所属カテゴリーからの継承値。未分類なら null のまま持つ
+        color: nextActivity.color === null ? null : resolveCategoryColor(nextActivity.color),
+        icon: nextActivity.icon,
+      });
     },
-    [getTagById, updateTag],
+    [getActivityById, updateActivity],
   );
 
-  const handleCreateAndSelectTag = useCallback(
-    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
+  const handleCreateAndSelectActivity = useCallback(
+    async (
+      name: string,
+      _color?: string | null,
+      _icon?: string | null,
+      categoryId?: string | null,
+    ) => {
       try {
-        const created = await createTagMutation.mutateAsync({
+        // 色・アイコンはカテゴリーだけが持つ（#2162 §4-6）。作成時に受け取っても
+        // アクティビティ側には保存せず、所属カテゴリーの指定だけを渡す。
+        const created = await createActivityMutation.mutateAsync({
           name,
-          color: resolveTagColor(color),
-          icon: icon ?? undefined,
-          parentId: parentId ?? undefined,
+          categoryId: categoryId ?? undefined,
         });
-        handleTagChange(created.id);
+        handleActivityChange(created.id);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message.includes('duplicate') || message.includes('already exists')) {
-          toast.error(t('tags.errors.duplicateName'));
+          toast.error(t('activities.activity.duplicateName'));
         } else {
-          toast.error(t('tags.errors.createFailed'));
+          toast.error(t('activities.activity.createFailed'));
         }
       }
     },
-    [createTagMutation, handleTagChange, t],
+    [createActivityMutation, handleActivityChange, t],
   );
 
   // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
@@ -221,10 +224,10 @@ export function ActivityTimeblockCreatePopover({
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
     const destination = resolveTimeblockDestination(endDate);
-    const displayTitle = currentTag.name;
+    const displayTitle = currentActivity.name;
     const input = {
-      title: currentTag.name,
-      tagId: currentTag.id,
+      title: currentActivity.name,
+      activityId: currentActivity.id,
       start_at: startDate.toISOString(),
       end_at: endDate.toISOString(),
     };
@@ -265,15 +268,15 @@ export function ActivityTimeblockCreatePopover({
     selectedDate,
     startTime,
     t,
-    currentTag.id,
-    currentTag.name,
+    currentActivity.id,
+    currentActivity.name,
   ]);
 
   const formNode = (
     <ActivityTimeblockCreateForm
-      tag={currentTag}
-      onTagChange={handleTagChange}
-      onCreateAndSelect={handleCreateAndSelectTag}
+      activity={currentActivity}
+      onActivityChange={handleActivityChange}
+      onCreateAndSelect={handleCreateAndSelectActivity}
       selectedDate={selectedDate}
       onDateSelect={handleDateSelect}
       startTime={startTime}
@@ -299,7 +302,7 @@ export function ActivityTimeblockCreatePopover({
         repositionInputs={false}
       >
         <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
-          <DrawerTitle className="sr-only">{currentTag.name}</DrawerTitle>
+          <DrawerTitle className="sr-only">{currentActivity.name}</DrawerTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-lg">{formNode}</div>
           </div>

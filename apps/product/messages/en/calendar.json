@@ -195,11 +195,19 @@
     },
     "filter": {
       "type": "Type",
+      "categoriesSection": "Categories",
       "uncategorized": "Uncategorized",
       "noActivity": "No activity",
+      "noCategories": "No categories yet",
+      "noUncategorized": "No uncategorized activities",
+      "noArchived": "Nothing archived",
       "noActivities": "Give your time a name with activities, and patterns will start to show. Create your first activity.",
       "comingSoon": "Coming soon",
       "createActivity": "Create activity",
+      "activitySettings": "Display",
+      "statusAll": "All",
+      "statusActive": "Active",
+      "statusArchived": "Archived",
       "createCategory": "Create category",
       "quickCreate": "Quick create",
       "addActivityToCategory": "Add activity",
@@ -211,6 +219,7 @@
       "noteHint": "Displayed in tooltip",
       "notePlaceholder": "Add a note...",
       "changeCategory": "Change category",
+      "changeActivity": "Change activity",
       "noCategory": "No category",
       "merge": "Merge into another activity",
       "showOnlyThisActivity": "Show only this activity",
@@ -226,7 +235,6 @@
       "expand": "Expand",
       "collapse": "Collapse",
       "archive": "Archive",
-      "archivedSection": "Archived",
       "archivedLoadFailed": "Could not load archived items",
       "restore": "Restore",
       "deleteActivity": {
@@ -251,7 +259,9 @@
         "selectIcon": "Select icon",
         "selectCategory": "Select category",
         "noCategory": "No category",
-        "duplicateName": "An activity with this name already exists. Please choose a different name."
+        "duplicateName": "An activity with this name already exists. Please choose a different name.",
+        "categoryName": "Category name",
+        "categoryNamePlaceholder": "e.g. Work, Personal"
       },
       "renamePopover": {
         "title": "Rename",
@@ -260,20 +270,12 @@
         "duplicateName": "An item with this name already exists. Please choose a different name."
       }
     },
-    "tagSelector": {
-      "title": "Select a tag",
-      "searchPlaceholder": "Search tags...",
-      "noResults": "No tags found",
-      "createPlaceholder": "e.g. Work, Study, Exercise...",
+    "activitySelector": {
+      "title": "Select an activity",
       "new": "New",
-      "create": "Create",
-      "color": "Color",
-      "icon": "Icon",
-      "group": "Group",
-      "noGroup": "None",
-      "emptyTitle": "Tags categorize your time",
-      "emptyDescription": "Pick one to get started, or create your own below",
-      "sampleTags": {
+      "emptyTitle": "Activities categorize your time",
+      "emptyDescription": "Tap one, or create your own below",
+      "sampleActivities": {
         "work": "Work",
         "study": "Study",
         "exercise": "Exercise",

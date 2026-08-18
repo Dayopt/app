@@ -259,7 +259,7 @@ export const BehindPlanCard: Story = {
           status: 'upcoming',
         }}
         position={{ top: 10.25 * HOUR_HEIGHT, height: 60, left: 0, width: 38 }}
-        tagName="Deep Work"
+        activityName="Deep Work"
         interactive={false}
       />
     </DayColumn>
@@ -419,7 +419,7 @@ export const AllPatterns: Story = {
               status: 'upcoming',
             }}
             position={{ top: 10.25 * HOUR_HEIGHT, height: 60, left: 0, width: 38 }}
-            tagName="Deep Work"
+            activityName="Deep Work"
             interactive={false}
           />
         </DayColumn>

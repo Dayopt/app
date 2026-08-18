@@ -3,24 +3,16 @@
  *
  * @example
  * ```tsx
- * import { useTags, useCreateTag } from '@/features/tags/hooks'
+ * import { useTags } from '@/features/tags/hooks'
  * ```
  */
 
-// Tags Query Keys
-export { tagKeys } from './tagQueryKeys';
-
 // Tags Query Hooks
-export { useTags, useTagsHierarchy } from './useTagsQuery';
+export { useTags } from './useTagsQuery';
 
 // Tags Mutation Hooks (CRUD)
-export { useCreateTag, useDeleteTag, useUpdateTag } from './useTagCrudMutations';
 
 // Tags Mutation Hooks (Archive / Restore)
-export { useArchiveTag, useArchivedTags, useRestoreTag } from './useTagArchiveMutations';
-
-// Tags Mutation Hooks (Merge)
-export { useMergeTag } from './useTagMergeMutation';
 
 // Tag Map
 export { useTagsMap } from './useTagsMap';

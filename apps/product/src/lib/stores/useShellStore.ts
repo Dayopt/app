@@ -9,57 +9,59 @@ import { platformStorage } from '@/lib/zustand/storage';
 
 // ── Sheet Types ──
 
-/** タグマージモーダルで渡す source tag の identity */
-interface TagMergeSourceTag {
+/** アクティビティ改名モーダルで渡す対象の identity */
+export interface ActivityRenameTarget {
   id: string;
   name: string;
-  color?: string | null;
 }
 
-/** タグリネームモーダルで渡す対象タグの identity */
-export interface TagRenameTarget {
+/** カテゴリー改名モーダルで渡す対象の identity */
+export interface CategoryRenameTarget {
   id: string;
   name: string;
-  parent_id: string | null;
-}
-
-/** タグ新規作成 modal の onCreated に渡される最小限の tag 情報（feature 依存を避ける plain shape） */
-export interface CreatedTagPayload {
-  id: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
-  parent_id: string | null;
 }
 
 /**
- * タグ新規作成モーダルの context。
+ * アクティビティ作成 modal の onCreated に渡される最小限の情報
+ * （feature 依存を避ける plain shape）。
+ */
+export interface CreatedActivityPayload {
+  id: string;
+  name: string;
+  categoryId: string | null;
+}
+
+/**
+ * アクティビティ作成モーダルの context。
  * `onCreated` は serializable ではないため persist には乗せない（partialize で除外済）。
  */
-export interface TagCreateContext {
-  /** 初期選択親タグ（null = ルート） */
-  initialParentId: string | null;
+export interface ActivityCreateContext {
+  /** 初期選択カテゴリー（null = 未分類） */
+  initialCategoryId: string | null;
   /**
    * 作成成功時のコールバック。caller が selection 反映や後続処理を行うのに使う。
    */
-  onCreated?: (tag: CreatedTagPayload) => void;
+  onCreated?: (activity: CreatedActivityPayload) => void;
 }
 
 /**
  * シェルレベルのシート/ダイアログ（排他: 1つしか開かない）
  *
- * `contact` / `settings` は Sheet 系、`tagMerge` / `tagRename` / `tagCreate` は Modal 系だが、
- * shell 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
- * を統合、P2-2）。
+ * `contact` / `settings` は Sheet 系、`activityCreate` / `activityRename` /
+ * `categoryRename` は Modal 系だが、shell 全体で「1 つしか開かない overlay」として
+ * 統一管理する（旧 useModalStore を統合、P2-2）。
+ *
+ * アクティビティの統合（マージ）は v1 で持たない（#2162 §4-8）。重複は改名 +
+ * アーカイブで代替するため、統合用の sheet も置かない。
  */
 type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
   | { type: 'timeblockSearch' }
   | { type: 'shortcutCheatSheet' }
-  | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }
-  | { type: 'tagRename'; tag: TagRenameTarget }
-  | { type: 'tagCreate'; context: TagCreateContext };
+  | { type: 'activityCreate'; context: ActivityCreateContext }
+  | { type: 'activityRename'; activity: ActivityRenameTarget }
+  | { type: 'categoryRename'; category: CategoryRenameTarget };
 
 // ── State ──
 
@@ -110,17 +112,17 @@ interface ShellStoreActions {
   closeSettings: () => void;
   setSettingsCategory: (category: SettingsCategory) => void;
 
-  // Tag merge modal convenience
-  openTagMergeModal: (sourceTag: TagMergeSourceTag) => void;
-  closeTagMergeModal: () => void;
+  // Activity create modal convenience
+  openActivityCreateModal: (context?: Partial<ActivityCreateContext>) => void;
+  closeActivityCreateModal: () => void;
 
-  // Tag rename modal convenience
-  openTagRenameModal: (tag: TagRenameTarget) => void;
-  closeTagRenameModal: () => void;
+  // Activity rename modal convenience
+  openActivityRenameModal: (activity: ActivityRenameTarget) => void;
+  closeActivityRenameModal: () => void;
 
-  // Tag create modal convenience
-  openTagCreateModal: (context?: Partial<TagCreateContext>) => void;
-  closeTagCreateModal: () => void;
+  // Category rename modal convenience
+  openCategoryRenameModal: (category: CategoryRenameTarget) => void;
+  closeCategoryRenameModal: () => void;
 }
 
 // ── Store ──
@@ -190,45 +192,53 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           }
         },
 
-        // ── Tag Merge Modal Convenience ──
-        openTagMergeModal: (sourceTag) =>
-          set({ activeSheet: { type: 'tagMerge', sourceTag } }, false, 'openTagMergeModal'),
-        closeTagMergeModal: () => {
-          const { activeSheet } = get();
-          if (activeSheet?.type === 'tagMerge') {
-            set({ activeSheet: null }, false, 'closeTagMergeModal');
-          }
-        },
-
-        // ── Tag Rename Modal Convenience ──
-        openTagRenameModal: (tag) =>
-          set({ activeSheet: { type: 'tagRename', tag } }, false, 'openTagRenameModal'),
-        closeTagRenameModal: () => {
-          const { activeSheet } = get();
-          if (activeSheet?.type === 'tagRename') {
-            set({ activeSheet: null }, false, 'closeTagRenameModal');
-          }
-        },
-
-        // ── Tag Create Modal Convenience ──
-        openTagCreateModal: (context) =>
+        // ── Activity Create Modal Convenience ──
+        openActivityCreateModal: (context) =>
           set(
             {
               activeSheet: {
-                type: 'tagCreate',
+                type: 'activityCreate',
                 context: {
-                  initialParentId: context?.initialParentId ?? null,
+                  initialCategoryId: context?.initialCategoryId ?? null,
                   ...(context?.onCreated ? { onCreated: context.onCreated } : {}),
                 },
               },
             },
             false,
-            'openTagCreateModal',
+            'openActivityCreateModal',
           ),
-        closeTagCreateModal: () => {
+        closeActivityCreateModal: () => {
           const { activeSheet } = get();
-          if (activeSheet?.type === 'tagCreate') {
-            set({ activeSheet: null }, false, 'closeTagCreateModal');
+          if (activeSheet?.type === 'activityCreate') {
+            set({ activeSheet: null }, false, 'closeActivityCreateModal');
+          }
+        },
+
+        // ── Activity Rename Modal Convenience ──
+        openActivityRenameModal: (activity) =>
+          set(
+            { activeSheet: { type: 'activityRename', activity } },
+            false,
+            'openActivityRenameModal',
+          ),
+        closeActivityRenameModal: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'activityRename') {
+            set({ activeSheet: null }, false, 'closeActivityRenameModal');
+          }
+        },
+
+        // ── Category Rename Modal Convenience ──
+        openCategoryRenameModal: (category) =>
+          set(
+            { activeSheet: { type: 'categoryRename', category } },
+            false,
+            'openCategoryRenameModal',
+          ),
+        closeCategoryRenameModal: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'categoryRename') {
+            set({ activeSheet: null }, false, 'closeCategoryRenameModal');
           }
         },
       }),

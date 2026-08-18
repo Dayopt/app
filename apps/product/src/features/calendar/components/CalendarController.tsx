@@ -193,7 +193,6 @@ export function CalendarController({
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   const visibleActivityIds = useCalendarFilterStore((state) => state.visibleActivityIds);
-  const showNoActivity = useCalendarFilterStore((state) => state.showNoActivity);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -210,6 +209,7 @@ export function CalendarController({
           title: entry.title,
           note: entry.description ?? null,
           tagId: entry.tagId,
+          activityId: entry.activityId,
           startAt,
           endAt,
         }),
@@ -254,7 +254,6 @@ export function CalendarController({
   );
   const calendarDiffPlans = useMemo(() => {
     void visibleActivityIds;
-    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'plan')
@@ -262,13 +261,14 @@ export function CalendarController({
         id: entry.id,
         title: entry.title,
         tagId: entry.tagId ?? null,
+        activityId: entry.activityId ?? null,
         color: entry.color,
         startAt: entry.startDate ?? entry.displayStartDate,
         endAt: entry.endDate ?? entry.displayEndDate,
         skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
-        // 範囲外・非表示タグのPlanも、表示中Recordの関係解決には残す。
+        // 範囲外・非表示アクティビティのPlanも、表示中Recordの関係解決には残す。
         isIncludedInDiff:
-          isEntryVisible(entry.tagId ?? null) &&
+          isEntryVisible(entry.activityId ?? null) &&
           isWithinVisibleDayBounds(
             entry.startDate ?? entry.displayStartDate,
             entry.endDate ?? entry.displayEndDate,
@@ -279,20 +279,19 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showNoActivity,
     visibleActivityIds,
   ]);
   const calendarDiffRecords = useMemo(() => {
     void visibleActivityIds;
-    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
-      .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
+      .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.activityId ?? null))
       .map((entry) => ({
         id: entry.id,
         planId: entry.planId ?? null,
         title: entry.title,
         tagId: entry.tagId ?? null,
+        activityId: entry.activityId ?? null,
         color: entry.color,
         startAt: entry.startDate ?? entry.displayStartDate,
         endAt: entry.endDate ?? entry.displayEndDate,
@@ -303,7 +302,6 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showNoActivity,
     visibleActivityIds,
   ]);
   const calendarDiff = useMemo(

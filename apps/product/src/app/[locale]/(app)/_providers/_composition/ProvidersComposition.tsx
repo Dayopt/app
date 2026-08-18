@@ -50,27 +50,29 @@ const ServiceWorkerProvider = dynamic(
   { ssr: false },
 );
 
-// GlobalTagMergeModalを遅延ロード
-const GlobalTagMergeModal = dynamic(
+// アクティビティ作成モーダルを遅延ロード
+const GlobalActivityCreateModal = dynamic(
   () =>
-    import('@/features/tags/components/GlobalTagMergeModal').then((mod) => mod.GlobalTagMergeModal),
-  { ssr: false },
-);
-
-// GlobalTagRenameModalを遅延ロード
-const GlobalTagRenameModal = dynamic(
-  () =>
-    import('@/features/tags/components/GlobalTagRenameModal').then(
-      (mod) => mod.GlobalTagRenameModal,
+    import('@/features/activities/components/GlobalActivityCreateModal').then(
+      (mod) => mod.GlobalActivityCreateModal,
     ),
   { ssr: false },
 );
 
-// GlobalTagCreateModalを遅延ロード
-const GlobalTagCreateModal = dynamic(
+// アクティビティ改名モーダルを遅延ロード
+const GlobalActivityRenameModal = dynamic(
   () =>
-    import('@/features/tags/components/GlobalTagCreateModal').then(
-      (mod) => mod.GlobalTagCreateModal,
+    import('@/features/activities/components/GlobalActivityRenameModal').then(
+      (mod) => mod.GlobalActivityRenameModal,
+    ),
+  { ssr: false },
+);
+
+// カテゴリー改名モーダルを遅延ロード
+const GlobalCategoryRenameModal = dynamic(
+  () =>
+    import('@/features/activities/components/GlobalCategoryRenameModal').then(
+      (mod) => mod.GlobalCategoryRenameModal,
     ),
   { ssr: false },
 );
@@ -114,9 +116,9 @@ export function ProvidersComposition({ children }: ProvidersCompositionProps) {
                   timezone 等が defaults のまま timezone-dependent mutation が実行
                   されるのを防ぐ。TanStack Query の永続 cache が効けば体感遅延は極小。 */}
               <UserSettingsInitializer>{children}</UserSettingsInitializer>
-              <GlobalTagMergeModal />
-              <GlobalTagRenameModal />
-              <GlobalTagCreateModal />
+              <GlobalActivityCreateModal />
+              <GlobalActivityRenameModal />
+              <GlobalCategoryRenameModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>
         </ThemeProvider>

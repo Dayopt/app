@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Mobile Navigation E2E
  *
  * Calendar 1画面化後の mobile shell regression guard:
- * フッターはタグ作成専用にし、アカウント導線は右上 icon から設定へ遷移する。
+ * フッターはアクティビティ作成専用にし、アカウント導線は右上 icon から設定へ遷移する。
  */
 
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;

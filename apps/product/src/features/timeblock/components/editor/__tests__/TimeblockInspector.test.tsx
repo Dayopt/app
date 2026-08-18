@@ -23,10 +23,12 @@ vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => false,
 }));
 
-vi.mock('@/features/tags', () => ({
-  useTagsMap: () => ({
-    getTagById: (tagId: string) =>
-      tagId === 'tag-1' ? { id: tagId, name: 'Work', color: 'blue', icon: null } : undefined,
+vi.mock('@/features/activities', () => ({
+  useActivitiesMap: () => ({
+    getActivityById: (activityId: string) =>
+      activityId === 'activity-1'
+        ? { id: activityId, name: 'Work', color: 'blue', icon: null }
+        : undefined,
   }),
 }));
 
@@ -101,7 +103,7 @@ const plan = {
   id: 'plan-1',
   user_id: 'user-1',
   tag_id: 'tag-1',
-  activity_id: null,
+  activity_id: 'activity-1',
   external_calendar_event_id: null,
   title: 'Legacy plan title',
   note: null,
@@ -118,7 +120,7 @@ const record = {
   id: 'record-1',
   user_id: 'user-1',
   tag_id: 'tag-1',
-  activity_id: null,
+  activity_id: 'activity-1',
   plan_id: plan.id,
   external_calendar_event_id: null,
   title: 'Legacy record title',
@@ -228,7 +230,7 @@ describe('TimeblockInspector relationships', () => {
         title: plan.title,
         note: plan.note,
         tagId: plan.tag_id,
-        activityId: null,
+        activityId: plan.activity_id,
         startAt: plan.start_at,
         endAt: plan.end_at,
       }),

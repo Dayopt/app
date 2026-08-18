@@ -154,6 +154,7 @@ const STATIC_RESULT: TimeblockSearchResult = {
   id: 'plan-static',
   note: 'Outline the next product iteration',
   tagId: 'tag-work',
+  activityId: 'activity-work',
   startAt: '2026-07-15T00:00:00.000Z',
   endAt: '2026-07-15T01:00:00.000Z',
   isSkipped: false,
@@ -164,6 +165,7 @@ const STATIC_RESULT_UNCATEGORIZED: TimeblockSearchResult = {
   id: 'record-uncategorized',
   note: 'Tag was deleted after this record was made',
   tagId: null,
+  activityId: null,
   startAt: '2026-07-15T02:00:00.000Z',
   endAt: '2026-07-15T02:45:00.000Z',
   isSkipped: false,
@@ -196,7 +198,7 @@ function StaticPattern({
           <TimeblockSearchContent
             query={query}
             results={results}
-            tagsById={STATIC_TAGS}
+            activitiesById={STATIC_TAGS}
             isLoading={isLoading}
             isError={isError}
             hasMore={hasMore}
@@ -210,7 +212,7 @@ function StaticPattern({
         <TimeblockSearchContent
           query={query}
           results={results}
-          tagsById={STATIC_TAGS}
+          activitiesById={STATIC_TAGS}
           isLoading={isLoading}
           isError={isError}
           hasMore={hasMore}

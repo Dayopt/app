@@ -1,0 +1,39 @@
+{
+  "activities": {
+    "activity": {
+      "created": "「{name}」を作成しました",
+      "updated": "「{name}」を更新しました",
+      "deleted": "「{name}」を削除しました",
+      "archived": "「{name}」をアーカイブしました",
+      "restored": "「{name}」を復元しました",
+      "createFailed": "アクティビティを作成できませんでした。もう一度お試しください",
+      "updateFailed": "アクティビティを更新できませんでした。もう一度お試しください",
+      "deleteFailed": "アクティビティを削除できませんでした。もう一度お試しください",
+      "archiveFailed": "アクティビティをアーカイブできませんでした。もう一度お試しください",
+      "restoreFailed": "アクティビティを復元できませんでした。もう一度お試しください",
+      "duplicateName": "この名前のアクティビティは既にあります",
+      "restoreDuplicateName": "同じ名前のアクティビティが既にあります。名前を変えてから復元してください"
+    },
+    "category": {
+      "created": "カテゴリー「{name}」を作成しました",
+      "updated": "カテゴリー「{name}」を更新しました",
+      "deleted": "カテゴリー「{name}」を削除しました",
+      "archived": "カテゴリー「{name}」をアーカイブしました",
+      "restored": "カテゴリー「{name}」を復元しました",
+      "createFailed": "カテゴリーを作成できませんでした。もう一度お試しください",
+      "updateFailed": "カテゴリーを更新できませんでした。もう一度お試しください",
+      "deleteFailed": "カテゴリーを削除できませんでした。もう一度お試しください",
+      "archiveFailed": "カテゴリーをアーカイブできませんでした。もう一度お試しください",
+      "restoreFailed": "カテゴリーを復元できませんでした。もう一度お試しください",
+      "duplicateName": "この名前のカテゴリーは既にあります",
+      "restoreDuplicateName": "同じ名前のカテゴリーが既にあります。名前を変えてから復元してください"
+    },
+    "delete": {
+      "confirmTitle": "「{name}」を削除",
+      "confirmButton": "削除",
+      "activityDescription": "この操作は取り消せません。関連する {count} 件の予定・記録は削除されず、アクティビティなしになります。",
+      "categoryDescription": "この操作は取り消せません。所属する {count} 件のアクティビティは削除されず、未分類になります。"
+    },
+    "undo": "元に戻す"
+  }
+}

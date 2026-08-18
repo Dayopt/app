@@ -9,13 +9,6 @@
  */
 
 // ========================================
-// 文字数制限
-// ========================================
-
-/** タグ名の最大文字数（バックエンドと一致: z.string().max(50)） */
-export const TAG_NAME_MAX_LENGTH = 50;
-
-// ========================================
 // カラー名一覧
 // ========================================
 
@@ -41,7 +34,7 @@ export type TagColorName = (typeof TAG_COLOR_NAMES)[number];
 // ========================================
 
 /** タグカラーのTailwindクラスとCSS変数のマッピング */
-export interface TagColorEntry {
+interface TagColorEntry {
   /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
   border: string;
   /** dot/icon背景用 Tailwindクラス (e.g. 'bg-tag-blue') */
@@ -76,7 +69,7 @@ function entry(name: TagColorName): TagColorEntry {
 }
 
 /** タグカラー名からTailwindクラス/CSS変数へのマッピングテーブル */
-export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
+const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
   red: entry('red'),
   orange: entry('orange'),
   amber: entry('amber'),
@@ -94,7 +87,7 @@ export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
 // ========================================
 
 /** タグのデフォルトカラー */
-export const DEFAULT_TAG_COLOR: TagColorName = 'blue';
+const DEFAULT_TAG_COLOR: TagColorName = 'blue';
 
 // ========================================
 // ブリッジ関数（HEX / 名前 / null → TagColorName）

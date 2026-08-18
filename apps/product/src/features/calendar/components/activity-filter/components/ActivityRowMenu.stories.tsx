@@ -27,7 +27,6 @@ const meta = {
     categoryOptions: CATEGORY_OPTIONS,
     onOpenRenameDialog: fn(),
     onChangeCategory: fn(),
-    onOpenMergeModal: fn(),
     onShowOnlyActivity: fn(),
     onViewStats: fn(),
     onArchiveActivity: fn(),
@@ -102,7 +101,6 @@ export const AllPatterns: Story = {
           categoryOptions={CATEGORY_OPTIONS}
           onOpenRenameDialog={fn()}
           onChangeCategory={fn()}
-          onOpenMergeModal={fn()}
           onShowOnlyActivity={fn()}
           onViewStats={fn()}
           onArchiveActivity={fn()}
@@ -118,7 +116,6 @@ export const AllPatterns: Story = {
           categoryOptions={CATEGORY_OPTIONS}
           onOpenRenameDialog={fn()}
           onChangeCategory={fn()}
-          onOpenMergeModal={fn()}
           onShowOnlyActivity={fn()}
           onArchiveActivity={fn()}
           onDeleteActivity={fn()}

@@ -38,11 +38,13 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-vi.mock('@/features/tags', () => ({
-  getTagColorClasses: vi.fn(),
-  resolveTagColor: (color: string | null | undefined) => color ?? 'gray',
-  useCreateTag: () => ({ mutateAsync: vi.fn() }),
-  useTagsMap: () => ({ getTagById: vi.fn() }),
+vi.mock('@/features/activities', () => ({
+  ActivityIcon: () => null,
+  ActivityQuickSelector: () => null,
+  getCategoryColorClasses: vi.fn(),
+  resolveCategoryColor: (color: string | null | undefined) => color ?? 'gray',
+  useCreateActivity: () => ({ mutateAsync: vi.fn() }),
+  useActivitiesMap: () => ({ getActivityById: vi.fn() }),
 }));
 
 vi.mock('@/lib/toast', () => ({
@@ -94,7 +96,11 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
 }));
 
 vi.mock('../../inspector/fields', () => ({
-  TagRow: ({ menuItems }: { menuItems?: Array<{ key: string; onSelect: () => void }> }) => (
+  ActivityFieldRow: ({
+    menuItems,
+  }: {
+    menuItems?: Array<{ key: string; onSelect: () => void }>;
+  }) => (
     <>
       {menuItems?.map((item) => (
         <button key={item.key} type="button" onClick={item.onSelect}>
@@ -454,7 +460,7 @@ describe('TimeblockInspectorForm', () => {
     );
   });
 
-  it('記録前にdebounceを止め、最新のタグとメモをsnapshot保存する', () => {
+  it('記録前にdebounceを止め、最新のアクティビティとメモをsnapshot保存する', () => {
     render(
       <TimeblockInspectorForm
         kind="plan"
@@ -472,6 +478,7 @@ describe('TimeblockInspectorForm', () => {
     expect(mocks.flushSave).toHaveBeenCalledWith({
       note: '最新メモ',
       tagId: '00000000-0000-4000-8000-000000000001',
+      activityId: null,
     });
 
     act(() => vi.advanceTimersByTime(600));

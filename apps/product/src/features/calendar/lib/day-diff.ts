@@ -12,6 +12,7 @@ interface CalendarDayDiffItem {
   kind: CalendarDayDiffKind;
   title: string;
   tagId: string | null;
+  activityId: string | null;
   color: string;
   plannedStart: Date | null;
   plannedEnd: Date | null;
@@ -141,10 +142,10 @@ function clipRange(
 export function filterCalendarDayDiffEntries(
   entries: readonly CalendarEvent[],
   bounds: CalendarDayDiffOptions,
-  isEntryVisible: (tagId: string | null) => boolean,
+  isEntryVisible: (activityId: string | null) => boolean,
 ): CalendarEvent[] {
   return entries.filter((entry) => {
-    if (!isEntryVisible(entry.tagId ?? null)) return false;
+    if (!isEntryVisible(entry.activityId ?? null)) return false;
 
     const planned = clipRange(plannedRange(entry), bounds);
     const actual = clipRange(actualRange(entry), bounds);
@@ -168,6 +169,7 @@ function makeItem(
     kind,
     title: entry.title,
     tagId: entry.tagId ?? null,
+    activityId: entry.activityId ?? null,
     color: entry.color,
     plannedStart: planned.start,
     plannedEnd: planned.end,

@@ -1,4 +1,4 @@
 // fields/ — Inspector のフラットなフィールドコンポーネント群
 
+export { ActivityFieldRow } from './ActivityFieldRow';
 export { NoteSection } from './NoteSection';
-export { TagRow } from './TagRow';

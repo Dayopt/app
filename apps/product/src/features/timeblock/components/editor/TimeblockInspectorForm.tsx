@@ -3,7 +3,7 @@
 /**
  * TimeblockInspector のフォーム（Level 2）
  *
- * plan / record の 1 行を受け取り、TagRow ヘッダー + TimeblockEditor を描画する。
+ * plan / record の 1 行を受け取り、ActivityFieldRow ヘッダー + TimeblockEditor を描画する。
  * タグと確定済み日時は即時保存、note はデバウンスして自動保存する。
  * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
+import { useActivitiesMap, useCreateActivity } from '@/features/activities';
 import type { PublicRecordRow, Row } from '@/lib/database';
 import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { toast } from '@/lib/toast';
@@ -48,7 +48,7 @@ import {
   hasTimeblockLaneConflict,
 } from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
-import { TagRow } from '../inspector/fields';
+import { ActivityFieldRow } from '../inspector/fields';
 import { EstimationFeedforward } from './EstimationFeedforward';
 import {
   isValidTimeModelRange,
@@ -150,8 +150,8 @@ export function TimeblockInspectorForm({
 }: TimeModelInspectorFormProps) {
   const t = useTranslations();
   const queryClient = useQueryClient();
-  const { getTagById } = useTagsMap();
-  const createTagMutation = useCreateTag({ showToast: false });
+  const { getActivityById } = useActivitiesMap();
+  const createActivityMutation = useCreateActivity({ showToast: false });
   const isDuplicateMode = duplicateDraft != null;
   const [hasTimeConflict, setHasTimeConflict] = useState(false);
   const latestTimeValueRef = useRef({ startAt: '', endAt: '' });
@@ -192,6 +192,7 @@ export function TimeblockInspectorForm({
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
     note: duplicateDraft?.note ?? target?.note ?? '',
     tagId: duplicateDraft?.tagId ?? target?.tag_id ?? null,
+    activityId: duplicateDraft?.activityId ?? target?.activity_id ?? null,
     startAt: duplicateDraft
       ? new Date(duplicateDraft.startAt)
       : target
@@ -278,6 +279,7 @@ export function TimeblockInspectorForm({
               ...previous,
               note: latest.note ?? '',
               tagId: latest.tag_id,
+              activityId: latest.activity_id,
               startAt: new Date(latest.start_at),
               endAt: new Date(latest.end_at),
             }));
@@ -330,40 +332,43 @@ export function TimeblockInspectorForm({
 
   useEffect(() => () => flushNoteSave(), [flushNoteSave]);
 
-  // --- タグ（即時保存） ---
-  const selectedTag = value.tagId ? getTagById(value.tagId) : undefined;
-  const selectedTagColorClasses = selectedTag ? getTagColorClasses(selectedTag.color) : undefined;
+  // --- アクティビティ（即時保存） ---
+  const selectedActivity = value.activityId ? getActivityById(value.activityId) : undefined;
 
-  const handleTagChange = useCallback(
-    (tagId: string | null) => {
+  const handleActivityChange = useCallback(
+    (activityId: string | null) => {
       if (isMigrated || actionPreparingRef.current || conflictRecoveringRef.current) return;
-      setValue((prev) => ({ ...prev, tagId }));
+      setValue((prev) => ({ ...prev, activityId }));
       if (isDuplicateMode || !targetId) return;
-      enqueueSave({ tagId });
+      enqueueSave({ activityId });
     },
     [targetId, isMigrated, isDuplicateMode, enqueueSave],
   );
 
-  const handleCreateAndSelectTag = useCallback(
-    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
+  const handleCreateAndSelectActivity = useCallback(
+    async (
+      name: string,
+      _color?: string | null,
+      _icon?: string | null,
+      categoryId?: string | null,
+    ) => {
       try {
-        const newTag = await createTagMutation.mutateAsync({
+        // 色・アイコンはカテゴリーだけが持つ（#2162 §4-6）。アクティビティ側には保存しない
+        const created = await createActivityMutation.mutateAsync({
           name,
-          color: resolveTagColor(color),
-          icon: icon ?? undefined,
-          parentId: parentId ?? undefined,
+          categoryId: categoryId ?? undefined,
         });
-        handleTagChange(newTag.id);
+        handleActivityChange(created.id);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message.includes('duplicate') || message.includes('already exists')) {
-          toast.error(t('tags.errors.duplicateName'));
+          toast.error(t('activities.activity.duplicateName'));
         } else {
-          toast.error(t('tags.errors.createFailed'));
+          toast.error(t('activities.activity.createFailed'));
         }
       }
     },
-    [createTagMutation, handleTagChange, t],
+    [createActivityMutation, handleActivityChange, t],
   );
 
   // --- 日時・メモ（自動保存） ---
@@ -412,11 +417,12 @@ export function TimeblockInspectorForm({
     await flushSave({
       note: normalizeNote(pendingNoteRef.current),
       tagId: value.tagId,
+      activityId: value.activityId,
     });
     const updatedAt = latestUpdatedAtRef.current;
     if (!updatedAt) throw new Error('Missing timeblock version');
     return updatedAt;
-  }, [cancelScheduledNoteSave, flushSave, value.tagId]);
+  }, [cancelScheduledNoteSave, flushSave, value.tagId, value.activityId]);
 
   const handleCopy = useCallback(() => {
     if (!target || !onCopy) return;
@@ -428,6 +434,7 @@ export function TimeblockInspectorForm({
         startAt: value.startAt,
         endAt: value.endAt,
         tagId: value.tagId,
+        activityId: value.activityId,
       }),
     );
   }, [kind, onCopy, target, value]);
@@ -441,6 +448,7 @@ export function TimeblockInspectorForm({
         title: target.title,
         note: normalizeNote(value.note),
         tagId: value.tagId,
+        activityId: value.activityId,
         startAt: value.startAt,
         endAt: value.endAt,
       }),
@@ -556,9 +564,11 @@ export function TimeblockInspectorForm({
         // plan → planned / record → unplanned の対応で表示条件だけ流用する
         origin: kind === 'plan' ? 'planned' : 'unplanned',
         tagId: value.tagId,
+        activityId: value.activityId,
         isPast,
         isSkipped,
-        onViewStats: onViewStats && value.tagId ? () => onViewStats(value.tagId ?? '') : undefined,
+        onViewStats:
+          onViewStats && value.activityId ? () => onViewStats(value.activityId ?? '') : undefined,
         onCopy: onCopy ? handleCopy : undefined,
         onDuplicate: onStartDuplicate ? handleStartDuplicate : undefined,
         onSkip:
@@ -570,13 +580,13 @@ export function TimeblockInspectorForm({
   if (!target && !duplicateDraft) return null;
 
   const toRelationshipItem = (row: PlanRow | RecordRow): TimeblockRelationshipItem => {
-    const tag = row.tag_id ? getTagById(row.tag_id) : undefined;
+    const activity = row.activity_id ? getActivityById(row.activity_id) : undefined;
     return {
       id: row.id,
-      tagName: tag?.name ?? t('common.tags.noTag'),
-      tagColor: tag?.color ?? null,
-      tagIcon: tag?.icon ?? null,
-      isUncategorized: row.tag_id == null,
+      activityName: activity?.name ?? t('calendar.filter.noActivity'),
+      activityColor: activity?.color ?? null,
+      activityIcon: activity?.icon ?? null,
+      isUncategorized: row.activity_id == null,
       startAt: new Date(row.start_at),
       endAt: new Date(row.end_at),
     };
@@ -584,14 +594,14 @@ export function TimeblockInspectorForm({
 
   return (
     <div className="space-y-3 p-4">
-      <TagRow
-        tagId={value.tagId}
-        tagName={selectedTag?.name ?? t('common.tags.noTag')}
-        tagColorClasses={selectedTagColorClasses}
-        tagIcon={selectedTag?.icon}
-        tagColor={selectedTag?.color}
-        onTagChange={handleTagChange}
-        onCreateAndSelect={handleCreateAndSelectTag}
+      <ActivityFieldRow
+        activityId={value.activityId}
+        activityName={selectedActivity?.name ?? t('calendar.filter.noActivity')}
+        activityIcon={selectedActivity?.icon}
+        activityColor={selectedActivity?.color}
+        uncategorized={selectedActivity?.categoryId === null}
+        onActivityChange={handleActivityChange}
+        onCreateAndSelect={handleCreateAndSelectActivity}
         menuItems={menuItems}
         onCloseInspector={onCloseInspector}
         disabled={isWriteFrozen}

@@ -13,6 +13,7 @@ import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 export interface TimeModelEditorValue {
   note: string;
   tagId: string | null;
+  activityId: string | null;
   startAt: Date;
   endAt: Date;
   /** 既存 Plan の編集時だけ指定する。 */

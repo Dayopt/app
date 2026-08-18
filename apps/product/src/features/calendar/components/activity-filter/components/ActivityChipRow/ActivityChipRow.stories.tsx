@@ -1,130 +1,76 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { Tag } from '@/features/tags';
+import type { Activity, Category } from '@/features/activities';
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 
 import { ActivityChipRow } from './ActivityChipRow';
 
-/** MOCK_TAGS: sidebar と同じ sort_order で chip 行に並ぶ想定 */
-const MOCK_TAGS: Tag[] = [
+const TIMESTAMPS = {
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
+};
+
+/** 色とアイコンはカテゴリーが持ち、所属アクティビティが継承する */
+const MOCK_CATEGORIES: Category[] = [
   {
-    id: 'tag-1',
+    id: 'cat-work',
     name: '仕事',
     user_id: 'user-1',
     color: 'blue',
     icon: 'briefcase',
-    parent_id: null,
-    is_active: true,
     archived_at: null,
-    sort_order: 0,
-    created_at: null,
-    updated_at: null,
+    ...TIMESTAMPS,
   },
+];
+
+const MOCK_ACTIVITIES: Activity[] = [
   {
-    id: 'tag-2',
+    id: 'act-meeting',
     name: '会議',
     user_id: 'user-1',
-    color: 'blue',
-    icon: 'users',
-    parent_id: 'tag-1',
-    is_active: true,
+    category_id: 'cat-work',
     archived_at: null,
-    sort_order: 1,
-    created_at: null,
-    updated_at: null,
+    ...TIMESTAMPS,
   },
   {
-    id: 'tag-3',
-    name: '開発',
-    user_id: 'user-1',
-    color: 'indigo',
-    icon: 'code',
-    parent_id: 'tag-1',
-    is_active: true,
-    archived_at: null,
-    sort_order: 2,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-4',
-    name: '勉強',
-    user_id: 'user-1',
-    color: 'green',
-    icon: 'book-open',
-    parent_id: null,
-    is_active: true,
-    archived_at: null,
-    sort_order: 3,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-5',
+    id: 'act-workout',
     name: '運動',
     user_id: 'user-1',
-    color: 'amber',
-    icon: 'dumbbell',
-    parent_id: null,
-    is_active: true,
+    category_id: null,
     archived_at: null,
-    sort_order: 4,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-6',
-    name: '休憩',
-    user_id: 'user-1',
-    color: 'orange',
-    icon: 'coffee',
-    parent_id: null,
-    is_active: true,
-    archived_at: null,
-    sort_order: 5,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-7',
-    name: '読書',
-    user_id: 'user-1',
-    color: 'teal',
-    icon: 'book',
-    parent_id: null,
-    is_active: true,
-    archived_at: null,
-    sort_order: 6,
-    created_at: null,
-    updated_at: null,
+    ...TIMESTAMPS,
   },
 ];
 
 /** 30 件までスケールさせた版（横スクロールの確認用） */
-const MANY_TAGS: Tag[] = Array.from({ length: 30 }, (_, i) => ({
-  id: `tag-many-${i}`,
-  name: `タグ${i + 1}`,
+const MANY_ACTIVITIES: Activity[] = Array.from({ length: 30 }, (_, i) => ({
+  id: `act-many-${i}`,
+  name: `アクティビティ${i + 1}`,
   user_id: 'user-1',
-  color: ['blue', 'indigo', 'green', 'amber', 'orange', 'teal', 'pink', 'violet'][i % 8] ?? 'gray',
-  icon: null,
-  parent_id: null,
-  is_active: true,
+  category_id: 'cat-work',
   archived_at: null,
-  sort_order: i,
-  created_at: null,
-  updated_at: null,
+  ...TIMESTAMPS,
 }));
 
+function mocks(activities: Activity[], categories: Category[] = MOCK_CATEGORIES) {
+  return {
+    'activities.listActivities': activities,
+    'activities.listCategories': categories,
+    'plans.list': [],
+    'records.list': [],
+  };
+}
+
 /**
- * モバイル専用タグチップ行。タイムライン下部の固定フッターに配置される想定。
+ * モバイル専用のアクティビティチップ行。タイムライン下部の固定フッターに配置される想定。
  *
- * - sort_order 昇順で並ぶ（PC sidebar と完全一致）
- * - is_active === false のタグは除外
- * - 葉タグは suffix のみ表示（"仕事:会議" → "会議"）
- * - タップで bottom sheet popover（既存 TagTimeblockCreatePopover を isMobile=true で再利用）
+ * - 名前順で並ぶ（PC サイドバーと同じサーバー側の並び）
+ * - アーカイブ済みは一覧の時点で除外される
+ * - 色とアイコンは所属カテゴリーから継承し、未分類は中立表示
+ * - タップで bottom sheet popover（`ActivityTimeblockCreatePopover` を isMobile=true で再利用）
  */
 const meta = {
-  title: 'Product/Features/Calendar/Filter/TagFilter/ActivityChipRow',
+  title: 'Product/Features/Calendar/Sidebar/ActivityChipRow',
   component: ActivityChipRow,
   parameters: {
     layout: 'fullscreen',
@@ -146,29 +92,27 @@ type Story = StoryObj<typeof meta>;
 /** Default: 7 タグ、ほぼ画面に収まる */
 export const Default: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'plans.list': [], 'records.list': [] },
+    trpcMocks: mocks(MOCK_ACTIVITIES),
   },
 };
 
-/** ManyTags: 30 タグ、横スクロールで全件アクセス可能 */
-export const ManyTags: Story = {
+/** ManyActivities: 30 件、横スクロールで全件アクセス可能 */
+export const ManyActivities: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'plans.list': [], 'records.list': [] },
+    trpcMocks: mocks(MANY_ACTIVITIES),
   },
 };
 
-/** Empty: タグゼロ → chip 行ごと非描画（null を返す） */
+/** Empty: アクティビティゼロ → chip 行ごと非描画（null を返す） */
 export const Empty: Story = {
   parameters: {
-    trpcMocks: { 'tags.list': { data: [] }, 'plans.list': [], 'records.list': [] },
+    trpcMocks: mocks([]),
   },
 };
 
-function FooterPreview({ tags }: { tags: Tag[] }) {
+function FooterPreview({ activities }: { activities: Activity[] }) {
   return (
-    <StoryTRPCProvider
-      mocks={{ 'tags.list': { data: tags }, 'plans.list': [], 'records.list': [] }}
-    >
+    <StoryTRPCProvider mocks={mocks(activities)}>
       <div className="border-border-subtle bg-background relative h-20 overflow-hidden rounded-lg border">
         <ActivityChipRow className="absolute" />
       </div>
@@ -176,13 +120,13 @@ function FooterPreview({ tags }: { tags: Tag[] }) {
   );
 }
 
-/** AllPatterns: fixed footer 化した mobile tag row の主要状態を一覧表示 */
+/** AllPatterns: fixed footer 化したモバイルのチップ行の主要状態を一覧表示 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="bg-background space-y-4 p-4">
-      <FooterPreview tags={MOCK_TAGS} />
-      <FooterPreview tags={MANY_TAGS} />
-      <FooterPreview tags={[]} />
+      <FooterPreview activities={MOCK_ACTIVITIES} />
+      <FooterPreview activities={MANY_ACTIVITIES} />
+      <FooterPreview activities={[]} />
     </div>
   ),
 };

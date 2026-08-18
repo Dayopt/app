@@ -4,11 +4,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 
 import { addDays, subDays } from 'date-fns';
 
+import { useActivities, useArchivedActivities } from '@/features/activities';
 import {
   useExternalCalendarEvents,
   type ExternalCalendarEvent,
 } from '@/features/external-calendar';
-import { useArchivedTags, useTags } from '@/features/tags';
 import { getDateKey } from '@/lib/date';
 import { toTZEndISO, toTZStartISO, tzIsSameDay } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -181,25 +181,28 @@ export function useCalendarData({
     ],
   );
 
-  // タグマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
-  const { data: tagsData } = useTags();
+  // アクティビティマスタ取得（TimeblockCard等で使用するためキャッシュをwarm up + フィルタ同期）
+  const { data: activitiesData } = useActivities();
   // syncWithActivities にアーカイブ済み ID も含めるための取得（#1576 回帰防止）。
-  const { data: archivedTagsData } = useArchivedTags();
+  const { data: archivedActivitiesData } = useArchivedActivities();
   const syncWithActivities = useCalendarFilterStore((state) => state.syncWithActivities);
 
-  // タグフィルタを tagsData と同期（新規 tag は visible として追加、削除済み tag は orphan として除去）。
-  // アーカイブ済み ID を含めないと、archived タグを持つ過去ブロックが orphan 扱いされ
-  // visibleActivityIds から消えてカレンダーから消えてしまう。
-  // モバイルではサイドバーがマウントされないため、ここで保証する
+  // アクティビティフィルタを activitiesData と同期（新規は visible として追加、削除済みは
+  // orphan として除去）。アーカイブ済み ID を含めないと、archived アクティビティを持つ
+  // 過去ブロックが orphan 扱いされ visibleActivityIds から消えてカレンダーから消えてしまう。
+  // モバイルではサイドバーがマウントされないため、ここで保証する。
+  //
+  // `ActivityFilterList` も同じ store を sync するので、渡す ID 集合を揃えること
+  // （ズレると後から走った方が相手の ID を orphan として消す）。
   useEffect(() => {
-    const allTagIds = [
-      ...(tagsData ?? []).map((tag) => tag.id),
-      ...(archivedTagsData ?? []).map((tag) => tag.id),
+    const allActivityIds = [
+      ...(activitiesData ?? []).map((activity) => activity.id),
+      ...(archivedActivitiesData ?? []).map((activity) => activity.id),
     ];
-    if (allTagIds.length > 0) {
-      syncWithActivities(allTagIds);
+    if (allActivityIds.length > 0) {
+      syncWithActivities(allActivityIds);
     }
-  }, [tagsData, archivedTagsData, syncWithActivities]);
+  }, [activitiesData, archivedActivitiesData, syncWithActivities]);
 
   // tRPC utils（プリフェッチ用）
   const utils = api.useUtils();
@@ -353,7 +356,6 @@ export function useCalendarData({
     useCalendarFilterStore((state) => state.visibleActivityIds),
   );
   // 未分類(タグなし)フィルターの表示切替も同様にリアクティブ依存として渡す（#1576）
-  const showNoActivity = useDeferredValue(useCalendarFilterStore((state) => state.showNoActivity));
 
   // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
   // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
@@ -381,6 +383,7 @@ export function useCalendarData({
           status: timeblockState === 'past' ? 'closed' : 'open',
           color: '',
           tagId: plan.tag_id,
+          activityId: plan.activity_id,
           createdAt: new Date(plan.created_at),
           updatedAt: new Date(plan.updated_at),
           version: plan.updated_at,
@@ -422,6 +425,7 @@ export function useCalendarData({
         status: 'closed' as const,
         color: '',
         tagId: record.tagId,
+        activityId: record.activityId,
         createdAt: new Date(sourceRow.created_at),
         updatedAt: new Date(sourceRow.updated_at),
         version: sourceRow.updated_at,
@@ -478,19 +482,12 @@ export function useCalendarData({
 
     // サイドバーのフィルター設定を適用
     const visibilityFiltered = filtered.filter((event) => {
-      return isEntryVisible(event.tagId ?? null);
+      return isEntryVisible(event.activityId ?? null);
     });
 
     return visibilityFiltered;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleActivityIds/showNoActivity はリアクティブ依存（関数参照は安定のため直接依存不可）
-  }, [
-    viewDateRange,
-    allCalendarEvents,
-    timezone,
-    isEntryVisible,
-    visibleActivityIds,
-    showNoActivity,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleActivityIds はリアクティブ依存（関数参照は安定のため直接依存不可）
+  }, [viewDateRange, allCalendarEvents, timezone, isEntryVisible, visibleActivityIds]);
 
   return {
     viewDateRange,

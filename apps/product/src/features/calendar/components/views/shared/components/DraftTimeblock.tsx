@@ -5,15 +5,18 @@ import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import { buildNewTimeblockOverlapTarget } from '@/features/calendar/lib/overlap';
-import { getTagColorClasses, TagIcon } from '@/features/tags';
 import { timeblockTintColor } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
-import { useTagDraftStore, type TagDraft } from '../../../../stores/useTagDraftStore';
+import {
+  useActivityDraftStore,
+  type ActivityDraft,
+} from '../../../../stores/useActivityDraftStore';
 import { Z_INDEX } from '../constants/grid.constants';
 import { ConflictOverlay } from './ConflictOverlay';
 
@@ -31,14 +34,14 @@ function isTimeblocksListQuery(query: { queryKey: unknown }): boolean {
 
 interface DraftTimeblockProps {
   /** この列が表示する日付（draft.date と同日のときだけ render する想定） */
-  draft: TagDraft;
+  draft: ActivityDraft;
   hourHeight: number;
 }
 
 /**
- * Tag タップで開く draft Timeblock の Calendar 上のプレビュー。
+ * アクティビティタップで開く draft Timeblock の Calendar 上のプレビュー。
  *
- * - InlineTagPalette と同じ視覚（左 accent strip + 右 tinted card）
+ * - InlineActivityPalette と同じ視覚（左 accent strip + 右 tinted card）
  * - 下端に drawer pill 風の resize handle。drag で end time を更新
  * - drag 中は 15 分粒度に snap、24:00 を超えない・start より小さくならない
  * - クリックは popover 側の interaction を阻害しないよう pointer-events: none を基本にし、
@@ -48,7 +51,7 @@ interface DraftTimeblockProps {
 export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
   const t = useTranslations();
   const timeFormat = useUserPreferences((s) => s.timeFormat);
-  const updateTimes = useTagDraftStore((s) => s.updateTimes);
+  const updateTimes = useActivityDraftStore((s) => s.updateTimes);
   const queryClient = useQueryClient();
 
   const [startH, startM] = parseHHMM(draft.startTime);
@@ -58,7 +61,7 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
   const top = startMinutes * (hourHeight / 60);
   const height = Math.max(20, (endMinutes - startMinutes) * (hourHeight / 60));
 
-  const accentColor = getTagColorClasses(draft.tag.color).cssVar;
+  const accentColor = getCategoryColorClasses(draft.activity.color).cssVar;
   // TimeblockCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
   const tintColor = timeblockTintColor(accentColor);
 
@@ -160,7 +163,7 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
 
   return (
     <div
-      data-tag-draft-block
+      data-activity-draft-block
       className="pointer-events-none absolute right-0 left-0"
       style={{ zIndex: Z_INDEX.POPOVER }}
     >
@@ -204,31 +207,31 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
             >
               {height < 40 ? (
                 <div className="flex h-full items-center gap-1 px-2">
-                  {draft.tag.icon && (
-                    <TagIcon
-                      icon={draft.tag.icon}
-                      color={draft.tag.color}
+                  {draft.activity.icon && (
+                    <ActivityIcon
+                      icon={draft.activity.icon}
+                      color={draft.activity.color}
                       size="sm"
                       className="shrink-0"
                     />
                   )}
                   <span className="text-foreground truncate text-xs font-normal">
-                    {draft.tag.name}
+                    {draft.activity.name}
                   </span>
                 </div>
               ) : (
                 <div className="flex h-full flex-col gap-1 p-2">
                   <div className="flex items-center gap-1">
-                    {draft.tag.icon && (
-                      <TagIcon
-                        icon={draft.tag.icon}
-                        color={draft.tag.color}
+                    {draft.activity.icon && (
+                      <ActivityIcon
+                        icon={draft.activity.icon}
+                        color={draft.activity.color}
                         size="sm"
                         className="shrink-0"
                       />
                     )}
                     <span className="text-foreground min-w-0 truncate text-sm leading-tight font-normal">
-                      {draft.tag.name}
+                      {draft.activity.name}
                     </span>
                   </div>
                   <span className="text-muted-foreground text-xs leading-tight tabular-nums">

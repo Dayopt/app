@@ -42,7 +42,7 @@ const record: RecordEvent = {
 
 describe('TwoLane cards', () => {
   it('Planカードはtitleではなくタグ名を表示する', () => {
-    render(<PlanLaneCard event={plan} position={position} tagName="Deep Work" />);
+    render(<PlanLaneCard event={plan} position={position} activityName="Deep Work" />);
 
     expect(screen.getByRole('button', { name: 'Deep Work' })).toBeInTheDocument();
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
@@ -50,14 +50,19 @@ describe('TwoLane cards', () => {
 
   it('PlanカードはtagIconを表示する', () => {
     const { container } = render(
-      <PlanLaneCard event={plan} position={position} tagName="Deep Work" tagIcon="briefcase" />,
+      <PlanLaneCard
+        event={plan}
+        position={position}
+        activityName="Deep Work"
+        activityIcon="briefcase"
+      />,
     );
 
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
   it('Recordカードはtitleではなくタグ名を表示する', () => {
-    render(<RecordLaneCard event={record} position={position} tagName="Deep Work" />);
+    render(<RecordLaneCard event={record} position={position} activityName="Deep Work" />);
 
     expect(screen.getByRole('button', { name: 'Deep Work' })).toBeInTheDocument();
     expect(screen.queryByText('Legacy record title')).not.toBeInTheDocument();
@@ -65,27 +70,37 @@ describe('TwoLane cards', () => {
 
   it('RecordカードはtagIconを表示する', () => {
     const { container } = render(
-      <RecordLaneCard event={record} position={position} tagName="Deep Work" tagIcon="briefcase" />,
+      <RecordLaneCard
+        event={record}
+        position={position}
+        activityName="Deep Work"
+        activityIcon="briefcase"
+      />,
     );
 
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
-  it('タグを解決できない場合もtitleへフォールバックしない', () => {
-    render(<PlanLaneCard event={plan} position={position} tagName={null} />);
+  it('アクティビティを解決できない場合もtitleへフォールバックしない', () => {
+    render(<PlanLaneCard event={plan} position={position} activityName={null} />);
 
-    expect(screen.getByRole('button', { name: 'common.tags.noTag' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'calendar.filter.noActivity' })).toBeInTheDocument();
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
   });
 
   it('drag ghostは操作・focus対象にしない', () => {
     const { container } = render(
       <div>
-        <PlanLaneCard event={plan} position={position} tagName="Deep Work" interactive={false} />
+        <PlanLaneCard
+          event={plan}
+          position={position}
+          activityName="Deep Work"
+          interactive={false}
+        />
         <RecordLaneCard
           event={record}
           position={position}
-          tagName="Deep Work"
+          activityName="Deep Work"
           interactive={false}
         />
       </div>,
@@ -104,7 +119,7 @@ describe('TwoLane cards', () => {
 
   it('Compare対象のPlanカードにmarkerを表示する', () => {
     const { container } = render(
-      <PlanLaneCard event={plan} position={position} tagName="Deep Work" showDayDiffMarker />,
+      <PlanLaneCard event={plan} position={position} activityName="Deep Work" showDayDiffMarker />,
     );
 
     expect(container.querySelector('[data-entry-day-diff-marker]')).not.toBeNull();
@@ -112,7 +127,12 @@ describe('TwoLane cards', () => {
 
   it('Compare対象のRecordカードにmarkerを表示する', () => {
     const { container } = render(
-      <RecordLaneCard event={record} position={position} tagName="Deep Work" showDayDiffMarker />,
+      <RecordLaneCard
+        event={record}
+        position={position}
+        activityName="Deep Work"
+        showDayDiffMarker
+      />,
     );
 
     expect(container.querySelector('[data-entry-day-diff-marker]')).not.toBeNull();
@@ -121,8 +141,8 @@ describe('TwoLane cards', () => {
   it('Compare対象でないカードにはmarkerを表示しない', () => {
     const { container } = render(
       <div>
-        <PlanLaneCard event={plan} position={position} tagName="Deep Work" />
-        <RecordLaneCard event={record} position={position} tagName="Deep Work" />
+        <PlanLaneCard event={plan} position={position} activityName="Deep Work" />
+        <RecordLaneCard event={record} position={position} activityName="Deep Work" />
       </div>,
     );
 
@@ -134,7 +154,7 @@ describe('TwoLane cards', () => {
       <RecordLaneCard
         event={{ ...record, diffMinutes: 0 }}
         position={position}
-        tagName="Deep Work"
+        activityName="Deep Work"
       />,
     );
 
@@ -144,7 +164,7 @@ describe('TwoLane cards', () => {
       <RecordLaneCard
         event={{ ...record, diffMinutes: 20 }}
         position={position}
-        tagName="Deep Work"
+        activityName="Deep Work"
       />,
     );
 

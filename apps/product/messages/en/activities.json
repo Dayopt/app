@@ -1,0 +1,39 @@
+{
+  "activities": {
+    "activity": {
+      "created": "Created \"{name}\"",
+      "updated": "Updated \"{name}\"",
+      "deleted": "Deleted \"{name}\"",
+      "archived": "Archived \"{name}\"",
+      "restored": "Restored \"{name}\"",
+      "createFailed": "Couldn't create the activity. Please try again",
+      "updateFailed": "Couldn't update the activity. Please try again",
+      "deleteFailed": "Couldn't delete the activity. Please try again",
+      "archiveFailed": "Couldn't archive the activity. Please try again",
+      "restoreFailed": "Couldn't restore the activity. Please try again",
+      "duplicateName": "An activity with this name already exists",
+      "restoreDuplicateName": "An activity with the same name already exists. Rename it before restoring"
+    },
+    "category": {
+      "created": "Created category \"{name}\"",
+      "updated": "Updated category \"{name}\"",
+      "deleted": "Deleted category \"{name}\"",
+      "archived": "Archived category \"{name}\"",
+      "restored": "Restored category \"{name}\"",
+      "createFailed": "Couldn't create the category. Please try again",
+      "updateFailed": "Couldn't update the category. Please try again",
+      "deleteFailed": "Couldn't delete the category. Please try again",
+      "archiveFailed": "Couldn't archive the category. Please try again",
+      "restoreFailed": "Couldn't restore the category. Please try again",
+      "duplicateName": "A category with this name already exists",
+      "restoreDuplicateName": "A category with the same name already exists. Rename it before restoring"
+    },
+    "delete": {
+      "confirmTitle": "Delete \"{name}\"",
+      "confirmButton": "Delete",
+      "activityDescription": "This can't be undone. The {count} plans and records that use it aren't deleted — they become blocks with no activity.",
+      "categoryDescription": "This can't be undone. The {count} activities in it aren't deleted — they become uncategorized."
+    },
+    "undo": "Undo"
+  }
+}

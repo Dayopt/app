@@ -195,11 +195,19 @@
     },
     "filter": {
       "type": "種類",
+      "categoriesSection": "カテゴリ",
       "uncategorized": "未分類",
       "noActivity": "アクティビティなし",
+      "noCategories": "カテゴリはまだありません",
+      "noUncategorized": "未分類のアクティビティはありません",
+      "noArchived": "アーカイブ済みはありません",
       "noActivities": "アクティビティで時間に名前をつけると、パターンが見えてきます。最初のアクティビティを作りましょう",
       "comingSoon": "近日公開予定",
       "createActivity": "アクティビティを作成",
+      "activitySettings": "表示",
+      "statusAll": "すべて",
+      "statusActive": "アクティブ",
+      "statusArchived": "アーカイブ",
       "createCategory": "カテゴリーを作成",
       "quickCreate": "クイック作成",
       "addActivityToCategory": "アクティビティを追加",
@@ -211,6 +219,7 @@
       "noteHint": "ツールチップに表示されます",
       "notePlaceholder": "ノートを追加...",
       "changeCategory": "カテゴリーを変更",
+      "changeActivity": "アクティビティを変更",
       "noCategory": "カテゴリーなし",
       "merge": "他のアクティビティに統合",
       "showOnlyThisActivity": "このアクティビティだけ表示",
@@ -226,7 +235,6 @@
       "expand": "展開",
       "collapse": "折りたたむ",
       "archive": "アーカイブ",
-      "archivedSection": "アーカイブ済み",
       "archivedLoadFailed": "アーカイブ済みの項目を読み込めませんでした",
       "restore": "復元",
       "deleteActivity": {
@@ -251,7 +259,9 @@
         "selectIcon": "アイコンを選択",
         "selectCategory": "カテゴリーを選択",
         "noCategory": "カテゴリーなし",
-        "duplicateName": "同じ名前のアクティビティが既にあります。別の名前を入力してください"
+        "duplicateName": "同じ名前のアクティビティが既にあります。別の名前を入力してください",
+        "categoryName": "カテゴリー名",
+        "categoryNamePlaceholder": "例: 仕事、プライベート"
       },
       "renamePopover": {
         "title": "名前を変更",
@@ -260,20 +270,12 @@
         "duplicateName": "同じ名前の項目が既にあります。別の名前を入力してください"
       }
     },
-    "tagSelector": {
-      "title": "タグを選択",
-      "searchPlaceholder": "タグを検索...",
-      "noResults": "タグが見つかりません",
-      "createPlaceholder": "例: 仕事、勉強、運動...",
+    "activitySelector": {
+      "title": "アクティビティを選択",
       "new": "新規",
-      "create": "作成",
-      "color": "色",
-      "icon": "アイコン",
-      "group": "グループ",
-      "noGroup": "なし",
-      "emptyTitle": "タグで時間を分類しよう",
+      "emptyTitle": "アクティビティで時間を分類しよう",
       "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
-      "sampleTags": {
+      "sampleActivities": {
         "work": "仕事",
         "study": "勉強",
         "exercise": "運動",

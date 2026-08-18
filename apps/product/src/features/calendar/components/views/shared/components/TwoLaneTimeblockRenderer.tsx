@@ -13,7 +13,7 @@
 
 import type React from 'react';
 
-import { useTagsMap } from '@/features/tags';
+import { useActivitiesMap } from '@/features/activities';
 import { resolveTimeblockDestination, useTimeblockInspectorStore } from '@/features/timeblock';
 import type { TimeFormat } from '@dayopt/domain';
 
@@ -102,7 +102,7 @@ export function TwoLaneTimeblockRenderer({
   const inspectorEntryId = useTimeblockInspectorStore((state) => state.timeblockId);
   const isInspectorOpen = useTimeblockInspectorStore((state) => state.isOpen);
   const setAnchorRect = useTimeblockInspectorStore((state) => state.setAnchorRect);
-  const { getTagById } = useTagsMap();
+  const { getActivityById } = useActivitiesMap();
 
   const timeblockDragging =
     isDragging && interactionState.mode === 'dragging' && interactionState.timeblockId === entry.id;
@@ -121,10 +121,10 @@ export function TwoLaneTimeblockRenderer({
       ? { zIndex: 1000 }
       : {};
 
-  const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
-  const tagName = tag?.name ?? null;
-  const tagColor = tag?.color ?? null;
-  const tagIcon = tag?.icon ?? null;
+  const activity = entry.activityId ? getActivityById(entry.activityId) : undefined;
+  const activityName = activity?.name ?? null;
+  const activityColor = activity?.color ?? null;
+  const activityIcon = activity?.icon ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
   // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
   const now = Date.now();
@@ -169,9 +169,9 @@ export function TwoLaneTimeblockRenderer({
       <PlanLaneCard
         event={calendarEventToPlanEvent(entry, allEvents)}
         position={previewPosition}
-        tagName={tagName}
-        tagColor={tagColor}
-        tagIcon={tagIcon}
+        activityName={activityName}
+        activityColor={activityColor}
+        activityIcon={activityIcon}
         isActive={isActive}
         disableDrag={disableDrag}
         disableResize={disableResize}
@@ -192,9 +192,9 @@ export function TwoLaneTimeblockRenderer({
     <RecordLaneCard
       event={calendarEventToRecordEvent(entry)}
       position={previewPosition}
-      tagName={tagName}
-      tagColor={tagColor}
-      tagIcon={tagIcon}
+      activityName={activityName}
+      activityColor={activityColor}
+      activityIcon={activityIcon}
       isActive={isActive}
       disableDrag={disableDrag}
       showDayDiffMarker={showDayDiffMarker}
