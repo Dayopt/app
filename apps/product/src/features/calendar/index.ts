@@ -15,10 +15,7 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
-export {
-  CalendarPanelToggle,
-  type CalendarPanelTab,
-} from './components/layout/Header/CalendarPanelToggle';
+export { CalendarPanelToggle } from './components/layout/Header/CalendarPanelToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Button, cn, HoverTooltip } from '@dayopt/components';
 
-export type CalendarPanelTab = 'review' | 'diff';
+type CalendarPanelTab = 'review' | 'diff';
 
 interface CalendarPanelToggleProps {
   /** パネルが開いていてどのタブがアクティブか。閉じている場合は null */
@@ -29,9 +29,7 @@ export function CalendarPanelToggle({
   const t = useTranslations();
 
   return (
-    <div
-      className={cn('border-border flex items-center gap-0.5 rounded-lg border p-0.5', className)}
-    >
+    <div className={cn('border-border flex items-center gap-1 rounded-lg border p-1', className)}>
       <HoverTooltip content={t('calendar.stats.review.tooltip')} side="bottom">
         <Button
           type="button"

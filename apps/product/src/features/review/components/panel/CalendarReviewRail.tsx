@@ -9,7 +9,7 @@ import type { ReviewDisplayRange } from '../../lib/compute-date-range';
 import { ReviewDiffPanel, type ReviewDiffResult } from '../diff/ReviewDiffPanel';
 import { CalendarReviewPanel } from './CalendarReviewPanel';
 
-export type CalendarReviewTab = 'review' | 'diff';
+type CalendarReviewTab = 'review' | 'diff';
 
 interface CalendarReviewRailProps {
   activeTab: CalendarReviewTab;
@@ -54,7 +54,7 @@ export function CalendarReviewRail({
         <button
           type="button"
           className={cn(
-            'ease-standard flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150',
+            'ease-standard flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150',
             activeTab === 'review'
               ? 'bg-state-selected text-foreground'
               : 'text-muted-foreground hover:text-foreground',
@@ -69,7 +69,7 @@ export function CalendarReviewRail({
           type="button"
           disabled={diffTabDisabled}
           className={cn(
-            'ease-standard flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50',
+            'ease-standard flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50',
             activeTab === 'diff'
               ? 'bg-state-selected text-foreground'
               : 'text-muted-foreground hover:text-foreground',

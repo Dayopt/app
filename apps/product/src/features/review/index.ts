@@ -10,8 +10,6 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { ReviewDiffPanel } from './components/diff/ReviewDiffPanel';
-export { CalendarReviewPanel } from './components/panel/CalendarReviewPanel';
 export { CalendarReviewRail } from './components/panel/CalendarReviewRail';
 
 // =============================================================================
