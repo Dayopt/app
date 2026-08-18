@@ -64,19 +64,20 @@ PostgreSQL 17（`supabase/config.toml:44` の `major_version = 17`）を前提�
 
 ### 4-1. categories
 
-| カラム                 | 型               | 制約                                    |
-| ---------------------- | ---------------- | --------------------------------------- |
-| id                     | uuid PK          | `gen_random_uuid()`                     |
-| user_id                | uuid NOT NULL    | FK → `auth.users`、ON DELETE CASCADE    |
-| name                   | text NOT NULL    |                                         |
-| color                  | text NOT NULL    | 10 色パレットの色名。CHECK で値域を固定 |
-| icon                   | text NULL        | curated icons の Lucide 名              |
-| archived_at            | timestamptz NULL |                                         |
-| created_at, updated_at | timestamptz      | `update_updated_at()` トリガーを流用    |
+| カラム                 | 型               | 制約                                                                                        |
+| ---------------------- | ---------------- | ------------------------------------------------------------------------------------------- |
+| id                     | uuid PK          | `gen_random_uuid()`                                                                         |
+| user_id                | uuid NOT NULL    | FK → `auth.users`、ON DELETE CASCADE                                                        |
+| name                   | text NOT NULL    |                                                                                             |
+| color                  | text NULL        | 10 色パレットの色名。非 NULL 値には CHECK で値域を固定。**NULL は既定色へのフォールバック** |
+| icon                   | text NULL        | curated icons の Lucide 名                                                                  |
+| archived_at            | timestamptz NULL |                                                                                             |
+| created_at, updated_at | timestamptz      | `update_updated_at()` トリガーを流用                                                        |
 
 - `UNIQUE (id, user_id)` — 複合 FK の受け皿。実データ上は冗長だが、これが無いと 4-4 の所有者整合が書けない
 - `UNIQUE (user_id, name) WHERE archived_at IS NULL` — 通常カテゴリー名の一意。既存 `tags_user_root_name_unique` と同じ部分 unique index の形
 - **`parent_id` を持たない。** 階層は構造的に発生しないので、現行の `check_tag_hierarchy()` / `check_tag_has_children()` の 2 トリガーが不要になる。深さ制約をトリガーで守る必要がなくなるのが、2 階層固定を「列を作らない」ことで表現する利点
+- **`color` は nullable**（2026-08-18 確定）。当初契約は NOT NULL + 10 色 CHECK だったが、実装レビュー（P1/P2 ゼロで merge 済み）を経て nullable を採用した。消費側（分析の集計行、サイドバーの継承解決）がいずれも NULL を既定色フォールバックとして扱う実装で揃っており、後から NOT NULL 化するには新 migration と既定色 backfill の判断が要る一方で得るものが無い。**非 NULL 値への 10 色 CHECK は維持する**（値域の保証は失っていない）
 
 ### 4-2. activities
 
