@@ -8,6 +8,7 @@ export interface ClipboardTimeblock {
   startHour: number;
   startMinute: number;
   tagId: string | null | undefined;
+  activityId: string | null | undefined;
 }
 
 interface ClipboardTimeblockSource {
@@ -17,6 +18,7 @@ interface ClipboardTimeblockSource {
   startAt: Date;
   endAt: Date;
   tagId: string | null | undefined;
+  activityId?: string | null | undefined;
 }
 
 /** Timeblock の種別と表示内容だけをコピーし、IDやPlan関連は持ち込まない。 */
@@ -27,6 +29,7 @@ export function createClipboardTimeblock({
   startAt,
   endAt,
   tagId,
+  activityId,
 }: ClipboardTimeblockSource): ClipboardTimeblock {
   return {
     kind,
@@ -36,5 +39,6 @@ export function createClipboardTimeblock({
     startHour: startAt.getHours(),
     startMinute: startAt.getMinutes(),
     tagId,
+    activityId,
   };
 }

@@ -6,7 +6,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertTagAssignable } from './tag-assignment-guard';
+import { assertActivityAssignable, assertTagAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -54,6 +54,7 @@ export class RecordService {
     const {
       userId,
       tagId,
+      activityId,
       planId,
       planIds,
       search,
@@ -74,6 +75,7 @@ export class RecordService {
       .is('deleted_at', null);
 
     if (tagId) query = query.eq('tag_id', tagId);
+    if (activityId) query = query.eq('activity_id', activityId);
     if (planId) query = query.eq('plan_id', planId);
     if (planIds) query = query.in('plan_id', planIds);
 
@@ -148,6 +150,7 @@ export class RecordService {
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     this.ensureRecordCanBeCreated(input.end_at);
     await assertTagAssignable(this.supabase, userId, input.tagId);
+    await assertActivityAssignable(this.supabase, userId, input.activityId);
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);
@@ -162,6 +165,7 @@ export class RecordService {
       title: input.title,
       note: input.note ?? null,
       tagId: input.tagId ?? null,
+      activityId: input.activityId ?? null,
       planId: input.planId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
@@ -195,6 +199,12 @@ export class RecordService {
     if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
       await assertTagAssignable(this.supabase, userId, input.tagId);
     }
+    // activity も同型に独立判定する。tag の条件へネストすると、activity だけを
+    // 付け替える更新で fail-fast が発火しない（DB 側 assert は効くが、エラーが
+    // tag 語彙で返り、timeblock-command-service の実装とも非対称になる）。
+    if (input.activityId !== undefined && input.activityId !== existing.activity_id) {
+      await assertActivityAssignable(this.supabase, userId, input.activityId);
+    }
 
     if (input.planId) {
       await this.ensureRecordablePlan(userId, input.planId);
@@ -217,6 +227,7 @@ export class RecordService {
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
       tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       planId: input.planId === undefined ? existing.plan_id : input.planId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined

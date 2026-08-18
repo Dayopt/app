@@ -17,6 +17,17 @@ export const statisticsGeneralRouter = createTRPCRouter({
       }
     }),
 
+  /** Get activity statistics (entry count and last used date) */
+  getActivityStats: protectedProcedure
+    .meta({ description: 'アクティビティ別統計取得（エントリ数・最終使用日）' })
+    .query(async ({ ctx }) => {
+      try {
+        return await new StatisticsService(ctx.supabase).getActivityStats(ctx.userId);
+      } catch (error) {
+        handleStatsError('getActivityStats', error);
+      }
+    }),
+
   /** Get time spent per tag (DB function) */
   getTimeByTag: protectedProcedure
     .meta({ description: 'タグ別時間集計（期間フィルタ対応）' })

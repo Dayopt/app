@@ -54,6 +54,11 @@ export class StatisticsService {
     return this.generalService.getTagStats(userId);
   }
 
+  /** `getTagStats` のアクティビティ版。戻り値の形は同一でキーが activityId。 */
+  async getActivityStats(userId: string) {
+    return this.generalService.getActivityStats(userId);
+  }
+
   /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */
   async getTimeByTag(userId: string, range: DateRangeInput = {}) {
     return this.generalService.getTimeByTag(userId, range);
