@@ -54,6 +54,7 @@ import {
   listConnections,
   listProviderCalendars,
   reconnectExistingConnection,
+  revokeOrphanedGrant,
   updateSelectedCalendars,
 } from '../connection-service';
 
@@ -735,5 +736,122 @@ describe('disconnect', () => {
     await expect(disconnect(USER_ID, CONNECTION_ID)).rejects.toBeInstanceOf(
       ExternalCalendarServiceError,
     );
+  });
+});
+
+// =============================================================================
+// revokeOrphanedGrant（#2072）
+// =============================================================================
+
+describe('revokeOrphanedGrant', () => {
+  const PROVIDER_ACCOUNT_ID = 'google-sub-orphan';
+
+  function setupExistenceCheck(existingRows: Array<{ id: string }>): {
+    eqCalls: Array<[string, unknown]>;
+  } {
+    const eqCalls: Array<[string, unknown]> = [];
+    const from = vi.fn(() => {
+      const proxy: unknown = new Proxy(
+        {},
+        {
+          get(_t, prop: string) {
+            if (prop === 'then') {
+              return (onF: (v: { data: unknown; error: unknown }) => unknown) =>
+                Promise.resolve({ data: existingRows, error: null }).then(onF);
+            }
+            return (...args: unknown[]) => {
+              if (prop === 'eq') eqCalls.push(args as [string, unknown]);
+              return proxy;
+            };
+          },
+        },
+      );
+      return proxy;
+    });
+    createClient.mockReturnValue({ from });
+    return { eqCalls };
+  }
+
+  it('同一 provider_account_id の既存接続があれば revoke しない（user_id は問わない）', async () => {
+    const { eqCalls } = setupExistenceCheck([{ id: '00000000-0000-4000-8000-0000000000c9' }]);
+
+    await revokeOrphanedGrant({
+      providerAccountId: PROVIDER_ACCOUNT_ID,
+      refreshToken: 'refresh-token',
+      deadlineAt: Date.now() + 60_000,
+    });
+
+    expect(revoke).not.toHaveBeenCalled();
+    // user_id を条件に含めない（別ユーザーの接続も「使用中」とみなす）。
+    expect(eqCalls).toEqual([
+      ['provider', 'google'],
+      ['provider_account_id', PROVIDER_ACCOUNT_ID],
+    ]);
+  });
+
+  it('既存接続が無ければ revoke する', async () => {
+    setupExistenceCheck([]);
+
+    await revokeOrphanedGrant({
+      providerAccountId: PROVIDER_ACCOUNT_ID,
+      refreshToken: 'refresh-token',
+      deadlineAt: Date.now() + 60_000,
+    });
+
+    expect(revoke).toHaveBeenCalledWith('refresh-token');
+  });
+
+  it('残予算が不足していれば存在確認も revoke も行わない', async () => {
+    const { eqCalls } = setupExistenceCheck([]);
+
+    // CALENDAR_CONNECTION_DB_TIMEOUT_MS(15s) + TOKEN_REQUEST_TIMEOUT_MS(15s) = 30s 未満。
+    await revokeOrphanedGrant({
+      providerAccountId: PROVIDER_ACCOUNT_ID,
+      refreshToken: 'refresh-token',
+      deadlineAt: Date.now() + 10_000,
+    });
+
+    expect(eqCalls).toEqual([]);
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  it('存在確認・revoke いずれが失敗しても throw しない（best-effort）', async () => {
+    setupExistenceCheck([]);
+    revoke.mockRejectedValue(new Error('revoke endpoint unreachable'));
+
+    await expect(
+      revokeOrphanedGrant({
+        providerAccountId: PROVIDER_ACCOUNT_ID,
+        refreshToken: 'refresh-token',
+        deadlineAt: Date.now() + 60_000,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('存在確認クエリ自体が失敗したら安全側（存在する扱い）に倒して revoke しない', async () => {
+    const from = vi.fn(() => {
+      const proxy: unknown = new Proxy(
+        {},
+        {
+          get(_t, prop: string) {
+            if (prop === 'then') {
+              return (onF: (v: { data: unknown; error: unknown }) => unknown) =>
+                Promise.resolve({ data: null, error: { code: '42501' } }).then(onF);
+            }
+            return () => proxy;
+          },
+        },
+      );
+      return proxy;
+    });
+    createClient.mockReturnValue({ from });
+
+    await revokeOrphanedGrant({
+      providerAccountId: PROVIDER_ACCOUNT_ID,
+      refreshToken: 'refresh-token',
+      deadlineAt: Date.now() + 60_000,
+    });
+
+    expect(revoke).not.toHaveBeenCalled();
   });
 });
