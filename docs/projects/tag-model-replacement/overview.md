@@ -272,7 +272,9 @@ epic は「未所属のアクティビティは『未分類』として扱う」
 
 カテゴリー軸で集計するとき、どのカテゴリーにも入らない時間が 2 種類ある（未分類アクティビティの時間 / アクティビティなしのブロックの時間）。**カテゴリー軸ではこれを 1 つの「未分類」バケットへ畳む** — ユーザーにとって「どのカテゴリーにも入っていない時間」は 1 つの概念なので、残余を 2 行に割ると読みにくくなる。アクティビティ軸では「アクティビティなし」を独立した行として出す。これで各軸の残余バケットが 1 つずつになり、§3 の不変条件が両軸で成り立つ。
 
-現行 `estimation-accuracy.ts` の `aggregatePlanRecordEstimationAccuracy` と Time P/L の `buildTagPL` が既に「`tag_id` が null、または削除済みタグ参照を単一バケットへ畳む」という同じ畳み方をしているので、その形を踏襲する。
+現行 `features/timeblock/domain/estimation-accuracy.ts` の `aggregatePlanRecordEstimationAccuracy` と `buildTagPL` が既に「`tag_id` が null、または削除済みタグ参照を単一バケットへ畳む」という同じ畳み方をしているので、その形を踏襲する。
+
+**集計ロジックの所在に注意（レーン境界に効く）**: Time P/L の画面は `features/review`（Layer 2）にあるが、**集計の本体は `features/timeblock`（Layer 1）側にある** — `domain/estimation-accuracy.ts`、`server/statistics-row-builders.ts` / `statistics-summary-service.ts` / `statistics-service.ts` / `statistics-kpi-service.ts`。分析軸を切り替える作業は review だけでは閉じず、timeblock の server / domain を触る。
 
 ### 6-3. セグメントの表示規律（重要）
 
