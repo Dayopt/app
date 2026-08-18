@@ -593,7 +593,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
 
 **推奨: `proProcedure` はそのまま残す。** 裁定の意図（v1 は全部無料 / 境界は後で設計）は、既存の enforcement フラグが**そのまま**満たしている。本 project の実装 scope から認可の変更を落とす。
 
-**この差し戻しは指揮台へ送信済み**（2026-08-18）。確認が返るまで、本節は「注釈を残す」を前提に書く。§9 の Step 4 と §6-7 も同じ前提。
+**差し戻しは受諾された**（2026-08-18、指揮台。「実測が正しく、実装指定が誤りだった」）。**確定: `proProcedure` 注釈は残し、本 project の実装 scope から認可の変更を落とす。** 挙動差ゼロの可逆な采配として User へ事後報告される。
 
 **副産物**: §6-2 の当初の懸念（無料ユーザーに「押せるタブが 1 つ死んでいる」体験が出る）は、**課金を有効化するまで発生しない**。懸念が現実になるのは `BILLING_ENFORCED='true'` を立てる時で、その時点で境界を設計するという裁定は、懸念のタイミングとも噛み合っている。
 
@@ -720,6 +720,84 @@ export interface ReviewDisplayRange {
 
 **次のラウンドでやること**: 上表 7 件を設計へ落とし、§5・§6 を再提出して `/plan-review` にかけ直す。
 
+### 6-9. HALT の解消（設計の追補）
+
+§6-8 の 7 件に答える。**ここまで書いて再度 `/plan-review` にかける。**
+
+#### 1. タブリンクが `date` と `view` を引き継ぐ（契約）
+
+`WorkspaceTabs` の href は固定文字列にしない。`useCalendarNavigation()` の `currentDate` / `viewType` から組む:
+
+- カレンダータブ: `/{locale}/calendar?view={viewType}&date={currentDate}`
+- レポートタブ: `/{locale}/report?date={currentDate}&range={range}`
+
+**§5-4 の「日付は不変」の根拠を差し替える。** 「Provider が分岐より上にある」は**必要条件でしかない**。実際に state を守っているのは**タブ href が `date` を運ぶこと**で、Provider の位置はそれを可能にする土台にすぎない。`CalendarNavigationContext.tsx:257-270` の effect は `/calendar` へ戻った瞬間に URL 由来の `initialDate` で state を上書きするので、URL に `date` が乗っていなければ今日へ飛ぶ。
+
+**test で固定する**: `/calendar?view=day&date=X` → レポートタブ → カレンダータブ の往復で `currentDate` と `viewType` が不変であること。
+
+**`viewType` / `panelKind` / `reviewTagId` を §5-4 の表に追加する**: `viewType` は href が運ぶので不変。`panelKind` は Step 6 で廃止されるまで残るので、Step 3〜5 の期間は**タブ往復で落ちることを許容する**（中間状態で、`/report` へ移った時点で panel の概念自体が意味を失うため）。`reviewTagId` は §6-5 のとおり Sidebar 側へ移すので、この期間は同様に落ちてよい。
+
+#### 2. セクションごとに独立した loading / error 境界を持つ
+
+`isLoading` / `hasError` を**クエリ横断で合成しない**（`CalendarReviewPanel.tsx:76-77` の形を持ち込まない）。セクション 1（差分）・2（Time P/L）・3（セグメント）がそれぞれ自分のデータ源の状態だけを見る。
+
+- 片方のクエリが失敗しても、他のセクションは描画され続ける
+- `enabled: false` でクエリを止める場合、**`isPending` を loading 判定に使わない**（TanStack Query v5 では disabled query の `isPending` は真のままなので、永久スケルトンになる）
+- 将来 `BILLING_ENFORCED` を立てた時に `FORBIDDEN` が返る経路ができるので、**その時に備えて「`error.data?.code === 'FORBIDDEN'` は案内、それ以外は `ErrorState`」の分岐を最初から入れておく**。今は発火しないが、分岐が無いと課金有効化の日に全画面エラーになる
+
+#### 3. `days` はクライアント側でのみ組む
+
+§6-3 の「サーバー / クライアントで組み立てる」を**「クライアントで組み立てる」に限定する**。`toCalendarDateKey`（`compute-date-range.ts:164-169`）が `getFullYear` / `getMonth` / `getDate` という**実行環境のローカル TZ 依存**の getter を使うため、Vercel（UTC）で組むと JST ユーザーの週境界が 1 日ずれる。**ローカルの Mac では再現しない production 限定の故障**になる。
+
+サーバー prefetch が要る場合は `days`（`Date[]`）ではなく `visibleDateKeys`（文字列）を TZ 明示で作る関数を別に用意する。**本 project の v1 では `/report` の server prefetch をやらない**（§11 へ追加）ことで、この分岐自体を避ける。
+
+#### 4. 固定バーは 1 つのコンテナに入れ、本文余白は CSS 変数で連動させる
+
+§5-7-b の「`pb-16` を 2 段分へ更新」は**実装できない**。理由: `TagChipRow.tsx:58` は `fixed inset-x-0 bottom-0` + `min-h-14`（56px）+ `pt-1` + **`pb-safe`**（ホームインジケーター分、iPhone で約 34px）で実効 ~94px あるのに、本文側の余白は `pb-16` = 64px しかない。**2 段化以前に既に約 30px 食い込んでいる**（既存の不具合。本 project が作ったものではないが、2 段化で確実に露見する）。静的な Tailwind クラスでは `env(safe-area-inset-bottom)` を含む高さを表現できない。
+
+**設計**: `fixed inset-x-0 bottom-0` のコンテナを 1 つだけ置き、その中に縦 flex で `ActivityChipRow` → `BottomTabBar` の順に入れる。`pb-safe` は**コンテナの最下段にだけ**付ける。本文側は固定クラスをやめ、コンテナの実測高を CSS 変数（`--bottom-bars-h`）で公開して `padding-bottom: calc(var(--bottom-bars-h) + env(safe-area-inset-bottom))` にする。
+
+この形なら `z-index` トークンも増やさずに済む（`bottom-tab: 40` 1 つで足りる。`packages/foundations/src/tokens/z-index.css`）。`TagChipRow` の `bottom-0` を任意値（`bottom-[56px]`）でずらす案は `design-system.md` の規律に触れるので採らない。
+
+**追加の検証項目**（実機確認が要る、実装 Step の完了条件に含める）:
+
+- **iOS Safari のツールバー**: `base-layout-content.tsx` は `h-screen` を使っており、`100vh` は大ビューポート（ツールバー隠れ時）基準。ツールバー表示中に下段タブが到達不能にならないか。必要なら `h-dvh` へ変える
+- **キーボード / bottom sheet 表示時**: `TagTimeblockCreatePopover` が開いている間は**下段バー群を隠す**（誤タップ対策の 4 点目）
+
+#### 5. `weekStartsOn` を期間契約の入力に含める
+
+`range=week` の週境界を決めるのに必須（`compute-date-range.ts` の関数が引数に取る）。`showWeekends` とまったく同じ「共有リンクを開いた相手と表示がずれる」性質を持つ。
+
+**一般原則として書く**（`showWeekends` だけの個別判断にしない）: **表示設定（`showWeekends` / `weekStartsOn` / タイムゾーン）は URL に載せない。** URL が持つのは「どこを見ているか」（`date` / `range`）だけで、「どう見せるか」は各ユーザーの設定に従う。共有リンクを開いた相手が自分の設定で見るのは劣化ではなく意図した挙動。
+
+#### 6. 差分のデータ源 — 純関数は既に切り出されている
+
+**実測すると、作業量は懸念より小さい。** `computeTimeblockDayDiffs` は `features/calendar/lib/timeblock-day-diff.ts:113-117` の**純関数**で、`(plans, records, bounds)` を取るだけ。`CalendarController.tsx:255-311` がやっているのは `allTimeblocks` を plan / record に振り分けて可視性で絞る**前処理**で、これも純粋な変換。
+
+**選択肢の比較**（指揮台の要請により明示）:
+
+| 案                                                                  | 作業量                                                                                                                                        | 判定     |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **A: 前処理を純関数として切り出し、`/report` が独立に呼ぶ**（採用） | 中。`CalendarController.tsx:255-311` の 2 つの `useMemo` を pure 関数へ移し、両者が呼ぶ形にする                                               | **採用** |
+| B: `CalendarController` から差分結果を受け取る                      | 小さく見えるが、`/report` が `CalendarController` に依存する。カレンダーが描画されていない `/report` で Controller を動かす形になり、本末転倒 | 不採用   |
+| C: `/report` 専用の差分集計を新規に書く                             | 大。集計ロジックが 2 本になり、`computeTimeblockDayDiffs` の回帰テストが片方しか守らなくなる                                                  | 不採用   |
+
+**A を採る理由**: 差分計算の本体（`computeTimeblockDayDiffs`）は**既に純関数として切り出されている**（`features/calendar/lib/timeblock-day-diff.ts:113-117`、`(plans, records, bounds)` を取るだけ）。残っているのは `allTimeblocks` を plan / record へ振り分けて可視性で絞る前処理だけで、これも純粋な変換。**つまり A は「切り出す」というより「切り出し残しを片付ける」作業**で、当初の懸念（Step 4 の作業量が大きく変わる）ほど重くない。
+
+**設計**: 前処理を `CalendarController` から純関数として切り出し、`/report` は「期間分の timeblock を取得 → 同じ前処理 → 同じ `computeTimeblockDayDiffs`」を通す。**集計ロジックを二重に持たない。**
+
+**feature 境界に注意**: `timeblock-day-diff.ts` は `features/calendar` にあり、`features/review` から直接 import すると cross-feature になる。`feature-boundaries.md` に従い、**calendar の barrel から export するか、Composition Layer 側（`/report` の page）で合成する**。どちらにするかは実装時に `architecture-guard` の判断を仰ぐ。
+
+#### 7. Step 4 にレーン G の順序制約を付ける（対応済み）
+
+§6-4 / §6-5 は `features/review/` の**公開契約の作り替えと内部 7 箇所の改修**を要求しており、レーン G が同じファイルの同じ箇所（`CalendarReviewPanel.tsx:95-118` の `Select`、`reviewTagId` の語彙）を書き換える。**PR #2179 のような rename ではなく構造的な競合**になる。§9 の Step 4 に「レーン G merge 後」を追記済み。
+
+#### あわせて削るもの（過剰と指摘され受け入れた）
+
+- **`WorkspaceTab` の `'other'` を廃止**し `'calendar' | 'report'` の 2 値にする。§5-4 が「`other` は calendar として扱う」と決めている以上、第 3 の値があると「`other` 用の Sidebar」を後から誰かが足す。判定は `pathname === '/report' ? 'report' : 'calendar'` の 1 行
+- **§6-5 の `truncate` 棚卸し行を削る**。幅が足りていれば無害で、フルページ化の目的（面積）と無関係。別 issue
+- **§6-6（spec 改名）を独立した節として持たない**。§4-6 の E2E 全面書き換えに吸収する
+
 ## 9. Step 分解と Reversibility Table
 
 各 Step = 1 レーン = 1 branch = 1 PR（`.claude/rules/workflow.md` §PR 粒度・判定 3 問）。issue は指揮台が凍結後に起票する。**Step 3 以降はスライス 3 の凍結後に確定する**（現時点では骨格のみ）。
@@ -789,7 +867,7 @@ export interface ReviewDisplayRange {
 | 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す                                         |
 | 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                                                                 |
 | 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                                                         |
-| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**認可は変更しない**（§6-2。既存の enforcement フラグで既に無料） |
+| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3 / **レーン G** | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**認可は変更しない**（§6-2。既存の enforcement フラグで既に無料） |
 | 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                              |
 | 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                    |
 | 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                   |
