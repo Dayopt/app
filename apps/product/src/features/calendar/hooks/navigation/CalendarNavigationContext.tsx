@@ -22,7 +22,7 @@ import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { isCalendarDiffView } from '../../types/calendar.types';
 
-type CalendarPanelKind = 'review' | 'diff' | 'analytics' | null;
+type CalendarPanelKind = 'review' | 'diff' | null;
 
 // ── カレンダーページ判定・初期値計算（旧 useCalendarProviderProps） ──
 

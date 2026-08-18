@@ -10,6 +10,7 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
+import { isWeekend } from 'date-fns';
 import { PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
@@ -104,14 +105,22 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     },
     [restoreSidebar, suppressSidebar],
   );
-  const isReviewPanelActive = panelKind === 'review' || panelKind === 'analytics';
+  // panelKind は CalendarNavigationContext の読み取り時点で 'analytics'→'review' に正規化済みのため、
+  // ここでは 'review' のみを見ればよい（旧 'analytics' 分岐は #2161 P3 でデッドブランチとして整理）
+  const isReviewPanelActive = panelKind === 'review';
   const isDiffPanelActive = panelKind === 'diff';
   const activePanelTab: 'review' | 'diff' | null = isDiffPanelActive
     ? 'diff'
     : isReviewPanelActive
       ? 'review'
       : null;
-  const diffTabDisabled = !isCalendarDiffView(viewType);
+  // CalendarController の calendarDiffEnabled と同じ判定式を揃える（週末のみ表示中の多日ビューでは
+  // diffデータが空になるため、タブ自体を disabled にする。#2161 P2 の縁ケース修正）
+  const calendarDiffDays = composition.showWeekends
+    ? composition.viewDateRange.days
+    : composition.viewDateRange.days.filter((day) => !isWeekend(day));
+  const diffTabDisabled =
+    !isCalendarDiffView(viewType) || (viewType !== 'day' && calendarDiffDays.length === 0);
   const panelOpen = activePanelTab !== null;
   useReviewOpenedTracking(isReviewPanelActive);
   const reviewDisplayRange = useMemo(

@@ -110,13 +110,15 @@ Calendar のメインコンテンツには `pb-16`（64px）でタグフッタ�
 
 ### グリッド密度（時間あたり高さ）
 
-`HOUR_HEIGHT_DENSITIES`（`src/lib/calendar-constants.ts`）で定義。
+時間グリッドは常にコンテナ実測高（viewport高からヘッダー等を除いた高さ）へ 24h をフィットさせ、密度プリセットはそのフィットに対する倍率として表現する（`DENSITY_FACTOR`、`src/features/calendar/lib/constants.ts`）。
 
-| 密度     | モバイル | タブレット | デスクトップ |
-| -------- | -------- | ---------- | ------------ |
-| compact  | 36px     | 40px       | 48px         |
-| default  | 48px     | 60px       | 72px         |
-| spacious | 64px     | 80px       | 96px         |
+| 密度     | フィットに対する倍率 | 挙動                                           |
+| -------- | -------------------- | ---------------------------------------------- |
+| compact  | 1.0                  | 24h がコンテナ高に正確に一致（スクロールなし） |
+| default  | 1.5                  | フィットの1.5倍。意図的にスクロールを許容      |
+| spacious | 2.0                  | フィットの2倍。意図的にスクロールを許容        |
+
+`hourHeight = Math.max(MIN_LEGIBLE_HOUR_HEIGHT, Math.floor((containerHeight / 24) * DENSITY_FACTOR[density]))`
 
 ```tsx
 // CalendarViewRenderer.tsx
