@@ -85,6 +85,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）。**検査基準（2026-08-12）: open PR の Closes 対象 issue と `status:in-progress` issue はすべて現行 milestone に入っているか。open PR 自体にも milestone が付いているか（2026-08-13、#2065）**
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
+- [ ] night-watch 運行記録の前夜コメント確認（`.claude/skills/night-watch/SKILL.md`。欠落があれば故障を疑い `docs/operations/night-watch.md` §故障検出手順 に従う）
 
 ### 月次 backstop（`/gardening` と同時期に実施）
 

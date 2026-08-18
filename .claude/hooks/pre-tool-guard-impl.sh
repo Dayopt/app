@@ -206,6 +206,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 数え上げが尽きないため（.claude/rules/workflow.md §同型指摘の打ち切り
   # 「denylist をやめて allowlist にする」）。env var が無いセッション（通常の
   # 全レーン）には一切影響しない。
+  #
+  # 「literal prefix + 末尾ワイルドカード」は配下バイナリの書込フラグ
+  # （`git diff --output=<path>`、`pnpm quality:deadcode:ci --fix` 等）を
+  # そのまま継承する穴だった（2026-08-19、内製クロスレビュー risk-reviewer /
+  # behavior-verifier が実測確認）。修正方針は点の追加（危険フラグの denylist）
+  # ではなく class を閉じる: 引数を必要としないチェックリストコマンドは
+  # **完全一致**にし、動的引数が要る gh コマンドだけ
+  # night_watch_flags_only で「許可した -- flag 以外は一切許さない」
+  # positive allowlist にする。read-only git（status/log/diff/show）は
+  # checklist が実際には使わないため allowlist から撤去した（未使用の
+  # 攻撃面を patch でなく削除で閉じる）。
   if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
     # redirect はファイル書き込み手段になるため無条件で拒否（read-only 原則）。
     case "$COMMAND" in
@@ -220,25 +231,70 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       exit 2
     fi
 
+    # $1 = 許可コマンドの後続部分（先頭の空白は呼び出し側で除去済み）
+    # $2 = 許可 flag を空白区切りで並べた文字列（例: "--title --body --label"）
+    #
+    # トークンごとに判定する: `-` で始まるトークンは許可 flag と完全一致
+    # しない限り拒否（短縮 flag `-X` / `-f` は許可リストに入れられないので
+    # 一律拒否になる）。`-` で始まらないトークンは位置引数・flag の値として
+    # 無条件に許可する。`--body="値"` のような `=` 結合形は対応しない
+    # （許可形は空白区切りのみに絞る。等号形を通すと `--body=safe--output=x`
+    # のような 1 token に紛れ込ませる迂回を許可 flag の完全一致だけで
+    # 弾けなくなる）。
+    night_watch_flags_only() {
+      local rest="$1" allowed="$2" tok
+      local -a tokens allowed_arr
+      read -ra tokens <<<"$rest"
+      read -ra allowed_arr <<<"$allowed"
+      for tok in "${tokens[@]}"; do
+        case "$tok" in
+          -*)
+            local ok=0 a
+            for a in "${allowed_arr[@]}"; do
+              [ "$tok" = "$a" ] && ok=1 && break
+            done
+            [ "$ok" -eq 1 ] || return 1
+            ;;
+        esac
+      done
+      return 0
+    }
+
     night_watch_allowed=0
     case "$COMMAND" in
-      "pnpm docs:check"* | "pnpm docs:coverage"* | "pnpm quality:deadcode:ci"*)
+      "pnpm docs:check" | "pnpm docs:coverage" | "pnpm quality:deadcode:ci")
+        # 引数不要な checklist コマンド。完全一致のみ許可（引数が付いた
+        # 時点で許可外の呼び出しとして拒否する）。
         night_watch_allowed=1
         ;;
-      "gh api repos/Dayopt/dayopt/dependabot/alerts"* | "gh api repos/Dayopt/dayopt --jq"*)
-        case "$COMMAND" in
-          *'-X'* | *'--method'*) night_watch_allowed=0 ;;
-          *) night_watch_allowed=1 ;;
-        esac
-        ;;
-      "gh issue create "* | "gh issue comment "* | "gh issue list"* | "gh issue view "* | "gh search issues "*)
+      "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
+        | "gh api repos/Dayopt/dayopt --jq .permissions")
+        # checklist.md / SKILL.md step 0 が指定する固定コマンドのみ完全一致で許可。
+        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。
         night_watch_allowed=1
         ;;
-      "git status"* | "git log"* | "git diff"* | "git show"*)
+      "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "echo \$DAYOPT_NIGHT_WATCH"*)
-        night_watch_allowed=1
+      "gh issue create "*)
+        night_watch_flags_only "${COMMAND#"gh issue create "}" "--title --body --label --repo" \
+          && night_watch_allowed=1
+        ;;
+      "gh issue comment "*)
+        night_watch_flags_only "${COMMAND#"gh issue comment "}" "--body --repo" \
+          && night_watch_allowed=1
+        ;;
+      "gh issue list"*)
+        night_watch_flags_only "${COMMAND#"gh issue list"}" "--repo --state --search --label" \
+          && night_watch_allowed=1
+        ;;
+      "gh issue view "*)
+        night_watch_flags_only "${COMMAND#"gh issue view "}" "--repo --json" \
+          && night_watch_allowed=1
+        ;;
+      "gh search issues "*)
+        night_watch_flags_only "${COMMAND#"gh search issues "}" "--repo --state --search" \
+          && night_watch_allowed=1
         ;;
     esac
 

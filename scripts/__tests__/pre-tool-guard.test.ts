@@ -703,7 +703,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     });
   });
 
-  describe('許可形（night-watch checklist が実行する形）', () => {
+  describe('許可形（night-watch checklist が実行する形。完全一致 or positive flag allowlist）', () => {
     it.each([
       ['docs:check', 'pnpm docs:check'],
       ['docs:coverage', 'pnpm docs:coverage'],
@@ -721,10 +721,6 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'gh search issues (dedup検索)',
         'gh search issues --repo Dayopt/dayopt --state open --search test',
       ],
-      ['git status', 'git status --porcelain'],
-      ['git log', 'git log -1'],
-      ['git diff', 'git diff --cached'],
-      ['git show', 'git show HEAD'],
       ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
@@ -758,6 +754,50 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
       ['redirect による追記（>>）', 'echo x >> baseline.json'],
       ['stdin redirect（<）', 'gh issue create < /tmp/body.txt'],
+      // read-only git は checklist が実際には使わないため allowlist から撤去した
+      // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
+      // git diff/show を残すと --output= 迂回の温床になる）。
+      ['git status（allowlist に無い）', 'git status --porcelain'],
+      ['git log（allowlist に無い）', 'git log -1'],
+      // P1（2026-08-19、内製クロスレビュー risk-reviewer が実測確認）:
+      // 「literal prefix + 末尾ワイルドカード」だった旧実装は git diff の
+      // ネイティブ --output フラグを検査しておらず、任意ファイル書込
+      // （baseline.json 破壊 / hook 自体の上書きによる全セッション DoS）が
+      // 通っていた。完全一致 + read-only git 撤去で class ごと閉じた。
+      ['P1回帰: git diff --output での任意ファイル書込', 'git diff --output=/tmp/pwned.txt'],
+      ['P1回帰: git show --output での任意ファイル書込', 'git show --output=/tmp/pwned.txt HEAD'],
+      // P1（同上）: quality:deadcode:ci --fix で knip がソースを自動改変できた。
+      // 完全一致（引数を一切許さない）で閉じた。
+      ['P1回帰: quality:deadcode:ci --fix によるソース自動改変', 'pnpm quality:deadcode:ci --fix'],
+      ['docs:check に引数を付ける迂回', 'pnpm docs:check --anything'],
+      ['docs:coverage に引数を付ける迂回', 'pnpm docs:coverage --write'],
+      // P2-a（同上）: gh api への -f/-F/--input は暗黙的に POST を意味しうる。
+      // dependabot alerts コマンドは完全一致のみ許可のため、追加 flag は
+      // 文字列として一致しなくなり自動的に拒否される。
+      [
+        'P2回帰: gh api dependabot alerts に -f を付けて暗黙POSTを試みる迂回',
+        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length' -f x=1",
+      ],
+      [
+        'gh api permissions self-check に --input を付ける迂回',
+        'gh api repos/Dayopt/dayopt --jq .permissions --input /tmp/x',
+      ],
+      // gh 系 positive flag allowlist の迂回試行（token単位判定の裏取り）
+      [
+        'gh issue create に未許可 flag（--output）を混入',
+        'gh issue create --title x --output=/tmp/pwned',
+      ],
+      [
+        'gh issue create の値の中に --output を空白区切りで埋め込む迂回',
+        'gh issue create --title x --body "hello --output=/tmp/pwned"',
+      ],
+      ['gh issue comment に短縮 flag（-f）を混入', 'gh issue comment 2209 -f x=1'],
+      ['gh issue list に未許可 flag（--milestone）を混入', 'gh issue list --milestone v0.34'],
+      ['gh search issues に未許可 flag（--label）を混入', 'gh search issues --repo x --label evil'],
+      [
+        '等号結合形（--title=x）は空白区切りのみ許可のため落とす',
+        'gh issue create --title=x --body=y',
+      ],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
     });
