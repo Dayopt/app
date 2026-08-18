@@ -122,6 +122,7 @@
 §レーンの連絡規律 の標準ブロック（止まる前に連絡・User へ直接質問しない・節目で issue コメントを読み直す）に加え、このレーンのチップ prompt には次を必須で含める:
 
 - **1Password 値の非表示規律** — 発行・登録した値そのものは chat / issue コメント / terminal 出力に出さない。存在確認・field 名の確認に留める
+- **1Password の存在確認は item UUID / item 名の照合のみで行い、`op item get` の生 JSON を表示しない**（fields に実値が混じるため。2026-08-18、[#2026](https://github.com/Dayopt/dayopt/issues/2026) の credential 投入作業中に生 JSON が誤って chat へ貼付された実事故を受けた追記。経緯は [docs/operations/log/2026-08-18-incident-credential-paste.md](../../docs/operations/log/2026-08-18-incident-credential-paste.md)）
 - **op 書き込み系コマンドは出力を `>/dev/null` に落とす** — `op item create` / `op item edit` 等は実行結果 stdout に値が混じりうるため、出力を捨てて exit code だけで成否判定する
 - **SHA / トークン疎通の実測** — 疎通確認や検証コマンドの結果は記憶や直近の状況把握を根拠にせず、実行のたびに測定し直す
 
