@@ -5,8 +5,11 @@
 /** 1時間の高さ（px）— SSRフォールバック用デフォルト */
 export const HOUR_HEIGHT = 72; // 1時間の高さ(px) — SSRフォールバック用
 
-// 密度プリセット — feature lib/constants から re-export
-export { HOUR_HEIGHT_DENSITIES } from '../../../../lib/constants';
+/** グリッド全体の時間数（gridHeight = HOURS_PER_DAY * hourHeight の canonical 定数） */
+export const HOURS_PER_DAY = 24;
+
+// 密度プリセット（viewport フィットへの倍率）— feature lib/constants から re-export
+export { DENSITY_FACTOR, MIN_LEGIBLE_HOUR_HEIGHT } from '../../../../lib/constants';
 
 /** 時間列の幅（px） */
 export const TIME_COLUMN_WIDTH = 56; // 時間列の幅(px)
