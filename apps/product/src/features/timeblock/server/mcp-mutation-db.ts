@@ -31,7 +31,14 @@ type McpMutationDatabase = {
 type McpMutationDbClient = SupabaseClient<McpMutationDatabase>;
 type GeneratedPlanCreateRpcArgs =
   Database['public']['Functions']['apply_mcp_plan_create_v1']['Args'];
-type PlanCreateRpcArgs = Omit<GeneratedPlanCreateRpcArgs, 'p_note' | 'p_tag_id'> & {
+// 生成型は DEFAULT 付き引数を `p_activity_id?: string` として出すので、null を
+// 渡せるよう明示的に上書きする（p_note / p_tag_id と同じ扱い）。present flag も
+// optional から必須へ上げて、呼び出し側が三状態を必ず明示するようにする。
+type PlanCreateRpcArgs = Omit<
+  GeneratedPlanCreateRpcArgs,
+  'p_activity_id' | 'p_note' | 'p_tag_id'
+> & {
+  p_activity_id: string | null;
   p_note: string | null;
   p_tag_id: string | null;
 };
@@ -39,8 +46,16 @@ type GeneratedPlanUpdateRpcArgs =
   Database['public']['Functions']['apply_mcp_plan_update_v1']['Args'];
 type PlanUpdateRpcArgs = Omit<
   GeneratedPlanUpdateRpcArgs,
-  'p_end_at' | 'p_note' | 'p_start_at' | 'p_tag_id' | 'p_title'
+  | 'p_activity_id'
+  | 'p_activity_id_present'
+  | 'p_end_at'
+  | 'p_note'
+  | 'p_start_at'
+  | 'p_tag_id'
+  | 'p_title'
 > & {
+  p_activity_id: string | null;
+  p_activity_id_present: boolean;
   p_end_at: string | null;
   p_note: string | null;
   p_start_at: string | null;
@@ -53,8 +68,9 @@ type GeneratedRecordCreateRpcArgs =
   Database['public']['Functions']['apply_mcp_record_create_v1']['Args'];
 type RecordCreateRpcArgs = Omit<
   GeneratedRecordCreateRpcArgs,
-  'p_note' | 'p_plan_id' | 'p_tag_id'
+  'p_activity_id' | 'p_note' | 'p_plan_id' | 'p_tag_id'
 > & {
+  p_activity_id: string | null;
   p_note: string | null;
   p_plan_id: string | null;
   p_tag_id: string | null;
@@ -63,8 +79,16 @@ type GeneratedRecordUpdateRpcArgs =
   Database['public']['Functions']['apply_mcp_record_update_v1']['Args'];
 type RecordUpdateRpcArgs = Omit<
   GeneratedRecordUpdateRpcArgs,
-  'p_end_at' | 'p_note' | 'p_start_at' | 'p_tag_id' | 'p_title'
+  | 'p_activity_id'
+  | 'p_activity_id_present'
+  | 'p_end_at'
+  | 'p_note'
+  | 'p_start_at'
+  | 'p_tag_id'
+  | 'p_title'
 > & {
+  p_activity_id: string | null;
+  p_activity_id_present: boolean;
   p_end_at: string | null;
   p_note: string | null;
   p_start_at: string | null;
@@ -102,6 +126,7 @@ export function createMcpMutationDb() {
     applyPlanCreate: async (args: PlanCreateRpcArgs) => {
       const { data, error } = await client.rpc('apply_mcp_plan_create_v1', {
         ...args,
+        p_activity_id: args.p_activity_id as never,
         p_note: args.p_note as never,
         p_tag_id: args.p_tag_id as never,
       });
@@ -110,6 +135,7 @@ export function createMcpMutationDb() {
     applyPlanUpdate: async (args: PlanUpdateRpcArgs) => {
       const { data, error } = await client.rpc('apply_mcp_plan_update_v1', {
         ...args,
+        p_activity_id: args.p_activity_id as never,
         p_end_at: args.p_end_at as never,
         p_note: args.p_note as never,
         p_start_at: args.p_start_at as never,
@@ -129,6 +155,7 @@ export function createMcpMutationDb() {
     applyRecordCreate: async (args: RecordCreateRpcArgs) => {
       const { data, error } = await client.rpc('apply_mcp_record_create_v1', {
         ...args,
+        p_activity_id: args.p_activity_id as never,
         p_note: args.p_note as never,
         p_plan_id: args.p_plan_id as never,
         p_tag_id: args.p_tag_id as never,
@@ -138,6 +165,7 @@ export function createMcpMutationDb() {
     applyRecordUpdate: async (args: RecordUpdateRpcArgs) => {
       const { data, error } = await client.rpc('apply_mcp_record_update_v1', {
         ...args,
+        p_activity_id: args.p_activity_id as never,
         p_end_at: args.p_end_at as never,
         p_note: args.p_note as never,
         p_start_at: args.p_start_at as never,

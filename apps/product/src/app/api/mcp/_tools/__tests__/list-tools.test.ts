@@ -114,6 +114,11 @@ const context: McpRequestContext = {
   resourceUri: 'https://mcp.dayopt.app' as McpRequestContext['resourceUri'],
 };
 
+// Plan / Record の fixture は activity を持つ状態にしておく。null 固定にすると、
+// read 経路が activity_id を SELECT し損ねても（列が消えて undefined になっても）
+// 「null が返る」正常系と見分けが付かず、テストが素通りする。
+const TIMEBLOCK_ACTIVITY_ID = '55555555-5555-4555-8555-555555555555';
+
 const plan = {
   created_at: '2026-07-01T00:00:00.000Z',
   deleted_at: null,
@@ -124,7 +129,7 @@ const plan = {
   skipped_at: null,
   source: 'manual',
   start_at: '2026-07-01T10:00:00.000Z',
-  activity_id: null,
+  activity_id: TIMEBLOCK_ACTIVITY_ID,
   title: 'Plan',
   updated_at: '2026-07-01T00:00:00.000Z',
   user_id: context.userId,
@@ -140,7 +145,7 @@ const record = {
   plan_id: null,
   source: 'manual',
   start_at: '2026-07-01T11:00:00.000Z',
-  activity_id: null,
+  activity_id: TIMEBLOCK_ACTIVITY_ID,
   title: 'Record',
   updated_at: '2026-07-01T00:00:00.000Z',
   user_id: context.userId,
@@ -313,10 +318,26 @@ describe('MCP list tools public contract', () => {
       await getHandler(handlers, 'records.trash.list')({ limit: 8 }),
     );
 
-    expect(planResult).toMatchObject({ schemaVersion: 3, plan: { id: plan.id } });
-    expect(recordResult).toMatchObject({ schemaVersion: 3, record: { id: record.id } });
-    expect(planTrashResult).toMatchObject({ schemaVersion: 3, count: 1 });
-    expect(recordTrashResult).toMatchObject({ schemaVersion: 3, count: 1 });
+    // get / trash とも行の中身まで見る。count だけを見ていると、read client の
+    // SELECT から activity_id が落ちても件数は変わらないので素通りする。
+    expect(planResult).toMatchObject({
+      schemaVersion: 3,
+      plan: { id: plan.id, activityId: TIMEBLOCK_ACTIVITY_ID },
+    });
+    expect(recordResult).toMatchObject({
+      schemaVersion: 3,
+      record: { id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID },
+    });
+    expect(planTrashResult).toMatchObject({
+      schemaVersion: 3,
+      count: 1,
+      plans: [{ id: plan.id, activityId: TIMEBLOCK_ACTIVITY_ID }],
+    });
+    expect(recordTrashResult).toMatchObject({
+      schemaVersion: 3,
+      count: 1,
+      records: [{ id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID }],
+    });
     expect(listDeletedPlans).toHaveBeenCalledWith(context.userId, 7);
     expect(listDeletedRecords).toHaveBeenCalledWith(context.userId, 8);
   });

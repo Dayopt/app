@@ -7,9 +7,9 @@ import type { Database } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 const PLAN_TRASH_SELECT =
-  'id, title, note, tag_id, start_at, end_at, source, skipped_at, deleted_at, created_at, updated_at' as const;
+  'id, title, note, activity_id, start_at, end_at, source, skipped_at, deleted_at, created_at, updated_at' as const;
 const RECORD_TRASH_SELECT =
-  'id, title, note, tag_id, plan_id, start_at, end_at, source, deleted_at, created_at, updated_at' as const;
+  'id, title, note, activity_id, plan_id, start_at, end_at, source, deleted_at, created_at, updated_at' as const;
 
 type TimeblockTrashDatabase = {
   public: {
@@ -25,7 +25,7 @@ interface PlanReadRow {
   id: string;
   title: string;
   note: string | null;
-  tag_id: string | null;
+  activity_id: string | null;
   start_at: string;
   end_at: string;
   source: string;
@@ -39,7 +39,7 @@ interface RecordReadRow {
   id: string;
   title: string;
   note: string | null;
-  tag_id: string | null;
+  activity_id: string | null;
   plan_id: string | null;
   start_at: string;
   end_at: string;
@@ -97,7 +97,7 @@ export function transformPlanReadModel(row: PlanReadRow) {
     id: row.id,
     title: row.title,
     note: row.note,
-    tagId: row.tag_id,
+    activityId: row.activity_id,
     startAt: row.start_at,
     endAt: row.end_at,
     source: row.source,
@@ -113,7 +113,7 @@ export function transformRecordReadModel(row: RecordReadRow) {
     id: row.id,
     title: row.title,
     note: row.note,
-    tagId: row.tag_id,
+    activityId: row.activity_id,
     planId: row.plan_id,
     startAt: row.start_at,
     endAt: row.end_at,
