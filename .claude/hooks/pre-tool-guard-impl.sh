@@ -201,6 +201,53 @@ conforming_env_file_paths() {
 
 # --- Bash: 危険コマンドのブロック ---
 if [ "$TOOL_NAME" = "Bash" ]; then
+  # night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の
+  # 時だけ有効になる allowlist。denylist ではなく allowlist にするのは、迂回形の
+  # 数え上げが尽きないため（.claude/rules/workflow.md §同型指摘の打ち切り
+  # 「denylist をやめて allowlist にする」）。env var が無いセッション（通常の
+  # 全レーン）には一切影響しない。
+  if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
+    # redirect はファイル書き込み手段になるため無条件で拒否（read-only 原則）。
+    case "$COMMAND" in
+      *'>'* | *'<'*)
+        echo "BLOCKED: night-watch モードでは redirect (> / <) を含むコマンドは実行できません" >&2
+        exit 2
+        ;;
+    esac
+
+    if ! is_single_simple_command "$COMMAND"; then
+      echo "BLOCKED: night-watch モードでは単一の単純コマンドのみ実行できます（区切り・置換・eval不可）" >&2
+      exit 2
+    fi
+
+    night_watch_allowed=0
+    case "$COMMAND" in
+      "pnpm docs:check"* | "pnpm docs:coverage"* | "pnpm quality:deadcode:ci"*)
+        night_watch_allowed=1
+        ;;
+      "gh api repos/Dayopt/dayopt/dependabot/alerts"* | "gh api repos/Dayopt/dayopt --jq"*)
+        case "$COMMAND" in
+          *'-X'* | *'--method'*) night_watch_allowed=0 ;;
+          *) night_watch_allowed=1 ;;
+        esac
+        ;;
+      "gh issue create "* | "gh issue comment "* | "gh issue list"* | "gh issue view "* | "gh search issues "*)
+        night_watch_allowed=1
+        ;;
+      "git status"* | "git log"* | "git diff"* | "git show"*)
+        night_watch_allowed=1
+        ;;
+      "echo \$DAYOPT_NIGHT_WATCH"*)
+        night_watch_allowed=1
+        ;;
+    esac
+
+    if [ "$night_watch_allowed" -ne 1 ]; then
+      echo "BLOCKED: night-watch モードで許可されていないコマンドです（許可形は .claude/skills/night-watch/SKILL.md §権限の構造的強制 参照）: $COMMAND" >&2
+      exit 2
+    fi
+  fi
+
   # git push --force (--force-with-lease は許可)
   if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force[^-]|git\s+push\s+.*--force$'; then
     echo "BLOCKED: git push --force は禁止です。--force-with-lease を使ってください（この文字列に言及しただけでも落ちます。commit message や PR 本文に書く時は文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）" >&2
