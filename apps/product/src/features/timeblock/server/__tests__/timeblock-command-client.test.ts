@@ -58,6 +58,7 @@ describe('TimeblockCommandClient', () => {
 
     expect(rpc).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith('create_plan_command_v1', {
+      p_activity_id: null,
       p_end_at: plan.end_at,
       p_external_calendar_event_id: null,
       p_note: null,

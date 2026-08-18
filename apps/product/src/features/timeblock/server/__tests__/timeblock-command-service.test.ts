@@ -155,6 +155,7 @@ describe('TimeblockCommandService', () => {
       title: 'Changed',
       note: plan.note,
       tagId: plan.tag_id,
+      activityId: plan.activity_id,
       externalCalendarEventId: plan.external_calendar_event_id,
       source: 'api',
       startAt: plan.start_at,

@@ -12,7 +12,7 @@ const plan: ClipboardTimeblock = {
   startHour: 10,
   startMinute: 30,
   tagId: 'tag-work',
-  activityId: null,
+  activityId: 'activity-dev',
 };
 
 const record: ClipboardTimeblock = {
@@ -36,7 +36,7 @@ describe('resolveTimeblockClipboardPaste', () => {
         title: '設計',
         note: 'APIを整理する',
         tagId: 'tag-work',
-        activityId: null,
+        activityId: 'activity-dev',
         start_at: '2026-07-15T01:30:00.000Z',
         end_at: '2026-07-15T02:30:00.000Z',
       },
