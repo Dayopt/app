@@ -54,7 +54,7 @@ export interface CategoryLookupRow {
   icon: string | null;
 }
 
-export interface ActivityPLRow {
+interface ActivityPLRow {
   /** null は「アクティビティなし」 */
   activityId: string | null;
   activityName: string | null;
@@ -67,7 +67,7 @@ export interface ActivityPLRow {
   isNoActivity: boolean;
 }
 
-export interface CategoryPLRow {
+interface CategoryPLRow {
   /** null は「未分類」 */
   categoryId: string | null;
   categoryName: string | null;
@@ -85,7 +85,7 @@ export interface CategoryPLRow {
  * 意図的に合計・比率を持たない。セグメントは重複しうるので合計に意味が無く、
  * 比率を出せる形にすると円グラフ・積み上げ棒・「合計 100%」が書けてしまう。
  */
-export interface SegmentTotalRow {
+interface SegmentTotalRow {
   segmentId: string;
   segmentName: string;
   budgetMinutes: number;

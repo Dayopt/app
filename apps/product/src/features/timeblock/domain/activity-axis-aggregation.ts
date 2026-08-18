@@ -31,7 +31,7 @@ export interface ActivityAxisDurationRow {
 }
 
 /** アクティビティ軸の 1 行。`activityId: null` は「アクティビティなし」。 */
-export interface ActivityAxisAggregate {
+interface ActivityAxisAggregate {
   activityId: string | null;
   plannedMinutes: number;
   recordedMinutes: number;
@@ -40,7 +40,7 @@ export interface ActivityAxisAggregate {
 }
 
 /** カテゴリー軸の 1 行。`categoryId: null` は「未分類」。 */
-export interface CategoryAxisAggregate {
+interface CategoryAxisAggregate {
   categoryId: string | null;
   plannedMinutes: number;
   recordedMinutes: number;
@@ -54,7 +54,7 @@ export interface CategoryAxisAggregate {
  * 意図的に `totalMinutes` / `share` を持たない（重複しうる軸なので合計に意味が無い）。
  * 出してよいのは単体の数字と過去の自分との比較だけ。
  */
-export interface SegmentAxisAggregate {
+interface SegmentAxisAggregate {
   segmentId: string;
   plannedMinutes: number;
   recordedMinutes: number;
