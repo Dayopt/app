@@ -73,6 +73,55 @@ const BUDGETS = {
 const SENTRY_PREVIEW_COMPENSATION_KB = 67; // #2121 実測 66〜68 KB の中央値
 const IS_PRODUCTION_BUILD = process.env.VERCEL_ENV === 'production';
 
+/**
+ * Supabase Preview Branch の実 credential による二重計上の暫定減額（#2159）。
+ *
+ * `SENTRY_PREVIEW_COMPENSATION_KB`（67 KB）は「production 実測 − placeholder preview
+ * 実測」の一括差分として較正されており、Sentry 分と Supabase credential inline 分が
+ * 混在している。Supabase Preview Branch を持つ PR（`supabase/migrations/**` を含む PR）
+ * には Vercel integration が実 `NEXT_PUBLIC_SUPABASE_URL` / 実 JWT 形式 anon key を注入し、
+ * 他の PR は `apps/product/next.config.mjs` の短い placeholder
+ * （`https://placeholder.supabase.co` / `placeholder`）のまま build される
+ * （`docs/engineering/infra.md` §PR Preview の Supabase Vercel integration 参照）。
+ *
+ * 実 credential を持つ preview では、実際にビルドへ埋め込まれた長い credential 文字列
+ * （信頼できる複数箇所から参照される: `lib/supabase/{client,server,middleware}.ts`,
+ * `lib/trpc/{context,server}.ts` 等）と、既存の一括補正（67 KB）が二重計上になり、
+ * 偽陽性の budget 超過を招く（#2159 で発見）。
+ *
+ * 三点実測（2026-08-18、PR #2159）: production 476.0 KB / placeholder preview
+ * 報告値 475.5 KB（構造的に一致）/ 実 credential preview 報告値 502.4 KB。
+ * 502.4 − 475.5 ≈ 27 KB が credential inline 分の推定値。
+ *
+ * これは暫定の lump 減額であり、Sentry 分・credential 分を個別に較正し直す恒久対応は
+ * #2163 に切り出し済み。
+ */
+const SUPABASE_REAL_CRED_ADJUSTMENT_KB = 27; // #2159 実測（475.5 KB 基準の暫定値、詳細は #2163）
+const PLACEHOLDER_SUPABASE_URL = 'https://placeholder.supabase.co'; // next.config.mjs と同じ値
+
+/**
+ * preview/local build に実 Supabase URL（`next.config.mjs` の placeholder 以外）が
+ * 埋め込まれているかを判定する。`NEXT_PUBLIC_SUPABASE_URL` を直接読まず引数で受けるのは、
+ * env mock 無しで単体テストできるようにするため。
+ */
+export function hasRealSupabaseCredentials(supabaseUrl: string | undefined): boolean {
+  return (
+    typeof supabaseUrl === 'string' &&
+    supabaseUrl.length > 0 &&
+    supabaseUrl !== PLACEHOLDER_SUPABASE_URL
+  );
+}
+
+/**
+ * preview/local build に適用する補正値（KB）。production build には適用しない
+ * （呼び出し側で `IS_PRODUCTION_BUILD` を先に見て 0 に倒す）。
+ */
+export function resolvePreviewCompensationKB(supabaseUrl: string | undefined): number {
+  return hasRealSupabaseCredentials(supabaseUrl)
+    ? SENTRY_PREVIEW_COMPENSATION_KB - SUPABASE_REAL_CRED_ADJUSTMENT_KB
+    : SENTRY_PREVIEW_COMPENSATION_KB;
+}
+
 /** デザインシステム目標値（段階的に達成） */
 const TARGETS = {
   FIRST_LOAD_JS_KB: 100,
@@ -243,9 +292,15 @@ function main(): void {
   const stats = JSON.parse(readFileSync(STATS_FILE, 'utf8')) as RouteBundleStat[];
 
   console.log(`Checking bundle budgets for ${stats.length} routes...\n`);
+  const previewCompensationKB = IS_PRODUCTION_BUILD
+    ? 0
+    : resolvePreviewCompensationKB(process.env.NEXT_PUBLIC_SUPABASE_URL);
   if (!IS_PRODUCTION_BUILD) {
+    const suffix = hasRealSupabaseCredentials(process.env.NEXT_PUBLIC_SUPABASE_URL)
+      ? '（実 Supabase credential 検出、#2159 の減額調整込み）'
+      : '';
     console.log(
-      `  (preview/local build: +${SENTRY_PREVIEW_COMPENSATION_KB} KB Sentry compensation applied per route, #2123)\n`,
+      `  (preview/local build: +${previewCompensationKB} KB Sentry compensation applied per route, #2123${suffix})\n`,
     );
   }
 
@@ -257,7 +312,7 @@ function main(): void {
     const measuredGzipKB = Math.round((gzipBytes / 1024) * 10) / 10;
     const gzipKB = IS_PRODUCTION_BUILD
       ? measuredGzipKB
-      : Math.round((measuredGzipKB + SENTRY_PREVIEW_COMPENSATION_KB) * 10) / 10;
+      : Math.round((measuredGzipKB + previewCompensationKB) * 10) / 10;
     const budgetKB = getBudgetForRoute(stat.route);
     const status = getStatus(gzipKB, budgetKB);
 
@@ -326,4 +381,8 @@ function main(): void {
   }
 }
 
-main();
+// テストから純粋関数だけを import した時に CLI 本体を実行しないためのガード
+// （STATS_FILE が無い test 環境で process.exit(1) が走ると test runner ごと落ちる）。
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

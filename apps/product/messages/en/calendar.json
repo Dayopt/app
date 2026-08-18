@@ -53,19 +53,10 @@
     "panel": {
       "resizeLabel": "Resize right panel"
     },
-    "analysis": {
-      "tooltip": "Show analytics",
-      "ariaLabel": "Toggle analytics panel",
-      "panel": {
-        "title": "Analytics",
-        "description": "Analysis by period and tag.",
-        "scopeLabel": "Analysis scope",
-        "all": "All"
-      }
-    },
     "compare": {
       "tooltip": "Compare planned and actual time",
       "ariaLabel": "Toggle planned and actual comparison",
+      "unavailableTooltip": "Diff isn't available in this view",
       "rail": {
         "title": "Plan diff",
         "description": "Changes from the visible plan.",

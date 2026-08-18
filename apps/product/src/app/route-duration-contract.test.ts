@@ -71,6 +71,11 @@ const ROUTE_DURATION_CONTRACT = {
   // 外部 I/O が複数逐次
   'src/app/[locale]/(auth)/auth/callback/route.ts': 60,
   'src/app/[locale]/(auth)/auth/confirm/route.ts': 60,
+  // #2055(b): list_expired_calendar_account_deletion_intents_v1 →
+  // normalize_calendar_account_deletion_intent_v1 を候補ごとに順次呼ぶ（RPC 1 本あたり数秒級 ×
+  // 最大 10 件）。予算不等式は settle-dispatcher.ts の SETTLE_WORST_CASE_MS を route.test.ts が
+  // 実測で固定する。
+  'src/app/api/cron/calendar-account-deletion-settle/route.ts': 60,
   'src/app/api/cron/calendar-sync/route.ts': 60,
   'src/app/api/cron/external-connection-maintenance/route.ts': 60,
   'src/app/api/integrations/google-calendar/start/route.ts': 60,

@@ -7,7 +7,8 @@ import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import type { Database } from './generated/database.types';
 
 const PREDECESSOR_MISSING_FUNCTION_CODES = new Set(['42883', 'PGRST202']);
-const VERSION_RPC_TIMEOUT_MS = 3_000;
+/** cron route の予算不等式（`SETTLE_WORST_CASE_MS` 等）が導出に使うため export する。 */
+export const VERSION_RPC_TIMEOUT_MS = 3_000;
 
 type DatabaseError = {
   code?: unknown;

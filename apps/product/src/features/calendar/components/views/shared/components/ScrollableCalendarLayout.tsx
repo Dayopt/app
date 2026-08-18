@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 
 import { cn } from '@dayopt/components';
 
@@ -19,6 +19,7 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
+import { useContainerHeight } from '../hooks/useContainerHeight';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
@@ -114,8 +115,12 @@ export const ScrollableCalendarLayout = ({
   enableKeyboardNavigation = true,
   onScrollPositionChange,
 }: ScrollableCalendarLayoutProps) => {
-  // hourHeight store をウィンドウサイズと同期（カレンダー内で1箇所のみ）
-  useHourHeightSync();
+  // scroll container の ref を先に確保し、実測高の観測と useScrollableCalendar 双方で共有する
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const containerHeight = useContainerHeight(scrollContainerRef);
+
+  // hourHeight store をコンテナ実測高と同期（カレンダー内で1箇所のみ）
+  useHourHeightSync(containerHeight);
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   // グリッドレイアウト計算（フック利用）
@@ -124,12 +129,13 @@ export const ScrollableCalendarLayout = ({
     displayDates,
   });
 
-  // スクロール管理・キーボードナビゲーション（フック利用）
-  const { scrollContainerRef, handleKeyDown } = useScrollableCalendar({
+  // スクロール管理・キーボードナビゲーション（フック利用、ref は上で確保したものを共有）
+  const { handleKeyDown } = useScrollableCalendar({
     viewMode,
     hourHeight: HOUR_HEIGHT,
     enableKeyboardNavigation,
     onScrollPositionChange,
+    containerRef: scrollContainerRef,
   });
 
   // Mobile + Inspector open / Tag draft open のとき、対象が Drawer に隠れないよう自動スクロール

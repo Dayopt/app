@@ -14,6 +14,7 @@ import {
   CALENDAR_CONNECTION_DB_TIMEOUT_MS,
   getReconnectTarget,
   reconnectExistingConnection,
+  revokeOrphanedGrant,
   saveConnection,
 } from '@/features/external-calendar/server/connection-service';
 import {
@@ -69,6 +70,12 @@ const TIME_BUDGET_MS = 80_000;
  * の 2 回の DB 往復が直列）を基準にする。新規接続経路（`saveConnection` 1 回）はこれより
  * 短く、常に安全側。`TOKEN_REQUEST_TIMEOUT_MS` / `CALENDAR_CONNECTION_DB_TIMEOUT_MS` から
  * 導出し、手書きの数値を二重管理しない。
+ *
+ * #2072 で追加した `revokeOrphanedGrant`（`scope_not_granted` / `account_mismatch` /
+ * `reconnect_target_invalid` の失敗パスで best-effort に呼ぶ）はこの定数に**含めない**。
+ * `revokeOrphanedGrant` は呼び出し時に渡す `deadlineAt`（= この route の `deadlineAt`）を
+ * 自分で見て残予算不足なら revoke 自体を skip する自己完結の gate を持つため、
+ * `POST_EXCHANGE_BUDGET_MS` を元に `maxDuration` を再導出する計算にこの分を足す必要は無い。
  */
 const POST_EXCHANGE_BUDGET_MS = TOKEN_REQUEST_TIMEOUT_MS + 2 * CALENDAR_CONNECTION_DB_TIMEOUT_MS;
 
@@ -250,6 +257,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // granular consent でカレンダー scope の一部だけ外された場合。active な接続を作ると
       // 同期が毎回 403 になり「接続済みなのに同期されない」状態が残る。
       logger.warn('[calendar-callback] required calendar scopes were not granted');
+
+      // #2072: token 交換は完了しているため、Dayopt 側に接続行が無いままだと孤立 grant に
+      // なる。この時点ではメインフローの idToken パースがまだ走っていないため、専用の
+      // try/catch で試みる — 失敗（malformed id_token 等）なら revoke せず安全側に倒す。
+      // メインフローのエラーハンドリングには影響しない自己完結ブロック。
+      if (tokens.refresh_token) {
+        try {
+          const scopeFailureIdToken = parseIdToken(tokens.id_token);
+          await revokeOrphanedGrant({
+            providerAccountId: scopeFailureIdToken.sub,
+            refreshToken: tokens.refresh_token,
+            deadlineAt,
+          });
+        } catch {
+          // id_token が parse できなければ providerAccountId が特定できないため revoke しない。
+        }
+      }
+
       return fail('scope_not_granted');
     }
 
@@ -273,14 +298,37 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (flowState.reconnectConnectionId) {
       const target = await getReconnectTarget(user.id, flowState.reconnectConnectionId);
-      if (!target) return fail('reconnect_target_invalid');
-      if (target.providerAccountId !== idToken.sub) return fail('account_mismatch');
+      if (!target) {
+        // #2072: この時点で token 交換済み・idToken parse 済みなので providerAccountId は
+        // 確定している。Dayopt 側に接続行が残らない孤立 grant を best-effort で revoke する。
+        await revokeOrphanedGrant({
+          providerAccountId: idToken.sub,
+          refreshToken: tokens.refresh_token,
+          deadlineAt,
+        });
+        return fail('reconnect_target_invalid');
+      }
+      if (target.providerAccountId !== idToken.sub) {
+        await revokeOrphanedGrant({
+          providerAccountId: idToken.sub,
+          refreshToken: tokens.refresh_token,
+          deadlineAt,
+        });
+        return fail('account_mismatch');
+      }
 
       const outcome = await reconnectExistingConnection({
         ...connectionInput,
         connectionId: flowState.reconnectConnectionId,
       });
-      if (outcome === 'missing') return fail('reconnect_target_invalid');
+      if (outcome === 'missing') {
+        await revokeOrphanedGrant({
+          providerAccountId: idToken.sub,
+          refreshToken: tokens.refresh_token,
+          deadlineAt,
+        });
+        return fail('reconnect_target_invalid');
+      }
     } else {
       await saveConnection(connectionInput);
     }
