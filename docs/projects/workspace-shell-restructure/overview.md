@@ -685,3 +685,27 @@ export interface ReviewDisplayRange {
 - **「ついでに」データ層を触らない** — この project に migration も RPC 変更も無い。#2162 の波と混ぜない
 - **`_shell/` と `features/review/` の作り替えをスライス 1 でやらない** — レーン F / G の writer 境界（§4-9）
 - **`robots.txt` の刷新をこの project の外へ広げない** — `/calendar` `/report` の追加と、それに伴って死んでいる 2 行の除去まで。robots 全体の設計見直しは別問題
+
+## 12. sub-issue 分解案（起票は指揮台）
+
+§9 の Step をそのまま issue にする。**1 Step = 1 issue = 1 レーン = 1 branch = 1 PR。** 依存の向きが merge 順になる。
+
+| Step | issue タイトル案                                                                  | 依存                  | 受け入れ条件の核                                                                                                               |
+| ---- | --------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す |
+| 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                         |
+| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                 |
+| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築                            |
+| 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                      |
+| 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                            |
+| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                           |
+
+**Step 7 は他と並行してよい**（docs のみで、コードに依存しない）。ただし **§4-10 と `principles.md:35` を分けない** — 片方だけ直すと後続レビューが未改訂の側を根拠に差し戻せる。
+
+**ラベル案**: 全件 `type:feature` または `type:refactor` + `area:calendar`。Step 7 のみ `area:docs`。milestone は epic #2181 と同じ。
+
+**別 issue へ切るもの**（この project の scope 外・§11 と対応）:
+
+- `/calendar` の `view` 省略時に `defaultView` へ追従する（`defaultView` の値空間拡張を含む）
+- 旧 URL redirect の 308 昇格（写像が正しいと実測で確認した後）
+- `getStatsPageData` と `getTimePL` の重複統合（#2161 が Phase 2 送りにしたもの）
