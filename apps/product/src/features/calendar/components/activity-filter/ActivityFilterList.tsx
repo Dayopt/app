@@ -65,7 +65,7 @@ export function ActivityFilterList() {
   const isMobile = useIsMobile();
   const { data: tree, isLoading, isFetching } = useActivityTree();
   const { data: stats, isError: isStatsError } = api.statistics.getActivityStats.useQuery();
-  const { data: archivedActivities } = useArchivedActivities();
+  const { data: archivedActivities, isFetching: isArchivedFetching } = useArchivedActivities();
   const { data: archivedCategories } = useArchivedCategories();
 
   // `?? []` を直接書くと毎 render で新しい配列になり、下流の useMemo /
@@ -111,7 +111,13 @@ export function ActivityFilterList() {
   //
   // アーカイブ済み ID も含める。含めないと、アーカイブ済みアクティビティを参照する
   // 過去ブロックが orphan 扱いで visibleActivityIds から消え、カレンダーから見えなくなる
-  // （#1576 の回帰）。フェッチ中はスキップして、途中の集合で orphan 除去が走るのを防ぐ。
+  // （#1576 の回帰）。
+  //
+  // **tree と archived は別クエリなので、両方の fetch 完了を待つ。** 片方だけで
+  // sync すると欠けている側の ID が orphan として除去され、`knownActivityIds` も
+  // その集合で上書きされる。tRPC の httpBatchLink は同一 tick の呼び出しを束ねるため
+  // 通常は同時に解決するが、mount tick がずれる経路（ルート遷移・hydrate の分割）では
+  // その前提が崩れる。バッチングに依存させない。
   //
   // `useCalendarData` も同じ store を sync するので、**渡す ID 集合を揃える**こと。
   // ズレると後から走った方が相手の ID を orphan として消す。
@@ -124,10 +130,10 @@ export function ActivityFilterList() {
   );
 
   useEffect(() => {
-    if (isFetching) return;
+    if (isFetching || isArchivedFetching) return;
     if (allFilterableIds.length === 0) return;
     syncWithActivities(allFilterableIds);
-  }, [allFilterableIds, syncWithActivities, isFetching]);
+  }, [allFilterableIds, syncWithActivities, isFetching, isArchivedFetching]);
 
   // 一覧の表示ステータス。すべて / アクティブ（既定）/ アーカイブの排他選択
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('active');
