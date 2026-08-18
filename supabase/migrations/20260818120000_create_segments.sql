@@ -5,10 +5,13 @@
 -- 合計の足し算が合うのに対し、**セグメントは重複しうる**。この違いが schema にも出る:
 -- segment_activities は多対多で、1 アクティビティが複数セグメントに入ってよい。
 --
--- 設計上、セグメントに保存させるのは**アクティビティの集合だけ**とする（#2162 の凍結契約）。
--- 期間・指標・グルーピング・並べ替えを持たせない。これは principles.md §右サイドパネル の
--- 「カスタムレポート・期間指定の複雑なフィルタは足さない（Toggl / RescueTime の領土）」を
--- schema 側で担保するためで、列を足さないこと自体が制約として機能する。
+-- 設計上の制約（docs/projects/tag-model-replacement/overview.md §4-3・§6-3・§6-4）:
+-- - セグメントに保存させるのは**アクティビティの集合だけ**。期間・指標・グルーピング・
+--   並べ替えの列を持たせない。列を足さないこと自体がレポートビルダー化への制約になる
+-- - `plans` / `records` にセグメントを指す列は作らない。セグメントが第 2 の分類軸へ
+--   育つ道を構造で塞ぐ
+-- - セグメントはアクティビティだけを束ねる。カテゴリーを直接メンバーにできない
+--   （カテゴリー単位の合計は rollup で出るので、両方許すと同じ数字への 2 つの道ができる）
 --
 -- 所有者整合はトリガーではなく複合 FK で守る（categories / activities と同じ形）。
 -- segment_activities は segments と activities の両方へ (id, user_id) で参照するため、
@@ -29,32 +32,26 @@ CREATE TABLE public.segments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT segments_user_id_name_unique UNIQUE (user_id, name),
   -- segment_activities からの複合 FK 参照先
   CONSTRAINT segments_id_user_id_unique UNIQUE (id, user_id),
-  CONSTRAINT segments_name_not_blank CHECK (btrim(name) <> '')
+  -- categories / activities の *_name_not_blank と同形
+  CONSTRAINT segments_name_not_blank CHECK (length(btrim(name)) > 0)
 );
-
--- アクティブなセグメント内での名前重複だけを禁止する（アーカイブ済みは同名を許す）。
--- categories / activities と同じ部分 UNIQUE の形。
-CREATE UNIQUE INDEX segments_user_id_name_active_unique
-  ON public.segments (user_id, name)
-  WHERE archived_at IS NULL;
 
 -- =============================================================================
 -- 2. segment_activities（多対多。セグメントが重複しうることの実体）
 -- =============================================================================
 
+-- 代理キーを持たせない。(segment_id, activity_id) が自然キーであり、
+-- junction table に surrogate id を足しても参照する側がいない。
 CREATE TABLE public.segment_activities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   segment_id UUID NOT NULL,
   activity_id UUID NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  -- 同じアクティビティを同じセグメントへ二重登録させない
-  CONSTRAINT segment_activities_segment_activity_unique UNIQUE (segment_id, activity_id),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT segment_activities_pkey PRIMARY KEY (segment_id, activity_id),
   -- 所有者整合を複合 FK で守る（トリガー不要）
   CONSTRAINT segment_activities_segment_owner_fkey
     FOREIGN KEY (segment_id, user_id)
@@ -66,11 +63,8 @@ CREATE TABLE public.segment_activities (
     ON DELETE CASCADE
 );
 
--- 「このセグメントに入っているアクティビティ」の引き当て（集計の主経路）
-CREATE INDEX segment_activities_segment_id_idx
-  ON public.segment_activities (segment_id);
-
--- 「このアクティビティが属するセグメント」の逆引き（アクティビティ削除時の影響確認）
+-- 「このアクティビティが属するセグメント」の逆引き（アクティビティ削除時の影響確認）。
+-- 順方向（segment_id からの引き当て）は PRIMARY KEY の先頭列で賄えるため索引を足さない。
 CREATE INDEX segment_activities_activity_id_idx
   ON public.segment_activities (activity_id);
 
