@@ -551,7 +551,7 @@
         },
         "scopes": {
           "readEntries": "Read plans and records",
-          "readTags": "Read tags",
+          "readActivities": "Read activities and categories",
           "readConstraints": "Read time constraints",
           "readStats": "Read review data",
           "writePlans": "Create and edit plans",

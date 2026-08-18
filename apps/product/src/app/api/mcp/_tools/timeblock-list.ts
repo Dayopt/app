@@ -21,7 +21,7 @@ const inputSchema = z
   .object({
     startDate: z.string().datetime().optional(),
     endDate: z.string().datetime().optional(),
-    tagId: z.string().uuid().optional(),
+    activityId: z.string().uuid().optional(),
     limit: z.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -48,7 +48,7 @@ function registerTimeblockListTool(
       inputSchema,
       outputSchema: model === 'plans' ? MCP_PLAN_LIST_OUTPUT_SCHEMA : MCP_RECORD_LIST_OUTPUT_SCHEMA,
     },
-    async ({ startDate, endDate, tagId, limit }) => {
+    async ({ startDate, endDate, activityId, limit }) => {
       if (!ctx.scopes.includes('read:entries')) {
         return createMcpToolError(
           'INSUFFICIENT_SCOPE',
@@ -65,7 +65,7 @@ function registerTimeblockListTool(
           limit: limit ?? 50,
           ...(startDate ? { startDate } : {}),
           ...(endDate ? { endDate } : {}),
-          ...(tagId ? { tagId } : {}),
+          ...(activityId ? { activityId } : {}),
         };
         if (model === 'plans') {
           const rows = await trpc.plans.list({

@@ -9,7 +9,12 @@ import { serializeUntrustedMcpData } from './untrusted-data-serialization';
 // (mcp_mutation_receipts.envelope_version) に永続化された別系統の値のため、
 // MCP_MUTATION_RECEIPT_SCHEMA_VERSION（features/timeblock/server/mcp-mutation-contract.ts）
 // を使う。混同すると SDK の outputSchema 検証が実際の DB 値と食い違って壊れる。
-export const MCP_TOOL_SCHEMA_VERSION = 2 as const;
+// v3 (#2174): タグモデル全置換（#2162）に伴う公開契約の切替。`tags.list` を
+// `activities.list` / `categories.list` へ置換し、read / mutation tool の `tagId` を
+// `activityId` へ改名、mutation の `TAG_ARCHIVED` を `ACTIVITY_ARCHIVED` へ変更した。
+// alias は持たせず一度に切っている（production の OAuth 接続が 0 件であることを
+// read-only で実測済み。詳細は 20260818150000 の migration 冒頭）。
+export const MCP_TOOL_SCHEMA_VERSION = 3 as const;
 
 /**
  * 成功結果の legacy text は必ず untrusted data として枠付けする。

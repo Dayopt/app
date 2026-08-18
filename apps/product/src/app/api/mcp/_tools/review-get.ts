@@ -44,27 +44,20 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
           signal: extra.signal,
         });
 
-        // アーカイブ済み判定は review 本体と切り離して失敗させる。read:tags scope が
-        // 無い接続や tags.listArchived 側の一時的な失敗で review.get 全体を落とさない。
-        // 失敗時は null (= 全行 isArchived false) に degrade する。誤判定の向きは常に
-        // 安全側（非archivedをarchivedと誤表示することはなく、archivedの見落としのみ）。
-        const resolveArchivedTagIds = async (): Promise<Set<string> | null> => {
-          try {
-            const archivedTags = await trpc.tags.listArchived();
-            return new Set(archivedTags.map((tag) => tag.id));
-          } catch (error) {
-            captureUnexpectedMcpToolError(error, 'review_get_archived_tags');
-            logger.warn(
-              'MCP review get could not resolve archived tags; isArchived defaults to false',
-            );
-            return null;
-          }
-        };
+        // アーカイブ判定は当面 null 固定 = 全行 isArchived false。
+        //
+        // 解決元だった `tags.listArchived` は `read:tags` scope を要求していたが、
+        // #2174 でその scope ごと廃止した（アクティビティへ全置換）。ここで呼び続けても
+        // 必ず scope 拒否になり、review.get のたびに Sentry へ雑音を出すだけなので
+        // 呼ばない。tagId 側をアクティビティ軸へ切り替えるのはレーン G（#2173）の
+        // scope で、集計そのものがアクティビティ軸になった時点でアーカイブ解決も戻る。
+        //
+        // degrade の向きは元から安全側（非 archived を archived と誤表示することは
+        // なく、archived の見落としのみ）で、outputSchema の
+        // 「isArchived safely defaults to false」もそのまま成立する。
+        const archivedTagIds: Set<string> | null = null;
 
-        const [result, archivedTagIds] = await Promise.all([
-          trpc.statistics.getMcpReview(input),
-          resolveArchivedTagIds(),
-        ]);
+        const result = await trpc.statistics.getMcpReview(input);
 
         return createMcpToolSuccess({
           schemaVersion: MCP_TOOL_SCHEMA_VERSION,
