@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildAuthorizationServerMetadata, buildProtectedResourceMetadata } from '../metadata';
 
-const READ_SCOPES = ['read:entries', 'read:tags', 'read:constraints', 'read:stats'];
+const READ_SCOPES = ['read:entries', 'read:activities', 'read:constraints', 'read:stats'];
 
 describe('OAuth metadata scopes', () => {
   afterEach(() => {

@@ -40,7 +40,7 @@ const CLAUDE_CONNECTION: ConnectionFixture = {
 const CHATGPT_CONNECTION: ConnectionFixture = {
   id: 'conn-chatgpt',
   client_id: 'chatgpt',
-  scopes: ['read:tags'],
+  scopes: ['read:activities'],
   authorized_at: '2026-07-20T00:00:00.000Z',
   last_used_at: null,
 };

@@ -196,8 +196,8 @@ function scopeLabelFor(t: ReturnType<typeof useTranslations>, scope: string): st
   switch (scope) {
     case 'read:entries':
       return t('scopes.readEntries');
-    case 'read:tags':
-      return t('scopes.readTags');
+    case 'read:activities':
+      return t('scopes.readActivities');
     case 'read:constraints':
       return t('scopes.readConstraints');
     case 'read:stats':
