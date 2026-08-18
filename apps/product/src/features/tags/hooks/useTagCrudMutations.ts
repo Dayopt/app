@@ -125,7 +125,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       utils.tags.list.setData(undefined, (old) => upsertTagInListCache(old, tempTag));
       utils.tags.listHierarchy.setData(undefined, (old) => upsertTagInHierarchyCache(old, tempTag));
 
-      // Calendar filter store の sync は useCalendarData / CalendarFilterList の effect が
+      // Calendar filter store の sync は useCalendarData / ActivityFilterList の effect が
       // utils.tags.list 変更を検知して syncWithActivities 経由で行う（Layer 0 境界を保つため、
       // tags hook からは calendar store を直接触らない）。
       return {

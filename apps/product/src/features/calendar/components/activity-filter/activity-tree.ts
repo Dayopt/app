@@ -23,8 +23,17 @@ interface SidebarActivityModel {
   categories: CategoryWithActivities[];
   /** カテゴリー未所属のアクティビティ（名前順） */
   uncategorizedActivities: Tag[];
-  /** カレンダーフィルターの同期対象になる全アクティビティ ID */
-  allActivityIds: string[];
+  /**
+   * カレンダーフィルターの同期対象になる全 ID。
+   *
+   * **カテゴリー ID も含める。** ブロックはカテゴリー（旧モデルの親タグ）を直接
+   * 参照している場合があり、除外すると `syncWithActivities` の orphan 除去で
+   * `visibleActivityIds` から消え、そのブロックがカレンダーから見えなくなる。
+   * サイドバーにはカテゴリー自身の表示トグルが無いため復帰手段も無くなる。
+   * `useCalendarData` 側の sync も同じ理由で全タグ ID を渡しており、集合を
+   * 揃えないと「後から走った方」が相手の ID を orphan 除去してしまう。
+   */
+  allFilterableIds: string[];
   /** 「カテゴリーを変更」ピッカーに出す全アクティビティ（同名衝突の検出にも使う） */
   allActivities: Tag[];
 }
@@ -67,7 +76,10 @@ export function partitionActivityTree(nodes: TagTreeNode[]): SidebarActivityMode
   return {
     categories,
     uncategorizedActivities,
-    allActivityIds: allActivities.map((activity) => activity.id),
+    allFilterableIds: [
+      ...categories.map((entry) => entry.category.id),
+      ...allActivities.map((activity) => activity.id),
+    ],
     allActivities,
   };
 }

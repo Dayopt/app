@@ -61,15 +61,37 @@ describe('partitionActivityTree', () => {
     expect(result.uncategorizedActivities.map((a) => a.id)).toEqual(['u-1', 'u-2']);
   });
 
-  it('allActivityIds はカテゴリー所属と未分類の両方を含む（フィルター同期の対象）', () => {
+  it('allFilterableIds はカテゴリー所属と未分類の両方のアクティビティを含む', () => {
     const result = partitionActivityTree([
       node(tag('cat-1', 'A'), [tag('act-1', 'x'), tag('act-2', 'y')]),
       node(tag('act-3', 'z')),
     ]);
 
-    // 見出し（カテゴリー）自身は表示フィルターの対象ではないため含めない
-    expect(result.allActivityIds).toEqual(['act-1', 'act-2', 'act-3']);
-    expect(result.allActivityIds).not.toContain('cat-1');
+    expect(result.allFilterableIds).toEqual(expect.arrayContaining(['act-1', 'act-2', 'act-3']));
+  });
+
+  // 回帰防止: カテゴリー ID を除外すると、カテゴリーを直接参照しているブロックが
+  // syncWithActivities の orphan 除去で visibleActivityIds から消え、カレンダーから
+  // 見えなくなる。サイドバーにカテゴリー自身の表示トグルが無いため復帰手段も無い。
+  // useCalendarData 側の sync は全タグ ID を渡すため、集合を揃えないと後から走った
+  // 方が相手の ID を orphan 除去してしまう（旧実装は flattenTagTree で親を含めていた）。
+  it('allFilterableIds はカテゴリー ID も含む（ブロックがカテゴリーを直接参照しうるため）', () => {
+    const result = partitionActivityTree([
+      node(tag('cat-1', 'A'), [tag('act-1', 'x')]),
+      node(tag('cat-2', 'B'), [tag('act-2', 'y')]),
+      node(tag('act-3', 'z')),
+    ]);
+
+    expect(result.allFilterableIds).toContain('cat-1');
+    expect(result.allFilterableIds).toContain('cat-2');
+    // 旧実装（flattenTagTree）と同じく、親 + 子 + 葉の全 ID が揃う
+    expect([...result.allFilterableIds].sort()).toEqual([
+      'act-1',
+      'act-2',
+      'act-3',
+      'cat-1',
+      'cat-2',
+    ]);
   });
 
   it('空配列でも壊れない', () => {
@@ -77,7 +99,7 @@ describe('partitionActivityTree', () => {
 
     expect(result.categories).toEqual([]);
     expect(result.uncategorizedActivities).toEqual([]);
-    expect(result.allActivityIds).toEqual([]);
+    expect(result.allFilterableIds).toEqual([]);
     expect(result.allActivities).toEqual([]);
   });
 });

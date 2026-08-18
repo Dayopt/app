@@ -92,11 +92,11 @@ export function ActivityFilterList() {
   useEffect(() => {
     if (isFetching) return;
 
-    const allIds = [...model.allActivityIds, ...(archived ?? []).map((item) => item.id)];
+    const allIds = [...model.allFilterableIds, ...(archived ?? []).map((item) => item.id)];
     if (allIds.length > 0) {
       syncWithActivities(allIds);
     }
-  }, [model.allActivityIds, archived, syncWithActivities, isFetching]);
+  }, [model.allFilterableIds, archived, syncWithActivities, isFetching]);
 
   // 既定は展開。折りたたんだカテゴリーだけを集合で持つ
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());

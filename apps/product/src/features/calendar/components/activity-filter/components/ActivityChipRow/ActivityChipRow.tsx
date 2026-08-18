@@ -11,45 +11,53 @@ import { cn } from '@dayopt/components';
 
 import { ActivityTimeblockCreatePopover } from '../ActivityTimeblockCreatePopover';
 
-interface TagChipRowProps {
+interface ActivityChipRowProps {
   className?: string;
 }
 
-/** useTags() は hierarchy flatten 済み順を返すため、その順序を維持して active のみ抽出する。 */
-function sortActiveTags(tags: Tag[] | undefined): Tag[] {
-  if (!tags) return [];
-  return tags.filter((tag) => tag.is_active !== false);
+/**
+ * active なアクティビティだけを名前順で返す。
+ *
+ * PC サイドバー（`partitionActivityTree`）と同じ `Intl.Collator` を使い、
+ * 両者の並びが食い違わないようにする（`sort_order` は DnD 撤去で廃止済み）。
+ */
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+function sortActiveActivities(activities: Tag[] | undefined): Tag[] {
+  if (!activities) return [];
+  return activities
+    .filter((activity) => activity.is_active !== false)
+    .sort((a, b) => collator.compare(a.name, b.name));
 }
 
 /**
- * モバイル専用タグチップ行。
+ * モバイル専用のアクティビティチップ行。
  *
- * - タイムライン下部の固定フッターに横一列で並ぶ（親タグ・葉タグ混在）
+ * - タイムライン下部の固定フッターに横一列で並ぶ（カテゴリー所属・未分類が混在）
  * - タップで bottom sheet `ActivityTimeblockCreatePopover` を開き、時刻指定してエントリ作成
- * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成
+ * - 行末に「+」ボタンを置き新規アクティビティを作成
  * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
- * - 並び順: `sort_order` 昇順（PC sidebar と完全一致）
- * - 葉タグは suffix のみ表示（icon + color で親を識別）
- * - `is_active === false` のタグは除外
- * - タグゼロなら null を返す（行ごと非表示。初回タグ作成は別導線）
+ * - 並び順: 名前順（PC sidebar と一致。`sort_order` は DnD 撤去で廃止）
+ * - `is_active === false` は除外
+ * - 0 件なら null を返す（行ごと非表示。初回作成は別導線）
  */
-export function ActivityChipRow({ className }: TagChipRowProps) {
+export function ActivityChipRow({ className }: ActivityChipRowProps) {
   const t = useTranslations();
   const { data: tags } = useTags();
-  const [openTagId, setOpenTagId] = useState<string | null>(null);
+  const [openActivityId, setOpenActivityId] = useState<string | null>(null);
 
-  const openTagCreateModal = useShellStore.use.openTagCreateModal();
+  const openActivityCreateModal = useShellStore.use.openTagCreateModal();
 
-  const sortedTags = useMemo(() => sortActiveTags(tags), [tags]);
-  const openTag = useMemo(
-    () => sortedTags.find((tag) => tag.id === openTagId) ?? null,
-    [sortedTags, openTagId],
+  const sortedActivities = useMemo(() => sortActiveActivities(tags), [tags]);
+  const openActivity = useMemo(
+    () => sortedActivities.find((activity) => activity.id === openActivityId) ?? null,
+    [sortedActivities, openActivityId],
   );
 
-  if (sortedTags.length === 0) return null;
+  if (sortedActivities.length === 0) return null;
 
-  const handleTagTap = (tagId: string) => {
-    setOpenTagId(tagId);
+  const handleActivityTap = (activityId: string) => {
+    setOpenActivityId(activityId);
   };
 
   return (
@@ -63,17 +71,17 @@ export function ActivityChipRow({ className }: TagChipRowProps) {
       role="list"
       aria-label={t('calendar.filter.quickCreate')}
     >
-      {sortedTags.map((tag) => {
-        const label = tag.name;
+      {sortedActivities.map((activity) => {
+        const label = activity.name;
         return (
           <button
-            key={tag.id}
+            key={activity.id}
             type="button"
             role="listitem"
-            onClick={() => handleTagTap(tag.id)}
+            onClick={() => handleActivityTap(activity.id)}
             className="hover:bg-state-hover flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
           >
-            <TagIcon icon={tag.icon} color={tag.color} size="md" />
+            <TagIcon icon={activity.icon} color={activity.color} size="md" />
             <span className="text-muted-foreground max-w-16 truncate text-xs">{label}</span>
           </button>
         );
@@ -83,20 +91,20 @@ export function ActivityChipRow({ className }: TagChipRowProps) {
         type="button"
         role="listitem"
         aria-label={t('calendar.filter.createActivity')}
-        onClick={() => openTagCreateModal()}
+        onClick={() => openActivityCreateModal()}
         className="hover:bg-state-hover text-muted-foreground flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
       >
         <Plus className="size-5" />
         <span className="max-w-16 truncate text-xs">{t('common.actions.add')}</span>
       </button>
 
-      {openTag && (
+      {openActivity && (
         <ActivityTimeblockCreatePopover
           open={true}
           onOpenChange={(o: boolean) => {
-            if (!o) setOpenTagId(null);
+            if (!o) setOpenActivityId(null);
           }}
-          activity={openTag}
+          activity={openActivity}
           isMobile
         />
       )}
