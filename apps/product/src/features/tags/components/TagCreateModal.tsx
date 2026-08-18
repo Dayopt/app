@@ -312,7 +312,7 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
                 {selectedGroupOption ? (
                   <button
                     type="button"
-                    aria-label={t('selectGroup')}
+                    aria-label={t('selectCategory')}
                     className={cn(
                       // eslint-disable-next-line tailwindcss/no-arbitrary-value -- グループ名ボタンの最大幅 10rem はトークンに対応する spacing が無い
                       'flex h-8 max-w-[10rem] items-center gap-1 rounded-full border px-2 transition-colors',
@@ -336,7 +336,7 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
                 ) : (
                   <button
                     type="button"
-                    aria-label={t('selectGroup')}
+                    aria-label={t('selectCategory')}
                     className={cn(
                       'border-border hover:bg-state-hover active:bg-state-hover flex size-8 items-center justify-center rounded-lg border border-dashed transition-colors',
                       'focus-visible:outline-ring outline-none focus-visible:outline-2 focus-visible:outline-offset-2',
@@ -349,7 +349,7 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
               <PopoverContent align="start" className="w-56 p-1">
                 <div
                   role="radiogroup"
-                  aria-label={t('selectGroup')}
+                  aria-label={t('selectCategory')}
                   className="flex flex-col gap-1"
                 >
                   <button
@@ -365,7 +365,7 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
                       parentId === null && 'bg-state-selected',
                     )}
                   >
-                    {t('noGroup')}
+                    {t('noCategory')}
                   </button>
                   {groupOptions.map((option) => {
                     const active = parentId === option.id;

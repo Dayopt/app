@@ -1,8 +1,11 @@
 /**
  * カレンダー表示フィルターストア
  *
- * Googleカレンダーの「マイカレンダー」のように、
- * タグでカレンダー上の表示/非表示を切り替える
+ * サイドバーのアクティビティ一覧と連動し、カレンダー上の表示/非表示を切り替える。
+ *
+ * 語彙の区別（設計契約）:
+ * - **未分類** — カテゴリーに所属していないアクティビティ（サイドバーの見出し）
+ * - **アクティビティなし** — アクティビティが設定されていないブロック（`showNoActivity`）
  */
 
 import { create } from 'zustand';
@@ -12,316 +15,277 @@ import { createPlatformStorage } from '@/lib/zustand/storage';
 
 /** カレンダーフィルターの状態インターフェース */
 interface CalendarFilterState {
-  /** タグIDごとの表示設定（デフォルト: すべて表示） */
-  visibleTagIds: Set<string>;
+  /** アクティビティIDごとの表示設定（デフォルト: すべて表示） */
+  visibleActivityIds: Set<string>;
 
-  /** 初期化済みフラグ（タグ一覧取得後に初期化） */
+  /** 初期化済みフラグ（アクティビティ一覧取得後に初期化） */
   initialized: boolean;
 
-  /** 未分類（tag_id=null）ブロックの表示設定（デフォルト: 表示） */
-  showUntagged: boolean;
+  /** アクティビティ未設定ブロックの表示設定（デフォルト: 表示） */
+  showNoActivity: boolean;
 
   /**
-   * `syncWithTags` が最後に認識した全タグ ID（アーカイブ済み含む）の集合。
+   * `syncWithActivities` が最後に認識した全アクティビティ ID（アーカイブ済み含む）の集合。
    *
-   * `visibleTagIds` だけでは「新規タグ」と「意図的に非表示にしたタグ」を区別できず、
-   * showOnlyUntagged 等で visibleTagIds を空にした直後に syncWithTags が走ると
-   * 全タグが「新規」と誤認されて復活してしまう（#1576フォローアップ）。この集合を
-   * 既知タグの基準にすることで区別する。syncWithTags 以外のアクションでは更新しない。
+   * `visibleActivityIds` だけでは「新規アクティビティ」と「意図的に非表示にしたもの」を
+   * 区別できず、showOnlyNoActivity 等で空にした直後に sync が走ると全アクティビティが
+   * 「新規」と誤認されて復活してしまう（#1576フォローアップ）。この集合を既知の基準に
+   * することで区別する。`syncWithActivities` 以外のアクションでは更新しない。
    */
-  knownTagIds: Set<string>;
+  knownActivityIds: Set<string>;
 }
 
 /** カレンダーフィルターのアクションインターフェース */
 interface CalendarFilterActions {
-  /** タグの表示切替 */
-  toggleTag: (tagId: string) => void;
+  /** アクティビティの表示切替 */
+  toggleActivity: (activityId: string) => void;
 
-  /** 未分類（タグなし）ブロックの表示切替 */
-  toggleShowUntagged: () => void;
+  /** アクティビティ未設定ブロックの表示切替 */
+  toggleShowNoActivity: () => void;
 
-  /** すべてのタグを表示 */
-  showAllTags: (tagIds: string[]) => void;
+  /** すべてのアクティビティを表示 */
+  showAllActivities: (activityIds: string[]) => void;
 
-  /** すべてのタグを非表示 */
-  hideAllTags: () => void;
-
-  /** グループ内のタグを一括表示 */
-  showGroupTags: (tagIds: string[]) => void;
-
-  /** グループ内のタグを一括非表示 */
-  hideGroupTags: (tagIds: string[]) => void;
-
-  /** グループ内のタグを一括切替（全ON→全OFF、それ以外→全ON） */
-  toggleGroupTags: (tagIds: string[]) => void;
+  /** すべてのアクティビティを非表示 */
+  hideAllActivities: () => void;
 
   /**
-   * タグ一覧と filter state を同期する。
+   * アクティビティ一覧と filter state を同期する。
    *
-   * - 初回: 全タグを表示 + `initialized=true`
+   * - 初回: 全アクティビティを表示 + `initialized=true`
    * - 2 回目以降: 既存の visible / hidden toggle を保持しつつ、
-   *   新規タグは visible として追加、削除済みタグ（orphan ID）は除去
+   *   新規は visible として追加、削除済み（orphan ID）は除去
    */
-  syncWithTags: (tagIds: string[]) => void;
+  syncWithActivities: (activityIds: string[]) => void;
 
-  /** 特定のタグを削除（マージ後などに使用） */
-  removeTag: (tagId: string) => void;
+  /** 特定のアクティビティを除去（統合後などに使用） */
+  removeActivity: (activityId: string) => void;
 
-  /** このタグだけ表示（他を全てOFF） */
-  showOnlyTag: (tagId: string) => void;
+  /** このアクティビティだけ表示（他を全てOFF） */
+  showOnlyActivity: (activityId: string) => void;
 
-  /** 未分類ブロックだけ表示（タグを全てOFF） */
-  showOnlyUntagged: () => void;
+  /** アクティビティ未設定ブロックだけ表示（アクティビティを全てOFF） */
+  showOnlyNoActivity: () => void;
 
-  /** 指定タグだけ表示（グループ用） */
-  showOnlyGroupTags: (tagIds: string[]) => void;
+  /** このカテゴリーのアクティビティだけ表示（context menu「このカテゴリーだけ表示」） */
+  showOnlyCategoryActivities: (activityIds: string[]) => void;
 
-  /** タグが表示中かチェック */
-  isTagVisible: (tagId: string) => boolean;
+  /** アクティビティが表示中かチェック */
+  isActivityVisible: (activityId: string) => boolean;
 
-  /** グループ内のタグの表示状態を取得（all: 全ON, none: 全OFF, some: 一部） */
-  getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
+  /** カテゴリー内アクティビティの表示状態を取得（all: 全ON, none: 全OFF, some: 一部） */
+  getCategoryVisibility: (activityIds: string[]) => 'all' | 'none' | 'some';
 
-  /** タグフィルタに一致するかチェック（起源は無視） */
-  matchesTagFilter: (tagId: string | null) => boolean;
+  /** アクティビティフィルタに一致するかチェック */
+  matchesActivityFilter: (activityId: string | null) => boolean;
 
-  /** エントリが表示対象かチェック（タグフィルター） */
-  isEntryVisible: (tagId: string | null) => boolean;
+  /** エントリが表示対象かチェック（アクティビティフィルター） */
+  isEntryVisible: (activityId: string | null) => boolean;
 }
 
 type CalendarFilterStore = CalendarFilterState & CalendarFilterActions;
 
 // シリアライズ済みの状態型
 interface SerializedCalendarFilterState {
-  visibleTagIds: string[];
+  visibleActivityIds: string[];
   initialized: boolean;
-  showUntagged: boolean;
-  knownTagIds: string[];
+  showNoActivity: boolean;
+  knownActivityIds: string[];
+}
+
+/** 永続化データが読めない / 旧タグモデルの時に戻す初期状態 */
+function createInitialFilterState(): CalendarFilterState {
+  return {
+    visibleActivityIds: new Set<string>(),
+    initialized: false,
+    showNoActivity: true,
+    knownActivityIds: new Set<string>(),
+  };
 }
 
 // カスタムシリアライザー（Setの永続化対応）
 const setSerializer = {
   serialize: (state: CalendarFilterState): SerializedCalendarFilterState => ({
-    visibleTagIds: Array.from(state.visibleTagIds),
+    visibleActivityIds: Array.from(state.visibleActivityIds),
     initialized: state.initialized,
-    showUntagged: state.showUntagged,
-    knownTagIds: Array.from(state.knownTagIds),
+    showNoActivity: state.showNoActivity,
+    knownActivityIds: Array.from(state.knownActivityIds),
   }),
   deserialize: (state: unknown): CalendarFilterState => {
     if (typeof state !== 'object' || state === null) {
-      return {
-        visibleTagIds: new Set<string>(),
-        initialized: false,
-        showUntagged: true,
-        knownTagIds: new Set<string>(),
-      };
+      return createInitialFilterState();
     }
 
-    const rawVisibleTagIds = Reflect.get(state, 'visibleTagIds');
+    const rawVisibleActivityIds = Reflect.get(state, 'visibleActivityIds');
     const rawInitialized = Reflect.get(state, 'initialized');
-    const rawShowUntagged = Reflect.get(state, 'showUntagged');
-    const rawKnownTagIds = Reflect.get(state, 'knownTagIds');
-    const visibleTagIds = Array.isArray(rawVisibleTagIds)
-      ? rawVisibleTagIds.filter((tagId): tagId is string => typeof tagId === 'string')
+    const rawShowNoActivity = Reflect.get(state, 'showNoActivity');
+    const rawKnownActivityIds = Reflect.get(state, 'knownActivityIds');
+    const visibleActivityIds = Array.isArray(rawVisibleActivityIds)
+      ? rawVisibleActivityIds.filter((id): id is string => typeof id === 'string')
       : [];
-    // v6以前(knownTagIdsキーが無い)からの移行は visibleTagIds を既知集合の初期値として使う。
-    // syncWithTags が次に走った時点で正しい knownTagIds に上書きされる一回限りの近似値。
-    const knownTagIds = Array.isArray(rawKnownTagIds)
-      ? rawKnownTagIds.filter((tagId): tagId is string => typeof tagId === 'string')
-      : visibleTagIds;
+    const knownActivityIds = Array.isArray(rawKnownActivityIds)
+      ? rawKnownActivityIds.filter((id): id is string => typeof id === 'string')
+      : visibleActivityIds;
 
     return {
-      visibleTagIds: new Set(visibleTagIds),
+      visibleActivityIds: new Set(visibleActivityIds),
       initialized: rawInitialized === true,
-      // 追加以前(v5以前)の永続化データにはキーが無いため、その場合は表示(true)をデフォルトにする
-      showUntagged: typeof rawShowUntagged === 'boolean' ? rawShowUntagged : true,
-      knownTagIds: new Set(knownTagIds),
+      showNoActivity: typeof rawShowNoActivity === 'boolean' ? rawShowNoActivity : true,
+      knownActivityIds: new Set(knownActivityIds),
     };
   },
 };
 
+/**
+ * v7 以前（タグモデル）の永続化データは全て破棄して初期状態へ落とす。
+ *
+ * v7 の `visibleTagIds` はタグ ID の集合で、アクティビティ ID とは値空間が異なる。
+ * そのまま `visibleActivityIds` として読むと全 ID が未知になり、初回 sync までの間
+ * 「カレンダーに何も表示されない」状態でアプリが開く。ID を引き継がず捨てることで、
+ * 次の `syncWithActivities` が「初回」として全アクティビティを表示状態にする。
+ */
 export function migrateCalendarFilterState(
   persistedState: unknown,
   version: number,
 ): CalendarFilterState {
-  if (version < 5 || typeof persistedState !== 'object' || persistedState === null) {
-    return {
-      visibleTagIds: new Set<string>(),
-      initialized: false,
-      showUntagged: true,
-      knownTagIds: new Set<string>(),
-    };
+  if (version < 8 || typeof persistedState !== 'object' || persistedState === null) {
+    return createInitialFilterState();
   }
 
-  const rawVisibleTagIds = Reflect.get(persistedState, 'visibleTagIds');
+  const rawVisibleActivityIds = Reflect.get(persistedState, 'visibleActivityIds');
   const rawInitialized = Reflect.get(persistedState, 'initialized');
-  const rawShowUntagged = Reflect.get(persistedState, 'showUntagged');
-  const rawKnownTagIds = Reflect.get(persistedState, 'knownTagIds');
-  const visibleTagIds =
-    rawVisibleTagIds instanceof Set
-      ? Array.from(rawVisibleTagIds).filter((tagId): tagId is string => typeof tagId === 'string')
+  const rawShowNoActivity = Reflect.get(persistedState, 'showNoActivity');
+  const rawKnownActivityIds = Reflect.get(persistedState, 'knownActivityIds');
+  const visibleActivityIds =
+    rawVisibleActivityIds instanceof Set
+      ? Array.from(rawVisibleActivityIds).filter((id): id is string => typeof id === 'string')
       : [];
-  // v6以前(knownTagIdsキーが無い)からの移行は visibleTagIds を既知集合の初期値として使う。
-  // 次回の syncWithTags で正しい値に上書きされる一回限りの近似値（#1576フォローアップ）。
-  const knownTagIds =
-    rawKnownTagIds instanceof Set
-      ? Array.from(rawKnownTagIds).filter((tagId): tagId is string => typeof tagId === 'string')
-      : visibleTagIds;
+  const knownActivityIds =
+    rawKnownActivityIds instanceof Set
+      ? Array.from(rawKnownActivityIds).filter((id): id is string => typeof id === 'string')
+      : visibleActivityIds;
 
   return {
-    visibleTagIds: new Set(visibleTagIds),
+    visibleActivityIds: new Set(visibleActivityIds),
     initialized: rawInitialized === true,
-    // v6以前(showUntaggedキーが無い状態)からの移行は表示(true)をデフォルトにする
-    showUntagged: typeof rawShowUntagged === 'boolean' ? rawShowUntagged : true,
-    knownTagIds: new Set(knownTagIds),
+    showNoActivity: typeof rawShowNoActivity === 'boolean' ? rawShowNoActivity : true,
+    knownActivityIds: new Set(knownActivityIds),
   };
 }
 
-/** カレンダーのタグ表示フィルターを管理するZustandストア（localStorageに永続化） */
+/** カレンダーのアクティビティ表示フィルターを管理するZustandストア（localStorageに永続化） */
 export const useCalendarFilterStore = create<CalendarFilterStore>()(
   devtools(
     persist<CalendarFilterStore, [], [], CalendarFilterState>(
       (set, get) => ({
         // 初期状態
-        visibleTagIds: new Set<string>(),
-        initialized: false,
-        showUntagged: true,
-        knownTagIds: new Set<string>(),
+        ...createInitialFilterState(),
 
         // アクション
 
-        toggleTag: (tagId) =>
+        toggleActivity: (activityId) =>
           set((state) => {
-            const newSet = new Set(state.visibleTagIds);
-            if (newSet.has(tagId)) {
-              newSet.delete(tagId);
+            const newSet = new Set(state.visibleActivityIds);
+            if (newSet.has(activityId)) {
+              newSet.delete(activityId);
             } else {
-              newSet.add(tagId);
+              newSet.add(activityId);
             }
-            return { visibleTagIds: newSet };
+            return { visibleActivityIds: newSet };
           }),
 
-        toggleShowUntagged: () => set((state) => ({ showUntagged: !state.showUntagged })),
+        toggleShowNoActivity: () => set((state) => ({ showNoActivity: !state.showNoActivity })),
 
-        showAllTags: (tagIds) =>
+        showAllActivities: (activityIds) =>
           set(() => ({
-            visibleTagIds: new Set(tagIds),
+            visibleActivityIds: new Set(activityIds),
           })),
 
-        hideAllTags: () =>
+        hideAllActivities: () =>
           set(() => ({
-            visibleTagIds: new Set(),
-            showUntagged: false,
+            visibleActivityIds: new Set(),
+            showNoActivity: false,
           })),
 
-        showGroupTags: (tagIds) =>
+        syncWithActivities: (activityIds) =>
           set((state) => {
-            const newSet = new Set(state.visibleTagIds);
-            tagIds.forEach((id) => newSet.add(id));
-            return { visibleTagIds: newSet };
-          }),
-
-        hideGroupTags: (tagIds) =>
-          set((state) => {
-            const newSet = new Set(state.visibleTagIds);
-            tagIds.forEach((id) => newSet.delete(id));
-            return { visibleTagIds: newSet };
-          }),
-
-        toggleGroupTags: (tagIds) =>
-          set((state) => {
-            const newSet = new Set(state.visibleTagIds);
-            // 全てONなら全てOFF、それ以外は全てON
-            const allVisible = tagIds.every((id) => state.visibleTagIds.has(id));
-            if (allVisible) {
-              tagIds.forEach((id) => newSet.delete(id));
-            } else {
-              tagIds.forEach((id) => newSet.add(id));
-            }
-            return { visibleTagIds: newSet };
-          }),
-
-        syncWithTags: (tagIds) =>
-          set((state) => {
-            const tagIdSet = new Set(tagIds);
+            const activityIdSet = new Set(activityIds);
 
             if (!state.initialized) {
-              // 初回は全タグを表示
+              // 初回は全アクティビティを表示
               return {
-                visibleTagIds: new Set(tagIds),
-                knownTagIds: tagIdSet,
+                visibleActivityIds: new Set(activityIds),
+                knownActivityIds: activityIdSet,
                 initialized: true,
               };
             }
 
             // 2 回目以降: 既存の visible / hidden toggle を保持しつつ
-            //   - 新規タグ（knownTagIds に無い ID）は visible として追加
-            //   - 削除済みタグ（tagIdSet に無い visible ID）は orphan として除去
+            //   - 新規（knownActivityIds に無い ID）は visible として追加
+            //   - 削除済み（activityIdSet に無い visible ID）は orphan として除去
             //
-            // 「新規タグ」の判定は knownTagIds（前回 syncWithTags 時点の全タグ集合）で
-            // 行う。visibleTagIds で判定すると、showOnlyUntagged 等で意図的に
-            // visibleTagIds を空にした直後の sync で「既存タグ全部が新規」に見えて
-            // 復活してしまう（#1576フォローアップ）。
+            // 「新規」の判定は knownActivityIds（前回 sync 時点の全集合）で行う。
+            // visibleActivityIds で判定すると、showOnlyNoActivity 等で意図的に空に
+            // した直後の sync で「既存全部が新規」に見えて復活する（#1576フォローアップ）。
             const newSet = new Set<string>();
-            for (const id of state.visibleTagIds) {
-              if (tagIdSet.has(id)) newSet.add(id);
+            for (const id of state.visibleActivityIds) {
+              if (activityIdSet.has(id)) newSet.add(id);
             }
-            for (const id of tagIds) {
-              if (!state.knownTagIds.has(id)) newSet.add(id);
+            for (const id of activityIds) {
+              if (!state.knownActivityIds.has(id)) newSet.add(id);
             }
-            return { visibleTagIds: newSet, knownTagIds: tagIdSet };
+            return { visibleActivityIds: newSet, knownActivityIds: activityIdSet };
           }),
 
-        removeTag: (tagId) =>
+        removeActivity: (activityId) =>
           set((state) => {
-            const newSet = new Set(state.visibleTagIds);
-            newSet.delete(tagId);
-            return { visibleTagIds: newSet };
+            const newSet = new Set(state.visibleActivityIds);
+            newSet.delete(activityId);
+            return { visibleActivityIds: newSet };
           }),
 
-        showOnlyTag: (tagId) =>
+        showOnlyActivity: (activityId) =>
           set(() => ({
-            visibleTagIds: new Set([tagId]),
-            showUntagged: false,
+            visibleActivityIds: new Set([activityId]),
+            showNoActivity: false,
           })),
 
-        showOnlyUntagged: () =>
+        showOnlyNoActivity: () =>
           set(() => ({
-            visibleTagIds: new Set(),
-            showUntagged: true,
+            visibleActivityIds: new Set(),
+            showNoActivity: true,
           })),
 
-        showOnlyGroupTags: (tagIds) =>
+        showOnlyCategoryActivities: (activityIds) =>
           set(() => ({
-            visibleTagIds: new Set(tagIds),
-            showUntagged: false,
+            visibleActivityIds: new Set(activityIds),
+            showNoActivity: false,
           })),
 
-        isTagVisible: (tagId) => get().visibleTagIds.has(tagId),
+        isActivityVisible: (activityId) => get().visibleActivityIds.has(activityId),
 
-        getGroupVisibility: (tagIds) => {
-          if (tagIds.length === 0) return 'none';
+        getCategoryVisibility: (activityIds) => {
+          if (activityIds.length === 0) return 'none';
           const state = get();
-          const visibleCount = tagIds.filter((id) => state.visibleTagIds.has(id)).length;
+          const visibleCount = activityIds.filter((id) => state.visibleActivityIds.has(id)).length;
           if (visibleCount === 0) return 'none';
-          if (visibleCount === tagIds.length) return 'all';
+          if (visibleCount === activityIds.length) return 'all';
           return 'some';
         },
 
-        matchesTagFilter: (tagId) => {
+        matchesActivityFilter: (activityId) => {
           const state = get();
 
-          // タグなし(未分類) → showUntagged フラグに従う
-          // (#1576: タグ削除で未分類化したブロックをフィルターできるようにshowUntagged復活)
-          if (tagId === null) {
-            return state.showUntagged;
+          // アクティビティ未設定のブロック → showNoActivity フラグに従う
+          if (activityId === null) {
+            return state.showNoActivity;
           }
 
-          return state.visibleTagIds.has(tagId);
+          return state.visibleActivityIds.has(activityId);
         },
 
-        isEntryVisible: (tagId) => {
-          return get().matchesTagFilter(tagId);
+        isEntryVisible: (activityId) => {
+          return get().matchesActivityFilter(activityId);
         },
       }),
       {
@@ -330,23 +294,23 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // v2: visibleTagIds競合問題の修正に伴いリセット
         // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
         // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
-        version: 7,
+        // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
+        // v6: showUntagged 復活。未分類(tag_id=null)ブロックのフィルター対応（#1576）
+        // v7: knownTagIds 追加。syncWithTags が「新規タグ」と「意図的に非表示にした
+        //     既知タグ」を区別するための基準集合（#1576フォローアップ）
+        // v8: タグモデル廃止。visibleTagIds→visibleActivityIds / showUntagged→showNoActivity /
+        //     knownTagIds→knownActivityIds。旧タグ ID は値空間が違うため migrate で全破棄する
+        version: 8,
         storage: createPlatformStorage<CalendarFilterState>({
           serialize: setSerializer.serialize,
           deserialize: setSerializer.deserialize,
         }),
-        partialize: ({ visibleTagIds, initialized, showUntagged, knownTagIds }) => ({
-          visibleTagIds,
+        partialize: ({ visibleActivityIds, initialized, showNoActivity, knownActivityIds }) => ({
+          visibleActivityIds,
           initialized,
-          showUntagged,
-          knownTagIds,
+          showNoActivity,
+          knownActivityIds,
         }),
-        // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
-        // v6: showUntagged 復活。未分類(tag_id=null)ブロックのフィルター対応（#1576）。
-        //     既存ユーザーはキーが無いため migrate で表示(true)をデフォルトにする
-        // v7: knownTagIds 追加。syncWithTags が「新規タグ」と「意図的に非表示にした
-        //     既知タグ」を区別するための基準集合（#1576フォローアップ）。
-        //     既存ユーザーはキーが無いため migrate で visibleTagIds を初期値にする
         migrate: migrateCalendarFilterState,
       },
     ),

@@ -8,7 +8,7 @@
  */
 
 import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
-import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
+import { ActivityFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
 
 import { SidebarUtilities } from './SidebarUtilities';
 
@@ -30,7 +30,7 @@ export function SidebarContent() {
 
       <div className="flex min-w-0 flex-col overflow-hidden px-2">
         <ViewSwitcherList />
-        <CalendarFilterList />
+        <ActivityFilterList />
       </div>
 
       <SidebarUtilities />

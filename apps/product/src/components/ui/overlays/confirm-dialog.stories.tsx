@@ -40,7 +40,7 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-/** 削除確認（variant="destructive"）。実使用: tags-list, PlanDeleteConfirmDialog, CalendarFilterList */
+/** 削除確認（variant="destructive"）。実使用: tags-list, PlanDeleteConfirmDialog, ActivityFilterList */
 export const Destructive: Story = {
   render: () => {
     function Demo() {

@@ -6,10 +6,10 @@ describe('useCalendarFilterStore', () => {
   beforeEach(() => {
     localStorage.clear();
     useCalendarFilterStore.setState({
-      visibleTagIds: new Set<string>(),
+      visibleActivityIds: new Set<string>(),
       initialized: false,
-      showUntagged: true,
-      knownTagIds: new Set<string>(),
+      showNoActivity: true,
+      knownActivityIds: new Set<string>(),
     });
   });
 
@@ -21,390 +21,345 @@ describe('useCalendarFilterStore', () => {
 
   describe('永続化', () => {
     it('Setを配列へ変換し、stateだけを保存する', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().showAllActivities(['activity-1', 'activity-2']);
       useCalendarFilterStore.setState({ initialized: true });
 
       expect(JSON.parse(localStorage.getItem('calendar-filter-storage') ?? '')).toEqual({
         state: {
-          visibleTagIds: ['tag-1', 'tag-2'],
+          visibleActivityIds: ['activity-1', 'activity-2'],
           initialized: true,
-          showUntagged: true,
-          knownTagIds: [],
+          showNoActivity: true,
+          knownActivityIds: [],
         },
-        version: 7,
+        version: 8,
       });
     });
 
-    it('v4以前の状態を初期値へ移行する', () => {
-      expect(
-        migrateCalendarFilterState(
-          { visibleTagIds: new Set(['tag-1']), initialized: true, visibleTypes: ['planned'] },
-          4,
-        ),
-      ).toEqual({
-        visibleTagIds: new Set<string>(),
-        initialized: false,
-        showUntagged: true,
-        knownTagIds: new Set<string>(),
-      });
-    });
-
-    it('v5からの移行はvisibleTagIds/initializedを保持しつつshowUntaggedをtrueにデフォルトする', () => {
-      expect(
-        migrateCalendarFilterState({ visibleTagIds: new Set(['tag-1']), initialized: true }, 5),
-      ).toEqual({
-        visibleTagIds: new Set(['tag-1']),
-        initialized: true,
-        showUntagged: true,
-        // v7未満(knownTagIdsキーが無い)からの移行は visibleTagIds をフォールバックに使う
-        knownTagIds: new Set(['tag-1']),
-      });
-    });
-
-    it('showUntaggedが既に永続化されていればその値を保持する', () => {
-      expect(
-        migrateCalendarFilterState(
-          { visibleTagIds: new Set(['tag-1']), initialized: true, showUntagged: false },
-          5,
-        ),
-      ).toEqual({
-        visibleTagIds: new Set(['tag-1']),
-        initialized: true,
-        showUntagged: false,
-        knownTagIds: new Set(['tag-1']),
-      });
-    });
-
-    it('v6(knownTagIdsキーが無い)からの移行はvisibleTagIdsをknownTagIdsのフォールバックにする（#1576フォローアップ）', () => {
-      expect(
-        migrateCalendarFilterState(
-          { visibleTagIds: new Set(['tag-1', 'tag-2']), initialized: true, showUntagged: true },
-          6,
-        ),
-      ).toEqual({
-        visibleTagIds: new Set(['tag-1', 'tag-2']),
-        initialized: true,
-        showUntagged: true,
-        knownTagIds: new Set(['tag-1', 'tag-2']),
-      });
-    });
-
-    it('knownTagIdsが既に永続化されていればその値を保持する（フォールバックで上書きしない）', () => {
+    // v8 はタグモデルからアクティビティモデルへの切り替え。旧 state の ID はタグ ID で
+    // 値空間が違うため、引き継ぐと全 ID が未知になり「カレンダーに何も表示されない」
+    // 状態でアプリが開く。v7 以前は中身によらず初期状態へ落とすのが契約。
+    it.each([4, 5, 6, 7])('v%i（タグモデル）の永続化データは初期状態へ落とす', (version) => {
       expect(
         migrateCalendarFilterState(
           {
-            visibleTagIds: new Set<string>(),
+            visibleTagIds: new Set(['tag-1', 'tag-2']),
             initialized: true,
-            showUntagged: true,
+            showUntagged: false,
             knownTagIds: new Set(['tag-1', 'tag-2']),
           },
-          6,
+          version,
         ),
       ).toEqual({
-        visibleTagIds: new Set<string>(),
+        visibleActivityIds: new Set<string>(),
+        initialized: false,
+        showNoActivity: true,
+        knownActivityIds: new Set<string>(),
+      });
+    });
+
+    it('v7 から移行した直後の sync は「初回」として全アクティビティを表示する', () => {
+      const migrated = migrateCalendarFilterState(
+        { visibleTagIds: new Set(['tag-1']), initialized: true, knownTagIds: new Set(['tag-1']) },
+        7,
+      );
+      useCalendarFilterStore.setState(migrated);
+
+      // initialized=false に落ちているので syncWithActivities が初回扱いになり、
+      // 新モデルの ID が全て visible になる（旧タグ ID は残らない）
+      useCalendarFilterStore.getState().syncWithActivities(['activity-1', 'activity-2']);
+      const state = useCalendarFilterStore.getState();
+      expect(state.visibleActivityIds).toEqual(new Set(['activity-1', 'activity-2']));
+      expect(state.visibleActivityIds.has('tag-1')).toBe(false);
+    });
+
+    it('v8 の永続化データはそのまま保持する', () => {
+      expect(
+        migrateCalendarFilterState(
+          {
+            visibleActivityIds: new Set(['activity-1']),
+            initialized: true,
+            showNoActivity: false,
+            knownActivityIds: new Set(['activity-1', 'activity-2']),
+          },
+          8,
+        ),
+      ).toEqual({
+        visibleActivityIds: new Set(['activity-1']),
         initialized: true,
-        showUntagged: true,
-        knownTagIds: new Set(['tag-1', 'tag-2']),
+        showNoActivity: false,
+        knownActivityIds: new Set(['activity-1', 'activity-2']),
+      });
+    });
+
+    it('v8 で showNoActivity キーが無ければ表示(true)を既定にする', () => {
+      expect(
+        migrateCalendarFilterState(
+          { visibleActivityIds: new Set(['activity-1']), initialized: true },
+          8,
+        ),
+      ).toEqual({
+        visibleActivityIds: new Set(['activity-1']),
+        initialized: true,
+        showNoActivity: true,
+        // knownActivityIds が無ければ visibleActivityIds をフォールバックに使う
+        knownActivityIds: new Set(['activity-1']),
       });
     });
   });
 
-  describe('toggleTag', () => {
-    it('タグを追加できる', () => {
-      useCalendarFilterStore.getState().toggleTag('tag-1');
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-1')).toBe(true);
+  describe('toggleActivity', () => {
+    it('アクティビティを追加できる', () => {
+      useCalendarFilterStore.getState().toggleActivity('tag-1');
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-1')).toBe(true);
     });
 
-    it('既存タグを削除できる', () => {
-      useCalendarFilterStore.getState().toggleTag('tag-1');
-      useCalendarFilterStore.getState().toggleTag('tag-1');
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-1')).toBe(false);
+    it('既存アクティビティを削除できる', () => {
+      useCalendarFilterStore.getState().toggleActivity('tag-1');
+      useCalendarFilterStore.getState().toggleActivity('tag-1');
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-1')).toBe(false);
     });
   });
 
-  describe('showAllTags / hideAllTags', () => {
-    it('全タグを表示できる', () => {
+  describe('showAllActivities / hideAllActivities', () => {
+    it('全アクティビティを表示できる', () => {
       const tagIds = ['tag-1', 'tag-2', 'tag-3'];
-      useCalendarFilterStore.getState().showAllTags(tagIds);
+      useCalendarFilterStore.getState().showAllActivities(tagIds);
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(3);
+      expect(state.visibleActivityIds.size).toBe(3);
     });
 
-    it('全タグを非表示にできる', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().hideAllTags();
+    it('全アクティビティを非表示にできる', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().hideAllActivities();
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(0);
+      expect(state.visibleActivityIds.size).toBe(0);
     });
 
-    it('hideAllTags: showUntaggedもfalseにする（全部隠す操作のため）', () => {
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
-      useCalendarFilterStore.getState().hideAllTags();
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
-    });
-  });
-
-  describe('グループ操作', () => {
-    it('showGroupTags: グループ内タグを一括表示', () => {
-      useCalendarFilterStore.getState().showGroupTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
-      expect(ids.has('tag-1')).toBe(true);
-      expect(ids.has('tag-2')).toBe(true);
-    });
-
-    it('hideGroupTags: グループ内タグを一括非表示', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      useCalendarFilterStore.getState().hideGroupTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
-      expect(ids.has('tag-1')).toBe(false);
-      expect(ids.has('tag-3')).toBe(true);
-    });
-
-    it('toggleGroupTags: 全ONなら全OFF', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      useCalendarFilterStore.getState().toggleGroupTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
-      expect(ids.has('tag-1')).toBe(false);
-      expect(ids.has('tag-2')).toBe(false);
-      expect(ids.has('tag-3')).toBe(true);
-    });
-
-    it('toggleGroupTags: 一部OFFなら全ON', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1']);
-      useCalendarFilterStore.getState().toggleGroupTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
-      expect(ids.has('tag-1')).toBe(true);
-      expect(ids.has('tag-2')).toBe(true);
-    });
-  });
-
-  describe('syncWithTags', () => {
-    it('初回は全タグを表示＆initializedをtrue', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      const state = useCalendarFilterStore.getState();
-      expect(state.initialized).toBe(true);
-      expect(state.visibleTagIds.size).toBe(2);
-    });
-
-    it('2回目は既存 visible タグを保持しつつ新規タグを visible として追加', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2', 'tag-3']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+    it('2回目は既存 visible を保持しつつ新規を visible として追加', () => {
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2', 'tag-3']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-2')).toBe(true);
       expect(ids.has('tag-3')).toBe(true);
     });
 
-    it('削除済みタグ（orphan ID）は除去される', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2', 'tag-3']);
+    it('削除済み（orphan ID）は除去される', () => {
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2', 'tag-3']);
       // tag-3 が削除された想定で再 sync
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-2')).toBe(true);
       expect(ids.has('tag-3')).toBe(false);
     });
 
     it('一時 ID → 実 ID の置き換えで orphan が cleanup される', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1']);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1']);
       // 楽観更新で temp-2 を追加
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'temp-2']);
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('temp-2')).toBe(true);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'temp-2']);
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('temp-2')).toBe(true);
       // mutation 成功で temp-2 → real-2 に置き換わる
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'real-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'real-2']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('real-2')).toBe(true);
       expect(ids.has('temp-2')).toBe(false);
     });
 
-    it('アーカイブ済みタグの ID を含めれば visibleTagIds から消えない（#1576 P1回帰）', () => {
+    it('アーカイブ済みの ID を含めれば visibleActivityIds から消えない（#1576 P1回帰）', () => {
       // 初回: tag-1（通常）と tag-archived（後にアーカイブされる想定）を表示
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(true);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-archived']);
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-archived')).toBe(true);
 
       // tag-archived をアーカイブした後も、呼び出し元がアーカイブ済み ID を含めて
-      // syncWithTags を呼べば orphan 扱いされず visible のまま残る。
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      // syncWithActivities を呼べば orphan 扱いされず visible のまま残る。
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-archived']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-archived')).toBe(true);
     });
 
     it('アーカイブ済み ID を含めずに sync すると orphan として除去される（regressionの再現）', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-archived']);
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(true);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-archived']);
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-archived')).toBe(true);
 
       // tags.list（アクティブのみ）由来の ID だけで sync すると、
       // アーカイブ済みタグは orphan として消えてしまう。これが #1576 で起きたバグ。
-      useCalendarFilterStore.getState().syncWithTags(['tag-1']);
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-archived')).toBe(false);
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1']);
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-archived')).toBe(false);
     });
 
-    it('showOnlyUntagged 後に syncWithTags が走っても他タグが復活しない（#1576フォローアップ）', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().showOnlyUntagged();
-      expect(useCalendarFilterStore.getState().visibleTagIds.size).toBe(0);
+    it('showOnlyNoActivity 後に syncWithActivities が走っても他が復活しない（#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().showOnlyNoActivity();
+      expect(useCalendarFilterStore.getState().visibleActivityIds.size).toBe(0);
 
-      // タグ一覧に変化が無くても、アーカイブ/復元/削除/作成のいずれかで syncWithTags は
-      // 再実行される。visibleTagIds が空のままであるべき。
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
+      // タグ一覧に変化が無くても、アーカイブ/復元/削除/作成のいずれかで syncWithActivities は
+      // 再実行される。visibleActivityIds が空のままであるべき。
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(0);
-      expect(state.showUntagged).toBe(true);
+      expect(state.visibleActivityIds.size).toBe(0);
+      expect(state.showNoActivity).toBe(true);
     });
 
-    it('showOnlyUntagged 後でも新規タグは syncWithTags で表示される（#1576フォローアップ）', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().showOnlyUntagged();
-      expect(useCalendarFilterStore.getState().visibleTagIds.size).toBe(0);
+    it('showOnlyNoActivity 後でも新規は syncWithActivities で表示される（#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().showOnlyNoActivity();
+      expect(useCalendarFilterStore.getState().visibleActivityIds.size).toBe(0);
 
-      // tag-3 は knownTagIds に無い「本当に新規のタグ」なので visible として追加される。
+      // tag-3 は knownActivityIds に無い「本当に新規のタグ」なので visible として追加される。
       // tag-1 / tag-2 は意図的に隠した既知タグなので復活しない。
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2', 'tag-3']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2', 'tag-3']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(false);
       expect(ids.has('tag-2')).toBe(false);
       expect(ids.has('tag-3')).toBe(true);
     });
 
-    it('個別に非表示にしたタグも syncWithTags で復活しない（showOnlyUntagged以外の隠す操作でも同様）', () => {
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().toggleTag('tag-1'); // tag-1 だけ非表示
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-1')).toBe(false);
+    it('個別に非表示にしたアクティビティも syncWithActivities で復活しない（showOnlyNoActivity 以外の隠す操作でも同様）', () => {
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().toggleActivity('tag-1'); // tag-1 だけ非表示
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-1')).toBe(false);
 
-      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      useCalendarFilterStore.getState().syncWithActivities(['tag-1', 'tag-2']);
+      const ids = useCalendarFilterStore.getState().visibleActivityIds;
       expect(ids.has('tag-1')).toBe(false);
       expect(ids.has('tag-2')).toBe(true);
     });
   });
 
-  describe('removeTag', () => {
-    it('タグを削除できる', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().removeTag('tag-1');
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-1')).toBe(false);
-      expect(useCalendarFilterStore.getState().visibleTagIds.has('tag-2')).toBe(true);
+  describe('removeActivity', () => {
+    it('アクティビティを除去できる', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().removeActivity('tag-1');
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-1')).toBe(false);
+      expect(useCalendarFilterStore.getState().visibleActivityIds.has('tag-2')).toBe(true);
     });
   });
 
   describe('showOnly系', () => {
-    it('showOnlyTag: 指定タグのみ表示', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      useCalendarFilterStore.getState().showOnlyTag('tag-2');
+    it('showOnlyActivity: 指定アクティビティのみ表示', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2', 'tag-3']);
+      useCalendarFilterStore.getState().showOnlyActivity('tag-2');
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(1);
-      expect(state.visibleTagIds.has('tag-2')).toBe(true);
+      expect(state.visibleActivityIds.size).toBe(1);
+      expect(state.visibleActivityIds.has('tag-2')).toBe(true);
     });
 
-    it('showOnlyTag: showUntaggedをfalseにする（このタグだけ表示なら未分類は隠れる、#1576フォローアップ）', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
-      useCalendarFilterStore.getState().showOnlyTag('tag-2');
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    it('showOnlyActivity: showNoActivity を false にする（このアクティビティだけ表示ならアクティビティなしは隠れる、#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(true);
+      useCalendarFilterStore.getState().showOnlyActivity('tag-2');
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(false);
     });
 
-    it('showOnlyGroupTags: 指定グループのタグのみ表示', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      useCalendarFilterStore.getState().showOnlyGroupTags(['tag-1', 'tag-3']);
+    it('showOnlyCategoryActivities: 指定カテゴリーのアクティビティのみ表示', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2', 'tag-3']);
+      useCalendarFilterStore.getState().showOnlyCategoryActivities(['tag-1', 'tag-3']);
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(2);
+      expect(state.visibleActivityIds.size).toBe(2);
     });
 
-    it('showOnlyGroupTags: showUntaggedをfalseにする（対称性、#1576フォローアップ）', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2', 'tag-3']);
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
-      useCalendarFilterStore.getState().showOnlyGroupTags(['tag-1', 'tag-3']);
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    it('showOnlyCategoryActivities: showNoActivity を false にする（対称性、#1576フォローアップ）', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(true);
+      useCalendarFilterStore.getState().showOnlyCategoryActivities(['tag-1', 'tag-3']);
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(false);
     });
 
-    it('showOnlyUntagged: 未分類だけ表示（他のタグは全てOFF、visibleTagIdsが空になる対称性）', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().toggleShowUntagged(); // 一旦 false にしておく
-      useCalendarFilterStore.getState().showOnlyUntagged();
+    it('showOnlyNoActivity: アクティビティなしだけ表示（他は全て OFF、visibleActivityIds が空になる対称性）', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().toggleShowNoActivity(); // 一旦 false にしておく
+      useCalendarFilterStore.getState().showOnlyNoActivity();
       const state = useCalendarFilterStore.getState();
-      expect(state.visibleTagIds.size).toBe(0);
-      expect(state.showUntagged).toBe(true);
+      expect(state.visibleActivityIds.size).toBe(0);
+      expect(state.showNoActivity).toBe(true);
     });
   });
 
-  describe('showUntagged（未分類ブロックの表示切替、#1576）', () => {
+  describe('showNoActivity（アクティビティ未設定ブロックの表示切替、#1576）', () => {
     it('デフォルトはtrue（表示）', () => {
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(true);
     });
 
-    it('toggleShowUntagged: falseへ切り替えられる', () => {
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(false);
+    it('toggleShowNoActivity: falseへ切り替えられる', () => {
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(false);
     });
 
-    it('toggleShowUntagged: 2回呼ぶと元に戻る', () => {
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      expect(useCalendarFilterStore.getState().showUntagged).toBe(true);
+    it('toggleShowNoActivity: 2回呼ぶと元に戻る', () => {
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      expect(useCalendarFilterStore.getState().showNoActivity).toBe(true);
     });
 
-    it('toggleShowUntaggedは visibleTagIds に影響しない', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      expect(useCalendarFilterStore.getState().visibleTagIds.size).toBe(2);
+    it('toggleShowNoActivity は visibleActivityIds に影響しない', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      expect(useCalendarFilterStore.getState().visibleActivityIds.size).toBe(2);
     });
 
-    it('matchesTagFilter(null) はshowUntaggedの値をそのまま返す', () => {
-      expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(true);
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(false);
+    it('matchesActivityFilter(null) は showNoActivity の値をそのまま返す', () => {
+      expect(useCalendarFilterStore.getState().matchesActivityFilter(null)).toBe(true);
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      expect(useCalendarFilterStore.getState().matchesActivityFilter(null)).toBe(false);
     });
 
-    it('isEntryVisible(null) はshowUntaggedの値をそのまま返す', () => {
+    it('isEntryVisible(null) は showNoActivity の値をそのまま返す', () => {
       expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(true);
-      useCalendarFilterStore.getState().toggleShowUntagged();
+      useCalendarFilterStore.getState().toggleShowNoActivity();
       expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(false);
     });
 
-    it('showUntaggedがfalseでもタグ付きアイテムの判定には影響しない', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1']);
-      useCalendarFilterStore.getState().toggleShowUntagged();
-      expect(useCalendarFilterStore.getState().matchesTagFilter('tag-1')).toBe(true);
+    it('showNoActivity が false でもアクティビティ付きアイテムの判定には影響しない', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1']);
+      useCalendarFilterStore.getState().toggleShowNoActivity();
+      expect(useCalendarFilterStore.getState().matchesActivityFilter('tag-1')).toBe(true);
       expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(false);
     });
   });
 
   describe('クエリ系', () => {
-    it('isTagVisible', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1']);
-      expect(useCalendarFilterStore.getState().isTagVisible('tag-1')).toBe(true);
-      expect(useCalendarFilterStore.getState().isTagVisible('tag-99')).toBe(false);
+    it('isActivityVisible', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1']);
+      expect(useCalendarFilterStore.getState().isActivityVisible('tag-1')).toBe(true);
+      expect(useCalendarFilterStore.getState().isActivityVisible('tag-99')).toBe(false);
     });
 
-    it('getGroupVisibility: all / none / some', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1', 'tag-2']);
-      expect(useCalendarFilterStore.getState().getGroupVisibility(['tag-1', 'tag-2'])).toBe('all');
+    it('getCategoryVisibility: all / none / some', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1', 'tag-2']);
+      expect(useCalendarFilterStore.getState().getCategoryVisibility(['tag-1', 'tag-2'])).toBe(
+        'all',
+      );
 
-      useCalendarFilterStore.getState().toggleTag('tag-1');
-      expect(useCalendarFilterStore.getState().getGroupVisibility(['tag-1', 'tag-2'])).toBe('some');
+      useCalendarFilterStore.getState().toggleActivity('tag-1');
+      expect(useCalendarFilterStore.getState().getCategoryVisibility(['tag-1', 'tag-2'])).toBe(
+        'some',
+      );
 
-      useCalendarFilterStore.getState().hideAllTags();
-      expect(useCalendarFilterStore.getState().getGroupVisibility(['tag-1', 'tag-2'])).toBe('none');
+      useCalendarFilterStore.getState().hideAllActivities();
+      expect(useCalendarFilterStore.getState().getCategoryVisibility(['tag-1', 'tag-2'])).toBe(
+        'none',
+      );
     });
 
-    it('getGroupVisibility: 空配列はnone', () => {
-      expect(useCalendarFilterStore.getState().getGroupVisibility([])).toBe('none');
+    it('getCategoryVisibility: 空配列はnone', () => {
+      expect(useCalendarFilterStore.getState().getCategoryVisibility([])).toBe('none');
     });
 
-    it('matchesTagFilter: タグなしアイテムはshowUntagged(デフォルトtrue)に従う', () => {
-      expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(true);
+    it('matchesActivityFilter: アクティビティなしアイテムは showNoActivity（既定 true）に従う', () => {
+      expect(useCalendarFilterStore.getState().matchesActivityFilter(null)).toBe(true);
     });
 
-    it('matchesTagFilter: タグ付きアイテム', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1']);
-      expect(useCalendarFilterStore.getState().matchesTagFilter('tag-1')).toBe(true);
-      expect(useCalendarFilterStore.getState().matchesTagFilter('tag-99')).toBe(false);
+    it('matchesActivityFilter: アクティビティ付きアイテム', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1']);
+      expect(useCalendarFilterStore.getState().matchesActivityFilter('tag-1')).toBe(true);
+      expect(useCalendarFilterStore.getState().matchesActivityFilter('tag-99')).toBe(false);
     });
 
-    it('isEntryVisible: タグフィルターのチェック', () => {
-      useCalendarFilterStore.getState().showAllTags(['tag-1']);
+    it('isEntryVisible: アクティビティフィルターのチェック', () => {
+      useCalendarFilterStore.getState().showAllActivities(['tag-1']);
       expect(useCalendarFilterStore.getState().isEntryVisible('tag-1')).toBe(true);
       expect(useCalendarFilterStore.getState().isEntryVisible('tag-99')).toBe(false);
       expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(true);

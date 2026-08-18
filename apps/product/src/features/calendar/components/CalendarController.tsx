@@ -192,8 +192,8 @@ export function CalendarController({
   const timezone = useUserPreferences((preferences) => preferences.timezone);
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
-  const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
-  const showUntagged = useCalendarFilterStore((state) => state.showUntagged);
+  const visibleActivityIds = useCalendarFilterStore((state) => state.visibleActivityIds);
+  const showNoActivity = useCalendarFilterStore((state) => state.showNoActivity);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -253,8 +253,8 @@ export function CalendarController({
     [calendarDiffDayBounds, showWeekends, viewType],
   );
   const calendarDiffPlans = useMemo(() => {
-    void visibleTagIds;
-    void showUntagged;
+    void visibleActivityIds;
+    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'plan')
@@ -279,12 +279,12 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showUntagged,
-    visibleTagIds,
+    showNoActivity,
+    visibleActivityIds,
   ]);
   const calendarDiffRecords = useMemo(() => {
-    void visibleTagIds;
-    void showUntagged;
+    void visibleActivityIds;
+    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
@@ -303,8 +303,8 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showUntagged,
-    visibleTagIds,
+    showNoActivity,
+    visibleActivityIds,
   ]);
   const calendarDiff = useMemo(
     () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffRecords, calendarDiffBounds),
