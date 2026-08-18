@@ -29,7 +29,7 @@ vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 
 import { SETTLE_WORST_CASE_MS } from '../_composition/settle-dispatcher';
-import { GET, maxDuration } from '../route';
+import { GET, maxDuration, TIME_BUDGET_MS } from '../route';
 
 const URL = 'https://app.dayopt.app/api/cron/calendar-account-deletion-settle';
 
@@ -65,12 +65,12 @@ describe('calendar account deletion settle cron', () => {
     const after = Date.now();
 
     const passed = dispatchCalendarAccountDeletionSettle.mock.calls[0]?.[0];
-    expect(passed?.deadlineAt).toBeGreaterThanOrEqual(before + 50_000);
-    expect(passed?.deadlineAt).toBeLessThanOrEqual(after + 50_000);
+    expect(passed?.deadlineAt).toBeGreaterThanOrEqual(before + TIME_BUDGET_MS);
+    expect(passed?.deadlineAt).toBeLessThanOrEqual(after + TIME_BUDGET_MS);
 
     // TIME_BUDGET_MS(50s) が SETTLE_WORST_CASE_MS を上回り、かつ maxDuration(60s) までの
-    // hard-kill margin が残ることを固定する。
-    const TIME_BUDGET_MS = 50_000;
+    // hard-kill margin が残ることを固定する。route.ts の実値を import する（pr-cross-review
+    // 指摘 — リテラル複製だと route.ts 側の値変更に test が追従しない）。
     const CRON_MAX_DURATION_MS = 60 * 1_000;
     expect(SETTLE_WORST_CASE_MS).toBeLessThanOrEqual(TIME_BUDGET_MS);
     expect(TIME_BUDGET_MS).toBeLessThan(CRON_MAX_DURATION_MS);

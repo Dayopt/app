@@ -15,8 +15,10 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 // SETTLE_WORST_CASE_MS（settle-dispatcher.ts）に対して 10s の hard-kill margin を残す
-// （他の cron route と同じ導出。route.test.ts が実測で固定する）。
-const TIME_BUDGET_MS = 50_000;
+// （他の cron route と同じ導出。route.test.ts が実測で固定する）。export するのは
+// route.test.ts の予算不等式チェックがこの値をリテラル複製せず import するため
+// （pr-cross-review 指摘。値がずれたまま test が両方 pass する事故を防ぐ）。
+export const TIME_BUDGET_MS = 50_000;
 const MIN_CRON_SECRET_LENGTH = 16;
 const NO_STORE_HEADERS = { 'cache-control': 'no-store' } as const;
 
