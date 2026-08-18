@@ -8,12 +8,6 @@
  */
 
 // Components
-export {
-  // Modals & Dialogs
-  TagDeleteConfirmDialog,
-} from './components';
-export { ColorPaletteMenuItems } from './components/ColorPaletteMenuItems';
-export { IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
 export type { HoveredTagInfo } from './components/TagQuickSelector';
@@ -24,22 +18,15 @@ export type { TagColorEntry, TagColorName } from './lib/tag-colors';
 
 // Hooks
 export {
-  tagKeys,
-  useArchiveTag,
   useArchivedTags,
   useCreateTag,
-  useDeleteTag,
-  useMergeTag,
-  useRestoreTag,
 
   // Tags CRUD
   useTags,
-  useTagsHierarchy,
   useTagsMap,
-  useUpdateTag,
 } from './hooks';
 
 // Types
-export type { Tag, TagTreeNode } from './types';
+export type { Tag } from './types';
 
 // ここにないものはfeature内部専用

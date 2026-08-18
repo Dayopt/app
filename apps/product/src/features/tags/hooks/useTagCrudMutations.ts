@@ -1,32 +1,15 @@
-// タグCRUD用ミューテーションフック（作成・更新・削除・リネーム・色変更・並び替え）
+// タグCRUD用ミューテーションフック（作成・削除）
 
 import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import {
-  generateTempId,
-  snapshotQuery,
-  updatePaginatedList,
-} from '@/lib/tanstack-query/optimistic-mutation';
+import { generateTempId, snapshotQuery } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/lib/trpc/client';
-import type { TagColorName } from '../lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '../lib/tag-colors';
 
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag, TagTreeNode } from '../types';
-
-// 新しい入力型（tRPC形式）
-interface TrpcTagUpdateInput {
-  id: string;
-  name?: string | undefined;
-  color?: TagColorName | undefined;
-  icon?: string | null | undefined;
-  parentId?: string | null | undefined;
-}
-
-/** タグ更新の入力型 */
-type UpdateTagInput = TrpcTagUpdateInput;
 
 type TagListData = {
   data: Tag[];
@@ -165,69 +148,6 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       void utils.tags.listHierarchy.invalidate();
     },
   });
-}
-
-/** タグ更新フック（楽観的更新付き）。名前・色の変更に対応 */
-export function useUpdateTag() {
-  const utils = trpc.useUtils();
-  const t = useTranslations('tags');
-
-  const mutation = trpc.tags.update.useMutation({
-    onMutate: async (newData) => {
-      const listSnapshot = await snapshotQuery(utils.tags.list);
-      const detailSnapshot = await snapshotQuery(utils.tags.getById, { id: newData.id });
-
-      const updateTag = (tag: Tag) => {
-        if (tag.id !== newData.id) return tag;
-        return {
-          ...tag,
-          name: newData.name ?? tag.name,
-          color: newData.color ?? tag.color,
-          icon: newData.icon !== undefined ? newData.icon : tag.icon,
-          parent_id: newData.parentId !== undefined ? newData.parentId : tag.parent_id,
-        };
-      };
-
-      utils.tags.list.setData(undefined, (old) => updatePaginatedList(old, updateTag));
-      utils.tags.getById.setData({ id: newData.id }, (old) => (old ? updateTag(old) : undefined));
-
-      return { listSnapshot, detailSnapshot };
-    },
-    onSuccess: (result) => {
-      utils.tags.list.setData(undefined, (old) =>
-        updatePaginatedList(old, (tag) => (tag.id === result.id ? result : tag)),
-      );
-      utils.tags.getById.setData({ id: result.id }, result);
-    },
-    onError: (err, _newData, context) => {
-      context?.listSnapshot?.restore();
-      context?.detailSnapshot?.restore();
-
-      const message = err.message;
-      if (message.includes('already exists') || message.includes('DUPLICATE_NAME')) {
-        toast.error(t('errors.duplicateName'));
-      } else {
-        toast.error(t('errors.updateFailed'));
-      }
-    },
-    onSettled: (_data, _err, input) => {
-      void utils.plans.list.invalidate();
-      void utils.records.list.invalidate();
-      void utils.tags.list.invalidate();
-      void utils.tags.listHierarchy.invalidate();
-      void utils.tags.getById.invalidate({ id: input.id });
-    },
-  });
-
-  return {
-    ...mutation,
-    mutate: (input: UpdateTagInput) => {
-      return mutation.mutate(input);
-    },
-    mutateAsync: async (input: UpdateTagInput) => {
-      return mutation.mutateAsync(input);
-    },
-  };
 }
 
 /** タグ削除フック（楽観的更新付き）。削除戦略（エントリ削除/再割当て）対応 */

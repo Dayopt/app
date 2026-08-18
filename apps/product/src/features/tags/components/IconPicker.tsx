@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 
 import { icons } from 'lucide-react';
 
-import { cn, DropdownMenuItem } from '@dayopt/components';
+import { cn } from '@dayopt/components';
 
 import { CURATED_ICONS, kebabToPascal } from '../lib/curated-icons';
 
@@ -58,45 +58,6 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-interface IconPickerDropdownItemsProps {
-  value: string | null;
-  onChange: (icon: string | null) => void;
-}
-
-/**
- * DropdownMenu 内で使うアイコンピッカー。
- *
- * 各アイコンを `DropdownMenuItem` でラップすることで、選択時に Radix が
- * 自動的にメニューを閉じる（ColorPaletteMenuItems と同じ振る舞い）。
- */
-export function IconPickerDropdownItems({ value, onChange }: IconPickerDropdownItemsProps) {
-  return (
-    <div className="grid grid-cols-8 gap-0">
-      {CURATED_ICONS.map((iconName) => {
-        const pascal = kebabToPascal(iconName);
-        const LucideIcon = icons[pascal as keyof typeof icons];
-        if (!LucideIcon) return null;
-
-        const isSelected = value === iconName;
-
-        return (
-          <DropdownMenuItem
-            key={iconName}
-            onSelect={() => onChange(iconName)}
-            className={cn(
-              'flex items-center justify-center rounded-lg p-2',
-              isSelected && 'ring-primary bg-state-hover ring-2',
-            )}
-            aria-label={iconName}
-          >
-            <LucideIcon className="size-5" />
-          </DropdownMenuItem>
-        );
-      })}
     </div>
   );
 }

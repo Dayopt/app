@@ -7,20 +7,14 @@
  * ```
  */
 
-// Tags Query Keys
-export { tagKeys } from './tagQueryKeys';
-
 // Tags Query Hooks
-export { useTags, useTagsHierarchy } from './useTagsQuery';
+export { useTags } from './useTagsQuery';
 
 // Tags Mutation Hooks (CRUD)
-export { useCreateTag, useDeleteTag, useUpdateTag } from './useTagCrudMutations';
+export { useCreateTag } from './useTagCrudMutations';
 
 // Tags Mutation Hooks (Archive / Restore)
-export { useArchiveTag, useArchivedTags, useRestoreTag } from './useTagArchiveMutations';
-
-// Tags Mutation Hooks (Merge)
-export { useMergeTag } from './useTagMergeMutation';
+export { useArchivedTags } from './useTagArchiveMutations';
 
 // Tag Map
 export { useTagsMap } from './useTagsMap';

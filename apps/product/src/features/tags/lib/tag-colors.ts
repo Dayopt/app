@@ -9,13 +9,6 @@
  */
 
 // ========================================
-// 文字数制限
-// ========================================
-
-/** タグ名の最大文字数（バックエンドと一致: z.string().max(50)） */
-export const TAG_NAME_MAX_LENGTH = 50;
-
-// ========================================
 // カラー名一覧
 // ========================================
 
@@ -76,7 +69,7 @@ function entry(name: TagColorName): TagColorEntry {
 }
 
 /** タグカラー名からTailwindクラス/CSS変数へのマッピングテーブル */
-export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
+const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
   red: entry('red'),
   orange: entry('orange'),
   amber: entry('amber'),
