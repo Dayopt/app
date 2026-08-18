@@ -16,6 +16,12 @@ interface UseScrollableCalendarOptions {
   hourHeight: number;
   enableKeyboardNavigation?: boolean | undefined;
   onScrollPositionChange?: ((scrollTop: number) => void) | undefined;
+  /**
+   * 外部で作成済みの scroll container ref。
+   * 未指定なら内部で新規作成する（既存挙動）。
+   * viewport フィット計算のため ResizeObserver と同じ ref を共有したい呼び出し元向け。
+   */
+  containerRef?: RefObject<HTMLDivElement | null> | undefined;
 }
 
 interface UseScrollableCalendarReturn {
@@ -31,8 +37,10 @@ export const useScrollableCalendar = ({
   hourHeight,
   enableKeyboardNavigation = true,
   onScrollPositionChange,
+  containerRef,
 }: UseScrollableCalendarOptions): UseScrollableCalendarReturn => {
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const internalContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = containerRef ?? internalContainerRef;
   const hasRestoredScroll = useRef(false);
 
   // 密度変更時のスクロール位置保持
@@ -46,7 +54,7 @@ export const useScrollableCalendar = ({
       });
     }
     prevHourHeight.current = hourHeight;
-  }, [hourHeight]);
+  }, [hourHeight, scrollContainerRef]);
 
   // 初期スクロール位置の設定（保存された位置を優先、なければ現在時刻を中央に）
   // viewMode変更時のhasRestoredScrollリセットも統合（effect順序のrace回避）
@@ -85,7 +93,7 @@ export const useScrollableCalendar = ({
         behavior: useSmoothScroll ? 'smooth' : 'instant',
       });
     });
-  }, [viewMode, hourHeight]);
+  }, [viewMode, hourHeight, scrollContainerRef]);
 
   // スクロールイベントの処理
   const handleScroll = useCallback(() => {
@@ -99,6 +107,7 @@ export const useScrollableCalendar = ({
 
     // スクロール位置をモジュールストアに保存
     setScrollPosition(viewMode, scrollTop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollContainerRef はReact Compilerのpreserve-manual-memoizationと衝突するため省略（refは安定参照）
   }, [onScrollPositionChange, viewMode]);
 
   // スクロールリスナーの設定
@@ -108,7 +117,7 @@ export const useScrollableCalendar = ({
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  }, [handleScroll, scrollContainerRef]);
 
   // キーボードナビゲーション
   const handleKeyDown = useCallback(
@@ -158,6 +167,7 @@ export const useScrollableCalendar = ({
           break;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollContainerRef はReact Compilerのpreserve-manual-memoizationと衝突するため省略（refは安定参照）
     [enableKeyboardNavigation, hourHeight],
   );
 

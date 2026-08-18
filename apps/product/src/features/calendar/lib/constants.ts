@@ -8,15 +8,23 @@
  * カレンダー機能内部にそのまま残る。ここではストアが型として必要な最小限のみ定義。
  */
 
-/** 時間の高さ密度プリセット（デバイス × 密度ごとのピクセル値） */
-export const HOUR_HEIGHT_DENSITIES = {
-  compact: { mobile: 36, tablet: 40, desktop: 48 },
-  default: { mobile: 48, tablet: 60, desktop: 72 },
-  spacious: { mobile: 64, tablet: 80, desktop: 96 },
+/**
+ * 時間の高さ密度プリセット（viewport フィット（コンテナ実測高 / 24）に対する倍率）
+ *
+ * compact = 1.0 は 24h が正確にコンテナへフィットする（スクロールなし）。
+ * default / spacious はその上の倍率で、意図的にスクロールを許容する。
+ */
+export const DENSITY_FACTOR = {
+  compact: 1,
+  default: 1.5,
+  spacious: 2,
 } as const;
 
+/** 密度プリセットの最小可読高（px）— 極端に低いコンテナでのフロア */
+export const MIN_LEGIBLE_HOUR_HEIGHT = 36;
+
 /** 時間の高さ密度のキー型 */
-export type HourHeightDensity = keyof typeof HOUR_HEIGHT_DENSITIES;
+export type HourHeightDensity = keyof typeof DENSITY_FACTOR;
 
 /** 複数日ビューで表示可能な日数（2〜7） */
 export type MultiDayCount = 2 | 3 | 4 | 5 | 6 | 7;

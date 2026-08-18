@@ -6,6 +6,8 @@
 
 import { useMemo } from 'react';
 
+import { HOURS_PER_DAY } from '../constants/grid.constants';
+
 /** 今日の列位置情報 */
 interface TodayColumnPosition {
   left: string | number;
@@ -33,7 +35,7 @@ export const useSleepHoursLayout = ({
   displayDates = [],
 }: UseSleepHoursLayoutOptions): UseSleepHoursLayoutReturn => {
   // グリッド高さ
-  const gridHeight = 24 * hourHeight;
+  const gridHeight = HOURS_PER_DAY * hourHeight;
 
   // 今日の列の位置を計算
   const todayColumnPosition = useMemo((): TodayColumnPosition | null => {

@@ -367,36 +367,35 @@ export const CalendarResponsive: Story = {
 
         {/* グリッド密度 */}
         <section>
-          <h2 className="mb-4 text-lg font-medium">グリッド密度（HOUR_HEIGHT_DENSITIES）</h2>
-          <p className="text-muted-foreground mb-4 text-sm">src/lib/calendar-constants.ts で定義</p>
+          <h2 className="mb-4 text-lg font-medium">グリッド密度（DENSITY_FACTOR）</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            src/features/calendar/lib/constants.ts で定義。24h
+            をコンテナ実測高へフィットさせた値への倍率
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
                   <th className="px-4 py-2 text-left">密度</th>
-                  <th className="px-4 py-2 text-left">モバイル</th>
-                  <th className="px-4 py-2 text-left">タブレット</th>
-                  <th className="px-4 py-2 text-left">デスクトップ</th>
+                  <th className="px-4 py-2 text-left">倍率</th>
+                  <th className="px-4 py-2 text-left">挙動</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">compact</td>
-                  <td className="px-4 py-2">36px</td>
-                  <td className="px-4 py-2">40px</td>
-                  <td className="px-4 py-2">48px</td>
+                  <td className="px-4 py-2">1.0</td>
+                  <td className="px-4 py-2">24hがコンテナ高に正確に一致（スクロールなし）</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">default</td>
-                  <td className="px-4 py-2">48px</td>
-                  <td className="px-4 py-2">60px</td>
-                  <td className="px-4 py-2">72px</td>
+                  <td className="px-4 py-2">1.5</td>
+                  <td className="px-4 py-2">フィットの1.5倍（意図的にスクロール）</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2">spacious</td>
-                  <td className="px-4 py-2">64px</td>
-                  <td className="px-4 py-2">80px</td>
-                  <td className="px-4 py-2">96px</td>
+                  <td className="px-4 py-2">2.0</td>
+                  <td className="px-4 py-2">フィットの2倍（意図的にスクロール）</td>
                 </tr>
               </tbody>
             </table>
