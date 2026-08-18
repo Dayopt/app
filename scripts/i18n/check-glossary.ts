@@ -40,7 +40,7 @@ interface ForbiddenTerm {
 
 /** 即座に使用を停止すべき語 */
 const ACTIVE_FORBIDDEN: ForbiddenTerm[] = [
-  { term: 'ラベル', preferred: 'タグ' },
+  { term: 'ラベル', preferred: 'アクティビティ' },
   {
     term: 'レビュー',
     preferred: '振り返り（ページ名として）',
@@ -54,8 +54,10 @@ const MIGRATION_TARGETS: ForbiddenTerm[] = [
   { term: 'タスク', preferred: 'エントリ', migration: true },
   { term: 'ログイン', preferred: 'サインイン', migration: true },
   { term: 'ログアウト', preferred: 'サインアウト', migration: true },
-  // タグの代替として使うカテゴリは禁止。ただし法的文書・問い合わせフォーム等の文脈は許容で既存違反も多いため移行対象
-  { term: 'カテゴリ', preferred: 'タグ', migration: true },
+  // 「カテゴリ」は 2026-08-18(#2162)に禁止語から外した。検出が value.includes() の部分一致であり、
+  // 新しい正解語「カテゴリー」の部分文字列にあたるため、残すと正解語が全件フラグされる。
+  // 詳細は docs/product/glossary.md#スキャン対象外誤検知防止
+  { term: 'タグ', preferred: 'アクティビティ / カテゴリー / セグメント', migration: true },
 ];
 
 // ─── JSON 走査ユーティリティ ───
