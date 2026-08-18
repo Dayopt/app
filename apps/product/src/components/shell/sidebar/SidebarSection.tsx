@@ -33,7 +33,12 @@ export function SidebarSection({
   const collapsible = onToggleCollapse !== undefined;
 
   return (
-    <section className="w-full min-w-0 overflow-hidden">
+    // overflow-hidden ではなく overflow-clip。見た目の切り落としは同じだが、
+    // hidden はスクロール可能な箱になるため、44px タッチターゲット用の擬似要素が
+    // はみ出していると、右端のボタンにフォーカスした瞬間にブラウザが
+    // 「見える位置へ」と横スクロールし、見出しごと左へずれて文字が欠ける。
+    // clip はスクロールコンテナを作らないのでこれが起きない
+    <section className="w-full min-w-0 overflow-clip">
       <div
         className={cn(
           'group/section flex h-8 w-full items-center rounded-lg',
@@ -76,7 +81,7 @@ export function SidebarSection({
         )}
       </div>
       {collapsed ? null : (
-        <div className={cn('w-full min-w-0 overflow-hidden', className)}>{children}</div>
+        <div className={cn('w-full min-w-0 overflow-clip', className)}>{children}</div>
       )}
     </section>
   );
