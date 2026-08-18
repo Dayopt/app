@@ -129,6 +129,27 @@ describe('storage-backup.sh', () => {
     expect(result.stderr).not.toContain('unbound variable');
     expect(result.status).toBe(0);
   });
+
+  it('既定で --max-delete 1000 を付ける（全消し型事故を fail loud にする歯止め、#2151 P1）', () => {
+    const binDir = makeStubBin('record');
+
+    const result = run(backupScript, binDir, { STORAGE_BACKUP_BUCKETS: 'avatars' });
+
+    expect(result.status).toBe(0);
+    expect(readCallLog(binDir)[0]).toContain('--max-delete 1000');
+  });
+
+  it('STORAGE_BACKUP_MAX_DELETE で --max-delete の上限値を上書きできる', () => {
+    const binDir = makeStubBin('record');
+
+    const result = run(backupScript, binDir, {
+      STORAGE_BACKUP_BUCKETS: 'avatars',
+      STORAGE_BACKUP_MAX_DELETE: '42',
+    });
+
+    expect(result.status).toBe(0);
+    expect(readCallLog(binDir)[0]).toContain('--max-delete 42');
+  });
 });
 
 describe('storage-restore.sh', () => {
