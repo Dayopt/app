@@ -19,6 +19,7 @@ type Story = StoryObj<typeof meta>;
 const futureValue: TimeModelEditorValue = {
   note: '',
   tagId: null,
+  activityId: null,
   startAt: new Date('2099-07-11T09:00:00'),
   endAt: new Date('2099-07-11T10:00:00'),
   source: 'plan',

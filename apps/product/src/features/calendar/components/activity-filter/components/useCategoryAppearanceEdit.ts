@@ -2,12 +2,8 @@
 
 import { useCallback, useState } from 'react';
 
-import { useTranslations } from 'next-intl';
-
-import type { TagColorName } from '@/features/tags';
-import { resolveTagColor, useUpdateTag } from '@/features/tags';
-import { logger } from '@/lib/logger';
-import { toast } from '@/lib/toast';
+import type { CategoryColorName } from '@/features/activities';
+import { resolveCategoryColor, useUpdateCategory } from '@/features/activities';
 
 interface UseCategoryAppearanceEditProps {
   categoryId: string | undefined;
@@ -16,7 +12,7 @@ interface UseCategoryAppearanceEditProps {
 
 interface UseCategoryAppearanceEditReturn {
   displayColor: string;
-  handleColorChange: (color: TagColorName) => Promise<void>;
+  handleColorChange: (color: CategoryColorName) => Promise<void>;
   handleIconChange: (icon: string | null) => Promise<void>;
 }
 
@@ -24,34 +20,32 @@ interface UseCategoryAppearanceEditReturn {
  * カテゴリーの見た目（色・アイコン）編集フック。
  *
  * 色とアイコンはカテゴリーだけが持ち、所属アクティビティは継承する。
- * 色は楽観的更新（サーバー値と一致したら派生状態が自動的に無視される）。
+ * 色は選択直後に派生状態で先出しし、サーバー値が追いついたらそちらへ戻る。
+ * 失敗時の toast は `useUpdateCategory` が出すので、ここでは出さない（二重通知を避ける）。
  */
 export function useCategoryAppearanceEdit({
   categoryId,
   initialColor,
 }: UseCategoryAppearanceEditProps): UseCategoryAppearanceEditReturn {
-  const t = useTranslations();
-  const updateMutation = useUpdateTag();
+  const updateMutation = useUpdateCategory();
 
-  const [optimisticColor, setOptimisticColor] = useState<TagColorName | null>(null);
+  const [optimisticColor, setOptimisticColor] = useState<CategoryColorName | null>(null);
   const displayColor =
-    optimisticColor !== null && optimisticColor !== resolveTagColor(initialColor)
+    optimisticColor !== null && optimisticColor !== resolveCategoryColor(initialColor)
       ? optimisticColor
-      : resolveTagColor(initialColor);
+      : resolveCategoryColor(initialColor);
 
   const handleColorChange = useCallback(
-    async (color: TagColorName) => {
+    async (color: CategoryColorName) => {
       if (!categoryId) return;
       setOptimisticColor(color);
       try {
         await updateMutation.mutateAsync({ id: categoryId, color });
-      } catch (error) {
+      } catch {
         setOptimisticColor(null);
-        logger.error('Category color change failed:', error);
-        toast.error(t('tags.toast.updateFailed'));
       }
     },
-    [categoryId, updateMutation, t],
+    [categoryId, updateMutation],
   );
 
   const handleIconChange = useCallback(
@@ -59,12 +53,11 @@ export function useCategoryAppearanceEdit({
       if (!categoryId) return;
       try {
         await updateMutation.mutateAsync({ id: categoryId, icon });
-      } catch (error) {
-        logger.error('Category icon change failed:', error);
-        toast.error(t('tags.toast.updateFailed'));
+      } catch {
+        // 失敗時の復帰はキャッシュのロールバックに任せる（派生状態を持たないため）
       }
     },
-    [categoryId, updateMutation, t],
+    [categoryId, updateMutation],
   );
 
   return { displayColor, handleColorChange, handleIconChange };

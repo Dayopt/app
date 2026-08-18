@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { useTagsMap } from '@/features/tags';
+import { useActivitiesMap } from '@/features/activities';
 import { cn } from '@dayopt/components';
 
 import { calculateTwoLaneLayout } from '../../../../../lib/two-lane-layout';
@@ -33,7 +33,7 @@ export function TwoLaneDayColumn({
   planLaneWidthPercent,
   className,
 }: TwoLaneDayColumnProps) {
-  const { getTagById } = useTagsMap();
+  const { getActivityById } = useActivitiesMap();
 
   const { planLayouts, recordLayouts } = calculateTwoLaneLayout({
     plans,
@@ -45,28 +45,28 @@ export function TwoLaneDayColumn({
   return (
     <div data-two-lane-day-column className={cn('relative h-full w-full', className)}>
       {planLayouts.map(({ entry, position }) => {
-        const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+        const activity = entry.activityId ? getActivityById(entry.activityId) : undefined;
         return (
           <PlanLaneCard
             key={entry.id}
             event={entry}
             position={position}
-            tagName={tag?.name ?? null}
-            tagColor={tag?.color ?? null}
-            tagIcon={tag?.icon ?? null}
+            activityName={activity?.name ?? null}
+            activityColor={activity?.color ?? null}
+            activityIcon={activity?.icon ?? null}
           />
         );
       })}
       {recordLayouts.map(({ entry, position }) => {
-        const tag = entry.tagId ? getTagById(entry.tagId) : undefined;
+        const activity = entry.activityId ? getActivityById(entry.activityId) : undefined;
         return (
           <RecordLaneCard
             key={entry.id}
             event={entry}
             position={position}
-            tagName={tag?.name ?? null}
-            tagColor={tag?.color ?? null}
-            tagIcon={tag?.icon ?? null}
+            activityName={activity?.name ?? null}
+            activityColor={activity?.color ?? null}
+            activityIcon={activity?.icon ?? null}
           />
         );
       })}

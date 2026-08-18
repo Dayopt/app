@@ -5,8 +5,10 @@ import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { TagIcon, useTags, type Tag } from '@/features/tags';
-import { useShellStore } from '@/lib/stores/useShellStore';
+import { ActivityIcon, useActivities, useActivitiesMap } from '@/features/activities';
+
+import { useActivityModalNavigation } from '../../../../hooks/useActivityModalNavigation';
+
 import { cn } from '@dayopt/components';
 
 import { ActivityTimeblockCreatePopover } from '../ActivityTimeblockCreatePopover';
@@ -16,45 +18,46 @@ interface ActivityChipRowProps {
 }
 
 /**
- * active なアクティビティだけを名前順で返す。
- *
- * PC サイドバー（`partitionActivityTree`）と同じ `Intl.Collator` を使い、
- * 両者の並びが食い違わないようにする（`sort_order` は DnD 撤去で廃止済み）。
- */
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-function sortActiveActivities(activities: Tag[] | undefined): Tag[] {
-  if (!activities) return [];
-  return activities
-    .filter((activity) => activity.is_active !== false)
-    .sort((a, b) => collator.compare(a.name, b.name));
-}
-
-/**
  * モバイル専用のアクティビティチップ行。
  *
  * - タイムライン下部の固定フッターに横一列で並ぶ（カテゴリー所属・未分類が混在）
  * - タップで bottom sheet `ActivityTimeblockCreatePopover` を開き、時刻指定してエントリ作成
  * - 行末に「+」ボタンを置き新規アクティビティを作成
- * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
- * - 並び順: 名前順（PC sidebar と一致。`sort_order` は DnD 撤去で廃止）
- * - `is_active === false` は除外
+ * - データソース: `useActivities()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
+ * - 並び順はサーバーの名前順に従う（`sort_order` は持たない）。PC サイドバーの
+ *   `listTree` も同じ照合順序なので、client 側で並べ直すと逆にズレる
+ * - アーカイブ済みは `useActivities()` の時点で除外済み
+ * - 色とアイコンは所属カテゴリーから継承する。未分類は中立表示
  * - 0 件なら null を返す（行ごと非表示。初回作成は別導線）
  */
 export function ActivityChipRow({ className }: ActivityChipRowProps) {
   const t = useTranslations();
-  const { data: tags } = useTags();
+  const { data: activities } = useActivities();
+  const { getActivityById } = useActivitiesMap();
   const [openActivityId, setOpenActivityId] = useState<string | null>(null);
 
-  const openActivityCreateModal = useShellStore.use.openTagCreateModal();
+  const { openActivityCreateModal } = useActivityModalNavigation();
 
-  const sortedActivities = useMemo(() => sortActiveActivities(tags), [tags]);
-  const openActivity = useMemo(
-    () => sortedActivities.find((activity) => activity.id === openActivityId) ?? null,
-    [sortedActivities, openActivityId],
+  const chips = useMemo(
+    () =>
+      (activities ?? []).map((activity) => {
+        const display = getActivityById(activity.id);
+        return {
+          id: activity.id,
+          name: activity.name,
+          color: display?.color ?? null,
+          icon: display?.icon ?? null,
+        };
+      }),
+    [activities, getActivityById],
   );
 
-  if (sortedActivities.length === 0) return null;
+  const openActivity = useMemo(
+    () => chips.find((chip) => chip.id === openActivityId) ?? null,
+    [chips, openActivityId],
+  );
+
+  if (chips.length === 0) return null;
 
   const handleActivityTap = (activityId: string) => {
     setOpenActivityId(activityId);
@@ -71,21 +74,23 @@ export function ActivityChipRow({ className }: ActivityChipRowProps) {
       role="list"
       aria-label={t('calendar.filter.quickCreate')}
     >
-      {sortedActivities.map((activity) => {
-        const label = activity.name;
-        return (
-          <button
-            key={activity.id}
-            type="button"
-            role="listitem"
-            onClick={() => handleActivityTap(activity.id)}
-            className="hover:bg-state-hover flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
-          >
-            <TagIcon icon={activity.icon} color={activity.color} size="md" />
-            <span className="text-muted-foreground max-w-16 truncate text-xs">{label}</span>
-          </button>
-        );
-      })}
+      {chips.map((chip) => (
+        <button
+          key={chip.id}
+          type="button"
+          role="listitem"
+          onClick={() => handleActivityTap(chip.id)}
+          className="hover:bg-state-hover flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
+        >
+          <ActivityIcon
+            icon={chip.icon}
+            color={chip.color}
+            size="md"
+            neutral={chip.color === null}
+          />
+          <span className="text-muted-foreground max-w-16 truncate text-xs">{chip.name}</span>
+        </button>
+      ))}
 
       <button
         type="button"

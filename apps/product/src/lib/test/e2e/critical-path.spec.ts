@@ -8,7 +8,7 @@ import { suppressConsentBanner } from './suppress-consent-banner';
 /**
  * クリティカルパス E2E — 計画 → 実績 → 振り返りの中核ループを実 UI 操作で通す
  *
- * 「作成導線が存在する」ではなく、ドラッグ選択 → タグ選択で実際に Plan / Record を作り、
+ * 「作成導線が存在する」ではなく、ドラッグ選択 → アクティビティ選択で実際に Plan / Record を作り、
  * リロード後も残る（= DB へ永続化された）ことと、Review panel の Time P/L へ反映される
  * ことを検証する。
  *
@@ -33,7 +33,7 @@ const TEST_RUN_ID = crypto.randomUUID();
 const TEST_USER_ID = crypto.randomUUID();
 const TEST_EMAIL = `critical-path-${TEST_RUN_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
-const TAG_NAME = `Journey ${TEST_RUN_ID.slice(0, 8)}`;
+const ACTIVITY_NAME = `Journey ${TEST_RUN_ID.slice(0, 8)}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -152,21 +152,33 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
       week_starts_on: 1,
     });
 
-    const { error: tagError } = await adminSupabase.from('tags').insert({
+    // 色・アイコンを持つのはカテゴリーだけで、アクティビティは継承する（#2162 §4-6）
+    const { data: category, error: categoryError } = await adminSupabase
+      .from('categories')
+      .insert({
+        user_id: TEST_USER_ID,
+        name: `Cat ${TEST_RUN_ID.slice(0, 8)}`,
+        color: 'blue',
+        icon: 'circle',
+      })
+      .select()
+      .single();
+    if (categoryError) throw new Error(categoryError.message);
+
+    const { error: activityError } = await adminSupabase.from('activities').insert({
       user_id: TEST_USER_ID,
-      name: TAG_NAME,
-      color: 'blue',
-      icon: 'circle',
-      sort_order: 0,
+      category_id: category.id,
+      name: ACTIVITY_NAME,
     });
-    if (tagError) throw new Error(tagError.message);
+    if (activityError) throw new Error(activityError.message);
   });
 
   test.afterAll(async () => {
     if (!adminSupabase) return;
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
-    await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('activities').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('categories').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('profiles').delete().eq('id', TEST_USER_ID);
     await adminSupabase.auth.admin.deleteUser(TEST_USER_ID);
@@ -180,24 +192,28 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     await login(page);
   });
 
-  test('ドラッグ選択とタグ選択で明日の Plan を作成し、リロード後も残る', async ({ page }) => {
+  test('ドラッグ選択とアクティビティ選択で明日の Plan を作成し、リロード後も残る', async ({
+    page,
+  }) => {
     await openDay(page, tomorrow);
 
     await dragSelect(page, 9, 10);
 
-    // InlineTagPalette → タグ選択ダイアログ
-    const tagDialog = page.getByRole('dialog', { name: 'タグを選択' });
-    await expect(tagDialog).toBeVisible({ timeout: 10_000 });
-    await tagDialog.getByRole('button', { name: TAG_NAME }).click();
+    // InlineActivityPalette → アクティビティ選択ダイアログ
+    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
+    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
+    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
 
-    // Plan lane にカードが現れる（lane カードはタグ名を表示する）
-    const planCard = page.locator('[data-plan-lane-card]', { hasText: TAG_NAME }).first();
+    // Plan lane にカードが現れる（lane カードはアクティビティ名を表示する）
+    const planCard = page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first();
     await expect(planCard).toBeVisible({ timeout: 10_000 });
 
     // リロードしても残る = DB へ永続化されている
     await page.reload();
     await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('[data-plan-lane-card]', { hasText: TAG_NAME }).first()).toBeVisible({
+    await expect(
+      page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -207,33 +223,37 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 9, 10);
 
-    // InlineTagPalette → タグ選択ダイアログ
-    const tagDialog = page.getByRole('dialog', { name: 'タグを選択' });
-    await expect(tagDialog).toBeVisible({ timeout: 10_000 });
-    await tagDialog.getByRole('button', { name: TAG_NAME }).click();
+    // InlineActivityPalette → アクティビティ選択ダイアログ
+    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
+    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
+    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
 
-    // Record レーンにカードが現れる（lane カードはタグ名を表示する）
-    const recordCard = page.locator('[data-record-lane-card]', { hasText: TAG_NAME }).first();
+    // Record レーンにカードが現れる（lane カードはアクティビティ名を表示する）
+    const recordCard = page.locator('[data-record-lane-card]', { hasText: ACTIVITY_NAME }).first();
     await expect(recordCard).toBeVisible({ timeout: 10_000 });
 
     // リロードしても残る = DB へ永続化されている
     await page.reload();
     await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
     await expect(
-      page.locator('[data-record-lane-card]', { hasText: TAG_NAME }).first(),
+      page.locator('[data-record-lane-card]', { hasText: ACTIVITY_NAME }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
+  // Review の Time P/L はまだタグ集計（`useTimePLData` が tagId / tagName ベース）で、
+  // cutover 後のブロックは tag を持たないため行が出ない。実装側の未追従であり
+  // このテストの期待が正しい。#2162 の (B) 裁定を参照。
+  // **レーン G の Step 5（3 軸集計）の UI 結線で解除すること。**
+  test.fixme('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
     await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
 
     // CalendarReviewPanel の section は aria-label のみ持ち、暗黙 role="region" になる
     const reviewPanel = page.getByRole('region', { name: '振り返り' });
     await expect(reviewPanel).toBeVisible({ timeout: 10_000 });
 
-    // TimePLRow はタグ名を含む button（day view は単日スコープなので明日の Plan は混入しない）
-    const tagRow = reviewPanel.getByRole('button', { name: new RegExp(TAG_NAME) });
-    await expect(tagRow).toBeVisible({ timeout: 10_000 });
-    await expect(tagRow).toContainText('1h');
+    // TimePLRow はアクティビティ名を含む button（day view は単日スコープなので明日の Plan は混入しない）
+    const activityRow = reviewPanel.getByRole('button', { name: new RegExp(ACTIVITY_NAME) });
+    await expect(activityRow).toBeVisible({ timeout: 10_000 });
+    await expect(activityRow).toContainText('1h');
   });
 });

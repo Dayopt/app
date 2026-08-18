@@ -20,12 +20,3 @@ export function useTags() {
     data: query.data?.data,
   };
 }
-
-/**
- * 階層タグ一覧取得フック（sidebar/DnD 用）
- */
-export function useTagsHierarchy() {
-  return trpc.tags.listHierarchy.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
-  });
-}

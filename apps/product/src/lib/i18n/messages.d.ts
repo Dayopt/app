@@ -17,6 +17,7 @@
  * augmentation（既存の型定義への merge）ではなく新規の ambient module 宣言として
  * 扱われ、next-intl 本来の export（useTranslations 等）を丸ごと不可視化する。
  */
+import type activities from '../../../messages/en/activities.json';
 import type auth from '../../../messages/en/auth.json';
 import type calendar from '../../../messages/en/calendar.json';
 import type common from '../../../messages/en/common.json';
@@ -32,7 +33,8 @@ import type sidebar from '../../../messages/en/sidebar.json';
 import type tags from '../../../messages/en/tags.json';
 import type timeblock from '../../../messages/en/timeblock.json';
 
-type Messages = typeof auth &
+type Messages = typeof activities &
+  typeof auth &
   typeof calendar &
   typeof common &
   typeof contact &

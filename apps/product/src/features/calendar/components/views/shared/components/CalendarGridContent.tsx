@@ -4,8 +4,8 @@ import React, { useCallback } from 'react';
 
 import { isSameDay } from 'date-fns';
 
+import { useActivitiesMap } from '@/features/activities';
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
-import { useTagsMap } from '@/features/tags';
 import {
   isPlanRecordDrop,
   resolveTimeblockDestination,
@@ -33,15 +33,15 @@ import {
   calculateTwoLaneStylesForCalendarEvents,
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 } from '../../../../lib/two-lane-layout';
+import { useActivityDraftStore } from '../../../../stores/useActivityDraftStore';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
-import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { HOURS_PER_DAY } from '../constants/grid.constants';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
 import { DraftTimeblock } from './DraftTimeblock';
-import { InlineTagPalette } from './InlineTagPalette';
+import { InlineActivityPalette } from './InlineActivityPalette';
 import { ExternalEventCard } from './TwoLane/ExternalEventCard';
 import { PlanLaneCard } from './TwoLane/PlanLaneCard';
 import { RecordLaneCard } from './TwoLane/RecordLaneCard';
@@ -185,7 +185,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   externalEvents,
   className,
 }: CalendarGridContentProps) {
-  const { getTagById } = useTagsMap();
+  const { getActivityById } = useActivitiesMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const { defaultDuration, timeFormat } = useUserPreferences();
   const timezone = useUserPreferences((state) => state.timezone);
@@ -195,8 +195,8 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const { createRecord } = useTimeblockWriteMutations();
   const { convertGhost, dismissGhost } = useConvertGhostEvent();
 
-  // Tag タップで開いている draft entry（同日のときだけ block を描画）
-  const tagDraft = useTagDraftStore((s) => s.draft);
+  // アクティビティタップで開いている draft entry（同日のときだけ block を描画）
+  const activityDraft = useActivityDraftStore((s) => s.draft);
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
@@ -304,7 +304,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       const entry = visibleEntries.find((e) => e.id === timeblockId);
       if (!entry) return null;
       const previewEntry = buildDragPreviewEntry(entry, previewTime);
-      const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      const activity = entry.activityId ? getActivityById(entry.activityId) : null;
       const ghostHeight = Math.max(twoLaneStyles[timeblockId]?.height ?? 20, isMobile ? 40 : 20);
       const sourceKind =
         entry.kind ?? resolveTimeblockDestination(entry.endDate ?? entry.displayEndDate);
@@ -321,9 +321,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
             };
       const sharedProps = {
         position,
-        tagName: tag?.name ?? null,
-        tagColor: tag?.color ?? null,
-        tagIcon: tag?.icon ?? null,
+        activityName: activity?.name ?? null,
+        activityColor: activity?.color ?? null,
+        activityIcon: activity?.icon ?? null,
         compact: compactCards,
         timeFormat,
         interactive: false,
@@ -357,7 +357,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       visibleEntries,
       allEventsForOverlapCheck,
       twoLaneStyles,
-      getTagById,
+      getActivityById,
       isMobile,
       planLaneWidthPercent,
       compactCards,
@@ -450,11 +450,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           );
         })}
 
-        <InlineTagPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
+        <InlineActivityPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
 
         {/* Tag タップで作成中の draft entry を該当日に描画 */}
-        {tagDraft && isSameDay(tagDraft.date, date) && (
-          <DraftTimeblock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
+        {activityDraft && isSameDay(activityDraft.date, date) && (
+          <DraftTimeblock draft={activityDraft} hourHeight={HOUR_HEIGHT} />
         )}
       </div>
 

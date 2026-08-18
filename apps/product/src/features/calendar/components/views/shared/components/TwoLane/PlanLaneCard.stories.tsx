@@ -47,7 +47,7 @@ const meta = {
   args: {
     event: makeEvent('upcoming'),
     position: basePosition,
-    tagName: 'Deep Work',
+    activityName: 'Deep Work',
   },
   argTypes: {
     showDayDiffMarker: { control: 'boolean' },
@@ -64,8 +64,8 @@ export const Upcoming: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="blue"
+        activityName="Deep Work"
+        activityColor="blue"
       />
     </Slot>
   ),
@@ -77,8 +77,8 @@ export const Active: Story = {
       <PlanLaneCard
         event={makeEvent('active')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="teal"
+        activityName="Deep Work"
+        activityColor="teal"
       />
     </Slot>
   ),
@@ -91,8 +91,8 @@ export const Unrecorded: Story = {
       <PlanLaneCard
         event={makeEvent('unrecorded')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="amber"
+        activityName="Deep Work"
+        activityColor="amber"
       />
     </Slot>
   ),
@@ -105,8 +105,8 @@ export const Recorded: Story = {
       <PlanLaneCard
         event={makeEvent('recorded')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="indigo"
+        activityName="Deep Work"
+        activityColor="indigo"
       />
     </Slot>
   ),
@@ -119,8 +119,8 @@ export const Skipped: Story = {
       <PlanLaneCard
         event={makeEvent('skipped')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="gray"
+        activityName="Deep Work"
+        activityColor="gray"
       />
     </Slot>
   ),
@@ -128,13 +128,13 @@ export const Skipped: Story = {
 
 /**
  * タグ未設定（未分類）。title は表示へフォールバックしない。
- * 実際のカレンダーは tagName=null と同時に tagColor/tagIcon も null になるため、
+ * 実際のカレンダーは activityName=null と同時に tagColor/tagIcon も null になるため、
  * ここでも両方 null にして中立表示（枠線・アイコンとも中立）を確認する。
  */
 export const NoTag: Story = {
   render: () => (
     <Slot>
-      <PlanLaneCard event={makeEvent('upcoming')} position={basePosition} tagName={null} />
+      <PlanLaneCard event={makeEvent('upcoming')} position={basePosition} activityName={null} />
     </Slot>
   ),
 };
@@ -146,8 +146,8 @@ export const Compact: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming')}
         position={{ ...basePosition, height: 24 }}
-        tagName="Deep Work"
-        tagColor="red"
+        activityName="Deep Work"
+        activityColor="red"
       />
     </Slot>
   ),
@@ -160,8 +160,8 @@ export const CompareTarget: Story = {
       <PlanLaneCard
         event={makeEvent('recorded')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="indigo"
+        activityName="Deep Work"
+        activityColor="indigo"
         showDayDiffMarker
       />
     </Slot>
@@ -175,8 +175,8 @@ export const GhostPreview: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming')}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="blue"
+        activityName="Deep Work"
+        activityColor="blue"
         interactive={false}
         className="shadow-card"
       />
@@ -191,8 +191,8 @@ export const NarrowLane: Story = {
       <PlanLaneCard
         event={makeEvent('upcoming', { title: 'デザインレビュー' })}
         position={{ ...basePosition, left: 0, width: 100 }}
-        tagName="Deep Work"
-        tagColor="blue"
+        activityName="Deep Work"
+        activityColor="blue"
         compact
       />
     </div>
@@ -216,8 +216,8 @@ export const AllPatterns: Story = {
           <PlanLaneCard
             event={makeEvent(status)}
             position={basePosition}
-            tagName="Deep Work"
-            tagColor={color}
+            activityName="Deep Work"
+            activityColor={color}
             showDayDiffMarker={status === 'recorded'}
           />
         </Slot>
@@ -226,8 +226,8 @@ export const AllPatterns: Story = {
         <PlanLaneCard
           event={makeEvent('upcoming')}
           position={basePosition}
-          tagName="Deep Work"
-          tagColor="blue"
+          activityName="Deep Work"
+          activityColor="blue"
           interactive={false}
           className="shadow-card"
         />
@@ -236,8 +236,8 @@ export const AllPatterns: Story = {
         <PlanLaneCard
           event={makeEvent('upcoming', { title: 'デザインレビュー' })}
           position={{ ...basePosition, left: 0, width: 100 }}
-          tagName="Deep Work"
-          tagColor="blue"
+          activityName="Deep Work"
+          activityColor="blue"
           compact
         />
       </div>

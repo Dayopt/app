@@ -9,18 +9,18 @@ import {
 const relatedRecords: TimeblockRelationshipItem[] = [
   {
     id: '00000000-0000-4000-8000-000000000101',
-    tagName: 'API開発',
-    tagColor: 'blue',
-    tagIcon: 'code-2',
+    activityName: 'API開発',
+    activityColor: 'blue',
+    activityIcon: 'code-2',
     isUncategorized: false,
     startAt: new Date('2026-07-14T09:05:00'),
     endAt: new Date('2026-07-14T09:35:00'),
   },
   {
     id: '00000000-0000-4000-8000-000000000102',
-    tagName: 'レビュー',
-    tagColor: 'green',
-    tagIcon: 'search',
+    activityName: 'レビュー',
+    activityColor: 'green',
+    activityIcon: 'search',
     isUncategorized: false,
     startAt: new Date('2026-07-14T10:10:00'),
     endAt: new Date('2026-07-14T10:55:00'),
@@ -30,9 +30,9 @@ const relatedRecords: TimeblockRelationshipItem[] = [
 /** タグ削除で未分類化した(#1576) Record。アイコンは中立マーカー(bg-muted + Minus)。 */
 const uncategorizedRecord: TimeblockRelationshipItem = {
   id: '00000000-0000-4000-8000-000000000103',
-  tagName: 'タグなし',
-  tagColor: null,
-  tagIcon: null,
+  activityName: 'タグなし',
+  activityColor: null,
+  activityIcon: null,
   isUncategorized: true,
   startAt: new Date('2026-07-14T11:00:00'),
   endAt: new Date('2026-07-14T11:20:00'),
@@ -128,7 +128,7 @@ export const MobileNarrow: Story = {
         status="success"
         plan={{
           ...relatedRecords[0]!,
-          tagName: '設計レビューとAPIインターフェースの整理',
+          activityName: '設計レビューとAPIインターフェースの整理',
         }}
         onOpen={fn()}
         onRetry={fn()}

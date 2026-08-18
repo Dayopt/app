@@ -35,7 +35,7 @@ export function useCalendarHandlers() {
   );
 
   // 統一された時間範囲選択ハンドラー（全ビュー共通）
-  // ドラッグ/ダブルクリック/タップ → InlineTagPalette 表示
+  // ドラッグ/ダブルクリック/タップ → InlineActivityPalette 表示
   const handleDateTimeRangeSelect = useCallback(
     (selection: DateTimeSelection) => {
       // 最小15分制約の適用

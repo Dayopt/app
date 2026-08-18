@@ -18,7 +18,7 @@ const TEST_USER_ID = crypto.randomUUID();
 const TEST_EMAIL = `block-search-${TEST_RUN_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
 const SEARCH_TOKEN = TEST_RUN_ID.slice(0, 8);
-const TAG_NAME = `Search tag ${SEARCH_TOKEN}`;
+const ACTIVITY_NAME = `Search activity ${SEARCH_TOKEN}`;
 const PLAN_NOTE = `Plan note ${SEARCH_TOKEN}`;
 const RECORD_NOTE = `Record note ${SEARCH_TOKEN}`;
 const PLAN_COMPATIBILITY_TITLE = `Legacy plan ${SEARCH_TOKEN}`;
@@ -102,24 +102,35 @@ describeWithEnv('Block search', () => {
       week_starts_on: 1,
     });
 
-    const { data: tag, error: tagError } = await adminSupabase
-      .from('tags')
+    // 色・アイコンを持つのはカテゴリーだけで、アクティビティは継承する（#2162 §4-6）
+    const { data: category, error: categoryError } = await adminSupabase
+      .from('categories')
       .insert({
         user_id: TEST_USER_ID,
-        name: TAG_NAME,
+        name: `Cat ${SEARCH_TOKEN}`,
         color: 'blue',
         icon: 'circle',
-        sort_order: 0,
       })
       .select('id')
       .single();
-    if (tagError) throw new Error(tagError.message);
+    if (categoryError) throw new Error(categoryError.message);
+
+    const { data: activity, error: activityError } = await adminSupabase
+      .from('activities')
+      .insert({
+        user_id: TEST_USER_ID,
+        category_id: category.id,
+        name: ACTIVITY_NAME,
+      })
+      .select('id')
+      .single();
+    if (activityError) throw new Error(activityError.message);
 
     const { data: plan, error: planError } = await adminSupabase
       .from('plans')
       .insert({
         user_id: TEST_USER_ID,
-        tag_id: tag.id,
+        activity_id: activity.id,
         title: PLAN_COMPATIBILITY_TITLE,
         note: PLAN_NOTE,
         start_at: isoAt(planDate, '09:00'),
@@ -134,7 +145,7 @@ describeWithEnv('Block search', () => {
       .from('records')
       .insert({
         user_id: TEST_USER_ID,
-        tag_id: tag.id,
+        activity_id: activity.id,
         title: RECORD_COMPATIBILITY_TITLE,
         note: RECORD_NOTE,
         start_at: isoAt(recordDate, '09:00'),
@@ -151,7 +162,8 @@ describeWithEnv('Block search', () => {
     if (!adminSupabase) return;
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
-    await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('activities').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('categories').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('profiles').delete().eq('id', TEST_USER_ID);
     await adminSupabase.auth.admin.deleteUser(TEST_USER_ID);
@@ -161,7 +173,9 @@ describeWithEnv('Block search', () => {
     await login(page);
   });
 
-  test('desktop shortcut・note/tag検索・Inspector遷移がつながる', async ({ page }, testInfo) => {
+  test('desktop shortcut・note/アクティビティ検索・Inspector遷移がつながる', async ({
+    page,
+  }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
 
     await page.keyboard.press('Control+K');
@@ -176,30 +190,30 @@ describeWithEnv('Block search', () => {
     await expect(
       page
         .locator('[data-calendar-grid][data-calendar-day-index="0"] [data-record-lane-card]', {
-          hasText: TAG_NAME,
+          hasText: ACTIVITY_NAME,
         })
         .first(),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
 
     // Inspectorを閉じた直後に同じblockを検索し直しても、close時のURL cleanupが
     // 後着して再オープンを打ち消さない。
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: TAG_NAME })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toHaveCount(0);
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(RECORD_NOTE);
     await page.getByText(RECORD_NOTE).click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
-    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
 
     // Inspector は modal dialog なので、実際の導線どおり一度閉じてから次の検索を開く。
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: TAG_NAME })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
-    await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);
+    await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(ACTIVITY_NAME);
     await expect(page.getByText(PLAN_NOTE)).toBeVisible();
     await expect(page.getByText(RECORD_NOTE)).toBeVisible();
     await page.getByText(PLAN_NOTE).click();
@@ -211,11 +225,11 @@ describeWithEnv('Block search', () => {
     await expect(
       page
         .locator('[data-calendar-grid][data-calendar-day-index="0"] [data-plan-lane-card]', {
-          hasText: TAG_NAME,
+          hasText: ACTIVITY_NAME,
         })
         .first(),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('dialog', { name: TAG_NAME })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
   });
 
   test('mobileは展開mini calendarから検索を開ける', async ({ page }, testInfo) => {
@@ -223,7 +237,7 @@ describeWithEnv('Block search', () => {
 
     await page.getByRole('button', { name: 'カレンダーを開く' }).click();
     await page.getByRole('button', { name: 'ブロックを検索' }).click();
-    await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(TAG_NAME);
+    await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(ACTIVITY_NAME);
 
     await expect(page.getByText(PLAN_NOTE)).toBeVisible();
     await expect(page.getByText(RECORD_NOTE)).toBeVisible();

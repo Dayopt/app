@@ -9,6 +9,7 @@ interface PlanRecordDropInput {
   title: string;
   note: string | null;
   tagId: string | null;
+  activityId: string | null;
   planId: string;
   start_at: string;
   end_at: string;
@@ -26,6 +27,7 @@ export function buildPlanRecordDropInput(
     title: plan.title,
     note: plan.description ?? null,
     tagId: plan.tagId ?? null,
+    activityId: plan.activityId ?? null,
     planId: plan.id,
     start_at: range.start.toISOString(),
     end_at: range.end.toISOString(),

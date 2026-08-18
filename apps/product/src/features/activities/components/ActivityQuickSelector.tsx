@@ -1,0 +1,489 @@
+'use client';
+
+/**
+ * ActivityQuickSelector
+ *
+ * アクティビティ選択用フローティングパネル。`features/tags/components/TagQuickSelector.tsx`
+ * の移植版（#2162）。単一選択 + 新規作成（グローバル ActivityCreateModal 経由）。
+ * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
+ *
+ * 一覧はカテゴリーでグルーピングして表示する。色・アイコンはカテゴリーだけが持ち、
+ * 所属アクティビティはこれを継承する。未分類のアクティビティは継承する色が無いため
+ * アイコンを出さずテキストのみで表示する（サイドバーの ActivityRow と同じ扱い、
+ * 2026-08-18 User 指示）。
+ *
+ * 「+」押下時は自身を一旦閉じてからグローバル ActivityCreateModal を開く（vaul nested
+ * Drawer 問題を避けるため）。modal の onCreated callback で selection を反映する。
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { Plus, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useShellStore } from '@/lib/stores/useShellStore';
+import {
+  Button,
+  cn,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  overlaySurface,
+} from '@dayopt/components';
+import { getCategoryColorClasses } from '../lib/category-colors';
+
+import { useActivityTree } from '../hooks/useActivitiesQuery';
+import { ActivityIcon } from './ActivityIcon';
+
+import type { Activity, ActivityTree } from '../types';
+
+/**
+ * サンプルアクティビティの i18n キー（`calendar.activitySelector.sampleActivities` 配下）。
+ *
+ * 移植元が読んでいた `calendar.tagSelector.*` は旧ピッカーの撤去と同時に削除済み（#2162）。
+ */
+type SampleActivityNameKey = 'work' | 'study' | 'exercise' | 'break' | 'meal';
+
+/** アクティビティが0件のときにユーザーへ表示するサンプル候補一覧 */
+const SAMPLE_ACTIVITY_CHIPS: Array<{
+  nameKey: SampleActivityNameKey;
+  color: string;
+  icon: string;
+}> = [
+  { nameKey: 'work', color: 'blue', icon: 'briefcase' },
+  { nameKey: 'study', color: 'indigo', icon: 'book-open' },
+  { nameKey: 'exercise', color: 'green', icon: 'dumbbell' },
+  { nameKey: 'break', color: 'amber', icon: 'coffee' },
+  { nameKey: 'meal', color: 'orange', icon: 'utensils' },
+];
+
+const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
+const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
+
+/** ホバー中のアクティビティ情報（色・アイコンは所属カテゴリーからの継承値） */
+export interface HoveredActivityInfo {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+}
+
+interface ActivityQuickSelectorProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (activityId: string, activityName: string) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    categoryId?: string | null,
+  ) => void;
+  /** アクティビティホバー時のコールバック（プレビュー用） */
+  onActivityHover?: ((activity: HoveredActivityInfo | null) => void) | undefined;
+  /** PC: アンカー要素の横にパネルを配置する */
+  anchorRef?: React.RefObject<HTMLDivElement | HTMLButtonElement | null>;
+  /** ヘッダーに表示する日付・時間帯ラベル（例: "3/30 (日) 14:00 – 15:30"） */
+  timeLabel?: string | undefined;
+  /**
+   * timeLabel の下に出す補助表示。呼び出し側が組み立てた ReactNode をそのまま描画する。
+   * activities feature は Layer 0 なので上位 feature の component を import できない。
+   * ノードで受け取ることで依存方向を保ったまま合成できる（例: 作成時フィードフォワード）。
+   */
+  hint?: React.ReactNode | undefined;
+}
+
+interface ActivityBadgeCellProps {
+  activity: Activity;
+  /** 継承する表示色。未分類なら null */
+  color: string | null;
+  /** 継承する表示アイコン。未分類なら null */
+  icon: string | null;
+  isSelected: boolean;
+  onSelect: () => void;
+  onHover?: ((info: HoveredActivityInfo) => void) | undefined;
+  onHoverEnd?: (() => void) | undefined;
+  /** 未分類（カテゴリー未所属）なら true。アイコンを出さずテキストのみにする */
+  uncategorized?: boolean;
+}
+
+/** 選択用の pill badge。未分類は継承する色が無いのでアイコンを出さない */
+function ActivityBadgeCell({
+  activity,
+  color,
+  icon,
+  isSelected,
+  onSelect,
+  onHover,
+  onHoverEnd,
+  uncategorized = false,
+}: ActivityBadgeCellProps) {
+  // 選択中の見た目はカテゴリー色の Tailwind クラスで出す。移植元は style 属性で
+  // CSS 変数を直接当てていたが、`design-system.md` が style 属性を禁じており、
+  // クラス名は category-colors.ts の safelist が生成を保証している
+  const colorClasses = getCategoryColorClasses(color);
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      onMouseEnter={
+        onHover ? () => onHover({ id: activity.id, name: activity.name, color, icon }) : undefined
+      }
+      onMouseLeave={onHoverEnd}
+      className={cn(
+        'flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-sm transition-colors',
+        'active:scale-95 active:transition-transform',
+        isSelected
+          ? uncategorized
+            ? // 未分類は継承する色が無いので、色ではなく選択状態のトークンで示す
+              'border-border bg-state-selected text-foreground'
+            : cn('text-foreground', colorClasses.border, colorClasses.tint)
+          : 'border-border text-foreground hover:bg-state-hover',
+      )}
+    >
+      {/* アクティビティ自体にはアイコンを出さない。カテゴリー見出しが既に同じ
+          アイコンを出しており、pill 側で繰り返しても情報が増えない（サイドバーの
+          ActivityRow と同じ規律、2026-08-18 User 指示） */}
+      <span className="truncate">{activity.name}</span>
+    </button>
+  );
+}
+
+function CreateBadge({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'border-border hover:bg-state-hover text-muted-foreground flex min-h-11 items-center gap-1 rounded-full border border-dashed px-3 py-2 text-sm transition-colors',
+        'active:scale-95 active:transition-transform',
+      )}
+    >
+      <Plus className="size-4" aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/**
+ * アクティビティ選択コンテンツ
+ *
+ * カテゴリーごとの見出し + 所属アクティビティ、末尾に「未分類」、さらに末尾の「+」で
+ * 自身を閉じてグローバル ActivityCreateModal を `openActivityCreateModal({ onCreated })`
+ * で開く。所属アクティビティが 0 件のカテゴリーは見出しごと出さない（選べるものが無い
+ * 見出しはノイズになるため）。
+ */
+function ActivityQuickSelectorContent({
+  onSelect,
+  onCreateAndSelect,
+  onActivityHover,
+  closeSelf,
+}: {
+  onSelect: (activityId: string, activityName: string) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    categoryId?: string | null,
+  ) => void;
+  onActivityHover?: ((activity: HoveredActivityInfo | null) => void) | undefined;
+  /** 自身（ActivityQuickSelector）を閉じる関数。modal を開く前に呼んで nest を回避 */
+  closeSelf: () => void;
+}) {
+  const t = useTranslations('calendar');
+  const { data: tree } = useActivityTree();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const openActivityCreateModal = useShellStore.use.openActivityCreateModal();
+
+  const categories = tree?.categories ?? EMPTY_CATEGORIES;
+  const uncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
+  const isActivityZero =
+    uncategorized.length === 0 && categories.every((node) => node.activities.length === 0);
+
+  const handleSelect = useCallback(
+    (activityId: string, activityName: string) => {
+      setSelectedId(activityId);
+      onSelect(activityId, activityName);
+    },
+    [onSelect],
+  );
+
+  const handleOpenCreate = useCallback(() => {
+    closeSelf();
+    openActivityCreateModal({
+      onCreated: (activity) => {
+        // 作成は modal 側で済んでいる。caller の onCreateAndSelect は再度 mutation
+        // を呼んで duplicate-name で fail するので、id を直接 onSelect に渡す。
+        onSelect(activity.id, activity.name);
+      },
+    });
+  }, [closeSelf, openActivityCreateModal, onSelect]);
+
+  const handleHover = onActivityHover
+    ? (info: HoveredActivityInfo) => onActivityHover(info)
+    : undefined;
+  const handleHoverEnd = onActivityHover ? () => onActivityHover(null) : undefined;
+
+  return (
+    <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+      {isActivityZero ? (
+        <div className="space-y-2 px-4 py-4">
+          <div className="text-center">
+            <p className="text-foreground text-sm">{t('activitySelector.emptyTitle')}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('activitySelector.emptyDescription')}
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {SAMPLE_ACTIVITY_CHIPS.map(({ nameKey, color, icon }) => {
+              const name = t(`activitySelector.sampleActivities.${nameKey}`);
+              return (
+                <button
+                  key={nameKey}
+                  type="button"
+                  onClick={() => onCreateAndSelect(name, color, icon)}
+                  className="border-border hover:bg-state-hover flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors"
+                >
+                  <ActivityIcon icon={icon} color={color} size="sm" />
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-col gap-2 px-4 py-2">
+        {categories.map(({ category, activities }) =>
+          activities.length > 0 ? (
+            <div key={category.id} className="flex flex-col gap-2">
+              <div className="text-foreground flex items-center gap-1 px-1 text-sm font-medium">
+                <ActivityIcon icon={category.icon} color={category.color} size="sm" />
+                <span className="truncate">{category.name}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activities.map((activity) => (
+                  <ActivityBadgeCell
+                    key={activity.id}
+                    activity={activity}
+                    color={category.color}
+                    icon={category.icon}
+                    isSelected={selectedId === activity.id}
+                    onSelect={() => handleSelect(activity.id, activity.name)}
+                    onHover={handleHover}
+                    onHoverEnd={handleHoverEnd}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null,
+        )}
+
+        {uncategorized.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="text-foreground px-1 text-sm font-medium">
+              {t('filter.uncategorized')}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {uncategorized.map((activity) => (
+                <ActivityBadgeCell
+                  key={activity.id}
+                  activity={activity}
+                  color={null}
+                  icon={null}
+                  uncategorized
+                  isSelected={selectedId === activity.id}
+                  onSelect={() => handleSelect(activity.id, activity.name)}
+                  onHover={handleHover}
+                  onHoverEnd={handleHoverEnd}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <CreateBadge label={t('activitySelector.new')} onClick={handleOpenCreate} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** アンカー要素の横にパネルを配置する位置を計算 */
+function calcAnchoredPosition(anchorRect: DOMRect, panelWidth: number) {
+  const GAP = 8;
+  const MARGIN = 16;
+  const spaceRight = window.innerWidth - anchorRect.right - GAP - MARGIN;
+  const spaceLeft = anchorRect.left - GAP - MARGIN;
+
+  // 右に十分なスペースがあれば右、なければ左
+  const left =
+    spaceRight >= panelWidth
+      ? anchorRect.right + GAP
+      : spaceLeft >= panelWidth
+        ? anchorRect.left - GAP - panelWidth
+        : // どちらも足りなければ右寄せ（画面端からマージン）
+          window.innerWidth - panelWidth - MARGIN;
+
+  // 縦位置: アンカーの上端に揃えつつ、画面内に収まるようクランプ
+  const maxTop = window.innerHeight - MARGIN;
+  const top = Math.max(MARGIN, Math.min(anchorRect.top, maxTop - 200));
+
+  return { top, left };
+}
+
+/** アクティビティ選択フローティングパネル。モバイルはDrawer、PCはアンカー横フローティング */
+export function ActivityQuickSelector({
+  open,
+  onOpenChange,
+  onSelect,
+  onCreateAndSelect,
+  onActivityHover,
+  anchorRef,
+  timeLabel,
+  hint,
+}: ActivityQuickSelectorProps) {
+  const t = useTranslations('calendar');
+  const isMobile = useIsMobile();
+  const mounted = useHasMounted();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // PC: アンカー横に配置する位置を計算
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!open || isMobile) return;
+
+    const anchor = anchorRef?.current;
+    if (!anchor) return;
+
+    const update = () => {
+      const rect = anchor.getBoundingClientRect();
+      const panelWidth = 320; // w-80 = 20rem = 320px
+      setPosition(calcAnchoredPosition(rect, panelWidth));
+    };
+
+    update();
+
+    // スクロール・リサイズで再計算
+    window.addEventListener('resize', update);
+    // カレンダーのスクロールコンテナにも対応
+    const scrollParent = anchor.closest('[data-scroll-container]') ?? window;
+    scrollParent.addEventListener('scroll', update, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', update);
+      scrollParent.removeEventListener('scroll', update);
+    };
+  }, [open, isMobile, anchorRef]);
+
+  // Escape キーで閉じる（PC のみ — Drawer は自前で処理）
+  useEffect(() => {
+    if (!open || isMobile) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onOpenChange(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, isMobile, onOpenChange]);
+
+  // PC: カレンダーを操作可能なまま、パネルとアンカー外の pointer down だけで閉じる。
+  useEffect(() => {
+    if (!open || isMobile) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (anchorRef?.current?.contains(target)) return;
+      onOpenChange(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [open, isMobile, anchorRef, onOpenChange]);
+
+  const closeSelf = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  if (!mounted) return null;
+
+  // モバイル: Vaul Drawer（スワイプで閉じる）
+  // 背後の calendar grid は操作させず、sheet 内の選択に集中させる。
+  // handleOnly でアクティビティリスト内のスクロール・タップが drawer dismiss を誘発しない。
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange} handleOnly>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle>{t('activitySelector.title')}</DrawerTitle>
+            {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
+            {hint}
+          </DrawerHeader>
+          <ActivityQuickSelectorContent
+            onSelect={onSelect}
+            onCreateAndSelect={onCreateAndSelect}
+            onActivityHover={onActivityHover}
+            closeSelf={closeSelf}
+          />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // PC: フローティングパネル
+  if (!open) return null;
+
+  const panel = (
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label={t('activitySelector.title')}
+      className={cn(
+        overlaySurface(),
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- セレクタ高は viewport 単位 70vh が必要でトークン化不可
+        'z-overlay-popover fixed flex max-h-[70vh] w-80 flex-col',
+        'animate-in fade-in duration-150',
+      )}
+      style={position ? { top: position.top, left: position.left } : { visibility: 'hidden' }}
+    >
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+        <div className="min-w-0">
+          <h2 className="font-medium">{t('activitySelector.title')}</h2>
+          {timeLabel && <p className="text-muted-foreground truncate text-sm">{timeLabel}</p>}
+          {hint}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          icon
+          size="lg"
+          onClick={() => onOpenChange(false)}
+          aria-label={t('actions.close')}
+          className="shrink-0"
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+
+      <ActivityQuickSelectorContent
+        onSelect={onSelect}
+        onCreateAndSelect={onCreateAndSelect}
+        onActivityHover={onActivityHover}
+        closeSelf={closeSelf}
+      />
+    </div>
+  );
+
+  return createPortal(panel, document.body);
+}

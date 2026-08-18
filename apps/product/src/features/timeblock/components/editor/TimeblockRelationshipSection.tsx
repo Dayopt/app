@@ -6,7 +6,7 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 import { formatDurationMinutes, isSameDay } from '@/lib/date';
 import { useDateFormat } from '@/lib/hooks/useDateFormat';
 import { Skeleton } from '@dayopt/components';
@@ -15,11 +15,11 @@ import type { TimeblockDestination } from '../../domain/timeblock-destination';
 
 export interface TimeblockRelationshipItem {
   id: string;
-  tagName: string;
-  tagColor: string | null;
-  tagIcon: string | null;
+  activityName: string;
+  activityColor: string | null;
+  activityIcon: string | null;
   /**
-   * true ならタグ自体が存在しない（未分類）。tagName は表示用に
+   * true ならアクティビティ自体が存在しない。activityName は表示用に
    * `common.tags.noTag` へ潰れているため、実在シグナルは別途この
    * フィールドで保持する（呼び出し元が tag_id の null 判定から算出）。
    */
@@ -72,7 +72,7 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
       : `${startDate} ${startTime}–${formatDate(item.endAt)} ${endTime}`;
     const duration = formatDurationMinutes(getDurationMinutes(item));
     const openLabel = t(kind === 'record' ? 'openRecord' : 'openPlan', {
-      tag: item.tagName,
+      tag: item.activityName,
       dateTime,
       duration,
     });
@@ -85,15 +85,15 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
         aria-label={openLabel}
         onClick={() => props.onOpen(item.id, kind)}
       >
-        <TagIcon
-          icon={item.tagIcon}
-          color={item.tagColor}
+        <ActivityIcon
+          icon={item.activityIcon}
+          color={item.activityColor}
           size="sm"
           className="shrink-0"
-          isUncategorized={item.isUncategorized}
+          neutral={item.isUncategorized}
         />
         <span className="min-w-0 flex-1">
-          <span className="text-foreground block truncate text-sm">{item.tagName}</span>
+          <span className="text-foreground block truncate text-sm">{item.activityName}</span>
           <span className="text-muted-foreground block truncate text-xs tabular-nums">
             {dateTime}
           </span>

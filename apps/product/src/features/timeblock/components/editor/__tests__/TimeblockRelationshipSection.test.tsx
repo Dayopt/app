@@ -30,13 +30,9 @@ vi.mock('next-intl', () => ({
     },
 }));
 
-vi.mock('@/features/tags', () => ({
-  TagIcon: ({ isUncategorized }: { isUncategorized?: boolean }) => (
-    <span
-      aria-hidden="true"
-      data-testid="tag-icon"
-      data-uncategorized={String(!!isUncategorized)}
-    />
+vi.mock('@/features/activities', () => ({
+  ActivityIcon: ({ neutral }: { neutral?: boolean }) => (
+    <span aria-hidden="true" data-testid="activity-icon" data-uncategorized={String(!!neutral)} />
   ),
 }));
 
@@ -62,18 +58,18 @@ vi.mock('@/lib/hooks/useDateFormat', () => ({
 const records: TimeblockRelationshipItem[] = [
   {
     id: 'record-1',
-    tagName: 'API development',
-    tagColor: 'blue',
-    tagIcon: null,
+    activityName: 'API development',
+    activityColor: 'blue',
+    activityIcon: null,
     isUncategorized: false,
     startAt: new Date('2026-07-14T09:05:00.000Z'),
     endAt: new Date('2026-07-14T09:35:00.000Z'),
   },
   {
     id: 'record-2',
-    tagName: 'Review',
-    tagColor: 'green',
-    tagIcon: 'search',
+    activityName: 'Review',
+    activityColor: 'green',
+    activityIcon: 'search',
     isUncategorized: false,
     startAt: new Date('2026-07-14T10:10:00.000Z'),
     endAt: new Date('2026-07-14T10:55:00.000Z'),
@@ -180,7 +176,7 @@ describe('TimeblockRelationshipSection', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('未分類(タグ削除済み)のRecordは中立マーカーのTagIconを描画する', () => {
+  it('アクティビティなしのRecordは中立マーカーのActivityIconを描画する', () => {
     render(
       <TimeblockRelationshipSection
         kind="plan"
@@ -188,9 +184,9 @@ describe('TimeblockRelationshipSection', () => {
         records={[
           {
             id: 'record-uncategorized',
-            tagName: 'No tag',
-            tagColor: null,
-            tagIcon: null,
+            activityName: 'No tag',
+            activityColor: null,
+            activityIcon: null,
             isUncategorized: true,
             startAt: new Date('2026-07-14T09:05:00.000Z'),
             endAt: new Date('2026-07-14T09:35:00.000Z'),
@@ -201,10 +197,10 @@ describe('TimeblockRelationshipSection', () => {
       />,
     );
 
-    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'true');
+    expect(screen.getByTestId('activity-icon')).toHaveAttribute('data-uncategorized', 'true');
   });
 
-  it('タグが実在するRecordは中立マーカーを立てない', () => {
+  it('アクティビティが実在するRecordは中立マーカーを立てない', () => {
     render(
       <TimeblockRelationshipSection
         kind="plan"
@@ -215,7 +211,7 @@ describe('TimeblockRelationshipSection', () => {
       />,
     );
 
-    for (const icon of screen.getAllByTestId('tag-icon')) {
+    for (const icon of screen.getAllByTestId('activity-icon')) {
       expect(icon).toHaveAttribute('data-uncategorized', 'false');
     }
   });

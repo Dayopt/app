@@ -13,6 +13,7 @@ interface TimeblockPasteInput {
   title: string;
   note?: string | undefined;
   tagId?: string | undefined;
+  activityId?: string | undefined;
   start_at: string;
   end_at: string;
 }

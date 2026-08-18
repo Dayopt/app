@@ -6,29 +6,32 @@ import { useCallback, useState } from 'react';
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
-import type { Tag } from '@/features/tags';
-import { TagIcon, useMergeTag, useUpdateTag } from '@/features/tags';
+import type { Activity } from '@/features/activities';
+import { useUpdateActivity } from '@/features/activities';
+import { toast } from '@/lib/toast';
 import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
-import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
+import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
 import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
 
 import { ActivityRowMenu, type CategoryOption } from './ActivityRowMenu';
 import { ActivityTimeblockCreatePopover } from './ActivityTimeblockCreatePopover';
 
 interface ActivityRowProps {
-  activity: Tag;
+  activity: Activity;
   /** 同名衝突の検出に使う全アクティビティ */
-  allActivities: Tag[];
+  allActivities: Activity[];
   /** カレンダーに表示中か */
   checked: boolean;
   /** 所属カテゴリー ID（null = 未分類） */
   categoryId: string | null;
-  /** 継承する表示色。カテゴリーが持つ色で、未分類なら null */
+  /**
+   * クイック作成ポップオーバーへ渡す継承色。行そのものには出さないが、
+   * ポップオーバーはカテゴリーの色でブロックの見た目を示すため必要。
+   */
   inheritedColor: string | null;
-  /** 継承する表示アイコン。未分類なら null */
+  /** 同上（ポップオーバー用） */
   inheritedIcon: string | null;
   categoryOptions: CategoryOption[];
   isMobile: boolean;
@@ -43,8 +46,8 @@ interface ActivityRowProps {
 /**
  * サイドバーのアクティビティ行。
  *
- * 色・アイコンは所属カテゴリーから継承する（アクティビティ自身は持たない）。
- * カテゴリー未所属（未分類）のアクティビティは中立マーカーで表示する。
+ * 行はテキストのみで、アイコンも色ドットも出さない。色とアイコンを持つのは
+ * カテゴリーだけで、配下の行に並べても見出しの繰り返しになるため。
  * 行クリックでクイック作成ポップオーバー、👁 で表示切替、⋯ でメニュー。
  */
 export function ActivityRow({
@@ -67,50 +70,34 @@ export function ActivityRow({
   const locale = useLocale();
   const router = useRouter();
   const navigation = useCalendarNavigation();
-  const updateMutation = useUpdateTag();
-  const mergeMutation = useMergeTag();
-  const { openTagMergeModal, openTagRenameModal } = useTagModalNavigation();
+  const updateMutation = useUpdateActivity();
+  const { openActivityRenameModal } = useActivityModalNavigation();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [categoryChangeConflict, setCategoryChangeConflict] = useState<{
-    targetActivityId: string;
-    targetName: string;
-  } | null>(null);
 
   const isPopoverOpen = openPopoverActivityId === activity.id;
-  const isUncategorized = categoryId === null;
 
   const handleChangeCategory = useCallback(
     (newCategoryId: string | null) => {
-      // 移動先に同名アクティビティがあると UNIQUE 制約に触れるため、統合を提案する
-      const conflict = allActivities.find(
+      // 移動先に同名アクティビティがあると UNIQUE 制約に触れる。統合（マージ）は
+      // v1 で持たない（#2162 §4-8）ので、ここでは送らずに理由を伝えるだけにする。
+      // サーバー側も DUPLICATE_NAME で弾くが、先に出した方が往復が 1 回減る。
+      const hasConflict = allActivities.some(
         (candidate) =>
           candidate.id !== activity.id &&
-          (candidate.parent_id ?? null) === newCategoryId &&
+          (candidate.category_id ?? null) === newCategoryId &&
           candidate.name.toLowerCase() === activity.name.toLowerCase(),
       );
 
-      if (conflict) {
-        setCategoryChangeConflict({ targetActivityId: conflict.id, targetName: conflict.name });
+      if (hasConflict) {
+        toast.error(t('calendar.filter.createDialog.duplicateName'));
         return;
       }
 
-      updateMutation.mutate({ id: activity.id, parentId: newCategoryId });
+      updateMutation.mutate({ id: activity.id, categoryId: newCategoryId });
     },
-    [allActivities, activity.id, activity.name, updateMutation],
+    [allActivities, activity.id, activity.name, updateMutation, t],
   );
-
-  const handleConfirmCategoryChangeMerge = useCallback(async () => {
-    if (!categoryChangeConflict) return;
-    try {
-      await mergeMutation.mutateAsync({
-        sourceTagId: activity.id,
-        targetTagId: categoryChangeConflict.targetActivityId,
-      });
-    } finally {
-      setCategoryChangeConflict(null);
-    }
-  }, [categoryChangeConflict, mergeMutation, activity.id]);
 
   const handleViewStats = useCallback(() => {
     if (navigation) {
@@ -134,14 +121,10 @@ export function ActivityRow({
           )}
           onClick={() => onOpenPopover(activity.id)}
         >
-          <span className="ml-2 shrink-0">
-            <TagIcon
-              icon={inheritedIcon}
-              color={inheritedColor}
-              size="sm"
-              isUncategorized={isUncategorized}
-            />
-          </span>
+          {/* アクティビティ行にアイコンは出さない（2026-08-18 User 指示）。
+              カテゴリー配下では見出しのアイコンをそのまま繰り返すことになり、
+              未分類では継承する色が無い。どちらも情報を足さずノイズになる。
+              色とアイコンを見せるのはカテゴリー見出しだけ */}
 
           <HoverTooltip
             content={activity.name}
@@ -192,20 +175,9 @@ export function ActivityRow({
               categoryOptions={categoryOptions}
               isMobile={isMobile}
               onOpenRenameDialog={() =>
-                openTagRenameModal({
-                  id: activity.id,
-                  name: activity.name,
-                  parent_id: activity.parent_id ?? null,
-                })
+                openActivityRenameModal({ id: activity.id, name: activity.name })
               }
               onChangeCategory={handleChangeCategory}
-              onOpenMergeModal={() =>
-                openTagMergeModal({
-                  id: activity.id,
-                  name: activity.name,
-                  color: activity.color ?? null,
-                })
-              }
               onShowOnlyActivity={onShowOnlyActivity}
               onViewStats={handleViewStats}
               onArchiveActivity={onArchiveActivity}
@@ -228,23 +200,6 @@ export function ActivityRow({
           ) : null}
         </div>
       </div>
-
-      <ConfirmDialog
-        open={categoryChangeConflict !== null}
-        onClose={() => setCategoryChangeConflict(null)}
-        onConfirm={handleConfirmCategoryChangeMerge}
-        title={t('calendar.filter.mergeActivity.title')}
-        description={
-          categoryChangeConflict
-            ? t('calendar.filter.mergeActivity.description', {
-                sourceName: activity.name,
-                targetName: categoryChangeConflict.targetName,
-              })
-            : ''
-        }
-        confirmLabel={t('calendar.filter.mergeActivity.confirm')}
-        variant="destructive"
-      />
     </>
   );
 }
