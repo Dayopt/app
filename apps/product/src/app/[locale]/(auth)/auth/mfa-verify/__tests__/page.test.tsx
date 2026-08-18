@@ -183,12 +183,12 @@ describe('MFAVerifyPage', () => {
       expect(mockChallenge).toHaveBeenCalledWith({ factorId: 'factor-1' });
     });
 
-    it('検証済みfactorが無い場合、/weekへ遷移する', async () => {
+    it('検証済みfactorが無い場合、localeのcalendarへ遷移する', async () => {
       mockListFactors.mockResolvedValue(emptyFactorsList);
 
       render(<MFAVerifyPage />);
 
-      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/calendar'));
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/ja/calendar'));
       expect(mockChallenge).not.toHaveBeenCalled();
     });
   });

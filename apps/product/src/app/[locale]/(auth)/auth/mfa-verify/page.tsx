@@ -67,10 +67,10 @@ export default function MFAVerifyPage() {
             setChallengeId(challengeData.id);
           }
         } else {
-          router.push('/calendar');
+          router.push(`/${locale}/calendar`);
         }
       } else {
-        router.push('/calendar');
+        router.push(`/${locale}/calendar`);
       }
     } catch (err) {
       logger.error('MFA initialization failed:', err);
@@ -83,7 +83,7 @@ export default function MFAVerifyPage() {
       });
       setError(t('common.errors.mfa.verifyFailed'));
     }
-  }, [router, supabase, t]);
+  }, [router, supabase, t, locale]);
 
   useEffect(() => {
     queueMicrotask(() => void checkMFARequired());
