@@ -349,7 +349,7 @@ const status = typeof init === 'number' ? init : ((init == null ? void 0 : init.
 
 ---
 
-## 5. スライス 2 — shell / Sidebar タブ構造（凍結）
+## 5. スライス 2 — shell / Sidebar タブ構造（**凍結前・改稿中**）
 
 ### 5-1. 旧構造の半分は既に生き残っている（再実装しなくてよい部分）
 
@@ -567,7 +567,35 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 > **v1 では `/report` に課金境界を引かない。全部無料にする。**
 
-実装への落とし込み: **`statistics.getStatsPageData` の `proProcedure` ゲートを `protectedProcedure` へ外す**（本 project の実装 scope に含める）。Free / Pro 境界は**課金を有効化するタイミングで改めて設計する**。
+Free / Pro 境界は**課金を有効化するタイミングで改めて設計する**。
+
+##### 実装方法は「ゲートを外す」ではなく「何もしない」が正しい（実測による差し戻し）
+
+指揮台からの伝達では実装方法まで指定されていた — 「`statistics.getStatsPageData` の `proProcedure` ゲートを `protectedProcedure` へ外す」。**実測すると、この手段は裁定の意図と食い違う。**
+
+```ts
+// lib/trpc/procedures.ts:183-188
+export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
+  // 課金 enforcement が無効（既定）の間は Pro ゲートを素通りさせ、全機能を無料提供する。
+  // proProcedure 注釈は将来の課金対象マーカーとして温存する（Phase B でフラグを 'true' に）。
+  if (!isBillingEnforced()) {
+    return next({ ctx });
+  }
+```
+
+`isBillingEnforced()` は `env.BILLING_ENFORCED === 'true'` を見るだけで（`lib/billing/enforcement.ts:19-21`）、production では未設定。**つまり `getStatsPageData` は今すでに無料で通っている。**
+
+したがって:
+
+- **「v1 は `/report` を全部無料にする」は、コードを 1 行も変えずに既に満たされている。** ゲートを外しても**今日の挙動は 1 ミリも変わらない**
+- **ゲートを外すと失うものがある。** `enforcement.ts:16-17` が設計意図を明記している — 「Phase B（プロダクト成熟・ローンチ前）に production で `BILLING_ENFORCED='true'` を設定し、Free/Pro の棲み分けを**1 か所のフラグ反転で**復活させる」。注釈を剥がすと `getStatsPageData` だけがこの一括反転から**静かに漏れる**。課金を有効化した時、他の Pro 機能はゲートが戻るのにこの 1 本だけ無料のまま残り、しかも誰も気づかない
+- **裁定のもう半分「Free / Pro 境界は課金有効化のタイミングで改めて設計する」と直接矛盾する。** 注釈を剥がす行為自体が「この 1 本は無料」という境界の先引きになる
+
+**推奨: `proProcedure` はそのまま残す。** 裁定の意図（v1 は全部無料 / 境界は後で設計）は、既存の enforcement フラグが**そのまま**満たしている。本 project の実装 scope から認可の変更を落とす。
+
+**この差し戻しは指揮台へ送信済み**（2026-08-18）。確認が返るまで、本節は「注釈を残す」を前提に書く。§9 の Step 4 と §6-7 も同じ前提。
+
+**副産物**: §6-2 の当初の懸念（無料ユーザーに「押せるタブが 1 つ死んでいる」体験が出る）は、**課金を有効化するまで発生しない**。懸念が現実になるのは `BILLING_ENFORCED='true'` を立てる時で、その時点で境界を設計するという裁定は、懸念のタイミングとも噛み合っている。
 
 **これは設計レーンの推奨（差分と Time P/L だけ無料、深い分析は Pro）とも指揮台の支持とも分岐した判断**で、判断ジャーナル（`judgment:diverged`）として #2181 に記録済み。
 
@@ -577,13 +605,13 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 - **課金は production で未有効化**（Stripe env が入っていない）。いま境界を引いても検証できず、実データも取れない
 - 私が推奨した「深さで線を引く」案は、**課金を有効化する時に改めて選べる**。v1 で無料にしたものを後から有料にするのは難しいが、**この時点ではまだ誰にも出荷していない**ので、その非対称性は発生していない
 
-#### 認可を緩める変更なので、実装時に反証レビューを必須にする
+#### もし差し戻しが通らず「ゲートを外す」で確定したら
 
-`proProcedure` → `protectedProcedure` は**認可境界を緩める変更**である。`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件（auth / billing）に該当するので、**実装 PR では `risk-reviewer` の反証レビューを push 前に必ずかける**。確認する観点:
+`proProcedure` → `protectedProcedure` は**認可境界を緩める変更**なので、`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件（auth / billing）に該当する。その場合は**実装 PR で `risk-reviewer` の反証レビューを push 前に必ずかける**。確認する観点:
 
-- `getStatsPageData` が返すデータに、Pro 限定であることを前提にした情報（他ユーザーのデータ、課金状態そのもの等）が混ざっていないか
-- `proProcedure` を外した後、`getStatsPageData` 以外に道連れで緩む procedure が無いか（`proProcedure` の実装を共有している場合）
-- 課金を有効化する時にこのゲートを戻す手順が、`docs/product/specs/` のどこかに残るか
+- 剥がした注釈が `BILLING_ENFORCED` の一括反転から漏れることを、`docs/product/specs/` のどこかに記録したか（漏れの本体は上記のとおり、これが最大の失点）
+- `getStatsPageData` が返すデータに、Pro 限定であることを前提にした情報が混ざっていないか
+- `getStatsPageData` 以外に道連れで緩む procedure が無いか
 
 ### 6-3. 期間契約 — `/report` は自前の期間を持つ必要がある（実測で判明）
 
@@ -661,13 +689,36 @@ export interface ReviewDisplayRange {
 
 ### 6-7. このスライスの Reversibility
 
-| 変更                                                | 判定        | 根拠                                                                                                                  |
-| --------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1 スクロール構成                                    | `[minutes]` | レイアウトのみ                                                                                                        |
-| `/report?date=&range=` の凍結                       | `[hours]`   | 公開 URL 契約だが 307 redirect で行き先を変えられる（§4-5 と同じ性質）                                                |
-| `features/review/index.ts` の公開契約作り替え       | `[minutes]` | repo 内の契約。外部に出ない                                                                                           |
-| `ReviewGranularity` 型の拡張                        | `[minutes]` | 純追加                                                                                                                |
-| `getStatsPageData` の `proProcedure` を外す（§6-2） | `[minutes]` | 認可を**緩める**変更なので revert 自体は容易。ただし実装時に `risk-reviewer` 必須。課金未有効化のため顧客には見えない |
+| 変更                                          | 判定        | 根拠                                                                                                                                             |
+| --------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1 スクロール構成                              | `[minutes]` | レイアウトのみ                                                                                                                                   |
+| `/report?date=&range=` の凍結                 | `[hours]`   | 公開 URL 契約だが 307 redirect で行き先を変えられる（§4-5 と同じ性質）                                                                           |
+| `features/review/index.ts` の公開契約作り替え | `[minutes]` | repo 内の契約。外部に出ない                                                                                                                      |
+| `ReviewGranularity` 型の拡張                  | `[minutes]` | 純追加                                                                                                                                           |
+| 課金境界（§6-2）                              | —           | **v1 では何もしない**。既存の `BILLING_ENFORCED` フラグが既に全機能を無料にしている。認可の変更を scope から落としたので可逆性の議論も発生しない |
+
+### 6-8. plan-review の HALT 判定と未解決の設計課題（2026-08-18）
+
+スライス 2・3 に `/plan-review` をかけたところ **HALT（凍結不可）** が返った。**指摘はすべて実測で裏を取り、妥当と判断した。** 以下を埋めるまで §5・§6 は凍結しない。
+
+| #   | 課題                                                                                                                                                                                                                | 実測での確認                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **タブを往復すると日付と view がリセットされる。** §5-4 の「日付は不変」は誤り。Provider が再マウントされないことと state が保たれることは別で、`/calendar` へ戻った時に `initialDate`（今日）が state を上書きする | `CalendarNavigationContext.tsx:257-270` の effect を確認。`isCalendarPage` が false の `/report` では発火しないが、**戻った瞬間に発火する** |
+| 2   | **`/report` の loading / error を現行のまま移植すると壊れる。** `isLoading = isPending \|\| isTimePLPending` / `hasError = isError \|\| isTimePLError` の合成で、片方の失敗が画面全体を潰す                         | `CalendarReviewPanel.tsx:76-77` で合成を確認                                                                                                |
+| 3   | **`days` をサーバー側で組むと production だけ 1 日ずれる。** §6-3 の「サーバー / クライアントで組み立てる」が誤り                                                                                                   | `compute-date-range.ts:164-169` の `toCalendarDateKey` がローカル TZ の getter（`getFullYear` 等）を使うことを確認。Vercel は UTC           |
+| 4   | **`pb-16` は 2 段化以前に既に足りていない。** 静的クラスでは `env(safe-area-inset-bottom)` を含む高さを表現できない                                                                                                 | `TagChipRow.tsx:58` が `min-h-14` + `pt-1` + `pb-safe` + `fixed inset-x-0 bottom-0` を確認。対する余白は `pb-16`（64px）                    |
+| 5   | **`weekStartsOn` が設計に一度も出てこない。** `range=week` の週境界を決める必須入力で、`showWeekends` と同じ「共有リンクで相手とずれる」性質を持つ                                                                  | `compute-date-range.ts` の関数が `weekStartsOn` を取ることを確認                                                                            |
+| 6   | **差分のデータ源が `CalendarController` の内部にある。** `/report` がこれを表示する方法が未確定で、Step 4 の作業量を大きく変える                                                                                    | `CalendarController.tsx:255-311` で `computeTimeblockDayDiffs` が `allTimeblocks` + 可視性 + `showWeekends` から計算していることを確認      |
+| 7   | **Step 4 にレーン G との順序制約が無い。** §6-4 / §6-5 は `features/review/` の公開契約作り替えと内部改修を要求しており、G と**構造的に競合**する（rename ではない）                                                | §9 の Step 表で「レーン G merge 後」が Step 5 にしか付いていないことを確認                                                                  |
+
+**あわせて直した設計書自身の欠陥**:
+
+- §11 に「`BottomTabBar` を復活させない」が残ったまま §5-7 で復活を決めており、**設計書が自己矛盾していた**（User 判断を反映した時に §11 を直し忘れた）。§11 の当該行と §10 の該当行を修正済み
+- §5-4-b（`/report` の MiniCalendar が `/calendar` の URL を書いてしまう）は設計レーンが独自に見つけて先に書いていたもので、plan-review も同じ穴を独立に指摘した。**2 経路が一致したので確度が高い**
+
+**過剰と指摘され、受け入れたもの**: `WorkspaceTab` の `'other'` は §5-4 が「calendar として扱う」と決めている以上不要（2 値へ畳む）。§6-5 の `truncate` 棚卸しは目的（面積）と無関係なので別 issue。§6-6 の spec 改名は §4-6 の E2E 書き換えに吸収する。
+
+**次のラウンドでやること**: 上表 7 件を設計へ落とし、§5・§6 を再提出して `/plan-review` にかけ直す。
 
 ## 9. Step 分解と Reversibility Table
 
@@ -713,7 +764,7 @@ export interface ReviewDisplayRange {
 | 安全な redirect 先の検証       | `getSafeRedirectPath`（`lib/safe-redirect.ts`。fallback 値だけ変える）                             |
 | review / diff の中身           | `CalendarReviewPanel` / `ReviewDiffPanel`（スライス 3 で扱う）                                     |
 | 集計                           | `features/timeblock` の `domain/estimation-accuracy.ts` と `server/statistics-*`（#2162 §6-2）     |
-| モバイルの `/report` 入口      | #2161 が作ったヘッダーのトグル（付け替えるだけ。§5-7）                                             |
+| 前期間（prevDateRange）の算出  | `computeCalendarDisplayDateRanges`（`compute-date-range.ts:33-68`）。新規実装は要らない            |
 
 ## 11. What I'm Not Doing
 
@@ -724,7 +775,6 @@ export interface ReviewDisplayRange {
 - **`emailRedirectTo` を変えない** — Supabase の Redirect URL allowlist に依存する本番専用の故障点。redirect 層に任せれば足りる（§4-6）
 - **308 permanent へ上げない** — 写像が正しいと実測で確認した後の独立判断（§4-5）
 - **`{L}/review` の redirect を復活させない** — 2026-06 に「ローンチ前のため互換 redirect は作らない」と判断済みの route（§4-4）
-- **`BottomTabBar` を復活させない** — 2 度削除された資産で、クイック作成の固定フッターと画面下端を奪い合う（§5-7）
 - **セグメントの並び替え・フォルダ分け・共有を作らない** — §3-2 の歯止めに直接触れる（§5-5）
 - **「ついでに」データ層を触らない** — この project に migration も RPC 変更も無い。#2162 の波と混ぜない
 - **`_shell/` と `features/review/` の作り替えをスライス 1 でやらない** — レーン F / G の writer 境界（§4-9）
@@ -734,15 +784,15 @@ export interface ReviewDisplayRange {
 
 §9 の Step をそのまま issue にする。**1 Step = 1 issue = 1 レーン = 1 branch = 1 PR。** 依存の向きが merge 順になる。
 
-| Step | issue タイトル案                                                                  | 依存                  | 受け入れ条件の核                                                                                                                                                                                                |
-| ---- | --------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す                                                                                  |
-| 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                                                                                                          |
-| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                                                                                                  |
-| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**`getStatsPageData` の `proProcedure` を外す（§6-2）**。認可を緩めるので `risk-reviewer` を push 前に必須 |
-| 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                                                                       |
-| 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                                                             |
-| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                                                            |
+| Step | issue タイトル案                                                                  | 依存                  | 受け入れ条件の核                                                                                                                                                       |
+| ---- | --------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す                                         |
+| 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                                                                 |
+| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                                                         |
+| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**認可は変更しない**（§6-2。既存の enforcement フラグで既に無料） |
+| 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                              |
+| 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                    |
+| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                   |
 
 **Step 7 は他と並行してよい**（docs のみで、コードに依存しない）。ただし **§4-10 と `principles.md:35` を分けない** — 片方だけ直すと後続レビューが未改訂の側を根拠に差し戻せる。
 
