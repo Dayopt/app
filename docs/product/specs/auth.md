@@ -188,13 +188,13 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 - OAuth token は **MCP endpoint（`/api/mcp`）内部からの実行だけ**が tRPC に到達できる。公開 tRPC endpoint（`/api/trpc`）へ同じ token を投げても、scope 判定より手前で `FORBIDDEN` になる（context の `oauthExecution: 'mcp_internal'` が無いため）
 - MCP 内部実行でも、procedure path ごとの allowlist（`MCP_TRPC_SCOPE_REQUIREMENTS`、`apps/product/src/lib/trpc/procedures.ts`）と scope が一致した場合だけ許可する。現在の集合:
 
-  | procedure                          | scope              |
-  | ---------------------------------- | ------------------ |
-  | `plans.list` / `plans.getById`     | `read:entries`     |
-  | `records.list` / `records.getById` | `read:entries`     |
-  | `statistics.getMcpReview`          | `read:stats`       |
-  | `tags.list` / `tags.listArchived`  | `read:tags`        |
-  | `timeblockContext.getConstraints`  | `read:constraints` |
+  | procedure                                                 | scope              |
+  | --------------------------------------------------------- | ------------------ |
+  | `plans.list` / `plans.getById`                            | `read:entries`     |
+  | `records.list` / `records.getById`                        | `read:entries`     |
+  | `statistics.getMcpReview`                                 | `read:stats`       |
+  | `activities.listActivities` / `activities.listCategories` | `read:activities`  |
+  | `timeblockContext.getConstraints`                         | `read:constraints` |
 
   互換 MCP tool `entries.list` も `read:entries` scope を使う。write / delete は tRPC を経由せず、MCP mutation 経路（`private.authorize_mcp_mutation_v1` + 三重 write gate）だけが扱う
 

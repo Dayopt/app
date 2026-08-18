@@ -141,7 +141,7 @@ const eslintConfig = defineConfig([
   // =========================================================================
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
-  // Layer 0 (基盤):   tags             — 他featureに依存しない
+  // Layer 0 (基盤):   tags, activities — 他featureに依存しない
   // Layer 1 (中核):   timeblock, external-calendar — L0 barrel のみ
   // Layer 2 (体験):   calendar, review — L0+L1 barrel のみ
   // Independent:      auth, contact    — 他featureに依存しない
@@ -204,6 +204,25 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Layer 0 (activities): 他featureへの依存ゼロ
+  {
+    files: ['src/features/activities/**/*.{ts,tsx}'],
+    ignores: ['**/*.stories.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/**'],
+              message: 'Layer 0（基盤feature）は他featureに依存不可。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Layer 1 (timeblock): L0 barrel のみ許可
   {
     files: ['src/features/timeblock/**/*.{ts,tsx}'],
@@ -240,6 +259,10 @@ const eslintConfig = defineConfig([
             {
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/activities/**'],
+              message: 'barrel import（@/features/activities）のみ使用。',
             },
           ],
         },
@@ -284,6 +307,10 @@ const eslintConfig = defineConfig([
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
             },
+            {
+              group: ['@/features/activities/**'],
+              message: 'barrel import（@/features/activities）のみ使用。',
+            },
           ],
         },
       ],
@@ -317,6 +344,10 @@ const eslintConfig = defineConfig([
             {
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/activities/**'],
+              message: 'barrel import（@/features/activities）のみ使用。',
             },
             {
               group: ['@/features/timeblock/**'],
@@ -359,6 +390,10 @@ const eslintConfig = defineConfig([
             {
               group: ['@/features/tags/**'],
               message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/activities/**'],
+              message: 'barrel import（@/features/activities）のみ使用。',
             },
             {
               group: ['@/features/timeblock/**'],

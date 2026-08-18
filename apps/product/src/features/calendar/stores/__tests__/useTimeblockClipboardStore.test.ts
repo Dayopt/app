@@ -11,6 +11,7 @@ const mockEntry: ClipboardTimeblock = {
   startHour: 10,
   startMinute: 0,
   tagId: 'tag-1',
+  activityId: null,
 };
 
 describe('useTimeblockClipboardStore', () => {

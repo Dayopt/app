@@ -14,6 +14,7 @@ export interface RecordEventSourceRow {
   title: string;
   note: string | null;
   tag_id: string | null;
+  activity_id: string | null;
   plan_id: string | null;
   source: string;
   start_at: string;
@@ -51,6 +52,7 @@ export function recordRowToRecordEvent(
     title: row.title || '',
     note: row.note,
     tagId: row.tag_id,
+    activityId: row.activity_id,
     planId: row.plan_id,
     startDate,
     endDate,

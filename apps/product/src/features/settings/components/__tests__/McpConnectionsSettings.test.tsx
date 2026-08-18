@@ -27,7 +27,7 @@ const CLAUDE_CONNECTION: ConnectionFixture = {
 const CHATGPT_CONNECTION: ConnectionFixture = {
   id: 'conn-chatgpt',
   client_id: 'chatgpt',
-  scopes: ['read:tags'],
+  scopes: ['read:activities'],
   authorized_at: '2026-07-20T00:00:00.000Z',
   last_used_at: null,
 };
@@ -176,6 +176,22 @@ describe('McpConnectionsSettings', () => {
     render(<McpConnectionsSettings />);
 
     expect(revokeUseMutationCallCount.value).toBe(1);
+  });
+
+  it('既知の scope は翻訳キーで描画し、生の scope 文字列を出さない', () => {
+    // scopeLabelFor は未知 scope を生値のまま返す（翻訳漏れで情報が消えるより安全）。
+    // その安全弁のせいで、scope 名を変えて switch の case を直し忘れても画面は
+    // 壊れず「read:activities」と生で出るだけになり、テストも素通りする。
+    // #2174 の read:tags → read:activities 置換で実際にこれを踏んだので、
+    // 「生値が出ていない」ことを明示的に固定する。
+    render(<McpConnectionsSettings />);
+
+    expect(screen.getByText('scopes.readActivities')).toBeInTheDocument();
+    for (const connection of [CLAUDE_CONNECTION, CHATGPT_CONNECTION, CURSOR_CONNECTION]) {
+      for (const scope of connection.scopes) {
+        expect(screen.queryByText(scope)).not.toBeInTheDocument();
+      }
+    }
   });
 
   it('行ごとの revoke ボタンは、クリックした connection の名前を dialog に表示する（先頭行に固定されない）', async () => {

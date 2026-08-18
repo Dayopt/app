@@ -43,7 +43,7 @@ const CLAUDE: Row = {
 const CHATGPT: Row = {
   id: 'conn-chatgpt',
   client_id: 'chatgpt',
-  scopes: ['read:tags'],
+  scopes: ['read:activities'],
   authorized_at: '2026-08-02T00:00:00.000000Z',
   last_used_at: null,
 };

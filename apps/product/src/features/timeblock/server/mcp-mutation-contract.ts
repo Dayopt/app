@@ -9,7 +9,7 @@ interface McpMutationBinding {
 export interface McpPlanCreateInput extends McpMutationBinding {
   title: string;
   note: string | null;
-  tagId: string | null;
+  activityId: string | null;
   startAt: string;
   endAt: string;
 }
@@ -21,10 +21,10 @@ interface McpPlanVersionedInput extends McpMutationBinding {
 }
 
 export interface McpPlanUpdateInput extends McpPlanVersionedInput {
-  /** Omitted fields are preserved. An explicit null clears note or tag. */
+  /** Omitted fields are preserved. An explicit null clears note or activity. */
   title?: string;
   note?: string | null;
-  tagId?: string | null;
+  activityId?: string | null;
   startAt?: string;
   endAt?: string;
 }
@@ -35,7 +35,7 @@ export type McpPlanRestoreInput = McpPlanVersionedInput;
 export interface McpRecordCreateInput extends McpMutationBinding {
   title: string;
   note: string | null;
-  tagId: string | null;
+  activityId: string | null;
   /** Null creates an unplanned Record; a UUID links it to a completed Plan. */
   planId: string | null;
   startAt: string;
@@ -49,10 +49,10 @@ interface McpRecordVersionedInput extends McpMutationBinding {
 }
 
 export interface McpRecordUpdateInput extends McpRecordVersionedInput {
-  /** Omitted fields are preserved. An explicit null clears note or tag. */
+  /** Omitted fields are preserved. An explicit null clears note or activity. */
   title?: string;
   note?: string | null;
-  tagId?: string | null;
+  activityId?: string | null;
   startAt?: string;
   endAt?: string;
 }
@@ -93,6 +93,7 @@ export type McpRecordDeleteReceipt = McpRecordMutationReceipt<string>;
 export type McpRecordRestoreReceipt = McpRecordMutationReceipt<null>;
 
 export type McpMutationErrorCode =
+  | 'ACTIVITY_ARCHIVED'
   | 'ALREADY_RECORDED'
   | 'AUTHORIZATION_LOST'
   | 'CONFLICT'
@@ -108,7 +109,6 @@ export type McpMutationErrorCode =
   | 'PRO_REQUIRED'
   | 'RECORD_IN_FUTURE'
   | 'SKIP_IN_FUTURE'
-  | 'TAG_ARCHIVED'
   | 'TIME_OVERLAP'
   | 'WRITE_DISABLED';
 

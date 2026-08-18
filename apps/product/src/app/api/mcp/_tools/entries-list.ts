@@ -32,7 +32,7 @@ const inputSchema = z
       .datetime()
       .optional()
       .describe('Inclusive ISO 8601 datetime. Returns entries with start_time <= this.'),
-    tagId: z.string().uuid().optional().describe('Filter by tag UUID.'),
+    activityId: z.string().uuid().optional().describe('Filter by activity UUID.'),
     limit: z
       .number()
       .int()
@@ -53,7 +53,7 @@ interface NormalizedEntry {
   actualStartTime: string | null;
   actualEndTime: string | null;
   durationMinutes: number | null;
-  tagId: string | null;
+  activityId: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -68,7 +68,7 @@ interface EntryRowLike {
   actual_start_time: string | null;
   actual_end_time: string | null;
   planned_duration_minutes: number | null;
-  tag_id: string | null;
+  activity_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -86,7 +86,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
       inputSchema,
       outputSchema: MCP_ENTRY_LIST_OUTPUT_SCHEMA,
     },
-    async ({ startDate, endDate, tagId, limit }) => {
+    async ({ startDate, endDate, activityId, limit }) => {
       // Scope enforcement: token が read:entries を持たない場合は実行しない
       if (!ctx.scopes.includes('read:entries')) {
         return createMcpToolError(
@@ -107,7 +107,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             sortOrder: 'desc',
             ...(startDate ? { startDate } : {}),
             ...(endDate ? { endDate } : {}),
-            ...(tagId ? { tagId } : {}),
+            ...(activityId ? { activityId } : {}),
           }),
           trpc.records.list({
             limit: limit ?? 50,
@@ -115,7 +115,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             sortOrder: 'desc',
             ...(startDate ? { startDate } : {}),
             ...(endDate ? { endDate } : {}),
-            ...(tagId ? { tagId } : {}),
+            ...(activityId ? { activityId } : {}),
           }),
         ]);
         const entries: EntryRowLike[] = [
@@ -129,7 +129,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             actual_start_time: null,
             actual_end_time: null,
             planned_duration_minutes: durationMinutes(plan.start_at, plan.end_at),
-            tag_id: plan.tag_id,
+            activity_id: plan.activity_id,
             created_at: plan.created_at,
             updated_at: plan.updated_at,
           })),
@@ -145,7 +145,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
             planned_duration_minutes: record.plan_id
               ? durationMinutes(record.start_at, record.end_at)
               : null,
-            tag_id: record.tag_id,
+            activity_id: record.activity_id,
             created_at: record.created_at,
             updated_at: record.updated_at,
           })),
@@ -179,7 +179,7 @@ function normalizeEntry(e: EntryRowLike): NormalizedEntry {
     actualStartTime: e.actual_start_time,
     actualEndTime: e.actual_end_time,
     durationMinutes: e.planned_duration_minutes,
-    tagId: e.tag_id,
+    activityId: e.activity_id,
     createdAt: e.created_at,
     updatedAt: e.updated_at,
   };

@@ -74,7 +74,7 @@ describe('MCP route scope preflight', () => {
   });
 
   it('returns HTTP 403 before a cached registered tool executes without its scope', async () => {
-    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:tags'] });
+    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:activities'] });
     const response = await POST(
       createRequest({
         jsonrpc: '2.0',
@@ -86,19 +86,21 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain('error="insufficient_scope"');
-    expect(response.headers.get('www-authenticate')).toContain('scope="read:tags read:entries"');
+    expect(response.headers.get('www-authenticate')).toContain(
+      'scope="read:activities read:entries"',
+    );
     expect(response.headers.get('www-authenticate')).toContain(
       'resource_metadata="https://mcp.dayopt.app/.well-known/oauth-protected-resource"',
     );
     await expect(response.json()).resolves.toMatchObject({
       error: 'insufficient_scope',
-      scope: 'read:tags read:entries',
+      scope: 'read:activities read:entries',
     });
     expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
 
   it('read toolのstep-upはeffective scopeと不足scopeだけを要求する', async () => {
-    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:tags'] });
+    verifyAccessToken.mockResolvedValue({ ...baseAuth, scopes: ['read:activities'] });
 
     const response = await POST(
       createRequest({
@@ -111,12 +113,12 @@ describe('MCP route scope preflight', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('www-authenticate')).toContain(
-      'scope="read:tags read:constraints"',
+      'scope="read:activities read:constraints"',
     );
     expect(response.headers.get('www-authenticate')).not.toContain('read:entries');
     await expect(response.json()).resolves.toMatchObject({
       error: 'insufficient_scope',
-      scope: 'read:tags read:constraints',
+      scope: 'read:activities read:constraints',
     });
     expect(handleMcpProtocolRequest).not.toHaveBeenCalled();
   });
@@ -445,7 +447,7 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     // 初回 challenge は広告済み read scope 一式 (write 系は step-up 専用で含めない)
     expect(response.headers.get('www-authenticate')).toContain(
-      'scope="read:entries read:tags read:constraints read:stats"',
+      'scope="read:entries read:activities read:constraints read:stats"',
     );
     expect(response.headers.get('www-authenticate')).not.toContain('write:');
     expect(response.headers.get('www-authenticate')).not.toContain('delete:');
@@ -504,7 +506,7 @@ describe('MCP route scope preflight', () => {
     // 3 経路ある challenge のうちこの経路だけ scope が未固定だった。再認可で
     // read 4 種へ広がる契約を discovery 経路と同じ exact 文字列で守る
     expect(response.headers.get('www-authenticate')).toContain(
-      'scope="read:entries read:tags read:constraints read:stats"',
+      'scope="read:entries read:activities read:constraints read:stats"',
     );
     await expect(response.json()).resolves.toEqual({
       error: 'invalid_token',
@@ -521,7 +523,7 @@ describe('MCP route scope preflight', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('www-authenticate')).toContain('Bearer error="invalid_request"');
     expect(response.headers.get('www-authenticate')).toContain(
-      'scope="read:entries read:tags read:constraints read:stats"',
+      'scope="read:entries read:activities read:constraints read:stats"',
     );
     await expect(response.json()).resolves.toEqual({
       error: 'invalid_request',

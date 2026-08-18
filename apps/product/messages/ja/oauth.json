@@ -7,7 +7,7 @@
       "scopesLabel": "アクセス範囲",
       "scope": {
         "read:entries": "予定と記録の閲覧",
-        "read:tags": "タグの閲覧",
+        "read:activities": "アクティビティとカテゴリーの閲覧",
         "read:constraints": "予定・記録の占有時間帯と時間上の制約の閲覧",
         "read:stats": "振り返り統計の閲覧",
         "write:plans": "予定の作成と更新",

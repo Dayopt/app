@@ -17,6 +17,7 @@ const baseTimeblockSchema = z.object({
   title: z.string().min(1, 'validation.title.required').max(200, 'validation.title.maxLength'),
   note: z.string().max(10000, 'validation.note.maxLength').nullable().optional(),
   tagId: z.string().uuid().nullable().optional(),
+  activityId: z.string().uuid().nullable().optional(),
   externalCalendarEventId: z.string().uuid().nullable().optional(),
   start_at: z.string().datetime({ offset: true }),
   end_at: z.string().datetime({ offset: true }),
@@ -34,6 +35,7 @@ export const planFilterSchema = z.object({
   ids: z.array(z.string().uuid()).max(100).optional(),
   search: z.string().max(200).optional(),
   tagId: z.string().uuid().optional(),
+  activityId: z.string().uuid().optional(),
   startDate: z.string().datetime({ offset: true }).optional(),
   endDate: z.string().datetime({ offset: true }).optional(),
   includeSkipped: z.boolean().optional(),
@@ -69,6 +71,7 @@ export const recordIdSchema = z.object({
 export const recordFilterSchema = z.object({
   search: z.string().max(200).optional(),
   tagId: z.string().uuid().optional(),
+  activityId: z.string().uuid().optional(),
   planId: z.string().uuid().optional(),
   planIds: z.array(z.string().uuid()).max(100).optional(),
   startDate: z.string().datetime({ offset: true }).optional(),

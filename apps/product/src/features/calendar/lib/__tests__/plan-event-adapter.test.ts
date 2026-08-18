@@ -14,6 +14,7 @@ function makeRow(overrides: Partial<PlanEventSourceRow> = {}): PlanEventSourceRo
     title: 'Deep Work',
     note: null,
     tag_id: 'tag-1',
+    activity_id: null,
     start_at: '2026-07-10T09:00:00Z',
     end_at: '2026-07-10T10:00:00Z',
     skipped_at: null,
@@ -28,6 +29,7 @@ describe('planRowToPlanEvent', () => {
       id: 'plan-1',
       title: 'Deep Work',
       tagId: 'tag-1',
+      activityId: null,
       duration: 60,
     });
   });

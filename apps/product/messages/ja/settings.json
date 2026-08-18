@@ -551,7 +551,7 @@
         },
         "scopes": {
           "readEntries": "予定と実績を読む",
-          "readTags": "タグを読む",
+          "readActivities": "アクティビティとカテゴリーを読む",
           "readConstraints": "時間の制約を読む",
           "readStats": "ふりかえりを読む",
           "writePlans": "予定を作成・編集する",
