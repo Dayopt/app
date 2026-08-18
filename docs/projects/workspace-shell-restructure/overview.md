@@ -66,7 +66,7 @@ epic #2181 は 2026-05-01 / 2026-06-25 の panel 化コミットを一次資料�
 
 この改訂は `tag-model-replacement` §6-4 が挙げた 4 つの歯止め（期間はページが見ている期間に従う / 指標は固定 / グルーピングと保存フィルタの入れ子を持たせない / セグメントに保存させるのはアクティビティの集合だけ）を**そのまま引き継ぐ**。§6-4 が「専用ページを作らない」を歯止めの 1 つに数えていたのに対し、本 project はそれを外し、**残り 4 点を強化して埋め合わせる**。歯止めを 1 つ外すなら残りを緩めない、という形で釣り合いを取る。
 
-**この改訂は指揮台経由で User の確認を要する**（原則の書き換えは価値判断であり、レーンが単独で決めない）。確認が取れるまで本設計は「改訂案」として保持し、docs の実改訂は Step に切り出す。
+**この改訂は User 承認済み**（2026-08-18、指揮台経由で伝達）。原則の書き換えは価値判断なのでレーン単独では決めず、指揮台へ上げて裁可を得た。`docs/strategy.md` と `docs/product/principles.md` への実改訂は §9 Step 7 として独立させる（設計書の凍結と docs の書き換えを同じ PR に混ぜない）。
 
 ---
 
@@ -477,7 +477,114 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 **セクションを足すには、この一覧を書き換える必要がある。** 実装上も、ページが受け取るセクションの配列をここに固定し、条件分岐で生やせないようにする。
 
-<!-- §6-2 以降（期間契約・集計 API の配線・CalendarReviewRail の去就）は実測待ち -->
+### 6-2. `/report` は Pro 境界を丸ごと抱える（実測で判明・**要 User 裁可**）
+
+**このスライスで最も重い発見。** `/report` の中身の主役は Pro プラン限定の procedure である。
+
+| procedure                     | 認可                 | 誰が使うか                                                                      |
+| ----------------------------- | -------------------- | ------------------------------------------------------------------------------- |
+| `statistics.getTimePL`        | `protectedProcedure` | `useTimePLData` → Time P/L（予実比較）                                          |
+| `statistics.getStatsPageData` | **`proProcedure`**   | `useReviewPageData` → `WeeklyReflectionPanel`（見積もりバイアス・空白率・傾向） |
+
+`features/timeblock/server/statistics-kpi-router.ts:43-44` のコメントが方針を明示している — 「（`getTimePL`）は protected、Review の分析深度にあたるもの（`getEstimationAccuracy` / `getStatsPageData` 等）は pro になっている」。
+
+**パネルだった時は、これで良かった。** 脇の帯の一部が Pro だと分かるのは自然な体験で、無料ユーザーにもカレンダーという主画面が残る。**フルページになると意味が変わる** — Sidebar に常設タブとして「レポート」が並び、無料ユーザーがそれを押すと**中身の大半が空か Pro 案内のページ**に着く。タブが常に見えている分、これは「機能の一部が有料」ではなく「押せるタブが 1 つ死んでいる」体験になる。
+
+**選択肢（推奨は 1）**:
+
+1. **`/report` の第 1 セクション（差分）と第 2 セクション（Time P/L）は無料で出し、第 3 セクション以降と `getStatsPageData` 由来の深い分析だけ Pro にする** — 1 スクロール構成（§6-1）なら、上から読んでいって途中で Pro 境界に当たる形になり、「タブが死んでいる」ではなく「続きがある」になる。差分は `protectedProcedure` 経路（クライアント計算 + `getTimePL`）で賄えるので実装上も成立する
+2. `/report` 全体を Pro にし、無料ユーザーには Sidebar タブ自体を出さない — 体験は一貫するが、無料ユーザーが分析の価値を知る機会がゼロになる
+3. 現状の境界のまま（`getStatsPageData` だけ Pro）でフルページ化し、Pro 境界の再設計は別 project
+
+**推奨は 1。** `strategy.md` §4-6「進捗は報酬ではなく証拠で見せる」に沿えば、**証拠の最小単位（今日のズレ）は無料で見られるべき**で、Pro が売るのは「深さ」（期間をまたぐ傾向、見積もり精度の推移）である。この線引きは 1 と一致する。
+
+**注意**: 課金は production でまだ有効化されていない（Stripe env が入っていない）ため、**この判断は今すぐ壊れるものではない**。しかし境界の設計を先送りすると、課金を入れた瞬間に「タブが死ぬ」体験が出荷される。**設計としてここで決め、実装は Step で分けてよい。**
+
+これは価値判断なので指揮台経由で User へ上げる。裁可が出るまで §6-3 以降は「セクション 1・2 は無料」を仮置きで書く。
+
+### 6-3. 期間契約 — `/report` は自前の期間を持つ必要がある（実測で判明）
+
+**現状 `/report` に相当する期間の概念は存在しない。** review が受け取る期間は、カレンダーの view から作られている:
+
+```ts
+// CalendarViewClient.tsx:126-132
+const reviewDisplayRange = useMemo(
+  () => ({ ...composition.viewDateRange, showWeekends: composition.showWeekends }),
+  [composition.showWeekends, composition.viewDateRange],
+);
+```
+
+型は `ReviewDisplayRange`（`features/review/lib/compute-date-range.ts:9-14`）:
+
+```ts
+export interface ReviewDisplayRange {
+  start: Date;
+  end: Date;
+  days: readonly Date[]; // ← 範囲ではなく「日の配列」
+  showWeekends: boolean;
+}
+```
+
+**`days` が範囲ではなく日の配列である点が効く。** 週末非表示の週は 5 要素になり、集計もその 5 日で行われる。`/report` が自前の期間を持つなら、この配列を自分で組み立てなければならない。
+
+**粒度の型は存在するが、形骸化している**（実測）:
+
+- `features/review/stores/useReviewFilterStore.ts:7` に `export type ReviewGranularity = 'week';` — **取りうる値が 1 つしかない**
+- `compute-date-range.ts` の 3 関数（`computeStatsDateRange` / `computePreviousDateRange` / `computeMonthCount`）はいずれも granularity を `_granularity` として受け取るだけで**分岐に使っていない**。`computeMonthCount` は無条件に `return 3;`
+- 実際の粒度は `useTimePLData.ts:92` が `dayCount` から導出している: `dayCount === 1 ? 'day' : dayCount === 7 ? 'week' : 'range'`
+
+**したがって `/report` の期間契約はこう凍結する**:
+
+```
+/{locale}/report?date=YYYY-MM-DD&range=day|week
+```
+
+- `range` の値域は **v1 で `day` と `week` の 2 つだけ**。これは `useTimePLData` が既に導出している 3 値のうち実装が存在する 2 つで、`range`（任意日数）はカレンダーの multi-day view 由来の状態なので `/report` には持ち込まない
+- `range` 省略時は `week`
+- **`days` はサーバー / クライアントで `date` + `range` + ユーザー設定の `showWeekends` から組み立てる。** `showWeekends` は URL に置かない — これはユーザー設定であって共有したい状態ではないため。`ReviewDisplayRange` の構築関数を `features/review/lib/compute-date-range.ts` に足す
+- **`month` を足さない**（§11）。足すと `computeMonthCount` の無条件 `return 3` を含む形骸化した経路を全部生かす作業が生え、しかも「期間指定の複雑なフィルタ」（§3-2 の歯止め）へ一歩踏み出す
+
+**`ReviewGranularity` 型は `'day' | 'week'` へ広げる。** 形骸化した `_granularity` パラメータもこの機会に実際に使うか、使わないなら消す（引数だけ残すと次の人が「効く」と誤解する）。
+
+### 6-4. `CalendarReviewRail` は廃止する
+
+§6-1 で 1 スクロールに決めた以上、**タブ切替の薄いラッパーである `CalendarReviewRail` は役目を失う**。#2161 が「段階統合 Phase 1」として作ったもので、Phase 2 がこの project にあたる。
+
+- `features/review/index.ts` は現在 `CalendarReviewRail` と `useReviewOpenedTracking` の **2 つしか export していない**。`CalendarReviewPanel` / `ReviewDiffPanel` / `WeeklyReflectionPanel` は feature 内部専用で、`lint:boundaries` が deep import を禁止している
+- したがって `/report` ページを作る作業は、**`features/review/index.ts` の公開契約の作り替え**を伴う。`CalendarReviewRail` を落として、フルページ用のコンポーネント（例: `ReportPage` 相当）を 1 つ export する形にする
+- **export を 1 つに保つ。** セクションを個別に export すると、`/report` の外からセクションを拾って別の場所に置けるようになり、§3-2 の歯止め（分析の置き場を増やさない）が緩む
+
+### 6-5. パネルの狭さを前提にした実装の作り替え（実測一覧）
+
+フルページ化で直す箇所。**「そのまま置けば広く見える」わけではない**ことの根拠。
+
+| 箇所                                                                                                                   | 現状                                                          | フルページでの扱い                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `WeeklyReflectionPanel.tsx:15-16`                                                                                      | `MAX_TIME_PL_ROWS = 5` / `MAX_ESTIMATION_ROWS = 3` で切り詰め | **上限を外す**。狭さのための切り詰めで、広い画面では情報を捨てているだけ                                        |
+| `CalendarReviewPanel.tsx:38` / `ReviewDiffPanel.tsx:51`                                                                | `variant: 'rail' \| 'sheet'` の 2 値                          | `'page'` を足すのではなく、**`variant` を廃止**（§6-4 で rail が消え、sheet はモバイルのパネル = これも消える） |
+| `CalendarReviewPanel.tsx:140`                                                                                          | `isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1'`     | ページ全体のスクロールに委ねる                                                                                  |
+| `ReviewDiffPanel.tsx:161`                                                                                              | `isSheet ? 'max-h-96' : 'flex-1'`（384px 頭打ち）             | 同上                                                                                                            |
+| `CalendarReviewPanel.tsx:101-104,114,160` / `ReviewDiffPanel.tsx:95,183-185` / `WeeklyReflectionPanel.tsx:214,290-295` | `truncate` を多用                                             | 幅が取れるので大半は不要。**残すのは本当に長くなりうる名前だけ**                                                |
+| `CalendarReviewPanel.tsx:119-132` / `ReviewDiffPanel.tsx:94-114`                                                       | close ボタン                                                  | **削除**（ページには閉じるという概念が無い）                                                                    |
+| `CalendarReviewRail.tsx:52`                                                                                            | `h-full flex-col`（親の高さに完全依存）                       | ページのスクロールに委ねる                                                                                      |
+
+**タグ絞り込み `Select`（`CalendarReviewPanel.tsx:95-118`）の去就**: 狭さのために `Select` に押し込めていた。フルページかつ #2162 でセグメントが Sidebar に出る（§5-5）ので、**この `Select` は廃止して Sidebar 側へ寄せる**。`reviewTagId` は #2162 の語彙で名前が変わるため、最終名はレーン G の確定に従う。
+
+### 6-6. 誤解を招く既存テスト名（ついでに直す）
+
+`apps/product/src/lib/test/e2e/review-granularity.spec.ts` は**名前に反して粒度を検証していない**（実測）。中身は `/ja/week?date=…&panel=review` の deep link からパネルが復元されることの smoke test 1 件だけで、`test.skip` が 2 つ掛かっている（認証情報が無ければ丸ごと skip、モバイルも対象外）。
+
+§4-6 で E2E を書き換える時に、**実態に合った名前へ改名する**（deep link の smoke test なので `deep-link.spec.ts` へ統合するのが素直）。名前と中身が乖離したテストは「粒度は検証済み」という誤った安心を与える。
+
+### 6-7. このスライスの Reversibility
+
+| 変更                                          | 判定        | 根拠                                                                   |
+| --------------------------------------------- | ----------- | ---------------------------------------------------------------------- |
+| 1 スクロール構成                              | `[minutes]` | レイアウトのみ                                                         |
+| `/report?date=&range=` の凍結                 | `[hours]`   | 公開 URL 契約だが 307 redirect で行き先を変えられる（§4-5 と同じ性質） |
+| `features/review/index.ts` の公開契約作り替え | `[minutes]` | repo 内の契約。外部に出ない                                            |
+| `ReviewGranularity` 型の拡張                  | `[minutes]` | 純追加                                                                 |
+| Pro 境界の線引き（§6-2）                      | `[hours]`   | 課金未有効化のため今は挙動に出ない。有効化後に変えると**顧客に見える** |
 
 ## 9. Step 分解と Reversibility Table
 
@@ -491,7 +598,7 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 | 4   | **`/report` ページ本体** — review / diff の中身の移植 + 期間パラメータの凍結                                                               | 未確定        | スライス 3 で確定                                                                                                |
 | 5   | **セグメント表示の接続** — レーン G の集計 API を `/report` と `ReportSidebar` へ配線                                                      | 未確定        | **レーン G merge 後**。スライス 3 で確定                                                                         |
 | 6   | **旧 route と旧 panel の削除** — `(workspace)/{day,week,[nday]}/**`、`CalendarPanelKind`、パネル関連コード                                 | `[minutes]`   | **redirect の稼働を実測してから。** `workspaceViewPathPattern` の削除もここ（§4-5-b）。**redirect 層は消さない** |
-| 7   | **docs の追従** — `strategy.md` 原則 10 改訂、`principles.md` の右パネル節、`specs/review.md`                                              | `[minutes]`   | **User 裁可待ち**（§3-2）。裁可が出るまで着手しない                                                              |
+| 7   | **docs の追従** — `strategy.md` 原則 10 改訂、`principles.md` の右パネル節と 3 点分散表、`specs/review.md`                                 | `[minutes]`   | **User 承認済み**（§3-2）。設計書の凍結とは別 PR にする                                                          |
 
 **`[irreversible]` は 1 つも無いが、`[irreversible]` に近いものが 2 つある**（§4-7）。Step 2 が作る redirect 層と、Step 1 が公開する URL 契約そのもの。
 
