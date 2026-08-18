@@ -137,6 +137,31 @@ export const UncategorizedOnly: Story = {
   },
 };
 
+/**
+ * 現役カテゴリーが 0 件で、アーカイブ済みだけが存在する状態。
+ *
+ * 表示メニューでステータスを切り替えた時に、見出しの有無がデータ（カテゴリーが
+ * 存在するか）で決まり、フィルタでは変わらないことを確認するための story。
+ * ここでは現役カテゴリーが無いので「カテゴリ」見出しはどのステータスでも出ず、
+ * アーカイブ済みカテゴリーは「未分類」の中に並ぶ。
+ */
+export const ArchivedWithoutCategories: Story = {
+  parameters: {
+    trpcMocks: {
+      ...MOCK_TRPC,
+      'activities.listTree': { categories: [], uncategorized: UNCATEGORIZED },
+      'activities.listActivities': [...UNCATEGORIZED, ARCHIVED_ACTIVITY],
+      'activities.listCategories': [ARCHIVED_CATEGORY],
+    },
+    storeMocks: {
+      useCalendarFilterStore: {
+        visibleActivityIds: new Set(['act-workout', 'act-rest']),
+        initialized: true,
+      },
+    },
+  },
+};
+
 /** 空状態。アクティビティが 1 件も無い新規ユーザー向け。 */
 export const EmptyState: Story = {
   parameters: {

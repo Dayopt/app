@@ -17,6 +17,7 @@ import {
   useArchiveActivity,
   useArchiveCategory,
   useArchivedActivities,
+  useArchivedCategories,
   useDeleteActivity,
   useDeleteCategory,
 } from '@/features/activities';
@@ -65,6 +66,7 @@ export function ActivityFilterList() {
   const { data: tree, isLoading, isFetching } = useActivityTree();
   const { data: stats, isError: isStatsError } = api.statistics.getActivityStats.useQuery();
   const { data: archivedActivities } = useArchivedActivities();
+  const { data: archivedCategories } = useArchivedCategories();
 
   // `?? []` を直接書くと毎 render で新しい配列になり、下流の useMemo /
   // useCallback の依存が毎回変わる。空配列を定数に固定して安定させる
@@ -216,12 +218,17 @@ export function ActivityFilterList() {
 
   const hasAnyActivity = categories.length > 0 || uncategorized.length > 0;
 
-  // 「カテゴリ」見出しは現役カテゴリーがある時だけ出す。アーカイブ済みは種別によらず
-  // 「未分類」側にまとめる（アーカイブは未分類の話であってカテゴリーの話ではない、
-  // 2026-08-18 User 指示）ので、この見出しはアーカイブ単独表示では消える。
-  // 逆に「未分類」見出しは常に出す — 表示メニュー（+ / 歯車）を抱えているため、
-  // 消すとアーカイブ単独表示から戻る手段が無くなる
-  const showCategoriesSection = showActive && categories.length > 0;
+  // 各セクションの空状態（empty state）。見出しは常に出るので、中身が無い時は
+  // 見出しだけが宙に浮かないよう一行の文言を置く。
+  //
+  // 未分類の中身は表示ステータスで変わるため、件数も同じ条件で数える。
+  const archivedCount = (archivedActivities?.length ?? 0) + (archivedCategories?.length ?? 0);
+  const uncategorizedCount =
+    (showActive ? uncategorized.length : 0) + (showArchived ? archivedCount : 0);
+
+  // 何一つ無い新規ユーザーには、セクションごとの短い文言ではなく
+  // 最初の 1 件を作るよう促す既存のオンボーディング文を出す
+  const isCompletelyEmpty = !hasAnyActivity && archivedCount === 0;
 
   return (
     <>
@@ -236,39 +243,50 @@ export function ActivityFilterList() {
           <>
             {/* カテゴリー群。個々のカテゴリー見出し（CategoryHeader）とは別に、
                 「カテゴリ」全体を示す親見出しを上に置く（未分類見出しと対になる構造）。
-                子のカテゴリー見出しと同じく折りたたみを持つ */}
-            {showCategoriesSection ? (
-              <SidebarSection
-                title={t('calendar.filter.categoriesSection')}
-                className="space-y-1"
-                collapsed={categoriesSectionCollapsed}
-                onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
-              >
-                {categories.map(({ category, activities }) => (
-                  <CategoryGroup
-                    key={category.id}
-                    category={category}
-                    activities={activities}
-                    allActivities={allActivities}
-                    visibleActivityIds={visibleActivityIds}
-                    categoryOptions={categoryOptions}
-                    collapsed={collapsedCategories.has(category.id)}
-                    isMobile={isMobile}
-                    onToggleCollapse={() => toggleCategoryCollapse(category.id)}
-                    onToggleActivity={toggleActivity}
-                    onShowOnlyActivity={showOnlyActivity}
-                    onShowOnlyCategoryActivities={showOnlyCategoryActivities}
-                    getCategoryVisibility={getCategoryVisibility}
-                    onArchiveCategory={handleArchiveCategory}
-                    onDeleteCategory={handleDeleteCategory}
-                    onArchiveActivity={handleArchiveActivity}
-                    onDeleteActivity={handleDeleteActivity}
-                    openPopoverActivityId={openPopoverActivityId}
-                    onOpenPopover={setOpenPopoverActivityId}
-                  />
-                ))}
-              </SidebarSection>
-            ) : null}
+                子のカテゴリー見出しと同じく折りたたみを持つ。
+
+                サイドバーの骨格は「カテゴリ」+「未分類」の 2 見出しで固定し、
+                件数やステータスで見出しを出し入れしない（2026-08-18 User 指示）。
+
+                **表示ステータス（すべて / アクティブ / アーカイブ）は「未分類」だけに
+                かかる。** カテゴリーは独立した単位で、その配下のアクティビティごと
+                このフィルタの影響を受けない（2026-08-18 User 指示） */}
+            <SidebarSection
+              title={t('calendar.filter.categoriesSection')}
+              className="space-y-1"
+              collapsed={categoriesSectionCollapsed}
+              onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
+            >
+              {categories.map(({ category, activities }) => (
+                <CategoryGroup
+                  key={category.id}
+                  category={category}
+                  activities={activities}
+                  allActivities={allActivities}
+                  visibleActivityIds={visibleActivityIds}
+                  categoryOptions={categoryOptions}
+                  collapsed={collapsedCategories.has(category.id)}
+                  isMobile={isMobile}
+                  onToggleCollapse={() => toggleCategoryCollapse(category.id)}
+                  onToggleActivity={toggleActivity}
+                  onShowOnlyActivity={showOnlyActivity}
+                  onShowOnlyCategoryActivities={showOnlyCategoryActivities}
+                  getCategoryVisibility={getCategoryVisibility}
+                  onArchiveCategory={handleArchiveCategory}
+                  onDeleteCategory={handleDeleteCategory}
+                  onArchiveActivity={handleArchiveActivity}
+                  onDeleteActivity={handleDeleteActivity}
+                  openPopoverActivityId={openPopoverActivityId}
+                  onOpenPopover={setOpenPopoverActivityId}
+                />
+              ))}
+
+              {categories.length === 0 && !isCompletelyEmpty ? (
+                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                  {t('calendar.filter.noCategories')}
+                </p>
+              ) : null}
+            </SidebarSection>
 
             {/* 未分類（カテゴリー未所属のアクティビティ） + アクティビティなし行。
                 「未分類」は分類の名前ではなく並びの単位なので、アーカイブ単独表示でも
@@ -373,10 +391,20 @@ export function ActivityFilterList() {
                   onDeleteCategory={handleDeleteCategory}
                 />
               ) : null}
+
+              {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
+                  言い切る（未分類そのものが空だと誤読させない） */}
+              {uncategorizedCount === 0 && !isCompletelyEmpty ? (
+                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                  {statusFilter === 'archived'
+                    ? t('calendar.filter.noArchived')
+                    : t('calendar.filter.noUncategorized')}
+                </p>
+              ) : null}
             </SidebarSection>
 
-            {showActive && !hasAnyActivity ? (
-              <div className="text-muted-foreground px-2 py-2 text-xs">
+            {isCompletelyEmpty ? (
+              <div role="status" className="text-muted-foreground px-2 py-2 text-xs">
                 {t('calendar.filter.noActivities')}
               </div>
             ) : null}
