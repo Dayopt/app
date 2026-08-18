@@ -54,7 +54,7 @@ pnpm lint:i18n               # 翻訳キー変更時
 
 # テスト
 pnpm test:run                # ロジック変更・バグ修正後
-pnpm test:integration
+pnpm test:integration        # 前提: ローカル Supabase 起動（Docker Desktop + `supabase start`）。未起動なら明示的に失敗する
 pnpm test:e2e:smoke
 
 # 型生成・DB
