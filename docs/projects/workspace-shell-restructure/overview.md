@@ -266,7 +266,7 @@ const status = typeof init === 'number' ? init : ((init == null ? void 0 : init.
 
 | 対象                                                                                                               | 現状                                                                                                                                                                                                                                           | 対応                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/product/src/lib/auth/domain/access-policy.ts:17`                                                             | `const workspaceViewPathPattern = /^\/(day\|week\|\d+day)(\/\|$)/;`                                                                                                                                                                            | `/calendar` `/report` を保護対象へ。**旧パターンも当面残す**（redirect 前に認証判定が走る経路があるため。消すと旧 URL が未認証で redirect を試みる）                                                                                                                                                                   |
+| `apps/product/src/lib/auth/domain/access-policy.ts:17`                                                             | `const workspaceViewPathPattern = /^\/(day\|week\|\d+day)(\/\|$)/;`                                                                                                                                                                            | `/calendar` `/report` を保護対象へ。**旧パターンは旧 route ファイルを削除する Step 6 まで残す**（§4-5-b。理由は「経路が残っているから」ではなく「残すコストがゼロで、消し急ぐ方が危ないから」）                                                                                                                        |
 | `apps/product/src/proxy.ts:282-287`                                                                                | 認証済みで auth path → `getLocalizedPath('/week', currentLocale)`                                                                                                                                                                              | `/calendar` へ                                                                                                                                                                                                                                                                                                         |
 | `apps/product/src/emails/{Welcome,TrialStart,ProStart,PaymentRecovered}Email.tsx`（`:43` / `:62` / `:55` / `:41`） | いずれも `<Button href={\`${appUrl}/week\`}>`。**送信済みメールは回収できない**                                                                                                                                                                | テンプレートを `/calendar` へ。**同時に `/week` の redirect を恒久維持対象として扱う**（§4-5）                                                                                                                                                                                                                         |
 | `apps/product/src/app/[locale]/page.tsx:13`                                                                        | `redirect(\`/${locale}/week\`)`                                                                                                                                                                                                                | `/calendar` へ                                                                                                                                                                                                                                                                                                         |
@@ -388,7 +388,7 @@ _shell/
 └── ReportSidebar.tsx       — 新規
 ```
 
-- 型は `WorkspaceTab = 'calendar' | 'report' | 'other'`。旧 `getModeFromPath`（`_shell/navigation-paths.ts`、`66a3ea6db` で削除済み）の再来だが、**パスが完全一致 2 値になるので形状判定が要らない**。旧実装が必要とした `isCalendarViewPath(pathWithoutLocale)` 呼び出しと `[2-7]day` 正規表現が dispatcher から消える。これはスライス 1 で view をクエリにした設計の直接の見返り
+- 型は `WorkspaceTab = 'calendar' | 'report'` の **2 値**。判定は `pathname === '/report' ? 'report' : 'calendar'` の 1 行で済む。旧 `getModeFromPath`（`_shell/navigation-paths.ts`、`66a3ea6db` で削除済み）が必要とした `isCalendarViewPath` 呼び出しと `[2-7]day` 正規表現は dispatcher から消える。これはスライス 1 で view をクエリにした設計の直接の見返り。**第 3 の値（`other`）は作らない** — `/settings` も calendar 扱いで足り（§5-4）、値を増やすと「`other` 用の Sidebar」を後から誰かが足す
 - 新規ファイルは `_shell/`（Composition Layer）に置き、`features/` へ昇格させない。旧設計が `CalendarSidebar` / `StatsSidebar` を `_shell/` に置いた判断をそのまま踏襲する
 - `CalendarSidebar.tsx` は**現 `SidebarContent` の body を移動するだけ**で、中身を書き換えない（§5-6 の writer 境界に直結）
 
@@ -404,14 +404,14 @@ _shell/
 
 ### 5-4. タブが切り替えるもの / 切り替えないもの
 
-| 要素                                           | タブ切替時 | 根拠                                               |
-| ---------------------------------------------- | ---------- | -------------------------------------------------- |
-| Sidebar 外殻（ロゴ・幅・開閉状態・`UserMenu`） | 不変       | `desktop-layout.tsx` に単一マウント（§5-1）        |
-| `SidebarUtilities`（テーマ切替）               | 不変       | dispatch の外に置く（旧実装と同じ）                |
-| Sidebar の中身                                 | **切替**   | `CalendarSidebar` ⇄ `ReportSidebar`                |
-| メイン領域                                     | **切替**   | route が変わる（`/calendar` ⇄ `/report`）          |
-| 選択中の日付                                   | 不変       | `CalendarNavigationProvider` が分岐より上（§5-1）  |
-| `sidebar.open` / `sidebar.width`               | 不変       | `useShellStore`（型 `:70,72` / 初期値 `:136-137`） |
+| 要素                                           | タブ切替時                     | 根拠                                                                                                       |
+| ---------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Sidebar 外殻（ロゴ・幅・開閉状態・`UserMenu`） | 不変                           | `desktop-layout.tsx` に単一マウント（§5-1）                                                                |
+| `SidebarUtilities`（テーマ切替）               | 不変                           | dispatch の外に置く（旧実装と同じ）                                                                        |
+| Sidebar の中身                                 | **切替**                       | `CalendarSidebar` ⇄ `ReportSidebar`                                                                        |
+| メイン領域                                     | **切替**                       | route が変わる（`/calendar` ⇄ `/report`）                                                                  |
+| 選択中の日付                                   | **不変**（時刻は正午へ正規化） | **タブ href が `date` を運ぶ**（§6-9 #1）。Provider が分岐より上なのは必要条件にすぎない。正規化は §6-10 A |
+| `sidebar.open` / `sidebar.width`               | 不変                           | `useShellStore`（型 `:70,72` / 初期値 `:136-137`）                                                         |
 
 `/settings` は `other`。デスクトップの設定は**ホームへ redirect してモーダルで出す**実装（`settings/layout.tsx` のコメント）なので、裏に見えているのはカレンダーである。したがって `other` のフォールバックは **calendar タブをアクティブにして `CalendarSidebar` を描く**（旧実装の「fallback: settings 等のモード外は CalendarSidebar」と同じ挙動で、今回は実態にも合う）。
 
@@ -468,7 +468,7 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 | `_shell/mobile-layout.tsx`                    | `TagChipRow` → `ActivityChipRow`（import + JSX + コメント）               |
 | `_shell/__tests__/app-shell-layouts.test.tsx` | mock の `TagChipRow` → `ActivityChipRow`                                  |
 
-**結論: F の成果は 1 行も作り替えない。** F が作ったカテゴリー / アクティビティ IA 本体（`features/calendar/components/activity-filter/` 配下 20 ファイル超）は、`CalendarSidebar.tsx` の中に**そのまま入る**。私が足すのはその外側のタブと dispatcher だけ。
+**結論: F が作る IA の中身（ロジック・データ契約・コンポーネント構成）は 1 行も作り替えない。**（§6-10 G で範囲を明確化した — モバイル shell の都合で `ActivityChipRow` の**配置に関する className** は触る。IA のロジックには触らない） F が作ったカテゴリー / アクティビティ IA 本体（`features/calendar/components/activity-filter/` 配下 20 ファイル超）は、`CalendarSidebar.tsx` の中に**そのまま入る**。私が足すのはその外側のタブと dispatcher だけ。
 
 衝突は**テキスト衝突のみ**（同じ 2 行を両者が触る）で、**F を先に merge して本 project がその上に載れば消える**。F をやり直させる理由はない。
 
@@ -683,23 +683,16 @@ export interface ReviewDisplayRange {
 
 フルページ化で直す箇所。**「そのまま置けば広く見える」わけではない**ことの根拠。
 
-| 箇所                                                                                                           | 現状                                                          | フルページでの扱い                                                                                              |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `WeeklyReflectionPanel.tsx:15-16`                                                                              | `MAX_TIME_PL_ROWS = 5` / `MAX_ESTIMATION_ROWS = 3` で切り詰め | **上限を外す**。狭さのための切り詰めで、広い画面では情報を捨てているだけ                                        |
-| `CalendarReviewPanel.tsx:38` / `ReviewDiffPanel.tsx:51`                                                        | `variant: 'rail' \| 'sheet'` の 2 値                          | `'page'` を足すのではなく、**`variant` を廃止**（§6-4 で rail が消え、sheet はモバイルのパネル = これも消える） |
-| `CalendarReviewPanel.tsx:140`                                                                                  | `isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1'`     | ページ全体のスクロールに委ねる                                                                                  |
-| `ReviewDiffPanel.tsx:161`                                                                                      | `isSheet ? 'max-h-96' : 'flex-1'`（384px 頭打ち）             | 同上                                                                                                            |
-| `CalendarReviewPanel.tsx:114,160` / `ReviewDiffPanel.tsx:95,183-185` / `WeeklyReflectionPanel.tsx:214,290-295` | `truncate` を多用                                             | 幅が取れるので大半は不要。**残すのは本当に長くなりうる名前だけ**                                                |
-| `CalendarReviewPanel.tsx:119-132` / `ReviewDiffPanel.tsx:94-114`                                               | close ボタン                                                  | **削除**（ページには閉じるという概念が無い）                                                                    |
-| `CalendarReviewRail.tsx:52`                                                                                    | `h-full flex-col`（親の高さに完全依存）                       | ページのスクロールに委ねる                                                                                      |
+| 箇所                                                             | 現状                                                          | フルページでの扱い                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `WeeklyReflectionPanel.tsx:15-16`                                | `MAX_TIME_PL_ROWS = 5` / `MAX_ESTIMATION_ROWS = 3` で切り詰め | **上限を外す**。狭さのための切り詰めで、広い画面では情報を捨てているだけ                                        |
+| `CalendarReviewPanel.tsx:38` / `ReviewDiffPanel.tsx:51`          | `variant: 'rail' \| 'sheet'` の 2 値                          | `'page'` を足すのではなく、**`variant` を廃止**（§6-4 で rail が消え、sheet はモバイルのパネル = これも消える） |
+| `CalendarReviewPanel.tsx:140`                                    | `isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1'`     | ページ全体のスクロールに委ねる                                                                                  |
+| `ReviewDiffPanel.tsx:161`                                        | `isSheet ? 'max-h-96' : 'flex-1'`（384px 頭打ち）             | 同上                                                                                                            |
+| `CalendarReviewPanel.tsx:119-132` / `ReviewDiffPanel.tsx:94-114` | close ボタン                                                  | **削除**（ページには閉じるという概念が無い）                                                                    |
+| `CalendarReviewRail.tsx:52`                                      | `h-full flex-col`（親の高さに完全依存）                       | ページのスクロールに委ねる                                                                                      |
 
 **タグ絞り込み `Select`（`CalendarReviewPanel.tsx:95-118`）の去就**: 狭さのために `Select` に押し込めていた。フルページかつ #2162 でセグメントが Sidebar に出る（§5-5）ので、**この `Select` は廃止して Sidebar 側へ寄せる**。`reviewTagId` は #2162 の語彙で名前が変わるため、最終名はレーン G の確定に従う。
-
-### 6-6. 誤解を招く既存テスト名（ついでに直す）
-
-`apps/product/src/lib/test/e2e/review-granularity.spec.ts` は**名前に反して粒度を検証していない**（実測）。中身は `/ja/week?date=…&panel=review` の deep link からパネルが復元されることの smoke test 1 件だけで、`test.skip` が 2 つ掛かっている（認証情報が無ければ丸ごと skip、モバイルも対象外）。
-
-§4-6 で E2E を書き換える時に、**実態に合った名前へ改名する**（deep link の smoke test なので `deep-link.spec.ts` へ統合するのが素直）。名前と中身が乖離したテストは「粒度は検証済み」という誤った安心を与える。
 
 ### 6-7. このスライスの Reversibility
 
@@ -817,9 +810,85 @@ export interface ReviewDisplayRange {
 
 #### あわせて削るもの（過剰と指摘され受け入れた）
 
-- **`WorkspaceTab` の `'other'` を廃止**し `'calendar' | 'report'` の 2 値にする。§5-4 が「`other` は calendar として扱う」と決めている以上、第 3 の値があると「`other` 用の Sidebar」を後から誰かが足す。判定は `pathname === '/report' ? 'report' : 'calendar'` の 1 行
-- **§6-5 の `truncate` 棚卸し行を削る**。幅が足りていれば無害で、フルページ化の目的（面積）と無関係。別 issue
-- **§6-6（spec 改名）を独立した節として持たない**。§4-6 の E2E 全面書き換えに吸収する
+- **`WorkspaceTab` の `'other'` を廃止し、§5-2 を 2 値へ改訂した**（上流への反映漏れを再レビューで指摘されたので実行済み）。§5-4 が「`other` は calendar として扱う」と決めている以上、第 3 の値があると「`other` 用の Sidebar」を後から誰かが足す。判定は `pathname === '/report' ? 'report' : 'calendar'` の 1 行
+- **§6-5 の `truncate` 棚卸し行を削除した**。幅が足りていれば無害で、フルページ化の目的（面積）と無関係。別 issue へ
+- **§6-6（spec 改名）の節を削除した**。§4-6 の E2E 全面書き換えに吸収する
+
+### 6-10. 再レビュー（2 巡目）の指摘への回答
+
+1 巡目の解（§6-9）に対して再度 HALT が出た。**上流への反映漏れ 4 件は実行済み**（`WorkspaceTab` の 2 値化、`truncate` 行の削除、§6-6 節の削除、§11 への scope 除外追加、§4-6 と §4-5-b の理由の統一）。残る実質的な指摘に答える。
+
+#### A. 日付の時刻成分 — 実測により無害（blocker 解除）
+
+指摘: href に載るのは `YYYY-MM-DD` なので時刻成分が落ち、戻った時に `initialDate.getTime() !== currentDate.getTime()` が成立して `:257-270` の effect が発火する。
+
+**実測すると `parseCalendarDateParam`（`features/calendar/lib/date-param.ts`）は正午を返す**:
+
+```ts
+// 正午で保持し、DST境界やUTC変換で日付が前後しにくい基準値にする。
+const parsed = new Date(year, monthIndex, day, 12, 0, 0, 0);
+```
+
+したがって:
+
+- **URL 経由で入った日付は今も必ず正午**。`?date=` を読んだ時点で正規化されているので、タブ往復しても `getTime()` は一致し、effect は発火しない
+- 非正午になりうるのは `initialDate` の fallback（`new Date()` = 実際の現在時刻）だけ。**この 1 回だけ正午へ正規化される**が、日付は変わらないのでユーザーには見えない
+- **これは本 project が作る挙動ではなく、`?date=` を持つ現行 URL の既存挙動**。`/week?date=X` を開いた時点で既に正午になっている
+
+**結論: blocker ではない。** ただし「日付は不変」という §5-4 の表現は厳密には「**日付は不変、時刻成分は正午へ正規化される**」なので、そう書き直す。往復 test の assert も `getTime()` の一致ではなく**日付（`getDateKey`）の一致**で書く（時刻で assert すると初回の正規化で落ちる）。
+
+#### B. `/report` 滞在中の `initialDateRef` と popstate
+
+指摘 2 件に答える。
+
+- **`initialDateRef` の空転**: `:258-259` の `initialDateRef.current = initialDate` は `isCalendarPage` に関係なく毎回走る。`/report` では `initialDate` が `new Date()`（毎レンダー新しい値）なので ref が更新され続ける。**害は無い** — ref は「前回の initialDate」との比較にしか使われず、比較の後段が `isCalendarPage` でガードされている。ただし**紛らわしいので、`/report` でも `resolveCalendarProps` が安定した値を返すようにする**: `isCalendarPage: false` の分岐（`:81-87`）で `initialDate` を `new Date()` ではなく **`currentDateRef` の現在値**にする。これで ref の空転自体が消える
+- **popstate の早期 return**: `:275` の `if (!resolved.isCalendarPage) return;` により、`/report` で日付を変えた後の「戻る」が state に反映されない。**`/report` も扱うようにハンドラを直す** — `resolveCalendarProps` が `/report` を認識し、`date` を読んで `currentDate` を復元する。`isCalendarPage` という 2 値の判定を `workspaceTab`（`'calendar' | 'report'` + それ以外）へ広げるのが素直で、§5-2 の dispatcher と同じ判定を共有できる
+
+**この 2 点で `CalendarNavigationContext` の改修範囲が確定する**（§4-2-b の 4 箇所 + §5-4-b の URL writer + ここの 2 箇所 = 計 7 箇所）。Step 1 の scope に反映する。
+
+#### C. `/report` の差分はタグ可視性フィルタに従わない（契約として決める）
+
+指摘: `CalendarController` の前処理は `useCalendarFilterStore` の可視性（`visibleTagIds` / `showUntagged`）に依存しており、`/report` にはそのフィルタ UI が無い。**ユーザーから見て不可視な状態が集計結果を変える。**
+
+**決定: `/report` の集計は可視性フィルタに従わない。全アクティビティを対象にする。**
+
+理由は #2162 §3 の不変条件（Σカテゴリー + 未分類 = 全ブロック時間）。**サイドバーのチェックを外しただけで合計が変わるなら、それは分析ではなく表示の副作用**で、「集計の足し算が合う軸」という 3 構造モデルの前提そのものを壊す。カレンダー上の差分表示（`CalendarController` 側）は「今見えているものの差分」なので可視性に従ってよいが、**`/report` は「事実の集計」なので従わない**。
+
+**実装への含意**: 前処理を純関数化する時、可視性フィルタは**引数として外から渡す形**にし、カレンダーは `isEntryVisible` を渡し、`/report` は「全部可視」を渡す。フィルタ判定を関数の中に閉じ込めない。
+
+#### D. `/report` のデータ取得経路
+
+**`features/review` から `features/calendar` は barrel 込みで機械的に禁止**（`apps/product/eslint.config.mjs:337-348` の `no-restricted-imports`、「同層 feature の import 禁止」）。実測で確認した。したがって `/report` が `useCalendarData`（calendar barrel）を直接呼ぶ形は**成立しない**。
+
+**決定: `/report` のページ（`app/[locale]/(app)/(workspace)/report/`）= Composition Layer が timeblock を取得し、`features/review` のコンポーネントへ props で渡す。**
+
+- Composition Layer は DAG の外なので、timeblock の取得元（`features/timeblock` の barrel）を直接叩ける
+- `features/review` 側は「期間分の plan / record を受け取って描く」だけになり、データ取得の責務を持たない。これは現行の `CalendarReviewRail` が `diff` を props で受けている形（`CalendarViewClient.tsx:205`）と**同じ構図**なので、新しいパターンを持ち込まない
+- §6-9 #6 の A 案（`timeblock-day-diff.ts` を Layer 1 へ移す）と噛み合う。移した後は Composition Layer が timeblock barrel から集計関数を取れる
+
+**キャッシュ**: カレンダーと `/report` が同じ期間を見ている時にクエリを共有できるかは、tRPC の query key が一致するかで決まる。**v1 では共有を前提にしない**（別々に取得してよい）。単一ユーザー規模で問題にならず、共有を狙うと期間表現の統一という別の設計が要る。
+
+#### E. `CalendarPanelKind` 廃止と「恒久 shim」コメントの衝突（判断を明記）
+
+`CalendarNavigationContext.tsx:60-61` は `analytics` → `review` の読み替えを「**恒久 shim（削除不可 — 外部共有 URL の後方互換のため）**」と書き、テストで固定している。§3-3 はこの型ごと廃止すると決めている。**衝突を明示的に解く。**
+
+**判断: 廃止してよい。** shim が守っている契約（`?panel=analytics` の外部共有リンクが動くこと）は、**§4-4 の redirect 層が引き継ぐ**（`?panel=analytics` → `/report`）。コメントが「削除不可」と書いているのは「**この shim を消すと後方互換が失われる**」という意味であって、「後方互換を別の層で担保しても消してはいけない」ではない。守るべきは shim ではなく契約。
+
+**実行時の条件**: shim を消す Step（Step 6）で、**redirect 層が `?panel=analytics` を処理していることを E2E で確認してから**消す。固定テスト（`CalendarNavigationContext.test.tsx`）は削除ではなく、**redirect の E2E へ移す**（契約を守るテストを消さない）。
+
+#### F. モバイル固定バーの実装可能性（3 点に答える）
+
+- **測定主体**: `ResizeObserver` で測って `style` 属性に書くのは `CLAUDE.md` の規律に触れる。**測らない設計にする** — コンテナの高さを 2 段分のセマンティックな固定値（`min-h-14` × 2 相当）でトークン化し、本文余白も同じトークンで書く。動的測定を導入しない
+- **SSR 初期値**: 上記により CSS 変数の未定義問題が消える。固定値なので初回描画から正しい
+- **`TagChipRow` がタグ 0 件で `null` を返す**（`:49`）ため、バーの有無が非同期データに依存する。**コンテナは常にマウントし、中身が空でも高さを保つ**か、**空の時はコンテナごと畳んで余白トークンを切り替える**かの二択。**前者を採る**（レイアウトシフトが起きない方を選ぶ。空のチップ列 1 行分の余白は許容する）
+
+**この形なら `--bottom-bars-h` は不要**で、§6-9 #4 の CSS 変数案は取り下げる。指摘のとおり、変数案は測定主体・SSR 初期値・非同期のバー有無という 3 つの穴を同時に開けていた。
+
+#### G. `features/calendar` の component を `_shell` 都合で書き換える件（writer 境界）
+
+`TagChipRow` は自分で `fixed inset-x-0 bottom-0 pb-safe z-bottom-tab` を持っている（`:58`）。F の設計はこれを `_shell` 側のコンテナへ移すので、**`features/calendar` の component を触る**。§5-6 の「F の成果は 1 行も作り替えない」宣言と抵触する。
+
+**訂正**: §5-6 の宣言は「**カテゴリー / アクティビティ IA の中身**を作り替えない」の意味に限定する。`TagChipRow`（→ `ActivityChipRow`）の**配置に関する className** はモバイル shell の都合なので、本 project が触る。**F が作る IA のロジック・データ契約には触れない。** この区別を §5-6 に明記する。
 
 ## 9. Step 分解と Reversibility Table
 
@@ -879,6 +948,7 @@ export interface ReviewDisplayRange {
 - **セグメントの並び替え・フォルダ分け・共有を作らない** — §3-2 の歯止めに直接触れる（§5-5）
 - **「ついでに」データ層を触らない** — この project に migration も RPC 変更も無い。#2162 の波と混ぜない
 - **`_shell/` と `features/review/` の作り替えをスライス 1 でやらない** — レーン F / G の writer 境界（§4-9）
+- **`/report` の server prefetch をやらない** — `days` の構築が TZ 依存になるのを避けるため（§6-9 #3）。v1 はクライアント取得だけにする
 - **`robots.txt` の刷新をこの project の外へ広げない** — `/calendar` `/report` の追加と、それに伴って死んでいる 2 行の除去まで。robots 全体の設計見直しは別問題
 
 ## 12. sub-issue 分解案（起票は指揮台）
