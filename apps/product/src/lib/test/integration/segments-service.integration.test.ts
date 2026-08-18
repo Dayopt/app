@@ -199,6 +199,71 @@ describe.skipIf(!RUN_LOCAL)('SegmentsService (#2162)', () => {
     expect(data?.id).toBe(activityId);
   });
 
+  /**
+   * risk-reviewer が構成した P1 の再現（2026-08-18）。
+   * 削除→挿入の順だと、stale な activityId が 1 つ混じるだけで既存メンバーが全消しになる。
+   */
+  it('keeps existing members when the new set contains a stale activity id', async () => {
+    const a1 = await createActivity(ownerId, `維持1-${crypto.randomUUID()}`);
+    const a2 = await createActivity(ownerId, `維持2-${crypto.randomUUID()}`);
+    const stale = await createActivity(ownerId, `消える-${crypto.randomUUID()}`);
+    const created = await service.create({
+      userId: ownerId,
+      name: `巻き戻し-${crypto.randomUUID()}`,
+      activityIds: [a1, a2],
+    });
+
+    // 別タブでアクティビティが消えた状況を作る
+    await admin.from('activities').delete().eq('id', stale);
+
+    const code = await codeOf(() =>
+      service.replaceMembers({
+        userId: ownerId,
+        segmentId: created.id,
+        activityIds: [a1, a2, stale],
+      }),
+    );
+    expect(code).toBe('INVALID_INPUT');
+
+    // 失敗しても既存メンバーは 1 件も落ちていない
+    const listed = await service.list({ userId: ownerId });
+    expect([...(listed.find((s) => s.id === created.id)?.activityIds ?? [])].sort()).toEqual(
+      [a1, a2].sort(),
+    );
+  });
+
+  /** 同じく P1: create が途中失敗した時に名前を占有する幽霊セグメントを残さない。 */
+  it('leaves no ghost segment when create fails on a bad activity id', async () => {
+    const foreign = await createActivity(otherId, `他人-${crypto.randomUUID()}`);
+    const name = `幽霊-${crypto.randomUUID()}`;
+
+    const firstCode = await codeOf(() =>
+      service.create({ userId: ownerId, name, activityIds: [foreign] }),
+    );
+    expect(firstCode).toBe('INVALID_INPUT');
+
+    // 同じ名前で作り直せる（幽霊が名前を占有していたら DUPLICATE_NAME で詰む）
+    const retried = await service.create({ userId: ownerId, name, activityIds: [] });
+    expect(retried.name).toBe(name);
+
+    const listed = await service.list({ userId: ownerId });
+    expect(listed.filter((s) => s.name === name)).toHaveLength(1);
+  });
+
+  it('rejects replaceMembers on another user’s segment with NOT_FOUND', async () => {
+    const foreign = await service.create({
+      userId: otherId,
+      name: `他人-${crypto.randomUUID()}`,
+      activityIds: [],
+    });
+
+    const code = await codeOf(() =>
+      service.replaceMembers({ userId: ownerId, segmentId: foreign.id, activityIds: [] }),
+    );
+    // 以前は 0 行 delete + insert skip で success を返す silent no-op だった
+    expect(code).toBe('NOT_FOUND');
+  });
+
   it('scopes list to the calling user', async () => {
     const mine = await service.create({
       userId: ownerId,

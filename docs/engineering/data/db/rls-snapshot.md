@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 52 件 / RLS 対象テーブル 23 件 / GRANT 234 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 59 件 / RLS 対象テーブル 25 件 / GRANT 238 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -30,6 +30,8 @@
 | profiles                      | ✅          | —      |
 | records                       | ✅          | —      |
 | reports                       | ✅          | —      |
+| segment_activities            | ✅          | —      |
+| segments                      | ✅          | —      |
 | stripe_webhook_events         | ✅          | —      |
 | tags                          | ✅          | —      |
 | user_settings                 | ✅          | —      |
@@ -158,6 +160,23 @@
 | Users can delete own reports | DELETE | PERMISSIVE | {public}       | (( SELECT auth.uid() AS uid) = user_id) | —          |
 | System can create reports    | INSERT | PERMISSIVE | {service_role} | —                                       | true       |
 | Users can view own reports   | SELECT | PERMISSIVE | {public}       | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### segment_activities
+
+| policy                                  | cmd    | permissive | roles    | USING                                   | WITH CHECK                              |
+| --------------------------------------- | ------ | ---------- | -------- | --------------------------------------- | --------------------------------------- |
+| Users can delete own segment_activities | DELETE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can insert own segment_activities | INSERT | PERMISSIVE | {public} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own segment_activities   | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+
+### segments
+
+| policy                        | cmd    | permissive | roles    | USING                                   | WITH CHECK                              |
+| ----------------------------- | ------ | ---------- | -------- | --------------------------------------- | --------------------------------------- |
+| Users can delete own segments | DELETE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can insert own segments | INSERT | PERMISSIVE | {public} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own segments   | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can update own segments | UPDATE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
 
 ### stripe_webhook_events
 
@@ -466,6 +485,10 @@ allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapsho
 | table       | public.reports                                                                                                                                                                                                                                                                                                                                                                                                                                   | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.reports                                                                                                                                                                                                                                                                                                                                                                                                                                   | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.reports                                                                                                                                                                                                                                                                                                                                                                                                                                   | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.segment_activities                                                                                                                                                                                                                                                                                                                                                                                                                        | authenticated       | DELETE, INSERT, SELECT                                                  |
+| table       | public.segment_activities                                                                                                                                                                                                                                                                                                                                                                                                                        | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE         |
+| table       | public.segments                                                                                                                                                                                                                                                                                                                                                                                                                                  | authenticated       | DELETE, INSERT, SELECT, UPDATE                                          |
+| table       | public.segments                                                                                                                                                                                                                                                                                                                                                                                                                                  | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.stripe_webhook_events                                                                                                                                                                                                                                                                                                                                                                                                                     | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.tags                                                                                                                                                                                                                                                                                                                                                                                                                                      | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.tags                                                                                                                                                                                                                                                                                                                                                                                                                                      | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |

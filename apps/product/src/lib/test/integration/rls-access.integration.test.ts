@@ -246,6 +246,53 @@ const userOwnedCases: UserOwnedRlsCase[] = [
     },
     update: { tool_name: 'foreign_update' },
   },
+  {
+    // #2162 Step 1。E1 では matrix への登録が漏れていた（migration 内の privilege
+    // invariant が production リスク自体は覆っているので、ここは防御層の補完）。
+    table: 'categories',
+    idColumn: 'id',
+    rowId: crypto.randomUUID(),
+    seed: async function () {
+      const { error } = await adminSupabase.from('categories').insert({
+        id: this.rowId,
+        user_id: TEST_USER_B_ID,
+        name: `RLS category ${this.rowId}`,
+      });
+      if (error) throw error;
+    },
+    update: { name: 'foreign update' },
+  },
+  {
+    // #2162 Step 1。同上。
+    table: 'activities',
+    idColumn: 'id',
+    rowId: crypto.randomUUID(),
+    seed: async function () {
+      const { error } = await adminSupabase.from('activities').insert({
+        id: this.rowId,
+        user_id: TEST_USER_B_ID,
+        name: `RLS activity ${this.rowId}`,
+      });
+      if (error) throw error;
+    },
+    update: { name: 'foreign update' },
+  },
+  {
+    // #2162 Step 5。service-role client の test（segment-schema / segments-service）は
+    // 複合 FK を検証できるが RLS は素通りするため、実 anon client で見る場所がここになる。
+    table: 'segments',
+    idColumn: 'id',
+    rowId: crypto.randomUUID(),
+    seed: async function () {
+      const { error } = await adminSupabase.from('segments').insert({
+        id: this.rowId,
+        user_id: TEST_USER_B_ID,
+        name: `RLS segment ${this.rowId}`,
+      });
+      if (error) throw error;
+    },
+    update: { name: 'foreign update' },
+  },
 ];
 
 /**

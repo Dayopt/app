@@ -125,11 +125,20 @@ class SegmentsService {
       );
     }
 
-    await this.replaceMembers({
-      userId: options.userId,
-      segmentId: data.id,
-      activityIds: options.activityIds,
-    });
+    try {
+      await this.replaceMembers({
+        userId: options.userId,
+        segmentId: data.id,
+        activityIds: options.activityIds,
+      });
+    } catch (error) {
+      // メンバー登録に失敗したら、作ったばかりのセグメント行を巻き戻す。
+      // 残すと「見えない 0 件セグメント」が名前を占有し、ユーザーが同じ名前で
+      // 作り直そうとした時に DUPLICATE_NAME で詰む（PostgREST に跨る
+      // トランザクションが無いため、補償削除で代替する）。
+      await this.supabase.from('segments').delete().eq('id', data.id).eq('user_id', options.userId);
+      throw error;
+    }
 
     return {
       id: data.id,
@@ -165,49 +174,108 @@ class SegmentsService {
     }
   }
 
-  /** メンバーを入れ替える。差分計算はせず、消してから入れ直す（件数が小さいため）。 */
+  /**
+   * メンバーを入れ替える。
+   *
+   * **追加を先に、削除を後に**行う。PostgREST の 2 リクエストは 1 トランザクションに
+   * ならないため、削除→挿入の順にすると「挿入だけ失敗してセグメントが空になる」
+   * データ消失が起きる。攻撃者は要らず、別タブでアクティビティを消した直後の
+   * stale な id が 1 つ混じるだけで踏む。多行 INSERT は原子的なので、追加が失敗した
+   * 時点では何も消えていない状態で止まる。
+   *
+   * 逆順（追加成功 → 削除失敗）の失敗は「余分なメンバーが残る」だけで、再実行すれば
+   * 収束する。消えるより残る方に倒している。
+   */
   async replaceMembers(options: {
     userId: string;
     segmentId: string;
     activityIds: readonly string[];
   }): Promise<void> {
-    const { error: deleteError } = await this.supabase
+    // 存在しない / 他人のセグメントを黙って no-op にしない（rename / remove と同じ意味論）。
+    // ここで弾いておくと、後段の FK 違反は必ず activity 側だと確定できる。
+    await this.assertOwnedSegment(options);
+
+    const desired = new Set(options.activityIds);
+    const current = new Set(await this.listMemberIds(options));
+
+    const toAdd = [...desired].filter((id) => !current.has(id));
+    const toRemove = [...current].filter((id) => !desired.has(id));
+
+    if (toAdd.length > 0) {
+      const { error } = await this.supabase.from('segment_activities').insert(
+        toAdd.map((activityId) => ({
+          user_id: options.userId,
+          segment_id: options.segmentId,
+          activity_id: activityId,
+        })),
+      );
+
+      if (error) {
+        // セグメント側は上で確認済みなので、この FK 違反は activity 側で確定する。
+        if (errorCodeOf(error) === FOREIGN_KEY_VIOLATION) {
+          throw new SegmentsServiceError('INVALID_INPUT', 'Unknown or unowned activity');
+        }
+        throw createDatabaseError(
+          error,
+          'UPDATE_FAILED',
+          'Failed to add segment members',
+          'replace_segment_members',
+        );
+      }
+    }
+
+    if (toRemove.length > 0) {
+      const { error } = await this.supabase
+        .from('segment_activities')
+        .delete()
+        .eq('segment_id', options.segmentId)
+        .eq('user_id', options.userId)
+        .in('activity_id', toRemove);
+
+      if (error) {
+        throw createDatabaseError(
+          error,
+          'UPDATE_FAILED',
+          'Failed to remove segment members',
+          'replace_segment_members',
+        );
+      }
+    }
+  }
+
+  /** 自分が所有するセグメントであることを確認する。無ければ NOT_FOUND。 */
+  private async assertOwnedSegment(options: { userId: string; segmentId: string }): Promise<void> {
+    const { data, error } = await this.supabase
+      .from('segments')
+      .select('id')
+      .eq('id', options.segmentId)
+      .eq('user_id', options.userId)
+      .maybeSingle();
+
+    if (error) {
+      throw createDatabaseError(error, 'FETCH_FAILED', 'Failed to load segment', 'load_segment');
+    }
+    if (!data) {
+      throw new SegmentsServiceError('NOT_FOUND', 'Segment not found');
+    }
+  }
+
+  private async listMemberIds(options: { userId: string; segmentId: string }): Promise<string[]> {
+    const { data, error } = await this.supabase
       .from('segment_activities')
-      .delete()
+      .select('activity_id')
       .eq('segment_id', options.segmentId)
       .eq('user_id', options.userId);
 
-    if (deleteError) {
+    if (error) {
       throw createDatabaseError(
-        deleteError,
-        'UPDATE_FAILED',
-        'Failed to clear segment members',
-        'replace_segment_members',
+        error,
+        'FETCH_FAILED',
+        'Failed to load segment members',
+        'list_segment_members',
       );
     }
-
-    if (options.activityIds.length === 0) return;
-
-    const { error: insertError } = await this.supabase.from('segment_activities').insert(
-      options.activityIds.map((activityId) => ({
-        user_id: options.userId,
-        segment_id: options.segmentId,
-        activity_id: activityId,
-      })),
-    );
-
-    if (insertError) {
-      // 他人のアクティビティ、または存在しないアクティビティ。複合 FK が弾いた側。
-      if (errorCodeOf(insertError) === FOREIGN_KEY_VIOLATION) {
-        throw new SegmentsServiceError('INVALID_INPUT', 'Unknown or unowned activity');
-      }
-      throw createDatabaseError(
-        insertError,
-        'UPDATE_FAILED',
-        'Failed to set segment members',
-        'replace_segment_members',
-      );
-    }
+    return data.map((row) => row.activity_id);
   }
 
   /** セグメントを削除する。メンバーシップは CASCADE で消え、アクティビティ本体は残る。 */

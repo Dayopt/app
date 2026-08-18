@@ -17,7 +17,8 @@
 -- segment_activities は segments と activities の両方へ (id, user_id) で参照するため、
 -- 他ユーザーの activity をセグメントへ混ぜることが構造的に不可能になる。
 --
--- 依存: activities テーブル（Step 1、レーン E）。本 migration はそれより後に適用される。
+-- 依存: activities テーブル（Step 1、20260818120000）。複合 FK の参照先である
+-- activities_id_user_id_unique がそちらで作られるため、本 migration は後に適用される。
 
 BEGIN;
 
@@ -88,13 +89,12 @@ CREATE POLICY "Users can update own segments" ON public.segments
 CREATE POLICY "Users can delete own segments" ON public.segments
   FOR DELETE USING ((select auth.uid()) = user_id);
 
+-- segment_activities は **UPDATE を持たない**。両列が PK を構成しており、
+-- メンバーの変更は「消して入れ直す」以外に意味を持たないため、更新経路を作らない。
 CREATE POLICY "Users can view own segment_activities" ON public.segment_activities
   FOR SELECT USING ((select auth.uid()) = user_id);
 CREATE POLICY "Users can insert own segment_activities" ON public.segment_activities
   FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
-CREATE POLICY "Users can update own segment_activities" ON public.segment_activities
-  FOR UPDATE USING ((select auth.uid()) = user_id)
-  WITH CHECK ((select auth.uid()) = user_id);
 CREATE POLICY "Users can delete own segment_activities" ON public.segment_activities
   FOR DELETE USING ((select auth.uid()) = user_id);
 
@@ -102,15 +102,87 @@ CREATE POLICY "Users can delete own segment_activities" ON public.segment_activi
 -- 4. GRANT
 -- =============================================================================
 
--- anon には与えない。tags は baseline で anon へ過剰付与され 20260810085344 で
--- 剥がされた経緯があるので、最初から authenticated / service_role だけにする。
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.segments TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.segment_activities TO authenticated;
-GRANT ALL ON public.segments TO service_role;
-GRANT ALL ON public.segment_activities TO service_role;
+-- **REVOKE を先に打つ。** production の pg_default_acl は新規 public テーブルへ
+-- anon / authenticated に arwdDxtm を既定付与するが、local / Preview は Dxtm のみ。
+-- つまり GRANT だけ書くと production にだけ過剰権限が残る。とくに TRUNCATE は
+-- RLS で制御できないため、明示的に剥がさないと RLS を素通りしてテーブルを空にできる。
+-- 実際に 6 テーブルで発生し 20260810085344（#1715）で剥がした前例がある。
+-- 同 epic の 20260818120000（categories / activities）と同じ形を踏襲する。
+REVOKE ALL ON TABLE public.segments, public.segment_activities
+  FROM PUBLIC, anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON TABLE public.segments
+  TO authenticated;
+
+-- segment_activities に UPDATE を与えない（policy を作っていないのと対）。
+GRANT SELECT, INSERT, DELETE
+  ON TABLE public.segment_activities
+  TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON TABLE public.segments
+  TO service_role;
+
+GRANT SELECT, INSERT, DELETE
+  ON TABLE public.segment_activities
+  TO service_role;
 
 -- =============================================================================
--- 5. updated_at
+-- 5. Privilege invariants
+-- =============================================================================
+
+DO $$
+DECLARE
+  new_tables TEXT[] := ARRAY['public.segments', 'public.segment_activities'];
+  dml_privileges TEXT[] := ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
+  target_table TEXT;
+  privilege TEXT;
+BEGIN
+  FOREACH target_table IN ARRAY new_tables LOOP
+    -- anon は 1 つも持たない。
+    FOREACH privilege IN ARRAY dml_privileges LOOP
+      IF has_table_privilege('anon', target_table, privilege) THEN
+        RAISE EXCEPTION 'anon must not hold % on %', privilege, target_table;
+      END IF;
+    END LOOP;
+
+    -- TRUNCATE は RLS で制御できないため、両ロールから明示的に否定する。
+    IF has_table_privilege('anon', target_table, 'TRUNCATE')
+      OR has_table_privilege('authenticated', target_table, 'TRUNCATE')
+    THEN
+      RAISE EXCEPTION 'browser roles must not hold TRUNCATE on %', target_table;
+    END IF;
+  END LOOP;
+
+  -- segments は DML 4 種すべて。カンマ区切りは OR 判定になるので 1 つずつ呼ぶ。
+  FOREACH privilege IN ARRAY dml_privileges LOOP
+    IF NOT has_table_privilege('authenticated', 'public.segments', privilege) THEN
+      RAISE EXCEPTION 'authenticated is missing % on public.segments', privilege;
+    END IF;
+    IF NOT has_table_privilege('service_role', 'public.segments', privilege) THEN
+      RAISE EXCEPTION 'service_role is missing % on public.segments', privilege;
+    END IF;
+  END LOOP;
+
+  -- segment_activities は UPDATE を持たない（メンバーは消して入れ直す）。
+  FOREACH privilege IN ARRAY ARRAY['SELECT', 'INSERT', 'DELETE'] LOOP
+    IF NOT has_table_privilege('authenticated', 'public.segment_activities', privilege) THEN
+      RAISE EXCEPTION 'authenticated is missing % on public.segment_activities', privilege;
+    END IF;
+    IF NOT has_table_privilege('service_role', 'public.segment_activities', privilege) THEN
+      RAISE EXCEPTION 'service_role is missing % on public.segment_activities', privilege;
+    END IF;
+  END LOOP;
+
+  IF has_table_privilege('authenticated', 'public.segment_activities', 'UPDATE') THEN
+    RAISE EXCEPTION 'authenticated must not hold UPDATE on public.segment_activities';
+  END IF;
+END;
+$$;
+
+-- =============================================================================
+-- 6. updated_at
 -- =============================================================================
 
 CREATE TRIGGER set_updated_at

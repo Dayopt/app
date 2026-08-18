@@ -22,11 +22,30 @@ import type { Database } from '@/lib/database';
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const RUN_LOCAL = process.env.USE_LOCAL_DB === 'true';
 
 const admin = createClient<Database>(LOCAL_DB_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+/**
+ * 実 anon client でサインインして返す。
+ *
+ * service-role client は RLS を素通りするため、上の複合 FK の検証は通っても
+ * 「RLS が他人の行を隠すか」は 1 ミリも証明していない。そこだけは実 client で見る。
+ * `segments` 本体は rls-access.integration.test.ts の matrix にも登録したが、
+ * `segment_activities` は複合 PK で matrix の型（単一 idColumn）に合わないため、
+ * ここで個別に見る。
+ */
+async function signIn(email: string) {
+  const client = createClient<Database>(LOCAL_DB_URL, ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return client;
+}
 
 const ownerId = crypto.randomUUID();
 const otherId = crypto.randomUUID();
@@ -209,6 +228,74 @@ describe.skipIf(!RUN_LOCAL)('segments / segment_activities schema contract (#216
       const { error } = await admin.from('segments').insert({ user_id: otherId, name });
 
       expect(error).toBeNull();
+    });
+  });
+
+  /**
+   * RLS を実 anon client で確認する。ここまでの test は service-role client なので
+   * RLS を素通りしており、行レベルの遮蔽については何も証明していない。
+   */
+  describe('RLS with real authenticated clients', () => {
+    it('hides another user’s segment_activities rows from select', async () => {
+      const foreignSegment = await createSegment(otherId, `他人-${crypto.randomUUID()}`);
+      const foreignActivity = await createActivity(otherId, `他人-${crypto.randomUUID()}`);
+      await admin.from('segment_activities').insert({
+        user_id: otherId,
+        segment_id: foreignSegment,
+        activity_id: foreignActivity,
+      });
+
+      const client = await signIn(ownerEmail);
+      const { data, error } = await client
+        .from('segment_activities')
+        .select('segment_id')
+        .eq('segment_id', foreignSegment);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it('refuses to delete another user’s segment_activities rows', async () => {
+      const foreignSegment = await createSegment(otherId, `他人-${crypto.randomUUID()}`);
+      const foreignActivity = await createActivity(otherId, `他人-${crypto.randomUUID()}`);
+      await admin.from('segment_activities').insert({
+        user_id: otherId,
+        segment_id: foreignSegment,
+        activity_id: foreignActivity,
+      });
+
+      const client = await signIn(ownerEmail);
+      await client.from('segment_activities').delete().eq('segment_id', foreignSegment);
+
+      // service-role で見て、実際に残っていることを確認する
+      const { data } = await admin
+        .from('segment_activities')
+        .select('segment_id')
+        .eq('segment_id', foreignSegment);
+      expect(data).toHaveLength(1);
+    });
+
+    /** UPDATE は grant も policy も与えていない。メンバーは消して入れ直す設計。 */
+    it('does not allow updating a membership row', async () => {
+      const segmentId = await createSegment(ownerId, `更新不可-${crypto.randomUUID()}`);
+      const a1 = await createActivity(ownerId, `旧-${crypto.randomUUID()}`);
+      const a2 = await createActivity(ownerId, `新-${crypto.randomUUID()}`);
+      await admin
+        .from('segment_activities')
+        .insert({ user_id: ownerId, segment_id: segmentId, activity_id: a1 });
+
+      const client = await signIn(ownerEmail);
+      await client
+        .from('segment_activities')
+        .update({ activity_id: a2 })
+        .eq('segment_id', segmentId);
+
+      const { data } = await admin
+        .from('segment_activities')
+        .select('activity_id')
+        .eq('segment_id', segmentId)
+        .single();
+      expect(data?.activity_id).toBe(a1);
     });
   });
 
