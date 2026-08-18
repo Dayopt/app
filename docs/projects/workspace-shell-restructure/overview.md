@@ -452,6 +452,34 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 <!-- スライス 3 は凍結に応じて追記する -->
 
+## 9. Step 分解と Reversibility Table
+
+各 Step = 1 レーン = 1 branch = 1 PR（`.claude/rules/workflow.md` §PR 粒度・判定 3 問）。issue は指揮台が凍結後に起票する。**Step 3 以降はスライス 3 の凍結後に確定する**（現時点では骨格のみ）。
+
+| #   | Step                                                                                                                                       | Reversibility | 備考                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | **URL 契約の新設** — `/calendar` route 追加 + `access-policy.ts` の保護対象追加 + `CalendarNavigationContext` の view 読み書きを search へ | `[minutes]`   | **`access-policy.ts` を必ず同梱**（§4-5-b。分けると未認証で開通する）。旧 route は残したまま                     |
+| 2   | **redirect と参照の切替** — `proxy.ts` の写像 + アプリ内リンク 8 箇所 + メールテンプレート 4 通 + `robots.txt` + E2E                       | `[hours]`     | 写像の行き先は 307 なので変えられるが、**redirect 層そのものは以後恒久物**（§4-5）                               |
+| 3   | **shell のタブ化** — `SidebarContent` の dispatcher 化 + `CalendarSidebar` 抽出 + `WorkspaceTabs`                                          | `[minutes]`   | **レーン F（PR #2179）merge 後**（§5-6）。`/report` はまだ空でよい                                               |
+| 4   | **`/report` ページ本体** — review / diff の中身の移植 + 期間パラメータの凍結                                                               | 未確定        | スライス 3 で確定                                                                                                |
+| 5   | **セグメント表示の接続** — レーン G の集計 API を `/report` と `ReportSidebar` へ配線                                                      | 未確定        | **レーン G merge 後**。スライス 3 で確定                                                                         |
+| 6   | **旧 route と旧 panel の削除** — `(workspace)/{day,week,[nday]}/**`、`CalendarPanelKind`、パネル関連コード                                 | `[minutes]`   | **redirect の稼働を実測してから。** `workspaceViewPathPattern` の削除もここ（§4-5-b）。**redirect 層は消さない** |
+| 7   | **docs の追従** — `strategy.md` 原則 10 改訂、`principles.md` の右パネル節、`specs/review.md`                                              | `[minutes]`   | **User 裁可待ち**（§3-2）。裁可が出るまで着手しない                                                              |
+
+**`[irreversible]` は 1 つも無いが、`[irreversible]` に近いものが 2 つある**（§4-7）。Step 2 が作る redirect 層と、Step 1 が公開する URL 契約そのもの。
+
+### Step 1 と Step 2 を分ける理由
+
+1 つにすると、`/calendar` が動くことを確認する前に旧 URL の入口を全部塞ぐことになる。分ければ Step 1 merge 後に**旧 URL と新 URL が両方動く窓**ができ、そこで新ページの実挙動を確かめてから切り替えられる。`workflow.md` §分割してよい理由 の「独立して検証したい変更」に当たる。
+
+窓の間の劣化: 無し（旧 URL は今までどおり動く）。**Step 1 だけが production に乗った状態は安全**で、この窓は好きなだけ開けておける。
+
+### Step 6 を最後に隔離する理由
+
+`workflow.md` §分割してよい理由 の「code removal の隔離」。加えて、**redirect が実際に効いていることを production で確認してからでないと旧 route を消せない**（消した後に写像の穴が見つかると 404 になる）。
+
+**Step 6 で消すのは旧 route ファイルであって redirect 層ではない。** 送信済みメール 4 通が `/week` を指しているため、redirect 層は残す（§4-5）。この 2 つを混同すると壊れる。
+
 ## 10. Existing Code to Reuse
 
 新規実装ではなく既存を使うもの。**「再利用できるのに新規で書く」を避けるための一覧**（`plan-format.md`）。
