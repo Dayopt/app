@@ -49,9 +49,6 @@ jobs:
     # 初回実運用（#2026）前の見積もり。avatars / attachments の実データ量が不明なため
     # 保守的な値を置く。初回搬出の実測を見て #2026 側で調整する。
     timeout-minutes: 30
-    env:
-      RCLONE_VERSION: '1.75.0'
-      RCLONE_SHA256: 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,12 +57,22 @@ jobs:
       # org の Actions 許可リストが actions/* github/* zaproxy/* codecov/* softprops/*
       # supabase/* oven-sh/* に限定されており rclone 公式 action は使えないため、
       # docs-guard.yml の gitleaks と同じくバイナリを直接取得・checksum 検証する。
+      #
+      # env は RCLONE_ prefix を避ける（BACKUP_RCLONE_* にする）。rclone は
+      # RCLONE_<FLAG名> 形式の環境変数をすべて自身の CLI フラグとして解釈するため、
+      # RCLONE_VERSION は --version（boolean）として parse され CRITICAL で落ちる
+      # （2026-08-18、#2155 実測。RCLONE_CONFIG_* だけが rclone 自身が認識する正当な
+      # 例外）。job-level ではなくこの step だけの env にし、後続 step（rclone sync
+      # を実行する secrets 経由の RCLONE_CONFIG_*）に紛れ込ませない。
       - name: rclone をインストール
+        env:
+          BACKUP_RCLONE_VERSION: '1.75.0'
+          BACKUP_RCLONE_ZIP_SHA256: 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa'
         run: |
-          curl -fsSLO "https://downloads.rclone.org/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
-          echo "${RCLONE_SHA256}  rclone-v${RCLONE_VERSION}-linux-amd64.zip" | sha256sum -c -
-          unzip -q "rclone-v${RCLONE_VERSION}-linux-amd64.zip"
-          sudo install -m 0755 "rclone-v${RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          curl -fsSLO "https://downloads.rclone.org/v${BACKUP_RCLONE_VERSION}/rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip"
+          echo "${BACKUP_RCLONE_ZIP_SHA256}  rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip" | sha256sum -c -
+          unzip -q "rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip"
+          sudo install -m 0755 "rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
           rclone version
 
       # secrets 未投入（#2026 完了前）でも workflow 自体は main へマージ・cron 起動できる
