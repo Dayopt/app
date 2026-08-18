@@ -45,6 +45,14 @@ function mockAuthenticatedSession(aalResult: {
   });
 }
 
+function mockUnauthenticatedSession() {
+  mocks.updateSession.mockResolvedValue({
+    response: NextResponse.next(),
+    user: null,
+    supabase: { auth: {} },
+  });
+}
+
 describe('proxy MFA gate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,14 +76,77 @@ describe('proxy MFA gate', () => {
     expect(response.headers.get('location')).toBe('https://app.dayopt.app/ja/auth/mfa-verify');
   });
 
-  it('redirects to login when the MFA assurance lookup returns an error', async () => {
+  // #2144: /auth/login は認証済みだと /week へ弾かれ、/week は protected path なので
+  // MFA gate を再度通る。lookupFailed が続く限り無限ループになっていたため、
+  // authPathsAllowedWhileAuthenticated 済みの専用ページへ送るよう変更した。
+  it('redirects to the session error page when the MFA assurance lookup returns an error', async () => {
     mockAuthenticatedSession({ data: null, error: { message: 'lookup failed' } });
 
     const response = await proxy(new NextRequest('https://app.dayopt.app/week'));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/login');
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
   });
+
+  // #2144: lookupFailed が続く限り、この redirect 先自身へ再度到達しても
+  // /week へ弾き返されない（= ループが構造的に閉じている）ことを固定する。
+  it.each([
+    [
+      'locale prefix あり',
+      'https://app.dayopt.app/ja/week',
+      'https://app.dayopt.app/ja/auth/session-error',
+    ],
+    [
+      'locale prefix なし',
+      'https://app.dayopt.app/week',
+      'https://app.dayopt.app/auth/session-error',
+    ],
+  ])(
+    '%s: session error ページへ到達した後も認証済みで /week へ送り返されない',
+    async (_label, weekUrl, expectedSessionErrorUrl) => {
+      mockAuthenticatedSession({ data: null, error: { message: 'lookup failed' } });
+
+      const first = await proxy(new NextRequest(weekUrl));
+      expect(first.headers.get('location')).toBe(expectedSessionErrorUrl);
+
+      const second = await proxy(new NextRequest(expectedSessionErrorUrl));
+      expect(second.status).toBe(200);
+      expect(second.headers.get('location')).toBeNull();
+    },
+  );
+
+  // proxy が catch する予期しない例外（updateSession 自体の throw）も、同じ
+  // /auth/login → /week の無限ループ shape を持っていた（#2144）。同じ着地先に倒す。
+  it('redirects to the session error page when an unexpected proxy error occurs', async () => {
+    mocks.updateSession.mockRejectedValue(new Error('unexpected'));
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/week'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
+  });
+
+  // #2144 risk-reviewer 指摘: env misconfiguration 等で updateSession() が
+  // persistent に throw すると、/auth/session-error 自身へのリクエストでも
+  // catch に落ちる。その時に同じ path へ redirect すると自己ループになるため、
+  // この path 自身は redirect せず素通しすることを固定する。
+  // #2144 P3（クロスレビュー指摘）: catch 内の判定は pathWithoutLocale（locale を
+  // 剥がした path）で行っており、locale prefix ありでも同じ分岐を共有する。
+  // 対称性を崩す変更が入ってもすぐ検出できるよう、両ケースを固定する。
+  it.each([
+    ['locale prefix なし', 'https://app.dayopt.app/auth/session-error'],
+    ['locale prefix あり', 'https://app.dayopt.app/ja/auth/session-error'],
+  ])(
+    '%s: 予期しない例外発生時も session error ページ自身は redirect しない',
+    async (_label, url) => {
+      mocks.updateSession.mockRejectedValue(new Error('unexpected'));
+
+      const response = await proxy(new NextRequest(url));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    },
+  );
 
   it.each([
     { currentLevel: 'aal1', nextLevel: 'aal1' },
@@ -136,5 +207,19 @@ describe('proxy auth-path allowlist', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe(expected);
+  });
+
+  // #2144: lookupFailed は user 状態が曖昧な時にも起きうるため、未認証でも
+  // /auth/session-error を表示できる必要がある（認証を要求しない、redirect も起きない）。
+  it.each([
+    ['locale prefix あり', 'https://app.dayopt.app/ja/auth/session-error'],
+    ['locale prefix なし', 'https://app.dayopt.app/auth/session-error'],
+  ])('%s の session error ページは未認証でも表示できる', async (_label, url) => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
   });
 });
