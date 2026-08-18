@@ -13,6 +13,7 @@ import { captureUnexpectedError } from '@/lib/sentry';
 
 import { deleteUnreferencedEvents } from './event-pruning';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
+import { TOKEN_REQUEST_TIMEOUT_MS } from './google-oauth';
 import { googleCalendarAdapter } from './providers/google';
 import { CalendarProviderError } from './providers/types';
 import { decryptToken, encryptToken } from './token-crypto';
@@ -738,5 +739,81 @@ export async function disconnect(userId: string, connectionId: string): Promise<
         cause: error,
       },
     );
+  }
+}
+
+// =============================================================================
+// #2072: OAuth 交換失敗時の orphan grant revoke
+// =============================================================================
+
+/**
+ * 指定した Google account（`sub`）に対する `calendar_connections` 行が
+ * どの Dayopt user にも存在しないかを確認する。
+ *
+ * `user_id` を条件に含めない: `calendar_connections` の UNIQUE 制約は
+ * `user_id, provider, provider_account_id` で、同一 Google account を複数の異なる
+ * Dayopt user が接続できる。`revokeRefreshToken`（google-oauth.ts doc comment）は
+ * revoke を Google account × GCP project 単位で行うため、`user_id` を条件に含めて
+ * 「この user には行が無い」と判定すると、同じ Google account を繋いでいる別の
+ * Dayopt user の接続を巻き添えで失効させる。
+ */
+async function hasAnyConnectionForProviderAccount(providerAccountId: string): Promise<boolean> {
+  const db = createCalendarConnectionDbClient();
+  const { data, error } = await db
+    .from(databaseTables.calendarConnections)
+    .select('id')
+    .eq('provider', GOOGLE_PROVIDER)
+    .eq('provider_account_id', providerAccountId)
+    .limit(1);
+
+  if (error) {
+    // 存在確認に失敗した場合は「存在する」扱いにして revoke を skip する（安全側に倒す）。
+    logger.warn('[calendar-connection] failed to check for existing connections before revoke');
+    return true;
+  }
+
+  return (data?.length ?? 0) > 0;
+}
+
+/**
+ * OAuth callback が token 交換後（refresh token 発行後）に失敗した時、Dayopt 側に
+ * どの接続行も残らない孤立 grant を best-effort で revoke する（#2072）。
+ *
+ * 同一 Google account の接続が 1 件でも残っていれば revoke しない（上記
+ * `hasAnyConnectionForProviderAccount` 参照）。結果に関わらず throw しない — 呼び出し元の
+ * 失敗 redirect フローを壊さない。失敗は `logger.warn` に留め Sentry へは送らない
+ * （`disconnect` の `reportUnrevokedGrant` と異なり、こちらは元々失敗パスの中の
+ * additional cleanup であり、主要フローの失敗ではないため）。
+ *
+ * **保証境界（TOCTOU、risk-reviewer 指摘）**: 存在確認と revoke の間（最大 30s）に、同じ
+ * Google account を別タブ / 別 user が接続完了すると、その新しい接続の grant を巻き添えで
+ * 失効させうる。provider 側に atomic な「確認 + revoke」操作が無いため構造的に閉じられない
+ * 残余だが、回復可能（次回 sync が provider から reauth エラーを受けて対象接続を
+ * `reauth_required` へ落とし、ユーザーの再認証で復帰する）。
+ */
+export async function revokeOrphanedGrant(params: {
+  providerAccountId: string;
+  refreshToken: string;
+  /** 呼び出し元 route の残予算（epoch ms）。budget 不足なら revoke 自体を skip する。 */
+  deadlineAt: number;
+}): Promise<void> {
+  if (
+    params.deadlineAt - Date.now() <
+    CALENDAR_CONNECTION_DB_TIMEOUT_MS + TOKEN_REQUEST_TIMEOUT_MS
+  ) {
+    logger.warn('[calendar-connection] insufficient time budget remaining; skipping orphan revoke');
+    return;
+  }
+
+  try {
+    const hasConnection = await hasAnyConnectionForProviderAccount(params.providerAccountId);
+    if (hasConnection) return;
+
+    const revoked = await googleCalendarAdapter.revoke(params.refreshToken);
+    if (!revoked) {
+      logger.warn('[calendar-connection] orphan grant revoke was not confirmed');
+    }
+  } catch {
+    logger.warn('[calendar-connection] failed to revoke orphan grant');
   }
 }
