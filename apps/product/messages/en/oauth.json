@@ -7,7 +7,7 @@
       "scopesLabel": "Access scope",
       "scope": {
         "read:entries": "Read timeblocks",
-        "read:tags": "Read tags",
+        "read:activities": "Read activities and categories",
         "read:constraints": "Read Plan and Record occupancy times and scheduling constraints",
         "read:stats": "Read review statistics",
         "write:plans": "Create and update plans",

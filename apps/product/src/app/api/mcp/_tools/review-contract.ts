@@ -47,13 +47,14 @@ export const MCP_REVIEW_GET_OUTPUT_SCHEMA = z
       })
       .strict()
       .nullable(),
-    // 未分類（タグなし）は tagId: null / isUncategorized: true の 1 行として返る。
-    // tags.list はアーカイブ済みタグを既定で含まないため、client が解決できない tagId と
-    // 未分類を取り違えないよう、未分類側は明示 flag で識別できる形にする。
-    // isArchived は review.get 自身が tags.listArchived と突き合わせて解決する。
-    // 解決に失敗した場合は安全側（誤って archived 扱いしない）に false へ degrade する
-    // ため、client 側は isArchived を「確実に archived」という肯定シグナルとして扱い、
-    // false を「確実に非 archived」とは解釈しない（#1576）。
+    // 未分類は tagId: null / isUncategorized: true の 1 行として返る。client が
+    // 解決できない tagId と未分類を取り違えないよう、未分類側は明示 flag で識別できる
+    // 形にする。
+    //
+    // isArchived は「確実に archived」という肯定シグナルとしてだけ扱い、false を
+    // 「確実に非 archived」とは解釈しない（#1576）。この degrade 契約は当初から
+    // あったもので、#2174 で `read:tags` scope を廃止した後は解決元が無くなったため
+    // 常に false になる。アクティビティ軸での解決はレーン G（#2173）が戻す。
     tags: z
       .array(
         z

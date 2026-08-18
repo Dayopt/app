@@ -51,10 +51,11 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
   DT013: 'PLAN_NOT_RECORDABLE',
-  DT014: 'TAG_ARCHIVED',
+  DT014: 'ACTIVITY_ARCHIVED',
 };
 
 const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
+  ACTIVITY_ARCHIVED: 'This activity is archived and cannot be assigned to a plan or record.',
   ALREADY_RECORDED: 'Plan already has an active record.',
   AUTHORIZATION_LOST: 'The Dayopt connection is no longer authorized for this change.',
   CONFLICT:
@@ -71,7 +72,6 @@ const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
   PRO_REQUIRED: 'Dayopt Pro is required for MCP changes.',
   RECORD_IN_FUTURE: 'Records cannot end in the future.',
   SKIP_IN_FUTURE: 'Future plans cannot be skipped. Delete the plan instead.',
-  TAG_ARCHIVED: 'This tag is archived and cannot be assigned to a plan or record.',
   TIME_OVERLAP: 'This time range overlaps with an existing item.',
   WRITE_DISABLED: 'Dayopt MCP changes are temporarily disabled.',
 };
@@ -238,9 +238,9 @@ function requireDeletedMutationReceipt<TResourceType extends MutationResourceTyp
  * access is not exposed.
  *
  * 内部の service-role handle は apply RPC 8 本だけを型で絞った `db` 1 つ。
- * アーカイブ済みタグの拒否は DB の command 境界が担う
- * (`assert_active_timeblock_tag_v1` が DT014 を投げる) ため、この adapter は
- * tags を直接読まない (#1824)。
+ * アーカイブ済みアクティビティの拒否は DB の command 境界が担う
+ * (`assert_active_timeblock_activity_v1` が DT014 を投げる) ため、この adapter は
+ * activities を直接読まない (#1824)。
  */
 export class McpMutationClient {
   /**
@@ -256,12 +256,15 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyPlanCreate({
         p_access_token_id: input.accessTokenId,
+        // MCP はタグを付けなくなったので常に null を渡す。RPC 側の p_tag_id は
+        // 旧バンドル互換のために残っている必須引数で、消すのは Step 8。
+        p_activity_id: input.activityId,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt,
         p_note: input.note,
         p_operation_id: input.operationId,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId,
+        p_tag_id: null,
         p_title: input.title,
       });
 
@@ -276,6 +279,8 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyPlanUpdate({
         p_access_token_id: input.accessTokenId,
+        p_activity_id: input.activityId ?? null,
+        p_activity_id_present: input.activityId !== undefined,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt ?? null,
         p_end_at_present: input.endAt !== undefined,
@@ -286,8 +291,10 @@ export class McpMutationClient {
         p_plan_id: input.planId,
         p_start_at: input.startAt ?? null,
         p_start_at_present: input.startAt !== undefined,
-        p_tag_id: input.tagId ?? null,
-        p_tag_id_present: input.tagId !== undefined,
+        // present を常に false に固定し、既存の tag_id へ一切触れない。MCP は
+        // タグを持たなくなったので「未指定」であって「null で消す」ではない。
+        p_tag_id: null,
+        p_tag_id_present: false,
         p_title: input.title ?? null,
         p_title_present: input.title !== undefined,
       });
@@ -337,13 +344,15 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyRecordCreate({
         p_access_token_id: input.accessTokenId,
+        // createPlan と同じ理由で p_tag_id は常に null。
+        p_activity_id: input.activityId,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt,
         p_note: input.note,
         p_operation_id: input.operationId,
         p_plan_id: input.planId,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId,
+        p_tag_id: null,
         p_title: input.title,
       });
 
@@ -358,6 +367,8 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyRecordUpdate({
         p_access_token_id: input.accessTokenId,
+        p_activity_id: input.activityId ?? null,
+        p_activity_id_present: input.activityId !== undefined,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt ?? null,
         p_end_at_present: input.endAt !== undefined,
@@ -368,8 +379,9 @@ export class McpMutationClient {
         p_record_id: input.recordId,
         p_start_at: input.startAt ?? null,
         p_start_at_present: input.startAt !== undefined,
-        p_tag_id: input.tagId ?? null,
-        p_tag_id_present: input.tagId !== undefined,
+        // updatePlan と同じ。既存の tag_id には触れない。
+        p_tag_id: null,
+        p_tag_id_present: false,
         p_title: input.title ?? null,
         p_title_present: input.title !== undefined,
       });

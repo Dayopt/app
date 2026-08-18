@@ -3,7 +3,7 @@ import 'server-only';
 /** OAuth grants that Dayopt understands. Tool discovery is filtered separately. */
 export const SUPPORTED_SCOPES = [
   'read:entries',
-  'read:tags',
+  'read:activities',
   'read:constraints',
   'read:stats',
   'write:plans',
@@ -16,7 +16,7 @@ export type SupportedScope = (typeof SUPPORTED_SCOPES)[number];
 /** Public metadata advertises the generally available read-only capabilities. */
 export const ADVERTISED_SCOPES = [
   'read:entries',
-  'read:tags',
+  'read:activities',
   'read:constraints',
   'read:stats',
 ] as const satisfies readonly SupportedScope[];

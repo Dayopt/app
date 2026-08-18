@@ -170,7 +170,7 @@ describe('トークン期限切れ・セッション検証', () => {
         authMode: 'oauth',
         oauthClientId: 'claude-ai',
         oauthExecution: 'mcp_internal',
-        oauthScopes: ['read:tags'],
+        oauthScopes: ['read:activities'],
       });
       const caller = createCaller(ctx as never);
 
