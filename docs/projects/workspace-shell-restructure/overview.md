@@ -158,7 +158,7 @@ epic 本文が実装 commit として挙げた **`a2c962f5e`（route group）と
 | 箇所                                                            | 現在の実装                                                                               | B での変更                              |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------- |
 | `resolveCalendarProps`（`CalendarNavigationContext.tsx:88-91`） | `pathname.split('/')` の**最終セグメント**から view を決め、不正なら `'day'` へ fallback | `view` を search から読む               |
-| `useMemo` の依存（`:129-132`）                                  | `[pathname]`                                                                             | 依存の見直し                            |
+| `useMemo` の依存（`:129-132`）                                  | `[pathname]`                                                                             | **変えない**（下記）                    |
 | popstate ハンドラ（`:272-293`）                                 | `resolveCalendarProps(window.location.pathname)` を呼ぶ                                  | 同上（search を見る）                   |
 | `writeCalendarUrl`（`:175-207`）                                | `` `/${localeRef.current}/${view}?${params}` `` を `pushState` / `replaceState` で書く   | `` `/${locale}/calendar?view=…&…` `` へ |
 
@@ -169,6 +169,20 @@ epic 本文が実装 commit として挙げた **`a2c962f5e`（route group）と
 - 旧 route を削除した後は、その履歴エントリへ「戻る」たびに実リクエストが飛んで redirect が 1 往復入る
 
 **したがって `CalendarNavigationContext.tsx` はスライス 1 の scope に入る**（§4-6 の一覧に追加済み）。「redirect を張るだけ」では済まない。
+
+**`useMemo` の依存は `[pathname]` のまま変えない。view の真実源は state 側に一本化する。**
+
+依存に search を入れられない（それが Suspense 回避の理由）ので、`initialView` は「**pathname が変わった時の初期値**」以上のものにはならない。同じ `/calendar` の中で `?view=` を書き換えても memo は再計算されず、`initialView` は古い値を返し続ける。
+
+これは**バグではなく、そう決める**。`changeView` は今も `setViewType(view)` と `writeCalendarUrl(...)` を同時に呼んでいて、**画面に効いているのは state 側**である。`initialView` が担うのは「URL 直アクセス・ブラウザ戻る/進む・タブ遷移でページに入り直した時の初期値」だけ。
+
+実装規律として固定する:
+
+- `viewType` の真実源は `useState` の値。`initialView` は pathname 変化時に state を初期化するためだけに使う
+- 「initialView 同期」effect（`:235-253`）は **stale な `initialView` で発火しうる**ことを前提に、pathname が変わった時だけ効くようガードする
+- popstate ハンドラは `window.location`（pathname と search の両方）から読み直す。memo を経由しない
+
+この規律を書かずに `resolveCalendarProps` を search 対応にすると、「`?view=` を変えたのに `initialView` が古い」状態で同期 effect が意図しない値で発火する余地が残る。
 
 **`useSearchParams()` は使わない。** 同ファイルの docstring（`:118-124`）が「外部から `useSearchParams()` を渡す必要がないため、親コンポーネントの Suspense 境界を不要にする」を明示の設計根拠にしており、`base-layout-content.tsx` の警告（§5-3）もこれと対になっている。**解法は既にコードの中にある** — `resolveCalendarProps` は `date` を読むのに既に `typeof window !== 'undefined'` ガード付きの `new URLSearchParams(window.location.search)` を使っている（`:95-97`）。`view` も**同じ経路で読む**。これで Suspense 境界の設計を壊さずに B が成立する。
 
