@@ -21,11 +21,27 @@ import { spawn } from 'node:child_process';
  *
  * 判定基準は絶対値ではなく「Test Files 行の skipped が 0 件であること」の 1 点（#2178 の教訓:
  * ファイル数・テスト数の絶対値は test 追加のたびに動くため success criterion にならない）。
+ *
+ * 実測確認（vitest 4.1.10、2026-08-19、CI=true / CI 未設定の両方）: 全 test が
+ * `ctx.skip()` される `captcha-bypass.integration.test.ts`（3 test 全部が実行時 skip）を
+ * 含めて実行しても、`Test Files` 行は `38 passed (38)` のまま skip が現れない
+ * （`Tests` 行にのみ `3 skipped` が出る）。ファイル単位の skip か個別 test の意図的 skip
+ * かは、この 2 行の使い分けで正しく判別できることを確認済み。子プロセスの stdout は
+ * 非 TTY（`stdio: 'pipe'`）のため、CI=true でも vitest は ANSI カラーを出力しない
+ * （正規表現がエスケープシーケンスに邪魔されない）。
  */
 
 const USE_LOCAL_DB = process.env.USE_LOCAL_DB ?? 'true';
 
-const child = spawn('vitest', ['run', '--config', 'vitest.config.integration.ts'], {
+// `pnpm test:integration -- captcha-bypass` は pnpm 自身が `--` を消費せず
+// `tsx run-integration-tests.ts -- captcha-bypass` としてそのまま転送する。
+// 先頭の `--` を残したまま vitest へ渡すと、vitest がフィルタとして解釈できず
+// 全ファイル実行にフォールバックする（実測確認済み）。pnpm の区切りとして
+// 付いた先頭の `--` だけを取り除く。
+const rawArgs = process.argv.slice(2);
+const extraArgs = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs;
+
+const child = spawn('vitest', ['run', '--config', 'vitest.config.integration.ts', ...extraArgs], {
   env: { ...process.env, USE_LOCAL_DB },
   stdio: ['inherit', 'pipe', 'pipe'],
 });
