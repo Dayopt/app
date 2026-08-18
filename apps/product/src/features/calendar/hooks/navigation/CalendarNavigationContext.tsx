@@ -18,7 +18,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
 import { getNextPeriod, getPreviousPeriod } from '../../domain/view-range';
 import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';
-import { isCalendarViewPath } from '../../lib/route-utils';
+import { resolveWorkspaceTab } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { isCalendarDiffView } from '../../types/calendar.types';
 
@@ -73,30 +73,70 @@ function readCalendarPanelState(viewType: CalendarViewType): {
   };
 }
 
-/** pathname と URL searchParams からカレンダーページ判定と初期値を計算 */
-function resolveCalendarProps(pathname: string) {
-  const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
-  const isCalendar = isCalendarViewPath(pathWithoutLocale);
+/** SSR安全に現在の URL search から日付を読む（window.location.search は client-only） */
+function readDateParamFromLocation(): Date | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return parseCalendarDateParam(new URLSearchParams(window.location.search).get('date'));
+}
 
-  if (!isCalendar) {
+/**
+ * pathname と URL searchParams からワークスペースタブ判定と初期値を計算
+ *
+ * `fallbackDate` は calendar / report いずれでもない workspaceTab（例: /settings）で
+ * 使う initialDate のフォールバック。呼び出し側の currentDateRef を渡すことで、
+ * `/report` `/settings` 滞在中に initialDate が `new Date()` へ空転し続けるのを防ぐ
+ * （docs/projects/workspace-shell-restructure/overview.md §6-10 B）。
+ */
+function resolveCalendarProps(pathname: string, fallbackDate?: Date) {
+  const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
+  const workspaceTab = resolveWorkspaceTab(pathWithoutLocale);
+
+  if (workspaceTab === 'report') {
+    const initialDate = readDateParamFromLocation() ?? fallbackDate ?? new Date();
     return {
       isCalendarPage: false as const,
-      initialDate: new Date(),
+      workspaceTab,
+      initialDate,
       initialView: 'week' as CalendarViewType,
     };
   }
 
-  const pathSegments = pathname.split('/');
-  const lastSegment = pathSegments[pathSegments.length - 1] ?? '';
-  const view: CalendarViewType = isValidViewType(lastSegment) ? lastSegment : 'day';
+  if (workspaceTab === 'other') {
+    return {
+      isCalendarPage: false as const,
+      workspaceTab,
+      initialDate: fallbackDate ?? new Date(),
+      initialView: 'week' as CalendarViewType,
+    };
+  }
 
-  // SSR安全: window.location.search は client-only なので typeof チェック
-  const dateParam =
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('date') : null;
-  const initialDate = parseCalendarDateParam(dateParam) ?? new Date();
+  // 二重解決: `/calendar` は view をクエリから読み、旧 view path（/day, /week, /Nday）は
+  // 最終セグメントから読む。旧 path 判定は workspace-shell-restructure Step 6（旧route削除）
+  // まで維持する（overview.md §9「Step 1 と Step 2 を分ける理由」）。
+  const isNewCalendarPath = pathWithoutLocale.split('/')[1]?.split('?')[0] === 'calendar';
+  let view: CalendarViewType;
+  if (isNewCalendarPath) {
+    const viewParam =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('view')
+        : null;
+    view = viewParam && isValidViewType(viewParam) ? viewParam : 'week';
+  } else {
+    const pathSegments = pathname.split('/');
+    const lastSegment = pathSegments[pathSegments.length - 1] ?? '';
+    view = isValidViewType(lastSegment) ? lastSegment : 'day';
+  }
+
+  const initialDate = readDateParamFromLocation() ?? new Date();
   const initialPanel = readCalendarPanelState(view);
 
-  return { isCalendarPage: true as const, initialDate, initialView: view, initialPanel };
+  return {
+    isCalendarPage: true as const,
+    workspaceTab,
+    initialDate,
+    initialView: view,
+    initialPanel,
+  };
 }
 
 interface CalendarNavigationContextValue {
@@ -125,11 +165,18 @@ const CalendarNavigationContext = createContext<CalendarNavigationContextValue |
 export const CalendarNavigationProvider = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? '/';
 
-  // pathname + window.location.search からカレンダーページ判定と初期値を計算
+  // pathname + window.location.search からワークスペースタブ判定と初期値を計算。
+  // render 中は ref を読めない（react-hooks/refs）ため fallbackDate は渡さない —
+  // 'other'（/settings 等）の initialDate が pathname 変化のたびに new Date() へ
+  // 空転する点は overview.md §6-10 B も「害は無い」と明記しており、event handler
+  // 側（popstate。下記）でだけ currentDateRef を使う。
   const { isCalendarPage, initialDate, initialView, initialPanel } = useMemo(
     () => resolveCalendarProps(pathname),
     [pathname],
   );
+
+  // useRefで最新値を保持し、コールバックの依存配列を安定化
+  const currentDateRef = useRef<Date>(initialDate);
 
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
@@ -149,11 +196,11 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   const [isPending, startTransition] = useTransition();
 
   // useRefで最新値を保持し、コールバックの依存配列を安定化
-  const currentDateRef = useRef(currentDate);
   const viewTypeRef = useRef(viewType);
   const panelKindRef = useRef(panelKind);
   const reviewTagIdRef = useRef(reviewTagId);
   const initialDateRef = useRef(initialDate);
+  const pathnameRef = useRef(pathname);
 
   // 現在のlocaleを取得（例: /ja/day -> ja）
   const locale = pathname?.split('/')[1] || 'ja';
@@ -167,12 +214,21 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     reviewTagIdRef.current = reviewTagId;
     localeRef.current = locale;
     isMobileRef.current = isMobile;
+    pathnameRef.current = pathname;
     // Palette等がカレンダー表示日/ビュータイプを参照するためグローバルに同期
     useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
     useCalendarNavigationStore.getState()._syncViewType(viewType);
-  }, [currentDate, viewType, panelKind, reviewTagId, locale, isMobile]);
+  }, [currentDate, viewType, panelKind, reviewTagId, locale, isMobile, pathname]);
 
-  const writeCalendarUrl = useCallback(
+  /**
+   * 今いる面（calendar / report）の URL を書く。
+   *
+   * 旧 `writeCalendarUrl` から改名: view はカレンダー限定の概念になったため、
+   * 「今いる面」ベースで書き先を分岐させる（overview.md §5-4-b）。
+   * タブ判定は `pathnameRef`（usePathname() 由来）のみで行い、
+   * `useSearchParams()` は使わない（§5-3 と同じ理由）。
+   */
+  const writeWorkspaceUrl = useCallback(
     (
       view: CalendarViewType,
       date: Date,
@@ -180,23 +236,35 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       nextReviewTagId: string | null,
       historyMode: 'push' | 'replace',
     ) => {
+      const pathWithoutLocale = pathnameRef.current.replace(/^\/(ja|en)/, '');
+      const currentTab = resolveWorkspaceTab(pathWithoutLocale);
+
       const params = new URLSearchParams(window.location.search);
       params.set('date', formatCalendarDateParam(date));
-      params.delete('compare');
-      params.delete('panel');
-      params.delete('reviewTagId');
 
-      const normalizedPanel = normalizePanelForView(view, nextPanelKind);
-      if (normalizedPanel) {
-        params.set('panel', normalizedPanel);
-      }
-      if (normalizedPanel === 'review' && nextReviewTagId) {
-        params.set('reviewTagId', nextReviewTagId);
+      let newUrl: string;
+      if (currentTab === 'report') {
+        // range 等の既存クエリはそのまま素通しし、date だけ更新する
+        newUrl = `/${localeRef.current}/report?${params.toString()}`;
       } else {
+        params.delete('compare');
+        params.delete('panel');
         params.delete('reviewTagId');
+        params.set('view', view);
+
+        const normalizedPanel = normalizePanelForView(view, nextPanelKind);
+        if (normalizedPanel) {
+          params.set('panel', normalizedPanel);
+        }
+        if (normalizedPanel === 'review' && nextReviewTagId) {
+          params.set('reviewTagId', nextReviewTagId);
+        } else {
+          params.delete('reviewTagId');
+        }
+
+        newUrl = `/${localeRef.current}/calendar?${params.toString()}`;
       }
 
-      const newUrl = `/${localeRef.current}/${view}?${params.toString()}`;
       if (historyMode === 'push') {
         window.history.pushState(null, '', newUrl);
       } else {
@@ -219,7 +287,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         setReviewTagIdState(nextReviewTagId);
       });
       // URLもday viewに更新
-      writeCalendarUrl(
+      writeWorkspaceUrl(
         'day',
         currentDateRef.current,
         panelKindRef.current,
@@ -227,7 +295,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         'replace',
       );
     }
-  }, [isCalendarPage, isMobile, viewType, writeCalendarUrl]);
+  }, [isCalendarPage, isMobile, viewType, writeWorkspaceUrl]);
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
@@ -271,8 +339,17 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   React.useEffect(() => {
     const handlePopState = () => {
-      const resolved = resolveCalendarProps(window.location.pathname);
-      if (!resolved.isCalendarPage) return;
+      const resolved = resolveCalendarProps(window.location.pathname, currentDateRef.current);
+      // 'other'（/settings 等）は非対応のまま。calendar / report は両方扱う
+      // （overview.md §6-10 B「popstate の早期return」対策）。
+      if (resolved.workspaceTab === 'other') return;
+
+      if (resolved.workspaceTab === 'report') {
+        startTransition(() => {
+          setCurrentDate(resolved.initialDate);
+        });
+        return;
+      }
 
       const nextView =
         isMobileRef.current && !isMobileCalendarViewSupported(resolved.initialView)
@@ -300,7 +377,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
       if (updateUrl) {
         // 日付変更は履歴に追加しない（replaceState）
-        writeCalendarUrl(
+        writeWorkspaceUrl(
           viewTypeRef.current,
           date,
           panelKindRef.current,
@@ -309,7 +386,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         );
       }
     },
-    [writeCalendarUrl],
+    [writeWorkspaceUrl],
   );
 
   const changeView = useCallback(
@@ -327,9 +404,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
       });
       // pushState: 即座にURL更新、サーバーナビゲーションなし
       // Next.js App Router は pushState と統合済み（usePathname等が同期する）
-      writeCalendarUrl(view, currentDateRef.current, nextPanelKind, nextReviewTagId, 'push');
+      writeWorkspaceUrl(view, currentDateRef.current, nextPanelKind, nextReviewTagId, 'push');
     },
-    [writeCalendarUrl],
+    [writeWorkspaceUrl],
   );
 
   const setPanelKind = useCallback(
@@ -349,7 +426,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         setPanelKindState(normalizedPanel);
         setReviewTagIdState(nextReviewTagId);
       });
-      writeCalendarUrl(
+      writeWorkspaceUrl(
         nextView,
         currentDateRef.current,
         normalizedPanel,
@@ -357,7 +434,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         'replace',
       );
     },
-    [writeCalendarUrl],
+    [writeWorkspaceUrl],
   );
 
   const setReviewTagId = useCallback(
@@ -368,9 +445,9 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
         setPanelKindState('review');
         setReviewTagIdState(nextReviewTagId);
       });
-      writeCalendarUrl(nextView, currentDateRef.current, 'review', nextReviewTagId, 'replace');
+      writeWorkspaceUrl(nextView, currentDateRef.current, 'review', nextReviewTagId, 'replace');
     },
-    [writeCalendarUrl],
+    [writeWorkspaceUrl],
   );
 
   const navigateRelative = useCallback(

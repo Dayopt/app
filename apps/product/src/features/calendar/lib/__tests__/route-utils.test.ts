@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { isCalendarViewPath } from '../route-utils';
+import { isCalendarViewPath, resolveWorkspaceTab } from '../route-utils';
 
 describe('isCalendarViewPath', () => {
   describe('正常系', () => {
+    it('/calendar（新URL契約、完全一致）→ true', () => {
+      expect(isCalendarViewPath('/calendar')).toBe(true);
+    });
+
+    it('/calendar?view=week のようにクエリが付いていても true', () => {
+      expect(isCalendarViewPath('/calendar?view=week')).toBe(true);
+    });
+
     it('/day → true', () => {
       expect(isCalendarViewPath('/day')).toBe(true);
     });
@@ -39,8 +47,7 @@ describe('isCalendarViewPath', () => {
       expect(isCalendarViewPath('/tags')).toBe(false);
     });
 
-    it('旧 calendar namespace は平坦化後 false（先頭セグメントが calendar）', () => {
-      expect(isCalendarViewPath('/calendar')).toBe(false);
+    it('旧 calendar namespace のサブパスは false（先頭セグメントが calendar でも完全一致でなければ false）', () => {
       expect(isCalendarViewPath('/calendar/day')).toBe(false);
       expect(isCalendarViewPath('/api/calendar/day')).toBe(false);
     });
@@ -57,5 +64,23 @@ describe('isCalendarViewPath', () => {
     it('day 単位のみで数字なしは false', () => {
       expect(isCalendarViewPath('/day-')).toBe(false);
     });
+  });
+});
+
+describe('resolveWorkspaceTab', () => {
+  it.each(['/calendar', '/day', '/week', '/2day', '/7day'])('%s → calendar', (path) => {
+    expect(resolveWorkspaceTab(path)).toBe('calendar');
+  });
+
+  it('/report → report', () => {
+    expect(resolveWorkspaceTab('/report')).toBe('report');
+  });
+
+  it('/report/anything は report タブではない（完全一致のみ）', () => {
+    expect(resolveWorkspaceTab('/report/anything')).toBe('other');
+  });
+
+  it.each(['/settings', '/tags', '/'])('%s → other（第3のタブは作らない）', (path) => {
+    expect(resolveWorkspaceTab(path)).toBe('other');
   });
 });

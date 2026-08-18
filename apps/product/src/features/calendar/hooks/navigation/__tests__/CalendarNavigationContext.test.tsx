@@ -80,6 +80,81 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('view')).toHaveTextContent('day');
   });
 
+  // 二重解決（overview.md §9「Step 1 と Step 2 を分ける理由」）: /calendar は view を
+  // クエリから読み、旧 view path は最終セグメントから読む。両方が同時に成立すること
+  // を固定する。
+  it('resolves view from query on the new /calendar URL contract', () => {
+    window.history.replaceState(null, '', '/ja/calendar?view=week&date=2026-03-25');
+    mockPathname = '/ja/calendar';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('date')).toHaveTextContent('2026-03-25');
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+  });
+
+  it('/calendar without view defaults to week', () => {
+    window.history.replaceState(null, '', '/ja/calendar?date=2026-03-25');
+    mockPathname = '/ja/calendar';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
+  });
+
+  it('resolves multi-day view from query on /calendar', () => {
+    window.history.replaceState(null, '', '/ja/calendar?view=3day&date=2026-03-25');
+    mockPathname = '/ja/calendar';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('view')).toHaveTextContent('3day');
+  });
+
+  // report タブでは currentDate だけを ?date= から読み、view/panel は無関係のまま
+  // （overview.md §6-9 #1）。
+  it('resolves currentDate from ?date= on /report without touching view', () => {
+    window.history.replaceState(null, '', '/ja/report?date=2026-04-01');
+    mockPathname = '/ja/report';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    expect(screen.getByTestId('date')).toHaveTextContent('2026-04-01');
+  });
+
+  // URL の書き手はタブ対応（overview.md §5-4-b）: /report 滞在中に日付を変えたら
+  // /report の URL を書く。/calendar へタブが飛ばないことを固定する。
+  it('writes /report URL (not /calendar) when navigating date while on the report tab', () => {
+    window.history.replaceState(null, '', '/ja/report?date=2026-04-01');
+    mockPathname = '/ja/report';
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'move-url' }));
+
+    expect(window.location.pathname + window.location.search).toBe('/ja/report?date=2026-03-30');
+  });
+
   it('keeps internal date changes after navigateToDate', () => {
     window.history.replaceState(null, '', '/ja/day?date=2026-03-25');
     mockPathname = '/ja/day';
@@ -206,7 +281,7 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'diff-on' }));
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-25&panel=diff',
+      '/ja/calendar?date=2026-03-25&view=day&panel=diff',
     );
   });
 
@@ -224,7 +299,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('view')).toHaveTextContent('3day');
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/3day?date=2026-03-25&panel=diff',
+      '/ja/calendar?date=2026-03-25&view=3day&panel=diff',
     );
   });
 
@@ -242,7 +317,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('view')).toHaveTextContent('week');
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/week?date=2026-03-25&panel=diff',
+      '/ja/calendar?date=2026-03-25&view=week&panel=diff',
     );
   });
 
@@ -258,7 +333,7 @@ describe('CalendarNavigationProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'move-url' }));
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-30&panel=diff',
+      '/ja/calendar?date=2026-03-30&view=day&panel=diff',
     );
   });
 
@@ -275,7 +350,7 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'week' }));
     expect(screen.getByTestId('panel')).toHaveTextContent('diff');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/week?date=2026-03-25&panel=diff',
+      '/ja/calendar?date=2026-03-25&view=week&panel=diff',
     );
   });
 
@@ -294,7 +369,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/calendar?date=2026-03-25&view=day&panel=review&reviewTagId=tag-1',
     );
   });
 
@@ -311,7 +386,7 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
     expect(screen.getByTestId('view')).toHaveTextContent('week');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/week?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/calendar?date=2026-03-25&view=week&panel=review&reviewTagId=tag-1',
     );
   });
 
@@ -328,7 +403,7 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'review-on' }));
     expect(screen.getByTestId('view')).toHaveTextContent('3day');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/calendar?date=2026-03-25&view=3day&panel=review&reviewTagId=tag-1',
     );
   });
 
@@ -350,7 +425,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('view')).toHaveTextContent('3day');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-2');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/3day?date=2026-03-25&panel=review&reviewTagId=tag-2',
+      '/ja/calendar?date=2026-03-25&view=3day&panel=review&reviewTagId=tag-2',
     );
   });
 
@@ -394,7 +469,7 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('panel')).toHaveTextContent('review');
     expect(screen.getByTestId('review-tag')).toHaveTextContent('tag-1');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/day?date=2026-03-25&panel=review&reviewTagId=tag-1',
+      '/ja/calendar?date=2026-03-25&view=day&panel=review&reviewTagId=tag-1',
     );
   });
 
@@ -412,7 +487,9 @@ describe('CalendarNavigationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'week' }));
 
     expect(screen.getByTestId('view')).toHaveTextContent('week');
-    expect(window.location.pathname + window.location.search).toBe('/ja/week?date=2026-03-25');
+    expect(window.location.pathname + window.location.search).toBe(
+      '/ja/calendar?date=2026-03-25&view=week',
+    );
   });
 
   it('モバイルのWeek直URLをdayへ戻さない', () => {

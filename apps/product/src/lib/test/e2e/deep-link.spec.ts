@@ -64,6 +64,9 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
 
     // Calendar グリッドが deep link 直後から描画される
     await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
+
+    // view 種別の assert: week は複数日カラムを持つ（day view=1 列と区別する）
+    await expect(page.locator('[data-calendar-grid]')).not.toHaveCount(1);
   });
 
   test('prefixless default-locale calendar renders only its own visible header', async ({
@@ -76,6 +79,9 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
     await page.goto('/day?date=2026-04-20');
     await expect(page).toHaveURL(/\/day\?date=2026-04-20/);
     await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
+
+    // view 種別の assert: day view は単一カラムのみ
+    await expect(page.locator('[data-calendar-grid]')).toHaveCount(1);
 
     // CalendarLayout は responsive header を2つDOMに持つため、実際に表示中のheaderを数える。
     // shell側のlocale誤判定が再発すると、desktopでvisible headerが2つになる。
