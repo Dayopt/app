@@ -29,7 +29,7 @@ describe('useCalendarFilterStore', () => {
           initialized: true,
           knownActivityIds: [],
         },
-        version: 8,
+        version: 9,
       });
     });
 
