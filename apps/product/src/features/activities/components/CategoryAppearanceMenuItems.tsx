@@ -31,7 +31,7 @@ import type { CategoryColorName } from '../lib/category-colors';
  * @param color - カテゴリーカラー名
  * @param t - useTranslations('common') の返り値
  */
-export function getColorDisplayName(
+function getColorDisplayName(
   color: CategoryColorName,
   t: ReturnType<typeof useTranslations<'common'>>,
 ): string {

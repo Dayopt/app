@@ -44,7 +44,7 @@ interface ActivityRowProps {
  * サイドバーのアクティビティ行。
  *
  * 色・アイコンは所属カテゴリーから継承する（アクティビティ自身は持たない）。
- * カテゴリー未所属（未分類）のアクティビティは中立マーカーで表示する。
+ * カテゴリー未所属（未分類）のアクティビティはアイコンを持たずテキストだけで表示する。
  * 行クリックでクイック作成ポップオーバー、👁 で表示切替、⋯ でメニュー。
  */
 export function ActivityRow({
@@ -119,14 +119,14 @@ export function ActivityRow({
           )}
           onClick={() => onOpenPopover(activity.id)}
         >
-          <span className="ml-2 shrink-0">
-            <ActivityIcon
-              icon={inheritedIcon}
-              color={inheritedColor}
-              size="sm"
-              neutral={isUncategorized}
-            />
-          </span>
+          {/* 未分類のアクティビティはアイコンを出さずテキストだけにする
+              （2026-08-18 User 指示）。継承する色が無い以上、中立マーカーを並べても
+              情報を足さずノイズになる。カテゴリー配下は色つきアイコンを継承する */}
+          {isUncategorized ? null : (
+            <span className="ml-2 shrink-0">
+              <ActivityIcon icon={inheritedIcon} color={inheritedColor} size="sm" />
+            </span>
+          )}
 
           <HoverTooltip
             content={activity.name}

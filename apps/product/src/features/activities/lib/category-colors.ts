@@ -43,7 +43,7 @@ export type CategoryColorName = (typeof CATEGORY_COLOR_NAMES)[number];
 // ========================================
 
 /** カテゴリーカラーのTailwindクラスとCSS変数のマッピング */
-export interface CategoryColorEntry {
+interface CategoryColorEntry {
   /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
   border: string;
   /** dot/icon背景用 Tailwindクラス (e.g. 'bg-tag-blue') */

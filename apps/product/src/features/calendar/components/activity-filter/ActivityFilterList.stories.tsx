@@ -47,17 +47,27 @@ const MOCK_TREE = {
 
 const ALL_ACTIVITY_IDS = ['act-meeting', 'act-dev', 'act-reading', 'act-workout', 'act-rest'];
 
+/** アーカイブ済み（listTree には出ず、末尾の折りたたみセクションにだけ並ぶ） */
+const ARCHIVED_ACTIVITY = {
+  ...activity('act-archived', '旧タスク整理'),
+  archived_at: '2026-08-01T00:00:00.000Z',
+};
+const ARCHIVED_CATEGORY = {
+  ...category('cat-archived', '一時プロジェクト', 'violet', 'folder'),
+  archived_at: '2026-08-01T00:00:00.000Z',
+};
+
+const LIVE_ACTIVITIES = [...MOCK_TREE.categories.flatMap((c) => c.activities), ...UNCATEGORIZED];
+
 /**
  * `listActivities` / `listCategories` はアーカイブ済みを含めて 1 本引く実装なので、
- * ここでも同じ形（アーカイブ 0 件）でモックする。
+ * ここでも同じ形（現役 + アーカイブ済み）でモックする。通常表示とアーカイブ済みの
+ * 出し分けは client 側の絞り込みが担う。
  */
 const MOCK_TRPC = {
   'activities.listTree': MOCK_TREE,
-  'activities.listActivities': [
-    ...MOCK_TREE.categories.flatMap((c) => c.activities),
-    ...UNCATEGORIZED,
-  ],
-  'activities.listCategories': [WORK, STUDY],
+  'activities.listActivities': [...LIVE_ACTIVITIES, ARCHIVED_ACTIVITY],
+  'activities.listCategories': [WORK, STUDY, ARCHIVED_CATEGORY],
   'statistics.getActivityStats': { counts: {}, planCounts: {}, lastUsed: {} },
 };
 
@@ -84,7 +94,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * 既定状態。カテゴリー（仕事 / 学習）が上に展開表示され、
- * その下に「未分類」見出しと未所属アクティビティ、末尾に「アクティビティなし」行。
+ * その下に「未分類」見出しと未所属アクティビティ（テキストのみ）、末尾にアーカイブ済み。
  */
 export const Default: Story = {
   parameters: {
@@ -92,7 +102,6 @@ export const Default: Story = {
       useCalendarFilterStore: {
         visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
         initialized: true,
-        showNoActivity: true,
       },
     },
   },
@@ -105,7 +114,6 @@ export const PartiallyHidden: Story = {
       useCalendarFilterStore: {
         visibleActivityIds: new Set(['act-meeting', 'act-reading']),
         initialized: true,
-        showNoActivity: false,
       },
     },
   },
@@ -124,7 +132,6 @@ export const UncategorizedOnly: Story = {
       useCalendarFilterStore: {
         visibleActivityIds: new Set(['act-workout', 'act-rest']),
         initialized: true,
-        showNoActivity: true,
       },
     },
   },
@@ -143,7 +150,6 @@ export const EmptyState: Story = {
       useCalendarFilterStore: {
         visibleActivityIds: new Set(),
         initialized: false,
-        showNoActivity: true,
       },
     },
   },
@@ -161,7 +167,6 @@ export const AllPatterns: Story = {
       useCalendarFilterStore: {
         visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
         initialized: true,
-        showNoActivity: true,
       },
     },
   },

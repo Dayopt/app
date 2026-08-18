@@ -3,9 +3,12 @@
  *
  * サイドバーのアクティビティ一覧と連動し、カレンダー上の表示/非表示を切り替える。
  *
- * 語彙の区別（設計契約）:
- * - **未分類** — カテゴリーに所属していないアクティビティ（サイドバーの見出し）
- * - **アクティビティなし** — アクティビティが設定されていないブロック（`showNoActivity`）
+ * **アクティビティ未設定のブロックは常に表示する。** サイドバーに「アクティビティなし」
+ * のフィルタ行を置かない確定（2026-08-18 User 指示）に伴い、対応する state も持たない。
+ * state だけ残すと「UI から戻せないのに非表示のまま」という復帰不能な状態を作れてしまう。
+ *
+ * ここでの「未分類」はカテゴリーに所属していないアクティビティ（サイドバーの見出し）を指す。
+ * アクティビティが設定されていないブロックは別概念で、語彙を混ぜない。
  */
 
 import { create } from 'zustand';
@@ -21,14 +24,11 @@ interface CalendarFilterState {
   /** 初期化済みフラグ（アクティビティ一覧取得後に初期化） */
   initialized: boolean;
 
-  /** アクティビティ未設定ブロックの表示設定（デフォルト: 表示） */
-  showNoActivity: boolean;
-
   /**
    * `syncWithActivities` が最後に認識した全アクティビティ ID（アーカイブ済み含む）の集合。
    *
    * `visibleActivityIds` だけでは「新規アクティビティ」と「意図的に非表示にしたもの」を
-   * 区別できず、showOnlyNoActivity 等で空にした直後に sync が走ると全アクティビティが
+   * 区別できず、「このアクティビティだけ表示」等で絞り込んだ直後に sync が走ると全アクティビティが
    * 「新規」と誤認されて復活してしまう（#1576フォローアップ）。この集合を既知の基準に
    * することで区別する。`syncWithActivities` 以外のアクションでは更新しない。
    */
@@ -39,9 +39,6 @@ interface CalendarFilterState {
 interface CalendarFilterActions {
   /** アクティビティの表示切替 */
   toggleActivity: (activityId: string) => void;
-
-  /** アクティビティ未設定ブロックの表示切替 */
-  toggleShowNoActivity: () => void;
 
   /** すべてのアクティビティを表示 */
   showAllActivities: (activityIds: string[]) => void;
@@ -63,9 +60,6 @@ interface CalendarFilterActions {
 
   /** このアクティビティだけ表示（他を全てOFF） */
   showOnlyActivity: (activityId: string) => void;
-
-  /** アクティビティ未設定ブロックだけ表示（アクティビティを全てOFF） */
-  showOnlyNoActivity: () => void;
 
   /** このカテゴリーのアクティビティだけ表示（context menu「このカテゴリーだけ表示」） */
   showOnlyCategoryActivities: (activityIds: string[]) => void;
@@ -89,7 +83,6 @@ type CalendarFilterStore = CalendarFilterState & CalendarFilterActions;
 interface SerializedCalendarFilterState {
   visibleActivityIds: string[];
   initialized: boolean;
-  showNoActivity: boolean;
   knownActivityIds: string[];
 }
 
@@ -98,7 +91,6 @@ function createInitialFilterState(): CalendarFilterState {
   return {
     visibleActivityIds: new Set<string>(),
     initialized: false,
-    showNoActivity: true,
     knownActivityIds: new Set<string>(),
   };
 }
@@ -108,7 +100,6 @@ const setSerializer = {
   serialize: (state: CalendarFilterState): SerializedCalendarFilterState => ({
     visibleActivityIds: Array.from(state.visibleActivityIds),
     initialized: state.initialized,
-    showNoActivity: state.showNoActivity,
     knownActivityIds: Array.from(state.knownActivityIds),
   }),
   deserialize: (state: unknown): CalendarFilterState => {
@@ -118,7 +109,6 @@ const setSerializer = {
 
     const rawVisibleActivityIds = Reflect.get(state, 'visibleActivityIds');
     const rawInitialized = Reflect.get(state, 'initialized');
-    const rawShowNoActivity = Reflect.get(state, 'showNoActivity');
     const rawKnownActivityIds = Reflect.get(state, 'knownActivityIds');
     const visibleActivityIds = Array.isArray(rawVisibleActivityIds)
       ? rawVisibleActivityIds.filter((id): id is string => typeof id === 'string')
@@ -130,7 +120,6 @@ const setSerializer = {
     return {
       visibleActivityIds: new Set(visibleActivityIds),
       initialized: rawInitialized === true,
-      showNoActivity: typeof rawShowNoActivity === 'boolean' ? rawShowNoActivity : true,
       knownActivityIds: new Set(knownActivityIds),
     };
   },
@@ -155,7 +144,6 @@ export function migrateCalendarFilterState(
 
   const rawVisibleActivityIds = Reflect.get(persistedState, 'visibleActivityIds');
   const rawInitialized = Reflect.get(persistedState, 'initialized');
-  const rawShowNoActivity = Reflect.get(persistedState, 'showNoActivity');
   const rawKnownActivityIds = Reflect.get(persistedState, 'knownActivityIds');
   const visibleActivityIds =
     rawVisibleActivityIds instanceof Set
@@ -169,7 +157,6 @@ export function migrateCalendarFilterState(
   return {
     visibleActivityIds: new Set(visibleActivityIds),
     initialized: rawInitialized === true,
-    showNoActivity: typeof rawShowNoActivity === 'boolean' ? rawShowNoActivity : true,
     knownActivityIds: new Set(knownActivityIds),
   };
 }
@@ -195,8 +182,6 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
             return { visibleActivityIds: newSet };
           }),
 
-        toggleShowNoActivity: () => set((state) => ({ showNoActivity: !state.showNoActivity })),
-
         showAllActivities: (activityIds) =>
           set(() => ({
             visibleActivityIds: new Set(activityIds),
@@ -205,7 +190,6 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         hideAllActivities: () =>
           set(() => ({
             visibleActivityIds: new Set(),
-            showNoActivity: false,
           })),
 
         syncWithActivities: (activityIds) =>
@@ -226,8 +210,8 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
             //   - 削除済み（activityIdSet に無い visible ID）は orphan として除去
             //
             // 「新規」の判定は knownActivityIds（前回 sync 時点の全集合）で行う。
-            // visibleActivityIds で判定すると、showOnlyNoActivity 等で意図的に空に
-            // した直後の sync で「既存全部が新規」に見えて復活する（#1576フォローアップ）。
+            // visibleActivityIds で判定すると、「このカテゴリーだけ表示」等で意図的に絞り込んだ
+            // 直後の sync で「既存全部が新規」に見えて復活する（#1576フォローアップ）。
             const newSet = new Set<string>();
             for (const id of state.visibleActivityIds) {
               if (activityIdSet.has(id)) newSet.add(id);
@@ -248,19 +232,11 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         showOnlyActivity: (activityId) =>
           set(() => ({
             visibleActivityIds: new Set([activityId]),
-            showNoActivity: false,
-          })),
-
-        showOnlyNoActivity: () =>
-          set(() => ({
-            visibleActivityIds: new Set(),
-            showNoActivity: true,
           })),
 
         showOnlyCategoryActivities: (activityIds) =>
           set(() => ({
             visibleActivityIds: new Set(activityIds),
-            showNoActivity: false,
           })),
 
         isActivityVisible: (activityId) => get().visibleActivityIds.has(activityId),
@@ -275,14 +251,11 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         },
 
         matchesActivityFilter: (activityId) => {
-          const state = get();
+          // アクティビティ未設定のブロックは常に表示する。サイドバーに切替が無いので、
+          // ここで false を返せるようにすると復帰手段のない非表示状態を作れてしまう
+          if (activityId === null) return true;
 
-          // アクティビティ未設定のブロック → showNoActivity フラグに従う
-          if (activityId === null) {
-            return state.showNoActivity;
-          }
-
-          return state.visibleActivityIds.has(activityId);
+          return get().visibleActivityIds.has(activityId);
         },
 
         isEntryVisible: (activityId) => {
@@ -302,16 +275,17 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // v8: 状態名をアクティビティ語彙へ改名（visibleTagIds→visibleActivityIds /
         //     showUntagged→showNoActivity / knownTagIds→knownActivityIds）。
         //     ただしこの時点のデータ源はまだ tags で、中身はタグ ID だった
-        // v9: データ源を activities へ切替。ID の値空間が変わるため migrate で全破棄する
+        // v9: データ源を activities へ切替。ID の値空間が変わるため migrate で全破棄する。
+        //     あわせて showNoActivity を撤去（サイドバーの「アクティビティなし」行を
+        //     置かない確定に伴い、未設定ブロックは常時表示になった）
         version: 9,
         storage: createPlatformStorage<CalendarFilterState>({
           serialize: setSerializer.serialize,
           deserialize: setSerializer.deserialize,
         }),
-        partialize: ({ visibleActivityIds, initialized, showNoActivity, knownActivityIds }) => ({
+        partialize: ({ visibleActivityIds, initialized, knownActivityIds }) => ({
           visibleActivityIds,
           initialized,
-          showNoActivity,
           knownActivityIds,
         }),
         migrate: migrateCalendarFilterState,

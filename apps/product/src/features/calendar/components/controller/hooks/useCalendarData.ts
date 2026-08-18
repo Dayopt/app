@@ -353,7 +353,6 @@ export function useCalendarData({
     useCalendarFilterStore((state) => state.visibleActivityIds),
   );
   // 未分類(タグなし)フィルターの表示切替も同様にリアクティブ依存として渡す（#1576）
-  const showNoActivity = useDeferredValue(useCalendarFilterStore((state) => state.showNoActivity));
 
   // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
   // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
@@ -482,15 +481,8 @@ export function useCalendarData({
     });
 
     return visibilityFiltered;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleActivityIds/showNoActivity はリアクティブ依存（関数参照は安定のため直接依存不可）
-  }, [
-    viewDateRange,
-    allCalendarEvents,
-    timezone,
-    isEntryVisible,
-    visibleActivityIds,
-    showNoActivity,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleActivityIds はリアクティブ依存（関数参照は安定のため直接依存不可）
+  }, [viewDateRange, allCalendarEvents, timezone, isEntryVisible, visibleActivityIds]);
 
   return {
     viewDateRange,

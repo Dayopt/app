@@ -11,54 +11,40 @@
  */
 
 // Types
-export type { Activity, ActivityTree, Category, CategoryTreeNode } from './types';
+export type { Activity, ActivityTree, Category } from './types';
 
 // 表示部品（色・アイコンを持つのはカテゴリーだけ。アクティビティは継承する）
 export { ActivityIcon } from './components/ActivityIcon';
 export {
   CategoryColorMenuItems,
   CategoryIconMenuItems,
-  getColorDisplayName,
 } from './components/CategoryAppearanceMenuItems';
 
-// モーダル / 確認ダイアログ
-export { ActivityCreateModal } from './components/ActivityCreateModal';
+// 確認ダイアログ（作成 / 改名モーダルは Global ラッパー経由でだけ開くので barrel に出さない）
 export { ActivityDeleteConfirmDialog } from './components/ActivityDeleteConfirmDialog';
-export { ActivityRenameModal } from './components/ActivityRenameModal';
-export { CategoryRenameModal } from './components/CategoryRenameModal';
 
 // 色・アイコンの解決
-export {
-  ACTIVITY_NAME_MAX_LENGTH,
-  CATEGORY_COLOR_NAMES,
-  DEFAULT_CATEGORY_COLOR,
-  getCategoryColorClasses,
-  resolveCategoryColor,
-} from './lib/category-colors';
-export type { CategoryColorEntry, CategoryColorName } from './lib/category-colors';
+export { resolveCategoryColor } from './lib/category-colors';
+export type { CategoryColorName } from './lib/category-colors';
 
 // 取得
 export { useActivitiesMap } from './hooks/useActivitiesMap';
-export type { ActivityDisplayInfo } from './hooks/useActivitiesMap';
 export {
   useActivities,
   useActivityTree,
   useArchivedActivities,
   useArchivedCategories,
-  useCategories,
 } from './hooks/useActivitiesQuery';
 
 // 更新（すべて楽観的更新つき）
 export {
   useArchiveActivity,
-  useCreateActivity,
   useDeleteActivity,
   useRestoreActivity,
   useUpdateActivity,
 } from './hooks/useActivityMutations';
 export {
   useArchiveCategory,
-  useCreateCategory,
   useDeleteCategory,
   useRestoreCategory,
   useUpdateCategory,
@@ -70,4 +56,7 @@ export {
   collectActivityIdsFromTree,
 } from './domain/activity-tree-cache';
 
-// ここにないものはfeature内部専用
+// ここにないものはfeature内部専用。
+// 作成系（useCreateActivity / useCreateCategory）や色クラスの解決
+// （getCategoryColorClasses）は、カレンダー本体の切替（H1 の activityId 待ち）で
+// 外から要るようになった時点で足す。使う前に export すると knip が孤児として検出する。

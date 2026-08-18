@@ -22,7 +22,7 @@ import { useCallback, useMemo } from 'react';
 import { useAllActivities, useAllCategories } from './useActivitiesQuery';
 
 /** ブロック表示に必要な最小限の情報 */
-export interface ActivityDisplayInfo {
+interface ActivityDisplayInfo {
   id: string;
   name: string;
   /** 所属カテゴリー ID。null = 未分類 */

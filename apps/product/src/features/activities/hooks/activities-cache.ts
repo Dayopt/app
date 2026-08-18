@@ -22,7 +22,7 @@ import { ACTIVITY_LIST_INPUT, CATEGORY_LIST_INPUT } from './useActivitiesQuery';
 type ActivitiesUtils = ReturnType<typeof trpc.useUtils>;
 
 /** ロールバック用のスナップショット */
-export interface ActivitiesSnapshot {
+interface ActivitiesSnapshot {
   restore: () => void;
 }
 

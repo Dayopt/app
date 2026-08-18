@@ -31,7 +31,6 @@ import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
 import { CategoryGroup } from './components/CategoryGroup';
-import { NoActivityRow } from './components/NoActivityRow';
 
 const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
 const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
@@ -41,9 +40,11 @@ const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
  *
  * IA（確定仕様）:
  * 1. カテゴリー見出し（色 + アイコン + 折りたたみ、既定は展開）→ 所属アクティビティをネスト
- * 2. 「未分類」見出し → カテゴリー未所属のアクティビティをフラットに列挙
- * 3. 「アクティビティなし」行 → アクティビティ未設定のブロックの表示切替
- * 4. 「アーカイブ済み」折りたたみ
+ * 2. 「未分類」見出し → カテゴリー未所属のアクティビティをテキストのみで列挙
+ * 3. 「アーカイブ済み」折りたたみ
+ *
+ * アクティビティ未設定のブロックのフィルタ行は置かない（2026-08-18 User 指示）。
+ * それらのブロックは常に表示される。
  *
  * 並び順はサーバーの `listTree` が名前順で返す（`sort_order` は持たない）。
  * DnD は廃止した。カテゴリーの付け替えは行メニューの「カテゴリーを変更」で行う。
@@ -93,9 +94,6 @@ export function ActivityFilterList() {
   const showOnlyActivity = useCalendarFilterStore((s) => s.showOnlyActivity);
   const showOnlyCategoryActivities = useCalendarFilterStore((s) => s.showOnlyCategoryActivities);
   const getCategoryVisibility = useCalendarFilterStore((s) => s.getCategoryVisibility);
-  const showNoActivity = useCalendarFilterStore((s) => s.showNoActivity);
-  const toggleShowNoActivity = useCalendarFilterStore((s) => s.toggleShowNoActivity);
-  const showOnlyNoActivity = useCalendarFilterStore((s) => s.showOnlyNoActivity);
 
   // 一覧と filter state を同期（新規は visible 追加、削除済みは orphan として除去）。
   //
@@ -275,15 +273,6 @@ export function ActivityFilterList() {
                     onOpenPopover={setOpenPopoverActivityId}
                   />
                 ))}
-
-                {/* アクティビティ未設定のブロックの表示切替。
-                    見出しの「未分類」とは別概念なので語彙を混ぜない */}
-                <NoActivityRow
-                  checked={showNoActivity}
-                  isMobile={isMobile}
-                  onToggle={toggleShowNoActivity}
-                  onShowOnlyThis={showOnlyNoActivity}
-                />
               </div>
             </SidebarSection>
 
