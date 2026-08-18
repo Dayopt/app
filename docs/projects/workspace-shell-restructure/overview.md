@@ -1007,9 +1007,11 @@ const parsed = new Date(year, monthIndex, day, 12, 0, 0, 0);
 | 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3 / **レーン G** | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**認可は変更しない**（§6-2。既存の enforcement フラグで既に無料）                       |
 | 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                                                    |
 | 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                                          |
-| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                                         |
+| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | **レーン G**          | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                                         |
 
-**Step 7 は他と並行してよい**（docs のみで、コードに依存しない）。ただし **§4-10 と `principles.md:35` を分けない** — 片方だけ直すと後続レビューが未改訂の側を根拠に差し戻せる。
+**Step 7 はコードに依存しないが、着手はレーン G の merge 後**（2026-08-18、指揮台が #2196 起票時に付けた制約）。G が in-flight branch で `strategy.md` / `principles.md` のタグ文言を編集しているため、**同じファイルへの writer 衝突を避ける**。設計上の依存ではなく盤面都合の順序制約なので、G が merge された時点で他の Step と無関係に着手してよい。
+
+ただし **§4-10 と `principles.md:35` を分けない** — 片方だけ直すと後続レビューが未改訂の側を根拠に差し戻せる。
 
 **ラベル案**: 全件 `type:feature` または `type:refactor` + `area:calendar`。Step 7 のみ `area:docs`。milestone は epic #2181 と同じ。
 
