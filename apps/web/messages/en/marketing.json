@@ -100,20 +100,20 @@
             "Calendar — day, week, and multi-day views",
             "Plan and Record tracking",
             "Core Review metrics",
-            "Tags"
+            "Activities"
           ]
         },
         "pro": {
           "name": "Pro",
           "badge": "Recommended",
-          "description": "All review metrics, unlimited tags, and API and MCP access",
+          "description": "All review metrics, unlimited activities, and API and MCP access",
           "price": "$5",
           "period": "/month",
           "priceDaily": "About 15¢ a day",
           "cta": "Try Pro Free",
           "highlights": [
             "All Review metrics",
-            "Unlimited tags",
+            "Unlimited activities",
             "API and MCP access",
             "Data export"
           ]

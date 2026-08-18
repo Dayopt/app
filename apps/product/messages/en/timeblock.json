@@ -17,8 +17,8 @@
       "bulkUpdateFailed": "Failed to bulk update: {error}",
       "bulkDeleted": "{count, plural, one {1 item} other {# items}} deleted",
       "bulkDeleteFailed": "Failed to bulk delete: {error}",
-      "tagsAdded": "Tags added",
-      "tagsAddFailed": "Failed to add tags: {error}",
+      "tagsAdded": "Activities added",
+      "tagsAddFailed": "Failed to add activities: {error}",
       "statusChanged": "Status changed to {status}",
       "statusChangedCount": "Status changed for {count, plural, one {1 item} other {# items}}",
       "statusChangeFailed": "Failed to change status",
@@ -79,7 +79,7 @@
       "completeOptions": "Complete options",
       "completeAndCreate": "Complete + create timeblock",
       "toast": {
-        "tagsSaveFailed": "Failed to save tags",
+        "tagsSaveFailed": "Failed to save activities",
         "createFailed": "Failed to create timeblock",
         "saveFailed": "Failed to save"
       },
@@ -93,7 +93,7 @@
         "openNewTab": "Open in new tab"
       },
       "tags": {
-        "add": "Add tag"
+        "add": "Add activity"
       },
       "time": {
         "date": "Date",
@@ -191,7 +191,7 @@
       },
       "migratedLocked": "Migrated past records cannot be edited",
       "feedforward": {
-        "recentActual": "Recent actuals for this tag are around {duration}"
+        "recentActual": "Recent actuals for this activity are around {duration}"
       }
     }
   }

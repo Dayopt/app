@@ -5,8 +5,8 @@ code: apps/product/src/features/tags
 public_docs:
   - tags
 lp:
-  - 'Tags'
-  - 'Unlimited tags'
+  - 'Activities'
+  - 'Unlimited activities'
 ---
 
 # Tags（タグ）
