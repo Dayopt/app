@@ -421,7 +421,7 @@ main ruleset の required status checks は `ci.yml` の 4 job（`🔍 Static Ch
 
 どちらも Vercel 側のビルドインフラの一過性障害で、アプリケーションコードの回帰ではない。切り分けの第一手は常に「そもそも deployment ができているか」の確認（Vercel Dashboard の Deployments 一覧）で、無ければ型 1、あるが失敗していれば型 2 を疑う。
 
-**型 1 の復旧は Dashboard 手動作成に限る（2026-08-18 実測）。** Vercel の deployment policy（git-source-only）により、API / CLI で作成した deployment は `BLOCKED` 状態になり、承認して production/preview へ通す経路が無い。型 1 の正しい復旧は Vercel Dashboard の **Create Deployment**、または該当 branch への新しい実変更 push（空コミットでは webhook 欠落そのものは直らないため、コード変更を伴う push で新しい commit を作る）のいずれか。
+**型 1 の復旧経路は 2 つ（2026-08-18 実測）。** Vercel の deployment policy（git-source-only）により、API / CLI で作成した deployment は `BLOCKED` 状態になり、承認して production/preview へ通す経路が無いことを実測確認した。実測済みの復旧経路は Vercel Dashboard の **Create Deployment**、および該当 branch への新しい実変更 push の 2 つ（いずれも復旧を確認済み）。空コミット push での復旧は本実測では試していない（未検証）。
 
 **型 3（GitHub Actions 側）: `CI` / `Docs Guard` の check-suite が丸ごと存在しない。** `gh pr checks` に主要 workflow が一切現れず（`Production Config Audit` のような `pull_request_target` 系だけは走る）、commit の check-suites API を見ても `ci.yml` / `docs-guard.yml` に対応する suite 自体が無い（2026-08-14、PR #2083 で実測。close→reopen で `reopened` イベントの配信は確認できたが、それでも発火しなかった）。webhook 配信の失敗ではなく、**`mergeable: CONFLICTING` を疑う**のが正しい切り分け。`pull_request`（`pull_request_target` ではない）トリガーの workflow は GitHub 側で test merge commit を作れないと起動されないため、base（`main`）との conflict が解消されるまで check-suite 自体が作られない。復旧はコード修正でも再 push でもなく、`gh pr view <N> --json mergeable,mergeStateStatus` で `CONFLICTING` を確認したうえで通常の conflict 解消（`git merge origin/main` して resolve）を行うこと。
 
