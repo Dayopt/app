@@ -6,6 +6,7 @@ const createClient = vi.hoisted(() => vi.fn());
 const saveConnection = vi.hoisted(() => vi.fn());
 const getReconnectTarget = vi.hoisted(() => vi.fn());
 const reconnectExistingConnection = vi.hoisted(() => vi.fn());
+const revokeOrphanedGrant = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const checkProAccessForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
@@ -34,6 +35,7 @@ vi.mock('@/features/external-calendar/server/connection-service', async (importO
     saveConnection,
     getReconnectTarget,
     reconnectExistingConnection,
+    revokeOrphanedGrant,
   };
 });
 vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
@@ -117,6 +119,7 @@ describe('google calendar callback route', () => {
       providerAccountId: 'google-sub-123',
     });
     reconnectExistingConnection.mockResolvedValue('updated');
+    revokeOrphanedGrant.mockResolvedValue(undefined);
     checkProAccessForUser.mockResolvedValue('allowed');
     resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal1' });
     rateLimit.mockResolvedValue({ success: true });
@@ -555,6 +558,13 @@ describe('google calendar callback route', () => {
     expect(reasonOf(response)).toBe('account_mismatch');
     expect(reconnectExistingConnection).not.toHaveBeenCalled();
     expect(saveConnection).not.toHaveBeenCalled();
+    // #2072: token 交換は完了しているので、Dayopt 側に残らない孤立 grant を revoke する。
+    expect(revokeOrphanedGrant).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerAccountId: 'google-sub-123',
+        refreshToken: 'refresh-token',
+      }),
+    );
   });
 
   it.each([
@@ -573,6 +583,83 @@ describe('google calendar callback route', () => {
 
     expect(reasonOf(response)).toBe('reconnect_target_invalid');
     expect(saveConnection).not.toHaveBeenCalled();
+    // #2072: 両ケースとも token 交換済みなので orphan grant の revoke を試みる。
+    expect(revokeOrphanedGrant).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerAccountId: 'google-sub-123',
+        refreshToken: 'refresh-token',
+      }),
+    );
+  });
+
+  describe('orphan grant revoke（#2072）', () => {
+    it('scope_not_granted は refresh_token と id_token が揃っていれば revoke する', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify(
+                tokenResponse({ scope: 'https://www.googleapis.com/auth/userinfo.email' }),
+              ),
+              { status: 200 },
+            ),
+          ),
+        ),
+      );
+
+      const response = await GET(withCookie(request()));
+
+      expect(reasonOf(response)).toBe('scope_not_granted');
+      expect(revokeOrphanedGrant).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerAccountId: 'google-sub-123',
+          refreshToken: 'refresh-token',
+        }),
+      );
+    });
+
+    it('scope_not_granted かつ id_token が malformed なら revoke しない（安全側）', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify(
+                tokenResponse({
+                  scope: 'https://www.googleapis.com/auth/userinfo.email',
+                  id_token: 'not-a-valid-jwt',
+                }),
+              ),
+              { status: 200 },
+            ),
+          ),
+        ),
+      );
+
+      const response = await GET(withCookie(request()));
+
+      expect(reasonOf(response)).toBe('scope_not_granted');
+      expect(revokeOrphanedGrant).not.toHaveBeenCalled();
+    });
+
+    it('missing_refresh_token では revoke 対象の token が無いため revoke しない', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() =>
+          Promise.resolve(
+            new Response(JSON.stringify(tokenResponse({ refresh_token: undefined })), {
+              status: 200,
+            }),
+          ),
+        ),
+      );
+
+      const response = await GET(withCookie(request()));
+
+      expect(reasonOf(response)).toBe('missing_refresh_token');
+      expect(revokeOrphanedGrant).not.toHaveBeenCalled();
+    });
   });
 
   it('write fence が有効な時は Google の code を消費する前に拒否する', async () => {

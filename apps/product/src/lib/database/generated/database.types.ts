@@ -1840,6 +1840,7 @@ export type Database = {
         Returns: {
           access_tokens_due: boolean;
           authorization_codes_due: boolean;
+          calendar_finalize_stuck_count: number;
           calendar_revoke_due: number;
           calendar_revoke_total: number;
           connections_due: boolean;

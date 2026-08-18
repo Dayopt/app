@@ -85,6 +85,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // #2055(a): finalize-calendar-revoke-guards cron 側の滞留は summary.complete の対象外
+    // （この cron からは解消できない別 cron の backlog のため）。独立した warn 条件にする。
+    if (summary.calendarFinalizeStuck > 0) {
+      logger.warn('[external-connection-maintenance] finalize guard candidates are stuck', {
+        calendarFinalizeStuck: summary.calendarFinalizeStuck,
+      });
+    }
+
     return noStoreJson({ ok: true, ...summary });
   } catch {
     // dispatcher の将来変更でも raw DB/provider error を Sentry の cause へ通さない。
