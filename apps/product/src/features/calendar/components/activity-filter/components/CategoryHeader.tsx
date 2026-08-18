@@ -136,8 +136,14 @@ export function CategoryHeader({
           collapsed ? t('calendar.filter.expandCategory') : t('calendar.filter.collapseCategory')
         }
         aria-expanded={!collapsed}
-        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-        className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 before:absolute before:-inset-2 before:content-['']"
+        className={cn(
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
+          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity duration-150 before:absolute before:-inset-2 before:content-['']",
+          // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
+          collapsed
+            ? 'opacity-100'
+            : 'opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+        )}
       >
         <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-90')} />
       </button>
