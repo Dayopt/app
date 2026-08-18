@@ -15,6 +15,7 @@ export interface PlanEvent {
   title: string;
   note: string | null;
   tagId: string | null;
+  activityId: string | null;
   startDate: Date;
   endDate: Date;
   /** タイムゾーン変換済みの表示用開始時刻 */

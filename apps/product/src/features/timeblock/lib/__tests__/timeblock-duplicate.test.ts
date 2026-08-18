@@ -26,14 +26,18 @@ describe('timeblock duplicate', () => {
     const input = buildTimeblockDuplicateCreateInput(draft, {
       note: ' Updated note ',
       tagId: draft.tagId ?? null,
+      activityId: '00000000-0000-4000-8000-0000000000a1',
       startAt: new Date('2026-07-15T10:00:00.000Z'),
       endAt: new Date('2026-07-15T11:00:00.000Z'),
     });
 
+    // tagId と activityId の両方が create 入力へ運ばれること。activityId を落とすと
+    // 複製先で分類が無言で消える（貼り付け経路で実際に起きていた同型の欠落）。
     expect(input).toEqual({
       title: 'API development',
       note: 'Updated note',
       tagId: '00000000-0000-4000-8000-000000000001',
+      activityId: '00000000-0000-4000-8000-0000000000a1',
       start_at: '2026-07-15T10:00:00.000Z',
       end_at: '2026-07-15T11:00:00.000Z',
     });

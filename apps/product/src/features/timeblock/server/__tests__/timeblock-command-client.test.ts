@@ -26,6 +26,7 @@ const plan: Row<'plans'> = {
   source: 'manual',
   start_at: '2026-07-24T01:00:00.000000Z',
   tag_id: null,
+  activity_id: null,
   title: 'Plan',
   updated_at: '2026-07-23T00:00:00.000001Z',
   user_id: '00000000-0000-4000-8000-000000000002',
@@ -37,6 +38,7 @@ function createPlanInput() {
     title: plan.title,
     note: plan.note,
     tagId: plan.tag_id,
+    activityId: null,
     externalCalendarEventId: plan.external_calendar_event_id,
     source: 'manual' as const,
     startAt: plan.start_at,
@@ -56,6 +58,7 @@ describe('TimeblockCommandClient', () => {
 
     expect(rpc).toHaveBeenCalledOnce();
     expect(rpc).toHaveBeenCalledWith('create_plan_command_v1', {
+      p_activity_id: null,
       p_end_at: plan.end_at,
       p_external_calendar_event_id: null,
       p_note: null,

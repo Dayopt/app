@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 export interface TimeblockSavePatch {
   note?: string | null;
   tagId?: string | null;
+  activityId?: string | null;
   start_at?: string;
   end_at?: string;
 }

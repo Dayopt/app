@@ -44,6 +44,7 @@ export interface TimeblockMenuItem {
 interface TimeblockMenuItemsArgs {
   origin: TimeblockOrigin | undefined;
   tagId: string | null | undefined;
+  activityId?: string | null | undefined;
   /**
    * 未来（upcoming）の予定か。
    * 未来の予定はまだ記録が存在し得ないため「予定外にする」を表示しない。
@@ -70,6 +71,7 @@ interface TimeblockMenuItemsArgs {
 export function getTimeblockMenuItems({
   origin,
   tagId,
+  activityId,
   isUpcoming = false,
   isPast = false,
   isSkipped = false,
@@ -86,7 +88,7 @@ export function getTimeblockMenuItems({
   const isPlanned = origin === 'planned';
 
   const items: (TimeblockMenuItem | null)[] = [
-    onViewStats && tagId
+    onViewStats && (tagId || activityId)
       ? {
           key: 'viewStats',
           labelKey: 'calendar.filter.viewStats',

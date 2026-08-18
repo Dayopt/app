@@ -38,3 +38,44 @@ export async function assertTagAssignable(
     throw new TimeblockServiceError('TAG_ARCHIVED', 'Archived tags cannot be assigned');
   }
 }
+
+/**
+ * アーカイブ済みアクティビティを新規 Plan / Record に付与させないガード
+ *
+ * `assertTagAssignable` と同型。DB 側の `assert_active_timeblock_activity_v1` が
+ * 権威（command 境界で FOR SHARE ロック付きで検証する）で、こちらは UI 経路で
+ * 往復する前に速く失敗させるための重複ガード。MCP 経路が意図的にこの事前検証を
+ * 持たない設計（再送が誤って拒否されるのを防ぐ）は tag 側と同じ。
+ *
+ * エラーコードは `TAG_ARCHIVED` を流用する。DB は tag / activity のどちらも
+ * DT014 で表し区別しないため、ここだけ新コードを足すと層ごとに粒度が食い違う。
+ * 語彙の付け替えは tags 撤去（Step 7）でまとめて行う。
+ */
+export async function assertActivityAssignable(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  activityId: string | null | undefined,
+): Promise<void> {
+  if (!activityId) return;
+
+  const { data, error } = await supabase
+    .from('activities')
+    .select('archived_at')
+    .eq('id', activityId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    const original = captureUnexpectedDatabaseError(error, {
+      feature: 'timeblock',
+      operation: 'assert_activity_assignable',
+    });
+    throw new TimeblockServiceError('FETCH_FAILED', 'Failed to inspect activity', {
+      cause: original,
+    });
+  }
+
+  if (data?.archived_at) {
+    throw new TimeblockServiceError('TAG_ARCHIVED', 'Archived activities cannot be assigned');
+  }
+}

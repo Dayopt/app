@@ -664,6 +664,7 @@ export type Database = {
       };
       plans: {
         Row: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -679,6 +680,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          activity_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           end_at: string;
@@ -694,6 +696,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          activity_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           end_at?: string;
@@ -709,6 +712,13 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'plans_activity_owner_fkey';
+            columns: ['activity_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id', 'user_id'];
+          },
           {
             foreignKeyName: 'plans_external_calendar_event_id_fkey';
             columns: ['external_calendar_event_id'];
@@ -787,6 +797,7 @@ export type Database = {
       };
       records: {
         Row: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -802,6 +813,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          activity_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           end_at: string;
@@ -817,6 +829,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          activity_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           end_at?: string;
@@ -832,6 +845,13 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'records_activity_owner_fkey';
+            columns: ['activity_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id', 'user_id'];
+          },
           {
             foreignKeyName: 'records_external_calendar_event_id_fkey';
             columns: ['external_calendar_event_id'];
@@ -1070,6 +1090,7 @@ export type Database = {
       apply_mcp_plan_create_v1: {
         Args: {
           p_access_token_id: string;
+          p_activity_id?: string;
           p_connection_id: string;
           p_end_at: string;
           p_note: string;
@@ -1127,6 +1148,8 @@ export type Database = {
       apply_mcp_plan_update_v1: {
         Args: {
           p_access_token_id: string;
+          p_activity_id?: string;
+          p_activity_id_present?: boolean;
           p_connection_id: string;
           p_end_at: string;
           p_end_at_present: boolean;
@@ -1155,6 +1178,7 @@ export type Database = {
       apply_mcp_record_create_v1: {
         Args: {
           p_access_token_id: string;
+          p_activity_id?: string;
           p_connection_id: string;
           p_end_at: string;
           p_note: string;
@@ -1213,6 +1237,8 @@ export type Database = {
       apply_mcp_record_update_v1: {
         Args: {
           p_access_token_id: string;
+          p_activity_id?: string;
+          p_activity_id_present?: boolean;
           p_connection_id: string;
           p_end_at: string;
           p_end_at_present: boolean;
@@ -1237,6 +1263,10 @@ export type Database = {
           schema_version: number;
           version: string;
         }[];
+      };
+      assert_active_timeblock_activity_v1: {
+        Args: { p_activity_id: string; p_user_id: string };
+        Returns: undefined;
       };
       assert_active_timeblock_tag_v1: {
         Args: { p_tag_id: string; p_user_id: string };
@@ -1582,6 +1612,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1611,6 +1642,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1651,6 +1683,7 @@ export type Database = {
       };
       create_plan_command_v1: {
         Args: {
+          p_activity_id?: string;
           p_end_at: string;
           p_external_calendar_event_id: string;
           p_note: string;
@@ -1661,6 +1694,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1684,6 +1718,7 @@ export type Database = {
       };
       create_record_command_v1: {
         Args: {
+          p_activity_id?: string;
           p_end_at: string;
           p_external_calendar_event_id: string;
           p_note: string;
@@ -1695,6 +1730,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1741,6 +1777,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1769,6 +1806,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -1981,6 +2019,7 @@ export type Database = {
       lock_recordable_plan_v1: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2173,6 +2212,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2239,6 +2279,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2271,6 +2312,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2418,6 +2460,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2488,6 +2531,8 @@ export type Database = {
       };
       update_plan_command_v1: {
         Args: {
+          p_activity_id?: string;
+          p_activity_id_present?: boolean;
           p_end_at: string;
           p_expected_updated_at: string;
           p_external_calendar_event_id: string;
@@ -2499,6 +2544,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;
@@ -2522,6 +2568,8 @@ export type Database = {
       };
       update_record_command_v1: {
         Args: {
+          p_activity_id?: string;
+          p_activity_id_present?: boolean;
           p_end_at: string;
           p_expected_updated_at: string;
           p_external_calendar_event_id: string;
@@ -2534,6 +2582,7 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          activity_id: string | null;
           created_at: string;
           deleted_at: string | null;
           end_at: string;

@@ -53,6 +53,7 @@ export function resolveTimeblockClipboardPaste({
       title: copiedTimeblock.title,
       ...(copiedTimeblock.description ? { note: copiedTimeblock.description } : {}),
       ...(copiedTimeblock.tagId ? { tagId: copiedTimeblock.tagId } : {}),
+      ...(copiedTimeblock.activityId ? { activityId: copiedTimeblock.activityId } : {}),
       start_at: startAt,
       end_at: endAt,
     },
