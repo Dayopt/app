@@ -47,13 +47,15 @@ gate値、enabled client、未検証項目、未実装blockerといった実行�
 | Scope              | Tools                                                                    |
 | ------------------ | ------------------------------------------------------------------------ |
 | `read:entries`     | `entries.list`, `plans.list`, `plans.get`, `records.list`, `records.get` |
-| `read:tags`        | `tags.list`                                                              |
+| `read:activities`  | `activities.list`, `categories.list`, `segments.list`                    |
 | `read:constraints` | `constraints.get`                                                        |
 | `read:stats`       | `review.get`                                                             |
-| `write:plans`      | `plans.create`, `plans.update`                                           |
-| `delete:plans`     | `plans.trash.list`, `plans.delete`, `plans.restore`                      |
-| `write:records`    | `records.create`, `records.update`                                       |
-| `delete:records`   | `records.trash.list`, `records.delete`, `records.restore`                |
+
+`read:tags` / `tags.list` は #2162 で `read:activities` へ alias なしクリーン置換された（production 実測 0 件、migration `20260818150000`）。表は実装済みの現行契約のみを載せる。
+| `write:plans` | `plans.create`, `plans.update` |
+| `delete:plans` | `plans.trash.list`, `plans.delete`, `plans.restore` |
+| `write:records` | `records.create`, `records.update` |
+| `delete:records` | `records.trash.list`, `records.delete`, `records.restore` |
 
 公開metadataは一般提供する4つのread scopeだけを広告する。write / delete scopeはclosed betaの対象clientにだけ発行する。write / delete scopeは`read:entries`を必須とする。
 
@@ -85,7 +87,7 @@ credentialなし、形式不正、無効token、scope不足、一時的な認可
 ## Read consistency and product convergence
 
 - `plans.list` / `records.list` / `get`は安定したresource IDとversionを返す
-- `tags.list`、`constraints.get`、`review.get`は最小限のprojectionだけを返す
+- `activities.list`、`categories.list`、`segments.list`、`constraints.get`、`review.get`は最小限のprojectionだけを返す
 - `constraints.get`と`review.get`の複数readは、user revisionとtimezoneが変わっていない一貫した時点に揃える。互換用`entries.list`はbest-effortな複数readであり、同じsnapshot保証を持たない
 - DBとserverにはuser revision境界があるが、現在のProduct UIはrevisionをpollしていない。Calendar、Inspector、Reviewの外部変更追従と20秒SLAはStep 6の未完了項目とする
 - legacy text outputは外部由来のtitle、noteなどをuntrusted dataとして警告付きで囲む。`structuredContent`は構造化するだけで同じ囲みを持たないため、3 clientがモデルへの指示として誤採用しないことを別に実機確認する

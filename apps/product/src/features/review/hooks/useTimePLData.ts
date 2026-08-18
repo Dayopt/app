@@ -17,27 +17,27 @@ import {
 } from '../lib/compute-date-range';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 
-/** get_time_pl_data RPC のレスポンス型 */
+/** getTimePL procedure のレスポンス型。#2162 でアクティビティ軸へ移行。 */
 interface TimePLRpcResponse {
-  tags: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
-    tagIcon: string | null;
+  activities: Array<{
+    activityId: string | null;
+    activityName: string | null;
+    categoryColor: string | null;
+    categoryIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
-    isUncategorized: boolean;
+    isNoActivity: boolean;
   }>;
-  prevTags: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
-    tagIcon: string | null;
+  prevActivities: Array<{
+    activityId: string | null;
+    activityName: string | null;
+    categoryColor: string | null;
+    categoryIcon: string | null;
     budgetMinutes: number;
     actualMinutes: number;
     isPlanned: boolean;
-    isUncategorized: boolean;
+    isNoActivity: boolean;
   }>;
   availableMinutes: number;
 }
@@ -85,7 +85,7 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
 
   const timePLInput: TimePLInput | null = useMemo(() => {
     const data = query.data as TimePLRpcResponse | undefined;
-    if (!data || data.tags.length === 0) return null;
+    if (!data || data.activities.length === 0) return null;
 
     return {
       period: {
@@ -95,27 +95,27 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
         endDate: dateRange.endDate,
       },
       availableMinutes: data.availableMinutes,
-      tags: data.tags.map((t) => ({
-        tagId: t.tagId,
-        tagName: t.tagName,
-        tagColor: t.isUncategorized ? null : resolveTagColor(t.tagColor),
-        tagIcon: t.tagIcon,
-        budgetMinutes: t.budgetMinutes,
-        actualMinutes: t.actualMinutes,
-        isPlanned: t.isPlanned,
-        isUncategorized: t.isUncategorized,
+      activities: data.activities.map((a) => ({
+        activityId: a.activityId,
+        activityName: a.activityName,
+        categoryColor: a.isNoActivity ? null : resolveTagColor(a.categoryColor),
+        categoryIcon: a.categoryIcon,
+        budgetMinutes: a.budgetMinutes,
+        actualMinutes: a.actualMinutes,
+        isPlanned: a.isPlanned,
+        isNoActivity: a.isNoActivity,
       })),
-      prevTags:
-        data.prevTags.length > 0
-          ? data.prevTags.map((t) => ({
-              tagId: t.tagId,
-              tagName: t.tagName,
-              tagColor: t.isUncategorized ? null : resolveTagColor(t.tagColor),
-              tagIcon: t.tagIcon,
-              budgetMinutes: t.budgetMinutes,
-              actualMinutes: t.actualMinutes,
-              isPlanned: t.isPlanned,
-              isUncategorized: t.isUncategorized,
+      prevActivities:
+        data.prevActivities.length > 0
+          ? data.prevActivities.map((a) => ({
+              activityId: a.activityId,
+              activityName: a.activityName,
+              categoryColor: a.isNoActivity ? null : resolveTagColor(a.categoryColor),
+              categoryIcon: a.categoryIcon,
+              budgetMinutes: a.budgetMinutes,
+              actualMinutes: a.actualMinutes,
+              isPlanned: a.isPlanned,
+              isNoActivity: a.isNoActivity,
             }))
           : undefined,
     };

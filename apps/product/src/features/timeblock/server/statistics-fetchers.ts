@@ -159,3 +159,39 @@ export async function fetchTagsById(
   }
   return new Map((data ?? []).map((tag) => [tag.id, tag]));
 }
+
+export async function fetchActivitiesById(
+  supabase: ServiceSupabaseClient,
+  userId: string,
+): Promise<Map<string, { id: string; name: string; category_id: string | null }>> {
+  // is_active / archived_at では絞らない。過去の Plan / Record はアーカイブ済み
+  // アクティビティを参照し続けるため、統計・過去表示では元の名前・所属を解決する必要がある（#1576）
+  const { data, error } = await supabase
+    .from('activities')
+    .select('id, name, category_id')
+    .eq('user_id', userId);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_activities',
+    });
+  }
+  return new Map((data ?? []).map((activity) => [activity.id, activity]));
+}
+
+export async function fetchCategoriesById(
+  supabase: ServiceSupabaseClient,
+  userId: string,
+): Promise<Map<string, { id: string; name: string; color: string | null; icon: string | null }>> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, color, icon')
+    .eq('user_id', userId);
+  if (error) {
+    throw captureUnexpectedDatabaseError(error, {
+      feature: 'statistics',
+      operation: 'fetch_categories',
+    });
+  }
+  return new Map((data ?? []).map((category) => [category.id, category]));
+}

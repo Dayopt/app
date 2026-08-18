@@ -12,10 +12,13 @@ import { MCP_REVIEW_GET_INPUT_SCHEMA, MCP_REVIEW_GET_OUTPUT_SCHEMA } from './rev
 import { createMcpToolError, createMcpToolSuccess, MCP_TOOL_SCHEMA_VERSION } from './tool-result';
 import { MCP_UNTRUSTED_CONTENT_NOTICE } from './untrusted-data-serialization';
 
-/** 未分類（tagId null）は常に false。archivedTagIds が未解決（degrade）の時も false 固定。 */
-function resolveIsArchived(tagId: string | null, archivedTagIds: Set<string> | null): boolean {
-  if (tagId === null) return false;
-  return archivedTagIds?.has(tagId) ?? false;
+/** アクティビティなし（activityId null）は常に false。未解決（degrade）の時も false 固定。 */
+function resolveIsArchived(
+  activityId: string | null,
+  archivedActivityIds: Set<string> | null,
+): boolean {
+  if (activityId === null) return false;
+  return archivedActivityIds?.has(activityId) ?? false;
 }
 
 export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext) {
@@ -23,7 +26,7 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
     'review.get',
     {
       title: 'Get Dayopt Plan and Record review',
-      description: `Get deterministic Plan versus Record totals, tag variances, and accuracy signals. Time on blocks with no tag is included as a single uncategorized row with tagId null and isUncategorized true, so totals cover every block in the period. Tag rows and the largest_tag_variance signal also carry isArchived, true only when that tagId can no longer be assigned to new Plans or Records; its past time still counts in these totals. isArchived safely defaults to false when archived status cannot be resolved. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
+      description: `Get deterministic Plan versus Record totals, activity variances, and accuracy signals. Totals are broken down by activity, the same one-per-block granularity a Plan or Record carries; resolve activityId through activities.list, and roll up to categories through its categoryId when a coarser view is wanted. Time on blocks with no activity is included as a single row with activityId null and isNoActivity true, so totals cover every block in the period. Activity rows and the largest_activity_variance signal also carry isArchived, true only when that activityId can no longer be assigned to new Plans or Records; its past time still counts in these totals. isArchived safely defaults to false when archived status cannot be resolved. ${MCP_UNTRUSTED_CONTENT_NOTICE}`,
       inputSchema: MCP_REVIEW_GET_INPUT_SCHEMA,
       outputSchema: MCP_REVIEW_GET_OUTPUT_SCHEMA,
       annotations: { readOnlyHint: true, idempotentHint: true },
@@ -44,20 +47,39 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
           signal: extra.signal,
         });
 
-        // アーカイブ判定は当面 null 固定 = 全行 isArchived false。
+        // アーカイブ判定は review 本体と切り離して失敗させる。`read:activities` scope が
+        // 無い接続や activities.list 側の一時的な失敗で review.get 全体を落とさない。
+        // 失敗時は null (= 全行 isArchived false) に degrade する。誤判定の向きは常に
+        // 安全側（非archivedをarchivedと誤表示することはなく、archivedの見落としのみ）。
         //
-        // 解決元だった `tags.listArchived` は `read:tags` scope を要求していたが、
-        // #2174 でその scope ごと廃止した（アクティビティへ全置換）。ここで呼び続けても
-        // 必ず scope 拒否になり、review.get のたびに Sentry へ雑音を出すだけなので
-        // 呼ばない。tagId 側をアクティビティ軸へ切り替えるのはレーン G（#2173）の
-        // scope で、集計そのものがアクティビティ軸になった時点でアーカイブ解決も戻る。
-        //
-        // degrade の向きは元から安全側（非 archived を archived と誤表示することは
-        // なく、archived の見落としのみ）で、outputSchema の
-        // 「isArchived safely defaults to false」もそのまま成立する。
-        const archivedTagIds: Set<string> | null = null;
+        // **`archived_at != null` での絞り込みが必須。** 旧 `tags.listArchived` は
+        // アーカイブ済みのみを返したが、`listActivities({ includeArchived: true })` は
+        // アクティブも含む全件を返す。素直に全件を Set へ入れると全アクティビティが
+        // archived 扱いになり、degrade の向きが安全側から危険側へ反転する。
+        const resolveArchivedActivityIds = async (): Promise<Set<string> | null> => {
+          // `read:activities` を持たない接続（`read:stats` のみ等）では呼んでも必ず
+          // scope 拒否になる。往復と warn を無駄に出さず、想定内の欠落として即 degrade する。
+          if (!ctx.scopes.includes('read:activities')) return null;
+          try {
+            const activities = await trpc.activities.listActivities({ includeArchived: true });
+            return new Set(
+              activities
+                .filter((activity) => activity.archived_at !== null)
+                .map((activity) => activity.id),
+            );
+          } catch (error) {
+            captureUnexpectedMcpToolError(error, 'review_get_archived_activities');
+            logger.warn(
+              'MCP review get could not resolve archived activities; isArchived defaults to false',
+            );
+            return null;
+          }
+        };
 
-        const result = await trpc.statistics.getMcpReview(input);
+        const [result, archivedActivityIds] = await Promise.all([
+          trpc.statistics.getMcpReview(input),
+          resolveArchivedActivityIds(),
+        ]);
 
         return createMcpToolSuccess({
           schemaVersion: MCP_TOOL_SCHEMA_VERSION,
@@ -88,14 +110,14 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
                 status: result.accuracy.status,
               }
             : null,
-          tags: result.tags.map((tag) => ({
-            tagId: tag.tagId,
-            isUncategorized: tag.isUncategorized,
-            isArchived: resolveIsArchived(tag.tagId, archivedTagIds),
-            plannedMinutes: tag.plannedMinutes,
-            recordedMinutes: tag.recordedMinutes,
-            varianceMinutes: tag.varianceMinutes,
-            variancePercent: tag.variancePercent,
+          activities: result.activities.map((activity) => ({
+            activityId: activity.activityId,
+            isNoActivity: activity.isNoActivity,
+            isArchived: resolveIsArchived(activity.activityId, archivedActivityIds),
+            plannedMinutes: activity.plannedMinutes,
+            recordedMinutes: activity.recordedMinutes,
+            varianceMinutes: activity.varianceMinutes,
+            variancePercent: activity.variancePercent,
           })),
           signals: result.signals.map((signal) =>
             signal.code === 'plan_accuracy'
@@ -106,9 +128,9 @@ export function registerReviewGetTool(server: McpServer, ctx: McpRequestContext)
                 }
               : {
                   code: signal.code,
-                  tagId: signal.tagId,
-                  isUncategorized: signal.isUncategorized,
-                  isArchived: resolveIsArchived(signal.tagId, archivedTagIds),
+                  activityId: signal.activityId,
+                  isNoActivity: signal.isNoActivity,
+                  isArchived: resolveIsArchived(signal.activityId, archivedActivityIds),
                   direction: signal.direction,
                   absoluteMinutes: signal.absoluteMinutes,
                 },

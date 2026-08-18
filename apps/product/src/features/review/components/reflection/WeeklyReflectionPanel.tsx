@@ -115,7 +115,7 @@ export function WeeklyReflectionPanel({
         ) : (
           <div className="flex flex-col gap-1">
             {compactTimePLRows.map((row) => (
-              <TimePLRow key={row.tagId ?? 'uncategorized'} row={row} onTagClick={onTagClick} />
+              <TimePLRow key={row.activityId ?? 'no-activity'} row={row} onTagClick={onTagClick} />
             ))}
           </div>
         )}
@@ -199,19 +199,19 @@ function TimePLRow({
   onTagClick,
 }: {
   row: BarComparisonRow;
-  onTagClick?: ((tagId: string) => void) | undefined;
+  onTagClick?: ((activityId: string) => void) | undefined;
 }) {
   const t = useTranslations('calendar.stats.overview');
-  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
+  const activityName = row.isNoActivity ? t('uncategorized') : row.activityName;
   const content = (
     <>
       <TimePLTagMarker
-        isUncategorized={row.isUncategorized}
-        tagIcon={row.tagIcon}
-        tagColor={row.tagColor}
+        isNoActivity={row.isNoActivity}
+        categoryIcon={row.categoryIcon}
+        categoryColor={row.categoryColor}
       />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{tagName}</span>
+        <span className="block truncate text-sm font-medium">{activityName}</span>
         <span className="text-muted-foreground mt-1 block text-xs tabular-nums">
           {formatDurationMinutes(row.budgetMinutes)} / {formatDurationMinutes(row.actualMinutes)}
         </span>
@@ -227,17 +227,17 @@ function TimePLRow({
     </>
   );
 
-  if (row.isUncategorized || row.tagId == null || !onTagClick) {
+  if (row.isNoActivity || row.activityId == null || !onTagClick) {
     return <div className="flex min-h-11 items-center gap-2 px-2 py-2">{content}</div>;
   }
 
-  const tagId = row.tagId;
+  const activityId = row.activityId;
 
   return (
     <button
       type="button"
       className="hover:bg-state-hover flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150"
-      onClick={() => onTagClick(tagId)}
+      onClick={() => onTagClick(activityId)}
     >
       {content}
     </button>

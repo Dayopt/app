@@ -330,8 +330,8 @@
         "subscriptionDesc": "Plan and billing management",
         "about": "About",
         "aboutDesc": "Legal information and version",
-        "tags": "Tags",
-        "tagsDesc": "Create and edit tags and groups"
+        "tags": "Activities",
+        "tagsDesc": "Create and edit categories and activities"
       }
     },
     "dataControls": {
@@ -354,7 +354,7 @@
         "includedDataTitle": "Data included in export",
         "profileInfo": "Profile information",
         "tasksEvents": "Timeblocks",
-        "tagSettings": "Tag settings",
+        "tagSettings": "Activity settings",
         "calendarSettings": "Calendar settings",
         "otherSettings": "Other settings"
       },
@@ -389,12 +389,12 @@
       "deletion": {
         "title": "Data deletion",
         "deleteBlocks": "Delete all blocks",
-        "deleteBlocksDesc": "Remove all timeblocks. Tags and settings are kept.",
+        "deleteBlocksDesc": "Remove all timeblocks. Activities and settings are kept.",
         "deleteAllData": "Delete all data",
-        "deleteAllDataDesc": "Remove all data including tags and settings. Your account remains active.",
+        "deleteAllDataDesc": "Remove all data including activities and settings. Your account remains active.",
         "confirmTitle": "Are you sure?",
-        "confirmDeleteBlocks": "This will permanently delete all your timeblocks. Tags and settings will be preserved.",
-        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all timeblocks, tags, and settings will be removed.",
+        "confirmDeleteBlocks": "This will permanently delete all your timeblocks. Activities and settings will be preserved.",
+        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all timeblocks, activities, and settings will be removed.",
         "typeToConfirm": "Type \"{keyword}\" to confirm",
         "confirmKeyword": "DELETE",
         "deleting": "Deleting..."
@@ -664,7 +664,7 @@
           "features": {
             "timeboxing": "Timeboxing & time tracking",
             "basicAnalytics": "Basic analytics (2 metrics)",
-            "tags": "Up to 5 tags",
+            "tags": "Up to 5 activities",
             "ai": "AI reflection (10/month)"
           }
         },
@@ -672,7 +672,7 @@
           "name": "Pro",
           "features": {
             "fullAnalytics": "All 8 metrics + chart views",
-            "unlimitedTags": "Unlimited tags",
+            "unlimitedTags": "Unlimited activities",
             "api": "MCP / API access",
             "dataExport": "Data export (CSV/JSON)",
             "unlimitedAI": "Unlimited AI + model selection"

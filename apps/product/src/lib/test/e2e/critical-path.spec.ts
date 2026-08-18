@@ -240,11 +240,7 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // Review の Time P/L はまだタグ集計（`useTimePLData` が tagId / tagName ベース）で、
-  // cutover 後のブロックは tag を持たないため行が出ない。実装側の未追従であり
-  // このテストの期待が正しい。#2162 の (B) 裁定を参照。
-  // **レーン G の Step 5（3 軸集計）の UI 結線で解除すること。**
-  test.fixme('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
+  test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
     await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
 
     // CalendarReviewPanel の section は aria-label のみ持ち、暗黙 role="region" になる

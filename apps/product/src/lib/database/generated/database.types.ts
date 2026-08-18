@@ -908,6 +908,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      segment_activities: {
+        Row: {
+          activity_id: string;
+          segment_id: string;
+          user_id: string;
+        };
+        Insert: {
+          activity_id: string;
+          segment_id: string;
+          user_id: string;
+        };
+        Update: {
+          activity_id?: string;
+          segment_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'segment_activities_activity_owner_fkey';
+            columns: ['activity_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id', 'user_id'];
+          },
+          {
+            foreignKeyName: 'segment_activities_segment_owner_fkey';
+            columns: ['segment_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'segments';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
+      segments: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       stripe_webhook_events: {
         Row: {
           claimed_at: string;

@@ -1,18 +1,18 @@
 import { computePlanAccuracy, computePlanVariance, type PlanAccuracyStatus } from '@dayopt/domain';
 
-import { aggregateTimePLTags } from './time-pl-tag-aggregation';
+import { aggregateByActivity } from './activity-axis-aggregation';
 
 export interface TimePLReviewSourceRow {
-  /** 未分類（タグ削除で `tag_id = NULL` になった行）は null */
-  tagId: string | null;
+  /** アクティビティ未設定、およびアクティビティ削除で `activity_id = NULL` になった行は null */
+  activityId: string | null;
   startAt: string;
   endAt: string;
 }
 
-export interface TimePLReviewTag {
-  /** 未分類バケットは null。`isUncategorized` と常に一致する */
-  tagId: string | null;
-  isUncategorized: boolean;
+export interface TimePLReviewActivity {
+  /** 「アクティビティなし」バケットは null。`isNoActivity` と常に一致する */
+  activityId: string | null;
+  isNoActivity: boolean;
   plannedMinutes: number;
   recordedMinutes: number;
   varianceMinutes: number;
@@ -26,9 +26,9 @@ export type TimePLReviewSignal =
       status: PlanAccuracyStatus;
     }
   | {
-      code: 'largest_tag_variance';
-      tagId: string | null;
-      isUncategorized: boolean;
+      code: 'largest_activity_variance';
+      activityId: string | null;
+      isNoActivity: boolean;
       direction: 'recorded_less_than_planned' | 'recorded_more_than_planned';
       absoluteMinutes: number;
     };
@@ -44,21 +44,21 @@ export interface TimePLReview {
     rate: number;
     status: PlanAccuracyStatus;
   } | null;
-  tags: TimePLReviewTag[];
+  activities: TimePLReviewActivity[];
   signals: TimePLReviewSignal[];
 }
 
 /**
- * 最小Plan / Record行から、tag別の決定論的なTime P/L reviewを導出する。
+ * 最小Plan / Record行から、アクティビティ別の決定論的なTime P/L reviewを導出する。
  *
- * `tagId` が null の行は単一の未分類バケット（`tagId: null` /
- * `isUncategorized: true`）として集計に含める（#1576）。
+ * `activityId` が null の行は単一の「アクティビティなし」バケット（`activityId: null` /
+ * `isNoActivity: true`）として集計に含める（#1576 の未分類バケットを #2162 で改称）。
  */
 export function deriveTimePLReview(
   plans: ReadonlyArray<TimePLReviewSourceRow>,
   records: ReadonlyArray<TimePLReviewSourceRow>,
 ): TimePLReview {
-  const tags = aggregateTimePLTags(plans.map(toDurationRow), records.map(toDurationRow))
+  const activities = aggregateByActivity(plans.map(toDurationRow), records.map(toDurationRow))
     .map((totals) => {
       const variance = computePlanVariance(
         totals.plannedMinutes,
@@ -66,8 +66,8 @@ export function deriveTimePLReview(
         totals.hasPlan,
       );
       return {
-        tagId: totals.tagId,
-        isUncategorized: totals.tagId == null,
+        activityId: totals.activityId,
+        isNoActivity: totals.activityId == null,
         plannedMinutes: totals.plannedMinutes,
         recordedMinutes: totals.recordedMinutes,
         varianceMinutes: roundToTenth(variance.varianceMinutes),
@@ -78,23 +78,27 @@ export function deriveTimePLReview(
       (left, right) =>
         Math.max(right.plannedMinutes, right.recordedMinutes) -
           Math.max(left.plannedMinutes, left.recordedMinutes) ||
-        compareIds(left.tagId, right.tagId),
+        compareIds(left.activityId, right.activityId),
     );
 
-  const plannedMinutes = roundToTenth(tags.reduce((sum, tag) => sum + tag.plannedMinutes, 0));
-  const recordedMinutes = roundToTenth(tags.reduce((sum, tag) => sum + tag.recordedMinutes, 0));
+  const plannedMinutes = roundToTenth(
+    activities.reduce((sum, activity) => sum + activity.plannedMinutes, 0),
+  );
+  const recordedMinutes = roundToTenth(
+    activities.reduce((sum, activity) => sum + activity.recordedMinutes, 0),
+  );
   const summary = {
     plannedMinutes,
     recordedMinutes,
     varianceMinutes: roundToTenth(plannedMinutes - recordedMinutes),
   };
 
-  if (tags.length === 0) {
+  if (activities.length === 0) {
     return {
       hasData: false,
       summary,
       accuracy: null,
-      tags: [],
+      activities: [],
       signals: [],
     };
   }
@@ -112,16 +116,16 @@ export function deriveTimePLReview(
     },
   ];
 
-  const largestVariance = [...tags].sort(
+  const largestVariance = [...activities].sort(
     (left, right) =>
       Math.abs(right.varianceMinutes) - Math.abs(left.varianceMinutes) ||
-      compareIds(left.tagId, right.tagId),
+      compareIds(left.activityId, right.activityId),
   )[0];
   if (largestVariance && largestVariance.varianceMinutes !== 0) {
     signals.push({
-      code: 'largest_tag_variance',
-      tagId: largestVariance.tagId,
-      isUncategorized: largestVariance.isUncategorized,
+      code: 'largest_activity_variance',
+      activityId: largestVariance.activityId,
+      isNoActivity: largestVariance.isNoActivity,
       direction:
         largestVariance.varianceMinutes > 0
           ? 'recorded_less_than_planned'
@@ -134,14 +138,14 @@ export function deriveTimePLReview(
     hasData: true,
     summary,
     accuracy,
-    tags,
+    activities,
     signals,
   };
 }
 
 function toDurationRow(row: TimePLReviewSourceRow) {
   return {
-    tagId: row.tagId,
+    activityId: row.activityId,
     minutes: (Date.parse(row.endAt) - Date.parse(row.startAt)) / 60_000,
   };
 }
@@ -154,7 +158,7 @@ function roundToFourDecimals(value: number): number {
   return Math.round(value * 10_000) / 10_000;
 }
 
-/** tie-break専用の全順序。未分類（null）は同点時だけ末尾へ回す。 */
+/** tie-break専用の全順序。アクティビティなし（null）は同点時だけ末尾へ回す。 */
 function compareIds(left: string | null, right: string | null): number {
   if (left === right) return 0;
   if (left == null) return 1;

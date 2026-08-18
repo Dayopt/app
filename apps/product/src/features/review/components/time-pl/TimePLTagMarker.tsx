@@ -3,14 +3,18 @@ import { Minus } from 'lucide-react';
 import { TagIcon } from '@/features/tags';
 
 interface TimePLTagMarkerProps {
-  isUncategorized: boolean;
-  tagIcon: string | null | undefined;
-  tagColor: string | null | undefined;
+  isNoActivity: boolean;
+  categoryIcon: string | null | undefined;
+  categoryColor: string | null | undefined;
 }
 
-/** Neutral marker for the synthetic uncategorized bucket; normal tags keep their own color. */
-export function TimePLTagMarker({ isUncategorized, tagIcon, tagColor }: TimePLTagMarkerProps) {
-  if (isUncategorized) {
+/** アクティビティなしの合成バケット用の中立マーカー。通常行は継承したカテゴリー色を出す。 */
+export function TimePLTagMarker({
+  isNoActivity,
+  categoryIcon,
+  categoryColor,
+}: TimePLTagMarkerProps) {
+  if (isNoActivity) {
     return (
       <span
         data-slot="uncategorized-tag-marker"
@@ -22,5 +26,5 @@ export function TimePLTagMarker({ isUncategorized, tagIcon, tagColor }: TimePLTa
     );
   }
 
-  return <TagIcon icon={tagIcon} color={tagColor} size="sm" />;
+  return <TagIcon icon={categoryIcon} color={categoryColor} size="sm" />;
 }
