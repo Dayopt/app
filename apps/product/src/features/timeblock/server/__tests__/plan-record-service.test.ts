@@ -89,6 +89,7 @@ function createPlan(overrides: Partial<PlanRow> = {}): PlanRow {
     source: 'manual',
     start_at: '2030-03-17T10:00:00.000Z',
     tag_id: null,
+    activity_id: null,
     title: 'Plan',
     updated_at: '2026-07-01T00:00:00.000Z',
     user_id: USER_ID,
@@ -108,6 +109,7 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     source: 'manual',
     start_at: '2026-03-17T10:00:00.000Z',
     tag_id: null,
+    activity_id: null,
     title: 'Record',
     updated_at: '2026-07-01T00:00:00.000Z',
     user_id: USER_ID,
@@ -355,6 +357,7 @@ describe('PlanService.create', () => {
       title: 'Future plan',
       note: null,
       tagId: null,
+      activityId: null,
       externalCalendarEventId: null,
       source: 'manual',
       startAt: '2030-03-17T10:00:00.000Z',
@@ -495,6 +498,7 @@ describe('PlanService.update', () => {
       title: existing.title,
       note: 'Updated note',
       tagId: 'tag-1',
+      activityId: null,
       externalCalendarEventId: existing.external_calendar_event_id,
       source: 'manual',
       startAt: existing.start_at,
@@ -559,6 +563,7 @@ describe('PlanService.record', () => {
       note: 'note',
       start_at: '2026-03-17T10:00:00.000Z',
       tag_id: 'tag-1',
+      activity_id: null,
       title: 'Recorded plan',
       updated_at: '2026-07-01T00:00:00.654321Z',
     });
@@ -569,6 +574,7 @@ describe('PlanService.record', () => {
       source: 'from_plan',
       start_at: plan.start_at,
       tag_id: plan.tag_id,
+      activity_id: null,
       title: plan.title,
     });
     const { service, mockSupabase, commands } = createPlanService();
@@ -830,6 +836,7 @@ describe('RecordService.create', () => {
       title: 'Second segment',
       note: null,
       tagId: null,
+      activityId: null,
       planId: plan.id,
       externalCalendarEventId: null,
       source: 'manual',
@@ -913,6 +920,7 @@ describe('RecordService.update', () => {
       note: 'old note',
       plan_id: 'plan-1',
       tag_id: TAG_ID,
+      activity_id: null,
       updated_at: '2026-07-01T00:00:00.654321Z',
     });
     const updated = { ...existing, title: 'Renamed' };
@@ -936,6 +944,7 @@ describe('RecordService.update', () => {
       title: 'Renamed',
       note: existing.note,
       tagId: existing.tag_id,
+      activityId: null,
       planId: existing.plan_id,
       externalCalendarEventId: existing.external_calendar_event_id,
       source: 'manual',

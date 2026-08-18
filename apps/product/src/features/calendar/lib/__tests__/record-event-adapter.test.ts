@@ -12,6 +12,7 @@ function makeRow(overrides: Partial<RecordEventSourceRow> = {}): RecordEventSour
     title: 'Deep Work',
     note: null,
     tag_id: 'tag-1',
+    activity_id: null,
     plan_id: null,
     source: 'manual',
     start_at: '2026-07-10T09:00:00Z',
@@ -27,6 +28,7 @@ describe('recordRowToRecordEvent', () => {
       id: 'record-1',
       title: 'Deep Work',
       tagId: 'tag-1',
+      activityId: null,
       duration: 60,
     });
   });
