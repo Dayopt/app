@@ -17,7 +17,7 @@ const TEST_RUN_ID = crypto.randomUUID();
 const TEST_USER_ID = crypto.randomUUID();
 const TEST_EMAIL = `plan-record-${TEST_RUN_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
-const TEST_TAG_NAME = `Plan Record E2E ${TEST_RUN_ID.slice(0, 8)}`;
+const TEST_ACTIVITY_NAME = `Plan Record E2E ${TEST_RUN_ID.slice(0, 8)}`;
 const PLAN_TITLE = `Plan ${TEST_RUN_ID.slice(0, 8)}`;
 const RECORD_TITLE = `Record ${TEST_RUN_ID.slice(0, 8)}`;
 
@@ -100,24 +100,35 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
       week_starts_on: 1,
     });
 
-    const { data: tag, error: tagError } = await adminSupabase
-      .from('tags')
+    // 色・アイコンを持つのはカテゴリーだけで、アクティビティは継承する（#2162 §4-6）
+    const { data: category, error: categoryError } = await adminSupabase
+      .from('categories')
       .insert({
         user_id: TEST_USER_ID,
-        name: TEST_TAG_NAME,
+        name: `Cat ${TEST_RUN_ID.slice(0, 8)}`,
         color: 'blue',
         icon: 'circle',
-        sort_order: 0,
       })
       .select('id')
       .single();
-    if (tagError) throw new Error(tagError.message);
+    if (categoryError) throw new Error(categoryError.message);
+
+    const { data: activity, error: activityError } = await adminSupabase
+      .from('activities')
+      .insert({
+        user_id: TEST_USER_ID,
+        category_id: category.id,
+        name: TEST_ACTIVITY_NAME,
+      })
+      .select('id')
+      .single();
+    if (activityError) throw new Error(activityError.message);
 
     const planDate = offsetDateParam(14);
     const recordDate = offsetDateParam(-14);
     const { error: planError } = await adminSupabase.from('plans').insert({
       user_id: TEST_USER_ID,
-      tag_id: tag.id,
+      activity_id: activity.id,
       title: PLAN_TITLE,
       start_at: isoAt(planDate, '09:00'),
       end_at: isoAt(planDate, '10:00'),
@@ -128,7 +139,7 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
       .from('records')
       .insert({
         user_id: TEST_USER_ID,
-        tag_id: tag.id,
+        activity_id: activity.id,
         title: RECORD_TITLE,
         start_at: isoAt(recordDate, '09:00'),
         end_at: isoAt(recordDate, '10:00'),
@@ -144,7 +155,8 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
     if (!adminSupabase) return;
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
-    await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('activities').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('categories').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('profiles').delete().eq('id', TEST_USER_ID);
     await adminSupabase.auth.admin.deleteUser(TEST_USER_ID);
@@ -155,24 +167,24 @@ describeWithEnv('Plan / Record Timeblock flow', () => {
     await login(page);
   });
 
-  // lane カード（TwoLane/PlanLaneCard / RecordLaneCard）は title ではなくタグ名を表示する
+  // lane カード（TwoLane/PlanLaneCard / RecordLaneCard）は title ではなくアクティビティ名を表示する
   test('Plan と Record をそれぞれの Calendar 日付に表示する', async ({ page }) => {
     await openDay(page, offsetDateParam(14));
     await expect(
-      page.locator('[data-plan-lane-card]', { hasText: TEST_TAG_NAME }).first(),
+      page.locator('[data-plan-lane-card]', { hasText: TEST_ACTIVITY_NAME }).first(),
     ).toBeVisible({
       timeout: 10_000,
     });
 
     await openDay(page, offsetDateParam(-14));
     await expect(
-      page.locator('[data-record-lane-card]', { hasText: TEST_TAG_NAME }).first(),
+      page.locator('[data-record-lane-card]', { hasText: TEST_ACTIVITY_NAME }).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test('Record の Inspector URL は record prefix を使う', async ({ page }) => {
     await openDay(page, offsetDateParam(-14));
-    await page.locator('[data-record-lane-card]', { hasText: TEST_TAG_NAME }).first().click();
+    await page.locator('[data-record-lane-card]', { hasText: TEST_ACTIVITY_NAME }).first().click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
