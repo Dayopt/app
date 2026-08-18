@@ -357,7 +357,7 @@ epic の「既知の障害 1」は「SidebarContent のモード分岐は完全�
 
 | 旧設計（`8c9e497b4` の Option Y）が要求した条件                     | 現状                                                                                                                                                                                                                                                                 | 判定           |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| Sidebar 外殻を単一箇所にマウントし、モード切替で再マウントさせない  | `desktop-layout.tsx:71-79` で `AnimatedWidthPanel` → `Sidebar` → `SidebarContent` を 1 回だけマウント                                                                                                                                                                | **既に満たす** |
+| Sidebar 外殻を単一箇所にマウントし、モード切替で再マウントさせない  | `desktop-layout.tsx:68-77` で `AnimatedWidthPanel` → `Sidebar` → `SidebarContent` を 1 回だけマウント                                                                                                                                                                | **既に満たす** |
 | navigation state をモード横断で保持する Provider を分岐より上に置く | `base-layout-content.tsx` が `CalendarNavigationProvider` を `MobileLayout` / `DesktopLayout` の分岐より上でラップ（コメントに「ルート切替時に Provider の付け外しによるリマウントを防ぎ、Sidebar が静止したままメインコンテンツだけが変わる体験を実現する」と明記） | **既に満たす** |
 | pathname から現在モードを導く dispatcher                            | 撤去済み（`SidebarContent` は Calendar の中身を直接描画）                                                                                                                                                                                                            | **要再実装**   |
 
@@ -390,16 +390,48 @@ _shell/
 
 ### 5-4. タブが切り替えるもの / 切り替えないもの
 
-| 要素                                           | タブ切替時 | 根拠                                              |
-| ---------------------------------------------- | ---------- | ------------------------------------------------- |
-| Sidebar 外殻（ロゴ・幅・開閉状態・`UserMenu`） | 不変       | `desktop-layout.tsx` に単一マウント（§5-1）       |
-| `SidebarUtilities`（テーマ切替）               | 不変       | dispatch の外に置く（旧実装と同じ）               |
-| Sidebar の中身                                 | **切替**   | `CalendarSidebar` ⇄ `ReportSidebar`               |
-| メイン領域                                     | **切替**   | route が変わる（`/calendar` ⇄ `/report`）         |
-| 選択中の日付                                   | 不変       | `CalendarNavigationProvider` が分岐より上（§5-1） |
-| `sidebar.open` / `sidebar.width`               | 不変       | `useShellStore`（`useShellStore.ts:76,139`）      |
+| 要素                                           | タブ切替時 | 根拠                                               |
+| ---------------------------------------------- | ---------- | -------------------------------------------------- |
+| Sidebar 外殻（ロゴ・幅・開閉状態・`UserMenu`） | 不変       | `desktop-layout.tsx` に単一マウント（§5-1）        |
+| `SidebarUtilities`（テーマ切替）               | 不変       | dispatch の外に置く（旧実装と同じ）                |
+| Sidebar の中身                                 | **切替**   | `CalendarSidebar` ⇄ `ReportSidebar`                |
+| メイン領域                                     | **切替**   | route が変わる（`/calendar` ⇄ `/report`）          |
+| 選択中の日付                                   | 不変       | `CalendarNavigationProvider` が分岐より上（§5-1）  |
+| `sidebar.open` / `sidebar.width`               | 不変       | `useShellStore`（型 `:70,72` / 初期値 `:136-137`） |
 
 `/settings` は `other`。デスクトップの設定は**ホームへ redirect してモーダルで出す**実装（`settings/layout.tsx` のコメント）なので、裏に見えているのはカレンダーである。したがって `other` のフォールバックは **calendar タブをアクティブにして `CalendarSidebar` を描く**（旧実装の「fallback: settings 等のモード外は CalendarSidebar」と同じ挙動で、今回は実態にも合う）。
+
+### 5-4-b. URL の書き手をタブ対応にする（設計レーンが実測で見つけた穴）
+
+**§5-4 の「選択中の日付はタブ切替で不変」を素直に実装すると、`/report` から弾き出される。**
+
+`CalendarNavigationProvider` は分岐より上にあるので `/report` でも生きている（§5-1）。`ReportSidebar` の MiniCalendar（§5-5）が日付選択で呼ぶのは既存の `navigateToDate(date, true)` で、その中身はこうなっている:
+
+```ts
+// CalendarNavigationContext.tsx（navigateToDate 内、updateUrl のとき）
+writeCalendarUrl(
+  viewTypeRef.current,
+  date,
+  panelKindRef.current,
+  reviewTagIdRef.current,
+  'replace',
+);
+// → `/${localeRef.current}/${view}?${params}` を replaceState
+```
+
+**つまり `/report` でカレンダーの日付を触った瞬間、URL が `/calendar` 系へ書き換わってタブが飛ぶ。** `?view=` 対応（§4-2-b）で `writeCalendarUrl` を直すだけでは足りない — 直した後も**行き先は常にカレンダー**だからである。
+
+**設計: URL の書き手を現在タブで分岐させる。**
+
+| 現在タブ   | `navigateToDate` が書く URL                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| `calendar` | `/{locale}/calendar?view={view}&date={date}`                                                       |
+| `report`   | `/{locale}/report?date={date}&range={range}`                                                       |
+| `other`    | 現行どおりカレンダーへ（`/settings` からの日付選択でカレンダーへ飛ぶのは今の挙動であり、変えない） |
+
+タブの判定は §5-3 と同じ `usePathname()` 由来のものを使い、`useSearchParams()` は使わない。**`writeCalendarUrl` は「カレンダーの URL を書く関数」から「今いる面の URL を書く関数」へ役割が変わる**ので、名前も実態に合わせる（`writeWorkspaceUrl` 等）。
+
+**この穴は §4-2-b の 4 箇所とは別物**なので、実装 Step の scope に個別に数える。§4-2-b は「view をどこから読むか」、こちらは「どの面の URL を書くか」で、直す動機も直し方も違う。
 
 ### 5-5. `ReportSidebar` の中身（v1）
 
@@ -430,7 +462,9 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 ### 5-7. モバイルのタブ切替 — `BottomTabBar` を 2 タブで復活する（**User 確定**）
 
-**現状の実測**: モバイルに Sidebar は存在しない。`mobile-layout.tsx` は `AppHeader` + `MainContentWrapper` + `ActivityChipRow`（カレンダーのみの固定フッター）の 3 段だけで、Sidebar も toggle も出さない（`calendar-review-panel-migration` overview §3 の「Sidebar toggle は mobile に出さない」がそのまま生きている）。**したがって §5-2 の Sidebar タブはモバイルでは 1 ピクセルも見えない。**
+**現状の実測**: モバイルに Sidebar は存在しない。`mobile-layout.tsx` は `AppHeader` + `MainContentWrapper` + チップ列（カレンダーのみの固定フッター）の 3 段だけで、Sidebar も toggle も出さない（`calendar-review-panel-migration` overview §3 の「Sidebar toggle は mobile に出さない」がそのまま生きている）。**したがって §5-2 の Sidebar タブはモバイルでは 1 ピクセルも見えない。**
+
+**名前について**: このチップ列は **main では今も `TagChipRow`**（`mobile-layout.tsx:4,61`）で、`ActivityChipRow` への改名は**未 merge の PR #2179 が持っている**変更。本節以下は #2179 merge 後に着手する前提なので `ActivityChipRow` と書くが、**現在の main を読むと `TagChipRow` である**（plan-review が「未来の名前を現状の実測として書いている」と指摘したので明示する）。
 
 **決定: `BottomTabBar` を「カレンダー / レポート」の 2 タブで復活させる**（2026-08-18、User 判断。指揮台経由で伝達）。
 
@@ -516,30 +550,40 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 **セクションを足すには、この一覧を書き換える必要がある。** 実装上も、ページが受け取るセクションの配列をここに固定し、条件分岐で生やせないようにする。
 
-### 6-2. `/report` は Pro 境界を丸ごと抱える（実測で判明・**要 User 裁可**）
+### 6-2. Pro 境界 — v1 は `/report` 全体を無料にする（**User 裁定**）
 
-**このスライスで最も重い発見。** `/report` の中身の主役は Pro プラン限定の procedure である。
+**このスライスで最も重い発見だった。** `/report` の中身の主役は Pro プラン限定の procedure だった。
 
-| procedure                     | 認可                 | 誰が使うか                                                                      |
+| procedure                     | 現状の認可           | 誰が使うか                                                                      |
 | ----------------------------- | -------------------- | ------------------------------------------------------------------------------- |
 | `statistics.getTimePL`        | `protectedProcedure` | `useTimePLData` → Time P/L（予実比較）                                          |
 | `statistics.getStatsPageData` | **`proProcedure`**   | `useReviewPageData` → `WeeklyReflectionPanel`（見積もりバイアス・空白率・傾向） |
 
-`features/timeblock/server/statistics-kpi-router.ts:43-44` のコメントが方針を明示している — 「（`getTimePL`）は protected、Review の分析深度にあたるもの（`getEstimationAccuracy` / `getStatsPageData` 等）は pro になっている」。
+`features/timeblock/server/statistics-kpi-router.ts:43-44` のコメントが従来方針を明示している — 「（`getTimePL`）は protected、Review の分析深度にあたるもの（`getEstimationAccuracy` / `getStatsPageData` 等）は pro になっている」。
 
-**パネルだった時は、これで良かった。** 脇の帯の一部が Pro だと分かるのは自然な体験で、無料ユーザーにもカレンダーという主画面が残る。**フルページになると意味が変わる** — Sidebar に常設タブとして「レポート」が並び、無料ユーザーがそれを押すと**中身の大半が空か Pro 案内のページ**に着く。タブが常に見えている分、これは「機能の一部が有料」ではなく「押せるタブが 1 つ死んでいる」体験になる。
+**パネルだった時は、これで良かった。** 脇の帯の一部が Pro なのは自然で、無料ユーザーにもカレンダーという主画面が残る。**フルページになると意味が変わる** — Sidebar に常設タブとして「レポート」が並び、無料ユーザーがそれを押すと中身の大半が空か Pro 案内のページに着く。タブが常に見えている分、「機能の一部が有料」ではなく「押せるタブが 1 つ死んでいる」体験になる。
 
-**選択肢（推奨は 1）**:
+#### 決定（2026-08-18、User 裁定。指揮台経由）
 
-1. **`/report` の第 1 セクション（差分）と第 2 セクション（Time P/L）は無料で出し、第 3 セクション以降と `getStatsPageData` 由来の深い分析だけ Pro にする** — 1 スクロール構成（§6-1）なら、上から読んでいって途中で Pro 境界に当たる形になり、「タブが死んでいる」ではなく「続きがある」になる。差分は `protectedProcedure` 経路（クライアント計算 + `getTimePL`）で賄えるので実装上も成立する
-2. `/report` 全体を Pro にし、無料ユーザーには Sidebar タブ自体を出さない — 体験は一貫するが、無料ユーザーが分析の価値を知る機会がゼロになる
-3. 現状の境界のまま（`getStatsPageData` だけ Pro）でフルページ化し、Pro 境界の再設計は別 project
+> **v1 では `/report` に課金境界を引かない。全部無料にする。**
 
-**推奨は 1。** `strategy.md` §4-6「進捗は報酬ではなく証拠で見せる」に沿えば、**証拠の最小単位（今日のズレ）は無料で見られるべき**で、Pro が売るのは「深さ」（期間をまたぐ傾向、見積もり精度の推移）である。この線引きは 1 と一致する。
+実装への落とし込み: **`statistics.getStatsPageData` の `proProcedure` ゲートを `protectedProcedure` へ外す**（本 project の実装 scope に含める）。Free / Pro 境界は**課金を有効化するタイミングで改めて設計する**。
 
-**注意**: 課金は production でまだ有効化されていない（Stripe env が入っていない）ため、**この判断は今すぐ壊れるものではない**。しかし境界の設計を先送りすると、課金を入れた瞬間に「タブが死ぬ」体験が出荷される。**設計としてここで決め、実装は Step で分けてよい。**
+**これは設計レーンの推奨（差分と Time P/L だけ無料、深い分析は Pro）とも指揮台の支持とも分岐した判断**で、判断ジャーナル（`judgment:diverged`）として #2181 に記録済み。
 
-これは価値判断なので指揮台経由で User へ上げる。裁可が出るまで §6-3 以降は「セクション 1・2 は無料」を仮置きで書く。
+**この裁定を支持する根拠**（分岐した側の言い分を残すためではなく、判断の再現性のために書く）:
+
+- **#2162 が Free / Pro 境界を「保留」にしている**（同設計書 §12-3）。片方の project だけが境界を先に引くと、後から全体設計をやり直す時に既に出荷された線引きが制約になる。**境界を引かないほうが扉が多く残る**（`decision-principles.md` 原則 4）
+- **課金は production で未有効化**（Stripe env が入っていない）。いま境界を引いても検証できず、実データも取れない
+- 私が推奨した「深さで線を引く」案は、**課金を有効化する時に改めて選べる**。v1 で無料にしたものを後から有料にするのは難しいが、**この時点ではまだ誰にも出荷していない**ので、その非対称性は発生していない
+
+#### 認可を緩める変更なので、実装時に反証レビューを必須にする
+
+`proProcedure` → `protectedProcedure` は**認可境界を緩める変更**である。`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件（auth / billing）に該当するので、**実装 PR では `risk-reviewer` の反証レビューを push 前に必ずかける**。確認する観点:
+
+- `getStatsPageData` が返すデータに、Pro 限定であることを前提にした情報（他ユーザーのデータ、課金状態そのもの等）が混ざっていないか
+- `proProcedure` を外した後、`getStatsPageData` 以外に道連れで緩む procedure が無いか（`proProcedure` の実装を共有している場合）
+- 課金を有効化する時にこのゲートを戻す手順が、`docs/product/specs/` のどこかに残るか
 
 ### 6-3. 期間契約 — `/report` は自前の期間を持つ必要がある（実測で判明）
 
@@ -553,7 +597,7 @@ const reviewDisplayRange = useMemo(
 );
 ```
 
-型は `ReviewDisplayRange`（`features/review/lib/compute-date-range.ts:9-14`）:
+型は `ReviewDisplayRange`（`features/review/lib/compute-date-range.ts:8-13`）:
 
 ```ts
 export interface ReviewDisplayRange {
@@ -597,15 +641,15 @@ export interface ReviewDisplayRange {
 
 フルページ化で直す箇所。**「そのまま置けば広く見える」わけではない**ことの根拠。
 
-| 箇所                                                                                                                   | 現状                                                          | フルページでの扱い                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `WeeklyReflectionPanel.tsx:15-16`                                                                                      | `MAX_TIME_PL_ROWS = 5` / `MAX_ESTIMATION_ROWS = 3` で切り詰め | **上限を外す**。狭さのための切り詰めで、広い画面では情報を捨てているだけ                                        |
-| `CalendarReviewPanel.tsx:38` / `ReviewDiffPanel.tsx:51`                                                                | `variant: 'rail' \| 'sheet'` の 2 値                          | `'page'` を足すのではなく、**`variant` を廃止**（§6-4 で rail が消え、sheet はモバイルのパネル = これも消える） |
-| `CalendarReviewPanel.tsx:140`                                                                                          | `isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1'`     | ページ全体のスクロールに委ねる                                                                                  |
-| `ReviewDiffPanel.tsx:161`                                                                                              | `isSheet ? 'max-h-96' : 'flex-1'`（384px 頭打ち）             | 同上                                                                                                            |
-| `CalendarReviewPanel.tsx:101-104,114,160` / `ReviewDiffPanel.tsx:95,183-185` / `WeeklyReflectionPanel.tsx:214,290-295` | `truncate` を多用                                             | 幅が取れるので大半は不要。**残すのは本当に長くなりうる名前だけ**                                                |
-| `CalendarReviewPanel.tsx:119-132` / `ReviewDiffPanel.tsx:94-114`                                                       | close ボタン                                                  | **削除**（ページには閉じるという概念が無い）                                                                    |
-| `CalendarReviewRail.tsx:52`                                                                                            | `h-full flex-col`（親の高さに完全依存）                       | ページのスクロールに委ねる                                                                                      |
+| 箇所                                                                                                           | 現状                                                          | フルページでの扱い                                                                                              |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `WeeklyReflectionPanel.tsx:15-16`                                                                              | `MAX_TIME_PL_ROWS = 5` / `MAX_ESTIMATION_ROWS = 3` で切り詰め | **上限を外す**。狭さのための切り詰めで、広い画面では情報を捨てているだけ                                        |
+| `CalendarReviewPanel.tsx:38` / `ReviewDiffPanel.tsx:51`                                                        | `variant: 'rail' \| 'sheet'` の 2 値                          | `'page'` を足すのではなく、**`variant` を廃止**（§6-4 で rail が消え、sheet はモバイルのパネル = これも消える） |
+| `CalendarReviewPanel.tsx:140`                                                                                  | `isSheet ? 'max-h-[min(72dvh,560px)]' : 'min-h-0 flex-1'`     | ページ全体のスクロールに委ねる                                                                                  |
+| `ReviewDiffPanel.tsx:161`                                                                                      | `isSheet ? 'max-h-96' : 'flex-1'`（384px 頭打ち）             | 同上                                                                                                            |
+| `CalendarReviewPanel.tsx:114,160` / `ReviewDiffPanel.tsx:95,183-185` / `WeeklyReflectionPanel.tsx:214,290-295` | `truncate` を多用                                             | 幅が取れるので大半は不要。**残すのは本当に長くなりうる名前だけ**                                                |
+| `CalendarReviewPanel.tsx:119-132` / `ReviewDiffPanel.tsx:94-114`                                               | close ボタン                                                  | **削除**（ページには閉じるという概念が無い）                                                                    |
+| `CalendarReviewRail.tsx:52`                                                                                    | `h-full flex-col`（親の高さに完全依存）                       | ページのスクロールに委ねる                                                                                      |
 
 **タグ絞り込み `Select`（`CalendarReviewPanel.tsx:95-118`）の去就**: 狭さのために `Select` に押し込めていた。フルページかつ #2162 でセグメントが Sidebar に出る（§5-5）ので、**この `Select` は廃止して Sidebar 側へ寄せる**。`reviewTagId` は #2162 の語彙で名前が変わるため、最終名はレーン G の確定に従う。
 
@@ -617,13 +661,13 @@ export interface ReviewDisplayRange {
 
 ### 6-7. このスライスの Reversibility
 
-| 変更                                          | 判定        | 根拠                                                                   |
-| --------------------------------------------- | ----------- | ---------------------------------------------------------------------- |
-| 1 スクロール構成                              | `[minutes]` | レイアウトのみ                                                         |
-| `/report?date=&range=` の凍結                 | `[hours]`   | 公開 URL 契約だが 307 redirect で行き先を変えられる（§4-5 と同じ性質） |
-| `features/review/index.ts` の公開契約作り替え | `[minutes]` | repo 内の契約。外部に出ない                                            |
-| `ReviewGranularity` 型の拡張                  | `[minutes]` | 純追加                                                                 |
-| Pro 境界の線引き（§6-2）                      | `[hours]`   | 課金未有効化のため今は挙動に出ない。有効化後に変えると**顧客に見える** |
+| 変更                                                | 判定        | 根拠                                                                                                                  |
+| --------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1 スクロール構成                                    | `[minutes]` | レイアウトのみ                                                                                                        |
+| `/report?date=&range=` の凍結                       | `[hours]`   | 公開 URL 契約だが 307 redirect で行き先を変えられる（§4-5 と同じ性質）                                                |
+| `features/review/index.ts` の公開契約作り替え       | `[minutes]` | repo 内の契約。外部に出ない                                                                                           |
+| `ReviewGranularity` 型の拡張                        | `[minutes]` | 純追加                                                                                                                |
+| `getStatsPageData` の `proProcedure` を外す（§6-2） | `[minutes]` | 認可を**緩める**変更なので revert 自体は容易。ただし実装時に `risk-reviewer` 必須。課金未有効化のため顧客には見えない |
 
 ## 9. Step 分解と Reversibility Table
 
@@ -690,15 +734,15 @@ export interface ReviewDisplayRange {
 
 §9 の Step をそのまま issue にする。**1 Step = 1 issue = 1 レーン = 1 branch = 1 PR。** 依存の向きが merge 順になる。
 
-| Step | issue タイトル案                                                                  | 依存                  | 受け入れ条件の核                                                                                                               |
-| ---- | --------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す |
-| 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                         |
-| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                 |
-| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築                            |
-| 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                      |
-| 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                            |
-| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                           |
+| Step | issue タイトル案                                                                  | 依存                  | 受け入れ条件の核                                                                                                                                                                                                |
+| ---- | --------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `feat(routing): /calendar route を新設し view をクエリで受ける`                   | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` が true であることを test で固定。旧 route は残す                                                                                  |
+| 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                                                                                                          |
+| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                                                                                                  |
+| 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3                | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**`getStatsPageData` の `proProcedure` を外す（§6-2）**。認可を緩めるので `risk-reviewer` を push 前に必須 |
+| 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                                                                       |
+| 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                                                             |
+| 7    | `docs(product): 原則 10 の歯止めを置き場所から中身へ移す`                         | なし（並行可）        | `strategy.md` §4-10 と `principles.md:35` を**同時に**直す。`specs/review.md` も追従                                                                                                                            |
 
 **Step 7 は他と並行してよい**（docs のみで、コードに依存しない）。ただし **§4-10 と `principles.md:35` を分けない** — 片方だけ直すと後続レビューが未改訂の側を根拠に差し戻せる。
 
