@@ -9,7 +9,6 @@ import 'server-only';
  * - マージ: `tag-merge-service.ts`
  * - アーカイブ / 復元: `tag-archive-service.ts`
  * - 削除: `tag-delete-service.ts`
- * - 並び替え: `tag-reorder-service.ts`
  *
  * キャッシュ戦略:
  * - [一時的に無効化] unstable_cache()によるサーバーサイドキャッシュ
@@ -29,7 +28,6 @@ import {
   type UpdateTagInput,
 } from './tag-mutation-service';
 import { TagQueryService } from './tag-query-service';
-import { TagReorderService, type ReorderTagUpdate } from './tag-reorder-service';
 
 export { TagServiceError } from './tag-service-error';
 
@@ -45,7 +43,6 @@ interface ListTagsOptions {
  */
 export class TagService {
   private readonly queryService: TagQueryService;
-  private readonly reorderService: TagReorderService;
   private readonly mutationService: TagMutationService;
   private readonly mergeService: TagMergeService;
   private readonly archiveService: TagArchiveService;
@@ -53,7 +50,6 @@ export class TagService {
 
   constructor(supabase: SupabaseClient<Database>) {
     this.queryService = new TagQueryService(supabase);
-    this.reorderService = new TagReorderService(supabase);
     this.mutationService = new TagMutationService(supabase, this.queryService);
     this.mergeService = new TagMergeService(supabase, this.queryService);
     this.archiveService = new TagArchiveService(supabase, this.queryService);
@@ -175,12 +171,6 @@ export class TagService {
    * @param options - userId と更新配列
    * @returns 更新されたタグ数
    */
-  async reorder(options: {
-    userId: string;
-    updates: ReorderTagUpdate[];
-  }): Promise<{ count: number }> {
-    return this.reorderService.reorder(options);
-  }
 }
 
 /**
