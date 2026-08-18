@@ -15,14 +15,14 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
-export { CalendarCompareToggle } from './components/layout/Header/CalendarCompareToggle';
+export { CalendarPanelToggle } from './components/layout/Header/CalendarPanelToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================
 // Filter
 // =============================================================================
-export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
-export { TagChipRow } from './components/tag-filter/components/TagChipRow';
+export { ActivityFilterList } from './components/activity-filter/ActivityFilterList';
+export { ActivityChipRow } from './components/activity-filter/components/ActivityChipRow';
 
 // =============================================================================
 // Types

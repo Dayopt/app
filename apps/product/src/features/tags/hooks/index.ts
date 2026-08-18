@@ -14,7 +14,7 @@ export { tagKeys } from './tagQueryKeys';
 export { useTags, useTagsHierarchy } from './useTagsQuery';
 
 // Tags Mutation Hooks (CRUD)
-export { useCreateTag, useDeleteTag, useReorderTags, useUpdateTag } from './useTagCrudMutations';
+export { useCreateTag, useDeleteTag, useUpdateTag } from './useTagCrudMutations';
 
 // Tags Mutation Hooks (Archive / Restore)
 export { useArchiveTag, useArchivedTags, useRestoreTag } from './useTagArchiveMutations';

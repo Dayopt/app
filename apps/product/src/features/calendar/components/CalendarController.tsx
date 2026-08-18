@@ -120,22 +120,21 @@ interface CalendarControllerProps {
   className?: string;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
-  onCompareRailOpenChange?: ((open: boolean) => void) | undefined;
-  renderCompareRail?: ((props: CalendarCompareRailRenderProps) => React.ReactNode) | undefined;
-  panelRail?: React.ReactNode | undefined;
-  mobilePanelRail?: React.ReactNode | undefined;
-  panelRailOpen?: boolean | undefined;
-  onPanelRailOpenChange?: ((open: boolean) => void) | undefined;
-  panelRailTitle?: string | undefined;
-  panelRailDescription?: string | undefined;
+  /** review/diff 統合パネル（#2149 段階統合 Phase 1）が開いているか */
+  panelOpen?: boolean | undefined;
+  onPanelOpenChange?: ((open: boolean) => void) | undefined;
+  renderPanelRail?: ((props: CalendarPanelRailRenderProps) => React.ReactNode) | undefined;
+  panelTitle?: string | undefined;
+  panelDescription?: string | undefined;
   recoverableSidebarWidth?: number | undefined;
   onSideRailSpaceRecoveryChange?: ((recovering: boolean) => void) | undefined;
 }
 
-interface CalendarCompareRailRenderProps {
-  diff: ReturnType<typeof computeTimeblockDayDiffs>;
+interface CalendarPanelRailRenderProps {
+  /** panelOpen かつ diff 対応 view の時のみ非 null（タブ切替の有無に関わらず計算済み） */
+  diff: ReturnType<typeof computeTimeblockDayDiffs> | null;
   variant: 'rail' | 'sheet';
-  onItemClick: (timeblockId: string) => void;
+  onDiffItemClick: (timeblockId: string) => void;
   onClose?: (() => void) | undefined;
 }
 
@@ -176,14 +175,11 @@ export function CalendarController({
   className,
   leftSlot,
   rightSlot,
-  onCompareRailOpenChange,
-  renderCompareRail,
-  panelRail,
-  mobilePanelRail,
-  panelRailOpen = false,
-  onPanelRailOpenChange,
-  panelRailTitle,
-  panelRailDescription,
+  panelOpen = false,
+  onPanelOpenChange,
+  renderPanelRail,
+  panelTitle,
+  panelDescription,
   recoverableSidebarWidth,
   onSideRailSpaceRecoveryChange,
 }: CalendarControllerProps) {
@@ -196,8 +192,8 @@ export function CalendarController({
   const timezone = useUserPreferences((preferences) => preferences.timezone);
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
-  const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
-  const showUntagged = useCalendarFilterStore((state) => state.showUntagged);
+  const visibleActivityIds = useCalendarFilterStore((state) => state.visibleActivityIds);
+  const showNoActivity = useCalendarFilterStore((state) => state.showNoActivity);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -225,8 +221,10 @@ export function CalendarController({
     () => (showWeekends ? viewDateRange.days : viewDateRange.days.filter((day) => !isWeekend(day))),
     [showWeekends, viewDateRange.days],
   );
+  // rail の diff データは「panel が開いていて diff 対応 view」なら常に計算する（タブ切替時の再計算待ちを無くす）。
+  // グリッド上のハイライト表示（dayDiffEntryIds）は別途 showActualDiff（diff タブが実際に active）で絞る。
   const calendarDiffEnabled =
-    showActualDiff &&
+    panelOpen &&
     isCalendarDiffView(viewType) &&
     (viewType === 'day' || calendarDiffDays.length > 0);
   const calendarDiffDayBounds = useMemo(
@@ -255,8 +253,8 @@ export function CalendarController({
     [calendarDiffDayBounds, showWeekends, viewType],
   );
   const calendarDiffPlans = useMemo(() => {
-    void visibleTagIds;
-    void showUntagged;
+    void visibleActivityIds;
+    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'plan')
@@ -281,12 +279,12 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showUntagged,
-    visibleTagIds,
+    showNoActivity,
+    visibleActivityIds,
   ]);
   const calendarDiffRecords = useMemo(() => {
-    void visibleTagIds;
-    void showUntagged;
+    void visibleActivityIds;
+    void showNoActivity;
     if (!calendarDiffEnabled) return [];
     return allTimeblocks
       .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.tagId ?? null))
@@ -305,16 +303,22 @@ export function CalendarController({
     calendarDiffEnabled,
     isEntryVisible,
     isWithinVisibleDayBounds,
-    showUntagged,
-    visibleTagIds,
+    showNoActivity,
+    visibleActivityIds,
   ]);
   const calendarDiff = useMemo(
     () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffRecords, calendarDiffBounds),
     [calendarDiffBounds, calendarDiffPlans, calendarDiffRecords],
   );
+  // グリッド上のハイライトは diff タブが実際に active（showActualDiff）な時だけに絞る。
+  // calendarDiffEnabled は panel が開いていれば true になるため、この絞り込みが無いと
+  // 統計タブ表示中でもグリッドに差分マーカーが出てしまう。
   const dayDiffEntryIds = useMemo(
-    () => new Set(calendarDiff.items.map((item) => item.timeblockId)),
-    [calendarDiff.items],
+    () =>
+      showActualDiff
+        ? new Set(calendarDiff.items.map((item) => item.timeblockId))
+        : new Set<string>(),
+    [showActualDiff, calendarDiff.items],
   );
   const handleCalendarDiffItemClick = useCallback(
     (timeblockId: string) => {
@@ -323,9 +327,9 @@ export function CalendarController({
     },
     [allTimeblocks, onEntryClick],
   );
-  const handleCloseCompareRail = useCallback(() => {
-    onCompareRailOpenChange?.(false);
-  }, [onCompareRailOpenChange]);
+  const handleClosePanelRail = useCallback(() => {
+    onPanelOpenChange?.(false);
+  }, [onPanelOpenChange]);
 
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
@@ -400,45 +404,33 @@ export function CalendarController({
     ],
   );
 
-  const compareRail =
-    calendarDiffEnabled && renderCompareRail
-      ? renderCompareRail({
-          diff: calendarDiff,
+  const panelRailDiff = calendarDiffEnabled ? calendarDiff : null;
+  const activeRail =
+    panelOpen && renderPanelRail
+      ? renderPanelRail({
+          diff: panelRailDiff,
           variant: 'rail',
-          onItemClick: handleCalendarDiffItemClick,
-          onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
+          onDiffItemClick: handleCalendarDiffItemClick,
+          onClose: onPanelOpenChange ? handleClosePanelRail : undefined,
         })
       : null;
-  const mobileCompareRail =
-    calendarDiffEnabled && renderCompareRail
-      ? renderCompareRail({
-          diff: calendarDiff,
+  const activeMobileRail =
+    panelOpen && renderPanelRail
+      ? renderPanelRail({
+          diff: panelRailDiff,
           variant: 'sheet',
-          onItemClick: handleCalendarDiffItemClick,
-          onClose: onCompareRailOpenChange ? handleCloseCompareRail : undefined,
+          onDiffItemClick: handleCalendarDiffItemClick,
+          onClose: onPanelOpenChange ? handleClosePanelRail : undefined,
         })
       : null;
-  const compareRailOpen = Boolean(compareRail);
-  const panelRailActive = Boolean(panelRailOpen && panelRail);
-  const activeRail = panelRailActive ? panelRail : compareRail;
-  const activeMobileRail = panelRailActive ? (mobilePanelRail ?? panelRail) : mobileCompareRail;
-  const activeRailOpen = panelRailActive || compareRailOpen;
-  const activeRailTitle = panelRailActive
-    ? (panelRailTitle ?? t('calendar.analysis.panel.title'))
-    : t('calendar.compare.rail.title');
-  const activeRailDescription = panelRailActive
-    ? (panelRailDescription ?? t('calendar.analysis.panel.description'))
-    : t('calendar.compare.rail.description');
+  const activeRailOpen = panelOpen;
+  const activeRailTitle = panelTitle ?? t('calendar.compare.rail.title');
+  const activeRailDescription = panelDescription ?? t('calendar.compare.rail.description');
   const handleSideRailOpenChange = useCallback(
     (open: boolean) => {
-      if (panelRailActive) {
-        onPanelRailOpenChange?.(open);
-        return;
-      }
-
-      onCompareRailOpenChange?.(open);
+      onPanelOpenChange?.(open);
     },
-    [panelRailActive, onPanelRailOpenChange, onCompareRailOpenChange],
+    [onPanelOpenChange],
   );
 
   // =========================================================================

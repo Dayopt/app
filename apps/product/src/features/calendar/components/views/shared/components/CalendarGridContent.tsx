@@ -36,6 +36,7 @@ import {
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
+import { HOURS_PER_DAY } from '../constants/grid.constants';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
@@ -190,7 +191,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const timezone = useUserPreferences((state) => state.timezone);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
-  const gridHeight = 24 * HOUR_HEIGHT;
+  const gridHeight = HOURS_PER_DAY * HOUR_HEIGHT;
   const { createRecord } = useTimeblockWriteMutations();
   const { convertGhost, dismissGhost } = useConvertGhostEvent();
 

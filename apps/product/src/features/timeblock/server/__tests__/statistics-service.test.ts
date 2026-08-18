@@ -140,7 +140,7 @@ describe('StatisticsService.getTagStats', () => {
 
     // records が無いタグは counts に現れない（0 扱い） — 削除確認の合計判定は呼び出し側が
     // counts + planCounts を合算する（apps/product/src/features/calendar/components/
-    // tag-filter/tag-delete-counts.ts の mergeTagDeleteCounts）
+    // activity-filter/activity-delete-counts.ts の mergeActivityDeleteCounts）
     expect(result.counts['tag-future']).toBeUndefined();
     expect(result.planCounts).toEqual({ 'tag-future': 1 });
   });

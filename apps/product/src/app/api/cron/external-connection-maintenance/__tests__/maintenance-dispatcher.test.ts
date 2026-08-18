@@ -75,6 +75,7 @@ const STATUS = {
   connections_due: false,
   receipts_due: false,
   security_events_due: false,
+  calendar_finalize_stuck_count: 0,
 };
 
 const CLEAN_STATUS = {
@@ -88,6 +89,7 @@ const CLEAN_STATUS = {
   connections_due: false,
   receipts_due: false,
   security_events_due: false,
+  calendar_finalize_stuck_count: 0,
 };
 
 const CLEAN_OUTBOX = {
@@ -453,5 +455,29 @@ describe('dispatchExternalConnectionMaintenance', () => {
     expect(serialized).not.toContain('lease_id');
     expect(serialized).not.toContain('user_id');
     expect(serialized).not.toContain('connection_id');
+  });
+
+  describe('calendarFinalizeStuck（#2055a）', () => {
+    it('status の calendar_finalize_stuck_count をそのまま返す', async () => {
+      processCalendarRevokeOutbox.mockResolvedValue(CLEAN_OUTBOX);
+      setupRpc({ ...CLEAN_STATUS, calendar_finalize_stuck_count: 2 });
+
+      const summary = await dispatchExternalConnectionMaintenance({ deadlineAt: FAR_DEADLINE });
+
+      expect(summary.calendarFinalizeStuck).toBe(2);
+      // 別 cron の backlog なので complete / hasMore には混ぜない。
+      expect(summary.complete).toBe(true);
+      expect(summary.retention.hasMore).toBe(false);
+    });
+
+    it('列が無い predecessor schema では 0 に fallback する', async () => {
+      processCalendarRevokeOutbox.mockResolvedValue(CLEAN_OUTBOX);
+      const { calendar_finalize_stuck_count: _omit, ...statusWithoutColumn } = CLEAN_STATUS;
+      setupRpc(statusWithoutColumn as typeof CLEAN_STATUS);
+
+      const summary = await dispatchExternalConnectionMaintenance({ deadlineAt: FAR_DEADLINE });
+
+      expect(summary.calendarFinalizeStuck).toBe(0);
+    });
   });
 });
