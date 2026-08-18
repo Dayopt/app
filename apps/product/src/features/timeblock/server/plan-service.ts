@@ -207,6 +207,11 @@ export class PlanService {
     // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
     if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
       await assertTagAssignable(this.supabase, userId, input.tagId);
+    }
+    // activity も同型に独立判定する。tag の条件へネストすると、activity だけを
+    // 付け替える更新で fail-fast が発火しない（DB 側 assert は効くが、エラーが
+    // tag 語彙で返り、timeblock-command-service の実装とも非対称になる）。
+    if (input.activityId !== undefined && input.activityId !== existing.activity_id) {
       await assertActivityAssignable(this.supabase, userId, input.activityId);
     }
 
