@@ -116,7 +116,7 @@ export class StatisticsTagDashboardService {
   ): Promise<Array<StatRecordRow & { title: string; note: string | null }>> {
     const { data, error } = await this.supabase
       .from(databaseTables.records)
-      .select('id, title, note, tag_id, plan_id, source, start_at, end_at')
+      .select('id, title, note, tag_id, activity_id, plan_id, source, start_at, end_at')
       .eq('user_id', userId)
       .eq('tag_id', tagId)
       .is('deleted_at', null)
@@ -142,7 +142,7 @@ export class StatisticsTagDashboardService {
   > {
     const { data, error } = await this.supabase
       .from('plans')
-      .select('id, title, note, tag_id, start_at, end_at, skipped_at')
+      .select('id, title, note, tag_id, activity_id, start_at, end_at, skipped_at')
       .eq('user_id', userId)
       .eq('tag_id', tagId)
       .is('deleted_at', null)

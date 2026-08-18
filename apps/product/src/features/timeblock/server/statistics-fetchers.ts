@@ -14,6 +14,7 @@ import type { ServiceSupabaseClient } from './types';
 export interface StatPlanRow {
   id: string;
   tag_id: string | null;
+  activity_id: string | null;
   start_at: string;
   end_at: string;
 }
@@ -21,6 +22,7 @@ export interface StatPlanRow {
 export interface StatRecordRow {
   id: string;
   tag_id: string | null;
+  activity_id: string | null;
   plan_id: string | null;
   source: string;
   start_at: string;
@@ -51,7 +53,7 @@ export async function fetchRecords(
 ): Promise<StatRecordRow[]> {
   let query = supabase
     .from(databaseTables.records)
-    .select('id, tag_id, plan_id, source, start_at, end_at')
+    .select('id, tag_id, activity_id, plan_id, source, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -74,7 +76,7 @@ export async function fetchRecordsByPlanIds(
 ): Promise<StatRecordRow[]> {
   const { data, error } = await supabase
     .from(databaseTables.records)
-    .select('id, tag_id, plan_id, source, start_at, end_at')
+    .select('id, tag_id, activity_id, plan_id, source, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .in('plan_id', planIds);
@@ -94,7 +96,7 @@ export async function fetchPlans(
 ): Promise<StatPlanRow[]> {
   let query = supabase
     .from('plans')
-    .select('id, tag_id, start_at, end_at')
+    .select('id, tag_id, activity_id, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -123,7 +125,7 @@ export async function fetchPlansForEstimation(
 ): Promise<EstimationPlanRow[]> {
   let query = supabase
     .from('plans')
-    .select('id, tag_id, start_at, end_at, skipped_at')
+    .select('id, tag_id, activity_id, start_at, end_at, skipped_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);

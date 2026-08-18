@@ -73,6 +73,53 @@ export class StatisticsGeneralService {
     return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
   }
 
+  /**
+   * `getTagStats` のアクティビティ版。戻り値の形は同一で、キーが activityId になる。
+   *
+   * サイドバーの削除確認分岐がこれを引く。`getTagStats` は tag_id 集計なので
+   * activity ID で引くと全件 0 になり、使用中のアクティビティが確認なしで即削除
+   * される（tag 側で #1576 のフォローアップとして直したのと同型の断線）。
+   *
+   * `counts` は records ベース、`planCounts` は Plan 側を別 Record で返す。
+   * アクティビティ削除は Plan / Record の両方を「アクティビティなし」にするため、
+   * 呼び出し側は両方の合計を「削除で未分類になる件数」として扱う。
+   *
+   * 集約は tag 版と同じ pure 関数を通す。`tag_id` は grouping key の field 名として
+   * 使っているだけで、複製すると「last_used が null の row は lastUsed から除外する」
+   * のような細部が将来ずれるため、意図的に共有する。
+   */
+  async getActivityStats(userId: string): Promise<{
+    counts: Record<string, number>;
+    planCounts: Record<string, number>;
+    lastUsed: Record<string, string>;
+  }> {
+    const [records, plans] = await Promise.all([
+      fetchRecords(this.supabase, userId),
+      fetchPlans(this.supabase, userId),
+    ]);
+
+    const byActivity = new Map<string, { count: number; lastUsed: string | null }>();
+    for (const record of records) {
+      if (record.activity_id == null) continue;
+      const acc = byActivity.get(record.activity_id) ?? { count: 0, lastUsed: null };
+      acc.count += 1;
+      if (acc.lastUsed == null || record.start_at > acc.lastUsed) acc.lastUsed = record.start_at;
+      byActivity.set(record.activity_id, acc);
+    }
+
+    const rows = Array.from(byActivity.entries()).map(([activityId, v]) => ({
+      tag_id: activityId,
+      record_count: v.count,
+      last_used: v.lastUsed,
+    }));
+
+    const planRows = plans
+      .filter((plan): plan is typeof plan & { activity_id: string } => plan.activity_id != null)
+      .map((plan) => ({ tag_id: plan.activity_id }));
+
+    return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
+  }
+
   /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */
   async getTimeByTag(userId: string, range: DateRangeInput = {}) {
     const [records, tagsById] = await Promise.all([
