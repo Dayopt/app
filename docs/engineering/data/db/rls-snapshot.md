@@ -5,14 +5,16 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 44 件 / RLS 対象テーブル 21 件 / GRANT 230 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 52 件 / RLS 対象テーブル 23 件 / GRANT 234 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）0 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
 | table                         | RLS enabled | forced |
 | ----------------------------- | ----------- | ------ |
+| activities                    | ✅          | —      |
 | calendar_connection_calendars | ✅          | —      |
 | calendar_connections          | ✅          | —      |
+| categories                    | ✅          | —      |
 | email_suppressions            | ✅          | —      |
 | external_calendar_events      | ✅          | —      |
 | mcp_environment_identity      | ✅          | —      |
@@ -35,6 +37,15 @@
 
 ## ポリシー一覧（table 別）
 
+### activities
+
+| policy                          | cmd    | permissive | roles    | USING                                   | WITH CHECK                              |
+| ------------------------------- | ------ | ---------- | -------- | --------------------------------------- | --------------------------------------- |
+| Users can delete own activities | DELETE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can insert own activities | INSERT | PERMISSIVE | {public} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own activities   | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can update own activities | UPDATE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
 ### calendar_connection_calendars
 
 | policy                                                        | cmd    | permissive | roles           | USING                                   | WITH CHECK |
@@ -48,6 +59,15 @@
 | ---------------------------------------------------- | ------ | ---------- | --------------- | --------------------------------------- | ---------- |
 | Service role has full access to calendar connections | ALL    | PERMISSIVE | {service_role}  | true                                    | true       |
 | Users can view own calendar connections              | SELECT | PERMISSIVE | {authenticated} | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### categories
+
+| policy                          | cmd    | permissive | roles    | USING                                   | WITH CHECK                              |
+| ------------------------------- | ------ | ---------- | -------- | --------------------------------------- | --------------------------------------- |
+| Users can delete own categories | DELETE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can insert own categories | INSERT | PERMISSIVE | {public} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
+| Users can view own categories   | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
+| Users can update own categories | UPDATE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
 
 ### email_suppressions
 
@@ -415,9 +435,13 @@ allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapsho
 | routine     | public.update_updated_at()                                                                                                                                                                                                                                                                                                                                                                                                                       | service_role        | EXECUTE                                                                 |
 | routine     | public.use_recovery_code(p_user_id uuid, p_code_hash text)                                                                                                                                                                                                                                                                                                                                                                                       | service_role        | EXECUTE                                                                 |
 | routine     | public.vault_secret_exists(p_name text)                                                                                                                                                                                                                                                                                                                                                                                                          | service_role        | EXECUTE                                                                 |
+| table       | public.activities                                                                                                                                                                                                                                                                                                                                                                                                                                | authenticated       | DELETE, INSERT, SELECT, UPDATE                                          |
+| table       | public.activities                                                                                                                                                                                                                                                                                                                                                                                                                                | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.calendar_connection_calendars                                                                                                                                                                                                                                                                                                                                                                                                             | authenticated       | SELECT                                                                  |
 | table       | public.calendar_connection_calendars                                                                                                                                                                                                                                                                                                                                                                                                             | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.calendar_connections                                                                                                                                                                                                                                                                                                                                                                                                                      | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.categories                                                                                                                                                                                                                                                                                                                                                                                                                                | authenticated       | DELETE, INSERT, SELECT, UPDATE                                          |
+| table       | public.categories                                                                                                                                                                                                                                                                                                                                                                                                                                | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.email_suppressions                                                                                                                                                                                                                                                                                                                                                                                                                        | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.external_calendar_events                                                                                                                                                                                                                                                                                                                                                                                                                  | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.mcp_mutation_control                                                                                                                                                                                                                                                                                                                                                                                                                      | service_role        | SELECT                                                                  |

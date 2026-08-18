@@ -15,7 +15,6 @@
  * - tags.archive: タグアーカイブ（親は子タグを道連れ）
  * - tags.restore: アーカイブ済みタグの復元
  * - tags.delete: タグ削除（関連 Plan / Record は未分類化）
- * - tags.reorder: タグ並び替え（sort_order更新）
  */
 
 import { z } from 'zod';
@@ -357,46 +356,6 @@ export const tagsRouter = createTRPCRouter({
         });
 
         return deletedTag;
-      } catch (error) {
-        return handleServiceError(error);
-      }
-    }),
-
-  /**
-   * タグ並び替え（バッチ更新）
-   */
-  reorder: protectedProcedure
-    .meta({ description: 'タグ並び替え（バッチsort_order更新、最大200件）' })
-    .input(
-      z.object({
-        updates: z
-          .array(
-            z.object({
-              id: z.string().uuid(),
-              parent_id: z.string().uuid().nullable(),
-              sort_order: z.number().int(),
-            }),
-          )
-          .max(200),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const service = createTagService(ctx.supabase);
-        const result = await service.reorder({
-          userId: ctx.userId,
-          updates: input.updates,
-        });
-
-        // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
-          logger.warn('Tags cache invalidation failed (non-fatal)', {
-            userId: ctx.userId,
-            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
-          });
-        });
-
-        return result;
       } catch (error) {
         return handleServiceError(error);
       }

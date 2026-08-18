@@ -28,6 +28,44 @@ export type Database = {
   };
   public: {
     Tables: {
+      activities: {
+        Row: {
+          archived_at: string | null;
+          category_id: string | null;
+          created_at: string;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          archived_at?: string | null;
+          category_id?: string | null;
+          created_at?: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          archived_at?: string | null;
+          category_id?: string | null;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'activities_category_owner_fkey';
+            columns: ['category_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
       calendar_connection_calendars: {
         Row: {
           calendar_name: string | null;
@@ -127,6 +165,39 @@ export type Database = {
           refresh_token_rotation_operation_id?: string | null;
           status?: string;
           sync_sequence?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      categories: {
+        Row: {
+          archived_at: string | null;
+          color: string | null;
+          created_at: string;
+          icon: string | null;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          archived_at?: string | null;
+          color?: string | null;
+          created_at?: string;
+          icon?: string | null;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          archived_at?: string | null;
+          color?: string | null;
+          created_at?: string;
+          icon?: string | null;
+          id?: string;
+          name?: string;
           updated_at?: string;
           user_id?: string;
         };

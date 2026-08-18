@@ -84,20 +84,20 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   }, [selectedTargetId, sourceTag.id, mergeTagMutation, onMergeSuccess, onClose, t]);
 
   const description = selectedTarget
-    ? t('calendar.filter.mergeTag.description', {
+    ? t('calendar.filter.mergeActivity.description', {
         sourceName: sourceTag.name,
         targetName: selectedTarget.name,
       })
-    : t('calendar.filter.mergeTag.selectTarget');
+    : t('calendar.filter.mergeActivity.selectTarget');
 
   return (
     <DestructiveFormDialog
       open={open}
       onClose={onClose}
       onConfirm={handleMerge}
-      title={t('calendar.filter.mergeTag.title')}
+      title={t('calendar.filter.mergeActivity.title')}
       description={description}
-      confirmLabel={t('calendar.filter.mergeTag.confirm')}
+      confirmLabel={t('calendar.filter.mergeActivity.confirm')}
       loadingLabel={t('calendar.toast.saving')}
       confirmDisabled={!selectedTargetId}
       responsive
@@ -111,7 +111,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
           onSelect={handleSelectTag}
           excludeIds={[sourceTag.id]}
           asRadioGroup
-          ariaLabel={t('calendar.filter.mergeTag.title')}
+          ariaLabel={t('calendar.filter.mergeActivity.title')}
         />
       </div>
 

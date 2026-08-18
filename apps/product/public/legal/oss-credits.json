@@ -144,34 +144,6 @@
     "publisher": "The Babel Team (https://babel.dev/team)"
   },
   {
-    "name": "@dnd-kit/accessibility",
-    "version": "3.1.1",
-    "license": "MIT",
-    "repository": "https://github.com/clauderic/dnd-kit.git",
-    "publisher": "Claudéric Demers"
-  },
-  {
-    "name": "@dnd-kit/core",
-    "version": "6.3.1",
-    "license": "MIT",
-    "repository": "https://github.com/clauderic/dnd-kit.git",
-    "publisher": "Claudéric Demers"
-  },
-  {
-    "name": "@dnd-kit/sortable",
-    "version": "10.0.0",
-    "license": "MIT",
-    "repository": "https://github.com/clauderic/dnd-kit.git",
-    "publisher": "Claudéric Demers"
-  },
-  {
-    "name": "@dnd-kit/utilities",
-    "version": "3.2.2",
-    "license": "MIT",
-    "repository": "https://github.com/clauderic/dnd-kit.git",
-    "publisher": "Claudéric Demers"
-  },
-  {
     "name": "@esbuild/darwin-arm64",
     "version": "0.28.1",
     "license": "MIT",
