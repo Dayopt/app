@@ -73,6 +73,7 @@ const SUMMARY: Awaited<ReturnType<typeof dispatchType>> = {
     },
     hasMore: false,
   },
+  calendarFinalizeStuck: 0,
   durationMs: 120,
 };
 
@@ -223,5 +224,22 @@ describe('external connection maintenance cron', () => {
 
     expect(response.status).toBe(503);
     expect(dispatchExternalConnectionMaintenance).not.toHaveBeenCalled();
+  });
+
+  it('calendarFinalizeStuck が残る時は complete に関わらず独立した warn を出す（#2055a）', async () => {
+    dispatchExternalConnectionMaintenance.mockResolvedValue({
+      ...SUMMARY,
+      complete: true,
+      retention: { ...SUMMARY.retention, hasMore: false },
+      calendarFinalizeStuck: 3,
+    });
+
+    const response = await GET(request('Bearer super-secret-cron'));
+
+    expect(response.status).toBe(200);
+    expect(loggerWarn).toHaveBeenCalledWith(
+      '[external-connection-maintenance] finalize guard candidates are stuck',
+      { calendarFinalizeStuck: 3 },
+    );
   });
 });

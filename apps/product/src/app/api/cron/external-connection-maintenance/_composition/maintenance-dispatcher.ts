@@ -83,6 +83,12 @@ type ExternalConnectionMaintenanceSummary = {
   complete: boolean;
   outbox: PublicOutboxSummary;
   retention: RetentionSummary;
+  /**
+   * `finalize-calendar-revoke-guards` cron 側で 24h 超 guard されたまま滞留している件数
+   * （#2055(a)）。この cron からは解消できない別 cron の backlog なので `retention.due` /
+   * `hasMore` / `complete` には混ぜず、独立フィールドとして持つ。
+   */
+  calendarFinalizeStuck: number;
   durationMs: number;
 };
 
@@ -251,6 +257,7 @@ export async function dispatchExternalConnectionMaintenance(params: {
         due: NO_RETENTION_DUE,
         hasMore: false,
       },
+      calendarFinalizeStuck: 0,
       durationMs: Date.now() - startedAt,
     };
     logger.info(
@@ -370,6 +377,8 @@ export async function dispatchExternalConnectionMaintenance(params: {
     !outbox.deadlineReached &&
     status.calendar_revoke_total === 0 &&
     !hasMore;
+  // predecessor schema（新列が無い）は number | undefined になりうる。実行時 fallback で吸収する。
+  const calendarFinalizeStuck = Number(status.calendar_finalize_stuck_count ?? 0);
 
   const summary: ExternalConnectionMaintenanceSummary = {
     complete,
@@ -390,6 +399,7 @@ export async function dispatchExternalConnectionMaintenance(params: {
       due,
       hasMore,
     },
+    calendarFinalizeStuck,
     durationMs: Date.now() - startedAt,
   };
 
