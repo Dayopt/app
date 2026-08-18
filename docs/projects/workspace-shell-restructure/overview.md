@@ -461,7 +461,9 @@ writeCalendarUrl(
 
 **v1 に入れないもの**: セグメントの並び替え、フォルダ分け、共有。§3-2 の歯止め（レポートビルダー化の禁止）に直接触れる。
 
-### 5-6. writer 境界 — PR #2179（レーン F）との衝突（実測）
+### 5-6. writer 境界 — PR #2179（レーン F）との衝突（**解消済み**）
+
+> **2026-08-18 に #2179 が merge され、この節の衝突は解消した。** 以下は判断の記録として残す（見立てが正しかったか後から検証できるように）。実際、追従 merge で `_shell/` に競合は 1 件も起きなかった。
 
 PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構造変更はゼロで、全部 rename**:
 
@@ -481,7 +483,9 @@ PR #2179 が触る `_shell/` の 3 ファイルの差分を実測した。**構�
 
 **現状の実測**: モバイルに Sidebar は存在しない。`mobile-layout.tsx` は `AppHeader` + `MainContentWrapper` + チップ列（カレンダーのみの固定フッター）の 3 段だけで、Sidebar も toggle も出さない（`calendar-review-panel-migration` overview §3 の「Sidebar toggle は mobile に出さない」がそのまま生きている）。**したがって §5-2 の Sidebar タブはモバイルでは 1 ピクセルも見えない。**
 
-**名前について**: このチップ列は **main では今も `TagChipRow`**（`mobile-layout.tsx:4,61`）で、`ActivityChipRow` への改名は**未 merge の PR #2179 が持っている**変更。本節以下は #2179 merge 後に着手する前提なので `ActivityChipRow` と書くが、**現在の main を読むと `TagChipRow` である**（plan-review が「未来の名前を現状の実測として書いている」と指摘したので明示する）。
+**名前について**: このチップ列は **`ActivityChipRow`**（`mobile-layout.tsx:4,61`）。`TagChipRow` からの改名は **PR #2179（レーン F）で 2026-08-18 に merge 済み**なので、本節の記述は main の実態と一致している。
+
+（経緯: この設計を書いた時点では #2179 が未 merge で、当初は未来の名前を「現状の実測」として書いてしまい plan-review に指摘された。追従で main を取り込んだ 2026-08-18 に事実の方が追いついたため、注記を実態へ更新した。）
 
 **決定: `BottomTabBar` を「カレンダー / レポート」の 2 タブで復活させる**（2026-08-18、User 判断。指揮台経由で伝達）。
 
@@ -926,15 +930,15 @@ const parsed = new Date(year, monthIndex, day, 12, 0, 0, 0);
 
 各 Step = 1 レーン = 1 branch = 1 PR（`.claude/rules/workflow.md` §PR 粒度・判定 3 問）。issue は指揮台が凍結後に起票する。**Step 3 以降はスライス 3 の凍結後に確定する**（現時点では骨格のみ）。
 
-| #   | Step                                                                                                                                                                                                                                 | Reversibility | 備考                                                                                                                     |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **URL 契約の新設** — `/calendar` と `/report`（プレースホルダ）の route 追加 + `access-policy.ts` へ**両 path**を追加 + `CalendarNavigationContext` の **7 箇所**（§6-10 B）。**旧 path 用の view フォールバックは Step 6 まで維持** | `[minutes]`   | **`access-policy.ts` を必ず同梱**（§4-5-b。分けると未認証開通と MFA gate バイパスが同時に起きる）。旧 route は残したまま |
-| 2   | **redirect と参照の切替** — `proxy.ts` の写像 + アプリ内リンク **12 箇所**（§4-6 の 2 表の合計）+ `loading.tsx` / `error.tsx` 6 ファイルの統合 + メールテンプレート 4 通 + `robots.txt` + E2E 7 ファイル                             | `[hours]`     | 写像の行き先は 307 なので変えられるが、**redirect 層そのものは以後恒久物**（§4-5）                                       |
-| 3   | **shell のタブ化** — `SidebarContent` の dispatcher 化 + `CalendarSidebar` 抽出 + `WorkspaceTabs` + モバイル `BottomTabBar`                                                                                                          | `[minutes]`   | **レーン F（PR #2179）merge 後**（§5-6）。`/report` は Step 1 のプレースホルダのままでよい                               |
-| 4   | **`/report` ページ本体** — review / diff の中身の移植 + 期間パラメータの凍結                                                                                                                                                         | 未確定        | スライス 3 で確定                                                                                                        |
-| 5   | **セグメント表示の接続** — レーン G の集計 API を `/report` と `ReportSidebar` へ配線                                                                                                                                                | 未確定        | **レーン G merge 後**。スライス 3 で確定                                                                                 |
-| 6   | **旧 route と旧 panel の削除** — `(workspace)/{day,week,[nday]}/**`、`CalendarPanelKind`、パネル関連コード                                                                                                                           | `[minutes]`   | **redirect の稼働を実測してから。** `workspaceViewPathPattern` の削除もここ（§4-5-b）。**redirect 層は消さない**         |
-| 7   | **docs の追従** — `strategy.md` 原則 10 改訂、`principles.md` の右パネル節と 3 点分散表、`specs/review.md`                                                                                                                           | `[minutes]`   | **User 承認済み**（§3-2）。設計書の凍結とは別 PR にする                                                                  |
+| #   | Step                                                                                                                                                                                                                                 | Reversibility | 備考                                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **URL 契約の新設** — `/calendar` と `/report`（プレースホルダ）の route 追加 + `access-policy.ts` へ**両 path**を追加 + `CalendarNavigationContext` の **7 箇所**（§6-10 B）。**旧 path 用の view フォールバックは Step 6 まで維持** | `[minutes]`   | **`access-policy.ts` を必ず同梱**（§4-5-b。分けると未認証開通と MFA gate バイパスが同時に起きる）。旧 route は残したまま  |
+| 2   | **redirect と参照の切替** — `proxy.ts` の写像 + アプリ内リンク **12 箇所**（§4-6 の 2 表の合計）+ `loading.tsx` / `error.tsx` 6 ファイルの統合 + メールテンプレート 4 通 + `robots.txt` + E2E 7 ファイル                             | `[hours]`     | 写像の行き先は 307 なので変えられるが、**redirect 層そのものは以後恒久物**（§4-5）                                        |
+| 3   | **shell のタブ化** — `SidebarContent` の dispatcher 化 + `CalendarSidebar` 抽出 + `WorkspaceTabs` + モバイル `BottomTabBar`                                                                                                          | `[minutes]`   | **レーン F（PR #2179）は merge 済み**（2026-08-18）なので順序制約は解消。`/report` は Step 1 のプレースホルダのままでよい |
+| 4   | **`/report` ページ本体** — review / diff の中身の移植 + 期間パラメータの凍結                                                                                                                                                         | 未確定        | スライス 3 で確定                                                                                                         |
+| 5   | **セグメント表示の接続** — レーン G の集計 API を `/report` と `ReportSidebar` へ配線                                                                                                                                                | 未確定        | **レーン G merge 後**。スライス 3 で確定                                                                                  |
+| 6   | **旧 route と旧 panel の削除** — `(workspace)/{day,week,[nday]}/**`、`CalendarPanelKind`、パネル関連コード                                                                                                                           | `[minutes]`   | **redirect の稼働を実測してから。** `workspaceViewPathPattern` の削除もここ（§4-5-b）。**redirect 層は消さない**          |
+| 7   | **docs の追従** — `strategy.md` 原則 10 改訂、`principles.md` の右パネル節と 3 点分散表、`specs/review.md`                                                                                                                           | `[minutes]`   | **User 承認済み**（§3-2）。設計書の凍結とは別 PR にする                                                                   |
 
 **`[irreversible]` は 1 つも無いが、`[irreversible]` に近いものが 2 つある**（§4-7）。Step 2 が作る redirect 層と、Step 1 が公開する URL 契約そのもの。
 
@@ -1003,7 +1007,7 @@ const parsed = new Date(year, monthIndex, day, 12, 0, 0, 0);
 | ---- | --------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1    | `feat(routing): /calendar と /report の route を新設し view をクエリで受ける`     | なし                  | `access-policy.ts` の更新を**同梱**し、`isProtectedProductPath('/calendar')` **と** `('/report')` が true であることを test で固定。view は二重解決（§9）。旧 URL 5 形の E2E が green のまま |
 | 2    | `refactor(routing): 旧 URL から /calendar /report へ redirect し参照を切り替える` | Step 1                | 旧 URL 5 形すべての写像を E2E で検証。メールテンプレート 4 通も同一 PR                                                                                                                       |
-| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1 / **PR #2179** | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ                                                                               |
+| 3    | `refactor(shell): Sidebar をタブ構造へ戻し SidebarContent を dispatcher にする`   | Step 1                | タブ往復で Sidebar が再マウントされず日付が保たれることを test で固定。`BottomTabBar` 復活とフッター共存もここ。**PR #2179 は merge 済みなので待ちは無い**                                   |
 | 4    | `feat(review): /report をフルページ 1 スクロール構成で実装する`                   | Step 3 / **レーン G** | `features/review` の公開契約を 1 export へ。期間は `?date=&range=` から `ReviewDisplayRange` を構築。**認可は変更しない**（§6-2。既存の enforcement フラグで既に無料）                       |
 | 5    | `feat(review): セグメントを ReportSidebar と /report へ配線する`                  | Step 4 / **レーン G** | #2162 §6-3 の表示規律（`total` / `share` を返さない、円グラフ・積み上げを使わない）を維持                                                                                                    |
 | 6    | `refactor(routing): 旧 route と右サイドパネルの残骸を削除する`                    | Step 2 / Step 4       | **redirect 層は消さない。** `workspaceViewPathPattern` の削除もここ                                                                                                                          |
