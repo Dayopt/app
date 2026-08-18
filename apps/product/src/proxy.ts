@@ -292,9 +292,12 @@ export async function proxy(request: NextRequest) {
     if (user && isProtectedPath && !isMFAVerifyPath) {
       const mfaAssurance = await resolveMfaAssurance(supabase, 'proxy');
       if (mfaAssurance.lookupFailed) {
-        logger.warn('MFA assurance lookup failed; redirecting to login');
+        // #2144: /auth/login は認証済みだと /week へ弾かれ、/week は protected path
+        // なので MFA gate を再度通る。lookupFailed が続く限り無限ループになるため、
+        // authPathsAllowedWhileAuthenticated に登録済みの専用ページへ送る。
+        logger.warn('MFA assurance lookup failed; redirecting to session error page');
         return redirectWithCsp(
-          new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
+          new URL(getLocalizedPath('/auth/session-error', currentLocale), request.url),
           contentSecurityPolicy,
         );
       }
@@ -322,8 +325,17 @@ export async function proxy(request: NextRequest) {
       source: 'next_proxy',
     });
     logger.error('Proxy request failed');
+    // #2144: session-error ページ自身へのリクエストで updateSession() が
+    // (env misconfiguration 等で) persistent に throw すると、ここでまた
+    // session-error への redirect を返してしまい自己ループになる。この path
+    // 自体は認証を要求しない静的ページなので、redirect せずそのまま次へ流す。
+    if (pathWithoutLocale === '/auth/session-error') {
+      return nextWithCsp(request, contentSecurityPolicy);
+    }
+    // lookupFailed分岐と同じ理由で、/auth/login ではなく認証済みでも
+    // 弾かれない session-error ページへ送る（同型の無限ループを避ける）。
     return redirectWithCsp(
-      new URL(getLocalizedPath('/auth/login', currentLocale), request.url),
+      new URL(getLocalizedPath('/auth/session-error', currentLocale), request.url),
       contentSecurityPolicy,
     );
   }

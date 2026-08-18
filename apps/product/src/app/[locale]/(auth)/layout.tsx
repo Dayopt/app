@@ -7,7 +7,7 @@
  * クライアント側UIは AuthClientLayout に委譲する。
  *
  * Provider階層:
- * 1. IntlProvider（common + auth + error）
+ * 1. IntlProvider（common + auth + error + navigation）
  * 2. AuthClientLayout → PublicProviders（Theme, Tooltip のみ）
  * 3. AuthLayout（認証UI用レイアウト）
  */
@@ -17,8 +17,15 @@ import { IntlProvider } from '@/lib/i18n';
 
 import { AuthClientLayout } from './client-layout';
 
-/** 認証ページで必要なnamespace */
-const AUTH_NAMESPACES = ['common', 'auth', 'error'];
+/**
+ * 認証ページで必要なnamespace。
+ *
+ * `navigation` は #2144 の /auth/session-error にある sign-out ボタンが
+ * `useLogout`（`navigation.navUser.*` キーでtoastを出す）を再利用するために必要。
+ * useLogout はナビバー等でも共有される hook のため、呼び出し側ごとに文言を
+ * 差し替えるより、この namespace を配信する方が hook の単純さを保てる。
+ */
+const AUTH_NAMESPACES = ['common', 'auth', 'error', 'navigation'];
 
 /** 認証ページはクロール不要（noindex） */
 export const metadata: Metadata = {
