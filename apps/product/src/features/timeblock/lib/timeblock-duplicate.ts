@@ -95,6 +95,7 @@ export function buildTimeblockDuplicateCreateInput(
     title: draft.title,
     ...(note ? { note } : {}),
     ...(value.tagId ? { tagId: value.tagId } : {}),
+    ...(value.activityId ? { activityId: value.activityId } : {}),
     start_at: value.startAt.toISOString(),
     end_at: value.endAt.toISOString(),
   };

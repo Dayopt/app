@@ -73,7 +73,6 @@ BEGIN
       'title', p_title,
       'note', p_note,
       'tagId', p_tag_id,
-      'activityId', p_activity_id,
       'externalCalendarEventId', NULL::UUID,
       'source', 'api',
       'startAt', pg_catalog.to_char(
@@ -85,6 +84,10 @@ BEGIN
         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
       )
     )
+    || CASE
+         WHEN p_activity_id IS NULL THEN '{}'::JSONB
+         ELSE pg_catalog.jsonb_build_object('activityId', p_activity_id)
+       END
   );
 
   SELECT replay_receipt.*
@@ -251,7 +254,6 @@ BEGIN
       'title', p_title,
       'note', p_note,
       'tagId', p_tag_id,
-      'activityId', p_activity_id,
       'planId', p_plan_id,
       'externalCalendarEventId', NULL::UUID,
       'source', 'api',
@@ -264,6 +266,10 @@ BEGIN
         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
       )
     )
+    || CASE
+         WHEN p_activity_id IS NULL THEN '{}'::JSONB
+         ELSE pg_catalog.jsonb_build_object('activityId', p_activity_id)
+       END
   );
 
   SELECT replay_receipt.*
