@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-14
+last_verified: 2026-08-19
 ---
 
 # インフラ・環境・API/Routing 総覧
@@ -1145,13 +1145,32 @@ npm run test:coverage       # カバレッジ付き実行
 npm run test:coverage:summary  # カバレッジサマリー表示
 npm run test:diff-coverage  # 差分カバレッジ
 npm run test-storybook      # Storybook テスト
-npm run test:integration    # 統合テスト
+npm run test:integration    # 統合テスト（前提: ローカル Supabase 起動。未起動なら失敗する。#2178）
 npm run test:e2e            # Playwright E2Eテスト
 npm run test:e2e:smoke      # E2Eスモークテスト
 npm run test:e2e:critical   # E2Eクリティカルパス
 npm run test:e2e:ui         # Playwright UIモード
 npm run test:e2e:headed     # ブラウザ表示付きE2E
 ```
+
+> **既知の問題: ローカル node が 26 系だと localStorage 系 unit test が偽陽性で落ちる**（#2198）。repo の要求は `engines: node 24.x`（`.nvmrc` も `24`）だが、ローカルの実行環境が pin に従わず node 26 のままだと、node 26 の `ExperimentalWarning: localStorage is not available because --localstorage-file was not provided` により zustand persist / localStorage 依存の test が失敗する。CI は node 24 で実行するため常に green（偽陽性はローカル限定）。
+>
+> 2026-08-19 実測（node `v26.5.0`、`pnpm test:run`）: **10 ファイル・74 テスト**が失敗する。失敗ファイル一覧:
+>
+> - `__tests__/instrumentation-client.test.ts`
+> - `src/features/calendar/components/views/WeekView/components/__tests__/WeekGrid.test.tsx`
+> - `src/features/calendar/hooks/keyboard/__tests__/useShortcutRegistry.test.tsx`
+> - `src/features/calendar/hooks/keyboard/__tests__/useTimeblockSearchShortcut.test.ts`
+> - `src/features/calendar/stores/__tests__/useCalendarDisplayModeStore.test.ts`
+> - `src/features/calendar/stores/__tests__/useCalendarFilterStore.test.ts`
+> - `src/lib/__tests__/cookie-consent.test.ts`
+> - `src/lib/analytics/__tests__/DeferredAnalytics.test.tsx`
+> - `src/lib/stores/__tests__/usePageTitleStore.test.ts`
+> - `src/lib/stores/__tests__/useShellStore.test.ts`
+>
+> **切り分け手順**: 失敗したファイル集合を上のリストと突き合わせる。完全に一致する（または部分集合である）なら node バージョン起因の偽陽性であり、自分の変更が原因ではない。一致しない・上記以外のファイルも失敗している場合は実際の regression を疑う。
+>
+> **根治**: ローカル node を 24 系へ固定する（`.nvmrc` は既に `24`。`nvm use` や `mise install` 等で実行環境側を pin に合わせる。repo 側の対応はここまでで、実行環境の切り替えは各自のローカル設定に依存する）。数値は node / 依存の更新で変動しうるため、再遭遇時は本節の記載を鵜呑みにせず `pnpm test:run` を再実行して突き合わせる。
 
 #### Supabase / DB
 

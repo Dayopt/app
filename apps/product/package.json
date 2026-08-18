@@ -41,7 +41,7 @@
     "test:coverage": "vitest --project unit --project unit-dom run --coverage",
     "test:diff-coverage": "pnpm test:coverage && tsx ../../scripts/diff-coverage.ts",
     "test:watch": "vitest --watch",
-    "test:integration": "vitest run --config vitest.config.integration.ts",
+    "test:integration": "tsx scripts/run-integration-tests.ts",
     "db:reset": "supabase db reset --local",
     "db:reset-linked:unsafe": "supabase db reset --linked",
     "db:seed": "../../scripts/seed-dev-data.sh",
