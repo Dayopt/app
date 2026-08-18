@@ -10,14 +10,15 @@ const mockPlansUseQuery = vi.fn();
 const mockRecordsUseQuery = vi.fn();
 const mockPlanRefetch = vi.fn();
 const mockRecordRefetch = vi.fn();
-const mockTagsRefetch = vi.fn();
-const mockArchivedTagsRefetch = vi.fn();
+const mockActivitiesRefetch = vi.fn();
+const mockArchivedActivitiesRefetch = vi.fn();
 
 const PLAN_ROW = {
   id: 'plan-1',
   title: 'Legacy deep work title',
   note: 'Outline the product iteration',
   tag_id: 'tag-work',
+  activity_id: 'activity-work',
   start_at: '2026-07-15T00:00:00.000Z',
   end_at: '2026-07-15T01:00:00.000Z',
   skipped_at: null,
@@ -36,37 +37,34 @@ function successfulQuery(data: unknown[]) {
 
 const MOCK_PLAN_ROWS = [PLAN_ROW];
 
-vi.mock('@/features/tags', () => ({
-  TagIcon: ({ isUncategorized }: { isUncategorized?: boolean }) => (
-    <span data-testid="tag-icon" data-uncategorized={String(!!isUncategorized)} />
+vi.mock('@/features/activities', () => ({
+  ActivityIcon: ({ neutral }: { neutral?: boolean }) => (
+    <span data-testid="activity-icon" data-uncategorized={String(!!neutral)} />
   ),
-  useTags: () => ({
-    data: [
-      {
-        id: 'tag-work',
-        name: 'Work',
-        color: 'blue',
-        icon: 'briefcase',
-      },
-    ],
+  // 名前・継承色の解決は現役 + アーカイブ済みをまとめた 1 つの map が担う
+  useActivitiesMap: () => ({
+    activitiesMap: new Map([
+      ['activity-work', { id: 'activity-work', name: 'Work', color: 'blue', icon: 'briefcase' }],
+      [
+        'activity-archived',
+        { id: 'activity-archived', name: 'Retired Project', color: 'rose', icon: 'archive' },
+      ],
+    ]),
     isLoading: false,
-    isFetching: false,
-    isError: false,
-    refetch: mockTagsRefetch,
   }),
-  useArchivedTags: () => ({
-    data: [
-      {
-        id: 'tag-archived',
-        name: 'Retired Project',
-        color: 'rose',
-        icon: 'archive',
-      },
-    ],
+  useActivities: () => ({
+    data: [{ id: 'activity-work', name: 'Work' }],
     isLoading: false,
     isFetching: false,
     isError: false,
-    refetch: mockArchivedTagsRefetch,
+    refetch: mockActivitiesRefetch,
+  }),
+  useArchivedActivities: () => ({
+    data: [{ id: 'activity-archived', name: 'Retired Project' }],
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    refetch: mockArchivedActivitiesRefetch,
   }),
 }));
 
@@ -142,18 +140,19 @@ describe('TimeblockSearchDialog', () => {
     );
   });
 
-  it('アーカイブ済みタグのブロックも正しいタグ名で表示する（タグなしに落ちない、#1576）', async () => {
-    const archivedTagPlan = {
+  it('アーカイブ済みアクティビティのブロックも正しい名前で表示する（アクティビティなしに落ちない、#1576）', async () => {
+    const archivedActivityPlan = {
       id: 'plan-2',
       title: 'Old archived project',
       note: null,
       tag_id: 'tag-archived',
+      activity_id: 'activity-archived',
       start_at: '2026-05-01T00:00:00.000Z',
       end_at: '2026-05-01T01:00:00.000Z',
       skipped_at: null,
     };
     mockPlansUseQuery.mockImplementation(() => ({
-      data: [archivedTagPlan],
+      data: [archivedActivityPlan],
       error: null,
       isLoading: false,
       isFetching: false,
@@ -169,7 +168,7 @@ describe('TimeblockSearchDialog', () => {
     });
 
     expect(screen.getByText('Retired Project')).toBeInTheDocument();
-    expect(screen.queryByText('common.tags.noTag')).not.toBeInTheDocument();
+    expect(screen.queryByText('calendar.filter.noActivity')).not.toBeInTheDocument();
   });
 
   it('結果を選ぶとopen callbackを呼び、検索語をリセットして閉じる', async () => {
@@ -243,6 +242,7 @@ describe('TimeblockSearchContent', () => {
     id: 'record-1',
     note: 'Calendar search states',
     tagId: 'tag-work',
+    activityId: 'activity-work',
     startAt: '2026-07-14T01:30:00.000Z',
     endAt: '2026-07-14T02:30:00.000Z',
     isSkipped: false,
@@ -254,8 +254,8 @@ describe('TimeblockSearchContent', () => {
     const props = {
       query: 'work',
       results: [result],
-      tagsById: new Map([
-        ['tag-work', { id: 'tag-work', name: 'Work', color: 'blue', icon: 'briefcase' }],
+      activitiesById: new Map([
+        ['activity-work', { id: 'activity-work', name: 'Work', color: 'blue', icon: 'briefcase' }],
       ]),
       isLoading: false,
       isError: false,
@@ -289,7 +289,7 @@ describe('TimeblockSearchContent', () => {
     return props;
   }
 
-  it('kind・タグ・ノート・日時を表示し、IDは表示しない', () => {
+  it('kind・アクティビティ・ノート・日時を表示し、IDは表示しない', () => {
     renderContent();
 
     expect(screen.getByText('calendar.search.kind.record')).toBeInTheDocument();
@@ -297,17 +297,17 @@ describe('TimeblockSearchContent', () => {
     expect(screen.getByText('Calendar search states')).toBeInTheDocument();
     expect(screen.getByText(/2026/)).toBeInTheDocument();
     expect(screen.queryByText('record-1')).not.toBeInTheDocument();
-    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'false');
+    expect(screen.getByTestId('activity-icon')).toHaveAttribute('data-uncategorized', 'false');
   });
 
-  it('タグを解決できない結果はタグなしを表示名にし、中立マーカーのTagIconを描画する', () => {
+  it('アクティビティを解決できない結果はアクティビティなしを表示名にし、中立マーカーのActivityIconを描画する', () => {
     renderContent({
-      results: [{ ...result, tagId: null }],
-      tagsById: new Map(),
+      results: [{ ...result, activityId: null }],
+      activitiesById: new Map(),
     });
 
-    expect(screen.getByText('common.tags.noTag')).toBeInTheDocument();
-    expect(screen.getByTestId('tag-icon')).toHaveAttribute('data-uncategorized', 'true');
+    expect(screen.getByText('calendar.filter.noActivity')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-icon')).toHaveAttribute('data-uncategorized', 'true');
   });
 
   it('エラー時に再試行できる', () => {

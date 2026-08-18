@@ -8,6 +8,7 @@ const plan = {
   title: 'API design',
   description: 'Review the endpoint contract',
   tagId: 'tag-1',
+  activityId: 'activity-1',
   kind: 'plan',
   startDate: new Date('2026-07-14T09:00:00.000Z'),
   endDate: new Date('2026-07-14T10:00:00.000Z'),
@@ -24,6 +25,7 @@ describe('buildPlanRecordDropInput', () => {
       title: 'API design',
       note: 'Review the endpoint contract',
       tagId: 'tag-1',
+      activityId: 'activity-1',
       planId: 'plan-1',
       start_at: '2026-07-14T10:15:00.000Z',
       end_at: '2026-07-14T10:45:00.000Z',
@@ -32,15 +34,15 @@ describe('buildPlanRecordDropInput', () => {
     expect(input.end_at).not.toBe(plan.endDate?.toISOString());
   });
 
-  it('未設定のメモとタグをnullへ正規化する', () => {
+  it('未設定のメモとアクティビティをnullへ正規化する', () => {
     const input = buildPlanRecordDropInput(
-      { ...plan, description: undefined, tagId: undefined },
+      { ...plan, description: undefined, tagId: undefined, activityId: undefined },
       {
         start: new Date('2026-07-14T11:00:00.000Z'),
         end: new Date('2026-07-14T11:20:00.000Z'),
       },
     );
 
-    expect(input).toMatchObject({ note: null, tagId: null });
+    expect(input).toMatchObject({ note: null, tagId: null, activityId: null });
   });
 });

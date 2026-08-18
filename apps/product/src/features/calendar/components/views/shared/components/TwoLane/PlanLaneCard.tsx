@@ -11,7 +11,7 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses, TagIcon } from '@/features/tags';
+import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import type { PlanEvent } from '@/features/timeblock';
 import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
@@ -23,10 +23,10 @@ import { DayDiffMarker } from './DayDiffMarker';
 interface PlanLaneCardProps {
   event: PlanEvent;
   position: TwoLanePosition;
-  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
-  tagName: string | null;
-  tagColor?: string | null | undefined;
-  tagIcon?: string | null | undefined;
+  /** Calendar カードの表示名。title ではなくアクティビティを source of truth とする。 */
+  activityName: string | null;
+  activityColor?: string | null | undefined;
+  activityIcon?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
@@ -63,9 +63,9 @@ function skippedHatchImage(accentColor: string): string {
 export function PlanLaneCard({
   event,
   position,
-  tagName,
-  tagColor = null,
-  tagIcon = null,
+  activityName,
+  activityColor = null,
+  activityIcon = null,
   className,
   isActive = false,
   disableDrag = false,
@@ -82,13 +82,13 @@ export function PlanLaneCard({
   styleOverride,
 }: PlanLaneCardProps) {
   const t = useTranslations();
-  const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
+  const colorClasses = activityColor ? getCategoryColorClasses(activityColor) : null;
   const borderClass = colorClasses?.border ?? 'border-border';
-  // tagName は「タグが実在するか」の source of truth（Tag.name は非nullのため、
-  // 実在すれば必ず文字列になる）。tagColor/tagIcon の null 判定は、既存タグの
-  // color=null（DB上は許容）と区別できないため使わない。
-  const isUncategorized = tagName === null;
-  const displayName = tagName ?? t('common.tags.noTag');
+  // activityName は「アクティビティが実在するか」の source of truth（Activity.name は
+  // 非nullのため、実在すれば必ず文字列になる）。activityColor/activityIcon の null 判定は、
+  // 未分類（継承元カテゴリーが無い）と区別できないため使わない。
+  const isUncategorized = activityName === null;
+  const displayName = activityName ?? t('calendar.filter.noActivity');
 
   const isSkipped = event.status === 'skipped';
   const isUnrecorded = event.status === 'unrecorded';
@@ -158,12 +158,12 @@ export function PlanLaneCard({
       }
     >
       <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-        <TagIcon
-          icon={tagIcon}
-          color={tagColor ?? undefined}
+        <ActivityIcon
+          icon={activityIcon}
+          color={activityColor}
           size="sm"
           className="shrink-0"
-          isUncategorized={isUncategorized}
+          neutral={isUncategorized}
         />
         <span className="truncate">{displayName}</span>
       </p>

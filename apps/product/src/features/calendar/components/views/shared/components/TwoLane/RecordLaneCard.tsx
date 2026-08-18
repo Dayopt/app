@@ -12,7 +12,7 @@ import type React from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses, TagIcon } from '@/features/tags';
+import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import type { RecordEvent } from '@/features/timeblock';
 import { formatTimeRange } from '@/lib/date';
 import { cn } from '@dayopt/components';
@@ -25,10 +25,10 @@ import { DiffBadge } from './DiffBadge';
 interface RecordLaneCardProps {
   event: RecordEvent;
   position: TwoLanePosition;
-  /** Calendar カードの表示名。title ではなくタグを source of truth とする。 */
-  tagName: string | null;
-  tagColor?: string | null | undefined;
-  tagIcon?: string | null | undefined;
+  /** Calendar カードの表示名。title ではなくアクティビティを source of truth とする。 */
+  activityName: string | null;
+  activityColor?: string | null | undefined;
+  activityIcon?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
@@ -59,9 +59,9 @@ const RESIZE_HANDLE_HEIGHT = 20;
 export function RecordLaneCard({
   event,
   position,
-  tagName,
-  tagColor = null,
-  tagIcon = null,
+  activityName,
+  activityColor = null,
+  activityIcon = null,
   className,
   isActive = false,
   disableDrag = false,
@@ -77,12 +77,12 @@ export function RecordLaneCard({
   styleOverride,
 }: RecordLaneCardProps) {
   const t = useTranslations();
-  const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
-  // tagName は「タグが実在するか」の source of truth（Tag.name は非nullのため、
-  // 実在すれば必ず文字列になる）。tagColor/tagIcon の null 判定は、既存タグの
-  // color=null（DB上は許容）と区別できないため使わない。
-  const isUncategorized = tagName === null;
-  const displayName = tagName ?? t('common.tags.noTag');
+  const colorClasses = activityColor ? getCategoryColorClasses(activityColor) : null;
+  // activityName は「アクティビティが実在するか」の source of truth（Activity.name は
+  // 非nullのため、実在すれば必ず文字列になる）。activityColor/activityIcon の null 判定は、
+  // 未分類（継承元カテゴリーが無い）と区別できないため使わない。
+  const isUncategorized = activityName === null;
+  const displayName = activityName ?? t('calendar.filter.noActivity');
   const isUnplanned = event.planId == null;
   const hasDiff = event.diffMinutes != null && event.diffMinutes !== 0;
   const showDetails = !compact && position.height >= DETAIL_HEIGHT_THRESHOLD;
@@ -144,12 +144,12 @@ export function RecordLaneCard({
     >
       <div className="flex items-start justify-between gap-1">
         <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-          <TagIcon
-            icon={tagIcon}
-            color={tagColor ?? undefined}
+          <ActivityIcon
+            icon={activityIcon}
+            color={activityColor}
             size="sm"
             className="shrink-0"
-            isUncategorized={isUncategorized}
+            neutral={isUncategorized}
           />
           <span className="truncate">{displayName}</span>
         </p>

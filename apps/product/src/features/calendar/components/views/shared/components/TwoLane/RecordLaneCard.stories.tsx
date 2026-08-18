@@ -49,7 +49,7 @@ const meta = {
   args: {
     event: makeEvent(),
     position: basePosition,
-    tagName: 'Deep Work',
+    activityName: 'Deep Work',
   },
   argTypes: {
     showDayDiffMarker: { control: 'boolean' },
@@ -67,8 +67,8 @@ export const RecordedNoDiff: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="blue"
+        activityName="Deep Work"
+        activityColor="blue"
       />
     </Slot>
   ),
@@ -81,8 +81,8 @@ export const Overtime: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 20 })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="teal"
+        activityName="Deep Work"
+        activityColor="teal"
       />
     </Slot>
   ),
@@ -95,8 +95,8 @@ export const Early: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: -15 })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="amber"
+        activityName="Deep Work"
+        activityColor="amber"
       />
     </Slot>
   ),
@@ -109,8 +109,8 @@ export const Unplanned: Story = {
       <RecordLaneCard
         event={makeEvent({ planId: null, diffMinutes: undefined })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="violet"
+        activityName="Deep Work"
+        activityColor="violet"
       />
     </Slot>
   ),
@@ -118,7 +118,7 @@ export const Unplanned: Story = {
 
 /**
  * タグ未設定（未分類）。title は表示へフォールバックしない。
- * 実際のカレンダーは tagName=null と同時に tagColor/tagIcon も null になるため、
+ * 実際のカレンダーは activityName=null と同時に tagColor/tagIcon も null になるため、
  * ここでも両方 null にして中立表示（背景・アイコンとも中立）を確認する。
  */
 export const NoTag: Story = {
@@ -127,7 +127,7 @@ export const NoTag: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
-        tagName={null}
+        activityName={null}
       />
     </Slot>
   ),
@@ -140,8 +140,8 @@ export const Compact: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 10 })}
         position={{ ...basePosition, height: 24 }}
-        tagName="Deep Work"
-        tagColor="red"
+        activityName="Deep Work"
+        activityColor="red"
       />
     </Slot>
   ),
@@ -154,8 +154,8 @@ export const CompareTarget: Story = {
       <RecordLaneCard
         event={makeEvent({ planId: null, diffMinutes: undefined })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="violet"
+        activityName="Deep Work"
+        activityColor="violet"
         showDayDiffMarker
       />
     </Slot>
@@ -169,8 +169,8 @@ export const GhostPreview: Story = {
       <RecordLaneCard
         event={makeEvent({ diffMinutes: 0 })}
         position={basePosition}
-        tagName="Deep Work"
-        tagColor="blue"
+        activityName="Deep Work"
+        activityColor="blue"
         interactive={false}
         className="shadow-card"
       />
@@ -185,8 +185,8 @@ export const NarrowLane: Story = {
       <RecordLaneCard
         event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
         position={{ ...basePosition, left: 0, width: 100 }}
-        tagName="Deep Work"
-        tagColor="teal"
+        activityName="Deep Work"
+        activityColor="teal"
         compact
       />
     </div>
@@ -202,8 +202,8 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: 0 })}
             position={basePosition}
-            tagName="Deep Work"
-            tagColor="blue"
+            activityName="Deep Work"
+            activityColor="blue"
           />
         </Slot>
       </div>
@@ -213,8 +213,8 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: 20 })}
             position={basePosition}
-            tagName="Deep Work"
-            tagColor="teal"
+            activityName="Deep Work"
+            activityColor="teal"
           />
         </Slot>
       </div>
@@ -224,8 +224,8 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ diffMinutes: -15 })}
             position={basePosition}
-            tagName="Deep Work"
-            tagColor="amber"
+            activityName="Deep Work"
+            activityColor="amber"
           />
         </Slot>
       </div>
@@ -235,8 +235,8 @@ export const AllPatterns: Story = {
           <RecordLaneCard
             event={makeEvent({ planId: null, diffMinutes: undefined })}
             position={basePosition}
-            tagName="Deep Work"
-            tagColor="violet"
+            activityName="Deep Work"
+            activityColor="violet"
             showDayDiffMarker
           />
         </Slot>
@@ -245,8 +245,8 @@ export const AllPatterns: Story = {
         <RecordLaneCard
           event={makeEvent({ diffMinutes: 0 })}
           position={basePosition}
-          tagName="Deep Work"
-          tagColor="blue"
+          activityName="Deep Work"
+          activityColor="blue"
           interactive={false}
           className="shadow-card"
         />
@@ -255,8 +255,8 @@ export const AllPatterns: Story = {
         <RecordLaneCard
           event={makeEvent({ title: 'デザインレビュー', diffMinutes: 20 })}
           position={{ ...basePosition, left: 0, width: 100 }}
-          tagName="Deep Work"
-          tagColor="teal"
+          activityName="Deep Work"
+          activityColor="teal"
           compact
         />
       </div>

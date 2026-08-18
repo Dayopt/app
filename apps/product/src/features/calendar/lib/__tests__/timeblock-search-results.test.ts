@@ -14,6 +14,7 @@ function createRow(
     id,
     note: null,
     tag_id: null,
+    activity_id: null,
     start_at: startAt,
     end_at: new Date(Date.parse(startAt) + 60 * 60 * 1000).toISOString(),
     ...overrides,

@@ -28,6 +28,7 @@ function entry(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     status: 'closed',
     color: 'var(--tag-blue)',
     tagId: 'tag-1',
+    activityId: 'activity-1',
     createdAt: start,
     updatedAt: end,
     version: '2026-07-15T00:00:00.000000Z',
@@ -261,14 +262,14 @@ describe('computeCalendarDayDiffs', () => {
     expect(result.items).toMatchObject([{ timeblockId: 'entry-1', actualMinutes: 60 }]);
   });
 
-  it('diff source は tag filter を適用する', () => {
+  it('diff source は アクティビティ filter を適用する', () => {
     const source = filterCalendarDayDiffEntries(
       [entry()],
       {
         dayStart: new Date('2026-06-18T00:00:00.000Z'),
         dayEnd: new Date('2026-06-19T00:00:00.000Z'),
       },
-      (tagId) => tagId !== 'tag-1',
+      (activityId) => activityId !== 'activity-1',
     );
 
     expect(source).toHaveLength(0);

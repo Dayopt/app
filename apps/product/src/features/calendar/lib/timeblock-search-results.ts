@@ -5,6 +5,7 @@ export interface TimeblockSearchSourceRow {
   id: string;
   note: string | null;
   tag_id: string | null;
+  activity_id: string | null;
   start_at: string;
   end_at: string;
   skipped_at?: string | null | undefined;
@@ -16,6 +17,7 @@ export interface TimeblockSearchResult {
   id: string;
   note: string | null;
   tagId: string | null;
+  activityId: string | null;
   startAt: string;
   endAt: string;
   isSkipped: boolean;
@@ -35,6 +37,7 @@ function toSearchResult(
     id: row.id,
     note: row.note,
     tagId: row.tag_id,
+    activityId: row.activity_id,
     startAt: row.start_at,
     endAt: row.end_at,
     isSkipped: kind === 'plan' && row.skipped_at != null,
