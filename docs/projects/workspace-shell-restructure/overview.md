@@ -786,7 +786,16 @@ export interface ReviewDisplayRange {
 
 **設計**: 前処理を `CalendarController` から純関数として切り出し、`/report` は「期間分の timeblock を取得 → 同じ前処理 → 同じ `computeTimeblockDayDiffs`」を通す。**集計ロジックを二重に持たない。**
 
-**feature 境界に注意**: `timeblock-day-diff.ts` は `features/calendar` にあり、`features/review` から直接 import すると cross-feature になる。`feature-boundaries.md` に従い、**calendar の barrel から export するか、Composition Layer 側（`/report` の page）で合成する**。どちらにするかは実装時に `architecture-guard` の判断を仰ぐ。
+**feature 境界（実測で確定。architecture-guard 送りにしない）**: `calendar` と `review` は**どちらも Layer 2**（`feature-boundaries.md` の DAG）で、**同層間の参照は ESLint `error` で禁止**されている。したがって「calendar の barrel から export して review が使う」は**成立しない**。取れる形は 2 つ:
+
+| 案                                                                              | 判定                                                                                     |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **A: `timeblock-day-diff.ts` と前処理を `features/timeblock`（Layer 1）へ移す** | **採用**                                                                                 |
+| B: Composition Layer（`/report` の page、`app/` 配下）で合成する                | 次善。DAG の外なので合法だが、集計ロジックが page に貼り付き、単体テストが書きにくくなる |
+
+**A を採る理由**: `computeTimeblockDayDiffs` の入力型は `TimeModelPlanDiffInput` / `TimeModelRecordDiffInput` で、**中身は plan と record、つまり timeblock のドメイン概念**である。`features/calendar` にあるのは「最初に使ったのが calendar だったから」で、置き場所としては元々ずれている。Layer 1 へ下ろせば calendar も review も barrel 経由で参照でき、`feature-boundaries.md` §Layer 1 → Layer 2 は不可 の「adapter は source 側に置く」とも一致する。
+
+**この移動は本 project の Step 4 に含める**（`git mv` + 両 feature の import 差し替え + barrel 追加）。`architecture-guard` の反証レビューを push 前にかける（cross-feature の file move は `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件）。
 
 #### 7. Step 4 にレーン G の順序制約を付ける（対応済み）
 
