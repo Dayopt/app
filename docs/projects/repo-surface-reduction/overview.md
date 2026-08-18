@@ -38,24 +38,29 @@ node -e "console.log(Object.keys(require('./package.json').scripts).length)"
 1. **外部参照数**: `.github/workflows/**` / `docs/**` / `CLAUDE.md` / `.claude/**` / 各 `package.json` / `.husky/**` を対象に、`pnpm [run] [--filter X] <script名>` パターンを grep（word boundary 付き）で数える
 2. **内部参照数**: root `package.json` の他 script の値（右辺コマンド文字列）に `pnpm <script名>` が現れるか
 3. **alias**: 右辺コマンド文字列が別 script と完全一致するか
-4. 上記いずれもゼロなら `未参照`
+4. **ソースコード内参照**（2026-08-19 追記、指揮台セカンドオピニオンの指摘で追加）: `apps/**` / `packages/**` / `scripts/**` を対象に `pnpm <script名>` を grep する。エラーメッセージ・案内コメント・README・生成ファイルの docstring がこの実行コマンドを印字している場合、機能的に参照されているとみなす（例: `scripts/boundaries/check.ts` がエラー時に `pnpm lint:boundaries:update` を案内している）
+5. 上記いずれもゼロなら `未参照`
 
-判定優先順位: `alias` > 外部参照 > 内部参照 > `未参照`。
+判定優先順位: `alias` > 外部参照 > 内部参照 > ソースコード内参照 > `未参照`。
+
+**初回実測の欠陥**: 最初のスキャンはソースコード内参照（手順 4）を含めていなかった。`lint:boundaries:update` / `auth-email:sync` / `dev:web` の 3 件が、README・生成ファイルの docstring・エラーメッセージから実際に参照されているにもかかわらず「未参照」に誤分類されていた。§結果 は再スキャン後の値。
 
 再実行用スクリプトは使い捨てのため保存していない（bash の `for` ループが worktree-isolated セッションで実行を拒否されるため、次回は Node script で書き直すのが早い。本 doc に判定ロジックの疑似コードを残す方が再現性が高い）。
 
 ### 結果
 
-| 分類                                                                                       |        件数 | 内訳                                                                                                                                                                                                                           |
-| ------------------------------------------------------------------------------------------ | ----------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `public`（docs/CI/CLAUDE.md 等から参照される、または内部参照ありでも同時に外部参照がある） |          83 | —                                                                                                                                                                                                                              |
-| `internal`（外部参照ゼロ・root script 間参照のみ）                                         |           0 | 内部限定の script は現状すべて同時に外部（docs 等）からも参照されており、"internal のみ" のケースは存在しない                                                                                                                  |
-| `alias`（右辺完全一致）                                                                    | 6（3 ペア） | `build` / `build:product`（`pnpm --filter @dayopt/product build`）、`start` / `start:product`（`pnpm --filter @dayopt/product start`）、`test` / `test:product`（`pnpm --filter @dayopt/product test`）                        |
-| `未参照`（外部参照・内部参照ともにゼロ）                                                   |          13 | `dev:product` / `dev:op` / `lint:product` / `lint:boundaries:update` / `typecheck:product` / `typecheck:packages` / `prepare` / `migration:list` / `migration:status` / `auth-email:sync` / `format` / `dev:web` / `start:web` |
+| 分類                                                                                                   |        件数 | 内訳                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------ | ----------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public`（docs/CI/CLAUDE.md/ソースコード等から参照される、または内部参照ありでも同時に外部参照がある） |          86 | 初回スキャンの `public` 83 + ソースコード内参照で再分類した 3（`lint:boundaries:update` / `auth-email:sync` / `dev:web`）                                                                               |
+| `internal`（外部参照ゼロ・root script 間参照のみ）                                                     |           0 | 内部限定の script は現状すべて同時に外部（docs 等）からも参照されており、"internal のみ" のケースは存在しない                                                                                           |
+| `alias`（右辺完全一致）                                                                                | 6（3 ペア） | `build` / `build:product`（`pnpm --filter @dayopt/product build`）、`start` / `start:product`（`pnpm --filter @dayopt/product start`）、`test` / `test:product`（`pnpm --filter @dayopt/product test`） |
+| `未参照`（外部・内部・ソースコード内参照ともにゼロ）                                                   |          10 | `dev:product` / `dev:op` / `lint:product` / `typecheck:product` / `typecheck:packages` / `prepare` / `migration:list` / `migration:status` / `format` / `start:web`                                     |
 
-**`未参照` 13 件のうち 1 件は false positive**: `prepare` は npm/pnpm のライフサイクルフック（`pnpm install` 時に自動起動）で、`pnpm prepare` と明示的に打鍵されることは無い。これは削減候補ではない。残り 12 件が真の候補。
+**`未参照` 10 件のうち 1 件は false positive**: `prepare` は npm/pnpm のライフサイクルフック（`pnpm install` 時に自動起動）で、`pnpm prepare` と明示的に打鍵されることは無い。これは削減候補ではない。残り 9 件が真の候補。
 
-**削減見込み**: `alias` 3 件（ペアのどちらか片方を残せば良い）+ `未参照` 12 件（`prepare` 除く）= **15 / 102 ≈ 14.7%**
+**参照ゼロ ≠ 使用ゼロの感度注記**（2026-08-19 追記）: 上記 9 件のうち `format` / `dev:web` 系統（対話的に人間が直接打鍵する想定の script）は、grep できる参照（docs・CI・ソースコード内の案内文）が存在しなくても、開発者が手元で日常的に打鍵している可能性がある。本 slice の「参照数ゼロ」は「grep で発見できる参照がゼロ」を意味するのであって、「実際の呼び出し頻度がゼロ」の証明ではない。削除前には `.zsh_history` 等の実行ログ確認、または「2 週間、自分が触らなかった機能は削除候補にする」（`CLAUDE.md` シンプルルール 5）と同型の実運用での経過観察が必要。
+
+**削減見込み**: `alias` 3 件（ペアのどちらか片方を残せば良い）+ `未参照` 9 件（`prepare` 除く）= **12 / 102 ≈ 11.8%**
 
 ---
 
@@ -170,22 +175,22 @@ pnpm quality:deadcode      # 非CI版（除外なし）
 
 ## 6. 4 層の削減見込みサマリー
 
-| 層                 |          削減見込み | 精度                                             |
-| ------------------ | ------------------: | ------------------------------------------------ |
-| root scripts       | **14.7%**（15/102） | 高（機械判定、外部/内部参照を実測）              |
-| workspace packages |       **0%**（0/7） | 高（全 package が consumer あり）                |
-| current docs       |              未確定 | 低（サンプル 2 件のみ、65 ファイル全体は未走査） |
-| test / story       |              未確定 | 低（5 分類が未完了。proxy 指標のみ）             |
+| 層                 |          削減見込み | 精度                                                            |
+| ------------------ | ------------------: | --------------------------------------------------------------- |
+| root scripts       | **11.8%**（12/102） | 高（外部/内部/ソースコード内参照を実測。2026-08-19 再判定済み） |
+| workspace packages |       **0%**（0/7） | 高（全 package が consumer あり）                               |
+| current docs       |              未確定 | 低（サンプル 2 件のみ、65 ファイル全体は未走査）                |
+| test / story       |              未確定 | 低（5 分類が未完了。proxy 指標のみ）                            |
 
 ## 7. 撤退判定
 
 **Not Planned では閉じない。epic #2165 を継続する。**
 
-撤退条件は「4 層すべてで削減見込みが 10% 未満」。**root scripts 層が単独で 14.7% と 10% を超えているため、この条件は docs / test-story 2 層の精度を上げなくても既に不成立**である。4 層全部を高精度で測ってから判定する必要は無く、1 層が閾値を超えた時点で「続行」の結論は確定する。
+撤退条件は「4 層すべてで削減見込みが 10% 未満」。**root scripts 層が単独で 11.8% と 10% を超えているため、この条件は docs / test-story 2 層の精度を上げなくても既に不成立**である。4 層全部を高精度で測ってから判定する必要は無く、1 層が閾値を超えた時点で「続行」の結論は確定する（この早期確定ロジック自体は指揮台セカンドオピニオンで妥当性を確認済み。ただし初回実測の scripts 層の数字自体にはソースコード内参照の見落としがあり、11.8% へ差し戻し済み — 経緯は上の「初回実測の欠陥」を参照）。
 
 続行する場合の次 slice（未起票、epic 側で優先度判断が必要）:
 
-1. root scripts の `未参照` 12 件 + `alias` 3 件の削除実施（最も確度が高く、着手コストも低い）
+1. root scripts の `未参照` 9 件 + `alias` 3 件の削除実施（`format` / `dev:web` 系統は参照ゼロ≠使用ゼロの感度注記どおり、削除前に実運用での経過観察を挟む）
 2. docs 重複の全 65 ファイル走査（サンプルでは足りないため、次 slice で本格実施）
 3. test/story の 5 分類（quality 判断が要るため、専用の判定基準を先に決めてから着手）
 
