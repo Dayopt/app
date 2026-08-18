@@ -147,8 +147,9 @@ function ActivityBadgeCell({
           : 'border-border text-foreground hover:bg-state-hover',
       )}
     >
-      {/* 未分類は継承する色が無いのでアイコンを出さない（ActivityRow と同じ扱い） */}
-      {uncategorized ? null : <ActivityIcon icon={icon} color={color} size="sm" />}
+      {/* アクティビティ自体にはアイコンを出さない。カテゴリー見出しが既に同じ
+          アイコンを出しており、pill 側で繰り返しても情報が増えない（サイドバーの
+          ActivityRow と同じ規律、2026-08-18 User 指示） */}
       <span className="truncate">{activity.name}</span>
     </button>
   );

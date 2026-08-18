@@ -7,7 +7,7 @@ import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { Activity } from '@/features/activities';
-import { ActivityIcon, useUpdateActivity } from '@/features/activities';
+import { useUpdateActivity } from '@/features/activities';
 import { toast } from '@/lib/toast';
 import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
@@ -26,9 +26,12 @@ interface ActivityRowProps {
   checked: boolean;
   /** 所属カテゴリー ID（null = 未分類） */
   categoryId: string | null;
-  /** 継承する表示色。カテゴリーが持つ色で、未分類なら null */
+  /**
+   * クイック作成ポップオーバーへ渡す継承色。行そのものには出さないが、
+   * ポップオーバーはカテゴリーの色でブロックの見た目を示すため必要。
+   */
   inheritedColor: string | null;
-  /** 継承する表示アイコン。未分類なら null */
+  /** 同上（ポップオーバー用） */
   inheritedIcon: string | null;
   categoryOptions: CategoryOption[];
   isMobile: boolean;
@@ -43,8 +46,8 @@ interface ActivityRowProps {
 /**
  * サイドバーのアクティビティ行。
  *
- * 色・アイコンは所属カテゴリーから継承する（アクティビティ自身は持たない）。
- * カテゴリー未所属（未分類）のアクティビティはアイコンを持たずテキストだけで表示する。
+ * 行はテキストのみで、アイコンも色ドットも出さない。色とアイコンを持つのは
+ * カテゴリーだけで、配下の行に並べても見出しの繰り返しになるため。
  * 行クリックでクイック作成ポップオーバー、👁 で表示切替、⋯ でメニュー。
  */
 export function ActivityRow({
@@ -73,7 +76,6 @@ export function ActivityRow({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isPopoverOpen = openPopoverActivityId === activity.id;
-  const isUncategorized = categoryId === null;
 
   const handleChangeCategory = useCallback(
     (newCategoryId: string | null) => {
@@ -119,14 +121,10 @@ export function ActivityRow({
           )}
           onClick={() => onOpenPopover(activity.id)}
         >
-          {/* 未分類のアクティビティはアイコンを出さずテキストだけにする
-              （2026-08-18 User 指示）。継承する色が無い以上、中立マーカーを並べても
-              情報を足さずノイズになる。カテゴリー配下は色つきアイコンを継承する */}
-          {isUncategorized ? null : (
-            <span className="ml-2 shrink-0">
-              <ActivityIcon icon={inheritedIcon} color={inheritedColor} size="sm" />
-            </span>
-          )}
+          {/* アクティビティ行にアイコンは出さない（2026-08-18 User 指示）。
+              カテゴリー配下では見出しのアイコンをそのまま繰り返すことになり、
+              未分類では継承する色が無い。どちらも情報を足さずノイズになる。
+              色とアイコンを見せるのはカテゴリー見出しだけ */}
 
           <HoverTooltip
             content={activity.name}
