@@ -76,7 +76,7 @@ export { isCalendarDiffView } from './types/calendar.types';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { parseCalendarDateParam } from './lib/date-param';
+export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
 export { buildReportPath } from './lib/panel-url';
 export { isCalendarViewPath, resolveWorkspaceTab } from './lib/route-utils';
 export type { WorkspaceTab } from './lib/route-utils';

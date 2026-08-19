@@ -37,10 +37,15 @@ export function isCalendarViewPath(pathWithoutLocale: string): boolean {
 }
 
 /**
- * Sidebar タブ（カレンダー / レポート）の判定に使う3値。
+ * ワークスペースタブの判定に使う3値。
  *
- * `/settings` 等の workspace 外のパスは 'other' として扱う（第3のタブは作らない。
- * docs/projects/workspace-shell-restructure/overview.md §5-2）。
+ * **UI 上のタブは 'calendar' | 'report' の2値**（第3のタブは作らない。
+ * docs/projects/workspace-shell-restructure/overview.md §5-2・§6-9・§6-11）。
+ * `'other'` は UI タブではなく、CalendarNavigationContext が `/settings` 等の
+ * workspace 外パスで view/date のパースを止めるための内部状態（§5-4「`/settings`
+ * は calendar として扱う」は dispatcher 側の 2 値折り畳みで満たす。§4-2-b・
+ * §6-10 B の resolveCalendarProps・popstate ハンドラは 'other' を別枝として
+ * 扱う必要があるため、型としては3値のまま残す）。
  */
 export type WorkspaceTab = 'calendar' | 'report' | 'other';
 

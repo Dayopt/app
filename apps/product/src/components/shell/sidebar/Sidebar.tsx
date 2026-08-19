@@ -18,12 +18,17 @@ import { useTranslations } from 'next-intl';
 import { HelpMenuItems, UserMenu } from './UserMenu';
 
 interface SidebarProps {
-  /** Sidebarのコンテンツ（composition layerから注入） */
+  /** Sidebarのコンテンツ（composition layerから注入、スクロール領域） */
   children: ReactNode;
   /** UserMenu に表示するユーザー情報（composition layerから注入） */
   user: { name: string; email: string; avatar: string | null };
   /** フッターに配置するアクション（通知アイコン等） */
   footerActions?: ReactNode;
+  /**
+   * スクロール領域とフッターの間に固定表示するコンテンツ（MiniCalendar 等）。
+   * スクロールに追従させず「プロフィールの上」に留めたい要素向け（#2217）。
+   */
+  pinnedContent?: ReactNode;
   /** ランドマークのアクセシブルネーム */
   'aria-label'?: string;
 }
@@ -53,7 +58,13 @@ function SidebarHelpMenu() {
 }
 
 /** サイドバーコンテナ（ヘッダー + スクロール領域 + フッター） */
-export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
+export function Sidebar({
+  children,
+  user,
+  footerActions,
+  pinnedContent,
+  'aria-label': ariaLabel,
+}: SidebarProps) {
   const closeSidebar = useShellStore.use.closeSidebar();
   const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
   const t = useTranslations();
@@ -108,6 +119,11 @@ export function Sidebar({ children, user, footerActions, 'aria-label': ariaLabel
       <div className="scrollbar-stable flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
         {children}
       </div>
+
+      {/* Pinned（スクロールに追従しない。MiniCalendar 等。#2217） */}
+      {pinnedContent && (
+        <div className="border-border shrink-0 border-t px-2 pt-2">{pinnedContent}</div>
+      )}
 
       {/* Footer - UserMenu + Help */}
       <div className="shrink-0 px-2 py-2">

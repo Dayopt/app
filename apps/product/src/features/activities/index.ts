@@ -50,6 +50,7 @@ export {
 } from './hooks/useActivityMutations';
 export {
   useArchiveCategory,
+  useCreateCategory,
   useDeleteCategory,
   useRestoreCategory,
   useUpdateCategory,

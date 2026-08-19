@@ -2,7 +2,7 @@
   "sidebar": {
     "pageNav": {
       "calendar": "Calendar",
-      "stats": "Review"
+      "report": "Report"
     }
   }
 }
