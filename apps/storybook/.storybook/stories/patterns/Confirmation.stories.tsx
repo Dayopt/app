@@ -188,14 +188,14 @@ export const Overview: Story = {
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`const handleDelete = async () => {
-  await api.tags.delete.mutateAsync({ id: tagId });
+  await api.activities.deleteActivity.mutateAsync({ id: activityId });
 };
 
 <ConfirmDialog
   open={isOpen}
   onClose={() => setIsOpen(false)}
   onConfirm={handleDelete}
-  title="タグを削除する？"
+  title="アクティビティを削除する？"
   variant="destructive"
   loadingLabel="削除中..."
 />`}

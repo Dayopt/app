@@ -1,40 +1,15 @@
-import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { ServiceError } from '@/lib/trpc/errors';
 
-type TagServiceErrorCode =
-  | 'FETCH_FAILED'
-  | 'CREATE_FAILED'
-  | 'UPDATE_FAILED'
-  | 'DELETE_FAILED'
-  | 'NOT_FOUND'
-  | 'DUPLICATE_NAME'
-  | 'INVALID_INPUT'
-  | 'MERGE_FAILED'
-  | 'SAME_TAG_MERGE'
-  | 'TAG_ARCHIVED'
-  | 'TARGET_NOT_FOUND'
-  | 'UNGROUP_CONFLICTS'
-  | 'GROUP_NAME_CONFLICT';
+/**
+ * CRUD / マージ / アーカイブ向けのコードは対応する service ごと撤去済み
+ * （#2162 tag-model-replacement Step 7）。残る `tag-query-service.ts` は
+ * `FETCH_FAILED` しか投げない。
+ */
+type TagServiceErrorCode = 'FETCH_FAILED';
 
 export class TagServiceError extends ServiceError {
   constructor(code: TagServiceErrorCode, message: string, options?: ErrorOptions) {
     super(code, message, options);
     this.name = 'TagServiceError';
   }
-}
-
-export function createTagDatabaseError(
-  error: unknown,
-  code: Extract<
-    TagServiceErrorCode,
-    'FETCH_FAILED' | 'CREATE_FAILED' | 'UPDATE_FAILED' | 'DELETE_FAILED' | 'MERGE_FAILED'
-  >,
-  message: string,
-  operation: string,
-): TagServiceError {
-  const original = captureUnexpectedDatabaseError(error, {
-    feature: 'tags',
-    operation,
-  });
-  return new TagServiceError(code, message, { cause: original });
 }

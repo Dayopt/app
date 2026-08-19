@@ -148,29 +148,4 @@ export class TagQueryService {
     }
     return data.map(transformDbTag);
   }
-
-  async getById(options: {
-    userId: string;
-    tagId: string;
-    includeInactive?: boolean;
-  }): Promise<Tag> {
-    const query = this.supabase
-      .from('tags')
-      .select('*')
-      .eq('id', options.tagId)
-      .eq('user_id', options.userId);
-    if (!options.includeInactive) query.eq('is_active', true);
-    const { data, error } = await query.maybeSingle();
-    if (error && error.code !== 'PGRST116') {
-      const original = captureUnexpectedDatabaseError(error, {
-        feature: 'tags',
-        operation: 'get_tag_by_id',
-      });
-      throw new TagServiceError('FETCH_FAILED', 'Failed to fetch tag', { cause: original });
-    }
-    if (!data) {
-      throw new TagServiceError('NOT_FOUND', `Tag not found: ${options.tagId}`);
-    }
-    return transformDbTag(data);
-  }
 }

@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test';
 
 import { DropdownMenu, DropdownMenuTrigger } from '@dayopt/components';
 
-import { ActivityRowMenu, NoActivityRowMenu, type CategoryOption } from './ActivityRowMenu';
+import { ActivityRowMenu, type CategoryOption } from './ActivityRowMenu';
 
 const CATEGORY_OPTIONS: CategoryOption[] = [
   { id: 'cat-work', name: '仕事', color: 'green', icon: 'briefcase' },
@@ -75,19 +75,6 @@ export const CategoryPickerOpen: Story = {
   },
 };
 
-/** アクティビティ未設定ブロック行のメニュー（項目 1 つ）。 */
-export const NoActivityVariant: StoryObj<typeof NoActivityRowMenu> = {
-  render: () => (
-    <DropdownMenu defaultOpen>
-      <DropdownMenuTrigger asChild>
-        <button type="button">メニューを開く</button>
-      </DropdownMenuTrigger>
-      <NoActivityRowMenu onShowOnlyThis={fn()} />
-    </DropdownMenu>
-  ),
-  decorators: [(Story) => <Story />],
-};
-
 /** 全パターン一覧（メニューは Portal に出るため、状態ごとに個別 Story で確認する）。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -120,12 +107,6 @@ export const AllPatterns: Story = {
           onArchiveActivity={fn()}
           onDeleteActivity={fn()}
         />
-      </DropdownMenu>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button type="button">アクティビティなし行</button>
-        </DropdownMenuTrigger>
-        <NoActivityRowMenu onShowOnlyThis={fn()} />
       </DropdownMenu>
     </div>
   ),

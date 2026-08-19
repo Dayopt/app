@@ -63,6 +63,5 @@ export {
 } from './domain/activity-tree-cache';
 
 // ここにないものはfeature内部専用。
-// 作成系（useCreateActivity / useCreateCategory）や色クラスの解決
-// （getCategoryColorClasses）は、カレンダー本体の切替（H1 の activityId 待ち）で
-// 外から要るようになった時点で足す。使う前に export すると knip が孤児として検出する。
+// useCreateCategory は外から要るようになった時点で足す。使う前に export すると
+// knip が孤児として検出する。
