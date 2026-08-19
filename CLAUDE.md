@@ -29,6 +29,17 @@ Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.cl
 
 subagent への委任・writer 境界・報告フォーマットなどの運用機構は [.claude/rules/ai-behavior.md](.claude/rules/ai-behavior.md) が正本。
 
+## 運用基盤（STATE.md）
+
+指揮台セッションは日次でリセットされるため、プロジェクトの現在地をセッションの記憶ではなくリポジトリに持たせる。[STATE.md](STATE.md)（repo 直下）がその地図で、**正本ではなく生成されたビュー**である。正本は GitHub issue と open PR のまま（2026-08-01、rollup tracking issue `#1788` を「手動更新に依存して陳腐化する」という理由で廃止した教訓。[docs/engineering/log/2026-08-01-issue-state-labels-epics.md](docs/engineering/log/2026-08-01-issue-state-labels-epics.md)）。二重の正本を作らないため、STATE.md には経緯・議論を書かない。詳細は各 issue にリンクで辿る。
+
+- **起動時**: 指揮台セッションは最初に STATE.md と open issue を読み込む
+- **更新トリガー**: 進行中レーン（§2）・キュー（§3）・要判断（§4）・決定ログ（§5）は `pnpm state:generate` が GitHub の現状（open PR / `status:ready` / `type:discussion` / `judgment:diverged` ラベル）から機械生成する。lane は push-ready 報告前にこのコマンドを実行し、差分があれば自分の PR のコミットに含める（main への直接 push はしない — main は `PR + pnpm branch:finish` 経由のマージに限定されている）
+- **§1（北極星と今週の最優先）だけが手動更新**。指揮台は repo を書けないため、更新したい時は次に動く lane への指示（issue コメント + send_message）に含め、lane が通常の PR で編集する
+- **サイズ上限 100 行**。`pnpm state:generate` がキュー（§3）を優先的に切り詰め、決定ログ（§5）は直近 5 件のみ表示して全履歴を [docs/decisions.md](docs/decisions.md)（append-only）へ追い出す。進行中レーン（§2）と要判断（§4）はブロッカー・判断待ちという重要度から切り詰め対象外にする
+- **鮮度**: 冒頭見出しに生成時点の `main` short SHA（生成基点 main@xxxxxxxx）を刻む。これが現在の `origin/main` と一致しなければ、その差分の merge 分だけ盤面が古い（直列 merge モデルでは「STATE.md を含む PR が merge されるたび 1 手ずつ古くなる」のが常態であり、異常ではない）
+- **追従（update-branch）時の衝突は再生成で解決する**。STATE.md は生成物のため、§2〜§5 が conflict しても手 merge しない。`pnpm state:generate` を再実行すれば現在の main に基づく内容に置き換わる（`.claude/rules/orchestration.md` §追従とマージ順の采配 参照）
+
 ## Tech Stack
 
 Next.js App Router / React / TypeScript strict / Tailwind CSS / Zustand / Supabase / tRPC / Zod / shadcn/ui / Sentry。exact version は各 `package.json` と lockfile を正とする
