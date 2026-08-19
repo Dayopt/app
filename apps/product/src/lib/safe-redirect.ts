@@ -16,7 +16,7 @@
  * - エンコードされたバイパス (`%2F%2Fevil.com`)
  * - raw / encoded backslash (`/%5C%5Cevil.com`)
  */
-export function getSafeRedirectPath(next: string | null, fallback = '/week'): string {
+export function getSafeRedirectPath(next: string | null, fallback = '/calendar'): string {
   if (!next) return fallback;
 
   // 相対パスでない、またはプロトコル相対URL

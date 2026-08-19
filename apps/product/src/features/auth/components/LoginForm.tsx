@@ -140,7 +140,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
         const fullRedirectPath = `/${locale}${redirectPath}`;
         const buildMfaUrl = () => {
           const base = `/${locale}/auth/mfa-verify`;
-          return redirectPath !== '/week'
+          return redirectPath !== '/calendar'
             ? `${base}?next=${encodeURIComponent(fullRedirectPath)}`
             : base;
         };

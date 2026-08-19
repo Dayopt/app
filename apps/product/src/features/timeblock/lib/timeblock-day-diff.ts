@@ -1,6 +1,6 @@
 type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
 
-interface TimeModelPlanDiffInput {
+export interface TimeModelPlanDiffInput {
   id: string;
   title: string;
   tagId: string | null;
@@ -14,7 +14,7 @@ interface TimeModelPlanDiffInput {
   isIncludedInDiff?: boolean | undefined;
 }
 
-interface TimeModelRecordDiffInput {
+export interface TimeModelRecordDiffInput {
   id: string;
   planId: string | null;
   title: string;

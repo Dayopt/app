@@ -26,7 +26,7 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(day|week|stats)/i, { timeout: 15000 });
+  await page.waitForURL(/\/calendar/i, { timeout: 15000 });
 }
 
 /**
@@ -89,7 +89,10 @@ test.describe('A11y: 認証済みページ', () => {
   });
 
   test('統計ページ', async ({ page }) => {
-    await page.goto('/ja/stats');
+    // /stats は現行 route に存在しない（main にも無い、本 PR 以前からの死亡 sub-test）。
+    // 分析面は #2181 で /report へ移設されたため、現在地を指すよう追従する（Step 2 の
+    // login 遷移先追従と同型。新設 /report が a11y 検査ゼロのまま出荷されるのを防ぐ）。
+    await page.goto('/ja/report');
     await page.waitForLoadState('domcontentloaded');
 
     const results = await new AxeBuilder({ page: page as never })

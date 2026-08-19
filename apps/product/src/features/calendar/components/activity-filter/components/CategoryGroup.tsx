@@ -7,9 +7,8 @@ import { useLocale } from 'next-intl';
 
 import type { Activity, Category } from '@/features/activities';
 
-import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
-import { buildCalendarReviewPanelPath } from '../../../lib/panel-url';
+import { buildReportPath } from '../../../lib/panel-url';
 
 import { ActivityRow } from './ActivityRow';
 import type { CategoryOption } from './ActivityRowMenu';
@@ -66,7 +65,6 @@ export function CategoryGroup({
 }: CategoryGroupProps) {
   const locale = useLocale();
   const router = useRouter();
-  const navigation = useCalendarNavigation();
   const { openActivityCreateModal, openCategoryRenameModal } = useActivityModalNavigation();
   const { displayColor, handleColorChange, handleIconChange } = useCategoryAppearanceEdit({
     categoryId: category.id,
@@ -77,14 +75,10 @@ export function CategoryGroup({
   const visibility = getCategoryVisibility(activityIds);
 
   const handleViewStats = useCallback(() => {
-    if (navigation) {
-      navigation.setPanelKind('review', { reviewTagId: category.id });
-      return;
-    }
-    // ここに来るのは navigation が無い経路だけなので、日付は現在時刻で解決する
-    const reviewDate = new Date();
-    router.push(buildCalendarReviewPanelPath(locale, reviewDate, category.id));
-  }, [navigation, router, locale, category.id]);
+    // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
+    // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
+    router.push(buildReportPath(locale, new Date()));
+  }, [router, locale]);
 
   return (
     <div className="w-full min-w-0">

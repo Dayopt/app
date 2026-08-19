@@ -20,23 +20,18 @@ const TEST_PASSWORD = 'test-password-123';
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
-async function expectCalendarUrl(
-  page: Page,
-  expected: { pathname: string; date: string; panel?: string | null },
-) {
+async function expectCalendarUrl(page: Page, expected: { pathname: string; date: string }) {
   await expect
     .poll(() => {
       const url = new URL(page.url());
       return {
         pathname: url.pathname,
         date: url.searchParams.get('date'),
-        panel: url.searchParams.get('panel'),
       };
     })
     .toEqual({
       pathname: expected.pathname,
       date: expected.date,
-      panel: expected.panel ?? null,
     });
 }
 
@@ -46,7 +41,7 @@ async function login(page: Page) {
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').first().click();
-  await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+  await page.waitForURL(/\/ja\/calendar/i, { timeout: 15_000 });
   await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
 }
 
@@ -99,36 +94,34 @@ describeWithEnv('Calendar navigation', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
     await login(page);
-    await page.goto(`/ja/day?date=${TEST_DATE}`);
+    await page.goto(`/ja/calendar?view=day&date=${TEST_DATE}`);
     await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test('Review panelとviewを実UI操作・reload・browser backで復元する', async ({ page }) => {
-    const reviewToggle = page.getByRole('button', { name: '振り返りパネルを切り替え' });
-    const reviewPanel = page.getByRole('region', { name: '振り返り' });
+  // カレンダー内 review panel（CalendarReviewRail）は廃止済み（#2181 Step 4）。
+  // 振り返りは /report へのタブ遷移に置き換わった（Step 6 で旧 panel 経路を削除）。
+  test('レポートタブとviewを実UI操作・reload・browser backで復元する', async ({ page }) => {
+    const reportTab = page.getByRole('tab', { name: 'レポート' });
+    const calendarTab = page.getByRole('tab', { name: 'カレンダー' });
 
-    await reviewToggle.click();
-    await expectCalendarUrl(page, { pathname: '/ja/day', date: TEST_DATE, panel: 'review' });
-    await expect(reviewToggle).toHaveAttribute('aria-pressed', 'true');
-    await expect(reviewPanel).toBeVisible();
+    await reportTab.click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/ja/report');
+    await expect.poll(() => new URL(page.url()).searchParams.get('date')).toBe(TEST_DATE);
 
     await page.reload();
-    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
-    await expectCalendarUrl(page, { pathname: '/ja/day', date: TEST_DATE, panel: 'review' });
-    await expect(reviewToggle).toHaveAttribute('aria-pressed', 'true');
-    await expect(reviewPanel).toBeVisible();
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/ja/report');
 
-    await reviewPanel.getByRole('button', { name: '閉じる' }).click();
-    await expectCalendarUrl(page, { pathname: '/ja/day', date: TEST_DATE });
-    await expect(reviewPanel).toHaveCount(0);
+    await calendarTab.click();
+    await expectCalendarUrl(page, { pathname: '/ja/calendar', date: TEST_DATE });
+    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole('button', { name: '日', exact: true }).click();
     await page.getByRole('menuitem', { name: /^3日\s*3$/ }).click();
-    await expectCalendarUrl(page, { pathname: '/ja/3day', date: TEST_DATE });
+    await expectCalendarUrl(page, { pathname: '/ja/calendar', date: TEST_DATE });
     await expect(page.locator('[data-calendar-grid]')).toHaveCount(3);
 
     await page.goBack();
-    await expectCalendarUrl(page, { pathname: '/ja/day', date: TEST_DATE });
+    await expectCalendarUrl(page, { pathname: '/ja/calendar', date: TEST_DATE });
     await expect(page.locator('[data-calendar-grid]')).toHaveCount(1);
     await expect(page.getByRole('button', { name: '日', exact: true })).toBeVisible();
   });

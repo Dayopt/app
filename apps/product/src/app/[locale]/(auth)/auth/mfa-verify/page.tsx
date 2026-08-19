@@ -67,10 +67,10 @@ export default function MFAVerifyPage() {
             setChallengeId(challengeData.id);
           }
         } else {
-          router.push('/week');
+          router.push(`/${locale}/calendar`);
         }
       } else {
-        router.push('/week');
+        router.push(`/${locale}/calendar`);
       }
     } catch (err) {
       logger.error('MFA initialization failed:', err);
@@ -83,7 +83,7 @@ export default function MFAVerifyPage() {
       });
       setError(t('common.errors.mfa.verifyFailed'));
     }
-  }, [router, supabase, t]);
+  }, [router, supabase, t, locale]);
 
   useEffect(() => {
     queueMicrotask(() => void checkMFARequired());
@@ -119,7 +119,7 @@ export default function MFAVerifyPage() {
         throw new Error(verifyError.message);
       }
 
-      const next = getSafeRedirectPath(searchParams?.get('next') ?? null, `/${locale}/week`);
+      const next = getSafeRedirectPath(searchParams?.get('next') ?? null, `/${locale}/calendar`);
       router.refresh();
       router.push(next);
     } catch (err) {
@@ -145,7 +145,7 @@ export default function MFAVerifyPage() {
       await vanillaTrpc.user.verifyRecoveryCode.mutate({ code: trimmed });
 
       toast.success(t('auth.mfaVerify.recoverySuccess'));
-      const next = getSafeRedirectPath(searchParams?.get('next') ?? null, `/${locale}/week`);
+      const next = getSafeRedirectPath(searchParams?.get('next') ?? null, `/${locale}/calendar`);
       router.refresh();
       router.push(next);
     } catch (err) {

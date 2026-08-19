@@ -170,7 +170,7 @@ describe('settings route hydration guards', () => {
     render(<SettingsPage />);
 
     expect(mockOpenSettings).toHaveBeenCalledWith('profile');
-    expect(mockReplace).toHaveBeenCalledWith('/week');
+    expect(mockReplace).toHaveBeenCalledWith('/calendar');
   });
 
   it('renders mobile settings content without redirect', () => {
@@ -209,7 +209,7 @@ describe('settings route hydration guards', () => {
     render(<SettingsCategoryPage />);
 
     expect(mockOpenSettings).toHaveBeenCalledWith('billing');
-    expect(mockReplace).toHaveBeenCalledWith('/week');
+    expect(mockReplace).toHaveBeenCalledWith('/calendar');
   });
 
   it('handles a desktop calendar callback before opening Integrations', () => {
@@ -224,7 +224,7 @@ describe('settings route hydration guards', () => {
     );
     expect(mockInvalidateConnections).toHaveBeenCalled();
     expect(mockOpenSettings).toHaveBeenCalledWith('integrations');
-    expect(mockReplace).toHaveBeenCalledWith('/week');
+    expect(mockReplace).toHaveBeenCalledWith('/calendar');
   });
 
   it('handles a desktop checkout return before reopening Billing', () => {
@@ -238,7 +238,7 @@ describe('settings route hydration guards', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('settings.subscription.checkoutSuccess');
     expect(mockInvalidateBillingOverview).toHaveBeenCalled();
     expect(mockOpenSettings).toHaveBeenCalledWith('billing');
-    expect(mockReplace).toHaveBeenCalledWith('/week');
+    expect(mockReplace).toHaveBeenCalledWith('/calendar');
   });
 
   it('cleans only checkout callback params on mobile', () => {

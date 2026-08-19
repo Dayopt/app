@@ -4,7 +4,7 @@ import { devtools } from 'zustand/middleware';
 import { addWeeks } from '@/lib/date/core';
 
 /** Review の表示粒度 */
-export type ReviewGranularity = 'week';
+export type ReviewGranularity = 'day' | 'week';
 
 interface ReviewFilterState {
   /** 表示粒度 */

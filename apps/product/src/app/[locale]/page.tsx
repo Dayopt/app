@@ -10,7 +10,7 @@ interface PageProps {
 export default async function LocaleHomePage({ params }: PageProps) {
   const { locale } = await params;
   // workspace の既定表示は week（mobile では CalendarNavigationContext が day へ自動降格）
-  redirect(`/${locale}/week`);
+  redirect(`/${locale}/calendar`);
 }
 
 // 静的生成無効化

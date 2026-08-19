@@ -1,12 +1,12 @@
 'use client';
 
-import { ArrowDown, ArrowUp, Circle, GitCompareArrows, Minus, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Circle, GitCompareArrows, Minus, Plus } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { useTagsMap } from '@/features/tags';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { Button, cn } from '@dayopt/components';
+import { cn } from '@dayopt/components';
 
 export type ReviewDiffKind =
   'unplanned' | 'missed' | 'recorded' | 'resized' | 'shifted' | 'skipped' | 'unrecorded';
@@ -47,8 +47,6 @@ export interface ReviewDiffResult {
 interface ReviewDiffPanelProps {
   diff: ReviewDiffResult;
   onItemClick?: ((timeblockId: string) => void) | undefined;
-  onClose?: (() => void) | undefined;
-  variant?: 'rail' | 'sheet' | undefined;
   className?: string | undefined;
 }
 
@@ -62,18 +60,11 @@ const KIND_ICON = {
   unrecorded: Minus,
 } satisfies Record<ReviewDiffKind, typeof Plus>;
 
-export function ReviewDiffPanel({
-  diff,
-  onItemClick,
-  onClose,
-  variant = 'rail',
-  className,
-}: ReviewDiffPanelProps) {
+export function ReviewDiffPanel({ diff, onItemClick, className }: ReviewDiffPanelProps) {
   const t = useTranslations();
   const locale = useLocale();
   const { timeFormat, timezone } = useUserPreferences();
   const { getTagById } = useTagsMap();
-  const isSheet = variant === 'sheet';
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -87,30 +78,14 @@ export function ReviewDiffPanel({
 
   return (
     <section
-      className={cn('flex min-h-0 w-full flex-col', className)}
+      className={cn('flex w-full flex-col', className)}
       aria-label={t('calendar.compare.rail.title')}
     >
-      <header className={cn('shrink-0', !isSheet && 'border-border-subtle border-b')}>
+      <header className="shrink-0">
         <div className="flex h-12 items-center gap-2 px-4">
           <h2 className="min-w-0 flex-1 truncate text-sm font-medium">
             {t('calendar.compare.rail.title')}
           </h2>
-          {onClose ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              icon
-              className={cn(
-                'text-muted-foreground hover:text-foreground -mr-2',
-                isSheet && 'min-h-11 min-w-11',
-              )}
-              onClick={onClose}
-              aria-label={t('common.actions.close')}
-            >
-              <X className="size-4" aria-hidden="true" />
-            </Button>
-          ) : null}
         </div>
         <dl className="mx-4 mt-2 mb-4 flex flex-col gap-2">
           <SummaryMetric
@@ -145,12 +120,7 @@ export function ReviewDiffPanel({
       </header>
 
       {diff.items.length === 0 ? (
-        <div
-          className={cn(
-            'flex flex-col items-center px-6 py-8 text-center',
-            isSheet ? 'shrink-0' : 'min-h-0 flex-1 justify-center',
-          )}
-        >
+        <div className="flex flex-col items-center px-6 py-8 text-center">
           <Circle className="text-muted-foreground size-8" aria-hidden="true" />
           <p className="mt-4 text-sm font-medium">{t('calendar.compare.rail.emptyTitle')}</p>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -158,7 +128,7 @@ export function ReviewDiffPanel({
           </p>
         </div>
       ) : (
-        <div className={cn('min-h-0 overflow-y-auto p-2', isSheet ? 'max-h-96' : 'flex-1')}>
+        <div className="p-2">
           <ol className="flex flex-col gap-1">
             {diff.items.map((item) => {
               const tag = item.tagId ? getTagById(item.tagId) : null;

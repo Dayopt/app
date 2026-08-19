@@ -1,21 +1,18 @@
 User-agent: *
 Allow: /
-Disallow: /calendar/
-Disallow: /stats/
+Disallow: /calendar
+Disallow: /report
 Disallow: /settings/
-Disallow: /notifications/
 Disallow: /auth/
 Disallow: /api/
 Disallow: /_next/
-Disallow: /ja/calendar/
-Disallow: /ja/stats/
+Disallow: /ja/calendar
+Disallow: /ja/report
 Disallow: /ja/settings/
-Disallow: /ja/notifications/
 Disallow: /ja/auth/
-Disallow: /en/calendar/
-Disallow: /en/stats/
+Disallow: /en/calendar
+Disallow: /en/report
 Disallow: /en/settings/
-Disallow: /en/notifications/
 Disallow: /en/auth/
 
 User-agent: GPTBot

@@ -40,7 +40,7 @@ export function WelcomeEmail({
             </Text>
             <Text style={styles.paragraph}>{t('welcome.body')}</Text>
             <Text style={styles.paragraph}>{t('welcome.valueProp')}</Text>
-            <Button style={styles.button} href={`${appUrl}/week`}>
+            <Button style={styles.button} href={`${appUrl}/calendar`}>
               {t('welcome.ctaButton')}
             </Button>
             <Text style={styles.paragraph}>

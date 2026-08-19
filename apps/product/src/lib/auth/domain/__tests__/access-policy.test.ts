@@ -55,3 +55,25 @@ describe('isAuthPathAllowedWhileAuthenticated', () => {
     expect(isProtectedProductPath('/auth/session-error')).toBe(false);
   });
 });
+
+describe('isProtectedProductPath', () => {
+  // workspace-shell-restructure Step 1（#2190）: /calendar と /report の新設と
+  // access-policy.ts への追加が同一 commit であることをこの test で固定する。
+  // 分けると未認証開通と MFA gate バイパスが同時に起きる
+  // （docs/projects/workspace-shell-restructure/overview.md §4-5-b）。
+  it.each(['/calendar', '/report'])('%s は保護対象である', (path) => {
+    expect(isProtectedProductPath(path)).toBe(true);
+  });
+
+  // workspace-shell-restructure Step 6（#2181・#2195、A案裁可）: 旧URL（/day, /week,
+  // /Nday）の route ファイルと workspaceViewPathPattern を削除した。旧URLは
+  // proxy.ts の redirect（認可チェックより前段）が常に先に処理するため、
+  // isProtectedProductPath による保護は不要になった。旧URLが未認証のまま
+  // レンダリングされないことは proxy.test.ts の redirect 網羅テストが担保する。
+  it.each(['/day', '/week', '/2day', '/7day'])(
+    '%s（旧URL）は isProtectedProductPath の対象から外れる（redirect 層が先に処理するため）',
+    (path) => {
+      expect(isProtectedProductPath(path)).toBe(false);
+    },
+  );
+});

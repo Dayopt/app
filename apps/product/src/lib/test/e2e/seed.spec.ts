@@ -11,7 +11,7 @@ test.describe('Playwright Test Agent seed', () => {
     await page.locator('input[name="password"]').fill(process.env.TEST_USER_PASSWORD!);
     await page.locator('button[type="submit"]').click();
 
-    await page.waitForURL(/\/ja\/(day|week)/, { timeout: 15_000 });
+    await page.waitForURL(/\/ja\/calendar/, { timeout: 15_000 });
     await expect(page.locator('[data-calendar-grid][data-calendar-day-index="0"]')).toBeVisible({
       timeout: 10_000,
     });

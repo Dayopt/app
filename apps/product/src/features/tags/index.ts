@@ -15,10 +15,6 @@ export { getTagColorClasses, resolveTagColor } from './lib/tag-colors';
 export type { TagColorName } from './lib/tag-colors';
 
 // Hooks
-export {
-  // Tags CRUD
-  useTags,
-  useTagsMap,
-} from './hooks';
+export { useTagsMap } from './hooks';
 
 // ここにないものはfeature内部専用

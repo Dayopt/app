@@ -8,6 +8,11 @@ const bannerState = vi.hoisted(() => ({
 
 vi.mock('@dayopt/i18n/navigation', () => ({
   usePathname: pathnameMock,
+  Link: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/features/auth', () => ({
@@ -15,7 +20,11 @@ vi.mock('@/features/auth', () => ({
 }));
 
 vi.mock('@/features/calendar', () => ({
-  isCalendarViewPath: (pathname: string) => /^\/(?:day|week|[2-7]day)(?:\/|$)/.test(pathname),
+  isCalendarViewPath: (pathname: string) => pathname === '/calendar',
+  resolveWorkspaceTab: (pathname: string) =>
+    pathname === '/calendar' ? 'calendar' : pathname === '/report' ? 'report' : 'other',
+  formatCalendarDateParam: () => '2026-03-25',
+  useCalendarNavigation: () => null,
   ActivityChipRow: () => <div data-testid="activity-chip-row" />,
 }));
 
@@ -90,8 +99,8 @@ describe('DesktopLayout', () => {
     expectBefore(alert, main);
   });
 
-  it('keeps one banner before main content and omits the shell header on prefixless calendar routes', () => {
-    pathnameMock.mockReturnValue('/day');
+  it('keeps one banner before main content and omits the shell header on /calendar', () => {
+    pathnameMock.mockReturnValue('/calendar');
 
     const { container } = render(
       <DesktopLayout>
@@ -139,7 +148,7 @@ describe('MobileLayout', () => {
     expectBefore(alert, main);
   });
 
-  it.each(['/day', '/settings', '/settings/billing'])(
+  it.each(['/calendar', '/settings', '/settings/billing'])(
     'shows one banner before main content and omits the shell header on %s',
     (pathname) => {
       pathnameMock.mockReturnValue(pathname);
@@ -154,8 +163,25 @@ describe('MobileLayout', () => {
       const alert = expectSingleVisibleBanner(container);
       expectBefore(alert, screen.getByRole('main'));
       expect(screen.queryAllByTestId('activity-chip-row')).toHaveLength(
-        pathname === '/day' ? 1 : 0,
+        pathname === '/calendar' ? 1 : 0,
       );
+    },
+  );
+
+  // workspace-shell-restructure #2181 Step 3: BottomTabBar は常時表示（タブ2個）
+  it.each(['/calendar', '/report', '/projects'])(
+    'always shows the 2-tab BottomTabBar on %s',
+    (pathname) => {
+      pathnameMock.mockReturnValue(pathname);
+
+      render(
+        <MobileLayout>
+          <div>Content</div>
+        </MobileLayout>,
+      );
+
+      const tabs = screen.getAllByRole('tab');
+      expect(tabs).toHaveLength(2);
     },
   );
 

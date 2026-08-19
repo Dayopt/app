@@ -66,7 +66,10 @@ export function ActivityChipRow({ className }: ActivityChipRowProps) {
   return (
     <div
       className={cn(
-        'bg-surface-container border-border-subtle z-bottom-tab pb-safe fixed inset-x-0 bottom-0 flex min-h-14 items-center gap-1 overflow-x-auto border-t px-2 pt-1',
+        // 固定配置（fixed / z-index / safe-area）は呼び出し側（_shell/mobile-layout.tsx）の
+        // 縦積みコンテナが担う。ここでは行としての見た目だけを持つ
+        // （workspace-shell-restructure #2181 Step 3。overview.md §6-10 G）
+        'bg-surface-container border-border-subtle flex min-h-14 items-center gap-1 overflow-x-auto border-b px-2 pt-1',
         // タップ領域を広く保ちつつ、横スクロール時のバウンスを抑える + スクロールバー非表示
         'scrollbar-hide overscroll-x-contain',
         className,

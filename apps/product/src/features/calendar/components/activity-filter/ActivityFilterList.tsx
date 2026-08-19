@@ -41,6 +41,7 @@ import { mergeActivityDeleteCounts } from './activity-delete-counts';
 import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
+import { CategoryCreatePopover } from './components/CategoryCreatePopover';
 import { CategoryGroup } from './components/CategoryGroup';
 
 const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
@@ -148,6 +149,8 @@ export function ActivityFilterList() {
   const [uncategorizedCollapsed, setUncategorizedCollapsed] = useState(false);
   // 「カテゴリ」見出し（個々のカテゴリー群をまとめる親見出し）の開閉。既定は展開
   const [categoriesSectionCollapsed, setCategoriesSectionCollapsed] = useState(false);
+  // カテゴリー作成 popover の開閉。開いている間は「カテゴリ」見出しの + を隠さない（#2211）
+  const [categoryCreateOpen, setCategoryCreateOpen] = useState(false);
   const [openPopoverActivityId, setOpenPopoverActivityId] = useState<string | null>(null);
 
   const toggleCategoryCollapse = useCallback((categoryId: string) => {
@@ -262,6 +265,20 @@ export function ActivityFilterList() {
               className="space-y-1"
               collapsed={categoriesSectionCollapsed}
               onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
+              action={
+                // 「未分類」の + と対称: 常時は隠し、見出し行にホバー / フォーカス
+                // した時だけ出す。popover 展開中は categoryCreateOpen で強制表示
+                <span
+                  className={cn(
+                    'opacity-0 transition-opacity',
+                    categoryCreateOpen
+                      ? 'opacity-100'
+                      : 'group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+                  )}
+                >
+                  <CategoryCreatePopover onOpenChange={setCategoryCreateOpen} />
+                </span>
+              }
             >
               {categories.map(({ category, activities }) => (
                 <CategoryGroup
