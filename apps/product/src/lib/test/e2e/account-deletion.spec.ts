@@ -50,7 +50,7 @@ async function login(page: Page) {
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').first().click();
-  await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+  await page.waitForURL(/\/ja\/calendar/i, { timeout: 15_000 });
 }
 
 /**
@@ -189,7 +189,7 @@ describeWithEnv('Account Deletion: 削除 → セッション失効 → 再ロ�
       'メールアドレスまたはパスワードが正しくありません',
       { timeout: 10_000 },
     );
-    // 認証が通っていないこと自体も確認する（成功していれば /ja/day 等へ抜ける）
+    // 認証が通っていないこと自体も確認する（成功していれば /ja/calendar へ抜ける）
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });

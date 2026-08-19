@@ -75,6 +75,8 @@ test.describe('Legacy URL redirects', () => {
     // 修正前に送信済みのメールは `${appUrl}/week` を焼き付けたまま回収できない
     // （overview.md §4-6）。redirect 層がこの形のまま生き続けることを固定する。
     await page.goto('/week');
-    await expect(page).toHaveURL(/\/ja\/calendar$/);
+    // resolveLegacyWorkspaceRedirect は legacyView を view クエリへ写すため
+    // `?view=week` が付く（`/ja/calendar` への着地自体が本題で、query の有無は問わない）。
+    await expect(page).toHaveURL(/\/ja\/calendar(\?|$)/);
   });
 });
