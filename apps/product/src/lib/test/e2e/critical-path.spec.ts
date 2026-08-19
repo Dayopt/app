@@ -64,11 +64,11 @@ async function login(page: Page) {
   await page.locator('input[type="email"], input[name="email"]').first().fill(TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   await page.locator('button[type="submit"]').first().click();
-  await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+  await page.waitForURL(/\/ja\/calendar/i, { timeout: 15_000 });
 }
 
 async function openDay(page: Page, dateParam: string) {
-  await page.goto(`/ja/day?date=${dateParam}`);
+  await page.goto(`/ja/calendar?view=day&date=${dateParam}`);
   await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
 }
 
@@ -240,15 +240,22 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
-    await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
+  test('記録した実績が /report の Time P/L に反映される', async ({ page }) => {
+    // 旧 /day?panel=review は proxy.ts の redirect で /report?range=day へ写る（Step 2）。
+    // #2181 Step 4 で /report がフルページ化されたので直接開く。
+    await page.goto(`/ja/report?date=${offsetDateParam(-1)}&range=day`);
 
-    // CalendarReviewPanel の section は aria-label のみ持ち、暗黙 role="region" になる
-    const reviewPanel = page.getByRole('region', { name: '振り返り' });
-    await expect(reviewPanel).toBeVisible({ timeout: 10_000 });
+    // ReportBody の「予実の傾向」section は aria-label のみ持ち、暗黙 role="region" になる
+    const trendSection = page.getByRole('region', { name: 'Time P/L' });
+    await expect(trendSection).toBeVisible({ timeout: 10_000 });
 
-    // TimePLRow はアクティビティ名を含む button（day view は単日スコープなので明日の Plan は混入しない）
-    const activityRow = reviewPanel.getByRole('button', { name: new RegExp(ACTIVITY_NAME) });
+    // TimePLRow は /report では onTagClick が未配線のため button ではなく div で描画される
+    // （WeeklyReflectionPanel.tsx の TimePLRow、意図的な設計 — クリック機能は現状スコープ外）。
+    // role=button を前提にしていたのは元 test の誤りだったため（day range は単日スコープなので
+    // 明日の Plan は混入しない）、interactive/static どちらでも一致する data 属性で選ぶ。
+    const activityRow = trendSection.locator('[data-timepl-row]', {
+      hasText: ACTIVITY_NAME,
+    });
     await expect(activityRow).toBeVisible({ timeout: 10_000 });
     await expect(activityRow).toContainText('1h');
   });

@@ -32,6 +32,7 @@ export function buildTimeblockSearchResultPath({
 }): string {
   const params = new URLSearchParams();
   params.set('date', formatCalendarDateParam(resolveTimeblockSearchResultDate(startAt, timezone)));
+  params.set('view', 'day');
   params.set(TIMEBLOCK_PARAM, serializeTimeblockParam(timeblockId, kind));
-  return `/${locale}/day?${params.toString()}`;
+  return `/${locale}/calendar?${params.toString()}`;
 }

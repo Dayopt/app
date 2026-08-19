@@ -10,19 +10,10 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
-import { isWeekend } from 'date-fns';
 import { PanelLeft } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { useCallback, useMemo } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
-import {
-  CalendarController,
-  CalendarPanelToggle,
-  isCalendarDiffView,
-  useCalendarNavigation,
-} from '@/features/calendar';
-import { CalendarReviewRail, useReviewOpenedTracking } from '@/features/review';
+import { CalendarController, useCalendarNavigation } from '@/features/calendar';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -37,11 +28,8 @@ interface CalendarViewClientProps {
 }
 
 export function CalendarViewClient({ translations }: CalendarViewClientProps) {
-  const t = useTranslations();
   const calendarNavigation = useCalendarNavigation();
   const sidebar = useShellStore.use.sidebar();
-  const suppressSidebar = useShellStore.use.suppressSidebar();
-  const restoreSidebar = useShellStore.use.restoreSidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
@@ -53,17 +41,8 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     );
   }
 
-  const {
-    viewType,
-    currentDate,
-    panelKind,
-    reviewTagId,
-    setPanelKind,
-    setReviewTagId,
-    navigateRelative,
-    changeView,
-    navigateToDate,
-  } = calendarNavigation;
+  const { viewType, currentDate, navigateRelative, changeView, navigateToDate } =
+    calendarNavigation;
 
   // Composition: 全cross-featureデータとコールバックを集約
   const composition = useCalendarComposition({
@@ -88,64 +67,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <PanelLeft className="size-4" />
     </Button>
   ) : null;
-  const handlePanelTabSelect = useCallback(
-    (tab: 'review' | 'diff') => {
-      setPanelKind(tab);
-    },
-    [setPanelKind],
-  );
-  const handleSideRailSpaceRecoveryChange = useCallback(
-    (recovering: boolean) => {
-      if (recovering) {
-        suppressSidebar();
-        return;
-      }
-
-      restoreSidebar();
-    },
-    [restoreSidebar, suppressSidebar],
-  );
-  // panelKind は CalendarNavigationContext の読み取り時点で 'analytics'→'review' に正規化済みのため、
-  // ここでは 'review' のみを見ればよい（旧 'analytics' 分岐は #2161 P3 でデッドブランチとして整理）
-  const isReviewPanelActive = panelKind === 'review';
-  const isDiffPanelActive = panelKind === 'diff';
-  const activePanelTab: 'review' | 'diff' | null = isDiffPanelActive
-    ? 'diff'
-    : isReviewPanelActive
-      ? 'review'
-      : null;
-  // CalendarController の calendarDiffEnabled と同じ判定式を揃える（週末のみ表示中の多日ビューでは
-  // diffデータが空になるため、タブ自体を disabled にする。#2161 P2 の縁ケース修正）
-  const calendarDiffDays = composition.showWeekends
-    ? composition.viewDateRange.days
-    : composition.viewDateRange.days.filter((day) => !isWeekend(day));
-  const diffTabDisabled =
-    !isCalendarDiffView(viewType) || (viewType !== 'day' && calendarDiffDays.length === 0);
-  const panelOpen = activePanelTab !== null;
-  useReviewOpenedTracking(isReviewPanelActive);
-  const reviewDisplayRange = useMemo(
-    () => ({
-      ...composition.viewDateRange,
-      showWeekends: composition.showWeekends,
-    }),
-    [composition.showWeekends, composition.viewDateRange],
-  );
-  const panelToggle = (
-    <CalendarPanelToggle
-      activeTab={activePanelTab}
-      onSelect={handlePanelTabSelect}
-      diffDisabled={diffTabDisabled}
-    />
-  );
-  const headerActions = (
-    <>
-      {panelToggle}
-      <ConnectedMobileAccountButton className="md:hidden" />
-    </>
-  );
-  const panelTitle = t('calendar.views.stats');
-  const panelDescription = t('calendar.stats.review.description');
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <FeatureErrorBoundary
@@ -175,7 +96,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           allTimeblocks={composition.allCalendarEvents}
           externalEvents={composition.externalEvents}
           showWeekends={composition.showWeekends}
-          showActualDiff={isDiffPanelActive && isCalendarDiffView(viewType)}
           disabledTimeblockId={composition.disabledTimeblockId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}
@@ -196,31 +116,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onDateSelect={composition.onDateSelect}
           onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
-          rightSlot={headerActions}
-          panelOpen={panelOpen}
-          onPanelOpenChange={(open) => {
-            if (open) return;
-            setPanelKind(null);
-          }}
-          renderPanelRail={({ diff, variant, onDiffItemClick, onClose }) => (
-            <CalendarReviewRail
-              activeTab={activePanelTab ?? 'review'}
-              onTabChange={handlePanelTabSelect}
-              diffTabDisabled={diffTabDisabled}
-              currentDate={currentDate}
-              displayRange={reviewDisplayRange}
-              selectedTagId={reviewTagId}
-              onSelectedTagIdChange={setReviewTagId}
-              diff={diff}
-              onDiffItemClick={onDiffItemClick}
-              variant={variant}
-              onClose={onClose}
-            />
-          )}
-          panelTitle={panelTitle}
-          panelDescription={panelDescription}
-          recoverableSidebarWidth={sidebar.open ? sidebar.width : 0}
-          onSideRailSpaceRecoveryChange={handleSideRailSpaceRecoveryChange}
+          rightSlot={<ConnectedMobileAccountButton className="md:hidden" />}
         />
       </FeatureErrorBoundary>
     </div>

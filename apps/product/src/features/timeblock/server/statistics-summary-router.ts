@@ -111,6 +111,40 @@ export const statisticsSummaryRouter = createTRPCRouter({
       }
     }),
 
+  /**
+   * セグメント別の予実合計 + 直前期間との比較（#2181 Step 5）。
+   *
+   * セグメント定義は呼び出し側（`features/review` の `listSegments`）が取得して渡す
+   * （features/timeblock は Layer 1 のため Layer 2 の segments テーブルを参照できない）。
+   */
+  getSegmentTotals: protectedProcedure
+    .meta({ description: 'セグメント別予実合計 + 直前期間比較取得' })
+    .input(
+      z.object({
+        startDate: z.string().datetime({ offset: true }),
+        endDate: z.string().datetime({ offset: true }),
+        prevStart: z.string().datetime({ offset: true }).optional(),
+        prevEnd: z.string().datetime({ offset: true }).optional(),
+        segments: z
+          .array(
+            z.object({
+              id: z.string().uuid(),
+              // features/review の SEGMENT_NAME（review/server/router.ts）と揃える
+              name: z.string().min(1).max(50),
+              activityIds: z.array(z.string().uuid()).max(500),
+            }),
+          )
+          .max(100),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return await new StatisticsService(ctx.supabase).getSegmentTotals(ctx.userId, input);
+      } catch (error) {
+        handleStatsError('getSegmentTotals', error);
+      }
+    }),
+
   /** 外部AI向けの最小・決定論的なPlan / Record review */
   getMcpReview: protectedProcedure
     .meta({ description: 'MCP Time P/L review取得' })

@@ -1,7 +1,3 @@
-import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-
-import { addDays } from '@/lib/date';
-
 import type { CalendarEvent } from '../types/calendar.types';
 
 type CalendarDayDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
@@ -43,11 +39,6 @@ interface CalendarDayDiffResult {
 interface CalendarDayDiffOptions {
   dayStart?: Date | null;
   dayEnd?: Date | null;
-}
-
-interface CalendarDayDiffBounds {
-  dayStart: Date;
-  dayEnd: Date;
 }
 
 const EMPTY_RESULT: CalendarDayDiffResult = {
@@ -99,26 +90,6 @@ function actualRange(entry: CalendarEvent): { start: Date | null; end: Date | nu
 function resolveOptions(input: CalendarDayDiffOptions | Date): CalendarDayDiffOptions {
   if (input instanceof Date) return {};
   return input;
-}
-
-export function resolveCalendarDayDiffBounds(date: Date, timezone: string): CalendarDayDiffBounds {
-  const dayKey = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-  const zonedDayStart = new Date(`${dayKey}T00:00:00`);
-  return {
-    dayStart: fromZonedTime(zonedDayStart, timezone),
-    dayEnd: fromZonedTime(addDays(zonedDayStart, 1), timezone),
-  };
-}
-
-export function resolveCalendarRangeDiffBounds(
-  startDate: Date,
-  endDate: Date,
-  timezone: string,
-): CalendarDayDiffBounds {
-  return {
-    dayStart: resolveCalendarDayDiffBounds(startDate, timezone).dayStart,
-    dayEnd: resolveCalendarDayDiffBounds(endDate, timezone).dayEnd,
-  };
 }
 
 function clipRange(

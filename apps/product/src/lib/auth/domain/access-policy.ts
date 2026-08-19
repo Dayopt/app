@@ -1,6 +1,8 @@
 import { isProSubscriptionStatus } from '@dayopt/billing';
 
 const protectedProductPaths = [
+  '/calendar',
+  '/report',
   '/tasks',
   '/settings',
   '/box',
@@ -12,16 +14,12 @@ const protectedProductPaths = [
   '/oauth/consent',
 ] as const;
 
-// workspace の時間軸ビュー（/day, /week, /2day〜/9day）。calendar namespace 廃止後も認証必須。
-// prefix では /2day が /day に当たらないため、パス形状を正規表現で判定する。
-const workspaceViewPathPattern = /^\/(day|week|\d+day)(\/|$)/;
-
 const authProductPaths = ['/login', '/signup', '/auth'] as const;
 
 /**
  * 認証済みでもアクセスを許す auth path。
  *
- * 通常の auth path（ログイン・サインアップ）は認証済みなら /week へ流すが、
+ * 通常の auth path（ログイン・サインアップ）は認証済みなら /calendar へ流すが、
  * 以下はセッションを持ったまま踏むのが正常系なので除外する:
  * - `/auth/mfa-verify`: aal1 セッションから aal2 へ昇格させる
  * - `/auth/confirm`: メール内リンクの token_hash を verifyOtp する。ログイン中の
@@ -29,7 +27,7 @@ const authProductPaths = ['/login', '/signup', '/auth'] as const;
  * - `/auth/callback`: OAuth の code 交換
  * - `/auth/reset-password`: confirm の verifyOtp でセッション確立後に着地する
  * - `/auth/session-error`: MFA AAL lookup 失敗時の着地ページ（#2144）。認証済みで
- *   弾くと `/week` との無限 redirect ループになる（proxy.ts の lookupFailed 分岐参照）
+ *   弾くと `/calendar` との無限 redirect ループになる（proxy.ts の lookupFailed 分岐参照）
  */
 const authPathsAllowedWhileAuthenticated = [
   '/auth/mfa-verify',
@@ -51,9 +49,7 @@ export function canAccessProFeatures(status: string | null | undefined): boolean
 }
 
 export function isProtectedProductPath(pathname: string): boolean {
-  return (
-    matchesPathPrefix(pathname, protectedProductPaths) || workspaceViewPathPattern.test(pathname)
-  );
+  return matchesPathPrefix(pathname, protectedProductPaths);
 }
 
 export function isAuthProductPath(pathname: string): boolean {

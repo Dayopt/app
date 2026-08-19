@@ -250,15 +250,4 @@ describe('ReviewDiffPanel', () => {
 
     expect(onItemClick).toHaveBeenCalledWith('entry-1');
   });
-
-  it('close button click で onClose を呼ぶ', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-
-    render(<ReviewDiffPanel diff={diff()} onClose={onClose} />);
-
-    await user.click(screen.getByRole('button', { name: 'common.actions.close' }));
-
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
 });

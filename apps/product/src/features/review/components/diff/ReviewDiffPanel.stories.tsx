@@ -199,8 +199,7 @@ export const Default: Story = {
   args: {
     diff,
     onItemClick: fn(),
-    onClose: fn(),
-    className: 'border-border-subtle h-96 w-64 border',
+    className: 'border-border-subtle w-64 border',
   },
 };
 
@@ -209,8 +208,7 @@ export const Balanced: Story = {
   args: {
     diff: balancedDiff,
     onItemClick: fn(),
-    onClose: fn(),
-    className: 'border-border-subtle h-96 w-64 border',
+    className: 'border-border-subtle w-64 border',
   },
 };
 
@@ -219,8 +217,7 @@ export const TwelveHour: Story = {
   args: {
     diff,
     onItemClick: fn(),
-    onClose: fn(),
-    className: 'border-border-subtle h-96 w-64 border',
+    className: 'border-border-subtle w-64 border',
   },
   parameters: {
     trpcMocks: {
@@ -235,24 +232,8 @@ export const Empty: Story = {
   args: {
     diff: emptyDiff,
     onItemClick: fn(),
-    onClose: fn(),
-    className: 'border-border-subtle h-96 w-64 border',
+    className: 'border-border-subtle w-64 border',
   },
-};
-
-/** モバイルボトムシート。 */
-export const MobileSheet: Story = {
-  args: {
-    diff: emptyDiff,
-    onItemClick: fn(),
-    onClose: fn(),
-    variant: 'sheet',
-  },
-  render: (args) => (
-    <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border">
-      <ReviewDiffPanel {...args} />
-    </div>
-  ),
 };
 
 /** 全パターン一覧。 */
@@ -266,30 +247,25 @@ export const AllPatterns: Story = {
       <ReviewDiffPanel
         diff={diff}
         onItemClick={fn()}
-        onClose={fn()}
-        className="border-border-subtle h-96 w-64 border"
+        className="border-border-subtle w-64 border"
       />
       <ReviewDiffPanel
         diff={balancedDiff}
         onItemClick={fn()}
-        onClose={fn()}
-        className="border-border-subtle h-96 w-64 border"
+        className="border-border-subtle w-64 border"
       />
       <ReviewDiffPanel
         diff={emptyDiff}
         onItemClick={fn()}
-        className="border-border-subtle h-96 w-64 border"
+        className="border-border-subtle w-64 border"
       />
       <StoryTRPCProvider mocks={{ 'userSettings.get': TWELVE_HOUR_SETTINGS, 'tags.list': tags }}>
         <ReviewDiffPanel
           diff={diff}
           onItemClick={fn()}
-          className="border-border-subtle h-96 w-64 border"
+          className="border-border-subtle w-64 border"
         />
       </StoryTRPCProvider>
-      <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border">
-        <ReviewDiffPanel diff={emptyDiff} onItemClick={fn()} onClose={fn()} variant="sheet" />
-      </div>
     </div>
   ),
 };

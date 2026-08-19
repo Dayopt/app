@@ -15,6 +15,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
+import { SidebarPinnedContent } from './SidebarPinnedContent';
 import { useAppInlineBanner } from './useAppInlineBanner';
 
 interface DesktopLayoutProps {
@@ -71,7 +72,7 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
           className="h-full"
           innerClassName="h-full"
         >
-          <Sidebar user={sidebarUser}>
+          <Sidebar user={sidebarUser} pinnedContent={<SidebarPinnedContent />}>
             <SidebarContent />
           </Sidebar>
         </AnimatedWidthPanel>

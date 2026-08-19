@@ -1,9 +1,42 @@
+import { eachDayOfInterval, endOfWeek, startOfWeek } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
 import { addWeeks } from '@/lib/date/core';
 import { tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 
 import type { ReviewGranularity } from '../stores/useReviewFilterStore';
+
+/** `/report` の期間契約（`?date=&range=`）から `days` をクライアント側でのみ組み立てる。
+ *
+ * サーバー prefetch はしない（overview.md §6-9 #3）。`toCalendarDateKey`（本ファイル内）が
+ * ローカル TZ の getter に依存するため、サーバー（UTC）で組むと非 UTC ユーザーの週境界がずれる。
+ * `showWeekends` / `weekStartsOn` は URL に載せない（共有リンクの相手は自分の設定で見る、
+ * overview.md §6-9 #5）。
+ */
+export function buildReportDisplayRange(
+  date: Date,
+  range: ReviewGranularity,
+  showWeekends: boolean,
+  weekStartsOn: 0 | 1 | 6 = 1,
+): ReviewDisplayRange {
+  if (range === 'day') {
+    return { start: date, end: date, days: [date], showWeekends };
+  }
+
+  const weekStart = startOfWeek(date, { weekStartsOn });
+  const weekEnd = endOfWeek(date, { weekStartsOn });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  const days = showWeekends
+    ? weekDays
+    : weekDays.filter((day) => day.getDay() !== 0 && day.getDay() !== 6);
+
+  return {
+    start: days[0] ?? weekStart,
+    end: days[days.length - 1] ?? weekEnd,
+    days,
+    showWeekends,
+  };
+}
 
 export interface ReviewDisplayRange {
   start: Date;

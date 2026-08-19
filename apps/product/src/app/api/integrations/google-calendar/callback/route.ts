@@ -89,7 +89,10 @@ function settingsRedirect(requestUrl: URL, locale: string, result: string, reaso
   const query = new URLSearchParams({ calendar: result });
   if (reason) query.set('reason', reason);
 
-  const path = getSafeRedirectPath(`/${locale}/settings/integrations?${query.toString()}`, '/week');
+  const path = getSafeRedirectPath(
+    `/${locale}/settings/integrations?${query.toString()}`,
+    '/calendar',
+  );
   return new URL(path, requestUrl);
 }
 

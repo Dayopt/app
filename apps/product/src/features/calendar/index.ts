@@ -15,7 +15,6 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
-export { CalendarPanelToggle } from './components/layout/Header/CalendarPanelToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================
@@ -71,14 +70,14 @@ export { CALENDAR_SHORTCUT_CATALOG } from './lib/calendar-shortcut-catalog';
 // Domain（Calendar 固有の仕様ルール）
 // =============================================================================
 export { calculateViewDateRange } from './domain/view-range';
-export { isCalendarDiffView } from './types/calendar.types';
 
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { parseCalendarDateParam } from './lib/date-param';
-export { buildCalendarReviewPanelPath } from './lib/panel-url';
-export { isCalendarViewPath } from './lib/route-utils';
+export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
+export { buildReportPath } from './lib/panel-url';
+export { isCalendarViewPath, resolveWorkspaceTab } from './lib/route-utils';
+export type { WorkspaceTab } from './lib/route-utils';
 export {
   buildTimeblockSearchResultPath,
   resolveTimeblockSearchResultDate,

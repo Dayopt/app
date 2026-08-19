@@ -85,7 +85,7 @@ test.describe('Auth: 認証フロー', () => {
     await page.locator('input[type="password"]').first().fill(process.env.TEST_USER_PASSWORD!);
     await page.locator('button[type="submit"]').first().click();
 
-    await page.waitForURL(/\/(day|week|stats)/i, { timeout: 15000 });
+    await page.waitForURL(/\/calendar/i, { timeout: 15000 });
     await expect(page).toHaveTitle(/Dayopt/);
   });
 
@@ -113,7 +113,7 @@ test.describe('Auth: 認証フロー', () => {
       'メールアドレスまたはパスワードが正しくありません',
       { timeout: 10000 },
     );
-    // 認証が通っていないこと自体も確認する（成功していれば /day 等へ抜ける）
+    // 認証が通っていないこと自体も確認する（成功していれば /calendar へ抜ける）
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 });

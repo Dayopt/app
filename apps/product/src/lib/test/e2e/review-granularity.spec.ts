@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Calendar Review Panel E2E
+ * Report deep link E2E
  *
- * Review は独立ページではなく Calendar の contextual panel として復元される。
+ * workspace-shell-restructure（#2181）で review は /report フルページへ移行した。
+ * 旧 `?panel=review` は /report へ redirect される（Step 2、overview.md §4-4）。
  */
 
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
@@ -20,23 +21,20 @@ async function login(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(day|week|review)/i, { timeout: 15000 });
+  await page.waitForURL(/\/calendar/i, { timeout: 15000 });
 }
 
-test.describe('Smoke: Calendar Review Panel', () => {
+test.describe('Smoke: Report deep link', () => {
   test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
 
-  test('panel=review deep link restores the review panel', async ({ page }, testInfo) => {
+  // TODO(#2181 Step 4): /report 本体（DOM assert）は Step 4 で実装する。
+  // ここでは Step 2 の redirect 契約（旧 panel=review → /report?range=week）だけを固定する。
+  test('panel=review deep link redirects to /report', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only（mobile は sheet 表示）');
     await login(page);
 
-    // review panel を持つ route は /ja/week（/ja/calendar/week は存在しない）
     await page.goto('/ja/week?date=2026-04-20&panel=review');
 
-    await expect(page).toHaveURL(/\/ja\/week\?date=2026-04-20&panel=review/);
-    // desktop の Review panel は heading ではなく region（aria-label="振り返り"）
-    await expect(page.getByRole('region', { name: /振り返り|Review/i }).first()).toBeVisible({
-      timeout: 15000,
-    });
+    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=week/);
   });
 });

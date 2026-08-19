@@ -70,43 +70,43 @@ describe('proxy MFA gate', () => {
       error: null,
     });
 
-    const response = await proxy(new NextRequest('https://app.dayopt.app/ja/week'));
+    const response = await proxy(new NextRequest('https://app.dayopt.app/ja/calendar'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe('https://app.dayopt.app/ja/auth/mfa-verify');
   });
 
-  // #2144: /auth/login は認証済みだと /week へ弾かれ、/week は protected path なので
-  // MFA gate を再度通る。lookupFailed が続く限り無限ループになっていたため、
+  // #2144: /auth/login は認証済みだと /calendar へ弾かれ、/calendar は protected path
+  // なので MFA gate を再度通る。lookupFailed が続く限り無限ループになっていたため、
   // authPathsAllowedWhileAuthenticated 済みの専用ページへ送るよう変更した。
   it('redirects to the session error page when the MFA assurance lookup returns an error', async () => {
     mockAuthenticatedSession({ data: null, error: { message: 'lookup failed' } });
 
-    const response = await proxy(new NextRequest('https://app.dayopt.app/week'));
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
   });
 
   // #2144: lookupFailed が続く限り、この redirect 先自身へ再度到達しても
-  // /week へ弾き返されない（= ループが構造的に閉じている）ことを固定する。
+  // /calendar へ弾き返されない（= ループが構造的に閉じている）ことを固定する。
   it.each([
     [
       'locale prefix あり',
-      'https://app.dayopt.app/ja/week',
+      'https://app.dayopt.app/ja/calendar',
       'https://app.dayopt.app/ja/auth/session-error',
     ],
     [
       'locale prefix なし',
-      'https://app.dayopt.app/week',
+      'https://app.dayopt.app/calendar',
       'https://app.dayopt.app/auth/session-error',
     ],
   ])(
-    '%s: session error ページへ到達した後も認証済みで /week へ送り返されない',
-    async (_label, weekUrl, expectedSessionErrorUrl) => {
+    '%s: session error ページへ到達した後も認証済みで /calendar へ送り返されない',
+    async (_label, calendarUrl, expectedSessionErrorUrl) => {
       mockAuthenticatedSession({ data: null, error: { message: 'lookup failed' } });
 
-      const first = await proxy(new NextRequest(weekUrl));
+      const first = await proxy(new NextRequest(calendarUrl));
       expect(first.headers.get('location')).toBe(expectedSessionErrorUrl);
 
       const second = await proxy(new NextRequest(expectedSessionErrorUrl));
@@ -116,11 +116,11 @@ describe('proxy MFA gate', () => {
   );
 
   // proxy が catch する予期しない例外（updateSession 自体の throw）も、同じ
-  // /auth/login → /week の無限ループ shape を持っていた（#2144）。同じ着地先に倒す。
+  // /auth/login → /calendar の無限ループ shape を持っていた（#2144）。同じ着地先に倒す。
   it('redirects to the session error page when an unexpected proxy error occurs', async () => {
     mocks.updateSession.mockRejectedValue(new Error('unexpected'));
 
-    const response = await proxy(new NextRequest('https://app.dayopt.app/week'));
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
@@ -154,7 +154,7 @@ describe('proxy MFA gate', () => {
   ])('does not redirect a valid $currentLevel session', async (data) => {
     mockAuthenticatedSession({ data, error: null });
 
-    const response = await proxy(new NextRequest('https://app.dayopt.app/week'));
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
@@ -191,16 +191,16 @@ describe('proxy auth-path allowlist', () => {
     expect(response.headers.get('location')).toBeNull();
   });
 
-  // 対の確認。allowlist に無い auth path は従来どおり /week へ送る（allowlist を
+  // 対の確認。allowlist に無い auth path は従来どおり /calendar へ送る（allowlist を
   // 広げすぎていないこと、この test が常に 200 を返すだけの空振りでないことの両方を示す）。
   it.each([
     [
       'locale prefix あり',
       'https://app.dayopt.app/ja/auth/login',
-      'https://app.dayopt.app/ja/week',
+      'https://app.dayopt.app/ja/calendar',
     ],
-    ['locale prefix なし', 'https://app.dayopt.app/auth/login', 'https://app.dayopt.app/week'],
-  ])('%s の login は認証済みなら /week へ送る', async (_label, url, expected) => {
+    ['locale prefix なし', 'https://app.dayopt.app/auth/login', 'https://app.dayopt.app/calendar'],
+  ])('%s の login は認証済みなら /calendar へ送る', async (_label, url, expected) => {
     mockAuthenticatedSession({ data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null });
 
     const response = await proxy(new NextRequest(url));
@@ -221,5 +221,179 @@ describe('proxy auth-path allowlist', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
+  });
+});
+
+// workspace-shell-restructure #2181 Step 2（#2191）: 旧URL → /calendar・/report の
+// 写像（overview.md §4-4）を固定する。認証状態を問わない redirect なので
+// updateSession をモックせずに検証できる。
+describe('proxy legacy workspace redirects', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_MAINTENANCE_MODE', 'false');
+    vi.stubEnv('SKIP_AUTH_IN_DEV', 'false');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['/week', '/calendar?view=week'],
+    ['/day', '/calendar?view=day'],
+    ['/2day', '/calendar?view=2day'],
+    ['/7day', '/calendar?view=7day'],
+  ])('%s → %s（date なし）', async (from, to) => {
+    const response = await proxy(new NextRequest(`https://app.dayopt.app${from}`));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(`https://app.dayopt.app${to}`);
+  });
+
+  it.each([
+    ['/week', '/calendar?date=2026-04-20&view=week'],
+    ['/day', '/calendar?date=2026-04-20&view=day'],
+    ['/3day', '/calendar?date=2026-04-20&view=3day'],
+  ])('%s?date=... → %s（date を素通し）', async (from, to) => {
+    const response = await proxy(new NextRequest(`https://app.dayopt.app${from}?date=2026-04-20`));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(`https://app.dayopt.app${to}`);
+  });
+
+  it('locale prefix ありでも /calendar への写像を維持する', async () => {
+    const response = await proxy(new NextRequest('https://app.dayopt.app/ja/week?date=2026-04-20'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/ja/calendar?date=2026-04-20&view=week',
+    );
+  });
+
+  it.each([
+    ['/day', 'day'],
+    ['/week', 'week'],
+    ['/3day', 'week'],
+    ['/7day', 'week'],
+  ])('%s?panel=review → /report?range=%s（panel と reviewTagId は落とす）', async (from, range) => {
+    const response = await proxy(
+      new NextRequest(
+        `https://app.dayopt.app${from}?date=2026-04-20&panel=review&reviewTagId=tag-1`,
+      ),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(
+      `https://app.dayopt.app/report?date=2026-04-20&range=${range}`,
+    );
+  });
+
+  it.each(['diff', 'analytics'])('panel=%s も /report へ写す', async (panel) => {
+    const response = await proxy(new NextRequest(`https://app.dayopt.app/day?panel=${panel}`));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/report?range=day');
+  });
+
+  it('panel は view より優先される（同時に来たらレポートへ行く）', async () => {
+    const response = await proxy(
+      new NextRequest('https://app.dayopt.app/week?date=2026-04-20&panel=diff'),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/report?date=2026-04-20&range=week',
+    );
+  });
+
+  it('/review（削除済み旧route）は redirect しない', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/review'));
+
+    // legacy redirect の対象外。以降の通常の未認証 protected-path 判定に委ねられる
+    // （/review は isProtectedProductPath に該当しないため 200 のまま通過する）。
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('範囲外の Nday（8day 等）は legacy redirect の対象外・旧route削除後は認可判定にも乗らない（#2181 Step 6）', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/8day'));
+
+    // 8day は resolveLegacyWorkspaceRedirect の対象外（2〜7day のみ許容）。
+    // workspaceViewPathPattern（access-policy.ts）は Step 6 で削除済みなので
+    // isProtectedProductPath の対象からも外れ、middleware は素通しする。
+    // 旧 [nday]/page.tsx も削除済みのため、この URL は Next.js のルーティングで
+    // 404 になる（middleware レベルでは 200 素通し、404 は App Router の責務）。
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('/calendar 自身（新URL）は写像の対象外', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar?view=week'));
+
+    // 未認証 protected-path として login へ送られる（legacy redirect ではない）
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar%3Fview%3Dweek',
+    );
+  });
+});
+
+// workspace-shell-restructure #2181: /calendar?view= の範囲外検証を edge で行う。
+// page.tsx の notFound()（searchParams 依存）は静的シェルの prerender と競合し
+// status code に反映されないため（x-nextjs-prerender: 1 で 200 が返る、2026-08-19
+// 実測。dynamic = 'force-dynamic' / connection() いずれでも解消せず）、
+// 「範囲外 view は 404」の契約を redirect と同じ edge 層で守る。
+describe('proxy /calendar view 範囲外検証', () => {
+  it('view=8day（範囲外）は edge で 404 を返す', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(
+      new NextRequest('https://app.dayopt.app/ja/calendar?view=8day&date=2026-04-20'),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('view=week（正当）は素通しして通常の認可判定へ渡る', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar?view=week'));
+
+    // 404 にならず、未認証 protected-path として login へ送られる
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar%3Fview%3Dweek',
+    );
+  });
+
+  it('view 省略時は素通しして通常の認可判定へ渡る（page.tsx の既定 week フォールバック対象）', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar',
+    );
+  });
+
+  // risk-reviewer 指摘（2026-08-19）: URLSearchParams.get は同一キー重複時に先頭値しか
+  // 見ないため、getAll でないと後続の不正値が素通りする。
+  it.each([
+    ['正当な値の後に範囲外', 'https://app.dayopt.app/calendar?view=week&view=8day'],
+    ['範囲外の後に正当な値', 'https://app.dayopt.app/calendar?view=8day&view=week'],
+  ])('view が重複し、うち1つでも範囲外なら404にする（%s）', async (_label, url) => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(404);
   });
 });
