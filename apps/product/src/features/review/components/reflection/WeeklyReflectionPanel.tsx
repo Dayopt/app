@@ -223,7 +223,14 @@ function TimePLRow({
   );
 
   if (row.isNoActivity || row.activityId == null || !onTagClick) {
-    return <div className="flex min-h-11 items-center gap-2 px-2 py-2">{content}</div>;
+    return (
+      <div
+        className="flex min-h-11 items-center gap-2 px-2 py-2"
+        data-timepl-row={row.activityId ?? 'no-activity'}
+      >
+        {content}
+      </div>
+    );
   }
 
   const activityId = row.activityId;
@@ -233,6 +240,7 @@ function TimePLRow({
       type="button"
       className="hover:bg-state-hover flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150"
       onClick={() => onTagClick(activityId)}
+      data-timepl-row={activityId}
     >
       {content}
     </button>
