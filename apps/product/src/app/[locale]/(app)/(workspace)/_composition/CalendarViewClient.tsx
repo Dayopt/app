@@ -13,7 +13,7 @@
 import { PanelLeft } from 'lucide-react';
 
 import { FeatureErrorBoundary } from '@/components/ui/feedback/error-boundary';
-import { CalendarController, isCalendarDiffView, useCalendarNavigation } from '@/features/calendar';
+import { CalendarController, useCalendarNavigation } from '@/features/calendar';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button } from '@dayopt/components';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -41,7 +41,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     );
   }
 
-  const { viewType, currentDate, panelKind, navigateRelative, changeView, navigateToDate } =
+  const { viewType, currentDate, navigateRelative, changeView, navigateToDate } =
     calendarNavigation;
 
   // Composition: 全cross-featureデータとコールバックを集約
@@ -67,11 +67,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
       <PanelLeft className="size-4" />
     </Button>
   ) : null;
-  // カレンダー内 review/diff パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
-  // panelKind='diff' の URL（旧 ?panel=diff）は Step 6 の redirect 実測まで読み取りだけ残る
-  // ため、グリッド上の diff ハイライトだけは維持する（トグル UI 自体は無い）。
-  const showActualDiff = panelKind === 'diff' && isCalendarDiffView(viewType);
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <FeatureErrorBoundary
@@ -101,7 +96,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           allTimeblocks={composition.allCalendarEvents}
           externalEvents={composition.externalEvents}
           showWeekends={composition.showWeekends}
-          showActualDiff={showActualDiff}
           disabledTimeblockId={composition.disabledTimeblockId}
           onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}

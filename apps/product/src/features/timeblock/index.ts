@@ -39,21 +39,11 @@ export {
   buildTimeblockDayDiffPlans,
   buildTimeblockDayDiffRecords,
 } from './lib/build-day-diff-inputs';
-export type { BuildDayDiffInputsOptions } from './lib/build-day-diff-inputs';
 export {
   resolveTimeblockDayDiffBounds,
   resolveTimeblockRangeDiffBounds,
 } from './lib/day-diff-bounds';
-export type { TimeblockDayDiffBounds } from './lib/day-diff-bounds';
 export { computeTimeblockDayDiffs } from './lib/timeblock-day-diff';
-export type {
-  TimeModelDayDiffBounds,
-  TimeModelDayDiffItem,
-  TimeModelDayDiffKind,
-  TimeModelDayDiffResult,
-  TimeModelPlanDiffInput,
-  TimeModelRecordDiffInput,
-} from './lib/timeblock-day-diff';
 
 // =============================================================================
 // Domain (時間モデル — 純粋関数、DB/tRPC/React 非依存)

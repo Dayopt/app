@@ -14,13 +14,6 @@ const protectedProductPaths = [
   '/oauth/consent',
 ] as const;
 
-// workspace の時間軸ビュー旧URL（/day, /week, /2day〜/9day）。/calendar への統一後も
-// workspace-shell-restructure Step 6（旧route削除）までは残す — 削除条件は「旧route
-// ファイルを削除した Step と同じ PR」（docs/projects/workspace-shell-restructure/
-// overview.md §4-5-b）。残すコストはゼロで、消し忘れより消し急ぎの方が危ない。
-// prefix では /2day が /day に当たらないため、パス形状を正規表現で判定する。
-const workspaceViewPathPattern = /^\/(day|week|\d+day)(\/|$)/;
-
 const authProductPaths = ['/login', '/signup', '/auth'] as const;
 
 /**
@@ -56,9 +49,7 @@ export function canAccessProFeatures(status: string | null | undefined): boolean
 }
 
 export function isProtectedProductPath(pathname: string): boolean {
-  return (
-    matchesPathPrefix(pathname, protectedProductPaths) || workspaceViewPathPattern.test(pathname)
-  );
+  return matchesPathPrefix(pathname, protectedProductPaths);
 }
 
 export function isAuthProductPath(pathname: string): boolean {

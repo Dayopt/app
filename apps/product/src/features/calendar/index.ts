@@ -15,7 +15,6 @@ export { CalendarController } from './components/CalendarController';
 // =============================================================================
 // Layout Components
 // =============================================================================
-export { CalendarPanelToggle } from './components/layout/Header/CalendarPanelToggle';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================
@@ -71,7 +70,6 @@ export { CALENDAR_SHORTCUT_CATALOG } from './lib/calendar-shortcut-catalog';
 // Domain（Calendar 固有の仕様ルール）
 // =============================================================================
 export { calculateViewDateRange } from './domain/view-range';
-export { isCalendarDiffView } from './types/calendar.types';
 
 // =============================================================================
 // Lib / Utils

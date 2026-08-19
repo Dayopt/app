@@ -1,4 +1,4 @@
-export type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
+type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
 
 export interface TimeModelPlanDiffInput {
   id: string;
@@ -25,7 +25,7 @@ export interface TimeModelRecordDiffInput {
   endAt: Date;
 }
 
-export interface TimeModelDayDiffItem {
+interface TimeModelDayDiffItem {
   id: string;
   /** クリック時に開く Inspector 対象の id（recorded/skipped/unrecorded は plan、unplanned は record） */
   timeblockId: string;
@@ -48,7 +48,7 @@ export interface TimeModelDayDiffItem {
   sortTime: number;
 }
 
-export interface TimeModelDayDiffResult {
+interface TimeModelDayDiffResult {
   summary: {
     plannedMinutes: number;
     actualMinutes: number;
@@ -61,7 +61,7 @@ export interface TimeModelDayDiffResult {
   items: TimeModelDayDiffItem[];
 }
 
-export interface TimeModelDayDiffBounds {
+interface TimeModelDayDiffBounds {
   dayStart?: Date | null | undefined;
   dayEnd?: Date | null | undefined;
 }

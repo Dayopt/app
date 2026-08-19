@@ -317,19 +317,18 @@ describe('proxy legacy workspace redirects', () => {
     expect(response.headers.get('location')).toBeNull();
   });
 
-  it('範囲外の Nday（8day 等）は legacy redirect の対象外（後続の protected-path 判定に委ねる）', async () => {
+  it('範囲外の Nday（8day 等）は legacy redirect の対象外・旧route削除後は認可判定にも乗らない（#2181 Step 6）', async () => {
     mockUnauthenticatedSession();
 
     const response = await proxy(new NextRequest('https://app.dayopt.app/8day'));
 
-    // 8day は resolveLegacyWorkspaceRedirect の対象外（2〜7day のみ許容）。ただし
-    // workspaceViewPathPattern（access-policy.ts）は \d+day を範囲制限なしで protected
-    // 扱いするため、未認証では login へ redirect される。/calendar /report ではないこと
-    // だけを確認する（8day 自体の 404 判定は旧 route 側の notFound() の責務のまま）。
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe(
-      'https://app.dayopt.app/auth/login?redirect=%2F8day',
-    );
+    // 8day は resolveLegacyWorkspaceRedirect の対象外（2〜7day のみ許容）。
+    // workspaceViewPathPattern（access-policy.ts）は Step 6 で削除済みなので
+    // isProtectedProductPath の対象からも外れ、middleware は素通しする。
+    // 旧 [nday]/page.tsx も削除済みのため、この URL は Next.js のルーティングで
+    // 404 になる（middleware レベルでは 200 素通し、404 は App Router の責務）。
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
   });
 
   it('/calendar 自身（新URL）は写像の対象外', async () => {

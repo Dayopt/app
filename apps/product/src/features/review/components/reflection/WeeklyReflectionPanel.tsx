@@ -172,7 +172,7 @@ function ReflectionSection({ title, children }: { title: string; children: React
   );
 }
 
-export function ReviewMetricRow({
+function ReviewMetricRow({
   label,
   value,
   valueClassName,

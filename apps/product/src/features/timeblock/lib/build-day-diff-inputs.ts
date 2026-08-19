@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '../types/calendar-event';
 import type { TimeModelPlanDiffInput, TimeModelRecordDiffInput } from './timeblock-day-diff';
 
-export interface BuildDayDiffInputsOptions {
+interface BuildDayDiffInputsOptions {
   /**
    * 各日の範囲。空配列なら常に visible とみなす（day view 相当、範囲チェックを省略する）。
    * 非連続な複数日（週末非表示の週など）を表現するため、単一の開始/終了ではなく日ごとの配列を取る。

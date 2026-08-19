@@ -2,7 +2,7 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 import { addDays } from '@/lib/date';
 
-export interface TimeblockDayDiffBounds {
+interface TimeblockDayDiffBounds {
   dayStart: Date;
   dayEnd: Date;
 }

@@ -24,7 +24,13 @@ import {
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { useCalendarData, useCalendarSettings } from '@/features/calendar';
-import { buildReportDisplayRange, ReportBody, type ReviewGranularity } from '@/features/review';
+import {
+  buildReportDisplayRange,
+  ReportBody,
+  type ReportDiffState,
+  type ReviewDisplayRange,
+  type ReviewGranularity,
+} from '@/features/review';
 
 interface ReportViewClientProps {
   date: Date;
@@ -36,7 +42,7 @@ export function ReportViewClient({ date, range }: ReportViewClientProps) {
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
   const timezone = useUserPreferences((s) => s.timezone);
 
-  const displayRange = useMemo(
+  const displayRange: ReviewDisplayRange = useMemo(
     () => buildReportDisplayRange(date, range, showWeekends, weekStartsOn),
     [date, range, showWeekends, weekStartsOn],
   );
@@ -79,15 +85,11 @@ export function ReportViewClient({ date, range }: ReportViewClientProps) {
     viewDateRange,
   ]);
 
-  return (
-    <ReportBody
-      currentDate={date}
-      displayRange={displayRange}
-      diff={{
-        data: diffData,
-        isPending: isTimeblocksLoading,
-        isError: timeblocksError != null,
-      }}
-    />
-  );
+  const diff: ReportDiffState = {
+    data: diffData,
+    isPending: isTimeblocksLoading,
+    isError: timeblocksError != null,
+  };
+
+  return <ReportBody currentDate={date} displayRange={displayRange} diff={diff} />;
 }

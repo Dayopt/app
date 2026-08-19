@@ -52,7 +52,7 @@ export interface TimePLInput {
 }
 
 /** セグメント別合計の 1 行。`total` / `share` を持たない（#2162 §6-3）。 */
-export interface SegmentTotalRow {
+interface SegmentTotalRow {
   segmentId: string;
   segmentName: string;
   budgetMinutes: number;
@@ -68,7 +68,7 @@ export interface SegmentTotalsInput {
   segments: ReadonlyArray<{ id: string; name: string; activityIds: readonly string[] }>;
 }
 
-export interface SegmentTotalsResponse {
+interface SegmentTotalsResponse {
   current: SegmentTotalRow[];
   previous: SegmentTotalRow[];
 }

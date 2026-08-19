@@ -9,34 +9,19 @@
  * @see _composition/useCalendarComposition.ts
  */
 
-import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
-
-import { isWeekend } from 'date-fns';
 
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import {
-  buildTimeblockDayDiffPlans,
-  buildTimeblockDayDiffRecords,
-  computeTimeblockDayDiffs,
   createTimeblockDuplicateDraft,
-  resolveTimeblockDayDiffBounds,
   resolveTimeblockDestination,
-  resolveTimeblockRangeDiffBounds,
   useTimeblockInspectorStore,
 } from '@/features/timeblock';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
-import {
-  isCalendarDiffView,
-  type CalendarEvent,
-  type CalendarViewType,
-  type ViewDateRange,
-} from '../types/calendar.types';
+import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
@@ -47,6 +32,10 @@ import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
 // 初回ロード時にビューをプリロード
 initializePreload();
+
+// diff ハイライトを点灯させる経路が無くなったため、常にこの空集合を渡す
+// （#2181 Step 6）。render のたびに new Set() すると参照が変わり無駄な再計算を招く。
+const EMPTY_DAY_DIFF_ENTRY_IDS: ReadonlySet<string> = new Set();
 
 // =============================================================================
 // Props
@@ -68,7 +57,6 @@ interface CalendarControllerProps {
 
   // --- Settings ---
   showWeekends: boolean;
-  showActualDiff?: boolean;
 
   // --- Timeblock state ---
   disabledTimeblockId: string | null;
@@ -123,22 +111,6 @@ interface CalendarControllerProps {
   className?: string;
   leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
-  /** review/diff 統合パネル（#2149 段階統合 Phase 1）が開いているか */
-  panelOpen?: boolean | undefined;
-  onPanelOpenChange?: ((open: boolean) => void) | undefined;
-  renderPanelRail?: ((props: CalendarPanelRailRenderProps) => React.ReactNode) | undefined;
-  panelTitle?: string | undefined;
-  panelDescription?: string | undefined;
-  recoverableSidebarWidth?: number | undefined;
-  onSideRailSpaceRecoveryChange?: ((recovering: boolean) => void) | undefined;
-}
-
-interface CalendarPanelRailRenderProps {
-  /** panelOpen かつ diff 対応 view の時のみ非 null（タブ切替の有無に関わらず計算済み） */
-  diff: ReturnType<typeof computeTimeblockDayDiffs> | null;
-  variant: 'rail' | 'sheet';
-  onDiffItemClick: (timeblockId: string) => void;
-  onClose?: (() => void) | undefined;
 }
 
 // =============================================================================
@@ -153,7 +125,6 @@ export function CalendarController({
   allTimeblocks,
   externalEvents,
   showWeekends,
-  showActualDiff = false,
   disabledTimeblockId,
   onEntryClick,
   onTimeRangeSelect,
@@ -178,24 +149,12 @@ export function CalendarController({
   className,
   leftSlot,
   rightSlot,
-  panelOpen = false,
-  onPanelOpenChange,
-  renderPanelRail,
-  panelTitle,
-  panelDescription,
-  recoverableSidebarWidth,
-  onSideRailSpaceRecoveryChange,
 }: CalendarControllerProps) {
-  const t = useTranslations();
-
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
 
-  const timezone = useUserPreferences((preferences) => preferences.timezone);
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
-  const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
-  const visibleActivityIds = useCalendarFilterStore((state) => state.visibleActivityIds);
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -220,92 +179,6 @@ export function CalendarController({
     },
     [openDuplicateInspector],
   );
-  const calendarDiffDays = useMemo(
-    () => (showWeekends ? viewDateRange.days : viewDateRange.days.filter((day) => !isWeekend(day))),
-    [showWeekends, viewDateRange.days],
-  );
-  // rail の diff データは「panel が開いていて diff 対応 view」なら常に計算する（タブ切替時の再計算待ちを無くす）。
-  // グリッド上のハイライト表示（dayDiffEntryIds）は別途 showActualDiff（diff タブが実際に active）で絞る。
-  const calendarDiffEnabled =
-    panelOpen &&
-    isCalendarDiffView(viewType) &&
-    (viewType === 'day' || calendarDiffDays.length > 0);
-  const calendarDiffDayBounds = useMemo(
-    () => calendarDiffDays.map((day) => resolveTimeblockDayDiffBounds(day, timezone)),
-    [calendarDiffDays, timezone],
-  );
-  const calendarDiffBounds = useMemo(
-    () =>
-      viewType === 'day' || calendarDiffDays.length === 0
-        ? resolveTimeblockDayDiffBounds(currentDate, timezone)
-        : resolveTimeblockRangeDiffBounds(
-            calendarDiffDays[0] ?? viewDateRange.start,
-            calendarDiffDays[calendarDiffDays.length - 1] ?? viewDateRange.end,
-            timezone,
-          ),
-    [calendarDiffDays, currentDate, timezone, viewDateRange.end, viewDateRange.start, viewType],
-  );
-  // Step 8: compare rail は plans/records（kind 付き CalendarEvent）から直接集計する。
-  // タグ可視性・週末除外は集計対象から外すが、Plan は Record の関係解決用contextとして残す。
-  // 連続範囲内の時間クリップは computeTimeblockDayDiffs 側の clippedMinutes に委ねる。
-  // `dayBounds: []` は「常に visible」を意味する（day view か週末込み表示の shortcut）。
-  const calendarDiffDayBoundsForVisibility = useMemo(
-    () => (viewType === 'day' || showWeekends ? [] : calendarDiffDayBounds),
-    [calendarDiffDayBounds, showWeekends, viewType],
-  );
-  const calendarDiffPlans = useMemo(() => {
-    void visibleActivityIds;
-    if (!calendarDiffEnabled) return [];
-    return buildTimeblockDayDiffPlans(allTimeblocks, {
-      dayBounds: calendarDiffDayBoundsForVisibility,
-      isEntryVisible,
-    });
-  }, [
-    allTimeblocks,
-    calendarDiffDayBoundsForVisibility,
-    calendarDiffEnabled,
-    isEntryVisible,
-    visibleActivityIds,
-  ]);
-  const calendarDiffRecords = useMemo(() => {
-    void visibleActivityIds;
-    if (!calendarDiffEnabled) return [];
-    return buildTimeblockDayDiffRecords(allTimeblocks, {
-      dayBounds: calendarDiffDayBoundsForVisibility,
-      isEntryVisible,
-    });
-  }, [
-    allTimeblocks,
-    calendarDiffDayBoundsForVisibility,
-    calendarDiffEnabled,
-    isEntryVisible,
-    visibleActivityIds,
-  ]);
-  const calendarDiff = useMemo(
-    () => computeTimeblockDayDiffs(calendarDiffPlans, calendarDiffRecords, calendarDiffBounds),
-    [calendarDiffBounds, calendarDiffPlans, calendarDiffRecords],
-  );
-  // グリッド上のハイライトは diff タブが実際に active（showActualDiff）な時だけに絞る。
-  // calendarDiffEnabled は panel が開いていれば true になるため、この絞り込みが無いと
-  // 統計タブ表示中でもグリッドに差分マーカーが出てしまう。
-  const dayDiffEntryIds = useMemo(
-    () =>
-      showActualDiff
-        ? new Set(calendarDiff.items.map((item) => item.timeblockId))
-        : new Set<string>(),
-    [showActualDiff, calendarDiff.items],
-  );
-  const handleCalendarDiffItemClick = useCallback(
-    (timeblockId: string) => {
-      const entry = allTimeblocks.find((candidate) => candidate.id === timeblockId);
-      if (entry) onEntryClick(entry);
-    },
-    [allTimeblocks, onEntryClick],
-  );
-  const handleClosePanelRail = useCallback(() => {
-    onPanelOpenChange?.(false);
-  }, [onPanelOpenChange]);
-
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
     viewType,
@@ -344,8 +217,10 @@ export function CalendarController({
       externalEvents,
       currentDate,
       showWeekends,
-      showActualDiff,
-      dayDiffEntryIds,
+      // カレンダー内 review/diff パネル（CalendarReviewRail）は廃止済み（#2181 Step 6）。
+      // グリッドの diff ハイライト自体は View 層に残すが、点灯させる経路が無くなったため常に空。
+      showActualDiff: false,
+      dayDiffEntryIds: EMPTY_DAY_DIFF_ENTRY_IDS,
       disabledTimeblockId,
       onEntryClick,
       onEntryContextMenu: handleEventContextMenu,
@@ -364,8 +239,6 @@ export function CalendarController({
       externalEvents,
       currentDate,
       showWeekends,
-      showActualDiff,
-      dayDiffEntryIds,
       disabledTimeblockId,
       onEntryClick,
       handleEventContextMenu,
@@ -377,35 +250,6 @@ export function CalendarController({
       onNavigateNext,
       onNavigateToday,
     ],
-  );
-
-  const panelRailDiff = calendarDiffEnabled ? calendarDiff : null;
-  const activeRail =
-    panelOpen && renderPanelRail
-      ? renderPanelRail({
-          diff: panelRailDiff,
-          variant: 'rail',
-          onDiffItemClick: handleCalendarDiffItemClick,
-          onClose: onPanelOpenChange ? handleClosePanelRail : undefined,
-        })
-      : null;
-  const activeMobileRail =
-    panelOpen && renderPanelRail
-      ? renderPanelRail({
-          diff: panelRailDiff,
-          variant: 'sheet',
-          onDiffItemClick: handleCalendarDiffItemClick,
-          onClose: onPanelOpenChange ? handleClosePanelRail : undefined,
-        })
-      : null;
-  const activeRailOpen = panelOpen;
-  const activeRailTitle = panelTitle ?? t('calendar.compare.rail.title');
-  const activeRailDescription = panelDescription ?? t('calendar.compare.rail.description');
-  const handleSideRailOpenChange = useCallback(
-    (open: boolean) => {
-      onPanelOpenChange?.(open);
-    },
-    [onPanelOpenChange],
   );
 
   // =========================================================================
@@ -428,16 +272,6 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
-        sideRail={activeRail}
-        mobileSideRail={activeMobileRail}
-        mobileSideRailPresentation="sheet"
-        sideRailOpen={activeRailOpen}
-        onSideRailOpenChange={handleSideRailOpenChange}
-        sideRailTitle={activeRailTitle}
-        sideRailDescription={activeRailDescription}
-        sideRailResizeLabel={t('calendar.panel.resizeLabel')}
-        recoverableSidebarWidth={recoverableSidebarWidth}
-        onSideRailSpaceRecoveryChange={onSideRailSpaceRecoveryChange}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>

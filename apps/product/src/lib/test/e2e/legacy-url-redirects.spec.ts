@@ -60,4 +60,21 @@ test.describe('Legacy URL redirects', () => {
     await page.goto('/ja/day?date=2026-04-20&panel=diff');
     await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=day/);
   });
+
+  test('panel=analytics（旧URL別名）redirects to /report — 恒久 shim を redirect 層が引き継ぐ', async ({
+    page,
+  }) => {
+    await page.goto('/ja/day?date=2026-04-20&panel=analytics');
+    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=day/);
+  });
+
+  test('送信済みメールが焼き付けている裸の /week（locale prefix・query 無し）も /calendar へ着地する', async ({
+    page,
+  }) => {
+    // WelcomeEmail 等 4 通は既に `/calendar` へ修正済みだが（#2181 Step 2）、
+    // 修正前に送信済みのメールは `${appUrl}/week` を焼き付けたまま回収できない
+    // （overview.md §4-6）。redirect 層がこの形のまま生き続けることを固定する。
+    await page.goto('/week');
+    await expect(page).toHaveURL(/\/ja\/calendar$/);
+  });
 });
