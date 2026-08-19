@@ -16,8 +16,13 @@ import { isWeekend } from 'date-fns';
 
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import {
+  buildTimeblockDayDiffPlans,
+  buildTimeblockDayDiffRecords,
+  computeTimeblockDayDiffs,
   createTimeblockDuplicateDraft,
+  resolveTimeblockDayDiffBounds,
   resolveTimeblockDestination,
+  resolveTimeblockRangeDiffBounds,
   useTimeblockInspectorStore,
 } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
@@ -25,8 +30,6 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { resolveCalendarDayDiffBounds, resolveCalendarRangeDiffBounds } from '../lib/day-diff';
-import { computeTimeblockDayDiffs } from '../lib/timeblock-day-diff';
 import { useCalendarFilterStore } from '../stores/useCalendarFilterStore';
 import {
   isCalendarDiffView,
@@ -228,14 +231,14 @@ export function CalendarController({
     isCalendarDiffView(viewType) &&
     (viewType === 'day' || calendarDiffDays.length > 0);
   const calendarDiffDayBounds = useMemo(
-    () => calendarDiffDays.map((day) => resolveCalendarDayDiffBounds(day, timezone)),
+    () => calendarDiffDays.map((day) => resolveTimeblockDayDiffBounds(day, timezone)),
     [calendarDiffDays, timezone],
   );
   const calendarDiffBounds = useMemo(
     () =>
       viewType === 'day' || calendarDiffDays.length === 0
-        ? resolveCalendarDayDiffBounds(currentDate, timezone)
-        : resolveCalendarRangeDiffBounds(
+        ? resolveTimeblockDayDiffBounds(currentDate, timezone)
+        : resolveTimeblockRangeDiffBounds(
             calendarDiffDays[0] ?? viewDateRange.start,
             calendarDiffDays[calendarDiffDays.length - 1] ?? viewDateRange.end,
             timezone,
@@ -245,63 +248,37 @@ export function CalendarController({
   // Step 8: compare rail は plans/records（kind 付き CalendarEvent）から直接集計する。
   // タグ可視性・週末除外は集計対象から外すが、Plan は Record の関係解決用contextとして残す。
   // 連続範囲内の時間クリップは computeTimeblockDayDiffs 側の clippedMinutes に委ねる。
-  const isWithinVisibleDayBounds = useCallback(
-    (start: Date, end: Date) => {
-      if (viewType === 'day' || showWeekends) return true;
-      return calendarDiffDayBounds.some((bounds) => start < bounds.dayEnd && end > bounds.dayStart);
-    },
+  // `dayBounds: []` は「常に visible」を意味する（day view か週末込み表示の shortcut）。
+  const calendarDiffDayBoundsForVisibility = useMemo(
+    () => (viewType === 'day' || showWeekends ? [] : calendarDiffDayBounds),
     [calendarDiffDayBounds, showWeekends, viewType],
   );
   const calendarDiffPlans = useMemo(() => {
     void visibleActivityIds;
     if (!calendarDiffEnabled) return [];
-    return allTimeblocks
-      .filter((entry) => entry.kind === 'plan')
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        tagId: entry.tagId ?? null,
-        activityId: entry.activityId ?? null,
-        color: entry.color,
-        startAt: entry.startDate ?? entry.displayStartDate,
-        endAt: entry.endDate ?? entry.displayEndDate,
-        skippedAt: entry.isSkipped ? (entry.startDate ?? entry.displayStartDate) : null,
-        // 範囲外・非表示アクティビティのPlanも、表示中Recordの関係解決には残す。
-        isIncludedInDiff:
-          isEntryVisible(entry.activityId ?? null) &&
-          isWithinVisibleDayBounds(
-            entry.startDate ?? entry.displayStartDate,
-            entry.endDate ?? entry.displayEndDate,
-          ),
-      }));
+    return buildTimeblockDayDiffPlans(allTimeblocks, {
+      dayBounds: calendarDiffDayBoundsForVisibility,
+      isEntryVisible,
+    });
   }, [
     allTimeblocks,
+    calendarDiffDayBoundsForVisibility,
     calendarDiffEnabled,
     isEntryVisible,
-    isWithinVisibleDayBounds,
     visibleActivityIds,
   ]);
   const calendarDiffRecords = useMemo(() => {
     void visibleActivityIds;
     if (!calendarDiffEnabled) return [];
-    return allTimeblocks
-      .filter((entry) => entry.kind === 'record' && isEntryVisible(entry.activityId ?? null))
-      .map((entry) => ({
-        id: entry.id,
-        planId: entry.planId ?? null,
-        title: entry.title,
-        tagId: entry.tagId ?? null,
-        activityId: entry.activityId ?? null,
-        color: entry.color,
-        startAt: entry.startDate ?? entry.displayStartDate,
-        endAt: entry.endDate ?? entry.displayEndDate,
-      }))
-      .filter((record) => isWithinVisibleDayBounds(record.startAt, record.endAt));
+    return buildTimeblockDayDiffRecords(allTimeblocks, {
+      dayBounds: calendarDiffDayBoundsForVisibility,
+      isEntryVisible,
+    });
   }, [
     allTimeblocks,
+    calendarDiffDayBoundsForVisibility,
     calendarDiffEnabled,
     isEntryVisible,
-    isWithinVisibleDayBounds,
     visibleActivityIds,
   ]);
   const calendarDiff = useMemo(
