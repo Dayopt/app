@@ -11,23 +11,6 @@ describe('isCalendarViewPath', () => {
     it('/calendar?view=week のようにクエリが付いていても true', () => {
       expect(isCalendarViewPath('/calendar?view=week')).toBe(true);
     });
-
-    it('/day → true', () => {
-      expect(isCalendarViewPath('/day')).toBe(true);
-    });
-
-    it('/week → true', () => {
-      expect(isCalendarViewPath('/week')).toBe(true);
-    });
-
-    it.each(['2day', '3day', '5day', '7day'])('/%s（multi-day view）→ true', (segment) => {
-      expect(isCalendarViewPath(`/${segment}`)).toBe(true);
-    });
-
-    it('クエリ文字列が付いていても判定できる', () => {
-      expect(isCalendarViewPath('/week?date=2026-01-01')).toBe(true);
-      expect(isCalendarViewPath('/3day?foo=bar')).toBe(true);
-    });
   });
 
   describe('false 判定', () => {
@@ -52,24 +35,20 @@ describe('isCalendarViewPath', () => {
       expect(isCalendarViewPath('/api/calendar/day')).toBe(false);
     });
 
-    it('数字以外を含む day-like セグメント → false', () => {
-      // 3day-archive / dayweek / day2 のような誤マッチを防ぐ
-      expect(isCalendarViewPath('/3day-archive')).toBe(false);
-      expect(isCalendarViewPath('/dayweek')).toBe(false);
-      expect(isCalendarViewPath('/day2')).toBe(false);
-      expect(isCalendarViewPath('/8day')).toBe(false);
-      expect(isCalendarViewPath('/9day')).toBe(false);
-    });
-
-    it('day 単位のみで数字なしは false', () => {
-      expect(isCalendarViewPath('/day-')).toBe(false);
+    // 旧 /day /week /Nday は proxy.ts の redirect で /calendar へ集約済み
+    // （epic #2181 Step 6、#2195）。この関数はアプリ内部の pathname のみを見るため
+    // redirect 前提の旧パスは false になる（redirect の契約自体は proxy.test.ts が担保する）。
+    it('旧 day/week/Nday パスは false（proxy の redirect が担保する。この関数の対象外）', () => {
+      expect(isCalendarViewPath('/day')).toBe(false);
+      expect(isCalendarViewPath('/week')).toBe(false);
+      expect(isCalendarViewPath('/3day')).toBe(false);
     });
   });
 });
 
 describe('resolveWorkspaceTab', () => {
-  it.each(['/calendar', '/day', '/week', '/2day', '/7day'])('%s → calendar', (path) => {
-    expect(resolveWorkspaceTab(path)).toBe('calendar');
+  it('/calendar → calendar', () => {
+    expect(resolveWorkspaceTab('/calendar')).toBe('calendar');
   });
 
   it('/report → report', () => {
