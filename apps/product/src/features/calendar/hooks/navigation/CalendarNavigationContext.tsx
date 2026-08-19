@@ -45,6 +45,38 @@ function readDateParamFromLocation(): Date | undefined {
 }
 
 /**
+ * `/report` 滞在中に最後にいた calendar view を localStorage へ憶えておく。
+ *
+ * `/report` の URL は `view=` を持たないため（date のみ）、`/report` 上での
+ * page reload は Provider を再マウントさせ、view の初期値を復元する手がかりが
+ * URL に無くなる。WorkspaceTabs の「カレンダーへ戻る」リンクはこの Provider の
+ * `viewType` を読んで `/calendar?view=` を組み立てるため、reload 直後にここが
+ * 既定値へ落ちると、直前まで day だったのに reload 後は week へ戻ってしまう
+ * （2026-08-19、calendar-navigation.spec.ts の reload 実走で検出）。
+ */
+const LAST_CALENDAR_VIEW_STORAGE_KEY = 'dayopt:last-calendar-view';
+
+function readLastCalendarView(): CalendarViewType | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = window.localStorage.getItem(LAST_CALENDAR_VIEW_STORAGE_KEY);
+    return raw && isValidViewType(raw) ? raw : undefined;
+  } catch {
+    // localStorage 利用不可（プライベートブラウジング等）は諦めて既定値へ
+    return undefined;
+  }
+}
+
+function writeLastCalendarView(view: CalendarViewType): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LAST_CALENDAR_VIEW_STORAGE_KEY, view);
+  } catch {
+    // 同上、書き込み失敗は無視してよい（ただの復元ヒントであり必須データではない）
+  }
+}
+
+/**
  * pathname と URL searchParams からワークスペースタブ判定と初期値を計算
  *
  * `fallbackDate` は calendar / report いずれでもない workspaceTab（例: /settings）で
@@ -62,7 +94,9 @@ function resolveCalendarProps(pathname: string, fallbackDate?: Date) {
       isCalendarPage: false as const,
       workspaceTab,
       initialDate,
-      initialView: 'week' as CalendarViewType,
+      // /report の URL は view を持たないため、直前に /calendar にいた時の view を
+      // localStorage から復元する（無ければ week。readLastCalendarView 参照）。
+      initialView: readLastCalendarView() ?? 'week',
     };
   }
 
@@ -153,7 +187,12 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     // Palette等がカレンダー表示日/ビュータイプを参照するためグローバルに同期
     useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
     useCalendarNavigationStore.getState()._syncViewType(viewType);
-  }, [currentDate, viewType, locale, isMobile, pathname]);
+    // /report での reload 後に復元できるよう、calendar page にいる間だけ憶えておく
+    // （readLastCalendarView 参照。/report 自体の view は無関係のまま書き換えない）。
+    if (isCalendarPage) {
+      writeLastCalendarView(viewType);
+    }
+  }, [currentDate, viewType, locale, isMobile, pathname, isCalendarPage]);
 
   /**
    * 今いる面（calendar / report）の URL を書く。
@@ -201,16 +240,25 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     }
   }, [isCalendarPage, isMobile, viewType, writeWorkspaceUrl]);
 
-  // URL由来の initialView が変更されたら viewType を同期
-  // （ブラウザ戻る/進む、直接URL入力時）
+  // URL に view= が明示されていたら viewType を同期する
+  // （ブラウザ戻る/進む、直接URL入力時）。
   // モバイルでは Day / Week 以外への変更を拒否（Effect A の replaceState と競合防止）
+  //
+  // `initialView`（[pathname] のみに依存する useMemo 由来）は使わない: Next.js の
+  // クライアント遷移は pathname を search より先に確定するため、遷移直後の 1 render は
+  // search にまだ view= が付いていない瞬間があり（2026-08-19 実測）、その瞬間の
+  // `initialView` は既定値 'week' に丸められている。この stale な既定値を「URL の
+  // 意思」として signState へ同期すると、既に正しく復元済みの viewType を破壊する。
+  // **view= の不在は「意見なし」であり、既定値の主張ではない** — 明示されている時
+  // だけ同期対象にする。
   React.useEffect(() => {
-    if (isCalendarPage && initialView !== viewType) {
-      if (isMobileRef.current && !isMobileCalendarViewSupported(initialView)) return;
-      setViewType(initialView);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
-  }, [isCalendarPage, initialView]);
+    if (!isCalendarPage || typeof window === 'undefined') return;
+    const viewParam = new URLSearchParams(window.location.search).get('view');
+    if (viewParam === null || !isValidViewType(viewParam)) return;
+    if (viewParam === viewType) return;
+    if (isMobileRef.current && !isMobileCalendarViewSupported(viewParam)) return;
+    setViewType(viewParam);
+  }, [isCalendarPage, pathname, viewType]);
 
   // URL由来の initialDate が変更されたら currentDate を同期
   // （ブラウザ戻る/進む、直接URL入力時）

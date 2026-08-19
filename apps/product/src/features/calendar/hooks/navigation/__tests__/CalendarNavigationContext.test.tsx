@@ -235,4 +235,41 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('date')).toHaveTextContent('2026-03-29');
     expect(screen.getByTestId('view')).toHaveTextContent('day');
   });
+
+  // /report の URL は view= を持たないため（date のみ）、/report 上での
+  // full page reload は Provider を再マウントさせ、view の初期値を URL から
+  // 復元する手がかりが無くなる。WorkspaceTabs の「カレンダーへ戻る」リンクは
+  // この Provider の viewType を読んで /calendar?view= を組み立てるため、
+  // reload 直後に既定値（week）へ落ちると直前まで day だったのに week へ戻って
+  // しまう（calendar-navigation.spec.ts の reload 実走で検出、2026-08-19）。
+  it('/report での reload（Provider 再マウント）後も直前の calendar view を localStorage から復元する', () => {
+    localStorage.clear();
+    window.history.replaceState(null, '', '/ja/calendar?date=2026-03-25&view=day');
+    mockPathname = '/ja/calendar';
+
+    const { unmount } = render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+
+    // /report へ client-side 遷移（soft nav）。Provider は同一インスタンスのまま。
+    mockPathname = '/ja/report';
+    window.history.replaceState(null, '', '/ja/report?date=2026-03-25');
+
+    // ここで full page reload が起きたとみなし、Provider を明示的に unmount→remount する
+    // （テストでは実ブラウザの reload を再現できないため、この unmount/remount が代替）。
+    unmount();
+
+    render(
+      <CalendarNavigationProvider>
+        <TestConsumer />
+      </CalendarNavigationProvider>,
+    );
+
+    // /report 自体は view を持たない概念だが、Provider 内部の viewType は
+    // 「カレンダーへ戻る」リンクの組み立てに使われるため、reload 前の day を保持する
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
+  });
 });

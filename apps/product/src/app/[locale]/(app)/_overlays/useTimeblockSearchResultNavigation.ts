@@ -11,7 +11,9 @@ import {
 
 interface CalendarSearchNavigation {
   currentDate: Date;
+  viewType: string;
   navigateToDate: (date: Date) => void;
+  changeView: (view: 'day') => void;
 }
 
 interface PendingSearchNavigation {
@@ -76,6 +78,14 @@ export function useTimeblockSearchResultNavigation({
       }
 
       pendingNavigationRef.current = { targetDate, targetPath };
+      // buildTimeblockSearchResultPath は view=day を URL へ書くが、raw pushState
+      // （下の pending navigation effect）は pathname を変えないため
+      // CalendarNavigationContext の useMemo（[pathname] 依存）に拾われない
+      // （2026-08-19、block-search.spec.ts の実走で検出）。view state は
+      // changeView() で明示的に揃える。
+      if (calendarNavigation.viewType !== 'day') {
+        calendarNavigation.changeView('day');
+      }
       if (calendarNavigation.currentDate.getTime() !== targetDate.getTime()) {
         calendarNavigation.navigateToDate(targetDate);
       }
