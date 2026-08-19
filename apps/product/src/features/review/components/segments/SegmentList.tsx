@@ -71,7 +71,7 @@ export function SegmentList() {
           className="py-4"
         />
       ) : (
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-1">
           {segments.map((segment) => (
             <li
               key={segment.id}
