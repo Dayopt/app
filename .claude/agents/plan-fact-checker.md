@@ -19,6 +19,12 @@ maxTurns: 12
 - `docs/README.md` の routing、該当 skill、current code / schema / config から、その時点の source of truth を発見する
 - command、test、MCP、live environment の確認が必要なら、Main が実行すべき command と照合条件を `⚠` として返す
 
+## 出力契約
+
+- 主張の検証が進むたびに、確定した `CLAIMS` 行を **text として書き出す**。全主張を検証し終えてから最後に一括で書く方式を禁止する
+- 残り検証が 1 件でも、先に確定済みの `CLAIMS` 行を text で書いてから次の検証を続ける
+- 最終 turn は必ず text block で終える（tool 呼び出しだけで turn を終えない）
+
 # 入力
 
 `/plan-review` から plan 全文が verbatim で渡される。
