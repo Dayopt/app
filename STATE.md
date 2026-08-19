@@ -1,4 +1,4 @@
-# STATE.md（最終更新: 2026-08-19 / 生成基点 main@4431649e / pnpm state:generate）
+# STATE.md（最終更新: 2026-08-19 / 生成基点 main@61ec8288 / pnpm state:generate）
 
 > STATE.md は判断のための現在地の地図であり、正本ではない。正本は GitHub issue と open PR。
 > §2〜§5 は `pnpm state:generate` が機械生成する（手で編集しても次回生成で上書きされる）。
@@ -8,16 +8,13 @@
 ## 1. 北極星と今週の最優先
 
 - V1.0 リリース: 2026-10-01
-- 今週の最優先: epic #2181（workspace-shell-restructure、v0.34）を収束させる。PR #2222 のクロスレビュー→merge、次いで #2224/#2220（本 STATE.md 導入・連絡方式改訂）の merge
+- 今週の最優先: epic #2181 完了後の仕上げ — dogfooding 修正束（#2233 ほか）と Inspector 右パネル化（#2215）を v0.35（期限 8/26）へ収束させる
 
 ## 2. 進行中レーン（open PR、機械生成）
 
 <!-- STATE:GENERATED:LANES:START -->
 
-| PR                                                                                                                | Issue        | branch                        | 状態  | ブロッカー |
-| ----------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------- | ----- | ---------- |
-| [#2225](https://github.com/Dayopt/dayopt/pull/2225) feat(ops): 運用基盤にSTATE.mdを導入しレーン連絡方式を改訂する | #2220, #2224 | `claude/conductor-infra-2224` | draft | draft      |
-
+（open PR なし）
 <!-- STATE:GENERATED:LANES:END -->
 
 ## 3. 次にやるキュー（status:ready、機械生成）
@@ -25,8 +22,7 @@
 <!-- STATE:GENERATED:QUEUE:START -->
 
 1. [#2218](https://github.com/Dayopt/dayopt/issues/2218) chore(tags): 残余のtag系依存を撤去する（Step 5完了後）
-2. [#2215](https://github.com/Dayopt/dayopt/issues/2215) feat(timeblock): 予定/記録の Inspector をポップアップから右サイドパネルへ変更する
-3. [#2163](https://github.com/Dayopt/dayopt/issues/2163) chore(build): bundle budget の preview 補正を成分分解して再較正する（Sentry 分と Supaba…
+2. [#2163](https://github.com/Dayopt/dayopt/issues/2163) chore(build): bundle budget の preview 補正を成分分解して再較正する（Sentry 分と Supaba…
 
 <!-- STATE:GENERATED:QUEUE:END -->
 
@@ -34,6 +30,7 @@
 
 <!-- STATE:GENERATED:ESCALATIONS:START -->
 
+- [ ] [#2236](https://github.com/Dayopt/dayopt/issues/2236) discussion(calendar): 予定/記録の重なり表示（左右分割）の見直しと表示フィルタの要否
 - [ ] [#2160](https://github.com/Dayopt/dayopt/issues/2160) design(calendar): Plan/Record 2レーンの常時固定幅分割を見直すか判断する
 
 <!-- STATE:GENERATED:ESCALATIONS:END -->

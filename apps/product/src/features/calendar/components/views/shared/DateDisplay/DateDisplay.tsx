@@ -122,7 +122,7 @@ const DateMainDisplay = ({
 
     <div
       className={cn(
-        'flex size-6 items-center justify-center rounded-full text-sm font-normal',
+        'flex size-6 items-center justify-center rounded-full text-base font-normal',
         today && 'bg-primary text-primary-foreground font-medium',
       )}
     >

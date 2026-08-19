@@ -110,6 +110,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 訴求・コピー                   | `business/messaging.md`（UI 文言は `product/copywriting.md`） |
 | 全体 architecture / state flow | `engineering/architecture.md`                                 |
 | coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`             |
+| 不可解な失敗の切り分け手順     | `engineering/diagnostics.md`                                  |
 | env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`               |
 | 障害対応・release              | `operations/runbook.md`                                       |
 | 監視・alert                    | `operations/monitoring.md`                                    |

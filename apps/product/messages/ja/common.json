@@ -231,7 +231,8 @@
       "paymentError": "お支払いに問題があります",
       "checkPayment": "支払い情報を確認",
       "conflict": "他で変更がありました",
-      "reload": "再読み込み"
+      "reload": "再読み込み",
+      "updateAvailable": "新しいバージョンがあります"
     },
     "pwa": {
       "installTitle": "Dayoptをインストール",

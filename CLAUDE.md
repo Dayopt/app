@@ -176,6 +176,7 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 | `.claude/rules/mcp-usage.md`            | Sentry / Supabase / Context7 / Vercel / Eagle                        |
 | `.claude/rules/skill-design.md`         | project skill の設計・更新                                           |
 | `.claude/rules/orchestration.md`        | 指揮台セッション、レーン編成、盤面監視、send_message、判断ジャーナル |
+| `.claude/rules/lane-protocol.md`        | レーンの着手手順、PR 規約、報告テンプレート、検証原則                |
 | `.claude/rules/decision-principles.md`  | シンプルルールで裁けない判断、前提の再考、ルール自体の改訂           |
 
 ## Skills

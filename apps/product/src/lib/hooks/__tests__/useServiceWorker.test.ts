@@ -145,4 +145,84 @@ describe('useServiceWorker', () => {
       expect(result.current.isRegistered).toBe(false);
     });
   });
+
+  describe('controllerchange（#2232）', () => {
+    /** navigator.serviceWorker.addEventListener('controllerchange', ...) に渡されたハンドラを取り出す */
+    function getControllerChangeHandler(): () => void {
+      const call = vi
+        .mocked(navigator.serviceWorker.addEventListener)
+        .mock.calls.find(([event]) => event === 'controllerchange');
+      if (!call) throw new Error('controllerchange リスナーが登録されていない');
+      return call[1] as () => void;
+    }
+
+    it('既存 controller がいる状態で始まった場合、controllerchange で updateAvailable が true になる', async () => {
+      // beforeEach の mockNavigator は controller = mockServiceWorker（既存 controller あり）
+      const { result } = renderHook(() => useServiceWorker());
+
+      await waitFor(() => {
+        expect(result.current.isRegistered).toBe(true);
+      });
+      expect(result.current.updateAvailable).toBe(false);
+
+      act(() => {
+        getControllerChangeHandler()();
+      });
+
+      expect(result.current.updateAvailable).toBe(true);
+    });
+
+    it('初回登録時（controller が null → 非null）の controllerchange では updateAvailable が false のまま', async () => {
+      // controller を null にして「まだ誰も制御していない」初回登録状態を再現
+      const mockNavigator = {
+        serviceWorker: {
+          register: vi.fn().mockResolvedValue(mockRegistration),
+          controller: null,
+          ready: Promise.resolve(mockRegistration),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+      };
+      vi.stubGlobal('navigator', mockNavigator);
+
+      const { result } = renderHook(() => useServiceWorker());
+
+      await waitFor(() => {
+        expect(result.current.isRegistered).toBe(true);
+      });
+
+      act(() => {
+        getControllerChangeHandler()();
+      });
+
+      // 初回遷移は無視される
+      expect(result.current.updateAvailable).toBe(false);
+
+      // 2回目（本当の更新）からは検出される
+      act(() => {
+        getControllerChangeHandler()();
+      });
+      expect(result.current.updateAvailable).toBe(true);
+    });
+
+    it('applyUpdate はページをリロードする', async () => {
+      const reloadMock = vi.fn();
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, reload: reloadMock },
+        writable: true,
+      });
+
+      const { result } = renderHook(() => useServiceWorker());
+
+      await waitFor(() => {
+        expect(result.current.isRegistered).toBe(true);
+      });
+
+      act(() => {
+        result.current.applyUpdate();
+      });
+
+      expect(reloadMock).toHaveBeenCalledOnce();
+    });
+  });
 });

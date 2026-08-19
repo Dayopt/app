@@ -46,9 +46,18 @@ export function HelpMenuItems() {
   const locale = useLocale();
   const openSheet = useShellStore((s) => s.openSheet);
 
+  // DropdownMenuItem の onSelect から直接 Dialog/Sheet を開くと、DropdownMenu を
+  // 閉じる click の tail と、新しく mount された Dialog の outside-interaction 検出
+  // （modal=false の場合は overlay が無くこの検出に頼る。ShortcutCheatSheetDialog が
+  // 該当）が同一 tick で競合し、開いた直後に閉じる（#2153）。次の macrotask まで
+  // state 更新を遅らせ、DropdownMenu の close 処理が完全に終わってから Dialog を開く。
+  const openSheetAfterMenuClose: typeof openSheet = (sheet) => {
+    setTimeout(() => openSheet(sheet), 0);
+  };
+
   return (
     <>
-      <DropdownMenuItem onSelect={() => openSheet({ type: 'shortcutCheatSheet' })}>
+      <DropdownMenuItem onSelect={() => openSheetAfterMenuClose({ type: 'shortcutCheatSheet' })}>
         <Keyboard />
         {t('navigation.navUser.helpSubmenu.keyboardShortcuts')}
       </DropdownMenuItem>
@@ -116,7 +125,7 @@ export function HelpMenuItems() {
         </a>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem onSelect={() => openSheet({ type: 'contact' })}>
+      <DropdownMenuItem onSelect={() => openSheetAfterMenuClose({ type: 'contact' })}>
         <MessageSquare />
         {t('navigation.navUser.helpSubmenu.contact')}
       </DropdownMenuItem>

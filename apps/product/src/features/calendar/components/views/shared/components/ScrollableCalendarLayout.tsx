@@ -71,7 +71,15 @@ export const CalendarDateHeader = ({
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
 
   return (
-    <div className={cn('flex h-8 shrink-0 flex-col justify-end md:h-12', className)}>
+    // md 以上（デスクトップ）はナビゲーション行（CalendarLayout の AppHeader）と背景・下端の
+    // 境界線を共有し、2 行合わせて「1 つの太いヘッダー」に見せる（#2233-2 案B）。モバイルは
+    // MobileCalendarHeader が独立したヘッダーを持つため対象外
+    <div
+      className={cn(
+        'md:border-border-subtle md:bg-background flex h-8 shrink-0 flex-col justify-end md:h-12 md:border-b',
+        className,
+      )}
+    >
       <div className="flex items-end">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (

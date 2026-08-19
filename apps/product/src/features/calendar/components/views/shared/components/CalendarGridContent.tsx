@@ -324,6 +324,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         activityName: activity?.name ?? null,
         activityColor: activity?.color ?? null,
         activityIcon: activity?.icon ?? null,
+        activityCategoryId: activity?.categoryId ?? null,
         compact: compactCards,
         timeFormat,
         interactive: false,

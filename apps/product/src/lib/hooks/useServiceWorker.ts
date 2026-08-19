@@ -13,22 +13,33 @@ interface ServiceWorkerState {
   isRegistering: boolean;
   /** エラー */
   error: Error | null;
+  /**
+   * 表示中のページを制御する Service Worker が新バージョンへ切り替わったか
+   * （`controllerchange`、初回登録時の遷移は除く。#2232）。
+   * true の間、現在のページは旧シェルの JS のまま動き続けている。
+   */
+  updateAvailable: boolean;
 }
 
 interface UseServiceWorkerResult extends ServiceWorkerState {
   /** キャッシュをクリア */
   clearCache: () => Promise<void>;
+  /** 新バージョンを適用するためページをリロードする */
+  applyUpdate: () => void;
 }
 
 /**
  * Service Worker を管理するフック
  *
- * sw.js は install 時に skipWaiting するため新バージョンは検出後すぐ有効化される。
- * 更新の適用は次回リロードで反映される既存挙動に委ね、このフックは更新通知 UI を持たない。
+ * sw.js は install 時に skipWaiting するため新バージョンは検出後すぐ有効化されるが、
+ * **開きっぱなしのページには反映されない**。新 SW が制御を得た（`controllerchange`）
+ * ことを検出し、`updateAvailable` で呼び出し側（`ServiceWorkerProvider`）に伝える。
+ * 実際のリロードは `applyUpdate()` を呼ぶまで行わない（編集中データの喪失を避ける
+ * ため、フックが勝手にリロードすることはない）。
  *
  * @example
  * ```tsx
- * const { isRegistered, clearCache } = useServiceWorker()
+ * const { isRegistered, clearCache, updateAvailable, applyUpdate } = useServiceWorker()
  * ```
  */
 export function useServiceWorker(): UseServiceWorkerResult {
@@ -37,6 +48,7 @@ export function useServiceWorker(): UseServiceWorkerResult {
     isRegistered: false,
     isRegistering: false,
     error: null,
+    updateAvailable: false,
   });
 
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
@@ -106,6 +118,41 @@ export function useServiceWorker(): UseServiceWorkerResult {
     return () => window.removeEventListener('load', registerSW);
   }, []);
 
+  // 新 SW への切替検出（controllerchange）
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+    if (process.env.NODE_ENV === 'development') {
+      return;
+    }
+
+    // クロージャに固定する（cleanup 時点で navigator.serviceWorker が
+    // 差し替え・解体済みでも、登録した addEventListener と同じ参照で外せるように）
+    const sw = navigator.serviceWorker;
+
+    // 初回登録時（このページ読み込みが最初に SW の制御下に入る瞬間）は
+    // controller が null → 非null へ一度だけ変わる。これは「更新」ではないので
+    // 除外する（既存 controller が居る状態で始まった時だけ、以後の変化を更新として扱う）。
+    let hasController = sw.controller !== null;
+
+    const handleControllerChange = () => {
+      if (!hasController) {
+        // 初回登録の遷移。以後の controllerchange から更新として扱う
+        hasController = true;
+        return;
+      }
+      setState((prev) => ({ ...prev, updateAvailable: true }));
+    };
+
+    sw.addEventListener('controllerchange', handleControllerChange);
+    return () => sw.removeEventListener('controllerchange', handleControllerChange);
+  }, []);
+
+  const applyUpdate = useCallback(() => {
+    window.location.reload();
+  }, []);
+
   // キャッシュクリア
   const clearCache = useCallback(async () => {
     if (!registration?.active) return;
@@ -124,5 +171,6 @@ export function useServiceWorker(): UseServiceWorkerResult {
   return {
     ...state,
     clearCache,
+    applyUpdate,
   };
 }
