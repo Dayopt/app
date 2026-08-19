@@ -11,7 +11,6 @@ import { useUpdateActivity } from '@/features/activities';
 import { toast } from '@/lib/toast';
 import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
-import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
 import { buildReportPath } from '../../../lib/panel-url';
 
@@ -69,7 +68,6 @@ export function ActivityRow({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const navigation = useCalendarNavigation();
   const updateMutation = useUpdateActivity();
   const { openActivityRenameModal } = useActivityModalNavigation();
 
@@ -100,15 +98,10 @@ export function ActivityRow({
   );
 
   const handleViewStats = useCallback(() => {
-    if (navigation) {
-      navigation.setPanelKind('review', { reviewTagId: activity.id });
-      return;
-    }
-    // ここに来るのは navigation が無い経路だけなので、日付は現在時刻で解決する。
+    // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
     // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
-    const reviewDate = new Date();
-    router.push(buildReportPath(locale, reviewDate));
-  }, [navigation, router, locale, activity.id]);
+    router.push(buildReportPath(locale, new Date()));
+  }, [router, locale]);
 
   return (
     <>

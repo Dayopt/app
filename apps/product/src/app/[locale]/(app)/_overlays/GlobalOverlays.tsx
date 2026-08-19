@@ -105,25 +105,16 @@ export function GlobalOverlays() {
     }
   }, [pathname, isInspectorOpen, closeInspector]);
 
-  // Inspector → Calendar review panel
-  // setPanelKind は writeCalendarUrl(window.history.replaceState) で URL を
-  // 同期更新するため、続く closeInspector の URL 同期（entry 削除）が
-  // review panel を打ち消さない。router.push の非同期遷移と closeInspector が
-  // 競合し「inspector だけ閉じて panel に到達しない」問題を解消する。
-  //
-  // calendarNavigation が無い（Calendar タブ外）場合は /report へ遷移する。
-  // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する
-  // （docs/projects/workspace-shell-restructure/overview.md §6-5）。
+  // Inspector → /report。カレンダー内パネル（CalendarReviewRail）は廃止済み
+  // （#2181 Step 4）。tagId によるセグメント絞り込みは Step 5（セグメント配線）で
+  // 復元する（docs/projects/workspace-shell-restructure/overview.md §6-5）。
   const handleViewStats = useCallback(
     (tagId: string) => {
-      if (calendarNavigation) {
-        calendarNavigation.setPanelKind('review', { reviewTagId: tagId });
-      } else {
-        router.push(buildReportPath(locale, new Date()));
-      }
+      void tagId;
+      router.push(buildReportPath(locale, new Date()));
       closeInspector();
     },
-    [calendarNavigation, closeInspector, router, locale],
+    [closeInspector, router, locale],
   );
 
   const handleCopy = useCallback(

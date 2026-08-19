@@ -12,9 +12,6 @@ import type { BarComparisonRow } from '../../domain/timePL/types';
 import { TimePLTagMarker } from '../time-pl/TimePLTagMarker';
 import { formatVariance, getVarianceColor } from '../time-pl/data/timePL.presentation';
 
-const MAX_TIME_PL_ROWS = 5;
-const MAX_ESTIMATION_ROWS = 3;
-
 export interface WeeklyReflectionEstimationRow {
   tagId: string | null;
   tagName: string | null;
@@ -68,8 +65,7 @@ export function WeeklyReflectionPanel({
     () =>
       [...(estimationRows ?? [])]
         .filter((row) => row.recordCount > 0)
-        .sort((a, b) => Math.abs(b.avgDeviationMinutes) - Math.abs(a.avgDeviationMinutes))
-        .slice(0, MAX_ESTIMATION_ROWS),
+        .sort((a, b) => Math.abs(b.avgDeviationMinutes) - Math.abs(a.avgDeviationMinutes)),
     [estimationRows],
   );
   const signal = deriveReflectionSignal({
@@ -78,7 +74,6 @@ export function WeeklyReflectionPanel({
     skipSummary,
     blankSummary,
   });
-  const compactTimePLRows = timePLRows.slice(0, MAX_TIME_PL_ROWS);
   const hasSkipSummary = skipSummary != null;
   const hasBlankSummary = blankSummary != null;
 
@@ -110,11 +105,11 @@ export function WeeklyReflectionPanel({
       </dl>
 
       <ReflectionSection title={t('review.timePLTitle')}>
-        {compactTimePLRows.length === 0 ? (
+        {timePLRows.length === 0 ? (
           <EmptySection />
         ) : (
           <div className="flex flex-col gap-1">
-            {compactTimePLRows.map((row) => (
+            {timePLRows.map((row) => (
               <TimePLRow key={row.activityId ?? 'no-activity'} row={row} onTagClick={onTagClick} />
             ))}
           </div>

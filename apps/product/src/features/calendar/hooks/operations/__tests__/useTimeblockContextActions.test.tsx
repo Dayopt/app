@@ -5,8 +5,6 @@ import type { CalendarEvent } from '../../../types/calendar.types';
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
-  setPanelKind: vi.fn(),
-  useCalendarNavigation: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -31,10 +29,6 @@ vi.mock('@/lib/toast', () => ({
   toast: { success: vi.fn() },
 }));
 
-vi.mock('../../navigation/CalendarNavigationContext', () => ({
-  useCalendarNavigation: mocks.useCalendarNavigation,
-}));
-
 import { useTimeblockContextActions } from '../useTimeblockContextActions';
 
 const taggedEntry = {
@@ -48,26 +42,14 @@ const taggedEntry = {
 describe('useTimeblockContextActions - Review navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.useCalendarNavigation.mockReturnValue({ setPanelKind: mocks.setPanelKind });
   });
 
-  it('Calendar内では現在viewを保つContext経由でReviewを開く', () => {
-    const { result } = renderHook(() => useTimeblockContextActions());
-
-    act(() => result.current.handleViewStats(taggedEntry));
-
-    expect(mocks.setPanelKind).toHaveBeenCalledWith('review', { reviewTagId: 'tag-1' });
-    expect(mocks.push).not.toHaveBeenCalled();
-  });
-
-  it('Calendar Context外では/reportへfallbackする（tagIdは落ちる。Step5で復元）', () => {
-    mocks.useCalendarNavigation.mockReturnValue(null);
+  it('/report へ遷移する（カレンダー内パネルは廃止済み、#2181 Step 4）', () => {
     const { result } = renderHook(() => useTimeblockContextActions());
 
     act(() => result.current.handleViewStats(taggedEntry));
 
     expect(mocks.push).toHaveBeenCalledWith('/ja/report?date=2026-03-25');
-    expect(mocks.setPanelKind).not.toHaveBeenCalled();
   });
 
   it('tagなしentryではReviewを開かない', () => {
@@ -75,7 +57,6 @@ describe('useTimeblockContextActions - Review navigation', () => {
 
     act(() => result.current.handleViewStats({ ...taggedEntry, tagId: null }));
 
-    expect(mocks.setPanelKind).not.toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
 });

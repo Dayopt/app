@@ -10,7 +10,6 @@ import { toast } from '@/lib/toast';
 
 import { buildReportPath } from '../../lib/panel-url';
 import type { CalendarEvent } from '../../types/calendar.types';
-import { useCalendarNavigation } from '../navigation/CalendarNavigationContext';
 
 /**
  * コンテキストメニューで使用する plan / record 操作アクションを提供するフック
@@ -22,7 +21,6 @@ export function useTimeblockContextActions() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations();
-  const navigation = useCalendarNavigation();
   const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
 
   const handleDeleteTimeblock = useCallback(
@@ -40,15 +38,11 @@ export function useTimeblockContextActions() {
   const handleViewStats = useCallback(
     (entry: CalendarEvent) => {
       if (!entry.tagId) return;
-      if (navigation) {
-        navigation.setPanelKind('review', { reviewTagId: entry.tagId });
-        return;
-      }
-
+      // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
       // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
       router.push(buildReportPath(locale, entry.startDate ?? entry.actualStartDate ?? new Date()));
     },
-    [navigation, router, locale],
+    [router, locale],
   );
 
   const handleSkip = useCallback(
