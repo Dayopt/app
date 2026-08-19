@@ -171,17 +171,3 @@ export function ActivityRowMenu({
     </DropdownMenuContent>
   );
 }
-
-/** アクティビティ未設定ブロック行のシンプルなメニュー */
-export function NoActivityRowMenu({ onShowOnlyThis }: { onShowOnlyThis: () => void }) {
-  const t = useTranslations();
-
-  return (
-    <DropdownMenuContent align="start" side="right">
-      <DropdownMenuItem onClick={onShowOnlyThis}>
-        <Eye className="mr-2 size-4" />
-        {t('calendar.filter.showOnlyNoActivity')}
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  );
-}

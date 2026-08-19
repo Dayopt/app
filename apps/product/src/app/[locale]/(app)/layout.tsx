@@ -37,7 +37,6 @@ const APP_NAMESPACES = [
   'timeblock',
   'plan',
   'record',
-  'tags',
   'navigation',
   'settings',
   'sidebar',

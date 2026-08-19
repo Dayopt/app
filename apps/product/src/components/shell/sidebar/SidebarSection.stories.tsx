@@ -39,7 +39,6 @@ function ActionButton() {
 }
 
 /**
- * TagFlatList 内 SortableTagItem と同一構造。
  * borderColor/backgroundColor に getTagColorClasses().cssVar を使用。
  */
 function TagRow({

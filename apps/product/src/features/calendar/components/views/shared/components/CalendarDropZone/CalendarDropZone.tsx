@@ -4,7 +4,7 @@
  * カレンダー列のドロップゾーン
  *
  * 責務: ドラッグ選択の基盤要素 + data-calendar-day-index の付与。
- * dnd-kit の useDroppable は廃止し、カスタム interaction machine に統一。
+ * 外部 DnD ライブラリの useDroppable 相当は使わず、カスタム interaction machine に統一。
  */
 
 import { cn } from '@dayopt/components';

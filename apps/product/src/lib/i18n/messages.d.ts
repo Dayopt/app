@@ -30,7 +30,6 @@ import type oauth from '../../../messages/en/oauth.json';
 import type settings from '../../../messages/en/settings.json';
 import type shortcuts from '../../../messages/en/shortcuts.json';
 import type sidebar from '../../../messages/en/sidebar.json';
-import type tags from '../../../messages/en/tags.json';
 import type timeblock from '../../../messages/en/timeblock.json';
 
 type Messages = typeof activities &
@@ -46,7 +45,6 @@ type Messages = typeof activities &
   typeof settings &
   typeof shortcuts &
   typeof sidebar &
-  typeof tags &
   typeof timeblock;
 
 declare module 'next-intl' {

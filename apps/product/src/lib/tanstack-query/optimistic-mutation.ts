@@ -5,15 +5,14 @@
  *
  * @example
  * ```typescript
- * const mutation = api.tags.delete.useMutation({
+ * const mutation = api.activities.deleteActivity.useMutation({
  *   onMutate: async ({ id }) => {
  *     const snapshot = await createSnapshot(utils, [
- *       { query: utils.tags.list, key: undefined },
- *       { query: utils.tags.getById, key: { id } },
+ *       { query: utils.activities.listActivities, key: undefined },
  *     ]);
  *
  *     // 楽観的更新
- *     updateListCache(utils.tags.list, undefined, (old) =>
+ *     updateListCache(utils.activities.listActivities, undefined, (old) =>
  *       filterFromList(old, (item) => item.id !== id)
  *     );
  *
@@ -23,7 +22,7 @@
  *     context?.snapshot?.restore();
  *   },
  *   onSettled: () => {
- *     void utils.tags.list.invalidate();
+ *     void utils.activities.listActivities.invalidate();
  *   },
  * });
  * ```
@@ -72,7 +71,7 @@ interface Snapshot {
  * ```typescript
  * const snapshot = await createSnapshot(utils, [
  *   { query: utils.tags.list, key: undefined },
- *   { query: utils.tags.getById, key: { id } },
+ *   { query: utils.activities.listActivities, key: undefined },
  * ]);
  *
  * // エラー時にロールバック

@@ -231,7 +231,7 @@ export function useErrorToast() {
 // 使用例
 const showErrorToast = useErrorToast();
 
-const mutation = api.tags.create.useMutation({
+const mutation = api.activities.createActivity.useMutation({
   onError: showErrorToast,
 });
 ```

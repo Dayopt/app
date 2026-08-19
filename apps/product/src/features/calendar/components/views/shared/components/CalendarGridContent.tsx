@@ -385,7 +385,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       data-calendar-grid
       data-calendar-day-index={dayIndex}
     >
-      {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
+      {/* CalendarDragSelection: グリッド選択 + カスタム droppable */}
       <CalendarDragSelection
         date={date}
         dayIndex={dayIndex}

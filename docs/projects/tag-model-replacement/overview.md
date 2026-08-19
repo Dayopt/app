@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-08-18
+last_verified: 2026-08-19
 code:
   - apps/product/src/features/tags
   - apps/product/src/features/calendar/components/activity-filter
@@ -478,6 +478,17 @@ Step 7 の削除後に走らせ、孤児化した barrel / ファイルを拾う
 | 6   | **公開契約** — MCP tool 置換 + schemaVersion 2→3、`read:activities` へ alias なしクリーン置換（実装確定。当初は「`read:tags` は alias 維持」だったが production 実測 0 件で §7-4 の更新どおり変更）、公開 docs 更新 | H2                              | `[irreversible]`                  | schemaVersion の bump と MCP フィールド名は戻さない。**冪等 digest のキーは触らない**                                                                                                                                                                                                  |
 | 7   | **非破壊 cleanup** — `features/tags` / tag-filter / i18n キー削除、`--tag-*` → `--category-*` トークン                                                                                                              | **本日 scope 外**（指揮台采配） | `[minutes]`                       | 明日以降の編成。commit 単位で revert 可能                                                                                                                                                                                                                                              |
 | 8   | **destructive migration** — `tags` テーブル・`tag_id` 列・tag 専有 RPC / トリガー群 drop                                                                                                                            | 未割当                          | `[days]`                          | **`EXPLICIT AUTHORITY`**。明示指示 + 独立レビュー + backup / PITR 確認が揃うまで実行しない                                                                                                                                                                                             |
+
+### Step 7 は部分実施（2026-08-19、#2176）
+
+本表は Step 7 の前提として Step 5（分析軸切替）が完了済みであることを想定していたが、#2176 着手時の実測で **Step 5 は未完了**と判明した。review（`TimePLTagMarker.tsx` / `domain/timePL/types.ts` / `CalendarReviewPanel.tsx` / `ReviewDiffPanel.tsx`）と timeblock server 層の分析ロジック（`statistics-service.ts` 等が呼ぶ tag 系 12 ファイル）が `features/tags` の一部（`TagIcon` / `tag-colors.ts` / `useTags` / `useTagsMap` とその読み取り専用 API）に今も実依存していたため、`features/tags` feature の全撤去はできなかった。
+
+実施したのは「今すでに孤児化していた部分」に限定した部分実施:
+
+- 撤去: tag CRUD/mutation/archive/delete の router procedure + service 層、マージ機構（§4-8 の v1 drop 確定分）、`tag-sort-order.ts` / `tag-rpc-args.ts` / `tag-row-transform.ts`（上記の被参照先が消えて orphan 化）、`IconPicker.tsx`、`Tags.docs.mdx`、i18n `tags` namespace、孤児化した `lib/cache`
+- 維持（撤去できず）: `TagIcon` / `tag-colors.ts` / `useTags` / `useTagsMap` / `curated-icons.ts`（tags版）、timeblock の tag-* 12 ファイル、`--tag-*` design token
+
+残余は [#2218](https://github.com/Dayopt/dayopt/issues/2218) へ切り出した（`status:blocked`、Step 5 merge または epic #2181 merge のいずれか早い方が解除条件）。
 
 ### Step 3 の RPC 変更は additive-only に固定する（本番故障を閉じる）
 
