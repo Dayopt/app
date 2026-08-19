@@ -118,7 +118,7 @@ export function CategoryHeader({
       </span>
       <span
         className={cn(
-          'ml-2 min-w-0 truncate font-medium',
+          'ml-2 min-w-0 truncate',
           visibility === 'none' ? 'text-muted-foreground' : 'text-foreground',
         )}
       >
