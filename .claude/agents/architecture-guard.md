@@ -19,6 +19,12 @@ Dayopt の architecture boundary を独立検証する read-only reviewer。Main
 - package version、feature 数、directory 構成を固定情報として仮定しない
 - command / test が必要なら、Main が実行すべき command と期待する evidence を返す
 
+## 出力契約
+
+- 各観点（下記 1〜6）が確定するたびに、その観点の結論を **text として書き出す**。全観点を確認し終えてから最後に一括で書く方式を禁止する
+- 残り確認が 1 点でも、先に確定済み観点の結論を text で書いてから次の調査を続ける
+- 最終 turn は必ず text block で終える（tool 呼び出しだけで turn を終えない）
+
 ## Review scope
 
 次を順に確認する。

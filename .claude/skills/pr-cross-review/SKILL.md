@@ -77,6 +77,15 @@ P1/P2 の review comment とは別に、**1 件の summary comment** を issue �
 - `agent: <実行した subagent 名をカンマ区切り、または docs-only>`
 - P1/P2/P3 の件数サマリー（inline review comment の一覧を指す旨も添える）
 
+**marker 本文は `pnpm review:marker` で生成する（手書きしない）。** SHA の捏造（短縮 SHA からの補完、2026-08-14 実事故）と zerolike 書式の汚染（注釈付き `P1: なし（…）` が gate を誤通過させた PR #2053 の実事故）を、生成の機械化で防ぐ（`scripts/review/generate-marker.ts`、#2230）。
+
+```bash
+pnpm review:marker <PR番号> --agent "risk-reviewer, behavior-verifier" \
+  --p1 0 --p2 2 --p2-note "review comment 参照" [--p3 "..."]
+```
+
+head SHA は script が `gh pr view --json headRefOid` で実測する（引数で渡す口は無い）。P1/P2 が 0 件の時は注釈を付けられない（zerolike 書式を維持するため。理由は P3 か経緯欄へ）。**stdout の出力を目視確認してから** `gh pr comment <PR番号> --body "<出力>"` 等で投稿する — 生成と投稿を分けているのは、投稿前に 1 拍置く確認ステップを残すため。
+
 `agent:` の値は自己申告であり、gate は非空であることしか検証しない（機械的な docs-only 判定はしない）。この trust boundary は marker を OWNER / MEMBER / COLLABORATOR しか投稿できない、という既存の権限境界に依っている。
 
 ### 7. 収束後、確定伝達する
@@ -116,10 +125,11 @@ agent: docs-only
 
 ## 参考ファイル
 
-| ファイル                                                    | 用途                                                  |
-| ----------------------------------------------------------- | ----------------------------------------------------- |
-| `.claude/rules/ai-behavior.md`                              | subagent 選定基準、model tiering                      |
-| `.claude/rules/workflow.md` §レビュー指摘の必須解決         | 指摘後の 3 択・resolve 運用                           |
-| `.claude/rules/orchestration.md` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達            |
-| `AGENTS.md`                                                 | 凍結された P1/P2 定義の由来（このスキルが生きた正本） |
-| `scripts/git/finish-branch.sh`                              | `[internal-review]` marker の gate 判定ロジック       |
+| ファイル                                                    | 用途                                                                 |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `.claude/rules/ai-behavior.md`                              | subagent 選定基準、model tiering                                     |
+| `.claude/rules/workflow.md` §レビュー指摘の必須解決         | 指摘後の 3 択・resolve 運用                                          |
+| `.claude/rules/orchestration.md` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達                           |
+| `AGENTS.md`                                                 | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                |
+| `scripts/git/finish-branch.sh`                              | `[internal-review]` marker の gate 判定ロジック                      |
+| `scripts/review/generate-marker.ts`                         | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |

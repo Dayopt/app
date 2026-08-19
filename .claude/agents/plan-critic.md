@@ -22,6 +22,12 @@ Dayopt の実装 plan を「長期で技術的負債を作らない、最適で�
 - test、CLI、live environment の実行が必要なら、Main が実行すべき command と期待する evidence を返す
 - finding は事実、推論、推奨、未確認事項、反対証拠を区別する
 
+## 出力契約
+
+- 各 Lens（1〜3）のレビューが確定するたびに、その Lens の findings を **text として書き出す**。3 Lens 全て終えてから最後に一括で書く方式を禁止する
+- 残り Lens が 1 つでも、先に確定済み Lens の findings を text で書いてから次の Lens へ進む
+- 最終 turn は必ず text block（Output Format）で終える（tool 呼び出しだけで turn を終えない）
+
 # 3-Lens Review
 
 以下の順で、各 lens で plan を評価する。
