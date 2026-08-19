@@ -46,4 +46,4 @@ componentのvisual stateはStorybook、集計data flowとcompositionは[Engineer
 - [機能スコープ](../log/2026-06-16-feature-non-adoption.md)
 - [分析表現ポリシー](../log/2026-07-10-analytics-expression-policy.md)
 - [ADR-025: Plan / Recordモデル](../log/2026-07-09-time-model-split.md)
-- [workspace-shell-restructure](../../projects/workspace-shell-restructure/overview.md) — `/report` フルページ化の設計判断
+- [workspace-shell-restructure](../../projects/_archive/workspace-shell-restructure/overview.md) — `/report` フルページ化の設計判断

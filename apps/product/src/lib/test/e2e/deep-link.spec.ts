@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
  *
  * 旧 URL（/day, /week, /Nday, `?panel=`）からの redirect 網羅は
  * `legacy-url-redirects.spec.ts` を正とする
- * （docs/projects/workspace-shell-restructure/overview.md §4-4）。
+ * （docs/projects/_archive/workspace-shell-restructure/overview.md §4-4）。
  */
 
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
