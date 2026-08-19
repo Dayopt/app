@@ -71,7 +71,7 @@ interface Snapshot {
  * ```typescript
  * const snapshot = await createSnapshot(utils, [
  *   { query: utils.tags.list, key: undefined },
- *   { query: utils.tags.getById, key: { id } },
+ *   { query: utils.activities.listActivities, key: undefined },
  * ]);
  *
  * // エラー時にロールバック

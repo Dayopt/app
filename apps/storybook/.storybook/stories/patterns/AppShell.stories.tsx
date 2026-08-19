@@ -113,7 +113,6 @@ const meta = {
       'billing.getOverview': PAST_DUE_OVERVIEW,
       'tags.list': { data: [] },
       'tags.listArchived': [],
-      'tags.listHierarchy': [],
       'statistics.getTagStats': { counts: {}, planCounts: {}, lastUsed: {} },
       'userSettings.get': PRESET_USER_SETTINGS.default,
     },
