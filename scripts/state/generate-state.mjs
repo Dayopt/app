@@ -37,6 +37,7 @@ const MARKER = {
 const LINE_CAP = 100;
 const QUEUE_MAX_ITEMS = 8;
 const DECISIONS_IN_STATE_MAX = 5;
+const ESCALATIONS_MAX_ITEMS = 8;
 
 /**
  * 制御文字（tab/改行は呼び出し側で別途処理済みの前提で除去対象に含む）を取り除く。
@@ -131,13 +132,20 @@ export function renderQueueList(queueIssues, maxItems = QUEUE_MAX_ITEMS) {
   return lines.join('\n');
 }
 
-export function renderEscalationsList(escalationIssues) {
+export function renderEscalationsList(escalationIssues, maxItems = Infinity) {
   if (!escalationIssues.length) {
     return '（type:discussion の open issue なし）';
   }
-  return escalationIssues
-    .map((issue) => `- [ ] [#${issue.number}](${issue.url}) ${sanitizeCell(issue.title, 80)}`)
-    .join('\n');
+  const shown = escalationIssues.slice(0, maxItems);
+  const lines = shown.map(
+    (issue) => `- [ ] [#${issue.number}](${issue.url}) ${sanitizeCell(issue.title, 80)}`,
+  );
+  if (escalationIssues.length > maxItems) {
+    lines.push(
+      `…他 ${escalationIssues.length - maxItems} 件は \`gh issue list --label type:discussion --state open\` で確認`,
+    );
+  }
+  return lines.join('\n');
 }
 
 export function renderDecisionsSection(decisionEntries, maxItems = DECISIONS_IN_STATE_MAX) {
@@ -164,7 +172,7 @@ export function renderDecisionsSection(decisionEntries, maxItems = DECISIONS_IN_
  */
 export function mergeDecisionsMd(existingContent, decisionEntries) {
   const header =
-    '# 決定ログ（append-only）\n\n判断が分かれた記録の全履歴。STATE.md §5 には直近 5 件だけを表示し、詳細はここへ追記する。手で行を消さない（`judgment:diverged` ラベルが gardening で外れても、ここの行は残す）。\n\n';
+    '# 決定ログ（append-only）\n\n判断が分かれた記録の全履歴。STATE.md §5 には直近 5 件だけを表示し、詳細はここへ追記する。手で行を消さない（`judgment:diverged` ラベルが gardening で外れても、ここの行は残す）。既存行の削除・変更は `pnpm docs:check`（decisions-append-only ガード）が機械的に拒否する。\n\n';
   const body = existingContent && existingContent.trim() ? existingContent : header;
   const existingNumbers = new Set([...body.matchAll(/\(#(\d+)\)/g)].map((m) => Number(m[1])));
   const toAppend = decisionEntries
@@ -252,14 +260,26 @@ export function renderStateMarkdown(existingContent, data, opts = {}) {
     renderDecisionsSection(data.decisionEntries),
   );
 
-  const lineCount = content.split('\n').length;
-  if (lineCount > LINE_CAP) {
-    // 追加の切り詰めが要る場合はキュー（§3）を最優先で削る。§2 進行中レーンと
-    // §4 要判断はブロッカー・判断待ちという重要度の高い情報のため切り詰め対象外にする。
+  // 100 行上限の超過は 2 段階で切り詰める。§2 進行中レーンは open PR 直列 1 本
+  // + レーン上限 3（orchestration.md §1日サイクル）で構造的に小さいため対象外にする。
+  // 第 1 段: キュー（§3）。優先度が最も低い（まだ着手していない）ため最初に削る。
+  if (content.split('\n').length > LINE_CAP) {
     content = replaceBetweenMarkers(
       content,
       MARKER.QUEUE,
       renderQueueList(data.queueIssues, Math.max(1, QUEUE_MAX_ITEMS - 4)),
+    );
+  }
+
+  // 第 2 段: 要判断（§4）。原則は切り詰め対象外だが、要判断だけで上限を超える
+  // ケース（判断待ちが溜まった朝）まで無条件で許すと「サイズ上限 100 行」という
+  // 上位の不変条件が破られる。footer で `gh issue list` への導線を残した上で切り詰める
+  // ——「情報を失わない」より「読める状態を保つ」を優先する。
+  if (content.split('\n').length > LINE_CAP) {
+    content = replaceBetweenMarkers(
+      content,
+      MARKER.ESCALATIONS,
+      renderEscalationsList(data.escalationIssues, ESCALATIONS_MAX_ITEMS),
     );
   }
 

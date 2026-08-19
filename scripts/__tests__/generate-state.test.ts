@@ -137,6 +137,32 @@ describe('renderEscalationsList', () => {
     ]);
     expect(result).toContain('- [ ] [#42]');
   });
+
+  it('maxItems を指定しなければ全件表示する（既定は切り詰めない）', () => {
+    const issues = Array.from({ length: 20 }, (_, i) => ({
+      number: i + 1,
+      title: `issue ${i + 1}`,
+      url: `https://github.com/o/r/issues/${i + 1}`,
+    }));
+    const result = renderEscalationsList(issues);
+    expect(result).toContain('#1');
+    expect(result).toContain('#20');
+    expect(result).not.toContain('他');
+  });
+
+  it('maxItems を超えた分は件数フッターで示し、issue 自体は落とさない', () => {
+    const issues = Array.from({ length: 12 }, (_, i) => ({
+      number: i + 1,
+      title: `issue ${i + 1}`,
+      url: `https://github.com/o/r/issues/${i + 1}`,
+    }));
+    const result = renderEscalationsList(issues, 8);
+    expect(result).toContain('#1');
+    expect(result).toContain('#8');
+    expect(result).not.toContain('#9');
+    expect(result).toContain('他 4 件');
+    expect(result).toContain('gh issue list --label type:discussion --state open');
+  });
 });
 
 describe('renderDecisionsSection', () => {
@@ -250,7 +276,7 @@ describe('renderStateMarkdown', () => {
     expect(result).toContain('生成基点 main@unknown');
   });
 
-  it('100 行を超える場合はキューを切り詰め、進行中レーン・要判断は削らない', () => {
+  it('100 行を超える場合、キューの切り詰め（第1段）だけで収まるなら要判断は削らない', () => {
     const manyQueue = Array.from({ length: 30 }, (_, i) => ({
       number: i + 1,
       title: `queue issue ${i + 1}`,
@@ -269,9 +295,31 @@ describe('renderStateMarkdown', () => {
     };
     const result = renderStateMarkdown('', data, { generatedAt: '2026-08-19' });
     expect(result.split('\n').length).toBeLessThanOrEqual(100);
-    // 要判断は切り詰め対象外 = 全件残る
+    // キュー切り詰め（第1段）だけで100行以内に収まるケースでは要判断は全件残る
     for (const issue of manyEscalations) {
       expect(result).toContain(`#${issue.number}`);
     }
+  });
+
+  it('要判断だけで上限を超える場合（第1段のキュー切り詰めだけでは足りない）は第2段で要判断も切り詰める', () => {
+    // キューを 0 件にしても、要判断だけで 100 行超になる分量を用意する
+    const manyEscalations = Array.from({ length: 100 }, (_, i) => ({
+      number: 200 + i,
+      title: `判断待ち issue ${i}`,
+      url: `https://github.com/o/r/issues/${200 + i}`,
+    }));
+    const data = {
+      prs: [],
+      queueIssues: [],
+      escalationIssues: manyEscalations,
+      decisionEntries: [],
+    };
+    const result = renderStateMarkdown('', data, { generatedAt: '2026-08-19' });
+    // 上位の不変条件（サイズ上限 100 行）は要判断の全件保持より優先される
+    expect(result.split('\n').length).toBeLessThanOrEqual(100);
+    // 切り詰められても、確認先への導線は残る（情報を失っても迷子にはしない）
+    expect(result).toContain('gh issue list --label type:discussion --state open');
+    // 冒頭の issue（優先度が高いと仮定できる並び順）は残る
+    expect(result).toContain('#200');
   });
 });

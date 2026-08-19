@@ -36,7 +36,7 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 - **起動時**: 指揮台セッションは最初に STATE.md と open issue を読み込む
 - **更新トリガー**: 進行中レーン（§2）・キュー（§3）・要判断（§4）・決定ログ（§5）は `pnpm state:generate` が GitHub の現状（open PR / `status:ready` / `type:discussion` / `judgment:diverged` ラベル）から機械生成する。lane は push-ready 報告前にこのコマンドを実行し、差分があれば自分の PR のコミットに含める（main への直接 push はしない — main は `PR + pnpm branch:finish` 経由のマージに限定されている）
 - **§1（北極星と今週の最優先）だけが手動更新**。指揮台は repo を書けないため、更新したい時は次に動く lane への指示（issue コメント + send_message）に含め、lane が通常の PR で編集する
-- **サイズ上限 100 行**。`pnpm state:generate` がキュー（§3）を優先的に切り詰め、決定ログ（§5）は直近 5 件のみ表示して全履歴を [docs/decisions.md](docs/decisions.md)（append-only）へ追い出す。進行中レーン（§2）と要判断（§4）はブロッカー・判断待ちという重要度から切り詰め対象外にする
+- **サイズ上限 100 行**。`pnpm state:generate` が 2 段階で切り詰める: 第 1 段はキュー（§3、優先度が最も低い）、それでも超えれば第 2 段で要判断（§4）も切り詰める（`gh issue list --label type:discussion --state open` への導線を残す）。進行中レーン（§2）は open PR 直列 1 本 + レーン上限 3（後述の 1 日サイクル）で構造的に小さいため対象外。決定ログ（§5）は直近 5 件のみ表示して全履歴を [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へ追い出す
 - **鮮度**: 冒頭見出しに生成時点の `main` short SHA（生成基点 main@xxxxxxxx）を刻む。これが現在の `origin/main` と一致しなければ、その差分の merge 分だけ盤面が古い（直列 merge モデルでは「STATE.md を含む PR が merge されるたび 1 手ずつ古くなる」のが常態であり、異常ではない）
 - **追従（update-branch）時の衝突は再生成で解決する**。STATE.md は生成物のため、§2〜§5 が conflict しても手 merge しない。`pnpm state:generate` を再実行すれば現在の main に基づく内容に置き換わる（`.claude/rules/orchestration.md` §追従とマージ順の采配 参照）
 

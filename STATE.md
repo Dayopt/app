@@ -1,4 +1,4 @@
-# STATE.md（最終更新: 2026-08-19 / 生成基点 main@cf598114 / pnpm state:generate）
+# STATE.md（最終更新: 2026-08-19 / 生成基点 main@4431649e / pnpm state:generate）
 
 > STATE.md は判断のための現在地の地図であり、正本ではない。正本は GitHub issue と open PR。
 > §2〜§5 は `pnpm state:generate` が機械生成する（手で編集しても次回生成で上書きされる）。
@@ -14,9 +14,9 @@
 
 <!-- STATE:GENERATED:LANES:START -->
 
-| PR                                                                                                                       | Issue                                                                       | branch                                    | 状態  | ブロッカー |
-| ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------- | ----- | ---------- |
-| [#2222](https://github.com/Dayopt/dayopt/pull/2222) feat(calendar): analysisをカレンダー右パネルから/reportフルページへ… | #2190, #2191, #2192, #2193, #2194, #2195, #2196, #2210, #2211, #2212, #2217 | `claude/workspace-shell-restructure-2181` | draft | draft      |
+| PR                                                                                                                | Issue        | branch                        | 状態  | ブロッカー |
+| ----------------------------------------------------------------------------------------------------------------- | ------------ | ----------------------------- | ----- | ---------- |
+| [#2225](https://github.com/Dayopt/dayopt/pull/2225) feat(ops): 運用基盤にSTATE.mdを導入しレーン連絡方式を改訂する | #2220, #2224 | `claude/conductor-infra-2224` | draft | draft      |
 
 <!-- STATE:GENERATED:LANES:END -->
 
@@ -24,7 +24,9 @@
 
 <!-- STATE:GENERATED:QUEUE:START -->
 
-1. [#2163](https://github.com/Dayopt/dayopt/issues/2163) chore(build): bundle budget の preview 補正を成分分解して再較正する（Sentry 分と Supaba…
+1. [#2218](https://github.com/Dayopt/dayopt/issues/2218) chore(tags): 残余のtag系依存を撤去する（Step 5完了後）
+2. [#2215](https://github.com/Dayopt/dayopt/issues/2215) feat(timeblock): 予定/記録の Inspector をポップアップから右サイドパネルへ変更する
+3. [#2163](https://github.com/Dayopt/dayopt/issues/2163) chore(build): bundle budget の preview 補正を成分分解して再較正する（Sentry 分と Supaba…
 
 <!-- STATE:GENERATED:QUEUE:END -->
 
@@ -41,8 +43,8 @@
 <!-- STATE:GENERATED:DECISIONS:START -->
 
 - 2026-08-19: [#2181](https://github.com/Dayopt/dayopt/issues/2181) epic: 分析をフルページへ戻し URL を /calendar と /report に統一する（Notion 型 Sidebar タブ）
+- 2026-08-19: [#2195](https://github.com/Dayopt/dayopt/issues/2195) refactor(routing): 旧 route と右サイドパネルの残骸を削除する
 - 2026-08-18: [#2205](https://github.com/Dayopt/dayopt/issues/2205) chore(ops): Claude Routines を使った夜間自律運用を段階導入する案を検討する
-- 2026-08-18: [#2195](https://github.com/Dayopt/dayopt/issues/2195) refactor(routing): 旧 route と右サイドパネルの残骸を削除する
 
 全履歴: [docs/decisions.md](docs/decisions.md)
 <!-- STATE:GENERATED:DECISIONS:END -->

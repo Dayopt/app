@@ -2,11 +2,12 @@
 /**
  * docs-guard（orchestrator）
  *
- * docs/ の機械的ガードを4 checker で実行する。
- *  - link-check          : 相対リンク切れ
- *  - frontmatter-check   : path別metadata / code path / Project lifecycle
- *  - naming-check        : kebab-case 命名規約
- *  - append-only-guard   : 各ドメイン log/ の凍結契約
+ * docs/ の機械的ガードを5 checker で実行する。
+ *  - link-check              : 相対リンク切れ
+ *  - frontmatter-check       : path別metadata / code path / Project lifecycle
+ *  - naming-check            : kebab-case 命名規約
+ *  - append-only-guard       : 各ドメイン log/ の凍結契約
+ *  - decisions-append-only   : docs/decisions.md の append-only 契約
  *
  * Usage:
  *   tsx scripts/docs-guard/index.ts
@@ -15,6 +16,10 @@
  */
 
 import { reportAppendOnlyGuard, runAppendOnlyGuard } from './checks/append-only-guard.ts';
+import {
+  reportDecisionsAppendOnlyGuard,
+  runDecisionsAppendOnlyGuard,
+} from './checks/decisions-append-only.ts';
 import { reportFrontmatterCheck, runFrontmatterCheck } from './checks/frontmatter-check.ts';
 import { reportLinkCheck, runLinkCheck } from './checks/link-check.ts';
 import { reportNamingCheck, runNamingCheck } from './checks/naming-check.ts';
@@ -36,9 +41,12 @@ async function main(): Promise<void> {
   const appendOnlyViolations = runAppendOnlyGuard();
   const appendOnlyOk = reportAppendOnlyGuard(appendOnlyViolations);
 
+  const decisionsAppendOnlyViolations = runDecisionsAppendOnlyGuard();
+  const decisionsAppendOnlyOk = reportDecisionsAppendOnlyGuard(decisionsAppendOnlyViolations);
+
   console.log('\n' + '='.repeat(60));
 
-  const ok = linkOk && frontmatterOk && namingOk && appendOnlyOk;
+  const ok = linkOk && frontmatterOk && namingOk && appendOnlyOk && decisionsAppendOnlyOk;
 
   if (ok) {
     console.log(`${colors.green}✅ docs-guard: 全チェック pass${colors.reset}`);
