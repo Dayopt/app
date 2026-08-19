@@ -342,3 +342,58 @@ describe('proxy legacy workspace redirects', () => {
     );
   });
 });
+
+// workspace-shell-restructure #2181: /calendar?view= の範囲外検証を edge で行う。
+// page.tsx の notFound()（searchParams 依存）は静的シェルの prerender と競合し
+// status code に反映されないため（x-nextjs-prerender: 1 で 200 が返る、2026-08-19
+// 実測。dynamic = 'force-dynamic' / connection() いずれでも解消せず）、
+// 「範囲外 view は 404」の契約を redirect と同じ edge 層で守る。
+describe('proxy /calendar view 範囲外検証', () => {
+  it('view=8day（範囲外）は edge で 404 を返す', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(
+      new NextRequest('https://app.dayopt.app/ja/calendar?view=8day&date=2026-04-20'),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('view=week（正当）は素通しして通常の認可判定へ渡る', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar?view=week'));
+
+    // 404 にならず、未認証 protected-path として login へ送られる
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar%3Fview%3Dweek',
+    );
+  });
+
+  it('view 省略時は素通しして通常の認可判定へ渡る（page.tsx の既定 week フォールバック対象）', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).not.toBe(404);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar',
+    );
+  });
+
+  // risk-reviewer 指摘（2026-08-19）: URLSearchParams.get は同一キー重複時に先頭値しか
+  // 見ないため、getAll でないと後続の不正値が素通りする。
+  it.each([
+    ['正当な値の後に範囲外', 'https://app.dayopt.app/calendar?view=week&view=8day'],
+    ['範囲外の後に正当な値', 'https://app.dayopt.app/calendar?view=8day&view=week'],
+  ])('view が重複し、うち1つでも範囲外なら404にする（%s）', async (_label, url) => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(404);
+  });
+});

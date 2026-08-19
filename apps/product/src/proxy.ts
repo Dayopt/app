@@ -136,6 +136,13 @@ function redirectWithCsp(url: URL, contentSecurityPolicy: string): NextResponse 
   return applyCsp(NextResponse.redirect(url), contentSecurityPolicy);
 }
 
+function notFoundWithCsp(contentSecurityPolicy: string): NextResponse {
+  return applyCsp(
+    new NextResponse(null, { status: 404, headers: { 'cache-control': 'no-store' } }),
+    contentSecurityPolicy,
+  );
+}
+
 // 言語プレフィックスを除いたパスを取得
 // as-needed設定: デフォルト言語(en)はプレフィックスなし
 function getPathWithoutLocale(pathname: string): string {
@@ -216,6 +223,50 @@ function resolveLegacyWorkspaceRedirect(
   return { pathname: '/calendar', search: params.toString() };
 }
 
+/**
+ * `/calendar?view=` の許容トークン。`_server/calendar-page-params.ts` の
+ * `parseCalendarViewParam` と意味的に同一だが、edge runtime（proxy.ts）は
+ * `next-intl/server` 等 node 依存を持つそちらを import できないため定数を複製する。
+ * drift 検出は `calendar-page-params.test.ts` の parity test が担う。
+ *
+ * 完全一致の Set にする（regex `$` に "末尾改行を許容する" 懸念が push 前レビューで
+ * 上がったが、JS の `$` は /m フラグ無しでは文字列末尾を厳密に指すため実害は無いと
+ * 実測で反証済み。Set 化自体は edge が唯一の enforcement になった以上、より保守的な
+ * 完全一致へ寄せる判断として維持する）。
+ */
+export const VALID_CALENDAR_VIEW_TOKENS = new Set([
+  'day',
+  'week',
+  '2day',
+  '3day',
+  '4day',
+  '5day',
+  '6day',
+  '7day',
+]);
+
+/**
+ * `/calendar?view=` が範囲外の場合、page.tsx の notFound() を待たず edge で 404 を返す。
+ *
+ * page 側の notFound()（searchParams 依存）は静的シェルの prerender と競合し、
+ * status code に反映されない（`x-nextjs-prerender: 1` で 200 が返る、2026-08-19 実測。
+ * `dynamic = 'force-dynamic'` / `connection()` のいずれでも解消せず、page 内では
+ * 構造的に解決不能と判断）。redirect 群と同じ edge 層で完結させることで、
+ * 「範囲外 view は 404」の契約を守る。
+ *
+ * `getAll` を使う: `?view=week&view=8day` のように同一キーが重複すると
+ * `URLSearchParams.get` は先頭値しか見ず、後続の不正値を素通しさせてしまう。
+ */
+function resolveCalendarViewNotFound(
+  pathWithoutLocale: string,
+  searchParams: URLSearchParams,
+): boolean {
+  if (pathWithoutLocale !== '/calendar') return false;
+  const values = searchParams.getAll('view');
+  if (values.length === 0) return false;
+  return values.some((value) => !VALID_CALENDAR_VIEW_TOKENS.has(value));
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
@@ -289,6 +340,13 @@ export async function proxy(request: NextRequest) {
     const target = new URL(getLocalizedPath(legacyRedirect.pathname, currentLocale), request.url);
     target.search = legacyRedirect.search;
     return redirectWithCsp(target, contentSecurityPolicy);
+  }
+
+  // /calendar?view= の範囲外検証（page.tsx の notFound() が prerender シェルの
+  // status に効かないため edge で完結させる。resolveCalendarViewNotFound 参照）。
+  // 認証状態を問わないので legacy redirect と同じ位置、auth 判定より前で返す。
+  if (resolveCalendarViewNotFound(pathWithoutLocale, request.nextUrl.searchParams)) {
+    return notFoundWithCsp(contentSecurityPolicy);
   }
 
   const isProtectedPath = isProtectedProductPath(pathWithoutLocale);
