@@ -10,7 +10,7 @@ import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 
 import { aggregateMonthlyTrend, getMonthlyStartDate, transformEstimationAccuracy } from '../domain';
 
-import { buildActivityPL } from './statistics-activity-axis-builders';
+import { buildActivityPL, buildSegmentTotals } from './statistics-activity-axis-builders';
 import {
   fetchActivitiesById,
   fetchCategoriesById,
@@ -49,6 +49,28 @@ export interface TimePLInput {
   prevVisibleDateKeys?: readonly string[] | undefined;
   wakeHour: number;
   sleepHour: number;
+}
+
+/** セグメント別合計の 1 行。`total` / `share` を持たない（#2162 §6-3）。 */
+export interface SegmentTotalRow {
+  segmentId: string;
+  segmentName: string;
+  budgetMinutes: number;
+  actualMinutes: number;
+}
+
+export interface SegmentTotalsInput {
+  startDate: string;
+  endDate: string;
+  prevStart?: string | undefined;
+  prevEnd?: string | undefined;
+  /** セグメント定義（features/review が所有。timeblock は Layer 1 のため自分では取得しない） */
+  segments: ReadonlyArray<{ id: string; name: string; activityIds: readonly string[] }>;
+}
+
+export interface SegmentTotalsResponse {
+  current: SegmentTotalRow[];
+  previous: SegmentTotalRow[];
 }
 
 export interface StatsPageDataInput {
@@ -173,6 +195,40 @@ export class StatisticsSummaryService {
     });
 
     return { activities, prevActivities, availableMinutes };
+  }
+
+  /**
+   * セグメント別の予実合計 + 直前期間との比較（#2181 Step 5）。
+   *
+   * セグメント定義（id/name/activityIds）は `features/review`（Layer 2）の
+   * `segments` テーブルが持つため、ここでは受け取るだけで自分では取得しない
+   * （`features/timeblock` は Layer 1 なので Layer 2 を参照できない、DAG）。
+   *
+   * `total` / `share` を返さない（#2162 §6-3 の表示規律。呼び出し側で合算しないこと）。
+   */
+  async getSegmentTotals(
+    userId: string,
+    input: SegmentTotalsInput,
+  ): Promise<SegmentTotalsResponse> {
+    const { startDate, endDate, prevStart, prevEnd, segments } = input;
+
+    const [plans, records, activitiesById] = await Promise.all([
+      fetchPlans(this.supabase, userId, { startDate, endDate }),
+      fetchRecords(this.supabase, userId, { startDate, endDate }),
+      fetchActivitiesById(this.supabase, userId),
+    ]);
+    const current = buildSegmentTotals(plans, records, activitiesById, segments);
+
+    let previous: SegmentTotalsResponse['previous'] = [];
+    if (prevStart && prevEnd) {
+      const [prevPlans, prevRecords] = await Promise.all([
+        fetchPlans(this.supabase, userId, { startDate: prevStart, endDate: prevEnd }),
+        fetchRecords(this.supabase, userId, { startDate: prevStart, endDate: prevEnd }),
+      ]);
+      previous = buildSegmentTotals(prevPlans, prevRecords, activitiesById, segments);
+    }
+
+    return { current, previous };
   }
 
   /** `get_stats_page_data` 相当。Review panel 用データを一括構築する。 */

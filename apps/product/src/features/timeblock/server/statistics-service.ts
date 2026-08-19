@@ -24,7 +24,11 @@ import type { DateRangeInput } from './statistics-fetchers';
 import { StatisticsGeneralService } from './statistics-general-service';
 import type { BlankRateInput } from './statistics-kpi-service';
 import { StatisticsKpiService } from './statistics-kpi-service';
-import type { StatsPageDataInput, TimePLInput } from './statistics-summary-service';
+import type {
+  SegmentTotalsInput,
+  StatsPageDataInput,
+  TimePLInput,
+} from './statistics-summary-service';
 import { StatisticsSummaryService } from './statistics-summary-service';
 import type { TagDashboardInput } from './statistics-tag-dashboard-service';
 import { StatisticsTagDashboardService } from './statistics-tag-dashboard-service';
@@ -131,6 +135,11 @@ export class StatisticsService {
   /** `get_stats_page_data` 相当。Review panel 用データを一括構築する。 */
   async getStatsPageData(userId: string, input: StatsPageDataInput) {
     return this.summaryService.getStatsPageData(userId, input);
+  }
+
+  /** セグメント別の予実合計 + 直前期間との比較（#2181 Step 5）。 */
+  async getSegmentTotals(userId: string, input: SegmentTotalsInput) {
+    return this.summaryService.getSegmentTotals(userId, input);
   }
 
   // ---------------------------------------------------------------------------

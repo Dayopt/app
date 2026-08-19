@@ -240,18 +240,17 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // TODO(#2181 Step 4): panel=review は /report へ redirect される（Step 2）。
-  // ここのDOM assertはCalendarReviewPanel（旧shell）を前提にしており、/report
-  // フルページ実装（Step 4）に合わせて更新する。
-  test('記録した実績が Review panel の Time P/L に反映される', async ({ page }) => {
-    await page.goto(`/ja/day?date=${offsetDateParam(-1)}&panel=review`);
+  test('記録した実績が /report の Time P/L に反映される', async ({ page }) => {
+    // 旧 /day?panel=review は proxy.ts の redirect で /report?range=day へ写る（Step 2）。
+    // #2181 Step 4 で /report がフルページ化されたので直接開く。
+    await page.goto(`/ja/report?date=${offsetDateParam(-1)}&range=day`);
 
-    // CalendarReviewPanel の section は aria-label のみ持ち、暗黙 role="region" になる
-    const reviewPanel = page.getByRole('region', { name: '振り返り' });
-    await expect(reviewPanel).toBeVisible({ timeout: 10_000 });
+    // ReportBody の「予実の傾向」section は aria-label のみ持ち、暗黙 role="region" になる
+    const trendSection = page.getByRole('region', { name: 'Time P/L' });
+    await expect(trendSection).toBeVisible({ timeout: 10_000 });
 
-    // TimePLRow はアクティビティ名を含む button（day view は単日スコープなので明日の Plan は混入しない）
-    const activityRow = reviewPanel.getByRole('button', { name: new RegExp(ACTIVITY_NAME) });
+    // TimePLRow はアクティビティ名を含む button（day range は単日スコープなので明日の Plan は混入しない）
+    const activityRow = trendSection.getByRole('button', { name: new RegExp(ACTIVITY_NAME) });
     await expect(activityRow).toBeVisible({ timeout: 10_000 });
     await expect(activityRow).toContainText('1h');
   });

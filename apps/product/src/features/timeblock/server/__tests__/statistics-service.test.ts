@@ -687,3 +687,86 @@ describe('StatisticsService.getTagDashboard', () => {
     expect(result.records).toHaveLength(0);
   });
 });
+
+describe('StatisticsService.getSegmentTotals', () => {
+  it('セグメント定義（activityIds）に含まれる予実だけを合計し、直前期間と比較できる形で返す', async () => {
+    const { service } = createService({
+      records: createChainableMock([
+        {
+          id: 'record-1',
+          tag_id: null,
+          activity_id: 'activity-1',
+          plan_id: null,
+          start_at: '2026-01-15T09:00:00Z',
+          end_at: '2026-01-15T10:00:00Z',
+        },
+        {
+          id: 'record-other',
+          tag_id: null,
+          activity_id: 'activity-2',
+          plan_id: null,
+          start_at: '2026-01-15T11:00:00Z',
+          end_at: '2026-01-15T12:00:00Z',
+        },
+      ]),
+      plans: createChainableMock([]),
+      activities: createChainableMock([
+        { id: 'activity-1', name: 'Deep Work', category_id: null },
+        { id: 'activity-2', name: 'Admin', category_id: null },
+      ]),
+    });
+
+    const result = await service.getSegmentTotals(USER_ID, {
+      startDate: '2026-01-15T00:00:00.000Z',
+      endDate: '2026-01-15T23:59:59.999Z',
+      segments: [{ id: 'segment-1', name: '深い仕事', activityIds: ['activity-1'] }],
+    });
+
+    // activity-2（segment 非メンバー）は集計に含まれない
+    expect(result.current).toEqual([
+      { segmentId: 'segment-1', segmentName: '深い仕事', budgetMinutes: 0, actualMinutes: 60 },
+    ]);
+    // total / share フィールドを持たない（#2162 §6-3 の表示規律）
+    expect(result.current[0]).not.toHaveProperty('total');
+    expect(result.current[0]).not.toHaveProperty('share');
+    // prevStart/prevEnd 未指定なので previous は空
+    expect(result.previous).toEqual([]);
+  });
+
+  it('prevStart/prevEnd を指定すると直前期間分の fetch も行い previous を埋める', async () => {
+    // createChainableMock は日付フィルタを解釈せず全件を返すため、ここでは
+    // 「prevStart/prevEnd 指定時に previous が空でなくなる（2 回目の fetch が
+    // 実際に行われ buildSegmentTotals へ渡る）」という配線を検証する。
+    // 期間ごとの正確な分離は buildSegmentTotals 自身の unit test（純関数、
+    // statistics-activity-axis-builders.test.ts）が担う。
+    const { service } = createService({
+      records: createChainableMock([
+        {
+          id: 'record-1',
+          tag_id: null,
+          activity_id: 'activity-1',
+          plan_id: null,
+          start_at: '2026-01-15T09:00:00Z',
+          end_at: '2026-01-15T10:00:00Z',
+        },
+      ]),
+      plans: createChainableMock([]),
+      activities: createChainableMock([{ id: 'activity-1', name: 'Deep Work', category_id: null }]),
+    });
+
+    const result = await service.getSegmentTotals(USER_ID, {
+      startDate: '2026-01-15T00:00:00.000Z',
+      endDate: '2026-01-15T23:59:59.999Z',
+      prevStart: '2026-01-08T00:00:00.000Z',
+      prevEnd: '2026-01-08T23:59:59.999Z',
+      segments: [{ id: 'segment-1', name: '深い仕事', activityIds: ['activity-1'] }],
+    });
+
+    expect(result.current).toEqual([
+      { segmentId: 'segment-1', segmentName: '深い仕事', budgetMinutes: 0, actualMinutes: 60 },
+    ]);
+    expect(result.previous).toEqual([
+      { segmentId: 'segment-1', segmentName: '深い仕事', budgetMinutes: 0, actualMinutes: 60 },
+    ]);
+  });
+});

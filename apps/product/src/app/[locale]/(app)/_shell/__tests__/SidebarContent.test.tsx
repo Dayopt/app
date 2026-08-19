@@ -25,6 +25,10 @@ vi.mock('@/components/ui/inputs/mini-calendar', () => ({
   MiniCalendar: () => <div data-testid="mini-calendar" />,
 }));
 
+vi.mock('@/features/review', () => ({
+  SegmentList: () => <div data-testid="segment-list" />,
+}));
+
 vi.mock('@/lib/hooks/useTheme', () => ({
   useTheme: () => ({ resolvedTheme: 'light', setTheme: vi.fn() }),
 }));
@@ -43,13 +47,14 @@ describe('SidebarContent', () => {
     expect(screen.getByTestId('activity-filter-list')).toBeInTheDocument();
   });
 
-  it('renders ReportSidebar (v1 placeholder, no activity filter) on /report', () => {
+  it('renders ReportSidebar（セグメント一覧、calendar の view-switcher/activity-filter は出さない）on /report', () => {
     pathnameMock.mockReturnValue('/report');
 
     render(<SidebarContent />);
 
     expect(screen.queryByTestId('view-switcher-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('activity-filter-list')).not.toBeInTheDocument();
+    expect(screen.getByTestId('segment-list')).toBeInTheDocument();
   });
 
   it('always renders the WorkspaceTabs with both tabs', () => {
