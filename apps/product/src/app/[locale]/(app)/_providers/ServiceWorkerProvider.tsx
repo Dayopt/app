@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { InstallBanner } from '@/components/shell/InstallBanner';
 import { IOSInstallGuide } from '@/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { usePWAInit } from '@/lib/hooks/usePWA';
 import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 /**
  * Service Worker プロバイダー
@@ -12,8 +15,16 @@ import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
  * Service Workerの登録・PWAインストール促進・iOS対応を提供
  */
 export function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
-  // Service Worker 自体の登録（sw.js が skipWaiting で自動更新するため、更新通知 UI は持たない）
-  useServiceWorker();
+  // sw.js は install 時に skipWaiting で自動更新するが、開きっぱなしの画面には
+  // 反映されない（#2232）。updateAvailable を shell store へ同期し、実際のバナー
+  // 表示は useAppInlineBanner（app layout の flex column 内）に委ねる — ここ
+  // （children より上位）で直接描画すると root レイアウトの高さ計算を崩しうるため
+  const { updateAvailable } = useServiceWorker();
+  const setServiceWorkerUpdateAvailable = useShellStore.use.setServiceWorkerUpdateAvailable();
+  useEffect(() => {
+    setServiceWorkerUpdateAvailable(updateAvailable);
+  }, [updateAvailable, setServiceWorkerUpdateAvailable]);
+
   const { shouldShowBanner, promptInstall, dismissBanner, shouldShowIOSGuide, dismissIOSGuide } =
     useInstallPrompt();
 

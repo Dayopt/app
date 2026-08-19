@@ -42,11 +42,13 @@ export function SidebarSection({
       <div
         className={cn(
           'group/section flex h-8 w-full items-center rounded-lg',
-          collapsible && 'hover:bg-state-hover cursor-pointer transition-colors duration-150',
+          // hover で行全体の背景は変えない。欲しいのはアクションアイコン（chevron / action slot）
+          // の表示だけ（クリック対象も分離: 見出しテキスト=開閉トグル、右側アイコン=各アクション）
+          collapsible && 'cursor-pointer',
         )}
         onClick={collapsible ? onToggleCollapse : undefined}
       >
-        <h3 className="text-muted-foreground ml-2 min-w-0 truncate text-sm font-medium">{title}</h3>
+        <h3 className="text-muted-foreground ml-2 min-w-0 truncate text-sm font-normal">{title}</h3>
         {collapsible && (
           // カテゴリー見出し（CategoryHeader）と同じ位置: タイトルの右に置く独立ボタン。
           // 行クリックへ波及させない（行自体も onToggleCollapse を持つため二重発火しうる）

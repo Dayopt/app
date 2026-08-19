@@ -407,8 +407,10 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             rightSlot={rightSlot}
           />
 
-          {/* デスクトップ: 現行AppHeader（変更なし） */}
-          <div className="hidden md:block">
+          {/* デスクトップ: ナビゲーション行。下の日付ヘッダー行（CalendarDateHeader）と
+              背景を揃え、間に余白・境界線を挟まない — 2 行を「1 つの太いヘッダー」として
+              視覚的に一体化する（#2233-2 案B。境界線は日付ヘッダー行の下端 1 本だけに絞る） */}
+          <div className="bg-background hidden md:block">
             <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
               <div className="flex items-center gap-2">
                 <DateRangeDisplay

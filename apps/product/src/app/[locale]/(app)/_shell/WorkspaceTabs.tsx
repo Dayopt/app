@@ -29,19 +29,21 @@ export function WorkspaceTabs() {
   const reportHref = date ? `/report?date=${date}` : '/report';
 
   return (
-    <div className="flex items-center gap-1 px-2 py-2" role="tablist">
-      <TabButton
-        href={calendarHref}
-        label={t('sidebar.pageNav.calendar')}
-        icon={<CalendarDays className="size-4" />}
-        active={currentTab === 'calendar'}
-      />
-      <TabButton
-        href={reportHref}
-        label={t('sidebar.pageNav.report')}
-        icon={<BarChart3 className="size-4" />}
-        active={currentTab === 'report'}
-      />
+    <div className="px-2 py-2">
+      <div className="bg-container flex items-center gap-1 rounded-lg p-1" role="tablist">
+        <TabButton
+          href={calendarHref}
+          label={t('sidebar.pageNav.calendar')}
+          icon={<CalendarDays className="size-4" />}
+          active={currentTab === 'calendar'}
+        />
+        <TabButton
+          href={reportHref}
+          label={t('sidebar.pageNav.report')}
+          icon={<BarChart3 className="size-4" />}
+          active={currentTab === 'report'}
+        />
+      </div>
     </div>
   );
 }
@@ -65,8 +67,8 @@ function TabButton({
       className={cn(
         'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-normal transition-colors duration-150',
         active
-          ? 'bg-state-selected text-foreground'
-          : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
+          ? 'bg-card text-foreground shadow-sm'
+          : 'text-muted-foreground hover:text-foreground',
       )}
     >
       {icon}

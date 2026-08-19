@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 
@@ -27,14 +28,16 @@ interface InlineBannerState {
 /**
  * InlineBanner の app-level composition フック
  *
- * feature 層の billing 状態（past_due）を合成する。
+ * feature 層の billing 状態（past_due）と Service Worker 更新状態を合成する。
  *
  * 優先度（高→低）:
  * 1. 決済エラー（Pro失効リスク）
+ * 2. Service Worker 更新（#2232、開きっぱなしの画面が旧シェルのまま残る）
  */
 export function useAppInlineBanner(): InlineBannerState {
   const t = useTranslations();
   const [billingActionClosed, setBillingActionClosed] = useState(false);
+  const serviceWorkerUpdateAvailable = useShellStore.use.serviceWorkerUpdateAvailable();
   const {
     begin: beginPortalAttempt,
     isLocked: isPortalAttemptLocked,
@@ -116,6 +119,27 @@ export function useAppInlineBanner(): InlineBannerState {
       };
     }
 
+    // Priority 2: Service Worker 更新（自動リロードはしない。編集中データの喪失を
+    // 避けるため、ユーザーの明示操作でのみ反映する）
+    if (serviceWorkerUpdateAvailable) {
+      return {
+        visible: true,
+        message: t('common.inlineBanner.updateAvailable'),
+        action: {
+          label: t('common.inlineBanner.reload'),
+          onClick: () => window.location.reload(),
+        },
+      };
+    }
+
     return { visible: false, message: '' };
-  }, [beginPortalAttempt, billingActionClosed, createPortal, isPastDue, isPortalAttemptLocked, t]);
+  }, [
+    beginPortalAttempt,
+    billingActionClosed,
+    createPortal,
+    isPastDue,
+    isPortalAttemptLocked,
+    serviceWorkerUpdateAvailable,
+    t,
+  ]);
 }
