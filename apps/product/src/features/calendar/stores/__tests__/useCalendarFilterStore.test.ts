@@ -301,7 +301,7 @@ describe('useCalendarFilterStore', () => {
       expect(useCalendarFilterStore.getState().getCategoryVisibility([])).toBe('none');
     });
 
-    it('matchesActivityFilter: アクティビティなしアイテムは showNoActivity（既定 true）に従う', () => {
+    it('matchesActivityFilter: アクティビティ未設定ブロックは常に表示される', () => {
       expect(useCalendarFilterStore.getState().matchesActivityFilter(null)).toBe(true);
     });
 

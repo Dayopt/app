@@ -1,5 +1,5 @@
 /**
- * Tag Service Unit Tests — 取得系（list / getById）
+ * Tag Service Unit Tests — 取得系（list）
  *
  * TagServiceのビジネスロジックをモックを使用してテスト
  */
@@ -17,11 +17,7 @@ vi.mock('@/lib/supabase/oauth', () => ({
 }));
 
 import { createTagService, TagService, TagServiceError } from '../tag-service';
-import {
-  setupMockQuery,
-  setupMockQueryError,
-  setupMockSingleQuery,
-} from './tag-service-test-helpers';
+import { setupMockQuery, setupMockQueryError } from './tag-service-test-helpers';
 
 describe('TagService', () => {
   let mockSupabase: ReturnType<typeof createMockSupabase>;
@@ -198,48 +194,6 @@ describe('TagService', () => {
       await service.listWithArchived({ userId });
 
       expect(warn).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getById', () => {
-    it('should return tag by id', async () => {
-      const mockTag = { id: 'tag-1', name: 'Tag 1', user_id: userId };
-
-      const mockQuery = setupMockSingleQuery(mockSupabase.from, mockTag);
-
-      const result = await service.getById({ userId, tagId: 'tag-1' });
-
-      expect(result).toMatchObject(mockTag);
-      expect(mockQuery.eq).toHaveBeenCalledWith('is_active', true);
-    });
-
-    it('should allow inactive tag lookup only when explicitly requested', async () => {
-      const mockTag = { id: 'tag-1', name: 'Tag 1', user_id: userId, is_active: false };
-
-      const mockQuery = setupMockSingleQuery(mockSupabase.from, mockTag);
-
-      const result = await service.getById({
-        userId,
-        tagId: 'tag-1',
-        includeInactive: true,
-      });
-
-      expect(result).toMatchObject(mockTag);
-      expect(mockQuery.eq).not.toHaveBeenCalledWith('is_active', true);
-    });
-
-    it('should throw NOT_FOUND when tag does not exist', async () => {
-      setupMockSingleQuery(mockSupabase.from, null);
-
-      await expect(service.getById({ userId, tagId: 'non-existent' })).rejects.toThrow(
-        TagServiceError,
-      );
-
-      try {
-        await service.getById({ userId, tagId: 'non-existent' });
-      } catch (error) {
-        expect((error as TagServiceError).code).toBe('NOT_FOUND');
-      }
     });
   });
 });
