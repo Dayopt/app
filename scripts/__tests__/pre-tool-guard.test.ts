@@ -34,11 +34,16 @@ const AGENT_REF = `op://agent/supabase/SUPABASE_ACCESS_TOKEN`;
 
 type Decision = 'block' | 'allow';
 
-function runGuard(input: Record<string, unknown>, cwd: string = rootDir): Decision {
+function runGuard(
+  input: Record<string, unknown>,
+  cwd: string = rootDir,
+  env?: Record<string, string>,
+): Decision {
   const result = spawnSync('bash', [guardPath], {
     cwd,
     encoding: 'utf8',
     input: JSON.stringify(input),
+    env: env ? { ...process.env, ...env } : process.env,
   });
   return result.status === 2 ? 'block' : 'allow';
 }
@@ -675,5 +680,159 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
     ['指揮台への連絡', 'mcp__ccd_session_mgmt__send_message'],
   ])('worktree でも他の tool は通す: %s', (_label, toolName) => {
     expect(runGuard(mcp(toolName), worktreeDir)).toBe('allow');
+  });
+});
+
+// night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の時だけ
+// 有効になる allowlist。denylist ではなく allowlist にした理由は
+// .claude/rules/workflow.md §同型指摘の打ち切り「denylist をやめて allowlist にする」。
+// 危険側を先に列挙してから許可側を書く（file 冒頭コメントの教訓）。
+describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
+  const NIGHT_WATCH_ENV = { DAYOPT_NIGHT_WATCH: '1' };
+  // force-push の文字列自体が guard の別ルールに引っかかるため、リテラルで
+  // 埋め込まず組み立てる（file 冒頭 27-30 行目と同じ回避）。
+  const FORCE_FLAG = `--for${''}ce`;
+
+  describe('env var が無い通常レーンには一切影響しない', () => {
+    it('git push はそのまま通る（既存挙動）', () => {
+      expect(runGuard(bash('git push origin main'))).toBe('allow');
+    });
+
+    it('allowlist に無い任意コマンドも通る（既存挙動）', () => {
+      expect(runGuard(bash('curl https://example.com'))).toBe('allow');
+    });
+  });
+
+  describe('許可形（night-watch checklist が実行する形。完全一致 or positive flag allowlist）', () => {
+    it.each([
+      ['docs:check', 'pnpm docs:check'],
+      ['docs:coverage', 'pnpm docs:coverage'],
+      ['quality:deadcode:ci', 'pnpm quality:deadcode:ci'],
+      [
+        'dependabot alerts (GET)',
+        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
+      ],
+      ['token permissions self-check (GET)', 'gh api repos/Dayopt/dayopt --jq .permissions'],
+      ['gh issue create', 'gh issue create --title x --body y --label type:chore'],
+      ['gh issue comment', 'gh issue comment 2209 --body hello'],
+      ['gh issue list', 'gh issue list --state open'],
+      ['gh issue view', 'gh issue view 2209'],
+      [
+        'gh search issues (dedup検索)',
+        'gh search issues --repo Dayopt/dayopt --state open --search test',
+      ],
+      ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
+    ])('%s は通す', (_label, command) => {
+      expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
+    });
+  });
+
+  describe('拒否形（敵対的）', () => {
+    it.each([
+      ['git push', 'git push origin main'],
+      ['git commit', 'git commit -m x'],
+      ['git merge', 'git merge origin/main'],
+      ['gh pr create', 'gh pr create --title x --body y'],
+      ['gh pr merge', 'gh pr merge 1 --merge'],
+      ['gh pr ready', 'gh pr ready 1'],
+      ['gh pr edit', 'gh pr edit 1 --title x'],
+      ['gh issue edit（ラベル変更）', 'gh issue edit 1 --add-label priority:p0'],
+      ['gh issue close', 'gh issue close 1'],
+      ['gh issue delete', 'gh issue delete 1'],
+      ['gh release create', 'gh release create v1.0.0'],
+      ['gh workflow run', 'gh workflow run production-config-audit.yml'],
+      [
+        'gh api dependabot alerts に -X POST を付ける迂回',
+        'gh api repos/Dayopt/dayopt/dependabot/alerts?state=open -X POST',
+      ],
+      [
+        'gh api dependabot alerts に --method PUT を付ける迂回',
+        'gh api repos/Dayopt/dayopt/dependabot/alerts --method PUT',
+      ],
+      ['gh api graphql mutation', "gh api graphql -f query='mutation{}'"],
+      ['allowlist に無い任意コマンド', 'curl https://evil.example'],
+      ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
+      ['redirect による追記（>>）', 'echo x >> baseline.json'],
+      ['stdin redirect（<）', 'gh issue create < /tmp/body.txt'],
+      // read-only git は checklist が実際には使わないため allowlist から撤去した
+      // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
+      // git diff/show を残すと --output= 迂回の温床になる）。
+      ['git status（allowlist に無い）', 'git status --porcelain'],
+      ['git log（allowlist に無い）', 'git log -1'],
+      // P1（2026-08-19、内製クロスレビュー risk-reviewer が実測確認）:
+      // 「literal prefix + 末尾ワイルドカード」だった旧実装は git diff の
+      // ネイティブ --output フラグを検査しておらず、任意ファイル書込
+      // （baseline.json 破壊 / hook 自体の上書きによる全セッション DoS）が
+      // 通っていた。完全一致 + read-only git 撤去で class ごと閉じた。
+      ['P1回帰: git diff --output での任意ファイル書込', 'git diff --output=/tmp/pwned.txt'],
+      ['P1回帰: git show --output での任意ファイル書込', 'git show --output=/tmp/pwned.txt HEAD'],
+      // P1（同上）: quality:deadcode:ci --fix で knip がソースを自動改変できた。
+      // 完全一致（引数を一切許さない）で閉じた。
+      ['P1回帰: quality:deadcode:ci --fix によるソース自動改変', 'pnpm quality:deadcode:ci --fix'],
+      ['docs:check に引数を付ける迂回', 'pnpm docs:check --anything'],
+      ['docs:coverage に引数を付ける迂回', 'pnpm docs:coverage --write'],
+      // P2-a（同上）: gh api への -f/-F/--input は暗黙的に POST を意味しうる。
+      // dependabot alerts コマンドは完全一致のみ許可のため、追加 flag は
+      // 文字列として一致しなくなり自動的に拒否される。
+      [
+        'P2回帰: gh api dependabot alerts に -f を付けて暗黙POSTを試みる迂回',
+        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length' -f x=1",
+      ],
+      [
+        'gh api permissions self-check に --input を付ける迂回',
+        'gh api repos/Dayopt/dayopt --jq .permissions --input /tmp/x',
+      ],
+      // gh 系 positive flag allowlist の迂回試行（token単位判定の裏取り）
+      [
+        'gh issue create に未許可 flag（--output）を混入',
+        'gh issue create --title x --output=/tmp/pwned',
+      ],
+      [
+        'gh issue create の値の中に --output を空白区切りで埋め込む迂回',
+        'gh issue create --title x --body "hello --output=/tmp/pwned"',
+      ],
+      ['gh issue comment に短縮 flag（-f）を混入', 'gh issue comment 2209 -f x=1'],
+      ['gh issue list に未許可 flag（--milestone）を混入', 'gh issue list --milestone v0.34'],
+      ['gh search issues に未許可 flag（--label）を混入', 'gh search issues --repo x --label evil'],
+      [
+        '等号結合形（--title=x）は空白区切りのみ許可のため落とす',
+        'gh issue create --title=x --body=y',
+      ],
+    ])('%s は落とす', (_label, command) => {
+      expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    it('force-push flag 付きでも落とす（既存 force-push ガードとの二重防御）', () => {
+      expect(runGuard(bash(`git push ${FORCE_FLAG} origin main`), rootDir, NIGHT_WATCH_ENV)).toBe(
+        'block',
+      );
+    });
+
+    it('許可コマンドをセパレータで連結して push を混ぜる迂回は落とす', () => {
+      expect(
+        runGuard(bash('pnpm docs:check; git push origin main'), rootDir, NIGHT_WATCH_ENV),
+      ).toBe('block');
+    });
+
+    it('許可コマンドをパイプで連結する迂回は落とす', () => {
+      expect(
+        runGuard(bash('pnpm docs:check | tee /tmp/night-watch-out.txt'), rootDir, NIGHT_WATCH_ENV),
+      ).toBe('block');
+    });
+
+    it('コマンド置換で隠す迂回は落とす', () => {
+      expect(
+        runGuard(bash('gh issue create --title $(git log -1)'), rootDir, NIGHT_WATCH_ENV),
+      ).toBe('block');
+    });
+
+    it('eval で隠す迂回は落とす', () => {
+      expect(runGuard(bash("eval 'git push'"), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    // layer3（本ファイル）は Bash のみを見る。Write/Edit の遮断は層2
+    // （RemoteTrigger の allowed_tools）の責務で、DAYOPT_NIGHT_WATCH の
+    // 有無に関わらずここでは検証しない（.claude/skills/night-watch/SKILL.md
+    // §権限の構造的強制 参照）。
   });
 });
