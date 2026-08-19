@@ -113,6 +113,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`               |
 | 障害対応・release              | `operations/runbook.md`                                       |
 | 監視・alert                    | `operations/monitoring.md`                                    |
+| 夜間 read-only 品質観測        | `operations/night-watch.md`                                   |
 | security                       | `operations/security.md`                                      |
 | 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                     |
 | 契約サービス                   | `company/accounts.md`                                         |
