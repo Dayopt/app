@@ -27,6 +27,11 @@ interface PlanLaneCardProps {
   activityName: string | null;
   activityColor?: string | null | undefined;
   activityIcon?: string | null | undefined;
+  /**
+   * 所属カテゴリー ID。null = 未分類（activity は実在するが継承元カテゴリーが無い）。
+   * 「アクティビティなし」（activityName === null）とは別概念 — #2162 §4-6。
+   */
+  activityCategoryId?: string | null | undefined;
   className?: string | undefined;
   /** Inspector で選択中か（強調表示） */
   isActive?: boolean | undefined;
@@ -66,6 +71,7 @@ export function PlanLaneCard({
   activityName,
   activityColor = null,
   activityIcon = null,
+  activityCategoryId = null,
   className,
   isActive = false,
   disableDrag = false,
@@ -82,12 +88,16 @@ export function PlanLaneCard({
   styleOverride,
 }: PlanLaneCardProps) {
   const t = useTranslations();
-  const colorClasses = activityColor ? getCategoryColorClasses(activityColor) : null;
-  const borderClass = colorClasses?.border ?? 'border-border';
   // activityName は「アクティビティが実在するか」の source of truth（Activity.name は
   // 非nullのため、実在すれば必ず文字列になる）。activityColor/activityIcon の null 判定は、
   // 未分類（継承元カテゴリーが無い）と区別できないため使わない。
-  const isUncategorized = activityName === null;
+  const hasActivity = activityName !== null;
+  // 未分類 = activity は実在するが所属カテゴリーが無い。「アクティビティなし」とは別概念。
+  const isUncategorized = hasActivity && activityCategoryId === null;
+  // 色は activity が実在する限り解決する（未分類でも DEFAULT_CATEGORY_COLOR を適用）。
+  // アクティビティなしの時だけ中立トークンの枠線に落とす。
+  const colorClasses = hasActivity ? getCategoryColorClasses(activityColor) : null;
+  const borderClass = colorClasses?.border ?? 'border-border';
   const displayName = activityName ?? t('calendar.filter.noActivity');
 
   const isSkipped = event.status === 'skipped';
@@ -158,13 +168,18 @@ export function PlanLaneCard({
       }
     >
       <p className="flex min-h-0 items-start gap-1 truncate font-medium">
-        <ActivityIcon
-          icon={activityIcon}
-          color={activityColor}
-          size="sm"
-          className="shrink-0"
-          neutral={isUncategorized}
-        />
+        {/* 未分類（activity はあるがカテゴリー無所属）は icon 領域自体を出さない
+            （空アイコン・フォールバック絵文字も出さない、#2235）。「アクティビティなし」
+            のみ neutral マーカーへフォールバックする */}
+        {isUncategorized ? null : (
+          <ActivityIcon
+            icon={activityIcon}
+            color={activityColor}
+            size="sm"
+            className="shrink-0"
+            neutral={!hasActivity}
+          />
+        )}
         <span className="truncate">{displayName}</span>
       </p>
       {showDetails && (

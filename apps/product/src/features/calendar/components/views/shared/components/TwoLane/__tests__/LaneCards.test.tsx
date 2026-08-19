@@ -48,17 +48,32 @@ describe('TwoLane cards', () => {
     expect(screen.queryByText('Legacy plan title')).not.toBeInTheDocument();
   });
 
-  it('PlanカードはtagIconを表示する', () => {
+  it('カテゴリー所属の Plan カードは継承した icon を表示する', () => {
     const { container } = render(
       <PlanLaneCard
         event={plan}
         position={position}
         activityName="Deep Work"
         activityIcon="briefcase"
+        activityCategoryId="category-1"
       />,
     );
 
     expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('未分類（カテゴリー無所属）の Plan カードは icon を表示しない（#2235）', () => {
+    const { container } = render(
+      <PlanLaneCard
+        event={plan}
+        position={position}
+        activityName="Deep Work"
+        activityIcon="briefcase"
+        activityCategoryId={null}
+      />,
+    );
+
+    expect(container.querySelector('svg')).toBeNull();
   });
 
   it('Recordカードはtitleではなくタグ名を表示する', () => {
@@ -68,17 +83,32 @@ describe('TwoLane cards', () => {
     expect(screen.queryByText('Legacy record title')).not.toBeInTheDocument();
   });
 
-  it('RecordカードはtagIconを表示する', () => {
+  it('カテゴリー所属の Record カードは継承した icon を表示する', () => {
     const { container } = render(
       <RecordLaneCard
         event={record}
         position={position}
         activityName="Deep Work"
         activityIcon="briefcase"
+        activityCategoryId="category-1"
       />,
     );
 
     expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('未分類（カテゴリー無所属）の Record カードは icon を表示しない（#2235）', () => {
+    const { container } = render(
+      <RecordLaneCard
+        event={record}
+        position={position}
+        activityName="Deep Work"
+        activityIcon="briefcase"
+        activityCategoryId={null}
+      />,
+    );
+
+    expect(container.querySelector('svg')).toBeNull();
   });
 
   it('アクティビティを解決できない場合もtitleへフォールバックしない', () => {

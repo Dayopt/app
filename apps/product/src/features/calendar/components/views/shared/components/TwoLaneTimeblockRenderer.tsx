@@ -125,6 +125,7 @@ export function TwoLaneTimeblockRenderer({
   const activityName = activity?.name ?? null;
   const activityColor = activity?.color ?? null;
   const activityIcon = activity?.icon ?? null;
+  const activityCategoryId = activity?.categoryId ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
   // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
   const now = Date.now();
@@ -172,6 +173,7 @@ export function TwoLaneTimeblockRenderer({
         activityName={activityName}
         activityColor={activityColor}
         activityIcon={activityIcon}
+        activityCategoryId={activityCategoryId}
         isActive={isActive}
         disableDrag={disableDrag}
         disableResize={disableResize}
@@ -195,6 +197,7 @@ export function TwoLaneTimeblockRenderer({
       activityName={activityName}
       activityColor={activityColor}
       activityIcon={activityIcon}
+      activityCategoryId={activityCategoryId}
       isActive={isActive}
       disableDrag={disableDrag}
       showDayDiffMarker={showDayDiffMarker}
