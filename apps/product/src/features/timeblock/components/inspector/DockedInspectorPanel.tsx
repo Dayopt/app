@@ -25,22 +25,29 @@ export function DockedInspectorPanel({ children, title, slotElement }: DockedIns
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // 開く前のフォーカス要素を記録し、パネルが開いたら最初のフォーカス可能な要素に移動。
-  // 閉じたら記録していた要素へ復帰する。
+  // 開く前のフォーカス要素を記録し（マウント時1回）、閉じたら復帰する。
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
 
+  // slotElement が用意でき次第フォーカスを移動する。DesktopLayout 側の ref 登録
+  // （lib/dom-slots）が TimeblockInspector の初回レンダリングより後のコミットで
+  // 揃うことがあるため、固定タイマーではなく slotElement の変化をトリガーにする
+  // （behavior-verifier 指摘: 旧実装はマウント時1回の50ms固定タイマーで、slot登録が
+  // 大幅に遅延するとフォーカスが黙って当たらないままになる余地があった）。
+  useEffect(() => {
+    if (!slotElement) return;
     const timer = setTimeout(() => {
       const panel = panelRef.current;
       if (!panel) return;
       const focusable = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
       (focusable ?? panel).focus();
     }, 50);
-    return () => {
-      clearTimeout(timer);
-      previousFocusRef.current?.focus();
-    };
-  }, []);
+    return () => clearTimeout(timer);
+  }, [slotElement]);
 
   if (!slotElement) return null;
 
