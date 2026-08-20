@@ -23,14 +23,14 @@ import {
   calendarEventToRecordEvent,
 } from '../../../../lib/calendar-event-to-lane-event';
 import type { TwoLanePosition } from '../../../../lib/two-lane-layout';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { PlanLaneCard } from './TwoLane/PlanLaneCard';
 import { RecordLaneCard } from './TwoLane/RecordLaneCard';
 
 interface TwoLaneEntryRendererProps {
-  entry: CalendarEvent;
+  entry: CalendarDisplayEvent;
   position: TwoLanePosition;
-  allEvents: CalendarEvent[];
+  allEvents: CalendarDisplayEvent[];
   isDragging: boolean;
   isResizing: boolean;
   interactionState: InteractionState;
@@ -39,8 +39,8 @@ interface TwoLaneEntryRendererProps {
   showDayDiffMarker?: boolean | undefined;
   compactCards: boolean;
   timeFormat: TimeFormat;
-  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
-  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onEntryClick?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarDisplayEvent, e: React.MouseEvent) => void) | undefined;
   onPointerDown: (
     timeblockId: string,
     e: React.MouseEvent,
@@ -62,13 +62,13 @@ interface TwoLaneEntryRendererProps {
 }
 
 /** auto_migrated record はドラッグ/リサイズを禁止する。 */
-function isDragDisabled(entry: CalendarEvent): boolean {
+function isDragDisabled(entry: CalendarDisplayEvent): boolean {
   if (entry.recordSource === 'auto_migrated') return true;
   return false;
 }
 
 /** 過去Planは時間変更を禁止するが、Recordレーンへの記録dropは許可する。 */
-function isResizeDisabled(entry: CalendarEvent, now: number): boolean {
+function isResizeDisabled(entry: CalendarDisplayEvent, now: number): boolean {
   if (entry.kind === 'plan') {
     const end = entry.endDate?.getTime();
     return end != null && end <= now;

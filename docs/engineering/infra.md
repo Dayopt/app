@@ -29,10 +29,10 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 | ------------------------------ | -------- | ------------------------------------------------------------------------ |
 | Vitest unit（product / web）   | required | ロジックとcomponentの回帰検知                                            |
 | Playwright `chromium`          | required | 認証必須含む `apps/product/src/lib/test/e2e` の全specをCIで実行          |
-| Playwright `Mobile Chrome`     | local    | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を持つ環境でmobile shellを確認  |
+| Playwright `Mobile Chrome`     | local    | ローカルでservice roleが使える環境でmobile shellを確認                   |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
 
-e2e job は `supabase/setup-cli` + `supabase start` でlocal Supabase stackを立て、`scripts/ci/create-e2e-test-user.mjs` が発行する使い捨てユーザーで `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` を満たす（#1808）。これにより認証必須testも含めて全specがCIでskipされずに実行される。Mobile Chromeも同じ認証情報でCI実行は技術的に可能だが、chromiumと同じspecを二重実行するだけなのでlocal専用のままとする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
+e2e job は `supabase/setup-cli` + `supabase start` でlocal Supabase stackを立てる。認証必須specは `create-scoped-test-user.ts`（`apps/product/src/lib/test/e2e/`）でspecファイルごとに専用の使い捨てユーザーをservice role経由で作成する（#2246）。単一の共有test accountだと`workers`並列実行下でtRPCのin-memory rate limiter（userId単位）を超過するため、spec単位でaccountを分離してrate limit予算も分離している。旧`scripts/ci/create-e2e-test-user.mjs`（全specで単一accountを共有する方式）は撤去済み。これにより認証必須testも含めて全specがCIでskipされずに実行される。Mobile Chromeも同じ方式でCI実行は技術的に可能だが、chromiumと同じspecを二重実行するだけなのでlocal専用のままとする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
 
 ### Supabase Project
 

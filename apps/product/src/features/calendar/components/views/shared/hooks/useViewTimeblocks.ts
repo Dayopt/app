@@ -4,7 +4,7 @@ import { isValid } from 'date-fns';
 
 import { getDateKey } from '@/lib/date';
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT } from '../constants/grid.constants';
 import { getTimeblockStackIndex } from '../utils/timeblockStacking';
@@ -13,14 +13,14 @@ import { useTimeblockLayoutCalculator, type TimeblockLayout } from './useTimeblo
 
 interface UseViewEntriesOptions {
   date: Date;
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   hourHeight?: number;
   timezone: string;
 }
 
 /** グリッド上のエントリ描画位置情報 */
 export interface TimeblockPosition {
-  plan: CalendarEvent;
+  plan: CalendarDisplayEvent;
   top: number;
   height: number;
   left: number;
@@ -32,7 +32,7 @@ export interface TimeblockPosition {
 }
 
 interface UseViewEntriesReturn {
-  dayEntries: CalendarEvent[];
+  dayEntries: CalendarDisplayEvent[];
   timeblockPositions: TimeblockPosition[];
   maxConcurrentEntries: number;
   skippedEntriesCount: number;
@@ -70,7 +70,7 @@ export function useViewTimeblocks({
     return result;
   }, [date, entries, timezone]);
 
-  // CalendarEventをuseTimeblockLayoutCalculatorで期待される形式に変換
+  // CalendarDisplayEventをuseTimeblockLayoutCalculatorで期待される形式に変換
   // displayStartDate/displayEndDateを使用してTZ対応の位置計算を実現
   const convertedEntries = useMemo(() => {
     return dayEntries.map((entry) => ({
@@ -93,12 +93,12 @@ export function useViewTimeblocks({
       );
 
       return {
-        plan: layout.entry as CalendarEvent,
+        plan: layout.entry as CalendarDisplayEvent,
         top,
         height,
         left: layout.left,
         width: layout.width,
-        zIndex: getTimeblockStackIndex(layout.entry as CalendarEvent, index),
+        zIndex: getTimeblockStackIndex(layout.entry as CalendarDisplayEvent, index),
         column: layout.column,
         totalColumns: layout.totalColumns,
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,

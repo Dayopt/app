@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 
 import type { TimeblockDestination } from '@/features/timeblock';
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
 interface TimeModelCacheRow {
   id: string;
@@ -124,7 +124,7 @@ export const useTimeblockOperations = () => {
   // Timeblock更新ハンドラー（ドラッグ&ドロップ / リサイズ用）
   const handleUpdateTimeblock = useCallback(
     async (
-      timeblockIdOrTimeblock: string | CalendarEvent,
+      timeblockIdOrTimeblock: string | CalendarDisplayEvent,
       updates?: {
         startTime: Date;
         endTime: Date;
@@ -150,7 +150,7 @@ export const useTimeblockOperations = () => {
         return;
       }
 
-      // kind が既知（CalendarEvent object 経由）ならそのレーンだけ、未知なら両レーンを探す。
+      // kind が既知（CalendarDisplayEvent object 経由）ならそのレーンだけ、未知なら両レーンを探す。
       // previous 値は常にキャッシュ由来（渡された event 自身は更新後プレビューの可能性があるため）。
       const knownKind =
         typeof timeblockIdOrTimeblock !== 'string' ? timeblockIdOrTimeblock.kind : undefined;

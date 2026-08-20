@@ -5,21 +5,21 @@
 import { useMemo } from 'react';
 
 import { getDateKey } from '@/lib/date';
-import type { CalendarEvent } from '../../../../types/base.types';
+import type { CalendarDisplayEvent } from '../../../../types/base.types';
 import { isValidEvent } from '../utils/dateHelpers';
 import { sortAgendaEventsByDateKeys, sortEventsByDateKeys } from '../utils/timeblockSorting';
 
 /** useTimeblocksByDate フックのオプション */
 interface UseEntriesByDateOptions {
   dates: Date[];
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   sortType?: 'standard' | 'agenda';
   timezone?: string;
 }
 
 /** useTimeblocksByDate フックの戻り値 */
 interface UseEntriesByDateReturn {
-  entriesByDate: Record<string, CalendarEvent[]>;
+  entriesByDate: Record<string, CalendarDisplayEvent[]>;
   totalEntries: number;
   hasEntries: boolean;
 }
@@ -41,7 +41,7 @@ export function useTimeblocksByDate({
   timezone,
 }: UseEntriesByDateOptions): UseEntriesByDateReturn {
   const entriesByDate = useMemo(() => {
-    const grouped: Record<string, CalendarEvent[]> = {};
+    const grouped: Record<string, CalendarDisplayEvent[]> = {};
 
     // Step 1: 各日付のキーを初期化
     dates.forEach((date) => {

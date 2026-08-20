@@ -6,7 +6,7 @@ import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
-import type { CalendarEvent } from '../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../types/calendar.types';
 import type { DateTimeSelection } from '../../views/shared';
 
 /** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
@@ -22,7 +22,7 @@ export function useCalendarHandlers() {
 
   // エントリクリックハンドラー
   const handleTimeblockClick = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       openTimeblockInspector(entry.id, entry.kind ?? 'plan');
 
       logger.log('Opening Timeblock Inspector:', {

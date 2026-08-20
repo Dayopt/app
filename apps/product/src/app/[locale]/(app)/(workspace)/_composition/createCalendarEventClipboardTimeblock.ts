@@ -1,9 +1,9 @@
-import type { CalendarEvent } from '@/features/calendar';
+import type { CalendarDisplayEvent } from '@/features/calendar';
 import { createClipboardTimeblock, type ClipboardTimeblock } from '@/features/timeblock';
 
 /** Calendar の表示時刻を保ったまま、既存の貼り付け用データへ変換する。 */
 export function createCalendarEventClipboardTimeblock(
-  entry: CalendarEvent,
+  entry: CalendarDisplayEvent,
 ): ClipboardTimeblock | null {
   if (!entry.kind) return null;
 

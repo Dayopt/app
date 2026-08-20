@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 import { buildPlanRecordDropInput } from '../plan-record-drop';
 
 const plan = {
@@ -12,7 +12,7 @@ const plan = {
   kind: 'plan',
   startDate: new Date('2026-07-14T09:00:00.000Z'),
   endDate: new Date('2026-07-14T10:00:00.000Z'),
-} as CalendarEvent;
+} as CalendarDisplayEvent;
 
 describe('buildPlanRecordDropInput', () => {
   it('Planの内容とdrop先のpreview rangeから関連Record入力を作る', () => {

@@ -33,7 +33,7 @@ const BUDGETS = {
   // 3 日以上全滅した。原因は NEXT_PUBLIC_SENTRY_DSN が Production にのみスコープされて
   // いるため、preview/ローカル build では Sentry 初期化が dead-code-eliminate され
   // 全 route 一律 -66〜68 KB 軽くなる非対称（preview 実測 409.1 KB）。この非対称自体は
-  // 下記 SENTRY_PREVIEW_COMPENSATION_KB で解消済み（#2123）。本予算は実測値 476.5 KB
+  // 下記 SENTRY_COMPONENT_KB + SUPABASE_CREDENTIAL_COMPONENT_KB で解消済み（#2123, #2163）。本予算は実測値 476.5 KB
   // + 余裕で 500 KB のまま（一時緩和時の値を継続、再引き締めは別途判断）。
   // ResetPasswordForm.tsx の MFAVerifyForm 遅延ロード（同 #2121）は局所的な削減。
   /** 認証系ルート（/auth/*）: production 実測 ~477 KB gzip。#2123 の補正により preview/ローカルも同じ土俵で比較する（#2121, #2123 参照） */
@@ -45,58 +45,71 @@ const BUDGETS = {
 } as const;
 
 /**
- * preview/production budget parity（#2123）。
+ * preview/production budget parity（#2123、成分分解・再較正は #2163）。
  *
- * `NEXT_PUBLIC_SENTRY_DSN` は Production にのみスコープされている（意図的、preview
- * のノイズを Sentry へ送らない設計。`apps/product/production-build-gate.mjs` の
- * `FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV` が preview への実値混入を禁止する）。
- * `apps/product/instrumentation-client.ts` の Sentry 初期化はこの値でガードされているため、
- * preview/ローカル build では Sentry client SDK（browserTracingIntegration 等）が
- * dead-code-elimination で全 route から一律に消え、production 実測より軽くなる。
+ * production build は preview/ローカル build より重い。原因は独立した 2 つの成分の
+ * 加算で、どちらも preview では欠けている:
  *
- * 対応として instrumentation-client.ts 側を変更する案（dummy DSN 注入・lazy load）は
- * 両方とも見送った: dummy DSN 注入は preview で `Sentry.init()` を実際に呼ぶことになり、
- * `enabled: false` を渡しても公式ドキュメントが明記する通り「doesn't prevent all overhead」
- * （fetch/console 等の instrumentation hook は enabled に関わらず動きうる）。lazy load
- * は同意済みリピーターの hydration 直後〜import 解決までの窓でエラー捕捉が抜ける
- * リスクがある。どちらも observability の本来目的を bundle 削減と天秤にかける必要が
- * あるため、ここでは budget check 側の補正で対応する（アプリ実行パスには一切触れない）。
+ * 1. **Sentry 成分**: `NEXT_PUBLIC_SENTRY_DSN` は Production にのみスコープされている
+ *    （意図的、preview のノイズを Sentry へ送らない設計。`apps/product/production-build-gate.mjs`
+ *    の `FORBIDDEN_PRODUCT_PREVIEW_BUILD_ENV` が preview への実値混入を禁止する）。
+ *    `apps/product/instrumentation-client.ts` の Sentry 初期化はこの値でガードされているため、
+ *    preview/ローカル build では Sentry client SDK（browserTracingIntegration 等）が
+ *    dead-code-elimination で全 route から一律に消える。
+ *    対応として instrumentation-client.ts 側を変更する案（dummy DSN 注入・lazy load）は
+ *    両方とも見送った: dummy DSN 注入は preview で `Sentry.init()` を実際に呼ぶことになり、
+ *    `enabled: false` を渡しても公式ドキュメントが明記する通り「doesn't prevent all overhead」
+ *    （fetch/console 等の instrumentation hook は enabled に関わらず動きうる）。lazy load
+ *    は同意済みリピーターの hydration 直後〜import 解決までの窓でエラー捕捉が抜ける
+ *    リスクがある。どちらも observability の本来目的を bundle 削減と天秤にかける必要が
+ *    あるため、ここでは budget check 側の補正で対応する（アプリ実行パスには一切触れない）。
  *
- * 実測: Vercel production ビルドは preview/ローカルより全 route 一律 +66〜68 KB gzip
- * 重い（#2121）。この既知の重量差を preview/ローカル計測値に加算してから budget と
- * 比較することで、preview の budget check が production 相当の重さを検出できるようにする。
+ * 2. **Supabase credential 成分**: Supabase Preview Branch を持つ PR
+ *    （`supabase/migrations/**` を含む PR）には Vercel integration が実
+ *    `NEXT_PUBLIC_SUPABASE_URL` / 実 JWT 形式 anon key を注入し、他の PR は
+ *    `apps/product/next.config.mjs` の短い placeholder
+ *    （`https://placeholder.supabase.co` / `placeholder`）のまま build される
+ *    （`docs/engineering/infra.md` §環境変数の管理 参照）。実 credential の長い文字列が
+ *    ビルドへ inline される分（`lib/supabase/{client,server,middleware}.ts`,
+ *    `lib/trpc/{context,server}.ts` 等、複数箇所から参照される）だけ preview が軽い。
  *
- * 更新条件: Sentry SDK のバージョン更新や instrumentation-client.ts の integrations
- * 構成変更でこの差分が変わったら、対象 PR の Vercel production デプロイログ実測値で
- * この定数を更新する（ローカル/preview 実測との差分を再計算する）。
+ * #2123 時点ではこの 2 成分を「production − placeholder preview」の一括差分（67 KB）
+ * として較正していたため、実 credential preview（Supabase Preview Branch 付き PR）では
+ * 既に含まれる credential 分と一括差分が二重計上になり、偽陽性の budget 超過を招いた
+ * （#2159 で発見）。#2163 で 2 成分を独立変数として個別に実測し直した:
+ *
+ * - **Sentry 成分の実測**（2026-08-18、PR #2159。credential を定数に保つため、同一 PR の
+ *   直前 commit の実 credential preview build と、その merge commit の production build を
+ *   比較する — どちらも実 credential ありで揃うため、差分は Sentry 成分のみに帰属する）:
+ *   production `/[locale]/auth/reset-password` raw 476.0 KB
+ *   （merge commit `b7ea3572`, https://vercel.com/dayopt/product/4MfSkJGmu2RK1u6rZFgQRr9GFoe7）
+ *   − 実 credential preview 同 route raw 435.4 KB
+ *   （直前 commit `9d1ec97b`, https://vercel.com/dayopt/product/GzurMBo7wk5mS5s5xsjxLf6R62oo、
+ *   502.4 KB 報告値から旧 67 KB 補正を除いた raw）
+ *   = 40.6 KB → 41 KB に丸め
+ * - **Supabase credential 成分の実測**（同じく 2026-08-18、PR #2159。Sentry 不在を定数に
+ *   保つため、実 credential preview と placeholder preview はどちらも Sentry 補正無しの
+ *   preview build 同士を比較する）:
+ *   実 credential preview 報告値 502.4 KB − placeholder preview 報告値 475.5 KB
+ *   （同日の他 PR preview、どちらも旧 67 KB 補正込みの報告値のため差分を取ると補正分は
+ *   キャンセルされ credential 成分だけが残る）= 26.9 KB → 27 KB に丸め
+ *
+ * 2026-08-20 に再実測した合計（production `/[locale]/auth/reset-password` raw 475.9 KB
+ * − 同日 placeholder preview raw 408.5 KB = 67.4 KB）が 2 成分の和（41 + 27 = 68 KB）と
+ * 近い値で安定していることを確認済み（±1 KB は丸め誤差）。
+ *
+ * 再較正手順: `supabase/migrations/**` を含む PR を用意し、(a) その PR の Vercel product
+ * preview デプロイのビルドログから `/[locale]/auth/reset-password` の raw gzip を読む
+ * （`SUPABASE_CREDENTIAL_COMPONENT_KB` 込みの報告値からこの定数を引く）、(b) 同じ PR を
+ * merge した後の production デプロイのビルドログから同 route の raw gzip を読む、
+ * (c) production − preview で SENTRY_COMPONENT_KB を再計算する。
+ * `SUPABASE_CREDENTIAL_COMPONENT_KB` は、同日の別 PR の placeholder preview 報告値と
+ * 実 credential preview 報告値の差分（どちらも同じ Sentry 補正込みなので差分でキャンセル
+ * される）から再計算する。
  */
-const SENTRY_PREVIEW_COMPENSATION_KB = 67; // #2121 実測 66〜68 KB の中央値
+const SENTRY_COMPONENT_KB = 41; // #2163 実測（2026-08-18、PR #2159、credential 一定下の production - real-cred preview）
+const SUPABASE_CREDENTIAL_COMPONENT_KB = 27; // #2163 実測（2026-08-18、PR #2159、Sentry 不在下の real-cred - placeholder preview）
 const IS_PRODUCTION_BUILD = process.env.VERCEL_ENV === 'production';
-
-/**
- * Supabase Preview Branch の実 credential による二重計上の暫定減額（#2159）。
- *
- * `SENTRY_PREVIEW_COMPENSATION_KB`（67 KB）は「production 実測 − placeholder preview
- * 実測」の一括差分として較正されており、Sentry 分と Supabase credential inline 分が
- * 混在している。Supabase Preview Branch を持つ PR（`supabase/migrations/**` を含む PR）
- * には Vercel integration が実 `NEXT_PUBLIC_SUPABASE_URL` / 実 JWT 形式 anon key を注入し、
- * 他の PR は `apps/product/next.config.mjs` の短い placeholder
- * （`https://placeholder.supabase.co` / `placeholder`）のまま build される
- * （`docs/engineering/infra.md` §PR Preview の Supabase Vercel integration 参照）。
- *
- * 実 credential を持つ preview では、実際にビルドへ埋め込まれた長い credential 文字列
- * （信頼できる複数箇所から参照される: `lib/supabase/{client,server,middleware}.ts`,
- * `lib/trpc/{context,server}.ts` 等）と、既存の一括補正（67 KB）が二重計上になり、
- * 偽陽性の budget 超過を招く（#2159 で発見）。
- *
- * 三点実測（2026-08-18、PR #2159）: production 476.0 KB / placeholder preview
- * 報告値 475.5 KB（構造的に一致）/ 実 credential preview 報告値 502.4 KB。
- * 502.4 − 475.5 ≈ 27 KB が credential inline 分の推定値。
- *
- * これは暫定の lump 減額であり、Sentry 分・credential 分を個別に較正し直す恒久対応は
- * #2163 に切り出し済み。
- */
-const SUPABASE_REAL_CRED_ADJUSTMENT_KB = 27; // #2159 実測（475.5 KB 基準の暫定値、詳細は #2163）
 const PLACEHOLDER_SUPABASE_URL = 'https://placeholder.supabase.co'; // next.config.mjs と同じ値
 
 /**
@@ -115,11 +128,14 @@ export function hasRealSupabaseCredentials(supabaseUrl: string | undefined): boo
 /**
  * preview/local build に適用する補正値（KB）。production build には適用しない
  * （呼び出し側で `IS_PRODUCTION_BUILD` を先に見て 0 に倒す）。
+ *
+ * 実 credential preview は credential 成分が既にビルドへ inline 済みのため Sentry 成分
+ * のみを加算する。placeholder preview は両成分とも欠けているため両方を加算する。
  */
 export function resolvePreviewCompensationKB(supabaseUrl: string | undefined): number {
   return hasRealSupabaseCredentials(supabaseUrl)
-    ? SENTRY_PREVIEW_COMPENSATION_KB - SUPABASE_REAL_CRED_ADJUSTMENT_KB
-    : SENTRY_PREVIEW_COMPENSATION_KB;
+    ? SENTRY_COMPONENT_KB
+    : SENTRY_COMPONENT_KB + SUPABASE_CREDENTIAL_COMPONENT_KB;
 }
 
 /** デザインシステム目標値（段階的に達成） */
@@ -297,10 +313,10 @@ function main(): void {
     : resolvePreviewCompensationKB(process.env.NEXT_PUBLIC_SUPABASE_URL);
   if (!IS_PRODUCTION_BUILD) {
     const suffix = hasRealSupabaseCredentials(process.env.NEXT_PUBLIC_SUPABASE_URL)
-      ? '（実 Supabase credential 検出、#2159 の減額調整込み）'
-      : '';
+      ? '（実 Supabase credential 検出、Sentry 成分のみ加算、#2163）'
+      : '（Sentry 成分 + Supabase credential 成分を加算、#2163）';
     console.log(
-      `  (preview/local build: +${previewCompensationKB} KB Sentry compensation applied per route, #2123${suffix})\n`,
+      `  (preview/local build: +${previewCompensationKB} KB compensation applied per route, #2123${suffix})\n`,
     );
   }
 

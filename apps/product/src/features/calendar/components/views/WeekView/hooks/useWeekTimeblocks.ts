@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
 import { calculateTimeblockLayouts, type TimeblockLayout } from '../../../../lib/layout';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 
 import type {
   UseWeekEntriesOptions,
@@ -29,7 +29,7 @@ export function useWeekTimeblocks({
 }: UseWeekEntriesOptions): UseWeekEntriesReturn {
   // エントリを日付ごとにグループ化（raw startDate + ユーザーTZの日付キーで判定）
   const entriesByDate = useMemo(() => {
-    const grouped: Record<string, CalendarEvent[]> = {};
+    const grouped: Record<string, CalendarDisplayEvent[]> = {};
 
     // 各日付のキーを初期化
     weekDates.forEach((date) => {
@@ -82,7 +82,7 @@ export function useWeekTimeblocks({
           ? entriesByDate[dateKey]
           : null) || [];
 
-      // CalendarEventをTimedTimeblock形式に変換（calculateTimeblockLayouts用）
+      // CalendarDisplayEventをTimedTimeblock形式に変換（calculateTimeblockLayouts用）
       const timedEntries = dayEntries
         .filter((entry) => !!entry.displayStartDate)
         .map((entry) => ({
@@ -96,7 +96,7 @@ export function useWeekTimeblocks({
 
       // TimeblockLayoutをWeekEntryPositionに変換
       layouts.forEach((layout: TimeblockLayout, index: number) => {
-        const entry = layout.entry as CalendarEvent;
+        const entry = layout.entry as CalendarDisplayEvent;
         const { top, height } = layoutEntryToVerticalPosition(
           new Date(layout.entry.start),
           new Date(layout.entry.end),

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 /**
  * カレンダーのドラッグ状態を管理するストア
@@ -14,7 +14,7 @@ interface CalendarDragState {
   /** ドラッグ中のTimeblockID */
   draggedEntryId: string | null;
   /** ドラッグ中のTimeblockデータ */
-  draggedEntry: CalendarEvent | null;
+  draggedEntry: CalendarDisplayEvent | null;
   /** 元の日付インデックス */
   originalDateIndex: number;
   /** 現在のターゲット日付インデックス */
@@ -34,7 +34,7 @@ interface CalendarDragActions {
   /** カレンダー内ドラッグ開始 */
   startDrag: (
     timeblockId: string,
-    entry: CalendarEvent,
+    entry: CalendarDisplayEvent,
     dateIndex: number,
     lane?: 'plan' | 'record',
   ) => void;

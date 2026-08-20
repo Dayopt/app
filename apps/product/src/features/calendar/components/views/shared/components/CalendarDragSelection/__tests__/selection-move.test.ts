@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../../types/calendar.types';
 import { computeSelectionMove, type SelectionMoveInput } from '../selection-move';
 
 // 未来日に固定して overlap 判定の kind が 'plan' になるようにする
@@ -27,12 +27,12 @@ function makeInput(overrides: Partial<SelectionMoveInput> = {}): SelectionMoveIn
   };
 }
 
-function makePlan(startHour: number, endHour: number): CalendarEvent {
+function makePlan(startHour: number, endHour: number): CalendarDisplayEvent {
   const startDate = new Date(date);
   startDate.setHours(startHour, 0, 0, 0);
   const endDate = new Date(date);
   endDate.setHours(endHour, 0, 0, 0);
-  return { id: 'plan-1', kind: 'plan', startDate, endDate } as CalendarEvent;
+  return { id: 'plan-1', kind: 'plan', startDate, endDate } as CalendarDisplayEvent;
 }
 
 describe('computeSelectionMove', () => {

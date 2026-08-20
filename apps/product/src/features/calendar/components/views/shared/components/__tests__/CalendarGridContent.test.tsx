@@ -3,7 +3,7 @@ import type React from 'react';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 
 const ghostMock = vi.hoisted(() => ({
   timeblockId: null as string | null,
@@ -92,7 +92,7 @@ vi.mock('../TwoLaneTimeblockRenderer', () => ({
     position,
     showDayDiffMarker,
   }: {
-    entry: CalendarEvent;
+    entry: CalendarDisplayEvent;
     position: { left: number; width: number };
     showDayDiffMarker?: boolean;
   }) => (
@@ -114,8 +114,8 @@ import {
 
 function makeCalendarEvent(
   kind: 'plan' | 'record',
-  overrides: Partial<CalendarEvent> = {},
-): CalendarEvent {
+  overrides: Partial<CalendarDisplayEvent> = {},
+): CalendarDisplayEvent {
   const startDate = new Date('2026-07-15T09:00:00.000Z');
   const endDate = new Date('2026-07-15T10:00:00.000Z');
 
@@ -315,7 +315,7 @@ describe('CalendarGridContent', () => {
       origin: 'planned' as const,
       timeblockState: 'upcoming' as const,
       kind: 'plan' as const,
-    } satisfies CalendarEvent;
+    } satisfies CalendarDisplayEvent;
     const second = {
       ...first,
       id: 'entry-2',
@@ -323,7 +323,7 @@ describe('CalendarGridContent', () => {
       endDate: new Date('2026-06-04T11:00:00.000Z'),
       displayStartDate: new Date('2026-06-04T10:00:00.000Z'),
       displayEndDate: new Date('2026-06-04T11:00:00.000Z'),
-    } satisfies CalendarEvent;
+    } satisfies CalendarDisplayEvent;
 
     render(
       <CalendarGridContent
