@@ -1,14 +1,38 @@
 import { expect, test } from '@playwright/test';
 
-const HAS_TEST_USER = Boolean(process.env.TEST_USER_EMAIL && process.env.TEST_USER_PASSWORD);
+import {
+  createScopedTestUser,
+  deleteScopedTestUser,
+  type ScopedTestUser,
+} from './create-scoped-test-user';
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+let testUser: ScopedTestUser | undefined;
+
+test.beforeAll(async () => {
+  if (!SERVICE_ROLE_TARGET.safe) return;
+  testUser = await createScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, 'seed');
+});
+
+test.afterAll(async () => {
+  if (!testUser) return;
+  await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
+});
 
 test.describe('Playwright Test Agent seed', () => {
   test('authenticated Calendar session', async ({ page }) => {
-    test.skip(!HAS_TEST_USER, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
+    test.skip(
+      !SERVICE_ROLE_TARGET.safe,
+      SERVICE_ROLE_TARGET.safe ? '' : SERVICE_ROLE_TARGET.reason,
+    );
 
     await page.goto('/ja/auth/login');
-    await page.locator('input[name="email"]').fill(process.env.TEST_USER_EMAIL!);
-    await page.locator('input[name="password"]').fill(process.env.TEST_USER_PASSWORD!);
+    await page.locator('input[name="email"]').fill(testUser!.email);
+    await page.locator('input[name="password"]').fill(testUser!.password);
     await page.locator('button[type="submit"]').click();
 
     await page.waitForURL(/\/ja\/calendar/, { timeout: 15_000 });
