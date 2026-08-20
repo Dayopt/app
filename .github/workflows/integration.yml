@@ -128,15 +128,23 @@ jobs:
       # round ごとの追い push で毎回コメントしない（workflow.md §Actions経済の規律と同じ理由）。
       # 既にラベルが付いていれば「初回検知は伝達済み」として scope: pull-requests/label は
       # 一覧取得できるが「1件だけ存在確認」する軽い endpoint が無いため一覧を取って grep する。
+      # クロスレビュー指摘: この job の契約は「検知は merge を止めない」なので、gh api の
+      # 一過性障害（rate limit 等）で `has_label` の取得自体が失敗しても job を失敗させない。
+      # 失敗時は has_label=false（未検知扱い）に倒す — 最悪でも次 step が通知を再試行する
+      # だけで、merge を止める副作用は無い。continue-on-error は他 step 群と同じ扱いで併用する。
       - name: Check existing label
         id: existing
         if: steps.detect.outputs.destructive == 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          has_label="$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
-            --jq '[.[] | select(.name == "db:destructive-migration")] | length > 0')"
-          echo "has_label=$has_label" >> "$GITHUB_OUTPUT"
+          if has_label="$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+            --jq '[.[] | select(.name == "db:destructive-migration")] | length > 0')"; then
+            echo "has_label=$has_label" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_label=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Ensure label exists in repo
         if: steps.detect.outputs.destructive == 'true' && steps.existing.outputs.has_label != 'true'
