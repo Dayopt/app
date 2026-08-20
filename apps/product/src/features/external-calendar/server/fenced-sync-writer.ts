@@ -39,10 +39,18 @@ const CLIENT_FLOOR_TIMEOUT_MS = 15_000;
  *   限り alert が最大 3 attempt 分遅れる）。`token-rotation.ts` の `DEFINITIVE_ROLLBACK_CODES`
  *   も同じコードを definitive 扱いしており、outcome 分類（呼び出し側が受け取る bucket）も
  *   22023/54000 と同じ「即終了・アラートあり」で揃える（#2289 で発覚）。Sentry capture する。
- *   **ただし capture する Error message は 22023/54000 と分ける**（`isDefinitiveFailure` 参照）
- *   — 42501 は per-call の入力バグではなく fleet 規模の認証・認可失敗（service role key
- *   rotation 等で 5 RPC 全てが同時に落ち、begin は `not_configured` に畳まれて UI 無表示に
- *   なる）なので、Sentry 側で別 issue にグルーピングされないと triage で区別できない
+ *   **capture は 22023/54000 とは別関数（`reportPermissionDenied`）から行う**（実測に基づく
+ *   #2289 の訂正: この repo の Sentry `beforeSend`
+ *   （`packages/observability/src/sanitize.ts` の `sanitizeException`）は exception の
+ *   `value`（= Error message）を常に `[REDACTED]` へ落とすため、**Error message の文字列を
+ *   22023/54000 と分けても Sentry 上のグルーピングには一切効かない**（実測: DAYOPT-X のタイトルは
+ *   実際に「Error: [REDACTED]」）。Sentry の issue グルーピングは stacktrace（`new Error(...)`
+ *   を生成した関数フレーム）で決まり、fingerprint も beforeSend が捨てるため使えない。
+ *   したがって 42501 を 22023/54000 と別 Sentry issue として区別する唯一の実装可能な手段は、
+ *   `new Error(...)` の呼び出しをそれぞれ別の名前付き関数・別行に切り出し、innermost frame を
+ *   変えることだけ — 42501 は per-call の入力バグではなく fleet 規模の認証・認可失敗
+ *   （service role key rotation 等で 5 RPC 全てが同時に落ち、begin は `not_configured` に
+ *   畳まれて UI 無表示になる）ため、triage で「入力が悪い呼び出し」と区別できる必要がある
  * - `CA019`（account deletion in progress、`assert_calendar_account_not_deleting_v1` 由来）:
  *   想定内。Sentry capture しない
  */
@@ -51,7 +59,7 @@ const DEFINITIVE_CODE_ACCOUNT_DELETING = 'CA019';
 /** service role 権限失敗専用の permission denied コード（definitive・アラートあり）。 */
 const DEFINITIVE_CODE_PERMISSION_DENIED = '42501';
 
-/** retry ループで最後に観測した RPC error（`reportUnresolved` の診断情報用、#2289）。 */
+/** retry ループで最後に観測した RPC error（capture の診断情報用、#2289）。 */
 type ObservedRpcError = { code?: string | undefined; message?: string | undefined };
 
 /**
@@ -76,27 +84,51 @@ function hasBudgetForAttempt(deadlineAt: number | undefined): boolean {
   return deadlineAt - Date.now() >= RPC_TIMEOUT_MS;
 }
 
+/**
+ * `isDefinitiveFailure` の 22023/54000 経路専用 capture。**`new Error(...)` をこの関数内・
+ * この行で実行することが要件**（他の definitive capture 関数と innermost frame を分け、
+ * Sentry の stacktrace ベースの issue グルーピングを構造的に分離するため。詳細は
+ * `DEFINITIVE_CODES_WITH_ALERT` のコメント参照）。42501 は発生源が 2 種（service role 検査
+ * 失敗 / EXECUTE 権限欠落）あり message でしか区別できないため、errorMessage も伝搬する。
+ */
+function reportRejectedInput(operation: string, error: ObservedRpcError): 'rejected_input' {
+  captureUnexpectedError(new Error(`fenced calendar writer rejected input: ${operation}`), {
+    feature: 'external_calendar',
+    operation,
+    source: 'supabase_rpc',
+    ...(error.code !== undefined ? { errorCode: error.code } : {}),
+    ...(error.message !== undefined ? { errorMessage: error.message } : {}),
+  });
+  return 'rejected_input';
+}
+
+/**
+ * `isDefinitiveFailure` の 42501 経路専用 capture。`reportRejectedInput` と outcome bucket
+ * （`'rejected_input'`）は同じだが、**`new Error(...)` を別関数・別行で実行する**ことで
+ * Sentry 上で別 issue にグルーピングされる（`DEFINITIVE_CODES_WITH_ALERT` のコメント参照）。
+ */
+function reportPermissionDenied(operation: string, error: ObservedRpcError): 'rejected_input' {
+  captureUnexpectedError(new Error(`fenced calendar writer permission denied: ${operation}`), {
+    feature: 'external_calendar',
+    operation,
+    source: 'supabase_rpc',
+    ...(error.code !== undefined ? { errorCode: error.code } : {}),
+    ...(error.message !== undefined ? { errorMessage: error.message } : {}),
+  });
+  return 'rejected_input';
+}
+
 function isDefinitiveFailure(
-  code: string | undefined,
+  error: ObservedRpcError | null | undefined,
   operation: string,
 ): FencedWriterFailure | null {
+  const code = error?.code;
   if (code === DEFINITIVE_CODE_ACCOUNT_DELETING) return 'account_deleting';
   if (code && DEFINITIVE_CODES_WITH_ALERT.has(code)) {
-    // #2289: 42501 は per-call の入力バグ（22023/54000）とは別の Sentry issue message で
-    // capture する。fleet 規模の認証・認可失敗（service role key rotation 等）は 5 RPC が
-    // 同時に落ちる形で現れ、outcome bucket（rejected_input）は同じでも triage で
-    // 「入力が悪い呼び出し」と区別できる必要がある。
-    const message =
-      code === DEFINITIVE_CODE_PERMISSION_DENIED
-        ? `fenced calendar writer permission denied: ${operation}`
-        : `fenced calendar writer rejected input: ${operation}`;
-    captureUnexpectedError(new Error(message), {
-      feature: 'external_calendar',
-      operation,
-      source: 'supabase_rpc',
-      errorCode: code,
-    });
-    return 'rejected_input';
+    const details: ObservedRpcError = { code, message: error?.message };
+    return code === DEFINITIVE_CODE_PERMISSION_DENIED
+      ? reportPermissionDenied(operation, details)
+      : reportRejectedInput(operation, details);
   }
   return null;
 }
@@ -187,7 +219,7 @@ async function callTextRpc(
 
       if (error) lastError = { code: error.code, message: error.message };
 
-      const definitive = isDefinitiveFailure(error?.code, operation);
+      const definitive = isDefinitiveFailure(error, operation);
       if (definitive !== null) return definitive;
       // それ以外（network 例外、40P01 デッドロック、55P03 lock not available 含む）は retry。
     } catch (caught) {
@@ -267,7 +299,7 @@ export async function beginCalendarSyncRun(params: {
 
       if (error) lastError = { code: error.code, message: error.message };
 
-      const definitive = isDefinitiveFailure(error?.code, operation);
+      const definitive = isDefinitiveFailure(error, operation);
       if (definitive !== null) return definitive;
     } catch (caught) {
       lastError = { message: caught instanceof Error ? caught.message : String(caught) };

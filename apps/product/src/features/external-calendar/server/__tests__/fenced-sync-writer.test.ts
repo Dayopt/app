@@ -84,7 +84,10 @@ describe('エラーコード分類（overview.md §2）', () => {
   });
 
   it('22023（invalid input）は Sentry capture して rejected_input を返す（retry しない）', async () => {
-    const rpc = mockRpc(() => ({ data: null, error: { code: '22023' } }));
+    const rpc = mockRpc(() => ({
+      data: null,
+      error: { code: '22023', message: 'invalid input syntax' },
+    }));
 
     const result = await clearCalendarSyncCursor({
       ...CAS,
@@ -97,13 +100,13 @@ describe('エラーコード分類（overview.md §2）', () => {
     expect(result).toBe('rejected_input');
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
-      expect.objectContaining({ errorCode: '22023' }),
+      expect.objectContaining({ errorCode: '22023', errorMessage: 'invalid input syntax' }),
     );
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it('54000（sequence exhausted）は Sentry capture して rejected_input を返す', async () => {
-    mockRpc(() => ({ data: null, error: { code: '54000' } }));
+    mockRpc(() => ({ data: null, error: { code: '54000', message: 'sequence exhausted' } }));
 
     const result = await finishCalendarSyncRun({
       ...CAS,
@@ -113,14 +116,20 @@ describe('エラーコード分類（overview.md §2）', () => {
     });
 
     expect(result).toBe('rejected_input');
-    expect(captureUnexpectedError).toHaveBeenCalled();
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ errorCode: '54000', errorMessage: 'sequence exhausted' }),
+    );
   });
 
-  // #2289: service role 検査失敗（assert_timeblock_service_role_request_v1）由来の
-  // 42501 は network blip と誤認して retry してはいけない。22023/54000 と同型で即時 definitive。
-  // ただし capture する Error message は 22023/54000（rejected input）と分ける — 42501 は
-  // per-call の入力バグではなく fleet 規模の認証・認可失敗のため、Sentry issue グルーピングを
-  // 別にして triage で区別できる必要がある（isDefinitiveFailure のコメント参照）。
+  // #2289 round 3（指揮台の Sentry 実測に基づく訂正）: この repo の Sentry beforeSend
+  // （packages/observability/src/sanitize.ts の sanitizeException）は exception message を
+  // 常に [REDACTED] へ落とすため、Error message の文字列を変えても Sentry のグルーピングには
+  // 効かない（実測: DAYOPT-X のタイトルは実際に「Error: [REDACTED]」）。42501 が 22023/54000 と
+  // 別 Sentry issue になるのは、`new Error(...)` を別関数（reportPermissionDenied）・別行で
+  // 実行し stacktrace の innermost frame を変えているため（isDefinitiveFailure のコメント参照）。
+  // この test は実装詳細である別関数呼び出しそのものは assert せず、観測可能な契約
+  // （retry しない・message 文字列・errorCode・errorMessage）だけを確認する。
   it('42501（permission denied、service role 必須）は専用 message で Sentry capture して rejected_input を返す（retry しない）', async () => {
     const rpc = mockRpc(() => ({
       data: null,
@@ -143,7 +152,12 @@ describe('エラーコード分類（overview.md §2）', () => {
       'fenced calendar writer permission denied: clear_calendar_sync_cursor',
     );
     expect((capturedError as Error).message).not.toContain('rejected input');
-    expect(context).toEqual(expect.objectContaining({ errorCode: '42501' }));
+    expect(context).toEqual(
+      expect.objectContaining({
+        errorCode: '42501',
+        errorMessage: 'Access denied: service role required',
+      }),
+    );
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
