@@ -2018,6 +2018,7 @@ export type Database = {
       };
       get_external_lifecycle_app_version_v1: { Args: never; Returns: number };
       get_external_lifecycle_app_version_v2: { Args: never; Returns: number };
+      get_external_lifecycle_app_version_v3: { Args: never; Returns: number };
       get_mcp_environment_identity_v1: {
         Args: never;
         Returns: {
