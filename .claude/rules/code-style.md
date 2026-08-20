@@ -23,19 +23,32 @@ paths:
 
 ## スタイリング
 
-セマンティックトークンでダークモード対応を自動化する。
-
-```tsx
-// ✅ セマンティックトークン
-<div className="bg-card text-foreground border-border" />
-
-// ❌ 直接カラー、style属性
-<div className="text-blue-500" />
-```
+正本は `.claude/rules/design-system.md` §色。semantic token 経由のみ使用可（直接カラー・style 属性禁止）で、ダークモード対応を自動化する。許可クラス・透過トークン・メール/OG画像の例外は同ファイルを参照する。
 
 ## UIコンポーネント
 
 Storybookに記載されているパターンのみ使用。新パターンは先にStory追加。
+
+## Export
+
+named export を使う。App Router の特殊ファイル（`page.tsx` / `layout.tsx` / `loading.tsx` 等、Next.js が規約で `export default` を要求するもの）だけ `export default` を許可する。feature の公開 API（`index.ts` barrel）の named export 限定は別契約（`.claude/rules/feature-boundaries.md` §Barrel Export）。
+
+## Component
+
+関数宣言 + props 型の直接注釈を基本にする。
+
+```tsx
+// ✅
+type Props = { label: string };
+function Button({ label }: Props) { ... }
+
+// ❌ アロー関数 const、props 型の間接参照
+const Button = (props: ButtonProps) => { ... };
+```
+
+## 命名
+
+`utils.ts` / `helpers.ts` を避け、責務を表す具体名にする（例: `formatDuration.ts`、`normalizeTagInput.ts`）。
 
 ## ログ出力
 
@@ -50,11 +63,6 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 - 認証必須エンドポイントは `protectedProcedure`
 - `ctx.userId` でデータアクセスを制限
 - `dangerouslySetInnerHTML` 禁止
-
-## セマンティックトークン補足
-
-- 透過（`/10`など）は `state-*` トークンのみ許可
-- domain固有色は`packages/foundations`で公開済みのsemantic tokenだけを使用する
 
 ## Tailwind v4 既知の落とし穴
 
