@@ -213,6 +213,26 @@ export const WithAction: Story = {
   decorators: [withWrapper('w-64 px-2')],
 };
 
+/** 開閉可能な見出し（#2249: テキスト+arrowが1つのhover領域になっていることを確認）。 */
+export const Collapsible: Story = {
+  args: {
+    title: '見出し（hover してテキスト+arrow の領域を確認）',
+    collapsed: false,
+    onToggleCollapse: noop,
+    children: (
+      <div className="space-y-1">
+        <BlockItem
+          tagName="仕事"
+          iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+          durationMinutes={60}
+          onClick={noop}
+        />
+      </div>
+    ),
+  },
+  decorators: [withWrapper('w-64 px-2')],
+};
+
 /** サイドバー全体再現 — ヘッダー + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
 export const FullSidebar: Story = {
   args: { title: '', children: null },
