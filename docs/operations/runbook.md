@@ -609,7 +609,26 @@ ORDER BY created_at DESC;
   git pull origin main
   ```
 
-### 1.2 Gitタグの作成とプッシュ
+### 1.2 Production promote を手動 dispatch し、完了を待つ
+
+main merge は `release.yml` を自動起動しない（`workflow_dispatch` のみ、2026-08-20 #2268）。タグを打つ前にここで明示的に dispatch し、promote の成功を確認する。
+
+- [ ] **`Production Release` を手動 dispatch し、promote が成功**
+
+  ```bash
+  gh workflow run release.yml
+  gh run list --workflow=release.yml --limit 1
+  gh run watch --exit-status
+
+  gh api "repos/Dayopt/dayopt/commits/$(git rev-parse HEAD)/status" \
+    --jq '.statuses[] | select(.context == "Production Release") | .state'
+  ```
+
+`success` にならないうちはタグを打たない。
+
+### 1.3 Gitタグの作成とプッシュ
+
+promote の成功と Production の観察が終わってから、証跡としてタグを打つ。
 
 - [ ] **Gitタグを作成してプッシュ**
 
@@ -621,20 +640,13 @@ ORDER BY created_at DESC;
   git push origin v${VERSION}
   ```
 
-### 1.3 GitHub Actions の自動実行を確認
-
-タグpushにより以下が自動実行される：
-
-- [ ] **`Production Release` の promote が成功**（`gh run list --workflow=release.yml --limit 1`）
-
-  ```bash
-  gh run list --workflow=create-release.yml --limit 1
-  gh run watch
-  ```
+タグ push により `create-release.yml` が自動実行され、GitHub Release を作成する（タグ SHA の `Production Release` status が `success` であることを確認してから作成する。この workflow はデプロイしない）。
 
 - [ ] **GitHub Releaseが自動作成された**
 
   ```bash
+  gh run list --workflow=create-release.yml --limit 1
+  gh run watch
   gh release view v${VERSION}
   ```
 
