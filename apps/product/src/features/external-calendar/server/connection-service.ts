@@ -864,23 +864,41 @@ export async function disconnect(userId: string, connectionId: string): Promise<
 // =============================================================================
 
 /**
- * 指定した Google account（`sub`）に対する `calendar_connections` 行が
+ * 指定した Google account（`sub`）に対する **`active`** な `calendar_connections` 行が
  * どの Dayopt user にも存在しないかを確認する。
+ *
+ * #2280: 判定を `status` 問わず「行が存在するか」から `status = 'active'` に限定した。
+ * `revokeOrphanedGrant` の呼び出し元（callback route の失敗パス）は、呼び出し時点で
+ * 「この revoke 対象 token 自体は DB に一度も保存されていない」ことを**多くの場合**保証する
+ * （scope 不足 / reconnect target 不在・不一致・missing のいずれも、書き込みが成立する前に
+ * revoke へ分岐する）。ただし outer catch（保存 throw）経路では、DB 側は commit 済みで
+ * レスポンス受信のみ失敗した（fetch timeout 等）ケースも throw に含まれるため、保存が実際に
+ * 成立している可能性を完全には排除できない。その場合でも保存が成立していれば行は必ず
+ * `status='active'` になるので、**この関数自身の active 判定が revoke を止める** —
+ * 安全性は呼び出し元の保証ではなく、この存在確認そのものが担保している。したがってこの関数が
+ * 答えるべき問いは「この token が保存されたか」ではなく、
+ * **「revoke が他の生きた grant を巻き添えにしないか」** に絞ってよい。
+ *
+ * `revokeRefreshToken`（google-oauth.ts doc comment）は revoke を Google account ×
+ * GCP project 単位で行うため、巻き添えの実害があるのは token が実際に有効な `active` 行に
+ * 限られる。`reauth_required` 行（reconnect 対象自身を含む）の token は既に provider 側で
+ * 死んでいる前提の行なので、巻き添えで無効化されても実害が無い。旧実装はこの区別をせず
+ * 全 status を「存在する」に含めていたため、reconnect 対象の `reauth_required` 行自身が
+ * 「接続あり」と誤判定させ、新規発行 token の revoke を skip していた（孤立残存）。
  *
  * `user_id` を条件に含めない: `calendar_connections` の UNIQUE 制約は
  * `user_id, provider, provider_account_id` で、同一 Google account を複数の異なる
- * Dayopt user が接続できる。`revokeRefreshToken`（google-oauth.ts doc comment）は
- * revoke を Google account × GCP project 単位で行うため、`user_id` を条件に含めて
- * 「この user には行が無い」と判定すると、同じ Google account を繋いでいる別の
- * Dayopt user の接続を巻き添えで失効させる。
+ * Dayopt user が接続できる。`user_id` を条件に含めて「この user には行が無い」と判定すると、
+ * 同じ Google account を繋いでいる別の Dayopt user の active 接続を巻き添えで失効させる。
  */
-async function hasAnyConnectionForProviderAccount(providerAccountId: string): Promise<boolean> {
+async function hasActiveConnectionForProviderAccount(providerAccountId: string): Promise<boolean> {
   const db = createCalendarConnectionDbClient();
   const { data, error } = await db
     .from(databaseTables.calendarConnections)
     .select('id')
     .eq('provider', GOOGLE_PROVIDER)
     .eq('provider_account_id', providerAccountId)
+    .eq('status', 'active')
     .limit(1);
 
   if (error) {
@@ -896,9 +914,10 @@ async function hasAnyConnectionForProviderAccount(providerAccountId: string): Pr
  * OAuth callback が token 交換後（refresh token 発行後）に失敗した時、Dayopt 側に
  * どの接続行も残らない孤立 grant を best-effort で revoke する（#2072）。
  *
- * 同一 Google account の接続が 1 件でも残っていれば revoke しない（上記
- * `hasAnyConnectionForProviderAccount` 参照）。結果に関わらず throw しない — 呼び出し元の
- * 失敗 redirect フローを壊さない。失敗は `logger.warn` に留め Sentry へは送らない
+ * 同一 Google account の **active** 接続が 1 件でも残っていれば revoke しない（上記
+ * `hasActiveConnectionForProviderAccount` 参照。#2280 で account 単位の存在確認から
+ * active 限定へ変更した理由は同関数の docblock を参照）。結果に関わらず throw しない —
+ * 呼び出し元の失敗 redirect フローを壊さない。失敗は `logger.warn` に留め Sentry へは送らない
  * （`disconnect` の `reportUnrevokedGrant` と異なり、こちらは元々失敗パスの中の
  * additional cleanup であり、主要フローの失敗ではないため）。
  *
@@ -906,7 +925,11 @@ async function hasAnyConnectionForProviderAccount(providerAccountId: string): Pr
  * Google account を別タブ / 別 user が接続完了すると、その新しい接続の grant を巻き添えで
  * 失効させうる。provider 側に atomic な「確認 + revoke」操作が無いため構造的に閉じられない
  * 残余だが、回復可能（次回 sync が provider から reauth エラーを受けて対象接続を
- * `reauth_required` へ落とし、ユーザーの再認証で復帰する）。
+ * `reauth_required` へ落とし、ユーザーの再認証で復帰する）。#2280 で active 限定にしたことに
+ * より、この窓はわずかに広がっている: 存在確認より**前**の時点で、同一 account の別フロー
+ * （別タブでの reconnect 等）が既に交換済みだが未保存の token を持っている場合、その token も
+ * 巻き添えで失効しうる（旧実装では reconnect 対象の `reauth_required` 行の存在自体がこの窓を
+ * 塞いでいた）。回復経路は同上。
  */
 export async function revokeOrphanedGrant(params: {
   providerAccountId: string;
@@ -923,7 +946,7 @@ export async function revokeOrphanedGrant(params: {
   }
 
   try {
-    const hasConnection = await hasAnyConnectionForProviderAccount(params.providerAccountId);
+    const hasConnection = await hasActiveConnectionForProviderAccount(params.providerAccountId);
     if (hasConnection) return;
 
     const revoked = await googleCalendarAdapter.revoke(params.refreshToken);
