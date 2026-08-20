@@ -345,12 +345,67 @@ function sanitizePrimitiveValue(value: unknown): string | number | boolean | und
 /**
  * `sanitizeTechnicalContext` の結果は丸ごと `scope.setTags()` へ流れる（`integration.ts`
  * の `captureUnexpectedError`）。Sentry tag value は 200 字上限・indexed のため、これを
- * 超える文字列は SDK 側で黙って欠落・切り詰めされる。`errorMessage`（PostgREST/gateway の
- * 生 error message 等、長さが予測できない自由文字列）はここで明示的に truncate し、
- * 挙動を決定的にする。`componentStack` は tag 宛先ではなく `scope.setContext('react', ...)`
- * へ別経路で渡るため対象外。
+ * 超える文字列は SDK 側で黙って欠落・切り詰めされる。`componentStack` は tag 宛先ではなく
+ * `scope.setContext('react', ...)` へ別経路で渡るため、この上限は対象外。
  */
 const SENTRY_TAG_VALUE_MAX_LENGTH = 200;
+
+const UNRECOGNIZED_ERROR_MESSAGE = '[UNRECOGNIZED_ERROR_MESSAGE]';
+
+/**
+ * `errorMessage`（PostgREST/gateway/DB driver 由来の自由文字列）専用の default-closed
+ * sanitizer（#2289 round 4、Codex P1）。
+ *
+ * `sanitizeString` は denylist（既知の secret パターンを狙って redact する）であり、
+ * 自由文の error message には安全ではない。未ラベルの短い token、UUID、SQL キャスト
+ * エラーが引用する生の入力値（例: `invalid input syntax for type ...: "..."`）、
+ * gateway の診断文に紛れ込む資格情報は、どの denylist パターンにも一致しないため
+ * 素通りしてしまう。allowlist（tags 経路 = `TECHNICAL_CONTEXT_KEYS` 全体）に自由文を
+ * 混ぜるのは、この tags 経路が他の技術的コンテキストと共有されている以上、危険度が高い。
+ *
+ * そのため `errorMessage` だけは **allowlist に完全一致した既知の静的メッセージのみ**を
+ * 通し、それ以外は内容を一切送らず定数 `UNRECOGNIZED_ERROR_MESSAGE` に落とす
+ * （default-closed）。拡張はパターン追加 = レビューを通る変更としてのみ行う。これにより
+ * 「cast エラーの値引用・gateway 診断文・UUID 素通り」という class を個別パターンの
+ * 追加ではなく構造的に閉じる。
+ *
+ * 通過ケースも `sanitizeString` + 200 字 truncate を重ねて belt-and-braces にする
+ * （allowlist パターン自体に動的部分は無い設計だが、実装ミスの二重防御として残す）。
+ */
+const ERROR_MESSAGE_ALLOWLIST: readonly RegExp[] = [
+  // assert_timeblock_service_role_request_v1 の静的 RAISE（動的部分なし）
+  /^Access denied: service role required$/,
+  // PostgREST の EXECUTE 拒否。関数名は識別子 charset（[A-Za-z0-9_]）に限定される
+  /^permission denied for function [A-Za-z0-9_]+$/,
+  // 40P01: PostgreSQL の固定文言、動的部分なし
+  /^deadlock detected$/,
+  // 57014: PostgreSQL の固定文言、動的部分なし
+  /^canceling statement due to statement timeout$/,
+  // 55P03: relation 名は識別子 charset に限定される
+  /^could not obtain lock on row in relation "[A-Za-z0-9_]+"$/,
+  // undici/node fetch 層の代表的例外 message。固定文言（AbortController の message は
+  // Node バージョンで揺れがあるため、末尾の理由句は optional として許容する）
+  /^fetch failed$/,
+  /^terminated$/,
+  /^The operation was aborted\.?( due to timeout\.?)?$/,
+  // PGRST202（PostgREST が RPC 関数を schema cache 上で見つけられない）。関数シグネチャの
+  // 文字種は PostgREST 自身の serialization 形式で識別子・記号に限定される
+  /^Could not find the function [A-Za-z0-9_.(), =>]+ in the schema cache$/,
+  // 注意: `invalid input syntax for type ... : "..."` 系は意図的に allowlist へ入れない。
+  // メッセージ末尾に生の入力値がそのまま引用されるため（cast エラー）。呼び出し側は
+  // SQLSTATE 22007 等の errorCode で識別する。
+];
+
+function sanitizeErrorMessage(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+
+  const isKnownSafe = ERROR_MESSAGE_ALLOWLIST.some((pattern) => pattern.test(trimmed));
+  if (!isKnownSafe) return UNRECOGNIZED_ERROR_MESSAGE;
+
+  return sanitizeString(trimmed).slice(0, SENTRY_TAG_VALUE_MAX_LENGTH);
+}
 
 function sanitizeTechnicalValue(key: string, value: unknown): unknown {
   const normalized = normalizedKey(key);
@@ -364,8 +419,7 @@ function sanitizeTechnicalValue(key: string, value: unknown): unknown {
     return typeof value === 'string' ? sanitizeString(value) : undefined;
   }
   if (normalized === 'errormessage') {
-    if (typeof value !== 'string') return undefined;
-    return sanitizeString(value).slice(0, SENTRY_TAG_VALUE_MAX_LENGTH);
+    return sanitizeErrorMessage(value);
   }
   if (TECHNICAL_NUMBER_KEYS.has(normalized)) {
     return typeof value === 'number' && Number.isFinite(value) ? value : undefined;

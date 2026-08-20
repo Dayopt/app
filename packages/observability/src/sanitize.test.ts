@@ -373,54 +373,95 @@ describe('sanitizeSentryEvent', () => {
     expect(result).toEqual({});
   });
 
-  // #2289: errorMessage carries free-text RPC/gateway error text (e.g. PostgREST
-  // messages). It goes through the same free-text sanitizer as componentStack
-  // (sanitizeString, not the identifier-only sanitizeTechnicalLabel), plus an
-  // explicit 200-char truncation because the sanitized result is later spread into
-  // Sentry tags (200-char, indexed) via `stringTags()` in `integration.ts`.
-  describe('errorMessage technical context (#2289)', () => {
-    it('redacts an email address embedded in errorMessage', () => {
+  // #2289 round 4 (Codex P1): errorMessage carries free-text RPC/gateway error text.
+  // sanitizeString is a denylist and is unsafe for arbitrary free text — unlabeled
+  // short tokens, UUIDs, values quoted by cast errors, and credentials embedded in
+  // gateway diagnostics all slip through it. errorMessage therefore uses a
+  // default-closed allowlist sanitizer instead: only messages matching a known-safe
+  // static pattern pass through (with sanitizeString + 200-char truncation applied on
+  // top as belt-and-braces); everything else collapses to a fixed constant, with no
+  // content sent at all.
+  describe('errorMessage technical context (#2289 round 4, default-closed allowlist)', () => {
+    it('passes through a known-safe static message unchanged (service role check)', () => {
       const result = sanitizeTechnicalContext({
-        errorMessage: 'permission denied for user alice@example.com',
+        errorMessage: 'Access denied: service role required',
+      });
+
+      expect(result).toEqual({ errorMessage: 'Access denied: service role required' });
+    });
+
+    it('passes through a known-safe static message unchanged (deadlock, 40P01)', () => {
+      const result = sanitizeTechnicalContext({ errorMessage: 'deadlock detected' });
+
+      expect(result).toEqual({ errorMessage: 'deadlock detected' });
+    });
+
+    it('passes through permission denied for function, with an identifier-charset function name', () => {
+      const result = sanitizeTechnicalContext({
+        errorMessage: 'permission denied for function begin_calendar_sync_run_v1',
       });
 
       expect(result).toEqual({
-        errorMessage: 'permission denied for user [REDACTED_EMAIL]',
+        errorMessage: 'permission denied for function begin_calendar_sync_run_v1',
       });
     });
 
-    it('redacts a 32+ character token embedded in errorMessage', () => {
-      const token = 'a'.repeat(40);
+    it('passes through lock-not-available (55P03) with an identifier-charset relation name', () => {
       const result = sanitizeTechnicalContext({
-        errorMessage: `session expired: ${token}`,
-      });
-
-      expect(result).toEqual({ errorMessage: 'session expired: [REDACTED_TOKEN]' });
-    });
-
-    it('strips the query string from a URL embedded in errorMessage', () => {
-      const result = sanitizeTechnicalContext({
-        errorMessage: 'fetch failed for https://app.dayopt.app/auth/callback?code=123456',
+        errorMessage: 'could not obtain lock on row in relation "external_calendar_events"',
       });
 
       expect(result).toEqual({
-        errorMessage: 'fetch failed for https://app.dayopt.app/auth/callback',
+        errorMessage: 'could not obtain lock on row in relation "external_calendar_events"',
       });
     });
 
-    it('redacts a labeled secret value embedded in errorMessage', () => {
+    it('collapses a cast error that quotes the raw input value to the unrecognized constant', () => {
+      // Intentionally NOT allowlisted: the message tail quotes caller-controlled
+      // input verbatim. The caller should identify this case via SQLSTATE 22007
+      // (errorCode), not via errorMessage content.
       const result = sanitizeTechnicalContext({
-        errorMessage: 'request failed api_key=short-api-key',
+        errorMessage: 'invalid input syntax for type timestamp with time zone: "2026-13-99 evil"',
       });
 
-      expect(result).toEqual({ errorMessage: 'request failed api_key=[REDACTED]' });
-      expect(JSON.stringify(result)).not.toContain('short-api-key');
+      expect(result).toEqual({ errorMessage: '[UNRECOGNIZED_ERROR_MESSAGE]' });
+      expect(JSON.stringify(result)).not.toContain('2026-13-99 evil');
     });
 
-    it('truncates a sanitized errorMessage to the 200-char Sentry tag value limit', () => {
-      // no email / token / URL / labeled-secret substrings, so sanitizeString is a
-      // no-op here — isolates the truncation behavior from redaction behavior.
-      const longMessage = `Access denied: ${'service role required. '.repeat(20)}`;
+    it('collapses an unknown message containing a UUID to the unrecognized constant', () => {
+      const result = sanitizeTechnicalContext({
+        errorMessage: 'Key (connection_id)=(11111111-1111-4111-8111-111111111111) already exists.',
+      });
+
+      expect(result).toEqual({ errorMessage: '[UNRECOGNIZED_ERROR_MESSAGE]' });
+      expect(JSON.stringify(result)).not.toContain('11111111-1111-4111-8111-111111111111');
+    });
+
+    it('collapses a gateway-style HTML/long-text diagnostic to the unrecognized constant', () => {
+      const gatewayHtml =
+        '<html><head><title>504 Gateway Time-out</title></head><body>' +
+        'The server is temporarily unable to service your request due to maintenance ' +
+        'downtime or capacity problems. Please try again later. Reference: 0x' +
+        'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4</body></html>';
+
+      const result = sanitizeTechnicalContext({ errorMessage: gatewayHtml });
+
+      expect(result).toEqual({ errorMessage: '[UNRECOGNIZED_ERROR_MESSAGE]' });
+      expect(JSON.stringify(result)).not.toContain('Gateway Time-out');
+    });
+
+    it('truncates a passed-through allowlisted message to the 200-char Sentry tag value limit', () => {
+      // A single long identifier (e.g. a 220-char function name) would itself be
+      // caught by sanitizeString's own 32+-char token redaction before truncation
+      // ever runs, making it unsuitable for isolating truncation behavior. The
+      // PGRST202 pattern's charset ([A-Za-z0-9_.(), =>]) includes spaces and commas,
+      // so a long multi-parameter function signature can exceed 200 chars overall
+      // while every individual identifier segment stays well under the 32-char
+      // LONG_TOKEN_RE threshold — that isolates truncation from token redaction.
+      const params = Array.from({ length: 12 }, (_, index) => `p_param_${index} => text`).join(
+        ', ',
+      );
+      const longMessage = `Could not find the function begin_calendar_sync_run_v1(${params}) in the schema cache`;
       expect(longMessage.length).toBeGreaterThan(200);
 
       const result = sanitizeTechnicalContext({ errorMessage: longMessage });
