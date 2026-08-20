@@ -52,9 +52,9 @@ vi.mock('../../inspector/hooks', () => ({
   useInspectorKeyboard: () => undefined,
 }));
 
-vi.mock('../../inspector/FloatingPopover', () => ({
-  FloatingPopover: ({ children, title }: { children: React.ReactNode; title: string }) => (
-    <div role="dialog" aria-label={title}>
+vi.mock('../../inspector/DockedInspectorPanel', () => ({
+  DockedInspectorPanel: ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <div role="region" aria-label={title}>
       {children}
     </div>
   ),
@@ -178,7 +178,7 @@ describe('TimeblockInspector relationships', () => {
     act(() => useTimeblockInspectorStore.getState().openInspector(plan.id, 'plan'));
     render(<TimeblockInspector />);
 
-    expect(screen.getByRole('dialog', { name: 'Work' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Work' })).toBeInTheDocument();
     expect(screen.getByTestId('inspector-kind')).toHaveTextContent('plan');
     expect(screen.getByTestId('relationship-kind')).toHaveTextContent('plan');
     expect(mocks.recordsList).toHaveBeenCalledWith(
@@ -237,7 +237,7 @@ describe('TimeblockInspector relationships', () => {
     );
     render(<TimeblockInspector />);
 
-    expect(screen.getByRole('dialog', { name: 'Work' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Work' })).toBeInTheDocument();
     expect(screen.getByTestId('inspector-mode')).toHaveTextContent('duplicate');
     expect(mocks.planGetById).toHaveBeenCalledWith(
       { id: plan.id },

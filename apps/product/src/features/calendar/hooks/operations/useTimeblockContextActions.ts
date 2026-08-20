@@ -9,7 +9,7 @@ import { useTimeblockWriteMutations } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
 
 import { buildReportPath } from '../../lib/panel-url';
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
 /**
  * コンテキストメニューで使用する plan / record 操作アクションを提供するフック
@@ -24,7 +24,7 @@ export function useTimeblockContextActions() {
   const { deleteRecord, deletePlan, skipPlan, unskipPlan } = useTimeblockWriteMutations();
 
   const handleDeleteTimeblock = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       if (entry.recordSource === 'auto_migrated') return;
       if ((entry.kind ?? 'plan') === 'plan') {
         deletePlan.mutate({ id: entry.id, expectedUpdatedAt: entry.version });
@@ -36,7 +36,7 @@ export function useTimeblockContextActions() {
   );
 
   const handleViewStats = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       if (!entry.tagId) return;
       // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
       // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
@@ -46,7 +46,7 @@ export function useTimeblockContextActions() {
   );
 
   const handleSkip = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       if (entry.kind !== 'plan') return;
       skipPlan.mutate(
         { id: entry.id, expectedUpdatedAt: entry.version },
@@ -57,7 +57,7 @@ export function useTimeblockContextActions() {
   );
 
   const handleUnskip = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       if (entry.kind !== 'plan') return;
       unskipPlan.mutate(
         { id: entry.id, expectedUpdatedAt: entry.version },

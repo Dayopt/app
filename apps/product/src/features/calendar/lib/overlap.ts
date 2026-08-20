@@ -6,7 +6,7 @@
  */
 
 import { hasTwoLayerTimeConflict, rangesOverlap, type TwoLayerOverlapTarget } from '@dayopt/domain';
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 export function buildNewTimeblockOverlapTarget(
   startTime: Date,
@@ -36,7 +36,7 @@ export function buildNewTimeblockOverlapTarget(
  * @returns 他のイベントと重複している場合true
  */
 export function checkClientSideOverlap(
-  events: CalendarEvent[],
+  events: CalendarDisplayEvent[],
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
@@ -89,18 +89,18 @@ export function checkClientSideOverlap(
 
 /**
  * ドラッグ/リサイズ中の kind-aware 重複判定（plan×plan / record×record のみ禁止、plan×record は許可）。
- * time model 化された CalendarEvent（`kind` 付き）専用。checkClientSideOverlap の
+ * time model 化された CalendarDisplayEvent（`kind` 付き）専用。checkClientSideOverlap の
  * 旧二層判定（planned/actual layer）は record-with-plan を origin:'planned' として誤扱いするため、
  * ドラッグ移動先が同一 kind の他イベントと重ならないかだけを見るこちらに置き換える。
  */
 export function checkClientSideOverlapByKind(
-  events: CalendarEvent[],
+  events: CalendarDisplayEvent[],
   draggedEventId: string,
   previewStartTime: Date,
   previewEndTime: Date,
   options: {
     /** レーン間ドラッグ時に、ドラッグ元ではなくdrop先のkindで判定する。 */
-    targetKind?: NonNullable<CalendarEvent['kind']>;
+    targetKind?: NonNullable<CalendarDisplayEvent['kind']>;
     now?: number;
   } = {},
 ): boolean {
@@ -121,10 +121,10 @@ export function checkClientSideOverlapByKind(
 }
 
 /**
- * CalendarEvent を重複判定用の2レイヤー表現に変換する。
+ * CalendarDisplayEvent を重複判定用の2レイヤー表現に変換する。
  * actual レイヤーは effective actual（確定済み actual、なければ過去 planned の自動記録）。
  */
-function toOverlapEntry(event: CalendarEvent, now: number) {
+function toOverlapEntry(event: CalendarDisplayEvent, now: number) {
   const plannedStart =
     event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
   const plannedEnd = event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);

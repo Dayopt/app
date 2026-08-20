@@ -15,7 +15,7 @@ import {
 } from '../../../../../domain/interaction/selection-rules';
 import { pixelsToTime } from '../../../../../domain/interaction/time-math';
 import { checkClientSideOverlapByKind } from '../../../../../lib/overlap';
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 import type { TimeRange } from './types';
 import { DRAG_CONSTANTS } from './types';
 
@@ -30,7 +30,7 @@ export interface SelectionMoveInput {
   /** これまでにドラッグ判定済みか */
   hasDragged: boolean;
   date: Date;
-  plans: CalendarEvent[];
+  plans: CalendarDisplayEvent[];
   /** 直前のスナップ位置（ハプティック発火判定用） */
   lastSnap: { startMin: number; endMin: number } | null;
 }
@@ -87,7 +87,7 @@ export function resolveInstantSelection(
   start: HourMinute,
   date: Date,
   defaultDuration: number,
-  plans: CalendarEvent[],
+  plans: CalendarDisplayEvent[],
 ): { selection: DateSelectionRange; isOverlapping: boolean } {
   const selection = createInstantSelection(start, date, defaultDuration);
   const startTime = new Date(date);

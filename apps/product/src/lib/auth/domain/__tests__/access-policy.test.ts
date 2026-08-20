@@ -60,7 +60,7 @@ describe('isProtectedProductPath', () => {
   // workspace-shell-restructure Step 1（#2190）: /calendar と /report の新設と
   // access-policy.ts への追加が同一 commit であることをこの test で固定する。
   // 分けると未認証開通と MFA gate バイパスが同時に起きる
-  // （docs/projects/workspace-shell-restructure/overview.md §4-5-b）。
+  // （docs/projects/_archive/workspace-shell-restructure/overview.md §4-5-b）。
   it.each(['/calendar', '/report'])('%s は保護対象である', (path) => {
     expect(isProtectedProductPath(path)).toBe(true);
   });

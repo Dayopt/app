@@ -183,7 +183,7 @@ describe('MCP OAuth host boundary', () => {
     ['app.dayopt.app', '/oauth/token'],
     ['app.dayopt.app', '/api/oauth/token'],
     ['app.dayopt.app', '/.well-known/oauth-authorization-server'],
-    ['app.dayopt.app', '/week'],
+    ['app.dayopt.app', '/calendar'],
   ])('allows the exact Production host/path pair: %s%s', (hostname, pathname) => {
     expect(
       isOAuthRequestHostAllowed({
@@ -201,7 +201,7 @@ describe('MCP OAuth host boundary', () => {
     ['app.dayopt.app', '/api/mcp/'],
     ['mcp.dayopt.app', '/oauth/token'],
     ['mcp.dayopt.app', '/api/oauth/token'],
-    ['mcp.dayopt.app', '/week'],
+    ['mcp.dayopt.app', '/calendar'],
     ['preview-product.vercel.app', '/api/mcp'],
     ['preview-product.vercel.app', '/oauth/authorize'],
     ['mcp.dayopt.app.example.com', '/mcp'],
@@ -244,7 +244,7 @@ describe('MCP OAuth host boundary', () => {
     '/mcp',
     '/api/mcp',
     '/.well-known/oauth-protected-resource',
-    '/week',
+    '/calendar',
   ])('allows authorization, resource, and Product paths on the Preview origin: %s', (pathname) => {
     expect(
       isOAuthRequestHostAllowed({
@@ -297,7 +297,7 @@ describe('MCP OAuth host boundary', () => {
 
     for (const [hostname, pathname] of [
       ['app.dayopt.app', '/oauth/authorize'],
-      ['app.dayopt.app', '/week'],
+      ['app.dayopt.app', '/calendar'],
       ['mcp.dayopt.app', '/'],
     ] as const) {
       expect(

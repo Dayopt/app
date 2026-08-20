@@ -4,8 +4,9 @@ import { hasRealSupabaseCredentials, resolvePreviewCompensationKB } from '../che
 
 /**
  * #2159: Supabase Preview Branch の実 credential が preview build に inline され、
- * 既存の Sentry 補正（67 KB）と二重計上になる偽陽性を防ぐ減額ロジックの単体テスト。
- * 成分分解・恒久較正は #2163。
+ * 既存の Sentry 補正と二重計上になる偽陽性を防ぐロジックの単体テスト。
+ * #2163: Sentry 成分（41 KB）と Supabase credential 成分（27 KB）を独立変数として
+ * 実測・分離した恒久較正。値の実測根拠は check-bundle-budget.ts 側のコメントを正本とする。
  */
 describe('hasRealSupabaseCredentials', () => {
   it('next.config.mjs の placeholder は実 credential とみなさない', () => {
@@ -26,15 +27,15 @@ describe('hasRealSupabaseCredentials', () => {
 });
 
 describe('resolvePreviewCompensationKB', () => {
-  it('placeholder URL では既存の Sentry 補正（67 KB）のみを適用する', () => {
-    expect(resolvePreviewCompensationKB('https://placeholder.supabase.co')).toBe(67);
+  it('placeholder URL では Sentry 成分（41 KB）+ Supabase credential 成分（27 KB）の両方を適用する', () => {
+    expect(resolvePreviewCompensationKB('https://placeholder.supabase.co')).toBe(68);
   });
 
-  it('未設定では既存の Sentry 補正（67 KB）のみを適用する', () => {
-    expect(resolvePreviewCompensationKB(undefined)).toBe(67);
+  it('未設定では Sentry 成分（41 KB）+ Supabase credential 成分（27 KB）の両方を適用する', () => {
+    expect(resolvePreviewCompensationKB(undefined)).toBe(68);
   });
 
-  it('実 URL では Supabase credential 分（27 KB）を減額する', () => {
-    expect(resolvePreviewCompensationKB('https://abcdefghijklmnop.supabase.co')).toBe(40);
+  it('実 URL では credential 分が既にビルドへ inline 済みのため Sentry 成分（41 KB）のみを適用する', () => {
+    expect(resolvePreviewCompensationKB('https://abcdefghijklmnop.supabase.co')).toBe(41);
   });
 });

@@ -4,7 +4,7 @@ import { fn } from 'storybook/test';
 import { PRESET_USER_SETTINGS } from '@dayopt/storybook/mocks/presets';
 import { StoryTRPCProvider } from '@dayopt/storybook/mocks/trpc';
 import { computeCalendarDayDiffs } from '../../../lib/day-diff';
-import type { CalendarEvent, ViewDateRange } from '../../../types/calendar.types';
+import type { CalendarDisplayEvent, ViewDateRange } from '../../../types/calendar.types';
 
 import { DayView } from './DayView';
 
@@ -37,7 +37,7 @@ function makeDate(base: Date, hour: number, minute = 0): Date {
   return d;
 }
 
-const basePlan: CalendarEvent = {
+const basePlan: CalendarDisplayEvent = {
   id: 'plan-1',
   title: 'チームミーティング',
   description: '週次の進捗確認',
@@ -56,7 +56,7 @@ const basePlan: CalendarEvent = {
   origin: 'planned',
 };
 
-const mockPlans: CalendarEvent[] = [
+const mockPlans: CalendarDisplayEvent[] = [
   basePlan,
   {
     ...basePlan,
@@ -93,7 +93,7 @@ const mockPlans: CalendarEvent[] = [
 ];
 
 /** 期限切れ未完了エントリ（昨日のタスク）*/
-const overdueEntry: CalendarEvent = {
+const overdueEntry: CalendarDisplayEvent = {
   ...basePlan,
   id: 'overdue-1',
   title: '期限切れタスク（昨日）',
@@ -216,7 +216,7 @@ export const WithOverdueEntry: Story = {
 // Preset Sample Day — オンボーディング後の初回表示イメージ
 // ─────────────────────────────────────────────────────────
 
-const presetBase: CalendarEvent = {
+const presetBase: CalendarDisplayEvent = {
   id: '',
   title: '',
   status: 'open',
@@ -240,8 +240,8 @@ function preset(
   startHour: number,
   startMin: number,
   durationMin: number,
-  extra?: Partial<CalendarEvent>,
-): CalendarEvent {
+  extra?: Partial<CalendarDisplayEvent>,
+): CalendarDisplayEvent {
   const start = makeDate(today, startHour, startMin);
   const end = new Date(start);
   end.setMinutes(end.getMinutes() + durationMin);
@@ -260,9 +260,9 @@ function preset(
 }
 
 /** 過去エントリ（記録済み）の共通props */
-const closed: Partial<CalendarEvent> = { status: 'closed', timeblockState: 'past' };
+const closed: Partial<CalendarDisplayEvent> = { status: 'closed', timeblockState: 'past' };
 
-const presetSampleEntries: CalendarEvent[] = [
+const presetSampleEntries: CalendarDisplayEvent[] = [
   // 過去（記録済み）
   preset('preset-1', 'Morning Run', 'var(--category-teal)', 8, 0, 30, {
     ...closed,

@@ -2,10 +2,10 @@
  * エントリ関連の型定義
  */
 
-import type { CalendarEvent } from './calendar.types';
+import type { CalendarDisplayEvent } from './calendar.types';
 
 /** 時間指定エントリ型（startDate/endDateをstart/endにエイリアス） */
-export type TimedTimeblock = CalendarEvent & {
+export type TimedTimeblock = CalendarDisplayEvent & {
   start: Date; // startDateのエイリアス
   end: Date; // endDateのエイリアス
   isReadOnly?: boolean;
@@ -13,7 +13,7 @@ export type TimedTimeblock = CalendarEvent & {
 
 /** カラム割り当て済みのエントリ列情報 */
 export interface TimeblockColumn {
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   columnIndex: number;
   totalColumns: number;
 }

@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import type { CalendarViewType, MultiDayViewType } from '@/features/calendar';
 import { parseCalendarDateParam } from '@/features/calendar';
 import type { ReviewGranularity } from '@/features/review';
+import { isValidCalendarViewToken } from '@/lib/calendar-view-tokens';
 import type { Locale } from '@dayopt/i18n/routing';
 
 /**
@@ -14,7 +15,9 @@ export function parseDateParam(date: string | undefined): Date | undefined {
 
 /** URL segmentをサポート対象のmulti-day view（2day〜7day）として解析する。 */
 export function parseMultiDayViewParam(nday: string): MultiDayViewType | null {
-  return /^[2-7]day$/.test(nday) ? (nday as MultiDayViewType) : null;
+  return isValidCalendarViewToken(nday) && nday !== 'day' && nday !== 'week'
+    ? (nday as MultiDayViewType)
+    : null;
 }
 
 /**
@@ -23,12 +26,13 @@ export function parseMultiDayViewParam(nday: string): MultiDayViewType | null {
  * `view` 省略時（undefined）は呼び出し側で week として扱う（呼び出し側の責務）。
  * 値が指定されていて day/week/2〜7day のいずれにも一致しない場合のみ null を返し、
  * 呼び出し側で 404 にする（範囲外は redirect せず 404 のまま、という現行 [nday] の
- * 挙動を維持するため）。
+ * 挙動を維持するため）。トークン集合は proxy.ts（Edge runtime）と共有する
+ * `@/lib/calendar-view-tokens` が正本（`.claude/rules/workflow.md` §同型指摘の打ち切り
+ * に従い、旧実装の定数複製 + parity test を単一定義への統一へ置き換えた）。
  */
 export function parseCalendarViewParam(view: string | undefined): CalendarViewType | null {
   if (view === undefined) return null;
-  if (view === 'day' || view === 'week') return view;
-  return parseMultiDayViewParam(view);
+  return isValidCalendarViewToken(view) ? (view as CalendarViewType) : null;
 }
 
 /**

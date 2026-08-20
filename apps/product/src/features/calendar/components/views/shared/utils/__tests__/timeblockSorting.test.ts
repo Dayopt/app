@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 
 import {
   sortAgendaEventsByDateKeys,
@@ -9,7 +9,7 @@ import {
   sortEventsForAgenda,
 } from '../timeblockSorting';
 
-function makeTimeblock(id: string, startDate: Date | null): CalendarEvent {
+function makeTimeblock(id: string, startDate: Date | null): CalendarDisplayEvent {
   return {
     id,
     title: `Entry ${id}`,
@@ -65,7 +65,7 @@ describe('timeblockSorting', () => {
 
   describe('sortEventsByDateKeys', () => {
     it('各日付キーのイベントをソートする', () => {
-      const eventsByDate: Record<string, CalendarEvent[]> = {
+      const eventsByDate: Record<string, CalendarDisplayEvent[]> = {
         '2026-02-21': [
           makeTimeblock('b', new Date('2026-02-21T14:00:00')),
           makeTimeblock('a', new Date('2026-02-21T09:00:00')),
@@ -95,7 +95,7 @@ describe('timeblockSorting', () => {
 
   describe('sortAgendaEventsByDateKeys', () => {
     it('各日付キーのイベントをAgenda用にソートする', () => {
-      const eventsByDate: Record<string, CalendarEvent[]> = {
+      const eventsByDate: Record<string, CalendarDisplayEvent[]> = {
         '2026-02-21': [
           makeTimeblock('b', new Date('2026-02-21T14:00:00')),
           makeTimeblock('a', new Date('2026-02-21T09:00:00')),

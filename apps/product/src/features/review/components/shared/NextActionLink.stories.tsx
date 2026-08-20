@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 /** 基本表示: 来週の計画への導線 */
 export const Default: Story = {
   args: {
-    href: '/ja/week?date=2026-06-15',
+    href: '/ja/calendar?view=week&date=2026-06-15',
     label: '来週の計画を立てる',
   },
 };
@@ -28,9 +28,9 @@ export const AllPatterns: Story = {
   args: { href: '#', label: '' },
   render: () => (
     <div className="flex flex-col gap-4">
-      <NextActionLink href="/ja/week?date=2026-06-15" label="来週の計画を立てる" />
-      <NextActionLink href="/ja/day?date=2026-06-11" label="明日の計画を立てる" />
-      <NextActionLink href="/ja/week?date=2026-07-01" label="来月の計画を立てる" />
+      <NextActionLink href="/ja/calendar?view=week&date=2026-06-15" label="来週の計画を立てる" />
+      <NextActionLink href="/ja/calendar?view=day&date=2026-06-11" label="明日の計画を立てる" />
+      <NextActionLink href="/ja/calendar?view=week&date=2026-07-01" label="来月の計画を立てる" />
     </div>
   ),
 };

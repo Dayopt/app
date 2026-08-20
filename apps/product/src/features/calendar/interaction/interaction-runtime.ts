@@ -11,7 +11,7 @@ import type React from 'react';
 
 import type { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { useCalendarDragStore } from '../stores/useCalendarDragStore';
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 import type {
   InteractionAction,
@@ -25,9 +25,9 @@ export interface UseInteractionProps {
   /** Base date of the current view */
   date: Date;
   /** Events for the current view */
-  events: CalendarEvent[];
+  events: CalendarDisplayEvent[];
   /** Events for overlap checking (defaults to events) */
-  allEventsForOverlapCheck?: CalendarEvent[];
+  allEventsForOverlapCheck?: CalendarDisplayEvent[];
   /** Displayed dates (week/multi-day views) */
   displayDates?: Date[];
   /** View mode */
@@ -53,7 +53,7 @@ export interface UseInteractionProps {
   /** Plan を Record レーンへdropした時の記録化 */
   onPlanRecord?: ((planId: string, range: TimeRange) => void) | undefined;
   /** Callback when an event is clicked (not dragged) */
-  onEventClick?: (event: CalendarEvent) => void;
+  onEventClick?: (event: CalendarDisplayEvent) => void;
   /** Callback when a time range is selected on the grid */
   onTimeRangeSelect?: (selection: {
     date: Date;
@@ -100,8 +100,8 @@ type CalendarDragStoreState = ReturnType<typeof useCalendarDragStore.getState>;
 
 /** latestRef.current の形。stable dispatch から毎回読む可変依存の束 */
 export interface InteractionRuntime {
-  events: CalendarEvent[];
-  allEvents: CalendarEvent[];
+  events: CalendarDisplayEvent[];
+  allEvents: CalendarDisplayEvent[];
   hourHeight: number;
   planLaneWidthPercent: number;
   date: Date;

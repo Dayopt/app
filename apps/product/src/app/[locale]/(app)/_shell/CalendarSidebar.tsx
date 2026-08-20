@@ -5,7 +5,7 @@
  *
  * view switcher + tag filter。MiniCalendar は Sidebar の pinned 領域
  * （プロフィール直上）へ移動した（#2217）。中身は書き換えない（docs/projects/
- * workspace-shell-restructure/overview.md §5-2）。
+ * _archive/workspace-shell-restructure/overview.md §5-2）。
  */
 
 import { ActivityFilterList, ViewSwitcherList } from '@/features/calendar';

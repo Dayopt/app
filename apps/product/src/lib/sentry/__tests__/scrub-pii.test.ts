@@ -43,20 +43,20 @@ describe('Product Sentry sanitizer adapters', () => {
   });
 
   it('adapts transaction, span, and breadcrumb hooks', () => {
-    const transaction = scrubSentryTransaction({ transaction: '/day?search=private' });
+    const transaction = scrubSentryTransaction({ transaction: '/calendar?search=private' });
     const span = scrubSentrySpan({
       trace_id: 'a'.repeat(32),
       span_id: 'b'.repeat(16),
-      data: { 'url.full': 'https://app.dayopt.com/day?token=private' },
+      data: { 'url.full': 'https://app.dayopt.com/calendar?token=private' },
     });
     const breadcrumb = scrubSentryBreadcrumb({
       category: 'http',
-      data: { method: 'GET', url: 'https://app.dayopt.com/day?token=private' },
+      data: { method: 'GET', url: 'https://app.dayopt.com/calendar?token=private' },
     });
 
-    expect(transaction.transaction).toBe('/day');
-    expect(span.data).toEqual({ 'url.full': 'https://app.dayopt.com/day' });
-    expect(breadcrumb?.data).toEqual({ method: 'GET', url: 'https://app.dayopt.com/day' });
+    expect(transaction.transaction).toBe('/calendar');
+    expect(span.data).toEqual({ 'url.full': 'https://app.dayopt.com/calendar' });
+    expect(breadcrumb?.data).toEqual({ method: 'GET', url: 'https://app.dayopt.com/calendar' });
   });
 });
 
