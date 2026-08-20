@@ -1061,14 +1061,20 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(world.promoted()).toEqual(['web', 'product']);
   });
 
-  it('promotes only product when a product-only package changes', async () => {
-    // packages/domain は product だけが依存する。依存グラフを実際に辿らないと
-    // この区別は出ない。
+  it('promotes only product when a product-local-only path changes', async () => {
+    // packages/domain（product だけが依存する共有 package）は #2168 で
+    // apps/product/src/lib/time へ統合済み。この移動後、残る shared package は
+    // すべて product + web の 2 consumer を持つため、依存グラフ traversal で
+    // 「product だけが影響を受ける」を実証する実在 shared package の代替が無い
+    // （product-local path は apps/product/ prefix で product 判定されるため、
+    // このケースは依存グラフ解決を経由しない）。グラフ traversal 自体の検証は
+    // scripts/__tests__/impact.test.ts の synthetic fixture（product-only
+    // workspace package）が引き続き担う。
     const world = createReleaseWorld();
 
     const result = await release({
       fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['packages/domain/src/index.ts'],
+      diffFilesImpl: () => ['apps/product/src/lib/time/index.ts'],
     });
 
     expect(result.status).toBe('promoted');

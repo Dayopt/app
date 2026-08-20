@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-24
+last_verified: 2026-08-20
 code: apps/product/src
 ---
 
@@ -571,8 +571,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
 - `packages/i18n`: product / web 共通の next-intl routing / navigation / request locale fallback。message loader や app 固有 Provider は入れない。
 - `packages/observability`: product / web 共通のPII sanitizer、技術context型、明示的cancel判定、browser telemetry consent契約。root exportはprovider非依存とし、明示的な`./build-gate` subpathだけにSentry Production buildのcredential / upload失敗policyを置く。Sentry SDK、Next.js、app固有capture経路は入れない。
-- `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は現状 product のみだが、純粋ロジックの隔離層として package を維持する。
-- `packages/assets`: 複数 app で共有する静的素材の原本（logo / app icon / OGP image）。React component は入れない。
+- `apps/product/src/lib/time`（旧 `packages/domain`）: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。消費者は product のみのため、workspace package の「2 consumer 以上」基準を満たさず product-local へ統合済み（2026-08、#2168）。
 - `apps/product/src/lib/database`（旧 `packages/database`）: Supabase/Postgres boundary。generated types / table names / row helper types を扱う。product 専用のため package ではなく product-local。
 - `packages/billing`: Free / Pro plans, subscription status, entitlement, public-safe pricing constants。Stripe secret key, SDK, webhook handlers, checkout / portal 実装は入れない。
 
@@ -590,20 +589,17 @@ apps/product, apps/web
   -> packages/config
   -> packages/billing
   -> packages/observability
-
-apps/product
-  -> packages/domain
 ```
 
 `packages/components` は `packages/foundations` の token / CSS variables を使えるが、`packages/foundations` は `packages/components` を知らない。
-`packages/domain` は DB row shape を知らない。DB の都合を domain model に漏らす場合は product 側（`apps/product/src/lib/database`）で吸収する。
+`apps/product/src/lib/time`（旧 `packages/domain`）は DB row shape を知らない。DB の都合を domain model に漏らす場合は `apps/product/src/lib/database` で吸収する。
 
 ### Current Phase
 
-`packages/foundations`, `packages/components`, `packages/config`, `packages/domain`, `packages/observability` は最小の公開面を持つ package として運用中。
+`packages/foundations`, `packages/components`, `packages/config`, `packages/observability` は最小の公開面を持つ package として運用中。
 `packages/i18n` は `packages/config` の locale 定義を使い、product / web に共通する next-intl adapter の公開面を環境別 subpath に限定して提供する。
 `packages/observability` のroot exportはprovider非依存のprivacy / consent契約だけを公開する。Sentryの初期化、DSN値、sampling、upload実行、app固有routeは各appに残し、Production build gateの純粋な検証policyだけを`./build-gate` subpathで共有する。
-`packages/domain` は Dayopt の意味を表すpure TypeScript packageで、`TimeRange`, `TimeblockOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。
+`apps/product/src/lib/time`（旧 `packages/domain`）は Dayopt の意味を表すpure TypeScriptで、`TimeRange`, `TimeblockOrigin`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
 `packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
@@ -618,7 +614,7 @@ Source of truth:
 - URL / domain / contact / public brand constants: `packages/config`
 - next-intl routing / navigation / request locale fallback: `packages/i18n`
 - Sentry event sanitizer / technical context / explicit cancellation / browser telemetry consent / Production build gate policy: `packages/observability`
-- Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `packages/domain`
+- Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `apps/product/src/lib/time`（旧 `packages/domain`）
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
 
@@ -720,9 +716,10 @@ Product / Webが同じprivacy boundaryとbrowser telemetry同意判定を使う�
 - app固有のfeature、logger、capture経路
 - operator smokeやapp固有runtime Production env
 
-#### `packages/domain`
+#### `apps/product/src/lib/time`（旧 `packages/domain`）
 
 Dayopt の「意味」を pure TypeScript の型・定数・helper にする。DB に保存する形ではなく、アプリが考える概念を置く。
+consumer が product のみで「2 consumer 以上」基準（#2100 Phase 3-1）を満たさないため、workspace package から product-local へ統合済み（2026-08、#2168）。
 
 入れてよいもの:
 
@@ -787,8 +784,7 @@ product 専用（web・他 package から参照なし）のため package では
 - 見た目の token / CSS variable / theme: `packages/foundations`
 - URL / metadata / public constants: `packages/config`
 - locale-aware routing / navigation / request fallback: `packages/i18n`
-- DB なしで説明できる Dayopt の business definition: `packages/domain`
-- 複数 app で共有する静的素材の原本: `packages/assets`
+- DB なしで説明できる Dayopt の business definition（product 専用）: `apps/product/src/lib/time`（旧 `packages/domain`、product-local）
 - Supabase row / generated type / domain converter: `apps/product/src/lib/database`（product-local）
 - plan / subscription / entitlement の公開定義: `packages/billing`
 - Dayopt に依存しない pure helper: 再利用先が明確になるまでは利用する app 内に置く
@@ -800,7 +796,7 @@ Storybook は `packages/foundations` と `packages/components` の公開面を�
 
 - `packages/foundations`: token の一覧、意味、使用禁止例を `Shared/Foundations/*` で可視化する。
 - `packages/components`: props と状態を `Shared/Components/*` で可視化する。
-- `packages/domain`, `packages/billing`, `apps/product/src/lib/database`: UI カタログではなく docs と decision table で境界を説明する。
+- `apps/product/src/lib/time`（旧 `packages/domain`）, `packages/billing`, `apps/product/src/lib/database`: UI カタログではなく docs と decision table で境界を説明する。
 - `apps/product` 固有の feature component は `Product/*` に残し、汎用化できたものだけ `packages/components` に移す。
 
 `apps/storybook` が `@dayopt/product` に加えて `@dayopt/foundations` / `@dayopt/components` を直接 dependencies に持つのは意図的で、product 経由の二重経路ではない。`.storybook/main.ts` の `stories` glob が両 package の `src` を直接読み込み、`packages/components/src/*.stories.tsx` は `@dayopt/components` を package 名で self-import する。直接依存は Storybook build の実入力を宣言している。

@@ -13,7 +13,8 @@
     ".storybook/stories/**",
     "src/test/**",
     "src/emails/**",
-    "src/lib/database/**"
+    "src/lib/database/**",
+    "src/lib/time/**"
   ],
   "ignoreDependencies": [
     "@axe-core/react",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasTwoLayerTimeConflict } from '@dayopt/domain';
+import { hasTwoLayerTimeConflict } from '@/lib/time';
 
 import type { CalendarDisplayEvent } from '../../types/calendar.types';
 

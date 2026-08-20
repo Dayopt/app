@@ -2,7 +2,7 @@
  * CalendarDragSelection 型定義
  */
 
-import type { TimeFormat } from '@dayopt/domain';
+import type { TimeFormat } from '@/lib/time';
 
 import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 

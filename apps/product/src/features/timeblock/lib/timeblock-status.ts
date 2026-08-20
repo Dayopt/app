@@ -7,7 +7,7 @@
  * - past: 過去の記録
  */
 
-import type { TimeblockState } from '@dayopt/domain';
+import type { TimeblockState } from '@/lib/time';
 
 type TimeblockLike = {
   origin?: string | null;

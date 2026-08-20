@@ -5,7 +5,7 @@ code:
   - apps/product/src/features/timeblock
   - apps/product/src/features/calendar
   - apps/product/src/lib/database/generated/database.types.ts
-  - packages/domain
+  - apps/product/src/lib/time
   - packages/foundations
   - supabase/migrations/20260716022141_drop_chronotype_fulfillment_columns.sql
 ---

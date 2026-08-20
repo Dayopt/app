@@ -89,7 +89,7 @@ export const INTEGRATION_GLOBS = [
   '.github/workflows/integration.yml',
   'apps/product/src/features/*/domain/**',
   'apps/product/src/features/*/server/**',
-  'packages/domain/**',
+  'apps/product/src/lib/time/**',
   'apps/product/src/lib/database/**',
   'apps/product/src/lib/mcp/**',
   'apps/product/src/lib/oauth-server/**',

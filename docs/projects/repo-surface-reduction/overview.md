@@ -88,6 +88,8 @@ foundations のみ CSS / Tailwind 設定からの参照も追加で数える（`
 
 **削減見込み**: 全 7 package が 10 件以上の consumer を持ち、zero-use package は存在しない。**0 / 7 = 0%**。
 
+> **注記（2026-08-20、#2168）**: 上記実測後、`@dayopt/domain` は consumer が `apps/product` のみ（この表の 16 と一致）だったため「2 consumer 以上」基準（#2100 Phase 3-1）を満たさないと判定し、`apps/product/src/lib/time` へ product-local 統合した。以後 workspace package は 7→6。本表の数値は 2026-08-19 実測時点のまま凍結し、次回実測時に更新する。
+
 ---
 
 ## 3. current docs（65、`log/` `_archive/` 除く）

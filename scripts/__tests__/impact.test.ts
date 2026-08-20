@@ -76,11 +76,12 @@ function expectImpact(files: string[], expected: Partial<Impact>) {
 }
 
 describe('workspace 依存グラフ', () => {
-  it('product は全 package、web は domain 以外に依存する（現在の manifest の固定）', () => {
+  it('product / web 共通の package は両方から reachable（現在の manifest の固定）', () => {
     // このテストが落ちたら manifest が変わったということ。期待値を現実に合わせて
     // 更新すればよい（resolver 側は自動追従している）。
+    // `packages/domain` は consumer が product のみだったため #2168 で
+    // `apps/product/src/lib/time` へ統合済み（workspace package から除外）。
     const graph = readWorkspaceGraph() as Map<string, Set<string>>;
-    expect(graph.get('packages/domain')).toEqual(new Set(['product']));
     expect(graph.get('packages/config')).toEqual(new Set(['product', 'web']));
     expect(graph.get('packages/i18n')).toEqual(new Set(['product', 'web']));
     expect(graph.get('packages/components')).toEqual(new Set(['product', 'web']));
@@ -130,11 +131,11 @@ describe('app とその依存', () => {
     });
   });
 
-  it('packages/domain → product のみ（web は依存しない）', () => {
-    expectImpact(['packages/domain/src/plan.ts'], {
+  it('apps/product/src/lib/time（旧 packages/domain）→ product のみ、integration も要求', () => {
+    expectImpact(['apps/product/src/lib/time/time-conflict.ts'], {
       product: true,
       productJourney: true,
-      integration: true, // packages/domain/** は integration.yml の paths に含まれる
+      integration: true, // apps/product/src/lib/time/** は integration.yml の paths に含まれる
     });
   });
 
