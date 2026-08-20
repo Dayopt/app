@@ -20,7 +20,7 @@ export function PlanMock() {
       height: '12%',
       label: 'Email & Slack',
       duration: '1h',
-      color: 'bg-tag-amber/15 border-tag-amber/30',
+      color: 'bg-category-amber/15 border-category-amber/30',
     },
     {
       top: '40%',
@@ -34,14 +34,14 @@ export function PlanMock() {
       height: '22%',
       label: 'Code Review + PR',
       duration: '2h',
-      color: 'bg-tag-blue/15 border-tag-blue/30',
+      color: 'bg-category-blue/15 border-category-blue/30',
     },
     {
       top: '78%',
       height: '15%',
       label: 'Weekly Reflection',
       duration: '1h',
-      color: 'bg-tag-green/15 border-tag-green/30',
+      color: 'bg-category-green/15 border-category-green/30',
     },
   ];
 

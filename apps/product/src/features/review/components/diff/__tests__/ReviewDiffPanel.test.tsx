@@ -44,7 +44,7 @@ function item(
     title: 'Focus',
     tagId: null,
     activityId: 'activity-1',
-    color: 'var(--tag-blue)',
+    color: 'var(--category-blue)',
     plannedStart: start,
     plannedEnd: end,
     actualStart,

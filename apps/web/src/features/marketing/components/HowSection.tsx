@@ -19,7 +19,7 @@ const PILLARS = [
 const CYCLE_DOTS = [
   { key: 'plan', color: 'bg-primary' },
   { key: 'track', color: 'bg-success' },
-  { key: 'learn', color: 'bg-tag-amber' },
+  { key: 'learn', color: 'bg-category-amber' },
 ] as const;
 
 export async function HowSection({ locale }: HowSectionProps) {

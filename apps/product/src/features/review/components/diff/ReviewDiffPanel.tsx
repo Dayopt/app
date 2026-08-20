@@ -147,7 +147,7 @@ export function ReviewDiffPanel({ diff, onItemClick, className }: ReviewDiffPane
                       className="mt-1 h-8 w-1 shrink-0 rounded-full"
                       style={{
                         backgroundColor: activity?.color
-                          ? `var(--tag-${activity.color})`
+                          ? `var(--category-${activity.color})`
                           : item.color,
                       }}
                       aria-hidden="true"
