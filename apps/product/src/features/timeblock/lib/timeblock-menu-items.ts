@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 import type { MessageKey } from '@/lib/i18n';
-import type { TimeblockOrigin } from '@dayopt/domain';
+import type { TimeblockOrigin } from '@/lib/time';
 
 export type TimeblockMenuItemKey =
   | 'viewStats'

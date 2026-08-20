@@ -4,7 +4,7 @@ last_verified: 2026-07-16
 code:
   - apps/product/src/features/timeblock
   - apps/product/src/features/calendar
-  - packages/domain
+  - apps/product/src/lib/time
   - packages/foundations
   - scripts
   - supabase

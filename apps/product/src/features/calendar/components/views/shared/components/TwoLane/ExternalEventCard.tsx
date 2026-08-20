@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl';
 
 import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { formatTimeRange } from '@/lib/date';
+import type { TimeFormat } from '@/lib/time';
 import { cn } from '@dayopt/components';
-import type { TimeFormat } from '@dayopt/domain';
 
 import {
   MIN_CARD_HEIGHT_PX,

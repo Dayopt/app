@@ -15,8 +15,8 @@ import { useTranslations } from 'next-intl';
 import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import type { RecordEvent } from '@/features/timeblock';
 import { formatTimeRange } from '@/lib/date';
+import type { TimeFormat } from '@/lib/time';
 import { cn } from '@dayopt/components';
-import type { TimeFormat } from '@dayopt/domain';
 
 import type { TwoLanePosition } from '../../../../../lib/two-lane-layout';
 import { DayDiffMarker } from './DayDiffMarker';

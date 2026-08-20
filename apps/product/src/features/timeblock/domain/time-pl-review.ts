@@ -1,4 +1,4 @@
-import { computePlanAccuracy, computePlanVariance, type PlanAccuracyStatus } from '@dayopt/domain';
+import { computePlanAccuracy, computePlanVariance, type PlanAccuracyStatus } from '@/lib/time';
 
 import { aggregateByActivity } from './activity-axis-aggregation';
 

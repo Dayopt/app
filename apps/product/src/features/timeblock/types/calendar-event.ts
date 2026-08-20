@@ -1,4 +1,4 @@
-import type { TimeblockOrigin, TimeblockState } from '@dayopt/domain';
+import type { TimeblockOrigin, TimeblockState } from '@/lib/time';
 import type { TimeblockDestination } from '../domain/timeblock-destination';
 
 /** Timeblock の表示用射影型（カレンダー上でのレンダリングに使用） */

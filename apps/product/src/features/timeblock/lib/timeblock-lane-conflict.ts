@@ -1,4 +1,4 @@
-import { rangesOverlap } from '@dayopt/domain';
+import { rangesOverlap } from '@/lib/time';
 import type { QueryClient } from '@tanstack/react-query';
 
 interface TimeblockLaneItem {
