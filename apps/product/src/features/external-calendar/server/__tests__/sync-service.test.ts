@@ -18,6 +18,7 @@ const createClient = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
 const getConfiguredExternalLifecycleAppVersion = vi.hoisted(() => vi.fn());
+const isConfiguredFencedCalendarSyncWriterReady = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
 
 vi.mock('@/env', () => ({
@@ -34,6 +35,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 vi.mock('@/lib/database/external-lifecycle-version', () => ({
   getConfiguredExternalLifecycleAppVersion,
+  isConfiguredFencedCalendarSyncWriterReady,
 }));
 vi.mock('../token-crypto', () => ({ decryptToken }));
 vi.mock('../token-rotation', () => ({
@@ -42,6 +44,20 @@ vi.mock('../token-rotation', () => ({
 }));
 vi.mock('../providers/google', () => ({
   googleCalendarAdapter: { provider: 'google', startSession, syncCalendar },
+}));
+
+const beginCalendarSyncRun = vi.hoisted(() => vi.fn());
+const clearCalendarSyncCursor = vi.hoisted(() => vi.fn());
+const finishCalendarSyncRun = vi.hoisted(() => vi.fn());
+const persistCalendarSyncResult = vi.hoisted(() => vi.fn());
+const resolveProjectKey = vi.hoisted(() => vi.fn());
+
+vi.mock('../fenced-sync-writer', () => ({
+  beginCalendarSyncRun,
+  clearCalendarSyncCursor,
+  finishCalendarSyncRun,
+  persistCalendarSyncResult,
+  resolveProjectKey,
 }));
 
 import { PERSIST_RESERVE_MS, syncConnection } from '../sync-service';
@@ -191,7 +207,27 @@ function activeConnection() {
 }
 
 function oneCalendar(syncToken: string | null = 'existing-token') {
-  return [{ provider_calendar_id: CALENDAR_ID, calendar_name: 'Work', sync_token: syncToken }];
+  return [
+    {
+      id: 'cal-row-1',
+      provider_calendar_id: CALENDAR_ID,
+      calendar_name: 'Work',
+      sync_token: syncToken,
+    },
+  ];
+}
+
+function beginStarted(overrides: Record<string, unknown> = {}) {
+  return {
+    result: 'started',
+    dataGeneration: 3,
+    authorityFenceId: 'fence-1',
+    authorityEpoch: 7,
+    syncSequence: 42,
+    runStartedAt: RUN_ISO,
+    refreshTokenEnc: 'enc',
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
@@ -205,7 +241,13 @@ beforeEach(() => {
   });
   markCalendarConnectionReauth.mockResolvedValue('marked');
   getConfiguredExternalLifecycleAppVersion.mockResolvedValue(1);
+  isConfiguredFencedCalendarSyncWriterReady.mockResolvedValue(false);
   startSession.mockResolvedValue(session());
+  resolveProjectKey.mockReturnValue('project-key');
+  beginCalendarSyncRun.mockResolvedValue(beginStarted());
+  clearCalendarSyncCursor.mockResolvedValue('cleared');
+  persistCalendarSyncResult.mockResolvedValue('persisted');
+  finishCalendarSyncRun.mockResolvedValue('finished');
 });
 
 afterEach(() => {
@@ -836,5 +878,244 @@ describe('syncConnection — 情報漏洩', () => {
     await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
 
     expect(JSON.stringify(loggerWarn.mock.calls)).not.toContain('super-secret-refresh');
+  });
+});
+
+// =============================================================================
+// #2050: lifecycleVersion >= 2（fenced sync writer 経路）
+//
+// v0/v1（上記）とは独立した経路。CAS 入出力とチャンク化・superseded の扱いに絞って
+// 検証する（RPC 呼び出しの discriminant マッピングは overview.md §3 が正本）。
+// =============================================================================
+
+describe('syncConnection — fenced writer ready', () => {
+  beforeEach(() => {
+    isConfiguredFencedCalendarSyncWriterReady.mockResolvedValue(true);
+  });
+
+  it('begin が missing なら not_configured を返す（RPC を一切呼ばない）', async () => {
+    beginCalendarSyncRun.mockResolvedValue({ result: 'missing' });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result).toEqual({ outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 });
+    expect(startSession).not.toHaveBeenCalled();
+  });
+
+  it('begin が reauth_required なら skipped_reauth_required を返す', async () => {
+    beginCalendarSyncRun.mockResolvedValue({ result: 'reauth_required' });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('skipped_reauth_required');
+  });
+
+  // project fence / quarantine fence 由来の superseded は全ユーザーに影響しうるグローバル
+  // 状態なので、無音の全停止を防ぐため必ず capture する（overview.md §3、critic 指摘）。
+  it('begin が superseded なら captureUnexpectedError してから not_configured を返す', async () => {
+    beginCalendarSyncRun.mockResolvedValue({ result: 'superseded' });
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('not_configured');
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({ operation: 'calendar_sync_fence_superseded' }),
+    );
+  });
+
+  it('projectKey が解決できないなら not_configured を返し begin を呼ばない', async () => {
+    resolveProjectKey.mockReturnValue(null);
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('not_configured');
+    expect(beginCalendarSyncRun).not.toHaveBeenCalled();
+  });
+
+  it('成功時は finishCalendarSyncRun を begin の CAS state で呼び、synced を返す', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result).toEqual({ outcome: 'synced', calendarsSynced: 1, calendarsFailed: 0 });
+    expect(persistCalendarSyncResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: CONNECTION_ID,
+        userId: USER_ID,
+        projectKey: 'project-key',
+        expectedGeneration: 3,
+        expectedAuthorityFenceId: 'fence-1',
+        expectedAuthorityEpoch: 7,
+        expectedSyncSequence: 42,
+        calendarSelectionId: 'cal-row-1',
+        providerCalendarId: CALENDAR_ID,
+        usedFullSync: false,
+        nextCursor: 'next-sync-token',
+      }),
+    );
+    expect(finishCalendarSyncRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: CONNECTION_ID,
+        expectedSyncSequence: 42,
+        runStartedAt: RUN_ISO,
+        lastSyncError: null,
+      }),
+    );
+  });
+
+  // RPC 側の 10,000 件上限（events/tombstone 別）と、events/tombstone 間の id 重複拒否
+  // （migration:401-404, 460-464）に対応する chunk 化 + dedupe（overview.md §3）。
+  it('2,000 件超の events を chunk 化し、重複 id を dedupe してから渡す', async () => {
+    setupDb({ calendars: oneCalendar() });
+    const events = [
+      ...Array.from({ length: 2500 }, (_, i) =>
+        event({ providerEventId: `ev-${i}`, title: `v1-${i}` }),
+      ),
+      // 重複 id（後勝ち）。dedupe 後は 2500 件のまま増えない。
+      event({ providerEventId: 'ev-0', title: 'v2-0' }),
+    ];
+    syncCalendar.mockResolvedValue(
+      syncResult({
+        events,
+        // ev-0 は events 側にも存在するため、tombstone からは除外されるはず。
+        cancelledEventIds: ['ev-0', 'ev-cancelled-only'],
+        usedFullSync: true,
+      }),
+    );
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(persistCalendarSyncResult).toHaveBeenCalledTimes(2);
+    const [firstCallArgs] = persistCalendarSyncResult.mock.calls[0] as [
+      {
+        events: unknown[];
+        tombstoneEventIds: string[];
+        usedFullSync: boolean;
+        nextCursor: unknown;
+      },
+    ];
+    const [secondCallArgs] = persistCalendarSyncResult.mock.calls[1] as [
+      {
+        events: unknown[];
+        tombstoneEventIds: string[];
+        usedFullSync: boolean;
+        nextCursor: unknown;
+      },
+    ];
+
+    expect(firstCallArgs.events).toHaveLength(2000);
+    expect(secondCallArgs.events).toHaveLength(500);
+    // 後勝ち dedupe: ev-0 の title は v2-0 のみが残る。
+    const allEvents = [...firstCallArgs.events, ...secondCallArgs.events] as Array<{
+      providerEventId: string;
+      title: string;
+    }>;
+    expect(allEvents.filter((e) => e.providerEventId === 'ev-0')).toHaveLength(1);
+    expect(allEvents.find((e) => e.providerEventId === 'ev-0')?.title).toBe('v2-0');
+
+    // 最終 chunk だけが tombstone / usedFullSync / nextCursor を運ぶ。
+    expect(firstCallArgs.tombstoneEventIds).toEqual([]);
+    expect(firstCallArgs.usedFullSync).toBe(false);
+    expect(firstCallArgs.nextCursor).toBeNull();
+    // ev-0 は events 側に存在するため tombstone から除外される。
+    expect(secondCallArgs.tombstoneEventIds).toEqual(['ev-cancelled-only']);
+    expect(secondCallArgs.usedFullSync).toBe(true);
+  });
+
+  // 良性競合（先行/後続 run に追い越された）は実失敗として報告しない
+  // （overview.md §3、critic 指摘）。
+  it('persist が superseded を返したら calendarsFailed を増やさず not_configured を返す', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    persistCalendarSyncResult.mockResolvedValue('superseded');
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result).toEqual({ outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 });
+    expect(finishCalendarSyncRun).not.toHaveBeenCalled();
+  });
+
+  // pr-cross-review P2（PR #2276）: begin/clear/persist/finish が deadlineAt を無視して
+  // 固定 retry 予算を消費すると、1 接続が cron の maxDuration を食い潰し後続接続を
+  // starve させる。deadline_exceeded は 'failed' ではなく既存の deadlineExceeded 経路
+  // （calendarsIncomplete）に合流させる。
+  it('persist が deadline_exceeded を返したら failed ではなく calendarsIncomplete に数える', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    persistCalendarSyncResult.mockResolvedValue('deadline_exceeded');
+
+    const result = await syncConnection({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: Date.now() + 5_000,
+    });
+
+    // 空振り（1 カレンダーも完走しなかった）なので last_synced_at は進めない
+    // （既存の calendarsIncomplete 分岐と同じ意味論）。
+    expect(result).toEqual({ outcome: 'partial_timeout', calendarsSynced: 0, calendarsFailed: 0 });
+  });
+
+  it('deadlineAt が渡されると begin/persist/finish の呼び出し引数に伝播する', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    const deadlineAt = Date.now() + 30_000;
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID, deadlineAt });
+
+    expect(beginCalendarSyncRun).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+    expect(persistCalendarSyncResult).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+    expect(finishCalendarSyncRun).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+  });
+
+  it('missing_selection は実失敗として partial_failure を報告する', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    persistCalendarSyncResult.mockResolvedValue('missing_selection');
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('partial_failure');
+    expect(finishCalendarSyncRun).toHaveBeenCalledWith(
+      expect.objectContaining({ lastSyncError: 'partial_failure' }),
+    );
+  });
+
+  it('cursorInvalid（410）では clearCalendarSyncCursor を呼んでから full sync をやり直す', async () => {
+    setupDb({ calendars: oneCalendar('stale-token') });
+    syncCalendar
+      .mockResolvedValueOnce(syncResult({ cursorInvalid: true }))
+      .mockResolvedValueOnce(syncResult({ events: [event()] }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(clearCalendarSyncCursor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        calendarSelectionId: 'cal-row-1',
+        providerCalendarId: CALENDAR_ID,
+        expectedSyncToken: 'stale-token',
+      }),
+    );
+    expect(syncCalendar).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({ cursor: null }),
+    );
+    expect(result.outcome).toBe('synced');
+  });
+
+  // clear cursor の response-loss retry は「既に clear 済み」を意味しうる。'failed' にせず
+  // full sync として続行する（overview.md §3、critic 指摘）。
+  it('clearCalendarSyncCursor が superseded を返しても失敗にせず full sync を続行する', async () => {
+    setupDb({ calendars: oneCalendar('stale-token') });
+    clearCalendarSyncCursor.mockResolvedValue('superseded');
+    syncCalendar
+      .mockResolvedValueOnce(syncResult({ cursorInvalid: true }))
+      .mockResolvedValueOnce(syncResult({ events: [event()] }));
+
+    const result = await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID });
+
+    expect(result.outcome).toBe('synced');
   });
 });

@@ -17,7 +17,10 @@ const encryptToken = vi.hoisted(() => vi.fn());
 const persistCalendarTokenRotation = vi.hoisted(() => vi.fn());
 const markCalendarConnectionReauth = vi.hoisted(() => vi.fn());
 const getConfiguredExternalLifecycleAppVersion = vi.hoisted(() => vi.fn());
+const isConfiguredFencedCalendarSyncWriterReady = vi.hoisted(() => vi.fn());
 const loggerWarn = vi.hoisted(() => vi.fn());
+const replaceSelectedCalendars = vi.hoisted(() => vi.fn());
+const resolveProjectKey = vi.hoisted(() => vi.fn());
 
 vi.mock('@/env', () => ({
   env: {
@@ -38,6 +41,11 @@ vi.mock('../token-rotation', () => ({
 }));
 vi.mock('@/lib/database/external-lifecycle-version', () => ({
   getConfiguredExternalLifecycleAppVersion,
+  isConfiguredFencedCalendarSyncWriterReady,
+}));
+vi.mock('../fenced-sync-writer', () => ({
+  replaceSelectedCalendars,
+  resolveProjectKey,
 }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: loggerWarn, info: vi.fn(), debug: vi.fn() },
@@ -64,7 +72,13 @@ const CONNECTION_ID = '00000000-0000-4000-8000-0000000000c1';
 type Recorder = { table: string; chain: Array<{ method: string; args: unknown[] }> };
 
 type Config = {
-  connection?: { data_generation?: number; status: string; refresh_token_enc: string } | null;
+  connection?: {
+    data_generation?: number;
+    status: string;
+    refresh_token_enc: string;
+    authority_fence_id?: string | null;
+    authority_epoch?: number | null;
+  } | null;
   reconnectTarget?: {
     id: string;
     provider_account_id: string;
@@ -151,10 +165,13 @@ beforeEach(() => {
   });
   markCalendarConnectionReauth.mockResolvedValue('marked');
   getConfiguredExternalLifecycleAppVersion.mockResolvedValue(1);
+  isConfiguredFencedCalendarSyncWriterReady.mockResolvedValue(false);
   startSession.mockResolvedValue({ accessToken: 'access', rotatedRefreshToken: null });
   listCalendars.mockResolvedValue([]);
   revoke.mockResolvedValue(true);
   deleteUnreferencedEvents.mockResolvedValue(undefined);
+  resolveProjectKey.mockReturnValue('project-key');
+  replaceSelectedCalendars.mockResolvedValue('updated');
 });
 
 afterEach(() => {
@@ -524,6 +541,116 @@ describe('updateSelectedCalendars', () => {
       expect.any(Error),
       expect.objectContaining({ operation: 'update_selected_calendars_prune' }),
     );
+  });
+});
+
+// #2050: fenced writer ready な接続は replace_selected_calendars_command_v1 1 回に
+// 統合される（overview.md §4）。
+describe('updateSelectedCalendars（fenced writer ready）', () => {
+  beforeEach(() => {
+    isConfiguredFencedCalendarSyncWriterReady.mockResolvedValue(true);
+  });
+
+  it('updated なら成功し、app 層の deleteUnreferencedEvents は呼ばない（RPC がアトミックに prune 済み）', async () => {
+    setupServiceRoleDb({
+      connection: {
+        status: 'active',
+        refresh_token_enc: 'enc',
+        data_generation: 3,
+        authority_fence_id: 'fence-1',
+        authority_epoch: 7,
+      },
+    });
+
+    await updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+      { providerCalendarId: 'cal-a', calendarName: 'A' },
+    ]);
+
+    expect(replaceSelectedCalendars).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: CONNECTION_ID,
+        userId: USER_ID,
+        projectKey: 'project-key',
+        expectedGeneration: 3,
+        expectedAuthorityFenceId: 'fence-1',
+        expectedAuthorityEpoch: 7,
+      }),
+    );
+    expect(deleteUnreferencedEvents).not.toHaveBeenCalled();
+  });
+
+  it('missing は CONNECTION_NOT_FOUND を throw する', async () => {
+    setupServiceRoleDb({
+      connection: {
+        status: 'active',
+        refresh_token_enc: 'enc',
+        authority_fence_id: 'fence-1',
+        authority_epoch: 7,
+      },
+    });
+    replaceSelectedCalendars.mockResolvedValue('missing');
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).rejects.toMatchObject({ code: 'CONNECTION_NOT_FOUND' });
+  });
+
+  // discriminant 未写像のまま無視すると選択変更が黙って消える（overview.md §4、critic 指摘）。
+  it('superseded は再試行可能な UPDATE_FAILED を throw する（黙って無視しない）', async () => {
+    setupServiceRoleDb({
+      connection: {
+        status: 'active',
+        refresh_token_enc: 'enc',
+        authority_fence_id: 'fence-1',
+        authority_epoch: 7,
+      },
+    });
+    replaceSelectedCalendars.mockResolvedValue('superseded');
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).rejects.toMatchObject({ code: 'UPDATE_FAILED' });
+  });
+
+  it('authority fence が未確立の接続は missing 相当として CONNECTION_NOT_FOUND を throw する', async () => {
+    setupServiceRoleDb({
+      connection: {
+        status: 'active',
+        refresh_token_enc: 'enc',
+        authority_fence_id: null,
+        authority_epoch: null,
+      },
+    });
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).rejects.toMatchObject({ code: 'CONNECTION_NOT_FOUND' });
+    expect(replaceSelectedCalendars).not.toHaveBeenCalled();
+  });
+
+  it('authority config 未解決（projectKey null）なら UPDATE_FAILED を throw する', async () => {
+    setupServiceRoleDb({
+      connection: {
+        status: 'active',
+        refresh_token_enc: 'enc',
+        authority_fence_id: 'fence-1',
+        authority_epoch: 7,
+      },
+    });
+    resolveProjectKey.mockReturnValue(null);
+
+    await expect(
+      updateSelectedCalendars(USER_ID, CONNECTION_ID, [
+        { providerCalendarId: 'cal-a', calendarName: 'A' },
+      ]),
+    ).rejects.toMatchObject({ code: 'UPDATE_FAILED' });
+    expect(replaceSelectedCalendars).not.toHaveBeenCalled();
   });
 });
 
