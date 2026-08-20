@@ -109,6 +109,65 @@ describe('useCalendarFilterStore', () => {
     });
   });
 
+  // #2188: 上記の migrate 系 test は migrateCalendarFilterState を直接呼ぶだけで、
+  // 実際の永続化パイプライン（localStorage → persist middleware の deserialize → migrate）
+  // は経由しない。ここでは旧バージョンの生 payload を localStorage に置いた状態から
+  // `persist.rehydrate()` で実ラウンドトリップさせ、migrate まで含めた結線を検証する。
+  describe('localStorage 実ラウンドトリップ', () => {
+    const STORAGE_KEY = 'calendar-filter-storage';
+
+    it('v8 の永続化データを localStorage に置いて rehydrate すると、migrate により初期状態へ落ちる', async () => {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          state: {
+            visibleActivityIds: ['tag-1', 'tag-2'],
+            initialized: true,
+            knownActivityIds: ['tag-1', 'tag-2'],
+          },
+          version: 8,
+        }),
+      );
+
+      await useCalendarFilterStore.persist.rehydrate();
+
+      const state = useCalendarFilterStore.getState();
+      expect(state.visibleActivityIds).toEqual(new Set<string>());
+      expect(state.initialized).toBe(false);
+      expect(state.knownActivityIds).toEqual(new Set<string>());
+    });
+
+    it('v9 の永続化データを localStorage に置いて rehydrate すると、そのまま復元される', async () => {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          state: {
+            visibleActivityIds: ['activity-1'],
+            initialized: true,
+            knownActivityIds: ['activity-1', 'activity-2'],
+          },
+          version: 9,
+        }),
+      );
+
+      await useCalendarFilterStore.persist.rehydrate();
+
+      const state = useCalendarFilterStore.getState();
+      expect(state.visibleActivityIds).toEqual(new Set(['activity-1']));
+      expect(state.initialized).toBe(true);
+      expect(state.knownActivityIds).toEqual(new Set(['activity-1', 'activity-2']));
+    });
+
+    it('永続化データが無ければ rehydrate しても初期状態のまま', async () => {
+      await useCalendarFilterStore.persist.rehydrate();
+
+      const state = useCalendarFilterStore.getState();
+      expect(state.visibleActivityIds).toEqual(new Set<string>());
+      expect(state.initialized).toBe(false);
+      expect(state.knownActivityIds).toEqual(new Set<string>());
+    });
+  });
+
   describe('toggleActivity', () => {
     it('アクティビティを追加できる', () => {
       useCalendarFilterStore.getState().toggleActivity('tag-1');

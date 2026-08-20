@@ -54,34 +54,9 @@ describe('billing-router', () => {
     vi.clearAllMocks();
   });
 
-  describe('認証ガード', () => {
-    it('未認証での getOverview は UNAUTHORIZED', async () => {
-      const ctx = createMockContext({ userId: undefined });
-      const caller = createCaller(ctx);
-
-      await expect(caller.getOverview()).rejects.toThrow(
-        expect.objectContaining({ code: 'UNAUTHORIZED' }),
-      );
-    });
-
-    it('未認証での getInfo は UNAUTHORIZED', async () => {
-      const ctx = createMockContext({ userId: undefined });
-      const caller = createCaller(ctx);
-
-      await expect(caller.getInfo()).rejects.toThrow(
-        expect.objectContaining({ code: 'UNAUTHORIZED' }),
-      );
-    });
-
-    it('未認証での createCheckoutSession は UNAUTHORIZED', async () => {
-      const ctx = createMockContext({ userId: undefined });
-      const caller = createCaller(ctx);
-
-      await expect(caller.createCheckoutSession({ operationId: OPERATION_ID })).rejects.toThrow(
-        expect.objectContaining({ code: 'UNAUTHORIZED' }),
-      );
-    });
-  });
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert（getOverview / getInfo /
+  // createCheckoutSession の 3 件）は重複だったため削除した。
 
   describe('getOverview', () => {
     it('認証済みユーザーの課金情報を返す', async () => {

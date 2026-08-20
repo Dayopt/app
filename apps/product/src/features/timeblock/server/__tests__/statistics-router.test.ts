@@ -59,12 +59,8 @@ beforeEach(() => {
   });
 });
 
-describe('statistics router: 認証ガード', () => {
-  it('未認証で getTagStats は UNAUTHORIZED', async () => {
-    const caller = createCaller(createMockContext({ userId: undefined }));
-    await expect(caller.getTagStats()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
-});
+// 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+// 機械検証する（#2187 E-3）。ここでの個別 assert（getTagStats）は重複だったため削除した。
 
 describe('statistics router: StatisticsService 委譲', () => {
   it('general procedures を plans / records service へ渡す', async () => {
