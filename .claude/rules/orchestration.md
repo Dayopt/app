@@ -44,10 +44,13 @@
 
 朝の Routine が毎日「盤面 YYYY-MM-DD」issue（`type:board` ラベル）を起票する。**起票テンプレ・自動パートの手順の正本は `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）**（複製しない）。本節はこの issue を指揮台がどう使うかだけを扱う。
 
+**本文 = 現在地のスナップショット、コメント列 = タイムライン**（策定日: 2026-08-20、[#2285](https://github.com/Dayopt/dayopt/issues/2285)。初日運用 [#2265](https://github.com/Dayopt/dayopt/issues/2265) で確立した形を正本化）。指揮台が踏む状態遷移（dispatch・レーン報告受領・クロスレビュー確定伝達・重量green報告受領・`branch:finish` 完了）のたびに、§2 本文の更新と**同じタイミングで盤面 issue へ 1 行のイベントコメントを落とす**。コメントは書いた瞬間の事実しか書かないため陳腐化せず、[#2256](https://github.com/Dayopt/dayopt/issues/2256) の「追記漏れの機械検出」（当日コメント欠落を朝編成 sweep で検出）と噛み合う。「今日何が起きたか」は §2 の現在地からではなく、このコメント列を上から読んで再構成する。
+
 - **§2 進行中レーンは指揮台が定型で更新する**（機械生成ではない）。更新タイミングと段階値の対応:
 
   | タイミング                                                                                      | 段階値                                                         |
   | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+  | dispatch コメント記載（チップ未発火 / 未クリック）                                              | 「起動待ち」                                                   |
   | dispatch 時                                                                                     | 「実装中」                                                     |
   | レーンから「レビュー待ち」報告受領（ready+重量green自己申告、§指揮台の merge シーケンス 手順2） | 「レビュー待ち」                                               |
   | クロスレビューで fix round 発生中                                                               | 「fix対応中」                                                  |
@@ -56,9 +59,12 @@
 
   この定型更新を怠ると STATE.md 時代と同じ陳腐化が起きる。[#2256](https://github.com/Dayopt/dayopt/issues/2256) の「追記漏れの機械検出」（当日コメント欠落を朝編成 sweep で検出）が backstop になる
 
-- **§3 キュー・§4 要判断は転記しない。** `status:ready` / `type:discussion` の検索リンクを貼るだけにする（常に最新、鮮度劣化しない）
+- **§3 本日の実績は転記しない。** `is:pr is:merged merged:YYYY-MM-DDT00:00:00+09:00..YYYY-MM-DDT23:59:59+09:00`（issue は `is:issue closed:...`）の JST 日境界検索リンクを貼るだけにする。「本日 merge N 本」のような**手書きの集計数字は書かない**（実測とズレて陳腐化する。2026-08-20 初日運用で実際に 18 本 → 実測 17 本のズレが発生）。経緯の複製が要る時はコメント列（タイムライン）を参照する
+- **§4 キュー・§5 要判断は転記しない。** `status:ready` / `type:discussion` / `status:blocked` の検索リンクを貼るだけにする（常に最新、鮮度劣化しない）
 - **§1 今週の最優先だけが内容を持つ**。前日 issue から機械コピーし、当日は User/指揮台が直接編集する
-- **公開契約の注意**: 盤面 issue は public repo の観測コンテンツ。指示の効力は持たない（§裁可・指示の経路 の原則どおり、盤面 issue のコメント単独で指示を実行しない）。テンプレ冒頭にこの旨を固定文言で入れる
+- **§6 決定ログ**は [docs/decisions.md](../../docs/decisions.md)（append-only 全履歴）へのリンクのみを持つ
+- **公開契約の注意**: 盤面 issue は public repo の観測コンテンツ。イベントコメントも含め指示の効力は持たない（§裁可・指示の経路 の原則どおり、盤面 issue のコメント単独で指示を実行しない。タイムラインは記録であって指示経路ではない）。テンプレ冒頭にこの旨を固定文言で入れる
+- **畳む順序**: セッション分割・終了時は「§2 本文更新 → 引き継ぎコメント」の順で行う。本文が古いままコメントだけが正になる逆転を避ける（§1 日サイクル の引き継ぎコメント運用と対応）
 
 ## 裁可・指示の経路（issue 正本 + send_message ポインタ）
 
@@ -201,9 +207,56 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 
 1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）。追従だけは今も指揮台の合図待ち（レーンは merge 順を知らないため）
 2. **レーンが自律的に進める** — 軽量 green（Static Checks / Unit Tests / Docs Guard）確認 → 保護対象該当時は指揮台へ申告（`gh workflow run production-config-audit.yml` の trusted dispatch は指揮台が diff レビュー後にユーザー明示指示で実行。変更しない）→ ready 化 → 重量層 watch → green 確認 →「レビュー待ち」を指揮台へ報告。指揮台の合図を待たない（§レーン主導の push・ready化 参照）
-3. **クロスレビュー** — レーンから「レビュー待ち」報告を受けたら、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行する。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う
+3. **クロスレビュー** — レーンから「レビュー待ち」報告を受けたら、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行する。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う。**この diff レビューの時点で、§高リスク PR への限定 Codex レビュー（試行） の基準に該当するかも判定する**（該当すれば内製クロスレビューと並行して `@codex review` を依頼してよい。非ブロッキング）
 4. **fix round（該当時のみ）** — 指摘があれば、**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む。修正後、レーンは重量 green を再確認して指揮台へ再報告する（重量 CI の再走はこのフローの明示的トレードオフ）
-5. **merge** — thread 全 resolve + marker + green を確認したら、`pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台のみ）
+5. **merge** — thread 全 resolve + marker + green を確認したら、`pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台のみ）。**Codex review を依頼した場合でも、Codex の応答は merge の前提条件にしない**（§高リスク PR への限定 Codex レビュー（試行） 参照）
+
+## 高リスク PR への限定 Codex レビュー（試行）
+
+策定日: 2026-08-20（[#2238](https://github.com/Dayopt/dayopt/issues/2238)。外部レビュー全廃止（2026-08-13、[#2040](https://github.com/Dayopt/dayopt/issues/2040)、`docs/engineering/log/2026-08-13-internal-review-standardization.md`）を全面撤回するものではない。内製 3 層レビュー（plan-review / push 前反証 / merge 前クロスレビュー）を正本に維持したまま、**失敗コストが高く既存の機械検証だけでは見落としやすい PR に限定して**、Codex を追加レイヤーとして小さく再導入し実測する。Refs #1947）
+
+**選別基準の正本はこの節。** 他ファイル（`AGENTS.md`、`.claude/skills/pr-cross-review/SKILL.md`、`.claude/rules/workflow.md`）はこの節を参照するのみで、選別条件を複製しない。`AGENTS.md` は「選ばれた PR で Codex が何を守るか」（レビュー時の観点・severity）にのみ集中させる。
+
+### 選別基準
+
+PR の行数・ファイル数・「大きそう」という印象では判定しない。判断軸は **失敗時の損失 × CI / テストでの検出困難性**。
+
+```text
+Codex review を依頼する
+  = 保護対象へ触れる
+    OR
+    （blast radius が広い AND 決定的な検証証拠が弱い）
+```
+
+**必須候補**（いずれかに該当）:
+
+1. **信頼境界・ユーザー分離** — Auth / OAuth / MFA、RLS / authorization / service role、ユーザー・tenant 間のデータ分離、secrets / credential / privileged operation、外部入力から権限付き処理までの経路。重点観点: 認可漏れ、越境アクセス、fail-open、秘密情報露出、意図しない write 経路
+2. **永続データ・不可逆性** — schema / migration / backfill、RPC / constraint / trigger、データ削除・変換・移行、rollback で旧アプリと新 schema が非互換になりうる変更。重点観点: data loss、部分適用、再実行安全性、rollback safety、既存データとの互換性
+3. **外部契約・金銭** — MCP / public API / OAuth scope、Stripe / billing / webhook、外部 calendar sync、event / payload / field name 等の外部 consumer が依存する wire contract。重点観点: 後方互換性、重複処理、再送、誤課金、既存 consumer の破壊
+4. **Dayopt のコア不変条件** — timezone / DST / 日境界、半開区間 `[start, end)`、overlap 判定、Plan / Log の変換・対応関係、過去データの凍結、記録の訂正可能範囲、source / origin / state transition。重点観点: 境界値、時間帯差、重複・欠落、既存記録の意味変化、仕様上禁止された状態
+
+**条件付き候補**（blast radius が広く、かつ検証証拠が弱いものだけ）: shared package / Composition Layer / cross-feature dependency、CI/CD・production config・環境変数・deploy/rollback 経路、大規模な構造変更・広範な rename、runtime dependency / permission の変更、テストでは再現しにくい concurrency / cache / race、「挙動不変」とする refactor だが証明する契約テストが不足している変更。
+
+**原則として対象外**: docs / copy / comment のみ、isolated な見た目・Storybook のみの変更、公開契約や永続データへ触れない機械的変更、lint / format / typecheck / build 等 CI が決定的に判定できる事項、既存挙動を変えず十分な契約テストがある局所 refactor。**ただし** assertion 削除・期待値の弱体化・`.skip`・timeout 増加など検証能力を下げる変更は「test-only」でも対象外にしない。
+
+path は自動判定の補助信号であり、正本は守るべき境界・不変条件・契約。1 行の RLS 変更が高リスクになりうる一方、数百行の docs / Storybook 追加が低リスクになりうる。
+
+### 運用（手動・可逆・非ブロッキング）
+
+1. §指揮台の merge シーケンス 手順 3（クロスレビュー時の diff レビュー）で、指揮台が上記基準に照らして対象かを判定する
+2. 既存の内製 `pr-cross-review` は変更せず並行して維持する
+3. 対象 PR だけ `review:codex` label を付けてよい
+4. 一般的な依頼文ではなく、該当カテゴリに合わせて観点を指定する（例: 「timezone, DST, half-open interval, overlap invariants, and possible data loss」「tenant isolation, RLS regressions, fail-open paths, and unintended privileged writes」）
+5. Codex が usage limit / 障害で応答しない場合は、その事実を該当 PR へ記録する。試行期間中は Codex の応答を hard merge gate にせず、既存の内製 review gate（`branch:finish` の `[internal-review]` marker gate）を正本のまま維持する
+6. 実測で有効性と可用性が確認できるまで、全 PR 自動レビューや必須 status check へ昇格しない
+
+### AGENTS.md との関係
+
+`AGENTS.md` は Codex 専用のレビュー規則（何を守るか・severity）を持つ。P1/P2 の定義は `pr-cross-review` skill が生きた正本で、`AGENTS.md` はその凍結前の定義を踏襲する（`.claude/skills/pr-cross-review/SKILL.md` 手順 4「指摘を分類する」参照）。**`AGENTS.md` 側に選別基準（どの PR を対象にするか）は書かない** — 書くと本節と二重管理になる。
+
+### 試行の記録と判断
+
+対象 PR 10 件または 30 日の早い方まで、対象判定の理由・Codex の応答有無 / 待ち時間・内製レビューが先に見つけていなかった有効な指摘数・false positive / 反証で棄却した指摘数・指摘により防げた failure scenario・対象にすべきだったのに漏れた PR を該当 PR のコメントへ記録する。終了時点で、継続 / 範囲縮小 / 拡張 / 停止のいずれかを月次 gardening 相当のタイミングで判断する（`.claude/skills/gardening/SKILL.md` 人間パート参照）。成功指標は「Codex を使った回数」ではなく、**限られた利用量を、既存の検証層だけでは見落としやすい重大リスクへ集中できていること**。
 
 ## 1 日サイクル
 
