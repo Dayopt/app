@@ -51,6 +51,28 @@ push の実行タイミングは指揮台の合図待ち（`.claude/rules/orches
 
 検証主張には実行コマンドと出力の要点（サマリー行の原文）を添える。「pass した」だけの報告を不可とする。パイプで exit code を隠す・turbo の cache 経由の偽グリーンなど、検証コマンドの成否を誤読しやすい罠は `docs/engineering/diagnostics.md` を参照する。「pre-existing / 環境問題」を主張する報告には同ページのプロトコルの実施結果を添付する。
 
+## 1Password 不要のローカル実アプリ検証（策定日: 2026-08-20、[#2253](https://github.com/Dayopt/dayopt/issues/2253)）
+
+worktree のレーンセッションは `pnpm dev`（op-run 前提）を起動できず、UI 確認が Storybook のみに縛られると認識されていたが、以下の経路でローカル Supabase を使った実アプリ検証が可能。Storybook が正本の位置づけは変わらないが、実アプリでの確認が要る場面（統合的な動作確認、Storybook で再現しにくい状態遷移）でこの手順を使う。
+
+1. **Docker Desktop + `supabase start` が前提**（`supabase-local` MCP と同じ前提。§Before use は `.claude/rules/mcp-usage.md` 参照）
+2. ローカル Supabase の env を直接注入する:
+   ```bash
+   eval "$(npx supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=')"
+   ```
+3. `:3000` の衝突を起動前に確認する（複数レーンが並走する場合、他レーンが既に使用中の可能性がある）:
+   ```bash
+   nc -z localhost 3000 && echo "使用中 — 指揮台へポート調整を依頼" || echo "空き"
+   ```
+4. env を直接渡して `dev:raw` を起動する（`.env` ファイルは読み書きしない — 引き続き禁止のまま）:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=$API_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY pnpm --filter @dayopt/product dev:raw
+   ```
+5. 認証は `probe:setup`（service role のスローアウェイ user + storageState 生成）、または同型の手動 user 作成で行う
+6. **検証後の後始末は必須**: スローアウェイ user の削除（`scripts/admin-delete-user.sh`）とサーバー停止
+
+**注意**: ローカル env のキー（`ANON_KEY` 等）は公知値であり secret ではない（ローカル Supabase の固定シークレット）。ただし `.env` / `.env.local` 系ファイルの読み書き境界（`docs/operations/secrets.md` §AI エージェントの env ファイル境界）は変わらず、この手順でも触らない。検証コマンドの成否確認・偽グリーンの罠は `docs/engineering/diagnostics.md` を参照する。
+
 ## 条件付き事前 E2E
 
 routes / auth / E2E spec に触れる PR は、push-ready 宣言前に影響 spec のローカル実走（1 worker）を必須にする。重量 CI で初めて失敗が判明すると、修正の後追い round が複数回発生する（PR #2222 で 13 fail → 5 round の実例）。ローカル実走なら大半を事前検出できる。

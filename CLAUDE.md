@@ -29,16 +29,15 @@ Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.cl
 
 subagent への委任・writer 境界・報告フォーマットなどの運用機構は [.claude/rules/ai-behavior.md](.claude/rules/ai-behavior.md) が正本。
 
-## 運用基盤（STATE.md）
+## 運用基盤（日次盤面 issue）
 
-指揮台セッションは日次でリセットされるため、プロジェクトの現在地をセッションの記憶ではなくリポジトリに持たせる。[STATE.md](STATE.md)（repo 直下）がその地図で、**正本ではなく生成されたビュー**である。正本は GitHub issue と open PR のまま（2026-08-01、rollup tracking issue `#1788` を「手動更新に依存して陳腐化する」という理由で廃止した教訓。[docs/engineering/log/2026-08-01-issue-state-labels-epics.md](docs/engineering/log/2026-08-01-issue-state-labels-epics.md)）。二重の正本を作らないため、STATE.md には経緯・議論を書かない。詳細は各 issue にリンクで辿る。
+指揮台セッションは日次でリセットされるため、プロジェクトの現在地をセッションの記憶ではなくリポジトリ外の GitHub issue に持たせる（2026-08-20、STATE.md を廃止して移行。経緯は [#2259](https://github.com/Dayopt/dayopt/issues/2259)）。root file（STATE.md）による機械生成は、直列 merge モデルの下で構造的に鮮度が遅れる（merge されるたび 1 手ずつ古くなる）上、機械生成に頼らない限り更新が善意任せになり [#1788](https://github.com/Dayopt/dayopt/issues/1788)（rollup tracking issue、手動更新依存で陳腐化し 2026-08-01 廃止）と同じ経路をたどる。**日次盤面 issue はコード変更を伴わない issue コメントで完結するため、指揮台自身が repo を書かずに毎回作成・更新できる**（`.claude/rules/orchestration.md` §指揮台セッションの定義 が許可する external state 操作の範囲内）。正本は GitHub issue と open PR のまま変わらない。詳細は各 issue にリンクで辿る。
 
-- **起動時**: 指揮台セッションは最初に STATE.md と open issue を読み込む
-- **更新トリガー**: 進行中レーン（§2）・キュー（§3）・要判断（§4）・決定ログ（§5）は `pnpm state:generate` が GitHub の現状（open PR / `status:ready` / `type:discussion` / `judgment:diverged` ラベル）から機械生成する。lane は push-ready 報告前にこのコマンドを実行し、差分があれば自分の PR のコミットに含める（main への直接 push はしない — main は `PR + pnpm branch:finish` 経由のマージに限定されている）
-- **§1（北極星と今週の最優先）だけが手動更新**。指揮台は repo を書けないため、更新したい時は次に動く lane への指示（issue コメント + send_message）に含め、lane が通常の PR で編集する
-- **サイズ上限 100 行**。`pnpm state:generate` が 2 段階で切り詰める: 第 1 段はキュー（§3、優先度が最も低い）、それでも超えれば第 2 段で要判断（§4）も切り詰める（`gh issue list --label type:discussion --state open` への導線を残す）。進行中レーン（§2）は open PR 直列 1 本 + レーン上限 3（後述の 1 日サイクル）で構造的に小さいため対象外。決定ログ（§5）は直近 5 件のみ表示して全履歴を [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へ追い出す
-- **鮮度**: 冒頭見出しに生成時点の `main` short SHA（生成基点 main@xxxxxxxx）を刻む。これが現在の `origin/main` と一致しなければ、その差分の merge 分だけ盤面が古い（直列 merge モデルでは「STATE.md を含む PR が merge されるたび 1 手ずつ古くなる」のが常態であり、異常ではない）
-- **追従（update-branch）時の衝突は再生成で解決する**。STATE.md は生成物のため、§2〜§5 が conflict しても手 merge しない。`pnpm state:generate` を再実行すれば現在の main に基づく内容に置き換わる（`.claude/rules/orchestration.md` §追従とマージ順の采配 参照）
+- **起動時**: 指揮台セッションは最初に本日の日次盤面 issue（`is:issue label:type:board is:open` で検索）と open issue を読み込む
+- **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新する（機械生成ではなく指揮台の定型動作）。§3 キュー・§4 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない）
+- **§1（北極星と今週の最優先）だけが内容を持つ手動更新セクション**。前日の issue から機械コピーし、当日は User/指揮台が直接編集する
+- **§5 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する
+- **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計。実際の cutover — #2020 の Routine 停止・close — は日次盤面 issue の Routine が稼働してから指揮台が行う運用切替であり、本改訂の scope 外）
 
 ## Tech Stack
 
