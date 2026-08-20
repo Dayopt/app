@@ -9,6 +9,7 @@ import {
   hashToken,
   isRuntimeClientWriteEnabled,
   isSupportedScope,
+  isWriteScope,
   resolveClient,
   resolveRequestedResource,
   type CanonicalResourceUri,
@@ -154,10 +155,6 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     resourceUri: tokenResource,
     expiresAt: Math.floor(expiresAtMs / 1000),
   };
-}
-
-function isWriteScope(scope: SupportedScope): boolean {
-  return scope.startsWith('write:') || scope.startsWith('delete:');
 }
 
 async function applyDurableWriteGate(
