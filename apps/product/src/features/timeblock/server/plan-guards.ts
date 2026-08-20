@@ -19,7 +19,6 @@ export function toPlanUpdate(input: UpdatePlanOptions['input']): PlanUpdate {
   const updateData: PlanUpdate = {};
   if (input.title !== undefined) updateData.title = input.title;
   if (input.note !== undefined) updateData.note = input.note;
-  if (input.tagId !== undefined) updateData.tag_id = input.tagId;
   if (input.externalCalendarEventId !== undefined) {
     updateData.external_calendar_event_id = input.externalCalendarEventId;
   }

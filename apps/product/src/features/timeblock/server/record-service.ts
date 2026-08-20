@@ -6,7 +6,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertActivityAssignable, assertTagAssignable } from './tag-assignment-guard';
+import { assertActivityAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -149,7 +149,6 @@ export class RecordService {
 
     this.validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     this.ensureRecordCanBeCreated(input.end_at);
-    await assertTagAssignable(this.supabase, userId, input.tagId);
     await assertActivityAssignable(this.supabase, userId, input.activityId);
 
     if (input.planId) {
@@ -164,7 +163,7 @@ export class RecordService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: input.tagId ?? null,
+      tagId: null,
       activityId: input.activityId ?? null,
       planId: input.planId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
@@ -195,10 +194,6 @@ export class RecordService {
 
     this.validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
     if (updatesTime) this.ensureRecordCanBeCreated(nextEndAt);
-    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
-    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
-      await assertTagAssignable(this.supabase, userId, input.tagId);
-    }
     // activity も同型に独立判定する。tag の条件へネストすると、activity だけを
     // 付け替える更新で fail-fast が発火しない（DB 側 assert は効くが、エラーが
     // tag 語彙で返り、timeblock-command-service の実装とも非対称になる）。
@@ -226,7 +221,7 @@ export class RecordService {
       expectedUpdatedAt: existing.updated_at,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       planId: input.planId === undefined ? existing.plan_id : input.planId,
       externalCalendarEventId:
@@ -284,7 +279,6 @@ export class RecordService {
     const updateData: RecordUpdate = {};
     if (input.title !== undefined) updateData.title = input.title;
     if (input.note !== undefined) updateData.note = input.note;
-    if (input.tagId !== undefined) updateData.tag_id = input.tagId;
     if (input.planId !== undefined) updateData.plan_id = input.planId;
     if (input.externalCalendarEventId !== undefined) {
       updateData.external_calendar_event_id = input.externalCalendarEventId;
