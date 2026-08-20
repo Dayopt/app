@@ -11,9 +11,14 @@ import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { resolveTimeblockDestination } from '@/features/timeblock';
 import { cn } from '@dayopt/components';
 
-import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-layout';
+import {
+  DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  hasLaneCounterpart,
+} from '../../../../../lib/two-lane-layout';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
 
@@ -28,6 +33,12 @@ interface DragSelectionPreviewProps {
   isOverlapping?: boolean;
   /** 1時間あたりの高さ（px） */
   hourHeight?: number | undefined;
+  /**
+   * 相手レーンとの重複判定に使う、その日の全 entry（plan+record 両方）。
+   * `CalendarDragSelection` の `plans` prop と同じ実体（呼び出し元の命名慣習）。
+   * 未指定時は counterpart 無し扱い（フル幅）にはせず、常に split 幅（既存挙動）を保つ。
+   */
+  allDayEvents?: CalendarDisplayEvent[] | undefined;
 }
 
 /**
@@ -41,6 +52,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   formatTime,
   isOverlapping = false,
   hourHeight = HOUR_HEIGHT,
+  allDayEvents,
 }: DragSelectionPreviewProps) {
   const tCalendar = useTranslations('calendar');
   const tEntry = useTranslations('timeblock');
@@ -55,12 +67,34 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   // 保存先と同じ境界条件: end > now は Plan、それ以外は Record。
   const nowForPastCheck = Date.now();
+  const startDateTime = new Date(date);
+  startDateTime.setHours(selection.startHour, selection.startMinute, 0, 0);
   const endDateTime = new Date(date);
   endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
   const kind = endDateTime.getTime() > nowForPastCheck ? 'plan' : 'record';
   const isPlan = kind === 'plan';
-  const left = isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
-  const width = isPlan ? DEFAULT_PLAN_LANE_WIDTH_PERCENT : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+
+  // #2250: 相手レーンに重なる entry が無ければフル幅にする（表示層と同じ判定）。
+  // allDayEvents 未指定時（呼び出し元が配線していない場合）は従来どおり split 幅を保つ。
+  const counterpartKind = isPlan ? 'record' : 'plan';
+  const hasCounterpart =
+    allDayEvents === undefined
+      ? true
+      : hasLaneCounterpart(
+          allDayEvents.filter((event) => {
+            const eventKind =
+              event.kind ?? resolveTimeblockDestination(event.endDate ?? event.displayEndDate);
+            return eventKind === counterpartKind;
+          }),
+          startDateTime,
+          endDateTime,
+        );
+  const left = !hasCounterpart ? 0 : isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+  const width = !hasCounterpart
+    ? 100
+    : isPlan
+      ? DEFAULT_PLAN_LANE_WIDTH_PERCENT
+      : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
   const destinationLabel = tCalendar(`event.preview.${kind}`);
 
   // 重複時は全面 destructive 化（drag/resize のゴーストと同一の ConflictOverlay に統一）

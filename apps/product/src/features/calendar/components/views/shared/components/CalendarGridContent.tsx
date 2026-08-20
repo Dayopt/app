@@ -32,6 +32,7 @@ import { buildPlanRecordDropInput } from '../../../../lib/plan-record-drop';
 import {
   calculateTwoLaneStylesForCalendarEvents,
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  hasLaneCounterpart,
 } from '../../../../lib/two-lane-layout';
 import { useActivityDraftStore } from '../../../../stores/useActivityDraftStore';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
@@ -310,8 +311,24 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         entry.kind ?? resolveTimeblockDestination(entry.endDate ?? entry.displayEndDate);
       const targetLane = useCalendarDragStore.getState().targetLane ?? sourceKind;
       const previewKind = isPlanRecordDrop(sourceKind, targetLane) ? 'record' : sourceKind;
-      const position =
-        previewKind === 'plan'
+      // #2250: ゴーストの幅も表示レイヤーと同じ動的判定に揃える。相手レーンに
+      // previewTime と重なる entry が無ければフル幅（境界の無いカラムへ「掴んだ瞬間
+      // 幅が縮む」ような不整合な見た目を出さない）。
+      const counterpartKind = previewKind === 'plan' ? 'record' : 'plan';
+      const hasGhostCounterpart = hasLaneCounterpart(
+        visibleEntries.filter((candidate) => {
+          if (candidate.id === entry.id) return false;
+          const kind =
+            candidate.kind ??
+            resolveTimeblockDestination(candidate.endDate ?? candidate.displayEndDate);
+          return kind === counterpartKind;
+        }),
+        previewTime.start,
+        previewTime.end,
+      );
+      const position = !hasGhostCounterpart
+        ? { top: 0, left: 0, width: 100, height: ghostHeight }
+        : previewKind === 'plan'
           ? { top: 0, left: 0, width: planLaneWidthPercent, height: ghostHeight }
           : {
               top: 0,
@@ -451,7 +468,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           );
         })}
 
-        <InlineActivityPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
+        <InlineActivityPalette
+          hourHeight={HOUR_HEIGHT}
+          dayEntries={allEventsForOverlapCheck ?? entries}
+          {...(enableCrossDayDrag ? { date } : {})}
+        />
 
         {/* Tag タップで作成中の draft entry を該当日に描画 */}
         {activityDraft && isSameDay(activityDraft.date, date) && (

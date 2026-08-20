@@ -33,7 +33,8 @@ interface SidebarProps {
   'aria-label'?: string;
 }
 
-function SidebarHelpMenu() {
+/** サイドバーのヘルプメニュー。#2248 の race 回帰 test から直接検証するため export する。 */
+export function SidebarHelpMenu() {
   const t = useTranslations();
 
   return (
@@ -50,6 +51,13 @@ function SidebarHelpMenu() {
         side="right"
         align="end"
         sideOffset={4}
+        // DropdownMenu が閉じる際にデフォルトでは trigger へフォーカスを戻すが、
+        // HelpMenuItems の onSelect は同じ tick で Dialog/Sheet（shortcutCheatSheet /
+        // contact、いずれも modal=false）を開く。フォーカス復帰がその Dialog の
+        // outside-interaction 検出と競合し、開いた直後に閉じてしまう（#2153 で
+        // setTimeout 遅延の workaround を試みたが実機で再発、#2248 で根治）。
+        // フォーカス復帰そのものを止めることで競合を起こさせない。
+        onCloseAutoFocus={(event) => event.preventDefault()}
       >
         <HelpMenuItems />
       </DropdownMenuContent>

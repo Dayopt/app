@@ -1,7 +1,7 @@
 /**
  * Check: docs/decisions.md の append-only 契約
  *
- * `docs/decisions.md` は `pnpm state:generate` が既存行を残したまま新規行だけを
+ * `docs/decisions.md` は `pnpm decisions:sync` が既存行を残したまま新規行だけを
  * 追記する append-only ファイル（`docs/{domain}/log/` の凍結契約とは違い、
  * 単一ファイルへの継続的な追記モデル）。既存の append-only-guard は
  * `docs/<domain>/log/` ディレクトリ配下の frontmatter supersede 契約専用のため、

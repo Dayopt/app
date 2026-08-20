@@ -1,14 +1,31 @@
 /**
- * Plan レーン + Record レーンの固定 2 レーン座標計算（Step 5、read 側専用）。
+ * Plan レーン + Record レーンの 2 レーン座標計算（Step 5、read 側専用。
+ * #2250 で常時固定幅分割から区間ごとの動的幅判定へ変更）。
  *
  * `plans_no_overlap` / `records_no_overlap`（DB EXCLUDE 制約、半開区間）により、
  * 同一ユーザーの plans 同士・records 同士は決して時間的に重ならない。そのため
  * 既存 `layout.ts` の `calculateGroupLayout`（時間重複を動的に検出して
  * column を割り当てる sweep-line）は不要で、各レーン内は「その日の時刻から
- * 座標を出すだけ」で足りる。レーン自体は Plan=左・Record=右の固定幅分割。
+ * 座標を出すだけ」で足りる。
+ *
+ * レーン幅は entry 単位で決める（時間軸の途中で 1 entry の幅が変わることはない）:
+ * 相手レーンに時間の重なる entry が 1 件でもあれば従来どおり Plan=左・Record=右の
+ * 固定幅分割、無ければその entry はフル幅（0-100%）で描画する。`DEFAULT_PLAN_LANE_WIDTH_PERCENT`
+ * は「split 時の Plan レーン幅」であり、「常時のレーン幅」ではない点に注意する。
+ *
+ * この動的幅判定は表示だけでなく、ドラッグ中の pointer→lane 判定
+ * （`resolveTwoLaneFromPointer`）・ドラッグゴースト（`CalendarGridContent.renderGhost`）・
+ * 選択後パレット（`InlineActivityPalette`）・選択中プレビュー（`DragSelectionPreview`）の
+ * 4 経路でも同じ `hasLaneCounterpart` を用いて揃える。表示上フル幅（境界不可視）なのに
+ * pointer 判定だけ旧固定境界のままだと、境界の見えないカラムで意図せず
+ * Plan→Record 変換 mutation が発火する（#2250 plan-review で検出、P1 級）。
  *
  * 呼び出し側は対象日の plans/records だけを渡す想定（日をまたぐ絞り込みは
- * 呼び出し側の責務、TwoLaneDayColumn と同じ分担）。
+ * 呼び出し側の責務、TwoLaneDayColumn と同じ分担）。この日次スコープの前提により、
+ * 日をまたぐ entry の重複判定も `displayStartDate`/`displayEndDate`（実時刻）を
+ * そのまま比較すれば足りる（px 座標は `timeToPosition` が 24:00 でクランプするが、
+ * 相手レーンの候補リスト自体が既に当日分だけに絞られているため、実時刻ベースの
+ * 判定と px 座標のクランプは競合しない）。
  */
 
 import type { PlanEvent, RecordEvent } from '@/features/timeblock';
@@ -46,17 +63,54 @@ interface CalculateTwoLaneLayoutOptions {
 }
 
 const DAY_MINUTES = 24 * 60;
-/** day / week / multi-day で共有する Plan / Record レーン幅の契約。 */
+/** day / week / multi-day で共有する、重複時（split 時）の Plan レーン幅の契約。 */
 export const DEFAULT_PLAN_LANE_WIDTH_PERCENT = 38;
 const TWO_LANE_MIN_GAP_PX: number = 2;
 
-/** カラム内の pointer X から Plan / Record の drop 先レーンを決める。 */
+/**
+ * 相手レーンに時間の重なる entry が存在するか判定する。
+ *
+ * 重複判定は実時刻（`displayStartDate`/`displayEndDate`）の半開区間比較で行う
+ * （`[targetStart, targetEnd)` と `[counterpart.start, counterpart.end)` が交差するか）。
+ * `targetEnd <= targetStart`（0 秒以下・巻き戻り）の縮退区間は「重複なし」と
+ * 誤判定してフル幅にすると 0 幅カードが全幅で他 entry と重なる事故になるため、
+ * 安全側（相手が存在する扱い = split 幅）に倒す。
+ */
+export function hasLaneCounterpart(
+  counterparts: ReadonlyArray<{ displayStartDate: Date; displayEndDate: Date }>,
+  targetStart: Date,
+  targetEnd: Date,
+): boolean {
+  const targetStartMs = targetStart.getTime();
+  const targetEndMs = targetEnd.getTime();
+  if (targetEndMs <= targetStartMs) return true;
+  return counterparts.some((counterpart) => {
+    const counterpartStartMs = counterpart.displayStartDate.getTime();
+    const counterpartEndMs = counterpart.displayEndDate.getTime();
+    if (counterpartEndMs <= counterpartStartMs) return false;
+    return targetStartMs < counterpartEndMs && counterpartStartMs < targetEndMs;
+  });
+}
+
+/**
+ * カラム内の pointer X から Plan / Record の drop 先レーンを決める。
+ *
+ * `laneAvailability` を渡すと、その時刻に相手レーンの entry が存在しない
+ * （= 画面上フル幅で境界が見えていない）場合は pointer の x 座標に関わらず
+ * `sourceLane` をそのまま返す。境界の無いカラムで意図しない
+ * Plan→Record 変換が起きるのを防ぐための安全弁（#2250）。省略時は従来どおり
+ * 常に x 座標だけで判定する（既存 test / 呼び出し元との互換を保つ）。
+ */
 export function resolveTwoLaneFromPointer(
   clientX: number,
   columnLeft: number,
   columnWidth: number,
   planLaneWidthPercent: number = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  laneAvailability?: { sourceLane: 'plan' | 'record'; hasCounterpart: boolean },
 ): 'plan' | 'record' {
+  if (laneAvailability && !laneAvailability.hasCounterpart) {
+    return laneAvailability.sourceLane;
+  }
   const boundary = columnLeft + columnWidth * (planLaneWidthPercent / 100);
   return clientX < boundary ? 'plan' : 'record';
 }
@@ -67,8 +121,9 @@ function minutesSinceMidnight(date: Date): number {
 
 function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Date; id: string }>(
   items: ReadonlyArray<T>,
-  laneLeft: number,
-  laneWidth: number,
+  counterparts: ReadonlyArray<{ displayStartDate: Date; displayEndDate: Date }>,
+  splitLeft: number,
+  splitWidth: number,
   hourHeight: number,
 ): Array<TwoLaneLayoutItem<T>> {
   const sorted = items
@@ -78,7 +133,15 @@ function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Dat
         entry.displayEndDate,
         hourHeight,
       );
-      return { entry, top, height };
+      // 重複判定は実時刻ベース（px クランプ前）で行う。gap 調整は同一レーン内の
+      // 視覚的な詰め込み対策であり、相手レーンとの時間重複とは無関係なため、
+      // gap 適用前の displayStartDate/displayEndDate を判定に使う。
+      const hasCounterpart = hasLaneCounterpart(
+        counterparts,
+        entry.displayStartDate,
+        entry.displayEndDate,
+      );
+      return { entry, top, height, hasCounterpart };
     })
     .sort((a, b) => a.top - b.top || a.entry.id.localeCompare(b.entry.id));
 
@@ -95,8 +158,8 @@ function buildLaneLayout<T extends { displayStartDate: Date; displayEndDate: Dat
     const position: TwoLanePosition = {
       top,
       height,
-      left: laneLeft,
-      width: laneWidth,
+      left: item.hasCounterpart ? splitLeft : 0,
+      width: item.hasCounterpart ? splitWidth : 100,
     };
 
     layouts.push({ entry: item.entry, position });
@@ -134,9 +197,10 @@ export function calculateTwoLaneLayout({
   planLaneWidthPercent = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 }: CalculateTwoLaneLayoutOptions): TwoLaneLayoutResult {
   const recordLaneWidthPercent = 100 - planLaneWidthPercent;
-  const planLayouts = buildLaneLayout(plans, 0, planLaneWidthPercent, hourHeight);
+  const planLayouts = buildLaneLayout(plans, records, 0, planLaneWidthPercent, hourHeight);
   const recordLayouts = buildLaneLayout(
     records,
+    plans,
     planLaneWidthPercent,
     recordLaneWidthPercent,
     hourHeight,
@@ -179,12 +243,19 @@ export function calculateTwoLaneStylesForCalendarEvents(
     }
   }
 
-  for (const { entry, position } of buildLaneLayout(plans, 0, planLaneWidthPercent, hourHeight)) {
+  for (const { entry, position } of buildLaneLayout(
+    plans,
+    records,
+    0,
+    planLaneWidthPercent,
+    hourHeight,
+  )) {
     styles[entry.id] = position;
   }
 
   for (const { entry, position } of buildLaneLayout(
     records,
+    plans,
     planLaneWidthPercent,
     recordLaneWidthPercent,
     hourHeight,
