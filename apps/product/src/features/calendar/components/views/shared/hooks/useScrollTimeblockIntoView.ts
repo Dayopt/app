@@ -25,7 +25,7 @@ function scrollToTopPx(container: HTMLDivElement, topPx: number) {
  * Mobile では Drawer が下半分を覆うため、選択された entry や作成中 draft が隠れる。
  * 対象を viewport の上端から ~25% の位置に置く。
  *
- * PC では何もしない（FloatingPopover / Popover が entry を覆わないため）。
+ * PC では何もしない（Inspector は右ドッキングパネルで entry を覆わないため）。
  */
 export function useScrollTimeblockIntoView({
   scrollContainerRef,

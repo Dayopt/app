@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pathnameMock = vi.hoisted(() => vi.fn(() => '/projects'));
@@ -45,7 +45,9 @@ vi.mock('@/lib/stores/useShellStore', () => ({
 }));
 
 vi.mock('@/components/shell/AnimatedWidthPanel', () => ({
-  AnimatedWidthPanel: ({ children }: { children: React.ReactNode }) => <aside>{children}</aside>,
+  AnimatedWidthPanel: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+    <aside data-open={open}>{children}</aside>
+  ),
 }));
 
 vi.mock('@/components/shell/sidebar', () => ({
@@ -63,6 +65,8 @@ vi.mock('../MobileAccountButton', () => ({
 vi.mock('../useAppInlineBanner', () => ({
   useAppInlineBanner: () => bannerState.current,
 }));
+
+import { useTimeblockInspectorStore } from '@/features/timeblock';
 
 import { DesktopLayout } from '../desktop-layout';
 import { MobileLayout } from '../mobile-layout';
@@ -124,6 +128,26 @@ describe('DesktopLayout', () => {
 
     expect(container.querySelectorAll('[data-slot="inline-banner"]')).toHaveLength(1);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('renders the inspector as a 3rd column that opens when the inspector store opens', () => {
+    act(() => useTimeblockInspectorStore.getState().closeInspector());
+
+    const { container } = render(
+      <DesktopLayout>
+        <div>Content</div>
+      </DesktopLayout>,
+    );
+
+    const asides = container.querySelectorAll('aside');
+    const inspectorAside = asides[asides.length - 1]!;
+    expect(inspectorAside.getAttribute('data-open')).toBe('false');
+
+    act(() => useTimeblockInspectorStore.getState().openInspector('timeblock-1', 'plan'));
+    const openedAside = container.querySelectorAll('aside');
+    expect(openedAside[openedAside.length - 1]!.getAttribute('data-open')).toBe('true');
+
+    act(() => useTimeblockInspectorStore.getState().closeInspector());
   });
 });
 

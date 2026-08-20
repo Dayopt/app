@@ -96,7 +96,7 @@ export function GlobalOverlays() {
   }, [settingsOpen, contactOpen, timeblockSearchOpen, shortcutCheatSheetOpen, closeInspector]);
 
   // Inspector は Calendar ビュー専用 — workspace ビュー外への遷移で自動 close。
-  // URL は平坦化済み（/day, /week, /Nday）のため isCalendarViewPath で判定する。
+  // `/calendar` への集約済み（isCalendarViewPath で判定）。
   useEffect(() => {
     if (!isInspectorOpen) return;
     const pathWithoutLocale = pathname?.replace(/^\/(ja|en)/, '') ?? '';
@@ -107,7 +107,7 @@ export function GlobalOverlays() {
 
   // Inspector → /report。カレンダー内パネル（CalendarReviewRail）は廃止済み
   // （#2181 Step 4）。tagId によるセグメント絞り込みは Step 5（セグメント配線）で
-  // 復元する（docs/projects/workspace-shell-restructure/overview.md §6-5）。
+  // 復元する（docs/projects/_archive/workspace-shell-restructure/overview.md §6-5）。
   const handleViewStats = useCallback(
     (tagId: string) => {
       void tagId;

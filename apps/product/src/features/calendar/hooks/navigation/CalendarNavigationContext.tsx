@@ -14,6 +14,7 @@ import { usePathname } from 'next/navigation';
 
 import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { isValidCalendarViewToken } from '@/lib/calendar-view-tokens';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
 import { getNextPeriod, getPreviousPeriod } from '../../domain/view-range';
@@ -23,14 +24,13 @@ import type { CalendarViewType } from '../../types/calendar.types';
 
 // ── カレンダーページ判定・初期値計算（旧 useCalendarProviderProps） ──
 
+/**
+ * トークン集合は proxy.ts（Edge runtime）と共有する `@/lib/calendar-view-tokens` が正本。
+ * 旧実装は正規表現を独自に持ち proxy.ts / calendar-page-params.ts と三重実装だった
+ * （`.claude/rules/workflow.md` §同型指摘の打ち切り に従い単一定義へ統一）。
+ */
 function isValidViewType(view: string): view is CalendarViewType {
-  if (['day', 'week'].includes(view)) return true;
-  const match = view.match(/^(\d+)day$/);
-  if (match) {
-    const n = parseInt(match[1]!);
-    return n >= 2 && n <= 7;
-  }
-  return false;
+  return isValidCalendarViewToken(view);
 }
 
 /** モバイルで提供する表示。Weekはレーン切替で密度を確保し、2〜7日は対象外とする。 */
@@ -82,7 +82,7 @@ function writeLastCalendarView(view: CalendarViewType): void {
  * `fallbackDate` は calendar / report いずれでもない workspaceTab（例: /settings）で
  * 使う initialDate のフォールバック。呼び出し側の currentDateRef を渡すことで、
  * `/report` `/settings` 滞在中に initialDate が `new Date()` へ空転し続けるのを防ぐ
- * （docs/projects/workspace-shell-restructure/overview.md §6-10 B）。
+ * （docs/projects/_archive/workspace-shell-restructure/overview.md §6-10 B）。
  */
 function resolveCalendarProps(pathname: string, fallbackDate?: Date) {
   const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');

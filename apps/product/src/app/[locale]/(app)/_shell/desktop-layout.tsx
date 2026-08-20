@@ -1,12 +1,15 @@
 'use client';
 
 import { PanelLeft } from 'lucide-react';
+import { useCallback } from 'react';
 
 import { AnimatedWidthPanel } from '@/components/shell/AnimatedWidthPanel';
 import { AppHeader } from '@/components/shell/AppHeader';
 import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
+import { TIMEBLOCK_INSPECTOR_SLOT_KEY, useTimeblockInspectorStore } from '@/features/timeblock';
+import { setDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
 import { Button, InlineBanner } from '@dayopt/components';
 import { usePathname } from '@dayopt/i18n/navigation';
@@ -22,12 +25,16 @@ interface DesktopLayoutProps {
   children: React.ReactNode;
 }
 
+/** Inspector ドッキングパネルの幅（px）。リサイズは非対応（v1 は固定幅）。 */
+const INSPECTOR_PANEL_WIDTH = 400;
+
 /**
  * デスクトップ用レイアウト
  *
- * 2カラムレイアウト:
+ * 3カラムレイアウト:
  * - Sidebar（256px、開閉可能）← 全ページ共通 Sidebar
- * - PageHeader + MainContent + Inspector
+ * - PageHeader + MainContent
+ * - Inspector（400px、Timeblock 選択時のみ開く。@/features/timeblock が portal で描画）
  *
  */
 export function DesktopLayout({ children }: DesktopLayoutProps) {
@@ -38,6 +45,10 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const title = useShellStore.use.pageTitle();
   const authUser = useAuthStore((s) => s.user);
+  const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
+  const setInspectorSlot = useCallback((element: HTMLDivElement | null) => {
+    setDomSlot(TIMEBLOCK_INSPECTOR_SLOT_KEY, element);
+  }, []);
   const sidebarUser = {
     name: getDisplayName(authUser, 'User'),
     email: authUser?.email || '',
@@ -77,7 +88,7 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
           </Sidebar>
         </AnimatedWidthPanel>
 
-        {/* PageHeader + Main Content + Inspector */}
+        {/* PageHeader + Main Content */}
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* AppHeader（Calendar は独自ヘッダーを持つため非表示） */}
           {!hasOwnHeader && (
@@ -89,13 +100,24 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
           {/* インラインバナー（自前ヘッダーを持つ画面を含む全ページ共通） */}
           <InlineBanner {...banner} />
 
-          {/* Main Content + Inspector（自動的に残りのスペースを使用） */}
+          {/* Main Content（自動的に残りのスペースを使用） */}
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="relative flex h-full min-h-0 flex-col">
               <MainContentWrapper>{children}</MainContentWrapper>
             </div>
           </div>
         </div>
+
+        {/* Inspector（固定幅、Timeblock 選択時のみ開く） */}
+        <AnimatedWidthPanel
+          open={isInspectorOpen}
+          width={INSPECTOR_PANEL_WIDTH}
+          side="right"
+          className="border-border h-full border-l"
+          innerClassName="h-full"
+        >
+          <div ref={setInspectorSlot} className="h-full" />
+        </AnimatedWidthPanel>
       </div>
     </div>
   );
