@@ -128,6 +128,7 @@ paths:
 | Overlay          | 1200–1400 | Inspector 上の modal, popover, confirm                              |
 | 最前面           | 9999      | tooltip                                                             |
 
+- **Inspector 帯（1000-1100）の現況**: `inspector-backdrop` / `inspector` は TimeblockInspector の右サイドパネル化（`DockedInspectorPanel`、非フローティング）に伴い現在未使用。トークン定義は削除せず、将来同種のフローティング UI が必要になった時のために予約する
 - **Elevation との関係**: Sunken / Base / Raised は z-index 指定なし。Overlay のみ z-index を使用。見た目の浮き（shadow）は Elevation、スタッキング順序は Z-Index。別の関心事
 
 ## State Patterns (Error / Empty / Loading)
