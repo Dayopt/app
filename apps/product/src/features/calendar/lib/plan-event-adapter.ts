@@ -1,7 +1,7 @@
 /**
  * `plans` テーブル行 -> `PlanEvent` 変換アダプター（Step 5、read 側専用）
  *
- * `entry-adapter.ts`（entries -> CalendarEvent）と同じ配置パターンで、
+ * `entry-adapter.ts`（entries -> CalendarDisplayEvent）と同じ配置パターンで、
  * plans -> PlanEvent の射影を担う。書き込み・DnD 保存先判定は Step 6。
  */
 

@@ -21,7 +21,11 @@ import {
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
+import type {
+  CalendarDisplayEvent,
+  CalendarViewType,
+  ViewDateRange,
+} from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
@@ -50,8 +54,8 @@ interface CalendarControllerProps {
 
   // --- Data ---
   viewDateRange: ViewDateRange;
-  filteredTimeblocks: CalendarEvent[];
-  allTimeblocks: CalendarEvent[];
+  filteredTimeblocks: CalendarDisplayEvent[];
+  allTimeblocks: CalendarDisplayEvent[];
   /** 外部カレンダーの未変換予定（ghost）。読み取り専用で tag フィルタの対象外 */
   externalEvents?: ExternalCalendarEvent[] | undefined;
 
@@ -62,7 +66,7 @@ interface CalendarControllerProps {
   disabledTimeblockId: string | null;
 
   // --- Timeblock click handlers ---
-  onEntryClick: (entry: CalendarEvent) => void;
+  onEntryClick: (entry: CalendarDisplayEvent) => void;
   onTimeRangeSelect: (selection: {
     date: Date;
     startHour: number;
@@ -73,7 +77,7 @@ interface CalendarControllerProps {
 
   // --- Timeblock CRUD ---
   onUpdateEntry: (
-    timeblockIdOrTimeblock: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarDisplayEvent,
     updates?: {
       startTime: Date;
       endTime: Date;
@@ -83,14 +87,14 @@ interface CalendarControllerProps {
   onDeleteTimeblock: (timeblockId: string) => void;
 
   // --- Context menu actions ---
-  onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
-  onViewStats: (entry: CalendarEvent) => void;
-  onCopy: (entry: CalendarEvent) => void;
+  onDeleteTimeblockConfirm: (entry: CalendarDisplayEvent) => void;
+  onViewStats: (entry: CalendarDisplayEvent) => void;
+  onCopy: (entry: CalendarDisplayEvent) => void;
   // plan ⇄ record 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
-  onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
-  onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
-  onSkip: (entry: CalendarEvent) => void;
-  onUnskip: (entry: CalendarEvent) => void;
+  onMarkUnplanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onRestorePlanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onSkip: (entry: CalendarDisplayEvent) => void;
+  onUnskip: (entry: CalendarDisplayEvent) => void;
 
   // --- Navigation handlers ---
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -160,7 +164,7 @@ export function CalendarController({
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
   const handleDuplicate = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       const startAt = entry.startDate ?? entry.displayStartDate;
       const endAt = entry.endDate ?? entry.displayEndDate;
       const kind = entry.kind ?? resolveTimeblockDestination(endAt);

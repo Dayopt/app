@@ -4,7 +4,7 @@
 
 import type { TimeFormat } from '@dayopt/domain';
 
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 
 /** ドラッグ選択の時間範囲（時・分単位） */
 export interface TimeRange {
@@ -35,7 +35,7 @@ export interface CalendarDragSelectionProps {
   /** ドラッグ選択を無効にする */
   disabled?: boolean | undefined;
   /** 重複チェック用のプラン一覧 */
-  plans?: CalendarEvent[] | undefined;
+  plans?: CalendarDisplayEvent[] | undefined;
   /** 新規作成時の既定時間（分） */
   defaultDuration: number;
   /** ユーザー設定に基づく時刻表記 */
@@ -49,7 +49,7 @@ export interface UseDragSelectionOptions {
   disabled?: boolean | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
-  plans?: CalendarEvent[] | undefined;
+  plans?: CalendarDisplayEvent[] | undefined;
   hourHeight?: number | undefined;
   defaultDuration: number;
   timeFormat: TimeFormat;

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import type { CalendarEvent, ViewDateRange } from '../../../types/calendar.types';
+import type { CalendarDisplayEvent, ViewDateRange } from '../../../types/calendar.types';
 
 import { WeekView } from './WeekView';
 
@@ -65,7 +65,7 @@ function makeDate(base: Date, hour: number, minute = 0): Date {
   return d;
 }
 
-const basePlan: CalendarEvent = {
+const basePlan: CalendarDisplayEvent = {
   id: 'plan-1',
   title: 'チームミーティング',
   startDate: makeDate(today, 10, 0),
@@ -84,7 +84,7 @@ const basePlan: CalendarEvent = {
 };
 
 // 週の各日に分散したプラン
-const mockPlans: CalendarEvent[] = [
+const mockPlans: CalendarDisplayEvent[] = [
   // 月曜
   {
     ...basePlan,
@@ -145,7 +145,7 @@ const mockPlans: CalendarEvent[] = [
 ];
 
 /** 期限切れ未完了エントリ（先週のタスク）*/
-const overdueEntry: CalendarEvent = {
+const overdueEntry: CalendarDisplayEvent = {
   ...basePlan,
   id: 'overdue-1',
   title: '期限切れタスク（先週）',

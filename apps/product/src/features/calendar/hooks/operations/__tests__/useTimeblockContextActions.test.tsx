@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../types/calendar.types';
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -37,7 +37,7 @@ const taggedEntry = {
   tagId: 'tag-1',
   startDate: new Date(2026, 2, 25, 9),
   actualStartDate: null,
-} as unknown as CalendarEvent;
+} as unknown as CalendarDisplayEvent;
 
 describe('useTimeblockContextActions - Review navigation', () => {
   beforeEach(() => {

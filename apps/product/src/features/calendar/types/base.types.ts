@@ -3,12 +3,12 @@
  * 全カレンダービューで共通するプロパティ
  */
 
-// CalendarEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
-export type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
+// CalendarDisplayEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
+export type { CalendarDisplayEvent, CalendarViewType, ViewDateRange } from './calendar.types';
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 
 import type { DateTimeSelection } from '../components/views/shared';
-import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
+import type { CalendarDisplayEvent, CalendarViewType, ViewDateRange } from './calendar.types';
 
 /**
  * 全ビューで共通する最小限のプロパティ
@@ -16,15 +16,16 @@ import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.
  */
 interface BaseViewProps {
   // Core data
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   currentDate: Date;
 
   // Display options
   className?: string | undefined;
 
   // Timeblock handlers（最小限）
-  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
-  onEntryContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
+  onEntryClick?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onEntryContextMenu?:
+    ((entry: CalendarDisplayEvent, mouseEvent: React.MouseEvent) => void) | undefined;
 }
 
 /**
@@ -35,7 +36,7 @@ export interface GridViewProps extends BaseViewProps {
   // Core data
   dateRange: ViewDateRange;
   /** 全エントリ（期限切れ未完了表示用、日付フィルタリング前） */
-  allTimeblocks?: CalendarEvent[] | undefined;
+  allTimeblocks?: CalendarDisplayEvent[] | undefined;
   /**
    * 外部カレンダーの未変換予定（ghost、#1962）。読み取り専用で `entries` とは別に持つ。
    * plan / record と違い DB の EXCLUDE 制約が無いため重なり、座標計算も別系統になる。
@@ -55,7 +56,7 @@ export interface GridViewProps extends BaseViewProps {
   // Timeblock handlers（グリッド操作用）
   onUpdateEntry?:
     | ((
-        timeblockIdOrTimeblock: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarDisplayEvent,
         updates?: {
           startTime: Date;
           endTime: Date;
@@ -78,7 +79,7 @@ export interface GridViewProps extends BaseViewProps {
  * 4箇所で重複していた TimeblockPosition を統一
  */
 export interface BaseEntryPosition {
-  plan: CalendarEvent;
+  plan: CalendarDisplayEvent;
   top: number;
   height: number;
   left: number;

@@ -1,17 +1,20 @@
 /**
  * カレンダー固有のデータ変換ユーティリティ
  *
- * CalendarEvent のタイムゾーン適用を行う。
+ * CalendarDisplayEvent のタイムゾーン適用を行う。
  */
 
 import { convertToTimezone } from '@/lib/date/timezone';
 
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 /**
- * CalendarEvent の displayStartDate/displayEndDate をユーザーTZに変換
+ * CalendarDisplayEvent の displayStartDate/displayEndDate をユーザーTZに変換
  */
-export function applyTimezoneToDisplayDates(plan: CalendarEvent, timezone: string): CalendarEvent {
+export function applyTimezoneToDisplayDates(
+  plan: CalendarDisplayEvent,
+  timezone: string,
+): CalendarDisplayEvent {
   if (!plan.startDate) {
     return plan;
   }

@@ -1,7 +1,9 @@
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 /** planned entry の予定と記録が、リサイズ開始前から異なっているかを判定する。 */
-export function hasCalendarActualRangeDiff(entry: CalendarEvent | null | undefined): boolean {
+export function hasCalendarActualRangeDiff(
+  entry: CalendarDisplayEvent | null | undefined,
+): boolean {
   if (entry?.origin !== 'planned') return false;
 
   const plannedStart = entry.plannedStartDate ?? entry.startDate;

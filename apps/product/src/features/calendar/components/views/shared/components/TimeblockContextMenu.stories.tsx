@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { EventContextMenu } from './TimeblockContextMenu';
 
 // ─────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ const past = new Date('2026-03-18T10:00:00');
 const pastEnd = new Date('2026-03-18T11:00:00');
 
 /** 完了済み planned entry（全項目表示の前提） */
-const completedPlannedEntry: CalendarEvent = {
+const completedPlannedEntry: CalendarDisplayEvent = {
   id: 'entry-1',
   kind: 'plan',
   title: 'デザインレビュー',
@@ -37,7 +37,7 @@ const completedPlannedEntry: CalendarEvent = {
 };
 
 /** タグなし entry（振り返り非表示） */
-const noTagEntry: CalendarEvent = {
+const noTagEntry: CalendarDisplayEvent = {
   ...completedPlannedEntry,
   id: 'entry-2',
   tagId: null,
@@ -46,7 +46,7 @@ const noTagEntry: CalendarEvent = {
 /** 未来の planned entry（記録が存在し得ないため「予定外にする」非表示） */
 const futureStart = new Date('2099-01-01T10:00:00');
 const futureEnd = new Date('2099-01-01T11:00:00');
-const upcomingPlannedEntry: CalendarEvent = {
+const upcomingPlannedEntry: CalendarDisplayEvent = {
   ...completedPlannedEntry,
   id: 'entry-3',
   startDate: futureStart,
@@ -60,7 +60,7 @@ const upcomingPlannedEntry: CalendarEvent = {
 };
 
 /** Unplanned entry（計画に戻す表示） */
-const unplannedEntry: CalendarEvent = {
+const unplannedEntry: CalendarDisplayEvent = {
   ...completedPlannedEntry,
   id: 'entry-4',
   kind: 'record',
@@ -97,7 +97,7 @@ function ContextMenuTrigger({
   entry,
   menuProps,
 }: {
-  entry: CalendarEvent;
+  entry: CalendarDisplayEvent;
   menuProps?: Partial<React.ComponentProps<typeof EventContextMenu>>;
 }) {
   const [menuState, setMenuState] = useState<{ x: number; y: number } | null>(null);
