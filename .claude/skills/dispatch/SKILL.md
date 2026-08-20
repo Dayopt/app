@@ -37,7 +37,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 feature の設計書（例: `docs/projects/mcp-plan-track-learn/` の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列で処理するのを第一候補**とする（並行させない理由が衝突回避なら、束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
 4. **凍結・state チェック**: `status:blocked` が付いていないこと、かつ候補 issue の `state` が OPEN であることを確認する。state は `gh issue view <N> --json state` の実測を根拠にする（close 済み issue にも `status:ready` 等のラベルが残留しうるため、**ラベルは state の代わりにならない**）。束ねた場合は全 issue について両方確認する。1 つでも凍結 or close 済みなら、その issue だけ束ねから外す（2026-08-12、close 済み #1895 への誤 dispatch を受けて state 確認を追加。経緯は #1957）
 5. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（2026-08-12。編成時（操作 B 手順 5）の「押し込むか」の判断とは独立に、着手 = 付与を機械的に行う。経緯は #2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。経緯は #2065）
+6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（2026-08-12。編成時（操作 B 手順 5）の「押し込むか」の判断とは独立に、着手 = 付与を機械的に行う。経緯は #2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。経緯は #2065）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)。「仕様には適合しているが意図とズレている」静かな失敗は User にしか捕まえられないため、operations C の日次棚卸しで行うランダム抽出監査（下記）が意図との整合を確認できるよう、着手時点の意図を issue コメントに固定しておく。束ねた場合は代表 issue のコメントへ一括で書く）
 7. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする。着手手順・PR 規約・報告テンプレート・検証原則はチップ prompt へ個別に書き下さず `.claude/rules/lane-protocol.md` への参照 1 行で足りる（§チップ prompt の標準形）
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素）
@@ -122,6 +122,8 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
 - [ ] night-watch 運行記録の前夜コメント確認（`.claude/skills/night-watch/SKILL.md`。欠落があれば故障を疑い `docs/operations/night-watch.md` §故障検出手順 に従う）
+- [ ] **ランダム抽出監査**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）: 前日 merge 済み PR から乱数で 1 本を選び、対象 issue の dispatch コメントに記載した DoD（操作 A 手順 6）と実際の merge 内容が意図どおりかを User が 5 分で監査する。指揮台は候補 PR を提示するだけで、監査そのものは User が行う。見つかったズレは `judgment:diverged` ラベルでジャーナル化する（`.claude/rules/orchestration.md` §判断ジャーナル）
+- [ ] **heavy-post-merge の赤確認**（2026-08-20、CI 4 層再設計 [#2269](https://github.com/Dayopt/dayopt/issues/2269)）: `gh run list --workflow=heavy-post-merge.yml --limit 5 --json conclusion,createdAt,event` で直近 run を確認する。red（`conclusion=failure`）があれば修正 issue を最優先で起票する。E2E / Web E2E / Integration Tests は per-PR から撤去され、main push 後 + nightly でしか検証されないため、この確認を欠くと壊れた main が promote gate（層 4）に阻まれるまで無通知で滞留する
 
 ### 月次 backstop（`/gardening` と同時期に実施）
 

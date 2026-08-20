@@ -108,6 +108,48 @@ jobs:
 
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
+      # CI 4 層再設計（#2269）の層 4。E2E / Web E2E / Integration Tests は
+      # per-PR から撤去され、main push 後（heavy-post-merge.yml / integration.yml）
+      # の層 3 だけが検証する。promote 前にこの層 3 が target SHA で green だった
+      # ことを確認しないと、壊れた main がそのまま Production へ昇格しうる。
+      # force（break-glass）時はこの gate も既存の smoke/audit skip と同様にスキップする。
+      - name: Verify heavy-tier (layer 3) checks are green
+        if: '!inputs.force'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          # target SHA に対する check-runs を取得し、層 3 の 3 check（E2E / Web E2E /
+          # Integration Tests）がすべて success であることを要求する。取得失敗・
+          # 見つからない・pending はすべて fail closed（停止）に倒す。
+          # push:main トリガー（layer 3）は毎 main push で必ず発火するため、
+          # 「見つからない」は運用上ほぼ発生しないが、fail closed を維持する。
+          required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
+
+          runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \
+            --jq '.check_runs[] | {name, status, conclusion, started_at}' | jq -s '.')"
+
+          if [ -z "$runs_json" ] || [ "$runs_json" = "[]" ]; then
+            echo "::error::target SHA の check-runs を取得できませんでした（0 件）。層 3 の実行完了を待つか、force で bypass してください。"
+            exit 1
+          fi
+
+          fail=0
+          for name in "${required_checks[@]}"; do
+            # 同名 check-run が複数（再実行）ある場合は started_at が最新のものを代表とする。
+            conclusion="$(printf '%s' "$runs_json" | jq -r --arg n "$name" \
+              '[.[] | select(.name == $n)] | sort_by(.started_at // "") | .[-1].conclusion // "missing"')"
+            if [ "$conclusion" != "success" ]; then
+              echo "::error::layer 3 check \"$name\" is not green (conclusion=$conclusion)"
+              fail=1
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::promote を停止しました。層 3（main push 後の重量テスト）が target SHA で green ではありません。"
+            exit 1
+          fi
+
       - name: Wait, smoke, and promote Production
         id: release
         env:
