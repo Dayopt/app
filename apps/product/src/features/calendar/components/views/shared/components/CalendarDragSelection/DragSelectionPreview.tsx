@@ -18,7 +18,7 @@ import {
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
   hasLaneCounterpart,
 } from '../../../../../lib/two-lane-layout';
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
 
@@ -38,7 +38,7 @@ interface DragSelectionPreviewProps {
    * `CalendarDragSelection` の `plans` prop と同じ実体（呼び出し元の命名慣習）。
    * 未指定時は counterpart 無し扱い（フル幅）にはせず、常に split 幅（既存挙動）を保つ。
    */
-  allDayEvents?: CalendarEvent[] | undefined;
+  allDayEvents?: CalendarDisplayEvent[] | undefined;
 }
 
 /**

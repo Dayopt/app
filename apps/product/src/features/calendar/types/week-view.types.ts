@@ -1,7 +1,7 @@
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 
 import type { BaseEntryPosition, GridViewProps } from './base.types';
-import type { CalendarEvent } from './calendar.types';
+import type { CalendarDisplayEvent } from './calendar.types';
 
 import type { DateTimeSelection } from '../components/views/shared';
 
@@ -13,20 +13,21 @@ export interface WeekViewProps extends GridViewProps {
 /** WeekGrid コンポーネントのプロパティ */
 export interface WeekGridProps {
   weekDates: Date[];
-  events: CalendarEvent[];
+  events: CalendarDisplayEvent[];
   /** 全エントリ（期限切れ未完了表示用） */
-  allTimeblocks?: CalendarEvent[] | undefined;
+  allTimeblocks?: CalendarDisplayEvent[] | undefined;
   /** 外部カレンダーの未変換予定（ghost、読み取り専用） */
   externalEvents?: ExternalCalendarEvent[] | undefined;
-  eventsByDate: Record<string, CalendarEvent[]>;
+  eventsByDate: Record<string, CalendarDisplayEvent[]>;
   todayIndex: number;
   /** DnDを無効化するTimeblock ID（Inspector表示中のTimeblock など） */
   disabledTimeblockId?: string | null | undefined;
-  onEventClick?: ((entry: CalendarEvent) => void) | undefined;
-  onEventContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
+  onEventClick?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onEventContextMenu?:
+    ((entry: CalendarDisplayEvent, mouseEvent: React.MouseEvent) => void) | undefined;
   onEventUpdate?:
     | ((
-        timeblockIdOrTimeblock: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarDisplayEvent,
         updates?: {
           startTime: Date;
           endTime: Date;
@@ -45,11 +46,11 @@ export interface WeekGridProps {
 /** useWeekView フックのオプション */
 export interface UseWeekViewOptions {
   startDate: Date;
-  events: CalendarEvent[];
+  events: CalendarDisplayEvent[];
   timezone: string;
   weekStartsOn?: 0 | 1 | 6;
   onEventUpdate?: (
-    timeblockIdOrTimeblock: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarDisplayEvent,
     updates?: {
       startTime: Date;
       endTime: Date;
@@ -61,7 +62,7 @@ export interface UseWeekViewOptions {
 /** useWeekView フックの戻り値 */
 export interface UseWeekViewReturn {
   weekDates: Date[];
-  eventsByDate: Record<string, CalendarEvent[]>;
+  eventsByDate: Record<string, CalendarDisplayEvent[]>;
   todayIndex: number;
   scrollToNow: () => void;
   isCurrentWeek: boolean;
@@ -70,14 +71,14 @@ export interface UseWeekViewReturn {
 /** useWeekTimeblocks フックのオプション */
 export interface UseWeekEntriesOptions {
   weekDates: Date[];
-  events: CalendarEvent[];
+  events: CalendarDisplayEvent[];
   hourHeight?: number;
   timezone: string;
 }
 
 /** useWeekTimeblocks フックの戻り値 */
 export interface UseWeekEntriesReturn {
-  entriesByDate: Record<string, CalendarEvent[]>;
+  entriesByDate: Record<string, CalendarDisplayEvent[]>;
   timeblockPositions: WeekEntryPosition[];
   maxConcurrentEntries: number;
 }

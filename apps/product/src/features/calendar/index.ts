@@ -27,7 +27,7 @@ export { ActivityChipRow } from './components/activity-filter/components/Activit
 // Types
 // =============================================================================
 export type {
-  CalendarEvent,
+  CalendarDisplayEvent,
   CalendarViewType,
   MultiDayViewType,
   ViewDateRange,

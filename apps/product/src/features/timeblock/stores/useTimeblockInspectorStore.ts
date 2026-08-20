@@ -10,8 +10,11 @@ import type { TimeblockDuplicateDraft } from '../lib/timeblock-duplicate';
  * Plan / Record に対応。timeblockKind で対象を判別する。
  */
 
-/** Inspector ポップオーバーのアンカー位置 */
-export interface AnchorRect {
+/**
+ * Inspector のアンカー位置。DockedInspectorPanel（右サイドパネル）は使わず、
+ * 書き手（TwoLaneTimeblockRenderer 等）だけが残る（#2242 で撤去検討）。
+ */
+interface AnchorRect {
   top: number;
   right: number;
   bottom: number;

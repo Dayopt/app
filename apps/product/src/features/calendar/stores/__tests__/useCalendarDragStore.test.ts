@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
 import { useCalendarDragStore } from '../useCalendarDragStore';
 
-const mockCalendarEvent: CalendarEvent = {
+const mockCalendarEvent: CalendarDisplayEvent = {
   id: 'plan-1',
   title: 'テストプラン',
   startDate: new Date('2026-02-21T10:00:00'),

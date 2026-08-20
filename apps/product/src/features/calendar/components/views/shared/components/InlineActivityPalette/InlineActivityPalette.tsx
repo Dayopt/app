@@ -35,7 +35,7 @@ import {
   hasLaneCounterpart,
 } from '../../../../../lib/two-lane-layout';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 
 import { Z_INDEX } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
@@ -55,7 +55,7 @@ interface InlineActivityPaletteProps {
    * 相手レーンとの重複判定に使う、その日の全 entry（plan+record 両方）。
    * 未指定時は counterpart 無し扱いにはせず、常に split 幅（既存挙動）を保つ。
    */
-  dayEntries?: CalendarEvent[] | undefined;
+  dayEntries?: CalendarDisplayEvent[] | undefined;
 }
 
 /** ドラッグ選択後にカレンダーグリッド上でアクティビティを選んでエントリ作成するコンポーネント */

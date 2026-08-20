@@ -10,14 +10,14 @@
 
 import { createContext } from 'react';
 
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 interface CalendarEntryActions {
-  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
-  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onEntryClick?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarDisplayEvent, e: React.MouseEvent) => void) | undefined;
   onUpdateEntry?:
     | ((
-        timeblockIdOrTimeblock: string | CalendarEvent,
+        timeblockIdOrTimeblock: string | CalendarDisplayEvent,
         updates?: {
           startTime: Date;
           endTime: Date;

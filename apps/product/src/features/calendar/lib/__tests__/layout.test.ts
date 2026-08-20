@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
 import type { TimedTimeblock } from '../../types/timeblock.types';
 
@@ -41,8 +41,8 @@ function createTimedEntry(
 }
 
 function createCalendarEvent(
-  overrides: Partial<CalendarEvent> & { startDate: Date; endDate: Date },
-): CalendarEvent {
+  overrides: Partial<CalendarDisplayEvent> & { startDate: Date; endDate: Date },
+): CalendarDisplayEvent {
   return {
     id: 'test-1',
     title: 'Test Event',
@@ -57,7 +57,7 @@ function createCalendarEvent(
     updatedAt: new Date(),
     origin: 'planned',
     ...overrides,
-  } as CalendarEvent;
+  } as CalendarDisplayEvent;
 }
 
 // ========================================

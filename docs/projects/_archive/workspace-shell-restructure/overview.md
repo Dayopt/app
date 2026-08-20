@@ -1,6 +1,6 @@
 ---
-status: active
-last_verified: 2026-08-18
+status: done
+last_verified: 2026-08-20
 code:
   - apps/product/src/app/[locale]/(app)
   - apps/product/src/proxy.ts

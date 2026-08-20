@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo } from 'react';
 
-import type { CalendarEvent, CalendarViewType, ViewDateRange } from '@/features/calendar';
+import type { CalendarDisplayEvent, CalendarViewType, ViewDateRange } from '@/features/calendar';
 import { useCalendarData } from '@/features/calendar';
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import { logger } from '@/lib/logger';
@@ -28,8 +28,8 @@ interface CalendarDataLayerInput {
 
 interface CalendarDataLayerResult {
   viewDateRange: ViewDateRange;
-  filteredEvents: CalendarEvent[];
-  allCalendarEvents: CalendarEvent[];
+  filteredEvents: CalendarDisplayEvent[];
+  allCalendarEvents: CalendarDisplayEvent[];
   /** 外部カレンダーの未変換予定（ghost）。取得失敗時は空配列で、calendar 全体は落とさない */
   externalEvents: ExternalCalendarEvent[];
   /** バックグラウンド再取得を含む取得中フラグ */

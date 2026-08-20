@@ -30,7 +30,7 @@
 
 import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 export interface TwoLanePosition {
   /** px */
@@ -210,12 +210,12 @@ export function calculateTwoLaneLayout({
 }
 
 /**
- * `CalendarEvent[]`（Step 8 の time model 射影、`kind` 付き）から直接 2 レーン座標を計算する。
- * `TwoLaneTimeblockRenderer` はインタラクション状態（drag/resize preview）を CalendarEvent 単位で
+ * `CalendarDisplayEvent[]`（Step 8 の time model 射影、`kind` 付き）から直接 2 レーン座標を計算する。
+ * `TwoLaneTimeblockRenderer` はインタラクション状態（drag/resize preview）を CalendarDisplayEvent 単位で
  * 持つ既存 `useInteraction` をそのまま使うため、PlanEvent/RecordEvent への変換を経由しない。
  */
 export function calculateTwoLaneStylesForCalendarEvents(
-  events: ReadonlyArray<CalendarEvent>,
+  events: ReadonlyArray<CalendarDisplayEvent>,
   hourHeight: number,
   planLaneWidthPercent: number = DEFAULT_PLAN_LANE_WIDTH_PERCENT,
 ): Record<string, TwoLanePosition> {

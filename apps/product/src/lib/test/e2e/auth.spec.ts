@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  createScopedTestUser,
+  deleteScopedTestUser,
+  type ScopedTestUser,
+} from './create-scoped-test-user';
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+
 /**
  * 認証フロー E2E テスト
  *
@@ -22,7 +29,11 @@ import { expect, test } from '@playwright/test';
  * @see Storybook → Features/Auth/* でUI詳細を確認
  */
 
-const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+let testUser: ScopedTestUser | undefined;
 
 // ─────────────────────────────────────────────────────────
 // ページ配信（未認証で実行可能、CI で常時走る層）
@@ -73,16 +84,23 @@ test.describe('Auth: ページ配信', () => {
 // ─────────────────────────────────────────────────────────
 
 test.describe('Auth: 認証フロー', () => {
-  test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
+  test.skip(!SERVICE_ROLE_TARGET.safe, SERVICE_ROLE_TARGET.safe ? '' : SERVICE_ROLE_TARGET.reason);
+
+  test.beforeAll(async () => {
+    if (!SERVICE_ROLE_TARGET.safe) return;
+    testUser = await createScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, 'auth');
+  });
+
+  test.afterAll(async () => {
+    if (!testUser) return;
+    await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
+  });
 
   test('正しい認証情報でログインしカレンダーへ遷移する', async ({ page }) => {
     await page.goto('/auth/login');
 
-    await page
-      .locator('input[type="email"], input[name="email"]')
-      .first()
-      .fill(process.env.TEST_USER_EMAIL!);
-    await page.locator('input[type="password"]').first().fill(process.env.TEST_USER_PASSWORD!);
+    await page.locator('input[type="email"], input[name="email"]').first().fill(testUser!.email);
+    await page.locator('input[type="password"]').first().fill(testUser!.password);
     await page.locator('button[type="submit"]').first().click();
 
     await page.waitForURL(/\/calendar/i, { timeout: 15000 });

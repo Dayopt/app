@@ -12,7 +12,7 @@ import { useCallback, useMemo } from 'react';
 import { addHours, startOfHour } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
-import type { CalendarEvent } from '@/features/calendar';
+import type { CalendarDisplayEvent } from '@/features/calendar';
 import {
   useCalendarEventKeyboard,
   useCalendarHandlers,
@@ -32,14 +32,14 @@ interface CalendarCrudHandlersInput {
   /** Inspector で選択中の Timeblock ID */
   selectedTimeblockId: string | null;
   /** フィルタ済みイベント一覧（キーボード操作でタイトル取得に使用） */
-  filteredEvents: CalendarEvent[];
+  filteredEvents: CalendarDisplayEvent[];
   /** 現在の表示日付（キーボード操作で過去日判定に使用） */
   currentDate: Date;
 }
 
 interface CalendarCrudHandlersResult {
   disabledTimeblockId: string | null;
-  onEntryClick: (entry: CalendarEvent) => void;
+  onEntryClick: (entry: CalendarDisplayEvent) => void;
   onTimeRangeSelect: (selection: {
     date: Date;
     startHour: number;
@@ -48,7 +48,7 @@ interface CalendarCrudHandlersResult {
     endMinute: number;
   }) => void;
   onUpdateEntry: (
-    timeblockIdOrTimeblock: string | CalendarEvent,
+    timeblockIdOrTimeblock: string | CalendarDisplayEvent,
     updates?: {
       startTime: Date;
       endTime: Date;
@@ -57,11 +57,11 @@ interface CalendarCrudHandlersResult {
     },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteTimeblock: (timeblockId: string) => Promise<boolean>;
-  onDeleteTimeblockConfirm: (entry: CalendarEvent) => void;
-  onViewStats: (entry: CalendarEvent) => void;
-  onCopy: (entry: CalendarEvent) => void;
-  onSkip: (entry: CalendarEvent) => void;
-  onUnskip: (entry: CalendarEvent) => void;
+  onDeleteTimeblockConfirm: (entry: CalendarDisplayEvent) => void;
+  onViewStats: (entry: CalendarDisplayEvent) => void;
+  onCopy: (entry: CalendarDisplayEvent) => void;
+  onSkip: (entry: CalendarDisplayEvent) => void;
+  onUnskip: (entry: CalendarDisplayEvent) => void;
 }
 
 // =============================================================================
@@ -123,7 +123,7 @@ export function useCalendarCrudHandlers({
   }, [selectedTimeblockId, filteredEvents]);
 
   const handleCopy = useCallback(
-    (entry: CalendarEvent) => {
+    (entry: CalendarDisplayEvent) => {
       const timeblock = createCalendarEventClipboardTimeblock(entry);
       if (!timeblock) return;
       copyTimeblock(timeblock);

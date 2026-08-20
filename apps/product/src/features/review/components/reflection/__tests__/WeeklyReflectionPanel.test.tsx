@@ -24,9 +24,9 @@ const timePLRows: BarComparisonRow[] = [
 
 const estimationRows: WeeklyReflectionEstimationRow[] = [
   {
-    tagId: 'tag-1',
-    tagName: 'Deep Work',
-    tagColor: 'blue',
+    activityId: 'activity-1',
+    activityName: 'Deep Work',
+    activityColor: 'blue',
     isUncategorized: false,
     avgPlannedMinutes: 120,
     avgActualMinutes: 150,
@@ -132,9 +132,9 @@ describe('WeeklyReflectionPanel', () => {
 
   it('見積もり精度の未分類を neutral marker と翻訳ラベルで表示する（#1576）', () => {
     const uncategorizedEstimationRow: WeeklyReflectionEstimationRow = {
-      tagId: null,
-      tagName: null,
-      tagColor: null,
+      activityId: null,
+      activityName: null,
+      activityColor: null,
       isUncategorized: true,
       avgPlannedMinutes: 60,
       avgActualMinutes: 65,
@@ -154,7 +154,7 @@ describe('WeeklyReflectionPanel', () => {
     );
 
     expect(screen.getByText('uncategorized')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="tag-icon-uncategorized"]')).toHaveClass(
+    expect(container.querySelector('[data-slot="activity-icon-neutral"]')).toHaveClass(
       'bg-muted',
       'text-muted-foreground',
     );

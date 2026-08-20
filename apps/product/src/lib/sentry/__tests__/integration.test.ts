@@ -39,7 +39,7 @@ describe('Product Sentry capture helpers', () => {
     captureUnexpectedError(original, {
       feature: 'calendar',
       operation: 'load',
-      route: '/day?search=private',
+      route: '/calendar?search=private',
       requestId: 'request-123',
       userId: 'user-123',
     });
@@ -49,7 +49,7 @@ describe('Product Sentry capture helpers', () => {
     expect(sentry.setTags).toHaveBeenCalledWith({
       feature: 'calendar',
       operation: 'load',
-      route: '/day',
+      route: '/calendar',
       requestId: 'request-123',
     });
     expect(sentry.setUser).toHaveBeenCalledWith({ id: 'user-123' });

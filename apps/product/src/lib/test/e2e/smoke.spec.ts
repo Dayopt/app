@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  createScopedTestUser,
+  deleteScopedTestUser,
+  type ScopedTestUser,
+} from './create-scoped-test-user';
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+
 /**
  * スモークテスト
  *
@@ -8,6 +15,12 @@ import { expect, test } from '@playwright/test';
  *
  * @see docs/engineering/log/2026-07-13-test-automation-strategy.md
  */
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+let testUser: ScopedTestUser | undefined;
 test.describe('Smoke: ルーティング', () => {
   test('未認証ユーザーは認証ページにリダイレクトされる', async ({ page }) => {
     await page.goto('/');
@@ -98,9 +111,19 @@ test.describe('Smoke: 認証フロー', () => {
 
   test.describe('認証済みユーザー', () => {
     test.skip(
-      !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD,
-      'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定',
+      !SERVICE_ROLE_TARGET.safe,
+      SERVICE_ROLE_TARGET.safe ? '' : SERVICE_ROLE_TARGET.reason,
     );
+
+    test.beforeAll(async () => {
+      if (!SERVICE_ROLE_TARGET.safe) return;
+      testUser = await createScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, 'smoke');
+    });
+
+    test.afterAll(async () => {
+      if (!testUser) return;
+      await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
+    });
 
     test('ログイン→カレンダー表示→ログアウト', async ({ page }) => {
       // ログインページへ
@@ -109,11 +132,11 @@ test.describe('Smoke: 認証フロー', () => {
 
       // メール入力
       const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-      await emailInput.fill(process.env.TEST_USER_EMAIL!);
+      await emailInput.fill(testUser!.email);
 
       // パスワード入力
       const passwordInput = page.locator('input[type="password"]').first();
-      await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
+      await passwordInput.fill(testUser!.password);
 
       // ログインボタンクリック
       const submitButton = page.locator('button[type="submit"]').first();

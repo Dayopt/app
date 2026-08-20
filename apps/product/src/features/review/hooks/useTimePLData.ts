@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-import { resolveTagColor } from '@/features/tags';
+import { resolveCategoryColor } from '@/features/activities';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { api } from '@/lib/trpc';
 
@@ -98,7 +98,7 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
       activities: data.activities.map((a) => ({
         activityId: a.activityId,
         activityName: a.activityName,
-        categoryColor: a.isNoActivity ? null : resolveTagColor(a.categoryColor),
+        categoryColor: a.isNoActivity ? null : resolveCategoryColor(a.categoryColor),
         categoryIcon: a.categoryIcon,
         budgetMinutes: a.budgetMinutes,
         actualMinutes: a.actualMinutes,
@@ -110,7 +110,7 @@ export function useTimePLData(displayRange?: ReviewDisplayRange | undefined) {
           ? data.prevActivities.map((a) => ({
               activityId: a.activityId,
               activityName: a.activityName,
-              categoryColor: a.isNoActivity ? null : resolveTagColor(a.categoryColor),
+              categoryColor: a.isNoActivity ? null : resolveCategoryColor(a.categoryColor),
               categoryIcon: a.categoryIcon,
               budgetMinutes: a.budgetMinutes,
               actualMinutes: a.actualMinutes,

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { useCurrentPeriod, useDateUtilities, useTimeblocksByDate } from '../../shared';
 
 /** useMultiDayView フックのオプション */
@@ -8,14 +8,14 @@ interface UseMultiDayViewOptions {
   centerDate: Date;
   dayCount: number;
   timezone: string;
-  events?: CalendarEvent[];
+  events?: CalendarDisplayEvent[];
   showWeekends?: boolean;
 }
 
 /** useMultiDayView フックの戻り値 */
 interface UseMultiDayViewReturn {
   displayDates: Date[];
-  eventsByDate: Record<string, CalendarEvent[]>;
+  eventsByDate: Record<string, CalendarDisplayEvent[]>;
   centerIndex: number;
   todayIndex: number;
   isCurrentDay: boolean;

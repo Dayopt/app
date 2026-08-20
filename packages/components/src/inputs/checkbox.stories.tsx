@@ -5,7 +5,7 @@ import { expect, userEvent, within } from 'storybook/test';
 import { Checkbox, Label } from '@dayopt/components';
 
 // カスタムカラー demo 用のタグトークン（foundations の --tag-* を直接参照）
-const greenCssVar = 'var(--tag-green)';
+const greenCssVar = 'var(--category-green)';
 
 const meta = {
   title: 'Shared/Components/Inputs/Checkbox',

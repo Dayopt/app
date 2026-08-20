@@ -20,9 +20,9 @@
    * 追従するもの: --primary / --ring / --state-active / --accent / --chart-1
    * 追従しないもの:
    *   - chart-2〜5（色域確保のため色相 literal。colors.css のコメント参照）
-   *   - tag-* / badge-* / --entry-default（ユーザーデータ側の色）
+   *   - category-* / badge-* / --entry-default（ユーザーデータ側の色）
    *
-   * 変更する時は 240 未満に下げない。tag-blue(H240) と
+   * 変更する時は 240 未満に下げない。category-blue(H240) と
    * --entry-default(H220) に衝突してデータ色との区別が消える。
    * ============================================ */
   --hue-brand: 259.8145; /* 青紫 — Primary, Ring, Charts */

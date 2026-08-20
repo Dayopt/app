@@ -10,6 +10,7 @@ import {
   isPublicProductPath,
   isPublicRewritePath,
 } from '@/lib/auth/domain';
+import { isValidCalendarViewToken } from '@/lib/calendar-view-tokens';
 import { logger } from '@/lib/logger';
 import {
   isOAuthRequestHostAllowed,
@@ -197,7 +198,7 @@ interface LegacyWorkspaceRedirect {
  *
  * `?panel=review|diff|analytics` は `/report` へ、それ以外は `/calendar?view=` へ。
  * 既存クエリは素通しし、この関数が明示的に扱うキー（panel / reviewTagId / view / range）
- * だけを置換・削除する（docs/projects/workspace-shell-restructure/overview.md §4-4）。
+ * だけを置換・削除する（docs/projects/_archive/workspace-shell-restructure/overview.md §4-4）。
  *
  * `/review`（削除済み旧route）はこの関数の対象外（張らない。§4-4）。
  */
@@ -224,28 +225,6 @@ function resolveLegacyWorkspaceRedirect(
 }
 
 /**
- * `/calendar?view=` の許容トークン。`_server/calendar-page-params.ts` の
- * `parseCalendarViewParam` と意味的に同一だが、edge runtime（proxy.ts）は
- * `next-intl/server` 等 node 依存を持つそちらを import できないため定数を複製する。
- * drift 検出は `calendar-page-params.test.ts` の parity test が担う。
- *
- * 完全一致の Set にする（regex `$` に "末尾改行を許容する" 懸念が push 前レビューで
- * 上がったが、JS の `$` は /m フラグ無しでは文字列末尾を厳密に指すため実害は無いと
- * 実測で反証済み。Set 化自体は edge が唯一の enforcement になった以上、より保守的な
- * 完全一致へ寄せる判断として維持する）。
- */
-export const VALID_CALENDAR_VIEW_TOKENS = new Set([
-  'day',
-  'week',
-  '2day',
-  '3day',
-  '4day',
-  '5day',
-  '6day',
-  '7day',
-]);
-
-/**
  * `/calendar?view=` が範囲外の場合、page.tsx の notFound() を待たず edge で 404 を返す。
  *
  * page 側の notFound()（searchParams 依存）は静的シェルの prerender と競合し、
@@ -264,7 +243,7 @@ function resolveCalendarViewNotFound(
   if (pathWithoutLocale !== '/calendar') return false;
   const values = searchParams.getAll('view');
   if (values.length === 0) return false;
-  return values.some((value) => !VALID_CALENDAR_VIEW_TOKENS.has(value));
+  return values.some((value) => !isValidCalendarViewToken(value));
 }
 
 export async function proxy(request: NextRequest) {

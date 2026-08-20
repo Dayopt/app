@@ -4,7 +4,7 @@ import { isValid } from 'date-fns';
 
 import { getDateKey } from '@/lib/date';
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT as DEFAULT_HOUR_HEIGHT } from '../constants/grid.constants';
 import { getTimeblockStackIndex } from '../utils/timeblockStacking';
@@ -15,7 +15,7 @@ import type { TimeblockPosition } from './useViewTimeblocks';
 /** useMultiDayTimeblockPositions フックのオプション */
 interface UseMultiDayEntryPositionsOptions {
   displayDates: Date[];
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   hourHeight?: number;
   timezone: string;
 }
@@ -23,7 +23,7 @@ interface UseMultiDayEntryPositionsOptions {
 /** useMultiDayTimeblockPositions フックの戻り値 */
 interface UseMultiDayEntryPositionsReturn {
   timeblockPositions: TimeblockPosition[];
-  entriesByDate: Map<string, CalendarEvent[]>;
+  entriesByDate: Map<string, CalendarDisplayEvent[]>;
 }
 
 /**
@@ -41,7 +41,7 @@ export function useMultiDayTimeblockPositions({
 }: UseMultiDayEntryPositionsOptions): UseMultiDayEntryPositionsReturn {
   // 日付別にエントリをグループ化（raw startDate + ユーザーTZの日付キーで判定）
   const entriesByDate = useMemo(() => {
-    const grouped = new Map<string, CalendarEvent[]>();
+    const grouped = new Map<string, CalendarDisplayEvent[]>();
 
     displayDates.forEach((date) => {
       const dateKey = getDateKey(date, timezone);
@@ -66,7 +66,7 @@ export function useMultiDayTimeblockPositions({
   const allConvertedEntries = useMemo(() => {
     const converted: Array<{
       dateKey: string;
-      entry: CalendarEvent;
+      entry: CalendarDisplayEvent;
       start: Date;
       end: Date;
       id: string;
@@ -89,7 +89,7 @@ export function useMultiDayTimeblockPositions({
 
   // O(1)ルックアップ用Map（allConvertedEntries.find() の O(n*m) を回避）
   const timeblockMap = useMemo(() => {
-    const map = new Map<string, CalendarEvent>();
+    const map = new Map<string, CalendarDisplayEvent>();
     for (const item of allConvertedEntries) {
       map.set(item.id, item.entry);
     }
@@ -111,7 +111,7 @@ export function useMultiDayTimeblockPositions({
   // レイアウト情報をTimeblockPositionに変換
   const timeblockPositions = useMemo((): TimeblockPosition[] => {
     return timeblockLayouts.map((layout: TimeblockLayout, index: number) => {
-      const entry = timeblockMap.get(layout.entry.id) ?? (layout.entry as CalendarEvent);
+      const entry = timeblockMap.get(layout.entry.id) ?? (layout.entry as CalendarDisplayEvent);
       const { top, height } = layoutEntryToVerticalPosition(
         new Date(layout.entry.start),
         new Date(layout.entry.end),

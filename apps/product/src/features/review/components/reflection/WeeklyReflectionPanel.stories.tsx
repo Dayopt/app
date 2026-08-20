@@ -10,9 +10,9 @@ const unplannedTimePLRows = deriveBarComparison(MOCK_WITH_UNPLANNED);
 
 const estimationRows = [
   {
-    tagId: '1',
-    tagName: 'Deep Work',
-    tagColor: 'blue',
+    activityId: '1',
+    activityName: 'Deep Work',
+    activityColor: 'blue',
     isUncategorized: false,
     avgPlannedMinutes: 120,
     avgActualMinutes: 148,
@@ -20,9 +20,9 @@ const estimationRows = [
     recordCount: 5,
   },
   {
-    tagId: '2',
-    tagName: 'Meeting',
-    tagColor: 'amber',
+    activityId: '2',
+    activityName: 'Meeting',
+    activityColor: 'amber',
     isUncategorized: false,
     avgPlannedMinutes: 60,
     avgActualMinutes: 48,
@@ -30,9 +30,9 @@ const estimationRows = [
     recordCount: 7,
   },
   {
-    tagId: '3',
-    tagName: 'Learning',
-    tagColor: 'green',
+    activityId: '3',
+    activityName: 'Learning',
+    activityColor: 'green',
     isUncategorized: false,
     avgPlannedMinutes: 80,
     avgActualMinutes: 65,
@@ -40,9 +40,9 @@ const estimationRows = [
     recordCount: 3,
   },
   {
-    tagId: null,
-    tagName: null,
-    tagColor: null,
+    activityId: null,
+    activityName: null,
+    activityColor: null,
     isUncategorized: true,
     avgPlannedMinutes: 90,
     avgActualMinutes: 108,

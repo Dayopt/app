@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 import { computeCalendarDayDiffs, filterCalendarDayDiffEntries } from '../day-diff';
 
 const now = new Date('2026-06-18T23:00:00.000Z');
 
-function entry(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+function entry(overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEvent {
   const start = new Date('2026-06-18T09:00:00.000Z');
   const end = new Date('2026-06-18T10:00:00.000Z');
 
@@ -21,7 +21,7 @@ function entry(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     displayStartDate: start,
     displayEndDate: end,
     status: 'closed',
-    color: 'var(--tag-blue)',
+    color: 'var(--category-blue)',
     tagId: 'tag-1',
     activityId: 'activity-1',
     createdAt: start,

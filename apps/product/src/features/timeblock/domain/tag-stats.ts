@@ -3,9 +3,6 @@
  *
  * Server 層 (`features/timeblock/server/statistics.ts`) の `getTagStats` から
  * DB 非依存の純粋な reduce を切り出している。
- *
- * 注: `buildTagDashboard` (`./tag-dashboard.ts`) は entry rows から daily 集計を
- * 組み立てる別概念で、入力 / 出力 / 消費者が異なるため並置している。
  */
 
 interface TagStatsRow {

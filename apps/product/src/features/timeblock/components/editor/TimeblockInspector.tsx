@@ -5,7 +5,7 @@
  *
  * plans / records を対象にした Inspector シェル:
  * - store 読み取り（timeblockId + timeblockKind）、kind 別 getById、loading/empty 分岐
- * - レスポンシブ分岐（mobile=Drawer / PC=FloatingPopover）
+ * - レスポンシブ分岐（mobile=Drawer / PC=DockedInspectorPanel）
  * - keyboard ショートカット、URL同期
  *
  * 旧 TimeblockInspector（entries 用）の置き換え。旧実装は Step 9 で削除する。
@@ -18,15 +18,17 @@ import { useTranslations } from 'next-intl';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { useActivitiesMap } from '@/features/activities';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { api } from '@/lib/trpc';
 import { Drawer, DrawerContent, DrawerTitle, Spinner } from '@dayopt/components';
 
 import type { TimeblockDestination } from '../../domain/timeblock-destination';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
+import { TIMEBLOCK_INSPECTOR_SLOT_KEY } from '../../lib/inspector-slot';
 import type { ClipboardTimeblock } from '../../lib/timeblock-clipboard';
 import { useTimeblockInspectorStore } from '../../stores/useTimeblockInspectorStore';
-import { FloatingPopover } from '../inspector/FloatingPopover';
+import { DockedInspectorPanel } from '../inspector/DockedInspectorPanel';
 import { useInspectorKeyboard } from '../inspector/hooks';
 import { TimeblockInspectorForm, type TimeblockRelationships } from './TimeblockInspectorForm';
 
@@ -46,7 +48,7 @@ interface TimeModelInspectorProps {
 const INSPECTOR_FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** plans / records 対応 Inspector のトップレベル（モバイル=Drawer / PC=FloatingPopover） */
+/** plans / records 対応 Inspector のトップレベル（モバイル=Drawer / PC=DockedInspectorPanel） */
 export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
@@ -55,8 +57,8 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
   const isOpen = useTimeblockInspectorStore((state) => state.isOpen);
   const timeblockId = useTimeblockInspectorStore((state) => state.timeblockId);
   const timeblockKind = useTimeblockInspectorStore((state) => state.timeblockKind);
-  const anchorRect = useTimeblockInspectorStore((state) => state.anchorRect);
   const duplicateDraft = useTimeblockInspectorStore((state) => state.duplicateDraft);
+  const inspectorSlotElement = useDomSlot(TIMEBLOCK_INSPECTOR_SLOT_KEY);
   const openInspector = useTimeblockInspectorStore((state) => state.openInspector);
   const openDuplicate = useTimeblockInspectorStore((state) => state.openDuplicate);
   const cancelDuplicate = useTimeblockInspectorStore((state) => state.cancelDuplicate);
@@ -169,7 +171,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         duplicateDraft={duplicateDraft}
         onCancelDuplicate={handleCancelDuplicate}
         onDuplicateCreated={handleOpenRelationship}
-        onCloseInspector={isMobile ? handleClose : undefined}
+        onCloseInspector={handleClose}
         onDeleted={handleClose}
       />
     );
@@ -206,7 +208,7 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
         onViewStats={onViewStats}
         onCopy={onCopy}
         onStartDuplicate={openDuplicate}
-        onCloseInspector={isMobile ? handleClose : undefined}
+        onCloseInspector={handleClose}
         onDeleted={handleClose}
       />
     );
@@ -246,9 +248,9 @@ export function TimeblockInspector({ onViewStats, onCopy }: TimeModelInspectorPr
           </DrawerContent>
         </Drawer>
       ) : (
-        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
+        <DockedInspectorPanel title={title} slotElement={inspectorSlotElement}>
           {contentElement}
-        </FloatingPopover>
+        </DockedInspectorPanel>
       )}
     </>
   );

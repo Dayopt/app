@@ -35,11 +35,11 @@ describe('parseBillingReturn', () => {
 describe('removeBillingReturnParams', () => {
   it('復帰 query だけを取り除き、他は温存する', () => {
     const result = removeBillingReturnParams(
-      new URLSearchParams('returnTo=%2Fweek&success=true&panel=review'),
+      new URLSearchParams('returnTo=%2Fcalendar&success=true&panel=review'),
     );
 
     expect(result.get('success')).toBeNull();
-    expect(result.get('returnTo')).toBe('/week');
+    expect(result.get('returnTo')).toBe('/calendar');
     expect(result.get('panel')).toBe('review');
   });
 

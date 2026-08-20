@@ -1,46 +1,30 @@
 /**
  * ワークスペースビューのルーティングユーティリティ
  *
- * URLパスが workspace の時間軸ビュー（/calendar または旧 day / week / Nday）
- * かどうかを判定する。
+ * URLパスが workspace の時間軸ビュー（`/calendar`）かどうかを判定する。
  *
- * `/calendar` は新URL契約（view はクエリで受ける）、旧 day/week/Nday は
- * workspace-shell-restructure Step 6（旧route削除）まで二重解決のために残す
- * （docs/projects/workspace-shell-restructure/overview.md §9「Step 1 と
- * Step 2 を分ける理由」）。
+ * 旧 day/week/Nday は proxy.ts の redirect で `/calendar` へ集約済み
+ * （workspace-shell-restructure epic #2181 Step 6 完了。#2195）。
+ * アプリ内部の pathname 判定はこの関数を含め `/calendar` の完全一致のみを見ればよい。
  */
 
-const CALENDAR_VIEWS = ['day', 'week'];
-
 /**
- * ロケールを除いたパスが workspace の時間軸ビューかどうかを判定
+ * ロケールを除いたパスが workspace の時間軸ビュー（`/calendar`）かどうかを判定
  *
- * @param pathWithoutLocale - ロケールプレフィックスを除いたパス（例: "/calendar", "/day", "/week?date=2026-01-01", "/3day"）
+ * @param pathWithoutLocale - ロケールプレフィックスを除いたパス（例: "/calendar", "/calendar?view=week"）
  */
 export function isCalendarViewPath(pathWithoutLocale: string): boolean {
   const [pathOnly] = pathWithoutLocale.split('?');
 
   // `/calendar` は完全一致のみ（`/calendar/day` 等のサブパスは新URL契約に存在しない）
-  if (pathOnly === '/calendar') return true;
-
-  // 先頭セグメントを取得（"/day" -> "day", "/week?date=..." -> "week?date=..."）
-  const segment = pathWithoutLocale.split('/')[1];
-  if (!segment) return false;
-
-  // query string を除去
-  const clean = segment.split('?')[0];
-  if (!clean) return false;
-
-  if (CALENDAR_VIEWS.includes(clean)) return true;
-  // multi-day view: 2day〜7day（厳密に「2〜7の1桁+day」のみ）
-  return /^[2-7]day$/.test(clean);
+  return pathOnly === '/calendar';
 }
 
 /**
  * ワークスペースタブの判定に使う3値。
  *
  * **UI 上のタブは 'calendar' | 'report' の2値**（第3のタブは作らない。
- * docs/projects/workspace-shell-restructure/overview.md §5-2・§6-9・§6-11）。
+ * docs/projects/_archive/workspace-shell-restructure/overview.md §5-2・§6-9・§6-11）。
  * `'other'` は UI タブではなく、CalendarNavigationContext が `/settings` 等の
  * workspace 外パスで view/date のパースを止めるための内部状態（§5-4「`/settings`
  * は calendar として扱う」は dispatcher 側の 2 値折り畳みで満たす。§4-2-b・

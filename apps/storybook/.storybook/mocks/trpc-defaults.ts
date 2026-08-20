@@ -7,66 +7,11 @@
 
 import type { MockResponseMap } from './trpc';
 
-/** Storybook用モックデータ: プリセットタグ */
-const MOCK_TAGS = [
-  {
-    id: 'tag-work',
-    name: 'Work',
-    color: 'blue',
-    icon: null,
-    user_id: null,
-    is_active: true,
-    sort_order: 0,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-learning',
-    name: 'Learning',
-    color: 'green',
-    icon: null,
-    user_id: null,
-    is_active: true,
-    sort_order: 1,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-life',
-    name: 'Life',
-    color: 'amber',
-    icon: null,
-    user_id: null,
-    is_active: true,
-    sort_order: 2,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-exercise',
-    name: 'Exercise',
-    color: 'teal',
-    icon: null,
-    user_id: null,
-    is_active: true,
-    sort_order: 3,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-hobby',
-    name: 'Hobby',
-    color: 'violet',
-    icon: null,
-    user_id: null,
-    is_active: true,
-    sort_order: 4,
-    created_at: null,
-    updated_at: null,
-  },
-];
-
-/** 全Storyに自動適用されるデフォルトモックレスポンス */
-export const DEFAULT_TRPC_MOCKS: MockResponseMap = {
-  'tags.list': { data: MOCK_TAGS },
-};
+/**
+ * 全Storyに自動適用されるデフォルトモックレスポンス。
+ *
+ * tags feature 撤去（tag-model-replacement Step 5/7）に伴い、旧 `tags.list` の
+ * プリセットモックは削除した。現在グローバルデフォルトを持つ procedure は無く、
+ * 個別 Story の `parameters.trpcMocks` だけで賄う。
+ */
+export const DEFAULT_TRPC_MOCKS: MockResponseMap = {};

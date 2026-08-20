@@ -36,14 +36,14 @@ function buildPair(index: number, actualMinutes = 90) {
   return {
     plan: {
       id: `plan-${index}`,
-      tag_id: 'tag-a',
+      activity_id: 'activity-a',
       start_at: `2026-08-${day}T09:00:00.000Z`,
       end_at: `2026-08-${day}T10:00:00.000Z`,
       skipped_at: null,
     },
     record: {
       id: `record-${index}`,
-      tag_id: 'tag-a',
+      activity_id: 'activity-a',
       plan_id: `plan-${index}`,
       source: 'from_plan',
       start_at: `2026-08-${day}T09:00:00.000Z`,
@@ -91,7 +91,7 @@ describe('StatisticsFeedforwardService', () => {
     );
 
     await expect(service.getTagEstimationFactors(USER_ID, NOW)).resolves.toEqual([
-      { tagId: 'tag-a', factor: 1.5, sampleCount: 3 },
+      { activityId: 'activity-a', factor: 1.5, sampleCount: 3 },
     ]);
   });
 

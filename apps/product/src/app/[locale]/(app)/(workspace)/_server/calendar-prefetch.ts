@@ -95,7 +95,6 @@ export async function prefetchCalendarData(view: CalendarViewType, targetDate: D
         limit: 100,
       }),
       helpers.statistics.getTagStats.prefetch(),
-      helpers.tags.list.prefetch(),
     ]);
   } catch (error) {
     // 認証エラー（UNAUTHORIZED）等の場合はprefetchをスキップ

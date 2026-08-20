@@ -11,10 +11,8 @@ import { fn } from 'storybook/test';
 import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
-import { getTagColorClasses } from '@/features/tags';
+import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import { Checkbox } from '@dayopt/components';
-
-import { TagIcon } from '@/features/tags';
 
 import { withWrapper } from '@dayopt/storybook/decorators';
 import { SidebarSection } from './SidebarSection';
@@ -30,7 +28,7 @@ function formatMockDuration(minutes: number): string {
   return remainder > 0 ? `${hours}h${remainder}m` : `${hours}h`;
 }
 
-/** タグアイコン + タグ名 + duration を表示する装飾行（旧コンポーネントは production 未使用のため撤去）の local-only mock */
+/** BlockItem（旧 sidebar/BlockItem.tsx、production 未使用のため撤去）と同一の見た目を再現する local-only mock */
 function MockBlockRow({
   tagName,
   durationMinutes,
@@ -41,7 +39,7 @@ function MockBlockRow({
   tagName: string;
   durationMinutes: number;
   icon: string | null;
-  color: string;
+  color: string | null;
   onClick?: (() => void) | undefined;
 }) {
   return (
@@ -51,7 +49,7 @@ function MockBlockRow({
         onClick={onClick}
         className="flex min-w-0 flex-1 items-center gap-2 px-2"
       >
-        <TagIcon icon={icon} color={color} size="sm" />
+        <ActivityIcon icon={icon} color={color} size="sm" />
         <span className="text-foreground min-w-0 truncate">{tagName}</span>
         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
           {formatMockDuration(durationMinutes)}
@@ -76,7 +74,7 @@ function ActionButton() {
 }
 
 /**
- * borderColor/backgroundColor に getTagColorClasses().cssVar を使用。
+ * borderColor/backgroundColor に getCategoryColorClasses().cssVar を使用。
  */
 function TagRow({
   name,
@@ -87,7 +85,7 @@ function TagRow({
   color: string;
   checked?: boolean;
 }) {
-  const colorClasses = getTagColorClasses(color);
+  const colorClasses = getCategoryColorClasses(color);
   return (
     <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm">
       <Checkbox
