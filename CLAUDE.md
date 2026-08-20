@@ -36,7 +36,7 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 - **起動時**: 指揮台セッションは最初に本日の日次盤面 issue（`is:issue label:type:board is:open` で検索）と open issue を読み込む
 - **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新する（機械生成ではなく指揮台の定型動作）。§3 キュー・§4 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない）
 - **§1（北極星と今週の最優先）だけが内容を持つ手動更新セクション**。前日の issue から機械コピーし、当日は User/指揮台が直接編集する
-- **§5 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する
+- **§5 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` で直接検索する
 - **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計。実際の cutover — #2020 の Routine 停止・close — は日次盤面 issue の Routine が稼働してから指揮台が行う運用切替であり、本改訂の scope 外）
 
 ## Tech Stack
