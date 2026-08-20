@@ -194,23 +194,23 @@ describeWithEnv('Block search', () => {
         })
         .first(),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
+    await expect(page.getByRole('region', { name: ACTIVITY_NAME })).toBeVisible();
 
     // Inspectorを閉じた直後に同じblockを検索し直しても、close時のURL cleanupが
     // 後着して再オープンを打ち消さない。
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: ACTIVITY_NAME })).toHaveCount(0);
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(RECORD_NOTE);
     await page.getByText(RECORD_NOTE).click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get('timeblock'))
       .toBe(`record:${recordId}`);
-    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
+    await expect(page.getByRole('region', { name: ACTIVITY_NAME })).toBeVisible();
 
     // Inspector は modal dialog なので、実際の導線どおり一度閉じてから次の検索を開く。
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: ACTIVITY_NAME })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'ブロックを検索' }).first().click();
     await page.getByRole('combobox', { name: '予定と記録を検索' }).fill(ACTIVITY_NAME);
@@ -229,7 +229,7 @@ describeWithEnv('Block search', () => {
         })
         .first(),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('dialog', { name: ACTIVITY_NAME })).toBeVisible();
+    await expect(page.getByRole('region', { name: ACTIVITY_NAME })).toBeVisible();
   });
 
   test('mobileは展開mini calendarから検索を開ける', async ({ page }, testInfo) => {
