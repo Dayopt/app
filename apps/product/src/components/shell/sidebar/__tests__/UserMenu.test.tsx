@@ -19,13 +19,11 @@ import { DropdownMenu, DropdownMenuContent } from '@dayopt/components';
 import { HelpMenuItems } from '../UserMenu';
 
 /**
- * #2153: DropdownMenuItem の onSelect から直接 Dialog/Sheet を開くと、DropdownMenu の
- * close 処理と新しい Dialog の outside-interaction 検出が同一 tick で競合し、開いた
- * 瞬間に閉じる（ShortcutCheatSheetDialog は modal=false のため overlay が無くこの
- * 競合の影響を受ける）。setTimeout で macrotask まで遅らせることで回避する — この
- * test は「選択操作の結果、正しい sheet が最終的に開かれる」という契約を固定する
- * （tick 単位の同期/非同期タイミング自体は jsdom + fake timers の組み合わせが
- * 不安定なため assert 対象にしない）。
+ * HelpMenuItems の onSelect が「選択操作の結果、正しい sheet が最終的に開かれる」
+ * という契約を固定する。DropdownMenu を閉じる際の race（#2153 → #2248 で根治、
+ * DropdownMenuContent の onCloseAutoFocus で解消）そのものは
+ * Sidebar.shortcut-race.test.tsx（#2248）が実際に DropdownMenu を開閉させて
+ * 固定しており、この test では扱わない。
  */
 describe('HelpMenuItems (#2153)', () => {
   beforeEach(() => {
