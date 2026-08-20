@@ -56,6 +56,137 @@ permissions:
   contents: read
 
 jobs:
+  # 破壊的 migration の検知（#2272）。DB 起動を伴わない静的スキャンなので draft でも
+  # 走らせる（コストがほぼゼロで、早期にフィードバックできる価値の方が大きい）。
+  # 検知しても job 自体は失敗させない（fail open）: ラベル付与 + PR コメントで人間の目に
+  # 留めるところまでが scope で、merge を機械的にブロックする執行は #2175 の scope。
+  migration-safety:
+    name: Migration safety
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      # クロスレビュー指摘: `gh label create`（POST /repos/{owner}/{repo}/labels）は
+      # repo 全体のラベル定義を作る操作で、labels の endpoint は issues 権限スコープに
+      # 属する。pull-requests: write だけでも PR への既存ラベル付与自体は通ることが
+      # 多いが、ラベル定義そのものの作成はこちらが正本のスコープなので明示する。
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # risk-reviewer 指摘（#2271/#2272 push前反証レビュー）: 取得（gh api）と判定
+      # （node script）を同一 pipe に混ぜると、gh 側の失敗（rate limit 等）が pipe の exit
+      # code に埋もれ、node が空 stdin を「検知なし」として処理してしまう（fail open が
+      # 「取得失敗」と「本当に安全」を区別できず、後者として誤報告する）。ci.yml の
+      # Impact summary と同じ「取得を分離して失敗を明示検出する」形に揃える。
+      # jq filter は `--paginate` がページごとに適用する前提で、単一配列へ包まず
+      # NDJSON（1行1オブジェクト）にする。配列で包むと複数ページの PR で
+      # `[{...}]\n[{...}]` という壊れた JSON になり、パース失敗を fail open で握り潰すと
+      # 「破壊的変更なし」という誤った肯定シグナルを出してしまう。
+      - name: Fetch changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | {filename, status} | tojson')"; then
+            echo "fetch_failed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "fetch_failed=false" >> "$GITHUB_OUTPUT"
+          {
+            echo 'files<<MIGRATION_SAFETY_FILES_EOF'
+            echo "$files"
+            echo 'MIGRATION_SAFETY_FILES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Report fetch failure
+        if: steps.files.outputs.fetch_failed == 'true'
+        run: |
+          {
+            echo '## Migration safety'
+            echo ''
+            echo '⚠️ 変更ファイル一覧の取得に失敗したため、破壊的変更の検査を実施できませんでした。再実行してください。'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # files も migration ファイル名（PR 作成者が自由に決められる）を含むため、
+      # `${{ }}` で run: へ直接展開せず env 経由にする（下の Label/comment step と同じ理由）。
+      - name: Detect destructive migrations
+        id: detect
+        if: steps.files.outputs.fetch_failed != 'true'
+        env:
+          FILES: ${{ steps.files.outputs.files }}
+        run: |
+          summary="$(printf '%s\n' "$FILES" | node scripts/ci/check-destructive-migration.mjs --stdin)"
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
+          destructive="$(printf '%s\n' "$FILES" | node scripts/ci/check-destructive-migration.mjs --stdin --github-output)"
+          echo "$destructive" >> "$GITHUB_OUTPUT"
+          # multiline summary を後続 step へ渡す（GITHUB_OUTPUT の複数行値は heredoc 区切りが必要）
+          {
+            echo 'summary<<MIGRATION_SAFETY_SUMMARY_EOF'
+            echo "$summary"
+            echo 'MIGRATION_SAFETY_SUMMARY_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # round ごとの追い push で毎回コメントしない（workflow.md §Actions経済の規律と同じ理由）。
+      # 既にラベルが付いていれば「初回検知は伝達済み」として scope: pull-requests/label は
+      # 一覧取得できるが「1件だけ存在確認」する軽い endpoint が無いため一覧を取って grep する。
+      # クロスレビュー指摘: この job の契約は「検知は merge を止めない」なので、gh api の
+      # 一過性障害（rate limit 等）で `has_label` の取得自体が失敗しても job を失敗させない。
+      # 失敗時は has_label=false（未検知扱い）に倒す — 最悪でも次 step が通知を再試行する
+      # だけで、merge を止める副作用は無い。continue-on-error は他 step 群と同じ扱いで併用する。
+      - name: Check existing label
+        id: existing
+        if: steps.detect.outputs.destructive == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if has_label="$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+            --jq '[.[] | select(.name == "db:destructive-migration")] | length > 0')"; then
+            echo "has_label=$has_label" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_label=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure label exists in repo
+        if: steps.detect.outputs.destructive == 'true' && steps.existing.outputs.has_label != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "db:destructive-migration" \
+            --repo "${{ github.repository }}" \
+            --color "B60205" \
+            --description "破壊的 migration を検知（EXPLICIT AUTHORITY 要確認）" \
+            2>/dev/null || true
+
+      # risk-reviewer 指摘: ラベル付与を先にすると、コメント投稿前に job が cancel された
+      # 場合（concurrency: cancel-in-progress で追い push のたびに普通に起こる）ラベルだけ
+      # 残って以後永久に通知されない。コメント投稿を「通知済みの receipt」として先に行い、
+      # 成功した時だけラベルを付ける順序にする。
+      #
+      # summary は新規 migration の SQL 内容（PR 作成者が自由に書ける文字列）に由来するため、
+      # `${{ }}` で run: の中へ直接展開しない（shell injection を避ける）。env 経由で渡し、
+      # bash 側は変数参照だけにする。
+      #
+      # fork からの PR は `pull_request` イベントでは GITHUB_TOKEN が構造的に read-only に
+      # 落ちる（宣言した pull-requests: write は付与されない）ため、この step は失敗しうる。
+      # 「検知しても job を失敗させない」設計と矛盾しないよう continue-on-error にする
+      # （Step Summary には既に検知結果が出ているため、通知の欠落だけで完全な情報欠落にはならない）。
+      - name: Comment and label when newly destructive
+        if: steps.detect.outputs.destructive == 'true' && steps.existing.outputs.has_label != 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.detect.outputs.summary }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+            --body "$SUMMARY"
+          gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+            -f "labels[]=db:destructive-migration" > /dev/null
+
   integration:
     name: Integration Tests
     # 重量層: draft の間は走らせない（2 段階 CI、ci.yml の e2e / web job と同じ扱い）。
