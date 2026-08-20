@@ -123,6 +123,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
 - [ ] night-watch 運行記録の前夜コメント確認（`.claude/skills/night-watch/SKILL.md`。欠落があれば故障を疑い `docs/operations/night-watch.md` §故障検出手順 に従う）
 - [ ] **ランダム抽出監査**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）: 前日 merge 済み PR から乱数で 1 本を選び、対象 issue の dispatch コメントに記載した DoD（操作 A 手順 6）と実際の merge 内容が意図どおりかを User が 5 分で監査する。指揮台は候補 PR を提示するだけで、監査そのものは User が行う。見つかったズレは `judgment:diverged` ラベルでジャーナル化する（`.claude/rules/orchestration.md` §判断ジャーナル）
+- [ ] **heavy-post-merge の赤確認**（2026-08-20、CI 4 層再設計 [#2269](https://github.com/Dayopt/dayopt/issues/2269)）: `gh run list --workflow=heavy-post-merge.yml --limit 5 --json conclusion,createdAt,event` で直近 run を確認する。red（`conclusion=failure`）があれば修正 issue を最優先で起票する。E2E / Web E2E / Integration Tests は per-PR から撤去され、main push 後 + nightly でしか検証されないため、この確認を欠くと壊れた main が promote gate（層 4）に阻まれるまで無通知で滞留する
 
 ### 月次 backstop（`/gardening` と同時期に実施）
 

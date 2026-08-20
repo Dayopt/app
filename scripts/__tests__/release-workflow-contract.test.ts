@@ -114,6 +114,28 @@ describe('release workflow contract', () => {
     expect(publishStep).toMatch(/RELEASE_STATUS" = "superseded"[\s\S]{0,200}state=failure/);
   });
 
+  it('verifies layer-3 (heavy-tier) checks are green before promoting (#2269)', () => {
+    // CI 4 層再設計で E2E / Web E2E / Integration Tests は per-PR から撤去され、
+    // main push 後の層 3 だけが検証する。promote 前にこの gate が無いと、
+    // 壊れた main がそのまま Production へ昇格しうる。
+    const gateStep = release.slice(
+      release.indexOf('Verify heavy-tier (layer 3) checks are green'),
+      release.indexOf('Wait, smoke, and promote Production'),
+    );
+    expect(gateStep.length).toBeGreaterThan(0);
+
+    // 3 context すべてを検証する
+    for (const context of ['🎭 E2E Tests', '🌐 Web Build & E2E', 'Integration Tests']) {
+      expect(gateStep).toContain(context);
+    }
+
+    // force（break-glass）時のみ skip する。既存の smoke/audit skip と同じ条件式。
+    expect(gateStep).toMatch(/if:\s*'!inputs\.force'/);
+
+    // 見つからない・pending・failure はすべて exit 1（fail closed）に倒す
+    expect(gateStep).toContain('exit 1');
+  });
+
   it('allows more wall clock than the script can consume', () => {
     // job が先に kill されると、rollback 途中の片系 promote が
     // 手動 rollback の手掛かり（run summary の previous id）ごと消える。
