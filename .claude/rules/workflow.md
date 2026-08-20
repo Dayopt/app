@@ -273,11 +273,11 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 [PR #1657](https://github.com/Dayopt/dayopt/pull/1657) は #1534 / #1535 を 1 PR に束ねた。当時は「1 issue = 1 PR の意図的な例外」としてユーザーの明示指示を根拠にしていた。本節はこの例外を既定に反転させたもの。
 
-### Actions 経済の規律（策定日: 2026-08-12、根拠は 2026-08-11 の private 化保留決定を反映）
+### Actions 経済の規律（策定日: 2026-08-12、2026-08-20 改訂: private 化確定を反映）
 
-**private 化は保留し、public を維持する**（[2026-08-11 の決定ログ](../../docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md)）。当初想定していた「2026-09 に private 化して無料枠が月 2,000 分になる」という前提は撤回済み。決め手は算術: private 換算コストは ~17,000 分/月に対し Free 枠は 2,000 分で 88% の削減が要るが、CodeQL・Docs Guard を全廃しても CI 単体が ~11,900 分を占めるため「CI 削減が完了したら private 化する」という条件が成立しない。public を維持する限り GitHub-hosted runner は実質無制限で、push 回数それ自体が無料枠の予算制約にはならない。
+**リポジトリは 2026-09 に private 化する**（User 決定、2026-08-20。[2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)が [2026-08-11 の「private 化保留」決定](../../docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md)を覆した）。private 化後は Actions 無料枠（Free: 2,000 分/月、GitHub Team 加入時: 3,000 分/月）が予算制約として復活する。これに対応する主要な打ち手は per-PR の重量層（E2E / Web E2E / Integration Tests）撤去（§CI 4 層構造（2026-08-20 改訂） 参照）であり、push 回数の抑制だけでは不足する規模の削減が必要だった。
 
-それでも本節の規律は変えない。public のままでも CI run 自体の待ち時間・`concurrency: cancel-in-progress` による手戻り（§なぜ束ねるか）は push 回数に比例して増えるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
+本節の規律（push 回数の抑制）は変えない。private 化後も CI run 自体の待ち時間・`concurrency: cancel-in-progress` による手戻り（§なぜ束ねるか）は push 回数に比例して増えるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
 
 - **レビューの指摘対応は round 単位で 1 push に束ねる。** 1 push = 軽量 CI 1 run なので、指摘が来るたびに 1 件ずつ直して push すると round 数だけ CI run が増える。ある PR では指摘対応が 8 巡 = 8 run になった実例がある。1 round で出た指摘をすべて拾ってから push する
 - **軽微な fix の追い push をしない。** typo や 1 行修正を見つけても即 push せず、次の round（レビュー対応や機能追加）に同乗させる
@@ -322,9 +322,9 @@ typo 修正など issue を切っていない作業では省略してよい。�
 
 - **draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。手順は `dispatch` skill 操作 A 手順 6 が正本。経緯は #2065）
 - **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
-- **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
-- **flow（2026-08-20 改訂）**: 「draft で push（軽量層のみ）→ 軽量 green 確認後、レーンが自己判断で ready 化 → 重量層 watch → green を指揮台へ「レビュー待ち」報告 → クロスレビュー → 指摘があれば **ready のまま** 1 round = 1 push で fix → thread 全 resolve + green で `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
-- **fix round は draft へ戻さない**（旧「`gh pr ready --undo` で draft に戻す」運用を廃止）。ready のまま push を重ね、その都度重量層が再走する。これは明示的なトレードオフで、public repo 維持（2026-08-11 決定）により runner コストは実質待ち時間のみのため許容する
+- **ready 後に走る重量層**: Production Config Audit（保護対象該当時のみ trusted dispatch）。**E2E / Web E2E は per-PR から撤去済み**（2026-08-20、CI 4 層再設計 #2269。§CI 4 層構造（2026-08-20 改訂） 参照）。draft/ready はどちらも同じ軽量セットになった
+- **flow（2026-08-20 改訂）**: 「draft で push（軽量層のみ）→ 軽量 green 確認後、レーンが自己判断で ready 化 → green を指揮台へ「レビュー待ち」報告 → クロスレビュー → 指摘があれば **ready のまま** 1 round = 1 push で fix → thread 全 resolve + green で `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
+- **fix round は draft へ戻さない**（旧「`gh pr ready --undo` で draft に戻す」運用を廃止）。ready のまま push を重ねる。E2E / Web E2E が per-PR から撤去された（2026-08-20）ため、fix round のたびに重い CI が再走するコストは実質消えている。保護対象 PR の trusted dispatch（Production Config Audit）は引き続き push ごとに要る
 - **クロスレビューは ready 化後（レーンの「レビュー待ち」報告受領後）に `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）で回す。** 旧版は draft のまま先にクロスレビューし、収束後に ready 化する順序だったが、新フローではレーンが先に ready 化・重量 green まで進めてから指揮台がレビューする（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 参照）
 - **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
@@ -341,7 +341,23 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 
 ### なぜ 2 段階か
 
-2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペースだった（この試算時点では private 化後の Free 枠 2,000 分/月を基準に「5 倍超」と評価していたが、private 化は 2026-08-11 に保留決定済み。§Actions 経済の規律 参照。public 維持下でも CI run の待ち時間・concurrency cancel の手戻りは push 回数に比例するため、検証の量は減らさず走るタイミングを merge 前 1 回に寄せる判断自体は変えていない）。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。**2026-08-20 の改訂（[#2263](https://github.com/Dayopt/dayopt/issues/2263)）で「ready 化は merge 直前に 1 回」の運用は終了し、fix round のたびに重量層が再走することを明示的に許容している**（上記フロー参照）。draft/ready の 2 段階構造自体（軽量層は draft 中、重量層は ready 後）は不変。
+2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペースだった。同じ原理で Integration Tests の push:main トリガー（当時は up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。**2026-08-20 の改訂（[#2263](https://github.com/Dayopt/dayopt/issues/2263)）で「ready 化は merge 直前に 1 回」の運用は終了し、fix round のたびに重量層が再走することを明示的に許容している**（上記フロー参照）。draft/ready の 2 段階構造自体（軽量層は draft 中、重量層は ready 後）は不変。
+
+### CI 4 層構造（2026-08-20 改訂）
+
+private 化前提の確定（[2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）により、per-PR で E2E / Web E2E を走らせるコストが Actions 予算を圧迫すると判明したため、CI を 4 層へ再設計した（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）。
+
+| 層  | タイミング             | 内容                                                                 | 実装                                                                           |
+| --- | ---------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1   | draft push             | Static Checks / Unit Tests（Impact gate による docs-only skip 込み） | `.github/workflows/ci.yml`                                                     |
+| 2   | ready                  | 層 1 と同一セット                                                    | `.github/workflows/ci.yml`                                                     |
+| 3   | main push 後 + nightly | E2E / Web E2E / Integration Tests                                    | `.github/workflows/heavy-post-merge.yml` / `.github/workflows/integration.yml` |
+| 4   | promote 前             | release.yml 内の smoke（既存）+ 層 3 green を promote の前提条件に   | `.github/workflows/release.yml`                                                |
+
+- **E2E / Web E2E / Integration Tests は per-PR（層 1・2）に存在しない。** レーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）が per-PR 検出の主力を引き継ぐ
+- **層 3 は main push 後に必ず走る安全網。** docs-only skip は行わない（push:main の頻度は PR push よりずっと低いため、複雑な skip ロジックより単純に毎回走らせる方が壊れにくい）
+- **層 4（promote 前）は層 3 が target SHA で green であることを要求する。** 壊れた main がそのまま Production へ昇格するのを防ぐ。`force`（break-glass）時は既存の smoke/audit skip と同様にこの gate もスキップする
+- 詳細な設計判断・却下した選択肢・GitHub Team プラン検討は [2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)を参照
 
 ## マージ方式
 

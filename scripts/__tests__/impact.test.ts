@@ -501,11 +501,15 @@ describe('formatSummary', () => {
  */
 describe('integration.yml の paths と INTEGRATION_GLOBS の同期契約', () => {
   it('.github/workflows/integration.yml の paths リストが INTEGRATION_GLOBS と完全一致する', () => {
+    // integration.yml のトリガーは CI 4 層再設計（#2269）で pull_request から
+    // push:main へ移った（層 3 化）。paths ブロックの位置は変わったが、
+    // 抽出する正規表現自体は親キー非依存（`paths:\n  - '...'` の形を見るだけ）
+    // なので変更不要。
     const workflowYml = readFileSync(join(rootDir, '.github/workflows/integration.yml'), 'utf8');
     const pathsBlock = workflowYml.match(/paths:\n((?:\s+-\s+'[^']*'\n)+)/);
     expect(
       pathsBlock,
-      'integration.yml の pull_request.paths ブロックを抽出できませんでした（YAML 構造が変わった可能性）',
+      'integration.yml の push.paths ブロックを抽出できませんでした（YAML 構造が変わった可能性）',
     ).not.toBeNull();
     const workflowPaths = [...pathsBlock![1].matchAll(/-\s+'([^']*)'/g)].map((m) => m[1]);
 

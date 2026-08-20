@@ -1,5 +1,12 @@
 name: Integration Tests
 
+# CI 4 層再設計（#2269）で `integration` job（DB 起動を伴う重量テスト）の
+# per-PR 実行を撤去し、main push 後 + nightly の層 3 へ移した。一方で
+# `migration-safety` job（#2272、破壊的 migration の静的スキャン。draft でも
+# 走らせたい軽量 job）は pull_request イベントを必要とするため、
+# `pull_request` トリガー自体は残す。2 job は互いに独立したイベント条件で
+# 動く: `migration-safety` は pull_request のみ、`integration` は
+# push:main / schedule / workflow_dispatch のみ（各 job の `if:` で分岐）。
 on:
   pull_request:
     branches: [main]
@@ -30,23 +37,43 @@ on:
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
-  # main への push では走らせない（ci.yml と同じ根拠）。branch:finish が
-  # 「branch が main 最新を含み、その状態で green」をマージ前に強制するため、
-  # マージ後の main は常に PR で検証済みの tree と一致する。旧 push トリガーは
-  # pull_request と同じ paths を持っていたので、走る時は必ず同一 tree の再検証
-  # だった（2026-08-03 実測: 3 日で 32 run のうち push 由来が 5 分 × 複数回）。
-  #
-  # workflow_dispatch に paths は書けない（inputs しか受け付けない）。手動実行は
+  push:
+    branches: [main]
+    paths:
+      - '.nvmrc'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'apps/product/package.json'
+      - '.github/actions/setup/action.yml'
+      - '.github/workflows/integration.yml'
+      - 'apps/product/src/features/*/domain/**'
+      - 'apps/product/src/features/*/server/**'
+      - 'packages/domain/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/mcp/**'
+      - 'apps/product/src/lib/oauth-server/**'
+      - 'apps/product/src/lib/supabase/**'
+      - 'apps/product/src/lib/trpc/**'
+      - 'apps/product/src/app/api/mcp/**'
+      - 'supabase/migrations/**'
+      - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/src/lib/test/integration-setup.ts'
+      - 'apps/product/src/lib/test/trpc-test-helpers.ts'
+      - 'apps/product/vitest.config.integration.ts'
+      - 'scripts/generate-rls-snapshot.ts'
+      - 'docs/engineering/data/db/rls-snapshot.md'
+  schedule:
+    # 06:45 JST。production-config-audit（06:00）・replica-check（06:30）と
+    # 時間をずらし、同時実行の Supabase / 外部 API 呼び出し衝突を避ける。
+    - cron: '45 21 * * *'
+  # paths は workflow_dispatch には書けない（inputs しか受け付けない）。手動実行は
   # 常に全実行になる。
   workflow_dispatch:
 
-# ここに Supabase の Management API token を置かない。この workflow は `pull_request`
-# で発火し、`ref` 未指定の checkout（= PR の merge ref）の上で pnpm install の
-# postinstall と branch 側の test を実行するため、workflow レベル env に置いた secret は
-# PR の code へそのまま渡る。integration test は `supabase start` のローカル stack だけを
-# 使い、cloud へは触らないので token は不要（2026-08-11 に vestigial と確認して削除）。
-# production の Auth 設定を読む audit は production-config-audit.yml の auth-config job が
-# 担い、そちらは push:main と schedule でしか走らない。
+# ここに Supabase の Management API token を置かない。integration test は
+# `supabase start` のローカル stack だけを使い、cloud へは触らないので token は
+# 不要（2026-08-11 に vestigial と確認して削除）。production の Auth 設定を読む
+# audit は production-config-audit.yml の auth-config job が担う。
 
 concurrency:
   group: integration-${{ github.ref }}
@@ -56,14 +83,143 @@ permissions:
   contents: read
 
 jobs:
+  # 破壊的 migration の検知（#2272）。DB 起動を伴わない静的スキャンなので draft でも
+  # 走らせる（コストがほぼゼロで、早期にフィードバックできる価値の方が大きい）。
+  # 検知しても job 自体は失敗させない（fail open）: ラベル付与 + PR コメントで人間の目に
+  # 留めるところまでが scope で、merge を機械的にブロックする執行は #2175 の scope。
+  migration-safety:
+    name: Migration safety
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      # クロスレビュー指摘: `gh label create`（POST /repos/{owner}/{repo}/labels）は
+      # repo 全体のラベル定義を作る操作で、labels の endpoint は issues 権限スコープに
+      # 属する。pull-requests: write だけでも PR への既存ラベル付与自体は通ることが
+      # 多いが、ラベル定義そのものの作成はこちらが正本のスコープなので明示する。
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # risk-reviewer 指摘（#2271/#2272 push前反証レビュー）: 取得（gh api）と判定
+      # （node script）を同一 pipe に混ぜると、gh 側の失敗（rate limit 等）が pipe の exit
+      # code に埋もれ、node が空 stdin を「検知なし」として処理してしまう（fail open が
+      # 「取得失敗」と「本当に安全」を区別できず、後者として誤報告する）。ci.yml の
+      # Impact summary と同じ「取得を分離して失敗を明示検出する」形に揃える。
+      # jq filter は `--paginate` がページごとに適用する前提で、単一配列へ包まず
+      # NDJSON（1行1オブジェクト）にする。配列で包むと複数ページの PR で
+      # `[{...}]\n[{...}]` という壊れた JSON になり、パース失敗を fail open で握り潰すと
+      # 「破壊的変更なし」という誤った肯定シグナルを出してしまう。
+      - name: Fetch changed files
+        id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | {filename, status} | tojson')"; then
+            echo "fetch_failed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "fetch_failed=false" >> "$GITHUB_OUTPUT"
+          {
+            echo 'files<<MIGRATION_SAFETY_FILES_EOF'
+            echo "$files"
+            echo 'MIGRATION_SAFETY_FILES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Report fetch failure
+        if: steps.files.outputs.fetch_failed == 'true'
+        run: |
+          {
+            echo '## Migration safety'
+            echo ''
+            echo '⚠️ 変更ファイル一覧の取得に失敗したため、破壊的変更の検査を実施できませんでした。再実行してください。'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # files も migration ファイル名（PR 作成者が自由に決められる）を含むため、
+      # `${{ }}` で run: へ直接展開せず env 経由にする（下の Label/comment step と同じ理由）。
+      - name: Detect destructive migrations
+        id: detect
+        if: steps.files.outputs.fetch_failed != 'true'
+        env:
+          FILES: ${{ steps.files.outputs.files }}
+        run: |
+          summary="$(printf '%s\n' "$FILES" | node scripts/ci/check-destructive-migration.mjs --stdin)"
+          echo "$summary" >> "$GITHUB_STEP_SUMMARY"
+          destructive="$(printf '%s\n' "$FILES" | node scripts/ci/check-destructive-migration.mjs --stdin --github-output)"
+          echo "$destructive" >> "$GITHUB_OUTPUT"
+          # multiline summary を後続 step へ渡す（GITHUB_OUTPUT の複数行値は heredoc 区切りが必要）
+          {
+            echo 'summary<<MIGRATION_SAFETY_SUMMARY_EOF'
+            echo "$summary"
+            echo 'MIGRATION_SAFETY_SUMMARY_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # round ごとの追い push で毎回コメントしない（workflow.md §Actions経済の規律と同じ理由）。
+      # 既にラベルが付いていれば「初回検知は伝達済み」として scope: pull-requests/label は
+      # 一覧取得できるが「1件だけ存在確認」する軽い endpoint が無いため一覧を取って grep する。
+      # クロスレビュー指摘: この job の契約は「検知は merge を止めない」なので、gh api の
+      # 一過性障害（rate limit 等）で `has_label` の取得自体が失敗しても job を失敗させない。
+      # 失敗時は has_label=false（未検知扱い）に倒す — 最悪でも次 step が通知を再試行する
+      # だけで、merge を止める副作用は無い。continue-on-error は他 step 群と同じ扱いで併用する。
+      - name: Check existing label
+        id: existing
+        if: steps.detect.outputs.destructive == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if has_label="$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+            --jq '[.[] | select(.name == "db:destructive-migration")] | length > 0')"; then
+            echo "has_label=$has_label" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_label=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ensure label exists in repo
+        if: steps.detect.outputs.destructive == 'true' && steps.existing.outputs.has_label != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "db:destructive-migration" \
+            --repo "${{ github.repository }}" \
+            --color "B60205" \
+            --description "破壊的 migration を検知（EXPLICIT AUTHORITY 要確認）" \
+            2>/dev/null || true
+
+      # risk-reviewer 指摘: ラベル付与を先にすると、コメント投稿前に job が cancel された
+      # 場合（concurrency: cancel-in-progress で追い push のたびに普通に起こる）ラベルだけ
+      # 残って以後永久に通知されない。コメント投稿を「通知済みの receipt」として先に行い、
+      # 成功した時だけラベルを付ける順序にする。
+      #
+      # summary は新規 migration の SQL 内容（PR 作成者が自由に書ける文字列）に由来するため、
+      # `${{ }}` で run: の中へ直接展開しない（shell injection を避ける）。env 経由で渡し、
+      # bash 側は変数参照だけにする。
+      #
+      # fork からの PR は `pull_request` イベントでは GITHUB_TOKEN が構造的に read-only に
+      # 落ちる（宣言した pull-requests: write は付与されない）ため、この step は失敗しうる。
+      # 「検知しても job を失敗させない」設計と矛盾しないよう continue-on-error にする
+      # （Step Summary には既に検知結果が出ているため、通知の欠落だけで完全な情報欠落にはならない）。
+      - name: Comment and label when newly destructive
+        if: steps.detect.outputs.destructive == 'true' && steps.existing.outputs.has_label != 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.detect.outputs.summary }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" \
+            --body "$SUMMARY"
+          gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" \
+            -f "labels[]=db:destructive-migration" > /dev/null
+
   integration:
     name: Integration Tests
-    # 重量層: draft の間は走らせない（2 段階 CI、ci.yml の e2e / web job と同じ扱い）。
-    # Supabase 起動込みで 1 run ≈ 4 課金分と単価が全 job 中最も高く、draft push の
-    # たびに走らせる必要はない。`draft != true` の形なのは workflow_dispatch では
-    # pull_request context が null になるためで、この形なら手動実行は常に走る。
-    # skipped のまま残る check は branch:finish の畳み込みが正しく扱う。
-    if: github.event.pull_request.draft != true
+    # 層 3 化（#2269）: DB 起動を伴う重量テストは per-PR では走らせない。
+    # `migration-safety` job と異なりこちらは pull_request イベントを除外する
+    # （`on:` に pull_request が残っているのは migration-safety のためだけ）。
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

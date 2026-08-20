@@ -116,15 +116,15 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 詳細は `.claude/rules/` を読む。本ファイルには作業中に見失いやすい規約だけ載せる。
 
-- **型**: 具体的な型を書く。variance の逃げは `as never`。`as any` は使わない
-- **ログ**: `@/lib/logger` で構造化ログを出す。`console.log` は本番コードに残さない
+- **型**: [code-style.md §型定義](.claude/rules/code-style.md#型定義) に従う
+- **ログ**: [code-style.md §ログ出力](.claude/rules/code-style.md#ログ出力) に従う
 - **通信**: サーバーデータは tRPC / TanStack Query 経由で扱う
-- **スタイル**: Tailwind semantic token を使う。直接色、任意 spacing、style 属性を避ける
-- **export**: named export を使う。App Router の特殊ファイルだけ `export default` を許可する
-- **Component**: 関数宣言 + props 型の直接注釈を基本にする
+- **スタイル**: [design-system.md §色](.claude/rules/design-system.md#色) に従う（semantic token 経由のみ、直接色・style 属性禁止）
+- **export**: [code-style.md §Export](.claude/rules/code-style.md#export) に従う
+- **Component**: [code-style.md §Component](.claude/rules/code-style.md#component) に従う
 - **Feature 境界**: feature 間の結合は Composition Layer で行う。feature barrel から import する
 - **依存方向**: `features/ -> lib/` の一方向。`lib/` は feature 非依存の再利用コードだけ
-- **命名**: `utils.ts` / `helpers.ts` を避け、責務を表す具体名にする
+- **命名**: [code-style.md §命名](.claude/rules/code-style.md#命名) に従う
 - **新規 top-level feature**: `features/` 直下に新 feature を作る前に相談する
 
 ## Documentation and writing
