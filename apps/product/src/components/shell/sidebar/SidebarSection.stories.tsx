@@ -11,10 +11,8 @@ import { fn } from 'storybook/test';
 import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { MiniCalendar } from '@/components/ui/inputs/mini-calendar';
-import { getTagColorClasses } from '@/features/tags';
+import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import { Checkbox } from '@dayopt/components';
-
-import { TagIcon } from '@/features/tags';
 
 import { withWrapper } from '@dayopt/storybook/decorators';
 import { BlockItem } from './BlockItem';
@@ -39,7 +37,7 @@ function ActionButton() {
 }
 
 /**
- * borderColor/backgroundColor に getTagColorClasses().cssVar を使用。
+ * borderColor/backgroundColor に getCategoryColorClasses().cssVar を使用。
  */
 function TagRow({
   name,
@@ -50,7 +48,7 @@ function TagRow({
   color: string;
   checked?: boolean;
 }) {
-  const colorClasses = getTagColorClasses(color);
+  const colorClasses = getCategoryColorClasses(color);
   return (
     <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm">
       <Checkbox
@@ -172,13 +170,13 @@ export const Default: Story = {
       <div className="space-y-1">
         <BlockItem
           tagName="仕事"
-          iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+          iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
           durationMinutes={60}
           onClick={noop}
         />
         <BlockItem
           tagName="勉強"
-          iconSlot={<TagIcon icon={null} color="green" size="sm" />}
+          iconSlot={<ActivityIcon icon={null} color="green" size="sm" />}
           durationMinutes={30}
           onClick={noop}
         />
@@ -197,13 +195,13 @@ export const WithAction: Story = {
       <div className="space-y-1">
         <BlockItem
           tagName="仕事"
-          iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+          iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
           durationMinutes={60}
           onClick={noop}
         />
         <BlockItem
           tagName="運動"
-          iconSlot={<TagIcon icon={null} color="teal" size="sm" />}
+          iconSlot={<ActivityIcon icon={null} color="teal" size="sm" />}
           durationMinutes={30}
           onClick={noop}
         />
@@ -247,13 +245,13 @@ export const FullSidebar: Story = {
           <SidebarSection title="パレット">
             <BlockItem
               tagName="Work"
-              iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
+              iconSlot={<ActivityIcon icon="briefcase" color="blue" size="sm" />}
               durationMinutes={60}
               onClick={noop}
             />
             <BlockItem
               tagName="Exercise"
-              iconSlot={<TagIcon icon="dumbbell" color="teal" size="sm" />}
+              iconSlot={<ActivityIcon icon="dumbbell" color="teal" size="sm" />}
               durationMinutes={30}
               onClick={noop}
             />
@@ -265,19 +263,19 @@ export const FullSidebar: Story = {
           <SidebarSection title="履歴">
             <BlockItem
               tagName="Work"
-              iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
+              iconSlot={<ActivityIcon icon="briefcase" color="blue" size="sm" />}
               durationMinutes={45}
               onClick={noop}
             />
             <BlockItem
               tagName="Learning"
-              iconSlot={<TagIcon icon="book-open" color="green" size="sm" />}
+              iconSlot={<ActivityIcon icon="book-open" color="green" size="sm" />}
               durationMinutes={30}
               onClick={noop}
             />
             <BlockItem
               tagName="Life"
-              iconSlot={<TagIcon icon="heart" color="amber" size="sm" />}
+              iconSlot={<ActivityIcon icon="heart" color="amber" size="sm" />}
               durationMinutes={15}
               onClick={noop}
             />
@@ -303,13 +301,13 @@ export const AllPatterns: Story = {
           <SidebarSection title="セクション">
             <BlockItem
               tagName="仕事"
-              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+              iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
               durationMinutes={60}
               onClick={noop}
             />
             <BlockItem
               tagName="勉強"
-              iconSlot={<TagIcon icon={null} color="green" size="sm" />}
+              iconSlot={<ActivityIcon icon={null} color="green" size="sm" />}
               durationMinutes={30}
               onClick={noop}
             />
@@ -322,7 +320,7 @@ export const AllPatterns: Story = {
           <SidebarSection title="パレット" action={<ActionButton />}>
             <BlockItem
               tagName="仕事"
-              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+              iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
               durationMinutes={60}
               onClick={noop}
             />
@@ -354,7 +352,7 @@ export const AllPatterns: Story = {
               <SidebarSection title="パレット">
                 <BlockItem
                   tagName="Work"
-                  iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+                  iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
                   durationMinutes={60}
                   onClick={noop}
                 />
@@ -364,7 +362,7 @@ export const AllPatterns: Story = {
               <SidebarSection title="履歴">
                 <BlockItem
                   tagName="Work"
-                  iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+                  iconSlot={<ActivityIcon icon={null} color="blue" size="sm" />}
                   durationMinutes={45}
                   onClick={noop}
                 />

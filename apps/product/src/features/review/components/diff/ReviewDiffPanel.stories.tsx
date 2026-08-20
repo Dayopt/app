@@ -26,8 +26,9 @@ function item(overrides: Partial<ReviewDiffItem> = {}): ReviewDiffItem {
     timeblockId: 'entry-1',
     kind: 'shifted',
     title: 'Deep work',
-    tagId: 'tag-work',
-    color: 'var(--tag-blue)',
+    tagId: null,
+    activityId: 'activity-work',
+    color: 'var(--category-blue)',
     plannedStart,
     plannedEnd,
     actualStart,
@@ -57,8 +58,9 @@ const diff: ReviewDiffResult = {
       timeblockId: 'entry-2',
       kind: 'resized',
       title: 'Planning',
-      tagId: 'tag-admin',
-      color: 'var(--tag-amber)',
+      tagId: null,
+      activityId: 'activity-admin',
+      color: 'var(--category-amber)',
       plannedStart: makeDate(11),
       plannedEnd: makeDate(12),
       actualStart: makeDate(11),
@@ -75,8 +77,9 @@ const diff: ReviewDiffResult = {
       timeblockId: 'entry-3',
       kind: 'unplanned',
       title: 'Unexpected call',
-      tagId: 'tag-admin',
-      color: 'var(--tag-amber)',
+      tagId: null,
+      activityId: 'activity-admin',
+      color: 'var(--category-amber)',
       plannedStart: null,
       plannedEnd: null,
       actualStart: makeDate(13),
@@ -93,8 +96,9 @@ const diff: ReviewDiffResult = {
       timeblockId: 'entry-4',
       kind: 'missed',
       title: 'Email batch',
-      tagId: 'tag-admin',
-      color: 'var(--tag-amber)',
+      tagId: null,
+      activityId: 'activity-admin',
+      color: 'var(--category-amber)',
       plannedStart: makeDate(15),
       plannedEnd: makeDate(15, 30),
       actualStart: null,
@@ -123,8 +127,9 @@ const balancedDiff: ReviewDiffResult = {
       timeblockId: 'entry-balanced-over',
       kind: 'recorded',
       title: 'Planning',
-      tagId: 'tag-admin',
-      color: 'var(--tag-amber)',
+      tagId: null,
+      activityId: 'activity-admin',
+      color: 'var(--category-amber)',
       plannedStart: makeDate(11),
       plannedEnd: makeDate(12),
       actualStart: makeDate(11),
@@ -141,8 +146,9 @@ const balancedDiff: ReviewDiffResult = {
       timeblockId: 'entry-balanced-under',
       kind: 'missed',
       title: 'Email batch',
-      tagId: 'tag-admin',
-      color: 'var(--tag-amber)',
+      tagId: null,
+      activityId: 'activity-admin',
+      color: 'var(--category-amber)',
       plannedStart: makeDate(15),
       plannedEnd: makeDate(15, 30),
       actualStart: null,
@@ -168,10 +174,49 @@ const emptyDiff: ReviewDiffResult = {
   items: [],
 };
 
-const tags = [
-  { id: 'tag-work', name: 'Work', color: 'blue', icon: null, sort_order: 0 },
-  { id: 'tag-admin', name: 'Admin', color: 'amber', icon: null, sort_order: 1 },
+const TIMESTAMPS = {
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
+};
+
+const CATEGORY_WORK = {
+  id: 'cat-work',
+  name: 'Work',
+  user_id: 'user-1',
+  color: 'blue',
+  icon: null,
+  archived_at: null,
+  ...TIMESTAMPS,
+};
+const CATEGORY_ADMIN = {
+  id: 'cat-admin',
+  name: 'Admin',
+  user_id: 'user-1',
+  color: 'amber',
+  icon: null,
+  archived_at: null,
+  ...TIMESTAMPS,
+};
+
+const activities = [
+  {
+    id: 'activity-work',
+    name: 'Work',
+    user_id: 'user-1',
+    category_id: CATEGORY_WORK.id,
+    archived_at: null,
+    ...TIMESTAMPS,
+  },
+  {
+    id: 'activity-admin',
+    name: 'Admin',
+    user_id: 'user-1',
+    category_id: CATEGORY_ADMIN.id,
+    archived_at: null,
+    ...TIMESTAMPS,
+  },
 ];
+const categories = [CATEGORY_WORK, CATEGORY_ADMIN];
 
 const TWELVE_HOUR_SETTINGS = {
   ...PRESET_USER_SETTINGS.default,
@@ -186,7 +231,8 @@ const meta = {
     layout: 'padded',
     trpcMocks: {
       'userSettings.get': PRESET_USER_SETTINGS.default,
-      'tags.list': tags,
+      'activities.listActivities': activities,
+      'activities.listCategories': categories,
     },
   },
 } satisfies Meta<typeof ReviewDiffPanel>;
@@ -222,7 +268,8 @@ export const TwelveHour: Story = {
   parameters: {
     trpcMocks: {
       'userSettings.get': TWELVE_HOUR_SETTINGS,
-      'tags.list': tags,
+      'activities.listActivities': activities,
+      'activities.listCategories': categories,
     },
   },
 };
@@ -259,7 +306,13 @@ export const AllPatterns: Story = {
         onItemClick={fn()}
         className="border-border-subtle w-64 border"
       />
-      <StoryTRPCProvider mocks={{ 'userSettings.get': TWELVE_HOUR_SETTINGS, 'tags.list': tags }}>
+      <StoryTRPCProvider
+        mocks={{
+          'userSettings.get': TWELVE_HOUR_SETTINGS,
+          'activities.listActivities': activities,
+          'activities.listCategories': categories,
+        }}
+      >
         <ReviewDiffPanel
           diff={diff}
           onItemClick={fn()}

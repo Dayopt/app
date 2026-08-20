@@ -6,7 +6,6 @@ code:
   - apps/product/src/features/timeblock/server/statistics-general-router.ts
   - apps/product/src/features/timeblock/server/statistics-kpi-router.ts
   - apps/product/src/features/timeblock/server/statistics-summary-router.ts
-  - apps/product/src/features/timeblock/server/tag-statistics.ts
   - supabase/migrations/20260610000000_entry_auto_record_model.sql
 ---
 

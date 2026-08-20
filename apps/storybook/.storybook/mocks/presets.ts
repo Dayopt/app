@@ -2,7 +2,6 @@
  * Storybook用モックデータプリセット
  *
  * Story間で共通のモックデータを集約。
- * テスト用ファクトリ（src/lib/test/factories/）と併用する。
  *
  * @example
  * import { PRESET_USER_SETTINGS, PRESET_AUTH } from '../../../.storybook/mocks/presets';
@@ -14,25 +13,6 @@
  *   },
  * } satisfies Meta;
  */
-
-import { createMockTag } from '@/lib/test/factories';
-
-// ─────────────────────────────────────────────────────────
-// Tags
-// ─────────────────────────────────────────────────────────
-
-export const PRESET_TAGS = {
-  /** 標準5タグ（Work, Learning, Life, Exercise, Hobby） */
-  standard: [
-    createMockTag({ id: 'tag-work', name: 'Work', color: 'blue', sort_order: 0 }),
-    createMockTag({ id: 'tag-learning', name: 'Learning', color: 'green', sort_order: 1 }),
-    createMockTag({ id: 'tag-life', name: 'Life', color: 'amber', sort_order: 2 }),
-    createMockTag({ id: 'tag-exercise', name: 'Exercise', color: 'teal', sort_order: 3 }),
-    createMockTag({ id: 'tag-hobby', name: 'Hobby', color: 'violet', sort_order: 4 }),
-  ],
-  /** 空状態 */
-  empty: [],
-} as const;
 
 // ─────────────────────────────────────────────────────────
 // User Settings

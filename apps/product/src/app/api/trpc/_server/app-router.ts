@@ -13,7 +13,6 @@ import { reviewRouter } from '@/features/review/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { mcpConnectionsRouter } from '@/features/settings/server/mcp-connections-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
-import { tagsRouter } from '@/features/tags/server/router';
 import { planCommandsRouter } from '@/features/timeblock/server/plan-commands-router';
 import { plansRouter } from '@/features/timeblock/server/plans-router';
 import { recordCommandsRouter } from '@/features/timeblock/server/record-commands-router';
@@ -42,7 +41,6 @@ export const appRouter = createTRPCRouter({
   review: reviewRouter,
   plans: plansRouter,
   statistics: statisticsRouter,
-  tags: tagsRouter,
   timeblockContext: timeblockContextRouter,
   user: userRouter,
   userSettings: userSettingsRouter,

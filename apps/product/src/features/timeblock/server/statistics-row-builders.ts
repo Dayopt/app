@@ -8,7 +8,7 @@ import 'server-only';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-import type { StatRecordRow, TagLookupRow } from './statistics-fetchers';
+import type { StatRecordRow } from './statistics-fetchers';
 import { minutesBetween } from './statistics-service-grouping';
 
 export function filterRowsByVisibleDateKeys<T extends { start_at: string }>(
@@ -39,32 +39,4 @@ export function buildOverviewSection(records: ReadonlyArray<StatRecordRow>) {
     plannedEntries,
     planRate: totalEntries > 0 ? plannedEntries / totalEntries : 0,
   };
-}
-
-export function buildTimeByTagRows(
-  records: ReadonlyArray<StatRecordRow>,
-  tagsById: ReadonlyMap<string, TagLookupRow>,
-) {
-  const minutesByTag = new Map<string | null, number>();
-  for (const record of records) {
-    const tagId = record.tag_id != null && tagsById.has(record.tag_id) ? record.tag_id : null;
-    minutesByTag.set(
-      tagId,
-      (minutesByTag.get(tagId) ?? 0) + minutesBetween(record.start_at, record.end_at),
-    );
-  }
-  return Array.from(minutesByTag.entries())
-    .filter(([, minutes]) => minutes > 0)
-    .map(([tagId, minutes]) => {
-      const tag = tagId == null ? undefined : tagsById.get(tagId);
-      const isUncategorized = tag == null;
-      return {
-        tag_id: isUncategorized ? null : tagId,
-        tag_name: isUncategorized ? null : (tag?.name ?? null),
-        tag_color: isUncategorized ? null : (tag?.color ?? 'indigo'),
-        hours: minutes / 60,
-        is_uncategorized: isUncategorized,
-      };
-    })
-    .sort((a, b) => b.hours - a.hours);
 }

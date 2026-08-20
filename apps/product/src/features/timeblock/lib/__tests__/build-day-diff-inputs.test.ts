@@ -13,7 +13,7 @@ function entry(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     startDate: start,
     endDate: end,
     status: 'closed',
-    color: 'var(--tag-blue)',
+    color: 'var(--category-blue)',
     tagId: 'tag-1',
     activityId: 'activity-1',
     createdAt: start,

@@ -10,7 +10,7 @@ import 'server-only';
 
 import { MS_PER_DAY } from '@/lib/date/constants';
 
-import { aggregateTagEstimationFactors, type TagEstimationFactor } from '../domain';
+import { aggregateActivityEstimationFactors, type ActivityEstimationFactor } from '../domain';
 
 import { fetchPlansForEstimation, fetchRecordsByPlanIds } from './statistics-fetchers';
 import { minutesBetween } from './statistics-service-grouping';
@@ -23,12 +23,19 @@ export class StatisticsFeedforwardService {
   constructor(private readonly supabase: ServiceSupabaseClient) {}
 
   /**
-   * 直近 4 週のタグ別見積もり係数を返す。`n >= 3` のタグだけが含まれる。
+   * 直近 4 週の activity 別見積もり係数を返す。`n >= 3` の activity だけが含まれる。
    *
    * 期間は UTC の絶対時刻で切る。タイムゾーン境界に依存する「日」の集計ではなく
    * 「今から 28 日前まで」の窓なので、user timezone を引く必要が無い。
+   *
+   * メソッド名は procedure 名（`statistics.getTagEstimationFactors`）に合わせて維持している
+   * （`docs/projects/tag-model-replacement/step-5-7-completion.md` §4-2。procedure 名の改名は
+   * 破壊的公開契約変更のため別 scope）。中身は activity 軸の集計を返す。
    */
-  async getTagEstimationFactors(userId: string, now = new Date()): Promise<TagEstimationFactor[]> {
+  async getTagEstimationFactors(
+    userId: string,
+    now = new Date(),
+  ): Promise<ActivityEstimationFactor[]> {
     const startDate = new Date(now.getTime() - ESTIMATION_WINDOW_DAYS * MS_PER_DAY).toISOString();
     const endDate = now.toISOString();
     const plans = await fetchPlansForEstimation(this.supabase, userId, { startDate, endDate });
@@ -40,10 +47,10 @@ export class StatisticsFeedforwardService {
       plans.map((plan) => plan.id),
     );
 
-    return aggregateTagEstimationFactors(
+    return aggregateActivityEstimationFactors(
       plans.map((plan) => ({
         id: plan.id,
-        tag_id: plan.tag_id,
+        activity_id: plan.activity_id,
         planned_minutes: minutesBetween(plan.start_at, plan.end_at),
         is_skipped: plan.skipped_at != null,
       })),

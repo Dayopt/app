@@ -8,7 +8,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 import { withWrapper } from '@dayopt/storybook/decorators';
 
 import { BlockItem } from './BlockItem';
@@ -31,7 +31,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     tagName: '仕事',
-    iconSlot: <TagIcon icon="briefcase" color="blue" size="sm" />,
+    iconSlot: <ActivityIcon icon="briefcase" color="blue" size="sm" />,
     durationMinutes: 60,
   },
 };
@@ -40,7 +40,7 @@ export const Default: Story = {
 export const ShortDuration: Story = {
   args: {
     tagName: '休憩',
-    iconSlot: <TagIcon icon="coffee" color="amber" size="sm" />,
+    iconSlot: <ActivityIcon icon="coffee" color="amber" size="sm" />,
     durationMinutes: 15,
   },
 };
@@ -49,7 +49,7 @@ export const ShortDuration: Story = {
 export const LongName: Story = {
   args: {
     tagName: 'プロジェクト管理・定例ミーティング準備',
-    iconSlot: <TagIcon icon="calendar" color="indigo" size="sm" />,
+    iconSlot: <ActivityIcon icon="calendar" color="indigo" size="sm" />,
     durationMinutes: 90,
   },
 };
@@ -58,7 +58,7 @@ export const LongName: Story = {
 export const NoIcon: Story = {
   args: {
     tagName: '未分類',
-    iconSlot: <TagIcon icon={null} color={null} size="sm" />,
+    iconSlot: <ActivityIcon icon={null} color={null} size="sm" />,
     durationMinutes: 30,
   },
 };
@@ -67,7 +67,7 @@ export const NoIcon: Story = {
 export const WithMenuSlot: Story = {
   args: {
     tagName: '勉強',
-    iconSlot: <TagIcon icon="book-open" color="green" size="sm" />,
+    iconSlot: <ActivityIcon icon="book-open" color="green" size="sm" />,
     durationMinutes: 45,
     menuSlot: (
       <button
@@ -85,56 +85,56 @@ export const WithMenuSlot: Story = {
 export const AllPatterns: Story = {
   args: {
     tagName: '',
-    iconSlot: <TagIcon icon={null} color={null} size="sm" />,
+    iconSlot: <ActivityIcon icon={null} color={null} size="sm" />,
     durationMinutes: 0,
   },
   render: () => (
     <div className="w-64 space-y-1">
       <BlockItem
         tagName="仕事"
-        iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
+        iconSlot={<ActivityIcon icon="briefcase" color="blue" size="sm" />}
         durationMinutes={60}
         onClick={fn()}
       />
       <BlockItem
         tagName="勉強"
-        iconSlot={<TagIcon icon="book-open" color="green" size="sm" />}
+        iconSlot={<ActivityIcon icon="book-open" color="green" size="sm" />}
         durationMinutes={30}
         onClick={fn()}
       />
       <BlockItem
         tagName="運動"
-        iconSlot={<TagIcon icon="dumbbell" color="amber" size="sm" />}
+        iconSlot={<ActivityIcon icon="dumbbell" color="amber" size="sm" />}
         durationMinutes={45}
         onClick={fn()}
       />
       <BlockItem
         tagName="開発:API"
-        iconSlot={<TagIcon icon="code" color="indigo" size="sm" />}
+        iconSlot={<ActivityIcon icon="code" color="indigo" size="sm" />}
         durationMinutes={60}
         onClick={fn()}
       />
       <BlockItem
         tagName="仕事:定例MTG"
-        iconSlot={<TagIcon icon="users" color="blue" size="sm" />}
+        iconSlot={<ActivityIcon icon="users" color="blue" size="sm" />}
         durationMinutes={30}
         onClick={fn()}
       />
       <BlockItem
         tagName="プロジェクト管理・定例ミーティング準備"
-        iconSlot={<TagIcon icon="calendar" color="indigo" size="sm" />}
+        iconSlot={<ActivityIcon icon="calendar" color="indigo" size="sm" />}
         durationMinutes={90}
         onClick={fn()}
       />
       <BlockItem
         tagName="休憩"
-        iconSlot={<TagIcon icon="coffee" color="orange" size="sm" />}
+        iconSlot={<ActivityIcon icon="coffee" color="orange" size="sm" />}
         durationMinutes={15}
         onClick={fn()}
       />
       <BlockItem
         tagName="未分類"
-        iconSlot={<TagIcon icon={null} color={null} size="sm" />}
+        iconSlot={<ActivityIcon icon={null} color={null} size="sm" />}
         durationMinutes={30}
         onClick={fn()}
       />

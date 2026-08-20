@@ -4,7 +4,7 @@ import { CalendarX2, Clock3, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, type ReactNode } from 'react';
 
-import { resolveTagColor, TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
@@ -13,9 +13,9 @@ import { TimePLTagMarker } from '../time-pl/TimePLTagMarker';
 import { formatVariance, getVarianceColor } from '../time-pl/data/timePL.presentation';
 
 export interface WeeklyReflectionEstimationRow {
-  tagId: string | null;
-  tagName: string | null;
-  tagColor: string | null;
+  activityId: string | null;
+  activityName: string | null;
+  activityColor: string | null;
   isUncategorized: boolean;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
@@ -122,7 +122,7 @@ export function WeeklyReflectionPanel({
         ) : (
           <div className="divide-border-subtle divide-y">
             {sortedEstimationRows.map((row) => (
-              <EstimationBiasRow key={row.tagId ?? 'uncategorized'} row={row} />
+              <EstimationBiasRow key={row.activityId ?? 'uncategorized'} row={row} />
             ))}
           </div>
         )}
@@ -250,17 +250,12 @@ function TimePLRow({
 function EstimationBiasRow({ row }: { row: WeeklyReflectionEstimationRow }) {
   const t = useTranslations('calendar.stats.overview');
   const deviation = Math.round(row.avgDeviationMinutes);
-  const tagName = row.isUncategorized ? t('uncategorized') : row.tagName;
+  const activityName = row.isUncategorized ? t('uncategorized') : row.activityName;
 
   return (
     <div className="flex min-h-11 min-w-0 items-center gap-2 px-2 py-2">
-      <TagIcon
-        icon={null}
-        color={resolveTagColor(row.tagColor)}
-        size="sm"
-        isUncategorized={row.isUncategorized}
-      />
-      <span className="text-foreground min-w-0 flex-1 truncate text-sm">{tagName}</span>
+      <ActivityIcon icon={null} color={row.activityColor} size="sm" neutral={row.isUncategorized} />
+      <span className="text-foreground min-w-0 flex-1 truncate text-sm">{activityName}</span>
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {formatDurationMinutes(Math.round(row.avgPlannedMinutes))} /{' '}
         {formatDurationMinutes(Math.round(row.avgActualMinutes))}
@@ -321,8 +316,8 @@ function deriveReflectionSignal({
   const topBias = estimationRows[0];
   if (topBias && Math.abs(topBias.avgDeviationMinutes) >= 15) {
     const bias = Math.abs(Math.round(topBias.avgDeviationMinutes));
-    // 未分類が最大バイアスの場合、tagName(null) をそのまま補間せず翻訳ラベルへ差し替える
-    const tagLabel = topBias.tagName ?? t('overview.uncategorized');
+    // 未分類が最大バイアスの場合、activityName(null) をそのまま補間せず翻訳ラベルへ差し替える
+    const tagLabel = topBias.activityName ?? t('overview.uncategorized');
     return {
       text:
         topBias.avgDeviationMinutes > 0

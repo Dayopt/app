@@ -640,7 +640,16 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
 
     const sourceTag = tags.find((tag) => tag.name === 'Legacy source')!;
     const targetTag = tags.find((tag) => tag.name === 'Legacy target')!;
-    const retagged = await plans.update({ id: plan.id, data: { tagId: sourceTag.id } });
+    // tRPC の書き込み入口（tagId）は tag-model-replacement Step 5 で塞がれたため
+    // （schemas/timeblock.ts から tagId を除去済み）、tag 付与は残る唯一の writer
+    // である service_role で直接 DML する。この test の主眼は merge_tags_with_hierarchy
+    // RPC が既存 tag_id を正しく付け替えることの検証であり、付与経路自体ではない。
+    const { error: retagError } = await admin
+      .from('plans')
+      .update({ tag_id: sourceTag.id })
+      .eq('id', plan.id);
+    if (retagError) throw retagError;
+    const retagged = await plans.getById({ id: plan.id });
     expect(retagged.tag_id).toBe(sourceTag.id);
 
     const { error: mergeError } = await admin.rpc('merge_tags_with_hierarchy', {

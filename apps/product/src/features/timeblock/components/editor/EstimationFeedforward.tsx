@@ -9,9 +9,9 @@
  *
  * 出さない条件（どれか 1 つでも該当したら `null`）:
  * - 保存先が Record（過去の事実の記録に見積もりの話は要らない）
- * - タグ未選択
+ * - activity 未選択
  * - draft の長さが 0 以下
- * - そのタグのサンプルが 3 件未満、または係数を取得できていない
+ * - その activity のサンプルが 3 件未満、または係数を取得できていない
  */
 
 import { useTranslations } from 'next-intl';
@@ -24,14 +24,14 @@ import { useTagEstimationFactors } from '../../hooks/useTagEstimationFactors';
 interface EstimationFeedforwardProps {
   /** 保存先。`'plan'` のときだけ表示する。 */
   destination: TimeblockDestination;
-  tagId: string | null;
+  activityId: string | null;
   /** draft の予定時間（分）。 */
   draftMinutes: number;
 }
 
 export function EstimationFeedforward({
   destination,
-  tagId,
+  activityId,
   draftMinutes,
 }: EstimationFeedforwardProps) {
   const t = useTranslations('timeblock.editor.feedforward');
@@ -39,7 +39,7 @@ export function EstimationFeedforward({
 
   if (destination !== 'plan') return null;
 
-  const projection = project(tagId, draftMinutes);
+  const projection = project(activityId, draftMinutes);
   if (!projection) return null;
 
   return (

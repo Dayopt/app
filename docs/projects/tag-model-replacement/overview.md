@@ -2,7 +2,7 @@
 status: active
 last_verified: 2026-08-19
 code:
-  - apps/product/src/features/tags
+  - apps/product/src/features/activities
   - apps/product/src/features/calendar/components/activity-filter
   - apps/product/src/features/timeblock/server
   - supabase/migrations

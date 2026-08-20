@@ -313,7 +313,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       const tempPlan: PlanListItem = {
         id: tempId,
         user_id: '',
-        tag_id: input.tagId ?? null,
+        tag_id: null,
         activity_id: input.activityId ?? null,
         external_calendar_event_id: input.externalCalendarEventId ?? null,
         title: input.title,
@@ -350,7 +350,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       const tempRecord: RecordListItem = {
         id: tempId,
         user_id: '',
-        tag_id: input.tagId ?? null,
+        tag_id: null,
         activity_id: input.activityId ?? null,
         plan_id: input.planId ?? null,
         external_calendar_event_id: input.externalCalendarEventId ?? null,
@@ -386,7 +386,6 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         ...row,
         ...(input.data.title !== undefined ? { title: input.data.title } : {}),
         ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
-        ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
         ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
         ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
       });
@@ -413,7 +412,6 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         ...row,
         ...(input.data.title !== undefined ? { title: input.data.title } : {}),
         ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
-        ...(input.data.tagId !== undefined ? { tag_id: input.data.tagId ?? null } : {}),
         ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
         ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
       });

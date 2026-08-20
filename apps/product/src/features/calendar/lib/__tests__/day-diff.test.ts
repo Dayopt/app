@@ -21,7 +21,7 @@ function entry(overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEv
     displayStartDate: start,
     displayEndDate: end,
     status: 'closed',
-    color: 'var(--tag-blue)',
+    color: 'var(--category-blue)',
     tagId: 'tag-1',
     activityId: 'activity-1',
     createdAt: start,

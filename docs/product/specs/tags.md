@@ -1,7 +1,6 @@
 ---
 status: current
 last_verified: 2026-08-04
-code: apps/product/src/features/tags
 public_docs:
   - tags
 lp:
