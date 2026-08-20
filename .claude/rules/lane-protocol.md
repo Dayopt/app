@@ -14,10 +14,10 @@
 
 ## PR 規約
 
-- `gh pr create --draft` で作成する。ready 化は merge 直前の 1 回だけ（`.claude/rules/workflow.md` §2 段階 CI）
+- `gh pr create --draft` で作成する。軽量 green 確認後、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）
 - 本文に `Closes #N` を対象 issue ごとに 1 行ずつ書く。epic や部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
 - draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する
-- **保護対象の検出**: audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は push-ready 報告（下記）に明記する。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 3・6）
+- **保護対象の検出**: audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
 
 ## 報告テンプレート（4 種）
 
@@ -37,15 +37,15 @@ round の commit + push 前セルフレビューまで済ませた時に送る�
 - **保護対象該当**: 該当する場合、trusted dispatch が必要になる旨を明記
 - **残論点**: 未解決の指摘・懸念があれば
 
-push の実行タイミングは指揮台の合図待ち（`.claude/rules/orchestration.md` §push タイミングの一元化）。
+push の実行は指揮台の合図を待たず自己判断で行う（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)）。**追従（update-branch）だけは今も指揮台の合図待ち**（`.claude/rules/orchestration.md` §追従とマージ順の采配）。
 
-### merge 可能報告
+### レビュー待ち報告
 
-軽量 CI green を確認した時点で送ってよい（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、軽量 CI の green を確認した旨を添える。
+軽量 green 確認 → 自己判断で ready 化 → 重量層（E2E / Web E2E / Production Config Audit）watch → green 確認、まで進めた時点で送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、重量 green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
 
-### 重量 green 報告
+### fix round green 報告
 
-指揮台の確定伝達を受けて ready 化し、重量層（E2E / Web E2E / Production Config Audit）の green を確認した時に送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 6・7）。
+クロスレビューの指摘に対応した時（**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む）、重量 green を再確認して送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 4）。
 
 ## 検証の証跡原則
 
@@ -85,7 +85,7 @@ routes / auth / E2E spec に触れる PR は、push-ready 宣言前に影響 spe
 レーン{名}。{issue URL または束の構成}。
 worktree を `.claude/worktrees/` 配下に作成し、branch 名は `{agent}/{domain}-{action}[-issue番号]`。
 レーンプロトコル: `.claude/rules/lane-protocol.md` に従う（着手手順・PR規約・報告テンプレート・検証証跡原則・条件付き事前E2E）。
-連絡規律: `.claude/rules/orchestration.md` §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当issueのコメントを読み直す・push は指揮台の合図待ち・spawn_task は指揮台の専権のため使わない・確定後は ready 化 → 重量 watch → green 報告）。
+連絡規律: `.claude/rules/orchestration.md` §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当issueのコメントを読み直す・push/ready化/重量watchは自律的に進める・追従だけは指揮台の合図待ち・spawn_task は指揮台の専権のため使わない）。
 {案件固有の注意（同乗タスク、既知の罠、触ってはいけない領域など）}
 ```
 

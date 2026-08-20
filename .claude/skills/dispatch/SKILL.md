@@ -108,6 +108,11 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 起票後、前日の日次盤面 issue は close する（引き継ぎは新issueの §1 コピーとコメントで完結しているため、旧issueに残す情報はない）。**初回起票**（Routine 未登録の間の最初の 1 回）は本 PR の merge 後に指揮台が手動で行う。Routine の実登録・スケジュール設定自体はこの skill / 本 PR の scope 外（指揮台/User 操作枠が別途行う）。
 
+**cutover 手順（初回起票時のみ、指揮台が実施）**: [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割は日次盤面 issue へ完全吸収される。
+
+1. PR merge 後、指揮台が上記テンプレで初日の盤面 issue を手動起票する
+2. #2020 へ最終コメント（「以後の盤面・引き継ぎは日次盤面 issue へ。最新は `label:type:board is:open` で発見」）を投稿して close する
+
 ### 日次（指揮台の朝編成が吸収）
 
 - [ ] 当日の日次盤面 issue に本日分のコメント/追記が無いことの確認（[#2256](https://github.com/Dayopt/dayopt/issues/2256) 再scope。night-watch の前夜コメント欠落検出と同型 — §2 レーン表の更新漏れ、または issue 自体の起票漏れを検出する）

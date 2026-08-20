@@ -318,14 +318,14 @@ typo 修正など issue を切っていない作業では省略してよい。�
 
 策定日: 2026-08-03
 
-**PR は `gh pr create --draft` で作成し、ready 化は merge 直前に 1 回だけ行う。**
+**PR は `gh pr create --draft` で作成する。ready 化のタイミングは 2026-08-20 に改訂した（[#2263](https://github.com/Dayopt/dayopt/issues/2263)、`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）。**
 
 - **draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と盤面把握が楽になる。手順は `dispatch` skill 操作 A 手順 6 が正本。経緯は #2065）
 - **draft 中に走る軽量層**: Static Checks / Unit Tests / Docs Guard。修正ラウンドの手応え確認はこれで足りる
 - **ready 後に走る重量層**: E2E / Web E2E / Production Config Audit
-- flow は「draft で push を重ねる（軽量層のみ）→ ready 化 → 重量層 green を確認 → `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
-- ready 後にさらに push すると重量層も再走する。レビュー指摘の対応が続くなら `gh pr ready --undo` で draft に戻してから積む
-- **クロスレビューは draft のまま `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）で回す。** 指揮台がレーンから merge 可能報告を受けた後に発火し、PR の状態に依存せず draft のまま実行できる。収束後の ready 化タイミングは `.claude/rules/orchestration.md` §指揮台の merge シーケンス が正本で、指摘が尽きてから ready 化すれば重量層は merge 前の 1 回に収まる
+- **flow（2026-08-20 改訂）**: 「draft で push（軽量層のみ）→ 軽量 green 確認後、レーンが自己判断で ready 化 → 重量層 watch → green を指揮台へ「レビュー待ち」報告 → クロスレビュー → 指摘があれば **ready のまま** 1 round = 1 push で fix → thread 全 resolve + green で `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）
+- **fix round は draft へ戻さない**（旧「`gh pr ready --undo` で draft に戻す」運用を廃止）。ready のまま push を重ね、その都度重量層が再走する。これは明示的なトレードオフで、public repo 維持（2026-08-11 決定）により runner コストは実質待ち時間のみのため許容する
+- **クロスレビューは ready 化後（レーンの「レビュー待ち」報告受領後）に `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）で回す。** 旧版は draft のまま先にクロスレビューし、収束後に ready 化する順序だったが、新フローではレーンが先に ready 化・重量 green まで進めてから指揮台がレビューする（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 参照）
 - **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
 - draft を忘れて ready で作っても機能的な regression は無い（全 push で全層が走る従来挙動に戻り、課金だけ増える）
 
@@ -341,7 +341,7 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 
 ### なぜ 2 段階か
 
-2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペースだった（この試算時点では private 化後の Free 枠 2,000 分/月を基準に「5 倍超」と評価していたが、private 化は 2026-08-11 に保留決定済み。§Actions 経済の規律 参照。public 維持下でも CI run の待ち時間・concurrency cancel の手戻りは push 回数に比例するため、検証の量は減らさず走るタイミングを merge 前 1 回に寄せる判断自体は変えていない）。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。
+2026-08-03 実測: 3 日間で CI 38 run / 15 PR。push 2.5 回に対して merge 前に必要な全量検証は 1 回で、全 push で重量層まで走らせると月 ~11,000 課金分ペースだった（この試算時点では private 化後の Free 枠 2,000 分/月を基準に「5 倍超」と評価していたが、private 化は 2026-08-11 に保留決定済み。§Actions 経済の規律 参照。public 維持下でも CI run の待ち時間・concurrency cancel の手戻りは push 回数に比例するため、検証の量は減らさず走るタイミングを merge 前 1 回に寄せる判断自体は変えていない）。同じ原理で Integration Tests の push:main トリガー（up-to-date gate により PR 検証と同一 tree の再検証だった）を廃止し、Production Config Audit（Vercel 側 drift の検査で PR diff と無関係）を draft skip + 日次 cron に変えた。**2026-08-20 の改訂（[#2263](https://github.com/Dayopt/dayopt/issues/2263)）で「ready 化は merge 直前に 1 回」の運用は終了し、fix round のたびに重量層が再走することを明示的に許容している**（上記フロー参照）。draft/ready の 2 段階構造自体（軽量層は draft 中、重量層は ready 後）は不変。
 
 ## マージ方式
 
