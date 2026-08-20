@@ -10,7 +10,7 @@ paths:
 ## 階層モデル（DAG）
 
 ```
-Layer 0 (基盤):    tags                ← 他featureに依存しない
+Layer 0 (基盤):    activities          ← 他featureに依存しない
 Layer 1 (中核):    timeblock, external-calendar ← Layer 0 の barrel を使える
 Layer 2 (体験):    calendar, review    ← Layer 0+1 を使える
 Independent:       auth, contact       ← 他featureに依存しない
@@ -33,7 +33,7 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 
 `features/{name}/domain/` は **pure logic（DB / React / Zustand / TZ 非依存）が複数箇所で参照される or 単体テストで凍結すべき挙動を持つ場合のみ** 作る。
 
-- 例: `features/timeblock/domain/`、`features/tags/domain/`、`features/review/domain/`
+- 例: `features/timeblock/domain/`、`features/activities/domain/`、`features/review/domain/`
 - domain を作らない feature: `contact`（pure logic が薄い）、`settings`（composition なので rule は外部）
 
 「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
@@ -42,13 +42,13 @@ source of truth は [`apps/product/eslint.config.mjs`](../../apps/product/eslint
 
 `domain/index.ts`（および `domain/{sub}/index.ts`）は**必須ではない**。現状 `domain/` を持つ 5 feature のうち barrel があるのは 2 つだけで、これは揃えるべき不統一ではない。
 
-| feature   | domain barrel | 理由                                                                                                                  |
-| --------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
-| auth      | あり          | consumer が barrel 経由で参照している                                                                                 |
-| timeblock | あり          | 同上（9 export）                                                                                                      |
-| calendar  | **なし**      | consumer が leaf を直接 import しており、barrel が孤児化した（[#1857](https://github.com/Dayopt/dayopt/issues/1857)） |
-| review    | なし          | 同上                                                                                                                  |
-| tags      | なし          | 同上                                                                                                                  |
+| feature    | domain barrel | 理由                                                                                                                  |
+| ---------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| auth       | あり          | consumer が barrel 経由で参照している                                                                                 |
+| timeblock  | あり          | 同上（9 export）                                                                                                      |
+| calendar   | **なし**      | consumer が leaf を直接 import しており、barrel が孤児化した（[#1857](https://github.com/Dayopt/dayopt/issues/1857)） |
+| review     | なし          | 同上                                                                                                                  |
+| activities | なし          | 同上                                                                                                                  |
 
 判断基準は「**barrel 経由の consumer が実際にいるか**」。いなければ置かない。`auth` / `timeblock` に倣って空振りの barrel を足すと、knip が unused file として検出し続ける（実際に #1854 で 4 件検出された）。feature barrel（`features/{name}/index.ts`）は cross-feature の公開 API として必須だが、domain barrel は feature 内部の都合なのでこの制約を受けない。
 
