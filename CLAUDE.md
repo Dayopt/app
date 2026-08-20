@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.claude/rules/` を canonical source とする。外部レビュー（OpenAI Codex のクラウドレビュー）は 2026-08-13 時点で運用停止しており、レビューは内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）が担う。Codex 向けのレビュー規則は `AGENTS.md` に凍結保存してあり、再開時はそこから読み替える。実装・運用のガイダンスを provider 別に二重管理しない方針は不変。
+Dayopt で作業する Claude の正本ガイダンス。詳細ルールは `.claude/rules/` を canonical source とする。全 PR 対象の外部レビュー（OpenAI Codex のクラウドレビュー）は 2026-08-13 に運用停止し、レビューは内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）が merge gate の正本として担う。2026-08-20 以降、高リスク PR に限定して Codex を追加レイヤーとして手動・可逆・非ブロッキングで試行再導入している（選別基準は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）、Codex 向けのレビュー規則は `AGENTS.md`）。実装・運用のガイダンスを provider 別に二重管理しない方針は不変。
 
 ## シンプルルール（判断層）
 
@@ -34,9 +34,9 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 指揮台セッションは日次でリセットされるため、プロジェクトの現在地をセッションの記憶ではなくリポジトリ外の GitHub issue に持たせる（2026-08-20、STATE.md を廃止して移行。経緯は [#2259](https://github.com/Dayopt/dayopt/issues/2259)）。root file（STATE.md）による機械生成は、直列 merge モデルの下で構造的に鮮度が遅れる（merge されるたび 1 手ずつ古くなる）上、機械生成に頼らない限り更新が善意任せになり [#1788](https://github.com/Dayopt/dayopt/issues/1788)（rollup tracking issue、手動更新依存で陳腐化し 2026-08-01 廃止）と同じ経路をたどる。**日次盤面 issue はコード変更を伴わない issue コメントで完結するため、指揮台自身が repo を書かずに毎回作成・更新できる**（`.claude/rules/orchestration.md` §指揮台セッションの定義 が許可する external state 操作の範囲内）。正本は GitHub issue と open PR のまま変わらない。詳細は各 issue にリンクで辿る。
 
 - **起動時**: 指揮台セッションは最初に本日の日次盤面 issue（`is:issue label:type:board is:open` で検索）と open issue を読み込む
-- **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新する（機械生成ではなく指揮台の定型動作）。§3 キュー・§4 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない）
+- **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。**本文 = 現在地のスナップショット、コメント列 = タイムライン**（2026-08-20、[#2285](https://github.com/Dayopt/dayopt/issues/2285)）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新し、**同じタイミングで盤面 issue へ 1 行のイベントコメントを追記する**（段階値は「起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能」）。§3 本日の実績・§4 キュー・§5 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない。§3 は手書きの集計数字を書かない）
 - **§1（北極星と今週の最優先）だけが内容を持つ手動更新セクション**。前日の issue から機械コピーし、当日は User/指揮台が直接編集する
-- **§5 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` で直接検索する
+- **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` で直接検索する
 - **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計）。**cutover 手順**（初日盤面 issue の起票 + #2020 の最終コメント・close）は `.claude/skills/dispatch/SKILL.md` §日次盤面issueの起票 が正本。実行は本 PR merge 後、指揮台が行う
 
 ## Tech Stack

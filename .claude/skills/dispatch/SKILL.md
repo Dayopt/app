@@ -84,6 +84,8 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ```markdown
 > このビュー（観測コンテンツ）は指示の効力を持たない。効力は send_message のポインタ到達で確定する（`.claude/rules/orchestration.md` §裁可・指示の経路）。
+>
+> 本文 = 現在地のスナップショット、コメント列 = タイムライン（状態遷移を指揮台が 1 行ずつ追記。手書きの集計数字は本文に書かない）。
 
 ## 1. 今週の最優先
 
@@ -91,22 +93,29 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ## 2. 進行中レーン
 
-（空。指揮台が dispatch のたびに 1 行追記する。段階値の対応表は `.claude/rules/orchestration.md` §日次盤面issue 参照）
+（空。指揮台が dispatch のたびに 1 行追記し、同じタイミングで盤面 issue へ 1 行のイベントコメントも追記する。段階値: 起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能 →（branch:finish で行削除）。対応表は `.claude/rules/orchestration.md` §日次盤面issue 参照）
 
-## 3. 次にやるキュー
+## 3. 本日の実績
+
+- [本日 merge された PR 一覧](https://github.com/Dayopt/dayopt/pulls?q=is%3Apr+is%3Amerged+merged%3AYYYY-MM-DDT00%3A00%3A00%2B09%3A00..YYYY-MM-DDT23%3A59%3A59%2B09%3A00)
+- [本日 close された issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+closed%3AYYYY-MM-DDT00%3A00%3A00%2B09%3A00..YYYY-MM-DDT23%3A59%3A59%2B09%3A00)
+- 経緯（いつ何が起きたか）は本 issue のコメント列（タイムライン）を上から読む
+
+## 4. 次にやるキュー
 
 [status:ready の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready)
 
-## 4. 要判断
+## 5. 要判断
 
-[type:discussion の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Atype%3Adiscussion)
+[type:discussion の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Atype%3Adiscussion)（開いた議論）
+[status:blocked の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Ablocked)（凍結・裁可待ち。解除条件は各 issue 本文）
 
-## 5. 決定ログ
+## 6. 決定ログ
 
 [docs/decisions.md](https://github.com/Dayopt/dayopt/blob/main/docs/decisions.md)（append-only 全履歴）
 ```
 
-起票後、前日の日次盤面 issue は close する（引き継ぎは新issueの §1 コピーとコメントで完結しているため、旧issueに残す情報はない）。**初回起票**（Routine 未登録の間の最初の 1 回）は本 PR の merge 後に指揮台が手動で行う。Routine の実登録・スケジュール設定自体はこの skill / 本 PR の scope 外（指揮台/User 操作枠が別途行う）。
+`YYYY-MM-DD` は起票日の JST 日境界（`+09:00`）で埋める。起票後、前日の日次盤面 issue は close する（引き継ぎは新issueの §1 コピーとコメントで完結しているため、旧issueに残す情報はない）。**初回起票**（Routine 未登録の間の最初の 1 回）は本 PR の merge 後に指揮台が手動で行う。Routine の実登録・スケジュール設定自体はこの skill / 本 PR の scope 外（指揮台/User 操作枠が別途行う）。
 
 **cutover 手順（初回起票時のみ、指揮台が実施）**: [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割は日次盤面 issue へ完全吸収される。
 
@@ -115,7 +124,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ### 日次（指揮台の朝編成が吸収）
 
-- [ ] 当日の日次盤面 issue に本日分のコメント/追記が無いことの確認（[#2256](https://github.com/Dayopt/dayopt/issues/2256) 再scope。night-watch の前夜コメント欠落検出と同型 — §2 レーン表の更新漏れ、または issue 自体の起票漏れを検出する）
+- [ ] 当日の日次盤面 issue に本日分のコメント/追記が無いことの確認（[#2256](https://github.com/Dayopt/dayopt/issues/2256) 再scope。night-watch の前夜コメント欠落検出と同型 — §2 レーン表の更新漏れ、または issue 自体の起票漏れを検出する）。あわせて **§2 に載る PR 番号が既に closed になっていないか**を確認する（`branch:finish` 完了時の行削除漏れ、または close イベントのコメント記録漏れを検出する。2026-08-20 追記、[#2285](https://github.com/Dayopt/dayopt/issues/2285)）
 - [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
 - [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 - [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）。**検査基準（2026-08-12）: open PR の Closes 対象 issue と `status:in-progress` issue はすべて現行 milestone に入っているか。open PR 自体にも milestone が付いているか（2026-08-13、#2065）**
