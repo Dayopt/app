@@ -6,7 +6,7 @@ code:
   - apps/product/src/features/timeblock/domain
   - apps/product/src/features/timeblock/hooks
   - apps/product/src/features/review/components
-  - apps/product/src/features/tags
+  - apps/product/src/features/activities
 ---
 
 # tag-model-replacement — Step 5 残り（分析軸切替）+ Step 7 残余撤去（レーン G、#2247 + #2218）
