@@ -51,6 +51,10 @@ export function isSupportedScope(scope: string): scope is SupportedScope {
   return (SUPPORTED_SCOPES as readonly string[]).includes(scope);
 }
 
+export function isWriteScope(scope: SupportedScope): boolean {
+  return (WRITE_SCOPES as readonly SupportedScope[]).includes(scope);
+}
+
 export function hasWriteScope(scopes: readonly SupportedScope[]): boolean {
-  return scopes.some((scope) => (WRITE_SCOPES as readonly SupportedScope[]).includes(scope));
+  return scopes.some(isWriteScope);
 }

@@ -85,6 +85,9 @@ describe('resolveSessionAuthContext', () => {
     { currentLevel: 'aal1', nextLevel: 'aal1' },
     { currentLevel: 'aal1', nextLevel: 'aal2' },
     { currentLevel: 'aal2', nextLevel: 'aal2' },
+    // #2150: MFA無効化直後、JWT由来のcurrentLevelがaal2のままnextLevelが
+    // aal1（実際のfactor状態）になる正常な降格。lookupFailedにしない。
+    { currentLevel: 'aal2', nextLevel: 'aal1' },
   ])('returns a valid $currentLevel -> $nextLevel assurance pair', async (mfaData) => {
     const { client, getAuthenticatorAssuranceLevel } = createSupabaseMock({ mfaData });
 
@@ -170,7 +173,6 @@ describe('resolveSessionAuthContext', () => {
     { label: 'thrown error', mfaError: new Error('lookup failed') },
     { label: 'null data', mfaData: null },
     { label: 'unknown level', mfaData: { currentLevel: 'aal3', nextLevel: 'aal3' } },
-    { label: 'invalid downgrade', mfaData: { currentLevel: 'aal2', nextLevel: 'aal1' } },
   ])('fails closed for $label', async ({ mfaData, mfaError }) => {
     const { client } = createSupabaseMock({ mfaData, mfaError });
 

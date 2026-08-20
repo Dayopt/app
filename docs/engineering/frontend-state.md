@@ -5,12 +5,14 @@ last_verified: 2026-07-14
 code: apps/product/src
 ---
 
-# UIステート・マトリクス — 全組み合わせ棚卸し & ギャップ分析
+# UIステート・マトリクス — 全組み合わせ棚卸し & ギャップ分析（superseded）
 
-> **目的**: EntryState × Auth × Plan × Device × Error の5軸を網羅し、未定義の組み合わせを可視化する
-> **生成日**: 2026-03-19
+> **このファイルは正本ではない。** 後継は [docs/product/specs/plan-record.md](../product/specs/plan-record.md)。
+> 本文は 2026-03-19 生成時点のスナップショットで、`~/Critical` `~/High` の GAP は全件修正済み（下記ギャップインデックス参照）。`~/Medium` の未修正分は後継ドキュメントか個別 issue を参照すること。
+> [docs/engineering/log/2026-08-01-journal.md](log/2026-08-01-journal.md) から参照されているため削除せず、ポインタとして残す。
 
----
+<details>
+<summary>旧本文（アーカイブ、参照時のみ展開）</summary>
 
 ## 1. 軸レジストリ
 
@@ -193,3 +195,5 @@ Auth=unauthenticated のとき Entry/Plan は無関係 → 実効 **~330通り**
 | **M3** | offline + Inspector の無限ローディング — offline 専用メッセージなし                |
 | **M4** | offline + mutation の error toast + offline バナー二重表示                         |
 | **M5** | mobile ↔ desktop 切替時の sidebar `isOpen` 状態残存                                |
+
+</details>

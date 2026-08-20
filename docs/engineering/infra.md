@@ -15,11 +15,11 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 
 ### 環境一覧
 
-| 環境           | Supabase                          | Vercel                          | URL              |
-| -------------- | --------------------------------- | ------------------------------- | ---------------- |
-| **Local**      | `supabase start`                  | `pnpm dev`                      | localhost:3000   |
-| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)      | `*.vercel.app`   |
-| **Production** | `dayopt` main                     | main merge で Production deploy | `app.dayopt.app` |
+| 環境           | Supabase                          | Vercel                                             | URL              |
+| -------------- | --------------------------------- | -------------------------------------------------- | ---------------- |
+| **Local**      | `supabase start`                  | `pnpm dev`                                         | localhost:3000   |
+| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                         | `*.vercel.app`   |
+| **Production** | `dayopt` main                     | 手動 dispatch（`release.yml`）で Production deploy | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
 
@@ -99,7 +99,7 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production build（domain 未割当の candidate）
         ↓
-      Production Release workflow（影響判定 / smoke / audit）
+      Production Release workflow（手動 workflow_dispatch。影響判定 / smoke / audit）
         ↓
       promote（affected な project のみ）→ Production domain
         ↓
@@ -1436,12 +1436,12 @@ ORDER BY schemaname, tablename;
 
 障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
 
-| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`、rclone ベース）は実装済み。**destination 未決定・実搬出実績ゼロのため、依然として実運用上の復元元は存在しない**（[#2026](https://github.com/Dayopt/dayopt/issues/2026) で実運用化を追跡） |
-| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                         |
-| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                            |
-| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                     |
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`、rclone ベース）は実装済み。**destination（Cloudflare R2）を確定し、初回搬出・実復元演習ともに完了**（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。以後は日次 cron が差分同期する。詳細は [disaster-recovery-drill.md](../operations/disaster-recovery-drill.md) §Storage |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                                                                                                                                |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                                                                                                                                   |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                                                                                                                            |
 
 **production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
 
