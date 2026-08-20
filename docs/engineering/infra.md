@@ -15,11 +15,11 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 
 ### 環境一覧
 
-| 環境           | Supabase                          | Vercel                          | URL              |
-| -------------- | --------------------------------- | ------------------------------- | ---------------- |
-| **Local**      | `supabase start`                  | `pnpm dev`                      | localhost:3000   |
-| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)      | `*.vercel.app`   |
-| **Production** | `dayopt` main                     | main merge で Production deploy | `app.dayopt.app` |
+| 環境           | Supabase                          | Vercel                                             | URL              |
+| -------------- | --------------------------------- | -------------------------------------------------- | ---------------- |
+| **Local**      | `supabase start`                  | `pnpm dev`                                         | localhost:3000   |
+| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                         | `*.vercel.app`   |
+| **Production** | `dayopt` main                     | 手動 dispatch（`release.yml`）で Production deploy | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
 
@@ -99,7 +99,7 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production build（domain 未割当の candidate）
         ↓
-      Production Release workflow（影響判定 / smoke / audit）
+      Production Release workflow（手動 workflow_dispatch。影響判定 / smoke / audit）
         ↓
       promote（affected な project のみ）→ Production domain
         ↓

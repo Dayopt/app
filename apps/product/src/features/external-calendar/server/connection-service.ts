@@ -5,14 +5,18 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
-import type { Database } from '@/lib/database';
+import type { Database, Json } from '@/lib/database';
 import { databaseTables } from '@/lib/database';
-import { getConfiguredExternalLifecycleAppVersion } from '@/lib/database/external-lifecycle-version';
+import {
+  getConfiguredExternalLifecycleAppVersion,
+  isConfiguredFencedCalendarSyncWriterReady,
+} from '@/lib/database/external-lifecycle-version';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedError } from '@/lib/sentry';
 
 import { deleteUnreferencedEvents } from './event-pruning';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
+import { replaceSelectedCalendars, resolveProjectKey } from './fenced-sync-writer';
 import { TOKEN_REQUEST_TIMEOUT_MS } from './google-oauth';
 import { googleCalendarAdapter } from './providers/google';
 import { CalendarProviderError } from './providers/types';
@@ -308,12 +312,56 @@ type ProviderCalendarOption = {
   selected: boolean;
 };
 
+type ConnectionSecret = {
+  dataGeneration: number;
+  status: string;
+  refreshTokenEnc: string;
+  /** fenced sync writer（#2050）が ready な時だけ非 undefined。 */
+  authorityFenceId?: string;
+  authorityEpoch?: number;
+};
+
 /** service_role で connection の token 行を読む。無ければ null。 */
 async function loadConnectionSecret(
   db: CalendarConnectionClient,
   userId: string,
   connectionId: string,
-): Promise<{ dataGeneration: number; status: string; refreshTokenEnc: string } | null> {
+): Promise<ConnectionSecret | null> {
+  // #2050: この判定は `getConfiguredExternalLifecycleAppVersion`（Candidate 3 marker、
+  // settings/billing 等の無関係な既存呼び出し元と共有）とは別関数に分離してある —
+  // widen すると既存呼び出し元の RPC 呼び出し契約が変わり、無関係な test が regression
+  // する（overview.md §0 改訂）。
+  const fencedWriterReady = await isConfiguredFencedCalendarSyncWriterReady();
+  if (fencedWriterReady) {
+    // #2050 fenced writer 移行: replaceSelectedCalendars の CAS 入力に要る
+    // authority_fence_id / authority_epoch も同時に読む。
+    const { data, error } = await db
+      .from(databaseTables.calendarConnections)
+      .select('status, refresh_token_enc, data_generation, authority_fence_id, authority_epoch')
+      .eq('id', connectionId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new ExternalCalendarServiceError('FETCH_FAILED', 'failed to load calendar connection', {
+        cause: error,
+      });
+    }
+    if (!data) return null;
+    if (data.authority_fence_id === null || data.authority_epoch === null) {
+      // authority fence 未確立の接続（理論上は #2050 の CAS 対象外）。fenced writer
+      // 呼び出しに必要な CAS 値が揃わないため missing 相当として扱う。
+      return null;
+    }
+    return {
+      dataGeneration: data.data_generation,
+      status: data.status,
+      refreshTokenEnc: data.refresh_token_enc,
+      authorityFenceId: data.authority_fence_id,
+      authorityEpoch: data.authority_epoch,
+    };
+  }
+
   const lifecycleVersion = await getConfiguredExternalLifecycleAppVersion();
   if (lifecycleVersion === 0) {
     const { data, error } = await db
@@ -546,6 +594,19 @@ export async function updateSelectedCalendars(
     throw new ExternalCalendarServiceError('CONNECTION_NOT_FOUND', 'calendar connection not found');
   }
 
+  const { authorityFenceId, authorityEpoch } = secret;
+  if (authorityFenceId !== undefined && authorityEpoch !== undefined) {
+    await updateSelectedCalendarsFenced({
+      userId,
+      connectionId,
+      selected,
+      dataGeneration: secret.dataGeneration,
+      authorityFenceId,
+      authorityEpoch,
+    });
+    return;
+  }
+
   const { data: existingRows, error: existingError } = await db
     .from(databaseTables.calendarConnectionCalendars)
     .select('provider_calendar_id')
@@ -613,6 +674,62 @@ export async function updateSelectedCalendars(
       });
     }
   }
+}
+
+/**
+ * `>= 2` 分岐: `replace_selected_calendars_command_v1` 1 回で選択差分の適用 + 外した
+ * カレンダーの未参照ミラー行の anti-join prune をアトミックに行う（migration:839-854）。
+ * v0/v1 分岐と異なり、app 層の `deleteUnreferencedEvents` は呼ばない（二重実行を避ける）。
+ *
+ * **fail-open → fail-closed への意味論変化を受容する**（overview.md §4）: v0/v1 の
+ * prune は best-effort だったが、この RPC の DELETE は同一トランザクション
+ * （`statement_timeout=30s`）内のため、外したカレンダーのミラー行が多い場合に
+ * timeout（`57014`）で選択変更ごと rollback されうる。
+ */
+async function updateSelectedCalendarsFenced(params: {
+  userId: string;
+  connectionId: string;
+  selected: SelectedCalendarInput[];
+  dataGeneration: number;
+  authorityFenceId: string;
+  authorityEpoch: number;
+}): Promise<void> {
+  const { userId, connectionId, selected, dataGeneration, authorityFenceId, authorityEpoch } =
+    params;
+
+  const projectKey = resolveProjectKey();
+  if (projectKey === null) {
+    throw new ExternalCalendarServiceError(
+      'UPDATE_FAILED',
+      'google calendar authority identity is unset',
+    );
+  }
+
+  const outcome = await replaceSelectedCalendars({
+    connectionId,
+    userId,
+    projectKey,
+    expectedGeneration: dataGeneration,
+    expectedAuthorityFenceId: authorityFenceId,
+    expectedAuthorityEpoch: authorityEpoch,
+    selectedCalendars: selected.map((calendar) => ({
+      providerCalendarId: calendar.providerCalendarId,
+      calendarName: calendar.calendarName ?? null,
+    })) as unknown as Json,
+  });
+
+  if (outcome === 'updated') return;
+  if (outcome === 'missing') {
+    throw new ExternalCalendarServiceError('CONNECTION_NOT_FOUND', 'calendar connection not found');
+  }
+  // 'superseded'（先行の sync run / 選択変更 / revoke に追い越された）、および
+  // callTextRpc の failure（'unresolved' / 'rejected_input' / 'account_deleting'）を
+  // まとめて再試行可能なエラーとして返す。未写像のまま無視すると選択変更が黙って
+  // 消えるため、discriminant を必ず throw に写像する（overview.md §4、critic 指摘）。
+  throw new ExternalCalendarServiceError(
+    'UPDATE_FAILED',
+    'failed to save selected calendars; please try again',
+  );
 }
 
 /**
