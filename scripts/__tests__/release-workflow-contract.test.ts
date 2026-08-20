@@ -19,6 +19,16 @@ function workflow(name: string) {
 describe('release workflow contract', () => {
   const release = workflow('release.yml');
 
+  it('has no push trigger; promote is manual dispatch only (#2268)', () => {
+    // main push で自動 promote すると、merge のたびに Production domain が
+    // 切り替わる。#2268 でこれを廃止し、workflow_dispatch のみへ一本化した。
+    // 再発すると意図しない自動 promote が復活するため、on: ブロック全体を
+    // 検査して push: を含まないことを固定する。
+    const onBlock = release.slice(release.indexOf('\non:'), release.indexOf('\npermissions:'));
+    expect(onBlock).not.toMatch(/^\s*push:/m);
+    expect(onBlock).toMatch(/^\s*workflow_dispatch:/m);
+  });
+
   it('never checks out a caller-supplied ref', () => {
     // ref に inputs.sha を渡すと、未 merge の commit が持つ script が
     // Production secret 付きで実行される。これが唯一の実効的な防御。

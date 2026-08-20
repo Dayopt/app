@@ -4,10 +4,11 @@ name: Production Release
 # Auto-assign Custom Production Domains を無効化した Product / Web に対し、
 # このワークフローだけが「同一 SHA・両 project 成功」を確認して promote する。
 # タグと GitHub Release は promote と観察が終わった後の証跡であり、deploy trigger ではない。
+#
+# 2026-08-20: push:main トリガーを廃止し、手動 workflow_dispatch のみへ切り替えた（#2268）。
+# main への merge が Production domain の切り替えを自動で起動することはない。
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       sha:
@@ -89,18 +90,20 @@ jobs:
             exit 1
           fi
 
-          # push:main の github.sha は GitHub 側が供給する main 上の commit なので
-          # 検証しない。人が渡した値のときだけ main 包含を確認し、GitHub API の
-          # 一時障害が通常の release を止めないようにする。
-          if [ -n "$INPUT_SHA" ]; then
-            # `main` という名の tag との曖昧さを避けるため heads/main で明示する。
-            # 404 なら gh が非 0 終了し、代入が set -e に拾われて fail closed になる
-            # （`export status=$(...)` にすると壊れるので前置しない）。
-            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/heads/main...$sha" --jq '.status')
-            if [ "$status" != "identical" ] && [ "$status" != "behind" ]; then
-              echo "::error::Release target must already be merged into main (compare status: $status)"
-              exit 1
-            fi
+          # 常に main 包含を確認する。push:main 廃止（#2268）前は github.sha が
+          # main 上の commit である push イベントでしか埋まらなかったため、
+          # 人が渡した sha だけを検証していた。workflow_dispatch は任意 ref から
+          # 起動できるため、sha 未指定時の github.sha（= dispatch した ref の
+          # tip）も main 以外を指しうる。無条件化しないと、main 以外の ref から
+          # sha 省略で dispatch した場合にこの検証が丸ごと素通りする。
+          #
+          # `main` という名の tag との曖昧さを避けるため heads/main で明示する。
+          # 404 なら gh が非 0 終了し、代入が set -e に拾われて fail closed になる
+          # （`export status=$(...)` にすると壊れるので前置しない）。
+          status=$(gh api "repos/$GITHUB_REPOSITORY/compare/heads/main...$sha" --jq '.status')
+          if [ "$status" != "identical" ] && [ "$status" != "behind" ]; then
+            echo "::error::Release target must already be merged into main (compare status: $status)"
+            exit 1
           fi
 
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
