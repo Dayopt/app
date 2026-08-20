@@ -213,22 +213,27 @@ describe('StatisticsService.getEstimationAccuracy', () => {
       plans: createChainableMock([
         {
           id: 'p1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
         },
         {
           id: 'p2',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-07-02T00:00:00Z',
           end_at: '2026-07-02T00:30:00Z',
         },
       ]),
-      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }]),
+      activities: createChainableMock([
+        { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
+      ]),
+      categories: createChainableMock([
+        { id: 'category-1', name: '仕事', color: 'blue', icon: null },
+      ]),
       records: createChainableMock([
         {
           id: 'l1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: 'p1',
           source: 'from_plan',
           start_at: '2026-07-01T00:00:00Z',
@@ -236,7 +241,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
         },
         {
           id: 'l2',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: 'p2',
           source: 'auto_migrated',
           start_at: '2026-07-02T00:00:00Z',
@@ -253,27 +258,32 @@ describe('StatisticsService.getEstimationAccuracy', () => {
     expect(mockSupabase.from).toHaveBeenCalledWith('records');
   });
 
-  it('未設定と削除済みタグの Plan / Record を同じ未分類 bucket に集計する（#1576）', async () => {
+  it('未設定と削除済みアクティビティの Plan / Record を同じ未分類 bucket に集計する（#1576 を activity 軸へ踏襲）', async () => {
     const { service } = createService({
       plans: createChainableMock([
         {
           id: 'p-unset',
-          tag_id: null,
+          activity_id: null,
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T00:30:00Z',
         },
         {
           id: 'p-deleted',
-          tag_id: 'deleted-tag-id',
+          activity_id: 'deleted-activity-id',
           start_at: '2026-07-02T00:00:00Z',
           end_at: '2026-07-02T00:50:00Z',
         },
       ]),
-      tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: null }]),
+      activities: createChainableMock([
+        { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
+      ]),
+      categories: createChainableMock([
+        { id: 'category-1', name: '仕事', color: 'blue', icon: null },
+      ]),
       records: createChainableMock([
         {
           id: 'l1',
-          tag_id: null,
+          activity_id: null,
           plan_id: 'p-unset',
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
@@ -281,7 +291,7 @@ describe('StatisticsService.getEstimationAccuracy', () => {
         },
         {
           id: 'l2',
-          tag_id: 'deleted-tag-id',
+          activity_id: 'deleted-activity-id',
           plan_id: 'p-deleted',
           source: 'manual',
           start_at: '2026-07-02T00:00:00Z',
@@ -294,9 +304,9 @@ describe('StatisticsService.getEstimationAccuracy', () => {
 
     expect(result).toEqual([
       {
-        tagId: null,
-        tagName: null,
-        tagColor: null,
+        activityId: null,
+        activityName: null,
+        activityColor: null,
         isUncategorized: true,
         avgPlannedMinutes: 40,
         avgActualMinutes: 50,

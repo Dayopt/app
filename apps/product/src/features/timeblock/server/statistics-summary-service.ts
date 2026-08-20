@@ -16,7 +16,6 @@ import {
   fetchCategoriesById,
   fetchPlans,
   fetchRecords,
-  fetchTagsById,
 } from './statistics-fetchers';
 import type { BlankRateInput, StatisticsKpiService } from './statistics-kpi-service';
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
@@ -255,7 +254,8 @@ export class StatisticsSummaryService {
       rangePrevPlans,
       yearRecords,
       monthlyRecords,
-      tagsById,
+      activitiesById,
+      categoriesById,
     ] = await Promise.all([
       fetchRecords(this.supabase, userId, { startDate, endDate }),
       fetchPlans(this.supabase, userId, { startDate, endDate }),
@@ -263,7 +263,8 @@ export class StatisticsSummaryService {
       fetchPlans(this.supabase, userId, { startDate: prevStart, endDate: prevEnd }),
       fetchRecords(this.supabase, userId, { startDate: startOfYear, endDate: startOfNextYear }),
       fetchRecords(this.supabase, userId, { startDate: monthlyStartDate.toISOString() }),
-      fetchTagsById(this.supabase, userId),
+      fetchActivitiesById(this.supabase, userId),
+      fetchCategoriesById(this.supabase, userId),
     ]);
     const records = filterRowsByVisibleDateKeys(rangeRecords, visibleDateKeys, timezone);
     const plans = filterRowsByVisibleDateKeys(rangePlans, visibleDateKeys, timezone);
@@ -304,10 +305,20 @@ export class StatisticsSummaryService {
     const prevEnergyMap = groupEnergyMap(prevRecords, timezone);
 
     const estimationAccuracy = transformEstimationAccuracy(
-      await this.kpiService.computeEstimationAccuracy(userId, plans, tagsById),
+      await this.kpiService.computeEstimationAccuracy(
+        userId,
+        plans,
+        activitiesById,
+        categoriesById,
+      ),
     );
     const prevEstimationAccuracy = transformEstimationAccuracy(
-      await this.kpiService.computeEstimationAccuracy(userId, prevPlans, tagsById),
+      await this.kpiService.computeEstimationAccuracy(
+        userId,
+        prevPlans,
+        activitiesById,
+        categoriesById,
+      ),
     );
 
     const dailyHours = groupHoursByDay(yearRecords, timezone);

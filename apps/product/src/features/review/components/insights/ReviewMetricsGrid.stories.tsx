@@ -33,9 +33,9 @@ const MOCK_PAGE_DATA: StatsPageData = {
   ],
   estimationAccuracy: [
     {
-      tagId: '1',
-      tagName: 'Work',
-      tagColor: 'blue',
+      activityId: '1',
+      activityName: 'Work',
+      activityColor: 'blue',
       isUncategorized: false,
       avgPlannedMinutes: 60,
       avgActualMinutes: 72,
@@ -45,9 +45,9 @@ const MOCK_PAGE_DATA: StatsPageData = {
   ],
   prevEstimationAccuracy: [
     {
-      tagId: '1',
-      tagName: 'Work',
-      tagColor: 'blue',
+      activityId: '1',
+      activityName: 'Work',
+      activityColor: 'blue',
       isUncategorized: false,
       avgPlannedMinutes: 60,
       avgActualMinutes: 78,

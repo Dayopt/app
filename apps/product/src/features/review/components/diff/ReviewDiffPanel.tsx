@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Circle, GitCompareArrows, Minus, Plus } from 'lucid
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
-import { useTagsMap } from '@/features/tags';
+import { useActivitiesMap } from '@/features/activities';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 
@@ -17,6 +17,7 @@ export interface ReviewDiffItem {
   kind: ReviewDiffKind;
   title: string;
   tagId: string | null;
+  activityId: string | null;
   color: string;
   plannedStart: Date | null;
   plannedEnd: Date | null;
@@ -64,7 +65,7 @@ export function ReviewDiffPanel({ diff, onItemClick, className }: ReviewDiffPane
   const t = useTranslations();
   const locale = useLocale();
   const { timeFormat, timezone } = useUserPreferences();
-  const { getTagById } = useTagsMap();
+  const { getActivityById } = useActivitiesMap();
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -131,7 +132,7 @@ export function ReviewDiffPanel({ diff, onItemClick, className }: ReviewDiffPane
         <div className="p-2">
           <ol className="flex flex-col gap-1">
             {diff.items.map((item) => {
-              const tag = item.tagId ? getTagById(item.tagId) : null;
+              const activity = item.activityId ? getActivityById(item.activityId) : null;
               const Icon = KIND_ICON[item.kind];
               const rangeStart = item.actualStart ?? item.plannedStart;
 
@@ -144,7 +145,11 @@ export function ReviewDiffPanel({ diff, onItemClick, className }: ReviewDiffPane
                   >
                     <span
                       className="mt-1 h-8 w-1 shrink-0 rounded-full"
-                      style={{ backgroundColor: tag ? `var(--tag-${tag.color})` : item.color }}
+                      style={{
+                        backgroundColor: activity?.color
+                          ? `var(--tag-${activity.color})`
+                          : item.color,
+                      }}
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1">

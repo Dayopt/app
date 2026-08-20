@@ -103,9 +103,9 @@ export interface StatsPageData {
     recordCount: number;
   }>;
   estimationAccuracy: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
+    activityId: string | null;
+    activityName: string | null;
+    activityColor: string | null;
     isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;
@@ -113,9 +113,9 @@ export interface StatsPageData {
     recordCount: number;
   }>;
   prevEstimationAccuracy: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
+    activityId: string | null;
+    activityName: string | null;
+    activityColor: string | null;
     isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;
