@@ -135,7 +135,7 @@ async function main() {
     await page.locator('input[type="email"], input[name="email"]').first().fill(email);
     await page.locator('input[type="password"]').first().fill(password);
     await page.locator('button[type="submit"]').first().click();
-    await page.waitForURL(/\/ja\/(day|week)/i, { timeout: 15_000 });
+    await page.waitForURL(/\/ja\/calendar/i, { timeout: 15_000 });
 
     mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
     await context.storageState({ path: STORAGE_STATE_PATH });
