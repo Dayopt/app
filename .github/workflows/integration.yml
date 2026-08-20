@@ -1,12 +1,42 @@
 name: Integration Tests
 
-# CI 4 層再設計（#2269）で per-PR（pull_request）トリガーを撤去し、
-# main push 後 + nightly の層 3 へ移した。旧 push:main 廃止（2026-08-03 実測で
-# PR 検証と同一 tree の再検証だったため）の判断は、per-PR 実行そのものが
-# 前提だった。前提が変わった（per-PR では走らせない）ため、push:main を
-# 「main 上で唯一の検証機会」として復活させる。paths は旧 pull_request.paths と
-# 同一を維持し、無関係な merge での実行を避ける。
+# CI 4 層再設計（#2269）で `integration` job（DB 起動を伴う重量テスト）の
+# per-PR 実行を撤去し、main push 後 + nightly の層 3 へ移した。一方で
+# `migration-safety` job（#2272、破壊的 migration の静的スキャン。draft でも
+# 走らせたい軽量 job）は pull_request イベントを必要とするため、
+# `pull_request` トリガー自体は残す。2 job は互いに独立したイベント条件で
+# 動く: `migration-safety` は pull_request のみ、`integration` は
+# push:main / schedule / workflow_dispatch のみ（各 job の `if:` で分岐）。
 on:
+  pull_request:
+    branches: [main]
+    # ready_for_review を明示する（ci.yml と同じ根拠）。既定 types に含まれないため、
+    # これが無いと draft → ready の変換で再発火せず、draft 時の skipped が残ったまま
+    # merge できてしまう（.claude/rules/workflow.md §2 段階 CI）。
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.nvmrc'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'apps/product/package.json'
+      - '.github/actions/setup/action.yml'
+      - '.github/workflows/integration.yml'
+      - 'apps/product/src/features/*/domain/**'
+      - 'apps/product/src/features/*/server/**'
+      - 'packages/domain/**'
+      - 'apps/product/src/lib/database/**'
+      - 'apps/product/src/lib/mcp/**'
+      - 'apps/product/src/lib/oauth-server/**'
+      - 'apps/product/src/lib/supabase/**'
+      - 'apps/product/src/lib/trpc/**'
+      - 'apps/product/src/app/api/mcp/**'
+      - 'supabase/migrations/**'
+      - 'apps/product/src/lib/test/integration/**'
+      - 'apps/product/src/lib/test/integration-setup.ts'
+      - 'apps/product/src/lib/test/trpc-test-helpers.ts'
+      - 'apps/product/vitest.config.integration.ts'
+      - 'scripts/generate-rls-snapshot.ts'
+      - 'docs/engineering/data/db/rls-snapshot.md'
   push:
     branches: [main]
     paths:
@@ -186,9 +216,10 @@ jobs:
 
   integration:
     name: Integration Tests
-    # pull_request トリガー撤去（層 3 化）に伴い draft 判定は不要になった。
-    # push:main / schedule / workflow_dispatch はいずれも pull_request context を
-    # 持たないため、job 自体は常に実行される。
+    # 層 3 化（#2269）: DB 起動を伴う重量テストは per-PR では走らせない。
+    # `migration-safety` job と異なりこちらは pull_request イベントを除外する
+    # （`on:` に pull_request が残っているのは migration-safety のためだけ）。
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
