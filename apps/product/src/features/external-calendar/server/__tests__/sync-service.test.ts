@@ -1037,6 +1037,38 @@ describe('syncConnection — fenced writer ready', () => {
     expect(finishCalendarSyncRun).not.toHaveBeenCalled();
   });
 
+  // pr-cross-review P2（PR #2276）: begin/clear/persist/finish が deadlineAt を無視して
+  // 固定 retry 予算を消費すると、1 接続が cron の maxDuration を食い潰し後続接続を
+  // starve させる。deadline_exceeded は 'failed' ではなく既存の deadlineExceeded 経路
+  // （calendarsIncomplete）に合流させる。
+  it('persist が deadline_exceeded を返したら failed ではなく calendarsIncomplete に数える', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    persistCalendarSyncResult.mockResolvedValue('deadline_exceeded');
+
+    const result = await syncConnection({
+      connectionId: CONNECTION_ID,
+      userId: USER_ID,
+      deadlineAt: Date.now() + 5_000,
+    });
+
+    // 空振り（1 カレンダーも完走しなかった）なので last_synced_at は進めない
+    // （既存の calendarsIncomplete 分岐と同じ意味論）。
+    expect(result).toEqual({ outcome: 'partial_timeout', calendarsSynced: 0, calendarsFailed: 0 });
+  });
+
+  it('deadlineAt が渡されると begin/persist/finish の呼び出し引数に伝播する', async () => {
+    setupDb({ calendars: oneCalendar() });
+    syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));
+    const deadlineAt = Date.now() + 30_000;
+
+    await syncConnection({ connectionId: CONNECTION_ID, userId: USER_ID, deadlineAt });
+
+    expect(beginCalendarSyncRun).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+    expect(persistCalendarSyncResult).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+    expect(finishCalendarSyncRun).toHaveBeenCalledWith(expect.objectContaining({ deadlineAt }));
+  });
+
   it('missing_selection は実失敗として partial_failure を報告する', async () => {
     setupDb({ calendars: oneCalendar() });
     syncCalendar.mockResolvedValue(syncResult({ events: [event()] }));

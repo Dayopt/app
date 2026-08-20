@@ -41,8 +41,23 @@ const DEFINITIVE_CODE_ACCOUNT_DELETING = 'CA019';
  * `'unresolved'`: retry を使い切っても確定しなかった（Sentry 済み）。
  * `'rejected_input'`: 呼び出し側のバグ相当の入力拒否（Sentry 済み）。
  * `'account_deleting'`: account deletion 進行中（想定内、Sentry なし）。
+ * `'deadline_exceeded'`: 呼び出し側の残予算が尽きたため試行しなかった（想定内、Sentry なし）。
  */
-type FencedWriterFailure = 'unresolved' | 'rejected_input' | 'account_deleting';
+type FencedWriterFailure =
+  'unresolved' | 'rejected_input' | 'account_deleting' | 'deadline_exceeded';
+
+/**
+ * 次の 1 試行を始める残予算があるか（pr-cross-review P2 指摘、PR #2276）。
+ *
+ * `deadlineAt` 未指定（呼び出し側が締切を持たない）なら常に true。DB 劣化時に
+ * `RPC_TIMEOUT_MS × RPC_ATTEMPTS` を残予算に関係なく毎回消費すると、1 接続が
+ * cron の maxDuration を食い潰し、同一 run 内の後続接続を starve させる
+ * （adapter 側の `adapterDeadlineAt` と同じ理由でのガード）。
+ */
+function hasBudgetForAttempt(deadlineAt: number | undefined): boolean {
+  if (deadlineAt === undefined) return true;
+  return deadlineAt - Date.now() >= RPC_TIMEOUT_MS;
+}
 
 function isDefinitiveFailure(
   code: string | undefined,
@@ -124,9 +139,11 @@ export type CasContext = {
 /** `TEXT` を1つ返す RPC 用の共通 retry ループ。応答喪失と rollback を区別せず同一引数で retry する。 */
 async function callTextRpc(
   operation: string,
+  deadlineAt: number | undefined,
   request: () => PromiseLike<{ data: string | null; error: { code?: string } | null }>,
 ): Promise<string | FencedWriterFailure> {
   for (let attempt = 0; attempt < RPC_ATTEMPTS; attempt += 1) {
+    if (!hasBudgetForAttempt(deadlineAt)) return 'deadline_exceeded';
     try {
       const { data, error } = await request();
       if (!error && data !== null) return data;
@@ -164,10 +181,12 @@ export async function beginCalendarSyncRun(params: {
   connectionId: string;
   userId: string;
   projectKey: string;
+  deadlineAt?: number | undefined;
 }): Promise<BeginSyncRunOutcome> {
   const operation = 'begin_calendar_sync_run';
 
   for (let attempt = 0; attempt < RPC_ATTEMPTS; attempt += 1) {
+    if (!hasBudgetForAttempt(params.deadlineAt)) return 'deadline_exceeded';
     try {
       const db = createFencedSyncWriterClient();
       const { data, error } = await db
@@ -227,9 +246,10 @@ export async function clearCalendarSyncCursor(
     calendarSelectionId: string;
     providerCalendarId: string;
     expectedSyncToken: string | null;
+    deadlineAt?: number | undefined;
   },
 ): Promise<ClearSyncCursorResult | FencedWriterFailure> {
-  const outcome = await callTextRpc('clear_calendar_sync_cursor', async () => {
+  const outcome = await callTextRpc('clear_calendar_sync_cursor', cas.deadlineAt, async () => {
     const db = createFencedSyncWriterClient();
     return db
       .rpc('clear_calendar_sync_cursor_command_v1', {
@@ -265,9 +285,10 @@ export async function persistCalendarSyncResult(
     tombstoneEventIds: string[];
     usedFullSync: boolean;
     nextCursor: string | null;
+    deadlineAt?: number | undefined;
   },
 ): Promise<PersistSyncResultResult | FencedWriterFailure> {
-  const outcome = await callTextRpc('persist_calendar_sync_result', async () => {
+  const outcome = await callTextRpc('persist_calendar_sync_result', cas.deadlineAt, async () => {
     const db = createFencedSyncWriterClient();
     return db
       .rpc('persist_calendar_sync_result_command_v1', {
@@ -302,9 +323,10 @@ export async function finishCalendarSyncRun(
     expectedSyncSequence: number;
     runStartedAt: string;
     lastSyncError: string | null;
+    deadlineAt?: number | undefined;
   },
 ): Promise<FinishSyncRunResult | FencedWriterFailure> {
-  const outcome = await callTextRpc('finish_calendar_sync_run', async () => {
+  const outcome = await callTextRpc('finish_calendar_sync_run', cas.deadlineAt, async () => {
     const db = createFencedSyncWriterClient();
     return db
       .rpc('finish_calendar_sync_run_v1', {
@@ -338,7 +360,10 @@ export async function replaceSelectedCalendars(
     selectedCalendars: Json;
   },
 ): Promise<ReplaceSelectedCalendarsResult | FencedWriterFailure> {
-  const outcome = await callTextRpc('replace_selected_calendars', async () => {
+  // ユーザー起点の一回操作（connection-service.ts の updateSelectedCalendars）で、
+  // cron の共有予算を持たないため deadline は対象外（pr-cross-review 指摘の対象は
+  // sync 経路の 4 関数のみ、overview.md 対象外）。
+  const outcome = await callTextRpc('replace_selected_calendars', undefined, async () => {
     const db = createFencedSyncWriterClient();
     return db
       .rpc('replace_selected_calendars_command_v1', {

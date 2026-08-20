@@ -538,10 +538,11 @@ async function syncConnectionFenced(args: {
     return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
   }
 
-  const begin = await beginCalendarSyncRun({ connectionId, userId, projectKey });
+  const begin = await beginCalendarSyncRun({ connectionId, userId, projectKey, deadlineAt });
   if (typeof begin === 'string') {
     // callRpc 内で Sentry capture 済み（unresolved / rejected_input）か、想定内
-    // （account_deleting）。いずれも安全な no-op として畳む。
+    // （account_deleting / deadline_exceeded）。いずれも安全な no-op として畳む
+    // （pr-cross-review P2 指摘、PR #2276 — 残予算不足時は試行せず即座に諦める）。
     return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
   }
   if (begin.result === 'missing') {
@@ -581,7 +582,7 @@ async function syncConnectionFenced(args: {
       feature: 'external_calendar',
       operation: 'decrypt_refresh_token',
     });
-    await finishFencedSyncRunBestEffort(runState, 'encryption_key_invalid');
+    await finishFencedSyncRunBestEffort(runState, 'encryption_key_invalid', deadlineAt);
     return { outcome: 'encryption_key_invalid', calendarsSynced: 0, calendarsFailed: 0 };
   }
 
@@ -601,7 +602,7 @@ async function syncConnectionFenced(args: {
       return reauthResult(reauthOutcome, 0, 0);
     }
     captureProviderError(error, 'start_session');
-    await finishFencedSyncRunBestEffort(runState, providerErrorCode(error));
+    await finishFencedSyncRunBestEffort(runState, providerErrorCode(error), deadlineAt);
     return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
   }
 
@@ -642,7 +643,7 @@ async function syncConnectionFenced(args: {
 
   const calendars = await loadSelectedCalendars(db, connectionId, userId);
   if (calendars === null) {
-    await finishFencedSyncRunBestEffort(runState, 'partial_failure');
+    await finishFencedSyncRunBestEffort(runState, 'partial_failure', deadlineAt);
     return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
   }
 
@@ -715,18 +716,18 @@ async function syncConnectionFenced(args: {
   }
 
   if (calendarsFailed > 0) {
-    await finishFencedSyncRunBestEffort(runState, 'partial_failure');
+    await finishFencedSyncRunBestEffort(runState, 'partial_failure', deadlineAt);
     return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
   }
 
   if (calendarsIncomplete > 0) {
     if (calendarsSynced > 0) {
-      await finishFencedSyncRunBestEffort(runState, 'partial_timeout');
+      await finishFencedSyncRunBestEffort(runState, 'partial_timeout', deadlineAt);
     }
     return { outcome: 'partial_timeout', calendarsSynced, calendarsFailed };
   }
 
-  await finishFencedSyncRunBestEffort(runState, null);
+  await finishFencedSyncRunBestEffort(runState, null, deadlineAt);
   return { outcome: 'synced', calendarsSynced, calendarsFailed };
 }
 
@@ -761,7 +762,11 @@ async function syncOneCalendarFenced(args: {
         calendarSelectionId: calendar.id,
         providerCalendarId: calendar.provider_calendar_id,
         expectedSyncToken: calendar.sync_token,
+        deadlineAt,
       });
+      // 残予算不足で試行しなかった（pr-cross-review P2 指摘、PR #2276）。'failed' にせず
+      // 既存の deadlineExceeded 経路と同じ扱いにする。
+      if (clearOutcome === 'deadline_exceeded') return 'deadline_exceeded';
       // 'superseded' は応答喪失後の retry で「既に clear 済み」を意味しうる
       // （overview.md §3）。'failed' にせず full sync として続行する。
       if (clearOutcome === 'missing_selection' || clearOutcome === 'missing') {
@@ -800,8 +805,10 @@ async function syncOneCalendarFenced(args: {
       runState,
       calendar,
       result,
+      deadlineAt,
     });
     if (persistOutcome === 'run_superseded') return 'run_superseded';
+    if (persistOutcome === 'deadline_exceeded') return 'deadline_exceeded';
     if (persistOutcome === 'failed') return 'failed';
 
     if (result.deadlineExceeded) return 'deadline_exceeded';
@@ -824,8 +831,9 @@ async function persistCalendarSyncResultChunked(args: {
   runState: FencedRunState;
   calendar: CalendarRow;
   result: Awaited<ReturnType<CalendarProviderAdapter['syncCalendar']>>;
-}): Promise<'persisted' | 'run_superseded' | 'failed'> {
-  const { cas, runState, calendar, result } = args;
+  deadlineAt?: number | undefined;
+}): Promise<'persisted' | 'run_superseded' | 'deadline_exceeded' | 'failed'> {
+  const { cas, runState, calendar, result, deadlineAt } = args;
 
   const dedupedEventsByProviderId = new Map<string, NormalizedExternalEvent>();
   for (const event of result.events) {
@@ -863,9 +871,11 @@ async function persistCalendarSyncResultChunked(args: {
       tombstoneEventIds: isLast ? tombstoneIds : [],
       usedFullSync: isLast ? result.usedFullSync : false,
       nextCursor: isLast ? result.nextCursor : null,
+      deadlineAt,
     });
 
     if (outcome === 'persisted') continue;
+    if (outcome === 'deadline_exceeded') return 'deadline_exceeded';
     if (outcome === 'superseded' || outcome === 'account_deleting') return 'run_superseded';
     return 'failed';
   }
@@ -876,15 +886,19 @@ async function persistCalendarSyncResultChunked(args: {
 async function finishFencedSyncRunBestEffort(
   runState: FencedRunState,
   lastSyncError: SyncErrorCode | null,
+  deadlineAt?: number | undefined,
 ): Promise<void> {
   // best-effort。既存の updateConnection と同じ意味論 — 失敗しても呼び出し側の
   // outcome は変えない（overview.md §3）。callTextRpc が unresolved/rejected_input を
-  // 既に capture 済みなので、ここでは戻り値を見ずに投げっぱなしにする。
+  // 既に capture 済みなので、ここでは戻り値を見ずに投げっぱなしにする。deadlineAt を
+  // 渡すのは残予算が無い時に無駄な retry で予算を食い潰さないため
+  // （pr-cross-review P2 指摘、PR #2276）。
   await finishCalendarSyncRun({
     ...toCasContext(runState),
     expectedSyncSequence: runState.expectedSyncSequence,
     runStartedAt: runState.runStartedAtIso,
     lastSyncError,
+    deadlineAt,
   });
 }
 

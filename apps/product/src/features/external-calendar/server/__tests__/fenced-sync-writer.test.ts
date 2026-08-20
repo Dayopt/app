@@ -214,3 +214,72 @@ describe('beginCalendarSyncRun（RETURNS TABLE の shape 変換）', () => {
     expect(result).toBe('unresolved');
   });
 });
+
+// pr-cross-review P2（PR #2276）: 残予算が RPC_TIMEOUT_MS 未満なら試行せず即座に
+// 'deadline_exceeded' を返す。DB 劣化時に固定 timeout×attempts を残予算に関係なく
+// 消費し、cron の後続接続を starve させないためのガード。
+describe('deadline budget（pr-cross-review P2、PR #2276）', () => {
+  it('begin: 残予算が RPC_TIMEOUT_MS 未満なら RPC を呼ばず deadline_exceeded を返す', async () => {
+    const rpc = mockRpc(() => ({ data: null, error: { code: '40P01' } }));
+
+    const result = await beginCalendarSyncRun({
+      connectionId: CAS.connectionId,
+      userId: CAS.userId,
+      projectKey: CAS.projectKey,
+      deadlineAt: Date.now() + 1_000,
+    });
+
+    expect(result).toBe('deadline_exceeded');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('clearCalendarSyncCursor: 残予算不足なら RPC を呼ばず deadline_exceeded を返す', async () => {
+    const rpc = mockRpc(() => ({ data: 'cleared', error: null }));
+
+    const result = await clearCalendarSyncCursor({
+      ...CAS,
+      expectedSyncSequence: 1,
+      calendarSelectionId: 'cal-1',
+      providerCalendarId: 'primary',
+      expectedSyncToken: 'token',
+      deadlineAt: Date.now() + 1_000,
+    });
+
+    expect(result).toBe('deadline_exceeded');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('deadlineAt 未指定なら常に試行する（既存呼び出し互換）', async () => {
+    const rpc = mockRpc(() => ({ data: 'finished', error: null }));
+
+    const result = await finishCalendarSyncRun({
+      ...CAS,
+      expectedSyncSequence: 1,
+      runStartedAt: '2026-08-20T00:00:00.000Z',
+      lastSyncError: null,
+    });
+
+    expect(result).toBe('finished');
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('残予算が十分なら retry を継続する（budget check は attempt 前のみ）', async () => {
+    let attempt = 0;
+    const rpc = mockRpc(() => {
+      attempt += 1;
+      if (attempt < 2) return { data: null, error: { code: '40P01' } };
+      return { data: 'finished', error: null };
+    });
+
+    const result = await finishCalendarSyncRun({
+      ...CAS,
+      expectedSyncSequence: 1,
+      runStartedAt: '2026-08-20T00:00:00.000Z',
+      lastSyncError: null,
+      deadlineAt: Date.now() + 60_000,
+    });
+
+    expect(result).toBe('finished');
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+});
