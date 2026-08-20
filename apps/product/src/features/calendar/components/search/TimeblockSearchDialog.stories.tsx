@@ -61,7 +61,6 @@ const RECORDS = [
 
 const DEFAULT_MOCKS = {
   'userSettings.get': PRESET_USER_SETTINGS.default,
-  'tags.list': { data: TAGS },
   'plans.list': PLANS,
   'records.list': RECORDS,
 };

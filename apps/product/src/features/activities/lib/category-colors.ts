@@ -44,41 +44,41 @@ export type CategoryColorName = (typeof CATEGORY_COLOR_NAMES)[number];
 
 /** カテゴリーカラーのTailwindクラスとCSS変数のマッピング */
 interface CategoryColorEntry {
-  /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
+  /** border用 Tailwindクラス (e.g. 'border-category-blue') */
   border: string;
-  /** dot/icon背景用 Tailwindクラス (e.g. 'bg-tag-blue') */
+  /** dot/icon背景用 Tailwindクラス (e.g. 'bg-category-blue') */
   dot: string;
-  /** card背景tint用 Tailwindクラス (e.g. 'bg-tag-blue-tint') */
+  /** card背景tint用 Tailwindクラス (e.g. 'bg-category-blue-tint') */
   tint: string;
-  /** inline style用 CSS変数 (e.g. 'var(--tag-blue)') */
+  /** inline style用 CSS変数 (e.g. 'var(--category-blue)') */
   cssVar: string;
-  /** inline style用 tint CSS変数 (e.g. 'var(--tag-blue-tint)') */
+  /** inline style用 tint CSS変数 (e.g. 'var(--category-blue-tint)') */
   cssVarTint: string;
 }
 
 /**
- * CSS トークン名（`--tag-*`）と Tailwind クラス名（`bg-tag-*` / `border-tag-*`）は
- * #2162 の本 PR では意図的に変更しない。`--tag-*` → `--category-*` へのトークン改名は
- * #2162 Step 7（本 PR の scope 外）で行う。ここで名前を変えると対応する CSS が
- * 生成されず色が消えるため、必ず Step 7 側の作業として実施すること。
+ * CSS トークン名（`--category-*`）と Tailwind クラス名（`bg-category-*` / `border-category-*`）。
+ * 元は `--tag-*` だったが、tags feature 撤去後もこの token が activity/category の配色の
+ * 実体を支え続けているため #2162 Step 5b/7 で `--category-*` へリネームした
+ * （`packages/foundations/src/tokens/colors.css` / `tailwind-theme.css` と同一 commit）。
  *
  * Tailwind v4 safelist — テンプレートリテラルはJITスキャナーに検出されないため、
  * 全カテゴリーカラーのクラス名をフル文字列で列挙してCSS生成を保証する。
  *
- * bg-tag-red bg-tag-orange bg-tag-amber bg-tag-green bg-tag-teal
- * bg-tag-blue bg-tag-indigo bg-tag-violet bg-tag-pink bg-tag-gray
- * bg-tag-red-tint bg-tag-orange-tint bg-tag-amber-tint bg-tag-green-tint bg-tag-teal-tint
- * bg-tag-blue-tint bg-tag-indigo-tint bg-tag-violet-tint bg-tag-pink-tint bg-tag-gray-tint
- * border-tag-red border-tag-orange border-tag-amber border-tag-green border-tag-teal
- * border-tag-blue border-tag-indigo border-tag-violet border-tag-pink border-tag-gray
+ * bg-category-red bg-category-orange bg-category-amber bg-category-green bg-category-teal
+ * bg-category-blue bg-category-indigo bg-category-violet bg-category-pink bg-category-gray
+ * bg-category-red-tint bg-category-orange-tint bg-category-amber-tint bg-category-green-tint bg-category-teal-tint
+ * bg-category-blue-tint bg-category-indigo-tint bg-category-violet-tint bg-category-pink-tint bg-category-gray-tint
+ * border-category-red border-category-orange border-category-amber border-category-green border-category-teal
+ * border-category-blue border-category-indigo border-category-violet border-category-pink border-category-gray
  */
 function entry(name: CategoryColorName): CategoryColorEntry {
   return {
-    border: `border-tag-${name}`,
-    dot: `bg-tag-${name}`,
-    tint: `bg-tag-${name}-tint`,
-    cssVar: `var(--tag-${name})`,
-    cssVarTint: `var(--tag-${name}-tint)`,
+    border: `border-category-${name}`,
+    dot: `bg-category-${name}`,
+    tint: `bg-category-${name}-tint`,
+    cssVar: `var(--category-${name})`,
+    cssVarTint: `var(--category-${name}-tint)`,
   };
 }
 

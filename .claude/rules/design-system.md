@@ -9,7 +9,7 @@ paths:
 ## 色
 
 - **semantic token経由のみ**使用可。直接Tailwind色クラス (`text-red-500`, `bg-zinc-800` 等) / hex / rgb / oklch リテラル禁止
-- 許可されるクラス: `bg-primary`, `text-foreground`, `border-border`, `bg-tag-blue` 等、`packages/foundations/src/tailwind-theme.css` で定義済みのもの
+- 許可されるクラス: `bg-primary`, `text-foreground`, `border-border`, `bg-category-blue` 等、`packages/foundations/src/tailwind-theme.css` で定義済みのもの
 - **例外**:
   - メールテンプレート (`apps/product/src/emails/`): CSS変数が使えない環境のためhex許容。`apps/product/src/emails/styles.ts` に集約
   - OG画像 (`apps/product/src/app/opengraph-image.tsx` / `apps/web/src/app/api/og/route.tsx`): Satori制約のため `@dayopt/foundations/og-colors` の定数を参照。product と marketing で palette を複製しない

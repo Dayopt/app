@@ -264,11 +264,11 @@ export const AllColors: Story = {
         5. Domain — Dayopt 固有
       </h2>
 
-      <ColorGroup title="Tag Colors（oklch統一 L/C、Hのみ変化）">
+      <ColorGroup title="Category Colors（oklch統一 L/C、Hのみ変化）">
         {/* Base: L=0.65 C=0.18 / Dark: L=0.78 C=0.15（例外: teal, gray） */}
-        {/* Tailwind 静的抽出用 safelist（下の bg-tag-${name} は動的クラスのため）:
-            bg-tag-red bg-tag-orange bg-tag-amber bg-tag-green bg-tag-teal
-            bg-tag-blue bg-tag-indigo bg-tag-violet bg-tag-pink bg-tag-gray */}
+        {/* Tailwind 静的抽出用 safelist（下の bg-category-${name} は動的クラスのため）:
+            bg-category-red bg-category-orange bg-category-amber bg-category-green bg-category-teal
+            bg-category-blue bg-category-indigo bg-category-violet bg-category-pink bg-category-gray */}
         {[
           { name: 'red', hue: 25 },
           { name: 'orange', hue: 55 },
@@ -283,7 +283,7 @@ export const AllColors: Story = {
         ].map(({ name, note }) => (
           <ColorSwatch
             key={name}
-            tailwindClass={`bg-tag-${name}`}
+            tailwindClass={`bg-category-${name}`}
             description={`${name}${note ? `（${note}）` : ''}`}
           />
         ))}
@@ -945,13 +945,13 @@ export const Tags: Story = {
                   <td className="px-4 py-2">
                     <div
                       className="size-6 rounded-lg"
-                      style={{ backgroundColor: `var(--tag-${name})` }}
+                      style={{ backgroundColor: `var(--category-${name})` }}
                     />
                   </td>
                   <td className="px-4 py-2">
                     <div
                       className="border-border size-6 rounded-lg border"
-                      style={{ backgroundColor: `var(--tag-${name}-tint)` }}
+                      style={{ backgroundColor: `var(--category-${name}-tint)` }}
                     />
                   </td>
                   <td className="px-4 py-2 font-mono text-xs">
@@ -982,7 +982,7 @@ export const Tags: Story = {
             <div
               key={name}
               className="border-border flex h-16 w-20 flex-col items-center justify-center rounded-lg border"
-              style={{ backgroundColor: `var(--tag-${name}-tint)` }}
+              style={{ backgroundColor: `var(--category-${name}-tint)` }}
             >
               <span className="text-foreground text-xs font-medium">{name}</span>
               <span className="text-muted-foreground text-xs">tint</span>
@@ -998,15 +998,15 @@ export const Tags: Story = {
               <span
                 key={name}
                 className="rounded-full border px-2 py-1 text-sm capitalize"
-                style={{ borderColor: `var(--tag-${name})`, color: `var(--tag-${name})` }}
+                style={{ borderColor: `var(--category-${name})`, color: `var(--category-${name})` }}
               >
                 {name}
               </span>
             ))}
           </div>
           <p className="text-muted-foreground text-xs">
-            <code>border-tag-*</code> + <code>text-tag-*</code> でアウトラインバッジ。 EntryCard
-            背景は <code>bg-tag-*-tint</code>。
+            <code>border-category-*</code> + <code>text-category-*</code> でアウトラインバッジ。
+            EntryCard 背景は <code>bg-category-*-tint</code>。
           </p>
         </div>
       </div>
@@ -1107,16 +1107,16 @@ export const DosDonts: Story = {
 // ========================================
 
 const TAG_COLORS_FOR_CVD = [
-  { name: 'Red', token: '--tag-red', hue: 25 },
-  { name: 'Orange', token: '--tag-orange', hue: 55 },
-  { name: 'Amber', token: '--tag-amber', hue: 80 },
-  { name: 'Green', token: '--tag-green', hue: 145 },
-  { name: 'Teal', token: '--tag-teal', hue: 185 },
-  { name: 'Blue', token: '--tag-blue', hue: 240 },
-  { name: 'Indigo', token: '--tag-indigo', hue: 280 },
-  { name: 'Violet', token: '--tag-violet', hue: 310 },
-  { name: 'Pink', token: '--tag-pink', hue: 350 },
-  { name: 'Gray', token: '--tag-gray', hue: 250 },
+  { name: 'Red', token: '--category-red', hue: 25 },
+  { name: 'Orange', token: '--category-orange', hue: 55 },
+  { name: 'Amber', token: '--category-amber', hue: 80 },
+  { name: 'Green', token: '--category-green', hue: 145 },
+  { name: 'Teal', token: '--category-teal', hue: 185 },
+  { name: 'Blue', token: '--category-blue', hue: 240 },
+  { name: 'Indigo', token: '--category-indigo', hue: 280 },
+  { name: 'Violet', token: '--category-violet', hue: 310 },
+  { name: 'Pink', token: '--category-pink', hue: 350 },
+  { name: 'Gray', token: '--category-gray', hue: 250 },
 ] as const;
 
 /**

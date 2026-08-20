@@ -3,8 +3,8 @@
 /**
  * ActivityQuickSelector
  *
- * アクティビティ選択用フローティングパネル。`features/tags/components/TagQuickSelector.tsx`
- * の移植版（#2162）。単一選択 + 新規作成（グローバル ActivityCreateModal 経由）。
+ * アクティビティ選択用フローティングパネル。旧 `features/tags/components/TagQuickSelector.tsx`
+ * の移植版（#2162。tags feature 自体は #2176 以降段階的に撤去済み）。単一選択 + 新規作成（グローバル ActivityCreateModal 経由）。
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  *
  * 一覧はカテゴリーでグルーピングして表示する。色・アイコンはカテゴリーだけが持ち、

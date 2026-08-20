@@ -28,18 +28,6 @@ export const statisticsGeneralRouter = createTRPCRouter({
       }
     }),
 
-  /** Get time spent per tag (DB function) */
-  getTimeByTag: protectedProcedure
-    .meta({ description: 'タグ別時間集計（期間フィルタ対応）' })
-    .input(dateRangeInput.optional())
-    .query(async ({ ctx, input }) => {
-      try {
-        return await new StatisticsService(ctx.supabase).getTimeByTag(ctx.userId, input);
-      } catch (error) {
-        handleStatsError('getTimeByTag', error);
-      }
-    }),
-
   /** Get daily hours for heatmap (DB function) */
   getDailyHours: protectedProcedure
     .meta({ description: '日別記録時間取得（ヒートマップ用）' })

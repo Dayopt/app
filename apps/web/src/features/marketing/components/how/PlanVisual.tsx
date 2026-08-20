@@ -13,7 +13,7 @@ export function PlanVisual() {
       label: 'Standup',
       time: '30m',
       height: 24,
-      color: 'bg-tag-amber-tint border-l-2 border-l-tag-amber',
+      color: 'bg-category-amber-tint border-l-2 border-l-category-amber',
     },
     {
       label: 'Deep Work',
@@ -25,13 +25,13 @@ export function PlanVisual() {
       label: 'Lunch',
       time: '1h',
       height: 32,
-      color: 'bg-tag-green-tint border-l-2 border-l-tag-green',
+      color: 'bg-category-green-tint border-l-2 border-l-category-green',
     },
     {
       label: 'Reading',
       time: '1h',
       height: 32,
-      color: 'bg-tag-violet-tint border-l-2 border-l-tag-violet',
+      color: 'bg-category-violet-tint border-l-2 border-l-category-violet',
     },
   ];
 

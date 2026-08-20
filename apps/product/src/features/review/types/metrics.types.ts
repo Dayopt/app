@@ -92,13 +92,6 @@ export interface StatsPageData {
     scheduledMinutes: number;
     blankRate: number;
   };
-  timeByTag: Array<{
-    tagId: string | null;
-    name: string | null;
-    color: string | null;
-    hours: number;
-    isUncategorized: boolean;
-  }>;
   hourly: Array<{
     hour: number;
     totalMinutes: number;
@@ -109,9 +102,9 @@ export interface StatsPageData {
   }>;
   energyMap: EnergyMapRow[];
   estimationAccuracy: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
+    activityId: string | null;
+    activityName: string | null;
+    activityColor: string | null;
     isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;
@@ -119,9 +112,9 @@ export interface StatsPageData {
     recordCount: number;
   }>;
   prevEstimationAccuracy: Array<{
-    tagId: string | null;
-    tagName: string | null;
-    tagColor: string | null;
+    activityId: string | null;
+    activityName: string | null;
+    activityColor: string | null;
     isUncategorized: boolean;
     avgPlannedMinutes: number;
     avgActualMinutes: number;

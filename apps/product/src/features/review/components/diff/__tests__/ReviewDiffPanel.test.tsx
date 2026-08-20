@@ -5,9 +5,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewDiffResult } from '../ReviewDiffPanel';
 import { ReviewDiffPanel } from '../ReviewDiffPanel';
 
-vi.mock('@/features/tags', () => ({
-  useTagsMap: () => ({
-    getTagById: () => ({ id: 'tag-1', name: 'Work', color: 'blue', icon: null }),
+vi.mock('@/features/activities', () => ({
+  useActivitiesMap: () => ({
+    getActivityById: () => ({
+      id: 'activity-1',
+      name: 'Work',
+      categoryId: 'cat-1',
+      categoryName: 'Work',
+      color: 'blue',
+      icon: null,
+    }),
   }),
 }));
 
@@ -35,8 +42,9 @@ function item(
     timeblockId: 'entry-1',
     kind: 'shifted',
     title: 'Focus',
-    tagId: 'tag-1',
-    color: 'var(--tag-blue)',
+    tagId: null,
+    activityId: 'activity-1',
+    color: 'var(--category-blue)',
     plannedStart: start,
     plannedEnd: end,
     actualStart,

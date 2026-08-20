@@ -6,12 +6,12 @@
  * @example
  * ```typescript
  * import { createTestCaller, createMockContext } from '@/lib/test/trpc-test-helpers'
- * import { tagsRouter } from '@/features/tags/server/router'
+ * import { activitiesRouter } from '@/features/activities/server/router'
  *
- * describe('tags.list', () => {
- *   it('should return tags for authenticated user', async () => {
+ * describe('activities.list', () => {
+ *   it('should return activities for authenticated user', async () => {
  *     const ctx = createMockContext({ userId: 'test-user-id' })
- *     const caller = createTestCaller(tagsRouter, ctx)
+ *     const caller = createTestCaller(activitiesRouter, ctx)
  *
  *     const result = await caller.list()
  *     expect(result).toBeDefined()
@@ -163,7 +163,7 @@ export function createMockContext(options: MockContextOptions = {}): Context {
  *
  * @example
  * ```typescript
- * const caller = createTestCaller(tagsRouter, ctx);
+ * const caller = createTestCaller(activitiesRouter, ctx);
  * const result = await caller.list(); // 型推論される
  * ```
  */

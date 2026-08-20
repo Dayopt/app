@@ -115,7 +115,7 @@ interface StoryTRPCProviderProps {
  * Story用 tRPC プロバイダ
  *
  * 毎回新しい QueryClient を生成し、Story間のキャッシュ漏洩を防ぐ。
- * mocks は DEFAULT_TRPC_MOCKS にマージされるので、tags.list 等は自動的に利用可能。
+ * mocks は DEFAULT_TRPC_MOCKS にマージされる（現在グローバルデフォルトは無し）。
  */
 export function StoryTRPCProvider({ children, mocks, pending, error }: StoryTRPCProviderProps) {
   const queryClient = new QueryClient({

@@ -191,31 +191,7 @@ describe('TimeblockCommandService', () => {
     );
   });
 
-  it('createPlanでarchivedタグを付与しようとするとTAG_ARCHIVEDで拒否し、RPCを呼ばない', async () => {
-    const tagQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000000Z' });
-    const supabase = createMockSupabase({ from: vi.fn(() => tagQuery) });
-    const commands = createCommands();
-    const service = new TimeblockCommandService(
-      supabase as unknown as ServiceSupabaseClient,
-      commands as unknown as TimeblockCommandClient,
-    );
-
-    await expect(
-      service.createPlan({
-        userId: USER_ID,
-        input: {
-          title: 'Plan',
-          tagId: TAG_ID,
-          start_at: plan.start_at,
-          end_at: plan.end_at,
-        },
-      }),
-    ).rejects.toMatchObject({ code: 'TAG_ARCHIVED' });
-
-    expect(commands.createPlan).not.toHaveBeenCalled();
-  });
-
-  it('updatePlanでtagIdを変更しない編集は、既にarchive済みのタグでもguardを呼ばず通す', async () => {
+  it('updatePlanはtagIdを入力に持たないため、既にarchive済みのタグでもguardを呼ばず既存値を保持する', async () => {
     const archivedPlan: PlanRow = { ...plan, tag_id: TAG_ID };
     const planQuery = createChainableMock(archivedPlan);
     const tagQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000000Z' });

@@ -21,20 +21,20 @@ export function AppPreviewMockup() {
       top: '25%',
       height: '12%',
       label: 'Email & Slack',
-      color: 'bg-tag-amber/15 border-tag-amber/30',
+      color: 'bg-category-amber/15 border-category-amber/30',
     },
     { top: '40%', height: '10%', label: 'Lunch', color: 'bg-container border-border' },
     {
       top: '53%',
       height: '22%',
       label: 'Code Review + PR',
-      color: 'bg-tag-blue/15 border-tag-blue/30',
+      color: 'bg-category-blue/15 border-category-blue/30',
     },
     {
       top: '78%',
       height: '15%',
       label: 'Weekly Reflection',
-      color: 'bg-tag-green/15 border-tag-green/30',
+      color: 'bg-category-green/15 border-category-green/30',
     },
   ];
 

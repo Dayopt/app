@@ -141,7 +141,7 @@ const eslintConfig = defineConfig([
   // =========================================================================
   // Feature Boundary: DAG（有向非循環グラフ）モデル
   //
-  // Layer 0 (基盤):   tags, activities — 他featureに依存しない
+  // Layer 0 (基盤):   activities — 他featureに依存しない
   // Layer 1 (中核):   timeblock, external-calendar — L0 barrel のみ
   // Layer 2 (体験):   calendar, review — L0+L1 barrel のみ
   // Independent:      auth, contact    — 他featureに依存しない
@@ -184,25 +184,6 @@ const eslintConfig = defineConfig([
   },
 
   // ── 2. Feature DAG ──
-
-  // Layer 0 (tags): 他featureへの依存ゼロ
-  {
-    files: ['src/features/tags/**/*.{ts,tsx}'],
-    ignores: ['**/*.stories.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@/features/*', '@/features/**'],
-              message: 'Layer 0（基盤feature）は他featureに依存不可。',
-            },
-          ],
-        },
-      ],
-    },
-  },
 
   // Layer 0 (activities): 他featureへの依存ゼロ
   {
@@ -257,10 +238,6 @@ const eslintConfig = defineConfig([
             },
             // L0 deep import禁止（barrel のみ許可）
             {
-              group: ['@/features/tags/**'],
-              message: 'barrel import（@/features/tags）のみ使用。',
-            },
-            {
               group: ['@/features/activities/**'],
               message: 'barrel import（@/features/activities）のみ使用。',
             },
@@ -304,10 +281,6 @@ const eslintConfig = defineConfig([
             },
             // L0 deep import禁止（barrel のみ許可）
             {
-              group: ['@/features/tags/**'],
-              message: 'barrel import（@/features/tags）のみ使用。',
-            },
-            {
               group: ['@/features/activities/**'],
               message: 'barrel import（@/features/activities）のみ使用。',
             },
@@ -341,10 +314,6 @@ const eslintConfig = defineConfig([
               message: '独立featureのimport禁止。',
             },
             // L0+L1 deep import禁止（barrel のみ許可）
-            {
-              group: ['@/features/tags/**'],
-              message: 'barrel import（@/features/tags）のみ使用。',
-            },
             {
               group: ['@/features/activities/**'],
               message: 'barrel import（@/features/activities）のみ使用。',
@@ -387,10 +356,6 @@ const eslintConfig = defineConfig([
               message: '独立featureのimport禁止。',
             },
             // L0+L1 deep import禁止（barrel のみ許可）
-            {
-              group: ['@/features/tags/**'],
-              message: 'barrel import（@/features/tags）のみ使用。',
-            },
             {
               group: ['@/features/activities/**'],
               message: 'barrel import（@/features/activities）のみ使用。',

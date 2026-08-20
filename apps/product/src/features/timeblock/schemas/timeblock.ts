@@ -16,7 +16,6 @@ const timeRangeRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
 const baseTimeblockSchema = z.object({
   title: z.string().min(1, 'validation.title.required').max(200, 'validation.title.maxLength'),
   note: z.string().max(10000, 'validation.note.maxLength').nullable().optional(),
-  tagId: z.string().uuid().nullable().optional(),
   activityId: z.string().uuid().nullable().optional(),
   externalCalendarEventId: z.string().uuid().nullable().optional(),
   start_at: z.string().datetime({ offset: true }),

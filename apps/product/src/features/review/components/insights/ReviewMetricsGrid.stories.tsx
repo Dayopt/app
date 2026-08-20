@@ -24,7 +24,6 @@ const MOCK_PAGE_DATA: StatsPageData = {
   },
   contextSwitches: { totalSwitches: 35, avgPerDay: 5.0 },
   blankRate: { availableMinutes: 4800, scheduledMinutes: 2295, blankRate: 0.52 },
-  timeByTag: [],
   hourly: [],
   dow: [],
   energyMap: [
@@ -34,9 +33,9 @@ const MOCK_PAGE_DATA: StatsPageData = {
   ],
   estimationAccuracy: [
     {
-      tagId: '1',
-      tagName: 'Work',
-      tagColor: 'blue',
+      activityId: '1',
+      activityName: 'Work',
+      activityColor: 'blue',
       isUncategorized: false,
       avgPlannedMinutes: 60,
       avgActualMinutes: 72,
@@ -46,9 +45,9 @@ const MOCK_PAGE_DATA: StatsPageData = {
   ],
   prevEstimationAccuracy: [
     {
-      tagId: '1',
-      tagName: 'Work',
-      tagColor: 'blue',
+      activityId: '1',
+      activityName: 'Work',
+      activityColor: 'blue',
       isUncategorized: false,
       avgPlannedMinutes: 60,
       avgActualMinutes: 78,

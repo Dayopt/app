@@ -17,7 +17,7 @@ import {
   validateRange,
 } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertActivityAssignable, assertTagAssignable } from './tag-assignment-guard';
+import { assertActivityAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,
@@ -162,7 +162,6 @@ export class PlanService {
 
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
     ensurePlanCanBeCreated(input.end_at);
-    await assertTagAssignable(this.supabase, userId, input.tagId);
     await assertActivityAssignable(this.supabase, userId, input.activityId);
 
     if (preventOverlappingPlans) {
@@ -173,7 +172,7 @@ export class PlanService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: input.tagId ?? null,
+      tagId: null,
       activityId: input.activityId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
@@ -204,10 +203,6 @@ export class PlanService {
 
     validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
     if (updatesTime) ensurePlanCanBeCreated(nextEndAt);
-    // 後からアーカイブされたタグを保持したままの編集は許可し、付け替えだけ拒否する
-    if (input.tagId !== undefined && input.tagId !== existing.tag_id) {
-      await assertTagAssignable(this.supabase, userId, input.tagId);
-    }
     // activity も同型に独立判定する。tag の条件へネストすると、activity だけを
     // 付け替える更新で fail-fast が発火しない（DB 側 assert は効くが、エラーが
     // tag 語彙で返り、timeblock-command-service の実装とも非対称になる）。
@@ -231,7 +226,7 @@ export class PlanService {
       expectedUpdatedAt: existing.updated_at,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: input.tagId === undefined ? existing.tag_id : input.tagId,
+      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined
