@@ -25,24 +25,24 @@ style={{ zIndex: 'var(--z-index-modal)' }}
 
 ## レイヤー一覧
 
-| 値   | Tailwind クラス        | 名前               | 用途                                       |
-| ---- | ---------------------- | ------------------ | ------------------------------------------ |
-| 40   | `z-bottom-tab`         | bottom-tab         | モバイル下部の固定バー（タグチップ列）     |
-| 45   | `z-bottom-strip`       | bottom-strip       | 下部バーの上に載る帯                       |
-| 50   | `z-dropdown`           | dropdown           | ドロップダウンメニュー、セレクト           |
-| 100  | `z-popover`            | popover            | ポップオーバー（日付選択、カラーピッカー） |
-| 150  | `z-sheet`              | sheet              | サイドシート、ドロワー（Inspector 等）     |
-| 200  | `z-modal`              | modal              | 通常のダイアログ・モーダル                 |
-| 250  | `z-confirm`            | confirm            | 確認ダイアログ（削除など重要な操作）       |
-| 300  | `z-toast`              | toast              | トースト通知                               |
-| 350  | `z-context-menu`       | context-menu       | コンテキストメニュー（右クリック）         |
-| 1000 | `z-calendar-drag`      | calendar-drag      | カレンダードラッグプレビュー               |
-| 1050 | `z-inspector-backdrop` | inspector-backdrop | ドラッグ可能 Inspector 背景                |
-| 1100 | `z-inspector`          | inspector          | ドラッグ可能 Inspector                     |
-| 1200 | `z-overlay-modal`      | overlay-modal      | Inspector 上のモーダル                     |
-| 1300 | `z-overlay-popover`    | overlay-popover    | Inspector 上の日付選択・カラーピッカー     |
-| 1400 | `z-overlay-confirm`    | overlay-confirm    | Inspector 上の確認ダイアログ               |
-| 9999 | `z-tooltip`            | tooltip            | ツールチップ（最前面）                     |
+| 値   | Tailwind クラス        | 名前               | 用途                                                 |
+| ---- | ---------------------- | ------------------ | ---------------------------------------------------- |
+| 40   | `z-bottom-tab`         | bottom-tab         | モバイル下部の固定バー（タグチップ列）               |
+| 45   | `z-bottom-strip`       | bottom-strip       | 下部バーの上に載る帯                                 |
+| 50   | `z-dropdown`           | dropdown           | ドロップダウンメニュー、セレクト                     |
+| 100  | `z-popover`            | popover            | ポップオーバー（日付選択、カラーピッカー）           |
+| 150  | `z-sheet`              | sheet              | サイドシート、ドロワー（Inspector 等）               |
+| 200  | `z-modal`              | modal              | 通常のダイアログ・モーダル                           |
+| 250  | `z-confirm`            | confirm            | 確認ダイアログ（削除など重要な操作）                 |
+| 300  | `z-toast`              | toast              | トースト通知                                         |
+| 350  | `z-context-menu`       | context-menu       | コンテキストメニュー（右クリック）                   |
+| 1000 | `z-calendar-drag`      | calendar-drag      | カレンダードラッグプレビュー                         |
+| 1050 | `z-inspector-backdrop` | inspector-backdrop | 現在未使用。将来フローティング化する UI 向けの予約枠 |
+| 1100 | `z-inspector`          | inspector          | 現在未使用。将来フローティング化する UI 向けの予約枠 |
+| 1200 | `z-overlay-modal`      | overlay-modal      | Inspector 上のモーダル                               |
+| 1300 | `z-overlay-popover`    | overlay-popover    | Inspector 上の日付選択・カラーピッカー               |
+| 1400 | `z-overlay-confirm`    | overlay-confirm    | Inspector 上の確認ダイアログ                         |
+| 9999 | `z-tooltip`            | tooltip            | ツールチップ（最前面）                               |
 
 ---
 
@@ -54,7 +54,7 @@ style={{ zIndex: 'var(--z-index-modal)' }}
 
 ### Inspector（1000-1100）
 
-ドラッグ操作やフローティング UI。calendar-drag, inspector-backdrop, inspector
+ドラッグ操作やフローティング UI 向けの帯。calendar-drag, inspector-backdrop, inspector はいずれも現在未使用（TimeblockInspector が右サイドパネル化しフローティングでなくなったため、#2242）。将来同種の UI が必要になった時のために予約する
 
 ### Overlay 系（1200-1400）
 

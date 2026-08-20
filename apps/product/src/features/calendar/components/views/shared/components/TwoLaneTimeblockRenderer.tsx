@@ -7,7 +7,7 @@
  * 描画は kind に応じて `PlanLaneCard` / `RecordLaneCard`（presentational）に委譲する。
  * PlanLaneCard/RecordLaneCard は自身の `position` prop から絶対座標を描画するため、
  * 追加のラッパー div で位置を持たせない（二重にレーン幅が掛かるのを避ける）。
- * anchorRect 取得・past-plan/auto_migrated ロックは TimeblockRenderer には無い、
+ * past-plan/auto_migrated ロックは TimeblockRenderer には無い、
  * time model 固有の関心事としてここに実装する。
  */
 
@@ -101,7 +101,6 @@ export function TwoLaneTimeblockRenderer({
 }: TwoLaneEntryRendererProps) {
   const inspectorEntryId = useTimeblockInspectorStore((state) => state.timeblockId);
   const isInspectorOpen = useTimeblockInspectorStore((state) => state.isOpen);
-  const setAnchorRect = useTimeblockInspectorStore((state) => state.setAnchorRect);
   const { getActivityById } = useActivitiesMap();
 
   const timeblockDragging =
@@ -133,16 +132,7 @@ export function TwoLaneTimeblockRenderer({
   const disableResize = isResizeDisabled(entry, now);
   const rect = toRect(position);
 
-  const handleClick = (_target: unknown, e: React.MouseEvent) => {
-    const cardRect = e.currentTarget.getBoundingClientRect();
-    setAnchorRect({
-      top: cardRect.top,
-      right: cardRect.right,
-      bottom: cardRect.bottom,
-      left: cardRect.left,
-      width: cardRect.width,
-      height: cardRect.height,
-    });
+  const handleClick = (_target: unknown) => {
     onEntryClick?.(entry);
   };
 
