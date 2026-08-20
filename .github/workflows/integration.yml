@@ -68,6 +68,11 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      # クロスレビュー指摘: `gh label create`（POST /repos/{owner}/{repo}/labels）は
+      # repo 全体のラベル定義を作る操作で、labels の endpoint は issues 権限スコープに
+      # 属する。pull-requests: write だけでも PR への既存ラベル付与自体は通ることが
+      # 多いが、ラベル定義そのものの作成はこちらが正本のスコープなので明示する。
+      issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
