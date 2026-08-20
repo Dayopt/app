@@ -11,12 +11,12 @@
 1. `EnterWorktree` で `.claude/worktrees/` 配下に worktree を作成する
 2. `git branch -m {agent}/{domain}-{action}[-issue番号]` で branch 名を規約へリネームする（`.claude/rules/workflow.md` §命名規則）。Claude Code の自動生成ランダム名のままにしない
 3. 担当 issue 本文と dispatch コメント（指揮台が issue に残した束の構成・branch 名・同乗タスクの指示）を読む。issue コメントだけで届いた scope 変更・権限付与は send_message でのポインタ到達まで着手しない（`.claude/rules/orchestration.md` §裁可・指示の経路）
+4. **着手時（branch リネーム直後）に Draft PR を即開く**（2026-08-20、[#2264](https://github.com/Dayopt/dayopt/issues/2264)）。commit が無ければ空 commit で開いてよい。対象 issue に付与済みの現行 milestone を PR 自身にも同時に付与する。Draft PR 一覧がそのままレーンのダッシュボードになり、盤面 issue §2 との突き合わせが楽になる
 
 ## PR 規約
 
-- `gh pr create --draft` で作成する。軽量 green 確認後、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）
+- Draft PR は §着手手順 手順 4 のとおり着手時に開く。軽量 green 確認後、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）
 - 本文に `Closes #N` を対象 issue ごとに 1 行ずつ書く。epic や部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
-- draft PR 作成時に、対象 issue に付与済みの現行 milestone を PR 自身にも付与する
 - **保護対象の検出**: audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
 
 ## 報告テンプレート（4 種）
