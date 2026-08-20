@@ -31,11 +31,36 @@ const CLIENT_FLOOR_TIMEOUT_MS = 15_000;
  *
  * - `22023`（invalid input）: 呼び出し側のバグでしか到達しない値域。Sentry capture する
  * - `54000`（sequence exhausted）: 理論上 到達しない値域。Sentry capture する
+ * - `42501`（permission denied。`assert_timeblock_service_role_request_v1` の service
+ *   role 検査失敗、または RPC への EXECUTE 権限自体が無い呼び出し由来）: retry しても
+ *   結果が変わらない認証・認可失敗で、network blip や lock contention とは性質が違う
+ *   （PostgREST は権限拒否を HTTP 4xx で同期的に即返しするため retry 自体はミリ秒で終わる。
+ *   ただし alert が発火するのは 3 attempt を使い切った後になるため、definitive 分類しない
+ *   限り alert が最大 3 attempt 分遅れる）。`token-rotation.ts` の `DEFINITIVE_ROLLBACK_CODES`
+ *   も同じコードを definitive 扱いしており、outcome 分類（呼び出し側が受け取る bucket）も
+ *   22023/54000 と同じ「即終了・アラートあり」で揃える（#2289 で発覚）。Sentry capture する。
+ *   **capture は 22023/54000 とは別関数（`reportPermissionDenied`）から行う**（実測に基づく
+ *   #2289 の訂正: この repo の Sentry `beforeSend`
+ *   （`packages/observability/src/sanitize.ts` の `sanitizeException`）は exception の
+ *   `value`（= Error message）を常に `[REDACTED]` へ落とすため、**Error message の文字列を
+ *   22023/54000 と分けても Sentry 上のグルーピングには一切効かない**（実測: DAYOPT-X のタイトルは
+ *   実際に「Error: [REDACTED]」）。Sentry の issue グルーピングは stacktrace（`new Error(...)`
+ *   を生成した関数フレーム）で決まり、fingerprint も beforeSend が捨てるため使えない。
+ *   したがって 42501 を 22023/54000 と別 Sentry issue として区別する唯一の実装可能な手段は、
+ *   `new Error(...)` の呼び出しをそれぞれ別の名前付き関数・別行に切り出し、innermost frame を
+ *   変えることだけ — 42501 は per-call の入力バグではなく fleet 規模の認証・認可失敗
+ *   （service role key rotation 等で 5 RPC 全てが同時に落ち、begin は `not_configured` に
+ *   畳まれて UI 無表示になる）ため、triage で「入力が悪い呼び出し」と区別できる必要がある
  * - `CA019`（account deletion in progress、`assert_calendar_account_not_deleting_v1` 由来）:
  *   想定内。Sentry capture しない
  */
-const DEFINITIVE_CODES_WITH_ALERT = new Set(['22023', '54000']);
+const DEFINITIVE_CODES_WITH_ALERT = new Set(['22023', '54000', '42501']);
 const DEFINITIVE_CODE_ACCOUNT_DELETING = 'CA019';
+/** service role 権限失敗専用の permission denied コード（definitive・アラートあり）。 */
+const DEFINITIVE_CODE_PERMISSION_DENIED = '42501';
+
+/** retry ループで最後に観測した RPC error（capture の診断情報用、#2289）。 */
+type ObservedRpcError = { code?: string | undefined; message?: string | undefined };
 
 /**
  * `'unresolved'`: retry を使い切っても確定しなかった（Sentry 済み）。
@@ -59,28 +84,67 @@ function hasBudgetForAttempt(deadlineAt: number | undefined): boolean {
   return deadlineAt - Date.now() >= RPC_TIMEOUT_MS;
 }
 
+/**
+ * `isDefinitiveFailure` の 22023/54000 経路専用 capture。**`new Error(...)` をこの関数内・
+ * この行で実行することが要件**（他の definitive capture 関数と innermost frame を分け、
+ * Sentry の stacktrace ベースの issue グルーピングを構造的に分離するため。詳細は
+ * `DEFINITIVE_CODES_WITH_ALERT` のコメント参照）。42501 は発生源が 2 種（service role 検査
+ * 失敗 / EXECUTE 権限欠落）あり message でしか区別できないため、errorMessage も伝搬する。
+ */
+function reportRejectedInput(operation: string, error: ObservedRpcError): 'rejected_input' {
+  captureUnexpectedError(new Error(`fenced calendar writer rejected input: ${operation}`), {
+    feature: 'external_calendar',
+    operation,
+    source: 'supabase_rpc',
+    ...(error.code !== undefined ? { errorCode: error.code } : {}),
+    ...(error.message !== undefined ? { errorMessage: error.message } : {}),
+  });
+  return 'rejected_input';
+}
+
+/**
+ * `isDefinitiveFailure` の 42501 経路専用 capture。`reportRejectedInput` と outcome bucket
+ * （`'rejected_input'`）は同じだが、**`new Error(...)` を別関数・別行で実行する**ことで
+ * Sentry 上で別 issue にグルーピングされる（`DEFINITIVE_CODES_WITH_ALERT` のコメント参照）。
+ */
+function reportPermissionDenied(operation: string, error: ObservedRpcError): 'rejected_input' {
+  captureUnexpectedError(new Error(`fenced calendar writer permission denied: ${operation}`), {
+    feature: 'external_calendar',
+    operation,
+    source: 'supabase_rpc',
+    ...(error.code !== undefined ? { errorCode: error.code } : {}),
+    ...(error.message !== undefined ? { errorMessage: error.message } : {}),
+  });
+  return 'rejected_input';
+}
+
 function isDefinitiveFailure(
-  code: string | undefined,
+  error: ObservedRpcError | null | undefined,
   operation: string,
 ): FencedWriterFailure | null {
+  const code = error?.code;
   if (code === DEFINITIVE_CODE_ACCOUNT_DELETING) return 'account_deleting';
   if (code && DEFINITIVE_CODES_WITH_ALERT.has(code)) {
-    captureUnexpectedError(new Error(`fenced calendar writer rejected input: ${operation}`), {
-      feature: 'external_calendar',
-      operation,
-      source: 'supabase_rpc',
-      errorCode: code,
-    });
-    return 'rejected_input';
+    const details: ObservedRpcError = { code, message: error?.message };
+    return code === DEFINITIVE_CODE_PERMISSION_DENIED
+      ? reportPermissionDenied(operation, details)
+      : reportRejectedInput(operation, details);
   }
   return null;
 }
 
-function reportUnresolved(operation: string): 'unresolved' {
+/**
+ * retry を使い切った経路（応答喪失と rollback を区別できない）で発火する。最後に観測した
+ * RPC error の code/message を capture に含める（#2289: 従来は `{feature, operation, source}`
+ * のみで、3 回の retry で観測した実エラーを捨てていたため、Sentry 側で原因究明ができなかった）。
+ */
+function reportUnresolved(operation: string, lastError?: ObservedRpcError): 'unresolved' {
   captureUnexpectedError(new Error(`fenced calendar writer outcome is unresolved: ${operation}`), {
     feature: 'external_calendar',
     operation,
     source: 'supabase_rpc',
+    ...(lastError?.code !== undefined ? { errorCode: lastError.code } : {}),
+    ...(lastError?.message !== undefined ? { errorMessage: lastError.message } : {}),
   });
   return 'unresolved';
 }
@@ -140,22 +204,30 @@ export type CasContext = {
 async function callTextRpc(
   operation: string,
   deadlineAt: number | undefined,
-  request: () => PromiseLike<{ data: string | null; error: { code?: string } | null }>,
+  request: () => PromiseLike<{
+    data: string | null;
+    error: { code?: string; message?: string } | null;
+  }>,
 ): Promise<string | FencedWriterFailure> {
+  let lastError: ObservedRpcError | undefined;
+
   for (let attempt = 0; attempt < RPC_ATTEMPTS; attempt += 1) {
     if (!hasBudgetForAttempt(deadlineAt)) return 'deadline_exceeded';
     try {
       const { data, error } = await request();
       if (!error && data !== null) return data;
 
-      const definitive = isDefinitiveFailure(error?.code, operation);
+      if (error) lastError = { code: error.code, message: error.message };
+
+      const definitive = isDefinitiveFailure(error, operation);
       if (definitive !== null) return definitive;
       // それ以外（network 例外、40P01 デッドロック、55P03 lock not available 含む）は retry。
-    } catch {
+    } catch (caught) {
+      lastError = { message: caught instanceof Error ? caught.message : String(caught) };
       // 同上。
     }
   }
-  return reportUnresolved(operation);
+  return reportUnresolved(operation, lastError);
 }
 
 // =============================================================================
@@ -184,6 +256,7 @@ export async function beginCalendarSyncRun(params: {
   deadlineAt?: number | undefined;
 }): Promise<BeginSyncRunOutcome> {
   const operation = 'begin_calendar_sync_run';
+  let lastError: ObservedRpcError | undefined;
 
   for (let attempt = 0; attempt < RPC_ATTEMPTS; attempt += 1) {
     if (!hasBudgetForAttempt(params.deadlineAt)) return 'deadline_exceeded';
@@ -224,14 +297,17 @@ export async function beginCalendarSyncRun(params: {
         return reportUnresolved(operation);
       }
 
-      const definitive = isDefinitiveFailure(error?.code, operation);
+      if (error) lastError = { code: error.code, message: error.message };
+
+      const definitive = isDefinitiveFailure(error, operation);
       if (definitive !== null) return definitive;
-    } catch {
+    } catch (caught) {
+      lastError = { message: caught instanceof Error ? caught.message : String(caught) };
       // response 欠落と rollback を区別できないため同一引数で retry する。
     }
   }
 
-  return reportUnresolved(operation);
+  return reportUnresolved(operation, lastError);
 }
 
 // =============================================================================

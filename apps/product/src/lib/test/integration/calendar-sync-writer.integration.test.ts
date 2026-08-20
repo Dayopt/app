@@ -10,14 +10,36 @@ import type { Database } from '@/lib/database';
  * integration test（#2050）。overview.md §7 が必須と定める受け入れ条件（disconnect
  * 後の書き込み拒否）と、#2078 の allowlist 拡張を固定する。CAS ロジック本体の網羅は対象外
  * — ここでは begin → disconnect → persist/finish の race だけを再現する。
+ *
+ * #2289: 5 RPC すべて `REVOKE ALL ... GRANT EXECUTE ... TO service_role` のみで、
+ * anon/authenticated には EXECUTE 権限自体が無い。この実 shape（PostgREST が返す
+ * `error.code === '42501'`）を pin し、`fenced-sync-writer.ts` の definitive 分類
+ * （`DEFINITIVE_CODES_WITH_ALERT`）が実際の DB 応答と一致していることを固定する。
  */
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const RUN_LOCAL = process.env.USE_LOCAL_DB === 'true';
 
 const admin = createClient<Database>(LOCAL_DB_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
+});
+
+/**
+ * anon DB role を確実に踏む client。新しい local Supabase project は asymmetric JWT key
+ * を公開するため、legacy anon key を Bearer JWT として同時提示すると role 解決が変わる
+ * （`external-authority-maintenance.integration.test.ts` と同じ回避策）。
+ */
+const anonymous = createClient<Database>(LOCAL_DB_URL, ANON_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+  global: {
+    fetch: async (input, init) => {
+      const headers = new Headers(init?.headers);
+      headers.delete('Authorization');
+      return fetch(input, { ...init, headers });
+    },
+  },
 });
 
 function createRunProjectNumber(): string {
@@ -285,5 +307,20 @@ WHERE user_id = :'user_id'::UUID;`,
       { connection_id: connectionId },
     );
     expect(lastSyncError).toBe('partial_timeout');
+  });
+
+  // #2289: begin_calendar_sync_run_v1 は service_role にしか EXECUTE 権限が無い
+  // （`REVOKE ALL ... GRANT EXECUTE ... TO service_role`）。この privilege check は関数
+  // 本体（assert_timeblock_service_role_request_v1）に入る前に PostgREST 層で決着するため、
+  // 接続 fixture の準備は不要 — 存在しない connection_id でも同じ 42501 になる。
+  it('anon role で呼ぶと EXECUTE 権限が無く 42501（permission denied）で拒否される', async () => {
+    const { error } = await anonymous.rpc('begin_calendar_sync_run_v1', {
+      p_project_key: projectKey,
+      p_user_id: userId,
+      p_connection_id: connectionId,
+    });
+
+    expect(error).not.toBeNull();
+    expect(error?.code).toBe('42501');
   });
 });

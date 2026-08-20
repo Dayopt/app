@@ -295,7 +295,7 @@ type NormalizedPage = {
  * 静かに欠けたことを alert に回す。
  *
  * **件数や上限値は context に入れない。** `CaptureErrorContext`（`@dayopt/observability` の
- * `TechnicalErrorContext`）は feature / operation など 8 個の string キーしか持たず、
+ * `TechnicalErrorContext`）は feature / operation など string キーしか持たず、
  * 数値キーは型に無い。仮に通しても `sanitizeTechnicalContext` の allowlist で捨てられる。
  * 具体的な件数は logger 側に出し、Sentry は「起きた」ことと operation だけを運ぶ。
  */
