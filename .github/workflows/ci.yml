@@ -323,25 +323,12 @@ jobs:
           echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
           echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
 
-      # TEST_USER_* 依存の spec（deep-link / review-granularity / smoke 認証部 /
-      # auth 認証部）向けの一時ユーザー。seed 型 spec（critical-path /
-      # plan-record-timeblock / block-search）は service key があれば自前で
-      # ユーザーを作るためここでは対象外（scripts/ci/create-e2e-test-user.mjs 参照）。
-      - name: Create E2E test user
-        id: e2e-user
-        run: node scripts/ci/create-e2e-test-user.mjs
-        env:
-          SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
-
       - name: Run E2E tests
         run: pnpm --dir apps/product exec playwright test --project="chromium"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
-          TEST_USER_EMAIL: ${{ steps.e2e-user.outputs.email }}
-          TEST_USER_PASSWORD: ${{ steps.e2e-user.outputs.password }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
 

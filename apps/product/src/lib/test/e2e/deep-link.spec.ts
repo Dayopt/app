@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  createScopedTestUser,
+  deleteScopedTestUser,
+  type ScopedTestUser,
+} from './create-scoped-test-user';
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+
 /**
  * Deep Link E2E
  *
@@ -11,7 +18,11 @@ import { expect, test } from '@playwright/test';
  * （docs/projects/workspace-shell-restructure/overview.md §4-4）。
  */
 
-const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+let testUser: ScopedTestUser | undefined;
 
 async function loginAndNavigate(page: import('@playwright/test').Page) {
   await page.goto('/');
@@ -21,15 +32,25 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   const passwordInput = page.locator('input[type="password"]').first();
   const submitButton = page.locator('button[type="submit"]').first();
 
-  await emailInput.fill(process.env.TEST_USER_EMAIL!);
-  await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
+  await emailInput.fill(testUser!.email);
+  await passwordInput.fill(testUser!.password);
   await submitButton.click();
 
   await page.waitForURL(/\/calendar/i, { timeout: 15000 });
 }
 
 test.describe('Deep Link: SSR rendering of /calendar', () => {
-  test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
+  test.skip(!SERVICE_ROLE_TARGET.safe, SERVICE_ROLE_TARGET.safe ? '' : SERVICE_ROLE_TARGET.reason);
+
+  test.beforeAll(async () => {
+    if (!SERVICE_ROLE_TARGET.safe) return;
+    testUser = await createScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, 'deep-link');
+  });
+
+  test.afterAll(async () => {
+    if (!testUser) return;
+    await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
+  });
 
   test('calendar week renders with sidebar on direct access', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');

@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  createScopedTestUser,
+  deleteScopedTestUser,
+  type ScopedTestUser,
+} from './create-scoped-test-user';
+import { resolveServiceRoleTarget } from './service-role-target-guard';
+
 /**
  * Report deep link E2E
  *
@@ -7,7 +14,11 @@ import { expect, test } from '@playwright/test';
  * 旧 `?panel=review` は /report へ redirect される（Step 2、overview.md §4-4）。
  */
 
-const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+let testUser: ScopedTestUser | undefined;
 
 async function login(page: import('@playwright/test').Page) {
   await page.goto('/');
@@ -17,15 +28,25 @@ async function login(page: import('@playwright/test').Page) {
   const passwordInput = page.locator('input[type="password"]').first();
   const submitButton = page.locator('button[type="submit"]').first();
 
-  await emailInput.fill(process.env.TEST_USER_EMAIL!);
-  await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
+  await emailInput.fill(testUser!.email);
+  await passwordInput.fill(testUser!.password);
   await submitButton.click();
 
   await page.waitForURL(/\/calendar/i, { timeout: 15000 });
 }
 
 test.describe('Smoke: Report deep link', () => {
-  test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
+  test.skip(!SERVICE_ROLE_TARGET.safe, SERVICE_ROLE_TARGET.safe ? '' : SERVICE_ROLE_TARGET.reason);
+
+  test.beforeAll(async () => {
+    if (!SERVICE_ROLE_TARGET.safe) return;
+    testUser = await createScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, 'review-granularity');
+  });
+
+  test.afterAll(async () => {
+    if (!testUser) return;
+    await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
+  });
 
   // TODO(#2181 Step 4): /report 本体（DOM assert）は Step 4 で実装する。
   // ここでは Step 2 の redirect 契約（旧 panel=review → /report?range=week）だけを固定する。
