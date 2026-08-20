@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 type CalendarDayDiffKind = 'unplanned' | 'missed' | 'shifted' | 'resized';
 
@@ -65,14 +65,14 @@ function minutesBetween(a: Date | null, b: Date | null): number {
   return Math.round((b.getTime() - a.getTime()) / 60_000);
 }
 
-function plannedRange(entry: CalendarEvent): { start: Date | null; end: Date | null } {
+function plannedRange(entry: CalendarDisplayEvent): { start: Date | null; end: Date | null } {
   return {
     start: entry.plannedStartDate ?? entry.startDate,
     end: entry.plannedEndDate ?? entry.endDate,
   };
 }
 
-function actualRange(entry: CalendarEvent): { start: Date | null; end: Date | null } {
+function actualRange(entry: CalendarDisplayEvent): { start: Date | null; end: Date | null } {
   if (entry.origin === 'unplanned') {
     return {
       start: entry.actualStartDate ?? entry.startDate,
@@ -111,10 +111,10 @@ function clipRange(
 }
 
 export function filterCalendarDayDiffEntries(
-  entries: readonly CalendarEvent[],
+  entries: readonly CalendarDisplayEvent[],
   bounds: CalendarDayDiffOptions,
   isEntryVisible: (activityId: string | null) => boolean,
-): CalendarEvent[] {
+): CalendarDisplayEvent[] {
   return entries.filter((entry) => {
     if (!isEntryVisible(entry.activityId ?? null)) return false;
 
@@ -126,7 +126,7 @@ export function filterCalendarDayDiffEntries(
 }
 
 function makeItem(
-  entry: CalendarEvent,
+  entry: CalendarDisplayEvent,
   kind: CalendarDayDiffKind,
   planned: { start: Date | null; end: Date | null },
   actual: { start: Date | null; end: Date | null },
@@ -156,7 +156,7 @@ function makeItem(
 }
 
 export function computeCalendarDayDiffs(
-  entries: readonly CalendarEvent[],
+  entries: readonly CalendarDisplayEvent[],
   options: CalendarDayDiffOptions | Date = {},
 ): CalendarDayDiffResult {
   if (entries.length === 0) return EMPTY_RESULT;

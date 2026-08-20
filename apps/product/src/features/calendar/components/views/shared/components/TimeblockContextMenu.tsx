@@ -6,20 +6,20 @@ import { useTranslations } from 'next-intl';
 
 import { getTimeblockMenuItems } from '@/features/timeblock';
 import { cn, overlaySurface } from '@dayopt/components';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 
 interface TimeblockContextMenuProps {
-  entry: CalendarEvent;
+  entry: CalendarDisplayEvent;
   position: { x: number; y: number };
   onClose: () => void;
-  onDelete?: ((entry: CalendarEvent) => void) | undefined;
-  onViewStats?: ((entry: CalendarEvent) => void) | undefined;
-  onCopy?: ((entry: CalendarEvent) => void) | undefined;
-  onDuplicate?: ((entry: CalendarEvent) => void) | undefined;
-  onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
-  onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
-  onSkip?: ((entry: CalendarEvent) => void) | undefined;
-  onUnskip?: ((entry: CalendarEvent) => void) | undefined;
+  onDelete?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onViewStats?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onCopy?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onDuplicate?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onMarkUnplanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onRestorePlanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onSkip?: ((entry: CalendarDisplayEvent) => void) | undefined;
+  onUnskip?: ((entry: CalendarDisplayEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */

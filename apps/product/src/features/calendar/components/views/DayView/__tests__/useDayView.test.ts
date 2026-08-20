@@ -6,10 +6,10 @@ vi.mock('@/lib/hooks/useUserPreferences', () => ({
     selector({ timezone: 'Asia/Tokyo' }),
 }));
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { useDayView } from '../hooks/useDayView';
 
-const createMockEntry = (overrides: Partial<CalendarEvent> = {}): CalendarEvent => ({
+const createMockEntry = (overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEvent => ({
   id: `entry-${Math.random().toString(36).slice(2)}`,
   title: 'Test Entry',
   startDate: new Date('2026-03-30T10:00:00'),

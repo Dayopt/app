@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
 import {
   buildNewTimeblockOverlapTarget,
@@ -11,8 +11,8 @@ import {
 } from '../overlap';
 
 function createEvent(
-  overrides: Partial<CalendarEvent> & { id: string; startDate: Date; endDate: Date },
-): CalendarEvent {
+  overrides: Partial<CalendarDisplayEvent> & { id: string; startDate: Date; endDate: Date },
+): CalendarDisplayEvent {
   return {
     title: 'Test',
     displayStartDate: overrides.startDate,
@@ -26,7 +26,7 @@ function createEvent(
     updatedAt: new Date(),
     origin: 'planned',
     ...overrides,
-  } as CalendarEvent;
+  } as CalendarDisplayEvent;
 }
 
 describe('buildNewTimeblockOverlapTarget', () => {

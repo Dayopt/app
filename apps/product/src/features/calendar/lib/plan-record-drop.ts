@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 interface PlanRecordDropRange {
   start: Date;
@@ -20,7 +20,7 @@ interface PlanRecordDropInput {
  * Plan 自身の予定時間は変更せず、drop 先の範囲を実績時間の source of truth とする。
  */
 export function buildPlanRecordDropInput(
-  plan: CalendarEvent,
+  plan: CalendarDisplayEvent,
   range: PlanRecordDropRange,
 ): PlanRecordDropInput {
   return {

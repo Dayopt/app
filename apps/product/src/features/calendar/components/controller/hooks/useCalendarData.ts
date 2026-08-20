@@ -24,7 +24,11 @@ import {
 import { applyTimezoneToDisplayDates } from '../../../lib/plan-data-adapter';
 import { expandRecordRowsToRecordEvents } from '../../../lib/record-event-adapter';
 
-import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
+import type {
+  CalendarDisplayEvent,
+  CalendarViewType,
+  ViewDateRange,
+} from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
 
 /** 表示範囲の行を先頭に保ったまま、関連取得で得た同一行を id 単位で統合する。 */
@@ -46,8 +50,8 @@ interface UseCalendarDataOptions {
 
 interface UseCalendarDataResult {
   viewDateRange: ViewDateRange;
-  filteredEvents: CalendarEvent[];
-  allCalendarEvents: CalendarEvent[];
+  filteredEvents: CalendarDisplayEvent[];
+  allCalendarEvents: CalendarDisplayEvent[];
   /**
    * 外部カレンダーの未変換予定（ghost）。読み取り専用で、タグフィルタの対象にしない
    * （外部予定にタグは無い）。取得に失敗しても空配列になるだけで、calendar 全体は落とさない。
@@ -358,7 +362,7 @@ export function useCalendarData({
   // 未分類(タグなし)フィルターの表示切替も同様にリアクティブ依存として渡す（#1576）
 
   // Step 8 の表示互換射影。既存のカードと DnD の段階的置換が完了するまで
-  // CalendarEvent は view model としてだけ維持し、データ取得は time model に固定する。
+  // CalendarDisplayEvent は view model としてだけ維持し、データ取得は time model に固定する。
   const allCalendarEvents = useMemo(() => {
     const visiblePlans = plansQuery.data ?? [];
     const visibleRecords = recordsQuery.data ?? [];

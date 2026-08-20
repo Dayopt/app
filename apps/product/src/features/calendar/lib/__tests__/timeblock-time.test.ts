@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 import { hasCalendarActualRangeDiff } from '../timeblock-time';
 
-function makeTimeblock(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+function makeTimeblock(overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEvent {
   const start = new Date('2026-06-10T08:00:00.000Z');
   const end = new Date('2026-06-10T09:00:00.000Z');
   return {
