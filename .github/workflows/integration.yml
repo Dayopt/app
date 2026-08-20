@@ -1,12 +1,14 @@
 name: Integration Tests
 
+# CI 4 層再設計（#2269）で per-PR（pull_request）トリガーを撤去し、
+# main push 後 + nightly の層 3 へ移した。旧 push:main 廃止（2026-08-03 実測で
+# PR 検証と同一 tree の再検証だったため）の判断は、per-PR 実行そのものが
+# 前提だった。前提が変わった（per-PR では走らせない）ため、push:main を
+# 「main 上で唯一の検証機会」として復活させる。paths は旧 pull_request.paths と
+# 同一を維持し、無関係な merge での実行を避ける。
 on:
-  pull_request:
+  push:
     branches: [main]
-    # ready_for_review を明示する（ci.yml と同じ根拠）。既定 types に含まれないため、
-    # これが無いと draft → ready の変換で再発火せず、draft 時の skipped が残ったまま
-    # merge できてしまう（.claude/rules/workflow.md §2 段階 CI）。
-    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.nvmrc'
       - 'package.json'
@@ -30,23 +32,18 @@ on:
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
-  # main への push では走らせない（ci.yml と同じ根拠）。branch:finish が
-  # 「branch が main 最新を含み、その状態で green」をマージ前に強制するため、
-  # マージ後の main は常に PR で検証済みの tree と一致する。旧 push トリガーは
-  # pull_request と同じ paths を持っていたので、走る時は必ず同一 tree の再検証
-  # だった（2026-08-03 実測: 3 日で 32 run のうち push 由来が 5 分 × 複数回）。
-  #
-  # workflow_dispatch に paths は書けない（inputs しか受け付けない）。手動実行は
+  schedule:
+    # 06:45 JST。production-config-audit（06:00）・replica-check（06:30）と
+    # 時間をずらし、同時実行の Supabase / 外部 API 呼び出し衝突を避ける。
+    - cron: '45 21 * * *'
+  # paths は workflow_dispatch には書けない（inputs しか受け付けない）。手動実行は
   # 常に全実行になる。
   workflow_dispatch:
 
-# ここに Supabase の Management API token を置かない。この workflow は `pull_request`
-# で発火し、`ref` 未指定の checkout（= PR の merge ref）の上で pnpm install の
-# postinstall と branch 側の test を実行するため、workflow レベル env に置いた secret は
-# PR の code へそのまま渡る。integration test は `supabase start` のローカル stack だけを
-# 使い、cloud へは触らないので token は不要（2026-08-11 に vestigial と確認して削除）。
-# production の Auth 設定を読む audit は production-config-audit.yml の auth-config job が
-# 担い、そちらは push:main と schedule でしか走らない。
+# ここに Supabase の Management API token を置かない。integration test は
+# `supabase start` のローカル stack だけを使い、cloud へは触らないので token は
+# 不要（2026-08-11 に vestigial と確認して削除）。production の Auth 設定を読む
+# audit は production-config-audit.yml の auth-config job が担う。
 
 concurrency:
   group: integration-${{ github.ref }}
@@ -58,12 +55,9 @@ permissions:
 jobs:
   integration:
     name: Integration Tests
-    # 重量層: draft の間は走らせない（2 段階 CI、ci.yml の e2e / web job と同じ扱い）。
-    # Supabase 起動込みで 1 run ≈ 4 課金分と単価が全 job 中最も高く、draft push の
-    # たびに走らせる必要はない。`draft != true` の形なのは workflow_dispatch では
-    # pull_request context が null になるためで、この形なら手動実行は常に走る。
-    # skipped のまま残る check は branch:finish の畳み込みが正しく扱う。
-    if: github.event.pull_request.draft != true
+    # pull_request トリガー撤去（層 3 化）に伴い draft 判定は不要になった。
+    # push:main / schedule / workflow_dispatch はいずれも pull_request context を
+    # 持たないため、job 自体は常に実行される。
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

@@ -5,6 +5,7 @@ date: 2026-08-11
 code:
   - docs/engineering/infra.md
   - .github/workflows/docs-guard.yml
+partially_superseded_2026_08_20_private-visibility: docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md
 ---
 
 # CodeQL を無効化し、private 化は保留する（#1934）
