@@ -116,6 +116,37 @@ describe('エラーコード分類（overview.md §2）', () => {
     expect(captureUnexpectedError).toHaveBeenCalled();
   });
 
+  // #2289: service role 検査失敗（assert_timeblock_service_role_request_v1）由来の
+  // 42501 は network blip と誤認して retry してはいけない。22023/54000 と同型で即時 definitive。
+  // ただし capture する Error message は 22023/54000（rejected input）と分ける — 42501 は
+  // per-call の入力バグではなく fleet 規模の認証・認可失敗のため、Sentry issue グルーピングを
+  // 別にして triage で区別できる必要がある（isDefinitiveFailure のコメント参照）。
+  it('42501（permission denied、service role 必須）は専用 message で Sentry capture して rejected_input を返す（retry しない）', async () => {
+    const rpc = mockRpc(() => ({
+      data: null,
+      error: { code: '42501', message: 'Access denied: service role required' },
+    }));
+
+    const result = await clearCalendarSyncCursor({
+      ...CAS,
+      expectedSyncSequence: 1,
+      calendarSelectionId: 'cal-1',
+      providerCalendarId: 'primary',
+      expectedSyncToken: 'token',
+    });
+
+    expect(result).toBe('rejected_input');
+    expect(captureUnexpectedError).toHaveBeenCalledTimes(1);
+    const [capturedError, context] = captureUnexpectedError.mock.calls[0]!;
+    expect(capturedError).toBeInstanceOf(Error);
+    expect((capturedError as Error).message).toBe(
+      'fenced calendar writer permission denied: clear_calendar_sync_cursor',
+    );
+    expect((capturedError as Error).message).not.toContain('rejected input');
+    expect(context).toEqual(expect.objectContaining({ errorCode: '42501' }));
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
   it('40P01（deadlock）は応答喪失と同じ扱いで retry し、最終的に成功すれば discriminant を返す', async () => {
     let attempt = 0;
     const rpc = mockRpc(() => {
@@ -149,6 +180,58 @@ describe('エラーコード分類（overview.md §2）', () => {
     expect(captureUnexpectedError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({ operation: 'finish_calendar_sync_run' }),
+    );
+  });
+
+  // #2289: reportUnresolved が最後に観測した RPC error を握りつぶしていたため、Sentry 側で
+  // DAYOPT-X の実トリガーが generic メッセージしか持たず原因究明できなかった。3 回とも
+  // 同じ code/message を観測した場合、その値が capture の context に乗ることを確認する。
+  it('retry を使い切って unresolved になる時、最後に観測した errorCode/errorMessage を capture する', async () => {
+    mockRpc(() => ({
+      data: null,
+      error: { code: '40P01', message: 'deadlock detected' },
+    }));
+
+    const result = await finishCalendarSyncRun({
+      ...CAS,
+      expectedSyncSequence: 1,
+      runStartedAt: '2026-08-20T00:00:00.000Z',
+      lastSyncError: null,
+    });
+
+    expect(result).toBe('unresolved');
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        operation: 'finish_calendar_sync_run',
+        errorCode: '40P01',
+        errorMessage: 'deadlock detected',
+      }),
+    );
+  });
+
+  // beginCalendarSyncRun は callTextRpc とは別の retry ループ実装を持つため、同じ診断情報
+  // 伝搬を独立に確認する（callTextRpc 側の実装が正しくても begin 側で漏れていた実バグの型）。
+  it('begin: retry を使い切って unresolved になる時、最後に観測した errorCode/errorMessage を capture する', async () => {
+    mockRpc(() => ({
+      data: null,
+      error: { code: '55P03', message: 'lock not available' },
+    }));
+
+    const result = await beginCalendarSyncRun({
+      connectionId: CAS.connectionId,
+      userId: CAS.userId,
+      projectKey: CAS.projectKey,
+    });
+
+    expect(result).toBe('unresolved');
+    expect(captureUnexpectedError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        operation: 'begin_calendar_sync_run',
+        errorCode: '55P03',
+        errorMessage: 'lock not available',
+      }),
     );
   });
 });

@@ -6,6 +6,7 @@ export interface TechnicalErrorContext {
   route?: string;
   requestId?: string;
   errorCode?: string;
+  errorMessage?: string;
   source?: string;
   component?: string;
   digest?: string;
@@ -41,6 +42,7 @@ const TECHNICAL_CONTEXT_KEYS = new Set([
   'environment',
   'errorboundary',
   'errorcode',
+  'errormessage',
   'errortype',
   'feature',
   'level',
@@ -340,6 +342,16 @@ function sanitizePrimitiveValue(value: unknown): string | number | boolean | und
   return undefined;
 }
 
+/**
+ * `sanitizeTechnicalContext` の結果は丸ごと `scope.setTags()` へ流れる（`integration.ts`
+ * の `captureUnexpectedError`）。Sentry tag value は 200 字上限・indexed のため、これを
+ * 超える文字列は SDK 側で黙って欠落・切り詰めされる。`errorMessage`（PostgREST/gateway の
+ * 生 error message 等、長さが予測できない自由文字列）はここで明示的に truncate し、
+ * 挙動を決定的にする。`componentStack` は tag 宛先ではなく `scope.setContext('react', ...)`
+ * へ別経路で渡るため対象外。
+ */
+const SENTRY_TAG_VALUE_MAX_LENGTH = 200;
+
 function sanitizeTechnicalValue(key: string, value: unknown): unknown {
   const normalized = normalizedKey(key);
   if (normalized === 'requestid' || normalized === 'digest') {
@@ -350,6 +362,10 @@ function sanitizeTechnicalValue(key: string, value: unknown): unknown {
   }
   if (normalized === 'componentstack') {
     return typeof value === 'string' ? sanitizeString(value) : undefined;
+  }
+  if (normalized === 'errormessage') {
+    if (typeof value !== 'string') return undefined;
+    return sanitizeString(value).slice(0, SENTRY_TAG_VALUE_MAX_LENGTH);
   }
   if (TECHNICAL_NUMBER_KEYS.has(normalized)) {
     return typeof value === 'number' && Number.isFinite(value) ? value : undefined;

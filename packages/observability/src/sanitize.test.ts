@@ -373,6 +373,63 @@ describe('sanitizeSentryEvent', () => {
     expect(result).toEqual({});
   });
 
+  // #2289: errorMessage carries free-text RPC/gateway error text (e.g. PostgREST
+  // messages). It goes through the same free-text sanitizer as componentStack
+  // (sanitizeString, not the identifier-only sanitizeTechnicalLabel), plus an
+  // explicit 200-char truncation because the sanitized result is later spread into
+  // Sentry tags (200-char, indexed) via `stringTags()` in `integration.ts`.
+  describe('errorMessage technical context (#2289)', () => {
+    it('redacts an email address embedded in errorMessage', () => {
+      const result = sanitizeTechnicalContext({
+        errorMessage: 'permission denied for user alice@example.com',
+      });
+
+      expect(result).toEqual({
+        errorMessage: 'permission denied for user [REDACTED_EMAIL]',
+      });
+    });
+
+    it('redacts a 32+ character token embedded in errorMessage', () => {
+      const token = 'a'.repeat(40);
+      const result = sanitizeTechnicalContext({
+        errorMessage: `session expired: ${token}`,
+      });
+
+      expect(result).toEqual({ errorMessage: 'session expired: [REDACTED_TOKEN]' });
+    });
+
+    it('strips the query string from a URL embedded in errorMessage', () => {
+      const result = sanitizeTechnicalContext({
+        errorMessage: 'fetch failed for https://app.dayopt.app/auth/callback?code=123456',
+      });
+
+      expect(result).toEqual({
+        errorMessage: 'fetch failed for https://app.dayopt.app/auth/callback',
+      });
+    });
+
+    it('redacts a labeled secret value embedded in errorMessage', () => {
+      const result = sanitizeTechnicalContext({
+        errorMessage: 'request failed api_key=short-api-key',
+      });
+
+      expect(result).toEqual({ errorMessage: 'request failed api_key=[REDACTED]' });
+      expect(JSON.stringify(result)).not.toContain('short-api-key');
+    });
+
+    it('truncates a sanitized errorMessage to the 200-char Sentry tag value limit', () => {
+      // no email / token / URL / labeled-secret substrings, so sanitizeString is a
+      // no-op here — isolates the truncation behavior from redaction behavior.
+      const longMessage = `Access denied: ${'service role required. '.repeat(20)}`;
+      expect(longMessage.length).toBeGreaterThan(200);
+
+      const result = sanitizeTechnicalContext({ errorMessage: longMessage });
+
+      expect(result.errorMessage).toHaveLength(200);
+      expect(result.errorMessage).toBe(longMessage.slice(0, 200));
+    });
+  });
+
   it('drops malformed object leaves from headers, tags, contexts, and breadcrumbs', () => {
     const traceId = 'a'.repeat(32);
     const result = sanitizeSentryEvent({
