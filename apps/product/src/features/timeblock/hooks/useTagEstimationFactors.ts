@@ -6,6 +6,11 @@
  * 係数は**activity 単位で draft の長さに依存しない**ので、query は 1 回だけ引いて
  * 掛け算は client の pure 関数（`projectActualMinutes`）で行う。draft の時間を
  * 動かすたびに query を撃つ必要は無く、debounce も要らない。
+ *
+ * hook 名・ファイル名（`tag-estimation-factor.ts`）は tRPC procedure 名
+ * （`statistics.getTagEstimationFactors`、破壊的公開契約変更を避けるため維持）
+ * との対応を保つため据え置いている。中身は activity 軸の集計
+ * （`docs/projects/tag-model-replacement/step-5-7-completion.md` §4-2）。
  */
 
 import { useMemo } from 'react';

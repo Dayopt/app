@@ -483,7 +483,6 @@ shape の話ではなく後続 plan で扱う:
 
 - `src/lib/trpc/errors.ts:16-119` — `ServiceError` 階層と code enum
 - `src/features/timeblock/server/types.ts` — `ListEntriesOptions`, `CreateEntryOptions`, `UpdateEntryOptions`, `DeleteEntryOptions`, `GetEntryByIdOptions`, `EntryWithTags`, `EntryRow`, `UpdateEntryResult`
-- `src/features/tags/server/tag-service.ts:48-` — `CreateTagInput`, `UpdateTagInput`, `ListTagsOptions`, `MergeTagsOptions`, `MergeTagsResult`, `ReorderTagUpdate`, `TagStatsRow`
 - `src/features/auth/server/user-service.ts` — `DeleteAccountOptions`, `DeleteAccountResult`, `ExportDataOptions`, `ExportDataResult`
 - `src/features/settings/server/billing-service.ts:18-` — `BillingInfo`, `PaymentMethod`, `InvoiceItem`, `BillingOverview`, `SubscriptionStatus`
 - `src/features/contact/server/contact-service.ts` — `CreateIssueParams`, `CreateIssueResult`, `ContactFormInput`
