@@ -140,6 +140,6 @@ ADR-026 は「Plan 側の `tag_id` で束ねる」という非対称ルール（
 
 - [overview.md](./overview.md) — Step 5/7 の元設計
 - [#2247](https://github.com/Dayopt/dayopt/issues/2247) / [#2218](https://github.com/Dayopt/dayopt/issues/2218) — 本 plan の対象 issue
-- [workspace-shell-restructure/overview.md §6-5](../workspace-shell-restructure/overview.md) — Review パネルのタグ絞り込み `Select` 廃止の確定済み設計（§3-A の隣接根拠。タグ詳細ダッシュボード自体の根拠は `TagDetailPage` 削除済み + 呼び出し元ゼロの実測）
+- [workspace-shell-restructure/overview.md §6-5](../_archive/workspace-shell-restructure/overview.md) — Review パネルのタグ絞り込み `Select` 廃止の確定済み設計（§3-A の隣接根拠。タグ詳細ダッシュボード自体の根拠は `TagDetailPage` 削除済み + 呼び出し元ゼロの実測）
 - [#2175](https://github.com/Dayopt/dayopt/issues/2175) — DB destructive migration（本 plan のスコープ外）
 - [PR #2202](https://github.com/Dayopt/dayopt/pull/2202) — Step 4 cutover 本番反映（2026-08-18 merge、§4-2 の起点）
