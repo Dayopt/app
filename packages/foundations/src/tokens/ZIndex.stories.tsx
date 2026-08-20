@@ -69,9 +69,14 @@ const zIndexLayers = [
     name: 'inspector-backdrop',
     value: 1050,
     tailwind: 'z-inspector-backdrop',
-    description: 'ドラッグ可能Inspector背景',
+    description: '現在未使用。将来フローティング化するUI向けの予約枠',
   },
-  { name: 'inspector', value: 1100, tailwind: 'z-inspector', description: 'ドラッグ可能Inspector' },
+  {
+    name: 'inspector',
+    value: 1100,
+    tailwind: 'z-inspector',
+    description: '現在未使用。将来フローティング化するUI向けの予約枠',
+  },
   {
     name: 'overlay-modal',
     value: 1200,
