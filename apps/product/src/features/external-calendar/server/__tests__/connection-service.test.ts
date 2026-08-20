@@ -873,7 +873,12 @@ describe('disconnect', () => {
 describe('revokeOrphanedGrant', () => {
   const PROVIDER_ACCOUNT_ID = 'google-sub-orphan';
 
-  function setupExistenceCheck(existingRows: Array<{ id: string }>): {
+  /**
+   * `status` の絞り込みを実クエリと同様に mock 内で適用する（#2280 回帰テストのため）。
+   * `.eq('status', 'active')` を実際にクエリへ含めているかどうかで結果が変わるので、
+   * 呼び出し側の実装が全 status を対象にしてしまう回帰を検出できる。
+   */
+  function setupExistenceCheck(existingRows: Array<{ id: string; status: string }>): {
     eqCalls: Array<[string, unknown]>;
   } {
     const eqCalls: Array<[string, unknown]> = [];
@@ -883,8 +888,17 @@ describe('revokeOrphanedGrant', () => {
         {
           get(_t, prop: string) {
             if (prop === 'then') {
-              return (onF: (v: { data: unknown; error: unknown }) => unknown) =>
-                Promise.resolve({ data: existingRows, error: null }).then(onF);
+              return (onF: (v: { data: unknown; error: unknown }) => unknown) => {
+                const statusFilter = eqCalls.find(([column]) => column === 'status')?.[1];
+                const filtered =
+                  statusFilter === undefined
+                    ? existingRows
+                    : existingRows.filter((row) => row.status === statusFilter);
+                return Promise.resolve({
+                  data: filtered.map(({ id }) => ({ id })),
+                  error: null,
+                }).then(onF);
+              };
             }
             return (...args: unknown[]) => {
               if (prop === 'eq') eqCalls.push(args as [string, unknown]);
@@ -899,8 +913,10 @@ describe('revokeOrphanedGrant', () => {
     return { eqCalls };
   }
 
-  it('同一 provider_account_id の既存接続があれば revoke しない（user_id は問わない）', async () => {
-    const { eqCalls } = setupExistenceCheck([{ id: '00000000-0000-4000-8000-0000000000c9' }]);
+  it('同一 provider_account_id の active 接続があれば revoke しない（user_id は問わない）', async () => {
+    const { eqCalls } = setupExistenceCheck([
+      { id: '00000000-0000-4000-8000-0000000000c9', status: 'active' },
+    ]);
 
     await revokeOrphanedGrant({
       providerAccountId: PROVIDER_ACCOUNT_ID,
@@ -909,10 +925,11 @@ describe('revokeOrphanedGrant', () => {
     });
 
     expect(revoke).not.toHaveBeenCalled();
-    // user_id を条件に含めない（別ユーザーの接続も「使用中」とみなす）。
+    // user_id を条件に含めない（別ユーザーの接続も「使用中」とみなす）。status は active に限定する。
     expect(eqCalls).toEqual([
       ['provider', 'google'],
       ['provider_account_id', PROVIDER_ACCOUNT_ID],
+      ['status', 'active'],
     ]);
   });
 
@@ -926,6 +943,23 @@ describe('revokeOrphanedGrant', () => {
     });
 
     expect(revoke).toHaveBeenCalledWith('refresh-token');
+  });
+
+  it('#2280 回帰: reconnect 対象自身の reauth_required 行しか無くても revoke する（account 単位ではなく active 限定の判定）', async () => {
+    // 旧実装（status を問わない存在確認）では、reconnect 対象自身の reauth_required 行が
+    // 「接続あり」と誤判定させ revoke を skip していた（#2280 の根本原因）。この行の token は
+    // 既に provider 側で死んでいる前提なので、revoke 判定の対象から除外してよい。
+    setupExistenceCheck([
+      { id: '00000000-0000-4000-8000-0000000000c9', status: 'reauth_required' },
+    ]);
+
+    await revokeOrphanedGrant({
+      providerAccountId: PROVIDER_ACCOUNT_ID,
+      refreshToken: 'newly-issued-refresh-token',
+      deadlineAt: Date.now() + 60_000,
+    });
+
+    expect(revoke).toHaveBeenCalledWith('newly-issued-refresh-token');
   });
 
   it('残予算が不足していれば存在確認も revoke も行わない', async () => {
