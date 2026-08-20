@@ -1,8 +1,22 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+// #2271。oauth_connections は service_role にも INSERT/DELETE の GRANT が無く
+// （SECURITY DEFINER RPC 経由でしか書けない設計）、adminSupabase（PostgREST 経由）では
+// fixture を seed/cleanup できない。mcp-stage1-writer-fence.integration.test.ts と同じ
+// psql 直接実行パターンで postgres role（GRANT の外）から挿入・削除する。
+const RAW_DATABASE_URL =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+function runRawSql(sql: string): string {
+  return execFileSync('psql', [RAW_DATABASE_URL, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'], {
+    encoding: 'utf8',
+    input: sql,
+  }).trim();
+}
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SUPABASE_URL =
@@ -963,6 +977,231 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
 
       expect(error).toBeNull();
       expect(data).toEqual([]);
+    });
+  });
+
+  // #2271。oauth_connections は authenticated に SELECT のみ GRANT（write は無 GRANT、
+  // service_role にも INSERT/DELETE 権限が無い設計 — 本文書き込みは SECURITY DEFINER RPC
+  // 経由のみ）。userOwnedCases の共通ブロックには乗らないため独立させ、fixture は
+  // runRawSql（postgres role、GRANT の外）で seed/cleanup する。
+  describe('oauth_connections column grants', () => {
+    const OAUTH_CONNECTION_ID = crypto.randomUUID();
+    // resource_uri は mcp_environment_identity への FK。ハードコードすると migration 側の
+    // seed 値が変わった時に静かにズレるため、実際に seed 済みの値を都度問い合わせる。
+    let environmentResourceUri = '';
+
+    beforeAll(() => {
+      environmentResourceUri = runRawSql(
+        'SELECT resource_uri FROM public.mcp_environment_identity LIMIT 1;',
+      );
+      if (!environmentResourceUri) {
+        throw new Error('mcp_environment_identity has no seeded resource_uri to reference');
+      }
+      runRawSql(`
+        INSERT INTO public.oauth_connections
+          (id, user_id, client_id, resource_uri, scopes)
+        VALUES
+          ('${OAUTH_CONNECTION_ID}', '${TEST_USER_B_ID}', 'unknown', '${environmentResourceUri}', ARRAY['read:entries']);
+      `);
+    });
+
+    afterAll(() => {
+      runRawSql(`DELETE FROM public.oauth_connections WHERE id = '${OAUTH_CONNECTION_ID}';`);
+    });
+
+    it('ownerは自分のconnectionをselectできる', async () => {
+      const { data, error } = await supabaseB
+        .from('oauth_connections')
+        .select('id, client_id')
+        .eq('id', OAUTH_CONNECTION_ID);
+
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+    });
+
+    it('他ユーザーの接続はRLSで0件になる', async () => {
+      const { data, error } = await supabaseA
+        .from('oauth_connections')
+        .select('id')
+        .eq('id', OAUTH_CONNECTION_ID);
+
+      expect(error).toBeNull();
+      expect(data).toEqual([]);
+    });
+
+    it.each(['insert', 'update', 'delete'] as const)(
+      'ownerでもauthenticatedの%sはwrite grantが無いため常に42501',
+      async (operation) => {
+        let query = supabaseB.from('oauth_connections').select();
+        if (operation === 'insert') {
+          query = supabaseB.from('oauth_connections').insert({
+            user_id: TEST_USER_B_ID,
+            client_id: 'unknown',
+            resource_uri: 'https://example.com/mcp',
+            scopes: ['read:entries'],
+          });
+        } else if (operation === 'update') {
+          query = supabaseB
+            .from('oauth_connections')
+            .update({ legacy_read_only: true })
+            .eq('id', OAUTH_CONNECTION_ID);
+        } else if (operation === 'delete') {
+          query = supabaseB.from('oauth_connections').delete().eq('id', OAUTH_CONNECTION_ID);
+        }
+
+        const { error } = await query;
+        expect(error?.code).toBe('42501');
+      },
+    );
+  });
+
+  // #2271。segments / activities の junction table。roles={public} かつ UPDATE grant が無い
+  // ため、userOwnedCases の共通ブロック（select/update/delete の3操作前提）には当てはまらず
+  // 独立させる。segment_id / activity_id は userOwnedCases で既に seed 済みの行を再利用する
+  // （複合 FK が (segment_id, user_id) / (activity_id, user_id) の一致を要求するため）。
+  describe('segment_activities cross-user isolation', () => {
+    const segmentCase = userOwnedCases.find((c) => c.table === 'segments');
+    const activityCase = userOwnedCases.find((c) => c.table === 'activities');
+    if (!segmentCase || !activityCase) {
+      throw new Error('segment_activities RLS fixture requires segments/activities cases');
+    }
+
+    afterAll(async () => {
+      await adminSupabase
+        .from('segment_activities')
+        .delete()
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+    });
+
+    it('ownerは自分のsegment/activityの組をinsert・select・deleteできる', async () => {
+      const { error: insertError } = await supabaseB.from('segment_activities').insert({
+        segment_id: segmentCase.rowId,
+        activity_id: activityCase.rowId,
+        user_id: TEST_USER_B_ID,
+      });
+      expect(insertError).toBeNull();
+
+      const { data, error: selectError } = await supabaseB
+        .from('segment_activities')
+        .select('segment_id, activity_id')
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+      expect(selectError).toBeNull();
+      expect(data).toHaveLength(1);
+
+      const { error: deleteError } = await supabaseB
+        .from('segment_activities')
+        .delete()
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+      expect(deleteError).toBeNull();
+
+      // 以降のテストのため service-role で再挿入する
+      const { error: reinsertError } = await adminSupabase.from('segment_activities').insert({
+        segment_id: segmentCase.rowId,
+        activity_id: activityCase.rowId,
+        user_id: TEST_USER_B_ID,
+      });
+      expect(reinsertError).toBeNull();
+    });
+
+    it('他ユーザーはRLSで0件になり、insert/deleteも通らない', async () => {
+      const { data, error: selectError } = await supabaseA
+        .from('segment_activities')
+        .select('segment_id')
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+      expect(selectError).toBeNull();
+      expect(data).toEqual([]);
+
+      const { error: deleteError } = await supabaseA
+        .from('segment_activities')
+        .delete()
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId)
+        .select();
+      expect(deleteError).toBeNull();
+
+      const { data: stillThere } = await adminSupabase
+        .from('segment_activities')
+        .select('segment_id')
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+      expect(stillThere).toHaveLength(1);
+    });
+
+    it('他ユーザーの所有物へのinsertは複合FKで拒否される', async () => {
+      // (segment_id, activity_id) は前の it で既に owner 分が存在するため、PK 衝突（23505）
+      // ではなく FK 違反（23503）を確実に見るために activity_id は未使用の新規 UUID を使う。
+      // 「B の segment に、存在しない activity をぶら下げる」形で複合 FK
+      // (segment_id, user_id) -> segments(id, user_id) を検証する。
+      const { error } = await supabaseA.from('segment_activities').insert({
+        segment_id: segmentCase.rowId, // user B の segment
+        activity_id: crypto.randomUUID(), // どのユーザーの activity にも存在しない
+        user_id: TEST_USER_A_ID,
+      });
+      expect(error?.code).toBe('23503');
+    });
+
+    it('authenticatedのupdateはUPDATE grantが無いため常に42501', async () => {
+      const { error } = await supabaseB
+        .from('segment_activities')
+        .update({ user_id: TEST_USER_B_ID })
+        .eq('segment_id', segmentCase.rowId)
+        .eq('activity_id', activityCase.rowId);
+      expect(error?.code).toBe('42501');
+    });
+  });
+
+  // #2271。singleton の global lock 状態。user_id を持たず authenticated 全員に SELECT true
+  // （個人データではなく MCP write の全体停止スイッチ）。write grant は無いため常に拒否される。
+  describe('write_fence_control global read, no write', () => {
+    it('authenticatedはグローバル状態をselectできる', async () => {
+      const { data, error } = await supabaseA
+        .from('write_fence_control')
+        .select('singleton_key, fence_enabled');
+
+      expect(error).toBeNull();
+      expect(data?.length).toBeGreaterThan(0);
+    });
+
+    it.each(['insert', 'update', 'delete'] as const)(
+      'authenticatedの%sはwrite grantが無いため常に42501',
+      async (operation) => {
+        let query = supabaseA.from('write_fence_control').select();
+        if (operation === 'insert') {
+          query = supabaseA
+            .from('write_fence_control')
+            .insert({ singleton_key: true, fence_enabled: true });
+        } else if (operation === 'update') {
+          query = supabaseA
+            .from('write_fence_control')
+            .update({ fence_enabled: true })
+            .eq('singleton_key', true);
+        } else if (operation === 'delete') {
+          query = supabaseA.from('write_fence_control').delete().eq('singleton_key', true);
+        }
+
+        const { error } = await query;
+        expect(error?.code).toBe('42501');
+      },
+    );
+  });
+
+  // #2271。anon/authenticated への GRANT が存在しないため RLS policy の有無に関わらず
+  // GRANT 層で 42501 になるテーブル群（PostgREST 到達性そのものの回帰テスト。RLS/GRANT の
+  // どちらが原因でも browser client からは同じ 42501 に見えるが、これらは静的な
+  // rls-snapshot.md の記述だけでなく e2e でも遮断を実証する）。
+  describe('service-role-only tables reject anon/authenticated at the grant layer', () => {
+    it.each([
+      'mcp_environment_identity',
+      'mcp_mutation_control',
+      'mcp_mutation_receipts',
+      'product_events',
+    ] as const)('%s はauthenticatedのselectを42501で拒否する', async (table) => {
+      const { error } = await supabaseA.from(table).select('*').limit(1);
+      expect(error?.code).toBe('42501');
     });
   });
 

@@ -458,6 +458,22 @@ describe('google calendar callback route', () => {
     expect(location.searchParams.get('calendar')).toBe('connected');
   });
 
+  // #2156(a): saveConnection の throw（token 交換済み・idToken parse 済みの後）は
+  // outer catch でしか拾えない。ここで orphan grant の revoke が漏れていた。
+  it('saveConnection が DB 障害で throw したら孤立 grant を revoke し connection_failed を返す', async () => {
+    saveConnection.mockRejectedValueOnce(new Error('db unavailable'));
+
+    const response = await GET(withCookie(request()));
+
+    expect(reasonOf(response)).toBe('connection_failed');
+    expect(revokeOrphanedGrant).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerAccountId: 'google-sub-123',
+        refreshToken: 'refresh-token',
+      }),
+    );
+  });
+
   it('scope の連続スペースで空文字が混ざらない', async () => {
     vi.stubGlobal(
       'fetch',

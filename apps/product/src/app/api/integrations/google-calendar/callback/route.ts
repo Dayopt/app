@@ -240,6 +240,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return fail('unsupported_environment');
   }
 
+  // #2156(a): saveConnection / reconnectExistingConnection の throw は下の outer catch
+  // でしか拾えない。token 交換済み・idToken parse 済みになった時点でこれを埋め、outer
+  // catch は非 undefined なら best-effort で revoke する。try block 内の `const` は
+  // catch から参照できないため、hoist して埋める（overview.md §5）。
+  let orphanRevokeCandidate: { providerAccountId: string; refreshToken: string } | undefined;
+
   try {
     // code を消費する（= token 交換を呼ぶ）前に、消費後の DB 書き込みを完走できる見込みが
     // あるかを検査する（#1990）。ここで諦めれば code は未消費のまま残るので、ユーザーは
@@ -289,6 +295,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const idToken = parseIdToken(tokens.id_token);
+    orphanRevokeCandidate = { providerAccountId: idToken.sub, refreshToken: tokens.refresh_token };
 
     const connectionInput = {
       userId: user.id,
@@ -336,6 +343,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       await saveConnection(connectionInput);
     }
   } catch (error) {
+    // #2156(a): saveConnection / reconnectExistingConnection の throw（DB 障害等）は
+    // ここでしか拾えない。token 交換自体が失敗した早期エラー（GoogleOAuthError）では
+    // orphanRevokeCandidate は未設定のまま（idToken parse 前）なので自然に skip される。
+    if (orphanRevokeCandidate) {
+      await revokeOrphanedGrant({
+        providerAccountId: orphanRevokeCandidate.providerAccountId,
+        refreshToken: orphanRevokeCandidate.refreshToken,
+        deadlineAt,
+      });
+    }
+
     if (error instanceof GoogleOAuthError) {
       logger.warn('[calendar-callback] google oauth exchange failed');
 
