@@ -92,13 +92,6 @@ export interface StatsPageData {
     scheduledMinutes: number;
     blankRate: number;
   };
-  timeByTag: Array<{
-    tagId: string | null;
-    name: string | null;
-    color: string | null;
-    hours: number;
-    isUncategorized: boolean;
-  }>;
   hourly: Array<{
     hour: number;
     totalMinutes: number;

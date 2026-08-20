@@ -24,7 +24,6 @@ const MOCK_PAGE_DATA: StatsPageData = {
   },
   contextSwitches: { totalSwitches: 35, avgPerDay: 5.0 },
   blankRate: { availableMinutes: 4800, scheduledMinutes: 2295, blankRate: 0.52 },
-  timeByTag: [],
   hourly: [],
   dow: [],
   energyMap: [

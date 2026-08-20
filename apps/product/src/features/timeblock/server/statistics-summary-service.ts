@@ -20,11 +20,7 @@ import {
 } from './statistics-fetchers';
 import type { BlankRateInput, StatisticsKpiService } from './statistics-kpi-service';
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
-import {
-  buildOverviewSection,
-  buildTimeByTagRows,
-  filterRowsByVisibleDateKeys,
-} from './statistics-row-builders';
+import { buildOverviewSection, filterRowsByVisibleDateKeys } from './statistics-row-builders';
 import {
   computeAvailableMinutesInclusive,
   computeBlankRate,
@@ -37,7 +33,6 @@ import {
   minutesBetween,
 } from './statistics-service-grouping';
 import type { StatsPageData, TimePLResponse } from './statistics-shared';
-import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 import type { ServiceSupabaseClient } from './types';
 
 export interface TimePLInput {
@@ -294,7 +289,6 @@ export class StatisticsSummaryService {
       visibleDayCount: visibleDateKeys?.length,
     });
 
-    const timeByTag = transformTimeByTagResponse(buildTimeByTagRows(records, tagsById));
     // NOTE: get_stats_page_data の hourly/dow は 24h/7dow の raw bucket をそのまま返す
     // （getHourlyDistribution/getDayOfWeekDistribution procedure が行う 2h slot 集約や
     // 曜日ラベル変換は適用しない。RPC 契約どおり）。
@@ -333,7 +327,6 @@ export class StatisticsSummaryService {
         scheduledMinutes: fullBlankRate.scheduledMinutes,
         blankRate: fullBlankRate.blankRate,
       },
-      timeByTag,
       hourly,
       dow,
       energyMap,

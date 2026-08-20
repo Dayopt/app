@@ -15,7 +15,6 @@ import 'server-only';
  * - General（タグ別統計・時間帯分布・トレンド）: statistics-general-service.ts
  * - KPI（見積もり精度・空白率）: statistics-kpi-service.ts
  * - Summary（streak / KPI サマリー / Time P/L / Review panel 統合データ）: statistics-summary-service.ts
- * - タグ詳細ダッシュボード: statistics-tag-dashboard-service.ts
  * - 行取得: statistics-fetchers.ts / 行組み立て: statistics-row-builders.ts
  */
 
@@ -30,8 +29,6 @@ import type {
   TimePLInput,
 } from './statistics-summary-service';
 import { StatisticsSummaryService } from './statistics-summary-service';
-import type { TagDashboardInput } from './statistics-tag-dashboard-service';
-import { StatisticsTagDashboardService } from './statistics-tag-dashboard-service';
 import type { ServiceSupabaseClient } from './types';
 
 export class StatisticsService {
@@ -39,14 +36,12 @@ export class StatisticsService {
   private readonly generalService: StatisticsGeneralService;
   private readonly kpiService: StatisticsKpiService;
   private readonly summaryService: StatisticsSummaryService;
-  private readonly tagDashboardService: StatisticsTagDashboardService;
 
   constructor(supabase: ServiceSupabaseClient) {
     this.feedforwardService = new StatisticsFeedforwardService(supabase);
     this.generalService = new StatisticsGeneralService(supabase);
     this.kpiService = new StatisticsKpiService(supabase);
     this.summaryService = new StatisticsSummaryService(supabase, this.kpiService);
-    this.tagDashboardService = new StatisticsTagDashboardService(supabase);
   }
 
   // ---------------------------------------------------------------------------
@@ -61,11 +56,6 @@ export class StatisticsService {
   /** `getTagStats` のアクティビティ版。戻り値の形は同一でキーが activityId。 */
   async getActivityStats(userId: string) {
     return this.generalService.getActivityStats(userId);
-  }
-
-  /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */
-  async getTimeByTag(userId: string, range: DateRangeInput = {}) {
-    return this.generalService.getTimeByTag(userId, range);
   }
 
   /** `get_daily_hours` 相当。指定年の日別実績時間（ヒートマップ用）。 */
@@ -140,13 +130,5 @@ export class StatisticsService {
   /** セグメント別の予実合計 + 直前期間との比較（#2181 Step 5）。 */
   async getSegmentTotals(userId: string, input: SegmentTotalsInput) {
     return this.summaryService.getSegmentTotals(userId, input);
-  }
-
-  // ---------------------------------------------------------------------------
-  // タグ詳細ダッシュボード（旧 `tagStatisticsRouter.getTagDashboard`）
-  // ---------------------------------------------------------------------------
-
-  async getTagDashboard(userId: string, input: TagDashboardInput) {
-    return this.tagDashboardService.getTagDashboard(userId, input);
   }
 }
