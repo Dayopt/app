@@ -17,12 +17,8 @@ describe('review analytics router', () => {
     trackReviewOpened.mockResolvedValue(undefined);
   });
 
-  it('rejects unauthenticated calls', async () => {
-    await expect(
-      createCaller(createMockContext({ userId: undefined })).trackOpened(),
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
-
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert は重複だったため削除した。
   it('uses the authenticated context user without client input', async () => {
     const caller = createCaller(createMockContext({ userId: 'user-1' }));
 

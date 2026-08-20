@@ -59,18 +59,8 @@ describe('timeblock command routers', () => {
     );
   });
 
-  it('未認証ではcommandを呼ばない', async () => {
-    const caller = createPlanCaller(createMockContext());
-
-    await expect(
-      caller.create({
-        title: 'Plan',
-        start_at: '2026-07-30T01:00:00.000Z',
-        end_at: '2026-07-30T02:00:00.000Z',
-      }),
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-    expect(methods.createPlan).not.toHaveBeenCalled();
-  });
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert（planCommands.create）は重複だったため削除した。
 
   it('versioned Plan inputを必須にし、session userをserviceへbindする', async () => {
     await expect(

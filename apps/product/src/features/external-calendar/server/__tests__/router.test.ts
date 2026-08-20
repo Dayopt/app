@@ -74,10 +74,8 @@ describe('externalCalendarRouter — 認可', () => {
     });
   });
 
-  it('未認証（userId なし）は listConnections で弾かれる', async () => {
-    const unauth = createCaller(createMockContext({}));
-    await expect(unauth.listConnections()).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert は重複だったため削除した。
 });
 
 describe('externalCalendarRouter — listProviderCalendars', () => {
@@ -233,10 +231,8 @@ describe('externalCalendarRouter — listEvents', () => {
     expect(listGhostEvents).not.toHaveBeenCalled();
   });
 
-  it('未認証は弾かれる', async () => {
-    const unauth = createCaller(createMockContext({}));
-    await expect(unauth.listEvents(RANGE)).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-  });
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert は重複だったため削除した。
 
   it.each([
     ['終了が開始より前', { startDate: RANGE.endDate, endDate: RANGE.startDate }],
@@ -287,12 +283,8 @@ describe('externalCalendarRouter — dismissEvent', () => {
     expect(setEventDismissed).not.toHaveBeenCalled();
   });
 
-  it('未認証は弾かれる', async () => {
-    const unauth = createCaller(createMockContext({}));
-    await expect(unauth.dismissEvent({ eventId: EVENT_ID, dismissed: true })).rejects.toMatchObject(
-      { code: 'UNAUTHORIZED' },
-    );
-  });
+  // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
+  // 機械検証する（#2187 E-3）。ここでの個別 assert は重複だったため削除した。
 
   it('eventId が uuid でなければ BAD_REQUEST', async () => {
     await expect(
