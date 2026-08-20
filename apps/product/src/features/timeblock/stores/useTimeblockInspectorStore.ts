@@ -11,19 +11,6 @@ import type { TimeblockDuplicateDraft } from '../lib/timeblock-duplicate';
  */
 
 /**
- * Inspector のアンカー位置。DockedInspectorPanel（右サイドパネル）は使わず、
- * 書き手（TwoLaneTimeblockRenderer 等）だけが残る（#2242 で撤去検討）。
- */
-interface AnchorRect {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-/**
  * Timeblock Inspector Store の状態
  */
 interface TimeblockInspectorState {
@@ -33,8 +20,6 @@ interface TimeblockInspectorState {
   timeblockId: string | null;
   /** 対象が plan / record のどちらか */
   timeblockKind: TimeblockDestination;
-  /** Inspector のアンカー位置（クリックされたブロックの位置） */
-  anchorRect: AnchorRect | null;
   /** 複製時だけ保持する独立新規ブロックの下書き。 */
   duplicateDraft: TimeblockDuplicateDraft | null;
 }
@@ -51,8 +36,6 @@ interface TimeblockInspectorActions {
   cancelDuplicate: () => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
-  /** アンカー位置を設定 */
-  setAnchorRect: (rect: AnchorRect) => void;
 }
 
 /**
@@ -67,10 +50,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
       isOpen: false,
       timeblockId: null,
       timeblockKind: 'plan',
-      anchorRect: null,
       duplicateDraft: null,
-
-      setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
 
       openInspector: (timeblockId, kind = 'plan') =>
         set(
@@ -108,7 +88,6 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             isOpen: false,
             timeblockId: null,
             timeblockKind: 'plan',
-            anchorRect: null,
             duplicateDraft: null,
           },
           false,

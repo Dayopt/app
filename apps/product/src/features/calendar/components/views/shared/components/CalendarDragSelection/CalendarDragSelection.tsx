@@ -85,6 +85,7 @@ export const CalendarDragSelection = ({
           formatTime={formatTime}
           isOverlapping={isOverlapping}
           hourHeight={hourHeight}
+          allDayEvents={plans}
         />
       )}
     </CalendarDropZone>
