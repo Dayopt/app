@@ -47,10 +47,12 @@ export function SidebarSection({
         onClick={collapsible ? onToggleCollapse : undefined}
       >
         {/* 見出しテキスト + chevron を 1 つの hover 領域として囲う（#2249）。
+            flex-1 は付けない（残り幅は後続の spacer が吸収する既存の分担）。
+            付けるとタイトルの短さに関係なく行の半分近くまで hover 領域が伸びる。
             右側の action スロットは別のクリック対象なのでこのグループには含めない。 */}
         <div
           className={cn(
-            'flex min-w-0 flex-1 items-center gap-1 rounded-lg px-2 py-1',
+            'flex min-w-0 items-center gap-1 rounded-lg px-2 py-1',
             collapsible && 'hover:bg-state-hover',
           )}
         >
