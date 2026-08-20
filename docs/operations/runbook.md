@@ -219,7 +219,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://app.dayopt.app/api/health
 promote は行われていないので、**Production domain は現行 SHA のまま無傷**。緊急操作は不要。
 
 - [ ] run summary のエラーを確認し、原因に応じてケースA / B を実施
-- [ ] 修正を main へ merge すると、新しい SHA で release gate が再実行される
+- [ ] 修正を main へ merge しても release gate は自動で再実行されない（`release.yml` は `workflow_dispatch` のみ、2026-08-20 #2268）。修正後に `gh workflow run release.yml` を手動で dispatch する
 - [ ] 同じ SHA を再試行するだけなら `gh workflow run release.yml -f sha=<SHA>` - `sha` は main に merge 済みの commit だけを受け付ける - `--ref` は付けない。付けるとその ref の script が Production 権限で動く
 - [ ] smoke が Deployment Protection で止まった場合は、対象 project の Protection Bypass for Automation と repository secret（`VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）を確認する
 
@@ -278,7 +278,7 @@ promote 済みの deployment に問題があった場合だけ使う。
 
 Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。
 
-通常のProduction公開は `main` merge → `Production Release` workflow の promote だけを使う。
+通常のProduction公開は `main` merge → `gh workflow run release.yml` の手動 dispatch → `Production Release` workflow の promote だけを使う。
 `Instant Rollback` / `Promote to Production` は正常な既存deploymentへ戻す緊急操作で、新規buildの作成経路ではない。
 
 #### ケースD: Force Promote（break-glass）
@@ -609,7 +609,26 @@ ORDER BY created_at DESC;
   git pull origin main
   ```
 
-### 1.2 Gitタグの作成とプッシュ
+### 1.2 Production promote を手動 dispatch し、完了を待つ
+
+main merge は `release.yml` を自動起動しない（`workflow_dispatch` のみ、2026-08-20 #2268）。タグを打つ前にここで明示的に dispatch し、promote の成功を確認する。
+
+- [ ] **`Production Release` を手動 dispatch し、promote が成功**
+
+  ```bash
+  gh workflow run release.yml
+  gh run list --workflow=release.yml --limit 1
+  gh run watch --exit-status
+
+  gh api "repos/Dayopt/dayopt/commits/$(git rev-parse HEAD)/status" \
+    --jq '.statuses[] | select(.context == "Production Release") | .state'
+  ```
+
+`success` にならないうちはタグを打たない。
+
+### 1.3 Gitタグの作成とプッシュ
+
+promote の成功と Production の観察が終わってから、証跡としてタグを打つ。
 
 - [ ] **Gitタグを作成してプッシュ**
 
@@ -621,20 +640,13 @@ ORDER BY created_at DESC;
   git push origin v${VERSION}
   ```
 
-### 1.3 GitHub Actions の自動実行を確認
-
-タグpushにより以下が自動実行される：
-
-- [ ] **`Production Release` の promote が成功**（`gh run list --workflow=release.yml --limit 1`）
-
-  ```bash
-  gh run list --workflow=create-release.yml --limit 1
-  gh run watch
-  ```
+タグ push により `create-release.yml` が自動実行され、GitHub Release を作成する（タグ SHA の `Production Release` status が `success` であることを確認してから作成する。この workflow はデプロイしない）。
 
 - [ ] **GitHub Releaseが自動作成された**
 
   ```bash
+  gh run list --workflow=create-release.yml --limit 1
+  gh run watch
   gh release view v${VERSION}
   ```
 
@@ -1022,7 +1034,7 @@ git log -5 --oneline
 node -p "require('./package.json').version"  # → ${VERSION} になっているはず
 ```
 
-> main マージは domain 未割当の Production build を作るだけで、公開は `Production Release` workflow の promote が行う。タグはデプロイトリガーではなく、promote と観察が終わった後の証跡。
+> main マージは domain 未割当の Production build を作るだけで、公開は `gh workflow run release.yml` を手動 dispatch した `Production Release` workflow の promote が行う（mainマージでは自動起動しない、2026-08-20 #2268）。タグはデプロイトリガーではなく、promote と観察が終わった後の証跡。
 
 ### Phase 2: リリースノート作成
 
@@ -1098,7 +1110,7 @@ git tag --list | tail -5
 git push origin v${VERSION}
 ```
 
-タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。この workflow はデプロイしない。公開は main マージ後の `Production Release` workflow が promote 済みで、create-release はタグ SHA の `Production Release` status が success であることを確認してから Release を作る。
+タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。この workflow はデプロイしない。公開は `gh workflow run release.yml` の手動 dispatch で `Production Release` workflow が promote 済みのはずで（Phase 1.2）、create-release はタグ SHA の `Production Release` status が success であることを確認してから Release を作る。
 
 #### 4.2 プッシュ確認
 
@@ -1467,7 +1479,7 @@ git commit -am "chore(release): v${VERSION} へ version bump"
    ↓
 3. CI・品質チェック (Quality Gate)
    ↓
-4. PR マージ (merge commit / ブランチ削除) → Vercel が Production build → `Production Release` が promote
+4. PR マージ (merge commit / ブランチ削除) → Vercel が Production build → `gh workflow run release.yml` を手動 dispatch → `Production Release` が promote
    ↓
 5. main でタグ作成 & push
    ↓

@@ -127,12 +127,16 @@ git checkout main
 git pull origin main
 ```
 
-### Phase 1.2: Production promote の完了を待つ
+### Phase 1.2: Production promote を手動 dispatch し、完了を待つ
 
-main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`Production Release` workflow が同一 SHA の両 candidate を smoke・監査してから promote する。
+main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`release.yml` は `push: main` トリガーを持たず **`workflow_dispatch` のみ**で起動する（2026-08-20、#2268）。merge しても自動では走らないため、ここで明示的に dispatch する。**production への操作のため `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
 
 ```bash
-# promote の実行状況を確認
+# Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。
+# --ref は付けない。release script は常に main のものを使う（runbook.md 参照）。
+gh workflow run release.yml
+
+# 実行状況を確認
 gh run list --workflow=release.yml --limit 1
 gh run watch --exit-status
 
