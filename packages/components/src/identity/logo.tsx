@@ -20,7 +20,7 @@ const textSize = {
   lg: 'text-2xl',
 } as const;
 
-// Dayopt symbol mark（配信用原本 SVG は packages/assets/brand/logo-mark.svg）
+// Dayopt symbol mark（path data をここに直接持つ。共有 SVG 原本の package は存在しない）
 const SYMBOL_PATH_D =
   'M12 3.5c4.69 0 8.5 3.81 8.5 8.5s-3.81 8.5-8.5 8.5S3.5 16.69 3.5 12 7.31 3.5 12 3.5Zm0 3.2A5.31 5.31 0 0 0 6.7 12c0 2.92 2.38 5.3 5.3 5.3s5.3-2.38 5.3-5.3h-3.1a2.2 2.2 0 1 1-2.2-2.2V6.7Z';
 

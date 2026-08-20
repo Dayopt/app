@@ -70,7 +70,6 @@
     "@dayopt/billing": "workspace:*",
     "@dayopt/components": "workspace:*",
     "@dayopt/config": "workspace:*",
-    "@dayopt/domain": "workspace:*",
     "@dayopt/foundations": "workspace:*",
     "@dayopt/i18n": "workspace:*",
     "@dayopt/observability": "workspace:*",

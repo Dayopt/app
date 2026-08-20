@@ -10,8 +10,8 @@ import { buildNewTimeblockOverlapTarget } from '@/features/calendar/lib/overlap'
 import { timeblockTintColor } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { hasTwoLayerTimeConflict } from '@/lib/time';
 import { cn } from '@dayopt/components';
-import { hasTwoLayerTimeConflict } from '@dayopt/domain';
 
 import {
   useActivityDraftStore,

@@ -16,8 +16,8 @@
 import type React from 'react';
 
 import { formatTimeRange } from '@/lib/date';
+import type { TimeFormat } from '@/lib/time';
 import { cn } from '@dayopt/components';
-import type { TimeFormat } from '@dayopt/domain';
 
 import type { TimeRange } from '../../../../domain/interaction/types';
 

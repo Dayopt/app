@@ -5,7 +5,7 @@
  * 同一レーンの Timeblock 間で重複を禁止する。
  */
 
-import { hasTwoLayerTimeConflict, rangesOverlap, type TwoLayerOverlapTarget } from '@dayopt/domain';
+import { hasTwoLayerTimeConflict, rangesOverlap, type TwoLayerOverlapTarget } from '@/lib/time';
 import type { CalendarDisplayEvent } from '../types/calendar.types';
 
 export function buildNewTimeblockOverlapTarget(

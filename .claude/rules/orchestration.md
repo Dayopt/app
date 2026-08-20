@@ -184,12 +184,12 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 **旧「push タイミングの一元化」を廃止し、push・ready 化・重量 watch はレーンが自己判断で進める。** 2026-08-20 の実測（8 PR merge）で、push 合図・確定伝達・ready 合図の往復の大半が形式的だったため、PR の状態遷移を「draft = レーン作業中 / ready + CI green = 指揮官レビュー待ち」という自己記述的なセマンティクスへ転換した（設計は #2263）。
 
 - レーンは round の commit + push 前セルフレビュー完了後、**指揮台の合図を待たずに push する**
-- push 後、軽量 CI green を確認したら、**指揮台の合図を待たずに ready 化**し、重量層（E2E / Web E2E / Production Config Audit）を watch する
+- push 後、軽量 CI green を確認したら、**指揮台の合図を待たずに ready 化**し、重量層（Production Config Audit。保護対象該当時のみ）を watch する。**E2E / Web E2E は 2026-08-20（CI 4 層再設計、#2269）で per-PR から撤去済み**で、ready 化後の watch 対象に含まれない
 - **維持するもの（変えない）**:
   - **追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため。2026-08-20 のレーン F/H で先行追従の弊害と例外承認の両方を実測済み）
   - round 束ね規律（1 round = 1 push、追い push しない）は不変
   - 保護対象 PR（audit contract）は ready 前に指揮台へ申告する（trusted dispatch が要るため）。§指揮台の merge シーケンス 手順 2 参照
-- **明示するトレードオフ**: ready 後の fix round push で重量 CI が再走する（旧「ready 化は merge 直前に 1 回」思想からの転換。`.claude/rules/workflow.md` §2 段階 CI 参照）。public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する
+- **トレードオフの改訂（2026-08-20）**: 旧注記は「ready 後の fix round push で重量 CI（E2E / Web E2E）が再走するが、public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する」だった。**private 化確定（2026-08-20、[決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）と CI 4 層再設計により、E2E / Web E2E は per-PR に存在しなくなった**ため、この trade-off 自体が解消している。fix round push で再走するのは軽量層（Static Checks / Unit Tests）と、該当時のみ Production Config Audit
 
 **2026-08-13 追記（now-legacy、経緯として残す）**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。push 前の permission prompt という偶発的な機械 gate は無い。force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める。
 
@@ -221,3 +221,5 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 ## 判断ジャーナル
 
 Fable の推奨と User の判断が分かれた時、該当 issue / PR に分岐コメント（推奨・User 判断・理由・**何をもって正否を判定するかの観点**）を 1 つ残し、`judgment:diverged` ラベルを付ける。月次 gardening は**現在ラベルが付いている全件**を `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs --limit 200` で取得し、結果を観測できた事例に判定コメント（どちらの判断が正しかったか）を追記して**ラベルを外す**。未観測の事例はラベルを残して翌月へ持ち越す。境界の更新（本ファイル §権限の既定）は判定済み事例だけを母集団にする（`.claude/skills/gardening/SKILL.md` 人間パート参照）。
+
+**dispatch の日次ランダム抽出監査（`.claude/skills/dispatch/SKILL.md` 操作 C）で見つかったズレも同じ扱い**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）。「仕様には適合しているが意図とズレている」静かな失敗を User が監査で発見した場合も、分岐コメント + `judgment:diverged` ラベルでジャーナル化し、月次 gardening の判定対象に乗せる。

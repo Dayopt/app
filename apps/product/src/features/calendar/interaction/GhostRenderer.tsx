@@ -19,8 +19,8 @@ import { createPortal } from 'react-dom';
 
 import { formatTimeRange } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import type { TimeFormat } from '@/lib/time';
 import { cn } from '@dayopt/components';
-import type { TimeFormat } from '@dayopt/domain';
 
 import { ConflictOverlay } from '../components/views/shared/components/ConflictOverlay';
 import type { InteractionState, TimeRange } from '../domain/interaction/types';

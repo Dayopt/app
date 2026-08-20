@@ -5,13 +5,24 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
-import { databaseTables, type Database } from '@/lib/database';
-import { getConfiguredExternalLifecycleAppVersion } from '@/lib/database/external-lifecycle-version';
+import { databaseTables, type Database, type Json } from '@/lib/database';
+import {
+  getConfiguredExternalLifecycleAppVersion,
+  isConfiguredFencedCalendarSyncWriterReady,
+} from '@/lib/database/external-lifecycle-version';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 
 import { deleteUnreferencedEvents } from './event-pruning';
 import { ExternalCalendarServiceError } from './external-calendar-service-error';
+import {
+  beginCalendarSyncRun,
+  clearCalendarSyncCursor,
+  finishCalendarSyncRun,
+  persistCalendarSyncResult,
+  resolveProjectKey,
+  type CasContext,
+} from './fenced-sync-writer';
 import { googleCalendarAdapter } from './providers/google';
 import {
   CalendarProviderError,
@@ -65,13 +76,11 @@ const PROVIDER = 'google';
  * この列は authenticated に SELECT が GRANT されているので、provider の生メッセージや URL を
  * 入れてはいけない（PII / 内部情報の露出）。値域を閉じておき、UI（Step 6）が i18n する。
  *
- * **DB 側 allowlist との二重管理に注意**（risk-reviewer 指摘、PR #2075）。fenced sync
- * writer v1（`supabase/migrations/20260730090017_fenced_calendar_sync_writers.sql` の
- * `finish_calendar_sync_run_v1`、#2050 系）は `p_last_sync_error` を 5 値
- * （`encryption_key_invalid` / `partial_failure` / `provider_unavailable` /
- * `rate_limited` / `reauth_required`）に制限しており、この型の値と自動同期しない。
- * 現行 sync-service.ts は RPC を経由しない直接書き込みのため今は不発だが、v1 writer へ
- * 移行する際は allowlist 側にも新値を追加する migration が要る（follow-up issue で追跡）。
+ * **DB 側 allowlist との二重管理に注意**（risk-reviewer 指摘、PR #2075。#2078 で解消済み）。
+ * fenced sync writer v1（`supabase/migrations/20260730090017_fenced_calendar_sync_writers.sql`
+ * の `finish_calendar_sync_run_v1`）の `p_last_sync_error` allowlist は
+ * `20260820120000_extend_calendar_sync_error_allowlist.sql`（#2078）でこの型と同じ 6 値に
+ * 拡張済み。以後この型に新値を足す時は allowlist migration を同じ PR に含める。
  */
 type SyncErrorCode =
   | 'reauth_required'
@@ -145,10 +154,36 @@ type ConnectionRow = {
 };
 
 type CalendarRow = {
+  /** fenced RPC 群（`>= 2` 分岐）の `p_calendar_selection_id` に使う。legacy 分岐では未使用。 */
+  id: string;
   provider_calendar_id: string;
   calendar_name: string | null;
   sync_token: string | null;
 };
+
+/** `syncConnectionFenced` が `begin_calendar_sync_run_v1` の結果から組み立てる CAS state。 */
+type FencedRunState = {
+  connectionId: string;
+  userId: string;
+  projectKey: string;
+  expectedGeneration: number;
+  expectedAuthorityFenceId: string;
+  expectedAuthorityEpoch: number;
+  expectedSyncSequence: number;
+  runStartedAtIso: string;
+  refreshTokenEnc: string;
+};
+
+function toCasContext(state: FencedRunState): CasContext {
+  return {
+    connectionId: state.connectionId,
+    userId: state.userId,
+    projectKey: state.projectKey,
+    expectedGeneration: state.expectedGeneration,
+    expectedAuthorityFenceId: state.expectedAuthorityFenceId,
+    expectedAuthorityEpoch: state.expectedAuthorityEpoch,
+  };
+}
 
 /**
  * 1 接続を同期する。
@@ -174,6 +209,19 @@ export async function syncConnection(params: {
   const { connectionId, userId, forceFullSync = false, deadlineAt } = params;
   const adapter: CalendarProviderAdapter = googleCalendarAdapter;
   const db = createSyncDbClient();
+
+  // #2050: fenced sync writer RPC 群（20260730090017 + #2078 の allowlist 拡張 +
+  // `_v3` terminal marker）が揃っている接続だけ新経路を使う。この判定は
+  // `getConfiguredExternalLifecycleAppVersion`（Candidate 3 marker、settings/billing・
+  // cron dispatcher 等の無関係な既存呼び出し元と共有）とは別関数に分離してある
+  // — widen すると既存呼び出し元の RPC 呼び出し契約が変わり、無関係な test が
+  // regression する（overview.md §0 改訂）。揃っていなければ v0/v1 の直接書き込み
+  // パスをそのまま使う（無変更）。
+  const fencedWriterReady = await isConfiguredFencedCalendarSyncWriterReady();
+  if (fencedWriterReady) {
+    return syncConnectionFenced({ db, adapter, connectionId, userId, forceFullSync, deadlineAt });
+  }
+
   const lifecycleVersion = await getConfiguredExternalLifecycleAppVersion();
 
   // run の生成時刻。全 upsert 行と sweep 条件の両方でこの単一値を使う。行ごとに now() を
@@ -465,6 +513,396 @@ async function syncOneCalendar(args: {
 }
 
 // =============================================================================
+// #2050: fenced sync writer RPC 群を使う経路（`lifecycleVersion >= 2`）
+//
+// v0/v1 分岐（上記）とは独立した並行実装。5 RPC の CAS ロジック本体（凍結資産）は
+// 変更しない — 呼び出し方と結果マッピングだけをここに書く
+// （docs/projects/external-calendar-fenced-writer-migration/overview.md §3）。
+// =============================================================================
+
+/** 1 chunk あたりの最大 event 数。RPC 側の 10,000 件上限に対して十分な余裕を取る。 */
+const PERSIST_EVENT_CHUNK_SIZE = 2_000;
+
+async function syncConnectionFenced(args: {
+  db: SyncClient;
+  adapter: CalendarProviderAdapter;
+  connectionId: string;
+  userId: string;
+  forceFullSync: boolean;
+  deadlineAt?: number | undefined;
+}): Promise<SyncConnectionResult> {
+  const { db, adapter, connectionId, userId, forceFullSync, deadlineAt } = args;
+
+  const projectKey = resolveProjectKey();
+  if (projectKey === null) {
+    return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  const begin = await beginCalendarSyncRun({ connectionId, userId, projectKey, deadlineAt });
+  if (typeof begin === 'string') {
+    // callRpc 内で Sentry capture 済み（unresolved / rejected_input）か、想定内
+    // （account_deleting / deadline_exceeded）。いずれも安全な no-op として畳む
+    // （pr-cross-review P2 指摘、PR #2276 — 残予算不足時は試行せず即座に諦める）。
+    return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+  if (begin.result === 'missing') {
+    return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+  if (begin.result === 'reauth_required') {
+    return { outcome: 'skipped_reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+  if (begin.result === 'superseded') {
+    // project fence / quarantine fence が ready でない場合（全ユーザーに影響しうる
+    // グローバル状態）もここに含まれるため、無音の全停止を防ぐため必ず capture する
+    // （overview.md §3、critic 指摘）。
+    captureUnexpectedError(new Error('calendar sync fence was superseded before it started'), {
+      feature: 'external_calendar',
+      operation: 'calendar_sync_fence_superseded',
+    });
+    return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  const runState: FencedRunState = {
+    connectionId,
+    userId,
+    projectKey,
+    expectedGeneration: begin.dataGeneration,
+    expectedAuthorityFenceId: begin.authorityFenceId,
+    expectedAuthorityEpoch: begin.authorityEpoch,
+    expectedSyncSequence: begin.syncSequence,
+    runStartedAtIso: begin.runStartedAt,
+    refreshTokenEnc: begin.refreshTokenEnc,
+  };
+
+  let refreshToken: string;
+  try {
+    refreshToken = decryptToken(runState.refreshTokenEnc, env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '');
+  } catch (error) {
+    captureUnexpectedError(error instanceof Error ? error : new Error('token decrypt failed'), {
+      feature: 'external_calendar',
+      operation: 'decrypt_refresh_token',
+    });
+    await finishFencedSyncRunBestEffort(runState, 'encryption_key_invalid', deadlineAt);
+    return { outcome: 'encryption_key_invalid', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  const rotationOperationId = randomUUID();
+  let session: ProviderSession;
+  try {
+    session = await adapter.startSession(refreshToken);
+  } catch (error) {
+    if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
+      const reauthOutcome = await markCalendarConnectionReauth({
+        userId,
+        connectionId,
+        expectedGeneration: runState.expectedGeneration,
+        expectedRefreshTokenEnc: runState.refreshTokenEnc,
+        lastSyncedAt: runState.runStartedAtIso,
+      });
+      return reauthResult(reauthOutcome, 0, 0);
+    }
+    captureProviderError(error, 'start_session');
+    await finishFencedSyncRunBestEffort(runState, providerErrorCode(error), deadlineAt);
+    return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  let markReauthAfterRotation: Awaited<
+    ReturnType<typeof persistCalendarTokenRotation>
+  >['markReauthIfCurrent'] = null;
+  if (session.rotatedRefreshToken !== null) {
+    const rotationResult = await persistCalendarTokenRotation({
+      operationId: rotationOperationId,
+      userId,
+      connectionId,
+      expectedGeneration: runState.expectedGeneration,
+      expectedRefreshTokenEnc: runState.refreshTokenEnc,
+      rotatedRefreshToken: session.rotatedRefreshToken,
+      encryptionKey: env.CALENDAR_TOKEN_ENCRYPTION_KEY ?? '',
+      provider: adapter,
+      lastSyncedAt: runState.runStartedAtIso,
+    });
+    const { outcome: rotationOutcome } = rotationResult;
+    markReauthAfterRotation = rotationResult.markReauthIfCurrent;
+
+    if (rotationOutcome === 'enqueued' || rotationOutcome === 'missing') {
+      return { outcome: 'not_configured', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    if (rotationOutcome === 'reauth_required') {
+      return { outcome: 'reauth_required', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    if (rotationOutcome === 'superseded') {
+      return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+    }
+    if (rotationOutcome === 'unresolved') {
+      throw new ExternalCalendarServiceError(
+        'SYNC_FAILED',
+        'calendar token rotation is unresolved',
+      );
+    }
+  }
+
+  const calendars = await loadSelectedCalendars(db, connectionId, userId);
+  if (calendars === null) {
+    await finishFencedSyncRunBestEffort(runState, 'partial_failure', deadlineAt);
+    return { outcome: 'partial_failure', calendarsSynced: 0, calendarsFailed: 0 };
+  }
+
+  const runStartedAt = new Date(runState.runStartedAtIso);
+  const window: SyncWindow = {
+    timeMin: new Date(runStartedAt.getTime() - WINDOW_RADIUS_MS).toISOString(),
+    timeMax: new Date(runStartedAt.getTime() + WINDOW_RADIUS_MS).toISOString(),
+  };
+
+  let calendarsSynced = 0;
+  let calendarsFailed = 0;
+  let calendarsIncomplete = 0;
+  let reauthRequired = false;
+  let runSuperseded = false;
+
+  for (const calendar of calendars) {
+    if (runSuperseded) break;
+
+    const outcome = await syncOneCalendarFenced({
+      adapter,
+      session,
+      runState,
+      calendar,
+      window,
+      forceFullSync,
+      deadlineAt,
+    });
+
+    if (outcome === 'synced') calendarsSynced += 1;
+    else if (outcome === 'reauth_required') reauthRequired = true;
+    else if (outcome === 'deadline_exceeded') calendarsIncomplete += 1;
+    else if (outcome === 'run_superseded') runSuperseded = true;
+    else calendarsFailed += 1;
+  }
+
+  if (runSuperseded) {
+    // 良性競合（先行/後続 run に追い越された）。last_sync_error は書かず、次回
+    // スケジュールに委ねる（overview.md §3）。
+    return { outcome: 'not_configured', calendarsSynced, calendarsFailed };
+  }
+
+  if (reauthRequired) {
+    const reauthOutcome =
+      markReauthAfterRotation === null
+        ? await markCalendarConnectionReauth({
+            userId,
+            connectionId,
+            expectedGeneration: runState.expectedGeneration,
+            expectedRefreshTokenEnc: runState.refreshTokenEnc,
+            lastSyncedAt: runState.runStartedAtIso,
+          })
+        : await markReauthAfterRotation();
+    return reauthResult(reauthOutcome, calendarsSynced, calendarsFailed);
+  }
+
+  if (calendarsIncomplete === 0) {
+    try {
+      await deleteUnreferencedEvents({
+        userId,
+        connectionId,
+        scope: { kind: 'window', notBefore: window.timeMin, notAfter: window.timeMax },
+      });
+    } catch (error) {
+      logger.warn('[calendar-sync] failed to prune out-of-window events');
+      captureUnexpectedError(error instanceof Error ? error : new Error('calendar prune failed'), {
+        feature: 'external_calendar',
+        operation: 'sync_window_prune',
+      });
+    }
+  }
+
+  if (calendarsFailed > 0) {
+    await finishFencedSyncRunBestEffort(runState, 'partial_failure', deadlineAt);
+    return { outcome: 'partial_failure', calendarsSynced, calendarsFailed };
+  }
+
+  if (calendarsIncomplete > 0) {
+    if (calendarsSynced > 0) {
+      await finishFencedSyncRunBestEffort(runState, 'partial_timeout', deadlineAt);
+    }
+    return { outcome: 'partial_timeout', calendarsSynced, calendarsFailed };
+  }
+
+  await finishFencedSyncRunBestEffort(runState, null, deadlineAt);
+  return { outcome: 'synced', calendarsSynced, calendarsFailed };
+}
+
+async function syncOneCalendarFenced(args: {
+  adapter: CalendarProviderAdapter;
+  session: ProviderSession;
+  runState: FencedRunState;
+  calendar: CalendarRow;
+  window: SyncWindow;
+  forceFullSync: boolean;
+  deadlineAt?: number | undefined;
+}): Promise<CalendarSyncOutcome | 'run_superseded'> {
+  const { adapter, session, runState, calendar, window, forceFullSync, deadlineAt } = args;
+  const cas = toCasContext(runState);
+
+  const cursor = forceFullSync ? null : calendar.sync_token;
+  const adapterDeadlineAt = deadlineAt === undefined ? undefined : deadlineAt - PERSIST_RESERVE_MS;
+
+  let result: Awaited<ReturnType<CalendarProviderAdapter['syncCalendar']>>;
+  try {
+    result = await adapter.syncCalendar(session, {
+      calendarId: calendar.provider_calendar_id,
+      cursor,
+      window,
+      deadlineAt: adapterDeadlineAt,
+    });
+
+    if (result.cursorInvalid) {
+      const clearOutcome = await clearCalendarSyncCursor({
+        ...cas,
+        expectedSyncSequence: runState.expectedSyncSequence,
+        calendarSelectionId: calendar.id,
+        providerCalendarId: calendar.provider_calendar_id,
+        expectedSyncToken: calendar.sync_token,
+        deadlineAt,
+      });
+      // 残予算不足で試行しなかった（pr-cross-review P2 指摘、PR #2276）。'failed' にせず
+      // 既存の deadlineExceeded 経路と同じ扱いにする。
+      if (clearOutcome === 'deadline_exceeded') return 'deadline_exceeded';
+      // 'superseded' は応答喪失後の retry で「既に clear 済み」を意味しうる
+      // （overview.md §3）。'failed' にせず full sync として続行する。
+      if (clearOutcome === 'missing_selection' || clearOutcome === 'missing') {
+        captureDatabaseError(
+          new Error('calendar selection missing during cursor clear'),
+          'clear_sync_cursor',
+        );
+        return 'failed';
+      }
+      if (
+        typeof clearOutcome === 'string' &&
+        clearOutcome !== 'cleared' &&
+        clearOutcome !== 'superseded'
+      ) {
+        return 'failed';
+      }
+
+      result = await adapter.syncCalendar(session, {
+        calendarId: calendar.provider_calendar_id,
+        cursor: null,
+        window,
+        deadlineAt: adapterDeadlineAt,
+      });
+    }
+  } catch (error) {
+    if (error instanceof CalendarProviderError && error.kind === 'reauth_required') {
+      return 'reauth_required';
+    }
+    captureProviderError(error, 'sync_calendar');
+    return 'failed';
+  }
+
+  try {
+    const persistOutcome = await persistCalendarSyncResultChunked({
+      cas,
+      runState,
+      calendar,
+      result,
+      deadlineAt,
+    });
+    if (persistOutcome === 'run_superseded') return 'run_superseded';
+    if (persistOutcome === 'deadline_exceeded') return 'deadline_exceeded';
+    if (persistOutcome === 'failed') return 'failed';
+
+    if (result.deadlineExceeded) return 'deadline_exceeded';
+    return 'synced';
+  } catch (error) {
+    captureDatabaseError(error, 'persist_calendar_events');
+    return 'failed';
+  }
+}
+
+/**
+ * `persist_calendar_sync_result_command_v1` の 10,000 件上限・events/tombstone 間の id
+ * 重複拒否（migration:401-404, 460-464）に対応する chunk 化 + dedupe（overview.md §3）。
+ *
+ * 最終 chunk だけが tombstone / usedFullSync / nextCursor を運ぶ。events が 0 件でも
+ * tombstone か nextCursor があれば 1 回は呼ぶ。全て空なら呼ばない（元の 4 分岐と同じ意味論）。
+ */
+async function persistCalendarSyncResultChunked(args: {
+  cas: CasContext;
+  runState: FencedRunState;
+  calendar: CalendarRow;
+  result: Awaited<ReturnType<CalendarProviderAdapter['syncCalendar']>>;
+  deadlineAt?: number | undefined;
+}): Promise<'persisted' | 'run_superseded' | 'deadline_exceeded' | 'failed'> {
+  const { cas, runState, calendar, result, deadlineAt } = args;
+
+  const dedupedEventsByProviderId = new Map<string, NormalizedExternalEvent>();
+  for (const event of result.events) {
+    // 後勝ち（provider が同一 id を複数ページで返した場合、最後の値を採用する）。
+    dedupedEventsByProviderId.set(event.providerEventId, event);
+  }
+  const dedupedEvents = [...dedupedEventsByProviderId.values()];
+
+  const tombstoneIdSet = new Set(
+    [...result.cancelledEventIds, ...result.skippedEventIds].filter(
+      (id) => !dedupedEventsByProviderId.has(id),
+    ),
+  );
+  const tombstoneIds = [...tombstoneIdSet];
+
+  const needsWrite =
+    dedupedEvents.length > 0 || tombstoneIds.length > 0 || result.nextCursor !== null;
+  if (!needsWrite) return 'persisted';
+
+  const eventChunks: NormalizedExternalEvent[][] = [];
+  for (let i = 0; i < dedupedEvents.length; i += PERSIST_EVENT_CHUNK_SIZE) {
+    eventChunks.push(dedupedEvents.slice(i, i + PERSIST_EVENT_CHUNK_SIZE));
+  }
+  const chunksToSend = eventChunks.length > 0 ? eventChunks : [[]];
+
+  for (let i = 0; i < chunksToSend.length; i += 1) {
+    const isLast = i === chunksToSend.length - 1;
+    const outcome = await persistCalendarSyncResult({
+      ...cas,
+      expectedSyncSequence: runState.expectedSyncSequence,
+      calendarSelectionId: calendar.id,
+      providerCalendarId: calendar.provider_calendar_id,
+      runStartedAt: runState.runStartedAtIso,
+      events: chunksToSend[i] as unknown as Json,
+      tombstoneEventIds: isLast ? tombstoneIds : [],
+      usedFullSync: isLast ? result.usedFullSync : false,
+      nextCursor: isLast ? result.nextCursor : null,
+      deadlineAt,
+    });
+
+    if (outcome === 'persisted') continue;
+    if (outcome === 'deadline_exceeded') return 'deadline_exceeded';
+    if (outcome === 'superseded' || outcome === 'account_deleting') return 'run_superseded';
+    return 'failed';
+  }
+
+  return 'persisted';
+}
+
+async function finishFencedSyncRunBestEffort(
+  runState: FencedRunState,
+  lastSyncError: SyncErrorCode | null,
+  deadlineAt?: number | undefined,
+): Promise<void> {
+  // best-effort。既存の updateConnection と同じ意味論 — 失敗しても呼び出し側の
+  // outcome は変えない（overview.md §3）。callTextRpc が unresolved/rejected_input を
+  // 既に capture 済みなので、ここでは戻り値を見ずに投げっぱなしにする。deadlineAt を
+  // 渡すのは残予算が無い時に無駄な retry で予算を食い潰さないため
+  // （pr-cross-review P2 指摘、PR #2276）。
+  await finishCalendarSyncRun({
+    ...toCasContext(runState),
+    expectedSyncSequence: runState.expectedSyncSequence,
+    runStartedAt: runState.runStartedAtIso,
+    lastSyncError,
+    deadlineAt,
+  });
+}
+
+// =============================================================================
 // DB 操作
 // =============================================================================
 
@@ -529,7 +967,7 @@ async function loadSelectedCalendars(
 ): Promise<CalendarRow[] | null> {
   const { data, error } = await db
     .from(databaseTables.calendarConnectionCalendars)
-    .select('provider_calendar_id, calendar_name, sync_token')
+    .select('id, provider_calendar_id, calendar_name, sync_token')
     .eq('connection_id', connectionId)
     .eq('user_id', userId);
 

@@ -15,7 +15,7 @@ import type React from 'react';
 
 import { useActivitiesMap } from '@/features/activities';
 import { resolveTimeblockDestination, useTimeblockInspectorStore } from '@/features/timeblock';
-import type { TimeFormat } from '@dayopt/domain';
+import type { TimeFormat } from '@/lib/time';
 
 import type { InteractionState } from '../../../../domain/interaction/types';
 import {
