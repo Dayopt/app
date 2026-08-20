@@ -37,9 +37,15 @@ function normalizeMfaAssuranceLevel(level: unknown): MfaAssuranceLevel | undefin
   return undefined;
 }
 
+/**
+ * aal2 → aal1 の降格は常に許可する（#2150）。MFA無効化直後は
+ * `currentLevel`（JWT由来、token refreshまでaal2のまま）と`nextLevel`
+ * （実際のfactor状態から算出、既にaal1）がこの組み合わせになる正常状態で、
+ * aal2は要求水準を満たしている側なので許可しても権限昇格にはならない。
+ */
 export function isValidMfaAssuranceTransition(currentLevel: unknown, nextLevel: unknown): boolean {
   if (currentLevel === 'aal1') return nextLevel === 'aal1' || nextLevel === 'aal2';
-  return currentLevel === 'aal2' && nextLevel === 'aal2';
+  return currentLevel === 'aal2' && (nextLevel === 'aal1' || nextLevel === 'aal2');
 }
 
 /** HTTP/RSCのsession contextへ同じ認証情報とfail-closed MFA状態を設定する。 */

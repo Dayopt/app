@@ -21,6 +21,7 @@ export {
   DEFAULT_SCOPES,
   hasWriteScope,
   isSupportedScope,
+  isWriteScope,
   type SupportedScope,
 } from './scopes';
 export { generateAuthorizationCode, hashToken } from './tokens';
