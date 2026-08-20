@@ -43,7 +43,7 @@ function Block({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative w-56 overflow-hidden rounded-r-lg" style={{ height: 64 }}>
       <div className="flex h-full">
-        <div className="bg-tag-blue shrink-0 opacity-70" style={{ width: 3 }} />
+        <div className="bg-category-blue shrink-0 opacity-70" style={{ width: 3 }} />
         <div className="bg-card flex-1" />
       </div>
       {children}

@@ -503,12 +503,13 @@ describe('PlanService.update', () => {
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
   });
 
-  it('過去 plan でもタグとメモの更新は許可する', async () => {
+  it('過去 plan でもメモの更新は許可する（tagId は入力から除去済みのため既存値を保持する）', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
+      tag_id: 'tag-1',
     });
-    const updated = { ...existing, note: 'Updated note', tag_id: 'tag-1' };
+    const updated = { ...existing, note: 'Updated note' };
     const { service, mockSupabase, commands } = createPlanService();
     mockSupabase.from.mockReturnValue(createChainableMock(existing));
     commands.updatePlan.mockResolvedValue(updated);
@@ -517,11 +518,12 @@ describe('PlanService.update', () => {
       service.update({
         userId: USER_ID,
         planId: existing.id,
-        input: { note: 'Updated note', tagId: 'tag-1' },
+        input: { note: 'Updated note' },
       }),
     ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
 
-    // 部分更新は現在行で補完し、未指定fieldを取り落とさない
+    // 部分更新は現在行で補完し、未指定fieldを取り落とさない。tagId は tRPC 入力に存在しない
+    // ため常に既存行の tag_id を渡し、書き込み経路からは変更できない。
     expect(commands.updatePlan).toHaveBeenCalledWith({
       userId: USER_ID,
       planId: existing.id,

@@ -1,4 +1,4 @@
-# STATE.md（最終更新: 2026-08-19 / 生成基点 main@61ec8288 / pnpm state:generate）
+# STATE.md（最終更新: 2026-08-20 / 生成基点 main@bb9a7b0a / pnpm state:generate）
 
 > STATE.md は判断のための現在地の地図であり、正本ではない。正本は GitHub issue と open PR。
 > §2〜§5 は `pnpm state:generate` が機械生成する（手で編集しても次回生成で上書きされる）。
@@ -14,15 +14,20 @@
 
 <!-- STATE:GENERATED:LANES:START -->
 
-（open PR なし）
+| PR                                                                                                                           | Issue               | branch                              | 状態  | ブロッカー |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------- | ----- | ---------- |
+| [#2255](https://github.com/Dayopt/dayopt/pull/2255) fix(test): E2E specごとに専用test accountを割りrate limit…               | #2246               | `claude/e2e-account-isolation-2246` | draft | draft      |
+| [#2254](https://github.com/Dayopt/dayopt/pull/2254) fix(ui): dogfoodingフィードバック第2弾（ショートカットrace/Sidebar…      | #2248, #2249, #2250 | `claude/ui-feedback-round2-2250`    | draft | draft      |
+| [#2244](https://github.com/Dayopt/dayopt/pull/2244) feat(timeblock): 予定/記録のInspectorをポップアップから右サイドパネルへ… | #2215, #2223        | `claude/inspector-side-panel-2215`  | ready | CI failing |
+
 <!-- STATE:GENERATED:LANES:END -->
 
 ## 3. 次にやるキュー（status:ready、機械生成）
 
 <!-- STATE:GENERATED:QUEUE:START -->
 
-1. [#2218](https://github.com/Dayopt/dayopt/issues/2218) chore(tags): 残余のtag系依存を撤去する（Step 5完了後）
-2. [#2163](https://github.com/Dayopt/dayopt/issues/2163) chore(build): bundle budget の preview 補正を成分分解して再較正する（Sentry 分と Supaba…
+1. [#2256](https://github.com/Dayopt/dayopt/issues/2256) ops(state): STATE.md 再生成の実行漏れを機械検出する（push-ready 手順の形骸化防止）
+2. [#2253](https://github.com/Dayopt/dayopt/issues/2253) docs(engineering): worktree レーンが 1Password なしでローカル実アプリを検証する手順を lane-p…
 
 <!-- STATE:GENERATED:QUEUE:END -->
 

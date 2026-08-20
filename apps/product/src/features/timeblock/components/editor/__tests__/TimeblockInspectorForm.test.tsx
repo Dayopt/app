@@ -135,18 +135,18 @@ vi.mock('../TimeblockRelationshipSection', () => ({
 }));
 
 // 作成時フィードフォワードは自身の test が挙動を固定する。ここでは配線
-// （どの destination / tagId / draftMinutes が渡るか）だけを見える化する。
+// （どの destination / activityId / draftMinutes が渡るか）だけを見える化する。
 vi.mock('../EstimationFeedforward', () => ({
   EstimationFeedforward: ({
     destination,
-    tagId,
+    activityId,
     draftMinutes,
   }: {
     destination: 'plan' | 'record';
-    tagId: string | null;
+    activityId: string | null;
     draftMinutes: number;
   }) => (
-    <output data-testid="feedforward-props">{`${destination}/${tagId ?? 'none'}/${draftMinutes}`}</output>
+    <output data-testid="feedforward-props">{`${destination}/${activityId ?? 'none'}/${draftMinutes}`}</output>
   ),
 }));
 
@@ -316,11 +316,15 @@ describe('TimeblockInspectorForm', () => {
   });
 
   it('作成時フィードフォワードへ end ルール基準の保存先と draft の長さを渡す', () => {
-    render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
+    const planWithActivity = {
+      ...futurePlan,
+      activity_id: '00000000-0000-4000-8000-000000000002',
+    };
+    render(<TimeblockInspectorForm kind="plan" plan={planWithActivity} onDeleted={vi.fn()} />);
 
     // 13:00-14:00（now は 12:00）→ plan / 60 分
     expect(screen.getByTestId('feedforward-props')).toHaveTextContent(
-      `plan/${futurePlan.tag_id}/60`,
+      `plan/${planWithActivity.activity_id}/60`,
     );
   });
 

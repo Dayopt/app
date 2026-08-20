@@ -640,7 +640,7 @@ export function TimeblockInspectorForm({
       */}
       <EstimationFeedforward
         destination={resolveTimeblockDestination(value.endAt)}
-        tagId={value.tagId}
+        activityId={value.activityId}
         draftMinutes={(value.endAt.getTime() - value.startAt.getTime()) / 60000}
       />
 

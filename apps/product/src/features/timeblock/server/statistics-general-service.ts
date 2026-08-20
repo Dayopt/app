@@ -18,15 +18,13 @@ import {
 } from '../domain';
 
 import type { DateRangeInput } from './statistics-fetchers';
-import { fetchPlans, fetchRecords, fetchTagsById } from './statistics-fetchers';
-import { buildTimeByTagRows } from './statistics-row-builders';
+import { fetchPlans, fetchRecords } from './statistics-fetchers';
 import {
   groupHoursByDay,
   groupHoursByMonth,
   groupMinutesByDow,
   groupMinutesByHour,
 } from './statistics-service-grouping';
-import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 import type { ServiceSupabaseClient } from './types';
 
 export class StatisticsGeneralService {
@@ -118,16 +116,6 @@ export class StatisticsGeneralService {
       .map((plan) => ({ tag_id: plan.activity_id }));
 
     return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
-  }
-
-  /** `get_time_by_tag` 相当。実績（records）のタグ別合計時間。 */
-  async getTimeByTag(userId: string, range: DateRangeInput = {}) {
-    const [records, tagsById] = await Promise.all([
-      fetchRecords(this.supabase, userId, range),
-      fetchTagsById(this.supabase, userId),
-    ]);
-
-    return transformTimeByTagResponse(buildTimeByTagRows(records, tagsById));
   }
 
   /** `get_daily_hours` 相当。指定年の日別実績時間（ヒートマップ用）。 */

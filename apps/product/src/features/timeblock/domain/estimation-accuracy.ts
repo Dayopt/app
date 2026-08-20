@@ -7,13 +7,16 @@
  * Review UI が消費する型 (`features/review/types/metrics.types.ts` の
  * `EstimationAccuracyData`) と構造的に互換だが、boundary rule により
  * review/domain への配置は不可。
+ *
+ * 集計キーは tag_id から activity_id へ移行済み（tag-model-replacement Step 5
+ * §3-C）。集計の意味論（未分類の畳み方・除外条件・n>=2 閾値）は tag 版から変更していない。
  */
 
 export interface EstimationAccuracyDbRow {
-  tag_id: string | null;
-  tag_name: string | null;
-  tag_color: string | null;
-  /** タグ削除等で `tag_id` が未分類バケットに畳まれた行かどうか */
+  activity_id: string | null;
+  activity_name: string | null;
+  activity_color: string | null;
+  /** アクティビティ削除等で `activity_id` が未分類バケットに畳まれた行かどうか */
   is_uncategorized: boolean;
   avg_planned_minutes: number;
   avg_actual_minutes: number;
@@ -22,10 +25,10 @@ export interface EstimationAccuracyDbRow {
 }
 
 interface EstimationAccuracyItem {
-  tagId: string | null;
-  tagName: string | null;
+  activityId: string | null;
+  activityName: string | null;
   /** 未分類なら null。空文字の場合は 'indigo' にフォールバック */
-  tagColor: string | null;
+  activityColor: string | null;
   isUncategorized: boolean;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
@@ -37,15 +40,15 @@ interface EstimationAccuracyItem {
  * DB RPC 行配列を tRPC response 用に変換する。
  *
  * - snake_case → camelCase
- * - `tag_color` が空文字なら `'indigo'` にフォールバック（未分類行は null のまま）
+ * - `activity_color` が空文字なら `'indigo'` にフォールバック（未分類行は null のまま）
  */
 export function transformEstimationAccuracy(
   rows: ReadonlyArray<EstimationAccuracyDbRow>,
 ): EstimationAccuracyItem[] {
   return rows.map((row) => ({
-    tagId: row.tag_id,
-    tagName: row.tag_name,
-    tagColor: row.is_uncategorized ? null : row.tag_color || 'indigo',
+    activityId: row.activity_id,
+    activityName: row.activity_name,
+    activityColor: row.is_uncategorized ? null : row.activity_color || 'indigo',
     isUncategorized: row.is_uncategorized,
     avgPlannedMinutes: row.avg_planned_minutes,
     avgActualMinutes: row.avg_actual_minutes,
@@ -63,18 +66,17 @@ export function transformEstimationAccuracy(
  * 除外した結果、紐づく実績が 1 件も無い plan は estimation accuracy の分母から外れる
  * （旧 RPC の `actual_start_time/end_time IS NOT NULL` 条件と同じ効果）。
  *
- * `tag_id` が null の plan、および `tag_id` はあるが `tagsById` に存在しない
- * （タグ削除済み参照）plan は、どちらも単一の未分類バケット（`tag_id: null`）へ
- * 畳んで集計する。Time P/L の `buildTagPL`（`statistics-row-builders.ts`）と同じ扱い
- * （#1576: タグ削除時に Plan / Record を未分類化する仕様のため、見積もり精度からも
- * 除外しない）。
+ * `activity_id` が null の plan、および `activity_id` はあるが `activitiesById` に存在しない
+ * （アクティビティ削除済み参照）plan は、どちらも単一の未分類バケット（`activity_id: null`）へ
+ * 畳んで集計する。Time P/L の `buildActivityPL`（`statistics-activity-axis-builders.ts`）と
+ * 同じ扱い（#1576: タグ削除時に Plan / Record を未分類化する仕様を activity 軸でも踏襲）。
  *
  * 出力は `transformEstimationAccuracy` にそのまま渡せる DB-row 互換 shape。
  */
 
 export interface EstimationAccuracyPlanRow {
   id: string;
-  tag_id: string | null;
+  activity_id: string | null;
   planned_minutes: number;
 }
 
@@ -84,8 +86,9 @@ export interface EstimationAccuracyRecordRow {
   minutes: number;
 }
 
-export interface EstimationAccuracyTagLookup {
+export interface EstimationAccuracyActivityLookup {
   name: string;
+  /** アクティビティ自身は色を持たないため、所属カテゴリーから継承した色を渡す（#2162 §4-6） */
   color: string | null;
 }
 
@@ -96,7 +99,7 @@ const MIN_ENTRY_COUNT = 2;
 export function aggregatePlanRecordEstimationAccuracy(
   plans: ReadonlyArray<EstimationAccuracyPlanRow>,
   records: ReadonlyArray<EstimationAccuracyRecordRow>,
-  tagsById: ReadonlyMap<string, EstimationAccuracyTagLookup>,
+  activitiesById: ReadonlyMap<string, EstimationAccuracyActivityLookup>,
 ): EstimationAccuracyDbRow[] {
   const actualMinutesByPlanId = new Map<string, number>();
   for (const record of records) {
@@ -107,25 +110,27 @@ export function aggregatePlanRecordEstimationAccuracy(
     );
   }
 
-  interface TagAccumulator {
-    tagId: string | null;
+  interface ActivityAccumulator {
+    activityId: string | null;
     plannedSum: number;
     actualSum: number;
     deviationSum: number;
     count: number;
   }
-  const byTag = new Map<string | null, TagAccumulator>();
+  const byActivity = new Map<string | null, ActivityAccumulator>();
 
   for (const plan of plans) {
     if (plan.planned_minutes <= 0) continue;
     const actualMinutes = actualMinutesByPlanId.get(plan.id);
     if (actualMinutes == null) continue;
 
-    // tag_id はあるが tagsById に無い（削除済みタグ参照）場合も未分類バケットへ畳む
-    const tagId = plan.tag_id != null && tagsById.has(plan.tag_id) ? plan.tag_id : null;
+    // activity_id はあるが activitiesById に無い（削除済みアクティビティ参照）場合も
+    // 未分類バケットへ畳む
+    const activityId =
+      plan.activity_id != null && activitiesById.has(plan.activity_id) ? plan.activity_id : null;
 
-    const acc = byTag.get(tagId) ?? {
-      tagId,
+    const acc = byActivity.get(activityId) ?? {
+      activityId,
       plannedSum: 0,
       actualSum: 0,
       deviationSum: 0,
@@ -135,20 +140,20 @@ export function aggregatePlanRecordEstimationAccuracy(
     acc.actualSum += actualMinutes;
     acc.deviationSum += Math.abs(actualMinutes - plan.planned_minutes);
     acc.count += 1;
-    byTag.set(tagId, acc);
+    byActivity.set(activityId, acc);
   }
 
-  return Array.from(byTag.values())
+  return Array.from(byActivity.values())
     .filter((acc) => acc.count >= MIN_ENTRY_COUNT)
     .sort((a, b) => b.count - a.count)
     .map((acc) => {
-      const { tagId } = acc;
-      const tag = tagId == null ? undefined : tagsById.get(tagId);
-      const isUncategorized = tag == null;
+      const { activityId } = acc;
+      const activity = activityId == null ? undefined : activitiesById.get(activityId);
+      const isUncategorized = activity == null;
       return {
-        tag_id: isUncategorized ? null : tagId,
-        tag_name: isUncategorized ? null : (tag?.name ?? ''),
-        tag_color: isUncategorized ? null : (tag?.color ?? ''),
+        activity_id: isUncategorized ? null : activityId,
+        activity_name: isUncategorized ? null : (activity?.name ?? ''),
+        activity_color: isUncategorized ? null : (activity?.color ?? ''),
         is_uncategorized: isUncategorized,
         avg_planned_minutes: acc.plannedSum / acc.count,
         avg_actual_minutes: acc.actualSum / acc.count,

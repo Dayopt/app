@@ -38,7 +38,6 @@ const MOCK_PROFILE = {
 const DIALOG_MOCKS = {
   'userSettings.get': PRESET_USER_SETTINGS.default,
   'profile.get': MOCK_PROFILE,
-  'tags.list': { data: [] },
   'statistics.getTagStats': { counts: {} },
   'externalCalendar.getConnectionAvailability': { available: false },
   'externalCalendar.listConnections': [],

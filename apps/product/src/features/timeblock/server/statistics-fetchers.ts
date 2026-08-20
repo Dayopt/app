@@ -34,7 +34,7 @@ interface EstimationPlanRow extends StatPlanRow {
   skipped_at: string | null;
 }
 
-export interface TagLookupRow {
+interface TagLookupRow {
   id: string;
   name: string;
   color: string | null;

@@ -1,6 +1,6 @@
 import { Minus } from 'lucide-react';
 
-import { TagIcon } from '@/features/tags';
+import { ActivityIcon } from '@/features/activities';
 
 interface TimePLTagMarkerProps {
   isNoActivity: boolean;
@@ -26,5 +26,5 @@ export function TimePLTagMarker({
     );
   }
 
-  return <TagIcon icon={categoryIcon} color={categoryColor} size="sm" />;
+  return <ActivityIcon icon={categoryIcon} color={categoryColor} size="sm" />;
 }

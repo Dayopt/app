@@ -5,7 +5,7 @@
  * この1つの入力型から導出される。ビュー固有の計算値はここに持たず、derivers で算出する。
  */
 
-import type { TagColorName } from '@/features/tags';
+import type { CategoryColorName } from '@/features/activities';
 
 /** P/Lの表示粒度 */
 export type TimePLGranularity = 'day' | 'week' | 'range' | 'month' | 'year';
@@ -21,7 +21,7 @@ export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';
 export interface TimePLActivityTimeblock {
   activityId: string | null;
   activityName: string | null;
-  categoryColor: TagColorName | null;
+  categoryColor: CategoryColorName | null;
   categoryIcon?: string | null | undefined;
   /** 予定時間（分） */
   budgetMinutes: number;
@@ -62,7 +62,7 @@ export interface TimePLAccuracy {
 export interface TimePLRow {
   activityId: string | null;
   activityName: string | null;
-  categoryColor: TagColorName | null;
+  categoryColor: CategoryColorName | null;
   categoryIcon?: string | null | undefined;
   isNoActivity: boolean;
   minutes: number;
@@ -73,7 +73,7 @@ export interface TimePLRow {
 export interface TimePLVarianceRow {
   activityId: string | null;
   activityName: string | null;
-  categoryColor: TagColorName | null;
+  categoryColor: CategoryColorName | null;
   categoryIcon?: string | null | undefined;
   isNoActivity: boolean;
   varianceMinutes: number;
@@ -95,7 +95,7 @@ export interface StatementViewData {
 export interface BarComparisonRow {
   activityId: string | null;
   activityName: string | null;
-  categoryColor: TagColorName | null;
+  categoryColor: CategoryColorName | null;
   categoryIcon?: string | null | undefined;
   isNoActivity: boolean;
   budgetMinutes: number;

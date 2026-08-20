@@ -39,7 +39,7 @@ export const statisticsKpiRouter = createTRPCRouter({
    * 作成時フィードフォワード: タグ別見積もり係数（直近 4 週の中央値、`n >= 3`）
    *
    * `protectedProcedure` を使う。同じ statistics router 内でも Pro 区分は分かれており、
-   * Calendar の常設導線が引くもの（`getTagStats` / `getTimeByTag` / `getStreak` /
+   * Calendar の常設導線が引くもの（`getTagStats` / `getStreak` /
    * `getTimePL`）は protected、Review の分析深度にあたるもの（`getEstimationAccuracy` /
    * `getStatsPageData` 等）は pro になっている。本 procedure は Plan を作る瞬間の
    * 中核ループ（ADR-026 の 1 点目）に属するため前者に揃える。

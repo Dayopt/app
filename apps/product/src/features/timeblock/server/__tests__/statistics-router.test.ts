@@ -13,9 +13,7 @@ const serviceMethods = vi.hoisted(() => ({
   getMonthlyTrend: vi.fn(),
   getStatsOverview: vi.fn(),
   getStatsPageData: vi.fn(),
-  getTagDashboard: vi.fn(),
   getTagStats: vi.fn(),
-  getTimeByTag: vi.fn(),
   getTimePLData: vi.fn(),
 }));
 
@@ -30,18 +28,14 @@ vi.mock('../statistics-service', () => ({
     getMonthlyTrend = serviceMethods.getMonthlyTrend;
     getStatsOverview = serviceMethods.getStatsOverview;
     getStatsPageData = serviceMethods.getStatsPageData;
-    getTagDashboard = serviceMethods.getTagDashboard;
     getTagStats = serviceMethods.getTagStats;
-    getTimeByTag = serviceMethods.getTimeByTag;
     getTimePLData = serviceMethods.getTimePLData;
   },
 }));
 
 import { statisticsQueriesRouter } from '../statistics';
-import { tagStatisticsRouter } from '../tag-statistics';
 
 const createCaller = createCallerFactory(statisticsQueriesRouter);
-const createTagCaller = createCallerFactory(tagStatisticsRouter);
 const USER_ID = 'user-1';
 const START = '2026-04-01T00:00:00.000Z';
 const END = '2026-04-30T23:59:59.000Z';
@@ -78,14 +72,12 @@ describe('statistics router: StatisticsService 委譲', () => {
     const range = { startDate: START, endDate: END };
 
     await caller.getTagStats();
-    await caller.getTimeByTag(range);
     await caller.getDailyHours({ year: 2026 });
     await caller.getHourlyDistribution(range);
     await caller.getDayOfWeekDistribution(range);
     await caller.getMonthlyTrend({ months: 6 });
 
     expect(serviceMethods.getTagStats).toHaveBeenCalledWith(USER_ID);
-    expect(serviceMethods.getTimeByTag).toHaveBeenCalledWith(USER_ID, range);
     expect(serviceMethods.getDailyHours).toHaveBeenCalledWith(USER_ID, 2026);
     expect(serviceMethods.getHourlyDistribution).toHaveBeenCalledWith(USER_ID, range);
     expect(serviceMethods.getDayOfWeekDistribution).toHaveBeenCalledWith(USER_ID, range);
@@ -151,15 +143,6 @@ describe('statistics router: StatisticsService 委譲', () => {
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(serviceMethods.getTimePLData).not.toHaveBeenCalled();
-  });
-
-  it('tag dashboard を plans / records service へ渡す', async () => {
-    const ctx = createMockContext({ userId: USER_ID });
-    const input = { tagId: '00000000-0000-4000-8000-000000000001', startDate: START, endDate: END };
-
-    await createTagCaller(ctx).getTagDashboard(input);
-
-    expect(serviceMethods.getTagDashboard).toHaveBeenCalledWith(USER_ID, { ...input, limit: 50 });
   });
 
   it('service error を INTERNAL_SERVER_ERROR に正規化する', async () => {

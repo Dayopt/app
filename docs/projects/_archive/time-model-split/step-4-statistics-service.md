@@ -3,7 +3,6 @@ status: current
 last_verified: 2026-07-09
 code:
   - apps/product/src/features/timeblock/server/statistics.ts
-  - apps/product/src/features/timeblock/server/tag-statistics.ts
 ---
 
 # Step 4: 統計 TS service

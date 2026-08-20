@@ -16,15 +16,10 @@ import {
   fetchCategoriesById,
   fetchPlans,
   fetchRecords,
-  fetchTagsById,
 } from './statistics-fetchers';
 import type { BlankRateInput, StatisticsKpiService } from './statistics-kpi-service';
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
-import {
-  buildOverviewSection,
-  buildTimeByTagRows,
-  filterRowsByVisibleDateKeys,
-} from './statistics-row-builders';
+import { buildOverviewSection, filterRowsByVisibleDateKeys } from './statistics-row-builders';
 import {
   computeAvailableMinutesInclusive,
   computeBlankRate,
@@ -37,7 +32,6 @@ import {
   minutesBetween,
 } from './statistics-service-grouping';
 import type { StatsPageData, TimePLResponse } from './statistics-shared';
-import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 import type { ServiceSupabaseClient } from './types';
 
 export interface TimePLInput {
@@ -260,7 +254,8 @@ export class StatisticsSummaryService {
       rangePrevPlans,
       yearRecords,
       monthlyRecords,
-      tagsById,
+      activitiesById,
+      categoriesById,
     ] = await Promise.all([
       fetchRecords(this.supabase, userId, { startDate, endDate }),
       fetchPlans(this.supabase, userId, { startDate, endDate }),
@@ -268,7 +263,8 @@ export class StatisticsSummaryService {
       fetchPlans(this.supabase, userId, { startDate: prevStart, endDate: prevEnd }),
       fetchRecords(this.supabase, userId, { startDate: startOfYear, endDate: startOfNextYear }),
       fetchRecords(this.supabase, userId, { startDate: monthlyStartDate.toISOString() }),
-      fetchTagsById(this.supabase, userId),
+      fetchActivitiesById(this.supabase, userId),
+      fetchCategoriesById(this.supabase, userId),
     ]);
     const records = filterRowsByVisibleDateKeys(rangeRecords, visibleDateKeys, timezone);
     const plans = filterRowsByVisibleDateKeys(rangePlans, visibleDateKeys, timezone);
@@ -294,7 +290,6 @@ export class StatisticsSummaryService {
       visibleDayCount: visibleDateKeys?.length,
     });
 
-    const timeByTag = transformTimeByTagResponse(buildTimeByTagRows(records, tagsById));
     // NOTE: get_stats_page_data の hourly/dow は 24h/7dow の raw bucket をそのまま返す
     // （getHourlyDistribution/getDayOfWeekDistribution procedure が行う 2h slot 集約や
     // 曜日ラベル変換は適用しない。RPC 契約どおり）。
@@ -310,10 +305,20 @@ export class StatisticsSummaryService {
     const prevEnergyMap = groupEnergyMap(prevRecords, timezone);
 
     const estimationAccuracy = transformEstimationAccuracy(
-      await this.kpiService.computeEstimationAccuracy(userId, plans, tagsById),
+      await this.kpiService.computeEstimationAccuracy(
+        userId,
+        plans,
+        activitiesById,
+        categoriesById,
+      ),
     );
     const prevEstimationAccuracy = transformEstimationAccuracy(
-      await this.kpiService.computeEstimationAccuracy(userId, prevPlans, tagsById),
+      await this.kpiService.computeEstimationAccuracy(
+        userId,
+        prevPlans,
+        activitiesById,
+        categoriesById,
+      ),
     );
 
     const dailyHours = groupHoursByDay(yearRecords, timezone);
@@ -333,7 +338,6 @@ export class StatisticsSummaryService {
         scheduledMinutes: fullBlankRate.scheduledMinutes,
         blankRate: fullBlankRate.blankRate,
       },
-      timeByTag,
       hourly,
       dow,
       energyMap,

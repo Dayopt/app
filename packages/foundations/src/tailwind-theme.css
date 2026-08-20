@@ -83,32 +83,32 @@
   --shadow-card: var(--shadow-card);
 
   /* ============================================
-   * Tag Colors — Base（borders / dots / accents）
-   * 使用例: bg-tag-blue, border-tag-red
+   * Category Colors — Base（borders / dots / accents）
+   * 使用例: bg-category-blue, border-category-red
    * ============================================ */
-  --color-tag-red: var(--tag-red);
-  --color-tag-orange: var(--tag-orange);
-  --color-tag-amber: var(--tag-amber);
-  --color-tag-green: var(--tag-green);
-  --color-tag-teal: var(--tag-teal);
-  --color-tag-blue: var(--tag-blue);
-  --color-tag-indigo: var(--tag-indigo);
-  --color-tag-violet: var(--tag-violet);
-  --color-tag-pink: var(--tag-pink);
-  --color-tag-gray: var(--tag-gray);
+  --color-category-red: var(--category-red);
+  --color-category-orange: var(--category-orange);
+  --color-category-amber: var(--category-amber);
+  --color-category-green: var(--category-green);
+  --color-category-teal: var(--category-teal);
+  --color-category-blue: var(--category-blue);
+  --color-category-indigo: var(--category-indigo);
+  --color-category-violet: var(--category-violet);
+  --color-category-pink: var(--category-pink);
+  --color-category-gray: var(--category-gray);
 
-  /* Tag Colors — Tint（card背景用、WCAG AA準拠）
-   * 使用例: bg-tag-blue-tint */
-  --color-tag-red-tint: var(--tag-red-tint);
-  --color-tag-orange-tint: var(--tag-orange-tint);
-  --color-tag-amber-tint: var(--tag-amber-tint);
-  --color-tag-green-tint: var(--tag-green-tint);
-  --color-tag-teal-tint: var(--tag-teal-tint);
-  --color-tag-blue-tint: var(--tag-blue-tint);
-  --color-tag-indigo-tint: var(--tag-indigo-tint);
-  --color-tag-violet-tint: var(--tag-violet-tint);
-  --color-tag-pink-tint: var(--tag-pink-tint);
-  --color-tag-gray-tint: var(--tag-gray-tint);
+  /* Category Colors — Tint（card背景用、WCAG AA準拠）
+   * 使用例: bg-category-blue-tint */
+  --color-category-red-tint: var(--category-red-tint);
+  --color-category-orange-tint: var(--category-orange-tint);
+  --color-category-amber-tint: var(--category-amber-tint);
+  --color-category-green-tint: var(--category-green-tint);
+  --color-category-teal-tint: var(--category-teal-tint);
+  --color-category-blue-tint: var(--category-blue-tint);
+  --color-category-indigo-tint: var(--category-indigo-tint);
+  --color-category-violet-tint: var(--category-violet-tint);
+  --color-category-pink-tint: var(--category-pink-tint);
+  --color-category-gray-tint: var(--category-gray-tint);
 
   /* Now Indicator */
   --color-now-indicator: var(--now-indicator);
