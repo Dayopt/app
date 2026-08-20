@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-11
+last_verified: 2026-08-20
 code: .github/dependabot.yml
 ---
 
@@ -32,6 +32,7 @@ code: .github/dependabot.yml
 - `type:spike`
 - `type:discussion`
 - `type:chore`
+- `type:board`（日次盤面 issue 専用。2026-08-20、[#2259](https://github.com/Dayopt/dayopt/issues/2259)。`is:issue label:type:board is:open` で検索し当日の盤面issueを特定するために使う）
 
 ### priority
 

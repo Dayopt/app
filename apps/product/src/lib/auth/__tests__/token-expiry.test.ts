@@ -74,14 +74,18 @@ describe('トークン期限切れ・セッション検証', () => {
       );
     });
 
-    it('不正なMFA assurance組み合わせはfail closedでFORBIDDEN', async () => {
+    it('MFA無効化直後のaal2→aal1は通過する（#2150）', async () => {
+      // JWT由来のcurrentLevelがaal2のまま(token refresh前)、実際のfactor状態
+      // から算出したnextLevelが既にaal1になる正常な降格。aal2は要求水準を
+      // 満たしている側なので、これを許可しても権限昇格にはならない。
       const ctx = createMockContext({
         userId: 'user-1',
         mfaAssurance: { currentLevel: 'aal2', nextLevel: 'aal1' },
       });
       const caller = createCaller(ctx as never);
 
-      await expect(caller.whoami()).rejects.toThrow(expect.objectContaining({ code: 'FORBIDDEN' }));
+      const result = await caller.whoami();
+      expect(result.userId).toBe('user-1');
     });
 
     it('MFA登録済みAAL1セッションはFORBIDDEN', async () => {

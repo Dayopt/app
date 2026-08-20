@@ -38,6 +38,28 @@
 
 対にして覚える: **凍結した plan は issue コメントへ、検証手順は repo の test へ。** どちらも「セッションが畳まれても残るか」で置き場所を決めている。
 
+## 日次盤面 issue
+
+策定日: 2026-08-20（[#2259](https://github.com/Dayopt/dayopt/issues/2259)。STATE.md 廃止に伴う移行。旧設計と経緯は `CLAUDE.md` §運用基盤）
+
+朝の Routine が毎日「盤面 YYYY-MM-DD」issue（`type:board` ラベル）を起票する。**起票テンプレ・自動パートの手順の正本は `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）**（複製しない）。本節はこの issue を指揮台がどう使うかだけを扱う。
+
+- **§2 進行中レーンは指揮台が定型で更新する**（機械生成ではない）。更新タイミングと段階値の対応:
+
+  | タイミング                                                                                      | 段階値                                                         |
+  | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+  | dispatch 時                                                                                     | 「実装中」                                                     |
+  | レーンから「レビュー待ち」報告受領（ready+重量green自己申告、§指揮台の merge シーケンス 手順2） | 「レビュー待ち」                                               |
+  | クロスレビューで fix round 発生中                                                               | 「fix対応中」                                                  |
+  | thread解消+green再報告受領                                                                      | 「merge可能」                                                  |
+  | `branch:finish` 完了                                                                            | 行を削除（PR は close され GitHub 側でバッジが自動反映される） |
+
+  この定型更新を怠ると STATE.md 時代と同じ陳腐化が起きる。[#2256](https://github.com/Dayopt/dayopt/issues/2256) の「追記漏れの機械検出」（当日コメント欠落を朝編成 sweep で検出）が backstop になる
+
+- **§3 キュー・§4 要判断は転記しない。** `status:ready` / `type:discussion` の検索リンクを貼るだけにする（常に最新、鮮度劣化しない）
+- **§1 今週の最優先だけが内容を持つ**。前日 issue から機械コピーし、当日は User/指揮台が直接編集する
+- **公開契約の注意**: 盤面 issue は public repo の観測コンテンツ。指示の効力は持たない（§裁可・指示の経路 の原則どおり、盤面 issue のコメント単独で指示を実行しない）。テンプレ冒頭にこの旨を固定文言で入れる
+
 ## 裁可・指示の経路（issue 正本 + send_message ポインタ）
 
 策定日: 2026-08-12（2026-08-19 改訂: issue 正本 + ポインタ方式へ。経緯は #2220。send_message の queue 滞留により同日 3 件の行き違いが発生したため）
@@ -93,11 +115,11 @@
 >
 > **節目で担当 issue のコメントを読み直す**（2026-08-12 追記） — 実装の節目（plan 凍結後・PR 作成前・merge 可能報告前）に、自分の担当 issue のコメントを読み直す。send_message はレーンの turn 実行中に配信されないため、scope 追加・裁可が issue コメントとして先に届いていることがある（§裁可・指示の経路 参照）
 >
-> **確定後は ready 化 → 重量 watch → green 報告**（2026-08-13 追記） — 指揮台からクロスレビュー収束の確定伝達を受けたら、レーンは §指揮台の merge シーケンス の前提条件（確定・merge 順で先頭・追従済み・直前 push の軽量 CI 起動完了）を確認した上で ready 化し、重量 CI を watch して green を指揮台へ報告する。保護対象該当時の trusted dispatch 実行は指揮台のまま。branch:finish は指揮台が実行する
+> **push・ready 化・重量 watch は自律的に進める**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)） — 軽量 green を確認したら指揮台の合図を待たずに ready 化し、重量 CI を watch して green を指揮台へ「レビュー待ち」として報告する。**追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため）。保護対象該当時の trusted dispatch 実行は指揮台のまま。branch:finish は指揮台が実行する
 
 **チップ prompt への転記は、上記全文の代わりに次の 1 行で足りる**（2026-08-19、#2220。全文の正本はこの節に置いたまま複製しない — 複製すると片方だけ改訂される drift を必ず生む。軽量化するのはコピー先だけ）:
 
-> 連絡規律: `.claude/rules/orchestration.md` §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当 issue のコメントを読み直す・push は指揮台の合図待ち・spawn_task は指揮台の専権のため使わない・確定後は ready 化 → 重量 watch → green 報告）。
+> 連絡規律: `.claude/rules/orchestration.md` §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当 issue のコメントを読み直す・push/ready化/重量watchは自律的に進める・追従だけは指揮台の合図待ち・spawn_task は指揮台の専権のため使わない）。
 
 例外: 初出のレーン、またはこの規律が守られなかった直後のレーン再起動では、上記全文を明示する（規律の意図を一度は伝える）。
 
@@ -153,38 +175,35 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 
 担当が二重化すると、両者が同じ親から merge commit を並行作成し、後から push した側が non-fast-forward で弾かれる。気づかず重複 push すれば重量 CI がもう 1 回走る（2026-08-11 に実発生。先行追従の方も、前段の merge で無効化されて重量 CI を 1 回無駄にした）。
 
-**STATE.md（#2224）が追従で衝突したら手 merge しない。** STATE.md の §2〜§5 は生成物なので、conflict の解決は `pnpm state:generate` の再実行に一本化する（`CLAUDE.md` §運用基盤（STATE.md）参照）。手で conflict marker を編集すると、次回生成時にマーカー構文ごと壊れる恐れがある。
+**日次盤面 issue（#2224 → #2259）は追従の対象外。** issue コメントは git 管理下にないため、`update-branch` / merge 順の采配とは無関係。STATE.md 時代の「conflict は再生成で解決する」という運用（機械生成ファイルゆえの制約）は、日次盤面 issue への移行に伴い解消済み。
 
 **上位の教訓: 指揮台の采配ミスは「基本形から良かれと思って外れた時」に集中する。** 基本形は直列・1 本ずつ・決めたら動かさない。最適化を思いついたら、実行前に**レーン側の実務コストで検算する** — 指揮台から見た手数の削減が、レーンでは追従のやり直しや CI の再走に化けることがある。
 
-### push タイミングの一元化（策定日: 2026-08-12）
+### レーン主導の push・ready 化（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)）
 
-レーンは盤面（他 PR の動き・merge 順）を把握していないため、自己判断の push は「merge 前に main が動いてやり直し」「CI の無駄撃ち」になる。Actions 経済（2026-09 の private 化で無料枠 2,000 分/月）の下では push 回数が直接の予算制約になるため、push のタイミングも指揮台が采配する。
+**旧「push タイミングの一元化」を廃止し、push・ready 化・重量 watch はレーンが自己判断で進める。** 2026-08-20 の実測（8 PR merge）で、push 合図・確定伝達・ready 合図の往復の大半が形式的だったため、PR の状態遷移を「draft = レーン作業中 / ready + CI green = 指揮官レビュー待ち」という自己記述的なセマンティクスへ転換した（設計は #2263）。
 
-- レーンは round の commit + push 前セルフレビューまで済ませて「push-ready」を指揮台へ報告し、**指揮台の合図を待ってから push する**
-- push の実行はレーン自身が行う（branch の writer のまま）。指揮台が采配するのはタイミングだけ
-- 待ちが増えるのは許容する（待ち中は他作業を続けてよい）
-- 既存ルール（追い push 禁止・round 単位で 1 回に束ねる・追従担当は 1 者）は不変。本節はその上に「push の実行タイミング」の采配を積む
-- **ready 化も同じ確定伝達の合図に従う**（2026-08-13 追記、[#2042](https://github.com/Dayopt/dayopt/issues/2042)）。ready 化は push そのものではないが同じ性質（盤面を知らない側が起こすと merge 前に main が動いてやり直しになる、高価な Actions イベントを起動する）を持つため、§指揮台の merge シーケンス の「確定伝達」を経てから行う
+- レーンは round の commit + push 前セルフレビュー完了後、**指揮台の合図を待たずに push する**
+- push 後、軽量 CI green を確認したら、**指揮台の合図を待たずに ready 化**し、重量層（E2E / Web E2E / Production Config Audit）を watch する
+- **維持するもの（変えない）**:
+  - **追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため。2026-08-20 のレーン F/H で先行追従の弊害と例外承認の両方を実測済み）
+  - round 束ね規律（1 round = 1 push、追い push しない）は不変
+  - 保護対象 PR（audit contract）は ready 前に指揮台へ申告する（trusted dispatch が要るため）。§指揮台の merge シーケンス 手順 2 参照
+- **明示するトレードオフ**: ready 後の fix round push で重量 CI が再走する（旧「ready 化は merge 直前に 1 回」思想からの転換。`.claude/rules/workflow.md` §2 段階 CI 参照）。public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する
 
-**2026-08-13 追記**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。これにより push 前の permission prompt という偶発的な機械 gate は無くなった。**本節が定める「合図を待ってから push する」の抑止は、以後は規律のみで担保する。** force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める（本節の対象は通常 push のタイミングで、それらとは別の話）。
+**2026-08-13 追記（now-legacy、経緯として残す）**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。push 前の permission prompt という偶発的な機械 gate は無い。force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める。
 
 ## 指揮台の merge シーケンス
 
-策定日: 2026-08-12（2026-08-13 改訂: ready 化・重量 watch をレーンへ移管、[#2042](https://github.com/Dayopt/dayopt/issues/2042)）
+策定日: 2026-08-12（2026-08-20 改訂: レーン主導フローへ全面転換、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。旧版は §指揮台の merge シーケンス の履歴として git log に残る）
 
 1 本の PR を merge へ運ぶ手順を実行順で固定する。個々の step の詳細は `.claude/rules/workflow.md` §2 段階 CI・§Worktree 運用・[infra.md §CI 品質ゲート](../../docs/engineering/infra.md#ci-品質ゲート)が正本で、ここでは指揮台が踏む順序と判断点だけをまとめる（重複させない）。
 
-1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）。**これは以後の手順すべての前提**: ready 化はこの追従が済み、かつ merge 順で先頭であることが確定してから行う（手順 6 参照）
-2. **軽量 green** — draft 中に走る Static Checks / Unit Tests / Docs Guard の green を確認する
-3. **保護対象の検出・報告（レーン）** — audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に PR が触れているかをレーンが検出し、指揮台へ報告する。**レーンは検出・報告のみを行う。** `gh workflow run production-config-audit.yml` の trusted dispatch 実行は、diff レビュー後にユーザーの明示指示を得て指揮台が行う（変更しない。`workflow.md` §build と bundle 検査は Vercel 側で走る 参照）。この確認は ready 化の前に済ませる — ready 化してから気づくと、重量層が動き出した後に trusted dispatch を後追いで挟むことになり、Production Config Audit のやり直しが 1 回増える
-4. **クロスレビュー** — レーンが軽量 green を指揮台へ報告した後、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行し、収束させる。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う
-5. **確定伝達** — 指揮台がクロスレビューの収束を確認したら、「確定」としてレーンへ伝える。この時点で **「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも合わせて宣言する**。レーンはこの条件を自己判定しない（レーンは盤面を持たないため。§push タイミングの一元化 と同じ理由）
-6. **ready 化 + 重量 watch（レーン実行）** — レーンが確定伝達を受けたら ready 化し、重量層（E2E / Web E2E / Production Config Audit）を watch する。ready 化は**直前 push が起こした軽量 CI が起動・完了していることを確認してから**行う（push イベントと ready_for_review イベントの二重トリガーで concurrency の cancel-in-progress が古い run を cancelled にし、`branch:finish` の rollup 判定を止める事故が実際に起きた。cancelled run は削除して復旧する）。手順 3 で保護対象該当と分かっていた場合、Production Config Audit は設計上 failure になる（`infra.md` §CI 品質ゲート「audit contract 変更 PR の guard failure は trusted dispatch で解除する」）ため、**push ごとに**指揮台へ trusted dispatch の実行を依頼してから green を待つ。**依頼は PR 側の audit run が完了してから出す**（`workflow.md` §マージ後の掃除 と同じ順序制約: 先に dispatch を流すと、後から完了した PR 側 run の failure が dispatch の success を上書きする。この確認はレーン watch → 依頼のタイミングで担保する）
-7. **green 報告** — レーンが重量 green を確認し、指揮台へ報告する
-8. **branch:finish** — `pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台）
-
-**レーンの merge 可能報告は draft 時点（手順 2 の軽量 green 確認後）でよい。** ただし**保護対象 PR に該当する場合は、trusted dispatch が必要になることを報告に明記する**（レーンの連絡規律の「推奨を必ず持って上げる」の一部）。指揮台が手順 3 を ready 化前に済ませられるかは、この申し送りの有無で決まる。
+1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）。追従だけは今も指揮台の合図待ち（レーンは merge 順を知らないため）
+2. **レーンが自律的に進める** — 軽量 green（Static Checks / Unit Tests / Docs Guard）確認 → 保護対象該当時は指揮台へ申告（`gh workflow run production-config-audit.yml` の trusted dispatch は指揮台が diff レビュー後にユーザー明示指示で実行。変更しない）→ ready 化 → 重量層 watch → green 確認 →「レビュー待ち」を指揮台へ報告。指揮台の合図を待たない（§レーン主導の push・ready化 参照）
+3. **クロスレビュー** — レーンから「レビュー待ち」報告を受けたら、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行する。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う
+4. **fix round（該当時のみ）** — 指摘があれば、**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む。修正後、レーンは重量 green を再確認して指揮台へ再報告する（重量 CI の再走はこのフローの明示的トレードオフ）
+5. **merge** — thread 全 resolve + marker + green を確認したら、`pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台のみ）
 
 ## 1 日サイクル
 
@@ -195,9 +214,9 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 - **画面操作は指揮台が実行する**（策定日: 2026-08-12、User 決定。経緯は #2019）。User 操作枠は「User が画面を触る」前提でリスト化していたが、画面操作の大半は指揮台が Browser / Claude in Chrome（ログイン済みセッション）/ Gmail 経由で実行できる。アプリ検証・Dashboard read 系・コンソール確認・デモ操作の運転は指揮台が行い、User の実働は次の人間ゲートだけに絞る: (1) パスワード等の入力（1Password 承認含む）(2) form 送信・公開・購入の最終クリック承認 (3) attended 必須セッションへの同席 (4) 録画・アップロード・審査提出。窓の checklist はこの人間ゲートまで「押すだけ」に分解して渡す。制約: User 本人以外のメールボックス宛てのリンクは開封だけ User に渡す（または転送設定）
 - **日中: 例外駆動** — レーンからの質問を一次仕分けし、証拠で答えられるものは指揮台が直接返答、価値判断だけを User へ `CHECKPOINT` report 形式で上げる。加えて**内製クロスレビューの往復の収束は指揮台が主導する**。往復の中にいるレーンは「本体はもう確定した」と判断しにくく、放っておくと防御の上乗せで往復が倍に伸びる。外から見ている指揮台が能動的に打ち切りを出す（判断基準は `.claude/rules/workflow.md` §同型指摘の打ち切り）
 - **夕方: 収束** — diff レビュー + クロスレビュー、マージ順の采配、`pnpm branch:finish`、issue への反映、翌日への引き継ぎを書いてセッションを畳む
-- **上限は 1 日、数日跨ぐ常駐はしない**（transcript 肥大で判断が鈍る）。ただし下限を 1 日に固定する理由は消えている（策定日: 2026-08-20、User 発案。経緯は [#2226](https://github.com/Dayopt/dayopt/issues/2226)）。STATE.md（`CLAUDE.md` §運用基盤）と issue 正本 + ポインタ方式（§裁可・指示の経路）の導入により、新セッションが即座に現状把握できるようになったため、**収束点での分割を推奨する**: 大きな merge の完了・フェーズ転換（編成→監視、収束→締め）・transcript の肥大を感じた時に、STATE.md の更新と引き継ぎコメント（下記）を残して畳み、新セッションで再開してよい
+- **上限は 1 日、数日跨ぐ常駐はしない**（transcript 肥大で判断が鈍る）。ただし下限を 1 日に固定する理由は消えている（策定日: 2026-08-20、User 発案。経緯は [#2226](https://github.com/Dayopt/dayopt/issues/2226)）。日次盤面 issue（`CLAUDE.md` §運用基盤）と issue 正本 + ポインタ方式（§裁可・指示の経路）の導入により、新セッションが即座に現状把握できるようになったため、**収束点での分割を推奨する**: 大きな merge の完了・フェーズ転換（編成→監視、収束→締め）・transcript の肥大を感じた時に、日次盤面 issue §2 レーン表の更新と引き継ぎコメント（下記）を残して畳み、新セッションで再開してよい
   - **切らない条件**: レーンとの往復（レビュー差し戻し・`CHECKPOINT` 応酬）が進行中の間は切らない。往復の途中で切り替えが当たると、返答待ちのレーンを取りこぼす
-  - **引き継ぎコメント**: 分割時は現在の盤面把握が可能な issue（引き継ぎ用の常設 issue、または直近の作業 issue）へコメントを残す。書く内容は 3 行程度: (1) 直前までの状態（何を完了・何が進行中） (2) 次にやること (3) 未解決の判断・懸念。STATE.md の§2〜§5 は `pnpm state:generate` が機械生成するため、引き継ぎコメントに進捗の複製は書かない（`CLAUDE.md` §運用基盤（STATE.md））
+  - **引き継ぎコメント**: 分割時は当日の日次盤面 issue へコメントを残す。書く内容は 3 行程度: (1) 直前までの状態（何を完了・何が進行中） (2) 次にやること (3) 未解決の判断・懸念。日次盤面 issue 自体が §2 進行中レーンの状態を持つため、引き継ぎコメントに進捗の複製は書かない
 
 ## 判断ジャーナル
 

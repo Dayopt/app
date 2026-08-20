@@ -26,6 +26,13 @@ import { SUPPORTED_SCOPES } from '@/lib/oauth-server/scopes';
  *
  * DB 側の期待値をこのファイルに literal で書かないのが要点。書くと「5 箇所目」が
  * 増えるだけで、同じ取りこぼしがここでも起きる。
+ *
+ * #2183 で DB 側の allowlist は `private.oauth_supported_scopes_v1()` の単一定義へ
+ * 一元化した。CHECK 制約 3 本と grant 関数本体はもう scope literal を持たず、
+ * この関数を参照するだけになったため、定義文から literal を正規表現で抜き出す
+ * 突き合わせ（旧方式）はもう機能しない。代わりに (a) 単一定義の中身が
+ * SUPPORTED_SCOPES と一致すること (b) 4 箇所すべてが単一定義を参照している
+ * こと（= 自前の literal を持たないこと）の 2 点を確認する。
  */
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
@@ -87,10 +94,11 @@ function expectRows(result: SpawnSyncReturns<string>): string[] {
 }
 
 /**
- * 生の定義文から scope literal だけを取り出す。scope は必ず `区分:対象` の形なので、
- * コロンを含む literal に絞れば `'S256'` のような無関係な文字列を巻き込まない。
+ * 定義文（catalog から読んだテキスト）に scope literal が残っていないかを
+ * JS 側で直接検査するパターン。scope は必ず `区分:対象` の形なので、コロンを
+ * 含む引用文字列に絞れば `'S256'` のような無関係な文字列を巻き込まない。
  */
-const SCOPE_LITERAL_PATTERN = String.raw`'''([a-z]+:[a-z]+)'''`;
+const SCOPE_LITERAL_PATTERN = /'[a-z]+:[a-z]+'/;
 
 describe.skipIf(!RUN_LOCAL)('MCP OAuth scope allowlist', () => {
   beforeAll(async () => {
@@ -107,58 +115,56 @@ describe.skipIf(!RUN_LOCAL)('MCP OAuth scope allowlist', () => {
     await admin.auth.admin.deleteUser(userId);
   });
 
-  it('CHECK 制約 3 本の allowlist が SUPPORTED_SCOPES と完全一致する', () => {
+  it('単一定義 private.oauth_supported_scopes_v1() が SUPPORTED_SCOPES と完全一致する', () => {
+    const rows = expectRows(
+      runOwnerSql(`SELECT unnest(private.oauth_supported_scopes_v1()) ORDER BY 1;`),
+    );
+
+    expect(rows).toEqual([...SUPPORTED_SCOPES].sort());
+    expect(rows).not.toContain(REMOVED_SCOPE);
+  });
+
+  it('CHECK 制約 3 本が単一定義を参照し、自前の scope literal を持たない', () => {
     for (const constraintName of SCOPE_CHECK_CONSTRAINTS) {
       // 定義は catalog から読む。migration ファイルの本文を読むと、後から別の
       // migration が制約を差し替えた時に古い定義を検証してしまう。
       const rows = expectRows(
         runOwnerSql(
           `
-            SELECT DISTINCT scope_literal[1]
+            SELECT pg_catalog.pg_get_constraintdef(c.oid)
             FROM pg_constraint AS c
             JOIN pg_class AS rel ON rel.oid = c.conrelid
             JOIN pg_namespace AS schema ON schema.oid = rel.relnamespace
-            CROSS JOIN LATERAL regexp_matches(
-              pg_catalog.pg_get_constraintdef(c.oid),
-              ${SCOPE_LITERAL_PATTERN},
-              'g'
-            ) AS scope_literal
             WHERE schema.nspname = 'public'
-              AND c.conname = :'constraint_name'
-            ORDER BY 1;
+              AND c.conname = :'constraint_name';
           `,
           { constraint_name: constraintName },
         ),
       );
 
-      expect(rows, constraintName).toEqual([...SUPPORTED_SCOPES].sort());
-      expect(rows, constraintName).not.toContain(REMOVED_SCOPE);
+      expect(rows, constraintName).toHaveLength(1);
+      expect(rows[0], constraintName).toContain('private.oauth_supported_scopes_v1()');
+      expect(rows[0], constraintName).not.toMatch(SCOPE_LITERAL_PATTERN);
     }
   });
 
-  it('grant 関数本体の allowlist が SUPPORTED_SCOPES と完全一致する', () => {
-    // `p_scopes <@ ARRAY[...]` の中だけを見る。本体には write scope の配列や
+  it('grant 関数本体が単一定義を参照し、allowlist 判定に自前の scope literal を持たない', () => {
+    // `p_scopes <@ ...` の中だけを見る。本体には write scope の配列や
     // read:entries 同伴チェックにも scope literal が出るので、body 全体から
-    // 集めると「allowlist から外したのに他の配列に残っている」scope を
-    // 取りこぼす（それが 4 箇所目を見落とすのと同じ失敗になる）。
+    // 集めると無関係な literal を巻き込む。
     const rows = expectRows(
       runOwnerSql(`
-        SELECT DISTINCT scope_literal[1]
+        SELECT pg_catalog.substring(p.prosrc, 'p_scopes <@ [^\\n]*')
         FROM pg_proc AS p
         JOIN pg_namespace AS schema ON schema.oid = p.pronamespace
-        CROSS JOIN LATERAL regexp_matches(
-          pg_catalog.substring(p.prosrc, 'p_scopes <@ ARRAY\\[([^\\]]*)\\]'),
-          ${SCOPE_LITERAL_PATTERN},
-          'g'
-        ) AS scope_literal
         WHERE schema.nspname = 'public'
-          AND p.proname = 'create_oauth_authorization_grant_v2'
-        ORDER BY 1;
+          AND p.proname = 'create_oauth_authorization_grant_v2';
       `),
     );
 
-    expect(rows).toEqual([...SUPPORTED_SCOPES].sort());
-    expect(rows).not.toContain(REMOVED_SCOPE);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain('private.oauth_supported_scopes_v1()');
+    expect(rows[0]).not.toMatch(SCOPE_LITERAL_PATTERN);
   });
 
   it('grant 関数は SUPPORTED_SCOPES の read scope をすべて受け付ける', async () => {
@@ -276,5 +282,68 @@ describe.skipIf(!RUN_LOCAL)('MCP OAuth scope allowlist', () => {
     expect(rejected.status).not.toBe(0);
     expect(rejected.stderr).toContain('23514');
     expect(rejected.stderr).toContain('oauth_tokens_supported_scopes_check');
+  });
+
+  it('service_role は oauth_tokens / oauth_connections の last_used_at を直接 UPDATE できる', async () => {
+    // `apps/product/src/lib/mcp/auth.ts` の `updateUsageTimestamps()` が
+    // service_role で直接 UPDATE する経路（RPC を経由しない）。CHECK 制約は
+    // UPDATE のたびに全カラム再評価され、制約式内の関数呼び出しは実行中の
+    // ロール（ここでは service_role）で EXECUTE 権限をチェックされるため、
+    // `private.oauth_supported_scopes_v1()` への GRANT が抜けると
+    // 42501（permission denied for function）でこの経路だけが壊れる
+    // （risk-reviewer の反証レビューで検出、20260820100001 で修正）。
+    // owner（postgres）や SECURITY DEFINER 経由の呼び出しは owner 権限で
+    // 素通りしてしまい検出できないため、`admin`（service_role client）で
+    // 直接 UPDATE することが重要。
+    const code = `scope-allowlist-usage-${crypto.randomUUID()}`;
+    const { data: connectionId, error } = await admin.rpc('create_oauth_authorization_grant_v2', {
+      p_user_id: userId,
+      p_client_id: 'chatgpt',
+      p_resource_uri: productionResource,
+      p_scopes: ['read:entries'],
+      p_code_hash: code,
+      p_redirect_uri: redirectUri,
+      p_code_challenge: 'scope-allowlist-usage-challenge',
+      p_write_enabled: false,
+    });
+    expect(error).toBeNull();
+
+    const tokenHash = `scope-allowlist-usage-token-${crypto.randomUUID()}`;
+    const insertResult = runOwnerSql(
+      `
+        INSERT INTO public.oauth_tokens (
+          user_id, token_hash, token_type, client_id, scopes,
+          expires_at, connection_id, resource_uri
+        ) VALUES (
+          :'user_id'::UUID,
+          :'token_hash',
+          'access',
+          'chatgpt',
+          ARRAY['read:entries']::TEXT[],
+          pg_catalog.now() + INTERVAL '5 minutes',
+          :'connection_id'::UUID,
+          :'resource_uri'
+        );
+      `,
+      {
+        user_id: userId,
+        token_hash: tokenHash,
+        connection_id: String(connectionId),
+        resource_uri: productionResource,
+      },
+    );
+    expect(insertResult.status).toBe(0);
+
+    const { error: tokenUpdateError } = await admin
+      .from('oauth_tokens')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('token_hash', tokenHash);
+    expect(tokenUpdateError).toBeNull();
+
+    const { error: connectionUpdateError } = await admin
+      .from('oauth_connections')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('id', String(connectionId));
+    expect(connectionUpdateError).toBeNull();
   });
 });

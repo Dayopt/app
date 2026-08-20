@@ -30,6 +30,10 @@ export function WorkspaceTabs() {
 
   return (
     <div className="px-2 py-2">
+      {/* #2249: 「カレンダー」ラベルが折り返す狭さが「タブが狭い」の実体だった
+          （w-64 = デフォルトsidebar幅256pxで実測）。gap/paddingを詰めて折り返しを解消する。
+          active表現はpill+shadow（浮いたカード）ではなく淡い塗り+太字（候補B、User提供の
+          Claude desktopスクリーンショット参照）。 */}
       <div className="bg-container flex items-center gap-1 rounded-lg p-1" role="tablist">
         <TabButton
           href={calendarHref}
@@ -65,10 +69,10 @@ function TabButton({
       role="tab"
       aria-selected={active}
       className={cn(
-        'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-normal transition-colors duration-150',
+        'flex flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2 text-sm whitespace-nowrap transition-colors duration-150',
         active
-          ? 'bg-card text-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground',
+          ? 'bg-state-selected text-foreground font-medium'
+          : 'text-muted-foreground hover:bg-state-hover hover:text-foreground font-normal',
       )}
     >
       {icon}
