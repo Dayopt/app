@@ -29,7 +29,11 @@ import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
-import { captureUnexpectedDatabaseError, observeAuthOperation } from '@/lib/sentry';
+import {
+  captureUnexpectedDatabaseError,
+  captureUnexpectedError,
+  observeAuthOperation,
+} from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import type { Context } from '@/lib/trpc/procedures';
@@ -122,21 +126,33 @@ async function isEmailSuppressed(email: string): Promise<boolean> {
 /**
  * Resend APIでメールを送信する共通ヘルパー
  *
- * サプレッションリスト（バウンス/苦情）に含まれるアドレスへの送信をスキップ
+ * サプレッションリスト（バウンス/苦情）に含まれるアドレスへの送信をスキップ。
+ * `securityNotification: true`（MFA無効化・パスワード変更などセキュリティ通知）
+ * の場合、suppressed でも `logger.warn` だけでなく Sentry へ痕跡を残す（#2043）。
+ * 配信評価保護という suppression 本来の目的（bounce/complaint 済みアドレスへ
+ * 送り続けない）は維持しつつ、セキュリティ通知が無痕跡で落ちるのを防ぐ。
  */
 async function sendEmail({
   to,
   subject,
   react,
   context,
+  securityNotification = false,
 }: {
   to: string;
   subject: string;
   react: React.ReactElement;
   context: string;
+  securityNotification?: boolean;
 }) {
   if (await isEmailSuppressed(to)) {
     logger.warn(`${context} skipped: email suppressed`);
+    if (securityNotification) {
+      captureUnexpectedError(new Error(`${context} skipped: recipient is suppressed`), {
+        feature: 'email',
+        operation: 'send_security_notification_suppressed',
+      });
+    }
     return { success: true as const, emailId: undefined, suppressed: true as const };
   }
 
@@ -235,6 +251,7 @@ export async function sendMfaDisabledEmail({
       appUrl: APP_URL,
     }),
     context: 'MFA disabled email',
+    securityNotification: true,
   });
 }
 
@@ -484,6 +501,7 @@ export const emailRouter = createTRPCRouter({
             appUrl: APP_URL,
           }),
           context: 'Password changed email',
+          securityNotification: true,
         });
       } catch (error) {
         return handleServiceError(error);
