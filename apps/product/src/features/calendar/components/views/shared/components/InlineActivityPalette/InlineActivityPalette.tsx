@@ -30,8 +30,12 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import { DEFAULT_PLAN_LANE_WIDTH_PERCENT } from '../../../../../lib/two-lane-layout';
+import {
+  DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  hasLaneCounterpart,
+} from '../../../../../lib/two-lane-layout';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
+import type { CalendarEvent } from '../../../../../types/calendar.types';
 
 import { Z_INDEX } from '../../constants/grid.constants';
 import { ConflictOverlay } from '../ConflictOverlay';
@@ -47,10 +51,19 @@ interface InlineActivityPaletteProps {
   hourHeight: number;
   /** このカラムの日付（複数日ビューで対象カラムのみ表示するため） */
   date?: Date | undefined;
+  /**
+   * 相手レーンとの重複判定に使う、その日の全 entry（plan+record 両方）。
+   * 未指定時は counterpart 無し扱いにはせず、常に split 幅（既存挙動）を保つ。
+   */
+  dayEntries?: CalendarEvent[] | undefined;
 }
 
 /** ドラッグ選択後にカレンダーグリッド上でアクティビティを選んでエントリ作成するコンポーネント */
-export function InlineActivityPalette({ hourHeight, date }: InlineActivityPaletteProps) {
+export function InlineActivityPalette({
+  hourHeight,
+  date,
+  dayEntries,
+}: InlineActivityPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
@@ -129,6 +142,13 @@ export function InlineActivityPalette({ hourHeight, date }: InlineActivityPalett
   const datePattern = locale === 'ja' ? 'M/d (E)' : 'E, MMM d';
   const pickerTimeLabel = `${format(pendingSelection.date, datePattern, { locale: dateFnsLocale })} ${timeLabel}`;
 
+  const selectionStartLocal = new Date(
+    pendingSelection.date.getFullYear(),
+    pendingSelection.date.getMonth(),
+    pendingSelection.date.getDate(),
+    startHour,
+    startMinute,
+  );
   const selectionEndLocal = new Date(
     pendingSelection.date.getFullYear(),
     pendingSelection.date.getMonth(),
@@ -140,10 +160,29 @@ export function InlineActivityPalette({ hourHeight, date }: InlineActivityPalett
   const isPlan = destination === 'plan';
   const destinationLabel = tCalendar(`event.preview.${destination}`);
   const pickerContextLabel = `${destinationLabel} · ${pickerTimeLabel}`;
-  const laneLeft = isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
-  const laneWidth = isPlan
-    ? DEFAULT_PLAN_LANE_WIDTH_PERCENT
-    : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+
+  // #2250: 相手レーンに重なる entry が無ければフル幅にする（表示層・選択プレビューと
+  // 同じ判定）。selectionStartLocal/EndLocal は displayStartDate/displayEndDate と
+  // 同じ wall-clock 座標系（timezone 変換前）で構築しているため、そのまま比較できる。
+  const counterpartKind = isPlan ? 'record' : 'plan';
+  const hasCounterpart =
+    dayEntries === undefined
+      ? true
+      : hasLaneCounterpart(
+          dayEntries.filter((event) => {
+            const eventKind =
+              event.kind ?? resolveTimeblockDestination(event.endDate ?? event.displayEndDate);
+            return eventKind === counterpartKind;
+          }),
+          selectionStartLocal,
+          selectionEndLocal,
+        );
+  const laneLeft = !hasCounterpart ? 0 : isPlan ? 0 : DEFAULT_PLAN_LANE_WIDTH_PERCENT;
+  const laneWidth = !hasCounterpart
+    ? 100
+    : isPlan
+      ? DEFAULT_PLAN_LANE_WIDTH_PERCENT
+      : 100 - DEFAULT_PLAN_LANE_WIDTH_PERCENT;
 
   // ホバー中アクティビティが継承する色を解決
   const hoveredColorClasses = hoveredActivity

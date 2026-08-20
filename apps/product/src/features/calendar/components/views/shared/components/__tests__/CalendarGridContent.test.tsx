@@ -239,7 +239,35 @@ describe('CalendarGridContent', () => {
     expect(previewEntry.actualEndDate?.toISOString()).toBe('2026-06-04T18:45:00.000Z');
   });
 
-  it('Planのdrag previewはPlanレーンのoutlineカードで表示する', () => {
+  it('Planのdrag previewはPlanレーンのoutlineカードで表示する（#2250: previewTime に重なる Record が存在する場合は split 幅）', () => {
+    const plan = makeCalendarEvent('plan');
+    // ghostMock.previewTime（10:00-11:00 UTC）に重なる Record を counterpart として用意する。
+    const counterpartRecord = makeCalendarEvent('record', {
+      id: 'record-counterpart',
+      startDate: new Date('2026-07-15T10:00:00.000Z'),
+      endDate: new Date('2026-07-15T11:00:00.000Z'),
+      displayStartDate: new Date('2026-07-15T10:00:00.000Z'),
+      displayEndDate: new Date('2026-07-15T11:00:00.000Z'),
+    });
+    ghostMock.timeblockId = plan.id;
+    useCalendarDragStore.getState().updateDrag({ targetLane: 'plan' });
+
+    const { container } = render(
+      <CalendarGridContent
+        date={new Date('2026-07-15T00:00:00.000Z')}
+        entries={[plan, counterpartRecord]}
+        dayIndex={0}
+      />,
+    );
+
+    const card = container.querySelector('[data-plan-lane-card]');
+    expect(card).not.toBeNull();
+    expect(card).toHaveStyle({ left: '0%', width: 'calc(38% - 4px)' });
+    expect(card).not.toHaveAttribute('role');
+    expect(card).not.toHaveAttribute('tabindex');
+  });
+
+  it('previewTime に重なる Record が無い場合、Plan の drag preview はフル幅になる（#2250 P1 regression）', () => {
     const plan = makeCalendarEvent('plan');
     ghostMock.timeblockId = plan.id;
     useCalendarDragStore.getState().updateDrag({ targetLane: 'plan' });
@@ -254,12 +282,38 @@ describe('CalendarGridContent', () => {
 
     const card = container.querySelector('[data-plan-lane-card]');
     expect(card).not.toBeNull();
-    expect(card).toHaveStyle({ left: '0%', width: 'calc(38% - 4px)' });
-    expect(card).not.toHaveAttribute('role');
-    expect(card).not.toHaveAttribute('tabindex');
+    expect(card).toHaveStyle({ left: '0%', width: 'calc(100% - 4px)' });
   });
 
-  it('PlanをRecordレーンへdragすると紐づくRecordの塗りカードでpreviewする', () => {
+  it('PlanをRecordレーンへdragすると紐づくRecordの塗りカードでpreviewする（#2250: previewTime に重なる Plan が存在する場合は split 幅）', () => {
+    const plan = makeCalendarEvent('plan');
+    // ghostMock.previewTime（10:00-11:00 UTC）に重なる Plan を counterpart として用意する。
+    const counterpartPlan = makeCalendarEvent('plan', {
+      id: 'plan-counterpart',
+      startDate: new Date('2026-07-15T10:00:00.000Z'),
+      endDate: new Date('2026-07-15T11:00:00.000Z'),
+      displayStartDate: new Date('2026-07-15T10:00:00.000Z'),
+      displayEndDate: new Date('2026-07-15T11:00:00.000Z'),
+    });
+    ghostMock.timeblockId = plan.id;
+    useCalendarDragStore.getState().updateDrag({ targetLane: 'record' });
+
+    const { container } = render(
+      <CalendarGridContent
+        date={new Date('2026-07-15T00:00:00.000Z')}
+        entries={[plan, counterpartPlan]}
+        dayIndex={0}
+      />,
+    );
+
+    const card = container.querySelector('[data-record-lane-card]');
+    expect(card).not.toBeNull();
+    expect(card).toHaveAttribute('data-record-planned', 'true');
+    expect(card).toHaveStyle({ left: '38%', width: 'calc(62% - 4px)' });
+    expect(container.querySelector('[data-plan-lane-card]')).toBeNull();
+  });
+
+  it('previewTime に重なる Plan が無い場合、Record 変換 drag preview はフル幅になる（#2250 P1 regression）', () => {
     const plan = makeCalendarEvent('plan');
     ghostMock.timeblockId = plan.id;
     useCalendarDragStore.getState().updateDrag({ targetLane: 'record' });
@@ -274,9 +328,7 @@ describe('CalendarGridContent', () => {
 
     const card = container.querySelector('[data-record-lane-card]');
     expect(card).not.toBeNull();
-    expect(card).toHaveAttribute('data-record-planned', 'true');
-    expect(card).toHaveStyle({ left: '38%', width: 'calc(62% - 4px)' });
-    expect(container.querySelector('[data-plan-lane-card]')).toBeNull();
+    expect(card).toHaveStyle({ left: '0%', width: 'calc(100% - 4px)' });
   });
 
   it('RecordをPlanレーン上へdragしてもRecordの塗りカードを維持する', () => {
