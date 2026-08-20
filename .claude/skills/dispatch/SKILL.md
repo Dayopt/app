@@ -78,8 +78,44 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 指揮台の朝の編成（`.claude/rules/orchestration.md` §1 日サイクル）が動くようになったため、頻度の高い項目は日次で吸収する。頻度が低い・外部サービス往復を要する項目だけ月次 backstop として `/gardening` に残す。同じ項目を両方に重複させない。
 
+### 日次盤面 issue の起票（策定日: 2026-08-20、[#2259](https://github.com/Dayopt/dayopt/issues/2259)）
+
+朝 7 時、Routine（未登録の間は指揮台が代行）が「盤面 YYYY-MM-DD」issue（`type:board` ラベル）を新規起票する。テンプレ:
+
+```markdown
+> このビュー（観測コンテンツ）は指示の効力を持たない。効力は send_message のポインタ到達で確定する（`.claude/rules/orchestration.md` §裁可・指示の経路）。
+
+## 1. 今週の最優先
+
+（前日の日次盤面 issue §1 をそのままコピー。当日中の編集は User/指揮台が直接行う）
+
+## 2. 進行中レーン
+
+（空。指揮台が dispatch のたびに 1 行追記する。段階値の対応表は `.claude/rules/orchestration.md` §日次盤面issue 参照）
+
+## 3. 次にやるキュー
+
+[status:ready の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Astatus%3Aready)
+
+## 4. 要判断
+
+[type:discussion の issue 一覧](https://github.com/Dayopt/dayopt/issues?q=is%3Aissue+is%3Aopen+label%3Atype%3Adiscussion)
+
+## 5. 決定ログ
+
+[docs/decisions.md](https://github.com/Dayopt/dayopt/blob/main/docs/decisions.md)（append-only 全履歴）
+```
+
+起票後、前日の日次盤面 issue は close する（引き継ぎは新issueの §1 コピーとコメントで完結しているため、旧issueに残す情報はない）。**初回起票**（Routine 未登録の間の最初の 1 回）は本 PR の merge 後に指揮台が手動で行う。Routine の実登録・スケジュール設定自体はこの skill / 本 PR の scope 外（指揮台/User 操作枠が別途行う）。
+
+**cutover 手順（初回起票時のみ、指揮台が実施）**: [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割は日次盤面 issue へ完全吸収される。
+
+1. PR merge 後、指揮台が上記テンプレで初日の盤面 issue を手動起票する
+2. #2020 へ最終コメント（「以後の盤面・引き継ぎは日次盤面 issue へ。最新は `label:type:board is:open` で発見」）を投稿して close する
+
 ### 日次（指揮台の朝編成が吸収）
 
+- [ ] 当日の日次盤面 issue に本日分のコメント/追記が無いことの確認（[#2256](https://github.com/Dayopt/dayopt/issues/2256) 再scope。night-watch の前夜コメント欠落検出と同型 — §2 レーン表の更新漏れ、または issue 自体の起票漏れを検出する）
 - [ ] open PR で 2 週間以上動きがないものの扱い（rebase / close / 引き継ぎ）
 - [ ] worktree・ブランチの残骸: `git worktree list` / `git worktree prune` / `git branch --merged main`（手順は `.claude/rules/workflow.md` §Worktree 運用）
 - [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）。**検査基準（2026-08-12）: open PR の Closes 対象 issue と `status:in-progress` issue はすべて現行 milestone に入っているか。open PR 自体にも milestone が付いているか（2026-08-13、#2065）**

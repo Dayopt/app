@@ -4,6 +4,7 @@ import type { PlanEvent, RecordEvent } from '@/features/timeblock';
 import {
   calculateTwoLaneLayout,
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
+  hasLaneCounterpart,
   resolveTwoLaneFromPointer,
 } from '../two-lane-layout';
 
@@ -179,8 +180,110 @@ describe('calculateTwoLaneLayout', () => {
     const result = calculateTwoLaneLayout({ plans, records: [], hourHeight: HOUR_HEIGHT });
     const lastPosition = result.planLayouts.at(-1)?.position;
 
-    expect(lastPosition).toEqual({ top: 1427, height: 13, left: 0, width: 38 });
+    // records が無いため、この plan は相手レーンの counterpart が無くフル幅になる（#2250）。
+    expect(lastPosition).toEqual({ top: 1427, height: 13, left: 0, width: 100 });
     expect((lastPosition?.top ?? 0) + (lastPosition?.height ?? 0)).toBe(24 * HOUR_HEIGHT);
+  });
+});
+
+describe('calculateTwoLaneLayout（#2250: 区間ごとの動的幅判定）', () => {
+  it('相手レーンに時間の重なりが無ければ Plan はフル幅（left=0, width=100）になる', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [makePlan({ displayStartDate: localDate(9, 0), displayEndDate: localDate(10, 0) })],
+      records: [
+        makeRecord({ displayStartDate: localDate(14, 0), displayEndDate: localDate(15, 0) }),
+      ],
+      hourHeight: HOUR_HEIGHT,
+    });
+
+    expect(result.planLayouts[0]?.position).toMatchObject({ left: 0, width: 100 });
+    expect(result.recordLayouts[0]?.position).toMatchObject({ left: 0, width: 100 });
+  });
+
+  it('相手レーンと時間が重なる entry だけ split 幅になる（重ならない entry は同じレーン内でもフル幅）', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [
+        makePlan({
+          id: 'p-overlap',
+          displayStartDate: localDate(9, 0),
+          displayEndDate: localDate(10, 0),
+        }),
+        makePlan({
+          id: 'p-alone',
+          displayStartDate: localDate(14, 0),
+          displayEndDate: localDate(15, 0),
+        }),
+      ],
+      records: [
+        makeRecord({
+          id: 'r-overlap',
+          displayStartDate: localDate(9, 30),
+          displayEndDate: localDate(10, 30),
+        }),
+      ],
+      hourHeight: HOUR_HEIGHT,
+    });
+
+    const overlapping = result.planLayouts.find((l) => l.entry.id === 'p-overlap');
+    const alone = result.planLayouts.find((l) => l.entry.id === 'p-alone');
+    expect(overlapping?.position).toMatchObject({ left: 0, width: 38 });
+    expect(alone?.position).toMatchObject({ left: 0, width: 100 });
+  });
+
+  it('境界が接するだけ（隣接、重複しない）の entry はフル幅になる', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [makePlan({ displayStartDate: localDate(9, 0), displayEndDate: localDate(10, 0) })],
+      records: [
+        makeRecord({ displayStartDate: localDate(10, 0), displayEndDate: localDate(11, 0) }),
+      ],
+      hourHeight: HOUR_HEIGHT,
+    });
+
+    expect(result.planLayouts[0]?.position).toMatchObject({ left: 0, width: 100 });
+    expect(result.recordLayouts[0]?.position).toMatchObject({ left: 0, width: 100 });
+  });
+
+  it('部分的に重なるだけでも split 幅になる', () => {
+    const result = calculateTwoLaneLayout({
+      plans: [makePlan({ displayStartDate: localDate(9, 0), displayEndDate: localDate(10, 0) })],
+      records: [
+        makeRecord({ displayStartDate: localDate(9, 55), displayEndDate: localDate(11, 0) }),
+      ],
+      hourHeight: HOUR_HEIGHT,
+    });
+
+    expect(result.planLayouts[0]?.position).toMatchObject({ left: 0, width: 38 });
+    expect(result.recordLayouts[0]?.position).toMatchObject({ left: 38, width: 62 });
+  });
+});
+
+describe('hasLaneCounterpart', () => {
+  it('区間が交差すれば true', () => {
+    expect(
+      hasLaneCounterpart(
+        [{ displayStartDate: localDate(9, 30), displayEndDate: localDate(10, 30) }],
+        localDate(9, 0),
+        localDate(10, 0),
+      ),
+    ).toBe(true);
+  });
+
+  it('区間が接するだけ（重複しない）なら false', () => {
+    expect(
+      hasLaneCounterpart(
+        [{ displayStartDate: localDate(10, 0), displayEndDate: localDate(11, 0) }],
+        localDate(9, 0),
+        localDate(10, 0),
+      ),
+    ).toBe(false);
+  });
+
+  it('候補が空なら false', () => {
+    expect(hasLaneCounterpart([], localDate(9, 0), localDate(10, 0))).toBe(false);
+  });
+
+  it('target 区間が縮退（end<=start）なら安全側の true', () => {
+    expect(hasLaneCounterpart([], localDate(9, 0), localDate(9, 0))).toBe(true);
   });
 });
 
@@ -199,5 +302,30 @@ describe('resolveTwoLaneFromPointer', () => {
   it('明示した境界幅を反映する', () => {
     expect(resolveTwoLaneFromPointer(149, 100, 100, 50)).toBe('plan');
     expect(resolveTwoLaneFromPointer(150, 100, 100, 50)).toBe('record');
+  });
+
+  // #2250 plan-review で検出した P1 故障モード（本 issue のcoreとなるregression test）:
+  // 相手レーンの entry が無い時刻（= 画面上フル幅で境界が見えない）では、
+  // pointer の x 座標に関わらず sourceLane のまま維持し、意図しない
+  // Plan→Record 変換 mutation を発火させない。
+  it('相手レーンに counterpart が無い時、x座標に関わらず sourceLane を維持する（不可視 mutation の防止）', () => {
+    // x=138（既定38%境界より右、通常なら'record'と判定される位置）でも、
+    // hasCounterpart=false なら sourceLane='plan' を返す。
+    expect(
+      resolveTwoLaneFromPointer(138, 100, 100, 38, { sourceLane: 'plan', hasCounterpart: false }),
+    ).toBe('plan');
+    // 境界の左端（x=137）でも同様に sourceLane を維持する。
+    expect(
+      resolveTwoLaneFromPointer(137, 100, 100, 38, { sourceLane: 'plan', hasCounterpart: false }),
+    ).toBe('plan');
+  });
+
+  it('相手レーンに counterpart がある時は、laneAvailability を渡しても従来どおり x座標で判定する', () => {
+    expect(
+      resolveTwoLaneFromPointer(138, 100, 100, 38, { sourceLane: 'plan', hasCounterpart: true }),
+    ).toBe('record');
+    expect(
+      resolveTwoLaneFromPointer(137, 100, 100, 38, { sourceLane: 'plan', hasCounterpart: true }),
+    ).toBe('plan');
   });
 });
