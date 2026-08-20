@@ -35,7 +35,7 @@ import {
 } from '../../../../lib/two-lane-layout';
 import { useActivityDraftStore } from '../../../../stores/useActivityDraftStore';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { HOURS_PER_DAY } from '../constants/grid.constants';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
@@ -60,9 +60,9 @@ function shiftOptionalDate(
 }
 
 export function buildDragPreviewEntry(
-  entry: CalendarEvent,
+  entry: CalendarDisplayEvent,
   previewTime: { start: Date; end: Date },
-): CalendarEvent {
+): CalendarDisplayEvent {
   const baseStart = entry.startDate ?? entry.plannedStartDate ?? entry.displayStartDate;
   const deltaMs = baseStart ? previewTime.start.getTime() - baseStart.getTime() : 0;
   const duration = Math.max(
@@ -102,19 +102,19 @@ interface CalendarGridContentProps {
   /** この列が担当する日付 */
   date: Date;
   /** 表示するエントリ一覧 */
-  entries: CalendarEvent[];
+  entries: CalendarDisplayEvent[];
   /** ビューモード（useInteraction に渡す） */
   viewMode?: 'day' | '3day' | '5day' | 'week';
   /** この列の日付インデックス（DayView=0, Week/MultiDay=列番号） */
   dayIndex: number;
   /** 重複チェック用の全イベント（週/複数日ビュー用） */
-  allEventsForOverlapCheck?: CalendarEvent[];
+  allEventsForOverlapCheck?: CalendarDisplayEvent[];
   /** 表示日付リスト（週/複数日ビュー用） */
   displayDates?: Date[];
   /** エントリクリック */
-  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEntryClick?: ((entry: CalendarDisplayEvent) => void) | undefined;
   /** エントリ右クリック */
-  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarDisplayEvent, e: React.MouseEvent) => void) | undefined;
   /** D&D/リサイズ時の更新コールバック */
   onEventUpdate?:
     | ((
@@ -285,7 +285,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
-  // Step 8: 2レーン座標（plan=左/record=右）。entries は既に kind 付き CalendarEvent。
+  // Step 8: 2レーン座標（plan=左/record=右）。entries は既に kind 付き CalendarDisplayEvent。
   const twoLaneStyles = React.useMemo(
     () =>
       calculateTwoLaneStylesForCalendarEvents(visibleEntries, HOUR_HEIGHT, planLaneWidthPercent),

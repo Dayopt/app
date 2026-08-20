@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '@/features/calendar';
+import type { CalendarDisplayEvent } from '@/features/calendar';
 
 import { createCalendarEventClipboardTimeblock } from '../createCalendarEventClipboardTimeblock';
 
-function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+function makeEvent(overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEvent {
   return {
     id: 'plan-1',
     title: '読書',
@@ -39,7 +39,7 @@ describe('createCalendarEventClipboardTimeblock', () => {
     });
   });
 
-  it('種別を持たないCalendarEventはコピー対象にしない', () => {
+  it('種別を持たないCalendarDisplayEventはコピー対象にしない', () => {
     expect(createCalendarEventClipboardTimeblock(makeEvent({ kind: undefined }))).toBeNull();
   });
 });

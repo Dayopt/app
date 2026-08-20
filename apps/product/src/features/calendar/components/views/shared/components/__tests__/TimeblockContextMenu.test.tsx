@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '../../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 import { EventContextMenu } from '../TimeblockContextMenu';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-const migratedRecord: CalendarEvent = {
+const migratedRecord: CalendarDisplayEvent = {
   id: 'record-1',
   kind: 'record',
   title: '移行済み実績',

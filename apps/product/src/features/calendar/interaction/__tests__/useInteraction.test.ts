@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TimeblockRect } from '../../domain/interaction/types';
 import { useCalendarDragStore } from '../../stores/useCalendarDragStore';
-import type { CalendarEvent } from '../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../types/calendar.types';
 import { useInteraction, type UseInteractionProps } from '../useInteraction';
 
-const baseEvent: CalendarEvent = {
+const baseEvent: CalendarDisplayEvent = {
   id: 'entry-1',
   title: 'test entry',
   startDate: new Date('2026-01-15T09:00:00'),
@@ -17,7 +17,7 @@ const baseEvent: CalendarEvent = {
   actualEndDate: null,
   kind: 'plan',
   version: '2026-01-15T08:00:00.000000Z',
-} as unknown as CalendarEvent;
+} as unknown as CalendarDisplayEvent;
 
 const rect: TimeblockRect = { top: 540, left: 0, width: 200, height: 60 };
 const now = new Date('2026-01-15T12:00:00').getTime();
@@ -353,7 +353,7 @@ describe('useInteraction handleResizeStart guard', () => {
 describe('useInteraction resize completion', () => {
   it('通常 entry の resize 完了時は actual 固定フラグを渡さない', () => {
     const onEventUpdate = vi.fn();
-    const matchingEntry: CalendarEvent = {
+    const matchingEntry: CalendarDisplayEvent = {
       ...baseEvent,
       origin: 'planned',
       plannedStartDate: baseEvent.startDate,
@@ -392,7 +392,7 @@ describe('useInteraction resize completion', () => {
 
   it('予定と記録がズレた entry の resize 完了時も actual 固定フラグは渡さない（自動記録モデルでは planned のみ更新）', () => {
     const onEventUpdate = vi.fn();
-    const overtimeEntry: CalendarEvent = {
+    const overtimeEntry: CalendarDisplayEvent = {
       ...baseEvent,
       origin: 'planned',
       plannedStartDate: baseEvent.startDate,
@@ -431,13 +431,13 @@ describe('useInteraction optimistic version', () => {
     const onEventUpdate = vi.fn();
     const originalVersion = '2026-01-15T08:00:00.000001Z';
     const refreshedVersion = '2026-01-15T08:00:00.000002Z';
-    const originalEvent: CalendarEvent = {
+    const originalEvent: CalendarDisplayEvent = {
       ...baseEvent,
       kind: 'record',
       version: originalVersion,
     };
     const { result, rerender } = renderHook(
-      ({ events }: { events: CalendarEvent[] }) =>
+      ({ events }: { events: CalendarDisplayEvent[] }) =>
         useInteraction(makeProps({ events, onEventUpdate })),
       { initialProps: { events: [originalEvent] } },
     );

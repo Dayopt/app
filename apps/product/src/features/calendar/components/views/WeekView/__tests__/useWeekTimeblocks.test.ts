@@ -1,10 +1,10 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarDisplayEvent } from '../../../../types/calendar.types';
 import { useWeekTimeblocks } from '../hooks/useWeekTimeblocks';
 
-const createMockEntry = (overrides: Partial<CalendarEvent> = {}): CalendarEvent => ({
+const createMockEntry = (overrides: Partial<CalendarDisplayEvent> = {}): CalendarDisplayEvent => ({
   id: `entry-${Math.random().toString(36).slice(2)}`,
   title: 'Test Entry',
   startDate: new Date('2026-03-30T10:00:00'),
