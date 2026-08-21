@@ -241,7 +241,31 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     # （許可形は空白区切りのみに絞る。等号形を通すと `--body=safe--output=x`
     # のような 1 token に紛れ込ませる迂回を許可 flag の完全一致だけで
     # 弾けなくなる）。
-    night_watch_flags_only() {
+    #
+    # ANSI-C / locale 形式の quote（$'…' / $"…"）が shell に剥がされる前提で
+    # 導入の $ を落としてから通常の quote 除去に合流させる。--env-file 検査
+    # （このファイル下方、COMMAND_UNQUOTED 生成ロジック）と同じモデル。
+    night_watch_unquote() {
+      local s="$1" sq="'" dq='"'
+      s=${s//\$$sq/$sq}
+      s=${s//\$$dq/$dq}
+      s=${s//$dq/}
+      s=${s//$sq/}
+      s=${s//\\/}
+      printf '%s' "$s"
+    }
+
+    # raw 文字列だけをトークン判定すると、`"--body-file"`（quote で包んだ flag
+    # 名）や `\-\-body-file`（backslash escape）が `-*` に一致せず位置引数
+    # として無条件許可され、shell が実行時に quote/backslash を剥がして gh に
+    # 許可外 flag が渡る（2026-08-21、内製クロスレビュー risk-reviewer が
+    # critical として実測確認: `gh issue create --title x "--body-file" ...`
+    # が通っていた）。raw 版と unquoted 版の**両方**でトークン判定し、
+    # どちらか一方でも不許可 flag を検出したら block する
+    # （--env-file 検査の「両方の写しで検査してどちらかが落ちたら落とす」と
+    # 同じ設計）。1 箇所（このヘルパー）を直せば night_watch_flags_only を
+    # 呼ぶ全 gh コマンド（create/comment/close/list/view/search）に効く。
+    night_watch_flags_only_single() {
       local rest="$1" allowed="$2" tok
       local -a tokens allowed_arr
       read -ra tokens <<<"$rest"
@@ -260,6 +284,13 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       return 0
     }
 
+    night_watch_flags_only() {
+      local rest="$1" allowed="$2"
+      night_watch_flags_only_single "$rest" "$allowed" || return 1
+      night_watch_flags_only_single "$(night_watch_unquote "$rest")" "$allowed" || return 1
+      return 0
+    }
+
     night_watch_allowed=0
     case "$COMMAND" in
       "pnpm docs:check" | "pnpm docs:coverage" | "pnpm quality:deadcode:ci")
@@ -268,9 +299,13 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         night_watch_allowed=1
         ;;
       "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
-        | "gh api repos/Dayopt/dayopt --jq .permissions")
-        # checklist.md / SKILL.md step 0 が指定する固定コマンドのみ完全一致で許可。
-        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。
+        | "gh api repos/Dayopt/dayopt --jq .permissions" \
+        | "gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url" \
+        | 'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"')
+        # checklist.md / SKILL.md §自動パート Step 0（自己検証）・Step 2（観測。
+        # heavy-red / sentry-new を含む）が指定する固定コマンドのみ完全一致で許可。
+        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。night-watch v2
+        # （#2291）で heavy-post-merge 赤確認・Sentry スキャンの 2 本を追加した。
         night_watch_allowed=1
         ;;
       "echo \$DAYOPT_NIGHT_WATCH")
@@ -284,8 +319,19 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         night_watch_flags_only "${COMMAND#"gh issue comment "}" "--body --repo" \
           && night_watch_allowed=1
         ;;
+      "gh issue close "*)
+        # night-watch v2（#2291）で追加。盤面 issue の起票・close を Routine が
+        # 自律実行できるようにするための positive allowlist。close できる issue の
+        # 番号自体はここでは検査しない（トークン単位の flag 判定という guard の
+        # 設計と同じ粒度 — 「どの issue か」は layer1 token scope（issues:write）が
+        # 既に許容している範囲で、layer3 はコマンド形状の逸脱だけを見る）。
+        night_watch_flags_only "${COMMAND#"gh issue close "}" "--repo --comment" \
+          && night_watch_allowed=1
+        ;;
       "gh issue list"*)
-        night_watch_flags_only "${COMMAND#"gh issue list"}" "--repo --state --search --label" \
+        # --json は night-watch v2 で追加（盤面 issue の起票済み判定・前日issue
+        # 特定に number/title/body を構造化取得するため）。
+        night_watch_flags_only "${COMMAND#"gh issue list"}" "--repo --state --search --label --json" \
           && night_watch_allowed=1
         ;;
       "gh issue view "*)

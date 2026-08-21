@@ -1,18 +1,24 @@
 ---
 status: current
-last_verified: 2026-08-19
+last_verified: 2026-08-21
 code: .claude/skills/night-watch/SKILL.md
 ---
 
 # 計測夜勤（night-watch）運用
 
-夜間に read-only の品質観測を行う Claude Routine の運用ページ。設計正本は [#2205](https://github.com/Dayopt/dayopt/issues/2205)、実装は [#2209](https://github.com/Dayopt/dayopt/issues/2209)。手順そのものの正本は [`.claude/skills/night-watch/SKILL.md`](../../.claude/skills/night-watch/SKILL.md)（本ページはこの複製ではなく、運用面の補足のみ）。
+夜間に read-only の品質観測を行う Claude Routine の運用ページ。設計正本は [#2205](https://github.com/Dayopt/dayopt/issues/2205)、v1 実装は [#2209](https://github.com/Dayopt/dayopt/issues/2209)、v2（盤面起票・heavy-post-merge赤確認・Sentryスキャン・DoD監査候補選定）は [#2291](https://github.com/Dayopt/dayopt/issues/2291)。手順そのものの正本は [`.claude/skills/night-watch/SKILL.md`](../../.claude/skills/night-watch/SKILL.md)（本ページはこの複製ではなく、運用面の補足のみ）。
 
-## 常設運行記録 issue
+## 常設運行記録 issue と盤面 issue
 
 night-watch は毎晩、常設の運行記録 issue へ1コメントを残す。issue 番号は登録時（実装 merge 後）に指揮台が確定し、ここに追記する:
 
 - 運行記録 issue: **未登録**（この行は指揮台が trigger 登録と同時に issue 番号へ書き換える）
+
+**v2 で書き込み先が拡張された**（[#2291](https://github.com/Dayopt/dayopt/issues/2291)）。上記の常設運行記録 issue に加え、当日/前日の日次盤面 issue（`type:board` ラベル）への起票・close・コメントも行う。実行手順は `.claude/skills/night-watch/SKILL.md` §自動パート Step 1（盤面起票）・Step 4（DoD監査候補コメント）が正本。書き込み先はこの 2 種類の issue に限る（§守ること）。
+
+**Sentry token 依存（v2 追加）**: Step 2 の `sentry-new` 観測は `SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item、read-only scope）を Cloud Environment 側の env として要求する。未配線だと `op run` がエラー終了し、fail-closed 原則（§Step 2）により「取得失敗」として運行記録に記録される。
+
+**層1 token scope に `Actions: read` を追加（v2 追加）**: Step 2 の `heavy-red` 観測（`gh run list`）に必要。既存の `issues:write` + `contents:read` + `Dependabot alerts: read` に追加する形で、`contents:write` / `pull_requests:write` / `administration` は引き続き持たせない（詳細は `.claude/skills/night-watch/SKILL.md` §権限の構造的強制 層1 参照）。
 
 ## 故障検出手順
 

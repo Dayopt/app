@@ -722,6 +722,24 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'gh search issues --repo Dayopt/dayopt --state open --search test',
       ],
       ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
+      // night-watch v2（#2291）で追加: heavy-post-merge 赤確認・Sentry 新規 issue
+      // スキャン・盤面 issue の起票/close 系。
+      [
+        'heavy-post-merge 赤確認 (GET)',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      ],
+      [
+        'Sentry 新規 issue スキャン (GET)',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
+      ],
+      [
+        'gh issue close（盤面起票の前日 close）',
+        'gh issue close 2000 --repo Dayopt/dayopt --comment bye',
+      ],
+      [
+        'gh issue list --json（盤面起票の open 検索）',
+        'gh issue list --repo Dayopt/dayopt --state open --label type:board --json number,title,body',
+      ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
     });
@@ -737,7 +755,13 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['gh pr ready', 'gh pr ready 1'],
       ['gh pr edit', 'gh pr edit 1 --title x'],
       ['gh issue edit（ラベル変更）', 'gh issue edit 1 --add-label priority:p0'],
-      ['gh issue close', 'gh issue close 1'],
+      // gh issue close 自体は night-watch v2（#2291）で盤面 issue の close 用に
+      // 許可形へ移動した（下記「gh 系 positive flag allowlist の迂回試行」参照）。
+      // ここでは close に未許可 flag を混ぜた迂回だけを見る。
+      [
+        'gh issue close にラベル変更 flag を混入する迂回',
+        'gh issue close 1 --repo Dayopt/dayopt --comment bye --add-label priority:p0',
+      ],
       ['gh issue delete', 'gh issue delete 1'],
       ['gh release create', 'gh release create v1.0.0'],
       ['gh workflow run', 'gh workflow run production-config-audit.yml'],
@@ -798,6 +822,70 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         '等号結合形（--title=x）は空白区切りのみ許可のため落とす',
         'gh issue create --title=x --body=y',
       ],
+      // critical（2026-08-21、内製クロスレビュー risk-reviewer が実測確認）:
+      // night_watch_flags_only の raw トークン判定は quote/backslash を除去
+      // しないため、`"--body-file"` のように flag 名を quote で包む・
+      // `\-\-web` のように backslash escape する形が `-*` に一致せず位置引数
+      // として無条件許可されていた。shell が実行時に quote/backslash を
+      // 剥がすため、gh には許可外 flag がそのまま届く。raw + unquoted の
+      // 2 写し評価（night_watch_flags_only_single を 2 回呼ぶ）で class ごと
+      // 閉じた。明示ケース（risk-reviewer 指摘の実測コマンドそのもの）:
+      [
+        'P0回帰: gh issue create の許可外 flag を二重引用符で包む迂回',
+        'gh issue create --title x "--body-file" /tmp/x --repo Dayopt/dayopt',
+      ],
+      [
+        'P0回帰: gh issue close の許可外 flag を二重引用符で包む迂回',
+        'gh issue close 1 "--web" --repo Dayopt/dayopt',
+      ],
+      // 上記 2 件と同型の迂回を、quote 種別・対象コマンドを変えて横展開。
+      [
+        'quote 迂回: backslash escape（\\-\\-body-file）',
+        'gh issue create --title x \\-\\-body-file /tmp/x --repo Dayopt/dayopt',
+      ],
+      ["quote 迂回: ANSI-C quote（$'--web'）", "gh issue close 1 $'--web' --repo Dayopt/dayopt"],
+      [
+        'quote 迂回: gh issue list に許可外 flag を二重引用符で混入',
+        'gh issue list "--milestone" v0.34 --repo Dayopt/dayopt',
+      ],
+      ['quote 迂回: gh issue view に許可外 flag を二重引用符で混入', 'gh issue view 2209 "--web"'],
+      [
+        'quote 迂回: gh search issues の許可外 flag を二重引用符で混入',
+        'gh search issues --repo x "--label" evil',
+      ],
+      [
+        'quote 迂回: gh issue comment の許可外 flag を二重引用符で混入',
+        'gh issue comment 2209 "--web" --body hi',
+      ],
+      // low（同レビュー）: gh issue list --json は night-watch v2 で新規許可
+      // した flag。未許可 flag 混入が他 3 種（create/comment/close）と対称に
+      // 弾かれることを確認する。
+      [
+        'gh issue list に未許可 flag（--web）を混入',
+        'gh issue list --repo Dayopt/dayopt --json number --web',
+      ],
+      // night-watch v2（#2291）で追加した完全一致コマンドの迂回試行。
+      [
+        'heavy-post-merge 赤確認に未許可 flag（-X POST）を付ける迂回',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
+      ],
+      [
+        'heavy-post-merge 赤確認の workflow 名を差し替える迂回',
+        'gh run list --workflow=production-config-audit.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      ],
+      [
+        'heavy-post-merge 赤確認の --json field 列を差し替える迂回（旧v1文字列）',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,headSha,createdAt',
+      ],
+      [
+        'Sentry スキャンの query を差し替える迂回',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved"',
+      ],
+      [
+        'Sentry スキャンに write 系サブコマンド（resolve）を混ぜる迂回',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue resolve 1',
+      ],
+      ['gh issue close に --repo/--comment 以外の値なし flag を混入', 'gh issue close 1 --delete'],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
     });
