@@ -155,7 +155,9 @@ describe('CalendarNavigationProvider', () => {
     );
   });
 
-  it('モバイルでもWeekへ切り替えられる', () => {
+  // モバイルは day-only（#2299）。week は実質 DayView にしか収束せず機能していない
+  // 選択肢だったため、changeView('week') はモバイルでは無視される。
+  it('モバイルではWeekへ切り替えられない（day-only, #2299）', () => {
     mockUseMediaQuery.mockReturnValue(true);
     window.history.replaceState(null, '', '/ja/calendar?date=2026-03-25&view=day');
     mockPathname = '/ja/calendar';
@@ -168,13 +170,13 @@ describe('CalendarNavigationProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'week' }));
 
-    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/calendar?date=2026-03-25&view=week',
+      '/ja/calendar?date=2026-03-25&view=day',
     );
   });
 
-  it('モバイルのWeek直URLをdayへ戻さない', () => {
+  it('モバイルのWeek直URLをdayへ戻す（#2299）', () => {
     mockUseMediaQuery.mockReturnValue(true);
     window.history.replaceState(null, '', '/ja/calendar?date=2026-03-25&view=week');
     mockPathname = '/ja/calendar';
@@ -185,9 +187,9 @@ describe('CalendarNavigationProvider', () => {
       </CalendarNavigationProvider>,
     );
 
-    expect(screen.getByTestId('view')).toHaveTextContent('week');
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
     expect(window.location.pathname + window.location.search).toBe(
-      '/ja/calendar?date=2026-03-25&view=week',
+      '/ja/calendar?date=2026-03-25&view=day',
     );
   });
 

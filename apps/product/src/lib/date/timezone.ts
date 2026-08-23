@@ -220,6 +220,34 @@ export function isTodayInTimezone(date: Date, timezone: string, now: Date = new 
 }
 
 /**
+ * 指定 Date がユーザー TZ における「今日より過去」かどうか（#2302）
+ *
+ * `yyyy-MM-dd` 形式の暦日キー同士を文字列比較する（ISO 形式なので
+ * 辞書順比較がそのまま日付順になる）。`isTodayInTimezone` と同じ
+ * `formatInTimeZone` ベースの手法で TZ 境界を揃える。
+ *
+ * @param date - 判定対象（UTC Date）
+ * @param timezone - ユーザーのタイムゾーン
+ * @param now - 比較基準（テスト用）。省略時は現在時刻
+ */
+export function isPastDayInTimezone(date: Date, timezone: string, now: Date = new Date()): boolean {
+  return (
+    formatInTimeZone(date, timezone, 'yyyy-MM-dd') < formatInTimeZone(now, timezone, 'yyyy-MM-dd')
+  );
+}
+
+/** 指定 Date がユーザー TZ における「今日より未来」かどうか（`isPastDayInTimezone` 参照） */
+export function isFutureDayInTimezone(
+  date: Date,
+  timezone: string,
+  now: Date = new Date(),
+): boolean {
+  return (
+    formatInTimeZone(date, timezone, 'yyyy-MM-dd') > formatInTimeZone(now, timezone, 'yyyy-MM-dd')
+  );
+}
+
+/**
  * 壁時計 Date から、指定 TZ でのその日の 00:00:00.000 を表す UTC ISO 文字列を返す。
  *
  * **`date` は `date-fns` のローカルフィールド演算（`setHours` / `startOfDay` / `addDays` 等）で

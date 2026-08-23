@@ -26,9 +26,8 @@ const MAIN_VIEW_OPTIONS: MainViewOption[] = [
   { value: 'week', count: 7, shortcut: '7', icon: CalendarRange },
 ];
 
-const MOBILE_VIEW_OPTIONS = MAIN_VIEW_OPTIONS.filter(
-  (option) => option.value === 'day' || option.value === 'week',
-);
+/** モバイルは day-only（#2299）。week は実質 DayView にしか収束せず機能していなかった。 */
+const MOBILE_VIEW_OPTIONS = MAIN_VIEW_OPTIONS.filter((option) => option.value === 'day');
 
 /**
  * サイドバー用ビュー切り替えリスト（モバイル専用）

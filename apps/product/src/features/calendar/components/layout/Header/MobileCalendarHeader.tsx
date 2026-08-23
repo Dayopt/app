@@ -2,18 +2,20 @@
 
 import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, Redo2, Search, Undo2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { memo, useCallback, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { AppHeader } from '@/components/shell/AppHeader';
-import { isTodayInTimezone } from '@/lib/date/timezone';
+import { isPastDayInTimezone, isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, cn } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 
+import { formatCalendarDateParam } from '../../../lib/date-param';
 import { MobileMonthGrid } from './MobileMonthGrid';
 import { MobileYearStrip } from './MobileYearStrip';
 
@@ -52,6 +54,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const dateFnsLocale = locale === 'ja' ? ja : enUS;
     const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false);
     const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
+    // 外側タップで閉じる（#2297）。ヘッダー+パネル全体を containerRef で囲み、
+    // isExpanded の間だけ document レベルの pointerdown を監視する
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // viewMonth: グリッドスワイプで独立して変化する表示月
     const [viewMonth, setViewMonth] = useState(() => currentDate);
@@ -76,11 +81,33 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const daySuffix = locale === 'ja' ? '日' : '';
     const weekdayShort = format(currentDate, 'EEE', { locale: enUS });
     const today = isTodayInTimezone(currentDate, timezone);
+    // 過去日を見ている: Redo（時間を進めて今日へ戻る）。未来日を見ている: Undo
+    // （時間を戻して今日へ戻る）。today の時はボタン自体を非表示にする（#2302）
+    const isPast = !today && isPastDayInTimezone(currentDate, timezone);
+    const TodayIcon = isPast ? Redo2 : Undo2;
     const weekNumber = getWeek(currentDate, { weekStartsOn });
 
     const handleToggle = useCallback(() => {
       setIsExpanded((prev) => !prev);
     }, []);
+
+    // 外側タップで閉じる（#2297）。isExpanded の間だけ document レベルの
+    // pointerdown を監視し、containerRef の外側なら閉じる。toggle ボタン自身は
+    // containerRef 内側にあるため、開閉の二重発火（閉じた直後に再度開く）は
+    // 起きない
+    useEffect(() => {
+      if (!isExpanded) return;
+
+      const handlePointerDown = (event: PointerEvent) => {
+        if (!containerRef.current) return;
+        if (!(event.target instanceof Node)) return;
+        if (containerRef.current.contains(event.target)) return;
+        setIsExpanded(false);
+      };
+
+      document.addEventListener('pointerdown', handlePointerDown);
+      return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [isExpanded]);
 
     // Google Calendar準拠: 日付選択してもパネルは閉じない（Chevronタップでのみ閉じる）
     const handleDateSelect = useCallback(
@@ -106,26 +133,45 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
     return (
-      <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
+      <div
+        ref={containerRef}
+        className={cn('bg-background sticky top-0 z-20 md:hidden', className)}
+      >
         <AppHeader
           rightSlot={
             <div className="flex h-8 items-center gap-1">
+              {/* 今日を見ている時はボタン自体を非表示にする（#2302）。過去日は
+                  Redo（時間を進めて戻る）、未来日は Undo（時間を戻す）を出す */}
+              {!today && (
+                <Button
+                  variant="ghost"
+                  icon
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={handleTodayClick}
+                  onMouseEnter={() => onPrefetch?.('today')}
+                  onTouchStart={() => onPrefetch?.('today')}
+                  aria-label={t('actions.goToToday')}
+                >
+                  <TodayIcon className="size-5" />
+                </Button>
+              )}
+              {/* フッターの BottomTabBar 廃止に伴うトグル（#2300）。現在地ではなく
+                  遷移先（レポート）を示すアイコン。SidebarUtilities.tsx のテーマ
+                  切り替えパターンに倣う */}
               <Button
                 variant="ghost"
                 icon
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
-                onClick={handleTodayClick}
-                onMouseEnter={() => onPrefetch?.('today')}
-                onTouchStart={() => onPrefetch?.('today')}
-                aria-label={t('actions.goToToday')}
+                asChild
               >
-                <div className="relative flex size-5 flex-col">
-                  <div className="h-1 w-full border-b-2 border-current" />
-                  <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
-                  </div>
-                </div>
+                <Link
+                  href={`/report?date=${formatCalendarDateParam(currentDate)}`}
+                  aria-label={t('actions.openReport')}
+                >
+                  <BarChart3 className="size-5" />
+                </Link>
               </Button>
               {rightSlot}
             </div>

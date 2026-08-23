@@ -192,22 +192,33 @@ describe('MobileLayout', () => {
     },
   );
 
-  // workspace-shell-restructure #2181 Step 3: BottomTabBar は常時表示（タブ2個）
-  it.each(['/calendar', '/report', '/projects'])(
-    'always shows the 2-tab BottomTabBar on %s',
-    (pathname) => {
-      pathnameMock.mockReturnValue(pathname);
+  // #2300: フッターの BottomTabBar を廃止し、report 画面限定でヘッダーに
+  // カレンダーへ戻るトグルアイコンを置く（calendar は独自ヘッダーのため対象外）。
+  it('shows the calendar toggle in the header only on /report', () => {
+    pathnameMock.mockReturnValue('/report');
 
-      render(
-        <MobileLayout>
-          <div>Content</div>
-        </MobileLayout>,
-      );
+    render(
+      <MobileLayout>
+        <div>Content</div>
+      </MobileLayout>,
+    );
 
-      const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(2);
-    },
-  );
+    expect(screen.getByRole('link', { name: 'calendar.actions.openCalendar' })).toBeInTheDocument();
+  });
+
+  it.each(['/calendar', '/projects'])('does not show the calendar toggle on %s', (pathname) => {
+    pathnameMock.mockReturnValue(pathname);
+
+    render(
+      <MobileLayout>
+        <div>Content</div>
+      </MobileLayout>,
+    );
+
+    expect(
+      screen.queryByRole('link', { name: 'calendar.actions.openCalendar' }),
+    ).not.toBeInTheDocument();
+  });
 
   it('keeps a single hidden banner container out of the accessibility tree', () => {
     bannerState.current = { visible: false, message: '' };
