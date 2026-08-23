@@ -15,14 +15,18 @@ interface AppHeaderProps {
  * 高さ・スタイルを統一する薄い枠。中身は各ページが slots で注入する。
  *
  * **デザイン仕様:**
- * - 全体の高さ: 48px固定（h-12）
- * - 上下パディング: 8px（py-2）
  * - コンテナ: 32px（h-8）
+ * - 上下パディング: 8px（py-2）
+ * - 全体の高さ: 最小 48px（min-h-12）。`pt-safe` で safe-area top inset を
+ *   確保する分だけ箱が伸びる（固定 `h-12` だと inset の分だけ中身が
+ *   潰れてしまうため min-h にする。footer 側の `pb-safe` +
+ *   `ActivityChipRow`（`mobile-layout.tsx` の固定コンテナ、`min-h-14`）
+ *   と対称の対応）
  * - 8pxグリッドシステム準拠
  */
 export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
   return (
-    <header className="h-12 px-4 py-2">
+    <header className="pt-safe min-h-12 px-4 py-2">
       {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- complex grid template */}
       <div className="grid h-8 grid-cols-[auto_1fr_auto] items-center">
         {/* 左側 */}

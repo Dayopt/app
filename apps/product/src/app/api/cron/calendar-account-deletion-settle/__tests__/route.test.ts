@@ -28,7 +28,10 @@ vi.mock('@/lib/logger', () => ({
 vi.mock('@/lib/ops/write-fence', () => ({ isWriteFenceEnabled }));
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient: vi.fn(() => ({})) }));
 
-import { SETTLE_WORST_CASE_MS } from '../_composition/settle-dispatcher';
+import {
+  CalendarAccountDeletionSettleError,
+  SETTLE_WORST_CASE_MS,
+} from '../_composition/settle-dispatcher';
 import { GET, maxDuration, TIME_BUDGET_MS } from '../route';
 
 const URL = 'https://app.dayopt.app/api/cron/calendar-account-deletion-settle';
@@ -149,7 +152,7 @@ describe('calendar account deletion settle cron', () => {
     );
   });
 
-  it('dispatcher失敗は安全な500とSentry通知に変換する', async () => {
+  it('dispatcher失敗は安全な500とSentry通知に変換する（未分類の raw error は context を持たない）', async () => {
     const error = new Error('v1.secret-ciphertext');
     dispatchCalendarAccountDeletionSettle.mockRejectedValue(error);
 
@@ -166,5 +169,48 @@ describe('calendar account deletion settle cron', () => {
     expect(captured).not.toBe(error);
     expect(JSON.stringify(captureUnexpectedError.mock.calls)).not.toContain(error.message);
     expect(loggerError).toHaveBeenCalledWith('[calendar-account-deletion-settle] dispatch failed');
+  });
+
+  // DAYOPT-V（#2305）: generic dispatch failure で真因が観測不能だった穴を塞ぐ回帰。
+  // dispatcher が CalendarAccountDeletionSettleError で reject した時、原因の code/message
+  // が errorCode/errorMessage として captureUnexpectedError の context へ伝搬することを固定する。
+  it('CalendarAccountDeletionSettleError は原因の code/message を Sentry context へ伝搬する', async () => {
+    const error = new CalendarAccountDeletionSettleError('normalize', {
+      code: '55P03',
+      message: 'could not obtain lock on row in relation "timeblock_supported_writer_v1"',
+    });
+    dispatchCalendarAccountDeletionSettle.mockRejectedValue(error);
+
+    const response = await GET(request('Bearer super-secret-cron'));
+
+    expect(response.status).toBe(500);
+    expect(captureUnexpectedError).toHaveBeenCalledWith(expect.any(Error), {
+      feature: 'external_calendar',
+      operation: 'cron_dispatch',
+      route: '/api/cron/calendar-account-deletion-settle',
+      errorCode: '55P03',
+      errorMessage: 'could not obtain lock on row in relation "timeblock_supported_writer_v1"',
+    });
+    const captured = captureUnexpectedError.mock.calls[0]?.[0] as Error;
+    expect(captured).not.toBe(error);
+  });
+
+  // causeCode が無い場合（例: client 生成失敗）は stage 自身の code へフォールバックする。
+  it('causeCode が無い CalendarAccountDeletionSettleError は自身の stage code を errorCode に使う', async () => {
+    const error = new CalendarAccountDeletionSettleError('client', {
+      message: 'missing SUPABASE_SERVICE_ROLE_KEY',
+    });
+    dispatchCalendarAccountDeletionSettle.mockRejectedValue(error);
+
+    const response = await GET(request('Bearer super-secret-cron'));
+
+    expect(response.status).toBe(500);
+    expect(captureUnexpectedError).toHaveBeenCalledWith(expect.any(Error), {
+      feature: 'external_calendar',
+      operation: 'cron_dispatch',
+      route: '/api/cron/calendar-account-deletion-settle',
+      errorCode: 'ACCOUNT_DELETION_SETTLE_CLIENT_FAILED',
+      errorMessage: 'missing SUPABASE_SERVICE_ROLE_KEY',
+    });
   });
 });

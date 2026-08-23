@@ -14,9 +14,10 @@ import React, { useCallback, useRef } from 'react';
 import { cn } from '@dayopt/components';
 
 import { formatTimeString } from '@/lib/date';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
-import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
+import { MOBILE_TIME_COLUMN_WIDTH, TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
 import { useContainerHeight } from '../hooks/useContainerHeight';
@@ -55,17 +56,29 @@ interface CalendarDateHeaderProps {
 }
 
 /**
+ * 時間列のデフォルト幅。モバイルでは短い時刻ラベルの左側余白を抑えるため縮小する。
+ * timeColumnWidth を明示指定しない呼び出し元（CalendarDateHeader / ScrollableCalendarLayout
+ * 共通）が同じ値源を見るための共有 hook。
+ */
+function useDefaultTimeColumnWidth(): number {
+  const isMobile = useIsMobile();
+  return isMobile ? MOBILE_TIME_COLUMN_WIDTH : TIME_COLUMN_WIDTH;
+}
+
+/**
  * カレンダー日付ヘッダー（固定）
  */
 export const CalendarDateHeader = ({
   header,
   showTimeColumn = true,
   showTimezone = true,
-  timeColumnWidth = TIME_COLUMN_WIDTH,
+  timeColumnWidth,
   weekNumber,
   className,
 }: CalendarDateHeaderProps) => {
   const showWeekNumbers = useUserPreferences((s) => s.showWeekNumbers);
+  const defaultTimeColumnWidth = useDefaultTimeColumnWidth();
+  const resolvedTimeColumnWidth = timeColumnWidth ?? defaultTimeColumnWidth;
 
   // 設定がオンで週番号が渡されている場合のみ表示
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
@@ -85,7 +98,7 @@ export const CalendarDateHeader = ({
         {showTimeColumn ? (
           <div
             className="flex h-8 shrink-0 flex-col items-center justify-center"
-            style={{ width: timeColumnWidth }}
+            style={{ width: resolvedTimeColumnWidth }}
           >
             {/* 週番号バッジ（Googleカレンダースタイル） - モバイルのみ表示 */}
             {shouldShowWeekNumber ? (
@@ -116,13 +129,16 @@ export const ScrollableCalendarLayout = ({
   showTimeColumn = true,
   showCurrentTime = true,
   showTimezone: _showTimezone = true,
-  timeColumnWidth = TIME_COLUMN_WIDTH,
+  timeColumnWidth,
   onTimeClick,
   displayDates = [],
   viewMode = 'week',
   enableKeyboardNavigation = true,
   onScrollPositionChange,
 }: ScrollableCalendarLayoutProps) => {
+  const defaultTimeColumnWidth = useDefaultTimeColumnWidth();
+  const resolvedTimeColumnWidth = timeColumnWidth ?? defaultTimeColumnWidth;
+
   // scroll container の ref を先に確保し、実測高の観測と useScrollableCalendar 双方で共有する
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const containerHeight = useContainerHeight(scrollContainerRef);
@@ -173,7 +189,7 @@ export const ScrollableCalendarLayout = ({
       const x = e.clientX - rect.left;
 
       // 時間列以外の領域のクリックのみ処理
-      if (showTimeColumn && x < timeColumnWidth) return;
+      if (showTimeColumn && x < resolvedTimeColumnWidth) return;
 
       // 15分単位でスナップ
       const totalMinutes = Math.max(0, Math.floor((y / HOUR_HEIGHT) * 60));
@@ -184,7 +200,7 @@ export const ScrollableCalendarLayout = ({
         onTimeClick(hours, minutes);
       }
     },
-    [onTimeClick, HOUR_HEIGHT, showTimeColumn, timeColumnWidth, scrollContainerRef],
+    [onTimeClick, HOUR_HEIGHT, showTimeColumn, resolvedTimeColumnWidth, scrollContainerRef],
   );
 
   // 現在時刻線を表示するか判定
@@ -209,7 +225,7 @@ export const ScrollableCalendarLayout = ({
         {showTimeColumn && (
           <div
             className="border-border sticky left-0 z-10 shrink-0 border-r"
-            style={{ width: timeColumnWidth }}
+            style={{ width: resolvedTimeColumnWidth }}
           >
             <div className="relative h-full overflow-hidden">
               <TimeColumn
@@ -218,6 +234,7 @@ export const ScrollableCalendarLayout = ({
                 hourHeight={HOUR_HEIGHT}
                 format={timeFormat}
                 className="h-full"
+                width={resolvedTimeColumnWidth}
               />
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (

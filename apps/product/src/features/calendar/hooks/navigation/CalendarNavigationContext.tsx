@@ -33,9 +33,14 @@ function isValidViewType(view: string): view is CalendarViewType {
   return isValidCalendarViewToken(view);
 }
 
-/** モバイルで提供する表示。Weekはレーン切替で密度を確保し、2〜7日は対象外とする。 */
+/**
+ * モバイルで提供する表示。day-only（#2299）。
+ *
+ * かつては week も許可していたが、モバイルでは実質 DayView にしか収束せず
+ * （CalendarViewRenderer 参照）、機能していない「7日」選択肢だった。
+ */
 function isMobileCalendarViewSupported(view: CalendarViewType): boolean {
-  return view === 'day' || view === 'week';
+  return view === 'day';
 }
 
 /** SSR安全に現在の URL search から日付を読む（window.location.search は client-only） */
@@ -228,8 +233,8 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
     [],
   );
 
-  // モバイルで未対応の複数日ビューが設定された場合、dayへ切替
-  // （URL直アクセスやブラウザ戻る/進むで2〜7day URLに遷移した場合のガード）
+  // モバイルで未対応のビュー（day 以外）が設定された場合、dayへ切替
+  // （URL直アクセスやブラウザ戻る/進むで week〜7day の URL に遷移した場合のガード）
   React.useEffect(() => {
     if (isCalendarPage && isMobile && !isMobileCalendarViewSupported(viewType)) {
       startTransition(() => {
@@ -322,7 +327,7 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   const changeView = useCallback(
     (view: CalendarViewType) => {
-      // モバイルではDay / Weekのみ許可
+      // モバイルではDayのみ許可
       if (isMobileRef.current && !isMobileCalendarViewSupported(view)) return;
 
       startTransition(() => {

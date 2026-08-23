@@ -416,7 +416,13 @@ export function TimeblockSearchDialog({
         </CommandList>
       ) : (
         <div
-          className="max-h-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto md:max-h-80 md:flex-none"
+          // mobile: 空状態メッセージが利用可能な高さいっぱいで中央寄せされるよう
+          // このラッパー自身を flex-col コンテナにする。justify-center が主軸
+          // （縦）を中央寄せし、align-items の既定値 stretch が交差軸（横）で
+          // 子要素を従来どおり全幅にする（子の text-center と組み合わさる）。
+          // desktop は md:block で従来の block layout（上寄せ、max-h-80 で
+          // 高さ固定）に戻す（#2296）
+          className="flex max-h-none min-h-0 flex-1 flex-col justify-center overflow-x-hidden overflow-y-auto md:block md:max-h-80 md:flex-none"
           aria-busy={isLoading}
           data-sentry-block
         >

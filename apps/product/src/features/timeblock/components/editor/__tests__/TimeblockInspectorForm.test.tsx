@@ -96,7 +96,7 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
 }));
 
 vi.mock('../../inspector/fields', () => ({
-  ActivityFieldRow: ({
+  InspectorHeaderActions: ({
     menuItems,
   }: {
     menuItems?: Array<{ key: string; onSelect: () => void }>;

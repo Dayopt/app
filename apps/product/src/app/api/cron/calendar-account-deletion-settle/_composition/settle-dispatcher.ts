@@ -71,13 +71,27 @@ const NO_ACCOUNT_DELETION_SETTLE: Omit<AccountDeletionSettleSummary, 'durationMs
   skipped: false,
 };
 
-class CalendarAccountDeletionSettleError extends Error {
+/**
+ * `causeCode`/`causeMessage` は #2289（DAYOPT-X）と同型の診断可能性の穴（DAYOPT-V、#2305）を
+ * 塞ぐために持たせる。以前はここで原因（DB / provider の raw error）を握りつぶし、stage 名
+ * だけの `code` に丸めていたため、route.ts 側で generic dispatch failure としか観測できず
+ * 真因が Sentry 上で完全に不可視だった。`route.ts` はこれを `errorCode`/`errorMessage` として
+ * `captureUnexpectedError` へ伝搬し、`packages/observability/src/sanitize.ts` の
+ * `sanitizeErrorMessage`（default-closed allowlist）を通してから送信する。allowlist 外の
+ * 内容は `[UNRECOGNIZED_ERROR_MESSAGE]` に落ちるため、ここで raw message を保持しても
+ * 送信経路の安全性は sanitizer 側が担保する。
+ */
+export class CalendarAccountDeletionSettleError extends Error {
   readonly code: string;
+  readonly causeCode: string | undefined;
+  readonly causeMessage: string | undefined;
 
-  constructor(operation: string) {
+  constructor(operation: string, cause?: { code?: string; message?: string }) {
     super('Calendar account deletion settle failed');
     this.name = 'CalendarAccountDeletionSettleError';
     this.code = `ACCOUNT_DELETION_SETTLE_${operation.toUpperCase()}_FAILED`;
+    this.causeCode = cause?.code;
+    this.causeMessage = cause?.message;
   }
 }
 
@@ -95,8 +109,11 @@ export async function dispatchCalendarAccountDeletionSettle(params: {
   let db: SupabaseClient<Database>;
   try {
     db = createServiceRoleClient();
-  } catch {
-    throw new CalendarAccountDeletionSettleError('client');
+  } catch (error) {
+    throw new CalendarAccountDeletionSettleError(
+      'client',
+      error instanceof Error ? { message: error.message } : undefined,
+    );
   }
 
   const lifecycleVersion = await getExternalLifecycleAppVersion(db);
@@ -133,7 +150,10 @@ export async function dispatchCalendarAccountDeletionSettle(params: {
     if (isPredecessorMissingFunction(listError)) {
       return { ...NO_ACCOUNT_DELETION_SETTLE, durationMs: Date.now() - startedAt };
     }
-    throw new CalendarAccountDeletionSettleError('list');
+    throw new CalendarAccountDeletionSettleError('list', {
+      code: listError.code,
+      message: listError.message,
+    });
   }
 
   const result = { ...NO_ACCOUNT_DELETION_SETTLE };
@@ -158,7 +178,10 @@ export async function dispatchCalendarAccountDeletionSettle(params: {
 
       if (error) {
         if (isPredecessorMissingFunction(error)) continue;
-        throw new CalendarAccountDeletionSettleError('normalize');
+        throw new CalendarAccountDeletionSettleError('normalize', {
+          code: error.code,
+          message: error.message,
+        });
       }
 
       if (data === 'normalized') {
@@ -169,12 +192,15 @@ export async function dispatchCalendarAccountDeletionSettle(params: {
         result.other += 1;
       }
     } catch (error) {
-      // raw error（DB / provider）を Sentry / ログへ通さない。既存の
-      // CalendarAccountDeletionSettleError はそのまま、それ以外は固定メッセージへ置き換える。
+      // CalendarAccountDeletionSettleError はそのまま（cause 情報は既に載っている）。
+      // 未分類の例外（abortSignal タイムアウト等）は message を cause として引き継ぐ。
       firstError ??=
         error instanceof CalendarAccountDeletionSettleError
           ? error
-          : new CalendarAccountDeletionSettleError('normalize');
+          : new CalendarAccountDeletionSettleError(
+              'normalize',
+              error instanceof Error ? { message: error.message } : undefined,
+            );
     }
   }
 

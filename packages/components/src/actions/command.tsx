@@ -35,6 +35,7 @@ const CommandDialog = ({
   className,
   showCloseButton = true,
   mobilePresentation = 'sheet',
+  handleOnly,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string;
@@ -43,8 +44,12 @@ const CommandDialog = ({
   showCloseButton?: boolean;
   mobilePresentation?: DialogMobilePresentation;
 }) => {
+  // full-height（内部スクロール主体）は既定でハンドルのみでスワイプ dismiss させ、
+  // リスト内のスクロールが誤って閉じるのを防ぐ。呼び出し側で明示指定した場合はそちらを優先。
+  const resolvedHandleOnly = handleOnly ?? mobilePresentation === 'full-height';
+
   return (
-    <Dialog {...props}>
+    <Dialog handleOnly={resolvedHandleOnly} {...props}>
       <DialogHeader className="sr-only">
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>

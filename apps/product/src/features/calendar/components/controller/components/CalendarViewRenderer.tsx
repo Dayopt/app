@@ -82,8 +82,10 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
       case 'week':
-        // モバイルは CalendarNavigationContext が viewType を 'day' に強制するため、
-        // 収束先と同じ DayView を直接返す（MultiDayView を経由すると2段階で切り替わりちらつく）
+        // モバイルは day-only（#2299）。CalendarNavigationContext の
+        // isMobileCalendarViewSupported ガードが viewType を 'day' に強制するまでの
+        // 短い window で 'week' が残ることがあるため、収束先と同じ DayView を直接
+        // 返す（MultiDayView を経由すると2段階で切り替わりちらつく）
         if (isMobile) {
           return (
             <Suspense fallback={<CalendarViewSkeleton />}>

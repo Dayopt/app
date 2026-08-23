@@ -924,3 +924,254 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     // §権限の構造的強制 参照）。
   });
 });
+
+// #2293: agent-ops secret 露出の出力段 redaction。過去 4 件の露出 incident
+// （07-22 Vercel CLI token / 08-11 Supabase branches credential / 08-11
+// Turnstile secret via Management API ×2）はいずれも「生表示 command を
+// denylist keyword や部分一致フィルタで塞ごうとして漏れた」class。本節は
+// denylist の穴埋めではなく、危険な command shape そのものを block し、
+// field allowlist projection を持つ安全な代替（scripts/supabase-mgmt-safe-get.mjs
+// 等）へ一本化する構造の contract を固定する。
+describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', () => {
+  it('--reveal を伴うと落ちる（concealed field の実値が出力される）', () => {
+    expect(runGuard(bash('op item get "human/supabase" --fields password --reveal'))).toBe('block');
+  });
+
+  it('--format=json を伴うと --reveal なしでも落ちる（1Password CLI は --reveal と無関係に .value へ実値を含める仕様）', () => {
+    expect(runGuard(bash('op item get "human/supabase" --format=json'))).toBe('block');
+  });
+
+  it('--format json（空白区切り）でも落ちる', () => {
+    expect(runGuard(bash('op item get "human/supabase" --format json'))).toBe('block');
+  });
+
+  it('OP_FORMAT=json 環境変数指定でも落ちる', () => {
+    expect(runGuard(bash('OP_FORMAT=json op item get "human/supabase"'))).toBe('block');
+  });
+
+  it('quote された --reveal でも落ちる（raw+unquoted 2 写し評価）', () => {
+    expect(runGuard(bash(`op item get 'human/supabase' --fields password '--reveal'`))).toBe(
+      'block',
+    );
+  });
+
+  it('既定の human-readable 形式・--reveal なしは通す（concealed field は masked のまま出る）', () => {
+    expect(runGuard(bash('op item get "human/supabase" --fields password'))).toBe('allow');
+  });
+
+  it('存在確認（--vault のみ）は通す', () => {
+    expect(runGuard(bash('op item get "human/supabase" --vault human'))).toBe('allow');
+  });
+});
+
+describe('pre-tool-guard.sh: #2293 supabase branches get（08-11 incident 再現）', () => {
+  it('08-11 incident の実行形（--experimental branches get）は落ちる', () => {
+    expect(runGuard(bash('supabase --experimental branches get efqkuihquhzhuhnwvffk'))).toBe(
+      'block',
+    );
+  });
+
+  it('安全な代替（branches list）は通す', () => {
+    expect(runGuard(bash('supabase --experimental branches list'))).toBe('allow');
+  });
+});
+
+describe('pre-tool-guard.sh: #2293 vercel --token / -t（07-22 incident 再現）', () => {
+  it('--token に値を伴う vercel 呼び出しは落ちる', () => {
+    expect(runGuard(bash('vercel ls --token abc123'))).toBe('block');
+  });
+
+  it('短縮形 -t でも落ちる', () => {
+    expect(runGuard(bash('vercel ls -t abc123'))).toBe('block');
+  });
+
+  it('等号結合形（--token=）でも落ちる', () => {
+    expect(runGuard(bash('vercel ls --token=abc123'))).toBe('block');
+  });
+
+  it('&& で連結した先でも落ちる（コマンド先頭以外の位置）', () => {
+    expect(runGuard(bash('echo hi && vercel ls --token abc123'))).toBe('block');
+  });
+
+  it('token を渡さない vercel 呼び出しは通す', () => {
+    expect(runGuard(bash('vercel ls'))).toBe('allow');
+  });
+
+  it('無関係なコマンドの -t flag は落とさない（vercel 呼び出しでない）', () => {
+    expect(runGuard(bash('tar -t -f archive.tar'))).toBe('allow');
+  });
+});
+
+describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-11 incident 再現 ×2）', () => {
+  it('08-11 incident 1 の実行形（config/auth への直接 curl）は落ちる', () => {
+    expect(
+      runGuard(
+        bash(
+          'curl -s "https://api.supabase.com/v1/projects/ref/config/auth" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"',
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('jq allowlist 射影を挟んでも落ちる（jq 形状の妥当性は検証しない設計）', () => {
+    expect(
+      runGuard(
+        bash(
+          'curl -s "https://api.supabase.com/v1/projects/ref/config/auth" | jq \'{security_captcha_enabled}\'',
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('08-11 incident 2 の実行形（branches/{id} への直接アクセス）は落ちる', () => {
+    expect(
+      runGuard(bash('curl -s "https://api.supabase.com/v1/branches/efqkuihquhzhuhnwvffk"')),
+    ).toBe('block');
+  });
+
+  it('projects/{ref}/branches（一覧形）も落ちる', () => {
+    expect(runGuard(bash('curl -s "https://api.supabase.com/v1/projects/ref/branches"'))).toBe(
+      'block',
+    );
+  });
+
+  it('config / branches 以外の endpoint（例: actions）は落とさない', () => {
+    expect(runGuard(bash('curl -s "https://api.supabase.com/v1/projects/ref/actions"'))).toBe(
+      'allow',
+    );
+  });
+
+  it('無関係な host への curl は落とさない', () => {
+    expect(runGuard(bash('curl -s "https://example.com/foo"'))).toBe('allow');
+  });
+
+  // push前反証レビューで発見: invoke 判定を「コマンド先頭・shell separator直後」
+  // に限定していたため、`--` の後ろに空白1つで置かれる形が anchor に一致せず
+  // 素通りした。本ファイルの env-file 判定が既に採用している「コマンド名では
+  // なく引数で判定する（位置に依存しない）」原則に揃え、空白境界のみを要求する
+  // 形へ修正した。この test はその修正の回帰防止。
+  it('op run -- の後ろに空白1つで置かれた curl も落ちる（anchor 限定の抜け穴修正）', () => {
+    expect(
+      runGuard(
+        bash(
+          'op run -- curl -s "https://api.supabase.com/v1/projects/ref/config/auth" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"',
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  // merge前クロスレビュー（risk-reviewer / behavior-verifier）で発見: curl|wget
+  // への invoke 限定は、node fetch / python urllib のような別 HTTP client で
+  // 丸ごと迂回できた。この repo は scripts/*.mjs を書くのが日常 idiom で、
+  // agent が同型 one-liner を書く動機は自然にある（安全な代替経路自体が
+  // Node wrapper のため）。08-11 の denylist keyword 漏れと同じ「点を塞ぐ」
+  // 形だった。curl|wget 限定を外し、endpoint 文字列（host + path）の言及
+  // だけで無条件 block する設計へ変更した。
+  it('curl|wget 以外の HTTP client（node fetch）でも落ちる（invoke 限定を外した修正の回帰防止）', () => {
+    expect(
+      runGuard(
+        bash(
+          "node -e \"fetch('https://api.supabase.com/v1/projects/ref/config/auth',{headers:{Authorization:'Bearer '+process.env.SUPABASE_ACCESS_TOKEN}}).then(r=>r.json()).then(console.log)\"",
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('python3 urllib でも落ちる', () => {
+    expect(
+      runGuard(
+        bash(
+          'python3 -c "import urllib.request; urllib.request.urlopen(\'https://api.supabase.com/v1/branches/x\')"',
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('httpie（http コマンド）でも落ちる', () => {
+    expect(runGuard(bash('http GET https://api.supabase.com/v1/projects/ref/config/auth'))).toBe(
+      'block',
+    );
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/usr/bin/curl 等）は invoke 判定の
+  // 境界集合に `/` が無く素通りしていた。curl|wget 限定を外した上記修正により、
+  // curl 自体はもはや invoke 判定を経由しない（endpoint 文字列だけで block する）
+  // ため、この class は自動的に閉じている。回帰防止として残す。
+  it('絶対パス起動の curl も落ちる（invoke 限定撤廃により自動的に閉じる）', () => {
+    expect(
+      runGuard(bash('/usr/bin/curl -s https://api.supabase.com/v1/projects/ref/config/auth')),
+    ).toBe('block');
+  });
+});
+
+describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
+  it('op run -- の後ろに空白1つで置かれた vercel --token も落ちる', () => {
+    expect(runGuard(bash('op run -- vercel ls --token abc123'))).toBe('block');
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/opt/homebrew/bin/vercel 等）は
+  // 直前の文字が `/` で境界集合 [[:space:];&|] のどれにも一致せず素通りした。
+  // 境界集合に `/` を追加して修正した。
+  it('絶対パス起動（/opt/homebrew/bin/vercel）でも --token は落ちる', () => {
+    expect(runGuard(bash('/opt/homebrew/bin/vercel ls --token abc123'))).toBe('block');
+  });
+});
+
+describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持たず、例外なく block）', () => {
+  it('redirect なしの op read は落ちる', () => {
+    expect(runGuard(bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"'))).toBe('block');
+  });
+
+  it('後続コマンドと ; で連結しても落ちる', () => {
+    expect(
+      runGuard(bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" && echo done')),
+    ).toBe('block');
+  });
+
+  // 当初は `>/dev/null` への破棄 redirect があれば通す設計だったが、push前
+  // 反証レビューで2つの穴が見つかった: ① `2>/dev/null`（stderr破棄）が文字列
+  // として `>/dev/null` を含むため誤って許可側に倒れ、stdout の実値はそのまま
+  // 出力される ② 複数出現する場合、コマンド全体に1回でも `/dev/null` があれば
+  // 全体を許可してしまい、redirect の無い方が漏れる。例外を作らず無条件で
+  // block する設計へ変更した（接続確認は (a) の既定 masked 出力で代替できる）。
+  it('stdout への破棄 redirect（>/dev/null）があっても、例外なく落ちる（設計変更）', () => {
+    expect(
+      runGuard(
+        bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK'),
+      ),
+    ).toBe('block');
+  });
+
+  it('stderr のみの破棄（2>/dev/null）は stdout の実値を隠さない（旧設計の穴の回帰防止）', () => {
+    expect(
+      runGuard(bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" 2>/dev/null')),
+    ).toBe('block');
+  });
+
+  it('複数の op read が混在し、片方だけ redirect されていても両方落ちる（旧設計の穴の回帰防止）', () => {
+    expect(
+      runGuard(
+        bash('op read "op://human/supabase/A" && op read "op://human/supabase/B" >/dev/null'),
+      ),
+    ).toBe('block');
+  });
+
+  it('op run -- の後ろに空白1つで置かれた op read も落ちる（anchor 限定の抜け穴修正）', () => {
+    expect(
+      runGuard(bash('op run -- op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"')),
+    ).toBe('block');
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/usr/local/bin/op 等）は直前の
+  // 文字が `/` で境界集合 [[:space:];&|] のどれにも一致せず素通りした。
+  // 境界集合に `/` を追加して修正した。
+  it('絶対パス起動（/usr/local/bin/op read）でも落ちる', () => {
+    expect(
+      runGuard(bash('/usr/local/bin/op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"')),
+    ).toBe('block');
+  });
+
+  it('代替経路（op item get --fields、既定形式）は影響を受けない', () => {
+    expect(runGuard(bash('op item get "human/supabase" --fields password'))).toBe('allow');
+  });
+});

@@ -128,19 +128,21 @@ export function MobileAccountOverview({
 
   return (
     <>
-      <AppHeader
-        leftSlot={
-          <Button variant="ghost" size="sm" icon asChild className="-ml-2">
-            <Link href={returnPath} aria-label={t('common.back')}>
-              <ArrowLeft className="size-5" />
-            </Link>
-          </Button>
-        }
-      >
-        <h1 className="text-lg font-medium">{t('navigation.navUser.account')}</h1>
-      </AppHeader>
+      <div className="bg-background sticky top-0 z-20">
+        <AppHeader
+          leftSlot={
+            <Button variant="ghost" size="sm" icon asChild className="-ml-2">
+              <Link href={returnPath} aria-label={t('common.back')}>
+                <ArrowLeft className="size-5" />
+              </Link>
+            </Button>
+          }
+        >
+          <h1 className="text-lg font-medium">{t('navigation.navUser.account')}</h1>
+        </AppHeader>
+      </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         {/* B. ヒーローエリア */}
         <div className="px-4 pt-4 pb-6">
           <Card className="border-border-subtle gap-0 overflow-hidden rounded-lg py-0 shadow-sm">
