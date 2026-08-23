@@ -2,12 +2,12 @@
 
 import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-import { BarChart3, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, Redo2, Search, Undo2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState, type ReactNode } from 'react';
 
 import { AppHeader } from '@/components/shell/AppHeader';
-import { isTodayInTimezone } from '@/lib/date/timezone';
+import { isPastDayInTimezone, isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, cn } from '@dayopt/components';
@@ -78,6 +78,10 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const daySuffix = locale === 'ja' ? '日' : '';
     const weekdayShort = format(currentDate, 'EEE', { locale: enUS });
     const today = isTodayInTimezone(currentDate, timezone);
+    // 過去日を見ている: Redo（時間を進めて今日へ戻る）。未来日を見ている: Undo
+    // （時間を戻して今日へ戻る）。today の時はボタン自体を非表示にする（#2302）
+    const isPast = !today && isPastDayInTimezone(currentDate, timezone);
+    const TodayIcon = isPast ? Redo2 : Undo2;
     const weekNumber = getWeek(currentDate, { weekStartsOn });
 
     const handleToggle = useCallback(() => {
@@ -112,23 +116,22 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
         <AppHeader
           rightSlot={
             <div className="flex h-8 items-center gap-1">
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={handleTodayClick}
-                onMouseEnter={() => onPrefetch?.('today')}
-                onTouchStart={() => onPrefetch?.('today')}
-                aria-label={t('actions.goToToday')}
-              >
-                <div className="relative flex size-5 flex-col">
-                  <div className="h-1 w-full border-b-2 border-current" />
-                  <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
-                  </div>
-                </div>
-              </Button>
+              {/* 今日を見ている時はボタン自体を非表示にする（#2302）。過去日は
+                  Redo（時間を進めて戻る）、未来日は Undo（時間を戻す）を出す */}
+              {!today && (
+                <Button
+                  variant="ghost"
+                  icon
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={handleTodayClick}
+                  onMouseEnter={() => onPrefetch?.('today')}
+                  onTouchStart={() => onPrefetch?.('today')}
+                  aria-label={t('actions.goToToday')}
+                >
+                  <TodayIcon className="size-5" />
+                </Button>
+              )}
               {/* フッターの BottomTabBar 廃止に伴うトグル（#2300）。現在地ではなく
                   遷移先（レポート）を示すアイコン。SidebarUtilities.tsx のテーマ
                   切り替えパターンに倣う */}
