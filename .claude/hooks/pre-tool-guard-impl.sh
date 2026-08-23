@@ -443,6 +443,121 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       conforming_env_file_paths "$COMMAND_UNQUOTED"
     } | sort -u
   )
+
+  # --- #2293: agent-ops secret 露出の出力段 redaction ---
+  #
+  # 過去4件の露出incident（07-22 Vercel CLI token / 08-11×2 Supabase credential /
+  # 08-11 Turnstile secret via Management API）はいずれも「生表示commandを
+  # denylist keywordや部分一致フィルタで塞ごうとして漏れた」class。本節は
+  # denylistの穴埋めではなく、危険なcommand shapeそのものをPreToolUseで
+  # blockし、field allowlist projectionを持つ安全な代替へ一本化する。
+  #
+  # jq projectionの形が正しいか（allowlist射影かdenylist射影か）はregexで
+  # 検証しない。shell展開回避（$'\xNN' / ${IFS} / base64等）でop-env.humanの
+  # 境界と同じ壁に当たるため。「raw commandそのものを無条件block」に倒し、
+  # jqを挟んでも通さない（secrets.mdの既存curl+jq例は本PRでwrapper呼び出しへ
+  # 置換する）。
+
+  # (a) op item get: --reveal または --format=json（OP_FORMAT=json含む）は
+  # concealed fieldの実値を出力する。1Password CLI実測: --format=jsonは
+  # --revealの有無に関わらず値を.valueへ含める（--revealはhuman-readable
+  # テキスト出力のmaskingにのみ効く仕様）。既定形式・--revealなしはmasked表示
+  # のまま出るため許可する（orchestration.md §手作業コンシェルジュレーンの
+  # 「item UUID/名前の照合のみで行い、生JSONを表示しない」idiomを機械強制する
+  # 形になる）。
+  ITEM_GET_RE='item[[:space:]]+get([[:space:]]|$)'
+  REVEAL_FLAG_RE='(^|[[:space:];&|])--reveal([[:space:];&|]|$)'
+  JSON_FORMAT_RE='(--format[=[:space:]]+json|OP_FORMAT=json)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$ITEM_GET_RE"; then
+      if echo "$scanned" | grep -qE "$REVEAL_FLAG_RE" || echo "$scanned" | grep -qE "$JSON_FORMAT_RE"; then
+        echo "BLOCKED: op item get で --reveal / --format=json（または OP_FORMAT=json）を使うと concealed field の実値が出力されます（--format=json は --reveal の有無に関わらず値を含む仕様です）。既定の human-readable 形式・--reveal なしで存在確認してください。値そのものが必要な操作は既存の scripts/admin-*.sh 経由で行ってください（agent が直接値を reveal する経路には使えません。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+        exit 2
+      fi
+    fi
+  done
+
+  # (b) supabase branches get: credentialを含むJSONを返す仕様（08-11 incident）。
+  # 状態確認にはmetadataのみを返すbranches listを使う（#1920の学び）。
+  BRANCHES_GET_RE='branches[[:space:]]+get([[:space:]]|$)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$BRANCHES_GET_RE"; then
+      echo "BLOCKED: supabase branches get は credential（SERVICE_ROLE_KEY 等）を含む JSON を返す仕様です（2026-08-11 incident）。状態確認には metadata のみを返す branches list を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+      exit 2
+    fi
+  done
+
+  # (c) vercel --token / -t: 長寿命tokenをCLI引数へ渡すと、CLIの再実行・
+  # pagination案内へ値がechoされる場合がある（2026-07-22 incident）。
+  #
+  # invoke 判定はコマンド先頭・shell separator 直後だけでなく、単純な空白の
+  # 前後でも一致させる（push前反証レビューで発見: `op run -- vercel ...` の
+  # ように `--` の後ろに空白 1 つで置かれる形は、separator 限定の anchor だと
+  # 素通りした。これは本ファイル §env-file の言及がすべて許可形かを判定する
+  # が既に採用している「コマンド名ではなく引数で判定する（位置に依存しない）」
+  # 原則から外れていた誤り。空白境界だけを要求する形へ揃える）。
+  #
+  # 境界集合に `/` も含める（merge 前クロスレビューで発見: `/opt/homebrew/bin/vercel`
+  # のような絶対パス起動は、直前の文字が `/` で `[[:space:];&|]` のどれにも
+  # 一致せず素通りしていた。push前反証で直した「op run -- vercel（空白区切り）」
+  # と同じ「位置に依存しない」原則の取りこぼしで、path 区切りも境界として扱う）。
+  VERCEL_INVOKE_RE='(^|[[:space:];&|/])vercel([[:space:]]|$)'
+  VERCEL_AUTH_FLAG_RE='(^|[[:space:];&|])(--token|-t)([[:space:]=]|$)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$VERCEL_INVOKE_RE" && echo "$scanned" | grep -qE "$VERCEL_AUTH_FLAG_RE"; then
+      echo "BLOCKED: vercel CLI に --token / -t を渡すのは禁止です（CLI が再実行・pagination 案内へ値を echo する場合があり、2026-07-22 に実際に露出しました）。VERCEL_TOKEN は環境変数として渡してください（docs/operations/secrets.md 既述。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+      exit 2
+    fi
+  done
+
+  # (d) Supabase Management API の secret 保持エンドポイント（config/* と
+  # branches*）への直接アクセス。jq projection の有無を問わず無条件で block
+  # する（denylist keyword / 部分一致 keyword フィルタが2回とも漏れた
+  # 08-11 incident 2件）。安全な代替は scripts/supabase-mgmt-safe-get.mjs に
+  # 一本化する。
+  #
+  # invoke 側（curl|wget の言及）は要求しない（merge前クロスレビューで発見:
+  # `curl` / `wget` 限定は `node -e "fetch(...)"` や `python3 -c "urllib..."`
+  # のような別 HTTP client で丸ごと迂回できた。この repo は scripts/*.mjs を
+  # 書くのが日常 idiom で、agent が同型 one-liner を書く動機は自然にある。
+  # 08-11 の denylist keyword 漏れと同じ「点を塞ぐ」形だった）。**endpoint
+  # 文字列（host + path）の言及だけで無条件 block する。** どんな実行手段
+  # （curl / wget / node fetch / python / httpie / ブラウザ拡張の内部実装等）
+  # で叩かれるかを問わない。secret 保持エンドポイントへの言及自体が危険信号
+  # であり、絞り込みを増やすほど新しい client 名を数え上げる負債になる。
+  # projects/{ref}/config・projects/{ref}/branches（一覧）・branches/{id}
+  # （個別、08-11 incident 2 で実際に叩かれた形）の3形をすべて拾う。
+  SUPABASE_MGMT_DANGER_ENDPOINT_RE='api\.supabase\.com/v1/(projects/[^[:space:]"'"'"']*/(config|branches)|branches)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$SUPABASE_MGMT_DANGER_ENDPOINT_RE"; then
+      echo "BLOCKED: Supabase Management API の config / branches endpoint への言及は禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました。curl 限定だと別 HTTP client で迂回できるため、実行手段を問わず endpoint への言及自体を block します）。node scripts/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+      exit 2
+    fi
+  done
+
+  # (e) op read: --reveal相当のmaskingを持たず、常に実値をstdoutへ出す。
+  #
+  # 当初は `>/dev/null` への破棄 redirect があれば通す設計だったが、push前
+  # 反証レビューで2つの穴が見つかった: ① `2>/dev/null`（stderrの破棄）が
+  # 文字列として `>/dev/null` を含むため誤って許可側に倒れ、stdout の実値は
+  # そのまま出力される ② `op read A && op read B >/dev/null` のように複数
+  # 出現する場合、コマンド全体に1回でも `/dev/null` があれば全体を許可して
+  # しまい、redirect の無い A 側が漏れる。どちらも「redirect の形」を後から
+  # 数え上げる設計の限界（.op-env.human 境界と同型の壁）。
+  #
+  # 例外を作らず無条件で block する。接続確認は既定形式の
+  # `op item get <item> --fields <field>`（(a) により masked 出力が保証され
+  # ている）で代替できるため、`op read` を agent が直接叩く必要自体が無い。
+  #
+  # 境界集合に `/` を含める理由は (c) と同じ（`/usr/local/bin/op read ...`
+  # のような絶対パス起動を anchor の穴にしない）。
+  OP_READ_RE='(^|[[:space:];&|/])op[[:space:]]+read([[:space:]]|$)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$OP_READ_RE"; then
+      echo "BLOCKED: op read op://... は --reveal 相当の masking を持たず、常に実値を stdout へ出します（例外なく block）。接続確認は op item get <itemName> --vault <vault> --fields <field> （既定の human-readable 形式・--reveal なしなら masked 出力）で代替してください。値そのものが必要な操作は op run 経由で行ってください（stdout へ出さずに process へ渡せます。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+      exit 2
+    fi
+  done
 fi
 
 exit 0
