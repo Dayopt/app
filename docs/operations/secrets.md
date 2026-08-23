@@ -115,9 +115,9 @@ field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT
 
 ### `op item get` / `op read` の直接実行（#2293）
 
-**`op item get` は `--reveal` または `--format=json`（`OP_FORMAT=json` 含む）を伴うと block される。** 1Password CLI の実測: `--format=json` は `--reveal` の有無に関わらず concealed field の実値を `.value` へ含める仕様で、`--reveal` は human-readable テキスト出力の masking にのみ効く。既定の human-readable 形式・`--reveal` なしは値が masked のまま出るため、存在確認はこの形で行う（`op item get <item> --fields <field>`）。この block は orchestration.md §手作業コンシェルジュレーンの「item UUID / 名前の照合のみで行い、生 JSON を表示しない」idiom を機械強制する形になる。値そのものが必要な操作は既存の `scripts/admin-*.sh`（内部で `--reveal` を使うが agent の Bash tool には見えない実行経路）で行う。
+**`op item get` は `--reveal` または `--format=json`（`OP_FORMAT=json` 含む）を伴うと block される。** 1Password CLI の実測: `--format=json` は `--reveal` の有無に関わらず concealed field の実値を `.value` へ含める仕様で、`--reveal` は human-readable テキスト出力の masking にのみ効く。既定の human-readable 形式・`--reveal` なしは値が masked のまま出るため、存在確認はこの形で行う（`op item get <itemName> --vault <vault> --fields <field>`。位置引数は itemName/itemID/shareLink のみで、vault は `--vault` flag で別途指定する — `<vault>/<item>` のような slash 結合形は `op item get` の構文には無い）。この block は orchestration.md §手作業コンシェルジュレーンの「item UUID / 名前の照合のみで行い、生 JSON を表示しない」idiom を機械強制する形になる。値そのものが必要な操作は既存の `scripts/admin-*.sh`（内部で `--reveal` を使うが agent の Bash tool には見えない実行経路）で行う。
 
-**`op read op://...` の agent Bash tool からの直接実行は、`>/dev/null` への破棄 redirect の有無を問わず無条件で block される。** `op read` は常に実値を stdout へ出す（`--reveal` 相当の masking を持たない）コマンドで、当初は `>/dev/null` への破棄があれば許可する設計だったが、`2>/dev/null`（stderr のみの破棄で stdout は素通り）や複数出現時の判定漏れが push 前反証レビューで見つかり、例外を作らず無条件 block へ変更した。接続確認は `op item get <item> --fields <field>` の既定 human-readable 形式（`--reveal` なし、上記参照）で代替する。値そのものが process 内で必要な操作（env-file 経由の `op run` 等）はこの block の対象外。
+**`op read op://...` の agent Bash tool からの直接実行は、`>/dev/null` への破棄 redirect の有無を問わず無条件で block される。** `op read` は常に実値を stdout へ出す（`--reveal` 相当の masking を持たない）コマンドで、当初は `>/dev/null` への破棄があれば許可する設計だったが、`2>/dev/null`（stderr のみの破棄で stdout は素通り）や複数出現時の判定漏れが push 前反証レビューで見つかり、例外を作らず無条件 block へ変更した。接続確認は `op item get <itemName> --vault <vault> --fields <field>` の既定 human-readable 形式（`--reveal` なし、上記参照）で代替する。値そのものが process 内で必要な操作（env-file 経由の `op run` 等）はこの block の対象外。
 
 ### `op item create` / `op item edit` の stdout 抑制
 
@@ -474,10 +474,10 @@ production の Auth `uri_allow_list` に **localhost を入れない**。かつ�
 
 `scripts/setup-1password.sh`は3 vaultが空の時だけ使う初回bootstrap専用。既存vaultへ新しいitem / fieldを追加する時はGUIまたは対象を限定した`op item create` / `op item edit`でmasterを先に更新し、`pnpm 1password:check`で値を表示せず検証してからreplicaへ同期する。
 
-存在確認の例（agent の Bash tool 経由では `op item get` の既定 human-readable 形式・`--reveal` なしを使う。`op read` は #2293 により agent からの直接実行を無条件で block しているため、この用途には使わない）:
+存在確認の例（agent の Bash tool 経由では `op item get` の既定 human-readable 形式・`--reveal` なしを使う。`op read` は #2293 により agent からの直接実行を無条件で block しているため、この用途には使わない。位置引数は item 名のみで、vault は `--vault` flag で指定する）:
 
 ```bash
-op item get "human/supabase" --fields SUPABASE_SERVICE_ROLE_KEY
+op item get supabase --vault human --fields SUPABASE_SERVICE_ROLE_KEY
 ```
 
 ### 短命トークンのローテーション（expiry 付き再発行）

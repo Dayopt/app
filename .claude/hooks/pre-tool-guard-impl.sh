@@ -471,7 +471,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$ITEM_GET_RE"; then
       if echo "$scanned" | grep -qE "$REVEAL_FLAG_RE" || echo "$scanned" | grep -qE "$JSON_FORMAT_RE"; then
-        echo "BLOCKED: op item get で --reveal / --format=json（または OP_FORMAT=json）を使うと concealed field の実値が出力されます（--format=json は --reveal の有無に関わらず値を含む仕様です）。既定の human-readable 形式・--reveal なしで存在確認してください。値そのものが必要な操作は既存の scripts/admin-*.sh 経由で行ってください（agent が直接値を reveal する経路には使えません）" >&2
+        echo "BLOCKED: op item get で --reveal / --format=json（または OP_FORMAT=json）を使うと concealed field の実値が出力されます（--format=json は --reveal の有無に関わらず値を含む仕様です）。既定の human-readable 形式・--reveal なしで存在確認してください。値そのものが必要な操作は既存の scripts/admin-*.sh 経由で行ってください（agent が直接値を reveal する経路には使えません。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
         exit 2
       fi
     fi
@@ -482,7 +482,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   BRANCHES_GET_RE='branches[[:space:]]+get([[:space:]]|$)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$BRANCHES_GET_RE"; then
-      echo "BLOCKED: supabase branches get は credential（SERVICE_ROLE_KEY 等）を含む JSON を返す仕様です（2026-08-11 incident）。状態確認には metadata のみを返す branches list を使ってください" >&2
+      echo "BLOCKED: supabase branches get は credential（SERVICE_ROLE_KEY 等）を含む JSON を返す仕様です（2026-08-11 incident）。状態確認には metadata のみを返す branches list を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
       exit 2
     fi
   done
@@ -496,11 +496,16 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 素通りした。これは本ファイル §env-file の言及がすべて許可形かを判定する
   # が既に採用している「コマンド名ではなく引数で判定する（位置に依存しない）」
   # 原則から外れていた誤り。空白境界だけを要求する形へ揃える）。
-  VERCEL_INVOKE_RE='(^|[[:space:];&|])vercel([[:space:]]|$)'
+  #
+  # 境界集合に `/` も含める（merge 前クロスレビューで発見: `/opt/homebrew/bin/vercel`
+  # のような絶対パス起動は、直前の文字が `/` で `[[:space:];&|]` のどれにも
+  # 一致せず素通りしていた。push前反証で直した「op run -- vercel（空白区切り）」
+  # と同じ「位置に依存しない」原則の取りこぼしで、path 区切りも境界として扱う）。
+  VERCEL_INVOKE_RE='(^|[[:space:];&|/])vercel([[:space:]]|$)'
   VERCEL_AUTH_FLAG_RE='(^|[[:space:];&|])(--token|-t)([[:space:]=]|$)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$VERCEL_INVOKE_RE" && echo "$scanned" | grep -qE "$VERCEL_AUTH_FLAG_RE"; then
-      echo "BLOCKED: vercel CLI に --token / -t を渡すのは禁止です（CLI が再実行・pagination 案内へ値を echo する場合があり、2026-07-22 に実際に露出しました）。VERCEL_TOKEN は環境変数として渡してください（docs/operations/secrets.md 既述）" >&2
+      echo "BLOCKED: vercel CLI に --token / -t を渡すのは禁止です（CLI が再実行・pagination 案内へ値を echo する場合があり、2026-07-22 に実際に露出しました）。VERCEL_TOKEN は環境変数として渡してください（docs/operations/secrets.md 既述。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
       exit 2
     fi
   done
@@ -509,15 +514,23 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # branches*）への直接アクセス。jq projection の有無を問わず無条件で block
   # する（denylist keyword / 部分一致 keyword フィルタが2回とも漏れた
   # 08-11 incident 2件）。安全な代替は scripts/supabase-mgmt-safe-get.mjs に
-  # 一本化する。invoke 判定は (c) と同じ理由で空白境界のみを要求する
-  # （`op run -- curl ...` のような形を anchor の穴にしない）。
-  CURL_INVOKE_RE='(^|[[:space:];&|])(curl|wget)([[:space:]]|$)'
+  # 一本化する。
+  #
+  # invoke 側（curl|wget の言及）は要求しない（merge前クロスレビューで発見:
+  # `curl` / `wget` 限定は `node -e "fetch(...)"` や `python3 -c "urllib..."`
+  # のような別 HTTP client で丸ごと迂回できた。この repo は scripts/*.mjs を
+  # 書くのが日常 idiom で、agent が同型 one-liner を書く動機は自然にある。
+  # 08-11 の denylist keyword 漏れと同じ「点を塞ぐ」形だった）。**endpoint
+  # 文字列（host + path）の言及だけで無条件 block する。** どんな実行手段
+  # （curl / wget / node fetch / python / httpie / ブラウザ拡張の内部実装等）
+  # で叩かれるかを問わない。secret 保持エンドポイントへの言及自体が危険信号
+  # であり、絞り込みを増やすほど新しい client 名を数え上げる負債になる。
   # projects/{ref}/config・projects/{ref}/branches（一覧）・branches/{id}
   # （個別、08-11 incident 2 で実際に叩かれた形）の3形をすべて拾う。
   SUPABASE_MGMT_DANGER_ENDPOINT_RE='api\.supabase\.com/v1/(projects/[^[:space:]"'"'"']*/(config|branches)|branches)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
-    if echo "$scanned" | grep -qE "$CURL_INVOKE_RE" && echo "$scanned" | grep -qE "$SUPABASE_MGMT_DANGER_ENDPOINT_RE"; then
-      echo "BLOCKED: Supabase Management API の config / branches endpoint への直接アクセスは禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました）。node scripts/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください" >&2
+    if echo "$scanned" | grep -qE "$SUPABASE_MGMT_DANGER_ENDPOINT_RE"; then
+      echo "BLOCKED: Supabase Management API の config / branches endpoint への言及は禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました。curl 限定だと別 HTTP client で迂回できるため、実行手段を問わず endpoint への言及自体を block します）。node scripts/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
       exit 2
     fi
   done
@@ -535,10 +548,13 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # 例外を作らず無条件で block する。接続確認は既定形式の
   # `op item get <item> --fields <field>`（(a) により masked 出力が保証され
   # ている）で代替できるため、`op read` を agent が直接叩く必要自体が無い。
-  OP_READ_RE='(^|[[:space:];&|])op[[:space:]]+read([[:space:]]|$)'
+  #
+  # 境界集合に `/` を含める理由は (c) と同じ（`/usr/local/bin/op read ...`
+  # のような絶対パス起動を anchor の穴にしない）。
+  OP_READ_RE='(^|[[:space:];&|/])op[[:space:]]+read([[:space:]]|$)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$OP_READ_RE"; then
-      echo "BLOCKED: op read op://... は --reveal 相当の masking を持たず、常に実値を stdout へ出します（例外なく block）。接続確認は op item get <item> --fields <field> （既定の human-readable 形式・--reveal なしなら masked 出力）で代替してください。値そのものが必要な操作は op run 経由で行ってください（stdout へ出さずに process へ渡せます）" >&2
+      echo "BLOCKED: op read op://... は --reveal 相当の masking を持たず、常に実値を stdout へ出します（例外なく block）。接続確認は op item get <itemName> --vault <vault> --fields <field> （既定の human-readable 形式・--reveal なしなら masked 出力）で代替してください。値そのものが必要な操作は op run 経由で行ってください（stdout へ出さずに process へ渡せます。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
       exit 2
     fi
   done

@@ -971,11 +971,61 @@ describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-
       ),
     ).toBe('block');
   });
+
+  // merge前クロスレビュー（risk-reviewer / behavior-verifier）で発見: curl|wget
+  // への invoke 限定は、node fetch / python urllib のような別 HTTP client で
+  // 丸ごと迂回できた。この repo は scripts/*.mjs を書くのが日常 idiom で、
+  // agent が同型 one-liner を書く動機は自然にある（安全な代替経路自体が
+  // Node wrapper のため）。08-11 の denylist keyword 漏れと同じ「点を塞ぐ」
+  // 形だった。curl|wget 限定を外し、endpoint 文字列（host + path）の言及
+  // だけで無条件 block する設計へ変更した。
+  it('curl|wget 以外の HTTP client（node fetch）でも落ちる（invoke 限定を外した修正の回帰防止）', () => {
+    expect(
+      runGuard(
+        bash(
+          "node -e \"fetch('https://api.supabase.com/v1/projects/ref/config/auth',{headers:{Authorization:'Bearer '+process.env.SUPABASE_ACCESS_TOKEN}}).then(r=>r.json()).then(console.log)\"",
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('python3 urllib でも落ちる', () => {
+    expect(
+      runGuard(
+        bash(
+          'python3 -c "import urllib.request; urllib.request.urlopen(\'https://api.supabase.com/v1/branches/x\')"',
+        ),
+      ),
+    ).toBe('block');
+  });
+
+  it('httpie（http コマンド）でも落ちる', () => {
+    expect(runGuard(bash('http GET https://api.supabase.com/v1/projects/ref/config/auth'))).toBe(
+      'block',
+    );
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/usr/bin/curl 等）は invoke 判定の
+  // 境界集合に `/` が無く素通りしていた。curl|wget 限定を外した上記修正により、
+  // curl 自体はもはや invoke 判定を経由しない（endpoint 文字列だけで block する）
+  // ため、この class は自動的に閉じている。回帰防止として残す。
+  it('絶対パス起動の curl も落ちる（invoke 限定撤廃により自動的に閉じる）', () => {
+    expect(
+      runGuard(bash('/usr/bin/curl -s https://api.supabase.com/v1/projects/ref/config/auth')),
+    ).toBe('block');
+  });
 });
 
-describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー）', () => {
+describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
   it('op run -- の後ろに空白1つで置かれた vercel --token も落ちる', () => {
     expect(runGuard(bash('op run -- vercel ls --token abc123'))).toBe('block');
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/opt/homebrew/bin/vercel 等）は
+  // 直前の文字が `/` で境界集合 [[:space:];&|] のどれにも一致せず素通りした。
+  // 境界集合に `/` を追加して修正した。
+  it('絶対パス起動（/opt/homebrew/bin/vercel）でも --token は落ちる', () => {
+    expect(runGuard(bash('/opt/homebrew/bin/vercel ls --token abc123'))).toBe('block');
   });
 });
 
@@ -1021,6 +1071,15 @@ describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持�
   it('op run -- の後ろに空白1つで置かれた op read も落ちる（anchor 限定の抜け穴修正）', () => {
     expect(
       runGuard(bash('op run -- op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"')),
+    ).toBe('block');
+  });
+
+  // merge前クロスレビューで発見: 絶対パス起動（/usr/local/bin/op 等）は直前の
+  // 文字が `/` で境界集合 [[:space:];&|] のどれにも一致せず素通りした。
+  // 境界集合に `/` を追加して修正した。
+  it('絶対パス起動（/usr/local/bin/op read）でも落ちる', () => {
+    expect(
+      runGuard(bash('/usr/local/bin/op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"')),
     ).toBe('block');
   });
 
