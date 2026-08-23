@@ -174,17 +174,19 @@ export default function SettingsCategoryPage() {
   // Mobile: ヘッダー付き
   return (
     <>
-      <AppHeader
-        leftSlot={
-          <Button variant="ghost" size="sm" icon asChild className="-ml-2">
-            <Link href={settingsIndexHref} aria-label={t('common.back')}>
-              <ArrowLeft className="size-5" />
-            </Link>
-          </Button>
-        }
-      >
-        <h1 className="text-lg font-medium">{categoryMeta ? t(categoryMeta.labelKey) : ''}</h1>
-      </AppHeader>
+      <div className="bg-background sticky top-0 z-20">
+        <AppHeader
+          leftSlot={
+            <Button variant="ghost" size="sm" icon asChild className="-ml-2">
+              <Link href={settingsIndexHref} aria-label={t('common.back')}>
+                <ArrowLeft className="size-5" />
+              </Link>
+            </Button>
+          }
+        >
+          <h1 className="text-lg font-medium">{categoryMeta ? t(categoryMeta.labelKey) : ''}</h1>
+        </AppHeader>
+      </div>
       <SettingsContent category={category} />
     </>
   );
