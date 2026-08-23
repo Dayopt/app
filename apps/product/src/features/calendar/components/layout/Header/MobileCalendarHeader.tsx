@@ -4,7 +4,7 @@ import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { BarChart3, ChevronDown, ChevronUp, Redo2, Search, Undo2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { memo, useCallback, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { AppHeader } from '@/components/shell/AppHeader';
 import { isPastDayInTimezone, isTodayInTimezone } from '@/lib/date/timezone';
@@ -54,6 +54,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const dateFnsLocale = locale === 'ja' ? ja : enUS;
     const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false);
     const openTimeblockSearch = useShellStore.use.openTimeblockSearch();
+    // 外側タップで閉じる（#2297）。ヘッダー+パネル全体を containerRef で囲み、
+    // isExpanded の間だけ document レベルの pointerdown を監視する
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // viewMonth: グリッドスワイプで独立して変化する表示月
     const [viewMonth, setViewMonth] = useState(() => currentDate);
@@ -88,6 +91,24 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       setIsExpanded((prev) => !prev);
     }, []);
 
+    // 外側タップで閉じる（#2297）。isExpanded の間だけ document レベルの
+    // pointerdown を監視し、containerRef の外側なら閉じる。toggle ボタン自身は
+    // containerRef 内側にあるため、開閉の二重発火（閉じた直後に再度開く）は
+    // 起きない
+    useEffect(() => {
+      if (!isExpanded) return;
+
+      const handlePointerDown = (event: PointerEvent) => {
+        if (!containerRef.current) return;
+        if (!(event.target instanceof Node)) return;
+        if (containerRef.current.contains(event.target)) return;
+        setIsExpanded(false);
+      };
+
+      document.addEventListener('pointerdown', handlePointerDown);
+      return () => document.removeEventListener('pointerdown', handlePointerDown);
+    }, [isExpanded]);
+
     // Google Calendar準拠: 日付選択してもパネルは閉じない（Chevronタップでのみ閉じる）
     const handleDateSelect = useCallback(
       (date: Date) => {
@@ -112,7 +133,10 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
     return (
-      <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
+      <div
+        ref={containerRef}
+        className={cn('bg-background sticky top-0 z-20 md:hidden', className)}
+      >
         <AppHeader
           rightSlot={
             <div className="flex h-8 items-center gap-1">
