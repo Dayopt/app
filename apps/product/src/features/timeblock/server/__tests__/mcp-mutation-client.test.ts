@@ -275,3 +275,71 @@ describe('McpMutationClient archived activity boundary', () => {
     expect(db.applyRecordUpdate).toHaveBeenCalledOnce();
   });
 });
+
+describe('McpMutationClient records.update fulfillment wire contract', () => {
+  it('fulfillmentを省略した更新はpresent=falseで送り、既存値を保持する', async () => {
+    const db = createFakeDb();
+    db.applyRecordUpdate.mockResolvedValue({
+      data: [recordReceiptRow({ operation_id: 'op-10' })],
+      error: null,
+    });
+    const client = buildClient(db);
+
+    await client.updateRecord({
+      operationId: 'op-10',
+      recordId: 'record-1',
+      expectedUpdatedAt: '2026-07-31T00:00:00.000000Z',
+      title: 'renamed only',
+      connectionId: CONNECTION_ID,
+      accessTokenId: ACCESS_TOKEN_ID,
+    });
+
+    expect(db.applyRecordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ p_fulfillment: null, p_fulfillment_present: false }),
+    );
+  });
+
+  it('明示的なfulfillment:nullはpresent=trueで送り、既存値を解除する意図を伝える', async () => {
+    const db = createFakeDb();
+    db.applyRecordUpdate.mockResolvedValue({
+      data: [recordReceiptRow({ operation_id: 'op-11' })],
+      error: null,
+    });
+    const client = buildClient(db);
+
+    await client.updateRecord({
+      operationId: 'op-11',
+      recordId: 'record-1',
+      expectedUpdatedAt: '2026-07-31T00:00:00.000000Z',
+      fulfillment: null,
+      connectionId: CONNECTION_ID,
+      accessTokenId: ACCESS_TOKEN_ID,
+    });
+
+    expect(db.applyRecordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ p_fulfillment: null, p_fulfillment_present: true }),
+    );
+  });
+
+  it('新しいfulfillment値を渡した更新はpresent=trueでその値を送る', async () => {
+    const db = createFakeDb();
+    db.applyRecordUpdate.mockResolvedValue({
+      data: [recordReceiptRow({ operation_id: 'op-12' })],
+      error: null,
+    });
+    const client = buildClient(db);
+
+    await client.updateRecord({
+      operationId: 'op-12',
+      recordId: 'record-1',
+      expectedUpdatedAt: '2026-07-31T00:00:00.000000Z',
+      fulfillment: 'high',
+      connectionId: CONNECTION_ID,
+      accessTokenId: ACCESS_TOKEN_ID,
+    });
+
+    expect(db.applyRecordUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ p_fulfillment: 'high', p_fulfillment_present: true }),
+    );
+  });
+});

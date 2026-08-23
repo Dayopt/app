@@ -9,6 +9,7 @@ export const TIMEBLOCK_CSV_COLUMNS = [
   'end_at',
   'source',
   'skipped_at',
+  'fulfillment',
   'created_at',
   'updated_at',
   'deleted_at',
