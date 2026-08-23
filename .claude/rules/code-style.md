@@ -64,6 +64,18 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 - `ctx.userId` でデータアクセスを制限
 - `dangerouslySetInnerHTML` 禁止
 
+## zod v3/v4 分裂（意図的トレードオフ）
+
+策定日: 2026-08-23（[#2307](https://github.com/Dayopt/dayopt/issues/2307)、epic #2165 の follow-up）
+
+`apps/product` は zod `^3.25.76`、`apps/web` は zod `4.3.6` を使う。**この分裂は意図的に維持する。統一（v4 へ寄せる）は見送り済み。**
+
+- **障壁の実測**: `apps/product/src` で zod を直接 import するファイルは 37（`grep -rl "from ['\"]zod['\"]" apps/product/src | wc -l`）。issue の撤退条件（変更ファイル 20 超）を超過
+- **決定打は typecheck では検出できない実行時破壊**: `apps/product` の `@hookform/resolvers@^3.10.0`（`zodResolver`）は内部で `Array.isArray(error?.errors)` によって `ZodError` を判定するが、zod v4 の `ZodError` は `.errors` を持たず `.issues` のみを持つ。zod だけを v4 へ上げると、`tsc --noEmit` は 0 エラーで通過する一方、`LoginForm.test.tsx` の実行時テストが未捕捉の `ZodError` throw で fail する（実測済み）。apps/web は既に `@hookform/resolvers@^5.1.1` で zod v4 と揃えている
+- **意味すること**: 統一には zod 本体だけでなく `@hookform/resolvers` を含む依存 chain 全体の協調アップグレードと、全 37 ファイルの実行時再検証が要る。typecheck green は安全の証拠にならない
+- **新規コードのルール**: `apps/product` 配下は zod v3 系（`^3.x`）に留める。`apps/web` 配下は zod v4 系（`4.x`）に留める。app 間で zod スキーマを共有しない（`features/ -> lib/` の依存方向とも整合し、そもそも app 境界を跨ぐ共有はしない）
+- **再検討条件**: `@hookform/resolvers` を v4/v5 系へ先行アップグレードし、`apps/product` の全 zod 消費箇所（フォーム・tRPC input・外部 API レスポンス検証）を実行時テストで再検証できる見込みが立った時
+
 ## Tailwind v4 既知の落とし穴
 
 - `@theme` で `--spacing-xs/sm/md/lg/xl/2xl` を定義すると `max-w-sm/md/lg` 等が壊れる
