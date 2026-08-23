@@ -28,7 +28,9 @@ type Story = StoryObj<typeof meta>;
 const futureValue: TimeModelEditorValue = {
   note: '',
   tagId: null,
-  activityId: null,
+  // activityProps の見た目（アイコン・色）と一致させる。null にすると
+  // ActivityFieldRow が neutral 表示へフォールバックし、継承色のデモにならない。
+  activityId: 'activity-1',
   startAt: new Date('2099-07-11T09:00:00'),
   endAt: new Date('2099-07-11T10:00:00'),
   source: 'plan',
