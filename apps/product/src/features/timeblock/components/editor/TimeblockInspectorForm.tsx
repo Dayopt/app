@@ -3,7 +3,8 @@
 /**
  * TimeblockInspector のフォーム（Level 2）
  *
- * plan / record の 1 行を受け取り、ActivityFieldRow ヘッダー + TimeblockEditor を描画する。
+ * plan / record の 1 行を受け取り、InspectorHeaderActions（…メニュー + 閉じる）を
+ * パネル最上部に、アクティビティ選択は TimeblockEditor 内の時間フィールド直下へ配線する（#2298）。
  * タグと確定済み日時は即時保存、note はデバウンスして自動保存する。
  * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
@@ -48,7 +49,7 @@ import {
   hasTimeblockLaneConflict,
 } from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
-import { ActivityFieldRow } from '../inspector/fields';
+import { InspectorHeaderActions } from '../inspector/fields';
 import { EstimationFeedforward } from './EstimationFeedforward';
 import {
   isValidTimeModelRange,
@@ -594,14 +595,7 @@ export function TimeblockInspectorForm({
 
   return (
     <div className="space-y-3 p-4">
-      <ActivityFieldRow
-        activityId={value.activityId}
-        activityName={selectedActivity?.name ?? t('calendar.filter.noActivity')}
-        activityIcon={selectedActivity?.icon}
-        activityColor={selectedActivity?.color}
-        uncategorized={selectedActivity?.categoryId === null}
-        onActivityChange={handleActivityChange}
-        onCreateAndSelect={handleCreateAndSelectActivity}
+      <InspectorHeaderActions
         menuItems={menuItems}
         onCloseInspector={onCloseInspector}
         disabled={isWriteFrozen}
@@ -631,6 +625,13 @@ export function TimeblockInspectorForm({
           isWriteFrozen ||
           isMigrated
         }
+        activityName={selectedActivity?.name ?? t('calendar.filter.noActivity')}
+        activityIcon={selectedActivity?.icon}
+        activityColor={selectedActivity?.color}
+        activityUncategorized={selectedActivity?.categoryId === null}
+        onActivityChange={handleActivityChange}
+        onCreateAndSelectActivity={handleCreateAndSelectActivity}
+        activityDisabled={isWriteFrozen}
       />
 
       {/*

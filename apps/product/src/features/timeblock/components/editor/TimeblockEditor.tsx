@@ -7,7 +7,7 @@ import { DateTimeSection } from '@/features/timeblock';
 import { formatHHmm } from '@/lib/date';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
-import { NoteSection } from '../inspector/fields';
+import { ActivityFieldRow, NoteSection } from '../inspector/fields';
 import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 
 export interface TimeModelEditorValue {
@@ -28,6 +28,24 @@ interface TimeModelEditorProps {
   /** 日時入力に紐づけて表示するエラー。 */
   dateTimeError?: string | undefined;
   disabled?: boolean | undefined;
+  /** 解決済みのアクティビティ名（ActivityFieldRow へそのまま渡す） */
+  activityName: string;
+  /** 解決済みの継承アイコン名（未分類・未設定なら null） */
+  activityIcon?: string | null | undefined;
+  /** 解決済みの継承色名（未分類・未設定なら null） */
+  activityColor?: string | null | undefined;
+  /** アクティビティがカテゴリーに所属していない（= 継承する色が無い） */
+  activityUncategorized?: boolean | undefined;
+  onActivityChange: (activityId: string | null) => void;
+  /** アクティビティ作成コールバック（上位で useCreateActivity を呼ぶ） */
+  onCreateAndSelectActivity: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    categoryId?: string | null,
+  ) => void;
+  /** アクティビティ選択トリガーの無効化（日時・メモの disabled とは独立） */
+  activityDisabled?: boolean | undefined;
 }
 
 function withTime(date: Date, value: string): Date {
@@ -49,6 +67,13 @@ export function TimeblockEditor({
   onNoteBlur,
   dateTimeError,
   disabled,
+  activityName,
+  activityIcon,
+  activityColor,
+  activityUncategorized,
+  onActivityChange,
+  onCreateAndSelectActivity,
+  activityDisabled,
 }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
   const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
@@ -96,6 +121,17 @@ export function TimeblockEditor({
           </div>
         </div>
       </div>
+      <ActivityFieldRow
+        variant="compact"
+        activityId={value.activityId}
+        activityName={activityName}
+        activityIcon={activityIcon}
+        activityColor={activityColor}
+        uncategorized={activityUncategorized}
+        onActivityChange={onActivityChange}
+        onCreateAndSelect={onCreateAndSelectActivity}
+        disabled={activityDisabled}
+      />
       <div onBlurCapture={onNoteBlur}>
         <NoteSection
           label={t('note')}
