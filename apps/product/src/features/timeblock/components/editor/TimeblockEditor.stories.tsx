@@ -1,7 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
+import { fn } from 'storybook/test';
 
 import { TimeblockEditor, type TimeModelEditorValue } from './TimeblockEditor';
+
+const activityProps = {
+  activityName: '仕事',
+  activityIcon: 'briefcase',
+  activityColor: 'blue',
+  onActivityChange: fn(),
+  onCreateAndSelectActivity: fn(),
+};
 
 const meta = {
   title: 'Product/Features/Timeblock/TimeblockEditor',
@@ -37,6 +46,7 @@ export const Plan: Story = {
     value: futureValue,
     onDateTimeChange: () => undefined,
     onNoteChange: () => undefined,
+    ...activityProps,
   },
   render: function PlanStory() {
     const [value, setValue] = useState(futureValue);
@@ -45,6 +55,7 @@ export const Plan: Story = {
         value={value}
         onDateTimeChange={setValue}
         onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+        {...activityProps}
       />
     );
   },
@@ -56,6 +67,7 @@ export const PastPlan: Story = {
     value: futureValue,
     onDateTimeChange: () => undefined,
     onNoteChange: () => undefined,
+    ...activityProps,
   },
   render: function PastPlanStory() {
     const [value, setValue] = useState<TimeModelEditorValue>(pastPlanValue);
@@ -64,6 +76,7 @@ export const PastPlan: Story = {
         value={value}
         onDateTimeChange={setValue}
         onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+        {...activityProps}
       />
     );
   },
@@ -76,6 +89,7 @@ export const TimeConflict: Story = {
     onDateTimeChange: () => undefined,
     onNoteChange: () => undefined,
     dateTimeError: 'この時間帯には既に予定があります',
+    ...activityProps,
   },
 };
 
@@ -85,6 +99,7 @@ export const AllPatterns: Story = {
     value: futureValue,
     onDateTimeChange: () => undefined,
     onNoteChange: () => undefined,
+    ...activityProps,
   },
   render: function AllPatternsStory() {
     const [value, setValue] = useState(futureValue);
@@ -95,23 +110,27 @@ export const AllPatterns: Story = {
           value={value}
           onDateTimeChange={setValue}
           onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+          {...activityProps}
         />
         <TimeblockEditor
           value={pastValue}
           onDateTimeChange={setPastValue}
           onNoteChange={(note) => setPastValue((current) => ({ ...current, note }))}
+          {...activityProps}
         />
         <TimeblockEditor
           value={value}
           onDateTimeChange={setValue}
           onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
           dateTimeError="この時間帯には既に予定があります"
+          {...activityProps}
         />
         <TimeblockEditor
           value={value}
           onDateTimeChange={setValue}
           onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
           disabled
+          {...activityProps}
         />
       </div>
     );
