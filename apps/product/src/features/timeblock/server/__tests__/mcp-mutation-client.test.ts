@@ -227,6 +227,7 @@ describe('McpMutationClient archived activity boundary', () => {
         planId: null,
         startAt: '2026-07-31T00:00:00.000Z',
         endAt: '2026-07-31T01:00:00.000Z',
+        fulfillment: null,
         connectionId: CONNECTION_ID,
         accessTokenId: ACCESS_TOKEN_ID,
       }),

@@ -5,6 +5,7 @@ import { databaseTables, publicRecordSelect } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import { parseFulfillment } from '../schemas/timeblock';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
 import { assertActivityAssignable } from './tag-assignment-guard';
 import {
@@ -170,6 +171,7 @@ export class RecordService {
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
       startAt: input.start_at,
       endAt: input.end_at,
+      fulfillment: input.fulfillment ?? null,
     });
 
     await trackProductEvent({ eventName: 'record_created', userId });
@@ -231,6 +233,10 @@ export class RecordService {
       source: toTimeblockSource(existing.source),
       startAt: nextStartAt,
       endAt: nextEndAt,
+      fulfillment:
+        input.fulfillment === undefined
+          ? parseFulfillment(existing.fulfillment)
+          : input.fulfillment,
     });
   }
 

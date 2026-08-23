@@ -1,7 +1,7 @@
 import type { Row } from './types';
 
 export const publicRecordSelect =
-  'id, user_id, tag_id, activity_id, plan_id, external_calendar_event_id, title, note, start_at, end_at, source, deleted_at, created_at, updated_at' as const;
+  'id, user_id, tag_id, activity_id, plan_id, external_calendar_event_id, title, note, start_at, end_at, source, fulfillment, deleted_at, created_at, updated_at' as const;
 
 export type PublicRecordRow = Pick<
   Row<'records'>,
@@ -16,6 +16,7 @@ export type PublicRecordRow = Pick<
   | 'start_at'
   | 'end_at'
   | 'source'
+  | 'fulfillment'
   | 'deleted_at'
   | 'created_at'
   | 'updated_at'
@@ -34,6 +35,7 @@ export function toPublicRecordRow(row: Row<'records'>): PublicRecordRow {
     start_at: row.start_at,
     end_at: row.end_at,
     source: row.source,
+    fulfillment: row.fulfillment,
     deleted_at: row.deleted_at,
     created_at: row.created_at,
     updated_at: row.updated_at,

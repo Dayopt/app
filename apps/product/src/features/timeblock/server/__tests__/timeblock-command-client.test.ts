@@ -182,6 +182,7 @@ describe('TimeblockCommandClient', () => {
       new TimeblockCommandClient().createRecord({
         ...createPlanInput(),
         planId: plan.id,
+        fulfillment: null,
       }),
     ).rejects.toMatchObject({ code: 'PLAN_NOT_RECORDABLE' });
   });

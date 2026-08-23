@@ -68,9 +68,10 @@ type GeneratedRecordCreateRpcArgs =
   Database['public']['Functions']['apply_mcp_record_create_v1']['Args'];
 type RecordCreateRpcArgs = Omit<
   GeneratedRecordCreateRpcArgs,
-  'p_activity_id' | 'p_note' | 'p_plan_id' | 'p_tag_id'
+  'p_activity_id' | 'p_fulfillment' | 'p_note' | 'p_plan_id' | 'p_tag_id'
 > & {
   p_activity_id: string | null;
+  p_fulfillment: string | null;
   p_note: string | null;
   p_plan_id: string | null;
   p_tag_id: string | null;
@@ -82,6 +83,8 @@ type RecordUpdateRpcArgs = Omit<
   | 'p_activity_id'
   | 'p_activity_id_present'
   | 'p_end_at'
+  | 'p_fulfillment'
+  | 'p_fulfillment_present'
   | 'p_note'
   | 'p_start_at'
   | 'p_tag_id'
@@ -90,6 +93,8 @@ type RecordUpdateRpcArgs = Omit<
   p_activity_id: string | null;
   p_activity_id_present: boolean;
   p_end_at: string | null;
+  p_fulfillment: string | null;
+  p_fulfillment_present: boolean;
   p_note: string | null;
   p_start_at: string | null;
   p_tag_id: string | null;
@@ -156,6 +161,7 @@ export function createMcpMutationDb() {
       const { data, error } = await client.rpc('apply_mcp_record_create_v1', {
         ...args,
         p_activity_id: args.p_activity_id as never,
+        p_fulfillment: args.p_fulfillment as never,
         p_note: args.p_note as never,
         p_plan_id: args.p_plan_id as never,
         p_tag_id: args.p_tag_id as never,
@@ -167,6 +173,7 @@ export function createMcpMutationDb() {
         ...args,
         p_activity_id: args.p_activity_id as never,
         p_end_at: args.p_end_at as never,
+        p_fulfillment: args.p_fulfillment as never,
         p_note: args.p_note as never,
         p_start_at: args.p_start_at as never,
         p_tag_id: args.p_tag_id as never,

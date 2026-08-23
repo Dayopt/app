@@ -55,8 +55,11 @@ export const confirmDaySchema = z
   })
   .superRefine(timeRangeRefine);
 
+export const fulfillmentSchema = z.enum(['low', 'medium', 'high']);
+
 const baseRecordSchema = baseTimeblockSchema.extend({
   planId: z.string().uuid().nullable().optional(),
+  fulfillment: fulfillmentSchema.nullable().optional(),
 });
 
 export const createRecordSchema = baseRecordSchema.superRefine(timeRangeRefine);
@@ -88,3 +91,15 @@ export type ConfirmDayInput = z.infer<typeof confirmDaySchema>;
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 export type RecordFilter = z.infer<typeof recordFilterSchema>;
+export type Fulfillment = z.infer<typeof fulfillmentSchema>;
+
+/**
+ * DB 生成型は `records.fulfillment` を素の `string | null` としてしか持たない
+ * （CHECK 制約は生成型に反映されない）ため、既存行の値を `Fulfillment | null` へ
+ * 絞り込む。想定外の値は未入力として扱う（fail-safe）。client / server 双方から
+ * 使えるよう isomorphic な schemas/ 側に置く。
+ */
+export function parseFulfillment(value: string | null | undefined): Fulfillment | null {
+  const result = fulfillmentSchema.safeParse(value);
+  return result.success ? result.data : null;
+}

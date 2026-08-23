@@ -192,6 +192,14 @@
       "migratedLocked": "Migrated past records cannot be edited",
       "feedforward": {
         "recentActual": "Recent actuals for this activity are around {duration}"
+      },
+      "fulfillment": {
+        "label": "Fulfillment",
+        "options": {
+          "low": "Draining",
+          "medium": "Neutral",
+          "high": "Fulfilling"
+        }
       }
     }
   }

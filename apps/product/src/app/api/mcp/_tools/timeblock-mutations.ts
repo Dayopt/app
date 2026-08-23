@@ -24,6 +24,13 @@ const timestampSchema = MCP_TIMEBLOCK_TIMESTAMP_SCHEMA;
 const titleSchema = z.string().min(1).max(200);
 const noteSchema = z.string().max(10_000).nullable().optional();
 const nullableIdSchema = z.string().uuid().nullable().optional();
+const fulfillmentSchema = z
+  .enum(['low', 'medium', 'high'])
+  .nullable()
+  .optional()
+  .describe(
+    'Subjective fulfillment felt during this Record: low, medium, or high. Optional; omit or pass null to leave it unrated.',
+  );
 
 const planCreateInputSchema = z
   .object({
@@ -66,6 +73,7 @@ const recordCreateInputSchema = z
     planId: nullableIdSchema,
     startAt: timestampSchema,
     endAt: timestampSchema,
+    fulfillment: fulfillmentSchema,
   })
   .strict();
 
@@ -79,6 +87,7 @@ const recordUpdateInputSchema = z
     activityId: nullableIdSchema,
     startAt: timestampSchema.optional(),
     endAt: timestampSchema.optional(),
+    fulfillment: fulfillmentSchema,
   })
   .strict();
 
@@ -234,6 +243,7 @@ export function registerRecordsCreateTool(server: McpServer, ctx: McpRequestCont
           note: input.note ?? null,
           activityId: input.activityId ?? null,
           planId: input.planId ?? null,
+          fulfillment: input.fulfillment ?? null,
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),
@@ -264,6 +274,7 @@ export function registerRecordsUpdateTool(server: McpServer, ctx: McpRequestCont
           ...(input.activityId !== undefined ? { activityId: input.activityId } : {}),
           ...(input.startAt !== undefined ? { startAt: input.startAt } : {}),
           ...(input.endAt !== undefined ? { endAt: input.endAt } : {}),
+          ...(input.fulfillment !== undefined ? { fulfillment: input.fulfillment } : {}),
           connectionId: ctx.connectionId,
           accessTokenId: ctx.tokenId,
         }),

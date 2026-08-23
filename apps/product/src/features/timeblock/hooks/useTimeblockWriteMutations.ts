@@ -359,6 +359,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         start_at: input.start_at,
         end_at: input.end_at,
         source: 'manual',
+        fulfillment: input.fulfillment ?? null,
         deleted_at: null,
         created_at: nowIso,
         updated_at: nowIso,

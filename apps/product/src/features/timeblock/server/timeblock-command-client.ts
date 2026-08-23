@@ -52,8 +52,11 @@ interface VersionedPlanCommandInput {
   expectedUpdatedAt: string;
 }
 
+type Fulfillment = 'low' | 'medium' | 'high';
+
 interface CreateRecordCommandInput extends CreatePlanCommandInput {
   planId: string | null;
+  fulfillment: Fulfillment | null;
 }
 
 interface UpdateRecordCommandInput extends CreateRecordCommandInput {
@@ -273,6 +276,7 @@ export class TimeblockCommandClient {
         p_activity_id: input.activityId as never,
         p_end_at: input.endAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,
+        p_fulfillment: input.fulfillment as never,
         p_note: input.note as never,
         p_plan_id: input.planId as never,
         p_source: input.source,
@@ -292,6 +296,8 @@ export class TimeblockCommandClient {
         p_end_at: input.endAt,
         p_expected_updated_at: input.expectedUpdatedAt,
         p_external_calendar_event_id: input.externalCalendarEventId as never,
+        p_fulfillment: input.fulfillment as never,
+        p_fulfillment_present: true,
         p_note: input.note as never,
         p_plan_id: input.planId as never,
         p_record_id: input.recordId,
