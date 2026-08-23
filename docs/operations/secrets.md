@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-17
+last_verified: 2026-08-24
 code: scripts/env/schema.ts
 ---
 
@@ -100,16 +100,24 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 ... | jq 'if type == "object" then keys else type end'
 ```
 
-例: Supabase Auth config から bot protection の有効状態だけを確認する（`security_captcha_secret` のような `*_secret` フィールドは射影から除外する）:
+この節はここまで **Vercel Env API / Stripe API 等、下記の機械強制が及ばない API に対する規律**として維持する。
+
+**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`.claude/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/supabase-mgmt-safe-get.mjs` に一本化する:
 
 ```bash
-curl -sS --fail "https://api.supabase.com/v1/projects/{ref}/config/auth" \
-  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-  | jq -e '{security_captcha_enabled, external_email_enabled, disable_signup}
-           | select(all(.[]; type == "boolean"))'
+SUPABASE_ACCESS_TOKEN="op://human/supabase-cli/SUPABASE_ACCESS_TOKEN" \
+  op run -- node scripts/supabase-mgmt-safe-get.mjs auth-config security_captcha_enabled external_email_enabled disable_signup
 ```
 
-取得できていない状態を「確認できた」と誤読しないため、失敗を 2 段で落とす。`--fail` は HTTP エラー時にレスポンス本文を出さず非ゼロで終わる（`-s` だけでは 401 でも exit 0 になり、射影結果が全 `null` になる）。`select(all(...))` は 2xx でも期待フィールドを欠くレスポンス（API バージョン差など）を落とし、`jq -e` が出力なしとして非ゼロを返す。
+field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT` から派生し（二重管理を避ける）、`redact: 'url'` の付いた entry（`hook_send_email_uri`）は除外する。allowlist 外の field を 1 つでも含む要求は全体を拒否する（部分的に応じると allowlist 外の field を紛れ込ませて値を得られてしまうため）。`branches` については wrapper を作らず `supabase branches list`（既存 CLI、metadata のみ）へ誘導する — `branches get` が返す個別 credential に対して安全な部分集合が存在しないため。
+
+**wrapper がカバーするのは `config/auth` の boolean / enum / secret になり得ない値だけ**（`AUTH_CONFIG_CONTRACT` の対象）。`config/database` 等、他の config sub-resource は wrapper 未対応で、curl 直叩きは無条件 block のまま代替経路が無い。必要になったら wrapper に subcommand を追加する（先回りして作らない、実際の需要が出てから拡張する）。それまでの間に必要が生じた場合は User の明示操作（Supabase Dashboard での確認）に委ねる。
+
+### `op item get` / `op read` の直接実行（#2293）
+
+**`op item get` は `--reveal` または `--format=json`（`OP_FORMAT=json` 含む）を伴うと block される。** 1Password CLI の実測: `--format=json` は `--reveal` の有無に関わらず concealed field の実値を `.value` へ含める仕様で、`--reveal` は human-readable テキスト出力の masking にのみ効く。既定の human-readable 形式・`--reveal` なしは値が masked のまま出るため、存在確認はこの形で行う（`op item get <itemName> --vault <vault> --fields <field>`。位置引数は itemName/itemID/shareLink のみで、vault は `--vault` flag で別途指定する — `<vault>/<item>` のような slash 結合形は `op item get` の構文には無い）。この block は orchestration.md §手作業コンシェルジュレーンの「item UUID / 名前の照合のみで行い、生 JSON を表示しない」idiom を機械強制する形になる。値そのものが必要な操作は既存の `scripts/admin-*.sh`（内部で `--reveal` を使うが agent の Bash tool には見えない実行経路）で行う。
+
+**`op read op://...` の agent Bash tool からの直接実行は、`>/dev/null` への破棄 redirect の有無を問わず無条件で block される。** `op read` は常に実値を stdout へ出す（`--reveal` 相当の masking を持たない）コマンドで、当初は `>/dev/null` への破棄があれば許可する設計だったが、`2>/dev/null`（stderr のみの破棄で stdout は素通り）や複数出現時の判定漏れが push 前反証レビューで見つかり、例外を作らず無条件 block へ変更した。接続確認は `op item get <itemName> --vault <vault> --fields <field>` の既定 human-readable 形式（`--reveal` なし、上記参照）で代替する。値そのものが process 内で必要な操作（env-file 経由の `op run` 等）はこの block の対象外。
 
 ### `op item create` / `op item edit` の stdout 抑制
 
@@ -460,16 +468,16 @@ production の Auth `uri_allow_list` に **localhost を入れない**。かつ�
 
 1. 1Password master の該当 item / field を更新する
 2. 必要な長寿命 replica（Vercel Production Env / GitHub Secrets / Supabase Dashboard）へ同期する
-3. `op read` や `op run` で **値を表示せず** 存在確認する
+3. `op item get` や `op run` で **値を表示せず** 存在確認する
 4. 旧 key がある場合は発行元サービスで revoke する
 5. 変更内容は docs / PR には field 名と同期先だけを書く
 
 `scripts/setup-1password.sh`は3 vaultが空の時だけ使う初回bootstrap専用。既存vaultへ新しいitem / fieldを追加する時はGUIまたは対象を限定した`op item create` / `op item edit`でmasterを先に更新し、`pnpm 1password:check`で値を表示せず検証してからreplicaへ同期する。
 
-存在確認の例:
+存在確認の例（agent の Bash tool 経由では `op item get` の既定 human-readable 形式・`--reveal` なしを使う。`op read` は #2293 により agent からの直接実行を無条件で block しているため、この用途には使わない。位置引数は item 名のみで、vault は `--vault` flag で指定する）:
 
 ```bash
-op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY" >/dev/null && echo OK
+op item get supabase --vault human --fields SUPABASE_SERVICE_ROLE_KEY
 ```
 
 ### 短命トークンのローテーション（expiry 付き再発行）
