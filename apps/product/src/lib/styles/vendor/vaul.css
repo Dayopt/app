@@ -1,0 +1,34 @@
+/* ============================================
+ * vaul Drawer ドラッグハンドル
+ *
+ * vaul は視覚バー・タッチヒット領域の CSS を `vaul/style.css` として
+ * パッケージ本体と別配布しており、このリポジトリでは未 import。
+ * そのため `DrawerPrimitive.Handle` は data-vaul-handle 属性のみ持つ
+ * 無スタイルの div になり、高さ0に潰れてドラッグの起点にならない
+ * （@dayopt/components の DrawerHandle / Dialog drawer モード共通の問題）。
+ * デザイントークンで再定義し、両者に共通のドラッグハンドルを持たせる。
+ * @see node_modules/vaul/style.css の [data-vaul-handle] 相当
+ * ============================================ */
+
+[data-vaul-handle] {
+  display: block;
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
+  height: 4px; /* h-1 相当 */
+  width: 40px; /* w-10 相当 */
+  border-radius: 9999px;
+  background: var(--border);
+  touch-action: pan-y;
+}
+
+/* タップ・ドラッグのヒット領域はタッチターゲット最小値（44px）を確保する */
+[data-vaul-handle-hitarea] {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 2.75rem);
+  height: max(100%, 2.75rem);
+  touch-action: inherit;
+}

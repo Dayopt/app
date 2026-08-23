@@ -5,6 +5,8 @@ export interface TimeColumnProps {
   hourHeight?: number | undefined;
   format?: '12h' | '24h' | undefined; // 時刻表示形式
   className?: string | undefined;
+  /** 列の幅（px）。未指定時は TIME_COLUMN_WIDTH（PC 既定値）にフォールバック */
+  width?: number | undefined;
 }
 
 /** 現在時刻線コンポーネントのプロパティ */

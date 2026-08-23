@@ -31,6 +31,7 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
   hourHeight = 72,
   format = '24h',
   className = '',
+  width = TIME_COLUMN_WIDTH,
 }) {
   // グリッド高さ
   const gridHeight = (endHour - startHour) * hourHeight;
@@ -66,7 +67,7 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
     <div
       className={cn('sticky left-0 z-10 flex flex-col', className)}
       style={{
-        width: `${TIME_COLUMN_WIDTH}px`,
+        width: `${width}px`,
         height: `${gridHeight}px`,
       }}
     >

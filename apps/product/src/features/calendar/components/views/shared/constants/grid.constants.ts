@@ -14,6 +14,13 @@ export { DENSITY_FACTOR, MIN_LEGIBLE_HOUR_HEIGHT } from '../../../../lib/constan
 /** 時間列の幅（px） */
 export const TIME_COLUMN_WIDTH = 56; // 時間列の幅(px)
 
+/**
+ * モバイル版時間列の幅（px）
+ * ラベルは右詰めのため、PC と同じ 56px だと短いラベル（"9:00" 等）の
+ * 左側に余白が溜まる。8px グリッド準拠で縮小する。
+ */
+export const MOBILE_TIME_COLUMN_WIDTH = 40;
+
 /** 現在時刻ドットのサイズ（px） */
 export const CURRENT_TIME_DOT_SIZE = 6; // 現在時刻のドットサイズ(px)
 
