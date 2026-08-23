@@ -45,12 +45,15 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   return (
     <>
       {/* AppHeader + Main Content */}
-      <div className="flex h-full flex-1 flex-col">
-        {/* AppHeader（Calendar は独自ヘッダーを持つため非表示） */}
+      <div className="flex h-full min-h-0 flex-1 flex-col">
+        {/* AppHeader（Calendar は独自ヘッダーを持つため非表示）
+            sticky: スクロール祖先の先頭に固定する（calendar 側の実装と揃える） */}
         {!hasOwnHeader && (
-          <AppHeader rightSlot={<ConnectedMobileAccountButton />}>
-            {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
-          </AppHeader>
+          <div className="bg-background sticky top-0 z-20">
+            <AppHeader rightSlot={<ConnectedMobileAccountButton />}>
+              {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
+            </AppHeader>
+          </div>
         )}
 
         {/* インラインバナー（自前ヘッダーを持つ画面を含む全ページ共通） */}
