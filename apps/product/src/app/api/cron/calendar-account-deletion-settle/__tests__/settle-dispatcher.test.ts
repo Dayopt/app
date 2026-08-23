@@ -174,4 +174,93 @@ describe('dispatchCalendarAccountDeletionSettle', () => {
     expect(SETTLE_WORST_CASE_MS).toBeGreaterThan(0);
     expect(SETTLE_WORST_CASE_MS).toBeLessThan(50_000);
   });
+
+  // DAYOPT-V（#2305）: 原因の code/message が CalendarAccountDeletionSettleError へ載ることを
+  // stage ごとに固定する。route.ts はこれを errorCode/errorMessage として Sentry へ伝搬する。
+  describe('CalendarAccountDeletionSettleError への cause 伝搬', () => {
+    it('list RPC の error は code/message を cause として持つ', async () => {
+      rpc.mockImplementation((operation: string) => {
+        if (operation === 'get_external_lifecycle_app_version_v2') {
+          return { abortSignal: vi.fn(async () => ({ data: 1, error: null })) };
+        }
+        if (operation === 'list_expired_calendar_account_deletion_intents_v1') {
+          return {
+            abortSignal: vi.fn(async () => ({
+              data: null,
+              error: { code: '57014', message: 'canceling statement due to statement timeout' },
+            })),
+          };
+        }
+        return { abortSignal: vi.fn(async () => ({ data: [], error: null })) };
+      });
+
+      await expect(
+        dispatchCalendarAccountDeletionSettle({ deadlineAt: FAR_DEADLINE }),
+      ).rejects.toMatchObject({
+        name: 'CalendarAccountDeletionSettleError',
+        code: 'ACCOUNT_DELETION_SETTLE_LIST_FAILED',
+        causeCode: '57014',
+        causeMessage: 'canceling statement due to statement timeout',
+      });
+    });
+
+    it('normalize RPC の error は code/message を cause として持つ', async () => {
+      const candidates = [{ user_id: 'user-1', deletion_id: 'del-1' }];
+      rpc.mockImplementation((operation: string) => {
+        if (operation === 'get_external_lifecycle_app_version_v2') {
+          return { abortSignal: vi.fn(async () => ({ data: 1, error: null })) };
+        }
+        if (operation === 'list_expired_calendar_account_deletion_intents_v1') {
+          return { abortSignal: vi.fn(async () => ({ data: candidates, error: null })) };
+        }
+        if (operation === 'normalize_calendar_account_deletion_intent_v1') {
+          return {
+            abortSignal: vi.fn(async () => ({
+              data: null,
+              error: {
+                code: '55P03',
+                message: 'could not obtain lock on row in relation "timeblock_supported_writer_v1"',
+              },
+            })),
+          };
+        }
+        return { abortSignal: vi.fn(async () => ({ data: null, error: null })) };
+      });
+
+      await expect(
+        dispatchCalendarAccountDeletionSettle({ deadlineAt: FAR_DEADLINE }),
+      ).rejects.toMatchObject({
+        name: 'CalendarAccountDeletionSettleError',
+        code: 'ACCOUNT_DELETION_SETTLE_NORMALIZE_FAILED',
+        causeCode: '55P03',
+      });
+    });
+
+    it('未分類の例外（abortSignal タイムアウト等）は message だけを cause として引き継ぐ', async () => {
+      const candidates = [{ user_id: 'user-1', deletion_id: 'del-1' }];
+      rpc.mockImplementation((operation: string) => {
+        if (operation === 'get_external_lifecycle_app_version_v2') {
+          return { abortSignal: vi.fn(async () => ({ data: 1, error: null })) };
+        }
+        if (operation === 'list_expired_calendar_account_deletion_intents_v1') {
+          return { abortSignal: vi.fn(async () => ({ data: candidates, error: null })) };
+        }
+        if (operation === 'normalize_calendar_account_deletion_intent_v1') {
+          return {
+            abortSignal: vi.fn(async () => Promise.reject(new Error('The operation was aborted'))),
+          };
+        }
+        return { abortSignal: vi.fn(async () => ({ data: null, error: null })) };
+      });
+
+      await expect(
+        dispatchCalendarAccountDeletionSettle({ deadlineAt: FAR_DEADLINE }),
+      ).rejects.toMatchObject({
+        name: 'CalendarAccountDeletionSettleError',
+        code: 'ACCOUNT_DELETION_SETTLE_NORMALIZE_FAILED',
+        causeCode: undefined,
+        causeMessage: 'The operation was aborted',
+      });
+    });
+  });
 });

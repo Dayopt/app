@@ -8,7 +8,10 @@ import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
-import { dispatchCalendarAccountDeletionSettle } from './_composition/settle-dispatcher';
+import {
+  CalendarAccountDeletionSettleError,
+  dispatchCalendarAccountDeletionSettle,
+} from './_composition/settle-dispatcher';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,12 +81,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     return noStoreJson({ ok: true, ...summary });
-  } catch {
-    // dispatcher の将来変更でも raw DB error を Sentry の cause へ通さない。
+  } catch (error) {
+    // 常に新しい generic Error で capture する（raw error インスタンス自体は Sentry の
+    // cause へ通さない）。原因の code/message は #2289 と同型の default-closed
+    // errorMessage sanitizer（packages/observability/src/sanitize.ts）経由で
+    // context へ伝搬し、generic dispatch failure の真因を診断可能にする（DAYOPT-V、#2305）。
+    const causeCode =
+      error instanceof CalendarAccountDeletionSettleError
+        ? (error.causeCode ?? error.code)
+        : undefined;
+    const causeMessage =
+      error instanceof CalendarAccountDeletionSettleError ? error.causeMessage : undefined;
+
     captureUnexpectedError(new Error('Calendar account deletion settle dispatch failed'), {
       feature: 'external_calendar',
       operation: 'cron_dispatch',
       route: '/api/cron/calendar-account-deletion-settle',
+      ...(causeCode !== undefined ? { errorCode: causeCode } : {}),
+      ...(causeMessage !== undefined ? { errorMessage: causeMessage } : {}),
     });
     logger.error('[calendar-account-deletion-settle] dispatch failed');
     return noStoreJson({ error: 'Settle dispatch failed' }, 500);
