@@ -267,7 +267,9 @@ export const ForceDrawer: Story = {
 /** 入力や長い一覧を扱うモバイル向けの全高Drawer。 */
 export const FullHeightDrawer: Story = {
   render: () => (
-    <Dialog responsive="drawer">
+    // handleOnly: 検索結果一覧のスクロールが誤って dismiss を誘発しないよう、
+    // ハンドルのみでスワイプ dismiss させる（full-height の既定パターン）
+    <Dialog responsive="drawer" handleOnly>
       <DialogTrigger asChild>
         <Button variant="outline">全高Drawer</Button>
       </DialogTrigger>
@@ -337,7 +339,7 @@ export const AllPatterns: Story = {
         </DialogContent>
       </Dialog>
 
-      <Dialog responsive="drawer">
+      <Dialog responsive="drawer" handleOnly>
         <DialogTrigger asChild>
           <Button variant="outline">全高Drawer</Button>
         </DialogTrigger>

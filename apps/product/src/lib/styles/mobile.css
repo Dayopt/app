@@ -153,6 +153,12 @@ button,
   .calendar-scrollbar::-webkit-scrollbar {
     display: none !important;
   }
+
+  /* Radix ScrollArea（自前描画のスクロールバー）もモバイルでは非表示 */
+  [data-slot='scroll-area-scrollbar'],
+  [data-slot='scroll-area-corner'] {
+    display: none;
+  }
 }
 
 /* 画像のドラッグ防止（モバイル操作時の誤操作防止） */

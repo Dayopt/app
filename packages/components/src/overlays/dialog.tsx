@@ -37,9 +37,20 @@ type DialogMobilePresentation = 'sheet' | 'full-height';
 interface DialogProps extends React.ComponentProps<typeof DialogPrimitive.Root> {
   /** レスポンシブ制御。'auto' = PC:Dialog / モバイル:Drawer。default: 'auto' */
   responsive?: DialogResponsive;
+  /**
+   * drawer モードで、ハンドルのみでスワイプ dismiss を許可するか。
+   * true にすると本文（内部スクロール領域）のドラッグでは閉じなくなる。
+   * 内部スクロール主体の mobilePresentation="full-height" 等で使う。default: false
+   */
+  handleOnly?: boolean;
 }
 
-const Dialog = ({ responsive = 'auto', modal = true, ...props }: DialogProps) => {
+const Dialog = ({
+  responsive = 'auto',
+  modal = true,
+  handleOnly = false,
+  ...props
+}: DialogProps) => {
   const isMobile = useIsMobile();
   const mounted = useHasMounted();
 
@@ -60,7 +71,12 @@ const Dialog = ({ responsive = 'auto', modal = true, ...props }: DialogProps) =>
     return (
       <DialogModeContext.Provider value="drawer">
         <DialogModalContext.Provider value={resolvedModal}>
-          <DrawerPrimitive.Root data-slot="dialog" modal={resolvedModal} {...props} />
+          <DrawerPrimitive.Root
+            data-slot="dialog"
+            modal={resolvedModal}
+            handleOnly={handleOnly}
+            {...props}
+          />
         </DialogModalContext.Provider>
       </DialogModeContext.Provider>
     );
@@ -214,10 +230,8 @@ const DialogContent = ({
           )}
           {...(props as React.ComponentProps<typeof DrawerPrimitive.Content>)}
         >
-          {/* ドラッグハンドル */}
-          <div className="flex h-6 w-full shrink-0 items-center justify-center" aria-hidden="true">
-            <div className="bg-border h-1 w-10 rounded-full" />
-          </div>
+          {/* ドラッグハンドル（vaul Handle: handleOnly 時はここのみでスワイプ dismiss。drawer.tsx の DrawerHandle と同じ見た目） */}
+          <DrawerPrimitive.Handle data-slot="dialog-handle" className="mt-2 shrink-0" />
           {children}
         </DrawerPrimitive.Content>
       </DrawerPortalInternal>
