@@ -19,8 +19,9 @@ interface AppHeaderProps {
  * - 上下パディング: 8px（py-2）
  * - 全体の高さ: 最小 48px（min-h-12）。`pt-safe` で safe-area top inset を
  *   確保する分だけ箱が伸びる（固定 `h-12` だと inset の分だけ中身が
- *   潰れてしまうため min-h にする。footer 側の `pb-safe` + `min-h-14`
- *   （`BottomTabBar.tsx`）と対称の対応）
+ *   潰れてしまうため min-h にする。footer 側の `pb-safe` +
+ *   `ActivityChipRow`（`mobile-layout.tsx` の固定コンテナ、`min-h-14`）
+ *   と対称の対応）
  * - 8pxグリッドシステム準拠
  */
 export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
