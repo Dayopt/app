@@ -2,7 +2,7 @@
 
 import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState, type ReactNode } from 'react';
 
@@ -11,9 +11,11 @@ import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, cn } from '@dayopt/components';
+import { Link } from '@dayopt/i18n/navigation';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 
+import { formatCalendarDateParam } from '../../../lib/date-param';
 import { MobileMonthGrid } from './MobileMonthGrid';
 import { MobileYearStrip } from './MobileYearStrip';
 
@@ -126,6 +128,23 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                     <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
                   </div>
                 </div>
+              </Button>
+              {/* フッターの BottomTabBar 廃止に伴うトグル（#2300）。現在地ではなく
+                  遷移先（レポート）を示すアイコン。SidebarUtilities.tsx のテーマ
+                  切り替えパターンに倣う */}
+              <Button
+                variant="ghost"
+                icon
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link
+                  href={`/report?date=${formatCalendarDateParam(currentDate)}`}
+                  aria-label={t('actions.openReport')}
+                >
+                  <BarChart3 className="size-5" />
+                </Link>
               </Button>
               {rightSlot}
             </div>
