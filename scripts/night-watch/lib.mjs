@@ -74,3 +74,29 @@ export function extractTrailingNumber(url) {
   const match = url.trim().match(/(\d+)(?:#[^/]*)?$/);
   return match ? Number(match[1]) : null;
 }
+
+/**
+ * 当日 JST タイトルの盤面 issue を探す。無ければ null。
+ * dod-candidate.mjs（Step 4）・run-log.mjs（Step 5 の当日盤面 issue への 1 行
+ * コメント）の両方が使う共通ルックアップ。
+ * @param {{ execFileImpl?: ExecFileImpl }} [opts]
+ */
+export function findTodayBoardIssue({ execFileImpl } = {}) {
+  const title = `盤面 ${jstDateString()}`;
+  const openBoardIssues = runGhJson(
+    [
+      'issue',
+      'list',
+      '--repo',
+      REPO,
+      '--state',
+      'open',
+      '--label',
+      'type:board',
+      '--json',
+      'number,title',
+    ],
+    { execFileImpl },
+  );
+  return openBoardIssues.find((issue) => issue.title === title) ?? null;
+}

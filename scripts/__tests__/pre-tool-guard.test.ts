@@ -739,6 +739,27 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'check-id alert wrapper（Step3、sentry evidence を含む実測形）',
         'node scripts/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
       ],
+      // Step 0（環境故障報告）・Step 5（運行記録）の wrapper。push 前反証レビュー
+      // （risk-reviewer、high）で発見: 3 wrapper 化で `gh issue comment` の
+      // 直接 allowlist を全面撤去した際、Step 5 の運行記録コメントがどの
+      // wrapper にも属さず night-watch の唯一の故障検出チャネルが毎晩無音で
+      // block されていた。
+      [
+        '環境故障報告 wrapper（Step0、no-var）',
+        'node scripts/night-watch/run-log.mjs env-failure no-var',
+      ],
+      [
+        '環境故障報告 wrapper（Step0、write-token）',
+        'node scripts/night-watch/run-log.mjs env-failure write-token',
+      ],
+      [
+        '運行記録 wrapper（Step5、常設運行記録issueへの report）',
+        'node scripts/night-watch/run-log.mjs report \'{"executed":6}\'',
+      ],
+      [
+        '運行記録 wrapper（Step5、当日盤面issueへの1行 board-note）',
+        'node scripts/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
+      ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
     });
@@ -852,6 +873,14 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'wrapper prefix の迂回: board-issue.mjs に未許可のサブコマンドを渡す',
         'node scripts/night-watch/board-issue.mjs close 2000',
       ],
+      [
+        'run-log.mjs env-failure に未知の kind を渡す迂回',
+        'node scripts/night-watch/run-log.mjs env-failure evil',
+      ],
+      [
+        'run-log.mjs env-failure に余分な引数を付ける迂回',
+        'node scripts/night-watch/run-log.mjs env-failure no-var extra',
+      ],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
     });
@@ -897,11 +926,39 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     it('eval で隠す迂回は落とす', () => {
       expect(runGuard(bash("eval 'git push'"), rootDir, NIGHT_WATCH_ENV)).toBe('block');
     });
+  });
 
-    // layer3（本ファイル）は Bash のみを見る。Write/Edit の遮断は層2
-    // （RemoteTrigger の allowed_tools）の責務で、DAYOPT_NIGHT_WATCH の
-    // 有無に関わらずここでは検証しない（.claude/skills/night-watch/SKILL.md
-    // §権限の構造的強制 参照）。
+  // 層2（RemoteTrigger の allowed_tools から Write/Edit/MultiEdit/NotebookEdit を
+  // 除外する設定）が唯一の防御だと、その設定が漏れた場合に agent が
+  // scripts/night-watch/*.mjs（layer3 が prefix 一致で信頼している node script）
+  // や本 hook 自体を書き換えてから、信頼されたコマンド名で実行するだけで任意
+  // コード実行 / guard 自体の無効化に到達できる（push 前反証レビュー
+  // risk-reviewer 指摘、medium）。layer3 も Write/Edit を無条件で拒否し、
+  // 層2 の設定漏れに対する defense-in-depth にする。
+  describe('Write/Edit の無条件拒否（層2 の設定漏れに対する defense-in-depth）', () => {
+    it('通常ファイルへの Write は落とす', () => {
+      expect(runGuard(write('docs/some-file.md'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    it('通常ファイルへの Edit は落とす', () => {
+      expect(runGuard(edit('apps/product/src/index.ts'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    it('wrapper script 自身への Write（信頼された prefix の書き換え試行）は落とす', () => {
+      expect(runGuard(write('scripts/night-watch/alert-issue.mjs'), rootDir, NIGHT_WATCH_ENV)).toBe(
+        'block',
+      );
+    });
+
+    it('guard 自身への Edit（guard 無効化の書き換え試行）は落とす', () => {
+      expect(runGuard(edit('.claude/hooks/pre-tool-guard-impl.sh'), rootDir, NIGHT_WATCH_ENV)).toBe(
+        'block',
+      );
+    });
+
+    it('env var が無ければ通常どおり許可される（既存挙動）', () => {
+      expect(runGuard(write('docs/some-file.md'))).toBe('allow');
+    });
   });
 });
 

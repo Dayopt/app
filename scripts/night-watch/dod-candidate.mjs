@@ -1,7 +1,14 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { jstDateString, jstDayRange, jstYesterdayString, REPO, runGh, runGhJson } from './lib.mjs';
+import {
+  findTodayBoardIssue,
+  jstDayRange,
+  jstYesterdayString,
+  REPO,
+  runGh,
+  runGhJson,
+} from './lib.mjs';
 
 /**
  * night-watch SKILL.md §自動パート Step 4（DoD 監査候補の乱数選定）を1コマンドで
@@ -20,30 +27,6 @@ import { jstDateString, jstDayRange, jstYesterdayString, REPO, runGh, runGhJson 
  * 動的値（PR 番号・タイトル）はコメント本文の構築に使うが、`gh issue comment`
  * へは execFile の argv 要素として渡るため shell 展開の対象にならない。
  */
-
-/**
- * 当日 JST タイトルの盤面 issue を探す。無ければ null。
- * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
- */
-export function findTodayBoardIssue({ execFileImpl } = {}) {
-  const title = `盤面 ${jstDateString()}`;
-  const openBoardIssues = runGhJson(
-    [
-      'issue',
-      'list',
-      '--repo',
-      REPO,
-      '--state',
-      'open',
-      '--label',
-      'type:board',
-      '--json',
-      'number,title',
-    ],
-    { execFileImpl },
-  );
-  return openBoardIssues.find((issue) => issue.title === title) ?? null;
-}
 
 /**
  * 前日 JST に merge された PR 一覧を取得する。

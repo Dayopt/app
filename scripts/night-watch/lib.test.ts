@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { extractTrailingNumber, jstDateString, jstDayRange, jstYesterdayString } from './lib.mjs';
+import {
+  extractTrailingNumber,
+  findTodayBoardIssue,
+  jstDateString,
+  jstDayRange,
+  jstYesterdayString,
+} from './lib.mjs';
 
 describe('jstDateString', () => {
   it('JST の暦日を YYYY-MM-DD で返す（UTC 前日 15:30 = JST 当日 00:30）', () => {
@@ -52,5 +58,34 @@ describe('extractTrailingNumber', () => {
 
   it('数字が無ければ null を返す', () => {
     expect(extractTrailingNumber('')).toBeNull();
+  });
+});
+
+describe('findTodayBoardIssue', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-24T01:00:00Z')); // JST 2026-08-24 10:00
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('本日タイトルの盤面 issue を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([
+        { number: 100, title: '盤面 2026-08-23' },
+        { number: 200, title: '盤面 2026-08-24' },
+      ]),
+    );
+    expect(findTodayBoardIssue({ execFileImpl })).toEqual({
+      number: 200,
+      title: '盤面 2026-08-24',
+    });
+  });
+
+  it('見つからなければ null を返す', () => {
+    const execFileImpl = vi.fn(() => JSON.stringify([]));
+    expect(findTodayBoardIssue({ execFileImpl })).toBeNull();
   });
 });

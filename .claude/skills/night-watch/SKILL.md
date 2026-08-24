@@ -40,7 +40,7 @@ fresh session で以下を順に実施する。**価値判断・修正・裁量�
 1. `echo $DAYOPT_NIGHT_WATCH` が `1` であること
 2. `gh api repos/Dayopt/dayopt --jq .permissions` を実行し、`push` / `admin` が true でないこと（層1 token scope の実測検証）
 
-いずれかが想定外なら、**checklist を一切実行せず**、常設運行記録 issue へ「環境故障: DAYOPT_NIGHT_WATCH 未検出」または「環境故障: token に write 権限あり」の 1 コメントを残して終了する。これは checklist の異常とは別枠で、次回実行時も同じ状態なら毎晩同じ内容で報告し続ける（dedup の対象にしない — 環境故障は毎晩観測されるべき）。
+いずれかが想定外なら、**checklist を一切実行せず**、`node scripts/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `node scripts/night-watch/run-log.mjs env-failure write-token`（token に write 権限あり時）を実行して終了する。wrapper が常設運行記録 issue の番号を `docs/operations/night-watch.md` から自分で解決し、固定 2 文言のいずれかをコメントする（自由文は受け付けない）。これは checklist の異常とは別枠で、次回実行時も同じ状態なら毎晩同じ内容で報告し続ける（dedup の対象にしない — 環境故障は毎晩観測されるべき）。
 
 ### Step 1: 盤面起票
 
@@ -120,9 +120,22 @@ wrapper 内部の処理（引数は取らない）:
 
 ### Step 5: 運行記録
 
-常設運行記録 issue（初回登録時に指揮台が issue 番号を確定する。issue 番号は `docs/operations/night-watch.md` に記録する）へ、その晩の実行内容を要約した 1 コメントを必ず残す。Step 0 で中断した場合もこのコメントは残す（環境故障として）。
+`node scripts/night-watch/run-log.mjs report '<OpsLogReport JSON>'` を実行する。常設運行記録 issue（初回登録時に指揮台が issue 番号を確定する。issue 番号は `docs/operations/night-watch.md` に記録する。wrapper が同ファイルから自分で読み取り、呼び出し元は宛先 issue 番号を指定しない）へ、その晩の実行内容を要約した 1 コメントを必ず残す。Step 0 で中断した場合はこの Step の代わりに `run-log.mjs env-failure` を実行済み（§Step 0 参照）。
 
-コメント形式:
+JSON の形（wrapper 内部で厳密に検証する。既知 check-id 以外・範囲外の数値・不正な status は例外を投げて gh を呼ばない）:
+
+```json
+{
+  "executed": 6,
+  "failed": ["<check-id>", ...],
+  "results": [{ "checkId": "<check-id>", "outcome": "green" } | { "checkId": "<check-id>", "outcome": "issue", "issueNumber": 1234 }],
+  "baselineRecommend": ["<check-id>", ...],
+  "board": { "status": "success", "issueNumber": 1234 } | { "status": "skip" } | { "status": "fail", "detail": "<1〜300文字>" },
+  "dod": { "status": "candidate", "prNumber": 1234 } | { "status": "none" }
+}
+```
+
+wrapper はこの JSON から、以下と同じ内容のコメント本文を組み立てて投稿する:
 
 ```markdown
 **night-watch 運行記録 YYYY-MM-DD**
@@ -135,9 +148,9 @@ wrapper 内部の処理（引数は取らない）:
 - DoD監査候補: #NNNN | 前日merge PR無し
 ```
 
-**取得失敗が 1 件でもあれば「all green」と報告しない**（fail-closed。§Step 2 観測を実行する 参照）。
+**取得失敗が 1 件でもあれば「all green」と報告しない**（fail-closed。§Step 2 観測を実行する 参照。`results` に `outcome: "issue"` が 1 件でもあれば wrapper は自動的に「起票/追記」列挙へ切り替える）。
 
-**さらに**、Step 1 で起票/確認した当日盤面 issue へ「⏱ 夜勤: all green | 起票 N 件 / 観測 6 件」（取得失敗があれば「⏱ 夜勤: 一部取得失敗 | 起票 N 件 / 観測 M 件」）の 1 行コメントを追加する（`.claude/rules/orchestration.md` §日次盤面issue のイベントコメントと同じタイムライン形式に合わせる）。
+**さらに**、`node scripts/night-watch/run-log.mjs board-note '<BoardNote JSON>'`（`{"allGreen": true|false, "issued": N, "observed": M}`）を実行し、Step 1 で起票/確認した当日盤面 issue へ「⏱ 夜勤: all green | 起票 N 件 / 観測 6 件」（取得失敗があれば「⏱ 夜勤: 一部取得失敗 | 起票 N 件 / 観測 M 件」）の 1 行コメントを追加する（`.claude/rules/orchestration.md` §日次盤面issue のイベントコメントと同じタイムライン形式に合わせる。宛先の当日盤面 issue も wrapper が自分で検索する）。
 
 ## 権限の構造的強制（3層防御）
 
@@ -147,11 +160,13 @@ wrapper 内部の処理（引数は取らない）:
 - **層2（Cloud trigger 設定、登録時に指揮台が設定）**: RemoteTrigger の `session_context.allowed_tools` から `Write` / `Edit` / `MultiEdit` / `NotebookEdit` を除外する。**model は Haiku を指定する**（v2 追加。夜勤の判定は exit code / 閾値比較のみで裁量が無いため Haiku の適性と一致する。RemoteTrigger 側で model 指定ができない場合は、prompt 冒頭に「軽量実行（判定のみ、裁量なし）」と明記して代替し、実際に使われた model の構成比を月次ガーデニングで実測検証する）
 - **層3（repo hook、本実装）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる **allowlist**（denylist ではない — `.claude/rules/workflow.md` §同型指摘の打ち切りの「denylist をやめて allowlist にする」に従う）。引数不要な固定コマンド（checklist.md の4コマンド `docs:check` / `docs:coverage` / `quality:deadcode:ci`、自己検証の2コマンド `echo $DAYOPT_NIGHT_WATCH` / `gh api .../permissions`、v2 で追加した heavy-post-merge 赤確認・Sentry スキャンの2コマンド）は **完全一致**でのみ許可する（末尾ワイルドカードは配下バイナリの書込フラグ `--fix` `--output=` 等を継承してしまうため使わない、2026-08-19 内製クロスレビューで実測確認）。`gh api repos/Dayopt/dayopt/dependabot/alerts` も checklist.md の固定コマンドと完全一致でのみ許可する。`>` / `<` を含むコマンドは redirect によるファイル書き込みを防ぐため無条件で拒否する。read-only git（status/log/diff等）は checklist が実際には使わないため allowlist に含めない（未使用の攻撃面は追加せず、必要になった時に個別評価する）。それ以外は fail closed。env var が無いセッション（通常の全レーン）には一切影響しない
 
-  **動的な値（issue タイトル・本文・検索クエリ・close 対象）が要る書き込みは gh を直接許可せず、`scripts/night-watch/*.mjs` の wrapper だけを許可する**（v2 再設計、[#2291](https://github.com/Dayopt/dayopt/issues/2291)。PR #2309 未解決 thread #5 の是正）。旧実装は `gh issue create/comment/list/view/close` と `gh search issues` を、コマンドごとに許可 flag を列挙した positive allowlist（トークン単位で `-` から始まる語は許可 flag と完全一致しない限り拒否）で判定していたが、quote/backslash を削るだけの二重検査では shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}` 等）を再現できず、2026-08-21 に未許可 flag（`--body-file`）を smuggle する攻撃が実測された。wrapper 方式では `node scripts/night-watch/board-issue.mjs sync` / `node scripts/night-watch/dod-candidate.mjs select` を完全一致で、`node scripts/night-watch/alert-issue.mjs report <check-id> ...` を固定 prefix のみで許可する（flag 単位の検証はしない）。値は wrapper 内部で `execFileSync` の argv 要素として gh へ直接渡るため shell を経由せず、guard は「本当にこの固定 script を単純呼び出ししているか」（`is_single_simple_command` + no-redirect、本節冒頭の既存規則）だけを見れば足りる。値の形（数字のみ・既知の URL 形式のみ・`DAYOPT-<番号> <URL>` の空白区切りペアのみ）は各 wrapper 内部の責務（`scripts/night-watch/*.test.ts` が契約を固定する）
+  **動的な値（issue タイトル・本文・検索クエリ・close 対象）が要る書き込みは gh を直接許可せず、`scripts/night-watch/*.mjs` の wrapper だけを許可する**（v2 再設計、[#2291](https://github.com/Dayopt/dayopt/issues/2291)。PR #2309 未解決 thread #5 の是正）。旧実装は `gh issue create/comment/list/view/close` と `gh search issues` を、コマンドごとに許可 flag を列挙した positive allowlist（トークン単位で `-` から始まる語は許可 flag と完全一致しない限り拒否）で判定していたが、quote/backslash を削るだけの二重検査では shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}` 等）を再現できず、2026-08-21 に未許可 flag（`--body-file`）を smuggle する攻撃が実測された。wrapper 方式では `node scripts/night-watch/board-issue.mjs sync` / `node scripts/night-watch/dod-candidate.mjs select` / `node scripts/night-watch/run-log.mjs env-failure <no-var|write-token>` を完全一致で、`node scripts/night-watch/alert-issue.mjs report <check-id> ...` / `node scripts/night-watch/run-log.mjs report ...` / `node scripts/night-watch/run-log.mjs board-note ...` を固定 prefix のみで許可する（flag 単位の検証はしない）。値は wrapper 内部で `execFileSync` の argv 要素として gh へ直接渡るため shell を経由せず、guard は「本当にこの固定 script を単純呼び出ししているか」（`is_single_simple_command` + no-redirect、本節冒頭の既存規則）だけを見れば足りる。値の形（数字のみ・既知の URL 形式のみ・`DAYOPT-<番号> <URL>` の空白区切りペアのみ・`run-log.mjs` の JSON は既知 check-id / 範囲内の数値 / 既知の status のみ）は各 wrapper 内部の責務（`scripts/night-watch/*.test.ts` が契約を固定する）
+
+  **層3は Write/Edit も無条件で拒否する**（v2 追加、push 前反証レビュー risk-reviewer 指摘）。層2（allowed_tools からの除外）が唯一の防御だと、その設定漏れ時に agent が `scripts/night-watch/*.mjs`（layer3 が prefix 一致で信頼している node script）や本 hook 自体を書き換えてから、信頼されたコマンド名で実行するだけで任意コード実行 / guard 無効化に到達できる。SKILL.md が明言する「夜は書かない」を、layer3 でも class ごと閉じる形（Write/Edit という tool 種別を丸ごと拒否）で機械強制し、層2 の設定漏れに対する defense-in-depth にする。
 
 層1・2は登録ミスを機械的に検出できない外部状態のため、**層3だけが CI で継続的に検証される担保**。Step 0 の自己検証と合わせて、層1・2の設定漏れを「無音の素通り」から「観測可能な異常」に変える。
 
-**登録前提（v2 追加）**: Routine 登録時に、層2の `session_context.allowed_tools` が `Bash(op run ...)` と `Bash(gh run list ...)` と `Bash(node scripts/night-watch/*.mjs ...)` を含むことを dry-run で確認する。含まないと Step 2 の `sentry-new`（`op run`）/ `heavy-red`（`gh run list`）、または Step 1/3/4 の wrapper 呼び出しが unattended 実行時に prompt 待ちで停止する。層2 allowed_tools の具体的な登録内容・repo permissions との重なりの検証自体は登録ゲート（[#2231-A](https://github.com/Dayopt/dayopt/issues/2231)）の scope。
+**登録前提（v2 追加）**: Routine 登録時に、層2の `session_context.allowed_tools` が `Bash(op run ...)` と `Bash(gh run list ...)` と `Bash(node scripts/night-watch/*.mjs ...)` を含むことを dry-run で確認する。含まないと Step 2 の `sentry-new`（`op run`）/ `heavy-red`（`gh run list`）、または Step 0/1/3/4/5 の wrapper 呼び出しが unattended 実行時に prompt 待ちで停止する。層2 allowed_tools の具体的な登録内容・repo permissions との重なりの検証自体は登録ゲート（[#2231-A](https://github.com/Dayopt/dayopt/issues/2231)）の scope。
 
 ## 故障モード
 

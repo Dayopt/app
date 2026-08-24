@@ -73,10 +73,17 @@ function encodedJstDayRange(dateStr) {
   return jstDayRange(dateStr).replaceAll('+', '%2B').replaceAll(':', '%3A');
 }
 
-/** @param {{ dateStr: string, section1: string }} params */
+/**
+ * @param {{ dateStr: string, section1: string }} params
+ *
+ * 置換値は関数形で渡す。`String.prototype.replace` は置換文字列に
+ * `$&` / `$\`` / `$'` / `$$` 等の特殊パターンを解釈するため、前日 §1 の内容
+ * （毎日コピー継承される自由記述）にこれらが含まれると本文が壊れる
+ * （push 前反証レビュー risk-reviewer 指摘、low）。関数形なら戻り値がそのまま
+ * リテラル挿入され、特殊パターン解釈を経由しない。
+ */
 export function buildBoardBody({ dateStr, section1 }) {
-  return BOARD_BODY_TEMPLATE.replace('__SECTION1__', section1).replaceAll(
-    '__RANGE__',
+  return BOARD_BODY_TEMPLATE.replace('__SECTION1__', () => section1).replaceAll('__RANGE__', () =>
     encodedJstDayRange(dateStr),
   );
 }

@@ -34,6 +34,23 @@ disallowed_vault_refs() {
 
 # --- Write/Edit: 保護ファイルへの書き込みブロック ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
+  # night-watch（DAYOPT_NIGHT_WATCH=1）は Write/Edit を無条件で禁止する。
+  #
+  # 層2（RemoteTrigger の session_context.allowed_tools から Write/Edit/
+  # MultiEdit/NotebookEdit を除外する設定）が唯一の防御だと、その設定が漏れた
+  # 場合に agent が scripts/night-watch/*.mjs（下の Bash 節が prefix 一致で
+  # 信頼している node script）や本 hook 自体を書き換えてから、その信頼された
+  # コマンド名で実行するだけで任意コード実行 / guard 自体の無効化に到達できる
+  # （push 前反証レビュー risk-reviewer 指摘、medium）。SKILL.md が明言する
+  # 「夜は書かない。アプリコード・docs は変更しない」を、path で数え上げる
+  # denylist ではなく class ごと閉じる形（Write/Edit という tool 種別を丸ごと
+  # 拒否）で機械強制する。env var が無いセッション（通常の全レーン）には
+  # 一切影響しない。
+  if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
+    echo "BLOCKED: night-watch モードでは Write/Edit は一切実行できません（読み取り専用の観測・GitHub issue への書き込みのみが許可されています。.claude/skills/night-watch/SKILL.md §権限の構造的強制 参照）" >&2
+    exit 2
+  fi
+
   # .env ファイルへの書き込みは全面禁止（.env.example は 2026-08-14 に廃止。
   # 変数一覧の正本は scripts/env/schema.ts）
   case "$FILE_PATH" in
@@ -282,6 +299,26 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # 「本当に node scripts/night-watch/alert-issue.mjs report <...> の
         # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
         # （本 if ブロック冒頭）が既にそれを保証している。
+        night_watch_allowed=1
+        ;;
+      "node scripts/night-watch/run-log.mjs env-failure no-var" \
+        | "node scripts/night-watch/run-log.mjs env-failure write-token")
+        # Step 0（自己検証の環境故障報告）の wrapper。固定 2 文言のみ完全一致で
+        # 許可する（scripts/night-watch/run-log.mjs の ENV_FAILURE_MESSAGES）。
+        night_watch_allowed=1
+        ;;
+      "node scripts/night-watch/run-log.mjs report "* | "node scripts/night-watch/run-log.mjs board-note "*)
+        # Step 5（運行記録: 常設運行記録 issue へのコメント + 当日盤面 issue への
+        # 1 行コメント）の wrapper。push 前反証レビュー（risk-reviewer、high）で
+        # 発見: board/alert/dod の 3 wrapper 化で `gh issue comment` の直接
+        # allowlist を全面撤去した際、Step 5 の運行記録コメントがどの wrapper
+        # にも属さず、night-watch の唯一の故障検出チャネル
+        # （docs/operations/night-watch.md §故障検出手順）が毎晩無音で block
+        # されていた。alert-issue.mjs と同じ理由（値は execFile の argv 要素と
+        # して gh へ渡り shell を経由しない）で flag 単位の検査は不要。運行記録
+        # issue の宛先番号は wrapper 内部が docs/operations/night-watch.md から
+        # 解決し、呼び出し元は argv で指定できない（board-issue.mjs の close 対象
+        # と同じ設計）。
         night_watch_allowed=1
         ;;
     esac

@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  fetchYesterdayMergedPrs,
-  findTodayBoardIssue,
-  runDodCandidateSelect,
-} from './dod-candidate.mjs';
+import { fetchYesterdayMergedPrs, runDodCandidateSelect } from './dod-candidate.mjs';
 
 /** `.find()` の結果が無ければ即失敗させる（テストの意図を明確にする）。 */
 function mustFind<T>(items: T[], predicate: (item: T) => boolean): T {
@@ -20,26 +16,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
-});
-
-describe('findTodayBoardIssue', () => {
-  it('本日タイトルの盤面 issue を返す', () => {
-    const execFileImpl = vi.fn(() =>
-      JSON.stringify([
-        { number: 100, title: '盤面 2026-08-23' },
-        { number: 200, title: '盤面 2026-08-24' },
-      ]),
-    );
-    expect(findTodayBoardIssue({ execFileImpl })).toEqual({
-      number: 200,
-      title: '盤面 2026-08-24',
-    });
-  });
-
-  it('見つからなければ null を返す', () => {
-    const execFileImpl = vi.fn(() => JSON.stringify([]));
-    expect(findTodayBoardIssue({ execFileImpl })).toBeNull();
-  });
 });
 
 describe('fetchYesterdayMergedPrs', () => {

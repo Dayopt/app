@@ -80,6 +80,18 @@ function readBaseline() {
 }
 
 /**
+ * CHECK_DEFINITIONS を own property でのみ引く。`CHECK_DEFINITIONS[checkId]` の
+ * 素朴なブラケットアクセスは prototype chain も辿るため、`report __proto__` /
+ * `report constructor` のような checkId が `undefined` を返さず Object.prototype
+ * 上のオブジェクトにヒットしてしまう（push 前反証レビュー risk-reviewer 指摘、
+ * low）。
+ * @param {string} checkId
+ */
+function getCheckDefinition(checkId) {
+  return Object.hasOwn(CHECK_DEFINITIONS, checkId) ? CHECK_DEFINITIONS[checkId] : undefined;
+}
+
+/**
  * @typedef {{ evidence?: string[], actual?: string, count?: string, [key: string]: unknown }} AlertArgs
  */
 
@@ -115,7 +127,7 @@ export function parseAlertArgs(argv) {
  * @param {{ checkId: string, args: AlertArgs, detectedAt: string }} params
  */
 export function buildAlertBody({ checkId, args, detectedAt }) {
-  const definition = CHECK_DEFINITIONS[checkId];
+  const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
   }
@@ -182,6 +194,14 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
 
 /**
  * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
+ *
+ * GitHub の検索は語単位の緩いマッチで、`nightwatch(<id>): in:title` の括弧・
+ * コロンはほぼ無視される。検索結果をそのまま信用すると、public repo（2026-09
+ * 私有化まで）に外部ユーザーが似た文言の issue を 1 本立てるだけで、以後この
+ * check-id の alert が新規起票されずその issue へコメントされ続ける（alert
+ * 抑止 + 無関係スレッドへの書き込み）。`results[0]` を無条件採用せず、title が
+ * `nightwatch(<checkId>): ` で実際に始まる候補だけを採用する
+ * （push 前反証レビュー risk-reviewer 指摘、medium）。
  * @param {string} checkId
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
  */
@@ -201,7 +221,8 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
     ],
     { execFileImpl },
   );
-  return results[0] ?? null;
+  const titlePrefix = `nightwatch(${checkId}): `;
+  return results.find((issue) => issue.title.startsWith(titlePrefix)) ?? null;
 }
 
 /**
@@ -218,7 +239,7 @@ export function runAlertSync({
   detectedAt = new Date().toISOString(),
   execFileImpl,
 }) {
-  const definition = CHECK_DEFINITIONS[checkId];
+  const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
   }
