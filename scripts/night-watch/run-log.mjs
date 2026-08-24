@@ -123,8 +123,8 @@ function isPositiveInt(value) {
  *     | { checkId: string, outcome: 'skipped', reason: string }
  *   >,
  *   baselineRecommend: string[],
- *   board: { status: 'success', issueNumber: number } | { status: 'skip' } | { status: 'fail', reason: string },
- *   dod: { status: 'candidate', prNumber: number } | { status: 'none' },
+ *   board: { status: 'success', issueNumber: number } | { status: 'skip' } | { status: 'weekend' } | { status: 'fail', reason: string },
+ *   dod: { status: 'candidate', prNumber: number } | { status: 'none' } | { status: 'weekend' },
  * }} OpsLogReport
  */
 
@@ -172,8 +172,10 @@ export function validateOpsLogReport(report) {
   }
   if (board.status === 'success') {
     if (!isPositiveInt(board.issueNumber)) throw new Error('board.issueNumber が不正です');
-  } else if (board.status === 'skip') {
-    // 追加フィールド不要
+  } else if (board.status === 'skip' || board.status === 'weekend') {
+    // 追加フィールド不要。'weekend' は #2342: JST 土日（Step 1 が isJstWeekend
+    // 判定で gh を一切呼ばず skip する日）専用の値。'skip'（起票済み・重複回避）
+    // と意味が異なるため区別する。
   } else if (board.status === 'fail') {
     if (!BOARD_FAIL_REASONS.has(board.reason)) {
       throw new Error(
@@ -181,7 +183,7 @@ export function validateOpsLogReport(report) {
       );
     }
   } else {
-    throw new Error('board.status は success/skip/fail のいずれかである必要があります');
+    throw new Error('board.status は success/skip/fail/weekend のいずれかである必要があります');
   }
   const dod = r.dod;
   if (typeof dod !== 'object' || dod === null) {
@@ -189,8 +191,10 @@ export function validateOpsLogReport(report) {
   }
   if (dod.status === 'candidate') {
     if (!isPositiveInt(dod.prNumber)) throw new Error('dod.prNumber が不正です');
-  } else if (dod.status !== 'none') {
-    throw new Error('dod.status は candidate/none のいずれかである必要があります');
+  } else if (dod.status !== 'none' && dod.status !== 'weekend') {
+    // 'weekend' は #2342: JST 土日（Step 4 が isJstWeekend 判定で skip する日）
+    // 専用の値。'none'（前日merge PR無し）と意味が異なるため区別する。
+    throw new Error('dod.status は candidate/none/weekend のいずれかである必要があります');
   }
 }
 
@@ -229,9 +233,15 @@ export function buildOpsLogComment(report) {
       ? `成功（#${report.board.issueNumber}）`
       : report.board.status === 'skip'
         ? 'skip（起票済み）'
-        : `失敗（${report.board.reason}）`;
+        : report.board.status === 'weekend'
+          ? 'skip（土日）'
+          : `失敗（${report.board.reason}）`;
   const dodLine =
-    report.dod.status === 'candidate' ? `#${report.dod.prNumber}` : '前日merge PR無し';
+    report.dod.status === 'candidate'
+      ? `#${report.dod.prNumber}`
+      : report.dod.status === 'weekend'
+        ? 'skip（土日）'
+        : '前日merge PR無し';
 
   return `**night-watch 運行記録 ${today}**
 

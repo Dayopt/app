@@ -121,6 +121,22 @@ describe('validateOpsLogReport', () => {
     );
   });
 
+  // #2342: JST 土日は Step 1（盤面起票）・Step 4（DoD候補選定）が
+  // isJstWeekend 判定で skip する。旧 schema は 'skip'（起票済み・重複回避）/
+  // 'none'（前日merge PR無し）しか持たず、「土日につき skip」という別の意味を
+  // 表現できなかった（buildOpsLogComment の文言が事実と異なる形で残る）。
+  it('board.status=weekend を通す（追加フィールド不要）', () => {
+    expect(() =>
+      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'weekend' } }),
+    ).not.toThrow();
+  });
+
+  it('dod.status=weekend を通す（追加フィールド不要）', () => {
+    expect(() =>
+      validateOpsLogReport({ ...GREEN_REPORT, dod: { status: 'weekend' } }),
+    ).not.toThrow();
+  });
+
   // Codex 実測指摘（P2）: 旧 schema は results の outcome に "green"/"issue"
   // しか許さず、Step 3 の dedup 検索失敗（fail closed で起票見送り）という
   // 正当な状態を運行記録で表現できなかった。
@@ -192,6 +208,18 @@ describe('buildOpsLogComment', () => {
       board: { status: 'fail', reason: 'rate-limited' },
     });
     expect(comment).toContain('- 盤面起票: 失敗（rate-limited）');
+  });
+
+  // #2342: 土日は 'skip（起票済み）' / '前日merge PR無し' ではなく
+  // 'skip（土日）' と書き分ける（事実と異なる文言が毎週2回残る回帰の是正）。
+  it('土日（board.status=weekend / dod.status=weekend）は「skip（土日）」と書き分ける', () => {
+    const comment = buildOpsLogComment({
+      ...GREEN_REPORT,
+      board: { status: 'weekend' },
+      dod: { status: 'weekend' },
+    });
+    expect(comment).toContain('- 盤面起票: skip（土日）');
+    expect(comment).toContain('- DoD監査候補: skip（土日）');
   });
 
   // Codex 実測指摘（P2）: failed が非空でも results に issue/skipped が

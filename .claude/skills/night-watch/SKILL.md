@@ -65,7 +65,7 @@ wrapper 内部の処理（引数は取らない。判定・組み立てはすべ
 
 次の 7 check-id を判定する。各項目は「実行コマンド + 判定」の対で、裁量の余地はない。
 
-**fail-closed 原則（v2 追加）**: いずれかの観測コマンドが非 0 exit で終了する、またはレスポンスがパース不能なら、**緑と判定しない**。`<check-id>: 取得失敗` として Step 5 の運行記録へ必ず記録し、その run を「all green」と報告しない（§異常があれば起票または追記する の dedup 検索 fail-closed と対称の扱い。取得失敗は「異常なし」の代わりに「観測できず」として扱う）。
+**fail-closed 原則（v2 追加）**: いずれかの観測コマンドが非 0 exit で終了する、またはレスポンスがパース不能なら、**緑と判定しない**。`<check-id>: 取得失敗` として Step 5 の運行記録へ必ず記録し、その run を「all green」と報告しない（§異常があれば起票または追記する の dedup 検索 fail-closed と対称の扱い。取得失敗は「異常なし」の代わりに「観測できず」として扱う）。**heavy-red / integration-red は、コマンド自体が成功（exit 0・パース可能）でも直近 run が未完了（`in_progress` / `queued`）なら同じ経路（`<check-id>: 取得失敗`）へ倒す**（#2341。詳細は下記 heavy-red 参照。赤とは判定せず、alert-issue.mjs も呼ばない）。
 
 **checklist v1**（[checklist.md](checklist.md) の 4 項目、番号順に実行。判定規約は不変）:
 
@@ -73,9 +73,9 @@ wrapper 内部の処理（引数は取らない。判定・組み立てはすべ
 - actual < baseline の場合は正常だが、Step 5 の運行記録に「baseline 更新推奨（`<check-id>`: 現在値 N、baseline M）」を1行残す。baseline.json の更新は行わない（通常の PR レビューでのみ更新する review-gated ratchet）
 - `docs-check` / `deadcode` は exit code のみで判定（baseline 不要、閾値は常に 0）
 
-**heavy-post-merge 赤確認（check-id: `heavy-red`、v2 追加）**: `gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url` を実行する。**判定は「直近 run に success 以外（`cancelled` / `timed_out` / `action_required` 等の終了状態、または `status` が未完了）が含まれれば赤、または直近 24h に `conclusion=success` の run が 1 件も無ければ赤」**。baseline 不要。heavy-post-merge は schedule（nightly 04:00 JST）と push:main が同一 concurrency group（`cancel-in-progress: true`）のため、nightly が main push で cancel され `conclusion=cancelled` になりうる（`conclusion=failure` だけを見ると緑と誤読する）。実行中の run は `conclusion` が空で `status` が `in_progress`/`queued` になるため、`status` も判定に含める。対象 workflow は nightly・push:main・手動 dispatch のすべての run を含む。異常検出時は該当 run の `url` を起票本文の再現手がかりとして使う
+**heavy-post-merge 赤確認（check-id: `heavy-red`、v2 追加）**: `gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url` を実行する。**判定はまず直近 run（応答配列の先頭、gh run list は新しい順）の `status` を見る。`in_progress` / `queued`（未完了）なら判定を保留し、赤とはせず `heavy-red: 取得失敗` として §fail-closed 原則 の経路へ倒す**（#2341。GitHub Actions の scheduled workflow は数十分規模の遅延が日常的に起きるため、05:00 時点で直近 run がまだ実行中なだけのケースを、旧規約は無条件で赤と誤判定していた。判定境界の正本は `isLatestWorkflowRunPending`、`scripts/night-watch/lib.mjs`）。**直近 run が完了（`status: completed`）している場合のみ**、「直近 run に success 以外（`cancelled` / `timed_out` / `action_required` 等の終了状態）が含まれれば赤、または直近 24h に `conclusion=success` の run が 1 件も無ければ赤」と判定する。baseline 不要。heavy-post-merge は schedule（nightly 04:00 JST）と push:main が同一 concurrency group（`cancel-in-progress: true`）のため、nightly が main push で cancel され `conclusion=cancelled` になりうる（`conclusion=failure` だけを見ると緑と誤読する。この `cancelled` は `status: completed` の terminal conclusion であり、上記の未完了判定とは別物）。対象 workflow は nightly・push:main・手動 dispatch のすべての run を含む。異常検出時は該当 run の `url` を起票本文の再現手がかりとして使う
 
-**integration 赤確認（check-id: `integration-red`、[#2333](https://github.com/Dayopt/dayopt/issues/2333) 追加）**: `gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url` を実行する。判定規約は heavy-red と同一（`integration.yml` も schedule（nightly 04:30 JST）と push:main が同一 concurrency group `cancel-in-progress: true` のため、cancelled/timed_out/action_required も赤、直近 24h に success が無ければ赤）。**`--branch main` は必須**（push前反証レビュー risk-reviewer 指摘、P2）: `integration.yml` は `heavy-post-merge.yml` と異なり `pull_request` trigger も持つ（migration-safety job 用）ため、branch 指定が無いと直近 3 run に PR run が混入し、cancel-in-progress による誤起票・nightly success の窓外押し出し・本物の失敗の見逃しが同時に起こり得る。CI 4層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）で `integration.yml` が per-PR から nightly + push:main 後の層3へ移った後、夜勤が heavy-post-merge の赤しか観測しておらず integration 単独の失敗が無通知のまま朝を迎える穴があった（非ブロッキング Codex レビュー指摘、P2）。異常検出時は該当 run の `url` を起票本文の再現手がかりとして使う
+**integration 赤確認（check-id: `integration-red`、[#2333](https://github.com/Dayopt/dayopt/issues/2333) 追加）**: `gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url` を実行する。判定規約は heavy-red と同一（未完了時の取得失敗扱いを含む。`integration.yml` も schedule（nightly 04:30 JST）と push:main が同一 concurrency group `cancel-in-progress: true` のため、cancelled/timed_out/action_required も赤、直近 24h に success が無ければ赤）。**integration.yml は heavy-post-merge.yml（60分の余裕）と異なり schedule〜夜勤起動の余裕が 30 分しかなく、未完了判定の実益が heavy-red より大きい**（#2341、実測の誤起票シナリオ）。**`--branch main` は必須**（push前反証レビュー risk-reviewer 指摘、P2）: `integration.yml` は `heavy-post-merge.yml` と異なり `pull_request` trigger も持つ（migration-safety job 用）ため、branch 指定が無いと直近 3 run に PR run が混入し、cancel-in-progress による誤起票・nightly success の窓外押し出し・本物の失敗の見逃しが同時に起こり得る。CI 4層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）で `integration.yml` が per-PR から nightly + push:main 後の層3へ移った後、夜勤が heavy-post-merge の赤しか観測しておらず integration 単独の失敗が無通知のまま朝を迎える穴があった（非ブロッキング Codex レビュー指摘、P2）。異常検出時は該当 run の `url` を起票本文の再現手がかりとして使う
 
 **Sentry 新規 issue スキャン（check-id: `sentry-new`、v2 追加）**: `sentry issue list dayopt --query "is:unresolved age:-24h"` を実行し、直近 24h に新規発生した unresolved production issue の件数を数える。**この cloud 互換形（env の `SENTRY_AUTH_TOKEN` を直接使う）が夜勤 Routine（Cloud Environment 実行）の既定形**（[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメント、scope 追加5点目）。1Password が使えない Cloud Environment では `op run --` ラッパー自体が不要かつ実行不可能なため、Cloud Environment 側の env として `SENTRY_AUTH_TOKEN` を直接注入する（層1/2 と同じ、本 skill の実装 scope 外の登録前提）。`SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"`（旧形）は 1Password が使えるローカル環境（指揮台の手動代行）専用として allowlist に残す。**件数 > 0 のみ異常**（baseline 不要、閾値は常に 0）。**個別 triage はしない** — 列挙して Step 3 で起票し、朝のレーンへ渡すだけ。**public repo への raw データ露出を禁止する**（high、v2 で明記。repo は 2026-09 private 化まで public のまま）: Sentry issue の title / culprit / message には user email・OAuth callback query・Supabase エラー詳細等が混入しうる。Step 3 の起票本文へ転記してよいのは **件数・short ID（`DAYOPT-XXX`）・Sentry issue URL のみ**。title / culprit / message の生テキストは issue へ書かない
 
@@ -142,12 +142,14 @@ JSON の形（wrapper 内部で厳密に検証する。既知 check-id 以外・
     | { "checkId": "<check-id>", "outcome": "skipped", "reason": "dedup-search-failed" | "run-cap-reached" }
   ],
   "baselineRecommend": ["<check-id>", ...],
-  "board": { "status": "success", "issueNumber": 1234 } | { "status": "skip" } | { "status": "fail", "reason": "auth-error" | "rate-limited" | "network-error" | "invalid-response" | "unknown" },
-  "dod": { "status": "candidate", "prNumber": 1234 } | { "status": "none" }
+  "board": { "status": "success", "issueNumber": 1234 } | { "status": "skip" } | { "status": "weekend" } | { "status": "fail", "reason": "auth-error" | "rate-limited" | "network-error" | "invalid-response" | "unknown" },
+  "dod": { "status": "candidate", "prNumber": 1234 } | { "status": "none" } | { "status": "weekend" }
 }
 ```
 
 **`board.reason`（Step 1 の盤面起票が失敗した時の理由）は既知 enum のみで、gh CLI の生エラーメッセージをそのまま渡してはいけない**（push 前反証レビュー risk-reviewer / behavior-verifier + 非ブロッキング Codex レビューが独立に検出、P1）。旧設計は自由文字列（文字集合の denylist で検証）だったが、prompt injection を受けたセッションが Sentry issue の raw title/message（user email 等を含みうる）を 300 文字ずつ小分けにして public な常設運行記録 issue へ書く経路になり得た。自由文字列である限り、安全な文字だけで構成された機微情報の断片は文字集合の denylist では塞げない。実際に発生した gh CLI エラーを `auth-error` / `rate-limited` / `network-error` / `invalid-response` / `unknown` のいずれかへ分類してから渡す。`results` の `outcome: "skipped"` の `reason` も同様に既知 enum（`dedup-search-failed` / `run-cap-reached`）のみ。
+
+**`board.status` / `dod.status` の `"weekend"` は JST 土日専用**（#2342）。Step 1（盤面起票）・Step 4（DoD候補選定）は `isJstWeekend` 判定で土日に gh を一切呼ばず skip する（§Step 1・§Step 4 参照）。この skip は `board.status: "skip"`（起票済み・重複回避）や `dod.status: "none"`（前日merge PR無し）とは意味が異なるため、Claude は土日の運行記録でこれらへ丸めず `"weekend"` を渡す（丸めると「盤面起票: skip（起票済み）」「DoD監査候補: 前日merge PR無し」という事実と異なる文言が毎週2回残る）。
 
 wrapper はこの JSON から、以下と同じ内容のコメント本文を組み立てて投稿する:
 
@@ -158,8 +160,8 @@ wrapper はこの JSON から、以下と同じ内容のコメント本文を組
 - 取得失敗: <check-id> があれば列挙（コマンド非0 exit / パース不能）、無ければ「なし」
 - all green | 起票/追記: #NNNN（<check-id>）, ... | 見送り: <check-id>（<reason>）, ... | 取得失敗のみ（起票/追記なし）
 - baseline 更新推奨: <check-id> があれば列挙、無ければ「なし」
-- 盤面起票: 成功（#NNNN）| skip（起票済み）| 失敗（<reason>）
-- DoD監査候補: #NNNN | 前日merge PR無し
+- 盤面起票: 成功（#NNNN）| skip（起票済み）| skip（土日）| 失敗（<reason>）
+- DoD監査候補: #NNNN | 前日merge PR無し | skip（土日）
 - 起票予算 state: 有効（新規起票 N/3、対応済み check-id M件）| 利用不可（fail-open、無制限扱いで実行）
 ```
 
