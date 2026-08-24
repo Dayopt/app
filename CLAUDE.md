@@ -59,7 +59,7 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 gh issue view <番号> --json title,body -q '.title + "\n\n" + .body' \
   | codex exec --sandbox read-only \
     "敵対的レビュアーとして、この設計の穴・壊れるシナリオ・考慮漏れ・
-     暗黙の前提を列挙せよ。重要度順に。" -
+     暗黙の前提を列挙せよ。重要度順に。"
 ```
 
 批評を読み、採用分をチケット本文に反映してからレーンを起動する。
@@ -85,7 +85,7 @@ codex exec --sandbox read-only \
 gh pr diff <番号> \
   | codex exec --sandbox read-only \
     "この diff をレビューし、バグ・セキュリティ懸念・テナント境界の問題・
-     エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。" -
+     エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。"
 ```
 
 **非ブロッキング原則を維持する**（2026-08-24、User 裁可。原文の「Approve の前提条件」からこの形へ調整済み）: 危険地帯 PR では Codex レビューの実行を必須とするが、応答は merge の前提条件にしない（不通時はスキップを記録して続行する。既存の内製 review gate（`.claude/rules/workflow.md` §内製クロスレビューの実施を要求する gate）が hard merge gate のまま）。回数の既定は `.claude/rules/orchestration.md` §回数の既定 を継承する（既定 1 PR 1 回、再依頼は同節の 2 条件のみ）。
