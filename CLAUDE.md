@@ -40,6 +40,62 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 - **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` で直接検索する
 - **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計）。**cutover 手順**（初日盤面 issue の起票 + #2020 の最終コメント・close）は `.claude/skills/dispatch/SKILL.md` §日次盤面issueの起票 が正本。実行は本 PR merge 後、指揮台が行う
 
+## Codex（別系統批評係）の利用
+
+策定日: 2026-08-24（[#2349](https://github.com/Dayopt/dayopt/issues/2349)）。指揮台が別系統モデル（Codex CLI）を読み取り専用の批評係として自律的に呼び出すための運用。PR クロスレビュー（下記 C）は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）で既に運用中の試行を土台にし、設計レビュー（A）・攻撃シナリオ生成（B）を新たに追加する。
+
+原則:
+
+1. **Codex は「読む・批評する・攻める」係。実装・コミット・push はさせない。** すべての呼び出しは読み取り専用サンドボックス（`codex exec --sandbox read-only`）で行う
+2. **指揮系統は一つ。** Codex の出力は参考意見であり、採否は常に指揮台が判断する。採用しない指摘は「不採用: 理由」を一言添える
+3. **証跡を残す。** Codex の出力は該当 issue / PR へ「🔍 Codex レビュー」見出し付きで転記し、採否判断を同じコメントに書く
+4. **best-effort。** 呼び出し失敗・タイムアウト時はスキップして本来のフローを続行し、当日の日次盤面 issue（`CLAUDE.md` §運用基盤）へ「Codex 不通」を記録する。不通を理由に作業を止めない
+
+### A. 設計レビュー（レーン起動前）
+
+発動条件: 危険地帯（認証 / 決済 / RLS・テナント境界 / DB migration）に触れるチケット、または実装 2 日超相当の大型チケット。チケット本文完成後、レーン起動前に実行する。
+
+```bash
+gh issue view <番号> --json title,body -q '.title + "\n\n" + .body' \
+  | codex exec --sandbox read-only \
+    "敵対的レビュアーとして、この設計の穴・壊れるシナリオ・考慮漏れ・
+     暗黙の前提を列挙せよ。重要度順に。" -
+```
+
+批評を読み、採用分をチケット本文に反映してからレーンを起動する。
+
+### B. 攻撃シナリオ生成（RLS・スキーマ系チケットの起票時）
+
+発動条件: RLS ポリシー・テナント境界・スキーマ変更に関わるチケット。
+
+```bash
+codex exec --sandbox read-only \
+  "supabase/migrations/ 配下のスキーマと RLS ポリシーを読み、
+   テナント越えの読み書きができてしまう可能性のあるクエリ・操作パターンを
+   10個列挙せよ。それぞれ悪用手順を1行で添えること。"
+```
+
+出力をチケット本文に「## テストすべき攻撃シナリオ」として貼る。テストの実装は通常の Sonnet レーンが行う（Codex にコードは書かせない）。
+
+### C. PR クロスレビュー（Ready 化後）
+
+**選別基準の正本は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）。ここでは複製しない。** 該当 PR が Ready ＋ CI green になったら:
+
+```bash
+gh pr diff <番号> \
+  | codex exec --sandbox read-only \
+    "この diff をレビューし、バグ・セキュリティ懸念・テナント境界の問題・
+     エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。" -
+```
+
+**非ブロッキング原則を維持する**（2026-08-24、User 裁可。原文の「Approve の前提条件」からこの形へ調整済み）: 危険地帯 PR では Codex レビューの実行を必須とするが、応答は merge の前提条件にしない（不通時はスキップを記録して続行する。既存の内製 review gate（`.claude/rules/workflow.md` §内製クロスレビューの実施を要求する gate）が hard merge gate のまま）。回数の既定は `.claude/rules/orchestration.md` §回数の既定 を継承する（既定 1 PR 1 回、再依頼は同節の 2 条件のみ）。
+
+### 週次確認（人間向け）
+
+- 「🔍 Codex レビュー」コメントが危険地帯チケット・PR に付いているか（付いていない危険地帯 PR があれば発動条件の漏れ）
+- 採否判断が書かれているか（転記だけで判断がないのは NG。批評係が形骸化しているシグナル）
+- Codex 不通の記録が続いていないか（続くなら認証切れ → `codex login` し直しを人間へ依頼する）
+
 ## Tech Stack
 
 Next.js App Router / React / TypeScript strict / Tailwind CSS / Zustand / Supabase / tRPC / Zod / shadcn/ui / Sentry。exact version は各 `package.json` と lockfile を正とする
