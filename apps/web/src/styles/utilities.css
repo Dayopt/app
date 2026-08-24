@@ -3,44 +3,12 @@
  * ============================================ */
 
 @layer utilities {
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
   /* Visibility */
   .mobile-only {
     @apply block sm:hidden;
   }
   .desktop-only {
     @apply hidden lg:block;
-  }
-
-  /* Line clamp */
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
-  .line-clamp-2 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-  .line-clamp-3 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
   }
 }
 

@@ -122,9 +122,10 @@ export function Sidebar({
       </div>
 
       {/* Content */}
-      {/* scrollbar-stable: drag 中に collapsed groups の children container が
-          展開されて scrollbar が現れる際、内容が左右にずれるのを防ぐ */}
-      <div className="scrollbar-stable flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
+      {/* scrollbar-gutter-stable: drag 中に collapsed groups の children container が
+          展開されて scrollbar が現れる際、内容が左右にずれるのを防ぐ。
+          ポップオーバー等の小さな要素には使用しないこと */}
+      <div className="flex min-h-0 min-w-0 flex-1 scrollbar-gutter-stable flex-col gap-4 overflow-x-hidden overflow-y-auto">
         {children}
       </div>
 

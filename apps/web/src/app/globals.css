@@ -14,8 +14,8 @@
 /* Tailwind Plugins */
 @plugin '@tailwindcss/typography';
 
-/* Tailwind v4 ダークモード設定 */
-@variant dark (.dark &);
+/* Tailwind v4 ダークモード設定（現行推奨形: @custom-variant） */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================
  * ベーススタイル
