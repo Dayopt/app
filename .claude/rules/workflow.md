@@ -153,14 +153,14 @@ docs/projects/_archive/{project-name}/
 
 **confirm リストは発動点の中に置く。この表はその地図で、リストの複製は持たない。** 参照文書（本ファイルや `plan-format.md`）は「なぜそうするか」の正本のまま維持する。
 
-| Pause point | 発動する仕組み                                                                                      | 強制力                                                                               |
-| ----------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| plan 提示前 | `plan-format.md` の必須セクション + `/plan-review`                                                  | 書かないと plan が成立しない                                                         |
-| push 前     | `.husky/pre-push`（DO-CONFIRM の速度バンプ + affected typecheck/lint/test:run の実行ゲート、#2359） | commit set ごとに 1 回 DO-CONFIRM で止まり、以後は毎回実行ゲートが走る（下記の注意） |
-| merge 前    | `pnpm branch:finish`                                                                                | 機械。完了定義 5 点を満たさないと止まる                                              |
-| commit 前   | husky `pre-commit`（gitleaks の staged secret スキャン、#2359） / `commit-msg`                      | 機械                                                                                 |
+| Pause point | 発動する仕組み                                                                                                                           | 強制力                                                                               |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| plan 提示前 | `plan-format.md` の必須セクション + `/plan-review`                                                                                       | 書かないと plan が成立しない                                                         |
+| push 前     | `.husky/pre-push`（DO-CONFIRM の速度バンプ + affected typecheck/lint + typecheck:scripts/test:scripts/format:check の実行ゲート、#2359） | commit set ごとに 1 回 DO-CONFIRM で止まり、以後は毎回実行ゲートが走る（下記の注意） |
+| merge 前    | `pnpm branch:finish`                                                                                                                     | 機械。完了定義 5 点を満たさないと止まる                                              |
+| commit 前   | husky `pre-commit`（gitleaks の staged secret スキャン、#2359） / `commit-msg`                                                           | 機械                                                                                 |
 
-push 前の pause は git レベルの hook なので Claude / 人間 / wrapper script のすべてに効く。ただし DO-CONFIRM 部分は**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。DO-CONFIRM の後に走る実行ゲート（typecheck/lint/test:run）は本物のゲートで、失敗すれば push は通らない——ただし CI Static Checks の代替ではなく、affected スコープの高速フィルタに過ぎない（**フックは CI に着く前に無料で落とす係で、フックが通ったことは CI の省略理由にならない**）。
+push 前の pause は git レベルの hook なので Claude / 人間 / wrapper script のすべてに効く。ただし DO-CONFIRM 部分は**スピードバンプであってゲートではない** — 機械が強制できるのは「観点を提示して 1 回止める」までで、答えたかどうかは検証できない。黙って再実行すれば通ってしまうことを前提に、答えを発話してから再実行するのは規律の側で守る。DO-CONFIRM の後に走る実行ゲート（typecheck/lint + typecheck:scripts/test:scripts/format:check）は本物のゲートで、失敗すれば push は通らない——ただし CI Static Checks の代替ではなく、affected スコープの高速フィルタに過ぎない（**フックは CI に着く前に無料で落とす係で、フックが通ったことは CI の省略理由にならない**）。turbo の `test:run` タスクは対象外にした（`apps/product`/`apps/web` の localStorage 依存テストが Node 26 環境で環境依存の失敗を起こす既知の pre-existing 事象があり、含めると push が恒常的に失敗しうるため）。
 
 `--no-verify` での迂回は agent には禁止（`.claude/hooks/pre-tool-guard.sh` が `git push --no-verify` / `git commit --no-verify` の両方をブロック）、人間が使う場合は理由を一言、当日の日次盤面 issue へ残す。この検出は文字列一致なので、`--force` / `reset --hard` / `--no-verify` に heredoc 本文や commit message として言及しただけでも落ちる（誤検知として受け入れる。shell の引用状態を regex で再現できないため、判定を精緻化する試みは #1974 で撤回済み。回避策は文面を変えるか、Write / Edit で file に書いてから渡す）。
 
