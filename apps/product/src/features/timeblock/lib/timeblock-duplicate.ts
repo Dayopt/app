@@ -8,7 +8,6 @@ export interface TimeblockDuplicateDraft {
   kind: TimeblockDestination;
   title: string;
   note: string | null;
-  tagId: string | null | undefined;
   activityId?: string | null | undefined;
   startAt: string;
   endAt: string;
@@ -19,7 +18,6 @@ interface CreateTimeblockDuplicateDraftArgs {
   kind: TimeblockDestination;
   title: string;
   note: string | null;
-  tagId: string | null | undefined;
   activityId?: string | null | undefined;
   startAt: Date;
   endAt: Date;
@@ -27,7 +25,6 @@ interface CreateTimeblockDuplicateDraftArgs {
 
 interface TimeblockDuplicateEditorValue {
   note: string;
-  tagId: string | null;
   activityId?: string | null;
   startAt: Date;
   endAt: Date;
@@ -39,7 +36,6 @@ export type TimeblockDuplicateValidationReason =
 interface TimeblockDuplicateCreateInput {
   title: string;
   note?: string | undefined;
-  tagId?: string | undefined;
   activityId?: string | undefined;
   start_at: string;
   end_at: string;
@@ -51,7 +47,6 @@ export function createTimeblockDuplicateDraft({
   kind,
   title,
   note,
-  tagId,
   activityId,
   startAt,
   endAt,
@@ -61,7 +56,6 @@ export function createTimeblockDuplicateDraft({
     kind,
     title,
     note,
-    tagId,
     activityId,
     startAt: startAt.toISOString(),
     endAt: endAt.toISOString(),
@@ -94,7 +88,6 @@ export function buildTimeblockDuplicateCreateInput(
   return {
     title: draft.title,
     ...(note ? { note } : {}),
-    ...(value.tagId ? { tagId: value.tagId } : {}),
     ...(value.activityId ? { activityId: value.activityId } : {}),
     start_at: value.startAt.toISOString(),
     end_at: value.endAt.toISOString(),

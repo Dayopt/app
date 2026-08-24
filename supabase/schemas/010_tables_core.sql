@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-07-29
+-- 最終同期日: 2026-08-24
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -26,6 +26,7 @@
 --   - 20260729073123_mcp_stage1_legacy_writer_compatibility.sql
 --   - 20260729073124_mcp_stage1_revision_fence.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
+--   - 20260824090000_detach_tag_id_from_timeblock_write_path.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -164,7 +165,6 @@ CREATE TABLE public.plans (
 -- plans 関連 constraint / trigger:
 --   plans_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
 --   prevent_plans_source_change         -> prevent_time_model_source_change()
---   enforce_plan_tag_owner              -> enforce_plan_tag_owner()
 --   enforce_plan_external_event_owner   -> enforce_plan_external_event_owner()
 --   validate_plan_temporal_write_v1      -> 時刻順序、過去 Plan の時刻固定、future-only 作成
 --   enforce_plan_skip_record_invariant_v1
@@ -193,7 +193,6 @@ CREATE TABLE public.records (
 -- records 関連 constraint / trigger:
 --   records_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
 --   prevent_records_source_change         -> prevent_time_model_source_change()
---   enforce_record_tag_owner              -> enforce_record_tag_owner()
 --   enforce_record_plan_owner             -> enforce_record_plan_owner()
 --   enforce_record_external_event_owner   -> enforce_record_external_event_owner()
 --   validate_record_temporal_write_v1      -> 時刻順序、未来 Record を拒否

@@ -3,7 +3,6 @@ type TimeModelDayDiffKind = 'recorded' | 'skipped' | 'unplanned' | 'unrecorded';
 export interface TimeModelPlanDiffInput {
   id: string;
   title: string;
-  tagId: string | null;
   activityId: string | null;
   color: string;
   startAt: Date;
@@ -18,7 +17,6 @@ export interface TimeModelRecordDiffInput {
   id: string;
   planId: string | null;
   title: string;
-  tagId: string | null;
   activityId: string | null;
   color: string;
   startAt: Date;
@@ -31,7 +29,6 @@ interface TimeModelDayDiffItem {
   timeblockId: string;
   kind: TimeModelDayDiffKind;
   title: string;
-  tagId: string | null;
   activityId: string | null;
   color: string;
   planId: string | null;
@@ -93,7 +90,6 @@ function buildRecordedItem(
     timeblockId: plan.id,
     kind: 'recorded',
     title: plan.title,
-    tagId: plan.tagId,
     activityId: plan.activityId,
     color: plan.color,
     planId: plan.id,
@@ -144,7 +140,6 @@ export function computeTimeblockDayDiffs(
       timeblockId: record.id,
       kind: 'unplanned',
       title: record.title,
-      tagId: record.tagId,
       activityId: record.activityId,
       color: record.color,
       planId: null,
@@ -179,7 +174,6 @@ export function computeTimeblockDayDiffs(
         timeblockId: plan.id,
         kind: 'skipped',
         title: plan.title,
-        tagId: plan.tagId,
         activityId: plan.activityId,
         color: plan.color,
         planId: plan.id,
@@ -204,7 +198,6 @@ export function computeTimeblockDayDiffs(
         timeblockId: plan.id,
         kind: 'unrecorded',
         title: plan.title,
-        tagId: plan.tagId,
         activityId: plan.activityId,
         color: plan.color,
         planId: plan.id,

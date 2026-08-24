@@ -10,7 +10,6 @@ describe('createClipboardTimeblock', () => {
       description: '第3章まで',
       startAt: new Date(2026, 6, 14, 9, 15),
       endAt: new Date(2026, 6, 14, 10, 45),
-      tagId: 'tag-reading',
     });
 
     expect(result).toEqual({
@@ -20,7 +19,6 @@ describe('createClipboardTimeblock', () => {
       duration: 90,
       startHour: 9,
       startMinute: 15,
-      tagId: 'tag-reading',
     });
     expect(result).not.toHaveProperty('id');
     expect(result).not.toHaveProperty('planId');

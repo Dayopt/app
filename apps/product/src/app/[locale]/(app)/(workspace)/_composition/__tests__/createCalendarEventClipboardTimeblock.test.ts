@@ -35,7 +35,6 @@ describe('createCalendarEventClipboardTimeblock', () => {
       duration: 90,
       startHour: 9,
       startMinute: 15,
-      tagId: 'tag-reading',
     });
   });
 

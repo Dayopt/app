@@ -16,7 +16,6 @@ export interface ReviewDiffItem {
   timeblockId: string;
   kind: ReviewDiffKind;
   title: string;
-  tagId: string | null;
   activityId: string | null;
   color: string;
   plannedStart: Date | null;

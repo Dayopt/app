@@ -293,7 +293,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
         'Revision Plan',
         NULL,
         NULL,
-        NULL,
         'manual',
         pg_catalog.now() + INTERVAL '4 hours',
         pg_catalog.now() + INTERVAL '5 hours'
@@ -303,7 +302,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 writer revision and fence', () => {
       FROM public.create_record_command_v1(
         '${userId}',
         'Revision Record',
-        NULL,
         NULL,
         NULL,
         NULL,

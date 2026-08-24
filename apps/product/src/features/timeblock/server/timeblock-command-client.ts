@@ -33,7 +33,6 @@ interface CreatePlanCommandInput {
   userId: string;
   title: string;
   note: string | null;
-  tagId: string | null;
   activityId: string | null;
   externalCalendarEventId: string | null;
   source: TimeblockSource;
@@ -194,7 +193,6 @@ export class TimeblockCommandClient {
         p_note: input.note as never,
         p_source: input.source,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId as never,
         p_title: input.title,
         p_user_id: input.userId,
       }),
@@ -212,7 +210,6 @@ export class TimeblockCommandClient {
         p_note: input.note as never,
         p_plan_id: input.planId,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId as never,
         p_title: input.title,
         p_user_id: input.userId,
       }),
@@ -281,7 +278,6 @@ export class TimeblockCommandClient {
         p_plan_id: input.planId as never,
         p_source: input.source,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId as never,
         p_title: input.title,
         p_user_id: input.userId,
       }),
@@ -302,7 +298,6 @@ export class TimeblockCommandClient {
         p_plan_id: input.planId as never,
         p_record_id: input.recordId,
         p_start_at: input.startAt,
-        p_tag_id: input.tagId as never,
         p_title: input.title,
         p_user_id: input.userId,
       }),

@@ -1,7 +1,10 @@
 // レーン H1。activity 参照の防御層と配線を実 DB に対して固定する。
 //
-// tag 版（tag-assignment-guards）と対にして両方残す。移植の正しさは
-// 「同じ不変条件が activity 側でも成立する」ことで示すため、片方だけでは足りない。
+// 元は tag 版（tag-assignment-guards）と対にして両方残す設計だった（「同じ不変条件が
+// activity 側でも成立する」ことで移植の正しさを示すため）。tag 版は Step 8（tag_id
+// 剥離、issue #2352）で対象の assert_active_timeblock_tag_v1 呼び出しと
+// enforce_{plan,record}_tag_owner トリガーごと削除されたため、tag 版ファイルも
+// 合わせて削除した。この activity 版だけが残る。
 //
 // ★ この suite の中心は「保存行を検査する」こと。
 //   wrapper -> private の呼び出しは位置引数なので、wrapper のシグネチャにだけ引数を
@@ -66,7 +69,6 @@ async function createPlan(activityId: string | null, offsetHours = 1): Promise<P
       p_user_id: ownerId,
       p_title: 'activity guard probe',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_activity_id: activityId as never,
       p_external_calendar_event_id: dbNull,
       p_source: 'manual',
@@ -128,7 +130,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_user_id: ownerId,
         p_title: 'plan to record',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: activity.id as never,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
@@ -172,7 +173,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_expected_updated_at: plan.updated_at,
         p_title: 'retitled by an old bundle',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_external_calendar_event_id: dbNull,
         p_start_at: plan.start_at,
         p_end_at: plan.end_at,
@@ -196,7 +196,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_expected_updated_at: plan.updated_at,
         p_title: plan.title,
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: after.id as never,
         p_activity_id_present: true,
         p_external_calendar_event_id: dbNull,
@@ -220,7 +219,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_expected_updated_at: plan.updated_at,
         p_title: plan.title,
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: dbNull,
         p_activity_id_present: true,
         p_external_calendar_event_id: dbNull,
@@ -243,7 +241,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_user_id: ownerId,
         p_title: 'archived probe',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: archived.id as never,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
@@ -263,7 +260,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_user_id: ownerId,
         p_title: 'foreign probe',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: foreign.id as never,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
@@ -296,7 +292,6 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
         p_expected_updated_at: plan.updated_at,
         p_title: 'retitled without touching the activity',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_activity_id: activity.id as never,
         p_activity_id_present: true,
         p_external_calendar_event_id: dbNull,

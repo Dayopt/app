@@ -1156,7 +1156,6 @@ export type Database = {
           p_note: string;
           p_operation_id: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
         };
         Returns: {
@@ -1220,8 +1219,6 @@ export type Database = {
           p_plan_id: string;
           p_start_at: string;
           p_start_at_present: boolean;
-          p_tag_id: string;
-          p_tag_id_present: boolean;
           p_title: string;
           p_title_present: boolean;
         };
@@ -1246,7 +1243,6 @@ export type Database = {
           p_operation_id: string;
           p_plan_id: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
         };
         Returns: {
@@ -1312,8 +1308,6 @@ export type Database = {
           p_record_id: string;
           p_start_at: string;
           p_start_at_present: boolean;
-          p_tag_id: string;
-          p_tag_id_present: boolean;
           p_title: string;
           p_title_present: boolean;
         };
@@ -1754,7 +1748,6 @@ export type Database = {
           p_note: string;
           p_source: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
           p_user_id: string;
         };
@@ -1791,7 +1784,6 @@ export type Database = {
           p_plan_id: string;
           p_source: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
           p_user_id: string;
         };
@@ -2610,7 +2602,6 @@ export type Database = {
           p_note: string;
           p_plan_id: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
           p_user_id: string;
         };
@@ -2650,7 +2641,6 @@ export type Database = {
           p_plan_id: string;
           p_record_id: string;
           p_start_at: string;
-          p_tag_id: string;
           p_title: string;
           p_user_id: string;
         };

@@ -180,14 +180,12 @@ vi.mock('../TimeblockEditor', () => ({
   }: {
     value: {
       note: string;
-      tagId: string | null;
       startAt: Date;
       endAt: Date;
       source?: 'plan' | 'record';
     };
     onDateTimeChange: (next: {
       note: string;
-      tagId: string | null;
       startAt: Date;
       endAt: Date;
       source?: 'plan' | 'record';
@@ -501,7 +499,6 @@ describe('TimeblockInspectorForm', () => {
 
     expect(mocks.flushSave).toHaveBeenCalledWith({
       note: '最新メモ',
-      tagId: '00000000-0000-4000-8000-000000000001',
       activityId: null,
     });
 
@@ -590,7 +587,6 @@ describe('TimeblockInspectorForm', () => {
         kind: 'plan',
         title: futurePlan.title,
         note: '最新メモ',
-        tagId: futurePlan.tag_id,
         startAt: futurePlan.start_at,
         endAt: futurePlan.end_at,
       }),
@@ -604,7 +600,6 @@ describe('TimeblockInspectorForm', () => {
       kind: 'plan',
       title: futurePlan.title,
       note: futurePlan.note,
-      tagId: futurePlan.tag_id,
       startAt: new Date(futurePlan.start_at),
       endAt: new Date(futurePlan.end_at),
     });
@@ -644,7 +639,6 @@ describe('TimeblockInspectorForm', () => {
     expect(mocks.createPlanMutate).toHaveBeenLastCalledWith(
       {
         title: futurePlan.title,
-        tagId: futurePlan.tag_id,
         start_at: '2026-07-15T15:00:00.000Z',
         end_at: '2026-07-15T16:00:00.000Z',
       },
@@ -661,7 +655,6 @@ describe('TimeblockInspectorForm', () => {
       kind: 'record',
       title: relatedRecord.title,
       note: relatedRecord.note,
-      tagId: relatedRecord.tag_id,
       startAt: new Date(relatedRecord.start_at),
       endAt: new Date(relatedRecord.end_at),
     });
@@ -685,7 +678,6 @@ describe('TimeblockInspectorForm', () => {
     const input = mocks.createRecordMutate.mock.calls[0]?.[0];
     expect(input).toEqual({
       title: relatedRecord.title,
-      tagId: relatedRecord.tag_id,
       start_at: '2026-07-15T07:00:00.000Z',
       end_at: '2026-07-15T08:00:00.000Z',
     });

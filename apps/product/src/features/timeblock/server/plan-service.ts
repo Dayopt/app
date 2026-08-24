@@ -67,7 +67,6 @@ export class PlanService {
     const {
       userId,
       ids,
-      tagId,
       activityId,
       search,
       startDate,
@@ -88,7 +87,6 @@ export class PlanService {
       .is('deleted_at', null);
 
     if (ids) query = query.in('id', ids);
-    if (tagId) query = query.eq('tag_id', tagId);
     if (activityId) query = query.eq('activity_id', activityId);
     if (!includeSkipped) query = query.is('skipped_at', null);
 
@@ -172,7 +170,6 @@ export class PlanService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: null,
       activityId: input.activityId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
@@ -226,7 +223,6 @@ export class PlanService {
       expectedUpdatedAt: existing.updated_at,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined

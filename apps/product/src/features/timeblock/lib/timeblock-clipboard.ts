@@ -7,7 +7,6 @@ export interface ClipboardTimeblock {
   duration: number;
   startHour: number;
   startMinute: number;
-  tagId: string | null | undefined;
   activityId: string | null | undefined;
 }
 
@@ -17,7 +16,6 @@ interface ClipboardTimeblockSource {
   description: string | null;
   startAt: Date;
   endAt: Date;
-  tagId: string | null | undefined;
   activityId?: string | null | undefined;
 }
 
@@ -28,7 +26,6 @@ export function createClipboardTimeblock({
   description,
   startAt,
   endAt,
-  tagId,
   activityId,
 }: ClipboardTimeblockSource): ClipboardTimeblock {
   return {
@@ -38,7 +35,6 @@ export function createClipboardTimeblock({
     duration: (endAt.getTime() - startAt.getTime()) / 60_000,
     startHour: startAt.getHours(),
     startMinute: startAt.getMinutes(),
-    tagId,
     activityId,
   };
 }
