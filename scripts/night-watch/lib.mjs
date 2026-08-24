@@ -123,6 +123,30 @@ export function extractTrailingNumber(url) {
 }
 
 /**
+ * heavy-red / integration-red（`gh run list ... --json conclusion,status,...`）の
+ * 判定規約の正本。**直近 run（配列先頭、gh run list は新しい順）が未完了
+ * （`status` が `in_progress` / `queued`）なら、判定を保留すべきかを返す**。
+ *
+ * GitHub Actions の scheduled workflow は数十分規模の遅延が日常的に起きる。
+ * 旧判定規約は status を無条件で赤判定へ含めており、単に実行中というだけの
+ * run を赤と誤検出していた（#2341、integration.yml の schedule-run margin が
+ * 30分しかなく実際に誤起票しうると判明）。true を返した check-id は §Step2
+ * fail-closed 原則と同じ経路（`<check-id>: 取得失敗`、Step 5 の `failed` へ
+ * 記録）へ倒し、赤とは判定しない・alert-issue.mjs を呼ばない。
+ *
+ * 過去の run（配列 2 件目以降）が in_progress のまま止まっている場合まで
+ * 拾わない（そのような状態は通常発生せず、拾おうとすると「実行中」の通常
+ * 判定と区別できなくなる）。
+ * @param {{ status: string }[]} runs
+ * @returns {boolean}
+ */
+export function isLatestWorkflowRunPending(runs) {
+  if (!Array.isArray(runs) || runs.length === 0) return false;
+  const status = runs[0]?.status;
+  return status === 'in_progress' || status === 'queued';
+}
+
+/**
  * 当日 JST タイトルの盤面 issue を探す。無ければ null。
  * dod-candidate.mjs（Step 4）・run-log.mjs（Step 5 の当日盤面 issue への 1 行
  * コメント）の両方が使う共通ルックアップ。
