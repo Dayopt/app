@@ -428,7 +428,7 @@ export function useCalendarData({
         endDate: record.endDate,
         status: 'closed' as const,
         color: '',
-        tagId: record.tagId,
+        tagId: sourceRow.tag_id,
         activityId: record.activityId,
         createdAt: new Date(sourceRow.created_at),
         updatedAt: new Date(sourceRow.updated_at),

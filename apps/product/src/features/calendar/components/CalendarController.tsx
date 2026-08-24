@@ -174,7 +174,6 @@ export function CalendarController({
           kind,
           title: entry.title,
           note: entry.description ?? null,
-          tagId: entry.tagId,
           activityId: entry.activityId,
           startAt,
           endAt,

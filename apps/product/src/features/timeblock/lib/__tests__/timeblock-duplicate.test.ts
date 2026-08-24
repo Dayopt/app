@@ -14,7 +14,6 @@ function createDraft(kind: 'plan' | 'record') {
     kind,
     title: 'API development',
     note: 'Original note',
-    tagId: '00000000-0000-4000-8000-000000000001',
     startAt: new Date(kind === 'plan' ? '2026-07-15T13:00:00.000Z' : '2026-07-15T09:00:00.000Z'),
     endAt: new Date(kind === 'plan' ? '2026-07-15T14:00:00.000Z' : '2026-07-15T10:00:00.000Z'),
   });
@@ -25,18 +24,16 @@ describe('timeblock duplicate', () => {
     const draft = createDraft('record');
     const input = buildTimeblockDuplicateCreateInput(draft, {
       note: ' Updated note ',
-      tagId: draft.tagId ?? null,
       activityId: '00000000-0000-4000-8000-0000000000a1',
       startAt: new Date('2026-07-15T10:00:00.000Z'),
       endAt: new Date('2026-07-15T11:00:00.000Z'),
     });
 
-    // tagId と activityId の両方が create 入力へ運ばれること。activityId を落とすと
-    // 複製先で分類が無言で消える（貼り付け経路で実際に起きていた同型の欠落）。
+    // activityId が create 入力へ運ばれること。落とすと複製先で分類が無言で消える
+    // （貼り付け経路で実際に起きていた同型の欠落）。
     expect(input).toEqual({
       title: 'API development',
       note: 'Updated note',
-      tagId: '00000000-0000-4000-8000-000000000001',
       activityId: '00000000-0000-4000-8000-0000000000a1',
       start_at: '2026-07-15T10:00:00.000Z',
       end_at: '2026-07-15T11:00:00.000Z',
@@ -54,7 +51,6 @@ describe('timeblock duplicate', () => {
         draft,
         {
           note: '',
-          tagId: null,
           startAt: new Date(draft.startAt),
           endAt: new Date(draft.endAt),
         },
@@ -72,7 +68,6 @@ describe('timeblock duplicate', () => {
         plan,
         {
           note: '',
-          tagId: null,
           startAt: new Date('2026-07-15T10:00:00.000Z'),
           endAt: new Date('2026-07-15T11:00:00.000Z'),
         },
@@ -84,7 +79,6 @@ describe('timeblock duplicate', () => {
         record,
         {
           note: '',
-          tagId: null,
           startAt: new Date('2026-07-15T13:00:00.000Z'),
           endAt: new Date('2026-07-15T14:00:00.000Z'),
         },
@@ -96,7 +90,6 @@ describe('timeblock duplicate', () => {
         plan,
         {
           note: '',
-          tagId: null,
           startAt: new Date('2026-07-15T15:00:00.000Z'),
           endAt: new Date('2026-07-15T16:00:00.000Z'),
         },
@@ -108,7 +101,6 @@ describe('timeblock duplicate', () => {
         record,
         {
           note: '',
-          tagId: null,
           startAt: new Date('2026-07-15T07:00:00.000Z'),
           endAt: new Date('2026-07-15T08:00:00.000Z'),
         },

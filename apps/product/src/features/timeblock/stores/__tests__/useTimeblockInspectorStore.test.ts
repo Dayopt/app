@@ -8,7 +8,6 @@ const draft = createTimeblockDuplicateDraft({
   kind: 'record',
   title: 'Reading',
   note: null,
-  tagId: null,
   startAt: new Date('2026-07-15T09:00:00.000Z'),
   endAt: new Date('2026-07-15T10:00:00.000Z'),
 });

@@ -11,7 +11,6 @@ function makeRow(overrides: Partial<RecordEventSourceRow> = {}): RecordEventSour
     id: 'record-1',
     title: 'Deep Work',
     note: null,
-    tag_id: 'tag-1',
     activity_id: null,
     plan_id: null,
     source: 'manual',
@@ -27,7 +26,6 @@ describe('recordRowToRecordEvent', () => {
     expect(event).toMatchObject({
       id: 'record-1',
       title: 'Deep Work',
-      tagId: 'tag-1',
       activityId: null,
       duration: 60,
     });

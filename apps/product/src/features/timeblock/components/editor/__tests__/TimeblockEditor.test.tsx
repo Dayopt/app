@@ -45,7 +45,6 @@ vi.mock('../../inspector/fields', async (importOriginal) => {
 
 const value: TimeModelEditorValue = {
   note: '',
-  tagId: 'tag-1',
   activityId: 'activity-1',
   startAt: new Date('2099-07-14T09:00:00.000Z'),
   endAt: new Date('2099-07-14T10:00:00.000Z'),

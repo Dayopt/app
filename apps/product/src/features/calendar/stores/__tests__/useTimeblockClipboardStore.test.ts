@@ -10,7 +10,6 @@ const mockEntry: ClipboardTimeblock = {
   duration: 60,
   startHour: 10,
   startMinute: 0,
-  tagId: 'tag-1',
   activityId: null,
 };
 

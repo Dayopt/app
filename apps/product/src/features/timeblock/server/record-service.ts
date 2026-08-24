@@ -54,7 +54,6 @@ export class RecordService {
   async list(options: ListRecordsOptions): Promise<RecordRow[]> {
     const {
       userId,
-      tagId,
       activityId,
       planId,
       planIds,
@@ -75,7 +74,6 @@ export class RecordService {
       .eq('user_id', userId)
       .is('deleted_at', null);
 
-    if (tagId) query = query.eq('tag_id', tagId);
     if (activityId) query = query.eq('activity_id', activityId);
     if (planId) query = query.eq('plan_id', planId);
     if (planIds) query = query.in('plan_id', planIds);
@@ -164,7 +162,6 @@ export class RecordService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: null,
       activityId: input.activityId ?? null,
       planId: input.planId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
@@ -223,7 +220,6 @@ export class RecordService {
       expectedUpdatedAt: existing.updated_at,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       planId: input.planId === undefined ? existing.plan_id : input.planId,
       externalCalendarEventId:

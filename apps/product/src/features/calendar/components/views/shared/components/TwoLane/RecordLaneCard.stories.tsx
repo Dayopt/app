@@ -26,7 +26,6 @@ function makeEvent(overrides: Partial<RecordEvent> = {}): RecordEvent {
     id: 'record-1',
     title: 'Deep Work',
     note: null,
-    tagId: 'tag-1',
     activityId: null,
     planId: 'plan-1',
     startDate: start,

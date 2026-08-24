@@ -33,7 +33,6 @@ export const planIdSchema = z.object({
 export const planFilterSchema = z.object({
   ids: z.array(z.string().uuid()).max(100).optional(),
   search: z.string().max(200).optional(),
-  tagId: z.string().uuid().optional(),
   activityId: z.string().uuid().optional(),
   startDate: z.string().datetime({ offset: true }).optional(),
   endDate: z.string().datetime({ offset: true }).optional(),
@@ -72,7 +71,6 @@ export const recordIdSchema = z.object({
 
 export const recordFilterSchema = z.object({
   search: z.string().max(200).optional(),
-  tagId: z.string().uuid().optional(),
   activityId: z.string().uuid().optional(),
   planId: z.string().uuid().optional(),
   planIds: z.array(z.string().uuid()).max(100).optional(),
