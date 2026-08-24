@@ -115,6 +115,7 @@ export function Header() {
         <SheetContent
           side="right"
           aria-label={t('aria.navigationMenu')}
+          closeButtonLabel={t('aria.closeMenu')}
           className="w-4/5 max-w-80 overflow-y-auto px-6 py-6 lg:hidden"
         >
           <Link

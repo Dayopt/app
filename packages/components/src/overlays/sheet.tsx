@@ -48,11 +48,13 @@ const SheetContent = ({
   children,
   side = 'right',
   showCloseButton = true,
+  closeButtonLabel = 'Close',
   'aria-label': ariaLabel,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left';
   showCloseButton?: boolean;
+  closeButtonLabel?: string;
 }) => {
   return (
     <SheetPortal>
@@ -91,7 +93,7 @@ const SheetContent = ({
             )}
           >
             <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeButtonLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>
