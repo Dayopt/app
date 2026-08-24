@@ -795,6 +795,10 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         '運行記録 wrapper（Step5、当日盤面issueへの1行 board-note）',
         'node scripts/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
       ],
+      [
+        'pending escalation 判定 wrapper（Step2、#2350）',
+        'node scripts/night-watch/run-log.mjs recent-pending heavy-red',
+      ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
     });

@@ -8,6 +8,7 @@ import {
   buildAlertBudgetLine,
   buildBoardNoteComment,
   buildOpsLogComment,
+  checkRecentPending,
   resolveOpsLogIssueNumber,
   runBoardNote,
   runEnvFailure,
@@ -125,15 +126,65 @@ describe('validateOpsLogReport', () => {
   // isJstWeekend 判定で skip する。旧 schema は 'skip'（起票済み・重複回避）/
   // 'none'（前日merge PR無し）しか持たず、「土日につき skip」という別の意味を
   // 表現できなかった（buildOpsLogComment の文言が事実と異なる形で残る）。
-  it('board.status=weekend を通す（追加フィールド不要）', () => {
+  //
+  // #2350 クロスレビュー指摘（P3）: weekend の自己申告と実際の JST 曜日を
+  // クロス検証する（平日に weekend を自己申告できてしまう穴を閉じる）。
+  // 判定は「今日 or 昨日（JST）が土日」の緩和形（risk-reviewer low 指摘:
+  // 「今日のみ」だと、指揮台が土曜分の観測を翌月曜に手動代行で catch-up
+  // 投稿した時に throw して唯一の故障検出チャネルが無音化するため）。
+  it('board.status=weekend を JST 土日なら通す（追加フィールド不要）', () => {
+    vi.setSystemTime(new Date('2026-08-22T01:00:00Z')); // JST 2026-08-22（土）
     expect(() =>
       validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'weekend' } }),
     ).not.toThrow();
   });
 
-  it('dod.status=weekend を通す（追加フィールド不要）', () => {
+  it('dod.status=weekend を JST 土日なら通す（追加フィールド不要）', () => {
+    vi.setSystemTime(new Date('2026-08-22T01:00:00Z')); // JST 2026-08-22（土）
     expect(() =>
       validateOpsLogReport({ ...GREEN_REPORT, dod: { status: 'weekend' } }),
+    ).not.toThrow();
+  });
+
+  // global beforeEach の既定時刻（2026-08-24 = JST 月曜）は「昨日が日曜」の
+  // catch-up 許容ケースに当たるため、この 2 つの受理テストで直接確認する
+  // （既定時刻を流用することで、leniency が意図通り動くことを検証する）。
+  it('board.status=weekend を翌営業日（JST月曜、昨日が日曜）の catch-up でも通す', () => {
+    expect(() =>
+      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'weekend' } }),
+    ).not.toThrow();
+  });
+
+  it('dod.status=weekend を翌営業日（JST月曜、昨日が日曜）の catch-up でも通す', () => {
+    expect(() =>
+      validateOpsLogReport({ ...GREEN_REPORT, dod: { status: 'weekend' } }),
+    ).not.toThrow();
+  });
+
+  // 今日・昨日のどちらも平日（JST水曜、昨日は火曜）なら拒否する。
+  it('board.status=weekend を今日・昨日とも平日（JST水曜）なら拒否する', () => {
+    vi.setSystemTime(new Date('2026-08-26T01:00:00Z')); // JST 2026-08-26（水）
+    expect(() => validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'weekend' } })).toThrow(
+      /board\.status="weekend"/,
+    );
+  });
+
+  it('dod.status=weekend を今日・昨日とも平日（JST水曜）なら拒否する', () => {
+    vi.setSystemTime(new Date('2026-08-26T01:00:00Z')); // JST 2026-08-26（水）
+    expect(() => validateOpsLogReport({ ...GREEN_REPORT, dod: { status: 'weekend' } })).toThrow(
+      /dod\.status="weekend"/,
+    );
+  });
+
+  // #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
+  // （直近 run 未完了）と判定される class を、旧設計は「取得失敗」と合流させ
+  // ていた（コマンド失敗と区別できなかった）。専用の outcome を追加する。
+  it('results の outcome=pending を通す（追加フィールド不要）', () => {
+    expect(() =>
+      validateOpsLogReport({
+        ...GREEN_REPORT,
+        results: [{ checkId: 'heavy-red', outcome: 'pending' }],
+      }),
     ).not.toThrow();
   });
 
@@ -222,6 +273,17 @@ describe('buildOpsLogComment', () => {
     expect(comment).toContain('- DoD監査候補: skip（土日）');
   });
 
+  // #2350 クロスレビュー指摘（P2-1）: pending（run 未完了で判定保留）は
+  // 「取得失敗（コマンド失敗）」とは別物として書き分ける。
+  it('outcome=pending は「保留（run未完了）」として書き分け、all green と表示しない', () => {
+    const comment = buildOpsLogComment({
+      ...GREEN_REPORT,
+      results: [{ checkId: 'heavy-red', outcome: 'pending' }],
+    });
+    expect(comment).toContain('- 保留（run未完了）: heavy-red');
+    expect(comment).not.toContain('- all green');
+  });
+
   // Codex 実測指摘（P2）: failed が非空でも results に issue/skipped が
   // 無ければ resultsLine が "all green" になり、取得失敗と同時に誤った
   // 肯定シグナルを出していた。
@@ -255,6 +317,125 @@ describe('buildOpsLogComment', () => {
     });
     expect(comment).toContain('起票/追記: #700（docs-coverage）');
     expect(comment).toContain('見送り: sentry-new（dedup-search-failed）');
+  });
+});
+
+// #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が恒久的に
+// pending のまま無期限に無音化するのを防ぐ escalation 判定の read-only
+// wrapper。
+describe('checkRecentPending', () => {
+  const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+
+  type CommentSeed = string | { body: string; authorAssociation?: string };
+
+  function commentsResponse(seeds: CommentSeed[]) {
+    return JSON.stringify({
+      comments: seeds.map((seed) =>
+        typeof seed === 'string'
+          ? { body: seed, authorAssociation: 'OWNER' }
+          : { authorAssociation: 'OWNER', ...seed },
+      ),
+    });
+  }
+
+  it('直近2件の運行記録レポートで同一 check-id が連続 pending なら true を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n',
+        '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: integration-red, heavy-red\n',
+      ]),
+    );
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: true,
+      reportsChecked: 2,
+    });
+  });
+
+  it('直近1件だけ pending が途切れていれば false を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n',
+        '**night-watch 運行記録 2026-08-23**\n\n- all green\n',
+      ]),
+    );
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: false,
+      reportsChecked: 2,
+    });
+  });
+
+  it('env-failure 等の他コメントは対象外にし、night-watch 運行記録形式だけ数える', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-21**\n\n- 保留（run未完了）: heavy-red\n',
+        '環境故障: DAYOPT_NIGHT_WATCH 未検出',
+        '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n',
+      ]),
+    );
+    // 「night-watch 運行記録」形式は2件（08-21・08-23）。間の env-failure は
+    // 対象外のためスキップし、この2件で連続判定する。
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: true,
+      reportsChecked: 2,
+    });
+  });
+
+  it('対象コメントが lookback 件に満たなければ fail-open で false を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse(['**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n']),
+    );
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: false,
+      reportsChecked: 1,
+    });
+  });
+
+  it('未知の check-id は例外を投げる', () => {
+    const execFileImpl = vi.fn(() => commentsResponse([]));
+    expect(() => checkRecentPending('evil', { execFileImpl, readFileImpl })).toThrow(
+      /未知の check-id/,
+    );
+  });
+
+  // #2350 クロスレビュー指摘（P2-1、risk-reviewer medium）: repo は public の
+  // ため第三者が「night-watch 運行記録」の見出しを持つ偽コメントを投げられる。
+  // 偽の pending 行で escalation を誤発火させる、または保留行の無い偽コメント
+  // で真の 2 晩連続を分断し escalation を無音化する、の両方を防ぐため
+  // OWNER/MEMBER/COLLABORATOR 以外のコメントは無視する。
+  it('信頼できない書き手（authorAssociation が NONE 等）のコメントは無視する', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        { body: '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n' },
+        {
+          // 第三者による偽装コメント（保留行なし = escalation を分断しようとする形）。
+          body: '**night-watch 運行記録 2026-08-23**\n\n- all green\n',
+          authorAssociation: 'NONE',
+        },
+        { body: '**night-watch 運行記録 2026-08-24**\n\n- 保留（run未完了）: heavy-red\n' },
+      ]),
+    );
+    // NONE のコメントを除外すると、信頼できる直近2件は 08-22・08-24 になり、
+    // どちらも pending なので true。偽コメントに分断されない。
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: true,
+      reportsChecked: 2,
+    });
+  });
+
+  // 手動代行との重複投稿等で同じ晩に2件投稿されても「2晩連続」に誤カウント
+  // しない（同日付は 1 件に畳む）。
+  it('同一日付のコメントが複数あっても 1 件として畳み、2 晩連続の判定に使わない', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n',
+        '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n', // 同日の重複投稿
+      ]),
+    );
+    // 日付が同じ 08-23 の 2 件は 1 件に畳まれるため、lookback（既定2）に満たず false。
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: false,
+      reportsChecked: 1,
+    });
   });
 });
 

@@ -9,6 +9,7 @@ import {
   readAlertRunState,
   REPO,
   runGh,
+  runGhJson,
 } from './lib.mjs';
 
 /**
@@ -119,6 +120,7 @@ function isPositiveInt(value) {
  *   failed: string[],
  *   results: Array<
  *     { checkId: string, outcome: 'green' }
+ *     | { checkId: string, outcome: 'pending' }
  *     | { checkId: string, outcome: 'issue', issueNumber: number }
  *     | { checkId: string, outcome: 'skipped', reason: string }
  *   >,
@@ -127,6 +129,15 @@ function isPositiveInt(value) {
  *   dod: { status: 'candidate', prNumber: number } | { status: 'none' } | { status: 'weekend' },
  * }} OpsLogReport
  */
+
+// #2350 クロスレビュー指摘（P3、risk-reviewer low）: board.status/dod.status
+// の "weekend" クロス検証を「現在時刻の JST 曜日」だけに固定すると、指揮台が
+// 土曜分の観測を翌月曜（平日）に手動代行で catch-up 投稿した場合に
+// throw してしまい、night-watch 唯一の故障検出チャネルが無音化する。
+// 「今日 or 昨日（JST）が土日」まで許容し、翌営業日の catch-up を通す。
+function isJstWeekendLenient() {
+  return isJstWeekend() || isJstWeekend(new Date(Date.now() - 24 * 60 * 60 * 1000));
+}
 
 /**
  * Step 5 の運行記録レポートを検証する。1 つでも形が崩れていれば全体を拒否する
@@ -154,10 +165,16 @@ export function validateOpsLogReport(report) {
       throw new Error('results の各要素は既知の check-id を持つ必要があります');
     }
     if (entry.outcome === 'green') continue;
+    // 'pending'（#2350 クロスレビュー指摘 P2）: heavy-red/integration-red で
+    // 直近 run が未完了だった check-id。旧設計は「取得失敗」（コマンド自体の
+    // 非0 exit/パース不能）と合流させていたため、運行記録を読む側が「gh 認証
+    // 切れ」と「単に実行中」を区別できなかった。両者は原因が異なるため
+    // 分離する（詳細は checkRecentPending の doc comment 参照）。
+    if (entry.outcome === 'pending') continue;
     if (entry.outcome === 'issue' && isPositiveInt(entry.issueNumber)) continue;
     if (entry.outcome === 'skipped' && RESULT_SKIPPED_REASONS.has(entry.reason)) continue;
     throw new Error(
-      'results の outcome は "green" / issueNumber 付きの "issue" / 既知 reason 付きの "skipped" のいずれかである必要があります',
+      'results の outcome は "green" / "pending" / issueNumber 付きの "issue" / 既知 reason 付きの "skipped" のいずれかである必要があります',
     );
   }
   if (
@@ -172,10 +189,19 @@ export function validateOpsLogReport(report) {
   }
   if (board.status === 'success') {
     if (!isPositiveInt(board.issueNumber)) throw new Error('board.issueNumber が不正です');
-  } else if (board.status === 'skip' || board.status === 'weekend') {
-    // 追加フィールド不要。'weekend' は #2342: JST 土日（Step 1 が isJstWeekend
-    // 判定で gh を一切呼ばず skip する日）専用の値。'skip'（起票済み・重複回避）
-    // と意味が異なるため区別する。
+  } else if (board.status === 'skip') {
+    // 追加フィールド不要
+  } else if (board.status === 'weekend') {
+    // #2342: JST 土日（Step 1 が isJstWeekend 判定で gh を一切呼ばず skip する
+    // 日）専用の値。'skip'（起票済み・重複回避）と意味が異なるため区別する。
+    // #2350 クロスレビュー指摘（P3）: 自己申告のみだと平日にも weekend を
+    // 名乗れてしまうため、実際の JST 曜日とクロス検証する（今日 or 昨日が
+    // 土日なら許容 — 翌営業日の手動代行 catch-up を無音化しないため）。
+    if (!isJstWeekendLenient()) {
+      throw new Error(
+        'board.status="weekend" は JST 土日（または翌営業日の catch-up）のみ使用できます',
+      );
+    }
   } else if (board.status === 'fail') {
     if (!BOARD_FAIL_REASONS.has(board.reason)) {
       throw new Error(
@@ -191,9 +217,17 @@ export function validateOpsLogReport(report) {
   }
   if (dod.status === 'candidate') {
     if (!isPositiveInt(dod.prNumber)) throw new Error('dod.prNumber が不正です');
-  } else if (dod.status !== 'none' && dod.status !== 'weekend') {
+  } else if (dod.status === 'weekend') {
     // 'weekend' は #2342: JST 土日（Step 4 が isJstWeekend 判定で skip する日）
     // 専用の値。'none'（前日merge PR無し）と意味が異なるため区別する。
+    // #2350 クロスレビュー指摘（P3）: board.status と同じくクロス検証する
+    // （今日 or 昨日が土日なら許容）。
+    if (!isJstWeekendLenient()) {
+      throw new Error(
+        'dod.status="weekend" は JST 土日（または翌営業日の catch-up）のみ使用できます',
+      );
+    }
+  } else if (dod.status !== 'none') {
     throw new Error('dod.status は candidate/none/weekend のいずれかである必要があります');
   }
 }
@@ -203,17 +237,28 @@ export function buildOpsLogComment(report) {
   const today = jstDateString();
   const failedLine = report.failed.length > 0 ? report.failed.join(', ') : 'なし';
   const issueResults = report.results.filter((entry) => entry.outcome === 'issue');
+  const pendingResults = report.results.filter((entry) => entry.outcome === 'pending');
   const skippedResults = report.results.filter((entry) => entry.outcome === 'skipped');
-  // `failed`（取得失敗）だけがあり results に issue/skipped が無い晩でも
-  // "all green" と誤記しない（push 前反証レビュー risk-reviewer 指摘、P2。
-  // 取得失敗が 1 件でもあれば「異常なし」の代わりに「観測できず」として扱う
-  // §Step2 の fail-closed 原則と対称）。
+  // `failed`（取得失敗）だけがあり results に issue/pending/skipped が無い晩
+  // でも "all green" と誤記しない（push 前反証レビュー risk-reviewer 指摘、
+  // P2。取得失敗が 1 件でもあれば「異常なし」の代わりに「観測できず」として
+  // 扱う §Step2 の fail-closed 原則と対称）。pending（run 未完了で判定保留）も
+  // 同様に「異常なし」ではないため hasAnomaly に含める（#2350 クロスレビュー
+  // 指摘 P2）。
   const hasAnomaly =
-    report.failed.length > 0 || issueResults.length > 0 || skippedResults.length > 0;
+    report.failed.length > 0 ||
+    issueResults.length > 0 ||
+    pendingResults.length > 0 ||
+    skippedResults.length > 0;
   const resultParts = [];
   if (issueResults.length > 0) {
     resultParts.push(
       `起票/追記: ${issueResults.map((entry) => `#${entry.issueNumber}（${entry.checkId}）`).join(', ')}`,
+    );
+  }
+  if (pendingResults.length > 0) {
+    resultParts.push(
+      `保留（run未完了）: ${pendingResults.map((entry) => entry.checkId).join(', ')}`,
     );
   }
   if (skippedResults.length > 0) {
@@ -252,6 +297,77 @@ export function buildOpsLogComment(report) {
 - 盤面起票: ${boardLine}
 - DoD監査候補: ${dodLine}
 `;
+}
+
+// Step 5 の運行記録コメント本文で「night-watch 運行記録」レポートだけを
+// env-failure 等の他コメントと区別するための見出し（buildOpsLogComment が
+// 組み立てる本文の先頭行と一致させる）。日付部分は後続の distinct-date 判定
+// のため capture する。
+const OPS_LOG_COMMENT_HEADER_RE = /^\*\*night-watch 運行記録 (\d{4}-\d{2}-\d{2})\*\*/;
+// 「保留（run未完了）: <check-id>, ...」行から check-id 一覧を取り出す。
+const PENDING_LINE_RE = /^- 保留（run未完了）: (.+)$/m;
+
+// 常設運行記録 issue は 2026-09 private 化までは public repo 上にあり、
+// wrapper 自身は write 権限を持たない token だが、issue へのコメント投稿は
+// GitHub 上の誰でも行える（#2350 クロスレビュー指摘、risk-reviewer medium）。
+// 「night-watch 運行記録」の見出し文字列を含む偽コメントを第三者が投げると、
+// (a) 偽の保留行で escalation を誤発火させる、または (b) 保留行を欠いた
+// 偽コメントで真の 2 晩連続を分断し escalation を無音化できてしまう
+// （後者は本機能が塞ごうとした無音化そのものの再演）。finish-branch.sh の
+// marker gate と同じ idiom（OWNER/MEMBER/COLLABORATOR のみ信頼）で防ぐ。
+const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
+/**
+ * #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
+ * （直近 run 未完了）と判定される class は、runner 枯渇・workflow 定義破損
+ * 等で run が恒久的に完了しない場合、毎晩 pending を積むだけで
+ * `alert-issue.mjs` が二度と呼ばれず、無期限に無音のまま気づかれない
+ * （behavior-verifier 指摘）。これを検出するため、常設運行記録 issue の
+ * 直近コメントから、信頼できる書き手（OWNER/MEMBER/COLLABORATOR）による
+ * 「night-watch 運行記録」形式のものだけを新しい順に抽出し、**日付が異なる**
+ * 直近 `lookback` 件（既定 2）**すべて**で同一 check-id が pending だったかを
+ * machine で判定する。日付が異なることを要求するのは、手動代行との重複投稿
+ * などで同じ晩の 2 件を「2 晩連続」と誤カウントしないため。
+ *
+ * env-failure 等の他コメント・非信頼書き手のコメントは対象外（その晩は
+ * Step 2 が実際には走っていない、または偽装の疑いがあるため pending の
+ * 連続カウントに含めない）。直近コメントが `lookback` 件に満たない場合
+ * （運用開始直後等）は `consecutivePending: false` を返す（fail-open。
+ * 判定材料が無い状態で赤に倒すと誤起票になる）。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, lookback?: number }} [opts]
+ * @returns {{ consecutivePending: boolean, reportsChecked: number }}
+ */
+export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookback = 2 } = {}) {
+  if (!CHECK_IDS.has(checkId)) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+  const issueNumber = resolveOpsLogIssueNumber({ readFileImpl });
+  const response = runGhJson(
+    ['issue', 'view', String(issueNumber), '--repo', REPO, '--json', 'comments'],
+    { execFileImpl },
+  );
+  const seenDates = new Set();
+  const reports = [];
+  for (const comment of (response.comments ?? []).slice().reverse()) {
+    if (!TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) continue;
+    const match = OPS_LOG_COMMENT_HEADER_RE.exec(comment.body ?? '');
+    if (!match) continue;
+    const date = match[1];
+    if (seenDates.has(date)) continue; // 同日の重複投稿は 1 件に畳む
+    seenDates.add(date);
+    reports.push(comment);
+    if (reports.length === lookback) break;
+  }
+  if (reports.length < lookback) {
+    return { consecutivePending: false, reportsChecked: reports.length };
+  }
+  const consecutivePending = reports.every((comment) => {
+    const match = comment.body.match(PENDING_LINE_RE);
+    if (!match) return false;
+    return match[1].split(',').some((id) => id.trim() === checkId);
+  });
+  return { consecutivePending, reportsChecked: reports.length };
 }
 
 // #2332: alert-issue.mjs の run-scoped 起票上限（reserveAlertRunSlot）が
@@ -405,9 +521,11 @@ if (isDirectExecution()) {
       console.log(JSON.stringify(runBoardNote({ note })));
     } else if (subcommand === 'env-failure') {
       console.log(JSON.stringify(runEnvFailure({ kind: arg })));
+    } else if (subcommand === 'recent-pending') {
+      console.log(JSON.stringify(checkRecentPending(arg)));
     } else {
       console.error(
-        "Usage: node scripts/night-watch/run-log.mjs <report|board-note> '<JSON>' | env-failure <no-var|write-token>",
+        "Usage: node scripts/night-watch/run-log.mjs <report|board-note> '<JSON>' | env-failure <no-var|write-token> | recent-pending <check-id>",
       );
       process.exitCode = 1;
     }
