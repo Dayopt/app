@@ -58,6 +58,15 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  *   Auth drift と同様、この script は 1 つの狭い一次防御線として設計する。拡張は別 issue）
  * - migration を経由しない DB スキーマ変更全般（table 追加・GRANT 変更等）。あくまで
  *   `storage.objects` の RLS 境界のみ
+ * - **allow-list 内 policy の欠落（DROP 方向）は積極的には検出しない。** `storage.objects`
+ *   の policy はすべて PERMISSIVE（`generate-rls-snapshot.ts` の同種 policy と同じ前提）
+ *   なので、8 件のうち 1 件が Dashboard 経由で誤って DROP されても access 自体は他の
+ *   PERMISSIVE policy の OR 評価で fail-closed 側（より制限が強まる方向）に倒れる。
+ *   `auditProductionStorageRls()` は `unexpected_policies`（allow-list 外の混入）だけを
+ *   見ており、`STORAGE_OBJECTS_APP_POLICY_NAMES` の 8 件が実際に存在するかは確認しない。
+ *   欠落自体はセキュリティ後退ではないため本 script の scope 外に据え置くが、想定した
+ *   保護（例: 添付ファイルの owner 制限）が意図せず消えている状態を機械検出したくなったら
+ *   `fetchStoragePolicies()` 相当の存在確認を別途追加する判断になる
  */
 
 async function runReadOnlyQuery({ projectRef, token, query, fetchImpl }) {

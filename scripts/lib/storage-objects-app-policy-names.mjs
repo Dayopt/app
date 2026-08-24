@@ -24,6 +24,7 @@
  * 出典: supabase/migrations/20260730090027_fence_account_storage.sql（現行定義）。
  * この配列を変える時は同じ PR でその migration の変更を伴う。
  */
+/** @type {readonly string[]} */
 export const STORAGE_OBJECTS_APP_POLICY_NAMES = [
   'Users can delete own attachments',
   'Users can delete own avatar',
@@ -35,7 +36,18 @@ export const STORAGE_OBJECTS_APP_POLICY_NAMES = [
   'Users can view own avatar',
 ];
 
-/** SQL の文字列リテラルリスト（`IN (...)` 用）を組み立てる。値は上の const 配列のみで外部入力は通さない。 */
+/**
+ * SQL の文字列リテラルリスト（`IN (...)` 用）を組み立てる。値は上の const 配列のみで外部入力は通さない。
+ *
+ * この module は plain `.mjs`（`generate-rls-snapshot.ts` の TS 側と、token を持つ
+ * `production-storage-rls-audit.mjs` の plain node 実行の両方から素の import で読めるように
+ * するための意図的な選択、#2323）なので、`tsconfig.scripts.json` の `checkJs: false` により
+ * この JSDoc は型検査されない（解決のためだけに `allowJs` が効く）。呼び出し側で
+ * `readonly string[]` として扱われることを示す注釈として残す。
+ *
+ * @param {readonly string[]} values
+ * @returns {string}
+ */
 export function sqlStringList(values) {
   return values.map((v) => `'${v.replace(/'/g, "''")}'`).join(', ');
 }

@@ -68,7 +68,7 @@ function collectProcedures(
 describe('write fence coverage', () => {
   const procedures = collectProcedures(appRouter._def.record);
 
-  it('全 mutation / query procedure が protectedProcedure 由来（auth meta 付き）である', () => {
+  it('全 procedure が protectedProcedure 由来（auth meta 付き）である', () => {
     const withoutAuthMeta = procedures.filter(
       (procedure) => !['protected', 'pro'].includes(procedure.auth ?? ''),
     );

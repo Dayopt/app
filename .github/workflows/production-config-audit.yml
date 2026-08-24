@@ -266,8 +266,10 @@ jobs:
   # **このジョブより後に commit status を発行する job を置かない。**
   # scripts/__tests__/production-auth-config-audit-contract.test.ts の
   # 「auth audit の結果は commit status を経由しない」は auth-config job 名（コロン込み）の出現位置から
-  # ファイル末尾までを切り出して `statuses/` を含まないことを検証するため、この job を
-  # ファイルの最後に置く（上の deploy-health job 参照）。
+  # ファイル末尾までを切り出して `statuses/` を含まないことを検証する（上の deploy-health job 参照）。
+  # auth-config 以降に job を追加してよい条件は「commit status を発行しない」であって
+  # 「ファイル末尾に置く」ではない —— 実際 storage-rls job（#2323）は auth-config の後に
+  # 続くが、commit status は発行しないため上記 contract test は変わらず green のまま。
   auth-config:
     name: Audit Supabase Auth config (trusted)
     if: github.event_name == 'push' || github.event_name == 'schedule'
