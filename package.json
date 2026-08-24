@@ -32,6 +32,8 @@
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "prepare": "husky",
     "branch:finish": "bash scripts/git/finish-branch.sh",
+    "board:update": "node scripts/ops/board-update.mjs",
+    "green:watch": "node scripts/ops/green-watch.mjs",
     "decisions:sync": "node scripts/gardening/sync-decisions.mjs",
     "review:marker": "tsx scripts/review/generate-marker.ts",
     "gardening:judgment-journal": "bash scripts/gardening/collect-judgment-journal.sh",
