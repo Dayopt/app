@@ -27,9 +27,8 @@ DOM / Browser
 - **shadcn/ui は上流の設計・生成元として扱う。** 新規 primitive を追加する際の初期実装・公式パターンの参照元であり、shadcn のコードをそのまま絶対的な正本にはしない
 - **Radix は下層 primitive として扱う。** `@dayopt/components` で表現できない挙動が必要な場合のみ直接利用を許可する。直接利用する場合も semantic token / spacing / a11y ルールに従う
 - **不要な wrapper は作らない。** Radix の高度な API を隠すだけの薄い wrapper を増やさない。再利用価値がある場合のみ `@dayopt/components` に昇格する
-- **構造的な強制**: app の `package.json` に `@radix-ui/*` を追加しない。Radix 依存は `packages/components` にのみ置く。これにより app からの直接 import は module resolution レベルで解決不能になる（`apps/product` は現状この状態にある）
+- **構造的な強制**: app の `package.json` に `@radix-ui/*` を追加しない。Radix 依存は `packages/components` にのみ置く。これにより app からの直接 import は module resolution レベルで解決不能になる（`apps/product` / `apps/web` とも現状この状態にある。2026-08-24、[#2339](https://github.com/Dayopt/dayopt/issues/2339) で `apps/web` の `Header.tsx` が最後の例外だった `@radix-ui/react-dialog` 直接利用を `Sheet` へ統合し解消した）
 - **Radix を使わない判断も許可する。** `packages/components` の `Tooltip` は Radix の状態管理問題を回避するため意図的に自前の CSS-based 実装を採用している（`packages/components/src/overlays/tooltip.tsx`）。同種の判断が必要になった場合、理由をコメントに残せば Radix 非使用は許容される
-- **例外**: `apps/web/src/shell/layout/Header.tsx`（モバイルメニュー）は視覚要件（`@dayopt/components` の `Sheet` と異なる背景・close button スタイル）のため Radix (`@radix-ui/react-dialog`) を直接利用している。視覚差分未解消のため 2026-08-24 時点で残存（追跡: [#2339](https://github.com/Dayopt/dayopt/issues/2339)）。解消後は `apps/web/package.json` から `@radix-ui/react-dialog` を削除し、app からの直接 Radix 利用を repo 全体で構造的に不可能にする
 
 ## 色
 

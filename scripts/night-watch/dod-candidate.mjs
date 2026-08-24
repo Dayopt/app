@@ -3,7 +3,10 @@ import { pathToFileURL } from 'node:url';
 
 import {
   findTodayBoardIssue,
+  isJstMonday,
+  isJstWeekend,
   jstDayRange,
+  jstDaysAgoString,
   jstYesterdayString,
   REPO,
   runGh,
@@ -29,11 +32,11 @@ import {
  */
 
 /**
- * 前日 JST に merge された PR 一覧を取得する。
- * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ * 指定した JST 日境界レンジ（両端 inclusive）に merge された PR 一覧を取得する。
+ * @param {{ startDateStr: string, endDateStr: string, execFileImpl?: import('./lib.mjs').ExecFileImpl }} params
  */
-export function fetchYesterdayMergedPrs({ execFileImpl } = {}) {
-  const range = jstDayRange(jstYesterdayString());
+export function fetchMergedPrsInRange({ startDateStr, endDateStr, execFileImpl }) {
+  const range = jstDayRange(startDateStr, endDateStr);
   return runGhJson(
     [
       'pr',
@@ -54,20 +57,55 @@ export function fetchYesterdayMergedPrs({ execFileImpl } = {}) {
 }
 
 /**
- * Step 4 を実行する。当日盤面 issue が無ければエラー（Step 1 が先に走っている
- * 前提）。決定的な選定アルゴリズムは設けない（SKILL.md の既定方針どおり）。
+ * 前日 JST に merge された PR 一覧を取得する。
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ */
+export function fetchYesterdayMergedPrs({ execFileImpl } = {}) {
+  const yesterday = jstYesterdayString();
+  return fetchMergedPrsInRange({ startDateStr: yesterday, endDateStr: yesterday, execFileImpl });
+}
+
+/**
+ * 月曜日専用: 金〜日の JST 3 日分に merge された PR 一覧を取得する。
+ *
+ * 盤面 issue の起票が平日のみになった（#2334 コメント。board-issue.mjs
+ * §runBoardSync 参照）ため、Step 4 自体も土日は skip する（当日盤面 issue が
+ * 存在しないため）。「前日 JST」の単日窓のままだと、金・土曜に merge された PR
+ * が DoD 監査候補から永久に漏れる（土曜 run が金曜分を、日曜 run が土曜分を
+ * 拾うはずが、土日は run 自体が skip されるため）。月曜だけ窓を金〜日の 3 日分へ
+ * 拡張し、取りこぼしを埋める。
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ */
+export function fetchWeekendCatchUpMergedPrs({ execFileImpl } = {}) {
+  const friday = jstDaysAgoString(3);
+  const sunday = jstYesterdayString();
+  return fetchMergedPrsInRange({ startDateStr: friday, endDateStr: sunday, execFileImpl });
+}
+
+/**
+ * Step 4 を実行する。土日は当日盤面 issue が存在しない（board-issue.mjs が
+ * 起票を平日のみに絞るため）ため、gh を呼ばずに skip する。月曜は金〜日の
+ * 3 日分をまとめて対象にする（fetchWeekendCatchUpMergedPrs 参照）。当日盤面
+ * issue が無ければエラー（Step 1 が先に走っている前提）。決定的な選定
+ * アルゴリズムは設けない（SKILL.md の既定方針どおり）。
  * @param {{
  *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
  *   randomImpl?: () => number,
  * }} [opts]
  */
 export function runDodCandidateSelect({ execFileImpl, randomImpl = Math.random } = {}) {
+  if (isJstWeekend()) {
+    return { action: 'skipped', reason: 'weekend' };
+  }
+
   const boardIssue = findTodayBoardIssue({ execFileImpl });
   if (!boardIssue) {
     throw new Error('当日の盤面 issue が見つかりません（Step 1 が先に完了している必要があります）');
   }
 
-  const candidates = fetchYesterdayMergedPrs({ execFileImpl });
+  const candidates = isJstMonday()
+    ? fetchWeekendCatchUpMergedPrs({ execFileImpl })
+    : fetchYesterdayMergedPrs({ execFileImpl });
 
   let comment;
   let selected = null;

@@ -1,10 +1,9 @@
 'use client';
 
-import { Button, cn, Logo } from '@dayopt/components';
+import { Button, cn, Logo, Sheet, SheetContent } from '@dayopt/components';
 import { dayoptProductUrls } from '@dayopt/config';
 import { Link, usePathname } from '@dayopt/i18n/navigation';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
@@ -112,60 +111,53 @@ export function Header() {
       </nav>
 
       {/* Mobile menu */}
-      <DialogPrimitive.Root open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="z-sheet bg-overlay fixed inset-0 lg:hidden" />
-          <DialogPrimitive.Content className="bg-background border-border data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right z-sheet fixed inset-y-0 right-0 w-full overflow-y-auto border-l px-6 py-6 duration-300 sm:max-w-sm lg:hidden">
-            <DialogPrimitive.Title className="sr-only">
-              {t('aria.navigationMenu')}
-            </DialogPrimitive.Title>
-            <div className="flex items-center justify-between">
-              <Link
-                href="/"
-                className="flex items-center gap-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Logo variant="wordmark" size="md" className="text-foreground" />
-              </Link>
-              <DialogPrimitive.Close className="text-muted-foreground hover:bg-state-hover hover:text-foreground -m-2 rounded-lg p-2 transition-colors">
-                <span className="sr-only">{t('aria.closeMenu')}</span>
-                <X className="size-5" aria-hidden="true" />
-              </DialogPrimitive.Close>
-            </div>
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent
+          side="right"
+          aria-label={t('aria.navigationMenu')}
+          closeButtonLabel={t('aria.closeMenu')}
+          className="w-4/5 max-w-80 overflow-y-auto px-6 py-6 lg:hidden"
+        >
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Logo variant="wordmark" size="md" className="text-foreground" />
+          </Link>
 
-            <div className="mt-6 flow-root">
-              <div className="divide-border -my-6 divide-y">
-                <div className="space-y-1 py-6">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      aria-current={isActive(item.href) ? 'page' : undefined}
-                      className={cn(
-                        'block rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                        isActive(item.href)
-                          ? 'bg-state-selected text-foreground'
-                          : 'text-foreground hover:bg-state-hover',
-                      )}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
+          <div className="mt-6 flow-root">
+            <div className="divide-border -my-6 divide-y">
+              <div className="space-y-1 py-6">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                    className={cn(
+                      'block rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                      isActive(item.href)
+                        ? 'bg-state-selected text-foreground'
+                        : 'text-foreground hover:bg-state-hover',
+                    )}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
 
-                <div className="py-6">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                      {t('actions.login')}
-                    </Link>
-                  </Button>
-                </div>
+              <div className="py-6">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                    {t('actions.login')}
+                  </Link>
+                </Button>
               </div>
             </div>
-          </DialogPrimitive.Content>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
+          </div>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

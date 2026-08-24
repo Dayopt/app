@@ -166,3 +166,41 @@ describe('runBoardSync', () => {
     expect(closeCall[1][2]).toBe('8100');
   });
 });
+
+// night-watch の起点が 05:00 JST 毎日運行へ確定した際（#2334 コメント）、
+// 盤面 issue の起票だけは平日のみに絞ることになった。
+describe('runBoardSync: 平日判定（#2334）', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ['土曜日', '2026-08-22T01:00:00Z'], // JST 2026-08-22 10:00（土）
+    ['日曜日', '2026-08-23T01:00:00Z'], // JST 2026-08-23 10:00（日）
+  ])('%s（JST）は gh を一切呼ばず skip する', (_label, isoDate) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(isoDate));
+    const execFileImpl = vi.fn(() => {
+      throw new Error('gh を呼んではいけない（weekend skip は gh 呼び出し前に判定する）');
+    });
+
+    const result = runBoardSync({ execFileImpl });
+
+    expect(result).toEqual({ action: 'skipped', reason: 'weekend' });
+    expect(execFileImpl).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['月曜日', '2026-08-24T01:00:00Z'],
+    ['金曜日', '2026-08-28T01:00:00Z'],
+  ])('%s（JST）は通常どおり実行する', (_label, isoDate) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(isoDate));
+    const execFileImpl = vi.fn(() => '[]');
+
+    const result = runBoardSync({ execFileImpl });
+
+    expect(result).not.toEqual({ action: 'skipped', reason: 'weekend' });
+    expect(execFileImpl).toHaveBeenCalled();
+  });
+});
