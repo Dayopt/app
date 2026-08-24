@@ -298,3 +298,37 @@ jobs:
           set -o pipefail
           node scripts/production-auth-config-audit.mjs | tee audit-output.txt
           grep -q 'Production Auth Config Audit passed' audit-output.txt
+
+  # production の storage.objects RLS drift の継続検出（#2323）。`pnpm rls:snapshot:check`
+  # は migration から構築した ephemeral な local DB しか見ないため、production だけに
+  # 残存した legacy policy（#2316 の root cause）はこれまで検出できなかった。
+  #
+  # auth-config job と同じ理由（token を branch code へ渡さない・merge gate を巻き込ま
+  # ない）で分離する。発火経路も同じ push:main（merge 直後）と日次 cron のみ。
+  #
+  # **SUPABASE_STORAGE_RLS_AUDIT_TOKEN は 2026-08-24 時点で未発行**（database_read scope
+  # のみの新規 scoped token が要る。発行・1Password ci vault 登録・GitHub Secret 登録は
+  # fast-follow issue で扱う）。token 未設定の間、
+  # scripts/production-storage-rls-audit.mjs は fail ではなく `::notice::` を出して
+  # exit 0 にする（missing token を drift 検出の failure と誤読させない・かといって
+  # 黙って green にもしない、の両立）。
+  storage-rls:
+    name: Audit production storage.objects RLS (trusted)
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Audit production storage.objects RLS
+        env:
+          SUPABASE_STORAGE_RLS_AUDIT_TOKEN: ${{ secrets.SUPABASE_STORAGE_RLS_AUDIT_TOKEN }}
+        run: node scripts/production-storage-rls-audit.mjs
