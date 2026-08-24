@@ -25,6 +25,10 @@ import { fileURLToPath } from 'url';
 import { format as formatWithPrettier } from 'prettier';
 
 import { escapeMarkdownTableCell as cell } from './lib/markdown-table';
+import {
+  STORAGE_OBJECTS_APP_POLICY_NAMES,
+  sqlStringList,
+} from './lib/storage-objects-app-policy-names.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -52,38 +56,15 @@ const GRANTABLE_PRIVILEGE_SQL =
   "acl.privilege_type || CASE WHEN acl.is_grantable THEN '*' ELSE '' END";
 
 /**
- * `storage.objects` の RLS policy のうち、このリポジトリの migration が定義したものだけを
- * snapshot 対象にする allow-list（signal / noise 分離。#1900）。
+ * `STORAGE_OBJECTS_APP_POLICY_NAMES`（allow-list）と `sqlStringList` は
+ * `./lib/storage-objects-app-policy-names.mjs` が単一の正本（#2323。production 側の
+ * drift 検出スクリプトと共有するため抽出した。詳細な rationale は同ファイル参照）。
  *
- * `storage` schema は Supabase platform 自身も所有し、バージョンアップで内容が変わりうる
- * （このリポジトリの migration に一度も登場しない buckets_analytics / buckets_vectors /
- * iceberg_namespaces / iceberg_tables / vector_indexes が現に存在するのが証拠）。
- * schema 丸ごとを snapshot すると platform 更新のたびに無関係な drift が出るため、
- * まず対象 table を `storage.objects` 1 つに絞り（buckets 等の platform 専有 table を除外）、
- * その上でこの名前リストに合致する policy だけを「app 所有」として public 相当の重みで
- * 追跡する。リスト外の policy 名が現れた場合は `fetchUnexpectedStoragePolicyNames()` が
+ * リスト外の policy 名が現れた場合は `fetchUnexpectedStoragePolicyNames()` が
  * 別枠で拾い、0 件を機械固定する（allow-list が古くなって新しい policy を静かに
- * 見逃す事態を防ぐ）。
- *
- * 出典: supabase/migrations/20260730090027_fence_account_storage.sql（現行定義）。
- * この配列を変える時は同じ PR でその migration の変更を伴う。名前を変えずに
- * USING / WITH CHECK 句だけを変更した場合は、配列に触れなくても内容差分として drift 検出される。
+ * 見逃す事態を防ぐ）。名前を変えずに USING / WITH CHECK 句だけを変更した場合は、
+ * 配列に触れなくても内容差分として drift 検出される。
  */
-const STORAGE_OBJECTS_APP_POLICY_NAMES = [
-  'Users can delete own attachments',
-  'Users can delete own avatar',
-  'Users can update own attachments',
-  'Users can update own avatar',
-  'Users can upload own attachments',
-  'Users can upload own avatar',
-  'Users can view own attachments',
-  'Users can view own avatar',
-] as const;
-
-/** SQL の文字列リテラルリスト（`IN (...)` 用）を組み立てる。値は上の const 配列のみで外部入力は通さない。 */
-function sqlStringList(values: readonly string[]): string {
-  return values.map((v) => `'${v.replace(/'/g, "''")}'`).join(', ');
-}
 
 /**
  * 「本物の custom type / domain」だけを `pg_type` から拾うための絞り込み条件（#1900）。

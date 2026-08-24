@@ -266,8 +266,10 @@ jobs:
   # **このジョブより後に commit status を発行する job を置かない。**
   # scripts/__tests__/production-auth-config-audit-contract.test.ts の
   # 「auth audit の結果は commit status を経由しない」は auth-config job 名（コロン込み）の出現位置から
-  # ファイル末尾までを切り出して `statuses/` を含まないことを検証するため、この job を
-  # ファイルの最後に置く（上の deploy-health job 参照）。
+  # ファイル末尾までを切り出して `statuses/` を含まないことを検証する（上の deploy-health job 参照）。
+  # auth-config 以降に job を追加してよい条件は「commit status を発行しない」であって
+  # 「ファイル末尾に置く」ではない —— 実際 storage-rls job（#2323）は auth-config の後に
+  # 続くが、commit status は発行しないため上記 contract test は変わらず green のまま。
   auth-config:
     name: Audit Supabase Auth config (trusted)
     if: github.event_name == 'push' || github.event_name == 'schedule'
@@ -298,3 +300,40 @@ jobs:
           set -o pipefail
           node scripts/production-auth-config-audit.mjs | tee audit-output.txt
           grep -q 'Production Auth Config Audit passed' audit-output.txt
+
+  # production の storage.objects RLS drift の継続検出（#2323）。`pnpm rls:snapshot:check`
+  # は migration から構築した ephemeral な local DB しか見ないため、production だけに
+  # 残存した legacy policy（#2316 の root cause）はこれまで検出できなかった。
+  #
+  # auth-config job と同じ理由（token を branch code へ渡さない・merge gate を巻き込ま
+  # ない）で分離する。発火経路も同じ push:main（merge 直後）と日次 cron のみ。
+  #
+  # **SUPABASE_STORAGE_RLS_AUDIT_TOKEN は 2026-08-24 時点で未発行**（database_read scope
+  # のみの新規 scoped token が要る。発行・1Password ci vault 登録・GitHub Secret 登録は
+  # fast-follow issue で扱う）。token 未設定の間、
+  # scripts/production-storage-rls-audit.mjs は fail ではなく `::notice::` を出して
+  # exit 0 にする（missing token を drift 検出の failure と誤読させない・かといって
+  # 黙って green にもしない、の両立）。
+  storage-rls:
+    name: Audit production storage.objects RLS (trusted)
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Audit production storage.objects RLS
+        env:
+          SUPABASE_STORAGE_RLS_AUDIT_TOKEN: ${{ secrets.SUPABASE_STORAGE_RLS_AUDIT_TOKEN }}
+        run: |
+          set -o pipefail
+          node scripts/production-storage-rls-audit.mjs | tee storage-rls-audit-output.txt
+          grep -qE 'Production Storage RLS Audit (passed|is inactive)' storage-rls-audit-output.txt
