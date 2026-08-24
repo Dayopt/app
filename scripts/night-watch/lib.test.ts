@@ -10,6 +10,7 @@ import {
   findTodayBoardIssue,
   isJstMonday,
   isJstWeekend,
+  isLatestWorkflowRunPending,
   jstDateString,
   jstDayRange,
   jstWeekdayIndex,
@@ -93,6 +94,29 @@ describe('jstWeekdayIndex / isJstWeekend / isJstMonday', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+// #2341: scheduled workflow の遅延で直近 run がまだ in_progress/queued の時、
+// 旧判定規約（status も無条件で赤判定に含める）は誤って赤と判定していた。
+describe('isLatestWorkflowRunPending', () => {
+  it.each(['in_progress', 'queued'])('直近 run が status: %s なら true', (status) => {
+    expect(isLatestWorkflowRunPending([{ status }, { status: 'completed' }])).toBe(true);
+  });
+
+  it('直近 run が completed（terminal）なら false（赤判定を進めてよい）', () => {
+    expect(isLatestWorkflowRunPending([{ status: 'completed' }])).toBe(false);
+  });
+
+  it('過去の run が in_progress でも直近 run が completed なら false', () => {
+    // 配列先頭（最新）だけを見る。2件目以降の in_progress は拾わない。
+    expect(isLatestWorkflowRunPending([{ status: 'completed' }, { status: 'in_progress' }])).toBe(
+      false,
+    );
+  });
+
+  it('run が 0 件なら false（別途 fail-closed の取得失敗パスで扱われる想定）', () => {
+    expect(isLatestWorkflowRunPending([])).toBe(false);
   });
 });
 

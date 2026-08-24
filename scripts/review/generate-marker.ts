@@ -17,15 +17,32 @@
  *     --p1 0 --p2 2 --p2-note "review comment 参照" [--p3 "型安全性の軽微な改善余地"]
  *
  *   pnpm review:marker <PR番号> --agent docs-only --p1 0 --p2 0
+ *
+ * reviewer を実際に起動した場合（docs-only 以外）は `--agent` の代わりに
+ * `--review-result <path>` を使う。path は Workflow が返した
+ * `{role, status, result}[]` をそのまま書き出した JSON ファイル（#2348）。
+ * `ok`/`text-fallback` 以外の status が 1 件でもあれば marker を生成せず失敗する
+ * （1 role が結果を返していないのに Main が `--agent` へ手で書いて gate を
+ * 通す、という抜け道を無くすため。`--agent` との併用は不可）:
+ *
+ *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
+ *     --p1 0 --p2 2 --p2-note "review comment 参照"
  */
 
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
-import { buildMarkerBody } from './generate-marker-core.ts';
+import {
+  assertAgentFieldHasNoKnownReviewerRole,
+  buildMarkerBody,
+  deriveAgentFieldFromReviewResult,
+  type ReviewResultEntry,
+} from './generate-marker-core.ts';
 
 interface Args {
   prNumber: number;
-  agent: string;
+  agent?: string;
+  reviewResultPath?: string;
   p1Count: number;
   p1Note?: string;
   p2Count: number;
@@ -65,8 +82,21 @@ function parseArgs(argv: string[]): Args {
   }
 
   const agent = flags.get('agent');
-  if (!agent) {
-    throw new Error('--agent は必須です（実行した subagent 名、または docs-only）。');
+  const reviewResultPath = flags.get('review-result');
+
+  if (agent && reviewResultPath) {
+    throw new Error(
+      '--agent と --review-result は併用できません。どちらか一方を指定してください。',
+    );
+  }
+  if (!agent && !reviewResultPath) {
+    throw new Error(
+      '--agent または --review-result のいずれかが必須です（実行した subagent 名 / docs-only、' +
+        'または reviewer を起動した場合は Workflow の結果 JSON へのパス）。',
+    );
+  }
+  if (agent) {
+    assertAgentFieldHasNoKnownReviewerRole(agent);
   }
 
   const p1Count = Number(flags.get('p1') ?? '0');
@@ -75,6 +105,7 @@ function parseArgs(argv: string[]): Args {
   return {
     prNumber: Number(prNumberRaw),
     agent,
+    reviewResultPath,
     p1Count,
     p1Note: flags.get('p1-note'),
     p2Count,
@@ -98,13 +129,45 @@ function fetchHeadSha(prNumber: number, repo: string | undefined): string {
   return sha;
 }
 
+/**
+ * `--review-result` の JSON を読み、`agent:` フィールドの値を導出する。
+ * ファイルは Workflow が返した `{role, status, result}[]` をそのまま書き出したもの
+ * （`result` フィールドの中身は使わず role/status のみ見る）。
+ */
+function resolveAgentFromReviewResult(path: string): string {
+  let raw: string;
+  try {
+    raw = readFileSync(path, 'utf8');
+  } catch (err) {
+    throw new Error(`--review-result のファイルを読めませんでした: ${path}（${String(err)}）`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`--review-result のファイルが JSON として不正です: ${path}（${String(err)}）`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`--review-result の JSON は配列である必要があります: ${path}`);
+  }
+
+  const entries = parsed as ReviewResultEntry[];
+  return deriveAgentFieldFromReviewResult(entries);
+}
+
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const headSha = fetchHeadSha(args.prNumber, args.repo);
 
+  const agent = args.reviewResultPath
+    ? resolveAgentFromReviewResult(args.reviewResultPath)
+    : (args.agent as string);
+
   const body = buildMarkerBody({
     headSha,
-    agent: args.agent,
+    agent,
     p1Count: args.p1Count,
     p1Note: args.p1Note,
     p2Count: args.p2Count,

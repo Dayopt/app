@@ -85,6 +85,22 @@
 
 他セッション・レーンの transcript 読みは Haiku subagent へ固定委譲し、指揮台には蒸留結果だけを入れる。蒸留形式は prompt 側で固定する（例:「セッション数 + 各 1 行 + blocked / 衝突の兆候だけ」のように出力形式を明示する）。tier 配分と reasoning effort の選び方はここでは複製せず、`.claude/rules/ai-behavior.md` §委譲時の model 指定・§Reasoning effort を正本として参照する。
 
+### green watch（CI 遷移の機械 backstop）
+
+策定日: 2026-08-24（[#2355](https://github.com/Dayopt/dayopt/issues/2355)）。2026-08-24、レーンJ（PR #2350）が fix round push・CI 全 green・thread 3/3 resolve まで完了していたのに「fix round green 報告」（`.claude/rules/lane-protocol.md` §fix round green 報告）を送らず、PR が指揮台の認知外で停止する事故が発生した（User が発見。詳細は日次盤面 #2326 コメント列）。§レーンの連絡規律 が定める push 型報告（主経路）と本節冒頭の蒸留監視（backstop）は、どちらも「レーンが自分から連絡する」または「指揮台がレーン transcript を能動的に覗く」ことに依存しており、**レーンが green 到達後に沈黙する class を機械的に拾えない**。
+
+指揮台セッションは、**起動時に open PR の CI 遷移 watch（レーン報告非依存の機械 backstop）を常設で張る。** 実装形はセッション内 Monitor（`gh pr list` + `gh pr checks` の 90 秒 poll、状態遷移のみ通知、head SHA で dedupe）を正とする。コマンド例:
+
+```bash
+# open PR 一覧（head SHA を dedupe キーにする）
+gh pr list --repo Dayopt/dayopt --state open --json number,headRefOid
+
+# 各 PR の checks を 90 秒間隔で poll し、状態遷移（pending → success / failure）のみ通知する
+gh pr checks <PR番号> --repo Dayopt/dayopt --json name,state,bucket
+```
+
+**この watch は backstop であり、主経路を置き換えない。** 「watch が拾うから報告不要」への逆転を防ぐ（§レーンの連絡規律 の既存の逆転防止と同型）— レーンは push-ready 報告・レビュー待ち報告・fix round green 報告を watch の有無に関わらず必ず送る。watch が拾うのは「報告が漏れた時に指揮台が気づけるまでの時間」であって、報告そのものの代替ではない。
+
 ## 矛盾報告の独立再検証
 
 策定日: 2026-08-11
