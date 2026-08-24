@@ -707,6 +707,167 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
   });
 });
 
+// worktree 外ファイル編集ガード（2026-08-24, #2359）。
+// レーンは自分の worktree 外を書き換えない（.claude/rules/ai-behavior.md
+// §Writer ownership）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
+// working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
+describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
+  let fixtureRoot: string;
+  let mainDir: string;
+  let laneADir: string;
+  let laneBDir: string;
+  let plainDir: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-boundary-'));
+    mainDir = join(fixtureRoot, 'main');
+    laneADir = join(fixtureRoot, 'laneA');
+    laneBDir = join(fixtureRoot, 'laneB');
+    plainDir = join(fixtureRoot, 'plain');
+    mkdirSync(mainDir);
+    mkdirSync(plainDir);
+    git(['init', '-q', '.'], mainDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      mainDir,
+    );
+    git(['worktree', 'add', '-q', laneADir, '-b', 'laneA'], mainDir);
+    git(['worktree', 'add', '-q', laneBDir, '-b', 'laneB'], mainDir);
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('自分の worktree 内への Write は許可する', () => {
+    expect(runGuard(write(join(laneADir, 'foo.ts')), laneADir)).toBe('allow');
+  });
+
+  it('他レーンの worktree への Write は block する', () => {
+    expect(runGuard(write(join(laneBDir, 'foo.ts')), laneADir)).toBe('block');
+  });
+
+  it('他レーンの worktree への Edit も block する', () => {
+    expect(runGuard(edit(join(laneBDir, 'foo.ts')), laneADir)).toBe('block');
+  });
+
+  it('他レーンの worktree への MultiEdit も block する', () => {
+    expect(runGuard(multiEdit(join(laneBDir, 'foo.ts'), ['x']), laneADir)).toBe('block');
+  });
+
+  it('".." traversal で他レーンへ抜ける形も block する（prefix 比較のすり抜け対策）', () => {
+    expect(runGuard(write(join(laneADir, '..', 'laneB', 'foo.ts')), laneADir)).toBe('block');
+  });
+
+  it('相対パスの file_path は block する（tool 仕様への依存を guard としては信頼しない）', () => {
+    expect(runGuard(write('relative/foo.ts'), laneADir)).toBe('block');
+  });
+
+  it('repo 外（scratchpad 相当、存在しないディレクトリ）への Write は許可する', () => {
+    const outside = join(fixtureRoot, 'outside-not-yet-created', 'foo.md');
+    expect(runGuard(write(outside), laneADir)).toBe('allow');
+  });
+
+  it('自分の worktree 内の未存在サブディレクトリへの Write は許可する（新規ディレクトリ作成を壊さない）', () => {
+    expect(runGuard(write(join(laneADir, 'new', 'nested', 'foo.ts')), laneADir)).toBe('allow');
+  });
+
+  it('main checkout から自分自身への Write は許可する', () => {
+    expect(runGuard(write(join(mainDir, 'foo.ts')), mainDir)).toBe('allow');
+  });
+
+  it('main checkout から他レーンの worktree への Write は block する（指揮台はコードを書かない）', () => {
+    expect(runGuard(write(join(laneADir, 'foo.ts')), mainDir)).toBe('block');
+  });
+
+  it('git 管理外のディレクトリでは fail-open（Write/Edit は高頻度操作のため）', () => {
+    expect(runGuard(write('/tmp/anywhere/foo.ts'), plainDir)).toBe('allow');
+  });
+});
+
+// rm -rf 系（2026-08-24, #2359）。危険なシェイプの列挙（他 worktree 名を数え
+// 上げる等）ではなく、worktree 外へ抜けうる対象の指標（絶対パス起動・`~`・
+// 変数展開・`..`）で判定する（.claude/rules/workflow.md §同型指摘の打ち切り
+// 「denylist をやめて allowlist にする」）。worktree 内で完結する日常的な
+// キャッシュ削除は通す。
+describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
+  it.each([
+    ['rm -rf node_modules', 'rm -rf node_modules'],
+    ['rm -rf .next', 'rm -rf .next'],
+    ['rm -rf apps/product/.next tsbuildinfo', 'rm -rf apps/product/.next tsbuildinfo'],
+    ['非recursive の rm', 'rm /tmp/foo'],
+  ])('worktree 内で完結する形は通す: %s', (_label, cmd) => {
+    expect(runGuard(bash(cmd))).toBe('allow');
+  });
+
+  it.each([
+    ['".." traversal', 'rm -rf ../other-lane'],
+    ['".." のみ', 'rm -rf ..'],
+    ['$HOME 参照', 'rm -rf $HOME/Desktop'],
+    ['~ 参照', 'rm -rf ~/Desktop/dayopt/apps'],
+    ['変数展開', 'rm -rf $VAR'],
+    ['-r（force なし）でも traversal なら block', 'rm -r ../other-lane'],
+  ])('worktree 外を指しうる対象は block する: %s', (_label, cmd) => {
+    expect(runGuard(bash(cmd))).toBe('block');
+  });
+});
+
+// supabase db reset の生呼び出し block（2026-08-24, #2359）。ローカル Supabase
+// は複数 worktree セッションが共有する単一インスタンスのため、reset は他
+// レーンの進行中データも巻き戻す。CLAUDE.md Commands に明記された既定コマンド
+// （pnpm db:reset / db:fresh）は対象外にし、生の CLI 呼び出しだけを block する。
+describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', () => {
+  it.each([
+    ['supabase db reset', 'supabase db reset'],
+    ['npx 経由', 'npx supabase db reset --local'],
+  ])('生の CLI 呼び出しは block する: %s', (_label, cmd) => {
+    expect(runGuard(bash(cmd))).toBe('block');
+  });
+
+  it.each([
+    ['pnpm db:reset', 'pnpm db:reset'],
+    ['pnpm db:fresh', 'pnpm db:fresh'],
+  ])('既定コマンド（pnpm wrapper）は通す: %s', (_label, cmd) => {
+    expect(runGuard(bash(cmd))).toBe('allow');
+  });
+});
+
+// git commit --no-verify（2026-08-24, #2359）。pre-commit に gitleaks が乗った
+// ため、既存の git push --no-verify block を commit にも拡張する。短縮形 `-n`
+// は tail -n / grep -n 等との誤検知リスクが高いため対象外にする
+// （既存の --no-verify トレードオフとは非対称）。
+describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
+  it('長形式 --no-verify は block する', () => {
+    expect(runGuard(bash('git commit -m "x" --no-verify'))).toBe('block');
+  });
+
+  it('短縮形 -n は意図的に対象外（既知のギャップ）', () => {
+    expect(runGuard(bash('git commit -n'))).toBe('allow');
+  });
+
+  it('コミットメッセージ本文の "-n" 相当の文字列で誤検知しない', () => {
+    expect(runGuard(bash('git commit -m "tail -n 5 output"'))).toBe('allow');
+  });
+
+  it('git push -n（dry-run、別意味）は対象外のまま', () => {
+    expect(runGuard(bash('git push -n origin main'))).toBe('allow');
+  });
+
+  it('git push --no-verify は既存どおり block する（回帰確認）', () => {
+    expect(runGuard(bash('git push --no-verify origin foo'))).toBe('block');
+  });
+});
+
 // night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の時だけ
 // 有効になる allowlist。denylist ではなく allowlist にした理由は
 // .claude/rules/workflow.md §同型指摘の打ち切り「denylist をやめて allowlist にする」。
@@ -1054,7 +1215,9 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     });
 
     it('env var が無ければ通常どおり許可される（既存挙動）', () => {
-      expect(runGuard(write('docs/some-file.md'))).toBe('allow');
+      // file_path は絶対パスで渡す（#2359 の worktree 境界 guard が相対パスを
+      // 拒否するようになったため。tool 仕様どおりの絶対パスで書く）。
+      expect(runGuard(write(join(rootDir, 'docs/some-file.md')))).toBe('allow');
     });
   });
 

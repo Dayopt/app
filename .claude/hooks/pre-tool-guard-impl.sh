@@ -37,8 +37,142 @@ disallowed_vault_refs() {
     | grep -vE "$ALLOWED_VAULT_PATTERN" || true
 }
 
+# このセッションが今立っている working tree の root（GUARD_CURRENT_ROOT）、
+# 自分が main checkout かどうか（GUARD_IS_MAIN_CHECKOUT）、家系の**他の**
+# worktree の root 一覧（GUARD_OTHER_ROOTS、改行区切り）を返す
+# （2026-08-24, #2359）。
+#
+# 家系の把握は `git worktree list --porcelain` を正とする。dirname(git-common-dir)
+# から「家系 root」を 1 つ算出する設計は、worktree が main の配下に nested
+# されている（このリポジトリの `.claude/worktrees/<name>` 慣習）前提が
+# 崩れる——git worktree は物理的にどこに置いても機能するため、sibling 配置
+# （テスト fixture で実際に踏んだ）では nested 前提の prefix 比較が全て
+# 素通りしていた。`git worktree list` は物理配置に依存せず家系を正しく
+# 列挙する（既存コメントが述べる「path の慣習では見ない」原則をここでも守る）。
+#
+# main checkout 判定は `--absolute-git-dir` と `--git-common-dir` の比較
+# （linked worktree では前者が `<main>/.git/worktrees/<name>` になり食い違う）。
+# 空のまま cd に渡すと `cd ""` が成功してカレントに留まり誤判定する実測済みの
+# 罠があるため（#1961 由来のコメント参照）、各段階で空チェックしてから cd する。
+# 解決できた時だけ 0 を返す。
+guard_resolve_roots() {
+  GUARD_CURRENT_ROOT=""
+  GUARD_IS_MAIN_CHECKOUT=0
+  GUARD_OTHER_ROOTS=""
+  local toplevel git_dir common_dir line wt_path
+  toplevel=$(git rev-parse --show-toplevel 2> /dev/null || true)
+  git_dir=$(git rev-parse --absolute-git-dir 2> /dev/null || true)
+  common_dir=$(git rev-parse --git-common-dir 2> /dev/null || true)
+  if [ -z "$toplevel" ] || [ -z "$git_dir" ] || [ -z "$common_dir" ]; then
+    return 1
+  fi
+  toplevel=$(cd "$toplevel" 2> /dev/null && pwd -P)
+  git_dir=$(cd "$git_dir" 2> /dev/null && pwd -P)
+  case "$common_dir" in
+    /*) ;;
+    *) common_dir="$PWD/$common_dir" ;;
+  esac
+  common_dir=$(cd "$common_dir" 2> /dev/null && pwd -P)
+  if [ -z "$toplevel" ] || [ -z "$git_dir" ] || [ -z "$common_dir" ]; then
+    return 1
+  fi
+  GUARD_CURRENT_ROOT="$toplevel"
+  if [ "$git_dir" = "$common_dir" ]; then
+    GUARD_IS_MAIN_CHECKOUT=1
+  fi
+
+  while IFS= read -r line; do
+    case "$line" in
+      "worktree "*)
+        wt_path=${line#worktree }
+        wt_path=$(cd "$wt_path" 2> /dev/null && pwd -P)
+        [ -n "$wt_path" ] || continue
+        [ "$wt_path" = "$GUARD_CURRENT_ROOT" ] && continue
+        GUARD_OTHER_ROOTS="$GUARD_OTHER_ROOTS$wt_path
+"
+        ;;
+    esac
+  done < <(git worktree list --porcelain 2> /dev/null || true)
+
+  return 0
+}
+
+# GUARD_NORMALIZED_FILE_PATH が GUARD_OTHER_ROOTS のいずれかの配下（またはその
+# root 自身）に一致するかを判定する。一致すれば 0 を返す。
+guard_path_under_other_worktree() {
+  local other_root
+  while IFS= read -r other_root; do
+    [ -n "$other_root" ] || continue
+    case "$GUARD_NORMALIZED_FILE_PATH" in
+      "$other_root"/* | "$other_root")
+        return 0
+        ;;
+    esac
+  done <<< "$GUARD_OTHER_ROOTS"
+  return 1
+}
+
 # --- Write/Edit/MultiEdit/NotebookEdit: 保護ファイルへの書き込みブロック ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "MultiEdit" ] || [ "$TOOL_NAME" = "NotebookEdit" ]; then
+  # --- worktree 外ファイル編集ガード（2026-08-24, #2359）---
+  # レーンは自分の worktree 外を書き換えない（.claude/rules/ai-behavior.md
+  # §Writer ownership）。scratchpad・memory 等 repo 外は対象外（許可）。
+  #
+  # Write/Edit tool は絶対パスを要求する仕様だが、guard としてそれを信頼せず
+  # 正規化する（`..` を含む形や相対パスでのすり抜けを防ぐ、push 前反証レビュー
+  # 相当の指摘）。正規化できない場合は block（fail-open にしない）。
+  # fail-open にするのは git 自体が家系 root を解決できない時だけ
+  # （Write/Edit は高頻度操作のため、git state の些細な乱れで全 Write/Edit が
+  # 止まるのを避ける。spawn_task の fail-closed とは非対称——あちらは低頻度・
+  # 高価値ターゲットで再試行コストが低い）。
+  if [ -n "$FILE_PATH" ]; then
+    case "$FILE_PATH" in
+      /*) ;;
+      *)
+        echo "BLOCKED: file_path が絶対パスではありません: $FILE_PATH" >&2
+        exit 2
+        ;;
+    esac
+    # ".." path component は理由を問わず block する（symlink 解決に頼らず、
+    # 存在しないディレクトリでも traversal による worktree 脱出を閉じるため。
+    # Write/Edit tool が正当な理由で ".." を使う必要は無い）。
+    case "$FILE_PATH" in
+      *"/../"* | *"/..")
+        echo "BLOCKED: file_path に .. が含まれています（traversal は許可しません）: $FILE_PATH" >&2
+        exit 2
+        ;;
+    esac
+    # 親ディレクトリが存在すれば pwd -P で symlink まで含めて正規化する。
+    # まだ存在しない（新規サブディレクトリの作成）場合は正規化をスキップし
+    # FILE_PATH をそのまま使う——上で ".." は既に排除済みなので安全。
+    guard_dir_part=$(dirname "$FILE_PATH")
+    guard_base_part=$(basename "$FILE_PATH")
+    guard_resolved_dir=$(cd "$guard_dir_part" 2> /dev/null && pwd -P)
+    if [ -n "$guard_resolved_dir" ]; then
+      GUARD_NORMALIZED_FILE_PATH="$guard_resolved_dir/$guard_base_part"
+    else
+      GUARD_NORMALIZED_FILE_PATH="$FILE_PATH"
+    fi
+
+    if guard_resolve_roots; then
+      case "$GUARD_NORMALIZED_FILE_PATH" in
+        "$GUARD_CURRENT_ROOT"/* | "$GUARD_CURRENT_ROOT")
+          : # 自分の worktree 配下、許可
+          ;;
+        *)
+          # 他 worktree の root 一覧に一致すれば block（指揮台が他レーンへ
+          # 書き込む場合も、レーンが他レーンへ書き込む場合も、同じ判定で
+          # 一律に閉じる。物理配置に依存しない — guard_resolve_roots 参照）。
+          # 一覧のどれにも一致しなければ FAMILY 外（scratchpad・memory 等）、許可。
+          if guard_path_under_other_worktree; then
+            echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（.claude/rules/ai-behavior.md §Writer ownership、.claude/rules/workflow.md §main checkout の役割）" >&2
+            exit 2
+          fi
+          ;;
+      esac
+    fi
+  fi
+
   # night-watch（DAYOPT_NIGHT_WATCH=1）は書き込み系 tool を無条件で禁止する。
   #
   # 層2（RemoteTrigger の session_context.allowed_tools から Write/Edit/
@@ -149,26 +283,12 @@ is_single_simple_command() {
 # その状態は `.claude/rules/workflow.md` §main checkout の役割 が既に禁じている
 # 別の規律違反であり、このガードの担当範囲ではない。
 if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
-  # main checkout では両者が同じ .git を指す。linked worktree では
-  # --absolute-git-dir が <main>/.git/worktrees/<name> になる。
-  # --git-common-dir は main checkout だと相対（.git）で返るので絶対化して比べる。
   # 「指揮台だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /
-  # 解決失敗）はブロックへ倒す。
+  # 解決失敗）はブロックへ倒す。判定ロジックは guard_resolve_roots() を
+  # worktree 境界 guard と共用する（2026-08-24, #2359 で関数抽出）。
   guard_is_main_checkout=0
-  guard_git_dir=$(git rev-parse --absolute-git-dir 2> /dev/null || true)
-  guard_common_dir=$(git rev-parse --git-common-dir 2> /dev/null || true)
-  # 空のまま cd に渡さないこと。`cd ""` は bash では成功してカレントに留まるため、
-  # 両方が同じ cwd に解決されて「一致＝指揮台」と誤判定する（実測で踏んだ）。
-  if [ -n "$guard_git_dir" ] && [ -n "$guard_common_dir" ]; then
-    case "$guard_common_dir" in
-      /*) ;;
-      *) guard_common_dir="$PWD/$guard_common_dir" ;;
-    esac
-    guard_git_dir=$(cd "$guard_git_dir" 2> /dev/null && pwd -P)
-    guard_common_dir=$(cd "$guard_common_dir" 2> /dev/null && pwd -P)
-    if [ -n "$guard_git_dir" ] && [ "$guard_git_dir" = "$guard_common_dir" ]; then
-      guard_is_main_checkout=1
-    fi
+  if guard_resolve_roots && [ "$GUARD_IS_MAIN_CHECKOUT" = "1" ]; then
+    guard_is_main_checkout=1
   fi
   if [ "$guard_is_main_checkout" -ne 1 ]; then
     echo "BLOCKED: チップ起票（spawn_task）は指揮台セッションの専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) 指揮台へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（.claude/rules/orchestration.md §レーンの連絡規律）" >&2
@@ -390,6 +510,19 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     exit 2
   fi
 
+  # git commit --no-verify（pre-commit の gitleaks スキャンを迂回する経路。
+  # 2026-08-24, #2359 で pre-commit に実質的なセキュリティ境界が乗ったため、
+  # commit 側の迂回路も塞ぐ）。長形式 `--no-verify` のみを対象にする —
+  # 短縮形 `-n` は `tail -n` / `grep -n` / `sort -n` 等で日常的に出現し、
+  # コミットメッセージ本文（`[^;&|]*` の走査範囲に丸ごと入る）でも高頻度に
+  # 誤検知するため、push 前反証レビュー相当の指摘を受けて対象外にした
+  # （--no-verify の既存トレードオフとは非対称——あちらは 11 文字の literal で
+  # 実質レアケース）。
+  if echo "$COMMAND" | grep -qE '(^|[;&|]|&&|\|\|)[[:space:]]*git[[:space:]]+commit[^;&|]*--no-verify'; then
+    echo "BLOCKED: git commit --no-verify は禁止です。pre-commit の gitleaks スキャンを迂回するため（heredoc の本文など、この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）" >&2
+    exit 2
+  fi
+
   # 以降の env-file 系検査は行継続を畳んだ文字列で行う。bash は実行前に
   # `\` + 改行を除去するため、複数行に整形しただけで行単位の grep は
   # 分断されて検出できない（敵対的な回避ではなく通常の整形で起きる）。
@@ -413,6 +546,48 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\"/}
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\'/}
   COMMAND_UNQUOTED=${COMMAND_UNQUOTED//\\/}
+
+  # --- rm -r 系: worktree 外を指しうる対象を伴う呼び出しを block
+  #     （2026-08-24, #2359）---
+  #
+  # 「危険なシェイプの列挙」（他 worktree 名を数え上げる等）にはしない
+  # （.claude/rules/workflow.md §同型指摘の打ち切り「denylist をやめて
+  # allowlist にする」、push 前反証レビュー相当の指摘: `rm -rf $VAR` /
+  # `rm -rf ~/...` / `rm -rf ../lane-b` が列挙をすり抜ける）。
+  # worktree 内で完結する日常的なキャッシュ削除（`rm -rf node_modules` /
+  # `.next` 等、docs/engineering/diagnostics.md §3 が推奨する操作）は通す。
+  #
+  # 判定は 2 段: (1) recursive フラグ付き rm の呼び出しがあるか
+  # (2) コマンド全体に「対象が worktree 外へ抜けうる」指標
+  # （絶対パス起動・`~`・`$`（変数展開）・`..` traversal）が含まれるか。
+  # 両方成立した時だけ block する。指標をコマンド全体（rm の引数に限定しない）
+  # で見るのは、`.op-env.human` 境界や他の危険引数検査と同じく、位置に
+  # 依存せず判定するため。
+  RM_RECURSIVE_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(/[^[:space:]]*/)?rm[[:space:]].*(-[a-zA-Z]*[rR][a-zA-Z]*([[:space:]]|$)|--recursive([[:space:]=]|$))'
+  RM_ESCAPE_TARGET_RE='(^|[[:space:]/])(~|\$)|(^|[[:space:]/])\.\.([[:space:]/]|$)'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$RM_RECURSIVE_RE" && echo "$scanned" | grep -qE "$RM_ESCAPE_TARGET_RE"; then
+      echo "BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: $COMMAND" >&2
+      exit 2
+    fi
+  done
+
+  # --- supabase db reset の生呼び出し block（2026-08-24, #2359）---
+  #
+  # ローカル Supabase は複数 worktree セッションが共有する単一インスタンス
+  # （memory: ローカルSupabaseは共有状態で巻き戻る）。reset は他レーンの
+  # 進行中データも巻き戻すため、CLAUDE.md Commands に明記された既定コマンド
+  # `pnpm db:reset` / `pnpm db:fresh`（内部で同じ reset を呼ぶが、User が既に
+  # sanction した文書化済みコマンド）は対象外にし、**生の CLI 呼び出し**だけを
+  # 狙う（`.op-env.human` 境界と同型: ラップされた安全な入口は許可、生の
+  # 危険プリミティブは block）。
+  SUPABASE_DB_RESET_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(npx[[:space:]]+)?supabase[[:space:]]+db[[:space:]]+reset'
+  for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
+    if echo "$scanned" | grep -qE "$SUPABASE_DB_RESET_RE"; then
+      echo "BLOCKED: supabase db reset の直接呼び出しは禁止です。ローカル Supabase は複数レーンが共有する単一インスタンスで、reset は他レーンの進行中データも巻き戻します。既定コマンド pnpm db:reset / pnpm db:fresh を使うか、他レーンへの影響が無いことを確認してから指揮台へ相談してください（この文字列に言及しただけでも落ちます）" >&2
+      exit 2
+    fi
+  done
 
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     # 雛形の直接実行。.op-env.human.example は op://human/... の参照を

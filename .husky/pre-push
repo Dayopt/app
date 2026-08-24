@@ -60,3 +60,54 @@ CONFIRM
     exit 1
   fi
 fi
+
+# --- 実行ゲート（2026-08-24, #2359）: pause point 確認後に走る機械検証 ---
+# marker が既に存在する（= 上の pause を一度通過済みの）push でのみ到達する。
+# HAS_BRANCH_UPDATE=0（tag push・branch 削除）は対象外 — branch:finish の
+# 掃除 push を巻き込まないため（上の pause point と同じ理由）。
+#
+# これは CI Static Checks の代替ではない。`pnpm check` 相当のフルセットではなく
+# affected スコープの高速フィルタで、フックが通っても CI は必ず走る
+# （.claude/rules/workflow.md §Pause point「フックは CI 前に無料で落とす係」）。
+if [ "$HAS_BRANCH_UPDATE" = "1" ]; then
+  TURBO_TASKS="typecheck lint test:run"
+
+  # ローカルの origin/main が古いと affected 判定がずれうるが、over-scope
+  # 方向（対象が増える）の安全側リスクとして許容する。
+  #
+  # root/scripts のみの変更（本チケット自身の diff がまさにこれ）では
+  # --filter=...[origin/main] の選択パッケージが 0 件になり、affected run が
+  # 何もせず成功する no-op になる実測を確認済み（2026-08-24）。0 件の時は
+  # full run へフォールバックする。
+  AFFECTED_COUNT=$(npx turbo run $TURBO_TASKS --filter="...[origin/main]" --dry=json 2>/dev/null | jq '.packages | length' 2>/dev/null)
+
+  if [ -z "$AFFECTED_COUNT" ] || [ "$AFFECTED_COUNT" = "0" ] || [ "$AFFECTED_COUNT" = "null" ]; then
+    echo "→ affected package 選択が空のため full run にフォールバックします（root/scripts 変更等）" >&2
+    if ! npx turbo run $TURBO_TASKS; then
+      echo "✗ typecheck/lint/test:run が失敗しました。push を中断します。" >&2
+      exit 1
+    fi
+  else
+    if ! npx turbo run $TURBO_TASKS --filter="...[origin/main]"; then
+      echo "✗ typecheck/lint/test:run（affected）が失敗しました。push を中断します。" >&2
+      exit 1
+    fi
+  fi
+
+  # turbo タスクに乗っていない検証（scripts/ の typecheck・test、format）。
+  # `pnpm typecheck` 全体（turbo run typecheck && typecheck:scripts）と
+  # `pnpm check` の一部（format:check・test:scripts）から、CI Static Checks
+  # と揃えるために必要な最小セットだけを turbo run の外で追加する。
+  if ! pnpm typecheck:scripts; then
+    echo "✗ typecheck:scripts が失敗しました。push を中断します。" >&2
+    exit 1
+  fi
+  if ! pnpm test:scripts; then
+    echo "✗ test:scripts が失敗しました。push を中断します。" >&2
+    exit 1
+  fi
+  if ! pnpm format:check; then
+    echo "✗ format:check が失敗しました。push を中断します。" >&2
+    exit 1
+  fi
+fi
