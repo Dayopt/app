@@ -1,6 +1,6 @@
 ---
 status: active
-last_verified: 2026-08-19
+last_verified: 2026-08-24
 code:
   - apps/product/src/features/activities
   - apps/product/src/features/calendar/components/activity-filter
@@ -11,7 +11,7 @@ code:
 
 # tag-model-replacement — タグを アクティビティ / カテゴリー / セグメント の 3 構造へ全置換する
 
-[epic #2162](https://github.com/Dayopt/dayopt/issues/2162) で User が裁可した 3 構造モデルを、スキーマ・UI・分析・用語・移行順序へ落とす全体設計書。**大規模判定**（新テーブル 4 本、blast radius が tags / calendar / timeblock / review / MCP / OAuth / design token 横断、想定 Step 9）。
+[epic #2162](https://github.com/Dayopt/dayopt/issues/2162) で User が裁可した 3 構造モデルを、スキーマ・UI・分析・用語・移行順序へ落とす全体設計書。**大規模判定**（新テーブル 4 本、blast radius が tags / calendar / timeblock / review / MCP / OAuth / design token 横断、想定 Step 10。2026-08-24、#2175 の前提欠落を補う Step 8「tag_id 剥離」を追加）。
 
 決定の経緯と確定仕様は epic #2162 が正本で、本書はそれを実装計画に翻訳する。進捗・残作業は epic 側に置き、本書には設計と理由だけを書く（`.claude/rules/workflow.md` §issue と docs の分担）。
 
@@ -409,7 +409,7 @@ DB 側の CHECK 制約にも scope 配列が **4 箇所**ハードコードさ�
 
 なお本 repo の破壊的改名の既存パターンは in-place 置換ではなく **additive**（`entries.list` が `plans.list` / `records.list` と並存している）で、alias 方針はこの前例と一致する。
 
-**冪等 digest のキー名は変えない**（レーン H 推奨を採用）: `'tagId'` を `'activityId'` へ変えると **deploy 前に発行された receipt と digest が一致しなくなり、同じ `operation_id` で再送したクライアントが `DM006 IDEMPOTENCY_KEY_REUSED` を踏む**。digest は外部に露出しない内部表現で、クライアントが観測するのは receipt の `resource_id` / `version` だけなので、キー名を「正しく」する価値より in-flight な冪等キーを壊さない価値が大きい。直すなら既存 receipt が全部期限切れになった後（Step 8 のタイミング）。
+**冪等 digest のキー名は変えない**（レーン H 推奨を採用）: `'tagId'` を `'activityId'` へ変えると **deploy 前に発行された receipt と digest が一致しなくなり、同じ `operation_id` で再送したクライアントが `DM006 IDEMPOTENCY_KEY_REUSED` を踏む**。digest は外部に露出しない内部表現で、クライアントが観測するのは receipt の `resource_id` / `version` だけなので、キー名を「正しく」する価値より in-flight な冪等キーを壊さない価値が大きい。直すなら既存 receipt が全部期限切れになった後（Step 9 のタイミング）。
 
 `MCP_MUTATION_RECEIPT_SCHEMA_VERSION`（現在 `1`）は DB に永続化される **`MCP_TOOL_SCHEMA_VERSION` とは別のカウンタ**。混同すると冪等 replay が壊れる。bump するのは read tool の envelope を versioning している後者だけで、`tagId` を保持する tool は **17 中 12 本**、出力 schema は全部 `.strict()`。
 
@@ -467,17 +467,18 @@ Step 7 の削除後に走らせ、孤児化した barrel / ファイルを拾う
 
 **merge 順は指揮台が確定**（2026-08-18、[#2162 コメント](https://github.com/Dayopt/dayopt/issues/2162)で更新済み）: `F → E1 → H1 → F2（データ切替の小 round、レーン F）→ H2 → G`。F（#2179）を先頭に置くのは、open PR が #2179 のみで E1/H1 が未 PR 化のため先行追従の無効化が発生せず、#2179 の中身（UI shell / 語彙 / DnD 撤去）が E1/H1 に依存しないため。activities への実データ切替は従来どおり H1 merge 後（F2）に行う。
 
-| #   | Step                                                                                                                                                                                                                | レーン                          | Reversibility                     | 備考                                                                                                                                                                                                                                                                                   |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | **用語と docs の確定** — glossary 改訂、禁止表記に「タグ」追加、`copy:check` 更新、`specs/activities.md` 新設、`strategy.md` §4-1 / §4-2 の語彙更新                                                                 | G                               | `[minutes]`                       | docs / script のみ。コード非依存で先行できる                                                                                                                                                                                                                                           |
-| 1   | **schema 新設** — `categories` / `activities` + RLS + GRANT（パターン A・`anon` なし）+ privilege invariant + `assert_active_timeblock_activity_v1` + 生成型 + RLS snapshot                                         | E1                              | `[hours]`                         | 純追加。`tags` に触れない。`segments` はここで作らない                                                                                                                                                                                                                                 |
-| 2   | **server 層 + GDPR** — `features/activities/` の tRPC router / service / Zod / 単体 test。**`auth/server/user-service.ts` の export / deleteAllData への新テーブル追加を同梱**（指揮台の writer 境界確定）          | E1                              | `[minutes]`                       | テーブル追加と同時でないとエクスポート漏れ・削除漏れの穴が開く                                                                                                                                                                                                                         |
-| 3   | **plans / records の参照切替** — `activity_id` 列 + 複合 FK + コマンド RPC **13 本**の DROP→CREATE→GRANT 再適用（additive-only の意図は維持）+ `record_plan_command_v1` のコピー経路                                | H1                              | `[hours]`                         | `tag_id` と併存。UI 未接続。**characterization test を先に書く**（下記）                                                                                                                                                                                                               |
-| 4   | **cutover** — サイドバー IA / 作成・編集 / カレンダー表示を activity へ。DnD 撤去 + playground 2 ディレクトリ削除 + `@dnd-kit` 3 依存撤去。filter store の version 上げ                                             | F                               | `[minutes]` / データは `[hours]`  | **ここで既存ブロックが全部「アクティビティなし」になる**（データ移行しない確定の帰結）。コードの revert は commit 単位で効くが、窓の中で作られたブロックは `activity_id` を持ち `tag_id` を持たないため revert すると分類が消えて見える。**この `[minutes]` は Step 5 merge 前に限る** |
-| 5   | **分析軸の切替 + セグメント** — Time P/L・見積もり精度・statistics をアクティビティ / カテゴリー軸へ。**`segments` / `segment_activities` の schema もここ** + セグメント UI                                        | G                               | `[minutes]` / schema は `[hours]` | Step 4 merge から本 Step merge までの間、分析は新規ブロックを未分類として扱う                                                                                                                                                                                                          |
-| 6   | **公開契約** — MCP tool 置換 + schemaVersion 2→3、`read:activities` へ alias なしクリーン置換（実装確定。当初は「`read:tags` は alias 維持」だったが production 実測 0 件で §7-4 の更新どおり変更）、公開 docs 更新 | H2                              | `[irreversible]`                  | schemaVersion の bump と MCP フィールド名は戻さない。**冪等 digest のキーは触らない**                                                                                                                                                                                                  |
-| 7   | **非破壊 cleanup** — `features/tags` / tag-filter / i18n キー削除、`--tag-*` → `--category-*` トークン                                                                                                              | **本日 scope 外**（指揮台采配） | `[minutes]`                       | 明日以降の編成。commit 単位で revert 可能                                                                                                                                                                                                                                              |
-| 8   | **destructive migration** — `tags` テーブル・`tag_id` 列・tag 専有 RPC / トリガー群 drop                                                                                                                            | 未割当                          | `[days]`                          | **`EXPLICIT AUTHORITY`**。明示指示 + 独立レビュー + backup / PITR 確認が揃うまで実行しない                                                                                                                                                                                             |
+| #   | Step                                                                                                                                                                                                                         | レーン                          | Reversibility                     | 備考                                                                                                                                                                                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | **用語と docs の確定** — glossary 改訂、禁止表記に「タグ」追加、`copy:check` 更新、`specs/activities.md` 新設、`strategy.md` §4-1 / §4-2 の語彙更新                                                                          | G                               | `[minutes]`                       | docs / script のみ。コード非依存で先行できる                                                                                                                                                                                                                                           |
+| 1   | **schema 新設** — `categories` / `activities` + RLS + GRANT（パターン A・`anon` なし）+ privilege invariant + `assert_active_timeblock_activity_v1` + 生成型 + RLS snapshot                                                  | E1                              | `[hours]`                         | 純追加。`tags` に触れない。`segments` はここで作らない                                                                                                                                                                                                                                 |
+| 2   | **server 層 + GDPR** — `features/activities/` の tRPC router / service / Zod / 単体 test。**`auth/server/user-service.ts` の export / deleteAllData への新テーブル追加を同梱**（指揮台の writer 境界確定）                   | E1                              | `[minutes]`                       | テーブル追加と同時でないとエクスポート漏れ・削除漏れの穴が開く                                                                                                                                                                                                                         |
+| 3   | **plans / records の参照切替** — `activity_id` 列 + 複合 FK + コマンド RPC **13 本**の DROP→CREATE→GRANT 再適用（additive-only の意図は維持）+ `record_plan_command_v1` のコピー経路                                         | H1                              | `[hours]`                         | `tag_id` と併存。UI 未接続。**characterization test を先に書く**（下記）                                                                                                                                                                                                               |
+| 4   | **cutover** — サイドバー IA / 作成・編集 / カレンダー表示を activity へ。DnD 撤去 + playground 2 ディレクトリ削除 + `@dnd-kit` 3 依存撤去。filter store の version 上げ                                                      | F                               | `[minutes]` / データは `[hours]`  | **ここで既存ブロックが全部「アクティビティなし」になる**（データ移行しない確定の帰結）。コードの revert は commit 単位で効くが、窓の中で作られたブロックは `activity_id` を持ち `tag_id` を持たないため revert すると分類が消えて見える。**この `[minutes]` は Step 5 merge 前に限る** |
+| 5   | **分析軸の切替 + セグメント** — Time P/L・見積もり精度・statistics をアクティビティ / カテゴリー軸へ。**`segments` / `segment_activities` の schema もここ** + セグメント UI                                                 | G                               | `[minutes]` / schema は `[hours]` | Step 4 merge から本 Step merge までの間、分析は新規ブロックを未分類として扱う                                                                                                                                                                                                          |
+| 6   | **公開契約** — MCP tool 置換 + schemaVersion 2→3、`read:activities` へ alias なしクリーン置換（実装確定。当初は「`read:tags` は alias 維持」だったが production 実測 0 件で §7-4 の更新どおり変更）、公開 docs 更新          | H2                              | `[irreversible]`                  | schemaVersion の bump と MCP フィールド名は戻さない。**冪等 digest のキーは触らない**                                                                                                                                                                                                  |
+| 7   | **非破壊 cleanup** — `features/tags` / tag-filter / i18n キー削除、`--tag-*` → `--category-*` トークン                                                                                                                       | **本日 scope 外**（指揮台采配） | `[minutes]`                       | 明日以降の編成。commit 単位で revert 可能                                                                                                                                                                                                                                              |
+| 8   | **tag_id 剥離** — additive-only（Step 3）で残した 13 command RPC の `p_tag_id` 引数・14 TS ファイルの `tagId` 読み書き・検索クエリの `tags` 参照を除去し、DB書き込み経路から tags を完全に切り離す（テーブル・列自体は残す） | 未割当                          | `[minutes]`                       | 2026-08-24 に発覚した前提欠落（#2175）の補完 Step。詳細は §Step 8（tag_id 剥離）の設計                                                                                                                                                                                                 |
+| 9   | **destructive migration** — `tags` テーブル・`tag_id` 列・tag 専有 RPC / トリガー群 drop（孤立 10 関数の先行 drop は行わず本 Step へ同乗）                                                                                   | 未割当                          | `[days]`                          | **`EXPLICIT AUTHORITY`**。Step 8 の完了 + 剥離後の観測窓の再計測 + 明示指示 + 独立レビュー + backup / PITR 確認が揃うまで実行しない                                                                                                                                                    |
 
 ### Step 7 は部分実施（2026-08-19、#2176）
 
@@ -507,7 +508,7 @@ Step 7 の削除後に走らせ、孤児化した barrel / ファイルを拾う
 - **同一 migration 内で「旧シグネチャを厳密指定して `DROP` → 新シグネチャで `CREATE`」**にする。関数が 1 本に保たれ、旧バンドル（DEFAULT で埋まる）も新バンドルも通る（実測確認済み）
 - **`DROP` すると ACL が失われる。** 本 repo は `20260604230607_harden_function_execute_privileges.sql` で関数の EXECUTE を一斉 REVOKE + allowlist 化しているため、**同じ migration 内で GRANT / REVOKE を再適用しないと、その関数だけ hardening 前（PUBLIC に EXECUTE）へ静かに戻る**
 - additive-only の**意図**は変わらない: 新パラメータは `p_activity_id uuid DEFAULT NULL` として末尾に足し、既存パラメータの名前・型・順序・既定値を変えない
-- 戻り値の row shape も**列を足すだけ**。`tag_id` 列を消したり rename したりしない（消すのは Step 8）。`create_plan_command_v1` 系は `RETURNS SETOF public.plans` なので、`plans` に列を足せば `DROP FUNCTION` 無しで戻り値に反映される
+- 戻り値の row shape も**列を足すだけ**。`tag_id` 列を消したり rename したりしない（消すのは Step 9）。`create_plan_command_v1` 系は `RETURNS SETOF public.plans` なので、`plans` に列を足せば `DROP FUNCTION` 無しで戻り値に反映される
 - **`private.{create,update}_{plan,record}_unserialized_v1` も同じ制約の対象**。公開 RPC だけ additive にしても、内部関数のシグネチャを置き換えれば同じ窓で壊れる
 
 **表面積は 13 本**（当初「8 本」と見積もっていたが実測で訂正、レーン H）:
@@ -565,11 +566,41 @@ Step 4 と 5 を 1 PR に束ねると、tag-filter 25 ファイル + calendar + 
 
 **Step 4 のレーンは #2161 の merge 後に起こす。** Step 0〜3 は重ならないので先行してよい（`.claude/rules/ai-behavior.md` §Writer ownership）。
 
-### Step 8 の前提条件
+### Step 8（tag_id 剥離）の設計
 
-`workflow.md` §分割してよい理由 の「code removal と destructive migration の混在回避」に従い、Step 7 と Step 8 を必ず別 PR にする。Step 8 の実行前に揃えるもの:
+策定日: 2026-08-24（レーンK、issue [#2175](https://github.com/Dayopt/dayopt/issues/2175) の DoD 3 実測で発覚した前提欠落の補完。指揮台判断は[同 issue のコメント](https://github.com/Dayopt/dayopt/issues/2175#issuecomment-5392504493)、User 裁可済み）
 
-- Step 7 が production に反映され、`tags` を参照するコードが 1 行も動いていないことを実測（Sentry で `tags` 関連エラー 0 件、静穏期間）
+§Step 8 の前提条件（旧版、現 Step 9 の前提条件）は「Step 7 完了 = tags を参照するコードが 1 行も動いていない」を凍結時点（2026-08-18）の想定として書いたが、**Step 3 の additive-only 設計（`p_tag_id` を書き込み経路に残す判断）を巻き戻す Step が、Step 4〜7 のどこにも計画されていなかった**。2026-08-24 時点で `db:fresh` 後の `pg_proc` / `pg_depend` catalog 実測により、次が判明した:
+
+- **13 の command RPC** が今も `p_tag_id`（または `p_tag_id_present` フラグ）を引数に持ち、SQL 本体で `tags.tag_id` 列を読み書きしている: 4 public wrapper（`create_plan_command_v1` / `update_plan_command_v1` / `create_record_command_v1` / `update_record_command_v1`）+ 4 private 実体（`private.{create,update}_{plan,record}_unserialized_v1`）+ 4 `apply_mcp_*_v1` + `record_plan_command_v1` / `private.record_plan_unserialized_v1`（Plan→Record 変換時に `tag_id` をコピー、Plan 側の値をそのまま複写する経路。#7-2 参照）。加えて `private.confirm_day_plans_unserialized_v1`（一括確定バッチ）も同型のコピーを行う
+- **14 の TS ファイル**（`plan-service.ts` / `record-service.ts` / `timeblock-command-client.ts` / `timeblock-command-service.ts` / `mcp-mutation-client.ts` / `mcp-mutation-db.ts` / `TimeblockInspectorForm.tsx` / `timeblock-day-diff.ts` / `timeblock-duplicate.ts` / `timeblock-clipboard.ts` / `timeblock-menu-items.ts` / `build-day-diff-inputs.ts` / `types/plan-event.ts` / `types/record-event.ts`）が、create 時は `tagId: null`、update 時は `tagId: existing.tag_id` を毎回 RPC へ再送している（`plan-service.ts:175,229` / `record-service.ts:167,226` で実測）。UI に tag を新規割り当てる導線は無い（`TagRow.tsx` / `TagQuickSelector.tsx` は #2258 で撤去済み）が、**既存の tag_id を持つ過去ブロックを編集するたび同じ値をそのまま echo している**
+- **検索クエリ**（`timeblock-search-query.ts` の `buildTimeblockSearchFilter`）が `public.tags` を名前で ilike 検索し、ヒットした `tag_id` で `plans` / `records` を絞る filter を **アクティビティ名検索との和集合**（`.or()`）で構築している（同ファイル 26-32 行目のコメントが「tags 経路は Step 7 の tags 撤去まで残す」と明記、Step 7 が部分実施のため今も生存）
+- `enforce_plan_tag_owner()` / `enforce_record_tag_owner()`（tags 専有 trigger 関数、drop 対象）は `NEW.tag_id IS NOT NULL` の時に `SELECT ... FROM public.tags` を実行する。上記の echo により**tag 付きの過去ブロックを編集するたび今も発火している**
+- GDPR 削除の実処理（`delete_all_user_data_command_v5 → v4`、account 削除の実経路として実測確認済み）が `DELETE FROM public.tags WHERE user_id = ...` を含む
+
+**Step 8 のスコープ**: 上記すべてから `tag_id` / `tags` への参照を除去する。**`tags` テーブル・`plans.tag_id` / `records.tag_id` 列そのものは残す**（物理 drop は Step 9）。
+
+- DB: 13 RPC を「旧シグネチャを厳密指定して `DROP` → `p_tag_id` を除いた新シグネチャで `CREATE`」する（Step 3 と同じ additive-only の逆操作。GRANT / REVOKE の再適用も同様に必須、§Step 3 の RPC 変更は additive-only に固定する 参照）。`enforce_plan_tag_owner` / `enforce_record_tag_owner` トリガーは、列がまだ残っていても `tag_id` を書く経路が無くなれば `UPDATE OF tag_id` 条件が発火しなくなるため、この Step で trigger ごと drop してよい（tags テーブル自体の存続とは独立）
+- TS: 14 ファイルから `tagId` フィールドを削除し、型・呼び出し引数を simplify する。5 integration test（`rls-access` / `mcp-stage1-rollout-compat` / `tag-assignment-guards` / `mcp-tag-tristate-guards` / `user-data-purge-generation`）を合わせて修正する
+- 検索: `timeblock-search-query.ts` から `tags` 名前検索を削除し、`activities` のみで和集合を組む（コメントの「Step 7 の tags 撤去まで残す」を実行に移す）
+- 生成型・RLS snapshot は migration 適用済みの local DB から再生成する（手編集しない）
+
+**旧ブロックの分類表示・検索への影響（ユーザー可視の挙動変化）**:
+
+| 項目                                    | Step 8 前                                                                                                                       | Step 8 後                                                                                                                                                                                   | 変化の有無                                                                                                                                                                               |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| カレンダー / インスペクターでの分類表示 | tag_id を持つ旧ブロックも「アクティビティなし」表示（Step 4 cutover 済み、`TagIcon` 等の表示コンポーネントは #2258 で撤去済み） | 変化なし                                                                                                                                                                                    | **無し** — 表示は Step 4 の時点で既に activity_id のみを見ている                                                                                                                         |
+| 旧ブロックの `tag_id` 値そのもの        | 編集のたびに同じ値が re-write される（凍結はされていない）                                                                      | RPC が `p_tag_id` を受け付けなくなるので、**次回編集以降 `tag_id` は書き込み対象から外れ、値は Step 8 適用時点の状態で凍結される**（列が残る限り DB 上には残存し、Step 9 で物理削除される） | **軽微** — 実害はないが「今も動いている」から「凍結された残骸」に性質が変わる                                                                                                            |
+| **note に含まれない旧 tag 名での検索**  | 旧タグ名で検索すると `tag_id.in.(...)` filter がヒットし、該当ブロックが検索結果に出る                                          | `tags` 名前検索を削除するため、**note 本文にその語を含まないブロックは検索から消える**                                                                                                      | **あり（唯一のユーザー可視劣化）**。単一ユーザー・課金前・Step 4 以降ずっと「アクティビティなし」表示だった導線なので実利用への影響は限定的と見るが、剥離実装 issue の PR 本文に明記する |
+| アクティビティ名検索                    | 影響なし                                                                                                                        | 影響なし                                                                                                                                                                                    | 無し                                                                                                                                                                                     |
+
+**Reversibility**: `[minutes]`。RPC・TS・検索クエリいずれも `git revert` で戻せる純粋な code 変更で、テーブル・列は温存されるためデータ損失を伴わない。
+
+### Step 9 の前提条件
+
+`workflow.md` §分割してよい理由 の「code removal と destructive migration の混在回避」に従い、Step 7・Step 8・Step 9 は必ず別 PR にする。Step 9 の実行前に揃えるもの:
+
+- **Step 8（tag_id 剥離）が production に反映され、`tags` / `tag_id` を参照するコードが 1 行も動いていないことを実測**（Sentry で `tags` 関連エラー 0 件、静穏期間を Step 8 merge 後に再計測する。Step 7 merge 時点の計測は Step 8 の変更を経ていないため無効）
 - backup / PITR の存在確認
 - drop 対象の完全シグネチャと依存を catalog（`pg_depend`）で確認してから drop する（time-model-split Step 9b と同じ手順）
 - 生成型と RLS snapshot は migration 適用済みの local DB から再生成する（手編集しない）
@@ -643,7 +674,7 @@ User 裁可 c は「実測 0 件ならクリーン置換」だが、**その裁�
 - `decision-principles.md` ルール 1「破滅に賭けるな」— 期待値ではなく、失敗したときに何が残るかで判断する
 - grant 実測が 0 件でも、**実測と deploy の間に新しい grant が発行される窓**がある
 
-**推奨: 実測結果によらず alias を残す。** 掃除は Step 8 のタイミングで、既存 receipt / grant が全部期限切れになってから行う。この推奨は User 裁可 c を覆すものなので、**指揮台経由で 1 度だけ確認したい**（実測 0 件だった場合にどちらを採るか）。
+**推奨: 実測結果によらず alias を残す。** 掃除は Step 9 のタイミングで、既存 receipt / grant が全部期限切れになってから行う。この推奨は User 裁可 c を覆すものなので、**指揮台経由で 1 度だけ確認したい**（実測 0 件だった場合にどちらを採るか）。
 
 ## 13. 検証
 
