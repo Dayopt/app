@@ -795,6 +795,62 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
   });
 });
 
+// nested 配置（このリポジトリの実際の運用: worktree は main の配下の
+// `.claude/worktrees/<name>` に nested される）専用の fixture。
+// merge 前クロスレビュー risk-reviewer 指摘: sibling 配置の fixture（上の
+// describe）だけでは「指揮台（CURRENT_ROOT = 家系の親）から見ると、他
+// レーンのパスも $GUARD_CURRENT_ROOT/* に該当してしまい先に許可側へ倒れる」
+// class を検出できない。longest-prefix-match で修正済み（guard_path_belongs_to_current_root）。
+describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
+  let fixtureRoot: string;
+  let mainDir: string;
+  let laneBDir: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-nested-'));
+    mainDir = join(fixtureRoot, 'main');
+    laneBDir = join(mainDir, '.claude', 'worktrees', 'laneB');
+    mkdirSync(mainDir);
+    git(['init', '-q', '.'], mainDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      mainDir,
+    );
+    mkdirSync(join(mainDir, '.claude', 'worktrees'), { recursive: true });
+    git(['worktree', 'add', '-q', laneBDir, '-b', 'laneB'], mainDir);
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('main checkout から自分自身への Write は許可する', () => {
+    expect(runGuard(write(join(mainDir, 'foo.ts')), mainDir)).toBe('allow');
+  });
+
+  it('main checkout から nested な他レーンへの Write は block する', () => {
+    expect(runGuard(write(join(laneBDir, 'foo.ts')), mainDir)).toBe('block');
+  });
+
+  it('nested レーンから自分自身への Write は許可する', () => {
+    expect(runGuard(write(join(laneBDir, 'foo.ts')), laneBDir)).toBe('allow');
+  });
+
+  it('nested レーンから main への Write は block する', () => {
+    expect(runGuard(write(join(mainDir, 'foo.ts')), laneBDir)).toBe('block');
+  });
+});
+
 // rm -rf 系（2026-08-24, #2359）。危険なシェイプの列挙（他 worktree 名を数え
 // 上げる等）ではなく、worktree 外へ抜けうる対象の指標（絶対パス起動・`~`・
 // 変数展開・`..`）で判定する（.claude/rules/workflow.md §同型指摘の打ち切り
@@ -822,15 +878,79 @@ describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
     expect(runGuard(bash(cmd))).toBe('block');
   });
 
+  it('binary path 前置（/bin/rm）+ 相対パス target は通す', () => {
+    expect(runGuard(bash('/bin/rm -rf .next'))).toBe('allow');
+  });
+
   // 回帰テスト（DoD 動作確認中に自己検出）: escape-target 判定をコマンド全体で
   // 見ると、rm と無関係な別 segment の `$` が誤って block を引き起こしていた
   // （`rm -rf <安全な相対パス> && echo "done: $?"` が block される事故）。
   // 判定は rm を含む segment（; & | で区切った 1 文）に限定する。
-  it.each([
-    ['絶対パスへの rm -rf の後に $? を参照', 'rm -rf /tmp/scratch-dir && echo "done: $?"'],
-    ['安全な相対パス rm -rf の後に $? を参照', 'rm -rf .next && echo "done: $?"'],
-  ])('rm と無関係な別 segment の $ では誤 block しない: %s', (_label, cmd) => {
-    expect(runGuard(bash(cmd))).toBe('allow');
+  it('rm と無関係な別 segment の $ では誤 block しない（絶対パス、family 外）', () => {
+    expect(runGuard(bash('rm -rf /tmp/scratch-dir && echo "done: $?"'))).toBe('allow');
+  });
+
+  it('rm と無関係な別 segment の $ では誤 block しない（安全な相対パス）', () => {
+    expect(runGuard(bash('rm -rf .next && echo "done: $?"'))).toBe('allow');
+  });
+});
+
+// rm -rf の絶対パス target と家系判定（2026-08-24, #2359）。
+// merge 前クロスレビュー P2 是正: block メッセージは「相対パスのみ許可」と
+// 宣言していたのに実装は絶対パスを見ておらず素通りしていた。
+// 直後の risk-reviewer 指摘: 単純な「絶対パスは全部 block」だと scratchpad
+// 掃除（family 外の絶対パス）まで壊れる。guard_resolve_roots の家系 root と
+// 突合し、**自分以外の worktree root に属する時だけ** block する。
+describe('pre-tool-guard.sh: rm -rf の絶対パス target（家系判定、#2359）', () => {
+  let fixtureRoot: string;
+  let mainDir: string;
+  let laneBDir: string;
+  let outsideDir: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-rm-abs-'));
+    mainDir = join(fixtureRoot, 'main');
+    laneBDir = join(mainDir, '.claude', 'worktrees', 'laneB');
+    outsideDir = join(fixtureRoot, 'scratchpad-like');
+    mkdirSync(mainDir);
+    mkdirSync(outsideDir);
+    git(['init', '-q', '.'], mainDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      mainDir,
+    );
+    mkdirSync(join(mainDir, '.claude', 'worktrees'), { recursive: true });
+    git(['worktree', 'add', '-q', laneBDir, '-b', 'laneB'], mainDir);
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('family 外（scratchpad 相当）の絶対パスへの rm -rf は許可する', () => {
+    expect(runGuard(bash(`rm -rf ${outsideDir}/subdir`), mainDir)).toBe('allow');
+  });
+
+  it('自分自身の絶対パスへの rm -rf は許可する', () => {
+    expect(runGuard(bash(`rm -rf ${mainDir}/node_modules`), mainDir)).toBe('allow');
+  });
+
+  it('main checkout から nested な他 worktree への絶対パス rm -rf は block する', () => {
+    expect(runGuard(bash(`rm -rf ${laneBDir}`), mainDir)).toBe('block');
+  });
+
+  it('レーンから main への絶対パス rm -rf は block する', () => {
+    expect(runGuard(bash(`rm -rf ${mainDir}`), laneBDir)).toBe('block');
   });
 });
 
@@ -842,6 +962,10 @@ describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', (
   it.each([
     ['supabase db reset', 'supabase db reset'],
     ['npx 経由', 'npx supabase db reset --local'],
+    // pnpm exec / pnpm dlx（merge 前クロスレビュー P3 是正: npx を列挙した
+    // 以上、同じ粒度の兄弟実行ラッパーだけ抜けているのは片手落ち）
+    ['pnpm exec 経由', 'pnpm exec supabase db reset'],
+    ['pnpm dlx 経由', 'pnpm dlx supabase db reset'],
   ])('生の CLI 呼び出しは block する: %s', (_label, cmd) => {
     expect(runGuard(bash(cmd))).toBe('block');
   });

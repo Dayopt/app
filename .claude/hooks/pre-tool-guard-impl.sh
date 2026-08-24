@@ -97,19 +97,40 @@ guard_resolve_roots() {
   return 0
 }
 
-# GUARD_NORMALIZED_FILE_PATH が GUARD_OTHER_ROOTS のいずれかの配下（またはその
-# root 自身）に一致するかを判定する。一致すれば 0 を返す。
-guard_path_under_other_worktree() {
+# 引数の絶対パスが「どの worktree root に属するか」を longest-prefix-match
+# で判定する（2026-08-24、merge 前クロスレビュー risk-reviewer 指摘: 単純に
+# 「CURRENT_ROOT の配下なら自分」を先に見る設計は、このリポジトリの実配置
+# （worktree が main の配下に nested される `.claude/worktrees/<name>` 慣習）
+# で壊れる——main checkout（CURRENT_ROOT = 家系の親）から見ると、他レーンの
+# パスも `$GUARD_CURRENT_ROOT/*` に該当してしまい、より深い一致である他
+# worktree root を見る前に「自分の配下、許可」へ倒れて素通りしていた。
+# sibling 配置の fixture では検出できず、nested 配置の実測で発覚した）。
+#
+# 戻り値: 0 = 自分の CURRENT_ROOT に属する（またはどの worktree root にも
+# 属さない = scratchpad 等 family 外）。1 = 自分以外の worktree root に属する。
+guard_path_belongs_to_current_root() {
+  local target="$1"
+  local best_len=-1 best_is_current=1
+  case "$target" in
+    "$GUARD_CURRENT_ROOT"/* | "$GUARD_CURRENT_ROOT")
+      best_len=${#GUARD_CURRENT_ROOT}
+      best_is_current=1
+      ;;
+  esac
   local other_root
   while IFS= read -r other_root; do
     [ -n "$other_root" ] || continue
-    case "$GUARD_NORMALIZED_FILE_PATH" in
+    case "$target" in
       "$other_root"/* | "$other_root")
-        return 0
+        if [ ${#other_root} -gt "$best_len" ]; then
+          best_len=${#other_root}
+          best_is_current=0
+        fi
         ;;
     esac
   done <<< "$GUARD_OTHER_ROOTS"
-  return 1
+  [ "$best_len" -lt 0 ] && return 0 # どの worktree root にも属さない
+  [ "$best_is_current" = "1" ]
 }
 
 # --- Write/Edit/MultiEdit/NotebookEdit: 保護ファイルへの書き込みブロック ---
@@ -145,6 +166,12 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
     # 親ディレクトリが存在すれば pwd -P で symlink まで含めて正規化する。
     # まだ存在しない（新規サブディレクトリの作成）場合は正規化をスキップし
     # FILE_PATH をそのまま使う——上で ".." は既に排除済みなので安全。
+    # 既知の境界（merge 前クロスレビュー P3、記録のみで対処しない）: `pwd -P`
+    # はディレクトリ symlink しか解決しない。自 worktree 内に他 worktree の
+    # ファイルを指す symlink（basename 側）を事前に作っておけば、その
+    # symlink への Write は境界を越えて書ける。この経路は敵対的な自己攻撃
+    # にしか使えず（他人が事前に自分の worktree に symlink を仕込むことは
+    # できない）、Writer ownership guard が防ぐ「事故」の脅威モデルの外。
     guard_dir_part=$(dirname "$FILE_PATH")
     guard_base_part=$(basename "$FILE_PATH")
     guard_resolved_dir=$(cd "$guard_dir_part" 2> /dev/null && pwd -P)
@@ -155,21 +182,13 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
     fi
 
     if guard_resolve_roots; then
-      case "$GUARD_NORMALIZED_FILE_PATH" in
-        "$GUARD_CURRENT_ROOT"/* | "$GUARD_CURRENT_ROOT")
-          : # 自分の worktree 配下、許可
-          ;;
-        *)
-          # 他 worktree の root 一覧に一致すれば block（指揮台が他レーンへ
-          # 書き込む場合も、レーンが他レーンへ書き込む場合も、同じ判定で
-          # 一律に閉じる。物理配置に依存しない — guard_resolve_roots 参照）。
-          # 一覧のどれにも一致しなければ FAMILY 外（scratchpad・memory 等）、許可。
-          if guard_path_under_other_worktree; then
-            echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（.claude/rules/ai-behavior.md §Writer ownership、.claude/rules/workflow.md §main checkout の役割）" >&2
-            exit 2
-          fi
-          ;;
-      esac
+      # longest-prefix-match で「このパスは実際にどの worktree に属するか」
+      # を判定する（指揮台が他レーンへ書き込む場合も、レーンが他レーンへ
+      # 書き込む場合も、同じ判定で一律に閉じる。物理配置に依存しない）。
+      if ! guard_path_belongs_to_current_root "$GUARD_NORMALIZED_FILE_PATH"; then
+        echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（.claude/rules/ai-behavior.md §Writer ownership、.claude/rules/workflow.md §main checkout の役割）" >&2
+        exit 2
+      fi
     fi
   fi
 
@@ -558,20 +577,60 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # `.next` 等、docs/engineering/diagnostics.md §3 が推奨する操作）は通す。
   #
   # 判定は 2 段: (1) recursive フラグ付き rm の呼び出しがあるか
-  # (2) 対象が「worktree 外へ抜けうる」指標（`~`・`$`（変数展開）・`..`
-  # traversal）を伴うか。**判定は rm を含む segment（; & | 改行で区切った
-  # 1 文）に限定する**——コマンド全体を見ると、`rm -rf .next && echo "done: $?"`
-  # のように rm と無関係な `$` が同じ Bash 呼び出しの別 segment に現れただけで
-  # 誤 block する（DoD 動作確認中の自己検証で実際に踏んだ）。segment 単位に
-  # することで、rm の実引数と無関係な部分を判定から除く。
+  # (2) 対象が危険かどうか。`~`・`$`（変数展開）・`..` traversal は対象を
+  # 実行時まで確定できないため無条件 block する。**絶対パス引数**は
+  # 2026-08-24 に 2 段の是正を経た:
+  #   - merge 前クロスレビュー P2: block メッセージは「相対パスのみ許可」と
+  #     宣言していたのに実装は絶対パスを見ておらず、他 worktree を直接指す
+  #     絶対パスが素通りしていた（メッセージと契約の食い違い）
+  #   - 直後の risk-reviewer 指摘: 単純に「絶対パスは全部 block」にすると
+  #     scratchpad 掃除（`/private/tmp/.../scratchpad/...` への rm、repo 外）
+  #     まで壊れる。**絶対パス token は guard_resolve_roots の家系 root と
+  #     突合し、自分以外の worktree root に属する時だけ block する**
+  #     （family 外の絶対パス＝scratchpad 等は許可）。
+  # **判定は rm を含む segment（; & | 改行で区切った 1 文）に限定する**——
+  # コマンド全体を見ると、`rm -rf .next && echo "done: $?"` のように rm と
+  # 無関係な `$` が同じ Bash 呼び出しの別 segment に現れただけで誤 block する
+  # （DoD 動作確認中の自己検証で実際に踏んだ）。segment 単位にすることで、
+  # rm の実引数と無関係な部分を判定から除く。
   RM_RECURSIVE_RE='(^|[[:space:]])(/[^[:space:]]*/)?rm[[:space:]].*(-[a-zA-Z]*[rR][a-zA-Z]*([[:space:]]|$)|--recursive([[:space:]=]|$))'
   RM_ESCAPE_TARGET_RE='(^|[[:space:]/])(~|\$)|(^|[[:space:]/])\.\.([[:space:]/]|$)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     while IFS= read -r rm_segment; do
       [ -n "$rm_segment" ] || continue
-      if echo "$rm_segment" | grep -qE "$RM_RECURSIVE_RE" && echo "$rm_segment" | grep -qE "$RM_ESCAPE_TARGET_RE"; then
-        echo "BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: $COMMAND" >&2
-        exit 2
+      if echo "$rm_segment" | grep -qE "$RM_RECURSIVE_RE"; then
+        if echo "$rm_segment" | grep -qE "$RM_ESCAPE_TARGET_RE"; then
+          echo "BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: $COMMAND" >&2
+          exit 2
+        fi
+        # 絶対パス token（空白 + `/` 開始）を抽出し、家系の他 worktree root に
+        # 属するものだけを block する。抽出した token には rm 自体の binary
+        # path 前置（`/bin/rm` 等）も混ざりうるが、家系に属さないので害はない。
+        #
+        # token は pwd -P で正規化してから突合する（存在すれば）。macOS では
+        # /tmp・/var が /private 配下への symlink のため、正規化せずに文字列
+        # 比較すると GUARD_CURRENT_ROOT/GUARD_OTHER_ROOTS（pwd -P 済み）と
+        # 食い違い、実際は他 worktree を指す token が「一致しない＝family 外」
+        # と誤判定されて素通りする（自己検証で実際に踏んだ）。
+        if guard_resolve_roots; then
+          while IFS= read -r abs_token; do
+            [ -n "$abs_token" ] || continue
+            guard_resolved_abs_token=$(cd "$abs_token" 2> /dev/null && pwd -P)
+            [ -n "$guard_resolved_abs_token" ] || guard_resolved_abs_token="$abs_token"
+            if ! guard_path_belongs_to_current_root "$guard_resolved_abs_token"; then
+              echo "BLOCKED: rm -r 系が自分の worktree（$GUARD_CURRENT_ROOT）以外の worktree（$guard_resolved_abs_token）を指しています。worktree 内の相対パスまたは family 外（scratchpad 等）の絶対パスのみ許可します: $COMMAND" >&2
+              exit 2
+            fi
+          done < <(printf '%s\n' "$rm_segment" | grep -oE '(^|[[:space:]])/[^[:space:]]*' | sed -E 's/^[[:space:]]+//')
+        else
+          # git 自体が家系 root を解決できない場合は fail-open にしない。
+          # rm は Write/Edit と異なり高頻度操作ではないため、判定不能なら
+          # 安全側（block）に倒す。
+          if echo "$rm_segment" | grep -qE '(^|[[:space:]])/'; then
+            echo "BLOCKED: rm -r 系が絶対パス対象を伴っていますが、家系 root を解決できませんでした（fail closed）: $COMMAND" >&2
+            exit 2
+          fi
+        fi
       fi
     done < <(printf '%s\n' "$scanned" | tr ';&|' '\n')
   done
@@ -585,7 +644,10 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # sanction した文書化済みコマンド）は対象外にし、**生の CLI 呼び出し**だけを
   # 狙う（`.op-env.human` 境界と同型: ラップされた安全な入口は許可、生の
   # 危険プリミティブは block）。
-  SUPABASE_DB_RESET_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(npx[[:space:]]+)?supabase[[:space:]]+db[[:space:]]+reset'
+  # npx 経由に加え、同じ粒度の兄弟（pnpm exec / pnpm dlx）も塞ぐ
+  # （2026-08-24、merge 前クロスレビュー P3 指摘: npx を列挙した以上、
+  # 同型の実行ラッパーだけ抜けているのは片手落ち）。
+  SUPABASE_DB_RESET_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(npx[[:space:]]+|pnpm[[:space:]]+(exec|dlx)[[:space:]]+)?supabase[[:space:]]+db[[:space:]]+reset'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$SUPABASE_DB_RESET_RE"; then
       echo "BLOCKED: supabase db reset の直接呼び出しは禁止です。ローカル Supabase は複数レーンが共有する単一インスタンスで、reset は他レーンの進行中データも巻き戻します。既定コマンド pnpm db:reset / pnpm db:fresh を使うか、他レーンへの影響が無いことを確認してから指揮台へ相談してください（この文字列に言及しただけでも落ちます）" >&2
