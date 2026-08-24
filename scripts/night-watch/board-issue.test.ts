@@ -141,4 +141,28 @@ describe('runBoardSync', () => {
     expect(result).toEqual({ action: 'created', issueNumber: 9001, closedPrevious: null });
     expect(execFileImpl.mock.calls.some((call) => call[1][1] === 'close')).toBe(false);
   });
+
+  // push 前反証レビュー risk-reviewer 指摘（low）: 上記 2 件は候補が単独の
+  // 配列でしか検証しておらず、実装が `.find(predicate)` ではなく
+  // `openBoardIssues[0]` を無条件採用する形でも同じく pass してしまう。
+  // 無効な候補と有効な候補が混在する配列で、正しい方だけが選ばれることを
+  // 固定する。
+  it('無効な候補と有効な過去日付の盤面 issue が混在すれば、有効な方だけを close する', () => {
+    const previousBody = `> quote\n\n## 1. 今週の最優先\n\n継続タスクB\n\n## 2. 進行中レーン\n\n(空)\n`;
+    const execFileImpl = fakeGhList([
+      { number: 7500, title: '盤面バグ報告', body: '' },
+      { number: 7600, title: '盤面 2026-08-25', body: '' },
+      { number: 8100, title: '盤面 2026-08-22', body: previousBody },
+    ]);
+
+    const result = runBoardSync({ execFileImpl });
+
+    expect(result).toEqual({ action: 'created', issueNumber: 9001, closedPrevious: 8100 });
+    const createCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'create');
+    const bodyArg = createCall[1][createCall[1].indexOf('--body') + 1];
+    expect(bodyArg).toContain('継続タスクB');
+
+    const closeCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'close');
+    expect(closeCall[1][2]).toBe('8100');
+  });
 });

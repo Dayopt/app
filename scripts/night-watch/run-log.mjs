@@ -83,12 +83,18 @@ export function resolveOpsLogIssueNumber({ readFileImpl = readFileSync } = {}) {
   return Number(match[1]);
 }
 
+// GitHub issue/PR 番号の上限（現実的な値を大きく超えて余裕を持たせる）。
+// 自由文字列を enum 化して閉じた exfiltration class（board.reason 等）と
+// 同じ脅威モデルで、上限の無い整数は低帯域の covert channel になり得る
+// （push 前反証レビュー risk-reviewer 指摘、low）。
+const MAX_ISSUE_NUMBER = 9_999_999;
+
 function isNonNegativeInt(value) {
   return Number.isInteger(value) && value >= 0;
 }
 
 function isPositiveInt(value) {
-  return Number.isInteger(value) && value > 0;
+  return Number.isInteger(value) && value > 0 && value <= MAX_ISSUE_NUMBER;
 }
 
 /**
@@ -278,9 +284,10 @@ export function runBoardNote({ note, execFileImpl }) {
     typeof note.allGreen !== 'boolean' ||
     !isNonNegativeInt(note.issued) ||
     !isNonNegativeInt(note.observed) ||
+    note.issued > 6 ||
     note.observed > 6
   ) {
-    throw new Error('note の形が不正です（allGreen: boolean, issued/observed: 0以上の整数）');
+    throw new Error('note の形が不正です（allGreen: boolean, issued/observed: 0〜6の整数）');
   }
 
   const boardIssue = findTodayBoardIssue({ execFileImpl });

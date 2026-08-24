@@ -961,7 +961,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     // PreToolUse matcher にその 2 tool が登録されていなければ hook 自体が
     // 発火せず、判定コードは無意味になる。実際に登録が漏れていた
     // （settings.json 側の修正と一緒でないと閉じない class）。
-    it('MultiEdit も落とす（settings.json の matcher 登録込みで検証）', () => {
+    it('MultiEdit も落とす（本 hook への入力を直接検証。matcher 登録の固定は別 test）', () => {
       expect(
         runGuard(
           { tool_name: 'MultiEdit', tool_input: { file_path: 'docs/some-file.md', edits: [] } },

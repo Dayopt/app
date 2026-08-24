@@ -69,7 +69,18 @@ const RUN_URL_RE = /^https:\/\/github\.com\/Dayopt\/dayopt\/actions\/runs\/\d+(?
 // `|` を使わないのは、guard の is_single_simple_command が `|` をパイプ記号として
 // 無条件拒否するため（quote 内の文字でも区別しない）。空白区切りなら、値全体を
 // 1 個の shell argv token として quote すれば guard の検査に触れない。
-const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/[a-z0-9-]+\.sentry\.io\/[A-Za-z0-9/_-]+\/?$/;
+//
+// URL の path 部は `issues/<数字>/?` に固定する（末尾スラッシュ任意）。旧実装
+// （`[A-Za-z0-9/_-]+`）は base64url アルファベット全体を長さ無制限で許可して
+// おり、`--evidence` を複数回渡せる仕様と組み合わせると、board.reason
+// （run-log.mjs、同 round で自由文字列を enum 化した P1）と同型の任意バイト列
+// exfiltration 経路がここに残っていた（push 前反証レビュー risk-reviewer
+// 指摘、medium）。実在する Sentry issue URL は常に数値 ID で終わるため、診断
+// 価値を落とさずに閉じられる。
+const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/[a-z0-9-]+\.sentry\.io\/issues\/\d+\/?$/;
+// 1 check あたりの evidence 件数上限。`--evidence` は repeatable flag のため、
+// 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
+const MAX_SENTRY_EVIDENCE = 5;
 
 const BASELINE_PATH = fileURLToPath(
   new URL('../../.claude/skills/night-watch/baseline.json', import.meta.url),
@@ -174,10 +185,15 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
         throw new Error('--count は数字のみで指定してください');
       }
       const evidence = args.evidence ?? [];
+      if (evidence.length > MAX_SENTRY_EVIDENCE) {
+        throw new Error(
+          `--evidence は 1 check あたり最大 ${MAX_SENTRY_EVIDENCE} 件までです（指定: ${evidence.length} 件）`,
+        );
+      }
       const badEvidence = evidence.filter((entry) => !SENTRY_EVIDENCE_RE.test(entry));
       if (badEvidence.length > 0) {
         throw new Error(
-          `--evidence は "DAYOPT-<番号> https://<subdomain>.sentry.io/<path>" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
+          `--evidence は "DAYOPT-<番号> https://<subdomain>.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
         );
       }
       actual = `件数: ${args.count}${
@@ -202,9 +218,14 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
 }
 
 // runAlertSync が新規起票する issue に必ず付ける固定ラベル（下記
-// runAlertSync 参照）。dedup 判定でこの両方を要求することで、通常の
-// triage/write 権限を持たない外部ユーザー（public repo、2026-09 私有化まで）
-// が偽装 issue を dedup 対象へ紛れ込ませることを防ぐ（後述）。
+// runAlertSync 参照）。dedup 判定でこの両方を要求する。ただし実効的な gate は
+// `area:operations` の 1 本だけである点に注意（push 前反証レビュー
+// risk-reviewer 指摘、low）: `type:chore` は `.github/ISSUE_TEMPLATE/chore.yml`
+// の front-matter（`labels: ['type:chore']`）により、triage 権限の無い外部
+// ユーザーが issue form から作成しても自動付与される。`area:operations` は
+// どの issue form にも front-matter 登録が無く、triage/write 権限でしか
+// 付けられないため、こちらが偽装防止の実体になる。2 ラベルを要求する構成は
+// 将来 area:operations 側の issue form が増えた時にも壊れないための保険。
 const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
 
 /**
@@ -221,9 +242,10 @@ const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
  * title の完全一致プレフィックスだけでも、外部ユーザーは通常の issue 作成
  * 権限（write 権限は不要）で同じ prefix の title を自由に選べるため偽装でき
  * てしまう（非ブロッキング Codex レビュー指摘、P2）。`runAlertSync` が新規
- * 起票時に必ず付ける固定ラベル（`type:chore` + `area:operations`。ラベル
- * 付与には triage/write 権限が要り、外部ユーザーは満たせない）も同時に要求
- * し、両方を満たす候補だけを既存 alert として採用する。
+ * 起票時に必ず付ける固定ラベル（`type:chore` + `area:operations`。実効的な
+ * gate は triage/write 権限でしか付かない `area:operations` 側 —
+ * `ALERT_ISSUE_LABELS` の定義コメント参照）も同時に要求し、両方を満たす
+ * 候補だけを既存 alert として採用する。
  * @param {string} checkId
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
  */

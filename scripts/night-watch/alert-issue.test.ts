@@ -125,6 +125,55 @@ describe('buildAlertBody', () => {
     expect(body).toContain('DAYOPT-123 https://dayopt-x.sentry.io/issues/999/');
   });
 
+  // push 前反証レビュー risk-reviewer 指摘（medium）: 旧 SENTRY_EVIDENCE_RE の
+  // path 部（`[A-Za-z0-9/_-]+`）は base64url アルファベット全体を長さ無制限で
+  // 許可しており、`--evidence` が複数回指定できる仕様と組み合わさると、
+  // board.reason（run-log.mjs）で enum 化した P1 と同型の任意バイト列
+  // exfiltration 経路が残っていた。path を `issues/<数字>/?` に固定した。
+  it('sentry kind は issue ID が数字でない URL（base64url 風の任意文字列）を拒否する', () => {
+    const exfilPayload = 'dXNlckBleGFtcGxlLmNvbQ'; // "user@example.com" の base64url 風文字列
+    expect(() =>
+      buildAlertBody({
+        checkId: 'sentry-new',
+        args: {
+          count: '1',
+          evidence: [`DAYOPT-1 https://dayopt-x.sentry.io/issues/${exfilPayload}/`],
+        },
+        detectedAt: 'x',
+      }),
+    ).toThrow(/DAYOPT-<番号> https/);
+  });
+
+  it('sentry kind は issues/ 以外の path を拒否する', () => {
+    expect(() =>
+      buildAlertBody({
+        checkId: 'sentry-new',
+        args: { count: '1', evidence: ['DAYOPT-1 https://dayopt-x.sentry.io/projects/foo/999/'] },
+        detectedAt: 'x',
+      }),
+    ).toThrow(/DAYOPT-<番号> https/);
+  });
+
+  it('sentry kind は evidence が上限（5件）を超えれば拒否する', () => {
+    const evidence = Array.from(
+      { length: 6 },
+      (_, i) => `DAYOPT-${i} https://dayopt-x.sentry.io/issues/${i}/`,
+    );
+    expect(() =>
+      buildAlertBody({ checkId: 'sentry-new', args: { count: '6', evidence }, detectedAt: 'x' }),
+    ).toThrow(/最大 5 件/);
+  });
+
+  it('sentry kind は evidence が上限（5件）以内なら通す', () => {
+    const evidence = Array.from(
+      { length: 5 },
+      (_, i) => `DAYOPT-${i} https://dayopt-x.sentry.io/issues/${i}/`,
+    );
+    expect(() =>
+      buildAlertBody({ checkId: 'sentry-new', args: { count: '5', evidence }, detectedAt: 'x' }),
+    ).not.toThrow();
+  });
+
   it('未知の check-id は拒否する', () => {
     expect(() => buildAlertBody({ checkId: 'unknown', args: {}, detectedAt: 'x' })).toThrow(
       /未知の check-id/,
@@ -258,18 +307,26 @@ describe('runAlertSync', () => {
 
     expect(result).toEqual({ action: 'created', issueNumber: 600 });
     const createCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'create');
-    expect(createCall[1]).toEqual(
-      expect.arrayContaining([
-        '--label',
-        'type:chore',
-        '--label',
-        'area:operations',
-        '--label',
-        'priority:p2',
-      ]),
-    );
-    expect(createCall[1][createCall[1].indexOf('--title') + 1]).toBe(
+    // arrayContaining は要素の存在だけを見て --label とラベル名の対応や出現
+    // 順序を検証しないため、壊れた引数の並び（例: ラベル名が --label の直後に
+    // 無い形）でも通ってしまう。dedup の安全性がこの 2 ラベルの確実な付与に
+    // 依存するようになった（findExistingAlertIssue 参照）ため、完全一致で
+    // 固定する（push 前反証レビュー risk-reviewer 指摘、low）。
+    expect(createCall[1]).toEqual([
+      'issue',
+      'create',
+      '--repo',
+      'Dayopt/dayopt',
+      '--title',
       'nightwatch(deadcode): pnpm quality:deadcode:ci が exit 0 以外',
-    );
+      '--body',
+      expect.any(String),
+      '--label',
+      'type:chore',
+      '--label',
+      'area:operations',
+      '--label',
+      'priority:p2',
+    ]);
   });
 });

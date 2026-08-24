@@ -86,7 +86,16 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
   # 発生源だけが検査の空白になるため（#2086 反証レビュー）
   case "$FILE_PATH" in
     *.op-env.agent | *.op-env.agent.example | *.op-env.local | *.op-env.local.example)
-      WRITTEN=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
+      # Write は content、Edit は new_string、MultiEdit は edits[].new_string、
+      # NotebookEdit は new_source に書き込み内容が入る。MultiEdit/NotebookEdit
+      # を matcher/判定に含めた時点（本ファイル冒頭の TOOL_NAME 拡張）で、この
+      # 抽出も揃えないと「未検査で通る」新しい経路になる（push 前反証レビュー
+      # risk-reviewer 指摘、medium）。
+      WRITTEN=$(echo "$INPUT" | jq -r '
+        [.tool_input.content?, .tool_input.new_string?, .tool_input.new_source?, (.tool_input.edits[]?.new_string?)]
+        | map(select(type == "string"))
+        | join("\n")
+      ')
       bad_vaults=$(disallowed_vault_refs "$WRITTEN")
       if [ -n "$bad_vaults" ]; then
         echo "BLOCKED: local dev 用の env-file に許可外 vault の op:// 参照は書けません（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。このファイルは op run に渡せるので、production を参照する行を足すと production credential が解決されます。管理者運用の参照は .op-env.human.example 側に置いてください" >&2
