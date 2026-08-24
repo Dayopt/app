@@ -57,6 +57,8 @@
   | thread解消+green再報告受領                                                                      | 「merge可能」                                                  |
   | `branch:finish` 完了                                                                            | 行を削除（PR は close され GitHub 側でバッジが自動反映される） |
 
+  §2 本文の更新（行の追加・段階更新・削除）とイベントコメント追記は `scripts/ops/board-update.mjs`（`pnpm board:update`、#2363）で行い、その場の置換 script で本文を直接 edit しない — 2026-08-24 に置換 script の assert 失敗が command substitution に飲まれ、空 body での上書きで本文が一時消失する事故が実発生した（盤面 #2326 コメント列）。wrapper は生成に失敗すると非 0 exit で何も書かない（fail-safe）。
+
   この定型更新を怠ると STATE.md 時代と同じ陳腐化が起きる。[#2256](https://github.com/Dayopt/dayopt/issues/2256) の「追記漏れの機械検出」（当日コメント欠落を朝編成 sweep で検出）が backstop になる
 
 - **§3 本日の実績は転記しない。** `is:pr is:merged merged:YYYY-MM-DDT00:00:00+09:00..YYYY-MM-DDT23:59:59+09:00`（issue は `is:issue closed:...`）の JST 日境界検索リンクを貼るだけにする。「本日 merge N 本」のような**手書きの集計数字は書かない**（実測とズレて陳腐化する。2026-08-20 初日運用で実際に 18 本 → 実測 17 本のズレが発生）。経緯の複製が要る時はコメント列（タイムライン）を参照する
@@ -89,15 +91,7 @@
 
 策定日: 2026-08-24（[#2355](https://github.com/Dayopt/dayopt/issues/2355)）。2026-08-24、レーンJ（PR #2350）が fix round push・CI 全 green・thread 3/3 resolve まで完了していたのに「fix round green 報告」（`.claude/rules/lane-protocol.md` §fix round green 報告）を送らず、PR が指揮台の認知外で停止する事故が発生した（User が発見。詳細は日次盤面 #2326 コメント列）。§レーンの連絡規律 が定める push 型報告（主経路）と本節冒頭の蒸留監視（backstop）は、どちらも「レーンが自分から連絡する」または「指揮台がレーン transcript を能動的に覗く」ことに依存しており、**レーンが green 到達後に沈黙する class を機械的に拾えない**。
 
-指揮台セッションは、**起動時に open PR の CI 遷移 watch（レーン報告非依存の機械 backstop）を常設で張る。** 実装形はセッション内 Monitor（`gh pr list` + `gh pr checks` の 90 秒 poll、状態遷移のみ通知、head SHA で dedupe）を正とする。コマンド例:
-
-```bash
-# open PR 一覧（head SHA を dedupe キーにする）
-gh pr list --repo Dayopt/dayopt --state open --json number,headRefOid
-
-# 各 PR の checks を 90 秒間隔で poll し、状態遷移（pending → success / failure）のみ通知する
-gh pr checks <PR番号> --repo Dayopt/dayopt --json name,state,bucket
-```
+指揮台セッションは、**起動時に open PR の CI 遷移 watch（レーン報告非依存の機械 backstop）を常設で張る。** 実装形は `scripts/ops/green-watch.mjs`（`pnpm green:watch`）を正とする（90 秒 poll・状態遷移のみ通知・head SHA で dedupe。#2363 でセッション内の使い捨て Monitor から repo 管理の script へ降ろした）。既定モードは遷移を検出した時点で内容を出力して exit するため、バックグラウンド実行すればプロセス終了がそのまま push 型の通知になる — 通知を処理したら watch を張り直す。`--follow`（常駐）/ `--once`（起動時の初期把握）/ `--interval-seconds N` の詳細は script 冒頭コメントを正とする。
 
 **この watch は backstop であり、主経路を置き換えない。** 「watch が拾うから報告不要」への逆転を防ぐ（§レーンの連絡規律 の既存の逆転防止と同型）— レーンは push-ready 報告・レビュー待ち報告・fix round green 報告を watch の有無に関わらず必ず送る。watch が拾うのは「報告が漏れた時に指揮台が気づけるまでの時間」であって、報告そのものの代替ではない。
 
