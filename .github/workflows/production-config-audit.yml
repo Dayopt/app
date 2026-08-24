@@ -331,4 +331,7 @@ jobs:
       - name: Audit production storage.objects RLS
         env:
           SUPABASE_STORAGE_RLS_AUDIT_TOKEN: ${{ secrets.SUPABASE_STORAGE_RLS_AUDIT_TOKEN }}
-        run: node scripts/production-storage-rls-audit.mjs
+        run: |
+          set -o pipefail
+          node scripts/production-storage-rls-audit.mjs | tee storage-rls-audit-output.txt
+          grep -qE 'Production Storage RLS Audit (passed|is inactive)' storage-rls-audit-output.txt

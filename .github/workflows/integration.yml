@@ -36,6 +36,7 @@ on:
       - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
+      - 'scripts/lib/storage-objects-app-policy-names.mjs'
       - 'docs/engineering/data/db/rls-snapshot.md'
   push:
     branches: [main]
@@ -61,6 +62,7 @@ on:
       - 'apps/product/src/lib/test/trpc-test-helpers.ts'
       - 'apps/product/vitest.config.integration.ts'
       - 'scripts/generate-rls-snapshot.ts'
+      - 'scripts/lib/storage-objects-app-policy-names.mjs'
       - 'docs/engineering/data/db/rls-snapshot.md'
   schedule:
     # 05:30 JST（night-watch v2、#2291。旧 06:45 JST から前倒し）。夜勤 Routine

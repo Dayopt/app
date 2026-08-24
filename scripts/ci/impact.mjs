@@ -102,6 +102,7 @@ export const INTEGRATION_GLOBS = [
   'apps/product/src/lib/test/trpc-test-helpers.ts',
   'apps/product/vitest.config.integration.ts',
   'scripts/generate-rls-snapshot.ts',
+  'scripts/lib/storage-objects-app-policy-names.mjs',
   'docs/engineering/data/db/rls-snapshot.md',
 ];
 

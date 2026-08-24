@@ -304,6 +304,8 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 予定（#2090 の実施後に追加する）: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`（bypass secret の 1Password 登録先）。
 
+予定（[#2345](https://github.com/Dayopt/dayopt/issues/2345) の実施後に追加する）: `supabase-storage-rls-audit`（field `credential`）— Production Storage RLS Audit 専用 scoped token（`database_read` のみ）。
+
 `VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。agent からは読まない（agent の `replica:check` は agent 用の別発行 token を使う。発行までは User 実行）。
 
 ---
@@ -427,7 +429,7 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 
 策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope）。上記の Replica 台帳が「master は 1Password、replica は外部」の対応を列挙するのに対し、こちらは **1Password の外に構造的に実値が存在する場所**（1Password へ登録すること自体ができない値）を列挙する。基本方針 7「値がどこに存在していようと、必ず 1Password にもある」の唯一の意図的な例外群。
 
-**現在 0 件。** 調査の結果、既存の GitHub Secrets 5 件（`SUPABASE_AUTH_AUDIT_TOKEN` / `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）はいずれも 1Password `ci` vault を master に持つ replica であり、真の bootstrap 例外には該当しない（[Environment Secrets](./security/environment-secrets.md) §GitHub の表と 1:1）。
+**現在 0 件。** 調査の結果、既存の GitHub Secrets 6 件（`SUPABASE_AUTH_AUDIT_TOKEN` / `SUPABASE_STORAGE_RLS_AUDIT_TOKEN`（[#2345](https://github.com/Dayopt/dayopt/issues/2345) で発行待ち、workflow は既に参照済み）/ `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）はいずれも 1Password `ci` vault を master に持つ replica であり、真の bootstrap 例外には該当しない（[Environment Secrets](./security/environment-secrets.md) §GitHub の表と 1:1）。
 
 上記「Service Account（無人実行用、設計のみ・未導入）」の SA token が導入されれば、それが最初の例外になる（SA token は「1Password を読むための鍵」であるため、循環問題により 1Password 自身には保管できない）。保管場所は導入時に決定し、その時点でこの台帳に追記する。
 

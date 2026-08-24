@@ -21,11 +21,16 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  * ## 接続経路（read-only）
  *
  * Supabase Management API の `POST /v1/projects/{ref}/database/query` を
- * `read_only: true` フラグ付きで叩く。このフラグは API サーバー側で強制される
- * （クライアントの自己申告ではない。
- * https://supabase.com/docs/reference/api/v1-run-a-query）。token 自体も
- * `database_read` 権限のみを持つ scoped project token を使う運用を前提にしており、
- * **production への書き込みは token のスコープと API フラグの二重で構造的に不可能**。
+ * `read_only: true` フラグ付きで叩く。このフラグは API サーバー側で強制され、書き込み系
+ * SQL は拒否される（クライアントの自己申告ではない。
+ * https://supabase.com/docs/reference/api/v1-run-a-query）。token 自体も `database_read`
+ * 権限のみを持つ scoped project token を使う運用を前提にする（発行手順は #2345）。
+ *
+ * **ただし `database_read` は table 単位で絞れない。** この token は production の
+ * schema 全体（`auth.users` を含む）への SELECT を許可する広い scope で、
+ * `storage.objects` だけに絞る Supabase 側の機能は無い（2026-08-24 時点）。実際にこの
+ * script が実行する SELECT は `storage.objects` の policy 名と RLS 状態のみに限定して
+ * いるが、それは script の実装が守る境界であって token 自体の scope ではない。
  *
  * ## 保証境界（どこまでを守り、どこからを守らないか）
  *
@@ -43,8 +48,11 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  *
  * **守らない**:
  *
- * - policy の USING / WITH CHECK 句の中身（`storage.objects` 以外の table を含め、
- *   句の内容比較は local snapshot（migration 由来の DB）の役目のまま）
+ * - **policy の USING / WITH CHECK 句の中身は誰も見ていない。** allow-list に載った
+ *   policy 名の句が Dashboard 経由で `true` へ書き換えられても、この script は検出
+ *   しない（policy 名だけを追跡するため）。local snapshot（`generate-rls-snapshot.ts`）
+ *   も migration から構築した ephemeral DB しか見ないため、production の実際の句の内容
+ *   はこの 2 script のどちらにもカバーされない
  * - `storage.objects` 以外の table の policy、`storage.buckets` の public フラグ等
  *   （production-config-audit.mjs の Vercel drift、production-auth-config-audit.mjs の
  *   Auth drift と同様、この script は 1 つの狭い一次防御線として設計する。拡張は別 issue）
