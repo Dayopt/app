@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildAlertBody,
@@ -90,6 +94,23 @@ describe('buildAlertBody', () => {
     expect(body).toContain('https://github.com/Dayopt/dayopt/actions/runs/123');
   });
 
+  // #2333: integration.yml の失敗が夜勤で無観測のまま朝を迎えていた穴を埋める
+  // check-id。heavy-red と同じ run-url kind（判定規約も同一。integration.yml は
+  // heavy-post-merge.yml と同じ concurrency group 設計のため）だが、
+  // CHECK_DEFINITIONS のコマンド文言が正しく `integration.yml` を指しているかを
+  // 個別に固定する。
+  it('integration-red は run-url kind で integration.yml を対象にする', () => {
+    const body = buildAlertBody({
+      checkId: 'integration-red',
+      args: { 'evidence-url': 'https://github.com/Dayopt/dayopt/actions/runs/456' },
+      detectedAt: '2026-08-24T00:00:00Z',
+    });
+    expect(body).toContain('https://github.com/Dayopt/dayopt/actions/runs/456');
+    expect(body).toContain(
+      '**再現コマンド**: `gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url`',
+    );
+  });
+
   it('sentry kind は --count が数字のみでないと拒否する', () => {
     expect(() =>
       buildAlertBody({
@@ -118,11 +139,11 @@ describe('buildAlertBody', () => {
   it('sentry kind は正しい shortID+URL の evidence なら通す', () => {
     const body = buildAlertBody({
       checkId: 'sentry-new',
-      args: { count: '2', evidence: ['DAYOPT-123 https://dayopt-x.sentry.io/issues/999/'] },
+      args: { count: '2', evidence: ['DAYOPT-123 https://dayopt.sentry.io/issues/999/'] },
       detectedAt: '2026-08-24T00:00:00Z',
     });
     expect(body).toContain('件数: 2');
-    expect(body).toContain('DAYOPT-123 https://dayopt-x.sentry.io/issues/999/');
+    expect(body).toContain('DAYOPT-123 https://dayopt.sentry.io/issues/999/');
   });
 
   // push 前反証レビュー risk-reviewer 指摘（medium）: 旧 SENTRY_EVIDENCE_RE の
@@ -137,7 +158,7 @@ describe('buildAlertBody', () => {
         checkId: 'sentry-new',
         args: {
           count: '1',
-          evidence: [`DAYOPT-1 https://dayopt-x.sentry.io/issues/${exfilPayload}/`],
+          evidence: [`DAYOPT-1 https://dayopt.sentry.io/issues/${exfilPayload}/`],
         },
         detectedAt: 'x',
       }),
@@ -148,7 +169,32 @@ describe('buildAlertBody', () => {
     expect(() =>
       buildAlertBody({
         checkId: 'sentry-new',
-        args: { count: '1', evidence: ['DAYOPT-1 https://dayopt-x.sentry.io/projects/foo/999/'] },
+        args: { count: '1', evidence: ['DAYOPT-1 https://dayopt.sentry.io/projects/foo/999/'] },
+        detectedAt: 'x',
+      }),
+    ).toThrow(/DAYOPT-<番号> https/);
+  });
+
+  // #2334（PR #2309 delta re-review risk-reviewer 指摘、P2）: path 部
+  // （issues/<数字>/?）を固定した同 round で、subdomain 部（旧:
+  // `[a-z0-9-]+` で長さ無制限）が同型の任意データ搬送経路として残っていた。
+  // 実運用の Sentry org（`dayopt`）へ固定した後の回帰確認。
+  it('sentry kind は dayopt 以外の subdomain を拒否する（任意文字列の搬送経路が閉じたことの回帰確認）', () => {
+    expect(() =>
+      buildAlertBody({
+        checkId: 'sentry-new',
+        args: { count: '1', evidence: ['DAYOPT-1 https://dayopt-x.sentry.io/issues/999/'] },
+        detectedAt: 'x',
+      }),
+    ).toThrow(/DAYOPT-<番号> https/);
+  });
+
+  it('sentry kind は任意長の base64url 風 subdomain を拒否する', () => {
+    const exfilSubdomain = 'dXNlckBleGFtcGxlLmNvbQ'; // "user@example.com" の base64url 風文字列
+    expect(() =>
+      buildAlertBody({
+        checkId: 'sentry-new',
+        args: { count: '1', evidence: [`DAYOPT-1 https://${exfilSubdomain}.sentry.io/issues/1/`] },
         detectedAt: 'x',
       }),
     ).toThrow(/DAYOPT-<番号> https/);
@@ -157,7 +203,7 @@ describe('buildAlertBody', () => {
   it('sentry kind は evidence が上限（5件）を超えれば拒否する', () => {
     const evidence = Array.from(
       { length: 6 },
-      (_, i) => `DAYOPT-${i} https://dayopt-x.sentry.io/issues/${i}/`,
+      (_, i) => `DAYOPT-${i} https://dayopt.sentry.io/issues/${i}/`,
     );
     expect(() =>
       buildAlertBody({ checkId: 'sentry-new', args: { count: '6', evidence }, detectedAt: 'x' }),
@@ -167,7 +213,7 @@ describe('buildAlertBody', () => {
   it('sentry kind は evidence が上限（5件）以内なら通す', () => {
     const evidence = Array.from(
       { length: 5 },
-      (_, i) => `DAYOPT-${i} https://dayopt-x.sentry.io/issues/${i}/`,
+      (_, i) => `DAYOPT-${i} https://dayopt.sentry.io/issues/${i}/`,
     );
     expect(() =>
       buildAlertBody({ checkId: 'sentry-new', args: { count: '5', evidence }, detectedAt: 'x' }),
@@ -257,12 +303,30 @@ describe('findExistingAlertIssue', () => {
 });
 
 describe('runAlertSync', () => {
+  // #2332: 起票上限（reserveAlertRunSlot、scripts/night-watch/lib.mjs）は
+  // OS tmpdir 配下の state file で run をスコープする。plan-review
+  // （plan-critic）指摘: 関数注入のスタブだけでは fs の実挙動（ENOENT・
+  // 破損 JSON・書き込み不可）が検証できないため、実 tmpdir を使う。
+  // 既定 path（DEFAULT_ALERT_RUN_STATE_PATH）を使うと test 間・並行 worker
+  // 間で state が汚染されるため、test ごとに専用ディレクトリを用意する。
+  let stateDir: string;
+  let runStatePath: string;
+
+  beforeEach(() => {
+    stateDir = mkdtempSync(join(tmpdir(), 'night-watch-alert-run-state-'));
+    runStatePath = join(stateDir, 'state.json');
+  });
+
+  afterEach(() => {
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+
   it('dedup 検索が失敗したら起票せず skip する（fail closed）', () => {
     const execFileImpl = vi.fn(() => {
       throw new Error('gh: rate limited');
     });
 
-    const result = runAlertSync({ checkId: 'docs-check', args: {}, execFileImpl });
+    const result = runAlertSync({ checkId: 'docs-check', args: {}, execFileImpl, runStatePath });
 
     expect(result).toEqual({ action: 'skipped', reason: 'dedup検索失敗のため起票見送り' });
   });
@@ -286,6 +350,7 @@ describe('runAlertSync', () => {
       args: {},
       detectedAt: '2026-08-24T00:00:00Z',
       execFileImpl,
+      runStatePath,
     });
 
     expect(result).toEqual({ action: 'commented', issueNumber: 500 });
@@ -303,6 +368,7 @@ describe('runAlertSync', () => {
       args: {},
       detectedAt: '2026-08-24T00:00:00Z',
       execFileImpl,
+      runStatePath,
     });
 
     expect(result).toEqual({ action: 'created', issueNumber: 600 });
@@ -328,5 +394,104 @@ describe('runAlertSync', () => {
       '--label',
       'priority:p2',
     ]);
+  });
+
+  // #2332 の DoD: 起票上限が wrapper 側で機械強制され、超過の再現がテストで
+  // 固定される。以下は plan-review で確定した 2 段の cap をそれぞれ回帰確認する。
+  describe('run-scoped 起票上限（#2332）', () => {
+    it('同一 check-id への 2 回目の呼び出しは capped になり gh を呼ばない（無制限追記ループの class を閉じる）', () => {
+      const execFileImpl = vi.fn((cmd, args) => {
+        if (args[1] === 'list')
+          return JSON.stringify([
+            {
+              number: 700,
+              title: 'nightwatch(docs-check): x',
+              labels: [{ name: 'type:chore' }, { name: 'area:operations' }],
+            },
+          ]);
+        if (args[1] === 'comment') return 'https://github.com/Dayopt/dayopt/issues/700\n';
+        throw new Error(`unexpected: ${JSON.stringify(args)}`);
+      });
+
+      const first = runAlertSync({ checkId: 'docs-check', args: {}, execFileImpl, runStatePath });
+      expect(first).toEqual({ action: 'commented', issueNumber: 700 });
+
+      const commentCallCountAfterFirst = execFileImpl.mock.calls.filter(
+        (call) => call[1][1] === 'comment',
+      ).length;
+
+      const second = runAlertSync({
+        checkId: 'docs-check',
+        args: {},
+        execFileImpl,
+        runStatePath,
+      });
+      expect(second).toEqual({ action: 'capped', reason: 'run-cap-reached' });
+
+      const commentCallCountAfterSecond = execFileImpl.mock.calls.filter(
+        (call) => call[1][1] === 'comment',
+      ).length;
+      expect(commentCallCountAfterSecond).toBe(commentCallCountAfterFirst);
+    });
+
+    it('新規起票が上限（3件）に達したら 4 件目以降は capped になり gh create を呼ばない', () => {
+      let createdCount = 0;
+      const execFileImpl = vi.fn((cmd, args) => {
+        if (args[1] === 'list') return '[]';
+        if (args[1] === 'create') {
+          createdCount += 1;
+          return `https://github.com/Dayopt/dayopt/issues/${800 + createdCount}\n`;
+        }
+        throw new Error(`unexpected: ${JSON.stringify(args)}`);
+      });
+
+      // 異なる check-id を 4 つ使う（同一 check-id の cap ではなく新規起票数の
+      // cap を単独で検証するため）。
+      const checkIds = ['docs-check', 'deadcode', 'docs-coverage', 'dependabot-alerts'];
+      const argsByCheckId: Record<string, Record<string, string>> = {
+        'docs-coverage': { actual: '9' },
+        'dependabot-alerts': { actual: '5' },
+      };
+
+      const results = checkIds.map((checkId) =>
+        runAlertSync({ checkId, args: argsByCheckId[checkId] ?? {}, execFileImpl, runStatePath }),
+      );
+
+      expect(results.slice(0, 3).every((r) => r.action === 'created')).toBe(true);
+      expect(results[3]).toEqual({ action: 'capped', reason: 'run-cap-reached' });
+
+      const createCalls = execFileImpl.mock.calls.filter((call) => call[1][1] === 'create');
+      expect(createCalls).toHaveLength(3);
+    });
+
+    it('state file が存在しなければ fresh state として扱い、上限に達するまで通す', () => {
+      const execFileImpl = vi.fn((cmd, args) => {
+        if (args[1] === 'list') return '[]';
+        if (args[1] === 'create') return 'https://github.com/Dayopt/dayopt/issues/900\n';
+        throw new Error(`unexpected: ${JSON.stringify(args)}`);
+      });
+
+      const result = runAlertSync({
+        checkId: 'docs-check',
+        args: {},
+        execFileImpl,
+        runStatePath: join(stateDir, 'never-created.json'),
+      });
+
+      expect(result).toEqual({ action: 'created', issueNumber: 900 });
+    });
+
+    it('state file が破損していても fail-open で gh を呼ぶ（state 機構の不調で通知チャネルを無音にしない）', () => {
+      writeFileSync(runStatePath, 'not json', 'utf8');
+      const execFileImpl = vi.fn((cmd, args) => {
+        if (args[1] === 'list') return '[]';
+        if (args[1] === 'create') return 'https://github.com/Dayopt/dayopt/issues/901\n';
+        throw new Error(`unexpected: ${JSON.stringify(args)}`);
+      });
+
+      const result = runAlertSync({ checkId: 'docs-check', args: {}, execFileImpl, runStatePath });
+
+      expect(result).toEqual({ action: 'created', issueNumber: 901 });
+    });
   });
 });

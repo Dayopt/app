@@ -1,7 +1,14 @@
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { findTodayBoardIssue, jstDateString, REPO, runGh } from './lib.mjs';
+import {
+  findTodayBoardIssue,
+  jstDateString,
+  MAX_NEW_ISSUES_PER_RUN,
+  readAlertRunState,
+  REPO,
+  runGh,
+} from './lib.mjs';
 
 /**
  * night-watch SKILL.md §自動パート Step 5（運行記録）・Step 0（自己検証の環境
@@ -28,6 +35,7 @@ export const CHECK_IDS = new Set([
   'deadcode',
   'dependabot-alerts',
   'heavy-red',
+  'integration-red',
   'sentry-new',
 ]);
 
@@ -64,7 +72,14 @@ export const BOARD_FAIL_REASONS = new Set([
 // "green" / "issue" しか受け付けず、dedup 検索失敗という Step 3 の正当な
 // 状態を運行記録で表現できなかった（結果を省略して暗黙に緑扱いにするか、
 // failed へ誤って詰め込むしかなかった）。
-export const RESULT_SKIPPED_REASONS = new Set(['dedup-search-failed']);
+//
+// 'run-cap-reached'（#2332）は alert-issue.mjs の runAlertSync が
+// `action: 'capped'` を返した時（run-scoped 起票上限に達した）の reason。
+// `reserveAlertRunSlot`（lib.mjs）は「同一 check-id は 1 run 1 回まで」
+// 「新規起票は MAX_NEW_ISSUES_PER_RUN 件まで」の 2 種の cap を単一 reason に
+// 集約している（呼び出し側からは区別する実益が薄いため、既存の
+// `dedup-search-failed` と同じ粒度に揃えた）。
+export const RESULT_SKIPPED_REASONS = new Set(['dedup-search-failed', 'run-cap-reached']);
 
 /**
  * `docs/operations/night-watch.md` から常設運行記録 issue の番号を読み取る。
@@ -124,8 +139,8 @@ export function validateOpsLogReport(report) {
   }
   const r = /** @type {Record<string, unknown>} */ (report);
 
-  if (!isNonNegativeInt(r.executed) || r.executed > 6) {
-    throw new Error('executed は 0〜6 の整数である必要があります');
+  if (!isNonNegativeInt(r.executed) || r.executed > CHECK_IDS.size) {
+    throw new Error(`executed は 0〜${CHECK_IDS.size} の整数である必要があります`);
   }
   if (!Array.isArray(r.failed) || !r.failed.every((id) => CHECK_IDS.has(id))) {
     throw new Error('failed は既知の check-id の配列である必要があります');
@@ -219,7 +234,7 @@ export function buildOpsLogComment(report) {
 
   return `**night-watch 運行記録 ${today}**
 
-- 実行 check 数: ${report.executed} / 6（取得失敗を除く）
+- 実行 check 数: ${report.executed} / ${CHECK_IDS.size}（取得失敗を除く）
 - 取得失敗: ${failedLine}
 - ${resultsLine}
 - baseline 更新推奨: ${baselineLine}
@@ -228,13 +243,25 @@ export function buildOpsLogComment(report) {
 `;
 }
 
+// #2332: alert-issue.mjs の run-scoped 起票上限（reserveAlertRunSlot）が
+// 機能しているかを、Claude が渡す report JSON に頼らず wrapper 自身が同じ
+// state file を直接読んで報告する（自己申告は証拠にならない。state 機構が
+// 無音で無効化される fail-open クラスを Step 5 で観測可能にする）。
+export function buildAlertBudgetLine(state) {
+  if (!state.healthy) {
+    return '- 起票予算 state: 利用不可（fail-open、無制限扱いで実行）';
+  }
+  return `- 起票予算 state: 有効（新規起票 ${state.createdCount}/${MAX_NEW_ISSUES_PER_RUN}、対応済み check-id ${state.actedCheckIds.length}件）`;
+}
+
 /**
- * @param {{ report: OpsLogReport, execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string }} params
+ * @param {{ report: OpsLogReport, execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, alertRunStatePath?: string }} params
  */
-export function runOpsLogReport({ report, execFileImpl, readFileImpl }) {
+export function runOpsLogReport({ report, execFileImpl, readFileImpl, alertRunStatePath }) {
   validateOpsLogReport(report);
   const issueNumber = resolveOpsLogIssueNumber({ readFileImpl });
-  const body = buildOpsLogComment(report);
+  const alertState = readAlertRunState({ statePath: alertRunStatePath });
+  const body = `${buildOpsLogComment(report)}${buildAlertBudgetLine(alertState)}\n`;
   runGh(['issue', 'comment', String(issueNumber), '--repo', REPO, '--body', body], {
     execFileImpl,
   });
@@ -284,10 +311,12 @@ export function runBoardNote({ note, execFileImpl }) {
     typeof note.allGreen !== 'boolean' ||
     !isNonNegativeInt(note.issued) ||
     !isNonNegativeInt(note.observed) ||
-    note.issued > 6 ||
-    note.observed > 6
+    note.issued > CHECK_IDS.size ||
+    note.observed > CHECK_IDS.size
   ) {
-    throw new Error('note の形が不正です（allGreen: boolean, issued/observed: 0〜6の整数）');
+    throw new Error(
+      `note の形が不正です（allGreen: boolean, issued/observed: 0〜${CHECK_IDS.size}の整数）`,
+    );
   }
 
   const boardIssue = findTodayBoardIssue({ execFileImpl });

@@ -12,7 +12,7 @@ code: .claude/skills/night-watch/SKILL.md
 
 night-watch は毎晩、常設の運行記録 issue へ1コメントを残す。issue 番号は登録時（実装 merge 後）に指揮台が確定し、ここに追記する:
 
-- 運行記録 issue: **未登録**（この行は指揮台が trigger 登録と同時に issue 番号へ書き換える）
+- 運行記録 issue: **#2216**
 
 **v2 で書き込み先が拡張された**（[#2291](https://github.com/Dayopt/dayopt/issues/2291)）。上記の常設運行記録 issue に加え、当日/前日の日次盤面 issue（`type:board` ラベル）への起票・close・コメントも行う。実行手順は `.claude/skills/night-watch/SKILL.md` §自動パート Step 1（盤面起票）・Step 4（DoD監査候補コメント）が正本。書き込み先はこの 2 種類の issue に限る（§守ること）。
 

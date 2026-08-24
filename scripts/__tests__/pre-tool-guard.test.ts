@@ -73,6 +73,23 @@ function edit(filePath: string, newString = ''): Record<string, unknown> {
   return { tool_name: 'Edit', tool_input: { file_path: filePath, new_string: newString } };
 }
 
+// #2334（同乗タスク、P3）: MultiEdit は edits[].new_string、NotebookEdit は
+// new_source に書き込み内容が入る。impl の抽出 jq（WRITTEN 変数）が両方を
+// 拾えていることを block 側で固定する。
+function multiEdit(filePath: string, newStrings: string[]): Record<string, unknown> {
+  return {
+    tool_name: 'MultiEdit',
+    tool_input: { file_path: filePath, edits: newStrings.map((new_string) => ({ new_string })) },
+  };
+}
+
+function notebookEdit(notebookPath: string, newSource: string): Record<string, unknown> {
+  return {
+    tool_name: 'NotebookEdit',
+    tool_input: { notebook_path: notebookPath, new_source: newSource },
+  };
+}
+
 // guard 自体が壊れると全 tool がブロックされ、guard を直す編集まで塞がれる。
 // 2026-08-12 に実際に起きた（[[ ]] の中へ引用符入りの正規表現を直接書いて構文
 // エラーになり、Bash / Write / Edit がすべて拒否されて別セッションからの復旧が
@@ -567,6 +584,13 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
     // 旧名は User の手動移行まで disk に残りうる。消費は allowlist で落ちるが、
     // 書き込みの発生源検査も移行猶予として旧名を対象に残す（#2086 反証レビュー）
     ['旧名 .op-env.local への許可外 vault 参照', write(`/x/.op-env${'.'}local`, `A=${PROD_REF}`)],
+    // #2334（同乗タスク、P3）: MultiEdit/NotebookEdit を判定対象に含めた時点
+    // （非ブロッキング Codex レビュー P1 是正）で、抽出 jq（WRITTEN 変数）に
+    // edits[].new_string / new_source を足さないと「未検査で通る新経路」に
+    // なる。ロジックは実装済みだが、これまで block 側の回帰テストが無かった
+    // （手動トレースのみで正当性確認していた）ため固定する。
+    ['MultiEdit に production 参照', multiEdit(`/x/${AGENT}`, [`A=${PROD_REF}`])],
+    ['NotebookEdit に production 参照', notebookEdit(`/x/${AGENT}`, `A=${PROD_REF}`)],
   ])('書き込み時にも落とす: %s', (_label, input) => {
     expect(runGuard(input)).toBe('block');
   });
@@ -719,6 +743,10 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
+        'integration 赤確認 (GET、#2333)',
+        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      ],
+      [
         'Sentry 新規 issue スキャン (GET)',
         'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
       ],
@@ -830,6 +858,18 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       [
         'heavy-post-merge 赤確認の --json field 列を差し替える迂回（旧v1文字列）',
         'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,headSha,createdAt',
+      ],
+      [
+        'integration 赤確認に未許可 flag（-X POST）を付ける迂回',
+        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
+      ],
+      [
+        'integration 赤確認の workflow 名を差し替える迂回（似た名前の別 workflow）',
+        'gh run list --workflow=integration-tests.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      ],
+      [
+        'integration 赤確認の --json field 列を差し替える迂回',
+        'gh run list --workflow=integration.yml --limit 3 --json conclusion,headSha,createdAt',
       ],
       [
         'Sentry スキャンの query を差し替える迂回',
