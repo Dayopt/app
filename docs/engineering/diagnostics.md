@@ -33,6 +33,8 @@ last_verified: 2026-08-20
 
 新規 import + それを使う変更（intersection member の追加など）は、可能な限り**同一の Write / Edit 呼び出しでまとめる**。2 回に分けると、間に formatter hook が挟まって片方だけが消える。
 
+**2026-08-24、`.prettierrc` の `organizeImportsSkipDestructiveCodeActions: true`（#2362）でこの根本原因（`prettier-plugin-organize-imports` による無言の import 除去）自体を止めた。** PostToolUse hook・pre-commit の `lint-staged`・エディタ保存のすべての `prettier --write` 呼び出しに一括適用される（sort/combine は不変、removal だけを止める公式オプション）。以後、真に未使用な import は `noUnusedLocals`（`tsconfig.base.json` および各 app の tsconfig）が typecheck error として顕在化させるため、「無言で消える」クラスの再発は原理的に起きない。上記の同一 Write/Edit 呼び出しでまとめる規律は、他の理由（未使用にすら見えない一時的な構文不整合など）による混乱を避ける一般的な良い習慣として引き続き有効だが、本節が記録する具体的な事故クラスへの対処としては設定変更で閉じている。
+
 ## 実例集
 
 症状 → 誤診 → 真因の順で記録する。同じ症状を見た将来のレーンは、まずここを確認する。
