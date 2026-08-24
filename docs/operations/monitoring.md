@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-14
+last_verified: 2026-08-24
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -139,6 +139,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - Supabase database size、connection、slow query: 週次
 - provider usage / plan limit: 月次
 - **browser client telemetry の生死確認: 月次**（#2029）。Sentry で `environment:production has:browser.name` を直近30日で検索し、件数が0でないことを確認する。0件なら consent gate・DSN・CSP・SDK 初期化のどこかが壊れている可能性が高く、`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md` の contract に沿って client 側の初期化パス（`instrumentation-client.ts` / `packages/observability/src/consent.ts`）を調査する。新しい常設 canary surface は作らない（2026-07-16〜23 に一時追加した operator smoke surface は複雑さに見合わず撤去済み）
+- **体感速度北極星（production LCP p95 / INP p95）の月次確認: 月次**（#2294）。product（Sentry project `dayopt`）の Web Vitals を [LCP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.lcp+environment%3Aproduction&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.lcp%29%22%2C%22p95%28measurements.lcp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) / [INP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.inp&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.inp%29%22%2C%22p95%28measurements.inp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) で開き、p95 と n（count）を確認する。budget は `docs/engineering/infra.md` §速度指標（LCP p95≤2.5s、INP p95≤200ms）。2026-08-24 baseline: LCP p75=1318ms/p95=2101.2ms（n=110）、INP p75=96ms/p95=103.84ms（n=104）、いずれも budget 内。**INP query はあえて `environment:production` を付けない** — INP は Sentry SDK の仕様で standalone span に `environment` タグが付かないため（`environment:production` で絞ると誤って count=0 になる）。両 app とも `enabled: IS_SENTRY_PRODUCTION`（`apps/product/instrumentation-client.ts:66` / `apps/web/instrumentation-client.ts:24`）が production 以外で SDK 自体を init しない構造的 gate のため、フィルタなしでも値は production 限定と確定できる。**n を必ず確認する** — p95 は少数サンプルで暴れるため、n が前月比で大きく変動した月（consent UI 変更、計測ソース変更、トラフィック構成変化など）は単純比較せず断点として本節にコメントで残す。閾値アラートは n がまだ小さく統計的に成立しないため作らない（この月次確認と `docs/engineering/infra.md` §行動ルール の「p95悪化 → 改善Issue必須」で代替する）。月次の実測値は gardening journal（`docs/engineering/log/YYYY-MM-01-journal.md` §数値）にも記録し、時系列比較を蓄積する
 
 通知channelはprovider dashboardとemailを基本とする。
 
