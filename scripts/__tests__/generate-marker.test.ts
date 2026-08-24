@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildMarkerBody } from '../review/generate-marker-core.ts';
+import {
+  buildMarkerBody,
+  deriveAgentFieldFromReviewResult,
+  type ReviewResultEntry,
+} from '../review/generate-marker-core.ts';
 
 /**
  * generate-marker-core の契約テスト（#2230）。
@@ -127,5 +131,54 @@ describe('buildMarkerBody', () => {
         p2Count: 1.5,
       }),
     ).toThrow();
+  });
+});
+
+/**
+ * deriveAgentFieldFromReviewResult の契約テスト（#2348）。
+ *
+ * Workflow 経由で reviewer を起動した結果、1 role でも `ok`/`text-fallback`
+ * 以外の status が混じっていれば marker 生成そのものを拒否する
+ * （1 role が結果を返していないのに `--agent` へ手で書いて gate を素通りさせる
+ * 抜け道を、値の手入力自体を無くすことで塞ぐ）。
+ */
+describe('deriveAgentFieldFromReviewResult', () => {
+  it('全 role が ok なら role 名をカンマ区切りで返す', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok' },
+      { role: 'behavior-verifier', status: 'ok' },
+    ];
+
+    expect(deriveAgentFieldFromReviewResult(entries)).toBe('risk-reviewer, behavior-verifier');
+  });
+
+  it('text-fallback を含む場合は (text-fallback) を付けて返す', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok' },
+      { role: 'behavior-verifier', status: 'text-fallback' },
+    ];
+
+    expect(deriveAgentFieldFromReviewResult(entries)).toBe(
+      'risk-reviewer, behavior-verifier(text-fallback)',
+    );
+  });
+
+  it('1 role でも empty があれば拒否する', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok' },
+      { role: 'behavior-verifier', status: 'empty' },
+    ];
+
+    expect(() => deriveAgentFieldFromReviewResult(entries)).toThrow(/behavior-verifier\(empty\)/);
+  });
+
+  it('1 role でも error があれば拒否する', () => {
+    const entries: ReviewResultEntry[] = [{ role: 'architecture-guard', status: 'error' }];
+
+    expect(() => deriveAgentFieldFromReviewResult(entries)).toThrow(/architecture-guard\(error\)/);
+  });
+
+  it('空配列は拒否する', () => {
+    expect(() => deriveAgentFieldFromReviewResult([])).toThrow(/空です/);
   });
 });
