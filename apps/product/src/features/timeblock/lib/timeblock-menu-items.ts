@@ -43,7 +43,6 @@ export interface TimeblockMenuItem {
 
 interface TimeblockMenuItemsArgs {
   origin: TimeblockOrigin | undefined;
-  tagId: string | null | undefined;
   activityId?: string | null | undefined;
   /**
    * 未来（upcoming）の予定か。
@@ -70,7 +69,6 @@ interface TimeblockMenuItemsArgs {
 
 export function getTimeblockMenuItems({
   origin,
-  tagId,
   activityId,
   isUpcoming = false,
   isPast = false,
@@ -88,7 +86,7 @@ export function getTimeblockMenuItems({
   const isPlanned = origin === 'planned';
 
   const items: (TimeblockMenuItem | null)[] = [
-    onViewStats && (tagId || activityId)
+    onViewStats && activityId
       ? {
           key: 'viewStats',
           labelKey: 'calendar.filter.viewStats',

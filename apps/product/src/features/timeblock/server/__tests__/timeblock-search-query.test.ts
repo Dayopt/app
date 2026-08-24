@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * `buildTimeblockSearchFilter` の分類名検索が **アクティビティとタグの和集合**である
- * ことを凍結する（#2162）。
+ * `buildTimeblockSearchFilter` の分類名検索が **アクティビティ名一致のみ**である
+ * ことを凍結する（#2162、Step 8 tag_id 剥離 で tags 名前検索を除去）。
  *
- * cutover 後のブロックは `activity_id` を持ち `tag_id` を持たない。cutover 前の旧ブロックは
- * 逆になる。片側だけを見ると、もう一方の世代が検索から丸ごと消える。E2E は seed を
- * activities へ移したためタグ側を踏まなくなっており、この test がタグ経路の唯一の網。
+ * tags 名前検索の除去は書き込み経路からの tag_id 参照除去に伴う唯一のユーザー可視劣化
+ * （note に含まれない旧タグ名での検索が消える）。docs/projects/tag-model-replacement/
+ * overview.md §Step 8（tag_id 剥離）の設計 の表を参照。
  */
 
 const runPrivateTimeblockSearchQuery = vi.hoisted(() => vi.fn());
@@ -60,34 +60,17 @@ describe('buildTimeblockSearchFilter', () => {
     await expect(result).resolves.toBe('note.ilike.%design%,activity_id.in.(act-1,act-2)');
   });
 
-  it('タグ名の一致を tag_id フィルタへ載せる（cutover 前の旧ブロックを消さない）', async () => {
-    const { result } = buildWith({ tags: [{ id: 'tag-1' }] });
-
-    await expect(result).resolves.toBe('note.ilike.%design%,tag_id.in.(tag-1)');
-  });
-
-  it('両方一致したら和集合にする（どちらの世代のブロックも引ける）', async () => {
-    const { result } = buildWith({
-      activities: [{ id: 'act-1' }],
-      tags: [{ id: 'tag-1' }],
-    });
-
-    await expect(result).resolves.toBe(
-      'note.ilike.%design%,activity_id.in.(act-1),tag_id.in.(tag-1)',
-    );
-  });
-
-  it('分類が一致しなければ note だけで引く', async () => {
+  it('アクティビティが一致しなければ note だけで引く', async () => {
     const { result } = buildWith({});
 
     await expect(result).resolves.toBe('note.ilike.%design%');
   });
 
-  it('activities と tags の両方を引く', async () => {
+  it('activities だけを引く（tags へは問い合わせない）', async () => {
     const { seen, result } = buildWith({});
     await result;
 
-    expect(seen).toEqual(expect.arrayContaining(['activities', 'tags']));
+    expect(seen).toEqual(['activities']);
   });
 
   it('記号だけの入力は無条件一覧へフォールバックしない', async () => {
@@ -98,7 +81,6 @@ describe('buildTimeblockSearchFilter', () => {
 
   it('分類クエリが失敗したら検索語を含めずに FETCH_FAILED を投げる', async () => {
     runPrivateTimeblockSearchQuery.mockResolvedValueOnce({ data: null, error: new Error('boom') });
-    runPrivateTimeblockSearchQuery.mockResolvedValueOnce({ data: [], error: null });
 
     const { result } = buildWith({}, 'secret-words');
 

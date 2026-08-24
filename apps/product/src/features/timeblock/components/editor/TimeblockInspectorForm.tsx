@@ -193,7 +193,6 @@ export function TimeblockInspectorForm({
 
   const [value, setValue] = useState<TimeModelEditorValue>(() => ({
     note: duplicateDraft?.note ?? target?.note ?? '',
-    tagId: duplicateDraft?.tagId ?? target?.tag_id ?? null,
     activityId: duplicateDraft?.activityId ?? target?.activity_id ?? null,
     startAt: duplicateDraft
       ? new Date(duplicateDraft.startAt)
@@ -283,7 +282,6 @@ export function TimeblockInspectorForm({
             setValue((previous) => ({
               ...previous,
               note: latest.note ?? '',
-              tagId: latest.tag_id,
               activityId: latest.activity_id,
               startAt: new Date(latest.start_at),
               endAt: new Date(latest.end_at),
@@ -431,13 +429,12 @@ export function TimeblockInspectorForm({
     noteDirtyRef.current = false;
     await flushSave({
       note: normalizeNote(pendingNoteRef.current),
-      tagId: value.tagId,
       activityId: value.activityId,
     });
     const updatedAt = latestUpdatedAtRef.current;
     if (!updatedAt) throw new Error('Missing timeblock version');
     return updatedAt;
-  }, [cancelScheduledNoteSave, flushSave, value.tagId, value.activityId]);
+  }, [cancelScheduledNoteSave, flushSave, value.activityId]);
 
   const handleCopy = useCallback(() => {
     if (!target || !onCopy) return;
@@ -448,7 +445,6 @@ export function TimeblockInspectorForm({
         description: normalizeNote(value.note),
         startAt: value.startAt,
         endAt: value.endAt,
-        tagId: value.tagId,
         activityId: value.activityId,
       }),
     );
@@ -462,7 +458,6 @@ export function TimeblockInspectorForm({
         kind,
         title: target.title,
         note: normalizeNote(value.note),
-        tagId: value.tagId,
         activityId: value.activityId,
         startAt: value.startAt,
         endAt: value.endAt,
@@ -578,7 +573,6 @@ export function TimeblockInspectorForm({
         // time model では変換系（markUnplanned / restorePlanned）を出さないため
         // plan → planned / record → unplanned の対応で表示条件だけ流用する
         origin: kind === 'plan' ? 'planned' : 'unplanned',
-        tagId: value.tagId,
         activityId: value.activityId,
         isPast,
         isSkipped,

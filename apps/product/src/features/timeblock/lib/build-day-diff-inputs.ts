@@ -38,7 +38,6 @@ export function buildTimeblockDayDiffPlans(
       return {
         id: entry.id,
         title: entry.title,
-        tagId: entry.tagId ?? null,
         activityId: entry.activityId ?? null,
         color: entry.color,
         startAt,
@@ -62,7 +61,6 @@ export function buildTimeblockDayDiffRecords(
       id: entry.id,
       planId: entry.planId ?? null,
       title: entry.title,
-      tagId: entry.tagId ?? null,
       activityId: entry.activityId ?? null,
       color: entry.color,
       startAt: entry.startDate ?? entry.displayStartDate,

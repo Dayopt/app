@@ -29,7 +29,6 @@ type Story = StoryObj;
 
 const fullPlannedMenu = getTimeblockMenuItems({
   origin: 'planned',
-  tagId: null,
   activityId: 'activity-1',
   onViewStats: fn(),
   onCopy: fn(),
@@ -40,7 +39,6 @@ const fullPlannedMenu = getTimeblockMenuItems({
 
 const unplannedMenu = getTimeblockMenuItems({
   origin: 'unplanned',
-  tagId: null,
   activityId: 'activity-1',
   onViewStats: fn(),
   onCopy: fn(),
@@ -51,7 +49,6 @@ const unplannedMenu = getTimeblockMenuItems({
 
 const copyAndDeleteMenu = getTimeblockMenuItems({
   origin: 'planned',
-  tagId: null,
   activityId: 'activity-1',
   onCopy: fn(),
   onDuplicate: fn(),
@@ -61,7 +58,6 @@ const copyAndDeleteMenu = getTimeblockMenuItems({
 /** 未来の予定: まだ記録が存在し得ないため「予定外にする」は出ない。 */
 const upcomingPlannedMenu = getTimeblockMenuItems({
   origin: 'planned',
-  tagId: null,
   activityId: 'activity-1',
   isUpcoming: true,
   onViewStats: fn(),

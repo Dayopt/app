@@ -13,6 +13,5 @@ export function createCalendarEventClipboardTimeblock(
     description: entry.description ?? null,
     startAt: entry.displayStartDate,
     endAt: entry.displayEndDate,
-    tagId: entry.tagId,
   });
 }

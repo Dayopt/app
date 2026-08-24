@@ -13,7 +13,6 @@ describe('getTimeblockMenuItems', () => {
   const noop = vi.fn();
 
   const baseArgs = {
-    tagId: 'tag-1',
     onViewStats: noop,
     onCopy: noop,
     onDuplicate: noop,
@@ -56,7 +55,7 @@ describe('getTimeblockMenuItems', () => {
     });
 
     it('ハンドラ未指定なら表示しない', () => {
-      expect(keys({ origin: 'planned', tagId: null })).not.toContain('copy');
+      expect(keys({ origin: 'planned' })).not.toContain('copy');
     });
   });
 
@@ -67,7 +66,7 @@ describe('getTimeblockMenuItems', () => {
     });
 
     it('ハンドラ未指定なら表示しない', () => {
-      expect(keys({ origin: 'planned', tagId: null })).not.toContain('duplicate');
+      expect(keys({ origin: 'planned' })).not.toContain('duplicate');
     });
   });
 
