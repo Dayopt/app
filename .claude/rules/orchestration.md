@@ -250,6 +250,19 @@ path は自動判定の補助信号であり、正本は守るべき境界・不
 5. Codex が usage limit / 障害で応答しない場合は、その事実を該当 PR へ記録する。試行期間中は Codex の応答を hard merge gate にせず、既存の内製 review gate（`branch:finish` の `[internal-review]` marker gate）を正本のまま維持する
 6. 実測で有効性と可用性が確認できるまで、全 PR 自動レビューや必須 status check へ昇格しない
 
+### 回数の既定（策定日: 2026-08-24、[#2331](https://github.com/Dayopt/dayopt/issues/2331)）
+
+**既定は 1 PR 1 回。** review-ready の head に対して 1 度だけ `@codex review` を依頼する。
+
+再依頼してよい条件は次の 2 つのみ:
+
+- (a) P1 が出て fix が点修正でなく設計の作り直しになった時
+- (b) fix round で保護対象の境界（RLS・migration・wire contract）に新規変更が入った時
+
+P2 の点修正は再依頼しない。内製クロスレビューの delta re-review + thread resolve gate（`.claude/rules/workflow.md` §レビュー指摘の必須解決）が fix 検証を担う。
+
+根拠: 「指摘ゼロまで回す」は到達不能ゴール（`.claude/rules/workflow.md` §同型指摘の打ち切り、PR #1820 の 30 ラウンド超の実績と整合）。Codex 利用量は希少で、試行の成功指標は「重大リスクへの集中」（#1850 以降 8 PR 連続無応答の実績）。「クリーンになるまで」は本節の非ブロッキング設計を実質 hard gate 化し矛盾する。
+
 ### AGENTS.md との関係
 
 `AGENTS.md` は Codex 専用のレビュー規則（何を守るか・severity）を持つ。P1/P2 の定義は `pr-cross-review` skill が生きた正本で、`AGENTS.md` はその凍結前の定義を踏襲する（`.claude/skills/pr-cross-review/SKILL.md` 手順 4「指摘を分類する」参照）。**`AGENTS.md` 側に選別基準（どの PR を対象にするか）は書かない** — 書くと本節と二重管理になる。
