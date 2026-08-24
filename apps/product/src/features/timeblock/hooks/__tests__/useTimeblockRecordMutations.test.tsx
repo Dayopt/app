@@ -82,6 +82,7 @@ const record = {
   start_at: '2026-07-14T09:00:00.000Z',
   end_at: '2026-07-14T10:00:00.000Z',
   source: 'from_plan',
+  fulfillment: null,
   deleted_at: null,
   created_at: '2026-07-14T10:00:00.000Z',
   updated_at: '2026-07-14T10:00:00.000Z',

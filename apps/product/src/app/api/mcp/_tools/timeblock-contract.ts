@@ -28,6 +28,7 @@ const MCP_RECORD_OUTPUT_SCHEMA = z
     startAt: z.string(),
     endAt: z.string(),
     source: z.string(),
+    fulfillment: z.enum(['low', 'medium', 'high']).nullable(),
     deletedAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),

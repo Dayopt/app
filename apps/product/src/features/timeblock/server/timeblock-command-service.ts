@@ -9,6 +9,7 @@ import type {
   UpdatePlanInput,
   UpdateRecordInput,
 } from '../schemas/timeblock';
+import { parseFulfillment } from '../schemas/timeblock';
 import { PlanService } from './plan-service';
 import { RecordService } from './record-service';
 import { assertActivityAssignable } from './tag-assignment-guard';
@@ -155,6 +156,7 @@ export class TimeblockCommandService {
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
       startAt: input.start_at,
       endAt: input.end_at,
+      fulfillment: input.fulfillment ?? null,
     });
     await trackProductEvent({ eventName: 'record_created', userId });
     return record;
@@ -182,6 +184,10 @@ export class TimeblockCommandService {
       source: toTimeblockSource(existing.source),
       startAt: input.start_at ?? existing.start_at,
       endAt: input.end_at ?? existing.end_at,
+      fulfillment:
+        input.fulfillment === undefined
+          ? parseFulfillment(existing.fulfillment)
+          : input.fulfillment,
     });
   }
 

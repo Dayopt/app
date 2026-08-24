@@ -104,6 +104,7 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     deleted_at: null,
     end_at: '2026-03-17T11:00:00.000Z',
     external_calendar_event_id: null,
+    fulfillment: null,
     id: 'record-1',
     note: null,
     plan_id: null,
@@ -875,6 +876,7 @@ describe('RecordService.create', () => {
       source: 'manual',
       startAt: '2026-03-17T12:00:00.000Z',
       endAt: '2026-03-17T13:00:00.000Z',
+      fulfillment: null,
     });
     expect(trackProductEvent).toHaveBeenCalledWith({
       eventName: 'record_created',
@@ -983,6 +985,7 @@ describe('RecordService.update', () => {
       source: 'manual',
       startAt: existing.start_at,
       endAt: existing.end_at,
+      fulfillment: null,
     });
   });
 

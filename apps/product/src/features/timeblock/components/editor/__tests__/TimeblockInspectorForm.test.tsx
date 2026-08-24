@@ -109,6 +109,25 @@ vi.mock('../../inspector/fields', () => ({
       ))}
     </>
   ),
+  RecordFulfillmentRow: ({
+    value,
+    onChange,
+    disabled,
+  }: {
+    value: 'low' | 'medium' | 'high' | null;
+    onChange: (next: 'low' | 'medium' | 'high' | null) => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      type="button"
+      data-testid="record-fulfillment-row"
+      data-value={value ?? ''}
+      disabled={disabled}
+      onClick={() => onChange('high')}
+    >
+      fulfillment
+    </button>
+  ),
 }));
 
 vi.mock('../TimeblockRecordActions', () => ({
@@ -257,6 +276,7 @@ const relatedRecord = {
   start_at: '2026-07-15T10:00:00.000Z',
   end_at: '2026-07-15T11:00:00.000Z',
   source: 'from_plan',
+  fulfillment: null,
   deleted_at: null,
   created_at: '2026-07-15T10:00:00.000Z',
   updated_at: '2026-07-15T10:00:00.000Z',

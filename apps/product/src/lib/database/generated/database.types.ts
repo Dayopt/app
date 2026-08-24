@@ -802,6 +802,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -818,6 +819,7 @@ export type Database = {
           deleted_at?: string | null;
           end_at: string;
           external_calendar_event_id?: string | null;
+          fulfillment?: string | null;
           id?: string;
           note?: string | null;
           plan_id?: string | null;
@@ -834,6 +836,7 @@ export type Database = {
           deleted_at?: string | null;
           end_at?: string;
           external_calendar_event_id?: string | null;
+          fulfillment?: string | null;
           id?: string;
           note?: string | null;
           plan_id?: string | null;
@@ -1238,6 +1241,7 @@ export type Database = {
           p_activity_id?: string;
           p_connection_id: string;
           p_end_at: string;
+          p_fulfillment?: string;
           p_note: string;
           p_operation_id: string;
           p_plan_id: string;
@@ -1300,6 +1304,8 @@ export type Database = {
           p_end_at: string;
           p_end_at_present: boolean;
           p_expected_updated_at: string;
+          p_fulfillment?: string;
+          p_fulfillment_present?: boolean;
           p_note: string;
           p_note_present: boolean;
           p_operation_id: string;
@@ -1674,6 +1680,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -1704,6 +1711,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -1778,6 +1786,7 @@ export type Database = {
           p_activity_id?: string;
           p_end_at: string;
           p_external_calendar_event_id: string;
+          p_fulfillment?: string;
           p_note: string;
           p_plan_id: string;
           p_source: string;
@@ -1792,6 +1801,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -1868,6 +1878,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -2275,6 +2286,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -2375,6 +2387,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;
@@ -2631,6 +2644,8 @@ export type Database = {
           p_end_at: string;
           p_expected_updated_at: string;
           p_external_calendar_event_id: string;
+          p_fulfillment?: string;
+          p_fulfillment_present?: boolean;
           p_note: string;
           p_plan_id: string;
           p_record_id: string;
@@ -2645,6 +2660,7 @@ export type Database = {
           deleted_at: string | null;
           end_at: string;
           external_calendar_event_id: string | null;
+          fulfillment: string | null;
           id: string;
           note: string | null;
           plan_id: string | null;

@@ -49,7 +49,8 @@ import {
   hasTimeblockLaneConflict,
 } from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
-import { InspectorHeaderActions } from '../inspector/fields';
+import { parseFulfillment, type Fulfillment } from '../../schemas/timeblock';
+import { InspectorHeaderActions, RecordFulfillmentRow } from '../inspector/fields';
 import { EstimationFeedforward } from './EstimationFeedforward';
 import {
   isValidTimeModelRange,
@@ -206,6 +207,9 @@ export function TimeblockInspectorForm({
         : new Date(),
     ...(isDuplicateMode ? {} : { source: kind }),
   }));
+  const [fulfillment, setFulfillment] = useState<Fulfillment | null>(() =>
+    isDuplicateMode ? null : parseFulfillment(record?.fulfillment),
+  );
   const [duplicateValidationNow] = useState(() => new Date());
   const [isPreparingAction, setIsPreparingAction] = useState(false);
   const [isRecoveringConflict, setIsRecoveringConflict] = useState(false);
@@ -284,6 +288,7 @@ export function TimeblockInspectorForm({
               startAt: new Date(latest.start_at),
               endAt: new Date(latest.end_at),
             }));
+            setFulfillment(parseFulfillment('fulfillment' in latest ? latest.fulfillment : null));
             setHasUnresolvedWrite(false);
             conflictRecoveringRef.current = false;
           } catch {
@@ -410,6 +415,15 @@ export function TimeblockInspectorForm({
       scheduleNoteSave({ generation: noteGenerationRef.current, note });
     },
     [isDuplicateMode, scheduleNoteSave],
+  );
+
+  const handleFulfillmentChange = useCallback(
+    (next: Fulfillment | null) => {
+      if (isDuplicateMode || actionPreparingRef.current || conflictRecoveringRef.current) return;
+      setFulfillment(next);
+      enqueueSave({ fulfillment: next });
+    },
+    [isDuplicateMode, enqueueSave],
   );
 
   const flushPendingEdits = useCallback(async (): Promise<string> => {
@@ -633,6 +647,14 @@ export function TimeblockInspectorForm({
         onCreateAndSelectActivity={handleCreateAndSelectActivity}
         activityDisabled={isWriteFrozen}
       />
+
+      {!isDuplicateMode && kind === 'record' ? (
+        <RecordFulfillmentRow
+          value={fulfillment}
+          onChange={handleFulfillmentChange}
+          disabled={isWriteFrozen || isMigrated}
+        />
+      ) : null}
 
       {/*
         保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした

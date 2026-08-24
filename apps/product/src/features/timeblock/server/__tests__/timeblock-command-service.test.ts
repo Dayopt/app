@@ -39,6 +39,7 @@ const record: RecordRow = {
   deleted_at: null,
   end_at: '2026-07-28T02:00:00.000000Z',
   external_calendar_event_id: null,
+  fulfillment: null,
   id: RECORD_ID,
   note: null,
   plan_id: PLAN_ID,
