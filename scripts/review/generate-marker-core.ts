@@ -45,6 +45,33 @@ function formatCountLine(label: 'P1' | 'P2', count: number, note: string | undef
   return note && note.trim() ? `${base}（${note.trim()}）` : base;
 }
 
+/**
+ * `pr-cross-review` skill が呼ぶ read-only reviewer の role 名。
+ * `--agent` への直接手書きを拒否する時（`assertAgentFieldHasNoKnownReviewerRole`）と、
+ * `--review-result` の role 集合検証の両方で使う唯一の定義。
+ */
+const KNOWN_REVIEWER_ROLES = new Set(['risk-reviewer', 'behavior-verifier', 'architecture-guard']);
+
+/**
+ * `--agent` へ既知の reviewer role 名を手書きすることを拒否する（PR #2354 クロスレビュー P2）。
+ *
+ * `--review-result` を新設した本 PR 自身が「1 role が結果を返していないのに
+ * `--agent` へ手で書いて gate を通す」抜け道を塞ぐと宣言していたが、`--agent`
+ * 経路そのものは temporarily 生きたままで、その抜け道がまだ開いていた。
+ * reviewer を実際に起動した場合は必ず `--review-result` を使うことを強制する。
+ * `role(text-fallback)` のような注釈付き表記も、base 部分が既知 role と一致すれば
+ * 同様に拒否する（`--agent` へ直接書く形で text-fallback を偽装させないため）。
+ */
+export function assertAgentFieldHasNoKnownReviewerRole(agent: string): void {
+  const tokens = agent.split(',').map((t) => t.trim());
+  const found = tokens.filter((t) => KNOWN_REVIEWER_ROLES.has(t.replace(/\(.*\)$/, '').trim()));
+  if (found.length > 0) {
+    throw new Error(
+      `--agent に reviewer 名（${found.join(', ')}）を直接指定できません。reviewer を実際に起動した場合は --review-result <path> を使ってください（#2348）。`,
+    );
+  }
+}
+
 /** `pr-cross-review` skill が Workflow 経由で reviewer を起動した結果、1 role ぶんのエントリ。 */
 export interface ReviewResultEntry {
   role: string;
@@ -69,6 +96,11 @@ export interface ReviewResultEntry {
 export function deriveAgentFieldFromReviewResult(entries: ReviewResultEntry[]): string {
   if (entries.length === 0) {
     throw new Error('--review-result の JSON が空です。最低 1 件の reviewer 結果が必要です。');
+  }
+
+  const blankRole = entries.some((e) => !e.role || !e.role.trim());
+  if (blankRole) {
+    throw new Error('--review-result の JSON に role が空のエントリがあります。');
   }
 
   const unresolved = entries.filter((e) => e.status !== 'ok' && e.status !== 'text-fallback');

@@ -33,6 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import {
+  assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
   deriveAgentFieldFromReviewResult,
   type ReviewResultEntry,
@@ -93,6 +94,9 @@ function parseArgs(argv: string[]): Args {
       '--agent または --review-result のいずれかが必須です（実行した subagent 名 / docs-only、' +
         'または reviewer を起動した場合は Workflow の結果 JSON へのパス）。',
     );
+  }
+  if (agent) {
+    assertAgentFieldHasNoKnownReviewerRole(agent);
   }
 
   const p1Count = Number(flags.get('p1') ?? '0');

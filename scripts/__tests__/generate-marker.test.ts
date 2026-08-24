@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
   deriveAgentFieldFromReviewResult,
   type ReviewResultEntry,
@@ -180,5 +181,50 @@ describe('deriveAgentFieldFromReviewResult', () => {
 
   it('空配列は拒否する', () => {
     expect(() => deriveAgentFieldFromReviewResult([])).toThrow(/空です/);
+  });
+
+  it('role が空文字列のエントリがあれば拒否する（PR #2354 クロスレビュー P3）', () => {
+    const entries: ReviewResultEntry[] = [{ role: '', status: 'ok' }];
+
+    expect(() => deriveAgentFieldFromReviewResult(entries)).toThrow(/role が空/);
+  });
+
+  it('role が空白のみのエントリがあれば拒否する', () => {
+    const entries: ReviewResultEntry[] = [{ role: '   ', status: 'ok' }];
+
+    expect(() => deriveAgentFieldFromReviewResult(entries)).toThrow(/role が空/);
+  });
+});
+
+/**
+ * assertAgentFieldHasNoKnownReviewerRole の契約テスト（PR #2354 クロスレビュー P2）。
+ *
+ * `--review-result` を新設した本 PR 自身が「1 role が結果を返していないのに
+ * `--agent` へ手で書いて gate を通す」抜け道を塞ぐと宣言していたが、`--agent`
+ * 経路そのものには既知 role 名の直書きを禁止する仕組みが無く、抜け道が残っていた。
+ */
+describe('assertAgentFieldHasNoKnownReviewerRole', () => {
+  it('docs-only は許可する', () => {
+    expect(() => assertAgentFieldHasNoKnownReviewerRole('docs-only')).not.toThrow();
+  });
+
+  it('既知の reviewer role 名を単独で拒否する', () => {
+    expect(() => assertAgentFieldHasNoKnownReviewerRole('risk-reviewer')).toThrow(/risk-reviewer/);
+  });
+
+  it('既知の reviewer role 名がカンマ区切りの一部でも拒否する', () => {
+    expect(() => assertAgentFieldHasNoKnownReviewerRole('docs-only, behavior-verifier')).toThrow(
+      /behavior-verifier/,
+    );
+  });
+
+  it('(text-fallback) 注釈付きでも base 部分が既知 role なら拒否する（--agent 直書きでの偽装を防ぐ）', () => {
+    expect(() =>
+      assertAgentFieldHasNoKnownReviewerRole('architecture-guard(text-fallback)'),
+    ).toThrow(/architecture-guard/);
+  });
+
+  it('既知 role と無関係な自由記述は許可する', () => {
+    expect(() => assertAgentFieldHasNoKnownReviewerRole('my-custom-note')).not.toThrow();
   });
 });
