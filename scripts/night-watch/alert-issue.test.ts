@@ -107,7 +107,7 @@ describe('buildAlertBody', () => {
     });
     expect(body).toContain('https://github.com/Dayopt/dayopt/actions/runs/456');
     expect(body).toContain(
-      '**再現コマンド**: `gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url`',
+      '**再現コマンド**: `gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url`',
     );
   });
 

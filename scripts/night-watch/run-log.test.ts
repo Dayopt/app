@@ -429,4 +429,26 @@ describe('runBoardNote', () => {
       }),
     ).toThrow(/note の形が不正/);
   });
+
+  // push前反証レビュー risk-reviewer 指摘（P2）: board-issue.mjs が Step 1 の
+  // 起票を平日のみに絞った（#2334 コメント）ため、土日は当日盤面 issue が
+  // 存在せず findTodayBoardIssue が必ず null を返す。weekend skip 無しだと
+  // 毎週 2 回、確実に「故障に見える失敗」（例外 → exit 1）が出ていた。
+  it.each([
+    ['土曜日', '2026-08-22T01:00:00Z'],
+    ['日曜日', '2026-08-23T01:00:00Z'],
+  ])('%s（JST）は gh を一切呼ばず skip する', (_label, isoDate) => {
+    vi.setSystemTime(new Date(isoDate));
+    const execFileImpl = vi.fn(() => {
+      throw new Error('gh を呼んではいけない（weekend skip は gh 呼び出し前に判定する）');
+    });
+
+    const result = runBoardNote({
+      note: { allGreen: true, issued: 0, observed: 6 },
+      execFileImpl,
+    });
+
+    expect(result).toEqual({ action: 'skipped', reason: 'weekend' });
+    expect(execFileImpl).not.toHaveBeenCalled();
+  });
 });

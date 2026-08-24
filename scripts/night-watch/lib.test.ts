@@ -228,5 +228,19 @@ describe('readAlertRunState / reserveAlertRunSlot', () => {
       const result = reserveAlertRunSlot({ checkId: 'sentry-new', willCreate: false, statePath });
       expect(result).toEqual({ allowed: true });
     });
+
+    // push前反証レビュー risk-reviewer 指摘（P2）: state の書き込み失敗
+    // （tmpdir read-only / ENOSPC / 権限不足）を無視して例外を投げると、
+    // gh を一切呼ばずに CLI が exit 1 し、その run の全 check-id で起票・
+    // 追記が 1 件も出なくなる。fail-open（allowed: true を返す）を固定する。
+    it('state の書き込みに失敗しても fail-open で許可する（例外を投げない）', () => {
+      const unwritablePath = join(stateDir, 'no-such-subdir', 'state.json');
+      expect(() =>
+        reserveAlertRunSlot({ checkId: 'docs-check', willCreate: true, statePath: unwritablePath }),
+      ).not.toThrow();
+      expect(
+        reserveAlertRunSlot({ checkId: 'deadcode', willCreate: true, statePath: unwritablePath }),
+      ).toEqual({ allowed: true });
+    });
   });
 });

@@ -58,14 +58,26 @@ export const CHECK_DEFINITIONS = {
   // （`integration-${{ github.ref }}` + cancel-in-progress: true）のため、
   // 判定規約（cancelled/timed_out/action_required も赤・直近24hにsuccessが
   // 無ければ赤）は heavy-red と同一（#2333、CI 4層再設計 #2269 で integration
-  // が per-PR から nightly 05:30 JST + push:main 後へ移った後、夜勤が
-  // heavy-post-merge の赤しか観測しておらず integration 単独の失敗が無通知の
-  // まま朝を迎える穴を埋める）。
+  // が per-PR から nightly + push:main 後へ移った後、夜勤が heavy-post-merge
+  // の赤しか観測しておらず integration 単独の失敗が無通知のまま朝を迎える穴を
+  // 埋める）。
+  //
+  // **`--branch main` は heavy-red からのコピー時に落ちていた必須 flag**
+  // （push前反証レビュー risk-reviewer 指摘、P2）。integration.yml は
+  // heavy-post-merge.yml と異なり `pull_request` trigger も持つ
+  // （migration-safety job 用）ため、branch 指定が無いと直近 3 run に
+  // PR run が混入し、(a) PR の追い push で cancel-in-progress により
+  // cancelled になった run が「cancelled も赤」規約に直撃して誤起票、
+  // (b) PR run が直近枠を占有して nightly の success run が窓外に出て
+  // 「直近24hにsuccessが無い」で誤起票、逆に (c) 本物の nightly 失敗が
+  // PR run に押し出されて見逃される、の 3 経路が同時に開いていた。
+  // heavy-post-merge.yml には pull_request trigger が無いため heavy-red
+  // 側にはこの穴は無い。
   'integration-red': {
     kind: 'run-url',
     title: 'integration が直近 run で red',
     command:
-      'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
   },
   'sentry-new': {
     kind: 'sentry',

@@ -744,11 +744,18 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ],
       [
         'integration 赤確認 (GET、#2333)',
-        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
-        'Sentry 新規 issue スキャン (GET)',
+        'Sentry 新規 issue スキャン (GET、指揮台の手動代行用 op run 形)',
         'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
+      ],
+      // #2334 コメント（scope 追加5点目）: Cloud Environment（night-watch の
+      // 実行先）には 1Password が無く SENTRY_AUTH_TOKEN が env として直接
+      // 注入されるため、op run を挟まない cloud 互換形も許可する。
+      [
+        'Sentry 新規 issue スキャン (GET、cloud 互換の env 直読み形)',
+        'sentry issue list dayopt --query "is:unresolved age:-24h"',
       ],
       // night-watch v2（#2291）の gh 直叩き（盤面起票・前日盤面 close・検索）は
       // scripts/night-watch/*.mjs の wrapper へ寄せた（PR #2309 未解決 thread
@@ -861,15 +868,24 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ],
       [
         'integration 赤確認に未許可 flag（-X POST）を付ける迂回',
-        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
+        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
       ],
       [
         'integration 赤確認の workflow 名を差し替える迂回（似た名前の別 workflow）',
-        'gh run list --workflow=integration-tests.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'gh run list --workflow=integration-tests.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
         'integration 赤確認の --json field 列を差し替える迂回',
-        'gh run list --workflow=integration.yml --limit 3 --json conclusion,headSha,createdAt',
+        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,headSha,createdAt',
+      ],
+      // push前反証レビュー risk-reviewer 指摘（P2）: `--branch main` を省略した
+      // 旧 v1 文字列（integration.yml は heavy-post-merge.yml と異なり
+      // pull_request trigger も持つため、branch 指定が無いと PR run が直近
+      // 3 件に混入し、cancel-in-progress による誤起票・success 窓外押し出し・
+      // 本物の失敗の見逃しが同時に開く）。
+      [
+        'integration 赤確認の --branch main を省略する迂回（旧v1文字列）',
+        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
         'Sentry スキャンの query を差し替える迂回',
@@ -878,6 +894,18 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       [
         'Sentry スキャンに write 系サブコマンド（resolve）を混ぜる迂回',
         'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue resolve 1',
+      ],
+      [
+        'Sentry スキャン cloud互換形の query を差し替える迂回',
+        'sentry issue list dayopt --query "is:unresolved"',
+      ],
+      [
+        'Sentry スキャン cloud互換形に write 系サブコマンド（resolve）を混ぜる迂回',
+        'sentry issue resolve 1',
+      ],
+      [
+        'Sentry スキャン cloud互換形の org を差し替える迂回',
+        'sentry issue list evil-org --query "is:unresolved age:-24h"',
       ],
       // thread #1（P1: close 対象を前日の盤面 issue に限定する）: gh issue
       // create/comment/close を直接 Bash から呼ぶ経路そのものを撤去したため、

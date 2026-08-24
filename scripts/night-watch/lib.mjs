@@ -87,13 +87,22 @@ export function jstDayRange(startDateStr, endDateStr = startDateStr) {
 // なった。両方が同じ JST 曜日判定を必要とするため共通ユーティリティにする。
 const JST_WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
-/** JST 曜日インデックス（0=日〜6=土）を返す。 */
+/**
+ * JST 曜日インデックス（0=日〜6=土）を返す。`Intl.DateTimeFormat` が想定外の
+ * label を返した場合は例外を投げる（push前反証レビュー risk-reviewer 指摘、
+ * P3）。無言で fallback すると `isJstWeekend` / `isJstMonday` がどちらも
+ * false（平日扱い）を返し、weekend skip が無音で無効化される。
+ */
 export function jstWeekdayIndex(date = new Date()) {
   const label = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Tokyo',
     weekday: 'short',
   }).format(date);
-  return JST_WEEKDAY_INDEX[label];
+  const index = JST_WEEKDAY_INDEX[label];
+  if (index === undefined) {
+    throw new Error(`未知の JST 曜日ラベルです: ${label}`);
+  }
+  return index;
 }
 
 /** JST で土曜日または日曜日か。 */
@@ -178,9 +187,19 @@ function freshAlertRunState() {
 }
 
 // 想定外に壊れた state（第三者が予測可能な tmp path へ書いた、部分書き込みで
-// 破損した等）を無条件で信用しない。特に createdCount の上限チェックは、
-// 壊れた/偽装された値が cap を最初から超過扱いにして全 alert を抑止する
-// fail-closed 側の穴を防ぐ。
+// 破損した等）を**構造面でのみ**検証する（createdCount の範囲・actedCheckIds
+// の型と長さ）。**中身の正当性（actedCheckIds に実在する check-id が並んで
+// いるか）までは検証しない**（push前反証レビュー risk-reviewer 指摘、P2。
+// 旧コメントは「壊れた/偽装された値が cap を超過扱いにする」ことだけを防ぐと
+// 主張していたが、実装が防いでいるのはそれだけで、構造的に妥当な偽装値
+// （実在する check-id を並べた state）を先回りして書けば TTL の間 alert を
+// 無音化できる余地は防げていなかった。night-watch セッション自身はこの経路に
+// 到達できない（層3 が Write/Edit を無条件拒否し、Bash allowlist に汎用書き
+// 込み手段が無いため）。state file は固定名（DEFAULT_ALERT_RUN_STATE_PATH）で
+// tmpdir 配下に置かれるため、tmpdir を共有する別プロセス・別ユーザーからの
+// 到達性は実行環境依存。フルに閉じるには run 識別子で state を紐付ける設計
+// 変更が要る（follow-up issue で検討、mode 0o600 での書き込みは軽減策として
+// reserveAlertRunSlot 側に追加済み）。
 function isValidAlertRunState(value) {
   return (
     typeof value === 'object' &&
@@ -266,6 +285,16 @@ export function reserveAlertRunSlot({
     actedCheckIds: [...state.actedCheckIds, checkId],
     createdCount: state.createdCount + (willCreate ? 1 : 0),
   };
-  writeFileSync(statePath, JSON.stringify(next), 'utf8');
+  try {
+    // mode: 0o600 は tmpdir を共有する他ユーザー・他プロセスからの読み書きを
+    // 軽減する（isValidAlertRunState 冒頭のコメント参照）。
+    writeFileSync(statePath, JSON.stringify(next), { encoding: 'utf8', mode: 0o600 });
+  } catch {
+    // 書き込み失敗（tmpdir が read-only / ENOSPC / 権限不足）でも fail-open を
+    // 維持する（push前反証レビュー risk-reviewer 指摘、P2）。ここで例外を
+    // 伝播させると gh を一切呼ばずに CLI が exit 1 し、その run の全 check-id
+    // で起票・追記が 1 件も出ない — cap の目的（誤登録の減衰）を大きく超えて
+    // night-watch の唯一の通知チャネルを無音にしてしまう。
+  }
   return { allowed: true };
 }

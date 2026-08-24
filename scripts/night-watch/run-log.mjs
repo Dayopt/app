@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   findTodayBoardIssue,
+  isJstWeekend,
   jstDateString,
   MAX_NEW_ISSUES_PER_RUN,
   readAlertRunState,
@@ -302,9 +303,20 @@ export function buildBoardNoteComment(note) {
 /**
  * Step 5 の「さらに」（当日盤面 issue への 1 行コメント）。宛先は
  * findTodayBoardIssue が自分で見つける（呼び出し元は issue 番号を指定しない）。
+ *
+ * **平日のみ実行する**（push前反証レビュー risk-reviewer 指摘、P2）。
+ * board-issue.mjs が Step 1 の起票を平日のみに絞った（#2334 コメント）ため、
+ * JST 土日は当日盤面 issue という宛先が存在せず、`findTodayBoardIssue` が
+ * 必ず null を返して例外を投げていた（毎週 2 回、確実に「故障に見える失敗」
+ * が出る回帰）。board-issue.mjs / dod-candidate.mjs と同じ設計（gh を一切
+ * 呼ばずに skip）で閉じる。
  * @param {{ note: BoardNote, execFileImpl?: import('./lib.mjs').ExecFileImpl }} params
  */
 export function runBoardNote({ note, execFileImpl }) {
+  if (isJstWeekend()) {
+    return { action: 'skipped', reason: 'weekend' };
+  }
+
   if (
     typeof note !== 'object' ||
     note === null ||
