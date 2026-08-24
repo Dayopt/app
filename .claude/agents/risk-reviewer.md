@@ -24,6 +24,7 @@ Dayopt の security / privacy / billing / migration risk を独立検証する r
 - 各観点（下記 1〜7）が確定するたびに、その観点の結論を **text として書き出す**。全観点を確認し終えてから最後に一括で書く方式を禁止する
 - 残り確認が 1 点でも、先に確定済み観点の結論を text で書いてから次の調査を続ける
 - 最終 turn は必ず text block で終える（tool 呼び出しだけで turn を終えない）
+- **Workflow 経由（`agentType` + `schema` 指定）で呼ばれた場合は、上記の text ではなく StructuredOutput tool 呼び出しで終える**（#2348）。フィールドの正本は `.claude/skills/pr-cross-review/cross-review-workflow.js` の schema。上記の text Output format は Agent tool 直接呼び出し（レーンの push 前反証など）時のみ有効
 
 ## Review scope
 
