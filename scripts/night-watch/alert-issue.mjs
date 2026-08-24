@@ -1,0 +1,362 @@
+import { readFileSync, realpathSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { extractTrailingNumber, REPO, runGh, runGhJson } from './lib.mjs';
+
+/**
+ * night-watch SKILL.md §自動パート Step 3（異常があれば起票または追記する）を
+ * 1コマンドで完結させる wrapper（#2291 v2、PR #2309 未解決 thread 5 の構造的
+ * 解消）。
+ *
+ * thread #5（P1）: 旧実装（gh issue create/comment を動的 flag allowlist で
+ * 直接許可する形）は quote/backslash を削るだけの二重検査では shell 展開
+ * （ANSI-C escape `$'...'`、変数展開 `${IFS}` 等）を再現できず、Sentry/PR の
+ * title/message を Haiku が読む Step 3 で、攻撃者由来の文字列から `gh` へ
+ * 未許可 flag（`--body-file` 等）を渡す経路になり得た。
+ *
+ * 本 wrapper は 2 点でこの class を構造的に閉じる:
+ * 1. **値は execFile の argv 要素として gh へ渡る**（shell を経由しないため、
+ *    値の中身がどんな文字列でも gh の flag として再解釈されない）
+ * 2. **値の形を CHECK_DEFINITIONS の kind ごとに検証する**（数字のみ / 既知の
+ *    URL 形式のみ / Sentry short-ID + URL のみ）。Sentry issue の生 title /
+ *    culprit / message は検証を通らないため、そもそも issue 本文へ入り得ない
+ *    （SKILL.md §守ること「Sentry issue の raw title/culprit/message を issue
+ *    本文へ転記しない」を機械強制する形になる）。title 自体も CHECK_DEFINITIONS
+ *    の固定文言のみを使い、Claude が渡す自由文字列を title へ混ぜない
+ */
+
+export const CHECK_DEFINITIONS = {
+  'docs-check': {
+    kind: 'exit-code',
+    title: 'pnpm docs:check が exit 0 以外',
+    command: 'pnpm docs:check',
+  },
+  'docs-coverage': {
+    kind: 'count-baseline',
+    title: '公開docs未カバー件数がbaseline超過',
+    command: 'pnpm docs:coverage',
+    baselineKey: 'docs_coverage_missing',
+  },
+  deadcode: {
+    kind: 'exit-code',
+    title: 'pnpm quality:deadcode:ci が exit 0 以外',
+    command: 'pnpm quality:deadcode:ci',
+  },
+  'dependabot-alerts': {
+    kind: 'count-baseline',
+    title: 'Dependabot open alert 件数がbaseline超過',
+    command: "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
+    baselineKey: 'dependabot_alert_count',
+  },
+  'heavy-red': {
+    kind: 'run-url',
+    title: 'heavy-post-merge が直近 run で red',
+    command:
+      'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+  },
+  'sentry-new': {
+    kind: 'sentry',
+    title: '直近24hに新規 unresolved production issue を検出',
+    command:
+      'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
+  },
+};
+
+const DIGITS_RE = /^\d+$/;
+const RUN_URL_RE = /^https:\/\/github\.com\/Dayopt\/dayopt\/actions\/runs\/\d+(?:\/job\/\d+)?$/;
+// Sentry short ID（DAYOPT-123 形式）と issue URL の空白区切りペアのみを許可する。
+// title/culprit/message はこの形に一致しないため、混入すれば拒否される。区切りに
+// `|` を使わないのは、guard の is_single_simple_command が `|` をパイプ記号として
+// 無条件拒否するため（quote 内の文字でも区別しない）。空白区切りなら、値全体を
+// 1 個の shell argv token として quote すれば guard の検査に触れない。
+//
+// URL の path 部は `issues/<数字>/?` に固定する（末尾スラッシュ任意）。旧実装
+// （`[A-Za-z0-9/_-]+`）は base64url アルファベット全体を長さ無制限で許可して
+// おり、`--evidence` を複数回渡せる仕様と組み合わせると、board.reason
+// （run-log.mjs、同 round で自由文字列を enum 化した P1）と同型の任意バイト列
+// exfiltration 経路がここに残っていた（push 前反証レビュー risk-reviewer
+// 指摘、medium）。実在する Sentry issue URL は常に数値 ID で終わるため、診断
+// 価値を落とさずに閉じられる。
+const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/[a-z0-9-]+\.sentry\.io\/issues\/\d+\/?$/;
+// 1 check あたりの evidence 件数上限。`--evidence` は repeatable flag のため、
+// 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
+const MAX_SENTRY_EVIDENCE = 5;
+
+const BASELINE_PATH = fileURLToPath(
+  new URL('../../.claude/skills/night-watch/baseline.json', import.meta.url),
+);
+
+function readBaseline() {
+  return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
+}
+
+/**
+ * CHECK_DEFINITIONS を own property でのみ引く。`CHECK_DEFINITIONS[checkId]` の
+ * 素朴なブラケットアクセスは prototype chain も辿るため、`report __proto__` /
+ * `report constructor` のような checkId が `undefined` を返さず Object.prototype
+ * 上のオブジェクトにヒットしてしまう（push 前反証レビュー risk-reviewer 指摘、
+ * low）。
+ * @param {string} checkId
+ */
+function getCheckDefinition(checkId) {
+  return Object.hasOwn(CHECK_DEFINITIONS, checkId) ? CHECK_DEFINITIONS[checkId] : undefined;
+}
+
+/**
+ * @typedef {{ evidence?: string[], actual?: string, count?: string, [key: string]: unknown }} AlertArgs
+ */
+
+// buildAlertBody が実際に読む flag のみ許可する。未知 flag を静かに受理すると
+// 呼び出し側の typo・プロンプト由来の余計な flag がそのまま無視され、意図した
+// 値が実は検証も本文反映もされていないことに気づけない（push 前反証レビュー
+// behavior-verifier 指摘、P3）。
+const KNOWN_ALERT_FLAGS = new Set(['actual', 'evidence-url', 'count', 'evidence']);
+
+/**
+ * `--flag value` 形式の引数を集める。`--evidence` だけは複数回の指定を配列で集める。
+ * @param {string[]} argv
+ * @returns {AlertArgs}
+ */
+export function parseAlertArgs(argv) {
+  const result = { evidence: [] };
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) {
+      throw new Error(`未知の引数です: ${token}`);
+    }
+    const flag = token.slice(2);
+    if (!KNOWN_ALERT_FLAGS.has(flag)) {
+      throw new Error(`未知の flag です: ${token}`);
+    }
+    const value = argv[i + 1];
+    if (value === undefined) {
+      throw new Error(`${token} に値がありません`);
+    }
+    i += 1;
+    if (flag === 'evidence') {
+      result.evidence.push(value);
+    } else {
+      result[flag] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * CHECK_DEFINITIONS の kind ごとに issue 本文を組み立てる。検証を通らない値は例外を投げる。
+ * @param {{ checkId: string, args: AlertArgs, detectedAt: string }} params
+ */
+export function buildAlertBody({ checkId, args, detectedAt }) {
+  const definition = getCheckDefinition(checkId);
+  if (!definition) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+
+  let actual;
+  let baseline;
+
+  switch (definition.kind) {
+    case 'exit-code': {
+      actual = 'exit code 0 以外';
+      baseline = 'exit code 0';
+      break;
+    }
+    case 'count-baseline': {
+      if (!args.actual || !DIGITS_RE.test(args.actual)) {
+        throw new Error('--actual は数字のみで指定してください');
+      }
+      const baselineValue = readBaseline()[definition.baselineKey];
+      actual = args.actual;
+      baseline = String(baselineValue);
+      break;
+    }
+    case 'run-url': {
+      if (!args['evidence-url'] || !RUN_URL_RE.test(args['evidence-url'])) {
+        throw new Error(
+          '--evidence-url は https://github.com/Dayopt/dayopt/actions/runs/<id> 形式でのみ指定してください',
+        );
+      }
+      actual = args['evidence-url'];
+      baseline = 'N/A（success 以外の terminal state、または直近24hに success run が無い）';
+      break;
+    }
+    case 'sentry': {
+      if (!args.count || !DIGITS_RE.test(args.count)) {
+        throw new Error('--count は数字のみで指定してください');
+      }
+      const evidence = args.evidence ?? [];
+      if (evidence.length > MAX_SENTRY_EVIDENCE) {
+        throw new Error(
+          `--evidence は 1 check あたり最大 ${MAX_SENTRY_EVIDENCE} 件までです（指定: ${evidence.length} 件）`,
+        );
+      }
+      const badEvidence = evidence.filter((entry) => !SENTRY_EVIDENCE_RE.test(entry));
+      if (badEvidence.length > 0) {
+        throw new Error(
+          `--evidence は "DAYOPT-<番号> https://<subdomain>.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
+        );
+      }
+      actual = `件数: ${args.count}${
+        evidence.length > 0 ? `\n${evidence.map((e) => `- ${e}`).join('\n')}` : ''
+      }`;
+      baseline = '0（新規検出のみ異常）';
+      break;
+    }
+    default:
+      throw new Error(`未対応の kind です: ${definition.kind}`);
+  }
+
+  return `## night-watch 検出: ${checkId}
+
+**実測値**: ${actual}
+**閾値/baseline**: ${baseline}
+**再現コマンド**: \`${definition.command}\`
+**検出日時**: ${detectedAt}
+
+baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は通常の PR レビューでのみ行う。
+`;
+}
+
+// runAlertSync が新規起票する issue に必ず付ける固定ラベル（下記
+// runAlertSync 参照）。dedup 判定でこの両方を要求する。ただし実効的な gate は
+// `area:operations` の 1 本だけである点に注意（push 前反証レビュー
+// risk-reviewer 指摘、low）: `type:chore` は `.github/ISSUE_TEMPLATE/chore.yml`
+// の front-matter（`labels: ['type:chore']`）により、triage 権限の無い外部
+// ユーザーが issue form から作成しても自動付与される。`area:operations` は
+// どの issue form にも front-matter 登録が無く、triage/write 権限でしか
+// 付けられないため、こちらが偽装防止の実体になる。2 ラベルを要求する構成は
+// 将来 area:operations 側の issue form が増えた時にも壊れないための保険。
+const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
+
+/**
+ * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
+ *
+ * GitHub の検索は語単位の緩いマッチで、`nightwatch(<id>): in:title` の括弧・
+ * コロンはほぼ無視される。検索結果をそのまま信用すると、public repo（2026-09
+ * 私有化まで）に外部ユーザーが似た文言の issue を 1 本立てるだけで、以後この
+ * check-id の alert が新規起票されずその issue へコメントされ続ける（alert
+ * 抑止 + 無関係スレッドへの書き込み）。`results[0]` を無条件採用せず、title が
+ * `nightwatch(<checkId>): ` で実際に始まる候補だけを採用する
+ * （push 前反証レビュー risk-reviewer 指摘、medium）。
+ *
+ * title の完全一致プレフィックスだけでも、外部ユーザーは通常の issue 作成
+ * 権限（write 権限は不要）で同じ prefix の title を自由に選べるため偽装でき
+ * てしまう（非ブロッキング Codex レビュー指摘、P2）。`runAlertSync` が新規
+ * 起票時に必ず付ける固定ラベル（`type:chore` + `area:operations`。実効的な
+ * gate は triage/write 権限でしか付かない `area:operations` 側 —
+ * `ALERT_ISSUE_LABELS` の定義コメント参照）も同時に要求し、両方を満たす
+ * 候補だけを既存 alert として採用する。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ */
+export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
+  const results = runGhJson(
+    [
+      'issue',
+      'list',
+      '--repo',
+      REPO,
+      '--state',
+      'open',
+      '--search',
+      `nightwatch(${checkId}): in:title`,
+      '--json',
+      'number,title,labels',
+    ],
+    { execFileImpl },
+  );
+  const titlePrefix = `nightwatch(${checkId}): `;
+  return (
+    results.find((issue) => {
+      if (!issue.title.startsWith(titlePrefix)) return false;
+      const labelNames = new Set((issue.labels ?? []).map((label) => label.name));
+      return ALERT_ISSUE_LABELS.every((name) => labelNames.has(name));
+    }) ?? null
+  );
+}
+
+/**
+ * @param {{
+ *   checkId: string,
+ *   args: AlertArgs,
+ *   detectedAt?: string,
+ *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
+ * }} params
+ */
+export function runAlertSync({
+  checkId,
+  args,
+  detectedAt = new Date().toISOString(),
+  execFileImpl,
+}) {
+  const definition = getCheckDefinition(checkId);
+  if (!definition) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+
+  let existing;
+  try {
+    existing = findExistingAlertIssue(checkId, { execFileImpl });
+  } catch {
+    return { action: 'skipped', reason: 'dedup検索失敗のため起票見送り' };
+  }
+
+  const body = buildAlertBody({ checkId, args, detectedAt });
+
+  if (existing) {
+    runGh(['issue', 'comment', String(existing.number), '--repo', REPO, '--body', body], {
+      execFileImpl,
+    });
+    return { action: 'commented', issueNumber: existing.number };
+  }
+
+  const title = `nightwatch(${checkId}): ${definition.title}`;
+  const createOutput = runGh(
+    [
+      'issue',
+      'create',
+      '--repo',
+      REPO,
+      '--title',
+      title,
+      '--body',
+      body,
+      '--label',
+      'type:chore',
+      '--label',
+      'area:operations',
+      '--label',
+      'priority:p2',
+    ],
+    { execFileImpl },
+  );
+  return { action: 'created', issueNumber: extractTrailingNumber(createOutput) };
+}
+
+function isDirectExecution() {
+  if (!process.argv[1]) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
+  const [subcommand, checkId, ...rest] = process.argv.slice(2);
+  if (subcommand !== 'report' || !checkId) {
+    console.error(
+      'Usage: node scripts/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
+    );
+    process.exitCode = 1;
+  } else {
+    try {
+      const args = parseAlertArgs(rest);
+      const result = runAlertSync({ checkId, args });
+      console.log(JSON.stringify(result));
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : 'alert-issue report failed');
+      process.exitCode = 1;
+    }
+  }
+}

@@ -703,7 +703,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     });
   });
 
-  describe('許可形（night-watch checklist が実行する形。完全一致 or positive flag allowlist）', () => {
+  describe('許可形（night-watch checklist が実行する形。完全一致 or 固定 wrapper prefix）', () => {
     it.each([
       ['docs:check', 'pnpm docs:check'],
       ['docs:coverage', 'pnpm docs:coverage'],
@@ -713,15 +713,53 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
       ],
       ['token permissions self-check (GET)', 'gh api repos/Dayopt/dayopt --jq .permissions'],
-      ['gh issue create', 'gh issue create --title x --body y --label type:chore'],
-      ['gh issue comment', 'gh issue comment 2209 --body hello'],
-      ['gh issue list', 'gh issue list --state open'],
-      ['gh issue view', 'gh issue view 2209'],
-      [
-        'gh search issues (dedup検索)',
-        'gh search issues --repo Dayopt/dayopt --state open --search test',
-      ],
       ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
+      [
+        'heavy-post-merge 赤確認 (GET)',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      ],
+      [
+        'Sentry 新規 issue スキャン (GET)',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
+      ],
+      // night-watch v2（#2291）の gh 直叩き（盤面起票・前日盤面 close・検索）は
+      // scripts/night-watch/*.mjs の wrapper へ寄せた（PR #2309 未解決 thread
+      // 1/2/3/4/5/6 の構造的解消）。動的引数を持たない Step1/Step4 は完全一致、
+      // 動的引数（check-id・実測値）が要る Step3 は固定 prefix のみで許可し、
+      // flag 単位の検証は行わない（値は wrapper 内部で execFile の argv 要素と
+      // して gh へ渡るため shell を経由しない。scripts/night-watch/*.test.ts が
+      // 値の形の検証を担保する）。
+      ['盤面起票 wrapper（Step1）', 'node scripts/night-watch/board-issue.mjs sync'],
+      ['DoD候補選定 wrapper（Step4）', 'node scripts/night-watch/dod-candidate.mjs select'],
+      [
+        'check-id alert wrapper（Step3、count-baseline）',
+        'node scripts/night-watch/alert-issue.mjs report docs-coverage --actual 9',
+      ],
+      [
+        'check-id alert wrapper（Step3、sentry evidence を含む実測形）',
+        'node scripts/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
+      ],
+      // Step 0（環境故障報告）・Step 5（運行記録）の wrapper。push 前反証レビュー
+      // （risk-reviewer、high）で発見: 3 wrapper 化で `gh issue comment` の
+      // 直接 allowlist を全面撤去した際、Step 5 の運行記録コメントがどの
+      // wrapper にも属さず night-watch の唯一の故障検出チャネルが毎晩無音で
+      // block されていた。
+      [
+        '環境故障報告 wrapper（Step0、no-var）',
+        'node scripts/night-watch/run-log.mjs env-failure no-var',
+      ],
+      [
+        '環境故障報告 wrapper（Step0、write-token）',
+        'node scripts/night-watch/run-log.mjs env-failure write-token',
+      ],
+      [
+        '運行記録 wrapper（Step5、常設運行記録issueへの report）',
+        'node scripts/night-watch/run-log.mjs report \'{"executed":6}\'',
+      ],
+      [
+        '運行記録 wrapper（Step5、当日盤面issueへの1行 board-note）',
+        'node scripts/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
+      ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
     });
@@ -737,7 +775,6 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['gh pr ready', 'gh pr ready 1'],
       ['gh pr edit', 'gh pr edit 1 --title x'],
       ['gh issue edit（ラベル変更）', 'gh issue edit 1 --add-label priority:p0'],
-      ['gh issue close', 'gh issue close 1'],
       ['gh issue delete', 'gh issue delete 1'],
       ['gh release create', 'gh release create v1.0.0'],
       ['gh workflow run', 'gh workflow run production-config-audit.yml'],
@@ -753,7 +790,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['allowlist に無い任意コマンド', 'curl https://evil.example'],
       ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
       ['redirect による追記（>>）', 'echo x >> baseline.json'],
-      ['stdin redirect（<）', 'gh issue create < /tmp/body.txt'],
+      ['stdin redirect（<）', 'node scripts/night-watch/board-issue.mjs sync < /tmp/body.txt'],
       // read-only git は checklist が実際には使わないため allowlist から撤去した
       // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
       // git diff/show を残すと --output= 迂回の温床になる）。
@@ -782,21 +819,67 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'gh api permissions self-check に --input を付ける迂回',
         'gh api repos/Dayopt/dayopt --jq .permissions --input /tmp/x',
       ],
-      // gh 系 positive flag allowlist の迂回試行（token単位判定の裏取り）
       [
-        'gh issue create に未許可 flag（--output）を混入',
-        'gh issue create --title x --output=/tmp/pwned',
+        'heavy-post-merge 赤確認に未許可 flag（-X POST）を付ける迂回',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
       ],
       [
-        'gh issue create の値の中に --output を空白区切りで埋め込む迂回',
-        'gh issue create --title x --body "hello --output=/tmp/pwned"',
+        'heavy-post-merge 赤確認の workflow 名を差し替える迂回',
+        'gh run list --workflow=production-config-audit.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
-      ['gh issue comment に短縮 flag（-f）を混入', 'gh issue comment 2209 -f x=1'],
-      ['gh issue list に未許可 flag（--milestone）を混入', 'gh issue list --milestone v0.34'],
-      ['gh search issues に未許可 flag（--label）を混入', 'gh search issues --repo x --label evil'],
       [
-        '等号結合形（--title=x）は空白区切りのみ許可のため落とす',
-        'gh issue create --title=x --body=y',
+        'heavy-post-merge 赤確認の --json field 列を差し替える迂回（旧v1文字列）',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,headSha,createdAt',
+      ],
+      [
+        'Sentry スキャンの query を差し替える迂回',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved"',
+      ],
+      [
+        'Sentry スキャンに write 系サブコマンド（resolve）を混ぜる迂回',
+        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue resolve 1',
+      ],
+      // thread #1（P1: close 対象を前日の盤面 issue に限定する）: gh issue
+      // create/comment/close を直接 Bash から呼ぶ経路そのものを撤去したため、
+      // 旧来の positive flag allowlist 迂回はすべて「allowlist に無い任意
+      // コマンド」として一律で落ちる。代表形だけ回帰確認する。
+      [
+        '旧経路: gh issue create の直接呼び出し（wrapper 撤去後は allowlist に無い）',
+        'gh issue create --title x --body y --label type:board --repo Dayopt/dayopt',
+      ],
+      [
+        '旧経路: gh issue close の直接呼び出し（close 対象を Claude が指定する経路が無くなった）',
+        'gh issue close 2000 --repo Dayopt/dayopt --comment bye',
+      ],
+      [
+        '旧経路: gh search issues の直接呼び出し',
+        'gh search issues --repo Dayopt/dayopt --state open test',
+      ],
+      // thread #5（P1、2026-08-21 内製クロスレビュー risk-reviewer が実測確認）
+      // の原型攻撃: quote/backslash 除去だけの二重検査は shell 展開
+      // （ANSI-C escape `$'…'`）を再現できず、`gh issue create` へ未許可
+      // flag（`--body-file`）を渡せていた。wrapper 化により `gh issue create`
+      // の直接呼び出し経路自体が allowlist から消えたため、この攻撃形は
+      // 「allowlist に無い任意コマンド」として block される。
+      [
+        'P1回帰（thread #5 原型）: shell 展開で --body-file を smuggle する攻撃',
+        "gh issue create --title x $'\\x2d\\x2dbody-file' /path --repo Dayopt/dayopt",
+      ],
+      [
+        'P1回帰（thread #5、対象を wrapper 呼び出し自体に変えた迂回）: alert-issue.mjs の呼び出しに未知の script 名を混ぜる',
+        'node scripts/night-watch/evil.mjs report x --actual 1',
+      ],
+      [
+        'wrapper prefix の迂回: board-issue.mjs に未許可のサブコマンドを渡す',
+        'node scripts/night-watch/board-issue.mjs close 2000',
+      ],
+      [
+        'run-log.mjs env-failure に未知の kind を渡す迂回',
+        'node scripts/night-watch/run-log.mjs env-failure evil',
+      ],
+      [
+        'run-log.mjs env-failure に余分な引数を付ける迂回',
+        'node scripts/night-watch/run-log.mjs env-failure no-var extra',
       ],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
@@ -820,20 +903,108 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ).toBe('block');
     });
 
+    it('wrapper 呼び出しをセパレータで連結して push を混ぜる迂回は落とす', () => {
+      expect(
+        runGuard(
+          bash('node scripts/night-watch/alert-issue.mjs report docs-check; git push origin main'),
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
+      ).toBe('block');
+    });
+
     it('コマンド置換で隠す迂回は落とす', () => {
       expect(
-        runGuard(bash('gh issue create --title $(git log -1)'), rootDir, NIGHT_WATCH_ENV),
+        runGuard(
+          bash('node scripts/night-watch/alert-issue.mjs report $(git log -1)'),
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
       ).toBe('block');
     });
 
     it('eval で隠す迂回は落とす', () => {
       expect(runGuard(bash("eval 'git push'"), rootDir, NIGHT_WATCH_ENV)).toBe('block');
     });
+  });
 
-    // layer3（本ファイル）は Bash のみを見る。Write/Edit の遮断は層2
-    // （RemoteTrigger の allowed_tools）の責務で、DAYOPT_NIGHT_WATCH の
-    // 有無に関わらずここでは検証しない（.claude/skills/night-watch/SKILL.md
-    // §権限の構造的強制 参照）。
+  // 層2（RemoteTrigger の allowed_tools から Write/Edit/MultiEdit/NotebookEdit を
+  // 除外する設定）が唯一の防御だと、その設定が漏れた場合に agent が
+  // scripts/night-watch/*.mjs（layer3 が prefix 一致で信頼している node script）
+  // や本 hook 自体を書き換えてから、信頼されたコマンド名で実行するだけで任意
+  // コード実行 / guard 自体の無効化に到達できる（push 前反証レビュー
+  // risk-reviewer 指摘、medium）。layer3 も Write/Edit を無条件で拒否し、
+  // 層2 の設定漏れに対する defense-in-depth にする。
+  describe('Write/Edit の無条件拒否（層2 の設定漏れに対する defense-in-depth）', () => {
+    it('通常ファイルへの Write は落とす', () => {
+      expect(runGuard(write('docs/some-file.md'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    it('通常ファイルへの Edit は落とす', () => {
+      expect(runGuard(edit('apps/product/src/index.ts'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
+    });
+
+    it('wrapper script 自身への Write（信頼された prefix の書き換え試行）は落とす', () => {
+      expect(runGuard(write('scripts/night-watch/alert-issue.mjs'), rootDir, NIGHT_WATCH_ENV)).toBe(
+        'block',
+      );
+    });
+
+    it('guard 自身への Edit（guard 無効化の書き換え試行）は落とす', () => {
+      expect(runGuard(edit('.claude/hooks/pre-tool-guard-impl.sh'), rootDir, NIGHT_WATCH_ENV)).toBe(
+        'block',
+      );
+    });
+
+    // 非ブロッキング Codex レビュー指摘（P1）: この if ブロックが MultiEdit/
+    // NotebookEdit も判定対象にしていても、.claude/settings.json の
+    // PreToolUse matcher にその 2 tool が登録されていなければ hook 自体が
+    // 発火せず、判定コードは無意味になる。実際に登録が漏れていた
+    // （settings.json 側の修正と一緒でないと閉じない class）。
+    it('MultiEdit も落とす（本 hook への入力を直接検証。matcher 登録の固定は別 test）', () => {
+      expect(
+        runGuard(
+          { tool_name: 'MultiEdit', tool_input: { file_path: 'docs/some-file.md', edits: [] } },
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
+      ).toBe('block');
+    });
+
+    it('NotebookEdit も落とす（file_path ではなく notebook_path で渡る）', () => {
+      expect(
+        runGuard(
+          { tool_name: 'NotebookEdit', tool_input: { notebook_path: 'analysis.ipynb' } },
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
+      ).toBe('block');
+    });
+
+    it('env var が無ければ通常どおり許可される（既存挙動）', () => {
+      expect(runGuard(write('docs/some-file.md'))).toBe('allow');
+    });
+  });
+
+  // settings.json の PreToolUse matcher 自体を固定する。層3（本 hook）が
+  // MultiEdit/NotebookEdit を判定できても、matcher に登録が無ければ発火せず
+  // 無意味だった（非ブロッキング Codex レビュー指摘、P1）。
+  describe('.claude/settings.json: PreToolUse matcher の登録', () => {
+    it('Write / Edit / MultiEdit / NotebookEdit / Bash / spawn_task すべてが guard hook を指す', () => {
+      const settings = JSON.parse(readFileSync(join(rootDir, '.claude/settings.json'), 'utf8'));
+      const matchers = new Map(
+        settings.hooks.PreToolUse.map(
+          (entry: { matcher: string; hooks: { command: string }[] }) => [
+            entry.matcher,
+            entry.hooks[0]?.command,
+          ],
+        ),
+      );
+      for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash']) {
+        expect(matchers.get(tool)).toBe('.claude/hooks/pre-tool-guard.sh');
+      }
+      expect(matchers.get('mcp__ccd_session__spawn_task')).toBe('.claude/hooks/pre-tool-guard.sh');
+    });
   });
 });
 

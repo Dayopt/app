@@ -12,7 +12,12 @@
 
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+# NotebookEdit は file_path ではなく notebook_path を使う。file_path が空なら
+# notebook_path にフォールバックする（Codex 実測指摘、P1: settings.json の
+# PreToolUse matcher に MultiEdit/NotebookEdit が無く、本 hook がそもそも
+# 発火していなかった。matcher 側は別途追加済み。ここでは MultiEdit/
+# NotebookEdit を対象に含めて判定する）。
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
 # op run が解決してよい 1Password vault。human（本番キー・login・recovery）と
@@ -32,8 +37,28 @@ disallowed_vault_refs() {
     | grep -vE "$ALLOWED_VAULT_PATTERN" || true
 }
 
-# --- Write/Edit: 保護ファイルへの書き込みブロック ---
-if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
+# --- Write/Edit/MultiEdit/NotebookEdit: 保護ファイルへの書き込みブロック ---
+if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "MultiEdit" ] || [ "$TOOL_NAME" = "NotebookEdit" ]; then
+  # night-watch（DAYOPT_NIGHT_WATCH=1）は書き込み系 tool を無条件で禁止する。
+  #
+  # 層2（RemoteTrigger の session_context.allowed_tools から Write/Edit/
+  # MultiEdit/NotebookEdit を除外する設定）が唯一の防御だと、その設定が漏れた
+  # 場合に agent が scripts/night-watch/*.mjs（下の Bash 節が prefix 一致で
+  # 信頼している node script）や本 hook 自体を書き換えてから、その信頼された
+  # コマンド名で実行するだけで任意コード実行 / guard 自体の無効化に到達できる
+  # （push 前反証レビュー risk-reviewer 指摘、medium）。SKILL.md が明言する
+  # 「夜は書かない。アプリコード・docs は変更しない」を、path で数え上げる
+  # denylist ではなく class ごと閉じる形（書き込み系 tool を丸ごと拒否）で
+  # 機械強制する。**MultiEdit / NotebookEdit も対象に含める**（Codex 実測
+  # 指摘、P1: `.claude/settings.json` の PreToolUse matcher にこの 2 tool が
+  # 元々登録されておらず、本 hook 自体が発火していなかった。matcher は
+  # 別途追加済みで、ここは判定側の対応）。env var が無いセッション
+  # （通常の全レーン）には一切影響しない。
+  if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
+    echo "BLOCKED: night-watch モードでは Write/Edit/MultiEdit/NotebookEdit は一切実行できません（読み取り専用の観測・GitHub issue への書き込みのみが許可されています。.claude/skills/night-watch/SKILL.md §権限の構造的強制 参照）" >&2
+    exit 2
+  fi
+
   # .env ファイルへの書き込みは全面禁止（.env.example は 2026-08-14 に廃止。
   # 変数一覧の正本は scripts/env/schema.ts）
   case "$FILE_PATH" in
@@ -61,7 +86,16 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   # 発生源だけが検査の空白になるため（#2086 反証レビュー）
   case "$FILE_PATH" in
     *.op-env.agent | *.op-env.agent.example | *.op-env.local | *.op-env.local.example)
-      WRITTEN=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
+      # Write は content、Edit は new_string、MultiEdit は edits[].new_string、
+      # NotebookEdit は new_source に書き込み内容が入る。MultiEdit/NotebookEdit
+      # を matcher/判定に含めた時点（本ファイル冒頭の TOOL_NAME 拡張）で、この
+      # 抽出も揃えないと「未検査で通る」新しい経路になる（push 前反証レビュー
+      # risk-reviewer 指摘、medium）。
+      WRITTEN=$(echo "$INPUT" | jq -r '
+        [.tool_input.content?, .tool_input.new_string?, .tool_input.new_source?, (.tool_input.edits[]?.new_string?)]
+        | map(select(type == "string"))
+        | join("\n")
+      ')
       bad_vaults=$(disallowed_vault_refs "$WRITTEN")
       if [ -n "$bad_vaults" ]; then
         echo "BLOCKED: local dev 用の env-file に許可外 vault の op:// 参照は書けません（検出: $(echo "$bad_vaults" | tr '\n' ' ')）。このファイルは op run に渡せるので、production を参照する行を足すと production credential が解決されます。管理者運用の参照は .op-env.human.example 側に置いてください" >&2
@@ -212,11 +246,24 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # そのまま継承する穴だった（2026-08-19、内製クロスレビュー risk-reviewer /
   # behavior-verifier が実測確認）。修正方針は点の追加（危険フラグの denylist）
   # ではなく class を閉じる: 引数を必要としないチェックリストコマンドは
-  # **完全一致**にし、動的引数が要る gh コマンドだけ
-  # night_watch_flags_only で「許可した -- flag 以外は一切許さない」
-  # positive allowlist にする。read-only git（status/log/diff/show）は
-  # checklist が実際には使わないため allowlist から撤去した（未使用の
-  # 攻撃面を patch でなく削除で閉じる）。
+  # **完全一致**にし、read-only git（status/log/diff/show）は checklist が
+  # 実際には使わないため allowlist から撤去した（未使用の攻撃面を patch でなく
+  # 削除で閉じる）。
+  #
+  # 動的な値（issue タイトル・本文・検索クエリ・close 対象の判定）が要る gh
+  # 呼び出しは、shell の flag allowlist（旧 night_watch_flags_only）で守るのを
+  # やめ、`scripts/night-watch/*.mjs` の wrapper へ寄せた（#2291 v2、PR #2309
+  # 未解決 thread #5 の P1 是正）。旧方式は quote/backslash を削るだけの
+  # 二重検査だったため、shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}`
+  # 等）が生む未許可 flag を再現できず、2026-08-21 に critical な回避が実測
+  # された。wrapper 方式では、動的な値は Bash tool の command 文字列から
+  # `execFileSync` の argv 要素として node script 内部の gh 呼び出しへ**直接**
+  # 渡る（間に shell を経由しないため、値の中身がどんな文字列でも gh の flag
+  # として再解釈されない）。guard 側の役割は「本当にこの固定 script を単純呼び
+  # 出ししているか」（is_single_simple_command + no-redirect）だけに縮小され、
+  # shell 展開を検査で追いかける必要が無くなる。値の形（数字のみ / 既知の URL
+  # 形式のみ 等）の検証は各 wrapper 内部が担う（scripts/night-watch/*.test.ts
+  # 参照）。
   if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
     # redirect はファイル書き込み手段になるため無条件で拒否（read-only 原則）。
     case "$COMMAND" in
@@ -231,35 +278,6 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       exit 2
     fi
 
-    # $1 = 許可コマンドの後続部分（先頭の空白は呼び出し側で除去済み）
-    # $2 = 許可 flag を空白区切りで並べた文字列（例: "--title --body --label"）
-    #
-    # トークンごとに判定する: `-` で始まるトークンは許可 flag と完全一致
-    # しない限り拒否（短縮 flag `-X` / `-f` は許可リストに入れられないので
-    # 一律拒否になる）。`-` で始まらないトークンは位置引数・flag の値として
-    # 無条件に許可する。`--body="値"` のような `=` 結合形は対応しない
-    # （許可形は空白区切りのみに絞る。等号形を通すと `--body=safe--output=x`
-    # のような 1 token に紛れ込ませる迂回を許可 flag の完全一致だけで
-    # 弾けなくなる）。
-    night_watch_flags_only() {
-      local rest="$1" allowed="$2" tok
-      local -a tokens allowed_arr
-      read -ra tokens <<<"$rest"
-      read -ra allowed_arr <<<"$allowed"
-      for tok in "${tokens[@]}"; do
-        case "$tok" in
-          -*)
-            local ok=0 a
-            for a in "${allowed_arr[@]}"; do
-              [ "$tok" = "$a" ] && ok=1 && break
-            done
-            [ "$ok" -eq 1 ] || return 1
-            ;;
-        esac
-      done
-      return 0
-    }
-
     night_watch_allowed=0
     case "$COMMAND" in
       "pnpm docs:check" | "pnpm docs:coverage" | "pnpm quality:deadcode:ci")
@@ -268,33 +286,57 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         night_watch_allowed=1
         ;;
       "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
-        | "gh api repos/Dayopt/dayopt --jq .permissions")
-        # checklist.md / SKILL.md step 0 が指定する固定コマンドのみ完全一致で許可。
-        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。
+        | "gh api repos/Dayopt/dayopt --jq .permissions" \
+        | "gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url" \
+        | 'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"')
+        # checklist.md / SKILL.md §自動パート Step 0（自己検証）・Step 2（観測。
+        # heavy-red / sentry-new を含む）が指定する固定コマンドのみ完全一致で許可。
+        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。night-watch v2
+        # （#2291）で heavy-post-merge 赤確認・Sentry スキャンの 2 本を追加した。
         night_watch_allowed=1
         ;;
       "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "gh issue create "*)
-        night_watch_flags_only "${COMMAND#"gh issue create "}" "--title --body --label --repo" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/board-issue.mjs sync" | "node scripts/night-watch/dod-candidate.mjs select")
+        # Step 1（盤面起票・前日盤面 close）・Step 4（DoD候補検索・コメント）の
+        # wrapper。動的引数を一切取らない完全一致コマンドで、値の組み立ては
+        # script 内部（JST 日付計算・gh issue list の結果からの前日 issue
+        # 選定）が担う。close 対象を Claude が argv で指定する余地が無いため、
+        # 旧 thread #1（P1: close 対象を前日の盤面 issue に限定する）を構造的に
+        # 満たす。
+        night_watch_allowed=1
         ;;
-      "gh issue comment "*)
-        night_watch_flags_only "${COMMAND#"gh issue comment "}" "--body --repo" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/alert-issue.mjs report "*)
+        # Step 3（nightwatch(check-id) issue の起票・追記）の wrapper。動的な
+        # check-id・実測値が要るため完全一致にはできないが、値は script 内部で
+        # execFile の argv 要素として gh へ渡り、shell を経由しないため、この
+        # 節で flag 単位の検査を重ねる必要が無い（値の形の検証は wrapper 内部の
+        # 責務。scripts/night-watch/alert-issue.mjs 参照）。ここで守るのは
+        # 「本当に node scripts/night-watch/alert-issue.mjs report <...> の
+        # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
+        # （本 if ブロック冒頭）が既にそれを保証している。
+        night_watch_allowed=1
         ;;
-      "gh issue list"*)
-        night_watch_flags_only "${COMMAND#"gh issue list"}" "--repo --state --search --label" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/run-log.mjs env-failure no-var" \
+        | "node scripts/night-watch/run-log.mjs env-failure write-token")
+        # Step 0（自己検証の環境故障報告）の wrapper。固定 2 文言のみ完全一致で
+        # 許可する（scripts/night-watch/run-log.mjs の ENV_FAILURE_MESSAGES）。
+        night_watch_allowed=1
         ;;
-      "gh issue view "*)
-        night_watch_flags_only "${COMMAND#"gh issue view "}" "--repo --json" \
-          && night_watch_allowed=1
-        ;;
-      "gh search issues "*)
-        night_watch_flags_only "${COMMAND#"gh search issues "}" "--repo --state --search" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/run-log.mjs report "* | "node scripts/night-watch/run-log.mjs board-note "*)
+        # Step 5（運行記録: 常設運行記録 issue へのコメント + 当日盤面 issue への
+        # 1 行コメント）の wrapper。push 前反証レビュー（risk-reviewer、high）で
+        # 発見: board/alert/dod の 3 wrapper 化で `gh issue comment` の直接
+        # allowlist を全面撤去した際、Step 5 の運行記録コメントがどの wrapper
+        # にも属さず、night-watch の唯一の故障検出チャネル
+        # （docs/operations/night-watch.md §故障検出手順）が毎晩無音で block
+        # されていた。alert-issue.mjs と同じ理由（値は execFile の argv 要素と
+        # して gh へ渡り shell を経由しない）で flag 単位の検査は不要。運行記録
+        # issue の宛先番号は wrapper 内部が docs/operations/night-watch.md から
+        # 解決し、呼び出し元は argv で指定できない（board-issue.mjs の close 対象
+        # と同じ設計）。
+        night_watch_allowed=1
         ;;
     esac
 
