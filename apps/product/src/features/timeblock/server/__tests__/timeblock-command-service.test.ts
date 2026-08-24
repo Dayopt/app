@@ -155,7 +155,6 @@ describe('TimeblockCommandService', () => {
       expectedUpdatedAt,
       title: 'Changed',
       note: plan.note,
-      tagId: plan.tag_id,
       activityId: plan.activity_id,
       externalCalendarEventId: plan.external_calendar_event_id,
       source: 'api',
@@ -216,6 +215,9 @@ describe('TimeblockCommandService', () => {
     ).resolves.toEqual(plan);
 
     expect(tagQuery.select).not.toHaveBeenCalled();
-    expect(commands.updatePlan).toHaveBeenCalledWith(expect.objectContaining({ tagId: TAG_ID }));
+    // Step 8（tag_id 剥離）で tagId は command 入力から除去済み。archive 済みタグの
+    // guard も呼ばれず、既存値は DB 側で凍結されたまま一切送られない。
+    const updatePlanArgs = commands.updatePlan.mock.calls[0]?.[0];
+    expect(updatePlanArgs).not.toHaveProperty('tagId');
   });
 });

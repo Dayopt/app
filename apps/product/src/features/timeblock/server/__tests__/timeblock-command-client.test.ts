@@ -37,7 +37,6 @@ function createPlanInput() {
     userId: plan.user_id,
     title: plan.title,
     note: plan.note,
-    tagId: plan.tag_id,
     activityId: null,
     externalCalendarEventId: plan.external_calendar_event_id,
     source: 'manual' as const,
@@ -64,7 +63,6 @@ describe('TimeblockCommandClient', () => {
       p_note: null,
       p_source: 'manual',
       p_start_at: plan.start_at,
-      p_tag_id: null,
       p_title: plan.title,
       p_user_id: plan.user_id,
     });

@@ -14,7 +14,6 @@ export interface PlanEvent {
   id: string;
   title: string;
   note: string | null;
-  tagId: string | null;
   activityId: string | null;
   startDate: Date;
   endDate: Date;

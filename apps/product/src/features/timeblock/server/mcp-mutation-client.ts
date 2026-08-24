@@ -256,15 +256,12 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyPlanCreate({
         p_access_token_id: input.accessTokenId,
-        // MCP はタグを付けなくなったので常に null を渡す。RPC 側の p_tag_id は
-        // 旧バンドル互換のために残っている必須引数で、消すのは Step 8。
         p_activity_id: input.activityId,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt,
         p_note: input.note,
         p_operation_id: input.operationId,
         p_start_at: input.startAt,
-        p_tag_id: null,
         p_title: input.title,
       });
 
@@ -291,10 +288,6 @@ export class McpMutationClient {
         p_plan_id: input.planId,
         p_start_at: input.startAt ?? null,
         p_start_at_present: input.startAt !== undefined,
-        // present を常に false に固定し、既存の tag_id へ一切触れない。MCP は
-        // タグを持たなくなったので「未指定」であって「null で消す」ではない。
-        p_tag_id: null,
-        p_tag_id_present: false,
         p_title: input.title ?? null,
         p_title_present: input.title !== undefined,
       });
@@ -344,7 +337,6 @@ export class McpMutationClient {
     const request = () =>
       this.db.applyRecordCreate({
         p_access_token_id: input.accessTokenId,
-        // createPlan と同じ理由で p_tag_id は常に null。
         p_activity_id: input.activityId,
         p_connection_id: input.connectionId,
         p_end_at: input.endAt,
@@ -353,7 +345,6 @@ export class McpMutationClient {
         p_operation_id: input.operationId,
         p_plan_id: input.planId,
         p_start_at: input.startAt,
-        p_tag_id: null,
         p_title: input.title,
       });
 
@@ -382,9 +373,6 @@ export class McpMutationClient {
         p_record_id: input.recordId,
         p_start_at: input.startAt ?? null,
         p_start_at_present: input.startAt !== undefined,
-        // updatePlan と同じ。既存の tag_id には触れない。
-        p_tag_id: null,
-        p_tag_id_present: false,
         p_title: input.title ?? null,
         p_title_present: input.title !== undefined,
       });

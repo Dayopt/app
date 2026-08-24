@@ -42,7 +42,6 @@ function item(
     timeblockId: 'entry-1',
     kind: 'shifted',
     title: 'Focus',
-    tagId: null,
     activityId: 'activity-1',
     color: 'var(--category-blue)',
     plannedStart: start,
