@@ -1,11 +1,22 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  ALERT_RUN_STATE_TTL_MS,
   extractTrailingNumber,
   findTodayBoardIssue,
+  isJstMonday,
+  isJstWeekend,
   jstDateString,
   jstDayRange,
+  jstWeekdayIndex,
   jstYesterdayString,
+  MAX_NEW_ISSUES_PER_RUN,
+  readAlertRunState,
+  reserveAlertRunSlot,
 } from './lib.mjs';
 
 describe('jstDateString', () => {
@@ -40,6 +51,48 @@ describe('jstYesterdayString', () => {
 describe('jstDayRange', () => {
   it('日境界レンジを組み立てる', () => {
     expect(jstDayRange('2026-08-24')).toBe('2026-08-24T00:00:00+09:00..2026-08-24T23:59:59+09:00');
+  });
+});
+
+// push前反証レビュー risk-reviewer 指摘（P3）: 未知の曜日ラベルで無言
+// fallback すると isJstWeekend/isJstMonday がどちらも false（平日扱い）を
+// 返し、weekend skip が無音で無効化される。throw への変更（fail-open →
+// fail-closed の意図的な取り替え）を回帰確認する。
+describe('jstWeekdayIndex / isJstWeekend / isJstMonday', () => {
+  it.each([
+    ['2026-08-23T01:00:00Z', 0, '日'], // JST 2026-08-23（日）
+    ['2026-08-24T01:00:00Z', 1, '月'], // JST 2026-08-24（月）
+    ['2026-08-22T01:00:00Z', 6, '土'], // JST 2026-08-22（土）
+  ])('%s は曜日インデックス %i（%s）を返す', (isoDate, expectedIndex) => {
+    expect(jstWeekdayIndex(new Date(isoDate))).toBe(expectedIndex);
+  });
+
+  it('土曜・日曜は isJstWeekend が true、月曜は false', () => {
+    expect(isJstWeekend(new Date('2026-08-22T01:00:00Z'))).toBe(true); // 土
+    expect(isJstWeekend(new Date('2026-08-23T01:00:00Z'))).toBe(true); // 日
+    expect(isJstWeekend(new Date('2026-08-24T01:00:00Z'))).toBe(false); // 月
+  });
+
+  it('月曜のみ isJstMonday が true', () => {
+    expect(isJstMonday(new Date('2026-08-24T01:00:00Z'))).toBe(true);
+    expect(isJstMonday(new Date('2026-08-25T01:00:00Z'))).toBe(false); // 火
+  });
+
+  it('Intl.DateTimeFormat が未知の曜日ラベルを返したら throw する（無言 fallback を許さない）', () => {
+    // Intl.DateTimeFormat.prototype.format はネイティブ実装の accessor で、
+    // prototype 直接 spy だと internal slot チェックに落ちる。constructor 自体を
+    // fake formatter へ差し替える。
+    function FakeDateTimeFormat() {
+      return { format: () => 'Xyz' };
+    }
+    const spy = vi
+      .spyOn(Intl, 'DateTimeFormat')
+      .mockImplementation(FakeDateTimeFormat as unknown as typeof Intl.DateTimeFormat);
+    try {
+      expect(() => jstWeekdayIndex()).toThrow(/未知の JST 曜日ラベル/);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
@@ -87,5 +140,152 @@ describe('findTodayBoardIssue', () => {
   it('見つからなければ null を返す', () => {
     const execFileImpl = vi.fn(() => JSON.stringify([]));
     expect(findTodayBoardIssue({ execFileImpl })).toBeNull();
+  });
+});
+
+// #2332: night-watch の 1 run あたり起票上限（scripts/night-watch/alert-issue.mjs
+// runAlertSync が利用する run-scoped state）。plan-review（plan-critic）指摘に
+// 従い、関数注入のスタブではなく実 tmpdir の fs で検証する。
+describe('readAlertRunState / reserveAlertRunSlot', () => {
+  let stateDir: string;
+  let statePath: string;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-24T01:00:00Z'));
+    stateDir = mkdtempSync(join(tmpdir(), 'night-watch-run-state-'));
+    statePath = join(stateDir, 'state.json');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+
+  describe('readAlertRunState', () => {
+    it('state file が無ければ healthy な fresh state を返す', () => {
+      expect(readAlertRunState({ statePath })).toEqual({
+        healthy: true,
+        updatedAt: Date.now(),
+        actedCheckIds: [],
+        createdCount: 0,
+      });
+    });
+
+    it('破損した JSON は healthy: false の fresh state として扱う（fail-open）', () => {
+      writeFileSync(statePath, 'not json', 'utf8');
+      const state = readAlertRunState({ statePath });
+      expect(state.healthy).toBe(false);
+      expect(state.actedCheckIds).toEqual([]);
+      expect(state.createdCount).toBe(0);
+    });
+
+    it.each([
+      ['createdCount が上限超過', { updatedAt: Date.now(), actedCheckIds: [], createdCount: 99 }],
+      ['createdCount が負数', { updatedAt: Date.now(), actedCheckIds: [], createdCount: -1 }],
+      [
+        'actedCheckIds が文字列以外を含む',
+        { updatedAt: Date.now(), actedCheckIds: [123], createdCount: 0 },
+      ],
+      ['updatedAt が欠落', { actedCheckIds: [], createdCount: 0 }],
+    ])('構造が壊れた state（%s）は healthy: false の fresh state として扱う', (_label, value) => {
+      writeFileSync(statePath, JSON.stringify(value), 'utf8');
+      const state = readAlertRunState({ statePath });
+      expect(state.healthy).toBe(false);
+      expect(state.actedCheckIds).toEqual([]);
+      expect(state.createdCount).toBe(0);
+    });
+
+    it('TTL 超過の state は healthy な fresh state として扱う（別 run とみなす）', () => {
+      writeFileSync(
+        statePath,
+        JSON.stringify({
+          updatedAt: Date.now() - ALERT_RUN_STATE_TTL_MS - 1,
+          actedCheckIds: ['docs-check'],
+          createdCount: 3,
+        }),
+        'utf8',
+      );
+      const state = readAlertRunState({ statePath });
+      expect(state.healthy).toBe(true);
+      expect(state.actedCheckIds).toEqual([]);
+      expect(state.createdCount).toBe(0);
+    });
+
+    it('TTL 内の state はそのまま返す', () => {
+      writeFileSync(
+        statePath,
+        JSON.stringify({
+          updatedAt: Date.now() - 1000,
+          actedCheckIds: ['docs-check'],
+          createdCount: 1,
+        }),
+        'utf8',
+      );
+      const state = readAlertRunState({ statePath });
+      expect(state).toEqual({
+        healthy: true,
+        updatedAt: Date.now() - 1000,
+        actedCheckIds: ['docs-check'],
+        createdCount: 1,
+      });
+    });
+  });
+
+  describe('reserveAlertRunSlot', () => {
+    it('初回は許可し、state を書き込む', () => {
+      const result = reserveAlertRunSlot({ checkId: 'docs-check', willCreate: true, statePath });
+      expect(result).toEqual({ allowed: true });
+      expect(readAlertRunState({ statePath })).toEqual({
+        healthy: true,
+        updatedAt: Date.now(),
+        actedCheckIds: ['docs-check'],
+        createdCount: 1,
+      });
+    });
+
+    it('同一 check-id への 2 回目は拒否する（無制限追記ループの class を閉じる）', () => {
+      reserveAlertRunSlot({ checkId: 'docs-check', willCreate: false, statePath });
+      const second = reserveAlertRunSlot({ checkId: 'docs-check', willCreate: false, statePath });
+      expect(second).toEqual({ allowed: false, reason: 'run-cap-reached' });
+    });
+
+    it(`新規起票（willCreate: true）は ${MAX_NEW_ISSUES_PER_RUN} 件目までを許可し、それ以降は拒否する`, () => {
+      const checkIds = ['a', 'b', 'c', 'd'];
+      const results = checkIds.map((checkId) =>
+        reserveAlertRunSlot({ checkId, willCreate: true, statePath }),
+      );
+      expect(results.slice(0, MAX_NEW_ISSUES_PER_RUN)).toEqual(
+        Array.from({ length: MAX_NEW_ISSUES_PER_RUN }, () => ({ allowed: true })),
+      );
+      expect(results[MAX_NEW_ISSUES_PER_RUN]).toEqual({
+        allowed: false,
+        reason: 'run-cap-reached',
+      });
+    });
+
+    it('コメント追記（willCreate: false）は新規起票の cap を消費しない', () => {
+      // 新規起票を上限まで使い切っても、既存 issue への追記（別 check-id）は
+      // 「新規起票のみ 3 件」の cap 対象外（check-id 単位の冪等性だけが効く）。
+      ['a', 'b', 'c'].forEach((checkId) =>
+        reserveAlertRunSlot({ checkId, willCreate: true, statePath }),
+      );
+      const result = reserveAlertRunSlot({ checkId: 'sentry-new', willCreate: false, statePath });
+      expect(result).toEqual({ allowed: true });
+    });
+
+    // push前反証レビュー risk-reviewer 指摘（P2）: state の書き込み失敗
+    // （tmpdir read-only / ENOSPC / 権限不足）を無視して例外を投げると、
+    // gh を一切呼ばずに CLI が exit 1 し、その run の全 check-id で起票・
+    // 追記が 1 件も出なくなる。fail-open（allowed: true を返す）を固定する。
+    it('state の書き込みに失敗しても fail-open で許可する（例外を投げない）', () => {
+      const unwritablePath = join(stateDir, 'no-such-subdir', 'state.json');
+      expect(() =>
+        reserveAlertRunSlot({ checkId: 'docs-check', willCreate: true, statePath: unwritablePath }),
+      ).not.toThrow();
+      expect(
+        reserveAlertRunSlot({ checkId: 'deadcode', willCreate: true, statePath: unwritablePath }),
+      ).toEqual({ allowed: true });
+    });
   });
 });

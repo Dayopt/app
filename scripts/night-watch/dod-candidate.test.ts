@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchYesterdayMergedPrs, runDodCandidateSelect } from './dod-candidate.mjs';
+import {
+  fetchWeekendCatchUpMergedPrs,
+  fetchYesterdayMergedPrs,
+  runDodCandidateSelect,
+} from './dod-candidate.mjs';
 
 /** `.find()` の結果が無ければ即失敗させる（テストの意図を明確にする）。 */
 function mustFind<T>(items: T[], predicate: (item: T) => boolean): T {
@@ -9,9 +13,12 @@ function mustFind<T>(items: T[], predicate: (item: T) => boolean): T {
   return found;
 }
 
+// 2026-08-25（火曜）を既定にする。2026-08-24 は JST 月曜のため、月曜専用ロジック
+// （fetchWeekendCatchUpMergedPrs への分岐）と汎用ロジックのテストを混同しないよう、
+// 汎用テストは非月曜・非週末の日付を使う。月曜固有の挙動は専用 describe で扱う。
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-08-24T01:00:00Z')); // JST 2026-08-24 10:00 → 前日は 2026-08-23
+  vi.setSystemTime(new Date('2026-08-25T01:00:00Z')); // JST 2026-08-25 10:00（火）→ 前日は 2026-08-24
 });
 
 afterEach(() => {
@@ -31,7 +38,37 @@ describe('fetchYesterdayMergedPrs', () => {
         '--repo',
         'Dayopt/dayopt',
         '--search',
-        'is:merged merged:2026-08-23T00:00:00+09:00..2026-08-23T23:59:59+09:00',
+        'is:merged merged:2026-08-24T00:00:00+09:00..2026-08-24T23:59:59+09:00',
+        '--state',
+        'merged',
+        '--json',
+        'number,title',
+        '--limit',
+        '30',
+      ],
+      { encoding: 'utf8' },
+    );
+  });
+});
+
+// #2334 コメント: 盤面 issue の起票が平日のみになったため、Step 4 も土日は
+// skip する。月曜だけ金〜日の 3 日分の窓へ拡張する。
+describe('fetchWeekendCatchUpMergedPrs（月曜専用の金〜日 3 日分窓）', () => {
+  it('月曜日を基準に金〜日の JST 日境界レンジで検索する', () => {
+    vi.setSystemTime(new Date('2026-08-24T01:00:00Z')); // JST 2026-08-24（月）
+    const execFileImpl = vi.fn(() => '[]');
+
+    fetchWeekendCatchUpMergedPrs({ execFileImpl });
+
+    expect(execFileImpl).toHaveBeenCalledWith(
+      'gh',
+      [
+        'pr',
+        'list',
+        '--repo',
+        'Dayopt/dayopt',
+        '--search',
+        'is:merged merged:2026-08-21T00:00:00+09:00..2026-08-23T23:59:59+09:00',
         '--state',
         'merged',
         '--json',
@@ -50,10 +87,54 @@ describe('runDodCandidateSelect', () => {
     expect(() => runDodCandidateSelect({ execFileImpl })).toThrow(/盤面 issue が見つかりません/);
   });
 
-  it('候補 0 件なら「前日merge PR無し」を当日盤面 issue へコメントする', () => {
+  // #2334 コメント: 盤面 issue の起票が平日のみになったため、土日は当日盤面
+  // issue が存在しない。gh を一切呼ばず skip する。
+  it.each([
+    ['土曜日', '2026-08-22T01:00:00Z'],
+    ['日曜日', '2026-08-23T01:00:00Z'],
+  ])('%s（JST）は gh を一切呼ばず skip する', (_label, isoDate) => {
+    vi.setSystemTime(new Date(isoDate));
+    const execFileImpl = vi.fn(() => {
+      throw new Error('gh を呼んではいけない（weekend skip は gh 呼び出し前に判定する）');
+    });
+
+    const result = runDodCandidateSelect({ execFileImpl });
+
+    expect(result).toEqual({ action: 'skipped', reason: 'weekend' });
+    expect(execFileImpl).not.toHaveBeenCalled();
+  });
+
+  // 月曜は fetchYesterdayMergedPrs（前日=日曜のみの単日窓）ではなく
+  // fetchWeekendCatchUpMergedPrs（金〜日の3日分）が呼ばれることを、
+  // runDodCandidateSelect 経由（実際の分岐込み）で確認する。
+  it('月曜日は金〜日の3日分の窓で検索する（fetchYesterdayMergedPrs の単日窓ではない）', () => {
+    vi.setSystemTime(new Date('2026-08-24T01:00:00Z')); // JST 2026-08-24（月）
     const execFileImpl = vi.fn((cmd, args) => {
       if (args[0] === 'issue' && args[1] === 'list') {
         return JSON.stringify([{ number: 200, title: '盤面 2026-08-24' }]);
+      }
+      if (args[0] === 'pr' && args[1] === 'list') return '[]';
+      if (args[0] === 'issue' && args[1] === 'comment') {
+        return 'https://github.com/Dayopt/dayopt/issues/200#issuecomment-1\n';
+      }
+      throw new Error(`unexpected args: ${JSON.stringify(args)}`);
+    });
+
+    runDodCandidateSelect({ execFileImpl });
+
+    const prListCall = mustFind(
+      execFileImpl.mock.calls,
+      (call) => call[1][0] === 'pr' && call[1][1] === 'list',
+    );
+    expect(prListCall[1]).toContain(
+      'is:merged merged:2026-08-21T00:00:00+09:00..2026-08-23T23:59:59+09:00',
+    );
+  });
+
+  it('候補 0 件なら「前日merge PR無し」を当日盤面 issue へコメントする', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      if (args[0] === 'issue' && args[1] === 'list') {
+        return JSON.stringify([{ number: 200, title: '盤面 2026-08-25' }]);
       }
       if (args[0] === 'pr' && args[1] === 'list') {
         return '[]';
@@ -86,7 +167,7 @@ describe('runDodCandidateSelect', () => {
     ];
     const execFileImpl = vi.fn((cmd, args) => {
       if (args[0] === 'issue' && args[1] === 'list') {
-        return JSON.stringify([{ number: 200, title: '盤面 2026-08-24' }]);
+        return JSON.stringify([{ number: 200, title: '盤面 2026-08-25' }]);
       }
       if (args[0] === 'pr' && args[1] === 'list') {
         return JSON.stringify(candidates);

@@ -63,11 +63,12 @@ on:
       - 'scripts/generate-rls-snapshot.ts'
       - 'docs/engineering/data/db/rls-snapshot.md'
   schedule:
-    # 05:30 JST（night-watch v2、#2291。旧 06:45 JST から前倒し）。夜勤 Routine
-    # （07:00 JST 実行）が本 run の結果を読んで赤確認するため、それより前に完了させる。
+    # 04:30 JST（night-watch の起点時刻を 05:00 JST へ前倒しした変更、#2334
+    # コメントに伴う改訂。旧 05:30 JST からさらに前倒し）。夜勤 Routine
+    # （05:00 JST 実行）が本 run の結果を読んで赤確認するため、それより前に完了させる。
     # production-config-audit（06:00）・replica-check（06:30）と
     # 時間をずらし、同時実行の Supabase / 外部 API 呼び出し衝突を避ける。
-    - cron: '30 20 * * *'
+    - cron: '30 19 * * *'
   # paths は workflow_dispatch には書けない（inputs しか受け付けない）。手動実行は
   # 常に全実行になる。
   workflow_dispatch:
