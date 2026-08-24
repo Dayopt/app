@@ -558,18 +558,22 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # `.next` 等、docs/engineering/diagnostics.md §3 が推奨する操作）は通す。
   #
   # 判定は 2 段: (1) recursive フラグ付き rm の呼び出しがあるか
-  # (2) コマンド全体に「対象が worktree 外へ抜けうる」指標
-  # （絶対パス起動・`~`・`$`（変数展開）・`..` traversal）が含まれるか。
-  # 両方成立した時だけ block する。指標をコマンド全体（rm の引数に限定しない）
-  # で見るのは、`.op-env.human` 境界や他の危険引数検査と同じく、位置に
-  # 依存せず判定するため。
-  RM_RECURSIVE_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(/[^[:space:]]*/)?rm[[:space:]].*(-[a-zA-Z]*[rR][a-zA-Z]*([[:space:]]|$)|--recursive([[:space:]=]|$))'
+  # (2) 対象が「worktree 外へ抜けうる」指標（`~`・`$`（変数展開）・`..`
+  # traversal）を伴うか。**判定は rm を含む segment（; & | 改行で区切った
+  # 1 文）に限定する**——コマンド全体を見ると、`rm -rf .next && echo "done: $?"`
+  # のように rm と無関係な `$` が同じ Bash 呼び出しの別 segment に現れただけで
+  # 誤 block する（DoD 動作確認中の自己検証で実際に踏んだ）。segment 単位に
+  # することで、rm の実引数と無関係な部分を判定から除く。
+  RM_RECURSIVE_RE='(^|[[:space:]])(/[^[:space:]]*/)?rm[[:space:]].*(-[a-zA-Z]*[rR][a-zA-Z]*([[:space:]]|$)|--recursive([[:space:]=]|$))'
   RM_ESCAPE_TARGET_RE='(^|[[:space:]/])(~|\$)|(^|[[:space:]/])\.\.([[:space:]/]|$)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
-    if echo "$scanned" | grep -qE "$RM_RECURSIVE_RE" && echo "$scanned" | grep -qE "$RM_ESCAPE_TARGET_RE"; then
-      echo "BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: $COMMAND" >&2
-      exit 2
-    fi
+    while IFS= read -r rm_segment; do
+      [ -n "$rm_segment" ] || continue
+      if echo "$rm_segment" | grep -qE "$RM_RECURSIVE_RE" && echo "$rm_segment" | grep -qE "$RM_ESCAPE_TARGET_RE"; then
+        echo "BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: $COMMAND" >&2
+        exit 2
+      fi
+    done < <(printf '%s\n' "$scanned" | tr ';&|' '\n')
   done
 
   # --- supabase db reset の生呼び出し block（2026-08-24, #2359）---

@@ -817,8 +817,20 @@ describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
     ['~ 参照', 'rm -rf ~/Desktop/dayopt/apps'],
     ['変数展開', 'rm -rf $VAR'],
     ['-r（force なし）でも traversal なら block', 'rm -r ../other-lane'],
+    ['同一 segment 内の変数展開（区切りあり）', 'rm -rf $VAR && echo hi'],
   ])('worktree 外を指しうる対象は block する: %s', (_label, cmd) => {
     expect(runGuard(bash(cmd))).toBe('block');
+  });
+
+  // 回帰テスト（DoD 動作確認中に自己検出）: escape-target 判定をコマンド全体で
+  // 見ると、rm と無関係な別 segment の `$` が誤って block を引き起こしていた
+  // （`rm -rf <安全な相対パス> && echo "done: $?"` が block される事故）。
+  // 判定は rm を含む segment（; & | で区切った 1 文）に限定する。
+  it.each([
+    ['絶対パスへの rm -rf の後に $? を参照', 'rm -rf /tmp/scratch-dir && echo "done: $?"'],
+    ['安全な相対パス rm -rf の後に $? を参照', 'rm -rf .next && echo "done: $?"'],
+  ])('rm と無関係な別 segment の $ では誤 block しない: %s', (_label, cmd) => {
+    expect(runGuard(bash(cmd))).toBe('allow');
   });
 });
 
