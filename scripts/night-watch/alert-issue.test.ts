@@ -36,6 +36,12 @@ describe('parseAlertArgs', () => {
   it('値の無い flag は拒否する', () => {
     expect(() => parseAlertArgs(['--actual'])).toThrow(/値がありません/);
   });
+
+  // push 前反証レビュー behavior-verifier 指摘（P3）: 未知 flag を静かに受理
+  // すると typo・意図しない flag が無視されたまま気づけない。fail-fast にした。
+  it('未知の flag は拒否する（fail-fast、静かに無視しない）', () => {
+    expect(() => parseAlertArgs(['--unknown-flag', 'x'])).toThrow(/未知の flag/);
+  });
 });
 
 describe('buildAlertBody', () => {
@@ -124,6 +130,20 @@ describe('buildAlertBody', () => {
       /未知の check-id/,
     );
   });
+
+  // push 前反証レビュー risk-reviewer 指摘（P3）: CHECK_DEFINITIONS への素朴な
+  // ブラケットアクセスは prototype chain も辿るため、`__proto__` / `constructor`
+  // が checkId に来ると Object.prototype 上のオブジェクトにヒットしうる。
+  // Object.hasOwn 経由の own-property 限定アクセス（getCheckDefinition）が
+  // これを防いでいることを回帰確認する。
+  it.each(['__proto__', 'constructor', 'hasOwnProperty', 'toString'])(
+    'checkId=%s は prototype chain を辿らず未知の check-id として拒否する',
+    (checkId) => {
+      expect(() => buildAlertBody({ checkId, args: {}, detectedAt: 'x' })).toThrow(
+        /未知の check-id/,
+      );
+    },
+  );
 });
 
 describe('findExistingAlertIssue', () => {

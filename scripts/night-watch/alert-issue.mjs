@@ -95,6 +95,12 @@ function getCheckDefinition(checkId) {
  * @typedef {{ evidence?: string[], actual?: string, count?: string, [key: string]: unknown }} AlertArgs
  */
 
+// buildAlertBody が実際に読む flag のみ許可する。未知 flag を静かに受理すると
+// 呼び出し側の typo・プロンプト由来の余計な flag がそのまま無視され、意図した
+// 値が実は検証も本文反映もされていないことに気づけない（push 前反証レビュー
+// behavior-verifier 指摘、P3）。
+const KNOWN_ALERT_FLAGS = new Set(['actual', 'evidence-url', 'count', 'evidence']);
+
 /**
  * `--flag value` 形式の引数を集める。`--evidence` だけは複数回の指定を配列で集める。
  * @param {string[]} argv
@@ -108,6 +114,9 @@ export function parseAlertArgs(argv) {
       throw new Error(`未知の引数です: ${token}`);
     }
     const flag = token.slice(2);
+    if (!KNOWN_ALERT_FLAGS.has(flag)) {
+      throw new Error(`未知の flag です: ${token}`);
+    }
     const value = argv[i + 1];
     if (value === undefined) {
       throw new Error(`${token} に値がありません`);

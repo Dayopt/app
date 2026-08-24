@@ -87,6 +87,36 @@ describe('validateOpsLogReport', () => {
     ).toThrow(/board.detail/);
   });
 
+  // push 前反証レビュー risk-reviewer / behavior-verifier が独立に検出した P2:
+  // board.detail は Bash コマンド行へ単一の shell argv token として埋め込まれる
+  // ため、`<`/`>` は guard の redirect 拒否に、`'` は outer 単引用符の早期終端に
+  // 当たり、どちらも「盤面起票が失敗した晩に限って Step 5 の運行記録コメントが
+  // 沈黙する」結果になる。DETAIL_UNSAFE_CHARS_RE がこの class を validation 段で
+  // 塞ぐ（block 側 + 通過側の両方を固定する）。
+  it.each([
+    ['redirect 文字（<）を含む API エラーの引用', 'retry after <timestamp>'],
+    ['redirect 文字（>）を含む Node のスタックトレース断片', 'at <anonymous> (index.js:1:1) >'],
+    ['アポストロフィを含む GitHub API validation error', "Validation Failed: 'field' is required"],
+    ['バッククォートを含む文字列', 'run `pnpm install` first'],
+    ['ダブルクォートを含む文字列', 'field "name" is missing'],
+    ['バックスラッシュを含む文字列', 'path C:\\Users\\x'],
+    ['ドル記号を含む文字列', 'env $HOME not set'],
+    ['セミコロンを含む文字列', 'error code 500; retry later'],
+  ])('board.detail に危険な文字（%s）が含まれれば拒否する', (_label, detail) => {
+    expect(() =>
+      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', detail } }),
+    ).toThrow(/board.detail に使用できない文字/);
+  });
+
+  it('board.detail が安全な文字のみ（英数字・日本語・基本句読点）なら通す', () => {
+    expect(() =>
+      validateOpsLogReport({
+        ...GREEN_REPORT,
+        board: { status: 'fail', detail: 'API error 500（レート制限のため失敗、60秒後にretry）' },
+      }),
+    ).not.toThrow();
+  });
+
   it('未知の board.status は拒否する', () => {
     expect(() => validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'evil' } })).toThrow(
       /board.status/,

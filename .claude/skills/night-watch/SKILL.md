@@ -135,6 +135,8 @@ JSON の形（wrapper 内部で厳密に検証する。既知 check-id 以外・
 }
 ```
 
+**`board.detail`（Step 1 の盤面起票が失敗した時の概要）は `< > ' " `（バッククォート） `\` `$` `;` `&` `|` を含めてはいけない**（push 前反証レビュー risk-reviewer / behavior-verifier 指摘）。この JSON は 1 個の Bash argv token として渡すため、`<`/`>` は guard の redirect 拒否に、`'` は outer 単引用符の早期終端に当たり、どちらも「盤面起票が失敗した晩に限って運行記録コメント自体が沈黙する」結果になる。API エラーメッセージをそのまま転記せず、これらの文字を含まない短い要約に言い換える（例: `retry after <timestamp>` ではなく `rate limited, retry later`）。wrapper 側も同じ文字集合を検証で拒否するが、拒否が発火するのは JSON が壊れず正常に node へ届いた場合に限る（guard の redirect 拒否は JSON 到達前に働くため、この制約は執筆時点で守る）。
+
 wrapper はこの JSON から、以下と同じ内容のコメント本文を組み立てて投稿する:
 
 ```markdown
@@ -156,7 +158,7 @@ wrapper はこの JSON から、以下と同じ内容のコメント本文を組
 
 「規律で守る」だけでは足りないという #2205 の User 要件に応じ、次の3層で「Edit / Write / git push / PR 作成の実行不能」を保証する。層1・層2はこの skill の実装 scope 外（登録は指揮台が行う）だが、**登録時の必須要件としてここに固定する**:
 
-- **層1（GitHub token scope、登録時に指揮台が設定）**: night-watch 専用 token を `issues:write` + `contents:read` + `Dependabot alerts: read` + `Actions: read`（v2 追加。`gh run list` に必要）のみに scope する。`contents:write` / `pull_requests:write` / `administration` を持たせない。push・PR作成が API レベルで不可能になる。**Sentry CLI の認証は別トークン**（`SENTRY_AUTH_TOKEN`、1Password `sentry-cli-readonly` item、read-only scope）で、GitHub token scope には影響しない
+- **層1（GitHub token scope、登録時に指揮台が設定）**: night-watch 専用 token を `issues:write` + `contents:read` + `Dependabot alerts: read` + `Actions: read`（v2 追加。`gh run list` に必要）+ `Pull requests: read`（v2 再設計で追加。Step 4 の `gh pr list --search`（`scripts/night-watch/dod-candidate.mjs`）に必要。無いと登録直後は気づかれず、Step 4 が unattended 実行時に静かに失敗する — 登録時の dry-run で `gh pr list --search "is:merged" --state merged --limit 1` の疎通を確認する）のみに scope する。`contents:write` / `pull_requests:write` / `administration` を持たせない。push・PR作成が API レベルで不可能になる。**Sentry CLI の認証は別トークン**（`SENTRY_AUTH_TOKEN`、1Password `sentry-cli-readonly` item、read-only scope）で、GitHub token scope には影響しない
 - **層2（Cloud trigger 設定、登録時に指揮台が設定）**: RemoteTrigger の `session_context.allowed_tools` から `Write` / `Edit` / `MultiEdit` / `NotebookEdit` を除外する。**model は Haiku を指定する**（v2 追加。夜勤の判定は exit code / 閾値比較のみで裁量が無いため Haiku の適性と一致する。RemoteTrigger 側で model 指定ができない場合は、prompt 冒頭に「軽量実行（判定のみ、裁量なし）」と明記して代替し、実際に使われた model の構成比を月次ガーデニングで実測検証する）
 - **層3（repo hook、本実装）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる **allowlist**（denylist ではない — `.claude/rules/workflow.md` §同型指摘の打ち切りの「denylist をやめて allowlist にする」に従う）。引数不要な固定コマンド（checklist.md の4コマンド `docs:check` / `docs:coverage` / `quality:deadcode:ci`、自己検証の2コマンド `echo $DAYOPT_NIGHT_WATCH` / `gh api .../permissions`、v2 で追加した heavy-post-merge 赤確認・Sentry スキャンの2コマンド）は **完全一致**でのみ許可する（末尾ワイルドカードは配下バイナリの書込フラグ `--fix` `--output=` 等を継承してしまうため使わない、2026-08-19 内製クロスレビューで実測確認）。`gh api repos/Dayopt/dayopt/dependabot/alerts` も checklist.md の固定コマンドと完全一致でのみ許可する。`>` / `<` を含むコマンドは redirect によるファイル書き込みを防ぐため無条件で拒否する。read-only git（status/log/diff等）は checklist が実際には使わないため allowlist に含めない（未使用の攻撃面は追加せず、必要になった時に個別評価する）。それ以外は fail closed。env var が無いセッション（通常の全レーン）には一切影響しない
 

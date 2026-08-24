@@ -36,6 +36,19 @@ const OPS_LOG_DOC_PATH = fileURLToPath(
 );
 const OPS_LOG_ISSUE_RE = /運行記録 issue:\s*\*\*#(\d+)\*\*/;
 
+// board.detail は本 wrapper で唯一の自由文字列フィールド（gh API のエラー概要等、
+// enum 化できない）。JSON 全体は呼び出し元が単一の shell argv token（典型的には
+// 単引用符）として渡すため、detail にここで挙げる文字が 1 つでも混じると 2 通り
+// の壊れ方をする: ① `<` / `>` は guard の redirect 無条件拒否に当たり
+// コマンド全体が block される、② `'` は外側の単引用符を早期終端させ JSON が
+// 断片化して JSON.parse が失敗する。どちらも「盤面起票が失敗した晩に限って
+// Step 5 の運行記録コメント自体が沈黙する」（push 前反証レビュー risk-reviewer /
+// behavior-verifier が独立に検出、P2）。バッククォート・`$`・`;` `&` `|` `"`
+// `\` も同じ理由（guard の他の検査に触れる、または shell/JSON の構造を壊す）で
+// 一律拒否する。本 PR の設計原則「動的な値は shell へ二度渡さない」を
+// report 引数の自由文字列フィールドにも一貫適用する。
+const DETAIL_UNSAFE_CHARS_RE = /[<>'"`\\$;&|]/;
+
 /**
  * `docs/operations/night-watch.md` から常設運行記録 issue の番号を読み取る。
  * 未登録（`**未登録**`）のままなら、Routine 登録前であることを明示するエラーを
@@ -124,6 +137,11 @@ export function validateOpsLogReport(report) {
       board.detail.length > 300
     ) {
       throw new Error('board.detail は 1〜300 文字である必要があります');
+    }
+    if (DETAIL_UNSAFE_CHARS_RE.test(board.detail)) {
+      throw new Error(
+        'board.detail に使用できない文字が含まれています（< > \' " ` \\ $ ; & | は不可）。Bash コマンド行への埋め込みで guard の block や JSON の断片化を起こすため、これらを含まない要約に言い換えてください',
+      );
     }
   } else {
     throw new Error('board.status は success/skip/fail のいずれかである必要があります');
