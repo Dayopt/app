@@ -348,6 +348,14 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # と同じ設計）。
         night_watch_allowed=1
         ;;
+      "node scripts/night-watch/run-log.mjs recent-pending "*)
+        # Step 2（heavy-red/integration-red の pending escalation 判定、#2350
+        # クロスレビュー指摘 P2-1）の read-only wrapper。常設運行記録 issue の
+        # 直近コメントを読むだけで書き込みは行わない。値（check-id）は他
+        # wrapper と同じく execFile の argv 要素として gh へ渡り shell を経由
+        # しないため、flag 単位の検査は不要。
+        night_watch_allowed=1
+        ;;
     esac
 
     if [ "$night_watch_allowed" -ne 1 ]; then

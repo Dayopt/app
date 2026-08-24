@@ -47,6 +47,10 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 クロスレビューの指摘に対応した時（**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む）、重量 green を再確認して送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 4）。
 
+**報告送信は round 完了の一部であり、送っていない fix round は完了していない**（策定日: 2026-08-24、[#2355](https://github.com/Dayopt/dayopt/issues/2355)）。thread resolve / green 確認が終わったら、他の作業へ移る前に送る。2026-08-24、fix round・全 green・thread 3/3 resolve まで完了していたのに報告を送らず PR が指揮台の認知外で停止した実例がある（PR #2350。詳細は日次盤面 #2326 コメント列）。
+
+**追従（update-branch）の「指揮台の合図待ち」は fix round 文脈でも適用される**（`.claude/rules/orchestration.md` §追従とマージ順の采配）。fix round 中に main が動いていても、レーンが自己判断で追従してはいけない。2026-08-24、PR #2350 のレーンが fix round 中に追従を自己実行した実例がある（後続 PR が無く実害はなかったが、逸脱として記録）。
+
 ## 検証の証跡原則
 
 検証主張には実行コマンドと出力の要点（サマリー行の原文）を添える。「pass した」だけの報告を不可とする。パイプで exit code を隠す・turbo の cache 経由の偽グリーンなど、検証コマンドの成否を誤読しやすい罠は `docs/engineering/diagnostics.md` を参照する。「pre-existing / 環境問題」を主張する報告には同ページのプロトコルの実施結果を添付する。

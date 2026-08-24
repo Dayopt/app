@@ -46,11 +46,27 @@ maxTurns: 20
 - cross-feature import / barrel / Composition Layer / file move / 依存方向 → `architecture-guard`
 - いずれにも該当しない場合（docs-only 等）、subagent は起動しない。§投稿フォーマット の「対象外 diff」形式で記録する
 
-### 3. 並列実行する
+### 3. 並列実行する（Workflow + schema 強制）
 
-該当する subagent を同一メッセージ内で並列起動する（`Agent` tool、model は Sonnet 既定。`.claude/rules/ai-behavior.md` §委譲時の model 指定 に従う）。各 subagent には手順 1 の diff ファイルの絶対パスと「反証」観点（配線漏れ・定数間の不等式・直前修正が開けた穴）を明示する。
+該当する subagent を `Workflow` tool で並列実行する。**素の `Agent` tool は使わない**（StructuredOutput を機構的に強制できず、書き出し停止の再発源だったため。#2227 の prompt 契約適用後も1日5回再発し、#2348 で構造的強制へ移行した）。
 
-**subagent の書き出し省略癖への対処**: 応答が tool 呼び出しのみで終わり結論の書き出しが無い場合、同一 agent へ SendMessage で「見つけた findings を P1/P2/P3 分類で文章として書き出してください」と明示的に追加要求する。促す際に「追加調査は不要」とは書かない（未確認のまま停止するため）。
+指揮台は常に main checkout（repo root）に常駐する（`.claude/rules/orchestration.md` §指揮台セッションの定義）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パスと選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）を渡す:
+
+```
+Workflow({
+  scriptPath: ".claude/skills/pr-cross-review/cross-review-workflow.js",
+  args: { diffPath: "<手順1の絶対パス>", reviewers: ["risk-reviewer", "behavior-verifier"] }
+})
+```
+
+role ごとの schema・model・tools は `agentType` 経由で各 `.claude/agents/*.md` の frontmatter がそのまま継承される（実測済み: risk-reviewer は opus + Read/Grep/Glob のみ、behavior-verifier は sonnet + Read/Grep/Glob のみ呼び出し、いずれも StructuredOutput 以外の write-capable tool は呼ばれない。#2348 コメント参照）。
+
+script は各 role について `{ role, status: 'ok' | 'empty' | 'error', result }` の配列を返す。`status` が `ok` 以外の role が 1 件でもあれば、手順 6 の marker 生成は機械的に拒否される（`--review-result` 参照）。その場合 Main は次のいずれかを選ぶ:
+
+- 同一 script を再実行する（固定の自動リトライは行わない — 同一条件で同一失敗を再現するだけの可能性があり、1 週間の効果測定の解像度も下げるため、都度 Main が判断する）
+- 該当 role だけ Agent tool 経由（旧 text contract、`.claude/agents/<role>.md` の Output format）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）
+
+Workflow はタスク通知でバックグラウンド完了する。目安 30 分（`.claude/rules/orchestration.md` §可逆checkpointにはタイムアウト既定を設ける と同じ既定値）通知が届かなければ、セッション状態を確認した上で対処する。
 
 ### 4. 指摘を分類する
 
@@ -79,9 +95,17 @@ P1/P2 の review comment とは別に、**1 件の summary comment** を issue �
 
 **marker 本文は `pnpm review:marker` で生成する（手書きしない）。** SHA の捏造（短縮 SHA からの補完、2026-08-14 実事故）と zerolike 書式の汚染（注釈付き `P1: なし（…）` が gate を誤通過させた PR #2053 の実事故）を、生成の機械化で防ぐ（`scripts/review/generate-marker.ts`、#2230）。
 
+**手順 3 で reviewer を起動した場合（docs-only 以外）は `--agent` ではなく `--review-result` を使う。** 手順 3 の Workflow が返した `{role, status, result}[]` を、Main が `Write` tool でそのまま JSON ファイルへ書き出し、そのパスを渡す（#2348）。`status` が `ok`/`text-fallback` 以外の role が 1 件でもあれば生成が失敗する — これは「1 role が結果を返していないのに手で `--agent` へ書いて gate を通す」抜け道を、値の手入力自体を無くして塞ぐための機械的ガード:
+
 ```bash
-pnpm review:marker <PR番号> --agent "risk-reviewer, behavior-verifier" \
+pnpm review:marker <PR番号> --review-result /path/to/review-result.json \
   --p1 0 --p2 2 --p2-note "review comment 参照" [--p3 "..."]
+```
+
+docs-only 等 reviewer を起動しなかった場合は従来どおり `--agent` を直接指定する（`--agent` と `--review-result` は併用不可）:
+
+```bash
+pnpm review:marker <PR番号> --agent docs-only --p1 0 --p2 0
 ```
 
 head SHA は script が `gh pr view --json headRefOid` で実測する（引数で渡す口は無い）。P1/P2 が 0 件の時は注釈を付けられない（zerolike 書式を維持するため。理由は P3 か経緯欄へ）。**stdout の出力を目視確認してから** `gh pr comment <PR番号> --body "<出力>"` 等で投稿する — 生成と投稿を分けているのは、投稿前に 1 拍置く確認ステップを残すため。
