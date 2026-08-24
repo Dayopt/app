@@ -2,7 +2,7 @@
 status: current
 last_verified: 2026-08-04
 public_docs:
-  - tags
+  - activities
 lp:
   - 'Activities'
   - 'Unlimited activities'
