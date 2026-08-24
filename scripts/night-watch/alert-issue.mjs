@@ -1,7 +1,7 @@
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { extractTrailingNumber, REPO, runGh, runGhJson } from './lib.mjs';
+import { extractTrailingNumber, REPO, reserveAlertRunSlot, runGh, runGhJson } from './lib.mjs';
 
 /**
  * night-watch SKILL.md §自動パート Step 3（異常があれば起票または追記する）を
@@ -54,9 +54,42 @@ export const CHECK_DEFINITIONS = {
     command:
       'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
   },
+  // integration.yml は heavy-post-merge.yml と同じ concurrency group 設計
+  // （`integration-${{ github.ref }}` + cancel-in-progress: true）のため、
+  // 判定規約（cancelled/timed_out/action_required も赤・直近24hにsuccessが
+  // 無ければ赤）は heavy-red と同一（#2333、CI 4層再設計 #2269 で integration
+  // が per-PR から nightly + push:main 後へ移った後、夜勤が heavy-post-merge
+  // の赤しか観測しておらず integration 単独の失敗が無通知のまま朝を迎える穴を
+  // 埋める）。
+  //
+  // **`--branch main` は heavy-red からのコピー時に落ちていた必須 flag**
+  // （push前反証レビュー risk-reviewer 指摘、P2）。integration.yml は
+  // heavy-post-merge.yml と異なり `pull_request` trigger も持つ
+  // （migration-safety job 用）ため、branch 指定が無いと直近 3 run に
+  // PR run が混入し、(a) PR の追い push で cancel-in-progress により
+  // cancelled になった run が「cancelled も赤」規約に直撃して誤起票、
+  // (b) PR run が直近枠を占有して nightly の success run が窓外に出て
+  // 「直近24hにsuccessが無い」で誤起票、逆に (c) 本物の nightly 失敗が
+  // PR run に押し出されて見逃される、の 3 経路が同時に開いていた。
+  // heavy-post-merge.yml には pull_request trigger が無いため heavy-red
+  // 側にはこの穴は無い。
+  'integration-red': {
+    kind: 'run-url',
+    title: 'integration が直近 run で red',
+    command:
+      'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
+  },
   'sentry-new': {
     kind: 'sentry',
     title: '直近24hに新規 unresolved production issue を検出',
+    // 起票 issue の「再現コマンド」欄は、朝これを見た人間がローカル
+    // （1Password が使える環境）で手で再現する想定のため、意図的に op run
+    // 形のまま保持する（Cloud Environment の env 直読み形が Routine の
+    // 実行時の既定だが、朝レーンが再現する時は 1Password 経由の方が自然）。
+    // guard allowlist（.claude/hooks/pre-tool-guard-impl.sh）は両形とも
+    // 許可しており、この command 文字列自体は allowlist 判定には関与しない
+    // （こちらは issue 本文の表示用、SKILL.md §Step2 が実行時に叩く固定形の
+    // 正本）。
     command:
       'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
   },
@@ -77,7 +110,13 @@ const RUN_URL_RE = /^https:\/\/github\.com\/Dayopt\/dayopt\/actions\/runs\/\d+(?
 // exfiltration 経路がここに残っていた（push 前反証レビュー risk-reviewer
 // 指摘、medium）。実在する Sentry issue URL は常に数値 ID で終わるため、診断
 // 価値を落とさずに閉じられる。
-const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/[a-z0-9-]+\.sentry\.io\/issues\/\d+\/?$/;
+//
+// subdomain 部も `dayopt` へ固定する（#2334、PR #2309 delta re-review
+// risk-reviewer 指摘、P2）。path 部で閉じた class（自由長・限定文字集合での
+// 任意データ搬送）と同型の経路が subdomain（旧: `[a-z0-9-]+` で長さ無制限）に
+// 残っていた。実運用の Sentry org は `dayopt`（docs/operations/monitoring.md
+// の dashboard URL が実測）で固定のため、診断価値を落とさずに閉じられる。
+const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/dayopt\.sentry\.io\/issues\/\d+\/?$/;
 // 1 check あたりの evidence 件数上限。`--evidence` は repeatable flag のため、
 // 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
 const MAX_SENTRY_EVIDENCE = 5;
@@ -193,7 +232,7 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       const badEvidence = evidence.filter((entry) => !SENTRY_EVIDENCE_RE.test(entry));
       if (badEvidence.length > 0) {
         throw new Error(
-          `--evidence は "DAYOPT-<番号> https://<subdomain>.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
+          `--evidence は "DAYOPT-<番号> https://dayopt.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
         );
       }
       actual = `件数: ${args.count}${
@@ -281,6 +320,7 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
  *   args: AlertArgs,
  *   detectedAt?: string,
  *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
+ *   runStatePath?: string,
  * }} params
  */
 export function runAlertSync({
@@ -288,6 +328,7 @@ export function runAlertSync({
   args,
   detectedAt = new Date().toISOString(),
   execFileImpl,
+  runStatePath,
 }) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
@@ -302,6 +343,20 @@ export function runAlertSync({
   }
 
   const body = buildAlertBody({ checkId, args, detectedAt });
+
+  // gh を実際に呼ぶ直前で run-scoped の起票上限を予約する（#2332）。
+  // buildAlertBody の検証（未知 flag・不正な値の拒否）より後に置くのは、
+  // 検証エラーでは gh を呼ばないので予算を消費させないため。gh 呼び出しより
+  // 前に置くのは、gh が失敗した時に消費した試行を計上漏れさせないため
+  // （scripts/night-watch/lib.mjs の reserveAlertRunSlot コメント参照）。
+  const reservation = reserveAlertRunSlot({
+    checkId,
+    willCreate: !existing,
+    statePath: runStatePath,
+  });
+  if (!reservation.allowed) {
+    return { action: 'capped', reason: reservation.reason };
+  }
 
   if (existing) {
     runGh(['issue', 'comment', String(existing.number), '--repo', REPO, '--body', body], {

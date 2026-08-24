@@ -288,11 +288,21 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
         | "gh api repos/Dayopt/dayopt --jq .permissions" \
         | "gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url" \
-        | 'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"')
+        | "gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url" \
+        | 'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"' \
+        | 'sentry issue list dayopt --query "is:unresolved age:-24h"')
         # checklist.md / SKILL.md §自動パート Step 0（自己検証）・Step 2（観測。
-        # heavy-red / sentry-new を含む）が指定する固定コマンドのみ完全一致で許可。
-        # 空白区切りの表記ゆれ（'--jq=...' 等）には対応しない。night-watch v2
-        # （#2291）で heavy-post-merge 赤確認・Sentry スキャンの 2 本を追加した。
+        # heavy-red / integration-red / sentry-new を含む）が指定する固定
+        # コマンドのみ完全一致で許可。空白区切りの表記ゆれ（'--jq=...' 等）には
+        # 対応しない。night-watch v2（#2291）で heavy-post-merge 赤確認・Sentry
+        # スキャンの 2 本を追加し、#2333 で integration 赤確認を追加した。
+        #
+        # sentry-new に 2 形態あるのは、Cloud Environment（night-watch の実行
+        # 先）に 1Password が無いため（#2334 コメント）。Cloud Environment には
+        # `SENTRY_AUTH_TOKEN` が env として直接注入されるので `op run --` は
+        # 不要かつ実行不可能。夜勤 Routine（自動運行）は env 直読みの形
+        # （`sentry issue list ...`）を使い、`op run --` を挟む形は指揮台が
+        # 手動代行する時（1Password が使えるローカル環境）専用に残す。
         night_watch_allowed=1
         ;;
       "echo \$DAYOPT_NIGHT_WATCH")
