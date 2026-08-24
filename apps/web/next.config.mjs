@@ -240,7 +240,6 @@ const nextConfig = {
       '@web/components',
       '@web/lib',
       'lucide-react',
-      '@radix-ui/react-dialog',
       'clsx',
       'class-variance-authority',
     ],
