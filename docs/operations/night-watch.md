@@ -12,11 +12,11 @@ code: .claude/skills/night-watch/SKILL.md
 
 night-watch は毎晩、常設の運行記録 issue へ1コメントを残す。issue 番号は登録時（実装 merge 後）に指揮台が確定し、ここに追記する:
 
-- 運行記録 issue: **未登録**（この行は指揮台が trigger 登録と同時に issue 番号へ書き換える）
+- 運行記録 issue: **#2216**
 
 **v2 で書き込み先が拡張された**（[#2291](https://github.com/Dayopt/dayopt/issues/2291)）。上記の常設運行記録 issue に加え、当日/前日の日次盤面 issue（`type:board` ラベル）への起票・close・コメントも行う。実行手順は `.claude/skills/night-watch/SKILL.md` §自動パート Step 1（盤面起票）・Step 4（DoD監査候補コメント）が正本。書き込み先はこの 2 種類の issue に限る（§守ること）。
 
-**Sentry token 依存（v2 追加）**: Step 2 の `sentry-new` 観測は `SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item、read-only scope）を Cloud Environment 側の env として要求する。未配線だと `op run` がエラー終了し、fail-closed 原則（§Step 2）により「取得失敗」として運行記録に記録される。
+**Sentry token 依存（v2 追加、[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメントで cloud 互換形へ改訂）**: Step 2 の `sentry-new` 観測は `SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item、read-only scope）を Cloud Environment 側の env として要求する。Cloud Environment には 1Password が無いため、夜勤 Routine は `sentry` CLI が `SENTRY_AUTH_TOKEN` を直接読む cloud 互換形（`op run --` を挟まない）を使う。未配線だと `sentry` CLI が認証エラーで終了し、fail-closed 原則（§Step 2）により「取得失敗」として運行記録に記録される（`op run --` を挟む旧形は 1Password が使えるローカル環境での指揮台の手動代行専用に残す）。
 
 **層1 token scope に `Actions: read` を追加（v2 追加）**: Step 2 の `heavy-red` 観測（`gh run list`）に必要。既存の `issues:write` + `contents:read` + `Dependabot alerts: read` に追加する形で、`contents:write` / `pull_requests:write` / `administration` は引き続き持たせない（詳細は `.claude/skills/night-watch/SKILL.md` §権限の構造的強制 層1 参照）。
 

@@ -1,6 +1,11 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildAlertBudgetLine,
   buildBoardNoteComment,
   buildOpsLogComment,
   resolveOpsLogIssueNumber,
@@ -27,7 +32,7 @@ function mustFind<T>(items: T[], predicate: (item: T) => boolean): T {
 }
 
 const GREEN_REPORT: import('./run-log.mjs').OpsLogReport = {
-  executed: 6,
+  executed: 7,
   failed: [],
   results: [],
   baselineRecommend: [],
@@ -53,7 +58,7 @@ describe('validateOpsLogReport', () => {
   });
 
   it('executed が範囲外なら拒否する', () => {
-    expect(() => validateOpsLogReport({ ...GREEN_REPORT, executed: 7 })).toThrow(/executed/);
+    expect(() => validateOpsLogReport({ ...GREEN_REPORT, executed: 8 })).toThrow(/executed/);
   });
 
   it('failed に未知の check-id があれば拒否する', () => {
@@ -136,13 +141,24 @@ describe('validateOpsLogReport', () => {
       }),
     ).toThrow(/results/);
   });
+
+  // #2333: integration.yml の失敗を夜勤で観測する check-id を追加した回帰確認。
+  // CHECK_IDS に含まれていなければ既知の check-id チェックで拒否されるはず。
+  it('results の checkId=integration-red を既知として受け付ける', () => {
+    expect(() =>
+      validateOpsLogReport({
+        ...GREEN_REPORT,
+        results: [{ checkId: 'integration-red', outcome: 'issue', issueNumber: 800 }],
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe('buildOpsLogComment', () => {
   it('all green の場合の本文を組み立てる', () => {
     const comment = buildOpsLogComment(GREEN_REPORT);
     expect(comment).toContain('**night-watch 運行記録 2026-08-24**');
-    expect(comment).toContain('- 実行 check 数: 6 / 6（取得失敗を除く）');
+    expect(comment).toContain('- 実行 check 数: 7 / 7（取得失敗を除く）');
     expect(comment).toContain('- 取得失敗: なし');
     expect(comment).toContain('- all green');
     expect(comment).toContain('- baseline 更新推奨: なし');
@@ -215,13 +231,34 @@ describe('buildOpsLogComment', () => {
 });
 
 describe('runOpsLogReport', () => {
+  // #2332: runOpsLogReport は alert-issue.mjs と同じ run-state file を直接
+  // 読んで運行記録へ「起票予算」の 1 行を機械生成で足す（buildAlertBudgetLine
+  // 参照）。既定 path を使うと test 間・並行 worker 間で汚染するため、
+  // test ごとに専用ディレクトリを用意する（plan-review 指摘、実 fs で検証）。
+  let stateDir: string;
+  let alertRunStatePath: string;
+
+  beforeEach(() => {
+    stateDir = mkdtempSync(join(tmpdir(), 'night-watch-ops-log-state-'));
+    alertRunStatePath = join(stateDir, 'state.json');
+  });
+
+  afterEach(() => {
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+
   it('検証を通った report を運行記録 issue へコメントする（宛先は docs から解決）', () => {
     const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
     const execFileImpl = vi.fn(
       () => 'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
     );
 
-    const result = runOpsLogReport({ report: GREEN_REPORT, execFileImpl, readFileImpl });
+    const result = runOpsLogReport({
+      report: GREEN_REPORT,
+      execFileImpl,
+      readFileImpl,
+      alertRunStatePath,
+    });
 
     expect(result).toEqual({ issueNumber: 1234 });
     expect(execFileImpl).toHaveBeenCalledWith(
@@ -233,9 +270,87 @@ describe('runOpsLogReport', () => {
         '--repo',
         'Dayopt/dayopt',
         '--body',
-        buildOpsLogComment(GREEN_REPORT),
+        `${buildOpsLogComment(GREEN_REPORT)}${buildAlertBudgetLine({ healthy: true, updatedAt: Date.now(), actedCheckIds: [], createdCount: 0 })}\n`,
       ],
       { encoding: 'utf8' },
+    );
+  });
+
+  it('起票予算 state が壊れていても fail-open で報告し gh を呼ぶ', () => {
+    writeFileSync(alertRunStatePath, 'not json', 'utf8');
+    const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+    const execFileImpl = vi.fn(
+      (_cmd: string, _args: string[]) =>
+        'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
+    );
+
+    runOpsLogReport({ report: GREEN_REPORT, execFileImpl, readFileImpl, alertRunStatePath });
+
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    expect(commentCall[1][6]).toContain('起票予算 state: 利用不可（fail-open、無制限扱いで実行）');
+  });
+
+  // push前反証レビュー risk-reviewer 指摘（P2、2巡目）: reserveAlertRunSlot は
+  // state 書き込み失敗（EACCES/EROFS 等）時も fail-open で gh を呼ぶが、その
+  // check-id は actedCheckIds に載らない。何も手当てしないと state は
+  // healthy: true のまま「有効（0/3、0件）」と誤報告し、cap が実質無効に
+  // なっている事実が観測できない。report.results の issue 件数と
+  // actedCheckIds.length の不整合で検出する。
+  it('state の記録より起票実績が多ければ「利用不可（不整合）」と報告する', () => {
+    // state file は healthy な空 state（書き込みが一度も成功していない体で
+    // 固定する）。report は 1 件の起票を報告しており、不整合になる。
+    writeFileSync(
+      alertRunStatePath,
+      JSON.stringify({ updatedAt: Date.now(), actedCheckIds: [], createdCount: 0 }),
+      'utf8',
+    );
+    const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+    const execFileImpl = vi.fn(
+      (_cmd: string, _args: string[]) =>
+        'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
+    );
+
+    runOpsLogReport({
+      report: {
+        ...GREEN_REPORT,
+        results: [{ checkId: 'docs-check', outcome: 'issue', issueNumber: 700 }],
+      },
+      execFileImpl,
+      readFileImpl,
+      alertRunStatePath,
+    });
+
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    expect(commentCall[1][6]).toContain(
+      '起票予算 state: 利用不可（fail-open、state 書き込み失敗の疑い。起票実績が state の記録より多い）',
+    );
+  });
+
+  it('state の記録が起票実績以上なら「有効」と報告する（不整合の誤検知なし）', () => {
+    writeFileSync(
+      alertRunStatePath,
+      JSON.stringify({ updatedAt: Date.now(), actedCheckIds: ['docs-check'], createdCount: 1 }),
+      'utf8',
+    );
+    const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+    const execFileImpl = vi.fn(
+      (_cmd: string, _args: string[]) =>
+        'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
+    );
+
+    runOpsLogReport({
+      report: {
+        ...GREEN_REPORT,
+        results: [{ checkId: 'docs-check', outcome: 'issue', issueNumber: 700 }],
+      },
+      execFileImpl,
+      readFileImpl,
+      alertRunStatePath,
+    });
+
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    expect(commentCall[1][6]).toContain(
+      '起票予算 state: 有効（新規起票 1/3、対応済み check-id 1件）',
     );
   });
 
@@ -243,9 +358,9 @@ describe('runOpsLogReport', () => {
     const readFileImpl = () => '- 運行記録 issue: **未登録**\n';
     const execFileImpl = vi.fn();
 
-    expect(() => runOpsLogReport({ report: GREEN_REPORT, execFileImpl, readFileImpl })).toThrow(
-      /登録されていません/,
-    );
+    expect(() =>
+      runOpsLogReport({ report: GREEN_REPORT, execFileImpl, readFileImpl, alertRunStatePath }),
+    ).toThrow(/登録されていません/);
     expect(execFileImpl).not.toHaveBeenCalled();
   });
 
@@ -254,7 +369,12 @@ describe('runOpsLogReport', () => {
     const execFileImpl = vi.fn();
 
     expect(() =>
-      runOpsLogReport({ report: { ...GREEN_REPORT, executed: 99 }, execFileImpl, readFileImpl }),
+      runOpsLogReport({
+        report: { ...GREEN_REPORT, executed: 99 },
+        execFileImpl,
+        readFileImpl,
+        alertRunStatePath,
+      }),
     ).toThrow(/executed/);
     expect(execFileImpl).not.toHaveBeenCalled();
   });
@@ -372,5 +492,27 @@ describe('runBoardNote', () => {
         execFileImpl,
       }),
     ).toThrow(/note の形が不正/);
+  });
+
+  // push前反証レビュー risk-reviewer 指摘（P2）: board-issue.mjs が Step 1 の
+  // 起票を平日のみに絞った（#2334 コメント）ため、土日は当日盤面 issue が
+  // 存在せず findTodayBoardIssue が必ず null を返す。weekend skip 無しだと
+  // 毎週 2 回、確実に「故障に見える失敗」（例外 → exit 1）が出ていた。
+  it.each([
+    ['土曜日', '2026-08-22T01:00:00Z'],
+    ['日曜日', '2026-08-23T01:00:00Z'],
+  ])('%s（JST）は gh を一切呼ばず skip する', (_label, isoDate) => {
+    vi.setSystemTime(new Date(isoDate));
+    const execFileImpl = vi.fn(() => {
+      throw new Error('gh を呼んではいけない（weekend skip は gh 呼び出し前に判定する）');
+    });
+
+    const result = runBoardNote({
+      note: { allGreen: true, issued: 0, observed: 6 },
+      execFileImpl,
+    });
+
+    expect(result).toEqual({ action: 'skipped', reason: 'weekend' });
+    expect(execFileImpl).not.toHaveBeenCalled();
   });
 });

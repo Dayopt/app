@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import {
   extractTrailingNumber,
+  isJstWeekend,
   jstDateString,
   jstDayRange,
   REPO,
@@ -105,9 +106,19 @@ export function buildBoardBody({ dateStr, section1 }) {
  * Step 1 を実行する。今日の JST タイトルの盤面 issue が既にあれば skip、
  * 無ければ前日以前の open 盤面 issue（あれば §1 を継承）を探して新規起票し、
  * 前 issue が見つかっていればそれだけを close する。
+ *
+ * night-watch の起点が 05:00 JST 毎日運行へ確定した際（#2334 コメント）、
+ * **盤面 issue の起票だけは平日のみ**（健康診断・異常起票・運行記録は土日も
+ * 毎日行う）と決まった。土日は日次盤面 issue という運用単位自体が存在しない
+ * ため、gh を一切呼ばずに機械的に skip する（prompt 側の規律に頼らない。
+ * SKILL.md に書くだけでは Haiku が判定を誤る余地が残る）。
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
  */
 export function runBoardSync({ execFileImpl } = {}) {
+  if (isJstWeekend()) {
+    return { action: 'skipped', reason: 'weekend' };
+  }
+
   const today = jstDateString();
   const title = `盤面 ${today}`;
 
