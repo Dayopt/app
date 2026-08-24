@@ -38,7 +38,6 @@ interface PlanCreateInput {
   operationId: string;
   title: string;
   note?: string | null;
-  tagId?: string | null;
   startAt: string;
   endAt: string;
 }
@@ -129,7 +128,6 @@ function applyPlan(authorization: WriteAuthorization, input: PlanCreateInput) {
       p_operation_id: input.operationId,
       p_title: input.title,
       p_note: (input.note ?? null) as never,
-      p_tag_id: (input.tagId ?? null) as never,
       p_start_at: input.startAt,
       p_end_at: input.endAt,
     })
@@ -282,7 +280,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
       operationId,
       title: 'Canonical Plan',
       note: null,
-      tagId: null,
       startAt,
       endAt: at(2 * 60 * 60_000),
     };
@@ -473,7 +470,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
         p_user_id: userId,
         p_title: 'UI writer',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
         p_start_at: startAt,
@@ -508,7 +504,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
       p_user_id: userId,
       p_title: 'Occupied range',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_source: 'manual',
       p_start_at: occupiedStart,
@@ -767,7 +762,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan create apply integration', () => {
       p_operation_id: crypto.randomUUID(),
       p_title: 'Forbidden browser apply',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_start_at: at(25 * 60 * 60_000),
       p_end_at: at(26 * 60 * 60_000),
     });

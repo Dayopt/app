@@ -230,7 +230,6 @@ describe('TimeblockInspector relationships', () => {
         kind: 'plan',
         title: plan.title,
         note: plan.note,
-        tagId: plan.tag_id,
         activityId: plan.activity_id,
         startAt: plan.start_at,
         endAt: plan.end_at,

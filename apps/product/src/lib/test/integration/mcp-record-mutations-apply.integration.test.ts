@@ -42,7 +42,6 @@ interface WriteAuthorization {
 interface RecordPatch {
   title?: string;
   note?: string | null;
-  tagId?: string | null;
   startAt?: string;
   endAt?: string;
 }
@@ -145,7 +144,7 @@ function holdRecordLock(recordId: string): Promise<LockHolder> {
 function holdOverlappingRecord(input: { startAt: string; endAt: string }): Promise<LockHolder> {
   return startLockHolder(
     { user_id: userId, start_at: input.startAt, end_at: input.endAt },
-    "SELECT public.create_record_command_v1(:'user_id'::UUID, 'Lock holder', NULL, NULL, NULL, NULL, 'manual', :'start_at'::TIMESTAMPTZ, :'end_at'::TIMESTAMPTZ);",
+    "SELECT public.create_record_command_v1(:'user_id'::UUID, 'Lock holder', NULL, NULL, NULL, 'manual', :'start_at'::TIMESTAMPTZ, :'end_at'::TIMESTAMPTZ);",
   );
 }
 
@@ -279,7 +278,6 @@ async function createPlan(input: {
       p_user_id: userId,
       p_title: input.title,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_source: 'manual',
       p_start_at: input.startAt,
@@ -303,7 +301,6 @@ async function createCompletedPlan(title: string): Promise<PlanRow> {
 async function createRecord(input: {
   title: string;
   note?: string | null;
-  tagId?: string | null;
   planId?: string | null;
   externalCalendarEventId?: string | null;
   source?: 'manual' | 'api' | 'external_calendar';
@@ -315,7 +312,6 @@ async function createRecord(input: {
       p_user_id: userId,
       p_title: input.title,
       p_note: (input.note ?? null) as never,
-      p_tag_id: (input.tagId ?? null) as never,
       p_plan_id: (input.planId ?? null) as never,
       p_external_calendar_event_id: (input.externalCalendarEventId ?? null) as never,
       p_source: input.source ?? 'manual',
@@ -335,7 +331,6 @@ function uiUpdate(record: RecordRow, title: string) {
       p_expected_updated_at: record.updated_at,
       p_title: title,
       p_note: record.note as never,
-      p_tag_id: record.tag_id as never,
       p_plan_id: record.plan_id as never,
       p_external_calendar_event_id: record.external_calendar_event_id as never,
       p_start_at: record.start_at,
@@ -350,7 +345,6 @@ function applyCreate(
   input: {
     title: string;
     note?: string | null;
-    tagId?: string | null;
     planId?: string | null;
     startAt: string;
     endAt: string;
@@ -363,7 +357,6 @@ function applyCreate(
       p_operation_id: operationId,
       p_title: input.title,
       p_note: (input.note ?? null) as never,
-      p_tag_id: (input.tagId ?? null) as never,
       p_plan_id: (input.planId ?? null) as never,
       p_start_at: input.startAt,
       p_end_at: input.endAt,
@@ -380,7 +373,6 @@ function applyUpdate(
 ) {
   const titlePresent = hasOwn(patch, 'title');
   const notePresent = hasOwn(patch, 'note');
-  const tagIdPresent = hasOwn(patch, 'tagId');
   const startAtPresent = hasOwn(patch, 'startAt');
   const endAtPresent = hasOwn(patch, 'endAt');
 
@@ -395,8 +387,6 @@ function applyUpdate(
       p_title: (titlePresent ? patch.title : null) as never,
       p_note_present: notePresent,
       p_note: (notePresent ? patch.note : null) as never,
-      p_tag_id_present: tagIdPresent,
-      p_tag_id: (tagIdPresent ? patch.tagId : null) as never,
       p_start_at_present: startAtPresent,
       p_start_at: (startAtPresent ? patch.startAt : null) as never,
       p_end_at_present: endAtPresent,
@@ -573,16 +563,9 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
 
   it('applies partial updates while preserving Plan attribution and external provenance', async () => {
     const authorization = await createWriteAuthorization();
-    const tagId = crypto.randomUUID();
     const externalEventId = crypto.randomUUID();
     const startAt = at(-12 * 60 * 60_000);
     const endAt = at(-11 * 60 * 60_000);
-    const { error: tagError } = await admin.from('tags').insert({
-      id: tagId,
-      user_id: userId,
-      name: 'Initial tag',
-    });
-    expect(tagError).toBeNull();
     const { error: eventError } = await admin.from('external_calendar_events').insert({
       id: externalEventId,
       user_id: userId,
@@ -601,7 +584,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     const record = await createRecord({
       title: 'External original',
       note: 'Remove me',
-      tagId,
       planId: plan.id,
       externalCalendarEventId: externalEventId,
       source: 'external_calendar',
@@ -622,7 +604,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     expect(preserved).toMatchObject({
       title: 'MCP correction',
       note: 'Remove me',
-      tag_id: tagId,
       plan_id: plan.id,
       source: 'external_calendar',
       external_calendar_event_id: externalEventId,
@@ -636,14 +617,13 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       clearOperationId,
       record.id,
       first.data!.version,
-      { note: null, tagId: null },
+      { note: null },
     );
     expect(cleared.error).toBeNull();
 
     const { data: current } = await admin.from('records').select('*').eq('id', record.id).single();
     expect(current).toMatchObject({
       note: null,
-      tag_id: null,
       plan_id: plan.id,
       source: 'external_calendar',
       external_calendar_event_id: externalEventId,
@@ -656,7 +636,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       clearOperationId,
       record.id,
       asUtcZuluPreservingPrecision(first.data!.version),
-      { note: null, tagId: null },
+      { note: null },
     );
     expect(replay.error).toBeNull();
     expect(replay.data).toEqual({ ...cleared.data!, replayed: true });
@@ -698,8 +678,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
         p_title: 'Excluded from digest',
         p_note_present: true,
         p_note: 'Visible',
-        p_tag_id_present: false,
-        p_tag_id: dbNull,
         p_start_at_present: false,
         p_start_at: dbNull,
         p_end_at_present: false,
@@ -1090,7 +1068,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
         p_user_id: foreignUserId,
         p_title: 'Foreign Plan',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
         p_start_at: at(60 * 60_000),
@@ -1103,7 +1080,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
         p_user_id: foreignUserId,
         p_title: 'Foreign Record',
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_plan_id: dbNull,
         p_external_calendar_event_id: dbNull,
         p_source: 'manual',
@@ -1260,7 +1236,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       p_operation_id: crypto.randomUUID(),
       p_title: 'Forbidden',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_plan_id: dbNull,
       p_start_at: at(-38 * 60 * 60_000),
       p_end_at: at(-37 * 60 * 60_000),
@@ -1278,8 +1253,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       p_title: 'Forbidden',
       p_note_present: false,
       p_note: dbNull,
-      p_tag_id_present: false,
-      p_tag_id: dbNull,
       p_start_at_present: false,
       p_start_at: dbNull,
       p_end_at_present: false,

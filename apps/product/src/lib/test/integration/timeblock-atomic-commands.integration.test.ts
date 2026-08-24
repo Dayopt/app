@@ -49,7 +49,6 @@ async function createPlan(input: {
       p_user_id: userId,
       p_title: input.title,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_source: input.source ?? 'manual',
       p_start_at: input.startAt,
@@ -72,7 +71,6 @@ async function createRecord(input: {
       p_user_id: userId,
       p_title: input.title,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_plan_id: (input.planId ?? null) as never,
       p_external_calendar_event_id: dbNull,
       p_source: input.source ?? 'manual',
@@ -91,7 +89,6 @@ function planUpdateArgs(plan: PlanRow, title: string, expectedUpdatedAt = plan.u
     p_expected_updated_at: expectedUpdatedAt,
     p_title: title,
     p_note: plan.note as never,
-    p_tag_id: plan.tag_id as never,
     p_external_calendar_event_id: plan.external_calendar_event_id as never,
     p_start_at: plan.start_at,
     p_end_at: plan.end_at,
@@ -105,7 +102,6 @@ function recordUpdateArgs(record: RecordRow, title: string, expectedUpdatedAt = 
     p_expected_updated_at: expectedUpdatedAt,
     p_title: title,
     p_note: record.note as never,
-    p_tag_id: record.tag_id as never,
     p_plan_id: record.plan_id as never,
     p_external_calendar_event_id: record.external_calendar_event_id as never,
     p_start_at: record.start_at,
@@ -142,7 +138,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       p_user_id: userId,
       p_title: 'Forbidden direct RPC',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_source: 'manual',
       p_start_at: at(60 * 60_000),
@@ -257,7 +252,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     const base = {
       p_user_id: userId,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_start_at: startAt,
       p_end_at: endAt,
@@ -311,7 +305,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       const base = {
         p_user_id: userId,
         p_note: dbNull,
-        p_tag_id: dbNull,
         p_external_calendar_event_id: ghost.id,
         p_start_at: startAt,
         p_end_at: endAt,
@@ -369,7 +362,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
           p_user_id: userId,
           p_title: 'Competing Plan',
           p_note: dbNull,
-          p_tag_id: dbNull,
           p_external_calendar_event_id: dbNull,
           p_source: 'api',
           p_start_at: startAt,
@@ -390,7 +382,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     const base = {
       p_user_id: userId,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_plan_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_start_at: startAt,
@@ -446,7 +437,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       p_user_id: userId,
       p_title: 'Record error contract',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_external_calendar_event_id: dbNull,
       p_source: 'api',
     };
@@ -514,7 +504,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
           p_user_id: userId,
           p_title: 'Competing create',
           p_note: dbNull,
-          p_tag_id: dbNull,
           p_plan_id: dbNull,
           p_external_calendar_event_id: dbNull,
           p_source: 'api',
@@ -616,7 +605,6 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       p_user_id: userId,
       p_title: 'Forbidden generic from_plan',
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_plan_id: plan.id,
       p_external_calendar_event_id: dbNull,
       p_source: 'from_plan',
@@ -715,5 +703,47 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       })
       .single();
     expect(restoreError?.code).toBe('DT009');
+  });
+
+  // risk-reviewer が Step 8（tag_id 剥離、#2352）のレビューで検出した pre-existing bug の
+  // 回帰固定。confirm_day_plans_unserialized_v1 が record_plan_unserialized_v1（Plan を
+  // 1 件ずつ「記録する」）と非対称に activity_id をコピーしていなかった
+  // （20260824095706 で修正）。
+  it('confirm day plans が生成する Record は Plan の activity_id を引き継ぐ', async () => {
+    const { data: activity, error: activityError } = await admin
+      .from('activities')
+      .insert({ user_id: userId, name: `Confirm day activity ${crypto.randomUUID()}` })
+      .select()
+      .single();
+    expect(activityError).toBeNull();
+
+    const { data: plan, error: planError } = await admin
+      .rpc('create_plan_command_v1', {
+        p_user_id: userId,
+        p_title: 'Confirm day plan',
+        p_note: dbNull,
+        p_external_calendar_event_id: dbNull,
+        p_source: 'manual',
+        p_start_at: at(-2_000),
+        p_end_at: at(1_500),
+        p_activity_id: activity!.id,
+      })
+      .single();
+    expect(planError).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 1_700));
+
+    const { data: confirmed, error: confirmError } = await admin.rpc(
+      'confirm_day_plans_command_v1',
+      {
+        p_user_id: userId,
+        p_start_at: at(-12 * 60 * 60_000),
+        p_end_at: at(0),
+        p_confirmed_at: at(0),
+      },
+    );
+    expect(confirmError).toBeNull();
+
+    const record = confirmed?.find((row) => row.plan_id === plan!.id);
+    expect(record?.activity_id).toBe(activity!.id);
   });
 });

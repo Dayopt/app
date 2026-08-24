@@ -120,14 +120,13 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
 }
 
 describe('PlanService.list', () => {
-  it('同一userの現役アクティビティ名とtag名をnoteと同じOR条件で検索する', async () => {
+  it('同一userの現役アクティビティ名をnoteと同じOR条件で検索する', async () => {
     const plan = createPlan({ activity_id: ACTIVITY_ID, title: 'Legacy plan title' });
     const planQuery = createChainableMock([plan]);
-    const tagQuery = createChainableMock([{ id: TAG_ID }]);
     const activityQuery = createChainableMock([{ id: ACTIVITY_ID }]);
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : planQuery,
+      table === 'activities' ? activityQuery : planQuery,
     );
 
     await expect(
@@ -138,17 +137,11 @@ describe('PlanService.list', () => {
     expect(activityQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(activityQuery.is).toHaveBeenCalledWith('archived_at', null);
     expect(activityQuery.ilike).toHaveBeenCalledWith('name', '%Focus%');
-    expect(tagQuery.select).toHaveBeenCalledWith('id');
-    expect(tagQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
-    expect(tagQuery.eq).toHaveBeenCalledWith('is_active', true);
-    expect(tagQuery.ilike).toHaveBeenCalledWith('name', '%Focus%');
     expect(planQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(planQuery.is).toHaveBeenCalledWith('deleted_at', null);
     expect(planQuery.is).not.toHaveBeenCalledWith('skipped_at', null);
-    // 旧世代（tag_id）と新世代（activity_id）の和集合。片方だけだと一方が検索から消える
-    expect(planQuery.or).toHaveBeenCalledWith(
-      `note.ilike.%Focus%,activity_id.in.(${ACTIVITY_ID}),tag_id.in.(${TAG_ID})`,
-    );
+    // Step 8（tag_id 剥離）で tags 名前検索を除去したため、activity_id のみの和集合になる
+    expect(planQuery.or).toHaveBeenCalledWith(`note.ilike.%Focus%,activity_id.in.(${ACTIVITY_ID})`);
     expect(planQuery.or).not.toHaveBeenCalledWith(expect.stringContaining('title.ilike'));
     expect(planQuery.order).toHaveBeenCalledWith('start_at', { ascending: false });
     expect(planQuery.limit).toHaveBeenCalledWith(21);
@@ -156,11 +149,10 @@ describe('PlanService.list', () => {
 
   it('分類検索失敗時は不完全なplan一覧を返さない', async () => {
     const planQuery = createChainableMock([createPlan()]);
-    const tagQuery = createChainableMock([], { message: 'tag lookup failed' });
-    const activityQuery = createChainableMock([]);
+    const activityQuery = createChainableMock([], { message: 'activity lookup failed' });
     const { service, mockSupabase } = createPlanService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : planQuery,
+      table === 'activities' ? activityQuery : planQuery,
     );
 
     await expect(service.list({ userId: USER_ID, search: 'Focus' })).rejects.toMatchObject({
@@ -174,11 +166,10 @@ describe('PlanService.list', () => {
   it('検索query失敗時はDB messageを例外へ含めない', async () => {
     const privateError = 'parse failed near note.ilike.%private words%';
     const recordQuery = createChainableMock([], { message: privateError });
-    const tagQuery = createChainableMock([]);
     const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
+      table === 'activities' ? activityQuery : recordQuery,
     );
 
     const caught = await service
@@ -213,14 +204,13 @@ describe('PlanService.list', () => {
 });
 
 describe('RecordService.list', () => {
-  it('特殊文字を除去し、tagが一致しない場合もnoteを検索する', async () => {
+  it('特殊文字を除去してnoteとアクティビティ名を検索する', async () => {
     const record = createRecord({ note: 'Deep work', title: 'Legacy title' });
     const recordQuery = createChainableMock([record]);
-    const tagQuery = createChainableMock([]);
     const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
+      table === 'activities' ? activityQuery : recordQuery,
     );
 
     await expect(
@@ -233,9 +223,6 @@ describe('RecordService.list', () => {
     ).resolves.toEqual([record]);
 
     expect(activityQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
-    expect(tagQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
-    expect(tagQuery.eq).toHaveBeenCalledWith('is_active', true);
-    expect(tagQuery.ilike).toHaveBeenCalledWith('name', '%deepwork%');
     expect(recordQuery.eq).toHaveBeenCalledWith('user_id', USER_ID);
     expect(recordQuery.select).toHaveBeenCalledWith(publicRecordSelect);
     expect(recordQuery.is).toHaveBeenCalledWith('deleted_at', null);
@@ -271,11 +258,10 @@ describe('RecordService.list', () => {
   it('アクティビティ名一致をrecordのOR条件へ加える', async () => {
     const record = createRecord({ activity_id: ACTIVITY_ID });
     const recordQuery = createChainableMock([record]);
-    const tagQuery = createChainableMock([]);
     const activityQuery = createChainableMock([{ id: ACTIVITY_ID }]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
+      table === 'activities' ? activityQuery : recordQuery,
     );
 
     await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([record]);
@@ -285,19 +271,20 @@ describe('RecordService.list', () => {
     );
   });
 
-  it('tag名一致をrecordのOR条件へ加える（cutover 前の旧ブロックを消さない）', async () => {
-    const record = createRecord({ tag_id: TAG_ID });
-    const recordQuery = createChainableMock([record]);
-    const tagQuery = createChainableMock([{ id: TAG_ID }]);
+  it('tag名一致では検索しない（Step 8 で tags 名前検索を除去、唯一のユーザー可視劣化）', async () => {
+    // note/title/activity のいずれも 'Research' に一致しない、tag 名だけが一致する旧ブロック。
+    // tags 名前検索を除去したため、DB へ渡す filter は note.ilike のみになる
+    // （overview.md §Step 8（tag_id 剥離）の設計 の表を参照）。
+    const recordQuery = createChainableMock([]);
     const activityQuery = createChainableMock([]);
     const { service, mockSupabase } = createRecordService();
     mockSupabase.from.mockImplementation((table: string) =>
-      table === 'tags' ? tagQuery : table === 'activities' ? activityQuery : recordQuery,
+      table === 'activities' ? activityQuery : recordQuery,
     );
 
-    await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([record]);
+    await expect(service.list({ userId: USER_ID, search: 'Research' })).resolves.toEqual([]);
 
-    expect(recordQuery.or).toHaveBeenCalledWith(`note.ilike.%Research%,tag_id.in.(${TAG_ID})`);
+    expect(recordQuery.or).toHaveBeenCalledWith('note.ilike.%Research%');
   });
 
   it('user scopeを維持して指定したplan_idに絞り込む', async () => {
@@ -388,7 +375,6 @@ describe('PlanService.create', () => {
       userId: USER_ID,
       title: 'Future plan',
       note: null,
-      tagId: null,
       activityId: null,
       externalCalendarEventId: null,
       source: 'manual',
@@ -523,15 +509,14 @@ describe('PlanService.update', () => {
       }),
     ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
 
-    // 部分更新は現在行で補完し、未指定fieldを取り落とさない。tagId は tRPC 入力に存在しない
-    // ため常に既存行の tag_id を渡し、書き込み経路からは変更できない。
+    // 部分更新は現在行で補完し、未指定fieldを取り落とさない。tagId は Step 8 で command
+    // 入力から除去済みのため、既存行の tag_id には一切触れず凍結される。
     expect(commands.updatePlan).toHaveBeenCalledWith({
       userId: USER_ID,
       planId: existing.id,
       expectedUpdatedAt: existing.updated_at,
       title: existing.title,
       note: 'Updated note',
-      tagId: 'tag-1',
       activityId: null,
       externalCalendarEventId: existing.external_calendar_event_id,
       source: 'manual',
@@ -869,7 +854,6 @@ describe('RecordService.create', () => {
       userId: USER_ID,
       title: 'Second segment',
       note: null,
-      tagId: null,
       activityId: null,
       planId: plan.id,
       externalCalendarEventId: null,
@@ -978,7 +962,6 @@ describe('RecordService.update', () => {
       expectedUpdatedAt: existing.updated_at,
       title: 'Renamed',
       note: existing.note,
-      tagId: existing.tag_id,
       activityId: null,
       planId: existing.plan_id,
       externalCalendarEventId: existing.external_calendar_event_id,

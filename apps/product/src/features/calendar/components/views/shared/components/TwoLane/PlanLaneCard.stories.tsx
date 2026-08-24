@@ -26,7 +26,6 @@ function makeEvent(status: PlanEventStatus, overrides: Partial<PlanEvent> = {}):
     id: `plan-${status}`,
     title: 'Deep Work',
     note: null,
-    tagId: 'tag-1',
     activityId: null,
     startDate: start,
     endDate: end,

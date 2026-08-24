@@ -61,7 +61,6 @@ export class TimeblockCommandService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: null,
       activityId: input.activityId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
       source: input.externalCalendarEventId ? 'external_calendar' : 'manual',
@@ -84,7 +83,6 @@ export class TimeblockCommandService {
       expectedUpdatedAt,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       externalCalendarEventId:
         input.externalCalendarEventId === undefined
@@ -149,7 +147,6 @@ export class TimeblockCommandService {
       userId,
       title: input.title,
       note: input.note ?? null,
-      tagId: null,
       activityId: input.activityId ?? null,
       planId: input.planId ?? null,
       externalCalendarEventId: input.externalCalendarEventId ?? null,
@@ -174,7 +171,6 @@ export class TimeblockCommandService {
       expectedUpdatedAt,
       title: input.title ?? existing.title,
       note: input.note === undefined ? existing.note : input.note,
-      tagId: existing.tag_id,
       activityId: input.activityId === undefined ? existing.activity_id : input.activityId,
       planId: input.planId === undefined ? existing.plan_id : input.planId,
       externalCalendarEventId:

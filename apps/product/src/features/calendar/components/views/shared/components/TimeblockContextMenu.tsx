@@ -128,7 +128,6 @@ export const EventContextMenu = ({
   // 共通の menu items 定義から取得（Inspector の TagRow と同じ source）
   const menuItems = getTimeblockMenuItems({
     origin: entry.origin,
-    tagId: entry.tagId,
     isUpcoming,
     isPast,
     isSkipped: entry.isSkipped,

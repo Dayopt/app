@@ -13,7 +13,6 @@ export interface PlanEventSourceRow {
   id: string;
   title: string;
   note: string | null;
-  tag_id: string | null;
   activity_id: string | null;
   start_at: string;
   end_at: string;
@@ -73,7 +72,6 @@ export function planRowToPlanEvent(
     id: row.id,
     title: row.title || '',
     note: row.note,
-    tagId: row.tag_id,
     activityId: row.activity_id,
     startDate,
     endDate,

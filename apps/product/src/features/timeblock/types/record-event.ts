@@ -9,7 +9,6 @@ export interface RecordEvent {
   id: string;
   title: string;
   note: string | null;
-  tagId: string | null;
   activityId: string | null;
   /** 紐づく plan の id。null なら予定外の記録。 */
   planId: string | null;

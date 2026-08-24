@@ -322,7 +322,6 @@ FROM public.create_plan_command_v1(
   'created after purge',
   NULL,
   NULL,
-  NULL,
   'manual',
   pg_catalog.clock_timestamp() + INTERVAL '2 days',
   pg_catalog.clock_timestamp() + INTERVAL '2 days 1 hour'
@@ -404,7 +403,6 @@ FROM public.create_plan_command_v1(
 FROM public.create_plan_command_v1(
   :'user_id'::UUID,
   'created after second purge',
-  NULL,
   NULL,
   NULL,
   'manual',

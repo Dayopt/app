@@ -39,7 +39,6 @@ interface WriteAuthorization {
 interface PlanPatch {
   title?: string;
   note?: string | null;
-  tagId?: string | null;
   startAt?: string;
   endAt?: string;
 }
@@ -142,7 +141,7 @@ function holdPlanLock(planId: string): Promise<LockHolder> {
 function holdOverlappingPlan(input: { startAt: string; endAt: string }): Promise<LockHolder> {
   return startLockHolder(
     { user_id: userId, start_at: input.startAt, end_at: input.endAt },
-    "SELECT public.create_plan_command_v1(:'user_id'::UUID, 'Lock holder', NULL, NULL, NULL, 'manual', :'start_at'::TIMESTAMPTZ, :'end_at'::TIMESTAMPTZ);",
+    "SELECT public.create_plan_command_v1(:'user_id'::UUID, 'Lock holder', NULL, NULL, 'manual', :'start_at'::TIMESTAMPTZ, :'end_at'::TIMESTAMPTZ);",
   );
 }
 
@@ -267,7 +266,6 @@ async function createWriteAuthorization(): Promise<WriteAuthorization> {
 async function createPlan(input: {
   title: string;
   note?: string | null;
-  tagId?: string | null;
   externalCalendarEventId?: string | null;
   source?: 'manual' | 'api' | 'external_calendar';
   startAt: string;
@@ -278,7 +276,6 @@ async function createPlan(input: {
       p_user_id: userId,
       p_title: input.title,
       p_note: (input.note ?? null) as never,
-      p_tag_id: (input.tagId ?? null) as never,
       p_external_calendar_event_id: (input.externalCalendarEventId ?? null) as never,
       p_source: input.source ?? 'manual',
       p_start_at: input.startAt,
@@ -297,7 +294,6 @@ function uiUpdate(plan: PlanRow, title: string) {
       p_expected_updated_at: plan.updated_at,
       p_title: title,
       p_note: plan.note as never,
-      p_tag_id: plan.tag_id as never,
       p_external_calendar_event_id: plan.external_calendar_event_id as never,
       p_start_at: plan.start_at,
       p_end_at: plan.end_at,
@@ -314,7 +310,6 @@ function applyUpdate(
 ) {
   const titlePresent = hasOwn(patch, 'title');
   const notePresent = hasOwn(patch, 'note');
-  const tagIdPresent = hasOwn(patch, 'tagId');
   const startAtPresent = hasOwn(patch, 'startAt');
   const endAtPresent = hasOwn(patch, 'endAt');
 
@@ -329,8 +324,6 @@ function applyUpdate(
       p_title: (titlePresent ? patch.title : null) as never,
       p_note_present: notePresent,
       p_note: (notePresent ? patch.note : null) as never,
-      p_tag_id_present: tagIdPresent,
-      p_tag_id: (tagIdPresent ? patch.tagId : null) as never,
       p_start_at_present: startAtPresent,
       p_start_at: (startAtPresent ? patch.startAt : null) as never,
       p_end_at_present: endAtPresent,
@@ -351,7 +344,6 @@ function applyCreate(
       p_operation_id: operationId,
       p_title: input.title,
       p_note: dbNull,
-      p_tag_id: dbNull,
       p_start_at: input.startAt,
       p_end_at: input.endAt,
     })
@@ -443,17 +435,10 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     const authorization = await createWriteAuthorization();
     const preserveOperationId = crypto.randomUUID();
     const clearOperationId = crypto.randomUUID();
-    const tagId = crypto.randomUUID();
     const externalEventId = crypto.randomUUID();
     const startAt = at(60 * 60_000);
     const endAt = at(2 * 60 * 60_000);
 
-    const { error: tagError } = await admin.from('tags').insert({
-      id: tagId,
-      user_id: userId,
-      name: 'Initial tag',
-    });
-    expect(tagError).toBeNull();
     const { error: eventError } = await admin.from('external_calendar_events').insert({
       id: externalEventId,
       user_id: userId,
@@ -471,7 +456,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     const plan = await createPlan({
       title: 'External original',
       note: 'Remove me',
-      tagId,
       externalCalendarEventId: externalEventId,
       source: 'external_calendar',
       startAt,
@@ -506,7 +490,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     expect(preserved).toMatchObject({
       title: 'MCP title',
       note: 'Remove me',
-      tag_id: tagId,
       source: 'external_calendar',
       external_calendar_event_id: externalEventId,
       start_at: plan.start_at,
@@ -519,7 +502,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
       clearOperationId,
       plan.id,
       preserve.data!.version,
-      { note: null, tagId: null },
+      { note: null },
     );
     expect(clear.error).toBeNull();
 
@@ -532,7 +515,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     expect(updated).toMatchObject({
       title: 'MCP title',
       note: null,
-      tag_id: null,
       source: 'external_calendar',
       external_calendar_event_id: externalEventId,
       start_at: plan.start_at,
@@ -547,7 +529,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
       clearOperationId,
       plan.id,
       asUtcZuluPreservingPrecision(preserve.data!.version),
-      { note: null, tagId: null },
+      { note: null },
     );
     expect(replay.error).toBeNull();
     expect(replay.data).toEqual({ ...clear.data!, replayed: true });
@@ -580,8 +562,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
         p_title: 'Excluded from digest',
         p_note_present: true,
         p_note: 'Visible patch',
-        p_tag_id_present: false,
-        p_tag_id: dbNull,
         p_start_at_present: false,
         p_start_at: dbNull,
         p_end_at_present: false,
@@ -787,7 +767,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
           p_user_id: userId,
           p_title: 'UI competing Plan',
           p_note: dbNull,
-          p_tag_id: dbNull,
           p_external_calendar_event_id: dbNull,
           p_source: 'manual',
           p_start_at: startAt,
@@ -979,8 +958,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
       p_title: 'Forbidden',
       p_note_present: false,
       p_note: dbNull,
-      p_tag_id_present: false,
-      p_tag_id: dbNull,
       p_start_at_present: false,
       p_start_at: dbNull,
       p_end_at_present: false,

@@ -32,34 +32,23 @@ type McpMutationDbClient = SupabaseClient<McpMutationDatabase>;
 type GeneratedPlanCreateRpcArgs =
   Database['public']['Functions']['apply_mcp_plan_create_v1']['Args'];
 // 生成型は DEFAULT 付き引数を `p_activity_id?: string` として出すので、null を
-// 渡せるよう明示的に上書きする（p_note / p_tag_id と同じ扱い）。present flag も
+// 渡せるよう明示的に上書きする（p_note と同じ扱い）。present flag も
 // optional から必須へ上げて、呼び出し側が三状態を必ず明示するようにする。
-type PlanCreateRpcArgs = Omit<
-  GeneratedPlanCreateRpcArgs,
-  'p_activity_id' | 'p_note' | 'p_tag_id'
-> & {
+type PlanCreateRpcArgs = Omit<GeneratedPlanCreateRpcArgs, 'p_activity_id' | 'p_note'> & {
   p_activity_id: string | null;
   p_note: string | null;
-  p_tag_id: string | null;
 };
 type GeneratedPlanUpdateRpcArgs =
   Database['public']['Functions']['apply_mcp_plan_update_v1']['Args'];
 type PlanUpdateRpcArgs = Omit<
   GeneratedPlanUpdateRpcArgs,
-  | 'p_activity_id'
-  | 'p_activity_id_present'
-  | 'p_end_at'
-  | 'p_note'
-  | 'p_start_at'
-  | 'p_tag_id'
-  | 'p_title'
+  'p_activity_id' | 'p_activity_id_present' | 'p_end_at' | 'p_note' | 'p_start_at' | 'p_title'
 > & {
   p_activity_id: string | null;
   p_activity_id_present: boolean;
   p_end_at: string | null;
   p_note: string | null;
   p_start_at: string | null;
-  p_tag_id: string | null;
   p_title: string | null;
 };
 type PlanDeleteRpcArgs = Database['public']['Functions']['apply_mcp_plan_delete_v1']['Args'];
@@ -68,13 +57,12 @@ type GeneratedRecordCreateRpcArgs =
   Database['public']['Functions']['apply_mcp_record_create_v1']['Args'];
 type RecordCreateRpcArgs = Omit<
   GeneratedRecordCreateRpcArgs,
-  'p_activity_id' | 'p_fulfillment' | 'p_note' | 'p_plan_id' | 'p_tag_id'
+  'p_activity_id' | 'p_fulfillment' | 'p_note' | 'p_plan_id'
 > & {
   p_activity_id: string | null;
   p_fulfillment: string | null;
   p_note: string | null;
   p_plan_id: string | null;
-  p_tag_id: string | null;
 };
 type GeneratedRecordUpdateRpcArgs =
   Database['public']['Functions']['apply_mcp_record_update_v1']['Args'];
@@ -87,7 +75,6 @@ type RecordUpdateRpcArgs = Omit<
   | 'p_fulfillment_present'
   | 'p_note'
   | 'p_start_at'
-  | 'p_tag_id'
   | 'p_title'
 > & {
   p_activity_id: string | null;
@@ -97,7 +84,6 @@ type RecordUpdateRpcArgs = Omit<
   p_fulfillment_present: boolean;
   p_note: string | null;
   p_start_at: string | null;
-  p_tag_id: string | null;
   p_title: string | null;
 };
 type RecordDeleteRpcArgs = Database['public']['Functions']['apply_mcp_record_delete_v1']['Args'];
@@ -133,7 +119,6 @@ export function createMcpMutationDb() {
         ...args,
         p_activity_id: args.p_activity_id as never,
         p_note: args.p_note as never,
-        p_tag_id: args.p_tag_id as never,
       });
       return { data, error };
     },
@@ -144,7 +129,6 @@ export function createMcpMutationDb() {
         p_end_at: args.p_end_at as never,
         p_note: args.p_note as never,
         p_start_at: args.p_start_at as never,
-        p_tag_id: args.p_tag_id as never,
         p_title: args.p_title as never,
       });
       return { data, error };
@@ -164,7 +148,6 @@ export function createMcpMutationDb() {
         p_fulfillment: args.p_fulfillment as never,
         p_note: args.p_note as never,
         p_plan_id: args.p_plan_id as never,
-        p_tag_id: args.p_tag_id as never,
       });
       return { data, error };
     },
@@ -176,7 +159,6 @@ export function createMcpMutationDb() {
         p_fulfillment: args.p_fulfillment as never,
         p_note: args.p_note as never,
         p_start_at: args.p_start_at as never,
-        p_tag_id: args.p_tag_id as never,
         p_title: args.p_title as never,
       });
       return { data, error };

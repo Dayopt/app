@@ -12,7 +12,6 @@ interface ResolveTimeblockPasteArgs {
 interface TimeblockPasteInput {
   title: string;
   note?: string | undefined;
-  tagId?: string | undefined;
   activityId?: string | undefined;
   start_at: string;
   end_at: string;
@@ -53,7 +52,6 @@ export function resolveTimeblockClipboardPaste({
     input: {
       title: copiedTimeblock.title,
       ...(copiedTimeblock.description ? { note: copiedTimeblock.description } : {}),
-      ...(copiedTimeblock.tagId ? { tagId: copiedTimeblock.tagId } : {}),
       ...(copiedTimeblock.activityId ? { activityId: copiedTimeblock.activityId } : {}),
       start_at: startAt,
       end_at: endAt,
