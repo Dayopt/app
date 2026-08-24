@@ -290,6 +290,70 @@ describe('runOpsLogReport', () => {
     expect(commentCall[1][6]).toContain('起票予算 state: 利用不可（fail-open、無制限扱いで実行）');
   });
 
+  // push前反証レビュー risk-reviewer 指摘（P2、2巡目）: reserveAlertRunSlot は
+  // state 書き込み失敗（EACCES/EROFS 等）時も fail-open で gh を呼ぶが、その
+  // check-id は actedCheckIds に載らない。何も手当てしないと state は
+  // healthy: true のまま「有効（0/3、0件）」と誤報告し、cap が実質無効に
+  // なっている事実が観測できない。report.results の issue 件数と
+  // actedCheckIds.length の不整合で検出する。
+  it('state の記録より起票実績が多ければ「利用不可（不整合）」と報告する', () => {
+    // state file は healthy な空 state（書き込みが一度も成功していない体で
+    // 固定する）。report は 1 件の起票を報告しており、不整合になる。
+    writeFileSync(
+      alertRunStatePath,
+      JSON.stringify({ updatedAt: Date.now(), actedCheckIds: [], createdCount: 0 }),
+      'utf8',
+    );
+    const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+    const execFileImpl = vi.fn(
+      (_cmd: string, _args: string[]) =>
+        'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
+    );
+
+    runOpsLogReport({
+      report: {
+        ...GREEN_REPORT,
+        results: [{ checkId: 'docs-check', outcome: 'issue', issueNumber: 700 }],
+      },
+      execFileImpl,
+      readFileImpl,
+      alertRunStatePath,
+    });
+
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    expect(commentCall[1][6]).toContain(
+      '起票予算 state: 利用不可（fail-open、state 書き込み失敗の疑い。起票実績が state の記録より多い）',
+    );
+  });
+
+  it('state の記録が起票実績以上なら「有効」と報告する（不整合の誤検知なし）', () => {
+    writeFileSync(
+      alertRunStatePath,
+      JSON.stringify({ updatedAt: Date.now(), actedCheckIds: ['docs-check'], createdCount: 1 }),
+      'utf8',
+    );
+    const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+    const execFileImpl = vi.fn(
+      (_cmd: string, _args: string[]) =>
+        'https://github.com/Dayopt/dayopt/issues/1234#issuecomment-1\n',
+    );
+
+    runOpsLogReport({
+      report: {
+        ...GREEN_REPORT,
+        results: [{ checkId: 'docs-check', outcome: 'issue', issueNumber: 700 }],
+      },
+      execFileImpl,
+      readFileImpl,
+      alertRunStatePath,
+    });
+
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    expect(commentCall[1][6]).toContain(
+      '起票予算 state: 有効（新規起票 1/3、対応済み check-id 1件）',
+    );
+  });
+
   it('未登録なら gh を呼ばずに例外を投げる', () => {
     const readFileImpl = () => '- 運行記録 issue: **未登録**\n';
     const execFileImpl = vi.fn();

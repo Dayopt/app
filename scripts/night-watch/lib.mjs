@@ -286,8 +286,14 @@ export function reserveAlertRunSlot({
     createdCount: state.createdCount + (willCreate ? 1 : 0),
   };
   try {
-    // mode: 0o600 は tmpdir を共有する他ユーザー・他プロセスからの読み書きを
-    // 軽減する（isValidAlertRunState 冒頭のコメント参照）。
+    // mode: 0o600 は Node の writeFileSync 仕様上 **新規作成時にのみ**適用
+    // される（既存ファイルの mode は変更しない）。night-watch が先にこの
+    // state file を作れた通常系では他ユーザーからの読み書きを防ぐが、
+    // isValidAlertRunState 冒頭のコメントが示す脅威（第三者が先回りで偽装
+    // state を作る）そのものへの対策にはならない（push前反証レビュー
+    // risk-reviewer 指摘、P3。先に作られていれば mode は effect 無し）。
+    // フルに閉じるには run 識別子で state を紐付ける設計変更が要る
+    // （follow-up issue #2340 で検討）。
     writeFileSync(statePath, JSON.stringify(next), { encoding: 'utf8', mode: 0o600 });
   } catch {
     // 書き込み失敗（tmpdir が read-only / ENOSPC / 権限不足）でも fail-open を

@@ -8,8 +8,11 @@ import {
   ALERT_RUN_STATE_TTL_MS,
   extractTrailingNumber,
   findTodayBoardIssue,
+  isJstMonday,
+  isJstWeekend,
   jstDateString,
   jstDayRange,
+  jstWeekdayIndex,
   jstYesterdayString,
   MAX_NEW_ISSUES_PER_RUN,
   readAlertRunState,
@@ -48,6 +51,48 @@ describe('jstYesterdayString', () => {
 describe('jstDayRange', () => {
   it('日境界レンジを組み立てる', () => {
     expect(jstDayRange('2026-08-24')).toBe('2026-08-24T00:00:00+09:00..2026-08-24T23:59:59+09:00');
+  });
+});
+
+// push前反証レビュー risk-reviewer 指摘（P3）: 未知の曜日ラベルで無言
+// fallback すると isJstWeekend/isJstMonday がどちらも false（平日扱い）を
+// 返し、weekend skip が無音で無効化される。throw への変更（fail-open →
+// fail-closed の意図的な取り替え）を回帰確認する。
+describe('jstWeekdayIndex / isJstWeekend / isJstMonday', () => {
+  it.each([
+    ['2026-08-23T01:00:00Z', 0, '日'], // JST 2026-08-23（日）
+    ['2026-08-24T01:00:00Z', 1, '月'], // JST 2026-08-24（月）
+    ['2026-08-22T01:00:00Z', 6, '土'], // JST 2026-08-22（土）
+  ])('%s は曜日インデックス %i（%s）を返す', (isoDate, expectedIndex) => {
+    expect(jstWeekdayIndex(new Date(isoDate))).toBe(expectedIndex);
+  });
+
+  it('土曜・日曜は isJstWeekend が true、月曜は false', () => {
+    expect(isJstWeekend(new Date('2026-08-22T01:00:00Z'))).toBe(true); // 土
+    expect(isJstWeekend(new Date('2026-08-23T01:00:00Z'))).toBe(true); // 日
+    expect(isJstWeekend(new Date('2026-08-24T01:00:00Z'))).toBe(false); // 月
+  });
+
+  it('月曜のみ isJstMonday が true', () => {
+    expect(isJstMonday(new Date('2026-08-24T01:00:00Z'))).toBe(true);
+    expect(isJstMonday(new Date('2026-08-25T01:00:00Z'))).toBe(false); // 火
+  });
+
+  it('Intl.DateTimeFormat が未知の曜日ラベルを返したら throw する（無言 fallback を許さない）', () => {
+    // Intl.DateTimeFormat.prototype.format はネイティブ実装の accessor で、
+    // prototype 直接 spy だと internal slot チェックに落ちる。constructor 自体を
+    // fake formatter へ差し替える。
+    function FakeDateTimeFormat() {
+      return { format: () => 'Xyz' };
+    }
+    const spy = vi
+      .spyOn(Intl, 'DateTimeFormat')
+      .mockImplementation(FakeDateTimeFormat as unknown as typeof Intl.DateTimeFormat);
+    try {
+      expect(() => jstWeekdayIndex()).toThrow(/未知の JST 曜日ラベル/);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

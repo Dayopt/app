@@ -248,9 +248,26 @@ export function buildOpsLogComment(report) {
 // 機能しているかを、Claude が渡す report JSON に頼らず wrapper 自身が同じ
 // state file を直接読んで報告する（自己申告は証拠にならない。state 機構が
 // 無音で無効化される fail-open クラスを Step 5 で観測可能にする）。
-export function buildAlertBudgetLine(state) {
+//
+// `report` も渡すのは、state の書き込み失敗（EACCES/EROFS 等、JSON.parse
+// 自体は起きない = readAlertRunState が ENOENT と区別できない失敗）を検出
+// するため（push前反証レビュー risk-reviewer 指摘、P2）。
+// reserveAlertRunSlot は書き込み失敗時も fail-open で `{allowed:true}` を
+// 返す（P2-3 是正）ため gh は正常に呼ばれるが、その check-id は
+// actedCheckIds に載らない。結果として「実際は起票/追記が起きたのに state
+// 上は 0 件」という不整合が生まれ、何も手当てしないと healthy: true のまま
+// 「有効（0/3、0件）」と誤報告される。`report.results` の `outcome: 'issue'`
+// 件数（実際に起票/追記された check-id 数）が `actedCheckIds.length` を
+// 上回っていれば、state が実態を反映できていない徴候として「利用不可」へ倒す。
+export function buildAlertBudgetLine(state, report) {
   if (!state.healthy) {
     return '- 起票予算 state: 利用不可（fail-open、無制限扱いで実行）';
+  }
+  const actedIssueCount = (report?.results ?? []).filter(
+    (entry) => entry.outcome === 'issue',
+  ).length;
+  if (state.actedCheckIds.length < actedIssueCount) {
+    return '- 起票予算 state: 利用不可（fail-open、state 書き込み失敗の疑い。起票実績が state の記録より多い）';
   }
   return `- 起票予算 state: 有効（新規起票 ${state.createdCount}/${MAX_NEW_ISSUES_PER_RUN}、対応済み check-id ${state.actedCheckIds.length}件）`;
 }
@@ -262,7 +279,7 @@ export function runOpsLogReport({ report, execFileImpl, readFileImpl, alertRunSt
   validateOpsLogReport(report);
   const issueNumber = resolveOpsLogIssueNumber({ readFileImpl });
   const alertState = readAlertRunState({ statePath: alertRunStatePath });
-  const body = `${buildOpsLogComment(report)}${buildAlertBudgetLine(alertState)}\n`;
+  const body = `${buildOpsLogComment(report)}${buildAlertBudgetLine(alertState, report)}\n`;
   runGh(['issue', 'comment', String(issueNumber), '--repo', REPO, '--body', body], {
     execFileImpl,
   });
