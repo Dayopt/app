@@ -415,6 +415,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
         ...(input.data.note !== undefined ? { note: input.data.note ?? null } : {}),
         ...(input.data.start_at !== undefined ? { start_at: input.data.start_at } : {}),
         ...(input.data.end_at !== undefined ? { end_at: input.data.end_at } : {}),
+        ...(input.data.fulfillment !== undefined ? { fulfillment: input.data.fulfillment } : {}),
       });
       patchMatchingLists('records', input.id, patch);
       utils.records.getById.setData({ id: input.id }, (old) => (old ? patch(old) : old));
