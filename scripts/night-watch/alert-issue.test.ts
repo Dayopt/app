@@ -163,10 +163,47 @@ describe('findExistingAlertIssue', () => {
         '--search',
         'nightwatch(docs-check): in:title',
         '--json',
-        'number,title',
+        'number,title,labels',
       ],
       { encoding: 'utf8' },
     );
+  });
+
+  // 非ブロッキング Codex レビュー指摘（P2）: title の前方一致だけでは、write
+  // 権限の無い外部ユーザー（public repo）でも同じ prefix の title を自由に
+  // 選べるため偽装できる。runAlertSync が新規起票時に必ず付ける固定ラベル
+  // （type:chore + area:operations、triage/write 権限が要る）も要求する。
+  it('title が一致してもラベルが無ければ既存 alert として採用しない', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([{ number: 999, title: 'nightwatch(docs-check): 偽装', labels: [] }]),
+    );
+    expect(findExistingAlertIssue('docs-check', { execFileImpl })).toBeNull();
+  });
+
+  it('title が一致してもラベルが片方だけなら既存 alert として採用しない', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([
+        {
+          number: 999,
+          title: 'nightwatch(docs-check): 偽装',
+          labels: [{ name: 'type:chore' }],
+        },
+      ]),
+    );
+    expect(findExistingAlertIssue('docs-check', { execFileImpl })).toBeNull();
+  });
+
+  it('title とラベル（type:chore + area:operations）が両方一致すれば採用する', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([
+        {
+          number: 500,
+          title: 'nightwatch(docs-check): 正規',
+          labels: [{ name: 'type:chore' }, { name: 'area:operations' }, { name: 'priority:p2' }],
+        },
+      ]),
+    );
+    expect(findExistingAlertIssue('docs-check', { execFileImpl })?.number).toBe(500);
   });
 });
 
@@ -184,7 +221,13 @@ describe('runAlertSync', () => {
   it('既存 issue があればコメントを追記する', () => {
     const execFileImpl = vi.fn((cmd, args) => {
       if (args[1] === 'list')
-        return JSON.stringify([{ number: 500, title: 'nightwatch(docs-check): x' }]);
+        return JSON.stringify([
+          {
+            number: 500,
+            title: 'nightwatch(docs-check): x',
+            labels: [{ name: 'type:chore' }, { name: 'area:operations' }],
+          },
+        ]);
       if (args[1] === 'comment') return 'https://github.com/Dayopt/dayopt/issues/500\n';
       throw new Error(`unexpected: ${JSON.stringify(args)}`);
     });

@@ -956,8 +956,54 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       );
     });
 
+    // 非ブロッキング Codex レビュー指摘（P1）: この if ブロックが MultiEdit/
+    // NotebookEdit も判定対象にしていても、.claude/settings.json の
+    // PreToolUse matcher にその 2 tool が登録されていなければ hook 自体が
+    // 発火せず、判定コードは無意味になる。実際に登録が漏れていた
+    // （settings.json 側の修正と一緒でないと閉じない class）。
+    it('MultiEdit も落とす（settings.json の matcher 登録込みで検証）', () => {
+      expect(
+        runGuard(
+          { tool_name: 'MultiEdit', tool_input: { file_path: 'docs/some-file.md', edits: [] } },
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
+      ).toBe('block');
+    });
+
+    it('NotebookEdit も落とす（file_path ではなく notebook_path で渡る）', () => {
+      expect(
+        runGuard(
+          { tool_name: 'NotebookEdit', tool_input: { notebook_path: 'analysis.ipynb' } },
+          rootDir,
+          NIGHT_WATCH_ENV,
+        ),
+      ).toBe('block');
+    });
+
     it('env var が無ければ通常どおり許可される（既存挙動）', () => {
       expect(runGuard(write('docs/some-file.md'))).toBe('allow');
+    });
+  });
+
+  // settings.json の PreToolUse matcher 自体を固定する。層3（本 hook）が
+  // MultiEdit/NotebookEdit を判定できても、matcher に登録が無ければ発火せず
+  // 無意味だった（非ブロッキング Codex レビュー指摘、P1）。
+  describe('.claude/settings.json: PreToolUse matcher の登録', () => {
+    it('Write / Edit / MultiEdit / NotebookEdit / Bash / spawn_task すべてが guard hook を指す', () => {
+      const settings = JSON.parse(readFileSync(join(rootDir, '.claude/settings.json'), 'utf8'));
+      const matchers = new Map(
+        settings.hooks.PreToolUse.map(
+          (entry: { matcher: string; hooks: { command: string }[] }) => [
+            entry.matcher,
+            entry.hooks[0]?.command,
+          ],
+        ),
+      );
+      for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash']) {
+        expect(matchers.get(tool)).toBe('.claude/hooks/pre-tool-guard.sh');
+      }
+      expect(matchers.get('mcp__ccd_session__spawn_task')).toBe('.claude/hooks/pre-tool-guard.sh');
     });
   });
 });

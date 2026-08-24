@@ -120,4 +120,25 @@ describe('runBoardSync', () => {
       '本日分の盤面 issue へ移行: #9001',
     ]);
   });
+
+  // 非ブロッキング Codex レビュー指摘（P2）: close 候補の選定条件が
+  // `title !== 今日のタイトル` だけだと、type:board が誤付与された無関係
+  // issue や将来日付で先行作成された盤面 issue まで close 対象になり得る。
+  it('タイトルが「盤面 YYYY-MM-DD」形式でない type:board issue は close 対象にしない', () => {
+    const execFileImpl = fakeGhList([{ number: 7500, title: '盤面バグ報告', body: '' }]);
+
+    const result = runBoardSync({ execFileImpl });
+
+    expect(result).toEqual({ action: 'created', issueNumber: 9001, closedPrevious: null });
+    expect(execFileImpl.mock.calls.some((call) => call[1][1] === 'close')).toBe(false);
+  });
+
+  it('将来日付の盤面 issue は close 対象にしない', () => {
+    const execFileImpl = fakeGhList([{ number: 7600, title: '盤面 2026-08-25', body: '' }]);
+
+    const result = runBoardSync({ execFileImpl });
+
+    expect(result).toEqual({ action: 'created', issueNumber: 9001, closedPrevious: null });
+    expect(execFileImpl.mock.calls.some((call) => call[1][1] === 'close')).toBe(false);
+  });
 });

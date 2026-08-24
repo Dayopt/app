@@ -12,7 +12,12 @@
 
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+# NotebookEdit は file_path ではなく notebook_path を使う。file_path が空なら
+# notebook_path にフォールバックする（Codex 実測指摘、P1: settings.json の
+# PreToolUse matcher に MultiEdit/NotebookEdit が無く、本 hook がそもそも
+# 発火していなかった。matcher 側は別途追加済み。ここでは MultiEdit/
+# NotebookEdit を対象に含めて判定する）。
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
 # op run が解決してよい 1Password vault。human（本番キー・login・recovery）と
@@ -32,9 +37,9 @@ disallowed_vault_refs() {
     | grep -vE "$ALLOWED_VAULT_PATTERN" || true
 }
 
-# --- Write/Edit: 保護ファイルへの書き込みブロック ---
-if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
-  # night-watch（DAYOPT_NIGHT_WATCH=1）は Write/Edit を無条件で禁止する。
+# --- Write/Edit/MultiEdit/NotebookEdit: 保護ファイルへの書き込みブロック ---
+if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "MultiEdit" ] || [ "$TOOL_NAME" = "NotebookEdit" ]; then
+  # night-watch（DAYOPT_NIGHT_WATCH=1）は書き込み系 tool を無条件で禁止する。
   #
   # 層2（RemoteTrigger の session_context.allowed_tools から Write/Edit/
   # MultiEdit/NotebookEdit を除外する設定）が唯一の防御だと、その設定が漏れた
@@ -43,11 +48,14 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ]; then
   # コマンド名で実行するだけで任意コード実行 / guard 自体の無効化に到達できる
   # （push 前反証レビュー risk-reviewer 指摘、medium）。SKILL.md が明言する
   # 「夜は書かない。アプリコード・docs は変更しない」を、path で数え上げる
-  # denylist ではなく class ごと閉じる形（Write/Edit という tool 種別を丸ごと
-  # 拒否）で機械強制する。env var が無いセッション（通常の全レーン）には
-  # 一切影響しない。
+  # denylist ではなく class ごと閉じる形（書き込み系 tool を丸ごと拒否）で
+  # 機械強制する。**MultiEdit / NotebookEdit も対象に含める**（Codex 実測
+  # 指摘、P1: `.claude/settings.json` の PreToolUse matcher にこの 2 tool が
+  # 元々登録されておらず、本 hook 自体が発火していなかった。matcher は
+  # 別途追加済みで、ここは判定側の対応）。env var が無いセッション
+  # （通常の全レーン）には一切影響しない。
   if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
-    echo "BLOCKED: night-watch モードでは Write/Edit は一切実行できません（読み取り専用の観測・GitHub issue への書き込みのみが許可されています。.claude/skills/night-watch/SKILL.md §権限の構造的強制 参照）" >&2
+    echo "BLOCKED: night-watch モードでは Write/Edit/MultiEdit/NotebookEdit は一切実行できません（読み取り専用の観測・GitHub issue への書き込みのみが許可されています。.claude/skills/night-watch/SKILL.md §権限の構造的強制 参照）" >&2
     exit 2
   fi
 

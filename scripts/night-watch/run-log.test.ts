@@ -75,47 +75,34 @@ describe('validateOpsLogReport', () => {
     ).toThrow(/results/);
   });
 
-  it('board.status=fail で detail が空なら拒否する', () => {
+  // Codex 実測指摘（P1）: 旧設計（文字集合 denylist で検証する自由文字列
+  // detail）は、prompt injection を受けたセッションが Sentry issue の raw
+  // title/message（user email 等を含みうる）を 300 文字ずつ small に分けて
+  // public な常設運行記録 issue へ掲載する経路になっていた。alert-issue.mjs
+  // の SENTRY_EVIDENCE_RE allowlist を迂回する別の書き込み経路であり、
+  // 「安全な文字だけで構成された機微情報の断片」は文字集合の denylist では
+  // 塞げない。自由文字列自体を廃止し、既知の失敗理由 enum（board.reason）に
+  // 置き換えた。
+  it('board.status=fail で未知の reason なら拒否する', () => {
     expect(() =>
-      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', detail: '' } }),
-    ).toThrow(/board.detail/);
+      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', reason: 'evil' } }),
+    ).toThrow(/board.reason/);
   });
 
-  it('board.status=fail で detail が301文字超なら拒否する', () => {
-    expect(() =>
-      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', detail: 'x'.repeat(301) } }),
-    ).toThrow(/board.detail/);
+  it('board.status=fail で reason が無ければ拒否する', () => {
+    expect(() => validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail' } })).toThrow(
+      /board.reason/,
+    );
   });
 
-  // push 前反証レビュー risk-reviewer / behavior-verifier が独立に検出した P2:
-  // board.detail は Bash コマンド行へ単一の shell argv token として埋め込まれる
-  // ため、`<`/`>` は guard の redirect 拒否に、`'` は outer 単引用符の早期終端に
-  // 当たり、どちらも「盤面起票が失敗した晩に限って Step 5 の運行記録コメントが
-  // 沈黙する」結果になる。DETAIL_UNSAFE_CHARS_RE がこの class を validation 段で
-  // 塞ぐ（block 側 + 通過側の両方を固定する）。
-  it.each([
-    ['redirect 文字（<）を含む API エラーの引用', 'retry after <timestamp>'],
-    ['redirect 文字（>）を含む Node のスタックトレース断片', 'at <anonymous> (index.js:1:1) >'],
-    ['アポストロフィを含む GitHub API validation error', "Validation Failed: 'field' is required"],
-    ['バッククォートを含む文字列', 'run `pnpm install` first'],
-    ['ダブルクォートを含む文字列', 'field "name" is missing'],
-    ['バックスラッシュを含む文字列', 'path C:\\Users\\x'],
-    ['ドル記号を含む文字列', 'env $HOME not set'],
-    ['セミコロンを含む文字列', 'error code 500; retry later'],
-  ])('board.detail に危険な文字（%s）が含まれれば拒否する', (_label, detail) => {
-    expect(() =>
-      validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', detail } }),
-    ).toThrow(/board.detail に使用できない文字/);
-  });
-
-  it('board.detail が安全な文字のみ（英数字・日本語・基本句読点）なら通す', () => {
-    expect(() =>
-      validateOpsLogReport({
-        ...GREEN_REPORT,
-        board: { status: 'fail', detail: 'API error 500（レート制限のため失敗、60秒後にretry）' },
-      }),
-    ).not.toThrow();
-  });
+  it.each(['auth-error', 'rate-limited', 'network-error', 'invalid-response', 'unknown'])(
+    'board.status=fail で既知の reason（%s）なら通す',
+    (reason) => {
+      expect(() =>
+        validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'fail', reason } }),
+      ).not.toThrow();
+    },
+  );
 
   it('未知の board.status は拒否する', () => {
     expect(() => validateOpsLogReport({ ...GREEN_REPORT, board: { status: 'evil' } })).toThrow(
@@ -127,6 +114,27 @@ describe('validateOpsLogReport', () => {
     expect(() => validateOpsLogReport({ ...GREEN_REPORT, dod: { status: 'evil' } })).toThrow(
       /dod.status/,
     );
+  });
+
+  // Codex 実測指摘（P2）: 旧 schema は results の outcome に "green"/"issue"
+  // しか許さず、Step 3 の dedup 検索失敗（fail closed で起票見送り）という
+  // 正当な状態を運行記録で表現できなかった。
+  it('results の outcome=skipped で既知の reason なら通す', () => {
+    expect(() =>
+      validateOpsLogReport({
+        ...GREEN_REPORT,
+        results: [{ checkId: 'sentry-new', outcome: 'skipped', reason: 'dedup-search-failed' }],
+      }),
+    ).not.toThrow();
+  });
+
+  it('results の outcome=skipped で未知の reason なら拒否する', () => {
+    expect(() =>
+      validateOpsLogReport({
+        ...GREEN_REPORT,
+        results: [{ checkId: 'sentry-new', outcome: 'skipped', reason: 'evil' }],
+      }),
+    ).toThrow(/results/);
   });
 });
 
@@ -162,12 +170,47 @@ describe('buildOpsLogComment', () => {
     expect(comment).toContain('- DoD監査候補: 前日merge PR無し');
   });
 
-  it('盤面起票失敗時は detail をそのまま埋め込む', () => {
+  it('盤面起票失敗時は既知の reason を埋め込む', () => {
     const comment = buildOpsLogComment({
       ...GREEN_REPORT,
-      board: { status: 'fail', detail: 'API error 500' },
+      board: { status: 'fail', reason: 'rate-limited' },
     });
-    expect(comment).toContain('- 盤面起票: 失敗（API error 500）');
+    expect(comment).toContain('- 盤面起票: 失敗（rate-limited）');
+  });
+
+  // Codex 実測指摘（P2）: failed が非空でも results に issue/skipped が
+  // 無ければ resultsLine が "all green" になり、取得失敗と同時に誤った
+  // 肯定シグナルを出していた。
+  it('取得失敗のみ（results に issue/skipped が無い）なら all green と表示しない', () => {
+    const comment = buildOpsLogComment({
+      ...GREEN_REPORT,
+      failed: ['sentry-new'],
+      results: [],
+    });
+    expect(comment).toContain('- 取得失敗: sentry-new');
+    expect(comment).not.toContain('- all green');
+    expect(comment).toContain('- 取得失敗のみ（起票/追記なし）');
+  });
+
+  it('dedup 検索失敗（skipped outcome）を運行記録へ列挙する', () => {
+    const comment = buildOpsLogComment({
+      ...GREEN_REPORT,
+      results: [{ checkId: 'sentry-new', outcome: 'skipped', reason: 'dedup-search-failed' }],
+    });
+    expect(comment).toContain('- 見送り: sentry-new（dedup-search-failed）');
+    expect(comment).not.toContain('- all green');
+  });
+
+  it('起票/追記と見送りが両方あれば両方を列挙する', () => {
+    const comment = buildOpsLogComment({
+      ...GREEN_REPORT,
+      results: [
+        { checkId: 'docs-coverage', outcome: 'issue', issueNumber: 700 },
+        { checkId: 'sentry-new', outcome: 'skipped', reason: 'dedup-search-failed' },
+      ],
+    });
+    expect(comment).toContain('起票/追記: #700（docs-coverage）');
+    expect(comment).toContain('見送り: sentry-new（dedup-search-failed）');
   });
 });
 

@@ -36,18 +36,35 @@ const OPS_LOG_DOC_PATH = fileURLToPath(
 );
 const OPS_LOG_ISSUE_RE = /運行記録 issue:\s*\*\*#(\d+)\*\*/;
 
-// board.detail は本 wrapper で唯一の自由文字列フィールド（gh API のエラー概要等、
-// enum 化できない）。JSON 全体は呼び出し元が単一の shell argv token（典型的には
-// 単引用符）として渡すため、detail にここで挙げる文字が 1 つでも混じると 2 通り
-// の壊れ方をする: ① `<` / `>` は guard の redirect 無条件拒否に当たり
-// コマンド全体が block される、② `'` は外側の単引用符を早期終端させ JSON が
-// 断片化して JSON.parse が失敗する。どちらも「盤面起票が失敗した晩に限って
-// Step 5 の運行記録コメント自体が沈黙する」（push 前反証レビュー risk-reviewer /
-// behavior-verifier が独立に検出、P2）。バッククォート・`$`・`;` `&` `|` `"`
-// `\` も同じ理由（guard の他の検査に触れる、または shell/JSON の構造を壊す）で
-// 一律拒否する。本 PR の設計原則「動的な値は shell へ二度渡さない」を
-// report 引数の自由文字列フィールドにも一貫適用する。
-const DETAIL_UNSAFE_CHARS_RE = /[<>'"`\\$;&|]/;
+// board.status="fail" の失敗理由は自由文字列にしない。
+//
+// 旧設計（文字集合の denylist で検証する自由文字列 `detail`）は、Codex 実測
+// 指摘（P1）で「盤面起票中に prompt injection を受けたセッションが、Sentry
+// issue の raw title/message（user email 等の機微情報を含みうる）を 300 文字
+// ずつ小分けにして board.detail へ流し込み、public な常設運行記録 issue へ
+// 掲載する経路になる」ことが判明した。alert-issue.mjs の SENTRY_EVIDENCE_RE
+// allowlist を迂回する別の書き込み経路であり、文字集合の denylist をいくら
+// 強めても「安全な文字だけで構成された機微情報の断片」は通ってしまうため、
+// 自由文字列である限り構造的に閉じられない。
+//
+// enum に固定することで、そもそも自由文字列を受け付けない設計にする。
+// wrapper 内部から見た gh CLI の失敗は実務上この 5 種に収束するため
+// （認証切れ・レート制限・ネットワーク断・応答パース不能・分類不能）、
+// 診断価値を落とさずに攻撃面を消せる。
+export const BOARD_FAIL_REASONS = new Set([
+  'auth-error',
+  'rate-limited',
+  'network-error',
+  'invalid-response',
+  'unknown',
+]);
+
+// results の "skipped" outcome（dedup 検索失敗による起票見送り、SKILL.md
+// §Step3 point 2）の理由 enum。Codex 実測指摘（P2）: 旧 schema は
+// "green" / "issue" しか受け付けず、dedup 検索失敗という Step 3 の正当な
+// 状態を運行記録で表現できなかった（結果を省略して暗黙に緑扱いにするか、
+// failed へ誤って詰め込むしかなかった）。
+export const RESULT_SKIPPED_REASONS = new Set(['dedup-search-failed']);
 
 /**
  * `docs/operations/night-watch.md` から常設運行記録 issue の番号を読み取る。
@@ -78,9 +95,13 @@ function isPositiveInt(value) {
  * @typedef {{
  *   executed: number,
  *   failed: string[],
- *   results: Array<{ checkId: string, outcome: 'green' } | { checkId: string, outcome: 'issue', issueNumber: number }>,
+ *   results: Array<
+ *     { checkId: string, outcome: 'green' }
+ *     | { checkId: string, outcome: 'issue', issueNumber: number }
+ *     | { checkId: string, outcome: 'skipped', reason: string }
+ *   >,
  *   baselineRecommend: string[],
- *   board: { status: 'success', issueNumber: number } | { status: 'skip' } | { status: 'fail', detail: string },
+ *   board: { status: 'success', issueNumber: number } | { status: 'skip' } | { status: 'fail', reason: string },
  *   dod: { status: 'candidate', prNumber: number } | { status: 'none' },
  * }} OpsLogReport
  */
@@ -112,8 +133,9 @@ export function validateOpsLogReport(report) {
     }
     if (entry.outcome === 'green') continue;
     if (entry.outcome === 'issue' && isPositiveInt(entry.issueNumber)) continue;
+    if (entry.outcome === 'skipped' && RESULT_SKIPPED_REASONS.has(entry.reason)) continue;
     throw new Error(
-      'results の outcome は "green" か、issueNumber 付きの "issue" である必要があります',
+      'results の outcome は "green" / issueNumber 付きの "issue" / 既知 reason 付きの "skipped" のいずれかである必要があります',
     );
   }
   if (
@@ -131,16 +153,9 @@ export function validateOpsLogReport(report) {
   } else if (board.status === 'skip') {
     // 追加フィールド不要
   } else if (board.status === 'fail') {
-    if (
-      typeof board.detail !== 'string' ||
-      board.detail.length === 0 ||
-      board.detail.length > 300
-    ) {
-      throw new Error('board.detail は 1〜300 文字である必要があります');
-    }
-    if (DETAIL_UNSAFE_CHARS_RE.test(board.detail)) {
+    if (!BOARD_FAIL_REASONS.has(board.reason)) {
       throw new Error(
-        'board.detail に使用できない文字が含まれています（< > \' " ` \\ $ ; & | は不可）。Bash コマンド行への埋め込みで guard の block や JSON の断片化を起こすため、これらを含まない要約に言い換えてください',
+        `board.reason は既知の理由（${[...BOARD_FAIL_REASONS].join(' / ')}）のいずれかである必要があります。gh CLI の生エラーメッセージをそのまま渡さないでください（Sentry/PR の内容が prompt injection 経由で紛れ込むと public issue へ機微情報が漏れる経路になるため、自由文字列は受け付けません）`,
       );
     }
   } else {
@@ -162,10 +177,29 @@ export function buildOpsLogComment(report) {
   const today = jstDateString();
   const failedLine = report.failed.length > 0 ? report.failed.join(', ') : 'なし';
   const issueResults = report.results.filter((entry) => entry.outcome === 'issue');
-  const resultsLine =
-    issueResults.length === 0
-      ? 'all green'
-      : `起票/追記: ${issueResults.map((entry) => `#${entry.issueNumber}（${entry.checkId}）`).join(', ')}`;
+  const skippedResults = report.results.filter((entry) => entry.outcome === 'skipped');
+  // `failed`（取得失敗）だけがあり results に issue/skipped が無い晩でも
+  // "all green" と誤記しない（push 前反証レビュー risk-reviewer 指摘、P2。
+  // 取得失敗が 1 件でもあれば「異常なし」の代わりに「観測できず」として扱う
+  // §Step2 の fail-closed 原則と対称）。
+  const hasAnomaly =
+    report.failed.length > 0 || issueResults.length > 0 || skippedResults.length > 0;
+  const resultParts = [];
+  if (issueResults.length > 0) {
+    resultParts.push(
+      `起票/追記: ${issueResults.map((entry) => `#${entry.issueNumber}（${entry.checkId}）`).join(', ')}`,
+    );
+  }
+  if (skippedResults.length > 0) {
+    resultParts.push(
+      `見送り: ${skippedResults.map((entry) => `${entry.checkId}（${entry.reason}）`).join(', ')}`,
+    );
+  }
+  const resultsLine = !hasAnomaly
+    ? 'all green'
+    : resultParts.length > 0
+      ? resultParts.join('; ')
+      : '取得失敗のみ（起票/追記なし）';
   const baselineLine =
     report.baselineRecommend.length > 0 ? report.baselineRecommend.join(', ') : 'なし';
   const boardLine =
@@ -173,7 +207,7 @@ export function buildOpsLogComment(report) {
       ? `成功（#${report.board.issueNumber}）`
       : report.board.status === 'skip'
         ? 'skip（起票済み）'
-        : `失敗（${report.board.detail}）`;
+        : `失敗（${report.board.reason}）`;
   const dodLine =
     report.dod.status === 'candidate' ? `#${report.dod.prNumber}` : '前日merge PR無し';
 

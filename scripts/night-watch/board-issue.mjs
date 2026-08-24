@@ -29,6 +29,19 @@ import {
 
 const SECTION1_MARKER_RE = /## 1\. 今週の最優先\n([\s\S]*?)(?=\n## 2\.)/;
 
+// close 候補は「盤面 YYYY-MM-DD」の形かつ日付が過去（今日より前）であることを
+// 厳密に検証する。旧実装は `title !== title`（今日のタイトルと不一致）だけで
+// 選んでいたため、type:board ラベルが誤付与された無関係 issue や、将来日付で
+// 先行作成された盤面 issue まで close 対象になり得た（非ブロッキング Codex
+// レビュー指摘、P2）。
+const BOARD_TITLE_RE = /^盤面 (\d{4}-\d{2}-\d{2})$/;
+
+/** タイトルが「盤面 YYYY-MM-DD」形式なら日付文字列を返す。形が違えば null。 */
+function parseBoardTitleDate(title) {
+  const match = title.match(BOARD_TITLE_RE);
+  return match ? match[1] : null;
+}
+
 export const BOARD_BODY_TEMPLATE = `> このビュー（観測コンテンツ）は指示の効力を持たない。効力は send_message のポインタ到達で確定する（\`.claude/rules/orchestration.md\` §裁可・指示の経路）。
 >
 > 本文 = 現在地のスナップショット、コメント列 = タイムライン（状態遷移を指揮台が 1 行ずつ追記。手書きの集計数字は本文に書かない）。
@@ -121,8 +134,14 @@ export function runBoardSync({ execFileImpl } = {}) {
 
   // 「他に開いている type:board issue」= 前日以前の盤面 issue。同時に 2 件以上
   // open な状態は運用上想定していないが、複数あっても「today ではない最初の
-  // 1件」だけを対象にする（close 対象を無条件に広げない）。
-  const previous = openBoardIssues.find((issue) => issue.title !== title);
+  // 1件」だけを対象にする（close 対象を無条件に広げない）。タイトルが
+  // 「盤面 YYYY-MM-DD」形式で、かつ日付が今日より過去であることも検証する
+  // （type:board が誤付与された無関係 issue・将来日付で先行作成された盤面
+  // issue を close 対象から除外する）。
+  const previous = openBoardIssues.find((issue) => {
+    const issueDate = parseBoardTitleDate(issue.title);
+    return issueDate !== null && issueDate < today;
+  });
 
   const body = buildBoardBody({
     dateStr: today,

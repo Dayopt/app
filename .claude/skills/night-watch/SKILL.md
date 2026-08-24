@@ -82,7 +82,7 @@ Step 2 の 6 check-id すべてを対象に、異常があった check-id ごと
 wrapper 内部の処理:
 
 1. `gh issue list --repo Dayopt/dayopt --state open --search "nightwatch(<check-id>): in:title" --json number,title` で既存 open issue を検索する
-2. **検索コマンドがエラーで失敗したら、起票しない**（fail closed。原因不明のまま重複起票するリスクを避ける。Step 5 に「<check-id>: dedup検索失敗のため起票見送り」と記録する)
+2. **検索コマンドがエラーで失敗したら、起票しない**（fail closed。原因不明のまま重複起票するリスクを避ける。`alert-issue.mjs` は `{ action: 'skipped', reason: 'dedup検索失敗のため起票見送り' }` を返すので、Step 5 の `results` へ `{ checkId: '<check-id>', outcome: 'skipped', reason: 'dedup-search-failed' }` として記録する）
 3. 既存 open issue があればコメントで実測値・閾値・再現コマンドを追記する
 4. 無ければ新規起票する（テンプレートは下記。タイトルは `CHECK_DEFINITIONS` の固定文言のみを使い、Claude が渡す自由文字列を混ぜない）
 5. **1 run あたりの起票上限は3件（6 check-id 合計）。** 超過分は起票せず、Step 5 の運行記録コメントに集約して報告する（誤登録・想定外の大量検出を機械的に減衰させるため）
@@ -128,14 +128,18 @@ JSON の形（wrapper 内部で厳密に検証する。既知 check-id 以外・
 {
   "executed": 6,
   "failed": ["<check-id>", ...],
-  "results": [{ "checkId": "<check-id>", "outcome": "green" } | { "checkId": "<check-id>", "outcome": "issue", "issueNumber": 1234 }],
+  "results": [
+    { "checkId": "<check-id>", "outcome": "green" }
+    | { "checkId": "<check-id>", "outcome": "issue", "issueNumber": 1234 }
+    | { "checkId": "<check-id>", "outcome": "skipped", "reason": "dedup-search-failed" }
+  ],
   "baselineRecommend": ["<check-id>", ...],
-  "board": { "status": "success", "issueNumber": 1234 } | { "status": "skip" } | { "status": "fail", "detail": "<1〜300文字>" },
+  "board": { "status": "success", "issueNumber": 1234 } | { "status": "skip" } | { "status": "fail", "reason": "auth-error" | "rate-limited" | "network-error" | "invalid-response" | "unknown" },
   "dod": { "status": "candidate", "prNumber": 1234 } | { "status": "none" }
 }
 ```
 
-**`board.detail`（Step 1 の盤面起票が失敗した時の概要）は `< > ' " `（バッククォート） `\` `$` `;` `&` `|` を含めてはいけない**（push 前反証レビュー risk-reviewer / behavior-verifier 指摘）。この JSON は 1 個の Bash argv token として渡すため、`<`/`>` は guard の redirect 拒否に、`'` は outer 単引用符の早期終端に当たり、どちらも「盤面起票が失敗した晩に限って運行記録コメント自体が沈黙する」結果になる。API エラーメッセージをそのまま転記せず、これらの文字を含まない短い要約に言い換える（例: `retry after <timestamp>` ではなく `rate limited, retry later`）。wrapper 側も同じ文字集合を検証で拒否するが、拒否が発火するのは JSON が壊れず正常に node へ届いた場合に限る（guard の redirect 拒否は JSON 到達前に働くため、この制約は執筆時点で守る）。
+**`board.reason`（Step 1 の盤面起票が失敗した時の理由）は既知 enum のみで、gh CLI の生エラーメッセージをそのまま渡してはいけない**（push 前反証レビュー risk-reviewer / behavior-verifier + 非ブロッキング Codex レビューが独立に検出、P1）。旧設計は自由文字列（文字集合の denylist で検証）だったが、prompt injection を受けたセッションが Sentry issue の raw title/message（user email 等を含みうる）を 300 文字ずつ小分けにして public な常設運行記録 issue へ書く経路になり得た。自由文字列である限り、安全な文字だけで構成された機微情報の断片は文字集合の denylist では塞げない。実際に発生した gh CLI エラーを `auth-error` / `rate-limited` / `network-error` / `invalid-response` / `unknown` のいずれかへ分類してから渡す。`results` の `outcome: "skipped"` の `reason` も同様に既知 enum（`dedup-search-failed`）のみ。
 
 wrapper はこの JSON から、以下と同じ内容のコメント本文を組み立てて投稿する:
 
@@ -144,13 +148,13 @@ wrapper はこの JSON から、以下と同じ内容のコメント本文を組
 
 - 実行 check 数: N / 6（取得失敗を除く）
 - 取得失敗: <check-id> があれば列挙（コマンド非0 exit / パース不能）、無ければ「なし」
-- all green | 起票/追記: #NNNN（<check-id>）, ...
+- all green | 起票/追記: #NNNN（<check-id>）, ... | 見送り: <check-id>（<reason>）, ... | 取得失敗のみ（起票/追記なし）
 - baseline 更新推奨: <check-id> があれば列挙、無ければ「なし」
-- 盤面起票: 成功（#NNNN）| skip（起票済み）| 失敗（<概要>）
+- 盤面起票: 成功（#NNNN）| skip（起票済み）| 失敗（<reason>）
 - DoD監査候補: #NNNN | 前日merge PR無し
 ```
 
-**取得失敗が 1 件でもあれば「all green」と報告しない**（fail-closed。§Step 2 観測を実行する 参照。`results` に `outcome: "issue"` が 1 件でもあれば wrapper は自動的に「起票/追記」列挙へ切り替える）。
+**取得失敗が 1 件でもあれば「all green」と報告しない**（fail-closed。§Step 2 観測を実行する 参照）。`failed` が非空、または `results` に `outcome: "issue"` / `"skipped"` が 1 件でもあれば、wrapper は自動的に「起票/追記」「見送り」またはその両方の列挙（`failed` のみで `results` が空の場合は「取得失敗のみ（起票/追記なし）」）へ切り替える（push 前反証レビュー + 非ブロッキング Codex レビュー指摘、P2。`failed` 非空でも `results` が空だと誤って「all green」と報告していた）。
 
 **さらに**、`node scripts/night-watch/run-log.mjs board-note '<BoardNote JSON>'`（`{"allGreen": true|false, "issued": N, "observed": M}`）を実行し、Step 1 で起票/確認した当日盤面 issue へ「⏱ 夜勤: all green | 起票 N 件 / 観測 6 件」（取得失敗があれば「⏱ 夜勤: 一部取得失敗 | 起票 N 件 / 観測 M 件」）の 1 行コメントを追加する（`.claude/rules/orchestration.md` §日次盤面issue のイベントコメントと同じタイムライン形式に合わせる。宛先の当日盤面 issue も wrapper が自分で検索する）。
 

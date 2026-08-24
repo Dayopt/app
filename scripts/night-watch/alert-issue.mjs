@@ -201,6 +201,12 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
 `;
 }
 
+// runAlertSync が新規起票する issue に必ず付ける固定ラベル（下記
+// runAlertSync 参照）。dedup 判定でこの両方を要求することで、通常の
+// triage/write 権限を持たない外部ユーザー（public repo、2026-09 私有化まで）
+// が偽装 issue を dedup 対象へ紛れ込ませることを防ぐ（後述）。
+const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
+
 /**
  * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
  *
@@ -211,6 +217,13 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
  * 抑止 + 無関係スレッドへの書き込み）。`results[0]` を無条件採用せず、title が
  * `nightwatch(<checkId>): ` で実際に始まる候補だけを採用する
  * （push 前反証レビュー risk-reviewer 指摘、medium）。
+ *
+ * title の完全一致プレフィックスだけでも、外部ユーザーは通常の issue 作成
+ * 権限（write 権限は不要）で同じ prefix の title を自由に選べるため偽装でき
+ * てしまう（非ブロッキング Codex レビュー指摘、P2）。`runAlertSync` が新規
+ * 起票時に必ず付ける固定ラベル（`type:chore` + `area:operations`。ラベル
+ * 付与には triage/write 権限が要り、外部ユーザーは満たせない）も同時に要求
+ * し、両方を満たす候補だけを既存 alert として採用する。
  * @param {string} checkId
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
  */
@@ -226,12 +239,18 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
       '--search',
       `nightwatch(${checkId}): in:title`,
       '--json',
-      'number,title',
+      'number,title,labels',
     ],
     { execFileImpl },
   );
   const titlePrefix = `nightwatch(${checkId}): `;
-  return results.find((issue) => issue.title.startsWith(titlePrefix)) ?? null;
+  return (
+    results.find((issue) => {
+      if (!issue.title.startsWith(titlePrefix)) return false;
+      const labelNames = new Set((issue.labels ?? []).map((label) => label.name));
+      return ALERT_ISSUE_LABELS.every((name) => labelNames.has(name));
+    }) ?? null
+  );
 }
 
 /**
