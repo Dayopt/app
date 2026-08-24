@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-24
+last_verified: 2026-08-25
 code:
   - packages/observability
   - apps/product/src/instrumentation.ts
@@ -123,6 +123,23 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - Drain は team scope の設定であり、コードや env に新しい secret は増えない（`docs/operations/secrets.md` の対象外）
 - **既存の `@/lib/logger` 構造化ログの sanitize 方針は、アプリコードが出すログにのみ適用される。** Vercel の request log（path / query / clientIp / userAgent）は別経路で Drain に乗るため、上記手順 2 で送信フィールドを確定するまでは「sanitize 方針に従っているから安全」と読まない
 
+## Supabase `log_connections`
+
+策定日: 2026-08-25（[#1597](https://github.com/Dayopt/dayopt/issues/1597)）
+
+Supabase は新規 project の `log_connections` を既定 off へ移行しており、既存 project も順次移行対象になる。Dayopt Production は現在 **off**（2026-08-02 / 2026-08-25 の 2 回、SQL editor で `SHOW log_connections;` を実行して確認）。
+
+- **既定は off のまま運用する**。接続プール枯渇・不審接続の調査などログの価値がログ量・料金を上回る場合だけ、一時的に on へ切り替える
+- **有効化手順**: Supabase dashboard の SQL editor で `ALTER SYSTEM SET log_connections = on; SELECT pg_reload_conf();` を実行する。調査終了後は同じ手順で `off` に戻す。runtime config の変更であり、`supabase/migrations/` には残さない
+- **Preview（PR ごとの branch）は対象外**。non-persistent（`with_data: false`）かつ既定 off の新規 project 相当のため、常設の確認対象にならない
+
+### Logs ingestion / query の課金は 2026-08-25 時点で未稼働
+
+Supabase 公式ドキュメント（[Manage Logs usage](https://supabase.com/docs/guides/platform/manage-your-usage/logs)）は "Coming soon" 表記で、Logs Ingest / Logs Query の課金・quota は enforcement 未稼働。Dayopt org の Usage ページ（Supabase dashboard → Settings → Billing → Usage）にも "Logs Ingest" / "Logs Query" の行がまだ現れない（2026-08-25 確認、Egress / Compute Hours 等の既存 SKU のみ表示）。
+
+- 「Ingest 月5GB / Query 月1,000GB」は Supabase 側のドキュメントにまだ反映されていない暫定値のため、現時点でこの枠に対する具体的な進捗率は確認できない
+- **enforcement が有効化されたら**、下記 §Scheduled review の月次棚卸しで Usage ページを確認し、実際に公表された quota の 80% 到達を確認・対応の目安にする（他の枠で使っている閾値慣行に合わせた既定値。実 quota 公表後に必要なら調整する）
+
 ## Alert policy
 
 ### Immediate
@@ -137,7 +154,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 - error volume / regression: 週次
 - Vercel function duration、bandwidth、build trend: 週次
 - Supabase database size、connection、slow query: 週次
-- provider usage / plan limit: 月次
+- provider usage / plan limit: 月次（Supabase Logs ingest/query の quota 確認基準は §Supabase `log_connections` 参照。enforcement 稼働後に対象化）
 - **browser client telemetry の生死確認: 月次**（#2029）。Sentry で `environment:production has:browser.name` を直近30日で検索し、件数が0でないことを確認する。0件なら consent gate・DSN・CSP・SDK 初期化のどこかが壊れている可能性が高く、`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md` の contract に沿って client 側の初期化パス（`instrumentation-client.ts` / `packages/observability/src/consent.ts`）を調査する。新しい常設 canary surface は作らない（2026-07-16〜23 に一時追加した operator smoke surface は複雑さに見合わず撤去済み）
 - **体感速度北極星（production LCP p95 / INP p95）の月次確認: 月次**（#2294）。product（Sentry project `dayopt`）の Web Vitals を [LCP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.lcp+environment%3Aproduction&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.lcp%29%22%2C%22p95%28measurements.lcp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) / [INP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.inp&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.inp%29%22%2C%22p95%28measurements.inp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) で開き、p95 と n（count）を確認する。budget は `docs/engineering/infra.md` §速度指標（LCP p95≤2.5s、INP p95≤200ms）。2026-08-24 baseline: LCP p75=1318ms/p95=2101.2ms（n=110）、INP p75=96ms/p95=103.84ms（n=104）、いずれも budget 内。**INP query はあえて `environment:production` を付けない** — INP は Sentry SDK の仕様で standalone span に `environment` タグが付かないため（`environment:production` で絞ると誤って count=0 になる）。product は `enabled: IS_SENTRY_PRODUCTION`（`apps/product/instrumentation-client.ts:66`）で `Sentry.init` の `enabled` オプション自体を production 限定にし、web は `isProduction` 定数（`apps/web/instrumentation-client.ts:24`）で `initializeBrowserSentry()`（`Sentry.init` 呼び出し自体）を production 以外で実行しない lazy init gate にしている（web 側の `Sentry.init` の `enabled` は `true` 固定）。実装形は異なるが、両者とも production 以外で SDK 自体を init しない構造的 gate という不変条件は同じため、フィルタなしでも値は production 限定と確定できる。**n を必ず確認する** — p95 は少数サンプルで暴れるため、n が前月比で大きく変動した月（consent UI 変更、計測ソース変更、トラフィック構成変化など）は単純比較せず断点として本節にコメントで残す。閾値アラートは n がまだ小さく統計的に成立しないため作らない（この月次確認と `docs/engineering/infra.md` §行動ルール の「p95悪化 → 改善Issue必須」で代替する）。月次の実測値は gardening journal（`docs/engineering/log/YYYY-MM-01-journal.md` §数値）にも記録し、時系列比較を蓄積する
 
