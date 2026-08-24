@@ -32,6 +32,8 @@ export interface McpPlanUpdateInput extends McpPlanVersionedInput {
 export type McpPlanDeleteInput = McpPlanVersionedInput;
 export type McpPlanRestoreInput = McpPlanVersionedInput;
 
+export type McpFulfillment = 'low' | 'medium' | 'high';
+
 export interface McpRecordCreateInput extends McpMutationBinding {
   title: string;
   note: string | null;
@@ -40,6 +42,7 @@ export interface McpRecordCreateInput extends McpMutationBinding {
   planId: string | null;
   startAt: string;
   endAt: string;
+  fulfillment: McpFulfillment | null;
 }
 
 interface McpRecordVersionedInput extends McpMutationBinding {
@@ -49,12 +52,13 @@ interface McpRecordVersionedInput extends McpMutationBinding {
 }
 
 export interface McpRecordUpdateInput extends McpRecordVersionedInput {
-  /** Omitted fields are preserved. An explicit null clears note or activity. */
+  /** Omitted fields are preserved. An explicit null clears note, activity, or fulfillment. */
   title?: string;
   note?: string | null;
   activityId?: string | null;
   startAt?: string;
   endAt?: string;
+  fulfillment?: McpFulfillment | null;
 }
 
 export type McpRecordDeleteInput = McpRecordVersionedInput;

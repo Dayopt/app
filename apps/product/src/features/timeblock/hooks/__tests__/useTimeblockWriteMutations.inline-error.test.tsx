@@ -5,6 +5,16 @@ import { useTimeblockWriteMutations } from '../useTimeblockWriteMutations';
 
 interface MutationCallbacks {
   retry?: boolean;
+  onMutate?: (input: {
+    id: string;
+    data: {
+      title?: string;
+      note?: string | null;
+      start_at?: string;
+      end_at?: string;
+      fulfillment?: 'low' | 'medium' | 'high' | null;
+    };
+  }) => Promise<unknown>;
   onSuccess?: (data: TimeModelRow) => void;
   onError?: (
     error: { message: string },
@@ -41,6 +51,7 @@ const mocks = vi.hoisted(() => ({
   planDetailSetData: vi.fn(),
   planDetailInvalidate: vi.fn(),
   planDetailFetch: vi.fn().mockResolvedValue({ id: 'plan-1' }),
+  recordDetailSetData: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -91,7 +102,7 @@ vi.mock('@/lib/trpc', () => {
         records: {
           invalidate: vi.fn(),
           list: { cancel: vi.fn() },
-          getById: { fetch: vi.fn(), invalidate: vi.fn(), setData: vi.fn() },
+          getById: { fetch: vi.fn(), invalidate: vi.fn(), setData: mocks.recordDetailSetData },
         },
       }),
       planCommands: {
@@ -153,6 +164,7 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
     mocks.planSkipCallbacks = undefined;
     mocks.otherMutationCallbacks = [];
     mocks.cacheEntries = [];
+    mocks.recordDetailSetData.mockClear();
   });
 
   it('全command mutationでglobal retry設定を上書きする', () => {
@@ -167,6 +179,44 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
     ];
     expect(callbacks).toHaveLength(10);
     expect(callbacks.every((options) => options?.retry === false)).toBe(true);
+  });
+
+  it('Recordのfulfillment省略更新は楽観patchで既存値を保持する', async () => {
+    renderHook(() => useTimeblockWriteMutations());
+
+    await act(async () => {
+      await mocks.recordUpdateCallbacks?.onMutate?.({
+        id: 'record-1',
+        data: { title: 'renamed only' },
+      });
+    });
+
+    const updater = mocks.recordDetailSetData.mock.calls.at(-1)?.[1] as (
+      old: { title: string; fulfillment: string | null } | undefined,
+    ) => unknown;
+    expect(updater({ title: 'old title', fulfillment: 'high' })).toMatchObject({
+      title: 'renamed only',
+      fulfillment: 'high',
+    });
+  });
+
+  it('Recordのfulfillment明示null更新は楽観patchで解除する', async () => {
+    renderHook(() => useTimeblockWriteMutations());
+
+    await act(async () => {
+      await mocks.recordUpdateCallbacks?.onMutate?.({
+        id: 'record-1',
+        data: { fulfillment: null },
+      });
+    });
+
+    const updater = mocks.recordDetailSetData.mock.calls.at(-1)?.[1] as (
+      old: { title: string; fulfillment: string | null } | undefined,
+    ) => unknown;
+    expect(updater({ title: 'unchanged', fulfillment: 'high' })).toMatchObject({
+      title: 'unchanged',
+      fulfillment: null,
+    });
   });
 
   it('競合回復のdetail取得前にexact queryをstaleへする', async () => {

@@ -9,7 +9,7 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 const PLAN_TRASH_SELECT =
   'id, title, note, activity_id, start_at, end_at, source, skipped_at, deleted_at, created_at, updated_at' as const;
 const RECORD_TRASH_SELECT =
-  'id, title, note, activity_id, plan_id, start_at, end_at, source, deleted_at, created_at, updated_at' as const;
+  'id, title, note, activity_id, plan_id, start_at, end_at, source, fulfillment, deleted_at, created_at, updated_at' as const;
 
 type TimeblockTrashDatabase = {
   public: {
@@ -44,6 +44,7 @@ interface RecordReadRow {
   start_at: string;
   end_at: string;
   source: string;
+  fulfillment: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -118,6 +119,7 @@ export function transformRecordReadModel(row: RecordReadRow) {
     startAt: row.start_at,
     endAt: row.end_at,
     source: row.source,
+    fulfillment: row.fulfillment,
     deletedAt: row.deleted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

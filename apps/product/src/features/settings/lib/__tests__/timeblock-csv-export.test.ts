@@ -43,4 +43,15 @@ describe('timeblockRowsToCsv', () => {
     expect(csv).toContain('record,record-1,Done,"line 1\rline 2",');
     expect(csv).not.toContain('\r\n');
   });
+
+  it('fulfillment を設定した Record は CSV へ復元可能な形で含める', () => {
+    const csv = timeblockRowsToCsv([
+      { kind: 'record', id: 'record-1', title: 'Deep work', fulfillment: 'high' },
+    ]);
+
+    expect(TIMEBLOCK_CSV_COLUMNS).toContain('fulfillment');
+    const fulfillmentIndex = TIMEBLOCK_CSV_COLUMNS.indexOf('fulfillment');
+    const row = csv.split('\n')[1]?.split(',');
+    expect(row?.[fulfillmentIndex]).toBe('high');
+  });
 });

@@ -192,6 +192,14 @@
       "migratedLocked": "移行された過去の記録は編集できません",
       "feedforward": {
         "recentActual": "このアクティビティの直近実績は {duration} 前後です"
+      },
+      "fulfillment": {
+        "label": "充実度",
+        "options": {
+          "low": "消耗",
+          "medium": "普通",
+          "high": "充実"
+        }
       }
     }
   }

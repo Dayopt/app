@@ -8,6 +8,8 @@ export interface TimeblockSavePatch {
   activityId?: string | null;
   start_at?: string;
   end_at?: string;
+  /** Record 専用。Plan には存在しないため plan kind では送らない。 */
+  fulfillment?: 'low' | 'medium' | 'high' | null;
 }
 
 interface SaveWaiter {

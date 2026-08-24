@@ -78,6 +78,7 @@ vi.mock('@/features/timeblock/server/service-index', async () => {
       startAt: row.start_at,
       endAt: row.end_at,
       source: row.source,
+      fulfillment: row.fulfillment,
       deletedAt: row.deleted_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -148,6 +149,9 @@ const record = {
   source: 'manual',
   start_at: '2026-07-01T11:00:00.000Z',
   activity_id: TIMEBLOCK_ACTIVITY_ID,
+  // null 固定にすると fulfillment 列が SELECT から落ちても undefined と見分けが
+  // 付かず素通りする（activity_id と同じ理由）。
+  fulfillment: 'high',
   title: 'Record',
   updated_at: '2026-07-01T00:00:00.000Z',
   user_id: context.userId,
@@ -328,7 +332,7 @@ describe('MCP list tools public contract', () => {
     });
     expect(recordResult).toMatchObject({
       schemaVersion: 3,
-      record: { id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID },
+      record: { id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID, fulfillment: 'high' },
     });
     expect(planTrashResult).toMatchObject({
       schemaVersion: 3,
@@ -338,7 +342,7 @@ describe('MCP list tools public contract', () => {
     expect(recordTrashResult).toMatchObject({
       schemaVersion: 3,
       count: 1,
-      records: [{ id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID }],
+      records: [{ id: record.id, activityId: TIMEBLOCK_ACTIVITY_ID, fulfillment: 'high' }],
     });
     expect(listDeletedPlans).toHaveBeenCalledWith(context.userId, 7);
     expect(listDeletedRecords).toHaveBeenCalledWith(context.userId, 8);
