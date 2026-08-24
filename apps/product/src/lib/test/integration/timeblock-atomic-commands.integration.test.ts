@@ -704,4 +704,46 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       .single();
     expect(restoreError?.code).toBe('DT009');
   });
+
+  // risk-reviewer が Step 8（tag_id 剥離、#2352）のレビューで検出した pre-existing bug の
+  // 回帰固定。confirm_day_plans_unserialized_v1 が record_plan_unserialized_v1（Plan を
+  // 1 件ずつ「記録する」）と非対称に activity_id をコピーしていなかった
+  // （20260824095706 で修正）。
+  it('confirm day plans が生成する Record は Plan の activity_id を引き継ぐ', async () => {
+    const { data: activity, error: activityError } = await admin
+      .from('activities')
+      .insert({ user_id: userId, name: `Confirm day activity ${crypto.randomUUID()}` })
+      .select()
+      .single();
+    expect(activityError).toBeNull();
+
+    const { data: plan, error: planError } = await admin
+      .rpc('create_plan_command_v1', {
+        p_user_id: userId,
+        p_title: 'Confirm day plan',
+        p_note: dbNull,
+        p_external_calendar_event_id: dbNull,
+        p_source: 'manual',
+        p_start_at: at(-2_000),
+        p_end_at: at(1_500),
+        p_activity_id: activity!.id,
+      })
+      .single();
+    expect(planError).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 1_700));
+
+    const { data: confirmed, error: confirmError } = await admin.rpc(
+      'confirm_day_plans_command_v1',
+      {
+        p_user_id: userId,
+        p_start_at: at(-12 * 60 * 60_000),
+        p_end_at: at(0),
+        p_confirmed_at: at(0),
+      },
+    );
+    expect(confirmError).toBeNull();
+
+    const record = confirmed?.find((row) => row.plan_id === plan!.id);
+    expect(record?.activity_id).toBe(activity!.id);
+  });
 });
