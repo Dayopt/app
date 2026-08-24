@@ -212,11 +212,24 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # そのまま継承する穴だった（2026-08-19、内製クロスレビュー risk-reviewer /
   # behavior-verifier が実測確認）。修正方針は点の追加（危険フラグの denylist）
   # ではなく class を閉じる: 引数を必要としないチェックリストコマンドは
-  # **完全一致**にし、動的引数が要る gh コマンドだけ
-  # night_watch_flags_only で「許可した -- flag 以外は一切許さない」
-  # positive allowlist にする。read-only git（status/log/diff/show）は
-  # checklist が実際には使わないため allowlist から撤去した（未使用の
-  # 攻撃面を patch でなく削除で閉じる）。
+  # **完全一致**にし、read-only git（status/log/diff/show）は checklist が
+  # 実際には使わないため allowlist から撤去した（未使用の攻撃面を patch でなく
+  # 削除で閉じる）。
+  #
+  # 動的な値（issue タイトル・本文・検索クエリ・close 対象の判定）が要る gh
+  # 呼び出しは、shell の flag allowlist（旧 night_watch_flags_only）で守るのを
+  # やめ、`scripts/night-watch/*.mjs` の wrapper へ寄せた（#2291 v2、PR #2309
+  # 未解決 thread #5 の P1 是正）。旧方式は quote/backslash を削るだけの
+  # 二重検査だったため、shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}`
+  # 等）が生む未許可 flag を再現できず、2026-08-21 に critical な回避が実測
+  # された。wrapper 方式では、動的な値は Bash tool の command 文字列から
+  # `execFileSync` の argv 要素として node script 内部の gh 呼び出しへ**直接**
+  # 渡る（間に shell を経由しないため、値の中身がどんな文字列でも gh の flag
+  # として再解釈されない）。guard 側の役割は「本当にこの固定 script を単純呼び
+  # 出ししているか」（is_single_simple_command + no-redirect）だけに縮小され、
+  # shell 展開を検査で追いかける必要が無くなる。値の形（数字のみ / 既知の URL
+  # 形式のみ 等）の検証は各 wrapper 内部が担う（scripts/night-watch/*.test.ts
+  # 参照）。
   if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
     # redirect はファイル書き込み手段になるため無条件で拒否（read-only 原則）。
     case "$COMMAND" in
@@ -230,66 +243,6 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       echo "BLOCKED: night-watch モードでは単一の単純コマンドのみ実行できます（区切り・置換・eval不可）" >&2
       exit 2
     fi
-
-    # $1 = 許可コマンドの後続部分（先頭の空白は呼び出し側で除去済み）
-    # $2 = 許可 flag を空白区切りで並べた文字列（例: "--title --body --label"）
-    #
-    # トークンごとに判定する: `-` で始まるトークンは許可 flag と完全一致
-    # しない限り拒否（短縮 flag `-X` / `-f` は許可リストに入れられないので
-    # 一律拒否になる）。`-` で始まらないトークンは位置引数・flag の値として
-    # 無条件に許可する。`--body="値"` のような `=` 結合形は対応しない
-    # （許可形は空白区切りのみに絞る。等号形を通すと `--body=safe--output=x`
-    # のような 1 token に紛れ込ませる迂回を許可 flag の完全一致だけで
-    # 弾けなくなる）。
-    #
-    # ANSI-C / locale 形式の quote（$'…' / $"…"）が shell に剥がされる前提で
-    # 導入の $ を落としてから通常の quote 除去に合流させる。--env-file 検査
-    # （このファイル下方、COMMAND_UNQUOTED 生成ロジック）と同じモデル。
-    night_watch_unquote() {
-      local s="$1" sq="'" dq='"'
-      s=${s//\$$sq/$sq}
-      s=${s//\$$dq/$dq}
-      s=${s//$dq/}
-      s=${s//$sq/}
-      s=${s//\\/}
-      printf '%s' "$s"
-    }
-
-    # raw 文字列だけをトークン判定すると、`"--body-file"`（quote で包んだ flag
-    # 名）や `\-\-body-file`（backslash escape）が `-*` に一致せず位置引数
-    # として無条件許可され、shell が実行時に quote/backslash を剥がして gh に
-    # 許可外 flag が渡る（2026-08-21、内製クロスレビュー risk-reviewer が
-    # critical として実測確認: `gh issue create --title x "--body-file" ...`
-    # が通っていた）。raw 版と unquoted 版の**両方**でトークン判定し、
-    # どちらか一方でも不許可 flag を検出したら block する
-    # （--env-file 検査の「両方の写しで検査してどちらかが落ちたら落とす」と
-    # 同じ設計）。1 箇所（このヘルパー）を直せば night_watch_flags_only を
-    # 呼ぶ全 gh コマンド（create/comment/close/list/view/search）に効く。
-    night_watch_flags_only_single() {
-      local rest="$1" allowed="$2" tok
-      local -a tokens allowed_arr
-      read -ra tokens <<<"$rest"
-      read -ra allowed_arr <<<"$allowed"
-      for tok in "${tokens[@]}"; do
-        case "$tok" in
-          -*)
-            local ok=0 a
-            for a in "${allowed_arr[@]}"; do
-              [ "$tok" = "$a" ] && ok=1 && break
-            done
-            [ "$ok" -eq 1 ] || return 1
-            ;;
-        esac
-      done
-      return 0
-    }
-
-    night_watch_flags_only() {
-      local rest="$1" allowed="$2"
-      night_watch_flags_only_single "$rest" "$allowed" || return 1
-      night_watch_flags_only_single "$(night_watch_unquote "$rest")" "$allowed" || return 1
-      return 0
-    }
 
     night_watch_allowed=0
     case "$COMMAND" in
@@ -311,36 +264,25 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "gh issue create "*)
-        night_watch_flags_only "${COMMAND#"gh issue create "}" "--title --body --label --repo" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/board-issue.mjs sync" | "node scripts/night-watch/dod-candidate.mjs select")
+        # Step 1（盤面起票・前日盤面 close）・Step 4（DoD候補検索・コメント）の
+        # wrapper。動的引数を一切取らない完全一致コマンドで、値の組み立ては
+        # script 内部（JST 日付計算・gh issue list の結果からの前日 issue
+        # 選定）が担う。close 対象を Claude が argv で指定する余地が無いため、
+        # 旧 thread #1（P1: close 対象を前日の盤面 issue に限定する）を構造的に
+        # 満たす。
+        night_watch_allowed=1
         ;;
-      "gh issue comment "*)
-        night_watch_flags_only "${COMMAND#"gh issue comment "}" "--body --repo" \
-          && night_watch_allowed=1
-        ;;
-      "gh issue close "*)
-        # night-watch v2（#2291）で追加。盤面 issue の起票・close を Routine が
-        # 自律実行できるようにするための positive allowlist。close できる issue の
-        # 番号自体はここでは検査しない（トークン単位の flag 判定という guard の
-        # 設計と同じ粒度 — 「どの issue か」は layer1 token scope（issues:write）が
-        # 既に許容している範囲で、layer3 はコマンド形状の逸脱だけを見る）。
-        night_watch_flags_only "${COMMAND#"gh issue close "}" "--repo --comment" \
-          && night_watch_allowed=1
-        ;;
-      "gh issue list"*)
-        # --json は night-watch v2 で追加（盤面 issue の起票済み判定・前日issue
-        # 特定に number/title/body を構造化取得するため）。
-        night_watch_flags_only "${COMMAND#"gh issue list"}" "--repo --state --search --label --json" \
-          && night_watch_allowed=1
-        ;;
-      "gh issue view "*)
-        night_watch_flags_only "${COMMAND#"gh issue view "}" "--repo --json" \
-          && night_watch_allowed=1
-        ;;
-      "gh search issues "*)
-        night_watch_flags_only "${COMMAND#"gh search issues "}" "--repo --state --search" \
-          && night_watch_allowed=1
+      "node scripts/night-watch/alert-issue.mjs report "*)
+        # Step 3（nightwatch(check-id) issue の起票・追記）の wrapper。動的な
+        # check-id・実測値が要るため完全一致にはできないが、値は script 内部で
+        # execFile の argv 要素として gh へ渡り、shell を経由しないため、この
+        # 節で flag 単位の検査を重ねる必要が無い（値の形の検証は wrapper 内部の
+        # 責務。scripts/night-watch/alert-issue.mjs 参照）。ここで守るのは
+        # 「本当に node scripts/night-watch/alert-issue.mjs report <...> の
+        # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
+        # （本 if ブロック冒頭）が既にそれを保証している。
+        night_watch_allowed=1
         ;;
     esac
 

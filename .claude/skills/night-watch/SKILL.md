@@ -44,16 +44,20 @@ fresh session で以下を順に実施する。**価値判断・修正・裁量�
 
 ### Step 1: 盤面起票
 
-当日の日次盤面 issue を起票する。**テンプレ本体の正本は `dispatch` skill 操作C §日次盤面issueの起票**（複製しない。ここでは実行手順のみ定める）。
+`node scripts/night-watch/board-issue.mjs sync` を実行する。**テンプレ本体の正本は `dispatch` skill 操作C §日次盤面issueの起票**（複製しない。wrapper 内の `BOARD_BODY_TEMPLATE` はその実行用の写し）。
+
+wrapper 内部の処理（引数は取らない。判定・組み立てはすべて script 側の責務）:
 
 1. `gh issue list --repo Dayopt/dayopt --state open --label type:board --json number,title,body` で現在 open な盤面 issue を確認する
-2. 応答に本日 JST の日付を含むタイトル「盤面 YYYY-MM-DD」が既にあれば、**起票済みとみなしてこの Step を skip**（指揮台の手動起票などとの重複を避け、冪等に倒す）
+2. 応答に本日 JST の日付を含むタイトル「盤面 YYYY-MM-DD」が既にあれば、**起票済みとみなして skip**（指揮台の手動起票などとの重複を避け、冪等に倒す）
 3. 無ければ、応答の中から前日以前の open な盤面 issue（通常 1 件）を探す
    - 見つかった場合: その `body` から `## 1. 今週の最優先` セクションの内容を抜き出す（当日 issue の §1 コピー元にする）
    - 見つからない場合（初回起票直後など）: §1 は空のまま起票する
-4. `gh issue create --title "盤面 YYYY-MM-DD" --body "<dispatch skill のテンプレ本文>" --label type:board --repo Dayopt/dayopt` で当日 issue を起票する。§1 は手順3の内容、§3〜§5 の検索リンクは当日 JST 日境界で埋める
-5. 前日以前の issue が見つかっていれば `gh issue close <番号> --repo Dayopt/dayopt --comment "本日分の盤面 issue へ移行: #<新issue番号>"` で close する
+4. `gh issue create --repo Dayopt/dayopt --title "盤面 YYYY-MM-DD" --body <body> --label type:board` で当日 issue を起票する。§1 は手順3の内容、§3〜§5 の検索リンクは当日 JST 日境界で埋める
+5. 前日以前の issue が見つかっていれば、それだけを `gh issue close <番号> --repo Dayopt/dayopt --comment "本日分の盤面 issue へ移行: #<新issue番号>"` で close する（close 対象は wrapper が自分の検索結果から選んだ issue に限定され、呼び出し元が issue 番号を指定する余地は無い）
 6. この Step の失敗（API エラー等）は以降の Step を止めない（fail-open）。失敗時は Step 5（運行記録）に「盤面起票失敗: <エラー概要>」を残す。盤面起票の欠落は指揮台の朝 sweep（[#2256](https://github.com/Dayopt/dayopt/issues/2256)）が backstop として拾う
+
+**wrapper 化の理由（v2、[#2291](https://github.com/Dayopt/dayopt/issues/2291) 再設計）**: 旧実装は `gh issue create/close` を Bash tool から直接呼び、動的な本文（blockquote `>` や inline-code の backtick を含む正本テンプレ）が guard の redirect / `is_single_simple_command` 検査に触れて毎回 block されていた（自ガード衝突）。本文の組み立てを node script 内部に移し、`execFileSync` の argv 要素として gh へ渡すことで、値の中身が guard の shell 文字列検査に触れなくなる。詳細は §権限の構造的強制 参照。
 
 ### Step 2: 観測を実行する
 
@@ -73,16 +77,20 @@ fresh session で以下を順に実施する。**価値判断・修正・裁量�
 
 ### Step 3: 異常があれば起票または追記する
 
-Step 2 の 6 check-id すべてを対象に、check-id ごとに次を行う（**check-id 単位で 1 issue**。同一 check-id 内の複数件の異常は 1 issue に列挙する。例: dependabot alerts が同時に3件増えても issue は1件、heavy-red で E2E と Web E2E が両方 failure でも issue は1件）:
+Step 2 の 6 check-id すべてを対象に、異常があった check-id ごとに `node scripts/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-<番号> <Sentry issue URL>"]` を実行する（**check-id 単位で 1 issue**。同一 check-id 内の複数件の異常は 1 issue に列挙する。例: dependabot alerts が同時に3件増えても issue は1件）。渡す flag は check-id の kind ごとに決まる（`docs-check` / `deadcode` は exit-code kind で追加 flag 不要、`docs-coverage` / `dependabot-alerts` は `--actual`、`heavy-red` は `--evidence-url`、`sentry-new` は `--count` + `--evidence`。詳細は `scripts/night-watch/alert-issue.mjs` の `CHECK_DEFINITIONS`）。
 
-1. `gh search issues --repo Dayopt/dayopt --state open --search "nightwatch(<check-id>): in:title"` で既存 open issue を検索する
+wrapper 内部の処理:
+
+1. `gh issue list --repo Dayopt/dayopt --state open --search "nightwatch(<check-id>): in:title" --json number,title` で既存 open issue を検索する
 2. **検索コマンドがエラーで失敗したら、起票しない**（fail closed。原因不明のまま重複起票するリスクを避ける。Step 5 に「<check-id>: dedup検索失敗のため起票見送り」と記録する)
-3. 既存 open issue があれば `gh issue comment` で実測値・閾値・再現コマンドを追記する
-4. 無ければ `gh issue create` で新規起票する（テンプレートは下記）
+3. 既存 open issue があればコメントで実測値・閾値・再現コマンドを追記する
+4. 無ければ新規起票する（テンプレートは下記。タイトルは `CHECK_DEFINITIONS` の固定文言のみを使い、Claude が渡す自由文字列を混ぜない）
 5. **1 run あたりの起票上限は3件（6 check-id 合計）。** 超過分は起票せず、Step 5 の運行記録コメントに集約して報告する（誤登録・想定外の大量検出を機械的に減衰させるため）
 6. ラベルは既存体系のみ使う（`type:chore` / `area:operations` / `priority:p2` を既定とする。新ラベルは作らない）。milestone は付けない（着手時に指揮台が付与する既存運用に従う）
 
-**起票テンプレート**:
+**`--actual` / `--evidence-url` / `--count` / `--evidence` の値は wrapper 内部で形を検証する**（数字のみ / 既知の GitHub Actions run URL のみ / `DAYOPT-<番号> <Sentry issue URL>` の空白区切りペアのみ）。Sentry issue の生 title / culprit / message はこの検証を通らないため、§守ること の禁止（raw title/culprit/message を issue 本文へ転記しない）が機械的に強制される。
+
+**起票テンプレート**（wrapper が組み立てる。手で書かない）:
 
 ```markdown
 ## night-watch 検出: <check-id>
@@ -95,16 +103,20 @@ Step 2 の 6 check-id すべてを対象に、check-id ごとに次を行う（*
 baseline は `.claude/skills/night-watch/baseline.json` に固定。更新は通常の PR レビューでのみ行う。
 ```
 
-タイトル: `nightwatch(<check-id>): <一言概要>`
+タイトル: `nightwatch(<check-id>): <CHECK_DEFINITIONS の固定文言>`
 
 ### Step 4: DoD 監査候補の乱数選定（v2 追加）
 
-`dispatch` skill 操作C §ランダム抽出監査 の**候補提示のみ**を夜勤へ移す（監査そのものは引き続き User が行う。指揮台/夜勤は候補を提示するだけで採否を判断しない）。
+`dispatch` skill 操作C §ランダム抽出監査 の**候補提示のみ**を夜勤へ移す（監査そのものは引き続き User が行う。指揮台/夜勤は候補を提示するだけで採否を判断しない）。`node scripts/night-watch/dod-candidate.mjs select` を実行する。
 
-1. `gh search issues --repo Dayopt/dayopt --state closed --search "is:pr is:merged merged:<前日JST日境界の日付>"` で前日 JST に merge された PR 一覧を取得する
-2. 0 件なら、Step 1 で起票/確認した当日盤面 issue へ `gh issue comment` で「DoD候補: 前日merge PR無し」の 1 行を残し、この Step を終了する
+wrapper 内部の処理（引数は取らない）:
+
+1. `gh pr list --repo Dayopt/dayopt --search "is:merged merged:<前日JST日境界レンジ>" --state merged --json number,title --limit 30` で前日 JST に merge された PR 一覧を取得する
+2. 0 件なら、当日盤面 issue（Step 1 と同じ検索で自分で見つける）へ「DoD候補: 前日merge PR無し」の 1 行をコメントする
 3. 1 件以上あれば一覧から 1 本を選ぶ。選定に決定的なアルゴリズムは設けない（セッションごとの応答のばらつきをそのまま使う。低リスクな候補提示のため、再現可能な乱数生成器は不要と判断）
-4. `gh issue comment <当日盤面issue番号> --body "DoD監査候補: #<選定PR番号>（<PRタイトル>）" --repo Dayopt/dayopt` で当日盤面 issue へコメントする
+4. 当日盤面 issue へ「DoD監査候補: #<選定PR番号>（<PRタイトル>）」をコメントする
+
+**実装の是正（v2 再設計、2026-08-24 実測）**: 旧手順は `gh search issues --search "..."` を使っていたが、`gh search issues` には `--search` flag が存在せず（`unknown flag: --search`）常に失敗していた（PR #2309 未解決 thread #3）。加えて `merged:YYYY-MM-DD` の日単位指定は GitHub 検索の UTC 日境界になり、JST 0-9 時台の PR が前後の日に混入する（同 thread #4）。正しい形は `gh pr list --search "is:merged merged:<JST明示範囲>" --state merged`（`-S/--search` は `gh pr list` の正式 flag）で、`scripts/night-watch/dod-candidate.mjs` が実測確認済みの形で実装する。
 
 ### Step 5: 運行記録
 
@@ -133,11 +145,13 @@ baseline は `.claude/skills/night-watch/baseline.json` に固定。更新は通
 
 - **層1（GitHub token scope、登録時に指揮台が設定）**: night-watch 専用 token を `issues:write` + `contents:read` + `Dependabot alerts: read` + `Actions: read`（v2 追加。`gh run list` に必要）のみに scope する。`contents:write` / `pull_requests:write` / `administration` を持たせない。push・PR作成が API レベルで不可能になる。**Sentry CLI の認証は別トークン**（`SENTRY_AUTH_TOKEN`、1Password `sentry-cli-readonly` item、read-only scope）で、GitHub token scope には影響しない
 - **層2（Cloud trigger 設定、登録時に指揮台が設定）**: RemoteTrigger の `session_context.allowed_tools` から `Write` / `Edit` / `MultiEdit` / `NotebookEdit` を除外する。**model は Haiku を指定する**（v2 追加。夜勤の判定は exit code / 閾値比較のみで裁量が無いため Haiku の適性と一致する。RemoteTrigger 側で model 指定ができない場合は、prompt 冒頭に「軽量実行（判定のみ、裁量なし）」と明記して代替し、実際に使われた model の構成比を月次ガーデニングで実測検証する）
-- **層3（repo hook、本実装）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる **allowlist**（denylist ではない — `.claude/rules/workflow.md` §同型指摘の打ち切りの「denylist をやめて allowlist にする」に従う）。引数不要な固定コマンド（checklist.md の4コマンド `docs:check` / `docs:coverage` / `quality:deadcode:ci`、自己検証の2コマンド `echo $DAYOPT_NIGHT_WATCH` / `gh api .../permissions`、v2 で追加した heavy-post-merge 赤確認・Sentry スキャンの2コマンド）は **完全一致**でのみ許可する（末尾ワイルドカードは配下バイナリの書込フラグ `--fix` `--output=` 等を継承してしまうため使わない、2026-08-19 内製クロスレビューで実測確認）。`gh issue create/comment/list/view/close`（`close` は v2 追加、盤面 issue の close 用）と `gh search issues` は動的引数（タイトル・本文・issue番号・検索語）が要るため、コマンドごとに許可 flag を列挙した positive allowlist（トークン単位で `-` から始まる語は許可 flag と完全一致しない限り拒否）で判定する。`gh api repos/Dayopt/dayopt/dependabot/alerts` も checklist.md の固定コマンドと完全一致でのみ許可する。`>` / `<` を含むコマンドは redirect によるファイル書き込みを防ぐため無条件で拒否する。read-only git（status/log/diff等）は checklist が実際には使わないため allowlist に含めない（未使用の攻撃面は追加せず、必要になった時に個別評価する）。それ以外は fail closed。env var が無いセッション（通常の全レーン）には一切影響しない
+- **層3（repo hook、本実装）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる **allowlist**（denylist ではない — `.claude/rules/workflow.md` §同型指摘の打ち切りの「denylist をやめて allowlist にする」に従う）。引数不要な固定コマンド（checklist.md の4コマンド `docs:check` / `docs:coverage` / `quality:deadcode:ci`、自己検証の2コマンド `echo $DAYOPT_NIGHT_WATCH` / `gh api .../permissions`、v2 で追加した heavy-post-merge 赤確認・Sentry スキャンの2コマンド）は **完全一致**でのみ許可する（末尾ワイルドカードは配下バイナリの書込フラグ `--fix` `--output=` 等を継承してしまうため使わない、2026-08-19 内製クロスレビューで実測確認）。`gh api repos/Dayopt/dayopt/dependabot/alerts` も checklist.md の固定コマンドと完全一致でのみ許可する。`>` / `<` を含むコマンドは redirect によるファイル書き込みを防ぐため無条件で拒否する。read-only git（status/log/diff等）は checklist が実際には使わないため allowlist に含めない（未使用の攻撃面は追加せず、必要になった時に個別評価する）。それ以外は fail closed。env var が無いセッション（通常の全レーン）には一切影響しない
+
+  **動的な値（issue タイトル・本文・検索クエリ・close 対象）が要る書き込みは gh を直接許可せず、`scripts/night-watch/*.mjs` の wrapper だけを許可する**（v2 再設計、[#2291](https://github.com/Dayopt/dayopt/issues/2291)。PR #2309 未解決 thread #5 の是正）。旧実装は `gh issue create/comment/list/view/close` と `gh search issues` を、コマンドごとに許可 flag を列挙した positive allowlist（トークン単位で `-` から始まる語は許可 flag と完全一致しない限り拒否）で判定していたが、quote/backslash を削るだけの二重検査では shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}` 等）を再現できず、2026-08-21 に未許可 flag（`--body-file`）を smuggle する攻撃が実測された。wrapper 方式では `node scripts/night-watch/board-issue.mjs sync` / `node scripts/night-watch/dod-candidate.mjs select` を完全一致で、`node scripts/night-watch/alert-issue.mjs report <check-id> ...` を固定 prefix のみで許可する（flag 単位の検証はしない）。値は wrapper 内部で `execFileSync` の argv 要素として gh へ直接渡るため shell を経由せず、guard は「本当にこの固定 script を単純呼び出ししているか」（`is_single_simple_command` + no-redirect、本節冒頭の既存規則）だけを見れば足りる。値の形（数字のみ・既知の URL 形式のみ・`DAYOPT-<番号> <URL>` の空白区切りペアのみ）は各 wrapper 内部の責務（`scripts/night-watch/*.test.ts` が契約を固定する）
 
 層1・2は登録ミスを機械的に検出できない外部状態のため、**層3だけが CI で継続的に検証される担保**。Step 0 の自己検証と合わせて、層1・2の設定漏れを「無音の素通り」から「観測可能な異常」に変える。
 
-**登録前提（v2 追加）**: Routine 登録時に、層2の `session_context.allowed_tools` が `Bash(op run ...)` と `Bash(gh run list ...)` を含むことを dry-run で確認する。含まないと Step 2 の `sentry-new`（`op run`）/ `heavy-red`（`gh run list`）が unattended 実行時に prompt 待ちで停止する。層2 allowed_tools の具体的な登録内容・repo permissions との重なりの検証自体は登録ゲート（[#2231-A](https://github.com/Dayopt/dayopt/issues/2231)）の scope。
+**登録前提（v2 追加）**: Routine 登録時に、層2の `session_context.allowed_tools` が `Bash(op run ...)` と `Bash(gh run list ...)` と `Bash(node scripts/night-watch/*.mjs ...)` を含むことを dry-run で確認する。含まないと Step 2 の `sentry-new`（`op run`）/ `heavy-red`（`gh run list`）、または Step 1/3/4 の wrapper 呼び出しが unattended 実行時に prompt 待ちで停止する。層2 allowed_tools の具体的な登録内容・repo permissions との重なりの検証自体は登録ゲート（[#2231-A](https://github.com/Dayopt/dayopt/issues/2231)）の scope。
 
 ## 故障モード
 
