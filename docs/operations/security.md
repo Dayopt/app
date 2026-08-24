@@ -201,6 +201,8 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 secret 検出はこれとは別で、**全 PR で自動実行される**。`docs-guard.yml`（job 名 `docs & secrets guard`、path filter なし）が gitleaks で base ref からの差分を、`pnpm secrets:check` で tracked tree 全体を見る。加えて `ci.yml` がビルド後の client bundle への混入を grep する。ローカルでは `pnpm check` に `secrets:check` が含まれる（CI 側は docs-guard の 1 回のみで、二重実行はしない）。
 
+**2026-08-24 以降、`.husky/pre-commit` も gitleaks で staged 差分をスキャンする**（`gitleaks protect --staged`、CI より前に無料で落とす層。`.claude/rules/workflow.md` §Pause point 参照）。前提として `brew install gitleaks` が必要（`op`/`gh` と同じ host 常駐 CLI 前提、`.claude/rules/mcp-usage.md` と同じ運用）。対話環境で未インストールだと commit が hard fail する。**ローカルの gitleaks バージョンは brew の floating latest（本記述時点で 8.30.1）、CI は `docs-guard.yml` の `GITLEAKS_VERSION`（本記述時点で 8.9.0）に sha256 で pin している。この 2 つは意図的に同期させていない**（ローカルはあくまで pre-CI の高速フィルタで、CI が最終網であるため。バージョン固定を hook に持たせると `brew upgrade` のたびに壊れるブリトルさの方が割に合わないと判断した）。**非対話環境（`CI` 変数設定 or TTY 無し、例: 月次 gardening 自動パートの cloud Routine）で gitleaks が無い場合は hard fail せず warning のみで commit を続行する**（brew の無い実行環境で全 commit が回復不能に詰まるのを避けるため。secret 検出は CI の docs-guard.yml が最終網として残るため失われない）。
+
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
 所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。

@@ -94,7 +94,7 @@ claude mcp add-json usability-probe-browser "{\"command\":\"npx\",\"args\":[\"-y
 
 # 使い終わったら（登録解除 + storageState ファイル削除の両方）
 claude mcp remove usability-probe-browser -s user
-rm -rf "$(git rev-parse --show-toplevel)/apps/product/.probe"
+cd "$(git rev-parse --show-toplevel)/apps/product" && rm -rf .probe
 ```
 
 登録前に `usability-probe-setup.ts`（`pnpm --filter @dayopt/product probe:setup`）で storageState を生成しておくこと。生成せずに登録すると `--storage-state` のパスが存在せず、未認証のブラウザが起動する。

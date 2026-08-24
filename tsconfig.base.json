@@ -5,6 +5,13 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "target": "ES2022",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // packages/* と scripts/ の未使用 import 検出用（#2362）。既知の穴
+    // （記録のみ、対応不要・merge 前クロスレビュー指摘）: apps/product の
+    // tsconfig.test.json / tsconfig.integration.json は独自にこの値を
+    // false へ上書きしており、そちらの test glob には検出が効かない。
+    // apps は tsconfig.base.json を extends していない（この2ファイルの
+    // 上書きも継承経路とは無関係）ため、本チケットの変更範囲外の既存特性。
+    "noUnusedLocals": true
   }
 }
