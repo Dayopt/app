@@ -39,8 +39,10 @@ import { useCreateActivity } from '../hooks/useActivityMutations';
 import { useCreateCategory } from '../hooks/useCategoryMutations';
 import { ACTIVITY_NAME_MAX_LENGTH, getCategoryColorClasses } from '../lib/category-colors';
 import { ActivityIcon } from './ActivityIcon';
+import { CategoryAppearancePickerRow } from './CategoryAppearanceMenuItems';
 
 import type { CreatedActivityPayload } from '@/lib/stores/useShellStore';
+import type { CategoryColorName } from '../lib/category-colors';
 import type { Activity, Category } from '../types';
 
 interface ActivityCreateModalProps {
@@ -74,6 +76,8 @@ export function ActivityCreateModal({
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState<CategoryColorName | null>(null);
+  const [newCategoryIcon, setNewCategoryIcon] = useState<string | null>(null);
   const [categorySubmitting, setCategorySubmitting] = useState(false);
 
   // モーダル open 時に初期値を同期
@@ -87,6 +91,8 @@ export function ActivityCreateModal({
       setCategoryPopoverOpen(false);
       setCreatingCategory(false);
       setNewCategoryName('');
+      setNewCategoryColor(null);
+      setNewCategoryIcon(null);
       setCategorySubmitting(false);
     });
   }, [open, initialCategoryId]);
@@ -185,18 +191,30 @@ export function ActivityCreateModal({
     if (categorySubmitting || trimmedNewCategoryName.length === 0) return;
     setCategorySubmitting(true);
     try {
-      const created = await createCategoryMutation.mutateAsync({ name: trimmedNewCategoryName });
+      const created = await createCategoryMutation.mutateAsync({
+        name: trimmedNewCategoryName,
+        ...(newCategoryColor ? { color: newCategoryColor } : {}),
+        ...(newCategoryIcon ? { icon: newCategoryIcon } : {}),
+      });
       // 作成直後にそのまま選択し、フォームを閉じてカテゴリー選択に戻る
       setCategoryId(created.id);
       setCreatingCategory(false);
       setNewCategoryName('');
+      setNewCategoryColor(null);
+      setNewCategoryIcon(null);
       setCategoryPopoverOpen(false);
     } catch {
       // mutation hook 側で toast 済み。フォームは開いたまま
     } finally {
       setCategorySubmitting(false);
     }
-  }, [categorySubmitting, trimmedNewCategoryName, createCategoryMutation]);
+  }, [
+    categorySubmitting,
+    trimmedNewCategoryName,
+    newCategoryColor,
+    newCategoryIcon,
+    createCategoryMutation,
+  ]);
 
   const handleNewCategoryKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -241,6 +259,8 @@ export function ActivityCreateModal({
               if (!next) {
                 setCreatingCategory(false);
                 setNewCategoryName('');
+                setNewCategoryColor(null);
+                setNewCategoryIcon(null);
               }
             }}
           >
@@ -281,6 +301,12 @@ export function ActivityCreateModal({
             <PopoverContent align="start" className="w-56 p-1">
               {creatingCategory ? (
                 <div className="flex flex-col gap-2 p-2">
+                  <CategoryAppearancePickerRow
+                    color={newCategoryColor}
+                    onColorChange={setNewCategoryColor}
+                    icon={newCategoryIcon}
+                    onIconChange={setNewCategoryIcon}
+                  />
                   <Input
                     autoFocus
                     value={newCategoryName}
@@ -298,6 +324,8 @@ export function ActivityCreateModal({
                       onClick={() => {
                         setCreatingCategory(false);
                         setNewCategoryName('');
+                        setNewCategoryColor(null);
+                        setNewCategoryIcon(null);
                       }}
                       disabled={categorySubmitting}
                     >
