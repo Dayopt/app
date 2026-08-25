@@ -195,7 +195,51 @@ function fetchCurrentMilestoneTitle({ execFileImpl } = {}) {
   return openMilestones[0]?.title ?? null;
 }
 
-const PENDING_OUTCOMES = new Set(['', 'PENDING', 'IN_PROGRESS', 'QUEUED']);
+/**
+ * `scripts/git/finish-branch.sh` の `is_pending`（jq）と同じ判定。
+ * `status` / `state` のいずれかが実行中系の値なら true。
+ */
+function isPendingCheck(check) {
+  const status = String(check.status ?? '').toLowerCase();
+  const state = String(check.state ?? '').toLowerCase();
+  return (
+    ['in_progress', 'queued', 'pending', 'waiting', 'requested'].includes(status) ||
+    ['pending', 'expected'].includes(state)
+  );
+}
+
+/**
+ * `scripts/git/finish-branch.sh` の `is_decisive`（jq）と同じ判定。
+ * `skipped` / `neutral` / `stale` は decisive ではない（同名 check の古い
+ * failure がこれらの後着で隠れるのを防ぐための区別）。
+ */
+function isDecisiveCheck(check) {
+  const conclusion = String(check.conclusion ?? '').toLowerCase();
+  const state = String(check.state ?? '').toLowerCase();
+  return (
+    ['success', 'failure', 'cancelled', 'timed_out'].includes(conclusion) ||
+    ['success', 'failure', 'error'].includes(state)
+  );
+}
+
+/**
+ * 1 check 分の group から代表 entry を 1 件選ぶ。`finish-branch.sh` の
+ * ROLLUP jq（(1) pending 優先 (2) decisive entry の中から `startedAt` 最新、
+ * decisive が無ければ全 entry の中から `startedAt` 最新）と同じ規則。
+ * `startedAt` が無い entry は空文字列扱いで比較する。同点（`startedAt` 無し
+ * の entry 同士など）は **配列内の後着を優先**する（`>=` 比較。jq の
+ * `max_by` と同じ tie-break で、rollup 配列は再実行 entry が末尾に追加
+ * される想定と整合する）。
+ */
+function pickRepresentative(entries) {
+  const pending = entries.find(isPendingCheck);
+  if (pending) return pending;
+  const decisive = entries.filter(isDecisiveCheck);
+  const pool = decisive.length > 0 ? decisive : entries;
+  return pool.reduce((latest, current) =>
+    String(current.startedAt ?? '') >= String(latest.startedAt ?? '') ? current : latest,
+  );
+}
 
 /**
  * PR の CI rollup を簡易要約する。`gh pr list --json statusCheckRollup` の
@@ -208,11 +252,19 @@ const PENDING_OUTCOMES = new Set(['', 'PENDING', 'IN_PROGRESS', 'QUEUED']);
  * check を畳まない（`gh pr checks` は畳む）ため、同一 head SHA で 2 回 run
  * が走ると古い run の failure/cancelled を数え続ける（`.claude/rules/
  * workflow.md` §Worktree運用 が明文化する既知の罠、`scripts/git/
- * finish-branch.sh` に同型実装あり。Codex レビュー指摘・指揮台採用、
- * PR #2380。完全移植ではなく簡易版: check 単位で group し、pending 優先
- * → group内の最後（最新）の decisive entry を採る）。名前を特定できない
- * entry は畳まず単独 group のまま残す（identity 不明を fail-closed 側へ
- * 倒す。finish-branch.sh と同じ原則）。
+ * finish-branch.sh` に正解実装あり。Codex レビュー指摘・指揮台採用、
+ * PR #2380）。
+ *
+ * **`finish-branch.sh` の ROLLUP jq と揃える**（当初の簡易実装は「group
+ * 内の配列末尾を採る」だけで decisive フィルタが無く、`FAILURE` →
+ * （後着の）`SKIPPED` の順で再実行された場合に skipped が代表になり赤を
+ * 隠す回帰を作っていた —— delta re-review・指揮台差し戻しで発覚・修正）:
+ * check 単位で group し、**(1) pending が 1 件でもあれば pending を代表に
+ * する (2) それ以外は decisive（success/failure/cancelled/timed_out）な
+ * entry の中から `startedAt` 最新を採る。decisive な entry が無ければ
+ * 全 entry の中から `startedAt` 最新を採る**。名前を特定できない entry は
+ * 畳まず単独 group のまま残す（identity 不明を fail-closed 側へ倒す。
+ * finish-branch.sh と同じ原則）。
  */
 export function summarizeCheckState(rollup) {
   if (!Array.isArray(rollup) || rollup.length === 0) return '不明';
@@ -222,17 +274,14 @@ export function summarizeCheckState(rollup) {
     const key =
       name === ''
         ? `__unidentified_${index}`
-        : `${check.__typename ?? ''}\u0000${check.workflowName ?? ''}\u0000${name}`;
+        : `${check.__typename ?? ''} ${check.workflowName ?? ''} ${name}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(check);
   });
-  const latestOutcomes = Array.from(groups.values()).map((entries) => {
-    const outcomes = entries.map((c) => String(c.conclusion ?? c.state ?? '').toUpperCase());
-    if (outcomes.some((o) => PENDING_OUTCOMES.has(o))) return 'PENDING';
-    return outcomes[outcomes.length - 1];
-  });
-  if (latestOutcomes.some((o) => o === 'PENDING')) return '実行中';
-  const bad = latestOutcomes.filter((o) => !['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(o));
+  const representatives = Array.from(groups.values()).map(pickRepresentative);
+  if (representatives.some(isPendingCheck)) return '実行中';
+  const outcomes = representatives.map((c) => String(c.conclusion ?? c.state ?? '').toUpperCase());
+  const bad = outcomes.filter((o) => !['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(o));
   return bad.length === 0 ? 'green' : `red(${bad.length})`;
 }
 
