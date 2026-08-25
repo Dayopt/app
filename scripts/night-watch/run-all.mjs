@@ -429,11 +429,12 @@ function mapAlertResultToOutcome(checkId, alertResult) {
  * `results` / `baselineRecommend` へ書き込む。
  * @param {string} checkId
  * @param {{ status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome
+ * @param {{ execFileImpl?: ExecFileImpl, failed: string[], alertPostFailed: string[], results: unknown[], baselineRecommend: string[], runStatePath?: string }} deps
  */
 function processCheckOutcome(
   checkId,
   outcome,
-  { execFileImpl, failed, results, baselineRecommend, runStatePath },
+  { execFileImpl, failed, alertPostFailed, results, baselineRecommend, runStatePath },
 ) {
   if (outcome.status === 'fetch-failed') {
     failed.push(checkId);
@@ -473,6 +474,14 @@ function processCheckOutcome(
   } catch (error) {
     console.error(`::error::${checkId} の alert 投稿に失敗しました:`, error);
     failed.push(checkId);
+    // 赤を検出したのに alert issue を起票できなかった、という夜勤の主目的
+    // に反する最悪の組み合わせ。`failed` への計上（観測未完了扱い・板note
+    // の「一部取得失敗」表示）は維持しつつ、job の成否には別途この配列で
+    // 反映する（Codex レビュー指摘・指揮台採用、PR #2380）。
+    // `runNightWatch` 側で Step 5（運行記録）の投稿後に非 0 exit へ倒す —
+    // Step 5 の記録自体は「alert 投稿が失敗した」事実も含めて必ず残す
+    // ため、先に exitCode を立てて Step 5 をスキップさせない。
+    alertPostFailed.push(checkId);
   }
 }
 
@@ -547,6 +556,7 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
   const board = runStep1Board({ execFileImpl });
 
   const failed = [];
+  const alertPostFailed = [];
   const results = [];
   const baselineRecommend = [];
 
@@ -605,6 +615,7 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     processCheckOutcome(checkId, checkOutcomes[checkId], {
       execFileImpl,
       failed,
+      alertPostFailed,
       results,
       baselineRecommend,
       runStatePath,
@@ -656,7 +667,12 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     console.error('::warning::朝編成ブリーフの投稿に失敗しました（非致命）:', error);
   }
 
-  if (step5Failed || dod4Failed) {
+  // alert 投稿失敗（赤を検出したのに alert issue を起票できなかった）は
+  // Step 5（運行記録）の投稿後に判定する。この順序が重要 — 先に exitCode
+  // を立てて Step 5 の実行自体を止めてしまうと、「alert 投稿が失敗した」
+  // という事実そのものが常設運行記録 issue に残らなくなる（Codex レビュー
+  // 指摘・指揮台採用、PR #2380）。
+  if (step5Failed || dod4Failed || alertPostFailed.length > 0) {
     process.exitCode = 1;
   }
 

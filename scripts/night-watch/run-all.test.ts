@@ -416,9 +416,37 @@ describe('runNightWatch', () => {
         match: (file, args) => file === 'gh' && has(args, 'pr', 'list', '--search'),
         respond: () => JSON.stringify([]), // 前日merge PR無し
       },
+      // Step 6（朝編成ブリーフ、#2370）が呼ぶ観測系 gh コマンド。
+      // Codex レビュー指摘（指揮台採用、PR #2380）: これらが未 mock だと
+      // `runMorningBrief` が `unmocked command` を投げ、非致命 catch に
+      // 握られたまま test が green になる（Step 6 について何も検証しない
+      // 見せかけの green）。
+      {
+        // hasExistingMorningBrief（冪等ガード）: 既存ブリーフ無し
+        match: (file, args) => file === 'gh' && args[0] === 'issue' && args[1] === 'view',
+        respond: () => JSON.stringify({ comments: [] }),
+      },
+      {
+        match: (file, args) => file === 'gh' && has(args, 'issue', 'list', 'status:ready'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file, args) => file === 'gh' && has(args, 'issue', 'list', 'status:in-progress'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        // fetchOpenPrs（Step 6）。前日merge PR検索（--search 付き）とは別物。
+        match: (file, args) =>
+          file === 'gh' && args[0] === 'pr' && args[1] === 'list' && !has(args, '--search'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file, args) => file === 'gh' && has(args, 'api', 'milestones'),
+        respond: () => JSON.stringify([]),
+      },
       {
         match: (file, args) => file === 'gh' && args[0] === 'issue' && args[1] === 'comment',
-        respond: () => '', // dod-candidate / run-log の comment 投稿（body は都度確認しない）
+        respond: () => '', // dod-candidate / run-log / Step6 の comment 投稿（body は都度確認しない）
       },
       {
         match: (file, args) => file === 'pnpm' && args[0] === 'docs:check',
@@ -487,6 +515,21 @@ describe('runNightWatch', () => {
     );
     expect(createCalls).toHaveLength(0);
     expect(process.exitCode).not.toBe(1);
+
+    // Step 6（朝編成ブリーフ）が当日盤面 issue（TODAY_BOARD_ISSUE）へ実際に
+    // 投稿されたことまで確認する（Codex レビュー指摘・指揮台採用、PR
+    // #2380。unmocked command → 非致命 catch に握られて「何も検証しない
+    // green」になっていた穴を塞ぐ）。
+    const briefCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'comment' &&
+        c.args[2] === String(TODAY_BOARD_ISSUE) &&
+        (c.args[c.args.indexOf('--body') + 1] ?? '').includes('## 朝編成ブリーフ'),
+    );
+    expect(briefCall).toBeDefined();
+
     process.exitCode = 0;
   });
 
@@ -531,6 +574,57 @@ describe('runNightWatch', () => {
     );
     const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
     expect(body).toContain('起票/追記: #12345（docs-check）');
+    process.exitCode = 0;
+  });
+
+  // Codex レビュー指摘（指揮台採用、PR #2380）: 赤を検出したのに alert
+  // issue の起票自体が失敗した場合、従来は failed[] に積まれるだけで
+  // process.exitCode は step5Failed/dod4Failed でしか立たず、Step 5 が
+  // 無事なら job は緑のまま終わっていた。夜勤の主目的（赤の可視化）が
+  // 壊れても検出できない設計だったのを、alert 投稿失敗を専用に追跡して
+  // 非 0 exit へ倒す。
+  it('赤を検出したのにalert issueの起票自体が失敗すると非0 exitになる（Step5の記録は妨げない）', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () => {
+          const error = new Error('command failed') as Error & { status: number };
+          error.status = 1;
+          return error;
+        },
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch(docs-check)'),
+        respond: () => JSON.stringify([]), // 既存 alert issue 無し → 新規起票を試みる
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'create',
+        respond: () => new Error('HTTP 500: Internal Server Error'), // alert issue 起票自体が失敗
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    // job は赤（alert 投稿失敗を検出可能にする）。
+    expect(process.exitCode).toBe(1);
+
+    // Step 5（運行記録）自体は実行を妨げられず、失敗した check-id は
+    // 「取得失敗」として運行記録へ残る（exitCode を先に立てて Step 5 の
+    // 実行を止めていないことの確認）。
+    const opsLogCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    );
+    expect(opsLogCall).toBeDefined();
+    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
+    expect(body).toContain('docs-check');
+
     process.exitCode = 0;
   });
 

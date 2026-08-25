@@ -8,6 +8,7 @@ import {
   MORNING_BRIEF_HEADING,
   runMorningBrief,
   sanitizeTitle,
+  summarizeCheckState,
 } from './morning-brief.mjs';
 
 const FULL_BODY = `## 背景
@@ -61,6 +62,20 @@ describe('judgeHandoffQuality', () => {
   it('複数見出しが同時に欠落すれば両方列挙する', () => {
     const body = '## 背景\n\n説明\n\n## やること\n\n手順\n';
     expectMissing(judgeHandoffQuality(body), ['## 注意', '## 検証']);
+  });
+
+  // Codex レビュー指摘（指揮台採用、PR #2380）: `^` アンカー無しだと H3
+  // （`### 背景`）や地の文中の部分文字列（`必要項目: ## 背景`）にも一致し、
+  // 必須の H2 セクションが実際には存在しないのに ready と誤判定していた。
+  it('見出しがH3（### 背景）しか無い場合、行頭のH2として一致させず incomplete のまま', () => {
+    const body = '### 背景\n\n説明\n\n## やること\n\n手順\n\n## 注意\n\n罠\n\n## 検証\n\ncheck\n';
+    expectMissing(judgeHandoffQuality(body), ['## 背景']);
+  });
+
+  it('地の文中に「## 背景」を含むテンプレ引用があっても、行頭見出しが無ければ incomplete のまま', () => {
+    const body =
+      '必要項目: ## 背景 / ## やること / ## 注意 / ## 検証\n\n## やること\n\n手順\n\n## 注意\n\n罠\n\n## 検証\n\ncheck\n';
+    expectMissing(judgeHandoffQuality(body), ['## 背景']);
   });
 });
 
@@ -372,5 +387,53 @@ describe('buildMorningBriefBody（title sanitize の統合確認）', () => {
     expect(body).toContain('正常なPRタイトル');
     expect(body).toContain('milestone 未付与（現行: v0.35.0）');
     expect(body).toContain('chip 下書き');
+  });
+});
+
+// Codex レビュー指摘（指揮台採用、PR #2380）: statusCheckRollup は同名
+// check を畳まない。同一 head SHA の再実行で古い failure/cancelled entry
+// が残ったまま新しい success entry が追加されるため、畳まずに走査すると
+// 実際には green な PR を CI:red と誤報告する。
+describe('summarizeCheckState', () => {
+  it('同名checkの再実行entryが混在していても、最新のdecisive entryだけで判定する（誤redを防ぐ）', () => {
+    const rollup = [
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'Static Checks', conclusion: 'FAILURE' },
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'Static Checks', conclusion: 'SUCCESS' },
+    ];
+    expect(summarizeCheckState(rollup)).toBe('green');
+  });
+
+  it('同名check再実行のうち最新が実行中なら実行中と判定する（pending優先）', () => {
+    const rollup = [
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'Static Checks', conclusion: 'FAILURE' },
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'Static Checks', conclusion: '' },
+    ];
+    expect(summarizeCheckState(rollup)).toBe('実行中');
+  });
+
+  it('別名の複数checkがそれぞれ最新successなら全体green', () => {
+    const rollup = [
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'A', conclusion: 'SUCCESS' },
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'B', conclusion: 'SUCCESS' },
+    ];
+    expect(summarizeCheckState(rollup)).toBe('green');
+  });
+
+  it('別名のcheckが1件でも最新failureならその件数だけred(N)にする', () => {
+    const rollup = [
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'A', conclusion: 'SUCCESS' },
+      { __typename: 'CheckRun', workflowName: 'CI', name: 'B', conclusion: 'FAILURE' },
+    ];
+    expect(summarizeCheckState(rollup)).toBe('red(1)');
+  });
+
+  it('name/contextを特定できないentryは畳まず単独group扱いにする（identity不明はfail-closed）', () => {
+    const rollup = [{ conclusion: 'SUCCESS' }, { conclusion: 'FAILURE' }];
+    expect(summarizeCheckState(rollup)).toBe('red(1)');
+  });
+
+  it('rollupが空/非配列なら不明を返す', () => {
+    expect(summarizeCheckState([])).toBe('不明');
+    expect(summarizeCheckState(undefined)).toBe('不明');
   });
 });

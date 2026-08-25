@@ -68,7 +68,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 1. `echo $DAYOPT_NIGHT_WATCH` が `1` であること（層3 hook allowlist、下記参照、が armed になっているかの確認）
 2. `gh api repos/Dayopt/dayopt --jq .permissions` を実行し、`push` / `admin` が true でないこと（手動代行に使う token の scope 確認）
 
-いずれかが想定外なら、checklist を一切実行せず `node scripts/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `env-failure write-token`（token に write 権限あり時）を実行して終了する。以降は §自動パート と同じ Step 1〜5 を手動で辿る（`node scripts/night-watch/run-all.mjs` をローカルで直接実行してもよい。secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。
+いずれかが想定外なら、checklist を一切実行せず `node scripts/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `env-failure write-token`（token に write 権限あり時）を実行して終了する。以降は §自動パート と同じ Step 1〜5 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。Step 1〜5 はそれぞれの個別 wrapper（`board-issue.mjs sync` / checklist コマンド / `alert-issue.mjs report ...` / `dod-candidate.mjs select` / `run-log.mjs ...`）で辿ること。
 
 **層3（repo hook）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
 

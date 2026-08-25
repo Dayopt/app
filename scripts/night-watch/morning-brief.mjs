@@ -39,6 +39,18 @@ function escapeRegExp(str) {
  * `dispatch` skill §`status:ready`の定義（機械判定）を実装する。issue 本文に
  * `HANDOFF_HEADINGS` の 4 見出しが揃い、各見出し配下（次の `## ` 見出しまで）
  * が空でない・`TBD` でないかを判定する。
+ *
+ * 見出しは**行頭**の `## ` のみを認識する（`^` アンカー + `m` フラグ、Codex
+ * レビュー指摘・指揮台採用、PR #2380）。アンカー無しだと `### 背景`（H3）や
+ * 「必要項目: ## 背景」のような地の文中の部分文字列にも一致し、必須の H2
+ * セクションが実際には存在しないのに `ready` と誤判定する。
+ *
+ * 見出し側の行頭判定には lookbehind `(?<=^|\n)` を使い、`m` フラグは付けない
+ * ——`m` フラグを付けると `$` も「各行末」に一致するようになり、見出し直後の
+ * 空行で `(?=\n## |$)` が空文字列にマッチしてしまう（一度実装して
+ * `judgeHandoffQuality` の全既存 test が壊れる形で自己発見・修正済み）。
+ * `$` は「文字列末尾のみ」に一致させたいため、見出し側だけを lookbehind で
+ * 行頭に限定する。
  * @param {string | null | undefined} body
  * @returns {{ status: 'ready' } | { status: 'incomplete', missing: string[] }}
  */
@@ -46,7 +58,7 @@ export function judgeHandoffQuality(body) {
   const text = body ?? '';
   const missing = [];
   for (const heading of HANDOFF_HEADINGS) {
-    const re = new RegExp(`${escapeRegExp(heading)}[^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)`);
+    const re = new RegExp(`(?<=^|\\n)${escapeRegExp(heading)}[^\\n]*\\n([\\s\\S]*?)(?=\\n## |$)`);
     const match = text.match(re);
     const content = match ? match[1].trim() : '';
     if (!match || content === '' || /^TBD$/i.test(content)) {
@@ -183,20 +195,44 @@ function fetchCurrentMilestoneTitle({ execFileImpl } = {}) {
   return openMilestones[0]?.title ?? null;
 }
 
+const PENDING_OUTCOMES = new Set(['', 'PENDING', 'IN_PROGRESS', 'QUEUED']);
+
 /**
  * PR の CI rollup を簡易要約する。`gh pr list --json statusCheckRollup` の
  * 個々のチェックは check-run（`conclusion`）と status-context（`state`）の
  * 混在で、フィールド名・大文字小文字は環境依存のため厳密な判定はしない
  * （merge 後の workflow_dispatch 手動検証で実データと突き合わせる、issue
  * #2370 の検証観点）。
+ *
+ * **同一 check 名を畳んでから判定する。** `statusCheckRollup` は同名
+ * check を畳まない（`gh pr checks` は畳む）ため、同一 head SHA で 2 回 run
+ * が走ると古い run の failure/cancelled を数え続ける（`.claude/rules/
+ * workflow.md` §Worktree運用 が明文化する既知の罠、`scripts/git/
+ * finish-branch.sh` に同型実装あり。Codex レビュー指摘・指揮台採用、
+ * PR #2380。完全移植ではなく簡易版: check 単位で group し、pending 優先
+ * → group内の最後（最新）の decisive entry を採る）。名前を特定できない
+ * entry は畳まず単独 group のまま残す（identity 不明を fail-closed 側へ
+ * 倒す。finish-branch.sh と同じ原則）。
  */
-function summarizeCheckState(rollup) {
+export function summarizeCheckState(rollup) {
   if (!Array.isArray(rollup) || rollup.length === 0) return '不明';
-  const outcomes = rollup.map((c) => String(c.conclusion ?? c.state ?? '').toUpperCase());
-  if (outcomes.some((o) => o === '' || o === 'PENDING' || o === 'IN_PROGRESS' || o === 'QUEUED')) {
-    return '実行中';
-  }
-  const bad = outcomes.filter((o) => !['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(o));
+  const groups = new Map();
+  rollup.forEach((check, index) => {
+    const name = check.name ?? check.context ?? '';
+    const key =
+      name === ''
+        ? `__unidentified_${index}`
+        : `${check.__typename ?? ''}\u0000${check.workflowName ?? ''}\u0000${name}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(check);
+  });
+  const latestOutcomes = Array.from(groups.values()).map((entries) => {
+    const outcomes = entries.map((c) => String(c.conclusion ?? c.state ?? '').toUpperCase());
+    if (outcomes.some((o) => PENDING_OUTCOMES.has(o))) return 'PENDING';
+    return outcomes[outcomes.length - 1];
+  });
+  if (latestOutcomes.some((o) => o === 'PENDING')) return '実行中';
+  const bad = latestOutcomes.filter((o) => !['SUCCESS', 'NEUTRAL', 'SKIPPED'].includes(o));
   return bad.length === 0 ? 'green' : `red(${bad.length})`;
 }
 
