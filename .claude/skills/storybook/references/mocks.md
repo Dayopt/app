@@ -78,15 +78,14 @@ parameters: {
 
 Story 切替時に自動リストア。レジストリに登録済みのストアのみ対応。
 
-### 登録済みストア（.storybook/mocks/stores.ts）
+### 登録済みストア（.storybook/mocks/stores.tsx）
 
-| キー                         | ストア                         |
-| ---------------------------- | ------------------------------ |
-| `useAuthStore`               | 認証ストア                     |
-| `useCalendarFilterStore`     | アクティビティフィルターストア |
-| `useCalendarNavigationStore` | カレンダーナビゲーション       |
-| `useCalendarSettingsStore`   | カレンダー設定                 |
-| `useModalStore`              | モーダルストア                 |
+| キー                         | ストア                           |
+| ---------------------------- | -------------------------------- |
+| `useAuthStore`               | 認証ストア                       |
+| `useCalendarFilterStore`     | アクティビティフィルターストア   |
+| `useCalendarNavigationStore` | カレンダーナビゲーション         |
+| `useShellStore`              | shell UI state（サイドバー幅等） |
 
 新しいストアを追加する場合は `STORE_REGISTRY` に登録する。
 
