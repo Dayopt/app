@@ -317,14 +317,52 @@ const PENDING_LINE_RE = /^- 保留（run未完了）: (.+)$/m;
 // marker gate と同じ idiom（OWNER/MEMBER/COLLABORATOR のみ信頼）で防ぐ。
 const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
+// #2367（夜勤を Claude Routine から GitHub Actions cron へ移植）: 常設運行記録
+// issue への「night-watch 運行記録」コメントは、移植後は Actions の既定
+// `GITHUB_TOKEN` で `github-actions[bot]` が投稿する。この投稿者の
+// `authorAssociation` は実測で `NONE`（public repo・fine-grained scope の
+// token では OWNER/MEMBER/COLLABORATOR のいずれにも該当しない。PR #2358 の
+// migration-safety job コメントで確認）であり、`TRUSTED_AUTHOR_ASSOCIATIONS`
+// だけでは自分自身の投稿さえ信頼集合から漏れ、pending escalation（直近の
+// consecutivePending 判定）が Actions 化後は恒久的に発火しなくなる（#2367
+// issue コメントで指摘・指揮台が承認した DoD 改訂）。
+//
+// `authorAssociation` を緩めるのではなく、login 完全一致を **OR** で追加する
+// （`isTrustedCommentAuthor` 参照）。gh の `--json comments` はコメント単位の
+// `user.type`（"Bot" 等）を返さないため login のみで判定するが、
+// `github-actions[bot]` / `github-actions` という login は GitHub 側が予約し
+// ており、public repo の第三者がこの名義でコメントを投稿することはできない
+// （偽装耐性は authorAssociation ベースの判定と同じ水準を維持する）。
+//
+// `github-actions[bot]` に加えて suffix 無しの `github-actions` も含める。
+// `gh issue view --json comments`（GraphQL 経由）が返す login には `[bot]`
+// suffix が付かず、`github-actions[bot]` 単独では night-watch 自身が Actions
+// から投稿したコメントを判定できない（指揮台が #2358 / #2330 / #2324 の
+// 3 issue で実測して確定。PR #2380 クロスレビュー指摘）。
+const TRUSTED_BOT_LOGINS = new Set(['github-actions[bot]', 'github-actions']);
+
+/**
+ * `checkRecentPending` が使う信頼できる書き手の判定。
+ * `TRUSTED_AUTHOR_ASSOCIATIONS`（人間の OWNER/MEMBER/COLLABORATOR）に加えて、
+ * `TRUSTED_BOT_LOGINS`（night-watch 自身が Actions から投稿する時の login）を
+ * 許容する。
+ * @param {{ authorAssociation?: string, author?: { login?: string } }} comment
+ */
+function isTrustedCommentAuthor(comment) {
+  if (TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) return true;
+  return TRUSTED_BOT_LOGINS.has(comment.author?.login);
+}
+
 /**
  * #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
  * （直近 run 未完了）と判定される class は、runner 枯渇・workflow 定義破損
  * 等で run が恒久的に完了しない場合、毎晩 pending を積むだけで
  * `alert-issue.mjs` が二度と呼ばれず、無期限に無音のまま気づかれない
  * （behavior-verifier 指摘）。これを検出するため、常設運行記録 issue の
- * 直近コメントから、信頼できる書き手（OWNER/MEMBER/COLLABORATOR）による
- * 「night-watch 運行記録」形式のものだけを新しい順に抽出し、**日付が異なる**
+ * 直近コメントから、信頼できる書き手（`isTrustedCommentAuthor`: 人間の
+ * OWNER/MEMBER/COLLABORATOR、または night-watch 自身が Actions から投稿
+ * する時の予約 login）による「night-watch 運行記録」形式のものだけを
+ * 新しい順に抽出し、**日付が異なる**
  * 直近 `lookback` 件（既定 2）**すべて**で同一 check-id が pending だったかを
  * machine で判定する。日付が異なることを要求するのは、手動代行との重複投稿
  * などで同じ晩の 2 件を「2 晩連続」と誤カウントしないため。
@@ -350,7 +388,7 @@ export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookba
   const seenDates = new Set();
   const reports = [];
   for (const comment of (response.comments ?? []).slice().reverse()) {
-    if (!TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) continue;
+    if (!isTrustedCommentAuthor(comment)) continue;
     const match = OPS_LOG_COMMENT_HEADER_RE.exec(comment.body ?? '');
     if (!match) continue;
     const date = match[1];

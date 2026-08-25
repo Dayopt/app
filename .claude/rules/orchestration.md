@@ -42,7 +42,7 @@
 
 策定日: 2026-08-20（[#2259](https://github.com/Dayopt/dayopt/issues/2259)。STATE.md 廃止に伴う移行。旧設計と経緯は `CLAUDE.md` §運用基盤）
 
-夜勤 Routine（`night-watch` v2、毎日 05:00 JST 実行。旧 07:00 JST から前倒し（2026-08-24、[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメント）。[#2291](https://github.com/Dayopt/dayopt/issues/2291) で朝の別 Routine を新設せず夜勤へ統合）が平日「盤面 YYYY-MM-DD」issue（`type:board` ラベル）を起票する（土日は skip。`.claude/skills/night-watch/SKILL.md` §自動パート Step 1 参照）。**起票テンプレの正本は `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）、実行手順の正本は `.claude/skills/night-watch/SKILL.md` §自動パート Step 1**（いずれも複製しない）。本節はこの issue を指揮台がどう使うかだけを扱う。
+夜勤（`night-watch` v3、GitHub Actions の scheduled workflow、毎日 04:00 JST 実行。2026-08-25、[#2367](https://github.com/Dayopt/dayopt/issues/2367) で Claude Routine から移植し、朝の蒸留層 05:00 JST から逆算して前倒し。旧履歴: 07:00 JST → 05:00 JST（2026-08-24、[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメント）。[#2291](https://github.com/Dayopt/dayopt/issues/2291) で朝の別 Routine を新設せず夜勤へ統合）が平日「盤面 YYYY-MM-DD」issue（`type:board` ラベル）を起票する（土日は skip。`.claude/skills/night-watch/SKILL.md` §自動パート Step 1 参照）。**起票テンプレの正本は `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）、実行手順の正本は `.claude/skills/night-watch/SKILL.md` §自動パート Step 1**（いずれも複製しない）。本節はこの issue を指揮台がどう使うかだけを扱う。
 
 **本文 = 現在地のスナップショット、コメント列 = タイムライン**（策定日: 2026-08-20、[#2285](https://github.com/Dayopt/dayopt/issues/2285)。初日運用 [#2265](https://github.com/Dayopt/dayopt/issues/2265) で確立した形を正本化）。指揮台が踏む状態遷移（dispatch・レーン報告受領・クロスレビュー確定伝達・重量green報告受領・`branch:finish` 完了）のたびに、§2 本文の更新と**同じタイミングで盤面 issue へ 1 行のイベントコメントを落とす**。コメントは書いた瞬間の事実しか書かないため陳腐化せず、[#2256](https://github.com/Dayopt/dayopt/issues/2256) の「追記漏れの機械検出」（当日コメント欠落を朝編成 sweep で検出）と噛み合う。「今日何が起きたか」は §2 の現在地からではなく、このコメント列を上から読んで再構成する。
 
