@@ -143,32 +143,62 @@ gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/check-runs" \
 
 **`gh run list --limit 1` を dispatch 直後にそのまま使わない。** `gh workflow run` は run が Actions 側へ登録される前に返るため、`--limit 1` は**まだ存在しない新 run ではなく前夜の nightly（conclusion=success）を返しうる**。その id を `gh run watch --exit-status` へ渡すと完了済み run に対して即座に exit 0 が返り、「層 3 を green にした」と誤認したまま promote へ進んでしまう（実際には何も走っておらず層 4 gate で止まる）。`--event` / `--branch` で絞り、**headSha が main HEAD と一致すること**を確認してから watch する:
 
+**このブロックは頭から通しで実行する**（`MAIN_SHA` の取得を含む）。途中だけを別シェルへ貼ると `MAIN_SHA` が空になり、run を永久に特定できずに終わる。`WF` を差し替えて 2 回実行する（`heavy-post-merge.yml` → `integration.yml`）。
+
 ```bash
+git fetch origin main                      # MAIN_SHA を確実に最新へ
 MAIN_SHA="$(git rev-parse origin/main)"
+WF=heavy-post-merge.yml                    # 2 本目は integration.yml に差し替えて再実行
 
-gh workflow run heavy-post-merge.yml --ref main
-gh workflow run integration.yml --ref main  # 上記確認で既に green なら不要
+# dispatch 前の最新 run id を控える。これより新しい run だけを受け入れることで、
+# 「同じ main HEAD に対する過去の dispatch」（再 dispatch / promote 中断後の再開）を
+# 掴んでしまう経路を塞ぐ。headSha 一致だけでは旧 run と区別できない。
+BEFORE_ID="$(gh run list --workflow="$WF" --event=workflow_dispatch --branch=main \
+  --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
 
-# dispatch した run が現れるまで待ってから id を取る（伝播に数秒かかる）。
-# workflow ごとに実行するか、$WF をループさせる。
-WF=heavy-post-merge.yml
+gh workflow run "$WF" --ref main
+
+# run が Actions 側に現れるまで待つ（`gh workflow run` は登録前に返る）。
 RUN_ID=""
 for _ in $(seq 1 10); do
   RUN_ID="$(gh run list --workflow="$WF" --event=workflow_dispatch --branch=main \
-    --limit 1 --json databaseId,headSha \
-    --jq ".[] | select(.headSha == \"$MAIN_SHA\") | .databaseId")"
+    --limit 5 --json databaseId,headSha \
+    | jq -r --arg sha "$MAIN_SHA" --argjson before "$BEFORE_ID" \
+        '[.[] | select(.headSha == $sha and .databaseId > $before)] | .[0].databaseId // empty')"
   [ -n "$RUN_ID" ] && break
   sleep 5
 done
-[ -n "$RUN_ID" ] || { echo "dispatch した run を特定できません（手動で確認）"; exit 1; }
-gh run watch --exit-status "$RUN_ID"
+
+if [ -n "$RUN_ID" ]; then
+  gh run watch --exit-status "$RUN_ID"
+else
+  echo "dispatch した run を特定できません。MAIN_SHA=$MAIN_SHA が main HEAD と一致しているか（git fetch origin main 済みか）を確認し、Actions 画面で直接見る"
+fi
 ```
 
-**`integration.yml` も dispatch した場合は、同じ手順で `WF=integration.yml` として別途 watch する**（上の watch は heavy-post-merge しか待たない）。あるいは両方の完了後に**冒頭の check-runs 確認コマンドを再実行**して 3 check すべての `success` を確かめる — こちらの方が「層 4 gate が実際に見るもの」と同じなので確実。
+両方の完了後は、**冒頭の check-runs 確認コマンドを再実行**して 3 check すべての `success` を確かめる。`gh run watch` の結果ではなくこちらを最終判断に使う — **層 4 gate が実際に見るものと同じ**なので確実。
 
 `workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、#2382）ため、手動発火の green で層 4 gate は成立する。
 
-**制約**: `gh workflow run --ref` は branch / tag しか受け付けず、40-hex SHA は `HTTP 422: No ref found for: <sha>` で拒否される（2026-08-25 実測）。したがって**層 3 が一度も走っていない過去 SHA に、後から層 3 を付けることはできない**。`release.yml` は `sha` input で main HEAD より古い SHA を promote できる契約を持つが、その SHA に層 3 の check-run が無ければ `force` 以外に道が無い（`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip する最終手段）。**古い SHA を promote したい時は、まず「その SHA が層 3 を通っているか」を上の check-runs 確認コマンドで調べる。**
+### 層 3 が走っていない過去 SHA を promote したい時
+
+`release.yml` は `sha` input で main HEAD より古い SHA を promote できる。その SHA に層 3 の check-run が無い場合、**一時 tag を経由して実テストを走らせられる**（`force` に倒す前に必ずこちらを試す）:
+
+```bash
+TARGET=<promote したい 40-hex SHA>
+git tag "tmp-layer3-$(git rev-parse --short "$TARGET")" "$TARGET"
+git push origin "tmp-layer3-$(git rev-parse --short "$TARGET")"
+gh workflow run heavy-post-merge.yml --ref "tmp-layer3-$(git rev-parse --short "$TARGET")"
+gh workflow run integration.yml --ref "tmp-layer3-$(git rev-parse --short "$TARGET")"
+# 完了後、check-runs 確認コマンドの $(git rev-parse origin/main) を $TARGET に置き換えて 3 check の success を確認
+# 確認できたら tag を削除する
+git push origin --delete "tmp-layer3-$(git rev-parse --short "$TARGET")"
+git tag -d "tmp-layer3-$(git rev-parse --short "$TARGET")"
+```
+
+**2026-08-25 実測**: `gh workflow run --ref` は 40-hex SHA を `HTTP 422: No ref found for: <sha>` で拒否するが、**tag は受け付ける**。tag ref で起動した run は `headSha` が tag 先の commit になり、check-run もその commit へ付く（層 4 gate は `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。tag ref は concurrency group も main と別になるため、走行中の main run を巻き込まない。
+
+したがって**実テストを走らせる道は常に残っている**。`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip するため、上記を試した上での最後の手段として扱う。
 
 ```bash
 # Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。

@@ -133,12 +133,18 @@ jobs:
           # 対処は .claude/skills/releasing/SKILL.md Phase 1.2 の手動発火手順:
           # **main HEAD に対して**層 3 を dispatch し、その run の headSha を
           # この workflow の `sha` input へ渡して promote する。
-          # `gh workflow run --ref` は branch / tag しか受け付けず 40-hex SHA は
-          # HTTP 422 で拒否されるため（2026-08-25 実測）、「対象 SHA を指定して
-          # 層 3 を走らせる」ことはできない。したがって **層 3 が一度も走って
-          # いない過去 SHA には後から層 3 を付けられず、force 以外に道が無い**
-          # （force は本 gate だけでなく smoke と Production Config Audit も
-          # 同時に skip する。最終手段として扱う）。
+          #
+          # main HEAD 以外（層 3 が走っていない過去 SHA）を promote したい時は、
+          # その SHA へ一時 tag を打って `--ref <tag>` で dispatch する。
+          # `gh workflow run --ref` は 40-hex SHA を HTTP 422 で拒否するが
+          # **tag は受け付ける**（2026-08-25 実測。tag ref の run は headSha が
+          # tag 先の commit になり、check-run もその commit へ付く。本 gate は
+          # `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。
+          # tag ref は concurrency group も main と別になるため、走行中の
+          # main run を巻き込まない。
+          # したがって **実テストを走らせる道は常に残っており、force は最後の
+          # 手段**（force は本 gate だけでなく smoke と Production Config Audit
+          # も同時に skip する）。
           required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
 
           runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \
