@@ -303,6 +303,8 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 | `supabase-auth-audit`        | `credential`                                                                                  | Production Auth Config Audit 専用 scoped token（Auth の Read のみ）                                                                                                                                                                                                  |
 | `supabase-storage-rls-audit` | `credential`                                                                                  | Production Storage RLS Audit 専用 scoped token（`database_read` のみ、90 日期限）。`production-config-audit.yml` の `storage-rls` job が参照し、GitHub Secret `SUPABASE_STORAGE_RLS_AUDIT_TOKEN` へ同期する（[#2345](https://github.com/Dayopt/dayopt/issues/2345)） |
 
+**Supabase Management API の scoped access token（`sbp_` prefix）は Account Settings → Access Tokens（https://supabase.com/dashboard/account/tokens）で発行する。** Project の Settings → API Keys ページ（`sb_sec...` prefix、Data API 用の secret key）とは別物で Management API には使えない。2026-08-25、`supabase-storage-rls-audit` token の発行でこの取り違えにより 401 が発生した（[#2345](https://github.com/Dayopt/dayopt/issues/2345) コメント参照）。
+
 予定（#2090 の実施後に追加する）: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`（bypass secret の 1Password 登録先）。
 
 `VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。agent からは読まない（agent の `replica:check` は agent 用の別発行 token を使う。発行までは User 実行）。
