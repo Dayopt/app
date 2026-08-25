@@ -270,6 +270,17 @@
         "duplicateName": "An item with this name already exists. Please choose a different name."
       }
     },
+    "templates": {
+      "sectionTitle": "Templates",
+      "empty": "No templates yet",
+      "saveEntryLabel": "Save this arrangement as a template",
+      "saveNamePlaceholder": "Template name",
+      "renameLabel": "Rename template",
+      "editingAsDay": "Editing \"{name}\" as a day",
+      "diffSummaryPrefix": "Changed:",
+      "contextMenuTitle": "Template menu",
+      "rowAriaHint": "Template \"{name}\". Click to apply, drag to any day, right-click to rename or delete"
+    },
     "activitySelector": {
       "title": "Select an activity",
       "new": "New",

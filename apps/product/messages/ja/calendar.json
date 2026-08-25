@@ -270,6 +270,17 @@
         "duplicateName": "同じ名前の項目が既にあります。別の名前を入力してください"
       }
     },
+    "templates": {
+      "sectionTitle": "テンプレート",
+      "empty": "テンプレートはまだありません",
+      "saveEntryLabel": "この並びを型として保存",
+      "saveNamePlaceholder": "テンプレート名",
+      "renameLabel": "テンプレート名を変更",
+      "editingAsDay": "「{name}」を一日として編集中",
+      "diffSummaryPrefix": "変更:",
+      "contextMenuTitle": "テンプレートメニュー",
+      "rowAriaHint": "テンプレート「{name}」。クリックで適用、ドラッグで任意の日へ、右クリックで改名・削除"
+    },
     "activitySelector": {
       "title": "アクティビティを選択",
       "new": "新規",
