@@ -89,11 +89,18 @@ const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * 直近3件のいずれかが非successなら赤、という旧判定は誤起票を常態化させて
  * いた（Codex レビュー指摘、指揮台採用・issue #2367 コメント参照）:
- * heavy-post-merge/integration.yml は nightly と push:main が同一
- * concurrency group（cancel-in-progress: true）のため、main push のたびに
- * nightly run が `conclusion=cancelled` になるのは日常的に発生する
- * （SKILL.md 自身が明記）。直近が success でも 2 件前の cancelled で赤に
- * なってしまっていた。
+ * heavy-post-merge/integration.yml は同一 concurrency group
+ * （group が `github.ref`、cancel-in-progress: true）のため、run が
+ * `conclusion=cancelled` になるのは日常的に発生する。直近が success でも
+ * 2 件前の cancelled で赤になってしまっていた。
+ *
+ * cancelled の発生源は #2382（2026-08-25）で変わったが**緩和は引き続き
+ * 必要**。旧: nightly と push:main の衝突（heavy-post-merge の push:main は
+ * #2382 で廃止）。現: **nightly と workflow_dispatch（手動発火）の衝突**で、
+ * 手動発火は promote 経路の常用手順になった（`.claude/skills/releasing/SKILL.md`
+ * Phase 1）ため衝突機会はむしろ増える。integration.yml は paths 該当時の
+ * push:main も残るため旧経路も併存する。「push:main を廃止したから
+ * cancelled はもう起きない」と読んでこの緩和を撤回しないこと。
  *
  * `hasRecentSuccess` は `runs`（直近3件、runs[0] 自身を含む）全体を走査
  * する。**runs[0] が「24h 以内の」success なら、この条件だけで必ず green

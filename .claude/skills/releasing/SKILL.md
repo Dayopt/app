@@ -139,16 +139,36 @@ gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/check-runs" \
   --jq '.check_runs[] | select(.name == "🎭 E2E Tests" or .name == "🌐 Web Build & E2E" or .name == "Integration Tests") | "\(.name): \(.conclusion)"'
 ```
 
-3 check すべて `success` なら Phase 1.2 の dispatch へ進む。**不足・pending・古い SHA の場合は日中の手動発火**で層 3 を先に main HEAD へ揃える（`heavy-post-merge.yml` は paths フィルタが無いため常に必要、`integration.yml` は DB / migration / RLS 系ファイルを触った merge なら push:main で既に走っている場合がある — 上記コマンドで確認済みなら省略可）:
+3 check すべて `success` なら Phase 1.2 の dispatch へ進む。**不足・pending・古い SHA の場合は日中の手動発火**で層 3 を先に main HEAD へ揃える（`heavy-post-merge.yml` は per-merge 実行が無いため常に必要、`integration.yml` は DB / migration / RLS 系ファイルを触った merge なら push:main で既に走っている場合がある — 上記コマンドで確認済みなら省略可）。
+
+**`gh run list --limit 1` を dispatch 直後にそのまま使わない。** `gh workflow run` は run が Actions 側へ登録される前に返るため、`--limit 1` は**まだ存在しない新 run ではなく前夜の nightly（conclusion=success）を返しうる**。その id を `gh run watch --exit-status` へ渡すと完了済み run に対して即座に exit 0 が返り、「層 3 を green にした」と誤認したまま promote へ進んでしまう（実際には何も走っておらず層 4 gate で止まる）。`--event` / `--branch` で絞り、**headSha が main HEAD と一致すること**を確認してから watch する:
 
 ```bash
+MAIN_SHA="$(git rev-parse origin/main)"
+
 gh workflow run heavy-post-merge.yml --ref main
 gh workflow run integration.yml --ref main  # 上記確認で既に green なら不要
-# 両方の完了を待つ（並行して走る）
-gh run watch --exit-status $(gh run list --workflow=heavy-post-merge.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+
+# dispatch した run が現れるまで待ってから id を取る（伝播に数秒かかる）。
+# workflow ごとに実行するか、$WF をループさせる。
+WF=heavy-post-merge.yml
+RUN_ID=""
+for _ in $(seq 1 10); do
+  RUN_ID="$(gh run list --workflow="$WF" --event=workflow_dispatch --branch=main \
+    --limit 1 --json databaseId,headSha \
+    --jq ".[] | select(.headSha == \"$MAIN_SHA\") | .databaseId")"
+  [ -n "$RUN_ID" ] && break
+  sleep 5
+done
+[ -n "$RUN_ID" ] || { echo "dispatch した run を特定できません（手動で確認）"; exit 1; }
+gh run watch --exit-status "$RUN_ID"
 ```
 
+**`integration.yml` も dispatch した場合は、同じ手順で `WF=integration.yml` として別途 watch する**（上の watch は heavy-post-merge しか待たない）。あるいは両方の完了後に**冒頭の check-runs 確認コマンドを再実行**して 3 check すべての `success` を確かめる — こちらの方が「層 4 gate が実際に見るもの」と同じなので確実。
+
 `workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、#2382）ため、手動発火の green で層 4 gate は成立する。
+
+**制約**: `gh workflow run --ref` は branch / tag しか受け付けず、40-hex SHA は `HTTP 422: No ref found for: <sha>` で拒否される（2026-08-25 実測）。したがって**層 3 が一度も走っていない過去 SHA に、後から層 3 を付けることはできない**。`release.yml` は `sha` input で main HEAD より古い SHA を promote できる契約を持つが、その SHA に層 3 の check-run が無ければ `force` 以外に道が無い（`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip する最終手段）。**古い SHA を promote したい時は、まず「その SHA が層 3 を通っているか」を上の check-runs 確認コマンドで調べる。**
 
 ```bash
 # Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。

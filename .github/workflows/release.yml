@@ -109,9 +109,10 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       # CI 4 層再設計（#2269）の層 4。E2E / Web E2E / Integration Tests は
-      # per-PR から撤去され、main push 後（heavy-post-merge.yml / integration.yml）
-      # の層 3 だけが検証する。promote 前にこの層 3 が target SHA で green だった
-      # ことを確認しないと、壊れた main がそのまま Production へ昇格しうる。
+      # per-PR から撤去され、層 3（heavy-post-merge.yml は nightly + 手動発火、
+      # integration.yml はこれに加え paths 該当時の main push）だけが検証する。
+      # promote 前にこの層 3 が target SHA で green だったことを確認しないと、
+      # 壊れた main がそのまま Production へ昇格しうる。
       # force（break-glass）時はこの gate も既存の smoke/audit skip と同様にスキップする。
       - name: Verify heavy-tier (layer 3) checks are green
         if: '!inputs.force'
@@ -127,16 +128,24 @@ jobs:
           # main push）へ変わった。つまり main HEAD が「直近の層 3 実行 SHA」より
           # 進んでいる（nightly 後に追加の merge があった）のは通常運用で起こりうる。
           # この gate は target SHA ちょうどの check-runs しか見ないため、その場合は
-          # ここで fail closed に停止する。対処は .claude/skills/releasing/SKILL.md
-          # Phase 1.2 の手動発火手順（対象 SHA を明示して heavy-post-merge.yml /
-          # integration.yml を dispatch してから再実行）を使う。
+          # ここで fail closed に停止する。
+          #
+          # 対処は .claude/skills/releasing/SKILL.md Phase 1.2 の手動発火手順:
+          # **main HEAD に対して**層 3 を dispatch し、その run の headSha を
+          # この workflow の `sha` input へ渡して promote する。
+          # `gh workflow run --ref` は branch / tag しか受け付けず 40-hex SHA は
+          # HTTP 422 で拒否されるため（2026-08-25 実測）、「対象 SHA を指定して
+          # 層 3 を走らせる」ことはできない。したがって **層 3 が一度も走って
+          # いない過去 SHA には後から層 3 を付けられず、force 以外に道が無い**
+          # （force は本 gate だけでなく smoke と Production Config Audit も
+          # 同時に skip する。最終手段として扱う）。
           required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
 
           runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \
             --jq '.check_runs[] | {name, status, conclusion, started_at}' | jq -s '.')"
 
           if [ -z "$runs_json" ] || [ "$runs_json" = "[]" ]; then
-            echo "::error::target SHA の check-runs を取得できませんでした（0 件）。層 3 の実行完了を待つか、force で bypass してください。"
+            echo "::error::target SHA の check-runs を取得できませんでした（0 件）。.claude/skills/releasing/SKILL.md Phase 1.2 の手順で層 3 を手動発火し、その run の headSha を sha input へ渡して再実行してください（force は smoke と Production Config Audit も同時に skip する最終手段）。"
             exit 1
           fi
 
@@ -152,7 +161,7 @@ jobs:
           done
 
           if [ "$fail" -ne 0 ]; then
-            echo "::error::promote を停止しました。層 3（main push 後の重量テスト）が target SHA で green ではありません。"
+            echo "::error::promote を停止しました。層 3（nightly + 手動発火の重量テスト）が target SHA で green ではありません。.claude/skills/releasing/SKILL.md Phase 1.2 の手順で層 3 を手動発火し、その run の headSha を sha input へ渡して再実行してください。"
             exit 1
           fi
 

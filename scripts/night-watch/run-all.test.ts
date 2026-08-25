@@ -106,10 +106,14 @@ describe('judgeWorkflowRun', () => {
   });
 
   // #2367 issue コメント（Codex レビュー指摘、指揮台採用）: heavy-post-merge/
-  // integration.yml は nightly と push:main が同一 concurrency group
-  // （cancel-in-progress: true）のため、main push のたびに nightly run が
-  // cancelled になるのは日常的に発生する。直近 run だけを基準にすることで、
-  // 「直近は success なのに 2 件前の cancelled で赤」という誤起票を防ぐ。
+  // integration.yml は同一 concurrency group（group が `github.ref`、
+  // cancel-in-progress: true）のため run が cancelled になるのは日常的に
+  // 発生する。直近 run だけを基準にすることで、「直近は success なのに
+  // 2 件前の cancelled で赤」という誤起票を防ぐ。
+  // #2382（2026-08-25）で cancelled の発生源が「nightly × push:main」から
+  // 「nightly × workflow_dispatch（手動発火）」へ移ったが、手動発火は promote
+  // 経路の常用手順になったため緩和の必要性は不変（run-all.mjs の判定関数
+  // 直上コメント参照）。
   it('直近 run が success なら、過去 run に non-success が含まれていても green', () => {
     const runs = [
       {
