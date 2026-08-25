@@ -206,16 +206,18 @@ issue #2395 が拘束する順序（`入力/baseline 固定 → 正本階層 →
 
 本項目は #10（Ledger identity）・#14（accounting/migration）と同一の論点。重複して裁定しない。
 
-### #3 充実（FulfillmentScore の再導入）→ #16 の一部として扱う旨を明記
+### #3 充実（既存 3 択実装と v1.0 契約の差分）
 
-- **current contract**: Chronotype と FulfillmentScore は 2026-07-15 に**完全削除**（`docs/product/log/2026-07-15-chronotype-fulfillment-removal.md`）。決定理由は「将来候補として dormant 資産を維持する — 再導入の具体的な計画がなく、現在の contract を複雑にするため却下」。Phase 2（#1625）で DB column も drop 済み想定
-- **target contract**: v1.0 §3.5「充実 — AIが書けない唯一の列」。記録にのみ付く3択（充実／ふつう／消耗）、入口はコミットトースト、n<5 は沈黙、API/MCP に書き込み権限を与えない。§7 章3「質」（羅針盤）の入力そのもの
-- **decision**: **採用（supersede、具体的な再導入計画が今回は存在するため）**。2026-07-15 の却下理由（「再導入の具体的な計画がない」）は、v1.0 という**具体的な計画**の存在によって解消されている。3択への簡素化（旧 FulfillmentScore の数値尺度ではない）、書き込み経路を Record 編集面のみに構造的に限定する（API/MCP 到達不能にする）という設計は、旧削除時に懸念された「contract の複雑化」を最小化する形になっている。ただし直近で明示的に「両概念を殺す」と決めた経緯があるため、**再導入である旨を User に一言確認する**（§7 送付、ブロッキングではなく確認）
-- **effective milestone**: #2397（第一便）。「充実は初日から録らないと羅針盤が永遠に育たない」（v1.0 §11.1）ため最優先で先発させる
-- **data migration**: 新規列追加のみ（`[hours]`、純追加）。旧 FulfillmentScore 列との名前重複を避ける（旧列が既に drop 済みか要確認 — #1625 の実施状況を #2396 着手時に確認する）
-- **compatibility**: 新規列のため後方互換の懸念なし
+**訂正（2026-08-26、指揮台指摘）**: 本項目は当初「FulfillmentScore の再導入可否」として裁定していたが前提が stale だった。Chronotype/FulfillmentScore は 2026-07-15 に完全削除されたが（`docs/product/log/2026-07-15-chronotype-fulfillment-removal.md`）、[PR #2330](https://github.com/Dayopt/dayopt/pull/2330)（2026-08-23 merge）が**旧実装とは別の新規実装として `records.fulfillment` 3択を既に復活・出荷済み**。裁定すべきは「再導入するか」ではなく、**既存実装と v1.0 契約の差分**。
+
+- **current contract**: `records.fulfillment`（`low` / `medium` / `high`、nullable、Record にのみ付与）。書き込み経路は UI（`TimeblockInspectorForm`）・tRPC（`recordCommands`）に加え、**MCP `records.create` / `records.update` も `fulfillment` 引数を受け付けて直接書き込む**（`apps/product/src/app/api/mcp/_tools/timeblock-mutations.ts:83,97,253,284`）。入口はコミットトーストではなく詳細 Inspector のトグル。羅針盤（質の章）は未実装
+- **target contract**: v1.0 §3.5「APIとMCPにはこの列への書き込み権限を与えない」（唯一の閉域列）。§6.3「入口はコミットトースト」。値は3択で現行と cardinality 一致（表現順序のみ「充実／ふつう／消耗」対「high/medium/low」で対応）
+- **decision**: **採用（既存実装を v1.0 契約へ合わせて是正する）**。値の3択構造・Record 専有は既に v1.0 と一致しているため変更不要。**MCP からの書き込みは v1.0 の明示的な不変条件（AI/外部への閉域）に違反しており是正が必要** — `timeblock-mutations.ts` の `fulfillment` 引数を `records.create` / `records.update` の入力スキーマから除去する。コミットトーストへの入口移設は UI 実装 Step（#2397）で行う
+- **effective milestone**: MCP 書き込み経路の除去は破壊的変更のため #2399（第三便、MCP 公開契約の見直しと同じ Step）で行う。コミットトースト入口は #2397（第一便）
+- **data migration**: 無し（既存列・既存値はそのまま維持。書き込み経路の制限のみ）
+- **compatibility**: **実接続 0 件**（§裁定4 の根拠と同一実測）のため、MCP スキーマから `fulfillment` を除去しても影響を受ける外部クライアントは存在しない。`MCP_TOOL_SCHEMA_VERSION` の bump 要否は #16（public contract 移行）と同じ Step でまとめて判断する
 - **rollback**: `[hours]`
-- **downstream blockers**: #12（canonical fields）、#19（質の章）
+- **downstream blockers**: #4（外部書き込み境界、同じ Step でまとめて対応）、#12（canonical fields）、#19（質の章）
 
 ### #5 提案（ghost の汎用化）→ #15 で裁定済み
 
@@ -266,7 +268,7 @@ baseline 固定（#9 正本階層、DST 未解決を明記）
   ↓
 Plan/Record 核（#10 Ledger identity ← 【保留】、#11 lifecycle ← 採用）
   ↓
-分類・field（#12 canonical fields ← #10 に従属、#1 用語 ← 【保留・独立】、#3 充実 ← 採用/確認要）
+分類・field（#12 canonical fields ← #10 に従属、#1 用語 ← 【保留・独立】、#3 充実 ← 採用・確定済み）
   ↓
 計上/migration（#14 accounting ← #10 に従属、#13 deletion ← #10 に従属）
   ↓
@@ -285,12 +287,12 @@ supersede map・出荷 gate（#8、§8）
 
 ## 7. 指揮台へ送付する保留事項（価値判断が要る論点）
 
-以下は証拠を揃えたが、本レーンが単独で確定せず指揮台/User の判断を仰ぐ。send_message で別途送付する。
+以下は証拠を揃えたが、本レーンが単独で確定せず指揮台/User の判断を仰ぐ。send_message で別途送付する。**#3（充実）は 2026-08-26 に指揮台から証拠回答済みで解決済み（下記に経緯を残す）。残る 3 件は User へ束ねて確認中（同日、指揮台）。**
 
 1. **#10 Ledger identity（最重要・critical path）**: v1.0 §3.3 は `records.plan_id` という個別リンクの構造そのものを廃止し、Plan↔Record の対応を「期間×アクティビティの合計同士の突き合わせ」という集計ベースの導出に一本化する提案と読める。これは 2026-07-09 に確定・出荷済みの ADR-025（1 Plan : N Record、個別 FK）を丸ごと置き換える。**推奨**: v1.0 のとおり個別リンクを廃止する方向を推奨する（strategy.md §5「予定と実績が同じタイムラインで対になる設計」という不変原則自体は「同じ画面で対になる」ことを指しており、「個別行として FK で結ばれる」ことまでは要求していないため、集計ベースへの移行は strategy.md と矛盾しない）。ただし出荷済み UI（関連 Record 一覧、個別差分バッジ）を全面刷新する規模の変更のため、User の明示確認を要する
 2. **#1 用語と分類（8色 vs 10色、カテゴリーチェック有無）**: 2026-08-18 に User 自身が確定・実装済みの内容と v1.0 が食い違う。**推奨**: v1.0 の8色・チェックボックスありを、2026-08-18 確定に対する User 自身の再考の結果として採用することを推奨するが、「知らずに書かれた」可能性を排除できないため確認を要する
 3. **#4 外部書き込み境界（#1754 のスコープ変更）**: MCP 直接書き込みから提案作成のみへの転換は、#1754（Step 6、Candidate 1〜7 完了済み）の残作業スコープを変更する。**推奨**: 実接続 0 件という低コストの窓を使って提案モデルへ寄せることを推奨するが、#1754 の完了間近の作業を方向転換させる判断のため確認を要する
-4. **#3 充実の再導入**: 2026-07-15 に明示的に「再導入計画なし」を理由に完全削除した概念を、v1.0 という具体的計画を根拠に復活させる。**推奨**: 採用を推奨するが、直近の明示的削除決定を覆す性質上、確認を一言添える
+4. ~~**#3 充実の再導入**~~ — **解決済み（2026-08-26、指揮台が証拠で回答）**。前提が stale だった: FulfillmentScore は削除済みだが、[PR #2330](https://github.com/Dayopt/dayopt/pull/2330)（2026-08-23 merge）が別実装として 3 択（`records.fulfillment`）を既に出荷済み。裁定は「再導入するか」ではなく「既存実装と v1.0 契約の差分」に書き換えた（§5 #3 参照）。価値判断ではなく事実確認だったため、この項目に User 確認は不要
 
 ## 8. supersede map（既存 docs との対応）
 
@@ -316,7 +318,7 @@ supersede map・出荷 gate（#8、§8）
 | #18 governance（現行維持）                          | 該当なし                 | 変更なし                                                                                                                                                       |
 | #6 予実表示の視覚文法変更                           | `[minutes]`              | UI のみ、データ非依存                                                                                                                                          |
 | #1 用語と分類（8→10色の再割当て）                   | `[hours]`                | 既存カテゴリーの色再割当てを伴う                                                                                                                               |
-| #3 充実の再導入（新規列）                           | `[hours]`                | 純追加、drop すれば戻せる                                                                                                                                      |
+| #3 充実（MCP書き込み経路の除去）                    | `[hours]`                | 列は既存のまま、除去した MCP スキーマ引数を戻せば復元可能                                                                                                      |
 | #12 canonical fields                                | `[hours]`                | #16 確定に従う                                                                                                                                                 |
 | #15 Proposal 汎化（schema 変更）                    | `[hours]`                | `external_calendar_events` 拡張または新テーブル                                                                                                                |
 | #4 外部書き込み境界の転換                           | `[hours]`                | 実接続 0 件のためデータ移行なし                                                                                                                                |
