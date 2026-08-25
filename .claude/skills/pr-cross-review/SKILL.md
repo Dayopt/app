@@ -39,7 +39,12 @@ maxTurns: 20
 
 ### 2. subagent を選ぶ
 
-`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件表に照らして選ぶ:
+レーンから push-ready 報告 / レビュー待ち報告に添付された push 前セルフレビューの subagent 生出力（`.claude/rules/lane-protocol.md` §レビュー待ち報告、策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）があれば、まずそれを一次資料として読む。
+
+- **自動委任条件に該当する diff**（下記表参照）では、レーン添付の有無に関わらず指揮台の独立実行を維持する（既定不変。`.claude/rules/workflow.md` §内製クロスレビューの実施を要求する gate の「独立性の後退を認識する」と同じ理由 — 同一 agent 系列の自己申告に検証を委ねない）
+- **非該当・低リスク diff**（docs-only を含む）では、レーン添付 findings を検証した上で指揮台の独立実行を省略してよい。省略した場合、手順 6 の summary comment の経緯欄に「レーン添付 findings を検証、独立実行省略」と明記する。レーンの添付は自己申告であり指揮台の検証代替ではない（出発点の提供に留まる）ため、「検証した」と書けるのは実際に一次情報（diff・path・symbol）と突き合わせた場合に限る
+
+独立実行するかどうかは、`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件表に照らして選ぶ:
 
 - auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` → `risk-reviewer`
 - 現在挙動 / 公開契約 / state transition / query cache / temporal contract / bug regression → `behavior-verifier`

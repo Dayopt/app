@@ -1377,6 +1377,27 @@ supabase db push
 - [ ] `pnpm rls:snapshot` を再生成し、RLS / GRANT / Realtime publication の差分を確認している
 - [ ] Supabase Preview Branch check が green
 - [ ] Production 適用前に Vercel Preview で主要導線を確認した
+- [ ] `DROP FUNCTION` / `CREATE FUNCTION` / `GRANT` / `REVOKE` を含む DDL は、下記「DDL のロックタイムアウト規約」に従い `BEGIN`/`COMMIT` + `lock_timeout` でラップしている
+
+### DDL のロックタイムアウト規約
+
+策定日: 2026-08-25（[#2360](https://github.com/Dayopt/dayopt/issues/2360)）
+
+新規 migration で `DROP FUNCTION` / `CREATE FUNCTION` / `GRANT` / `REVOKE` など、既存オブジェクトに `ACCESS EXCLUSIVE` ロックを取る DDL を含む場合、`BEGIN` / `COMMIT` でラップし `lock_timeout` / `statement_timeout` を明示する。
+
+```sql
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+-- DROP FUNCTION / CREATE FUNCTION / GRANT / REVOKE ...
+COMMIT;
+```
+
+- **理由**: Supabase の migration runner は migration file を transaction で自動的に囲まない（CLI 実装の `ApplyMigrations` は明示コメントで "no transaction wrapping" としている）。明示的な `BEGIN` が無い statement は autocommit で実行されるため、ラップしなければ DDL 文自体のロック待ちが無制限になる
+- 関数定義内に埋め込む `SET lock_timeout TO '5s'`（`proconfig`）は、その関数が **deploy 後に呼ばれる時**のランタイム保護であり、migration 自身の DDL 文（DROP/CREATE/GRANT/REVOKE）には効かない。目的が異なるため、proconfig と本規約は両方維持する
+- **対象外**: `CREATE INDEX CONCURRENTLY` / `VACUUM` / `ALTER SYSTEM` / `CLUSTER` / `REINDEX CONCURRENTLY` など、トランザクション内で実行できない DDL を含む migration は本規約の対象外とする
+- 既存の「ラップなし」migration（`20260818140000` 以降の DROP+CREATE FUNCTION 系）は不変資産のため遡及しない。今後の新規 migration にのみ適用する
+- precedent: `supabase/migrations/20260809015344_optimize_soft_delete_rls_initplan.sql`
 
 ### GRANT / Realtime 監査
 

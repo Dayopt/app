@@ -43,6 +43,8 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 軽量 green 確認 → 自己判断で ready 化 → 重量層（E2E / Web E2E / Production Config Audit）watch → green 確認、まで進めた時点で送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、重量 green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
 
+**push 前セルフレビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー）で実行した subagent の role 一覧と生出力を添付する**（策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）。要約しない — findings ゼロならその旨の原文をそのまま貼る。指揮台はこれを `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md` 手順 2〜3）の出発点として読む。自動委任条件（`.claude/rules/ai-behavior.md` §Read-only delegation）に非該当で subagent を回していない場合は「非該当」と明記する。
+
 ### fix round green 報告
 
 クロスレビューの指摘に対応した時（**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む）、重量 green を再確認して送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 4）。
