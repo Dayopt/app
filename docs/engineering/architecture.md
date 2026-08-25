@@ -203,8 +203,8 @@ flowchart LR
 
 - 日付・view range・右パネルの表示可否は URL と `CalendarNavigationContext` が source of truth。
 - `CalendarViewClient` が `CalendarController` と右側パネルを合成する。Review/Diff は独立ページではなく Calendar shell に追従する。
-- Zustand は drag、inline create、clipboard、inspector、shell などの一時 UI state と、表示モード・タグフィルターのユーザー設定だけを担う。URL/Context の値を永続化しない。
-- Plan / Record / tag などのサーバーデータは Zustand に複製せず、tRPC / TanStack Query 経由で扱う。
+- Zustand は drag、inline create、clipboard、inspector、shell などの一時 UI state と、表示モード・アクティビティフィルターのユーザー設定だけを担う。URL/Context の値を永続化しない。
+- Plan / Record / activity などのサーバーデータは Zustand に複製せず、tRPC / TanStack Query 経由で扱う。
 
 ### 各レイヤーの役割
 
@@ -283,7 +283,7 @@ USING (auth.uid() = user_id);
 
 | 状態の種類               | 管理方法       | 例                               |
 | ------------------------ | -------------- | -------------------------------- |
-| **サーバーデータ**       | TanStack Query | 予定・記録一覧、タグ             |
+| **サーバーデータ**       | TanStack Query | 予定・記録一覧、アクティビティ   |
 | **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
 | **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
 | **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |

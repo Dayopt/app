@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-19
+last_verified: 2026-08-25
 code: apps/product/src/features/review
 public_docs:
   - review
@@ -33,6 +33,14 @@ lp:
 - セグメントの CRUD（作成・アクティビティ編集・削除）は Sidebar のコンテキストメニューで行う。並び替え・フォルダ分け・共有は持たない
 - Review UI と Storybook は Review feature が所有し、`/report` の Composition Layer（`app/**/(workspace)/_composition/ReportViewClient.tsx`）が timeblock 取得と diff 計算を担う
 
+## 週次補正（見積もりバイアスの提示）
+
+- 週次振り返りパネル（`WeeklyReflectionPanel`、「予実の傾向（Time P/L）」セクション内に表示）は、見積もりバイアス行（activity 別の平均計画時間・平均実績時間・平均偏差。1 activity あたり `n >= 2` 件の Plan×Record ペアがある行だけを含む）のうち **絶対偏差が最大の1件だけ**を選び、パネル冒頭の signal 文で提示する
+- 提示するのは絶対偏差が15分以上の場合のみ。「{activity} は平均 +{bias}分長くかかっています」（超過）または「{activity} は平均 {bias}分早く終わっています」（早期完了）のいずれかを見出しに、「次の計画では、この値を初期見積もりに使えます」を detail に添える
+- 対象行が無い、または最大偏差が15分未満の場合は、skip件数（0件超）→ blank rate（35%以上）→ 「この期間は予定との差が小さく収まりました」の順にフォールバックする（同パネル内、上から順に最初に条件を満たすものを1つだけ出す）
+- 見積もりバイアス行自体は signal とは別に、絶対偏差の大きい順で一覧表示される（フィルタなし、上位1件に限らない）。signal は「今週まず見るべき1点」を示す別の要約であり、一覧を置き換えない
+- **既知の不整合**（2026-08-25 検出、[#2386](https://github.com/Dayopt/dayopt/issues/2386)）: 平均偏差の集計元（`aggregatePlanRecordEstimationAccuracy`）は `Math.abs(実績 − 予定)` の平均であり符号を持たない。signal の「超過 / 早期完了」分岐はこの値の正負で判定するため、0 を下回ることが構造的になく、実運用ではほぼ常に「超過」文言だけが選ばれる。意図（早期完了も知らせる）どおりには動いていない
+
 ## URL契約
 
 - `/report?date=YYYY-MM-DD&range=day|week`（`range` 省略時は `week`）
@@ -44,6 +52,6 @@ componentのvisual stateはStorybook、集計data flowとcompositionは[Engineer
 ## 関連する意思決定
 
 - [機能スコープ](../log/2026-06-16-feature-non-adoption.md)
-- [分析表現ポリシー](../log/2026-07-10-analytics-expression-policy.md)
+- [分析表現ポリシー](../log/2026-07-10-analytics-expression-policy.md)（週次補正の中央値・沈黙閾値の定義元）
 - [ADR-025: Plan / Recordモデル](../log/2026-07-09-time-model-split.md)
 - [workspace-shell-restructure](../../projects/_archive/workspace-shell-restructure/overview.md) — `/report` フルページ化の設計判断
