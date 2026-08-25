@@ -58,6 +58,15 @@ jobs:
           fi
           gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="${BASE}..HEAD" --exit-code 1
 
+      - name: gitleaks allowlist canary
+        # .gitleaks.toml 導入により、config を読めた場合は有効 rule 0 本・
+        # findings 0 でも exit 0 を返せてしまう（custom config が加える
+        # fail-open な failure mode）。[extend].useDefault の欠落・typo・
+        # allowlist の過度な広さを検出能力の低下として固定する。#2379 で
+        # scratch repo を使い手作業で確認した 3 ケースをそのまま script 化
+        # した（`.claude/rules/orchestration.md` §盤面の正本 参照）。
+        run: bash scripts/ci/gitleaks-allowlist-canary.sh
+
       # ── docs reminder（PR のみ・warning）────────────────────────────
       - name: src 変更に対応する docs 更新の有無を確認
         if: github.event_name == 'pull_request'

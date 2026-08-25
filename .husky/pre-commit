@@ -23,7 +23,7 @@ else
   # --redact 必須: 実値を出力すると、この repo で作業する Claude セッション
   # 自身の transcript に秘密情報が写ってしまう。
   if ! gitleaks protect --staged --source . --redact; then
-    echo "✗ commit を中断しました（staged 差分に secret らしき文字列が検出されました）。誤検知なら .gitleaksignore の追加を検討してください。" >&2
+    echo "✗ commit を中断しました（staged 差分に secret らしき文字列が検出されました）。誤検知なら .gitleaks.toml の値ベース allowlist（docs/operations/security.md の追加手順を参照）を検討してください。" >&2
     exit 1
   fi
 fi
