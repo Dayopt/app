@@ -201,7 +201,16 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 secret 検出はこれとは別で、**全 PR で自動実行される**。`docs-guard.yml`（job 名 `docs & secrets guard`、path filter なし）が gitleaks で base ref からの差分を、`pnpm secrets:check` で tracked tree 全体を見る。加えて `ci.yml` がビルド後の client bundle への混入を grep する。ローカルでは `pnpm check` に `secrets:check` が含まれる（CI 側は docs-guard の 1 回のみで、二重実行はしない）。
 
-**2026-08-24 以降、`.husky/pre-commit` も gitleaks で staged 差分をスキャンする**（`gitleaks protect --staged`、CI より前に無料で落とす層。`.claude/rules/workflow.md` §Pause point 参照）。前提として `brew install gitleaks` が必要（`op`/`gh` と同じ host 常駐 CLI 前提、`.claude/rules/mcp-usage.md` と同じ運用）。対話環境で未インストールだと commit が hard fail する。**ローカルの gitleaks バージョンは brew の floating latest（本記述時点で 8.30.1）、CI は `docs-guard.yml` の `GITLEAKS_VERSION`（本記述時点で 8.9.0）に sha256 で pin している。この 2 つは意図的に同期させていない**（ローカルはあくまで pre-CI の高速フィルタで、CI が最終網であるため。バージョン固定を hook に持たせると `brew upgrade` のたびに壊れるブリトルさの方が割に合わないと判断した）。**非対話環境（`CI` 変数設定 or TTY 無し、例: 月次 gardening 自動パートの cloud Routine）で gitleaks が無い場合は hard fail せず warning のみで commit を続行する**（brew の無い実行環境で全 commit が回復不能に詰まるのを避けるため。secret 検出は CI の docs-guard.yml が最終網として残るため失われない）。
+**2026-08-24 以降、`.husky/pre-commit` も gitleaks で staged 差分をスキャンする**（`gitleaks protect --staged`、CI より前に無料で落とす層。`.claude/rules/workflow.md` §Pause point 参照）。前提として `brew install gitleaks` が必要（`op`/`gh` と同じ host 常駐 CLI 前提、`.claude/rules/mcp-usage.md` と同じ運用）。対話環境で未インストールだと commit が hard fail する。**ローカルの gitleaks バージョンは brew の floating latest（本記述時点で 8.30.1）、CI は `docs-guard.yml` の `GITLEAKS_VERSION`（本記述時点で 8.30.1、#2379 で 8.9.0 から更新）に sha256 で pin している。この 2 つは今も意図的に同期させていない**（ローカルはあくまで pre-CI の高速フィルタで、CI が最終網であるため。バージョン固定を hook に持たせると `brew upgrade` のたびに壊れるブリトルさの方が割に合わないと判断した）。**現在バージョン番号が一致しているのは偶然で、今後 `brew upgrade` によりローカルだけ先行する**（CI 側は次に手動で version bump するまで固定のまま）。**非対話環境（`CI` 変数設定 or TTY 無し、例: 月次 gardening 自動パートの cloud Routine）で gitleaks が無い場合は hard fail せず warning のみで commit を続行する**（brew の無い実行環境で全 commit が回復不能に詰まるのを避けるため。secret 検出は CI の docs-guard.yml が最終網として残るため失われない）。
+
+**`.gitleaks.toml`（repo root）が false positive の抑止設定を持つ**（#2379、gitleaks **8.25.0 以上**が `[[allowlists]]` 構文の前提。ローカルの brew floating latest・CI の pin 版 8.30.1 はどちらも満たす）。`gitleaks detect` / `gitleaks protect` はどちらも明示 `--config` 無しで repo root の `.gitleaks.toml` を自動探索するが、`docs-guard.yml` は guardrail workflow のため `--config .gitleaks.toml` を明示している。`[extend].useDefault = true` で default ruleset を継承しつつ、Dayopt 固有の既知 false positive だけを追加する。新しい false positive を見つけたら:
+
+1. **値ベースの抑止を第一選択にする**（`regexes` + `regexTarget = "secret"`）。commit / line 番号に依存しないため、将来そのファイルを touch する PR でも再検出されない
+2. **path だけで 1 ファイルを丸ごと免除しない**。path で絞る場合も必ず `regexes` と `condition = "AND"` を併用し、値パターンも一致した時だけ抑止する（さもないと、そのファイルへ本物の secret が紛れ込んでも二度と検出されなくなる。`useCalendarKeyboard.ts` の shortcut 文字列がこの形の実例）
+3. `regexTarget` は既定の `"match"`（rule の一致範囲全体、例: `key: 'value'` の周辺文字列ごと）ではなく `"secret"`（抽出された値そのもの）を使う。`^...$` の anchored regex を `"match"` に対して書くと、周辺文字列のせいで意図せず不一致になる（#2379 で実際に踏んだ）
+4. `targetRules` は必ず実際のスキャン結果（`gitleaks detect --report-format json` の `RuleID`）から取る。推測で書かない
+
+全履歴棚卸しの結果と個々の判定根拠は [docs/operations/log/2026-08-25-gitleaks-fullhistory-triage.md](./log/2026-08-25-gitleaks-fullhistory-triage.md) を参照。
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 

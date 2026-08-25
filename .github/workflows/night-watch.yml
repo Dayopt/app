@@ -106,11 +106,12 @@ jobs:
       # env 変数名は意図的に「SENTRY」を含めない（`NIGHT_WATCH_CLI_*`）。
       # gitleaks の `sentry-access-token` ルールは変数名が SENTRY を含み
       # かつ値が hex 文字列に見える行を誤検知する（checksum は実際の secret
-      # ではないが gitleaks には区別できない）。`.gitleaksignore` の
-      # fingerprint 方式は CI が pin する gitleaks 8.9.0 では未サポート
-      # （`Fingerprint` フィールド自体が存在しない、より新しいバージョンの
-      # 機能）と実測確認済みのため、値ではなく変数名側でルールの
-      # マッチ条件を外す設計にした。
+      # ではないが gitleaks には区別できない）。CI が pin する gitleaks は
+      # 8.30.1（#2379 で更新）で `.gitleaks.toml` allowlist / `.gitleaksignore`
+      # のどちらも利用可能だが、この checksum 検証 step は他 workflow
+      # （docs-guard.yml の gitleaks、storage-backup-export.yml の rclone）と
+      # 同型の idiom として今後もコピーされうるため、ignore 設定への依存を
+      # 増やすより変数名側でルールのマッチ条件そのものを外す設計を維持する。
       # 取得（ダウンロード）と検証（checksum）を別 step に分ける。
       # ダウンロード step は `continue-on-error: true` で、GitHub Release CDN
       # の一過性 5xx / DNS ゆらぎで夜勤が全停止しないよう degrade を許す

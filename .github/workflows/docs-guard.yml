@@ -24,8 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      GITLEAKS_VERSION: '8.9.0'
-      GITLEAKS_SHA256: '188d84394cfbb287e5acf789f313fca55a385ba738cb014e7a9bef6e6b0f4d69'
+      GITLEAKS_VERSION: '8.30.1'
+      GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,13 +47,25 @@ jobs:
         # 過去の commit 履歴には（すでに削除済みのファイルを含む）古いプレースホルダー値由来の
         # 誤検知が積もっている。全履歴を毎回スキャンすると同じ既知ノイズを永久に re-flag し続け
         # gate として機能しなくなるため、このPR/pushで新規に入ったcommitの範囲だけをスキャンする。
+        # `--config .gitleaks.toml` は明示指定（gitleaks の既定探索順でも repo root の
+        # .gitleaks.toml が拾われるが、guardrail workflow なので auto-discovery に依存せず
+        # 参照先を固定する。#2379 で実測確認済み）。
         run: |
           BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
             BASE="HEAD~1"
             git cat-file -e "$BASE" 2>/dev/null || BASE="HEAD"
           fi
-          gitleaks detect --source . --redact --log-opts="${BASE}..HEAD" --exit-code 1
+          gitleaks detect --source . --config .gitleaks.toml --redact --log-opts="${BASE}..HEAD" --exit-code 1
+
+      - name: gitleaks allowlist canary
+        # .gitleaks.toml 導入により、config を読めた場合は有効 rule 0 本・
+        # findings 0 でも exit 0 を返せてしまう（custom config が加える
+        # fail-open な failure mode）。[extend].useDefault の欠落・typo・
+        # allowlist の過度な広さを検出能力の低下として固定する。#2379 で
+        # scratch repo を使い手作業で確認した 3 ケースをそのまま script 化
+        # した（`.claude/rules/orchestration.md` §盤面の正本 参照）。
+        run: bash scripts/ci/gitleaks-allowlist-canary.sh
 
       # ── docs reminder（PR のみ・warning）────────────────────────────
       - name: src 変更に対応する docs 更新の有無を確認
