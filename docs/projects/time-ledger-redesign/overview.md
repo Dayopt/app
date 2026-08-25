@@ -14,7 +14,7 @@ code:
 
 # time-ledger-redesign — 「時間の台帳」v1 設計正本化と現行仕様との差分裁定
 
-[epic #2394](https://github.com/Dayopt/dayopt/issues/2394) が採用した「2026-08-25 のプロダクト設計書 v1.0」（原本: `/Users/tanakatomoya/Downloads/timebox-ledger-design.md`、327 行、以下「v1.0」）を、Dayopt の実装可能な契約へ翻訳し、現行仕様・実装・ADR との矛盾を明示的に裁定する設計書。[issue #2395](https://github.com/Dayopt/dayopt/issues/2395) の成果物（**大規模判定**。裁定 19 項目、blast radius が timeblock / activities / calendar / review / external-calendar / MCP / OAuth / design token / docs 全域、依存順を issue 本文が拘束）。
+[epic #2394](https://github.com/Dayopt/dayopt/issues/2394) が採用した「2026-08-25 のプロダクト設計書 v1.0」（原本: [v1-source.md](./v1-source.md)、327 行、以下「v1.0」）を、Dayopt の実装可能な契約へ翻訳し、現行仕様・実装・ADR との矛盾を明示的に裁定する設計書。[issue #2395](https://github.com/Dayopt/dayopt/issues/2395) の成果物（**大規模判定**。裁定 19 項目、blast radius が timeblock / activities / calendar / review / external-calendar / MCP / OAuth / design token / docs 全域、依存順を issue 本文が拘束）。
 
 本書は #2396〜#2399（契約基盤・第一便・第二便・第三便）の `status:blocked` 解除条件。進捗は各子 epic に置き、本書には裁定の中身と理由だけを書く（`.claude/rules/workflow.md` §issue と docs の分担）。
 
