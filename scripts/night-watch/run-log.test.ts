@@ -326,7 +326,8 @@ describe('buildOpsLogComment', () => {
 describe('checkRecentPending', () => {
   const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
 
-  type CommentSeed = string | { body: string; authorAssociation?: string };
+  type CommentSeed =
+    string | { body: string; authorAssociation?: string; author?: { login: string } };
 
   function commentsResponse(seeds: CommentSeed[]) {
     return JSON.stringify({
@@ -432,6 +433,82 @@ describe('checkRecentPending', () => {
       ]),
     );
     // 日付が同じ 08-23 の 2 件は 1 件に畳まれるため、lookback（既定2）に満たず false。
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: false,
+      reportsChecked: 1,
+    });
+  });
+
+  // #2367（夜勤を Claude Routine から GitHub Actions cron へ移植）: 移植後は
+  // 常設運行記録 issue へ github-actions[bot]（既定 GITHUB_TOKEN）が投稿する。
+  // この投稿者の authorAssociation は実測で NONE（PR #2358 の
+  // migration-safety job コメントで確認）のため、authorAssociation だけでは
+  // 自分自身の投稿が信頼集合から漏れる。login 完全一致の OR 追加で救う
+  // （指揮台承認、issue #2367 コメント参照）。
+  it('authorAssociation が NONE でも github-actions[bot] の login なら信頼する', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        {
+          body: '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'github-actions[bot]' },
+        },
+        {
+          body: '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'github-actions[bot]' },
+        },
+      ]),
+    );
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: true,
+      reportsChecked: 2,
+    });
+  });
+
+  // PR #2380 クロスレビュー指摘（指揮台実測、#2358/#2330/#2324）: gh の
+  // `--json comments`（GraphQL 経由）が返す login には `[bot]` suffix が
+  // 付かず、実際の投稿者 login は suffix 無しの `github-actions`。
+  // `github-actions[bot]` のみを信頼する実装ではこの実測 login が漏れ、
+  // pending escalation が Actions 化後に恒久的に無効化されていた。
+  it('authorAssociation が NONE でも github-actions（suffix無し、GraphQL実測の綴り）の login なら信頼する', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        {
+          body: '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'github-actions' },
+        },
+        {
+          body: '**night-watch 運行記録 2026-08-23**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'github-actions' },
+        },
+      ]),
+    );
+    expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
+      consecutivePending: true,
+      reportsChecked: 2,
+    });
+  });
+
+  it('github-actions[bot] 以外の login は authorAssociation が NONE なら引き続き信頼しない', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        {
+          // login が似ているだけの偽装（完全一致のみ信頼する設計を確認する）。
+          body: '**night-watch 運行記録 2026-08-22**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'evil-actions[bot]' },
+        },
+        {
+          body: '**night-watch 運行記録 2026-08-24**\n\n- 保留（run未完了）: heavy-red\n',
+          authorAssociation: 'NONE',
+          author: { login: 'github-actions[bot]' },
+        },
+      ]),
+    );
+    // 08-22 は信頼されず除外。信頼できる対象は 08-24 の1件のみで lookback 未満。
     expect(checkRecentPending('heavy-red', { execFileImpl, readFileImpl })).toEqual({
       consecutivePending: false,
       reportsChecked: 1,
