@@ -184,13 +184,34 @@ function isSpawnFailure(error) {
 }
 
 /**
- * exit-code kind（docs-check / deadcode）の観測。
+ * `process.env` から指定 key を除いた env オブジェクトを作る（元は変更しない）。
+ * `GH_TOKEN`/`GITHUB_TOKEN`（issues:write 等を持つ既定トークン）を、それを
+ * 必要としないサードパーティ依存コード（`pnpm docs:check` の docs-guard、
+ * `docs:coverage`、`quality:deadcode:ci` の knip 等、いずれも gh を呼ばない）
+ * から隠すために使う（push 前反証レビュー risk-reviewer 指摘、medium。
+ * NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN と同じ token 分離原則を
+ * 既定の GH_TOKEN にも適用する）。
+ */
+function envWithout(...keys) {
+  const env = { ...process.env };
+  for (const key of keys) delete env[key];
+  return env;
+}
+
+/**
+ * exit-code kind（docs-check / deadcode）の観測。gh を必要としないため
+ * `env`（呼び出し元が `envWithout('GH_TOKEN', 'GITHUB_TOKEN')` で用意する）を
+ * 使い、GH_TOKEN を持たない状態で spawn する。**呼び出し元は
+ * `process.env` からの秘密削除（`runNightWatch` 冒頭）が完了した後で
+ * `envWithout` を呼ぶこと** — モジュール読み込み時に一度だけ計算すると、
+ * その時点でまだ削除されていない NIGHT_WATCH_DEPENDABOT_TOKEN /
+ * SENTRY_AUTH_TOKEN がスナップショットに焼き込まれ、削除が無意味になる。
  * @param {string} command
  * @param {string[]} args
- * @param {{ execFileImpl?: ExecFileImpl }} [opts]
+ * @param {{ execFileImpl?: ExecFileImpl, env: NodeJS.ProcessEnv }} opts
  */
-function checkExitCode(command, args, { execFileImpl } = {}) {
-  const result = execObservationCommand(command, args, { execFileImpl });
+function checkExitCode(command, args, { execFileImpl, env }) {
+  const result = execObservationCommand(command, args, { execFileImpl, env });
   if (result.ok) return { status: 'green' };
   if (isSpawnFailure(result.error)) return { status: 'fetch-failed' };
   return { status: 'red' };
@@ -264,9 +285,12 @@ const SENTRY_EVIDENCE_CANDIDATES = 5;
  * 構造化出力を取得する（prose 出力の parsing より安全。CHECK_DEFINITIONS の
  * command 文字列は起票 issue の表示用のままで、実行はこちらを使う —
  * 既存の設計方針〈表示用コマンドと実行コマンドは意図的に異なりうる〉を踏襲）。
- * @param {{ execFileImpl?: ExecFileImpl, sentryToken?: string }} [opts]
+ * `env` は GH_TOKEN を持たない base（呼び出し元の `envWithoutGh`）を渡す —
+ * この CLI は gh を必要としないため、issues:write 等を持つ既定トークンを
+ * 見せる理由が無い（push 前反証レビュー risk-reviewer 指摘、medium）。
+ * @param {{ execFileImpl?: ExecFileImpl, sentryToken?: string, env?: NodeJS.ProcessEnv }} [opts]
  */
-function checkSentryNew({ execFileImpl, sentryToken } = {}) {
+function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
   const result = execObservationCommand(
     'sentry',
     [
@@ -281,7 +305,7 @@ function checkSentryNew({ execFileImpl, sentryToken } = {}) {
       '--limit',
       '100',
     ],
-    { execFileImpl, env: { ...process.env, SENTRY_AUTH_TOKEN: sentryToken } },
+    { execFileImpl, env: { ...env, SENTRY_AUTH_TOKEN: sentryToken } },
   );
   if (!result.ok) return { status: 'fetch-failed' };
   let issues;
@@ -448,13 +472,20 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
   // トークン分離: NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN を
   // process.env から即座に取り除き、以降に spawn する pnpm 系コマンド
   // （docs:check 等、サードパーティ依存コードを大量実行する）から見えなく
-  // する。GH_TOKEN（github.token）はここでは触らない — permissions ブロック
-  // で既に最小権限化されているため、他 step から見えても許容する
-  // （#2367 issue コメントのトークン分離設計）。
+  // する（#2367 issue コメントのトークン分離設計）。
   const dependabotToken = process.env.NIGHT_WATCH_DEPENDABOT_TOKEN;
   const sentryToken = process.env.SENTRY_AUTH_TOKEN;
   delete process.env.NIGHT_WATCH_DEPENDABOT_TOKEN;
   delete process.env.SENTRY_AUTH_TOKEN;
+
+  // GH_TOKEN（issues:write 等を持つ既定トークン）も、それを必要としない
+  // コマンド（docs:check/docs:coverage/quality:deadcode:ci/sentry はいずれも
+  // gh を呼ばない）からは隠す（push 前反証レビュー risk-reviewer 指摘、
+  // medium）。**上の delete 呼び出しの後で** envWithout を呼ぶこと — 先に
+  // 呼ぶと NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN がまだ
+  // process.env に残っている状態のスナップショットが焼き込まれ、上の
+  // delete が無意味になる。
+  const envWithoutGh = envWithout('GH_TOKEN', 'GITHUB_TOKEN');
 
   const baseline = readBaseline();
 
@@ -466,12 +497,13 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
 
   /** @type {Record<string, { status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }>} */
   const checkOutcomes = {
-    'docs-check': checkExitCode('pnpm', ['docs:check'], { execFileImpl }),
+    'docs-check': checkExitCode('pnpm', ['docs:check'], { execFileImpl, env: envWithoutGh }),
     'docs-coverage': checkCountBaseline('pnpm', ['docs:coverage'], baseline.docs_coverage_missing, {
       execFileImpl,
+      env: envWithoutGh,
       parse: countDocsCoverageMissing,
     }),
-    deadcode: checkExitCode('pnpm', ['quality:deadcode:ci'], { execFileImpl }),
+    deadcode: checkExitCode('pnpm', ['quality:deadcode:ci'], { execFileImpl, env: envWithoutGh }),
     'dependabot-alerts': checkCountBaseline(
       'gh',
       ['api', 'repos/Dayopt/dayopt/dependabot/alerts?state=open', '--jq', 'length'],
@@ -504,7 +536,7 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
       ],
       { execFileImpl, now },
     ),
-    'sentry-new': checkSentryNew({ execFileImpl, sentryToken }),
+    'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh }),
   };
 
   for (const checkId of CHECK_IDS) {

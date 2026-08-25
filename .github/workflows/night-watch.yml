@@ -93,9 +93,15 @@ jobs:
       # digest は GitHub の Release Assets API が計算したもの（アップロード
       # 時にサーバー側で算出され、アップロード後は不変。転送時の破損 /
       # MITM を検出する）を実測して固定した（2026-08-25）:
-      #   gh api repos/getsentry/cli/releases/latest \
-      #     --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest'
-      # version を上げる時はこのコマンドで digest を取り直すこと。
+      #   gh api repos/getsentry/cli/releases/tags/<VERSION> \
+      #     --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' \
+      #     | sed 's/^sha256://'
+      # `releases/latest` ではなく `releases/tags/<VERSION>` で pin 対象の
+      # version を明示すること（`latest` は将来のリリースで別バイナリを指す）。
+      # API の digest は `sha256:<hex>` 形式なので `sed` で prefix を落として
+      # から NIGHT_WATCH_SENTRY_CLI_SHA256 へ入れる（push 前反証レビュー
+      # risk-reviewer 指摘、low。付けたまま貼ると sha256sum -c が必ず失敗する
+      # — fail-closed なので安全側の壊れ方だが、次の version bump 時に迷う）。
       - name: Sentry CLI をインストール（pin + checksum 検証）
         env:
           NIGHT_WATCH_SENTRY_CLI_VERSION: '0.43.0'

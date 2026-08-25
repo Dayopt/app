@@ -19,6 +19,13 @@ import { findTodayBoardIssue, REPO, runGh, runGhJson } from './lib.mjs';
  * shell へ二度渡さない（execFile の argv 配列）・宛先 issue（当日盤面）は
  * `findTodayBoardIssue` が自分で解決する・盤面 issue が無い日は
  * `{ action: 'skipped' }` を返し gh を追加で呼ばない（fail-safe）。
+ *
+ * **issue/PR title は sanitizeTitle を必ず通す。** public repo では
+ * 任意ユーザー（fork からの PR 作成者を含む）が title を自由に設定できる。
+ * chip 下書きブロックは指揮台がレーン prompt へそのままコピペする前提の
+ * 設計のため、改行・コードフェンス・見出し記号を無害化しないまま転記すると
+ * markdown 構造の乗っ取り・偽内容の混入経路になる（push 前反証レビュー
+ * risk-reviewer 指摘、high）。
  */
 
 export const HANDOFF_HEADINGS = ['## 背景', '## やること', '## 注意', '## 検証'];
@@ -71,6 +78,32 @@ function isStale(updatedAt, now) {
   return now - new Date(updatedAt).getTime() > STALE_MS;
 }
 
+// このブリーフは public repo の任意ユーザーが設定できる issue/PR title を
+// github-actions[bot] 名義の issue コメントへ転記する。加えて chip 下書き
+// ブロック（buildChipDraftBlock）は指揮台がレーン prompt へそのまま
+// コピペする前提の設計のため、title に改行・コードフェンス・見出し記号が
+// 混じると markdown 構造を乗っ取られたり、偽の内容がレーン prompt へ
+// 紛れ込む経路になる。alert-issue.mjs の SENTRY_EVIDENCE_RE/RUN_URL_RE、
+// run-log.mjs の BOARD_FAIL_REASONS enum 化と同じ「自由文字列を public
+// issue へそのまま書かない」原則をここにも適用する（push 前反証レビュー
+// risk-reviewer 指摘、high）。
+const TITLE_MAX_LENGTH = 120;
+
+/** issue/PR title を安全な単一行の表示用文字列へ変換する。 */
+export function sanitizeTitle(title, { maxLength = TITLE_MAX_LENGTH } = {}) {
+  const collapsed = String(title ?? '')
+    .replace(/[\r\n\u2028\u2029]+/g, ' ')
+    .replace(/`/g, "'")
+    .replace(/^[#>*-]+\s*/, '')
+    .trim();
+  return collapsed.length > maxLength ? `${collapsed.slice(0, maxLength)}…` : collapsed;
+}
+
+// gh の既定 --limit（30）に頼らず明示する（他 wrapper と同じ規律。
+// 明示しないと 31 件目以降が黙って切り捨てられ、件数表示と実態がズレる —
+// 押し前反証レビュー risk-reviewer 指摘、low）。
+const FETCH_LIMIT = '100';
+
 function fetchReadyIssues({ execFileImpl } = {}) {
   return runGhJson(
     [
@@ -84,6 +117,8 @@ function fetchReadyIssues({ execFileImpl } = {}) {
       'status:ready',
       '--json',
       'number,title,body,milestone',
+      '--limit',
+      FETCH_LIMIT,
     ],
     { execFileImpl },
   );
@@ -102,6 +137,8 @@ function fetchInProgressIssues({ execFileImpl } = {}) {
       'status:in-progress',
       '--json',
       'number,title,updatedAt,milestone',
+      '--limit',
+      FETCH_LIMIT,
     ],
     { execFileImpl },
   );
@@ -118,6 +155,8 @@ function fetchOpenPrs({ execFileImpl } = {}) {
       'open',
       '--json',
       'number,title,isDraft,statusCheckRollup,milestone',
+      '--limit',
+      FETCH_LIMIT,
     ],
     { execFileImpl },
   );
@@ -156,7 +195,7 @@ function summarizeCheckState(rollup) {
 function buildChipDraftBlock(issue) {
   const branch = buildBranchNameCandidate(issue.title, issue.number);
   return [
-    `#### #${issue.number}: ${issue.title}`,
+    `#### #${issue.number}: ${sanitizeTitle(issue.title)}`,
     '```',
     `レーン「（指揮台が命名）」。https://github.com/${REPO}/issues/${issue.number}。`,
     `worktree を .claude/worktrees/ 配下に作成し、branch 名は ${branch}（案。指揮台が action 部分を補って確定する）。`,
@@ -191,19 +230,19 @@ export function buildMorningBriefBody({
   const readyLines = readyJudged.map(({ issue, judged }) => {
     const label =
       judged.status === 'ready' ? 'dispatch可能' : `本文不備（${judged.missing.join(', ')} 欠落）`;
-    return `- #${issue.number}（${label}）: ${issue.title}`;
+    return `- #${issue.number}（${label}）: ${sanitizeTitle(issue.title)}`;
   });
 
   const inProgressLines = inProgressIssues.map((issue) => {
     const stale = isStale(issue.updatedAt, now) ? ' ⚠️stale（48h超）' : '';
-    return `- #${issue.number}: ${issue.title}${stale}`;
+    return `- #${issue.number}: ${sanitizeTitle(issue.title)}${stale}`;
   });
 
   const prLines = openPrs.map((pr) => {
     const draftLabel = pr.isDraft ? 'draft' : 'ready';
     const ciState = summarizeCheckState(pr.statusCheckRollup);
     const milestoneLabel = pr.milestone ? pr.milestone.title : 'milestone無し';
-    return `- #${pr.number}（${draftLabel}, CI:${ciState}, ${milestoneLabel}）: ${pr.title}`;
+    return `- #${pr.number}（${draftLabel}, CI:${ciState}, ${milestoneLabel}）: ${sanitizeTitle(pr.title)}`;
   });
 
   const milestoneMissingPrs = currentMilestoneTitle

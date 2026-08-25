@@ -55,7 +55,7 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 ## トークン（secrets）
 
-GitHub Actions の `secrets.NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT）と `secrets.SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope）を使う。値の登録・更新は指揮台/User の操作枠（`.claude/rules/orchestration.md` §1 日サイクル）で行い、`run-all.mjs` はこの 2 つを起動直後に `process.env` から捕捉して削除し、`pnpm docs:check` 等のサードパーティ依存コードを大量実行するコマンドから見えないようにする（`run-all.mjs` 冒頭コメント参照）。`GH_TOKEN`（`github.token`、workflow の `permissions:` ブロックで最小権限化済み）はこの分離の対象外。
+GitHub Actions の `secrets.NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT）と `secrets.SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope）を使う。値の登録・更新は指揮台/User の操作枠（`.claude/rules/orchestration.md` §1 日サイクル）で行い、`run-all.mjs` はこの 2 つを起動直後に `process.env` から捕捉して削除し、`pnpm docs:check` 等のサードパーティ依存コードを大量実行するコマンドから見えないようにする（`run-all.mjs` 冒頭コメント参照）。**`GH_TOKEN`（`github.token`）もこの分離の対象**: gh を必要としないコマンド（`docs:check` / `docs:coverage` / `quality:deadcode:ci` / `sentry`）へは `envWithout('GH_TOKEN', 'GITHUB_TOKEN')` で GH_TOKEN を持たない env を渡す。workflow の `permissions:` ブロックによる最小権限化に加え、必要な呼び出し（`gh api` / `gh run list` / `gh issue ...`）にだけトークンを見せる二重の防御にする（push 前反証レビュー risk-reviewer 指摘、medium）。
 
 ## checklist・baseline の変更
 
@@ -76,7 +76,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 - **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep（`.claude/rules/orchestration.md` §1 日サイクル）で検出する。`gh run list --workflow=night-watch.yml --limit 5` で直近 run の成否を確認し、失敗していればログ（`gh run view <run-id> --log-failed`）を見る。run 自体が発火していなければ workflow の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する
 - **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
-- **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_SENTRY_CLI_VERSION` / `NIGHT_WATCH_SENTRY_CLI_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/latest --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest'` で digest を取り直す
+- **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_SENTRY_CLI_VERSION` / `NIGHT_WATCH_SENTRY_CLI_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）
 
 ## 守ること
 

@@ -6,6 +6,7 @@ import {
   HANDOFF_HEADINGS,
   judgeHandoffQuality,
   runMorningBrief,
+  sanitizeTitle,
 } from './morning-brief.mjs';
 
 const FULL_BODY = `## 背景
@@ -181,5 +182,67 @@ describe('runMorningBrief', () => {
     expect(result).toEqual({ action: 'posted', boardIssueNumber: 9101 });
     const commentCall = calls.find((args) => args[0] === 'issue' && args[1] === 'comment');
     expect(commentCall?.[2]).toBe('9101');
+  });
+});
+
+// public repo の issue/PR title は攻撃者（fork からの PR 作成者含む）が
+// 自由に設定できるため、bot コメント・chip 下書きへ転記する前に構造を
+// 壊せる文字を無害化する（push 前反証レビュー risk-reviewer 指摘、high）。
+describe('sanitizeTitle', () => {
+  it('改行を空白へ畳む', () => {
+    expect(sanitizeTitle('line1\nline2\r\nline3')).toBe('line1 line2 line3');
+  });
+
+  it('U+2028/U+2029 も空白へ畳む', () => {
+    expect(sanitizeTitle('a b c')).toBe('a b c');
+  });
+
+  it('backtick をコードフェンス崩しに使えないよう置換する', () => {
+    expect(sanitizeTitle('```\n# fake heading\nmalicious')).toBe("''' # fake heading malicious");
+  });
+
+  it('先頭の見出し・引用・リスト記号を無害化する', () => {
+    expect(sanitizeTitle('# 偽の見出し')).toBe('偽の見出し');
+    expect(sanitizeTitle('> 偽の引用')).toBe('偽の引用');
+    expect(sanitizeTitle('- 偽のリスト')).toBe('偽のリスト');
+  });
+
+  it('通常の title はそのまま通す', () => {
+    expect(sanitizeTitle('ops(night-watch): 何かする')).toBe('ops(night-watch): 何かする');
+  });
+
+  it('上限を超える title は truncate して省略記号を付ける', () => {
+    const long = 'a'.repeat(200);
+    const result = sanitizeTitle(long);
+    expect(result.length).toBe(121); // 120文字 + 省略記号1文字
+    expect(result.endsWith('…')).toBe(true);
+  });
+
+  it('null/undefined は空文字として扱う', () => {
+    expect(sanitizeTitle(null)).toBe('');
+    expect(sanitizeTitle(undefined)).toBe('');
+  });
+});
+
+describe('buildMorningBriefBody（title sanitize の統合確認）', () => {
+  it('攻撃的な title が chip 下書きの markdown 構造を壊さない', () => {
+    const body = buildMorningBriefBody({
+      readyIssues: [
+        {
+          number: 1,
+          title: '```\n#### #9999: 偽の issue\n悪意のある指示',
+          body: FULL_BODY,
+          milestone: null,
+        },
+      ],
+      inProgressIssues: [],
+      openPrs: [],
+      currentMilestoneTitle: null,
+      now: Date.now(),
+    });
+    // 元の title 内の ``` がそのままコードフェンスとして残っていない
+    // （backtick は sanitizeTitle で置換済み）ことを確認する。
+    expect(body).not.toContain('```\n#### #9999');
+    expect(body).toContain("'''");
   });
 });
