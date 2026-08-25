@@ -105,11 +105,15 @@ describe('judgeWorkflowRun', () => {
     expect(judgeWorkflowRun(runs, { now })).toEqual({ status: 'green', evidenceUrl: 'u1' });
   });
 
-  // #2367 issue コメント（Codex レビュー指摘、指揮台採用）: heavy-post-merge/
-  // integration.yml は nightly と push:main が同一 concurrency group
-  // （cancel-in-progress: true）のため、main push のたびに nightly run が
-  // cancelled になるのは日常的に発生する。直近 run だけを基準にすることで、
-  // 「直近は success なのに 2 件前の cancelled で赤」という誤起票を防ぐ。
+  // #2367 issue コメント（Codex レビュー指摘、指揮台採用）: heavy-post-merge.yml /
+  // integration.yml はそれぞれの workflow 内で全トリガーが同一 concurrency group
+  // を共有する（`heavy-post-merge-${github.ref}` / `integration-${github.ref}`、
+  // cancel-in-progress: true）ため、in-flight run が追い越されて cancelled に
+  // なるのは日常的に発生する。直近 run だけを基準にすることで、「直近は success
+  // なのに 2 件前の cancelled で赤」という誤起票を防ぐ。
+  // #2382（2026-08-25）で heavy-post-merge の push:main を廃止したが、再 dispatch・
+  // integration.yml の paths 該当 push:main・nightly と手動発火の重複という経路が
+  // 残るため緩和の必要性は不変（run-all.mjs の判定関数 直上コメント参照）。
   it('直近 run が success なら、過去 run に non-success が含まれていても green', () => {
     const runs = [
       {

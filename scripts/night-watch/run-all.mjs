@@ -89,11 +89,20 @@ const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * 直近3件のいずれかが非successなら赤、という旧判定は誤起票を常態化させて
  * いた（Codex レビュー指摘、指揮台採用・issue #2367 コメント参照）:
- * heavy-post-merge/integration.yml は nightly と push:main が同一
- * concurrency group（cancel-in-progress: true）のため、main push のたびに
- * nightly run が `conclusion=cancelled` になるのは日常的に発生する
- * （SKILL.md 自身が明記）。直近が success でも 2 件前の cancelled で赤に
- * なってしまっていた。
+ * heavy-post-merge.yml / integration.yml は**それぞれの workflow 内で**全
+ * トリガーが同一 concurrency group を共有する（`heavy-post-merge-${github.ref}`
+ * / `integration-${github.ref}`、cancel-in-progress: true。workflow 名 prefix
+ * があるので 2 workflow は互いに cancel しない）。そのため同一グループの
+ * in-flight run を新しい run が追い越すと `conclusion=cancelled` になり、
+ * 直近が success でも 2 件前の cancelled で赤になってしまっていた。
+ *
+ * #2382（2026-08-25）で heavy-post-merge の push:main を廃止したが、
+ * **緩和は引き続き必要**。cancelled の発生源は「同一グループの in-flight run を
+ * 新しい run が追い越す」ことで、経路は複数ある: 再 dispatch（promote 中断後の
+ * 再開など）、integration.yml に残る paths 該当 push:main、nightly と手動発火の
+ * 重複。頻度は push:main 廃止で下がる公算が大きいが、ゼロにはならない。
+ * 「push:main を廃止したから cancelled はもう起きない」と読んでこの緩和を
+ * 撤回しないこと。
  *
  * `hasRecentSuccess` は `runs`（直近3件、runs[0] 自身を含む）全体を走査
  * する。**runs[0] が「24h 以内の」success なら、この条件だけで必ず green

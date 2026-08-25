@@ -302,7 +302,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は[
 
 main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
 
-**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（push:main + nightly + workflow_dispatch のみ）。旧記述（4 job が required）は誤り。詳細は [2026-08-20 の決定ログ](./log/2026-08-20-private-visibility-and-ci-redesign.md)、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
+**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。詳細は [2026-08-20 の決定ログ](./log/2026-08-20-private-visibility-and-ci-redesign.md)、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
