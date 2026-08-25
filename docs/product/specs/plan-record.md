@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-07-24
+last_verified: 2026-08-25
 code: apps/product/src/features/timeblock
 public_docs:
   - plans
@@ -127,4 +127,4 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - [ADR-015 時間不変原則](../log/2026-03-10-time-immutability-principle.md)
 - [ADR-018 時間重なりの全面禁止](../log/2026-05-13-time-overlap-prohibition.md)
 - [ADR-020 entries の論理削除](../../engineering/log/2026-03-18-soft-delete-model.md)
-- [機能スコープ: やらないことを決める](../log/2026-06-16-feature-non-adoption.md)（繰り返し予定を採用しない理由）
+- [機能スコープ: やらないことを決める](../log/2026-06-16-feature-non-adoption.md)（繰り返し予定は 2026-07-02 に「提案型ルーティン」として条件付き採用へ改定。未実装。[principles.md「計画する」](../principles.md#計画する)参照）
