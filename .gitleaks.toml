@@ -1,0 +1,65 @@
+# gitleaks の custom allowlist（v8.25.0+ 構文）。default ruleset は
+# [extend].useDefault で継承し、Dayopt 固有の既知 false positive だけを
+# 値ベース（regexTarget = "secret"）で追加抑止する。
+#
+# 経緯・全履歴棚卸しの結果・設計判断は #2379 と
+# docs/operations/log/2026-08-25-gitleaks-fullhistory-triage.md を参照。
+#
+# 運用ルール（新しい false positive を足す時）:
+# 1. 値（regexes、regexTarget = "secret" で抽出済み secret 値に対して照合）を
+#    第一選択にする。commit / line に依存しないため、将来 PR がこの値を含む
+#    行を触れても再検出されない
+# 2. path だけで一つのファイルを丸ごと免除しない。目視で「この rule をこの
+#    path で恒久的に無視してよい」と判断した場合でも、必ず regexes と
+#    condition = "AND" を併用し、path と値パターンの両方が一致した時だけ
+#    抑止する（さもないと、そのファイルへ本物の secret が紛れ込んでも
+#    二度と検出されなくなる）
+# 3. regexTarget は既定の "match"（rule 全体のマッチ範囲）ではなく
+#    "secret"（抽出された値そのもの）を使う。"match" は `key: 'value'` の
+#    ような周辺文字列ごと対象にするため、値だけに絞った `^...$` 形の
+#    anchored regex が意図せず不一致になる（#2379 で実際に踏んだ）
+# 4. targetRules は必ず実際のスキャン結果（`gitleaks detect --report-format
+#    json` の `RuleID`）から取る。推測で書かない
+
+title = "dayopt gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Supabase CLI がローカル開発環境へ共通発行する固定デモ JWT（issuer: supabase-demo、anon/service_role）と固定 publishable key。全ローカル環境で同一の公開情報で production secret とは無関係。scripts/seed-dev-data.sh・apps/product/src/lib/test/integration*.ts 等のローカル専用フォールバック値"
+targetRules = ["jwt", "generic-api-key"]
+regexTarget = "secret"
+regexes = [
+  '''^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1v[A-Za-z0-9_=-]*\.[A-Za-z0-9_=-]+$''',
+  '''^sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH$''',
+]
+
+[[allowlists]]
+description = "Google reCAPTCHA v2 の公式テストキー（常に success を返す設計、Google 自身が公開している。https://developers.google.com/recaptcha/docs/faq）。docs/security/RECAPTCHA_SETUP.md 等のセットアップ手順で使用"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = [
+  '''^6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI$''',
+  '''^6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe$''',
+]
+
+[[allowlists]]
+description = "apps/product/src/lib/supabase/__tests__/oauth.test.ts の truncated JWT fixture（末尾が literal '...' で終わる非機能文字列。実際にデコード可能な値ではない）"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = [
+  '''^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.$''',
+]
+
+[[allowlists]]
+description = "useCalendarKeyboard.ts のキーボードショートカット定義（key: 'Cmd+ArrowLeft' 等）。generic-api-key ルールが key: フィールド名に反応する誤検知。path と値の両方が一致した時だけ抑止するため、同ファイルに本物の secret が紛れ込んでも検出は維持される"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = [
+  '''^(?:Cmd|Ctrl|Alt|Shift)\+(?:Arrow(?:Left|Right|Up|Down)|[A-Za-z0-9])$''',
+]
+paths = [
+  '''(?:^|/)apps/product/src/features/calendar/hooks/keyboard/useCalendarKeyboard\.ts$''',
+]
