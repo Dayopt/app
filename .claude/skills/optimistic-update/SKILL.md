@@ -261,11 +261,11 @@ export function useCreateEntity() {
 ## 既存実装参考
 
 ```
-apps/product/src/features/tags/hooks/
-├── useTagCrudMutations.ts   # CRUD楽観的更新（作成・更新・削除を統合）
-├── useTagMergeMutation.ts   # マージ操作の楽観的更新
-├── useTagsOptimistic.ts     # キャッシュ操作ヘルパー
-└── useTagOperations.ts      # 高レベル操作（UI連携）
+apps/product/src/features/activities/hooks/
+├── useActivityMutations.ts   # CRUD楽観的更新（作成・更新・削除を統合）
+├── useCategoryMutations.ts   # カテゴリー側のCRUD楽観的更新
+├── activities-cache.ts       # キャッシュ操作ヘルパー
+└── useActivitiesMap.ts       # 高レベル操作（UI連携、id→エンティティ解決）
 ```
 
 ## 関連スキル

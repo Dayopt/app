@@ -125,7 +125,7 @@ features/
 │   ├── stores/
 │   └── types/
 ├── timeblock/     # Plan / Record の時間管理
-├── tags/          # タグ管理
+├── activities/    # アクティビティ管理
 └── ...
 ```
 

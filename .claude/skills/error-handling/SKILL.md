@@ -105,7 +105,7 @@ retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
    │  └─ コンポーネント
    ├─ Feature ErrorBoundary（Calendar）
    │  └─ コンポーネント
-   └─ Feature ErrorBoundary（Tags）
+   └─ Feature ErrorBoundary（Activities）
       └─ コンポーネント
 ```
 
@@ -159,7 +159,7 @@ export class ErrorBoundary extends Component<Props, State> {
 ```tsx
 // 使用例
 <ErrorBoundary fallback={<ErrorFallback onRetry={() => window.location.reload()} />}>
-  <TagList />
+  <ActivityList />
 </ErrorBoundary>
 ```
 

@@ -211,12 +211,9 @@ export const useEntityFilterStore = create<FilterState>()(
 ## 既存ストア参考
 
 ```
-apps/product/src/features/tags/stores/
-└── useTagCacheStore.ts      # Realtime競合防止フラグ（isMutating）
-
 apps/product/src/features/calendar/stores/
 ├── useCalendarFilterStore.ts  # フィルター
-├── useCalendarScrollStore.ts  # スクロール位置
+├── calendarScrollStore.ts     # スクロール位置
 └── useCalendarDragStore.ts    # ドラッグ状態
 ```
 

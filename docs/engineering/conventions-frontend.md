@@ -393,7 +393,7 @@ Redux DevToolsでデバッグしたい？
 
 | 状態の種類               | 管理方法       | 例                               |
 | ------------------------ | -------------- | -------------------------------- |
-| **サーバーデータ**       | TanStack Query | プラン一覧、タグ                 |
+| **サーバーデータ**       | TanStack Query | プラン一覧、アクティビティ       |
 | **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
 | **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
 | **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |
@@ -543,17 +543,17 @@ export const featureKeys = {
 #### 階層的なキャッシュ無効化
 
 ```typescript
-// すべてのタグ関連クエリを無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.all });
+// すべてのアクティビティ関連クエリを無効化
+queryClient.invalidateQueries({ queryKey: activityKeys.all });
 
 // リストのみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.lists() });
+queryClient.invalidateQueries({ queryKey: activityKeys.lists() });
 
 // 特定のフィルタのみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.list({ includeChildren: true }) });
+queryClient.invalidateQueries({ queryKey: activityKeys.list({ includeArchived: true }) });
 
-// 特定のタグ詳細のみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.detail('tag-id') });
+// 特定のアクティビティ詳細のみ無効化
+queryClient.invalidateQueries({ queryKey: activityKeys.detail('activity-id') });
 ```
 
 ### キャッシュ戦略
