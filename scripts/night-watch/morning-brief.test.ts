@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   buildBranchNameCandidate,
@@ -161,6 +161,17 @@ describe('buildMorningBriefBody', () => {
 });
 
 describe('runMorningBrief', () => {
+  // findTodayBoardIssue は now を受け取らず内部で実時刻から当日 JST タイトルを
+  // 組み立てるため、mock のハードコード日付（盤面 2026-08-25）と一致させるには
+  // システム時刻ごと固定する（dod-candidate.test.ts と同じパターン。#2404）。
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-25T01:00:00Z')); // JST 2026-08-25 10:00
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('当日盤面 issue が無ければ gh を追加で呼ばず skip する', () => {
     const execFileImpl = vi.fn(() => JSON.stringify([])); // findTodayBoardIssue が空配列を返す
     const result = runMorningBrief({ execFileImpl, now: Date.now() });
