@@ -1,6 +1,6 @@
 # night-watch checklist v1
 
-策定日: 2026-08-19（[#2209](https://github.com/Dayopt/dayopt/issues/2209)）。変更は通常の PR レビューを通す。夜勤 Routine 自身はこのファイルを編集しない。
+策定日: 2026-08-19（[#2209](https://github.com/Dayopt/dayopt/issues/2209)）。変更は通常の PR レビューを通す。夜勤（GitHub Actions cron・手動代行のどちらも）自身はこのファイルを編集しない。
 
 各項目は「実行コマンド + 判定」の対のみで構成する。裁量的な探索・追加コマンドの実行はしない。判定規約と起票規約の正本は [SKILL.md](SKILL.md) §自動パート。
 
