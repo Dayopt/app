@@ -330,10 +330,16 @@ const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR'])
 // `authorAssociation` を緩めるのではなく、login 完全一致を **OR** で追加する
 // （`isTrustedCommentAuthor` 参照）。gh の `--json comments` はコメント単位の
 // `user.type`（"Bot" 等）を返さないため login のみで判定するが、
-// `github-actions[bot]` という login は GitHub 側が予約しており、public repo
-// の第三者がこの名義でコメントを投稿することはできない（偽装耐性は
-// authorAssociation ベースの判定と同じ水準を維持する）。
-const TRUSTED_BOT_LOGINS = new Set(['github-actions[bot]']);
+// `github-actions[bot]` / `github-actions` という login は GitHub 側が予約し
+// ており、public repo の第三者がこの名義でコメントを投稿することはできない
+// （偽装耐性は authorAssociation ベースの判定と同じ水準を維持する）。
+//
+// `github-actions[bot]` に加えて suffix 無しの `github-actions` も含める。
+// `gh issue view --json comments`（GraphQL 経由）が返す login には `[bot]`
+// suffix が付かず、`github-actions[bot]` 単独では night-watch 自身が Actions
+// から投稿したコメントを判定できない（指揮台が #2358 / #2330 / #2324 の
+// 3 issue で実測して確定。PR #2380 クロスレビュー指摘）。
+const TRUSTED_BOT_LOGINS = new Set(['github-actions[bot]', 'github-actions']);
 
 /**
  * `checkRecentPending` が使う信頼できる書き手の判定。
@@ -353,8 +359,10 @@ function isTrustedCommentAuthor(comment) {
  * 等で run が恒久的に完了しない場合、毎晩 pending を積むだけで
  * `alert-issue.mjs` が二度と呼ばれず、無期限に無音のまま気づかれない
  * （behavior-verifier 指摘）。これを検出するため、常設運行記録 issue の
- * 直近コメントから、信頼できる書き手（OWNER/MEMBER/COLLABORATOR）による
- * 「night-watch 運行記録」形式のものだけを新しい順に抽出し、**日付が異なる**
+ * 直近コメントから、信頼できる書き手（`isTrustedCommentAuthor`: 人間の
+ * OWNER/MEMBER/COLLABORATOR、または night-watch 自身が Actions から投稿
+ * する時の予約 login）による「night-watch 運行記録」形式のものだけを
+ * 新しい順に抽出し、**日付が異なる**
  * 直近 `lookback` 件（既定 2）**すべて**で同一 check-id が pending だったかを
  * machine で判定する。日付が異なることを要求するのは、手動代行との重複投稿
  * などで同じ晩の 2 件を「2 晩連続」と誤カウントしないため。

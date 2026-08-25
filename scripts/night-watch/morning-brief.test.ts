@@ -5,6 +5,7 @@ import {
   buildMorningBriefBody,
   HANDOFF_HEADINGS,
   judgeHandoffQuality,
+  MORNING_BRIEF_HEADING,
   runMorningBrief,
   sanitizeTitle,
 } from './morning-brief.mjs';
@@ -160,6 +161,9 @@ describe('runMorningBrief', () => {
       if (args.includes('type:board')) {
         return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
       }
+      if (args[0] === 'issue' && args[1] === 'view') {
+        return JSON.stringify({ comments: [] }); // 冪等ガード確認: 未投稿
+      }
       if (args[0] === 'issue' && args[1] === 'list' && args.includes('status:ready')) {
         return JSON.stringify([]);
       }
@@ -182,6 +186,84 @@ describe('runMorningBrief', () => {
     expect(result).toEqual({ action: 'posted', boardIssueNumber: 9101 });
     const commentCall = calls.find((args) => args[0] === 'issue' && args[1] === 'comment');
     expect(commentCall?.[2]).toBe('9101');
+  });
+
+  // PR #2380 クロスレビュー指摘（P2）: 夜勤が赤で終わった夜に手動 re-run
+  // すると、冪等ガードが無ければ当日盤面へ長文ブリーフが重複投稿される。
+  it('信頼できる書き手（night-watch自身のActions bot）の既存ブリーフなら観測を集めず skip する（re-run の重複投稿防止）', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      calls.push(args);
+      if (args.includes('type:board')) {
+        return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
+      }
+      if (args[0] === 'issue' && args[1] === 'view') {
+        return JSON.stringify({
+          comments: [
+            {
+              body: `${MORNING_BRIEF_HEADING}（機械生成・判断なし）\n\n...`,
+              authorAssociation: 'NONE',
+              author: { login: 'github-actions' },
+            },
+          ],
+        });
+      }
+      throw new Error(`unmocked: ${args.join(' ')}`);
+    });
+
+    const result = runMorningBrief({ execFileImpl, now: Date.now() });
+    expect(result).toEqual({ action: 'skipped', reason: 'already-posted', boardIssueNumber: 9101 });
+    // 観測系（issue list / pr list / issue comment）は一切呼ばれない。
+    expect(calls.some((args) => args[0] === 'pr' && args[1] === 'list')).toBe(false);
+    expect(calls.some((args) => args[0] === 'issue' && args[1] === 'comment')).toBe(false);
+  });
+
+  // push 前反証レビュー risk-reviewer 指摘（medium）: public repo では任意の
+  // 第三者が当日盤面 issue へ MORNING_BRIEF_HEADING で始まるコメントを投稿
+  // できる。投稿者を見ずに本文だけで冪等判定すると、この偽コメント 1 件で
+  // その日の自動ブリーフが恒久的に抑止される（観測データが機械生成される前に
+  // skip してしまう）。信頼できない書き手のコメントは「投稿済みの印」として
+  // 数えないことを固定する。
+  it('信頼できない第三者コメントがMORNING_BRIEF_HEADINGで始まっていても無視し、通常どおり投稿する', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      calls.push(args);
+      if (args.includes('type:board')) {
+        return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
+      }
+      if (args[0] === 'issue' && args[1] === 'view') {
+        return JSON.stringify({
+          comments: [
+            {
+              // 偽装: 第三者が見出しをそのままコピーして投稿した想定。
+              body: `${MORNING_BRIEF_HEADING}（機械生成・判断なし）\n\n偽の抑止コメント`,
+              authorAssociation: 'NONE',
+              author: { login: 'attacker' },
+            },
+          ],
+        });
+      }
+      if (args[0] === 'issue' && args[1] === 'list' && args.includes('status:ready')) {
+        return JSON.stringify([]);
+      }
+      if (args[0] === 'issue' && args[1] === 'list' && args.includes('status:in-progress')) {
+        return JSON.stringify([]);
+      }
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return JSON.stringify([]);
+      }
+      if (args[0] === 'api') {
+        return JSON.stringify([]);
+      }
+      if (args[0] === 'issue' && args[1] === 'comment') {
+        return '';
+      }
+      throw new Error(`unmocked: ${args.join(' ')}`);
+    });
+
+    const result = runMorningBrief({ execFileImpl, now: Date.now() });
+    expect(result).toEqual({ action: 'posted', boardIssueNumber: 9101 });
+    expect(calls.some((args) => args[0] === 'issue' && args[1] === 'comment')).toBe(true);
   });
 });
 
@@ -222,6 +304,16 @@ describe('sanitizeTitle', () => {
     expect(sanitizeTitle(null)).toBe('');
     expect(sanitizeTitle(undefined)).toBe('');
   });
+
+  // PR #2380 クロスレビュー指摘（P2）: fork PR title の `<!--` が GFM の
+  // HTML コメントを開き、`-->` まで後続セクションを不可視にする。
+  it('< を全角へ置換し HTML コメント開始を無害化する', () => {
+    expect(sanitizeTitle('fix(auth): <!-- 隠れたコメント')).toBe('fix(auth): ＜!-- 隠れたコメント');
+  });
+
+  it('リンク偽装に使う < も置換する（[text](url) 形式の title）', () => {
+    expect(sanitizeTitle('見た目 <script>')).toBe('見た目 ＜script>');
+  });
 });
 
 describe('buildMorningBriefBody（title sanitize の統合確認）', () => {
@@ -244,5 +336,41 @@ describe('buildMorningBriefBody（title sanitize の統合確認）', () => {
     // （backtick は sanitizeTitle で置換済み）ことを確認する。
     expect(body).not.toContain('```\n#### #9999');
     expect(body).toContain("'''");
+  });
+
+  // PR #2380 クロスレビュー指摘（P2）: fork PR の <!-- タイトルは、他の
+  // まっとうな open PR が並んでいても後続セクション（milestone 未付与 /
+  // chip 下書き）を丸ごと不可視にしてはいけない。1 件の汚染が全体を巻き
+  // 込まないことを固定する。
+  it('1件のPR titleが汚染されても、その他のセクション・後続PRの表示は残る', () => {
+    const body = buildMorningBriefBody({
+      readyIssues: [],
+      inProgressIssues: [],
+      openPrs: [
+        {
+          number: 20,
+          title: 'fix(auth): <!-- 隠したい本文 -->',
+          isDraft: false,
+          statusCheckRollup: [{ conclusion: 'SUCCESS' }],
+          milestone: null,
+        },
+        {
+          number: 21,
+          title: '正常なPRタイトル',
+          isDraft: false,
+          statusCheckRollup: [{ conclusion: 'SUCCESS' }],
+          milestone: { title: 'v0.35.0' },
+        },
+      ],
+      currentMilestoneTitle: 'v0.35.0',
+      now: Date.now(),
+    });
+    expect(body).toContain('＜!-- 隠したい本文 -->');
+    expect(body).not.toContain('<!--');
+    // #21 と、その後ろの milestone 未付与 / chip 下書きセクションが健在。
+    expect(body).toContain('#21');
+    expect(body).toContain('正常なPRタイトル');
+    expect(body).toContain('milestone 未付与（現行: v0.35.0）');
+    expect(body).toContain('chip 下書き');
   });
 });

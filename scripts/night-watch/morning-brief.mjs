@@ -89,11 +89,20 @@ function isStale(updatedAt, now) {
 // risk-reviewer 指摘、high）。
 const TITLE_MAX_LENGTH = 120;
 
-/** issue/PR title を安全な単一行の表示用文字列へ変換する。 */
+/**
+ * issue/PR title を安全な単一行の表示用文字列へ変換する。
+ *
+ * `<` は全角へ置換する（PR #2380 クロスレビュー指摘、P2）。fork からの
+ * PR title に `<!--` を含めると GFM の HTML コメントが開き、`-->` が現れる
+ * までブリーフの後続セクション（milestone 未付与 / chip 下書き）が丸ごと
+ * 不可視になる。maintainer の操作を介さず open PR title だけで成立する経路
+ * のため、経路の有無（private 化予定）に依存せず閉じる。
+ */
 export function sanitizeTitle(title, { maxLength = TITLE_MAX_LENGTH } = {}) {
   const collapsed = String(title ?? '')
     .replace(/[\r\n\u2028\u2029]+/g, ' ')
     .replace(/`/g, "'")
+    .replace(/</g, '＜')
     .replace(/^[#>*-]+\s*/, '')
     .trim();
   return collapsed.length > maxLength ? `${collapsed.slice(0, maxLength)}…` : collapsed;
@@ -284,15 +293,64 @@ ${chipDrafts.length > 0 ? chipDrafts.join('\n\n') : '（dispatch可能な issue 
 `;
 }
 
+export const MORNING_BRIEF_HEADING = '## 朝編成ブリーフ';
+
+// `run-log.mjs` の `TRUSTED_AUTHOR_ASSOCIATIONS`/`TRUSTED_BOT_LOGINS`/
+// `isTrustedCommentAuthor` と同じ判定を最小限だけ複製する（既存 wrapper
+// ファイルを無変更に保つ設計、#2367 issue コメント。`readBaseline` を
+// run-all.mjs 側に複製したのと同じ判断）。
+//
+// この repo は現時点で public（private 化は 2026-09 予定）。投稿者を見ず
+// 「本文が MORNING_BRIEF_HEADING で始まるか」だけで冪等判定すると、任意の
+// 第三者が当日盤面 issue へその見出しで 1 行コメントするだけで、その日の
+// 自動ブリーフを恒久的に抑止できてしまう（push 前反証レビュー
+// risk-reviewer 指摘、medium）。信頼できる書き手（人間の
+// OWNER/MEMBER/COLLABORATOR、または night-watch 自身が Actions から
+// 投稿する時の予約 login）のコメントだけを「投稿済みの印」として数える。
+const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+const TRUSTED_BOT_LOGINS = new Set(['github-actions[bot]', 'github-actions']);
+
+function isTrustedCommentAuthor(comment) {
+  if (TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) return true;
+  return TRUSTED_BOT_LOGINS.has(comment.author?.login);
+}
+
+/**
+ * 当日盤面 issue へ朝編成ブリーフが既に投稿済みかを判定する。`board-issue.mjs`
+ * の title 冪等 skip と同じ idiom（内容の重複ではなく「投稿済みの印」の有無で
+ * 判定する）。信頼できる書き手のコメントだけを対象にする（上記コメント参照）。
+ *
+ * `runMorningBrief` に冪等ガードが無いと、夜勤が赤で終わった夜に手動
+ * `workflow_dispatch` で re-run すると当日盤面へ長文ブリーフが重複投稿される
+ * （night-watch.yml は `step5Failed`/`dod4Failed` で非 0 exit するため job が
+ * 赤になりやすく、re-run が起きやすい設計）。PR #2380 クロスレビュー指摘、P2。
+ * @param {number} boardIssueNumber
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ */
+function hasExistingMorningBrief(boardIssueNumber, { execFileImpl } = {}) {
+  const response = runGhJson(
+    ['issue', 'view', String(boardIssueNumber), '--repo', REPO, '--json', 'comments'],
+    { execFileImpl },
+  );
+  return (response.comments ?? []).some(
+    (comment) =>
+      isTrustedCommentAuthor(comment) && (comment.body ?? '').startsWith(MORNING_BRIEF_HEADING),
+  );
+}
+
 /**
  * Step 6 を実行する。当日盤面 issue が無ければ（土日・起票失敗）gh を
- * 追加で呼ばず skip する。
+ * 追加で呼ばず skip する。既に朝編成ブリーフが投稿済み（re-run 等）なら
+ * 重複投稿を避けて skip する。
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, now?: number }} [opts]
  */
 export function runMorningBrief({ execFileImpl, now = Date.now() } = {}) {
   const boardIssue = findTodayBoardIssue({ execFileImpl });
   if (!boardIssue) {
     return { action: 'skipped', reason: 'no-board-issue' };
+  }
+  if (hasExistingMorningBrief(boardIssue.number, { execFileImpl })) {
+    return { action: 'skipped', reason: 'already-posted', boardIssueNumber: boardIssue.number };
   }
 
   const readyIssues = fetchReadyIssues({ execFileImpl });

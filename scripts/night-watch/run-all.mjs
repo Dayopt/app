@@ -93,10 +93,23 @@ const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
  * concurrency group（cancel-in-progress: true）のため、main push のたびに
  * nightly run が `conclusion=cancelled` になるのは日常的に発生する
  * （SKILL.md 自身が明記）。直近が success でも 2 件前の cancelled で赤に
- * なってしまっていた。直近 run だけを基準にしても見逃しは起きない —
- * 本物の失敗は直近 run として現れ、直近24hにsuccessが無いという第2条件が
- * backstop になる（直近 run が偶然 success でも、それより前が全滅なら
- * 赤のまま）。evidence には runs[0].url（直近 run の URL）を使う。
+ * なってしまっていた。
+ *
+ * `hasRecentSuccess` は `runs`（直近3件、runs[0] 自身を含む）全体を走査
+ * する。**runs[0] が「24h 以内の」success なら、この条件だけで必ず green
+ * になる**（2件前以前の cancelled/failure は red へ寄与しない。ただし
+ * runs[0] が success でも createdAt が 24h より古ければ——workflow の
+ * schedule 自体が長期間発火していない等——この条件は満たされず red の
+ * ままになりうる）。したがって第2条件は「直近 run が偶然 success でも、
+ * それより前が全滅なら赤のまま保つ backstop」ではなく、**「直近 window
+ * （fetch した直近3件、実運用の cron 間隔では概ね直近数日）に一度も
+ * 24h以内のsuccessが無い」workflow の長期停止・staleness を検出する
+ * backstop**（PR #2380 クロスレビュー指摘、P3・push前反証レビュー
+ * risk-reviewer 指摘で追加修正。実装ではなくこのコメントの誤記を訂正）。
+ * より強い保証（直近 run が success でも過去の失敗を検出したい）が要る
+ * 場合は別 issue で設計する — 直近 run 基準への変更自体は Codex 指摘で
+ * 採用した設計であり、ここを緩めると誤 red が戻る。evidence には
+ * runs[0].url（直近 run の URL）を使う。
  * @param {{ status: string, conclusion: string | null, createdAt: string, url: string }[]} runs
  * @param {{ now?: number }} [opts]
  */
@@ -156,6 +169,18 @@ export function classifyGhError(error) {
  */
 
 /**
+ * 観測コマンド 1 本あたりの上限。job 全体の予算は `timeout-minutes: 15`
+ * だけで、setup（pnpm install）+ 複数の観測コマンド（docs:check /
+ * docs:coverage / quality:deadcode:ci の monorepo 全体 knip / gh・sentry の
+ * ネットワーク往復）がその中に全部入る。1 本が hang すると runner が job
+ * ごと kill し、最後に置かれた Step 5（運行記録）が実行されないまま消える
+ * （PR #2380 クロスレビュー指摘、P2）。個々のコマンドに上限を設け、hang を
+ * 「取得失敗」（`isSpawnFailure` → fetch-failed 経路）へ縮退させる。
+ * @type {number}
+ */
+const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
+
+/**
  * Step 2 の観測コマンドを実行する共通 helper。secret を含む env override
  * （dependabot-alerts の PAT 等）はこの `env` 引数経由でのみ渡す —
  * `process.env` はここでは一切書き換えない（#2367 issue コメントのトークン
@@ -170,6 +195,8 @@ export function execObservationCommand(cmd, args, { execFileImpl = execFileSync,
     const stdout = execFileImpl(cmd, args, {
       encoding: 'utf8',
       env: env ?? process.env,
+      timeout: OBSERVATION_COMMAND_TIMEOUT_MS,
+      killSignal: 'SIGKILL',
       ...(cwd ? { cwd } : {}),
     });
     return { ok: true, stdout };
@@ -289,6 +316,26 @@ function checkWorkflowRun(runListArgs, { execFileImpl, now } = {}) {
 const SENTRY_EVIDENCE_CANDIDATES = 5;
 
 /**
+ * `sentry issue list` の `--limit`。`--limit` 引数と（将来 count 表示を扱う
+ * コードがあれば）その基準値を同じ場所で管理するための定数化のみ
+ * （マジックナンバー `100` の重複を避ける）。
+ *
+ * **`"${SENTRY_QUERY_LIMIT}+"` のような非数字 count 表示は導入しない**
+ * （2026-08-25、push 前反証レビュー risk-reviewer 指摘、high。一度実装して
+ * 自己発見・revert 済み）。`alert-issue.mjs` の sentry kind は
+ * `DIGITS_RE = /^\d+$/` で `--count` を厳密検証しており、`"100+"` を渡すと
+ * `buildAlertBody` が例外を投げる。`reportRedCheck` の evidence-less 再試行
+ * も count 自体は変えないため必ず再度 throw し、**24h で新規 unresolved が
+ * 100 件以上出た本番障害時（このチェックが最も必要な時）に限って alert
+ * issue が起票されず、運行記録には実態と違う「取得失敗: sentry-new」だけが
+ * 残る**という新しい回帰を作っていた。`alert-issue.mjs` は無変更のまま使う
+ * 既存 wrapper（#2367 issue コメント）のため、count は常に
+ * `String(issues.length)` の素の数字で渡す。
+ * @type {number}
+ */
+const SENTRY_QUERY_LIMIT = 100;
+
+/**
  * sentry kind（sentry-new）の観測。`--json --fields shortId,permalink` で
  * 構造化出力を取得する（prose 出力の parsing より安全。CHECK_DEFINITIONS の
  * command 文字列は起票 issue の表示用のままで、実行はこちらを使う —
@@ -298,7 +345,7 @@ const SENTRY_EVIDENCE_CANDIDATES = 5;
  * 見せる理由が無い（push 前反証レビュー risk-reviewer 指摘、medium）。
  * @param {{ execFileImpl?: ExecFileImpl, sentryToken?: string, env?: NodeJS.ProcessEnv }} [opts]
  */
-function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
+export function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
   const result = execObservationCommand(
     'sentry',
     [
@@ -311,7 +358,7 @@ function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
       '--fields',
       'shortId,permalink',
       '--limit',
-      '100',
+      String(SENTRY_QUERY_LIMIT),
     ],
     { execFileImpl, env: { ...env, SENTRY_AUTH_TOKEN: sentryToken } },
   );
@@ -332,7 +379,7 @@ function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
 }
 
 /** @param {string} checkId @param {{ actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome */
-function buildAlertArgs(checkId, outcome) {
+export function buildAlertArgs(checkId, outcome) {
   const definition = CHECK_DEFINITIONS[checkId];
   switch (definition.kind) {
     case 'exit-code':
@@ -525,6 +572,13 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     'heavy-red': checkWorkflowRun(
       [
         '--workflow=heavy-post-merge.yml',
+        // integration-red と同じく main に限定する（PR #2380 クロスレビュー
+        // 指摘、P2）。heavy-post-merge.yml は workflow_dispatch を持つため、
+        // 誰かが feature branch で手動 dispatch すると、その run が
+        // runs[0] になり main と無関係に heavy-red が誤起票される（または
+        // feature branch の success が直近成功として main の赤を隠す）。
+        '--branch',
+        'main',
         '--limit',
         '3',
         '--json',
@@ -589,8 +643,15 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
   // 欠けても「ブリーフ無し」と「正常」を区別できるようにする。
   // `process.exitCode` は立てない — Step 6 は観測の付加価値であり、夜勤
   // 本体（Step 1〜5）の成否とは切り分ける）。
+  //
+  // `skipped` 経路（当日盤面 issue が無い、または既に投稿済み）も無音に
+  // しない。特に `no-board-issue` は Step 1（起票）の失敗を示唆しうるため、
+  // `::notice::` annotation を残す（PR #2380 クロスレビュー指摘、P3）。
   try {
-    runMorningBrief({ execFileImpl, now });
+    const briefResult = runMorningBrief({ execFileImpl, now });
+    if (briefResult.action === 'skipped') {
+      console.log(`::notice::朝編成ブリーフを skip しました（reason: ${briefResult.reason}）`);
+    }
   } catch (error) {
     console.error('::warning::朝編成ブリーフの投稿に失敗しました（非致命）:', error);
   }

@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildAlertArgs,
+  checkSentryNew,
   classifyGhError,
   countDocsCoverageMissing,
   execObservationCommand,
@@ -258,6 +260,84 @@ describe('execObservationCommand', () => {
     execObservationCommand('gh', ['api', 'x'], { execFileImpl, env: scopedEnv });
     const passedOptions = vi.mocked(execFileImpl).mock.calls[0]?.[2];
     expect(passedOptions?.env).toBe(scopedEnv);
+  });
+
+  // PR #2380 クロスレビュー指摘（P2）: 観測コマンド 1 本の hang が job 全体を
+  // kill させ、Step 5（運行記録）を消す。個々のコマンドに上限を設ける。
+  it('timeout と killSignal を execFileImpl へ渡す（1本のhangがStep5を消さないための上限）', () => {
+    const execFileImpl: (
+      file: string,
+      args: string[],
+      options?: { timeout?: number; killSignal?: string },
+    ) => string = vi.fn(() => 'ok\n');
+    execObservationCommand('pnpm', ['docs:check'], { execFileImpl });
+    const passedOptions = vi.mocked(execFileImpl).mock.calls[0]?.[2];
+    expect(passedOptions?.timeout).toBeGreaterThan(0);
+    expect(passedOptions?.killSignal).toBe('SIGKILL');
+  });
+});
+
+// PR #2380 クロスレビュー指摘（当初 P3、対応の過程で自己発見した回帰は
+// push 前反証レビュー risk-reviewer 指摘で high に格上げ）: `count` は常に
+// 素の数字文字列で `alert-issue.mjs` へ渡す。"100+" のような非数字表示は
+// `DIGITS_RE = /^\d+$/`（alert-issue.mjs、無変更の既存 wrapper）が拒否し、
+// 24h で新規 unresolved が limit 件以上出た本番障害時（このチェックが
+// 最も必要な時）に限って alert issue の起票自体が失敗する回帰になる
+// （一度実装して自己発見・revert 済み）。
+describe('checkSentryNew / buildAlertArgs（count は常に素の数字）', () => {
+  it('issues.length が limit 未満なら count は実数のまま', () => {
+    const issues = Array.from({ length: 3 }, (_, i) => ({
+      shortId: `DAYOPT-${i}`,
+      permalink: `https://sentry.example/${i}`,
+    }));
+    const execFileImpl = vi.fn(() => JSON.stringify(issues));
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toMatchObject({ status: 'red', count: 3 });
+    expect(buildAlertArgs('sentry-new', outcome).count).toBe('3');
+  });
+
+  it('issues.length が limit（100）に達しても count は素の数字のまま（"100+"にしない）', () => {
+    const issues = Array.from({ length: 100 }, (_, i) => ({
+      shortId: `DAYOPT-${i}`,
+      permalink: `https://sentry.example/${i}`,
+    }));
+    const execFileImpl = vi.fn(() => JSON.stringify(issues));
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toMatchObject({ status: 'red', count: 100 });
+    expect(buildAlertArgs('sentry-new', outcome).count).toBe('100');
+  });
+
+  it('sentry --limit 引数は SENTRY_QUERY_LIMIT と同じ 100 を渡す', () => {
+    const execFileImpl: (file: string, args: string[], options?: object) => string = vi.fn(
+      () => '[]',
+    );
+    checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    const args = vi.mocked(execFileImpl).mock.calls[0]?.[1] ?? [];
+    expect(args[args.indexOf('--limit') + 1]).toBe('100');
+  });
+
+  // risk-reviewer 指摘: buildAlertArgs 単体の assert だけでは
+  // 「壊れる相手（alert-issue.mjs の厳密な入力検証）」を実際に呼ばない
+  // 同語反復になる。checkSentryNew → buildAlertArgs → 実 buildAlertBody
+  // まで通し、100 件到達時でも起票自体が壊れないことを固定する。
+  it('100件到達時のoutcomeでも実際のbuildAlertBody（alert-issue.mjs）まで通してthrowしない', async () => {
+    const { buildAlertBody } = await import('./alert-issue.mjs');
+    const issues = Array.from({ length: 100 }, (_, i) => ({
+      shortId: `DAYOPT-${i}`,
+      permalink: `https://dayopt.sentry.io/issues/${i}/`,
+    }));
+    const execFileImpl = vi.fn(() => JSON.stringify(issues));
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    const args = buildAlertArgs('sentry-new', outcome);
+    expect(() =>
+      buildAlertBody({ checkId: 'sentry-new', args, detectedAt: '2026-08-25T05:00:00+09:00' }),
+    ).not.toThrow();
+    const body = buildAlertBody({
+      checkId: 'sentry-new',
+      args,
+      detectedAt: '2026-08-25T05:00:00+09:00',
+    });
+    expect(body).toContain('件数: 100');
   });
 });
 

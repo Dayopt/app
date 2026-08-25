@@ -111,14 +111,32 @@ jobs:
       # （`Fingerprint` フィールド自体が存在しない、より新しいバージョンの
       # 機能）と実測確認済みのため、値ではなく変数名側でルールの
       # マッチ条件を外す設計にした。
-      - name: Sentry CLI をインストール（pin + checksum 検証）
+      # 取得（ダウンロード）と検証（checksum）を別 step に分ける。
+      # ダウンロード step は `continue-on-error: true` で、GitHub Release CDN
+      # の一過性 5xx / DNS ゆらぎで夜勤が全停止しないよう degrade を許す
+      # （`sentry` が PATH に無ければ後続の `checkSentryNew` が spawn 失敗 →
+      # 既存の fetch-failed 経路へ落ち、Sentry だけが欠けた夜勤として完走
+      # できる。PR #2380 クロスレビュー指摘、P2）。checksum 不一致（供給側
+      # 改ざんの疑い）は degrade させず、検証 step は continue-on-error を
+      # 付けず従来どおり job を止める。検証 step はダウンロードが成功した
+      # 時だけ走らせる（ファイル不在での sha256sum 失敗を「改ざん」と誤認
+      # しないため）。
+      - name: Sentry CLI をダウンロード（pin + retry、取得失敗は degrade）
+        id: sentry-cli-download
+        continue-on-error: true
         env:
           NIGHT_WATCH_CLI_VERSION: '0.43.0'
-          NIGHT_WATCH_CLI_CHECKSUM_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL -o "$HOME/.local/bin/sentry" \
+          curl -fsSL --retry 3 --retry-connrefused --retry-all-errors \
+            -o "$HOME/.local/bin/sentry" \
             "https://github.com/getsentry/cli/releases/download/${NIGHT_WATCH_CLI_VERSION}/sentry-linux-x64"
+
+      - name: Sentry CLI の checksum を検証（不一致は止める）
+        if: steps.sentry-cli-download.outcome == 'success'
+        env:
+          NIGHT_WATCH_CLI_CHECKSUM_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
+        run: |
           echo "${NIGHT_WATCH_CLI_CHECKSUM_SHA256}  $HOME/.local/bin/sentry" | sha256sum -c -
           chmod +x "$HOME/.local/bin/sentry"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
