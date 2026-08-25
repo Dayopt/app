@@ -99,18 +99,27 @@ jobs:
       # `releases/latest` ではなく `releases/tags/<VERSION>` で pin 対象の
       # version を明示すること（`latest` は将来のリリースで別バイナリを指す）。
       # API の digest は `sha256:<hex>` 形式なので `sed` で prefix を落として
-      # から NIGHT_WATCH_SENTRY_CLI_SHA256 へ入れる（push 前反証レビュー
+      # から NIGHT_WATCH_CLI_CHECKSUM_SHA256 へ入れる（push 前反証レビュー
       # risk-reviewer 指摘、low。付けたまま貼ると sha256sum -c が必ず失敗する
       # — fail-closed なので安全側の壊れ方だが、次の version bump 時に迷う）。
+      #
+      # env 変数名は意図的に「SENTRY」を含めない（`NIGHT_WATCH_CLI_*`）。
+      # gitleaks の `sentry-access-token` ルールは変数名が SENTRY を含み
+      # かつ値が hex 文字列に見える行を誤検知する（checksum は実際の secret
+      # ではないが gitleaks には区別できない）。`.gitleaksignore` の
+      # fingerprint 方式は CI が pin する gitleaks 8.9.0 では未サポート
+      # （`Fingerprint` フィールド自体が存在しない、より新しいバージョンの
+      # 機能）と実測確認済みのため、値ではなく変数名側でルールの
+      # マッチ条件を外す設計にした。
       - name: Sentry CLI をインストール（pin + checksum 検証）
         env:
-          NIGHT_WATCH_SENTRY_CLI_VERSION: '0.43.0'
-          NIGHT_WATCH_SENTRY_CLI_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
+          NIGHT_WATCH_CLI_VERSION: '0.43.0'
+          NIGHT_WATCH_CLI_CHECKSUM_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
         run: |
           mkdir -p "$HOME/.local/bin"
           curl -fsSL -o "$HOME/.local/bin/sentry" \
-            "https://github.com/getsentry/cli/releases/download/${NIGHT_WATCH_SENTRY_CLI_VERSION}/sentry-linux-x64"
-          echo "${NIGHT_WATCH_SENTRY_CLI_SHA256}  $HOME/.local/bin/sentry" | sha256sum -c -
+            "https://github.com/getsentry/cli/releases/download/${NIGHT_WATCH_CLI_VERSION}/sentry-linux-x64"
+          echo "${NIGHT_WATCH_CLI_CHECKSUM_SHA256}  $HOME/.local/bin/sentry" | sha256sum -c -
           chmod +x "$HOME/.local/bin/sentry"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           sentry --version

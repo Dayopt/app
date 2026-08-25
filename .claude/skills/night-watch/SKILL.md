@@ -76,7 +76,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 - **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep（`.claude/rules/orchestration.md` §1 日サイクル）で検出する。`gh run list --workflow=night-watch.yml --limit 5` で直近 run の成否を確認し、失敗していればログ（`gh run view <run-id> --log-failed`）を見る。run 自体が発火していなければ workflow の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する
 - **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
-- **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_SENTRY_CLI_VERSION` / `NIGHT_WATCH_SENTRY_CLI_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）
+- **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_CLI_VERSION` / `NIGHT_WATCH_CLI_CHECKSUM_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）。**env 変数名に「SENTRY」を含めない**（gitleaks の `sentry-access-token` ルールが変数名+hex文字列で誤検知するため。`night-watch.yml` の該当 step コメント参照）
 
 ## 守ること
 

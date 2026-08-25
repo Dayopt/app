@@ -1,8 +1,0 @@
-# gitleaks false-positive allowlist（fingerprint 単位）。
-# 各エントリは実際に手動確認済みの誤検知のみを記載し、理由をコメントで残す。
-
-# night-watch.yml: Sentry CLI（getsentry/cli）バイナリの pin 用 sha256 checksum。
-# GitHub の Release Assets API が算出した digest を実測して固定した値
-# （実際の secret ではない）。変数名に SENTRY を含むため gitleaks の
-# sentry-access-token ルールが hex 文字列を誤検知する（#2367）。
-.github/workflows/night-watch.yml:sentry-access-token:102
