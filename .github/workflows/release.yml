@@ -142,9 +142,12 @@ jobs:
           # `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。
           # tag ref は concurrency group も main と別になるため、走行中の
           # main run を巻き込まない。
-          # したがって **実テストを走らせる道は常に残っており、force は最後の
-          # 手段**（force は本 gate だけでなく smoke と Production Config Audit
-          # も同時に skip する）。
+          # この経路は TARGET の tree に heavy-post-merge.yml / integration.yml
+          # が存在し、job 名が required_checks と一致する場合に限り成立する
+          # （dispatch は tag 先 commit の workflow 定義で走るため、CI 4 層
+          # 再設計 #2269 より前の SHA では成立しない可能性がある。未検証）。
+          # 該当する SHA では force は最後の手段（force は本 gate だけでなく
+          # smoke と Production Config Audit も同時に skip する）。
           required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
 
           runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \
