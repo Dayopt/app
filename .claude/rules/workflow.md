@@ -68,7 +68,7 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 原則:
 
-- **domain**: 主要な影響範囲（sidebar / tag / auth / calendar / stats / ai 等）
+- **domain**: 主要な影響範囲（sidebar / activity / auth / calendar / stats / ai 等）
 - **action**: 動詞ベース（redesign / migration / refactor / unification / cleanup 等）
 - **variant**: 必要なら区別（design / implementation / cleanup 等）
 - kebab-case で統一
@@ -83,7 +83,7 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 - `sidebar-3-mode-structure`（旧 Phase 2-C）
 - `sidebar-v2-design`（旧 Phase 2-D）
 - `feature-colocation-migration`（旧 Phase 2-E）
-- `tag-management-refactor`
+- `activity-management-refactor`
 - `calendar-state-unification`
 
 **悪い例**:

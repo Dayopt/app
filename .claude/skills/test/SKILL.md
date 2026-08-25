@@ -240,19 +240,19 @@ describe('calculateTotal', () => {
 
 ```typescript
 // サービス層を直接テスト
-import { createTagService } from '../services/tag';
+import { createActivitiesService } from '../server/activities-service';
 
-describe('TagService', () => {
-  it('タグを作成する', async () => {
+describe('ActivitiesService', () => {
+  it('アクティビティを作成する', async () => {
     const mockSupabase = createMockSupabase();
-    const service = createTagService(mockSupabase);
+    const service = createActivitiesService(mockSupabase);
 
-    const result = await service.create({
+    const result = await service.createActivity({
       userId: 'user-1',
-      name: 'Test Tag',
+      input: { name: 'Test Activity' },
     });
 
-    expect(result.name).toBe('Test Tag');
+    expect(result.name).toBe('Test Activity');
   });
 });
 ```

@@ -27,6 +27,13 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 - Plan から Record を作る場合は「そのまま記録」などの明示的な記録導線を使う
 - エディタは Plan / Record で共有し、日時とメモを編集する
 
+## 見積もりフィードフォワード（作成時）
+
+- 保存先が Plan の draft 編集時にだけ、選択した activity の直近実績を「このアクティビティの直近実績は {duration} 前後です」という1行で静かに示す（警告色・アイコン・感嘆符は使わない、ADR-026）
+- 出す条件は次をすべて満たす場合のみ: 保存先が Plan、activity を選択済み、draft の長さが 0 より長い、その activity に直近4週で `n >= 3` 件の Plan×Record ペアがある
+- 表示する実時間は「Plan 1件ごとの `Σ(Record duration) ÷ Plan duration`」の直近4週（`plans.start_at` 基準の絶対時刻窓）における中央値を draft の長さに掛け、5分刻み・下限5分に丸めた値。中央値を使うのは平均が単発の外れ値に引きずられ「静かに教える」トーンと相性が悪いため
+- 値はユーザーの入力を書き換えない。読むかどうかはユーザーに委ねる
+
 ## 詳細 Inspector の保存
 
 - 保存ボタンは表示しない
@@ -123,6 +130,7 @@ Dayoptの中心概念。「予定を立てる → 記録する → 差分を見�
 ## 関連する意思決定
 
 - [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)
+- [ADR-026 分析表現ポリシー](../log/2026-07-10-analytics-expression-policy.md)（見積もりフィードフォワードの定義元）
 - [ADR-025 時間管理モデルを Plan / Record / 外部カレンダーミラーの3概念に分割する](../log/2026-07-09-time-model-split.md)
 - [ADR-015 時間不変原則](../log/2026-03-10-time-immutability-principle.md)
 - [ADR-018 時間重なりの全面禁止](../log/2026-05-13-time-overlap-prohibition.md)

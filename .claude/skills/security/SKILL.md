@@ -34,16 +34,16 @@ disallowedTools: Write
 - `protectedProcedure` を使用しているか
 - `ctx.userId` でデータアクセスを制限しているか
 
-**Dayoptの正しいパターン** (`apps/product/src/features/tags/server/router.ts`参照):
+**Dayoptの正しいパターン** (`apps/product/src/features/activities/server/router.ts`参照):
 
 ```typescript
 // ✅ Dayoptパターン
-export const tagsRouter = createTRPCRouter({
-  list: protectedProcedure
+export const activitiesRouter = createTRPCRouter({
+  listActivities: protectedProcedure
     .input(z.object({ ... }).optional())
     .query(async ({ ctx, input }) => {
-      const service = createTagService(ctx.supabase);
-      return await service.list({
+      const service = createActivitiesService(ctx.supabase);
+      return await service.listActivities({
         userId: ctx.userId!,  // 必須: userIdでフィルタ
         ...input,
       });
@@ -97,14 +97,14 @@ export const tagsRouter = createTRPCRouter({
 ```typescript
 // ✅ 安全: クエリビルダー使用
 const { data } = await supabase
-  .from('tags')
+  .from('activities')
   .select('*')
   .eq('user_id', userId)
   .ilike('name', `%${searchTerm}%`);
 
 // ❌ 危険: 生SQL + 文字列結合
 const { data } = await supabase.rpc('search', {
-  query: `SELECT * FROM tags WHERE name = '${userInput}'`, // 危険!
+  query: `SELECT * FROM activities WHERE name = '${userInput}'`, // 危険!
 });
 ```
 

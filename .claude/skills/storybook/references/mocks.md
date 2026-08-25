@@ -21,7 +21,7 @@ parameters: {
 }
 ```
 
-`trpcMocks` は `.storybook/mocks/trpc-defaults.ts` の `DEFAULT_TRPC_MOCKS`（`tags.list` 等）と自動マージされる。同じキーは上書き。
+`trpcMocks` は `.storybook/mocks/trpc-defaults.ts` の `DEFAULT_TRPC_MOCKS`（現状は空。tags feature 撤去に伴い旧 `tags.list` プリセットは削除済みで、個別 Story の `parameters.trpcMocks` だけで賄う）と自動マージされる。同じキーは上書き。
 
 ### StoryTRPCProvider で直接ラップ
 
@@ -80,13 +80,13 @@ Story 切替時に自動リストア。レジストリに登録済みのスト�
 
 ### 登録済みストア（.storybook/mocks/stores.ts）
 
-| キー                         | ストア                   |
-| ---------------------------- | ------------------------ |
-| `useAuthStore`               | 認証ストア               |
-| `useCalendarFilterStore`     | タグフィルターストア     |
-| `useCalendarNavigationStore` | カレンダーナビゲーション |
-| `useCalendarSettingsStore`   | カレンダー設定           |
-| `useModalStore`              | モーダルストア           |
+| キー                         | ストア                         |
+| ---------------------------- | ------------------------------ |
+| `useAuthStore`               | 認証ストア                     |
+| `useCalendarFilterStore`     | アクティビティフィルターストア |
+| `useCalendarNavigationStore` | カレンダーナビゲーション       |
+| `useCalendarSettingsStore`   | カレンダー設定                 |
+| `useModalStore`              | モーダルストア                 |
 
 新しいストアを追加する場合は `STORE_REGISTRY` に登録する。
 
@@ -96,14 +96,12 @@ Story 切替時に自動リストア。レジストリに登録済みのスト�
 
 Story 間で共通のモックデータ。
 
-| プリセット                     | 内容                                           |
-| ------------------------------ | ---------------------------------------------- |
-| `PRESET_TAGS.standard`         | 5タグ（Work, Learning, Life, Exercise, Hobby） |
-| `PRESET_TAGS.empty`            | 空配列                                         |
-| `PRESET_USER_SETTINGS.default` | 標準設定（24h, Asia/Tokyo, 月曜始まり）        |
-| `PRESET_AUTH.authenticated`    | 認証済みユーザー（useAuthStore用）             |
-| `PRESET_AUTH.unauthenticated`  | 未認証状態                                     |
-| `PRESET_AUTH.noEmail`          | メールなしユーザー                             |
+| プリセット                     | 内容                                    |
+| ------------------------------ | --------------------------------------- |
+| `PRESET_USER_SETTINGS.default` | 標準設定（24h, Asia/Tokyo, 月曜始まり） |
+| `PRESET_AUTH.authenticated`    | 認証済みユーザー（useAuthStore用）      |
+| `PRESET_AUTH.unauthenticated`  | 未認証状態                              |
+| `PRESET_AUTH.noEmail`          | メールなしユーザー                      |
 
 ```tsx
 import { PRESET_AUTH, PRESET_USER_SETTINGS } from '../../../.storybook/mocks/presets';

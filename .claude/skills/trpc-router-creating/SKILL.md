@@ -244,7 +244,7 @@ import type { Database } from '@/lib/database';
 ```
 apps/product/src/features/
 ├── entry/server/      # 最も大規模な例（router-index + service-index）
-├── tags/server/       # 標準的なCRUD例
+├── activities/server/ # 標準的なCRUD例
 ├── auth/server/       # ユーザー管理
 ├── settings/server/   # billing-router含む複数ルーター
 └── notifications/server/  # email-router, preferences-router含む

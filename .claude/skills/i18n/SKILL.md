@@ -82,7 +82,7 @@ apps/product/messages/en/calendar.json → 自動で calendar namespace を検�
 | `record`       | レコード                                  |
 | `settings`     | 設定画面                                  |
 | `sidebar`      | サイドバー                                |
-| `tags`         | タグ機能                                  |
+| `activities`   | アクティビティ機能                        |
 
 ### packages/components は next-intl 非依存
 
@@ -154,7 +154,7 @@ t('items', { count: 5 }); // → "5 items"
 | ----------------- | -------------------------------------------------------------------- |
 | `common.json`     | 共通キー（actions, aria, form, validation, errors, status, time 等） |
 | `calendar.json`   | カレンダー機能                                                       |
-| `tags.json`       | タグ管理                                                             |
+| `activities.json` | アクティビティ管理                                                   |
 | `settings.json`   | 設定画面                                                             |
 | `auth.json`       | 認証フロー                                                           |
 | `entry.json`      | エントリ機能                                                         |
@@ -253,8 +253,8 @@ t('items', { count: 5 }); // → "5 items"
 ### ❌ 汎用単語を feature ファイルに重複定義
 
 ```typescript
-// ❌ 禁止 — "保存" を tags.json に定義して使う
-t('tags.group.save');
+// ❌ 禁止 — "保存" を activities.json に定義して使う
+t('activities.category.save');
 
 // ✅ 正しい — actions.save を再利用
 t('actions.save');

@@ -52,7 +52,7 @@ mandate: **長期で負債を作らない・最適であり続ける**。launch 
 新規実装に使う既存の関数 / util / コンポーネント / hook の path を列挙。例:
 
 - `apps/product/src/lib/i18n/request.ts` の `getTranslations` を流用
-- `apps/product/src/features/tags/server/service.ts` の `mergeTags` を呼ぶ
+- `apps/product/src/features/activities/server/activities-service.ts` の `createActivitiesService` を呼ぶ
 
 「再利用できるのに新規書きする」提案は plan-critic に under-engineering / idiom 違反として REVISE される。
 
