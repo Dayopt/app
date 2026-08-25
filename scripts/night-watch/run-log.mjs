@@ -317,6 +317,36 @@ const PENDING_LINE_RE = /^- 保留（run未完了）: (.+)$/m;
 // marker gate と同じ idiom（OWNER/MEMBER/COLLABORATOR のみ信頼）で防ぐ。
 const TRUSTED_AUTHOR_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
+// #2367（夜勤を Claude Routine から GitHub Actions cron へ移植）: 常設運行記録
+// issue への「night-watch 運行記録」コメントは、移植後は Actions の既定
+// `GITHUB_TOKEN` で `github-actions[bot]` が投稿する。この投稿者の
+// `authorAssociation` は実測で `NONE`（public repo・fine-grained scope の
+// token では OWNER/MEMBER/COLLABORATOR のいずれにも該当しない。PR #2358 の
+// migration-safety job コメントで確認）であり、`TRUSTED_AUTHOR_ASSOCIATIONS`
+// だけでは自分自身の投稿さえ信頼集合から漏れ、pending escalation（直近の
+// consecutivePending 判定）が Actions 化後は恒久的に発火しなくなる（#2367
+// issue コメントで指摘・指揮台が承認した DoD 改訂）。
+//
+// `authorAssociation` を緩めるのではなく、login 完全一致を **OR** で追加する
+// （`isTrustedCommentAuthor` 参照）。gh の `--json comments` はコメント単位の
+// `user.type`（"Bot" 等）を返さないため login のみで判定するが、
+// `github-actions[bot]` という login は GitHub 側が予約しており、public repo
+// の第三者がこの名義でコメントを投稿することはできない（偽装耐性は
+// authorAssociation ベースの判定と同じ水準を維持する）。
+const TRUSTED_BOT_LOGINS = new Set(['github-actions[bot]']);
+
+/**
+ * `checkRecentPending` が使う信頼できる書き手の判定。
+ * `TRUSTED_AUTHOR_ASSOCIATIONS`（人間の OWNER/MEMBER/COLLABORATOR）に加えて、
+ * `TRUSTED_BOT_LOGINS`（night-watch 自身が Actions から投稿する時の login）を
+ * 許容する。
+ * @param {{ authorAssociation?: string, author?: { login?: string } }} comment
+ */
+function isTrustedCommentAuthor(comment) {
+  if (TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) return true;
+  return TRUSTED_BOT_LOGINS.has(comment.author?.login);
+}
+
 /**
  * #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
  * （直近 run 未完了）と判定される class は、runner 枯渇・workflow 定義破損
@@ -350,7 +380,7 @@ export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookba
   const seenDates = new Set();
   const reports = [];
   for (const comment of (response.comments ?? []).slice().reverse()) {
-    if (!TRUSTED_AUTHOR_ASSOCIATIONS.has(comment.authorAssociation)) continue;
+    if (!isTrustedCommentAuthor(comment)) continue;
     const match = OPS_LOG_COMMENT_HEADER_RE.exec(comment.body ?? '');
     if (!match) continue;
     const date = match[1];
