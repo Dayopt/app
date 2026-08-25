@@ -351,17 +351,25 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 
 private 化前提の確定（[2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）により、per-PR で E2E / Web E2E を走らせるコストが Actions 予算を圧迫すると判明したため、CI を 4 層へ再設計した（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）。
 
-| 層  | タイミング             | 内容                                                                 | 実装                                                                           |
-| --- | ---------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1   | draft push             | Static Checks / Unit Tests（Impact gate による docs-only skip 込み） | `.github/workflows/ci.yml`                                                     |
-| 2   | ready                  | 層 1 と同一セット                                                    | `.github/workflows/ci.yml`                                                     |
-| 3   | main push 後 + nightly | E2E / Web E2E / Integration Tests                                    | `.github/workflows/heavy-post-merge.yml` / `.github/workflows/integration.yml` |
-| 4   | promote 前             | release.yml 内の smoke（既存）+ 層 3 green を promote の前提条件に   | `.github/workflows/release.yml`                                                |
+| 層  | タイミング | 内容                                                                 | 実装                                                                           |
+| --- | ---------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1   | draft push | Static Checks / Unit Tests（Impact gate による docs-only skip 込み） | `.github/workflows/ci.yml`                                                     |
+| 2   | ready      | 層 1 と同一セット                                                    | `.github/workflows/ci.yml`                                                     |
+| 3   | 下記参照   | E2E / Web E2E / Integration Tests                                    | `.github/workflows/heavy-post-merge.yml` / `.github/workflows/integration.yml` |
+| 4   | promote 前 | release.yml 内の smoke（既存）+ 層 3 green を promote の前提条件に   | `.github/workflows/release.yml`                                                |
+
+**層 3 のトリガーは workflow ごとに非対称**（2026-08-25、[#2382](https://github.com/Dayopt/dayopt/issues/2382)。per-merge 実行のコストを実測し、workflow ごとに残す価値を判定し直した結果であり、揃え忘れではない）:
+
+| workflow               | nightly | 手動発火（`workflow_dispatch`） | main push 後                                                                                                                                                                               |
+| ---------------------- | ------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `heavy-post-merge.yml` | ✅      | ✅                              | ❌（2026-08-25 廃止。E2E 約 5 分 + Web 約 1 分 × 1 日約 7 merge ≈ 月 1,300 分が無料枠 2,000 分/月の 6 割超を占めていた）                                                                   |
+| `integration.yml`      | ✅      | ✅                              | ✅（`paths` フィルタ付き。DB / migration / RLS 系ファイルを触った merge のみ、14 日で 16 件 ≈ 1.1 件/日。DB 回帰は発見が遅れるほど高くつくクラスのため、そこだけ早い feedback を残す判断） |
 
 - **E2E / Web E2E / Integration Tests は per-PR（層 1・2）に存在しない。** レーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）が per-PR 検出の主力を引き継ぐ
-- **層 3 は main push 後に必ず走る安全網。** docs-only skip は行わない（push:main の頻度は PR push よりずっと低いため、複雑な skip ロジックより単純に毎回走らせる方が壊れにくい）
-- **層 4（promote 前）は層 3 が target SHA で green であることを要求する。** 壊れた main がそのまま Production へ昇格するのを防ぐ。`force`（break-glass）時は既存の smoke/audit skip と同様にこの gate もスキップする
-- 詳細な設計判断・却下した選択肢・GitHub Team プラン検討は [2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)を参照
+- **層 3 は「main の状態を検証する安全網」であって「main へ merge されるたび自動で走る」層ではなくなった。** 既定は nightly 1 回。日中に main の green を早めに確認したい時は `.claude/skills/releasing/SKILL.md` Phase 1 の手動発火手順を使う
+- **赤い main が最大 1 日残ることを受け入れる変更である。** 本番は main から自動デプロイされない（`release.yml` は `workflow_dispatch` のみ）ためユーザーには届かない。1 日約 7 merge ペースなので、夜の赤の容疑者は約 7 コミット
+- **層 4（promote 前）は層 3 が target SHA で green であることを要求する。** 壊れた main がそのまま Production へ昇格するのを防ぐ。`force`（break-glass）時は既存の smoke/audit skip と同様にこの gate もスキップする。`workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、[#2382](https://github.com/Dayopt/dayopt/issues/2382)）ため、手動発火した green でもこの gate は成立する
+- 詳細な設計判断・却下した選択肢・GitHub Team プラン検討は [2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)、per-merge 廃止の実測根拠は [#2382](https://github.com/Dayopt/dayopt/issues/2382) を参照
 
 ## マージ方式
 

@@ -122,8 +122,14 @@ jobs:
           # target SHA に対する check-runs を取得し、層 3 の 3 check（E2E / Web E2E /
           # Integration Tests）がすべて success であることを要求する。取得失敗・
           # 見つからない・pending はすべて fail closed（停止）に倒す。
-          # push:main トリガー（layer 3）は毎 main push で必ず発火するため、
-          # 「見つからない」は運用上ほぼ発生しないが、fail closed を維持する。
+          # #2382（2026-08-25）で heavy-post-merge.yml の push:main トリガーを廃止し、
+          # 層 3 は nightly + 手動発火（+ integration.yml のみ paths 該当時の
+          # main push）へ変わった。つまり main HEAD が「直近の層 3 実行 SHA」より
+          # 進んでいる（nightly 後に追加の merge があった）のは通常運用で起こりうる。
+          # この gate は target SHA ちょうどの check-runs しか見ないため、その場合は
+          # ここで fail closed に停止する。対処は .claude/skills/releasing/SKILL.md
+          # Phase 1.2 の手動発火手順（対象 SHA を明示して heavy-post-merge.yml /
+          # integration.yml を dispatch してから再実行）を使う。
           required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
 
           runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \

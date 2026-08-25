@@ -131,6 +131,25 @@ git pull origin main
 
 main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`release.yml` は `push: main` トリガーを持たず **`workflow_dispatch` のみ**で起動する（2026-08-20、#2268）。merge しても自動では走らないため、ここで明示的に dispatch する。**production への操作のため `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
 
+**promote 前に層 3（E2E / Web E2E / Integration Tests）が main HEAD の SHA で green か確認する**（2026-08-25、#2382）。`heavy-post-merge.yml` は per-merge 実行を廃止し nightly + 手動発火のみになったため、main HEAD が直近の nightly 実行 SHA より進んでいる（nightly 後に merge があった）のが通常運用になる。`release.yml` の層 4 gate は **target SHA ちょうど**の check-runs しか見ないため、この確認を省くと gate で止まる:
+
+```bash
+# main HEAD に層 3 の 3 check がすべて success で付いているか確認する
+gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/check-runs" \
+  --jq '.check_runs[] | select(.name == "🎭 E2E Tests" or .name == "🌐 Web Build & E2E" or .name == "Integration Tests") | "\(.name): \(.conclusion)"'
+```
+
+3 check すべて `success` なら Phase 1.2 の dispatch へ進む。**不足・pending・古い SHA の場合は日中の手動発火**で層 3 を先に main HEAD へ揃える（`heavy-post-merge.yml` は paths フィルタが無いため常に必要、`integration.yml` は DB / migration / RLS 系ファイルを触った merge なら push:main で既に走っている場合がある — 上記コマンドで確認済みなら省略可）:
+
+```bash
+gh workflow run heavy-post-merge.yml --ref main
+gh workflow run integration.yml --ref main  # 上記確認で既に green なら不要
+# 両方の完了を待つ（並行して走る）
+gh run watch --exit-status $(gh run list --workflow=heavy-post-merge.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+```
+
+`workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、#2382）ため、手動発火の green で層 4 gate は成立する。
+
 ```bash
 # Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。
 # --ref は付けない。release script は常に main のものを使う（runbook.md 参照）。
