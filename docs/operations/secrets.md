@@ -297,14 +297,13 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 **CI が消費する値の master を置く。** 現在 CI は 1Password を直接読まず GitHub Secrets replica で動くため、この vault の読み手は同期作業の人間だけ。Service Account を導入する時は、この vault を SA の read scope にする（[#2086](https://github.com/Dayopt/dayopt/issues/2086)）。
 
-| Item                  | Fields                                                                                        | 用途                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `vercel`              | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata     |
-| `supabase-auth-audit` | `credential`                                                                                  | Production Auth Config Audit 専用 scoped token（Auth の Read のみ） |
+| Item                         | Fields                                                                                        | 用途                                                                                                                                                                                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vercel`                     | `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID_STAGING`, `VERCEL_PROJECT_ID_PRODUCTION` | Production Config Audit / Production Release / project metadata                                                                                                                                                                                                      |
+| `supabase-auth-audit`        | `credential`                                                                                  | Production Auth Config Audit 専用 scoped token（Auth の Read のみ）                                                                                                                                                                                                  |
+| `supabase-storage-rls-audit` | `credential`                                                                                  | Production Storage RLS Audit 専用 scoped token（`database_read` のみ、90 日期限）。`production-config-audit.yml` の `storage-rls` job が参照し、GitHub Secret `SUPABASE_STORAGE_RLS_AUDIT_TOKEN` へ同期する（[#2345](https://github.com/Dayopt/dayopt/issues/2345)） |
 
 予定（#2090 の実施後に追加する）: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`（bypass secret の 1Password 登録先）。
-
-予定（[#2345](https://github.com/Dayopt/dayopt/issues/2345) の実施後に追加する）: `supabase-storage-rls-audit`（field `credential`）— Production Storage RLS Audit 専用 scoped token（`database_read` のみ）。
 
 `VERCEL_TOKEN`はautomation専用とし、local CLIのloginや`--token`引数には使わない。Production Config AuditとProduction Releaseが環境変数からprocess内で読み、Authorization headerにだけ設定する。Production Releaseはenv metadataの読取に加えて、Production deploymentのpromoteとrollbackを行う。localの確認方法とrotation順序は[Environment Secrets](./security/environment-secrets.md)を正とする。agent からは読まない（agent の `replica:check` は agent 用の別発行 token を使う。発行までは User 実行）。
 
