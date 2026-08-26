@@ -27,6 +27,14 @@
  *
  *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
  *     --p1 0 --p2 2 --p2-note "review comment 参照"
+ *
+ * `--review-result` の各エントリの `result.coverage` が `partial`（budget 逼迫で
+ * 一部の観点を打ち切った自己申告、#2417）な role が 1 件でもある場合、
+ * `--partial-coverage-note` が無いと marker 生成そのものを拒否する（早期切り上げの
+ * 浅いレビューが `status: 'ok'` のまま黙って gate を通過する fail-open を防ぐ）:
+ *
+ *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
+ *     --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
  */
 
 import { execFileSync } from 'node:child_process';
@@ -36,6 +44,7 @@ import {
   assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
   deriveAgentFieldFromReviewResult,
+  derivePartialCoverageRoles,
   type ReviewResultEntry,
 } from './generate-marker-core.ts';
 
@@ -49,6 +58,7 @@ interface Args {
   p2Note?: string;
   p3?: string;
   repo?: string;
+  partialCoverageNote?: string;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -112,6 +122,7 @@ function parseArgs(argv: string[]): Args {
     p2Note: flags.get('p2-note'),
     p3: flags.get('p3'),
     repo: flags.get('repo'),
+    partialCoverageNote: flags.get('partial-coverage-note'),
   };
 }
 
@@ -130,11 +141,10 @@ function fetchHeadSha(prNumber: number, repo: string | undefined): string {
 }
 
 /**
- * `--review-result` の JSON を読み、`agent:` フィールドの値を導出する。
- * ファイルは Workflow が返した `{role, status, result}[]` をそのまま書き出したもの
- * （`result` フィールドの中身は使わず role/status のみ見る）。
+ * `--review-result` の JSON を読む。ファイルは Workflow が返した
+ * `{role, status, result}[]` をそのまま書き出したもの。
  */
-function resolveAgentFromReviewResult(path: string): string {
+function readReviewResultEntries(path: string): ReviewResultEntry[] {
   let raw: string;
   try {
     raw = readFileSync(path, 'utf8');
@@ -153,17 +163,16 @@ function resolveAgentFromReviewResult(path: string): string {
     throw new Error(`--review-result の JSON は配列である必要があります: ${path}`);
   }
 
-  const entries = parsed as ReviewResultEntry[];
-  return deriveAgentFieldFromReviewResult(entries);
+  return parsed as ReviewResultEntry[];
 }
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const headSha = fetchHeadSha(args.prNumber, args.repo);
 
-  const agent = args.reviewResultPath
-    ? resolveAgentFromReviewResult(args.reviewResultPath)
-    : (args.agent as string);
+  const entries = args.reviewResultPath ? readReviewResultEntries(args.reviewResultPath) : null;
+  const agent = entries ? deriveAgentFieldFromReviewResult(entries) : (args.agent as string);
+  const partialCoverageRoles = entries ? derivePartialCoverageRoles(entries) : [];
 
   const body = buildMarkerBody({
     headSha,
@@ -173,6 +182,8 @@ function main(): void {
     p2Count: args.p2Count,
     p2Note: args.p2Note,
     p3: args.p3,
+    partialCoverageRoles,
+    partialCoverageNote: args.partialCoverageNote,
   });
 
   process.stdout.write(`${body}\n`);

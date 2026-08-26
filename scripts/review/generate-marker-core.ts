@@ -22,6 +22,13 @@ export interface MarkerInput {
   p2Note?: string;
   /** P3 は zerolike 判定の対象外のため自由記述。空なら行ごと省略する。 */
   p3?: string;
+  /**
+   * `derivePartialCoverageRoles` が抽出した role 名（#2417）。1 件でもあれば
+   * `partialCoverageNote` が必須（下記 `buildMarkerBody` が強制する）。
+   */
+  partialCoverageRoles?: string[];
+  /** partialCoverageRoles が 1 件でもある時に必須の、Main による明示的な扱いの記述。 */
+  partialCoverageNote?: string;
 }
 
 /**
@@ -82,6 +89,27 @@ export interface ReviewResultEntry {
    * 代替した（Main が明示的に選んだ場合のみこの値にする）。
    */
   status: 'ok' | 'empty' | 'error' | 'text-fallback';
+  /**
+   * schema 検証済みの構造化出力本体。`result.coverage` だけを
+   * `derivePartialCoverageRoles` が読む（他フィールドは Main が直接読む一次情報
+   * のままにし、ここではパースしない）。
+   */
+  result?: { coverage?: string } | null;
+}
+
+/**
+ * `status: 'ok'` かつ `result.coverage === 'partial'`（budget 逼迫で観点を打ち切った
+ * 自己申告、#2417）の role 名を抽出する。
+ *
+ * pacing discipline を緩めて早期の StructuredOutput 呼び出しを許可すると、
+ * 「schema 上は正常だが浅いレビュー」が `status: 'ok'` のまま marker を素通り
+ * しうる（fail-open）。`coverage` フィールドはこれを machine-readable にする
+ * ためのもので、この関数はその自己申告を marker 生成の判断へ橋渡しする。
+ */
+export function derivePartialCoverageRoles(entries: ReviewResultEntry[]): string[] {
+  return entries
+    .filter((e) => e.status === 'ok' && e.result?.coverage === 'partial')
+    .map((e) => e.role);
 }
 
 /**
@@ -125,6 +153,18 @@ export function buildMarkerBody(input: MarkerInput): string {
     throw new Error('agent は必須です（実行した subagent 名、または docs-only）。');
   }
 
+  const partialCoverageRoles = input.partialCoverageRoles ?? [];
+  if (
+    partialCoverageRoles.length > 0 &&
+    !(input.partialCoverageNote && input.partialCoverageNote.trim())
+  ) {
+    throw new Error(
+      `partial coverage を報告した role があります（${partialCoverageRoles.join(', ')}）。` +
+        '早期切り上げの浅いレビューを黙って gate 通過させないため、`--partial-coverage-note` で ' +
+        'Main の明示的な扱い（追加確認済み／許容する理由など）を記述してください（#2417）。',
+    );
+  }
+
   const p1Line = formatCountLine('P1', input.p1Count, input.p1Note);
   const p2Line = formatCountLine('P2', input.p2Count, input.p2Note);
 
@@ -135,6 +175,12 @@ export function buildMarkerBody(input: MarkerInput): string {
     `P1: ${p1Line}`,
     `P2: ${p2Line}`,
   ];
+
+  if (partialCoverageRoles.length > 0) {
+    lines.push(
+      `partial coverage: ${partialCoverageRoles.join(', ')}（${input.partialCoverageNote!.trim()}）`,
+    );
+  }
 
   if (input.p3 && input.p3.trim()) {
     lines.push(`P3: ${input.p3.trim()}`);

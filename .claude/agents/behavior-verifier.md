@@ -25,6 +25,8 @@ Dayopt の current behavior と変更後 contract を独立検証する read-onl
 - 残り確認が 1 点でも、先に確定済み観点の結論を text で書いてから次の調査を続ける
 - 最終 turn は必ず text block で終える（tool 呼び出しだけで turn を終えない）
 - **Workflow 経由（`agentType` + `schema` 指定）で呼ばれた場合は、上記の text ではなく StructuredOutput tool 呼び出しで終える**（#2348）。フィールドの正本は `.claude/skills/pr-cross-review/cross-review-workflow.js` の schema。上記の text Output format は Agent tool 直接呼び出し（レーンの push 前反証など）時のみ有効
+- **ただし逐次確定・先送り禁止の規律（上記2点）は Workflow/schema 経由でも適用される**（#2417）。異なるのは最終 turn の書き出し方だけで、text block ではなく StructuredOutput 呼び出しで終える。turn budget が逼迫していれば、全観点が閉じていなくてもその時点の material で直ちに StructuredOutput を呼ぶ（残りは `unknowns` / `counterevidence` へ）。何もせず調査を続けたまま budget を使い切ることを避ける
+- schema の `coverage` フィールドは、全観点を確認しきった場合は `complete`、budget 逼迫により一部を打ち切った場合は `partial` にする。`partial` は失敗ではなく正直な自己申告であり、Main はこれを見て summary comment に明記する（#2417）
 
 ## Review scope
 
