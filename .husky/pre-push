@@ -8,6 +8,13 @@ ZERO=0000000000000000000000000000000000000000
 HAS_BRANCH_UPDATE=0
 PUSHED_SHAS=''
 
+# stdin は 1 度しか読めない単一消費ストリーム。下の while ループに加えて
+# pre-push-diff.mjs（#2432、差分ゼロ push の自動スキップ判定）にも同じ内容を
+# 渡す必要があるため、いったん一時ファイルへ退避する。trap で確実に削除する。
+PUSH_INPUT_FILE=$(mktemp) || exit 1
+trap 'rm -f "$PUSH_INPUT_FILE"' EXIT
+cat > "$PUSH_INPUT_FILE"
+
 while read -r _local_ref local_sha remote_ref _remote_sha; do
   # main への直接 push を禁止する。マージは PR + pnpm branch:finish 経由に限定する。
   # private repo + Free plan では GitHub 側の branch protection が強制されないため、
@@ -31,7 +38,7 @@ while read -r _local_ref local_sha remote_ref _remote_sha; do
       fi
       ;;
   esac
-done
+done < "$PUSH_INPUT_FILE"
 
 # --- pause point: push 前の DO-CONFIRM ---
 # commit set ごとに 1 回だけ止め、確認の観点を出す。再実行すれば通る。
@@ -39,13 +46,24 @@ done
 # 検証できない）。項目は再発履歴のあるものだけ・観点名のみ。正本は
 # .claude/rules/workflow.md §push 前の敵対的セルフレビュー。
 # 検証は /gardening のステップ 5。項目を 1 つ足すときは 1 つ削る。
+#
+# 差分ゼロ push（空コミットのみ。着手時 Draft PR の初回 push 等）は 4 点が
+# 機械的に「該当なし」で確定しており、bump を出し続けると本当に確認が要る
+# push での回答の質を下げる（#2432）。tracked ファイルの差分が無い push
+# だけ、判定 script（pre-push-diff.mjs）の結果に従って自動スキップする。
+# **判定不能・失敗・タイムアウトはすべて no-skip（＝通常どおり DO-CONFIRM を
+# 出す）側に倒れる設計**（pre-push-diff.mjs 冒頭コメント参照）。
 if [ "$HAS_BRANCH_UPDATE" = "1" ]; then
-  PUSH_KEY=$(printf '%s' "$PUSHED_SHAS" | git hash-object --stdin 2>/dev/null || echo unknown)
-  MARKER_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)/dayopt-push-confirm"
-  if [ ! -f "$MARKER_DIR/$PUSH_KEY" ]; then
-    mkdir -p "$MARKER_DIR" && : > "$MARKER_DIR/$PUSH_KEY"
-    find "$MARKER_DIR" -type f -mtime +30 -delete 2>/dev/null
-    cat >&2 <<'CONFIRM'
+  SKIP_DECISION=$(node scripts/ops/pre-push-diff.mjs < "$PUSH_INPUT_FILE" 2>/dev/null || echo no-skip)
+  if [ "$SKIP_DECISION" = "skip" ]; then
+    echo "→ 差分ゼロ push のため DO-CONFIRM をスキップします（#2432）" >&2
+  else
+    PUSH_KEY=$(printf '%s' "$PUSHED_SHAS" | git hash-object --stdin 2>/dev/null || echo unknown)
+    MARKER_DIR="$(git rev-parse --git-dir 2>/dev/null || echo .git)/dayopt-push-confirm"
+    if [ ! -f "$MARKER_DIR/$PUSH_KEY" ]; then
+      mkdir -p "$MARKER_DIR" && : > "$MARKER_DIR/$PUSH_KEY"
+      find "$MARKER_DIR" -type f -mtime +30 -delete 2>/dev/null
+      cat >&2 <<'CONFIRM'
 PAUSE: push 前の確認（この commit set では初回。4 点に答えてから再実行する。
 該当なしの項目は「該当なし」と言い切る。黙って通さない）
 
@@ -57,7 +75,8 @@ PAUSE: push 前の確認（この commit set では初回。4 点に答えてか
 
 なぜこの 4 点か: .claude/rules/workflow.md §push 前の敵対的セルフレビュー
 CONFIRM
-    exit 1
+      exit 1
+    fi
   fi
 fi
 
