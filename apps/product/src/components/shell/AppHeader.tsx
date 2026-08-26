@@ -16,19 +16,22 @@ interface AppHeaderProps {
  *
  * **デザイン仕様:**
  * - コンテナ: 32px（h-8）
- * - 上下パディング: 8px（py-2）
- * - 全体の高さ: 最小 48px（min-h-12）。`pt-safe` で safe-area top inset を
- *   確保する分だけ箱が伸びる（固定 `h-12` だと inset の分だけ中身が
- *   潰れてしまうため min-h にする。footer 側の `pb-safe` +
- *   `ActivityChipRow`（`mobile-layout.tsx` の固定コンテナ、`min-h-14`）
- *   と対称の対応）
+ * - 全体の高さ: 最小 56px（min-h-14）。垂直方向は `flex items-center`
+ *   による中央寄せで確保し、padding では表現しない（`pt-safe` と同じ
+ *   プロパティを取り合うと、safe-area inset が無い端末で上パディングが
+ *   0 に潰れてしまうため。`py-2` 併用時に実測 0px を確認）
+ * - `pt-safe` は safe-area top inset の分だけ箱を追加で伸ばす（padding
+ *   と競合しないので加算になる。footer 側の `pb-safe` + `ActivityChipRow`
+ *   （`mobile-layout.tsx` の固定コンテナ、`min-h-14`）と対称の対応）
+ * - Sidebar ロゴ行（`Sidebar.tsx` の `flex h-14 shrink-0 items-center`）と
+ *   同じ高さ・同じ「固定 flex 行 + items-center」構成に揃える
  * - 8pxグリッドシステム準拠
  */
 export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
   return (
-    <header className="pt-safe min-h-12 px-4 py-2">
+    <header className="pt-safe flex min-h-14 shrink-0 items-center px-4">
       {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- complex grid template */}
-      <div className="grid h-8 grid-cols-[auto_1fr_auto] items-center">
+      <div className="grid h-8 w-full grid-cols-[auto_1fr_auto] items-center">
         {/* 左側 */}
         <div className="flex items-center">{leftSlot}</div>
 

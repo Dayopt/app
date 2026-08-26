@@ -82,8 +82,8 @@ export function Sidebar({
       className="border-border bg-surface-container text-foreground flex h-full w-full flex-col border-r"
       aria-label={ariaLabel}
     >
-      {/* Header - Logo + Close */}
-      <div className="flex h-12 shrink-0 items-center justify-between px-2">
+      {/* Header - Logo + Close。AppHeader.tsx と高さ・構成を揃える（h-14） */}
+      <div className="flex h-14 shrink-0 items-center justify-between px-2">
         <div className="flex items-center gap-2 pl-2">
           <Image
             src="/icons/icon-192.png"

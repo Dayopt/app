@@ -6,7 +6,6 @@ import { getWeek } from 'date-fns';
 
 import { cn } from '@dayopt/components';
 
-import { ConfirmDayButton } from '@/features/timeblock';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
@@ -90,27 +89,6 @@ export const DayView = ({
     return getWeek(date, { weekStartsOn });
   }, [date, weekStartsOn]);
 
-  // 過去日 + 未記録 plan あり = confirmDay 導線を出す。
-  // 記録済み判定は同日 entries 内の record.planId 参照で行う（他日への持ち越し記録は稀なため対象外）。
-  const dayEnd = useMemo(() => {
-    const d = new Date(date);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }, [date]);
-  const hasUnrecordedPastPlans = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity -- confirmDay 導線の表示判定。entries 変更時の再評価で十分（TimeblockContextMenu と同じ運用）
-    const now = Date.now();
-    const list = entries ?? [];
-    return list.some(
-      (e) =>
-        e.kind === 'plan' &&
-        !e.isSkipped &&
-        e.endDate != null &&
-        e.endDate.getTime() <= now &&
-        !list.some((record) => record.kind === 'record' && record.planId === e.id),
-    );
-  }, [entries]);
-
   const headerComponent = (
     <div className="flex h-8 items-center justify-between gap-2 px-2">
       <div className="flex-1" />
@@ -124,9 +102,7 @@ export const DayView = ({
         isToday={isToday}
         isSelected={false}
       />
-      <div className="flex flex-1 justify-end">
-        {hasUnrecordedPastPlans && <ConfirmDayButton startAt={date} endAt={dayEnd} />}
-      </div>
+      <div className="flex-1" />
     </div>
   );
 
