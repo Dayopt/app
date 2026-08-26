@@ -355,6 +355,7 @@ supersede map・出荷 gate（#8、§8）
 
 ## 13. 関連
 
+- [step-1-technical-contract-freeze.md](./step-1-technical-contract-freeze.md) — [#2396](https://github.com/Dayopt/dayopt/issues/2396) の技術契約凍結（週の分母・トリムidentity・後勝ち直列化・Undo・Proposal状態機械・8色制約・forward-only宣言）。本書§6の8段依存順の第1段
 - [epic #2394](https://github.com/Dayopt/dayopt/issues/2394) — v1 全体再構成の親 epic、固定するプロダクト契約
 - [issue #2395](https://github.com/Dayopt/dayopt/issues/2395) — 本書を成果物とする正本化 issue、Codex A レビューコメント
 - [#2162](https://github.com/Dayopt/dayopt/issues/2162) / [tag-model-replacement/overview.md](../tag-model-replacement/overview.md) — アクティビティ/カテゴリー/セグメント基盤（土台として再利用）
