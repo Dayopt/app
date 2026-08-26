@@ -128,10 +128,16 @@ export function shouldSkipDoConfirm(refUpdates, opts = {}) {
   return branchUpdates.every((ref) => !refHasTrackedDiff(ref, opts));
 }
 
-// stdin が終端しない・処理が想定外に長引く場合の fail-safe。この時間を超えて
-// 判定が終わらなければ `no-skip` を出して終了する（push を無期限にブロック
-// しない。既定の DO-CONFIRM が出るだけで、動作としては本 script が存在しない
-// 場合と同じに縮退する）。
+// stdin が終端しない場合（壊れた呼び出し元、または誤って対話的に実行した
+// 場合）の fail-safe。**この timer が守るのはここまで** — `shouldSkipDoConfirm`
+// 本体は `execFileSync` の同期呼び出しで構成されており、JS の setTimeout は
+// 同一スレッドで実行中の同期処理をプリエンプトできないため、この timer は
+// 計算フェーズに入った後の hang までは守れない。計算フェーズ自体の上限は
+// 個々の `git` 呼び出しに渡す `timeout: GIT_TIMEOUT_MS`（execFileSync/
+// spawnSync のネイティブ実装が保証する、JS イベントループに依存しない
+// 強制終了）が担う。1 push あたりの合計時間は「branch 数 × commit 数 ×
+// GIT_TIMEOUT_MS」で頭打ちになり、無限にハングすることはない（push 前
+// 反証レビュー指摘、#2432）。
 const FAILSAFE_TIMEOUT_MS = 10_000;
 
 if (isDirectExecution(import.meta.url)) {
