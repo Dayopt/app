@@ -24,21 +24,19 @@ Codex A（設計レビュー）は issue #2396 のコメント（2026-08-26）�
 
 ## 分類の根拠（誰が何を決めたか）
 
-issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点のうち **User 裁可事項2点**（週の分母・8色のDB制約の意味）は、レーンが選択肢+証拠+推奨まで作って指揮台へ上げる」「**残り5点はレーンが技術判断として確定してよい**」と明示している。本書の T1・T6 が provisional（指揮台裁可待ち）、T2〜T5・T7 が確定済みなのはこの指示に従った結果であり、レーン独自の判断ではない。
+issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点のうち **User 裁可事項2点**（週の分母・8色のDB制約の意味）は、レーンが選択肢+証拠+推奨まで作って指揮台へ上げる」「**残り5点はレーンが技術判断として確定してよい**」と明示している。本書の T2〜T5・T7 が確定済みなのはこの指示に従った結果であり、レーン独自の判断ではない。**T1・T6 は 2026-08-26 に User 裁可が確定した**（正本: [issue #2396 コメント](https://github.com/Dayopt/dayopt/issues/2396#issuecomment-5421534203)）。両方ともレーン・指揮台の推奨どおりで確定した。
 
 `/plan-review` の plan-critic は「T2（トリムidentity）・T4（Undo権限モデル）も CHECKPOINT 相当では」と指摘したが、上記 dispatch コメントが既にこの5点をレーンの技術判断として指定済みであるため、分類そのものは変更しない。ただし指摘の実質（将来の公開契約露出リスク・具体的数値の断定回避）は各節の `downstream blockers` へ反映した。
 
 ---
 
-## T1. 週の分母（**User 裁可事項 — provisional**）
+## T1. 週の分母（**採用（GO、2026-08-26 User 裁可）**）
 
 - **current contract**: `apps/product/src` に週168hの除数としてのハードコードは存在しない（grep確認、ヒットは`192.168.0.0/16`関連のみ）。唯一の週境界計算は [`tzWeekEnd`](../../../apps/product/src/lib/date/timezone.ts#L182-L189) で、次週開始日の `23:59:59.999` を返す——**半開区間ではない**。呼び出し元は [`compute-date-range.ts:127-128`](../../../apps/product/src/features/review/lib/compute-date-range.ts#L127-L128) のみ（review機能の期間計算）
-- **target contract**: v1.0 §3.4「台帳を名乗る以上、宇宙は週168時間」（[v1-source.md:100](./v1-source.md#L100)）。ただしこの文脈は決算バーの**表示上の全長**を語る記述であり、実装上の除数として書かれたものではない（v1.0本文に「168」が数式・実装用語として登場する箇所は他に無い）
-- **decision（provisional、推奨: Option A）**:
-  - **Option A（推奨）**: 分母は **実経過時間の半開区間** `[local week start, next local week start)`。DST週は実際に167h/169hになることを受け入れる
-    - 根拠: (a) Dayoptの既存invariant「保存はUTC、日境界はuser timezone」および全期間`[start, end)`半開区間統一方針（issue #2396必須不変条件）と一致する (b) `strategy.md`が掲げる「データの正直さ」原則に照らすと、実在しない168hを固定値として扱うのは虚偽の一種になる (c) v1.0本文の「168」は表示上の飾り語であり、実装をそれに縛る必然性がない (d) 年2回・1時間未満のズレであり、UI表示の「168」という語自体は変更不要（実際の除数だけが正確になる）
-    - Option B（不採用理由）: 名目上のwall-clock 168hを常に使う場合、DST週の実際の経過時間との間に最大1hの説明不能な差分が生じ、将来「記録率」等の%指標を追加した時に分母の出典が曖昧になる
-  - **確定にはUser裁可が必要**（指揮台へ選択肢+証拠+推奨として報告済み、本書は確定後に更新する）
+- **target contract**: v1.0 §3.4は節題が「**分母は**168時間」で、「余白チップを外せば**分母が**インク総量に切り替わる」とも書く（[v1-source.md:100](./v1-source.md#L100)）——168は表示文脈のみの記述ではなく、原文自身が168を分母と呼んでいる。ただし**DST週の扱いは原文が答えていない空白**（`overview.md` #9で既にDST未解決と明記済み）
+- **decision（採用・確定、2026-08-26 User裁可）**: **Option A — 実経過時間の半開区間 `[local week start, next local week start)` を採用**。DST週（年2回）だけ分母が167h/169hになることを受け入れる。通常週50/52は168hのまま、UIの「168」という語の扱いは表示層の判断に委ねる
+  - **根拠**: v1.0原文の空白（DST週の扱い）を埋める裁定として、台帳の帳尻（インク＝記録＋余白＝実経過時間）を優先した。Option B（名目168h固定）はDST週に「インク＋余白 ≠ 実経過時間」を生み、存在しない1時間の余白か消える1時間のどちらかを生む。台帳を名乗る以上、帳尻が実時間と合うことが原文の精神により忠実。加えてOption Bは第二の計上規則を必要とし、規則を増やす（Codex A指摘と同旨）
+  - Option B（不採用）: 名目上のwall-clock 168hを常に使う場合、DST週の実際の経過時間との間に最大1hの説明不能な差分が生じ、将来「記録率」等の%指標を追加した時に分母の出典が曖昧になる
 - **effective milestone**: #2396（本Step）で分母定義を確定、#2397（第一便）で実装
 - **data migration**: 無し（新規計算ロジックのみ）
 - **compatibility**: 無し（現行UIに168h除数の実装が存在しないため、破壊対象がない）
@@ -106,15 +104,15 @@ issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点の�
 - **rollback**: `[minutes]`（契約の記述のみ）
 - **downstream blockers**: #2399（storage設計、overview.md #15参照）
 
-## T6. 8色の DB 制約の意味（**User 裁可事項 — provisional**）
+## T6. 8色の DB 制約の意味（**採用（追加制約なし、2026-08-26 User 裁可）**）
 
-- **current contract**: `categories.color`（[migration:60-63](../../../supabase/migrations/20260818120000_add_activity_category_tables.sql#L60-L63)）は10色enumのCHECK制約・nullable・**per-user uniqueness制約なし**・カテゴリー件数の上限なし。`CATEGORY_COLOR_NAMES`（[category-colors.ts:25-38](../../../apps/product/src/features/activities/lib/category-colors.ts#L25-L38)）が同じ10色をTypeScript側で定義する
+- **current contract**: `categories.color`（[migration:60-63](../../../supabase/migrations/20260818120000_add_activity_category_tables.sql#L60-L63)）は10色enumのCHECK制約・**nullable**・**per-user uniqueness制約なし**・カテゴリー件数の上限なし。`CATEGORY_COLOR_NAMES`（[category-colors.ts:25-38](../../../apps/product/src/features/activities/lib/category-colors.ts#L25-L38)）が同じ10色をTypeScript側で定義する
 - **target contract**: v1.0 §4.3「8はライト／ダーク両モード…全条件で判別が保証できる実務上限」。この文言は**トークン数**（8色に絞る）を語っており、per-user一意性やカテゴリー件数上限には触れていない
-- **decision（provisional、推奨: 以下3点セット）**:
-  1. **トークン数=8**（10→8への縮小）: **overview.md #1で既にUser裁可済み（GO、2026-08-26）**。本書はこれを再確認するのみで、再度の裁可を求めない
-  2. **per-user色一意性: 推奨は「導入しない」**。根拠: (a) v1.0本文に一意性を明示的に要求する記述が無い (b) 現行データに既に非一意な色割当てが存在する可能性があり、新規UNIQUE制約は既存カテゴリーの再割当てを強制する不可逆操作を増やす (c) 「判別可能」という実務要件は8色という上限自体で十分に効果を持ち、厳密な一意性まで強制する必要はない
-  3. **カテゴリー件数上限: 推奨は「導入しない」**。根拠: v1.0本文にカテゴリー件数を8件に制限する記述は無く、issue本文が列挙する「候補」の1つに過ぎない。件数上限は8色のトークン数とは独立した新規の製品制限であり、今回のスコープを超える
-  - **確定にはUser裁可が必要**（指揮台へ選択肢+証拠+推奨として報告済み、本書は確定後に更新する）
+- **decision（採用・確定、2026-08-26 User裁可）**: 以下4点セット
+  1. **トークン数=8**（10→8への縮小）: **overview.md #1で既にUser裁可済み（GO、2026-08-26）**。本書はこれを再確認するのみ
+  2. **per-user色一意性: 導入しない**。根拠: (a) v1.0に要求なし (b) 既存の非一意データへの不可逆な再割当てを強制しうる (c) 8カテゴリー超の事実上の禁止という副作用もある
+  3. **カテゴリー件数上限: 導入しない**。根拠: v1.0に記述なし。新規の製品制限でありscope外
+  4. **null（色未設定）: 現行どおり許容する（nullable維持）**。根拠: v1.0にnull禁止の要求はなく、現行schemaも既にnullable。未設定時の表示規則（どのグレー/パターンで描画するか等）はUI契約側の判断に委ねる技術的な補足事項であり、本書はDB制約の意味としては「nullable維持」を確定するに留める
 - **effective milestone**: #2396（本Step、契約凍結）。色再割当てロジックの実装は#2396着手時（overview.md #1・#14と同一Step）
 - **data migration**: 既存10色のうち縮小対象となる色を使うカテゴリーの再割当てが必要（overview.md #14と同一Step、`[hours]`）
 - **compatibility**: 色token（`--category-*`）の削除はStorybook等に影響（overview.md #1と同一）
@@ -155,7 +153,6 @@ issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点の�
 
 - runtime code / migration の実装をしない（issue #2396完了条件どおり、凍結のみ）
 - sub-issue起票をしない（本書freeze後に別途行う）
-- T1・T6の最終決定をUser裁可なしに確定させない（本書はprovisional表記のまま指揮台へ報告する）
 - `docs/engineering/invariants.md`の追記を今行わない（overview.md §8supersede mapの既定どおり「各Step着手時」に実施する。invariants.mdは実コードで既に強制されている契約のカタログであり、未実装の目標契約を混在させると「不変条件」の意味が崩れる）
 - T5のProposalテーブル形状を確定しない（overview.md #15が既に#2399実装判断へ委譲済み、本書は状態機械の契約のみ）
 - fetchRecordsのクリップ欠落バグの実装修正をしない（別issue [#2426](https://github.com/Dayopt/dayopt/issues/2426)、本書はT1のdownstream blockerとして言及するのみ）
@@ -164,7 +161,7 @@ issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点の�
 
 - `pnpm docs:check` が green（frontmatter・リンク・命名規約）
 - 7点すべてが8フィールド（current/target/decision/effective milestone/data migration/compatibility/rollback/downstream blockers）を記載していること
-- T1・T6がprovisional表記のまま、指揮台裁可を経ずに「確定」表記に書き換わっていないこと
+- T1・T6 は 2026-08-26 に User 裁可（[issue #2396 コメント](https://github.com/Dayopt/dayopt/issues/2396#issuecomment-5421534203)）が正本として存在した上で「確定」表記へ更新されていること（裁可なしの確定表記書き換えではないこと）
 
 ## 関連
 
