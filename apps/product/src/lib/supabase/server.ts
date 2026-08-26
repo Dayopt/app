@@ -58,8 +58,9 @@ import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-import { env } from '@/env';
+import { env, isServerSupabaseDegraded } from '@/env';
 import type { Database } from '@/lib/database';
+import { createDegradedFetch } from '@/lib/supabase/preview-degradation';
 
 /**
  * Server用Supabaseクライアント作成
@@ -70,6 +71,14 @@ import type { Database } from '@/lib/database';
  */
 export async function createClient() {
   const cookieStore = await cookies();
+
+  // Preview で Supabase env が未設定の degradation 時（#2419）は env.ts が
+  // placeholder 値を返す。実 host が存在しない可能性があるため、cookie 由来の
+  // session token を実ネットワークへ送出しないよう fetch を reject させる。
+  // 判定は env.ts（isServerSupabaseDegraded）を唯一の情報源とする — ここで
+  // process.env.VERCEL_ENV を再計算すると、env.ts 側の正規化（trim / \n 除去）との
+  // ズレで判定が食い違いうる。
+  const isDegraded = isServerSupabaseDegraded();
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -91,12 +100,14 @@ export async function createClient() {
         },
       },
       global: {
-        fetch: (url, options) => {
-          return fetch(url, {
-            ...options,
-            signal: options?.signal ?? AbortSignal.timeout(15_000),
-          });
-        },
+        fetch: isDegraded
+          ? createDegradedFetch()
+          : (url, options) => {
+              return fetch(url, {
+                ...options,
+                signal: options?.signal ?? AbortSignal.timeout(15_000),
+              });
+            },
       },
     },
   );

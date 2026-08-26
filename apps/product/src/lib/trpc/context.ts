@@ -10,13 +10,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { TRPCError } from '@trpc/server';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 
-import { env } from '@/env';
+import { env, isServerSupabaseDegraded } from '@/env';
 import { type Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { extractBearerToken, verifyAccessToken } from '@/lib/mcp/auth';
 import { OAuthServerError, type OAuthClientId, type SupportedScope } from '@/lib/oauth-server';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
+import { createDegradedFetch } from '@/lib/supabase/preview-degradation';
 import { resolveSessionAuthContext, type MfaAssurance } from '@/lib/trpc/session-auth-context';
 
 /**
@@ -172,6 +173,12 @@ async function createTRPCContext(opts: {
   else {
     const { createServerClient } = await import('@supabase/ssr');
 
+    // Preview で Supabase env が未設定の degradation 時（#2419）は env.ts が
+    // placeholder 値を返す。実 host が存在しない可能性があるため、cookie 由来の
+    // session token を実ネットワークへ送出しないよう fetch を reject させる。
+    // 判定は env.ts を唯一の情報源とする（server.ts のコメント参照）。
+    const isDegraded = isServerSupabaseDegraded();
+
     supabase = createServerClient<Database>(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -187,6 +194,7 @@ async function createTRPCContext(opts: {
             // tRPC API routes cannot set cookies (read-only context)
           },
         },
+        ...(isDegraded && { global: { fetch: createDegradedFetch() } }),
       },
     );
 

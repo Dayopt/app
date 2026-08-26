@@ -32,8 +32,9 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { createServerSideHelpers } from '@trpc/react-query/server';
 import superjson from 'superjson';
 
-import { env } from '@/env';
+import { env, isServerSupabaseDegraded } from '@/env';
 import type { Database } from '@/lib/database';
+import { createDegradedFetch } from '@/lib/supabase/preview-degradation';
 import type { Context } from '@/lib/trpc/context';
 import { appRouter } from '@/lib/trpc/root';
 import { resolveSessionAuthContext } from '@/lib/trpc/session-auth-context';
@@ -46,6 +47,14 @@ export { dehydrate, HydrationBoundary };
  */
 async function createSupabaseServerClient() {
   const cookieStore = await cookies();
+
+  // Preview で Supabase env が未設定の degradation 時（#2419）は env.ts が
+  // placeholder 値を返す。実 host が存在しない可能性があるため、cookie 由来の
+  // session token を実ネットワークへ送出しないよう fetch を reject させる。
+  // この client は calendar page 等の RSC prefetch（createServerHelpers 経由）で
+  // 使われる — env.ts の degradation 導入前は、この経路の env アクセスが
+  // そのまま throw して 500 になっていた（#2419 の実測経路そのもの）。
+  const isDegraded = isServerSupabaseDegraded();
 
   return createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
@@ -65,6 +74,7 @@ async function createSupabaseServerClient() {
           }
         },
       },
+      ...(isDegraded && { global: { fetch: createDegradedFetch() } }),
     },
   );
 }

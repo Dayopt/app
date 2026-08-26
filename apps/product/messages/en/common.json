@@ -406,6 +406,12 @@
         "acceptAll": "Accept all"
       }
     },
+    "supabasePreviewDisabled": {
+      "banner": {
+        "title": "Supabase is disabled in this Preview",
+        "description": "Auth and data features are unavailable because Supabase environment variables aren't configured for this Preview deployment."
+      }
+    },
     "colors": {
       "red": "Red",
       "orange": "Orange",

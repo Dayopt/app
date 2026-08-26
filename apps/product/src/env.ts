@@ -7,9 +7,16 @@
  */
 import 'server-only';
 
+import { randomBytes } from 'crypto';
+
 import { z } from 'zod';
 
 import { isValidOAuthRedirectUriList } from '@/lib/oauth-server/redirect-uris';
+import {
+  isPreviewSupabaseDegraded,
+  PLACEHOLDER_SUPABASE_ANON_KEY,
+  PLACEHOLDER_SUPABASE_URL,
+} from '@/lib/supabase/preview-degradation';
 
 function isDayoptEmailAddress(value: string): boolean {
   const normalized = value.trim().toLowerCase();
@@ -43,6 +50,10 @@ function isBase64EncodedAes256Key(value: string | undefined): boolean {
 const serverSchema = z
   .object({
     // Supabase
+    // NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY は non-optional のまま維持する
+    // （既存の env.NEXT_PUBLIC_SUPABASE_URL: string 型を消費する呼び出し元多数への影響を避ける）。
+    // Preview + Supabase env 未設定（#2419）の degradation は、safeParse に渡す直前に
+    // `cleaned` へ placeholder 値を overlay することで実現する（下の get trap 参照）。
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
@@ -237,6 +248,22 @@ const serverSchema = z
 type ServerEnv = z.infer<typeof serverSchema>;
 
 let _validated = false;
+// Preview + Supabase env 未設定（#2419）かどうかを、Object.entries 由来の runtime 実値から
+// 一度だけ判定してキャッシュする。literal dot-access（`process.env.NEXT_PUBLIC_SUPABASE_URL`）は
+// next.config.mjs の build-time inlining の対象になり、実 env を後から追加しても
+// 再 build するまで判定が固定されたままになる事故につながるため使わない。
+let _isPreviewWithoutBackend = false;
+// degraded 時に SUPABASE_SERVICE_ROLE_KEY へ渡す起動ごとのランダム値。固定の公開定数を
+// 与えると、Preview 上で誰でもその値を X-API-Key に送るだけで service-role 認証
+// （`lib/trpc/context.ts` の `!expectedKey` fail-closed 判定）を通過できてしまう
+// （risk-reviewer 指摘 #2419）。推測不能なランダム値なら fail-closed のまま維持しつつ、
+// schema の型を non-optional（string）に保てる（`SUPABASE_SERVICE_ROLE_KEY: string` を
+// 前提にする既存呼び出し元 10 箇所超への型カスケードを避ける）。値は一切ログ・API に出さない。
+let _randomServiceRoleKeyPlaceholder: string | undefined;
+function getRandomServiceRoleKeyPlaceholder(): string {
+  _randomServiceRoleKeyPlaceholder ??= randomBytes(32).toString('hex');
+  return _randomServiceRoleKeyPlaceholder;
+}
 
 /**
  * サーバーサイド環境変数
@@ -244,6 +271,10 @@ let _validated = false;
  * process.env へのアクセスをProxy経由で提供する。
  * - dev/production ランタイム: 初回アクセス時にZodバリデーションを実行（不足があればthrow）
  * - ビルド時/テスト時/CI: バリデーションをスキップし process.env を直接返す
+ * - Preview + Supabase env 未設定（isPreviewWithoutBackend）: バリデーションは通常どおり実行するが
+ *   （他の refine の検出能力は維持する）、NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY には
+ *   既知の placeholder 値、SUPABASE_SERVICE_ROLE_KEY には起動ごとのランダム値を返す
+ *   （fail-open にしない。上のコメント参照）。
  */
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop: string) {
@@ -259,6 +290,25 @@ export const env = new Proxy({} as ServerEnv, {
         const trimmed = value?.replace(/\\n/g, '').trim();
         cleaned[key] = trimmed === '' ? undefined : trimmed;
       }
+      _isPreviewWithoutBackend =
+        // MCP OAuth を明示的に有効化した Preview は、上の UPSTASH_REDIS refine が
+        // production 同等の operational 環境として扱っている（外部 client から到達する
+        // ため）。同じ deployment class を degradation の対象からも外し、silent degrade
+        // ではなく loud throw のままにする（risk-reviewer 指摘 #2419）。
+        cleaned['MCP_OAUTH_ENVIRONMENT'] !== 'preview' &&
+        isPreviewSupabaseDegraded(
+          cleaned['VERCEL_ENV'],
+          cleaned['NEXT_PUBLIC_SUPABASE_URL'],
+          cleaned['NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+        );
+      if (_isPreviewWithoutBackend) {
+        // NEXT_PUBLIC_SUPABASE_URL 等は schema 上 non-optional のため、safeParse に渡す前に
+        // placeholder で overlay する（get trap の return 側で別途 override するので、
+        // ここでの overlay は検証を通すためだけの一時的な値）。
+        cleaned['NEXT_PUBLIC_SUPABASE_URL'] = PLACEHOLDER_SUPABASE_URL;
+        cleaned['NEXT_PUBLIC_SUPABASE_ANON_KEY'] = PLACEHOLDER_SUPABASE_ANON_KEY;
+        cleaned['SUPABASE_SERVICE_ROLE_KEY'] = getRandomServiceRoleKeyPlaceholder();
+      }
       const result = serverSchema.safeParse(cleaned);
       if (!result.success) {
         const formatted = result.error.issues
@@ -272,6 +322,30 @@ export const env = new Proxy({} as ServerEnv, {
       _validated = true;
     }
 
+    if (_isPreviewWithoutBackend) {
+      if (prop === 'NEXT_PUBLIC_SUPABASE_URL') return PLACEHOLDER_SUPABASE_URL;
+      if (prop === 'NEXT_PUBLIC_SUPABASE_ANON_KEY') return PLACEHOLDER_SUPABASE_ANON_KEY;
+      if (prop === 'SUPABASE_SERVICE_ROLE_KEY') return getRandomServiceRoleKeyPlaceholder();
+    }
+
     return process.env[prop];
   },
 });
+
+/**
+ * Preview + Supabase env 未設定の degradation 中かどうか（#2419）。
+ *
+ * `env.ts` が `Object.entries(process.env)` 由来の正規化済み値から確定させた
+ * 判定結果（`_isPreviewWithoutBackend`）を返す、この判定の唯一の情報源。
+ * 呼び出し元（`lib/supabase/server.ts` / `lib/supabase/oauth.ts` / `lib/trpc/context.ts` /
+ * `lib/trpc/server.ts`）はこの関数を使い、`process.env.VERCEL_ENV` を自前で
+ * 再計算しない — 正規化ロジック（trim / `\n` 除去）が env.ts とズレると、
+ * env.ts 側は degraded なのに呼び出し元は non-degraded のまま実ネットワークへ
+ * 出してしまう事故になる（risk-reviewer 指摘 #2419）。
+ */
+export function isServerSupabaseDegraded(): boolean {
+  // env.* に一度もアクセスしていない場合に備え、プロパティ読み出しで
+  // Proxy の検証（_isPreviewWithoutBackend の計算）を確実に走らせる。
+  void env.NEXT_PUBLIC_SUPABASE_URL;
+  return _isPreviewWithoutBackend;
+}

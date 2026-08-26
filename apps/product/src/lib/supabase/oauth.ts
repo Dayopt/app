@@ -29,8 +29,9 @@ import 'server-only';
 
 import { createClient } from '@supabase/supabase-js';
 
-import { env } from '@/env';
+import { env, isServerSupabaseDegraded } from '@/env';
 import type { Database } from '@/lib/database';
+import { createDegradedFetch } from '@/lib/supabase/preview-degradation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -104,18 +105,27 @@ export function createServiceRoleClient(): SupabaseClient<Database> {
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
+  // Preview で Supabase env が未設定の degradation 時（#2419）は env.ts が
+  // supabaseUrl に placeholder を、serviceRoleKey に起動ごとのランダム値を返す
+  // （fail-closed は env.ts 側の設計で維持済み）。実 host が存在しない可能性があるため、
+  // このクライアントを実際に使う呼び出し元があっても実ネットワークへ出さない。
+  // 判定は env.ts を唯一の情報源とする（server.ts のコメント参照）。
+  const isDegraded = isServerSupabaseDegraded();
+
   return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
     global: {
-      fetch: (url, options) => {
-        return fetch(url, {
-          ...options,
-          signal: options?.signal ?? AbortSignal.timeout(15_000),
-        });
-      },
+      fetch: isDegraded
+        ? createDegradedFetch()
+        : (url, options) => {
+            return fetch(url, {
+              ...options,
+              signal: options?.signal ?? AbortSignal.timeout(15_000),
+            });
+          },
     },
   });
 }

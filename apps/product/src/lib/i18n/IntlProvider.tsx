@@ -8,6 +8,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 
 import { CookieConsentBanner } from '@/components/shell/CookieConsentBanner';
+import { SupabasePreviewDegradedBanner } from '@/components/shell/SupabasePreviewDegradedBanner';
 
 import { pickMessages } from './index';
 
@@ -21,6 +22,7 @@ export async function IntlProvider({ namespaces, children }: IntlProviderProps) 
 
   return (
     <NextIntlClientProvider messages={pickMessages(messages, namespaces)}>
+      <SupabasePreviewDegradedBanner />
       {children}
       <CookieConsentBanner />
     </NextIntlClientProvider>

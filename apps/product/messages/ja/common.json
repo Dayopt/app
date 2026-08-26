@@ -406,6 +406,12 @@
         "acceptAll": "すべて同意"
       }
     },
+    "supabasePreviewDisabled": {
+      "banner": {
+        "title": "この Preview では Supabase 機能は無効です",
+        "description": "env 未設定のため、認証やデータの読み書きを含む機能は利用できません"
+      }
+    },
     "colors": {
       "red": "赤",
       "orange": "オレンジ",
