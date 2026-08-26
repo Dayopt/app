@@ -60,6 +60,7 @@ describe('cross-review-workflow.js の SCHEMA_CONTRACT', () => {
         'findings',
         'counterevidence',
         'unknowns',
+        'coverage',
         'recommendation',
         'recommendationReason',
       ],
@@ -73,6 +74,7 @@ describe('cross-review-workflow.js の SCHEMA_CONTRACT', () => {
         'findings',
         'counterevidence',
         'unknowns',
+        'coverage',
         'recommendation',
         'recommendationReason',
       ],
@@ -86,6 +88,7 @@ describe('cross-review-workflow.js の SCHEMA_CONTRACT', () => {
         'findings',
         'counterevidence',
         'unknowns',
+        'coverage',
         'authority',
         'recommendation',
         'recommendationReason',
@@ -101,6 +104,17 @@ describe('cross-review-workflow.js の SCHEMA_CONTRACT', () => {
       const schema = schemas[role] as JsonSchemaObject;
       expect(schema.required, `${role} の required`).toContain('counterevidence');
       expect(schema.required, `${role} の required`).toContain('unknowns');
+    }
+  });
+
+  it('全 role で coverage が required に含まれ complete/partial の enum を強制する（#2417、早期切り上げの自己申告）', () => {
+    for (const role of Object.keys(schemas)) {
+      const schema = schemas[role] as JsonSchemaObject;
+      expect(schema.required, `${role} の required`).toContain('coverage');
+      expect(schema.properties?.coverage?.enum, `${role} の coverage enum`).toEqual([
+        'complete',
+        'partial',
+      ]);
     }
   });
 
