@@ -14,6 +14,7 @@ const meta = {
   args: {
     position: { x: 0, y: 0 },
     onClose: fn(),
+    onEdit: fn(),
     onRename: fn(),
     onDelete: fn(),
   },
@@ -39,6 +40,7 @@ function ContextMenuTrigger() {
         <TemplateContextMenu
           position={menuState}
           onClose={() => setMenuState(null)}
+          onEdit={fn()}
           onRename={fn()}
           onDelete={fn()}
         />
@@ -57,6 +59,7 @@ export const DirectDisplay: Story = {
       <TemplateContextMenu
         position={{ x: 0, y: 0 }}
         onClose={fn()}
+        onEdit={fn()}
         onRename={fn()}
         onDelete={fn()}
       />
@@ -77,6 +80,7 @@ export const AllPatterns: Story = {
           <TemplateContextMenu
             position={{ x: 0, y: 0 }}
             onClose={fn()}
+            onEdit={fn()}
             onRename={fn()}
             onDelete={fn()}
           />

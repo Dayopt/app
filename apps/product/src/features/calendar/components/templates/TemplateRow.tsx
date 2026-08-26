@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 
-import { GripVertical } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { cn, Popover, PopoverContent, PopoverTrigger } from '@dayopt/components';
@@ -18,6 +17,7 @@ interface TemplateRowProps {
   /** クリック適用・ドラッグ中などの静的な視覚状態（Storybook 確認用） */
   visualState?: TemplateRowVisualState | undefined;
   onApply?: (() => void) | undefined;
+  onEdit?: (() => void) | undefined;
   onRename?: ((name: string) => void) | undefined;
   onDelete?: (() => void) | undefined;
 }
@@ -25,18 +25,25 @@ interface TemplateRowProps {
 /**
  * サイドバーのテンプレート行（v1.0 §5.4）。
  *
- * 見る＝ホバーでミニチュア日ビューのプレビュー。使う＝クリックで適用、
- * ドラッグで任意の日へ。統治（改名・削除）は右クリックに畳む。
+ * 見る＝ホバーでミニチュア日ビューのプレビュー（PC のみの挙動）。使う＝
+ * クリックで適用、ドラッグで任意の日へ。統治（改名・削除）＋型を一日として
+ * 開く「編集」は右クリックに畳む。
+ *
+ * サイドバー内での並び替え DnD は持たない（`design-system.md` §ドラッグ操作
+ * の既存方針どおり、リスト並び替えの DnD は廃止済み。ドラッグは「任意の日へ
+ * 適用する」ための操作であり、行の順序を変える操作ではない）。
  *
  * この component は Storybook-only の視覚確認用で、実際のドラッグ挙動・
- * 適用 mutation・改名 mutation は本 issue の非 scope（後続の実装 issue）。
- * `visualState` は「クリック適用中」「ドラッグ中」の見た目を Story で
- * 静的に確認するためのフラグで、実インタラクションの state machine ではない。
+ * 適用 mutation・改名 mutation・編集ビューへの遷移は本 issue の非 scope
+ * （後続の実装 issue）。`visualState` は「クリック適用中」「ドラッグ中」の
+ * 見た目を Story で静的に確認するためのフラグで、実インタラクションの
+ * state machine ではない。
  */
 export function TemplateRow({
   template,
   visualState = 'idle',
   onApply,
+  onEdit,
   onRename,
   onDelete,
 }: TemplateRowProps) {
@@ -82,11 +89,6 @@ export function TemplateRow({
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={handleContextMenu}
     >
-      <GripVertical
-        aria-hidden="true"
-        className="text-muted-foreground size-3.5 shrink-0 cursor-grab opacity-0 transition-opacity group-hover/template-row:opacity-100"
-      />
-
       <Popover open={isHovered && !isRenaming}>
         <PopoverTrigger asChild>
           {isRenaming ? (
@@ -112,7 +114,7 @@ export function TemplateRow({
             </button>
           )}
         </PopoverTrigger>
-        <PopoverContent side="right" align="start" className="h-64 w-40 p-2">
+        <PopoverContent side="right" align="start" className="h-96 w-64 p-3">
           <MiniDayPreview blocks={template.blocks} />
         </PopoverContent>
       </Popover>
@@ -121,6 +123,7 @@ export function TemplateRow({
         <TemplateContextMenu
           position={contextMenuPosition}
           onClose={() => setContextMenuPosition(null)}
+          onEdit={() => onEdit?.()}
           onRename={handleStartRename}
           onDelete={() => onDelete?.()}
         />

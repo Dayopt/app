@@ -10,6 +10,7 @@ import type { TemplateMock } from './types';
 interface TemplateListProps {
   templates: ReadonlyArray<TemplateMock>;
   onApplyTemplate?: ((templateId: string) => void) | undefined;
+  onEditTemplate?: ((templateId: string) => void) | undefined;
   onRenameTemplate?: ((templateId: string, name: string) => void) | undefined;
   onDeleteTemplate?: ((templateId: string) => void) | undefined;
 }
@@ -26,6 +27,7 @@ interface TemplateListProps {
 export function TemplateList({
   templates,
   onApplyTemplate,
+  onEditTemplate,
   onRenameTemplate,
   onDeleteTemplate,
 }: TemplateListProps) {
@@ -44,6 +46,7 @@ export function TemplateList({
               key={template.id}
               template={template}
               onApply={() => onApplyTemplate?.(template.id)}
+              onEdit={() => onEditTemplate?.(template.id)}
               onRename={(name) => onRenameTemplate?.(template.id, name)}
               onDelete={() => onDeleteTemplate?.(template.id)}
             />

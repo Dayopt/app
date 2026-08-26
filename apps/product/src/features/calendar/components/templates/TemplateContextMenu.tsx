@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, SquarePen, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { cn, overlaySurface } from '@dayopt/components';
@@ -10,12 +10,14 @@ import { cn, overlaySurface } from '@dayopt/components';
 interface TemplateContextMenuProps {
   position: { x: number; y: number };
   onClose: () => void;
+  onEdit: () => void;
   onRename: () => void;
   onDelete: () => void;
 }
 
 /**
- * テンプレート行の統治（改名・削除）を右クリックに畳んだメニュー（v1.0 §5.4）。
+ * テンプレート行の「直す」（型を一日として開く）＋統治（改名・削除）を
+ * 右クリックに畳んだメニュー（v1.0 §5.4）。
  *
  * `TimeblockContextMenu.tsx` の `EventContextMenu` と同じ位置追従・
  * フォーカス管理・矢印キー操作パターンを踏襲する（packages/components に
@@ -26,6 +28,7 @@ interface TemplateContextMenuProps {
 export function TemplateContextMenu({
   position,
   onClose,
+  onEdit,
   onRename,
   onDelete,
 }: TemplateContextMenuProps) {
@@ -103,6 +106,13 @@ export function TemplateContextMenu({
 
   const items = [
     {
+      key: 'edit',
+      labelKey: 'calendar.templates.editEntryLabel' as const,
+      icon: SquarePen,
+      dangerous: false,
+      onSelect: onEdit,
+    },
+    {
       key: 'rename',
       labelKey: 'common.actions.rename' as const,
       icon: Pencil,
@@ -132,26 +142,29 @@ export function TemplateContextMenu({
         top: adjustedPosition.y,
       }}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const IconComponent = item.icon;
+        const showSeparator = item.dangerous && index > 0 && !items[index - 1]?.dangerous;
         return (
-          <button
-            key={item.key}
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            onClick={() => handleAction(item.onSelect)}
-            className={cn(
-              'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
-              "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-              item.dangerous
-                ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
-                : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
-            )}
-          >
-            <IconComponent />
-            <span>{t(item.labelKey)}</span>
-          </button>
+          <Fragment key={item.key}>
+            {showSeparator && <div role="separator" className="bg-border-subtle -mx-1 my-1 h-px" />}
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={() => handleAction(item.onSelect)}
+              className={cn(
+                'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
+                "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                item.dangerous
+                  ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
+                  : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
+              )}
+            >
+              <IconComponent />
+              <span>{t(item.labelKey)}</span>
+            </button>
+          </Fragment>
         );
       })}
     </div>
