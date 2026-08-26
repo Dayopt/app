@@ -3,12 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mutateAsyncMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'cat-1' }));
 
-vi.mock('@/features/activities', () => ({
-  useCreateCategory: () => ({
-    mutateAsync: mutateAsyncMock,
-    isPending: false,
-  }),
-}));
+vi.mock('@/features/activities', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/features/activities')>('@/features/activities');
+  return {
+    ...actual,
+    // 色・アイコン属性行（CategoryAppearancePickerRow）は実実装のまま使う。
+    // ここで mock するのは作成 mutation の呼び出し検証のみ。
+    useCreateCategory: () => ({
+      mutateAsync: mutateAsyncMock,
+      isPending: false,
+    }),
+  };
+});
 
 import { CategoryCreatePopover } from '../CategoryCreatePopover';
 

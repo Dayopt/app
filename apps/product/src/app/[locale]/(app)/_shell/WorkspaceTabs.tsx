@@ -34,7 +34,7 @@ export function WorkspaceTabs() {
           （w-64 = デフォルトsidebar幅256pxで実測）。gap/paddingを詰めて折り返しを解消する。
           active表現はpill+shadow（浮いたカード）ではなく淡い塗り+太字（候補B、User提供の
           Claude desktopスクリーンショット参照）。 */}
-      <div className="bg-container flex items-center gap-1 rounded-lg p-1" role="tablist">
+      <div className="bg-muted flex items-center gap-1 rounded-lg p-1" role="tablist">
         <TabButton
           href={calendarHref}
           label={t('sidebar.pageNav.calendar')}
