@@ -42,7 +42,7 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 ### レビュー待ち報告
 
-ローカル検証 → 自己判断で ready 化 → **ready 化で起動する CI**（Static Checks / Unit Tests / Docs Guard、保護対象該当時のみ Production Config Audit）を watch → green 確認、まで進めた時点で送る（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、CI green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
+ローカル検証 → 自己判断で ready 化 → **ready 化で起動する CI**（Static Checks / Unit Tests、保護対象該当時のみ Production Config Audit）を watch → green 確認、まで進めた時点で送る（Docs Guard と Vercel Preview build は draft push の時点で走っているので、watch ではなく green の確認だけを行う）（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、CI green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
 
 **push 前セルフレビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー）で実行した subagent の role 一覧と生出力を添付する**（策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）。要約しない — findings ゼロならその旨の原文をそのまま貼る。指揮台はこれを `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md` 手順 2〜3）の出発点として読む。自動委任条件（`.claude/rules/ai-behavior.md` §Read-only delegation）に非該当で subagent を回していない場合は「非該当」と明記する。
 

@@ -64,7 +64,13 @@ permissions:
 # で skip するため check run は conclusion: skipped として発行され、ready 化で
 # types の ready_for_review が新しい run を起こす。加えて scripts/git/finish-branch.sh
 # が「docs-only でない PR では Static Checks / Unit Tests が success であること」を
-# by-name で検査するので、skipped のまま merge へ抜ける経路は塞がっている（#2415）。
+# by-name で検査する（#2415）。
+#
+# **ただしこの検査は `pnpm branch:finish` 経由でのみ効く。** GitHub の merge ボタン /
+# 手動 `gh pr merge` は素通りする（GitHub は skipped の required check を success
+# 扱いにし、private repo + Free plan では ruleset の強制自体が効かない）。
+# .claude/rules/workflow.md §内製クロスレビューの実施を要求する gate と同じ制約で、
+# merge の入口を branch:finish に一本化する運用がこの skip の前提になっている。
 jobs:
   # docs-only 判定だけを行う軽量 job。Impact Resolver（scripts/ci/impact.mjs）は
   # node 標準モジュールしか使わないため checkout だけで動く（pnpm install 不要、実測数十秒）。

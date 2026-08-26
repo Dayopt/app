@@ -122,17 +122,29 @@ function fetchChecks(prNumber, { execFileImpl } = {}) {
 }
 
 /**
- * open PR 全件の snapshot を取る。
+ * open PR 全件の snapshot を取る。**draft PR は対象外。**
+ *
+ * この watch は「レーンが green 報告を送り忘れた時に指揮台が気づけるようにする」
+ * backstop（`.claude/rules/orchestration.md` §green watch）で、拾いたいのは
+ * **ready + green = レビュー待ち**への遷移だけ。
+ *
+ * draft を含めると誤検知になる（2026-08-26、#2415）: Draft CI 廃止で draft PR の
+ * Static / Unit は `skipping` になり、`aggregateChecks` は fail / cancel / pending
+ * 以外をすべて success へ畳むため、**docs guard が通っただけの draft PR が
+ * 'pending → success' として通知される**。本 PR が確立するセマンティクス
+ * （draft = レーンの私的作業場 / ready + green = レビュー待ち）と真逆の信号になり、
+ * 指揮台のクロスレビューを誤発火させる。
  * @param {{ execFileImpl?: import('../night-watch/lib.mjs').ExecFileImpl }} [opts]
  * @returns {Map<string, PrSnapshot>}
  */
 export function takeSnapshot({ execFileImpl } = {}) {
   const prs = runGhJson(
-    ['pr', 'list', '--repo', REPO, '--state', 'open', '--json', 'number,headRefOid'],
+    ['pr', 'list', '--repo', REPO, '--state', 'open', '--json', 'number,headRefOid,isDraft'],
     { execFileImpl },
   );
   const snapshot = new Map();
   for (const pr of prs) {
+    if (pr.isDraft) continue;
     const checks = fetchChecks(pr.number, { execFileImpl });
     const state = aggregateChecks(checks);
     snapshot.set(`${pr.number}@${pr.headRefOid}`, {

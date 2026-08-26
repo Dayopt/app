@@ -125,6 +125,51 @@ describe('takeSnapshot（gh 呼び出し契約）', () => {
     const snapshot = takeSnapshot({ execFileImpl });
     expect(snapshot.get(`2364@${'e'.repeat(40)}`)?.state).toBe('pending');
   });
+
+  /**
+   * Draft CI 廃止（#2415）で draft PR の Static / Unit は `skipping` になる。
+   * `aggregateChecks` は fail / cancel / pending 以外をすべて success へ畳むため、
+   * draft を watch に残すと「docs guard が通っただけの draft PR」が
+   * pending → success として通知され、指揮台のクロスレビューを誤発火させる。
+   * この watch が拾いたいのは ready + green（= レビュー待ち）だけ。
+   */
+  it('draft PR は watch 対象から除外する（skipping を success と誤って通知しない）', () => {
+    const execFileImpl = vi.fn((cmd: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return JSON.stringify([
+          { number: 2415, headRefOid: 'f'.repeat(40), isDraft: true },
+          { number: 2420, headRefOid: 'a'.repeat(40), isDraft: false },
+        ]);
+      }
+      if (args[0] === 'pr' && args[1] === 'checks') {
+        return JSON.stringify([
+          { name: 'Static Checks', state: 'SKIPPED', bucket: 'skipping' },
+          { name: 'docs guard', state: 'SUCCESS', bucket: 'pass' },
+        ]);
+      }
+      throw new Error(`unexpected args: ${JSON.stringify(args)}`);
+    });
+
+    const snapshot = takeSnapshot({ execFileImpl });
+    expect(snapshot.has(`2415@${'f'.repeat(40)}`)).toBe(false);
+    expect(snapshot.get(`2420@${'a'.repeat(40)}`)?.state).toBe('success');
+    // draft の分は checks 取得すら呼ばない（無駄な gh 呼び出しを増やさない）
+    const checksCalls = execFileImpl.mock.calls.filter(
+      ([, args]) => args[0] === 'pr' && args[1] === 'checks',
+    );
+    expect(checksCalls).toHaveLength(1);
+  });
+
+  it('pr list で isDraft を要求する（除外判定の前提）', () => {
+    const execFileImpl = vi.fn((cmd: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'list') return JSON.stringify([]);
+      throw new Error(`unexpected args: ${JSON.stringify(args)}`);
+    });
+
+    takeSnapshot({ execFileImpl });
+    const listArgs = execFileImpl.mock.calls[0][1] as string[];
+    expect(listArgs[listArgs.indexOf('--json') + 1]).toContain('isDraft');
+  });
 });
 
 describe('parseArgs', () => {

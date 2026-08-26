@@ -27,13 +27,20 @@ export const REPO = 'Dayopt/dayopt';
  * test では差し替え可能な最小限の呼び出し形だけを型に持たせる。
  */
 
+// `execFileSync` の既定 maxBuffer は 1MB で、超えると ENOBUFS で throw する。
+// gh の応答量は public repo では第三者が動かせる変数（issue / PR の件数と本文長）
+// なので、既定のままだと「観測が黙って落ちる」を外から誘発できる。呼び出し側は
+// --jq 射影で応答を絞るのが第一防御（morning-brief の fetchOpenPrs 参照）で、
+// これはその裏の余裕。大きすぎる値は OOM を招くので 32MB に留める。
+export const GH_MAX_BUFFER_BYTES = 32 * 1024 * 1024;
+
 /**
  * gh CLI を execFile 経由で呼ぶ。shell を経由しない。
  * @param {string[]} args
  * @param {{ execFileImpl?: ExecFileImpl }} [opts]
  */
 export function runGh(args, { execFileImpl = execFileSync } = {}) {
-  return execFileImpl('gh', args, { encoding: 'utf8' });
+  return execFileImpl('gh', args, { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES });
 }
 
 /**

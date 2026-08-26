@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { GH_MAX_BUFFER_BYTES } from './lib.mjs';
+
 import {
   buildAlertBudgetLine,
   buildBoardNoteComment,
@@ -558,7 +560,7 @@ describe('runOpsLogReport', () => {
         '--body',
         `${buildOpsLogComment(GREEN_REPORT)}${buildAlertBudgetLine({ healthy: true, updatedAt: Date.now(), actedCheckIds: [], createdCount: 0 })}\n`,
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 
@@ -685,7 +687,7 @@ describe('runEnvFailure', () => {
         '--body',
         '環境故障: DAYOPT_NIGHT_WATCH 未検出',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 
@@ -706,7 +708,7 @@ describe('runEnvFailure', () => {
         '--body',
         '環境故障: token に write 権限あり',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 

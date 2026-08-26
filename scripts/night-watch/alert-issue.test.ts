@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { GH_MAX_BUFFER_BYTES } from './lib.mjs';
+
 import {
   buildAlertBody,
   findExistingAlertIssue,
@@ -260,7 +262,7 @@ describe('findExistingAlertIssue', () => {
         '--json',
         'number,title,labels',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 
