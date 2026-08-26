@@ -45,6 +45,8 @@ interface TimeModelEditorProps {
   ) => void;
   /** アクティビティ選択トリガーの無効化（日時・メモの disabled とは独立） */
   activityDisabled?: boolean | undefined;
+  /** 日時グルーピングの直下（時間の下）に差し込む要素。Record の充実度用（#2412） */
+  fulfillmentSlot?: React.ReactNode | undefined;
 }
 
 function withTime(date: Date, value: string): Date {
@@ -73,6 +75,7 @@ export function TimeblockEditor({
   onActivityChange,
   onCreateAndSelectActivity,
   activityDisabled,
+  fulfillmentSlot,
 }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
   const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
@@ -80,6 +83,18 @@ export function TimeblockEditor({
 
   return (
     <div className="space-y-3">
+      {/* タイトル行（アクティビティ）を一番上に置く（v1.0 設計書 §6.1、#2412） */}
+      <ActivityFieldRow
+        variant="compact"
+        activityId={value.activityId}
+        activityName={activityName}
+        activityIcon={activityIcon}
+        activityColor={activityColor}
+        uncategorized={activityUncategorized}
+        onActivityChange={onActivityChange}
+        onCreateAndSelect={onCreateAndSelectActivity}
+        disabled={activityDisabled}
+      />
       {timeLocked ? (
         <div className="flex justify-end">
           <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
@@ -109,6 +124,9 @@ export function TimeblockEditor({
             disabled={disabled === true || timeLocked}
             hasError={hasDateTimeError}
           />
+          {fulfillmentSlot ? (
+            <div className="border-border-subtle mt-2 border-t pt-2">{fulfillmentSlot}</div>
+          ) : null}
         </div>
         <div
           // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sidebar create と同じ expand/collapse animation
@@ -120,17 +138,7 @@ export function TimeblockEditor({
           </div>
         </div>
       </div>
-      <ActivityFieldRow
-        variant="compact"
-        activityId={value.activityId}
-        activityName={activityName}
-        activityIcon={activityIcon}
-        activityColor={activityColor}
-        uncategorized={activityUncategorized}
-        onActivityChange={onActivityChange}
-        onCreateAndSelect={onCreateAndSelectActivity}
-        disabled={activityDisabled}
-      />
+      {/* メモは一番下（v1.0 設計書 §6.1、#2412） */}
       <div onBlurCapture={onNoteBlur}>
         <NoteSection
           label={t('note')}

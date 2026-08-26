@@ -2,7 +2,10 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { fn } from 'storybook/test';
 
+import { RecordFulfillmentRow } from '../inspector/fields';
 import { TimeblockEditor, type TimeModelEditorValue } from './TimeblockEditor';
+
+import type { Fulfillment } from '../../schemas/timeblock';
 
 const activityProps = {
   activityName: '仕事',
@@ -62,7 +65,36 @@ export const Plan: Story = {
   },
 };
 
-/** 過去の Plan の日時ロックとメモ編集。 */
+/**
+ * Record（記録）の編集。フィールド順はタイトル（アクティビティ）→ 日付・時間 → 充実度
+ * （時間の下）→ メモ の順（v1.0 設計書 §6.1、#2412）。
+ */
+export const Record: Story = {
+  args: {
+    value: pastPlanValue,
+    onDateTimeChange: () => undefined,
+    onNoteChange: () => undefined,
+    ...activityProps,
+  },
+  render: function RecordStory() {
+    const [value, setValue] = useState<TimeModelEditorValue>({
+      ...pastPlanValue,
+      source: undefined,
+    });
+    const [fulfillment, setFulfillment] = useState<Fulfillment | null>('high');
+    return (
+      <TimeblockEditor
+        value={value}
+        onDateTimeChange={setValue}
+        onNoteChange={(note) => setValue((current) => ({ ...current, note }))}
+        {...activityProps}
+        fulfillmentSlot={<RecordFulfillmentRow value={fulfillment} onChange={setFulfillment} />}
+      />
+    );
+  },
+};
+
+/** 過去の Plan の日時ロックとメモ編集。フィールド順は Record と同じだが充実度は無い。 */
 export const PastPlan: Story = {
   args: {
     value: futureValue,
@@ -105,8 +137,20 @@ export const AllPatterns: Story = {
   render: function AllPatternsStory() {
     const [value, setValue] = useState(futureValue);
     const [pastValue, setPastValue] = useState(pastPlanValue);
+    const [recordValue, setRecordValue] = useState<TimeModelEditorValue>({
+      ...pastPlanValue,
+      source: undefined,
+    });
+    const [fulfillment, setFulfillment] = useState<Fulfillment | null>('high');
     return (
       <div className="space-y-6">
+        <TimeblockEditor
+          value={recordValue}
+          onDateTimeChange={setRecordValue}
+          onNoteChange={(note) => setRecordValue((current) => ({ ...current, note }))}
+          {...activityProps}
+          fulfillmentSlot={<RecordFulfillmentRow value={fulfillment} onChange={setFulfillment} />}
+        />
         <TimeblockEditor
           value={value}
           onDateTimeChange={setValue}

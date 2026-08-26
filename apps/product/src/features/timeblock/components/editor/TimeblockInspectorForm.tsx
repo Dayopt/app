@@ -640,15 +640,16 @@ export function TimeblockInspectorForm({
         onActivityChange={handleActivityChange}
         onCreateAndSelectActivity={handleCreateAndSelectActivity}
         activityDisabled={isWriteFrozen}
+        fulfillmentSlot={
+          !isDuplicateMode && kind === 'record' ? (
+            <RecordFulfillmentRow
+              value={fulfillment}
+              onChange={handleFulfillmentChange}
+              disabled={isWriteFrozen || isMigrated}
+            />
+          ) : undefined
+        }
       />
-
-      {!isDuplicateMode && kind === 'record' ? (
-        <RecordFulfillmentRow
-          value={fulfillment}
-          onChange={handleFulfillmentChange}
-          disabled={isWriteFrozen || isMigrated}
-        />
-      ) : null}
 
       {/*
         保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
