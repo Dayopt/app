@@ -16,6 +16,7 @@ export type { Activity, ActivityTree, Category } from './types';
 // 表示部品（色・アイコンを持つのはカテゴリーだけ。アクティビティは継承する）
 export { ActivityIcon } from './components/ActivityIcon';
 export {
+  CategoryAppearancePickerRow,
   CategoryColorMenuItems,
   CategoryIconMenuItems,
 } from './components/CategoryAppearanceMenuItems';
