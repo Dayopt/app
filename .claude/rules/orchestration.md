@@ -132,7 +132,7 @@
 >
 > **節目で担当 issue のコメントを読み直す**（2026-08-12 追記） — 実装の節目（plan 凍結後・PR 作成前・merge 可能報告前）に、自分の担当 issue のコメントを読み直す。send_message はレーンの turn 実行中に配信されないため、scope 追加・裁可が issue コメントとして先に届いていることがある（§裁可・指示の経路 参照）
 >
-> **push・ready 化・重量 watch は自律的に進める**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)） — 軽量 green を確認したら指揮台の合図を待たずに ready 化し、重量 CI を watch して green を指揮台へ「レビュー待ち」として報告する。**追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため）。保護対象該当時の trusted dispatch 実行は指揮台のまま。branch:finish は指揮台が実行する
+> **push・ready 化・CI watch は自律的に進める**（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。初出は 2026-08-20、[#2263](https://github.com/Dayopt/dayopt/issues/2263)） — draft 中は CI が走らない（Docs Guard を除く）ため、ローカル検証（`pnpm check` と pre-push フック）が済んだら指揮台の合図を待たずに ready 化し、**ready 化で起動する CI** を watch して green を指揮台へ「レビュー待ち」として報告する。**追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため）。保護対象該当時の trusted dispatch 実行は指揮台のまま。branch:finish は指揮台が実行する
 
 **チップ prompt への転記は、上記全文の代わりに次の 1 行で足りる**（2026-08-19、#2220。全文の正本はこの節に置いたまま複製しない — 複製すると片方だけ改訂される drift を必ず生む。軽量化するのはコピー先だけ）:
 
@@ -201,12 +201,12 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 **旧「push タイミングの一元化」を廃止し、push・ready 化・重量 watch はレーンが自己判断で進める。** 2026-08-20 の実測（8 PR merge）で、push 合図・確定伝達・ready 合図の往復の大半が形式的だったため、PR の状態遷移を「draft = レーン作業中 / ready + CI green = 指揮官レビュー待ち」という自己記述的なセマンティクスへ転換した（設計は #2263）。
 
 - レーンは round の commit + push 前セルフレビュー完了後、**指揮台の合図を待たずに push する**
-- push 後、軽量 CI green を確認したら、**指揮台の合図を待たずに ready 化**し、重量層（Production Config Audit。保護対象該当時のみ）を watch する。**E2E / Web E2E は 2026-08-20（CI 4 層再設計、#2269）で per-PR から撤去済み**で、ready 化後の watch 対象に含まれない
+- push 後、**指揮台の合図を待たずに ready 化**し、ready 化で起動する CI（Static Checks / Unit Tests、および保護対象該当時のみ Production Config Audit）を watch する。**E2E / Web E2E は 2026-08-20（CI 4 層再設計、#2269）で per-PR から撤去済み**で、ready 化後の watch 対象に含まれない。**Static Checks / Unit Tests は 2026-08-26（#2415）で draft から撤去された**ため、ready 化の前に CI green を確認する経路は無い（ローカルの `pnpm check` と pre-push フックが draft 中の確認手段）
 - **維持するもの（変えない）**:
   - **追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため。2026-08-20 のレーン F/H で先行追従の弊害と例外承認の両方を実測済み）
   - round 束ね規律（1 round = 1 push、追い push しない）は不変
   - 保護対象 PR（audit contract）は ready 前に指揮台へ申告する（trusted dispatch が要るため）。§指揮台の merge シーケンス 手順 2 参照
-- **トレードオフの改訂（2026-08-20）**: 旧注記は「ready 後の fix round push で重量 CI（E2E / Web E2E）が再走するが、public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する」だった。**private 化確定（2026-08-20、[決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）と CI 4 層再設計により、E2E / Web E2E は per-PR に存在しなくなった**ため、この trade-off 自体が解消している。fix round push で再走するのは軽量層（Static Checks / Unit Tests）と、該当時のみ Production Config Audit
+- **トレードオフの改訂（2026-08-20）**: 旧注記は「ready 後の fix round push で重量 CI（E2E / Web E2E）が再走するが、public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する」だった。**private 化確定（2026-08-20、[決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）と CI 4 層再設計により、E2E / Web E2E は per-PR に存在しなくなった**ため、この trade-off 自体が解消している。fix round push で再走するのは軽量層（Static Checks / Unit Tests）と、該当時のみ Production Config Audit。**fix round は ready 状態で行う**ため、draft skip（2026-08-26、#2415）はこの再走に影響しない
 
 **2026-08-13 追記（now-legacy、経緯として残す）**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。push 前の permission prompt という偶発的な機械 gate は無い。force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める。
 
@@ -217,9 +217,9 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 1 本の PR を merge へ運ぶ手順を実行順で固定する。個々の step の詳細は `.claude/rules/workflow.md` §2 段階 CI・§Worktree 運用・[infra.md §CI 品質ゲート](../../docs/engineering/infra.md#ci-品質ゲート)が正本で、ここでは指揮台が踏む順序と判断点だけをまとめる（重複させない）。
 
 1. **追従** — 自分の番が来たら update-branch する（§追従とマージ順の采配。担当は 1 者、先行追従はしない）。追従だけは今も指揮台の合図待ち（レーンは merge 順を知らないため）
-2. **レーンが自律的に進める** — 軽量 green（Static Checks / Unit Tests / Docs Guard）確認 → 保護対象該当時は指揮台へ申告（`gh workflow run production-config-audit.yml` の trusted dispatch は指揮台が diff レビュー後にユーザー明示指示で実行。変更しない）→ ready 化 → 重量層 watch → green 確認 →「レビュー待ち」を指揮台へ報告。指揮台の合図を待たない（§レーン主導の push・ready化 参照）
+2. **レーンが自律的に進める** — ローカル検証（`pnpm check` + pre-push フック）→ 保護対象該当時は指揮台へ申告（`gh workflow run production-config-audit.yml` の trusted dispatch は指揮台が diff レビュー後にユーザー明示指示で実行。変更しない）→ ready 化 → **ready 化で起動する CI（Static Checks / Unit Tests、該当時のみ Production Config Audit）を watch** → green 確認 →「レビュー待ち」を指揮台へ報告。**Docs Guard は ready 化では再発火せず** draft push 時の結果が同一 SHA のまま残る（`docs-guard.yml` は `types` に `ready_for_review` を持たない）ので、watch 対象ではなく「既に green であること」を確認する対象。指揮台の合図を待たない（§レーン主導の push・ready化 参照）。**2026-08-26（#2415）以降、CI green の確認は ready 化の前ではなく後**（draft 中は Docs Guard 以外走らない）
 3. **クロスレビュー** — レーンから「レビュー待ち」報告を受けたら、指揮台が `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）でクロスレビューを実行する。指摘の 3 択・resolve 運用は `.claude/rules/workflow.md` §レビュー指摘の必須解決 に従う。**この diff レビューの時点で、§高リスク PR への限定 Codex レビュー（試行） の基準に該当するかも判定する**（該当すれば内製クロスレビューと並行して `@codex review` を依頼してよい。非ブロッキング）
-4. **fix round（該当時のみ）** — 指摘があれば、**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む。修正後、レーンは重量 green を再確認して指揮台へ再報告する（重量 CI の再走はこのフローの明示的トレードオフ）
+4. **fix round（該当時のみ）** — 指摘があれば、**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む（ready のままなので CI は通常どおり走る）。修正後、レーンは green を再確認して指揮台へ再報告する（CI の再走はこのフローの明示的トレードオフ）
 5. **merge** — thread 全 resolve + marker + green を確認したら、`pnpm branch:finish <PR番号>` で merge 〜掃除まで実行する（指揮台のみ）。**Codex review を依頼した場合でも、Codex の応答は merge の前提条件にしない**（§高リスク PR への限定 Codex レビュー（試行） 参照）
 
 ## 高リスク PR への限定 Codex レビュー（試行）

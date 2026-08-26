@@ -387,9 +387,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   if [[ -n "$CHANGED_FILES" ]] && command -v node >/dev/null 2>&1; then
     IMPACT_JSON="$(printf '%s\n' "$CHANGED_FILES" | node "$IMPACT_RESOLVER" --stdin 2>/dev/null || true)"
   fi
+  IMPACT_DOCS_ONLY="false"
   if [[ -n "$IMPACT_JSON" ]]; then
     IMPACT_PRODUCT="$(printf '%s' "$IMPACT_JSON" | jq -r '.product' 2>/dev/null || echo true)"
     IMPACT_WEB="$(printf '%s' "$IMPACT_JSON" | jq -r '.web' 2>/dev/null || echo true)"
+    IMPACT_DOCS_ONLY="$(printf '%s' "$IMPACT_JSON" | jq -r '.docsOnly' 2>/dev/null || echo false)"
   else
     info "影響判定を実行できませんでした。fail closed で両方の Vercel context を必須にします。"
   fi
@@ -397,6 +399,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 明示的な "false" だけが必須 context を外せる。
   if [[ "$IMPACT_PRODUCT" != "false" ]]; then IMPACT_PRODUCT="true"; fi
   if [[ "$IMPACT_WEB" != "false" ]]; then IMPACT_WEB="true"; fi
+  # docsOnly は向きが逆（true が緩める側）なので、明示的な "true" だけを信じる。
+  # 判定不能・想定外の出力は "false"（= CI check を必須にする厳格側）へ倒す。
+  if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then IMPACT_DOCS_ONLY="false"; fi
 
   # 区切り文字は en dash（U+2013）。hyphen ではない。
   # **存在だけでなく success を要求する。** GitHub の StatusState には `EXPECTED`
@@ -412,8 +417,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     info "必須 Vercel context: ${REQUIRED_CONTEXTS[*]}"
   fi
 
-  for required in ${REQUIRED_CONTEXTS[@]+"${REQUIRED_CONTEXTS[@]}"}; do
-    succeeded="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
+  # 指定名の check が rollup 内でどの状態かを `success` / `not-success` / `missing`
+  # のいずれかで返す。jq が失敗して出力が数値でない場合は厳格側（missing）へ倒す。
+  context_state() {
+    local name="$1" succeeded present
+    succeeded="$(printf '%s' "$ROLLUP" | jq -r --arg name "$name" '
       map(select(
           ((.name // .context // "")) == $name
           and (
@@ -421,20 +429,72 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
             or ((.state // "") | ascii_downcase | . == "success")
           )
         ))
-      | length')"
-    if [[ "$succeeded" == "0" ]]; then
-      present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$required" '
-        map(select(((.name // .context // "")) == $name)) | length')"
-      if [[ "$present" == "0" ]]; then
+      | length' 2>/dev/null || echo "")"
+    if [[ "$succeeded" =~ ^[0-9]+$ ]] && [[ "$succeeded" != "0" ]]; then
+      printf 'success'
+      return
+    fi
+    present="$(printf '%s' "$ROLLUP" | jq -r --arg name "$name" '
+      map(select(((.name // .context // "")) == $name)) | length' 2>/dev/null || echo "")"
+    if [[ "$present" =~ ^[1-9][0-9]*$ ]]; then printf 'not-success'; else printf 'missing'; fi
+  }
+
+  for required in ${REQUIRED_CONTEXTS[@]+"${REQUIRED_CONTEXTS[@]}"}; do
+    case "$(context_state "$required")" in
+      success) ;;
+      missing)
         error "必須 check「${required}」が 1 件も見つかりません。マージを中止します。"
         error "Vercel integration の接続、Ignored Build Step の有無、project 名を確認してください。"
-      else
+        error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
+        exit 1
+        ;;
+      *)
         error "必須 check「${required}」が success ではありません。マージを中止します。"
         error "EXPECTED（status 到着待ち）のまま放置されている可能性があります。"
-      fi
-      error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
-      exit 1
-    fi
+        error "product / web の build はこの check でしか検証されません（Actions 側の build は撤去済み）。"
+        exit 1
+        ;;
+    esac
+  done
+
+  # ── Draft CI 廃止に伴う軽量層の実走要求（2026-08-26、#2415）──────────
+  #
+  # `.github/workflows/ci.yml` の Static / Unit は draft の間 skip される。
+  # skip は conclusion: skipped の check run になるが、**skipped は上の
+  # is_failed にも is_pending にも該当せず、is_decisive からも除外されている**。
+  # つまり「draft 期の skipped だけが rollup にある」状態は、失敗 0 件・実行中
+  # 0 件として通過する。success が 1 件以上という条件も docs guard（draft guard を
+  # 持たず常に走る）が満たすため、**ready 化直後（ready_for_review で起きた新しい
+  # run の check がまだ登録されていない窓）に branch:finish を打つと、Static /
+  # Unit が一度も実走しないまま merge が成立する**（fail-open）。
+  #
+  # 塞ぐのは窓という 1 点ではなく「軽量層の実走を誰も検査していない」という class。
+  # guard 条件の書き間違い・types からの ready_for_review 欠落・将来の別 workflow
+  # への draft skip 追加でも同じ結果になるため、名前で success を要求する。
+  #
+  # docs-only PR では Impact gate による skip が正当なので免除する。判定不能時は
+  # IMPACT_DOCS_ONLY=false（＝要求する側）へ倒してある。
+  REQUIRED_CI_CHECKS=()
+  if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then
+    REQUIRED_CI_CHECKS+=("🔍 Static Checks" "📦 Unit Tests")
+  else
+    info "docs-only の変更のため Static Checks / Unit Tests の skip を許容します。"
+  fi
+
+  for required in ${REQUIRED_CI_CHECKS[@]+"${REQUIRED_CI_CHECKS[@]}"}; do
+    case "$(context_state "$required")" in
+      success) ;;
+      missing)
+        error "必須 check「${required}」が 1 件も見つかりません。マージを中止します。"
+        error "ready 化で ci.yml が再発火したか（types に ready_for_review が要る）を確認してください。"
+        exit 1
+        ;;
+      *)
+        error "必須 check「${required}」が success ではありません。マージを中止します。"
+        error "draft 中の skipped のままになっている可能性があります。ready 化後の run の完了を待ってください。"
+        exit 1
+        ;;
+    esac
   done
 
   # ── レビュー thread の解決を要求する ────────────────────────────────

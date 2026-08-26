@@ -3,7 +3,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   buildBranchNameCandidate,
   buildMorningBriefBody,
+  elapsedBusinessMs,
   HANDOFF_HEADINGS,
+  isStalledDraftPr,
   judgeHandoffQuality,
   MORNING_BRIEF_HEADING,
   runMorningBrief,
@@ -160,6 +162,151 @@ describe('buildMorningBriefBody', () => {
   });
 });
 
+// 2026-08-21=金 / 08-24=月 / 08-25=火（JST）。営業時間は JST 平日 09:00-18:00。
+describe('elapsedBusinessMs', () => {
+  const at = (iso: string) => new Date(iso).getTime();
+  const hours = (n: number) => n * 60 * 60 * 1000;
+
+  it('平日日中の経過はそのまま営業時間になる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-25T10:00:00+09:00'), at('2026-08-25T12:00:00+09:00')),
+    ).toBe(hours(2));
+  });
+
+  it('営業時間外（夜間）は加算しない', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T18:00:00+09:00'), at('2026-08-25T09:00:00+09:00')),
+    ).toBe(0);
+  });
+
+  // ブリーフは 04:00 JST 生成。素の経過時間で判定すると前日夕方に commit した
+  // 健全なレーンが毎朝全件並ぶため、この 2 ケースが閾値設計の要になる。
+  it('前日 17:00 commit は翌 04:00 時点で 1 営業時間に畳まれる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T17:00:00+09:00'), at('2026-08-25T04:00:00+09:00')),
+    ).toBe(hours(1));
+  });
+
+  it('前日 13:00 commit は翌 04:00 時点で 5 営業時間になる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T13:00:00+09:00'), at('2026-08-25T04:00:00+09:00')),
+    ).toBe(hours(5));
+  });
+
+  it('週末を跨いでも土日は加算しない（金 17:00 → 月 04:00 = 1 営業時間）', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-21T17:00:00+09:00'), at('2026-08-24T04:00:00+09:00')),
+    ).toBe(hours(1));
+  });
+
+  it('to が from 以前・不正値なら 0 を返す', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-25T12:00:00+09:00'), at('2026-08-25T10:00:00+09:00')),
+    ).toBe(0);
+    expect(elapsedBusinessMs(Number.NaN, at('2026-08-25T10:00:00+09:00'))).toBe(0);
+  });
+});
+
+describe('isStalledDraftPr', () => {
+  // 04:00 JST（night-watch cron の生成時刻）を基準にする。
+  const now = new Date('2026-08-25T04:00:00+09:00').getTime();
+  // `lastCommittedDate` は fetchOpenPrs の --jq 射影が gh 側で畳んだ値
+  // （commits[].committedDate の max）。JS 側は commits 配列を持たない。
+  const draft = (lastCommittedDate: string | null) => ({
+    number: 1,
+    title: 'PR',
+    isDraft: true,
+    lastCommittedDate,
+  });
+
+  it('4 営業時間を超えた draft PR を検出する', () => {
+    expect(isStalledDraftPr(draft('2026-08-24T13:00:00+09:00'), now)).toBe(true);
+  });
+
+  it('4 営業時間以内の draft PR は検出しない', () => {
+    expect(isStalledDraftPr(draft('2026-08-24T17:00:00+09:00'), now)).toBe(false);
+  });
+
+  it('ready PR は対象外', () => {
+    expect(isStalledDraftPr({ ...draft('2026-08-24T13:00:00+09:00'), isDraft: false }, now)).toBe(
+      false,
+    );
+  });
+
+  // commit が 1 件も無い draft PR では jq の `max` が null を返す。そこに「停滞」の
+  // 意味は無く、誤検出はこの節への信頼を落とすため検出しない。
+  it('最終 commit 時刻が取れない draft PR は検出しない', () => {
+    expect(isStalledDraftPr(draft(null), now)).toBe(false);
+    expect(isStalledDraftPr({ number: 1, title: 'PR', isDraft: true }, now)).toBe(false);
+    // 想定外の文字列（パース不能）も同様に検出しない
+    expect(isStalledDraftPr(draft('not-a-date'), now)).toBe(false);
+  });
+});
+
+describe('buildMorningBriefBody（停滞疑いレーン）', () => {
+  const now = new Date('2026-08-25T04:00:00+09:00').getTime();
+  const base = {
+    readyIssues: [],
+    inProgressIssues: [],
+    currentMilestoneTitle: null,
+    now,
+  };
+
+  it('停滞疑いの draft PR を経過営業時間つきで並べる', () => {
+    const body = buildMorningBriefBody({
+      ...base,
+      openPrs: [
+        {
+          number: 20,
+          title: '止まっているPR',
+          isDraft: true,
+          statusCheckRollup: [],
+          milestone: null,
+          lastCommittedDate: '2026-08-24T13:00:00+09:00',
+        },
+        {
+          number: 21,
+          title: '動いているPR',
+          isDraft: true,
+          statusCheckRollup: [],
+          milestone: null,
+          lastCommittedDate: '2026-08-24T17:00:00+09:00',
+        },
+      ],
+    });
+
+    expect(body).toContain('### 停滞疑いレーン');
+    expect(body).toContain('#20（最終 commit から 5 営業時間）: 止まっているPR');
+    expect(body).not.toContain('#21（最終 commit から');
+  });
+
+  it('該当が無ければ（該当なし）を出す', () => {
+    const body = buildMorningBriefBody({ ...base, openPrs: [] });
+    expect(body).toMatch(/### 停滞疑いレーン[^\n]*\n（該当なし）/);
+  });
+
+  // 走査上限に達した時の戻り値は番兵（閾値 + 1ms）で実測値ではない。そのまま
+  // 時間へ丸めると「4 営業時間」と表示され、実測であるかのように読めてしまう。
+  it('走査上限に達した場合は実測値のように見せず「算定上限」と明示する', () => {
+    const body = buildMorningBriefBody({
+      ...base,
+      openPrs: [
+        {
+          number: 22,
+          title: '異常に古いPR',
+          isDraft: true,
+          statusCheckRollup: [],
+          milestone: null,
+          lastCommittedDate: '1990-01-01T00:00:00+09:00',
+        },
+      ],
+    });
+
+    expect(body).toContain('#22（最終 commit から 4 営業時間以上（算定上限））: 異常に古いPR');
+    expect(body).not.toContain('#22（最終 commit から 4 営業時間）');
+  });
+});
+
 describe('runMorningBrief', () => {
   // findTodayBoardIssue は now を受け取らず内部で実時刻から当日 JST タイトルを
   // 組み立てるため、mock のハードコード日付（盤面 2026-08-25）と一致させるには
@@ -212,6 +359,105 @@ describe('runMorningBrief', () => {
     expect(result).toEqual({ action: 'posted', boardIssueNumber: 9101 });
     const commentCall = calls.find((args) => args[0] === 'issue' && args[1] === 'comment');
     expect(commentCall?.[2]).toBe('9101');
+  });
+
+  /**
+   * `gh pr list --json commits` は「PR × commits × authors」を 1 クエリで要求する。
+   * FETCH_LIMIT=100 では 100×100×100 = 1,000,000 ノードとなり GitHub の上限
+   * 500,000 を超えて**クエリごと失敗する**（実測）。要求 limit からの静的計算なので
+   * open PR の実件数に関係なく必ず落ち、run-all の try/catch でブリーフ全体が
+   * 無音で消える。gh を stub する test では再現しないため、引数側で固定する。
+   */
+  it('一覧取得（pr list）で commits を要求しない（GraphQL ノード上限に当たるため）', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      calls.push(args);
+      if (args.includes('type:board')) {
+        return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
+      }
+      if (args[0] === 'issue' && args[1] === 'view') return JSON.stringify({ comments: [] });
+      if (args[0] === 'issue' && args[1] === 'list') return JSON.stringify([]);
+      if (args[0] === 'pr' && args[1] === 'list') return JSON.stringify([]);
+      if (args[0] === 'api') return JSON.stringify([]);
+      if (args[0] === 'issue' && args[1] === 'comment') return '';
+      throw new Error(`unmocked: ${args.join(' ')}`);
+    });
+
+    runMorningBrief({ execFileImpl, now: Date.now() });
+
+    const prListCall = calls.find((args) => args[0] === 'pr' && args[1] === 'list');
+    const jsonFields = prListCall?.[prListCall.indexOf('--json') + 1] ?? '';
+    expect(jsonFields).not.toContain('commits');
+    expect(jsonFields).toContain('isDraft');
+  });
+
+  it('draft PR にだけ最終 commit 時刻を個別取得し、ready PR には問い合わせない', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      calls.push(args);
+      if (args.includes('type:board')) {
+        return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
+      }
+      if (args[0] === 'issue' && args[1] === 'view') return JSON.stringify({ comments: [] });
+      if (args[0] === 'issue' && args[1] === 'list') return JSON.stringify([]);
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return JSON.stringify([
+          { number: 31, title: 'draftPR', isDraft: true, statusCheckRollup: [], milestone: null },
+          { number: 32, title: 'readyPR', isDraft: false, statusCheckRollup: [], milestone: null },
+        ]);
+      }
+      // --jq は raw 文字列を返す（JSON 引用符なし）
+      if (args[0] === 'pr' && args[1] === 'view') return '2026-08-24T04:00:00Z\n';
+      if (args[0] === 'api') return JSON.stringify([]);
+      if (args[0] === 'issue' && args[1] === 'comment') return '';
+      throw new Error(`unmocked: ${args.join(' ')}`);
+    });
+
+    runMorningBrief({ execFileImpl, now: Date.now() });
+
+    const prViewCalls = calls.filter((args) => args[0] === 'pr' && args[1] === 'view');
+    expect(prViewCalls).toHaveLength(1);
+    expect(prViewCalls[0][2]).toBe('31'); // draft のみ
+
+    // JST 2026-08-24 13:00 commit → 固定時刻 JST 08-25 10:00 まで 5+ 営業時間
+    const body = (() => {
+      const c = calls.find((args) => args[0] === 'issue' && args[1] === 'comment');
+      return c?.[c.indexOf('--body') + 1] ?? '';
+    })();
+    expect(body).toContain('#31（最終 commit から');
+    expect(body).not.toContain('#32（最終 commit から');
+  });
+
+  // 1 PR の取得失敗でブリーフ全体（ready キュー・chip 下書き）を落とさない。
+  it('最終 commit 時刻の取得に失敗しても他セクションを保って投稿する', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      calls.push(args);
+      if (args.includes('type:board')) {
+        return JSON.stringify([{ number: 9101, title: '盤面 2026-08-25' }]);
+      }
+      if (args[0] === 'issue' && args[1] === 'view') return JSON.stringify({ comments: [] });
+      if (args[0] === 'issue' && args[1] === 'list') return JSON.stringify([]);
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return JSON.stringify([
+          { number: 33, title: 'draftPR', isDraft: true, statusCheckRollup: [], milestone: null },
+        ]);
+      }
+      if (args[0] === 'pr' && args[1] === 'view') throw new Error('gh exploded');
+      if (args[0] === 'api') return JSON.stringify([]);
+      if (args[0] === 'issue' && args[1] === 'comment') return '';
+      throw new Error(`unmocked: ${args.join(' ')}`);
+    });
+
+    const result = runMorningBrief({ execFileImpl, now: Date.now() });
+    expect(result).toEqual({ action: 'posted', boardIssueNumber: 9101 });
+    const body = (() => {
+      const c = calls.find((args) => args[0] === 'issue' && args[1] === 'comment');
+      return c?.[c.indexOf('--body') + 1] ?? '';
+    })();
+    expect(body).toContain('### 停滞疑いレーン');
+    expect(body).toContain('### open PR（1件）');
+    expect(body).not.toContain('#33（最終 commit から'); // 取得失敗は検出しない側へ
   });
 
   // PR #2380 クロスレビュー指摘（P2）: 夜勤が赤で終わった夜に手動 re-run

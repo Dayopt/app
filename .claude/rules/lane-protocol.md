@@ -12,10 +12,11 @@
 2. `git branch -m {agent}/{domain}-{action}[-issue番号]` で branch 名を規約へリネームする（`.claude/rules/workflow.md` §命名規則）。Claude Code の自動生成ランダム名のままにしない
 3. 担当 issue 本文と dispatch コメント（指揮台が issue に残した束の構成・branch 名・同乗タスクの指示）を読む。issue コメントだけで届いた scope 変更・権限付与は send_message でのポインタ到達まで着手しない（`.claude/rules/orchestration.md` §裁可・指示の経路）
 4. **着手時（branch リネーム直後）に Draft PR を即開く**（2026-08-20、[#2264](https://github.com/Dayopt/dayopt/issues/2264)）。commit が無ければ空 commit で開いてよい。対象 issue に付与済みの現行 milestone を PR 自身にも同時に付与する。Draft PR 一覧がそのままレーンのダッシュボードになり、盤面 issue §2 との突き合わせが楽になる
+5. **Draft PR を開いた直後に、PR テンプレートの「復唱」「作業計画」「触るファイル領域」を記入する**（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。復唱は**チケット本文のコピペ禁止** — 何を・なぜ・どこまでやるかを自分の言葉で書く。指揮台はレーン起動直後に復唱だけを読み、チケットとの齟齬があれば issue コメントで即訂正する。実装後に誤解が判明すると往復 1 日、復唱段階なら 5 分で潰せる。**コピペや言い換えで埋めると誤解検知の機能そのものが死ぬ**ため、埋まっていること自体は目的ではない
 
 ## PR 規約
 
-- Draft PR は §着手手順 手順 4 のとおり着手時に開く。軽量 green 確認後、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-20 改訂、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）
+- Draft PR は §着手手順 手順 4 のとおり着手時に開く。ローカル検証（`pnpm check` + pre-push フック）が済んだら、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。初出は 2026-08-20、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）。**draft 中は Docs Guard 以外の CI が走らない**ため、CI green の確認は ready 化の後になる
 - 本文に `Closes #N` を対象 issue ごとに 1 行ずつ書く。epic や部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
 - **保護対象の検出**: audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
 
@@ -41,17 +42,30 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 ### レビュー待ち報告
 
-軽量 green 確認 → 自己判断で ready 化 → 重量層（E2E / Web E2E / Production Config Audit）watch → green 確認、まで進めた時点で送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、重量 green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
+ローカル検証 → 自己判断で ready 化 → **ready 化で起動する CI**（Static Checks / Unit Tests、保護対象該当時のみ Production Config Audit）を watch → green 確認、まで進めた時点で送る（Docs Guard と Vercel Preview build は draft push の時点で走っているので、watch ではなく green の確認だけを行う）（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、CI green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
 
 **push 前セルフレビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー）で実行した subagent の role 一覧と生出力を添付する**（策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）。要約しない — findings ゼロならその旨の原文をそのまま貼る。指揮台はこれを `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md` 手順 2〜3）の出発点として読む。自動委任条件（`.claude/rules/ai-behavior.md` §Read-only delegation）に非該当で subagent を回していない場合は「非該当」と明記する。
 
 ### fix round green 報告
 
-クロスレビューの指摘に対応した時（**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む）、重量 green を再確認して送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 4）。
+クロスレビューの指摘に対応した時（**draft へ戻さず ready のまま** 1 round = 1 push で fix を積む）、CI green を再確認して送る（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 4）。ready のまま積むので CI は通常どおり走る（draft skip の影響を受けない）。
 
 **報告送信は round 完了の一部であり、送っていない fix round は完了していない**（策定日: 2026-08-24、[#2355](https://github.com/Dayopt/dayopt/issues/2355)）。thread resolve / green 確認が終わったら、他の作業へ移る前に送る。2026-08-24、fix round・全 green・thread 3/3 resolve まで完了していたのに報告を送らず PR が指揮台の認知外で停止した実例がある（PR #2350。詳細は日次盤面 #2326 コメント列）。
 
 **追従（update-branch）の「指揮台の合図待ち」は fix round 文脈でも適用される**（`.claude/rules/orchestration.md` §追従とマージ順の采配）。fix round 中に main が動いていても、レーンが自己判断で追従してはいけない。2026-08-24、PR #2350 のレーンが fix round 中に追従を自己実行した実例がある（後続 PR が無く実害はなかったが、逸脱として記録）。
+
+## 停止条件
+
+策定日: 2026-08-26（[#2415](https://github.com/Dayopt/dayopt/issues/2415)）
+
+レーンは静かに詰まる。次のいずれかに当たったら、**試行を続けずに止めて報告する**。報告は §進捗報告 の 3 点固定型（何で止まっているか / 自分の推奨 / 待ち中に続行できる代替作業の有無）を使い、担当 issue へコメントする（`.claude/rules/orchestration.md` §レーンの連絡規律「止まる前に連絡」の具体化であり、複製ではない）。
+
+- **同種のエラーに 3 回連続で失敗した。** 試行を中止し、「何を試したか・エラー内容・自分の仮説」を添えて指揮台の指示を待つ。3 回目と 4 回目の間に質的な差は生まれにくく、それ以降は同じ形の試行を繰り返して時間だけを消費する側に倒れる
+- **scope 外のファイルを変更しないと解決できないと判明した。** PR テンプレートの「触るファイル領域」で申告した範囲がその scope。黙って広げず、停止して報告する（束ねの判断と writer 境界は指揮台が持つ。`.claude/rules/ai-behavior.md` §Writer ownership）
+
+**エスカレーションは失敗ではなく正しい動作である。** 止まって報告したことを減点しない。逆に、止まるべき場面で試行を続けて時間を溶かすこと、および黙って scope を広げることの方が損失が大きい。この明文がないと、レーンは「自力で解決するべきだ」と推論して沈黙する側へ倒れる。
+
+自己申告であるこの節に対し、機械側の二段目が朝編成ブリーフの「停滞疑いレーン」検出（`scripts/night-watch/morning-brief.mjs`）にあたる。**片方がもう片方の省略理由にならない** — 検出されるかどうかに関わらず、上記に当たったら自分から報告する。
 
 ## 検証の証跡原則
 
@@ -90,7 +104,7 @@ routes / auth / E2E spec に触れる PR は、push-ready 宣言前に影響 spe
 ```
 レーン{名}。{issue URL または束の構成}。
 worktree を `.claude/worktrees/` 配下に作成し、branch 名は `{agent}/{domain}-{action}[-issue番号]`。
-レーンプロトコル: `.claude/rules/lane-protocol.md` に従う（着手手順・PR規約・報告テンプレート・検証証跡原則・条件付き事前E2E）。
+レーンプロトコル: `.claude/rules/lane-protocol.md` に従う（着手手順・復唱の記入・PR規約・報告テンプレート・停止条件・検証証跡原則・条件付き事前E2E）。
 連絡規律: `.claude/rules/orchestration.md` §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当issueのコメントを読み直す・push/ready化/重量watchは自律的に進める・追従だけは指揮台の合図待ち・spawn_task は指揮台の専権のため使わない）。
 {案件固有の注意（同乗タスク、既知の罠、触ってはいけない領域など）}
 ```

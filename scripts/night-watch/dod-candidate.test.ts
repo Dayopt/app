@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { GH_MAX_BUFFER_BYTES } from './lib.mjs';
+
 import {
   fetchWeekendCatchUpMergedPrs,
   fetchYesterdayMergedPrs,
@@ -46,7 +48,7 @@ describe('fetchYesterdayMergedPrs', () => {
         '--limit',
         '30',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 });
@@ -76,7 +78,7 @@ describe('fetchWeekendCatchUpMergedPrs（月曜専用の金〜日 3 日分窓）
         '--limit',
         '30',
       ],
-      { encoding: 'utf8' },
+      { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
   });
 });

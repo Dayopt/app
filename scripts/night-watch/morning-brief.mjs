@@ -1,7 +1,14 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { findTodayBoardIssue, REPO, runGh, runGhJson } from './lib.mjs';
+import {
+  findTodayBoardIssue,
+  isJstWeekend,
+  jstDateString,
+  REPO,
+  runGh,
+  runGhJson,
+} from './lib.mjs';
 
 /**
  * night-watch オーケストレータ（`run-all.mjs`）の Step 6（#2370）。夜勤の
@@ -90,6 +97,105 @@ function isStale(updatedAt, now) {
   return now - new Date(updatedAt).getTime() > STALE_MS;
 }
 
+// ── 停滞疑いレーンの検出（#2415）─────────────────────────────
+// レーンの停止条件（`.claude/rules/lane-protocol.md` §停止条件）は自己申告
+// なので、黙って詰まったレーンは拾えない。その二段目として「最終 commit から
+// N 営業時間、commit が積まれていない open Draft PR」を機械検出する。
+// **判断語は出さない**（このブリーフ全体の方針）。「停滞疑い」までで、
+// 実際に詰まっているかの判断と介入は指揮台が持つ。
+//
+// **なぜ素の経過時間ではなく「営業時間」か。** このブリーフは 04:00 JST の
+// cron で 1 日 1 回だけ生成される（`.github/workflows/night-watch.yml`）。
+// 素の 4 時間で判定すると、前日の日中〜夕方に commit して正常に 1 日を終えた
+// レーンが翌朝すべて並ぶ（04:00 時点で 4 時間以内の commit はほぼ存在しない）。
+// 全件が毎朝載る節は読まれなくなり、即座に形骸化する。営業時間換算なら
+// 「前日 17:00 commit → 翌 04:00 時点で 1 営業時間」となり、実際に日中止まって
+// いたレーンだけが残る。金曜夕方 → 月曜朝も同じ理由で 1 営業時間に畳まれる。
+const BUSINESS_DAY_START_HOUR = 9;
+const BUSINESS_DAY_END_HOUR = 18;
+const STALLED_DRAFT_BUSINESS_HOURS = 4;
+// 走査の上限。開始が異常に古い（不正な committedDate 等）場合でも
+// 日単位ループが暴走しないようにする。1 年分あれば実運用の窓を十分に覆う。
+const MAX_BUSINESS_SCAN_DAYS = 400;
+
+/** JST 暦日文字列（YYYY-MM-DD）のその日の営業時間帯 [start, end) を epoch ms で返す。 */
+function jstBusinessWindow(jstDateStr) {
+  const pad = (hour) => String(hour).padStart(2, '0');
+  return {
+    start: new Date(`${jstDateStr}T${pad(BUSINESS_DAY_START_HOUR)}:00:00+09:00`).getTime(),
+    end: new Date(`${jstDateStr}T${pad(BUSINESS_DAY_END_HOUR)}:00:00+09:00`).getTime(),
+  };
+}
+
+/**
+ * `fromMs` から `toMs` までに含まれる営業時間（JST 平日 09:00-18:00）を ms で返す。
+ *
+ * JST 暦日ごとに営業時間帯との重なりを積算する。JST は DST を持たないため、
+ * 暦日の境界を UTC 演算で安全に刻める（`lib.mjs` の `jstDaysAgoString` と同じ前提）。
+ * 週末判定は `jstWeekdayIndex` を再利用する（`Intl` の想定外出力は例外にする
+ * 既存の fail-loud 方針をそのまま継承する）。
+ * @param {number} fromMs
+ * @param {number} toMs
+ */
+export function elapsedBusinessMs(fromMs, toMs) {
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return 0;
+  let total = 0;
+  let cursorDate = jstDateString(new Date(fromMs));
+  const lastDate = jstDateString(new Date(toMs));
+  for (let guard = 0; guard < MAX_BUSINESS_SCAN_DAYS; guard += 1) {
+    const cursorMidnight = new Date(`${cursorDate}T00:00:00+09:00`);
+    if (!isJstWeekend(cursorMidnight)) {
+      const { start, end } = jstBusinessWindow(cursorDate);
+      const overlapStart = Math.max(start, fromMs);
+      const overlapEnd = Math.min(end, toMs);
+      if (overlapEnd > overlapStart) total += overlapEnd - overlapStart;
+    }
+    if (cursorDate === lastDate) return total;
+    cursorDate = jstDateString(new Date(cursorMidnight.getTime() + 24 * 60 * 60 * 1000));
+  }
+  // 上限に達した = 想定外に古い committedDate。閾値超え側（検出する側）へ倒す。
+  // 戻り値は実測の経過時間ではなく番兵なので、表示側は isBusinessScanCapped で
+  // 判別して「算定上限」と明示する（実測値のように見せない）。
+  return BUSINESS_SCAN_CAPPED_MS;
+}
+
+/** 走査上限に達したことを示す番兵値（閾値 + 1ms）。実測の経過時間ではない。 */
+const BUSINESS_SCAN_CAPPED_MS = STALLED_DRAFT_BUSINESS_HOURS * 60 * 60 * 1000 + 1;
+
+/** `elapsedBusinessMs` の戻り値が走査上限の番兵かどうか。 */
+export function isBusinessScanCapped(elapsedMs) {
+  return elapsedMs === BUSINESS_SCAN_CAPPED_MS;
+}
+
+/**
+ * PR の最終 commit 時刻（epoch ms）を返す。取れなければ null。
+ *
+ * 値は `fetchOpenPrs` の `--jq` 射影が gh 側で畳んだ `lastCommittedDate`
+ * （commits の committedDate の max）。JS 側で commits 配列を走査しないのは、
+ * 無射影の commits を受け取ること自体が maxBuffer の攻撃面になるため
+ * （射影の理由は `fetchOpenPrs` のコメントを参照）。
+ * @param {{ lastCommittedDate?: string | null }} pr
+ */
+export function lastCommitTimeMs(pr) {
+  const ms = new Date(pr?.lastCommittedDate ?? '').getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * 停滞疑いの open Draft PR か。最終 commit 時刻が取れない PR は**検出しない**
+ * （false を返す）。commit が 1 件も無い draft PR は着手直後の空 commit すら
+ * 積まれていない状態で、そこに「停滞」の意味は無く、誤検出はこの節への
+ * 信頼を落とすため。
+ * @param {{ isDraft?: boolean, lastCommittedDate?: string | null } & Record<string, unknown>} pr
+ * @param {number} now
+ */
+export function isStalledDraftPr(pr, now) {
+  if (!pr?.isDraft) return false;
+  const lastCommitMs = lastCommitTimeMs(pr);
+  if (lastCommitMs === null) return false;
+  return elapsedBusinessMs(lastCommitMs, now) > STALLED_DRAFT_BUSINESS_HOURS * 60 * 60 * 1000;
+}
+
 // このブリーフは public repo の任意ユーザーが設定できる issue/PR title を
 // github-actions[bot] 名義の issue コメントへ転記する。加えて chip 下書き
 // ブロック（buildChipDraftBlock）は指揮台がレーン prompt へそのまま
@@ -175,12 +281,59 @@ function fetchOpenPrs({ execFileImpl } = {}) {
       '--state',
       'open',
       '--json',
+      // **ここで `commits` を要求してはいけない。** `gh pr list --json commits` は
+      // GraphQL へ「PR × commits × authors」を一度に投げるため、`--limit 100` だと
+      // 要求ノード数が 100 × 100 × 100 = 1,000,000 となり GitHub の上限 500,000 を
+      // 超えて **クエリごと失敗する**（実測エラー: "By the time this query traverses
+      // to the authors connection, it is requesting up to 1,000,000 possible nodes
+      // which exceeds the maximum limit of 500,000"）。
+      // これは実データ量ではなく要求 limit から静的に計算されるので、open PR が
+      // 何件でも必ず失敗する。ブリーフは run-all の try/catch で「非致命」扱いのため、
+      // 失敗するとブリーフ全体が無音で消えて夜勤 job は緑のまま残る。
+      // 最終 commit 時刻は draft PR に限って `fetchLastCommittedDate` で個別に取る。
       'number,title,isDraft,statusCheckRollup,milestone',
       '--limit',
       FETCH_LIMIT,
     ],
     { execFileImpl },
   );
+}
+
+/**
+ * 1 PR の最終 commit 時刻（ISO8601 文字列）を返す。取れなければ null。
+ *
+ * PR 単位に分けるのは `fetchOpenPrs` のコメントにある GraphQL ノード上限のため
+ * （1 PR なら 1 × 100 × 100 = 10,000 ノードで収まる）。呼び出すのは **draft PR
+ * だけ**なので、実運用の追加呼び出しは数件に収まる。
+ *
+ * `--jq` で gh 側へ畳むので、commits の本文・author email はプロセスに載らない
+ * （`execFileSync` の maxBuffer 面でも安全側。PR #2420 クロスレビュー P2）。
+ * `max` が正しいのは committedDate が常に UTC の `...Z` 形式で、ISO8601 の
+ * 辞書順 = 時系列順になるため。
+ *
+ * **限界（既知・許容）**: commits は GraphQL の first:100 打ち切りで、101 commit
+ * 以上の PR では先頭 100 件しか返らない。その場合この値が実際の最終 commit より
+ * 古くなり、停滞疑いを**過剰検出**しうる（見逃しではない）。この節は観測の提示で
+ * あって自動介入はしないため、過剰側へ倒れるのは許容する。
+ */
+export function fetchLastCommittedDate(prNumber, { execFileImpl } = {}) {
+  const out = runGh(
+    [
+      'pr',
+      'view',
+      String(prNumber),
+      '--repo',
+      REPO,
+      '--json',
+      'commits',
+      '--jq',
+      '[.commits[].committedDate] | max',
+    ],
+    { execFileImpl },
+  );
+  // `--jq` は文字列を raw（引用符なし）で出す。commit が無ければ `null` が返る。
+  const trimmed = String(out ?? '').trim();
+  return trimmed === '' || trimmed === 'null' ? null : trimmed;
 }
 
 /**
@@ -304,7 +457,7 @@ function buildChipDraftBlock(issue) {
  * @param {{
  *   readyIssues: Array<{ number: number, title: string, body: string, milestone: { title: string } | null }>,
  *   inProgressIssues: Array<{ number: number, title: string, updatedAt: string, milestone: { title: string } | null }>,
- *   openPrs: Array<{ number: number, title: string, isDraft: boolean, statusCheckRollup: unknown[], milestone: { title: string } | null }>,
+ *   openPrs: Array<{ number: number, title: string, isDraft: boolean, statusCheckRollup: unknown[], milestone: { title: string } | null, lastCommittedDate?: string | null }>,
  *   currentMilestoneTitle: string | null,
  *   now?: number,
  * }} params
@@ -343,6 +496,20 @@ export function buildMorningBriefBody({
     return `- #${pr.number}（${draftLabel}, CI:${ciState}, ${milestoneLabel}）: ${sanitizeTitle(pr.title)}`;
   });
 
+  const stalledDraftLines = openPrs
+    .filter((pr) => isStalledDraftPr(pr, now))
+    .map((pr) => {
+      const elapsedMs = elapsedBusinessMs(lastCommitTimeMs(pr), now);
+      // 走査上限に達した場合の戻り値は「閾値 + 1ms」の番兵で、実際の経過時間では
+      // ない。そのまま時間へ丸めると「4 営業時間」と表示され、実測値であるかの
+      // ように読めてしまう（PR #2420 クロスレビュー P3）。算定上限に当たったこと
+      // が分かる表記にする。
+      const label = isBusinessScanCapped(elapsedMs)
+        ? `${STALLED_DRAFT_BUSINESS_HOURS} 営業時間以上（算定上限）`
+        : `${Math.floor(elapsedMs / (60 * 60 * 1000))} 営業時間`;
+      return `- #${pr.number}（最終 commit から ${label}）: ${sanitizeTitle(pr.title)}`;
+    });
+
   const milestoneMissingPrs = currentMilestoneTitle
     ? openPrs.filter((pr) => pr.milestone?.title !== currentMilestoneTitle).map((pr) => pr.number)
     : [];
@@ -368,6 +535,9 @@ ${inProgressLines.length > 0 ? inProgressLines.join('\n') : '（該当なし）'
 
 ### open PR（${openPrs.length}件）
 ${prLines.length > 0 ? prLines.join('\n') : '（該当なし）'}
+
+### 停滞疑いレーン（open Draft PR、最終 commit から ${STALLED_DRAFT_BUSINESS_HOURS} 営業時間超）
+${stalledDraftLines.length > 0 ? stalledDraftLines.join('\n') : '（該当なし）'}
 
 ### milestone 未付与（現行: ${currentMilestoneTitle ? sanitizeTitle(currentMilestoneTitle) : '不明'}）
 - PR: ${milestoneMissingPrs.length > 0 ? milestoneMissingPrs.map((n) => `#${n}`).join(', ') : 'なし'}
@@ -440,7 +610,18 @@ export function runMorningBrief({ execFileImpl, now = Date.now() } = {}) {
 
   const readyIssues = fetchReadyIssues({ execFileImpl });
   const inProgressIssues = fetchInProgressIssues({ execFileImpl });
-  const openPrs = fetchOpenPrs({ execFileImpl });
+  // draft PR にだけ最終 commit 時刻を足す（停滞疑いレーンの検出に使う）。
+  // 個別取得にしている理由と、draft だけに絞る理由は fetchLastCommittedDate 参照。
+  // ここで throw すると run-all の try/catch がブリーフ全体を落とすため、
+  // 1 PR の取得失敗は null（＝検出しない側）へ倒して他のセクションを守る。
+  const openPrs = fetchOpenPrs({ execFileImpl }).map((pr) => {
+    if (!pr.isDraft) return pr;
+    try {
+      return { ...pr, lastCommittedDate: fetchLastCommittedDate(pr.number, { execFileImpl }) };
+    } catch {
+      return { ...pr, lastCommittedDate: null };
+    }
+  });
   const currentMilestoneTitle = fetchCurrentMilestoneTitle({ execFileImpl });
 
   const body = buildMorningBriefBody({
