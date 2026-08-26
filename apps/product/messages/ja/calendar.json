@@ -278,6 +278,7 @@
       "renameLabel": "テンプレート名を変更",
       "editEntryLabel": "編集",
       "editingAsDay": "「{name}」を一日として編集中",
+      "overwriteSaveLabel": "上書き保存",
       "diffSummaryPrefix": "変更:",
       "contextMenuTitle": "テンプレートメニュー",
       "rowAriaHint": "テンプレート「{name}」。クリックで適用、ドラッグで任意の日へ、右クリックで編集・改名・削除"
