@@ -4,6 +4,7 @@ import {
   assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
   deriveAgentFieldFromReviewResult,
+  derivePartialCoverageRoles,
   type ReviewResultEntry,
 } from '../review/generate-marker-core.ts';
 
@@ -114,6 +115,45 @@ describe('buildMarkerBody', () => {
     ).toThrow(/agent/);
   });
 
+  it('partial coverage の role があるのに注釈が無ければ拒否する（#2417、fail-open 防止）', () => {
+    expect(() =>
+      buildMarkerBody({
+        headSha: VALID_SHA,
+        agent: 'risk-reviewer',
+        p1Count: 0,
+        p2Count: 0,
+        partialCoverageRoles: ['risk-reviewer'],
+      }),
+    ).toThrow(/partial coverage/);
+  });
+
+  it('partial coverage の role があり注釈があれば marker に行を追加する', () => {
+    const body = buildMarkerBody({
+      headSha: VALID_SHA,
+      agent: 'risk-reviewer, behavior-verifier',
+      p1Count: 0,
+      p2Count: 0,
+      partialCoverageRoles: ['risk-reviewer'],
+      partialCoverageNote: 'diff 該当箇所を Main が目視確認済み',
+    });
+
+    expect(body.split('\n')).toContain(
+      'partial coverage: risk-reviewer（diff 該当箇所を Main が目視確認済み）',
+    );
+  });
+
+  it('partial coverage の role が無ければ注釈が無くても素通りする', () => {
+    expect(() =>
+      buildMarkerBody({
+        headSha: VALID_SHA,
+        agent: 'docs-only',
+        p1Count: 0,
+        p2Count: 0,
+        partialCoverageRoles: [],
+      }),
+    ).not.toThrow();
+  });
+
   it('負数・非整数の件数を拒否する', () => {
     expect(() =>
       buildMarkerBody({
@@ -193,6 +233,57 @@ describe('deriveAgentFieldFromReviewResult', () => {
     const entries: ReviewResultEntry[] = [{ role: '   ', status: 'ok' }];
 
     expect(() => deriveAgentFieldFromReviewResult(entries)).toThrow(/role が空/);
+  });
+});
+
+/**
+ * derivePartialCoverageRoles の契約テスト（#2417）。
+ *
+ * pacing discipline を緩めて早期の StructuredOutput 呼び出しを許可すると、
+ * 「schema 上は正常だが浅いレビュー」が `status: 'ok'` のまま marker を素通り
+ * しうる（fail-open）。この関数はその自己申告（`result.coverage: 'partial'`）を
+ * 拾い上げる唯一の経路であり、role/status しか見なかった旧設計を拡張する。
+ */
+describe('derivePartialCoverageRoles', () => {
+  it('coverage: partial の role だけを抽出する', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok', result: { coverage: 'partial' } },
+      { role: 'behavior-verifier', status: 'ok', result: { coverage: 'complete' } },
+    ];
+
+    expect(derivePartialCoverageRoles(entries)).toEqual(['risk-reviewer']);
+  });
+
+  it('全て complete なら空配列を返す', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'architecture-guard', status: 'ok', result: { coverage: 'complete' } },
+      { role: 'behavior-verifier', status: 'ok', result: { coverage: 'complete' } },
+    ];
+
+    expect(derivePartialCoverageRoles(entries)).toEqual([]);
+  });
+
+  it('status が ok 以外（text-fallback 等）は coverage: partial でも対象外にする（result 欠落でも fail-closed の対象外）', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'text-fallback', result: { coverage: 'partial' } },
+      { role: 'architecture-guard', status: 'empty' },
+    ];
+
+    expect(derivePartialCoverageRoles(entries)).toEqual([]);
+  });
+
+  it('status:"ok" なのに result が欠落していれば拒否する（fail-closed、PR #2424 クロスレビュー P2）', () => {
+    const entries: ReviewResultEntry[] = [{ role: 'behavior-verifier', status: 'ok' }];
+
+    expect(() => derivePartialCoverageRoles(entries)).toThrow(/result\.coverage が欠落または不正/);
+  });
+
+  it('status:"ok" なのに coverage が未知の値なら拒否する（fail-closed）', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok', result: { coverage: 'mostly-done' } },
+    ];
+
+    expect(() => derivePartialCoverageRoles(entries)).toThrow(/result\.coverage が欠落または不正/);
   });
 });
 
