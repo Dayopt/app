@@ -1,7 +1,14 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { findTodayBoardIssue, REPO, runGh, runGhJson } from './lib.mjs';
+import {
+  findTodayBoardIssue,
+  isJstWeekend,
+  jstDateString,
+  REPO,
+  runGh,
+  runGhJson,
+} from './lib.mjs';
 
 /**
  * night-watch オーケストレータ（`run-all.mjs`）の Step 6（#2370）。夜勤の
@@ -90,6 +97,98 @@ function isStale(updatedAt, now) {
   return now - new Date(updatedAt).getTime() > STALE_MS;
 }
 
+// ── 停滞疑いレーンの検出（#2415）─────────────────────────────
+// レーンの停止条件（`.claude/rules/lane-protocol.md` §停止条件）は自己申告
+// なので、黙って詰まったレーンは拾えない。その二段目として「最終 commit から
+// N 営業時間、commit が積まれていない open Draft PR」を機械検出する。
+// **判断語は出さない**（このブリーフ全体の方針）。「停滞疑い」までで、
+// 実際に詰まっているかの判断と介入は指揮台が持つ。
+//
+// **なぜ素の経過時間ではなく「営業時間」か。** このブリーフは 04:00 JST の
+// cron で 1 日 1 回だけ生成される（`.github/workflows/night-watch.yml`）。
+// 素の 4 時間で判定すると、前日の日中〜夕方に commit して正常に 1 日を終えた
+// レーンが翌朝すべて並ぶ（04:00 時点で 4 時間以内の commit はほぼ存在しない）。
+// 全件が毎朝載る節は読まれなくなり、即座に形骸化する。営業時間換算なら
+// 「前日 17:00 commit → 翌 04:00 時点で 1 営業時間」となり、実際に日中止まって
+// いたレーンだけが残る。金曜夕方 → 月曜朝も同じ理由で 1 営業時間に畳まれる。
+const BUSINESS_DAY_START_HOUR = 9;
+const BUSINESS_DAY_END_HOUR = 18;
+const STALLED_DRAFT_BUSINESS_HOURS = 4;
+// 走査の上限。開始が異常に古い（不正な committedDate 等）場合でも
+// 日単位ループが暴走しないようにする。1 年分あれば実運用の窓を十分に覆う。
+const MAX_BUSINESS_SCAN_DAYS = 400;
+
+/** JST 暦日文字列（YYYY-MM-DD）のその日の営業時間帯 [start, end) を epoch ms で返す。 */
+function jstBusinessWindow(jstDateStr) {
+  const pad = (hour) => String(hour).padStart(2, '0');
+  return {
+    start: new Date(`${jstDateStr}T${pad(BUSINESS_DAY_START_HOUR)}:00:00+09:00`).getTime(),
+    end: new Date(`${jstDateStr}T${pad(BUSINESS_DAY_END_HOUR)}:00:00+09:00`).getTime(),
+  };
+}
+
+/**
+ * `fromMs` から `toMs` までに含まれる営業時間（JST 平日 09:00-18:00）を ms で返す。
+ *
+ * JST 暦日ごとに営業時間帯との重なりを積算する。JST は DST を持たないため、
+ * 暦日の境界を UTC 演算で安全に刻める（`lib.mjs` の `jstDaysAgoString` と同じ前提）。
+ * 週末判定は `jstWeekdayIndex` を再利用する（`Intl` の想定外出力は例外にする
+ * 既存の fail-loud 方針をそのまま継承する）。
+ * @param {number} fromMs
+ * @param {number} toMs
+ */
+export function elapsedBusinessMs(fromMs, toMs) {
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || toMs <= fromMs) return 0;
+  let total = 0;
+  let cursorDate = jstDateString(new Date(fromMs));
+  const lastDate = jstDateString(new Date(toMs));
+  for (let guard = 0; guard < MAX_BUSINESS_SCAN_DAYS; guard += 1) {
+    const cursorMidnight = new Date(`${cursorDate}T00:00:00+09:00`);
+    if (!isJstWeekend(cursorMidnight)) {
+      const { start, end } = jstBusinessWindow(cursorDate);
+      const overlapStart = Math.max(start, fromMs);
+      const overlapEnd = Math.min(end, toMs);
+      if (overlapEnd > overlapStart) total += overlapEnd - overlapStart;
+    }
+    if (cursorDate === lastDate) return total;
+    cursorDate = jstDateString(new Date(cursorMidnight.getTime() + 24 * 60 * 60 * 1000));
+  }
+  // 上限に達した = 想定外に古い committedDate。閾値超え側（検出する側）へ倒す。
+  return STALLED_DRAFT_BUSINESS_HOURS * 60 * 60 * 1000 + 1;
+}
+
+/**
+ * PR の最終 commit 時刻（epoch ms）を返す。取れなければ null。
+ *
+ * `commits` 配列の順序に依存せず `committedDate` の max を採る。`gh pr list
+ * --json commits` は実測では時系列順に返すが、順序は契約として保証された
+ * ものではないため、末尾を採る実装にしない。
+ */
+export function lastCommitTimeMs(pr) {
+  const commits = Array.isArray(pr?.commits) ? pr.commits : [];
+  let latest = null;
+  for (const commit of commits) {
+    const ms = new Date(commit?.committedDate ?? '').getTime();
+    if (Number.isFinite(ms) && (latest === null || ms > latest)) latest = ms;
+  }
+  return latest;
+}
+
+/**
+ * 停滞疑いの open Draft PR か。最終 commit 時刻が取れない PR は**検出しない**
+ * （false を返す）。commit が 1 件も無い draft PR は着手直後の空 commit すら
+ * 積まれていない状態で、そこに「停滞」の意味は無く、誤検出はこの節への
+ * 信頼を落とすため。
+ * @param {{ isDraft?: boolean, commits?: Array<{ committedDate?: string }> } & Record<string, unknown>} pr
+ * @param {number} now
+ */
+export function isStalledDraftPr(pr, now) {
+  if (!pr?.isDraft) return false;
+  const lastCommitMs = lastCommitTimeMs(pr);
+  if (lastCommitMs === null) return false;
+  return elapsedBusinessMs(lastCommitMs, now) > STALLED_DRAFT_BUSINESS_HOURS * 60 * 60 * 1000;
+}
+
 // このブリーフは public repo の任意ユーザーが設定できる issue/PR title を
 // github-actions[bot] 名義の issue コメントへ転記する。加えて chip 下書き
 // ブロック（buildChipDraftBlock）は指揮台がレーン prompt へそのまま
@@ -175,7 +274,9 @@ function fetchOpenPrs({ execFileImpl } = {}) {
       '--state',
       'open',
       '--json',
-      'number,title,isDraft,statusCheckRollup,milestone',
+      // `commits` は停滞疑いレーンの検出（最終 commit 時刻）に要る。open PR は
+      // 常時 1 桁件なので、全 commit を引くコストは実運用で問題にならない。
+      'number,title,isDraft,statusCheckRollup,milestone,commits',
       '--limit',
       FETCH_LIMIT,
     ],
@@ -304,7 +405,7 @@ function buildChipDraftBlock(issue) {
  * @param {{
  *   readyIssues: Array<{ number: number, title: string, body: string, milestone: { title: string } | null }>,
  *   inProgressIssues: Array<{ number: number, title: string, updatedAt: string, milestone: { title: string } | null }>,
- *   openPrs: Array<{ number: number, title: string, isDraft: boolean, statusCheckRollup: unknown[], milestone: { title: string } | null }>,
+ *   openPrs: Array<{ number: number, title: string, isDraft: boolean, statusCheckRollup: unknown[], milestone: { title: string } | null, commits?: Array<{ committedDate: string }> }>,
  *   currentMilestoneTitle: string | null,
  *   now?: number,
  * }} params
@@ -343,6 +444,15 @@ export function buildMorningBriefBody({
     return `- #${pr.number}（${draftLabel}, CI:${ciState}, ${milestoneLabel}）: ${sanitizeTitle(pr.title)}`;
   });
 
+  const stalledDraftLines = openPrs
+    .filter((pr) => isStalledDraftPr(pr, now))
+    .map((pr) => {
+      const businessHours = Math.floor(
+        elapsedBusinessMs(lastCommitTimeMs(pr), now) / (60 * 60 * 1000),
+      );
+      return `- #${pr.number}（最終 commit から ${businessHours} 営業時間）: ${sanitizeTitle(pr.title)}`;
+    });
+
   const milestoneMissingPrs = currentMilestoneTitle
     ? openPrs.filter((pr) => pr.milestone?.title !== currentMilestoneTitle).map((pr) => pr.number)
     : [];
@@ -368,6 +478,9 @@ ${inProgressLines.length > 0 ? inProgressLines.join('\n') : '（該当なし）'
 
 ### open PR（${openPrs.length}件）
 ${prLines.length > 0 ? prLines.join('\n') : '（該当なし）'}
+
+### 停滞疑いレーン（open Draft PR、最終 commit から ${STALLED_DRAFT_BUSINESS_HOURS} 営業時間超）
+${stalledDraftLines.length > 0 ? stalledDraftLines.join('\n') : '（該当なし）'}
 
 ### milestone 未付与（現行: ${currentMilestoneTitle ? sanitizeTitle(currentMilestoneTitle) : '不明'}）
 - PR: ${milestoneMissingPrs.length > 0 ? milestoneMissingPrs.map((n) => `#${n}`).join(', ') : 'なし'}

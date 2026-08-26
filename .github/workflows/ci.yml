@@ -46,6 +46,25 @@ permissions:
 # skipped check の畳み込みも織り込み済みなので、merge gate はこの guard に依存できる。
 # 重量 job の guard は `draft != true` で書く: workflow_dispatch では
 # pull_request context が無く null になるため、この形なら全 job が走る。
+#
+# ── Draft 中の軽量層を廃止した理由（2026-08-26、#2415）─────────────
+# 検査網が要るのは境界を越える瞬間（ready = 指揮台の時間を使う / merge = main に
+# 入る）だけで、draft はレーンの私的作業場。軽量検査は pre-push フック（#2359 の
+# affected typecheck/lint + typecheck:scripts/test:scripts/format:check）が
+# ローカルで毎回実施済みのため、draft 中の CI は二重払いだった。
+# **この判断は指揮台の推奨（draft 中も維持）と分かれた User 裁可で採用した**
+# （#2415 の judgment:diverged コメント）。
+#
+# **復活条件**: Ready 後に環境差（lockfile 不整合・未宣言依存など、ローカルの
+# フックでは原理的に捕まらない差分）に起因して CI が赤になる事象が**月に複数回**
+# 発生したら、draft へ typecheck のみの超軽量版を戻す。判定は月次 gardening で
+# 行う（#2415 の judgment:diverged が定める正否の判定観点そのもの）。
+#
+# **skip は「走らせない」であって「検査を免除する」ではない。** job 単位の `if:`
+# で skip するため check run は conclusion: skipped として発行され、ready 化で
+# types の ready_for_review が新しい run を起こす。加えて scripts/git/finish-branch.sh
+# が「docs-only でない PR では Static Checks / Unit Tests が success であること」を
+# by-name で検査するので、skipped のまま merge へ抜ける経路は塞がっている（#2415）。
 jobs:
   # docs-only 判定だけを行う軽量 job。Impact Resolver（scripts/ci/impact.mjs）は
   # node 標準モジュールしか使わないため checkout だけで動く（pnpm install 不要、実測数十秒）。
@@ -53,6 +72,11 @@ jobs:
   # かつ required status check は success として報告される。
   gate:
     name: "\U0001F6A6 Impact gate"
+    # draft の間は走らせない（2026-08-26、#2415。§Draft 中の軽量層を廃止した理由 参照）。
+    # `draft != true` と書く（`== false` ではない）: workflow_dispatch では
+    # pull_request context が無く null になるため、`== false` だと手動実行で
+    # 全 job が skip される。本 workflow 冒頭の guard 規約と同じ形。
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -86,7 +110,11 @@ jobs:
     # `always()` を付けるのは、gate job 自体が落ちた時に下流が skip されると
     # 「検証なしで required check が success」になる（fail open）ため。
     # always() なら gate 失敗時も評価され、空の output は != 'true' で実行側に倒れる。
-    if: always() && needs.gate.outputs.docs_only != 'true'
+    #
+    # **draft guard は gate だけでなくこの job にも要る。** `always()` は
+    # 上流が skip されても評価を続けるため、gate 側にだけ guard を書くと
+    # draft でもこの job が実行側へ倒れる（2026-08-26、#2415）。
+    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -212,7 +240,8 @@ jobs:
   unit:
     name: "\U0001F4E6 Unit Tests"
     needs: gate
-    if: always() && needs.gate.outputs.docs_only != 'true'
+    # static job と同じ理由で draft guard をこの job にも書く（#2415）。
+    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -3,7 +3,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   buildBranchNameCandidate,
   buildMorningBriefBody,
+  elapsedBusinessMs,
   HANDOFF_HEADINGS,
+  isStalledDraftPr,
   judgeHandoffQuality,
   MORNING_BRIEF_HEADING,
   runMorningBrief,
@@ -157,6 +159,131 @@ describe('buildMorningBriefBody', () => {
     expect(body).toContain('（該当なし）');
     expect(body).toContain('milestone 未付与（現行: 不明）');
     expect(body).toContain('（dispatch可能な issue なし）');
+  });
+});
+
+// 2026-08-21=金 / 08-24=月 / 08-25=火（JST）。営業時間は JST 平日 09:00-18:00。
+describe('elapsedBusinessMs', () => {
+  const at = (iso: string) => new Date(iso).getTime();
+  const hours = (n: number) => n * 60 * 60 * 1000;
+
+  it('平日日中の経過はそのまま営業時間になる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-25T10:00:00+09:00'), at('2026-08-25T12:00:00+09:00')),
+    ).toBe(hours(2));
+  });
+
+  it('営業時間外（夜間）は加算しない', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T18:00:00+09:00'), at('2026-08-25T09:00:00+09:00')),
+    ).toBe(0);
+  });
+
+  // ブリーフは 04:00 JST 生成。素の経過時間で判定すると前日夕方に commit した
+  // 健全なレーンが毎朝全件並ぶため、この 2 ケースが閾値設計の要になる。
+  it('前日 17:00 commit は翌 04:00 時点で 1 営業時間に畳まれる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T17:00:00+09:00'), at('2026-08-25T04:00:00+09:00')),
+    ).toBe(hours(1));
+  });
+
+  it('前日 13:00 commit は翌 04:00 時点で 5 営業時間になる', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-24T13:00:00+09:00'), at('2026-08-25T04:00:00+09:00')),
+    ).toBe(hours(5));
+  });
+
+  it('週末を跨いでも土日は加算しない（金 17:00 → 月 04:00 = 1 営業時間）', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-21T17:00:00+09:00'), at('2026-08-24T04:00:00+09:00')),
+    ).toBe(hours(1));
+  });
+
+  it('to が from 以前・不正値なら 0 を返す', () => {
+    expect(
+      elapsedBusinessMs(at('2026-08-25T12:00:00+09:00'), at('2026-08-25T10:00:00+09:00')),
+    ).toBe(0);
+    expect(elapsedBusinessMs(Number.NaN, at('2026-08-25T10:00:00+09:00'))).toBe(0);
+  });
+});
+
+describe('isStalledDraftPr', () => {
+  // 04:00 JST（night-watch cron の生成時刻）を基準にする。
+  const now = new Date('2026-08-25T04:00:00+09:00').getTime();
+  const draft = (committedDates: string[]) => ({
+    number: 1,
+    title: 'PR',
+    isDraft: true,
+    commits: committedDates.map((committedDate) => ({ committedDate })),
+  });
+
+  it('4 営業時間を超えた draft PR を検出する', () => {
+    expect(isStalledDraftPr(draft(['2026-08-24T13:00:00+09:00']), now)).toBe(true);
+  });
+
+  it('4 営業時間以内の draft PR は検出しない', () => {
+    expect(isStalledDraftPr(draft(['2026-08-24T17:00:00+09:00']), now)).toBe(false);
+  });
+
+  it('ready PR は対象外', () => {
+    expect(isStalledDraftPr({ ...draft(['2026-08-24T13:00:00+09:00']), isDraft: false }, now)).toBe(
+      false,
+    );
+  });
+
+  // commit が 1 件も無い draft に「停滞」の意味は無い。誤検出はこの節への信頼を落とす。
+  it('commit が取れない draft PR は検出しない', () => {
+    expect(isStalledDraftPr(draft([]), now)).toBe(false);
+    expect(isStalledDraftPr({ number: 1, title: 'PR', isDraft: true }, now)).toBe(false);
+  });
+
+  // gh の返す commits の順序は契約として保証されていないため末尾を採らない。
+  it('commits の順序に依存せず最新の committedDate を採る', () => {
+    const shuffled = draft(['2026-08-24T17:00:00+09:00', '2026-08-24T09:00:00+09:00']);
+    expect(isStalledDraftPr(shuffled, now)).toBe(false);
+  });
+});
+
+describe('buildMorningBriefBody（停滞疑いレーン）', () => {
+  const now = new Date('2026-08-25T04:00:00+09:00').getTime();
+  const base = {
+    readyIssues: [],
+    inProgressIssues: [],
+    currentMilestoneTitle: null,
+    now,
+  };
+
+  it('停滞疑いの draft PR を経過営業時間つきで並べる', () => {
+    const body = buildMorningBriefBody({
+      ...base,
+      openPrs: [
+        {
+          number: 20,
+          title: '止まっているPR',
+          isDraft: true,
+          statusCheckRollup: [],
+          milestone: null,
+          commits: [{ committedDate: '2026-08-24T13:00:00+09:00' }],
+        },
+        {
+          number: 21,
+          title: '動いているPR',
+          isDraft: true,
+          statusCheckRollup: [],
+          milestone: null,
+          commits: [{ committedDate: '2026-08-24T17:00:00+09:00' }],
+        },
+      ],
+    });
+
+    expect(body).toContain('### 停滞疑いレーン');
+    expect(body).toContain('#20（最終 commit から 5 営業時間）: 止まっているPR');
+    expect(body).not.toContain('#21（最終 commit から');
+  });
+
+  it('該当が無ければ（該当なし）を出す', () => {
+    const body = buildMorningBriefBody({ ...base, openPrs: [] });
+    expect(body).toMatch(/### 停滞疑いレーン[^\n]*\n（該当なし）/);
   });
 });
 

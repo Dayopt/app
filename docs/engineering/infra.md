@@ -314,6 +314,13 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 `🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
+- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
+  Draft CI 廃止により、この 2 job は draft の間 `conclusion: skipped` の check run になる。skipped は
+  失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
+  「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
+  持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
+  影響判定が不能な場合は要求する側（fail closed）へ倒す。契約は
+  `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
 - **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context
@@ -380,7 +387,14 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   扱いになる**ため、実行コストを避けつつ merge gate も満たせる。`paths-ignore` は 2026-08-05 に撤去した
   （workflow ごと起動しなくなり、ruleset が required にしている 4 check が永久に "expected" のまま残って
   docs のみの PR が構造的に merge 不能になったため。PR #1836 で実測）。マージ可否は
-  `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）
+  `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。
+  **この集約判定に加えて、名前で success を要求する check がある**（Vercel の 2 context と、
+  2026-08-26 以降は Static Checks / Unit Tests。上記 §merge gate の required checks 参照）
+- **`ci.yml` の `gate` / `static` / `unit` は draft の間 skip する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
+  guard は 3 job すべてに書く必要がある — `static` / `unit` の `if:` は `always()` を含むため、
+  `gate` にだけ guard を置くと上流が skip されても下流が実行側へ倒れる。条件は `draft != true`
+  （`== false` にすると `workflow_dispatch` で `pull_request` context が null になり全 job が skip
+  される）。`types` の `ready_for_review` はこの skip の前提（無いと ready 化で再発火しない。PR #1810 で実測）
 - **判定は `statusCheckRollup` を畳んでから行う。** rollup は同名 check を畳まないため
   （`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled が
   残り続け、再実行で解決してもマージ不能になる。畳む単位は `gh pr checks` に合わせて
