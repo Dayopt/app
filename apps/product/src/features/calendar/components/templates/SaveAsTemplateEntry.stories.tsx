@@ -23,11 +23,14 @@ const dayBlocks: TemplateBlockMock[] = [
   },
 ];
 
-/** 「この並びを型として保存」の入口（v1.0 §5.4）。生きた日からのみ作成できる。 */
+/**
+ * 「この並びを型として保存」の入口（v1.0 §5.4）。生きた日からのみ作成できる。
+ * トリガー後はポップアップではなく、ヘッダーが名前入力＋保存/キャンセルへ
+ * 入れ替わり、メインはそのまま保存対象の日の盤面を表示し続ける。
+ */
 const meta = {
   title: 'Product/Features/Calendar/Templates/SaveAsTemplateEntry',
   component: SaveAsTemplateEntry,
-  parameters: { layout: 'padded' },
   tags: ['autodocs'],
   args: {
     dayBlocks,
@@ -39,22 +42,35 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 未展開の入口ボタン。 */
-export const Collapsed: Story = {};
+function MainAreaFrame({ children }: { children: React.ReactNode }) {
+  return <div style={{ height: '600px' }}>{children}</div>;
+}
 
-/** 展開後: 保存対象のプレビュー + 名前入力（クリックして開いた状態を再現）。 */
+/** 未展開の入口ボタン。 */
+export const Collapsed: Story = {
+  parameters: { layout: 'padded' },
+};
+
+/** 展開後: ヘッダーが名前入力＋保存/キャンセルへ入れ替わり、メインは保存対象の日のまま。 */
 export const Expanded: Story = {
+  parameters: { layout: 'fullscreen' },
+  render: (args) => (
+    <MainAreaFrame>
+      <SaveAsTemplateEntry {...args} />
+    </MainAreaFrame>
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const trigger = await canvas.findByRole('button');
+    const trigger = await canvas.findByRole('button', { name: /保存/ });
     await userEvent.click(trigger);
     await expect(canvas.getByRole('textbox')).toBeInTheDocument();
   },
 };
 
 export const AllPatterns: Story = {
+  parameters: { layout: 'padded' },
   render: () => (
-    <div className="flex flex-wrap items-start gap-6">
+    <div className="flex flex-col gap-6">
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs">未展開</p>
         <SaveAsTemplateEntry dayBlocks={dayBlocks} onSave={fn()} onCancel={fn()} />
