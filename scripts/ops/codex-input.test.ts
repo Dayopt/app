@@ -62,6 +62,15 @@ describe('buildCodexInput', () => {
     expect(output).toContain('## 参照先 #1: Ref1\n\nRef1 body');
     expect(output).toContain('## 参照先 #2: 取得失敗');
   });
+
+  // #2421 issueコメント（指揮台フィードバック）: repo内docs（設計書等）は
+  // 参照解決の対象外であることをCodexへ伝える固定の注意書きを冒頭へ入れる。
+  // #2396で、既にrepo内docsで裁定済みの論点をCodexが再指摘した実例がある。
+  it('冒頭にrepo内docs非同梱の注意書きが入る', () => {
+    const output = buildCodexInput({ target: { title: 'T', body: 'B' }, references: [] });
+    expect(output.startsWith('> 注意:')).toBe(true);
+    expect(output).toContain('repo 内 docs');
+  });
 });
 
 describe('buildIssueCodexInput', () => {
@@ -122,7 +131,7 @@ describe('buildPrCodexInput', () => {
     expect(output).toContain('## 参照先 #2395: Dep\n\ndep body');
   });
 
-  it('参照先が無ければ diff のみを返す（余計な区切りを付けない）', () => {
+  it('参照先が無ければ注意書き + diff のみを返す（余計な参照先区切りを付けない）', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
       if (args[0] === 'pr' && args[1] === 'view') {
         return JSON.stringify({ title: 'PR', body: 'no refs here' });
@@ -130,6 +139,21 @@ describe('buildPrCodexInput', () => {
       return 'diff --git a/x b/x\n+added';
     });
     const output = buildPrCodexInput(2424, { execFileImpl });
-    expect(output).toBe('diff --git a/x b/x\n+added');
+    expect(output).toBe(
+      '> 注意: この入力は issue/PR 本文が `#\\d+` で参照する他 issue のみを1段階解決したものです。本文が指す repo 内 docs（設計書等のファイルパス）は同梱していません。そこで既に裁定済みの論点を、この入力だけを根拠に再指摘している可能性があります。\n\n---\n\ndiff --git a/x b/x\n+added',
+    );
+    expect(output).not.toContain('参照先');
+  });
+
+  it('冒頭にrepo内docs非同梱の注意書きが入る（参照先ありの場合も）', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'view') {
+        return JSON.stringify({ title: 'PR', body: 'Closes #2395' });
+      }
+      if (args[0] === 'pr' && args[1] === 'diff') return 'diff --git a/x b/x';
+      return JSON.stringify({ title: 'Dep', body: 'dep body' });
+    });
+    const output = buildPrCodexInput(2424, { execFileImpl });
+    expect(output.startsWith('> 注意:')).toBe(true);
   });
 });

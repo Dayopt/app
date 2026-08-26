@@ -82,12 +82,24 @@ export function resolveReferencedIssue(number, { execFileImpl } = {}) {
   }
 }
 
+// #2421 issueコメント（2026-08-26、指揮台フィードバック、実測由来）:
+// wrapper の参照解決は `#\d+` の issue 番号のみが対象で、本文が指す repo 内
+// docs（設計書等）は同梱しない。#2396 への実行で、User が既に repo 内 docs
+// （overview.md）で裁定済みの論点を Codex が再指摘する事例が実際に発生した。
+// 費用対効果の判断（推奨採用）: docs を無条件同梱すると入力サイズが大きく
+// 膨らむため同梱はしないが、Codex側にこの穴の存在を伝える固定の注意書きを
+// 冒頭へ入れることで、入力を膨らませずに誤指摘の解釈コストだけを下げる。
+const CONTEXT_GAP_NOTICE =
+  '> 注意: この入力は issue/PR 本文が `#\\d+` で参照する他 issue のみを1段階解決したものです。' +
+  '本文が指す repo 内 docs（設計書等のファイルパス）は同梱していません。' +
+  'そこで既に裁定済みの論点を、この入力だけを根拠に再指摘している可能性があります。';
+
 /**
  * 対象本文 + 解決済み参照先を Codex への入力テキストへ組み立てる。
  * @param {{ target: { title: string, body: string }, references: Array<{ number: number, ok: boolean, title?: string, body?: string }> }} params
  */
 export function buildCodexInput({ target, references }) {
-  const parts = [`# ${target.title}\n\n${target.body ?? ''}`];
+  const parts = [CONTEXT_GAP_NOTICE, `# ${target.title}\n\n${target.body ?? ''}`];
   for (const ref of references) {
     parts.push(
       ref.ok
@@ -133,7 +145,7 @@ export function buildPrCodexInput(prNumber, { execFileImpl } = {}) {
   const diff = runGh(['pr', 'diff', String(prNumber), '--repo', REPO], { execFileImpl });
   const refNumbers = extractReferencedIssueNumbers(pr.body ?? '', { exclude: prNumber });
   const references = refNumbers.map((n) => resolveReferencedIssue(n, { execFileImpl }));
-  if (references.length === 0) return diff;
+  if (references.length === 0) return `${CONTEXT_GAP_NOTICE}\n\n---\n\n${diff}`;
   const refSection = references
     .map((ref) =>
       ref.ok
@@ -141,7 +153,7 @@ export function buildPrCodexInput(prNumber, { execFileImpl } = {}) {
         : `## 参照先 #${ref.number}: 取得失敗`,
     )
     .join('\n\n---\n\n');
-  return `${diff}\n\n---\n\n${refSection}`;
+  return `${CONTEXT_GAP_NOTICE}\n\n---\n\n${diff}\n\n---\n\n${refSection}`;
 }
 
 if (isDirectExecution(import.meta.url)) {
