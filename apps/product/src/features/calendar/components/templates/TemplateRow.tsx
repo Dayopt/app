@@ -89,7 +89,7 @@ export function TemplateRow({
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={handleContextMenu}
     >
-      <Popover open={isHovered && !isRenaming}>
+      <Popover open={isHovered && !isRenaming && !contextMenuPosition}>
         <PopoverTrigger asChild>
           {isRenaming ? (
             <input

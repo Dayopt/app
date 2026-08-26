@@ -29,7 +29,10 @@ interface TemplateDayEditorProps {
  * この component は Storybook-only の骨格で、実際のドラッグ挙動・保存
  * mutation・既存 DayView / CalendarGridContent への実配線は本 issue の
  * 非 scope（後続の実装 issue）。上書き保存時の差分一行はヘッダー直下に
- * 一時的な行として表示する。
+ * 一時的な行として表示する。実配線時は、この `AppHeader` が
+ * `CalendarLayout.tsx` 側で描画中の通常ヘッダーと二重に出ないよう、
+ * 1 画面 1 header の整合（通常ヘッダーの置き換え or 非表示化）を
+ * 後続の実装 issue で確定する。
  */
 export function TemplateDayEditor({
   templateName,

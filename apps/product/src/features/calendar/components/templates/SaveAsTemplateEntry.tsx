@@ -28,6 +28,9 @@ interface SaveAsTemplateEntryProps {
  * その日の盤面そのもの、という関係を UI 上でも一致させる。
  *
  * 実際の呼び出し位置（日ビューのどのメニューから開くか）・保存 mutation は
+ * 後続の実装 issue で確定する。実配線時は、この `AppHeader` が
+ * `CalendarLayout.tsx` 側で描画中の通常ヘッダーと二重に出ないよう、
+ * 1 画面 1 header の整合（通常ヘッダーの置き換え or 非表示化）を
  * 後続の実装 issue で確定する。
  */
 export function SaveAsTemplateEntry({ dayBlocks, onSave, onCancel }: SaveAsTemplateEntryProps) {

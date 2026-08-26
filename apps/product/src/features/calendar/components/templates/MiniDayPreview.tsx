@@ -10,8 +10,14 @@ interface MiniDayPreviewProps {
   className?: string | undefined;
 }
 
-/** アイコンを表示するには狭すぎるブロックの高さ閾値（px） */
-const ICON_HEIGHT_THRESHOLD = 20;
+/**
+ * アイコンを表示するには狭すぎるブロックの高さ閾値。
+ *
+ * `heightPercent`（親コンテナ高さに対する割合、0-100）と比較する値であり
+ * px 換算値ではない。親の実測 px を持たない Storybook mock のための
+ * 簡易判定なので、単位は「%」。
+ */
+const ICON_HEIGHT_THRESHOLD_PERCENT = 20;
 
 /**
  * テンプレートのホバープレビュー用ミニチュア日ビュー（v1.0 §5.4）。
@@ -39,10 +45,7 @@ export function MiniDayPreview({ blocks, className }: MiniDayPreviewProps) {
           : null;
         const topPercent = block.anchorRatio * 100;
         const heightPercent = Math.max(block.medianDurationRatio * 100, 4);
-        // 高さは相対値なので、実際の px 換算は親コンテナの高さに依存する。
-        // アイコン表示可否の判定は「親の実測 px」までは Storybook mock では
-        // 持たないため、比率が一定以上のブロックだけアイコンを出す簡易判定にする。
-        const showIcon = heightPercent >= ICON_HEIGHT_THRESHOLD;
+        const showIcon = heightPercent >= ICON_HEIGHT_THRESHOLD_PERCENT;
 
         return (
           <div
