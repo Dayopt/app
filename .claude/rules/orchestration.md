@@ -299,6 +299,20 @@ P2 の点修正は再依頼しない。内製クロスレビューの delta re-r
 
 ## 判断ジャーナル
 
-Fable の推奨と User の判断が分かれた時、該当 issue / PR に分岐コメント（推奨・User 判断・理由・**何をもって正否を判定するかの観点**）を 1 つ残し、`judgment:diverged` ラベルを付ける。月次 gardening は**現在ラベルが付いている全件**を `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs --limit 200` で取得し、結果を観測できた事例に判定コメント（どちらの判断が正しかったか）を追記して**ラベルを外す**。未観測の事例はラベルを残して翌月へ持ち越す。境界の更新（本ファイル §権限の既定）は判定済み事例だけを母集団にする（`.claude/skills/gardening/SKILL.md` 人間パート参照）。
+策定日: 2026-08-17。**判定タイミングを観測完了時点へ前倒しした（2026-08-27、[#2423](https://github.com/Dayopt/dayopt/issues/2423)）**。
 
-**dispatch の日次ランダム抽出監査（`.claude/skills/dispatch/SKILL.md` 操作 C）で見つかったズレも同じ扱い**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）。「仕様には適合しているが意図とズレている」静かな失敗を User が監査で発見した場合も、分岐コメント + `judgment:diverged` ラベルでジャーナル化し、月次 gardening の判定対象に乗せる。
+Fable の推奨と User の判断が分かれた時、該当 issue / PR に分岐コメント（推奨・User 判断・理由・**何をもって正否を判定するかの観点**）を 1 つ残し、`judgment:diverged` ラベルを付ける。この分岐コメントが**判定観点を事前登録する**役割を持つ。
+
+**個別の判定は観測完了時点で書くのを既定にする。** 判定観点への照合材料（実測結果・merge・close 等）が揃った時点で、気づいた者（通常は指揮台の日次運用）が判定コメント（事前登録した観点への照合 + 証拠の引用。どちらの判断が正しかったか）を追記し、その場で `judgment:diverged` ラベルを外す。月次まで待たない。
+
+この前倒しが成立するのは、**判定が「事前登録した観点への機械的な照合」であり、1 か月の距離がバイアス防止に寄与していないため**。バイアスを防いでいるのは分岐時点で判定観点を先に固定していること自体であり、照合をいつ行っても結論は変わらない。むしろ 1 か月後は文脈が薄れて照合の質が落ちる。
+
+- **滞留した実例**: [#2205](https://github.com/Dayopt/dayopt/issues/2205)（夜勤の実行 engine: Routine vs Actions）は、判定材料（[#2216](https://github.com/Dayopt/dayopt/issues/2216) の 3 層切り分け、[#2367](https://github.com/Dayopt/dayopt/issues/2367) の merge と初回 run success）が出揃ってからも未判定のまま滞留し、User の問い合わせを契機に指揮台が事後に判定コメントを書く形になった（2026-08-19 の分岐記録 → 2026-08-26 の判定コメントまで 1 週間）。証拠の再発掘コストが発生した
+- **同日に判定できた実例**: [#2416](https://github.com/Dayopt/dayopt/issues/2416)（Preview 課金の見送り）は、分岐コメントに判定観点を書いた同日のうちに状況が固まり、判定コストがほぼゼロで済んだ
+
+月次 gardening の役割は 2 つに再定義する（`.claude/skills/gardening/SKILL.md` 人間パート参照）:
+
+1. **書き漏れの sweep** — `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs --limit 200` で**現在もラベルが付いている全件**を取得する。日次で判定し損ねた事例、または判定材料がまだ揃っていない（未観測の）事例を拾う backstop。ラベル残存 = 未判定 or 未観測の意味は不変
+2. **境界更新の集計** — 判定済み事例だけを母集団に、境界（本ファイル §権限の既定 の試行運用の恒久化/巻き戻し）を実測で更新する。これは月次のまま変えない
+
+**dispatch の日次ランダム抽出監査（`.claude/skills/dispatch/SKILL.md` 操作 C）で見つかったズレも同じ扱い**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）。「仕様には適合しているが意図とズレている」静かな失敗を User が監査で発見した場合も、分岐コメント + `judgment:diverged` ラベルでジャーナル化し、判定は観測完了時点で行う（月次はあくまで sweep backstop）。
