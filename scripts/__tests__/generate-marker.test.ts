@@ -254,21 +254,36 @@ describe('derivePartialCoverageRoles', () => {
     expect(derivePartialCoverageRoles(entries)).toEqual(['risk-reviewer']);
   });
 
-  it('coverage が無い・complete の場合は空配列を返す', () => {
+  it('全て complete なら空配列を返す', () => {
     const entries: ReviewResultEntry[] = [
       { role: 'architecture-guard', status: 'ok', result: { coverage: 'complete' } },
-      { role: 'behavior-verifier', status: 'ok' },
+      { role: 'behavior-verifier', status: 'ok', result: { coverage: 'complete' } },
     ];
 
     expect(derivePartialCoverageRoles(entries)).toEqual([]);
   });
 
-  it('status が ok 以外（text-fallback 等）は coverage: partial でも対象外にする', () => {
+  it('status が ok 以外（text-fallback 等）は coverage: partial でも対象外にする（result 欠落でも fail-closed の対象外）', () => {
     const entries: ReviewResultEntry[] = [
       { role: 'risk-reviewer', status: 'text-fallback', result: { coverage: 'partial' } },
+      { role: 'architecture-guard', status: 'empty' },
     ];
 
     expect(derivePartialCoverageRoles(entries)).toEqual([]);
+  });
+
+  it('status:"ok" なのに result が欠落していれば拒否する（fail-closed、PR #2424 クロスレビュー P2）', () => {
+    const entries: ReviewResultEntry[] = [{ role: 'behavior-verifier', status: 'ok' }];
+
+    expect(() => derivePartialCoverageRoles(entries)).toThrow(/result\.coverage が欠落または不正/);
+  });
+
+  it('status:"ok" なのに coverage が未知の値なら拒否する（fail-closed）', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'risk-reviewer', status: 'ok', result: { coverage: 'mostly-done' } },
+    ];
+
+    expect(() => derivePartialCoverageRoles(entries)).toThrow(/result\.coverage が欠落または不正/);
   });
 });
 

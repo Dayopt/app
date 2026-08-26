@@ -69,7 +69,7 @@ role ごとの schema・model・tools は `agentType` 経由で各 `.claude/agen
 script は各 role について `{ role, status: 'ok' | 'empty' | 'error', result }` の配列を返す。`status` が `ok` 以外の role が 1 件でもあれば、手順 6 の marker 生成は機械的に拒否される（`--review-result` 参照）。その場合 Main は次のいずれかを選ぶ:
 
 - 同一 script を再実行する（固定の自動リトライは行わない — 同一条件で同一失敗を再現するだけの可能性があり、1 週間の効果測定の解像度も下げるため、都度 Main が判断する）
-- 該当 role だけ Agent tool 経由（旧 text contract、`.claude/agents/<role>.md` の Output format）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）
+- 該当 role だけ Agent tool 経由（旧 text contract、`.claude/agents/<role>.md` の Output format）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）。**text-fallback は `coverage` を機械的に追跡できない**（text contract は schema を強制しないため）。partial coverage の safeguard（手順6）は text-fallback role には適用されない
 
 `status: 'ok'` の各 role は `result.coverage`（`'complete' | 'partial'`）も持つ（#2417）。budget 逼迫で観点を打ち切った role は `'partial'` を自己申告する契約で、`status !== 'ok'` とは別の軸として扱う — schema 検証自体は通っているが浅い可能性がある、という意味。手順 6 の `--partial-coverage-note` 必須化がこの信号を marker の gate へ橋渡しする。
 
@@ -121,6 +121,8 @@ pnpm review:marker <PR番号> --agent docs-only --p1 0 --p2 0
 pnpm review:marker <PR番号> --review-result /path/to/review-result.json \
   --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
 ```
+
+**この防止線が効くのは `pnpm review:marker` 経由の生成時のみ。** `finish-branch.sh` の merge gate 自体は `partial coverage:` 行を一切パース・要求しない（`agent:` フィールドと同じ trust boundary — gate は marker の存在・書式だけを見る）。手書き marker や手組み JSON で `pnpm review:marker` を経由しなければ、この安全網は素通りする（PR #2424 クロスレビュー P2）。
 
 head SHA は script が `gh pr view --json headRefOid` で実測する（引数で渡す口は無い）。P1/P2 が 0 件の時は注釈を付けられない（zerolike 書式を維持するため。理由は P3 か経緯欄へ）。**stdout の出力を目視確認してから** `gh pr comment <PR番号> --body "<出力>"` 等で投稿する — 生成と投稿を分けているのは、投稿前に 1 拍置く確認ステップを残すため。
 

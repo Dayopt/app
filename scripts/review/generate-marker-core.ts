@@ -97,6 +97,8 @@ export interface ReviewResultEntry {
   result?: { coverage?: string } | null;
 }
 
+const VALID_COVERAGE_VALUES = new Set(['complete', 'partial']);
+
 /**
  * `status: 'ok'` かつ `result.coverage === 'partial'`（budget 逼迫で観点を打ち切った
  * 自己申告、#2417）の role 名を抽出する。
@@ -105,11 +107,32 @@ export interface ReviewResultEntry {
  * 「schema 上は正常だが浅いレビュー」が `status: 'ok'` のまま marker を素通り
  * しうる（fail-open）。`coverage` フィールドはこれを machine-readable にする
  * ためのもので、この関数はその自己申告を marker 生成の判断へ橋渡しする。
+ *
+ * **fail-closed**: schema は `coverage` を required にしているため、
+ * `status: 'ok'` なのに `result` 自体が欠落・`coverage` が欠落・未知の値、の
+ * いずれも「壊れた入力」として拒否する（黙って「partial ではない」扱いにしない）。
+ * `--review-result` JSON は Main が Write tool で手書きするため、旧 doc の
+ * 「role/status のみ見る」を信じて `result` を刈り込んだ JSON を書くと、この
+ * チェックが無いと fail-open が無音で再開してしまう（PR #2424 クロスレビュー P2）。
  */
 export function derivePartialCoverageRoles(entries: ReviewResultEntry[]): string[] {
-  return entries
-    .filter((e) => e.status === 'ok' && e.result?.coverage === 'partial')
-    .map((e) => e.role);
+  const okEntries = entries.filter((e) => e.status === 'ok');
+  const invalid = okEntries.filter(
+    (e) =>
+      !e.result ||
+      typeof e.result.coverage !== 'string' ||
+      !VALID_COVERAGE_VALUES.has(e.result.coverage),
+  );
+  if (invalid.length > 0) {
+    throw new Error(
+      '以下の role は status:"ok" なのに result.coverage が欠落または不正です: ' +
+        invalid.map((e) => `${e.role}(${JSON.stringify(e.result)})`).join(', ') +
+        '。Workflow の agent() が返した結果を result ごとそのまま JSON に書き出したか確認してください' +
+        '（role/status だけに刈り込むと fail-open の safeguard が機能しません）。',
+    );
+  }
+
+  return okEntries.filter((e) => e.result?.coverage === 'partial').map((e) => e.role);
 }
 
 /**

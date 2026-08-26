@@ -31,7 +31,10 @@
  * `--review-result` の各エントリの `result.coverage` が `partial`（budget 逼迫で
  * 一部の観点を打ち切った自己申告、#2417）な role が 1 件でもある場合、
  * `--partial-coverage-note` が無いと marker 生成そのものを拒否する（早期切り上げの
- * 浅いレビューが `status: 'ok'` のまま黙って gate を通過する fail-open を防ぐ）:
+ * 浅いレビューが `status: 'ok'` のまま黙って gate を通過する fail-open を防ぐ）。
+ * **この防止線は本 CLI 経由の生成時のみに効く**（`finish-branch.sh` の merge gate
+ * 自体は `partial coverage:` 行を検証しない。`agent:` フィールドと同じ trust
+ * boundary。PR #2424 クロスレビュー P2）:
  *
  *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
  *     --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
@@ -97,6 +100,12 @@ function parseArgs(argv: string[]): Args {
   if (agent && reviewResultPath) {
     throw new Error(
       '--agent と --review-result は併用できません。どちらか一方を指定してください。',
+    );
+  }
+  if (agent && flags.has('partial-coverage-note')) {
+    throw new Error(
+      '--partial-coverage-note は --review-result 経由（reviewer を実際に起動した場合）でのみ意味を持ちます。' +
+        '--agent と併用しても無音で無視されるため、指定しないでください（#2424 クロスレビュー P3）。',
     );
   }
   if (!agent && !reviewResultPath) {
