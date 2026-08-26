@@ -10,6 +10,7 @@ import {
   buildAlertBudgetLine,
   buildBoardNoteComment,
   buildOpsLogComment,
+  checkRecentFetchFailed,
   checkRecentPending,
   resolveOpsLogIssueNumber,
   runBoardNote,
@@ -515,6 +516,98 @@ describe('checkRecentPending', () => {
       consecutivePending: false,
       reportsChecked: 1,
     });
+  });
+});
+
+// #2422: 観測コマンド自体の取得失敗（fetch-failed）が pending と同様に
+// 無期限に無音化するのを防ぐ escalation 判定。checkRecentPending と同じ
+// 「直近 lookback 件すべてで一致」設計を「- 取得失敗: ...」行に適用する。
+describe('checkRecentFetchFailed', () => {
+  const readFileImpl = () => '- 運行記録 issue: **#1234**\n';
+
+  type CommentSeed =
+    string | { body: string; authorAssociation?: string; author?: { login: string } };
+
+  function commentsResponse(seeds: CommentSeed[]) {
+    return JSON.stringify({
+      comments: seeds.map((seed) =>
+        typeof seed === 'string'
+          ? { body: seed, authorAssociation: 'OWNER' }
+          : { authorAssociation: 'OWNER', ...seed },
+      ),
+    });
+  }
+
+  it('直近2件の運行記録レポートで同一 check-id が連続で取得失敗なら true を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-25**\n\n- 取得失敗: dependabot-alerts, sentry-new\n',
+        '**night-watch 運行記録 2026-08-26**\n\n- 取得失敗: dependabot-alerts, sentry-new\n',
+      ]),
+    );
+    expect(checkRecentFetchFailed('sentry-new', { execFileImpl, readFileImpl })).toEqual({
+      consecutiveFetchFailed: true,
+      reportsChecked: 2,
+    });
+  });
+
+  it('直近1件だけ取得失敗が途切れていれば false を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-25**\n\n- 取得失敗: sentry-new\n',
+        '**night-watch 運行記録 2026-08-26**\n\n- 取得失敗: なし\n',
+      ]),
+    );
+    expect(checkRecentFetchFailed('sentry-new', { execFileImpl, readFileImpl })).toEqual({
+      consecutiveFetchFailed: false,
+      reportsChecked: 2,
+    });
+  });
+
+  it('「取得失敗: なし」の晩を含む記録は false と判定する', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-25**\n\n- 取得失敗: なし\n',
+        '**night-watch 運行記録 2026-08-26**\n\n- 取得失敗: なし\n',
+      ]),
+    );
+    expect(checkRecentFetchFailed('sentry-new', { execFileImpl, readFileImpl })).toEqual({
+      consecutiveFetchFailed: false,
+      reportsChecked: 2,
+    });
+  });
+
+  it('対象コメントが lookback 件に満たなければ fail-open で false を返す', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse(['**night-watch 運行記録 2026-08-26**\n\n- 取得失敗: sentry-new\n']),
+    );
+    expect(checkRecentFetchFailed('sentry-new', { execFileImpl, readFileImpl })).toEqual({
+      consecutiveFetchFailed: false,
+      reportsChecked: 1,
+    });
+  });
+
+  it('未知の check-id は例外を投げる', () => {
+    const execFileImpl = vi.fn(() => commentsResponse([]));
+    expect(() => checkRecentFetchFailed('evil', { execFileImpl, readFileImpl })).toThrow(
+      /未知の check-id/,
+    );
+  });
+
+  it('別の check-id の取得失敗とは独立して判定する（dependabot-alertsだけ失敗が途切れてもsentry-newには影響しない）', () => {
+    const execFileImpl = vi.fn(() =>
+      commentsResponse([
+        '**night-watch 運行記録 2026-08-25**\n\n- 取得失敗: dependabot-alerts, sentry-new\n',
+        '**night-watch 運行記録 2026-08-26**\n\n- 取得失敗: sentry-new\n',
+      ]),
+    );
+    expect(
+      checkRecentFetchFailed('sentry-new', { execFileImpl, readFileImpl }).consecutiveFetchFailed,
+    ).toBe(true);
+    expect(
+      checkRecentFetchFailed('dependabot-alerts', { execFileImpl, readFileImpl })
+        .consecutiveFetchFailed,
+    ).toBe(false);
   });
 });
 

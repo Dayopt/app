@@ -2,12 +2,18 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { CHECK_DEFINITIONS, runAlertSync } from './alert-issue.mjs';
+import { CHECK_DEFINITIONS, runAlertSync, runFetchFailureAlertSync } from './alert-issue.mjs';
 import { runBoardSync } from './board-issue.mjs';
 import { runDodCandidateSelect } from './dod-candidate.mjs';
 import { isLatestWorkflowRunPending } from './lib.mjs';
 import { runMorningBrief } from './morning-brief.mjs';
-import { CHECK_IDS, checkRecentPending, runBoardNote, runOpsLogReport } from './run-log.mjs';
+import {
+  CHECK_IDS,
+  checkRecentFetchFailed,
+  checkRecentPending,
+  runBoardNote,
+  runOpsLogReport,
+} from './run-log.mjs';
 
 /**
  * night-watch SKILL.md §自動パートの Step 1〜5 を GitHub Actions cron から
@@ -210,8 +216,41 @@ export function execObservationCommand(cmd, args, { execFileImpl = execFileSync,
     });
     return { ok: true, stdout };
   } catch (error) {
+    logObservationFailure(cmd, args, error);
     return { ok: false, error };
   }
+}
+
+// GitHub Actions の job log（private、常設運行記録 issue とは別の出力先）へ
+// 出す診断行の長さ上限。#2422: `sentry-new` の取得失敗が「取得失敗」とだけ
+// 運行記録に残り、原因（認証切れ・ネットワーク断・応答パース不能等）が
+// job log にも一切残らない診断性の欠陥を埋める。ここは public issue 本文
+// （enum 化された自由文字列拒否が必要な場所）ではないため、error.message /
+// error.stderr を要約せずそのまま出す。長さだけ切って runner ログの肥大を防ぐ。
+const OBSERVATION_ERROR_LOG_MAX_CHARS = 500;
+
+function truncateForLog(text) {
+  return text.length > OBSERVATION_ERROR_LOG_MAX_CHARS
+    ? `${text.slice(0, OBSERVATION_ERROR_LOG_MAX_CHARS)}…`
+    : text;
+}
+
+/** @param {string} cmd @param {string[]} args @param {unknown} error */
+function logObservationFailure(cmd, args, error) {
+  const classification = classifyGhError(error);
+  const detailParts = [];
+  const message = /** @type {{ message?: unknown, stderr?: unknown }} */ (error)?.message;
+  const stderr = /** @type {{ message?: unknown, stderr?: unknown }} */ (error)?.stderr;
+  if (typeof message === 'string' && message.length > 0) {
+    detailParts.push(`message=${truncateForLog(message)}`);
+  }
+  if (typeof stderr === 'string' && stderr.length > 0) {
+    detailParts.push(`stderr=${truncateForLog(stderr)}`);
+  }
+  const detail = detailParts.length > 0 ? ` — ${detailParts.join(' ')}` : '';
+  console.error(
+    `::warning::観測コマンドが失敗しました（分類: ${classification}）: ${cmd} ${args.join(' ')}${detail}`,
+  );
 }
 
 /**
@@ -433,6 +472,14 @@ function mapAlertResultToOutcome(checkId, alertResult) {
   return { checkId, outcome: 'skipped', reason: 'dedup-search-failed' };
 }
 
+// #2422: fetch-failed（観測コマンド自体の取得失敗）の escalation lookback。
+// checkRecentFetchFailed は「直近 lookback 件の過去レポートすべてで同一
+// check-id が取得失敗だったか」を見るため、今回の失敗と合わせた合計は
+// lookback + 1 晩連続。heavy-red/integration-red の pending escalation
+// （checkRecentPending、既定 lookback 2）と同じ既定値を踏襲し、#2422 が
+// 提案する既定 3 晩連続と一致させる。
+const FETCH_FAILURE_ESCALATION_LOOKBACK = 2;
+
 /**
  * 1 check-id の観測結果を Step 3 の起票判断へつなげ、`failed` /
  * `results` / `baselineRecommend` へ書き込む。
@@ -447,6 +494,35 @@ function processCheckOutcome(
 ) {
   if (outcome.status === 'fetch-failed') {
     failed.push(checkId);
+    // #2422: 観測コマンド自体の取得失敗が FETCH_FAILURE_ESCALATION_LOOKBACK
+    // 晩連続すると escalation issue を起票/追記する（heavy-red/integration-red
+    // の pending escalation と同型。詳細は checkRecentFetchFailed のコメント）。
+    let escalate = false;
+    try {
+      escalate = checkRecentFetchFailed(checkId, {
+        execFileImpl,
+        lookback: FETCH_FAILURE_ESCALATION_LOOKBACK,
+      }).consecutiveFetchFailed;
+    } catch (error) {
+      console.error(
+        `::warning::${checkId} の fetch-failure escalation 判定に失敗しました（escalate しません）:`,
+        error,
+      );
+    }
+    if (escalate) {
+      try {
+        const alertResult = runFetchFailureAlertSync({
+          checkId,
+          consecutiveNights: FETCH_FAILURE_ESCALATION_LOOKBACK + 1,
+          execFileImpl,
+          runStatePath,
+        });
+        results.push(mapAlertResultToOutcome(checkId, alertResult));
+      } catch (error) {
+        console.error(`::error::${checkId} の fetch-failure alert 投稿に失敗しました:`, error);
+        alertPostFailed.push(checkId);
+      }
+    }
     return;
   }
   if (outcome.status === 'green') {

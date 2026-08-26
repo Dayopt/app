@@ -8,9 +8,12 @@ import { GH_MAX_BUFFER_BYTES } from './lib.mjs';
 
 import {
   buildAlertBody,
+  buildFetchFailureAlertBody,
   findExistingAlertIssue,
+  findExistingFetchFailureAlertIssue,
   parseAlertArgs,
   runAlertSync,
+  runFetchFailureAlertSync,
 } from './alert-issue.mjs';
 
 /** `.find()` の結果が無ければ即失敗させる（テストの意図を明確にする）。 */
@@ -495,5 +498,166 @@ describe('runAlertSync', () => {
 
       expect(result).toEqual({ action: 'created', issueNumber: 901 });
     });
+  });
+});
+
+// #2422: 観測コマンド自体の取得失敗（fetch-failed）が N 晩連続した時の
+// escalation。red-alert（runAlertSync）と title prefix・reservation key が
+// 独立していることを固定する。
+describe('buildFetchFailureAlertBody', () => {
+  it('check-id・晩数・再現コマンドを本文へ入れる', () => {
+    const body = buildFetchFailureAlertBody({
+      checkId: 'sentry-new',
+      consecutiveNights: 3,
+      detectedAt: '2026-08-27T00:00:00Z',
+    });
+    expect(body).toContain('sentry-new');
+    expect(body).toContain('3 晩連続');
+    expect(body).toContain('sentry issue list dayopt');
+  });
+
+  it('未知の check-id は例外を投げる', () => {
+    expect(() =>
+      buildFetchFailureAlertBody({
+        checkId: 'evil',
+        consecutiveNights: 3,
+        detectedAt: '2026-08-27T00:00:00Z',
+      }),
+    ).toThrow(/未知の check-id/);
+  });
+
+  it('consecutiveNights が不正な値なら例外を投げる', () => {
+    const base = { checkId: 'sentry-new', detectedAt: '2026-08-27T00:00:00Z' };
+    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: 0 })).toThrow(
+      /consecutiveNights/,
+    );
+    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: 1.5 })).toThrow(
+      /consecutiveNights/,
+    );
+    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: -1 })).toThrow(
+      /consecutiveNights/,
+    );
+  });
+});
+
+describe('findExistingFetchFailureAlertIssue', () => {
+  it('nightwatch-fetch-failed prefix で検索し、red-alert 用 issue（nightwatch(...)）とは区別する', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      expect(args).toContain('nightwatch-fetch-failed(sentry-new): in:title');
+      return JSON.stringify([
+        {
+          number: 700,
+          title: 'nightwatch-fetch-failed(sentry-new): 観測が3晩連続で取得失敗',
+          labels: [{ name: 'type:chore' }, { name: 'area:operations' }],
+        },
+      ]);
+    });
+    expect(findExistingFetchFailureAlertIssue('sentry-new', { execFileImpl })?.number).toBe(700);
+  });
+
+  it('固定ラベルを持たない候補は採用しない', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([
+        { number: 701, title: 'nightwatch-fetch-failed(sentry-new): x', labels: [] },
+      ]),
+    );
+    expect(findExistingFetchFailureAlertIssue('sentry-new', { execFileImpl })).toBeNull();
+  });
+});
+
+describe('runFetchFailureAlertSync', () => {
+  let stateDir: string;
+  let runStatePath: string;
+
+  beforeEach(() => {
+    stateDir = mkdtempSync(join(tmpdir(), 'night-watch-fetch-failure-state-'));
+    runStatePath = join(stateDir, 'state.json');
+  });
+
+  afterEach(() => {
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+
+  it('既存が無ければ nightwatch-fetch-failed prefix で新規作成する', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      if (args[1] === 'list') return '[]';
+      if (args[1] === 'create') return 'https://github.com/Dayopt/dayopt/issues/800\n';
+      throw new Error(`unexpected: ${JSON.stringify(args)}`);
+    });
+
+    const result = runFetchFailureAlertSync({
+      checkId: 'dependabot-alerts',
+      consecutiveNights: 3,
+      detectedAt: '2026-08-27T00:00:00Z',
+      execFileImpl,
+      runStatePath,
+    });
+
+    expect(result).toEqual({ action: 'created', issueNumber: 800 });
+    const createCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'create');
+    const title = createCall[1][createCall[1].indexOf('--title') + 1];
+    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
+  });
+
+  it('既存 escalation issue があればコメントを追記する', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      if (args[1] === 'list')
+        return JSON.stringify([
+          {
+            number: 801,
+            title: 'nightwatch-fetch-failed(sentry-new): 観測が3晩連続で取得失敗',
+            labels: [{ name: 'type:chore' }, { name: 'area:operations' }],
+          },
+        ]);
+      if (args[1] === 'comment') return 'https://github.com/Dayopt/dayopt/issues/801\n';
+      throw new Error(`unexpected: ${JSON.stringify(args)}`);
+    });
+
+    const result = runFetchFailureAlertSync({
+      checkId: 'sentry-new',
+      consecutiveNights: 4,
+      execFileImpl,
+      runStatePath,
+    });
+
+    expect(result).toEqual({ action: 'commented', issueNumber: 801 });
+  });
+
+  it('reservation key は fetch-failed:<checkId> のため、同一runの red-alert 予約とは独立する', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      if (args[1] === 'list') return '[]';
+      if (args[1] === 'create') return 'https://github.com/Dayopt/dayopt/issues/802\n';
+      throw new Error(`unexpected: ${JSON.stringify(args)}`);
+    });
+
+    // 同一 run 内で同じ checkId の red-alert（runAlertSync）が既に予約枠を
+    // 使っていても、fetch-failure escalation は別 key のため cap されない。
+    runAlertSync({
+      checkId: 'sentry-new',
+      args: { count: '1', evidence: [] },
+      execFileImpl,
+      runStatePath,
+    });
+    const result = runFetchFailureAlertSync({
+      checkId: 'sentry-new',
+      consecutiveNights: 3,
+      execFileImpl,
+      runStatePath,
+    });
+
+    expect(result.action).not.toBe('capped');
+  });
+
+  it('dedup 検索が失敗したら起票せず skip する（fail closed）', () => {
+    const execFileImpl = vi.fn(() => {
+      throw new Error('gh: rate limited');
+    });
+    const result = runFetchFailureAlertSync({
+      checkId: 'sentry-new',
+      consecutiveNights: 3,
+      execFileImpl,
+      runStatePath,
+    });
+    expect(result).toEqual({ action: 'skipped', reason: 'dedup検索失敗のため起票見送り' });
   });
 });

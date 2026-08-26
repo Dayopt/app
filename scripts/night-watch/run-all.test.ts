@@ -646,4 +646,117 @@ describe('runNightWatch', () => {
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });
+
+  // #2422: 観測コマンド自体の取得失敗（fetch-failed）が heavy-red/integration-red
+  // の pending escalation と同型で、3 晩連続すると escalation issue へ起票する。
+  it('dependabot-alerts の取得失敗が3晩連続すると nightwatch-fetch-failed escalation issue を起票する', () => {
+    const rules = [
+      {
+        // 観測コマンド自体を失敗させる（fetch-failed 経路。実際の 403 と同型）
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
+        respond: () =>
+          new Error('HTTP 403: Resource not accessible by personal access token (fine-grained)'),
+      },
+      {
+        // checkRecentFetchFailed が読む常設運行記録 issue（#2216）のコメント。
+        // 直近2晩とも dependabot-alerts が取得失敗（今回とあわせて3晩連続）。
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
+        respond: () =>
+          JSON.stringify({
+            comments: [
+              {
+                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+              {
+                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+            ],
+          }),
+      },
+      {
+        // fetch-failure escalation の dedup 検索（既存 issue 無し → 新規作成）
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'create' &&
+          has(args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/850\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    const createCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+    );
+    expect(createCall).toBeDefined();
+    const title = createCall?.args[createCall.args.indexOf('--title') + 1];
+    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
+
+    // Step 5（運行記録）にも escalation issue の起票が「起票/追記」として残る
+    const opsLogCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    );
+    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
+    expect(body).toContain('取得失敗: dependabot-alerts');
+    expect(body).toContain('#850（dependabot-alerts）');
+  });
+
+  it('取得失敗が直近と連続していなければ escalation issue を起票しない（単発の transient）', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
+        respond: () => new Error('HTTP 403: Resource not accessible'),
+      },
+      {
+        // 直近の運行記録に dependabot-alerts の取得失敗が含まれない（今夜が初回）
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
+        respond: () =>
+          JSON.stringify({
+            comments: [
+              {
+                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: なし\n',
+                authorAssociation: 'OWNER',
+              },
+              {
+                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: なし\n',
+                authorAssociation: 'OWNER',
+              },
+            ],
+          }),
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    const escalationCreateCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed'),
+    );
+    expect(escalationCreateCall).toBeUndefined();
+  });
 });
