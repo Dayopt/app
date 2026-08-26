@@ -55,8 +55,10 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 
 発動条件: 危険地帯（認証 / 決済 / RLS・テナント境界 / DB migration）に触れるチケット、または実装 2 日超相当の大型チケット。チケット本文完成後、レーン起動前に実行する。
 
+**呼び出しは `scripts/ops/codex-input.mjs` wrapper 経由に一本化する**（2026-08-27、[#2421](https://github.com/Dayopt/dayopt/issues/2421)）。Codex は `--sandbox read-only` のため `api.github.com` へ到達できず、対象チケットが `Depends on: #N` 等で参照する他 issue を自力で読めない（#2419 で実測: `error connecting to api.github.com`）。wrapper が対象本文中の `#\d+` 参照を 1 段階だけ `gh issue view` で解決し、連結してから Codex へ渡す（未解決の参照は `#NNNN: 取得失敗` と明記されるだけで、呼び出し自体は失敗しない）。
+
 ```bash
-gh issue view <番号> --json title,body -q '.title + "\n\n" + .body' \
+node scripts/ops/codex-input.mjs issue <番号> \
   | codex exec --sandbox read-only \
     "敵対的レビュアーとして、この設計の穴・壊れるシナリオ・考慮漏れ・
      暗黙の前提を列挙せよ。重要度順に。"
@@ -79,10 +81,10 @@ codex exec --sandbox read-only \
 
 ### C. PR クロスレビュー（Ready 化後）
 
-**選別基準の正本は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）。ここでは複製しない。** 該当 PR が Ready ＋ CI green になったら:
+**選別基準の正本は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）。ここでは複製しない。** 該当 PR が Ready ＋ CI green になったら、A と同じ `codex-input.mjs` wrapper 経由で呼ぶ（PR 本文が参照する issue を 1 段階解決してから diff と連結する）:
 
 ```bash
-gh pr diff <番号> \
+node scripts/ops/codex-input.mjs pr <番号> \
   | codex exec --sandbox read-only \
     "この diff をレビューし、バグ・セキュリティ懸念・テナント境界の問題・
      エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。"
