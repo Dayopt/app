@@ -3,8 +3,8 @@
 /**
  * Destructive migration 検知 — PR に追加された `supabase/migrations/**` の新規ファイルを
  * 走査し、DROP TABLE / DROP COLUMN / TRUNCATE / 列の型変更（narrowing かどうかは
- * 機械では判定しないため、ALTER COLUMN ... TYPE を検知したら人間の確認対象として扱う）を
- * 検出する。
+ * 機械では判定しないため、ALTER COLUMN ... TYPE を検知したら人間の確認対象として扱う）/
+ * UPDATE backfill（#2433。migration 自身が実行する既存行の書き換え）を検出する。
  *
  * scope（#2272）: 検知の機械化だけを行う。検知結果を理由に merge を機械的にブロックする
  * gate 化・EXPLICIT AUTHORITY の執行そのものは #2175 の scope。このスクリプトはラベル付与
@@ -57,6 +57,28 @@ const PATTERNS = [
     re: /\bALTER\s+COLUMN\s+\S+\s+(?:SET\s+DATA\s+)?TYPE\b/i,
     label: '列の型変更（narrowing かどうかは目視確認が必要）',
   },
+  // #2433（台帳 第2段）: UPDATE backfill を検知対象へ追加する。第8段（色再割当て等）が
+  // 持ち込む「既存行の書き換え」は DROP と同じく forward-only で、code revert では戻らない
+  // （backup restore しかない）。それが検知されないまま通る状態を、来る前に塞ぐ。
+  //
+  // `topLevelOnly` — この repo の migration は大半が SECURITY DEFINER 関数の定義を含む
+  // （public に definer 関数が 126 個ある実測）。関数本体の UPDATE は RPC のロジックであって
+  // backfill ではないため、素朴に照合すると事実上すべての migration に発火し、checker が
+  // 「常に警告が出るから読まない」状態＝ノイズになる。関数・プロシージャの本体だけを
+  // 除外したテキストに対して照合する（`DO $$ ... $$` の匿名ブロックは migration 自身が
+  // 実行するので**除外しない**。ここを外すと `DO $$ BEGIN UPDATE ... END $$;` という
+  // backfill の書き方が丸ごと素通りする）。
+  //
+  // `SET` を必須にすることで `ON UPDATE CASCADE` / `FOR UPDATE` / `BEFORE UPDATE ON` /
+  // `CREATE POLICY ... FOR UPDATE` / `GRANT UPDATE ON` / `has_table_privilege(..,'UPDATE')`
+  // がすべて外れる。省略可能な別名（`UPDATE t AS x SET` / `UPDATE t x SET`）と
+  // `UPDATE ONLY t SET` は拾う。
+  {
+    kind: 'UPDATE_BACKFILL',
+    re: /\bUPDATE\s+(?:ONLY\s+)?[\w".]+(?:\s+(?:AS\s+)?(?!SET\b)[\w"]+)?\s+SET\b/i,
+    label: 'UPDATE backfill（既存行の書き換え。forward-only、code revert では戻らない）',
+    topLevelOnly: true,
+  },
 ];
 
 function stripSqlLineComments(sql) {
@@ -67,12 +89,59 @@ function stripSqlLineComments(sql) {
 }
 
 /**
+ * 関数・プロシージャ本体の dollar-quoted ブロック（`$$ ... $$` / `$tag$ ... $tag$`）を
+ * 空白へ潰す。`topLevelOnly` パターンだけがこのテキストを使う。
+ *
+ * **`DO $$ ... $$` は潰さない。** 匿名ブロックは migration 自身がその場で実行する文であり、
+ * 中の UPDATE は紛れもなく backfill だから。潰す対象は、直前（直近の `;` 以降）に
+ * `CREATE [OR REPLACE] FUNCTION|PROCEDURE` が現れる dollar-quote に限る。
+ *
+ * 行番号を保つため、潰した範囲の改行はそのまま残す（呼び出し側の offset -> line 逆引きが
+ * 壊れないようにするため。文字数も 1:1 で保つ）。
+ *
+ * @param {string} sql 行コメント除去済みの SQL
+ * @returns {string} 同じ長さ・同じ改行位置のテキスト
+ */
+function blankRoutineBodies(sql) {
+  const out = sql.split('');
+  const openRe = /\$([A-Za-z_][A-Za-z0-9_]*)?\$/g;
+  let match;
+
+  while ((match = openRe.exec(sql)) !== null) {
+    const tag = match[0];
+    const bodyStart = match.index + tag.length;
+    const closeIndex = sql.indexOf(tag, bodyStart);
+    if (closeIndex === -1) break; // 閉じない dollar-quote は諦める（壊れた SQL）
+
+    // 直近の `;` 以降を「この文の先頭部分」とみなし、routine 定義かどうかを判定する。
+    const stmtStart = sql.lastIndexOf(';', match.index) + 1;
+    const head = sql.slice(stmtStart, match.index);
+    const isRoutineBody = /\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i.test(head);
+
+    if (isRoutineBody) {
+      for (let i = bodyStart; i < closeIndex; i += 1) {
+        if (out[i] !== '\n') out[i] = ' ';
+      }
+    }
+
+    // 閉じ tag の先へ進める（本体内の `$$` を開始として誤検出しないため）
+    openRe.lastIndex = closeIndex + tag.length;
+  }
+
+  return out.join('');
+}
+
+/**
  * @param {string} sql migration ファイルの内容
  * @returns {{ kind: string, label: string, line: number, snippet: string }[]}
  */
 export function detectDestructivePatterns(sql) {
   const cleaned = stripSqlLineComments(sql);
+  // `topLevelOnly` パターン専用のテキスト。routine 本体だけを空白へ潰す（長さ・改行位置は
+  // `cleaned` と 1:1 のまま）ので、行分割・offset -> line 逆引きは両者で共有できる。
+  const topLevelCleaned = blankRoutineBodies(cleaned);
   const lines = cleaned.split('\n');
+  const topLevelLines = topLevelCleaned.split('\n');
   const findings = [];
   const seen = new Set();
 
@@ -84,8 +153,12 @@ export function detectDestructivePatterns(sql) {
   };
 
   lines.forEach((line, index) => {
-    for (const { kind, re, label } of PATTERNS) {
-      if (re.test(line)) {
+    for (const { kind, re, label, topLevelOnly } of PATTERNS) {
+      // 判定は scope に応じたテキストで行い、**表示する snippet は常に元の行**にする
+      // （潰した空白を人間へ見せても意味が無い。マッチした時点でその範囲は非潰しなので、
+      // 元の行を出しても取り違えは起きない）。
+      const subject = topLevelOnly ? topLevelLines[index] : line;
+      if (re.test(subject)) {
         record(kind, label, index + 1, line);
       }
     }
@@ -97,9 +170,13 @@ export function detectDestructivePatterns(sql) {
   // 含む行へ逆引きする（近似ではなく厳密な offset -> line マッピング）。
   const lineOffsets = [];
   let flattened = '';
+  let flattenedTopLevel = '';
   lines.forEach((line, index) => {
     lineOffsets.push({ offset: flattened.length, line: index + 1 });
     flattened += `${line} `;
+    // `blankRoutineBodies` が長さを保つため、両者の offset は常に一致する
+    // （= `lineOffsets` を共有できる）。
+    flattenedTopLevel += `${topLevelLines[index]} `;
   });
   const lineForOffset = (offset) => {
     let result = 1;
@@ -110,12 +187,13 @@ export function detectDestructivePatterns(sql) {
     return result;
   };
 
-  for (const { kind, re, label } of PATTERNS) {
+  for (const { kind, re, label, topLevelOnly } of PATTERNS) {
+    const subject = topLevelOnly ? flattenedTopLevel : flattened;
     const globalRe = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
-    let match = globalRe.exec(flattened);
+    let match = globalRe.exec(subject);
     while (match !== null) {
       record(kind, label, lineForOffset(match.index), match[0]);
-      match = globalRe.exec(flattened);
+      match = globalRe.exec(subject);
     }
   }
 
