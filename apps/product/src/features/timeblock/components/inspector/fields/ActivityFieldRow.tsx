@@ -7,12 +7,11 @@
  * 2 つの呼び出し元で見た目の重さが異なるため `variant` で切り替える（#2298）:
  * - `heading`（既定）: 見出し相当の重さ。`ActivityTimeblockCreateForm`（activity-filter の
  *   ブロック作成 popover）はこのフォームの唯一の識別要素として使うため、この重さを保つ
- * - `compact`: 時間フィールド（DateTimeSection）直下に置く軽量なタップ要素。
- *   `TimeblockEditor` から描画される（Plan/Record エディタ）
+ * - `compact`: Inspector パネルのヘッダー行に置く軽量なタップ要素。
+ *   `TimeblockInspectorForm` から描画される（Plan/Record エディタ、#2430でヘッダー行へ移動）
  *
- * 「…」メニュー・閉じるボタンはこのコンポーネントの責務ではない。Timeblock エディタでは
- * パネル最上部で独立して常時表示する InspectorHeaderActions が担う（アクティビティ表示を
- * 移動・縮小しても、それらの導線は動かない）。
+ * 「…」メニュー・閉じるボタンはこのコンポーネントの責務ではない。同じヘッダー行に並ぶ
+ * InspectorHeaderActions が担う（アクティビティ表示を移動・縮小しても、それらの導線は動かない）。
  *
  * アクティビティデータの解決と作成は上位が担当。
  *
