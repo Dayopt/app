@@ -2,7 +2,7 @@
 -- RLS ポリシー一覧（読み物用 — CLIでは使用しない）
 -- ============================================================
 -- 全ユーザーデータテーブルで RLS が有効
--- 最終同期日: 2026-08-09
+-- 最終同期日: 2026-08-27
 -- 同期対象 migration:
 --   - 20260318150000_add_entries_soft_delete.sql
 --   - 20260323000000_fix_entries_soft_delete_rls.sql
@@ -26,6 +26,7 @@
 --   - 20260802013954_add_product_events.sql
 --   - 20260809015344_optimize_soft_delete_rls_initplan.sql
 --   - 20260812232852_write_fence_control.sql
+--   - 20260826234911_add_ledger_undo_substrate.sql
 --
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
@@ -86,5 +87,15 @@
 --   mutation は service-role のみ。sync_token は provider cursor であり credential ではない
 -- ■ product_events: browser client は明示 deny。service_role は INSERT のみ。
 --   SELECT / UPDATE / DELETE は DB owner の運用 query / retention job に限定する
+
+-- ■ undo_receipts / undo_receipt_effects / undo_receipt_field_changes（#2433）:
+--   RLS 有効。owner-scoped の **SELECT policy だけ**を持ち、INSERT/UPDATE/DELETE の
+--   policy は作らない（書き込みは第3段の typed SECURITY DEFINER RPC 専用）。
+--   **authenticated への GRANT は第2段では一切出していない**（service_role のみ）。
+--   policy はあるが GRANT が無いため browser client からは 42501 になる。これは
+--   片落ちではなく意図 — public schema は PostgREST が自動公開するので、読み手が
+--   1 つも無いうちに SELECT を与えると列の形が公開契約として確定してしまう。
+--   読みの開放は第3段で GRANT 1 行を足すだけ（additive）。
+--   契約は undo-substrate-schema.integration.test.ts が固定する
 
 -- 詳細は baseline.sql の RLS Policies セクションを参照
