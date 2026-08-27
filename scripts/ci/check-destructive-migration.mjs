@@ -74,6 +74,20 @@ const PATTERNS = [
   // `CREATE POLICY ... FOR UPDATE` / `GRANT UPDATE ON` / `has_table_privilege(..,'UPDATE')`
   // がすべて外れる。省略可能な別名（`UPDATE t AS x SET` / `UPDATE t x SET`）と
   // `UPDATE ONLY t SET` は拾う。
+  // 同じ「既存行の書き換え」を別構文で書いたもの。第8段の色再割当ては upsert 形で
+  // 書かれうるため、UPDATE だけ塞いでも素通りする（push 前反証の risk-reviewer 指摘）。
+  {
+    kind: 'UPSERT_BACKFILL',
+    re: /\bON\s+CONFLICT\b[\s\S]{0,200}?\bDO\s+UPDATE\s+SET\b/i,
+    label: 'upsert backfill（ON CONFLICT DO UPDATE SET。既存行を書き換える）',
+    topLevelOnly: true,
+  },
+  {
+    kind: 'MERGE_BACKFILL',
+    re: /\bMERGE\s+INTO\b[\s\S]{0,400}?\bWHEN\s+MATCHED\b[\s\S]{0,80}?\bTHEN\s+(?:UPDATE\s+SET|DELETE)\b/i,
+    label: 'MERGE backfill（WHEN MATCHED THEN UPDATE / DELETE。既存行を書き換える）',
+    topLevelOnly: true,
+  },
   {
     kind: 'UPDATE_BACKFILL',
     re: /\bUPDATE\s+(?:ONLY\s+)?[\w".]+(?:\s+(?:AS\s+)?(?!SET\b)[\w"]+)?\s+SET\b/i,
@@ -90,76 +104,107 @@ function stripSqlLineComments(sql) {
 }
 
 /**
- * ブロックコメント（`/* ... *' + '/`）を空白へ潰す。改行と文字数を保つので offset は動かない。
+ * `topLevelOnly` パターン用のテキストを 1 パスで作る。
  *
- * 行コメント除去（`stripSqlLineComments`）とは別関数にしてある。こちらは
- * `topLevelOnly` パターン専用のテキストにだけ適用する — 既存パターンの判定材料を
- * 変えると検知が弱くなる方向へ動きうるため（コメント内の DROP を拾わなくなる）。
+ * 「migration 自身がその場で実行する SQL」だけを残し、それ以外（コメント・文字列リテラル・
+ * 関数本体）を空白へ潰す。**文字数と改行位置を 1:1 で保つ**ので、呼び出し側の
+ * offset -> line 逆引きは元テキストと共有できる。
  *
- * @param {string} sql
+ * 層を重ねた正規表現ではなく単一の走査にしてある。前の実装はブロックコメント除去と
+ * dollar-quote 判定を別パスでやっており、**dollar-quote の中にある `/*` を本物のコメント
+ * 開始として扱ってしまう**穴があった（閉じ `*` + `/` が無ければファイル末尾まで潰れ、後続の
+ * backfill が丸ごと消える）。状態を 1 つ持って左から舐めれば、その取り違えは構造的に起きない。
+ *
+ * 残すもの / 潰すもの:
+ * - `-- 行コメント` … 潰す
+ * - `/* ブロックコメント *' + '/` … 潰す。**閉じていなければ潰さない**（壊れた SQL で
+ *   検知を失うより、余計に拾って人間に見せる方が安全側）
+ * - `'文字列リテラル'` … 潰す（リテラル中の "UPDATE ... SET" で誤検知しないため）
+ * - `$$ ... $$` … **匿名 `DO` ブロックだけ残す**。DO は migration がその場で実行する文なので
+ *   中の UPDATE は本物の backfill。関数・プロシージャ本体は RPC のロジックなので潰す
+ *
+ * @param {string} sql 生の migration テキスト
  * @returns {string} 同じ長さ・同じ改行位置のテキスト
  */
-function stripSqlBlockComments(sql) {
+function maskForTopLevelScan(sql) {
   const out = sql.split('');
-  const openRe = /\/\*/g;
-  let match;
-
-  while ((match = openRe.exec(sql)) !== null) {
-    const closeIndex = sql.indexOf('*' + '/', match.index + 2);
-    const end = closeIndex === -1 ? sql.length : closeIndex + 2;
-    for (let i = match.index; i < end; i += 1) {
+  const blank = (from, to) => {
+    for (let i = from; i < to && i < out.length; i += 1) {
       if (out[i] !== '\n') out[i] = ' ';
     }
-    openRe.lastIndex = end;
-  }
+  };
 
-  return out.join('');
-}
+  let i = 0;
+  // 直近の `;` の位置。dollar-quote が匿名 DO ブロックかを「文の先頭」で判定するのに使う。
+  let stmtStart = 0;
 
-/**
- * **匿名 `DO` ブロック以外**の dollar-quoted 本体（`$$ ... $$` / `$tag$ ... $tag$`）を
- * 空白へ潰す。`topLevelOnly` パターンだけがこのテキストを使う。
- *
- * 判定を「routine 定義なら潰す」ではなく「**`DO` ブロックでなければ潰す**」と反転して
- * ある。前者は文の先頭部分に `CREATE FUNCTION` という文字列が**含まれるか**で見るため、
- * 直前のコメントや別の文の残骸に同じ語があるだけで誤判定した（risk-reviewer 指摘、
- * `/* CREATE FUNCTION ... *' + '/` の直後に `DO $$ ... UPDATE ... $$` を置くと backfill が
- * 素通りする実測あり）。後者は文の**先頭**に錨を打つので、含有では騙せない。
- *
- * `DO` を残すのが要点。匿名ブロックは migration 自身がその場で実行する文であり、中の
- * UPDATE は紛れもなく backfill だから。ここを潰すと backfill を `DO $$ ... $$` で包むだけで
- * 検知を回避できる。逆に `DO` 以外の dollar-quote（関数・プロシージャ本体、ただの文字列
- * リテラル）は「今実行される UPDATE」ではないので潰してよい。
- *
- * 行番号を保つため、潰した範囲の改行はそのまま残す（呼び出し側の offset -> line 逆引きが
- * 壊れないようにするため。文字数も 1:1 で保つ）。
- *
- * @param {string} sql 行コメント・ブロックコメント除去済みの SQL
- * @returns {string} 同じ長さ・同じ改行位置のテキスト
- */
-function blankNonAnonymousBlockBodies(sql) {
-  const out = sql.split('');
-  const openRe = /\$([A-Za-z_][A-Za-z0-9_]*)?\$/g;
-  let match;
+  while (i < sql.length) {
+    const two = sql.slice(i, i + 2);
 
-  while ((match = openRe.exec(sql)) !== null) {
-    const tag = match[0];
-    const bodyStart = match.index + tag.length;
-    const closeIndex = sql.indexOf(tag, bodyStart);
-    if (closeIndex === -1) break; // 閉じない dollar-quote は諦める（壊れた SQL）
-
-    // 直近の `;` 以降がこの文。**先頭**が DO なら匿名ブロック。
-    const stmtStart = sql.lastIndexOf(';', match.index) + 1;
-    const isAnonymousBlock = /^\s*DO\b/i.test(sql.slice(stmtStart, match.index));
-
-    if (!isAnonymousBlock) {
-      for (let i = bodyStart; i < closeIndex; i += 1) {
-        if (out[i] !== '\n') out[i] = ' ';
-      }
+    if (two === '--') {
+      const nl = sql.indexOf('\n', i);
+      const stop = nl === -1 ? sql.length : nl;
+      blank(i, stop);
+      i = stop;
+      continue;
     }
 
-    // 閉じ tag の先へ進める（本体内の `$$` を開始として誤検出しないため）
-    openRe.lastIndex = closeIndex + tag.length;
+    if (two === '/' + '*') {
+      const close = sql.indexOf('*' + '/', i + 2);
+      if (close === -1) {
+        // 閉じないブロックコメント。潰すとファイル末尾までの検知を失うので、
+        // コメントとして扱わずそのまま進む（安全側 = 検知を残す）。
+        i += 2;
+        continue;
+      }
+      blank(i, close + 2);
+      i = close + 2;
+      continue;
+    }
+
+    if (sql[i] === "'") {
+      // 単一引用符の文字列。'' はエスケープされた引用符。
+      let j = i + 1;
+      while (j < sql.length) {
+        if (sql[j] === "'") {
+          if (sql[j + 1] === "'") {
+            j += 2;
+            continue;
+          }
+          break;
+        }
+        j += 1;
+      }
+      const stop = Math.min(j + 1, sql.length);
+      blank(i + 1, stop - 1);
+      i = stop;
+      continue;
+    }
+
+    const dollar = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(sql.slice(i));
+    if (dollar) {
+      const tag = dollar[0];
+      const bodyStart = i + tag.length;
+      const close = sql.indexOf(tag, bodyStart);
+      if (close === -1) {
+        i += tag.length;
+        continue;
+      }
+      // 文の**先頭**が DO なら匿名ブロック。含有ではなく先頭で見るので、直前のコメントや
+      // 別の文に同じ語があっても騙されない。
+      //
+      // 判定は **`out`（ここまでマスク済みのテキスト）** に対して行う。生の `sql` を見ると、
+      // 直前のブロックコメントが未除去のまま先頭一致に割り込み、`/* ... */\nDO $$` を
+      // 「DO で始まっていない」と誤判定する（実測で再現）。`out` なら comment は既に
+      // 空白へ潰れているので、先頭アンカーが期待どおり効く。
+      const isAnonymousBlock = /^\s*DO\b/i.test(out.slice(stmtStart, i).join(''));
+      if (!isAnonymousBlock) blank(bodyStart, close);
+      i = close + tag.length;
+      continue;
+    }
+
+    if (sql[i] === ';') stmtStart = i + 1;
+    i += 1;
   }
 
   return out.join('');
@@ -174,7 +219,7 @@ export function detectDestructivePatterns(sql) {
   // `topLevelOnly` パターン専用のテキスト。ブロックコメントと、匿名 DO ブロック以外の
   // dollar-quoted 本体を空白へ潰す（長さ・改行位置は `cleaned` と 1:1 のまま）ので、
   // 行分割・offset -> line 逆引きは両者で共有できる。
-  const topLevelCleaned = blankNonAnonymousBlockBodies(stripSqlBlockComments(cleaned));
+  const topLevelCleaned = maskForTopLevelScan(sql);
   const lines = cleaned.split('\n');
   const topLevelLines = topLevelCleaned.split('\n');
   const findings = [];
@@ -203,32 +248,39 @@ export function detectDestructivePatterns(sql) {
   // ように句が複数行へ折り返されることがあり、行単位の検査だけでは false negative になる。
   // 各行の連結オフセットを記録した上で空白正規化した全文にも一度マッチさせ、マッチ開始位置を
   // 含む行へ逆引きする（近似ではなく厳密な offset -> line マッピング）。
-  const lineOffsets = [];
-  let flattened = '';
-  let flattenedTopLevel = '';
-  lines.forEach((line, index) => {
-    lineOffsets.push({ offset: flattened.length, line: index + 1 });
-    flattened += `${line} `;
-    // 上の 2 関数が長さを保つため、両者の offset は常に一致する
-    // （= `lineOffsets` を共有できる）。
-    flattenedTopLevel += `${topLevelLines[index]} `;
-  });
-  const lineForOffset = (offset) => {
+  // **2 つのテキストで offset を共有しない。** `stripSqlLineComments` は `--` 以降を
+  // 削除して行を**短くする**ため、`cleaned` と `maskForTopLevelScan(sql)`（生の長さを
+  // 保つ）では同じ行でも長さが違う。offset 表を共有すると topLevel 側のマッチ位置が
+  // ずれ、ファイルの行数を超える行番号を報告する（実測で確認）。行**数**は一致するので、
+  // 行単位の突き合わせだけは index で共有できる。
+  const buildFlattened = (sourceLines) => {
+    const offsets = [];
+    let text = '';
+    sourceLines.forEach((line, index) => {
+      offsets.push({ offset: text.length, line: index + 1 });
+      text += `${line} `;
+    });
+    return { text, offsets };
+  };
+  const lineForOffsetIn = (offsets, offset) => {
     let result = 1;
-    for (const entry of lineOffsets) {
+    for (const entry of offsets) {
       if (entry.offset > offset) break;
       result = entry.line;
     }
     return result;
   };
 
+  const flat = buildFlattened(lines);
+  const flatTopLevel = buildFlattened(topLevelLines);
+
   for (const { kind, re, label, topLevelOnly } of PATTERNS) {
-    const subject = topLevelOnly ? flattenedTopLevel : flattened;
+    const { text, offsets } = topLevelOnly ? flatTopLevel : flat;
     const globalRe = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
-    let match = globalRe.exec(subject);
+    let match = globalRe.exec(text);
     while (match !== null) {
-      record(kind, label, lineForOffset(match.index), match[0]);
-      match = globalRe.exec(subject);
+      record(kind, label, lineForOffsetIn(offsets, match.index), match[0]);
+      match = globalRe.exec(text);
     }
   }
 

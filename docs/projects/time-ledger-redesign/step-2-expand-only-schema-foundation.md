@@ -38,16 +38,17 @@ migration のコメントが正本で、ここでは複製しない。
 
 境界を曖昧にすると後続段が「もう敷いてあるはず」と誤認するので、明示する。
 
-| 残したもの                                                                        | 担当段                                                                                             | 本段での扱い                                                                     |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Undo RPC 本体・TTL の具体値・権限交差の判定・TTL / revoke の transaction 内再検証 | 第3段（[#2434](https://github.com/Dayopt/dayopt/issues/2434)、シナリオ 4・5）                      | テーブルは敷いたが書き込み経路を作っていない                                     |
-| `field_name` の allowlist CHECK                                                   | 第3段（シナリオ 6）                                                                                | 行が 0 件の今なら後から CHECK を足すのが完全に安全なため、RPC と同じ PR で入れる |
-| `authenticated` への読み取り開放                                                  | 第3段                                                                                              | policy は確定させたが GRANT を出していない（下記）                               |
-| Proposal のテーブル・列                                                           | [#2399](https://github.com/Dayopt/dayopt/issues/2399)（overview.md #15 が委譲済み、シナリオ 7・8） | 一切作っていない。状態機械の契約は凍結済みだが、形状を先に敷くと委譲と矛盾する   |
-| canonical projection の view / RPC 本体                                           | 第7段                                                                                              | 命名・ACL 規約と guard だけを敷いた                                              |
-| 旧 version RPC の `authenticated` EXECUTE                                         | 第7段（シナリオ 10 の残り半分）                                                                    | guard の対象外（下記）                                                           |
-| `records.plan_id` の扱い                                                          | overview.md #10 の実装段                                                                           | 触っていない                                                                     |
-| 不可逆 cleanup（DROP・列の意味変更・UPDATE backfill）                             | 第8段（[#2439](https://github.com/Dayopt/dayopt/issues/2439)、`EXPLICIT AUTHORITY`）               | expand-only の定義そのものとして除外                                             |
+| 残したもの                                                                        | 担当段                                                                                             | 本段での扱い                                                                                               |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Undo RPC 本体・TTL の具体値・権限交差の判定・TTL / revoke の transaction 内再検証 | 第3段（[#2434](https://github.com/Dayopt/dayopt/issues/2434)、シナリオ 4・5）                      | テーブルは敷いたが書き込み経路を作っていない                                                               |
+| **effect が欠損した receipt の扱い**（下記）                                      | 第3段（[#2434](https://github.com/Dayopt/dayopt/issues/2434)）                                     | schema 側は正しい。RPC 側で「Undo 可能一覧から除外する」か「apply 時に effect 件数を再検証する」かを決める |
+| `field_name` の allowlist CHECK                                                   | 第3段（シナリオ 6）                                                                                | 行が 0 件の今なら後から CHECK を足すのが完全に安全なため、RPC と同じ PR で入れる                           |
+| `authenticated` への読み取り開放                                                  | 第3段                                                                                              | policy は確定させたが GRANT を出していない（下記）                                                         |
+| Proposal のテーブル・列                                                           | [#2399](https://github.com/Dayopt/dayopt/issues/2399)（overview.md #15 が委譲済み、シナリオ 7・8） | 一切作っていない。状態機械の契約は凍結済みだが、形状を先に敷くと委譲と矛盾する                             |
+| canonical projection の view / RPC 本体                                           | 第7段                                                                                              | 命名・ACL 規約と guard だけを敷いた                                                                        |
+| 旧 version RPC の `authenticated` EXECUTE                                         | 第7段（シナリオ 10 の残り半分）                                                                    | guard の対象外（下記）                                                                                     |
+| `records.plan_id` の扱い                                                          | overview.md #10 の実装段                                                                           | 触っていない                                                                                               |
+| 不可逆 cleanup（DROP・列の意味変更・UPDATE backfill）                             | 第8段（[#2439](https://github.com/Dayopt/dayopt/issues/2439)、`EXPLICIT AUTHORITY`）               | expand-only の定義そのものとして除外                                                                       |
 
 ## 判断が要った 3 点
 
@@ -80,6 +81,28 @@ GRANT が無い状態は片落ちではなく、**GRANT と RLS が別々に判�
 現行機能が壊れる。guard は `anon` / `PUBLIC` 到達のみを機械で塞ぎ、旧 version RPC の
 `authenticated` 権限（シナリオ 10 の残り半分）は「version ごとに exact signature で
 REVOKE / GRANT を明示する」規約 + cutover 時のレビューで担保する。
+
+## 第3段への申し送り: effect が欠損した receipt
+
+`undo_receipt_effects` → `plans` / `records` の複合 FK は `ON DELETE CASCADE`。resource が
+**物理削除**されると effect 行と配下の field_changes だけが消え、**receipt 本体は残る**。
+
+Plan / Record は通常 soft delete（`deleted_at`）だが、物理削除の経路は実在する
+（account-preserving purge、および本段の integration test 自身が
+`admin.from('plans').delete()` で実演している）。
+
+**この CASCADE 設計自体は正しい**（消えた resource を指す effect を残す方が危険）。問題は
+第3段の Undo RPC がこの欠損を検査しない場合に起きる:
+
+- ユーザーが Undo を押しても**何も戻らないまま成功として返る**（silent no-op）
+- 複数 resource 操作の一部だけが戻る部分適用になる（T4 の all-or-nothing 契約に反する）
+
+**第3段で決めること**: 「effect が 1 件も無い receipt を Undo 可能一覧から除外する」か
+「apply 時に effect 件数を記録時と再照合して不一致なら失敗させる」か。後者を採るなら
+receipt に件数を持たせる列が要るので、その時点で additive に足す（本段では足さない —
+どちらを採るか決まっていない列を先に敷くと、使われないまま残る）。
+
+（push 前反証 `risk-reviewer` → 内製クロスレビュー P2 の指摘。schema 変更は不要と確認済み）
 
 ## guard が現在 0 件であることについて
 

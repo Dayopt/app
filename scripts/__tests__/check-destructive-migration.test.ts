@@ -166,6 +166,8 @@ describe('checkFiles', () => {
 describe('detectDestructivePatterns — UPDATE backfill (#2433)', () => {
   const updateFindings = (sql: string) =>
     detectDestructivePatterns(sql).filter((f) => f.kind === 'UPDATE_BACKFILL');
+  const backfillFindings = (sql: string) =>
+    detectDestructivePatterns(sql).filter((f) => /BACKFILL$/.test(f.kind));
 
   describe('検知する（top-level の backfill）', () => {
     it.each([
@@ -273,6 +275,84 @@ describe('detectDestructivePatterns — UPDATE backfill (#2433)', () => {
 
     it('ブロックコメントで囲った UPDATE は検知しない', () => {
       expect(updateFindings('/* UPDATE public.plans SET title = 1; */')).toHaveLength(0);
+    });
+  });
+
+  describe('別構文で書かれた backfill（クロスレビュー P3）', () => {
+    // 第8段の色再割当ては upsert 形で書かれうる。UPDATE だけ塞いでも素通りするので
+    // 同じ「既存行の書き換え」の class として一緒に閉じる。
+    it.each([
+      [
+        'upsert backfill',
+        "INSERT INTO public.categories (id, color) VALUES ('x', 'y') ON CONFLICT (id) DO UPDATE SET color = excluded.color;",
+        'UPSERT_BACKFILL',
+      ],
+      [
+        'MERGE backfill (UPDATE)',
+        'MERGE INTO public.categories t USING src s ON t.id = s.id WHEN MATCHED THEN UPDATE SET color = s.color;',
+        'MERGE_BACKFILL',
+      ],
+      [
+        'MERGE backfill (DELETE)',
+        'MERGE INTO public.plans t USING src s ON t.id = s.id WHEN MATCHED THEN DELETE;',
+        'MERGE_BACKFILL',
+      ],
+    ])('%s を検知する', (_name, sql, kind) => {
+      const findings = backfillFindings(sql);
+      expect(findings).toHaveLength(1);
+      expect(findings[0]).toMatchObject({ kind });
+    });
+
+    it.each([
+      [
+        'ON CONFLICT DO NOTHING',
+        "INSERT INTO public.t (id) VALUES ('x') ON CONFLICT (id) DO NOTHING;",
+      ],
+      [
+        '関数本体の upsert（RPC のロジック）',
+        'CREATE FUNCTION public.f() RETURNS void AS $$ BEGIN INSERT INTO t VALUES (1) ON CONFLICT (id) DO UPDATE SET c = 1; END $$;',
+      ],
+    ])('%s は検知しない', (_name, sql) => {
+      expect(backfillFindings(sql)).toHaveLength(0);
+    });
+  });
+
+  describe('マスク処理の穴（クロスレビュー P3・前 round の regression）', () => {
+    // 前 round の実装はブロックコメント除去と dollar-quote 判定を別パスでやっており、
+    // dollar-quote の**中**にある `/*` を本物のコメント開始として扱っていた。閉じ記号が
+    // 無いとファイル末尾まで潰れ、後続の backfill が丸ごと消える。
+    it('DO ブロック内の閉じない /* が後続の backfill を消さない', () => {
+      const sql = [
+        'DO $$',
+        'BEGIN',
+        "  PERFORM log_note('/*');",
+        '  UPDATE public.categories SET color = 1;',
+        'END $$;',
+      ].join('\n');
+      expect(updateFindings(sql)).toHaveLength(1);
+    });
+
+    it('文字列リテラル中の UPDATE ... SET は検知しない', () => {
+      expect(
+        updateFindings(
+          "INSERT INTO public.audit (note) VALUES ('UPDATE public.plans SET title = 1');",
+        ),
+      ).toHaveLength(0);
+    });
+
+    it('報告する行番号がファイルの行数を超えない', () => {
+      // 行コメント除去は行を**短くする**ため、マスク済みテキストと offset 表を共有すると
+      // マッチ位置がずれて存在しない行を報告する（実測で確認）。
+      const sql = [
+        '-- 長い行コメント: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        'UPDATE public.profiles',
+        '  SET full_name = username',
+        '  WHERE username IS NOT NULL;',
+      ].join('\n');
+      const findings = updateFindings(sql);
+      expect(findings).toHaveLength(1);
+      expect(findings[0]!.line).toBeLessThanOrEqual(sql.split('\n').length);
+      expect(findings[0]).toMatchObject({ line: 2 });
     });
   });
 
