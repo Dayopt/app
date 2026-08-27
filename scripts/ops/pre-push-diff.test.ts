@@ -126,11 +126,14 @@ describe('refHasTrackedDiff', () => {
     );
   });
 
-  it('remoteSha が ZERO なら origin/main を base として解決する', () => {
+  it('remoteSha が ZERO なら merge-base(origin/main, local) を base として解決する', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
-      if (args[0] === 'rev-parse') return 'origin-main-sha\n';
+      if (args[0] === 'merge-base') {
+        expect(args.slice(1)).toEqual(['origin/main', 'local']);
+        return 'merge-base-sha\n';
+      }
       if (args[0] === 'rev-list') {
-        expect(args[1]).toBe('origin-main-sha..local');
+        expect(args[1]).toBe('merge-base-sha..local');
         return 'c1\n';
       }
       if (args[0] === 'diff') return '';
@@ -139,12 +142,36 @@ describe('refHasTrackedDiff', () => {
     expect(refHasTrackedDiff({ localSha: 'local', remoteSha: ZERO }, { execFileImpl })).toBe(false);
   });
 
-  it('origin/main が解決できなければ true（安全側、skipしない）', () => {
+  it('merge-base が解決できなければ true（安全側、skipしない）', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
-      if (args[0] === 'rev-parse') throw new Error('unknown revision');
+      if (args[0] === 'merge-base') throw new Error('unknown revision');
       throw new Error('should not reach here');
     });
     expect(refHasTrackedDiff({ localSha: 'local', remoteSha: ZERO }, { execFileImpl })).toBe(true);
+  });
+
+  // delta re-review 指摘（P2、PR #2445）: フォールバック base に origin/main の
+  // 現在の tip を直接使うと、worktree 作成後に main が進むたび（本 repo は
+  // 1日約7merge）に、branch自身は空コミットのみでも「main側で積まれた
+  // 無関係な変更」までrange diffに混ざり、#2432のDoDが実運用でほぼ満たされ
+  // なくなっていた。merge-base を使えば main の先行と無関係にbranch自身の
+  // 追加分だけを見られることを固定する。
+  it('origin/main がbranch分岐後に先行していても、branch自身が空コミットのみならskipされる', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'merge-base') {
+        // origin/main は既に何本もmergeされ先行しているが、merge-baseは
+        // このbranchが実際に分岐した古い時点を正しく返す。
+        expect(args.slice(1)).toEqual(['origin/main', 'local']);
+        return 'branch-point-sha\n';
+      }
+      if (args[0] === 'rev-list') {
+        expect(args[1]).toBe('branch-point-sha..local');
+        return 'empty-commit\n'; // branch自身の追加は空コミット1件のみ
+      }
+      if (args[0] === 'diff') return ''; // per-commit差分・range diffともに空
+      throw new Error(`unexpected git call: ${args.join(' ')}`);
+    });
+    expect(refHasTrackedDiff({ localSha: 'local', remoteSha: ZERO }, { execFileImpl })).toBe(false);
   });
 
   it('rev-list 自体が失敗すれば true（安全側）', () => {

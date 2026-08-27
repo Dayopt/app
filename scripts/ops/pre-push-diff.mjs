@@ -74,10 +74,22 @@ function runGit(args, execFileImpl) {
 export function refHasTrackedDiff({ localSha, remoteSha }, { execFileImpl = execFileSync } = {}) {
   let base = remoteSha;
   if (base === ZERO) {
-    // 新規 branch の初回 push（remote に既存 ref が無い）。origin/main を
-    // フォールバック base にする。解決できなければ安全側（差分あり）に倒す。
+    // 新規 branch の初回 push（remote に既存 ref が無い）。
+    //
+    // フォールバック base は origin/main の**現在の tip**ではなく
+    // `git merge-base origin/main <localSha>`（このbranchが実際に分岐した点）
+    // を使う（delta re-review 指摘・P2、PR #2445）。origin/main の tip を
+    // 直接使うと、worktree 作成後に main が進む（本 repo は1日約7merge）たび
+    // に、そのbranch自身は空コミットのみでも「origin/main(最新) と local の
+    // 全差分」に main 側で積まれた無関係な変更まで含まれてしまい、range diff
+    // のAND条件（force-push検出用）が常に「差分あり」を返して #2432 の自動
+    // skipがほぼ発火しなくなっていた（安全側なので事故にはならないが、DoD
+    // 「空コミットのみのpushでbumpが出ないこと」が実運用で満たされない）。
+    // merge-base ならbranchの分岐点を正しく特定でき、main の先行と無関係に
+    // このbranch自身の追加分だけを見られる。解決できなければ安全側
+    // （差分あり）に倒す。
     try {
-      base = runGit(['rev-parse', '--verify', 'origin/main'], execFileImpl).trim();
+      base = runGit(['merge-base', 'origin/main', localSha], execFileImpl).trim();
     } catch {
       return true;
     }

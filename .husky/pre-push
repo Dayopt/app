@@ -16,9 +16,15 @@ PUSHED_SHAS=''
 # ref リストのまま後続処理が「続行」してしまい、main への直接 push 禁止と
 # DO-CONFIRM・実行ゲートが丸ごと skip されて**成功終了する**（push前反証レビュー
 # 指摘・P1、PR #2445）。`mktemp` と同じく fail-closed にする。
-PUSH_INPUT_FILE=$(mktemp) || exit 1
+PUSH_INPUT_FILE=$(mktemp) || {
+  echo "✗ push 入力の退避に失敗しました（mktemp）。TMPDIR を確認してください。" >&2
+  exit 1
+}
 trap 'rm -f "$PUSH_INPUT_FILE"' EXIT
-cat > "$PUSH_INPUT_FILE" || exit 1
+cat > "$PUSH_INPUT_FILE" || {
+  echo "✗ push 入力の退避に失敗しました（cat。TMPDIR の容量・quota を確認してください）。" >&2
+  exit 1
+}
 
 while read -r _local_ref local_sha remote_ref _remote_sha; do
   # main への直接 push を禁止する。マージは PR + pnpm branch:finish 経由に限定する。

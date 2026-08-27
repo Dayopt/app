@@ -305,7 +305,7 @@ Fable の推奨と User の判断が分かれた時、該当 issue / PR に分�
 
 **個別の判定は観測完了時点で書くのを既定にする。** 判定観点への照合材料（実測結果・merge・close 等）が揃った時点で、気づいた者（通常は指揮台の日次運用）が判定コメント（事前登録した観点への照合 + 証拠の引用。どちらの判断が正しかったか）を追記する。月次まで待たない。
 
-**ラベルは外さず `judgment:judged` へ付け替える**（2026-08-27、User 裁可。push前反証レビュー指摘・P1、PR #2445 で確定）。`judgment:diverged` を外すだけの設計は、`scripts/gardening/sync-decisions.mjs`（append-only 全履歴 `docs/decisions.md` への同期）が前提とする「ラベル解除は月次 sync の**後**」という順序と衝突する — 日次でラベルを外すと、その分岐は次の月次 sync 実行時点で `judgment:diverged` の検索対象から漏れており、`docs/decisions.md` へ永久に載らなくなる（不可逆）。付け替え先の `judgment:judged` は「判定済み・月次 sync 待ち」を表す。月次 sync が `docs/decisions.md` へ書き込んだ**後**に `judgment:judged` を外す（この時点で初めてラベル無しに戻る）。
+**ラベルは外さず `judgment:judged` へ付け替える**（2026-08-27、User 裁可。push前反証レビュー指摘・P1、PR #2445 で確定）。`judgment:diverged` を外すだけの設計は、`scripts/gardening/sync-decisions.mjs`（append-only 全履歴 `docs/decisions.md` への同期）が前提とする「ラベル解除は月次 sync の**後**」という順序と衝突する — 日次でラベルを外すと、その分岐は次の月次 sync 実行時点で `judgment:diverged` の検索対象から漏れており、`docs/decisions.md` へ永久に載らなくなる（不可逆）。付け替え先の `judgment:judged` は「判定済み・月次 sync 待ち」を表す。月次 sync が `docs/decisions.md` へ書き込んだ**後**に `judgment:judged` を外す（この時点で初めてラベル無しに戻る）。**`gh issue edit` によるラベル付け替えが失敗した場合、`judgment:diverged` を外すだけの操作へフォールバックしない** — 失敗をそのまま報告し、手動で付け替え直す（フォールバックすると、外した瞬間に本節が塞いだのと同じ「sync 前にラベルが消える」不可逆な穴が再び開く）。
 
 `judgment:judged` は `dispatch` skill §ラベル体系（[docs/operations/github-labels.md](../../docs/operations/github-labels.md)）の「新しいラベルを作らない」既定に対する**明示的な例外**である（既存 `judgment` namespace 内の追加のため越境はしていないが、既存 2 値体系への追加という点で例外に当たる。User 裁可: 2026-08-27）。
 
