@@ -177,7 +177,20 @@ export function NoteSection({
         // （textarea自身にmin-h-11を付けると、1行の文字はtextarea内部で上詰めのまま
         // 描画され、表示div側の中央寄せと数px食い違って「入力時に少し上へ動く」ように
         // 見えていた。User指摘）。
-        <div className="hover:bg-state-hover focus-within:ring-ring -mx-2 flex min-h-11 items-center rounded-lg px-2 py-2 focus-within:ring-2">
+        <div
+          className="hover:bg-state-hover focus-within:ring-ring -mx-2 flex min-h-11 cursor-text items-center rounded-lg px-2 py-2 focus-within:ring-2"
+          // -mx-2 + px-2 で確保したホバー領域（textarea自身のpx-0の外側8px分）はtextarea要素
+          // の外。表示div側のcursor-textと見た目を揃えるだけでなく、この余白をクリックした
+          // 時にtextareaがblurしないようにする（preventDefaultしないと、非フォーカス対象への
+          // mousedownでtextareaが一旦blurし、onBlurが表示modeへ戻してしまってからでは
+          // 手遅れになるため、blurが起きる前のmousedownで止める。User指摘: カーソル
+          // ポインタの見た目とクリック挙動の不一致）。
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              event.preventDefault();
+            }
+          }}
+        >
           {/*
             @dayopt/components の Textarea（shadcn/ui由来）をアクセシビリティ・入力挙動の
             基盤として使い、見た目はclassNameで上書きしてこのInspectorの他フィールドに揃える
