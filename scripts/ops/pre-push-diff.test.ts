@@ -73,6 +73,28 @@ describe('refHasTrackedDiff', () => {
     );
   });
 
+  // push前反証レビュー指摘（P3、PR #2445）: per-commit判定だけでは force-push の
+  // 穴が残る。remote の C を落として同じ親から空コミット D を積む force-push
+  // では rev-list C..D = {D}、D 自体は空のため per-commit 判定だけだと
+  // 「差分なし」に誤判定される。実際には remote の tree が C の内容から
+  // D（= C の親と同じ内容）へ後退しており、C が持っていた変更が消えるという
+  // 実質的な差分がある。overall range diff（base..localSha）を AND で要求する
+  // ことでこれを検出する。
+  it('per-commitは空でもforce-pushで内容が後退していれば true（range diffとのAND）', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'rev-list') return 'D\n';
+      if (args[0] === 'diff') {
+        // per-commit diff（D^ D）は空。だが overall range diff（C D）は
+        // 実際には差分あり（force-pushでCの変更が失われるため）。
+        if (args[2] === 'D^') return '';
+        if (args[2] === 'C' && args[3] === 'D') throw new Error('exit 1: has diff');
+        throw new Error(`unexpected diff call: ${args.join(' ')}`);
+      }
+      throw new Error(`unexpected git call: ${args.join(' ')}`);
+    });
+    expect(refHasTrackedDiff({ localSha: 'D', remoteSha: 'C' }, { execFileImpl })).toBe(true);
+  });
+
   it('1件でも差分のあるcommitがあれば true（複数commit中の1件でも検出する）', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
       if (args[0] === 'rev-list') return 'c1\nc2\nc3\n';

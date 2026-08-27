@@ -437,9 +437,14 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
 }
 
 /**
- * @param {{ checkId: string, consecutiveNights: number, detectedAt: string }} params
+ * @param {{ checkId: string, consecutiveNights: number, detectedAt: string, isContinuing?: boolean }} params
  */
-export function buildFetchFailureAlertBody({ checkId, consecutiveNights, detectedAt }) {
+export function buildFetchFailureAlertBody({
+  checkId,
+  consecutiveNights,
+  detectedAt,
+  isContinuing = false,
+}) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
@@ -451,9 +456,18 @@ export function buildFetchFailureAlertBody({ checkId, consecutiveNights, detecte
   ) {
     throw new Error(`consecutiveNights は 1〜${MAX_CONSECUTIVE_NIGHTS} の整数である必要があります`);
   }
+  // 既存 escalation issue への追記（isContinuing）では固定の晩数を繰り返さない
+  // （push前反証レビュー指摘・P2、PR #2445）。呼び出し元は常に固定の
+  // `consecutiveNights`（既定 3）しか渡さないため、night4 以降も毎晩「3晩連続」
+  // という同じ本文が積まれ、実際の継続期間が過小評価される「検出はしたが
+  // 深刻度が伝わらない」劣化版無音化になっていた。実際の連続晩数を数える
+  // 代わりに、新規/継続で文言を分岐する最小修正を採る。
+  const status = isContinuing
+    ? '前回の検出以降も継続して取得失敗しています（直近の運行記録でも観測失敗を確認）。'
+    : `観測コマンド自体が ${consecutiveNights} 晩連続で取得失敗しています。`;
   return `## night-watch 検出: ${checkId}（観測失敗の escalation）
 
-この check は red/green の判定ではなく、**観測コマンド自体**が ${consecutiveNights} 晩連続で取得失敗しています。
+この check は red/green の判定ではなく、**観測コマンド自体**が失敗しています。${status}
 
 **再現コマンド**: \`${definition.command}\`
 **検出日時**: ${detectedAt}
@@ -494,7 +508,12 @@ export function runFetchFailureAlertSync({
     return { action: 'skipped', reason: 'dedup検索失敗のため起票見送り' };
   }
 
-  const body = buildFetchFailureAlertBody({ checkId, consecutiveNights, detectedAt });
+  const body = buildFetchFailureAlertBody({
+    checkId,
+    consecutiveNights,
+    detectedAt,
+    isContinuing: Boolean(existing),
+  });
 
   const reservation = reserveAlertRunSlot({
     checkId: `fetch-failed:${checkId}`,

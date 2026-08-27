@@ -112,6 +112,20 @@ export function refHasTrackedDiff({ localSha, remoteSha }, { execFileImpl = exec
       return true;
     }
   }
+
+  // per-commit 判定だけでは force-push の穴が残る（push前反証レビュー指摘・
+  // P3、PR #2445）: remote の commit C を落として同じ親から空コミット D を
+  // 積む force-push では `rev-list C..D` = {D} で D 自体は空のため、per-commit
+  // 判定だけだと「差分なし」に見えてしまう。しかし実際には remote の tree が
+  // C の内容から D（= C の親と同じ内容）へ後退しており、C が持っていた変更が
+  // 消えるという実質的な差分がある。per-commit 判定（打ち消し合うcommit列を
+  // 拾うため）と、この range 全体の diff 判定（force-push の後退を拾うため）
+  // は互いに補えない別の穴を塞いでいるため、両方を AND で要求する。
+  try {
+    runGit(['diff', '--quiet', base, localSha, '--'], execFileImpl);
+  } catch {
+    return true;
+  }
   return false;
 }
 

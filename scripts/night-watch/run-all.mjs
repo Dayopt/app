@@ -490,39 +490,28 @@ const FETCH_FAILURE_ESCALATION_LOOKBACK = 2;
 function processCheckOutcome(
   checkId,
   outcome,
-  { execFileImpl, failed, alertPostFailed, results, baselineRecommend, runStatePath },
+  {
+    execFileImpl,
+    failed,
+    alertPostFailed,
+    results,
+    baselineRecommend,
+    runStatePath,
+    deferredFetchFailed,
+  },
 ) {
   if (outcome.status === 'fetch-failed') {
     failed.push(checkId);
-    // #2422: 観測コマンド自体の取得失敗が FETCH_FAILURE_ESCALATION_LOOKBACK
-    // 晩連続すると escalation issue を起票/追記する（heavy-red/integration-red
-    // の pending escalation と同型。詳細は checkRecentFetchFailed のコメント）。
-    let escalate = false;
-    try {
-      escalate = checkRecentFetchFailed(checkId, {
-        execFileImpl,
-        lookback: FETCH_FAILURE_ESCALATION_LOOKBACK,
-      }).consecutiveFetchFailed;
-    } catch (error) {
-      console.error(
-        `::warning::${checkId} の fetch-failure escalation 判定に失敗しました（escalate しません）:`,
-        error,
-      );
-    }
-    if (escalate) {
-      try {
-        const alertResult = runFetchFailureAlertSync({
-          checkId,
-          consecutiveNights: FETCH_FAILURE_ESCALATION_LOOKBACK + 1,
-          execFileImpl,
-          runStatePath,
-        });
-        results.push(mapAlertResultToOutcome(checkId, alertResult));
-      } catch (error) {
-        console.error(`::error::${checkId} の fetch-failure alert 投稿に失敗しました:`, error);
-        alertPostFailed.push(checkId);
-      }
-    }
+    // #2422: fetch-failure escalation はここでは起票せず、全 check-id の
+    // red/pending 判定（下の他分岐）が終わってから、まとめて処理する。
+    // 理由（push前反証レビュー指摘・P2、PR #2445）: `reserveAlertRunSlot` の
+    // 新規起票上限（`MAX_NEW_ISSUES_PER_RUN`）は run 全体で共有されている。
+    // CHECK_IDS の並び順（dependabot-alerts が heavy-red/integration-red より
+    // 先）のまま逐次処理すると、慢性的な fetch-failed が先に予算を使い切り、
+    // 本物の CI 赤（heavy-red/integration-red）が `run-cap-reached` で
+    // 起票されなくなる。夜勤の主目的（赤の起票）を副次目的（観測失敗の
+    // 可視化）より優先するため、red/pending の予約を先に確定させる。
+    deferredFetchFailed.push(checkId);
     return;
   }
   if (outcome.status === 'green') {
@@ -566,6 +555,41 @@ function processCheckOutcome(
     // `runNightWatch` 側で Step 5（運行記録）の投稿後に非 0 exit へ倒す —
     // Step 5 の記録自体は「alert 投稿が失敗した」事実も含めて必ず残す
     // ため、先に exitCode を立てて Step 5 をスキップさせない。
+    alertPostFailed.push(checkId);
+  }
+}
+
+/**
+ * `processCheckOutcome` が deferred した fetch-failed check-id を、全 check-id の
+ * red/pending 判定が確定した後にまとめて処理する（#2422、P2 是正・PR #2445）。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: ExecFileImpl, alertPostFailed: string[], results: unknown[], runStatePath?: string }} deps
+ */
+function escalateFetchFailure(checkId, { execFileImpl, alertPostFailed, results, runStatePath }) {
+  let escalate = false;
+  try {
+    escalate = checkRecentFetchFailed(checkId, {
+      execFileImpl,
+      lookback: FETCH_FAILURE_ESCALATION_LOOKBACK,
+    }).consecutiveFetchFailed;
+  } catch (error) {
+    console.error(
+      `::warning::${checkId} の fetch-failure escalation 判定に失敗しました（escalate しません）:`,
+      error,
+    );
+    return;
+  }
+  if (!escalate) return;
+  try {
+    const alertResult = runFetchFailureAlertSync({
+      checkId,
+      consecutiveNights: FETCH_FAILURE_ESCALATION_LOOKBACK + 1,
+      execFileImpl,
+      runStatePath,
+    });
+    results.push(mapAlertResultToOutcome(checkId, alertResult));
+  } catch (error) {
+    console.error(`::error::${checkId} の fetch-failure alert 投稿に失敗しました:`, error);
     alertPostFailed.push(checkId);
   }
 }
@@ -696,6 +720,11 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh }),
   };
 
+  // #2422 の P2 是正（PR #2445）: fetch-failed の escalation は他 check-id の
+  // red/pending 判定がすべて確定してから処理する（deferredFetchFailed に集める）。
+  // 新規起票予算（reserveAlertRunSlot の run 全体共有カウンタ）を、慢性的な
+  // 観測失敗より本物の CI 赤（heavy-red/integration-red）に優先して割り当てる。
+  const deferredFetchFailed = [];
   for (const checkId of CHECK_IDS) {
     processCheckOutcome(checkId, checkOutcomes[checkId], {
       execFileImpl,
@@ -704,7 +733,11 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
       results,
       baselineRecommend,
       runStatePath,
+      deferredFetchFailed,
     });
+  }
+  for (const checkId of deferredFetchFailed) {
+    escalateFetchFailure(checkId, { execFileImpl, alertPostFailed, results, runStatePath });
   }
 
   const executed = CHECK_IDS.size - failed.length;

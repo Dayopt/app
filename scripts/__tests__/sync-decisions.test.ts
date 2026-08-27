@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { mergeDecisionsMd, sanitizeCell } from '../gardening/sync-decisions.mjs';
+import {
+  fetchDecisionEntries,
+  mergeDecisionsMd,
+  sanitizeCell,
+} from '../gardening/sync-decisions.mjs';
 
 describe('sanitizeCell', () => {
   it('改行を空白へ潰す', () => {
@@ -70,5 +74,39 @@ describe('mergeDecisionsMd', () => {
       { number: 1, title: 'older', url: 'u1', updatedAt: '2026-01-01T00:00:00Z' },
     ]);
     expect(result.indexOf('(#1)')).toBeLessThan(result.indexOf('(#2)'));
+  });
+});
+
+// push前反証レビュー指摘（P1、PR #2445）: 個別判定を観測完了時点で
+// `judgment:diverged` から `judgment:judged` へ付け替える設計にしたため、
+// 月次 sync は両ラベルを検索しないと、日次で付け替え済みの分岐が
+// docs/decisions.md へ永久に載らなくなる（不可逆）。
+describe('fetchDecisionEntries', () => {
+  it('judgment:diverged と judgment:judged の両方を検索する', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      const labelIdx = args.indexOf('--label');
+      const label = args[labelIdx + 1];
+      if (label === 'judgment:diverged') {
+        return JSON.stringify([
+          { number: 1, title: 'diverged only', url: 'u1', updatedAt: '2026-01-01T00:00:00Z' },
+        ]);
+      }
+      if (label === 'judgment:judged') {
+        return JSON.stringify([
+          { number: 2, title: 'judged, sync待ち', url: 'u2', updatedAt: '2026-08-01T00:00:00Z' },
+        ]);
+      }
+      throw new Error(`unexpected label: ${label}`);
+    });
+    const entries = fetchDecisionEntries('Dayopt/dayopt', { execFileImpl });
+    expect(entries.map((e) => e.number).sort()).toEqual([1, 2]);
+  });
+
+  it('同一issueが両ラベル検索に出ても重複させない', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify([{ number: 5, title: 'x', url: 'u5', updatedAt: '2026-01-01T00:00:00Z' }]),
+    );
+    const entries = fetchDecisionEntries('Dayopt/dayopt', { execFileImpl });
+    expect(entries).toHaveLength(1);
   });
 });

@@ -4,7 +4,9 @@ import {
   buildCodexInput,
   buildIssueCodexInput,
   buildPrCodexInput,
+  capReferences,
   extractReferencedIssueNumbers,
+  MAX_REFERENCES,
   resolveReferencedIssue,
 } from './codex-input.mjs';
 
@@ -24,6 +26,35 @@ describe('extractReferencedIssueNumbers', () => {
   it('本文が空/undefinedでも例外を投げない', () => {
     expect(extractReferencedIssueNumbers('')).toEqual([]);
     expect(extractReferencedIssueNumbers(undefined as unknown as string)).toEqual([]);
+  });
+});
+
+// push前反証レビュー指摘（P2、PR #2445）: 参照解決に上限が無いと、本文が
+// 多数の issue を参照するだけで gh 呼び出しが線形に増える（希少資源である
+// Codex 利用量の圧迫）。加えて public repo では参照先本文が第三者観測
+// コンテンツのため、無制限に Codex 入力へ混ざる経路になる。
+describe('capReferences', () => {
+  it(`${MAX_REFERENCES}件以下ならそのまま返す（truncated: 0）`, () => {
+    const refs = Array.from({ length: MAX_REFERENCES }, (_, i) => i + 1);
+    expect(capReferences(refs)).toEqual({ kept: refs, truncated: 0 });
+  });
+
+  it(`${MAX_REFERENCES}件を超えたら先頭${MAX_REFERENCES}件に切り詰め、超過数を返す`, () => {
+    const refs = Array.from({ length: MAX_REFERENCES + 5 }, (_, i) => i + 1);
+    const result = capReferences(refs);
+    expect(result.kept).toEqual(refs.slice(0, MAX_REFERENCES));
+    expect(result.truncated).toBe(5);
+  });
+});
+
+describe('runGh', () => {
+  it('maxBufferを明示的に渡す（大きいPR diffでのENOBUFS回避、night-watch/lib.mjsと同型）', async () => {
+    const { runGh } = await import('./codex-input.mjs');
+    const execFileImpl: (file: string, args: string[], options?: { maxBuffer?: number }) => string =
+      vi.fn(() => 'ok');
+    runGh(['pr', 'diff', '1', '--repo', 'x/y'], { execFileImpl });
+    const passedOptions = vi.mocked(execFileImpl).mock.calls[0]?.[2];
+    expect(passedOptions?.maxBuffer).toBeGreaterThanOrEqual(32 * 1024 * 1024);
   });
 });
 
@@ -110,6 +141,23 @@ describe('buildIssueCodexInput', () => {
     expect(() => buildIssueCodexInput(-1)).toThrow(/issue番号が不正/);
     expect(() => buildIssueCodexInput(1.5)).toThrow(/issue番号が不正/);
   });
+
+  it(`参照先が${MAX_REFERENCES}件を超えたら打ち切り、その旨を出力へ明記する`, () => {
+    const refNumbers = Array.from({ length: MAX_REFERENCES + 3 }, (_, i) => 3000 + i);
+    const body = refNumbers.map((n) => `#${n}`).join(' ');
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[2] === '2396') return JSON.stringify({ title: 'Epic', body });
+      return JSON.stringify({ title: 'Ref', body: 'ref body' });
+    });
+    const output = buildIssueCodexInput(2396, { execFileImpl });
+    expect(output).toContain('## 参照先の打ち切り');
+    expect(output).toContain('他に 3 件の参照先を上限超過のため解決していません');
+    // 上限件数までは実際に解決を試みている（gh呼び出し回数で検証）
+    const issueViewCalls = vi
+      .mocked(execFileImpl)
+      .mock.calls.filter((call) => call[1][0] === 'issue' && call[1][1] === 'view');
+    expect(issueViewCalls.length).toBe(1 + MAX_REFERENCES); // 対象issue本体 + 上限件数分の参照先
+  });
 });
 
 describe('buildPrCodexInput', () => {
@@ -139,10 +187,11 @@ describe('buildPrCodexInput', () => {
       return 'diff --git a/x b/x\n+added';
     });
     const output = buildPrCodexInput(2424, { execFileImpl });
-    expect(output).toBe(
-      '> 注意: この入力は issue/PR 本文が `#\\d+` で参照する他 issue のみを1段階解決したものです。本文が指す repo 内 docs（設計書等のファイルパス）は同梱していません。そこで既に裁定済みの論点を、この入力だけを根拠に再指摘している可能性があります。\n\n---\n\ndiff --git a/x b/x\n+added',
-    );
-    expect(output).not.toContain('参照先');
+    expect(output.startsWith('> 注意:')).toBe(true);
+    expect(output.endsWith('\n\n---\n\ndiff --git a/x b/x\n+added')).toBe(true);
+    // 注意書き自体は「参照先」という語に言及するが、実際の参照先セクション
+    // （見出し）は追加されないことを確認する。
+    expect(output).not.toContain('## 参照先');
   });
 
   it('冒頭にrepo内docs非同梱の注意書きが入る（参照先ありの場合も）', () => {

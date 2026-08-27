@@ -538,6 +538,31 @@ describe('buildFetchFailureAlertBody', () => {
       /consecutiveNights/,
     );
   });
+
+  // push前反証レビュー指摘（P2、PR #2445）: 呼び出し元は常に固定値
+  // （既定3）しか渡さないため、night4以降も毎晩「3晩連続」という同じ本文が
+  // 積まれ、実際の継続期間が過小評価される。isContinuing:true では固定の
+  // 晩数を繰り返さない文言に切り替える。
+  it('isContinuing:true では固定の晩数を繰り返さず「継続中」の文言にする', () => {
+    const body = buildFetchFailureAlertBody({
+      checkId: 'sentry-new',
+      consecutiveNights: 3,
+      detectedAt: '2026-08-27T00:00:00Z',
+      isContinuing: true,
+    });
+    expect(body).not.toContain('3 晩連続');
+    expect(body).toContain('継続して取得失敗');
+  });
+
+  it('isContinuing:false（既定）では晩数を明記する', () => {
+    const body = buildFetchFailureAlertBody({
+      checkId: 'sentry-new',
+      consecutiveNights: 3,
+      detectedAt: '2026-08-27T00:00:00Z',
+    });
+    expect(body).toContain('3 晩連続');
+    expect(body).not.toContain('継続して取得失敗');
+  });
 });
 
 describe('findExistingFetchFailureAlertIssue', () => {
@@ -599,7 +624,7 @@ describe('runFetchFailureAlertSync', () => {
     expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
   });
 
-  it('既存 escalation issue があればコメントを追記する', () => {
+  it('既存 escalation issue があればコメントを追記する（本文は「継続中」文言、固定晩数を繰り返さない）', () => {
     const execFileImpl = vi.fn((cmd, args) => {
       if (args[1] === 'list')
         return JSON.stringify([
@@ -615,12 +640,16 @@ describe('runFetchFailureAlertSync', () => {
 
     const result = runFetchFailureAlertSync({
       checkId: 'sentry-new',
-      consecutiveNights: 4,
+      consecutiveNights: 3,
       execFileImpl,
       runStatePath,
     });
 
     expect(result).toEqual({ action: 'commented', issueNumber: 801 });
+    const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
+    const body = commentCall[1][commentCall[1].indexOf('--body') + 1];
+    expect(body).not.toContain('3 晩連続');
+    expect(body).toContain('継続して取得失敗');
   });
 
   it('reservation key は fetch-failed:<checkId> のため、同一runの red-alert 予約とは独立する', () => {

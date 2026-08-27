@@ -11,9 +11,14 @@ PUSHED_SHAS=''
 # stdin は 1 度しか読めない単一消費ストリーム。下の while ループに加えて
 # pre-push-diff.mjs（#2432、差分ゼロ push の自動スキップ判定）にも同じ内容を
 # 渡す必要があるため、いったん一時ファイルへ退避する。trap で確実に削除する。
+#
+# `cat` 自体の失敗（TMPDIR の容量不足・quota 超過等）を検知しないと、空/部分的な
+# ref リストのまま後続処理が「続行」してしまい、main への直接 push 禁止と
+# DO-CONFIRM・実行ゲートが丸ごと skip されて**成功終了する**（push前反証レビュー
+# 指摘・P1、PR #2445）。`mktemp` と同じく fail-closed にする。
 PUSH_INPUT_FILE=$(mktemp) || exit 1
 trap 'rm -f "$PUSH_INPUT_FILE"' EXIT
-cat > "$PUSH_INPUT_FILE"
+cat > "$PUSH_INPUT_FILE" || exit 1
 
 while read -r _local_ref local_sha remote_ref _remote_sha; do
   # main への直接 push を禁止する。マージは PR + pnpm branch:finish 経由に限定する。
@@ -81,7 +86,10 @@ CONFIRM
 fi
 
 # --- 実行ゲート（2026-08-24, #2359）: pause point 確認後に走る機械検証 ---
-# marker が既に存在する（= 上の pause を一度通過済みの）push でのみ到達する。
+# push 前の pause point（DO-CONFIRM 表示、または差分ゼロ push の自動スキップ、
+# #2432）を経た push でのみ到達する。marker の有無では判定しない —
+# 差分ゼロ push は marker を作らずスキップするため、「marker が既にある」は
+# もう到達条件ではない（push前反証レビュー指摘・P3、PR #2445）。
 # HAS_BRANCH_UPDATE=0（tag push・branch 削除）は対象外 — branch:finish の
 # 掃除 push を巻き込まないため（上の pause point と同じ理由）。
 #
