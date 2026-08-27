@@ -1,10 +1,8 @@
 'use client';
 
 import { CircleHelp, PanelLeft, Search } from 'lucide-react';
-import Image from 'next/image';
 import type { ReactNode } from 'react';
 
-import { APP_NAME } from '@/lib/app-info';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import {
   Button,
@@ -22,6 +20,10 @@ interface SidebarProps {
   children: ReactNode;
   /** UserMenu に表示するユーザー情報（composition layerから注入） */
   user: { name: string; email: string; avatar: string | null };
+  /** ヘッダー左側（現在のワークスペース名。composition layerから注入） */
+  headerTitle: ReactNode;
+  /** ヘッダー右側、閉じるボタンの左に置く切替タブ（composition layerから注入） */
+  headerTabs: ReactNode;
   /** フッターに配置するアクション（通知アイコン等） */
   footerActions?: ReactNode;
   /**
@@ -69,6 +71,8 @@ export function SidebarHelpMenu() {
 export function Sidebar({
   children,
   user,
+  headerTitle,
+  headerTabs,
   footerActions,
   pinnedContent,
   'aria-label': ariaLabel,
@@ -79,34 +83,15 @@ export function Sidebar({
 
   return (
     <aside
-      className="border-border bg-surface-container text-foreground flex h-full w-full flex-col border-r"
+      className="border-border bg-surface-container text-foreground group flex h-full w-full flex-col border-r"
       aria-label={ariaLabel}
     >
-      {/* Header - Logo + Close。AppHeader.tsx と高さ・構成を揃える（h-14） */}
+      {/* Header - 現在のワークスペース名 + Close + 切替タブ。AppHeader.tsx と高さを揃える（h-14） */}
       <div className="flex h-14 shrink-0 items-center justify-between px-2">
-        <div className="flex items-center gap-2 pl-2">
-          <Image
-            src="/icons/icon-192.png"
-            alt={APP_NAME}
-            width={20}
-            height={20}
-            priority
-            className="rounded-lg"
-          />
-          <span className="text-foreground text-sm font-medium tracking-tight">{APP_NAME}</span>
-        </div>
-        <div className="flex items-center">
-          <HoverTooltip content={t('calendar.search.open')} side="bottom">
-            <Button
-              variant="ghost"
-              icon
-              size="sm"
-              onClick={openTimeblockSearch}
-              aria-label={t('calendar.search.open')}
-            >
-              <Search className="size-4" />
-            </Button>
-          </HoverTooltip>
+        <div className="flex min-w-0 items-center gap-2 pl-2">{headerTitle}</div>
+        <div className="flex items-center gap-1">
+          {/* 閉じるボタンはSidebarホバー時のみ表示（User指示）。キーボード操作でも
+              見えるよう group-focus-within も併用する */}
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"
@@ -114,10 +99,12 @@ export function Sidebar({
               size="sm"
               onClick={closeSidebar}
               aria-label={t('navigation.sidebar.closeSidebar')}
+              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
             >
               <PanelLeft className="size-4" />
             </Button>
           </HoverTooltip>
+          {headerTabs}
         </div>
       </div>
 
@@ -134,7 +121,7 @@ export function Sidebar({
         <div className="border-border shrink-0 border-t px-2 pt-2">{pinnedContent}</div>
       )}
 
-      {/* Footer - UserMenu + Help */}
+      {/* Footer - UserMenu + 検索 + Help。検索はUser指示によりヘッダーからここへ移動（ヘルプの左隣） */}
       <div className="shrink-0 px-2 py-2">
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">
@@ -142,6 +129,17 @@ export function Sidebar({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {footerActions}
+            <HoverTooltip content={t('calendar.search.open')} side="top">
+              <Button
+                variant="ghost"
+                icon
+                size="sm"
+                onClick={openTimeblockSearch}
+                aria-label={t('calendar.search.open')}
+              >
+                <Search className="size-4" />
+              </Button>
+            </HoverTooltip>
             <SidebarHelpMenu />
           </div>
         </div>
