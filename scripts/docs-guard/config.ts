@@ -15,7 +15,7 @@ export const STOCK_DIRS = ['business', 'product', 'engineering', 'operations', '
 
 // STOCK_DIRS はドメインサブディレクトリ単位で stock 契約を適用するための allowlist。
 // docs ルート直下へ昇格した個別ファイルはドメインを持たないため、ここに明示する。
-export const ROOT_STOCK_FILES = ['docs/strategy.md'];
+export const ROOT_STOCK_FILES = ['docs/strategy.md', 'docs/state.md'];
 
 // 書き換え禁止対象。新規追加後は frozen とし、supersede metadata 以外を変更しない。
 // 2026-08-10: docs/marketing/log は docs/business/log へ git mv 済みのため削除。

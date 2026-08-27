@@ -23,6 +23,7 @@
 | 質問                                 | 行き先                                               |
 | ------------------------------------ | ---------------------------------------------------- |
 | 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）  |
+| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く） |
 | 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言   |
 | 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか     |
 | コードの作り方の話か                 | `engineering/` — architecture、規約、infra           |
@@ -33,7 +34,9 @@
 
 `business/` の下位構造: 直下 = 事業判断の正本（icp / messaging / competitors / pricing / business-model / growth）、`content/` = 公開コンテンツの書き方と運用（voice / writing-style / docs-policy / review-checklist / content-operations）、`channels/` = チャネル別の運用（x / reddit / lp）。旧 `marketing/` ドメインは 2026-08-10 に `business/` へ統合した。
 
-ルート直下の `strategy.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う。
+ルート直下の `strategy.md` と `state.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う（docs-guard の `ROOT_STOCK_FILES`）。
+
+`strategy.md` / `state.md` / 日次盤面 issue は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは日次盤面 issue（`type:board`）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に盤面が動くたび古くなる（2026-08-20 に廃止した STATE.md と同じ失敗）。運用は `.claude/rules/orchestration.md` §メタ把握（User + Fable） が正本。
 
 ## 現在・Project・履歴
 
@@ -99,6 +102,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 質問                           | 正本                                                          |
 | ------------------------------ | ------------------------------------------------------------- |
 | なぜ作るか / 変えないもの      | `strategy.md`                                                 |
+| 今の認識・賭け・やらないこと   | `state.md`                                                    |
 | 誰向けか                       | `strategy.md` §3、詳細は `business/icp.md`                    |
 | 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md`  |
 | 事業指標の定義                 | `business/business-model.md` §Metrics                         |
