@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-10
+last_verified: 2026-08-27
 ---
 
 # Dayopt 不変条件カタログ
@@ -54,6 +54,24 @@ docs へ残している。
   この形から外れる policy は、外れる理由が migration に書かれているべき
 - `SECURITY DEFINER` 関数は `search_path` を固定し、内部で `auth.uid()` を検証する
 - token・暗号化 credential の列を `authenticated` ロールに GRANT しない
+- **所有者付きリソースを跨いで参照する行は、単一 ID ではなく `(id, user_id)` の複合 FK で
+  束縛する。** トリガーではなく FK で守るので、他人の行を紐づけることが構造的に不可能になる。
+  参照先には `UNIQUE (id, user_id)` の anchor が要る（`categories` / `activities` /
+  `segments` / `calendar_connections` / `plans` / `records` / `oauth_connections`）。
+  単一 FK は「その ID が存在すること」しか証明しない — 過去に Calendar で同型の穴が実発生し
+  複合 FK へ修正した（`20260724000416`）
+- **`public` schema の view は `security_invoker = true`・`_v<N>` 命名・`anon` 到達不可。**
+  `public` の `SECURITY DEFINER` 関数は `anon` / `PUBLIC` から EXECUTE できない。
+  GRANT と RLS は別々に判定され、view は既定で RLS を迂回しうるため、GRANT を絞るだけでは
+  足りない。`_v<N>` 命名は旧 version と新 version を並存させて可逆に cutover するための前提。
+  強制は `private.assert_public_contract_exposure_v1()`（migration 適用時）と
+  `pnpm rls:snapshot:check`（CI での継続 drift 検出）の 2 層
+- **`user_id` を持つ `public` table は、account-preserving purge
+  （`delete_all_user_data_command_v3`）が直接消すか、そこから `ON DELETE CASCADE` で
+  到達できるか、理由付きの allowlist に載っているかのいずれかでなければならない。**
+  purge は消す対象を関数本文に列挙する方式なので、新規テーブルの追加漏れが静かに起きる
+  （#2162 と #2444 で 2 回実発生）。強制は
+  `user-data-purge-enumeration.integration.test.ts`
 
 ## OAuth・暗号
 

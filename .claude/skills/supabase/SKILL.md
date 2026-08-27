@@ -459,6 +459,29 @@ npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
 - production Dashboard SQL Editor での直接クエリ禁止(git 履歴と DB 実態の乖離を防ぐ)
 - migration ファイル作成後、そのSQLを git 外の経路で実行することを禁止
 
+### 新規 public オブジェクトの境界（#2433）
+
+新しく `public` へ table / view / SECURITY DEFINER 関数を足す時に守ること。正本は
+[`docs/engineering/invariants.md`](../../../docs/engineering/invariants.md) §データ分離（RLS）で、
+ここでは「どの migration を書く時に思い出すか」だけを示す（条件の複製はしない）。
+
+- **table**: `ENABLE ROW LEVEL SECURITY` / `REVOKE ALL ... FROM PUBLIC, anon, authenticated` /
+  必要な `GRANT` / 権限不変条件の `DO` ブロックを**同一 migration に置く**。REVOKE を GRANT より
+  先に打つ（production の `pg_default_acl` が local と違うため、GRANT だけ書くと production に
+  過剰権限が残る）。雛形は `20260818130000_create_segments.sql`
+- **所有者付きの参照**: 単一 ID FK ではなく `(id, user_id)` の複合 FK にする。参照先に
+  `UNIQUE (id, user_id)` の anchor が要る
+- **view**: `security_invoker = true` と `_v<N>` 命名が必須。`anon` へ権限を出さない。
+  旧 version を残したまま新 version を足し、切替後に旧を撤去する（可逆な cutover）
+- **旧 version の撤去**: version ごとに exact signature で `REVOKE` / `GRANT` を明示する。
+  「新しい方だけ安全にした」状態で旧 version が残るのが典型的な穴
+- **`user_id` を持つ table**: account-preserving purge
+  （`delete_all_user_data_command_v3`）へ入れるか、消さない理由を
+  `user-data-purge-enumeration.integration.test.ts` の allowlist へ書く
+
+いずれも機械で強制されている（`private.assert_public_contract_exposure_v1()` /
+`pnpm rls:snapshot:check` / integration test）ので、抜けたら CI か migration 適用で落ちる。
+
 ### Edge Functions
 
 - デプロイは必ず `--use-api` フラグ付きで実行

@@ -386,8 +386,9 @@ describe.skipIf(!RUN_LOCAL)('undo substrate schema contract (#2433)', () => {
       const { error } = await admin.from('undo_receipt_effects').insert({
         user_id: ownerId,
         receipt_id: ownerReceiptId,
-        // @ts-expect-error 契約外の値を意図的に送る
-        effect_kind: 'upsert',
+        // 契約外の値を意図的に送る（この tsconfig は strict: false なので型では止まらない。
+        // 止めるのは DB の CHECK 制約であり、それを確認するのがこの test）
+        effect_kind: 'upsert' as 'insert',
         plan_id: ownerPlanId,
       });
       expect(error?.code).toBe(CHECK_VIOLATION);
