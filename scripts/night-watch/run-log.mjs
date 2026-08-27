@@ -354,32 +354,18 @@ function isTrustedCommentAuthor(comment) {
 }
 
 /**
- * #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
- * （直近 run 未完了）と判定される class は、runner 枯渇・workflow 定義破損
- * 等で run が恒久的に完了しない場合、毎晩 pending を積むだけで
- * `alert-issue.mjs` が二度と呼ばれず、無期限に無音のまま気づかれない
- * （behavior-verifier 指摘）。これを検出するため、常設運行記録 issue の
- * 直近コメントから、信頼できる書き手（`isTrustedCommentAuthor`: 人間の
- * OWNER/MEMBER/COLLABORATOR、または night-watch 自身が Actions から投稿
- * する時の予約 login）による「night-watch 運行記録」形式のものだけを
- * 新しい順に抽出し、**日付が異なる**
- * 直近 `lookback` 件（既定 2）**すべて**で同一 check-id が pending だったかを
- * machine で判定する。日付が異なることを要求するのは、手動代行との重複投稿
- * などで同じ晩の 2 件を「2 晩連続」と誤カウントしないため。
+ * 常設運行記録 issue から、信頼できる書き手（`isTrustedCommentAuthor`: 人間の
+ * OWNER/MEMBER/COLLABORATOR、または night-watch 自身が Actions から投稿する
+ * 時の予約 login）による「night-watch 運行記録」形式のコメントだけを新しい順に
+ * 抽出し、**日付が異なる**直近 `lookback` 件を集める（同日の重複投稿は 1 件に
+ * 畳む。手動代行との重複投稿で「2 晩連続」を誤カウントしないため）。
  *
- * env-failure 等の他コメント・非信頼書き手のコメントは対象外（その晩は
- * Step 2 が実際には走っていない、または偽装の疑いがあるため pending の
- * 連続カウントに含めない）。直近コメントが `lookback` 件に満たない場合
- * （運用開始直後等）は `consecutivePending: false` を返す（fail-open。
- * 判定材料が無い状態で赤に倒すと誤起票になる）。
- * @param {string} checkId
- * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, lookback?: number }} [opts]
- * @returns {{ consecutivePending: boolean, reportsChecked: number }}
+ * `checkRecentPending`（pending escalation、#2350）と `checkRecentFetchFailed`
+ * （fetch-failed escalation、#2422）の共通土台。env-failure 等の他コメント・
+ * 非信頼書き手のコメントは対象外（偽装・非稼働晩の混入防止）。
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, lookback: number }} params
  */
-export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookback = 2 } = {}) {
-  if (!CHECK_IDS.has(checkId)) {
-    throw new Error(`未知の check-id です: ${checkId}`);
-  }
+function collectRecentOpsLogReports({ execFileImpl, readFileImpl, lookback }) {
   const issueNumber = resolveOpsLogIssueNumber({ readFileImpl });
   const response = runGhJson(
     ['issue', 'view', String(issueNumber), '--repo', REPO, '--json', 'comments'],
@@ -397,6 +383,29 @@ export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookba
     reports.push(comment);
     if (reports.length === lookback) break;
   }
+  return reports;
+}
+
+/**
+ * #2350 クロスレビュー指摘（P2-1）: heavy-red/integration-red が pending
+ * （直近 run 未完了）と判定される class は、runner 枯渇・workflow 定義破損
+ * 等で run が恒久的に完了しない場合、毎晩 pending を積むだけで
+ * `alert-issue.mjs` が二度と呼ばれず、無期限に無音のまま気づかれない
+ * （behavior-verifier 指摘）。これを検出するため、直近 `lookback` 件（既定 2）
+ * **すべて**で同一 check-id が pending だったかを machine で判定する。
+ *
+ * 直近コメントが `lookback` 件に満たない場合（運用開始直後等）は
+ * `consecutivePending: false` を返す（fail-open。判定材料が無い状態で赤に
+ * 倒すと誤起票になる）。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, lookback?: number }} [opts]
+ * @returns {{ consecutivePending: boolean, reportsChecked: number }}
+ */
+export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookback = 2 } = {}) {
+  if (!CHECK_IDS.has(checkId)) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+  const reports = collectRecentOpsLogReports({ execFileImpl, readFileImpl, lookback });
   if (reports.length < lookback) {
     return { consecutivePending: false, reportsChecked: reports.length };
   }
@@ -406,6 +415,43 @@ export function checkRecentPending(checkId, { execFileImpl, readFileImpl, lookba
     return match[1].split(',').some((id) => id.trim() === checkId);
   });
   return { consecutivePending, reportsChecked: reports.length };
+}
+
+// 「- 取得失敗: <check-id>, ...」行（`buildOpsLogComment` の固定形式。
+// 異常なしの晩は「- 取得失敗: なし」）から check-id 一覧を取り出す。
+const FETCH_FAILED_LINE_RE = /^- 取得失敗: (.+)$/m;
+
+/**
+ * #2422: 観測コマンド自体の取得失敗（fetch-failed。`dependabot-alerts` の
+ * token scope 不足、`sentry-new` の原因未特定な失敗等）が恒久的な障害の場合、
+ * 毎晩 `failed` へ記録されるだけで `alert-issue.mjs` が一度も呼ばれず、
+ * 運行記録の 1 行（「取得失敗: ...」）を読み飛ばせば無期限に気づかれない
+ * （`checkRecentPending` が heavy-red/integration-red の pending に対して
+ * 塞いだのと同じ class の無音化を、fetch-failed 全般に広げて塞ぐ）。
+ *
+ * 判定は `checkRecentPending` と同型: 直近 `lookback` 件（既定 2）**すべて**の
+ * 「- 取得失敗: ...」行に同一 check-id が含まれているか。呼び出し元
+ * （`run-all.mjs`）はこれに「今回も取得失敗」を組み合わせて判定するため、
+ * 既定の合計は 3 晩連続（#2422 が提案する既定値と一致）。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl, readFileImpl?: (path: string, encoding: string) => string, lookback?: number }} [opts]
+ * @returns {{ consecutiveFetchFailed: boolean, reportsChecked: number }}
+ */
+export function checkRecentFetchFailed(checkId, { execFileImpl, readFileImpl, lookback = 2 } = {}) {
+  if (!CHECK_IDS.has(checkId)) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+  const reports = collectRecentOpsLogReports({ execFileImpl, readFileImpl, lookback });
+  if (reports.length < lookback) {
+    return { consecutiveFetchFailed: false, reportsChecked: reports.length };
+  }
+  const consecutiveFetchFailed = reports.every((comment) => {
+    const match = comment.body.match(FETCH_FAILED_LINE_RE);
+    if (!match) return false;
+    if (match[1].trim() === 'なし') return false;
+    return match[1].split(',').some((id) => id.trim() === checkId);
+  });
+  return { consecutiveFetchFailed, reportsChecked: reports.length };
 }
 
 // #2332: alert-issue.mjs の run-scoped 起票上限（reserveAlertRunSlot）が
