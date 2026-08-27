@@ -20,6 +20,7 @@ import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
 import { SidebarPinnedContent } from './SidebarPinnedContent';
 import { useAppInlineBanner } from './useAppInlineBanner';
+import { WorkspaceTabs, WorkspaceTitle } from './WorkspaceTabs';
 
 interface DesktopLayoutProps {
   children: React.ReactNode;
@@ -83,7 +84,12 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
           className="h-full"
           innerClassName="h-full"
         >
-          <Sidebar user={sidebarUser} pinnedContent={<SidebarPinnedContent />}>
+          <Sidebar
+            user={sidebarUser}
+            headerTitle={<WorkspaceTitle />}
+            headerTabs={<WorkspaceTabs />}
+            pinnedContent={<SidebarPinnedContent />}
+          >
             <SidebarContent />
           </Sidebar>
         </AnimatedWidthPanel>

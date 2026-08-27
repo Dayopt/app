@@ -4,6 +4,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
+import { Textarea } from '@dayopt/components';
+
 import { convertNoteHtmlToText } from './note-html-to-text';
 
 interface NoteSectionProps {
@@ -140,7 +142,10 @@ export function NoteSection({
         <div
           role="button"
           tabIndex={disabled ? -1 : 0}
-          className="bg-input text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex max-h-40 min-h-11 cursor-text items-start overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-left text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+          // -mx-2 + px-2: ホバー領域の左右に8pxの余白を確保しつつ、負のmarginで
+          // 打ち消してテキスト自体は親コンテナのcontent edgeに揃える（bg-input等の
+          // 常時背景・独立ボックス感は撤去し、カード内の軽いインライン操作に見せる。User指示）。
+          className="text-foreground hover:bg-state-hover focus-visible:ring-ring relative -mx-2 flex max-h-40 min-h-11 cursor-text items-center overflow-y-auto rounded-lg px-2 py-2 text-left text-sm leading-normal outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
             if (!disabled) {
               setIsEditing(true);
@@ -156,7 +161,7 @@ export function NoteSection({
           onBlur={() => setIsFocused(false)}
           aria-label={label}
         >
-          <span className="block min-h-6 w-full text-left text-sm leading-normal">
+          <span className="block w-full text-left text-sm leading-normal">
             {shouldShowPlaceholder && placeholder ? (
               <span className="text-muted-foreground">{placeholder}</span>
             ) : (
@@ -165,27 +170,63 @@ export function NoteSection({
           </span>
         </div>
       ) : (
-        <textarea
-          value={localNote}
-          onChange={(event) => {
-            setLocalNote(event.target.value);
-            onNoteChange(event.target.value);
+        // 高さ確保（min-h-11）とホバー/フォーカスの視覚（rounded-lg・hover:bg-state-hover・
+        // focus-within:ring）はこのラッパーが担う。textarea自身はfield-sizing-contentで
+        // 内容ぴったりの高さになり、それをラッパーがitems-centerで縦中央に置くため、
+        // 表示div（1行なら中央寄せ）と編集開始直後で文字の縦位置がズレない
+        // （textarea自身にmin-h-11を付けると、1行の文字はtextarea内部で上詰めのまま
+        // 描画され、表示div側の中央寄せと数px食い違って「入力時に少し上へ動く」ように
+        // 見えていた。User指摘）。
+        <div
+          className="hover:bg-state-hover focus-within:ring-ring -mx-2 flex min-h-11 cursor-text items-center rounded-lg px-2 py-2 focus-within:ring-2"
+          // -mx-2 + px-2 で確保したホバー領域（textarea自身のpx-0の外側8px分）はtextarea要素
+          // の外。表示div側のcursor-textと見た目を揃えるだけでなく、この余白をクリックした
+          // 時にtextareaがblurしないようにする（preventDefaultしないと、非フォーカス対象への
+          // mousedownでtextareaが一旦blurし、onBlurが表示modeへ戻してしまってからでは
+          // 手遅れになるため、blurが起きる前のmousedownで止める。User指摘: カーソル
+          // ポインタの見た目とクリック挙動の不一致）。
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              event.preventDefault();
+            }
           }}
-          onFocus={() => {
-            setIsFocused(true);
-          }}
-          onBlur={() => {
-            setIsFocused(false);
-            setIsEditing(false);
-            setLocalNote(displayNote);
-          }}
-          placeholder={placeholder}
-          disabled={disabled}
-          maxLength={maxLength}
-          aria-label={label}
-          rows={1}
-          className="bg-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring field-sizing-content max-h-40 min-h-11 resize-none overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
+        >
+          {/*
+            @dayopt/components の Textarea（shadcn/ui由来）をアクセシビリティ・入力挙動の
+            基盤として使い、見た目はclassNameで上書きしてこのInspectorの他フィールドに揃える
+            （常時のbg-input/border/shadow-xs/px-4/min-h-16を打ち消し、フォーカスリングは
+            二重にならないようこのラッパー側のfocus-withinへ一本化する。User指示）。
+          */}
+          <Textarea
+            value={localNote}
+            // 表示用divをクリックしてこのtextareaへ切り替わる瞬間にだけマウントされるため、
+            // ここでfocusしないとクリックが一度目は編集モードへの切り替えにしか使われず、実際に入力するには二度目のクリックが必要になる
+            autoFocus
+            onChange={(event) => {
+              setLocalNote(event.target.value);
+              onNoteChange(event.target.value);
+            }}
+            onFocus={(event) => {
+              setIsFocused(true);
+              const { length } = event.currentTarget.value;
+              event.currentTarget.setSelectionRange(length, length);
+            }}
+            onBlur={() => {
+              setIsFocused(false);
+              setIsEditing(false);
+              setLocalNote(displayNote);
+            }}
+            placeholder={placeholder}
+            disabled={disabled}
+            maxLength={maxLength}
+            aria-label={label}
+            rows={1}
+            // border-0でボーダー幅そのものを0にする（border-transparentだけだと色が
+            // 透明になるだけで幅1pxはボックスサイズに残り、表示div側（ボーダー無し）との
+            // 間で縦位置が1px未満ズレる原因になっていた。User指摘の layout shift 対策）。
+            className="max-h-40 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-normal shadow-none outline-none focus-visible:ring-0"
+          />
+        </div>
       )}
     </div>
   );

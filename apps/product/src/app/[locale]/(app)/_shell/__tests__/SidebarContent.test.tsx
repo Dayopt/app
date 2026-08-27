@@ -57,12 +57,6 @@ describe('SidebarContent', () => {
     expect(screen.getByTestId('segment-list')).toBeInTheDocument();
   });
 
-  it('always renders the WorkspaceTabs with both tabs', () => {
-    render(<SidebarContent />);
-
-    expect(screen.getAllByRole('tab')).toHaveLength(2);
-  });
-
   it('falls back to CalendarSidebar on workspace-external paths (e.g. /settings)', () => {
     pathnameMock.mockReturnValue('/settings');
 

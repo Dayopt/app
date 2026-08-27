@@ -7,7 +7,7 @@ import { DateTimeSection } from '@/features/timeblock';
 import { formatHHmm } from '@/lib/date';
 
 import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
-import { ActivityFieldRow, NoteSection } from '../inspector/fields';
+import { NoteSection } from '../inspector/fields';
 import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 
 export interface TimeModelEditorValue {
@@ -27,24 +27,6 @@ interface TimeModelEditorProps {
   /** 日時入力に紐づけて表示するエラー。 */
   dateTimeError?: string | undefined;
   disabled?: boolean | undefined;
-  /** 解決済みのアクティビティ名（ActivityFieldRow へそのまま渡す） */
-  activityName: string;
-  /** 解決済みの継承アイコン名（未分類・未設定なら null） */
-  activityIcon?: string | null | undefined;
-  /** 解決済みの継承色名（未分類・未設定なら null） */
-  activityColor?: string | null | undefined;
-  /** アクティビティがカテゴリーに所属していない（= 継承する色が無い） */
-  activityUncategorized?: boolean | undefined;
-  onActivityChange: (activityId: string | null) => void;
-  /** アクティビティ作成コールバック（上位で useCreateActivity を呼ぶ） */
-  onCreateAndSelectActivity: (
-    name: string,
-    color?: string | null,
-    icon?: string | null,
-    categoryId?: string | null,
-  ) => void;
-  /** アクティビティ選択トリガーの無効化（日時・メモの disabled とは独立） */
-  activityDisabled?: boolean | undefined;
   /** 日時グルーピングの直下（時間の下）に差し込む要素。Record の充実度用（#2412） */
   fulfillmentSlot?: React.ReactNode | undefined;
 }
@@ -68,13 +50,6 @@ export function TimeblockEditor({
   onNoteBlur,
   dateTimeError,
   disabled,
-  activityName,
-  activityIcon,
-  activityColor,
-  activityUncategorized,
-  onActivityChange,
-  onCreateAndSelectActivity,
-  activityDisabled,
   fulfillmentSlot,
 }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
@@ -83,18 +58,6 @@ export function TimeblockEditor({
 
   return (
     <div className="space-y-3">
-      {/* タイトル行（アクティビティ）を一番上に置く（v1.0 設計書 §6.1、#2412） */}
-      <ActivityFieldRow
-        variant="compact"
-        activityId={value.activityId}
-        activityName={activityName}
-        activityIcon={activityIcon}
-        activityColor={activityColor}
-        uncategorized={activityUncategorized}
-        onActivityChange={onActivityChange}
-        onCreateAndSelect={onCreateAndSelectActivity}
-        disabled={activityDisabled}
-      />
       {timeLocked ? (
         <div className="flex justify-end">
           <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
@@ -124,9 +87,7 @@ export function TimeblockEditor({
             disabled={disabled === true || timeLocked}
             hasError={hasDateTimeError}
           />
-          {fulfillmentSlot ? (
-            <div className="border-border-subtle mt-2 border-t pt-2">{fulfillmentSlot}</div>
-          ) : null}
+          {fulfillmentSlot}
         </div>
         <div
           // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sidebar create と同じ expand/collapse animation

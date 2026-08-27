@@ -23,38 +23,12 @@ vi.mock('@/features/timeblock', () => ({
   ),
 }));
 
-// NoteSection は実物を使う（依存が薄いため）。ActivityFieldRow は ActivityQuickSelector
-// 経由で tRPC データ取得に依存するため、trigger 部分だけの薄い stub に差し替える。
-vi.mock('../../inspector/fields', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../inspector/fields')>();
-  return {
-    ...actual,
-    ActivityFieldRow: ({
-      activityName,
-      onActivityChange,
-    }: {
-      activityName: string;
-      onActivityChange: (activityId: string | null) => void;
-    }) => (
-      <button type="button" onClick={() => onActivityChange('activity-2')}>
-        {activityName}
-      </button>
-    ),
-  };
-});
-
 const value: TimeModelEditorValue = {
   note: '',
   activityId: 'activity-1',
   startAt: new Date('2099-07-14T09:00:00.000Z'),
   endAt: new Date('2099-07-14T10:00:00.000Z'),
   source: 'plan',
-};
-
-const activityProps = {
-  activityName: '仕事',
-  onActivityChange: vi.fn(),
-  onCreateAndSelectActivity: vi.fn(),
 };
 
 describe('TimeblockEditor', () => {
@@ -75,17 +49,15 @@ describe('TimeblockEditor', () => {
         onDateTimeChange={vi.fn()}
         onNoteChange={vi.fn()}
         disabled={false}
-        {...activityProps}
       />,
     );
 
     expect(screen.queryByText('plan')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('title')).not.toBeInTheDocument();
     expect(screen.getByText('0/1000')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'note' })).toHaveClass(
-      'bg-input',
-      'border-transparent',
-    );
+    // メモ欄はカード内の軽いインライン操作として見せる（常時背景なし、hover時のみ表示。User指示）
+    expect(screen.getByRole('button', { name: 'note' })).toHaveClass('hover:bg-state-hover');
+    expect(screen.getByRole('button', { name: 'note' })).not.toHaveClass('bg-input');
     expect(screen.queryByRole('button', { name: 'save' })).not.toBeInTheDocument();
   });
 
@@ -98,7 +70,6 @@ describe('TimeblockEditor', () => {
         onDateTimeChange={vi.fn()}
         onNoteChange={onNoteChange}
         onNoteBlur={onNoteBlur}
-        {...activityProps}
       />,
     );
 
@@ -118,7 +89,6 @@ describe('TimeblockEditor', () => {
         onDateTimeChange={vi.fn()}
         onNoteChange={vi.fn()}
         dateTimeError="この時間帯には既に予定があります"
-        {...activityProps}
       />,
     );
 
@@ -136,7 +106,6 @@ describe('TimeblockEditor', () => {
         }}
         onDateTimeChange={vi.fn()}
         onNoteChange={vi.fn()}
-        {...activityProps}
       />,
     );
 
@@ -159,7 +128,6 @@ describe('TimeblockEditor', () => {
         }}
         onDateTimeChange={vi.fn()}
         onNoteChange={vi.fn()}
-        {...activityProps}
       />,
     );
 
@@ -173,13 +141,7 @@ describe('TimeblockEditor', () => {
 
   it('全体を無効化した場合は日時とメモを編集できない', () => {
     render(
-      <TimeblockEditor
-        value={value}
-        onDateTimeChange={vi.fn()}
-        onNoteChange={vi.fn()}
-        disabled
-        {...activityProps}
-      />,
+      <TimeblockEditor value={value} onDateTimeChange={vi.fn()} onNoteChange={vi.fn()} disabled />,
     );
 
     expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'true');

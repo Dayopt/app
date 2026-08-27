@@ -302,10 +302,16 @@ export function TimeInput({
           aria-controls="time-input-listbox"
           role="combobox"
           placeholder="--:--"
-          size={5}
+          // 幅は size 属性（ブラウザの平均文字幅による見積もり）ではなく w-14 で固定する。
+          // tabular-numsのHH:mm実測幅は約36px（"00:00"〜"23:59"すべて同一）で、w-14
+          // （content 40px = 56 - px-2*2）ならクリップせず、かつ size={5} 相当（約45px）
+          // より無駄な余白が少ない。桁数が変わっても幅は変わらないため、入力中も
+          // popoverの位置は揺れない。text-rightにしても余白がほぼ残らないため、
+          // 親のcontent edgeへテキストを揃えつつ（-mr-2で相殺、TimeRow参照）
+          // ホバー領域の左右非対称も実質解消される。
           className={cn(
             baseClasses,
-            'cursor-text text-right',
+            'w-14 cursor-text text-right',
             value || draft ? 'text-foreground' : 'text-muted-foreground',
           )}
         />

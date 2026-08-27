@@ -14,9 +14,9 @@ export function CalendarSkeleton() {
       aria-live="polite"
       aria-label="Loading calendar"
     >
-      {/* AppHeader skeleton — AppHeader.tsx の box-model 契約（min-h-12 + pt-safe）に揃える。
-          h-12 固定のままだとノッチ端末で skeleton → 実ヘッダー切替時にレイアウトシフトが出る（#2301） */}
-      <div className="border-border pt-safe flex min-h-12 shrink-0 items-center justify-between border-b px-4">
+      {/* AppHeader skeleton — AppHeader.tsx の box-model 契約（min-h-14 + pt-safe）に揃える。
+          固定 h-14 のままだとノッチ端末で skeleton → 実ヘッダー切替時にレイアウトシフトが出る（#2301） */}
+      <div className="border-border pt-safe flex min-h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <Skeleton className="size-8 rounded-lg" />
           <Skeleton className="h-5 w-28" />

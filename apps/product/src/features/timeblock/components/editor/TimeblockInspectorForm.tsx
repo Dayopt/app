@@ -3,8 +3,9 @@
 /**
  * TimeblockInspector のフォーム（Level 2）
  *
- * plan / record の 1 行を受け取り、InspectorHeaderActions（…メニュー + 閉じる）を
- * パネル最上部に、アクティビティ選択は TimeblockEditor 内の時間フィールド直下へ配線する（#2298）。
+ * plan / record の 1 行を受け取り、パネル最上部のヘッダー行（タイトル＝アクティビティ選択 +
+ * InspectorHeaderActions の「…」メニュー + 閉じる）を配線する。ヘッダーの高さ・余白は
+ * AppHeader / Sidebar のヘッダー行に揃える（User指示、#2430）。
  * タグと確定済み日時は即時保存、note はデバウンスして自動保存する。
  * auto_migrated の record は RLS で不変のため読み取り専用として扱う。
  */
@@ -50,7 +51,11 @@ import {
 } from '../../lib/timeblock-lane-conflict';
 import { getTimeblockMenuItems } from '../../lib/timeblock-menu-items';
 import { parseFulfillment, type Fulfillment } from '../../schemas/timeblock';
-import { InspectorHeaderActions, RecordFulfillmentRow } from '../inspector/fields';
+import {
+  ActivityFieldRow,
+  InspectorHeaderActions,
+  RecordFulfillmentRow,
+} from '../inspector/fields';
 import { EstimationFeedforward } from './EstimationFeedforward';
 import {
   isValidTimeModelRange,
@@ -602,123 +607,141 @@ export function TimeblockInspectorForm({
   };
 
   return (
-    <div className="space-y-3 p-4">
-      <InspectorHeaderActions
-        menuItems={menuItems}
-        onCloseInspector={onCloseInspector}
-        disabled={isWriteFrozen}
-      />
-
-      {isMigrated ? (
-        <p className="text-muted-foreground text-sm">{t('timeblock.editor.migratedLocked')}</p>
-      ) : null}
-
-      {hasUnresolvedWrite ? (
-        <p className="text-destructive text-sm" role="status">
-          {t('timeblock.editor.toast.writeUnresolved')}
-        </p>
-      ) : null}
-
-      <TimeblockEditor
-        value={value}
-        onDateTimeChange={handleDateTimeChange}
-        onNoteChange={handleNoteChange}
-        onNoteBlur={isDuplicateMode ? undefined : flushNoteSave}
-        dateTimeError={dateTimeError}
-        disabled={
-          deletePlan.isPending ||
-          deleteRecord.isPending ||
-          createPlan.isPending ||
-          createRecord.isPending ||
-          isWriteFrozen ||
-          isMigrated
-        }
-        activityName={selectedActivity?.name ?? t('calendar.filter.noActivity')}
-        activityIcon={selectedActivity?.icon}
-        activityColor={selectedActivity?.color}
-        activityUncategorized={selectedActivity?.categoryId === null}
-        onActivityChange={handleActivityChange}
-        onCreateAndSelectActivity={handleCreateAndSelectActivity}
-        activityDisabled={isWriteFrozen}
-        fulfillmentSlot={
-          !isDuplicateMode && kind === 'record' ? (
-            <RecordFulfillmentRow
-              value={fulfillment}
-              onChange={handleFulfillmentChange}
-              disabled={isWriteFrozen || isMigrated}
-            />
-          ) : undefined
-        }
-      />
-
+    <div className="flex flex-col">
       {/*
-        保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
-        瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 時間が
-        凍結されていて見積もりを直す余地が無いため。
+        パネル最上部のヘッダー行（タイトル＝アクティビティ選択 + 「…」メニュー + 閉じる）。
+        高さ・余白は AppHeader / Sidebar のヘッダー行（h-14、実質16pxインセット）に揃える
+        （User指示、#2430）。以前はアクティビティ行が本文側（p-4）に独立して置かれ、
+        閉じるボタンの行とは高さ・余白が揃っていなかった。
       */}
-      <EstimationFeedforward
-        destination={resolveTimeblockDestination(value.endAt)}
-        activityId={value.activityId}
-        draftMinutes={(value.endAt.getTime() - value.startAt.getTime()) / 60000}
-      />
-
-      {duplicateDraft ? (
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="ghost" onClick={onCancelDuplicate}>
-            {t('common.actions.cancel')}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleCreateDuplicate}
-            loading={createPlan.isPending || createRecord.isPending}
-            disabled={duplicateValidationReason !== null || hasTimeConflict}
-          >
-            {t('timeblock.editor.duplicate.create')}
-          </Button>
-        </div>
-      ) : null}
-
-      {!isDuplicateMode && relationships && onOpenRelationship ? (
-        relationships.kind === 'plan' ? (
-          <TimeblockRelationshipSection
-            kind="plan"
-            status={relationships.status}
-            records={relationships.records.map(toRelationshipItem)}
-            onOpen={onOpenRelationship}
-            onRetry={relationships.onRetry}
-          />
-        ) : (
-          <TimeblockRelationshipSection
-            kind="record"
-            status={relationships.status}
-            plan={relationships.plan ? toRelationshipItem(relationships.plan) : null}
-            onOpen={onOpenRelationship}
-            onRetry={relationships.onRetry}
-          />
-        )
-      ) : null}
-
-      {!isDuplicateMode &&
-      kind === 'plan' &&
-      isPast &&
-      !isSkipped &&
-      isRecordStateResolved &&
-      !hasRelatedRecords &&
-      targetId ? (
-        <div className="flex justify-start">
-          <RecordPlanButton
-            planId={targetId}
-            beforeRecord={flushPendingEdits}
-            onPreparingChange={setActionPreparing}
-            onError={(error) => {
-              if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
-            }}
-            onRecorded={
-              onOpenRelationship ? (recordId) => onOpenRelationship(recordId, 'record') : undefined
-            }
+      <div className="flex h-14 shrink-0 items-center justify-between px-2">
+        <div className="flex min-w-0 items-center pl-2">
+          <ActivityFieldRow
+            variant="compact"
+            activityId={value.activityId}
+            activityName={selectedActivity?.name ?? t('calendar.filter.noActivity')}
+            activityIcon={selectedActivity?.icon}
+            activityColor={selectedActivity?.color}
+            uncategorized={selectedActivity?.categoryId === null}
+            onActivityChange={handleActivityChange}
+            onCreateAndSelect={handleCreateAndSelectActivity}
+            disabled={isWriteFrozen}
           />
         </div>
-      ) : null}
+        <InspectorHeaderActions
+          menuItems={menuItems}
+          onCloseInspector={onCloseInspector}
+          disabled={isWriteFrozen}
+        />
+      </div>
+
+      <div className="space-y-3 p-4 pt-0">
+        {isMigrated ? (
+          <p className="text-muted-foreground text-sm">{t('timeblock.editor.migratedLocked')}</p>
+        ) : null}
+
+        {hasUnresolvedWrite ? (
+          <p className="text-destructive text-sm" role="status">
+            {t('timeblock.editor.toast.writeUnresolved')}
+          </p>
+        ) : null}
+
+        <TimeblockEditor
+          value={value}
+          onDateTimeChange={handleDateTimeChange}
+          onNoteChange={handleNoteChange}
+          onNoteBlur={isDuplicateMode ? undefined : flushNoteSave}
+          dateTimeError={dateTimeError}
+          disabled={
+            deletePlan.isPending ||
+            deleteRecord.isPending ||
+            createPlan.isPending ||
+            createRecord.isPending ||
+            isWriteFrozen ||
+            isMigrated
+          }
+          fulfillmentSlot={
+            !isDuplicateMode && kind === 'record' ? (
+              <RecordFulfillmentRow
+                value={fulfillment}
+                onChange={handleFulfillmentChange}
+                disabled={isWriteFrozen || isMigrated}
+              />
+            ) : undefined
+          }
+        />
+
+        {/*
+          保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
+          瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 時間が
+          凍結されていて見積もりを直す余地が無いため。
+        */}
+        <EstimationFeedforward
+          destination={resolveTimeblockDestination(value.endAt)}
+          activityId={value.activityId}
+          draftMinutes={(value.endAt.getTime() - value.startAt.getTime()) / 60000}
+        />
+
+        {duplicateDraft ? (
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={onCancelDuplicate}>
+              {t('common.actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateDuplicate}
+              loading={createPlan.isPending || createRecord.isPending}
+              disabled={duplicateValidationReason !== null || hasTimeConflict}
+            >
+              {t('timeblock.editor.duplicate.create')}
+            </Button>
+          </div>
+        ) : null}
+
+        {!isDuplicateMode && relationships && onOpenRelationship ? (
+          relationships.kind === 'plan' ? (
+            <TimeblockRelationshipSection
+              kind="plan"
+              status={relationships.status}
+              records={relationships.records.map(toRelationshipItem)}
+              onOpen={onOpenRelationship}
+              onRetry={relationships.onRetry}
+            />
+          ) : (
+            <TimeblockRelationshipSection
+              kind="record"
+              status={relationships.status}
+              plan={relationships.plan ? toRelationshipItem(relationships.plan) : null}
+              onOpen={onOpenRelationship}
+              onRetry={relationships.onRetry}
+            />
+          )
+        ) : null}
+
+        {!isDuplicateMode &&
+        kind === 'plan' &&
+        isPast &&
+        !isSkipped &&
+        isRecordStateResolved &&
+        !hasRelatedRecords &&
+        targetId ? (
+          <div className="flex justify-start">
+            <RecordPlanButton
+              planId={targetId}
+              beforeRecord={flushPendingEdits}
+              onPreparingChange={setActionPreparing}
+              onError={(error) => {
+                if (isTimeblockUncertainError(error)) setHasUnresolvedWrite(true);
+              }}
+              onRecorded={
+                onOpenRelationship
+                  ? (recordId) => onOpenRelationship(recordId, 'record')
+                  : undefined
+              }
+            />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -86,14 +86,19 @@ export const CalendarDateHeader = ({
   return (
     // md 以上（デスクトップ）はナビゲーション行（CalendarLayout の AppHeader）と背景・下端の
     // 境界線を共有し、2 行合わせて「1 つの太いヘッダー」に見せる（#2233-2 案B）。モバイルは
-    // MobileCalendarHeader が独立したヘッダーを持つため対象外
+    // MobileCalendarHeader が独立したヘッダーを持つため対象外。
+    // 垂直方向は items-center で中央寄せする（旧 flex-col justify-end + items-end は
+    // 中身を下端の border-b に隙間なく張り付かせ、実測で上15px/下0pxの偏った余白になっていた）
     <div
       className={cn(
-        'md:border-border-subtle md:bg-background flex h-8 shrink-0 flex-col justify-end md:h-12 md:border-b',
+        'md:border-border-subtle md:bg-background flex h-8 shrink-0 items-center md:h-12 md:border-b',
         className,
       )}
     >
-      <div className="flex items-end">
+      {/* flex-1 が必須: 親（flex-row + items-center）は子を幅方向に stretch しないため、
+          無いと中身が横方向にshrink-to-fitして左詰めになる（旧 flex-col + 暗黙の
+          align-items: stretch に依存していた分の明示化） */}
+      <div className="flex flex-1 items-center">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (
           <div

@@ -96,6 +96,17 @@ vi.mock('../../../hooks/useTimeblockWriteMutations', () => ({
 }));
 
 vi.mock('../../inspector/fields', () => ({
+  ActivityFieldRow: ({
+    activityName,
+    onActivityChange,
+  }: {
+    activityName: string;
+    onActivityChange: (activityId: string | null) => void;
+  }) => (
+    <button type="button" onClick={() => onActivityChange('activity-2')}>
+      {activityName}
+    </button>
+  ),
   InspectorHeaderActions: ({
     menuItems,
   }: {

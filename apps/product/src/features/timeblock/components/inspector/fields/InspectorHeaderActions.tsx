@@ -44,7 +44,7 @@ export function InspectorHeaderActions({
   if (!hasMenuItems && !onCloseInspector) return null;
 
   return (
-    <div className="-mr-2 flex items-center justify-end">
+    <div className="flex shrink-0 items-center">
       {hasMenuItems && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -52,12 +52,12 @@ export function InspectorHeaderActions({
               type="button"
               variant="ghost"
               icon
-              size="lg"
+              size="sm"
               disabled={disabled}
               aria-label={t('common.actions.more')}
               className="text-muted-foreground hover:text-foreground"
             >
-              <MoreHorizontal className="size-5" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -85,12 +85,12 @@ export function InspectorHeaderActions({
           type="button"
           variant="ghost"
           icon
-          size="lg"
+          size="sm"
           onClick={onCloseInspector}
           aria-label={t('common.actions.close')}
           className="text-muted-foreground hover:text-foreground"
         >
-          <X className="size-5" />
+          <X className="size-4" />
         </Button>
       )}
     </div>

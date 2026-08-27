@@ -55,6 +55,13 @@ export function TimeRow({
           {label}
         </span>
       </div>
+      {/*
+        endInput自身のpx-2はホバー/クリック領域の内側paddingで、テキストとの間に
+        余白を作る。-mr-2でグループ全体を右へ押し出し、endInputのテキストは親
+        （bg-muted px-4）のcontent edgeに揃え、ホバー背景だけがそこから8px外側
+        （親のpadding領域）まで伸びるようにする（User指示: text位置と
+        hover/click targetの分離）。
+      */}
       <div className="-mr-2 flex items-center gap-1">
         <TimeInput
           kind="start"
