@@ -87,7 +87,7 @@ export function TimeblockEditor({
             disabled={disabled === true || timeLocked}
             hasError={hasDateTimeError}
           />
-          {fulfillmentSlot ? <div className="mt-2">{fulfillmentSlot}</div> : null}
+          {fulfillmentSlot}
         </div>
         <div
           // eslint-disable-next-line tailwindcss/no-arbitrary-value -- sidebar create と同じ expand/collapse animation
