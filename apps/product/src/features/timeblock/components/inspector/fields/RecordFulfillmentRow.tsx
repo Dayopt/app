@@ -50,7 +50,7 @@ export function RecordFulfillmentRow({
         <Smile className="text-muted-foreground size-4 flex-shrink-0" />
         <span className="text-muted-foreground text-sm">{t('label')}</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="-mr-2 flex items-center gap-1">
         {FULFILLMENT_OPTIONS.map(({ value: option }) => {
           const isSelected = value === option;
           return (
