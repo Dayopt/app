@@ -61,7 +61,7 @@ export function RecordFulfillmentRow({
               onClick={() => handleToggle(option)}
               aria-pressed={isSelected}
               className={cn(
-                'rounded-lg px-3 py-1 text-sm font-medium transition-colors',
+                'border-border rounded-lg border px-3 py-1 text-sm font-medium transition-colors',
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
                 'disabled:pointer-events-none disabled:opacity-50',
                 isSelected
