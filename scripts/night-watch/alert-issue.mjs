@@ -388,6 +388,172 @@ export function runAlertSync({
   return { action: 'created', issueNumber: extractTrailingNumber(createOutput) };
 }
 
+// #2422: 観測コマンド自体の取得失敗（fetch-failed）が N 晩連続した時の
+// escalation issue。CHECK_DEFINITIONS の kind ベースの title
+// （`nightwatch(<checkId>): <definition.title>`、red-alert 用）とは
+// **別の title prefix** を使う。同じ prefix にすると、findExistingAlertIssue
+// の dedup 検索が「この check-id の red-alert issue」を誤って再利用し、
+// 「観測が失敗している」という別事象の body をそこへ紛れ込ませてしまう。
+const FETCH_FAILURE_TITLE_PREFIX = 'nightwatch-fetch-failed';
+
+// consecutiveNights の妥当範囲（無制限の整数を issue title/body へ載せる経路を
+// 作らない。run-log.mjs の MAX_ISSUE_NUMBER と同じ考え方）。
+const MAX_CONSECUTIVE_NIGHTS = 999;
+
+function fetchFailureTitle(checkId, consecutiveNights) {
+  return `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): 観測が${consecutiveNights}晩連続で取得失敗`;
+}
+
+/**
+ * `findExistingAlertIssue` の fetch-failure escalation 版。title prefix が
+ * 異なる点以外は同じ設計（title 完全一致プレフィックス + 固定ラベル要求）。
+ * @param {string} checkId
+ * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
+ */
+export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {}) {
+  const titlePrefix = `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): `;
+  const results = runGhJson(
+    [
+      'issue',
+      'list',
+      '--repo',
+      REPO,
+      '--state',
+      'open',
+      '--search',
+      `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): in:title`,
+      '--json',
+      'number,title,labels',
+    ],
+    { execFileImpl },
+  );
+  return (
+    results.find((issue) => {
+      if (!issue.title.startsWith(titlePrefix)) return false;
+      const labelNames = new Set((issue.labels ?? []).map((label) => label.name));
+      return ALERT_ISSUE_LABELS.every((name) => labelNames.has(name));
+    }) ?? null
+  );
+}
+
+/**
+ * @param {{ checkId: string, consecutiveNights: number, detectedAt: string, isContinuing?: boolean }} params
+ */
+export function buildFetchFailureAlertBody({
+  checkId,
+  consecutiveNights,
+  detectedAt,
+  isContinuing = false,
+}) {
+  const definition = getCheckDefinition(checkId);
+  if (!definition) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+  if (
+    !Number.isInteger(consecutiveNights) ||
+    consecutiveNights <= 0 ||
+    consecutiveNights > MAX_CONSECUTIVE_NIGHTS
+  ) {
+    throw new Error(`consecutiveNights は 1〜${MAX_CONSECUTIVE_NIGHTS} の整数である必要があります`);
+  }
+  // 既存 escalation issue への追記（isContinuing）では固定の晩数を繰り返さない
+  // （push前反証レビュー指摘・P2、PR #2445）。呼び出し元は常に固定の
+  // `consecutiveNights`（既定 3）しか渡さないため、night4 以降も毎晩「3晩連続」
+  // という同じ本文が積まれ、実際の継続期間が過小評価される「検出はしたが
+  // 深刻度が伝わらない」劣化版無音化になっていた。実際の連続晩数を数える
+  // 代わりに、新規/継続で文言を分岐する最小修正を採る。
+  const status = isContinuing
+    ? '前回の検出以降も継続して取得失敗しています（直近の運行記録でも観測失敗を確認）。'
+    : `観測コマンド自体が ${consecutiveNights} 晩連続で取得失敗しています。`;
+  return `## night-watch 検出: ${checkId}（観測失敗の escalation）
+
+この check は red/green の判定ではなく、**観測コマンド自体**が失敗しています。${status}
+
+**再現コマンド**: \`${definition.command}\`
+**検出日時**: ${detectedAt}
+
+原因の切り分けは \`docs/operations/night-watch.md\` §故障検出手順 を参照してください。
+`;
+}
+
+/**
+ * fetch-failed（観測コマンド自体の取得失敗）escalation の起票/追記。
+ * `runAlertSync` と同じ dedup・run-scoped 起票上限（`reserveAlertRunSlot`）の
+ * 仕組みを使うが、reservation key は `fetch-failed:<checkId>` にして
+ * red-alert 用の予約枠（`checkId` そのもの）と衝突させない。
+ * @param {{
+ *   checkId: string,
+ *   consecutiveNights: number,
+ *   detectedAt?: string,
+ *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
+ *   runStatePath?: string,
+ * }} params
+ */
+export function runFetchFailureAlertSync({
+  checkId,
+  consecutiveNights,
+  detectedAt = new Date().toISOString(),
+  execFileImpl,
+  runStatePath,
+}) {
+  const definition = getCheckDefinition(checkId);
+  if (!definition) {
+    throw new Error(`未知の check-id です: ${checkId}`);
+  }
+
+  let existing;
+  try {
+    existing = findExistingFetchFailureAlertIssue(checkId, { execFileImpl });
+  } catch {
+    return { action: 'skipped', reason: 'dedup検索失敗のため起票見送り' };
+  }
+
+  const body = buildFetchFailureAlertBody({
+    checkId,
+    consecutiveNights,
+    detectedAt,
+    isContinuing: Boolean(existing),
+  });
+
+  const reservation = reserveAlertRunSlot({
+    checkId: `fetch-failed:${checkId}`,
+    willCreate: !existing,
+    statePath: runStatePath,
+  });
+  if (!reservation.allowed) {
+    return { action: 'capped', reason: reservation.reason };
+  }
+
+  if (existing) {
+    runGh(['issue', 'comment', String(existing.number), '--repo', REPO, '--body', body], {
+      execFileImpl,
+    });
+    return { action: 'commented', issueNumber: existing.number };
+  }
+
+  const title = fetchFailureTitle(checkId, consecutiveNights);
+  const createOutput = runGh(
+    [
+      'issue',
+      'create',
+      '--repo',
+      REPO,
+      '--title',
+      title,
+      '--body',
+      body,
+      '--label',
+      'type:chore',
+      '--label',
+      'area:operations',
+      '--label',
+      'priority:p2',
+    ],
+    { execFileImpl },
+  );
+  return { action: 'created', issueNumber: extractTrailingNumber(createOutput) };
+}
+
 function isDirectExecution() {
   if (!process.argv[1]) return false;
   try {

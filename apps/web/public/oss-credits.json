@@ -281,14 +281,14 @@
   },
   {
     "name": "@next/env",
-    "version": "16.2.11",
+    "version": "16.3.3",
     "license": "MIT",
     "repository": "https://github.com/vercel/next.js",
     "publisher": "Next.js Team <support@vercel.com>"
   },
   {
     "name": "@next/swc-darwin-arm64",
-    "version": "16.2.11",
+    "version": "16.3.3",
     "license": "MIT",
     "repository": "https://github.com/vercel/next.js"
   },
@@ -858,7 +858,7 @@
   },
   {
     "name": "@swc/helpers",
-    "version": "0.5.15",
+    "version": "0.5.23",
     "license": "Apache-2.0",
     "repository": "https://github.com/swc-project/swc.git",
     "publisher": "강동윤 <kdy1997.dev@gmail.com>"
@@ -1212,12 +1212,6 @@
     "version": "4.0.4",
     "license": "MIT",
     "repository": "git://github.com/juliangruber/balanced-match.git"
-  },
-  {
-    "name": "baseline-browser-mapping",
-    "version": "2.10.43",
-    "license": "Apache-2.0",
-    "repository": "https://github.com/web-platform-dx/baseline-browser-mapping.git"
   },
   {
     "name": "baseline-browser-mapping",
@@ -2495,7 +2489,7 @@
   },
   {
     "name": "next",
-    "version": "16.2.11",
+    "version": "16.3.3",
     "license": "MIT",
     "repository": "vercel/next.js"
   },
@@ -2643,6 +2637,13 @@
     "license": "MIT-0",
     "repository": "https://github.com/postalsys/postal-mime.git",
     "publisher": "Andris Reinman"
+  },
+  {
+    "name": "postcss",
+    "version": "8.5.23",
+    "license": "MIT",
+    "repository": "postcss/postcss",
+    "publisher": "Andrey Sitnik <andrey@sitnik.es>"
   },
   {
     "name": "postcss",

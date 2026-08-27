@@ -12,9 +12,12 @@
  */
 
 // web の全 namespace（marketing / common / legal / search）を locale ごとに集約
-const messageModules = import.meta.glob<Record<string, unknown>>('../../../web/messages/*/*.json', {
+// Next.js 16.3+ が独自の import.meta.glob 型（Turbopack対応）をグローバルに追加し、
+// vite/client.d.ts の ImportGlobFunction とマージされ generic 呼び出しが壊れるため、
+// ジェネリック引数を渡さず結果を直接キャストする。
+const messageModules = import.meta.glob('../../../web/messages/*/*.json', {
   eager: true,
-});
+}) as Record<string, Record<string, unknown>>;
 
 const messagesByLocale = Object.entries(messageModules).reduce<
   Record<string, Record<string, unknown>>

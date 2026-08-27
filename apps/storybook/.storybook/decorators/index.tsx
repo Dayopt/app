@@ -33,12 +33,12 @@ export const withWrapper = (className: string): Decorator => {
 };
 
 // メッセージファイルを自動収集（namespace追加時に変更不要）
-const messageModules = import.meta.glob<Record<string, string>>(
-  '../../../product/messages/ja/*.json',
-  {
-    eager: true,
-  },
-);
+// Next.js 16.3+ が独自の import.meta.glob 型（Turbopack対応）をグローバルに追加し、
+// vite/client.d.ts の ImportGlobFunction とマージされ generic 呼び出しが壊れるため、
+// ジェネリック引数を渡さず結果を直接キャストする。
+const messageModules = import.meta.glob('../../../product/messages/ja/*.json', {
+  eager: true,
+}) as Record<string, Record<string, string>>;
 const messages = Object.entries(messageModules).reduce<Record<string, unknown>>(
   (acc, [, mod]) => ({ ...acc, ...(mod as Record<string, unknown>) }),
   {},

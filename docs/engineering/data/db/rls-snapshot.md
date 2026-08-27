@@ -5,7 +5,7 @@
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。
 >
-> 集計: public スキーマの policy 59 件 / RLS 対象テーブル 25 件 / GRANT 238 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）1 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
+> 集計: public スキーマの policy 62 件 / RLS 対象テーブル 28 件 / GRANT 241 件 / storage.objects の policy（app 所有）8 件 / 想定外 policy 0 件 / private schema のオブジェクト ACL（owner 以外）1 件 / 列レベル ACL（owner 以外）0 件 / function EXECUTE（owner 以外）1 件 / custom type USAGE（owner 以外）0 件 / schema USAGE（owner 以外）1 件 / Realtime publication 0 件。
 
 ## RLS 有効状態（public テーブル）
 
@@ -34,6 +34,9 @@
 | segments                      | ✅          | —      |
 | stripe_webhook_events         | ✅          | —      |
 | tags                          | ✅          | —      |
+| undo_receipt_effects          | ✅          | —      |
+| undo_receipt_field_changes    | ✅          | —      |
+| undo_receipts                 | ✅          | —      |
 | user_settings                 | ✅          | —      |
 | write_fence_control           | ✅          | —      |
 
@@ -192,6 +195,24 @@
 | Users can insert own tags | INSERT | PERMISSIVE | {public} | —                                       | (( SELECT auth.uid() AS uid) = user_id) |
 | Users can view own tags   | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —                                       |
 | Users can update own tags | UPDATE | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | (( SELECT auth.uid() AS uid) = user_id) |
+
+### undo_receipt_effects
+
+| policy                                  | cmd    | permissive | roles    | USING                                   | WITH CHECK |
+| --------------------------------------- | ------ | ---------- | -------- | --------------------------------------- | ---------- |
+| Users can view own undo_receipt_effects | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### undo_receipt_field_changes
+
+| policy                                        | cmd    | permissive | roles    | USING                                   | WITH CHECK |
+| --------------------------------------------- | ------ | ---------- | -------- | --------------------------------------- | ---------- |
+| Users can view own undo_receipt_field_changes | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —          |
+
+### undo_receipts
+
+| policy                           | cmd    | permissive | roles    | USING                                   | WITH CHECK |
+| -------------------------------- | ------ | ---------- | -------- | --------------------------------------- | ---------- |
+| Users can view own undo_receipts | SELECT | PERMISSIVE | {public} | (( SELECT auth.uid() AS uid) = user_id) | —          |
 
 ### user_settings
 
@@ -493,6 +514,9 @@ allow-list 外の policy を検出した場合、`pnpm rls:snapshot` は snapsho
 | table       | public.tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.undo_receipt_effects                                                                                                                                                                                                                                                                                                                                                                                                                                                            | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.undo_receipt_field_changes                                                                                                                                                                                                                                                                                                                                                                                                                                                      | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
+| table       | public.undo_receipts                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | anon                | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | authenticated       | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, UPDATE           |
 | table       | public.user_settings                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | service_role        | DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE |
@@ -527,6 +551,7 @@ function EXECUTE（`proacl`）/ custom type・domain USAGE（`typacl`）の 5 ca
 | function | private.assert_account_deletion_gate_active_v1()                                                                                                                                                                                                                                                                                                                                    | postgres |
 | function | private.assert_account_not_closing_v1(p_user_id uuid)                                                                                                                                                                                                                                                                                                                               | postgres |
 | function | private.assert_calendar_account_not_deleting_v1(p_user_id uuid)                                                                                                                                                                                                                                                                                                                     | postgres |
+| function | private.assert_public_contract_exposure_v1()                                                                                                                                                                                                                                                                                                                                        | postgres |
 | function | private.assert_timeblock_effective_write_boundary_v1()                                                                                                                                                                                                                                                                                                                              | postgres |
 | function | private.assert_timeblock_revision_acl_v1()                                                                                                                                                                                                                                                                                                                                          | postgres |
 | function | private.assert_timeblock_service_role_request_v1()                                                                                                                                                                                                                                                                                                                                  | postgres |
@@ -618,6 +643,7 @@ function EXECUTE（`proacl`）/ custom type・domain USAGE（`typacl`）の 5 ca
 | object   | private.integration_security_events                                                                                                                                                                                                                                                                                                                                                 | postgres |
 | object   | private.legacy_oauth_bind_observations                                                                                                                                                                                                                                                                                                                                              | postgres |
 | object   | private.legacy_oauth_bind_observations_id_seq                                                                                                                                                                                                                                                                                                                                       | postgres |
+| object   | private.public_contract_exposure_v1                                                                                                                                                                                                                                                                                                                                                 | postgres |
 | object   | private.timeblock_effective_write_privileges_v1                                                                                                                                                                                                                                                                                                                                     | postgres |
 | object   | private.timeblock_transaction_revision_bumps                                                                                                                                                                                                                                                                                                                                        | postgres |
 | object   | private.timeblock_transaction_states                                                                                                                                                                                                                                                                                                                                                | postgres |
@@ -658,6 +684,13 @@ implicit array type（`_型名`）と implicit row type（table / view の自動
 ## Plan / Record effective write境界
 
 - ✅ `anon` / `authenticated`のeffective table / column write権限なし
+
+## public schema の契約露出
+
+`public` の view / SECURITY DEFINER 関数が versioned-contract の規約を守っているか。
+view は `security_invoker = true`・`_v<N>` 命名・`anon` 到達不可、definer 関数は `anon` 実行不可。
+
+- ✅ 違反なし
 
 ## Realtime publication
 

@@ -37,7 +37,7 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 - **起動時**: 指揮台セッションは最初に本日の日次盤面 issue（`is:issue label:type:board is:open` で検索）と open issue を読み込む
 - **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。**本文 = 現在地のスナップショット、コメント列 = タイムライン**（2026-08-20、[#2285](https://github.com/Dayopt/dayopt/issues/2285)）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新し、**同じタイミングで盤面 issue へ 1 行のイベントコメントを追記する**（段階値は「起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能」）。§3 本日の実績・§4 キュー・§5 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない。§3 は手書きの集計数字を書かない）
 - **§1（北極星と今週の最優先）だけが内容を持つ手動更新セクション**。前日の issue から機械コピーし、当日は User/指揮台が直接編集する
-- **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` で直接検索する
+- **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` **と** `judgment:judged`（2026-08-27、[#2423](https://github.com/Dayopt/dayopt/issues/2423) の個別判定前倒しに伴い追加。詳細は `.claude/rules/orchestration.md` §判断ジャーナル）の両ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` と `gh search issues --label judgment:judged --include-prs` で直接検索する
 - **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計）。**cutover 手順**（初日盤面 issue の起票 + #2020 の最終コメント・close）は `.claude/skills/dispatch/SKILL.md` §日次盤面issueの起票 が正本。実行は本 PR merge 後、指揮台が行う
 
 ## Codex（別系統批評係）の利用
@@ -55,8 +55,13 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 
 発動条件: 危険地帯（認証 / 決済 / RLS・テナント境界 / DB migration）に触れるチケット、または実装 2 日超相当の大型チケット。チケット本文完成後、レーン起動前に実行する。
 
+**呼び出しは `scripts/ops/codex-input.mjs` wrapper 経由に一本化する**（2026-08-27、[#2421](https://github.com/Dayopt/dayopt/issues/2421)）。Codex は `--sandbox read-only` のため `api.github.com` へ到達できず、対象チケットが `Depends on: #N` 等で参照する他 issue を自力で読めない（#2419 で実測: `error connecting to api.github.com`）。wrapper が対象本文中の `#\d+` 参照を最大 10 件・1 段階だけ `gh issue view` で解決し、連結してから Codex へ渡す（未解決・上限超過の参照は本文中に明記されるだけで、呼び出し自体は失敗しない）。
+
+**`set -o pipefail` を必ず前置する**（push前反証レビュー指摘・P2、PR #2445）。無いと wrapper 自体の失敗（大きい diff での ENOBUFS 等）が飲み込まれ、Codex が空 stdin で起動して「指摘なし」相当を返し、実際には何もレビューしていないのに指摘ゼロと誤読する。
+
 ```bash
-gh issue view <番号> --json title,body -q '.title + "\n\n" + .body' \
+set -o pipefail
+node scripts/ops/codex-input.mjs issue <番号> \
   | codex exec --sandbox read-only \
     "敵対的レビュアーとして、この設計の穴・壊れるシナリオ・考慮漏れ・
      暗黙の前提を列挙せよ。重要度順に。"
@@ -79,10 +84,11 @@ codex exec --sandbox read-only \
 
 ### C. PR クロスレビュー（Ready 化後）
 
-**選別基準の正本は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）。ここでは複製しない。** 該当 PR が Ready ＋ CI green になったら:
+**選別基準の正本は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行）。ここでは複製しない。** 該当 PR が Ready ＋ CI green になったら、A と同じ `codex-input.mjs` wrapper 経由で呼ぶ（PR 本文が参照する issue を 1 段階解決してから diff と連結する）。A と同じ理由で `set -o pipefail` を前置する:
 
 ```bash
-gh pr diff <番号> \
+set -o pipefail
+node scripts/ops/codex-input.mjs pr <番号> \
   | codex exec --sandbox read-only \
     "この diff をレビューし、バグ・セキュリティ懸念・テナント境界の問題・
      エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。"

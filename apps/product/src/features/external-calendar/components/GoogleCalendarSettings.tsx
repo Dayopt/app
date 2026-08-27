@@ -49,6 +49,7 @@ export function GoogleCalendarSettings() {
   const startConnection = () => {
     if (!availability.data?.available) return;
     const query = new URLSearchParams({ locale });
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- OAuth start route（302 + cookie を返す redirect flow）であり SPA route ではない
     window.location.assign(`/api/integrations/google-calendar/start?${query.toString()}`);
   };
 
@@ -223,6 +224,7 @@ function GoogleCalendarConnection({
   const reconnect = () => {
     if (!origin) return;
     const query = new URLSearchParams({ locale, reconnectConnectionId: connection.id });
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- OAuth start route（302 + cookie を返す redirect flow）であり SPA route ではない
     window.location.assign(`/api/integrations/google-calendar/start?${query.toString()}`);
   };
 

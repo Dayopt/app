@@ -1045,6 +1045,134 @@ export type Database = {
           },
         ];
       };
+      undo_receipt_effects: {
+        Row: {
+          effect_kind: string;
+          id: string;
+          plan_id: string | null;
+          receipt_id: string;
+          record_id: string | null;
+          resource_type: string | null;
+          user_id: string;
+        };
+        Insert: {
+          effect_kind: string;
+          id?: string;
+          plan_id?: string | null;
+          receipt_id: string;
+          record_id?: string | null;
+          resource_type?: string | null;
+          user_id: string;
+        };
+        Update: {
+          effect_kind?: string;
+          id?: string;
+          plan_id?: string | null;
+          receipt_id?: string;
+          record_id?: string | null;
+          resource_type?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'undo_receipt_effects_plan_owner_fkey';
+            columns: ['plan_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['id', 'user_id'];
+          },
+          {
+            foreignKeyName: 'undo_receipt_effects_receipt_owner_fkey';
+            columns: ['receipt_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'undo_receipts';
+            referencedColumns: ['id', 'user_id'];
+          },
+          {
+            foreignKeyName: 'undo_receipt_effects_record_owner_fkey';
+            columns: ['record_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'records';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
+      undo_receipt_field_changes: {
+        Row: {
+          after_value: Json;
+          before_value: Json;
+          effect_id: string;
+          field_name: string;
+          user_id: string;
+        };
+        Insert: {
+          after_value: Json;
+          before_value: Json;
+          effect_id: string;
+          field_name: string;
+          user_id: string;
+        };
+        Update: {
+          after_value?: Json;
+          before_value?: Json;
+          effect_id?: string;
+          field_name?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'undo_receipt_field_changes_effect_owner_fkey';
+            columns: ['effect_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'undo_receipt_effects';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
+      undo_receipts: {
+        Row: {
+          command_name: string;
+          created_at: string;
+          id: string;
+          operation_id: string;
+          origin_connection_id: string | null;
+          undo_expires_at: string;
+          undone_at: string | null;
+          undone_operation_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          command_name: string;
+          created_at?: string;
+          id?: string;
+          operation_id: string;
+          origin_connection_id?: string | null;
+          undo_expires_at: string;
+          undone_at?: string | null;
+          undone_operation_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          command_name?: string;
+          created_at?: string;
+          id?: string;
+          operation_id?: string;
+          origin_connection_id?: string | null;
+          undo_expires_at?: string;
+          undone_at?: string | null;
+          undone_operation_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'undo_receipts_origin_connection_owner_fkey';
+            columns: ['origin_connection_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_connections';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
       user_settings: {
         Row: {
           created_at: string;
