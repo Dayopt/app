@@ -281,7 +281,10 @@ export const MiniCalendar = memo<MiniCalendarProps>(
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              {/* 年は2020-2050の31件あり、そのままだと画面のほぼ全高を占める長大なリストになる。
+                  1項目36px + Viewportのp-2(16px)で12件ぶん(448px)に収め、以降はスクロール
+                  にする（User指摘）。 */}
+              <SelectContent className="max-h-112">
                 {years.map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
