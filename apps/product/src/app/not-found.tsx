@@ -20,6 +20,7 @@ export default function RootNotFound() {
           </p>
         </div>
 
+        {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination -- not-found からの復旧は状態を完全にリセットするためハードリロードが意図的 */}
         <Button onClick={() => (window.location.href = '/')} className="w-full">
           Go to Home
         </Button>

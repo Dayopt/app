@@ -33,6 +33,7 @@ function handleAuthError(error: unknown): void {
     // 現在のパスのみ保存(query stringは含めない — 2次オープンリダイレクト防止)
     const currentPath = window.location.pathname;
     const loginUrl = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 認証エラー時は全クライアント状態（tRPC cache / query client）を確実に破棄するためハードリロードが意図的
     window.location.href = loginUrl;
   }
 }

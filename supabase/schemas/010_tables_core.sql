@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-08-24
+-- 最終同期日: 2026-08-27
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -27,6 +27,8 @@
 --   - 20260729073124_mcp_stage1_revision_fence.sql
 --   - 20260729073127_legacy_linked_record_restore_compatibility.sql
 --   - 20260824090000_detach_tag_id_from_timeblock_write_path.sql
+--   - 20260826234713_add_ledger_composite_tenant_anchors.sql
+--   - 20260826234911_add_ledger_undo_substrate.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -274,3 +276,89 @@ CREATE TABLE public.user_settings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ============================================================
+-- Undo substrate（#2433、台帳 第2段）
+-- ============================================================
+-- 凍結契約 T4 の「複数 resource × フィールド単位の before/after image」を 3 階層へ
+-- 正規化したもの。**構造だけが第2段の scope で、Undo RPC 本体は第3段**。
+--
+-- 設計上の要点（migration のコメントが正本、ここは要約）:
+-- ■ 行単位の版列を持たない。T4 訂正（#2443）で CAS の判定対象が field mask 内へ
+--   限定されたため、CAS anchor は field_changes.after_value が兼ねる。版列を置くと
+--   実装が行単位 CAS へ引き戻され、T4 の矛盾が schema の形で復活する
+-- ■ resource は polymorphic な単一 ID にしない。plan_id / record_id へ分けることで
+--   (resource_id, user_id) の複合 FK を実際に張れる（他人の resource を混ぜられない）
+-- ■ authenticated への GRANT は本段では出さない。policy だけ先に確定させ、読みの開放は
+--   第3段で GRANT 1 行を足す（public schema は PostgREST が自動公開するため、読み手が
+--   無いうちに列の形を公開契約として確定させない）
+
+CREATE TABLE public.undo_receipts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  operation_id UUID NOT NULL,               -- T3 の domain command 冪等性キー
+  command_name TEXT NOT NULL,
+  origin_connection_id UUID,                -- 元操作の authority の出所（UI 由来なら NULL）
+  undo_expires_at TIMESTAMPTZ NOT NULL,     -- **DEFAULT なし**（TTL の具体値は第3段）
+  undone_at TIMESTAMPTZ,
+  undone_operation_id UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT undo_receipts_id_user_id_unique UNIQUE (id, user_id),
+  CONSTRAINT undo_receipts_user_id_operation_id_unique UNIQUE (user_id, operation_id),
+  CONSTRAINT undo_receipts_command_name_not_blank CHECK (length(btrim(command_name)) > 0),
+  CONSTRAINT undo_receipts_undone_pair
+    CHECK ((undone_at IS NULL) = (undone_operation_id IS NULL)),
+  -- 単一 FK にしない。connection 削除時は列指定 SET NULL で user_id を巻き込まない
+  CONSTRAINT undo_receipts_origin_connection_owner_fkey
+    FOREIGN KEY (origin_connection_id, user_id)
+    REFERENCES public.oauth_connections (id, user_id)
+    ON DELETE SET NULL (origin_connection_id)
+);
+
+CREATE TABLE public.undo_receipt_effects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  receipt_id UUID NOT NULL,
+  plan_id UUID,                             -- plan_id / record_id はどちらか一方だけ
+  record_id UUID,
+  resource_type TEXT GENERATED ALWAYS AS (
+    CASE WHEN plan_id IS NOT NULL THEN 'plan' ELSE 'record' END
+  ) STORED,
+  effect_kind TEXT NOT NULL,                -- insert / update / delete
+  CONSTRAINT undo_receipt_effects_id_user_id_unique UNIQUE (id, user_id),
+  CONSTRAINT undo_receipt_effects_exactly_one_resource
+    CHECK (num_nonnulls(plan_id, record_id) = 1),
+  CONSTRAINT undo_receipt_effects_effect_kind_valid
+    CHECK (effect_kind IN ('insert', 'update', 'delete')),
+  CONSTRAINT undo_receipt_effects_receipt_owner_fkey
+    FOREIGN KEY (receipt_id, user_id)
+    REFERENCES public.undo_receipts (id, user_id) ON DELETE CASCADE,
+  CONSTRAINT undo_receipt_effects_plan_owner_fkey
+    FOREIGN KEY (plan_id, user_id)
+    REFERENCES public.plans (id, user_id) ON DELETE CASCADE,
+  CONSTRAINT undo_receipt_effects_record_owner_fkey
+    FOREIGN KEY (record_id, user_id)
+    REFERENCES public.records (id, user_id) ON DELETE CASCADE,
+  CONSTRAINT undo_receipt_effects_receipt_plan_unique UNIQUE (receipt_id, plan_id),
+  CONSTRAINT undo_receipt_effects_receipt_record_unique UNIQUE (receipt_id, record_id)
+);
+
+CREATE TABLE public.undo_receipt_field_changes (
+  effect_id UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  field_name TEXT NOT NULL,
+  -- SQL の NULL は JSON の null で表す（「触れていない」と「値が NULL」を区別する）
+  before_value JSONB NOT NULL,
+  after_value JSONB NOT NULL,               -- T4 訂正 (a) の CAS anchor はこれ
+  CONSTRAINT undo_receipt_field_changes_pkey PRIMARY KEY (effect_id, field_name),
+  CONSTRAINT undo_receipt_field_changes_field_name_not_blank
+    CHECK (length(btrim(field_name)) > 0),
+  CONSTRAINT undo_receipt_field_changes_effect_owner_fkey
+    FOREIGN KEY (effect_id, user_id)
+    REFERENCES public.undo_receipt_effects (id, user_id) ON DELETE CASCADE
+);
+
+-- 複合 tenant FK の anchor（#2433）。子が (親の id, user_id) で参照するために要る。
+-- ALTER TABLE public.plans             ADD CONSTRAINT plans_id_user_id_unique UNIQUE (id, user_id);
+-- ALTER TABLE public.records           ADD CONSTRAINT records_id_user_id_unique UNIQUE (id, user_id);
+-- ALTER TABLE public.oauth_connections ADD CONSTRAINT oauth_connections_id_user_id_unique UNIQUE (id, user_id);

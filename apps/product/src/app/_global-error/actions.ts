@@ -16,6 +16,7 @@ export function createGlobalErrorActions({ reset }: { reset: () => void }): Glob
       window.location.reload();
     },
     goHome: () => {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- global error からの復旧は状態を完全にリセットするためハードリロードが意図的
       window.location.href = '/';
     },
   };

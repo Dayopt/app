@@ -55,6 +55,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
 
         <div className="flex gap-4">
           <Button onClick={reset}>Try again</Button>
+          {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination -- error boundary からの復旧は状態を完全にリセットするためハードリロードが意図的 */}
           <Button onClick={() => (window.location.href = '/')} variant="outline">
             Go to Home
           </Button>

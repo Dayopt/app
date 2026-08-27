@@ -116,6 +116,12 @@ type EffectiveTimeblockWritePrivilegeRow = {
   object_name: string;
   privilege_type: string;
 };
+type PublicContractExposureRow = {
+  violation_kind: string;
+  object_type: string;
+  object_name: string;
+  detail: string;
+};
 
 /** psql で 1 行 JSON を取り出す（複数行・特殊文字に強い） */
 function queryJson<T>(sql: string): T {
@@ -514,6 +520,26 @@ function fetchEffectiveTimeblockWritePrivileges(): EffectiveTimeblockWritePrivil
 }
 
 /**
+ * `public` schema の契約露出（#2433）を DB 側の canonical audit view から読む。
+ *
+ * `security_invoker` は **reloption であって ACL ではない**ため、この file の GRANT 一覧
+ * には現れない。GRANT だけを snapshot していると「definer 権限で他人の行を返す view」が
+ * drift 検出をすり抜けるので、専用の section を持つ。1 行でも返れば snapshot 生成を止める。
+ */
+function fetchPublicContractExposure(): PublicContractExposureRow[] {
+  return (
+    queryJson<PublicContractExposureRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(violation) ORDER BY
+                violation.violation_kind,
+                violation.object_name,
+                violation.detail
+              ), '[]'::json)
+       FROM private.public_contract_exposure_v1 AS violation;`,
+    ) ?? []
+  );
+}
+
+/**
  * render() の入力。**位置引数ではなく名前付きで渡す**。
  * 同じ型の section が複数あるため（public / storage の PolicyRow[]・RlsRow[]、
  * function / custom type の PrivateGrantRow[]、public / private の GrantRow[]）、
@@ -537,6 +563,7 @@ type SnapshotSections = {
   privateSchemaUsage: SchemaGrantRow[];
   realtimePublication: RealtimePublicationRow[];
   effectiveTimeblockWritePrivileges: EffectiveTimeblockWritePrivilegeRow[];
+  publicContractExposure: PublicContractExposureRow[];
 };
 
 function render({
@@ -555,6 +582,7 @@ function render({
   privateSchemaUsage,
   realtimePublication,
   effectiveTimeblockWritePrivileges,
+  publicContractExposure,
 }: SnapshotSections): string {
   const policyByTable = new Map<string, PolicyRow[]>();
   for (const p of policies) {
@@ -831,6 +859,22 @@ function render({
   );
   lines.push('');
 
+  lines.push('## public schema の契約露出');
+  lines.push('');
+  lines.push(
+    '`public` の view / SECURITY DEFINER 関数が versioned-contract の規約を守っているか。',
+  );
+  lines.push(
+    'view は `security_invoker = true`・`_v<N>` 命名・`anon` 到達不可、definer 関数は `anon` 実行不可。',
+  );
+  lines.push('');
+  lines.push(
+    publicContractExposure.length === 0
+      ? '- ✅ 違反なし'
+      : '- ❌ 違反あり（snapshot生成を停止する）',
+  );
+  lines.push('');
+
   lines.push('## Realtime publication');
   lines.push('');
   lines.push('`supabase_realtime` に含まれる public table。空なら Realtime 公開なし。');
@@ -856,6 +900,17 @@ async function main(): Promise<void> {
       const violation = effectiveTimeblockWritePrivileges[0]!;
       throw new Error(
         `${violation.grantee} has effective ${violation.privilege_type} on ${violation.object_type} ${violation.object_name}`,
+      );
+    }
+
+    // `public` の view / definer 関数が契約露出の規約を破った状態では snapshot を生成しない
+    // （#2433）。上の timeblock 実効権限チェックと同じく fail closed にする — 描画するだけだと
+    // 「drift が出た → 再生成して commit」で違反が追認される。
+    const publicContractExposure = fetchPublicContractExposure();
+    if (publicContractExposure.length > 0) {
+      const violation = publicContractExposure[0]!;
+      throw new Error(
+        `public contract exposure: ${violation.violation_kind} on ${violation.object_type} ${violation.object_name} (${violation.detail})`,
       );
     }
 
@@ -888,6 +943,7 @@ async function main(): Promise<void> {
       privateSchemaUsage: fetchPrivateSchemaUsage(),
       realtimePublication: fetchRealtimePublication(),
       effectiveTimeblockWritePrivileges,
+      publicContractExposure,
     });
     // commit 時の lint-staged prettier と同一整形を施し、--check の drift を防ぐ
     // （raw のままだと prettier がテーブルを整列して常に差分になる）

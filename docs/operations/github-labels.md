@@ -91,7 +91,10 @@ code: .github/dependabot.yml
 
 ### judgment
 
-- `judgment:diverged` — Fable の推奨と User の判断が分かれた記録。月次で判定を追記したら外す。運用は `.claude/rules/orchestration.md` §判断ジャーナル
+- `judgment:diverged` — Fable の推奨と User の判断が分かれた記録（未判定 or 判定材料待ち）。判定を書いたら外さず `judgment:judged` へ付け替える
+- `judgment:judged` — 個別判定を書き終え、月次 `pnpm decisions:sync` 待ちの状態（2026-08-27、User 裁可の新設。`judgment` namespace 内の追加のため既存 2 値体系への例外にあたる。経緯は `.claude/rules/orchestration.md` §判断ジャーナル）。sync 後に外す
+
+運用は `.claude/rules/orchestration.md` §判断ジャーナル
 
 ### quality
 
