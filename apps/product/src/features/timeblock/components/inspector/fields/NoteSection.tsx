@@ -161,7 +161,7 @@ export function NoteSection({
           onBlur={() => setIsFocused(false)}
           aria-label={label}
         >
-          <span className="block min-h-6 w-full text-left text-sm leading-normal">
+          <span className="block w-full text-left text-sm leading-normal">
             {shouldShowPlaceholder && placeholder ? (
               <span className="text-muted-foreground">{placeholder}</span>
             ) : (
@@ -208,7 +208,10 @@ export function NoteSection({
             maxLength={maxLength}
             aria-label={label}
             rows={1}
-            className="max-h-40 min-h-0 w-full resize-none overflow-y-auto border-transparent bg-transparent px-0 py-0 text-sm leading-normal shadow-none outline-none focus-visible:border-transparent focus-visible:ring-0"
+            // border-0でボーダー幅そのものを0にする（border-transparentだけだと色が
+            // 透明になるだけで幅1pxはボックスサイズに残り、表示div側（ボーダー無し）との
+            // 間で縦位置が1px未満ズレる原因になっていた。User指摘の layout shift 対策）。
+            className="max-h-40 min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm leading-normal shadow-none outline-none focus-visible:ring-0"
           />
         </div>
       )}
