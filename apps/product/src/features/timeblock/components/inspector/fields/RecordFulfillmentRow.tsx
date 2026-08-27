@@ -50,6 +50,10 @@ export function RecordFulfillmentRow({
         <Smile className="text-muted-foreground size-4 flex-shrink-0" />
         <span className="text-muted-foreground text-sm">{t('label')}</span>
       </div>
+      {/*
+        日付・時間行とは異なり、こちらはテキスト位置ではなくボタンの枠線（border）自体を
+        親（bg-muted px-4）のcontent edgeに揃える（User指示）。negative marginは使わない。
+      */}
       <div className="flex items-center gap-1">
         {FULFILLMENT_OPTIONS.map(({ value: option }) => {
           const isSelected = value === option;

@@ -55,7 +55,14 @@ export function TimeRow({
           {label}
         </span>
       </div>
-      <div className="flex items-center gap-1">
+      {/*
+        endInput自身のpx-2はホバー/クリック領域の内側paddingで、テキストとの間に
+        余白を作る。-mr-2でグループ全体を右へ押し出し、endInputのテキストは親
+        （bg-muted px-4）のcontent edgeに揃え、ホバー背景だけがそこから8px外側
+        （親のpadding領域）まで伸びるようにする（User指示: text位置と
+        hover/click targetの分離）。
+      */}
+      <div className="-mr-2 flex items-center gap-1">
         <TimeInput
           kind="start"
           value={startTime}
@@ -101,7 +108,9 @@ export function TimeRowPlaceholder({
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span className="text-muted-foreground text-sm">{label}</span>
       </div>
-      <span className={cn('text-muted-foreground text-sm', muted && 'opacity-60')}>{message}</span>
+      <span className={cn('text-muted-foreground -mr-2 px-2 text-sm', muted && 'opacity-60')}>
+        {message}
+      </span>
     </div>
   );
 }

@@ -38,13 +38,21 @@ export function DateRow({
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span className="text-muted-foreground text-sm">{label}</span>
       </div>
-      <DatePickerPopover
-        selectedDate={selectedDate}
-        onDateChange={onDateChange}
-        placeholder={t('common.schedule.datePlaceholder')}
-        disabled={disabled}
-        minDate={minDate}
-      />
+      {/*
+        DatePickerPopoverトリガーの内側paddingはボタン自身のクリック領域を確保するためのもの。
+        -mr-2でその分だけ箱を右へ押し出し、テキスト自体は親（bg-muted px-4）のcontent edgeに
+        揃える一方、ホバー背景はcontent edgeの外側（親のpadding領域）まで伸びる
+        （User指示: text位置とhover/click targetの分離）。
+      */}
+      <div className="-mr-2">
+        <DatePickerPopover
+          selectedDate={selectedDate}
+          onDateChange={onDateChange}
+          placeholder={t('common.schedule.datePlaceholder')}
+          disabled={disabled}
+          minDate={minDate}
+        />
+      </div>
     </div>
   );
 }
