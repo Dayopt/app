@@ -302,10 +302,15 @@ export function TimeInput({
           aria-controls="time-input-listbox"
           role="combobox"
           placeholder="--:--"
+          // size属性（幅を「HH:mm」5文字ぶん固定し、桁数が変わっても入力中にpopoverが
+          // 揺れないようにする）はブラウザの平均文字幅で見積もるため、実際のフォントでの
+          // 描画幅（例: "08:31"）より広くなる。text-rightだと余った幅が左側だけに寄り、
+          // ホバー時のハイライトが左右非対称に見えていた（User指摘）。text-centerに
+          // することで余白を左右均等に振り分ける。
           size={5}
           className={cn(
             baseClasses,
-            'cursor-text text-right',
+            'cursor-text text-center',
             value || draft ? 'text-foreground' : 'text-muted-foreground',
           )}
         />
