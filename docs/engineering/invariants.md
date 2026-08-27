@@ -60,8 +60,12 @@ docs へ残している。
   `segments` / `calendar_connections` / `plans` / `records` / `oauth_connections`）。
   単一 FK は「その ID が存在すること」しか証明しない — 過去に Calendar で同型の穴が実発生し
   複合 FK へ修正した（`20260724000416`）
-- **`public` schema の view は `security_invoker = true`・`_v<N>` 命名・`anon` 到達不可。**
-  `public` の `SECURITY DEFINER` 関数は `anon` / `PUBLIC` から EXECUTE できない。
+- **PostgREST が公開する schema（`supabase/config.toml` の `[api] schemas`、現状 `public` と
+  `graphql_public`）の view は `security_invoker = true`・`_v<N>` 命名・`anon` 到達不可。**
+  同 schema の `SECURITY DEFINER` 関数は `anon` / `PUBLIC` から EXECUTE できない。
+  公開面が複数あるのに 1 つしか検査しない状態は、境界が無いより危険なので両方を見る。
+  新規 view は Supabase の default ACL で `anon` に権限が付くため、明示的な `REVOKE` が要る
+  （付けないとこの guard が落ちる）。
   GRANT と RLS は別々に判定され、view は既定で RLS を迂回しうるため、GRANT を絞るだけでは
   足りない。`_v<N>` 命名は旧 version と新 version を並存させて可逆に cutover するための前提。
   強制は `private.assert_public_contract_exposure_v1()`（migration 適用時）と

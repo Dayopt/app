@@ -238,6 +238,44 @@ describe('detectDestructivePatterns — UPDATE backfill (#2433)', () => {
     expect(findings[0]).toMatchObject({ line: 6 });
   });
 
+  describe('ブロックコメント経由の回避（push 前反証 risk-reviewer 指摘）', () => {
+    // 旧実装は「文の先頭部分に CREATE FUNCTION が**含まれるか**」で routine 本体を判定して
+    // いたため、直前のブロックコメントに同じ語があるだけで DO ブロックを本体と誤認し、
+    // backfill が素通りした（実測で再現）。判定を「文の**先頭**が DO か」へ反転して閉じた。
+    it('ブロックコメント内の CREATE FUNCTION に騙されず DO backfill を検知する', () => {
+      const sql = [
+        '/* CREATE FUNCTION note: replaced the old helper with an inline DO block */',
+        'DO $$',
+        'BEGIN',
+        "  UPDATE public.categories SET color = 'blue';",
+        'END $$;',
+      ].join('\n');
+      expect(updateFindings(sql)).toHaveLength(1);
+    });
+
+    it('複数行ブロックコメントでも同様に検知する', () => {
+      const sql = [
+        '/*',
+        ' CREATE OR REPLACE FUNCTION public.old_helper()',
+        ' was removed in favour of the block below',
+        '*/',
+        'DO $$ BEGIN UPDATE public.plans SET title = 1; END $$;',
+      ].join('\n');
+      expect(updateFindings(sql)).toHaveLength(1);
+    });
+
+    it('ブロックコメント内に DO があっても関数本体は依然として通す', () => {
+      const sql =
+        '/* DO not forget to drop the legacy helper */\n' +
+        'CREATE FUNCTION public.f() RETURNS void AS $$ BEGIN UPDATE public.plans SET title = 1; END $$ LANGUAGE plpgsql;';
+      expect(updateFindings(sql)).toHaveLength(0);
+    });
+
+    it('ブロックコメントで囲った UPDATE は検知しない', () => {
+      expect(updateFindings('/* UPDATE public.plans SET title = 1; */')).toHaveLength(0);
+    });
+  });
+
   it('既存パターンの検知を巻き込まない（UPDATE と DROP COLUMN の共存）', () => {
     const findings = detectDestructivePatterns(
       ["UPDATE public.plans SET title = '';", 'ALTER TABLE public.plans DROP COLUMN legacy;'].join(

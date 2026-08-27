@@ -84,7 +84,9 @@ REVOKE / GRANT を明示する」規約 + cutover 時のレビューで担保す
 ## guard が現在 0 件であることについて
 
 `private.public_contract_exposure_v1` は適用時点で違反 0 件を返す（`public` に view が 1 つも
-無く、`anon` 実行可能な definer 関数も無い）。**これは今ある穴を塞ぐ修正ではなく、第7段が
+無く、`anon` 実行可能な definer 関数も無い）。検査対象は PostgREST が公開する schema 全体
+（`public` + `graphql_public`）— 公開面が 2 つあるのに 1 つしか見ない状態は、誤った境界を
+根拠に「守られている」と読めてしまうため（push 前反証 `risk-reviewer` の P3 指摘を反映）。**これは今ある穴を塞ぐ修正ではなく、第7段が
 持ち込む view / RPC に対する tripwire**であり、承知の上で先に置いた。
 
 規約を守る対象より先に規約を置く理由は、第7段の実装が入ってから規約を書くと、その実装自体は

@@ -471,7 +471,8 @@ npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
   過剰権限が残る）。雛形は `20260818130000_create_segments.sql`
 - **所有者付きの参照**: 単一 ID FK ではなく `(id, user_id)` の複合 FK にする。参照先に
   `UNIQUE (id, user_id)` の anchor が要る
-- **view**: `security_invoker = true` と `_v<N>` 命名が必須。`anon` へ権限を出さない。
+- **view**: `security_invoker = true` と `_v<N>` 命名が必須。`anon` へ権限を出さない
+  （**新規 view には default ACL で `anon` 権限が付くので明示的な `REVOKE` が要る**）。
   旧 version を残したまま新 version を足し、切替後に旧を撤去する（可逆な cutover）
 - **旧 version の撤去**: version ごとに exact signature で `REVOKE` / `GRANT` を明示する。
   「新しい方だけ安全にした」状態で旧 version が残るのが典型的な穴

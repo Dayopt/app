@@ -39,9 +39,19 @@ SET LOCAL statement_timeout = '30s';
 CREATE VIEW private.public_contract_exposure_v1
 WITH (security_invoker = true)
 AS
-WITH public_views AS (
+WITH
+-- PostgREST が公開する schema。`supabase/config.toml` の `[api] schemas` と一致させる
+-- （現状 public / graphql_public の 2 つ）。**`public` だけを見ると片手落ちになる** —
+-- 公開面が 2 つあるのに 1 つしか検査していない状態は、境界が無いより危険（誤った境界を
+-- 根拠に「守られている」と読めてしまう）。config.toml を DB 側から読む手段が無いため
+-- ここは手で揃える。config.toml へ schema を足したらこの配列も足すこと。
+exposed_schemas(names) AS (
+  SELECT ARRAY['public', 'graphql_public']::NAME[]
+),
+public_views AS (
   SELECT
     relation.oid,
+    namespace.nspname AS schema_name,
     relation.relname,
     relation.relkind,
     (
@@ -52,7 +62,8 @@ WITH public_views AS (
   FROM pg_catalog.pg_class AS relation
   JOIN pg_catalog.pg_namespace AS namespace
     ON namespace.oid = relation.relnamespace
-  WHERE namespace.nspname = 'public'
+  CROSS JOIN exposed_schemas
+  WHERE namespace.nspname = ANY (exposed_schemas.names)
     AND relation.relkind IN ('v', 'm')
 ),
 -- view に対して `anon` が持ちうる権限。PG のバージョン差（17 の MAINTAIN）を避けるため、
@@ -69,7 +80,7 @@ view_privileges(privilege_type) AS (
 SELECT
   'view_missing_security_invoker'::TEXT AS violation_kind,
   'view'::TEXT AS object_type,
-  ('public.' || public_views.relname)::TEXT AS object_name,
+  (public_views.schema_name || '.' || public_views.relname)::TEXT AS object_name,
   (
     'security_invoker is '
     || coalesce(public_views.security_invoker, '<unset>')
@@ -86,7 +97,7 @@ UNION ALL
 SELECT
   'materialized_view_in_public'::TEXT,
   'materialized view'::TEXT,
-  ('public.' || public_views.relname)::TEXT,
+  (public_views.schema_name || '.' || public_views.relname)::TEXT,
   'materialized views cannot be security_invoker; keep them in the private schema'::TEXT
 FROM public_views
 WHERE public_views.relkind = 'm'
@@ -98,7 +109,7 @@ UNION ALL
 SELECT
   'view_unversioned_name'::TEXT,
   CASE public_views.relkind WHEN 'm' THEN 'materialized view' ELSE 'view' END::TEXT,
-  ('public.' || public_views.relname)::TEXT,
+  (public_views.schema_name || '.' || public_views.relname)::TEXT,
   'name must end with _v<N> so an old and a new version can coexist during cutover'::TEXT
 FROM public_views
 WHERE public_views.relname !~ '_v[0-9]+$'
@@ -110,7 +121,7 @@ UNION ALL
 SELECT
   'view_anon_privilege'::TEXT,
   CASE public_views.relkind WHEN 'm' THEN 'materialized view' ELSE 'view' END::TEXT,
-  ('public.' || public_views.relname)::TEXT,
+  (public_views.schema_name || '.' || public_views.relname)::TEXT,
   ('anon holds ' || view_privileges.privilege_type)::TEXT
 FROM public_views
 CROSS JOIN view_privileges
@@ -126,14 +137,15 @@ SELECT
   'definer_function_anon_executable'::TEXT,
   'function'::TEXT,
   (
-    'public.' || routine.proname
+    namespace.nspname || '.' || routine.proname
     || '(' || pg_catalog.pg_get_function_identity_arguments(routine.oid) || ')'
   )::TEXT,
   'anon can EXECUTE a SECURITY DEFINER function (it runs with owner privileges)'::TEXT
 FROM pg_catalog.pg_proc AS routine
 JOIN pg_catalog.pg_namespace AS namespace
   ON namespace.oid = routine.pronamespace
-WHERE namespace.nspname = 'public'
+CROSS JOIN exposed_schemas
+WHERE namespace.nspname = ANY (exposed_schemas.names)
   AND routine.prosecdef
   AND pg_catalog.has_function_privilege('anon', routine.oid, 'EXECUTE');
 

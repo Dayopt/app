@@ -67,7 +67,8 @@ const PATTERNS = [
   // 「常に警告が出るから読まない」状態＝ノイズになる。関数・プロシージャの本体だけを
   // 除外したテキストに対して照合する（`DO $$ ... $$` の匿名ブロックは migration 自身が
   // 実行するので**除外しない**。ここを外すと `DO $$ BEGIN UPDATE ... END $$;` という
-  // backfill の書き方が丸ごと素通りする）。
+  // backfill の書き方が丸ごと素通りする）。判定は「DO ブロックか否か」を文の先頭で見る
+  // （`CREATE FUNCTION` の含有で見るとコメント内の同語で騙される。risk-reviewer 指摘）。
   //
   // `SET` を必須にすることで `ON UPDATE CASCADE` / `FOR UPDATE` / `BEFORE UPDATE ON` /
   // `CREATE POLICY ... FOR UPDATE` / `GRANT UPDATE ON` / `has_table_privilege(..,'UPDATE')`
@@ -89,20 +90,54 @@ function stripSqlLineComments(sql) {
 }
 
 /**
- * 関数・プロシージャ本体の dollar-quoted ブロック（`$$ ... $$` / `$tag$ ... $tag$`）を
+ * ブロックコメント（`/* ... *' + '/`）を空白へ潰す。改行と文字数を保つので offset は動かない。
+ *
+ * 行コメント除去（`stripSqlLineComments`）とは別関数にしてある。こちらは
+ * `topLevelOnly` パターン専用のテキストにだけ適用する — 既存パターンの判定材料を
+ * 変えると検知が弱くなる方向へ動きうるため（コメント内の DROP を拾わなくなる）。
+ *
+ * @param {string} sql
+ * @returns {string} 同じ長さ・同じ改行位置のテキスト
+ */
+function stripSqlBlockComments(sql) {
+  const out = sql.split('');
+  const openRe = /\/\*/g;
+  let match;
+
+  while ((match = openRe.exec(sql)) !== null) {
+    const closeIndex = sql.indexOf('*' + '/', match.index + 2);
+    const end = closeIndex === -1 ? sql.length : closeIndex + 2;
+    for (let i = match.index; i < end; i += 1) {
+      if (out[i] !== '\n') out[i] = ' ';
+    }
+    openRe.lastIndex = end;
+  }
+
+  return out.join('');
+}
+
+/**
+ * **匿名 `DO` ブロック以外**の dollar-quoted 本体（`$$ ... $$` / `$tag$ ... $tag$`）を
  * 空白へ潰す。`topLevelOnly` パターンだけがこのテキストを使う。
  *
- * **`DO $$ ... $$` は潰さない。** 匿名ブロックは migration 自身がその場で実行する文であり、
- * 中の UPDATE は紛れもなく backfill だから。潰す対象は、直前（直近の `;` 以降）に
- * `CREATE [OR REPLACE] FUNCTION|PROCEDURE` が現れる dollar-quote に限る。
+ * 判定を「routine 定義なら潰す」ではなく「**`DO` ブロックでなければ潰す**」と反転して
+ * ある。前者は文の先頭部分に `CREATE FUNCTION` という文字列が**含まれるか**で見るため、
+ * 直前のコメントや別の文の残骸に同じ語があるだけで誤判定した（risk-reviewer 指摘、
+ * `/* CREATE FUNCTION ... *' + '/` の直後に `DO $$ ... UPDATE ... $$` を置くと backfill が
+ * 素通りする実測あり）。後者は文の**先頭**に錨を打つので、含有では騙せない。
+ *
+ * `DO` を残すのが要点。匿名ブロックは migration 自身がその場で実行する文であり、中の
+ * UPDATE は紛れもなく backfill だから。ここを潰すと backfill を `DO $$ ... $$` で包むだけで
+ * 検知を回避できる。逆に `DO` 以外の dollar-quote（関数・プロシージャ本体、ただの文字列
+ * リテラル）は「今実行される UPDATE」ではないので潰してよい。
  *
  * 行番号を保つため、潰した範囲の改行はそのまま残す（呼び出し側の offset -> line 逆引きが
  * 壊れないようにするため。文字数も 1:1 で保つ）。
  *
- * @param {string} sql 行コメント除去済みの SQL
+ * @param {string} sql 行コメント・ブロックコメント除去済みの SQL
  * @returns {string} 同じ長さ・同じ改行位置のテキスト
  */
-function blankRoutineBodies(sql) {
+function blankNonAnonymousBlockBodies(sql) {
   const out = sql.split('');
   const openRe = /\$([A-Za-z_][A-Za-z0-9_]*)?\$/g;
   let match;
@@ -113,12 +148,11 @@ function blankRoutineBodies(sql) {
     const closeIndex = sql.indexOf(tag, bodyStart);
     if (closeIndex === -1) break; // 閉じない dollar-quote は諦める（壊れた SQL）
 
-    // 直近の `;` 以降を「この文の先頭部分」とみなし、routine 定義かどうかを判定する。
+    // 直近の `;` 以降がこの文。**先頭**が DO なら匿名ブロック。
     const stmtStart = sql.lastIndexOf(';', match.index) + 1;
-    const head = sql.slice(stmtStart, match.index);
-    const isRoutineBody = /\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i.test(head);
+    const isAnonymousBlock = /^\s*DO\b/i.test(sql.slice(stmtStart, match.index));
 
-    if (isRoutineBody) {
+    if (!isAnonymousBlock) {
       for (let i = bodyStart; i < closeIndex; i += 1) {
         if (out[i] !== '\n') out[i] = ' ';
       }
@@ -137,9 +171,10 @@ function blankRoutineBodies(sql) {
  */
 export function detectDestructivePatterns(sql) {
   const cleaned = stripSqlLineComments(sql);
-  // `topLevelOnly` パターン専用のテキスト。routine 本体だけを空白へ潰す（長さ・改行位置は
-  // `cleaned` と 1:1 のまま）ので、行分割・offset -> line 逆引きは両者で共有できる。
-  const topLevelCleaned = blankRoutineBodies(cleaned);
+  // `topLevelOnly` パターン専用のテキスト。ブロックコメントと、匿名 DO ブロック以外の
+  // dollar-quoted 本体を空白へ潰す（長さ・改行位置は `cleaned` と 1:1 のまま）ので、
+  // 行分割・offset -> line 逆引きは両者で共有できる。
+  const topLevelCleaned = blankNonAnonymousBlockBodies(stripSqlBlockComments(cleaned));
   const lines = cleaned.split('\n');
   const topLevelLines = topLevelCleaned.split('\n');
   const findings = [];
@@ -174,7 +209,7 @@ export function detectDestructivePatterns(sql) {
   lines.forEach((line, index) => {
     lineOffsets.push({ offset: flattened.length, line: index + 1 });
     flattened += `${line} `;
-    // `blankRoutineBodies` が長さを保つため、両者の offset は常に一致する
+    // 上の 2 関数が長さを保つため、両者の offset は常に一致する
     // （= `lineOffsets` を共有できる）。
     flattenedTopLevel += `${topLevelLines[index]} `;
   });
