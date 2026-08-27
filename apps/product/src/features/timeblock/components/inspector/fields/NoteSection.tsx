@@ -140,7 +140,7 @@ export function NoteSection({
         <div
           role="button"
           tabIndex={disabled ? -1 : 0}
-          className="bg-input text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex max-h-40 min-h-11 cursor-text items-start overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-left text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-input text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex max-h-40 min-h-11 cursor-text items-center overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-left text-sm leading-normal shadow-xs outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
             if (!disabled) {
               setIsEditing(true);
