@@ -31,6 +31,7 @@ migration のコメントが正本で、ここでは複製しない。
 | `public` 契約露出 guard（audit view + assertion + snapshot section）                            | 9・10（anon 側）                                                 | `20260826234810`                  |
 | destructive checker の UPDATE backfill 検知                                                     | — （第8段の前提整備）                                            | `check-destructive-migration.mjs` |
 | purge 列挙の修復と再発防止 test                                                                 | — （[#2444](https://github.com/Dayopt/dayopt/issues/2444) 同乗） | `20260826235012`                  |
+| **製品経路（v5 → v4）への purge 修復**                                                          | — （Codex C の P1）                                              | `20260827014215`                  |
 
 攻撃シナリオの番号は [#2433 のコメント](https://github.com/Dayopt/dayopt/issues/2433#issuecomment-5432218386)（Codex B、全 10 件）が正本。
 
@@ -81,6 +82,27 @@ GRANT が無い状態は片落ちではなく、**GRANT と RLS が別々に判�
 現行機能が壊れる。guard は `anon` / `PUBLIC` 到達のみを機械で塞ぎ、旧 version RPC の
 `authenticated` 権限（シナリオ 10 の残り半分）は「version ごとに exact signature で
 REVOKE / GRANT を明示する」規約 + cutover 時のレビューで担保する。
+
+## purge の修復は v4（製品経路）が正本
+
+account-preserving purge には v3 / v4 / v5 の 3 世代がある。**製品が通るのは v5 → v4** で、
+v3 には生きた呼び出し元が無い:
+
+| version | 役割                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------ |
+| `v5`    | 製品の入口（`account-deletion.ts` の `DELETE_ALL_DATA_RPC`）。自分では消さず v4 へ委譲する |
+| `v4`    | **実際に削除を行う正本。** 新しい削除対象はここへ足す                                      |
+| `v3`    | レガシー。生きた呼び出し元ゼロ。履歴と `user-data-purge-generation` test のために残す      |
+
+#2444 の修復は当初 **v3 だけ**に入れており、製品経路は壊れたままだった（Codex C の P1、
+2026-08-27）。#2444 の起票時に `rg` で見つけた関数名を起点にし、**呼び出し元から辿らな
+かった**ことが原因で、以後の検証（レーン・指揮台・risk-reviewer・behavior-verifier）は
+すべてその誤前提を共有していた。
+
+**再発防止は test 側にある**: `user-data-purge-enumeration.integration.test.ts` は関数名を
+ハードコードせず、**製品コードの `DELETE_ALL_DATA_RPC` を起点に DB の呼び出しチェーンを
+再帰的に辿って**検査対象を決める。v3 だけ直して v4 が壊れている状態を再現すると、この
+test は実際に落ちる（mutation test で確認済み）。
 
 ## 第3段への申し送り: effect が欠損した receipt
 

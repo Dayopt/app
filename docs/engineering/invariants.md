@@ -74,8 +74,11 @@ docs へ残している。
   （`delete_all_user_data_command_v3`）が直接消すか、そこから `ON DELETE CASCADE` で
   到達できるか、理由付きの allowlist に載っているかのいずれかでなければならない。**
   purge は消す対象を関数本文に列挙する方式なので、新規テーブルの追加漏れが静かに起きる
-  （#2162 と #2444 で 2 回実発生）。強制は
-  `user-data-purge-enumeration.integration.test.ts`
+  （#2162 と #2444 で 2 回実発生）。**削除の正本は製品経路が到達する関数**（現在は
+  `account-deletion.ts` → `v5` → `v4`。`v3` はレガシーで生きた呼び出し元が無い）。
+  強制は `user-data-purge-enumeration.integration.test.ts` で、**関数名をハードコードせず
+  製品コードの RPC 定数から呼び出しチェーンを辿る** — 名前を固定すると、製品が別 version を
+  呼ぶようになった時に死んだ関数を検査し続ける（2026-08-27 に実発生）
 
 ## OAuth・暗号
 

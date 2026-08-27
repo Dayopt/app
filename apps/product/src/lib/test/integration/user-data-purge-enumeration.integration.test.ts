@@ -5,19 +5,26 @@
  * RUN_LOCAL が false だと describe ごと skip されるため、**passed 件数を読む**こと。
  * skipped は緑に見えるが何も検証していない。
  *
- * `public.delete_all_user_data_command_v3` は `auth.users` を消さずにユーザーデータだけを
- * 消す。消す対象は**関数本文の列挙**であり、新しいテーブルを足した人が列挙にも足すことを
- * 覚えていないと静かに漏れる。実際 2 回起きている:
+ * account-preserving purge は `auth.users` を消さずにユーザーデータだけを消す。消す対象は
+ * **関数本文の列挙**であり、新しいテーブルを足した人が列挙にも足すことを覚えていないと
+ * 静かに漏れる。実際 2 回起きている:
  *
  *   1 回目 — #2162（2026-08-18）で `tags` を `activities` / `categories` / `segments` へ
  *            置き換えた時。旧モデルは消えるのに後継が残るという逆転が 9 日間続いた
  *   2 回目 — #2433 の plan review で新規 `undo_receipts` について同じ指摘が出た時、
  *            裏取りで 1 回目が発覚した（#2444）
  *
- * **列挙を人が維持する限り 3 回目が来る。** この test はその class を閉じるためにある。
+ * **検査対象の関数名をハードコードしない。** 3 回目は「直したつもりの関数が製品経路に
+ * 無い」形で起きかけた（Codex C の P1、2026-08-27）— #2444 の修復と初版のこの test は
+ * どちらも `v3` を見ていたが、製品は `v5 → v4` を通る。v3 には生きた呼び出し元が無く、
+ * **製品経路は壊れたまま test が green を返していた**。
+ *
+ * だからここでは **製品コードの RPC 定数を起点に、DB 側の呼び出しチェーンを辿って**
+ * 検査対象を決める。関数名を固定する限り、また同じ形で死んだ関数を検査しうる。
+ *
  * `user_id` を持つ `public` の table は、次のどれか 1 つに必ず該当しなければならない:
  *
- *   A. purge が直接 DELETE する
+ *   A. purge チェーンのどれかの関数が直接 DELETE する
  *   B. A のいずれかから ON DELETE CASCADE で到達できる（＝消える）
  *   C. 下の allowlist に「消さない理由」付きで載っている
  *
@@ -25,12 +32,38 @@
  * その場で「消すのか、消さないのか」を決めさせられる。
  */
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 const RUN_LOCAL = process.env.USE_LOCAL_DB === 'true';
 
-const PURGE_FUNCTION = 'delete_all_user_data_command_v3';
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../..');
+/** 製品の削除経路の入口。ここに書かれた RPC 名が唯一の起点。 */
+const ACCOUNT_DELETION_SOURCE = resolve(
+  REPO_ROOT,
+  'apps/product/src/features/external-calendar/server/account-deletion.ts',
+);
+
+/**
+ * 製品コードから purge の入口 RPC 名を読む。
+ *
+ * **test 側に関数名を書かない**のが要点。書くと、製品が別の version を呼ぶようになった
+ * 時に test だけが古い関数を検査し続ける（#2444 の修復で実際に起きかけた）。
+ */
+function productPurgeEntryPoint(): string {
+  const source = readFileSync(ACCOUNT_DELETION_SOURCE, 'utf8');
+  const match = /const\s+DELETE_ALL_DATA_RPC\s*=\s*'([^']+)'/.exec(source);
+  if (!match) {
+    throw new Error(
+      `DELETE_ALL_DATA_RPC が ${ACCOUNT_DELETION_SOURCE} に見つからない。` +
+        '製品の削除経路が変わったなら、この test の入口検出も更新すること。',
+    );
+  }
+  return match[1]!;
+}
 
 /**
  * purge が**意図的に消さない** table と、その理由。
@@ -88,12 +121,39 @@ describe.skipIf(!RUN_LOCAL)('account-preserving purge の列挙 (#2444)', () => 
    * 足す必要が無いのは「親が消えれば CASCADE で消えるから」であって、その事実は
    * pg_constraint に書いてある。人間の記憶ではなくカタログから導く。
    */
+  const entryPoint = productPurgeEntryPoint();
+
+  /**
+   * 入口 RPC から `PERFORM` / `SELECT` で辿れる関数を再帰的に集める。
+   *
+   * v5 のように「自分では消さず別 version へ委譲する」形があるため、入口 1 本だけを見ても
+   * 何が消えるかは分からない。**チェーン全体の DELETE の和**が実際の削除対象になる。
+   */
   const purgeCoverageSql = `
-    WITH purge_body AS (
-      SELECT routine.prosrc AS src
-      FROM pg_proc AS routine
-      JOIN pg_namespace AS ns ON ns.oid = routine.pronamespace
-      WHERE ns.nspname = 'public' AND routine.proname = '${PURGE_FUNCTION}'
+    WITH RECURSIVE purge_chain(schema_name, proname) AS (
+      SELECT 'public'::name, '${entryPoint}'::name
+      UNION
+      SELECT callee.schema_name, callee.proname
+      FROM purge_chain
+      JOIN pg_proc AS caller ON caller.proname = purge_chain.proname
+      JOIN pg_namespace AS caller_ns
+        ON caller_ns.oid = caller.pronamespace AND caller_ns.nspname = purge_chain.schema_name
+      CROSS JOIN LATERAL regexp_matches(
+        caller.prosrc, '\\m(?:PERFORM|SELECT)\\s+(public|private)\\.(\\w+)\\s*\\(', 'g'
+      ) AS m
+      CROSS JOIN LATERAL (SELECT m[1]::name AS schema_name, m[2]::name AS proname) AS callee
+      WHERE EXISTS (
+        SELECT 1 FROM pg_proc AS p2
+        JOIN pg_namespace AS n2 ON n2.oid = p2.pronamespace
+        WHERE n2.nspname = callee.schema_name AND p2.proname = callee.proname
+      )
+    ),
+    purge_body AS (
+      SELECT string_agg(routine.prosrc, E'\\n') AS src
+      FROM purge_chain
+      JOIN pg_proc AS routine ON routine.proname = purge_chain.proname
+      JOIN pg_namespace AS ns
+        ON ns.oid = routine.pronamespace AND ns.nspname = purge_chain.schema_name
     ),
     user_tables AS (
       SELECT relation.oid, relation.relname
@@ -166,7 +226,9 @@ describe.skipIf(!RUN_LOCAL)('account-preserving purge の列挙 (#2444)', () => 
             `account-preserving purge から漏れている table: ${unaccounted.join(', ')}`,
             '',
             '次のどちらかを選ぶこと:',
-            `  - 消す  → ${PURGE_FUNCTION} の列挙へ DELETE を追加する（新しい migration で）`,
+            `  - 消す  → 製品経路の purge（入口: ${entryPoint}）の列挙へ DELETE を追加する`,
+            '           **委譲先の関数へ足すこと**。入口が委譲するだけの薄い関数の場合、',
+            '           入口へ足しても実際には実行されない',
             '  - 消さない → この test の INTENTIONALLY_RETAINED へ理由付きで追加する',
             '',
             'どちらでもない状態＝「決め忘れ」であり、#2162 / #2444 で 2 回起きた漏れの正体。',
@@ -184,6 +246,57 @@ describe.skipIf(!RUN_LOCAL)('account-preserving purge の列挙 (#2444)', () => 
       return row?.cascadeReachable === true; // 消える側になったのに allowlist に残っている
     });
     expect(stale).toEqual([]);
+  });
+
+  it('入口 RPC が製品コードから読めている', () => {
+    // ここが空振りすると以降の SQL が「存在しない関数」を起点にし、チェーンが空のまま
+    // 全 test が vacuous に通る。先に潰しておく。
+    expect(entryPoint).toMatch(/^delete_all_user_data_command_v\d+$/);
+  });
+
+  it('入口 RPC が DB に実在し、チェーンが実際に削除へ到達する', () => {
+    // Codex C の P1 の再発防止。「入口はあるが、そこから辿れる関数がどれも DELETE を
+    // 持たない」= 製品経路が何も消していない状態を検出する。
+    const rows = coverage();
+    expect(
+      rows.some((row) => row.directlyDeleted),
+      [
+        `入口 ${entryPoint} から辿れる関数が 1 つも DELETE を持たない。`,
+        '製品の削除経路が壊れているか、この test のチェーン解決が入口を見失っている。',
+      ].join('\n'),
+    ).toBe(true);
+  });
+
+  it('製品経路が委譲先まで正しく辿れている（v5 -> v4 の委譲）', () => {
+    // 入口が「委譲するだけ」の場合、入口の本文だけを見ると削除対象がゼロに見える。
+    // チェーン解決が委譲を追えていることを明示的に固定する。
+    const chainSql = `
+      WITH RECURSIVE purge_chain(schema_name, proname) AS (
+        SELECT 'public'::name, '${entryPoint}'::name
+        UNION
+        SELECT callee.schema_name, callee.proname
+        FROM purge_chain
+        JOIN pg_proc AS caller ON caller.proname = purge_chain.proname
+        JOIN pg_namespace AS caller_ns
+          ON caller_ns.oid = caller.pronamespace AND caller_ns.nspname = purge_chain.schema_name
+        CROSS JOIN LATERAL regexp_matches(
+          caller.prosrc, '\\m(?:PERFORM|SELECT)\\s+(public|private)\\.(\\w+)\\s*\\(', 'g'
+        ) AS m
+        CROSS JOIN LATERAL (SELECT m[1]::name AS schema_name, m[2]::name AS proname) AS callee
+        WHERE EXISTS (
+          SELECT 1 FROM pg_proc AS p2
+          JOIN pg_namespace AS n2 ON n2.oid = p2.pronamespace
+          WHERE n2.nspname = callee.schema_name AND p2.proname = callee.proname
+        )
+      )
+      SELECT proname FROM purge_chain
+      WHERE schema_name = 'public' AND proname LIKE 'delete_all_user_data_command_v%'
+      ORDER BY proname;
+    `;
+    const chain = runOwnerSql(chainSql).split('\n').filter(Boolean);
+    expect(chain).toContain(entryPoint);
+    // 入口以外の purge version も辿れている（= 委譲を追えている）
+    expect(chain.length).toBeGreaterThan(1);
   });
 
   it('#2444 の回帰: 分類モデル 3 件が purge 対象に入っている', () => {
