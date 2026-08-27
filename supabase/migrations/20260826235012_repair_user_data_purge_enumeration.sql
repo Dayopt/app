@@ -184,4 +184,13 @@ END;
 $$;
 
 
+-- `CREATE OR REPLACE FUNCTION` は引数型が変わらない限り既存の ACL と COMMENT を保持する。
+-- ACL（service_role のみ EXECUTE）はそれで正しく残るが、**COMMENT は古い本文のまま残る**。
+-- 旧本文は「... reports, and mirrors」で止まっており、undo receipt と分類モデルを消すように
+-- なった現状を反映しない。次に棚卸しする人が `pg_proc` の comment だけを見て列挙範囲を
+-- 誤認しうる — 本 migration が塞いだ「漏れと意図的な保持が見分けられない」問題と同じ形の
+-- 罠なので、ここで一緒に直す。
+COMMENT ON FUNCTION public.delete_all_user_data_command_v3(UUID) IS
+  'Expanded atomic account-preserving purge with generation advance, locked multi-token Calendar revoke capture, MCP revocation, reports, mirrors, undo receipts, and the activity / category / segment classification model; service role only. Intentionally retained (not a gap): mfa_recovery_codes, oauth_audit_log, product_events, and mcp_mutation_receipts (tombstoned instead).';
+
 COMMIT;
