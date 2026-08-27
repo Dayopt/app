@@ -63,6 +63,7 @@ export function AccountDeletionDialog() {
       } catch {
         // auth.users 削除済みのため signOut が失敗する可能性がある — 無視して続行
       }
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- アカウント削除直後は全クライアント状態（tRPC cache / auth）を確実に破棄するためハードリロードが意図的
       window.location.href = '/auth/login';
     },
     onError: (error) => {

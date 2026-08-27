@@ -73,6 +73,7 @@ export default function RootError({ error, reset }: ErrorProps) {
             {ERROR_TEXT.retry}
           </Button>
 
+          {/* eslint-disable-next-line @next/next/no-location-assign-relative-destination -- error boundary からの復旧は状態を完全にリセットするためハードリロードが意図的 */}
           <Button variant="outline" onClick={() => (window.location.href = '/')} className="w-full">
             {ERROR_TEXT.goHome}
           </Button>
