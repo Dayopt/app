@@ -646,4 +646,206 @@ describe('runNightWatch', () => {
     expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });
+
+  // #2422: 観測コマンド自体の取得失敗（fetch-failed）が heavy-red/integration-red
+  // の pending escalation と同型で、3 晩連続すると escalation issue へ起票する。
+  it('dependabot-alerts の取得失敗が3晩連続すると nightwatch-fetch-failed escalation issue を起票する', () => {
+    const rules = [
+      {
+        // 観測コマンド自体を失敗させる（fetch-failed 経路。実際の 403 と同型）
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
+        respond: () =>
+          new Error('HTTP 403: Resource not accessible by personal access token (fine-grained)'),
+      },
+      {
+        // checkRecentFetchFailed が読む常設運行記録 issue（#2216）のコメント。
+        // 直近2晩とも dependabot-alerts が取得失敗（今回とあわせて3晩連続）。
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
+        respond: () =>
+          JSON.stringify({
+            comments: [
+              {
+                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+              {
+                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+            ],
+          }),
+      },
+      {
+        // fetch-failure escalation の dedup 検索（既存 issue 無し → 新規作成）
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'create' &&
+          has(args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/850\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    const createCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+    );
+    expect(createCall).toBeDefined();
+    const title = createCall?.args[createCall.args.indexOf('--title') + 1];
+    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
+
+    // Step 5（運行記録）にも escalation issue の起票が「起票/追記」として残る
+    const opsLogCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    );
+    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
+    expect(body).toContain('取得失敗: dependabot-alerts');
+    expect(body).toContain('#850（dependabot-alerts）');
+  });
+
+  it('取得失敗が直近と連続していなければ escalation issue を起票しない（単発の transient）', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
+        respond: () => new Error('HTTP 403: Resource not accessible'),
+      },
+      {
+        // 直近の運行記録に dependabot-alerts の取得失敗が含まれない（今夜が初回）
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
+        respond: () =>
+          JSON.stringify({
+            comments: [
+              {
+                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: なし\n',
+                authorAssociation: 'OWNER',
+              },
+              {
+                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: なし\n',
+                authorAssociation: 'OWNER',
+              },
+            ],
+          }),
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    const escalationCreateCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed'),
+    );
+    expect(escalationCreateCall).toBeUndefined();
+  });
+
+  // push前反証レビュー指摘（P2、PR #2445）: fetch-failure escalation の新規
+  // 起票が run-scoped 起票上限（MAX_NEW_ISSUES_PER_RUN=3）を red-alert と
+  // 食い合う。CHECK_IDS の並び順（docs-check/deadcode/dependabot-alerts が
+  // heavy-red より先）のまま逐次処理すると、慢性 fetch-failed が先に予算を
+  // 使い切り本物の CI 赤が起票されなくなっていた。fetch-failed の escalation
+  // を全 red/pending 判定の後にまとめて処理する（deferredFetchFailed）ことで、
+  // 赤 check が予算を優先して確保することを固定する。
+  it('複数checkがfetch-failedでも、heavy-redの赤alertはcapされずに起票される（予算はredを優先）', () => {
+    function redRun(url: string) {
+      return JSON.stringify([
+        { status: 'completed', conclusion: 'failure', createdAt: FIXED_NOW.toISOString(), url },
+      ]);
+    }
+    const rules = [
+      {
+        // docs-check / deadcode を spawn failure（fetch-failed）にする
+        // （isSpawnFailure は error.status が数値でないことで判定するため、
+        // 素の Error を投げるだけでよい）。
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () => new Error('spawn ENOENT'),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'pnpm' && args[0] === 'quality:deadcode:ci',
+        respond: () => new Error('spawn ENOENT'),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
+        respond: () => new Error('HTTP 403: Resource not accessible'),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'run', 'list', '--workflow=heavy-post-merge.yml'),
+        respond: () => redRun('https://github.com/Dayopt/dayopt/actions/runs/99'),
+      },
+      {
+        // 3 check-id（docs-check, deadcode, dependabot-alerts）とも直近2晩
+        // 連続で取得失敗していたことにする（今回とあわせて3晩連続escalation）。
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
+        respond: () =>
+          JSON.stringify({
+            comments: [
+              {
+                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: docs-check, deadcode, dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+              {
+                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: docs-check, deadcode, dependabot-alerts\n',
+                authorAssociation: 'OWNER',
+              },
+            ],
+          }),
+      },
+      {
+        // alert-issue.mjs の dedup 検索（nightwatch(...) / nightwatch-fetch-
+        // failed(...)）だけを対象にする。Step1（当日盤面 type:board 検索）や
+        // Step6（status:ready 等）の issue list 呼び出しを誤って横取りしない
+        // よう、`nightwatch` を含む検索クエリに絞る。
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'list' && has(args, 'nightwatch'),
+        respond: () => '[]',
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'create' && has(args, 'nightwatch'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/900\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+
+    const createCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
+    );
+    // 予算(3)を使い切る: heavy-red 1件 + fetch-failed escalation 2件（3件中1件はcap）
+    expect(createCalls.length).toBe(3);
+
+    const heavyRedCreate = createCalls.find((c) => has(c.args, 'nightwatch(heavy-red)'));
+    expect(heavyRedCreate).toBeDefined(); // 赤は必ず起票される（capされない）
+
+    const fetchFailedCreates = createCalls.filter((c) => has(c.args, 'nightwatch-fetch-failed'));
+    expect(fetchFailedCreates.length).toBe(2); // 3件中1件は予算超過でcapされる
+
+    process.exitCode = 0;
+  });
 });
