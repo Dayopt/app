@@ -66,11 +66,6 @@ export { collectTimeblockLaneItems, hasTimeblockLaneConflict } from './lib/timeb
 export { getTimeblockMenuItems } from './lib/timeblock-menu-items';
 
 // =============================================================================
-// Components (記録導線)
-// =============================================================================
-export { ConfirmDayButton } from './components/editor/TimeblockRecordActions';
-
-// =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { ActivityFieldRow } from './components/inspector/fields/ActivityFieldRow';
