@@ -28,15 +28,17 @@ Main は次の条件で read-only subagent を自動利用する。許可は求�
 
 委譲（`Agent` tool / worker dispatch）では **model を必ず明示する**。省略すると Main と同じ tier が既定で継承され、階層が実運用されない（2026-08-03 実測: haiku は全 output token の 0.2%）。
 
-| Tier                     | 担当                                                            |
-| ------------------------ | --------------------------------------------------------------- |
-| **Haiku**                | rename、一括置換、ログ蒸留、test 実行と結果要約などの機械的作業 |
-| **Sonnet**               | 通常の実装、調査                                                |
-| **Main**（Opus / Fable） | 判断、統合、diff レビュー、commit、ユーザーへの報告             |
+| Tier             | 担当                                                                   |
+| ---------------- | ---------------------------------------------------------------------- |
+| **Haiku**        | rename、一括置換、ログ蒸留、test 実行と結果要約などの機械的作業        |
+| **Sonnet**       | 通常の実装、調査                                                       |
+| **Main**（Opus） | 指揮台の判断、統合、diff レビュー、commit、ユーザーへの報告            |
+| **Fable**        | メタ把握（問題設定・前提・全体構造を疑う）。常設せず発火条件でのみ使う |
 
 - 迷ったら 1 tier 下から始める。足りずに上げ直す方が、最初から上位 tier を使うより安い
 - provider / model 名が変わったら tier の役割定義を正とし、名前を読み替える
 - 実際の構成比は SessionStart hook（`.claude/hooks/session-token-usage.py`）が毎回出す。下位 tier の比率が上がらないなら委譲が機能していない
+- **Fable は日常のループに置かない**（2026-08-27、[#2451](https://github.com/Dayopt/dayopt/issues/2451)）。指揮台の既定は Opus で、Fable を呼ぶ発火条件と出力の着地先は `.claude/rules/orchestration.md` §メタ把握（User + Fable） が正本
 - `.claude/agents/` の agent は frontmatter の `model:` を正とする（未指定継承を禁止）。省略すると呼び出し元と同じ tier が継承され、上表の tiering が実運用されない
 
 ## Checkpoint / 完了報告
