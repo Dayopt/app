@@ -167,12 +167,17 @@ export function NoteSection({
       ) : (
         <textarea
           value={localNote}
+          // 表示用divをクリックしてこのtextareaへ切り替わる瞬間にだけマウントされるため、
+          // ここでfocusしないとクリックが一度目は編集モードへの切り替えにしか使われず、実際に入力するには二度目のクリックが必要になる
+          autoFocus
           onChange={(event) => {
             setLocalNote(event.target.value);
             onNoteChange(event.target.value);
           }}
-          onFocus={() => {
+          onFocus={(event) => {
             setIsFocused(true);
+            const { length } = event.currentTarget.value;
+            event.currentTarget.setSelectionRange(length, length);
           }}
           onBlur={() => {
             setIsFocused(false);
