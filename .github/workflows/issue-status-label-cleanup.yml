@@ -38,4 +38,5 @@ jobs:
       - name: status:* ラベルを剥がす
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/ops/strip-status-labels.mjs on-close "${{ github.event.issue.number }}"
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: node scripts/ops/strip-status-labels.mjs on-close "$ISSUE_NUMBER"
