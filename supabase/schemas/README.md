@@ -10,7 +10,7 @@
 
 - ここにあるのは完全な DDL ではなく、要約・コメント付きの読み物。declarative schema として結線するには全ファイルを実行可能な DDL へ書き直す必要がある
 - Dayopt の migration owner は Supabase GitHub integration であり、`local → PR Preview → production` の migration-first フローで運用する（[supabase skill](../../.claude/skills/supabase/SKILL.md)）。declarative schema は「schemas を編集して `db diff` で migration を生成する」逆向きのフローを前提とするため、現行運用と噛み合わない
-- 判断の経緯: [2026-07-23 の decision ログ](../../docs/engineering/log/2026-07-23-supabase-schemas-manual-snapshot.md)
+- 判断の経緯: 2026-07-23 の decision ログ（削除済み、git 履歴参照）
 
 ## スキーマの正本はどこか
 

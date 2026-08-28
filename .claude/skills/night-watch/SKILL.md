@@ -29,7 +29,7 @@ description: 夜勤 checklist の追加・変更を検討する時、または�
 
 - 月次の価値判断・ルールの足し引き → `gardening` skill
 - 並行作業の定期棚卸し（stale PR・worktree 残骸） → `dispatch` skill 操作 C
-- 個別の障害記録ログ作成 → `note` skill（`docs/operations/log/`）
+- 個別の障害記録 → GitHub issue 起票（2026-08-28、#2475 で `note` skill / domain log/ を廃止）
 - 夜勤の出力（盤面ブリーフ・運行記録）を読んで指揮台向けに整理する朝の蒸留層の障害・仕様変更 → `morning-digest` skill
 
 ## 自動パート（GitHub Actions が実施）

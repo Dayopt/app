@@ -13,7 +13,7 @@
 // 理由付き disable が primitive 層に恒久的に増えるだけで signal がないため、意図的に
 // packages には適用しない判断。
 // @see https://github.com/Dayopt/dayopt/issues/1679
-// @see docs/engineering/log/2026-07-23-packages-components-no-arbitrary-value.md
+// @see 決定ログ（削除済み、git 履歴参照）
 
 import nextTs from 'eslint-config-next/typescript';
 import jsxA11y from 'eslint-plugin-jsx-a11y';

@@ -12,7 +12,7 @@ Eagle デザインアセット管理設計、OSSライセンスコンプライ�
 # 第1部: Eagle デザインアセット運用
 
 > Eagle の役割と、何を入れて何を入れないかの規約。エージェント側の invoke 条件は `.claude/rules/mcp-usage.md` の Eagle 節を正とする。
-> 2026-07-23 に v2 へ全面改訂。旧版（Storybook スナップショット自動同期パイプライン）を廃止した経緯は [2026-07-23-eagle-content-strategy.md](log/2026-07-23-eagle-content-strategy.md) を参照。
+> 2026-07-23 に v2 へ全面改訂。旧版（Storybook スナップショット自動同期パイプライン）を廃止した経緯は 2026-07-23-eagle-content-strategy.md（削除済み、git 履歴参照） を参照。
 
 ## 1. 役割
 

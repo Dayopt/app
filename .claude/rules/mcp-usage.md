@@ -2,7 +2,7 @@
 
 モデルによってはツール呼び出しが控えめになる傾向がある。モデルによらず、以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
 
-MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.json` の user scope `mcpServers`）。**repo 側に MCP 定義を置かない**。repo と global の両方に同名サーバーがあるとキー単位でマージされ、方式が食い違うと壊れる（2026-07-23 に repo 定義を撤去。経緯は [2026-07-23-mcp-global-consolidation.md](../../docs/engineering/log/2026-07-23-mcp-global-consolidation.md)）。
+MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.json` の user scope `mcpServers`）。**repo 側に MCP 定義を置かない**。repo と global の両方に同名サーバーがあるとキー単位でマージされ、方式が食い違うと壊れる（2026-07-23 に repo 定義を撤去。経緯は 2026-07-23-mcp-global-consolidation.md（削除済み、git 履歴参照））。
 
 全 11 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
 

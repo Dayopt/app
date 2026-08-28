@@ -1,13 +1,13 @@
 ---
 name: decision
-description: ユーザーが意思決定ログの作成を明示依頼した時、または `/decision` として明示起動された時に発動。domain と slug から `docs/{domain}/log/YYYY-MM-DD-slug.md` を `docs/_templates/decision.md` の骨格で作成する。技術判断・プロダクト判断・事業判断を区別せず同じテンプレートを使う。調査・監査ログの作成（note skill の領域）では発動しない。
+description: ユーザーが意思決定ログの作成を明示依頼した時、または `/decision` として明示起動された時に発動。`docs/decisions.md`（全決定の時系列索引、append-only）へ1行追記し、該当ストック（state.md / rules / 該当 docs）の編集を同じ変更に含める。技術判断・プロダクト判断・事業判断を区別せず同じ索引を使う。調査・監査・feedback・incidentなど時点ものの記録（GitHub issue の領域）では発動しない。
 ---
 
 # /decision
 
-意思決定ログを `docs/{domain}/log/YYYY-MM-DD-slug.md` として作成する。
+意思決定を `docs/decisions.md`（全決定の時系列索引、append-only）へ 1 行追記する。
 
-引数: `$ARGUMENTS`（domain と slug。例: `/decision engineering skip-recurring-events` → `docs/engineering/log/2026-07-03-skip-recurring-events.md`）
+引数: `$ARGUMENTS`（決定の内容。例: `/decision skip-recurring-events を廃止する` → `docs/decisions.md` への1行追記）
 
 ## When to Use
 
@@ -15,27 +15,28 @@ description: ユーザーが意思決定ログの作成を明示依頼した時�
 
 - 「決定した」「決めた」「意思決定ログを作って」など、意思決定ログの作成が明示依頼された時
 - `/decision` として明示的に起動された時
-- domain・slug を伴う decision ログ作成が指示された時
+- 決定の記録が指示された時
 
 ## When NOT to Use
 
 この skill は **explicit 意思決定ログ作成意図のみを契機とする**。暗黙的な invocation ケースは該当なし（型の穴埋めとして明記）。参考として近接するが発動しないケース:
 
-- 時点ものの調査・監査・実験ログの作成 → `note` skill
+- 時点ものの調査・実験・feedback・incidentの記録 → GitHub issue として起票する（`dispatch` skill の既存ラベル体系に従う。2026-08-28、#2475 で `note` skill / domain log/ を廃止）
 - 月次の docs 鮮度・一貫性の保守 → `gardening` skill
 
 ## 手順
 
-1. domain が指定されていなければ、対話の文脈からどのドメイン(`business` / `product` / `engineering` / `operations` / `company`)の判断かを判定する。迷ったら問い返す
-2. slug が指定されていなければ、何を決めたかを 1 フレーズで問い返す
-3. 今日の日付(`YYYY-MM-DD`)を確認する
-4. `docs/{domain}/log/YYYY-MM-DD-slug.md` を [`docs/_templates/decision.md`](../../../docs/_templates/decision.md) の本文にある markdown 骨格で作成する
-
-5. 各セクションを対話の文脈から埋める。埋められない箇所はユーザーに問い返す(5分で書ける軽さを保つ。長い散文にしない)
-6. 確認不要。ファイル作成まで一気に実行する
+1. `docs/decisions.md` のヘッダ（書式・ルール・タグ語彙）を読み、書式とタグ語彙の現状を確認する
+2. 決定を 1 文に要約する。埋められない場合はユーザーに問い返す(5分で書ける軽さを保つ。長い散文にしない)
+3. タグ語彙から最も適切な `[タグ]` を選ぶ。適切なタグが無ければ、ヘッダのタグ語彙行への追加をユーザーに確認してから追加する（タグ語彙の変更は diff として見える設計）
+4. 今日の日付(`YYYY-MM-DD`)を確認し、`- YYYY-MM-DD: [タグ] 決定を1文（理由: 1フレーズ）（参照: #Issue等）` の書式でエントリ領域（`---` 区切りより下）の末尾に追記する。検証可能な仮説を含む決定には `結果(未):` 継続行を付ける
+5. 該当ストック（`docs/state.md` / `.claude/rules/` / 該当 `docs/`）の編集を**同じ変更**に含める(決定した内容を実際に反映する)
+6. `pnpm docs:check` を実行し、decisions.md の書式検証（タグ語彙・エントリ行の形式・300行上限）を通す
+7. 確認不要。追記まで一気に実行する
 
 ## 守ること
 
-- 一度作成した decision ファイルは書き換えない。訂正が必要になったら新しい `/decision` を実行し、古い方の frontmatter に新しいrepo-relative pathを`superseded_by`として追記する(本文は書き換えない)
-- 技術判断・プロダクト判断・事業判断を区別せず同じテンプレートを使う。置き場所(ドメイン)だけで分類する
-- 連番管理は不要(日付が一意性を担保する)。同日に複数決定があれば slug で区別する
+- `docs/decisions.md` のエントリ領域（`---` 区切りより下）は追記のみ。既存行の削除・書き換えはしない(`pnpm docs:check` が機械的に拒否する)。覆すときは新しい行で「〜を撤回、X へ」と書く
+- ヘッダ（書式・ルール・タグ語彙）の編集は許可されるが、タグ語彙を増やす時は既存の語彙で表現できないことを確認してから追加する（語彙の漂流を防ぐ）
+- 技術判断・プロダクト判断・事業判断を区別せず同じ索引を使う。分類はタグで行う
+- 300 行を超えたら年別分割（`docs/decisions/2026.md` 等）を検討する（`pnpm docs:check` が超過を検出する）

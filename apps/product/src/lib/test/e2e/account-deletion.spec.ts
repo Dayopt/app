@@ -28,7 +28,7 @@ import { suppressConsentBanner } from './suppress-consent-banner';
  * quiesceBoundBillingAccountData / deleteBoundBillingAccountData）。
  *
  * @see Issue #1872
- * @see docs/engineering/log/2026-07-13-test-automation-strategy.md
+ * @see 決定ログ（削除済み、git 履歴参照）
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

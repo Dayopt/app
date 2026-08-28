@@ -67,7 +67,7 @@ function authErrorMessage(error: unknown): string | undefined {
  * captcha_failed 系 test が現行文言を pin しており、そちらが red になったら本判定も同時に
  * 壊れている。message 判定が効かなくなった場合、passive instrumentation では検知できなく
  * なるため能動的な canary（production の GoTrue endpoint へ低頻度で合成 probe を送る設計）
- * への切替を検討する（検討済みの設計比較は docs/operations/log/2026-08-17-turnstile-secret-detection-design.md 参照）。
+ * への切替を検討する（検討済みの設計比較は 決定ログ（削除済み、git 履歴参照））。
  */
 const EXPECTED_CAPTCHA_TOKEN_ISSUE_MESSAGES = [
   // Cloudflare siteverify の公開 error-codes（token / client 側の問題）

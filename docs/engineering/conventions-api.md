@@ -259,7 +259,7 @@ describe('tRPC API統合テスト', () => {
 
 ## Service 層 Contracts（skin-agnostic target shape）
 
-作成: 2026-05-12 | 前段: `docs/engineering/log/2026-05-12-service-audit.md`
+作成: 2026-05-12 | 前段: 決定ログ（削除済み、git 履歴参照）
 
 Dayopt の service 層は tRPC 以外の skin（MCP server, Stripe webhook REST handler 等）からも呼ばれる。
 target contract が明文化されていないと各 skin が場当たり的に service を呼び、歪みが skin の数だけ増殖する。

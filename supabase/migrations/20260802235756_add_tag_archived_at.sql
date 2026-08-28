@@ -2,7 +2,7 @@
 --
 -- `archived_at` を正式なアーカイブ状態とする。`is_active = false` は
 -- merge RPC がソースタグに書く「マージ済みの墓標」専用であり、意味を混ぜない
--- （設計判断: docs/product/log/2026-08-03-tag-archive-design.md）。
+-- （設計判断: 決定ログ（削除済み、git 履歴参照））。
 --
 -- 状態の整理:
 --   通常:          is_active = true,  archived_at IS NULL

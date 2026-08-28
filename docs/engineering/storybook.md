@@ -113,7 +113,7 @@ src/components/ui/my-component.docs.mdx        # Docs（テーブルが必要な
 
 ### 命名規則（所有境界 taxonomy）
 
-story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は [ADR-023](./log/2026-06-24-storybook-ownership-taxonomy.md)。
+story の `title:` の **top-level は所有境界（どの package / app の資産か）** で分ける。第二階層以下は責務ベース。決定の経緯は ADR-023（削除済み、git 履歴参照）。
 
 - `Shared/Foundations/Colors` → デザイントークン
 - `Shared/Components/Actions/Button` → 共有 UI コンポーネント（`packages/components`）

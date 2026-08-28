@@ -56,8 +56,8 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 
 ## 関連する意思決定
 
-- [7日表示をWeekではなく中央基準の7営業日として扱う](../log/2026-07-16-feedback-calendar-seven-day-weekend-hidden.md)
-- [検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する](../log/2026-07-15-feedback-block-search-tag-note.md)
-- [ADR-025: Plan / Record / 外部カレンダーミラーへの分割](../log/2026-07-09-time-model-split.md)
-- [時間不変原則](../log/2026-03-10-time-immutability-principle.md)
-- [機能スコープ](../log/2026-06-16-feature-non-adoption.md)
+- 7日表示をWeekではなく中央基準の7営業日として扱う（削除済み、git 履歴参照）
+- 検索対象と表示をtag・メモに揃え、結果は対象ブロックを開く操作に限定する（削除済み、git 履歴参照）
+- ADR-025: Plan / Record / 外部カレンダーミラーへの分割（削除済み、git 履歴参照）
+- 時間不変原則（削除済み、git 履歴参照）
+- 機能スコープ（削除済み、git 履歴参照）

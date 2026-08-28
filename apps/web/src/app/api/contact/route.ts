@@ -29,7 +29,7 @@ const MAX_CONTACT_BODY_BYTES = 16 * 1024;
  * secret misconfiguration variant が同じ穴で握り潰されると指摘された。Cloudflare
  * siteverify を直接叩いて実測（`secret=''` → `missing-input-secret`）し、Cloudflare が
  * 将来追加する未知の error-code も含めて secret 側の異常を安全側（alert）に倒す設計にした。
- * 設計の詳細は docs/operations/log/2026-08-17-turnstile-secret-detection-design.md 参照。
+ * 設計の詳細は 決定ログ（削除済み、git 履歴参照）。
  */
 const EXPECTED_TURNSTILE_TOKEN_ISSUE_CODES: ReadonlySet<string> = new Set([
   'invalid-input-response',

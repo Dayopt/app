@@ -4,11 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  parseFrontmatter,
-  validateDocumentMetadata,
-  validateExistingLogSupersededBy,
-} from '../checks/frontmatter-check.ts';
+import { parseFrontmatter, validateDocumentMetadata } from '../checks/frontmatter-check.ts';
 
 const temporaryDirectories: string[] = [];
 
@@ -174,51 +170,18 @@ last_verified: 2026-02-30
     expect(reasons).toEqual(['last_verifiedが有効な過去日付ではない: 2026-02-30']);
   });
 
-  it('エラー系: 新規logはfrozenとfilenameに一致するdateを要求する', () => {
-    const reasons = validateDocumentMetadata({
-      content: `---
-status: current
-date: 2026-07-13
----
-`,
-      relativePath: 'docs/product/log/2026-07-14-example.md',
-      root: createRoot(),
-      today: '2026-07-14',
-    });
-
-    expect(reasons).toEqual([
-      '新規logのstatusはfrozenにする',
-      'dateがfilenameと一致しない: 2026-07-13 != 2026-07-14',
-    ]);
-  });
-
-  it('エラー系: 新規logの日付なしaliasを拒否する', () => {
-    const reasons = validateDocumentMetadata({
-      content: `---
-status: frozen
-date: 2026-07-14
----
-`,
-      relativePath: 'docs/engineering/log/latest.md',
-      root: createRoot(),
-      today: '2026-07-14',
-    });
-
-    expect(reasons).toEqual(['新規logのfilenameはYYYY-MM-DD-slug.mdにする']);
-  });
-
   it('正常系: superseded_byが実在するrepo-relative pathなら受理する', () => {
     const root = createRoot();
-    createFile(root, 'docs/product/log/2026-08-01-new.md');
+    createFile(root, 'docs/product/superseding-doc.md');
 
     const reasons = validateDocumentMetadata({
       content: `---
-status: frozen
-date: 2026-07-14
-superseded_by: docs/product/log/2026-08-01-new.md
+status: superseded
+last_verified: 2026-07-14
+superseded_by: docs/product/superseding-doc.md
 ---
 `,
-      relativePath: 'docs/product/log/2026-07-14-old.md',
+      relativePath: 'docs/product/superseded-doc.md',
       root,
       today: '2026-08-01',
     });
@@ -226,82 +189,40 @@ superseded_by: docs/product/log/2026-08-01-new.md
     expect(reasons).toEqual([]);
   });
 
+  it('エラー系: superseded_byの不在pathを拒否する', () => {
+    const reasons = validateDocumentMetadata({
+      content: `---
+status: superseded
+last_verified: 2026-07-14
+superseded_by: docs/product/missing-doc.md
+---
+`,
+      relativePath: 'docs/product/superseded-doc.md',
+      root: createRoot(),
+      today: '2026-08-01',
+    });
+
+    expect(reasons).toEqual(['superseded_byのpathが存在しない: docs/product/missing-doc.md']);
+  });
+
   it('エラー系: superseded_byのarray指定を拒否する', () => {
     const root = createRoot();
-    createFile(root, 'docs/product/log/2026-08-01-new.md');
+    createFile(root, 'docs/product/superseding-doc.md');
 
     const reasons = validateDocumentMetadata({
       content: `---
-status: frozen
-date: 2026-07-14
+status: superseded
+last_verified: 2026-07-14
 superseded_by:
-  - docs/product/log/2026-08-01-new.md
+  - docs/product/superseding-doc.md
 ---
 `,
-      relativePath: 'docs/product/log/2026-07-14-old.md',
+      relativePath: 'docs/product/superseded-doc.md',
       root,
       today: '2026-08-01',
     });
 
     expect(reasons).toEqual(['superseded_byはscalarのrepo-relative pathで指定する']);
-  });
-
-  it('正常系: 部分訂正keyが実在するrepo-relative pathなら受理する（#1939）', () => {
-    const root = createRoot();
-    createFile(root, 'docs/engineering/log/2026-08-11-fix.md');
-
-    const reasons = validateDocumentMetadata({
-      content: `---
-status: frozen
-date: 2026-07-14
-partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md
----
-`,
-      relativePath: 'docs/product/log/2026-07-14-old.md',
-      root,
-      today: '2026-08-11',
-    });
-
-    expect(reasons).toEqual([]);
-  });
-
-  it('エラー系: 部分訂正keyが指す先が存在しなければ拒否する（#1939）', () => {
-    const reasons = validateDocumentMetadata({
-      content: `---
-status: frozen
-date: 2026-07-14
-partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-missing.md
----
-`,
-      relativePath: 'docs/product/log/2026-07-14-old.md',
-      root: createRoot(),
-      today: '2026-08-11',
-    });
-
-    expect(reasons).toEqual([
-      'partially_superseded_2026_08_11_codeql-statusのpathが存在しない: docs/engineering/log/2026-08-11-missing.md',
-    ]);
-  });
-
-  it('エラー系: 部分訂正keyが実在するがlogではないfileを指す場合は拒否する（Codexレビュー指摘）', () => {
-    const root = createRoot();
-    createFile(root, 'docs/engineering/architecture.md');
-
-    const reasons = validateDocumentMetadata({
-      content: `---
-status: frozen
-date: 2026-07-14
-partially_superseded_2026_08_11_codeql-status: docs/engineering/architecture.md
----
-`,
-      relativePath: 'docs/product/log/2026-07-14-old.md',
-      root,
-      today: '2026-08-11',
-    });
-
-    expect(reasons).toEqual([
-      'partially_superseded_2026_08_11_codeql-statusはdocs/<domain>/log/配下の訂正logを指す（実在するだけでは不十分）: docs/engineering/architecture.md',
-    ]);
   });
 
   it('境界: secrets.mdはstock契約の検証対象にする', () => {
@@ -343,58 +264,6 @@ partially_superseded_2026_08_11_codeql-status: docs/engineering/architecture.md
     });
 
     expect(reasons).toEqual(['generated snapshotに生成元・command・手編集禁止の表示がない']);
-  });
-});
-
-describe('validateExistingLogSupersededBy', () => {
-  it('正常系: 既存logに追記した実在pathを受理する', () => {
-    const root = createRoot();
-    createFile(root, 'docs/product/log/2026-08-01-new.md');
-
-    const reasons = validateExistingLogSupersededBy(
-      `superseded_by: docs/product/log/2026-08-01-new.md\n`,
-      root,
-    );
-
-    expect(reasons).toEqual([]);
-  });
-
-  it('エラー系: 既存logに追記した不在pathを拒否する', () => {
-    const reasons = validateExistingLogSupersededBy(
-      `superseded_by: docs/product/log/2026-08-01-missing.md\n`,
-      createRoot(),
-    );
-
-    expect(reasons).toEqual([
-      'superseded_byのpathが存在しない: docs/product/log/2026-08-01-missing.md',
-    ]);
-  });
-
-  it('境界: legacyのstatus追記だけならsuperseded_by検証を要求しない', () => {
-    expect(validateExistingLogSupersededBy('status: superseded\n', createRoot())).toEqual([]);
-  });
-
-  it('正常系: 既存logに追記した部分訂正keyの実在pathを受理する（#1939）', () => {
-    const root = createRoot();
-    createFile(root, 'docs/engineering/log/2026-08-11-fix.md');
-
-    const reasons = validateExistingLogSupersededBy(
-      `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-fix.md\n`,
-      root,
-    );
-
-    expect(reasons).toEqual([]);
-  });
-
-  it('エラー系: 既存logに追記した部分訂正keyの不在pathを拒否する（#1939）', () => {
-    const reasons = validateExistingLogSupersededBy(
-      `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-missing.md\n`,
-      createRoot(),
-    );
-
-    expect(reasons).toEqual([
-      'partially_superseded_2026_08_11_codeql-statusのpathが存在しない: docs/engineering/log/2026-08-11-missing.md',
-    ]);
   });
 });
 

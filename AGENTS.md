@@ -1,6 +1,6 @@
 # AGENTS.md
 
-> **全 PR 対象の外部レビューは 2026-08-13 に廃止済み（[#2040](https://github.com/Dayopt/dayopt/issues/2040)、`docs/engineering/log/2026-08-13-internal-review-standardization.md`）。merge gate としての内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）はそのまま正本。** 2026-08-20（[#2238](https://github.com/Dayopt/dayopt/issues/2238)）、高リスク PR に限定して Codex を追加レイヤーとして手動・可逆・非ブロッキングで試行再導入した。**どの PR を対象にするかの選別基準は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行） が正本**。以下は Codex がレビュー時に何を守るか（観点・severity）だけを定義する。severity 定義（P1/P2/P3）の生きた正本は `pr-cross-review` skill 側。
+> **全 PR 対象の外部レビューは 2026-08-13 に廃止済み（[#2040](https://github.com/Dayopt/dayopt/issues/2040)、決定ログ（削除済み、git 履歴参照））。merge gate としての内製クロスレビュー（`.claude/rules/workflow.md` §レビュー指摘の必須解決、`.claude/skills/pr-cross-review/SKILL.md`）はそのまま正本。** 2026-08-20（[#2238](https://github.com/Dayopt/dayopt/issues/2238)）、高リスク PR に限定して Codex を追加レイヤーとして手動・可逆・非ブロッキングで試行再導入した。**どの PR を対象にするかの選別基準は `.claude/rules/orchestration.md` §高リスク PR への限定 Codex レビュー（試行） が正本**。以下は Codex がレビュー時に何を守るか（観点・severity）だけを定義する。severity 定義（P1/P2/P3）の生きた正本は `pr-cross-review` skill 側。
 
 このファイルは OpenAI Codex のクラウドコードレビュー（PR への `@codex review`）専用のレビュー規則。Codex はレビュー専任で、実装は行わない。実装・運用の正本ガイダンスは `CLAUDE.md` と `.claude/rules/` にあり、対象ディレクトリに `AGENTS.md` がある場合はそのスコープ固有のレビュー規則も適用する。
 

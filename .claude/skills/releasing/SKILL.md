@@ -346,7 +346,7 @@ gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 
 #### Phase 3.1: milestone の締めと次の開設（minor リリース時のみ）
 
-milestone は「次の minor version」を単位に常に 1 個だけ open にする運用（経緯は [2026-08-09-milestone-versioning.md](../../../docs/engineering/log/2026-08-09-milestone-versioning.md)）。minor リリースを出したらここで世代交代する。patch リリースでは何もしない。
+milestone は「次の minor version」を単位に常に 1 個だけ open にする運用（経緯は 2026-08-09-milestone-versioning.md（削除済み、git 履歴参照））。minor リリースを出したらここで世代交代する。patch リリースでは何もしない。
 
 ```bash
 # リリースした version の milestone を閉じる（open issue が残っていれば次へ移す）

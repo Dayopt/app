@@ -13,7 +13,7 @@ import { resolveServiceRoleTarget } from './service-role-target-guard';
  * ルーティング、認証リダイレクト、主要ページの表示を最小限のテストで確認。
  * UI詳細はunit / integration / Storybookに分担する。
  *
- * @see docs/engineering/log/2026-07-13-test-automation-strategy.md
+ * @see 決定ログ（削除済み、git 履歴参照）
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

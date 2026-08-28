@@ -203,7 +203,7 @@
 §レーンの連絡規律 の標準ブロック（止まる前に連絡・User へ直接質問しない・節目で issue コメントを読み直す）に加え、このレーンのチップ prompt には次を必須で含める:
 
 - **1Password 値の非表示規律** — 発行・登録した値そのものは chat / issue コメント / terminal 出力に出さない。存在確認・field 名の確認に留める
-- **1Password の存在確認は item UUID / item 名の照合のみで行い、`op item get` の生 JSON を表示しない**（fields に実値が混じるため。2026-08-18、[#2026](https://github.com/Dayopt/dayopt/issues/2026) の credential 投入作業中に生 JSON が誤って chat へ貼付された実事故を受けた追記。経緯は [docs/operations/log/2026-08-18-incident-credential-paste.md](../../docs/operations/log/2026-08-18-incident-credential-paste.md)）
+- **1Password の存在確認は item UUID / item 名の照合のみで行い、`op item get` の生 JSON を表示しない**（fields に実値が混じるため。2026-08-18、[#2026](https://github.com/Dayopt/dayopt/issues/2026) の credential 投入作業中に生 JSON が誤って chat へ貼付された実事故を受けた追記。経緯は 2026-08-18 の incident 記録（削除済み、git 履歴参照））
 - **op 書き込み系コマンドは出力を `>/dev/null` に落とす** — `op item create` / `op item edit` 等は実行結果 stdout に値が混じりうるため、出力を捨てて exit code だけで成否判定する
 - **SHA / トークン疎通の実測** — 疎通確認や検証コマンドの結果は記憶や直近の状況把握を根拠にせず、実行のたびに測定し直す
 
@@ -238,7 +238,7 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
   - **追従（update-branch）だけは指揮台の合図待ち**のまま（レーンは merge 順を知らないため。2026-08-20 のレーン F/H で先行追従の弊害と例外承認の両方を実測済み）
   - round 束ね規律（1 round = 1 push、追い push しない）は不変
   - 保護対象 PR（audit contract）は ready 前に指揮台へ申告する（trusted dispatch が要るため）。§指揮台の merge シーケンス 手順 2 参照
-- **トレードオフの改訂（2026-08-20）**: 旧注記は「ready 後の fix round push で重量 CI（E2E / Web E2E）が再走するが、public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する」だった。**private 化確定（2026-08-20、[決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）と CI 4 層再設計により、E2E / Web E2E は per-PR に存在しなくなった**ため、この trade-off 自体が解消している。fix round push で再走するのは軽量層（Static Checks / Unit Tests）と、該当時のみ Production Config Audit。**fix round は ready 状態で行う**ため、draft skip（2026-08-26、#2415）はこの再走に影響しない
+- **トレードオフの改訂（2026-08-20）**: 旧注記は「ready 後の fix round push で重量 CI（E2E / Web E2E）が再走するが、public repo 維持（2026-08-11 決定）で runner コストは実質待ち時間のみのため許容する」だった。**private 化確定（2026-08-20、決定ログ（削除済み、git 履歴参照））と CI 4 層再設計により、E2E / Web E2E は per-PR に存在しなくなった**ため、この trade-off 自体が解消している。fix round push で再走するのは軽量層（Static Checks / Unit Tests）と、該当時のみ Production Config Audit。**fix round は ready 状態で行う**ため、draft skip（2026-08-26、#2415）はこの再走に影響しない
 
 **2026-08-13 追記（now-legacy、経緯として残す）**: `git push` を `.claude/settings.json` の `permissions.ask` から `allow` へ移した（[#2030](https://github.com/Dayopt/dayopt/issues/2030)、User 承認）。push 前の permission prompt という偶発的な機械 gate は無い。force-push / `--no-verify` は引き続き `pre-tool-guard.sh` が機械的に止める。
 
@@ -256,7 +256,7 @@ open PR は直列 1 本ずつ回す（`.claude/rules/workflow.md` §PR 粒度）
 
 ## 高リスク PR への限定 Codex レビュー（試行）
 
-策定日: 2026-08-20（[#2238](https://github.com/Dayopt/dayopt/issues/2238)。外部レビュー全廃止（2026-08-13、[#2040](https://github.com/Dayopt/dayopt/issues/2040)、`docs/engineering/log/2026-08-13-internal-review-standardization.md`）を全面撤回するものではない。内製 3 層レビュー（plan-review / push 前反証 / merge 前クロスレビュー）を正本に維持したまま、**失敗コストが高く既存の機械検証だけでは見落としやすい PR に限定して**、Codex を追加レイヤーとして小さく再導入し実測する。Refs #1947）
+策定日: 2026-08-20（[#2238](https://github.com/Dayopt/dayopt/issues/2238)。外部レビュー全廃止（2026-08-13、[#2040](https://github.com/Dayopt/dayopt/issues/2040)、決定ログは削除済み・git 履歴参照）を全面撤回するものではない。内製 3 層レビュー（plan-review / push 前反証 / merge 前クロスレビュー）を正本に維持したまま、**失敗コストが高く既存の機械検証だけでは見落としやすい PR に限定して**、Codex を追加レイヤーとして小さく再導入し実測する。Refs #1947）
 
 **選別基準の正本はこの節。** 他ファイル（`AGENTS.md`、`.claude/skills/pr-cross-review/SKILL.md`、`.claude/rules/workflow.md`）はこの節を参照するのみで、選別条件を複製しない。`AGENTS.md` は「選ばれた PR で Codex が何を守るか」（レビュー時の観点・severity）にのみ集中させる。
 
@@ -338,7 +338,7 @@ P2 の点修正は再依頼しない。内製クロスレビューの delta re-r
 
 **個別の判定は観測完了時点で書くのを既定にする。** 判定観点への照合材料（実測結果・merge・close 等）が揃った時点で、気づいた者（通常は指揮台の日次運用）が判定コメント（事前登録した観点への照合 + 証拠の引用。どちらの判断が正しかったか）を追記する。月次まで待たない。
 
-**ラベルは外さず `judgment:judged` へ付け替える**（2026-08-27、User 裁可。push前反証レビュー指摘・P1、PR #2445 で確定）。`judgment:diverged` を外すだけの設計は、`scripts/gardening/sync-decisions.mjs`（append-only 全履歴 `docs/decisions.md` への同期）が前提とする「ラベル解除は月次 sync の**後**」という順序と衝突する — 日次でラベルを外すと、その分岐は次の月次 sync 実行時点で `judgment:diverged` の検索対象から漏れており、`docs/decisions.md` へ永久に載らなくなる（不可逆）。付け替え先の `judgment:judged` は「判定済み・月次 sync 待ち」を表す。月次 sync が `docs/decisions.md` へ書き込んだ**後**に `judgment:judged` を外す（この時点で初めてラベル無しに戻る）。**`gh issue edit` によるラベル付け替えが失敗した場合、`judgment:diverged` を外すだけの操作へフォールバックしない** — 失敗をそのまま報告し、手動で付け替え直す（フォールバックすると、外した瞬間に本節が塞いだのと同じ「sync 前にラベルが消える」不可逆な穴が再び開く）。
+**ラベル → 月次 sync による `docs/decisions.md` への反映は廃止した（2026-08-28、#2475）。** 分岐コメントを書く時点で `docs/decisions.md` へも直接 1 行追記する（検証可能な仮説を含む決定には `結果(未):` を付ける）。判明したら、その行がまだ追記の tail にあれば `結果(YYYY-MM-DD):` 継続行を足し、既に他のエントリが後続していれば新しい行として追記する。`judgment:diverged` / `judgment:judged` ラベル自体は分岐・判定の一次記録として引き続き付けてよいが、`docs/decisions.md` への反映は sync 機構ではなく上記の直接追記が正本になる。
 
 `judgment:judged` は `dispatch` skill §ラベル体系（[docs/operations/github-labels.md](../../docs/operations/github-labels.md)）の「新しいラベルを作らない」既定に対する**明示的な例外**である（既存 `judgment` namespace 内の追加のため越境はしていないが、既存 2 値体系への追加という点で例外に当たる。User 裁可: 2026-08-27）。
 
@@ -347,9 +347,9 @@ P2 の点修正は再依頼しない。内製クロスレビューの delta re-r
 - **滞留した実例**: [#2205](https://github.com/Dayopt/dayopt/issues/2205)（夜勤の実行 engine: Routine vs Actions）は、判定材料（[#2216](https://github.com/Dayopt/dayopt/issues/2216) の 3 層切り分け、[#2367](https://github.com/Dayopt/dayopt/issues/2367) の merge と初回 run success）が出揃ってからも未判定のまま滞留し、User の問い合わせを契機に指揮台が事後に判定コメントを書く形になった（2026-08-19 の分岐記録 → 2026-08-26 の判定コメントまで 1 週間）。証拠の再発掘コストが発生した
 - **同日に判定できた実例**: [#2416](https://github.com/Dayopt/dayopt/issues/2416)（Preview 課金の見送り）は、分岐コメントに判定観点を書いた同日のうちに状況が固まり、判定コストがほぼゼロで済んだ
 
-月次 gardening の役割は 2 つに再定義する（`.claude/skills/gardening/SKILL.md` 人間パート参照）:
+月次 gardening の役割は次のとおり（`.claude/skills/gardening/SKILL.md` 人間パート参照）:
 
-1. **sync + sweep** — `pnpm decisions:sync`（`judgment:diverged` **と** `judgment:judged` の両ラベルを検索対象にする）で `docs/decisions.md` へ追記した後、`judgment:judged` が付いた issue / PR からラベルを外す。`judgment:diverged` のまま残っている件は「日次で判定し損ねた、または判定材料がまだ揃っていない」sweep backstop として扱う（ラベル残存 = 未判定 or 未観測の意味は不変）
-2. **境界更新の集計** — 判定済み事例（sync 済みの全件）だけを母集団に、境界（本ファイル §権限の既定 の試行運用の恒久化/巻き戻し）を実測で更新する。これは月次のまま変えない
+- **sweep** — `gh search issues --label judgment:diverged --include-prs` で、判定材料が揃っているのに`docs/decisions.md`への直接追記が漏れている分岐（日次運用の書き漏れ）が無いか確認する。見つかれば追記する
+- **境界更新の集計** — `docs/decisions.md` に記録済みの事例を母集団に、境界（本ファイル §権限の既定 の試行運用の恒久化/巻き戻し）を実測で更新する。これは月次のまま変えない
 
-**dispatch の日次ランダム抽出監査（`.claude/skills/dispatch/SKILL.md` 操作 C）で見つかったズレも同じ扱い**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）。「仕様には適合しているが意図とズレている」静かな失敗を User が監査で発見した場合も、分岐コメント + `judgment:diverged` ラベルでジャーナル化し、判定は観測完了時点で `judgment:judged` への付け替えとともに行う（月次はあくまで sync + sweep backstop）。
+**dispatch の日次ランダム抽出監査（`.claude/skills/dispatch/SKILL.md` 操作 C）で見つかったズレも同じ扱い**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)）。「仕様には適合しているが意図とズレている」静かな失敗を User が監査で発見した場合も、分岐コメント + `docs/decisions.md` への直接追記でジャーナル化する（月次はあくまで書き漏れの sweep backstop）。

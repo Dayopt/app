@@ -95,7 +95,7 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 
 ### 技術選定スタンス（依存・ベンダー・ツール共通）
 
-選定の巧拙より「ダメになった時に捨てられること」を重視する（反脆弱性・脱固定化・可逆性。経緯は [2026-08-09-antifragility-stance.md](../../docs/engineering/log/2026-08-09-antifragility-stance.md)）:
+選定の巧拙より「ダメになった時に捨てられること」を重視する（反脆弱性・脱固定化・可逆性。経緯は 2026-08-09-antifragility-stance.md（削除済み、git 履歴参照））:
 
 - **出口コストを見る**: 深く浸透する依存（DB / 認証 / 決済級）は [infra.md §出口コスト台帳](../../docs/engineering/infra.md#出口コスト台帳) に浸透の深さ・逃げ道・出口検討トリガーを登録する
 - **小さく試してから広げる**: 本採用の前に限定 scope で検証する。全面導入を初手にしない
