@@ -40,7 +40,7 @@ const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 /** 迂回を意図的に行ってよい唯一の場所 */
 const ALLOWED_FILES = ['features/auth/server/password-reauthentication.ts'];
 
-const SKIPPED_DIRECTORIES = new Set(['__tests__', 'node_modules']);
+const SKIPPED_DIRECTORIES = new Set(['node_modules']);
 
 function collectSourceFiles(directory: string, found: string[] = []): string[] {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -50,7 +50,7 @@ function collectSourceFiles(directory: string, found: string[] = []): string[] {
       collectSourceFiles(path, found);
       continue;
     }
-    if (/\.tsx?$/.test(entry.name)) found.push(path);
+    if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) found.push(path);
   }
   return found;
 }
