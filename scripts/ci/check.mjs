@@ -321,6 +321,18 @@ async function runStatic() {
 // ─── test モード ─────────────────────────────────────────────────────
 
 async function runTest() {
+  // ── write 権限つき GH_TOKEN を PR コードの実行から隔離する ──────────
+  // このジョブは permissions: pull-requests: write / issues: write を宣言し、
+  // その GITHUB_TOKEN を GH_TOKEN として step env に受け取る。以降の run()
+  // 呼び出しは PR branch のテストコードと全依存（postinstall・vitest
+  // transform・plugin を含む）を実行するため、env を明示指定しない
+  // spawnSync はこのトークンをそのまま子プロセスへ継承してしまう
+  // （scripts/ci/night-watch/run-all.mjs の envWithout と同じ token 分離原則。
+  // 押収した値は migration safety の gh 呼び出しにだけ明示的に渡す。
+  // push前反証レビュー risk-reviewer 指摘、P1、PR #2484）。
+  const ghToken = process.env.GH_TOKEN;
+  delete process.env.GH_TOKEN;
+
   const repo = process.env.GITHUB_REPOSITORY;
   const eventName = process.env.GITHUB_EVENT_NAME;
   const prNumber = process.env.PR_NUMBER;
@@ -328,6 +340,15 @@ async function runTest() {
 
   const productUnit = shouldRunProductUnitTests(process.env.PRODUCT_UNIT);
   const integrationAffected = shouldRunIntegrationTests(process.env.INTEGRATION_AFFECTED);
+
+  // ── migration safety（破壊的変更の静的スキャン、常時・DB 不要）────
+  // 他の unit test より先に実行する。DB 起動も build:packages も不要な軽い
+  // 静的スキャンで、後段の unit test 失敗（run() が例外を投げて runTest を
+  // 中断する）に巻き込まれて検知そのものが飛ぶのを防ぐ（内製クロスレビュー
+  // risk-reviewer 指摘、P2、PR #2484）。
+  if (isPr) {
+    await runMigrationSafety({ repo, prNumber, env: { ...process.env, GH_TOKEN: ghToken } });
+  }
 
   run('pnpm', ['build:packages']);
   run('pnpm', ['test:scripts']);
@@ -351,11 +372,6 @@ async function runTest() {
   run('pnpm', ['test:web']);
   run('pnpm', ['--filter', '@dayopt/i18n', 'test:run']);
   run('pnpm', ['--filter', '@dayopt/observability', 'test:run']);
-
-  // ── migration safety（破壊的変更の静的スキャン、常時・DB 不要）────
-  if (isPr) {
-    await runMigrationSafety({ repo, prNumber });
-  }
 
   // ── integration / RLS（affected な PR だけ。Supabase の起動自体は ci.yml 側の `if:` が担う）──
   if (integrationAffected) {
@@ -382,6 +398,7 @@ async function runTest() {
  *   execFileImpl?: ExecFileImpl,
  *   spawnImpl?: SpawnImpl,
  *   writeStepSummaryImpl?: typeof writeStepSummary,
+ *   env?: NodeJS.ProcessEnv,
  * }} opts
  */
 export async function runMigrationSafety({
@@ -392,6 +409,7 @@ export async function runMigrationSafety({
   execFileImpl = execFileSync,
   spawnImpl = spawnSync,
   writeStepSummaryImpl = writeStepSummary,
+  env = process.env,
 }) {
   const files = fetchFilesImpl({ repo, prNumber });
   const withContent = files
@@ -421,7 +439,7 @@ export async function runMigrationSafety({
           '--jq',
           `[.[] | select(.name == "${MIGRATION_LABEL}")] | length > 0`,
         ],
-        { encoding: 'utf8' },
+        { encoding: 'utf8', env },
       ),
     );
   } catch {
@@ -429,36 +447,40 @@ export async function runMigrationSafety({
   }
   if (hasLabel) return { results, notified: false }; // round ごとの追い push で毎回コメントしない
 
-  spawnImpl('gh', [
-    'label',
-    'create',
-    MIGRATION_LABEL,
-    '--repo',
-    repo,
-    '--color',
-    'B60205',
-    '--description',
-    '破壊的 migration を検知（EXPLICIT AUTHORITY 要確認）',
-  ]);
+  spawnImpl(
+    'gh',
+    [
+      'label',
+      'create',
+      MIGRATION_LABEL,
+      '--repo',
+      repo,
+      '--color',
+      'B60205',
+      '--description',
+      '破壊的 migration を検知（EXPLICIT AUTHORITY 要確認）',
+    ],
+    { env },
+  );
 
-  const commentResult = spawnImpl('gh', [
-    'pr',
-    'comment',
-    String(prNumber),
-    '--repo',
-    repo,
-    '--body',
-    formatMigrationSummary(results),
-  ]);
+  const commentResult = spawnImpl(
+    'gh',
+    ['pr', 'comment', String(prNumber), '--repo', repo, '--body', formatMigrationSummary(results)],
+    { env },
+  );
   if (commentResult.status === 0) {
-    spawnImpl('gh', [
-      'api',
-      '--method',
-      'POST',
-      `repos/${repo}/issues/${prNumber}/labels`,
-      '-f',
-      `labels[]=${MIGRATION_LABEL}`,
-    ]);
+    spawnImpl(
+      'gh',
+      [
+        'api',
+        '--method',
+        'POST',
+        `repos/${repo}/issues/${prNumber}/labels`,
+        '-f',
+        `labels[]=${MIGRATION_LABEL}`,
+      ],
+      { env },
+    );
     return { results, notified: true };
   }
   // fork PR では pull_request イベントの GITHUB_TOKEN が構造的に read-only になる

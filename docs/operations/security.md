@@ -23,7 +23,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
     production-config-audit.yml  # Vercel environment metadata 監査
     nightly.yml               # heavy-e2e/heavy-web/integration（層3）+ night-watch + status-label-sweep + replica-check + storage-backup-export の6 job（#2483 で旧6ファイルから統合）
     create-release.yml        # GitHub Release 作成
-    release.yml               # リリース処理
+    promote.yml               # リリース処理
 ```
 
 ## 権限設計

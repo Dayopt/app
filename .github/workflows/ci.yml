@@ -40,10 +40,13 @@ permissions:
 # 検査網が要るのは境界を越える瞬間（ready = 指揮台の時間を使う / merge = main に
 # 入る）だけで、draft はレーンの私的作業場。機械 gate は pre-commit / pre-push
 # フック（affected typecheck/lint + typecheck:scripts/test:scripts/format:check、
-# #2359）が担う。**唯一の意図的な変更点は gitleaks が draft 中は走らないこと**
-# （旧 docs-guard.yml は draft 判定を持たず全 pull_request イベントで走っていた）。
+# #2359）が担う。**意図的な変更点は 2 つ**: (1) gitleaks が draft 中は走らない
+# （旧 docs-guard.yml は draft 判定を持たず全 pull_request イベントで走っていた。
 # pre-commit の gitleaks が一次防衛、CI（ready 後）は backstop という位置づけへ
-# 変える。それ以外の検査内容は削っていない。
+# 変える）。(2) migration safety（破壊的 migration の静的スキャン）も draft 中は
+# 走らない（旧 integration.yml の同ロジックは draft guard を持たず DB 不要の
+# 静的スキャンとして常時実行していた。内製クロスレビュー risk-reviewer 指摘、
+# P2、PR #2484）。それ以外の検査内容は削っていない。
 #
 # `draft != true` と書く（`== false` ではない）: workflow_dispatch では
 # pull_request context が無く null になるため、`== false` だと手動実行で
@@ -99,8 +102,14 @@ jobs:
       # check.mjs 側が skip するため、ここで CLI setup + start をまるごと
       # 省略してコストを避ける（旧 integration.yml の per-PR 撤去〈#2269〉の
       # 意図を、affected 判定つきの per-PR 実行として復活させたもの）。
+      #
+      # `!= 'false'`（`== 'true'` ではない）: check.mjs の shouldRunIntegrationTests
+      # と同じ fail-closed 方向（判定不能なら実行する）に揃える。output が
+      # 空になる経路は `needs.static.result == 'success'` 要求で現状塞がれて
+      # いるが、guard の向きが 2 箇所で食い違っていると将来の配線変更で
+      # サイレントに壊れる（内製クロスレビュー risk-reviewer 指摘、P3）。
       - id: supabase-version
-        if: needs.static.outputs.integration == 'true'
+        if: needs.static.outputs.integration != 'false'
         run: |
           version=$(node -p "require('./package.json').devDependencies.supabase")
           if [ "$version" = "undefined" ] || [ -z "$version" ]; then
@@ -110,17 +119,17 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        if: needs.static.outputs.integration == 'true'
+        if: needs.static.outputs.integration != 'false'
         with:
           version: ${{ steps.supabase-version.outputs.version }}
 
       - name: Start Supabase
-        if: needs.static.outputs.integration == 'true'
+        if: needs.static.outputs.integration != 'false'
         run: supabase start
 
       - name: Get Supabase status
         id: supabase
-        if: needs.static.outputs.integration == 'true'
+        if: needs.static.outputs.integration != 'false'
         run: |
           API_URL=$(supabase status --output json | jq -r '.API_URL')
           ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
@@ -148,5 +157,5 @@ jobs:
         run: node scripts/ci/check.mjs test
 
       - name: Stop Supabase
-        if: always() && needs.static.outputs.integration == 'true'
+        if: always() && needs.static.outputs.integration != 'false'
         run: supabase stop

@@ -19,7 +19,7 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 | -------------- | --------------------------------- | -------------------------------------------------- | ---------------- |
 | **Local**      | `supabase start`                  | `pnpm dev`                                         | localhost:3000   |
 | **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                         | `*.vercel.app`   |
-| **Production** | `dayopt` main                     | 手動 dispatch（`release.yml`）で Production deploy | `app.dayopt.app` |
+| **Production** | `dayopt` main                     | 手動 dispatch（`promote.yml`）で Production deploy | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
 
@@ -122,10 +122,10 @@ gate が機能する前提は **Product / Web の Auto-assign Custom Production 
 
 1. Vercel Dashboard → product / web → Settings → Git
 2. Auto-assign Custom Production Domains を OFF にする（web を先に、動作確認後 product）
-3. 両方 OFF にしたら `.github/workflows/release.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
+3. 両方 OFF にしたら `.github/workflows/promote.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
 
 無効化後は、main への merge が作るのは domain 未割当の Production build だけになり、Production domain の
-切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。
+切り替えは `.github/workflows/promote.yml`（`Production Release`）の promote だけが行う。
 workflow は次を満たした時だけ promote する。
 
 「今どれが配信しているか」は **production domain の alias** から引く。`/v9/projects/{id}` の
@@ -183,7 +183,7 @@ run の結果は `release-manifest-<attempt>` artifact（保持 90 日、`github
 
 ### release workflow の信頼境界
 
-`release.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
+`promote.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
 **workflow を dispatch した ref のもの**を使い、`sha` 入力は release 対象を指す data としてだけ扱う。
 `actions/checkout` の `ref` に入力 SHA を渡すと、未 merge の commit が持つ script が Production 権限で
 動く。この制約は `scripts/__tests__/release-workflow-contract.test.ts` が回帰から守る。
@@ -203,7 +203,7 @@ release job は `environment: production-release` を宣言済みなので、閉
    environment secret へ移す
 
 2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲をこの job に
-限定するための追加措置で、対象は release.yml しか読まない bypass secret 2 つに限る。
+限定するための追加措置で、対象は promote.yml しか読まない bypass secret 2 つに限る。
 
 **`VERCEL_TOKEN` と `VERCEL_ORG_ID` は repository secret のまま残す。** `production-config-audit.yml` の
 audit job は `pull_request_target` と `push: main` で走るため `environment:` を宣言できず、repository
@@ -225,7 +225,7 @@ release script は Vercel API への read-modify-write で、API にトランザ
 
 前提（運用で守る）:
 
-- **書き手は同時に 1 つ。** CI は `release.yml` の `concurrency: production-release`（cancel なし）で直列化される
+- **書き手は同時に 1 つ。** CI は `promote.yml` の `concurrency: production-release`（cancel なし）で直列化される
 - **release run の実行中に、人手で Vercel の promote / rollback / alias 操作をしない。** 緊急時も run の完了（または cancel の完了）を待ってから [runbook](../operations/runbook.md) Playbook 2 に従う
 
 script が保証すること（コードで守る）:
@@ -248,7 +248,7 @@ script が保証すること（コードで守る）:
 | Supabase PR check が出ない              | Supabase GitHub integration / required check 設定を確認                        |
 | Vercel Preview が production DB を見る  | Vercel Preview env から production Supabase vars を削除し integration を再同期 |
 | migration が Preview Branch で失敗      | Supabase deployment log を確認し、migration を修正して PR branch に push       |
-| Production に反映されない               | `gh run list --workflow=release.yml` で promote が成功しているか確認           |
+| Production に反映されない               | `gh run list --workflow=promote.yml` で promote が成功しているか確認           |
 | Supabase 側が Production に反映されない | Supabase GitHub integration の production deployment log を確認                |
 
 ---
@@ -2012,7 +2012,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status、**Cron**（`calendar-sync` / `external-connection-maintenance` を 15 分毎、`calendar-account-deletion-settle` を毎時）、**host 別 rewrite**（`mcp.dayopt.app` → `/api/mcp`）、**`dayopt.app` の registrar**（DNS zone 自体は Cloudflare へ委任済み。次項の Cloudflare 行、§DNS 管理（Cloudflare） 参照） | deploy 経路、PR 検証の一部、**カレンダー同期と接続メンテナンスの定期実行**、**MCP の入口 routing**、**ドメインの更新・移管権限**（DNS レコードそのものへの影響は無い） | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線に加え **scheduler と host routing の移植**（`apps/product/vercel.json`）と **registrar 移管**が要る。ホスティングだけ移して account を閉じるとドメインを失う                                                                  | 価格改定、他ホストでの Next.js 冷遇 |
 | **Stripe**                             | Pro 課金（billing）+ **アカウント削除フロー**（subscription cancel → customer 削除）                                                                                                                                                                                                                                                                                                     | 課金・サブスク管理に加え、`stripe_customer_id` を持つユーザーの**アカウント削除が完了しなくなる**                                                                      | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）と**削除フローの customer cleanup 差し替え**が要る                                                                                                                                                                                       | 手数料改定、アカウント凍結リスク    |
-| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`release.yml` が production domain promote の唯一経路）                                                                                                                       | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                                                              | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                                                                                     | 価格改定、Actions 課金の構造変化    |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`promote.yml` が production domain promote の唯一経路）                                                                                                                       | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                                                              | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                                                                                     | 価格改定、Actions 課金の構造変化    |
 | **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース                                                                                                                                                                                                                                                                                       | **operational 環境ではアプリが起動しない**（env 検証が失敗）。起動しても webhook 処理が fail-closed になる                                                             | `@upstash/redis` は REST API 前提のため素の Redis へ drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る                                                                                                                                  | 価格改定、REST API の互換性変更     |
 | **Google**                             | OAuth ログイン + external-calendar 連携 + **`support@dayopt.app` の最終受信箱**（Gmail destination と Send mail as）                                                                                                                                                                                                                                                                     | Google ログインユーザーのアクセス、カレンダー同期、**問い合わせの受信と返信**                                                                                          | ログインは email 併存、連携は opt-in。ただし**受信箱は代替が要る**（destination 変更・履歴移行・返信経路の再設定。`docs/operations/contact-email.md`）                                                                                                                                              | OAuth / Calendar API の政策変更     |
 | **Cloudflare**                         | `dayopt.app` の **authoritative DNS**（`app` / `mcp` / `www` を含む）、**Email Routing**（`support@` → Gmail）、Turnstile（Bot 対策）                                                                                                                                                                                                                                                    | **全ドメインの名前解決**と**問い合わせの受信**、Bot 対策                                                                                                               | nameserver を別 DNS へ委譲し直し、MX / SPF / DKIM と転送先を再設定、CAPTCHA を差し替える。DNS の切替は伝播待ちを伴う                                                                                                                                                                                | 価格改定、無料枠の縮小              |

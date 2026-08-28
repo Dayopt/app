@@ -72,6 +72,8 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 **層3（repo hook）**: `scripts/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
 
+**night-watch job だけを Actions 上で手動再実行したい場合**（ローカル代行ではなく `gh workflow run` で再現したい時）は `gh workflow run nightly.yml -f jobs=night-watch` を使う。**`-f jobs=all` は選ばない** — `all` は post-merge の一括検証専用で、storage-backup-export（実データ転送）・status-label-sweep も同時に起動する。night-watch 単独の再実行のつもりで `all` を選ぶと、意図せず実 backup 転送を誘発する（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484）。
+
 ## 故障モード
 
 - **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep で検出する。`gh run list --workflow=nightly.yml --limit 10` で直近 run 一覧を取得し、04:00 JST 前後の run を `gh run view <run-id>` で開いて night-watch job の成否を確認する（失敗していればログは `gh run view <run-id> --log-failed`）。run 自体が発火していなければ nightly.yml の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する

@@ -44,14 +44,18 @@ on:
   workflow_dispatch:
     inputs:
       jobs:
-        description: '実行する job。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。all = 全 job（post-merge の一括検証専用。storage-backup-export の実転送・status label sweep も同時に走るため routine 実行では選ばない）'
+        description: '実行する job を選ぶ。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。night-watch / replica-check / status-label-sweep / storage-backup は各 job を単独で手動代行したい時に選ぶ（night-watch SKILL.md §手動代行 等）。all は post-merge の一括検証専用——storage-backup-export の実転送・status label sweep も同時に走るため、単独の job だけ再実行したい時に選ばないこと（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484: jobs=all しか無いと、night-watch 単独の手動代行のつもりで実データ転送を誤爆させうる）'
         type: choice
         options:
           - layer3
+          - night-watch
+          - replica-check
+          - status-label-sweep
+          - storage-backup
           - all
         default: layer3
       dry_run:
-        description: 'storage-backup-export 用（jobs=all の時のみ意味を持つ）: true にすると実際には転送・削除せず rclone --dry-run で予定操作だけ表示する'
+        description: 'storage-backup-export 用（jobs=storage-backup または all の時のみ意味を持つ）: true にすると実際には転送・削除せず rclone --dry-run で予定操作だけ表示する'
         type: boolean
         default: false
 
@@ -250,7 +254,7 @@ jobs:
   # （secrets・permissions・依存ツールの導入）だけ。
   night-watch:
     name: Night Watch
-    if: github.event.schedule == '0 19 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    if: github.event.schedule == '0 19 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'night-watch' || github.event.inputs.jobs == 'all'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -337,7 +341,7 @@ jobs:
   # の全 closed issue を走査して重複除去する設計）。
   status-label-sweep:
     name: status:* ラベルの batch sweep
-    if: github.event.schedule == '30 19 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    if: github.event.schedule == '30 19 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'status-label-sweep' || github.event.inputs.jobs == 'all'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -359,7 +363,7 @@ jobs:
   # ─── replica-check（旧 replica-check.yml）───────────────────────────
   replica-check:
     name: Check Vercel replica against 1Password ledger
-    if: github.event.schedule == '30 21 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    if: github.event.schedule == '30 21 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'replica-check' || github.event.inputs.jobs == 'all'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     concurrency:
@@ -386,7 +390,7 @@ jobs:
   # コメント参照）。secrets 未投入の間は明示 failure にする（fail closed）。
   storage-backup-export:
     name: Export Supabase Storage to R2
-    if: github.event.schedule == '0 22 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    if: github.event.schedule == '0 22 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'storage-backup' || github.event.inputs.jobs == 'all'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
