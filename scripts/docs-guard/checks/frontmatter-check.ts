@@ -2,28 +2,22 @@
  * Check: path-aware document metadata
  *
  * - stock: current | superseded + last_verified
- * - newly added log: frozen + filenameと一致するdate
  * - code / superseded_by: 実在するrepo-relative path
  * - product spec: public_docs（公開docsのslug）/ lp（LPの約束文言）の形式
  *
  * docs/projects/ 前提の project-overview / project-document 分類は 2026-08-28
  * （#2473、docs/projects 全廃）に撤去した。設計の正本は issue/PR 本文へ一本化された。
+ * 各ドメイン log/ の frozen-log 契約（'log' kind、partial correction 等）は
+ * 2026-08-28（#2475、domain log/ 全廃）に撤去した。superseded_by は stock 間の
+ * 汎用的な差し替え表明として引き続き使える。
  */
 
 import { glob } from 'glob';
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 
-import {
-  colors,
-  DOCS_DIR,
-  FORBIDDEN_LOG_ALIASES,
-  GENERATED_DOCS,
-  ROOT,
-  ROOT_STOCK_FILES,
-  STOCK_DIRS,
-} from '../config.ts';
-import { listGitChanges, toRepoPath } from '../git-changes.ts';
+import { colors, DOCS_DIR, GENERATED_DOCS, ROOT, ROOT_STOCK_FILES, STOCK_DIRS } from '../config.ts';
+import { toRepoPath } from '../git-changes.ts';
 
 export interface FrontmatterViolation {
   file: string;
@@ -31,7 +25,7 @@ export interface FrontmatterViolation {
 }
 
 type MetadataValue = string | readonly string[];
-type DocumentKind = 'generated' | 'log' | 'stock';
+type DocumentKind = 'generated' | 'stock';
 
 interface ParsedFrontmatter {
   errors: readonly string[];
@@ -147,101 +141,9 @@ function isReadme(path: string): boolean {
   return /\/(readme|index)\.md$/i.test(path);
 }
 
-function isLogDocument(path: string): boolean {
-  return /^docs\/(business|product|marketing|engineering|operations|company)\/log\//.test(path);
-}
-
-function getLogFilenameDate(relativePath: string): string | undefined {
-  return relativePath.match(/\/log\/(?:\d{4}\/)?(\d{4}-\d{2}-\d{2})-/)?.[1];
-}
-
-export function usesFrozenLogContract(content: string, relativePath: string): boolean {
-  const parsed = parseFrontmatter(content);
-  const date = getString(parsed.fields, 'date');
-
-  return (
-    parsed.errors.length === 0 &&
-    getString(parsed.fields, 'status') === 'frozen' &&
-    date !== undefined &&
-    date === getLogFilenameDate(relativePath) &&
-    isCalendarDate(date)
-  );
-}
-
-export function isFrontmatterSupersededByAddition(
-  previousContent: string,
-  currentContent: string,
-): boolean {
-  const previous = parseFrontmatter(previousContent);
-  const current = parseFrontmatter(currentContent);
-  const currentValue = current.fields.get('superseded_by');
-
-  return (
-    previous.errors.length === 0 &&
-    !previous.fields.has('superseded_by') &&
-    current.errors.length === 0 &&
-    typeof currentValue === 'string' &&
-    currentValue.length > 0
-  );
-}
-
-const PARTIAL_CORRECTION_KEY_RE =
-  /^partially_superseded_\d{4}_\d{2}_\d{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-export function isPartialCorrectionKey(key: string): boolean {
-  return PARTIAL_CORRECTION_KEY_RE.test(key);
-}
-
-// 部分訂正の値は「実在するpath」だけでなく「実際に訂正logであること」まで確認する。
-// validateRepoPathだけだと、無関係な既存file（typoで別pathを指す等）でも
-// docs:checkが通り、凍結logには訂正済みの印だけが付いて「何が誤りだったか」へ
-// 到達できない状態になる（Codexレビューで検出）。
-function validatePartialCorrectionTarget(
-  root: string,
-  value: string,
-  field: string,
-): string | undefined {
-  const pathReason = validateRepoPath(root, value, field);
-  if (pathReason) return pathReason;
-  if (!isLogDocument(value)) {
-    return `${field}はdocs/<domain>/log/配下の訂正logを指す（実在するだけでは不十分）: ${value}`;
-  }
-  return undefined;
-}
-
-/**
- * 部分訂正（#1939）: 既存の凍結logへ、日付+slug付きの新規keyが1本だけ増えているかを
- * 検証する。isSupersedeOnlyDiffの行レベル判定に加え、frontmatter全体をparseした上で
- * 「そのkeyが以前は無かった」ことまで確認する（superseded_by用のisFrontmatterSupersededByAdditionと対）。
- */
-export function isFrontmatterPartialCorrectionAddition(
-  previousContent: string,
-  currentContent: string,
-): boolean {
-  const previous = parseFrontmatter(previousContent);
-  const current = parseFrontmatter(currentContent);
-  if (previous.errors.length > 0 || current.errors.length > 0) return false;
-
-  const newPartialCorrectionKeys = [...current.fields.keys()].filter(
-    (key) => isPartialCorrectionKey(key) && !previous.fields.has(key),
-  );
-  if (newPartialCorrectionKeys.length !== 1) return false;
-
-  const [key] = newPartialCorrectionKeys;
-  const value = key !== undefined ? current.fields.get(key) : undefined;
-  return typeof value === 'string' && value.length > 0;
-}
-
-export function classifyDocument(
-  relativePath: string,
-  isAddedLog: boolean,
-): DocumentKind | undefined {
+export function classifyDocument(relativePath: string): DocumentKind | undefined {
   if (GENERATED_DOCS.includes(relativePath)) return 'generated';
   if (relativePath === 'docs/README.md' || isReadme(relativePath)) return undefined;
-
-  if (isLogDocument(relativePath)) {
-    return isAddedLog ? 'log' : undefined;
-  }
 
   if (relativePath.startsWith('docs/_templates/')) return 'stock';
   if (ROOT_STOCK_FILES.includes(relativePath)) return 'stock';
@@ -272,28 +174,6 @@ function validateStock(fields: ReadonlyMap<string, MetadataValue>, today: string
   if (!lastVerified) reasons.push('frontmatterにlast_verifiedがない');
   else if (!isValidDate(lastVerified, today)) {
     reasons.push(`last_verifiedが有効な過去日付ではない: ${lastVerified}`);
-  }
-  return reasons;
-}
-
-function validateLog(
-  fields: ReadonlyMap<string, MetadataValue>,
-  relativePath: string,
-  today: string,
-): string[] {
-  const reasons: string[] = [];
-  const status = getString(fields, 'status');
-  const date = getString(fields, 'date');
-  const filenameDate = getLogFilenameDate(relativePath);
-
-  if (status !== 'frozen') reasons.push('新規logのstatusはfrozenにする');
-  if (!filenameDate) reasons.push('新規logのfilenameはYYYY-MM-DD-slug.mdにする');
-  if (!date) reasons.push('新規logにdateがない');
-  else {
-    if (!isValidDate(date, today)) reasons.push(`dateが有効な過去日付ではない: ${date}`);
-    if (filenameDate && date !== filenameDate) {
-      reasons.push(`dateがfilenameと一致しない: ${date} != ${filenameDate}`);
-    }
   }
   return reasons;
 }
@@ -332,36 +212,13 @@ function validateSpecRegistry(fields: ReadonlyMap<string, MetadataValue>): strin
   return reasons;
 }
 
-export function validateExistingLogSupersededBy(content: string, root = ROOT): string[] {
-  const reasons: string[] = [];
-  const values = [...content.matchAll(/^superseded_by:\s*(\S+)\s*$/gm)].map((match) => match[1]);
-
-  for (const value of values) {
-    if (!value) continue;
-    const reason = validateRepoPath(root, value, 'superseded_by');
-    if (reason) reasons.push(reason);
-  }
-
-  const partialCorrectionMatches = [
-    ...content.matchAll(/^(partially_superseded_\d{4}_\d{2}_\d{2}_[a-z0-9-]+):\s*(\S+)\s*$/gm),
-  ];
-  for (const match of partialCorrectionMatches) {
-    const [, key, value] = match;
-    if (!key || !value) continue;
-    const reason = validatePartialCorrectionTarget(root, value, key);
-    if (reason) reasons.push(reason);
-  }
-
-  return reasons;
-}
-
 export function validateDocumentMetadata({
   content,
   relativePath,
   root = ROOT,
   today = currentDateInTokyo(),
 }: MetadataValidationOptions): string[] {
-  const kind = classifyDocument(relativePath, true);
+  const kind = classifyDocument(relativePath);
   if (!kind) return [];
 
   if (kind === 'generated') {
@@ -373,13 +230,7 @@ export function validateDocumentMetadata({
   }
 
   const parsed = parseFrontmatter(content);
-  const reasons = [...parsed.errors];
-
-  if (kind === 'log') {
-    reasons.push(...validateLog(parsed.fields, relativePath, today));
-  } else {
-    reasons.push(...validateStock(parsed.fields, today));
-  }
+  const reasons = [...parsed.errors, ...validateStock(parsed.fields, today)];
 
   if (relativePath.startsWith(SPECS_PREFIX)) {
     reasons.push(...validateSpecRegistry(parsed.fields));
@@ -402,45 +253,19 @@ export function validateDocumentMetadata({
     }
   }
 
-  for (const [key, value] of parsed.fields) {
-    if (!isPartialCorrectionKey(key)) continue;
-    if (typeof value !== 'string' || value.length === 0) {
-      reasons.push(`${key}はscalarのrepo-relative pathで指定する`);
-    } else {
-      const reason = validatePartialCorrectionTarget(root, value, key);
-      if (reason) reasons.push(reason);
-    }
-  }
-
   return reasons;
 }
 
 export async function runFrontmatterCheck(): Promise<FrontmatterViolation[]> {
   const violations: FrontmatterViolation[] = [];
   const files = await glob('**/*.md', { cwd: DOCS_DIR, absolute: true });
-  const changes = listGitChanges('docs');
-  const changesByPath = new Map(changes.map((change) => [change.path, change]));
-  const addedPaths = new Set(
-    changes.filter((change) => change.status === 'added').map((change) => change.path),
-  );
 
   for (const file of files) {
     const relativePath = toRepoPath(file);
-    if (FORBIDDEN_LOG_ALIASES.includes(relativePath)) {
-      violations.push({ file, reason: '上書き型log aliasは禁止。日付付きlogを参照する' });
-      continue;
-    }
-
-    const content = readFileSync(file, 'utf8');
-    const change = changesByPath.get(relativePath);
-    const kind = classifyDocument(relativePath, addedPaths.has(relativePath));
-    if (!kind && isLogDocument(relativePath) && change?.status === 'modified') {
-      const reasons = validateExistingLogSupersededBy(content);
-      for (const reason of reasons) violations.push({ file, reason });
-      continue;
-    }
+    const kind = classifyDocument(relativePath);
     if (!kind) continue;
 
+    const content = readFileSync(file, 'utf8');
     const reasons = validateDocumentMetadata({
       content,
       relativePath,

@@ -227,7 +227,7 @@ jobs:
           title_prefix="[auto] production デプロイが unhealthy です"
           body="production target の最新デプロイが READY ではありません（ERROR / grace period 超過の BUILDING 停滞のいずれか）。検知時点の main HEAD: \`$SHA\`。詳細ログ: $RUN_URL
 
-          このコメントは \`production-config-audit.yml\` の \`deploy-health\` job による自動起票/追記です。詳細: \`docs/operations/log/2026-08-17-incident-production-deploy-freeze.md\`"
+          このコメントは \`production-config-audit.yml\` の \`deploy-health\` job による自動起票/追記です。詳細: \決定ログ（削除済み、git 履歴参照）"
 
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "area:deployment" --state open --json number,title \
             --jq --arg prefix "$title_prefix" '[.[] | select(.title | startswith($prefix))][0].number // empty')

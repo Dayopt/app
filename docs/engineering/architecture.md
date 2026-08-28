@@ -505,7 +505,7 @@ Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 
 
 - 状態導出（`upcoming` / `active` / `past`）は Plan / Record それぞれの時間位置から行う
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
-- 詳細は [ADR-025](../product/log/2026-07-09-time-model-split.md) 参照
+- 詳細は ADR-025（削除済み、git 履歴参照） 参照
 
 #### Tags の階層制限
 
@@ -626,7 +626,7 @@ Package foundation は第一段階として運用可能な状態にある。root
 
 品質ゲートは apps と同じ水準に揃っている。tsconfig の共通部分は root `tsconfig.base.json` に集約し、各 package はそこから `extends` して固有オプションだけを持つ。ESLint は root `eslint.config.packages.mjs` を共有 flat config とし、各 package の `eslint.config.mjs` が re-export する。全 package が `lint: eslint src --max-warnings 0` を持つため `turbo run lint`（= `pnpm lint`）と CI の `static` job（旧 lint job）が packages を検証対象に含む。Prettier も root `format:check` が `packages/*/src` の TS/TSX/CSS/MDX を対象にする。packages は Next.js に依存しないため、app 側の `core-web-vitals` ではなく TypeScript ルール + Storybook plugin を base にする。
 
-apps への adoption は完了している。[ADR-021](./log/2026-06-22-shared-packages-canonical-and-app-shims.md)（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
+apps への adoption は完了している。ADR-021（削除済み、git 履歴参照）（2026-06-22）で packages を canonical とし、product / web は shim を介さず直接 import する形に統一した。UI・トークンの app 側重複は解消済みで、i18n も routing / navigation を `@dayopt/i18n/*` から直接 import する。app 側には message loading と next-intl plugin entrypoint を担う `request.ts`、app 固有 Provider だけを残す。残る follow-up は `.from('table')` への `databaseTables` 段階適用など小粒のものに限られる。
 
 ### Package Boundaries
 
@@ -803,7 +803,7 @@ Storybook は `packages/foundations` と `packages/components` の公開面を�
 
 ### Ownership And Operations
 
-Storybook の story title top-level は所有境界（package / app）で分ける（[ADR-023](./log/2026-06-24-storybook-ownership-taxonomy.md)）。第二階層以下は責務ベース（[ADR-022](./log/2026-06-23-component-taxonomy.md)）。`scripts/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
+Storybook の story title top-level は所有境界（package / app）で分ける（ADR-023（削除済み、git 履歴参照））。第二階層以下は責務ベース（ADR-022（削除済み、git 履歴参照））。`scripts/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
 
 | title prefix           | Source of truth                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |

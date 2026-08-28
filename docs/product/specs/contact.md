@@ -48,4 +48,4 @@ ProductとWebから受け付けた問い合わせを、Production限定で`suppo
 
 ## 関連する意思決定
 
-- [問い合わせの受信と送信をCloudflare・Gmail・Resendへ分離する](../log/2026-07-21-contact-email-delivery.md)
+- 問い合わせの受信と送信をCloudflare・Gmail・Resendへ分離する（削除済み、git 履歴参照）

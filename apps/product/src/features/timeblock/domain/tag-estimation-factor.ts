@@ -1,7 +1,7 @@
 /**
  * activity 別見積もり係数（作成時フィードフォワードの燃料）の pure aggregation。
  *
- * ADR-026（`docs/product/log/2026-07-10-analytics-expression-policy.md`）の 3 点のうち
+ * ADR-026（決定ログ（削除済み、git 履歴参照））の 3 点のうち
  * 1 点目「タグ別見積もり係数」の定義を、tag_id → activity_id へキーを置換して実装する
  * （issue #2162 のコメント欄 step-5-7-completion.md §4-2 相当、#2473 で移設）:
  *

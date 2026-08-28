@@ -204,7 +204,7 @@ Plan / Record の時間位置から自動導出される3値。DBカラムでは
 | `past`     | `end_at <= now`            | Plan は時間凍結、Record は訂正可              |
 
 - 算出関数: `getTimeblockState()` — `src/features/timeblock/lib/timeblock-status.ts`
-- 意思決定ログ: [時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)、[ADR-025](log/2026-07-09-time-model-split.md)
+- 意思決定ログ: 時間不変原則（削除済み、git 履歴参照）、ADR-025（削除済み、git 履歴参照）
 
 #### 2レーン表示
 
@@ -231,7 +231,7 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 - 過去 Plan の `start_at` / `end_at` は変更不可（アクティビティ / note のみ訂正可）
 - Record は過去の記録そのものなので、時間・アクティビティ・noteを訂正可能
 - UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
-- 意思決定ログ: [ADR-025](log/2026-07-09-time-model-split.md)、[時間不変原則](../product/log/2026-03-10-time-immutability-principle.md)
+- 意思決定ログ: ADR-025（削除済み、git 履歴参照）、時間不変原則（削除済み、git 履歴参照）
 
 ### UI機能
 

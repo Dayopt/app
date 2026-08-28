@@ -52,4 +52,4 @@ lp: []
 
 ## 関連するフィードバック
 
-- [モバイルbottom sheetの閉じ方とoverlayの意図を統一したい](../log/2026-07-16-feedback-mobile-bottom-sheet-consistency.md)
+- モバイルbottom sheetの閉じ方とoverlayの意図を統一したい（削除済み、git 履歴参照）

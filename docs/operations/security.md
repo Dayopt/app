@@ -210,11 +210,11 @@ secret 検出はこれとは別で、**全 PR で自動実行される**。`docs
 3. `regexTarget` は既定の `"match"`（rule の一致範囲全体、例: `key: 'value'` の周辺文字列ごと）ではなく `"secret"`（抽出された値そのもの）を使う。`^...$` の anchored regex を `"match"` に対して書くと、周辺文字列のせいで意図せず不一致になる（#2379 で実際に踏んだ）
 4. `targetRules` は必ず実際のスキャン結果（`gitleaks detect --report-format json` の `RuleID`）から取る。推測で書かない
 
-全履歴棚卸しの結果と個々の判定根拠は [docs/operations/log/2026-08-25-gitleaks-fullhistory-triage.md](./log/2026-08-25-gitleaks-fullhistory-triage.md) を参照。
+全履歴棚卸しの結果と個々の判定根拠は 決定ログ（削除済み、git 履歴参照） を参照。
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-所見が出た場合は `docs/operations/log/YYYY-MM-DD-security-sweep.md` に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
+所見が出た場合は journal（月次 `/gardening` の draft PR 本文）に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 
 ### 前提: `claude-security` plugin
 

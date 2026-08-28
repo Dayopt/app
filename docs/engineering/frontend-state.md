@@ -9,7 +9,7 @@ code: apps/product/src
 
 > **このファイルは正本ではない。** 後継は [docs/product/specs/plan-record.md](../product/specs/plan-record.md)。
 > 本文は 2026-03-19 生成時点のスナップショットで、`~/Critical` `~/High` の GAP は全件修正済み（下記ギャップインデックス参照）。`~/Medium` の未修正分は後継ドキュメントか個別 issue を参照すること。
-> [docs/engineering/log/2026-08-01-journal.md](log/2026-08-01-journal.md) から参照されているため削除せず、ポインタとして残す。
+> 決定ログ（削除済み、git 履歴参照） から参照されているため削除せず、ポインタとして残す。
 
 <details>
 <summary>旧本文（アーカイブ、参照時のみ展開）</summary>

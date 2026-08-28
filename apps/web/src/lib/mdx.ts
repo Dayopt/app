@@ -33,7 +33,7 @@ const LOCALE_DIRS: readonly string[] = SUPPORTED_LOCALES;
  *   グローバル名前空間で占有してしまう。`/docs/pricing` は料金ページに見えるが
  *   実際は FAQ の 1 記事で、検索からの流入を誤解させる
  *
- * 経緯は docs/business/log/2026-07-27-docs-faq-url-nesting.md を参照。
+ * 経緯は 決定ログ（削除済み、git 履歴参照） を参照。
  */
 const NESTED_URL_CATEGORIES: readonly string[] = ['faq'];
 

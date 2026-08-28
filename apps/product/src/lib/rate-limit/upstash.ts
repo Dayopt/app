@@ -18,7 +18,7 @@ import { captureUnexpectedError } from '@/lib/sentry';
 /**
  * `@/env` の `env.X` は初回アクセス時に schema 全体（Supabase 必須3変数を含む）を検証する
  * all-or-nothing Proxy（`src/env.ts`）。generic Preview deployment は `SUPABASE_SERVICE_ROLE_KEY`
- * を持たない（`docs/operations/log/2026-07-14-vercel-env-scope-audit.md`）ため、この module を
+ * を持たない（決定ログ（削除済み、git 履歴参照））ため、この module を
  * 経由するどの route も import 時点で無関係に crash していた（#2011）。Upstash 側は本来
  * `UPSTASH_REDIS_REST_URL` / `_TOKEN` の2変数しか要らないので、`process.env` を直接読む
  * （schema 全体の fail-fast は他の operational-only module 経由で production では変わらず効く）。

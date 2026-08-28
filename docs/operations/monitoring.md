@@ -32,7 +32,7 @@ provider plan、sampling rate、SDK versionなどの値は変わるため、pack
 
 - Product と Web は別 Sentry project とし、quota、alert、release、DSN を分離する
 - server / edge は Production だけで常時初期化する。browser SDK、Analytics、Speed Insights は analytics consent 後だけ初期化する
-- **認証未完了フロー（`/auth/*`）は client telemetry の対象外**。同意バナーは LCP 最適化のため `/auth/*` では表示されず（認証後に表示）、その配下では分析同意を得る機会が一度も無い。つまり signup / login 失敗など認証未完了中に起きたエラーは browser Sentry に届かない（#2029）。この窓の一次証跡は Supabase Auth logs（dashboard）を見る。privacy 境界（analytics 同意後だけ browser telemetry を有効化する）を崩してまでこの窓を埋めることはしない — 2026-07-16 の frozen 決定（`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md`）を優先する
+- **認証未完了フロー（`/auth/*`）は client telemetry の対象外**。同意バナーは LCP 最適化のため `/auth/*` では表示されず（認証後に表示）、その配下では分析同意を得る機会が一度も無い。つまり signup / login 失敗など認証未完了中に起きたエラーは browser Sentry に届かない（#2029）。この窓の一次証跡は Supabase Auth logs（dashboard）を見る。privacy 境界（analytics 同意後だけ browser telemetry を有効化する）を崩してまでこの窓を埋めることはしない — 2026-07-16 の frozen 決定（決定ログ（削除済み、git 履歴参照））を優先する
 - browser telemetryの同意撤回時はclientを即時無効化してページを再読込し、SDK integration、active span、breadcrumb scopeを残さない
 - Session Replayは、現行SDKではRRWeb metadataとReplay envelopeのraw URL queryを通常sanitizerで除去できないため無効にする
 - build integration と source map upload は Vercel Production build だけで実行する。CI / Preview / Development に `SENTRY_AUTH_TOKEN` を置かない
@@ -99,7 +99,7 @@ Product / Webのbrowserを含むProduction検証、alert email、source map、tr
 ### 手順
 
 1. **legal 前提（Drain 作成より先に完了させる）** — Axiom は Dayopt の privacy policy が個別列挙するサブプロセッサーに該当しうる新規追加で、privacy.mdx は「導入の少なくとも 30 日前に通知」を約束している。手順どおり Drain を作るだけでは、この約束を素通りして公開ポリシー違反になる
-   - **完了（2026-08-17、#1701 コメント参照）**: `apps/web/content/legal/{ja,en}/privacy.mdx` の subProcessors 節へ Axiom を追記済み。決定の記録は `docs/operations/log/2026-08-17-axiom-subprocessor-notice.md`
+   - **完了（2026-08-17、#1701 コメント参照）**: `apps/web/content/legal/{ja,en}/privacy.mdx` の subProcessors 節へ Axiom を追記済み。決定の記録は 決定ログ（削除済み、git 履歴参照）
    - **30 日時計の起点はこの追記が production へ公開された日**（merge 日ではなく deploy 日）。Drain 作成はその 30 日後以降に行う。公開日は該当 PR の merge 後、Vercel Production deployment のタイムスタンプで確認する
    - この judgment（サブプロセッサーを追加するかどうか）自体が `EXPLICIT AUTHORITY` で、User 承認済み（#1701 コメント）
 2. **Drain が送信するフィールドの確定（legal 前提と並行して検討可、Drain 作成より先に確定させる）** — Log Drain はアプリの構造化ログだけでなく **Vercel 自身の request log**（path / query / clientIp / userAgent 等）を運ぶ。既存の `@/lib/logger` sanitize 方針（本ファイル §Sentry runtime contract）はアプリコードが出す構造化ログにしか及ばず、Vercel の request log には適用されない
@@ -155,8 +155,8 @@ Supabase 公式ドキュメント（[Manage Logs usage](https://supabase.com/doc
 - Vercel function duration、bandwidth、build trend: 週次
 - Supabase database size、connection、slow query: 週次
 - provider usage / plan limit: 月次（Supabase Logs ingest/query の quota 確認基準は §Supabase `log_connections` 参照。enforcement 稼働後に対象化）
-- **browser client telemetry の生死確認: 月次**（#2029）。Sentry で `environment:production has:browser.name` を直近30日で検索し、件数が0でないことを確認する。0件なら consent gate・DSN・CSP・SDK 初期化のどこかが壊れている可能性が高く、`docs/operations/log/2026-07-16-sentry-runtime-consent-boundary.md` の contract に沿って client 側の初期化パス（`instrumentation-client.ts` / `packages/observability/src/consent.ts`）を調査する。新しい常設 canary surface は作らない（2026-07-16〜23 に一時追加した operator smoke surface は複雑さに見合わず撤去済み）
-- **体感速度北極星（production LCP p95 / INP p95）の月次確認: 月次**（#2294）。product（Sentry project `dayopt`）の Web Vitals を [LCP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.lcp+environment%3Aproduction&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.lcp%29%22%2C%22p95%28measurements.lcp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) / [INP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.inp&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.inp%29%22%2C%22p95%28measurements.inp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) で開き、p95 と n（count）を確認する。budget は `docs/engineering/infra.md` §速度指標（LCP p95≤2.5s、INP p95≤200ms）。2026-08-24 baseline: LCP p75=1318ms/p95=2101.2ms（n=110）、INP p75=96ms/p95=103.84ms（n=104）、いずれも budget 内。**INP query はあえて `environment:production` を付けない** — INP は Sentry SDK の仕様で standalone span に `environment` タグが付かないため（`environment:production` で絞ると誤って count=0 になる）。product は `enabled: IS_SENTRY_PRODUCTION`（`apps/product/instrumentation-client.ts:66`）で `Sentry.init` の `enabled` オプション自体を production 限定にし、web は `isProduction` 定数（`apps/web/instrumentation-client.ts:24`）で `initializeBrowserSentry()`（`Sentry.init` 呼び出し自体）を production 以外で実行しない lazy init gate にしている（web 側の `Sentry.init` の `enabled` は `true` 固定）。実装形は異なるが、両者とも production 以外で SDK 自体を init しない構造的 gate という不変条件は同じため、フィルタなしでも値は production 限定と確定できる。**n を必ず確認する** — p95 は少数サンプルで暴れるため、n が前月比で大きく変動した月（consent UI 変更、計測ソース変更、トラフィック構成変化など）は単純比較せず断点として本節にコメントで残す。閾値アラートは n がまだ小さく統計的に成立しないため作らない（この月次確認と `docs/engineering/infra.md` §行動ルール の「p95悪化 → 改善Issue必須」で代替する）。月次の実測値は gardening journal（`docs/engineering/log/YYYY-MM-01-journal.md` §数値）にも記録し、時系列比較を蓄積する
+- **browser client telemetry の生死確認: 月次**（#2029）。Sentry で `environment:production has:browser.name` を直近30日で検索し、件数が0でないことを確認する。0件なら consent gate・DSN・CSP・SDK 初期化のどこかが壊れている可能性が高く、決定ログ（削除済み、git 履歴参照） の contract に沿って client 側の初期化パス（`instrumentation-client.ts` / `packages/observability/src/consent.ts`）を調査する。新しい常設 canary surface は作らない（2026-07-16〜23 に一時追加した operator smoke surface は複雑さに見合わず撤去済み）
+- **体感速度北極星（production LCP p95 / INP p95）の月次確認: 月次**（#2294）。product（Sentry project `dayopt`）の Web Vitals を [LCP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.lcp+environment%3Aproduction&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.lcp%29%22%2C%22p95%28measurements.lcp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) / [INP saved query](https://dayopt.sentry.io/explore/traces/?query=has%3Ameasurements.inp&project=4509737836412928&aggregateField=%7B%22yAxes%22%3A%5B%22count%28%29%22%2C%22p75%28measurements.inp%29%22%2C%22p95%28measurements.inp%29%22%5D%7D&mode=aggregate&sort=-count%28%29&statsPeriod=30d&table=span) で開き、p95 と n（count）を確認する。budget は `docs/engineering/infra.md` §速度指標（LCP p95≤2.5s、INP p95≤200ms）。2026-08-24 baseline: LCP p75=1318ms/p95=2101.2ms（n=110）、INP p75=96ms/p95=103.84ms（n=104）、いずれも budget 内。**INP query はあえて `environment:production` を付けない** — INP は Sentry SDK の仕様で standalone span に `environment` タグが付かないため（`environment:production` で絞ると誤って count=0 になる）。product は `enabled: IS_SENTRY_PRODUCTION`（`apps/product/instrumentation-client.ts:66`）で `Sentry.init` の `enabled` オプション自体を production 限定にし、web は `isProduction` 定数（`apps/web/instrumentation-client.ts:24`）で `initializeBrowserSentry()`（`Sentry.init` 呼び出し自体）を production 以外で実行しない lazy init gate にしている（web 側の `Sentry.init` の `enabled` は `true` 固定）。実装形は異なるが、両者とも production 以外で SDK 自体を init しない構造的 gate という不変条件は同じため、フィルタなしでも値は production 限定と確定できる。**n を必ず確認する** — p95 は少数サンプルで暴れるため、n が前月比で大きく変動した月（consent UI 変更、計測ソース変更、トラフィック構成変化など）は単純比較せず断点として本節にコメントで残す。閾値アラートは n がまだ小さく統計的に成立しないため作らない（この月次確認と `docs/engineering/infra.md` §行動ルール の「p95悪化 → 改善Issue必須」で代替する）。月次の実測値は gardening journal（月次 `/gardening` の draft PR 本文 §数値）にも記録し、時系列比較を蓄積する
 
 通知channelはprovider dashboardとemailを基本とする。
 
@@ -165,8 +165,8 @@ Supabase 公式ドキュメント（[Manage Logs usage](https://supabase.com/doc
 1. alertのenvironment、release、first seen、affected user数を確認する
 2. Vercel deployment / function logとSentry traceを同じ時刻で照合する
 3. DB/Authが関係する場合だけSupabase dashboardを確認する
-4. user impactがある場合は`docs/operations/log/YYYY-MM-DD-incident-<slug>.md`を新規作成する
-5. 復旧手順の変更はlogではなくrunbookへ反映する
+4. user impactがある場合はGitHub issueとして起票する（2026-08-28、#2475でdomain log/廃止に伴い移行）
+5. 復旧手順の変更はissueではなくrunbookへ反映する
 
 secret、request body、user contentをissue・docs・chatへ貼らない。
 

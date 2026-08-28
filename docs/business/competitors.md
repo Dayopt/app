@@ -7,8 +7,8 @@ last_verified: 2026-08-10
 
 Dayopt が競合とどう違い、何を監視するかの正本。調査の詳細（各社プロファイル・価格表・ERRC・機能マトリクス）は時点ものとして log に置く:
 
-- [競合機能マトリクス snapshot（2026-03 調査）](./log/2026-08-10-competitor-matrix-snapshot.md)
-- [競合深掘り調査（2026-06-15）](./log/2026-06-15-competitor-research-overview.md) — 個別競合の詳細メモ
+- 競合機能マトリクス snapshot（2026-03 調査）（削除済み、git 履歴参照）
+- 競合深掘り調査（2026-06-15）（削除済み、git 履歴参照） — 個別競合の詳細メモ
 
 カテゴリとコアメッセージの言い方は [strategy.md §2](../strategy.md) を正とする（「いちばん軽いタイムボクシングツール」/ "Plan days you can actually keep."）。
 

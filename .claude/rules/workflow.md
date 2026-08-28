@@ -235,7 +235,7 @@ Actions 課金は **PR ごとの固定費が支配的**（2026-07-25 実測）:
 
 ### Actions 経済の規律（策定日: 2026-08-12、2026-08-20 改訂: private 化確定を反映）
 
-**リポジトリは 2026-09 に private 化する**（User 決定、2026-08-20。[2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)が [2026-08-11 の「private 化保留」決定](../../docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md)を覆した）。private 化後は Actions 無料枠（Free: 2,000 分/月、GitHub Team 加入時: 3,000 分/月）が予算制約として復活する。これに対応する主要な打ち手は per-PR の重量層（E2E / Web E2E / Integration Tests）撤去（§CI 4 層構造（2026-08-20 改訂） 参照）であり、push 回数の抑制だけでは不足する規模の削減が必要だった。
+**リポジトリは 2026-09 に private 化する**（User 決定、2026-08-20。2026-08-20 の決定ログ（削除済み、git 履歴参照）が 2026-08-11 の「private 化保留」決定（削除済み、git 履歴参照）を覆した）。private 化後は Actions 無料枠（Free: 2,000 分/月、GitHub Team 加入時: 3,000 分/月）が予算制約として復活する。これに対応する主要な打ち手は per-PR の重量層（E2E / Web E2E / Integration Tests）撤去（§CI 4 層構造（2026-08-20 改訂） 参照）であり、push 回数の抑制だけでは不足する規模の削減が必要だった。
 
 本節の規律（push 回数の抑制）は変えない。private 化後も CI run 自体の待ち時間・`concurrency: cancel-in-progress` による手戻り（§なぜ束ねるか）は push 回数に比例して増えるため、§なぜ束ねるか の PR 本数の議論に加えて、1 PR の中での push 回数そのものを絞る規律を敷く（#1934 参照）。
 
@@ -306,7 +306,7 @@ product の `next build` と bundle 検査（client bundle への secret 混入 
 
 ### CI 4 層構造（2026-08-20 改訂）
 
-private 化前提の確定（[2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)）により、per-PR で E2E / Web E2E を走らせるコストが Actions 予算を圧迫すると判明したため、CI を 4 層へ再設計した（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）。**層 1 の内容は 2026-08-26 に改訂した**（[#2415](https://github.com/Dayopt/dayopt/issues/2415)、User 裁可。§2 段階 CI 参照）。
+private 化前提の確定（2026-08-20 の決定ログ（削除済み、git 履歴参照））により、per-PR で E2E / Web E2E を走らせるコストが Actions 予算を圧迫すると判明したため、CI を 4 層へ再設計した（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）。**層 1 の内容は 2026-08-26 に改訂した**（[#2415](https://github.com/Dayopt/dayopt/issues/2415)、User 裁可。§2 段階 CI 参照）。
 
 | 層  | タイミング | 内容                                                                                                                                                     | 実装                                                                           |
 | --- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -326,7 +326,7 @@ private 化前提の確定（[2026-08-20 の決定ログ](../../docs/engineering
 - **層 3 は「main の状態を検証する安全網」であって「main へ merge されるたび自動で走る」層ではなくなった。** 既定は nightly 1 回。日中に main の green を早めに確認したい時は `.claude/skills/releasing/SKILL.md` Phase 1 の手動発火手順を使う
 - **赤い main が最大 1 日残ることを受け入れる変更である。** 本番は main から自動デプロイされない（`release.yml` は `workflow_dispatch` のみ）ためユーザーには届かない。1 日約 7 merge ペースなので、夜の赤の容疑者は約 7 コミット
 - **層 4（promote 前）は層 3 が target SHA で green であることを要求する。** 壊れた main がそのまま Production へ昇格するのを防ぐ。`force`（break-glass）時は既存の smoke/audit skip と同様にこの gate もスキップする。`workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、[#2382](https://github.com/Dayopt/dayopt/issues/2382)）ため、手動発火した green でもこの gate は成立する
-- 詳細な設計判断・却下した選択肢・GitHub Team プラン検討は [2026-08-20 の決定ログ](../../docs/engineering/log/2026-08-20-private-visibility-and-ci-redesign.md)、per-merge 廃止の実測根拠は [#2382](https://github.com/Dayopt/dayopt/issues/2382) を参照
+- 詳細な設計判断・却下した選択肢・GitHub Team プラン検討は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-merge 廃止の実測根拠は [#2382](https://github.com/Dayopt/dayopt/issues/2382) を参照
 
 ## マージ方式
 
@@ -454,7 +454,7 @@ marker の判定は 5 点:
 
 素朴な部分一致にすると、gate 自身の停止メッセージや本節の規約文を PR コメントへ貼っただけで gate が黙って無効化される（引用・stderr の貼り付けは日常操作で踏む）。5 点のうち 1 つでも欠ければ痕跡なし扱いにする。取得失敗は停止に倒す（fail closed）。契約は `scripts/__tests__/finish-branch.test.ts` §内製クロスレビューの痕跡 gate が固定する。
 
-**独立性の後退を認識する。** 旧設計（Codex）は「結果によって出力先を変える第三者の挙動」に対応するため review / reviewThreads / comment の 3 経路を見ていたが、これは同時に「別主体の応答」という偽造しにくい証拠でもあった。内製 marker は同一 agent 系列の自己申告であり、SHA 拘束による監査性は旧設計より強くなった一方、独立性は後退している。この判断の背景と戻す条件は `docs/engineering/log/2026-08-13-internal-review-standardization.md` を参照。
+**独立性の後退を認識する。** 旧設計（Codex）は「結果によって出力先を変える第三者の挙動」に対応するため review / reviewThreads / comment の 3 経路を見ていたが、これは同時に「別主体の応答」という偽造しにくい証拠でもあった。内製 marker は同一 agent 系列の自己申告であり、SHA 拘束による監査性は旧設計より強くなった一方、独立性は後退している。この判断の背景と戻す条件は 決定ログ（削除済み、git 履歴参照） を参照。
 
 **この gate は `branch:finish` 経由でしか効かない。** GitHub の merge ボタンや手動 `gh pr merge` は素通りする（§マージ手順 の手動フォールバックを含む）。ローカル script 以外の強制手段は別途検討する。
 

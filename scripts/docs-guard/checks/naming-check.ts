@@ -8,7 +8,7 @@
 
 import { glob } from 'glob';
 import { basename, extname } from 'node:path';
-import { colors, DOCS_DIR, NAMING_ALLOW_PATTERNS } from '../config.ts';
+import { colors, DOCS_DIR } from '../config.ts';
 
 const ALLOWED_UPPERCASE_STEMS = new Set(['readme', 'license', 'changelog']);
 // 数字始まり（日付・連番プレフィックス）も含めた kebab-case
@@ -28,7 +28,6 @@ export async function runNamingCheck(): Promise<NamingViolation[]> {
     const stem = basename(file, extname(file));
 
     if (ALLOWED_UPPERCASE_STEMS.has(stem.toLowerCase())) continue;
-    if (NAMING_ALLOW_PATTERNS.some((re) => re.test(name))) continue;
 
     if (!KEBAB_RE.test(stem)) {
       violations.push({ file, reason: `"${name}" が kebab-case ではない` });

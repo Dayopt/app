@@ -20,17 +20,18 @@
 
 迷ったらこの表で行き先を決める。ファイル単位の細かい引き先は後述の「質問から正本へのルーティング」。
 
-| 質問                                 | 行き先                                                            |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）               |
-| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く）              |
-| 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言                |
-| 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか                  |
-| コードの作り方の話か                 | `engineering/` — architecture、規約、infra                        |
-| 本番を動かし続ける話か               | `operations/` — runbook、monitoring、security、legal              |
-| 何を契約・所有しているかの話か       | `company/` — accounts、登記                                       |
-| 進行中の複数領域を跨ぐ設計か         | epic issue 本文（`docs/projects/` は作らない。2026-08-28、#2473） |
-| 過去のある時点の記録か               | 各ドメインの `log/`（日付 prefix、凍結）                          |
+| 質問                                 | 行き先                                                               |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）                  |
+| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く）                 |
+| 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言                   |
+| 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか                     |
+| コードの作り方の話か                 | `engineering/` — architecture、規約、infra                           |
+| 本番を動かし続ける話か               | `operations/` — runbook、monitoring、security、legal                 |
+| 何を契約・所有しているかの話か       | `company/` — accounts、登記                                          |
+| 進行中の複数領域を跨ぐ設計か         | epic issue 本文（`docs/projects/` は作らない。2026-08-28、#2473）    |
+| 意思決定の記録か                     | `decisions.md`（全決定の時系列索引、append-only。2026-08-28、#2475） |
+| 調査・feedback・incidentの記録か     | GitHub issue（`domain log/` は 2026-08-28、#2475 で全廃）            |
 
 `business/` の下位構造: 直下 = 事業判断の正本（icp / messaging / competitors / pricing / business-model / growth）、`content/` = 公開コンテンツの書き方と運用（voice / writing-style / docs-policy / review-checklist / content-operations）、`channels/` = チャネル別の運用（x / reddit / lp）。旧 `marketing/` ドメインは 2026-08-10 に `business/` へ統合した。
 
@@ -57,26 +58,13 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 - `last_verified`: 内容をコード・外部状態・一次資料と照合した日。本文を眺めただけでは更新しない
 - `code`: scalar または配列。symbol や glob ではなく、実在する repo-relative path を書く
 
-### Log — 当時の記録
+### Decisions — 全決定の時系列索引
 
-各ドメイン直下の `log/YYYY-MM-DD-slug.md`。初回作成後は凍結し、追記・修正しない。
+各ドメイン直下の `log/YYYY-MM-DD-slug.md`（frozen frontmatter contract）は 2026-08-28（#2475）に全廃した。過去分は移設・蒸留せず、正本は Git 履歴と merged PR に任せる。
 
-```yaml
----
-status: frozen
-date: 2026-07-14 # filename の日付と一致
-code: apps/product/src/features/review # 任意
-superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追記
----
-```
+意思決定は [`decisions.md`](./decisions.md) 1 ファイルへ集約する。append-only（`---` 区切りより下のエントリ領域は追記のみ、`pnpm docs:check` が機械的に強制）で、書式・タグ語彙は同ファイルのヘッダが正本（ここでは複製しない）。決定したら `decisions.md` へ 1 行追記し、該当ストック（`state.md` / rules / 該当 docs）の編集を同じ変更に含める。
 
-- 訂正は新しい log を作り、古い log には `superseded_by` だけを追加する
-- `superseded_by` がある log を現在の判断根拠として引用しない
-- **部分訂正**（主題は今も生きているが、1 文だけが後の変更で誤りになった場合）は `superseded_by` を使わない。`superseded_by` を付けると log 全体が引用不可になり、まだ有効な主題まで巻き添えで凍結される。代わりに `partially_superseded_YYYY_MM_DD_slug: <訂正logへのrepo-relative path>` という形式の frontmatter key を追記する（例: `partially_superseded_2026_08_11_codeql-status: docs/engineering/log/2026-08-11-codeql-reenable-plan.md`）。key 自体に日付と対象を表す slug を埋め込むため、同じ log に複数回の部分訂正が入っても行を追記するだけで済み、過去の訂正 key を書き換える必要がない（docs-guard は削除を伴う diff を一律で拒否するため、既存 key の上書きはできない）
-- `partially_superseded_*` の値は訂正の中身そのものではなく、訂正 log への path。**「何が」誤りだったかは訂正 log 側に書く**（部分訂正 key は「どこに訂正があるか」を示す道標で、本体には触れない）
-- 旧契約で作られた log は移行しない。path と Git 履歴によって過去資料として扱う
-- `latest.md` のような上書き alias は作らない。必要なら日付順に検索する
-- 凍結 log からのリンク切れは直さない（仕様）。2026-08-10 時点の既知分と後継先は [2026-08-10-frozen-log-link-inventory.md](engineering/log/2026-08-10-frozen-log-link-inventory.md) にある。未登録のリンク切れは docs-guard が内訳付きで報告するので、stock 側の移動を見直すか、`KNOWN_FROZEN_BROKEN_LINKS` へ後継先付きで追加する（凍結 log 側には追記しない）
+調査・feedback・incidentなど 1 回きりの記録は GitHub issue として起票する（`dispatch` skill の既存ラベル体系に従う）。
 
 ## 質問から正本へのルーティング
 
@@ -104,11 +92,11 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 | 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                                            |
 | 契約サービス                   | `company/accounts.md`                                                                |
 | 進行中・完了 Project           | 該当 epic issue 本文と merge 済み PR（`docs/projects/` は 2026-08-28 に全廃、#2473） |
-| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                                               |
+| なぜその判断になったか         | `decisions.md`（全決定の時系列索引。2026-08-28、#2475）                              |
 
 ## 書く場所の決定木
 
-1. 過去のある時点の記録か → 該当ドメインの `log/`
+1. 意思決定の記録か → `decisions.md` へ 1 行追記。調査・feedback・incidentなど 1 回きりの記録か → GitHub issue（`domain log/` は 2026-08-28、#2475 で全廃）
 2. 有限の複数step作業か → epic issue 本文（`docs/projects/` は作らない）
 3. 単一componentに閉じる visual / interaction contractか → Storybook
 4. 現在の横断的な真実か → 該当ドメインの stock
@@ -120,19 +108,18 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - **全体像を先に、詳細を後に書く**(先行オーガナイザー)。読者が読み進める間ずっと保持しなければならない情報は本文中の表やリストへ出し、記憶ではなく参照で読めるようにする
 - 機械検証(contract test / guard / CI)が守っている領域は「ここは機械が保証するため理解不要」と明記してよい。読者に理解を要求するかどうかを暗黙にしない
 - **現在の振る舞い**、**目標・仮説**、**過去の経緯**を同じ箇条書きで混ぜない
-- 機能specは実装済みの外部挙動だけを書く。未実装は epic issue、理由はlogへ分ける
+- 機能specは実装済みの外部挙動だけを書く。未実装は epic issue、理由は決定した issue または `decisions.md` へ分ける
 - exact version、env名、価格値などコードに正本がある値はpathを示し、不要に複製しない
 - Mermaidを優先し、画像だけに設計情報を閉じ込めない
 - generated fileは生成元とcheck commandを冒頭に明記し、手編集しない
-- file / directory名はkebab-case。`log/`は日付prefixを使う
-- ユーザーの声の記録は `YYYY-MM-DD-feedback-<slug>.md`（基本 `product/log/`）、障害の記録は `YYYY-MM-DD-incident-<slug>.md`（基本 `operations/log/`）と接頭辞を固定する
+- file / directory名はkebab-case
+- ユーザーの声・障害の記録は GitHub issue として起票する（`dispatch` skill の既存ラベル体系に従う。2026-08-28、#2475 で domain log/ 廃止に伴い移行）
 
 ## 運用
 
 - featureの振る舞いを変えたら同じ変更で該当specを更新する
-- 意思決定はstock更新と新規decision logを同じ変更に含める
-- 月次 `/gardening` は当月journalを一度だけ作る。追加の発見は新しい日付付きnoteへ分ける
-- `pnpm docs:check` はlink、metadata、path、naming、append-onlyを検証する
-- `log/`が50件を超えたら年directoryへ分割してよい。日付prefixは維持する
+- 意思決定はstock更新と `decisions.md` への1行追記を同じ変更に含める
+- 月次 `/gardening` の journal は draft PR 本文に書く（独立ファイルは持たない）
+- `pnpm docs:check` はlink、metadata、path、naming、`decisions.md` の append-only 契約を検証する
 
 テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`CLAUDE.md`](../CLAUDE.md)を参照する。

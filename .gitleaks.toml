@@ -3,7 +3,7 @@
 # 値ベース（regexTarget = "secret"）で追加抑止する。
 #
 # 経緯・全履歴棚卸しの結果・設計判断は #2379 と
-# docs/operations/log/2026-08-25-gitleaks-fullhistory-triage.md を参照。
+# 決定ログ（削除済み、git 履歴参照） を参照。
 #
 # 運用ルール（新しい false positive を足す時）:
 # 1. 値（regexes、regexTarget = "secret" で抽出済み secret 値に対して照合）を

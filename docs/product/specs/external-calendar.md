@@ -33,5 +33,5 @@ Google カレンダーの予定を読み取り専用でミラーし、Calendar �
 
 ## 関連する意思決定
 
-- [ADR-025: Plan / Record / 外部カレンダーミラーへの分割](../log/2026-07-09-time-model-split.md)
+- ADR-025: Plan / Record / 外部カレンダーミラーへの分割（削除済み、git 履歴参照）
 - [Settings](./settings.md)

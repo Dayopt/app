@@ -179,7 +179,7 @@ curl -s "https://api.supabase.com/v1/projects/<branch-ref>/actions" \
   | jq '[.[] | {git_config, run_steps: [.run_steps[] | {name, status}]}]'
 ```
 
-**API / CLI の出力は `jq` の allowlist 射影だけを表示する。** `supabase branches get` は credential を返す command なので、状態確認には metadata しか返さない `branches list` を使う（[#1920](https://github.com/Dayopt/dayopt/issues/1920)、[2026-08-11 incident](../../../docs/operations/log/2026-08-11-incident-supabase-branch-password-exposure.md)）。
+**API / CLI の出力は `jq` の allowlist 射影だけを表示する。** `supabase branches get` は credential を返す command なので、状態確認には metadata しか返さない `branches list` を使う（[#1920](https://github.com/Dayopt/dayopt/issues/1920)、2026-08-11 incident（削除済み、git 履歴参照））。
 
 ### 機能削除の順序（destructive change）
 

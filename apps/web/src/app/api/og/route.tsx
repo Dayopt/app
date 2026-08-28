@@ -36,7 +36,7 @@ const NO_STORE_HEADERS: HeadersInit = { 'Cache-Control': 'no-store' };
  * 壊さないため。上限は Satori layout コストを頭打ちにする目的で足りる。
  *
  * title は line-clamp を持たないため、630px canvas を溢れさせない実用的な値に
- * 絞る(既存blog記事のtitleは概算100字以下、`docs/engineering/log/` 未参照)。
+ * 絞る(既存blog記事のtitleは概算100字以下、決定ログは無し)。
  */
 const MAX_TITLE_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 500;

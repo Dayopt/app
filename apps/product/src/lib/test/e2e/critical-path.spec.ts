@@ -19,7 +19,7 @@ import { suppressConsentBanner } from './suppress-consent-banner';
  * seed は service role で自前ユーザーを作る（block-search.spec.ts と同型）。
  * 実行先は resolveServiceRoleTarget が安全と判定した時だけ有効になる。
  *
- * @see docs/engineering/log/2026-07-13-test-automation-strategy.md
+ * @see 決定ログ（削除済み、git 履歴参照）
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

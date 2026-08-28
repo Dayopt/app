@@ -292,7 +292,7 @@ gh workflow run release.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate �
 `--ref` は付けない。release script は常に main のものを使う。
 
 - [ ] reason は必須。空だと workflow が停止する
-- [ ] 実行後、`docs/operations/log/YYYY-MM-DD-incident-*.md` に使用理由と結果を記録する
+- [ ] 実行後、GitHub issue として使用理由と結果を起票する（2026-08-28、#2475 で domain log/ 廃止に伴い移行）
 - [ ] gate の障害そのものを issue 化して、break-glass を常用しない
 
 ### 振り返り
@@ -1651,4 +1651,4 @@ AIがリリースノートを記載する際の構造テンプレート。リポ
 
 ## 過去のリリースノートスナップショット
 
-バージョン別の実際のリリースノートは `docs/operations/log/` に日付プレフィックス付きで保存する（例: [2026-01-23-release-v0.13.0.md](./log/2026-01-23-release-v0.13.0.md)、[2026-03-27-release-v0.23.0.md](./log/2026-03-27-release-v0.23.0.md)）。最新のリリース情報は [GitHub Releases](https://github.com/Dayopt/dayopt/releases) で確認できる。
+バージョン別のリリースノートは `docs/operations/log/` に日付プレフィックス付きで保存していたが、2026-08-28（#2475）に domain log/ を全廃したため、過去分は Git 履歴のみに残る。リリースノートの正本は [GitHub Releases](https://github.com/Dayopt/dayopt/releases) と `apps/web/content/blog/{en,ja}/` の `category: 'release'` 記事。

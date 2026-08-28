@@ -32,7 +32,7 @@ persistent staging は常設しない。固定 URL が必要な Stripe / OAuth c
 | Playwright `Mobile Chrome`     | local    | ローカルでservice roleが使える環境でmobile shellを確認                   |
 | Storybook browser light / dark | local    | interaction / a11yの既知failureを #1499 / #1586 で解消後にCI昇格を再判断 |
 
-e2e job は `supabase/setup-cli` + `supabase start` でlocal Supabase stackを立てる。認証必須specは `create-scoped-test-user.ts`（`apps/product/src/lib/test/e2e/`）でspecファイルごとに専用の使い捨てユーザーをservice role経由で作成する（#2246）。単一の共有test accountだと`workers`並列実行下でtRPCのin-memory rate limiter（userId単位）を超過するため、spec単位でaccountを分離してrate limit予算も分離している。旧`scripts/ci/create-e2e-test-user.mjs`（全specで単一accountを共有する方式）は撤去済み。これにより認証必須testも含めて全specがCIでskipされずに実行される。Mobile Chromeも同じ方式でCI実行は技術的に可能だが、chromiumと同じspecを二重実行するだけなのでlocal専用のままとする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は [2026-08-03-playwright-test-agents-retirement.md](./log/2026-08-03-playwright-test-agents-retirement.md) に引き継いだ。
+e2e job は `supabase/setup-cli` + `supabase start` でlocal Supabase stackを立てる。認証必須specは `create-scoped-test-user.ts`（`apps/product/src/lib/test/e2e/`）でspecファイルごとに専用の使い捨てユーザーをservice role経由で作成する（#2246）。単一の共有test accountだと`workers`並列実行下でtRPCのin-memory rate limiter（userId単位）を超過するため、spec単位でaccountを分離してrate limit予算も分離している。旧`scripts/ci/create-e2e-test-user.mjs`（全specで単一accountを共有する方式）は撤去済み。これにより認証必須testも含めて全specがCIでskipされずに実行される。Mobile Chromeも同じ方式でCI実行は技術的に可能だが、chromiumと同じspecを二重実行するだけなのでlocal専用のままとする。Playwright Test Agents（planner / generator の opt-in 採用、healer は不採用）は 2026-07-13 に限定採用したが、3週間利用ゼロのまま E2E 追加が手書きで行われたため 2026-08-03 に撤去した。再導入する場合は Playwright に定義を再生成させ、リポジトリ固有制約（healer 不採用、単一フロー限定、`test.skip()` / 固定 wait / `networkidle` 禁止）を planner / generator へ戻す。healer 不採用と CI の正を `chromium` とする判断は撤去後も有効で、根拠は 2026-08-03-playwright-test-agents-retirement.md（削除済み、git 履歴参照） に引き継いだ。
 
 ### Supabase Project
 
@@ -215,7 +215,7 @@ scope でこの 2 つを読む。environment secret へ移すと Production Conf
 緊急時は正常な既存 deployment の `Instant Rollback` / `Promote to Production` を使う。手順は
 [runbook](../operations/runbook.md) の Playbook 2 を正とする。
 
-Deployment Policies による強制は [判断ログ](./log/2026-07-14-vercel-github-only-deployment-policy.md) を参照する。
+Deployment Policies による強制は 判断ログ（削除済み、git 履歴参照） を参照する。
 
 ### release の並行性モデル
 
@@ -262,13 +262,13 @@ script が保証すること（コードで守る）:
 GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品質ゲートには採用しない。追加のActions利用・active committer課金を避け、保守性・信頼性の検査は既存のCI、自動コードレビュー、下記のセキュリティ静的解析で担保する。
 
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
-- **GitHub CodeQL は 2026-08-11 に無効化すると決めた。UI 操作は本記述時点で未実施で、現在も CodeQL は動いている**（残作業は #1934。現在状態は `gh api repos/Dayopt/dayopt/code-scanning/default-setup --jq '.state'` が `configured` を返すか `not-configured` を返すかで判定する。`not-configured` を確認したらこの一文を完了形へ更新する）。無効化を決めた理由は次のとおり。 default setup が `languages: ["actions"]` で有効化されており、**workflow YAML しか解析していなかった**（`apps/` 配下の JS / TS は対象外）。#1425 の Done 条件「JavaScript / TypeScript が対象になっていることを確認する」が満たされないまま COMPLETED で close されたため、誤った前提が docs 側に残り続けていた。無効化後のセキュリティ静的解析の担当: secret は gitleaks と `pnpm secrets:check`（ともに `.github/workflows/docs-guard.yml`）、依存は Dependabot、深掘り SAST は `/claude-security`。**`.github/workflows/**` に対する PR ごとの自動解析だけは代替が無く、無効化で失われる**（受容済み。根拠と再評価の条件は決定ログ）。再有効化する場合は `languages` に `javascript-typescript` が入っていることを `gh api repos/Dayopt/dayopt/code-scanning/default-setup` で確認する（設定画面を開いた事実では確認にならない）。判断は[2026-08-11 の決定ログ](./log/2026-08-11-codeql-disabled-and-visibility-decision.md)
-- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に運用停止し、内製クロスレビューへ一本化した**（[2026-08-13 決定ログ](./log/2026-08-13-internal-review-standardization.md)、`.claude/skills/pr-cross-review/SKILL.md`）。Codex 向け規則は `AGENTS.md` に凍結保存してあり、再開時はそこから読み替える
+- **GitHub CodeQL は 2026-08-11 に無効化すると決めた。UI 操作は本記述時点で未実施で、現在も CodeQL は動いている**（残作業は #1934。現在状態は `gh api repos/Dayopt/dayopt/code-scanning/default-setup --jq '.state'` が `configured` を返すか `not-configured` を返すかで判定する。`not-configured` を確認したらこの一文を完了形へ更新する）。無効化を決めた理由は次のとおり。 default setup が `languages: ["actions"]` で有効化されており、**workflow YAML しか解析していなかった**（`apps/` 配下の JS / TS は対象外）。#1425 の Done 条件「JavaScript / TypeScript が対象になっていることを確認する」が満たされないまま COMPLETED で close されたため、誤った前提が docs 側に残り続けていた。無効化後のセキュリティ静的解析の担当: secret は gitleaks と `pnpm secrets:check`（ともに `.github/workflows/docs-guard.yml`）、依存は Dependabot、深掘り SAST は `/claude-security`。**`.github/workflows/**` に対する PR ごとの自動解析だけは代替が無く、無効化で失われる**（受容済み。根拠と再評価の条件は決定ログ）。再有効化する場合は `languages` に `javascript-typescript` が入っていることを `gh api repos/Dayopt/dayopt/code-scanning/default-setup` で確認する（設定画面を開いた事実では確認にならない）。判断は2026-08-11 の決定ログ（削除済み、git 履歴参照）
+- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に運用停止し、内製クロスレビューへ一本化した**（2026-08-13 決定ログ（削除済み、git 履歴参照）、`.claude/skills/pr-cross-review/SKILL.md`）。Codex 向け規則は `AGENTS.md` に凍結保存してあり、再開時はそこから読み替える
 - **repo ruleset「Copilot automatic first review」は 2026-08-05 に削除した。** 上記の「外した」後も ruleset 自体は active で残っており、seat 付与後に復活したのか直近 PR（#1832）へ実際にレビューを投稿し、PR ごとに約 3 課金分の Actions 実行を発生させていた。private 化後の課金源かつ（当時の）Codex 一本化方針と二重のため ruleset ごと削除。再開する場合は org の Copilot seat 割り当て（Settings → Copilot → Access）と ruleset の再作成の両方が必要
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
 
-Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は[判断ログ](./log/2026-07-21-github-code-quality-disabled.md)に記録する（同ログは「セキュリティ静的解析はCodeQLを継続する」とも書いているが、その1行は上のとおり2026-08-11に覆った）。
+Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は判断ログ（削除済み、git 履歴参照）に記録する（同ログは「セキュリティ静的解析はCodeQLを継続する」とも書いているが、その1行は上のとおり2026-08-11に覆った）。
 
 - Edge Function（`supabase/functions/**`）の型検査は Static Checks job の `deno check` step（`pnpm functions:check`）が担う。tsconfig / `pnpm typecheck` の対象外（別ランタイム）で、`supabase/functions/**` を変更した PR でだけ走る（#1822）
 - `Production Contract`は安全なdummy値だけを使い、Product / WebのProduction build gateがResend、Upstash、Web Turnstileを要求することを検査する
@@ -302,7 +302,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は[
 
 main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
 
-**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。詳細は [2026-08-20 の決定ログ](./log/2026-08-20-private-visibility-and-ci-redesign.md)、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
+**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
@@ -353,7 +353,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
     含む PR の merge より前**に行う（トグル → trusted dispatch → merge の順。逆だと
     dispatch の project 設定監査が落ちて merge できない）
   - **実 PR で検証済み**（2026-08-05、PR #1836。記録は
-    [log/2026-08-05-vercel-skip-verification.md](./log/2026-08-05-vercel-skip-verification.md)）。
+    log/2026-08-05-vercel-skip-verification.md（削除済み、git 履歴参照））。
     docs-only push で両 project とも build されず、head SHA には
     `Vercel – web` / `Vercel – product` が **`success`（description は
     `Canceled by Ignored Build Step`）で付く**。したがって「PR 全体では affected だが最終 push
@@ -429,7 +429,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   渡して実行される**ため、contract 変更 PR の diff をレビューした後に、ユーザーの明示指示で実行する。
   契約は同じく `scripts/__tests__/finish-branch.test.ts` が固定する
 
-段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は [ADR-016](./log/2026-03-19-ci-quality-gates-roadmap.md) に残す。
+段階的導入案と当時の計測値は履歴であり、現行構成として複製しない。経緯は ADR-016（削除済み、git 履歴参照） に残す。
 
 ### PR の Vercel check が詰まった時の切り分け（策定日: 2026-08-12）
 
@@ -1981,7 +1981,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 ## 出口コスト台帳
 
-策定日: 2026-08-09（経緯は [2026-08-09-antifragility-stance.md](./log/2026-08-09-antifragility-stance.md)）
+策定日: 2026-08-09（経緯は 2026-08-09-antifragility-stance.md（削除済み、git 履歴参照））
 
 **乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`.claude/rules/code-style.md` §技術選定スタンス）。
 

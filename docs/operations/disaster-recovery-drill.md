@@ -287,7 +287,7 @@ DB 内の hook function が戻っても、**GoTrue 側の hook 登録は引き�
 
 > **実運用化・実復元演習ともに完了（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。** `scripts/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。日次搬出を実行する [`storage-backup-export.yml`](../../.github/workflows/storage-backup-export.yml)（[#2147](https://github.com/Dayopt/dayopt/issues/2147)）は destination を Cloudflare R2（bucket `avatars` / `attachments`、Bucket Locks 35 日 retention）へ確定し、2026-08-18 に初回搬出（実 run）を完走した。以後は日次 cron（07:00 JST）が差分同期する。
 >
-> 2026-08-20、R2 backup からの実復元演習を実施（[docs/operations/log/2026-08-20-storage-restore-drill.md](log/2026-08-20-storage-restore-drill.md)）。dry-run → 実復元（ローカルディレクトリ、production への書き戻しなし）で 2 オブジェクト・85.150 KiB を復元し、初回搬出時の実測と件数・サイズが完全一致することを確認した。RTO 実測は認証込みで約 2 分。
+> 2026-08-20、R2 backup からの実復元演習を実施（決定ログ（削除済み、git 履歴参照））。dry-run → 実復元（ローカルディレクトリ、production への書き戻しなし）で 2 オブジェクト・85.150 KiB を復元し、初回搬出時の実測と件数・サイズが完全一致することを確認した。RTO 実測は認証込みで約 2 分。
 >
 > **これにより production の `avatars` / `attachments` には実運用の復元元が存在する。** paid billing のゲート条件（[#1669](https://github.com/Dayopt/dayopt/issues/1669)）は技術面では満たされたが、有効化そのものの実行判断は別途 `EXPLICIT AUTHORITY` として User の明示裁可を要する。
 
@@ -374,7 +374,7 @@ operator: '<name>'
 ## 演習後にやること
 
 1. **実測値を [infra.md §災害復旧手順](../engineering/infra.md#災害復旧手順) へ反映する**（RTO / RPO / 復元されないもの）
-2. 記録を `docs/operations/log/YYYY-MM-DD-restore-drill.md` に残す
+2. 記録を GitHub issue として起票する（2026-08-28、#2475 で domain log/ 廃止に伴い移行）
 3. 本文書の「演習前に確定していないこと」の表を、**確定した事実で置き換える**
 4. 新規 project / branch / dump ファイルを削除する
 5. [#1879](https://github.com/Dayopt/dayopt/issues/1879) を閉じ、epic [#1669](https://github.com/Dayopt/dayopt/issues/1669) のゲート充足を報告する

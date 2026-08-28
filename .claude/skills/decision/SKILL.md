@@ -7,7 +7,7 @@ description: ユーザーが意思決定ログの作成を明示依頼した時�
 
 意思決定ログを `docs/{domain}/log/YYYY-MM-DD-slug.md` として作成する。
 
-引数: `$ARGUMENTS`（domain と slug。例: `/decision engineering skip-recurring-events` → `docs/engineering/log/2026-07-03-skip-recurring-events.md`）
+引数: `$ARGUMENTS`（domain と slug。例: `/decision engineering skip-recurring-events` → 決定ログ（削除済み、git 履歴参照））
 
 ## When to Use
 

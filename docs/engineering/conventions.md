@@ -557,7 +557,7 @@ updateRecord({ id, startAt, endAt, note });
 
 **二重防御**: UIの`isPlanTimeEditable()`判定とserver側の時間更新制約の両方で制御。
 
-詳細: ADR-015 時間不変原則（`docs/product/log/`）
+詳細: ADR-015 時間不変原則（決定ログは削除済み・git 履歴参照）
 
 ### 3. 直接カラーの使用
 
@@ -690,4 +690,4 @@ git commit -m "fix(ui): ボタンのカラーをセマンティックトーク�
 ## 参考
 
 - `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
-- [ADR-012 Feature-Sliced Architecture](./log/2026-02-26-feature-sliced-architecture.md)
+- ADR-012 Feature-Sliced Architecture（削除済み、git 履歴参照）

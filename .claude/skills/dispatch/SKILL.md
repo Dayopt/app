@@ -9,7 +9,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 **正（source of truth）**: 状態は **GitHub issue 自身**が持つ。open / closed に加えて `status:ready` / `status:in-progress` / `status:review` / `status:blocked` / `status:watching` のラベルが着手可否を表し、大きなテーマは `scope:epic` の issue が sub-issues で束ねる。全体俯瞰は rollup issue を読むのではなく、`scope:epic` 一覧 + `status:*` クエリで都度組み立てる。
 
-**rollup tracking issue は廃止した**（2026-08-01、#1788 を close。経緯は [2026-08-01-issue-state-labels-epics.md](../../../docs/engineering/log/2026-08-01-issue-state-labels-epics.md)）。後継 rollup は作らない。本ファイルは「手順」、issue とラベルが「状態」。
+**rollup tracking issue は廃止した**（2026-08-01、#1788 を close。経緯は 2026-08-01-issue-state-labels-epics.md（削除済み、git 履歴参照））。後継 rollup は作らない。本ファイルは「手順」、issue とラベルが「状態」。
 
 **履歴もコメントに落とす。** dispatch の記録（操作 A 手順 6）に加えて、checkpoint report、判断分岐（`judgment:diverged`。`.claude/rules/orchestration.md` §判断ジャーナル）、レーンからの完了報告も、該当 issue のコメントとして残す。指揮台セッションは transcript に状態を持たないため（`orchestration.md` §盤面の正本は issue + open PR）、issue コメントが唯一の永続履歴になる。
 
@@ -142,7 +142,6 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 - [ ] Supabase advisors: `get_advisors`（security / performance）の WARN が issue 化されているか
 - [ ] Dependabot security alerts: `gh api repos/Dayopt/dayopt/dependabot/alerts?state=open` が 0 件か
-- [ ] `docs/operations/log/` の監査・incident ログ末尾の「残タスク」が issue 化されているか
 - [ ] NOT_PLANNED で close された issue の中身が、実は未完了のまま受け皿を失っていないか
 - [ ] 生成系スクリプト（`api:spec` / `types:generate` / `rls:snapshot`）が現在も exit 0 で通るか
 

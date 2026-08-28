@@ -151,4 +151,4 @@ timeout後の再送やbounce / complaintを実在する第三者addressへ故意
 - [Secrets](./secrets.md)
 - [Environment Secrets](./security/environment-secrets.md)
 - 旧 Project overview（`docs/projects/_archive/contact-delivery-migration/overview.md`、docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
-- [Incident](./log/2026-07-21-incident-contact-delivery-outage.md)
+- Incident（削除済み、git 履歴参照）

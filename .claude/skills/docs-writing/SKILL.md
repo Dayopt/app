@@ -60,7 +60,7 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 | **blog**     | `apps/web/content/blog/{en,ja}/*.mdx`                 | ブログ記事（機能紹介、Tips、開発裏話等）                |
 | **releases** | blog と同じ。`category: 'release'` を付けた blog 記事 | リリースノート（`/blog/release` タブに表示）            |
 
-リリースノートは独立ページを持たない。blog の `release` カテゴリ記事として書く（旧 `/releases` ページは 2026-07 に廃止。`docs/business/log/2026-07-23-content-operations.md`）。役割分担は `docs/business/content/docs-policy.md`、文章基準は `docs/business/content/writing-style.md` に従う。
+リリースノートは独立ページを持たない。blog の `release` カテゴリ記事として書く（旧 `/releases` ページは 2026-07 に廃止。決定ログ（削除済み、git 履歴参照））。役割分担は `docs/business/content/docs-policy.md`、文章基準は `docs/business/content/writing-style.md` に従う。
 
 ---
 
