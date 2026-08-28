@@ -88,19 +88,17 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
   const fileExt = getFileExtension(file.name);
   const fileName = `${userId}/avatar.${fileExt}`;
 
-  // 既存のアバターを削除（あれば）
-  try {
-    await supabase.storage.from(AVATARS_BUCKET).remove([fileName]);
-  } catch (error) {
-    // 既存ファイルがない場合はエラーを無視（ログのみ）
-    logger.debug('[Storage] No existing avatar to delete or delete failed:', {
-      userId,
-      fileName,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  // 新しいアバターをアップロード
+  // 新しいアバターを先にアップロードする（#2449）。
+  //
+  // 旧実装は remove() を upload() の**前**に呼んでいたため、削除が成功して upload だけが
+  // 失敗する（例: bucket 制約による拒否、ネットワーク断）と旧画像が既に無く、参照済みの
+  // URL が 404 を返す状態になっていた（新規アップロードが失敗しても既存のアバターは
+  // 無傷のまま残すべき、という不変条件を壊す非原子的な置換）。
+  //
+  // `upsert: true` は同一 key への上書きを単一操作として扱うため、同じ拡張子で
+  // 再アップロードする最頻ケース（key が変わらない）では remove() は元々不要だった。
+  // 拡張子が変わって key も変わるケース（png → webp 等）だけ旧 object が孤児として
+  // 残り得るため、upload 成功を確認した**後**にベストエフォートで回収する。
   const { error: uploadError } = await supabase.storage
     .from(AVATARS_BUCKET)
     .upload(fileName, file, {
@@ -124,6 +122,32 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
         fileName,
       },
     );
+  }
+
+  // upload 成功後、同じユーザーフォルダに残る他拡張子の旧ファイルを回収する（ベストエフォート）。
+  // 失敗しても新しいアバター自体は既に確定しているため、ここでは throw しない。
+  try {
+    const { data: existingFiles, error: listError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .list(userId);
+
+    if (listError) {
+      throw listError;
+    }
+
+    const orphanPaths = (existingFiles ?? [])
+      .map((existingFile) => `${userId}/${existingFile.name}`)
+      .filter((path) => path !== fileName);
+
+    if (orphanPaths.length > 0) {
+      await supabase.storage.from(AVATARS_BUCKET).remove(orphanPaths);
+    }
+  } catch (error) {
+    logger.debug('[Storage] Failed to clean up orphaned avatar files (non-fatal):', {
+      userId,
+      fileName,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   // 公開URLを取得（キャッシュバスター付き）
