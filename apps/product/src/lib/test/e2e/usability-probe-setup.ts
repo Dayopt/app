@@ -6,8 +6,11 @@
  * service role で作り、このスクリプト自身が headless Playwright でログインフォームへ
  * 入力する。probe agent（Haiku）に渡るのは実セッション（refresh token を含む
  * storageState）そのもので、password ではないというだけの話であることに注意
- * （agent への非露出は `.claude/agents/usability-probe.md` の tools allowlist が
- * 担保する。このスクリプトが担保するのは password を書き出さないことだけ）。
+ * （agent への非露出は `.claude/skills/usability-probe/SKILL.md` §Probe agent へ渡す
+ * persona instructions の明示指示が担保する。常設 agent 定義の全廃（2026-08、#2478）
+ * 以前は `.claude/agents/usability-probe.md` の tools allowlist による技術的強制
+ * だったが、常設定義撤去に伴い prompt 内の明示指示ベースの担保へ後退した。
+ * このスクリプトが担保するのは password を書き出さないことだけ）。
  * probe agent は on-demand 登録した専用 Playwright MCP
  * （`--storage-state=<このファイル>`）経由でこの storageState を読み込んだ
  * ブラウザを操作する（agent 自身は storageState ファイルにも触れない）。

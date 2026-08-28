@@ -207,6 +207,12 @@ function runScript(
     };
     /** 痕跡クエリを失敗させる（fail closed 経路の検証） */
     reviewEvidenceUnavailable?: boolean;
+    /**
+     * PR に付与されたラベル名一覧。`review:full` を含めると保護対象 path に
+     * 該当しなくても内製クロスレビュー marker gate を要求する（#2478）。
+     * 省略時はラベル無し。
+     */
+    labels?: string[];
   } = {},
 ): { status: number | null; stderr: string } {
   // repo 直下ではなく os の temp に作る。プロセスが afterEach 前に落ちると untracked な
@@ -232,6 +238,7 @@ function runScript(
       mergeStateStatus: 'CLEAN',
       statusCheckRollup: rollup,
       changedFiles: options.changedFilesCount ?? changedFiles.length,
+      labels: (options.labels ?? []).map((name) => ({ name })),
     }),
   );
 
@@ -1214,10 +1221,18 @@ describe('内製クロスレビューの痕跡 gate', () => {
     ...requiredChecks(),
   ];
 
+  // 内製クロスレビュー marker gate は保護対象 path に触れる PR にのみ必須化された
+  // （#2478、レビュー gate のテンポ連動化）。このブロックは marker 判定ロジック
+  // そのものを検証する場なので、常に保護対象 path（migration ファイル）を変更
+  // ファイルに含めてゲートを起動させる。gate 条件化そのものの挙動は別の
+  // describe（'保護対象 path / review:full ラベルによる gate 条件化（#2478）'）で見る。
+  const run: typeof runScript = (rollup, options = {}) =>
+    runScript(rollup, { files: ['supabase/migrations/0001_test.sql'], ...options });
+
   it('痕跡が 1 つも無ければ止める（レビューの投げ忘れ）', () => {
     // thread の必須解決 gate は「存在する指摘」しか見ないため、thread 0 件の PR は
     // 「レビュー済みで指摘ゼロ」と「投げ忘れ」を区別できない。ここが本 gate の主目的。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: { comments: [{ author: 't3-nico', body: 'よろしくお願いします' }] },
     });
@@ -1226,7 +1241,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('head / agent 行が揃った marker を痕跡として認める', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
     });
@@ -1235,7 +1250,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('P1/P2 が「なし」の申告なら review thread が 0 件でも通す', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ p1: 'なし', p2: '0' }) }],
@@ -1249,7 +1264,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     // marker は自己申告であり、review comment を投稿し忘れても marker 自体の
     // 5 点チェックは通ってしまう。P1/P2 の非ゼロ申告と thread の実在を
     // 突き合わせることで、この抜け道を塞ぐ。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1262,7 +1277,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('marker が P1 で指摘ありと申告していても review thread が 1 件あれば通す', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [{ isResolved: true }],
       reviewEvidence: {
         comments: [
@@ -1276,7 +1291,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
 
   it('CRLF 改行の marker でも head / agent 行を認識する', () => {
     const crlfBody = internalReviewMarkerBody().replace(/\n/g, '\r\n');
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: { comments: [{ author: 't3-nico', body: crlfBody }] },
     });
@@ -1285,7 +1300,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('association が CONTRIBUTOR の marker では通さない', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1302,7 +1317,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('github-actions[bot]（association NONE）の marker では通さない', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1321,7 +1336,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   it('head 行が現在の HEAD SHA と一致しなければ止める（marker の使い回し防止）', () => {
     // 早い段階で貼った marker を使い回し、その後の未レビュー push を素通りさせる
     // 抜け道を塞ぐ。DEFAULT_HEAD_SHA と異なる sha を指す marker は無効。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) }],
@@ -1332,7 +1347,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('head 行が無ければ止める', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1345,7 +1360,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('agent 行が無ければ止める', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1364,7 +1379,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     // jq の `\s` は改行にマッチするため、`^agent:\s*\S` は「agent: の後が空のまま
     // 次の行に何か書かれていれば」誤って通過する。行内の空白（スペース/タブ）だけを
     // 許す `[ \t]*` に固定する必要がある。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1382,7 +1397,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   it('引用された marker では通さない（stderr / 規約文の貼り付けで空洞化しない）', () => {
     // gate 自身の停止メッセージと workflow.md の規約本文には marker が平文で載る。
     // 素朴な部分一致だと、それを PR コメントへ貼るだけで gate が黙って無効化される。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1401,7 +1416,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     // 旧実装の `ltrimstr(" ") | ltrimstr("\n")` は先頭の空白/改行をそれぞれ 1 回しか
     // 剥がさない。2 行以上の空行を挟んで marker を貼ると本来通るべきコメントが
     // 「引用された marker」と区別できず弾かれていた。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [{ author: 't3-nico', body: `\n\n${internalReviewMarkerBody()}` }],
@@ -1414,7 +1429,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   it('第三者（association が NONE）の marker では通さない', () => {
     // public repo なので任意のユーザーが PR にコメントできる。書き手を絞らないと
     // 外部から 1 コメントで gate を無効化できてしまう。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1428,7 +1443,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
 
   it('marker だけで中身が無いコメントは通さない', () => {
     for (const body of ['[internal-review]', '[internal-review]   \n  ']) {
-      const { status, stderr } = runScript(greenRollup(), {
+      const { status, stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: { comments: [{ author: 't3-nico', body }] },
       });
@@ -1440,7 +1455,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   it('comments が 100 件超なら、止める時に窓の切り詰めを伝える', () => {
     // last: 100 の窓から古い痕跡が落ちうる。判定は緩めず（切り詰めを理由に通すと
     // fail open になる）、なぜ止まったかだけを説明する。
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: { comments: [], commentsTotalCount: 140 },
     });
@@ -1449,7 +1464,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('100 件超でも痕跡があれば通す（切り詰めの説明は出さない）', () => {
-    const { status, stderr } = runScript(greenRollup(), {
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
@@ -1462,13 +1477,13 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('痕跡の取得に失敗したら止める（fail closed）', () => {
-    const { status, stderr } = runScript(greenRollup(), { reviewEvidenceUnavailable: true });
+    const { status, stderr } = run(greenRollup(), { reviewEvidenceUnavailable: true });
     expect(stderr).toContain('内製クロスレビューの痕跡を取得できませんでした');
     expect(status).toBe(1);
   });
 
   it('止める時は pr-cross-review スキルへの案内と head/agent 行の要求を出す', () => {
-    const { stderr } = runScript(greenRollup(), {
+    const { stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: { comments: [] },
     });
@@ -1478,7 +1493,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
   });
 
   it('通過時のログに agent 値を含める', () => {
-    const { stderr } = runScript(greenRollup(), {
+    const { stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
         comments: [
@@ -1491,7 +1506,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
 
   describe('痕跡ゼロ時の原因区別（5 点判定のどれで落ちたかをヒントで示す）', () => {
     it('marker で始まるコメントが 1 件も無ければ原因 1 を示す', () => {
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: { comments: [{ author: 't3-nico', body: 'よろしくお願いします' }] },
       });
@@ -1501,7 +1516,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     });
 
     it('association が不足しているだけなら原因 2 を示す', () => {
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: {
           comments: [
@@ -1515,7 +1530,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     });
 
     it('marker だけで中身が無ければ原因 3 を示す', () => {
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: { comments: [{ author: 't3-nico', body: '[internal-review]   \n  ' }] },
       });
@@ -1525,7 +1540,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     });
 
     it('head SHA が不一致なら原因 4 を示す（delta re-review の示唆）', () => {
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: {
           comments: [
@@ -1537,7 +1552,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     });
 
     it('agent 行が欠落していれば原因 5 を示す', () => {
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: {
           comments: [
@@ -1553,7 +1568,7 @@ describe('内製クロスレビューの痕跡 gate', () => {
     it('複数条件が同時に不足していても、判定順で最初の原因だけを示す', () => {
       // association 不足（原因 2）と head 不一致（原因 4）が同時に起きているケース。
       // 判定順（1→5）で最初の不足である原因 2 だけを示し、原因 4 は出さない。
-      const { stderr } = runScript(greenRollup(), {
+      const { stderr } = run(greenRollup(), {
         threads: [],
         reviewEvidence: {
           comments: [
@@ -1570,6 +1585,125 @@ describe('内製クロスレビューの痕跡 gate', () => {
       );
       expect(stderr).not.toContain('原因: marker はありますが `head:');
     });
+  });
+});
+
+describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
+  // 全 PR 一律の内製クロスレビュー要求をやめ、保護対象 path
+  // （scripts/ci/protected-path-gate.mjs の PROTECTED_PATH_GLOBS）に触れる PR、
+  // または review:full ラベルが付いた PR だけへ marker gate を要求する。
+  const greenRollup = () => [
+    checkRun('CI', 'SUCCESS', '2026-08-28T10:00:00Z'),
+    ...requiredChecks(),
+  ];
+
+  it('保護対象 path（migration）を含む PR は marker 無しなら止める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['supabase/migrations/0002_add_column.sql'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: required (matched supabase/migrations/**)');
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('保護対象 path（auth）を含む PR は marker ありなら通す', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/auth/server/router.ts'],
+      threads: [],
+      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+    });
+    expect(stderr).toContain('review gate: required (matched apps/product/src/features/auth/**)');
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('ガードレール自身（.husky/**）に触れる PR も保護対象として扱う', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['.husky/pre-push'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: required (matched .husky/**)');
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('非保護対象 path のみなら marker 無しでも通す（gate skip）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(stderr).toContain('内製クロスレビュー marker gate をスキップします');
+    expect(stderr).not.toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(0);
+  });
+
+  it('非保護対象 path でも review:full ラベルがあれば marker を必須にする（marker 無しで止める）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
+      labels: ['review:full'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: required (label: review:full)');
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('review:full ラベルによる要求も marker ありなら通す', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
+      labels: ['review:full'],
+      threads: [],
+      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+    });
+    expect(stderr).toContain('review gate: required (label: review:full)');
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('変更ファイル一覧の取得に失敗したら fail closed で marker を要求する（marker 無しで止める）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      filesUnavailable: true,
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('変更ファイル一覧の取得に失敗しても marker があれば通す（fail closed だが実施済みなら merge できる）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      filesUnavailable: true,
+      threads: [],
+      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+    });
+    expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('gate 判定の 1 行出力を確認する（not required）', () => {
+    const { stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+  });
+
+  it('gate 判定の 1 行出力を確認する（required、matched glob 込み）', () => {
+    const { stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/lib/stripe/webhook-handler.ts'],
+      threads: [],
+      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+    });
+    expect(stderr).toContain('review gate: required (matched apps/product/src/lib/stripe/**)');
   });
 });
 
