@@ -49,7 +49,7 @@ import {
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
   type ReviewResultEntry,
-} from './generate-marker-core.ts';
+} from '../lib/generate-marker-core.ts';
 
 interface Args {
   prNumber: number;

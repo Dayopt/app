@@ -308,7 +308,7 @@ describe('findExistingAlertIssue', () => {
 });
 
 describe('runAlertSync', () => {
-  // #2332: 起票上限（reserveAlertRunSlot、scripts/night-watch/lib.mjs）は
+  // #2332: 起票上限（reserveAlertRunSlot、scripts/ci/night-watch/lib.mjs）は
   // OS tmpdir 配下の state file で run をスコープする。plan-review
   // （plan-critic）指摘: 関数注入のスタブだけでは fs の実挙動（ENOENT・
   // 破損 JSON・書き込み不可）が検証できないため、実 tmpdir を使う。

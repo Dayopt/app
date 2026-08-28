@@ -33,7 +33,7 @@ maxTurns: 20
 4. **agent の最終応答を回収する**。agent はファイルを書けないため、構造化された報告は応答テキストとして返る
 5. **後片付け**（この順序を守る。`admin-delete-user.sh` に target guard が無いため、env を正しく渡すことに集中できる状態で先にやる）:
    1. `claude mcp remove usability-probe-browser -s user` で MCP 登録を解除する
-   2. test user を削除する。**`.op-env.human` は使わない**（production 専用の env file。`docs/operations/tooling.md` 参照）。local を対象にするなら `supabase status -o env` の値を使う: `NEXT_PUBLIC_SUPABASE_URL=<local> SUPABASE_SERVICE_ROLE_KEY=<local> USER_EMAIL=<setup script が出力した email> bash scripts/admin-delete-user.sh`
+   2. test user を削除する。**`.op-env.human` は使わない**（production 専用の env file。`docs/operations/tooling.md` 参照）。local を対象にするなら `supabase status -o env` の値を使う: `NEXT_PUBLIC_SUPABASE_URL=<local> SUPABASE_SERVICE_ROLE_KEY=<local> USER_EMAIL=<setup script が出力した email> bash scripts/runbook/admin-delete-user.sh`
    3. storageState を削除する: `cd "$(git rev-parse --show-toplevel)/apps/product" && rm -rf .probe`。**削除後に存在しないことを確認する**（`rm -rf` は不在パスに黙って成功するため、cwd がずれていると消えたつもりで残ることがある）: `test -e "$(git rev-parse --show-toplevel)/apps/product/.probe" && echo "残っている" || echo "削除済み"`
 6. **所見を記録する**: agent の報告を GitHub issue のコメントまたは本文として保存する（2026-08-28、#2475 で domain log/ 廃止に伴い issue 起票へ移行）
 7. **実バグ・改善候補があれば、指揮台が issue 起票する**。プローブ自身（skill も agent も）は起票しない

@@ -13,7 +13,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
-#     bash scripts/admin-delete-user.sh
+#     bash scripts/runbook/admin-delete-user.sh
 # ========================================
 
 set -euo pipefail

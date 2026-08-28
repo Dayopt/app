@@ -19,7 +19,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
-#     bash scripts/admin-create-user.sh
+#     bash scripts/runbook/admin-create-user.sh
 #
 # 環境:
 #   `.op-env.human` は human vault（本番キー）を参照するため、実行は production への操作になる。

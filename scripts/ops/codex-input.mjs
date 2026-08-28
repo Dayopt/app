@@ -12,7 +12,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * `error connecting to api.github.com` が出た）。指揮台側で参照先 issue を
  * 1 段階だけ解決し、対象本文と連結してから Codex へ渡す。
  *
- * 設計原則は night-watch wrapper 群（`scripts/night-watch/lib.mjs`）と同型:
+ * 設計原則は night-watch wrapper 群（`scripts/ci/night-watch/lib.mjs`）と同型:
  * 動的な値は execFile の argv 要素としてのみ渡し、shell を経由しない。
  * ただし night-watch 内部実装（`REPO` 等）を import して layering を濁らせ
  * ないため、この2定数だけ同型のまま複製する。

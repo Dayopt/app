@@ -36,7 +36,7 @@ import {
  */
 
 const BASELINE_PATH = fileURLToPath(
-  new URL('../../.claude/skills/night-watch/baseline.json', import.meta.url),
+  new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
 );
 
 /**

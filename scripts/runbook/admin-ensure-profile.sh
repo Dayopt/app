@@ -12,7 +12,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
-#     bash scripts/admin-ensure-profile.sh
+#     bash scripts/runbook/admin-ensure-profile.sh
 # ========================================
 
 set -euo pipefail

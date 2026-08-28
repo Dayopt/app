@@ -122,7 +122,7 @@ const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/dayopt\.sentry\.io\/issues\/\d
 const MAX_SENTRY_EVIDENCE = 5;
 
 const BASELINE_PATH = fileURLToPath(
-  new URL('../../.claude/skills/night-watch/baseline.json', import.meta.url),
+  new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
 );
 
 function readBaseline() {
@@ -348,7 +348,7 @@ export function runAlertSync({
   // buildAlertBody の検証（未知 flag・不正な値の拒否）より後に置くのは、
   // 検証エラーでは gh を呼ばないので予算を消費させないため。gh 呼び出しより
   // 前に置くのは、gh が失敗した時に消費した試行を計上漏れさせないため
-  // （scripts/night-watch/lib.mjs の reserveAlertRunSlot コメント参照）。
+  // （scripts/ci/night-watch/lib.mjs の reserveAlertRunSlot コメント参照）。
   const reservation = reserveAlertRunSlot({
     checkId,
     willCreate: !existing,
@@ -567,7 +567,7 @@ if (isDirectExecution()) {
   const [subcommand, checkId, ...rest] = process.argv.slice(2);
   if (subcommand !== 'report' || !checkId) {
     console.error(
-      'Usage: node scripts/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
+      'Usage: node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
     );
     process.exitCode = 1;
   } else {

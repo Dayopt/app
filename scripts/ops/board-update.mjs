@@ -1,7 +1,7 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { findTodayBoardIssue, REPO, runGh, runGhJson } from '../night-watch/lib.mjs';
+import { findTodayBoardIssue, REPO, runGh, runGhJson } from '../ci/night-watch/lib.mjs';
 
 /**
  * 日次盤面 issue（`CLAUDE.md` §運用基盤）の §2 進行中レーン更新とイベント
@@ -209,7 +209,7 @@ function fetchTodayBoard({ execFileImpl } = {}) {
  * CLI 本体。検証をすべて通過した場合に限り gh の write 系（issue edit /
  * issue comment）へ到達する。
  * @param {string[]} argv
- * @param {{ execFileImpl?: import('../night-watch/lib.mjs').ExecFileImpl }} [opts]
+ * @param {{ execFileImpl?: import('../ci/night-watch/lib.mjs').ExecFileImpl }} [opts]
  */
 export function runBoardUpdate(argv, { execFileImpl } = {}) {
   const [subcommand, ...rest] = argv;

@@ -12,7 +12,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
-#     bash scripts/admin-generate-magiclink.sh
+#     bash scripts/runbook/admin-generate-magiclink.sh
 # ========================================
 
 set -euo pipefail

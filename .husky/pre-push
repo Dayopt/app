@@ -65,7 +65,7 @@ done < "$PUSH_INPUT_FILE"
 # **判定不能・失敗・タイムアウトはすべて no-skip（＝通常どおり DO-CONFIRM を
 # 出す）側に倒れる設計**（pre-push-diff.mjs 冒頭コメント参照）。
 if [ "$HAS_BRANCH_UPDATE" = "1" ]; then
-  SKIP_DECISION=$(node scripts/ops/pre-push-diff.mjs < "$PUSH_INPUT_FILE" 2>/dev/null || echo no-skip)
+  SKIP_DECISION=$(node scripts/hooks/pre-push-diff.mjs < "$PUSH_INPUT_FILE" 2>/dev/null || echo no-skip)
   if [ "$SKIP_DECISION" = "skip" ]; then
     echo "→ 差分ゼロ push のため DO-CONFIRM をスキップします（#2432）" >&2
   else

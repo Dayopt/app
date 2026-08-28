@@ -1,13 +1,13 @@
 ---
 name: night-watch
-description: 夜勤 checklist の追加・変更を検討する時、または夜勤 Actions cron の障害時に手動代行する時に発動。read-only の機械判定チェックリストを実行し、赤なら 1 異常 = 1 issue で起票、常設運行記録 issue へ毎晩 1 コメントする。夜間の自動実行そのものは GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）が `scripts/night-watch/run-all.mjs` を直接実行して行い、この skill の invocation 経路ではない。
+description: 夜勤 checklist の追加・変更を検討する時、または夜勤 Actions cron の障害時に手動代行する時に発動。read-only の機械判定チェックリストを実行し、赤なら 1 異常 = 1 issue で起票、常設運行記録 issue へ毎晩 1 コメントする。夜間の自動実行そのものは GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）が `scripts/ci/night-watch/run-all.mjs` を直接実行して行い、この skill の invocation 経路ではない。
 ---
 
 # night-watch（計測夜勤）
 
 夜間に read-only の品質観測を行う GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`、毎日 **04:00 JST**）。設計正本は [#2205](https://github.com/Dayopt/dayopt/issues/2205) の 2026-08-19 決定コメント。v1 実装は [#2209](https://github.com/Dayopt/dayopt/issues/2209)。v2（盤面起票・heavy-post-merge赤確認・Sentryスキャン・DoD監査候補選定を追加）は [#2291](https://github.com/Dayopt/dayopt/issues/2291)。**v3（Claude Routine から GitHub Actions cron への移植、model を実行系から排除）は [#2367](https://github.com/Dayopt/dayopt/issues/2367)。**
 
-**v3 で実行主体が変わった理由**: v2 までは Claude Code Cloud の scheduled trigger（LLM agent、fresh session）が実行していたが、Anthropic cloud sandbox のプロキシが repo スコープの GitHub REST API を 403 で遮断する構造的障害（[#2216](https://github.com/Dayopt/dayopt/issues/2216) の 2026-08-24 切り分け）を抱え、登録以来一度も正常完走しなかった。夜勤は設計上「判定のみ・裁量なし」で model の裁量を使っていないため、判定ロジックを `scripts/night-watch/run-all.mjs` へ code 化し、GitHub Actions の scheduled workflow から model 不在で実行する形へ移植した（2026-08-25、User 裁可）。
+**v3 で実行主体が変わった理由**: v2 までは Claude Code Cloud の scheduled trigger（LLM agent、fresh session）が実行していたが、Anthropic cloud sandbox のプロキシが repo スコープの GitHub REST API を 403 で遮断する構造的障害（[#2216](https://github.com/Dayopt/dayopt/issues/2216) の 2026-08-24 切り分け）を抱え、登録以来一度も正常完走しなかった。夜勤は設計上「判定のみ・裁量なし」で model の裁量を使っていないため、判定ロジックを `scripts/ci/night-watch/run-all.mjs` へ code 化し、GitHub Actions の scheduled workflow から model 不在で実行する形へ移植した（2026-08-25、User 裁可）。
 
 **04:00 JST に固定する理由**: 朝の蒸留層（Haiku、05:00 JST 固定）から逆算した配置（2026-08-25、#2367 の scope 追加、User 決定）。旧 07:00 JST → 05:00 JST（2026-08-24、[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメント）からさらに前倒しした。`heavy-post-merge`（nightly 03:00 JST）・`integration`（nightly 03:30 JST）の重量 CI は、夜勤が結果を読める時刻（04:00 JST）より前に完了するよう配置してある（CI 完了後 60/30 分の相対配置は前倒し前と同じ。`.github/workflows/heavy-post-merge.yml` / `.github/workflows/integration.yml` の schedule コメント参照）。**盤面 issue の起票（Step 1）だけは平日のみ**、健康診断・異常起票・運行記録（Step 2・3・5）は土日も毎日行う（§自動パート 参照）。
 
@@ -21,7 +21,7 @@ description: 夜勤 checklist の追加・変更を検討する時、または�
 
 - 常設運行記録 issue に前夜のコメントが無く、Actions cron の故障を疑って手動代行する時（`gh run list --workflow=night-watch.yml` で状態確認後）
 - checklist v1 の項目追加・変更・baseline 更新方針を検討する時
-- `scripts/night-watch/run-all.mjs` の判定ロジック（Step 2 の red/green/pending 判定境界）を変更する時
+- `scripts/ci/night-watch/run-all.mjs` の判定ロジック（Step 2 の red/green/pending 判定境界）を変更する時
 
 ## When NOT to Use
 
@@ -34,9 +34,9 @@ description: 夜勤 checklist の追加・変更を検討する時、または�
 
 ## 自動パート（GitHub Actions が実施）
 
-**判定ロジックの正本は `scripts/night-watch/run-all.mjs` とその colocated test（`run-all.test.ts`）。** 以下は「何を観測するか」の概要のみで、判定の詳細（red/green/pending の閾値、fail-closed の扱い等）はコードと test を読む。prose とコードの二重管理を避けるため、ここに判定ロジックを複製しない（既存 wrapper 4 ファイルは今もこの節を `SKILL.md §自動パート Step N` として参照しているため、v3 でも見出し文字列は変えていない）。
+**判定ロジックの正本は `scripts/ci/night-watch/run-all.mjs` とその colocated test（`run-all.test.ts`）。** 以下は「何を観測するか」の概要のみで、判定の詳細（red/green/pending の閾値、fail-closed の扱い等）はコードと test を読む。prose とコードの二重管理を避けるため、ここに判定ロジックを複製しない（既存 wrapper 4 ファイルは今もこの節を `SKILL.md §自動パート Step N` として参照しているため、v3 でも見出し文字列は変えていない）。
 
-GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）が checkout → 依存インストール（`.github/actions/setup` + pinned/checksum 検証済み Sentry CLI）→ `node scripts/night-watch/run-all.mjs` を毎晩実行する。`run-all.mjs` は既存 wrapper（`board-issue.mjs` / `alert-issue.mjs` / `dod-candidate.mjs` / `run-log.mjs` / `lib.mjs`）を import して呼ぶ。既存 wrapper への変更点は下記参照（`checkRecentPending` の点修正、および #2422 で `checkRecentFetchFailed` / `runFetchFailureAlertSync` を追加）。
+GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）が checkout → 依存インストール（`.github/actions/setup` + pinned/checksum 検証済み Sentry CLI）→ `node scripts/ci/night-watch/run-all.mjs` を毎晩実行する。`run-all.mjs` は既存 wrapper（`board-issue.mjs` / `alert-issue.mjs` / `dod-candidate.mjs` / `run-log.mjs` / `lib.mjs`）を import して呼ぶ。既存 wrapper への変更点は下記参照（`checkRecentPending` の点修正、および #2422 で `checkRecentFetchFailed` / `runFetchFailureAlertSync` を追加）。
 
 ### Step 0: 廃止（v3、#2367）
 
@@ -68,14 +68,14 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 1. `echo $DAYOPT_NIGHT_WATCH` が `1` であること（層3 hook allowlist、下記参照、が armed になっているかの確認）
 2. `gh api repos/Dayopt/dayopt --jq .permissions` を実行し、`push` / `admin` が true でないこと（手動代行に使う token の scope 確認）
 
-いずれかが想定外なら、checklist を一切実行せず `node scripts/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `env-failure write-token`（token に write 権限あり時）を実行して終了する。以降は §自動パート と同じ Step 1〜5 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。Step 1〜5 はそれぞれの個別 wrapper（`board-issue.mjs sync` / checklist コマンド / `alert-issue.mjs report ...` / `dod-candidate.mjs select` / `run-log.mjs ...`）で辿ること。
+いずれかが想定外なら、checklist を一切実行せず `node scripts/ci/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `env-failure write-token`（token に write 権限あり時）を実行して終了する。以降は §自動パート と同じ Step 1〜5 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/ci/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。Step 1〜5 はそれぞれの個別 wrapper（`board-issue.mjs sync` / checklist コマンド / `alert-issue.mjs report ...` / `dod-candidate.mjs select` / `run-log.mjs ...`）で辿ること。
 
 **層3（repo hook）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
 
 ## 故障モード
 
 - **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep（`.claude/rules/orchestration.md` §1 日サイクル）で検出する。`gh run list --workflow=night-watch.yml --limit 5` で直近 run の成否を確認し、失敗していればログ（`gh run view <run-id> --log-failed`）を見る。run 自体が発火していなければ workflow の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する
-- **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
+- **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/ci/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
 - **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_CLI_VERSION` / `NIGHT_WATCH_CLI_CHECKSUM_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）。**env 変数名に「SENTRY」を含めない**（gitleaks の `sentry-access-token` ルールが変数名+hex文字列で誤検知するため。`night-watch.yml` の該当 step コメント参照）
 
 ## 守ること

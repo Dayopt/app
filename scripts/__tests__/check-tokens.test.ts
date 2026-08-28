@@ -7,7 +7,7 @@ import {
   isExcludedPath,
   ruleMatchesLine,
   type ForbiddenPattern,
-} from '../check-tokens-core';
+} from '../lib/check-tokens-core';
 
 /**
  * check-tokens の判定コアのテスト。

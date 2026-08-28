@@ -42,7 +42,7 @@ export const CHECK_IDS = new Set([
 ]);
 
 const OPS_LOG_DOC_PATH = fileURLToPath(
-  new URL('../../docs/operations/night-watch.md', import.meta.url),
+  new URL('../../../docs/operations/night-watch.md', import.meta.url),
 );
 const OPS_LOG_ISSUE_RE = /運行記録 issue:\s*\*\*#(\d+)\*\*/;
 
@@ -594,13 +594,13 @@ if (isDirectExecution()) {
     if (subcommand === 'report') {
       const report = parseJsonArg(
         arg,
-        "Usage: node scripts/night-watch/run-log.mjs report '<OpsLogReport JSON>'",
+        "Usage: node scripts/ci/night-watch/run-log.mjs report '<OpsLogReport JSON>'",
       );
       console.log(JSON.stringify(runOpsLogReport({ report })));
     } else if (subcommand === 'board-note') {
       const note = parseJsonArg(
         arg,
-        "Usage: node scripts/night-watch/run-log.mjs board-note '<BoardNote JSON>'",
+        "Usage: node scripts/ci/night-watch/run-log.mjs board-note '<BoardNote JSON>'",
       );
       console.log(JSON.stringify(runBoardNote({ note })));
     } else if (subcommand === 'env-failure') {
@@ -609,7 +609,7 @@ if (isDirectExecution()) {
       console.log(JSON.stringify(checkRecentPending(arg)));
     } else {
       console.error(
-        "Usage: node scripts/night-watch/run-log.mjs <report|board-note> '<JSON>' | env-failure <no-var|write-token> | recent-pending <check-id>",
+        "Usage: node scripts/ci/night-watch/run-log.mjs <report|board-note> '<JSON>' | env-failure <no-var|write-token> | recent-pending <check-id>",
       );
       process.exitCode = 1;
     }

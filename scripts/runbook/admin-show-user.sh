@@ -9,7 +9,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com \
-#     bash scripts/admin-show-user.sh
+#     bash scripts/runbook/admin-show-user.sh
 # ========================================
 
 set -euo pipefail
