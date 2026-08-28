@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { STORAGE_OBJECTS_APP_POLICY_NAMES } from '../lib/storage-objects-app-policy-names.mjs';
-import { buildQuery } from '../production-storage-rls-audit.mjs';
+import { buildQuery, EXPECTED_AVATARS_BUCKET } from '../production-storage-rls-audit.mjs';
 
 const auditScript = readFileSync(
   fileURLToPath(new URL('../production-storage-rls-audit.mjs', import.meta.url)),
@@ -39,6 +39,40 @@ describe('production storage RLS audit contract', () => {
       'Users can view own attachments',
       'Users can view own avatar',
     ]);
+  });
+
+  it('EXPECTED_AVATARS_BUCKET は supabase/config.toml の [storage.buckets.avatars] とリテラルで一致する（#2449）', () => {
+    // config.toml をこの script から直接 parse する経路が無いため値を写経している。
+    // config.toml 側を変える PR は、この test の diff を伴わない限り気づかれない
+    // （STORAGE_OBJECTS_APP_POLICY_NAMES と同じ二重管理の構図）。
+    const configToml = readFileSync(
+      fileURLToPath(new URL('../../supabase/config.toml', import.meta.url)),
+      'utf8',
+    );
+    const bucketSectionIndex = configToml.indexOf('[storage.buckets.avatars]');
+    expect(bucketSectionIndex).toBeGreaterThanOrEqual(0);
+    const bucketSection = configToml.slice(bucketSectionIndex, bucketSectionIndex + 300);
+
+    expect(bucketSection).toContain('public = true');
+    expect(bucketSection).toContain('file_size_limit = "5MiB"');
+    // allowed_mime_types も literal 一致で照合する（risk-reviewer 指摘、#2449）。
+    // これが無いと、config.toml 側で画像 4 種を増減しても drift-checker 自身が
+    // 気づかないまま production と食い違ったまま放置される。
+    expect(bucketSection).toContain(
+      'allowed_mime_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]',
+    );
+    expect(EXPECTED_AVATARS_BUCKET).toEqual({
+      public: true,
+      file_size_limit: 5242880,
+      allowed_mime_types: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+    });
+  });
+
+  it('クエリが storage.buckets の avatars 行を取得する（#2449）', () => {
+    const query = buildQuery();
+    expect(query).toContain('storage.buckets');
+    expect(query).toContain("b.id = 'avatars'");
+    expect(query).toContain('avatars_bucket');
   });
 
   it('script が import するのは想定した 2 つの shared module だけ', () => {
@@ -95,9 +129,21 @@ describe('production storage RLS audit contract', () => {
     expect(job).not.toContain('statuses/');
   });
 
-  it('token 未設定時は fail ではなく ::notice:: を出す（missing token を drift failure と誤読させない）', () => {
-    expect(auditScript).toContain('::notice title=Production Storage RLS Audit is inactive::');
-    expect(auditScript).toContain('process.exitCode = 0');
+  it('token 未設定時は notice ではなく即 throw する（#2449: token 発行済み後の false-green 経路を閉じる）', () => {
+    // 発行前は `::notice::` + exit 0 を許容していたが、発行済みになった今その分岐を
+    // 残すと「token が後日失効・削除されても audit が黙って no-op の緑になる」経路に
+    // なる。auth-config job（production-auth-config-audit.mjs）と同じ「token 必須」に
+    // 揃え、`::notice::` による黙認は復活させない。
+    expect(auditScript).not.toContain('::notice title=Production Storage RLS Audit is inactive::');
+    expect(auditScript).not.toContain('is inactive');
+  });
+
+  it('workflow の grep は passed のみを成功として受理する（is inactive を復活させない）', () => {
+    const jobIndex = workflow.indexOf('storage-rls:');
+    expect(jobIndex).toBeGreaterThanOrEqual(0);
+    const job = workflow.slice(jobIndex);
+    expect(job).toContain("grep -q 'Production Storage RLS Audit passed'");
+    expect(job).not.toContain('is inactive');
   });
 
   it('production への書き込みを行うキーワードを含まない（read-only 経路のみ、検出のみ）', () => {

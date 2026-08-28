@@ -4,7 +4,7 @@ description: 現在挙動、公開契約、state transition、query cache、temp
 model: sonnet
 tools: Read, Grep, Glob
 permissionMode: plan
-maxTurns: 12
+maxTurns: 20
 ---
 
 # Behavior Verifier
@@ -27,6 +27,8 @@ Dayopt の current behavior と変更後 contract を独立検証する read-onl
 - **Workflow 経由（`agentType` + `schema` 指定）で呼ばれた場合は、上記の text ではなく StructuredOutput tool 呼び出しで終える**（#2348）。フィールドの正本は `.claude/skills/pr-cross-review/cross-review-workflow.js` の schema。上記の text Output format は Agent tool 直接呼び出し（レーンの push 前反証など）時のみ有効
 - **ただし逐次確定・先送り禁止の規律（上記2点）は Workflow/schema 経由でも適用される**（#2417）。異なるのは最終 turn の書き出し方だけで、text block ではなく StructuredOutput 呼び出しで終える。turn budget が逼迫していれば、全観点が閉じていなくてもその時点の material で直ちに StructuredOutput を呼ぶ（残りは `unknowns` / `counterevidence` へ）。何もせず調査を続けたまま budget を使い切ることを避ける
 - schema の `coverage` フィールドは、全観点を確認しきった場合は `complete`、budget 逼迫により一部を打ち切った場合は `partial` にする。`partial` は失敗ではなく正直な自己申告であり、Main はこれを見て summary comment に明記する（#2417）
+- **diff は最初に対象ファイル全体を Read で通読し、以後の Grep は「読み終えた内容の裏取り」に限定する**（#2446）。1〜2 行を確認するためだけの断片的な Grep を積み重ねて turn を消費しない。state transition や cache 競合の追跡でファイルを跨ぐ確認が要る時も、対象を絞ってから読む（関連しそうな全ファイルを総当たりで grep しない）
+- **Review scope（下記 1〜6）のうち turn budget の 7 割を使った時点で、残りの観点は現在保持している material だけで結論を出す。** 新規の Read / Grep を追加で発行せず、不足分は `unknowns` へ回して StructuredOutput（または text 経路では最終 text）を呼ぶ。「あと少し調べれば分かるかもしれない」を理由に budget を使い切らない
 
 ## Review scope
 

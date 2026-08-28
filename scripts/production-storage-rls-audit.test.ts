@@ -3,12 +3,23 @@ import { describe, expect, it, vi } from 'vitest';
 import { STORAGE_OBJECTS_APP_POLICY_NAMES } from './lib/storage-objects-app-policy-names.mjs';
 import {
   auditProductionStorageRls,
+  EXPECTED_AVATARS_BUCKET,
   runProductionStorageRlsAudit,
 } from './production-storage-rls-audit.mjs';
 
+/** config.toml の宣言どおりの avatars bucket 応答（drift なし）。 */
+function compliantAvatarsBucket(): Record<string, unknown> {
+  return { ...EXPECTED_AVATARS_BUCKET };
+}
+
 /** allow-list どおりの production 応答（drift なし）。 */
 function compliantRow(): Record<string, unknown> {
-  return { unexpected_policies: [], rls_enabled: true, rls_forced: false };
+  return {
+    unexpected_policies: [],
+    rls_enabled: true,
+    rls_forced: false,
+    avatars_bucket: compliantAvatarsBucket(),
+  };
 }
 
 describe('auditProductionStorageRls', () => {
@@ -46,6 +57,7 @@ describe('auditProductionStorageRls', () => {
         unexpected_policies: ['rogue policy'],
         rls_enabled: false,
         rls_forced: false,
+        avatars_bucket: compliantAvatarsBucket(),
       },
     ]);
 
@@ -75,6 +87,92 @@ describe('auditProductionStorageRls', () => {
         { unexpected_policies: 'not-an-array', rls_enabled: true, rls_forced: false },
       ]),
     ).toEqual([expect.stringContaining('unexpected row shape')]);
+  });
+
+  it('fail closed: avatars_bucket が欠落・null（bucket が存在しない）は failure にする', () => {
+    // json_build_object の FROM 句が該当行を見つけられなければ avatars_bucket は null になる。
+    // 「確認できた」に倒さず shape error にする（#2449）。
+    expect(auditProductionStorageRls([{ ...compliantRow(), avatars_bucket: null }])).toEqual([
+      expect.stringContaining('unexpected row shape'),
+    ]);
+    expect(
+      auditProductionStorageRls([
+        { unexpected_policies: [], rls_enabled: true, rls_forced: false },
+      ]),
+    ).toEqual([expect.stringContaining('unexpected row shape')]);
+  });
+
+  // #2449: avatars bucket metadata が config.toml（実効的な正本、EXPECTED_AVATARS_BUCKET）と
+  // 一致する場合・drift する場合の両方を固定する。片側だけの test は緑が証拠にならない
+  // （チケット本文の明示要求。skip-conditional-tests-silent-green の教訓と同型）。
+  describe('avatars bucket metadata（#2449）', () => {
+    it('config.toml どおりの応答は error を返さない', () => {
+      expect(auditProductionStorageRls([compliantRow()])).toEqual([]);
+    });
+
+    it('block: public が config.toml と食い違えば error にする', () => {
+      const errors = auditProductionStorageRls([
+        { ...compliantRow(), avatars_bucket: { ...compliantAvatarsBucket(), public: false } },
+      ]);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('avatars bucket metadata drifted');
+      expect(errors[0]).toContain('public: expected true, got false');
+    });
+
+    it('block: file_size_limit が config.toml と食い違えば error にする', () => {
+      const errors = auditProductionStorageRls([
+        {
+          ...compliantRow(),
+          avatars_bucket: { ...compliantAvatarsBucket(), file_size_limit: 10485760 },
+        },
+      ]);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('file_size_limit: expected 5242880, got 10485760');
+    });
+
+    it('block: allowed_mime_types が config.toml と食い違えば error にする（順序差は drift と数えない）', () => {
+      // 順序を入れ替えただけの応答は drift ではない（集合として比較する）。
+      const reordered = auditProductionStorageRls([
+        {
+          ...compliantRow(),
+          avatars_bucket: {
+            ...compliantAvatarsBucket(),
+            allowed_mime_types: [...EXPECTED_AVATARS_BUCKET.allowed_mime_types].reverse(),
+          },
+        },
+      ]);
+      expect(reordered).toEqual([]);
+
+      // 実際に集合が変わっていれば drift として検出する。
+      const errors = auditProductionStorageRls([
+        {
+          ...compliantRow(),
+          avatars_bucket: {
+            ...compliantAvatarsBucket(),
+            allowed_mime_types: ['image/jpeg', 'image/png'],
+          },
+        },
+      ]);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('allowed_mime_types');
+    });
+
+    it('複数フィールドの drift は 1 件のメッセージへまとめて全件記載する', () => {
+      const errors = auditProductionStorageRls([
+        {
+          ...compliantRow(),
+          avatars_bucket: { public: false, file_size_limit: 10485760, allowed_mime_types: [] },
+        },
+      ]);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('public:');
+      expect(errors[0]).toContain('file_size_limit:');
+      expect(errors[0]).toContain('allowed_mime_types:');
+    });
   });
 });
 
@@ -120,7 +218,12 @@ describe('runProductionStorageRlsAudit', () => {
   it('drift があれば全件を並べて throw する', async () => {
     const fetchImpl = vi.fn(async () =>
       Response.json([
-        { unexpected_policies: ['rogue policy'], rls_enabled: false, rls_forced: false },
+        {
+          unexpected_policies: ['rogue policy'],
+          rls_enabled: false,
+          rls_forced: false,
+          avatars_bucket: compliantAvatarsBucket(),
+        },
       ]),
     );
 
