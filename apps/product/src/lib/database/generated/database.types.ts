@@ -2455,6 +2455,7 @@ export type Database = {
         Args: {
           p_command_name: string;
           p_effects: Json;
+          p_is_mcp_command: boolean;
           p_operation_id: string;
           p_origin_connection_id: string;
           p_undo_ttl_seconds: number;

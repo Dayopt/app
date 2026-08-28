@@ -69,6 +69,28 @@ async function createPlan(userId: string, title = 'undo rpc fixture'): Promise<s
   return data.id;
 }
 
+/** Record は未来に終われない（DB 側の業務ルール）ので、過去側へ連番でずらす。 */
+async function createRecord(userId: string, title = 'undo rpc fixture'): Promise<string> {
+  const end = new Date(Date.now() - nextSlot() * 60 * 60 * 1000);
+  const { data, error } = await admin
+    .from('records')
+    .insert({
+      user_id: userId,
+      title,
+      source: 'manual',
+      start_at: new Date(end.getTime() - 30 * 60 * 1000).toISOString(),
+      end_at: end.toISOString(),
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+/** insert effect の undo(=DELETE) は full mask 契約を要求する。plan/record それぞれの全列。 */
+const PLAN_FULL_MASK = ['deleted_at', 'end_at', 'note', 'skipped_at', 'start_at', 'title'] as const;
+const RECORD_FULL_MASK = ['deleted_at', 'end_at', 'note', 'start_at', 'title'] as const;
+
 type EffectInput = {
   plan_id?: string;
   record_id?: string;
@@ -80,15 +102,18 @@ async function recordReceipt(args: {
   userId: string;
   operationId?: string;
   commandName?: string;
+  isMcpCommand?: boolean;
   originConnectionId?: string | null;
   ttlSeconds?: number;
   effects: EffectInput[];
 }): Promise<string> {
+  const originConnectionId = args.originConnectionId ?? null;
   const { data, error } = await admin.rpc('record_undo_receipt_v1', {
     p_user_id: args.userId,
     p_operation_id: args.operationId ?? crypto.randomUUID(),
     p_command_name: args.commandName ?? 'test.command',
-    p_origin_connection_id: args.originConnectionId ?? null,
+    p_is_mcp_command: args.isMcpCommand ?? originConnectionId !== null,
+    p_origin_connection_id: originConnectionId,
     p_undo_ttl_seconds: args.ttlSeconds ?? 3600,
     p_effects: args.effects as never,
   });
@@ -111,11 +136,40 @@ function listUndoable(userId: string) {
 async function getPlan(planId: string) {
   const { data, error } = await admin
     .from('plans')
-    .select('title, note')
+    .select('title, note, start_at, end_at, skipped_at, deleted_at')
     .eq('id', planId)
     .maybeSingle();
   if (error) throw error;
   return data;
+}
+
+async function getRecord(recordId: string) {
+  const { data, error } = await admin
+    .from('records')
+    .select('title, note, start_at, end_at, deleted_at')
+    .eq('id', recordId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** insert effect の full mask 用の field_changes（作成時の値を after_value に置く）。 */
+/**
+ * insert effect の full mask 契約を満たす field_changes を、実際に作成された行の
+ * 現在値から組み立てる。before_value は常に null（挿入前は存在しなかった）、
+ * after_value は行の実値（timestamp 等の NOT NULL 列を null で偽装すると CAS が
+ * 恒久的に不一致になるため、必ず実際に作成された値を使う）。
+ */
+function fullMaskFieldChanges(
+  resourceType: 'plan' | 'record',
+  currentRow: Record<string, unknown>,
+): { field_name: string; before_value: unknown; after_value: unknown }[] {
+  const fields = resourceType === 'plan' ? PLAN_FULL_MASK : RECORD_FULL_MASK;
+  return fields.map((field_name) => ({
+    field_name,
+    before_value: null,
+    after_value: currentRow[field_name] ?? null,
+  }));
 }
 
 /**
@@ -355,6 +409,7 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
   describe('insert effect の undo（= DELETE）と delete effect_kind の拒否', () => {
     it('insert effectのundoは対象行を削除する', async () => {
       const planId = await createPlan(ownerId, 'created via command');
+      const created = await getPlan(planId);
 
       const receiptId = await recordReceipt({
         userId: ownerId,
@@ -362,9 +417,7 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
           {
             plan_id: planId,
             effect_kind: 'insert',
-            field_changes: [
-              { field_name: 'title', before_value: null, after_value: 'created via command' },
-            ],
+            field_changes: fullMaskFieldChanges('plan', created ?? {}),
           },
         ],
       });
@@ -401,6 +454,7 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
         scopes: ['read:entries', 'write:plans'],
       });
       const planId = await createPlan(ownerId, 'created via write-only connection');
+      const created = await getPlan(planId);
 
       const receiptId = await recordReceipt({
         userId: ownerId,
@@ -409,13 +463,7 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
           {
             plan_id: planId,
             effect_kind: 'insert',
-            field_changes: [
-              {
-                field_name: 'title',
-                before_value: null,
-                after_value: 'created via write-only connection',
-              },
-            ],
+            field_changes: fullMaskFieldChanges('plan', created ?? {}),
           },
         ],
       });
@@ -428,6 +476,45 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
       expect(plan).not.toBeNull();
 
       deleteConnection(connectionId);
+    });
+
+    it('クロスレビューP2: insert effectを部分maskで記録するとrecord時点で拒否される', async () => {
+      // mask外への正当な事後編集がundo(=DELETE)に巻き込まれ silent に消えるのを防ぐため、
+      // insert effectはresource_typeの全maskを揃えることを記録時に強制する。
+      const planId = await createPlan(ownerId);
+      await expect(
+        recordReceipt({
+          userId: ownerId,
+          effects: [
+            {
+              plan_id: planId,
+              effect_kind: 'insert',
+              field_changes: [
+                { field_name: 'title', before_value: null, after_value: 'partial mask' },
+              ],
+            },
+          ],
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('クロスレビューP2: recordにskipped_atのfield_changeを記録するとrecord時点で拒否される（resource_type不一致）', async () => {
+      // skipped_atはplansにしか存在しない列。record時点で拒否せずに通すと、
+      // list_undoable_receipts_v1で「Undo可能」と出た上でapply時に42703で落ちる
+      // （ユーザーに見える failure）。
+      const recordId = await createRecord(ownerId);
+      await expect(
+        recordReceipt({
+          userId: ownerId,
+          effects: [
+            {
+              record_id: recordId,
+              effect_kind: 'update',
+              field_changes: [{ field_name: 'skipped_at', before_value: null, after_value: null }],
+            },
+          ],
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -516,6 +603,50 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
       });
       const { error } = await applyReceipt(ownerId, receiptId);
       expect(error).toBeNull();
+    });
+
+    it('クロスレビューP2: is_mcp_command=trueなのにorigin_connection_idを省略すると拒否される', async () => {
+      // origin_connection_idの省略を「UI由来」へ暗黙変換すると、MCP発行のcommandが
+      // 引数を渡し忘れた時に権限交差判定が丸ごとskipされ黙って昇格する（fail-open）。
+      // 明示フラグとorigin_connection_idの有無が矛盾する場合はrecord時点で拒否する。
+      const planId = await createPlan(ownerId);
+      await expect(
+        recordReceipt({
+          userId: ownerId,
+          isMcpCommand: true,
+          originConnectionId: null,
+          effects: [
+            {
+              plan_id: planId,
+              effect_kind: 'update',
+              field_changes: [{ field_name: 'title', before_value: 'x', after_value: 'y' }],
+            },
+          ],
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('クロスレビューP2: is_mcp_command=falseなのにorigin_connection_idを指定すると拒否される', async () => {
+      const connectionId = createConnection({
+        userId: ownerId,
+        scopes: ['read:entries', 'write:plans'],
+      });
+      const planId = await createPlan(ownerId);
+      await expect(
+        recordReceipt({
+          userId: ownerId,
+          isMcpCommand: false,
+          originConnectionId: connectionId,
+          effects: [
+            {
+              plan_id: planId,
+              effect_kind: 'update',
+              field_changes: [{ field_name: 'title', before_value: 'x', after_value: 'y' }],
+            },
+          ],
+        }),
+      ).rejects.toThrow();
+      deleteConnection(connectionId);
     });
 
     it('revoke済みconnectionからのreceiptはTTL内でもUndo不可', async () => {
@@ -692,10 +823,97 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
     });
   });
 
+  describe('クロスレビューP2: recordリソース・timestamptz列の網羅', () => {
+    it('recordリソースのstart_at/end_at（timestamptz）でCAS正負が機能する', async () => {
+      const recordId = await createRecord(ownerId);
+      const original = await getRecord(recordId);
+      const newStart = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
+      const newEnd = new Date(Date.now() - 4.5 * 60 * 60 * 1000).toISOString();
+      await admin.from('records').update({ start_at: newStart, end_at: newEnd }).eq('id', recordId);
+
+      const receiptId = await recordReceipt({
+        userId: ownerId,
+        effects: [
+          {
+            record_id: recordId,
+            effect_kind: 'update',
+            field_changes: [
+              { field_name: 'start_at', before_value: original?.start_at, after_value: newStart },
+              { field_name: 'end_at', before_value: original?.end_at, after_value: newEnd },
+            ],
+          },
+        ],
+      });
+
+      const { error } = await applyReceipt(ownerId, receiptId);
+      expect(error).toBeNull();
+
+      const restored = await getRecord(recordId);
+      // JSONB経由（to_jsonb -> #>>'{}' -> ::timestamptz）でも往復精度が失われないこと。
+      expect(new Date(restored?.start_at ?? '').getTime()).toBe(
+        new Date(original?.start_at ?? '').getTime(),
+      );
+      expect(new Date(restored?.end_at ?? '').getTime()).toBe(
+        new Date(original?.end_at ?? '').getTime(),
+      );
+    });
+
+    it('recordリソースのinsert effect(undo=DELETE)もfull mask契約を満たせば成立する', async () => {
+      const recordId = await createRecord(ownerId, 'created record via command');
+      const created = await getRecord(recordId);
+
+      const receiptId = await recordReceipt({
+        userId: ownerId,
+        effects: [
+          {
+            record_id: recordId,
+            effect_kind: 'insert',
+            field_changes: fullMaskFieldChanges('record', created ?? {}),
+          },
+        ],
+      });
+
+      const { error } = await applyReceipt(ownerId, receiptId);
+      expect(error).toBeNull();
+
+      const record = await getRecord(recordId);
+      expect(record).toBeNull();
+    });
+
+    it('timestamptzフィールドがmask内で改変されているとCASが失敗する（recordリソース）', async () => {
+      const recordId = await createRecord(ownerId);
+      const original = await getRecord(recordId);
+      const newEnd = new Date(Date.now() - 4.5 * 60 * 60 * 1000).toISOString();
+      await admin.from('records').update({ end_at: newEnd }).eq('id', recordId);
+
+      const receiptId = await recordReceipt({
+        userId: ownerId,
+        effects: [
+          {
+            record_id: recordId,
+            effect_kind: 'update',
+            field_changes: [
+              { field_name: 'end_at', before_value: original?.end_at, after_value: newEnd },
+            ],
+          },
+        ],
+      });
+
+      // maskしたend_atをUndo実行までの間にさらに変更する。
+      await admin
+        .from('records')
+        .update({ end_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() })
+        .eq('id', recordId);
+
+      const { error } = await applyReceipt(ownerId, receiptId);
+      expect(error).not.toBeNull();
+    });
+  });
+
   describe('function-level GRANT不変条件（第2段のtable版DOブロックのfunction拡張）', () => {
     it('anon/authenticatedは3公開RPCへEXECUTEを持たない', () => {
       for (const fn of [
-        'record_undo_receipt_v1(uuid,uuid,text,uuid,integer,jsonb)',
+        'record_undo_receipt_v1(uuid,uuid,text,boolean,uuid,integer,jsonb)',
         'apply_undo_receipt_v1(uuid,uuid,uuid)',
         'list_undoable_receipts_v1(uuid)',
       ]) {
