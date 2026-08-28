@@ -38,7 +38,7 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 - **起動時**: 指揮台セッションは最初に本日の日次盤面 issue（`is:issue label:type:board is:open` で検索）と open issue を読み込む
 - **起票・テンプレ・更新トリガーの正本**: `.claude/skills/dispatch/SKILL.md` 操作C（日次棚卸し）。**本文 = 現在地のスナップショット、コメント列 = タイムライン**（2026-08-20、[#2285](https://github.com/Dayopt/dayopt/issues/2285)）。§2 進行中レーンは指揮台が dispatch / push-ready 報告受領 / クロスレビュー確定伝達 / 重量green報告受領 / `branch:finish` 完了のたびに定型で更新し、**同じタイミングで盤面 issue へ 1 行のイベントコメントを追記する**（段階値は「起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能」）。§3 本日の実績・§4 キュー・§5 要判断は転記せず検索リンクのみを貼る（常に最新、鮮度劣化しない。§3 は手書きの集計数字を書かない）
 - **§1（北極星と今週の最優先）だけが内容を持つ手動更新セクション**。前日の issue から機械コピーし、当日は User/指揮台が直接編集する
-- **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（append-only、`pnpm docs:check` が既存行の削除・変更を機械的に拒否する）へのリンクのみを持つ。全履歴は月次 gardening 時点で `pnpm decisions:sync` が `judgment:diverged` **と** `judgment:judged`（2026-08-27、[#2423](https://github.com/Dayopt/dayopt/issues/2423) の個別判定前倒しに伴い追加。詳細は `.claude/rules/orchestration.md` §判断ジャーナル）の両ラベルの現状から同期する。**同期は月次のみ**（旧 STATE.md 時代の「ほぼ毎 PR」から後退した意図的トレードオフ）。月内の最新の分岐は decisions.md に反映される前提を置かず、`gh search issues --label judgment:diverged --include-prs` と `gh search issues --label judgment:judged --include-prs` で直接検索する
+- **§6 決定ログ**は [docs/decisions.md](docs/decisions.md)（全決定の時系列索引、append-only。`---` 区切りより下のエントリ領域は追記のみ許可、区切りより上のヘッダ・タグ語彙は編集可。`pnpm docs:check` が機械的に強制する）へのリンクのみを持つ。ラベル → 月次 sync による反映は廃止済み（2026-08-28、#2475）。決定した時点で `docs/decisions.md` へ直接 1 行追記する（判断ジャーナルの分岐記録も同様。詳細は `.claude/rules/orchestration.md` §判断ジャーナル）
 - **前日からの引き継ぎ**は当日 issue のコメントへ残す（旧 [#2020](https://github.com/Dayopt/dayopt/issues/2020)「朝の盤面ブリーフ置き場」の役割を吸収する設計）。**cutover 手順**（初日盤面 issue の起票 + #2020 の最終コメント・close）は `.claude/skills/dispatch/SKILL.md` §日次盤面issueの起票 が正本。実行は本 PR merge 後、指揮台が行う
 
 ## Codex（別系統批評係）の利用
@@ -208,8 +208,8 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 `docs/README.md` の地図・決定木・書き方に従う。とくに以下は都度・自発的に実施する:
 
-- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに `docs/product/log/YYYY-MM-DD-feedback-<slug>.md` に原文のまま記録する（`note` skill 参照）
-- **障害の記録** — 障害・トラブルが起きたら `docs/operations/log/YYYY-MM-DD-incident-<slug>.md` に記録する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
+- **フィードバックの記録** — ユーザーの声（感想・要望・不具合報告）が届いたら、その日のうちに GitHub issue として原文のまま起票する（既存ラベル体系、`dispatch` skill の規約に従う。2026-08-28、#2475 で domain log/ 廃止に伴い issue 起票へ移行）
+- **障害の記録** — 障害・トラブルが起きたら GitHub issue として起票する。対応手順そのものの更新は `docs/operations/` 側に別途反映する
 - **機能仕様の反映** — プロダクトの振る舞いを変えたら `docs/product/specs/` の該当ファイルを更新する
 - **月次ガーデニング** — 自動パートは毎月 1 日に Routine が実施し、journal 下書きの draft PR を作る（正本は `.claude/skills/gardening/SKILL.md`）。当月 5 日を過ぎても `YYYY-MM-01-journal.md` の draft PR も merge 済み journal も無い状態でセッションが始まったら、Routine の故障を疑ってユーザーに報告し、`/gardening`（人間パート + 自動パートの手動代行）を提案する
 
@@ -219,9 +219,8 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 | コマンド       | 内容                                                                                                   |
 | -------------- | ------------------------------------------------------------------------------------------------------ |
-| `/decision`    | 各ドメインの `log/` に `YYYY-MM-DD-slug.md` で意思決定ログを新規作成                                   |
+| `/decision`    | `docs/decisions.md` へ意思決定を1行追記（該当ストックの編集とワンセット）                              |
 | `/plan-review` | 直前の実装 plan を plan-fact-checker / plan-critic の 2 agent で並列レビュー                           |
-| `/note`        | 各ドメインの `log/YYYY-MM-DD-slug.md` を新規作成（feedback-/incident- prefix対応）                     |
 | `/gardening`   | 月次ガーデニングの人間パート（Routine の成果物レビューと価値判断。自動パートの手順も同ファイルが正本） |
 
 ## Rule Map
