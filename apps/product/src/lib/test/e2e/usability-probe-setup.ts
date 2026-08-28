@@ -25,7 +25,7 @@
  * 前提: 対象アプリが起動していること（ローカルなら `pnpm dev:raw`）。
  *
  * 後始末: 作成した test user は自動で消さない。標準出力に出る email とホストを
- * 見て `USER_EMAIL=<email> bash scripts/admin-delete-user.sh` で削除する。
+ * 見て `USER_EMAIL=<email> bash scripts/runbook/admin-delete-user.sh` で削除する。
  * **`.op-env.human` 経由では実行しない**（`docs/operations/tooling.md` の通り
  * production 専用の env file のため）。local を対象にした本スクリプトの
  * cleanup は `supabase status -o env` の値を `NEXT_PUBLIC_SUPABASE_URL` /
@@ -104,7 +104,7 @@ async function main() {
   const cleanupHost = new URL(SUPABASE_URL!).host;
   console.log(`[usability-probe-setup] test user 作成済み（${cleanupHost}）: ${email}`);
   console.log(
-    `[usability-probe-setup] cleanup: NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL} SUPABASE_SERVICE_ROLE_KEY=<ローカルの値> USER_EMAIL=${email} bash scripts/admin-delete-user.sh`,
+    `[usability-probe-setup] cleanup: NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL} SUPABASE_SERVICE_ROLE_KEY=<ローカルの値> USER_EMAIL=${email} bash scripts/runbook/admin-delete-user.sh`,
   );
 
   const { error: profileError } = await adminSupabase.from('profiles').upsert({

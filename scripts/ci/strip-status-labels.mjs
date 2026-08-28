@@ -184,7 +184,7 @@ if (isDirectExecution(import.meta.url)) {
       }
     } else {
       console.error(
-        'Usage: node scripts/ops/strip-status-labels.mjs <on-close <issue番号> | bulk [--execute] [--resume-from <issue番号>]>',
+        'Usage: node scripts/ci/strip-status-labels.mjs <on-close <issue番号> | bulk [--execute] [--resume-from <issue番号>]>',
       );
       process.exitCode = 1;
     }

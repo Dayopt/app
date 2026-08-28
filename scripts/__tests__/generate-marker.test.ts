@@ -6,7 +6,7 @@ import {
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
   type ReviewResultEntry,
-} from '../review/generate-marker-core.ts';
+} from '../lib/generate-marker-core.ts';
 
 /**
  * generate-marker-core の契約テスト（#2230）。

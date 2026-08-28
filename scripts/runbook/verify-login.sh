@@ -13,7 +13,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
-#     bash scripts/verify-login.sh
+#     bash scripts/runbook/verify-login.sh
 # ========================================
 
 set -euo pipefail

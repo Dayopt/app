@@ -2,7 +2,7 @@ import { realpathSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
-import { REPO, runGhJson } from '../night-watch/lib.mjs';
+import { REPO, runGhJson } from '../ci/night-watch/lib.mjs';
 
 /**
  * green watch — open PR の CI 遷移 watch（`.claude/rules/orchestration.md`
@@ -102,7 +102,7 @@ export function diffSnapshots(prev, next) {
  * checks が 1 つも無い PR はエラー文言（no checks reported）になるため
  * 空配列へ倒す。
  * @param {number} prNumber
- * @param {{ execFileImpl?: import('../night-watch/lib.mjs').ExecFileImpl }} [opts]
+ * @param {{ execFileImpl?: import('../ci/night-watch/lib.mjs').ExecFileImpl }} [opts]
  */
 function fetchChecks(prNumber, { execFileImpl } = {}) {
   try {
@@ -134,7 +134,7 @@ function fetchChecks(prNumber, { execFileImpl } = {}) {
  * 'pending → success' として通知される**。本 PR が確立するセマンティクス
  * （draft = レーンの私的作業場 / ready + green = レビュー待ち）と真逆の信号になり、
  * 指揮台のクロスレビューを誤発火させる。
- * @param {{ execFileImpl?: import('../night-watch/lib.mjs').ExecFileImpl }} [opts]
+ * @param {{ execFileImpl?: import('../ci/night-watch/lib.mjs').ExecFileImpl }} [opts]
  * @returns {Map<string, PrSnapshot>}
  */
 export function takeSnapshot({ execFileImpl } = {}) {

@@ -196,7 +196,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
   #
   # 層2（RemoteTrigger の session_context.allowed_tools から Write/Edit/
   # MultiEdit/NotebookEdit を除外する設定）が唯一の防御だと、その設定が漏れた
-  # 場合に agent が scripts/night-watch/*.mjs（下の Bash 節が prefix 一致で
+  # 場合に agent が scripts/ci/night-watch/*.mjs（下の Bash 節が prefix 一致で
   # 信頼している node script）や本 hook 自体を書き換えてから、その信頼された
   # コマンド名で実行するだけで任意コード実行 / guard 自体の無効化に到達できる
   # （push 前反証レビュー risk-reviewer 指摘、medium）。SKILL.md が明言する
@@ -391,7 +391,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   #
   # 動的な値（issue タイトル・本文・検索クエリ・close 対象の判定）が要る gh
   # 呼び出しは、shell の flag allowlist（旧 night_watch_flags_only）で守るのを
-  # やめ、`scripts/night-watch/*.mjs` の wrapper へ寄せた（#2291 v2、PR #2309
+  # やめ、`scripts/ci/night-watch/*.mjs` の wrapper へ寄せた（#2291 v2、PR #2309
   # 未解決 thread #5 の P1 是正）。旧方式は quote/backslash を削るだけの
   # 二重検査だったため、shell 展開（ANSI-C escape `$'…'`、変数展開 `${IFS}`
   # 等）が生む未許可 flag を再現できず、2026-08-21 に critical な回避が実測
@@ -401,7 +401,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # として再解釈されない）。guard 側の役割は「本当にこの固定 script を単純呼び
   # 出ししているか」（is_single_simple_command + no-redirect）だけに縮小され、
   # shell 展開を検査で追いかける必要が無くなる。値の形（数字のみ / 既知の URL
-  # 形式のみ 等）の検証は各 wrapper 内部が担う（scripts/night-watch/*.test.ts
+  # 形式のみ 等）の検証は各 wrapper 内部が担う（scripts/ci/night-watch/*.test.ts
   # 参照）。
   if [ "${DAYOPT_NIGHT_WATCH:-}" = "1" ]; then
     # redirect はファイル書き込み手段になるため無条件で拒否（read-only 原則）。
@@ -447,7 +447,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "node scripts/night-watch/board-issue.mjs sync" | "node scripts/night-watch/dod-candidate.mjs select")
+      "node scripts/ci/night-watch/board-issue.mjs sync" | "node scripts/ci/night-watch/dod-candidate.mjs select")
         # Step 1（盤面起票・前日盤面 close）・Step 4（DoD候補検索・コメント）の
         # wrapper。動的引数を一切取らない完全一致コマンドで、値の組み立ては
         # script 内部（JST 日付計算・gh issue list の結果からの前日 issue
@@ -456,24 +456,24 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # 満たす。
         night_watch_allowed=1
         ;;
-      "node scripts/night-watch/alert-issue.mjs report "*)
+      "node scripts/ci/night-watch/alert-issue.mjs report "*)
         # Step 3（nightwatch(check-id) issue の起票・追記）の wrapper。動的な
         # check-id・実測値が要るため完全一致にはできないが、値は script 内部で
         # execFile の argv 要素として gh へ渡り、shell を経由しないため、この
         # 節で flag 単位の検査を重ねる必要が無い（値の形の検証は wrapper 内部の
-        # 責務。scripts/night-watch/alert-issue.mjs 参照）。ここで守るのは
-        # 「本当に node scripts/night-watch/alert-issue.mjs report <...> の
+        # 責務。scripts/ci/night-watch/alert-issue.mjs 参照）。ここで守るのは
+        # 「本当に node scripts/ci/night-watch/alert-issue.mjs report <...> の
         # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
         # （本 if ブロック冒頭）が既にそれを保証している。
         night_watch_allowed=1
         ;;
-      "node scripts/night-watch/run-log.mjs env-failure no-var" \
-        | "node scripts/night-watch/run-log.mjs env-failure write-token")
+      "node scripts/ci/night-watch/run-log.mjs env-failure no-var" \
+        | "node scripts/ci/night-watch/run-log.mjs env-failure write-token")
         # Step 0（自己検証の環境故障報告）の wrapper。固定 2 文言のみ完全一致で
-        # 許可する（scripts/night-watch/run-log.mjs の ENV_FAILURE_MESSAGES）。
+        # 許可する（scripts/ci/night-watch/run-log.mjs の ENV_FAILURE_MESSAGES）。
         night_watch_allowed=1
         ;;
-      "node scripts/night-watch/run-log.mjs report "* | "node scripts/night-watch/run-log.mjs board-note "*)
+      "node scripts/ci/night-watch/run-log.mjs report "* | "node scripts/ci/night-watch/run-log.mjs board-note "*)
         # Step 5（運行記録: 常設運行記録 issue へのコメント + 当日盤面 issue への
         # 1 行コメント）の wrapper。push 前反証レビュー（risk-reviewer、high）で
         # 発見: board/alert/dod の 3 wrapper 化で `gh issue comment` の直接
@@ -487,7 +487,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # と同じ設計）。
         night_watch_allowed=1
         ;;
-      "node scripts/night-watch/run-log.mjs recent-pending "*)
+      "node scripts/ci/night-watch/run-log.mjs recent-pending "*)
         # Step 2（heavy-red/integration-red の pending escalation 判定、#2350
         # クロスレビュー指摘 P2-1）の read-only wrapper。常設運行記録 issue の
         # 直近コメントを読むだけで書き込みは行わない。値（check-id）は他
@@ -814,7 +814,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   # (d) Supabase Management API の secret 保持エンドポイント（config/* と
   # branches*）への直接アクセス。jq projection の有無を問わず無条件で block
   # する（denylist keyword / 部分一致 keyword フィルタが2回とも漏れた
-  # 08-11 incident 2件）。安全な代替は scripts/supabase-mgmt-safe-get.mjs に
+  # 08-11 incident 2件）。安全な代替は scripts/agent/supabase-mgmt-safe-get.mjs に
   # 一本化する。
   #
   # invoke 側（curl|wget の言及）は要求しない（merge前クロスレビューで発見:
@@ -831,7 +831,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   SUPABASE_MGMT_DANGER_ENDPOINT_RE='api\.supabase\.com/v1/(projects/[^[:space:]"'"'"']*/(config|branches)|branches)'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$SUPABASE_MGMT_DANGER_ENDPOINT_RE"; then
-      echo "BLOCKED: Supabase Management API の config / branches endpoint への言及は禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました。curl 限定だと別 HTTP client で迂回できるため、実行手段を問わず endpoint への言及自体を block します）。node scripts/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
+      echo "BLOCKED: Supabase Management API の config / branches endpoint への言及は禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました。curl 限定だと別 HTTP client で迂回できるため、実行手段を問わず endpoint への言及自体を block します）。node scripts/agent/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）" >&2
       exit 2
     fi
   done

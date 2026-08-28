@@ -20,7 +20,7 @@ import {
  * 文字列としてのみ扱われ、`gh issue create` へ execFile の argv 要素として渡る
  * ため、blockquote `>` や本文中の backtick が guard の redirect /
  * is_single_simple_command 検査に一切触れない（Bash tool から見えるコマンドは
- * 常に `node scripts/night-watch/board-issue.mjs sync` の固定形）。
+ * 常に `node scripts/ci/night-watch/board-issue.mjs sync` の固定形）。
  *
  * close 対象は本 wrapper が自分の検索結果から選んだ「他に開いている
  * type:board issue」だけに限定される。呼び出し元が issue 番号や --repo を
@@ -197,7 +197,7 @@ function isDirectExecution() {
 if (isDirectExecution()) {
   const [subcommand] = process.argv.slice(2);
   if (subcommand !== 'sync') {
-    console.error('Usage: node scripts/night-watch/board-issue.mjs sync');
+    console.error('Usage: node scripts/ci/night-watch/board-issue.mjs sync');
     process.exitCode = 1;
   } else {
     try {

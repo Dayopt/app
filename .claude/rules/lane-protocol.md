@@ -66,7 +66,7 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 **エスカレーションは失敗ではなく正しい動作である。** 止まって報告したことを減点しない。逆に、止まるべき場面で試行を続けて時間を溶かすこと、および黙って scope を広げることの方が損失が大きい。この明文がないと、レーンは「自力で解決するべきだ」と推論して沈黙する側へ倒れる。
 
-自己申告であるこの節に対し、機械側の二段目が朝編成ブリーフの「停滞疑いレーン」検出（`scripts/night-watch/morning-brief.mjs`）にあたる。**片方がもう片方の省略理由にならない** — 検出されるかどうかに関わらず、上記に当たったら自分から報告する。
+自己申告であるこの節に対し、機械側の二段目が朝編成ブリーフの「停滞疑いレーン」検出（`scripts/ci/night-watch/morning-brief.mjs`）にあたる。**片方がもう片方の省略理由にならない** — 検出されるかどうかに関わらず、上記に当たったら自分から報告する。
 
 ## 検証の証跡原則
 
@@ -90,7 +90,7 @@ worktree のレーンセッションは `pnpm dev`（op-run 前提）を起動�
    NEXT_PUBLIC_SUPABASE_URL=$API_URL NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY pnpm --filter @dayopt/product dev:raw
    ```
 5. 認証は `probe:setup`（service role のスローアウェイ user + storageState 生成）、または同型の手動 user 作成で行う
-6. **検証後の後始末は必須**: スローアウェイ user の削除（`scripts/admin-delete-user.sh`）とサーバー停止
+6. **検証後の後始末は必須**: スローアウェイ user の削除（`scripts/runbook/admin-delete-user.sh`）とサーバー停止
 
 **注意**: ローカル env のキー（`ANON_KEY` 等）は公知値であり secret ではない（ローカル Supabase の固定シークレット）。ただし `.env` / `.env.local` 系ファイルの読み書き境界（`docs/operations/secrets.md` §AI エージェントの env ファイル境界）は変わらず、この手順でも触らない。検証コマンドの成否確認・偽グリーンの罠は `docs/engineering/diagnostics.md` を参照する。
 

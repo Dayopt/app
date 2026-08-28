@@ -167,7 +167,7 @@ describe('findTodayBoardIssue', () => {
   });
 });
 
-// #2332: night-watch の 1 run あたり起票上限（scripts/night-watch/alert-issue.mjs
+// #2332: night-watch の 1 run あたり起票上限（scripts/ci/night-watch/alert-issue.mjs
 // runAlertSync が利用する run-scoped state）。plan-review（plan-critic）指摘に
 // 従い、関数注入のスタブではなく実 tmpdir の fs で検証する。
 describe('readAlertRunState / reserveAlertRunSlot', () => {

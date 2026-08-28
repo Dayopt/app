@@ -37,8 +37,8 @@
 #     発行: https://supabase.com/dashboard/account/tokens
 #
 # 使い方:
-#   chmod +x scripts/enable-auth-hook.sh
-#   ./scripts/enable-auth-hook.sh
+#   chmod +x scripts/runbook/enable-auth-hook.sh
+#   ./scripts/runbook/enable-auth-hook.sh
 #
 # dayopt project の Production 環境に対して実行する。
 # PR Preview / staging 相当で有効化する場合は Supabase Dashboard 側で branch context を確認する。

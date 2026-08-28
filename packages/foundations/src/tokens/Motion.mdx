@@ -182,7 +182,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 `pnpm lint:tokens` が 4 つのモーション規約を検出する（禁止 duration / duration の任意値 / 生の easing / `cubic-bezier` 直書き）。
 
-検出範囲は `apps/product/src` / `apps/web/src` / `packages/components/src` / `packages/foundations/src` の `*.tsx` + `*.ts`（`scripts/check-tokens-core.ts` の `SCAN_TARGETS`）。**CSS ファイルは対象外**なので、そちらはこの文書とレビューで担保する。実際、2026-07-30 に是正した違反には CSS のもの（`calendar.css` の `cubic-bezier` 直書き）があり、lint では検出できなかった。
+検出範囲は `apps/product/src` / `apps/web/src` / `packages/components/src` / `packages/foundations/src` の `*.tsx` + `*.ts`（`scripts/lib/check-tokens-core.ts` の `SCAN_TARGETS`）。**CSS ファイルは対象外**なので、そちらはこの文書とレビューで担保する。実際、2026-07-30 に是正した違反には CSS のもの（`calendar.css` の `cubic-bezier` 直書き）があり、lint では検出できなかった。
 
 ---
 
