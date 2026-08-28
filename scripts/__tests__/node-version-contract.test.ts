@@ -37,10 +37,16 @@ describe('Node.js version contract', () => {
     expect(setupAction).toContain("default: '.nvmrc'");
     expect(setupAction).toContain('node-version-file: ${{ inputs.node-version-file }}');
 
+    // #2483（CI ファイル統合 Phase 1）: docs-guard.yml / integration.yml は
+    // 削除され、setup action を使う workflow は 4 本（ci.yml / nightly.yml /
+    // promote.yml / production-config-audit.yml）になった。対象は
+    // `.github/actions/setup/action.yml` を使う workflow 全件（`grep -l
+    // "setup/action" .github/workflows/*.yml` で実測確認）。
     for (const path of [
       '.github/workflows/ci.yml',
-      '.github/workflows/docs-guard.yml',
-      '.github/workflows/integration.yml',
+      '.github/workflows/nightly.yml',
+      '.github/workflows/promote.yml',
+      '.github/workflows/production-config-audit.yml',
     ]) {
       const workflow = readFileSync(resolve(repoRoot, path), 'utf8');
       expect(workflow, path).not.toContain('NODE_VERSION');

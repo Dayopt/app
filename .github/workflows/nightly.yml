@@ -1,0 +1,462 @@
+name: Nightly
+
+# CI ファイル統合（#2483 Phase 1）: 旧 night-watch.yml / heavy-post-merge.yml /
+# integration.yml（integration job のみ。migration-safety は ci.yml の test job へ
+# 移設済み）/ replica-check.yml / storage-backup-export.yml の 5 cron を 1 ファイル
+# へ統合し、status:* ラベルの close-time 剥がし漏れを掃除する batch sweep を
+# 新設 job として追加した。
+#
+# **同じ schedule 配列に複数 cron を書くと、どの cron でもこの workflow 全体が
+# 起動する。job 単位の `if: github.event.schedule == '<cron>'` 振り分けが
+# 無いと、全 job が全 cron で走り分が爆発する。** 全 job に振り分け条件が
+# あることを変更時に必ず確認すること。
+#
+# concurrency は job 単位で設定する（旧ファイルごとに group 名・
+# cancel-in-progress が異なっていたため。特に storage-backup-export は
+# 転送中キャンセルで destination が中途半端な状態になるのを避けるため
+# cancel-in-progress: false を維持する必要がある。workflow 全体を 1 つの
+# concurrency group にすると、無関係な cron 同士が互いをキャンセルしてしまう）。
+#
+# **`heavy-e2e` / `heavy-web` / `integration` の `name:`（表示名）は
+# night-watch の heavy-red / integration-red 判定キーとして
+# `scripts/ci/night-watch/run-all.mjs` から job 名で直接参照される
+# （workflow ファイル名ではなく job 名で判定する job-scoped 方式、#2483）。
+# ここを改名すると night-watch 側の検知が静かに壊れる（`gh api
+# .../actions/runs/{id}/jobs` の `select(.name == "...")` が一致しなくなる）。
+# 改名する場合は run-all.mjs 側の対応する job 名リテラルも同時に変更すること。
+
+on:
+  schedule:
+    # 03:00 JST — heavy（E2E / Web Build & E2E）。CI 4 層再設計（#2269）の層 3。
+    - cron: '0 18 * * *'
+    # 03:30 JST — integration（DB 起動を伴う重量テストの nightly fallback。
+    # per-PR 実行は ci.yml の test job が affected 判定つきで担う）。
+    - cron: '30 18 * * *'
+    # 04:00 JST — night-watch（朝の蒸留層 05:00 JST から逆算）。
+    - cron: '0 19 * * *'
+    # 04:30 JST — status:* ラベルの batch sweep（close 時の剥がし漏れ backstop）。
+    - cron: '30 19 * * *'
+    # 06:30 JST — replica-check（production-config-audit の 06:00 JST cron と
+    # 同日、時間をずらして外部 API 呼び出し衝突を避ける）。
+    - cron: '30 21 * * *'
+    # 07:00 JST — storage-backup-export。
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: '実行する job。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。all = 全 job（post-merge の一括検証専用。storage-backup-export の実転送・status label sweep も同時に走るため routine 実行では選ばない）'
+        type: choice
+        options:
+          - layer3
+          - all
+        default: layer3
+      dry_run:
+        description: 'storage-backup-export 用（jobs=all の時のみ意味を持つ）: true にすると実際には転送・削除せず rclone --dry-run で予定操作だけ表示する'
+        type: boolean
+        default: false
+
+jobs:
+  # ─── heavy（CI 4 層再設計 #2269 の層 3、旧 heavy-post-merge.yml）──────
+  heavy-e2e:
+    name: "\U0001F3AD E2E Tests"
+    if: github.event.schedule == '0 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 20
+    concurrency:
+      group: nightly-heavy-e2e
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
+
+      - id: supabase-version
+        run: |
+          version=$(node -p "require('./package.json').devDependencies.supabase")
+          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
+            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Get Supabase status
+        id: supabase
+        run: |
+          API_URL=$(supabase status --output json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Run E2E tests
+        run: pnpm --dir apps/product exec playwright test --project="chromium"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop
+
+      - name: Upload report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/product/playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: screenshots
+          path: apps/product/test-results/
+          retention-days: 7
+
+  heavy-web:
+    name: "\U0001F310 Web Build & E2E"
+    if: github.event.schedule == '0 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: nightly-heavy-web
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**/*.{ts,tsx}', 'apps/web/content/**/*.{md,mdx,json}') }}
+          restore-keys: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build web
+        run: pnpm build:web
+
+      - name: Install Playwright browser
+        run: pnpm --filter @dayopt/web exec playwright install --with-deps chromium chromium-headless-shell
+
+      - name: Run web E2E tests
+        run: pnpm --filter @dayopt/web test:e2e:smoke
+
+      - name: Upload web report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: web-playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload web test results on failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: web-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+
+  # ─── integration（DB 起動を伴う重量テストの nightly fallback、旧 integration.yml）──
+  # migration-safety（破壊的 migration の静的スキャン）は per-PR 化して
+  # ci.yml の test job へ移設済み。ここには残さない。
+  integration:
+    name: Integration Tests
+    if: github.event.schedule == '30 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: nightly-integration
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - id: supabase-version
+        run: |
+          version=$(node -p "require('./package.json').devDependencies.supabase")
+          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
+            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Get Supabase status
+        id: supabase
+        run: |
+          API_URL=$(supabase status --output json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
+          DB_URL=$(supabase status --output json | jq -r '.DB_URL')
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+          echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
+
+      - name: Run integration tests
+        run: pnpm test:integration
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
+          USE_LOCAL_DB: 'true'
+          NODE_ENV: test
+          CI: true
+
+      # migration から構築した DB の RLS が、committed snapshot と一致するか検証する。
+      - name: Check RLS snapshot drift
+        run: pnpm rls:snapshot:check
+        env:
+          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop
+
+  # ─── night-watch（旧 night-watch.yml）───────────────────────────────
+  # 判定規約の正本は .claude/skills/night-watch/SKILL.md §自動パート。ここに
+  # 判定ロジックを複製しない — この workflow が扱うのは実行環境の配線
+  # （secrets・permissions・依存ツールの導入）だけ。
+  night-watch:
+    name: Night Watch
+    if: github.event.schedule == '0 19 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: nightly-night-watch
+      cancel-in-progress: false
+    # GITHUB_TOKEN の権限をここで明示的に最小化する。issues: write は起票・
+    # コメント・close、contents: read は checkout、actions: read は
+    # heavy-red / integration-red の `gh run list`、pull-requests: read は
+    # DoD 候補選定の `gh pr list --search` に必要。
+    permissions:
+      issues: write
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: 必須 secrets の存在を確認（fail closed）
+        env:
+          NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          missing=()
+          for key in NIGHT_WATCH_DEPENDABOT_TOKEN SENTRY_AUTH_TOKEN; do
+            if [ -z "${!key:-}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::未設定の GitHub Secrets があります: ${missing[*]}"
+            echo "::error::docs/operations/night-watch.md の手順に従って登録してください（#2367）。"
+            exit 1
+          fi
+          echo "必須 secrets はすべて設定されています。"
+
+      # digest は GitHub の Release Assets API が計算したもの（アップロード時に
+      # サーバー側で算出され不変）を実測して固定した（2026-08-25）:
+      #   gh api repos/getsentry/cli/releases/tags/<VERSION> \
+      #     --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' \
+      #     | sed 's/^sha256://'
+      - name: Sentry CLI をダウンロード（pin + retry、取得失敗は degrade）
+        id: sentry-cli-download
+        continue-on-error: true
+        env:
+          NIGHT_WATCH_CLI_VERSION: '0.43.0'
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL --retry 3 --retry-connrefused --retry-all-errors \
+            -o "$HOME/.local/bin/sentry" \
+            "https://github.com/getsentry/cli/releases/download/${NIGHT_WATCH_CLI_VERSION}/sentry-linux-x64"
+
+      - name: Sentry CLI の checksum を検証（不一致は止める）
+        if: steps.sentry-cli-download.outcome == 'success'
+        env:
+          NIGHT_WATCH_CLI_CHECKSUM_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
+        run: |
+          echo "${NIGHT_WATCH_CLI_CHECKSUM_SHA256}  $HOME/.local/bin/sentry" | sha256sum -c -
+          chmod +x "$HOME/.local/bin/sentry"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          sentry --version
+
+      # NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN はこの step にしか渡さない。
+      # run-all.mjs は起動直後にこの 2 つを process.env から捕捉して削除し、以降に
+      # spawn する pnpm 系コマンドから見えなくする（run-all.mjs 冒頭コメント参照）。
+      - name: night-watch Step 1〜5 を実行
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: node scripts/ci/night-watch/run-all.mjs
+
+  # ─── status:* ラベルの batch sweep（新設）────────────────────────────
+  # #2483 で issue-status-label-cleanup.yml（issue close webhook 起点の
+  # per-close 即時剥がし）を廃止し、この nightly 一括 sweep が**唯一の経路**
+  # になった（旧「per-close イベントの backstop」という位置づけは正しくない
+  # ——close イベントを直接 trigger にする workflow はもう存在しない）。残留は
+  # 最長 1 日だが、queue 検索は `is:open` 付きが通常のため実害は無い（#2483
+  # issue 本文で確定済みのトレードオフ）。scripts/ci/strip-status-labels.mjs の
+  # bulk サブコマンドは #2440 の初期実装から既に存在する（KNOWN_STATUS_LABELS
+  # の全 closed issue を走査して重複除去する設計）。
+  status-label-sweep:
+    name: status:* ラベルの batch sweep
+    if: github.event.schedule == '30 19 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: nightly-status-label-sweep
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: status:* ラベルの batch sweep を実行
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/strip-status-labels.mjs bulk --execute
+
+  # ─── replica-check（旧 replica-check.yml）───────────────────────────
+  replica-check:
+    name: Check Vercel replica against 1Password ledger
+    if: github.event.schedule == '30 21 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: nightly-replica-check
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Run replica check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: pnpm replica:check
+
+  # ─── storage-backup-export（旧 storage-backup-export.yml）───────────
+  # Supabase Storage（avatars / attachments）を rclone で Cloudflare R2 へ搬出する。
+  # destination 側を source に合わせる設計（scripts/ci/storage-backup.sh 冒頭
+  # コメント参照）。secrets 未投入の間は明示 failure にする（fail closed）。
+  storage-backup-export:
+    name: Export Supabase Storage to R2
+    if: github.event.schedule == '0 22 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.jobs == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: nightly-storage-backup-export
+      # sync 実行中のキャンセルは destination を中途半端な状態で残しうるため
+      # cancel-in-progress にしない。
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: rclone をインストール
+        env:
+          BACKUP_RCLONE_VERSION: '1.75.0'
+          BACKUP_RCLONE_ZIP_SHA256: 'aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa'
+        run: |
+          curl -fsSLO "https://downloads.rclone.org/v${BACKUP_RCLONE_VERSION}/rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip"
+          echo "${BACKUP_RCLONE_ZIP_SHA256}  rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip" | sha256sum -c -
+          unzip -q "rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64.zip"
+          sudo install -m 0755 "rclone-v${BACKUP_RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          rclone version
+
+      - name: 必須 secrets の存在を確認（fail closed）
+        env:
+          RCLONE_CONFIG_SOURCE_TYPE: ${{ secrets.RCLONE_CONFIG_SOURCE_TYPE }}
+          RCLONE_CONFIG_SOURCE_PROVIDER: ${{ secrets.RCLONE_CONFIG_SOURCE_PROVIDER }}
+          RCLONE_CONFIG_SOURCE_ENDPOINT: ${{ secrets.RCLONE_CONFIG_SOURCE_ENDPOINT }}
+          RCLONE_CONFIG_SOURCE_REGION: ${{ secrets.RCLONE_CONFIG_SOURCE_REGION }}
+          RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID: ${{ secrets.RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY: ${{ secrets.RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_DEST_TYPE: ${{ secrets.RCLONE_CONFIG_DEST_TYPE }}
+          RCLONE_CONFIG_DEST_PROVIDER: ${{ secrets.RCLONE_CONFIG_DEST_PROVIDER }}
+          RCLONE_CONFIG_DEST_ENDPOINT: ${{ secrets.RCLONE_CONFIG_DEST_ENDPOINT }}
+          RCLONE_CONFIG_DEST_REGION: ${{ secrets.RCLONE_CONFIG_DEST_REGION }}
+          RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.RCLONE_CONFIG_DEST_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY }}
+        run: |
+          missing=()
+          for key in \
+            RCLONE_CONFIG_SOURCE_TYPE RCLONE_CONFIG_SOURCE_PROVIDER RCLONE_CONFIG_SOURCE_ENDPOINT \
+            RCLONE_CONFIG_SOURCE_REGION RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY \
+            RCLONE_CONFIG_DEST_TYPE RCLONE_CONFIG_DEST_PROVIDER RCLONE_CONFIG_DEST_ENDPOINT \
+            RCLONE_CONFIG_DEST_REGION RCLONE_CONFIG_DEST_ACCESS_KEY_ID RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY; do
+            if [ -z "${!key:-}" ]; then
+              missing+=("$key")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::未設定の GitHub Secrets があります: ${missing[*]}"
+            echo "::error::docs/operations/secrets.md の Change Procedure に従って登録してください（#2026）。"
+            exit 1
+          fi
+          echo "必須 secrets はすべて設定されています。"
+
+      - name: storage-backup.sh を実行
+        env:
+          RCLONE_CONFIG_SOURCE_TYPE: ${{ secrets.RCLONE_CONFIG_SOURCE_TYPE }}
+          RCLONE_CONFIG_SOURCE_PROVIDER: ${{ secrets.RCLONE_CONFIG_SOURCE_PROVIDER }}
+          RCLONE_CONFIG_SOURCE_ENDPOINT: ${{ secrets.RCLONE_CONFIG_SOURCE_ENDPOINT }}
+          RCLONE_CONFIG_SOURCE_REGION: ${{ secrets.RCLONE_CONFIG_SOURCE_REGION }}
+          RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID: ${{ secrets.RCLONE_CONFIG_SOURCE_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY: ${{ secrets.RCLONE_CONFIG_SOURCE_SECRET_ACCESS_KEY }}
+          RCLONE_CONFIG_DEST_TYPE: ${{ secrets.RCLONE_CONFIG_DEST_TYPE }}
+          RCLONE_CONFIG_DEST_PROVIDER: ${{ secrets.RCLONE_CONFIG_DEST_PROVIDER }}
+          RCLONE_CONFIG_DEST_ENDPOINT: ${{ secrets.RCLONE_CONFIG_DEST_ENDPOINT }}
+          RCLONE_CONFIG_DEST_REGION: ${{ secrets.RCLONE_CONFIG_DEST_REGION }}
+          RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.RCLONE_CONFIG_DEST_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: bash scripts/ci/storage-backup.sh

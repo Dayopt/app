@@ -39,7 +39,7 @@ fresh session で以下を実施する。**判断・推奨は一切行わない�
 
 1. **当日盤面 issue**（`type:board` ラベル、タイトル「盤面 YYYY-MM-DD」）の本文 + コメント列 — 機械層が落とした朝編成ブリーフ（Step 6、#2370）を含む
 2. **常設運行記録 issue #2216** の前夜コメント（`night-watch 運行記録 YYYY-MM-DD` 形式、`run-log.mjs` の `buildOpsLogComment` が組み立てる本文）
-3. **`.github/workflows/{night-watch,heavy-post-merge,integration}.yml` の直近 run 状態**（`actions_list` 相当の read 系ツールで取得。allowed_tools は下記参照）
+3. **`.github/workflows/nightly.yml` の直近 run 状態**（night-watch / heavy-e2e / heavy-web / integration の各 job。#2483 で night-watch.yml / heavy-post-merge.yml / integration.yml から統合。`actions_list` 相当の read 系ツールで取得。allowed_tools は下記参照）
 
 ### 出力 1（正常時）: 当日盤面 issue への蒸留コメント
 
@@ -47,7 +47,7 @@ fresh session で以下を実施する。**判断・推奨は一切行わない�
 
 ### 出力 2（機械層故障時）: 常設運行記録 issue #2216 と当日盤面 issue の両方へ故障仮説コメント
 
-機械層（`night-watch.yml`）の run が存在するのに前夜の運行記録コメントが無い、または run 自体が失敗している場合、次を投稿する:
+機械層（`nightly.yml` の night-watch job、#2483 で night-watch.yml から統合）の run が存在するのに前夜の運行記録コメントが無い、または run 自体が失敗している場合、次を投稿する:
 
 - 故障の証拠（どの run がどう終わったか、欠けているコメントはどれか）
 - 原因仮説 1〜3 個（断定しない、仮説として提示する）

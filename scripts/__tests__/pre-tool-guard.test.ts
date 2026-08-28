@@ -1050,13 +1050,17 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ],
       ['token permissions self-check (GET)', 'gh api repos/Dayopt/dayopt --jq .permissions'],
       ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
+      // #2483（CI ファイル統合 Phase 1）: heavy-post-merge.yml / integration.yml が
+      // nightly.yml へ吸収され、job 名で判定する多段処理（`checkWorkflowJobRun`）が
+      // 必要になった。単一の単純コマンドでは表現できないため、他の Step と同じ
+      // 「個別 wrapper を allowlist する」設計へ揃えた。
       [
-        'heavy-post-merge 赤確認 (GET)',
-        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'heavy-red 判定 wrapper（Step2、job-scoped 化）',
+        'node scripts/ci/night-watch/check-workflow-job.mjs heavy-red',
       ],
       [
-        'integration 赤確認 (GET、#2333)',
-        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'integration-red 判定 wrapper（Step2、job-scoped 化）',
+        'node scripts/ci/night-watch/check-workflow-job.mjs integration-red',
       ],
       [
         'Sentry 新規 issue スキャン (GET、指揮台の手動代行用 op run 形)',
@@ -1170,38 +1174,30 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'gh api permissions self-check に --input を付ける迂回',
         'gh api repos/Dayopt/dayopt --jq .permissions --input /tmp/x',
       ],
+      // #2483（CI ファイル統合 Phase 1）: heavy-red / integration-red の生 gh
+      // コマンド直叩きは wrapper 化で無効化された（旧文字列は workflow が
+      // 存在しないため gh 側で失敗するが、guard の完全一致も通らないため
+      // 二重に拒否される）。旧 v1 攻撃パターン（flag 追加・workflow 名差し替え・
+      // --json field 差し替え・--branch 省略）は新 wrapper の攻撃面に置き換える。
       [
-        'heavy-post-merge 赤確認に未許可 flag（-X POST）を付ける迂回',
-        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
+        'heavy-red wrapper の gh 生コマンド直叩きを試みる迂回（旧v1文字列、workflow 自体が現存しない）',
+        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
-        'heavy-post-merge 赤確認の workflow 名を差し替える迂回',
-        'gh run list --workflow=production-config-audit.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'integration-red wrapper の gh 生コマンド直叩きを試みる迂回（旧v1文字列、workflow 自体が現存しない）',
+        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
       ],
       [
-        'heavy-post-merge 赤確認の --json field 列を差し替える迂回（旧v1文字列）',
-        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,headSha,createdAt',
+        'check-workflow-job wrapper に未許可 checkId を渡す迂回',
+        'node scripts/ci/night-watch/check-workflow-job.mjs docs-check',
       ],
       [
-        'integration 赤確認に未許可 flag（-X POST）を付ける迂回',
-        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url -X POST',
+        'check-workflow-job wrapper に余分な flag を付ける迂回',
+        'node scripts/ci/night-watch/check-workflow-job.mjs heavy-red --extra',
       ],
       [
-        'integration 赤確認の workflow 名を差し替える迂回（似た名前の別 workflow）',
-        'gh run list --workflow=integration-tests.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
-      ],
-      [
-        'integration 赤確認の --json field 列を差し替える迂回',
-        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,headSha,createdAt',
-      ],
-      // push前反証レビュー risk-reviewer 指摘（P2）: `--branch main` を省略した
-      // 旧 v1 文字列（integration.yml は heavy-post-merge.yml と異なり
-      // pull_request trigger も持つため、branch 指定が無いと PR run が直近
-      // 3 件に混入し、cancel-in-progress による誤起票・success 窓外押し出し・
-      // 本物の失敗の見逃しが同時に開く）。
-      [
-        'integration 赤確認の --branch main を省略する迂回（旧v1文字列）',
-        'gh run list --workflow=integration.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+        'check-workflow-job wrapper の checkId を別 workflow っぽい文字列に差し替える迂回',
+        'node scripts/ci/night-watch/check-workflow-job.mjs production-config-audit',
       ],
       [
         'Sentry スキャンの query を差し替える迂回',

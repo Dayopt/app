@@ -8,11 +8,13 @@ import { describe, expect, it } from 'vitest';
  * （RCLONE_CONFIG_* だけが正当な例外）。workflow の env に RCLONE_VERSION のような
  * 名前を置くと --version フラグとして誤解釈され CRITICAL で落ちる（2026-08-18、
  * #2155 実測）。この契約を YAML の文字列一致で固定し、再発を防ぐ。
+ *
+ * storage-backup-export.yml は #2483（CI ファイル統合 Phase 1）で nightly.yml へ
+ * 吸収された（storage-backup-export job）。ファイル全体を regex 走査するため、
+ * 他 job（heavy-e2e 等）が RCLONE_ 始まりの env キーを持たない限り false
+ * positive にはならない。
  */
-const workflow = readFileSync(
-  join(process.cwd(), '.github/workflows/storage-backup-export.yml'),
-  'utf8',
-);
+const workflow = readFileSync(join(process.cwd(), '.github/workflows/nightly.yml'), 'utf8');
 
 function findDisallowedRcloneEnvKeys(yamlText: string): string[] {
   const envKeys = [...yamlText.matchAll(/^\s{2,}([A-Z][A-Z0-9_]*):/gm)].map((match) => match[1]);

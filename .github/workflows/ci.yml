@@ -1,21 +1,24 @@
 name: CI
 
+# CI ファイル統合（#2483 Phase 1）: 旧 ci.yml（gate/static/unit）+ docs-guard.yml
+# （secret scan + docs 整合）+ integration.yml（migration-safety の静的スキャン +
+# 層 3 撤去後に affected な PR だけ走る integration/RLS）を 1 ファイルへ統合した。
+# 実行本体は scripts/ci/check.mjs（「薄い呼び出し層 + scripts 実体」再編）。
+#
+# job は static → test の 2 本直列（fail-fast で課金を守る。static が落ちたら
+# test は走らない）。affected 判定（docs-only skip・integration の DB-touch 判定）
+# は scripts/ci/impact.mjs が正本で、static job が 1 回だけ判定して job output へ
+# 出し、test job はそれを再利用する（2 job で gh api を 2 回叩いて結果がずれる
+# リスクを避けるため）。
+
 on:
   pull_request:
     branches: [main]
     # **`ready_for_review` を明示的に含める。** 既定の types は
     # `opened / synchronize / reopened` だけで ready_for_review を含まないため、
-    # これが無いと draft → ready の変換で CI が再発火せず、draft 時に skip した
-    # 重量 job（§2 段階 CI）が skipped のまま残る。「ready にしたのに E2E が
-    # 一度も走らないまま merge できる」状態になる（2026-08-03、PR #1810 で実測）。
+    # これが無いと draft → ready の変換で CI が再発火しない
+    # （2026-08-03、PR #1810 で実測済みの罠）。
     types: [opened, synchronize, reopened, ready_for_review]
-    # **`paths-ignore` は使わない。** workflow ごと起動しなくなるため、ruleset が
-    # required にしている 4 つの check（Static / Unit / E2E / Web）が永久に
-    # "expected" のまま残り、docs のみの PR が構造的に merge 不能になる
-    # （2026-08-05、PR #1836 で実測: "4 of 7 required status checks are expected"）。
-    # 代わりに gate job で docs-only を判定し、各 job を `if:` で skip する。
-    # **skip された job は required status check として success 扱いになる**ため、
-    # 実行コストを避けつつ merge gate も満たせる。
   # main への push では走らせない。branch:finish が「branch が main 最新を
   # 含み、その状態で CI green」をマージ前に強制するため（up-to-date gate）、
   # マージ後の main は常に PR で検証済みの tree と一致する。
@@ -26,300 +29,124 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# pull-requests: read は Impact summary step（static job）が PR の変更ファイル一覧を
-# 取得するために要る。permissions を明示宣言すると未宣言スコープは none になるため、
-# contents: read だけだと files API が 403 で静かに落ちる（continue-on-error のため
-# job は成功し、summary だけが出ない）。
+# pull-requests: read は static job の impact 判定（PR の変更ファイル一覧取得）に、
+# issues: write は test job の migration safety のラベル付与に要る（job 単位で
+# 追加宣言する。ここでは最小に絞る）。
 permissions:
   contents: read
   pull-requests: read
 
-# private repo の Actions 課金は job ごとに 1 分単位で切り上げられるため、
-# job 数を絞り checkout + setup の重複を減らす構成にしている。
-# 実行コマンドは旧 11 job 構成と同一で、検証内容は減らしていない。
-#
-# 2 段階 CI（2026-08-03）: 実測で CI 38 run / 15 PR、つまり push 2.5 回に対して
-# merge 前に必要な検証は 1 回だった。draft の間は軽量層（Static / Unit）だけを
-# 走らせ、重量層（Build & Bundle / E2E / Web E2E）は ready 後に走らせる。
-# PR は `gh pr create --draft` で作り、merge 直前に ready 化する
-# （.claude/rules/workflow.md §2 段階 CI）。`branch:finish` は draft を拒否し、
-# skipped check の畳み込みも織り込み済みなので、merge gate はこの guard に依存できる。
-# 重量 job の guard は `draft != true` で書く: workflow_dispatch では
-# pull_request context が無く null になるため、この形なら全 job が走る。
-#
-# ── Draft 中の軽量層を廃止した理由（2026-08-26、#2415）─────────────
+# ── draft 中は CI を完全に skip する（2026-08-28、#2483 Phase 1。User 裁可）──
 # 検査網が要るのは境界を越える瞬間（ready = 指揮台の時間を使う / merge = main に
-# 入る）だけで、draft はレーンの私的作業場。軽量検査は pre-push フック（#2359 の
-# affected typecheck/lint + typecheck:scripts/test:scripts/format:check）が
-# ローカルで毎回実施済みのため、draft 中の CI は二重払いだった。
-# **この判断は指揮台の推奨（draft 中も維持）と分かれた User 裁可で採用した**
-# （#2415 の judgment:diverged コメント）。
+# 入る）だけで、draft はレーンの私的作業場。機械 gate は pre-commit / pre-push
+# フック（affected typecheck/lint + typecheck:scripts/test:scripts/format:check、
+# #2359）が担う。**唯一の意図的な変更点は gitleaks が draft 中は走らないこと**
+# （旧 docs-guard.yml は draft 判定を持たず全 pull_request イベントで走っていた）。
+# pre-commit の gitleaks が一次防衛、CI（ready 後）は backstop という位置づけへ
+# 変える。それ以外の検査内容は削っていない。
 #
-# **復活条件**: Ready 後に環境差（lockfile 不整合・未宣言依存など、ローカルの
-# フックでは原理的に捕まらない差分）に起因して CI が赤になる事象が**月に複数回**
-# 発生したら、draft へ typecheck のみの超軽量版を戻す。判定は月次 gardening で
-# 行う（#2415 の judgment:diverged が定める正否の判定観点そのもの）。
-#
-# **skip は「走らせない」であって「検査を免除する」ではない。** job 単位の `if:`
-# で skip するため check run は conclusion: skipped として発行され、ready 化で
-# types の ready_for_review が新しい run を起こす。加えて scripts/tasks/finish-branch.sh
-# が「docs-only でない PR では Static Checks / Unit Tests が success であること」を
-# by-name で検査する（#2415）。
-#
-# **ただしこの検査は `pnpm branch:finish` 経由でのみ効く。** GitHub の merge ボタン /
-# 手動 `gh pr merge` は素通りする（GitHub は skipped の required check を success
-# 扱いにし、private repo + Free plan では ruleset の強制自体が効かない）。
-# .claude/rules/workflow.md §内製クロスレビューの実施を要求する gate と同じ制約で、
-# merge の入口を branch:finish に一本化する運用がこの skip の前提になっている。
+# `draft != true` と書く（`== false` ではない）: workflow_dispatch では
+# pull_request context が無く null になるため、`== false` だと手動実行で
+# 全 job が skip される。
 jobs:
-  # docs-only 判定だけを行う軽量 job。Impact Resolver（scripts/ci/impact.mjs）は
-  # node 標準モジュールしか使わないため checkout だけで動く（pnpm install 不要、実測数十秒）。
-  # 判定を各 job の `if:` に配ることで、docs のみの PR では重い 4 job が skip され、
-  # かつ required status check は success として報告される。
-  gate:
-    name: "\U0001F6A6 Impact gate"
-    # draft の間は走らせない（2026-08-26、#2415。§Draft 中の軽量層を廃止した理由 参照）。
-    # `draft != true` と書く（`== false` ではない）: workflow_dispatch では
-    # pull_request context が無く null になるため、`== false` だと手動実行で
-    # 全 job が skip される。本 workflow 冒頭の guard 規約と同じ形。
-    if: github.event.pull_request.draft != true
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      docs_only: ${{ steps.impact.outputs.docs_only }}
-      product_unit: ${{ steps.impact.outputs.product_unit }}
-      web_ci: ${{ steps.impact.outputs.web_ci }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # 失敗しても job は落とさず、output を空のままにする。下流は空を
-      # 「docs-only ではない」「product の unit test は必要」として実行側に倒す（fail closed）。
-      - name: Resolve impact
-        id: impact
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[] | .filename, (.previous_filename // empty)')"
-          # gh が失敗して files が空でも fail closed に倒れる: impact.mjs は
-          # 「変更ファイル一覧が空 = 判定不能」を全 affected として返す。
-          # key=value への変換（fail closed の既定値を含む）は impact.mjs の
-          # --github-output が持つ。YAML に分岐を書くと test に載らないため。
-          node scripts/ci/impact.mjs --stdin --github-output <<<"$files" \
-            | tee -a "$GITHUB_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
-
   static:
     name: "\U0001F50D Static Checks"
-    needs: gate
-    # `always()` を付けるのは、gate job 自体が落ちた時に下流が skip されると
-    # 「検証なしで required check が success」になる（fail open）ため。
-    # always() なら gate 失敗時も評価され、空の output は != 'true' で実行側に倒れる。
-    #
-    # **draft guard は gate だけでなくこの job にも要る。** `always()` は
-    # 上流が skip されても評価を続けるため、gate 側にだけ guard を書くと
-    # draft でもこの job が実行側へ倒れる（2026-08-26、#2415）。
-    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
+    if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    outputs:
+      docs_only: ${{ steps.run.outputs.docs_only }}
+      product_unit: ${{ steps.run.outputs.product_unit }}
+      integration: ${{ steps.run.outputs.integration }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # gitleaks の diff scan と docs:check の append-only guard が
+          # base ref との差分を見るため full history が必要（旧 docs-guard.yml と同じ）
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Run static checks
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci/check.mjs static
+
+  test:
+    name: "\U0001F4E6 Unit Tests"
+    needs: static
+    # `always()` を付けるのは、static job 自体が落ちた時に下流が skip されると
+    # 「検証なしで required check が success」になる（fail open）ため。always()
+    # なら static 失敗時も評価され、空の output は `!= 'true'` で実行側に倒れる。
+    if: always() && github.event.pull_request.draft != true && needs.static.result == 'success' && needs.static.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup
 
-      # Impact Resolver（scripts/ci/impact.mjs）の判定結果を Step Summary に出す。
-      # merge gate（branch:finish）が同じ判定で必須 Vercel context を決めるため、
-      # PR 上で「何が affected と判定されたか」を可視化する（#1813）。
-      # 表示専用で gate ではないので、失敗しても static job は落とさない。
-      # job を新設しないのは課金が job 単位で切り上げられるため（本 workflow 冒頭コメント）。
-      - name: Impact summary
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # ── Supabase の起動は affected な PR（DB を触る変更）だけに絞る ──
+      # 起動しない PR では test:integration / rls:snapshot:check 自体を
+      # check.mjs 側が skip するため、ここで CLI setup + start をまるごと
+      # 省略してコストを避ける（旧 integration.yml の per-PR 撤去〈#2269〉の
+      # 意図を、affected 判定つきの per-PR 実行として復活させたもの）。
+      - id: supabase-version
+        if: needs.static.outputs.integration == 'true'
         run: |
-          # rename は移動元（previous_filename）も影響範囲に含める（finish-branch.sh と同じ規則）
-          gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[] | .filename, (.previous_filename // empty)' \
-            | node scripts/ci/impact.mjs --stdin --summary >> "$GITHUB_STEP_SUMMARY"
-
-      # 独立した static チェックを 1 step 内の shell background lane で並列実行する（#1422）。
-      # 2026-06-25 GA の native `parallel` 構文は hosted runner 未対応（workflow parse error）
-      # だったため、確実に動く `&` / `wait` 方式を採用。install は共有し、重い ESLint / knip /
-      # typecheck を個別 lane に分離。lane ごとに log を退避し ::group:: で表示して失敗箇所を明確にする。
-      - name: Static checks (parallel lanes)
-        run: |
-          set +e # rc は lane ごとに手動集計するため errexit は使わない
-
-          (pnpm lint) >/tmp/lane-eslint.log 2>&1 &
-          pid_eslint=$!
-
-          (
-            set -o pipefail
-            pnpm quality:deadcode:ci 2>&1 | tee /tmp/knip-output
-            rc=${PIPESTATUS[0]}
-            head -3 /tmp/knip-output >>"$GITHUB_STEP_SUMMARY"
-            exit "$rc"
-          ) >/tmp/lane-knip.log 2>&1 &
-          pid_knip=$!
-
-          (
-            set -e
-            pnpm check:static
-          ) >/tmp/lane-rest.log 2>&1 &
-          pid_rest=$!
-
-          (pnpm typecheck) >/tmp/lane-typecheck.log 2>&1 &
-          pid_typecheck=$!
-
-          wait "$pid_eslint"; rc_eslint=$?
-          wait "$pid_knip";   rc_knip=$?
-          wait "$pid_rest";   rc_rest=$?
-          wait "$pid_typecheck"; rc_typecheck=$?
-
-          echo "::group::lane: ESLint (rc=$rc_eslint)"; cat /tmp/lane-eslint.log; echo "::endgroup::"
-          echo "::group::lane: Dead code (rc=$rc_knip)"; cat /tmp/lane-knip.log; echo "::endgroup::"
-          echo "::group::lane: Boundaries/format/i18n/taxonomy (rc=$rc_rest)"; cat /tmp/lane-rest.log; echo "::endgroup::"
-          echo "::group::lane: TypeScript (rc=$rc_typecheck)"; cat /tmp/lane-typecheck.log; echo "::endgroup::"
-
-          if [ "$rc_eslint" -ne 0 ] || [ "$rc_knip" -ne 0 ] || [ "$rc_rest" -ne 0 ] || [ "$rc_typecheck" -ne 0 ]; then
-            echo "::error::static lane failed (eslint=$rc_eslint knip=$rc_knip rest=$rc_rest typecheck=$rc_typecheck)"
+          version=$(node -p "require('./package.json').devDependencies.supabase")
+          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
+            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
             exit 1
           fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # ── supabase/functions/** の Deno 型検査（#1822）───────────────
-      # tsconfig / typecheck lane の対象外（別ランタイム）のため、import 欠落等が
-      # すり抜けていた（2026-08-04 incident）。supabase/functions/** を触った PR
-      # でだけ走らせる。判定は Impact summary と同じ gh api の変更ファイル一覧を使う。
-      - name: supabase/functions/** 変更の有無を確認
-        id: functions-changed
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        if: needs.static.outputs.integration == 'true'
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Start Supabase
+        if: needs.static.outputs.integration == 'true'
+        run: supabase start
+
+      - name: Get Supabase status
+        id: supabase
+        if: needs.static.outputs.integration == 'true'
+        run: |
+          API_URL=$(supabase status --output json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
+          DB_URL=$(supabase status --output json | jq -r '.DB_URL')
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+          echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
+
+      - name: Run tests (unit + affected integration/RLS + migration safety)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          # 取得と判定を分離する。gh を grep への pipeline に入れると、gh の失敗や
-          # grep -q 早期終了の SIGPIPE が else（changed=false）へ倒れて fail open に
-          # なる。取得失敗は step 失敗（continue-on-error で outputs.changed 空）に
-          # して、下流の `!= 'false'` 判定で実行側に倒す。判定は herestring で行い
-          # pipe を排除する。既知の限界: files API は 3,000 件で silent truncation
-          # する（finish-branch.sh が件数照合するのと同じ理由）。3,000 件超の PR は
-          # 現実的に発生しないため許容する
-          files="$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            --jq '.[] | .filename, (.previous_filename // empty)')"
-          if grep -q '^supabase/functions/' <<<"$files"; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PRODUCT_UNIT: ${{ needs.static.outputs.product_unit }}
+          INTEGRATION_AFFECTED: ${{ needs.static.outputs.integration }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
+          USE_LOCAL_DB: 'true'
+          NODE_ENV: test
+          CI: true
+        run: node scripts/ci/check.mjs test
 
-      # 変更ファイル取得に失敗した場合（continue-on-error で outputs.changed が
-      # 空のまま）は fail closed で実行側に倒す。workflow_dispatch は
-      # pull_request context が無く上の step 自体が skip される（outputs.changed
-      # も空）ため、同じ条件で常に実行される。
-      - name: Deno インストール
-        if: steps.functions-changed.outputs.changed != 'false'
-        env:
-          # supabase/config.toml の deno_version = 2 系の最新安定版を pin する。
-          # org の Actions 許可リストに denoland/setup-deno が無いため、
-          # gitleaks（docs-guard.yml）と同じく公式バイナリを直接取得し sha256 検証する。
-          # sha256 は https://github.com/denoland/deno/releases/download/v2.9.4/deno-x86_64-unknown-linux-gnu.zip.sha256sum の実測値。
-          DENO_VERSION: '2.9.4'
-          DENO_SHA256: 'c24f955d9fbfe0ea5ae2b501c8e71ae76e31e4c9782390a54a284b3364fda725'
-        run: |
-          curl -sSLO "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip"
-          echo "${DENO_SHA256}  deno-x86_64-unknown-linux-gnu.zip" | sha256sum -c -
-          unzip -q deno-x86_64-unknown-linux-gnu.zip -d "$RUNNER_TEMP/deno-bin"
-          echo "$RUNNER_TEMP/deno-bin" >> "$GITHUB_PATH"
-
-      # import map（npm:/jsr: specifier）の解決でネットワークアクセスが要る。
-      # deno.json の import はすべて exact version 固定（npm:pkg@x.y.z）のため
-      # lock file の追加検証価値が薄く、`deno check` は失敗時に lock を書かない
-      # （実測: type error があると deno.lock が生成されない）ため運用に乗せづらい。
-      # `--no-lock` で明示的に無効化し、ローカル実行（pnpm functions:check）でも
-      # 未追跡の deno.lock が supabase/functions/ に生成されないようにする。
-      - name: deno check (supabase/functions)
-        if: steps.functions-changed.outputs.changed != 'false'
-        run: pnpm functions:check
-
-  unit:
-    name: "\U0001F4E6 Unit Tests"
-    needs: gate
-    # static job と同じ理由で draft guard をこの job にも書く（#2415）。
-    if: always() && github.event.pull_request.draft != true && needs.gate.outputs.docs_only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: ./.github/actions/setup
-
-      - name: Build packages
-        run: pnpm build:packages
-
-      # scripts 配下は個別列挙ではなく `pnpm test:scripts`（vitest.scripts.config.ts の
-      # include）で丸ごと実行する。名前を並べる形は「テストを足しても CI に載らない」を
-      # 既定にしてしまい、実際に contract test が一度も走っていなかった前例がある。
-      - name: Verify Product and Web Production contracts with safe dummy values
-        run: |
-          pnpm test:scripts
-          pnpm --dir apps/product exec vitest --project unit run production-build-gate.test.mjs
-          pnpm --dir apps/web exec vitest run production-build-gate.test.mjs
-
-      # coverage は計測しない。閾値 gate（vitest の coverage.thresholds）も
-      # artifact upload も無いため、istanbul 計装のコストをかけて作ったレポートは
-      # runner 破棄とともに捨てられていた。実行するテストは完全に同一。
-      # コスト削減は期待しないこと。CI 実測では課金分に差が出ず（7 → 7 分）、step 時間も
-      # 215 → 259 秒と逆に増えた（runner 変動が計装コストを上回る）。
-      # 目的は「誰も読まないレポートを作るのをやめる」ことだけ。
-      # coverage を見たい時はローカルで pnpm test:coverage を実行する。
-      #
-      # Unit job の中でここだけが重い（実測 131s / job 全体 188s）。影響が無い PR では
-      # まるごと skip する。判定は gate job の Impact Resolver が正本で、CI・merge gate・
-      # Vercel・release がすべて同じ規則を共有する
-      # （旧 docs/projects/_archive/ci-monorepo-refactor/overview.md §4 原則 1、
-      #   docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
-      # `!= 'false'` にするのは fail closed のため: gate が落ちて output が空でも実行側へ倒す。
-      #
-      # **見るのは `product` ではなく `productUnit`。** 前者は Vercel build / release を
-      # 走らせるかで、こちらは Actions 上で product の unit test を走らせるか。
-      # `.github/actions/setup/action.yml`（Node / pnpm のバージョン）を変えた PR では
-      # 後者だけ true になる — test の runtime は変わるが Vercel の build env は変わらない
-      # ため、`product` に倒すと Phase 4 で止めた preview build が復活してしまう。
-      #
-      # skip して安全な根拠: product の unit test は apps/product/** と packages/**
-      # だけを参照し、`productUnit=false` になる path（scripts/ .claude/ apps/storybook/ 等）
-      # へ到達しない（`@dayopt/storybook` / root `scripts/` への参照が 0 件であることを
-      # 確認済み）。scripts/ 側の契約は上の `pnpm test:scripts` が常時実行で受け持つ。
-      - name: Product unit tests
-        if: needs.gate.outputs.product_unit != 'false'
-        run: pnpm --filter @dayopt/product test:run
-
-      - name: Web unit tests
-        run: pnpm test:web
-
-      - name: Shared i18n unit tests
-        run: pnpm --filter @dayopt/i18n test:run
-
-      - name: Shared observability unit tests
-        run: pnpm --filter @dayopt/observability test:run
-
-  # product の build と bundle 検査（secret 混入 / JS budget / CSS size）は
-  # Vercel の build へ移設した（apps/product/vercel.json の buildCommand →
-  # apps/product の `verify:bundle`）。理由は 2 つ。
-  #
-  # ① 同じ build が Vercel の preview deploy で毎 push どのみち走っており、
-  #    ここで走らせるのは二重実行だった（実測 9 課金分/run）。
-  # ② secret 混入検査は Vercel の方が強い。ここでは build env に placeholder
-  #    しか無く、実 secret が存在しないので「ハードコードされた literal」しか
-  #    検出できなかった。Vercel の build は実 env を持つ。
-  #
-  # merge gate は維持される: build 失敗は commit status `Vercel – product` として
-  # PR の rollup に載り、`branch:finish` の失敗判定がそれを数える。
-  #
-  # E2E / Web E2E job は CI 4 層再設計（#2269）で per-PR から撤去し、
-  # heavy-post-merge.yml（main push 後 + nightly）へ移設した。per-PR での
-  # 重量層再実行コストが private 化後の Actions 予算を圧迫するため。
-  # レーンのローカル影響 spec 実走義務（.claude/rules/lane-protocol.md
-  # §条件付き事前 E2E）が per-PR 検出の主力を引き継ぐ。
+      - name: Stop Supabase
+        if: always() && needs.static.outputs.integration == 'true'
+        run: supabase stop

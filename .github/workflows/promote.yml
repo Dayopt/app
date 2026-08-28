@@ -46,7 +46,7 @@ jobs:
     # scripts/ci/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
     # 下回ると rollback の途中で job が kill され、片方だけ promote された
     # production が手動 rollback の手掛かりごと失われる。
-    # scripts/__tests__/release-workflow-contract.test.ts が不等式を守る。
+    # scripts/ci/release-workflow-contract.test.ts が不等式を守る。
     timeout-minutes: 80
     steps:
       # 実行する workflow / script は常に dispatch した ref のものを使う。

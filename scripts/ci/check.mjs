@@ -44,12 +44,21 @@ import {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MIGRATION_LABEL = 'db:destructive-migration';
 
+// DI 用の簡略型（`typeof execFileSync` 等の strict overload 型をそのまま JSDoc に
+// 使うと、test の単純な mock（`vi.fn(() => 'stdout')` 等）が Node の完全な戻り値型
+// （pid/output/stdout/stderr/signal を持つ SpawnSyncReturns 等）と一致せず
+// typecheck が落ちる。scripts/ci/night-watch/run-all.mjs の ExecFileImpl と同じ
+// 設計判断——実際に呼び出し側が使うプロパティだけを持つ最小型に絞る）。
+/** @typedef {(file: string, args: string[], options?: object) => string} ExecFileImpl */
+/** @typedef {(command: string, args: string[], options?: object) => { status: number | null }} SpawnImpl */
+/** @typedef {(path: string, encoding: string) => string} ReadFileImpl */
+
 // ─── PR ファイル一覧の取得 ────────────────────────────────────────────
 // pull_request イベント以外（workflow_dispatch 等）は PR context が無いため
 // 空配列を返す。呼び出し側（resolveImpact 等）は空入力を「判定不能」として
 // fail closed（全 affected）に倒す規約を共有している。
 
-/** @param {{ repo?: string, prNumber?: string | number, execImpl?: typeof execFileSync }} opts */
+/** @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl }} opts */
 export function fetchPrFilenames({ repo, prNumber, execImpl = execFileSync } = {}) {
   if (!repo || !prNumber) return [];
   const out = execImpl(
@@ -68,7 +77,7 @@ export function fetchPrFilenames({ repo, prNumber, execImpl = execFileSync } = {
 
 /**
  * migration safety（破壊的変更の静的スキャン）用。filename + status（NDJSON 由来）で返す。
- * @param {{ repo?: string, prNumber?: string | number, execImpl?: typeof execFileSync }} opts
+ * @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl }} opts
  * @returns {{ filename: string, status: string }[]}
  */
 export function fetchPrFilesWithStatus({ repo, prNumber, execImpl = execFileSync } = {}) {
@@ -130,13 +139,14 @@ export function shouldRunIntegrationTests(integrationAffected) {
 // 存在しない場合は HEAD~1、それも無ければ HEAD まで段階的にフォールバックする
 // （旧 docs-guard.yml の 2 箇所と同一規約）。
 
+/** @param {string} ref @param {SpawnImpl} [execImpl] */
 function refExists(ref, execImpl = spawnSync) {
   if (!ref) return false;
   const result = execImpl('git', ['cat-file', '-e', ref], { cwd: ROOT });
   return result.status === 0;
 }
 
-/** @param {{ candidate?: string, execImpl?: typeof spawnSync }} [opts] */
+/** @param {{ candidate?: string, execImpl?: SpawnImpl }} [opts] */
 export function resolveDiffBase({ candidate, execImpl = spawnSync } = {}) {
   if (refExists(candidate, execImpl)) return candidate;
   if (refExists('HEAD~1', execImpl)) return 'HEAD~1';
@@ -368,9 +378,9 @@ async function runTest() {
  *   repo?: string,
  *   prNumber?: string | number,
  *   fetchFilesImpl?: typeof fetchPrFilesWithStatus,
- *   readFileImpl?: typeof readFileSync,
- *   execFileImpl?: typeof execFileSync,
- *   spawnImpl?: typeof spawnSync,
+ *   readFileImpl?: ReadFileImpl,
+ *   execFileImpl?: ExecFileImpl,
+ *   spawnImpl?: SpawnImpl,
  *   writeStepSummaryImpl?: typeof writeStepSummary,
  * }} opts
  */

@@ -16,7 +16,7 @@
 
 ## PR 規約
 
-- Draft PR は §着手手順 手順 4 のとおり着手時に開く。ローカル検証（`pnpm check` + pre-push フック）が済んだら、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。初出は 2026-08-20、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）。**draft 中は Docs Guard 以外の CI が走らない**ため、CI green の確認は ready 化の後になる
+- Draft PR は §着手手順 手順 4 のとおり着手時に開く。ローカル検証（`pnpm check` + pre-push フック）が済んだら、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。初出は 2026-08-20、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）。**draft 中は Actions 側の CI が完全に走らない**（2026-08-28、#2483。旧 Docs Guard も `ci.yml` の static job へ吸収され draft skip 対象になった）ため、CI green の確認は ready 化の後になる
 - 本文に `Closes #N` を対象 issue ごとに 1 行ずつ書く。epic や部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
 - **保護対象の検出**: audit contract 保護対象（`scripts/ci/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
 
@@ -42,7 +42,7 @@ push の実行は指揮台の合図を待たず自己判断で行う（2026-08-2
 
 ### レビュー待ち報告
 
-ローカル検証 → 自己判断で ready 化 → **ready 化で起動する CI**（Static Checks / Unit Tests、保護対象該当時のみ Production Config Audit）を watch → green 確認、まで進めた時点で送る（Docs Guard と Vercel Preview build は draft push の時点で走っているので、watch ではなく green の確認だけを行う）（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、CI green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
+ローカル検証 → 自己判断で ready 化 → **ready 化で起動する CI**（Static Checks / Unit Tests、保護対象該当時のみ Production Config Audit）を watch → green 確認、まで進めた時点で送る（Vercel Preview build は draft push の時点で走っているので、watch ではなく green の確認だけを行う。#2483 で旧 Docs Guard は `ci.yml` の static job へ吸収され draft 中は走らなくなった）（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）。push-ready 報告と同じ固定形に、CI green を確認した旨を添える。この報告が指揮台のクロスレビュー実施のトリガーになる。
 
 **push 前セルフレビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー）で実行した subagent の role 一覧と生出力を添付する**（策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）。要約しない — findings ゼロならその旨の原文をそのまま貼る。指揮台はこれを `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md` 手順 2〜3）の出発点として読む。自動委任条件（`.claude/rules/ai-behavior.md` §Read-only delegation）に非該当で subagent を回していない場合は「非該当」と明記する。
 

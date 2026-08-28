@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { WORST_CASE_RELEASE_MS } from '../ci/production-release.mjs';
+import { WORST_CASE_RELEASE_MS } from './production-release.mjs';
 
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を
@@ -17,7 +17,7 @@ function workflow(name: string) {
 }
 
 describe('release workflow contract', () => {
-  const release = workflow('release.yml');
+  const release = workflow('promote.yml');
 
   it('has no push trigger; promote is manual dispatch only (#2268)', () => {
     // main push で自動 promote すると、merge のたびに Production domain が
@@ -157,7 +157,7 @@ describe('release workflow contract', () => {
   });
 
   it('keeps the audit workflow pinned to its trusted base revision', () => {
-    // release.yml と対称に「掃除」されないよう固定する。pull_request_target で
+    // promote.yml と対称に「掃除」されないよう固定する。pull_request_target で
     // PR head を checkout すると、PR code が Vercel token を読める。
     const audit = workflow('production-config-audit.yml');
     expect(audit).toContain('ref: ${{ github.event.pull_request.base.sha || github.sha }}');

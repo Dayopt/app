@@ -98,7 +98,7 @@ describe('docs のみの変更', () => {
   });
 
   it('rls-snapshot.md は docsOnly でも integration を要求する', () => {
-    // integration.yml の paths に含まれる docs ファイル。docsOnly の shortcut で
+    // INTEGRATION_GLOBS に含まれる docs ファイル。docsOnly の shortcut で
     // integration まで消してはいけない。
     expectImpact(['docs/engineering/data/db/rls-snapshot.md'], {
       docsOnly: true,
@@ -134,7 +134,7 @@ describe('app とその依存', () => {
     expectImpact(['apps/product/src/lib/time/time-conflict.ts'], {
       product: true,
       productJourney: true,
-      integration: true, // apps/product/src/lib/time/** は integration.yml の paths に含まれる
+      integration: true, // apps/product/src/lib/time/** は INTEGRATION_GLOBS に含まれる
     });
   });
 
@@ -161,7 +161,7 @@ describe('app とその依存', () => {
       web: true,
       productJourney: true,
       webPreviewSmoke: true,
-      integration: true, // integration.yml の paths に含まれる
+      integration: true, // INTEGRATION_GLOBS に含まれる
     });
   });
 
@@ -192,7 +192,7 @@ describe('中立 path（app 成果物に影響しない）', () => {
     // （shallow clone / exit code 変換）を変えた PR は実 Vercel 経路を通らずに merge
     // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
     // 崩れない。wrong-skip 方向の regression は本ファイルの unit test が防波堤になる。
-    [['scripts/ci/impact.mjs', 'scripts/__tests__/impact.test.ts']],
+    [['scripts/ci/impact.mjs', 'scripts/ci/impact.test.ts']],
     [['.claude/hooks/pre-tool-guard.sh', '.claude/settings.json']],
     [['.github/workflows/ci.yml']],
     [['.husky/pre-push', '.vscode/settings.json']],
@@ -209,6 +209,12 @@ describe('中立 path（app 成果物に影響しない）', () => {
       productUnit: true,
       webCi: true,
     });
+  });
+
+  it('nightly.yml（heavy-e2e/heavy-web/integration job を含む）の変更は integration を要求する', () => {
+    // #2483 で旧 integration.yml から統合。nightly.yml は CI_TOOLCHAIN_FILES には
+    // 含まれないため productUnit / webCi は誘発しない（setup action とは違う扱い）。
+    expectImpact(['.github/workflows/nightly.yml'], { integration: true });
   });
 });
 

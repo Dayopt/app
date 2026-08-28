@@ -208,7 +208,7 @@ export function gitHeadSha({ cwd = ROOT } = {}) {
  * `checkoutAtTarget` は「checkout の tree が target SHA そのものか」。workspace 依存
  * グラフは **checkout の manifest** から解決するため、これが false だと target 当時と
  * 違うグラフで分類することになる。`workflow_dispatch` で古い SHA を再試行した時に
- * 起きる（release.yml は main 包含だけを要求し、checkout は dispatch した ref のまま）。
+ * 起きる（promote.yml は main 包含だけを要求し、checkout は dispatch した ref のまま）。
  * 例えば target の後で web が package への依存を外していると、その package の変更が
  * 「web に consumer 無し」と判定され、live でない build に success が付く。
  */

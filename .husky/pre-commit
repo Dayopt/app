@@ -1,6 +1,6 @@
 # pre-commit: secret scan + auto format（provider 非依存の git hook）
 #
-# gitleaks は staged 差分のみを見る（速度予算: 数秒）。CI（docs-guard.yml）は
+# gitleaks は staged 差分のみを見る（速度予算: 数秒）。CI（ci.yml の static job、#2483 で docs-guard.yml から移設）は
 # バージョンを sha256 で pin しているが、ここは意図的に固定しない —
 # ローカルは「CI に着く前に無料で落とす」フィルタで、CI が最終網のまま。
 # バージョン強制は brew upgrade のたびに壊れるブリトルさの方が割に合わない。
@@ -10,11 +10,11 @@ if ! command -v gitleaks > /dev/null 2>&1; then
   # 月次 gardening 自動パート（cloud Routine、brew が無い環境）は draft PR
   # 作成のため commit を伴う。ここを hard fail のままにすると、--no-verify
   # も agent には禁止済みのため全 commit が回復不能に詰まる（2026-08-24、
-  # merge 前クロスレビュー risk-reviewer 指摘）。CI（docs-guard.yml）が
+  # merge 前クロスレビュー risk-reviewer 指摘）。CI（ci.yml の static job）が
   # secret 検出の最終網であるため、この環境だけ skip しても検出自体は
   # 失われない。
   if [ -n "${CI:-}" ] || [ ! -t 0 ]; then
-    echo "⚠ 警告: gitleaks が見つかりません。非対話環境のため secret scan を skip して commit を続行します（CI の docs-guard.yml が最終網です。詳細: docs/operations/security.md）。" >&2
+    echo "⚠ 警告: gitleaks が見つかりません。非対話環境のため secret scan を skip して commit を続行します（CI の ci.yml static job が最終網です。詳細: docs/operations/security.md）。" >&2
   else
     echo "✗ gitleaks が見つかりません。'brew install gitleaks' でインストールしてください（docs/operations/security.md 参照）。" >&2
     exit 1

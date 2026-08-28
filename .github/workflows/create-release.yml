@@ -9,7 +9,7 @@ permissions:
   contents: write
   statuses: read
 
-# Production公開はProduction Release workflow（release.yml）の手動 dispatch がpromoteで行う
+# Production公開はProduction Release workflow（promote.yml）の手動 dispatch がpromoteで行う
 # （mainマージでは自動起動しない、2026-08-20 #2268）。
 # このワークフローはGitHub Releaseの作成のみを担当する。
 # タグはpromoteと観察が終わった後の証跡であり、デプロイトリガーではない。

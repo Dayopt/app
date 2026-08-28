@@ -7,13 +7,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildAlertArgs,
   checkSentryNew,
+  checkWorkflowJobRun,
   classifyGhError,
   countDocsCoverageMissing,
   execObservationCommand,
   judgeCountBaseline,
   judgeWorkflowRun,
+  NIGHTLY_HEAVY_JOB_NAMES,
+  NIGHTLY_INTEGRATION_JOB_NAME,
   readBaseline,
   runNightWatch,
+  worseConclusion,
 } from './run-all.mjs';
 
 describe('countDocsCoverageMissing', () => {
@@ -191,6 +195,176 @@ describe('judgeWorkflowRun', () => {
 
   it('空配列は例外を投げる（fail-closed、gh run list の想定外レスポンスを緑扱いしない）', () => {
     expect(() => judgeWorkflowRun([], { now })).toThrow(/非空配列/);
+  });
+});
+
+describe('worseConclusion', () => {
+  it('重大度順で悪い方を返す', () => {
+    expect(worseConclusion('success', 'failure')).toBe('failure');
+    expect(worseConclusion('failure', 'success')).toBe('failure');
+    expect(worseConclusion('cancelled', 'success')).toBe('cancelled');
+    expect(worseConclusion('failure', 'cancelled')).toBe('failure');
+  });
+
+  it('両方 success なら success', () => {
+    expect(worseConclusion('success', 'success')).toBe('success');
+  });
+
+  it('未知の値は無条件で悪い方扱い（fail closed）', () => {
+    expect(worseConclusion('success', 'mystery')).toBe('mystery');
+    expect(worseConclusion('mystery', 'success')).toBe('mystery');
+  });
+});
+
+// #2483: heavy-red / integration-red が workflow ファイル名（gh run list
+// --workflow=）ではなく job 名で判定するようになった契約を固定する。
+// nightly.yml は複数 cron が同じ workflow を共有するため、単純な直近 N 件では
+// 対象 job が実行された run を取りこぼす——この境界を明示的にテストする。
+describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
+  const NOW = new Date('2026-08-25T05:00:00+09:00').getTime();
+
+  function jobsResponseFor(runId: number, jobs: Record<string, unknown>[]) {
+    return {
+      match: (file: string, args: string[]) =>
+        file === 'gh' && args.includes(`repos/Dayopt/dayopt/actions/runs/${runId}/jobs`),
+      respond: () => JSON.stringify(jobs),
+    };
+  }
+
+  function runListResponse(runs: { databaseId: number; createdAt: string; url: string }[]) {
+    return {
+      match: (file: string, args: string[]) =>
+        file === 'gh' && args[0] === 'run' && args[1] === 'list' && args.includes('--branch'),
+      respond: () => JSON.stringify(runs),
+    };
+  }
+
+  function makeExecFileImpl(
+    rules: { match: (f: string, a: string[]) => boolean; respond: () => string }[],
+  ) {
+    return (file: string, args: string[]) => {
+      for (const rule of rules) {
+        if (rule.match(file, args)) return rule.respond();
+      }
+      throw new Error(`unmocked: ${file} ${args.join(' ')}`);
+    };
+  }
+
+  it('workflow ファイル名ではなく `--workflow=nightly.yml` を使う（旧ファイル名には依存しない）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 1, createdAt: '2026-08-25T03:00:00+09:00', url: 'u1' }]),
+        jobsResponseFor(1, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    const listCall = execFileImpl.mock.calls.find((c) => c[1][0] === 'run' && c[1][1] === 'list');
+    expect(listCall?.[1]).toEqual(
+      expect.arrayContaining(['--workflow=nightly.yml', '--branch', 'main']),
+    );
+  });
+
+  it('skipped の job は無視し、実際に実行された run だけを対象にする', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          { databaseId: 1, createdAt: '2026-08-25T04:30:00+09:00', url: 'u-sweep' }, // 別 cron（status-label-sweep）
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u-integration' },
+        ]),
+        jobsResponseFor(1, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'skipped' },
+        ]),
+        jobsResponseFor(2, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'green' });
+  });
+
+  it('heavy-red は E2E / Web の 2 job を worst-of で 1 run 分の結論へ畳む', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 1, createdAt: '2026-08-25T03:00:00+09:00', url: 'u1' }]),
+        jobsResponseFor(1, [
+          {
+            name: NIGHTLY_HEAVY_JOB_NAMES[0],
+            status: 'completed',
+            conclusion: 'success',
+            html_url: 'job1',
+          },
+          {
+            name: NIGHTLY_HEAVY_JOB_NAMES[1],
+            status: 'completed',
+            conclusion: 'failure',
+            html_url: 'job2',
+          },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun(NIGHTLY_HEAVY_JOB_NAMES, { execFileImpl, now: NOW });
+    expect(outcome.status).toBe('red');
+    expect(outcome.evidenceUrl).toBe('job2'); // failure した job の url
+  });
+
+  it('databaseId が整数でない run は jobs API を呼ばずスキップする（push前反証レビュー risk-reviewer 指摘）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          // @ts-expect-error -- 意図的に不正な databaseId（gh run list の想定外レスポンス）を注入する
+          { databaseId: '1; rm -rf /', createdAt: '2026-08-25T03:00:00+09:00', url: 'u-bad' },
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u-good' },
+        ]),
+        jobsResponseFor(2, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'green' });
+    // 不正な databaseId に対して gh api が一切呼ばれていないことを確認する
+    const apiCalls = execFileImpl.mock.calls.filter((c) => c[1][0] === 'api');
+    expect(apiCalls).toHaveLength(1);
+    expect(apiCalls[0][1]).toContain('repos/Dayopt/dayopt/actions/runs/2/jobs');
+  });
+
+  it('対象 job が run 一覧内に 1 件も見つからなければ fetch-failed', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 1, createdAt: '2026-08-25T03:00:00+09:00', url: 'u1' }]),
+        jobsResponseFor(1, [{ name: '別の job', status: 'completed', conclusion: 'success' }]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+
+  it('run-list 自体の取得失敗は fetch-failed', () => {
+    const execFileImpl = vi.fn(() => {
+      throw new Error('rate limited');
+    });
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+
+  it('1 run 分の jobs 取得失敗は無視して次の run へ読み進める（全体を諦めない）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          { databaseId: 1, createdAt: '2026-08-25T03:30:00+09:00', url: 'u1' },
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
+        ]),
+        // databaseId 1 の jobs 取得は未 mock（unmocked → throw）、2 は成功
+        jobsResponseFor(2, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'green' });
   });
 });
 
@@ -393,9 +567,61 @@ describe('runNightWatch', () => {
 ## en / ja が揃っていない
 `;
 
-  function greenRun(url: string) {
-    return JSON.stringify([
-      { status: 'completed', conclusion: 'success', createdAt: FIXED_NOW.toISOString(), url },
+  // #2483: heavy-red / integration-red は nightly.yml 内の job 名で判定する
+  // 多段処理（`gh run list --workflow=nightly.yml` → run ごとに
+  // `gh api .../actions/runs/{id}/jobs`）になった。両 check が同じ run-list
+  // 呼び出しを共有するため、この 2 rule を baseRules() へまとめて足す。
+  const NIGHTLY_RUN_ID = 401;
+
+  function nightlyRunListAndJobsRules(
+    jobs: { name: string; status: string; conclusion: string; url: string }[],
+  ): Rule[] {
+    return [
+      {
+        match: (file, args) =>
+          file === 'gh' && has(args, 'run', 'list', '--workflow=nightly.yml', '--branch'),
+        respond: () =>
+          JSON.stringify([
+            { databaseId: NIGHTLY_RUN_ID, createdAt: FIXED_NOW.toISOString(), url: 'https://x/1' },
+          ]),
+      },
+      {
+        match: (file, args) =>
+          file === 'gh' && has(args, 'api', `actions/runs/${NIGHTLY_RUN_ID}/jobs`),
+        respond: () =>
+          JSON.stringify(
+            jobs.map((j) => ({
+              name: j.name,
+              status: j.status,
+              conclusion: j.conclusion,
+              started_at: FIXED_NOW.toISOString(),
+              html_url: j.url,
+            })),
+          ),
+      },
+    ];
+  }
+
+  function greenNightlyJobs(): Rule[] {
+    return nightlyRunListAndJobsRules([
+      {
+        name: '\u{1F3AD} E2E Tests',
+        status: 'completed',
+        conclusion: 'success',
+        url: 'https://x/1/job/1',
+      },
+      {
+        name: '\u{1F310} Web Build & E2E',
+        status: 'completed',
+        conclusion: 'success',
+        url: 'https://x/1/job/2',
+      },
+      {
+        name: 'Integration Tests',
+        status: 'completed',
+        conclusion: 'success',
+        url: 'https://x/1/job/3',
+      },
     ]);
   }
 
@@ -468,16 +694,7 @@ describe('runNightWatch', () => {
         match: (file, args) => file === 'gh' && has(args, 'api', 'dependabot/alerts'),
         respond: () => `${readBaseline().dependabot_alert_count}\n`,
       },
-      {
-        match: (file, args) =>
-          file === 'gh' && has(args, 'run', 'list', '--workflow=heavy-post-merge.yml'),
-        respond: () => greenRun('https://github.com/Dayopt/dayopt/actions/runs/1'),
-      },
-      {
-        match: (file, args) =>
-          file === 'gh' && has(args, 'run', 'list', '--workflow=integration.yml', '--branch'),
-        respond: () => greenRun('https://github.com/Dayopt/dayopt/actions/runs/2'),
-      },
+      ...greenNightlyJobs(),
       {
         match: (file) => file === 'sentry',
         respond: () => '[]',
@@ -768,11 +985,6 @@ describe('runNightWatch', () => {
   // を全 red/pending 判定の後にまとめて処理する（deferredFetchFailed）ことで、
   // 赤 check が予算を優先して確保することを固定する。
   it('複数checkがfetch-failedでも、heavy-redの赤alertはcapされずに起票される（予算はredを優先）', () => {
-    function redRun(url: string) {
-      return JSON.stringify([
-        { status: 'completed', conclusion: 'failure', createdAt: FIXED_NOW.toISOString(), url },
-      ]);
-    }
     const rules = [
       {
         // docs-check / deadcode を spawn failure（fetch-failed）にする
@@ -792,9 +1004,36 @@ describe('runNightWatch', () => {
         respond: () => new Error('HTTP 403: Resource not accessible'),
       },
       {
+        // heavy job（E2E）だけを failure にし、web / integration は success の
+        // ままにする——heavy-red だけが赤になり integration-red は green のまま
+        // という元テストの意図（下の assertion で create 件数を厳密に数える）を
+        // job-scoped 判定でも再現する。
         match: (file: string, args: string[]) =>
-          file === 'gh' && has(args, 'run', 'list', '--workflow=heavy-post-merge.yml'),
-        respond: () => redRun('https://github.com/Dayopt/dayopt/actions/runs/99'),
+          file === 'gh' && has(args, 'api', `actions/runs/${NIGHTLY_RUN_ID}/jobs`),
+        respond: () =>
+          JSON.stringify([
+            {
+              name: '\u{1F3AD} E2E Tests',
+              status: 'completed',
+              conclusion: 'failure',
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/1',
+            },
+            {
+              name: '\u{1F310} Web Build & E2E',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/2',
+            },
+            {
+              name: 'Integration Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/3',
+            },
+          ]),
       },
       {
         // 3 check-id（docs-check, deadcode, dependabot-alerts）とも直近2晩

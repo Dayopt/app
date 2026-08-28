@@ -1,8 +1,7 @@
 # Dayopt
 
 [![CI](https://github.com/Dayopt/dayopt/actions/workflows/ci.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/ci.yml)
-[![Docs Guard](https://github.com/Dayopt/dayopt/actions/workflows/docs-guard.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/docs-guard.yml)
-[![Integration Tests](https://github.com/Dayopt/dayopt/actions/workflows/integration.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/integration.yml)
+[![Nightly](https://github.com/Dayopt/dayopt/actions/workflows/nightly.yml/badge.svg)](https://github.com/Dayopt/dayopt/actions/workflows/nightly.yml)
 
 Dayoptは、予定（Plan）と記録（Record）を同じCalendarで扱う個人向けタイムボクシングプロダクト。このmonorepoにはproduct、marketing web、Storybook、共有package、Supabase資産を置く。
 

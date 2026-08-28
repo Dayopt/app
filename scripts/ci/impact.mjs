@@ -65,29 +65,28 @@ function isDocsPath(file) {
 }
 
 // ─── integration（server contract / DB 境界）────────────────────────
-// .github/workflows/integration.yml の paths と同一集合。同期は
-// scripts/__tests__/impact.test.ts の contract test（describe
-// 'integration.yml の paths と INTEGRATION_GLOBS の同期契約'）が強制する。
-// 片方だけ編集すると test が落ちるため、変更時は両方を揃える。
+// #2483（CI ファイル統合 Phase 1）以前は旧 integration.yml 自身が持つ
+// hand-written `paths:` フィルタが per-PR 実行可否を決めており、この
+// INTEGRATION_GLOBS はその YAML と重複させた上で contract test（当時の
+// scripts/__tests__/impact.test.ts）が同期を強制していた。#2483 で
+// integration の per-PR 実行が「ci.yml の test job が
+// `shouldRunIntegrationTests()`（check.mjs）を通じてこの判定結果を読む」形へ
+// 一本化されたため、**この INTEGRATION_GLOBS が per-PR 実行可否の唯一の定義**
+// になった——同期すべき別の YAML paths: リストはもう存在しない（nightly.yml の
+// integration job は schedule / workflow_dispatch 起動で `paths:` を持たない
+// fallback 専用）。
 //
-// 判定結果自体（resolveImpact().integration）の consumer は現状
-// formatSummary（Step Summary 表示）のみ。finish-branch.sh・
-// production-release.mjs・vercel.json の ignoreCommand はいずれも参照しない
-// （`product` / `web` だけを見る）。CI 側の実行可否は integration.yml 自身の
-// hand-written paths が決めており、この判定結果で job を skip する経路はまだ
-// 無い。gate job 化して一本化する案は検討したが、workflow が常時起動になり
-// 1 課金分/push が新規発生するため、drift ゼロ（実測）の現状では見送った
-// （#1815）。将来 paths が増えて手動同期のコストが上がったら再検討する。
-//
-// export するのは contract test（scripts/__tests__/impact.test.ts）が
-// integration.yml から抽出した実際の paths リストと直接比較するため。
+// 判定結果（resolveImpact().integration）は $GITHUB_OUTPUT 経由で ci.yml の
+// test job（`needs.static.outputs.integration`）へ渡り、Supabase 起動と
+// integration/RLS test の実行可否を決める（#1815 で見送った gate job 化は
+// この統合で解消済み——affected 判定はもう workflow trigger と別建てではない）。
 export const INTEGRATION_GLOBS = [
   '.nvmrc',
   'package.json',
   'pnpm-lock.yaml',
   'apps/product/package.json',
   '.github/actions/setup/action.yml',
-  '.github/workflows/integration.yml',
+  '.github/workflows/nightly.yml',
   'apps/product/src/features/*/domain/**',
   'apps/product/src/features/*/server/**',
   'apps/product/src/lib/time/**',

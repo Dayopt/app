@@ -105,7 +105,7 @@ function isStale(updatedAt, now) {
 // 実際に詰まっているかの判断と介入は指揮台が持つ。
 //
 // **なぜ素の経過時間ではなく「営業時間」か。** このブリーフは 04:00 JST の
-// cron で 1 日 1 回だけ生成される（`.github/workflows/night-watch.yml`）。
+// cron で 1 日 1 回だけ生成される（`.github/workflows/nightly.yml` の night-watch job）。
 // 素の 4 時間で判定すると、前日の日中〜夕方に commit して正常に 1 日を終えた
 // レーンが翌朝すべて並ぶ（04:00 時点で 4 時間以内の commit はほぼ存在しない）。
 // 全件が毎朝載る節は読まれなくなり、即座に形骸化する。営業時間換算なら
@@ -577,8 +577,11 @@ function isTrustedCommentAuthor(comment) {
  *
  * `runMorningBrief` に冪等ガードが無いと、夜勤が赤で終わった夜に手動
  * `workflow_dispatch` で re-run すると当日盤面へ長文ブリーフが重複投稿される
- * （night-watch.yml は `step5Failed`/`dod4Failed` で非 0 exit するため job が
- * 赤になりやすく、re-run が起きやすい設計）。PR #2380 クロスレビュー指摘、P2。
+ * （night-watch job は `step5Failed`/`dod4Failed` で非 0 exit するため job が
+ * 赤になりやすく、re-run が起きやすい設計。#2483 で nightly.yml へ統合後、
+ * night-watch job の再実行には `gh workflow run nightly.yml -f jobs=all` が
+ * 要る——既定の `jobs=layer3` では night-watch job 自体が実行対象外になる）。
+ * PR #2380 クロスレビュー指摘、P2。
  * @param {number} boardIssueNumber
  * @param {{ execFileImpl?: import('./lib.mjs').ExecFileImpl }} [opts]
  */
