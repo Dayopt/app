@@ -391,6 +391,44 @@ describe.skipIf(!RUN_LOCAL)('undo receipt RPC (#2434)', () => {
         }),
       ).rejects.toThrow();
     });
+
+    it('write:plansは持つがdelete:plansを持たないconnectionはinsert effectのundo(=DELETE)を拒否される（元操作より強い権限を得ない非対称性）', async () => {
+      // update effectのundo（書き戻し）はwrite:*で足りるが、insert effectのundo（DELETE）は
+      // delete:*を要求する。この非対称性そのものが「Undoは元操作より強い権限を得ない」の
+      // 核心なので、write:plansだけを持つconnectionでは拒否されることを直接固定する。
+      const connectionId = createConnection({
+        userId: ownerId,
+        scopes: ['read:entries', 'write:plans'],
+      });
+      const planId = await createPlan(ownerId, 'created via write-only connection');
+
+      const receiptId = await recordReceipt({
+        userId: ownerId,
+        originConnectionId: connectionId,
+        effects: [
+          {
+            plan_id: planId,
+            effect_kind: 'insert',
+            field_changes: [
+              {
+                field_name: 'title',
+                before_value: null,
+                after_value: 'created via write-only connection',
+              },
+            ],
+          },
+        ],
+      });
+
+      const { error } = await applyReceipt(ownerId, receiptId);
+      expect(error).not.toBeNull();
+
+      // 拒否された結果、行は消えていないことも確認する（部分適用が無いこと）。
+      const plan = await getPlan(planId);
+      expect(plan).not.toBeNull();
+
+      deleteConnection(connectionId);
+    });
   });
 
   describe('欠損検査: CASCADEでeffectが欠けたreceiptをsilent successにしない', () => {
