@@ -206,14 +206,52 @@ export function buildPrCodexInput(prNumber, { execFileImpl } = {}) {
   return `${CONTEXT_GAP_NOTICE}\n\n---\n\n${diff}\n\n---\n\n${refParts.join('\n\n---\n\n')}`;
 }
 
+// #2448: `set -o pipefail` 前置は運用手順であり機械強制ではない。手順を
+// 飛ばして `node codex-input.mjs ... | codex exec ...` を実行した場合、
+// wrapper が例外で落ちても Codex は空 stdin で起動し「指摘なし」相当を
+// 返しうる（CLAUDE.md §Codex（別系統批評係）の利用 参照）。この関数は
+// pipefail の有無に関わらず wrapper 自身が組み立てた出力の異常を検知する
+// backstop で、内容の質までは判定しない（過剰検証にしない、#2448 の注意）。
+const DIFF_MARKER = 'diff --git ';
+// buildCodexInput が組み立てる区切り（notice + '\n\n---\n\n' + '# ' + title）。
+// title の実値を知らなくても、この構造が現れているかで「対象本文が実際に
+// 連結されたか」を確認できる（issue 番号ごとに再取得する二重 gh 呼び出しを
+// 避けるための構造チェック）。
+const ISSUE_TARGET_MARKER = '\n\n---\n\n# ';
+
+/**
+ * 組み立てた Codex 入力の最低限の妥当性を検証する。空、または対象を示す
+ * 構造（issue: title 見出し、pr: diff 本体）が欠けていれば例外を投げる。
+ * @param {string} output
+ * @param {{ kind: 'issue' | 'pr' }} params
+ */
+export function assertValidCodexInput(output, { kind }) {
+  if (!output || !output.trim()) {
+    throw new Error('codex-input の出力が空です（wrapper が入力を作れなかった可能性）。');
+  }
+  if (kind === 'issue') {
+    if (!output.includes(ISSUE_TARGET_MARKER)) {
+      throw new Error('codex-input の出力に対象 issue の title 見出しが含まれていません。');
+    }
+  } else if (kind === 'pr') {
+    if (!output.includes(DIFF_MARKER)) {
+      throw new Error('codex-input の出力に PR diff が含まれていません。');
+    }
+  }
+}
+
 if (isDirectExecution(import.meta.url)) {
   const [subcommand, arg] = process.argv.slice(2);
   const num = Number(arg);
   try {
     if (subcommand === 'issue' && Number.isInteger(num)) {
-      process.stdout.write(buildIssueCodexInput(num));
+      const output = buildIssueCodexInput(num);
+      assertValidCodexInput(output, { kind: 'issue' });
+      process.stdout.write(output);
     } else if (subcommand === 'pr' && Number.isInteger(num)) {
-      process.stdout.write(buildPrCodexInput(num));
+      const output = buildPrCodexInput(num);
+      assertValidCodexInput(output, { kind: 'pr' });
+      process.stdout.write(output);
     } else {
       console.error('Usage: node scripts/ops/codex-input.mjs <issue|pr> <番号>');
       process.exitCode = 1;
