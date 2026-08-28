@@ -12,7 +12,7 @@ on:
     branches: [main]
     # ready_for_review を明示する（ci.yml と同じ根拠）。既定 types に含まれないため、
     # これが無いと draft → ready の変換で再発火せず、draft 時の skipped が残ったまま
-    # merge できてしまう（.claude/rules/workflow.md §2 段階 CI）。
+    # merge できてしまう（AGENTS.md §PR / git 運用 §2 段階 CI）。
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - '.nvmrc'

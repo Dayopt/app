@@ -10,7 +10,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * （2026-08-27 実測）、状態ラベルの意味と矛盾していた。close イベントで
  * `status:*` prefix のラベルだけを機械的に剥がす。
  *
- * **`judgment:diverged` は対象外**（.claude/rules/orchestration.md §判断ジャーナル）。
+ * **`judgment:diverged` は対象外**（`dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル）。
  * 判断ジャーナルは close 済み issue にラベルを残したまま月次で sweep する設計の
  * ため、誤って剥がすとジャーナルの母集団が消える不可逆に近い事故になる。
  * `selectStatusLabelsToStrip` は `status:` prefix への完全一致だけで判定する

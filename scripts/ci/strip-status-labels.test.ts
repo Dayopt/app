@@ -16,7 +16,7 @@ describe('selectStatusLabelsToStrip', () => {
   });
 
   // #2440 やること2: judgment:diverged は判断ジャーナルの月次sweep対象で
-  // close済みでも意図的に残す設計（.claude/rules/orchestration.md §判断ジャーナル）。
+  // close済みでも意図的に残す設計（`dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル）。
   // 誤って剥がすとジャーナルの母集団が消える不可逆に近い事故になる。
   it('judgment:diverged を含む複数ラベルからstatus:のみを選び、judgment:は残す', () => {
     expect(selectStatusLabelsToStrip(['status:ready', 'judgment:diverged', 'priority:p1'])).toEqual(

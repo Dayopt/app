@@ -239,7 +239,7 @@ script が保証すること（コードで守る）:
 - **外部変更の検出の完全性。** 最後の read と write / return の間に起きた変更は検出できない。再読み込みを何回足してもこの窓は消えず 1 段深くなるだけなので、検出のための再読み込みはこれ以上追加しない
 - **manifest の最終正確性。** manifest はベストエフォートの観測記録であって production の正ではない。実態は常に Vercel Dashboard を正とする
 
-この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../.claude/rules/workflow.md#レビュー指摘の必須解決) を参照。
+この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../AGENTS.md §PR / git 運用#レビュー指摘の必須解決) を参照。
 
 ### トラブルシューティング
 
@@ -302,7 +302,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 
 main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
 
-**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
+**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
@@ -366,14 +366,14 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
   `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
   101 件・未解決 0 の PR #1820 を偽陰性で止めた）。取得失敗・20 ページ（2000 件）超は
-  従来どおり停止に倒す（fail closed）。解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
+  従来どおり停止に倒す（fail closed）。解決の 3 択は `AGENTS.md §PR / git 運用` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
   `ci.yml` にも `pnpm check` にも入っていないため、required check 以前に**そもそも実行されていない**。
   除外の理由だった「light / dark とも既知 failure がある」は解消済みで、#1499 / #1586 は両方 closed、
   2026-07-30 のローカル実測では light / dark とも 136 tests 全 pass（42 files pass / 33 skip）。
-  CI へ載せるかは job 数 = 課金分の判断（`.claude/rules/workflow.md` §PR 粒度）なので、別途決める
+  CI へ載せるかは job 数 = 課金分の判断（`AGENTS.md §PR / git 運用` §PR 粒度）なので、別途決める
 - **`pull_request_target` の job でも check run は PR の `statusCheckRollup` に出る。**
   2026-07-30 に PR #1760 で実測: `production-config-audit.yml`（`pull_request_target`）の job が
   `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
@@ -381,7 +381,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
   ruleset の required 指定に使うため
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
-  外部レビュー（Codex、2026-08-13 に運用停止）と Claude の内部レビュー（`.claude/rules/ai-behavior.md`
+  外部レビュー（Codex、2026-08-13 に運用停止）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
   §Read-only delegation の `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化して
   いたが、現在は内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が merge gate の標準を
   担う。判定基準だった不変条件カタログは [invariants.md](./invariants.md) に残っている
@@ -920,7 +920,7 @@ src/app/
 - 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/timeblock` 等)
 - 出力: 1 つの client component ツリー
 
-`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は `.claude/rules/feature-boundaries.md` の Composition Layer / Composition Hub を参照。
+`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は AGENTS.md / `pr-cross-review` skill の Composition Layer / Composition Hub を参照。
 
 ### providers / shell / overlays
 
@@ -1002,7 +1002,7 @@ locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-f
 
 ### 関連ドキュメント
 
-- Feature 境界: `.claude/rules/feature-boundaries.md`
+- Feature 境界: AGENTS.md / `pr-cross-review` skill
 
 ---
 
@@ -1983,7 +1983,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 策定日: 2026-08-09（経緯は 2026-08-09-antifragility-stance.md（削除済み、git 履歴参照））
 
-**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`.claude/rules/code-style.md` §技術選定スタンス）。
+**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`AGENTS.md` §技術選定スタンス）。
 
 更新するのは 3 つの時: ①「深い」「中」級の依存を追加・削除した時、②**既存依存の用途・浸透範囲が変わった時**（新しい呼び出し面を足す、cron を増やす、必須 env に昇格させる等。依存の増減が無くても「今日捨てたら何が壊れるか」は変わる）、③出口検討トリガーに当たる発表・事象があった時。
 
@@ -1996,7 +1996,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 - **対象内**: 依存の列挙漏れ、層の誤り、「捨てたら壊れるもの」の誤り。これらは判断そのものを誤らせる
 - **対象外**: 既に列挙済みの依存について、移行手順を 1 段細かくする記述（オブジェクト搬出に加えた URL 書き換え、DNS レコードの移行順序など）。**台帳は移行手順書ではない**
 
-実際に乗り換える時は、その時点で対象サービスの棚卸しをやり直す前提とする。台帳は「どこから調べ始めるか」の起点であって、網羅した移行チェックリストではない。この境界を引かないと、列挙済みの依存を無限に細分化する指摘が構成でき、防災マップとしての可読性が先に死ぬ（同型指摘の打ち切りは [workflow.md §同型指摘の打ち切り](../../.claude/rules/workflow.md)）。
+実際に乗り換える時は、その時点で対象サービスの棚卸しをやり直す前提とする。台帳は「どこから調べ始めるか」の起点であって、網羅した移行チェックリストではない。この境界を引かないと、列挙済みの依存を無限に細分化する指摘が構成でき、防災マップとしての可読性が先に死ぬ（同型指摘の打ち切りは [workflow.md §同型指摘の打ち切り](../../AGENTS.md §PR / git 運用)）。
 
 ### 深い（乗り換えは週単位の大工事）
 

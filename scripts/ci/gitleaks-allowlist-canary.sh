@@ -7,7 +7,7 @@
 # ないまま green」になり、それに気づく手段が無い（fail-open）。
 #
 # #2379 のレビューで指摘された 3 ケースを固定する
-# （`.claude/rules/orchestration.md` §盤面の正本「scratchpad で作った検証は
+# （`dispatch` skill（旧 orchestration.md、#2479 で再編） §盤面の正本「scratchpad で作った検証は
 # repo の test に落とす」の適用）。gitleaks 本体・.gitleaks.toml のどちらの
 # 回帰も検出できるよう、ここでは実際の gitleaks バイナリを --no-git で
 # 直接呼ぶ（git 履歴は不要 — allowlist のマッチングは commit に依存しない）。

@@ -153,12 +153,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-start.sh",
+            "command": "scripts/hooks/session-start.sh",
             "statusMessage": "プロジェクト状態を取得中..."
           },
           {
             "type": "command",
-            "command": ".claude/hooks/session-token-usage.py",
+            "command": "scripts/hooks/session-token-usage.py",
             "statusMessage": "トークン消費を集計中..."
           }
         ]
@@ -170,7 +170,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -179,7 +179,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -188,7 +188,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -197,7 +197,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -206,7 +206,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -215,7 +215,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-tool-guard.sh"
+            "command": "scripts/hooks/pre-tool-guard.sh"
           }
         ]
       }
@@ -226,7 +226,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/post-tool-format.sh",
+            "command": "scripts/hooks/post-tool-format.sh",
             "statusMessage": "Prettier でフォーマット中..."
           }
         ]
@@ -236,7 +236,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/post-tool-format.sh",
+            "command": "scripts/hooks/post-tool-format.sh",
             "statusMessage": "Prettier でフォーマット中..."
           }
         ]
@@ -247,7 +247,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/notification.sh"
+            "command": "scripts/hooks/notification.sh"
           }
         ]
       }
@@ -257,7 +257,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/stop-failure.sh",
+            "command": "scripts/hooks/stop-failure.sh",
             "async": true
           }
         ]

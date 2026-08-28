@@ -27,7 +27,7 @@ import type { CalendarViewType } from '../../types/calendar.types';
 /**
  * トークン集合は proxy.ts（Edge runtime）と共有する `@/lib/calendar-view-tokens` が正本。
  * 旧実装は正規表現を独自に持ち proxy.ts / calendar-page-params.ts と三重実装だった
- * （`.claude/rules/workflow.md` §同型指摘の打ち切り に従い単一定義へ統一）。
+ * （`AGENTS.md §PR / git 運用` §同型指摘の打ち切り に従い単一定義へ統一）。
  */
 function isValidViewType(view: string): view is CalendarViewType {
   return isValidCalendarViewToken(view);

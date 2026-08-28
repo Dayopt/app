@@ -3,7 +3,7 @@ name: Heavy Tests (post-merge)
 # CI 4 層再設計（#2269）の層 3。E2E / Web E2E は per-PR（層 1・2）から撤去し、
 # ここへ移設した。per-PR で毎 push 走らせるコストが private 化後の Actions 無料枠
 # （2,000 分/月）を圧迫するため、「main へ merge された後に検証する」安全網へ変更する。
-# レーンのローカル影響 spec 実走義務（.claude/rules/lane-protocol.md §条件付き事前 E2E）が
+# レーンのローカル影響 spec 実走義務（AGENTS.md §レーン運用 §条件付き事前 E2E）が
 # per-PR 検出の主力を引き継ぐ。
 #
 # job 定義（checkout / setup / playwright install / supabase start / test 実行 /

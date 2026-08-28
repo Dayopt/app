@@ -342,7 +342,7 @@ describe('google calendar callback route', () => {
 
   // Google は要求した短縮形（openid/email）を返す時も、実際には正準 URL 形（userinfo.email 等）
   // を含めて返す（`request()` 直上の既存ケースが同じ形を使っている）。narrow pair だけの mock で
-  // 通ることを確認しても、実レスポンス形で通らなければ意味が無い（.claude/rules/quality.md
+  // 通ることを確認しても、実レスポンス形で通らなければ意味が無い（`test` skill
   // §外部 API 統合の検証、PR #1721 の教訓）
   it('openid / userinfo.email を含む実レスポンス形でも narrow pair で接続できる', async () => {
     const scope = [

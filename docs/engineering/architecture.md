@@ -181,7 +181,7 @@ end
     LIB --> STORE
 ```
 
-依存方向の正はリポジトリルートの [`.claude/rules/feature-boundaries.md`](../../.claude/rules/feature-boundaries.md) と
+依存方向の正はリポジトリルートの [AGENTS.md / `pr-cross-review` skill](../../AGENTS.md / `pr-cross-review` skill) と
 `apps/product/eslint.config.mjs`。`settings` は cross-cutting composition、`calendar` はページ全体を合成する hub として扱う。
 
 ### Calendar の Plan / Record と UI state

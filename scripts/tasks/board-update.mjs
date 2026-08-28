@@ -42,7 +42,7 @@ const REQUIRED_HEADERS = [
 ];
 
 /**
- * 段階値の正本は `.claude/rules/orchestration.md` §日次盤面issue の対応表。
+ * 段階値の正本は `dispatch` skill（旧 orchestration.md、#2479 で再編） §日次盤面issue の対応表。
  * 語彙が変わる時は rules とこの配列を同じ PR で更新する（drift したら
  * ここが先に落ちて気づける）。
  */
@@ -186,7 +186,7 @@ function assertStage(stage) {
   if (!STAGE_VALUES.includes(value)) {
     throw new Error(
       `段階「${value}」は語彙外です（許可値: ${STAGE_VALUES.join(' / ')}。` +
-        '語彙を変える時は .claude/rules/orchestration.md §日次盤面issue と本 script を同じ PR で更新する）',
+        '語彙を変える時は `dispatch` skill（旧 orchestration.md、#2479 で再編） §日次盤面issue と本 script を同じ PR で更新する）',
     );
   }
   return value;

@@ -11,7 +11,7 @@ Eagle デザインアセット管理設計、OSSライセンスコンプライ�
 
 # 第1部: Eagle デザインアセット運用
 
-> Eagle の役割と、何を入れて何を入れないかの規約。エージェント側の invoke 条件は `.claude/rules/mcp-usage.md` の Eagle 節を正とする。
+> Eagle の役割と、何を入れて何を入れないかの規約。エージェント側の invoke 条件は `mcp-usage` skill の Eagle 節を正とする。
 > 2026-07-23 に v2 へ全面改訂。旧版（Storybook スナップショット自動同期パイプライン）を廃止した経緯は 2026-07-23-eagle-content-strategy.md（削除済み、git 履歴参照） を参照。
 
 ## 1. 役割
@@ -542,7 +542,7 @@ skill invocation は description を読んで判断される仕様上、**descri
 
 ## 4. 12 skill の類型マッピング
 
-各 skill の類型定義と書式詳細は [.claude/rules/skill-design.md](../../.claude/rules/skill-design.md) を参照。
+各 skill の類型定義と書式詳細は [`skill-design` skill](../../`skill-design` skill) を参照。
 
 | #   | skill                  | 類型             |
 | --- | ---------------------- | ---------------- |
@@ -581,11 +581,11 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 
 ### `eagle-dayopt`: ライフサイクル型、要素数 8
 
-パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[.claude/rules/skill-design.md](../../.claude/rules/skill-design.md) の類型表で 8 まで許容と明記済み。
+パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[`skill-design` skill](../../`skill-design` skill) の類型表で 8 まで許容と明記済み。
 
 ## 6. 設計原則の確立
 
-この migration 中に確立した skill 設計の恒常ルールは **[.claude/rules/skill-design.md](../../.claude/rules/skill-design.md)** に分離した。主要原則:
+この migration 中に確立した skill 設計の恒常ルールは **[`skill-design` skill](../../`skill-design` skill)** に分離した。主要原則:
 
 - **6 類型の定義**（作成系 / 予防系 / 運用系 / 副次トリガー型 / 明示発動型 / ライフサイクル型）
 - **description の書式**（字数、先頭句、構造）
@@ -594,7 +594,7 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 - **境界設計原則**（skill 間 handoff、skill 層と rules 層の境界、自動生成 artifact の扱い、invocation トリガーと実行時ルールの分離、self-contained 原則）
 - **空白領域 flag**（URL state の将来 skill 化余地）
 
-本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `.claude/rules/skill-design.md` 側。将来 skill を追加・修正する際は rules/ 側を参照する。
+本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `skill-design` skill 側。将来 skill を追加・修正する際は rules/ 側を参照する。
 
 ## 7. スコープ境界（未着手タスク）
 

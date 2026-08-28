@@ -1,7 +1,7 @@
 /**
  * コピーライティング トーン監査データ
  *
- * トーンルール: .claude/rules/copywriting.md
+ * トーンルール: docs/product/copywriting.md
  * 対象: messages/ja/*.json + ハードコード文字列
  */
 

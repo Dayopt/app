@@ -11,9 +11,9 @@ description: 夜勤 checklist の追加・変更を検討する時、または�
 
 **04:00 JST に固定する理由**: 朝の蒸留層（Haiku、05:00 JST 固定）から逆算した配置（2026-08-25、#2367 の scope 追加、User 決定）。旧 07:00 JST → 05:00 JST（2026-08-24、[#2334](https://github.com/Dayopt/dayopt/issues/2334) コメント）からさらに前倒しした。`heavy-post-merge`（nightly 03:00 JST）・`integration`（nightly 03:30 JST）の重量 CI は、夜勤が結果を読める時刻（04:00 JST）より前に完了するよう配置してある（CI 完了後 60/30 分の相対配置は前倒し前と同じ。`.github/workflows/heavy-post-merge.yml` / `.github/workflows/integration.yml` の schedule コメント参照）。**盤面 issue の起票（Step 1）だけは平日のみ**、健康診断・異常起票・運行記録（Step 2・3・5）は土日も毎日行う（§自動パート 参照）。
 
-**夜は書かない。測る・見る・整える。** 夜間の比較優位は「壁時計の時間だけが必要で判断が要らない仕事」= 証拠集めと観測。判定は exit code / 閾値 / baseline 比較のみで、裁量的な探索・修正・KPI 集計は行わない。出力先は issue に一本化する（`.claude/rules/orchestration.md` §盤面の正本と同じ理由）。
+**夜は書かない。測る・見る・整える。** 夜間の比較優位は「壁時計の時間だけが必要で判断が要らない仕事」= 証拠集めと観測。判定は exit code / 閾値 / baseline 比較のみで、裁量的な探索・修正・KPI 集計は行わない。出力先は issue に一本化する（状態は issue/PR が正、transcript には持たせない）。
 
-`.claude/rules/skill-design.md` の類型上は **明示発動型**。gardening skill と同じ構造で、自動実行（GitHub Actions の scheduled workflow）は Skill tool の invocation 経路の外にある。この skill が実際に invoke されるのは、故障時の手動代行や checklist 変更検討など、人間 or 指揮台の明示判断が要る場面だけ。
+`skill-design` skill の類型上は **明示発動型**。gardening skill と同じ構造で、自動実行（GitHub Actions の scheduled workflow）は Skill tool の invocation 経路の外にある。この skill が実際に invoke されるのは、故障時の手動代行や checklist 変更検討など、人間 or 指揮台の明示判断が要る場面だけ。
 
 ## When to Use
 
@@ -49,13 +49,13 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 3. **Step 3（起票/追記）** — 赤の check-id ごとに `runAlertSync`（`alert-issue.mjs`）を呼ぶ。dedup・run-scoped 起票上限（1 run 3 件・check-id 単位 1 回）は `alert-issue.mjs` / `lib.mjs` が無変更のまま担う
 4. **Step 4（DoD 監査候補選定）** — `runDodCandidateSelect`（`dod-candidate.mjs`）を呼ぶ。**土日は skip、月曜は金〜日 3 日分へ窓を拡張**（既存挙動）。この Step の想定外失敗（`run-log.mjs` の `dod` schema に `fail` 状態が無いため）は `dod: {status:'none'}` として報告した上で job を非 0 exit にする（`run-all.mjs` の `runStep4Dod` 参照。job の赤で検出可能にする設計）
 5. **Step 5（運行記録）** — `runOpsLogReport` / `runBoardNote`（`run-log.mjs`）で常設運行記録 issue と当日盤面 issue へ結果を記録する。**この投稿自体が失敗したら job を非 0 exit にする**（新しい故障検出手段が `gh run list --workflow=night-watch.yml` のため、運行記録が 1 行も残らず job が緑、という最悪の組み合わせを防ぐ）
-6. **Step 6（朝編成ブリーフ、v3.1、#2370）** — `runMorningBrief`（`morning-brief.mjs`、新設 wrapper）を呼ぶ。朝の編成（`.claude/rules/orchestration.md` §1 日サイクル）で指揮台が毎朝手動で行っていた観測系 gh クエリ（`status:ready` / `status:in-progress` 棚卸し・open PR/CI 状態・milestone 整合）を前倒しし、当日盤面 issue へ機械生成の 1 コメントとして残す。**判断語（推奨・優先等）を含めない** — `status:ready` issue の handoff-quality 機械判定（`dispatch` skill §`status:ready`の定義 と同じ 4 見出し検査）・stale 判定（48h超）・**停滞疑いレーン検出（open Draft PR のうち最終 commit から 4 営業時間超のもの。2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）**・milestone 未付与列挙・dispatch 可能 issue ごとの chip 下書き（固定部分のみ、案件固有の注意と束ねの判断は空欄で指揮台に残す）。停滞疑いの閾値を「営業時間」（JST 平日 09:00-18:00）で数えるのは、このブリーフが 04:00 JST に 1 日 1 回生成されるため。素の経過時間だと前日日中に commit して正常に終えたレーンが毎朝全件並び、節が形骸化する。これは `.claude/rules/lane-protocol.md` §停止条件（レーンの自己申告）に対する機械側の二段目で、**片方がもう片方の省略理由にならない**。当日盤面 issue が無い日（土日・Step 1 起票失敗）は gh を追加で呼ばず skip する。失敗しても非致命（他 Step の結果には影響しない）
+6. **Step 6（朝編成ブリーフ、v3.1、#2370）** — `runMorningBrief`（`morning-brief.mjs`、新設 wrapper）を呼ぶ。朝の編成で指揮台が毎朝手動で行っていた観測系 gh クエリ（`status:ready` / `status:in-progress` 棚卸し・open PR/CI 状態・milestone 整合）を前倒しし、当日盤面 issue へ機械生成の 1 コメントとして残す。**判断語（推奨・優先等）を含めない** — `status:ready` issue の handoff-quality 機械判定（`dispatch` skill §`status:ready`の定義 と同じ 4 見出し検査）・stale 判定（48h超）・**停滞疑いレーン検出（open Draft PR のうち最終 commit から 4 営業時間超のもの。2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）**・milestone 未付与列挙・dispatch 可能 issue ごとの chip 下書き（固定部分のみ、案件固有の注意と束ねの判断は空欄で指揮台に残す）。停滞疑いの閾値を「営業時間」（JST 平日 09:00-18:00）で数えるのは、このブリーフが 04:00 JST に 1 日 1 回生成されるため。素の経過時間だと前日日中に commit して正常に終えたレーンが毎朝全件並び、節が形骸化する。これは `AGENTS.md` §レーン運用 の停止条件（レーンの自己申告）に対する機械側の二段目で、**片方がもう片方の省略理由にならない**。当日盤面 issue が無い日（土日・Step 1 起票失敗）は gh を追加で呼ばず skip する。失敗しても非致命（他 Step の結果には影響しない）
 
 **`run-log.mjs` への唯一の変更点（v3、DoD 改訂により許可された点修正）**: `checkRecentPending` の信頼できる書き手判定に、`github-actions[bot]`（Actions の既定 `GITHUB_TOKEN` での投稿者）を login 完全一致で OR 追加した。実測（PR #2358）で `github-actions[bot]` の `authorAssociation` は `NONE`（OWNER/MEMBER/COLLABORATOR いずれにも該当しない）と確認されており、この修正が無いと夜勤自身の運行記録コメントが信頼集合から漏れ、pending escalation（#2350）が Actions 化後は恒久的に発火しなくなる。第三者は `github-actions[bot]` という login を偽装できないため、public repo での偽装耐性は維持される。
 
 ## トークン（secrets）
 
-GitHub Actions の `secrets.NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT）と `secrets.SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope）を使う。値の登録・更新は指揮台/User の操作枠（`.claude/rules/orchestration.md` §1 日サイクル）で行い、`run-all.mjs` はこの 2 つを起動直後に `process.env` から捕捉して削除し、`pnpm docs:check` 等のサードパーティ依存コードを大量実行するコマンドから見えないようにする（`run-all.mjs` 冒頭コメント参照）。**`GH_TOKEN`（`github.token`）もこの分離の対象**: gh を必要としないコマンド（`docs:check` / `docs:coverage` / `quality:deadcode:ci` / `sentry`）へは `envWithout('GH_TOKEN', 'GITHUB_TOKEN')` で GH_TOKEN を持たない env を渡す。workflow の `permissions:` ブロックによる最小権限化に加え、必要な呼び出し（`gh api` / `gh run list` / `gh issue ...`）にだけトークンを見せる二重の防御にする（push 前反証レビュー risk-reviewer 指摘、medium）。
+GitHub Actions の `secrets.NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT）と `secrets.SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope）を使う。値の登録・更新は指揮台/User の操作枠で行い、`run-all.mjs` はこの 2 つを起動直後に `process.env` から捕捉して削除し、`pnpm docs:check` 等のサードパーティ依存コードを大量実行するコマンドから見えないようにする（`run-all.mjs` 冒頭コメント参照）。**`GH_TOKEN`（`github.token`）もこの分離の対象**: gh を必要としないコマンド（`docs:check` / `docs:coverage` / `quality:deadcode:ci` / `sentry`）へは `envWithout('GH_TOKEN', 'GITHUB_TOKEN')` で GH_TOKEN を持たない env を渡す。workflow の `permissions:` ブロックによる最小権限化に加え、必要な呼び出し（`gh api` / `gh run list` / `gh issue ...`）にだけトークンを見せる二重の防御にする（push 前反証レビュー risk-reviewer 指摘、medium）。
 
 ## checklist・baseline の変更
 
@@ -70,11 +70,11 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 いずれかが想定外なら、checklist を一切実行せず `node scripts/ci/night-watch/run-log.mjs env-failure no-var`（DAYOPT_NIGHT_WATCH 未検出時）または `env-failure write-token`（token に write 権限あり時）を実行して終了する。以降は §自動パート と同じ Step 1〜5 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/ci/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。Step 1〜5 はそれぞれの個別 wrapper（`board-issue.mjs sync` / checklist コマンド / `alert-issue.mjs report ...` / `dod-candidate.mjs select` / `run-log.mjs ...`）で辿ること。
 
-**層3（repo hook）**: `.claude/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
+**層3（repo hook）**: `scripts/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
 
 ## 故障モード
 
-- **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep（`.claude/rules/orchestration.md` §1 日サイクル）で検出する。`gh run list --workflow=night-watch.yml --limit 5` で直近 run の成否を確認し、失敗していればログ（`gh run view <run-id> --log-failed`）を見る。run 自体が発火していなければ workflow の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する
+- **常設運行記録 issue に前夜コメントが無い** — 朝の編成 sweep で検出する。`gh run list --workflow=night-watch.yml --limit 5` で直近 run の成否を確認し、失敗していればログ（`gh run view <run-id> --log-failed`）を見る。run 自体が発火していなければ workflow の schedule 設定を確認する。run は成功しているのに運行記録コメントが無い場合は §手動代行 で代行する
 - **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/ci/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
 - **Sentry CLI の version/checksum が古くなる** — `.github/workflows/night-watch.yml` の `NIGHT_WATCH_CLI_VERSION` / `NIGHT_WATCH_CLI_CHECKSUM_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）。**env 変数名に「SENTRY」を含めない**（gitleaks の `sentry-access-token` ルールが変数名+hex文字列で誤検知するため。`night-watch.yml` の該当 step コメント参照）
 

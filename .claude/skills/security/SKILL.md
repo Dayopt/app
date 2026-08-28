@@ -169,18 +169,19 @@ pnpm security:check
 3. **`handleServiceError()` を使用** - 直接TRPCErrorをthrowしない
 4. **守るべき前提を作ったら `docs/engineering/invariants.md` を同じ PR で更新** - 新しい
    Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。カタログは
-   `risk-reviewer` と内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
+   内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
    「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
    見えなくなる。**判定は自動では走らない**（外部モデルの自動レビュー ai-review は
-   2026-08-03 に撤去済み、外部レビュー（Codex）も 2026-08-13 に運用停止）。危険クラスの
-   diff では `risk-reviewer` を明示的に起動する
+   2026-08-03 に撤去済み、全PR対象の外部レビュー（Codex）も 2026-08-13 に運用停止。
+   保護対象 path に触れる PR に限り Codex を条件付きで併用する）。危険クラスの
+   diff では merge 前に `pr-cross-review` skill を明示的に実行する
 
-## 関連エージェント
+## 関連する検査経路
 
-- **risk-reviewer** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う plan / diff で自動委任される read-only reviewer（`.claude/rules/ai-behavior.md` §Read-only delegation）
+- **`pr-cross-review` skill** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う PR の merge 前クロスレビュー（旧 risk-reviewer agent の観点を inline 化して継承）
 - **`/claude-security`** — 既存コードの深掘りスキャン。月次 sweep（`/gardening` §5.7）と、auth 周りの大きな変更前にユーザーが手動起動する
 
-> このスキルは「実装時のガイド」、上記は「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンはエージェント / `/claude-security` を使う。
+> このスキルは「実装時のガイド」、上記は「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンは `/claude-security` を使う。
 
 ## 関連スキル
 

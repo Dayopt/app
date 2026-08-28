@@ -90,7 +90,7 @@ describe('EstimationFeedforward', () => {
 
   it('query が失敗しても ErrorState を出さず静かに消える', () => {
     // 失敗時は data が undefined。受動的なヒントなのでエラー表示はしない
-    // （`.claude/rules/quality.md` の ErrorState 必須ルールに対する明示的な例外）
+    // （`test` skill の ErrorState 必須ルールに対する明示的な例外）
     queryResult.current = { data: undefined };
 
     render(<EstimationFeedforward destination="plan" activityId="activity-a" draftMinutes={30} />);

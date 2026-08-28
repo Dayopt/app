@@ -175,12 +175,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 | 層         | タイミング          | 実体                                                                                                                                                                                                                                                                                                   |
 | ---------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`.claude/rules/ai-behavior.md` §Read-only delegation）                                                                                                                                                                             |
+| 実装中     | コード変更ごと      | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                              |
 | PR ごと    | CI + merge 前       | `docs-guard.yml` の secret scan（gitleaks + `secrets:check`）/ `integration.yml` の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
 | 継続       | 常時・自動          | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                   |
 | 定期・随時 | 月次 + オンデマンド | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                              |
 
-**束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`.claude/rules/workflow.md` §PR 粒度）。
+**束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`AGENTS.md §PR / git 運用` §PR 粒度）。
 
 ## 定期検査の cadence
 
@@ -190,7 +190,7 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 2. `pnpm security:check`（= `pnpm audit --audit-level=moderate`。後述のローカルパッチ済み advisory は `auditConfig` で除く）
 3. `/claude-security` の全体スキャン実行をユーザーへ提案
 
-2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`.claude/rules/workflow.md` §PR 粒度）でもあるため、月次の手動実行に留める。
+2 は **CI では実行しない**。依存脆弱性の継続検知は Dependabot alerts が担当し（security update は schedule と無関係に即時 PR が出る）、CI に `pnpm audit` を足すと新しい advisory が公開された瞬間に無関係な PR まで落ちる。Actions 課金が PR 本数に比例する構造（`AGENTS.md §PR / git 運用` §PR 粒度）でもあるため、月次の手動実行に留める。
 
 `image-size@2.0.2` の
 `GHSA-w3rx-r6r6-pgpr` と `GHSA-5p2g-fcmc-qvqq` は修正版が未リリースのため、
@@ -201,7 +201,7 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 secret 検出はこれとは別で、**全 PR で自動実行される**。`docs-guard.yml`（job 名 `docs & secrets guard`、path filter なし）が gitleaks で base ref からの差分を、`pnpm secrets:check` で tracked tree 全体を見る。加えて `ci.yml` がビルド後の client bundle への混入を grep する。ローカルでは `pnpm check` に `secrets:check` が含まれる（CI 側は docs-guard の 1 回のみで、二重実行はしない）。
 
-**2026-08-24 以降、`.husky/pre-commit` も gitleaks で staged 差分をスキャンする**（`gitleaks protect --staged`、CI より前に無料で落とす層。`.claude/rules/workflow.md` §Pause point 参照）。前提として `brew install gitleaks` が必要（`op`/`gh` と同じ host 常駐 CLI 前提、`.claude/rules/mcp-usage.md` と同じ運用）。対話環境で未インストールだと commit が hard fail する。**ローカルの gitleaks バージョンは brew の floating latest（本記述時点で 8.30.1）、CI は `docs-guard.yml` の `GITLEAKS_VERSION`（本記述時点で 8.30.1、#2379 で 8.9.0 から更新）に sha256 で pin している。この 2 つは今も意図的に同期させていない**（ローカルはあくまで pre-CI の高速フィルタで、CI が最終網であるため。バージョン固定を hook に持たせると `brew upgrade` のたびに壊れるブリトルさの方が割に合わないと判断した）。**現在バージョン番号が一致しているのは偶然で、今後 `brew upgrade` によりローカルだけ先行する**（CI 側は次に手動で version bump するまで固定のまま）。**非対話環境（`CI` 変数設定 or TTY 無し、例: 月次 gardening 自動パートの cloud Routine）で gitleaks が無い場合は hard fail せず warning のみで commit を続行する**（brew の無い実行環境で全 commit が回復不能に詰まるのを避けるため。secret 検出は CI の docs-guard.yml が最終網として残るため失われない）。
+**2026-08-24 以降、`.husky/pre-commit` も gitleaks で staged 差分をスキャンする**（`gitleaks protect --staged`、CI より前に無料で落とす層。`AGENTS.md §PR / git 運用` §Pause point 参照）。前提として `brew install gitleaks` が必要（`op`/`gh` と同じ host 常駐 CLI 前提、`mcp-usage` skill と同じ運用）。対話環境で未インストールだと commit が hard fail する。**ローカルの gitleaks バージョンは brew の floating latest（本記述時点で 8.30.1）、CI は `docs-guard.yml` の `GITLEAKS_VERSION`（本記述時点で 8.30.1、#2379 で 8.9.0 から更新）に sha256 で pin している。この 2 つは今も意図的に同期させていない**（ローカルはあくまで pre-CI の高速フィルタで、CI が最終網であるため。バージョン固定を hook に持たせると `brew upgrade` のたびに壊れるブリトルさの方が割に合わないと判断した）。**現在バージョン番号が一致しているのは偶然で、今後 `brew upgrade` によりローカルだけ先行する**（CI 側は次に手動で version bump するまで固定のまま）。**非対話環境（`CI` 変数設定 or TTY 無し、例: 月次 gardening 自動パートの cloud Routine）で gitleaks が無い場合は hard fail せず warning のみで commit を続行する**（brew の無い実行環境で全 commit が回復不能に詰まるのを避けるため。secret 検出は CI の docs-guard.yml が最終網として残るため失われない）。
 
 **`.gitleaks.toml`（repo root）が false positive の抑止設定を持つ**（#2379、gitleaks **8.25.0 以上**が `[[allowlists]]` 構文の前提。ローカルの brew floating latest・CI の pin 版 8.30.1 はどちらも満たす）。`gitleaks detect` / `gitleaks protect` はどちらも明示 `--config` 無しで repo root の `.gitleaks.toml` を自動探索するが、`docs-guard.yml` は guardrail workflow のため `--config .gitleaks.toml` を明示している。`[extend].useDefault = true` で default ruleset を継承しつつ、Dayopt 固有の既知 false positive だけを追加する。新しい false positive を見つけたら:
 
@@ -218,7 +218,7 @@ secret 検出はこれとは別で、**全 PR で自動実行される**。`docs
 
 ### 前提: `claude-security` plugin
 
-3 の深掘りスキャンは Claude Code の plugin に依存する。MCP サーバー（`.claude/rules/mcp-usage.md`）と同じく **user scope の設定に置き、repo には定義を持たない**。新しいマシン / 別プロファイルでは次を実行して導入する。
+3 の深掘りスキャンは Claude Code の plugin に依存する。MCP サーバー（`mcp-usage` skill）と同じく **user scope の設定に置き、repo には定義を持たない**。新しいマシン / 別プロファイルでは次を実行して導入する。
 
 ```bash
 claude plugin install claude-security@claude-plugins-official

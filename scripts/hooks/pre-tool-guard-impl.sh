@@ -1,13 +1,13 @@
 #!/bin/bash
 # PreToolUse hook の実ロジック（exit 2 = block）。呼び出し元は薄い loader
-# （.claude/hooks/pre-tool-guard.sh、#1961）で、settings.json はそちらを登録する。
+# （scripts/hooks/pre-tool-guard.sh、#1961）で、settings.json はそちらを登録する。
 # Write/Edit → ファイルパスチェック
 # Bash → コマンド内容チェック
 #
 # この script 自体に構文エラーがあると bash -n が失敗を検出し、loader が
 # fail closed へ倒す（復旧のためこのファイルへの Write/Edit だけは例外的に通す。
 # 詳細は loader 側のコメント）。変更したら必ず
-# `bash -n .claude/hooks/pre-tool-guard-impl.sh` を通すこと。
+# `bash -n scripts/hooks/pre-tool-guard-impl.sh` を通すこと。
 # scripts/__tests__/pre-tool-guard.test.ts がこれを test として固定している。
 
 INPUT=$(cat)
@@ -136,7 +136,7 @@ guard_path_belongs_to_current_root() {
 # --- Write/Edit/MultiEdit/NotebookEdit: 保護ファイルへの書き込みブロック ---
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "MultiEdit" ] || [ "$TOOL_NAME" = "NotebookEdit" ]; then
   # --- worktree 外ファイル編集ガード（2026-08-24, #2359）---
-  # レーンは自分の worktree 外を書き換えない（.claude/rules/ai-behavior.md
+  # レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
   # §Writer ownership）。scratchpad・memory 等 repo 外は対象外（許可）。
   #
   # Write/Edit tool は絶対パスを要求する仕様だが、guard としてそれを信頼せず
@@ -186,7 +186,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
       # を判定する（指揮台が他レーンへ書き込む場合も、レーンが他レーンへ
       # 書き込む場合も、同じ判定で一律に閉じる。物理配置に依存しない）。
       if ! guard_path_belongs_to_current_root "$GUARD_NORMALIZED_FILE_PATH"; then
-        echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（.claude/rules/ai-behavior.md §Writer ownership、.claude/rules/workflow.md §main checkout の役割）" >&2
+        echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（AGENTS.md §委任・報告の作法 §Writer ownership、AGENTS.md §PR / git 運用 §main checkout の役割）" >&2
         exit 2
       fi
     fi
@@ -291,7 +291,7 @@ is_single_simple_command() {
 # チップ起票（spawn_task）は指揮台セッションの専権。レーン（worktree の作業
 # セッション）が直接 User へチップを出すと、triage の判断が User へ飛んでしまう。
 # レーンは「issue 化 + 指揮台へ send_message」に一本化する
-# （.claude/rules/orchestration.md §盤面の正本は issue + open PR、§レーンの連絡規律）。
+# （dispatch skill（旧 orchestration.md、#2479 で再編） §盤面の正本は issue + open PR、§レーンの連絡規律）。
 #
 # 判定は「指揮台にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
 # path の慣習では見ない — 慣習の外に置かれた worktree が main checkout と区別
@@ -299,7 +299,7 @@ is_single_simple_command() {
 #
 # 見ているのは **worktree の構造** であって branch ではない。主 clone で feature
 # branch を直接 checkout していても「指揮台」と判定する。これは意図的で、
-# その状態は `.claude/rules/workflow.md` §main checkout の役割 が既に禁じている
+# その状態は `AGENTS.md §PR / git 運用` §main checkout の役割 が既に禁じている
 # 別の規律違反であり、このガードの担当範囲ではない。
 if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
   # 「指揮台だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /
@@ -310,7 +310,7 @@ if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
     guard_is_main_checkout=1
   fi
   if [ "$guard_is_main_checkout" -ne 1 ]; then
-    echo "BLOCKED: チップ起票（spawn_task）は指揮台セッションの専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) 指揮台へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（.claude/rules/orchestration.md §レーンの連絡規律）" >&2
+    echo "BLOCKED: チップ起票（spawn_task）は指揮台セッションの専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) 指揮台へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）" >&2
     exit 2
   fi
 fi
@@ -376,7 +376,7 @@ conforming_env_file_paths() {
 if [ "$TOOL_NAME" = "Bash" ]; then
   # night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の
   # 時だけ有効になる allowlist。denylist ではなく allowlist にするのは、迂回形の
-  # 数え上げが尽きないため（.claude/rules/workflow.md §同型指摘の打ち切り
+  # 数え上げが尽きないため（AGENTS.md §PR / git 運用 §同型指摘の打ち切り
   # 「denylist をやめて allowlist にする」）。env var が無いセッション（通常の
   # 全レーン）には一切影響しない。
   #
@@ -570,7 +570,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   #     （2026-08-24, #2359）---
   #
   # 「危険なシェイプの列挙」（他 worktree 名を数え上げる等）にはしない
-  # （.claude/rules/workflow.md §同型指摘の打ち切り「denylist をやめて
+  # （AGENTS.md §PR / git 運用 §同型指摘の打ち切り「denylist をやめて
   # allowlist にする」、push 前反証レビュー相当の指摘: `rm -rf $VAR` /
   # `rm -rf ~/...` / `rm -rf ../lane-b` が列挙をすり抜ける）。
   # worktree 内で完結する日常的なキャッシュ削除（`rm -rf node_modules` /
@@ -681,9 +681,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
     # （rg -- '--env-file' のような自己検索を含む）。「閉じ引用符なら除外する」類の
     # 例外は置かない — 同型の例外（path らしくない token は無視する）が過去 2 回
     # 穴になっている。名前で検索する時は leading dash を外す
-    # （rg env-file .claude/hooks/ は通る）。
+    # （rg env-file scripts/hooks/ は通る）。
     if ! env_file_mentions_conform "$scanned"; then
-      echo "BLOCKED: op run --env-file に渡してよいのは通常の local dev の env-file だけです（許可形以外の言及を検出）。別名や別ディレクトリへ複製した env-file 経由で production credential を解決する迂回を塞ぐためで、必要なら User に実行を依頼してください。名前を検索したいだけなら leading dash を外してください（例: rg env-file .claude/hooks/）" >&2
+      echo "BLOCKED: op run --env-file に渡してよいのは通常の local dev の env-file だけです（許可形以外の言及を検出）。別名や別ディレクトリへ複製した env-file 経由で production credential を解決する迂回を塞ぐためで、必要なら User に実行を依頼してください。名前を検索したいだけなら leading dash を外してください（例: rg env-file scripts/hooks/）" >&2
       exit 2
     fi
   done

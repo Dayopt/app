@@ -1,6 +1,11 @@
+---
+name: skill-design
+description: 新規 project skill（`.claude/skills/`）を作成する時、既存 skill の description・When to Use・NOT 条件を改修する時に発動。Dayopt 固有の 6 類型（作成系/予防系/運用系/副次トリガー型/明示発動型/ライフサイクル型）、description の字数・構造規約、When to Use/NOT の記法、skill 間・skill-AGENTS.md 間の境界設計原則を適用する。skill の中身（手順・コマンド）の実装作業そのものでは発動しない。
+---
+
 # Skill 設計ルール
 
-Dayopt の `.claude/skills/` 配下に置く project skill を設計する際の恒常ルール。description と `SKILL.md` 本体の書式、skill 間の境界、skill 層と rules 層の境界を定義する。
+Dayopt の `.claude/skills/` 配下に置く project skill を設計する際の恒常ルール。description と `SKILL.md` 本体の書式、skill 間の境界、skill 層と AGENTS.md 層の境界を定義する。
 
 skill は Claude Code の `Skill` tool から invoke される仕組み上、**description が invocation 判断の主戦場、本文は invoke 後の行動強化**という役割分担を前提にする。
 
@@ -14,10 +19,10 @@ project skill は以下 6 類型のいずれかに属する。類型は descript
 | ---------------- | ---------------------------------------------- | ----------------------------- | ------------ | --------------------------------------------------------------------- |
 | 作成系           | 新規ファイル / 構造の生成が主目的              | 明示的な作成意図 + コード変化 | 5-6          | `storybook` / `trpc-router-creating` / `store-creating`               |
 | 予防系           | 実装後の漏れ検出・品質担保                     | コード変化 + 診断             | 5-6          | `security` / `test` / `optimistic-update` / `i18n` / `error-handling` |
-| 運用系           | 複数軸（ファイル / 設定 / 環境）を跨ぐ運用支援 | 特定ファイル/設定変更         | 6（250字枠） | `supabase`                                                            |
+| 運用系           | 複数軸（ファイル / 設定 / 環境）を跨ぐ運用支援 | 特定ファイル/設定変更         | 6（250字枠） | `supabase` / `mcp-usage`                                              |
 | 副次トリガー型   | コード変化ではなく上位イベント確定がトリガー   | 上位イベント確定後            | 7            | `docs-writing`                                                        |
 | 明示発動型       | ユーザーの explicit な意図のみを契機           | 明示的な意図発話              | 4            | `releasing`                                                           |
-| ライフサイクル型 | パイプラインの各ステージが発動契機             | パイプライン進行              | 8            | 現在該当なし（旧 `eagle-dayopt`、2026-07-23 撤去）                    |
+| ライフサイクル型 | パイプラインの各ステージが発動契機             | パイプライン進行              | 8            | 現在該当なし                                                          |
 
 「要素数」は When to Use の bullet 総数（実装起点 + 診断起点）。類型ごとの目安であり、hard cap ではなく soft guidance。
 
@@ -110,12 +115,12 @@ NOT 条件は「**invoke しそうに見えて実は不要**」なケースに�
 
 NOT 条件が「本来この領域を担当する他の箇所」を指す場合、redirect 先を明記する。記法は redirect 先の種類で分ける:
 
-| Redirect 先                   | 記法                                           | 例                                                            |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`               |
-| `CLAUDE.md` / rules/ のルール | `(CLAUDE.md の {rule-name} ルールに従う)`      | `(CLAUDE.md の design-system ルールに従う、ロジック変更なし)` |
-| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                               |
-| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）`  |
+| Redirect 先                   | 記法                                           | 例                                                             |
+| ----------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| 他の skill                    | `(skill-name skill の領域)` 括弧明記           | `(storybook skill の視覚検証領域、test 対象外)`                |
+| AGENTS.md の判断層・不変条件  | `(AGENTS.md の {節名} に従う)`                 | `(AGENTS.md の semantic token ルールに従う、ロジック変更なし)` |
+| 自動生成 artifact             | `(XX 後の自動反映)` など artifact の由来を明記 | `(types:generate 後の自動反映)`                                |
+| 自然な境界（redirect 先なし） | 括弧省略                                       | `単一 component 内で完結する local state（useState で十分）`   |
 
 ### 4.3 明示発動型の NOT（特例）
 
@@ -146,15 +151,15 @@ skill が他 skill の領域に触れる場合、skill 名を明示的に書く�
 
 例: `docs-writing` の When to Use に `docs-audit skill から docs gap / 鮮度低下のフィードバックを受けた時` と記述。skill 間の明示的 handoff は skill routing の中で最も強い signal。
 
-### 5.2 Skill 層と rules 層の境界
+### 5.2 Skill 層と AGENTS.md 層の境界
 
-NOT 条件が他 skill の領域ではなく `CLAUDE.md` / `.claude/rules/` 配下のルールに属する場合、rules 参照記法を使う:
+NOT 条件が他 skill の領域ではなく `AGENTS.md` が定める判断層・不変条件に属する場合、AGENTS.md 参照記法を使う:
 
 ```
-(CLAUDE.md の {rule-name} ルールに従う、{補足})
+(AGENTS.md の {節名} に従う、{補足})
 ```
 
-これにより「なぜ X skill を作らないか」（= 既存の rule で十分だから）が既存 skill の NOT から self-documenting になる。将来「X skill を作ろうか」と考えた時に、skill 層に持ち上げなかった判断根拠を再確認できる。
+これにより「なぜ X skill を作らないか」（= 既存の AGENTS.md 記述で十分だから）が既存 skill の NOT から self-documenting になる。将来「X skill を作ろうか」と考えた時に、skill 層に持ち上げなかった判断根拠を再確認できる。
 
 ### 5.3 自動生成 artifact の扱い
 
@@ -181,26 +186,14 @@ description と When to Use は「**いつ invoke するか**」の純粋リス�
 
 **project skill の description と本文は、repo に commit される情報のみで self-contained でなければならない。**
 
-- 参照可能: 同一 repo 内のファイル（`CLAUDE.md`, 他 skill docs, `.claude/rules/`, コード）、公開 URL
+- 参照可能: 同一 repo 内のファイル（`AGENTS.md`, 他 skill docs, コード）、公開 URL
 - 参照不可: 個人メモリ（`~/.claude/projects/.../memory/`）、user-global skill（`~/.claude/skills/`）、個人設定、外部の非公開情報
 
 個人文脈が必要な skill は user-global skills に置く。project / user-global の境界はこの問題を分離するために存在する。solo dev のうちは緩めても動くが、他の dev が repo を clone した瞬間に壊れる skill を作らない。
 
 ---
 
-## 6. 空白領域 flag（未カバー領域）
-
-既存 skill の NOT 条件で「redirect 先がない自然な境界」として記述されているが、将来 skill 化の余地がある領域の記録。
-
-| 領域      | 現状                                                                   | 将来の判断                                                                                      |
-| --------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| URL state | `store-creating` NOT に `(searchParams / useRouter の領域)` として記述 | Dayopt で URL state パターン（`nuqs` 等の library 採用）が増えたら `routing-state` skill を検討 |
-
-新規 skill 追加時は「既存 skill の NOT に redirect 先として既に用意されているか」を確認する。用意されていれば、既存 skill 側の記述はそのまま機能し続ける。
-
----
-
-## 7. 新規 skill 追加時のチェックリスト
+## 6. 新規 skill 追加時のチェックリスト
 
 - [ ] 責務が 6 類型のいずれかに明確に属する（複数類型にまたがる場合は分割を検討）
 - [ ] description が類型別の字数・構造ルールに従う

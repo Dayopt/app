@@ -64,7 +64,7 @@ jobs:
         # fail-open な failure mode）。[extend].useDefault の欠落・typo・
         # allowlist の過度な広さを検出能力の低下として固定する。#2379 で
         # scratch repo を使い手作業で確認した 3 ケースをそのまま script 化
-        # した（`.claude/rules/orchestration.md` §盤面の正本 参照）。
+        # した（`dispatch` skill（旧 orchestration.md、#2479 で再編） §盤面の正本 参照）。
         run: bash scripts/ci/gitleaks-allowlist-canary.sh
 
       # ── docs reminder（PR のみ・warning）────────────────────────────

@@ -9,9 +9,15 @@
  * が定義する 6 分類）:
  *   1. root/apps/packages の package.json script エントリから呼ばれる -> tasks
  *   2. `.github/workflows/` から直接実行される -> ci
- *   3. `.husky/` または `.claude/hooks/` から直接実行される -> hooks
- *   4. `.claude/rules/` / `.claude/skills/` / CLAUDE.md / AGENTS.md が
+ *   3. `.husky/` または `.claude/settings.json` の hooks 設定から直接実行される -> hooks
+ *      （#2479 で hooks 実体が `.claude/hooks/` から `scripts/hooks/` へ移動し、
+ *      呼び出し元は settings.json の command path のみになった。`.claude/hooks/`
+ *      配下に残る言及があれば従来どおり拾うが、判定の主経路は settings.json）
+ *   4. `.claude/skills/` / CLAUDE.md / AGENTS.md が
  *      実行手順として指定する（エージェント直叩き） -> agent
+ *      （#2479 で `.claude/rules/` は全廃し AGENTS.md へ一本化した。walkFiles は
+ *      存在しないディレクトリに対して空配列を返すため、以前の `.claude/rules/`
+ *      判定コードを残していても無害だが、判定の主経路ではなくなった）
  *   5. docs の手順書（runbook）からのみ参照される -> runbook
  *   6. 他 script から import されるだけ（直接実行なし） -> lib
  *   該当なし -> unreferenced
@@ -51,7 +57,9 @@ export interface ReferenceHits {
   workflow: string[];
   husky: string[];
   claudeHook: string[];
-  /** .claude/rules/** + CLAUDE.md + AGENTS.md */
+  /** .claude/settings.json の hooks 設定からの参照（#2479 以降の hooks 実体の主な呼び出し元） */
+  claudeSettings: string[];
+  /** CLAUDE.md + AGENTS.md（#2479 以前は .claude/rules/** も含んでいたが全廃済み） */
   claudeRule: string[];
   claudeSkill: string[];
   docs: string[];
@@ -189,6 +197,7 @@ export interface ScanContext {
   workflowFiles: string[];
   huskyFiles: string[];
   claudeHookFiles: string[];
+  claudeSettingsFiles: string[];
   claudeRuleFiles: string[];
   claudeSkillFiles: string[];
   docsFiles: string[];
@@ -203,10 +212,12 @@ export function buildScanContext(repoRoot: string, scriptsDir = 'scripts'): Scan
     workflowFiles: walkFiles(repoRoot, '.github/workflows'),
     huskyFiles: walkFiles(repoRoot, '.husky'),
     claudeHookFiles: walkFiles(repoRoot, '.claude/hooks'),
-    claudeRuleFiles: [
-      ...walkFiles(repoRoot, '.claude/rules'),
-      ...['CLAUDE.md', 'AGENTS.md'].filter((f) => fs.existsSync(path.join(repoRoot, f))),
-    ],
+    claudeSettingsFiles: fs.existsSync(path.join(repoRoot, '.claude/settings.json'))
+      ? ['.claude/settings.json']
+      : [],
+    claudeRuleFiles: ['CLAUDE.md', 'AGENTS.md'].filter((f) =>
+      fs.existsSync(path.join(repoRoot, f)),
+    ),
     claudeSkillFiles: walkFiles(repoRoot, '.claude/skills'),
     docsFiles: walkFiles(repoRoot, 'docs'),
   };
@@ -222,6 +233,7 @@ export function collectReferenceHits(ctx: ScanContext, relPath: string): Referen
     workflow: scanGroup(ctx.repoRoot, ctx.workflowFiles, relPath, base),
     husky: scanGroup(ctx.repoRoot, ctx.huskyFiles, relPath, base),
     claudeHook: scanGroup(ctx.repoRoot, ctx.claudeHookFiles, relPath, base),
+    claudeSettings: scanGroup(ctx.repoRoot, ctx.claudeSettingsFiles, relPath, base),
     claudeRule: scanGroup(ctx.repoRoot, ctx.claudeRuleFiles, relPath, base),
     claudeSkill: scanGroup(ctx.repoRoot, ctx.claudeSkillFiles, relPath, base),
     docs: scanGroup(ctx.repoRoot, ctx.docsFiles, relPath, base),
@@ -233,7 +245,8 @@ export function collectReferenceHits(ctx: ScanContext, relPath: string): Referen
 export function classifyHits(hits: ReferenceHits): ScriptCategory {
   if (hits.pkg.length > 0) return 'tasks';
   if (hits.workflow.length > 0) return 'ci';
-  if (hits.husky.length > 0 || hits.claudeHook.length > 0) return 'hooks';
+  if (hits.husky.length > 0 || hits.claudeHook.length > 0 || hits.claudeSettings.length > 0)
+    return 'hooks';
   if (hits.claudeRule.length > 0 || hits.claudeSkill.length > 0) return 'agent';
   if (hits.docs.length > 0) return 'runbook';
   if (hits.importedBy.length > 0) return 'lib';
