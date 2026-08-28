@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /**
- * CLAUDE.md Document Reference Validator
+ * CLAUDE.md / AGENTS.md Document Reference Validator
  *
- * Validates all file references in CLAUDE.md files to ensure they exist.
+ * Validates all file references in CLAUDE.md and AGENTS.md files to ensure they exist.
  * Part of Issue #582 Phase 4-1: Document Link Validation Automation
+ *
+ * #2479（AGENTS.md 一本化）以降、root CLAUDE.md は `@AGENTS.md` import のシムのみで
+ * 実質のガイダンスは AGENTS.md 側にある。CLAUDE.md だけを検証すると AGENTS.md 内の
+ * リンク切れを見逃すため、両方を対象にする。
  *
  * Usage: npx tsx scripts/tasks/validate-doc-references.ts
  *
@@ -130,16 +134,20 @@ function validateClaudeFile(filePath: string): ValidationError[] {
  * Main validation function
  */
 async function main(): Promise<void> {
-  console.log(`${colors.cyan}📚 CLAUDE.md Document Reference Validator${colors.reset}\n`);
+  console.log(
+    `${colors.cyan}📚 CLAUDE.md / AGENTS.md Document Reference Validator${colors.reset}\n`,
+  );
 
-  // Find all CLAUDE.md files
-  const claudeFiles = await glob('**/CLAUDE.md', {
+  // Find all CLAUDE.md and AGENTS.md files
+  const claudeFiles = await glob('**/{CLAUDE,AGENTS}.md', {
     cwd: ROOT_DIR,
     ignore: ['node_modules/**', '.next/**', 'dist/**', 'build/**'],
     absolute: true,
   });
 
-  console.log(`${colors.blue}Found ${claudeFiles.length} CLAUDE.md files${colors.reset}\n`);
+  console.log(
+    `${colors.blue}Found ${claudeFiles.length} CLAUDE.md / AGENTS.md files${colors.reset}\n`,
+  );
 
   let totalErrors = 0;
 

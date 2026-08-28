@@ -4,14 +4,14 @@ name: Issue Status Label Cleanup
 # 事故（487件残留、2026-08-27実測）の再発防止（#2440）。close イベントの
 # たびにその issue の status:* prefix ラベルだけを機械的に剥がす。
 #
-# judgment:diverged / judgment:judged は対象外（.claude/rules/orchestration.md
+# judgment:diverged / judgment:judged は対象外（`dispatch` skill（旧 orchestration.md、#2479 で再編）
 # §判断ジャーナル。close済みでもラベルを残す設計）。剥がし判定は
 # scripts/ci/strip-status-labels.mjs の selectStatusLabelsToStrip が
 # status: prefixへの完全一致でのみ行うため、他 prefix には構造的に触れない
 # （契約は scripts/ci/strip-status-labels.test.ts が固定する）。
 #
 # reopen された issue への status ラベル付け直しはこの workflow の対象外
-# （.claude/rules/orchestration.md 起票時の推奨どおり、reopen 理由によって
+# （`dispatch` skill（旧 orchestration.md、#2479 で再編） 起票時の推奨どおり、reopen 理由によって
 # 適切な status が変わるため機械では決められない。手動で付け直す）。
 
 on:

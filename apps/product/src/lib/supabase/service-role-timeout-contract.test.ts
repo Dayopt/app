@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest';
  * 欠落を **3 つの factory で連続検出**した（`lib/oauth-server/db.ts` /
  * `lib/mcp/access-db.ts` / `external-calendar/server/connection-service.ts`）。3 件とも
  * 実際に漏れていた。1 件ずつ潰すのではなく class ごと閉じるためにこの test を置く
- * （`.claude/rules/workflow.md` §同型指摘の打ち切り「点の追加ではなく class ごと閉じる」）。
+ * （`AGENTS.md §PR / git 運用` §同型指摘の打ち切り「点の追加ではなく class ごと閉じる」）。
  *
  * ## 判定は factory の `global.fetch` を見る
  *

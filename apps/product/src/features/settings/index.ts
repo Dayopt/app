@@ -14,7 +14,7 @@
  * - `userSettingsRouter` / `billingRouter` は settings UI からの書き込み入口として
  *   server を同居（billing は launch 後に独立 feature 化を検討）
  *
- * 詳細: `.claude/rules/feature-boundaries.md` の Composition Feature セクション
+ * 詳細: AGENTS.md / `pr-cross-review` skill の Composition Feature セクション
  */
 
 // =============================================================================

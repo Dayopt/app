@@ -37,7 +37,7 @@
 
 ルート直下の `strategy.md` と `state.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う（docs-guard の `ROOT_STOCK_FILES`）。
 
-`strategy.md` / `state.md` / 日次盤面 issue は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは日次盤面 issue（`type:board`）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に盤面が動くたび古くなる（2026-08-20 に廃止した STATE.md と同じ失敗）。運用は `.claude/rules/orchestration.md` §メタ把握（User + Fable） が正本。
+`strategy.md` / `state.md` / 日次盤面 issue は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは日次盤面 issue（`type:board`）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に盤面が動くたび古くなる（2026-08-20 に廃止した STATE.md と同じ失敗）。運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） が正本。
 
 ## 現在・履歴
 
@@ -62,7 +62,7 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 
 各ドメイン直下の `log/YYYY-MM-DD-slug.md`（frozen frontmatter contract）は 2026-08-28（#2475）に全廃した。過去分は移設・蒸留せず、正本は Git 履歴と merged PR に任せる。
 
-意思決定は [`decisions.md`](./decisions.md) 1 ファイルへ集約する。append-only（`---` 区切りより下のエントリ領域は追記のみ、`pnpm docs:check` が機械的に強制）で、書式・タグ語彙は同ファイルのヘッダが正本（ここでは複製しない）。決定したら `decisions.md` へ 1 行追記し、該当ストック（`state.md` / rules / 該当 docs）の編集を同じ変更に含める。
+意思決定は [`decisions.md`](./decisions.md) 1 ファイルへ集約する。append-only（`---` 区切りより下のエントリ領域は追記のみ、`pnpm docs:check` が機械的に強制）で、書式・タグ語彙は同ファイルのヘッダが正本（ここでは複製しない）。決定したら `decisions.md` へ 1 行追記し、該当ストック（`state.md` / `AGENTS.md` / 該当 docs）の編集を同じ変更に含める。
 
 調査・feedback・incidentなど 1 回きりの記録は GitHub issue として起票する（`dispatch` skill の既存ラベル体系に従う）。
 
@@ -82,7 +82,7 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 | UI / code用語                  | `product/glossary.md`                                                                |
 | 訴求・コピー                   | `business/messaging.md`（UI 文言は `product/copywriting.md`）                        |
 | 全体 architecture / state flow | `engineering/architecture.md`                                                        |
-| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`                                    |
+| coding / API / frontend 規約   | `engineering/conventions*.md` と `AGENTS.md`                                         |
 | 不可解な失敗の切り分け手順     | `engineering/diagnostics.md`                                                         |
 | env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`                                      |
 | 障害対応・release              | `operations/runbook.md`                                                              |

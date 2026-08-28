@@ -7,7 +7,11 @@ maxTurns: 20
 
 # PR クロスレビュー スキル
 
-指揮台が merge 前に実行する内製クロスレビューの標準手順。外部レビュー（Codex）廃止（2026-08-13、`AGENTS.md` 冒頭の凍結注記参照）に伴い、`.claude/rules/workflow.md` §レビュー指摘の必須解決 が要求するレビュー痕跡はこのスキルが生成する `[internal-review]` marker 付きコメント + inline review comment で満たす。
+指揮台が merge 前に実行する内製クロスレビューの標準手順。外部レビュー（Codex）廃止（2026-08-13、`AGENTS.md` 冒頭の凍結注記参照）に伴い、`AGENTS.md §PR / git 運用` §レビュー指摘の必須解決 が要求するレビュー痕跡はこのスキルが生成する `[internal-review]` marker 付きコメント + inline review comment で満たす。
+
+**このレビューが必須になる PR は保護対象 path / `review:full` ラベルに該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化）。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
+
+**常設の subagent 定義（`.claude/agents/*.md`）は 2026-08 に全廃した（#2478）。** risk-reviewer / behavior-verifier / architecture-guard の persona・read-only 契約・review scope は、`.claude/skills/pr-cross-review/cross-review-workflow.js` の `ROLE_PROMPTS` へ inline prompt として畳み込んである（下記手順 3 参照）。role 名は `Workflow` 呼び出し時のラベル・schema 選択キーとしてのみ残り、`Agent` tool の `subagent_type` としては存在しない。
 
 ## When to Use
 
@@ -15,18 +19,18 @@ maxTurns: 20
 
 **上位イベント起点:**
 
-- レーンが軽量 CI green を確認し merge 可能報告を指揮台へ送った時（`.claude/rules/orchestration.md` §指揮台の merge シーケンス）
-- 複数 issue / 複数 Step を束ねた PR が merge 前クロスレビュー必須の対象になった時（`.claude/rules/workflow.md` §束ねた PR のレビュー）
+- レーンが軽量 CI green を確認し merge 可能報告を指揮台へ送った時（`dispatch skill（旧 orchestration.md、#2479 で再編）` §指揮台の merge シーケンス）
+- 複数 issue / 複数 Step を束ねた PR が merge 前クロスレビュー必須の対象になった時（`AGENTS.md §PR / git 運用` §束ねた PR のレビュー）
 
 **診断起点:**
 
-- `.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件（auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` / 現在挙動・公開契約・state transition・query cache・temporal contract・bug regression / cross-feature import・barrel・Composition Layer・file move・依存方向）に該当する diff を merge 前に見つけた時
+- `AGENTS.md §委任・報告の作法` §Read-only delegation の自動委任条件（auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` / 現在挙動・公開契約・state transition・query cache・temporal contract・bug regression / cross-feature import・barrel・Composition Layer・file move・依存方向）に該当する diff を merge 前に見つけた時
 
 ## When NOT to Use
 
-- push 前の自己反証レビュー（`.claude/rules/workflow.md` §push 前の敵対的セルフレビュー の領域。レーン自身が担当し、subagent も同じだが実行主体と目的が異なる — このスキルは merge 前の指揮台側レビュー）
+- push 前の自己反証レビュー（`AGENTS.md §PR / git 運用` §push 前の敵対的セルフレビュー の領域。レーン自身が担当し、subagent も同じだが実行主体と目的が異なる — このスキルは merge 前の指揮台側レビュー）
 - plan 段階のレビュー（`/plan-review` skill の領域）
-- 実装そのもの（write 可能な subagent への委譲は `.claude/rules/ai-behavior.md` §Writer ownership に従う。このスキルは read-only）
+- 実装そのもの（write 可能な subagent への委譲は `AGENTS.md §委任・報告の作法` §Writer ownership に従う。このスキルは read-only）
 
 ## 手順
 
@@ -39,12 +43,12 @@ maxTurns: 20
 
 ### 2. subagent を選ぶ
 
-レーンから push-ready 報告 / レビュー待ち報告に添付された push 前セルフレビューの subagent 生出力（`.claude/rules/lane-protocol.md` §レビュー待ち報告、策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）があれば、まずそれを一次資料として読む。
+レーンから push-ready 報告 / レビュー待ち報告に添付された push 前セルフレビューの subagent 生出力（`AGENTS.md §レーン運用` §レビュー待ち報告、策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）があれば、まずそれを一次資料として読む。
 
-- **自動委任条件に該当する diff**（下記表参照）では、レーン添付の有無に関わらず指揮台の独立実行を維持する（既定不変。`.claude/rules/workflow.md` §内製クロスレビューの実施を要求する gate の「独立性の後退を認識する」と同じ理由 — 同一 agent 系列の自己申告に検証を委ねない）
+- **自動委任条件に該当する diff**（下記表参照）では、レーン添付の有無に関わらず指揮台の独立実行を維持する（既定不変。`AGENTS.md §PR / git 運用` §内製クロスレビューの実施を要求する gate の「独立性の後退を認識する」と同じ理由 — 同一 agent 系列の自己申告に検証を委ねない）
 - **非該当・低リスク diff**（docs-only を含む）では、レーン添付 findings を検証した上で指揮台の独立実行を省略してよい。省略した場合、手順 6 の summary comment の経緯欄に「レーン添付 findings を検証、独立実行省略」と明記する。レーンの添付は自己申告であり指揮台の検証代替ではない（出発点の提供に留まる）ため、「検証した」と書けるのは実際に一次情報（diff・path・symbol）と突き合わせた場合に限る
 
-独立実行するかどうかは、`.claude/rules/ai-behavior.md` §Read-only delegation の自動委任条件表に照らして選ぶ:
+独立実行するかどうかは、`AGENTS.md §委任・報告の作法` §Read-only delegation の自動委任条件表に照らして選ぶ:
 
 - auth / RLS / service role / OAuth / webhook / billing / redirect / migration / `SECURITY DEFINER/INVOKER` → `risk-reviewer`
 - 現在挙動 / 公開契約 / state transition / query cache / temporal contract / bug regression → `behavior-verifier`
@@ -55,7 +59,7 @@ maxTurns: 20
 
 該当する subagent を `Workflow` tool で並列実行する。**素の `Agent` tool は使わない**（StructuredOutput を機構的に強制できず、書き出し停止の再発源だったため。#2227 の prompt 契約適用後も1日5回再発し、#2348 で構造的強制へ移行した）。
 
-指揮台は常に main checkout（repo root）に常駐する（`.claude/rules/orchestration.md` §指揮台セッションの定義）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パスと選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）を渡す:
+指揮台は常に main checkout（repo root）に常駐する（`dispatch skill（旧 orchestration.md、#2479 で再編）` §指揮台セッションの定義）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パスと選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）を渡す:
 
 ```
 Workflow({
@@ -64,16 +68,16 @@ Workflow({
 })
 ```
 
-role ごとの schema・model・tools は `agentType` 経由で各 `.claude/agents/*.md` の frontmatter がそのまま継承される（実測済み: risk-reviewer は opus + Read/Grep/Glob のみ、behavior-verifier は sonnet + Read/Grep/Glob のみ呼び出し、いずれも StructuredOutput 以外の write-capable tool は呼ばれない。#2348 コメント参照）。
+**role ごとの persona・read-only 契約・review scope・model は、`.claude/agents/*.md`（2026-08 に全廃、#2478）の代わりに `cross-review-workflow.js` の `ROLE_PROMPTS` / `MODEL_BY_ROLE` へ inline で持つ。** `agentType` は使わず、`agent()` 呼び出しに `model` と inline prompt（`ROLE_PROMPTS[role]` + diff 指示）だけを渡す。**既知のトレードオフ**: 旧 `.claude/agents/*.md` の `tools: Read, Grep, Glob` / `permissionMode: plan` は harness レベルの技術的強制だったが、agentType を撤去したことでこの技術的強制は失われ、read-only の担保は inline prompt 内の明示的な文章指示（+ 通常の permission gate）に後退している。これは #2478 の意図的な設計判断で、cross-review-workflow.js 冒頭のコメントに同じ注記がある。
 
 script は各 role について `{ role, status: 'ok' | 'empty' | 'error', result }` の配列を返す。`status` が `ok` 以外の role が 1 件でもあれば、手順 6 の marker 生成は機械的に拒否される（`--review-result` 参照）。その場合 Main は次のいずれかを選ぶ:
 
 - 同一 script を再実行する（固定の自動リトライは行わない — 同一条件で同一失敗を再現するだけの可能性があり、1 週間の効果測定の解像度も下げるため、都度 Main が判断する）
-- 該当 role だけ Agent tool 経由（旧 text contract、`.claude/agents/<role>.md` の Output format）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）。**text-fallback は `coverage` を機械的に追跡できない**（text contract は schema を強制しないため）。partial coverage の safeguard（手順6）は text-fallback role には適用されない
+- 該当 role だけ素の `Agent` tool 経由（`subagent_type` は指定しない汎用 agent に、`cross-review-workflow.js` の `ROLE_PROMPTS[role]` をそのまま prompt として渡し、text 出力を求める）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）。**text-fallback は `coverage` を機械的に追跡できない**（text contract は schema を強制しないため）。partial coverage の safeguard（手順6）は text-fallback role には適用されない
 
 `status: 'ok'` の各 role は `result.coverage`（`'complete' | 'partial'`）も持つ（#2417）。budget 逼迫で観点を打ち切った role は `'partial'` を自己申告する契約で、`status !== 'ok'` とは別の軸として扱う — schema 検証自体は通っているが浅い可能性がある、という意味。手順 6 の `--partial-coverage-note` 必須化がこの信号を marker の gate へ橋渡しする。
 
-Workflow はタスク通知でバックグラウンド完了する。目安 30 分（`.claude/rules/orchestration.md` §可逆checkpointにはタイムアウト既定を設ける と同じ既定値）通知が届かなければ、セッション状態を確認した上で対処する。
+Workflow はタスク通知でバックグラウンド完了する。目安 30 分（`dispatch skill（旧 orchestration.md、#2479 で再編）` §可逆checkpointにはタイムアウト既定を設ける と同じ既定値）通知が届かなければ、セッション状態を確認した上で対処する。
 
 ### 4. 指摘を分類する
 
@@ -85,12 +89,12 @@ P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、�
 
 ### 5. P1/P2 は review comment として投稿する（thread を生成させる）
 
-**`[internal-review]` marker 付きの単一 issue コメントだけでは、既存の thread-resolve gate（`scripts/tasks/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`.claude/rules/workflow.md` §レビュー指摘の必須解決）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
+**`[internal-review]` marker 付きの単一 issue コメントだけでは、既存の thread-resolve gate（`scripts/tasks/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`AGENTS.md §PR / git 運用` §レビュー指摘の必須解決）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
 
 - P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
 - diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
 - PR 作成者本人（指揮台と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、指揮台へ状況を報告してから手動で対応する
-- 投稿後は `.claude/rules/workflow.md` §レビュー指摘の必須解決 の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
+- 投稿後は `AGENTS.md §PR / git 運用` §レビュー指摘の必須解決 の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
 
 ### 6. summary コメントを投稿する（marker、gate 証跡）
 
@@ -130,7 +134,7 @@ head SHA は script が `gh pr view --json headRefOid` で実測する（引数�
 
 ### 7. 収束後、確定伝達する
 
-指摘の 3 択対応が済み thread が全件 resolve されたら、`.claude/rules/orchestration.md` §指揮台の merge シーケンス の「確定伝達」手順でレーンへ通知する。確定伝達には「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも含めて宣言する。
+指摘の 3 択対応が済み thread が全件 resolve されたら、`dispatch skill（旧 orchestration.md、#2479 で再編）` §指揮台の merge シーケンス の「確定伝達」手順でレーンへ通知する。確定伝達には「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも含めて宣言する。
 
 ### 8. HEAD が動いたら delta re-review する
 
@@ -165,11 +169,11 @@ agent: docs-only
 
 ## 参考ファイル
 
-| ファイル                                                    | 用途                                                                 |
-| ----------------------------------------------------------- | -------------------------------------------------------------------- |
-| `.claude/rules/ai-behavior.md`                              | subagent 選定基準、model tiering                                     |
-| `.claude/rules/workflow.md` §レビュー指摘の必須解決         | 指摘後の 3 択・resolve 運用                                          |
-| `.claude/rules/orchestration.md` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達                           |
-| `AGENTS.md`                                                 | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                |
-| `scripts/tasks/finish-branch.sh`                            | `[internal-review]` marker の gate 判定ロジック                      |
-| `scripts/tasks/generate-marker.ts`                          | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |
+| ファイル                                                                         | 用途                                                                 |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `AGENTS.md §委任・報告の作法`                                                    | subagent 選定基準、model tiering                                     |
+| `AGENTS.md §PR / git 運用` §レビュー指摘の必須解決                               | 指摘後の 3 択・resolve 運用                                          |
+| `dispatch skill（旧 orchestration.md、#2479 で再編）` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達                           |
+| `AGENTS.md`                                                                      | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                |
+| `scripts/tasks/finish-branch.sh`                                                 | `[internal-review]` marker の gate 判定ロジック                      |
+| `scripts/tasks/generate-marker.ts`                                               | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |

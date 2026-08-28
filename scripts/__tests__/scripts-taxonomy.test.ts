@@ -73,6 +73,17 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   // 走査しないため、ライブラリとして実在するにもかかわらず無参照判定になる
   // （#2476 Phase C コメントに既知の設計限界として記録済み）。
   'scripts/lib/scripts-taxonomy.ts',
+  // pre-tool-guard-impl.sh: loader（pre-tool-guard.sh、.claude/settings.json 経由で
+  // hooks 判定される）が `dirname "${BASH_SOURCE[0]}"` 相対でこのファイルを実行する
+  // ため、settings.json のテキストには impl のファイル名が直接現れない（admin-*.sh
+  // family と同型のペア構成）。docs/skills からの言及（利用者向けの説明文）で agent
+  // 判定になるが、実際の呼び出し元は隣接する loader のみで hooks/ に揃える必要がある。
+  'scripts/hooks/pre-tool-guard-impl.sh',
+  // protected-path-gate.mjs: impact.mjs（scripts/ci/、同じ --stdin 呼び出し規約）と
+  // 同型で、finish-branch.sh から node 経由で呼ばれる ci unit。skill docs（audit-ai-
+  // config / pr-cross-review）からの言及は利用者向けの説明文であり、実行呼び出しでは
+  // ないため agent 判定になるが、正しい分類は ci（現状維持、#2478）。
+  'scripts/ci/protected-path-gate.mjs',
 ]);
 
 describe('scripts/ 呼ばれ方別 taxonomy', () => {

@@ -33,7 +33,7 @@ interface ActivityEstimationFactors {
 }
 
 export function useTagEstimationFactors(): ActivityEstimationFactors {
-  // 意図的に isError をハンドリングしない（`.claude/rules/quality.md` の
+  // 意図的に isError をハンドリングしない（`test` skill の
   // 「UI を描画する全 useQuery は ErrorState 必須」に対する明示的な例外）。
   // これは受動的なヒントで、取れなかった事実をユーザーに見せる価値が無く、
   // ErrorState を出すと ADR-026 の「静かに教える」トーンを壊す。

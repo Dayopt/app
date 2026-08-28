@@ -8,7 +8,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * 自動スキップするための判定 script（#2432）。
  *
  * `.husky/pre-push` は「main への直接 push を防ぐ唯一の機構」かつ「push 前の
- * 敵対的セルフレビューの唯一のゲート」（`.claude/rules/workflow.md`
+ * 敵対的セルフレビューの唯一のゲート」（`AGENTS.md §PR / git 運用`
  * §Pause point）。誤って skip 側に倒れると、本来 DO-CONFIRM が出るべき push で
  * 出なくなり、しかも「静かに通った」ため気づかれにくい。そのため本 script の
  * 判定は**あらゆる不確実性を「skip しない」（no-skip）側に倒す**設計とする

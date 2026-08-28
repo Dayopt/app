@@ -17,7 +17,7 @@ describe('parseMultiDayViewParam', () => {
 // parseCalendarViewParam / CalendarNavigationContext.tsx の isValidViewType /
 // proxy.ts はいずれも @/lib/calendar-view-tokens の isValidCalendarViewToken を単一定義
 // として使う（旧実装は3箇所に判定ロジックを複製していた。
-// `.claude/rules/workflow.md` §同型指摘の打ち切り に従い統一）。
+// `AGENTS.md §PR / git 運用` §同型指摘の打ち切り に従い統一）。
 describe('@/lib/calendar-view-tokens と parseCalendarViewParam の整合性', () => {
   it.each(['day', 'week', '2day', '3day', '4day', '5day', '6day', '7day'])(
     '%s は両者とも受理する',

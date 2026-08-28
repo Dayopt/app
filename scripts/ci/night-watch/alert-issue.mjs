@@ -86,7 +86,7 @@ export const CHECK_DEFINITIONS = {
     // （1Password が使える環境）で手で再現する想定のため、意図的に op run
     // 形のまま保持する（Cloud Environment の env 直読み形が Routine の
     // 実行時の既定だが、朝レーンが再現する時は 1Password 経由の方が自然）。
-    // guard allowlist（.claude/hooks/pre-tool-guard-impl.sh）は両形とも
+    // guard allowlist（scripts/hooks/pre-tool-guard-impl.sh）は両形とも
     // 許可しており、この command 文字列自体は allowlist 判定には関与しない
     // （こちらは issue 本文の表示用、SKILL.md §Step2 が実行時に叩く固定形の
     // 正本）。

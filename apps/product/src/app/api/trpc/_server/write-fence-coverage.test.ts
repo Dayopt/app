@@ -23,7 +23,7 @@ import { appRouter } from '@/app/api/trpc/_server/app-router';
  * `.subscription()` procedure が追加されると auth meta が無くてもこの集計から黙って
  * 外れる（本対応前の「query が網の外」だった穴と同型。risk-reviewer 指摘、2026-08-20）。
  * 「未知の type を検出したら赤」という点の追加ではなく、**leaf procedure は type を
- * 問わず常に fence 対象**という不変条件そのものを守る形にする（`.claude/rules/workflow.md`
+ * 問わず常に fence 対象**という不変条件そのものを守る形にする（`AGENTS.md §PR / git 運用`
  * §同型指摘の打ち切り の「点の追加ではなく class ごと閉じる」に倣う）。
  */
 

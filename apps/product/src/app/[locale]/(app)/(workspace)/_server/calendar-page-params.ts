@@ -27,7 +27,7 @@ export function parseMultiDayViewParam(nday: string): MultiDayViewType | null {
  * 値が指定されていて day/week/2〜7day のいずれにも一致しない場合のみ null を返し、
  * 呼び出し側で 404 にする（範囲外は redirect せず 404 のまま、という現行 [nday] の
  * 挙動を維持するため）。トークン集合は proxy.ts（Edge runtime）と共有する
- * `@/lib/calendar-view-tokens` が正本（`.claude/rules/workflow.md` §同型指摘の打ち切り
+ * `@/lib/calendar-view-tokens` が正本（`AGENTS.md §PR / git 運用` §同型指摘の打ち切り
  * に従い、旧実装の定数複製 + parity test を単一定義への統一へ置き換えた）。
  */
 export function parseCalendarViewParam(view: string | undefined): CalendarViewType | null {

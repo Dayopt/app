@@ -6,7 +6,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 Dayopt のアイコン運用ルール。lucide-react を単一セットとして扱い、概念 → アイコンの対応を一意に決める。視覚シグナルが濁らないよう、同一概念に複数アイコンを混在させない。
 
-> このドキュメントは「どのアイコンをいつ使うか」の意味論ルール。サイズ / 色 / spacing の token ルールは `.claude/rules/design-system.md` を参照。視覚参照は `Foundations / Icons / ByConvention` Story を併用。
+> このドキュメントは「どのアイコンをいつ使うか」の意味論ルール。サイズ / 色 / spacing の token ルールは `storybook` skillを参照。視覚参照は`Foundations / Icons / ByConvention` Story を併用。
 >
 > 本ファイルが唯一の source of truth。編集は `packages/foundations/src/tokens/IconConventions.mdx` のみ。
 
@@ -16,7 +16,7 @@ Dayopt のアイコン運用ルール。lucide-react を単一セットとして
 
 - **アイコンセット**: [lucide-react](https://lucide.dev/) で統一
 - **stroke-width**: `1.75`（ダーク背景前提で視認性を確保。lucide デフォルトの 2 よりやや細く、1.5 より太く）
-- **サイズ**: `.claude/rules/design-system.md` の Icon Size 規約に従う
+- **サイズ**: `storybook` skill の Icon Size 規約に従う
   - `size-3.5` (14px): 補助（矢印、`Eye`、`ExternalLink` 等、`text-sm` の横）
   - `size-4` (16px): 標準（ボタン内、`text-base` の横）— **インラインのデフォルト**
   - `size-5` (20px): ボタン / ナビ / 強調
@@ -168,13 +168,13 @@ app コード（`src/app/` / `src/features/` 配下）では suffix なし（`Ch
 - [ ] 既に同概念で使われているアイコンがないか `grep -r "from 'lucide-react'" src` で確認
 - [ ] 意味論ルールのどこに属するか判断し、新概念ならこのドキュメント（`packages/foundations/src/tokens/IconConventions.mdx`）に追記
 - [ ] Storybook の `Foundations / Icons / ByConvention` Story に追加
-- [ ] `.claude/rules/design-system.md` の Icon Size 規約に準拠するサイズで使っているか
+- [ ] `storybook` skill の Icon Size 規約に準拠するサイズで使っているか
 
 ---
 
 ## 参考
 
 - Lucide Icons 公式: https://lucide.dev/icons/
-- デザインシステム全体: `.claude/rules/design-system.md`
-- Copywriting（「地図」メタファー等）: `.claude/rules/copywriting.md`
+- デザインシステム全体: `storybook` skill
+- Copywriting（「地図」メタファー等）: `docs/product/copywriting.md`
 - 視覚参照: `Foundations / Icons / ByConvention` Story

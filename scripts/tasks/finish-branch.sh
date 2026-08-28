@@ -12,7 +12,7 @@
 #   ④ リモート branch 消滅（fetch --prune で確認）
 #   ⑤ ローカル main ref が origin/main と一致
 #
-# 詳細な設計と手動フォールバックは .claude/rules/workflow.md §Worktree 運用 を参照。
+# 詳細な設計と手動フォールバックは AGENTS.md §PR / git 運用 §Worktree 運用 を参照。
 
 set -euo pipefail
 
@@ -107,7 +107,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,changedFiles 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,changedFiles,labels 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -324,7 +324,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # **product / web の build は Vercel でしか検証されない。** Actions 側の無条件
   # build は 2026-08-03 に撤去し、Next build と bundle 検査（secret 混入 /
   # JS budget / CSS budget）は `apps/product/vercel.json` の buildCommand へ移した
-  # （`.claude/rules/workflow.md` §build と bundle 検査は Vercel 側で走る）。
+  # （`AGENTS.md §PR / git 運用` §build と bundle 検査は Vercel 側で走る）。
   #
   # このため affected な project の context が **付かなかった場合**、上の「成功 1 件
   # 以上」は Static / Unit / Docs Guard だけで満たされ、build が一度も走らないまま
@@ -503,7 +503,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # レビュー（内製クロスレビュー等）の指摘 thread が未解決のまま merge できると、指摘の
   # 黙殺が構造的に可能になる。「解決」は 3 択のいずれか: ① fix を積んで resolve、
   # ② 反論・根拠を reply して resolve、③ 別 issue へ切り出し番号を reply して
-  # resolve（`.claude/rules/workflow.md` §レビュー指摘の必須解決）。
+  # resolve（`AGENTS.md §PR / git 運用` §レビュー指摘の必須解決）。
   #
   # thread の resolve 状態は GraphQL の reviewThreads にしか無い（REST には出ない）。
   # 取得に失敗した場合は「未確認のまま通す」ではなく停止に倒す（fail closed）。
@@ -653,7 +653,73 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   info "未解決のレビュー thread はありません。"
 
-  # ── 内製クロスレビューが実際に回ったことを要求する ──────────────────────
+  # ── 保護対象 path / review:full ラベルの判定（gate のテンポ連動化、#2478） ──
+  #
+  # 全 PR 一律の内製クロスレビュー要求をやめ、レビューの重さを「保護対象 path に
+  # 触れるか」で条件化する。保護対象に触れない可逆な変更は、CI green + 既存
+  # review thread の resolve（上の thread gate）だけで merge できるようにし、
+  # 高リスク path（auth / OAuth / 決済 / migration / timezone 系不変条件 /
+  # ガードレール自身等）だけへ `[internal-review]` marker gate を必須のままにする。
+  #
+  # 判定は scripts/ci/protected-path-gate.mjs（正本）へ委譲する。入力は
+  # Impact Resolver（§影響範囲を判定）で既に取得済みの $CHANGED_FILES を再利用し、
+  # 追加の API 呼び出しはしない。$CHANGED_FILES が空（取得失敗）の場合は
+  # Impact Resolver と同じ理由（判定不能 = 検証漏れの温床）で fail closed に倒す。
+  # node 不在時も同様に fail closed（このスクリプト自体を起動できないため、
+  # ここは呼び出し側で判定する）。
+  step "保護対象 path / レビュー要求ラベルを判定"
+
+  PROTECTED_GATE_SCRIPT="$SCRIPT_DIR/../ci/protected-path-gate.mjs"
+  REVIEW_GATE_REQUIRED="false"
+  REVIEW_GATE_REASONS=()
+
+  if [[ -z "$CHANGED_FILES" ]]; then
+    REVIEW_GATE_REQUIRED="true"
+    REVIEW_GATE_REASONS+=("changed files unavailable, fail closed")
+  elif ! command -v node >/dev/null 2>&1; then
+    REVIEW_GATE_REQUIRED="true"
+    REVIEW_GATE_REASONS+=("node unavailable, fail closed")
+  else
+    PROTECTED_GATE_JSON="$(printf '%s\n' "$CHANGED_FILES" | node "$PROTECTED_GATE_SCRIPT" --stdin 2>/dev/null || true)"
+    if [[ -z "$PROTECTED_GATE_JSON" ]]; then
+      REVIEW_GATE_REQUIRED="true"
+      REVIEW_GATE_REASONS+=("protected-path-gate.mjs failed, fail closed")
+    else
+      GATE_JSON_REQUIRED="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.required' 2>/dev/null || echo "")"
+      case "$GATE_JSON_REQUIRED" in
+        true)
+          REVIEW_GATE_REQUIRED="true"
+          GATE_JSON_REASON="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.reason // "matched protected path"' 2>/dev/null || echo "matched protected path")"
+          REVIEW_GATE_REASONS+=("matched ${GATE_JSON_REASON}")
+          ;;
+        false)
+          : # required なし。REVIEW_GATE_REQUIRED は既定値 false のまま
+          ;;
+        *)
+          REVIEW_GATE_REQUIRED="true"
+          REVIEW_GATE_REASONS+=("protected-path-gate.mjs returned unparseable output, fail closed")
+          ;;
+      esac
+    fi
+  fi
+
+  # review:full ラベルは保護対象 path に該当しない PR でも明示的にレビューを
+  # 要求する手動指定。`.labels` は `gh pr view --json labels` の配列（各要素に
+  # `.name`）。`.labels[]?` は field 欠落 / null を静かに空扱いにする。
+  HAS_REVIEW_FULL_LABEL="$(printf '%s' "$PR_JSON" | jq -r '([.labels[]?.name // ""] | index("review:full")) != null' 2>/dev/null || echo false)"
+  if [[ "$HAS_REVIEW_FULL_LABEL" == "true" ]]; then
+    REVIEW_GATE_REQUIRED="true"
+    REVIEW_GATE_REASONS+=("label: review:full")
+  fi
+
+  if [[ "$REVIEW_GATE_REQUIRED" == "true" ]]; then
+    REVIEW_GATE_REASON_JOINED="$(IFS=', '; echo "${REVIEW_GATE_REASONS[*]}")"
+    echo "review gate: required (${REVIEW_GATE_REASON_JOINED})" >&2
+  else
+    echo "review gate: not required" >&2
+  fi
+
+  # ── 内製クロスレビューが実際に回ったことを要求する（保護対象 path / review:full 該当時のみ） ──
   #
   # 上の thread gate は「**存在する** 指摘 thread が resolve 済みか」しか見ない。
   # thread が 0 件の PR は素通りするため、「レビューされて指摘ゼロだった PR」と
@@ -668,6 +734,13 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # pr-cross-review スキルが inline review comment として投稿し、上の thread gate
   # で resolve を強制される。ここで見る `[internal-review]` comment は「実施した
   # という証跡」のみを担う、二層構造の 1 層目。
+  #
+  # **このブロック全体は $REVIEW_GATE_REQUIRED == true の時だけ実行する。**
+  # 保護対象 path に触れず review:full ラベルも無い PR は、marker gate を
+  # 求めずここをスキップする（thread gate はどちらの場合も既に通過済み）。
+  if [[ "$REVIEW_GATE_REQUIRED" != "true" ]]; then
+    info "保護対象 path に該当せず review:full ラベルも無いため、内製クロスレビュー marker gate をスキップします。"
+  else
   step "内製クロスレビューの痕跡を確認"
 
   INTERNAL_REVIEW_MARKER="[internal-review]"
@@ -753,7 +826,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     error "指揮台が pr-cross-review スキルでクロスレビューを実行し、1 行目を"
     error "「${INTERNAL_REVIEW_MARKER}」で始めるコメントを投稿してから再実行してください。"
     error "コメントには \`head: <現在の HEAD SHA>\` 行と \`agent: <実行 agent 名>\` 行が必要です。"
-    error "（.claude/skills/pr-cross-review/SKILL.md、.claude/rules/workflow.md §内製クロスレビューの実施を要求する gate）"
+    error "（.claude/skills/pr-cross-review/SKILL.md、AGENTS.md §PR / git 運用 §内製クロスレビューの実施を要求する gate）"
 
     # 5 点判定のどの条件で落ちたかを、段階的に絞り込んだ step1〜step5 の候補数
     # から特定する。最初に 0 になった step が原因（複数条件が同時に不足して
@@ -836,6 +909,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   INTERNAL_REVIEW_AGENTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '(.agents // []) | map(select(. != null and . != "")) | unique | join(", ")' 2>/dev/null || true)"
 
   info "内製クロスレビューの痕跡を確認しました（agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
+  fi # REVIEW_GATE_REQUIRED
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
   # **実行元の worktree を main へ切り替えてから** ローカル branch を削除するため、

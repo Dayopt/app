@@ -6,7 +6,7 @@ import 'server-only';
  * 取得済み rows から画面向けの集計行を組み立てる。DB 非依存。
  * 足し算そのものは `domain/activity-axis-aggregation.ts` の純関数が持ち、
  * ここは snake_case の行を domain の入力へ均し、名前・色を載せて返すだけに留める
- * （`.claude/rules/feature-boundaries.md` の「RPC / DB response transformer は server」）。
+ * （AGENTS.md / `pr-cross-review` skill の「RPC / DB response transformer は server」）。
  *
  * 並び順は actualMinutes の降順にする。`activities.sort_order` を並びの根拠に使わないのは、
  * 分析軸の並びが「量の大きい順」であるべきで、サイドバーの並び順とは別の関心だから。

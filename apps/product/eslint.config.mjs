@@ -388,7 +388,7 @@ const eslintConfig = defineConfig([
   },
 
   // Composition Feature (settings): 他featureへのimportは許可するが、deep importは禁止（barrelのみ）
-  // .claude/rules/feature-boundaries.md の「Composition Feature: settings」参照
+  // AGENTS.md / `pr-cross-review` skill の「Composition Feature: settings」参照
   {
     files: ['src/features/settings/**/*.{ts,tsx}'],
     ignores: ['**/*.stories.{ts,tsx}'],

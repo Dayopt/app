@@ -40,6 +40,7 @@ describe('classifyHits', () => {
         workflow: ['.github/workflows/x.yml'],
         husky: [],
         claudeHook: [],
+        claudeSettings: [],
         claudeRule: [],
         claudeSkill: [],
         docs: [],
@@ -53,6 +54,7 @@ describe('classifyHits', () => {
         workflow: ['.github/workflows/x.yml'],
         husky: ['.husky/pre-push'],
         claudeHook: [],
+        claudeSettings: [],
         claudeRule: [],
         claudeSkill: [],
         docs: [],
@@ -66,7 +68,8 @@ describe('classifyHits', () => {
         workflow: [],
         husky: ['.husky/pre-push'],
         claudeHook: [],
-        claudeRule: ['.claude/rules/workflow.md'],
+        claudeSettings: [],
+        claudeRule: ['.claude/skills/dispatch/SKILL.md'],
         claudeSkill: [],
         docs: [],
         importedBy: [],
@@ -79,7 +82,8 @@ describe('classifyHits', () => {
         workflow: [],
         husky: [],
         claudeHook: [],
-        claudeRule: ['.claude/rules/workflow.md'],
+        claudeSettings: [],
+        claudeRule: ['.claude/skills/dispatch/SKILL.md'],
         docs: ['docs/x.md'],
         claudeSkill: [],
         importedBy: [],
@@ -92,6 +96,7 @@ describe('classifyHits', () => {
         workflow: [],
         husky: [],
         claudeHook: [],
+        claudeSettings: [],
         claudeRule: [],
         claudeSkill: [],
         docs: ['docs/x.md'],
@@ -105,6 +110,7 @@ describe('classifyHits', () => {
         workflow: [],
         husky: [],
         claudeHook: [],
+        claudeSettings: [],
         claudeRule: [],
         claudeSkill: [],
         docs: [],
@@ -118,6 +124,7 @@ describe('classifyHits', () => {
         workflow: [],
         husky: [],
         claudeHook: [],
+        claudeSettings: [],
         claudeRule: [],
         claudeSkill: [],
         docs: [],
@@ -210,6 +217,20 @@ describe('classifyAllScripts (統合)', () => {
 
     const result = classifyAllScripts(root);
     const target = result.find((r) => r.path === 'scripts/ops/pre-push-diff.mjs');
+    expect(target?.category).toBe('hooks');
+  });
+
+  it('.claude/settings.json の hooks 設定からのみ呼ばれる script を hooks 判定する（#2479、hooks 実体の scripts/hooks/ 移動後の主経路）', () => {
+    const root = makeFixtureRepo({
+      'package.json': JSON.stringify({ scripts: {} }),
+      '.claude/settings.json': JSON.stringify({
+        hooks: { SessionStart: [{ hooks: [{ command: 'scripts/hooks/session-start.sh' }] }] },
+      }),
+      'scripts/hooks/session-start.sh': '',
+    });
+
+    const result = classifyAllScripts(root);
+    const target = result.find((r) => r.path === 'scripts/hooks/session-start.sh');
     expect(target?.category).toBe('hooks');
   });
 
