@@ -5,8 +5,8 @@
  *
  * pathname から現在のワークスペースタブを判定し、Sidebar の中身を
  * 出し分ける dispatcher。Sidebar 外殻（Sidebar.tsx）は 1 回だけマウントされ、
- * タブ切替時も再マウントしない（docs/projects/_archive/workspace-shell-restructure/
- * overview.md §5-1・§5-2）。
+ * タブ切替時も再マウントしない（旧 docs/projects/_archive/workspace-shell-restructure/
+ * overview.md §5-1・§5-2、docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  *
  * ワークスペース切替（旧 WorkspaceTabs 行）は Sidebar ヘッダーへ統合済み
  * （`desktop-layout.tsx` が `headerTitle`/`headerTabs` として注入する）。

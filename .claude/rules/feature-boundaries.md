@@ -141,7 +141,7 @@ hub の barrel は「ページから見た public API」のみを export する�
 
 - 歴史的に 1 feature 内に view / filter / navigation / interaction が同居し、相互依存が密で切り分けが困難
 - pre-launch 時点では解体リスクが大きいため、「blast radius は hub 内部に閉じる」という形で境界を運用で担保する
-- 子featureへの分割は現時点でactive Projectではない。着手する場合は`docs/projects/`に新しいoverviewを作り、current DAGと移行手順を先に定義する
+- 子featureへの分割は現時点でactiveな取り組みではない。着手する場合は epic issue 本文に current DAG と移行手順を先に定義する
 
 ## Feature標準ディレクトリ構造
 

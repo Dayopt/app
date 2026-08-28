@@ -13,7 +13,7 @@ import { resolveGoogleCalendarAuthorityIdentity } from './authority-config';
  *
  * retry ループの骨格は `account-deletion.ts` の `callRpc<T>` を、確定失敗コードの分類は
  * `token-rotation.ts` の `DEFINITIVE_ROLLBACK_CODES` パターンを踏襲する
- * （docs/projects/external-calendar-fenced-writer-migration/overview.md §2）。
+ * （issue #2050 のコメント欄 overview.md §2 相当、docs/projects 全廃に伴い #2473 で移設）。
  *
  * 各 RPC の discriminant（`'started'` / `'superseded'` 等）はそのまま呼び出し側へ返し、
  * 意味付けは `sync-service.ts` / `connection-service.ts` に閉じる。CAS ロジック本体

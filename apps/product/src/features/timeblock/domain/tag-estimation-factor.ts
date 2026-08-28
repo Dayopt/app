@@ -3,7 +3,7 @@
  *
  * ADR-026（`docs/product/log/2026-07-10-analytics-expression-policy.md`）の 3 点のうち
  * 1 点目「タグ別見積もり係数」の定義を、tag_id → activity_id へキーを置換して実装する
- * （`docs/projects/tag-model-replacement/step-5-7-completion.md` §4-2）:
+ * （issue #2162 のコメント欄 step-5-7-completion.md §4-2 相当、#2473 で移設）:
  *
  * - Plan 1 件ごとに `Σ(Record duration) ÷ Plan duration` の比を **1 つ**作る（1 Plan : N Record は合算）
  * - activity は **Plan 側の `activity_id`** で束ねる。作成時に draft の activity で引くため、計上キーと参照キーを一致させる

@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * ことを凍結する（#2162、Step 8 tag_id 剥離 で tags 名前検索を除去）。
  *
  * tags 名前検索の除去は書き込み経路からの tag_id 参照除去に伴う唯一のユーザー可視劣化
- * （note に含まれない旧タグ名での検索が消える）。docs/projects/tag-model-replacement/
- * overview.md §Step 8（tag_id 剥離）の設計 の表を参照。
+ * （note に含まれない旧タグ名での検索が消える）。issue #2162 のコメント欄
+ * overview.md §Step 8（tag_id 剥離）の設計 相当の表を参照（#2473 で移設）。
  */
 
 const runPrivateTimeblockSearchQuery = vi.hoisted(() => vi.fn());

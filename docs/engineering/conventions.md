@@ -96,7 +96,7 @@ Composition:          settings  (= 通常 feature DAG には乗せない)
 
 - barrel は「ページから見た public API」のみを export
 - 子 feature 化（`calendar-view` / `calendar-filter` / `calendar-interaction`）は launch 後に検討
-- 子featureへの分割はactive Projectではない。着手時に`docs/projects/`へoverviewを作る
+- 子featureへの分割は現時点でactiveな取り組みではない。着手時に epic issue 本文へ設計を書く
 
 ---
 

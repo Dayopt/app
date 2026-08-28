@@ -145,7 +145,7 @@ docs へ残している。
     候補8のdrain対象で、撤去後にこの但し書きも消す
 - client停止は「durable gate除外 + 対象connectionを個別revoke」の2手を運用契約とする。
   恒久失効を1 transactionで行うDB commandは持たない
-  （[step-6-execution-checklist.md](../projects/mcp-plan-track-learn/step-6-execution-checklist.md) §3 の決定、2026-08-10）
+  （issue #1754 のコメント欄 step-6-execution-checklist.md 相当 §3 の決定、2026-08-10。docs/projects 全廃に伴い #2473 で移設）
   - **gate除外が止めるのは新規のwrite grantだけ。** `create_oauth_authorization_grant_v2`は
     write scopeを要求された時にだけ`enabled_client_ids`を検査するため、gate除外後も
     read-onlyのconnection / authorization code / tokenは新規発行できる。侵害clientへの
@@ -204,7 +204,7 @@ docs へ残している。
   mask外のフィールドへの正当な変更はUndoを妨げない。effectに行単位の版列
   （`resource_version_before`相当）は持たせない — CAS anchorは`after_value`が兼ねる
   （#2443、詳細は
-  [step-3-undo-receipt-rpc.md](../projects/time-ledger-redesign/step-3-undo-receipt-rpc.md)）
+  issue #2394 のコメント欄 step-3-undo-receipt-rpc.md 相当（docs/projects 全廃に伴い #2473 で移設）
 - **`undo_receipts.recorded_effect_count`は記録トランザクション内でDB側が`COUNT(*)`して
   確定し、アプリ入力を信頼しない。** apply時・list時の両方でこの値と現在のeffect数を
   再照合し、不一致なら拒否 / 一覧から除外する。`undo_receipt_effects` →

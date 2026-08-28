@@ -18,7 +18,7 @@ import {
 /**
  * night-watch SKILL.md §自動パートの Step 1〜5 を GitHub Actions cron から
  * model 不在で完走させるオーケストレータ（#2367、Claude Routine からの移植。
- * 経緯は docs/projects 配下ではなく issue #2367 のコメント列を正本とする）。
+ * 経緯は issue #2367 のコメント列を正本とする）。
  * Step 6（朝編成ブリーフ、#2370）も同じ run の最後に実行する。
  *
  * 既存 wrapper（board-issue.mjs / alert-issue.mjs / dod-candidate.mjs /

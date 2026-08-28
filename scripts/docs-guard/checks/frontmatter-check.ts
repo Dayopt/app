@@ -2,16 +2,17 @@
  * Check: path-aware document metadata
  *
  * - stock: current | superseded + last_verified
- * - project overview: active | paused | done + last_verified
- * - project document: stock contract
  * - newly added log: frozen + filenameと一致するdate
  * - code / superseded_by: 実在するrepo-relative path
  * - product spec: public_docs（公開docsのslug）/ lp（LPの約束文言）の形式
+ *
+ * docs/projects/ 前提の project-overview / project-document 分類は 2026-08-28
+ * （#2473、docs/projects 全廃）に撤去した。設計の正本は issue/PR 本文へ一本化された。
  */
 
 import { glob } from 'glob';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 import {
   colors,
@@ -30,7 +31,7 @@ export interface FrontmatterViolation {
 }
 
 type MetadataValue = string | readonly string[];
-type DocumentKind = 'generated' | 'log' | 'project-document' | 'project-overview' | 'stock';
+type DocumentKind = 'generated' | 'log' | 'stock';
 
 interface ParsedFrontmatter {
   errors: readonly string[];
@@ -45,7 +46,6 @@ export interface MetadataValidationOptions {
 }
 
 const STOCK_STATUSES = new Set(['current', 'superseded']);
-const PROJECT_STATUSES = new Set(['active', 'paused', 'done']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SPECS_PREFIX = 'docs/product/specs/';
 // 公開docsのslug（= /docs/<slug>）。実在検証はしない。未作成のページを宣言できることが
@@ -239,15 +239,6 @@ export function classifyDocument(
   if (GENERATED_DOCS.includes(relativePath)) return 'generated';
   if (relativePath === 'docs/README.md' || isReadme(relativePath)) return undefined;
 
-  // `_archive/` は完了 Project の移設先（§設計書の保存場所）。同じ contract を
-  // そのまま適用する（archive 後も status: done + summary.md の要件は変わらない）。
-  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/overview\.md$/.test(relativePath)) {
-    return 'project-overview';
-  }
-  if (/^docs\/projects\/(?:_archive\/)?[^/]+\/[^/]+\.md$/.test(relativePath)) {
-    return 'project-document';
-  }
-
   if (isLogDocument(relativePath)) {
     return isAddedLog ? 'log' : undefined;
   }
@@ -281,37 +272,6 @@ function validateStock(fields: ReadonlyMap<string, MetadataValue>, today: string
   if (!lastVerified) reasons.push('frontmatterにlast_verifiedがない');
   else if (!isValidDate(lastVerified, today)) {
     reasons.push(`last_verifiedが有効な過去日付ではない: ${lastVerified}`);
-  }
-  return reasons;
-}
-
-function validateProjectOverview(
-  fields: ReadonlyMap<string, MetadataValue>,
-  today: string,
-  root: string,
-  relativePath: string,
-): string[] {
-  const reasons: string[] = [];
-  const status = getString(fields, 'status');
-  const lastVerified = getString(fields, 'last_verified');
-
-  if (!status) reasons.push('frontmatterにstatusがない');
-  else if (!PROJECT_STATUSES.has(status)) reasons.push(`Projectのstatusが不正: ${status}`);
-  else if (relativePath.startsWith('docs/projects/_archive/') && status !== 'done') {
-    // _archive/ は完了 Project の移設先（workflow.md §完了後）。done 以外の配置は契約違反。
-    reasons.push(`_archive/ 配下のProjectはstatus: doneに限る: ${status}`);
-  } else if (!relativePath.startsWith('docs/projects/_archive/') && status === 'done') {
-    reasons.push('done Projectは docs/projects/_archive/ へ移す（workflow.md §完了後）');
-  }
-
-  if (!lastVerified) reasons.push('frontmatterにlast_verifiedがない');
-  else if (!isValidDate(lastVerified, today)) {
-    reasons.push(`last_verifiedが有効な過去日付ではない: ${lastVerified}`);
-  }
-
-  if (status === 'done') {
-    const summaryPath = resolve(root, dirname(relativePath), 'summary.md');
-    if (!existsSync(summaryPath)) reasons.push('done Projectにsummary.mdがない');
   }
   return reasons;
 }
@@ -415,9 +375,7 @@ export function validateDocumentMetadata({
   const parsed = parseFrontmatter(content);
   const reasons = [...parsed.errors];
 
-  if (kind === 'project-overview') {
-    reasons.push(...validateProjectOverview(parsed.fields, today, root, relativePath));
-  } else if (kind === 'log') {
+  if (kind === 'log') {
     reasons.push(...validateLog(parsed.fields, relativePath, today));
   } else {
     reasons.push(...validateStock(parsed.fields, today));

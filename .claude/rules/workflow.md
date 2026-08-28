@@ -33,16 +33,16 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 ### 大規模
 
-- Project 全体設計書を必ず作成（`docs/projects/{project-name}/overview.md`）
-- 複雑な Step は Step 詳細設計書（`step-X-detail.md`）
+- epic issue 本文に全体設計（Goal・段取り・依存関係）を必ず書く（`docs/projects/` は作らない。設計の正本は issue/PR。2026-08-28、User 決定）
+- 複雑な Step は sub-issue へ詳細設計を書く
 - 各 Step で事前調査プロンプト必須
 - 相談事項は Option α/β/γ 形式で提示
 - path-limited add / git diff --cached を必須ゲートに
 
 ### 中規模
 
-- Project 全体設計書は推奨（省略する場合は理由を明示）
-- Step 詳細設計書は省略可
+- epic issue 本文への設計記述は推奨（省略する場合は理由を明示）
+- sub-issue への詳細設計は省略可
 - 事前調査プロンプトは推奨
 - 相談事項は Option 形式
 - path-limited add は採用
@@ -62,9 +62,9 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 **Step 分割は「作業と plan の単位」であって「merge の単位」ではない。** 大規模 project を 6 Step に割っても、PR は機能のまとまりで束ねる（§PR 粒度）。Step ごとに PR を切らない。
 
-## Project 命名規則
+## Epic / Project 命名規則
 
-形式: `{domain}-{action}[-{variant}]`
+branch 名・epic issue タイトルに使う naming。形式: `{domain}-{action}[-{variant}]`
 
 原則:
 
@@ -92,60 +92,14 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 - `sidebar-work`（action が曖昧）
 - `fix-stuff`（domain 不明）
 
-## 設計書の保存場所
+## 設計正本の置き場所
 
-散文の設計書は repo 直下 `docs/projects/` に置く（Storybook には載せない。ビルド不要で GitHub 上でそのまま読める。`<Meta>` ラッパー不要の素の Markdown）。
+策定日: 2026-04-23。**2026-08-28、User 決定（メタ把握会話）で `docs/projects/` を全廃した（#2473）。設計・プロジェクト情報の正本は issue と PR のみに一本化する。中途半端な段階移行はしない。**
 
-### issue と docs の分担
-
-策定日: 2026-07-30
-
-**進捗と状態は issue、設計の中身と理由は docs。同じ情報を両方に書かない。**
-
-| 情報                                   | 正本                | なぜそちらか                                                                                                                                                                                         |
-| -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 進捗、残作業、チェックリスト、担当     | issue（epic issue） | open / closed と PR リンクで状態が勝手に最新化される。docs 側は PR を切らないと更新できないため、書いた時点から古くなる                                                                              |
-| 設計、選択肢の比較、なぜこの形にしたか | `docs/projects/`    | closed issue の長いコメント列からは後で発掘できない。repo にあれば `rg` で辿れ、docs-guard が鮮度とリンクを検査し、変更が PR レビューに乗る。repo しか読めない agent（plan-fact-checker 等）も読める |
-
-- `overview.md` に進捗表・残作業リスト・「現在地」を持たせない。状態は epic issue へリンクして委ねる
-- 大半の作業は issue だけで足りる。設計書が必須なのは §大規模 だけ（中規模は推奨、小規模は不要）
-- 完了時は `status: done` + `summary.md` に「何を達成したか」を残す。途中経過は残さない
-
-### 進行中
-
-```
-docs/projects/{project-name}/
-├── overview.md        — Project 全体設計書
-└── step-X-detail.md   — Step 詳細設計書（必要なら）
-```
-
-`overview.md` の `status` は進行中なら `active`、意図的に止めるなら `paused` とする。step文書は通常のstockとして `status: current` を使う。
-
-または簡略形式として `docs/projects/{project-name}-detail.md` 1 ファイル。
-
-### 完了後
-
-完了時は `overview.md` を `status: done` にし、`summary.md` を `status: current` で追加する。`done` と `summary.md` は常に同じ変更に含める。その上でディレクトリごと `docs/projects/_archive/{project-name}/` へ git mv する:
-
-```
-docs/projects/_archive/{project-name}/
-├── overview.md         — status: done
-├── step-X-detail.md
-└── summary.md          — 完了時に追加（達成した成果）
-```
-
-移動時の作業:
-
-- git mv で履歴追跡
-- 内部リンクの path 修正
-- 他 docs からこの Project を指す参照（stock）を `_archive/` 配下の新 path へ更新
-- `summary.md` を新規追加（Project 完了サマリー）
-
-### src/ にはコロケーションしない
-
-設計書は Project 単位（複数ファイル横断）の情報なので、src/ の個別コードにコロケーションしない。src/ はコード専用、設計書は `docs/projects/` に集約する。
-
-ただし feature 単位の長期設計（ARCHITECTURE.md 相当）は feature 内コロケーションの選択肢あり。これは Project 設計書とは別物。
+- 設計の中身・理由・選択肢の比較は epic issue 本文に書く。進捗・残作業・チェックリストも同じ issue に置き、docs と issue で同じ情報を二重管理しない
+- 複雑な Step は sub-issue へ詳細設計を切る。完了時は issue を close し、成果は merge 済み PR で辿る（`summary.md` のような別ファイルは作らない）
+- feature 単位の長期設計（ARCHITECTURE.md 相当）は feature 内コロケーションの選択肢が引き続きある。これは epic 単位の設計とは別物
+- 過去に `docs/projects/` にあった設計書は、対応する issue へ全文転記済み（#2473 の作業。原本は git 履歴を参照）
 
 ## Pause point（どこで止まって確認するか）
 
@@ -609,19 +563,4 @@ git branch --merged main   # merge 済みローカルブランチ → git branch
 
 ## 実例の参照先
 
-各規模の実例:
-
-**大規模**:
-
-- `sidebar-routing-unification`（8 コミット / Phase 全体設計書 + Step 4 詳細）
-- `sidebar-3-mode-structure`（7 コミット / Phase 全体設計書 + 各 Step 詳細）
-
-**中規模**:
-
-- （未実施、将来 `feature-colocation-migration` が該当予定）
-
-**小規模**:
-
-- フォローアップ作業群（typo 修正、namespace 追加、etc.）
-
-詳細は `docs/projects/` 配下の各 project ディレクトリを参照。
+設計の正本は epic issue 本文。`docs/projects/` は作らない（2026-08-28、User 決定。[#2473](https://github.com/Dayopt/dayopt/issues/2473) 参照）。各規模の実例は該当 issue / PR の履歴を辿る。

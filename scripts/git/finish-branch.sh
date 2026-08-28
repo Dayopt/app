@@ -334,7 +334,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 「あるはずの context が無い」ことをここで能動的に検出する。
   #
   # **どの context を「あるはず」とするかは Impact Resolver が決める**
-  # （scripts/ci/impact.mjs。docs/projects/_archive/ci-monorepo-refactor/overview.md §5）。
+  # （scripts/ci/impact.mjs。旧 docs/projects/_archive/ci-monorepo-refactor/overview.md §5、
+  #   docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
   # PR の変更ファイルから affected な app を判定し、affected な project の context
   # だけを必須にする。unaffected な project の context 欠落は正常（Vercel の
   # Skip deployment 導入後はこれが通常状態になる）。判定に失敗した場合

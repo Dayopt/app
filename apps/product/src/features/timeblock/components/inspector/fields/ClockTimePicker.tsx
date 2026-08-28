@@ -9,7 +9,9 @@
  * - 時選択後に自動で分ステップへ遷移
  * - drag（pointermove）で連続調整可
  *
- * @see docs/projects/timeline-precision-redesign/overview.md § 4 D-9
+ * @see 旧 docs/projects/timeline-precision-redesign/overview.md § 4 D-9
+ *   （docs/projects 全廃に伴い #2473 で削除。当時のリンク先自体が repo 内に見当たらず、
+ *   出典は git 履歴でも追跡できていない）
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

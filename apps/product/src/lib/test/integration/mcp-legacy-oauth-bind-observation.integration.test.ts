@@ -7,8 +7,8 @@ import type { Database } from '@/lib/database';
 
 /**
  * Stage 8-3 observation window
- * (docs/projects/mcp-plan-track-learn/step-6-candidate-8-cleanup.md §Stage
- * 8-3). bind_legacy_oauth_insert_to_connection() is the compatibility
+ * (issue #1754 comment, step-6-candidate-8-cleanup.md §Stage 8-3 equivalent;
+ * moved in #2473). bind_legacy_oauth_insert_to_connection() is the compatibility
  * BEFORE INSERT trigger on oauth_authorization_codes / oauth_tokens. Every
  * time it actually backfills connection_id for a legacy (connection_id IS
  * NULL) insert, 20260810013820_observe_legacy_oauth_bind.sql makes it write

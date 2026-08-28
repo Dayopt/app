@@ -177,7 +177,8 @@ export const protectedProcedure = t.procedure
  * - session 認証時: JWTカスタムクレーム（custom_access_token hook）→ DB fallback
  * - oauth 認証時: 必ず DB lookup (opaque token は JWT claim を持たないため)。
  *   毎リクエスト DB を引くことで、Pro 解約直後の暴露窓を access_token TTL = 5min に抑える
- *   (docs/projects/mcp-server/overview.md Decision 1)
+ *   (旧 docs/projects 配下の設計メモ Decision 1。docs/projects 全廃に伴い #2473 で削除。
+ *   当時のリンク先自体が repo 内に見当たらず、出典は git 履歴でも追跡できていない)
  *
  * past_due: Stripe dunning（回収リトライ）期間中はアクセス維持。
  */

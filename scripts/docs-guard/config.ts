@@ -169,6 +169,28 @@ export const KNOWN_FROZEN_BROKEN_LINKS: readonly FrozenBrokenLink[] = [
     source: 'docs/business/log/2026-07-05-founder-audit.md',
     target: '../../marketing/channels/x.md',
   },
+  // 2026-08-28（#2473）の docs/projects 全廃によるもの。設計の正本は各対応 issue の
+  // コメント欄（全文転記済み）または git 履歴（_archive/ 配下は移設なしで削除）。
+  {
+    source: 'docs/engineering/log/2026-08-12-vercel-root-directory-superseded.md',
+    target: '../../projects/_archive/ci-monorepo-refactor/overview.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-08-11-codeql-disabled-and-visibility-decision.md',
+    target: '../../projects/_archive/ci-monorepo-refactor/overview.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-07-29-mcp-2026-07-28-conformance.md',
+    target: '../../projects/mcp-plan-track-learn/step-6-conformance.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-07-23-migration-baseline-squash-plan.md',
+    target: '../../projects/migration-baseline-squash/overview.md',
+  },
+  {
+    source: 'docs/engineering/log/2026-07-23-supabase-schemas-manual-snapshot.md',
+    target: '../../projects/migration-baseline-squash/overview.md',
+  },
 ];
 
 // 手書きfrontmatterを付けないgenerated file。完全一致だけを例外にする。
