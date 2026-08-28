@@ -154,7 +154,7 @@ issue #2395 が拘束する順序（`入力/baseline 固定 → 正本階層 →
 - **decision**: **採用（縮小 scope で確定）**。全面再定義は将来 phase（#4 参照）まで見送り、v1 では `fulfillment` 引数の除去のみを行う
 - **effective milestone**: #2399（第三便、MCP 公開契約変更と同じ Step）
 - **data migration**: 無し（実接続 0 件）
-- **compatibility**: 実接続 0 件のため後方互換コストなし。`fulfillment` 除去は破壊的変更だが影響を受ける外部クライアントは存在しない
+- **compatibility**: 実接続 0 件のため後方互換コストなし。`fulfillment` 除去は破壊的変更だが影響を受ける外部クライアントは存在しない。**注（#2443、Codex A 指摘の表現是正）**: 「実接続 0 件」は 2026-08-18 時点の snapshot に基づく「今変えるコストの評価」であり、将来にわたる互換性保証ではない。実接続が付いた後にこの schema へ再度触れる場合は、その時点で改めて接続数を実測すること
 - **rollback**: `[hours]`
 - **downstream blockers**: 無し
 
@@ -213,9 +213,12 @@ issue #2395 が拘束する順序（`入力/baseline 固定 → 正本階層 →
 - **current contract**: `records.fulfillment`（`low` / `medium` / `high`、nullable、Record にのみ付与）。書き込み経路は UI（`TimeblockInspectorForm`）・tRPC（`recordCommands`）に加え、**MCP `records.create` / `records.update` も `fulfillment` 引数を受け付けて直接書き込む**（`apps/product/src/app/api/mcp/_tools/timeblock-mutations.ts:83,97,253,284`）。入口はコミットトーストではなく詳細 Inspector のトグル。羅針盤（質の章）は未実装
 - **target contract**: v1.0 §3.5「APIとMCPにはこの列への書き込み権限を与えない」（唯一の閉域列）。§6.3「入口はコミットトースト」。値は3択で現行と cardinality 一致（表現順序のみ「充実／ふつう／消耗」対「high/medium/low」で対応）
 - **decision**: **採用（既存実装を v1.0 契約へ合わせて是正する）**。値の3択構造・Record 専有は既に v1.0 と一致しているため変更不要。**MCP からの書き込みは v1.0 の明示的な不変条件（AI/外部への閉域）に違反しており是正が必要** — `timeblock-mutations.ts` の `fulfillment` 引数を `records.create` / `records.update` の入力スキーマから除去する。コミットトーストへの入口移設は UI 実装 Step（#2397）で行う
-- **effective milestone**: MCP 書き込み経路の除去は破壊的変更のため #2399（第三便、MCP 公開契約の見直しと同じ Step）で行う。コミットトースト入口は #2397（第一便）
+- **充実の閉域性の穴（追加裁定、2026-08-28 User裁可、#2443）**: `fulfillment` 引数の除去だけでは閉域性を守れない。record update RPC は present-flag 方式のため、`fulfillment` を一度も送らずに `activity_id` だけを変更でき、rated Record（`fulfillment IS NOT NULL`）の評価対象を外部が無断で付け替えられる（例:「読書」に付けた high 評価が「会議」の評価へ意味を変える）。**採用: (a) activity_id 変更時に fulfillment を NULL へ戻す**（評価対象が変わったら評価も失効させる。v1.0 §3.5 の精神——AI/外部からユーザーの評価を勝手に付け替えない——と一致。カレンダー側の正当な同期による `activity_id` 更新は引き続き許可する）。実装条件（User裁可時に付与、#2437着手時に必ず守ること）:
+  1. 失効させるのは **実際に値が変わった時のみ**（`p_activity_id_present AND v_record.fulfillment IS NOT NULL AND p_activity_id IS DISTINCT FROM v_record.activity_id` の時に限る）。同じ値を送り直しただけで評価が消える経路を作らない
+  2. negative test を対で置く: 「変わった時に NULL へ落ちる」と「同値送信では保持される」の両方を回帰 test として固定する
+- **effective milestone**: MCP 書き込み経路の除去は破壊的変更のため #2399（第三便、MCP 公開契約の見直しと同じ Step）で行う。コミットトースト入口は #2397（第一便）。**充実の閉域性の穴（上記追加裁定）の RPC 実装は #2437 で行う** — 本節（#2396、本 Step）が確定するのは契約の裁定のみで、`add_record_fulfillment.sql` 系 RPC への実装反映は #2437 着手時
 - **data migration**: 無し（既存列・既存値はそのまま維持。書き込み経路の制限のみ）
-- **compatibility**: **実接続 0 件**（§裁定4 の根拠と同一実測）のため、MCP スキーマから `fulfillment` を除去しても影響を受ける外部クライアントは存在しない。`MCP_TOOL_SCHEMA_VERSION` の bump 要否は #16（public contract 移行）と同じ Step でまとめて判断する
+- **compatibility**: **実接続 0 件**（§裁定4 の根拠と同一実測）のため、MCP スキーマから `fulfillment` を除去しても影響を受ける外部クライアントは存在しない。`MCP_TOOL_SCHEMA_VERSION` の bump 要否は #16（public contract 移行）と同じ Step でまとめて判断する。**注（#2443、Codex A 指摘の表現是正）**: 「実接続 0 件」は 2026-08-18 時点の snapshot に基づく「今変えるコストの評価」であり、将来にわたる互換性保証ではない（#4 の同注記と同一）
 - **rollback**: `[hours]`
 - **downstream blockers**: #4（外部書き込み境界、同じ Step でまとめて対応）、#12（canonical fields）、#19（質の章）
 

@@ -80,7 +80,7 @@ issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点の�
   - **権限**: Undo実行時点で、「Undo実行者の現在の有効権限」と「元操作の記録時点の権限上限」の**交差**のみを許可する。revoke済みconnection・期限切れtokenでは、たとえreceiptが有効期間内でもUndo不可（issue本文の明文どおり）
   - **field mask**: 復元は元操作が変更したフィールドだけに限定する。行全体のsnapshot復元はしない——Undo実行までの間に他フィールドへの正当な変更があった場合、それを巻き戻さないため
   - **TTLは具体的な数値をここでは確定しない**。監査保持（既存`mcp_mutation_receipts`の90日）とは別に、Undoとして**実行可能**な期間はそれより短い可動域を持つべきだが、具体的な時間数はUXの実装判断であり、#2397/#2399のいずれかの実装Step着手時に決定する。本書が固定するのはあくまで「TTLは監査保持期間より短く、独立した値である」という契約構造のみ
-  - **競合時の扱い**: Undo自体も通常の書き込みとして現在のRLS/CAS（T3参照）を通す。対象行のいずれかが元操作後に変更されていれば、Undoはall-or-nothingで失敗する（部分復元はしない）
+  - **競合時の扱い（訂正、#2443）**: Undo自体も通常の書き込みとして現在のRLS/CAS（T3参照）を通すが、**CAS判定の対象はfield mask内のフィールド（元操作が変更したフィールド）に限定する**。field mask外のフィールドへの正当な変更はUndoを妨げない。field mask内のいずれかのフィールドが元操作後に変更されていれば、Undoはall-or-nothingで失敗する（部分復元はしない）。この限定により、上記field maskの導入動機（field mask外の正当な変更を巻き戻さない）とCASが両立する——**旧記述「対象行のいずれかが元操作後に変更されていれば」は行全体を判定対象とする表現で、field maskの存在意義（行全体のsnapshot復元をしない）と矛盾していた**（Codex A の設計レビュー指摘・#2443で発見・訂正）
 - **effective milestone**: #2396（本Step、契約凍結）→ 実装はUndo substrate新設Step（overview.md 8段中の第3段）
 - **data migration**: 無し（新規テーブル追加、既存`mcp_mutation_receipts`は監査用として維持）
 - **compatibility**: 無し（新規substrate）
@@ -126,7 +126,7 @@ issue #2396 の dispatch コメント（2026-08-26、指揮台）は「7点の�
 - **decision（確定）**: overview.md #10（`plan_id`個別リンク廃止、User裁可GO・`[days]`不可逆）の実行後、**旧`plan_id`ベースのPlan↔Record個別対応は機械的に復元できない**と明示する。これ以降のforward-onlyポイントは以下のとおり:
   - `plan_id`列drop（実行判断は#2396着手時、上記T2/T14参照）以降、code revertでは復元できない
   - `skipped_at`廃止（overview.md #14）に伴うデータ削除も同様にforward-only
-  - 巻き戻し手段はcode revertではなく**backup restoreのみ**（`.claude/rules/decision-principles.md` Rule 1「破滅に賭けるな」と整合。既存の#1971 storage backupゲート運用と同型のパターンを踏襲する——backup復元確認が完了するまで不可逆cleanupを実行しない、というoverview.md 8段中の第8段の前提と一致）
+  - **backup restoreはrollbackではない（訂正、#2443）**: forward-only後にsemantic rollback（コード側で旧`plan_id`個別対応を機械的に復元する手段）は存在しない。backup restoreは、`plan_id`列drop以降に新たに作成されたPlan/Recordをすべて失う**災害復旧手段**であり、rollbackとして扱ってはならない——**旧記述「巻き戻し手段はbackup restoreのみ」はbackup restoreをrollbackの一種として位置づけており誤りだった**（Codex A の設計レビュー指摘・#2443で発見・訂正）。#1971のstorage backupゲート運用は「不可逆cleanupを実行する**前**にbackupを取る」ためのものであり、「cleanup**後**に問題が発覚したら戻す」手段として設計されていない。cleanup実行後に問題が発覚した場合、実務上の対処はforward-only（新しいコードで対処する）に限られる。この訂正は#2439（第8段、不可逆cleanupのexplicit-authority裁可）の前提に影響するため、#2439着手前に反映済みであること
   - 8段中の**第8段（不可逆cleanup）は#2175と別のexplicit-authority issue/PRにする**（issue #2396本文の既定どおり、本書では変更しない）
 - **effective milestone**: #2396（本Step、宣言の明記）。実行判断（drop/backfillの着手）は各実装Step
 - **data migration**: 該当なし（宣言のみ）
