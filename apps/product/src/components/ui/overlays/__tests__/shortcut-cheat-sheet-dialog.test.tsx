@@ -10,7 +10,8 @@ import { describe, expect, it, vi } from 'vitest';
 // namespace 登録漏れ（APP_NAMESPACES への `shortcuts` 追加忘れ）や引数なし
 // useTranslations() の見落としは静的チェック（pnpm lint:i18n）の穴になりうるため、
 // 実messagesで描画してMISSING_MESSAGEが出ないことを実行時にも二重で確認する
-// （docs/projects/_archive/shortcut-catalog-unification/overview.md §8）。
+// （旧 docs/projects/_archive/shortcut-catalog-unification/overview.md §8、
+// docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
 vi.unmock('next-intl');
 
 import type { ShortcutCatalog } from '@/lib/keyboard/shortcut-catalog';

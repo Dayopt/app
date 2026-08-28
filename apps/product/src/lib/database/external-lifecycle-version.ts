@@ -57,7 +57,7 @@ export function getConfiguredExternalLifecycleAppVersion(): Promise<0 | 1> {
  * 「RPC を 2 回呼ぶ」新しい contract に巻き込まれ、それらの mock ベース test が
  * 軒並み壊れる（実測: #2050 実装時、5+ ファイルが regression）。そのため sync-service.ts /
  * connection-service.ts だけが読む専用関数として分離する
- * （docs/projects/external-calendar-fenced-writer-migration/overview.md §0 改訂）。
+ * （issue #2050 のコメント欄 overview.md §0 相当、docs/projects 全廃に伴い #2473 で移設）。
  *
  * v3 marker が無ければ fenced sync writer RPC 群（`begin_calendar_sync_run_v1` 等、
  * `20260730090017_fenced_calendar_sync_writers.sql`）と `partial_timeout` allowlist

@@ -73,7 +73,9 @@ function timeToMinutes(time: string): number {
  *   矢印キー: dropdown が開いている時のみ list 内 highlight 移動（closed 時は何もしない）
  * - **Mobile**: タップで Drawer + 時計盤ピッカー（1 分粒度、drag で連続調整可）
  *
- * @see docs/projects/timeline-precision-redesign/overview.md
+ * @see 旧 docs/projects/timeline-precision-redesign/overview.md
+ *   （docs/projects 全廃に伴い #2473 で削除。当時のリンク先自体が repo 内に見当たらず、
+ *   出典は git 履歴でも追跡できていない）
  */
 export function TimeInput({
   kind,

@@ -14,8 +14,8 @@ import { MCP_TOOL_DESCRIPTORS } from '../src/app/api/mcp/_tools/registry';
 /**
  * MCP protocol conformance の repo 内再実行。
  *
- * `docs/projects/mcp-plan-track-learn/step-6-conformance.md` の Required release
- * evidence。`@modelcontextprotocol/conformance` CLI を child process で起動し、
+ * issue #1754 のコメント欄 step-6-conformance.md 相当（docs/projects 全廃に伴い
+ * #2473 で移設）の Required release evidence。`@modelcontextprotocol/conformance` CLI を child process で起動し、
  * `handleMcpProtocolRequest`（現行 v1 SDK / WebStandardStreamableHTTPServerTransport
  * 実装）に対して spec の active suite を走らせる。
  *

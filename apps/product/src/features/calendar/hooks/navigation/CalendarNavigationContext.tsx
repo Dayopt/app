@@ -87,7 +87,8 @@ function writeLastCalendarView(view: CalendarViewType): void {
  * `fallbackDate` は calendar / report いずれでもない workspaceTab（例: /settings）で
  * 使う initialDate のフォールバック。呼び出し側の currentDateRef を渡すことで、
  * `/report` `/settings` 滞在中に initialDate が `new Date()` へ空転し続けるのを防ぐ
- * （docs/projects/_archive/workspace-shell-restructure/overview.md §6-10 B）。
+ * （旧 docs/projects/_archive/workspace-shell-restructure/overview.md §6-10 B、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  */
 function resolveCalendarProps(pathname: string, fallbackDate?: Date) {
   const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');

@@ -54,4 +54,4 @@ componentのvisual stateはStorybook、集計data flowとcompositionは[Engineer
 - [機能スコープ](../log/2026-06-16-feature-non-adoption.md)
 - [分析表現ポリシー](../log/2026-07-10-analytics-expression-policy.md)（週次補正の中央値・沈黙閾値の定義元）
 - [ADR-025: Plan / Recordモデル](../log/2026-07-09-time-model-split.md)
-- [workspace-shell-restructure](../../projects/_archive/workspace-shell-restructure/overview.md) — `/report` フルページ化の設計判断
+- 旧 workspace-shell-restructure（`docs/projects/_archive/workspace-shell-restructure/overview.md`、docs/projects 全廃に伴い #2473 で削除。git 履歴参照） — `/report` フルページ化の設計判断

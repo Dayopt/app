@@ -4,8 +4,8 @@ import { logger } from '@/lib/logger';
 import { protectedProcedure } from '@/lib/trpc/procedures';
 
 /**
- * 候補8 Stage 8-1 の観測窓の主指標（docs/projects/mcp-plan-track-learn/
- * step-6-candidate-8-cleanup.md §Stage 8-1）。
+ * 候補8 Stage 8-1 の観測窓の主指標（issue #1754 のコメント欄
+ * step-6-candidate-8-cleanup.md §Stage 8-1 相当、#2473 で移設）。
  *
  * legacy route（plansRouter / recordsRouter の mutation）が呼ばれた事実を
  * 2 経路で残す。永続記録は Sentry event（保持 90 日 > 観測窓 14 日。issue の

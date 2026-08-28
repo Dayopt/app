@@ -209,7 +209,7 @@ CREATE TABLE public.mcp_mutation_receipts (
 -- app command移行と競合testを終えるまで到達不能にする。
 
 -- private.legacy_oauth_bind_observations: Stage 8-3（candidate 8 destructive
--- cleanup、docs/projects/mcp-plan-track-learn/step-6-candidate-8-cleanup.md）の
+-- cleanup、issue #1754 のコメント欄 step-6-candidate-8-cleanup.md 相当、#2473 で移設）の
 -- 主停止指標。bind_legacy_oauth_insert_to_connection() が connection_id を
 -- 補完実行するたびに1行append-onlyで記録する（20260810013820）。
 -- user_id/token id/client_id等の識別子は持たず、件数・trigger種別・時刻のみ。

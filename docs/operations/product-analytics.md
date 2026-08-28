@@ -64,5 +64,5 @@ event追加時はTypeScript allowlistだけを広げない。database check cons
 
 ## 関連
 
-- [Project overview](../projects/_archive/minimal-product-analytics/overview.md)
+- 旧 Project overview（`docs/projects/_archive/minimal-product-analytics/overview.md`、docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
 - [Supabase運用](../engineering/infra.md)

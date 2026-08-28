@@ -12,7 +12,8 @@ import { resolveServiceRoleTarget } from './service-role-target-guard';
  *
  * workspace-shell-restructure（#2181）Step 2: 旧 URL（/day, /week, /Nday、
  * `?panel=` 付き含む）から `/calendar` `/report` への写像を実ブラウザで検証する
- * （docs/projects/_archive/workspace-shell-restructure/overview.md §4-4）。
+ * （旧 docs/projects/_archive/workspace-shell-restructure/overview.md §4-4、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  *
  * `proxy.test.ts`（unit）が同じ写像ロジックを網羅済みだが、ここでは実際の
  * ブラウザナビゲーションとして「旧 URL の deep link が壊れていない」ことを固定する。

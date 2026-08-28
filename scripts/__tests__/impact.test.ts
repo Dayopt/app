@@ -93,7 +93,7 @@ describe('docs のみの変更', () => {
     [['docs/strategy.md']],
     [['AGENTS.md', 'CLAUDE.md', 'README.md']],
     [['.claude/rules/workflow.md', '.claude/skills/dispatch/SKILL.md']],
-    [['docs/projects/ci-monorepo-refactor/overview.md', 'docs/README.md']],
+    [['docs/engineering/conventions.md', 'docs/README.md']],
   ])('%j は docsOnly=true で app build を要求しない', (files) => {
     expectImpact(files, { docsOnly: true });
   });

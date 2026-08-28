@@ -15,7 +15,8 @@ import { resolveServiceRoleTarget } from './service-role-target-guard';
  *
  * 旧 URL（/day, /week, /Nday, `?panel=`）からの redirect 網羅は
  * `legacy-url-redirects.spec.ts` を正とする
- * （docs/projects/_archive/workspace-shell-restructure/overview.md §4-4）。
+ * （旧 docs/projects/_archive/workspace-shell-restructure/overview.md §4-4、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

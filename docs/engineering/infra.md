@@ -325,7 +325,8 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context
   欠落は正常。変更ファイル一覧の取得失敗・未知 path・判定不能は両方必須へ倒す（fail closed）。
-  判定仕様は [ci-monorepo-refactor overview §5](../projects/_archive/ci-monorepo-refactor/overview.md)
+  判定仕様は旧 ci-monorepo-refactor overview §5（`docs/projects/_archive/ci-monorepo-refactor/overview.md`、
+  docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
 - Vercel の check context は **project 名に由来する**。project を rename すると required check が一致しなくなり、
   全 PR が merge 不能になる。rename する場合は ruleset を先に更新する
 - **Ignored Build Step は `apps/{product,web}/vercel.json` の `ignoreCommand` が正本**（2026-08-05、
@@ -338,7 +339,9 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
     変更内容によらず常に build する。** `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
     build**」であって live SHA ではなく、未 promote candidate を基準に skip すると
     Production Release が存在しない candidate を待ち続けて詰まるため
-    （[ci-monorepo-refactor overview §8](../projects/_archive/ci-monorepo-refactor/overview.md#8-移行順序安全制約) 実施形態）
+    （旧 ci-monorepo-refactor overview §8「移行順序・安全制約」の実施形態。
+    `docs/projects/_archive/ci-monorepo-refactor/overview.md`、docs/projects 全廃に伴い
+    #2473 で削除。git 履歴参照）
   - preview の基準は **`VERCEL_GIT_PREVIOUS_SHA`〜HEAD**（その project + branch の直前の
     成功 deployment の SHA。Ignored Build Step 設定時のみ露出）
   - **fail open を徹底する**（= build 側に倒す）。env 欠落、shallow clone（build container は

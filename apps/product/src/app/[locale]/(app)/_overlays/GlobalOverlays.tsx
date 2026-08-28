@@ -107,7 +107,8 @@ export function GlobalOverlays() {
 
   // Inspector → /report。カレンダー内パネル（CalendarReviewRail）は廃止済み
   // （#2181 Step 4）。tagId によるセグメント絞り込みは Step 5（セグメント配線）で
-  // 復元する（docs/projects/_archive/workspace-shell-restructure/overview.md §6-5）。
+  // 復元する（旧 docs/projects/_archive/workspace-shell-restructure/overview.md §6-5、
+  // docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
   const handleViewStats = useCallback(
     (tagId: string) => {
       void tagId;

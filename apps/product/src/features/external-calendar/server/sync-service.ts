@@ -517,7 +517,7 @@ async function syncOneCalendar(args: {
 //
 // v0/v1 分岐（上記）とは独立した並行実装。5 RPC の CAS ロジック本体（凍結資産）は
 // 変更しない — 呼び出し方と結果マッピングだけをここに書く
-// （docs/projects/external-calendar-fenced-writer-migration/overview.md §3）。
+// （issue #2050 のコメント欄 overview.md §3 相当、docs/projects 全廃に伴い #2473 で移設）。
 // =============================================================================
 
 /** 1 chunk あたりの最大 event 数。RPC 側の 10,000 件上限に対して十分な余裕を取る。 */

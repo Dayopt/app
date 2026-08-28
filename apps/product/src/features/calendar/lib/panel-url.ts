@@ -5,7 +5,8 @@ import { formatCalendarDateParam } from './date-param';
  *
  * 旧 `buildCalendarReviewPanelPath`（`/{locale}/{viewType}?panel=review&reviewTagId=`）
  * の後継。`/report` の期間契約は `?date=&range=` のみで `reviewTagId` を受けない
- * （docs/projects/_archive/workspace-shell-restructure/overview.md §6-3・§6-5）。タグ絞り込みの
+ * （旧 docs/projects/_archive/workspace-shell-restructure/overview.md §6-3・§6-5、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。タグ絞り込みの
  * 復元は Step 5（セグメント配線）で扱う。
  */
 export function buildReportPath(locale: string, date: Date): string {

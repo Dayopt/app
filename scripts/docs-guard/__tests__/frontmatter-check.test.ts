@@ -174,58 +174,6 @@ last_verified: 2026-02-30
     expect(reasons).toEqual(['last_verifiedが有効な過去日付ではない: 2026-02-30']);
   });
 
-  it('境界: 配置とstatusの対応を強制する（doneは_archive限定、_archiveはdone限定）', () => {
-    const root = createRoot();
-    createFile(root, 'apps/product/index.ts');
-    createFile(root, 'docs/projects/example/summary.md');
-    const done = `---
-status: done
-last_verified: 2026-07-14
-code: apps/product
----
-`;
-    expect(
-      validateDocumentMetadata({
-        content: done,
-        relativePath: 'docs/projects/example/overview.md',
-        root,
-        today: '2026-07-14',
-      }),
-    ).toContain('done Projectは docs/projects/_archive/ へ移す（workflow.md §完了後）');
-
-    const active = done.replace('status: done', 'status: active');
-    expect(
-      validateDocumentMetadata({
-        content: active,
-        relativePath: 'docs/projects/_archive/example/overview.md',
-        root,
-        today: '2026-07-14',
-      }),
-    ).toContain('_archive/ 配下のProjectはstatus: doneに限る: active');
-  });
-
-  it('境界: _archive/ 配下の done Projectにも同じcontractを適用する', () => {
-    const root = createRoot();
-    createFile(root, 'apps/product/index.ts');
-    const content = `---
-status: done
-last_verified: 2026-07-14
-code: apps/product
----
-`;
-    const options = {
-      content,
-      relativePath: 'docs/projects/_archive/example/overview.md',
-      root,
-      today: '2026-07-14',
-    } as const;
-
-    expect(validateDocumentMetadata(options)).toContain('done Projectにsummary.mdがない');
-
-    createFile(root, 'docs/projects/_archive/example/summary.md');
-    expect(validateDocumentMetadata(options)).toEqual([]);
-  });
-
   it('エラー系: 新規logはfrozenとfilenameに一致するdateを要求する', () => {
     const reasons = validateDocumentMetadata({
       content: `---

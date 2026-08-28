@@ -10,7 +10,7 @@
  * hook 名・ファイル名（`tag-estimation-factor.ts`）は tRPC procedure 名
  * （`statistics.getTagEstimationFactors`、破壊的公開契約変更を避けるため維持）
  * との対応を保つため据え置いている。中身は activity 軸の集計
- * （`docs/projects/tag-model-replacement/step-5-7-completion.md` §4-2）。
+ * （issue #2162 のコメント欄 step-5-7-completion.md §4-2 相当、#2473 で移設）。
  */
 
 import { useMemo } from 'react';

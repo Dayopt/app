@@ -3,7 +3,8 @@ import 'server-only';
 /**
  * Step 4: 統計 TS service。
  *
- * Step 0 の Aggregation Source Contract（`docs/projects/_archive/time-model-split/step-0-statistics-rpc-policy.md`）
+ * Step 0 の Aggregation Source Contract（旧 `docs/projects/_archive/time-model-split/step-0-statistics-rpc-policy.md`、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
  * に従い、実績系は `records`、予定系は `plans`、予実比較は `plans` LEFT JOIN `records`（`plan_id` 経由）を読む。
  *
  * Step 8 のカットオーバーは完了済みで、**統計 procedure はすべてこのクラス経由**で動く

@@ -22,7 +22,8 @@
 #   2. proProcedure の DB fallback が実測で負荷になっている
 #   3. 解約後の暴露窓が jwt_exp（現在 3600 秒）まで開くのを許容できる
 #      — claim は token refresh まで更新されないため。OAuth 経路は設計上つねに
-#        DB を読むので影響しない（docs/projects/mcp-server/overview.md Decision 1）
+#        DB を読むので影響しない（旧 docs/projects 配下の設計メモ Decision 1、
+#        docs/projects 全廃に伴い #2473 で削除。文脈は #1946 参照）
 #
 # 実行する時は**同じ変更で** production-auth-config-audit.mjs の
 # `hook_custom_access_token_enabled` の expected を true にする。片方だけ変えると

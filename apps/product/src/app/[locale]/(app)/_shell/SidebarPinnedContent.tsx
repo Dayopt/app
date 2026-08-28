@@ -5,8 +5,9 @@
  *
  * MiniCalendar をサイドバー最上部から最下部へ移動した（#2217）。calendar /
  * report いずれのタブも `?date=` を持つため、両タブで同じ MiniCalendar を表示する
- * （docs/projects/_archive/workspace-shell-restructure/overview.md §5-5「/report も
- * ?date= を持つのでカレンダータブと同じ部品をそのまま使う」）。workspace 外の
+ * （旧 docs/projects/_archive/workspace-shell-restructure/overview.md §5-5「/report も
+ * ?date= を持つのでカレンダータブと同じ部品をそのまま使う」、docs/projects 全廃に伴い
+ * #2473 で削除。git 履歴参照）。workspace 外の
  * パス（'other'、例: /settings）では何も表示しない。
  */
 

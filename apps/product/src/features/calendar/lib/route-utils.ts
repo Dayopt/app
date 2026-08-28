@@ -24,7 +24,8 @@ export function isCalendarViewPath(pathWithoutLocale: string): boolean {
  * ワークスペースタブの判定に使う3値。
  *
  * **UI 上のタブは 'calendar' | 'report' の2値**（第3のタブは作らない。
- * docs/projects/_archive/workspace-shell-restructure/overview.md §5-2・§6-9・§6-11）。
+ * 旧 docs/projects/_archive/workspace-shell-restructure/overview.md §5-2・§6-9・§6-11、
+ * docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  * `'other'` は UI タブではなく、CalendarNavigationContext が `/settings` 等の
  * workspace 外パスで view/date のパースを止めるための内部状態（§5-4「`/settings`
  * は calendar として扱う」は dispatcher 側の 2 値折り畳みで満たす。§4-2-b・

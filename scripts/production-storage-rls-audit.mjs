@@ -48,9 +48,9 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  * 4. `storage.buckets` の `avatars` 行が `EXPECTED_AVATARS_BUCKET`（`supabase/config.toml`
  *    の `[storage.buckets.avatars]` を正本とする値。#2449）と一致しているか。`config.toml`
  *    は GitHub integration の Deploy to production / Automatic branching 経由で
- *    production へ同期される実効的な正本（[migration-baseline-squash/overview.md
- *    §bucket の正本は config.toml と migration に割れている](../docs/projects/migration-baseline-squash/overview.md)
- *    参照）で、`avatars` バケットを設定する migration は存在しない。したがって drift は
+ *    production へ同期される実効的な正本（[issue #1523 のコメント欄](https://github.com/Dayopt/dayopt/issues/1523)
+ *    §bucket の正本は config.toml と migration に割れている、旧 migration-baseline-squash/overview.md。
+ *    docs/projects 全廃に伴い #2473 で移設。参照）で、`avatars` バケットを設定する migration は存在しない。したがって drift は
  *    Dashboard 経由の手動変更、または `config.toml` の同期不備でしか起こり得ない
  *
  * **守らない**:

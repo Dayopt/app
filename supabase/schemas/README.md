@@ -57,4 +57,4 @@ migration を追加したら、**その migration が触れた領域のファイ
 `同期対象 migration` に挙げたファイルは、将来の baseline squash で `migrations/_archive/` へ移動し得る。
 その場合も**ヘッダーは書き換えない**。当時どの migration に合わせて同期したかの履歴として意味を持ち、
 `_archive/` を読めば追跡できる。squash 計画は
-[`docs/projects/migration-baseline-squash/overview.md`](../../docs/projects/migration-baseline-squash/overview.md) を参照。
+[issue #1523 のコメント欄](https://github.com/Dayopt/dayopt/issues/1523)（旧 `docs/projects/migration-baseline-squash/overview.md`、docs/projects 全廃に伴い #2473 で移設）を参照。

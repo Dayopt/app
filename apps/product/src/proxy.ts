@@ -198,7 +198,8 @@ interface LegacyWorkspaceRedirect {
  *
  * `?panel=review|diff|analytics` は `/report` へ、それ以外は `/calendar?view=` へ。
  * 既存クエリは素通しし、この関数が明示的に扱うキー（panel / reviewTagId / view / range）
- * だけを置換・削除する（docs/projects/_archive/workspace-shell-restructure/overview.md §4-4）。
+ * だけを置換・削除する（旧 docs/projects/_archive/workspace-shell-restructure/overview.md
+ * §4-4、docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
  *
  * `/review`（削除済み旧route）はこの関数の対象外（張らない。§4-4）。
  */

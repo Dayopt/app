@@ -20,17 +20,17 @@
 
 迷ったらこの表で行き先を決める。ファイル単位の細かい引き先は後述の「質問から正本へのルーティング」。
 
-| 質問                                 | 行き先                                               |
-| ------------------------------------ | ---------------------------------------------------- |
-| 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）  |
-| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く） |
-| 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言   |
-| 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか     |
-| コードの作り方の話か                 | `engineering/` — architecture、規約、infra           |
-| 本番を動かし続ける話か               | `operations/` — runbook、monitoring、security、legal |
-| 何を契約・所有しているかの話か       | `company/` — accounts、登記                          |
-| 進行中の複数領域を跨ぐ設計か         | `projects/` — 有限の実装計画と完了記録               |
-| 過去のある時点の記録か               | 各ドメインの `log/`（日付 prefix、凍結）             |
+| 質問                                 | 行き先                                                            |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）               |
+| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く）              |
+| 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言                |
+| 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか                  |
+| コードの作り方の話か                 | `engineering/` — architecture、規約、infra                        |
+| 本番を動かし続ける話か               | `operations/` — runbook、monitoring、security、legal              |
+| 何を契約・所有しているかの話か       | `company/` — accounts、登記                                       |
+| 進行中の複数領域を跨ぐ設計か         | epic issue 本文（`docs/projects/` は作らない。2026-08-28、#2473） |
+| 過去のある時点の記録か               | 各ドメインの `log/`（日付 prefix、凍結）                          |
 
 `business/` の下位構造: 直下 = 事業判断の正本（icp / messaging / competitors / pricing / business-model / growth）、`content/` = 公開コンテンツの書き方と運用（voice / writing-style / docs-policy / review-checklist / content-operations）、`channels/` = チャネル別の運用（x / reddit / lp）。旧 `marketing/` ドメインは 2026-08-10 に `business/` へ統合した。
 
@@ -38,7 +38,7 @@
 
 `strategy.md` / `state.md` / 日次盤面 issue は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは日次盤面 issue（`type:board`）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に盤面が動くたび古くなる（2026-08-20 に廃止した STATE.md と同じ失敗）。運用は `.claude/rules/orchestration.md` §メタ把握（User + Fable） が正本。
 
-## 現在・Project・履歴
+## 現在・履歴
 
 ### Stock — 現在の正
 
@@ -56,25 +56,6 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 - `superseded`: 正本ではない。通常は新しい正本へのリンクを本文に置く
 - `last_verified`: 内容をコード・外部状態・一次資料と照合した日。本文を眺めただけでは更新しない
 - `code`: scalar または配列。symbol や glob ではなく、実在する repo-relative path を書く
-
-### Project — 有限の作業状態
-
-Project の状態は `docs/projects/{name}/overview.md` だけを正本にする。
-
-```yaml
----
-status: active # active | paused | done
-last_verified: 2026-07-14
-code:
-  - apps/product/src/features/calendar
-  - apps/product/src/features/review
----
-```
-
-- `active`: 実装または検証が進行中
-- `paused`: 意図的に停止中
-- `done`: acceptance criteria を満たした。directory 内に `summary.md` が必須で、ディレクトリごと `docs/projects/_archive/{name}/` へ移す
-- step / summary は通常の stock metadata（`current | superseded`）を使う
 
 ### Log — 当時の記録
 
@@ -99,37 +80,36 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 
 ## 質問から正本へのルーティング
 
-| 質問                           | 正本                                                          |
-| ------------------------------ | ------------------------------------------------------------- |
-| なぜ作るか / 変えないもの      | `strategy.md`                                                 |
-| 今の認識・賭け・やらないこと   | `state.md`                                                    |
-| 誰向けか                       | `strategy.md` §3、詳細は `business/icp.md`                    |
-| 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md`  |
-| 事業指標の定義                 | `business/business-model.md` §Metrics                         |
-| 広げ方・チャネル               | `business/growth.md`, `business/channels/`                    |
-| 公開コンテンツの書き方・運用   | `business/content/`                                           |
-| プロダクト原則・不採用方針     | `product/principles.md`                                       |
-| 現在の機能仕様                 | `product/specs/*.md`                                          |
-| UI / code用語                  | `product/glossary.md`                                         |
-| 訴求・コピー                   | `business/messaging.md`（UI 文言は `product/copywriting.md`） |
-| 全体 architecture / state flow | `engineering/architecture.md`                                 |
-| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`             |
-| 不可解な失敗の切り分け手順     | `engineering/diagnostics.md`                                  |
-| env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`               |
-| 障害対応・release              | `operations/runbook.md`                                       |
-| 監視・alert                    | `operations/monitoring.md`                                    |
-| 夜間 read-only 品質観測        | `operations/night-watch.md`                                   |
-| security                       | `operations/security.md`                                      |
-| 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                     |
-| 契約サービス                   | `company/accounts.md`                                         |
-| 進行中Project                  | `projects/*/overview.md`                                      |
-| 完了Project                    | `projects/_archive/*/overview.md`, `summary.md`               |
-| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                        |
+| 質問                           | 正本                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| なぜ作るか / 変えないもの      | `strategy.md`                                                                        |
+| 今の認識・賭け・やらないこと   | `state.md`                                                                           |
+| 誰向けか                       | `strategy.md` §3、詳細は `business/icp.md`                                           |
+| 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md`                         |
+| 事業指標の定義                 | `business/business-model.md` §Metrics                                                |
+| 広げ方・チャネル               | `business/growth.md`, `business/channels/`                                           |
+| 公開コンテンツの書き方・運用   | `business/content/`                                                                  |
+| プロダクト原則・不採用方針     | `product/principles.md`                                                              |
+| 現在の機能仕様                 | `product/specs/*.md`                                                                 |
+| UI / code用語                  | `product/glossary.md`                                                                |
+| 訴求・コピー                   | `business/messaging.md`（UI 文言は `product/copywriting.md`）                        |
+| 全体 architecture / state flow | `engineering/architecture.md`                                                        |
+| coding / API / frontend 規約   | `engineering/conventions*.md` と `.claude/rules/`                                    |
+| 不可解な失敗の切り分け手順     | `engineering/diagnostics.md`                                                         |
+| env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`                                      |
+| 障害対応・release              | `operations/runbook.md`                                                              |
+| 監視・alert                    | `operations/monitoring.md`                                                           |
+| 夜間 read-only 品質観測        | `operations/night-watch.md`                                                          |
+| security                       | `operations/security.md`                                                             |
+| 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                                            |
+| 契約サービス                   | `company/accounts.md`                                                                |
+| 進行中・完了 Project           | 該当 epic issue 本文と merge 済み PR（`docs/projects/` は 2026-08-28 に全廃、#2473） |
+| なぜその判断になったか         | 各ドメインの `log/` を日付・slugで検索                                               |
 
 ## 書く場所の決定木
 
 1. 過去のある時点の記録か → 該当ドメインの `log/`
-2. 有限の複数step作業か → `projects/{name}/`
+2. 有限の複数step作業か → epic issue 本文（`docs/projects/` は作らない）
 3. 単一componentに閉じる visual / interaction contractか → Storybook
 4. 現在の横断的な真実か → 該当ドメインの stock
 5. コードが消費する値か → code / packageを正本にし、docsは意図とpathだけを書く
@@ -140,7 +120,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - **全体像を先に、詳細を後に書く**(先行オーガナイザー)。読者が読み進める間ずっと保持しなければならない情報は本文中の表やリストへ出し、記憶ではなく参照で読めるようにする
 - 機械検証(contract test / guard / CI)が守っている領域は「ここは機械が保証するため理解不要」と明記してよい。読者に理解を要求するかどうかを暗黙にしない
 - **現在の振る舞い**、**目標・仮説**、**過去の経緯**を同じ箇条書きで混ぜない
-- 機能specは実装済みの外部挙動だけを書く。未実装はProject、理由はlogへ分ける
+- 機能specは実装済みの外部挙動だけを書く。未実装は epic issue、理由はlogへ分ける
 - exact version、env名、価格値などコードに正本がある値はpathを示し、不要に複製しない
 - Mermaidを優先し、画像だけに設計情報を閉じ込めない
 - generated fileは生成元とcheck commandを冒頭に明記し、手編集しない
@@ -152,7 +132,7 @@ superseded_by: docs/product/log/2026-08-01-new-decision.md # 訂正時だけ追�
 - featureの振る舞いを変えたら同じ変更で該当specを更新する
 - 意思決定はstock更新と新規decision logを同じ変更に含める
 - 月次 `/gardening` は当月journalを一度だけ作る。追加の発見は新しい日付付きnoteへ分ける
-- `pnpm docs:check` はlink、metadata、path、naming、Project lifecycle、append-onlyを検証する
+- `pnpm docs:check` はlink、metadata、path、naming、append-onlyを検証する
 - `log/`が50件を超えたら年directoryへ分割してよい。日付prefixは維持する
 
 テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`CLAUDE.md`](../CLAUDE.md)を参照する。

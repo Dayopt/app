@@ -27,7 +27,8 @@ const NON_PRODUCTION_TARGETS = new Set(['preview', 'development']);
 // ものを使う（#1817 Phase 4）。`rootDirectory` は Vercel dashboard 側の Root Directory 設定
 // — vercel.json の `ignoreCommand`（`node ../../scripts/ci/impact.mjs --vercel <project>`）は
 // build container の cwd がこの値になる前提で相対 path を組んでいるため、drift すると
-// ignoreCommand 自体が壊れる（docs/projects/_archive/ci-monorepo-refactor/overview.md §8）。
+// ignoreCommand 自体が壊れる（旧 docs/projects/_archive/ci-monorepo-refactor/overview.md §8、
+// docs/projects 全廃に伴い #2473 で削除。git 履歴参照）。
 const PROJECT_METADATA_CONTRACTS = {
   product: { rootDirectory: 'apps/product', functionDefaultTimeout: 60 },
   web: { rootDirectory: 'apps/web', functionDefaultTimeout: 60 },
@@ -123,7 +124,8 @@ async function fetchProjectMetadata(projectName, token, teamId, fetchImpl) {
  * - `enableAffectedProjectsDeployments`（OpenAPI boolean。dashboard 表記は
  *   "Skip deployments (no changes to root directory)"） — workspace 依存グラフを見ない
  *   自動 skip で、`ignoreCommand`（依存グラフを見る）と競合するため常時 false が前提
- *   （docs/projects/_archive/ci-monorepo-refactor/overview.md §8 補足）
+ *   （旧 docs/projects/_archive/ci-monorepo-refactor/overview.md §8 補足、
+ *   docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
  * - `resourceConfig.functionDefaultTimeout`（dashboard 表記は Functions タブの
  *   "Default Max Duration"） — 契約表に載らない経路（dynamic page の SSR、Server Action、
  *   ISR 再生成）が継承する Default Function Timeout。project 既定値と各 route の静的

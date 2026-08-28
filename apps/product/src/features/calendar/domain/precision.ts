@@ -8,7 +8,9 @@
  * そこに 1 を含めると「drag を 1 分 snap にする選択肢」が UI に滲むため、
  * 1 分粒度は内部 policy 定数として隔離する。
  *
- * @see docs/projects/timeline-precision-redesign/overview.md
+ * @see 旧 docs/projects/timeline-precision-redesign/overview.md
+ *   （docs/projects 全廃に伴い #2473 で削除。当時のリンク先自体が repo 内に見当たらず、
+ *   出典は git 履歴でも追跡できていない）
  */
 
 /** Inspector / text input 専用。drag snap には絶対に使わない。 */

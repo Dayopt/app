@@ -28,8 +28,8 @@ function sanitizeTimeblockSearch(search: string): string {
  *
  * tags 名前検索は Step 8（tag_id 剥離）で除去した。書き込み経路が tag_id を
  * 受け付けなくなり、note に含まれない旧タグ名でのヒットは以後発生しない
- * （唯一のユーザー可視劣化。docs/projects/tag-model-replacement/overview.md
- * §Step 8（tag_id 剥離）の設計 参照）。
+ * （唯一のユーザー可視劣化。issue #2162 のコメント欄 overview.md
+ * §Step 8（tag_id 剥離）の設計 相当を参照。#2473 で移設）。
  *
  * ID は user-owned かつ現役の行のクエリ結果だけを使用する。
  */

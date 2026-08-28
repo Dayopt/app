@@ -29,7 +29,7 @@ export class StatisticsFeedforwardService {
    * 「今から 28 日前まで」の窓なので、user timezone を引く必要が無い。
    *
    * メソッド名は procedure 名（`statistics.getTagEstimationFactors`）に合わせて維持している
-   * （`docs/projects/tag-model-replacement/step-5-7-completion.md` §4-2。procedure 名の改名は
+   * （issue #2162 のコメント欄 step-5-7-completion.md §4-2 相当、#2473 で移設。procedure 名の改名は
    * 破壊的公開契約変更のため別 scope）。中身は activity 軸の集計を返す。
    */
   async getTagEstimationFactors(

@@ -150,5 +150,5 @@ timeout後の再送やbounce / complaintを実在する第三者addressへ故意
 - [Contact仕様](../product/specs/contact.md)
 - [Secrets](./secrets.md)
 - [Environment Secrets](./security/environment-secrets.md)
-- [Project overview](../projects/_archive/contact-delivery-migration/overview.md)
+- 旧 Project overview（`docs/projects/_archive/contact-delivery-migration/overview.md`、docs/projects 全廃に伴い #2473 で削除。git 履歴参照）
 - [Incident](./log/2026-07-21-incident-contact-delivery-outage.md)
