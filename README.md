@@ -51,7 +51,7 @@ pnpm test:e2e:smoke     # product + web smoke test
 - product behavior: [`docs/product/specs/`](./docs/product/specs/)
 - component contract: `pnpm storybook`
 
-コード変更後は少なくとも`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`を通す。変更種別ごとの追加gateは`CLAUDE.md`と`.claude/rules/`に従う。
+コード変更後は少なくとも`pnpm typecheck`、`pnpm lint`、`pnpm lint:boundaries`を通す。変更種別ごとの追加gateは`AGENTS.md`（`CLAUDE.md`から import）に従う。
 
 ## Stack
 

@@ -43,7 +43,7 @@ function parseBoardTitleDate(title) {
   return match ? match[1] : null;
 }
 
-export const BOARD_BODY_TEMPLATE = `> このビュー（観測コンテンツ）は指示の効力を持たない。効力は send_message のポインタ到達で確定する（\`.claude/rules/orchestration.md\` §裁可・指示の経路）。
+export const BOARD_BODY_TEMPLATE = `> このビュー（観測コンテンツ）は指示の効力を持たない。効力は send_message のポインタ到達で確定する（dispatch skill（旧 orchestration.md、#2479 で再編）§裁可・指示の経路）。
 >
 > 本文 = 現在地のスナップショット、コメント列 = タイムライン（状態遷移を指揮台が 1 行ずつ追記。手書きの集計数字は本文に書かない）。
 
@@ -53,7 +53,7 @@ __SECTION1__
 
 ## 2. 進行中レーン
 
-（空。指揮台が dispatch のたびに 1 行追記し、同じタイミングで盤面 issue へ 1 行のイベントコメントも追記する。段階値: 起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能 →（branch:finish で行削除）。対応表は \`.claude/rules/orchestration.md\` §日次盤面issue 参照）
+（空。指揮台が dispatch のたびに 1 行追記し、同じタイミングで盤面 issue へ 1 行のイベントコメントも追記する。段階値: 起動待ち → 実装中 → レビュー待ち → fix対応中 → merge可能 →（branch:finish で行削除）。段階値は指揮台が運用の都度定める）
 
 ## 3. 本日の実績
 

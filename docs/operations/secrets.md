@@ -68,17 +68,17 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 - **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
 - **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
 
-**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`.claude/rules/workflow.md` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`AGENTS.md §PR / git 運用` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
 
 **guard script 自体が壊れた時の挙動は決定済み（2026-08-13、User 決定。[#1961](https://github.com/Dayopt/dayopt/issues/1961)）。** bash は構文エラーでも `exit 2` を返すため、単一ファイル構成では guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。
 
-採ったのは純粋な fail open でも fail closed 全面維持でもなく、**中間案**: `.claude/hooks/pre-tool-guard.sh` を薄い loader に変え、実ロジックを `pre-tool-guard-impl.sh` へ分離した。loader は毎回 `bash -n` で impl の構文を検査し、健全なら委譲する（impl の exit code は 0 のみ 0、他はすべて 2 へ写す — 実行時エラーで想定外の非 0 を返しても fail closed を保つ）。impl が壊れていたら fail closed を既定にしつつ、**impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。他のすべての操作（Bash 全般、他ファイルの Write/Edit、spawn_task）は引き続きブロックする。
+採ったのは純粋な fail open でも fail closed 全面維持でもなく、**中間案**: `scripts/hooks/pre-tool-guard.sh` を薄い loader に変え、実ロジックを `pre-tool-guard-impl.sh` へ分離した。loader は毎回 `bash -n` で impl の構文を検査し、健全なら委譲する（impl の exit code は 0 のみ 0、他はすべて 2 へ写す — 実行時エラーで想定外の非 0 を返しても fail closed を保つ）。impl が壊れていたら fail closed を既定にしつつ、**impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。他のすべての操作（Bash 全般、他ファイルの Write/Edit、spawn_task）は引き続きブロックする。
 
 1 ファイル構成では、自己検査コードを含めファイル内のどのコードも構文エラーで実行されなくなるため（bash はスクリプト全体をパースしてから実行する）、この中間案は loader/impl の 2 ファイル分離でのみ実装できる。fail open 全面採用は復旧経路以外の全保護（force-push・env-file 消費・spawn_task ブロック）まで無効化する過剰な倒し方であり、fail closed 全面維持は復旧に別セッションを要求し続ける。中間案は問題の scope（復旧経路が塞がること）と対応の scope を一致させる。契約は `scripts/__tests__/pre-tool-guard.test.ts` の「loader/impl 分離」describe が固定する。
 
 **受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
 
-- `-env-file` のあとに何か語や引用符が続く文字列は、Bash 引数に含めるだけで落ちる（引用符の中でも散文でも同じ。`rg -- '--env-file' .claude/hooks/` のような自己検索も含む）。docs や commit message にコマンド例を書く時は Write / Edit で file に書いてから `--body-file` / `-F` で渡す。名前を検索したいだけなら **leading dash を外す**（`rg env-file .claude/hooks/` は通る）
+- `-env-file` のあとに何か語や引用符が続く文字列は、Bash 引数に含めるだけで落ちる（引用符の中でも散文でも同じ。`rg -- '--env-file' scripts/hooks/` のような自己検索も含む）。docs や commit message にコマンド例を書く時は Write / Edit で file に書いてから `--body-file` / `-F` で渡す。名前を検索したいだけなら **leading dash を外す**（`rg env-file scripts/hooks/` は通る）
 - `op run` の行に他のコマンドを繋げられない。雛形のコピーと実行を 1 行に畳む形（`cp .op-env.agent.example .op-env.agent && op run …`）、`cd` してからの実行、実行結果のリダイレクトによるログ取りが該当する。**分けて実行すれば通る**
 - 単一コマンド判定は文字単位なので、**引用済み引数の中の区切り記号でも落ちる**（`op run --env-file=… -- node -e "console.log('a|b')"`）。この形は分けても回避できない。判定範囲を絞れるかは [#1987](https://github.com/Dayopt/dayopt/issues/1987) で検討する
 
@@ -102,7 +102,7 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 
 この節はここまで **Vercel Env API / Stripe API 等、下記の機械強制が及ばない API に対する規律**として維持する。
 
-**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`.claude/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/agent/supabase-mgmt-safe-get.mjs` に一本化する:
+**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`scripts/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/agent/supabase-mgmt-safe-get.mjs` に一本化する:
 
 ```bash
 SUPABASE_ACCESS_TOKEN="op://human/supabase-cli/SUPABASE_ACCESS_TOKEN" \

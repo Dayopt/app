@@ -14,13 +14,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // まず「どう書けば通ってしまうか」を数え上げてから allow 側を書く。
 //
 // guard 実装側の対の教訓は「許可形を省略記法で組み立てず選択肢で列挙する」
-// （.claude/hooks/pre-tool-guard.sh のコメント参照）。
+// （scripts/hooks/pre-tool-guard.sh のコメント参照）。
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 // pre-tool-guard.sh は #1961 以降、薄い loader。実際のロジックは
 // pre-tool-guard-impl.sh にある（settings.json の hooks 登録は loader のまま
 // 変更していないので、通常の test はすべて guardPath 経由で書ける）。
-const guardPath = resolve(rootDir, '.claude/hooks/pre-tool-guard.sh');
-const implPath = resolve(rootDir, '.claude/hooks/pre-tool-guard-impl.sh');
+const guardPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.sh');
+const implPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-impl.sh');
 
 // path を組み立てるのは、この test file 自体を編集する Write が
 // guard の file path 検査に引っかからないようにするため。
@@ -387,11 +387,11 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
   // 受け入れる代償。閉じ引用符が続く形を除外する例外は置かない
   // （同型の例外が過去 2 回穴になっている）。回避策は leading dash を外すこと。
   it('flag の直後に引用符が来る自己検索も落ちる（受け入れる誤検知）', () => {
-    expect(runGuard(bash(`rg -- '--env-file' .claude/hooks/`))).toBe('block');
+    expect(runGuard(bash(`rg -- '--env-file' scripts/hooks/`))).toBe('block');
   });
 
   it('leading dash を外した検索は通る（誤検知の回避策）', () => {
-    expect(runGuard(bash('rg env-file .claude/hooks/'))).toBe('allow');
+    expect(runGuard(bash('rg env-file scripts/hooks/'))).toBe('allow');
   });
 });
 
@@ -405,7 +405,7 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
 //
 // force-push / reset ガードは agent 自身の逸脱を止めるためのもので、ブロック側の
 // 後退は P3 の誤検知より重い。誤検知（コミットメッセージに文字列を書くと落ちる）は
-// 受け入れて docs に書く。判断の記録は .claude/hooks/pre-tool-guard.sh のコメントと
+// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard.sh のコメントと
 // #1944 のコメント。
 describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
   const heredoc = (intro: string, body: string, delim = 'EOF') => `${intro}\n${body}\n${delim}`;
@@ -653,7 +653,7 @@ describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、�
 
 // #1959: チップ起票（spawn_task）は指揮台セッションの専権。レーンが直接 User へ
 // チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + 指揮台へ
-// send_message に一本化する（.claude/rules/orchestration.md §レーンの連絡規律）。
+// send_message に一本化する（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）。
 describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
   const SPAWN = 'mcp__ccd_session__spawn_task';
   let fixtureRoot: string;
@@ -723,7 +723,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 });
 
 // worktree 外ファイル編集ガード（2026-08-24, #2359）。
-// レーンは自分の worktree 外を書き換えない（.claude/rules/ai-behavior.md
+// レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
 // §Writer ownership）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
 // working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
 describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
@@ -868,7 +868,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested �
 
 // rm -rf 系（2026-08-24, #2359）。危険なシェイプの列挙（他 worktree 名を数え
 // 上げる等）ではなく、worktree 外へ抜けうる対象の指標（絶対パス起動・`~`・
-// 変数展開・`..`）で判定する（.claude/rules/workflow.md §同型指摘の打ち切り
+// 変数展開・`..`）で判定する（AGENTS.md §PR / git 運用 §同型指摘の打ち切り
 // 「denylist をやめて allowlist にする」）。worktree 内で完結する日常的な
 // キャッシュ削除は通す。
 describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
@@ -1021,7 +1021,7 @@ describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
 
 // night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の時だけ
 // 有効になる allowlist。denylist ではなく allowlist にした理由は
-// .claude/rules/workflow.md §同型指摘の打ち切り「denylist をやめて allowlist にする」。
+// AGENTS.md §PR / git 運用 §同型指摘の打ち切り「denylist をやめて allowlist にする」。
 // 危険側を先に列挙してから許可側を書く（file 冒頭コメントの教訓）。
 describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
   const NIGHT_WATCH_ENV = { DAYOPT_NIGHT_WATCH: '1' };
@@ -1333,7 +1333,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     });
 
     it('guard 自身への Edit（guard 無効化の書き換え試行）は落とす', () => {
-      expect(runGuard(edit('.claude/hooks/pre-tool-guard-impl.sh'), rootDir, NIGHT_WATCH_ENV)).toBe(
+      expect(runGuard(edit('scripts/hooks/pre-tool-guard-impl.sh'), rootDir, NIGHT_WATCH_ENV)).toBe(
         'block',
       );
     });
@@ -1385,9 +1385,9 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         ),
       );
       for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash']) {
-        expect(matchers.get(tool)).toBe('.claude/hooks/pre-tool-guard.sh');
+        expect(matchers.get(tool)).toBe('scripts/hooks/pre-tool-guard.sh');
       }
-      expect(matchers.get('mcp__ccd_session__spawn_task')).toBe('.claude/hooks/pre-tool-guard.sh');
+      expect(matchers.get('mcp__ccd_session__spawn_task')).toBe('scripts/hooks/pre-tool-guard.sh');
     });
   });
 });

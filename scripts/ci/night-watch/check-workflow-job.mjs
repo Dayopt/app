@@ -5,7 +5,7 @@
  *
  * `checkWorkflowJobRun`（run-all.mjs）は nightly.yml 内の job 名で red/green を
  * 判定する多段処理（`gh run list` → run ごとに `gh api .../jobs`）のため、
- * 「単一の単純コマンド」しか許可しない層3 guard（`.claude/hooks/pre-tool-guard-impl.sh`
+ * 「単一の単純コマンド」しか許可しない層3 guard（`scripts/hooks/pre-tool-guard-impl.sh`
  * の `DAYOPT_NIGHT_WATCH=1` allowlist）ではパイプラインを直接許可できない。
  * 他の Step（board-issue.mjs / alert-issue.mjs / dod-candidate.mjs / run-log.mjs）
  * と同じ「個別 wrapper を 1 本の固定コマンドとして allowlist する」設計に合わせ、

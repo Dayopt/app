@@ -84,12 +84,7 @@ const eslintConfig = defineConfig([
   // Story / test は意図的にラベルを省略した fixture を含むため対象外。
   {
     files: ['src/**/*.{jsx,tsx}'],
-    ignores: [
-      '**/*.test.{jsx,tsx}',
-      '**/*.spec.{jsx,tsx}',
-      '**/*.stories.{jsx,tsx}',
-      '**/__tests__/**',
-    ],
+    ignores: ['**/*.test.{jsx,tsx}', '**/*.spec.{jsx,tsx}', '**/*.stories.{jsx,tsx}'],
     rules: {
       'jsx-a11y/alt-text': 'error',
       'jsx-a11y/control-has-associated-label': [
@@ -112,7 +107,6 @@ const eslintConfig = defineConfig([
       '**/*.test.{ts,tsx,js,jsx}',
       '**/*.spec.{ts,tsx,js,jsx}',
       '**/*.stories.{ts,tsx,js,jsx}',
-      '**/__tests__/**',
       'src/app/**/{page,layout,loading,error,not-found,template,default}.{ts,tsx,js,jsx}',
       'src/app/{global-error,global-not-found,forbidden,unauthorized}.{ts,tsx,js,jsx}',
       'src/app/**/{icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx,js,jsx}',
@@ -394,7 +388,7 @@ const eslintConfig = defineConfig([
   },
 
   // Composition Feature (settings): 他featureへのimportは許可するが、deep importは禁止（barrelのみ）
-  // .claude/rules/feature-boundaries.md の「Composition Feature: settings」参照
+  // AGENTS.md / `pr-cross-review` skill の「Composition Feature: settings」参照
   {
     files: ['src/features/settings/**/*.{ts,tsx}'],
     ignores: ['**/*.stories.{ts,tsx}'],
@@ -535,7 +529,8 @@ const eslintConfig = defineConfig([
     ignores: [
       // signInWithPassword selector 用
       'src/lib/test/integration/**',
-      '**/__tests__/**',
+      '**/*.test.{ts,tsx}',
+      '**/*.spec.{ts,tsx}',
       // signInWithPassword selector 用: ログイン（ブラウザから captcha token 付きで呼ぶ）
       'src/features/auth/stores/useAuthStore.ts',
       // signInWithPassword selector 用: アカウント削除の本人確認。

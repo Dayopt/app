@@ -19,7 +19,7 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 | -------------- | --------------------------------- | -------------------------------------------------- | ---------------- |
 | **Local**      | `supabase start`                  | `pnpm dev`                                         | localhost:3000   |
 | **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                         | `*.vercel.app`   |
-| **Production** | `dayopt` main                     | 手動 dispatch（`promote.yml`）で Production deploy | `app.dayopt.app` |
+| **Production** | `dayopt` main                     | 手動 dispatch（`release.yml`）で Production deploy | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
 
@@ -122,10 +122,10 @@ gate が機能する前提は **Product / Web の Auto-assign Custom Production 
 
 1. Vercel Dashboard → product / web → Settings → Git
 2. Auto-assign Custom Production Domains を OFF にする（web を先に、動作確認後 product）
-3. 両方 OFF にしたら `.github/workflows/promote.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
+3. 両方 OFF にしたら `.github/workflows/release.yml` の `RELEASE_EXPECT_AUTO_ASSIGN` を `'false'` にする
 
 無効化後は、main への merge が作るのは domain 未割当の Production build だけになり、Production domain の
-切り替えは `.github/workflows/promote.yml`（`Production Release`）の promote だけが行う。
+切り替えは `.github/workflows/release.yml`（`Production Release`）の promote だけが行う。
 workflow は次を満たした時だけ promote する。
 
 「今どれが配信しているか」は **production domain の alias** から引く。`/v9/projects/{id}` の
@@ -183,7 +183,7 @@ run の結果は `release-manifest-<attempt>` artifact（保持 90 日、`github
 
 ### release workflow の信頼境界
 
-`promote.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
+`release.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
 **workflow を dispatch した ref のもの**を使い、`sha` 入力は release 対象を指す data としてだけ扱う。
 `actions/checkout` の `ref` に入力 SHA を渡すと、未 merge の commit が持つ script が Production 権限で
 動く。この制約は `scripts/__tests__/release-workflow-contract.test.ts` が回帰から守る。
@@ -203,7 +203,7 @@ release job は `environment: production-release` を宣言済みなので、閉
    environment secret へ移す
 
 2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲をこの job に
-限定するための追加措置で、対象は promote.yml しか読まない bypass secret 2 つに限る。
+限定するための追加措置で、対象は release.yml しか読まない bypass secret 2 つに限る。
 
 **`VERCEL_TOKEN` と `VERCEL_ORG_ID` は repository secret のまま残す。** `production-config-audit.yml` の
 audit job は `pull_request_target` と `push: main` で走るため `environment:` を宣言できず、repository
@@ -225,7 +225,7 @@ release script は Vercel API への read-modify-write で、API にトランザ
 
 前提（運用で守る）:
 
-- **書き手は同時に 1 つ。** CI は `promote.yml` の `concurrency: production-release`（cancel なし）で直列化される
+- **書き手は同時に 1 つ。** CI は `release.yml` の `concurrency: production-release`（cancel なし）で直列化される
 - **release run の実行中に、人手で Vercel の promote / rollback / alias 操作をしない。** 緊急時も run の完了（または cancel の完了）を待ってから [runbook](../operations/runbook.md) Playbook 2 に従う
 
 script が保証すること（コードで守る）:
@@ -239,7 +239,7 @@ script が保証すること（コードで守る）:
 - **外部変更の検出の完全性。** 最後の read と write / return の間に起きた変更は検出できない。再読み込みを何回足してもこの窓は消えず 1 段深くなるだけなので、検出のための再読み込みはこれ以上追加しない
 - **manifest の最終正確性。** manifest はベストエフォートの観測記録であって production の正ではない。実態は常に Vercel Dashboard を正とする
 
-この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../.claude/rules/workflow.md#レビュー指摘の必須解決) を参照。
+この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../AGENTS.md §PR / git 運用#レビュー指摘の必須解決) を参照。
 
 ### トラブルシューティング
 
@@ -248,7 +248,7 @@ script が保証すること（コードで守る）:
 | Supabase PR check が出ない              | Supabase GitHub integration / required check 設定を確認                        |
 | Vercel Preview が production DB を見る  | Vercel Preview env から production Supabase vars を削除し integration を再同期 |
 | migration が Preview Branch で失敗      | Supabase deployment log を確認し、migration を修正して PR branch に push       |
-| Production に反映されない               | `gh run list --workflow=promote.yml` で promote が成功しているか確認           |
+| Production に反映されない               | `gh run list --workflow=release.yml` で promote が成功しているか確認           |
 | Supabase 側が Production に反映されない | Supabase GitHub integration の production deployment log を確認                |
 
 ---
@@ -302,7 +302,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 
 main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
 
-**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。**2026-08-28、#2483 で `heavy-post-merge.yml` はさらに `nightly.yml` へ吸収された（job 名・schedule・required checks の扱いは無変更）。** 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`.claude/rules/lane-protocol.md` §条件付き事前 E2E）を参照。
+**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。**2026-08-28、#2483 で `heavy-post-merge.yml` はさらに `nightly.yml` へ吸収された（job 名・schedule・required checks の扱いは無変更）。** 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
 
 | context                   | 発行元            | 目的                                                       |
 | ------------------------- | ----------------- | ---------------------------------------------------------- |
@@ -366,14 +366,14 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
   `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
   101 件・未解決 0 の PR #1820 を偽陰性で止めた）。取得失敗・20 ページ（2000 件）超は
-  従来どおり停止に倒す（fail closed）。解決の 3 択は `.claude/rules/workflow.md` §レビュー指摘の必須解決
+  従来どおり停止に倒す（fail closed）。解決の 3 択は `AGENTS.md §PR / git 運用` §レビュー指摘の必須解決
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、
   `ci.yml` にも `pnpm check` にも入っていないため、required check 以前に**そもそも実行されていない**。
   除外の理由だった「light / dark とも既知 failure がある」は解消済みで、#1499 / #1586 は両方 closed、
   2026-07-30 のローカル実測では light / dark とも 136 tests 全 pass（42 files pass / 33 skip）。
-  CI へ載せるかは job 数 = 課金分の判断（`.claude/rules/workflow.md` §PR 粒度）なので、別途決める
+  CI へ載せるかは job 数 = 課金分の判断（`AGENTS.md §PR / git 運用` §PR 粒度）なので、別途決める
 - **`pull_request_target` の job でも check run は PR の `statusCheckRollup` に出る。**
   2026-07-30 に PR #1760 で実測: `production-config-audit.yml`（`pull_request_target`）の job が
   `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
@@ -381,7 +381,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
   ruleset の required 指定に使うため
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
-  外部レビュー（Codex、2026-08-13 に運用停止）と Claude の内部レビュー（`.claude/rules/ai-behavior.md`
+  外部レビュー（Codex、2026-08-13 に運用停止）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
   §Read-only delegation の `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化して
   いたが、現在は内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が merge gate の標準を
   担う。判定基準だった不変条件カタログは [invariants.md](./invariants.md) に残っている
@@ -442,7 +442,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 
 **型 1 の復旧経路は 2 つ（2026-08-18 実測）。** Vercel の deployment policy（git-source-only）により、API / CLI で作成した deployment は `BLOCKED` 状態になり、承認して production/preview へ通す経路が無いことを実測確認した。実測済みの復旧経路は Vercel Dashboard の **Create Deployment**、および該当 branch への新しい実変更 push の 2 つ（いずれも復旧を確認済み）。空コミット push での復旧は本実測では試していない（未検証）。
 
-**型 3（GitHub Actions 側）: `CI` / `Docs Guard` の check-suite が丸ごと存在しない。** `gh pr checks` に主要 workflow が一切現れず（`Production Config Audit` のような `pull_request_target` 系だけは走る）、commit の check-suites API を見ても対応する suite 自体が無い（2026-08-14、PR #2083 で実測時は `ci.yml` / `docs-guard.yml` の 2 ファイル。#2483 で docs-guard.yml は ci.yml へ統合済みのため、現在確認すべきは `ci.yml` の suite の有無のみ。close→reopen で `reopened` イベントの配信は確認できたが、それでも発火しなかった）。webhook 配信の失敗ではなく、**`mergeable: CONFLICTING` を疑う**のが正しい切り分け。`pull_request`（`pull_request_target` ではない）トリガーの workflow は GitHub 側で test merge commit を作れないと起動されないため、base（`main`）との conflict が解消されるまで check-suite 自体が作られない。復旧はコード修正でも再 push でもなく、`gh pr view <N> --json mergeable,mergeStateStatus` で `CONFLICTING` を確認したうえで通常の conflict 解消（`git merge origin/main` して resolve）を行うこと。
+**型 3（GitHub Actions 側）: `CI` / `Docs Guard` の check-suite が丸ごと存在しない。** `gh pr checks` に主要 workflow が一切現れず（`Production Config Audit` のような `pull_request_target` 系だけは走る）、commit の check-suites API を見ても対応する suite 自体が無い（実測時は `ci.yml` / `docs-guard.yml` の 2 ファイル。#2483 で docs-guard.yml は ci.yml へ統合済みのため、現在確認すべきは `ci.yml` の suite の有無のみ）（2026-08-14、PR #2083 で実測。close→reopen で `reopened` イベントの配信は確認できたが、それでも発火しなかった）。webhook 配信の失敗ではなく、**`mergeable: CONFLICTING` を疑う**のが正しい切り分け。`pull_request`（`pull_request_target` ではない）トリガーの workflow は GitHub 側で test merge commit を作れないと起動されないため、base（`main`）との conflict が解消されるまで check-suite 自体が作られない。復旧はコード修正でも再 push でもなく、`gh pr view <N> --json mergeable,mergeStateStatus` で `CONFLICTING` を確認したうえで通常の conflict 解消（`git merge origin/main` して resolve）を行うこと。
 
 ---
 
@@ -920,7 +920,7 @@ src/app/
 - 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/timeblock` 等)
 - 出力: 1 つの client component ツリー
 
-`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は `.claude/rules/feature-boundaries.md` の Composition Layer / Composition Hub を参照。
+`page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は AGENTS.md / `pr-cross-review` skill の Composition Layer / Composition Hub を参照。
 
 ### providers / shell / overlays
 
@@ -1002,7 +1002,7 @@ locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-f
 
 ### 関連ドキュメント
 
-- Feature 境界: `.claude/rules/feature-boundaries.md`
+- Feature 境界: AGENTS.md / `pr-cross-review` skill
 
 ---
 
@@ -1983,7 +1983,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 策定日: 2026-08-09（経緯は 2026-08-09-antifragility-stance.md（削除済み、git 履歴参照））
 
-**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`.claude/rules/code-style.md` §技術選定スタンス）。
+**乗り換え準備ではなく防災マップ。** 各依存について「今日捨てたら何が壊れるか」を知っておくことが目的で、adapter 層などの事前対策は取らない（YAGNI）。新規依存の採用判断では、この台帳のどの深さに相当するかを基準点にする（`AGENTS.md` §技術選定スタンス）。
 
 更新するのは 3 つの時: ①「深い」「中」級の依存を追加・削除した時、②**既存依存の用途・浸透範囲が変わった時**（新しい呼び出し面を足す、cron を増やす、必須 env に昇格させる等。依存の増減が無くても「今日捨てたら何が壊れるか」は変わる）、③出口検討トリガーに当たる発表・事象があった時。
 
@@ -1996,7 +1996,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 - **対象内**: 依存の列挙漏れ、層の誤り、「捨てたら壊れるもの」の誤り。これらは判断そのものを誤らせる
 - **対象外**: 既に列挙済みの依存について、移行手順を 1 段細かくする記述（オブジェクト搬出に加えた URL 書き換え、DNS レコードの移行順序など）。**台帳は移行手順書ではない**
 
-実際に乗り換える時は、その時点で対象サービスの棚卸しをやり直す前提とする。台帳は「どこから調べ始めるか」の起点であって、網羅した移行チェックリストではない。この境界を引かないと、列挙済みの依存を無限に細分化する指摘が構成でき、防災マップとしての可読性が先に死ぬ（同型指摘の打ち切りは [workflow.md §同型指摘の打ち切り](../../.claude/rules/workflow.md)）。
+実際に乗り換える時は、その時点で対象サービスの棚卸しをやり直す前提とする。台帳は「どこから調べ始めるか」の起点であって、網羅した移行チェックリストではない。この境界を引かないと、列挙済みの依存を無限に細分化する指摘が構成でき、防災マップとしての可読性が先に死ぬ（同型指摘の打ち切りは [workflow.md §同型指摘の打ち切り](../../AGENTS.md §PR / git 運用)）。
 
 ### 深い（乗り換えは週単位の大工事）
 
@@ -2012,7 +2012,7 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
 | **Vercel**                             | product / web のホスティング、build 内 bundle 検査、merge gate の commit status、**Cron**（`calendar-sync` / `external-connection-maintenance` を 15 分毎、`calendar-account-deletion-settle` を毎時）、**host 別 rewrite**（`mcp.dayopt.app` → `/api/mcp`）、**`dayopt.app` の registrar**（DNS zone 自体は Cloudflare へ委任済み。次項の Cloudflare 行、§DNS 管理（Cloudflare） 参照） | deploy 経路、PR 検証の一部、**カレンダー同期と接続メンテナンスの定期実行**、**MCP の入口 routing**、**ドメインの更新・移管権限**（DNS レコードそのものへの影響は無い） | Next.js は他ホスト（Cloudflare / Netlify / self-host）で動く。CI 配線に加え **scheduler と host routing の移植**（`apps/product/vercel.json`）と **registrar 移管**が要る。ホスティングだけ移して account を閉じるとドメインを失う                                                                  | 価格改定、他ホストでの Next.js 冷遇 |
 | **Stripe**                             | Pro 課金（billing）+ **アカウント削除フロー**（subscription cancel → customer 削除）                                                                                                                                                                                                                                                                                                     | 課金・サブスク管理に加え、`stripe_customer_id` を持つユーザーの**アカウント削除が完了しなくなる**                                                                      | 代替決済へ切替可能だが、既存サブスクの移行（解約 → 再契約）と**削除フローの customer cleanup 差し替え**が要る                                                                                                                                                                                       | 手数料改定、アカウント凍結リスク    |
-| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`promote.yml` が production domain promote の唯一経路）                                                                                                                       | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                                                              | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                                                                                     | 価格改定、Actions 課金の構造変化    |
+| **GitHub**                             | issue / PR 運用、Actions CI、`branch:finish` の REST 依存、**deployment の所有権**（Supabase integration が migration / Edge Function / Storage bucket の deploy owner、Vercel の唯一の deployment source、`release.yml` が production domain promote の唯一経路）                                                                                                                       | 開発運用の全経路に加え、**アプリと DB の production deploy が両方止まる**                                                                                              | git 自体は分散。CI workflow と運用 script の書き直しに加え、**Supabase / Vercel integration と release 経路の再配線**が主コスト                                                                                                                                                                     | 価格改定、Actions 課金の構造変化    |
 | **Upstash Redis**                      | rate limit（tRPC / OAuth token endpoint / MCP request）+ Resend webhook の exactly-once 処理リース                                                                                                                                                                                                                                                                                       | **operational 環境ではアプリが起動しない**（env 検証が失敗）。起動しても webhook 処理が fail-closed になる                                                             | `@upstash/redis` は REST API 前提のため素の Redis へ drop-in で移れない。rate limit は degrade で凌げるが、webhook の冪等性は代替ストア（Postgres 等）の実装が要る                                                                                                                                  | 価格改定、REST API の互換性変更     |
 | **Google**                             | OAuth ログイン + external-calendar 連携 + **`support@dayopt.app` の最終受信箱**（Gmail destination と Send mail as）                                                                                                                                                                                                                                                                     | Google ログインユーザーのアクセス、カレンダー同期、**問い合わせの受信と返信**                                                                                          | ログインは email 併存、連携は opt-in。ただし**受信箱は代替が要る**（destination 変更・履歴移行・返信経路の再設定。`docs/operations/contact-email.md`）                                                                                                                                              | OAuth / Calendar API の政策変更     |
 | **Cloudflare**                         | `dayopt.app` の **authoritative DNS**（`app` / `mcp` / `www` を含む）、**Email Routing**（`support@` → Gmail）、Turnstile（Bot 対策）                                                                                                                                                                                                                                                    | **全ドメインの名前解決**と**問い合わせの受信**、Bot 対策                                                                                                               | nameserver を別 DNS へ委譲し直し、MX / SPF / DKIM と転送先を再設定、CAPTCHA を差し替える。DNS の切替は伝播待ちを伴う                                                                                                                                                                                | 価格改定、無料枠の縮小              |

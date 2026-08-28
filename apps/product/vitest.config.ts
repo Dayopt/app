@@ -38,13 +38,13 @@ const dirname =
 /** `.tsx` でも `use*.test.ts` でもないが DOM が要る test。 */
 const DOM_ONLY_TESTS = [
   // 実装（calendarScrollStore.ts）が localStorage で永続化する
-  'src/features/calendar/stores/__tests__/calendarScrollStore.test.ts',
-  'src/features/timeblock/components/editor/__tests__/TimeblockRecordActions.test.ts',
-  'src/lib/__tests__/cookie-consent.test.ts',
-  'src/lib/keyboard/__tests__/shortcut-registry.test.ts',
-  'src/lib/security/__tests__/encryption.test.ts',
+  'src/features/calendar/stores/calendarScrollStore.test.ts',
+  'src/features/timeblock/components/editor/TimeblockRecordActions.test.ts',
+  'src/lib/cookie-consent.test.ts',
+  'src/lib/keyboard/shortcut-registry.test.ts',
+  'src/lib/security/encryption.test.ts',
   // 別タブからの storage.clear() まで見る consent lifecycle の test（browser 前提）
-  '__tests__/instrumentation-client.test.ts',
+  'instrumentation-client.test.ts',
 ];
 
 /** DOM を必要とする test の include パターン。 */

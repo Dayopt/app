@@ -30,7 +30,7 @@ body:
     id: bundle
     attributes:
       label: 相乗り先の docs 束
-      description: docs-only の小粒 issue は単独 PR を立てず束ねる（`.claude/rules/workflow.md` §PR 粒度）。相乗り先が決まっていなければ空欄でよい（指揮台が編成時に束ねる）
+      description: docs-only の小粒 issue は単独 PR を立てず束ねる（`AGENTS.md §PR / git 運用` §PR 粒度）。相乗り先が決まっていなければ空欄でよい（指揮台が編成時に束ねる）
       placeholder: 例 次の docs 束、または既存の代表 issue 番号
   - type: textarea
     id: verification

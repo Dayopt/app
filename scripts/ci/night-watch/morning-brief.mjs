@@ -13,7 +13,7 @@ import {
 /**
  * night-watch オーケストレータ（`run-all.mjs`）の Step 6（#2370）。夜勤の
  * GitHub Actions 移植（#2367）により観測がトークンゼロになったことを受け、
- * 朝の編成（`.claude/rules/orchestration.md` §1 日サイクル）で指揮台が毎朝
+ * 朝の編成（`dispatch` skill（旧 orchestration.md、#2479 で再編） §1 日サイクル）で指揮台が毎朝
  * 手動で行っていた観測系 gh クエリ（ready キュー確認・in-progress 棚卸し・
  * open PR/CI 状態・milestone 整合）を前倒しし、当日盤面 issue へ機械生成の
  * 1 コメントとして残す。
@@ -81,7 +81,7 @@ export function judgeHandoffQuality(body) {
  * 使う。action 部分は日本語 title からの機械推定が非現実的（正確な意味抽出には
  * model が要り、この wrapper は判断をしない設計のため）なため含めない —
  * 指揮台が dispatch 時に実際の action を補って `git branch -m` でリネームする
- * 前提の「たたき台」に留める（`.claude/rules/workflow.md` §命名規則 と同じ
+ * 前提の「たたき台」に留める（`AGENTS.md §PR / git 運用` §命名規則 と同じ
  * 運用、Claude Code 自動生成のランダム名を最初の PR 前にリネームするのと同型）。
  * @param {string} title
  * @param {number} issueNumber
@@ -98,7 +98,7 @@ function isStale(updatedAt, now) {
 }
 
 // ── 停滞疑いレーンの検出（#2415）─────────────────────────────
-// レーンの停止条件（`.claude/rules/lane-protocol.md` §停止条件）は自己申告
+// レーンの停止条件（`AGENTS.md §レーン運用` §停止条件）は自己申告
 // なので、黙って詰まったレーンは拾えない。その二段目として「最終 commit から
 // N 営業時間、commit が積まれていない open Draft PR」を機械検出する。
 // **判断語は出さない**（このブリーフ全体の方針）。「停滞疑い」までで、
@@ -403,10 +403,9 @@ function pickRepresentative(entries) {
  *
  * **同一 check 名を畳んでから判定する。** `statusCheckRollup` は同名
  * check を畳まない（`gh pr checks` は畳む）ため、同一 head SHA で 2 回 run
- * が走ると古い run の failure/cancelled を数え続ける（`.claude/rules/
- * workflow.md` §Worktree運用 が明文化する既知の罠、`scripts/git/
- * finish-branch.sh` に正解実装あり。Codex レビュー指摘・指揮台採用、
- * PR #2380）。
+ * が走ると古い run の failure/cancelled を数え続ける（既知の罠、
+ * `scripts/tasks/finish-branch.sh` に正解実装あり。Codex レビュー指摘・
+ * 指揮台採用、PR #2380）。
  *
  * **`finish-branch.sh` の ROLLUP jq と揃える**（当初の簡易実装は「group
  * 内の配列末尾を採る」だけで decisive フィルタが無く、`FAILURE` →
@@ -446,8 +445,8 @@ function buildChipDraftBlock(issue) {
     '```',
     `レーン「（指揮台が命名）」。https://github.com/${REPO}/issues/${issue.number}。`,
     `worktree を .claude/worktrees/ 配下に作成し、branch 名は ${branch}（案。指揮台が action 部分を補って確定する）。`,
-    'レーンプロトコル: .claude/rules/lane-protocol.md に従う。',
-    '連絡規律: .claude/rules/orchestration.md §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当issueのコメントを読み直す・push/ready化/重量watchは自律的に進める・追従だけは指揮台の合図待ち・spawn_task は指揮台の専権のため使わない）。',
+    'レーンプロトコル: AGENTS.md §レーン運用 に従う。',
+    '連絡規律: `dispatch` skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律 に従う（止まる前に連絡・User へ直接質問しない・節目で担当issueのコメントを読み直す・push/ready化/重量watchは自律的に進める・追従だけは指揮台の合図待ち・spawn_task は指揮台の専権のため使わない）。',
     '（案件固有の注意はここに指揮台が追記）',
     '```',
   ].join('\n');

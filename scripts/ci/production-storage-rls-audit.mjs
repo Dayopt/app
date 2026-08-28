@@ -34,7 +34,7 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  *
  * ## 保証境界（どこまでを守り、どこからを守らないか）
  *
- * `.claude/rules/workflow.md` §同型指摘の打ち切り に倣い、守る範囲を先に宣言する。
+ * `AGENTS.md §PR / git 運用` §同型指摘の打ち切り に倣い、守る範囲を先に宣言する。
  *
  * **守る**:
  *

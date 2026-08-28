@@ -91,7 +91,7 @@ describe('docs のみの変更', () => {
   it.each([
     [['docs/strategy.md']],
     [['AGENTS.md', 'CLAUDE.md', 'README.md']],
-    [['.claude/rules/workflow.md', '.claude/skills/dispatch/SKILL.md']],
+    [['docs/decisions.md', '.claude/skills/dispatch/SKILL.md']],
     [['docs/engineering/conventions.md', 'docs/README.md']],
   ])('%j は docsOnly=true で app build を要求しない', (files) => {
     expectImpact(files, { docsOnly: true });
@@ -193,7 +193,7 @@ describe('中立 path（app 成果物に影響しない）', () => {
     // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
     // 崩れない。wrong-skip 方向の regression は本ファイルの unit test が防波堤になる。
     [['scripts/ci/impact.mjs', 'scripts/ci/impact.test.ts']],
-    [['.claude/hooks/pre-tool-guard.sh', '.claude/settings.json']],
+    [['scripts/hooks/pre-tool-guard.sh', '.claude/settings.json']],
     [['.github/workflows/ci.yml']],
     [['.husky/pre-push', '.vscode/settings.json']],
     [['apps/storybook/.storybook/main.ts']],

@@ -1,6 +1,6 @@
 ---
 name: test
-description: 新機能実装の完了時（tRPC procedure / React hook / pure function / component の新規作成後）、バグ修正の完了時（回帰防止用）、既存テストの assertion 追加が必要になる実装変更時に発動。Vitest + Testing Library の配置規約（`__tests__/*.test.ts`）に従う。型定義のみ・UI 文言のみ・既存テストのリファクタリングのみの変更時は発動しない。
+description: 新機能実装の完了時（tRPC procedure / React hook / pure function / component の新規作成後）、バグ修正の完了時（回帰防止用）、既存テストの assertion 追加が必要になる実装変更時に発動。Vitest + Testing Library の配置規約（対象ファイルの隣に `X.test.ts`。`__tests__/` は使わない）に従う。型定義のみ・UI 文言のみ・既存テストのリファクタリングのみの変更時は発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -35,20 +35,19 @@ Dayoptのテスト作成を支援するスキル。Vitest + Testing Libraryを�
 
 ## テスト配置ルール
 
+**`X.test.ts` は `X` の隣に置く。`__tests__/` ディレクトリは作らない**（2026-08-28、[#2485](https://github.com/Dayopt/dayopt/issues/2485)。旧ディレクトリ隔離方式から統一）。
+
 ```
 apps/product/src/features/{feature}/
 ├── components/
 │   ├── MyComponent.tsx
-│   └── __tests__/
-│       └── MyComponent.test.tsx
+│   └── MyComponent.test.tsx
 ├── hooks/
 │   ├── useMyHook.ts
-│   └── __tests__/
-│       └── useMyHook.test.ts
+│   └── useMyHook.test.ts
 └── utils/
     ├── myUtil.ts
-    └── __tests__/
-        └── myUtil.test.ts
+    └── myUtil.test.ts
 ```
 
 ## 実行環境（node / happy-dom）
@@ -224,7 +223,7 @@ describe('calculateTotal', () => {
 - network mock は login / render / cache warm より前に登録し、必要なら request の発生と最終 UI の両方を確認する
 - **例外**: pure function の unit test など、入力と直接の返り値だけで契約を完全に証明できる場合はこの限りでない
 
-この規約は `AGENTS.md` の TEST-1（凍結前の定義）を踏襲しているが、**この skill が生きた正本**。`AGENTS.md` 側は変更しない。`.claude/rules/workflow.md` §教訓コメント方式 の回帰テスト言及もここを参照する。
+この規約は `AGENTS.md` の TEST-1（凍結前の定義）を踏襲しているが、**この skill が生きた正本**。`AGENTS.md` 側は変更しない。`AGENTS.md §PR / git 運用` §教訓コメント方式 の回帰テスト言及もここを参照する。
 
 ## skip 条件つき test は緑が証拠にならない
 
@@ -275,9 +274,9 @@ describe('useCalendarDrag', () => {
 
 ### 作成したテスト
 
-| ファイル                       | テスト数 | 内容             |
-| ------------------------------ | -------- | ---------------- |
-| `__tests__/formatDate.test.ts` | 3        | 日付フォーマット |
+| ファイル             | テスト数 | 内容             |
+| -------------------- | -------- | ---------------- |
+| `formatDate.test.ts` | 3        | 日付フォーマット |
 
 ### カバレッジ
 

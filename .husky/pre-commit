@@ -4,7 +4,7 @@
 # バージョンを sha256 で pin しているが、ここは意図的に固定しない —
 # ローカルは「CI に着く前に無料で落とす」フィルタで、CI が最終網のまま。
 # バージョン強制は brew upgrade のたびに壊れるブリトルさの方が割に合わない。
-# 詳細: docs/operations/security.md、.claude/rules/workflow.md §Pause point
+# 詳細: docs/operations/security.md、AGENTS.md §PR / git 運用 §Pause point
 if ! command -v gitleaks > /dev/null 2>&1; then
   # 非対話環境（CI 変数設定 or stdin が TTY でない）では hard fail にしない。
   # 月次 gardening 自動パート（cloud Routine、brew が無い環境）は draft PR

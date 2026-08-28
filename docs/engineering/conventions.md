@@ -12,7 +12,7 @@ Dayopt の feature / lib / shell の責務境界、設計パターン、`domain/
 
 ## Code Organization
 
-`ADR-012 Feature-Sliced Architecture` と `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）の運用面を補完する。
+`ADR-012 Feature-Sliced Architecture` と `Feature Boundaries`（AGENTS.md / `pr-cross-review` skill）の運用面を補完する。
 
 ### 3 つの結論（前提）
 
@@ -88,7 +88,7 @@ Independent:          auth, contact
 Composition:          settings  (= 通常 feature DAG には乗せない)
 ```
 
-詳細は `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）を参照。
+詳細は `Feature Boundaries`（AGENTS.md / `pr-cross-review` skill）を参照。
 
 ### Calendar Hub（暫定運用）
 
@@ -508,7 +508,7 @@ features/*  ✓→  src/lib/*
 - 他 feature の store / barrel を組み合わせて「設定」UI を合成
 - 自身の domain は持たない
 - deep import 優先順: **`@/lib/stores/*` > feature barrel > deep import**
-- 詳細: `features/settings/index.ts` 冒頭コメント / `.claude/rules/feature-boundaries.md`
+- 詳細: `features/settings/index.ts` 冒頭コメント / AGENTS.md / `pr-cross-review` skill
 
 #### `features/auth`（部分的）
 
@@ -689,5 +689,5 @@ git commit -m "fix(ui): ボタンのカラーをセマンティックトーク�
 
 ## 参考
 
-- `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
+- `Feature Boundaries`（AGENTS.md / `pr-cross-review` skill）
 - ADR-012 Feature-Sliced Architecture（削除済み、git 履歴参照）

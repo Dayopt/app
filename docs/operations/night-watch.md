@@ -25,7 +25,7 @@ night-watch は毎晩、常設の運行記録 issue へ1コメントを残す:
 
 ## 故障検出手順
 
-朝の編成 sweep（`.claude/rules/orchestration.md` §1 日サイクル）で確認する:
+朝の編成 sweep（`dispatch` skill（旧 orchestration.md、#2479 で再編） §1 日サイクル）で確認する:
 
 1. 常設運行記録 issue に前夜（当日 JST 未明）のコメントが付いているか確認する
 2. 付いていなければ、`gh run list --workflow=nightly.yml --limit 10` で直近 run 一覧を取得し、04:00 JST 前後の run を `gh run view <run-id>` で開いて night-watch job の状態を確認する（#2483 で nightly.yml へ統合されたため、workflow 名だけでは night-watch の cron を一意に絞れない）

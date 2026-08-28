@@ -55,7 +55,7 @@ done < "$PUSH_INPUT_FILE"
 # commit set ごとに 1 回だけ止め、確認の観点を出す。再実行すれば通る。
 # これはスピードバンプであってゲートではない（答えたかどうかは機械では
 # 検証できない）。項目は再発履歴のあるものだけ・観点名のみ。正本は
-# .claude/rules/workflow.md §push 前の敵対的セルフレビュー。
+# AGENTS.md §PR / git 運用 §push 前の敵対的セルフレビュー。
 # 検証は /gardening のステップ 5。項目を 1 つ足すときは 1 つ削る。
 #
 # 差分ゼロ push（空コミットのみ。着手時 Draft PR の初回 push 等）は 4 点が
@@ -84,7 +84,7 @@ PAUSE: push 前の確認（この commit set では初回。4 点に答えてか
    反証レビュー（risk-reviewer / behavior-verifier / architecture-guard）をかけたか
 4. 配線と不等式は確認したか（env の受け渡し、timeout / 予算などの定数関係）
 
-なぜこの 4 点か: .claude/rules/workflow.md §push 前の敵対的セルフレビュー
+なぜこの 4 点か: AGENTS.md §PR / git 運用 §push 前の敵対的セルフレビュー
 CONFIRM
       exit 1
     fi
@@ -101,7 +101,7 @@ fi
 #
 # これは CI Static Checks の代替ではない。`pnpm check` 相当のフルセットではなく
 # affected スコープの高速フィルタで、フックが通っても CI は必ず走る
-# （.claude/rules/workflow.md §Pause point「フックは CI 前に無料で落とす係」）。
+# （AGENTS.md §PR / git 運用 §Pause point「フックは CI 前に無料で落とす係」）。
 #
 # test:run（turbo タスク）は対象に含めない。apps/product・apps/web の
 # localStorage 依存テストが Node 26 環境で `Cannot read properties of

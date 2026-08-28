@@ -267,7 +267,7 @@ DAG構造の依存関係を持つ機能分類:
 | Independent | なし           | Auth, Contact    |
 | Composition | 必要なfeature  | Settings         |
 
-- machine-readableな正本は`apps/product/eslint.config.mjs`、説明は[Feature Boundaries](../../.claude/rules/feature-boundaries.md)
+- machine-readableな正本は`apps/product/eslint.config.mjs`、説明は[Feature Boundaries](../../AGENTS.md / `pr-cross-review` skill)
 - ESLint: `pnpm lint:boundaries` で強制
 
 #### Composition Layer

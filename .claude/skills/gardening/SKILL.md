@@ -10,9 +10,9 @@ description: ユーザーが月次ガーデニングの人間パート実施を�
 - **自動パート** — 毎月 1 日 09:00 JST に Routine（Claude Code cloud の scheduled trigger）が fresh session で実施する。手順の正本は本ファイル §自動パート。Routine の prompt は「本ファイルの §自動パート に従う」とだけ指しており、手順の変更はこのファイルの編集だけで済む
 - **人間パート** — Routine が作った draft PR とレポートを材料に、ユーザーと Main が価値判断だけを行う。本コマンド（`/gardening`）はこちらを指す
 
-機械にできる検出・調査・下書きを人間の記憶に依存させない。人間が使うのは判断だけ、が設計原則（`.claude/rules/workflow.md` §Pause point の「機械で強制できるものは機械へ」と同じ思想）。
+機械にできる検出・調査・下書きを人間の記憶に依存させない。人間が使うのは判断だけ、が設計原則（`AGENTS.md §PR / git 運用` §Pause point の「機械で強制できるものは機械へ」と同じ思想）。
 
-**統治レビューへの重心移動（2026-08-10）。** 指揮台オーケストレーション運用（`.claude/rules/orchestration.md`）が朝の編成で盤面（open PR・issue の停滞、worktree・ブランチ残骸、milestone 実態）という**速い変数**を日次で扱うようになった。gardening は**遅い変数**——権限境界（`orchestration.md` §権限の既定）・ルールの足し引き・機能の削除候補——を月 1 回、日次では溜まらない証拠（判断ジャーナルの分岐実績、月単位でしか動かない外部指標）に基づいて動かす場に絞る。二層構造は「日次が速い変数、gardening が遅い変数」で分担し、同じ検出項目を両方に持たせない。
+**統治レビューへの重心移動（2026-08-10）。** 指揮台オーケストレーション運用（`dispatch` skill（旧 orchestration.md、#2479 で再編））が朝の編成で盤面（open PR・issue の停滞、worktree・ブランチ残骸、milestone 実態）という**速い変数**を日次で扱うようになった。gardening は**遅い変数**——権限境界（`orchestration.md` §権限の既定）・ルールの足し引き・機能の削除候補——を月 1 回、日次では溜まらない証拠（判断ジャーナルの分岐実績、月単位でしか動かない外部指標）に基づいて動かす場に絞る。二層構造は「日次が速い変数、gardening が遅い変数」で分担し、同じ検出項目を両方に持たせない。
 
 ## When to Use
 
@@ -41,7 +41,7 @@ fresh session で以下を順に実施し、成果物を「draft PR + issue + jo
 5. **スモークテスト（1 問）** — 記憶に頼らず docs のみを根拠にプロダクトの仕組みへの質問に 1 つ答える。答えられなければ穴を issue として起票し、可能ならストック側も直す
 6. **並行レーン sweep** — `dispatch` skill（`.claude/skills/dispatch/SKILL.md`）の操作 C の**月次 backstop 項目のみ**実施する（日次項目は指揮台の朝編成が吸収済み。`orchestration.md` §1 日サイクル）。発見は同 skill の intake で起票する
 7. **公開コンテンツ監査** — `docs-audit` skill を実行し、実機能と公開 docs のギャップ・鮮度乖離・en/ja 非対称を検出して起票する。`area:blog` issue が枯渇していればレビュー待ちリストに記す。コンテンツの数字（Search Console / Vercel Analytics の指名検索・流入・上位クエリ）と事業指標（`docs/business/business-model.md` §Metrics の定義に従う WAU・課金率・チャーン。Stripe / Supabase から read-only で取得）は、取得できる環境なら journal に記録し、できなければ「未取得」と明記する。事業の現在地はこの月次記録を正とし、常設の進捗文書は作らない
-8. **セキュリティ sweep** — advisors 確認は **cloud Supabase MCP（`--read-only`、オンデマンド登録）を標準経路とする**（策定日: 2026-08-17、人間パート決定）: `.claude/rules/mcp-usage.md` §`supabase`(cloud) はオンデマンド登録する の手順で登録 → `get_advisors`（type: security）を実行 → 使用後に登録解除する。ローカル DB（`supabase-local`）は使わない（worktree 間で共有状態を持ち、他 branch の migration を抱えて advisors 結果が汚染されうるため）。あわせて `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば journal（draft PR 本文）に記録する
+8. **セキュリティ sweep** — advisors 確認は **cloud Supabase MCP（`--read-only`、オンデマンド登録）を標準経路とする**（策定日: 2026-08-17、人間パート決定）: `mcp-usage` skill §`supabase`(cloud) はオンデマンド登録する の手順で登録 → `get_advisors`（type: security）を実行 → 使用後に登録解除する。ローカル DB（`supabase-local`）は使わない（worktree 間で共有状態を持ち、他 branch の migration を抱えて advisors 結果が汚染されうるため）。あわせて `pnpm security:check` を実施。修正が必要な指摘は dispatch intake で起票。所見があれば journal（draft PR 本文）に記録する
 9. **四半期チェック** — 直近 3 ヶ月に AI 設定棚卸し（`audit-ai-config` skill）実施の issue / merged PR が無ければ（`gh search issues --repo Dayopt/dayopt "audit-ai-config" --include-prs` 等で検索）、レビュー待ちリストに「AI 設定棚卸しの実施提案」を記す。**skill / rules ファイルの鮮度を git log で判定する時は `audit-ai-config` skill §Review Questions 1 の shallow-clone 注意（`.git/shallow` 境界が 2026-07-15 に付き `git log -1` が汚染される）に従う**
 10. **成果物の着地** — branch `claude/gardening-YYYY-MM` を作り、鮮度更新（あれば）を commit して **draft PR** を作成する。journal（できごと / 決定 / 学び / 数値 / レビュー待ちリスト）は commit せず **PR 本文**に書く（正本は git 履歴と merged PR であり、独立ファイルは持たない）。issue は各ステップ内で起票済みであること。PR 本文に「実施したステップ / 起票した issue / レビュー待ちリストの件数」も要約する
 
@@ -49,7 +49,7 @@ fresh session で以下を順に実施し、成果物を「draft PR + issue + jo
 
 策定日: 2026-08-17（人間パート決定、PR #2110 コメント参照）。2026-09 の gardening（自動パート・人間パートいずれか適切な方）でのみ実施し、完了後は本節を削除する。
 
-- **Actions 8 月実測 vs 外挿 6,820 分の突き合わせ + PR 束ね反転効果の検証** — `.claude/rules/workflow.md` §Actions 経済の規律 の private 化保留判断の前提になった外挿値と、2026-08 の実測（journal のマージ PR 数 / push 回数 / CI 課金分）を突き合わせる。あわせて §PR 粒度 の束ね運用が実際に CI run 数を下げているかを検証する
+- **Actions 8 月実測 vs 外挿 6,820 分の突き合わせ + PR 束ね反転効果の検証** — `AGENTS.md §PR / git 運用` §Actions 経済の規律 の private 化保留判断の前提になった外挿値と、2026-08 の実測（journal のマージ PR 数 / push 回数 / CI 課金分）を突き合わせる。あわせて §PR 粒度 の束ね運用が実際に CI run 数を下げているかを検証する
 - **skill / plugin 発火実績確認**（[#2067](https://github.com/Dayopt/dayopt/issues/2067) 移管分） — 上記「四半期チェック」項目とは別に、#2067 の close コメントで 2026-09 gardening へ移管された発火実績確認を実施する
 
 ## 人間パート（/gardening で実施）
@@ -58,8 +58,8 @@ Routine の draft PR が存在する前提で、ユーザーと Main が以下�
 
 1. **draft PR のレビューと merge** — journal 下書きと鮮度更新を確認し、`pnpm branch:finish` で merge する
 2. **レビュー待ちリストの裁定** — superseded 判定、昇格の採否、AI 設定棚卸しの実施可否を決める
-3. **判断層の検証**（`CLAUDE.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）④**決定ログの sweep**（2026-08-28、#2475 でラベル→月次 sync 機構は廃止。分岐時点で `docs/decisions.md` へ直接 1 行追記する運用へ移行済み。`.claude/rules/orchestration.md` §判断ジャーナル 参照） — `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs` で、判定材料が揃っているのに追記が漏れている分岐が無いか確認し、見つかれば追記する。判定済み事例（`docs/decisions.md` に記録済みの全件）を母集団に `.claude/rules/orchestration.md` §権限の既定 の境界を実測で更新する（可逆な采配を指揮台決定 + opt-out にする試行運用の恒久化 / 巻き戻しの判定もここで行う）
-4. **実行層の検証**（`.claude/rules/workflow.md` §Pause point） — ⑤各チェックは今月何かを捕まえたか ⑥pause point の迂回の痕跡は無いか ⑦機械へ昇格できる項目は無いか
+3. **判断層の検証**（`CLAUDE.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）④**決定ログの sweep**（2026-08-28、#2475 でラベル→月次 sync 機構は廃止。分岐時点で `docs/decisions.md` へ直接 1 行追記する運用へ移行済み。`dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル 参照） — `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs` で、判定材料が揃っているのに追記が漏れている分岐が無いか確認し、見つかれば追記する。判定済み事例（`docs/decisions.md` に記録済みの全件）を母集団に `dispatch` skill（旧 orchestration.md、#2479 で再編） §権限の既定 の境界を実測で更新する（可逆な采配を指揮台決定 + opt-out にする試行運用の恒久化 / 巻き戻しの判定もここで行う）
+4. **実行層の検証**（`AGENTS.md §PR / git 運用` §Pause point） — ⑤各チェックは今月何かを捕まえたか ⑥pause point の迂回の痕跡は無いか ⑦機械へ昇格できる項目は無いか
 5. **深掘りスキャン** — claude-security プラグイン（multi-agent のリポジトリ全体走査 + 敵対検証 + patch 生成）を月次の 1 項目として月 1 回転する。per-PR には重すぎる（1 回で数百万 token 級）ため per-PR 層（plan-review / レーン反証 / 指揮台クロスレビュー）には組み込まず、変更同士の合成で開く穴（per-PR レビューの構造的死角）を拾う backstop と位置づける。専用セッションで、**User の明示同意の下で起動**する（プラグインは大量 token 消費の明示 opt-in が前提の設計。`/claude-security` の「Scan codebase」はユーザーのみ起動できる、`disable-model-invocation: true`）。走行レーンの無い静かな盤面で行う（同日に通常レーンを並走させない — findings が in-flight 変更と衝突して triage が濁る）。findings は全件 issue 化して通常の編成へ流す。patch の適用は findings の triage 後に個別判断する。初回実施は 2026-09 の gardening
 6. 3・4 で所見が出たら journal（draft PR 本文）に記録する。項目や pause point を変える場合はメタルール（**1 つ足すときは 1 つ削る**）に従い `/decision` で決定ログを残す
 

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { REPO, runGhJson } from '../ci/night-watch/lib.mjs';
 
 /**
- * green watch — open PR の CI 遷移 watch（`.claude/rules/orchestration.md`
+ * green watch — open PR の CI 遷移 watch（`dispatch` skill（旧 orchestration.md、#2479 で再編）
  * §green watch の実装。#2355 で常設化が決まり、#2363 で使い捨て Monitor から
  * repo 管理の script へ降ろした）。
  *
@@ -125,7 +125,7 @@ function fetchChecks(prNumber, { execFileImpl } = {}) {
  * open PR 全件の snapshot を取る。**draft PR は対象外。**
  *
  * この watch は「レーンが green 報告を送り忘れた時に指揮台が気づけるようにする」
- * backstop（`.claude/rules/orchestration.md` §green watch）で、拾いたいのは
+ * backstop（`dispatch` skill（旧 orchestration.md、#2479 で再編） §green watch）で、拾いたいのは
  * **ready + green = レビュー待ち**への遷移だけ。
  *
  * draft を含めると誤検知になる（2026-08-26、#2415）: Draft CI 廃止で draft PR の
