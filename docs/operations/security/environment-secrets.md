@@ -40,7 +40,7 @@ GitHub branch protection では、通常の CI check に加えて Supabase integ
 
 ```bash
 SUPABASE_STORAGE_RLS_AUDIT_TOKEN="op://ci/supabase-storage-rls-audit/credential" \
-  op run -- node scripts/production-storage-rls-audit.mjs
+  op run -- node scripts/ci/production-storage-rls-audit.mjs
 ```
 
 - token は `ci` vault にある（`human` vault ではない）。agent の vault allowlist は `agent` のみのため、**この実行自体は agent 単独では行えず、User の明示指示（1Password 承認）を経由する**
@@ -140,7 +140,7 @@ Previewは`RECOVERY_CODE_PEPPER`を維持する。production modeのenv validati
 
 production の Auth 設定（Bot Protection、メール変更の二重確認、匿名サインインの可否など）は **Supabase Dashboard が正本**で、`supabase/config.toml` の `[auth.*]` は local と PR Preview branch にしか効かない。GitHub integration の Deploy to production も Auth 設定を同期しない。そのため Dashboard 側でトグルが 1 つ変わると、テストも build も通ったまま安全性が消える。
 
-期待値の正本は [`scripts/production-auth-config-audit.mjs`](../../../scripts/production-auth-config-audit.mjs) の `AUTH_CONFIG_CONTRACT` に置く。docs は CI を fail させられないため正本にしない。監視は `Production Config Audit` workflow の `auth-config` job が担い、**push:main と日次 cron でだけ**走る。
+期待値の正本は [`scripts/ci/production-auth-config-audit.mjs`](../../../scripts/ci/production-auth-config-audit.mjs) の `AUTH_CONFIG_CONTRACT` に置く。docs は CI を fail させられないため正本にしない。監視は `Production Config Audit` workflow の `auth-config` job が担い、**push:main と日次 cron でだけ**走る。
 
 - PR と `workflow_dispatch` では走らせない。Management API の token は account 単位 read-write（`POST /v1/projects/{ref}/database/query` で production DB への任意 SQL を含む）で、Vercel token より blast radius が広い。`workflow_dispatch --ref <branch>` は branch head を checkout するため、この経路に token を乗せない
 - GitHub secret 名は `SUPABASE_ACCESS_TOKEN` と分けて `SUPABASE_AUTH_AUDIT_TOKEN` にする。同名だと、別 workflow が「その名前を参照するだけ」で PR 側 code の実行経路へ token が配られる（`integration.yml` が実際にこの形の workflow レベル env を持っていた。2026-08-11 に削除）
@@ -157,7 +157,7 @@ production の Auth 設定（Bot Protection、メール変更の二重確認、�
 手元での単発確認は `op run` 経由で行う（値は 1Password が masking する。`docs/operations/secrets.md` §API 経由の設定読戻し に従い、射影は完全一致で書く）:
 
 ```bash
-SUPABASE_AUTH_AUDIT_TOKEN="op://ci/supabase-auth-audit/credential" op run -- node scripts/production-auth-config-audit.mjs
+SUPABASE_AUTH_AUDIT_TOKEN="op://ci/supabase-auth-audit/credential" op run -- node scripts/ci/production-auth-config-audit.mjs
 ```
 
 #### Pre-deploy dry run

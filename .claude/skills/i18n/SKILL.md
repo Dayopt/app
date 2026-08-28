@@ -311,4 +311,4 @@ t('actions.save');
 - `apps/web/src/platform/i18n/request.ts` - メッセージローダー（固定 namespace）
 - `apps/product/src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`pnpm i18n:check`）
 - `apps/product/src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`pnpm i18n:unused`）
-- `scripts/i18n/check-glossary.ts` - 禁止表記スキャン（`pnpm copy:check`）
+- `scripts/tasks/check-glossary.ts` - 禁止表記スキャン（`pnpm copy:check`）

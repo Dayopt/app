@@ -8,7 +8,7 @@ import {
   AUTH_EMAIL_TEMPLATES,
   generateProductAuthEmailTemplate,
   syncAuthEmailTemplates,
-} from '../sync-auth-email-templates';
+} from '../tasks/sync-auth-email-templates';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const temporaryDirectories: string[] = [];

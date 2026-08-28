@@ -277,7 +277,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 - workflow導入PRでは`pull_request_target`がまだbaseにないため、同じscriptをmetadata-onlyで手動実行し、merge後の初回trusted run成功後にrequired statusへ昇格する
 - **project 設定 6 項目も監査対象（2026-08-05、#1817 Phase 4 で 4 項目導入 → #1835 で
   `sourceFilesOutsideRootDirectory` 追加 → 2026-08-14、#1966 で `functionDefaultTimeout` 追加）。**
-  `GET /v9/projects/{idOrName}`（`scripts/production-release.mjs`の`getProjectMeta`と同系API）を
+  `GET /v9/projects/{idOrName}`（`scripts/ci/production-release.mjs`の`getProjectMeta`と同系API）を
   追加で叩き、`rootDirectory`（product=`apps/product`、web=`apps/web`）・
   `autoAssignCustomDomains`（false）・`commandForIgnoringBuildStep`（null/未設定。
   vercel.jsonの`ignoreCommand`が正本で、dashboard側に別コマンドが残っていたらdrift）・
@@ -290,7 +290,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
   `vercel/sdk`の型定義（`GetProjectResponseBody`の`resourceConfig`配下）で確認した
   — 実応答での存在は trusted dispatch の green が唯一の実測（詳細は上記
   §Dashboard の Default Function Timeout 参照）
-  - **`scripts/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
+  - **`scripts/ci/production-release.mjs`のrelease gate（`runProductionConfigAudit`呼び出し2箇所）は
     `checkProjectSettings: false`で呼び、この6項目監査をスキップする。** `autoAssignCustomDomains`
     はrelease中に一時的にtrueへ戻りうる（Vercelのpromote endpointの既知挙動、
     vercel/vercel#15095）。production-release.mjs側はsweep/stabilizeで自前管理しており
@@ -390,7 +390,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   扱いになる**ため、実行コストを避けつつ merge gate も満たせる。`paths-ignore` は 2026-08-05 に撤去した
   （workflow ごと起動しなくなり、ruleset が required にしている 4 check が永久に "expected" のまま残って
   docs のみの PR が構造的に merge 不能になったため。PR #1836 で実測）。マージ可否は
-  `scripts/git/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。
+  `scripts/tasks/finish-branch.sh` が全 check を見て判定する（失敗 0 件・実行中 0 件・成功 1 件以上）。
   **この集約判定に加えて、名前で success を要求する check がある**（Vercel の 2 context と、
   2026-08-26 以降は Static Checks / Unit Tests。上記 §merge gate の required checks 参照）
 - **`ci.yml` の `gate` / `static` / `unit` は draft の間 skip する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
@@ -414,7 +414,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `scripts/__tests__/finish-branch.test.ts` が固定する（#1768）
 
 - **audit contract 変更 PR の guard failure は trusted dispatch で解除する。**
-  `production-config-audit.yml` は audit contract 保護対象（`scripts/production-config-audit.mjs` /
+  `production-config-audit.yml` は audit contract 保護対象（`scripts/ci/production-config-audit.mjs` /
   各 `production-build-gate.mjs` / workflow 自身）を変更する PR で、`pull_request_target` の check run
   `Audit Vercel metadata (trusted)` を設計として必ず failure にする（PR code に contract 変更を
   自己検証させないため）。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
@@ -731,7 +731,7 @@ flip 前に検討したチェック項目。**証拠が残っていない項目�
 3. **flip 実施時点（2026-08-12）では `/api/trpc/[trpc]` が project 既定を上回る 300 秒の明示値を持ち、project 既定を上書きする形で運用されていた。** 2026-08-14、PR #2075（#1965 の wall-clock 予算実装）により `/api/trpc/[trpc]` の `maxDuration` は 60 へ引き下げられた（詳細は上記 §tRPC が 60 の理由）。現時点で project 既定 60 を上回る静的宣言を持つ route は `api/integrations/google-calendar/callback`（90）と `api/mcp` / `mcp`（120）の 2 つのみで、いずれも project 既定を明示的に上書きする設計（上記 §例外を作る基準は「失敗の質」参照）。**runtime 適用の実測（宣言どおり Vercel が適用しているか）は未取得**（下記 §「実際に適用された」ことの証拠 参照。Vercel の deployment API は per-function `maxDuration` を返さないため自動検証はできない）
 4. rollback: Dashboard で 300 へ戻し、再 deploy して反映（`[hours]`）。**戻す場合は同一対応で下記 pin の契約値（`PROJECT_METADATA_CONTRACTS` の `functionDefaultTimeout`）も 300 へ戻すこと** — 戻さないと Production Config Audit が failure になり、この rollback を含む hotfix の出荷経路まで全 merge が止まる
 
-flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。**このフィールドパスは `vercel/sdk` の型定義と Dashboard 目視だけが根拠で、`GET /v9/projects/{idOrName}` の実応答での存在は未確認。** この repo には「スキーマに載っているが実応答に無い」前例がある（`enableAffectedProjectsDeployments`、2026-08-05）。唯一の実測は merge シーケンスの trusted dispatch — dispatch が `missing from project metadata` で落ちたら、そのまま fix を重ねず `defaultResourceConfig` 等の別フィールドパスを確認してから修正する。
+flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `production-config-audit.mjs` へ `functionDefaultTimeout` を pin 済み（`scripts/ci/production-config-audit.mjs` の `auditProjectSettings`）。フィールドは `GetProjectResponseBody` のトップレベルではなく **`resourceConfig.functionDefaultTimeout`**（`vercel/sdk` の型定義で確認、2026-08-14）。値が 60 以外、または `resourceConfig` に当該キーが無ければ fail closed で audit が failure になる。**このフィールドパスは `vercel/sdk` の型定義と Dashboard 目視だけが根拠で、`GET /v9/projects/{idOrName}` の実応答での存在は未確認。** この repo には「スキーマに載っているが実応答に無い」前例がある（`enableAffectedProjectsDeployments`、2026-08-05）。唯一の実測は merge シーケンスの trusted dispatch — dispatch が `missing from project metadata` で落ちたら、そのまま fix を重ねず `defaultResourceConfig` 等の別フィールドパスを確認してから修正する。
 
 #### 「実際に適用された」ことの証拠
 
@@ -750,7 +750,7 @@ flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `producti
 - 認証必須の endpoint は Supabase server client + Cookie で `getUser()` 検証、または webhook signature 検証
 - 公開requestのrate limit identifierは保存前に不可逆化する。Contact / CSPはbackend unavailable時にfail-closed、既存tRPC / iCalは定義済みfallbackを維持する
 - rate limitのIP identifierはVercelが上書きする`X-Real-IP`だけを検証し、`X-Forwarded-For`を解析しない。欠落・不正値は共有`ip:unknown`に入れてfail closedにする。この前提はVercel単独topologyに依存する
-- **認証操作にapp側のrate limit層は無い**。かつて`/api/auth`が持っていたが、呼び出し元ゼロの攻撃面だったため#1942で削除した。現在はSupabase Auth のproject-level rate limitだけが担う（期待値は`scripts/production-auth-config-audit.mjs`がpinする）。server側のanti-abuseが要るなら、その時点でrouteとlimiterを新設する
+- **認証操作にapp側のrate limit層は無い**。かつて`/api/auth`が持っていたが、呼び出し元ゼロの攻撃面だったため#1942で削除した。現在はSupabase Auth のproject-level rate limitだけが担う（期待値は`scripts/ci/production-auth-config-audit.mjs`がpinする）。server側のanti-abuseが要るなら、その時点でrouteとlimiterを新設する
 - 副作用はloggerで技術状態だけを追跡し、問い合わせ本文・氏名・email・raw webhook bodyを記録しない
 
 ### 関連ドキュメント
@@ -1476,12 +1476,12 @@ ORDER BY schemaname, tablename;
 
 障害対応中に最初に知るべきはこれ。**DB backup をどう復元しても、以下は戻らない。**
 
-| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/ci/storage-backup.sh` / `scripts/storage-restore.sh`、rclone ベース）は実装済み。**destination（Cloudflare R2）を確定し、初回搬出・実復元演習ともに完了**（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。以後は日次 cron が差分同期する。詳細は [disaster-recovery-drill.md](../operations/disaster-recovery-drill.md) §Storage |
-| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                                                                                                                                   |
-| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                                                                                                                                      |
-| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                                                                                                                               |
+| 対象                                              | なぜ                                                           | 戻し方                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Storage オブジェクト**                          | どの DB backup にも含まれない（Supabase の仕様）               | 搬出/復元 script（`scripts/ci/storage-backup.sh` / `scripts/runbook/storage-restore.sh`、rclone ベース）は実装済み。**destination（Cloudflare R2）を確定し、初回搬出・実復元演習ともに完了**（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。以後は日次 cron が差分同期する。詳細は [disaster-recovery-drill.md](../operations/disaster-recovery-drill.md) §Storage |
+| **Edge Functions とその secrets**                 | 復元対象外                                                     | `supabase functions deploy <slug> --use-api` で再デプロイ + **secrets を再投入**（`supabase secrets set`）。コードを戻しても secrets は戻らない                                                                                                                                                                                                                                           |
+| **Vault の secrets（別 project へ復元した場合）** | 暗号鍵は project 単位。別 project では復号できない可能性が高い | 1Password から再投入する（`vault.secrets` に 9 件。`stripe_secret_key` / `resend_api_key` / `service_role_key` / `recovery_code_pepper` 等）                                                                                                                                                                                                                                              |
+| **Realtime publication**                          | 別 project へ復元した場合は再有効化が必要                      | 現状 publication は空なので影響なし                                                                                                                                                                                                                                                                                                                                                       |
 
 **production の pg_cron job は `supabase/migrations/` が正本ではない**（baseline に「本番は Dashboard で設定」とある）。復元の前後で `SELECT jobname, schedule, active FROM cron.job;` を控えて突き合わせる。
 

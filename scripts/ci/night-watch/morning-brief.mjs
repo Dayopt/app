@@ -349,7 +349,7 @@ function fetchCurrentMilestoneTitle({ execFileImpl } = {}) {
 }
 
 /**
- * `scripts/git/finish-branch.sh` の `is_pending`（jq）と同じ判定。
+ * `scripts/tasks/finish-branch.sh` の `is_pending`（jq）と同じ判定。
  * `status` / `state` のいずれかが実行中系の値なら true。
  */
 function isPendingCheck(check) {
@@ -362,7 +362,7 @@ function isPendingCheck(check) {
 }
 
 /**
- * `scripts/git/finish-branch.sh` の `is_decisive`（jq）と同じ判定。
+ * `scripts/tasks/finish-branch.sh` の `is_decisive`（jq）と同じ判定。
  * `skipped` / `neutral` / `stale` は decisive ではない（同名 check の古い
  * failure がこれらの後着で隠れるのを防ぐための区別）。
  */

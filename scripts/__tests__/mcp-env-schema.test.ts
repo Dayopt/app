@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { envSchema, productionEnvSchema, type EnvSchemaEntry } from '../env/schema';
+import { envSchema, productionEnvSchema, type EnvSchemaEntry } from '../tasks/env/schema';
 
 const MCP_APP_ENV_NAMES = [
   'OAUTH_CLAUDE_REDIRECT_URIS',
@@ -26,7 +26,7 @@ const opEnvExample = readFileSync(
 );
 
 const setup1PasswordScript = readFileSync(
-  fileURLToPath(new URL('../setup-1password.sh', import.meta.url)),
+  fileURLToPath(new URL('../runbook/setup-1password.sh', import.meta.url)),
   'utf8',
 );
 

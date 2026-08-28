@@ -18,7 +18,7 @@
 
 - Draft PR は §着手手順 手順 4 のとおり着手時に開く。ローカル検証（`pnpm check` + pre-push フック）が済んだら、**指揮台の合図を待たずに自己判断で ready 化する**（2026-08-26 改訂、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。初出は 2026-08-20、[#2263](https://github.com/Dayopt/dayopt/issues/2263)。`.claude/rules/orchestration.md` §レーン主導の push・ready化 が正本）。**draft 中は Docs Guard 以外の CI が走らない**ため、CI green の確認は ready 化の後になる
 - 本文に `Closes #N` を対象 issue ごとに 1 行ずつ書く。epic や部分対応は `Refs #N`（`.claude/rules/workflow.md` §PR と issue の紐づけ）
-- **保護対象の検出**: audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
+- **保護対象の検出**: audit contract 保護対象（`scripts/ci/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）に触れているかを確認し、該当する場合は ready 化前に指揮台へ申告する（trusted dispatch が要るため）。trusted dispatch の実行は指揮台が行う（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 手順 2）
 
 ## 報告テンプレート（4 種）
 

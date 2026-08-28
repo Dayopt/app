@@ -10,7 +10,7 @@
 # ⚠ production では現在このスクリプトを実行しない（#1946 で決着、2026-08-12）
 # ========================================
 # production の hook は**意図的に無効**にしてある。実測値 false を
-# scripts/production-auth-config-audit.mjs が期待値として pin している。
+# scripts/ci/production-auth-config-audit.mjs が期待値として pin している。
 #
 # 無効のままにする理由: この hook は課金 gate の性能最適化であって機能要件ではない。
 # BILLING_ENFORCED が未設定の間、proProcedure は購読チェック自体を skip する

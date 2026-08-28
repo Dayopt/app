@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import {
   AUTH_CONFIG_CONTRACT,
   SUPABASE_PRODUCTION_PROJECT_REF,
-} from '../production-auth-config-audit.mjs';
+} from '../ci/production-auth-config-audit.mjs';
 
 /**
  * Supabase Management API の `GET /v1/projects/{ref}/config/auth` を、field allowlist

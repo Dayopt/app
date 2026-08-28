@@ -9,7 +9,7 @@ name: Heavy Tests (post-merge)
 # job 定義（checkout / setup / playwright install / supabase start / test 実行 /
 # artifact upload）は .github/workflows/ci.yml の旧 e2e / web job から無変更で移設した。
 # check 名（"🎭 E2E Tests" / "🌐 Web Build & E2E"）も維持する。release.yml の層 4
-# pre-flight（promote 前 gate）と scripts/git/finish-branch.sh の rollup 判定が
+# pre-flight（promote 前 gate）と scripts/tasks/finish-branch.sh の rollup 判定が
 # 参照する context/check 名は不変であることに依存しない設計（ruleset の
 # required_status_checks から外れるため finish-branch.sh には影響しない）だが、
 # release.yml 側は check-runs API でこの名前を直接参照する。

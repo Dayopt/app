@@ -26,7 +26,7 @@ import { afterEach, describe, expect, it } from 'vitest';
  */
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const scriptPath = join(rootDir, 'scripts/git/finish-branch.sh');
+const scriptPath = join(rootDir, 'scripts/tasks/finish-branch.sh');
 const temporaryDirectories: string[] = [];
 
 const BRANCH = 'claude/example-branch-1';
@@ -131,7 +131,7 @@ function internalReviewMarkerBody(
  * 内製クロスレビュー痕跡クエリ（comments のみ）のレスポンスを組み立てる。
  *
  * 外部レビュー（Codex）廃止後、痕跡は `[internal-review]` marker 付き issue comment
- * の 1 経路のみで判定する（`scripts/git/finish-branch.sh` §内製クロスレビューの
+ * の 1 経路のみで判定する（`scripts/tasks/finish-branch.sh` §内製クロスレビューの
  * 実施を要求する gate 参照）。
  */
 function reviewEvidencePayload(evidence: {
@@ -1135,13 +1135,13 @@ describe('レビュー thread の必須解決 gate', () => {
         { isResolved: true, path: 'src/resolved.ts' },
         {
           isResolved: false,
-          path: 'scripts/git/finish-branch.sh',
+          path: 'scripts/tasks/finish-branch.sh',
           author: 'chatgpt-codex-connector',
         },
       ],
     });
     expect(stderr).toContain('未解決のレビュー thread が 1 件');
-    expect(stderr).toContain('scripts/git/finish-branch.sh');
+    expect(stderr).toContain('scripts/tasks/finish-branch.sh');
     expect(status).toBe(1);
   });
 
@@ -1176,11 +1176,11 @@ describe('レビュー thread の必須解決 gate', () => {
     const { status, stderr } = runScript(greenRollup(), {
       threadPages: [
         { threads: resolvedThreads(100) },
-        { threads: [{ isResolved: false, path: 'scripts/git/finish-branch.sh' }] },
+        { threads: [{ isResolved: false, path: 'scripts/tasks/finish-branch.sh' }] },
       ],
     });
     expect(stderr).toContain('未解決のレビュー thread が 1 件');
-    expect(stderr).toContain('scripts/git/finish-branch.sh');
+    expect(stderr).toContain('scripts/tasks/finish-branch.sh');
     expect(status).toBe(1);
   });
 

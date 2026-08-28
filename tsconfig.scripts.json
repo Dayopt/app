@@ -28,7 +28,7 @@
     // 名前も誤っている。将来ここへ型を通すなら、apps/product 側で
     // ProcedureMeta を export するか、scripts 側に構造的に等価な型を複製する
     // 設計判断とセットで行う。
-    "scripts/generate-api-spec.ts",
+    "scripts/tasks/generate-api-spec.ts",
     "scripts/__tests__/generate-api-spec.test.ts"
   ]
 }

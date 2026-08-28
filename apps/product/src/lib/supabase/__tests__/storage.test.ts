@@ -86,7 +86,7 @@ describe('uploadAvatar（#2449: 非原子的な置換の回帰防止）', () => 
 
   // client 側の早期 validation 値は bucket 側の実際の制約
   // （supabase/config.toml の [storage.buckets.avatars]、
-  // scripts/production-storage-rls-audit.mjs の EXPECTED_AVATARS_BUCKET が正本）の
+  // scripts/ci/production-storage-rls-audit.mjs の EXPECTED_AVATARS_BUCKET が正本）の
   // 3 箇所目の写経になっている（#2464 cross-review 指摘）。この test はその 3 値が
   // 一致していることをリテラルで固定する。いずれかを変える PR はこの test の diff を
   // 伴わない限り気づかれない（STORAGE_OBJECTS_APP_POLICY_NAMES と同型の二重管理対策）。

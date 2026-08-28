@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { forbiddenFields, onePasswordEnvSchema } from '../env/schema';
+import { forbiddenFields, onePasswordEnvSchema } from '../tasks/env/schema';
 
 const rootDir = resolve(import.meta.dirname, '../..');
 const temporaryDirectories: string[] = [];
@@ -86,7 +86,7 @@ function runCheck(options: CheckOptions = {}) {
     ? fields
     : fields.filter((field) => !forbiddenNames.has(field.id));
 
-  return spawnSync('pnpm', ['exec', 'tsx', 'scripts/env/check-1password.ts'], {
+  return spawnSync('pnpm', ['exec', 'tsx', 'scripts/tasks/env/check-1password.ts'], {
     cwd: rootDir,
     encoding: 'utf8',
     env: {

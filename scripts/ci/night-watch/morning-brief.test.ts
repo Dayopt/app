@@ -671,7 +671,7 @@ describe('summarizeCheckState', () => {
   // 指揮台 delta re-review 差し戻し: 当初実装は「group内の配列末尾を採る」
   // だけで decisive フィルタが無く、FAILURE → （後着の）SKIPPED の順で
   // 再実行された場合に skipped が代表になり赤を隠す回帰を作っていた
-  // （`scripts/git/finish-branch.sh:192` が同シナリオを名指しする既知の罠）。
+  // （`scripts/tasks/finish-branch.sh:192` が同シナリオを名指しする既知の罠）。
   // finish-branch.sh と揃えた実装（decisive優先）でこの逆転が起きないこと
   // を固定する。
   it('同名checkがFAILURE→（後着の）SKIPPEDの順で再実行されても、decisiveなFAILUREを代表にしてredのまま', () => {

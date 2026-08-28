@@ -188,7 +188,7 @@ describe('app とその依存', () => {
 
 describe('中立 path（app 成果物に影響しない）', () => {
   it.each([
-    [['scripts/git/finish-branch.sh', 'scripts/__tests__/finish-branch.test.ts']],
+    [['scripts/tasks/finish-branch.sh', 'scripts/__tests__/finish-branch.test.ts']],
     // impact.mjs 自身も中立。トレードオフを明示して固定する: ignoreCommand の実動作
     // （shallow clone / exit code 変換）を変えた PR は実 Vercel 経路を通らずに merge
     // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
@@ -250,17 +250,17 @@ describe('CI toolchain（productUnit / webCi と product / web の分離）', ()
 });
 
 describe('Vercel の build が実行する root script', () => {
-  it.each([['scripts/check-client-bundle-secrets.mjs'], ['scripts/check-bundle-budget.ts']])(
-    '%s は product を要求する（scripts/ の中立扱いより優先）',
-    (file) => {
-      // これらは apps/product/vercel.json の buildCommand（verify:bundle）が直接実行する。
-      // 中立に倒すと product=false になり、変更した当の検証を走らせないまま merge できる。
-      expectImpact([file], { product: true, productJourney: true });
-    },
-  );
+  it.each([
+    ['scripts/tasks/check-client-bundle-secrets.mjs'],
+    ['scripts/tasks/check-bundle-budget.ts'],
+  ])('%s は product を要求する（scripts/ の中立扱いより優先）', (file) => {
+    // これらは apps/product/vercel.json の buildCommand（verify:bundle）が直接実行する。
+    // 中立に倒すと product=false になり、変更した当の検証を走らせないまま merge できる。
+    expectImpact([file], { product: true, productJourney: true });
+  });
 
   it('build に関与しない scripts/ は従来どおり中立', () => {
-    expectImpact(['scripts/git/finish-branch.sh'], {});
+    expectImpact(['scripts/tasks/finish-branch.sh'], {});
   });
 
   it('PRODUCT_BUILD_SCRIPTS が product の build 定義と一致する（drift 検出）', () => {
@@ -445,7 +445,7 @@ describe('formatGithubOutput', () => {
   });
 
   it('中立 path のみの変更では product=false（Unit の product test を skip できる）', () => {
-    expect(formatGithubOutput(resolveImpact(['scripts/git/finish-branch.sh']))).toBe(
+    expect(formatGithubOutput(resolveImpact(['scripts/tasks/finish-branch.sh']))).toBe(
       'docs_only=false\nproduct_unit=false\nweb_ci=false\n',
     );
   });

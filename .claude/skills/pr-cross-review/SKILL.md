@@ -85,7 +85,7 @@ P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、�
 
 ### 5. P1/P2 は review comment として投稿する（thread を生成させる）
 
-**`[internal-review]` marker 付きの単一 issue コメントだけでは、既存の thread-resolve gate（`scripts/git/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`.claude/rules/workflow.md` §レビュー指摘の必須解決）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
+**`[internal-review]` marker 付きの単一 issue コメントだけでは、既存の thread-resolve gate（`scripts/tasks/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`.claude/rules/workflow.md` §レビュー指摘の必須解決）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
 
 - P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
 - diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
@@ -94,13 +94,13 @@ P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、�
 
 ### 6. summary コメントを投稿する（marker、gate 証跡）
 
-P1/P2 の review comment とは別に、**1 件の summary comment** を issue コメントとして投稿する。1 行目を `[internal-review]` で始め、以下を含める（`scripts/git/finish-branch.sh` の gate 判定に必要な必須フィールド）:
+P1/P2 の review comment とは別に、**1 件の summary comment** を issue コメントとして投稿する。1 行目を `[internal-review]` で始め、以下を含める（`scripts/tasks/finish-branch.sh` の gate 判定に必要な必須フィールド）:
 
 - `head: <PR の現在の HEAD SHA、40 桁 hex>`
 - `agent: <実行した subagent 名をカンマ区切り、または docs-only>`
 - P1/P2/P3 の件数サマリー（inline review comment の一覧を指す旨も添える）
 
-**marker 本文は `pnpm review:marker` で生成する（手書きしない）。** SHA の捏造（短縮 SHA からの補完、2026-08-14 実事故）と zerolike 書式の汚染（注釈付き `P1: なし（…）` が gate を誤通過させた PR #2053 の実事故）を、生成の機械化で防ぐ（`scripts/review/generate-marker.ts`、#2230）。
+**marker 本文は `pnpm review:marker` で生成する（手書きしない）。** SHA の捏造（短縮 SHA からの補完、2026-08-14 実事故）と zerolike 書式の汚染（注釈付き `P1: なし（…）` が gate を誤通過させた PR #2053 の実事故）を、生成の機械化で防ぐ（`scripts/tasks/generate-marker.ts`、#2230）。
 
 **手順 3 で reviewer を起動した場合（docs-only 以外）は `--agent` ではなく `--review-result` を使う。** 手順 3 の Workflow が返した `{role, status, result}[]` を、Main が `Write` tool でそのまま JSON ファイルへ書き出し、そのパスを渡す（#2348）。`status` が `ok`/`text-fallback` 以外の role が 1 件でもあれば生成が失敗する — これは「1 role が結果を返していないのに手で `--agent` へ書いて gate を通す」抜け道を、値の手入力自体を無くして塞ぐための機械的ガード:
 
@@ -136,11 +136,11 @@ head SHA は script が `gh pr view --json headRefOid` で実測する（引数�
 
 指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
 
-**書式を誤った marker は窓内に残ると gate を塞ぎ続ける。** gate は「最新の marker」だけでなく窓内の**全 marker を any 判定**する（`scripts/git/finish-branch.sh` の `INTERNAL_REVIEW_CLAIMS_FINDINGS`）ため、正しい書式の新しい marker を投稿しても、窓内に残る誤書式の古い marker 1 件（例: §投稿フォーマット の zerolike 判定に落ちる注釈付き `P1: なし（…）`）が非ゼロ申告と誤認され続け、対応する review comment が無いまま停止する。復旧は当該コメントの削除または編集のみ（新しい marker の追加投稿では解決しない）。PR [#2053](https://github.com/Dayopt/dayopt/pull/2053) の初運用でこの型で 2 度停止し、汚染 marker を削除してから通過した。
+**書式を誤った marker は窓内に残ると gate を塞ぎ続ける。** gate は「最新の marker」だけでなく窓内の**全 marker を any 判定**する（`scripts/tasks/finish-branch.sh` の `INTERNAL_REVIEW_CLAIMS_FINDINGS`）ため、正しい書式の新しい marker を投稿しても、窓内に残る誤書式の古い marker 1 件（例: §投稿フォーマット の zerolike 判定に落ちる注釈付き `P1: なし（…）`）が非ゼロ申告と誤認され続け、対応する review comment が無いまま停止する。復旧は当該コメントの削除または編集のみ（新しい marker の追加投稿では解決しない）。PR [#2053](https://github.com/Dayopt/dayopt/pull/2053) の初運用でこの型で 2 度停止し、汚染 marker を削除してから通過した。
 
 ## 投稿フォーマット
 
-**P1/P2 行でゼロ件を申告する時は、値を `なし` / `0` / `0件` / `0 件` / `None` のいずれかのみにする。同一行に注釈・括弧書きを付けない。**gate の zerolike 判定（`scripts/git/finish-branch.sh` の `zerolike`）は完全一致の正規表現のため、`P1: なし（注釈…）` のような括弧注釈付きはゼロ件と認識されず非ゼロ申告と誤認され、対応する review comment が見つからず gate が停止する。ゼロ件の理由や補足を書きたい場合は別行にするか P3 / 経緯欄へ書く（非ゼロ件数を申告する行は下の例の P2 のように注釈を付けてよい。zerolike 判定の対象外なので gate 判定に影響しない）。
+**P1/P2 行でゼロ件を申告する時は、値を `なし` / `0` / `0件` / `0 件` / `None` のいずれかのみにする。同一行に注釈・括弧書きを付けない。**gate の zerolike 判定（`scripts/tasks/finish-branch.sh` の `zerolike`）は完全一致の正規表現のため、`P1: なし（注釈…）` のような括弧注釈付きはゼロ件と認識されず非ゼロ申告と誤認され、対応する review comment が見つからず gate が停止する。ゼロ件の理由や補足を書きたい場合は別行にするか P3 / 経緯欄へ書く（非ゼロ件数を申告する行は下の例の P2 のように注釈を付けてよい。zerolike 判定の対象外なので gate 判定に影響しない）。
 
 ```
 [internal-review]
@@ -161,7 +161,7 @@ agent: docs-only
 一次情報照合: 記述した path / symbol の実在を rg で確認した。
 ```
 
-タグだけで中身が空、`head:` 欠落・不一致、`agent:` 欠落のいずれかがあるコメントは gate を通過しない（`scripts/git/finish-branch.sh` §内製クロスレビューの実施を要求する gate）。
+タグだけで中身が空、`head:` 欠落・不一致、`agent:` 欠落のいずれかがあるコメントは gate を通過しない（`scripts/tasks/finish-branch.sh` §内製クロスレビューの実施を要求する gate）。
 
 ## 参考ファイル
 
@@ -171,5 +171,5 @@ agent: docs-only
 | `.claude/rules/workflow.md` §レビュー指摘の必須解決         | 指摘後の 3 択・resolve 運用                                          |
 | `.claude/rules/orchestration.md` §指揮台の merge シーケンス | このスキルが実行されるタイミング、確定伝達                           |
 | `AGENTS.md`                                                 | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                |
-| `scripts/git/finish-branch.sh`                              | `[internal-review]` marker の gate 判定ロジック                      |
-| `scripts/review/generate-marker.ts`                         | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |
+| `scripts/tasks/finish-branch.sh`                            | `[internal-review]` marker の gate 判定ロジック                      |
+| `scripts/tasks/generate-marker.ts`                          | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |

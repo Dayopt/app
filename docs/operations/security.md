@@ -84,7 +84,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 どの context を required にするかは [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks) を正本とする。ここには複製しない（job 名を変えるたびに 2 箇所が乖離するため）。
 
-private + Free plan では GitHub 側の required check 強制自体が効かず、マージ可否は `scripts/git/finish-branch.sh` が判定する。ruleset の実状は API から確認できない（`gh api repos/Dayopt/dayopt/rulesets` は 403 `Upgrade to GitHub Pro` を返す）ため、この画面の設定は手動確認に依存する。
+private + Free plan では GitHub 側の required check 強制自体が効かず、マージ可否は `scripts/tasks/finish-branch.sh` が判定する。ruleset の実状は API から確認できない（`gh api repos/Dayopt/dayopt/rulesets` は 403 `Upgrade to GitHub Pro` を返す）ため、この画面の設定は手動確認に依存する。
 
 ### Fork Pull Request
 

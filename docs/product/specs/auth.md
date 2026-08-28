@@ -43,7 +43,7 @@ Supabase Auth ベースの認証機能。
 
 ただしこれは**エラーメッセージ内の文言差**だけを防ぐ設計であり、**画面遷移そのものの差**は別の保証に依存する。`SignupForm.tsx` は `result.data.session` の有無で「そのままアプリへ」（session あり）と「確認メール待ち画面」（session なし）を分岐する。GoTrue は email confirmation が必須（`enable_confirmations = true` 相当）の場合、**新規登録でも既登録でも** confirmation 待ちの obfuscated レスポンス（session なし）を返す設計になっており、この対称性があって初めて「新規登録者と既登録者で画面遷移が区別できない」という列挙防止が成立する。
 
-**もし production の email confirmation 必須設定が drift して無効化されると**、新規登録は即座に session ありで成功する一方、既登録アドレスへの signup は `getAuthErrorKey` のエラー画面（`signupUnavailable`）に落ちるため、**エラー文言を丸めていても画面遷移の有無で存在が判別可能になる**。この設定（GoTrue の `mailer_autoconfirm`、`expected: false`）は `scripts/production-auth-config-audit.mjs` が既に pin しており、`true`（確認省略）への drift は fail-open として検出される。
+**もし production の email confirmation 必須設定が drift して無効化されると**、新規登録は即座に session ありで成功する一方、既登録アドレスへの signup は `getAuthErrorKey` のエラー画面（`signupUnavailable`）に落ちるため、**エラー文言を丸めていても画面遷移の有無で存在が判別可能になる**。この設定（GoTrue の `mailer_autoconfirm`、`expected: false`）は `scripts/ci/production-auth-config-audit.mjs` が既に pin しており、`true`（確認省略）への drift は fail-open として検出される。
 
 ## ログイン手段によるアカウント操作の分岐
 
@@ -174,7 +174,7 @@ gateを有効にした後は、同じユーザーの操作をDB内で直列化�
 
 削除の理由は、呼び出し元がゼロのまま公開されていたため。通常 UI は `useAuthStore` が Supabase Auth を直接呼ぶ経路を使っており、この route は「守るもの」ではなく**未認証の credential 受け口という攻撃面**だった。加えて signin 分岐は captcha token を渡しておらず、production の Bot Protection 下では `captcha_failed` で必ず失敗する状態だった（[#1917](https://github.com/Dayopt/dayopt/issues/1917) / [#1925](https://github.com/Dayopt/dayopt/issues/1925) と同じ故障クラス）。
 
-**したがって現在、認証操作の rate limit は Supabase Auth 自身の project-level rate limit だけが担う**（`rate_limit_email_sent` などは `scripts/production-auth-config-audit.mjs` が pin して drift を検出する）。アプリ側に認証の rate limit 層は無い。将来 server-side の anti-abuse を挟む必要が出たら、その時点で route と limiter を設計し直す。
+**したがって現在、認証操作の rate limit は Supabase Auth 自身の project-level rate limit だけが担う**（`rate_limit_email_sent` などは `scripts/ci/production-auth-config-audit.mjs` が pin して drift を検出する）。アプリ側に認証の rate limit 層は無い。将来 server-side の anti-abuse を挟む必要が出たら、その時点で route と limiter を設計し直す。
 
 ## tRPC API auth policy
 

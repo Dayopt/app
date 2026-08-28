@@ -43,7 +43,7 @@ jobs:
     # policy 未設定の間は素通りするため、設定するまで残存リスクは閉じない。
     # 手順は docs/engineering/infra.md を参照。
     environment: production-release
-    # scripts/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
+    # scripts/ci/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
     # 下回ると rollback の途中で job が kill され、片方だけ promote された
     # production が手動 rollback の手掛かりごと失われる。
     # scripts/__tests__/release-workflow-contract.test.ts が不等式を守る。
@@ -198,7 +198,7 @@ jobs:
           RELEASE_MANIFEST_PATH: release-manifest.json
         run: |
           set +e
-          node scripts/production-release.mjs
+          node scripts/ci/production-release.mjs
           release_exit=$?
           set -e
           echo "exit_code=$release_exit" >> "$GITHUB_OUTPUT"

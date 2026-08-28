@@ -75,7 +75,7 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           set +e
-          node scripts/production-config-audit.mjs
+          node scripts/ci/production-config-audit.mjs
           audit_exit=$?
           set -e
           echo "exit_code=$audit_exit" >> "$GITHUB_OUTPUT"
@@ -168,7 +168,7 @@ jobs:
           node-version: 24
 
       # commit status / issue 本文の参照用（health 判定そのものには使わない。
-      # scripts/production-config-audit.mjs の evaluateProductionDeploymentHealth の
+      # scripts/ci/production-config-audit.mjs の evaluateProductionDeploymentHealth の
       # コメント参照: ignoreCommand による意図的スキップと区別できないため main HEAD
       # SHA との一致は判定条件にしない）。
       - name: Determine main HEAD SHA
@@ -182,7 +182,7 @@ jobs:
           VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
         run: |
           set +e
-          node scripts/production-config-audit.mjs --deploy-health
+          node scripts/ci/production-config-audit.mjs --deploy-health
           exit_code=$?
           set -e
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
@@ -298,7 +298,7 @@ jobs:
           SUPABASE_AUTH_AUDIT_TOKEN: ${{ secrets.SUPABASE_AUTH_AUDIT_TOKEN }}
         run: |
           set -o pipefail
-          node scripts/production-auth-config-audit.mjs | tee audit-output.txt
+          node scripts/ci/production-auth-config-audit.mjs | tee audit-output.txt
           grep -q 'Production Auth Config Audit passed' audit-output.txt
 
   # production の storage.objects RLS drift の継続検出（#2323）。`pnpm rls:snapshot:check`
@@ -313,7 +313,7 @@ jobs:
   # なった今その分岐を残すと「token が後日失効・削除されても audit が黙って no-op の
   # 緑になる」false-green 経路になる（#2449 で発見。#2323 が守ろうとした「production だけ
   # に残存する drift を見逃さない」という主題そのものへの逆行）。auth-config job
-  # （scripts/production-auth-config-audit.mjs）と同じ「token 未設定は即 throw」へ揃え、
+  # （scripts/ci/production-auth-config-audit.mjs）と同じ「token 未設定は即 throw」へ揃え、
   # 曖昧な中間状態を持たない。
   storage-rls:
     name: Audit production storage.objects RLS (trusted)
@@ -336,5 +336,5 @@ jobs:
           SUPABASE_STORAGE_RLS_AUDIT_TOKEN: ${{ secrets.SUPABASE_STORAGE_RLS_AUDIT_TOKEN }}
         run: |
           set -o pipefail
-          node scripts/production-storage-rls-audit.mjs | tee storage-rls-audit-output.txt
+          node scripts/ci/production-storage-rls-audit.mjs | tee storage-rls-audit-output.txt
           grep -q 'Production Storage RLS Audit passed' storage-rls-audit-output.txt

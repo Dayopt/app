@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const rootDir = resolve(import.meta.dirname, '../..');
-const scriptPath = join(rootDir, 'scripts/env/check-secrets.ts');
+const scriptPath = join(rootDir, 'scripts/tasks/env/check-secrets.ts');
 const tsxBin = join(rootDir, 'node_modules/.bin/tsx');
 const temporaryDirectories: string[] = [];
 

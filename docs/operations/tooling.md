@@ -238,7 +238,7 @@ pnpm license:check
 pnpm license:check-risks
 ```
 
-`license:check` の allowlist 判定とは別軸の検出（`scripts/check-license-risks.ts`。CI では未実行、依存追加時の手動実行を想定）:
+`license:check` の allowlist 判定とは別軸の検出（`scripts/tasks/check-license-risks.ts`。CI では未実行、依存追加時の手動実行を想定）:
 
 - **禁止ライセンスパターン**: GPL / AGPL / LGPL / EUPL / CDDL / EPL のバージョン表記を正規表現で検出
 - **Dual License のリスクパターン**: `(MIT OR GPL)` のような表記は文字列に `MIT` を含むため allowlist の部分一致だけでは見逃しうる。括弧内に禁止ライセンス名を含む dual license 表記を個別に検出する

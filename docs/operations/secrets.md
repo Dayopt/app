@@ -1,7 +1,7 @@
 ---
 status: current
 last_verified: 2026-08-24
-code: scripts/env/schema.ts
+code: scripts/tasks/env/schema.ts
 ---
 
 # Secrets Management
@@ -32,7 +32,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 **触ってよい（読み書き可）**:
 
-- `.op-env.agent` / `.op-env.agent.example` — 中身は `op://` 参照のみで実秘密なし（app ごとの `.env.example` は 2026-08-14 に廃止した。変数一覧の正本は `scripts/env/schema.ts` で、手動維持の重複コピーは drift 源にしかならないため）
+- `.op-env.agent` / `.op-env.agent.example` — 中身は `op://` 参照のみで実秘密なし（app ごとの `.env.example` は 2026-08-14 に廃止した。変数一覧の正本は `scripts/tasks/env/schema.ts` で、手動維持の重複コピーは drift 源にしかならないため）
 - `.op-env.human` / `.op-env.human.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.human.example` の編集）だけでなく、`.op-env.human` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard.sh` の Bash 側ガードが、`--env-file` が `.op-env.human` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
   - **雛形も消費側の対象に含める**（`.op-env.human.example` は `op://human/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
 
@@ -123,7 +123,7 @@ field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT
 
 策定日: 2026-08-17（[#2086](https://github.com/Dayopt/dayopt/issues/2086) 残 scope、指揮台采配）。`op run` は stdout / stderr の secret masking が既定で有効だが、`op item create` / `op item edit` に実値をフィールド引数として直接渡す形（`'FIELD[concealed]=実値'`）は masking の対象外で、コマンドの引数そのものが agent の会話ログ・シェル履歴に残る（2026-08-14 に実際に発生した stdout 露出事故、mcp-usage.md 参照）。
 
-**agent は `op item create` / `op item edit` の引数へ実値を直接埋め込んで実行しない。** 値の投入は 1Password GUI で行うか、値を含まないプレースホルダ（`FIELD[concealed]=`、本ページの `scripts/setup-1password.sh` が使う形）だけを扱う。実値を要する item 操作（値の新規投入・更新）は User が行う。
+**agent は `op item create` / `op item edit` の引数へ実値を直接埋め込んで実行しない。** 値の投入は 1Password GUI で行うか、値を含まないプレースホルダ（`FIELD[concealed]=`、本ページの `scripts/runbook/setup-1password.sh` が使う形）だけを扱う。実値を要する item 操作（値の新規投入・更新）は User が行う。
 
 機械的な強制（pre-tool-guard.sh への正規表現追加）は見送る。`.op-env.human` の env-file ガードと同じ理由で「引数の形を数え上げると別の書き方で回り込まれる」壁に当たり、この事故は頻度・被害とも guard の複雑化に見合うほど大きくない。実インシデントが再発したら pre-tool-guard.sh 側の追加を再検討する。
 
@@ -135,7 +135,7 @@ field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT
 
 ### ① API キー / アクセストークン
 
-プログラム的アクセス権の鍵。Supabase service role、Stripe secret、Sentry auth token、Vercel token、GitHub PATなど。任意・legacyのprovider tokenも同じ分類で扱うが、runtime要件かどうかは`scripts/env/schema.ts`で判定する。
+プログラム的アクセス権の鍵。Supabase service role、Stripe secret、Sentry auth token、Vercel token、GitHub PATなど。任意・legacyのprovider tokenも同じ分類で扱うが、runtime要件かどうかは`scripts/tasks/env/schema.ts`で判定する。
 
 ### ② SSH 鍵 / 署名鍵
 
@@ -217,7 +217,7 @@ op item list --format=json | jq -r '.[] | select(.title == "<item名>") | .tags'
 
 field 名は可能な限り current code の env 名と一致させる。`.op-env.agent.example` はこの schema の参照だけを持つ。
 
-以下は期待 schema で、`scripts/env/schema.ts` が正本。`pnpm 1password:check` が item / field の実在と empty 状態を値を表示せずに検証する。2026-08-11 に 1Password CLI で全 entry を実測し、schema と実態の乖離は [#1929](https://github.com/Dayopt/dayopt/issues/1929) / [#1930](https://github.com/Dayopt/dayopt/issues/1930) で解消した（旧記述が所有者としていた #1558 は closed のため、受け皿は #1930 が引き継いだ）。
+以下は期待 schema で、`scripts/tasks/env/schema.ts` が正本。`pnpm 1password:check` が item / field の実在と empty 状態を値を表示せずに検証する。2026-08-11 に 1Password CLI で全 entry を実測し、schema と実態の乖離は [#1929](https://github.com/Dayopt/dayopt/issues/1929) / [#1930](https://github.com/Dayopt/dayopt/issues/1930) で解消した（旧記述が所有者としていた #1558 は closed のため、受け皿は #1930 が引き継いだ）。
 
 vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayopt/dayopt/issues/2086)、User 裁可）で **`agent` / `ci` / `human` の 3 箱**。軸は環境ではなく**読み手**（誰が読めるか）で、環境の区別は item 名（`stripe-test` / `stripe-live` 等）とタグ体系が担う。旧 vault との対応: `Dayopt-Staging` + `Dayopt-Shared` の AI 消費分 → `agent`、`Dayopt-Shared` の automation token → `ci`、`Dayopt-Production` + `Dayopt-Shared` の login / recovery / 個人系 → `human`。
 
@@ -227,7 +227,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 **test mode credential と、local dev が使う app 設定が主な中身。** 通常の PR Preview では使わず、persistent staging を追加した時、または local dev 用の長寿命参照が必要な時だけ使う。
 
-**常設 staging 環境は存在しない**（Supabase の branch は `main` のみ）。そのため Supabase の接続情報（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_DB_PASSWORD`）はこの vault に置かない。置けば production の複製にしかならず、実際 2026-08-11 まで 4 field とも `human/supabase` と同一値だった（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。local dev の Supabase 接続は `scripts/dev-with-op.sh` が `supabase status -o env` から注入し、1Password を経由しない。この境界は `scripts/__tests__/staging-supabase-boundary.test.ts` が固定する。
+**常設 staging 環境は存在しない**（Supabase の branch は `main` のみ）。そのため Supabase の接続情報（`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_DB_PASSWORD`）はこの vault に置かない。置けば production の複製にしかならず、実際 2026-08-11 まで 4 field とも `human/supabase` と同一値だった（[#1929](https://github.com/Dayopt/dayopt/issues/1929)）。local dev の Supabase 接続は `scripts/tasks/dev-with-op.sh` が `supabase status -o env` から注入し、1Password を経由しない。この境界は `scripts/__tests__/staging-supabase-boundary.test.ts` が固定する。
 
 | Item              | Fields                                                                                                                                                                                                                                                                                                                                               | 用途                                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -365,7 +365,7 @@ Sentry runtime と source map upload は Production 限定のため、local の 
 
 ## Verification
 
-検証コマンドは `scripts/env/schema.ts` の schema を参照する。いずれも secret 値、prefix、suffix、長さ、hash は表示しない。
+検証コマンドは `scripts/tasks/env/schema.ts` の schema を参照する。いずれも secret 値、prefix、suffix、長さ、hash は表示しない。
 
 ```bash
 pnpm env:check
@@ -376,7 +376,7 @@ pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
 
 - `env:check` — required env を `OK / EMPTY / MISSING` だけで確認する
 - `secrets:check` — tracked files と untracked `.env*` を scan し、literal secret は `value: [redacted]` で報告する。CI でも全 PR / push で走る（`docs-guard.yml` の `secrets-check` job）
-- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。**日次 cron（`.github/workflows/replica-check.yml`、06:30 JST）で定期実行する**（[#2111](https://github.com/Dayopt/dayopt/issues/2111)。初回実運用の NG 13 件分類が #2094/#2101 の merge で完了したため、local 専用だった制約は解除した）。token は production-config-audit と同じ GitHub Secrets（`ci/vercel` の replica）を再利用し、新規 token 発行は不要。手元での単発実行も引き続き可能（下の実行例は `ci` vault を inline 参照で解決するため、agent はコピペ実行しない。agent 用 token（`agent/vercel`、発行待ち）が入ったら agent も自走できる）。実行例:
+- `replica:check` — Vercel Production Env（product / web）の **key 名だけ**を取得し、1Password 台帳（`scripts/tasks/env/schema.ts` の `onePasswordEnvSchema`）に無い key を検出する（replica ⊆ 台帳。基本方針 7 の機械検証、[#2084](https://github.com/Dayopt/dayopt/issues/2084)）。`production-config-audit.mjs` が「台帳側の必須 key が Vercel に揃っているか」を見るのと逆方向。値は取得も表示もしない。**日次 cron（`.github/workflows/replica-check.yml`、06:30 JST）で定期実行する**（[#2111](https://github.com/Dayopt/dayopt/issues/2111)。初回実運用の NG 13 件分類が #2094/#2101 の merge で完了したため、local 専用だった制約は解除した）。token は production-config-audit と同じ GitHub Secrets（`ci/vercel` の replica）を再利用し、新規 token 発行は不要。手元での単発実行も引き続き可能（下の実行例は `ci` vault を inline 参照で解決するため、agent はコピペ実行しない。agent 用 token（`agent/vercel`、発行待ち）が入ったら agent も自走できる）。実行例:
 
   ```bash
   VERCEL_TOKEN="op://ci/vercel/VERCEL_TOKEN" VERCEL_TEAM_ID="op://ci/vercel/VERCEL_TEAM_ID" op run -- pnpm replica:check
@@ -387,7 +387,7 @@ pnpm replica:check   # 要 VERCEL_TOKEN / VERCEL_TEAM_ID（下記）
 secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この PR で新しく入った commit 範囲」だけを見る（全履歴には削除済みプレースホルダ由来の既知ノイズが積もっており、毎回 re-flag すると gate として機能しなくなるため）。`secrets:check` は「現在の tracked tree 全体」を見る。片方だけでは、既に main に入っている literal が誰にも検出されない。
 
 - `1password:check` — 1Password の vault / item / field / empty 状態だけを確認する。schemaで`required: true`のentryまたはoperational itemが不足・空の場合だけ失敗し、optional entryは不足・空の状態を表示しても成功する。item の作成・変更・削除はしない
-- `1password:check` は **禁止 field の実在**も検査する（`scripts/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`agent/supabase` の接続 4 field と `SUPABASE_ACCESS_TOKEN`（production 正本への一本化後、#1933）はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する。`SUPABASE_ACCESS_TOKEN` field の実削除（1Password 側、User 手作業）が済むまで `1password:check` は意図どおり red になる（fail-closed。接続 4 field の時と同型）
+- `1password:check` は **禁止 field の実在**も検査する（`scripts/tasks/env/schema.ts` の `forbiddenFields`）。schema から entry を消すのは「参照しない」宣言でしかなく、実 vault に field が残っていれば依然として取得できてしまう。`agent/supabase` の接続 4 field と `SUPABASE_ACCESS_TOKEN`（production 正本への一本化後、#1933）はここに登録してあり、残っていれば `FORBIDDEN_PRESENT` で失敗する。`SUPABASE_ACCESS_TOKEN` field の実削除（1Password 側、User 手作業）が済むまで `1password:check` は意図どおり red になる（fail-closed。接続 4 field の時と同型）
 
 この検査の**保証境界**は「正常応答から不在を確認できた時だけ `ABSENT` にする」。`op` の応答は vault / item / field の 3 段しかなく、そのどこで確認不能になっても `UNVERIFIABLE` として失敗させる。`op item get` は item 不在・権限エラー・一時エラー・不正 JSON をすべて同じ非ゼロ終了に畳むため、取得失敗を不在の証拠に使えないのが理由。3 段すべてを塞いだので「確認できないまま pass する」経路はこの検査には残らない。
 
@@ -400,11 +400,11 @@ secret scan は 2 本立てで、担当範囲が違う。gitleaks は「この P
 失敗は「master に無い」ことしか意味しない。**schema を緩めて黙らせる前に、その env を誰が必要としているかを先に確かめる。** 判定は 2 通りに分かれる。
 
 - **本当の欠落** — code が実際に要求している。replica（Vercel Production Env / Supabase Dashboard）には値があり、master だけが無い。この場合は replica から master へ値を戻す。§Change Procedure の逆流だが、master 不在の是正としては正しい向き。`required` は維持する
-- **schema の乖離** — 機能が未有効などで item / field が無いのが正しい。この場合は `scripts/env/schema.ts` を `required: false` にする
+- **schema の乖離** — 機能が未有効などで item / field が無いのが正しい。この場合は `scripts/tasks/env/schema.ts` を `required: false` にする
 
 「code が要求しているか」は build gate が正本になる。Sentry の 4 env（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_DSN` / `SENTRY_ORG` / `SENTRY_PROJECT`）は `packages/observability/build-gate.mjs` が product / web 双方の Vercel Production build で必須にしているため、`human/sentry` と `human/sentry-web` は両方とも実在が要る。
 
-master へ値を戻す時は GUI か対象を限定した `op item create` / `op item edit` を使う。`scripts/setup-1password.sh` は 3 vault が空の時だけの初回 bootstrap 専用で、既存 vault には使わない。`recovery` タグの付いた item のような再発行できない情報を扱う item では、**既存情報の集約だけを行い、値の生成・再発行はしない**。
+master へ値を戻す時は GUI か対象を限定した `op item create` / `op item edit` を使う。`scripts/runbook/setup-1password.sh` は 3 vault が空の時だけの初回 bootstrap 専用で、既存 vault には使わない。`recovery` タグの付いた item のような再発行できない情報を扱う item では、**既存情報の集約だけを行い、値の生成・再発行はしない**。
 
 ---
 
@@ -418,7 +418,7 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 
 | 場所                                         | master                                                                                                                      | 機械検証                                                                                                                                   |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Vercel Production Env（product / web）       | `scripts/env/schema.ts` の各 entry                                                                                          | `production-config-audit.mjs`（台帳 → replica）+ `pnpm replica:check`（replica → 台帳、§Verification）                                     |
+| Vercel Production Env（product / web）       | `scripts/tasks/env/schema.ts` の各 entry                                                                                    | `production-config-audit.mjs`（台帳 → replica）+ `pnpm replica:check`（replica → 台帳、§Verification）                                     |
 | Vercel Preview Env（`RECOVERY_CODE_PEPPER`） | `agent` / `human` の `app`（Preview 維持の経緯は [Environment Secrets](./security/environment-secrets.md) §Vercel）         | 無し                                                                                                                                       |
 | GitHub Secrets                               | 各 entry（[Environment Secrets](./security/environment-secrets.md) §GitHub の表と 1:1。2026-08-14 に未参照 6 件を削除済み） | 無し（残る機械検証の設計は [#2090](https://github.com/Dayopt/dayopt/issues/2090) / [#2084](https://github.com/Dayopt/dayopt/issues/2084)） |
 | Supabase Dashboard Secrets                   | `agent/turnstile` 等（下記 §Supabase Dashboard Secrets）                                                                    | 無し                                                                                                                                       |
@@ -440,7 +440,7 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 
 `pnpm replica:check` は product project の Vercel Production で 13 件の未台帳 key を検出した。Vercel API の `configurationId` で由来を確認したところ、issue の当初想定（13 件すべて integration 注入）とは異なり 2 群に分かれた:
 
-- **integration 注入（11 件）**: `POSTGRES_DATABASE` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` / `SUPABASE_JWT_SECRET` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`。Supabase↔Vercel Marketplace integration（configurationId `icfg_ZZhIJpCa3ksZJLqBXjg257gb`、slug: `supabase`）が Production へ自動注入する固定セットで、Supabase 公式仕様上 per-key の選択的無効化はできない（all-or-nothing）。同じ integration が Preview の PR Preview Branch credentials 注入（本節上部の Vercel Preview 記述）も担うため integration 自体の切断もできない。アプリコードからの参照は 0 件（`rg` で production runtime / build-gate / env.ts を確認）。**master は integration 自身とし、1Password には登録しない**。`scripts/env/check-vercel-replica.ts` の `allowedNonLedgerKeys` に理由付きで台帳化済み
+- **integration 注入（11 件）**: `POSTGRES_DATABASE` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` / `SUPABASE_JWT_SECRET` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`。Supabase↔Vercel Marketplace integration（configurationId `icfg_ZZhIJpCa3ksZJLqBXjg257gb`、slug: `supabase`）が Production へ自動注入する固定セットで、Supabase 公式仕様上 per-key の選択的無効化はできない（all-or-nothing）。同じ integration が Preview の PR Preview Branch credentials 注入（本節上部の Vercel Preview 記述）も担うため integration 自体の切断もできない。アプリコードからの参照は 0 件（`rg` で production runtime / build-gate / env.ts を確認）。**master は integration 自身とし、1Password には登録しない**。`scripts/tasks/env/check-vercel-replica.ts` の `allowedNonLedgerKeys` に理由付きで台帳化済み
 - **手動残骸（2 件、削除済み）**: `SUPABASE_URL` / `SUPABASE_ANON_KEY`。`configurationId` が無く、257 日前に手動作成された stray entry と判明（integration の 11 件は 73 日前）。既に台帳化済みの `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（human/supabase）と意味的に重複し、アプリコードからの参照も 0 件だったため、2026-08-17 に Vercel Production から削除済み（User 裁可、指揮台実行）
 
 **preview target には同名 `SUPABASE_URL` / `SUPABASE_ANON_KEY` が integration 注入として存在し続ける**（`configurationId` 一致で確認）。production target の手動残骸を削除しただけで、preview 側の integration 注入分は対象外・維持。`replica:check` は production target だけを見る設計のため影響しない。
@@ -451,7 +451,7 @@ Vercel Production Env は runtime / build 用の replica。1Password を先に�
 
 Vercel Preview の Supabase env vars は Supabase Vercel integration が PR Preview Branch credentials を注入する。Preview scope に production Supabase credentials を手動設定しない。
 
-Contact送信用の`RESEND_API_KEY` / `RESEND_FROM_EMAIL`とapp別`RESEND_WEBHOOK_SECRET`はProduct / WebのProductionだけへ同期する。送信credentialはPreview / Developmentへ置かない。Vercel metadataは`scripts/production-config-audit.mjs`でkey / target / typeだけを確認する。
+Contact送信用の`RESEND_API_KEY` / `RESEND_FROM_EMAIL`とapp別`RESEND_WEBHOOK_SECRET`はProduct / WebのProductionだけへ同期する。送信credentialはPreview / Developmentへ置かない。Vercel metadataは`scripts/ci/production-config-audit.mjs`でkey / target / typeだけを確認する。
 
 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`のVercel replicaは削除済みで、専用PATも失効済みである。current schemaの新規作成対象から外し、`Production Config Audit`が再設定を常時拒否する。経緯は[問い合わせメール運用](./contact-email.md)を参照する。
 
@@ -475,7 +475,7 @@ production の Auth `uri_allow_list` に **localhost を入れない**。かつ�
 4. 旧 key がある場合は発行元サービスで revoke する
 5. 変更内容は docs / PR には field 名と同期先だけを書く
 
-`scripts/setup-1password.sh`は3 vaultが空の時だけ使う初回bootstrap専用。既存vaultへ新しいitem / fieldを追加する時はGUIまたは対象を限定した`op item create` / `op item edit`でmasterを先に更新し、`pnpm 1password:check`で値を表示せず検証してからreplicaへ同期する。
+`scripts/runbook/setup-1password.sh`は3 vaultが空の時だけ使う初回bootstrap専用。既存vaultへ新しいitem / fieldを追加する時はGUIまたは対象を限定した`op item create` / `op item edit`でmasterを先に更新し、`pnpm 1password:check`で値を表示せず検証してからreplicaへ同期する。
 
 存在確認の例（agent の Bash tool 経由では `op item get` の既定 human-readable 形式・`--reveal` なしを使う。`op read` は #2293 により agent からの直接実行を無条件で block しているため、この用途には使わない。位置引数は item 名のみで、vault は `--vault` flag で指定する）:
 

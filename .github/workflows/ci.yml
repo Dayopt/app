@@ -62,7 +62,7 @@ permissions:
 #
 # **skip は「走らせない」であって「検査を免除する」ではない。** job 単位の `if:`
 # で skip するため check run は conclusion: skipped として発行され、ready 化で
-# types の ready_for_review が新しい run を起こす。加えて scripts/git/finish-branch.sh
+# types の ready_for_review が新しい run を起こす。加えて scripts/tasks/finish-branch.sh
 # が「docs-only でない PR では Static Checks / Unit Tests が success であること」を
 # by-name で検査する（#2415）。
 #

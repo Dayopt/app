@@ -11,7 +11,7 @@ import {
 /**
  * generate-marker-core の契約テスト（#2230）。
  *
- * branch:finish の gate（scripts/git/finish-branch.sh）が要求する marker 契約を
+ * branch:finish の gate（scripts/tasks/finish-branch.sh）が要求する marker 契約を
  * 生成側で機械的に満たせているかを固定する:
  *   - head SHA は 40 桁 hex のみ受け付ける（手入力・短縮 SHA の補完を拒否）
  *   - agent は非空必須

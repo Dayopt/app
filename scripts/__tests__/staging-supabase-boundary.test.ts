@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { envSchema, forbiddenFields, productionEnvSchema } from '../env/schema';
+import { envSchema, forbiddenFields, productionEnvSchema } from '../tasks/env/schema';
 
 // agent には常設 staging が無く、置けば production の複製になる 4 field。
 const SUPABASE_CONNECTION_FIELDS = [
@@ -19,12 +19,12 @@ const opEnvExample = readFileSync(
 );
 
 const setup1PasswordScript = readFileSync(
-  fileURLToPath(new URL('../setup-1password.sh', import.meta.url)),
+  fileURLToPath(new URL('../runbook/setup-1password.sh', import.meta.url)),
   'utf8',
 );
 
 const devWithOpScript = readFileSync(
-  fileURLToPath(new URL('../dev-with-op.sh', import.meta.url)),
+  fileURLToPath(new URL('../tasks/dev-with-op.sh', import.meta.url)),
   'utf8',
 );
 

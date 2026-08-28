@@ -102,7 +102,7 @@ export const INTEGRATION_GLOBS = [
   'apps/product/src/lib/test/integration-setup.ts',
   'apps/product/src/lib/test/trpc-test-helpers.ts',
   'apps/product/vitest.config.integration.ts',
-  'scripts/generate-rls-snapshot.ts',
+  'scripts/tasks/generate-rls-snapshot.ts',
   'scripts/lib/storage-objects-app-policy-names.mjs',
   'docs/engineering/data/db/rls-snapshot.md',
 ];
@@ -150,8 +150,8 @@ const ROOT_BUILD_FILES = new Set([
 // merge できてしまう（Vercel build がその PR で走らないため）。
 // 追加漏れ（drift）は `scripts/__tests__/impact.test.ts` が manifest から導出して検査する。
 export const PRODUCT_BUILD_SCRIPTS = new Set([
-  'scripts/check-client-bundle-secrets.mjs',
-  'scripts/check-bundle-budget.ts',
+  'scripts/tasks/check-client-bundle-secrets.mjs',
+  'scripts/tasks/check-bundle-budget.ts',
 ]);
 
 // web の buildCommand（`pnpm generate:search-index && pnpm build`）が呼ぶのは
@@ -491,7 +491,7 @@ const shortSha = (sha) =>
   typeof sha === 'string' && sha.length > 0 ? sha.slice(0, 7) : String(sha);
 
 /**
- * `baseSha`〜`targetSha` 間の変更ファイル一覧。scripts/production-release.mjs の
+ * `baseSha`〜`targetSha` 間の変更ファイル一覧。scripts/ci/production-release.mjs の
  * `gitDiffFiles` と同じ規則（`--no-renames` で rename 元も拾う、`-z` で non-ASCII path の
  * エスケープを避ける）。対象 commit が checkout に無ければ git が非 0 で終了し、
  * throw して呼び出し側の fail open 経路へ落ちる。
