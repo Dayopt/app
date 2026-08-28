@@ -1,0 +1,113 @@
+import { describe, expect, it } from 'vitest';
+
+import { classifyAllScripts } from '../lib/scripts-taxonomy';
+
+/**
+ * scripts/ 呼ばれ方別再編（#2476）の常設 contract test。
+ *
+ * 無参照 script（誰からも呼ばれていない script）を機械的に検出する。以後、
+ * このクラスの棚卸しを人力でやり直さずに済ませるための gate。
+ */
+
+// 呼ばれ方別ディレクトリと、そこに置かれるべきカテゴリの対応。
+// scripts/lib/scripts-taxonomy.ts の 6 分類（tasks/ci/hooks/agent/runbook/lib）と 1:1。
+const CATEGORY_DIR: Record<string, string> = {
+  tasks: 'scripts/tasks/',
+  ci: 'scripts/ci/',
+  hooks: 'scripts/hooks/',
+  agent: 'scripts/agent/',
+  runbook: 'scripts/runbook/',
+  lib: 'scripts/lib/',
+};
+
+/**
+ * ファイル単位の priority 判定では「配置ズレ」に見えるが、実際は内部結合の
+ * 強いディレクトリを主エントリポイントの分類でユニット扱いした意図的な例外。
+ * #2476 Phase B/C の issue コメントで都度説明済み（各行にコメントを付す）。
+ */
+const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
+  // boundaries/: check.ts が root package.json "lint:boundaries" を持つ tasks unit。
+  // budget.ts / checks/*.ts / config.ts は内部 lib・runbook 判定だが分割しない。
+  'scripts/tasks/boundaries/budget.ts',
+  'scripts/tasks/boundaries/checks/feature-dag.ts',
+  'scripts/tasks/boundaries/checks/import-paths.ts',
+  'scripts/tasks/boundaries/checks/package-layers.ts',
+  'scripts/tasks/boundaries/checks/public-api-barrels.ts',
+  'scripts/tasks/boundaries/config.ts',
+  // docs-guard/: index.ts が pkg entry "docs:check" を持つ tasks unit。
+  'scripts/tasks/docs-guard/checks/decisions-append-only.ts',
+  'scripts/tasks/docs-guard/checks/frontmatter-check.ts',
+  'scripts/tasks/docs-guard/checks/link-check.ts',
+  'scripts/tasks/docs-guard/checks/naming-check.ts',
+  'scripts/tasks/docs-guard/config.ts',
+  'scripts/tasks/docs-guard/git-changes.ts',
+  // docs-coverage/: index.ts が pkg entry "docs:coverage" を持つ tasks unit。
+  'scripts/tasks/docs-coverage/collect.ts',
+  // env/: check-*.ts が全て pkg entry を持つ tasks unit。schema.ts はその内部 lib。
+  'scripts/tasks/env/schema.ts',
+  // night-watch/: run-all.mjs が night-watch.yml から直接実行される ci unit。
+  // pre-tool-guard-impl.sh の allowlist 文字列一致・skill/rule の言及により
+  // 個別ファイルが hooks/agent 判定になるが、ディレクトリごと分割しない
+  // （夜勤 cron の内部結合が強く、分割すると相互 import の path 更新が二重化する）。
+  'scripts/ci/night-watch/dod-candidate.mjs',
+  'scripts/ci/night-watch/lib.mjs',
+  'scripts/ci/night-watch/morning-brief.mjs',
+  'scripts/ci/night-watch/run-log.mjs',
+  // admin-*.sh family: admin-common.sh を `dirname "${BASH_SOURCE[0]}"` 相対で
+  // source するため、同一ディレクトリに揃える必要がある。admin-delete-user.sh は
+  // lane-protocol.md / usability-probe SKILL.md からの言及で agent 判定になるが、
+  // family を割らない。
+  'scripts/runbook/admin-delete-user.sh',
+  // supabase-mgmt-safe-get.mjs: pre-tool-guard-impl.sh 内の言及は「このscriptを使え」
+  // という利用者(agent)向け誘導メッセージであり、フック自身がこのscriptを実行・
+  // 照合するわけではない（night-watch/*.mjs の allowlist 完全一致とは性質が違う）。
+  // 実利用のされ方は agent 直叩きに近いため agent/ に置く。
+  'scripts/agent/supabase-mgmt-safe-get.mjs',
+  // storage-objects-app-policy-names.mjs: production-config-audit.yml 内の言及は
+  // paths: トリガー条件（再実行契機）であって実行呼び出しではない。実際の呼び出し元は
+  // generate-rls-snapshot.ts（tasks）と production-storage-rls-audit.mjs（ci）の
+  // import のみで、正しい分類は lib（現状維持）。
+  'scripts/lib/storage-objects-app-policy-names.mjs',
+  // scripts-taxonomy.ts: 唯一の実 importer が __tests__/ 配下のテストファイルであり、
+  // classifyAllScripts の importedBy 判定は __tests__/ を除外した allScriptFiles しか
+  // 走査しないため、ライブラリとして実在するにもかかわらず無参照判定になる
+  // （#2476 Phase C コメントに既知の設計限界として記録済み）。
+  'scripts/lib/scripts-taxonomy.ts',
+]);
+
+describe('scripts/ 呼ばれ方別 taxonomy', () => {
+  it('無参照 script が存在しない', () => {
+    const classified = classifyAllScripts(process.cwd());
+    const unreferenced = classified
+      .filter((c) => c.category === 'unreferenced')
+      .filter((c) => !KNOWN_PLACEMENT_EXCEPTIONS.has(c.path));
+
+    expect(
+      unreferenced,
+      unreferenced
+        .map(
+          (c) =>
+            `${c.path} — package.json / workflow / husky・claude hooks / claude rules・skills・CLAUDE.md / docs / 他scriptのいずれからも参照されていません`,
+        )
+        .join('\n'),
+    ).toEqual([]);
+  });
+
+  it('分類カテゴリと実際の配置ディレクトリが一致する（既知の unit 例外を除く）', () => {
+    const classified = classifyAllScripts(process.cwd());
+    const mismatched = classified
+      .filter((c) => c.category !== 'unreferenced')
+      .filter((c) => !KNOWN_PLACEMENT_EXCEPTIONS.has(c.path))
+      .filter((c) => {
+        const expectedDir = CATEGORY_DIR[c.category];
+        return expectedDir && !c.path.startsWith(expectedDir);
+      });
+
+    expect(
+      mismatched,
+      mismatched
+        .map((c) => `${c.path} は ${c.category} 判定だが ${CATEGORY_DIR[c.category]} 配下に無い`)
+        .join('\n'),
+    ).toEqual([]);
+  });
+});
