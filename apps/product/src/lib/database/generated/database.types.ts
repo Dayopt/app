@@ -1133,9 +1133,12 @@ export type Database = {
         Row: {
           command_name: string;
           created_at: string;
+          had_origin_connection: boolean;
           id: string;
           operation_id: string;
           origin_connection_id: string | null;
+          origin_scopes_snapshot: string[] | null;
+          recorded_effect_count: number;
           undo_expires_at: string;
           undone_at: string | null;
           undone_operation_id: string | null;
@@ -1144,9 +1147,12 @@ export type Database = {
         Insert: {
           command_name: string;
           created_at?: string;
+          had_origin_connection?: boolean;
           id?: string;
           operation_id: string;
           origin_connection_id?: string | null;
+          origin_scopes_snapshot?: string[] | null;
+          recorded_effect_count?: number;
           undo_expires_at: string;
           undone_at?: string | null;
           undone_operation_id?: string | null;
@@ -1155,9 +1161,12 @@ export type Database = {
         Update: {
           command_name?: string;
           created_at?: string;
+          had_origin_connection?: boolean;
           id?: string;
           operation_id?: string;
           origin_connection_id?: string | null;
+          origin_scopes_snapshot?: string[] | null;
+          recorded_effect_count?: number;
           undo_expires_at?: string;
           undone_at?: string | null;
           undone_operation_id?: string | null;
@@ -1448,6 +1457,14 @@ export type Database = {
           schema_version: number;
           version: string;
         }[];
+      };
+      apply_undo_receipt_v1: {
+        Args: {
+          p_apply_operation_id: string;
+          p_receipt_id: string;
+          p_user_id: string;
+        };
+        Returns: undefined;
       };
       assert_active_timeblock_activity_v1: {
         Args: { p_activity_id: string; p_user_id: string };
@@ -2205,6 +2222,16 @@ export type Database = {
           user_id: string;
         }[];
       };
+      list_undoable_receipts_v1: {
+        Args: { p_user_id: string };
+        Returns: {
+          command_name: string;
+          created_at: string;
+          id: string;
+          operation_id: string;
+          undo_expires_at: string;
+        }[];
+      };
       lock_recordable_plan_v1: {
         Args: { p_plan_id: string; p_user_id: string };
         Returns: {
@@ -2423,6 +2450,18 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      record_undo_receipt_v1: {
+        Args: {
+          p_command_name: string;
+          p_effects: Json;
+          p_is_mcp_command: boolean;
+          p_operation_id: string;
+          p_origin_connection_id: string;
+          p_undo_ttl_seconds: number;
+          p_user_id: string;
+        };
+        Returns: string;
       };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };

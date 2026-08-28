@@ -187,6 +187,35 @@ docs へ残している。
   渡ってはならない。RLSが第2の防波堤として効かなくなったため、これが唯一のowner
   境界になる。router では `{ ...input, userId: ctx.userId }` の順を守る（spreadを
   後ろに置くと同名fieldの追加で境界が無言で反転し、typecheckも通る）
+- **Undo は元操作より強い権限や広い user scope を得ない**（`apply_undo_receipt_v1`、
+  #2434）。`undo_receipts.origin_connection_id` は `oauth_connections` への複合FKが
+  `ON DELETE SET NULL` を持つため、connectionの物理削除（retention cleanup経由）で
+  NULLへ落ちうる。これを「UI由来（scope制約なし）」と誤認しないよう、
+  `had_origin_connection BOOLEAN`（作成時に固定、以後不変）を別に持ち、
+  `had_origin_connection = true AND origin_connection_id IS NULL` を revoke相当として
+  扱う。権限判定は「apply時点のoauth_connections.scopes」∩
+  「`origin_scopes_snapshot`（receipt作成時点のscopesの固定コピー）」の交差に
+  resource_type × effect_kindから導くrequired_scopeが含まれるかで決める。
+  revoked_at / reauth_required_atの再検査はconnection行をFOR UPDATEでロックしてから
+  行い、権限判定と同時進行のrevokeのTOCTOUを防ぐ
+- **CASはfield mask内のフィールドに限定される**（`apply_undo_receipt_v1`）。
+  `undo_receipt_field_changes`の各field_nameについて「現在値 == after_value（元操作が
+  書いた値）」を確認し、1つでも不一致ならreceipt全体をall-or-nothingで失敗させる。
+  mask外のフィールドへの正当な変更はUndoを妨げない。effectに行単位の版列
+  （`resource_version_before`相当）は持たせない — CAS anchorは`after_value`が兼ねる
+  （#2443、詳細は
+  [step-3-undo-receipt-rpc.md](../projects/time-ledger-redesign/step-3-undo-receipt-rpc.md)）
+- **`undo_receipts.recorded_effect_count`は記録トランザクション内でDB側が`COUNT(*)`して
+  確定し、アプリ入力を信頼しない。** apply時・list時の両方でこの値と現在のeffect数を
+  再照合し、不一致なら拒否 / 一覧から除外する。`undo_receipt_effects` →
+  `plans`/`records`の複合FKは`ON DELETE CASCADE`のため、resourceの物理削除（単発の
+  legacy経路・将来のhard-delete command）でeffectだけが欠けるreceiptが生じうる。
+  この検査がsilent no-op / 部分適用を防ぐ唯一の機構
+- **account-preserving purgeは`undo_receipts`（親）ではなく`undo_receipt_effects`を
+  直接DELETEする**（#2434、`delete_all_user_data_command_v4`）。PIIは
+  `undo_receipt_field_changes.before_value`/`after_value`にのみ存在し、effectsの
+  DELETEがCASCADEでこれを除去する。`undo_receipts`親行（PIIを持たない）は
+  tombstoneとして残り、`UNIQUE(user_id, operation_id)`が遅延再送への冪等ガードを兼ねる
 
 ## 時刻
 
