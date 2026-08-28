@@ -4,7 +4,7 @@
 # production project を対象に実行する。これらは .op-env.agent ではなくこのファイルを使う:
 #
 #   cp .op-env.human.example .op-env.human
-#   op run --env-file=.op-env.human -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
+#   op run --env-file=.op-env.human -- env USER_EMAIL=foo@example.com bash scripts/runbook/admin-show-user.sh
 #
 # 参照先が human である以上、実行は production への操作になる。
 # 手順と作業ログの規約は docs/operations/tooling.md 第4部 を正本とする。

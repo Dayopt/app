@@ -6,7 +6,7 @@ name: Night Watch
 # REST API を 403 で遮断する構造的障害（#2216）を抱え、登録以来一度も正常
 # 完走していなかった。夜勤は設計上「判定のみ・裁量なし」（SKILL.md §実行
 # 内容）で model の裁量を使っていないため、model を実行系から完全に外し、
-# 判定ロジックを scripts/night-watch/run-all.mjs へ code 化した。
+# 判定ロジックを scripts/ci/night-watch/run-all.mjs へ code 化した。
 #
 # 判定規約の正本は .claude/skills/night-watch/SKILL.md §自動パート。ここに
 # 判定ロジックを複製しない — この workflow が扱うのは実行環境の配線
@@ -154,4 +154,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: node scripts/night-watch/run-all.mjs
+        run: node scripts/ci/night-watch/run-all.mjs

@@ -3,7 +3,7 @@
 # ========================================
 # Dayopt - admin-*.sh 共通ヘルパー
 # ========================================
-# scripts/admin-*.sh が共有する env チェック・auth header 生成をまとめる。
+# scripts/runbook/admin-*.sh が共有する env チェック・auth header 生成をまとめる。
 # 各 admin script の先頭で以下のように source する:
 #   source "$(dirname "${BASH_SOURCE[0]}")/admin-common.sh"
 # ========================================
@@ -25,7 +25,7 @@ require_user_email_and_password_item() {
     echo "使い方:" >&2
     echo "  op run --env-file=.op-env.human -- \\" >&2
     echo "    env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \\" >&2
-    echo "    bash scripts/${script_name}" >&2
+    echo "    bash scripts/runbook/${script_name}" >&2
     exit 1
   fi
 }

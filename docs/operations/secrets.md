@@ -102,11 +102,11 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 
 この節はここまで **Vercel Env API / Stripe API 等、下記の機械強制が及ばない API に対する規律**として維持する。
 
-**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`.claude/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/supabase-mgmt-safe-get.mjs` に一本化する:
+**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`.claude/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/agent/supabase-mgmt-safe-get.mjs` に一本化する:
 
 ```bash
 SUPABASE_ACCESS_TOKEN="op://human/supabase-cli/SUPABASE_ACCESS_TOKEN" \
-  op run -- node scripts/supabase-mgmt-safe-get.mjs auth-config security_captcha_enabled external_email_enabled disable_signup
+  op run -- node scripts/agent/supabase-mgmt-safe-get.mjs auth-config security_captcha_enabled external_email_enabled disable_signup
 ```
 
 field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT` から派生し（二重管理を避ける）、`redact: 'url'` の付いた entry（`hook_send_email_uri`）は除外する。allowlist 外の field を 1 つでも含む要求は全体を拒否する（部分的に応じると allowlist 外の field を紛れ込ませて値を得られてしまうため）。`branches` については wrapper を作らず `supabase branches list`（既存 CLI、metadata のみ）へ誘導する — `branches get` が返す個別 credential に対して安全な部分集合が存在しないため。
@@ -242,7 +242,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 | `google`          | `GOOGLE_SITE_VERIFICATION`, `YANDEX_VERIFICATION`, `YAHOO_VERIFICATION`                                                                                                                                                                                                                                                                              | Webmaster verification（旧 Shared）                                                             |
 | `vercel`          | `VERCEL_TOKEN`（agent 用別発行、未発行 pending）                                                                                                                                                                                                                                                                                                     | `pnpm replica:check` 用。CI の token（ci/vercel）とは別発行で共用しない（#2086 plan v2）        |
 
-`SUPABASE_ACCESS_TOKEN`（Supabase Management API 用。cloud の `supabase` MCP server と `scripts/enable-auth-hook.sh` が使う）は `human/supabase` を正本に一本化した（[#1933](https://github.com/Dayopt/dayopt/issues/1933)）。以前は `human/supabase` と同一値のまま `agent/supabase` にも複製されていたが、production を指す token を staging item から読む理由が無いため repo 側の参照はすべて production へ切り替えた。**item 自体は残す**（`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` は cron / send-email hook の local dev 検証に使うため、廃止しない）。
+`SUPABASE_ACCESS_TOKEN`（Supabase Management API 用。cloud の `supabase` MCP server と `scripts/runbook/enable-auth-hook.sh` が使う）は `human/supabase` を正本に一本化した（[#1933](https://github.com/Dayopt/dayopt/issues/1933)）。以前は `human/supabase` と同一値のまま `agent/supabase` にも複製されていたが、production を指す token を staging item から読む理由が無いため repo 側の参照はすべて production へ切り替えた。**item 自体は残す**（`CRON_SECRET` / `SEND_EMAIL_HOOK_SECRET` は cron / send-email hook の local dev 検証に使うため、廃止しない）。
 
 **2026-08-17 に `human/supabase-cli` へ再移動した**（[#2127](https://github.com/Dayopt/dayopt/issues/2127)）。「アプリが env として消費する値の束」と「人間・CLI が使う operational credential（PAT / CLI token / rotation 対象、有効期限 field 必須）」を分離する命名規約に合わせ、`SUPABASE_ACCESS_TOKEN` は専用 item `human/supabase-cli` へ切り出した。`human/supabase` 側の同名 field は **削除済み**（2026-08-17、`op item get` で実測確認）。repo 側の参照はすべて `human/supabase-cli` を正本とする。
 
@@ -350,7 +350,7 @@ pnpm dev
 
 ```bash
 cp .op-env.human.example .op-env.human
-op run --env-file=.op-env.human -- env USER_EMAIL=foo@example.com bash scripts/admin-show-user.sh
+op run --env-file=.op-env.human -- env USER_EMAIL=foo@example.com bash scripts/runbook/admin-show-user.sh
 ```
 
 参照先は `human/supabase` で、**実行は production への操作になる**。分けている理由は 2 つ。第一に、通常の `pnpm dev` に production の service role key を混ぜないこと。第二に、env-file 名と参照先 vault の両方が production だと明示され、「staging のつもりで production を触る」が起きないこと。手順と作業ログの規約は [tooling.md 第4部](./tooling.md) を正本とする。用が済んだら `.op-env.human` は削除する（gitignore 済みで残しても secret は含まないが、消費だけが hook でブロックされる設計なので、残置は次に触る人の判断を増やすだけで益がない）。
@@ -499,7 +499,7 @@ op item get supabase --vault human --fields SUPABASE_SERVICE_ROLE_KEY
 
 **期限管理**: 現状 1Password / 発行元サービスのいずれにも自動リマインダー機構は無い。次回ローテーション（または期限切れによる動作確認）は月次ガーデニングの棚卸し対象に含め、期限が近い token を検出したらこの手順で再発行する。
 
-初事例は Supabase legacy `cli` token（Never expire・full access、[#2112](https://github.com/Dayopt/dayopt/issues/2112)）。当初裁可時点では消費者（cloud supabase MCP の `--read-only` 起動、`scripts/enable-auth-hook.sh` の Auth config write）のうち後者が write を要求するため read-only scoped token への完全置換はできないと判断していたが、作業中に scoped project token UI を発見し、**scoped token（`dayopt-cli-2026-08b`、90 日期限、Auth Config Write / Advisors・Logs Read / Database・Migrations Read の個別 permission）への切替**へ変更した。`dayopt-auth-config-audit`（[#1951](https://github.com/Dayopt/dayopt/issues/1951)）も次回 rotation 時に scoped + expiry へ寄せる選択肢がある。
+初事例は Supabase legacy `cli` token（Never expire・full access、[#2112](https://github.com/Dayopt/dayopt/issues/2112)）。当初裁可時点では消費者（cloud supabase MCP の `--read-only` 起動、`scripts/runbook/enable-auth-hook.sh` の Auth config write）のうち後者が write を要求するため read-only scoped token への完全置換はできないと判断していたが、作業中に scoped project token UI を発見し、**scoped token（`dayopt-cli-2026-08b`、90 日期限、Auth Config Write / Advisors・Logs Read / Database・Migrations Read の個別 permission）への切替**へ変更した。`dayopt-auth-config-audit`（[#1951](https://github.com/Dayopt/dayopt/issues/1951)）も次回 rotation 時に scoped + expiry へ寄せる選択肢がある。
 
 ---
 

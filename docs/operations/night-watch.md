@@ -6,7 +6,7 @@ code: .claude/skills/night-watch/SKILL.md
 
 # 計測夜勤（night-watch）運用
 
-夜間に read-only の品質観測を行う GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）の運用ページ。設計正本は [#2205](https://github.com/Dayopt/dayopt/issues/2205)、v1 実装は [#2209](https://github.com/Dayopt/dayopt/issues/2209)、v2（盤面起票・heavy-post-merge赤確認・Sentryスキャン・DoD監査候補選定）は [#2291](https://github.com/Dayopt/dayopt/issues/2291)、**v3（Claude Routine から GitHub Actions cron への移植）は [#2367](https://github.com/Dayopt/dayopt/issues/2367)**。手順そのものの正本は [`.claude/skills/night-watch/SKILL.md`](../../.claude/skills/night-watch/SKILL.md)（本ページはこの複製ではなく、運用面の補足のみ）。判定ロジックの正本は `scripts/night-watch/run-all.mjs`。
+夜間に read-only の品質観測を行う GitHub Actions の scheduled workflow（`.github/workflows/night-watch.yml`）の運用ページ。設計正本は [#2205](https://github.com/Dayopt/dayopt/issues/2205)、v1 実装は [#2209](https://github.com/Dayopt/dayopt/issues/2209)、v2（盤面起票・heavy-post-merge赤確認・Sentryスキャン・DoD監査候補選定）は [#2291](https://github.com/Dayopt/dayopt/issues/2291)、**v3（Claude Routine から GitHub Actions cron への移植）は [#2367](https://github.com/Dayopt/dayopt/issues/2367)**。手順そのものの正本は [`.claude/skills/night-watch/SKILL.md`](../../.claude/skills/night-watch/SKILL.md)（本ページはこの複製ではなく、運用面の補足のみ）。判定ロジックの正本は `scripts/ci/night-watch/run-all.mjs`。
 
 ## 常設運行記録 issue と盤面 issue
 

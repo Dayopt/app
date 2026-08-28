@@ -135,7 +135,7 @@ function isDirectExecution() {
 if (isDirectExecution()) {
   const [subcommand] = process.argv.slice(2);
   if (subcommand !== 'select') {
-    console.error('Usage: node scripts/night-watch/dod-candidate.mjs select');
+    console.error('Usage: node scripts/ci/night-watch/dod-candidate.mjs select');
     process.exitCode = 1;
   } else {
     try {

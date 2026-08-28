@@ -5,7 +5,7 @@ code:
   - supabase/config.toml
   - supabase/migrations
   - scripts/generate-rls-snapshot.ts
-  - scripts/storage-backup.sh
+  - scripts/ci/storage-backup.sh
   - scripts/storage-restore.sh
   - docs/engineering/infra.md
 ---
@@ -89,15 +89,15 @@ supabase branches create --help
 
 ### 0-4. 必要な権限・準備物
 
-| 要るもの                            | 誰が持つか | 用途                                                                                           |
-| ----------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
-| Supabase Dashboard のログイン       | User       | backup 状態確認、restore 実行                                                                  |
-| Supabase 組織の課金設定へのアクセス | User       | PITR 有効化の判断・実行                                                                        |
-| production の DB 接続情報           | User       | 案γ で dump を取る時だけ                                                                       |
-| 1Password `human`                   | User       | 上記 credential の取り出し                                                                     |
-| `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions                                                                    |
-| `rclone`（brew 等でローカル導入）   | 共通       | Storage オブジェクトの搬出・復元（`scripts/storage-backup.sh` / `scripts/storage-restore.sh`） |
-| Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                                                                          |
+| 要るもの                            | 誰が持つか | 用途                                                                                              |
+| ----------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| Supabase Dashboard のログイン       | User       | backup 状態確認、restore 実行                                                                     |
+| Supabase 組織の課金設定へのアクセス | User       | PITR 有効化の判断・実行                                                                           |
+| production の DB 接続情報           | User       | 案γ で dump を取る時だけ                                                                          |
+| 1Password `human`                   | User       | 上記 credential の取り出し                                                                        |
+| `supabase` CLI（ログイン済み）      | 共通       | dump / branches / functions                                                                       |
+| `rclone`（brew 等でローカル導入）   | 共通       | Storage オブジェクトの搬出・復元（`scripts/ci/storage-backup.sh` / `scripts/storage-restore.sh`） |
+| Stripe Dashboard（**test mode**）   | User       | 復元後の billing 確認                                                                             |
 
 ### 0-5. Cloudflare DNS レコードの控え（Supabase 復元とは独立、推奨）
 
@@ -285,7 +285,7 @@ DB 内の hook function が戻っても、**GoTrue 側の hook 登録は引き�
 - [ ] `avatars` / `attachments` バケットが存在する（バケット定義は migration に入っているので schema と一緒に戻る）
 - [ ] **オブジェクト本体は空**であることを確認する。これは異常ではなく仕様
 
-> **実運用化・実復元演習ともに完了（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。** `scripts/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。日次搬出を実行する [`storage-backup-export.yml`](../../.github/workflows/storage-backup-export.yml)（[#2147](https://github.com/Dayopt/dayopt/issues/2147)）は destination を Cloudflare R2（bucket `avatars` / `attachments`、Bucket Locks 35 日 retention）へ確定し、2026-08-18 に初回搬出（実 run）を完走した。以後は日次 cron（07:00 JST）が差分同期する。
+> **実運用化・実復元演習ともに完了（2026-08-20、[#2026](https://github.com/Dayopt/dayopt/issues/2026)）。** `scripts/ci/storage-backup.sh` / `scripts/storage-restore.sh`（rclone ベース、`avatars` / `attachments` の両バケット対応）は 2026-08-13 にローカル Supabase Storage 相手の実 sync + copy で byte-identical な復元を確認済み（[#1972](https://github.com/Dayopt/dayopt/issues/1972)）。日次搬出を実行する [`storage-backup-export.yml`](../../.github/workflows/storage-backup-export.yml)（[#2147](https://github.com/Dayopt/dayopt/issues/2147)）は destination を Cloudflare R2（bucket `avatars` / `attachments`、Bucket Locks 35 日 retention）へ確定し、2026-08-18 に初回搬出（実 run）を完走した。以後は日次 cron（07:00 JST）が差分同期する。
 >
 > 2026-08-20、R2 backup からの実復元演習を実施（[docs/operations/log/2026-08-20-storage-restore-drill.md](log/2026-08-20-storage-restore-drill.md)）。dry-run → 実復元（ローカルディレクトリ、production への書き戻しなし）で 2 オブジェクト・85.150 KiB を復元し、初回搬出時の実測と件数・サイズが完全一致することを確認した。RTO 実測は認証込みで約 2 分。
 >

@@ -614,7 +614,7 @@ Designer / Critic / User の 3-agent design review を仮に実装する場合�
 
 `scripts/admin-*.sh` は Supabase Auth Admin API を直接叩き、dogfooding / 内部テスト用の account 操作を CLI から行うためのツール群。通常の signup / login flow を bypass したい時のみ使用する。
 
-共通の env チェック・auth header 生成は `scripts/admin-common.sh` に集約されており、各スクリプトはこれを `source` する。
+共通の env チェック・auth header 生成は `scripts/runbook/admin-common.sh` に集約されており、各スクリプトはこれを `source` する。
 
 ## 実行方法
 
@@ -622,7 +622,7 @@ Designer / Critic / User の 3-agent design review を仮に実装する場合�
 cp .op-env.human.example .op-env.human   # 初回だけ
 op run --env-file=.op-env.human -- \
   env USER_EMAIL=foo@example.com \
-  bash scripts/admin-show-user.sh
+  bash scripts/runbook/admin-show-user.sh
 ```
 
 **`.op-env.agent`（通常の local dev 用）ではなく `.op-env.human` を使う。** `pnpm dev` の Supabase 接続先は local 固定で、`.op-env.agent` は Supabase の接続情報を持たない（[secrets.md](./secrets.md) の `agent` 節）。admin script は Supabase Auth Admin API を service role で叩くため、専用の env-file を分けている。

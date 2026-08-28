@@ -8,7 +8,7 @@ import { join } from 'node:path';
  * 共通基盤（#2291 v2 dispatch、PR #2309 未解決 thread の構造的解消）。
  *
  * 設計原則: **動的な値は shell へ二度渡さない**。Bash tool から見えるコマンドは
- * 常に固定形（`node scripts/night-watch/<script>.mjs <subcommand>` + 検証済みの
+ * 常に固定形（`node scripts/ci/night-watch/<script>.mjs <subcommand>` + 検証済みの
  * 位置引数のみ）で、guard（.claude/hooks/pre-tool-guard-impl.sh）は
  * is_single_simple_command + no-redirect の一般規則だけで守れる。実際に危険な
  * 部分（issue 本文・タイトル・検索クエリの構築、gh への引数受け渡し）はこの

@@ -3,7 +3,7 @@ name: Storage Backup Export
 # Supabase Storage（avatars / attachments）を rclone で Cloudflare R2 へ日次搬出する。
 #
 # 背景（#1971）: avatars / attachments には DB backup 経由の復元元が無い。この export
-# workflow が唯一の復元元になる。実行 script は scripts/storage-backup.sh（rclone sync。
+# workflow が唯一の復元元になる。実行 script は scripts/ci/storage-backup.sh（rclone sync。
 # destination 側を source に合わせる設計のため、source 側の設定ミス・読み取り失敗は
 # destination の既存オブジェクトを削除しうる。script 冒頭コメント参照）。
 #
@@ -124,4 +124,4 @@ jobs:
           RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.RCLONE_CONFIG_DEST_ACCESS_KEY_ID }}
           RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-        run: bash scripts/storage-backup.sh
+        run: bash scripts/ci/storage-backup.sh

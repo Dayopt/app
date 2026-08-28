@@ -6,9 +6,9 @@ name: Issue Status Label Cleanup
 #
 # judgment:diverged / judgment:judged は対象外（.claude/rules/orchestration.md
 # §判断ジャーナル。close済みでもラベルを残す設計）。剥がし判定は
-# scripts/ops/strip-status-labels.mjs の selectStatusLabelsToStrip が
+# scripts/ci/strip-status-labels.mjs の selectStatusLabelsToStrip が
 # status: prefixへの完全一致でのみ行うため、他 prefix には構造的に触れない
-# （契約は scripts/ops/strip-status-labels.test.ts が固定する）。
+# （契約は scripts/ci/strip-status-labels.test.ts が固定する）。
 #
 # reopen された issue への status ラベル付け直しはこの workflow の対象外
 # （.claude/rules/orchestration.md 起票時の推奨どおり、reopen 理由によって
@@ -39,4 +39,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: node scripts/ops/strip-status-labels.mjs on-close "$ISSUE_NUMBER"
+        run: node scripts/ci/strip-status-labels.mjs on-close "$ISSUE_NUMBER"

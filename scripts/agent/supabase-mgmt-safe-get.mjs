@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import {
   AUTH_CONFIG_CONTRACT,
   SUPABASE_PRODUCTION_PROJECT_REF,
-} from './production-auth-config-audit.mjs';
+} from '../production-auth-config-audit.mjs';
 
 /**
  * Supabase Management API の `GET /v1/projects/{ref}/config/auth` を、field allowlist
@@ -26,7 +26,7 @@ import {
  * この inline 形が唯一の経路）:
  *
  *   SUPABASE_ACCESS_TOKEN="op://human/supabase-cli/SUPABASE_ACCESS_TOKEN" \
- *     op run -- node scripts/supabase-mgmt-safe-get.mjs auth-config <field1> [field2 ...]
+ *     op run -- node scripts/agent/supabase-mgmt-safe-get.mjs auth-config <field1> [field2 ...]
  */
 
 const NON_REDACTED_ENTRIES = AUTH_CONFIG_CONTRACT.filter((entry) => entry.redact !== 'url');
@@ -34,7 +34,9 @@ export const SAFE_AUTH_CONFIG_FIELDS = new Set(NON_REDACTED_ENTRIES.map((entry) 
 
 function usage() {
   const fields = [...SAFE_AUTH_CONFIG_FIELDS].sort();
-  console.error('Usage: node scripts/supabase-mgmt-safe-get.mjs auth-config <field1> [field2 ...]');
+  console.error(
+    'Usage: node scripts/agent/supabase-mgmt-safe-get.mjs auth-config <field1> [field2 ...]',
+  );
   console.error(`許可されている field（${fields.length} 件）: ${fields.join(', ')}`);
 }
 

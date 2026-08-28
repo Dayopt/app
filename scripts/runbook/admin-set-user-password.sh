@@ -20,7 +20,7 @@
 # 使い方:
 #   op run --env-file=.op-env.human -- \
 #     env USER_EMAIL=foo@example.com PASSWORD_ITEM_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx \
-#     bash scripts/admin-set-user-password.sh
+#     bash scripts/runbook/admin-set-user-password.sh
 #
 # 環境:
 #   `.op-env.human` は human（旧 Dayopt-Production） を参照するため、実行は production への操作になる。

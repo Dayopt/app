@@ -26,7 +26,7 @@ import {
   SCAN_TARGETS,
   findRuleViolations,
   isExcludedPath,
-} from './check-tokens-core';
+} from './lib/check-tokens-core';
 
 let hasViolations = false;
 let hasWarnings = false;

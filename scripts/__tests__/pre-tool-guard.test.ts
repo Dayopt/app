@@ -216,11 +216,17 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
   // 作成を解禁しても、雛形をそのまま op run に渡せば同じ権限が解決される。
   // コマンド名ではなく --env-file の指す先で判定するので、op をどう起動しても落ちる。
   it.each([
-    ['雛形の直接実行', `op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
-    ['実ファイル', `op run --env-file=${HUMAN} -- bash scripts/admin-show-user.sh`],
+    [
+      '雛形の直接実行',
+      `op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/runbook/admin-delete-user.sh`,
+    ],
+    ['実ファイル', `op run --env-file=${HUMAN} -- bash scripts/runbook/admin-show-user.sh`],
     ['空白区切りの --env-file', `op run --env-file ${ADMIN_EXAMPLE} -- sh -c true`],
     ['セパレータ後の op run', `cd /tmp && op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
-    ['env 経由', `env op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`],
+    [
+      'env 経由',
+      `env op run --env-file=${ADMIN_EXAMPLE} -- bash scripts/runbook/admin-delete-user.sh`,
+    ],
     ['command 経由', `command op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
     ['絶対パス', `/opt/homebrew/bin/op run --env-file=${ADMIN_EXAMPLE} -- sh -c true`],
     ['sh -c でくるむ', `sh -c "op run --env-file=${ADMIN_EXAMPLE} -- sh -c true"`],
@@ -258,7 +264,10 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
   // （cp .op-env.human.example /tmp/foo → その別名を op run へ）。
   // path 名から中身は判別できないので allowlist にして、中身を問わず落とす。
   it.each([
-    ['別名へ複製した env-file', 'op run --env-file=/tmp/foo -- bash scripts/admin-delete-user.sh'],
+    [
+      '別名へ複製した env-file',
+      'op run --env-file=/tmp/foo -- bash scripts/runbook/admin-delete-user.sh',
+    ],
     ['相対の別名', 'op run --env-file=./tmp-env -- sh -c true'],
     ['変数展開', 'op run --env-file="$OP_ENV_PATH" -- sh -c true'],
     ['local の雛形', `op run --env-file=${LOCAL_EXAMPLE} -- sh -c true`],
@@ -266,20 +275,23 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
     // 検査対象から外れて空白入りの別名で迂回できた。分類せず落とす。
     [
       '空白を escape した別名',
-      'op run --env-file=/tmp/foo\\ bar -- bash scripts/admin-delete-user.sh',
+      'op run --env-file=/tmp/foo\\ bar -- bash scripts/runbook/admin-delete-user.sh',
     ],
     ['引用符で囲んだ別名', 'op run --env-file="/tmp/foo bar" -- sh -c true'],
     // basename で判定すると、任意ディレクトリに同名で置くだけで通ってしまう。
     // path 文字列そのものを allowlist にして塞ぐ。
     [
       '別ディレクトリの同名ファイル',
-      'op run --env-file=/tmp/.op-env.agent -- bash scripts/admin-delete-user.sh',
+      'op run --env-file=/tmp/.op-env.agent -- bash scripts/runbook/admin-delete-user.sh',
     ],
     ['home 配下の同名ファイル', 'op run --env-file=~/.op-env.agent -- sh -c true'],
     ['深い相対 path の同名ファイル', 'op run --env-file=../../../tmp/.op-env.agent -- sh -c true'],
     // 許可形を optional group で組み立てると区切りの / が任意になり、
     // 下のような類似名まで通る。省略記法を使わず選択肢で列挙する。
-    ['区切りなしの類似名', 'op run --env-file=..op-env.agent -- bash scripts/admin-delete-user.sh'],
+    [
+      '区切りなしの類似名',
+      'op run --env-file=..op-env.agent -- bash scripts/runbook/admin-delete-user.sh',
+    ],
     ['ドットを増やした類似名', 'op run --env-file=../...op-env.agent -- sh -c true'],
     ['1 階層だけ上の同名ファイル', 'op run --env-file=../.op-env.agent -- sh -c true'],
     // 旧名は移行猶予中 disk に残りうるが、消費は改名時点で許可 literal から
@@ -290,7 +302,7 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
     // 行単位の grep は分断される。敵対的な回避ではなく通常の整形で起きる。
     [
       '行継続で分断した flag',
-      `op run --env-file\\\n=${ADMIN_EXAMPLE} -- bash scripts/admin-delete-user.sh`,
+      `op run --env-file\\\n=${ADMIN_EXAMPLE} -- bash scripts/runbook/admin-delete-user.sh`,
     ],
     ['行継続で分断した path', `op run --env-file=\\\n${ADMIN_EXAMPLE} -- sh -c true`],
   ])('許可外の env-file を落とす: %s', (_label, command) => {
@@ -341,8 +353,11 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
   it.each([
     // quote は shell が引数から取り除くので、= の前後どこへ刺しても argv は同じ。
     // 旧実装はトリガーの --env-file[=空白] に一致せず素通りしていた。
-    ['= の前に二重引用符', `op run --env-file"=${HUMAN}" -- bash scripts/admin-delete-user.sh`],
-    ['= の前に単引用符', `op run --env-file'='${HUMAN} -- bash scripts/admin-show-user.sh`],
+    [
+      '= の前に二重引用符',
+      `op run --env-file"=${HUMAN}" -- bash scripts/runbook/admin-delete-user.sh`,
+    ],
+    ['= の前に単引用符', `op run --env-file'='${HUMAN} -- bash scripts/runbook/admin-show-user.sh`],
     ['= を backslash escape', `op run --env-file\\=${HUMAN} -- sh -c true`],
     // flag 名の内側に刺す形は生の文字列に -env-file が現れない。
     // quote / backslash を除いた写しでのみ捕まる。
@@ -356,7 +371,7 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
     // = が無い形・変数が挟まる形も「許可形ではない言及」として落ちる。
     [
       'flag と = の間に変数',
-      'op run --env-file${X}=/tmp/evil -- bash scripts/admin-delete-user.sh',
+      'op run --env-file${X}=/tmp/evil -- bash scripts/runbook/admin-delete-user.sh',
     ],
     // 許可形が 1 つあっても、許可外の言及が混ざれば落ちる。
     [
@@ -1055,21 +1070,21 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'sentry issue list dayopt --query "is:unresolved age:-24h"',
       ],
       // night-watch v2（#2291）の gh 直叩き（盤面起票・前日盤面 close・検索）は
-      // scripts/night-watch/*.mjs の wrapper へ寄せた（PR #2309 未解決 thread
+      // scripts/ci/night-watch/*.mjs の wrapper へ寄せた（PR #2309 未解決 thread
       // 1/2/3/4/5/6 の構造的解消）。動的引数を持たない Step1/Step4 は完全一致、
       // 動的引数（check-id・実測値）が要る Step3 は固定 prefix のみで許可し、
       // flag 単位の検証は行わない（値は wrapper 内部で execFile の argv 要素と
-      // して gh へ渡るため shell を経由しない。scripts/night-watch/*.test.ts が
+      // して gh へ渡るため shell を経由しない。scripts/ci/night-watch/*.test.ts が
       // 値の形の検証を担保する）。
-      ['盤面起票 wrapper（Step1）', 'node scripts/night-watch/board-issue.mjs sync'],
-      ['DoD候補選定 wrapper（Step4）', 'node scripts/night-watch/dod-candidate.mjs select'],
+      ['盤面起票 wrapper（Step1）', 'node scripts/ci/night-watch/board-issue.mjs sync'],
+      ['DoD候補選定 wrapper（Step4）', 'node scripts/ci/night-watch/dod-candidate.mjs select'],
       [
         'check-id alert wrapper（Step3、count-baseline）',
-        'node scripts/night-watch/alert-issue.mjs report docs-coverage --actual 9',
+        'node scripts/ci/night-watch/alert-issue.mjs report docs-coverage --actual 9',
       ],
       [
         'check-id alert wrapper（Step3、sentry evidence を含む実測形）',
-        'node scripts/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
+        'node scripts/ci/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
       ],
       // Step 0（環境故障報告）・Step 5（運行記録）の wrapper。push 前反証レビュー
       // （risk-reviewer、high）で発見: 3 wrapper 化で `gh issue comment` の
@@ -1078,23 +1093,23 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       // block されていた。
       [
         '環境故障報告 wrapper（Step0、no-var）',
-        'node scripts/night-watch/run-log.mjs env-failure no-var',
+        'node scripts/ci/night-watch/run-log.mjs env-failure no-var',
       ],
       [
         '環境故障報告 wrapper（Step0、write-token）',
-        'node scripts/night-watch/run-log.mjs env-failure write-token',
+        'node scripts/ci/night-watch/run-log.mjs env-failure write-token',
       ],
       [
         '運行記録 wrapper（Step5、常設運行記録issueへの report）',
-        'node scripts/night-watch/run-log.mjs report \'{"executed":6}\'',
+        'node scripts/ci/night-watch/run-log.mjs report \'{"executed":6}\'',
       ],
       [
         '運行記録 wrapper（Step5、当日盤面issueへの1行 board-note）',
-        'node scripts/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
+        'node scripts/ci/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
       ],
       [
         'pending escalation 判定 wrapper（Step2、#2350）',
-        'node scripts/night-watch/run-log.mjs recent-pending heavy-red',
+        'node scripts/ci/night-watch/run-log.mjs recent-pending heavy-red',
       ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
@@ -1126,7 +1141,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['allowlist に無い任意コマンド', 'curl https://evil.example'],
       ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
       ['redirect による追記（>>）', 'echo x >> baseline.json'],
-      ['stdin redirect（<）', 'node scripts/night-watch/board-issue.mjs sync < /tmp/body.txt'],
+      ['stdin redirect（<）', 'node scripts/ci/night-watch/board-issue.mjs sync < /tmp/body.txt'],
       // read-only git は checklist が実際には使わないため allowlist から撤去した
       // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
       // git diff/show を残すと --output= 迂回の温床になる）。
@@ -1236,19 +1251,19 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ],
       [
         'P1回帰（thread #5、対象を wrapper 呼び出し自体に変えた迂回）: alert-issue.mjs の呼び出しに未知の script 名を混ぜる',
-        'node scripts/night-watch/evil.mjs report x --actual 1',
+        'node scripts/ci/night-watch/evil.mjs report x --actual 1',
       ],
       [
         'wrapper prefix の迂回: board-issue.mjs に未許可のサブコマンドを渡す',
-        'node scripts/night-watch/board-issue.mjs close 2000',
+        'node scripts/ci/night-watch/board-issue.mjs close 2000',
       ],
       [
         'run-log.mjs env-failure に未知の kind を渡す迂回',
-        'node scripts/night-watch/run-log.mjs env-failure evil',
+        'node scripts/ci/night-watch/run-log.mjs env-failure evil',
       ],
       [
         'run-log.mjs env-failure に余分な引数を付ける迂回',
-        'node scripts/night-watch/run-log.mjs env-failure no-var extra',
+        'node scripts/ci/night-watch/run-log.mjs env-failure no-var extra',
       ],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
@@ -1275,7 +1290,9 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     it('wrapper 呼び出しをセパレータで連結して push を混ぜる迂回は落とす', () => {
       expect(
         runGuard(
-          bash('node scripts/night-watch/alert-issue.mjs report docs-check; git push origin main'),
+          bash(
+            'node scripts/ci/night-watch/alert-issue.mjs report docs-check; git push origin main',
+          ),
           rootDir,
           NIGHT_WATCH_ENV,
         ),
@@ -1285,7 +1302,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     it('コマンド置換で隠す迂回は落とす', () => {
       expect(
         runGuard(
-          bash('node scripts/night-watch/alert-issue.mjs report $(git log -1)'),
+          bash('node scripts/ci/night-watch/alert-issue.mjs report $(git log -1)'),
           rootDir,
           NIGHT_WATCH_ENV,
         ),
@@ -1299,7 +1316,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
 
   // 層2（RemoteTrigger の allowed_tools から Write/Edit/MultiEdit/NotebookEdit を
   // 除外する設定）が唯一の防御だと、その設定が漏れた場合に agent が
-  // scripts/night-watch/*.mjs（layer3 が prefix 一致で信頼している node script）
+  // scripts/ci/night-watch/*.mjs（layer3 が prefix 一致で信頼している node script）
   // や本 hook 自体を書き換えてから、信頼されたコマンド名で実行するだけで任意
   // コード実行 / guard 自体の無効化に到達できる（push 前反証レビュー
   // risk-reviewer 指摘、medium）。layer3 も Write/Edit を無条件で拒否し、
@@ -1314,9 +1331,9 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
     });
 
     it('wrapper script 自身への Write（信頼された prefix の書き換え試行）は落とす', () => {
-      expect(runGuard(write('scripts/night-watch/alert-issue.mjs'), rootDir, NIGHT_WATCH_ENV)).toBe(
-        'block',
-      );
+      expect(
+        runGuard(write('scripts/ci/night-watch/alert-issue.mjs'), rootDir, NIGHT_WATCH_ENV),
+      ).toBe('block');
     });
 
     it('guard 自身への Edit（guard 無効化の書き換え試行）は落とす', () => {
@@ -1384,7 +1401,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
 // Turnstile secret via Management API ×2）はいずれも「生表示 command を
 // denylist keyword や部分一致フィルタで塞ごうとして漏れた」class。本節は
 // denylist の穴埋めではなく、危険な command shape そのものを block し、
-// field allowlist projection を持つ安全な代替（scripts/supabase-mgmt-safe-get.mjs
+// field allowlist projection を持つ安全な代替（scripts/agent/supabase-mgmt-safe-get.mjs
 // 等）へ一本化する構造の contract を固定する。
 describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', () => {
   it('--reveal を伴うと落ちる（concealed field の実値が出力される）', () => {

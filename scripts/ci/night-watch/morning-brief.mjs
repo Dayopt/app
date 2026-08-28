@@ -651,7 +651,7 @@ function isDirectExecution() {
 if (isDirectExecution()) {
   const [subcommand] = process.argv.slice(2);
   if (subcommand !== 'post') {
-    console.error('Usage: node scripts/night-watch/morning-brief.mjs post');
+    console.error('Usage: node scripts/ci/night-watch/morning-brief.mjs post');
     process.exitCode = 1;
   } else {
     try {

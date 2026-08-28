@@ -260,7 +260,7 @@ export const AUTH_CONFIG_CONTRACT = [
     key: 'hook_custom_access_token_enabled',
     expected: false,
     failureMode: 'fail-open',
-    // **production では意図的に無効**（#1946 で決着、2026-08-12）。`scripts/enable-auth-hook.sh`
+    // **production では意図的に無効**（#1946 で決着、2026-08-12）。`scripts/runbook/enable-auth-hook.sh`
     // は有効化の手順を持ち `supabase/config.toml` も enabled だが、前者は「実行してよい条件」を
     // 満たすまで実行しない手順書、後者は local / PR Preview にしか効かないので、いずれも
     // production の false と矛盾しない。
