@@ -308,12 +308,13 @@ jobs:
   # auth-config job と同じ理由（token を branch code へ渡さない・merge gate を巻き込ま
   # ない）で分離する。発火経路も同じ push:main（merge 直後）と日次 cron のみ。
   #
-  # **SUPABASE_STORAGE_RLS_AUDIT_TOKEN は 2026-08-24 時点で未発行**（database_read scope
-  # のみの新規 scoped token が要る。発行・1Password ci vault 登録・GitHub Secret 登録は
-  # fast-follow issue で扱う）。token 未設定の間、
-  # scripts/production-storage-rls-audit.mjs は fail ではなく `::notice::` を出して
-  # exit 0 にする（missing token を drift 検出の failure と誤読させない・かといって
-  # 黙って green にもしない、の両立）。
+  # **SUPABASE_STORAGE_RLS_AUDIT_TOKEN は 2026-08-25（#2345）に発行・GitHub Secret 登録
+  # 済み。** 発行前は token 未設定を `::notice::` + exit 0 で許容していたが、発行済みに
+  # なった今その分岐を残すと「token が後日失効・削除されても audit が黙って no-op の
+  # 緑になる」false-green 経路になる（#2449 で発見。#2323 が守ろうとした「production だけ
+  # に残存する drift を見逃さない」という主題そのものへの逆行）。auth-config job
+  # （scripts/production-auth-config-audit.mjs）と同じ「token 未設定は即 throw」へ揃え、
+  # 曖昧な中間状態を持たない。
   storage-rls:
     name: Audit production storage.objects RLS (trusted)
     if: github.event_name == 'push' || github.event_name == 'schedule'
@@ -336,4 +337,4 @@ jobs:
         run: |
           set -o pipefail
           node scripts/production-storage-rls-audit.mjs | tee storage-rls-audit-output.txt
-          grep -qE 'Production Storage RLS Audit (passed|is inactive)' storage-rls-audit-output.txt
+          grep -q 'Production Storage RLS Audit passed' storage-rls-audit-output.txt
