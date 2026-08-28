@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  assertValidCodexInput,
   buildCodexInput,
   buildIssueCodexInput,
   buildPrCodexInput,
@@ -204,5 +205,45 @@ describe('buildPrCodexInput', () => {
     });
     const output = buildPrCodexInput(2424, { execFileImpl });
     expect(output.startsWith('> 注意:')).toBe(true);
+  });
+});
+
+// #2448 push前反証レビュー指摘（P2、PR #2445）: `set -o pipefail` は運用
+// 手順であり機械強制ではない。手順を飛ばして wrapper が例外で落ちた場合、
+// Codex が空 stdin で「指摘なし」相当を返しうる backstop として、wrapper
+// 自身の出力を最低限検証する。
+describe('assertValidCodexInput', () => {
+  it('issue: buildIssueCodexInput の正常な出力は例外を投げない', () => {
+    const execFileImpl = vi.fn(() => JSON.stringify({ title: 'Target', body: 'body' }));
+    const output = buildIssueCodexInput(1, { execFileImpl });
+    expect(() => assertValidCodexInput(output, { kind: 'issue' })).not.toThrow();
+  });
+
+  it('pr: buildPrCodexInput の正常な出力は例外を投げない', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'pr' && args[1] === 'view') {
+        return JSON.stringify({ title: 'PR', body: 'no refs' });
+      }
+      return 'diff --git a/x b/x\n+added';
+    });
+    const output = buildPrCodexInput(1, { execFileImpl });
+    expect(() => assertValidCodexInput(output, { kind: 'pr' })).not.toThrow();
+  });
+
+  it('空文字列は kind によらず例外を投げる', () => {
+    expect(() => assertValidCodexInput('', { kind: 'issue' })).toThrow(/出力が空/);
+    expect(() => assertValidCodexInput('   \n  ', { kind: 'pr' })).toThrow(/出力が空/);
+  });
+
+  it('issue: title 見出し構造が無い出力は例外を投げる', () => {
+    expect(() => assertValidCodexInput('何か別の文字列', { kind: 'issue' })).toThrow(
+      /title 見出し/,
+    );
+  });
+
+  it('pr: diff 本体が無い出力は例外を投げる', () => {
+    expect(() => assertValidCodexInput('> 注意: ...\n\n---\n\n本文だけ', { kind: 'pr' })).toThrow(
+      /PR diff/,
+    );
   });
 });

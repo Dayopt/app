@@ -309,7 +309,7 @@ done
 
 カテゴリは `docs/operations/runbook.md` 第4部「リリースノート執筆規約」の5分類に従う（Web版リリースノート `docs-writing` skill とも共通のタクソノミー。ここでは再定義しない）:
 
-1. **新機能**: 機能名 + 具体的な実装内容
+1. **新機能**: 機能名 + 具体的な実装内容。**Storybook-only（本番コードからの呼び出し元が無い）変更は「新機能」に書かない**（策定日: 2026-08-28、[#2442](https://github.com/Dayopt/dayopt/issues/2442)）。対象 component/関数を `rg` し、`*.stories.tsx` や自 feature 内以外からの呼び出しが無ければ Storybook-only と判定する。どうしても記載する場合は「Storybook 上のみ・本番未接続」と明記し、ユーザーには見えないことを分かる形にする。2026-08-27、Storybook-only の [PR #2413](https://github.com/Dayopt/dayopt/pull/2413) を新機能として記載し、User が本番で探して見つからない実害が発生した
 2. **改善**: 何がどう変わったか + 影響範囲（パフォーマンス最適化を含む）
 3. **バグ修正**: 問題の原因 + 修正内容
 4. **破壊的変更**: DB変更、削除されたAPI/コンポーネント
