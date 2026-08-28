@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockUpload = vi.fn();
 const mockRemove = vi.fn();
-const mockList = vi.fn();
 const mockGetPublicUrl = vi.fn();
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -13,7 +12,6 @@ vi.mock('@/lib/supabase/client', () => ({
       from: () => ({
         upload: mockUpload,
         remove: mockRemove,
-        list: mockList,
         getPublicUrl: mockGetPublicUrl,
       }),
     },
@@ -24,7 +22,7 @@ vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 }));
 
-import { uploadAvatar } from '../storage';
+import { ALLOWED_IMAGE_TYPES, MAX_FILE_SIZE, uploadAvatar } from '../storage';
 
 function makeImageFile(name: string, type: string, sizeBytes = 1024): File {
   return new File([new Uint8Array(sizeBytes)], name, { type });
@@ -48,51 +46,28 @@ describe('uploadAvatar（#2449: 非原子的な置換の回帰防止）', () => 
     await expect(uploadAvatar(file, 'user-1')).rejects.toThrow('アップロードに失敗しました');
 
     // 修正前は upload の前に remove() を呼んでいたため、upload 失敗時にも旧ファイルが
-    // 既に消えていた。新しい実装は upload 成功を確認するまで remove を呼ばない。
+    // 既に消えていた。新しい実装は remove() を一切呼ばない（upsert: true が同一 key への
+    // 上書きを担うため）。
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
-  it('upload に成功した場合のみ、同ユーザーフォルダの他拡張子ファイルを回収する', async () => {
+  it('upload に成功した場合、remove を呼ばずに公開 URL を返す', async () => {
     mockUpload.mockResolvedValue({ error: null });
-    mockList.mockResolvedValue({
-      data: [{ name: 'avatar.png' }, { name: 'avatar.webp' }],
-      error: null,
-    });
 
-    // png → webp への切り替え。新しい key は user-1/avatar.webp。
-    const file = makeImageFile('photo.webp', 'image/webp');
+    const file = makeImageFile('avatar.png', 'image/png');
 
     const url = await uploadAvatar(file, 'user-1');
 
     expect(mockUpload).toHaveBeenCalledWith(
-      'user-1/avatar.webp',
+      'user-1/avatar.png',
       file,
       expect.objectContaining({ upsert: true }),
     );
-    // 新しい key（avatar.webp）自身は回収対象から除外し、旧 key（avatar.png）だけ削除する。
-    expect(mockRemove).toHaveBeenCalledWith(['user-1/avatar.png']);
-    expect(url).toContain('avatar.png'); // getPublicUrl のモック値をそのまま使っている
-  });
-
-  it('回収（list/remove）が失敗しても、アップロード自体は成功として扱う（ベストエフォート）', async () => {
-    mockUpload.mockResolvedValue({ error: null });
-    mockList.mockResolvedValue({ data: null, error: { message: 'list failed' } });
-
-    const file = makeImageFile('avatar.png', 'image/png');
-
-    await expect(uploadAvatar(file, 'user-1')).resolves.toBeTruthy();
+    // 拡張子が変わっても（png → webp 等）孤児ファイルの回収はしない（#2464 cross-review
+    // 指摘: 回収を upload 直後に行うと、呼び出し元の永続化が失敗した時に旧ファイルが
+    // 既に消えている 404 の窓ができてしまう。孤児の扱いは #2460 の scope）。
     expect(mockRemove).not.toHaveBeenCalled();
-  });
-
-  it('同一拡張子の再アップロードでは回収対象が無い（remove を呼ばない）', async () => {
-    mockUpload.mockResolvedValue({ error: null });
-    mockList.mockResolvedValue({ data: [{ name: 'avatar.png' }], error: null });
-
-    const file = makeImageFile('avatar.png', 'image/png');
-
-    await uploadAvatar(file, 'user-1');
-
-    expect(mockRemove).not.toHaveBeenCalled();
+    expect(url).toContain('avatar.png');
   });
 
   it('許可されていない MIME type は upload を試みずに拒否する', async () => {
@@ -107,5 +82,18 @@ describe('uploadAvatar（#2449: 非原子的な置換の回帰防止）', () => 
 
     await expect(uploadAvatar(file, 'user-1')).rejects.toThrow('ファイルサイズは5MB以下');
     expect(mockUpload).not.toHaveBeenCalled();
+  });
+
+  // client 側の早期 validation 値は bucket 側の実際の制約
+  // （supabase/config.toml の [storage.buckets.avatars]、
+  // scripts/production-storage-rls-audit.mjs の EXPECTED_AVATARS_BUCKET が正本）の
+  // 3 箇所目の写経になっている（#2464 cross-review 指摘）。この test はその 3 値が
+  // 一致していることをリテラルで固定する。いずれかを変える PR はこの test の diff を
+  // 伴わない限り気づかれない（STORAGE_OBJECTS_APP_POLICY_NAMES と同型の二重管理対策）。
+  it('client 側の validation 値は bucket の実際の制約（config.toml / EXPECTED_AVATARS_BUCKET）とリテラルで一致する（#2464）', () => {
+    expect(MAX_FILE_SIZE).toBe(5242880); // 5MiB
+    expect([...ALLOWED_IMAGE_TYPES].sort()).toEqual(
+      ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].sort(),
+    );
   });
 });

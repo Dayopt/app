@@ -8,8 +8,13 @@ import { logger } from '@/lib/logger';
 import { createClient } from './client';
 
 const AVATARS_BUCKET = 'avatars';
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+// client 側の早期 validation 値。bucket 側の実際の制約（supabase/config.toml の
+// [storage.buckets.avatars]、scripts/production-storage-rls-audit.mjs の
+// EXPECTED_AVATARS_BUCKET が正本）と 3 箇所目の写経になっている（#2464 cross-review
+// 指摘）。ここだけ緩めても bucket 側が拒否するため安全側の drift だが、値の同期は
+// __tests__/storage.test.ts の契約 test で機械固定する。
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 const DEFAULT_EXTENSION = 'png';
 
 /**
@@ -88,17 +93,21 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
   const fileExt = getFileExtension(file.name);
   const fileName = `${userId}/avatar.${fileExt}`;
 
-  // 新しいアバターを先にアップロードする（#2449）。
+  // remove() を呼ばず、先に新しいアバターをアップロードする（#2449）。
   //
   // 旧実装は remove() を upload() の**前**に呼んでいたため、削除が成功して upload だけが
   // 失敗する（例: bucket 制約による拒否、ネットワーク断）と旧画像が既に無く、参照済みの
-  // URL が 404 を返す状態になっていた（新規アップロードが失敗しても既存のアバターは
-  // 無傷のまま残すべき、という不変条件を壊す非原子的な置換）。
+  // URL が 404 を返す状態になっていた。`upsert: true` は同一 key への上書きを単一操作
+  // として扱うため、そもそも remove() は不要だった。
   //
-  // `upsert: true` は同一 key への上書きを単一操作として扱うため、同じ拡張子で
-  // 再アップロードする最頻ケース（key が変わらない）では remove() は元々不要だった。
-  // 拡張子が変わって key も変わるケース（png → webp 等）だけ旧 object が孤児として
-  // 残り得るため、upload 成功を確認した**後**にベストエフォートで回収する。
+  // 拡張子が変わる場合（png → webp 等）は key も変わるため、旧 object がユーザーの
+  // フォルダに孤児として残る。この孤児の回収は本 PR の scope から意図的に外した
+  // （cross-review 指摘、#2464）: upload 成功後すぐに回収すると、呼び出し元
+  // （`AvatarChangeDialog`）が新しい publicUrl を DB / auth metadata へ永続化する前に
+  // 失敗した場合、永続化済みの参照が既に削除された旧 key を指したまま 404 になる —
+  // 旧実装には無かった新しい破損経路を作ってしまう。孤児ファイルの蓄積そのものは
+  // storage の容量・object 数の quota の話で、[#2460](https://github.com/Dayopt/dayopt/issues/2460)
+  // の scope。
   const { error: uploadError } = await supabase.storage
     .from(AVATARS_BUCKET)
     .upload(fileName, file, {
@@ -122,32 +131,6 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
         fileName,
       },
     );
-  }
-
-  // upload 成功後、同じユーザーフォルダに残る他拡張子の旧ファイルを回収する（ベストエフォート）。
-  // 失敗しても新しいアバター自体は既に確定しているため、ここでは throw しない。
-  try {
-    const { data: existingFiles, error: listError } = await supabase.storage
-      .from(AVATARS_BUCKET)
-      .list(userId);
-
-    if (listError) {
-      throw listError;
-    }
-
-    const orphanPaths = (existingFiles ?? [])
-      .map((existingFile) => `${userId}/${existingFile.name}`)
-      .filter((path) => path !== fileName);
-
-    if (orphanPaths.length > 0) {
-      await supabase.storage.from(AVATARS_BUCKET).remove(orphanPaths);
-    }
-  } catch (error) {
-    logger.debug('[Storage] Failed to clean up orphaned avatar files (non-fatal):', {
-      userId,
-      fileName,
-      error: error instanceof Error ? error.message : String(error),
-    });
   }
 
   // 公開URLを取得（キャッシュバスター付き）
