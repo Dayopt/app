@@ -45,12 +45,7 @@ export default [
   },
   {
     files: ['src/**/*.{jsx,tsx}'],
-    ignores: [
-      '**/*.test.{jsx,tsx}',
-      '**/*.spec.{jsx,tsx}',
-      '**/*.stories.{jsx,tsx}',
-      '**/__tests__/**',
-    ],
+    ignores: ['**/*.test.{jsx,tsx}', '**/*.spec.{jsx,tsx}', '**/*.stories.{jsx,tsx}'],
     plugins: {
       'jsx-a11y': jsxA11y,
     },
@@ -74,7 +69,6 @@ export default [
       '**/*.test.{ts,tsx,js,jsx}',
       '**/*.spec.{ts,tsx,js,jsx}',
       '**/*.stories.{ts,tsx,js,jsx}',
-      '**/__tests__/**',
       'src/app/**/{page,layout,loading,error,not-found,template,default}.{ts,tsx,js,jsx}',
       'src/app/{global-error,global-not-found,forbidden,unauthorized}.{ts,tsx,js,jsx}',
       'src/app/**/{icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx,js,jsx}',
