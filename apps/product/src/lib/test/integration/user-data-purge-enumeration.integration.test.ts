@@ -83,6 +83,8 @@ const INTENTIONALLY_RETAINED: Record<string, string> = {
     '削除ではなく tombstone 方式（purged_generation / purged_at を打つ）。設計どおり',
   oauth_authorization_codes: '削除ではなく consumed_at を打って無効化する（OAuth ライフサイクル）',
   oauth_connections: '削除ではなく revoked_at / revoked_reason を打って失効させる',
+  undo_receipts:
+    '#2434: 削除ではなく tombstone として残す。親行は PII を持たず（PII は undo_receipt_effects/field_changes 側）、UNIQUE(user_id, operation_id) が遅延再送への冪等ガードを兼ねる。PII は undo_receipt_effects の直接 DELETE（CASCADE で field_changes も消える）で除去する',
   oauth_tokens: '削除ではなく revoked_at を打って失効させる',
 };
 
@@ -308,16 +310,21 @@ describe.skipIf(!RUN_LOCAL)('account-preserving purge の列挙 (#2444)', () => 
     }
   });
 
-  it('#2433: undo substrate が purge 対象に入っている', () => {
+  it('#2434: undo substrate は effects を直接 DELETE し、receipts 親行は tombstone として残す', () => {
     const rows = coverage();
-    // 親だけを直接 DELETE し、子は CASCADE で落とす設計。
-    expect(rows.find((entry) => entry.relname === 'undo_receipts')?.directlyDeleted).toBe(true);
-    for (const name of ['undo_receipt_effects', 'undo_receipt_field_changes']) {
-      expect(
-        rows.find((entry) => entry.relname === name)?.cascadeReachable,
-        `${name} が CASCADE で到達できない`,
-      ).toBe(true);
-    }
+    // PII（before_value/after_value）を持つ effects を直接 DELETE し、field_changes は
+    // CASCADE で落とす。PII を持たない receipts 親行は消さない（INTENTIONALLY_RETAINED）。
+    expect(rows.find((entry) => entry.relname === 'undo_receipt_effects')?.directlyDeleted).toBe(
+      true,
+    );
+    expect(
+      rows.find((entry) => entry.relname === 'undo_receipt_field_changes')?.cascadeReachable,
+      'undo_receipt_field_changes が CASCADE で到達できない',
+    ).toBe(true);
+    expect(
+      rows.find((entry) => entry.relname === 'undo_receipts')?.directlyDeleted,
+      'undo_receipts が直接 DELETE されている（tombstone として残す設計に反する）',
+    ).toBe(false);
   });
 
   it('CASCADE 頼みの table が実際に CASCADE 経路を持つ', () => {
