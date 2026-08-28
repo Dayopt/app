@@ -452,10 +452,17 @@ export function formatSummary(impact) {
 //
 // キーごとに fail closed の向きが逆になる点に注意する:
 // - `docs_only` は true が skip 側なので、確信が持てない時は false
-// - `product_unit` は false が skip 側なので、確信が持てない時は true
+// - `product_unit` / `integration` は false が skip 側なので、確信が持てない時は true
 //
 // 出すのは `productUnit` であって `product` ではない。CI の unit test を走らせるかは
 // Vercel の build を走らせるかとは別問題で、CI toolchain の変更で前者だけが true になる。
+//
+// `integration` は CI 4 層再設計（#2269）+ CI ファイル統合（#2483 Phase 1）で
+// scripts/ci/check.sh の test モードが「affected な PR だけ Supabase を起動して
+// integration/RLS を走らせる」判定に使う。旧 integration.yml の手書き paths と
+// INTEGRATION_GLOBS の二重管理（#1815 で見送った理由: gate job 化すると常時起動の
+// 課金が増える）は、per-PR 実行そのものを scripts 側の判定に一本化したことで解消した
+// （drift の心配がある二重管理自体が無くなった）。
 //
 // このコマンド自体が落ちた場合は stdout が空になり、GITHUB_OUTPUT に何も書かれない。
 // 下流は空文字を `!= 'true'` / `!= 'false'` で受けて実行側に倒すため、やはり fail closed。
@@ -464,7 +471,8 @@ export function formatGithubOutput(impact) {
   const docsOnly = impact?.docsOnly === true ? 'true' : 'false';
   const productUnit = impact?.productUnit === false ? 'false' : 'true';
   const webCi = impact?.webCi === false ? 'false' : 'true';
-  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb_ci=${webCi}\n`;
+  const integration = impact?.integration === false ? 'false' : 'true';
+  return `docs_only=${docsOnly}\nproduct_unit=${productUnit}\nweb_ci=${webCi}\nintegration=${integration}\n`;
 }
 
 // ─── Vercel Ignored Build Step（`--vercel <product|web>`）────────────
