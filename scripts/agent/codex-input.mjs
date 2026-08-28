@@ -253,7 +253,7 @@ if (isDirectExecution(import.meta.url)) {
       assertValidCodexInput(output, { kind: 'pr' });
       process.stdout.write(output);
     } else {
-      console.error('Usage: node scripts/ops/codex-input.mjs <issue|pr> <番号>');
+      console.error('Usage: node scripts/agent/codex-input.mjs <issue|pr> <番号>');
       process.exitCode = 1;
     }
   } catch (error) {

@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const backupScript = join(rootDir, 'scripts/ci/storage-backup.sh');
-const restoreScript = join(rootDir, 'scripts/storage-restore.sh');
+const restoreScript = join(rootDir, 'scripts/runbook/storage-restore.sh');
 const temporaryDirectories: string[] = [];
 
 function makeStubBin(rcloneBehavior: 'record' | 'missing'): string {

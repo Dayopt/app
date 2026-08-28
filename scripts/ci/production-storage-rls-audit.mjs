@@ -4,13 +4,13 @@ import { pathToFileURL } from 'node:url';
 import {
   STORAGE_OBJECTS_APP_POLICY_NAMES,
   sqlStringList,
-} from './lib/storage-objects-app-policy-names.mjs';
+} from '../lib/storage-objects-app-policy-names.mjs';
 import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.mjs';
 
 /**
  * production の `storage.objects` RLS drift を継続検出する（#2323）。
  *
- * `pnpm rls:snapshot:check`（`scripts/generate-rls-snapshot.ts`）は migration から構築した
+ * `pnpm rls:snapshot:check`（`scripts/tasks/generate-rls-snapshot.ts`）は migration から構築した
  * **ephemeral な local DB** しか見ない。production の実 state（Dashboard 経由の手動変更、
  * migration の DROP 漏れで残存した legacy policy 等）はこれまで一度も直接検査されて
  * こなかった —— #2316 の root cause（`_archive/20251024022910_remote_schema.sql` /
@@ -39,7 +39,7 @@ import { SUPABASE_PRODUCTION_PROJECT_REF } from './production-auth-config-audit.
  * **守る**:
  *
  * 1. `storage.objects` の policy 名が `STORAGE_OBJECTS_APP_POLICY_NAMES`
- *    （`./lib/storage-objects-app-policy-names.mjs` が正本）の外に出ていないか
+ *    （`../lib/storage-objects-app-policy-names.mjs` が正本）の外に出ていないか
  * 2. `storage.objects` の RLS が有効なままか（policy が残っていても
  *    `ENABLE ROW LEVEL SECURITY` が外れれば無力化される。local snapshot の
  *    `fetchStorageObjectsRls()` と同じ懸念）

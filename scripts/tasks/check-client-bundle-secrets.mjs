@@ -16,14 +16,14 @@
  * ため、ファイル path と一致したパターン名だけを出す。
  *
  * Usage:
- *   node scripts/check-client-bundle-secrets.mjs
+ *   node scripts/tasks/check-client-bundle-secrets.mjs
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const STATIC_DIR = resolve(ROOT, 'apps/product/.next/static');
 
 /**

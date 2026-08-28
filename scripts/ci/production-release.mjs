@@ -3,11 +3,11 @@ import { appendFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { resolveImpact } from './ci/impact.mjs';
+import { resolveImpact } from './impact.mjs';
 import { runProductionConfigAudit } from './production-config-audit.mjs';
 
 const API_ORIGIN = 'https://api.vercel.com';
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /**
  * 並行性モデル（保証の境界）: single-writer 前提。CI は concurrency group で直列化され、
@@ -1322,7 +1322,7 @@ export async function runProductionRelease({
           // checkProjectSettings: false — project 設定監査（rootDirectory /
           // autoAssignCustomDomains 等、#1817 Phase 4）は release 中の一時的な状態
           // （外部 promote による auto-assign 復帰）と衝突する。release の gate は
-          // 従来どおり env metadata のみを見る（scripts/production-config-audit.mjs
+          // 従来どおり env metadata のみを見る（scripts/ci/production-config-audit.mjs
           // の runProductionConfigAudit 冒頭コメント参照）。
           await runProductionConfigAudit({ token, teamId, fetchImpl, checkProjectSettings: false });
           logger.log('Production Config Audit passed against live Vercel metadata.');

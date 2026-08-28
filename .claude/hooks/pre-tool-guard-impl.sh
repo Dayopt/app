@@ -213,7 +213,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
   fi
 
   # .env ファイルへの書き込みは全面禁止（.env.example は 2026-08-14 に廃止。
-  # 変数一覧の正本は scripts/env/schema.ts）
+  # 変数一覧の正本は scripts/tasks/env/schema.ts）
   case "$FILE_PATH" in
     *.env | *.env.* | *.envrc)
       echo "BLOCKED: .env系ファイルへの書き込みは禁止です" >&2

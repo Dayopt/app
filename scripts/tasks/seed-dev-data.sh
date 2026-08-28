@@ -4,9 +4,9 @@
 # Dayopt - 開発用データ投入スクリプト
 # ========================================
 # 使い方:
-#   chmod +x scripts/seed-dev-data.sh
-#   ./scripts/seed-dev-data.sh                 # ローカルDB（デフォルト）
-#   USE_LINKED_DB=true ./scripts/seed-dev-data.sh  # linked DB（緊急時のみ）
+#   chmod +x scripts/tasks/seed-dev-data.sh
+#   ./scripts/tasks/seed-dev-data.sh                 # ローカルDB（デフォルト）
+#   USE_LINKED_DB=true ./scripts/tasks/seed-dev-data.sh  # linked DB（緊急時のみ）
 # ========================================
 
 set -e

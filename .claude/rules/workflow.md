@@ -284,7 +284,7 @@ typo 修正など issue を切っていない作業では省略してよい。�
 - **draft 中に走るもの**: Actions では Docs Guard だけ（gitleaks による secret 検査は境界に関係なく早い方がよいため draft guard を持たない）。**Actions の外では Vercel の Preview build（`Vercel – product` / `Vercel – web`）が draft でも push ごとに走る**ため、product / web の `next build` と bundle 検査（§build と bundle 検査は Vercel 側で走る）は draft 中も効いている。**Static Checks / Unit Tests は 2026-08-26 に draft から撤去した**（[#2415](https://github.com/Dayopt/dayopt/issues/2415)、User 裁可。指揮台の推奨とは分かれた `judgment:diverged`）。draft 中の Actions 側の機械ゲートは pre-push フック（§Pause point）
 - **ready 後に走る層**: Static Checks / Unit Tests + Production Config Audit（保護対象該当時のみ trusted dispatch）。**Docs Guard は ready 化では再発火しない** — `docs-guard.yml` の `types` は既定（`opened / synchronize / reopened`）のままで `ready_for_review` を含まないため。draft guard を持たず draft push の時点で同一 SHA を検査済みなので、その結果がそのまま残る（再実行の必要が無い）。**E2E / Web E2E は per-PR から撤去済み**（2026-08-20、CI 4 層再設計 #2269。§CI 4 層構造（2026-08-20 改訂） 参照）
 - **flow（2026-08-26 改訂）**: 「draft で push（CI は Docs Guard のみ。手応え確認は pre-push フックとローカル `pnpm check`）→ レーンが自己判断で ready 化 → **ready 化で軽量 CI が起動** → green 確認 → 指揮台へ「レビュー待ち」報告 → クロスレビュー → 指摘があれば **ready のまま** 1 round = 1 push で fix → thread 全 resolve + green で `pnpm branch:finish`」。`branch:finish` は draft を拒否する（既存挙動）。**旧 flow の「軽量 green 確認後に ready 化」は成立しない**（draft 中に確認対象が無いため、確認は ready 化の後になる）
-- **skip は検査の免除ではない。** draft 中の Static / Unit は `conclusion: skipped` の check run を発行し、`branch:finish` が「docs-only でない PR では両者が success であること」を名前で要求する（`scripts/git/finish-branch.sh`、#2415）。**ただしこの要求は `branch:finish` 経由でのみ効く。** GitHub の merge ボタンと手動 `gh pr merge` は素通りする（GitHub は skipped の required check を success 扱いにし、private repo + Free plan では ruleset の強制自体が効かない）——§内製クロスレビューの実施を要求する gate と同じ制約で、**この改訂は「ready 化直後の窓を素通りで merge した場合」の中身を検証済みから未検証へ変えている**。merge の入口を `branch:finish` に一本化する運用（§マージ手順）がこの前提
+- **skip は検査の免除ではない。** draft 中の Static / Unit は `conclusion: skipped` の check run を発行し、`branch:finish` が「docs-only でない PR では両者が success であること」を名前で要求する（`scripts/tasks/finish-branch.sh`、#2415）。**ただしこの要求は `branch:finish` 経由でのみ効く。** GitHub の merge ボタンと手動 `gh pr merge` は素通りする（GitHub は skipped の required check を success 扱いにし、private repo + Free plan では ruleset の強制自体が効かない）——§内製クロスレビューの実施を要求する gate と同じ制約で、**この改訂は「ready 化直後の窓を素通りで merge した場合」の中身を検証済みから未検証へ変えている**。merge の入口を `branch:finish` に一本化する運用（§マージ手順）がこの前提
 - **fix round は draft へ戻さない**（旧「`gh pr ready --undo` で draft に戻す」運用を廃止）。ready のまま push を重ねる。E2E / Web E2E が per-PR から撤去された（2026-08-20）ため、fix round のたびに重い CI が再走するコストは実質消えている。保護対象 PR の trusted dispatch（Production Config Audit）は引き続き push ごとに要る
 - **クロスレビューは ready 化後（レーンの「レビュー待ち」報告受領後）に `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）で回す。** 旧版は draft のまま先にクロスレビューし、収束後に ready 化する順序だったが、新フローではレーンが先に ready 化・重量 green まで進めてから指揮台がレビューする（`.claude/rules/orchestration.md` §指揮台の merge シーケンス 参照）
 - **draft skip を使う workflow は `types` に `ready_for_review` を明示する。** `pull_request` / `pull_request_target` の既定 types は `opened / synchronize / reopened` だけで、これが無いと ready 化で再発火せず、draft 時の `skipped` が残ったまま「重量層を一度も走らせずに merge できる」状態になる（2026-08-03、PR #1810 で実測）
@@ -386,7 +386,7 @@ gh pr merge <PR番号> --merge --delete-branch
 2. **反論を reply** — 採用しない根拠を thread に書いて resolve（黙って resolve しない）
 3. **issue 化** — エッジケース等を別 issue へ切り出し、issue 番号を reply して resolve
 
-レビューを起こすタイミングは §2 段階 CI の `pr-cross-review` スキル（draft のまま回す）に従う。P1/P2 の指摘は inline review comment として投稿され、この thread gate に直接接続される（`[internal-review]` marker 自体は別建てのサマリーで、実施の証跡のみを担う。二層構造は `scripts/git/finish-branch.sh` §内製クロスレビューの実施を要求する gate 参照）。
+レビューを起こすタイミングは §2 段階 CI の `pr-cross-review` スキル（draft のまま回す）に従う。P1/P2 の指摘は inline review comment として投稿され、この thread gate に直接接続される（`[internal-review]` marker 自体は別建てのサマリーで、実施の証跡のみを担う。二層構造は `scripts/tasks/finish-branch.sh` §内製クロスレビューの実施を要求する gate 参照）。
 
 内製クロスレビューの指摘は的中率が高い実績があるため、既定は 1。2 を選ぶ時は根拠を必ず書く（後から「なぜ見送ったか」を thread だけで追えるようにする）。3 は P2 のエッジケースや scope 外の改善が対象で、起票は dispatch skill の規約に従う。
 
@@ -505,11 +505,11 @@ branch 名は **`{agent}/{domain}-{action}[-{issue番号}]`** で統一する。
 ### 置き場と作成
 
 - Claude Code は `.claude/worktrees/<name>/` に自動作成する（gitignore 済み）。**手動で `git worktree add` する場合も `.claude/worktrees/` 配下に置く**（repo 直下や無関係な場所に散らさない）
-- `.op-env.agent` は gitignore 済みのため worktree には引き継がれないが、`pnpm dev` 実行時に main checkout から自動コピーされる（`scripts/dev-with-op.sh`）。手動セットアップは不要
+- `.op-env.agent` は gitignore 済みのため worktree には引き継がれないが、`pnpm dev` 実行時に main checkout から自動コピーされる（`scripts/tasks/dev-with-op.sh`）。手動セットアップは不要
 
 ### マージ後の掃除（AI の責務、merge と同一セッションで実施）
 
-**標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/git/finish-branch.sh`。Claude / 人間で共通）。
+**標準は `pnpm branch:finish <PR番号>` のワンセット実行。** マージ〜掃除〜main 最新化までを 1 コマンドで行う（`scripts/tasks/finish-branch.sh`。Claude / 人間で共通）。
 
 ```bash
 pnpm branch:finish <PR番号>            # マージ→worktree削除→main ref 更新→branch削除→リモート確認
@@ -520,7 +520,7 @@ pnpm branch:finish <PR番号> --dry-run  # 実行せず予定アクションだ�
 
 1. PR 状態を取得。OPEN かつ失敗 check が無ければ `gh api -X PUT repos/{owner}/{repo}/pulls/<N>/merge -f merge_method=merge -f sha=<head SHA>` でマージし、`gh api -X DELETE .../git/refs/heads/<branch>` でリモート branch を削除する。**`gh pr merge` は使わない**（削除対象 branch が current だと実行元 worktree を main へ切り替えてしまう）。REST 直叩きなら構造的にローカル git へ触れない。`sha` は check 判定後に積まれた未検証 commit ごとマージするのを防ぐ
    - check 判定は **`statusCheckRollup` を畳んでから**行う。rollup は同名 check を畳まないため（`gh pr checks` は畳む）、同一 head SHA で 2 回 run が走ると古い run の failure / cancelled を数え続けてマージ不能になる。代表は「最新を採る」ではなく **① 実行中があれば実行中 → ② 判定を持つ entry の最新 → ③ それも無ければ最新** の順で選ぶ。②が要るのは `skipped` が失敗にも成功にも数えられないためで、**古い `failure` は新しい `skipped` より優先される**。詳細と根拠は [infra.md §merge gate の required checks](../../docs/engineering/infra.md#merge-gate-の-required-checks)、契約は `scripts/__tests__/finish-branch.test.ts` が固定する
-   - audit contract 保護対象（`scripts/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）を変更する PR では、check run「Audit Vercel metadata (trusted)」が**設計として必ず failure になる**。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>` の trusted dispatch を実行する（branch 側の code に `VERCEL_TOKEN` を渡すため、diff レビュー後にユーザーの明示指示で実行する）。成功すると commit status「Production Config Audit」が head SHA へ success で発行され、`branch:finish` は **この status が success の時に限り** guard の failure を失敗数から除外する（dispatch run の check run は PR の rollup に紐づかず、畳み込みでは解消できないため）。status が failure のまま（dispatch 未実行 / audit 実失敗）なら従来どおり停止する
+   - audit contract 保護対象（`scripts/ci/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml`）を変更する PR では、check run「Audit Vercel metadata (trusted)」が**設計として必ず failure になる**。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>` の trusted dispatch を実行する（branch 側の code に `VERCEL_TOKEN` を渡すため、diff レビュー後にユーザーの明示指示で実行する）。成功すると commit status「Production Config Audit」が head SHA へ success で発行され、`branch:finish` は **この status が success の時に限り** guard の failure を失敗数から除外する（dispatch run の check run は PR の rollup に紐づかず、畳み込みでは解消できないため）。status が failure のまま（dispatch 未実行 / audit 実失敗）なら従来どおり停止する
    - **dispatch は「push で起動した `pull_request_target` の audit run が完了してから」実行する。** 両者は同じ commit status context（`Production Config Audit`）へ書き込むため、先に dispatch を流すと後から完了した PR 側 run の failure に上書きされる（2026-08-03、PR #1810 で実測。success の 5 秒後に failure が上書きした）。順序を守れば PR 側 run の failure を dispatch の success が上書きする
 2. 該当 branch の worktree を特定し、`status --porcelain` が空であることを確認（**dirty なら停止**してユーザーに委ねる）
 3. `git worktree remove --force <path>` で worktree を解除

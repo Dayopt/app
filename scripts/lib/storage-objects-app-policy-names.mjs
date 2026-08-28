@@ -12,9 +12,9 @@
  *
  * この配列は次の 2 箇所から参照される単一の正本:
  *
- * - `scripts/generate-rls-snapshot.ts`（`pnpm rls:snapshot`） — migration から構築した
+ * - `scripts/tasks/generate-rls-snapshot.ts`（`pnpm rls:snapshot`） — migration から構築した
  *   ephemeral な local DB を対象にした snapshot 生成 + drift 検出
- * - `scripts/production-storage-rls-audit.mjs` — production の実 DB を対象にした
+ * - `scripts/ci/production-storage-rls-audit.mjs` — production の実 DB を対象にした
  *   継続的 drift 検出（#2323。local snapshot は migration 由来の DB しか見ないため、
  *   production だけに残存した legacy policy（#2316 の root cause）を検出できなかった）
  *

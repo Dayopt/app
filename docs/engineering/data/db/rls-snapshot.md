@@ -1,6 +1,6 @@
 # RLS / schema snapshot（自動生成）
 
-> **生成元**: `scripts/generate-rls-snapshot.ts`（`pnpm rls:snapshot`）。DB の `pg_policies` /
+> **生成元**: `scripts/tasks/generate-rls-snapshot.ts`（`pnpm rls:snapshot`）。DB の `pg_policies` /
 > RLS 有効状態 / GRANT / Realtime publication を deterministic に書き出した snapshot。
 > **手で編集しない**。migration 変更時は CI（`pnpm rls:snapshot:check`）が drift を検出する。
 > 再生成で更新すること。

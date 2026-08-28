@@ -5,7 +5,7 @@
  * Validates all file references in CLAUDE.md files to ensure they exist.
  * Part of Issue #582 Phase 4-1: Document Link Validation Automation
  *
- * Usage: npx tsx scripts/validate-doc-references.ts
+ * Usage: npx tsx scripts/tasks/validate-doc-references.ts
  *
  * Exit codes:
  *   0: All references valid
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '..');
+const ROOT_DIR = path.resolve(__dirname, '../..');
 
 // ANSI colors for terminal output
 const colors = {

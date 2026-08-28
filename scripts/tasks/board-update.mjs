@@ -22,7 +22,7 @@ import { findTodayBoardIssue, REPO, runGh, runGhJson } from '../ci/night-watch/l
  *   `gh issue edit` を呼ぶ
  * - **動的な値は shell へ渡さない。** night-watch wrapper 群（PR #2309）の
  *   設計踏襲。gh への引数は execFileSync の argv 配列で渡し、Bash tool から
- *   見えるコマンドは常に `node scripts/ops/board-update.mjs <subcommand> ...`
+ *   見えるコマンドは常に `node scripts/tasks/board-update.mjs <subcommand> ...`
  *   の固定形に保つ
  *
  * 前提: 指揮台セッション（main checkout）が単一プロセスで直列に呼ぶ。
@@ -246,7 +246,7 @@ export function runBoardUpdate(argv, { execFileImpl } = {}) {
     operate = (rows) => removeLane(rows, lane);
   } else {
     throw new Error(
-      'Usage: node scripts/ops/board-update.mjs <lane-upsert|lane-stage|lane-remove|comment> ...',
+      'Usage: node scripts/tasks/board-update.mjs <lane-upsert|lane-stage|lane-remove|comment> ...',
     );
   }
 

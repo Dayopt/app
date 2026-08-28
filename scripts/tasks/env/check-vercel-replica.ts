@@ -1,15 +1,15 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../../apps/product/production-build-gate.mjs';
-import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../../apps/web/production-build-gate.mjs';
+import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../../../apps/product/production-build-gate.mjs';
+import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../../../apps/web/production-build-gate.mjs';
 import { onePasswordEnvSchema } from './schema';
 
 /**
  * replica ⊆ 台帳 検査（#2084）。
  *
  * Vercel production env の key 名だけを取得し、1Password 台帳
- * （scripts/env/schema.ts の onePasswordEnvSchema）に無い key を検出する。
+ * （scripts/tasks/env/schema.ts の onePasswordEnvSchema）に無い key を検出する。
  * 既存の production-config-audit.mjs が「台帳側の必須 key が Vercel に揃って
  * いるか」（台帳 → replica）を見るのに対し、こちらは逆方向 —「Vercel にあるが
  * 台帳に無い値の存在」= docs/operations/secrets.md 基本方針 7
@@ -193,7 +193,7 @@ export async function runReplicaCheck({
     assertProductionFloor(projectName, entries);
     for (const key of findUnlistedKeys(entries, ledger)) {
       findings.push(
-        `${projectName}: ${key} は Vercel Production にあるが 1Password 台帳（scripts/env/schema.ts）に無い`,
+        `${projectName}: ${key} は Vercel Production にあるが 1Password 台帳（scripts/tasks/env/schema.ts）に無い`,
       );
     }
   }
@@ -229,7 +229,7 @@ if (isDirectExecution()) {
         console.log(`NG ${finding}`);
       }
       console.log(
-        '対応: master（1Password）へ登録して scripts/env/schema.ts に entry を足すか、Vercel 側から撤去する（docs/operations/secrets.md §External Replicas）',
+        '対応: master（1Password）へ登録して scripts/tasks/env/schema.ts に entry を足すか、Vercel 側から撤去する（docs/operations/secrets.md §External Replicas）',
       );
       process.exitCode = 1;
     })

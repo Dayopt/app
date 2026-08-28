@@ -86,7 +86,7 @@ describe('dev-with-op.sh', () => {
   it('Supabase local が停止中なら自動起動して product dev を開始する', () => {
     const { callsPath, env } = createTestEnvironment();
 
-    const result = spawnSync('bash', ['scripts/dev-with-op.sh'], {
+    const result = spawnSync('bash', ['scripts/tasks/dev-with-op.sh'], {
       cwd: rootDir,
       encoding: 'utf8',
       env,
@@ -103,7 +103,7 @@ describe('dev-with-op.sh', () => {
   it('Supabase local を起動できない場合は復旧方法を表示する', () => {
     const { env } = createTestEnvironment({ failStart: true });
 
-    const result = spawnSync('bash', ['scripts/dev-with-op.sh'], {
+    const result = spawnSync('bash', ['scripts/tasks/dev-with-op.sh'], {
       cwd: rootDir,
       encoding: 'utf8',
       env,
@@ -120,7 +120,7 @@ describe('dev-with-op.sh', () => {
   it('DAYOPT_SUPABASE_TARGET=op は廃止されており、起動せずに失敗する', () => {
     const { callsPath, env } = createTestEnvironment();
 
-    const result = spawnSync('bash', ['scripts/dev-with-op.sh'], {
+    const result = spawnSync('bash', ['scripts/tasks/dev-with-op.sh'], {
       cwd: rootDir,
       encoding: 'utf8',
       env: { ...env, DAYOPT_SUPABASE_TARGET: 'op' },

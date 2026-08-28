@@ -11,7 +11,7 @@ const temporaryDirectories: string[] = [];
 function runGenerator(...args: string[]) {
   return spawnSync(
     'pnpm',
-    ['--dir', 'apps/product', 'exec', 'tsx', '../../scripts/generate-api-spec.ts', ...args],
+    ['--dir', 'apps/product', 'exec', 'tsx', '../../scripts/tasks/generate-api-spec.ts', ...args],
     {
       cwd: rootDir,
       encoding: 'utf8',

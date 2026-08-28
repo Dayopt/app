@@ -11,11 +11,11 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { buildQuery, EXPECTED_AVATARS_BUCKET } from '../ci/production-storage-rls-audit.mjs';
 import { STORAGE_OBJECTS_APP_POLICY_NAMES } from '../lib/storage-objects-app-policy-names.mjs';
-import { buildQuery, EXPECTED_AVATARS_BUCKET } from '../production-storage-rls-audit.mjs';
 
 const auditScript = readFileSync(
-  fileURLToPath(new URL('../production-storage-rls-audit.mjs', import.meta.url)),
+  fileURLToPath(new URL('../ci/production-storage-rls-audit.mjs', import.meta.url)),
   'utf8',
 );
 const workflow = readFileSync(
@@ -84,7 +84,7 @@ describe('production storage RLS audit contract', () => {
     const relativeImports = [...auditScript.matchAll(/from\s+'(\.[^']+)'/gu)].map((m) => m[1]);
 
     expect(relativeImports.sort()).toEqual(
-      ['./lib/storage-objects-app-policy-names.mjs', './production-auth-config-audit.mjs'].sort(),
+      ['../lib/storage-objects-app-policy-names.mjs', './production-auth-config-audit.mjs'].sort(),
     );
   });
 

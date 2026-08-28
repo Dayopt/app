@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export const ROOT = resolve(__dirname, '../..');
+export const ROOT = resolve(__dirname, '../../..');
 export const DOCS_DIR = resolve(ROOT, 'docs');
 
 // status / last_verified が必須の stock domain。

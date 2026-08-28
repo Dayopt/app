@@ -7,9 +7,9 @@
  * 各ルートの First Load JS (gzip) をバジェットと比較する。
  *
  * Usage:
- *   npx tsx scripts/check-bundle-budget.ts                  # レポート出力（warn-only）
- *   npx tsx scripts/check-bundle-budget.ts --fail            # バジェット超過時に exit 1
- *   npx tsx scripts/check-bundle-budget.ts --output=path.json # JSON結果を保存
+ *   npx tsx scripts/tasks/check-bundle-budget.ts                  # レポート出力（warn-only）
+ *   npx tsx scripts/tasks/check-bundle-budget.ts --fail            # バジェット超過時に exit 1
+ *   npx tsx scripts/tasks/check-bundle-budget.ts --output=path.json # JSON結果を保存
  */
 
 import { execSync } from 'child_process';
@@ -18,7 +18,7 @@ import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '../..');
 const APP_ROOT = resolve(ROOT, 'apps/product');
 const STATS_FILE = resolve(APP_ROOT, '.next/diagnostics/route-bundle-stats.json');
 

@@ -803,7 +803,7 @@ Storybook は `packages/foundations` と `packages/components` の公開面を�
 
 ### Ownership And Operations
 
-Storybook の story title top-level は所有境界（package / app）で分ける（ADR-023（削除済み、git 履歴参照））。第二階層以下は責務ベース（ADR-022（削除済み、git 履歴参照））。`scripts/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
+Storybook の story title top-level は所有境界（package / app）で分ける（ADR-023（削除済み、git 履歴参照））。第二階層以下は責務ベース（ADR-022（削除済み、git 履歴参照））。`scripts/tasks/check-story-taxonomy.ts` が物理位置と title prefix の一致を CI で強制する。
 
 | title prefix           | Source of truth                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------- |

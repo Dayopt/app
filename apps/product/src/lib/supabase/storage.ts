@@ -9,7 +9,7 @@ import { createClient } from './client';
 
 const AVATARS_BUCKET = 'avatars';
 // client 側の早期 validation 値。bucket 側の実際の制約（supabase/config.toml の
-// [storage.buckets.avatars]、scripts/production-storage-rls-audit.mjs の
+// [storage.buckets.avatars]、scripts/ci/production-storage-rls-audit.mjs の
 // EXPECTED_AVATARS_BUCKET が正本）と 3 箇所目の写経になっている（#2464 cross-review
 // 指摘）。ここだけ緩めても bucket 側が拒否するため安全側の drift だが、値の同期は
 // __tests__/storage.test.ts の契約 test で機械固定する。

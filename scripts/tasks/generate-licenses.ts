@@ -19,13 +19,13 @@
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runLicenseGeneratorCli } from './lib/license-generator';
+import { runLicenseGeneratorCli } from '../lib/license-generator';
 
 const CONFIG = {
   packageName: '@dayopt/product',
   fallbackPackageDirSegments: ['apps', 'product'],
   resolveOutputDir: (packageDir: string) => join(packageDir, 'public', 'legal'),
-  generatedByLabel: 'scripts/generate-licenses.ts',
+  generatedByLabel: 'scripts/tasks/generate-licenses.ts',
 };
 
 function isMainModule(): boolean {

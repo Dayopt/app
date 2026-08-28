@@ -13,7 +13,7 @@
  * 参照: docs/log/decisions/023-storybook-ownership-taxonomy.md
  *
  * Usage:
- *   npx tsx scripts/check-story-taxonomy.ts
+ *   npx tsx scripts/tasks/check-story-taxonomy.ts
  */
 
 import * as fs from 'node:fs';
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../..');
 
 // ─────────────────────────────────────────────────────────
 // Config

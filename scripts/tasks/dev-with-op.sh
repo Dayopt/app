@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 OP_ENV_FILE="${OP_ENV_FILE:-.op-env.agent}"
 # OP_ENV_FILE の差し替えは basename が .op-env.agent のものに限る（#2086 の
 # 反証レビュー指摘）。任意名への差し替えを許すと、guard の内容検査

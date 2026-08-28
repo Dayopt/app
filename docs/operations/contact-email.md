@@ -6,7 +6,7 @@ code:
   - apps/product/src/app/api/webhooks/resend
   - apps/web/src/app/api/contact
   - apps/web/src/app/api/webhooks/resend
-  - scripts/production-config-audit.mjs
+  - scripts/ci/production-config-audit.mjs
 ---
 
 # 問い合わせメール運用
@@ -95,12 +95,12 @@ DNS移管で到達性を失った場合は、Vercel Registrarのnameserverを元
 - 旧`GITHUB_TOKEN` / `GITHUB_CONTACT_REPO`がどのtargetにも存在しない
 
 ```bash
-node scripts/production-config-audit.mjs
+node scripts/ci/production-config-audit.mjs
 ```
 
 このscriptはVercel API responseからkey / target / typeだけを取り出す。値の一致、sender domainの検証状態、Product / Web secretが異なることは証明できないため、Resend / Vercel dashboardで別途確認する。
 
-`scripts/production-config-audit.mjs`、両appの`production-build-gate.mjs`、audit workflow自体を変更するPRでは、base revisionのaudit結果をheadの証拠として扱わない。通常CIのsafe dummy testに加え、maintainerがexact head SHAのdiffをレビューしたclean checkoutでmetadata-only auditを実行し、その成功statusをhead SHAへ付ける。merge後のpushでも新contractが成功してからrequired statusを継続する。
+`scripts/ci/production-config-audit.mjs`、両appの`production-build-gate.mjs`、audit workflow自体を変更するPRでは、base revisionのaudit結果をheadの証拠として扱わない。通常CIのsafe dummy testに加え、maintainerがexact head SHAのdiffをレビューしたclean checkoutでmetadata-only auditを実行し、その成功statusをhead SHAへ付ける。merge後のpushでも新contractが成功してからrequired statusを継続する。
 
 ## 4. DeployとProduction smoke
 

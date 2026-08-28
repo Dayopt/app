@@ -3,7 +3,7 @@
  *
  * gh 実行・stdout 出力などの副作用は generate-marker.ts（CLI 側）に置き、
  * ここでは文字列組み立てと入力検証だけを行う。branch:finish の
- * gate（scripts/git/finish-branch.sh）が要求する marker 契約（5 点チェック +
+ * gate（scripts/tasks/finish-branch.sh）が要求する marker 契約（5 点チェック +
  * zerolike 判定）を、生成側で機械的に満たすのが目的。
  */
 

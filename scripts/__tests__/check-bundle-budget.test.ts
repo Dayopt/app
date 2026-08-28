@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasRealSupabaseCredentials, resolvePreviewCompensationKB } from '../check-bundle-budget';
+import {
+  hasRealSupabaseCredentials,
+  resolvePreviewCompensationKB,
+} from '../tasks/check-bundle-budget';
 
 /**
  * #2159: Supabase Preview Branch の実 credential が preview build に inline され、

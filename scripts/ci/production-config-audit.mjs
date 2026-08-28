@@ -1,5 +1,5 @@
-import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../apps/product/production-build-gate.mjs';
-import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../apps/web/production-build-gate.mjs';
+import { REQUIRED_PRODUCT_OPERATIONAL_BUILD_ENV } from '../../apps/product/production-build-gate.mjs';
+import { REQUIRED_WEB_OPERATIONAL_BUILD_ENV } from '../../apps/web/production-build-gate.mjs';
 
 const PROJECT_CONTRACTS = {
   product: {

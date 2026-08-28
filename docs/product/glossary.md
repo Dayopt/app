@@ -112,7 +112,7 @@ pnpm copy:check:strict
 
 ## 禁止表記一覧
 
-`pnpm copy:check` がスキャンする禁止語の定義。追加した禁止語は `scripts/i18n/check-glossary.ts` がスキャンする。**即座に使用停止すべき語（ACTIVE_FORBIDDEN）は `pnpm copy:check:strict` で CI が強制する**（`pnpm check:static` に配線済み、2026-08-18）。移行中の語（MIGRATION_TARGETS）は新規追加のみ禁止で、既存の違反は警告のまま Phase 2(messages 整理)で順次修正する。スキャン範囲は製品 UI 文言（`apps/product/messages/ja`）のみ（上記 §スキャン範囲）。
+`pnpm copy:check` がスキャンする禁止語の定義。追加した禁止語は `scripts/tasks/check-glossary.ts` がスキャンする。**即座に使用停止すべき語（ACTIVE_FORBIDDEN）は `pnpm copy:check:strict` で CI が強制する**（`pnpm check:static` に配線済み、2026-08-18）。移行中の語（MIGRATION_TARGETS）は新規追加のみ禁止で、既存の違反は警告のまま Phase 2(messages 整理)で順次修正する。スキャン範囲は製品 UI 文言（`apps/product/messages/ja`）のみ（上記 §スキャン範囲）。
 
 ### タスク(UI でのブロック呼称として)
 
@@ -165,7 +165,7 @@ pnpm copy:check:strict
 
 #### 「カテゴリ」を禁止語から外した理由(2026-08-18、#2162)
 
-`scripts/i18n/check-glossary.ts` の検出は正規表現ではなく `value.includes(term)` の部分一致。**`カテゴリ` は新しい正解語 `カテゴリー` の部分文字列**なので、禁止語に残したままだと「カテゴリー」を使った正しい文言がすべて違反として報告される。
+`scripts/tasks/check-glossary.ts` の検出は正規表現ではなく `value.includes(term)` の部分一致。**`カテゴリ` は新しい正解語 `カテゴリー` の部分文字列**なので、禁止語に残したままだと「カテゴリー」を使った正しい文言がすべて違反として報告される。
 
 旧モデルでは `カテゴリ` は「タグの代替表現」として禁止されていたが、3 構造モデルで「カテゴリー」が正解語に昇格したため、この禁止は役目を終えた。送り仮名なしの `カテゴリ` 単体を防ぎたい場合は、部分一致ではなく単語境界を見る検出に変える必要がある(現時点では過剰。表記ゆれはレビューで拾う)。
 

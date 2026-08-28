@@ -17,8 +17,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** repo root（scripts/boundaries/ から 2 つ上） */
-export const ROOT = resolve(__dirname, '../..');
+/** repo root（scripts/tasks/boundaries/ から 3 つ上） */
+export const ROOT = resolve(__dirname, '../../..');
 
 /** root に置く boundary budget（feature-dag / import-paths のラチェット値） */
 export const BUDGET_FILE = resolve(ROOT, '.boundary-budget.json');

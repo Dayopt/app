@@ -7,9 +7,9 @@
  * input型、認証要件、レート制限、エラーコードを構造化して出力。
  *
  * Usage:
- *   npx tsx scripts/generate-api-spec.ts              # .generated/openapi.json に生成
- *   npx tsx scripts/generate-api-spec.ts --check       # 既存specと比較（CI用ドリフト検出）
- *   npx tsx scripts/generate-api-spec.ts --output path  # 出力先を指定
+ *   npx tsx scripts/tasks/generate-api-spec.ts              # .generated/openapi.json に生成
+ *   npx tsx scripts/tasks/generate-api-spec.ts --check       # 既存specと比較（CI用ドリフト検出）
+ *   npx tsx scripts/tasks/generate-api-spec.ts --output path  # 出力先を指定
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
@@ -21,10 +21,10 @@ import { format as formatWithPrettier } from 'prettier';
 import type { ZodType } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import type { ProcedureMeta } from '../apps/product/src/lib/trpc/procedures';
+import type { ProcedureMeta } from '../../apps/product/src/lib/trpc/procedures';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '../..');
 const DEFAULT_OUTPUT = resolve(ROOT, '.generated/openapi.json');
 const CHECK_MODE = process.argv.includes('--check');
 const OUTPUT_INDEX = process.argv.indexOf('--output');
@@ -58,8 +58,8 @@ async function loadRuntimeModules(): Promise<{
   installServerOnlyShim();
 
   const [{ ERROR_CODE_MAP }, { appRouter }] = await Promise.all([
-    import('../apps/product/src/lib/trpc/error-code-map'),
-    import('../apps/product/src/lib/trpc/root'),
+    import('../../apps/product/src/lib/trpc/error-code-map'),
+    import('../../apps/product/src/lib/trpc/root'),
   ]);
 
   return {

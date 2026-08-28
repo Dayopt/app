@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { WORST_CASE_RELEASE_MS } from '../production-release.mjs';
+import { WORST_CASE_RELEASE_MS } from '../ci/production-release.mjs';
 
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を

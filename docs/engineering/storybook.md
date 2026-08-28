@@ -138,7 +138,7 @@ story の `title:` の **top-level は所有境界（どの package / app の資
 
 - **Patterns の依存ベース分離**: import が `@/`（product 内部）に依存 → `Product/Patterns/`。`@dayopt/components` だけに依存 → `Shared/Patterns/`。
 
-このルールは `scripts/check-story-taxonomy.ts` が CI（`pnpm storybook:taxonomy`）で機械検証する。逸脱した title は lint job で hard-fail する。
+このルールは `scripts/tasks/check-story-taxonomy.ts` が CI（`pnpm storybook:taxonomy`）で機械検証する。逸脱した title は lint job で hard-fail する。
 
 ### 同期ルール
 

@@ -56,13 +56,13 @@ subagent への委任・writer 境界・報告フォーマットなどの運用�
 
 発動条件: 危険地帯（認証 / 決済 / RLS・テナント境界 / DB migration）に触れるチケット、または実装 2 日超相当の大型チケット。チケット本文完成後、レーン起動前に実行する。
 
-**呼び出しは `scripts/ops/codex-input.mjs` wrapper 経由に一本化する**（2026-08-27、[#2421](https://github.com/Dayopt/dayopt/issues/2421)）。Codex は `--sandbox read-only` のため `api.github.com` へ到達できず、対象チケットが `Depends on: #N` 等で参照する他 issue を自力で読めない（#2419 で実測: `error connecting to api.github.com`）。wrapper が対象本文中の `#\d+` 参照を最大 10 件・1 段階だけ `gh issue view` で解決し、連結してから Codex へ渡す（未解決・上限超過の参照は本文中に明記されるだけで、呼び出し自体は失敗しない）。
+**呼び出しは `scripts/agent/codex-input.mjs` wrapper 経由に一本化する**（2026-08-27、[#2421](https://github.com/Dayopt/dayopt/issues/2421)）。Codex は `--sandbox read-only` のため `api.github.com` へ到達できず、対象チケットが `Depends on: #N` 等で参照する他 issue を自力で読めない（#2419 で実測: `error connecting to api.github.com`）。wrapper が対象本文中の `#\d+` 参照を最大 10 件・1 段階だけ `gh issue view` で解決し、連結してから Codex へ渡す（未解決・上限超過の参照は本文中に明記されるだけで、呼び出し自体は失敗しない）。
 
 **`set -o pipefail` を必ず前置する**（push前反証レビュー指摘・P2、PR #2445）。無いと wrapper 自体の失敗（大きい diff での ENOBUFS 等）が飲み込まれ、Codex が空 stdin で起動して「指摘なし」相当を返し、実際には何もレビューしていないのに指摘ゼロと誤読する。
 
 ```bash
 set -o pipefail
-node scripts/ops/codex-input.mjs issue <番号> \
+node scripts/agent/codex-input.mjs issue <番号> \
   | codex exec --sandbox read-only \
     "敵対的レビュアーとして、この設計の穴・壊れるシナリオ・考慮漏れ・
      暗黙の前提を列挙せよ。重要度順に。"
@@ -89,7 +89,7 @@ codex exec --sandbox read-only \
 
 ```bash
 set -o pipefail
-node scripts/ops/codex-input.mjs pr <番号> \
+node scripts/agent/codex-input.mjs pr <番号> \
   | codex exec --sandbox read-only \
     "この diff をレビューし、バグ・セキュリティ懸念・テナント境界の問題・
      エッジケースの見落としを指摘せよ。問題なければ『指摘なし』と答えよ。"
@@ -151,10 +151,10 @@ pnpm docs:check               # link/metadata/path/project/命名/append-only �
 
 | script                                                                     | 実体                                                                                                                                                                                                                 | 混同しやすい相手                                                                                                                  |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm docs:check:claude-links`                                             | repo 全体の CLAUDE.md（root 含む）内リンク・参照ファイル存在検証（`scripts/validate-doc-references.ts` は ROOT_DIR 基点 glob）                                                                                       | `pnpm docs:check`（別物。こちらは `docs/` 配下の link/metadata/path 等を検証）                                                    |
+| `pnpm docs:check:claude-links`                                             | repo 全体の CLAUDE.md（root 含む）内リンク・参照ファイル存在検証（`scripts/tasks/validate-doc-references.ts` は ROOT_DIR 基点 glob）                                                                                 | `pnpm docs:check`（別物。こちらは `docs/` 配下の link/metadata/path 等を検証）                                                    |
 | `pnpm check:workspace`                                                     | `typecheck` + `lint` + `build:packages` + `build-storybook` の packages 検証                                                                                                                                         | `pnpm check`（別物。こちらは secrets/lint/test まで含む CI Stage 1 相当）                                                         |
 | `pnpm typecheck:scripts`                                                   | `scripts/` 配下だけの型検査（`tsc -p tsconfig.scripts.json`）                                                                                                                                                        | `pnpm typecheck`（`typecheck:scripts` を内包する上位コマンド。単体実行は scripts/ のみ確認したい時）                              |
-| `pnpm copy:check`                                                          | UI 文言（Copy System）の禁止表記スキャナー（`scripts/i18n/check-glossary.ts`）                                                                                                                                       | 名前からは「ファイルコピー」の検証に見えるが無関係                                                                                |
+| `pnpm copy:check`                                                          | UI 文言（Copy System）の禁止表記スキャナー（`scripts/tasks/check-glossary.ts`）                                                                                                                                      | 名前からは「ファイルコピー」の検証に見えるが無関係                                                                                |
 | `pnpm db:seed:identity`                                                    | MCP environment identity（ローカル固定 OAuth token 発行用 tuple）投入                                                                                                                                                | `pnpm db:seed`（別スクリプト。`db:fresh` は `db:reset && db:seed:identity && db:seed` の順で両方を実行する）                      |
 | license 系 5 script                                                        | `license:check`＝互換性チェック / `license:check-risks`＝risk 分類チェック / `license:audit`＝監査レポート出力 / `license:credits:check`＝表示用クレジット一覧の鮮度確認 / `generate-licenses`＝クレジット一覧再生成 | 名前だけでは役割が読み分けにくい 5 兄弟                                                                                           |
 | `pnpm lint:product` / `pnpm typecheck:product` / `pnpm typecheck:packages` | `pnpm --filter @dayopt/product lint` / `typecheck`、`turbo run typecheck --filter='./packages/*'`。全 workspace 検証より速く回したい時の意図的なサブセット呼び出し                                                   | `pnpm lint` / `pnpm typecheck`（上位コマンド。CI・plan-review 等はこちらを使う。`:product` / `:packages` は手動の絞り込み実行用） |

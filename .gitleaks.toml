@@ -27,7 +27,7 @@ title = "dayopt gitleaks config"
 useDefault = true
 
 [[allowlists]]
-description = "Supabase CLI がローカル開発環境へ共通発行する固定デモ JWT（issuer: supabase-demo、anon/service_role）と固定 publishable key。全ローカル環境で同一の公開情報で production secret とは無関係。scripts/seed-dev-data.sh・apps/product/src/lib/test/integration*.ts 等のローカル専用フォールバック値"
+description = "Supabase CLI がローカル開発環境へ共通発行する固定デモ JWT（issuer: supabase-demo、anon/service_role）と固定 publishable key。全ローカル環境で同一の公開情報で production secret とは無関係。scripts/tasks/seed-dev-data.sh・apps/product/src/lib/test/integration*.ts 等のローカル専用フォールバック値"
 targetRules = ["jwt", "generic-api-key"]
 regexTarget = "secret"
 regexes = [

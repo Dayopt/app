@@ -15,7 +15,7 @@
  *    → クライアントコンポーネントが使うnamespaceがルートグループで配信されるか検証
  *
  * Usage:
- *   npx tsx scripts/check-i18n-integrity.ts
+ *   npx tsx scripts/tasks/check-i18n-integrity.ts
  */
 
 import { execSync } from 'child_process';
@@ -24,7 +24,7 @@ import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '../..');
 const APP_ROOT = resolve(ROOT, 'apps/product');
 const MESSAGES_DIR = resolve(APP_ROOT, 'messages');
 const SRC_DIR = resolve(APP_ROOT, 'src');

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { STORAGE_OBJECTS_APP_POLICY_NAMES } from './lib/storage-objects-app-policy-names.mjs';
+import { STORAGE_OBJECTS_APP_POLICY_NAMES } from '../lib/storage-objects-app-policy-names.mjs';
 import {
   auditProductionStorageRls,
   EXPECTED_AVATARS_BUCKET,

@@ -64,7 +64,7 @@ function pendingEnvEntry(
 export const envSchema: EnvSchemaEntry[] = [
   // Supabase の接続情報（URL / anon key / service role key / DB password）は
   // agent（旧 Dayopt-Staging）に置かない。常設 staging 環境が存在せず、この 4 field は
-  // production の複製になっていた。local dev の接続は scripts/dev-with-op.sh が
+  // production の複製になっていた。local dev の接続は scripts/tasks/dev-with-op.sh が
   // supabase status -o env から注入するため 1Password を経由しない。
   // SUPABASE_ACCESS_TOKEN は human 側を正本に一本化した（#1933、2026-08-17 に
   // human/supabase-cli へ再切り出し、#2127）。human と同一値の複製を agent から

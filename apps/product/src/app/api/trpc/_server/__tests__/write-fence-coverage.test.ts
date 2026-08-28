@@ -14,7 +14,7 @@ import { appRouter } from '@/app/api/trpc/_server/app-router';
  * どちらも auth meta 無しは常に fence 漏れであり、query だけ緩める理由が無い
  * （元は mutation のみを対象にしていたが、query 41 本がこの網の外にあった。#2187 E-3）。
  *
- * router tree の歩き方は `scripts/generate-api-spec.ts` の `walkRouter` と同じ idiom
+ * router tree の歩き方は `scripts/tasks/generate-api-spec.ts` の `walkRouter` と同じ idiom
  * （`_def.procedure === true` で leaf procedure を判定し、それ以外はネストされた
  * router record として再帰する）。
  *

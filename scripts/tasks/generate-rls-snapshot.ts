@@ -24,14 +24,14 @@ import { fileURLToPath } from 'url';
 
 import { format as formatWithPrettier } from 'prettier';
 
-import { escapeMarkdownTableCell as cell } from './lib/markdown-table';
+import { escapeMarkdownTableCell as cell } from '../lib/markdown-table';
 import {
   STORAGE_OBJECTS_APP_POLICY_NAMES,
   sqlStringList,
-} from './lib/storage-objects-app-policy-names.mjs';
+} from '../lib/storage-objects-app-policy-names.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, '../..');
 const OUTPUT_PATH = resolve(ROOT, 'docs/engineering/data/db/rls-snapshot.md');
 const CHECK_MODE = process.argv.includes('--check');
 const LOCAL_SUPABASE_DATABASE_URL = [
@@ -595,7 +595,7 @@ function render({
   lines.push('# RLS / schema snapshot（自動生成）');
   lines.push('');
   lines.push(
-    '> **生成元**: `scripts/generate-rls-snapshot.ts`（`pnpm rls:snapshot`）。DB の `pg_policies` /',
+    '> **生成元**: `scripts/tasks/generate-rls-snapshot.ts`（`pnpm rls:snapshot`）。DB の `pg_policies` /',
   );
   lines.push(
     '> RLS 有効状態 / GRANT / Realtime publication を deterministic に書き出した snapshot。',

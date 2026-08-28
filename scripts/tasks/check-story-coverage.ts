@@ -8,8 +8,8 @@
  * 3. StoryObj<typeof meta> の型安全確認
  *
  * Usage:
- *   npx tsx scripts/check-story-coverage.ts           # レポート表示
- *   npx tsx scripts/check-story-coverage.ts --strict   # カバレッジ低下で exit 1
+ *   npx tsx scripts/tasks/check-story-coverage.ts           # レポート表示
+ *   npx tsx scripts/tasks/check-story-coverage.ts --strict   # カバレッジ低下で exit 1
  */
 
 import * as fs from 'node:fs';
@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '../..');
 const APP_ROOT = path.join(ROOT, 'apps/product');
 const STORYBOOK_ROOT = path.join(ROOT, 'apps/storybook');
 

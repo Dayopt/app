@@ -11,7 +11,7 @@ import {
   findUnlistedKeys,
   normalizeEnvKeys,
   runReplicaCheck,
-} from '../env/check-vercel-replica';
+} from '../tasks/env/check-vercel-replica';
 
 /**
  * replica ⊆ 台帳 検査（#2084）の契約を固定する。
@@ -248,7 +248,10 @@ describe('runReplicaCheck（end-to-end 契約）', () => {
 
 describe('entry point guard（fail open の再導入防止）', () => {
   it('素の import.meta.url 比較ではなく realpath 正規化で判定する（2026-08-11 実測の再発防止）', () => {
-    const source = readFileSync(new URL('../env/check-vercel-replica.ts', import.meta.url), 'utf8');
+    const source = readFileSync(
+      new URL('../tasks/env/check-vercel-replica.ts', import.meta.url),
+      'utf8',
+    );
     expect(source).toContain('pathToFileURL(realpathSync(process.argv[1]))');
     expect(source).not.toMatch(/if \(import\.meta\.url === `file:\/\//);
   });

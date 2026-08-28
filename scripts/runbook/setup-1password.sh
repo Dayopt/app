@@ -2,8 +2,8 @@
 # Dayopt 1Password vault / item 骨組み作成スクリプト
 #
 # 使い方:
-#   ./scripts/setup-1password.sh             # dry-run (全コマンドを echo)
-#   ./scripts/setup-1password.sh --execute   # 実際に作成
+#   ./scripts/runbook/setup-1password.sh             # dry-run (全コマンドを echo)
+#   ./scripts/runbook/setup-1password.sh --execute   # 実際に作成
 #
 # 前提:
 #   - `op` CLI インストール済み (brew install 1password-cli)

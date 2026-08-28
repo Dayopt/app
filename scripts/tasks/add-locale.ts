@@ -5,11 +5,11 @@
  * 値は "[TRANSLATE] {英語テキスト}" 形式で埋めるため、未翻訳箇所が一目でわかる。
  *
  * 使い方:
- *   npx tsx scripts/add-locale.ts <locale>
+ *   npx tsx scripts/tasks/add-locale.ts <locale>
  *
  * 例:
- *   npx tsx scripts/add-locale.ts ko    # 韓国語を追加
- *   npx tsx scripts/add-locale.ts es    # スペイン語を追加
+ *   npx tsx scripts/tasks/add-locale.ts ko    # 韓国語を追加
+ *   npx tsx scripts/tasks/add-locale.ts es    # スペイン語を追加
  *
  * 生成後に必要な手順:
  *   1. messages/<locale>/ の各JSONファイルを翻訳
@@ -22,7 +22,7 @@ import path, { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MESSAGES_DIR = resolve(__dirname, '..', 'apps/product/messages');
+const MESSAGES_DIR = resolve(__dirname, '../..', 'apps/product/messages');
 const SOURCE_LOCALE = 'en';
 
 function markForTranslation(obj: unknown, prefix = ''): unknown {
@@ -46,8 +46,8 @@ function main() {
   const locale = process.argv[2];
 
   if (!locale) {
-    console.error('使い方: npx tsx scripts/add-locale.ts <locale>');
-    console.error('例:     npx tsx scripts/add-locale.ts ko');
+    console.error('使い方: npx tsx scripts/tasks/add-locale.ts <locale>');
+    console.error('例:     npx tsx scripts/tasks/add-locale.ts ko');
     process.exit(1);
   }
 

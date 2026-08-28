@@ -13,10 +13,10 @@ import { describe, expect, it } from 'vitest';
 import {
   ACKNOWLEDGED_UNPINNED_KEYS,
   AUTH_CONFIG_CONTRACT,
-} from '../production-auth-config-audit.mjs';
+} from '../ci/production-auth-config-audit.mjs';
 
 const auditScript = readFileSync(
-  fileURLToPath(new URL('../production-auth-config-audit.mjs', import.meta.url)),
+  fileURLToPath(new URL('../ci/production-auth-config-audit.mjs', import.meta.url)),
   'utf8',
 );
 const workflow = readFileSync(

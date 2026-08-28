@@ -222,7 +222,7 @@ export function validateDocumentMetadata({
   if (!kind) return [];
 
   if (kind === 'generated') {
-    return content.includes('scripts/generate-rls-snapshot.ts') &&
+    return content.includes('scripts/tasks/generate-rls-snapshot.ts') &&
       content.includes('pnpm rls:snapshot') &&
       content.includes('手で編集しない')
       ? []

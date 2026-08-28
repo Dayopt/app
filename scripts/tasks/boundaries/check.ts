@@ -10,8 +10,8 @@
  *  - import-paths       : 廃止 import path の検知（ラチェット）
  *
  * Usage:
- *   tsx scripts/boundaries/check.ts            # 検査（budget 不在なら fail）
- *   tsx scripts/boundaries/check.ts --update   # budget を現状値で再生成
+ *   tsx scripts/tasks/boundaries/check.ts            # 検査（budget 不在なら fail）
+ *   tsx scripts/tasks/boundaries/check.ts --update   # budget を現状値で再生成
  */
 
 import { compareDeprecated, compareFeatureDag, readBudget, writeBudget } from './budget.ts';

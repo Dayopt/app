@@ -12,7 +12,7 @@
  * （2026-08-28、#2475）に伴い撤去した。
  *
  * Usage:
- *   tsx scripts/docs-guard/index.ts
+ *   tsx scripts/tasks/docs-guard/index.ts
  *
  * ローカルでは `pnpm docs:check` からも同じスクリプトが実行される。
  */
