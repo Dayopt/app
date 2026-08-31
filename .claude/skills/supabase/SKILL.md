@@ -502,12 +502,6 @@ npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
 - production への変更は必ず preview branch での検証を経る
 - staging は「Stripe検証 / hotfix / closed beta」以外の目的では触らない
 
-## 関連エージェント
-
-- **database-architect** — スキーマ設計評価、インデックス戦略、N+1検出、マイグレーション安全性分析
-
-> このスキルは「migration・RLS・Realtime・Edge Functions の実装手順書」、エージェントは「DB 設計の品質評価・最適化提案」。
-
 ## 関連スキル
 
 - `/optimistic-update` - Realtime 競合対策

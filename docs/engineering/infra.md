@@ -239,7 +239,7 @@ script が保証すること（コードで守る）:
 - **外部変更の検出の完全性。** 最後の read と write / return の間に起きた変更は検出できない。再読み込みを何回足してもこの窓は消えず 1 段深くなるだけなので、検出のための再読み込みはこれ以上追加しない
 - **manifest の最終正確性。** manifest はベストエフォートの観測記録であって production の正ではない。実態は常に Vercel Dashboard を正とする
 
-この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は [workflow.md §レビュー指摘の必須解決](../../AGENTS.md §PR / git 運用#レビュー指摘の必須解決) を参照。
+この境界の内側（「窓をもう 1 段狭めよ」型）のレビュー指摘は個別対応せず、本節を根拠に見送る。境界そのものを破る指摘（知らない deployment を上書きする、読めないのに書く、観測したのに manifest に載せない）は従来どおり修正する。打ち切りの一般規約は `AGENTS.md §PR / git 運用` §レビュー を参照。
 
 ### トラブルシューティング
 
@@ -366,7 +366,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   GraphQL `reviewThreads` を `pageInfo.hasNextPage` / `endCursor` で全ページ走査して
   `isResolved` を数える（2026-08-05、#1831。旧実装は first:100 の 1 ページのみで、
   101 件・未解決 0 の PR #1820 を偽陰性で止めた）。取得失敗・20 ページ（2000 件）超は
-  従来どおり停止に倒す（fail closed）。解決の 3 択は `AGENTS.md §PR / git 運用` §レビュー指摘の必須解決
+  従来どおり停止に倒す（fail closed）。解決の 3 択は `AGENTS.md §PR / git 運用` §レビュー
 - `Production Release` は merge 後の証跡であり、required check にはしない
 - **Storybook browser suite（`pnpm test-storybook` / `test-storybook:dark`）は CI に載っていない。**
   `@dayopt/product` の vitest project（`--project storybook` / `storybook-dark`）として実体はあるが、

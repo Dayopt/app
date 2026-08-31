@@ -322,7 +322,7 @@ export function formatSummary(results) {
     lines.push('');
   }
   lines.push(
-    '本番へのこの種の変更は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY`（明示指示 + 独立レビュー + dry-run/backup）を要する。',
+    '本番へのこの種の変更は `AGENTS.md` §シンプルルール の `EXPLICIT AUTHORITY`（明示指示 + 独立レビュー + dry-run/backup）を要する。',
   );
   return `${lines.join('\n')}\n`;
 }

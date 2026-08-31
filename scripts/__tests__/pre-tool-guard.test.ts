@@ -724,7 +724,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 
 // worktree 外ファイル編集ガード（2026-08-24, #2359）。
 // レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
-// §Writer ownership）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
+// の writer 4 条件）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
 // working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
 describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
   let fixtureRoot: string;
