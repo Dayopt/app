@@ -6,11 +6,23 @@
  * for a PR (#2478, tempo-linked review gate).
  *
  * The old design required internal cross-review on every PR uniformly. This
- * script narrows that requirement to PRs that touch protected paths (auth,
- * OAuth, billing, migrations, external integrations, timezone-sensitive
- * invariants, and the guardrail scripts themselves). It is the single source
- * of truth consumed by the merge gate in `scripts/tasks/finish-branch.sh`
- * (the glob list is not duplicated in bash to avoid drift).
+ * script narrows that requirement to PRs that touch protected paths. It is the
+ * single source of truth consumed by the merge gate in
+ * `scripts/tasks/finish-branch.sh` (the glob list is not duplicated in bash to
+ * avoid drift).
+ *
+ * The selection criterion is "external contract or irreversible" (#2489,
+ * 2026-08-31): a mistake there is not caught by CI and cannot be undone by a
+ * revert alone - it leaks across a tenant boundary, breaks an existing external
+ * consumer, mutates production data, or disables the guardrails themselves.
+ *
+ * Dayopt's core time invariants (timezone / half-open interval / overlap) were
+ * dropped from this list in the same change. They are reversible in-app
+ * behavior covered by unit tests and CI, and keeping them here put nearly every
+ * product PR on the required side - which, combined with cloud sessions where
+ * `Workflow` / `Agent` are disabled by default (#2472), stalled merges instead
+ * of adding review. `review:full` remains the manual escalation for a PR that
+ * deserves the heavier review without matching a glob.
  *
  * Usage:
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
@@ -65,13 +77,6 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/features/external-calendar/server/providers/**',
   // system API
   'apps/product/src/app/api/v1/system/**',
-  // Dayopt's core invariants (timezone / half-open interval / overlap etc.)
-  'apps/product/src/features/timeblock/**',
-  'apps/product/src/features/calendar/**',
-  'apps/product/src/lib/time/**',
-  'apps/product/src/lib/date/**',
-  'apps/product/src/lib/timezone-utils.ts',
-  'apps/product/src/lib/server/user-timezone-cache.ts',
   // the guardrails themselves
   '.husky/**',
   'scripts/hooks/**',

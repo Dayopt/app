@@ -1697,6 +1697,39 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(stderr).toContain('review gate: not required');
   });
 
+  // #2489（2026-08-31）: 保護対象を「外部契約 or 不可逆」だけへ絞り、Dayopt の
+  // コア時間不変条件（timeblock / calendar / lib/time）を必須側から外した。
+  // これらは CI と unit test で担保される可逆な挙動であり、必須のままだと
+  // プロダクト実装 PR のほぼ全てが marker gate に落ち、Workflow / Agent が既定
+  // 禁止のクラウドセッション（#2472）で merge が止まるだけだったため。
+  it.each([
+    ['apps/product/src/features/timeblock/lib/timeblock-status.ts'],
+    ['apps/product/src/features/calendar/components/CalendarGrid.tsx'],
+    ['apps/product/src/lib/time/half-open-interval.ts'],
+    ['apps/product/src/lib/timezone-utils.ts'],
+  ])('コア時間不変条件の path（%s）は marker を要求しない', (file) => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [file],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(stderr).toContain('内製クロスレビュー marker gate をスキップします');
+    expect(status).toBe(0);
+  });
+
+  it('コア時間不変条件の path でも review:full ラベルがあれば marker を必須にする', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/timeblock/lib/timeblock-status.ts'],
+      labels: ['review:full'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: required (label: review:full)');
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
   it('gate 判定の 1 行出力を確認する（required、matched glob 込み）', () => {
     const { stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/lib/stripe/webhook-handler.ts'],

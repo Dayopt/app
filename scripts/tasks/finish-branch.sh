@@ -658,8 +658,10 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 全 PR 一律の内製クロスレビュー要求をやめ、レビューの重さを「保護対象 path に
   # 触れるか」で条件化する。保護対象に触れない可逆な変更は、CI green + 既存
   # review thread の resolve（上の thread gate）だけで merge できるようにし、
-  # 高リスク path（auth / OAuth / 決済 / migration / timezone 系不変条件 /
-  # ガードレール自身等）だけへ `[internal-review]` marker gate を必須のままにする。
+  # 高リスク path（auth / OAuth / 決済 / migration / 外部 calendar provider /
+  # system API / ガードレール自身）だけへ `[internal-review]` marker gate を必須の
+  # ままにする。判定基準は「外部契約 or 不可逆」で、timezone 系の時間不変条件は
+  # 可逆かつ test が担保するため #2489（2026-08-31）で対象から外した。
   #
   # 判定は scripts/ci/protected-path-gate.mjs（正本）へ委譲する。入力は
   # Impact Resolver（§影響範囲を判定）で既に取得済みの $CHANGED_FILES を再利用し、
