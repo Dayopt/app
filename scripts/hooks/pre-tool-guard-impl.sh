@@ -426,8 +426,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         ;;
       "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
         | "gh api repos/Dayopt/dayopt --jq .permissions" \
-        | "gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url" \
-        | "gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url" \
+        | "node scripts/ci/night-watch/check-workflow-job.mjs heavy-red" \
+        | "node scripts/ci/night-watch/check-workflow-job.mjs integration-red" \
         | 'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"' \
         | 'sentry issue list dayopt --query "is:unresolved age:-24h"')
         # checklist.md / SKILL.md §自動パート Step 0（自己検証）・Step 2（観測。
@@ -435,6 +435,16 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # コマンドのみ完全一致で許可。空白区切りの表記ゆれ（'--jq=...' 等）には
         # 対応しない。night-watch v2（#2291）で heavy-post-merge 赤確認・Sentry
         # スキャンの 2 本を追加し、#2333 で integration 赤確認を追加した。
+        #
+        # heavy-red / integration-red は #2483（CI ファイル統合 Phase 1）で
+        # `gh run list --workflow=heavy-post-merge.yml` 等の**単一コマンド**
+        # から `scripts/ci/night-watch/check-workflow-job.mjs`（個別 wrapper）
+        # 経由へ変わった。heavy-e2e / heavy-web / integration が nightly.yml
+        # 内の job になり、job 名で判定するには「run 一覧取得 → run ごとに
+        # job 一覧取得」という多段処理が要る（`checkWorkflowJobRun`、
+        # run-all.mjs）ため、単一の単純コマンドでは表現できない
+        # （is_single_simple_command の制約）。他の Step と同じ「個別 wrapper
+        # を allowlist する」設計に揃えた。
         #
         # sentry-new に 2 形態あるのは、Cloud Environment（night-watch の実行
         # 先）に 1Password が無いため（#2334 コメント）。Cloud Environment には

@@ -458,28 +458,39 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     esac
   done
 
-  # ── Draft CI 廃止に伴う軽量層の実走要求（2026-08-26、#2415）──────────
+  # ── Draft CI 廃止に伴う軽量層の実走要求（2026-08-26、#2415。2026-08-28、
+  #    #2483 の CI ファイル統合でチェック体系が変わったため再改訂）─────────
   #
   # `.github/workflows/ci.yml` の Static / Unit は draft の間 skip される。
   # skip は conclusion: skipped の check run になるが、**skipped は上の
   # is_failed にも is_pending にも該当せず、is_decisive からも除外されている**。
   # つまり「draft 期の skipped だけが rollup にある」状態は、失敗 0 件・実行中
-  # 0 件として通過する。success が 1 件以上という条件も docs guard（draft guard を
-  # 持たず常に走る）が満たすため、**ready 化直後（ready_for_review で起きた新しい
-  # run の check がまだ登録されていない窓）に branch:finish を打つと、Static /
-  # Unit が一度も実走しないまま merge が成立する**（fail-open）。
+  # 0 件として通過する。**#2483 以前は success が 1 件以上という条件を docs
+  # guard（draft guard を持たず常に走る独立 workflow）が満たしていたため、
+  # 実質的にこの窓は塞がれていた。#2483 で docs-guard.yml は ci.yml の static
+  # job（gitleaks + secrets:check + docs:check を含む）へ吸収され、static job
+  # 自体が draft skip の対象になった**。つまり「Static Checks を docs-only で
+  # 免除する」旧ルールをそのまま残すと、ready 化直後（ready_for_review で
+  # 起きた新しい run の check がまだ登録されていない窓）に branch:finish を
+  # 打った場合、gitleaks / secrets:check / docs:check が一度も実走しないまま
+  # docs-only PR が merge されうる（fail-open。内製クロスレビュー
+  # risk-reviewer 指摘、P1、PR #2484）。
   #
   # 塞ぐのは窓という 1 点ではなく「軽量層の実走を誰も検査していない」という class。
   # guard 条件の書き間違い・types からの ready_for_review 欠落・将来の別 workflow
   # への draft skip 追加でも同じ結果になるため、名前で success を要求する。
   #
-  # docs-only PR では Impact gate による skip が正当なので免除する。判定不能時は
-  # IMPACT_DOCS_ONLY=false（＝要求する側）へ倒してある。
-  REQUIRED_CI_CHECKS=()
+  # **「🔍 Static Checks」は docs-only でも免除しない**（#2483 以降、static job
+  # 自体が docs-only でも skip されず secret/docs 検査の唯一の実行経路のため）。
+  # 「📦 Unit Tests」だけを docs-only で免除する（ci.yml の test job は
+  # `needs.static.outputs.docs_only != 'true'` で実際に skip されるため、
+  # ここを要求すると docs-only PR が永久に missing で止まる）。判定不能時は
+  # IMPACT_DOCS_ONLY=false（＝両方要求する側）へ倒してある。
+  REQUIRED_CI_CHECKS=("🔍 Static Checks")
   if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then
-    REQUIRED_CI_CHECKS+=("🔍 Static Checks" "📦 Unit Tests")
+    REQUIRED_CI_CHECKS+=("📦 Unit Tests")
   else
-    info "docs-only の変更のため Static Checks / Unit Tests の skip を許容します。"
+    info "docs-only の変更のため Unit Tests の skip を許容します（Static Checks は引き続き要求します）。"
   fi
 
   for required in ${REQUIRED_CI_CHECKS[@]+"${REQUIRED_CI_CHECKS[@]}"}; do

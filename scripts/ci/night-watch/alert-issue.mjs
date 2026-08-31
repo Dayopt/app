@@ -48,36 +48,35 @@ export const CHECK_DEFINITIONS = {
     command: "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
     baselineKey: 'dependabot_alert_count',
   },
+  // #2483（CI ファイル統合 Phase 1）: heavy-post-merge.yml / integration.yml は
+  // nightly.yml へ吸収され、複数 job（heavy-e2e / heavy-web / integration）が
+  // 1 つの workflow ファイルを共有するようになった。`gh run list --workflow=`
+  // だけでは cron ごとに異なる job を区別できないため、実行は
+  // `checkWorkflowJobRun`（run-all.mjs）が job 名で判定する（このコマンド文字列
+  // は起票 issue の「再現コマンド」欄の表示専用で、実行そのものには使わない
+  // ——既存の設計方針〈表示用コマンドと実行コマンドは意図的に異なりうる〉を
+  // 踏襲。checkSentryNew と同型）。**nightly.yml の job 名を変更したら
+  // run-all.mjs の NIGHTLY_HEAVY_JOB_NAMES / NIGHTLY_INTEGRATION_JOB_NAME と
+  // 合わせてこの表示文字列も更新すること。**
+  //
+  // `--branch main` は今も必須: `--workflow=nightly.yml` は誰でも
+  // `workflow_dispatch` できるため、feature branch からの手動発火が直近 run を
+  // 占有すると main と無関係な run で red/green が判定されてしまう（旧
+  // heavy-post-merge.yml / integration.yml から引き継いだ既知の穴、PR #2380 /
+  // #2333）。integration.yml が持っていた `pull_request` trigger
+  // （migration-safety job 用）は ci.yml の test job へ移設済みで、nightly.yml
+  // 自体に pull_request trigger は無いため、PR run 混入の懸念自体は解消した。
   'heavy-red': {
     kind: 'run-url',
-    title: 'heavy-post-merge が直近 run で red',
+    title: 'heavy（E2E / Web）が直近 run で red',
     command:
-      'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
+      'gh run list --workflow=nightly.yml --branch main --limit 30 --json databaseId,url | jq -r \'.[].databaseId\' | while read -r id; do gh api "repos/Dayopt/dayopt/actions/runs/$id/jobs" --jq \'.jobs[] | select(.name=="🎭 E2E Tests" or .name=="🌐 Web Build & E2E") | select(.conclusion!="skipped")\'; done | head -3',
   },
-  // integration.yml は heavy-post-merge.yml と同じ concurrency group 設計
-  // （`integration-${{ github.ref }}` + cancel-in-progress: true）のため、
-  // 判定規約（cancelled/timed_out/action_required も赤・直近24hにsuccessが
-  // 無ければ赤）は heavy-red と同一（#2333、CI 4層再設計 #2269 で integration
-  // が per-PR から nightly + push:main 後へ移った後、夜勤が heavy-post-merge
-  // の赤しか観測しておらず integration 単独の失敗が無通知のまま朝を迎える穴を
-  // 埋める）。
-  //
-  // **`--branch main` は heavy-red からのコピー時に落ちていた必須 flag**
-  // （push前反証レビュー risk-reviewer 指摘、P2）。integration.yml は
-  // heavy-post-merge.yml と異なり `pull_request` trigger も持つ
-  // （migration-safety job 用）ため、branch 指定が無いと直近 3 run に
-  // PR run が混入し、(a) PR の追い push で cancel-in-progress により
-  // cancelled になった run が「cancelled も赤」規約に直撃して誤起票、
-  // (b) PR run が直近枠を占有して nightly の success run が窓外に出て
-  // 「直近24hにsuccessが無い」で誤起票、逆に (c) 本物の nightly 失敗が
-  // PR run に押し出されて見逃される、の 3 経路が同時に開いていた。
-  // heavy-post-merge.yml には pull_request trigger が無いため heavy-red
-  // 側にはこの穴は無い。
   'integration-red': {
     kind: 'run-url',
     title: 'integration が直近 run で red',
     command:
-      'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
+      'gh run list --workflow=nightly.yml --branch main --limit 30 --json databaseId,url | jq -r \'.[].databaseId\' | while read -r id; do gh api "repos/Dayopt/dayopt/actions/runs/$id/jobs" --jq \'.jobs[] | select(.name=="Integration Tests") | select(.conclusion!="skipped")\'; done | head -3',
   },
   'sentry-new': {
     kind: 'sentry',

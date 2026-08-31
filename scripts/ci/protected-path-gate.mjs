@@ -94,6 +94,12 @@ export const PROTECTED_PATH_GLOBS = [
   'scripts/hooks/**',
   'scripts/tasks/finish-branch.sh',
   'scripts/ci/protected-path-gate.mjs',
+  // CI の中枢。check.mjs は write 権限つき GH_TOKEN を PR コードから隔離する
+  // 処理とどの test を skip するかの判定を持ち、ci.yml はその job / permissions
+  // を決める。どちらも「壊れても CI は green のまま」になりうるため、
+  // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
+  'scripts/ci/check.mjs',
+  '.github/workflows/ci.yml',
   'scripts/production-config-audit.mjs',
   'apps/product/production-build-gate.mjs',
   'apps/web/production-build-gate.mjs',

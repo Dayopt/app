@@ -100,20 +100,36 @@ describe('buildAlertBody', () => {
   });
 
   // #2333: integration.yml の失敗が夜勤で無観測のまま朝を迎えていた穴を埋める
-  // check-id。heavy-red と同じ run-url kind（判定規約も同一。integration.yml は
-  // heavy-post-merge.yml と同じ concurrency group 設計のため）だが、
-  // CHECK_DEFINITIONS のコマンド文言が正しく `integration.yml` を指しているかを
-  // 個別に固定する。
-  it('integration-red は run-url kind で integration.yml を対象にする', () => {
+  // check-id。heavy-red と同じ run-url kind（判定規約も同一）だが、
+  // CHECK_DEFINITIONS のコマンド文言が正しく job-scoped（#2483）の再現手順を
+  // 指しているかを個別に固定する。
+  it('integration-red は run-url kind で nightly.yml の Integration Tests job を対象にする', () => {
     const body = buildAlertBody({
       checkId: 'integration-red',
       args: { 'evidence-url': 'https://github.com/Dayopt/dayopt/actions/runs/456' },
       detectedAt: '2026-08-24T00:00:00Z',
     });
     expect(body).toContain('https://github.com/Dayopt/dayopt/actions/runs/456');
-    expect(body).toContain(
-      '**再現コマンド**: `gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url`',
-    );
+    expect(body).toContain('--workflow=nightly.yml');
+    expect(body).toContain('Integration Tests');
+  });
+
+  // #2483: heavy-red / integration-red の再現コマンドが旧 workflow ファイル名
+  // （heavy-post-merge.yml / integration.yml、削除済み）を指していないことを
+  // 固定する。指していると、朝の手動再現でファイル不在エラーに遭遇する。
+  it('heavy-red / integration-red の再現コマンドは削除済み workflow ファイル名を指さない', () => {
+    const heavyBody = buildAlertBody({
+      checkId: 'heavy-red',
+      args: { 'evidence-url': 'https://github.com/Dayopt/dayopt/actions/runs/123' },
+      detectedAt: '2026-08-24T00:00:00Z',
+    });
+    const integrationBody = buildAlertBody({
+      checkId: 'integration-red',
+      args: { 'evidence-url': 'https://github.com/Dayopt/dayopt/actions/runs/456' },
+      detectedAt: '2026-08-24T00:00:00Z',
+    });
+    expect(heavyBody).not.toContain('heavy-post-merge.yml');
+    expect(integrationBody).not.toContain('integration.yml');
   });
 
   it('sentry kind は --count が数字のみでないと拒否する', () => {

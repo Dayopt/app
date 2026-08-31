@@ -5,7 +5,7 @@ import {
   detectDestructivePatterns,
   formatGithubOutput,
   formatSummary,
-} from '../ci/check-destructive-migration.mjs';
+} from './check-destructive-migration.mjs';
 
 describe('detectDestructivePatterns', () => {
   it('DROP TABLE を検知する', () => {

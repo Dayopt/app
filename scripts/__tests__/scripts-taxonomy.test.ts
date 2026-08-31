@@ -45,10 +45,18 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   'scripts/tasks/docs-coverage/collect.ts',
   // env/: check-*.ts が全て pkg entry を持つ tasks unit。schema.ts はその内部 lib。
   'scripts/tasks/env/schema.ts',
-  // night-watch/: run-all.mjs が night-watch.yml から直接実行される ci unit。
-  // pre-tool-guard-impl.sh の allowlist 文字列一致・skill/rule の言及により
-  // 個別ファイルが hooks/agent 判定になるが、ディレクトリごと分割しない
-  // （夜勤 cron の内部結合が強く、分割すると相互 import の path 更新が二重化する）。
+  // night-watch/: run-all.mjs が nightly.yml（#2483 で night-watch.yml から
+  // 統合）から直接実行される ci unit。pre-tool-guard-impl.sh の allowlist
+  // 文字列一致・skill/rule の言及により個別ファイルが hooks/agent 判定になるが、
+  // ディレクトリごと分割しない（夜勤 cron の内部結合が強く、分割すると相互
+  // import の path 更新が二重化する）。
+  'scripts/ci/night-watch/alert-issue.mjs',
+  'scripts/ci/night-watch/board-issue.mjs',
+  // check-workflow-job.mjs: heavy-red / integration-red の job-scoped 判定を
+  // 「単一の単純コマンド」として手動代行できるようにする wrapper（#2483）。
+  // pre-tool-guard-impl.sh の allowlist 完全一致で hooks 判定になるが、他の
+  // night-watch/*.mjs wrapper と同じ理由でディレクトリを分割しない。
+  'scripts/ci/night-watch/check-workflow-job.mjs',
   'scripts/ci/night-watch/dod-candidate.mjs',
   'scripts/ci/night-watch/lib.mjs',
   'scripts/ci/night-watch/morning-brief.mjs',
@@ -63,10 +71,12 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   // 照合するわけではない（night-watch/*.mjs の allowlist 完全一致とは性質が違う）。
   // 実利用のされ方は agent 直叩きに近いため agent/ に置く。
   'scripts/agent/supabase-mgmt-safe-get.mjs',
-  // storage-objects-app-policy-names.mjs: production-config-audit.yml 内の言及は
-  // paths: トリガー条件（再実行契機）であって実行呼び出しではない。実際の呼び出し元は
-  // generate-rls-snapshot.ts（tasks）と production-storage-rls-audit.mjs（ci）の
-  // import のみで、正しい分類は lib（現状維持）。
+  // storage-objects-app-policy-names.mjs: #2483 以前は integration.yml の
+  // paths: トリガー条件への言及があったが、CI ファイル統合で INTEGRATION_GLOBS
+  // （impact.mjs、JS 配列）へ一本化され workflow YAML からの言及は無くなった。
+  // 実際の呼び出し元は generate-rls-snapshot.ts（tasks）と
+  // production-storage-rls-audit.mjs（ci）の import のみで、正しい分類は
+  // lib（現状維持。この exception は現状 no-op だが記録として残す）。
   'scripts/lib/storage-objects-app-policy-names.mjs',
   // scripts-taxonomy.ts: 唯一の実 importer が __tests__/ 配下のテストファイルであり、
   // classifyAllScripts の importedBy 判定は __tests__/ を除外した allScriptFiles しか
@@ -84,6 +94,19 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   // config / pr-cross-review）からの言及は利用者向けの説明文であり、実行呼び出しでは
   // ないため agent 判定になるが、正しい分類は ci（現状維持、#2478）。
   'scripts/ci/protected-path-gate.mjs',
+  // gitleaks-allowlist-canary.sh: #2483 以前は docs-guard.yml の `run:` step
+  // （workflow ヒット判定可能）から直接実行されていたが、CI ファイル統合で
+  // scripts/ci/check.mjs の `run('bash', [...])` 呼び出しへ移った。この呼び出し
+  // 形（JS ヘルパー経由の文字列引数）は本ライブラリの workflow/import 判定
+  // どちらにも当たらない検出漏れで、実行自体は無変更のまま継続している
+  // （scripts/ci/check.mjs:267）。
+  'scripts/ci/gitleaks-allowlist-canary.sh',
+  // check-destructive-migration.mjs: scripts/ci/check.mjs（#2483 で新設）が
+  // import するため lib 判定になるが、migration safety 検査は CI 専用ロジックで
+  // scripts/ci/ の兄弟ファイル（production-*-audit.mjs 等）と同じ結合を持つ。
+  // scripts/lib/ へ移すと import 元の相対 path が二重に散らばるため、taxonomy
+  // 再編（#2476）の対象外として現状の配置を維持する。
+  'scripts/ci/check-destructive-migration.mjs',
 ]);
 
 describe('scripts/ 呼ばれ方別 taxonomy', () => {

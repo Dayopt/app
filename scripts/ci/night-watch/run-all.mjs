@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CHECK_DEFINITIONS, runAlertSync, runFetchFailureAlertSync } from './alert-issue.mjs';
 import { runBoardSync } from './board-issue.mjs';
 import { runDodCandidateSelect } from './dod-candidate.mjs';
-import { isLatestWorkflowRunPending } from './lib.mjs';
+import { isLatestWorkflowRunPending, REPO } from './lib.mjs';
 import { runMorningBrief } from './morning-brief.mjs';
 import {
   CHECK_IDS,
@@ -38,6 +38,14 @@ import {
 const BASELINE_PATH = fileURLToPath(
   new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
 );
+
+// nightly.yml の対象 job の `name:` フィールドと完全一致させる（#2483）。
+// job 名を変更したらこの定数も同時に更新すること（nightly.yml 側にも同じ
+// 結合を明記したコメントがある）。heavy-red は E2E + Web の 2 job を worst-of
+// で 1 run 分の結論へ畳む（旧 heavy-post-merge.yml が 1 workflow に 2 job を
+// 持ち、run 全体の conclusion で判定していた挙動を再現する）。
+export const NIGHTLY_HEAVY_JOB_NAMES = ['\u{1F3AD} E2E Tests', '\u{1F310} Web Build & E2E'];
+export const NIGHTLY_INTEGRATION_JOB_NAME = 'Integration Tests';
 
 /**
  * `.claude/skills/night-watch/baseline.json` を読む。`alert-issue.mjs` にも
@@ -95,20 +103,20 @@ const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
  *
  * 直近3件のいずれかが非successなら赤、という旧判定は誤起票を常態化させて
  * いた（Codex レビュー指摘、指揮台採用・issue #2367 コメント参照）:
- * heavy-post-merge.yml / integration.yml は**それぞれの workflow 内で**全
- * トリガーが同一 concurrency group を共有する（`heavy-post-merge-${github.ref}`
- * / `integration-${github.ref}`、cancel-in-progress: true。workflow 名 prefix
- * があるので 2 workflow は互いに cancel しない）。そのため同一グループの
- * in-flight run を新しい run が追い越すと `conclusion=cancelled` になり、
- * 直近が success でも 2 件前の cancelled で赤になってしまっていた。
+ * 旧 heavy-post-merge.yml / integration.yml は**それぞれの workflow 内で**全
+ * トリガーが同一 concurrency group を共有していた（`heavy-post-merge-${github.ref}`
+ * / `integration-${github.ref}`、cancel-in-progress: true）。そのため同一
+ * グループの in-flight run を新しい run が追い越すと `conclusion=cancelled` に
+ * なり、直近が success でも 2 件前の cancelled で赤になってしまっていた。
  *
- * #2382（2026-08-25）で heavy-post-merge の push:main を廃止したが、
- * **緩和は引き続き必要**。cancelled の発生源は「同一グループの in-flight run を
- * 新しい run が追い越す」ことで、経路は複数ある: 再 dispatch（promote 中断後の
- * 再開など）、integration.yml に残る paths 該当 push:main、nightly と手動発火の
- * 重複。頻度は push:main 廃止で下がる公算が大きいが、ゼロにはならない。
- * 「push:main を廃止したから cancelled はもう起きない」と読んでこの緩和を
- * 撤回しないこと。
+ * #2382（2026-08-25）で heavy-post-merge の push:main を廃止し、#2483（CI
+ * ファイル統合 Phase 1）で両ファイルを nightly.yml へ吸収した。吸収後は
+ * job 単位の concurrency group（`nightly-heavy-e2e` / `nightly-heavy-web` /
+ * `nightly-integration`）に分かれ、integration の push:main トリガー自体も
+ * 廃止した（per-PR 検出は ci.yml の test job が affected 判定で担う）ため、
+ * 当時 cancelled 混入の主因だった経路は解消している。**それでも緩和ロジック
+ * 自体は撤去しない**: 再 dispatch（promote 中断後の再開等）や将来のトリガー
+ * 追加で同型の cancelled 混入が再発しうる一般的な backstop として維持する。
  *
  * `hasRecentSuccess` は `runs`（直近3件、runs[0] 自身を含む）全体を走査
  * する。**runs[0] が「24h 以内の」success なら、この条件だけで必ず green
@@ -334,23 +342,142 @@ function checkCountBaseline(command, args, baselineValue, { execFileImpl, env, p
   return { status: 'green' };
 }
 
+// GitHub Actions の conclusion のうち「success 以外」を重大度順に並べる。
+// 複数 job（heavy-red は E2E + Web の 2 job）を 1 run 分の代表値へ畳む時、
+// この順で最初に一致したものを「その run の結論」として採用する（旧
+// heavy-post-merge.yml の「run 全体の conclusion は job の worst-of」という
+// 挙動を、job 単位判定でも再現するため）。未知の conclusion は末尾に置く
+// （楽観側＝success 寄りに倒さない）。
+const CONCLUSION_SEVERITY = [
+  'action_required',
+  'timed_out',
+  'failure',
+  'startup_failure',
+  'stale',
+  'cancelled',
+  'neutral',
+  'success',
+];
+
+export function worseConclusion(a, b) {
+  const ai = CONCLUSION_SEVERITY.indexOf(a);
+  const bi = CONCLUSION_SEVERITY.indexOf(b);
+  if (ai === -1) return a; // 未知の値は無条件で「悪い方」扱い（fail closed）
+  if (bi === -1) return b;
+  return ai <= bi ? a : b;
+}
+
 /**
- * run-url kind（heavy-red / integration-red）の観測。
- * @param {string[]} runListArgs
- * @param {{ execFileImpl?: ExecFileImpl, now?: number }} [opts]
+ * run-url kind（heavy-red / integration-red）の観測。**workflow ファイル名では
+ * なく job 名で判定する**（#2483 CI ファイル統合: heavy-e2e / heavy-web /
+ * integration が nightly.yml 内の job になり、複数 cron の run が同じ
+ * `--workflow=nightly.yml` の下に混在するため、`--workflow=` だけでは
+ * cron ごとに異なる job を区別できない）。
+ *
+ * 手順: (1) `gh run list --workflow=nightly.yml --branch main` で直近の run
+ * 一覧（`runListLimit` 件）を新しい順に取得する。1 日 6 cron が同じ workflow
+ * を共有するため、対象 job が実際に走った run に絞り込むには単純な直近 N 件
+ * では足りない——`runListLimit` は数日分の余裕を持たせてある。(2) 各 run に
+ * ついて `gh api .../actions/runs/{id}/jobs` で対象 job 名（複数指定可）を
+ * 探し、全部が `conclusion === 'skipped'`（= その cron ではこの run に
+ * 対象 job が 1 つも実行されなかった）の run は除外する。実行された job が
+ * 複数あれば worst-of で 1 run 分の結論へ畳む（heavy-red は E2E / Web の
+ * 2 job を 1 つの run として扱う旧 heavy-post-merge.yml の挙動を再現）。
+ * (3) `targetCount` 件集まるか run 一覧を使い切ったら打ち切り、
+ * `judgeWorkflowRun`（判定ロジックは無変更）へ渡す。
+ *
+ * 1 run 単位の job 取得失敗（一時的な rate limit 等）は次の run へ読み進める
+ * ——1 件の失敗で全体を fetch-failed にすると、直近に本物の red がある時
+ * ほど検出できなくなる（fail closed の方向を間違える）。ただし対象 job が
+ * 1 件も見つからなければ「判定不能」として fetch-failed を返す（取得成功と
+ * 失敗を区別できないが、どちらも「今回は判定できなかった」という結論は
+ * 同じなので実害は無い）。
+ *
+ * @param {string[]} jobNames nightly.yml の対象 job の `name:` と完全一致
+ *   させる（例: `['🎭 E2E Tests', '🌐 Web Build & E2E']`）。job 名を変えたら
+ *   呼び出し側の定数も同時に変える。
+ * @param {{ execFileImpl?: ExecFileImpl, now?: number, runListLimit?: number, targetCount?: number }} [opts]
  */
-function checkWorkflowRun(runListArgs, { execFileImpl, now } = {}) {
-  const result = execObservationCommand('gh', ['run', 'list', ...runListArgs], { execFileImpl });
-  if (!result.ok) return { status: 'fetch-failed' };
+export function checkWorkflowJobRun(
+  jobNames,
+  { execFileImpl, now, runListLimit = 30, targetCount = 3 } = {},
+) {
+  const listResult = execObservationCommand(
+    'gh',
+    [
+      'run',
+      'list',
+      '--workflow=nightly.yml',
+      '--branch',
+      'main',
+      '--limit',
+      String(runListLimit),
+      '--json',
+      'databaseId,createdAt,url',
+    ],
+    { execFileImpl },
+  );
+  if (!listResult.ok) return { status: 'fetch-failed' };
+
   let runs;
   try {
-    runs = JSON.parse(result.stdout);
+    runs = JSON.parse(listResult.stdout);
   } catch {
     return { status: 'fetch-failed' };
   }
   if (!Array.isArray(runs) || runs.length === 0) return { status: 'fetch-failed' };
-  const judged = judgeWorkflowRun(runs, { now });
-  const latestUrl = runs[0]?.url;
+
+  const matched = [];
+  for (const run of runs) {
+    if (matched.length >= targetCount) break;
+    // gh run list の JSON 出力（GitHub API 由来）を信頼しているが、他 wrapper
+    // （alert-issue.mjs の evidence-url 検証、strip-status-labels.mjs の
+    // Number.isInteger）と同じ「値の形は使う直前に検証する」規約に揃える
+    // （push前反証レビュー risk-reviewer 指摘、P2）。
+    if (!Number.isInteger(run.databaseId)) continue;
+    const jobsResult = execObservationCommand(
+      'gh',
+      ['api', `repos/${REPO}/actions/runs/${run.databaseId}/jobs`, '--jq', '.jobs'],
+      { execFileImpl },
+    );
+    if (!jobsResult.ok) continue; // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）
+
+    let jobs;
+    try {
+      jobs = JSON.parse(jobsResult.stdout);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(jobs)) continue;
+
+    const targetJobs = jobs.filter(
+      (j) => jobNames.includes(j?.name) && j?.conclusion !== 'skipped',
+    );
+    if (targetJobs.length === 0) continue; // この run では対象 job が 1 つも実行されていない
+
+    const status = targetJobs.some((j) => j.status !== 'completed')
+      ? targetJobs.find((j) => j.status !== 'completed').status
+      : 'completed';
+    const conclusion = targetJobs
+      .map((j) => j.conclusion)
+      .reduce((worst, c) => (worst === null ? c : worseConclusion(worst, c)), null);
+    const earliestStartedAt = targetJobs
+      .map((j) => j.started_at)
+      .filter(Boolean)
+      .sort()[0];
+
+    matched.push({
+      status,
+      conclusion,
+      createdAt: earliestStartedAt || run.createdAt,
+      url: targetJobs.find((j) => j.conclusion !== 'success')?.html_url ?? run.url,
+    });
+  }
+
+  if (matched.length === 0) return { status: 'fetch-failed' };
+
+  const judged = judgeWorkflowRun(matched, { now });
+  const latestUrl = matched[0]?.url;
   if (judged.status === 'pending') return { status: 'pending', evidenceUrl: latestUrl };
   if (judged.status === 'red')
     return { status: 'red', evidenceUrl: judged.evidenceUrl ?? latestUrl };
@@ -688,35 +815,15 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
         parse: parseNonNegativeInt,
       },
     ),
-    'heavy-red': checkWorkflowRun(
-      [
-        '--workflow=heavy-post-merge.yml',
-        // integration-red と同じく main に限定する（PR #2380 クロスレビュー
-        // 指摘、P2）。heavy-post-merge.yml は workflow_dispatch を持つため、
-        // 誰かが feature branch で手動 dispatch すると、その run が
-        // runs[0] になり main と無関係に heavy-red が誤起票される（または
-        // feature branch の success が直近成功として main の赤を隠す）。
-        '--branch',
-        'main',
-        '--limit',
-        '3',
-        '--json',
-        'conclusion,status,headSha,createdAt,url',
-      ],
-      { execFileImpl, now },
-    ),
-    'integration-red': checkWorkflowRun(
-      [
-        '--workflow=integration.yml',
-        '--branch',
-        'main',
-        '--limit',
-        '3',
-        '--json',
-        'conclusion,status,headSha,createdAt,url',
-      ],
-      { execFileImpl, now },
-    ),
+    // job 名は nightly.yml の該当 job の `name:` と完全一致させる
+    // （NIGHTLY_HEAVY_JOB_NAMES / NIGHTLY_INTEGRATION_JOB_NAME、定数化して
+    // job 名変更時の更新漏れを検出しやすくしてある）。main 限定は旧設計を
+    // 引き継ぐ: `--workflow=nightly.yml` は誰でも `workflow_dispatch` できる
+    // ため、feature branch からの手動発火が直近 run を占有して main の赤を
+    // 隠す・誤起票する事故を防ぐ（旧 heavy-post-merge.yml / integration.yml
+    // と同じ理由、PR #2380 / #2333 の教訓を維持）。
+    'heavy-red': checkWorkflowJobRun(NIGHTLY_HEAVY_JOB_NAMES, { execFileImpl, now }),
+    'integration-red': checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now }),
     'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh }),
   };
 

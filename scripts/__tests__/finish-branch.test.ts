@@ -69,7 +69,10 @@ function statusContext(context: string, state: string, startedAt: string): Rollu
  * - Vercel の 2 context: Actions 側の無条件 build を撤去し、product / web の
  *   build 検証が Vercel にしか無いため（#1813）
  * - Static Checks / Unit Tests: draft 中は ci.yml が skip するため、skipped の
- *   まま merge へ抜ける経路を塞ぐ（#2415）。docs-only PR では免除される
+ *   まま merge へ抜ける経路を塞ぐ（#2415）。**Static Checks は docs-only でも
+ *   免除しない**（#2483 で secret/docs 検査が static job へ吸収され、docs-only
+ *   PR でも唯一の実行経路になったため。内製クロスレビュー risk-reviewer
+ *   指摘、P1、PR #2484）。Unit Tests だけ docs-only PR で免除される
  */
 function requiredChecks(): RollupEntry[] {
   return [
@@ -922,7 +925,12 @@ describe('affected-aware な Vercel context 要求（Impact Resolver 連携）',
 
   it('docs のみの変更なら Vercel context を要求しない', () => {
     const { status, stderr } = runScript(
-      [checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-04T10:00:00Z')],
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-04T10:00:00Z'),
+        // Static Checks は docs-only でも要求される（#2483 P1 修正後）ため、
+        // このテストの主眼（Vercel context の免除）を検証するには別途足す必要がある。
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-04T10:00:00Z'),
+      ],
       { files: ['docs/product/specs/calendar.md', 'AGENTS.md'] },
     );
     expect(stderr).toContain('Vercel context は要求しません');
@@ -1085,7 +1093,20 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
     expect(status).toBe(0);
   });
 
-  it('docs-only PR では Impact gate による skipped を許容する', () => {
+  it('docs-only PR では Unit Tests の skipped だけを許容する（Static Checks は引き続き要求する）', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('📦 Unit Tests', 'SKIPPED', '2026-08-26T10:00:00Z'),
+      ],
+      { files: ['docs/product/specs/calendar.md'] },
+    );
+    expect(stderr).toContain('docs-only の変更のため');
+    expect(status).toBe(0);
+  });
+
+  it('docs-only PR でも Static Checks が skipped のままなら止める（#2483 P1: secret scan bypass の再発防止）', () => {
     const { status, stderr } = runScript(
       [
         checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
@@ -1093,8 +1114,8 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
       ],
       { files: ['docs/product/specs/calendar.md'] },
     );
-    expect(stderr).toContain('docs-only の変更のため');
-    expect(status).toBe(0);
+    expect(stderr).toContain('必須 check「🔍 Static Checks」');
+    expect(status).toBe(1);
   });
 
   // 未知の path は docs でも app でもない。docsOnly=false 側（要求する側）へ倒る
@@ -1628,6 +1649,31 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(stderr).toContain('review gate: required (matched .husky/**)');
     expect(stderr).toContain('内製クロスレビューの痕跡がありません');
     expect(status).toBe(1);
+  });
+
+  // #2483 クロスレビュー: CI の中枢（token 隔離と test skip 判定を持つ check.mjs、
+  // その job / permissions を決める ci.yml）も guardrail として必須側に置く。
+  it.each([['scripts/ci/check.mjs'], ['.github/workflows/ci.yml']])(
+    'CI の中枢（%s）は marker を要求する',
+    (file) => {
+      const { status, stderr } = runScript(greenRollup(), {
+        files: [file],
+        threads: [],
+        reviewEvidence: { comments: [] },
+      });
+      expect(stderr).toContain(`review gate: required (matched ${file})`);
+      expect(status).toBe(1);
+    },
+  );
+
+  it('CI でも nightly.yml は marker を要求しない（PR gate を持たないため）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['.github/workflows/nightly.yml'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(status).toBe(0);
   });
 
   it('非保護対象 path のみなら marker 無しでも通す（gate skip）', () => {

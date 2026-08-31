@@ -1086,7 +1086,7 @@ describe('runProductionRelease (affected-aware)', () => {
 
     const result = await release({
       fetchImpl: world.fetchImpl,
-      diffFilesImpl: () => ['docs/engineering/infra.md', '.github/workflows/docs-guard.yml'],
+      diffFilesImpl: () => ['docs/engineering/infra.md', '.github/workflows/promote.yml'],
     });
 
     expect(result.status).toBe('unaffected');
