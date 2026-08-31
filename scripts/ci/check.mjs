@@ -441,7 +441,7 @@ export async function runMigrationSafety({
     return { results: [], notified: false, skipped: true };
   }
   const withContent = files
-    .filter((f) => f.filename.startsWith('supabase/migrations/'))
+    .filter((f) => f.filename.startsWith('supabase/migrations/') && f.filename.endsWith('.sql'))
     .map((f) => {
       let content = '';
       try {

@@ -134,6 +134,12 @@ describe('checkFiles', () => {
       },
       // migrations 配下でないファイルは対象外
       { path: 'apps/product/src/foo.sql', status: 'added', content: 'DROP TABLE z;' },
+      // migrations 配下でも非 SQL（ポインタ用 markdown 等）は対象外（#2510）
+      {
+        path: 'supabase/migrations/CLAUDE.md',
+        status: 'added',
+        content: 'DROP TABLE の説明を含む markdown',
+      },
     ]);
 
     expect(results).toHaveLength(1);
