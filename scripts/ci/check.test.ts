@@ -104,6 +104,27 @@ describe('fetchPrFilesWithStatus', () => {
     expect(fetchPrFilesWithStatus({ execImpl })).toEqual([]);
   });
 
+  it('env を渡すと gh の実行 env として使う', () => {
+    const execImpl = vi.fn(() => '');
+    const env = { ...process.env, GH_TOKEN: 'token-for-gh' };
+    fetchPrFilesWithStatus({ repo: 'Dayopt/dayopt', prNumber: 1, execImpl, env });
+    expect(execImpl).toHaveBeenCalledWith(
+      'gh',
+      expect.anything(),
+      expect.objectContaining({ env }),
+    );
+  });
+
+  it('env を省略したら execImpl の options に env を渡さない（process.env を継承する）', () => {
+    const execImpl = vi.fn(() => '');
+    fetchPrFilesWithStatus({ repo: 'Dayopt/dayopt', prNumber: 1, execImpl });
+    expect(execImpl).toHaveBeenCalledWith(
+      'gh',
+      expect.anything(),
+      expect.not.objectContaining({ env: expect.anything() }),
+    );
+  });
+
   it('NDJSON を 1 行ずつ JSON.parse して配列化し、壊れた行はスキップする', () => {
     const execImpl = vi.fn(
       () =>
@@ -136,6 +157,25 @@ describe('runMigrationSafety', () => {
     expect(result.notified).toBe(false);
     expect(spawnImpl).not.toHaveBeenCalled();
     expect(writeStepSummaryImpl).toHaveBeenCalledOnce();
+  });
+
+  // 回帰固定: runTest() は write 権限つき GH_TOKEN を process.env から外したうえで
+  // token を含む env を runMigrationSafety へ渡す。その env をファイル一覧取得の
+  // gh 呼び出しへ転送し忘れると、gh が「GH_TOKEN を設定してください」で失敗し
+  // Unit Tests job ごと落ちる（PR #2484 の実障害。run 33181021085）。
+  it('渡された env をファイル一覧取得の gh 呼び出しへ転送する', async () => {
+    const fetchFilesImpl = vi.fn(() => []);
+    const env = { ...process.env, GH_TOKEN: 'token-for-gh' };
+    await runMigrationSafety({
+      repo: 'Dayopt/dayopt',
+      prNumber: 1,
+      fetchFilesImpl,
+      execFileImpl: vi.fn(),
+      spawnImpl: vi.fn(noopSpawn),
+      writeStepSummaryImpl: vi.fn(async () => {}),
+      env,
+    });
+    expect(fetchFilesImpl).toHaveBeenCalledWith(expect.objectContaining({ env }));
   });
 
   it('destructive な変更を検知したら comment 投稿→ラベル付与の順で通知する', async () => {

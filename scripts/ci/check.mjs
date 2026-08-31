@@ -58,8 +58,14 @@ const MIGRATION_LABEL = 'db:destructive-migration';
 // 空配列を返す。呼び出し側（resolveImpact 等）は空入力を「判定不能」として
 // fail closed（全 affected）に倒す規約を共有している。
 
-/** @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl }} opts */
-export function fetchPrFilenames({ repo, prNumber, execImpl = execFileSync } = {}) {
+/**
+ * `env` は gh の実行環境。省略時は execFileSync の既定どおり process.env を継承する。
+ * runTest() は PR コードへ write 権限つき GH_TOKEN を渡さないため process.env から
+ * それを削除しており、その文脈から呼ぶ場合は token を含む env を明示的に渡す必要が
+ * ある（渡さないと gh が「GH_TOKEN を設定してください」で失敗する）。
+ * @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv }} opts
+ */
+export function fetchPrFilenames({ repo, prNumber, execImpl = execFileSync, env } = {}) {
   if (!repo || !prNumber) return [];
   const out = execImpl(
     'gh',
@@ -70,17 +76,18 @@ export function fetchPrFilenames({ repo, prNumber, execImpl = execFileSync } = {
       '--jq',
       '.[] | .filename, (.previous_filename // empty)',
     ],
-    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
+    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, ...(env ? { env } : {}) },
   );
   return out.split('\n').filter(Boolean);
 }
 
 /**
  * migration safety（破壊的変更の静的スキャン）用。filename + status（NDJSON 由来）で返す。
- * @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl }} opts
+ * `env` の扱いは fetchPrFilenames と同じ（省略時は process.env を継承）。
+ * @param {{ repo?: string, prNumber?: string | number, execImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv }} opts
  * @returns {{ filename: string, status: string }[]}
  */
-export function fetchPrFilesWithStatus({ repo, prNumber, execImpl = execFileSync } = {}) {
+export function fetchPrFilesWithStatus({ repo, prNumber, execImpl = execFileSync, env } = {}) {
   if (!repo || !prNumber) return [];
   const out = execImpl(
     'gh',
@@ -91,7 +98,7 @@ export function fetchPrFilesWithStatus({ repo, prNumber, execImpl = execFileSync
       '--jq',
       '.[] | {filename, status} | tojson',
     ],
-    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
+    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, ...(env ? { env } : {}) },
   );
   const entries = [];
   for (const line of out.split('\n')) {
@@ -411,7 +418,10 @@ export async function runMigrationSafety({
   writeStepSummaryImpl = writeStepSummary,
   env = process.env,
 }) {
-  const files = fetchFilesImpl({ repo, prNumber });
+  // env は gh 呼び出し 2 箇所（ファイル一覧の取得とラベル確認）の両方へ渡す。
+  // runTest() が process.env から GH_TOKEN を外しているため、片方でも漏らすと
+  // その gh が「GH_TOKEN を設定してください」で失敗する。
+  const files = fetchFilesImpl({ repo, prNumber, env });
   const withContent = files
     .filter((f) => f.filename.startsWith('supabase/migrations/'))
     .map((f) => {
