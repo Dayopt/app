@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   collectBulkTargets,
+  DEFAULT_BULK_BUDGET_SECONDS,
   findClosedIssuesWithStatusLabel,
+  formatBulkInterruption,
   KNOWN_STATUS_LABELS,
+  runBulkStrip,
   selectStatusLabelsToStrip,
   stripStatusLabelsForIssue,
 } from './strip-status-labels.mjs';
@@ -124,5 +127,90 @@ describe('collectBulkTargets', () => {
       .mocked(execFileImpl)
       .mock.calls.filter((call) => call[1][0] === 'issue' && call[1][1] === 'list');
     expect(listCalls).toHaveLength(KNOWN_STATUS_LABELS.length);
+  });
+});
+
+// #2506: bulk 実行が job timeout で SIGKILL され、どこまで進んだかも残らずに
+// 終わっていた（実測 run 33355490164: 501 件中 407 件目で cancelled）。
+// 予算内で安全に打ち切り、残件と再開点を返すことを両方向で固定する。
+describe('runBulkStrip', () => {
+  /** 呼ばれるたびに一定量だけ進む決定論的な clock。 */
+  const clockAdvancingBy = (stepMs: number) => {
+    let now = 0;
+    return () => {
+      const current = now;
+      now += stepMs;
+      return current;
+    };
+  };
+
+  it('予算内なら全件処理し remaining 0 を返す', () => {
+    const stripImpl = vi.fn(() => ['status:ready']);
+    const result = runBulkStrip({
+      targets: [1, 2, 3],
+      budgetSeconds: 100,
+      nowImpl: clockAdvancingBy(1000),
+      stripImpl,
+      logImpl: () => {},
+    });
+    expect(result).toEqual({ processed: 3, remaining: 0, lastProcessed: 3 });
+    expect(stripImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it('予算超過で打ち切り、残件と最後に処理した番号を返す', () => {
+    const stripImpl = vi.fn(() => ['status:ready']);
+    // clock は呼ばれるたび 2 秒進む。予算 5 秒なので 0s/2s/4s の 3 回は通り、
+    // 6s の判定で打ち切られる。
+    const result = runBulkStrip({
+      targets: [10, 20, 30, 40, 50],
+      budgetSeconds: 5,
+      nowImpl: clockAdvancingBy(2000),
+      stripImpl,
+      logImpl: () => {},
+    });
+    expect(result.processed).toBeLessThan(5);
+    expect(result.remaining).toBe(5 - result.processed);
+    expect(result.lastProcessed).toBe([10, 20, 30, 40, 50][result.processed - 1]);
+    expect(stripImpl).toHaveBeenCalledTimes(result.processed);
+  });
+
+  it('1 件も処理できない予算なら processed 0 / lastProcessed undefined を返す', () => {
+    const stripImpl = vi.fn(() => []);
+    const result = runBulkStrip({
+      targets: [1, 2],
+      budgetSeconds: 0.001,
+      nowImpl: clockAdvancingBy(1000),
+      stripImpl,
+      logImpl: () => {},
+    });
+    expect(result).toEqual({ processed: 0, remaining: 2, lastProcessed: undefined });
+    expect(stripImpl).not.toHaveBeenCalled();
+  });
+
+  it('既定の予算は nightly.yml の timeout-minutes より短い', () => {
+    // timeout-minutes: 10（= 600 秒）。予算ちょうどだと最後の 1 件の処理中に
+    // SIGKILL され打ち切り報告ごと消えるため、余白が要る。
+    expect(DEFAULT_BULK_BUDGET_SECONDS).toBeLessThan(600);
+  });
+});
+
+describe('formatBulkInterruption', () => {
+  it('最後に処理した番号を --resume-from に載せた再開コマンドを含める', () => {
+    const report = formatBulkInterruption({ processed: 407, remaining: 94, lastProcessed: 2242 });
+    expect(report).toContain('407 件で打ち切りました');
+    expect(report).toContain('残り 94 件');
+    expect(report).toContain(
+      'node scripts/ci/strip-status-labels.mjs bulk --execute --resume-from 2242',
+    );
+  });
+
+  it('1 件も処理できなかった場合は resume-from を付けず、原因の当たりを添える', () => {
+    const report = formatBulkInterruption({
+      processed: 0,
+      remaining: 12,
+      lastProcessed: undefined,
+    });
+    expect(report).toContain('1 件も処理できませんでした');
+    expect(report).not.toContain('--resume-from');
   });
 });
