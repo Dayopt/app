@@ -18,7 +18,6 @@ function createDefaultSettings(): NonNullable<UserSettingsData> {
     showWeekends: true,
     showWeekNumbers: false,
     defaultDuration: 60,
-    snapInterval: 15,
     defaultView: 'week',
     hourHeightDensity: 'default',
     theme: 'system',

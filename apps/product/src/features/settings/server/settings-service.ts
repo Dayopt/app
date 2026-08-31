@@ -22,7 +22,6 @@ interface UserSettingsUpdateInput {
   showWeekends?: boolean | undefined;
   showWeekNumbers?: boolean | undefined;
   defaultDuration?: number | undefined;
-  snapInterval?: 5 | 10 | 15 | 30 | undefined;
   defaultView?: 'day' | '3day' | '5day' | 'week' | undefined;
   hourHeightDensity?: 'compact' | 'default' | 'spacious' | undefined;
   theme?: 'light' | 'dark' | 'system' | undefined;
@@ -66,7 +65,6 @@ export class SettingsService {
       showWeekends: data.show_weekends,
       showWeekNumbers: data.show_week_numbers,
       defaultDuration: data.default_duration,
-      snapInterval: data.snap_interval as 5 | 10 | 15 | 30,
       defaultView: data.default_view as 'day' | '3day' | '5day' | 'week' | undefined,
       hourHeightDensity: data.hour_height_density as 'compact' | 'default' | 'spacious' | undefined,
       theme: data.theme as 'light' | 'dark' | 'system',
@@ -95,7 +93,6 @@ export class SettingsService {
     if (input.showWeekends !== undefined) updateData.show_weekends = input.showWeekends;
     if (input.showWeekNumbers !== undefined) updateData.show_week_numbers = input.showWeekNumbers;
     if (input.defaultDuration !== undefined) updateData.default_duration = input.defaultDuration;
-    if (input.snapInterval !== undefined) updateData.snap_interval = input.snapInterval;
     if (input.defaultView !== undefined) updateData.default_view = input.defaultView;
     if (input.hourHeightDensity !== undefined)
       updateData.hour_height_density = input.hourHeightDensity;

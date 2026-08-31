@@ -25,7 +25,6 @@ const userSettingsSchema = z.object({
 
   // タスク設定
   defaultDuration: z.number().min(5).max(480).optional(),
-  snapInterval: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),

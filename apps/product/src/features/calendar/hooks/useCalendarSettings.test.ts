@@ -12,7 +12,6 @@ describe('toCalendarSettings', () => {
         showWeekends: false,
         showWeekNumbers: false,
         defaultDuration: 60,
-        snapInterval: 15,
         defaultView: '3day',
         hourHeightDensity: 'compact',
         theme: 'system',
