@@ -22,11 +22,15 @@ describe('pixelsToTime', () => {
     expect(pixelsToTime(60, HOUR_HEIGHT)).toEqual({ hour: 1, minute: 0 });
   });
 
-  it('15 分単位にスナップする（デフォルト 15 分）', () => {
-    // 1px=1分なので 7px → 7分 → スナップで 0 分
-    expect(pixelsToTime(7, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 0 });
-    // 8px → 8分 → スナップで 15 分
-    expect(pixelsToTime(8, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 15 });
+  it('デフォルトは 1 分単位（#2496: 全操作 1 分スナップ）', () => {
+    // 1px=1分なので 7px → 0:07 をそのまま保持
+    expect(pixelsToTime(7, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 7 });
+    expect(pixelsToTime(8, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 8 });
+  });
+
+  it('snapInterval=15 を明示すると 15 分単位にスナップする', () => {
+    expect(pixelsToTime(7, HOUR_HEIGHT, 15)).toEqual({ hour: 0, minute: 0 });
+    expect(pixelsToTime(8, HOUR_HEIGHT, 15)).toEqual({ hour: 0, minute: 15 });
   });
 
   it('snapInterval=30 に変更できる', () => {
@@ -44,8 +48,8 @@ describe('pixelsToTime', () => {
   });
 
   it('スナップで minute=60 になった場合は次の hour に繰り上がる', () => {
-    // hourDecimal = 0.99, minute fraction = 59.4 → snap to 60 → 0 分 / 1 時
-    expect(pixelsToTime(59, HOUR_HEIGHT)).toEqual({ hour: 1, minute: 0 });
+    // hourDecimal = 0.99, minute fraction = 59.4 → interval=15 で snap to 60 → 0 分 / 1 時
+    expect(pixelsToTime(59, HOUR_HEIGHT, 15)).toEqual({ hour: 1, minute: 0 });
   });
 
   it('23時台の繰り上がりは 23:00 で止まる（00:00 の翌日にならない）', () => {
@@ -73,10 +77,17 @@ describe('timeToPixels', () => {
 
 describe('snapToGrid', () => {
   it('pixelsToTime + timeToPixels の組み合わせで snappedTop / hour / minute を返す', () => {
-    const result = snapToGrid(8, HOUR_HEIGHT);
+    const result = snapToGrid(8, HOUR_HEIGHT, 15);
     expect(result.hour).toBe(0);
     expect(result.minute).toBe(15);
     expect(result.snappedTop).toBe(15); // 0h + 15min @ 1px/min
+  });
+
+  it('デフォルトは 1 分粒度で snap する（#2496）', () => {
+    const result = snapToGrid(8, HOUR_HEIGHT);
+    expect(result.hour).toBe(0);
+    expect(result.minute).toBe(8);
+    expect(result.snappedTop).toBe(8);
   });
 
   it('intervalMin を上書きできる', () => {

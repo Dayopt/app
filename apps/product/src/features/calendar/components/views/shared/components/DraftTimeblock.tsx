@@ -13,6 +13,7 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { hasTwoLayerTimeConflict } from '@/lib/time';
 import { cn } from '@dayopt/components';
 
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../../../../domain/precision';
 import {
   useActivityDraftStore,
   type ActivityDraft,
@@ -43,7 +44,7 @@ interface DraftTimeblockProps {
  *
  * - InlineActivityPalette と同じ視覚（左 accent strip + 右 tinted card）
  * - 下端に drawer pill 風の resize handle。drag で end time を更新
- * - drag 中は 15 分粒度に snap、24:00 を超えない・start より小さくならない
+ * - drag 中は 1 分粒度、24:00 を超えない・最小ブロック長より短くならない
  * - クリックは popover 側の interaction を阻害しないよう pointer-events: none を基本にし、
  *   resize handle のみ pointer-events: auto
  * - 同一レーンの Timeblock と時間が重なる時は赤リング（drag ghost と同じ規範）
@@ -134,14 +135,12 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
   const handleResizeStart = useCallback(
     (clientY: number) => {
       const startEndMinutes = endMinutes;
-      const minEndMinutes = startMinutes + 15;
+      const minEndMinutes = startMinutes + MIN_TIMEBLOCK_DURATION_MINUTES;
 
       const handleMove = (event: PointerEvent) => {
         const deltaPx = event.clientY - clientY;
-        const deltaMinutesRaw = (deltaPx / hourHeight) * 60;
-        // 15 分粒度に snap
-        const snappedDelta = Math.round(deltaMinutesRaw / 15) * 15;
-        const next = Math.max(minEndMinutes, Math.min(24 * 60, startEndMinutes + snappedDelta));
+        const deltaMinutes = Math.round((deltaPx / hourHeight) * 60);
+        const next = Math.max(minEndMinutes, Math.min(24 * 60, startEndMinutes + deltaMinutes));
         if (next === endMinutes) return;
         const nh = Math.floor(next / 60);
         const nm = next % 60;

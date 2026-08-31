@@ -1,25 +1,37 @@
 /**
  * Calendar の時刻精度ポリシー
  *
- * drag/tap = 粗い grid snap、Inspector/text input = 1 分粒度 という
- * 非対称設計の出発点となる定数。
+ * 全操作（drag / resize / tap / Inspector / text input）を 1 分粒度で統一する。
+ * かつては drag/tap = 粗い grid snap、Inspector = 1 分という非対称設計だったが、
+ * #2496 で「時間の刻みは 1 分単位」に一本化した。
  *
- * 設計意図: useUserPreferences.snapInterval は user 設定の選択肢。
- * そこに 1 を含めると「drag を 1 分 snap にする選択肢」が UI に滲むため、
- * 1 分粒度は内部 policy 定数として隔離する。
- *
- * @see 旧 docs/projects/timeline-precision-redesign/overview.md
- *   （docs/projects 全廃に伴い #2473 で削除。当時のリンク先自体が repo 内に見当たらず、
- *   出典は git 履歴でも追跡できていない）
+ * snap 粒度と最小ブロック長は独立した概念として分離する:
+ * - snap 粒度 1 分 = 時刻の「位置」をどこに置けるか
+ * - 最小ブロック長 5 分 = ブロックの「長さ」の下限（誤操作での極小ブロック防止）
  */
 
-/** Inspector / text input 専用。drag snap には絶対に使わない。 */
+/** Inspector / text input 専用の入力精度。 */
 export const INSPECTOR_TIME_PRECISION_MINUTES = 1;
 
-/** drag / resize の default snap。store 未設定時のフォールバック。 */
-export const DEFAULT_DRAG_SNAP_MINUTES = 15;
+/** drag / resize / tap の snap 粒度。全操作 1 分で統一（#2496）。 */
+export const DEFAULT_DRAG_SNAP_MINUTES = 1;
 
-/** user setting で選べる drag snap の値域。 */
-export const ALLOWED_DRAG_SNAP_MINUTES = [5, 10, 15, 30] as const;
+/** drag / resize で作成・変更できるブロック長の下限。snap 粒度とは独立。 */
+export const MIN_TIMEBLOCK_DURATION_MINUTES = 5;
 
-export type DragSnapMinutes = (typeof ALLOWED_DRAG_SNAP_MINUTES)[number];
+/**
+ * ハプティック発火の境界間隔。
+ *
+ * snap が 1 分粒度になったため「snap 変化ごとに発火」では 1px 移動ごとに
+ * 振動が連射される。5 分境界を跨いだ時だけ発火させる。
+ */
+export const HAPTIC_BOUNDARY_MINUTES = 5;
+
+/** prev → next の移動が HAPTIC_BOUNDARY_MINUTES 境界を跨いだか（分単位で比較）。 */
+export function crossedHapticBoundary(prevMinutes: number, nextMinutes: number): boolean {
+  if (prevMinutes === nextMinutes) return false;
+  return (
+    Math.floor(prevMinutes / HAPTIC_BOUNDARY_MINUTES) !==
+    Math.floor(nextMinutes / HAPTIC_BOUNDARY_MINUTES)
+  );
+}

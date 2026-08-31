@@ -7,6 +7,8 @@
 
 import { MS_PER_MINUTE } from '@/lib/date';
 
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../domain/precision';
+
 /** SSRフォールバック用デフォルトの1時間高さ(px) */
 const DEFAULT_HOUR_HEIGHT = 72;
 
@@ -106,38 +108,6 @@ export function calculateGridHeight(
 }
 
 /**
- * 15分単位に丸める
- * @param time - 丸める時刻
- * @param direction - 'up' | 'down' | 'nearest'
- * @returns 丸められた時刻
- */
-export function roundToQuarterHour(
-  time: Date,
-  direction: 'up' | 'down' | 'nearest' = 'nearest',
-): Date {
-  const result = new Date(time);
-  const minutes = result.getMinutes();
-  const quarterHour = 15;
-
-  let roundedMinutes: number;
-  if (direction === 'up') {
-    roundedMinutes = Math.ceil(minutes / quarterHour) * quarterHour;
-  } else if (direction === 'down') {
-    roundedMinutes = Math.floor(minutes / quarterHour) * quarterHour;
-  } else {
-    roundedMinutes = Math.round(minutes / quarterHour) * quarterHour;
-  }
-
-  if (roundedMinutes === 60) {
-    result.setHours(result.getHours() + 1, 0, 0, 0);
-  } else {
-    result.setMinutes(roundedMinutes, 0, 0);
-  }
-
-  return result;
-}
-
-/**
  * イベントの継続時間を分で取得
  * @param start - 開始時刻
  * @param end - 終了時刻
@@ -161,7 +131,7 @@ export function layoutEntryToVerticalPosition(
 ): { top: number; height: number } {
   const startHour = start.getHours() + start.getMinutes() / 60;
   const endHour = end.getHours() + end.getMinutes() / 60;
-  const duration = Math.max(endHour - startHour, 0.25); // 最小15分
+  const duration = Math.max(endHour - startHour, MIN_TIMEBLOCK_DURATION_MINUTES / 60);
 
   const top = startHour * hourHeight;
   const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_EVENT_HEIGHT);

@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import { useTimeblockInspectorStore } from '@/features/timeblock';
 import { logger } from '@/lib/logger';
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../../../domain/precision';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
 import type { CalendarDisplayEvent } from '../../../types/calendar.types';
@@ -38,11 +39,11 @@ export function useCalendarHandlers() {
   // ドラッグ/ダブルクリック/タップ → InlineActivityPalette 表示
   const handleDateTimeRangeSelect = useCallback(
     (selection: DateTimeSelection) => {
-      // 最小15分制約の適用
+      // 最小ブロック長制約の適用
       const startMinutes = selection.startHour * 60 + selection.startMinute;
       let endMinutes = selection.endHour * 60 + selection.endMinute;
-      if (endMinutes - startMinutes < 15) {
-        endMinutes = startMinutes + 15;
+      if (endMinutes - startMinutes < MIN_TIMEBLOCK_DURATION_MINUTES) {
+        endMinutes = startMinutes + MIN_TIMEBLOCK_DURATION_MINUTES;
       }
 
       logger.log('Calendar Drag Selection:', {

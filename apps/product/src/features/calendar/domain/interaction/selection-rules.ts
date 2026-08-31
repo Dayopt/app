@@ -6,11 +6,11 @@
  *
  * 制約:
  * - drag 選択は下方向のみ（start <= end）
- * - drag 選択は最低 `DEFAULT_DRAG_SNAP_MINUTES` 分の長さを保証
+ * - drag 選択は最低 `MIN_TIMEBLOCK_DURATION_MINUTES` 分の長さを保証
  * - 即時選択 (createInstantSelection) は defaultDuration を当てて 24:00 を超えないように clamp
  */
 
-import { DEFAULT_DRAG_SNAP_MINUTES } from '../precision';
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../precision';
 
 /** 時刻入力（hour: 0-23, minute: 0-59） */
 /** @public Pending domain barrel contract cleanup in I-08. */
@@ -38,14 +38,14 @@ export interface DateSelectionRange extends SelectionRange {
  * 開始時刻と現在時刻から drag 選択範囲を計算する。
  *
  * - 下方向のみ（start より手前にはドラッグできない）
- * - 最低 `DEFAULT_DRAG_SNAP_MINUTES` 分の長さを保証
+ * - 最低 `MIN_TIMEBLOCK_DURATION_MINUTES` 分の長さを保証
  * - 0:00-23:59 にクランプ
  */
 export function calculateSelection(start: HourMinute, current: HourMinute): SelectionRange {
   const startMin = start.hour * 60 + start.minute;
   const currentMin = current.hour * 60 + current.minute;
 
-  const endMin = Math.max(currentMin, startMin + DEFAULT_DRAG_SNAP_MINUTES);
+  const endMin = Math.max(currentMin, startMin + MIN_TIMEBLOCK_DURATION_MINUTES);
 
   const startHour = Math.max(0, Math.floor(startMin / 60));
   const startMinute = Math.max(0, startMin % 60);

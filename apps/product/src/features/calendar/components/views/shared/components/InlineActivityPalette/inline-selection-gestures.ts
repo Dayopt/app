@@ -7,6 +7,10 @@
 
 import type React from 'react';
 
+import {
+  crossedHapticBoundary,
+  MIN_TIMEBLOCK_DURATION_MINUTES,
+} from '../../../../../domain/precision';
 import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
 
 interface SelectionTimesUpdate {
@@ -24,7 +28,7 @@ interface ResizeGestureOptions {
   tap: () => void;
 }
 
-/** 下端 handle: end time だけを 15 分単位で更新するハンドラを生成する */
+/** 下端 handle: end time だけを 1 分単位で更新するハンドラを生成する */
 export function createResizeStartHandler({
   hourHeight,
   startMinutes,
@@ -34,16 +38,16 @@ export function createResizeStartHandler({
 }: ResizeGestureOptions): (clientY: number) => void {
   return (clientY: number) => {
     const baseEndMin = endMinutes;
-    const minEndMin = startMinutes + 15;
+    const minEndMin = startMinutes + MIN_TIMEBLOCK_DURATION_MINUTES;
     let lastEndMin = baseEndMin;
 
     const onMove = (event: PointerEvent) => {
-      const deltaMin = Math.round(((event.clientY - clientY) * 60) / hourHeight / 15) * 15;
+      const deltaMin = Math.round(((event.clientY - clientY) * 60) / hourHeight);
       const next = Math.max(minEndMin, Math.min(24 * 60, baseEndMin + deltaMin));
       if (next === lastEndMin) return;
+      if (crossedHapticBoundary(lastEndMin, next)) tap();
       lastEndMin = next;
       updateSelectionTimes({ endHour: Math.floor(next / 60), endMinute: next % 60 });
-      tap();
     };
 
     const onEnd = () => {
@@ -105,9 +109,10 @@ export function createBodyPointerDownHandler({
         return;
       }
       // moving
-      const deltaMin = Math.round(((event.clientY - startClientY) * 60) / hourHeight / 15) * 15;
+      const deltaMin = Math.round(((event.clientY - startClientY) * 60) / hourHeight);
       const next = Math.max(0, Math.min(24 * 60 - duration, baseStartMin + deltaMin));
       if (next === lastStartMin) return;
+      if (crossedHapticBoundary(lastStartMin, next)) tap();
       lastStartMin = next;
       const nextEnd = next + duration;
       updateSelectionTimes({
@@ -116,7 +121,6 @@ export function createBodyPointerDownHandler({
         endHour: Math.floor(nextEnd / 60),
         endMinute: nextEnd % 60,
       });
-      tap();
     };
 
     const onEnd = () => {

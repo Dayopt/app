@@ -172,7 +172,7 @@ export interface InteractionContext {
   displayDates?: Date[];
   /** Current view mode */
   viewMode: 'day' | '3day' | '5day' | 'week';
-  /** Snap interval in minutes (default: 15) */
+  /** Snap interval in minutes (default: DEFAULT_DRAG_SNAP_MINUTES = 1) */
   snapIntervalMinutes?: number;
   /** Get entry duration in milliseconds by ID */
   getTimeblockDurationMs: (timeblockId: string) => number;

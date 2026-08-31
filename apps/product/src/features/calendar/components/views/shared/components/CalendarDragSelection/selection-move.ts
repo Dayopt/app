@@ -14,6 +14,7 @@ import {
   createInstantSelection,
 } from '../../../../../domain/interaction/selection-rules';
 import { pixelsToTime } from '../../../../../domain/interaction/time-math';
+import { crossedHapticBoundary } from '../../../../../domain/precision';
 import { checkClientSideOverlapByKind } from '../../../../../lib/overlap';
 import type { CalendarDisplayEvent } from '../../../../../types/calendar.types';
 import type { TimeRange } from './types';
@@ -40,7 +41,7 @@ interface SelectionMoveResult {
   hasDragged: boolean;
   isOverlapping: boolean;
   snap: { startMin: number; endMin: number };
-  /** スナップ位置が直前から変わったか（true ならハプティック） */
+  /** スナップ位置が直前からハプティック境界を跨いだか（true ならハプティック） */
   snapChanged: boolean;
 }
 
@@ -62,7 +63,9 @@ export function computeSelectionMove({
   const startMin = selection.startHour * 60 + selection.startMinute;
   const endMin = selection.endHour * 60 + selection.endMinute;
   const snapChanged =
-    lastSnap !== null && (startMin !== lastSnap.startMin || endMin !== lastSnap.endMin);
+    lastSnap !== null &&
+    (crossedHapticBoundary(lastSnap.startMin, startMin) ||
+      crossedHapticBoundary(lastSnap.endMin, endMin));
 
   const startTime = new Date(date);
   startTime.setHours(selection.startHour, selection.startMinute, 0, 0);
