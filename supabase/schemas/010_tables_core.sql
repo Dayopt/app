@@ -258,7 +258,6 @@ CREATE TABLE public.user_settings (
   time_format TEXT NOT NULL DEFAULT '24h',      -- 24h / 12h
   week_starts_on SMALLINT NOT NULL DEFAULT 1,   -- 0=Sun, 1=Mon, 6=Sat
   default_duration INTEGER NOT NULL DEFAULT 60,
-  snap_interval SMALLINT NOT NULL DEFAULT 15,   -- 5/10/15/30分
   -- 表示
   show_weekends BOOLEAN NOT NULL DEFAULT true,
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
