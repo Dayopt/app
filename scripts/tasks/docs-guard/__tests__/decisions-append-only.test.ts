@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   DECISIONS_PATH,
   hasRemovedOrModifiedEntryLines,
+  normalizeEntryReferenceLinks,
   parseTagVocabulary,
   runDecisionsAppendOnlyGuard,
   splitSections,
@@ -107,6 +108,64 @@ describe('hasRemovedOrModifiedEntryLines', () => {
 
   it('既存行の削除はtrue', () => {
     expect(hasRemovedOrModifiedEntryLines('- a\n- b\n', '- a\n')).toBe(true);
+  });
+
+  // #2481: 参照番号の表記だけを変える（素の #N ↔ markdown リンク）変更は
+  // 決定の内容を変えないので append-only 違反にしない。
+  it('参照を素の #N から markdown リンクへ変える変更はfalse', () => {
+    expect(
+      hasRemovedOrModifiedEntryLines(
+        '- 2026-08-18: [process] x（参照: #2195）\n',
+        '- 2026-08-18: [process] x（参照: [#2195](https://github.com/Dayopt/dayopt/issues/2195)）\n',
+      ),
+    ).toBe(false);
+  });
+
+  it('リンク先の番号が表示と食い違う差し替えはtrue', () => {
+    expect(
+      hasRemovedOrModifiedEntryLines(
+        '- 2026-08-18: [process] x（参照: #2195）\n',
+        '- 2026-08-18: [process] x（参照: [#2195](https://github.com/Dayopt/dayopt/issues/9999)）\n',
+      ),
+    ).toBe(true);
+  });
+
+  it('別ドメインへのリンク化はtrue', () => {
+    expect(
+      hasRemovedOrModifiedEntryLines(
+        '- 2026-08-18: [process] x（参照: #2195）\n',
+        '- 2026-08-18: [process] x（参照: [#2195](https://example.com/2195)）\n',
+      ),
+    ).toBe(true);
+  });
+
+  it('リンク化と同時に本文を書き換える変更はtrue', () => {
+    expect(
+      hasRemovedOrModifiedEntryLines(
+        '- 2026-08-18: [process] x（参照: #2195）\n',
+        '- 2026-08-18: [process] y（参照: [#2195](https://github.com/Dayopt/dayopt/issues/2195)）\n',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('normalizeEntryReferenceLinks', () => {
+  it('この repo の issues / pull リンクを素の #N へ畳む', () => {
+    expect(
+      normalizeEntryReferenceLinks(
+        '（参照: [#1](https://github.com/Dayopt/dayopt/issues/1)、[#2](https://github.com/Dayopt/dayopt/pull/2)）',
+      ),
+    ).toBe('（参照: #1、#2）');
+  });
+
+  it('表示番号とリンク先番号が食い違うものは畳まない', () => {
+    const line = '（参照: [#1](https://github.com/Dayopt/dayopt/issues/2)）';
+    expect(normalizeEntryReferenceLinks(line)).toBe(line);
+  });
+
+  it('他 repo / 他ドメインのリンクは畳まない', () => {
+    const line = '（参照: [#1](https://github.com/other/repo/issues/1)）';
+    expect(normalizeEntryReferenceLinks(line)).toBe(line);
   });
 });
 
