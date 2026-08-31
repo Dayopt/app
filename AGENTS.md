@@ -127,7 +127,7 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-保護対象path（auth/RLS/migration/billing/webhook/timeblock等）に触れるPR、または `review:full` ラベル付きPRは `[internal-review]` marker（`pr-cross-review` skill）が必須。それ以外はCI green + thread resolveのみでmerge可能。
+保護対象pathに触れるPR、または `review:full` ラベル付きPRは `[internal-review]` marker（`pr-cross-review` skill）が必須。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*`（MCP公開契約 + service roleのRLS迂回クエリ）と `private-timeblock-search-query.ts`（検索語のprivacy境界）は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPRには `review:full` を手で付ける。
 
 ### レーン運用
 

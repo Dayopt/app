@@ -6,11 +6,29 @@
  * for a PR (#2478, tempo-linked review gate).
  *
  * The old design required internal cross-review on every PR uniformly. This
- * script narrows that requirement to PRs that touch protected paths (auth,
- * OAuth, billing, migrations, external integrations, timezone-sensitive
- * invariants, and the guardrail scripts themselves). It is the single source
- * of truth consumed by the merge gate in `scripts/tasks/finish-branch.sh`
- * (the glob list is not duplicated in bash to avoid drift).
+ * script narrows that requirement to PRs that touch protected paths. It is the
+ * single source of truth consumed by the merge gate in
+ * `scripts/tasks/finish-branch.sh` (the glob list is not duplicated in bash to
+ * avoid drift).
+ *
+ * The selection criterion is "external contract or irreversible" (#2489,
+ * 2026-08-31): a mistake there is not caught by CI and cannot be undone by a
+ * revert alone - it leaks across a tenant boundary, breaks an existing external
+ * consumer, mutates production data, or disables the guardrails themselves.
+ *
+ * Dayopt's core time invariants (timezone / half-open interval / overlap) were
+ * dropped from this list in the same change. They are reversible in-app
+ * behavior covered by unit tests and CI, and keeping them here put nearly every
+ * product PR on the required side - which, combined with cloud sessions where
+ * `Workflow` / `Agent` are disabled by default (#2472), stalled merges instead
+ * of adding review. `review:full` remains the manual escalation for a PR that
+ * deserves the heavier review without matching a glob.
+ *
+ * Retreat condition for that call: the safety net for those paths is the unit
+ * test suite under `apps/product/src/features/timeblock` and
+ * `apps/product/src/lib/time`. Nothing here re-checks that the suite still
+ * exists, so a PR that deletes or skips those tests must carry `review:full`
+ * by hand - that is the one case where the reasoning above stops holding.
  *
  * Usage:
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
@@ -63,15 +81,14 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/features/settings/server/billing-*.ts',
   // external calendar integrations
   'apps/product/src/features/external-calendar/server/providers/**',
+  // timeblock feature の server 側だけに同居する高リスク面（#2489 クロスレビュー P1）。
+  // feature 全体は必須側から外したが、この 2 つは「外部契約 or 不可逆」に該当するため
+  // 残す: mcp-* は MCP の公開契約 + service role（RLS を迂回する）クエリ、
+  // private-timeblock-search-query.ts は検索語を Sentry から隔離する privacy 境界。
+  'apps/product/src/features/timeblock/server/mcp-*',
+  'apps/product/src/features/timeblock/server/private-timeblock-search-query.ts',
   // system API
   'apps/product/src/app/api/v1/system/**',
-  // Dayopt's core invariants (timezone / half-open interval / overlap etc.)
-  'apps/product/src/features/timeblock/**',
-  'apps/product/src/features/calendar/**',
-  'apps/product/src/lib/time/**',
-  'apps/product/src/lib/date/**',
-  'apps/product/src/lib/timezone-utils.ts',
-  'apps/product/src/lib/server/user-timezone-cache.ts',
   // the guardrails themselves
   '.husky/**',
   'scripts/hooks/**',
