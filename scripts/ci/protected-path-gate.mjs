@@ -100,7 +100,7 @@ export const PROTECTED_PATH_GLOBS = [
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
-  'scripts/production-config-audit.mjs',
+  'scripts/ci/production-config-audit.mjs',
   'apps/product/production-build-gate.mjs',
   'apps/web/production-build-gate.mjs',
   '.github/workflows/production-config-audit.yml',
