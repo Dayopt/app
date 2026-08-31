@@ -355,10 +355,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # --budget-seconds は上の timeout-minutes より短くする。予算に達した時点で
+      # script 側が次の 1 件を始めずに打ち切り、残件と再開コマンドを Step Summary
+      # へ残して exit 0 する（#2506）。余白が要るのは、予算ちょうどにすると最後の
+      # 1 件の処理中に job timeout の SIGKILL が来て打ち切り報告ごと消えるため。
+      # timeout-minutes を変える時はこの値も一緒に見直すこと。
       - name: status:* ラベルの batch sweep を実行
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/ci/strip-status-labels.mjs bulk --execute
+        run: node scripts/ci/strip-status-labels.mjs bulk --execute --budget-seconds 480
 
   # ─── replica-check（旧 replica-check.yml）───────────────────────────
   replica-check:
