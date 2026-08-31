@@ -24,6 +24,12 @@
  * of adding review. `review:full` remains the manual escalation for a PR that
  * deserves the heavier review without matching a glob.
  *
+ * Retreat condition for that call: the safety net for those paths is the unit
+ * test suite under `apps/product/src/features/timeblock` and
+ * `apps/product/src/lib/time`. Nothing here re-checks that the suite still
+ * exists, so a PR that deletes or skips those tests must carry `review:full`
+ * by hand - that is the one case where the reasoning above stops holding.
+ *
  * Usage:
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
  *   node scripts/ci/protected-path-gate.mjs apps/product/src/features/auth/foo.ts
@@ -75,6 +81,12 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/features/settings/server/billing-*.ts',
   // external calendar integrations
   'apps/product/src/features/external-calendar/server/providers/**',
+  // timeblock feature の server 側だけに同居する高リスク面（#2489 クロスレビュー P1）。
+  // feature 全体は必須側から外したが、この 2 つは「外部契約 or 不可逆」に該当するため
+  // 残す: mcp-* は MCP の公開契約 + service role（RLS を迂回する）クエリ、
+  // private-timeblock-search-query.ts は検索語を Sentry から隔離する privacy 境界。
+  'apps/product/src/features/timeblock/server/mcp-*',
+  'apps/product/src/features/timeblock/server/private-timeblock-search-query.ts',
   // system API
   'apps/product/src/app/api/v1/system/**',
   // the guardrails themselves

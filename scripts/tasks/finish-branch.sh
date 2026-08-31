@@ -661,7 +661,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 高リスク path（auth / OAuth / 決済 / migration / 外部 calendar provider /
   # system API / ガードレール自身）だけへ `[internal-review]` marker gate を必須の
   # ままにする。判定基準は「外部契約 or 不可逆」で、timezone 系の時間不変条件は
-  # 可逆かつ test が担保するため #2489（2026-08-31）で対象から外した。
+  # 可逆かつ test が担保するため #2489（2026-08-31）で対象から外した。ただし
+  # timeblock feature の server 側に同居する MCP 公開契約 / service role クエリ /
+  # privacy 境界だけは、同じ基準に該当するため必須側へ残してある。
   #
   # 判定は scripts/ci/protected-path-gate.mjs（正本）へ委譲する。入力は
   # Impact Resolver（§影響範囲を判定）で既に取得済みの $CHANGED_FILES を再利用し、

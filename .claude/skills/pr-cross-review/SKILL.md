@@ -9,7 +9,7 @@ maxTurns: 20
 
 指揮台が merge 前に実行する内製クロスレビューの標準手順。外部レビュー（Codex）廃止（2026-08-13、`AGENTS.md` 冒頭の凍結注記参照）に伴い、`AGENTS.md §PR / git 運用` §レビュー指摘の必須解決 が要求するレビュー痕跡はこのスキルが生成する `[internal-review]` marker 付きコメント + inline review comment で満たす。
 
-**このレビューが必須になる PR は保護対象 path / `review:full` ラベルに該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
+**このレビューが必須になる PR は保護対象 path / `review:full` ラベルに該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
 
 **常設の subagent 定義（`.claude/agents/*.md`）は 2026-08 に全廃した（#2478）。** risk-reviewer / behavior-verifier / architecture-guard の persona・read-only 契約・review scope は、`.claude/skills/pr-cross-review/cross-review-workflow.js` の `ROLE_PROMPTS` へ inline prompt として畳み込んである（下記手順 3 参照）。role 名は `Workflow` 呼び出し時のラベル・schema 選択キーとしてのみ残り、`Agent` tool の `subagent_type` としては存在しない。
 

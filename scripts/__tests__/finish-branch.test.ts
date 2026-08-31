@@ -1718,6 +1718,43 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(status).toBe(0);
   });
 
+  // #2489 クロスレビュー P1: feature を丸ごと外すと、timeblock/server に同居する
+  // service role（RLS 迂回）の MCP クエリと privacy 境界まで必須側から落ちる。
+  // 「外部契約 or 不可逆」に該当するこの 2 面だけは必須側へ残す。
+  it.each([
+    [
+      'apps/product/src/features/timeblock/server/mcp-mutation-db.ts',
+      'apps/product/src/features/timeblock/server/mcp-*',
+    ],
+    [
+      'apps/product/src/features/timeblock/server/mcp-timeblock-read-client.ts',
+      'apps/product/src/features/timeblock/server/mcp-*',
+    ],
+    [
+      'apps/product/src/features/timeblock/server/private-timeblock-search-query.ts',
+      'apps/product/src/features/timeblock/server/private-timeblock-search-query.ts',
+    ],
+  ])('timeblock/server の高リスク面（%s）は marker を要求する', (file, glob) => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [file],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain(`review gate: required (matched ${glob})`);
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('同じ timeblock/server でも高リスク面でない service は marker を要求しない', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/timeblock/server/plan-service.ts'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(status).toBe(0);
+  });
+
   it('コア時間不変条件の path でも review:full ラベルがあれば marker を必須にする', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/timeblock/lib/timeblock-status.ts'],
