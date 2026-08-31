@@ -5,7 +5,6 @@ import {
   getDurationInMinutes,
   getEventStyle,
   pixelsToTime,
-  roundToQuarterHour,
   timeToPixels,
 } from './grid';
 
@@ -116,83 +115,6 @@ describe('calculateGridHeight', () => {
 
   it('デフォルトで0-24時を使用する', () => {
     expect(calculateGridHeight(undefined, undefined, 72)).toBe(1728);
-  });
-});
-
-describe('roundToQuarterHour', () => {
-  describe('direction = "nearest"', () => {
-    it('7分を0分に丸める', () => {
-      const time = new Date('2026-01-15T10:07:00');
-      const result = roundToQuarterHour(time, 'nearest');
-      expect(result.getMinutes()).toBe(0);
-    });
-
-    it('8分を15分に丸める', () => {
-      const time = new Date('2026-01-15T10:08:00');
-      const result = roundToQuarterHour(time, 'nearest');
-      expect(result.getMinutes()).toBe(15);
-    });
-
-    it('15分はそのまま', () => {
-      const time = new Date('2026-01-15T10:15:00');
-      const result = roundToQuarterHour(time, 'nearest');
-      expect(result.getMinutes()).toBe(15);
-    });
-  });
-
-  describe('direction = "up"', () => {
-    it('1分を15分に切り上げる', () => {
-      const time = new Date('2026-01-15T10:01:00');
-      const result = roundToQuarterHour(time, 'up');
-      expect(result.getMinutes()).toBe(15);
-    });
-
-    it('0分はそのまま', () => {
-      const time = new Date('2026-01-15T10:00:00');
-      const result = roundToQuarterHour(time, 'up');
-      expect(result.getMinutes()).toBe(0);
-    });
-
-    it('46分を次の時間の0分に切り上げる', () => {
-      const time = new Date('2026-01-15T10:46:00');
-      const result = roundToQuarterHour(time, 'up');
-      expect(result.getHours()).toBe(11);
-      expect(result.getMinutes()).toBe(0);
-    });
-  });
-
-  describe('direction = "down"', () => {
-    it('14分を0分に切り下げる', () => {
-      const time = new Date('2026-01-15T10:14:00');
-      const result = roundToQuarterHour(time, 'down');
-      expect(result.getMinutes()).toBe(0);
-    });
-
-    it('29分を15分に切り下げる', () => {
-      const time = new Date('2026-01-15T10:29:00');
-      const result = roundToQuarterHour(time, 'down');
-      expect(result.getMinutes()).toBe(15);
-    });
-
-    it('45分はそのまま', () => {
-      const time = new Date('2026-01-15T10:45:00');
-      const result = roundToQuarterHour(time, 'down');
-      expect(result.getMinutes()).toBe(45);
-    });
-  });
-
-  it('秒とミリ秒を0にリセットする', () => {
-    const time = new Date('2026-01-15T10:07:35.123');
-    const result = roundToQuarterHour(time);
-    expect(result.getSeconds()).toBe(0);
-    expect(result.getMilliseconds()).toBe(0);
-  });
-
-  it('元のDateを変更しない', () => {
-    const time = new Date('2026-01-15T10:07:00');
-    const originalMinutes = time.getMinutes();
-    roundToQuarterHour(time);
-    expect(time.getMinutes()).toBe(originalMinutes);
   });
 });
 

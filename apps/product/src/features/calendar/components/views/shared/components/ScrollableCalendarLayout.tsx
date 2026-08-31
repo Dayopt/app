@@ -196,10 +196,10 @@ export const ScrollableCalendarLayout = ({
       // 時間列以外の領域のクリックのみ処理
       if (showTimeColumn && x < resolvedTimeColumnWidth) return;
 
-      // 15分単位でスナップ
+      // 1分単位でスナップ
       const totalMinutes = Math.max(0, Math.floor((y / HOUR_HEIGHT) * 60));
       const hours = Math.floor(totalMinutes / 60);
-      const minutes = Math.round((totalMinutes % 60) / 15) * 15;
+      const minutes = totalMinutes % 60;
 
       if (hours >= 0 && hours < 24) {
         onTimeClick(hours, minutes);

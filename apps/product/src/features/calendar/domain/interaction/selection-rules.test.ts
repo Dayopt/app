@@ -12,30 +12,39 @@ describe('calculateSelection', () => {
     });
   });
 
-  it('下方向のみ: current が start より手前でも最低 15 分の長さを保証する', () => {
+  it('下方向のみ: current が start より手前でも最低 5 分の長さを保証する', () => {
     expect(calculateSelection({ hour: 10, minute: 0 }, { hour: 9, minute: 0 })).toEqual({
       startHour: 10,
       startMinute: 0,
       endHour: 10,
-      endMinute: 15,
+      endMinute: 5,
     });
   });
 
-  it('current = start + 5 分のとき、最低 15 分長を確保するため end = start + 15 分', () => {
-    expect(calculateSelection({ hour: 14, minute: 0 }, { hour: 14, minute: 5 })).toEqual({
+  it('current = start + 3 分のとき、最低 5 分長を確保するため end = start + 5 分', () => {
+    expect(calculateSelection({ hour: 14, minute: 0 }, { hour: 14, minute: 3 })).toEqual({
       startHour: 14,
       startMinute: 0,
       endHour: 14,
-      endMinute: 15,
+      endMinute: 5,
     });
   });
 
-  it('current = start ジャストでも最低 15 分長を確保する', () => {
+  it('current = start + 7 分は 1 分粒度でそのまま end になる（15 分に丸めない）', () => {
+    expect(calculateSelection({ hour: 14, minute: 0 }, { hour: 14, minute: 7 })).toEqual({
+      startHour: 14,
+      startMinute: 0,
+      endHour: 14,
+      endMinute: 7,
+    });
+  });
+
+  it('current = start ジャストでも最低 5 分長を確保する', () => {
     expect(calculateSelection({ hour: 8, minute: 30 }, { hour: 8, minute: 30 })).toEqual({
       startHour: 8,
       startMinute: 30,
       endHour: 8,
-      endMinute: 45,
+      endMinute: 35,
     });
   });
 

@@ -29,6 +29,7 @@ import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@dayopt/components';
 
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../../../../../domain/precision';
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import {
   DEFAULT_PLAN_LANE_WIDTH_PERCENT,
@@ -291,7 +292,7 @@ export function InlineActivityPalette({
             aria-label={tCalendar('event.adjustEndTime')}
             aria-orientation="vertical"
             aria-valuenow={endMinutes - startMinutes}
-            aria-valuemin={15}
+            aria-valuemin={MIN_TIMEBLOCK_DURATION_MINUTES}
             aria-valuemax={24 * 60}
             className="pointer-events-auto absolute right-0 left-0 cursor-ns-resize"
             style={{

@@ -50,14 +50,25 @@ describe('computeSelectionMove', () => {
     expect(result.snap).toEqual({ startMin: 540, endMin: 600 });
   });
 
-  it('開始位置より上へ動かしても最低 15 分の選択を維持する', () => {
+  it('開始位置より上へ動かしても最低 5 分の選択を維持する', () => {
     const result = computeSelectionMove(makeInput({ y: 500 }));
 
     expect(result.selection).toEqual({
       startHour: 9,
       startMinute: 0,
       endHour: 9,
-      endMinute: 15,
+      endMinute: 5,
+    });
+  });
+
+  it('1 分粒度で選択範囲を計算する（9:00 → 9:37）', () => {
+    const result = computeSelectionMove(makeInput({ y: 577 }));
+
+    expect(result.selection).toEqual({
+      startHour: 9,
+      startMinute: 0,
+      endHour: 9,
+      endMinute: 37,
     });
   });
 
@@ -76,13 +87,21 @@ describe('computeSelectionMove', () => {
     expect(result.snapChanged).toBe(false);
   });
 
-  it('スナップ位置が変わったら snapChanged になる', () => {
+  it('ハプティック境界（5 分）を跨いだら snapChanged になる', () => {
     const result = computeSelectionMove(makeInput({ lastSnap: { startMin: 540, endMin: 615 } }));
     expect(result.snapChanged).toBe(true);
   });
 
   it('スナップ位置が同じなら snapChanged にならない', () => {
     const result = computeSelectionMove(makeInput({ lastSnap: { startMin: 540, endMin: 600 } }));
+    expect(result.snapChanged).toBe(false);
+  });
+
+  it('同一 5 分区画内の 1 分移動では snapChanged にならない（振動連射防止）', () => {
+    // y=601 → end 10:01。lastSnap end=600 と同じ 5 分区画（600-604）
+    const result = computeSelectionMove(
+      makeInput({ y: 601, lastSnap: { startMin: 540, endMin: 600 } }),
+    );
     expect(result.snapChanged).toBe(false);
   });
 

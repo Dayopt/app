@@ -42,12 +42,13 @@ describe('RESIZE_START', () => {
       },
       createCtx({
         checkOverlap: (_timeblockId, start, end) =>
-          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+          start.getHours() === 10 && start.getMinutes() === 7 && end.getHours() === 11,
       }),
     );
 
     if (state.mode === 'resizing') {
-      expect(state.previewTime.start.getMinutes()).toBe(0);
+      // 1 分 snap（#2496）なので 10:07 をそのまま保持する
+      expect(state.previewTime.start.getMinutes()).toBe(7);
       expect(state.isOverlapping).toBe(true);
     }
   });
@@ -69,12 +70,13 @@ describe('RESIZE_START', () => {
 
     if (state.mode === 'resizing') {
       const durationMs = state.previewTime.end.getTime() - state.previewTime.start.getTime();
-      expect(state.snappedHeight).toBe(15);
+      // 1 分 snap（#2496）: 10:08-10:16 の 8 分 entry をそのまま保持する
+      expect(state.snappedHeight).toBe(8);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.start.getMinutes()).toBe(8);
       expect(state.previewTime.end.getHours()).toBe(10);
-      expect(state.previewTime.end.getMinutes()).toBe(30);
-      expect(durationMs).toBe(15 * 60 * 1000);
+      expect(state.previewTime.end.getMinutes()).toBe(16);
+      expect(durationMs).toBe(8 * 60 * 1000);
       expect(state.isOverlapping).toBe(false);
     }
   });
@@ -112,13 +114,13 @@ describe('POINTER_MOVE while resizing', () => {
     }
   });
 
-  it('enforces minimum height of one snap interval', () => {
-    // Move 50px up → try to make height 10px, should clamp to 15 (15min)
-    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY - 50 };
+  it('enforces minimum duration (MIN_TIMEBLOCK_DURATION_MINUTES)', () => {
+    // Move 58px up → try to make height 2px, should clamp to 5 (5min)
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY - 58 };
     const { state } = dispatch(resizingState, { type: 'POINTER_MOVE', point: movedPoint });
 
     if (state.mode === 'resizing') {
-      expect(state.snappedHeight).toBe(15); // minimum = (60/60)*15 = 15px
+      expect(state.snappedHeight).toBe(5); // minimum = (60/60)*5 = 5px
     }
   });
 

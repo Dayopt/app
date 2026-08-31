@@ -13,19 +13,24 @@ import type { InteractionState, TimeblockRect } from './types';
 // ========================================
 
 describe('snapToGrid', () => {
-  it('snaps to 15-min intervals', () => {
+  it('snaps exact grid positions unchanged', () => {
     // 9:00 = 540px at 60px/h
     expect(snapToGrid(540, 60)).toEqual({ snappedTop: 540, hour: 9, minute: 0 });
   });
 
-  it('snaps 9:07 → 9:00', () => {
+  it('default snap は 1 分粒度（#2496: 9:07 を保持）', () => {
     // 9:07 = 547px
-    expect(snapToGrid(547, 60)).toEqual({ snappedTop: 540, hour: 9, minute: 0 });
+    expect(snapToGrid(547, 60)).toEqual({ snappedTop: 547, hour: 9, minute: 7 });
   });
 
-  it('snaps 9:08 → 9:15', () => {
+  it('interval=15 明示で 9:07 → 9:00', () => {
+    // 9:07 = 547px
+    expect(snapToGrid(547, 60, 15)).toEqual({ snappedTop: 540, hour: 9, minute: 0 });
+  });
+
+  it('interval=15 明示で 9:08 → 9:15', () => {
     // 9:08 = 548px
-    expect(snapToGrid(548, 60)).toEqual({ snappedTop: 555, hour: 9, minute: 15 });
+    expect(snapToGrid(548, 60, 15)).toEqual({ snappedTop: 555, hour: 9, minute: 15 });
   });
 
   it('snaps 9:52 → 9:45', () => {
@@ -55,7 +60,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
   // 10:07 entry を表す originalPosition: top=607（hourHeight=60 で 10*60+7=607）
   const off607: TimeblockRect = { top: 607, left: 0, width: 200, height: 60 };
 
-  it('LONGPRESS_FIRED on 10:07 entry → preview start snaps to 10:00', () => {
+  it('LONGPRESS_FIRED on 10:07 entry → preview start keeps 10:07 (1 分 snap)', () => {
     const longpressState: InteractionState = {
       mode: 'longpress-pending',
       timeblockId: 'a',
@@ -67,13 +72,13 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
 
     expect(state.mode).toBe('dragging');
     if (state.mode === 'dragging') {
-      expect(state.snappedTop).toBe(600);
+      expect(state.snappedTop).toBe(607);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
     }
   });
 
-  it('drag 10:07 → +30px → 10:30', () => {
+  it('drag 10:07 → +30px → 10:37（1 分 snap で :07 を保持）', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
       timeblockId: 'a',
@@ -93,13 +98,13 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
     const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
 
     if (state.mode === 'dragging') {
-      expect(state.snappedTop).toBe(630);
+      expect(state.snappedTop).toBe(637);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(30);
+      expect(state.previewTime.start.getMinutes()).toBe(37);
     }
   });
 
-  it('drag 10:07 → +7px → 10:15', () => {
+  it('drag 10:07 → +7px → 10:14（1 分 snap）', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
       timeblockId: 'a',
@@ -119,8 +124,8 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
     const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
 
     if (state.mode === 'dragging') {
-      expect(state.snappedTop).toBe(615);
-      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.snappedTop).toBe(614);
+      expect(state.previewTime.start.getMinutes()).toBe(14);
     }
   });
 
@@ -228,7 +233,7 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
     }
   });
 
-  it('RESIZE_START on 10:07 entry → preview range snaps to 10:00-11:00', () => {
+  it('RESIZE_START on 10:07 entry → preview range keeps 10:07-11:07 (1 分 snap)', () => {
     const { state } = dispatch(IDLE, {
       type: 'RESIZE_START',
       timeblockId: 'a',
@@ -239,13 +244,13 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
 
     if (state.mode === 'resizing') {
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
       expect(state.previewTime.end.getHours()).toBe(11);
-      expect(state.previewTime.end.getMinutes()).toBe(0);
+      expect(state.previewTime.end.getMinutes()).toBe(7);
     }
   });
 
-  it('resize 10:07-11:07 entry を +15px → 10:00-11:15', () => {
+  it('resize 10:07-11:07 entry を +15px → 10:07-11:22（1 分 snap）', () => {
     const resizingState: InteractionState = {
       mode: 'resizing',
       timeblockId: 'a',
@@ -266,9 +271,9 @@ describe('precision regression: drag/resize snaps off-grid times to the absolute
     if (state.mode === 'resizing') {
       expect(state.snappedHeight).toBe(75);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
       expect(state.previewTime.end.getHours()).toBe(11);
-      expect(state.previewTime.end.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getMinutes()).toBe(22);
     }
   });
 });
@@ -328,17 +333,18 @@ describe('day-end boundary regression', () => {
     }
   });
 
-  it('grid selection at 23:45 ends at next-day 00:00', () => {
+  it('grid selection at 23:56 ends at next-day 00:00', () => {
+    // 最小 5 分の初期選択が日境界を超えるケース（23:56 + 5 分 → 24:00 で clamp）
     const { state } = dispatch(IDLE, {
       type: 'GRID_POINTER_DOWN',
       point: origin,
       dateIndex: 0,
-      gridY: 1425,
+      gridY: 1436,
     });
 
     if (state.mode === 'selecting') {
       expect(state.selectionRange.start.getHours()).toBe(23);
-      expect(state.selectionRange.start.getMinutes()).toBe(45);
+      expect(state.selectionRange.start.getMinutes()).toBe(56);
       expect(state.selectionRange.end.getDate()).toBe(16);
       expect(state.selectionRange.end.getHours()).toBe(0);
       expect(state.selectionRange.end.getMinutes()).toBe(0);

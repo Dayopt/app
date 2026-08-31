@@ -122,12 +122,13 @@ describe('LONGPRESS_FIRED', () => {
       { type: 'LONGPRESS_FIRED' },
       createCtx({
         checkOverlap: (_timeblockId, start, end) =>
-          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+          start.getHours() === 10 && start.getMinutes() === 7 && end.getHours() === 11,
       }),
     );
 
     if (state.mode === 'dragging') {
-      expect(state.previewTime.start.getMinutes()).toBe(0);
+      // 1 分 snap（#2496）なので 10:07 をそのまま保持する
+      expect(state.previewTime.start.getMinutes()).toBe(7);
       expect(state.isOverlapping).toBe(true);
     }
   });
