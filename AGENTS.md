@@ -165,11 +165,12 @@ worktree で作業するセッション（レーン）は次を守る:
 | `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                              |
 | `test`                 | 新機能・バグ修正後のテスト                                                            |
 | `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）                  |
-| `docs-writing`         | ユーザー向けdocs・リリースノート・decisionログ                                        |
+| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                                    |
 | `docs-audit`           | 公開docsの監査                                                                        |
 | `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                              |
 | `gardening`            | 月次ガーデニングの人間パート（明示依頼時のみ）                                        |
 | `night-watch`          | 夜勤checklistの追加・変更、cron障害時の手動代行                                       |
+| `morning-digest`       | 朝の蒸留層（Haiku Routine）の障害時の手動代行、蒸留仕様の変更検討                     |
 | `audit-ai-config`      | AI設定の棚卸し・audit                                                                 |
 | `blog-ideas`           | ブログネタ提案とissue起票                                                             |
 | `usability-probe`      | Haikuユーザビリティプローブ実行                                                       |

@@ -78,4 +78,4 @@ AGENTS.md は次も確認する。
 - repo 内の `.claude/settings.local.json` のような local state は、削除提案前に git 管理対象かを確認する。
 - 「無効化して様子見」を基本方針にしない。git 管理対象で不要と判断できるものは削除候補にし、必要なら履歴から復元する。
 - parent session の live permission が child の既定値を上書きし得る platform では、manifestだけを security boundary と表現しない。
-- purpose-built writer を review role へ一般化しない。writer 例外は `AGENTS.md §委任・報告の作法` §Writer ownership の条件をすべて満たすものだけにする。
+- purpose-built writer を review role へ一般化しない。writer 例外は `AGENTS.md §委任・報告の作法` の writer 4 条件をすべて満たすものだけにする。

@@ -1,6 +1,6 @@
 ---
 name: docs-writing
-description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/blog/{en,ja}/` の `category: 'release'` 記事）作成時、アーキテクチャ意思決定確定後の decision ログ（技術判断・プロダクト判断ともに各ドメインの `log/YYYY-MM-DD-slug.md`）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。コード内コメントや一時メモでは発動しない。
+description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/blog/{en,ja}/` の `category: 'release'` 記事）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。意思決定ログの追記（`decision` skill の領域）やコード内コメント・一時メモでは発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -18,7 +18,6 @@ app側の技術ドキュメント（`docs/`）とは別物。
 
 - 新機能の public API 仕様が確定し、ユーザー向け使い方ドキュメントが必要になった時
 - リリース作業完了後、`apps/web/content/blog/{en,ja}/` に `category: 'release'` のリリースノート記事を書く時
-- アーキテクチャ意思決定が確定し、decision ログを書く時（技術判断・プロダクト判断ともに各ドメインの `log/YYYY-MM-DD-slug.md` が正本。`/decision` コマンド参照）
 - Breaking change を含む変更を merge する前、影響を受ける技術ドキュメントの更新が必要な時
 
 **診断起点（何に気付いたか）:**
@@ -29,7 +28,8 @@ app側の技術ドキュメント（`docs/`）とは別物。
 
 ## When NOT to Use
 
-- コード内コメント（`CLAUDE.md` の「コメント最小限」ルールに従う、skill 層の範囲外）
+- 意思決定ログの追記 → `decision` skill（`docs/decisions.md` へ 1 行追記。2026-08-28、#2475 で domain log/ を廃止）
+- コード内コメント（`AGENTS.md` のコメント・コード規約に従う、skill 層の範囲外）
 - 一時メモ・個人メモ・ミーティングノート（公開されない情報）
 - 自明な内容の重複記録（型定義・命名で自己説明できる内容）
 
@@ -171,8 +171,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 ```
 何を記録したいか？
 ├─ 機能の仕組み → 技術ドキュメント（docs/engineering/）
-├─ なぜこの方法を選んだか（技術判断） → engineering/log/YYYY-MM-DD-slug.md（正本）
-├─ なぜこの方法を選んだか（プロダクト判断） → product/log/YYYY-MM-DD-slug.md（正本）
+├─ なぜこの方法を選んだか（意思決定） → docs/decisions.md へ 1 行追記（decision skill。#2475 で domain log/ 廃止）
 └─ APIの使い方 → APIドキュメント（docs/engineering/conventions-api.md）
 ```
 

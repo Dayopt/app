@@ -29,6 +29,8 @@ DayoptプロジェクトのZustand storeを規約に沿って作成するスキ�
 
 ### 1. 基本ストア（CRUD操作）
 
+> ⚠️ このパターンは **client-only データ**（サーバーに正本を持たないローカル完結の一覧）専用。server 由来の entity は TanStack Query のキャッシュが正本であり（`optimistic-update` skill）、Zustand に複製しない（When NOT to Use 参照）。
+
 ```typescript
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
