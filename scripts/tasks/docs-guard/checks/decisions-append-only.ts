@@ -70,13 +70,38 @@ function toLines(text: string): string[] {
   return lines;
 }
 
-/** エントリ領域が「既存行そのまま + 新規行の追記」の形かどうか（削除・変更があれば true）。 */
+/**
+ * エントリ行中の「この repo の issue / PR への markdown リンク」を素の `#N` へ畳む。
+ *
+ * append-only 契約は「決定の内容を後から書き換えない」ためのもので、参照番号の
+ * **表記** までは縛らない。`#2195` を `[#2195](https://github.com/Dayopt/dayopt/issues/2195)`
+ * にする（あるいは戻す）変更は、畳んだ後の文字列が完全一致する限り内容を1文字も
+ * 変えていないため、既存行の変更として弾かない（#2481）。
+ *
+ * リンク先は「表示中の番号と同じ番号を指す、この repo の issues / pull URL」だけを
+ * 畳む。番号の異なる URL・別ドメイン・別 repo は畳まれずそのまま比較へ回るので、
+ * 表示テキストを据え置いたままリンク先だけ差し替える変更は従来どおり違反になる。
+ */
+export function normalizeEntryReferenceLinks(line: string): string {
+  return line.replace(
+    /\[#(\d+)\]\(https:\/\/github\.com\/Dayopt\/dayopt\/(?:issues|pull)\/(\d+)\)/g,
+    (match, shown: string, target: string) => (shown === target ? `#${shown}` : match),
+  );
+}
+
+/**
+ * エントリ領域が「既存行そのまま + 新規行の追記」の形かどうか（削除・変更があれば true）。
+ * 比較は normalizeEntryReferenceLinks を通した後の文字列で行う（上記の注記参照）。
+ */
 export function hasRemovedOrModifiedEntryLines(oldEntries: string, newEntries: string): boolean {
   const oldLines = toLines(oldEntries);
   const newLines = toLines(newEntries);
   if (newLines.length < oldLines.length) return true;
   for (const [i, oldLine] of oldLines.entries()) {
-    if (newLines[i] !== oldLine) return true;
+    const newLine = newLines[i];
+    if (newLine === undefined) return true;
+    if (normalizeEntryReferenceLinks(newLine) !== normalizeEntryReferenceLinks(oldLine))
+      return true;
   }
   return false;
 }
