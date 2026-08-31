@@ -178,6 +178,32 @@ describe('runMigrationSafety', () => {
     expect(fetchFilesImpl).toHaveBeenCalledWith(expect.objectContaining({ env }));
   });
 
+  // 回帰固定: ファイル一覧の取得失敗で job ごと落とさない（fail open）。
+  // #2483 で migration safety を unit test 群より前へ移したため、ここで例外を
+  // 素通しすると GitHub API の一時障害だけでテストが 1 本も走らなくなる。
+  it('ファイル一覧の取得に失敗したら skip して続行する（例外を投げない）', async () => {
+    const fetchFilesImpl = vi.fn(() => {
+      throw new Error('gh api failed: 503');
+    });
+    const spawnImpl = vi.fn(noopSpawn);
+    const summaries: string[] = [];
+    const writeStepSummaryImpl = vi.fn(async (markdown: string) => {
+      summaries.push(markdown);
+    });
+    const result = await runMigrationSafety({
+      repo: 'Dayopt/dayopt',
+      prNumber: 1,
+      fetchFilesImpl,
+      execFileImpl: vi.fn(),
+      spawnImpl,
+      writeStepSummaryImpl,
+    });
+    expect(result).toEqual({ results: [], notified: false, skipped: true });
+    expect(spawnImpl).not.toHaveBeenCalled();
+    expect(summaries[0]).toContain('skip');
+    expect(summaries[0]).toContain('gh api failed: 503');
+  });
+
   it('destructive な変更を検知したら comment 投稿→ラベル付与の順で通知する', async () => {
     const readFileImpl = vi.fn(() => 'DROP TABLE foo;');
     const execFileImpl = vi.fn(() => 'false'); // has_label=false

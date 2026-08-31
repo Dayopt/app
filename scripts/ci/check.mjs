@@ -421,7 +421,25 @@ export async function runMigrationSafety({
   // env は gh 呼び出し 2 箇所（ファイル一覧の取得とラベル確認）の両方へ渡す。
   // runTest() が process.env から GH_TOKEN を外しているため、片方でも漏らすと
   // その gh が「GH_TOKEN を設定してください」で失敗する。
-  const files = fetchFilesImpl({ repo, prNumber, env });
+  //
+  // 取得失敗は fail open に倒す（内製クロスレビュー risk-reviewer 指摘、P2）。
+  // この呼び出しは #2483 で unit test 群より前へ移したため、例外を素通しすると
+  // GitHub API の一時障害・rate limit・fork PR の権限差で「テストを 1 本も
+  // 走らせないまま Unit Tests job が落ちる」形になる（実際に PR #2484 の
+  // run 33181021085 がこの形で落ちた）。migration safety は検知しても job を
+  // 落とさない契約なので、取得できなかった時も同じ向き（続行）へ倒し、
+  // 見落としの可能性だけを Step Summary へ残す。
+  let files;
+  try {
+    files = fetchFilesImpl({ repo, prNumber, env });
+  } catch (error) {
+    await writeStepSummaryImpl(
+      `## Migration safety\n\n` +
+        `⚠️ PR のファイル一覧を取得できなかったため、破壊的 migration の検知を skip しました。\n\n` +
+        `\`\`\`\n${error instanceof Error ? error.message : String(error)}\n\`\`\`\n`,
+    );
+    return { results: [], notified: false, skipped: true };
+  }
   const withContent = files
     .filter((f) => f.filename.startsWith('supabase/migrations/'))
     .map((f) => {

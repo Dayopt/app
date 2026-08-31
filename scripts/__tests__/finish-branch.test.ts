@@ -1651,6 +1651,31 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(status).toBe(1);
   });
 
+  // #2483 クロスレビュー: CI の中枢（token 隔離と test skip 判定を持つ check.mjs、
+  // その job / permissions を決める ci.yml）も guardrail として必須側に置く。
+  it.each([['scripts/ci/check.mjs'], ['.github/workflows/ci.yml']])(
+    'CI の中枢（%s）は marker を要求する',
+    (file) => {
+      const { status, stderr } = runScript(greenRollup(), {
+        files: [file],
+        threads: [],
+        reviewEvidence: { comments: [] },
+      });
+      expect(stderr).toContain(`review gate: required (matched ${file})`);
+      expect(status).toBe(1);
+    },
+  );
+
+  it('CI でも nightly.yml は marker を要求しない（PR gate を持たないため）', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['.github/workflows/nightly.yml'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(status).toBe(0);
+  });
+
   it('非保護対象 path のみなら marker 無しでも通す（gate skip）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
