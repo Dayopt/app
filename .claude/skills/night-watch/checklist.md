@@ -4,14 +4,11 @@
 
 各項目は「実行コマンド + 判定」の対のみで構成する。裁量的な探索・追加コマンドの実行はしない。判定規約と起票規約の正本は [SKILL.md](SKILL.md) §自動パート。
 
-**count-only 判定の盲点（既知の限界）**: `docs-coverage` / `dependabot-alerts` は総件数のみを baseline と比較するため、同じ晩に既存の異常が N 件解消し新規の異常が N 件発生しても、正味の件数は変わらず異常として検出されない（turnover を検出しない）。個々の変化点まで追う設計にはしていない — count-only は v1 の意図的な簡素化で、turnover の実害が観測されたら v2 で診断対象を拡張する（2026-08-19、内製クロスレビュー指摘）。
-
-| check-id            | コマンド                                                                | 判定                                                                                                                               |
-| ------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `docs-check`        | `pnpm docs:check`                                                       | exit code 0 のみで判定。baseline 不要                                                                                              |
-| `docs-coverage`     | `pnpm docs:coverage`                                                    | `## 機能 ⇄ 公開docs` テーブル内の `なし` 件数を数え、`baseline.json` の `docs_coverage_missing` と比較。actual > baseline のみ異常 |
-| `deadcode`          | `pnpm quality:deadcode:ci`                                              | exit code 0 のみで判定（merge gate と同じ閾値）。baseline 不要                                                                     |
-| `dependabot-alerts` | `gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'` | 件数を `baseline.json` の `dependabot_alert_count` と比較。actual > baseline のみ異常                                              |
+| check-id            | コマンド                                                           | 判定                                                                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs-check`        | `pnpm docs:check`                                                  | exit code 0 のみで判定。baseline 不要                                                                                                                                                                                 |
+| `deadcode`          | `pnpm quality:deadcode:ci`                                         | exit code 0 のみで判定（merge gate と同じ閾値）。baseline 不要                                                                                                                                                        |
+| `dependabot-alerts` | `gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq '.'` | 各 alert の `created_at` を見て、直近48hに作成された open alert が1件以上あれば異常（baseline 不要、#2543。実行コマンドは `per_page=100` 付きだが、layer3 guard の `&` 制約により手動再現コマンドは省略形にしてある） |
 
 ## v1 から除外した項目
 

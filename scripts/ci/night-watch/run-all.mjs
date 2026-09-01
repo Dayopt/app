@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync, realpathSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 import {
   CHECK_DEFINITIONS,
@@ -51,7 +51,6 @@ import { isLatestWorkflowRunPending, REPO } from './lib.mjs';
  */
 export const CHECK_IDS = new Set([
   'docs-check',
-  'docs-coverage',
   'deadcode',
   'dependabot-alerts',
   'heavy-red',
@@ -63,10 +62,6 @@ export const CHECK_IDS = new Set([
   'storage-rls-audit-token-expiry',
 ]);
 
-const BASELINE_PATH = fileURLToPath(
-  new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
-);
-
 // nightly.yml の対象 job の `name:` フィールドと完全一致させる（#2483）。
 // job 名を変更したらこの定数も同時に更新すること（nightly.yml 側にも同じ
 // 結合を明記したコメントがある）。heavy-red は E2E + Web の 2 job を worst-of
@@ -74,50 +69,6 @@ const BASELINE_PATH = fileURLToPath(
 // 持ち、run 全体の conclusion で判定していた挙動を再現する）。
 export const NIGHTLY_HEAVY_JOB_NAMES = ['\u{1F3AD} E2E Tests', '\u{1F310} Web Build & E2E'];
 export const NIGHTLY_INTEGRATION_JOB_NAME = 'Integration Tests';
-
-/**
- * `.claude/skills/night-watch/baseline.json` を読む。`alert-issue.mjs` にも
- * 同名の private 定数（`BASELINE_PATH` / `readBaseline`）があるが、export
- * されていないため複製している（既存 wrapper ファイルを無変更に保つ設計判断、
- * #2367 issue コメント参照）。baseline.json の path を変える時は両方を
- * 更新すること。
- */
-export function readBaseline() {
-  return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
-}
-
-const DOCS_COVERAGE_SECTION_RE = /## 機能 ⇄ 公開docs\n([\s\S]*?)(?=\n## |$)/;
-
-/**
- * `pnpm docs:coverage` の stdout から `## 機能 ⇄ 公開docs` セクション内の
- * `なし`（cell 単位。en 列・ja 列それぞれが 1 件ずつ数えられる）を数える。
- * セクション境界は次の `## ` 見出し（`## en / ja が揃っていない` 等、そちらにも
- * `なし` を含む文字列が出るため、テーブル外まで拾わないよう非貪欲マッチで
- * 区切る）。
- *
- * 2026-08-25 実測: 現在の出力でちょうど 3 件、baseline.json の
- * `docs_coverage_missing: 3` と一致することを確認済み（#2367 issue コメント）。
- */
-export function countDocsCoverageMissing(markdown) {
-  const match = markdown.match(DOCS_COVERAGE_SECTION_RE);
-  if (!match) {
-    throw new Error('docs:coverage 出力から `## 機能 ⇄ 公開docs` セクションが見つかりません');
-  }
-  return (match[1].match(/なし/g) ?? []).length;
-}
-
-/**
- * count-baseline kind（docs-coverage / dependabot-alerts）の判定
- * （checklist.md: actual > baseline のみ異常）。
- * @param {number} actual
- * @param {number} baseline
- * @returns {'red' | 'green' | 'green-recommend'}
- */
-export function judgeCountBaseline(actual, baseline) {
-  if (actual > baseline) return 'red';
-  if (actual < baseline) return 'green-recommend';
-  return 'green';
-}
 
 const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -281,11 +232,14 @@ export function classifyGhError(error) {
 /**
  * 観測コマンド 1 本あたりの上限。job 全体の予算は `timeout-minutes: 15`
  * だけで、setup（pnpm install）+ 複数の観測コマンド（docs:check /
- * docs:coverage / quality:deadcode:ci の monorepo 全体 knip / gh・sentry の
- * ネットワーク往復）がその中に全部入る。1 本が hang すると runner が job
- * ごと kill し、最後に置かれた Step 5（運行記録）が実行されないまま消える
- * （PR #2380 クロスレビュー指摘、P2）。個々のコマンドに上限を設け、hang を
- * 「取得失敗」（`isSpawnFailure` → fetch-failed 経路）へ縮退させる。
+ * quality:deadcode:ci の monorepo 全体 knip / gh・sentry のネットワーク
+ * 往復）がその中に全部入る。1 本が hang すると runner が job ごと kill し、
+ * 当時最後に置かれていた Step 5（運行記録、#2525 で廃止済み）が実行されない
+ * まま消えていた（PR #2380 クロスレビュー指摘、P2）。個々のコマンドに上限を
+ * 設け、hang を「取得失敗」（`isSpawnFailure` → fetch-failed 経路）へ縮退
+ * させる——Step 5 廃止後も「hang した 1 本が job 全体を巻き込んで残りの
+ * check・alert 起票・サマリ出力ごと消す」という問題自体は変わらないため、
+ * この上限は維持している。
  * @type {number}
  */
 export const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
@@ -611,38 +565,68 @@ function checkExitCode(command, args, { execFileImpl, env, sleepImpl }) {
   return { status: 'red' };
 }
 
-function parseNonNegativeInt(stdout) {
-  const trimmed = stdout.trim();
-  if (!/^\d+$/.test(trimmed)) {
-    throw new Error(`数値ではない出力です: ${trimmed}`);
-  }
-  return Number(trimmed);
-}
+// #2543: dependabot-alerts の baseline 機構廃止に伴う定数。sentry-new の
+// `SENTRY_EVIDENCE_CANDIDATES` と同じ役割（evidence として本文へ載せる件数の
+// 上限）。
+const DEPENDABOT_EVIDENCE_CANDIDATES = 5;
 
 /**
- * count-baseline kind（docs-coverage / dependabot-alerts）の観測。この 2 つは
- * 常に exit 0 を返す設計（docs-coverage は index.ts 冒頭コメント参照、
- * dependabot-alerts は `--jq 'length'` が失敗するのは gh 側の障害時のみ）の
- * ため、非 0 exit・パース不能はどちらも「取得失敗」として扱う（red/fetch-failed
- * の曖昧さが無い）。
+ * 「直近 `windowMs` 以内に作成された」ものだけに絞る判定の窓（#2543）。
+ * count-baseline（実測 open 件数 vs baseline.json の固定値）は、同じ晩に
+ * N 件解消 + N 件新規が起きても count が変わらず検出できない「入れ替わりの
+ * 盲点」があった（実測: baseline=1 に対し実 open が 5 件、うち 2 件は
+ * 直近作成）。open 件数そのものではなく「新しく増えたか」を見る設計へ
+ * 置き換える。
+ */
+const RECENT_ALERT_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * dependabot-alerts の観測（#2543、baseline 機構廃止）。
+ *
+ * `gh api repos/Dayopt/dayopt/dependabot/alerts?state=open&per_page=100` の
+ * 生 JSON 配列を受け取り、JS 側で `created_at` が `RECENT_ALERT_WINDOW_MS`
+ * （48h）以内の alert が 1 件以上あれば red とする。`--jq` でサーバー側
+ * フィルタをかけないのは、フィルタロジックを gh 呼び出し文字列の外（この
+ * 関数）へ置いて test しやすくするため（既存の checkWorkflowJobRun 等と
+ * 同じ方針）。
+ *
+ * JSON.parse 失敗・非配列は取得失敗として扱う（他の観測 helper と同じ
+ * fail-closed 方針）。
  * @param {string} command
  * @param {string[]} args
- * @param {number} baselineValue
- * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, parse: (stdout: string) => number, sleepImpl?: (ms: number) => void }} opts
+ * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, sleepImpl?: (ms: number) => void, now?: number }} opts
  */
-function checkCountBaseline(command, args, baselineValue, { execFileImpl, env, parse, sleepImpl }) {
+function checkRecentDependabotAlerts(
+  command,
+  args,
+  { execFileImpl, env, sleepImpl, now = Date.now() },
+) {
   const result = execObservationCommand(command, args, { execFileImpl, env, sleepImpl });
   if (!result.ok) return { status: 'fetch-failed' };
-  let actual;
+  let alerts;
   try {
-    actual = parse(result.stdout);
+    alerts = JSON.parse(result.stdout);
   } catch {
     return { status: 'fetch-failed' };
   }
-  const judged = judgeCountBaseline(actual, baselineValue);
-  if (judged === 'red') return { status: 'red', actual };
-  if (judged === 'green-recommend') return { status: 'green-recommend', actual };
-  return { status: 'green' };
+  if (!Array.isArray(alerts)) return { status: 'fetch-failed' };
+
+  const recent = alerts.filter((alert) => {
+    const createdAt = alert?.created_at;
+    if (typeof createdAt !== 'string') return false;
+    const createdAtMs = new Date(createdAt).getTime();
+    if (Number.isNaN(createdAtMs)) return false;
+    return now - createdAtMs <= RECENT_ALERT_WINDOW_MS;
+  });
+  if (recent.length === 0) return { status: 'green' };
+
+  const evidence = recent
+    .slice(0, DEPENDABOT_EVIDENCE_CANDIDATES)
+    .map(
+      (alert) =>
+        `#${alert.number} ${alert.security_advisory?.severity} ${alert.dependency?.package?.name} ${alert.created_at}`,
+    );
+  return { status: 'red', count: recent.length, evidence };
 }
 
 // GitHub Actions の conclusion のうち「success 以外」を重大度順に並べる。
@@ -964,11 +948,28 @@ export function checkSentryNew({ execFileImpl, sentryToken, env = process.env, s
   let issues;
   try {
     const trimmed = result.stdout.trim();
-    issues = trimmed === '' ? [] : JSON.parse(trimmed);
+    // Sentry CLI 0.43.0 の `--json` 出力は素の配列ではなく
+    // `{"data": [...], "hasMore": ..., "hasPrev": ..., "_searchSyntax": ...}`
+    // という object 形状（2026-09-01 実測確認、`sentry issue list dayopt
+    // --query "is:unresolved age:-24h" --json --fields shortId,permalink
+    // --limit 5` で再現）。旧実装は `Array.isArray` だけで弾いていたため、この
+    // 形状変更で 8 晩連続 fetch-failed になっていた（後方互換: 素の配列が
+    // 返る旧 CLI / test fixture もそのまま扱えるよう `data` へのフォール
+    // バックのみ足す）。
+    const parsed = trimmed === '' ? [] : JSON.parse(trimmed);
+    issues = Array.isArray(parsed) ? parsed : parsed?.data;
   } catch {
+    console.log(
+      `::warning::sentry-new の出力を解釈できません（先頭200文字）: ${result.stdout.trim().slice(0, 200)}`,
+    );
     return { status: 'fetch-failed' };
   }
-  if (!Array.isArray(issues)) return { status: 'fetch-failed' };
+  if (!Array.isArray(issues)) {
+    console.log(
+      `::warning::sentry-new の出力を解釈できません（先頭200文字）: ${result.stdout.trim().slice(0, 200)}`,
+    );
+    return { status: 'fetch-failed' };
+  }
   if (issues.length === 0) return { status: 'green' };
   const evidence = issues
     .slice(0, SENTRY_EVIDENCE_CANDIDATES)
@@ -1008,13 +1009,12 @@ export function buildAlertArgs(checkId, outcome) {
   switch (definition.kind) {
     case 'exit-code':
       return {};
-    case 'count-baseline':
-      return { actual: String(outcome.actual) };
     case 'secret-expiry':
       return { actual: String(outcome.actual) };
     case 'run-url':
       return { 'evidence-url': outcome.evidenceUrl };
     case 'sentry':
+    case 'recent-alerts':
       return { count: String(outcome.count), evidence: outcome.evidence ?? [] };
     default:
       throw new Error(`未対応の kind です: ${definition.kind}`);
@@ -1089,24 +1089,15 @@ function isAlertDeliveryFailure(entry) {
 }
 
 /**
- * 1 check-id の観測結果を起票判断へつなげ、`failed` /
- * `results` / `baselineRecommend` へ書き込む。
+ * 1 check-id の観測結果を起票判断へつなげ、`failed` / `results` へ書き込む。
  * @param {string} checkId
  * @param {{ status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome
- * @param {{ execFileImpl?: ExecFileImpl, failed: string[], alertPostFailed: string[], results: unknown[], baselineRecommend: string[], runStatePath?: string }} deps
+ * @param {{ execFileImpl?: ExecFileImpl, failed: string[], alertPostFailed: string[], results: unknown[], runStatePath?: string }} deps
  */
 function processCheckOutcome(
   checkId,
   outcome,
-  {
-    execFileImpl,
-    failed,
-    alertPostFailed,
-    results,
-    baselineRecommend,
-    runStatePath,
-    deferredFetchFailed,
-  },
+  { execFileImpl, failed, alertPostFailed, results, runStatePath, deferredFetchFailed },
 ) {
   if (outcome.status === 'fetch-failed') {
     failed.push(checkId);
@@ -1126,11 +1117,6 @@ function processCheckOutcome(
   }
   if (outcome.status === 'green') {
     results.push({ checkId, outcome: 'green' });
-    return;
-  }
-  if (outcome.status === 'green-recommend') {
-    results.push({ checkId, outcome: 'green' });
-    baselineRecommend.push(checkId);
     return;
   }
   if (outcome.status === 'pending') {
@@ -1273,12 +1259,9 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
   // delete が無意味になる。
   const envWithoutGh = envWithout('GH_TOKEN', 'GITHUB_TOKEN');
 
-  const baseline = readBaseline();
-
   const failed = [];
   const alertPostFailed = [];
   const results = [];
-  const baselineRecommend = [];
 
   /** @type {Record<string, { status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }>} */
   const checkOutcomes = {
@@ -1287,26 +1270,19 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
       env: envWithoutGh,
       sleepImpl,
     }),
-    'docs-coverage': checkCountBaseline('pnpm', ['docs:coverage'], baseline.docs_coverage_missing, {
-      execFileImpl,
-      env: envWithoutGh,
-      parse: countDocsCoverageMissing,
-      sleepImpl,
-    }),
     deadcode: checkExitCode('pnpm', ['quality:deadcode:ci'], {
       execFileImpl,
       env: envWithoutGh,
       sleepImpl,
     }),
-    'dependabot-alerts': checkCountBaseline(
+    'dependabot-alerts': checkRecentDependabotAlerts(
       'gh',
-      ['api', 'repos/Dayopt/dayopt/dependabot/alerts?state=open', '--jq', 'length'],
-      baseline.dependabot_alert_count,
+      ['api', 'repos/Dayopt/dayopt/dependabot/alerts?state=open&per_page=100', '--jq', '.'],
       {
         execFileImpl,
         env: { ...process.env, GH_TOKEN: dependabotToken },
-        parse: parseNonNegativeInt,
         sleepImpl,
+        now,
       },
     ),
     // job 名は nightly.yml の該当 job の `name:` と完全一致させる
@@ -1340,7 +1316,6 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
       failed,
       alertPostFailed,
       results,
-      baselineRecommend,
       runStatePath,
       deferredFetchFailed,
     });
@@ -1354,7 +1329,7 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
   // 別々に数えないと、サマリ 1 行から原因を切り分けられない。
   const executed = CHECK_IDS.size - new Set(failed).size;
 
-  const report = { executed, failed, results, baselineRecommend, alertPostFailed };
+  const report = { executed, failed, results, alertPostFailed };
 
   // run の結論を job log へ残す（#2525）。**exitCode を立てる前に出す** —
   // 先に倒して出力を飛ばすと、「赤を検出したのに起票できなかった」という
@@ -1362,11 +1337,6 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
   // Codex が指摘した論点、PR #2380。出力先が issue から job log へ変わって
   // も同じ理由が効く）。
   console.log(buildRunSummaryLine(report));
-  if (baselineRecommend.length > 0) {
-    console.log(
-      `::notice::baseline 更新推奨（実測が baseline を下回りました）: ${baselineRecommend.join(', ')}`,
-    );
-  }
 
   if (alertPostFailed.length > 0) {
     console.error(

@@ -421,12 +421,19 @@ if [ "$TOOL_NAME" = "Bash" ]; then
 
     night_watch_allowed=0
     case "$COMMAND" in
-      "pnpm docs:check" | "pnpm docs:coverage" | "pnpm quality:deadcode:ci")
+      "pnpm docs:check" | "pnpm quality:deadcode:ci")
         # 引数不要な checklist コマンド。完全一致のみ許可（引数が付いた
         # 時点で許可外の呼び出しとして拒否する）。
         night_watch_allowed=1
         ;;
-      "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'" \
+      # #2543: baseline 比較（open 件数のみ）から「直近48hの新規判定」へ変更。
+      # `--jq 'length'` ではなく生 JSON 配列（`--jq '.'`）を返す形にした
+      # （created_at のフィルタは run-all.mjs の checkRecentDependabotAlerts が
+      # JS 側で行う）。実行コマンド（run-all.mjs、execFile 経由・shell を通ら
+      # ない）は `per_page=100` を付けるが、この allowlist の文字列には含め
+      # ない — `&` は is_single_simple_command が quote の有無に関わらず
+      # 無条件拒否するため（層3 guard は shell 経由のコマンドのみを見る）。
+      "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq '.'" \
         | "gh api repos/Dayopt/dayopt --jq .permissions" \
         | "node scripts/ci/night-watch/check-workflow-job.mjs heavy-red" \
         | "node scripts/ci/night-watch/check-workflow-job.mjs integration-red" \

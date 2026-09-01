@@ -23,6 +23,7 @@ v3 まで存在した常設運行記録 issue #2216 への毎晩 1 コメント�
 
 - `NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT、`dependabot-alerts` check 専用）
 - `SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope、`sentry-new` check 専用）
+- `NIGHT_WATCH_HEARTBEAT_URL`（healthchecks.io の heartbeat URL。night-watch job が発火した/killed されなかったことの外部監視用。アカウント作成・値の登録は User 操作）
 
 いずれも GitHub Actions の repository secrets として登録する（値の登録・更新は指揮台/User の操作枠）。`GH_TOKEN`（`github.token`）は secrets 登録不要（workflow が自動生成する）。未登録の間は `.github/workflows/nightly.yml`（night-watch job）の secrets 存在確認 step が fail closed で job を止める（無音失敗にしない）。
 
@@ -35,14 +36,15 @@ v3 まで存在した常設運行記録 issue #2216 への毎晩 1 コメント�
 3. run 自体が発火していない（schedule が動いていない）場合は `nightly.yml` の `on.schedule` 設定（04:00 JST の cron エントリ）と GitHub Actions 自体の稼働状況を確認する
 4. job が緑なら、log の `night-watch: ...` サマリ 1 行が run の結論。**緑なのにこの行が無い場合は途中で kill された可能性がある**（`timeout-minutes: 15` の超過など）ので log を追う
 5. 故障が確認できたら `.claude/skills/night-watch/SKILL.md` §手動代行 で当夜分を代行する
+6. **heartbeat の未着通知が来た朝は、night-watch job 自体が発火していない/killed された可能性が高い。** `gh run list --workflow=nightly.yml` で run の有無を確認する — run 自体が見当たらなければ cron 配信の欠落・workflow 定義の破損、run はあるが早期に killed されていれば runner 枯渇等を疑う（上記 1〜4 の手順で切り分ける）
 
 **「無音」を正常と読んでよいのは job が緑の時だけ。** 夜勤の異常は alert issue として能動的に届くが、その届く経路（gh）自体が壊れた夜は issue が出ない。この場合 night-watch job は**非 0 exit で赤くなる**設計にしてある（起票の失敗・dedup 検索の失敗を `alertPostFailed` として拾う）ので、**赤い run が「issue が来ていないこと」を信用してはいけない合図**になる。逆に言えば、job が緑で issue がゼロなら本当に何も無かった夜。
 
 このチェックを毎朝の義務にする必要はない。Actions の失敗通知が届く経路（GitHub の通知設定）を確保した上で、run が赤い時と、長期間 issue も赤もない状態が不自然に感じられる時に見ればよい。
 
-## checklist・baseline の変更
+## checklist の変更
 
-checklist（[`checklist.md`](../../.claude/skills/night-watch/checklist.md)）と baseline（[`baseline.json`](../../.claude/skills/night-watch/baseline.json)）の変更は通常の PR レビューを通す。night-watch 自身（Actions workflow・手動代行のどちらも）はこの2ファイルを読むだけで編集しない（review-gated ratchet）。
+checklist（[`checklist.md`](../../.claude/skills/night-watch/checklist.md)）の変更は通常の PR レビューを通す。night-watch 自身（Actions workflow・手動代行のどちらも）はこのファイルを読むだけで編集しない（review-gated ratchet）。baseline 機構（`baseline.json`）は v4（#2543）で廃止した。
 
 ## 撤退条件
 

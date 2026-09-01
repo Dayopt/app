@@ -7,9 +7,10 @@
  * 判定する多段処理（`gh run list` → run ごとに `gh api .../jobs`）のため、
  * 「単一の単純コマンド」しか許可しない層3 guard（`scripts/hooks/pre-tool-guard-impl.sh`
  * の `DAYOPT_NIGHT_WATCH=1` allowlist）ではパイプラインを直接許可できない。
- * 他の Step（board-issue.mjs / alert-issue.mjs / dod-candidate.mjs / run-log.mjs）
- * と同じ「個別 wrapper を 1 本の固定コマンドとして allowlist する」設計に合わせ、
- * この wrapper 自体を allowlist 対象にする。
+ * 他の Step（alert-issue.mjs）と同じ「個別 wrapper を 1 本の固定コマンドとして
+ * allowlist する」設計に合わせ、この wrapper 自体を allowlist 対象にする
+ * （board-issue.mjs / dod-candidate.mjs / run-log.mjs は同じ設計だった旧
+ * wrapper だが #2525 で廃止済み）。
  *
  * 使い方（手動代行時、`.claude/skills/night-watch/SKILL.md` §手動代行 Step 2）:
  *   node scripts/ci/night-watch/check-workflow-job.mjs heavy-red

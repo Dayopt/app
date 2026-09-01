@@ -283,9 +283,10 @@ jobs:
         env:
           NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          NIGHT_WATCH_HEARTBEAT_URL: ${{ secrets.NIGHT_WATCH_HEARTBEAT_URL }}
         run: |
           missing=()
-          for key in NIGHT_WATCH_DEPENDABOT_TOKEN SENTRY_AUTH_TOKEN; do
+          for key in NIGHT_WATCH_DEPENDABOT_TOKEN SENTRY_AUTH_TOKEN NIGHT_WATCH_HEARTBEAT_URL; do
             if [ -z "${!key:-}" ]; then
               missing+=("$key")
             fi
@@ -332,6 +333,25 @@ jobs:
           NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: node scripts/ci/night-watch/run-all.mjs
+
+      # night-watch job 自体が発火しない/killed された（cron 配信の欠落、
+      # runner 枯渇、workflow 定義の破損等）夜は、alert issue も job log の
+      # 失敗表示も残らず、night-watch job そのものが「走らなかった」ため
+      # #2535 の failure()/cancelled() backstop（下の step）すら発火しない。
+      # healthchecks.io の heartbeat 監視（外部・GitHub Actions の外側にいる
+      # 見張り）を毎晩叩き、届かない朝そのものを異常のシグナルにする
+      # （docs/operations/night-watch.md §secrets / §故障検出手順）。
+      - name: heartbeat（成功）
+        if: success()
+        env:
+          NIGHT_WATCH_HEARTBEAT_URL: ${{ secrets.NIGHT_WATCH_HEARTBEAT_URL }}
+        run: curl -fsS -m 10 --retry 3 "$NIGHT_WATCH_HEARTBEAT_URL"
+
+      - name: heartbeat（失敗）
+        if: failure()
+        env:
+          NIGHT_WATCH_HEARTBEAT_URL: ${{ secrets.NIGHT_WATCH_HEARTBEAT_URL }}
+        run: curl -fsS -m 10 --retry 3 "$NIGHT_WATCH_HEARTBEAT_URL/fail"
 
       # #2535: 「無音 = 緑」規約の backstop。上の step が例外を投げて失敗した、
       # または job 自身が `timeout-minutes`（15分。GitHub が degrade して 5xx を

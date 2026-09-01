@@ -10,82 +10,19 @@ import {
   checkSentryNew,
   checkWorkflowJobRun,
   classifyGhError,
-  countDocsCoverageMissing,
   execObservationCommand,
   foldJobConclusions,
-  judgeCountBaseline,
   judgeWorkflowRun,
   NIGHT_WATCH_JOB_TIMEOUT_MS,
   NIGHTLY_HEAVY_JOB_NAMES,
   NIGHTLY_INTEGRATION_JOB_NAME,
   OBSERVATION_COMMAND_TIMEOUT_MS,
   OBSERVATION_RETRY_MIN_ATTEMPT_MS,
-  readBaseline,
   reportRedCheck,
   runNightWatch,
   worseConclusion,
   WORST_CASE_OBSERVATION_MS,
 } from './run-all.mjs';
-
-describe('countDocsCoverageMissing', () => {
-  it('`## 機能 ⇄ 公開docs` セクション内の `なし`（cell 単位）だけを数える', () => {
-    const markdown = `# 公開docs カバレッジ
-
-## 機能 ⇄ 公開docs
-
-| spec | slug | en | ja | LP の約束 |
-| --- | --- | --- | --- | --- |
-| review | /docs/review | なし | draft（本文あり・公開待ち） | Core Review metrics |
-| settings | /docs/data-export | なし | draft（本文あり・公開待ち） | Data export |
-| tags | /docs/activities | なし | draft（本文あり・公開待ち） | Activities |
-
-## en / ja が揃っていない
-
-- /docs/review: en=なし / ja=draft（本文あり・公開待ち）
-- /docs/data-export: en=なし / ja=draft（本文あり・公開待ち）
-- /docs/activities: en=なし / ja=draft（本文あり・公開待ち）
-`;
-    // テーブル内は 3 件（en 列のみ）。次のセクションにも「なし」を含む文言が
-    // あるが、セクション境界（次の `## `）で正しく区切って数えないことを確認する。
-    expect(countDocsCoverageMissing(markdown)).toBe(3);
-  });
-
-  it('セクション境界の無い出力（見出しが無い）は例外を投げる', () => {
-    expect(() => countDocsCoverageMissing('no coverage table here')).toThrow(/## 機能 ⇄ 公開docs/);
-  });
-
-  it('最終セクションとして終端まで続く場合も正しく数える（末尾に次見出しが無いケース）', () => {
-    const markdown = `## 機能 ⇄ 公開docs
-
-| spec | slug | en | ja |
-| --- | --- | --- | --- |
-| x | /docs/x | なし | なし |
-`;
-    expect(countDocsCoverageMissing(markdown)).toBe(2);
-  });
-});
-
-describe('readBaseline', () => {
-  it('.claude/skills/night-watch/baseline.json を読む', () => {
-    const baseline = readBaseline();
-    expect(baseline).toHaveProperty('docs_coverage_missing');
-    expect(baseline).toHaveProperty('dependabot_alert_count');
-  });
-});
-
-describe('judgeCountBaseline', () => {
-  it('actual > baseline のみ red', () => {
-    expect(judgeCountBaseline(4, 3)).toBe('red');
-  });
-
-  it('actual === baseline は green', () => {
-    expect(judgeCountBaseline(3, 3)).toBe('green');
-  });
-
-  it('actual < baseline は green-recommend（baseline 更新推奨の対象）', () => {
-    expect(judgeCountBaseline(2, 3)).toBe('green-recommend');
-  });
-});
 
 describe('judgeWorkflowRun', () => {
   const now = new Date('2026-08-25T05:00:00+09:00').getTime();
@@ -1088,6 +1025,56 @@ describe('checkSecretExpiry / buildAlertArgs（secret-expiry kind）', () => {
   });
 });
 
+// Sentry CLI 0.43.0 は `sentry issue list --json` の出力を素の配列から
+// `{"data": [...], "hasMore": ..., "hasPrev": ..., "_searchSyntax": ...}`
+// という object 形状へ変えた（2026-09-01 実測確認）。旧実装は
+// `Array.isArray(issues)` だけで弾いていたため、この形状変更が原因で
+// sentry-new が 8 晩連続 fetch-failed していた。
+describe('checkSentryNew（Sentry CLI 0.43.0 の object 形状、#2544）', () => {
+  it('`{"data": [...]}` 形状で data が空配列なら green', () => {
+    const execFileImpl = vi.fn(() => JSON.stringify({ data: [], hasMore: false, hasPrev: false }));
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toEqual({ status: 'green' });
+  });
+
+  it('`{"data": [...]}` 形状で data に issue が入っていれば red・count はその件数', () => {
+    const execFileImpl = vi.fn(() =>
+      JSON.stringify({
+        data: [{ shortId: 'DAYOPT-1', permalink: 'https://dayopt.sentry.io/issues/1/' }],
+        hasMore: false,
+      }),
+    );
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toMatchObject({ status: 'red', count: 1 });
+    expect(outcome.evidence).toEqual(['DAYOPT-1 https://dayopt.sentry.io/issues/1/']);
+  });
+
+  it('後方互換: 素の配列が返る形（旧 CLI / test fixture）でも green のまま扱える', () => {
+    const execFileImpl = vi.fn(() => '[]');
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toEqual({ status: 'green' });
+  });
+
+  it('JSON として解釈できない出力は fetch-failed になり ::warning:: を出す', () => {
+    const execFileImpl = vi.fn(() => 'not json at all');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+      expect(outcome).toEqual({ status: 'fetch-failed' });
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('::warning::'));
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('sentry-new'));
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('data も配列でない object 形状は fetch-failed になる', () => {
+    const execFileImpl = vi.fn(() => JSON.stringify({ data: 'not-an-array' }));
+    const outcome = checkSentryNew({ execFileImpl, sentryToken: 'x' });
+    expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+});
+
 describe('checkSentryNew / buildAlertArgs（count は常に素の数字）', () => {
   it('issues.length が limit 未満なら count は実数のまま', () => {
     const issues = Array.from({ length: 3 }, (_, i) => ({
@@ -1263,19 +1250,6 @@ describe('runNightWatch', () => {
   const has = (args: string[], ...tokens: string[]) =>
     tokens.every((t) => args.some((a) => a.includes(t)));
 
-  const GREEN_DOCS_COVERAGE = `# 公開docs カバレッジ
-
-## 機能 ⇄ 公開docs
-
-| spec | slug | en | ja | LP の約束 |
-| --- | --- | --- | --- | --- |
-| review | /docs/review | なし | draft | Core Review metrics |
-| settings | /docs/data-export | なし | draft | Data export |
-| tags | /docs/activities | なし | draft | Activities |
-
-## en / ja が揃っていない
-`;
-
   // #2483: heavy-red / integration-red は nightly.yml 内の job 名で判定する
   // 多段処理（`gh run list --workflow=nightly.yml` → run ごとに
   // `gh api .../actions/runs/{id}/jobs`）になった。両 check が同じ run-list
@@ -1347,16 +1321,14 @@ describe('runNightWatch', () => {
         respond: () => '',
       },
       {
-        match: (file, args) => file === 'pnpm' && args[0] === 'docs:coverage',
-        respond: () => GREEN_DOCS_COVERAGE,
-      },
-      {
         match: (file, args) => file === 'pnpm' && args[0] === 'quality:deadcode:ci',
         respond: () => '',
       },
       {
+        // #2543: baseline 比較を廃止し、gh api の生 JSON 配列を返す形へ変更。
+        // 空配列（= 直近48hの新規 open alert 無し）は green。
         match: (file, args) => file === 'gh' && has(args, 'api', 'dependabot/alerts'),
-        respond: () => `${readBaseline().dependabot_alert_count}\n`,
+        respond: () => '[]',
       },
       ...greenNightlyJobs(),
       {
@@ -1407,7 +1379,7 @@ describe('runNightWatch', () => {
     expect(writeCalls).toHaveLength(0);
 
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     expect(process.exitCode).not.toBe(1);
     process.exitCode = 0;
@@ -1450,7 +1422,7 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch(docs-check): pnpm docs:check が exit 0 以外');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 8/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1513,7 +1485,7 @@ describe('runNightWatch', () => {
     expect(body).toContain('残り 3 日');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 8/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1637,7 +1609,7 @@ describe('runNightWatch', () => {
     // 観測そのものは 7/7 成功している（赤だと分かったからこそ起票を試みた）。
     // 「取得失敗 0 / 起票失敗 1」と読めることが、gh 障害の切り分けに要る。
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1699,7 +1671,7 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測コマンドが取得失敗');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 7/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
+      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
     );
     process.exitCode = 0;
   });
@@ -1761,7 +1733,7 @@ describe('runNightWatch', () => {
     expect(fetchFailedCreateCall).toBeDefined();
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 7/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
+      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
     );
     process.exitCode = 0;
   });
@@ -1780,7 +1752,7 @@ describe('runNightWatch', () => {
               stderr: 'could not resolve host: api.github.com',
             });
           }
-          return `${readBaseline().dependabot_alert_count}\n`;
+          return '[]';
         },
       },
       ...baseRules(),
@@ -1794,7 +1766,7 @@ describe('runNightWatch', () => {
     );
     expect(createCalls).toHaveLength(0);
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1878,7 +1850,7 @@ describe('runNightWatch', () => {
     // pending だけの夜は「要確認」に倒さない（日常的に起きるため verdict の
     // 識別力が落ちる。内製クロスレビュー risk-reviewer 指摘 low）。
     expect(summaryLine()).toBe(
-      'night-watch: 判定保留あり | 観測 8/8 | 起票 0 | 保留 1 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 判定保留あり | 観測 7/7 | 起票 0 | 保留 1 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -2032,7 +2004,7 @@ describe('runNightWatch', () => {
     expect(fetchFailedCreates.length).toBe(2); // 3件中1件は予算超過でcapされる
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 5/8 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
+      'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
     );
     // #2535 item 3（推奨案 a）: capped が 1 件でもあれば job を非 0 exit にする。
     // 起票上限で見送った事実がサマリ 1 行にしか残らないと、job 自体は緑のまま

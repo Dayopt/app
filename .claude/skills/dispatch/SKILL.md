@@ -133,6 +133,8 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
 - [ ] 夜勤の alert issue 確認（`gh issue list --state open --label area:operations --search "nightwatch in:title"`）。**緑の夜は無音が正常**（2026-09-01、#2525）ので、issue が無いこと自体は異常ではない。run の死活が疑わしい時だけ `docs/operations/night-watch.md` §故障検出手順 に従う
+  - `nightwatch(` issue は当日中に `status:ready` + priority 判定を付ける
+  - `nightwatch-fetch-failed(` issue は根本原因の issue へ `Refs` し、その issue が `status:blocked` なら理由を明示する
 - [ ] **heavy-post-merge の赤確認**（2026-08-20、CI 4 層再設計 [#2269](https://github.com/Dayopt/dayopt/issues/2269)。2026-08-25、[#2382](https://github.com/Dayopt/dayopt/issues/2382) で per-merge 実行を廃止。2026-08-28、[#2483](https://github.com/Dayopt/dayopt/issues/2483) で heavy-post-merge.yml / integration.yml が nightly.yml へ統合され job-scoped 判定へ移行）: `node scripts/ci/night-watch/check-workflow-job.mjs heavy-red`（および `integration-red`）で直近の job-scoped 判定結果を確認する。`status: "red"` があれば修正 issue を最優先で起票する（`evidenceUrl` が該当 job のログ URL）。E2E / Web E2E / Integration Tests は per-PR から撤去され、nightly + 手動発火でしか検証されないため、この確認を欠くと壊れた main が promote gate（層 4）に阻まれるまで無通知で滞留する。**`status: "pending"` の場合は完了を待って再確認する**（per-merge 廃止で「日中の main push run が backstop になる」前提が消えたため、nightly の遅延をそのまま見ると赤確認が空振りする）
 
 ### 月次 backstop（`/gardening` と同時期に実施）

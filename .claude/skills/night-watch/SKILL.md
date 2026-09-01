@@ -45,9 +45,9 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 ### Step 1（観測）
 
-[checklist.md](checklist.md) の 4 項目（`docs-check` / `docs-coverage` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）+ `storage-rls-audit-token-expiry`（#2467、`SUPABASE_STORAGE_RLS_AUDIT_TOKEN` の失効監視）の 8 check-id を観測する。この 8 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
+[checklist.md](checklist.md) の 3 項目（`docs-check` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）+ `storage-rls-audit-token-expiry`（#2467、`SUPABASE_STORAGE_RLS_AUDIT_TOKEN` の失効監視）の 7 check-id を観測する。この 7 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
 
-`storage-rls-audit-token-expiry` は他の 7 件と違い gh/sentry を一切呼ばない純粋な日付計算（`checkSecretExpiry`、`run-all.mjs`）。`CHECK_DEFINITIONS['storage-rls-audit-token-expiry'].expiresAt`（token の既知の失効日）を固定値として持ち、`warningDays`（14）以内に迫ると red。ネットワーク越しの取得が無いため fetch-failed 経路（run 内 retry）の対象にならない。token を再発行したら `expiresAt` を更新すること（新しい儀式は作らない——夜勤の既存ループへ 1 本足すだけ、という #2467 の軽量案）。
+`storage-rls-audit-token-expiry` は他の 6 件と違い gh/sentry を一切呼ばない純粋な日付計算（`checkSecretExpiry`、`run-all.mjs`）。`CHECK_DEFINITIONS['storage-rls-audit-token-expiry'].expiresAt`（token の既知の失効日）を固定値として持ち、`warningDays`（14）以内に迫ると red。ネットワーク越しの取得が無いため fetch-failed 経路（run 内 retry）の対象にならない。token を再発行したら `expiresAt` を更新すること（新しい儀式は作らない——夜勤の既存ループへ 1 本足すだけ、という #2467 の軽量案）。
 
 - **fail-closed 原則**: 観測コマンドが失敗（spawn 失敗・パース不能）した check-id は緑と判定せず `failed` へ記録する
 - **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。`network-error` には GitHub / Sentry 側の 5xx（502 / 503 / 504 / 500）も含む — Codex 指摘で、5xx がどの分類語にも該当せず `unknown` へ落ちて 1 回で確定していたことが実測で判明した。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）
@@ -57,7 +57,8 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
   - **pending 判定は allowlist（`status !== 'completed'`）**（#2534）。旧実装は `in_progress` / `queued` の denylist で、`waiting`（environment protection rule 承認待ち）等の未知の非 completed 値が pending からも「直近 run の terminal 結果」判定からも漏れ、判定の根拠が採用 run を離れて古い run へ移っていた。`isLatestWorkflowRunPending`（`lib.mjs`）が正本
   - success の判定には `status === 'completed'` も要求する。Codex 指摘で、`checkWorkflowJobRun` の畳み込みが `[in_progress, success]` を偽の success にしていた（未完了 job の `conclusion` も `null` なので、`worst === null` を初回の番兵に使う reduce が 2 件目で無検査に上書きしていた）ことが実測で判明した。畳み込み側も直したが、無音へ倒す判断はこちらでも確かめる
   - **履歴の一部を読めなかった夜は stale を確定させない**（`fetch-failed` へ縮退）。stale は「窓内に success が無い」ことを根拠にするので、前夜の success run だけ jobs API が落ちると誤 red を起票する（Codex 指摘、実測確定）
-- 判定関数は `judgeCountBaseline` / `judgeWorkflowRun` / `classifyGhError`（`run-all.mjs`）
+- **`dependabot-alerts` は baseline 比較ではなく「直近48hに作成された open alert があるか」で判定する**（v4、#2543。open 件数を固定値と比較する count-only 判定は、同じ晩に N 件解消 + N 件新規が起きても正味の件数が変わらず検出できない「入れ替わりの盲点」があった）。判定は `checkRecentDependabotAlerts`（`run-all.mjs`）が完結する
+- 判定関数は `judgeWorkflowRun` / `classifyGhError`（`run-all.mjs`）
 
 ### Step 2（起票/追記）
 
@@ -79,9 +80,9 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 GitHub Actions の `secrets.NIGHT_WATCH_DEPENDABOT_TOKEN`（Dependabot alerts: read の fine-grained PAT）と `secrets.SENTRY_AUTH_TOKEN`（1Password `sentry-cli-readonly` item と同じ read-only scope）を使う。値の登録・更新は指揮台/User の操作枠で行い、`run-all.mjs` はこの 2 つを起動直後に `process.env` から捕捉して削除し、`pnpm docs:check` 等のサードパーティ依存コードを大量実行するコマンドから見えないようにする（`run-all.mjs` 冒頭コメント参照）。**`GH_TOKEN`（`github.token`）もこの分離の対象**: gh を必要としないコマンド（`docs:check` / `docs:coverage` / `quality:deadcode:ci` / `sentry`）へは `envWithout('GH_TOKEN', 'GITHUB_TOKEN')` で GH_TOKEN を持たない env を渡す。workflow の `permissions:` ブロックによる最小権限化に加え、必要な呼び出し（`gh api` / `gh run list` / `gh issue ...`）にだけトークンを見せる二重の防御にする（push 前反証レビュー risk-reviewer 指摘、medium）。
 
-## checklist・baseline の変更
+## checklist の変更
 
-checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseline.json)）の変更は通常の PR レビューを通す。night-watch 自身（Actions workflow・手動代行のどちらも）はこの 2 ファイルを読むだけで編集しない（review-gated ratchet）。
+checklist（[checklist.md](checklist.md)）の変更は通常の PR レビューを通す。night-watch 自身（Actions workflow・手動代行のどちらも）はこのファイルを読むだけで編集しない（review-gated ratchet）。baseline 機構（`baseline.json`）は v4（#2543）で廃止した——`docs-coverage` は月次 `docs-audit` skill と検出が二重だったため削除し、`dependabot-alerts` は count-only 判定の「入れ替わりの盲点」を埋めるため「直近48hの新規判定」へ置き換えた。
 
 ## 手動代行
 
@@ -107,7 +108,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 ## 守ること
 
-- checklist の変更は通常の PR レビューを通す（Actions workflow・手動代行のどちらも checklist.md / baseline.json を編集しない）
+- checklist の変更は通常の PR レビューを通す（Actions workflow・手動代行のどちらも checklist.md を編集しない）
 - 新ラベルを作らない。既存体系（`docs/operations/github-labels.md`）のみ使う
 - **書き込み先は自分が起票した alert issue（`nightwatch(...)` / `nightwatch-fetch-failed(...)`）に限る**（v4、#2525）。他の issue のラベル変更・close・コメント・PR 操作は一切行わない。層3 hook の allowlist もこれに合わせて `alert-issue.mjs` の `report` / `report-fetch-failed` の 2 形だけを許可する
 - Sentry issue の個別 triage（`resolve` 等の write 操作、担当割り当て）は行わない。列挙して起票するだけ

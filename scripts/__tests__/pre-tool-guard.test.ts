@@ -1042,11 +1042,12 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
   describe('許可形（night-watch checklist が実行する形。完全一致 or 固定 wrapper prefix）', () => {
     it.each([
       ['docs:check', 'pnpm docs:check'],
-      ['docs:coverage', 'pnpm docs:coverage'],
       ['quality:deadcode:ci', 'pnpm quality:deadcode:ci'],
       [
+        // #2543: baseline 比較（`--jq 'length'`）から「直近48hの新規判定」
+        // （生 JSON 配列、`--jq '.'`）へ変更。
         'dependabot alerts (GET)',
-        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
+        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq '.'",
       ],
       ['token permissions self-check (GET)', 'gh api repos/Dayopt/dayopt --jq .permissions'],
       ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
@@ -1086,8 +1087,8 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       // 廃止したため、それらの許可形は下の「拒否形」側で塞がれていることを
       // 検証する。
       [
-        'check-id alert wrapper（count-baseline）',
-        'node scripts/ci/night-watch/alert-issue.mjs report docs-coverage --actual 9',
+        'check-id alert wrapper（recent-alerts）',
+        'node scripts/ci/night-watch/alert-issue.mjs report dependabot-alerts --count 1 --evidence "#123 high lodash 2026-08-30T00:00:00Z"',
       ],
       [
         'check-id alert wrapper（sentry evidence を含む実測形）',
@@ -1162,13 +1163,12 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       // 完全一致（引数を一切許さない）で閉じた。
       ['P1回帰: quality:deadcode:ci --fix によるソース自動改変', 'pnpm quality:deadcode:ci --fix'],
       ['docs:check に引数を付ける迂回', 'pnpm docs:check --anything'],
-      ['docs:coverage に引数を付ける迂回', 'pnpm docs:coverage --write'],
       // P2-a（同上）: gh api への -f/-F/--input は暗黙的に POST を意味しうる。
       // dependabot alerts コマンドは完全一致のみ許可のため、追加 flag は
       // 文字列として一致しなくなり自動的に拒否される。
       [
         'P2回帰: gh api dependabot alerts に -f を付けて暗黙POSTを試みる迂回',
-        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length' -f x=1",
+        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq '.' -f x=1",
       ],
       [
         'gh api permissions self-check に --input を付ける迂回',

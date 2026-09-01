@@ -1,5 +1,5 @@
-import { readFileSync, realpathSync } from 'node:fs';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 import { extractTrailingNumber, REPO, reserveAlertRunSlot, runGh, runGhJson } from './lib.mjs';
 
@@ -31,22 +31,28 @@ export const CHECK_DEFINITIONS = {
     title: 'pnpm docs:check が exit 0 以外',
     command: 'pnpm docs:check',
   },
-  'docs-coverage': {
-    kind: 'count-baseline',
-    title: '公開docs未カバー件数がbaseline超過',
-    command: 'pnpm docs:coverage',
-    baselineKey: 'docs_coverage_missing',
-  },
   deadcode: {
     kind: 'exit-code',
     title: 'pnpm quality:deadcode:ci が exit 0 以外',
     command: 'pnpm quality:deadcode:ci',
   },
+  // #2543: baseline（open 件数 vs 固定値）機構を廃止した。同じ晩に N 件解消 +
+  // N 件新規が起きても count が変わらず検出できない「入れ替わりの盲点」が
+  // あったため（実測: baseline=1 に対し実 open が 5 件、うち 2 件は直近作成）、
+  // 「直近 48h に作成された open alert があるか」の判定へ置き換える
+  // （run-all.mjs の `checkRecentDependabotAlerts` / `RECENT_ALERT_WINDOW_MS`
+  // 参照）。
   'dependabot-alerts': {
-    kind: 'count-baseline',
-    title: 'Dependabot open alert 件数がbaseline超過',
-    command: "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
-    baselineKey: 'dependabot_alert_count',
+    kind: 'recent-alerts',
+    title: '直近48hに新規 open Dependabot alert を検出',
+    // 起票 issue の「再現コマンド」欄は表示専用（実行は run-all.mjs の
+    // `checkRecentDependabotAlerts` が `per_page=100` 付きで execFile 経由で
+    // 叩く。既存の設計方針〈表示用コマンドと実行コマンドは意図的に異なり
+    // うる〉、checkSentryNew と同型）。`&` を含む文字列は層3 guard
+    // （scripts/hooks/pre-tool-guard-impl.sh の is_single_simple_command）が
+    // shell 制御文字として無条件拒否するため、手動再現用にはここで
+    // `per_page` を省いた形を使う。
+    command: "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq '.'",
   },
   // #2483（CI ファイル統合 Phase 1）: heavy-post-merge.yml / integration.yml は
   // nightly.yml へ吸収され、複数 job（heavy-e2e / heavy-web / integration）が
@@ -144,6 +150,17 @@ const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/dayopt\.sentry\.io\/issues\/\d
 // 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
 const MAX_SENTRY_EVIDENCE = 5;
 
+// dependabot-alerts（recent-alerts kind、#2543）の evidence 形式。
+// `#<番号> <severity> <package名> <ISO日時>` の空白区切り 4 要素のみ許可する
+// （run-all.mjs の `checkRecentDependabotAlerts` が組み立てる文字列と一致
+// させる）。sentry kind ほど厳密な URL 形状検証はしない — severity /
+// package 名は GitHub 側の値の性質上ある程度自由な文字集合になるため、過度に
+// 厳密にせず「gh api の生レスポンス（advisory の説明文等）がそのまま紛れ
+// 込んでいないか」を緩く検査する程度に留める。
+const DEPENDABOT_EVIDENCE_RE = /^#\d+ \S+ \S+ \d{4}-\d{2}-\d{2}T\S*$/;
+// 1 check あたりの evidence 件数上限（sentry と同じ理由）。
+const MAX_DEPENDABOT_EVIDENCE = 5;
+
 /**
  * evidence の書式・件数エラーに付ける識別子（Codex レビュー P2、#2525）。
  *
@@ -180,14 +197,6 @@ export function isEvidenceValidationError(error) {
     error !== null &&
     /** @type {{ code?: unknown }} */ (error).code === EVIDENCE_VALIDATION_ERROR_CODE
   );
-}
-
-const BASELINE_PATH = fileURLToPath(
-  new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
-);
-
-function readBaseline() {
-  return JSON.parse(readFileSync(BASELINE_PATH, 'utf8'));
 }
 
 /**
@@ -261,18 +270,9 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       baseline = 'exit code 0';
       break;
     }
-    case 'count-baseline': {
-      if (!args.actual || !DIGITS_RE.test(args.actual)) {
-        throw new Error('--actual は数字のみで指定してください');
-      }
-      const baselineValue = readBaseline()[definition.baselineKey];
-      actual = args.actual;
-      baseline = String(baselineValue);
-      break;
-    }
     case 'secret-expiry': {
       // #2467: 残り日数は失効済み（0 以下）もありうるため負数も許可する
-      // （count-baseline の DIGITS_RE は非負整数のみで流用できない）。
+      // （DIGITS_RE は非負整数のみで流用できない）。
       if (!args.actual || !/^-?\d+$/.test(args.actual)) {
         throw new Error('--actual は整数（残り日数）で指定してください');
       }
@@ -312,6 +312,28 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       baseline = '0（新規検出のみ異常）';
       break;
     }
+    case 'recent-alerts': {
+      if (!args.count || !DIGITS_RE.test(args.count)) {
+        throw new Error('--count は数字のみで指定してください');
+      }
+      const evidence = args.evidence ?? [];
+      if (evidence.length > MAX_DEPENDABOT_EVIDENCE) {
+        throw evidenceValidationError(
+          `--evidence は 1 check あたり最大 ${MAX_DEPENDABOT_EVIDENCE} 件までです（指定: ${evidence.length} 件）`,
+        );
+      }
+      const badEvidence = evidence.filter((entry) => !DEPENDABOT_EVIDENCE_RE.test(entry));
+      if (badEvidence.length > 0) {
+        throw evidenceValidationError(
+          `--evidence は "#<番号> <severity> <package名> <ISO日時>" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）`,
+        );
+      }
+      actual = `件数（直近48h新規）: ${args.count}${
+        evidence.length > 0 ? `\n${evidence.map((e) => `- ${e}`).join('\n')}` : ''
+      }`;
+      baseline = '0（直近48hの新規 open alert のみ異常）';
+      break;
+    }
     default:
       throw new Error(`未対応の kind です: ${definition.kind}`);
   }
@@ -322,8 +344,6 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
 **閾値/baseline**: ${baseline}
 **再現コマンド**: \`${definition.command}\`
 **検出日時**: ${detectedAt}
-
-baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は通常の PR レビューでのみ行う。
 `;
 }
 
@@ -500,8 +520,10 @@ export function runAlertSync({
   return { action: 'created', issueNumber: extractTrailingNumber(createOutput) };
 }
 
-// #2422: 観測コマンド自体の取得失敗（fetch-failed）が N 晩連続した時の
-// escalation issue。CHECK_DEFINITIONS の kind ベースの title
+// #2422 → #2525: 観測コマンド自体の取得失敗（fetch-failed）が run 内 retry
+// でも回復しなかった、その夜のうちに起票する escalation issue（旧「N 晩
+// 連続」条件は、判定に使っていた常設運行記録 issue のコメントごと #2525 で
+// 廃止した）。CHECK_DEFINITIONS の kind ベースの title
 // （`nightwatch(<checkId>): <definition.title>`、red-alert 用）とは
 // **別の title prefix** を使う。同じ prefix にすると、findExistingAlertIssue
 // の dedup 検索が「この check-id の red-alert issue」を誤って再利用し、

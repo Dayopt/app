@@ -74,9 +74,10 @@ export function extractTrailingNumber(url) {
  * GitHub Actions の scheduled workflow は数十分規模の遅延が日常的に起きる。
  * 旧判定規約は status を無条件で赤判定へ含めており、単に実行中というだけの
  * run を赤と誤検出していた（#2341、integration.yml の schedule-run margin が
- * 30分しかなく実際に誤起票しうると判明）。true を返した check-id は §Step2
- * fail-closed 原則と同じ経路（`<check-id>: 取得失敗`、Step 5 の `failed` へ
- * 記録）へ倒し、赤とは判定しない・alert-issue.mjs を呼ばない。
+ * 30分しかなく実際に誤起票しうると判明）。true を返した check-id は SKILL.md
+ * §Step1（観測）の fail-closed 原則と同じ経路（`<check-id>: 取得失敗`、
+ * `run-all.mjs` の `failed` 配列へ記録）へ倒し、赤とは判定しない・
+ * alert-issue.mjs を呼ばない。
  *
  * **allowlist 反転（#2534）**: 旧実装は `status === 'in_progress' ||
  * status === 'queued'` という denylist で pending を判定していた。GitHub
@@ -111,9 +112,9 @@ export function isLatestWorkflowRunPending(runs) {
 }
 
 /**
- * night-watch Step 3（alert-issue.mjs）の 1 run あたり起票上限（#2332）が使う
- * run-scoped state。check-id ごとに独立した process 呼び出しの間で状態を
- * 共有するため、gh を経由しない local file を使う。
+ * night-watch SKILL.md §Step2（起票/追記、alert-issue.mjs）の 1 run あたり
+ * 起票上限（#2332）が使う run-scoped state。check-id ごとに独立した process
+ * 呼び出しの間で状態を共有するため、gh を経由しない local file を使う。
  *
  * plan-review（#2332）で確定した設計:
  * - **同一 check-id は 1 run につき 1 回だけ**（新規起票・既存issueへの追記を
@@ -131,10 +132,11 @@ export function isLatestWorkflowRunPending(runs) {
  * - **state が読めない/壊れている時は fail-open**（無制限扱いで gh 呼び出しを
  *   通す）。cap の目的は誤登録の減衰であって、state 機構自体の不調で
  *   night-watch の唯一の通知チャネル（issue 起票・コメント）を無音にしては
- *   いけない。ただし不健全である事実は `healthy: false` として呼び出し元
- *   （run-log.mjs Step 5）へ伝え、運行記録コメントへ機械生成の 1 行として
- *   残す（Claude の自己申告に頼らず、wrapper 自身が同じ state file を読んで
- *   報告する）
+ *   いけない。不健全である事実は `healthy: false` として戻り値に残す
+ *   （型は下記 `AlertRunState`）。**#2525 で運行記録（旧 run-log.mjs）を
+ *   廃止したため、現在この `healthy` フィールドを読んで人間可読の記録へ
+ *   反映する呼び出し元は無い** — state file 自体の破損有無を後から
+ *   デバッグする時のための情報としてのみ残っている
  * - **単一プロセス直列実行が前提**。night-watch は 1 セッションが Bash tool
  *   呼び出しを 1 つずつ順に実行する（並行実行しない）ため、read-modify-write
  *   の TOCTOU は発生しない

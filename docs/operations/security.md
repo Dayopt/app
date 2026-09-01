@@ -33,15 +33,15 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ### ワークフロー別 permissions
 
-| ワークフロー                                          | permissions                                                                  | 理由                            |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------- |
-| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                                     | コード読み取り + impact 判定    |
-| `ci.yml`（test job）                                  | `contents: read` / `pull-requests: write` / `issues: write`                  | migration safety の通知         |
-| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                                             | コード読み取りのみ              |
-| `nightly.yml`（night-watch job）                      | `contents: read` / `issues: write` / `actions: read` / `pull-requests: read` | issue 起票・run 状態確認        |
-| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                                           | ラベル一括剥がし                |
-| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write`                 | 固定 context 名での status 発行 |
-| `create-release.yml`                                  | `contents: write`                                                            | タグからリリース作成            |
+| ワークフロー                                          | permissions                                                  | 理由                            |
+| ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
+| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取り + impact 判定    |
+| `ci.yml`（test job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知         |
+| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ              |
+| `nightly.yml`（night-watch job）                      | `issues: write` / `contents: read` / `actions: read`         | issue 起票・run 状態確認        |
+| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                |
+| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行 |
+| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成            |
 
 `production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
