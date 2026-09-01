@@ -601,9 +601,9 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
 
   // 「1 件の失敗で全体を諦めない」（= 次の run へ読み進める）という元の設計は
   // 維持しつつ、**「異常なし」の結論だけは確定させない**（内製クロスレビュー
-  // risk-reviewer 指摘 medium）。読めなかった run は必ず採用した run と同じか
-  // それより新しいので、そこに赤があった可能性を排除できない。
-  it('1 run 分の jobs 取得失敗があると、後続 run が success でも green を確定させない', () => {
+  // risk-reviewer 指摘 medium）。**採用する run より新しい** run が読めなかった
+  // 以上、そこに赤があった可能性を排除できない。
+  it('採用 run より新しい run の jobs 取得に失敗したら、後続 run が success でも green を確定させない', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
         runListResponse([
@@ -621,6 +621,27 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(execFileImpl.mock.calls.some((c) => (c[1] as string[])[1]?.includes('/2/'))).toBe(true);
     // ただし結論は green ではなく fetch-failed（起票されるので無音にならない）。
     expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+
+  // 逆向き（Codex 指摘 P2 第 3 ラウンド、#2525）。最新 run を green と読めた後で
+  // **より古い** run の取得に失敗しても縮退させない。その古い run の内容は green
+  // の根拠に効いていないため、縮退させると一過性の 503 のたびに不要な
+  // `nightwatch-fetch-failed` issue が立つ（jobs 取得は retries: 0 なので現実的）。
+  it('採用 run より古い run の取得失敗では green を縮退させない（不要な起票をしない）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
+          { databaseId: 1, createdAt: '2026-08-24T03:30:00+09:00', url: 'u1' },
+        ]),
+        // 最新（2）は success として読める。古い方（1）は未 mock（throw）。
+        jobsResponseFor(2, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'green' });
   });
 
   // 上の縮退は「異常なし」側だけに効く。赤が読めているなら、それより古い run の

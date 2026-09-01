@@ -750,6 +750,17 @@ export function checkWorkflowJobRun(
   // 「対象 job を読めなかった run」の件数。stale 判定の根拠（窓内に success が
   // 無い）を確定させてよいかの判断に使う。
   let jobFetchFailures = 0;
+  // **失敗した位置**も控える（Codex 指摘 P2 第 3 ラウンド、#2525）。ループは
+  // 新しい順に走るので、`matched` がまだ空のうちに起きた失敗＝**採用する run
+  // より新しい** run が読めなかった、という意味になる。green を縮退させて
+  // よいのはこちらだけ。読めた最新 run が green の夜に、3 件そろえる途中の
+  // **より古い** run が 1 回 503 になっただけで縮退させると、不要な
+  // `nightwatch-fetch-failed` を毎回起票してしまう。
+  let jobFetchFailuresBeforeFirstMatch = 0;
+  const countJobFetchFailure = () => {
+    jobFetchFailures += 1;
+    if (matched.length === 0) jobFetchFailuresBeforeFirstMatch += 1;
+  };
   for (const run of runs) {
     if (matched.length >= targetCount) break;
     // gh run list の JSON 出力（GitHub API 由来）を信頼しているが、他 wrapper
@@ -785,7 +796,7 @@ export function checkWorkflowJobRun(
       // 「読めなかった run がある」事実は控える — stale 判定は「窓内に success
       // が無い」ことを根拠に赤へ倒すので、読めなかった run を「success では
       // なかった」と同一視すると誤 red を出す（Codex 指摘 P2、実測確定）。
-      jobFetchFailures += 1;
+      countJobFetchFailure();
       continue;
     }
 
@@ -793,11 +804,11 @@ export function checkWorkflowJobRun(
     try {
       jobs = JSON.parse(jobsResult.stdout);
     } catch {
-      jobFetchFailures += 1;
+      countJobFetchFailure();
       continue;
     }
     if (!Array.isArray(jobs)) {
-      jobFetchFailures += 1;
+      countJobFetchFailure();
       continue;
     }
 
@@ -830,24 +841,28 @@ export function checkWorkflowJobRun(
   const latestUrl = matched[0]?.url;
 
   // **読めなかった run があるなら「異常なし」側の結論を確定させない。**
+  // ただし縮退の根拠は結論ごとに違うので、数える失敗の範囲も分ける
+  // （Codex 指摘 P2 第 3 ラウンド、#2525。旧実装は両方を `jobFetchFailures`
+  // で見ており、「失敗は必ず採用 run と同じか新しい」と書いたコメントの主張が
+  // **誤りだった** — ループは 3 件そろうまで走るので、採用済みの最新 run より
+  // 古い run の失敗も同じ counter に入る）:
   //
-  // このループは新しい順に走り、`targetCount` 件そろった時点で break する。
-  // つまり `jobFetchFailures` に数えられる失敗は、必ず**採用した run と同じか
-  // それより新しい** run で起きている。その run が本当は赤だった可能性を
-  // 排除できない以上、無音へ倒してよい根拠が無い。
-  //
-  // 対象は 2 つの「異常なし」結論:
-  // - `green`（内製クロスレビュー risk-reviewer 指摘 medium。ループ内 jobs 取得を
-  //   `retries: 0` にした結果、最新 run の 1 回の 503 で前夜の success へ落ち、
-  //   本物の赤が緑になる経路が新たに開いた。この PR が塞ごうとしている無音そのもの）
-  // - `stale-pending` の red（Codex 指摘 P2。「窓内に success が 1 件も無い」を
-  //   根拠にするので、前夜の success run が読めないと誤 red になる）
+  // - `green` → **採用した run より新しい** run が読めなかった時だけ縮退する
+  //   （`jobFetchFailuresBeforeFirstMatch`）。内製クロスレビュー risk-reviewer
+  //   指摘 medium の経路（最新 run の 1 回の 503 で前夜の success へ落ち、本物の
+  //   赤が緑になる）はこちらに入る。逆に、最新 run を green と読めた後で古い run
+  //   が 503 になっただけなら、その古い run の内容は green の根拠に効いていない
+  //   ので縮退させない（させると毎回不要な issue が立つ）
+  // - `stale-pending` の red → **どの位置の失敗でも**縮退する（`jobFetchFailures`）。
+  //   この判定は「窓内に success が 1 件も無い」を根拠にするため、古い success run
+  //   が読めなかっただけで誤 red になる（Codex 指摘 P2 第 1 ラウンド）
   //
   // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
   // `nightwatch-fetch-failed` として起票されるので、朝には見える。
-  const judgedAsNoAnomaly =
-    judged.status === 'green' || (judged.status === 'red' && judged.reason === 'stale-pending');
-  if (judgedAsNoAnomaly && jobFetchFailures > 0) {
+  const degradeGreen = judged.status === 'green' && jobFetchFailuresBeforeFirstMatch > 0;
+  const degradeStale =
+    judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0;
+  if (degradeGreen || degradeStale) {
     return { status: 'fetch-failed' };
   }
 
