@@ -18,6 +18,7 @@ import {
   NIGHTLY_HEAVY_JOB_NAMES,
   NIGHTLY_INTEGRATION_JOB_NAME,
   OBSERVATION_COMMAND_TIMEOUT_MS,
+  OBSERVATION_RETRY_MIN_ATTEMPT_MS,
   readBaseline,
   reportRedCheck,
   runNightWatch,
@@ -922,6 +923,16 @@ describe('execObservationCommand', () => {
     // retry を含めても、timeout 1 回ぶんから大きく増えないことを固定する。
     // ここが跳ね上がる変更（timeout の retry 復活など）は必ずこの test を割る。
     expect(WORST_CASE_OBSERVATION_MS).toBeLessThan(250_000);
+  });
+
+  // 内製クロスレビュー risk-reviewer 指摘 low（#2525）。この不等式が崩れると
+  // attempt 0 の時点で `remaining < 下限` が成立し、execFileImpl が一度も
+  // 呼ばれないまま `{ ok: false, error: undefined }` が返る = 全 check が
+  // 理由不明の fetch-failed へ一斉に落ちる。定数を短くする調整で静かに
+  // 踏めるので、この file の他の不等式と同じく test で固定する。
+  it('retry の下限が観測予算を上回らない（attempt 0 を殺さない）', () => {
+    expect(OBSERVATION_RETRY_MIN_ATTEMPT_MS).toBeLessThan(OBSERVATION_COMMAND_TIMEOUT_MS);
+    expect(OBSERVATION_RETRY_MIN_ATTEMPT_MS).toBeLessThan(WORST_CASE_OBSERVATION_MS);
   });
 
   it('env を渡すと process.env の代わりにその env で実行する（token 分離の検証）', () => {

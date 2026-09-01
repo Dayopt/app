@@ -320,7 +320,7 @@ const OBSERVATION_RETRY_BASE_DELAY_MS = 1_000;
  * fetch-failed へ降格する（無音にはならないが alert の種類と本文が実態と
  * ずれる）。「勝ち目のない試行はしない」方が原因を保存できる。
  */
-const OBSERVATION_RETRY_MIN_ATTEMPT_MS = 5_000;
+export const OBSERVATION_RETRY_MIN_ATTEMPT_MS = 5_000;
 
 /** retry の待ち時間の合計（1s + 2s = 3s）。 */
 const OBSERVATION_RETRY_TOTAL_DELAY_MS =
