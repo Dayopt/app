@@ -517,18 +517,17 @@ describe('runAlertSync', () => {
   });
 });
 
-// #2422: 観測コマンド自体の取得失敗（fetch-failed）が N 晩連続した時の
-// escalation。red-alert（runAlertSync）と title prefix・reservation key が
-// 独立していることを固定する。
+// #2422: 観測コマンド自体の取得失敗（fetch-failed）の起票。red-alert
+// （runAlertSync）と title prefix・reservation key が独立していることを固定する。
+// #2525 で「N 晩連続」の条件と consecutiveNights 引数を廃止し、run 内 retry でも
+// 回復しなかった夜にその場で起票する形へ変えた。
 describe('buildFetchFailureAlertBody', () => {
-  it('check-id・晩数・再現コマンドを本文へ入れる', () => {
+  it('check-id・再現コマンドを本文へ入れる', () => {
     const body = buildFetchFailureAlertBody({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       detectedAt: '2026-08-27T00:00:00Z',
     });
     expect(body).toContain('sentry-new');
-    expect(body).toContain('3 晩連続');
     expect(body).toContain('sentry issue list dayopt');
   });
 
@@ -536,48 +535,39 @@ describe('buildFetchFailureAlertBody', () => {
     expect(() =>
       buildFetchFailureAlertBody({
         checkId: 'evil',
-        consecutiveNights: 3,
         detectedAt: '2026-08-27T00:00:00Z',
       }),
     ).toThrow(/未知の check-id/);
   });
 
-  it('consecutiveNights が不正な値なら例外を投げる', () => {
-    const base = { checkId: 'sentry-new', detectedAt: '2026-08-27T00:00:00Z' };
-    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: 0 })).toThrow(
-      /consecutiveNights/,
-    );
-    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: 1.5 })).toThrow(
-      /consecutiveNights/,
-    );
-    expect(() => buildFetchFailureAlertBody({ ...base, consecutiveNights: -1 })).toThrow(
-      /consecutiveNights/,
-    );
+  // 本文に晩数を書かない（#2525）。旧実装の「N 晩連続」は常設運行記録 issue の
+  // コメント列を数えて得ていた値で、そのコメントを廃止した今は正しい N が
+  // 存在しない。事実でない数字を issue へ書かないことを固定する。
+  it('晩数を本文に書かない', () => {
+    for (const isContinuing of [true, false]) {
+      const body = buildFetchFailureAlertBody({
+        checkId: 'sentry-new',
+        detectedAt: '2026-08-27T00:00:00Z',
+        isContinuing,
+      });
+      expect(body).not.toMatch(/\d+\s*晩/);
+    }
   });
 
-  // push前反証レビュー指摘（P2、PR #2445）: 呼び出し元は常に固定値
-  // （既定3）しか渡さないため、night4以降も毎晩「3晩連続」という同じ本文が
-  // 積まれ、実際の継続期間が過小評価される。isContinuing:true では固定の
-  // 晩数を繰り返さない文言に切り替える。
-  it('isContinuing:true では固定の晩数を繰り返さず「継続中」の文言にする', () => {
-    const body = buildFetchFailureAlertBody({
+  it('isContinuing:true では「継続」、既定では「run 内 retry でも回復しなかった」文言にする', () => {
+    const continuing = buildFetchFailureAlertBody({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       detectedAt: '2026-08-27T00:00:00Z',
       isContinuing: true,
     });
-    expect(body).not.toContain('3 晩連続');
-    expect(body).toContain('継続して取得失敗');
-  });
+    expect(continuing).toContain('取得失敗が続いています');
 
-  it('isContinuing:false（既定）では晩数を明記する', () => {
-    const body = buildFetchFailureAlertBody({
+    const fresh = buildFetchFailureAlertBody({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       detectedAt: '2026-08-27T00:00:00Z',
     });
-    expect(body).toContain('3 晩連続');
-    expect(body).not.toContain('継続して取得失敗');
+    expect(fresh).toContain('retry でも回復しませんでした');
+    expect(fresh).not.toContain('取得失敗が続いています');
   });
 });
 
@@ -628,7 +618,6 @@ describe('runFetchFailureAlertSync', () => {
 
     const result = runFetchFailureAlertSync({
       checkId: 'dependabot-alerts',
-      consecutiveNights: 3,
       detectedAt: '2026-08-27T00:00:00Z',
       execFileImpl,
       runStatePath,
@@ -637,10 +626,13 @@ describe('runFetchFailureAlertSync', () => {
     expect(result).toEqual({ action: 'created', issueNumber: 800 });
     const createCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'create');
     const title = createCall[1][createCall[1].indexOf('--title') + 1];
-    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
+    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測コマンドが取得失敗');
   });
 
-  it('既存 escalation issue があればコメントを追記する（本文は「継続中」文言、固定晩数を繰り返さない）', () => {
+  // 既存 open issue の title を **旧形式のまま**にしてある（#2525）。title prefix
+  // `nightwatch-fetch-failed(<checkId>): ` を変えていないので、#2525 以前に
+  // 起票された issue も dedup に一致し、新規起票ではなくコメント追記になる。
+  it('既存 issue があればコメントを追記する（旧 title 形式でも dedup が効く）', () => {
     const execFileImpl = vi.fn((cmd, args) => {
       if (args[1] === 'list')
         return JSON.stringify([
@@ -656,7 +648,6 @@ describe('runFetchFailureAlertSync', () => {
 
     const result = runFetchFailureAlertSync({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       execFileImpl,
       runStatePath,
     });
@@ -664,8 +655,8 @@ describe('runFetchFailureAlertSync', () => {
     expect(result).toEqual({ action: 'commented', issueNumber: 801 });
     const commentCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'comment');
     const body = commentCall[1][commentCall[1].indexOf('--body') + 1];
-    expect(body).not.toContain('3 晩連続');
-    expect(body).toContain('継続して取得失敗');
+    expect(body).not.toMatch(/\d+\s*晩/);
+    expect(body).toContain('取得失敗が続いています');
   });
 
   it('reservation key は fetch-failed:<checkId> のため、同一runの red-alert 予約とは独立する', () => {
@@ -685,7 +676,6 @@ describe('runFetchFailureAlertSync', () => {
     });
     const result = runFetchFailureAlertSync({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       execFileImpl,
       runStatePath,
     });
@@ -699,7 +689,6 @@ describe('runFetchFailureAlertSync', () => {
     });
     const result = runFetchFailureAlertSync({
       checkId: 'sentry-new',
-      consecutiveNights: 3,
       execFileImpl,
       runStatePath,
     });

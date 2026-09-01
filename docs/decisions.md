@@ -26,3 +26,4 @@
 - 2026-08-28: [process] 意思決定ログを domain log/ から単一 append-only 索引 docs/decisions.md へ一本化する（理由: AI がオンデマンドで見た時に1ファイルで全決定が時系列に読める状態を作る）（参照: [#2475](https://github.com/Dayopt/dayopt/issues/2475)）
 - 2026-08-31: [process] decisions.md の参照 issue / PR をリンク付き表記へ統一し、旧 decision テンプレ（docs/_templates/decision.md）を削除する（理由: 索引一本化で domain log/ 形式のテンプレが不要になり、素の #N は GitHub 外から辿れないため）（参照: [#2481](https://github.com/Dayopt/dayopt/issues/2481)）
 - 2026-08-31: [process] 内製クロスレビュー必須の保護対象を「外部契約 or 不可逆」だけへ絞り、timeblock / calendar / lib/time の時間不変条件を必須側から外す（ただし features/timeblock/server の MCP 公開契約・service role クエリ・privacy 境界は残す）（理由: 可逆かつ test が担保する変更まで必須にすると Workflow 禁止のクラウドセッションで merge が止まるだけだったため）（参照: [#2489](https://github.com/Dayopt/dayopt/issues/2489)）
+- 2026-09-01: [process] 夜勤の「毎朝の読み物」層（日次盤面 issue・常設運行記録への毎晩1コメント・DoD 監査候補・朝編成ブリーフ・05:00 JST 蒸留層）を全廃し、「問題があれば issue、無ければ無音」へ集約する（理由: 毎日必ず何かが増えるコストが読まれる価値を上回ったため）（参照: [#2525](https://github.com/Dayopt/dayopt/issues/2525)）

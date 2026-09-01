@@ -7,95 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ALERT_RUN_STATE_TTL_MS,
   extractTrailingNumber,
-  findTodayBoardIssue,
-  isJstMonday,
-  isJstWeekend,
   isLatestWorkflowRunPending,
-  jstDateString,
-  jstDayRange,
-  jstWeekdayIndex,
-  jstYesterdayString,
   MAX_NEW_ISSUES_PER_RUN,
   readAlertRunState,
   reserveAlertRunSlot,
 } from './lib.mjs';
 
-describe('jstDateString', () => {
-  it('JST の暦日を YYYY-MM-DD で返す（UTC 前日 15:30 = JST 当日 00:30）', () => {
-    // 2026-08-23T15:30:00Z = 2026-08-24T00:30:00+09:00
-    expect(jstDateString(new Date('2026-08-23T15:30:00Z'))).toBe('2026-08-24');
-  });
-
-  it('UTC と同じ暦日になるケースも正しく変換する', () => {
-    // 2026-08-24T01:00:00Z = 2026-08-24T10:00:00+09:00
-    expect(jstDateString(new Date('2026-08-24T01:00:00Z'))).toBe('2026-08-24');
-  });
-});
-
-describe('jstYesterdayString', () => {
-  it('JST 暦日の前日を返す', () => {
-    // 2026-08-24T10:00:00+09:00 の前日は 2026-08-23
-    expect(jstYesterdayString(new Date('2026-08-24T01:00:00Z'))).toBe('2026-08-23');
-  });
-
-  it('JST 日境界をまたぐ瞬間（UTC 前日 15:00 = JST 当日 00:00）でも正しい前日を返す', () => {
-    // 2026-08-23T15:00:00Z = 2026-08-24T00:00:00+09:00 → 前日は 2026-08-23
-    expect(jstYesterdayString(new Date('2026-08-23T15:00:00Z'))).toBe('2026-08-23');
-  });
-
-  it('月境界をまたいでも正しい前日を返す', () => {
-    // 2026-09-01T00:30:00+09:00 の前日は 2026-08-31
-    expect(jstYesterdayString(new Date('2026-08-31T15:30:00Z'))).toBe('2026-08-31');
-  });
-});
-
-describe('jstDayRange', () => {
-  it('日境界レンジを組み立てる', () => {
-    expect(jstDayRange('2026-08-24')).toBe('2026-08-24T00:00:00+09:00..2026-08-24T23:59:59+09:00');
-  });
-});
-
 // push前反証レビュー risk-reviewer 指摘（P3）: 未知の曜日ラベルで無言
 // fallback すると isJstWeekend/isJstMonday がどちらも false（平日扱い）を
 // 返し、weekend skip が無音で無効化される。throw への変更（fail-open →
 // fail-closed の意図的な取り替え）を回帰確認する。
-describe('jstWeekdayIndex / isJstWeekend / isJstMonday', () => {
-  it.each([
-    ['2026-08-23T01:00:00Z', 0, '日'], // JST 2026-08-23（日）
-    ['2026-08-24T01:00:00Z', 1, '月'], // JST 2026-08-24（月）
-    ['2026-08-22T01:00:00Z', 6, '土'], // JST 2026-08-22（土）
-  ])('%s は曜日インデックス %i（%s）を返す', (isoDate, expectedIndex) => {
-    expect(jstWeekdayIndex(new Date(isoDate))).toBe(expectedIndex);
-  });
-
-  it('土曜・日曜は isJstWeekend が true、月曜は false', () => {
-    expect(isJstWeekend(new Date('2026-08-22T01:00:00Z'))).toBe(true); // 土
-    expect(isJstWeekend(new Date('2026-08-23T01:00:00Z'))).toBe(true); // 日
-    expect(isJstWeekend(new Date('2026-08-24T01:00:00Z'))).toBe(false); // 月
-  });
-
-  it('月曜のみ isJstMonday が true', () => {
-    expect(isJstMonday(new Date('2026-08-24T01:00:00Z'))).toBe(true);
-    expect(isJstMonday(new Date('2026-08-25T01:00:00Z'))).toBe(false); // 火
-  });
-
-  it('Intl.DateTimeFormat が未知の曜日ラベルを返したら throw する（無言 fallback を許さない）', () => {
-    // Intl.DateTimeFormat.prototype.format はネイティブ実装の accessor で、
-    // prototype 直接 spy だと internal slot チェックに落ちる。constructor 自体を
-    // fake formatter へ差し替える。
-    function FakeDateTimeFormat() {
-      return { format: () => 'Xyz' };
-    }
-    const spy = vi
-      .spyOn(Intl, 'DateTimeFormat')
-      .mockImplementation(FakeDateTimeFormat as unknown as typeof Intl.DateTimeFormat);
-    try {
-      expect(() => jstWeekdayIndex()).toThrow(/未知の JST 曜日ラベル/);
-    } finally {
-      spy.mockRestore();
-    }
-  });
-});
 
 // #2341: scheduled workflow の遅延で直近 run がまだ in_progress/queued の時、
 // 旧判定規約（status も無条件で赤判定に含める）は誤って赤と判定していた。
@@ -135,35 +56,6 @@ describe('extractTrailingNumber', () => {
 
   it('数字が無ければ null を返す', () => {
     expect(extractTrailingNumber('')).toBeNull();
-  });
-});
-
-describe('findTodayBoardIssue', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-08-24T01:00:00Z')); // JST 2026-08-24 10:00
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('本日タイトルの盤面 issue を返す', () => {
-    const execFileImpl = vi.fn(() =>
-      JSON.stringify([
-        { number: 100, title: '盤面 2026-08-23' },
-        { number: 200, title: '盤面 2026-08-24' },
-      ]),
-    );
-    expect(findTodayBoardIssue({ execFileImpl })).toEqual({
-      number: 200,
-      title: '盤面 2026-08-24',
-    });
-  });
-
-  it('見つからなければ null を返す', () => {
-    const execFileImpl = vi.fn(() => JSON.stringify([]));
-    expect(findTodayBoardIssue({ execFileImpl })).toBeNull();
   });
 });
 

@@ -32,7 +32,7 @@ code: .github/dependabot.yml
 - `type:spike`
 - `type:discussion`
 - `type:chore`
-- `type:board`（日次盤面 issue 専用。2026-08-20、[#2259](https://github.com/Dayopt/dayopt/issues/2259)。`is:issue label:type:board is:open` で検索し当日の盤面issueを特定するために使う）
+- ~~`type:board`~~（**廃止済み。2026-09-01、[#2525](https://github.com/Dayopt/dayopt/issues/2525)**。日次盤面 issue の運用ごと廃止した。ラベル自体は過去 issue の履歴として残すが、新規 issue には付けない）
 
 ### priority
 

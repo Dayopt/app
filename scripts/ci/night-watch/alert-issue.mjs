@@ -395,12 +395,20 @@ export function runAlertSync({
 // 「観測が失敗している」という別事象の body をそこへ紛れ込ませてしまう。
 const FETCH_FAILURE_TITLE_PREFIX = 'nightwatch-fetch-failed';
 
-// consecutiveNights の妥当範囲（無制限の整数を issue title/body へ載せる経路を
-// 作らない。run-log.mjs の MAX_ISSUE_NUMBER と同じ考え方）。
-const MAX_CONSECUTIVE_NIGHTS = 999;
-
-function fetchFailureTitle(checkId, consecutiveNights) {
-  return `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): 観測が${consecutiveNights}晩連続で取得失敗`;
+/**
+ * title は check-id 以外の可変要素を持たない（#2525）。
+ *
+ * 旧実装は「観測が N 晩連続で取得失敗」という晩数を title に含めていたが、
+ * その N は常設運行記録 issue #2216 のコメント列を数えて得ていた
+ * （`run-log.mjs` の `checkRecentFetchFailed`）。#2525 でそのコメント自体を
+ * 廃止し、起票条件も「retry しても駄目だったその夜」へ変えたため、title に
+ * 載せられる正しい晩数が存在しない。**title prefix
+ * `nightwatch-fetch-failed(<checkId>): ` は変えていない**ので、旧 title の
+ * 既存 open issue も `findExistingFetchFailureAlertIssue` の dedup に一致し、
+ * 新規起票ではなくコメント追記になる。
+ */
+function fetchFailureTitle(checkId) {
+  return `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): 観測コマンドが取得失敗`;
 }
 
 /**
@@ -436,35 +444,21 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
 }
 
 /**
- * @param {{ checkId: string, consecutiveNights: number, detectedAt: string, isContinuing?: boolean }} params
+ * @param {{ checkId: string, detectedAt: string, isContinuing?: boolean }} params
  */
-export function buildFetchFailureAlertBody({
-  checkId,
-  consecutiveNights,
-  detectedAt,
-  isContinuing = false,
-}) {
+export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing = false }) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
   }
-  if (
-    !Number.isInteger(consecutiveNights) ||
-    consecutiveNights <= 0 ||
-    consecutiveNights > MAX_CONSECUTIVE_NIGHTS
-  ) {
-    throw new Error(`consecutiveNights は 1〜${MAX_CONSECUTIVE_NIGHTS} の整数である必要があります`);
-  }
-  // 既存 escalation issue への追記（isContinuing）では固定の晩数を繰り返さない
-  // （push前反証レビュー指摘・P2、PR #2445）。呼び出し元は常に固定の
-  // `consecutiveNights`（既定 3）しか渡さないため、night4 以降も毎晩「3晩連続」
-  // という同じ本文が積まれ、実際の継続期間が過小評価される「検出はしたが
-  // 深刻度が伝わらない」劣化版無音化になっていた。実際の連続晩数を数える
-  // 代わりに、新規/継続で文言を分岐する最小修正を採る。
+  // 新規と継続で文言を分ける（push前反証レビュー指摘・P2、PR #2445 で導入した
+  // 分岐を #2525 の当夜起票へ引き継いだ形）。同じ本文が毎晩積まれると、
+  // 「1 晩だけの取得失敗」と「何週間も直っていない」がコメント列から区別
+  // できなくなる。
   const status = isContinuing
-    ? '前回の検出以降も継続して取得失敗しています（直近の運行記録でも観測失敗を確認）。'
-    : `観測コマンド自体が ${consecutiveNights} 晩連続で取得失敗しています。`;
-  return `## night-watch 検出: ${checkId}（観測失敗の escalation）
+    ? 'この issue が起票された晩以降も、取得失敗が続いています。'
+    : '観測コマンド自体が失敗し、run 内の retry でも回復しませんでした。';
+  return `## night-watch 検出: ${checkId}（観測失敗）
 
 この check は red/green の判定ではなく、**観測コマンド自体**が失敗しています。${status}
 
@@ -476,13 +470,12 @@ export function buildFetchFailureAlertBody({
 }
 
 /**
- * fetch-failed（観測コマンド自体の取得失敗）escalation の起票/追記。
+ * fetch-failed（観測コマンド自体の取得失敗）の起票/追記。
  * `runAlertSync` と同じ dedup・run-scoped 起票上限（`reserveAlertRunSlot`）の
  * 仕組みを使うが、reservation key は `fetch-failed:<checkId>` にして
  * red-alert 用の予約枠（`checkId` そのもの）と衝突させない。
  * @param {{
  *   checkId: string,
- *   consecutiveNights: number,
  *   detectedAt?: string,
  *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
  *   runStatePath?: string,
@@ -490,7 +483,6 @@ export function buildFetchFailureAlertBody({
  */
 export function runFetchFailureAlertSync({
   checkId,
-  consecutiveNights,
   detectedAt = new Date().toISOString(),
   execFileImpl,
   runStatePath,
@@ -509,7 +501,6 @@ export function runFetchFailureAlertSync({
 
   const body = buildFetchFailureAlertBody({
     checkId,
-    consecutiveNights,
     detectedAt,
     isContinuing: Boolean(existing),
   });
@@ -530,7 +521,7 @@ export function runFetchFailureAlertSync({
     return { action: 'commented', issueNumber: existing.number };
   }
 
-  const title = fetchFailureTitle(checkId, consecutiveNights);
+  const title = fetchFailureTitle(checkId);
   const createOutput = runGh(
     [
       'issue',

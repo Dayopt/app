@@ -1073,47 +1073,25 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'Sentry 新規 issue スキャン (GET、cloud 互換の env 直読み形)',
         'sentry issue list dayopt --query "is:unresolved age:-24h"',
       ],
-      // night-watch v2（#2291）の gh 直叩き（盤面起票・前日盤面 close・検索）は
-      // scripts/ci/night-watch/*.mjs の wrapper へ寄せた（PR #2309 未解決 thread
-      // 1/2/3/4/5/6 の構造的解消）。動的引数を持たない Step1/Step4 は完全一致、
-      // 動的引数（check-id・実測値）が要る Step3 は固定 prefix のみで許可し、
-      // flag 単位の検証は行わない（値は wrapper 内部で execFile の argv 要素と
-      // して gh へ渡るため shell を経由しない。scripts/ci/night-watch/*.test.ts が
-      // 値の形の検証を担保する）。
-      ['盤面起票 wrapper（Step1）', 'node scripts/ci/night-watch/board-issue.mjs sync'],
-      ['DoD候補選定 wrapper（Step4）', 'node scripts/ci/night-watch/dod-candidate.mjs select'],
+      // night-watch v2（#2291）の gh 直叩きは scripts/ci/night-watch/*.mjs の
+      // wrapper へ寄せた（PR #2309 未解決 thread 1/2/3/4/5/6 の構造的解消）。
+      // 動的引数（check-id・実測値）が要る alert-issue.mjs は固定 prefix のみで
+      // 許可し、flag 単位の検証は行わない（値は wrapper 内部で execFile の argv
+      // 要素として gh へ渡るため shell を経由しない。
+      // scripts/ci/night-watch/*.test.ts が値の形の検証を担保する）。
+      //
+      // **#2525 以降、書き込み系で許可されるのは alert-issue.mjs だけ。**
+      // board-issue.mjs（盤面起票）/ dod-candidate.mjs（DoD候補）/ run-log.mjs
+      // （運行記録・board-note・env-failure・recent-pending）は wrapper ごと
+      // 廃止したため、それらの許可形は下の「拒否形」側で塞がれていることを
+      // 検証する。
       [
-        'check-id alert wrapper（Step3、count-baseline）',
+        'check-id alert wrapper（count-baseline）',
         'node scripts/ci/night-watch/alert-issue.mjs report docs-coverage --actual 9',
       ],
       [
-        'check-id alert wrapper（Step3、sentry evidence を含む実測形）',
+        'check-id alert wrapper（sentry evidence を含む実測形）',
         'node scripts/ci/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
-      ],
-      // Step 0（環境故障報告）・Step 5（運行記録）の wrapper。push 前反証レビュー
-      // （risk-reviewer、high）で発見: 3 wrapper 化で `gh issue comment` の
-      // 直接 allowlist を全面撤去した際、Step 5 の運行記録コメントがどの
-      // wrapper にも属さず night-watch の唯一の故障検出チャネルが毎晩無音で
-      // block されていた。
-      [
-        '環境故障報告 wrapper（Step0、no-var）',
-        'node scripts/ci/night-watch/run-log.mjs env-failure no-var',
-      ],
-      [
-        '環境故障報告 wrapper（Step0、write-token）',
-        'node scripts/ci/night-watch/run-log.mjs env-failure write-token',
-      ],
-      [
-        '運行記録 wrapper（Step5、常設運行記録issueへの report）',
-        'node scripts/ci/night-watch/run-log.mjs report \'{"executed":6}\'',
-      ],
-      [
-        '運行記録 wrapper（Step5、当日盤面issueへの1行 board-note）',
-        'node scripts/ci/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
-      ],
-      [
-        'pending escalation 判定 wrapper（Step2、#2350）',
-        'node scripts/ci/night-watch/run-log.mjs recent-pending heavy-red',
       ],
     ])('%s は通す', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
@@ -1145,7 +1123,29 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
       ['allowlist に無い任意コマンド', 'curl https://evil.example'],
       ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
       ['redirect による追記（>>）', 'echo x >> baseline.json'],
-      ['stdin redirect（<）', 'node scripts/ci/night-watch/board-issue.mjs sync < /tmp/body.txt'],
+      [
+        'stdin redirect（<）',
+        'node scripts/ci/night-watch/alert-issue.mjs report docs-check < /tmp/body.txt',
+      ],
+      // #2525: 廃止した wrapper の旧許可形。ファイル自体が存在しないので実行
+      // しても失敗するが、guard の allowlist からも消えていることを固定する
+      // （allowlist に残したまま wrapper だけ消すと、後から同名ファイルを
+      // 置いた時に無検査で通る面が復活する）。
+      ['廃止: 盤面起票 wrapper', 'node scripts/ci/night-watch/board-issue.mjs sync'],
+      ['廃止: DoD候補選定 wrapper', 'node scripts/ci/night-watch/dod-candidate.mjs select'],
+      ['廃止: 環境故障報告 wrapper', 'node scripts/ci/night-watch/run-log.mjs env-failure no-var'],
+      [
+        '廃止: 運行記録 wrapper',
+        'node scripts/ci/night-watch/run-log.mjs report \'{"executed":6}\'',
+      ],
+      [
+        '廃止: 盤面1行note wrapper',
+        'node scripts/ci/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
+      ],
+      [
+        '廃止: pending escalation 判定 wrapper',
+        'node scripts/ci/night-watch/run-log.mjs recent-pending heavy-red',
+      ],
       // read-only git は checklist が実際には使わないため allowlist から撤去した
       // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
       // git diff/show を残すと --output= 迂回の温床になる）。
@@ -1250,16 +1250,8 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
         'node scripts/ci/night-watch/evil.mjs report x --actual 1',
       ],
       [
-        'wrapper prefix の迂回: board-issue.mjs に未許可のサブコマンドを渡す',
-        'node scripts/ci/night-watch/board-issue.mjs close 2000',
-      ],
-      [
-        'run-log.mjs env-failure に未知の kind を渡す迂回',
-        'node scripts/ci/night-watch/run-log.mjs env-failure evil',
-      ],
-      [
-        'run-log.mjs env-failure に余分な引数を付ける迂回',
-        'node scripts/ci/night-watch/run-log.mjs env-failure no-var extra',
+        'wrapper prefix の迂回: alert-issue.mjs に未許可のサブコマンドを渡す',
+        'node scripts/ci/night-watch/alert-issue.mjs close 2000',
       ],
     ])('%s は落とす', (_label, command) => {
       expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');

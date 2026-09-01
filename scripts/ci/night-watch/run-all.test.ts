@@ -83,18 +83,78 @@ describe('judgeCountBaseline', () => {
 describe('judgeWorkflowRun', () => {
   const now = new Date('2026-08-25T05:00:00+09:00').getTime();
 
-  it('直近 run が in_progress なら pending を返す', () => {
+  // #2525: pending の扱いは「直近 48h に success があるか」で分岐する。
+  // 単発の cron 遅延（前夜は成功している）は判定保留のまま無音、48h 何も
+  // 完了していない stuck は red。旧設計はこの分岐を常設運行記録 issue の
+  // コメント列（`checkRecentPending`）に持たせていた。
+  it('直近 run が in_progress でも、48h 以内に success があれば pending を返す', () => {
     const runs = [
       { status: 'in_progress', conclusion: null, createdAt: '2026-08-25T04:50:00Z', url: 'u1' },
+      {
+        status: 'completed',
+        conclusion: 'success',
+        createdAt: '2026-08-24T18:00:00Z',
+        url: 'u2',
+      },
     ];
     expect(judgeWorkflowRun(runs, { now })).toEqual({ status: 'pending' });
   });
 
-  it('直近 run が queued でも pending を返す', () => {
+  it('直近 run が queued でも、48h 以内に success があれば pending を返す', () => {
     const runs = [
       { status: 'queued', conclusion: null, createdAt: '2026-08-25T04:50:00Z', url: 'u1' },
+      {
+        status: 'completed',
+        conclusion: 'success',
+        createdAt: '2026-08-24T18:00:00Z',
+        url: 'u2',
+      },
     ];
     expect(judgeWorkflowRun(runs, { now })).toEqual({ status: 'pending' });
+  });
+
+  it('pending のまま 48h 以内に success が 1 件も無ければ red（stale-pending）', () => {
+    const runs = [
+      { status: 'queued', conclusion: null, createdAt: '2026-08-25T04:50:00Z', url: 'u1' },
+      { status: 'queued', conclusion: null, createdAt: '2026-08-24T18:00:00Z', url: 'u2' },
+      {
+        status: 'completed',
+        conclusion: 'success',
+        createdAt: '2026-08-21T18:00:00Z', // 48h より前
+        url: 'u3',
+      },
+    ];
+    expect(judgeWorkflowRun(runs, { now })).toEqual({
+      status: 'red',
+      evidenceUrl: 'u1',
+      reason: 'stale-pending',
+    });
+  });
+
+  // 24h 窓（terminal 判定側）と 48h 窓（stale 判定側）が別物であることの固定。
+  // pending は 24h〜48h の success を許容し、terminal は許容しない。
+  it('34h 前の success は pending を許容するが、terminal 判定では red のまま', () => {
+    // now は 2026-08-24T20:00:00Z（= 2026-08-25T05:00+09:00）。
+    const success30hAgo = {
+      status: 'completed',
+      conclusion: 'success',
+      createdAt: '2026-08-23T10:00:00Z', // 34h 前 = 24h 窓の外、48h 窓の内
+      url: 'u2',
+    };
+    expect(
+      judgeWorkflowRun(
+        [
+          { status: 'queued', conclusion: null, createdAt: '2026-08-25T04:50:00Z', url: 'u1' },
+          success30hAgo,
+        ],
+        { now },
+      ),
+    ).toEqual({ status: 'pending' });
+
+    expect(judgeWorkflowRun([success30hAgo], { now })).toEqual({
+      status: 'red',
+      evidenceUrl: 'u2',
+    });
   });
 
   it('直近 run が success かつ 24h 以内なら green', () => {
@@ -524,8 +584,7 @@ describe('checkSentryNew / buildAlertArgs（count は常に素の数字）', () 
 // 引き渡し・failed/results/board/dod の組み立て・fail-closed の 3 状態区別）
 // を狭く深く確認する。
 describe('runNightWatch', () => {
-  const FIXED_NOW = new Date('2026-08-25T05:00:00+09:00'); // 火曜（weekend/monday 分岐を避ける）
-  const TODAY_BOARD_ISSUE = 9101;
+  const FIXED_NOW = new Date('2026-08-25T05:00:00+09:00');
 
   type Rule = {
     match: (file: string, args: string[]) => boolean;
@@ -625,59 +684,14 @@ describe('runNightWatch', () => {
     ]);
   }
 
+  // #2525: 盤面起票（Step1）/ DoD 候補（Step4）/ 運行記録（Step5）/ 朝ブリーフ
+  // （Step6）の廃止で、baseRules が mock すべき gh 呼び出しは「7 check の観測」
+  // と「alert-issue.mjs の dedup 検索」だけになった。type:board の issue list、
+  // pr list、issue view、milestones API はどれも呼ばれない — **もし呼ばれたら
+  // `unmocked command` で落ちる**ので、廃止した層が復活していないことを
+  // この test 群全体が受動的に検証していることになる。
   function baseRules(): Rule[] {
     return [
-      {
-        // Step1 runBoardSync: 当日盤面 issue が既に存在（skip 経路、issue create を踏まない）
-        match: (file, args) =>
-          file === 'gh' && has(args, 'issue', 'list', 'type:board', 'number,title,body'),
-        respond: () =>
-          JSON.stringify([{ number: TODAY_BOARD_ISSUE, title: '盤面 2026-08-25', body: '' }]),
-      },
-      {
-        // Step4 findTodayBoardIssue（--json は number,title のみ、Step1 とは別呼び出し）
-        match: (file, args) =>
-          file === 'gh' &&
-          has(args, 'issue', 'list', 'type:board') &&
-          args[args.indexOf('--json') + 1] === 'number,title',
-        respond: () => JSON.stringify([{ number: TODAY_BOARD_ISSUE, title: '盤面 2026-08-25' }]),
-      },
-      {
-        match: (file, args) => file === 'gh' && has(args, 'pr', 'list', '--search'),
-        respond: () => JSON.stringify([]), // 前日merge PR無し
-      },
-      // Step 6（朝編成ブリーフ、#2370）が呼ぶ観測系 gh コマンド。
-      // Codex レビュー指摘（指揮台採用、PR #2380）: これらが未 mock だと
-      // `runMorningBrief` が `unmocked command` を投げ、非致命 catch に
-      // 握られたまま test が green になる（Step 6 について何も検証しない
-      // 見せかけの green）。
-      {
-        // hasExistingMorningBrief（冪等ガード）: 既存ブリーフ無し
-        match: (file, args) => file === 'gh' && args[0] === 'issue' && args[1] === 'view',
-        respond: () => JSON.stringify({ comments: [] }),
-      },
-      {
-        match: (file, args) => file === 'gh' && has(args, 'issue', 'list', 'status:ready'),
-        respond: () => JSON.stringify([]),
-      },
-      {
-        match: (file, args) => file === 'gh' && has(args, 'issue', 'list', 'status:in-progress'),
-        respond: () => JSON.stringify([]),
-      },
-      {
-        // fetchOpenPrs（Step 6）。前日merge PR検索（--search 付き）とは別物。
-        match: (file, args) =>
-          file === 'gh' && args[0] === 'pr' && args[1] === 'list' && !has(args, '--search'),
-        respond: () => JSON.stringify([]),
-      },
-      {
-        match: (file, args) => file === 'gh' && has(args, 'api', 'milestones'),
-        respond: () => JSON.stringify([]),
-      },
-      {
-        match: (file, args) => file === 'gh' && args[0] === 'issue' && args[1] === 'comment',
-        respond: () => '', // dod-candidate / run-log / Step6 の comment 投稿（body は都度確認しない）
-      },
       {
         match: (file, args) => file === 'pnpm' && args[0] === 'docs:check',
         respond: () => '',
@@ -704,57 +718,52 @@ describe('runNightWatch', () => {
 
   let runStatePath: string;
   let tmpDir: string;
+  let loggedLines: string[];
+  // retry の待ちを実時間で消費しない（`sleepSync` は Atomics.wait なので
+  // fake timers では縮まらない）。呼ばれた回数は retry 挙動の検証にも使う。
+  let sleepImpl: ReturnType<typeof vi.fn<(ms: number) => void>>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(FIXED_NOW);
     tmpDir = mkdtempSync(join(tmpdir(), 'night-watch-run-all-test-'));
     runStatePath = join(tmpDir, 'alert-run-state.json');
+    loggedLines = [];
+    vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+      loggedLines.push(String(args[0]));
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    sleepImpl = vi.fn<(ms: number) => void>();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('全チェック green の晩は issue を新規起票せず、運行記録に all green を報告する', () => {
+  /** console.log へ出た run サマリ行（#2525 で運行記録コメントを置き換えたもの）。 */
+  const summaryLine = () => loggedLines.find((line) => line.startsWith('night-watch: '));
+
+  it('全チェック green の晩は issue を 1 件も作らず、job log に all green のサマリを出す', () => {
     const execFileImpl = createExecFileImpl(baseRules());
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
-    const opsLogCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    // 緑の夜は無音（#2525 の中心的な契約）: issue の create も comment も
+    // 一切呼ばない。
+    const writeCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'issue' && ['create', 'comment'].includes(c.args[1]),
     );
-    expect(opsLogCall).toBeDefined();
-    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
-    expect(body).toContain('all green');
-    expect(body).toContain('起票予算 state: 有効（新規起票 0/3');
+    expect(writeCalls).toHaveLength(0);
 
-    // 赤の check が無いため gh issue create は一度も呼ばれない。
-    const createCalls = execFileImpl.calls.filter(
-      (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
+    expect(summaryLine()).toBe(
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 見送り 0 | 取得失敗 0',
     );
-    expect(createCalls).toHaveLength(0);
     expect(process.exitCode).not.toBe(1);
-
-    // Step 6（朝編成ブリーフ）が当日盤面 issue（TODAY_BOARD_ISSUE）へ実際に
-    // 投稿されたことまで確認する（Codex レビュー指摘・指揮台採用、PR
-    // #2380。unmocked command → 非致命 catch に握られて「何も検証しない
-    // green」になっていた穴を塞ぐ）。
-    const briefCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' &&
-        c.args[0] === 'issue' &&
-        c.args[1] === 'comment' &&
-        c.args[2] === String(TODAY_BOARD_ISSUE) &&
-        (c.args[c.args.indexOf('--body') + 1] ?? '').includes('## 朝編成ブリーフ'),
-    );
-    expect(briefCall).toBeDefined();
-
     process.exitCode = 0;
   });
 
-  it('docs-check が red の晩は nightwatch(docs-check) issue を新規起票し、運行記録へ反映する', () => {
+  it('docs-check が red の晩は nightwatch(docs-check) issue を新規起票し、サマリへ反映する', () => {
     const rules = [
       {
         match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
@@ -780,7 +789,7 @@ describe('runNightWatch', () => {
       ...baseRules(),
     ];
     const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
     const createCall = execFileImpl.calls.find(
       (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
@@ -789,22 +798,51 @@ describe('runNightWatch', () => {
     const title = createCall?.args[createCall.args.indexOf('--title') + 1];
     expect(title).toBe('nightwatch(docs-check): pnpm docs:check が exit 0 以外');
 
-    const opsLogCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 見送り 0 | 取得失敗 0',
     );
-    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
-    expect(body).toContain('起票/追記: #12345（docs-check）');
+    process.exitCode = 0;
+  });
+
+  // 非 0 exit（本物の赤）は retry しない（#2525）。retry すると
+  // `pnpm docs:check` のような重いコマンドを毎晩 3 回走らせるだけになる。
+  it('非 0 exit の観測コマンドは retry せず 1 回で確定する', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () => {
+          const error = new Error('command failed') as Error & { status: number };
+          error.status = 1;
+          return error;
+        },
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'list' && has(args, 'nightwatch'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'create',
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/12346',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    const docsCheckCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'pnpm' && c.args[0] === 'docs:check',
+    );
+    expect(docsCheckCalls).toHaveLength(1);
+    expect(sleepImpl).not.toHaveBeenCalled();
     process.exitCode = 0;
   });
 
   // Codex レビュー指摘（指揮台採用、PR #2380）: 赤を検出したのに alert
-  // issue の起票自体が失敗した場合、従来は failed[] に積まれるだけで
-  // process.exitCode は step5Failed/dod4Failed でしか立たず、Step 5 が
-  // 無事なら job は緑のまま終わっていた。夜勤の主目的（赤の可視化）が
-  // 壊れても検出できない設計だったのを、alert 投稿失敗を専用に追跡して
-  // 非 0 exit へ倒す。
-  it('赤を検出したのにalert issueの起票自体が失敗すると非0 exitになる（Step5の記録は妨げない）', () => {
+  // issue の起票自体が失敗した場合、job が緑のまま終わると夜勤の主目的
+  // （赤の可視化）が壊れても検出できない。
+  it('赤を検出したのにalert issueの起票自体が失敗すると非0 exitになる（サマリ出力は妨げない）', () => {
     const rules = [
       {
         match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
@@ -830,43 +868,21 @@ describe('runNightWatch', () => {
       ...baseRules(),
     ];
     const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
     // job は赤（alert 投稿失敗を検出可能にする）。
     expect(process.exitCode).toBe(1);
 
-    // Step 5（運行記録）自体は実行を妨げられず、失敗した check-id は
-    // 「取得失敗」として運行記録へ残る（exitCode を先に立てて Step 5 の
-    // 実行を止めていないことの確認）。
-    const opsLogCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
-    );
-    expect(opsLogCall).toBeDefined();
-    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
-    expect(body).toContain('docs-check');
-
+    // exitCode を先に立ててサマリ出力を止めていないこと（#2525。運行記録
+    // コメントの「Step 5 の記録は妨げない」と同じ理由が job log でも効く）。
+    expect(summaryLine()).toContain('要確認');
     process.exitCode = 0;
   });
 
-  it('Step 5（運行記録投稿）が失敗すると非 0 exit になる', () => {
-    const rules = [
-      {
-        match: (file: string, args: string[]) =>
-          file === 'gh' && args[0] === 'issue' && args[1] === 'comment' && args[2] === '2216',
-        respond: () => new Error('HTTP 500: Internal Server Error'),
-      },
-      ...baseRules(),
-    ];
-    const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
-    expect(process.exitCode).toBe(1);
-    process.exitCode = 0;
-  });
-
-  // #2422: 観測コマンド自体の取得失敗（fetch-failed）が heavy-red/integration-red
-  // の pending escalation と同型で、3 晩連続すると escalation issue へ起票する。
-  it('dependabot-alerts の取得失敗が3晩連続すると nightwatch-fetch-failed escalation issue を起票する', () => {
+  // #2422 → #2525: 観測コマンド自体の取得失敗（fetch-failed）は、run 内 retry で
+  // 回復しなければその夜のうちに起票する（旧「3 晩連続」条件は、判定に使っていた
+  // 常設運行記録 issue のコメントごと廃止した）。
+  it('取得失敗が retry でも回復しなければ、その夜に nightwatch-fetch-failed issue を起票する', () => {
     const rules = [
       {
         // 観測コマンド自体を失敗させる（fetch-failed 経路。実際の 403 と同型）
@@ -876,26 +892,7 @@ describe('runNightWatch', () => {
           new Error('HTTP 403: Resource not accessible by personal access token (fine-grained)'),
       },
       {
-        // checkRecentFetchFailed が読む常設運行記録 issue（#2216）のコメント。
-        // 直近2晩とも dependabot-alerts が取得失敗（今回とあわせて3晩連続）。
-        match: (file: string, args: string[]) =>
-          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
-        respond: () =>
-          JSON.stringify({
-            comments: [
-              {
-                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: dependabot-alerts\n',
-                authorAssociation: 'OWNER',
-              },
-              {
-                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: dependabot-alerts\n',
-                authorAssociation: 'OWNER',
-              },
-            ],
-          }),
-      },
-      {
-        // fetch-failure escalation の dedup 検索（既存 issue 無し → 新規作成）
+        // fetch-failure の dedup 検索（既存 issue 無し → 新規作成）
         match: (file: string, args: string[]) =>
           file === 'gh' &&
           args[0] === 'issue' &&
@@ -914,7 +911,14 @@ describe('runNightWatch', () => {
       ...baseRules(),
     ];
     const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    // 起票の前に run 内 retry を尽くしている（合計 3 回試行）。
+    const alertsCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'api' && (c.args[1] ?? '').includes('dependabot'),
+    );
+    expect(alertsCalls).toHaveLength(3);
+    expect(sleepImpl).toHaveBeenCalledTimes(2);
 
     const createCall = execFileImpl.calls.find(
       (c) =>
@@ -925,65 +929,159 @@ describe('runNightWatch', () => {
     );
     expect(createCall).toBeDefined();
     const title = createCall?.args[createCall.args.indexOf('--title') + 1];
-    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測が3晩連続で取得失敗');
+    expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測コマンドが取得失敗');
 
-    // Step 5（運行記録）にも escalation issue の起票が「起票/追記」として残る
-    const opsLogCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'comment' && c.args[2] === '2216',
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 見送り 0 | 取得失敗 1',
     );
-    const body = opsLogCall?.args[opsLogCall.args.indexOf('--body') + 1] ?? '';
-    expect(body).toContain('取得失敗: dependabot-alerts');
-    expect(body).toContain('#850（dependabot-alerts）');
+    process.exitCode = 0;
   });
 
-  it('取得失敗が直近と連続していなければ escalation issue を起票しない（単発の transient）', () => {
+  it('retry の途中で回復した観測は fetch-failed にせず green として扱う', () => {
+    let attempts = 0;
     const rules = [
       {
         match: (file: string, args: string[]) =>
           file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
-        respond: () => new Error('HTTP 403: Resource not accessible'),
-      },
-      {
-        // 直近の運行記録に dependabot-alerts の取得失敗が含まれない（今夜が初回）
-        match: (file: string, args: string[]) =>
-          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
-        respond: () =>
-          JSON.stringify({
-            comments: [
-              {
-                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: なし\n',
-                authorAssociation: 'OWNER',
-              },
-              {
-                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: なし\n',
-                authorAssociation: 'OWNER',
-              },
-            ],
-          }),
+        respond: () => {
+          attempts += 1;
+          if (attempts === 1) return new Error('getaddrinfo ENOTFOUND api.github.com');
+          return `${readBaseline().dependabot_alert_count}\n`;
+        },
       },
       ...baseRules(),
     ];
     const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
-    const escalationCreateCall = execFileImpl.calls.find(
-      (c) =>
-        c.file === 'gh' &&
-        c.args[0] === 'issue' &&
-        c.args[1] === 'create' &&
-        has(c.args, 'nightwatch-fetch-failed'),
+    expect(attempts).toBe(2);
+    const createCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
     );
-    expect(escalationCreateCall).toBeUndefined();
+    expect(createCalls).toHaveLength(0);
+    expect(summaryLine()).toBe(
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 見送り 0 | 取得失敗 0',
+    );
+    process.exitCode = 0;
   });
 
-  // push前反証レビュー指摘（P2、PR #2445）: fetch-failure escalation の新規
-  // 起票が run-scoped 起票上限（MAX_NEW_ISSUES_PER_RUN=3）を red-alert と
-  // 食い合う。CHECK_IDS の並び順（docs-check/deadcode/dependabot-alerts が
-  // heavy-red より先）のまま逐次処理すると、慢性 fetch-failed が先に予算を
-  // 使い切り本物の CI 赤が起票されなくなっていた。fetch-failed の escalation
-  // を全 red/pending 判定の後にまとめて処理する（deferredFetchFailed）ことで、
-  // 赤 check が予算を優先して確保することを固定する。
+  // #2525: pending の連晩判定（常設運行記録 issue のコメント列を数える
+  // `checkRecentPending`）を廃止した代わりの stale 判定が、runNightWatch まで
+  // 通しで効くことを固定する。単発の pending は無音、48h 以内に success が
+  // 無ければ赤。
+  it('直近 run が pending でも 48h 以内に success があれば起票しない（判定保留）', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'api', `actions/runs/${NIGHTLY_RUN_ID}/jobs`),
+        respond: () =>
+          JSON.stringify([
+            {
+              name: '\u{1F3AD} E2E Tests',
+              status: 'in_progress',
+              conclusion: null,
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/1',
+            },
+            {
+              name: '\u{1F310} Web Build & E2E',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/2',
+            },
+            {
+              name: 'Integration Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: FIXED_NOW.toISOString(),
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/3',
+            },
+          ]),
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    const createCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
+    );
+    expect(createCalls).toHaveLength(0);
+    expect(summaryLine()).toContain('保留 1');
+    process.exitCode = 0;
+  });
+
+  it('pending のまま 48h 以内に success が無ければ stale として起票する', () => {
+    const staleStartedAt = new Date(FIXED_NOW.getTime() - 72 * 60 * 60 * 1000).toISOString();
+    const rules = [
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'run', 'list', '--workflow=nightly.yml', '--branch'),
+        respond: () =>
+          JSON.stringify([
+            { databaseId: NIGHTLY_RUN_ID, createdAt: staleStartedAt, url: 'https://x/1' },
+          ]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'api', `actions/runs/${NIGHTLY_RUN_ID}/jobs`),
+        respond: () =>
+          JSON.stringify([
+            {
+              name: '\u{1F3AD} E2E Tests',
+              status: 'queued',
+              conclusion: null,
+              started_at: staleStartedAt,
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/1',
+            },
+            {
+              name: '\u{1F310} Web Build & E2E',
+              status: 'queued',
+              conclusion: null,
+              started_at: staleStartedAt,
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/2',
+            },
+            {
+              name: 'Integration Tests',
+              status: 'queued',
+              conclusion: null,
+              started_at: staleStartedAt,
+              html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/3',
+            },
+          ]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'list' && has(args, 'nightwatch'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'create',
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/870\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    // heavy-red / integration-red の両方が stale red になる。
+    const createTitles = execFileImpl.calls
+      .filter((c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create')
+      .map((c) => c.args[c.args.indexOf('--title') + 1]);
+    expect(createTitles).toContain('nightwatch(heavy-red): heavy（E2E / Web）が直近 run で red');
+    expect(createTitles).toContain('nightwatch(integration-red): integration が直近 run で red');
+    expect(summaryLine()).toContain('保留 0');
+    process.exitCode = 0;
+  });
+
+  // push前反証レビュー指摘（P2、PR #2445）: fetch-failure の新規起票が
+  // run-scoped 起票上限（MAX_NEW_ISSUES_PER_RUN=3）を red-alert と食い合う。
+  // CHECK_IDS の並び順（docs-check/deadcode/dependabot-alerts が heavy-red より
+  // 先）のまま逐次処理すると、慢性 fetch-failed が先に予算を使い切り本物の
+  // CI 赤が起票されなくなる。#2525 で fetch-failed が当夜起票になったぶん、
+  // この順序（deferredFetchFailed）の重要性はむしろ上がっている。
   it('複数checkがfetch-failedでも、heavy-redの赤alertはcapされずに起票される（予算はredを優先）', () => {
     const rules = [
       {
@@ -1036,29 +1134,6 @@ describe('runNightWatch', () => {
           ]),
       },
       {
-        // 3 check-id（docs-check, deadcode, dependabot-alerts）とも直近2晩
-        // 連続で取得失敗していたことにする（今回とあわせて3晩連続escalation）。
-        match: (file: string, args: string[]) =>
-          file === 'gh' && args[0] === 'issue' && args[1] === 'view' && args[2] === '2216',
-        respond: () =>
-          JSON.stringify({
-            comments: [
-              {
-                body: '**night-watch 運行記録 2026-08-23**\n\n- 取得失敗: docs-check, deadcode, dependabot-alerts\n',
-                authorAssociation: 'OWNER',
-              },
-              {
-                body: '**night-watch 運行記録 2026-08-24**\n\n- 取得失敗: docs-check, deadcode, dependabot-alerts\n',
-                authorAssociation: 'OWNER',
-              },
-            ],
-          }),
-      },
-      {
-        // alert-issue.mjs の dedup 検索（nightwatch(...) / nightwatch-fetch-
-        // failed(...)）だけを対象にする。Step1（当日盤面 type:board 検索）や
-        // Step6（status:ready 等）の issue list 呼び出しを誤って横取りしない
-        // よう、`nightwatch` を含む検索クエリに絞る。
         match: (file: string, args: string[]) =>
           file === 'gh' && args[0] === 'issue' && args[1] === 'list' && has(args, 'nightwatch'),
         respond: () => '[]',
@@ -1071,12 +1146,12 @@ describe('runNightWatch', () => {
       ...baseRules(),
     ];
     const execFileImpl = createExecFileImpl(rules);
-    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath });
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
     const createCalls = execFileImpl.calls.filter(
       (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
     );
-    // 予算(3)を使い切る: heavy-red 1件 + fetch-failed escalation 2件（3件中1件はcap）
+    // 予算(3)を使い切る: heavy-red 1件 + fetch-failed 2件（3件中1件はcap）
     expect(createCalls.length).toBe(3);
 
     const heavyRedCreate = createCalls.find((c) => has(c.args, 'nightwatch(heavy-red)'));
@@ -1085,6 +1160,9 @@ describe('runNightWatch', () => {
     const fetchFailedCreates = createCalls.filter((c) => has(c.args, 'nightwatch-fetch-failed'));
     expect(fetchFailedCreates.length).toBe(2); // 3件中1件は予算超過でcapされる
 
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 見送り 1 | 取得失敗 3',
+    );
     process.exitCode = 0;
   });
 });

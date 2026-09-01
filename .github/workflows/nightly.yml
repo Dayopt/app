@@ -32,7 +32,10 @@ on:
     # 03:30 JST — integration（DB 起動を伴う重量テストの nightly fallback。
     # per-PR 実行は ci.yml の test job が affected 判定つきで担う）。
     - cron: '30 18 * * *'
-    # 04:00 JST — night-watch（朝の蒸留層 05:00 JST から逆算）。
+    # 04:00 JST — night-watch。層 3（03:00 / 03:30 JST）の結果を読める時刻に置く。
+    # #2525 以前は「朝の蒸留層 05:00 JST から逆算」した時刻だったが、その蒸留層
+    # （と朝編成ブリーフ・盤面 issue・運行記録コメント）は廃止した。夜勤の出力は
+    # alert issue と job log だけになったため、後段の締め切りは無い。
     - cron: '0 19 * * *'
     # 04:30 JST — status:* ラベルの batch sweep（close 時の剥がし漏れ backstop）。
     - cron: '30 19 * * *'
@@ -260,15 +263,15 @@ jobs:
     concurrency:
       group: nightly-night-watch
       cancel-in-progress: false
-    # GITHUB_TOKEN の権限をここで明示的に最小化する。issues: write は起票・
-    # コメント・close、contents: read は checkout、actions: read は
-    # heavy-red / integration-red の `gh run list`、pull-requests: read は
-    # DoD 候補選定の `gh pr list --search` に必要。
+    # GITHUB_TOKEN の権限をここで明示的に最小化する。issues: write は alert
+    # issue の起票・追記、contents: read は checkout、actions: read は
+    # heavy-red / integration-red の `gh run list` に必要。
+    # #2525: DoD 候補選定（`gh pr list --search`）の廃止により
+    # `pull-requests: read` は不要になったので外した。
     permissions:
       issues: write
       contents: read
       actions: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -323,7 +326,7 @@ jobs:
       # NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN はこの step にしか渡さない。
       # run-all.mjs は起動直後にこの 2 つを process.env から捕捉して削除し、以降に
       # spawn する pnpm 系コマンドから見えなくする（run-all.mjs 冒頭コメント参照）。
-      - name: night-watch Step 1〜5 を実行
+      - name: night-watch の観測と起票を実行
         env:
           GH_TOKEN: ${{ github.token }}
           NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
