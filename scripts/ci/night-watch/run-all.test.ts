@@ -644,6 +644,36 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome).toEqual({ status: 'green' });
   });
 
+  // 採用 run が terminal でない class（環境承認待ちの `waiting` 等）では、green の
+  // 根拠が matched[0] を離れて古い run へ移る。この時は古い位置の失敗も効くので
+  // 総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。実測では
+  // development environment の protection_rules は空で現状到達しないが、
+  // rule を 1 つ足すだけで到達可能になるため repo 設定に依存させない。
+  it('採用 run が terminal でないなら、古い run の取得失敗でも green を確定させない', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          { databaseId: 3, createdAt: '2026-08-25T04:00:00+09:00', url: 'u3' },
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
+          // 24h 窓の内側（NOW の 23h 前）。ここが窓外だと hasRecentSuccess が
+          // false になり green ではなく red になって、縮退判定まで到達しない。
+          { databaseId: 1, createdAt: '2026-08-24T06:00:00+09:00', url: 'u1' },
+        ]),
+        // 最新（3）は environment 承認待ちで waiting（completed でも queued でもない）。
+        jobsResponseFor(3, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'waiting', conclusion: null },
+        ]),
+        // 2 は未 mock（throw）= 読めない。1 は 24h 以内の success。
+        jobsResponseFor(1, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    // run 2 が本物の red だった可能性を排除できないので green を確定させない。
+    expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+
   // 上の縮退は「異常なし」側だけに効く。赤が読めているなら、それより古い run の
   // 取得失敗があっても赤として起票する（元の設計意図——直近に本物の red がある
   // 時ほど検出できなくなる fail closed の方向違いを避ける——を維持する）。

@@ -767,6 +767,13 @@ export function checkWorkflowJobRun(
     // （alert-issue.mjs の evidence-url 検証、strip-status-labels.mjs の
     // Number.isInteger）と同じ「値の形は使う直前に検証する」規約に揃える
     // （push前反証レビュー risk-reviewer 指摘、P2）。
+    // **ここは意図的に数えない**（内製クロスレビュー risk-reviewer 指摘 low、
+    // 推奨どおり挙動は変えずコメントで精度を合わせる）。gh の応答形が壊れて
+    // databaseId が整数でない run は黙って読み飛ばすため、下の
+    // `jobFetchFailuresBeforeFirstMatch` の不変条件（「matched が空のうちの失敗
+    // ＝採用 run より新しい run が読めなかった」）はこの経路を網羅しない。
+    // 既存 test が「不正な databaseId では gh api を呼ばず green のまま」を
+    // 固定しており、ここを数えると余分な fetch-failed 側へ倒れる。
     if (!Number.isInteger(run.databaseId)) continue;
     const jobsResult = execObservationCommand(
       'gh',
@@ -859,7 +866,21 @@ export function checkWorkflowJobRun(
   //
   // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
   // `nightwatch-fetch-failed` として起票されるので、朝には見える。
-  const degradeGreen = judged.status === 'green' && jobFetchFailuresBeforeFirstMatch > 0;
+  // 採用 run が terminal（`completed`）でない時は、green の根拠が matched[0] を
+  // 離れて**より古い run**（`hasRecentSuccess`）へ移る。この時だけは古い位置の
+  // 失敗も効くので総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。
+  //
+  // 該当するのは status が `completed` / `in_progress` / `queued` のどれでもない
+  // 値（`waiting` / `requested` 等）を取る class。`isLatestWorkflowRunPending` は
+  // in_progress / queued しか pending と見なさないため、`waiting` は pending にも
+  // ならず `latestNonSuccessTerminal` にもならない。実測では `development`
+  // environment の protection_rules は空（`gh api .../environments/development`）
+  // なので現状この経路は到達しないが、**protection rule を 1 つ足すだけで
+  // 到達可能になる**。repo 設定に安全性を依存させない。
+  const adoptedRunIsTerminal = matched[0]?.status === 'completed';
+  const degradeGreen =
+    judged.status === 'green' &&
+    (jobFetchFailuresBeforeFirstMatch > 0 || (!adoptedRunIsTerminal && jobFetchFailures > 0));
   const degradeStale =
     judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0;
   if (degradeGreen || degradeStale) {
