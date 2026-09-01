@@ -277,12 +277,37 @@ describe('findExistingAlertIssue', () => {
         '--state',
         'open',
         '--search',
-        'nightwatch(docs-check): in:title',
+        // **括弧を含めない**（#2525、2026-09-01 実測）。GitHub の issue 検索は
+        // `(` `)` を構文として解釈するため、`nightwatch(docs-check):` を投げると
+        // 常に 0 件になり dedup が成立しない。旧 test はその壊れたクエリを
+        // 期待値として固定しており、本番で毎晩重複起票されていた事実を
+        // 検出できなかった（TEST-1）。
+        'nightwatch docs-check in:title',
         '--json',
         'number,title,labels',
       ],
       { encoding: 'utf8', maxBuffer: GH_MAX_BUFFER_BYTES },
     );
+  });
+
+  // 実測で確定した回帰。検索語に括弧が入ると GitHub 検索が 0 件を返す:
+  //   gh issue list --search 'nightwatch-fetch-failed(dependabot-alerts): in:title' → 0 件
+  //   gh issue list --search 'nightwatch-fetch-failed dependabot-alerts in:title'   → 5 件
+  it('dedup 検索の検索語に括弧を入れない（入れると GitHub 検索が常に 0 件になる）', () => {
+    const searchQueries: string[] = [];
+    const execFileImpl = (_file: string, args: string[]) => {
+      searchQueries.push(args[args.indexOf('--search') + 1]);
+      return '[]';
+    };
+    findExistingAlertIssue('docs-check', { execFileImpl });
+    findExistingFetchFailureAlertIssue('docs-check', { execFileImpl });
+
+    expect(searchQueries).toHaveLength(2);
+    for (const query of searchQueries) {
+      expect(query).not.toMatch(/[()]/);
+      // check-id は検索語として残っている（候補を絞る役には立てる）。
+      expect(query).toContain('docs-check');
+    }
   });
 
   // 非ブロッキング Codex レビュー指摘（P2）: title の前方一致だけでは、write
@@ -574,7 +599,7 @@ describe('buildFetchFailureAlertBody', () => {
 describe('findExistingFetchFailureAlertIssue', () => {
   it('nightwatch-fetch-failed prefix で検索し、red-alert 用 issue（nightwatch(...)）とは区別する', () => {
     const execFileImpl = vi.fn((cmd, args) => {
-      expect(args).toContain('nightwatch-fetch-failed(sentry-new): in:title');
+      expect(args).toContain('nightwatch-fetch-failed sentry-new in:title');
       return JSON.stringify([
         {
           number: 700,

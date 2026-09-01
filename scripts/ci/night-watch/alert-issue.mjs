@@ -267,6 +267,28 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
 const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
 
 /**
+ * dedup 検索の候補を集めるための検索語を組み立てる。
+ *
+ * **括弧を検索語に入れない**（2026-09-01 実測で確定、#2525）。GitHub の issue
+ * 検索は `(` `)` を構文（グループ化）として解釈するため、`nightwatch-fetch-failed(sentry-new):`
+ * のような素の title 断片を投げると**常に 0 件**になる:
+ *
+ *     gh issue list --search 'nightwatch-fetch-failed(dependabot-alerts): in:title'  → 0 件
+ *     gh issue list --search 'nightwatch-fetch-failed dependabot-alerts in:title'    → 5 件
+ *
+ * この不具合により dedup は本番で一度も成立しておらず、`nightwatch-fetch-failed`
+ * issue が毎晩（日によっては 1 晩に 2 件）新規起票され続けていた（実測: 2026-08-28
+ * 〜08-31 で 11 件の重複が open）。**検索はあくまで候補生成**で、最終的な同定は
+ * 呼び出し側の title prefix 完全一致 + 固定ラベルの検査が担うため、検索語を
+ * 緩めても誤って別 issue を掴むことはない。
+ * @param {string} prefix `nightwatch` / `nightwatch-fetch-failed`
+ * @param {string} checkId
+ */
+function buildDedupSearchQuery(prefix, checkId) {
+  return `${prefix} ${checkId} in:title`;
+}
+
+/**
  * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
  *
  * GitHub の検索は語単位の緩いマッチで、`nightwatch(<id>): in:title` の括弧・
@@ -297,7 +319,7 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
       '--state',
       'open',
       '--search',
-      `nightwatch(${checkId}): in:title`,
+      buildDedupSearchQuery('nightwatch', checkId),
       '--json',
       'number,title,labels',
     ],
@@ -428,7 +450,7 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
       '--state',
       'open',
       '--search',
-      `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): in:title`,
+      buildDedupSearchQuery(FETCH_FAILURE_TITLE_PREFIX, checkId),
       '--json',
       'number,title,labels',
     ],

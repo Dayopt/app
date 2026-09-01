@@ -972,7 +972,8 @@ describe('runNightWatch', () => {
           file === 'gh' &&
           args[0] === 'issue' &&
           args[1] === 'list' &&
-          has(args, 'nightwatch(docs-check)'),
+          // 検索語に括弧を入れない（#2525、実測: 括弧つきは GitHub 検索が 0 件）
+          has(args, 'nightwatch docs-check in:title'),
         respond: () => JSON.stringify([]), // 既存 alert issue 無し → 新規起票
       },
       {
@@ -1051,7 +1052,8 @@ describe('runNightWatch', () => {
           file === 'gh' &&
           args[0] === 'issue' &&
           args[1] === 'list' &&
-          has(args, 'nightwatch(docs-check)'),
+          // 検索語に括弧を入れない（#2525、実測: 括弧つきは GitHub 検索が 0 件）
+          has(args, 'nightwatch docs-check in:title'),
         respond: () => JSON.stringify([]), // 既存 alert issue 無し → 新規起票を試みる
       },
       {
@@ -1140,7 +1142,7 @@ describe('runNightWatch', () => {
           file === 'gh' &&
           args[0] === 'issue' &&
           args[1] === 'list' &&
-          has(args, 'nightwatch-fetch-failed(dependabot-alerts)'),
+          has(args, 'nightwatch-fetch-failed dependabot-alerts in:title'),
         respond: () => JSON.stringify([]),
       },
       {
