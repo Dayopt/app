@@ -480,6 +480,48 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(sleepImpl).not.toHaveBeenCalled();
   });
 
+  // 内製クロスレビュー risk-reviewer 指摘（medium）: ループ内 jobs 取得を
+  // retries: 0 にしたことで、**最新 run の 1 回の 503 で前夜の success へ落ち、
+  // 本物の赤が green になる**経路が新たに開いていた。ループは新しい順に走り
+  // targetCount で break するので、読めなかった run は必ず採用した run と
+  // 同じかそれより新しい — 赤だった可能性を排除できない。
+  it('最新 run の jobs 取得に失敗したら、前夜の success を根拠に green と判定しない', () => {
+    const previousNight = new Date(NOW - 2 * 60 * 60 * 1000).toISOString();
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'run') {
+        return JSON.stringify([
+          { databaseId: 2, createdAt: new Date(NOW).toISOString(), url: 'https://x/2' },
+          { databaseId: 1, createdAt: previousNight, url: 'https://x/1' },
+        ]);
+      }
+      // 最新 run（2）だけ読めない。前夜（1）は success。
+      if (args[1]?.includes('/1/')) {
+        return JSON.stringify([
+          {
+            name: NIGHTLY_INTEGRATION_JOB_NAME,
+            status: 'completed',
+            conclusion: 'success',
+            started_at: previousNight,
+            html_url: 'job1',
+          },
+        ]);
+      }
+      throw Object.assign(new Error('Command failed'), {
+        status: 1,
+        stderr: 'HTTP 503: Service Unavailable',
+      });
+    });
+
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], {
+      execFileImpl,
+      now: NOW,
+      sleepImpl: () => {},
+    });
+    // green ではなく fetch-failed（= nightwatch-fetch-failed として起票され、
+    // 朝に見える）。
+    expect(outcome.status).toBe('fetch-failed');
+  });
+
   it('stale 判定の根拠となる履歴を読めなかった run があれば fetch-failed へ倒す', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
       if (args[0] === 'run') {
@@ -554,7 +596,11 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome).toEqual({ status: 'fetch-failed' });
   });
 
-  it('1 run 分の jobs 取得失敗は無視して次の run へ読み進める（全体を諦めない）', () => {
+  // 「1 件の失敗で全体を諦めない」（= 次の run へ読み進める）という元の設計は
+  // 維持しつつ、**「異常なし」の結論だけは確定させない**（内製クロスレビュー
+  // risk-reviewer 指摘 medium）。読めなかった run は必ず採用した run と同じか
+  // それより新しいので、そこに赤があった可能性を排除できない。
+  it('1 run 分の jobs 取得失敗があると、後続 run が success でも green を確定させない', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
         runListResponse([
@@ -568,7 +614,36 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
       ]),
     );
     const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
-    expect(outcome).toEqual({ status: 'green' });
+    // 読み進めた事実は残る（run 2 の jobs API を叩いている）。
+    expect(execFileImpl.mock.calls.some((c) => (c[1] as string[])[1]?.includes('/2/'))).toBe(true);
+    // ただし結論は green ではなく fetch-failed（起票されるので無音にならない）。
+    expect(outcome).toEqual({ status: 'fetch-failed' });
+  });
+
+  // 上の縮退は「異常なし」側だけに効く。赤が読めているなら、それより古い run の
+  // 取得失敗があっても赤として起票する（元の設計意図——直近に本物の red がある
+  // 時ほど検出できなくなる fail closed の方向違いを避ける——を維持する）。
+  it('読めた run が red なら、他 run の取得失敗があっても red のまま起票する', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([
+          { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
+          { databaseId: 1, createdAt: '2026-08-24T03:30:00+09:00', url: 'u1' },
+        ]),
+        // 最新（2）は red、古い方（1）は未 mock（throw）
+        jobsResponseFor(2, [
+          {
+            name: NIGHTLY_INTEGRATION_JOB_NAME,
+            status: 'completed',
+            conclusion: 'failure',
+            html_url: 'job2',
+          },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome.status).toBe('red');
+    expect(outcome.evidenceUrl).toBe('job2');
   });
 });
 

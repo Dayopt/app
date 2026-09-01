@@ -677,13 +677,19 @@ export function checkWorkflowJobRun(
       // 発行する。retry 対象を非 0 exit（rate-limited / network-error）へ広げた
       // ため、GitHub の 5xx incident や secondary rate limit の夜は全 run が
       // 失敗し、heavy-red + integration-red の 2 check だけで 180 本の API
-      // 呼び出しと 180s のスリープを追加で消費しうる。job 予算（15 分）を
-      // 超えれば SIGKILL され、サマリ 1 行も alert 起票も残らない — この PR が
-      // 防ごうとしている無音そのものになる。
+      // 呼び出しと 180s のスリープを追加で消費しうる。rate limit 中の即時
+      // retry はむしろ secondary rate limit を深める方向にも働く。
       //
-      // ここは retry の価値も薄い: 1 run の取得失敗は既に「次の run へ進む」で
-      // 吸収され、必要な件数（targetCount）は他の run から満たせる。rate limit
-      // 中の即時 retry はむしろ secondary rate limit を深める方向に働く。
+      // **これで消えるのは「retry による 3 倍増幅」だけ**で、ループそのものの
+      // 乗算（最大 30 本 × 1 本あたり最大 240s）は残っている（内製クロス
+      // レビュー risk-reviewer 指摘 low）。gh が fail-fast に 5xx を返さず
+      // hang する夜は、retry の有無に関わらず job 予算を超えうる。観測フェーズ
+      // 全体の締切は別途設計する（この PR の scope 外）。
+      //
+      // 取りこぼしの補償: ここで諦めた run は `jobFetchFailures` に数えられ、
+      // 「異常なし」側の結論（green / stale-pending）を確定させない根拠になる
+      // （下の縮退判定）。したがって retry を外しても赤が無音化する方向へは
+      // 倒れない。
       { execFileImpl, sleepImpl, retries: 0 },
     );
     if (!jobsResult.ok) {
@@ -734,14 +740,29 @@ export function checkWorkflowJobRun(
 
   const judged = judgeWorkflowRun(matched, { now });
   const latestUrl = matched[0]?.url;
-  // stale-pending は「窓内に success が 1 件も無い」ことを根拠に赤へ倒す判定
-  // なので、履歴に読めなかった run があると根拠が成立しない（Codex 指摘 P2、
-  // 実測確定: 直近が pending の夜に前夜の success run だけ jobs API が落ちると
-  // 誤 red を起票する）。判定不能として fetch-failed へ縮退させる — こちらも
-  // 無音ではなく、retry しても駄目なら nightwatch-fetch-failed として起票される。
-  if (judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0) {
+
+  // **読めなかった run があるなら「異常なし」側の結論を確定させない。**
+  //
+  // このループは新しい順に走り、`targetCount` 件そろった時点で break する。
+  // つまり `jobFetchFailures` に数えられる失敗は、必ず**採用した run と同じか
+  // それより新しい** run で起きている。その run が本当は赤だった可能性を
+  // 排除できない以上、無音へ倒してよい根拠が無い。
+  //
+  // 対象は 2 つの「異常なし」結論:
+  // - `green`（内製クロスレビュー risk-reviewer 指摘 medium。ループ内 jobs 取得を
+  //   `retries: 0` にした結果、最新 run の 1 回の 503 で前夜の success へ落ち、
+  //   本物の赤が緑になる経路が新たに開いた。この PR が塞ごうとしている無音そのもの）
+  // - `stale-pending` の red（Codex 指摘 P2。「窓内に success が 1 件も無い」を
+  //   根拠にするので、前夜の success run が読めないと誤 red になる）
+  //
+  // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
+  // `nightwatch-fetch-failed` として起票されるので、朝には見える。
+  const judgedAsNoAnomaly =
+    judged.status === 'green' || (judged.status === 'red' && judged.reason === 'stale-pending');
+  if (judgedAsNoAnomaly && jobFetchFailures > 0) {
     return { status: 'fetch-failed' };
   }
+
   if (judged.status === 'pending') return { status: 'pending', evidenceUrl: latestUrl };
   if (judged.status === 'red')
     return { status: 'red', evidenceUrl: judged.evidenceUrl ?? latestUrl };
