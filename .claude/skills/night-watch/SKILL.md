@@ -48,9 +48,11 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 [checklist.md](checklist.md) の 4 項目（`docs-check` / `docs-coverage` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）の 7 check-id を観測する。この 7 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
 
 - **fail-closed 原則**: 観測コマンドが失敗（spawn 失敗・パース不能）した check-id は緑と判定せず `failed` へ記録する
-- **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）
+- **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。`network-error` には GitHub / Sentry 側の 5xx（502 / 503 / 504 / 500）も含む — Codex 指摘で、5xx がどの分類語にも該当せず `unknown` へ落ちて 1 回で確定していたことが実測で判明した。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）
 - **赤判定は直近 run（fetch した3件のうち先頭）の terminal 結果を基準にする**（過去 run に non-success が混じっていても直近が success なら緑。旧 heavy-post-merge.yml / integration.yml は nightly と push:main が同一 concurrency group だったため過去 run が `cancelled` になるのが日常的で、それを含めて判定すると誤起票が常態化した。#2483 で nightly.yml へ統合後は push:main トリガー自体が無くなりこの経路は解消したが、再 dispatch 等で同型が再発しうるため backstop として維持している）
-- **pending の stale 判定**（v4、#2525）: `heavy-red` / `integration-red` の「直近 run 未完了」は `pending` として区別し、単発（前夜は成功している cron 遅延）は無音のまま判定を保留する。ただし取得した run 群に **48h 以内の success が 1 件も無ければ red** へ倒す。旧 v3 はこの連晩判定を `checkRecentPending`（常設運行記録 issue のコメント列を数える）に持たせていたが、そのコメント自体を廃止したため run 履歴だけから導出する形へ置き換えた。これが無いと「queued のまま何晩も進まない」が永遠に無音になる
+- **pending の stale 判定**（v4、#2525）: `heavy-red` / `integration-red` の「直近 run 未完了」は `pending` として区別し、単発（前夜は成功している cron 遅延）は無音のまま判定を保留する。ただし取得した run 群に **48h 以内の完了した success が 1 件も無ければ red** へ倒す。旧 v3 はこの連晩判定を `checkRecentPending`（常設運行記録 issue のコメント列を数える）に持たせていたが、そのコメント自体を廃止したため run 履歴だけから導出する形へ置き換えた。これが無いと「queued のまま何晩も進まない」が永遠に無音になる
+  - success の判定には `status === 'completed'` も要求する。Codex 指摘で、`checkWorkflowJobRun` の畳み込みが `[in_progress, success]` を偽の success にしていた（未完了 job の `conclusion` も `null` なので、`worst === null` を初回の番兵に使う reduce が 2 件目で無検査に上書きしていた）ことが実測で判明した。畳み込み側も直したが、無音へ倒す判断はこちらでも確かめる
+  - **履歴の一部を読めなかった夜は stale を確定させない**（`fetch-failed` へ縮退）。stale は「窓内に success が無い」ことを根拠にするので、前夜の success run だけ jobs API が落ちると誤 red を起票する（Codex 指摘、実測確定）
 - 判定関数は `judgeCountBaseline` / `judgeWorkflowRun` / `classifyGhError`（`run-all.mjs`）
 
 ### Step 2（起票/追記）
@@ -84,7 +86,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 いずれかが想定外なら、checklist を一切実行せずその場で止めて指揮台へ報告する（v4、#2525 で `run-log.mjs env-failure` による自動報告経路は wrapper ごと廃止した。報告先の常設運行記録 issue が無くなったため）。
 
-前提を満たしていれば、§自動パート と同じ Step 1〜2 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/ci/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。checklist コマンド（`pnpm docs:check` 等）と `check-workflow-job.mjs heavy-red|integration-red` で観測し、赤があれば `alert-issue.mjs report <check-id> ...` で起票する。**v4 以降、night-watch モードで許可される書き込み経路は `alert-issue.mjs report` だけ**（夜勤が触ってよい issue は「自分が起票した alert issue」に限られる）。
+前提を満たしていれば、§自動パート と同じ Step 1〜2 を手動で辿る（secrets は `.op-env.human` 経由の 1Password 参照に読み替える）。**`node scripts/ci/night-watch/run-all.mjs` の直接実行は不可**（層3 hook allowlist は個別 wrapper を 1 本ずつ完全一致で許可する設計のため、`run-all.mjs` の単体呼び出しは含まれない。Codex レビュー指摘・指揮台採用、PR #2380）。checklist コマンド（`pnpm docs:check` 等）と `check-workflow-job.mjs heavy-red|integration-red` で観測し、赤があれば `alert-issue.mjs report <check-id> ...` で起票する。**v4 以降、night-watch モードで許可される書き込み経路は `alert-issue.mjs` の 2 サブコマンドだけ**（夜勤が触ってよい issue は「自分が起票した alert issue」に限られる）: 赤は `report <check-id> ...`、観測コマンド自体の取得失敗は `report-fetch-failed <check-id>`。後者は Codex 指摘で追加した — 自動パートは `run-all.mjs` から直接呼ぶが、手動代行はこの allowlist を通る wrapper 経由でしか書けないため、これが無いと代行時に観測失敗を issue へ残せなかった。**どちらも dedup 検索が失敗して起票を見送った場合は非 0 exit で終わる**（起票できていないのに成功に見えるのを防ぐ）。
 
 **層3（repo hook）**: `scripts/hooks/pre-tool-guard-impl.sh` が `DAYOPT_NIGHT_WATCH=1` を検出した時のみ有効になる allowlist（denylist ではない）。手動代行専用の防御として維持する（Actions cron はこの hook の対象外 — Bash tool 経由の実行ではないため）。allowlist の対象コマンド・設計原則は変更していない（旧 §権限の構造的強制 層3 の内容のまま。詳細は hook 本体のコメントを参照）。
 
@@ -100,7 +102,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 
 - checklist の変更は通常の PR レビューを通す（Actions workflow・手動代行のどちらも checklist.md / baseline.json を編集しない）
 - 新ラベルを作らない。既存体系（`docs/operations/github-labels.md`）のみ使う
-- **書き込み先は自分が起票した alert issue（`nightwatch(...)` / `nightwatch-fetch-failed(...)`）に限る**（v4、#2525）。他の issue のラベル変更・close・コメント・PR 操作は一切行わない。層3 hook の allowlist もこれに合わせて `alert-issue.mjs report` の 1 本だけを許可する
+- **書き込み先は自分が起票した alert issue（`nightwatch(...)` / `nightwatch-fetch-failed(...)`）に限る**（v4、#2525）。他の issue のラベル変更・close・コメント・PR 操作は一切行わない。層3 hook の allowlist もこれに合わせて `alert-issue.mjs` の `report` / `report-fetch-failed` の 2 形だけを許可する
 - Sentry issue の個別 triage（`resolve` 等の write 操作、担当割り当て）は行わない。列挙して起票するだけ
 - **Sentry issue の raw title / culprit / message を issue 本文へ転記しない**（public repo、2026-09 private 化まで。載せてよいのは件数・short ID・Sentry issue URL のみ）。`alert-issue.mjs` の `SENTRY_EVIDENCE_RE` がこれを機械強制する
 - 観測コマンドが取得失敗（spawn 失敗・パース不能）の場合、緑と判定しない（fail-closed）。run 内 retry でも回復しなければ `nightwatch-fetch-failed(<check-id>)` として起票する

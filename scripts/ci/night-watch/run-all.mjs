@@ -183,9 +183,17 @@ export function judgeWorkflowRun(runs, { now = Date.now() } = {}) {
   if (!Array.isArray(runs) || runs.length === 0) {
     throw new Error('runs は非空配列である必要があります');
   }
+  // `status === 'completed'` も要求する（Codex 指摘 P2 の推奨修正）。畳み込み側
+  // （`checkWorkflowJobRun`）の番兵バグは直したが、success を根拠に無音へ倒す
+  // 判断はこの関数の側でも「本当に終わった run か」を確かめる。未完了の run が
+  // success 扱いで履歴に混じると stale 判定が恒久的に効かなくなるため、
+  // 二重に閉じる価値がある。
   const hasSuccessWithin = (windowMs) =>
     runs.some(
-      (run) => run.conclusion === 'success' && now - new Date(run.createdAt).getTime() <= windowMs,
+      (run) =>
+        run.status === 'completed' &&
+        run.conclusion === 'success' &&
+        now - new Date(run.createdAt).getTime() <= windowMs,
     );
   if (isLatestWorkflowRunPending(runs)) {
     if (hasSuccessWithin(STALE_SUCCESS_WINDOW_MS)) {
@@ -201,10 +209,11 @@ export function judgeWorkflowRun(runs, { now = Date.now() } = {}) {
 }
 
 /**
- * gh CLI（や JSON.parse）の失敗を `run-log.mjs` の `board.reason` enum
- * （`BOARD_FAIL_REASONS`、既知 5 種）へ写像する。自由文字列を public な
- * 常設運行記録 issue へ書かないという既存の設計原則（run-log.mjs の
- * コメント参照）を、生成元の gh エラーメッセージにも適用する。
+ * gh CLI（や JSON.parse）の失敗を既知の分類へ写像する。元は `run-log.mjs` の
+ * `board.reason` enum へ写すためのもので（自由文字列を public な常設運行記録
+ * issue へ書かない設計原則を、生成元の gh エラーメッセージにも適用していた）、
+ * #2525 で運行記録を廃止した後は **retry 対象の判定**（`isRetriableObservationFailure`）
+ * と job log の診断行が利用者。
  * @param {unknown} error
  * @returns {'auth-error' | 'rate-limited' | 'network-error' | 'invalid-response' | 'unknown'}
  */
@@ -226,7 +235,16 @@ export function classifyGhError(error) {
     text.includes('enotfound') ||
     text.includes('etimedout') ||
     text.includes('could not resolve host') ||
-    text.includes('network is unreachable')
+    text.includes('network is unreachable') ||
+    // GitHub / Sentry 側の一時的な server error（Codex 指摘 P2、実測確定）。
+    // #2525 は「GitHub の 5xx は run 内 retry が吸収する」と書いていたが、
+    // 5xx は上のどの語にも該当せず `unknown` へ落ちて 1 回で確定していた。
+    // 恒久障害なら retry 後に結局 fetch-failed として起票されるので、
+    // ここを retriable 側へ入れても無音化には繋がらない。
+    /http 5\d\d/.test(text) ||
+    text.includes('bad gateway') ||
+    text.includes('service unavailable') ||
+    text.includes('gateway timeout')
   ) {
     return 'network-error';
   }
@@ -610,6 +628,9 @@ export function checkWorkflowJobRun(
   if (!Array.isArray(runs) || runs.length === 0) return { status: 'fetch-failed' };
 
   const matched = [];
+  // 「対象 job を読めなかった run」の件数。stale 判定の根拠（窓内に success が
+  // 無い）を確定させてよいかの判断に使う。
+  let jobFetchFailures = 0;
   for (const run of runs) {
     if (matched.length >= targetCount) break;
     // gh run list の JSON 出力（GitHub API 由来）を信頼しているが、他 wrapper
@@ -622,15 +643,26 @@ export function checkWorkflowJobRun(
       ['api', `repos/${REPO}/actions/runs/${run.databaseId}/jobs`, '--jq', '.jobs'],
       { execFileImpl, sleepImpl },
     );
-    if (!jobsResult.ok) continue; // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）
+    if (!jobsResult.ok) {
+      // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）。ただし
+      // 「読めなかった run がある」事実は控える — stale 判定は「窓内に success
+      // が無い」ことを根拠に赤へ倒すので、読めなかった run を「success では
+      // なかった」と同一視すると誤 red を出す（Codex 指摘 P2、実測確定）。
+      jobFetchFailures += 1;
+      continue;
+    }
 
     let jobs;
     try {
       jobs = JSON.parse(jobsResult.stdout);
     } catch {
+      jobFetchFailures += 1;
       continue;
     }
-    if (!Array.isArray(jobs)) continue;
+    if (!Array.isArray(jobs)) {
+      jobFetchFailures += 1;
+      continue;
+    }
 
     const targetJobs = jobs.filter(
       (j) => jobNames.includes(j?.name) && j?.conclusion !== 'skipped',
@@ -640,9 +672,22 @@ export function checkWorkflowJobRun(
     const status = targetJobs.some((j) => j.status !== 'completed')
       ? targetJobs.find((j) => j.status !== 'completed').status
       : 'completed';
+    // **初期値に null を使わない**（Codex 指摘 P2、実測確定）。旧実装は
+    // `reduce((worst, c) => worst === null ? c : worseConclusion(worst, c), null)`
+    // で、`worst === null` を「初回かどうか」の番兵に使っていた。ところが
+    // **未完了 job の conclusion も null** なので、[in_progress(null), success]
+    // の順で畳むと 2 件目で番兵条件が再び真になり、`worseConclusion` を通さず
+    // `success` で上書きされる（実測: 畳んだ結論が "success" になる）。
+    //
+    // これは #2483 からの潜在バグだが、#2525 の stale 判定が
+    // 「窓内に conclusion === 'success' の run があるか」を根拠にしたことで
+    // 実害化した: heavy の E2E が何晩 stuck しても Web が success なら
+    // 偽の success が毎晩記録され、stale へ倒れず永遠に無音になる。
+    // index で初回を判定すれば `worseConclusion(null, 'success')` が呼ばれ、
+    // 未知の値（null）を worst として正しく null を返す。
     const conclusion = targetJobs
       .map((j) => j.conclusion)
-      .reduce((worst, c) => (worst === null ? c : worseConclusion(worst, c)), null);
+      .reduce((worst, c, i) => (i === 0 ? c : worseConclusion(worst, c)));
     const earliestStartedAt = targetJobs
       .map((j) => j.started_at)
       .filter(Boolean)
@@ -660,6 +705,14 @@ export function checkWorkflowJobRun(
 
   const judged = judgeWorkflowRun(matched, { now });
   const latestUrl = matched[0]?.url;
+  // stale-pending は「窓内に success が 1 件も無い」ことを根拠に赤へ倒す判定
+  // なので、履歴に読めなかった run があると根拠が成立しない（Codex 指摘 P2、
+  // 実測確定: 直近が pending の夜に前夜の success run だけ jobs API が落ちると
+  // 誤 red を起票する）。判定不能として fetch-failed へ縮退させる — こちらも
+  // 無音ではなく、retry しても駄目なら nightwatch-fetch-failed として起票される。
+  if (judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0) {
+    return { status: 'fetch-failed' };
+  }
   if (judged.status === 'pending') return { status: 'pending', evidenceUrl: latestUrl };
   if (judged.status === 'red')
     return { status: 'red', evidenceUrl: judged.evidenceUrl ?? latestUrl };

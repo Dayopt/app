@@ -459,7 +459,8 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "node scripts/ci/night-watch/alert-issue.mjs report "*)
+      "node scripts/ci/night-watch/alert-issue.mjs report "* \
+        | "node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed "*)
         # 赤の起票・追記（nightwatch(check-id) issue）の wrapper。動的な
         # check-id・実測値が要るため完全一致にはできないが、値は script 内部で
         # execFile の argv 要素として gh へ渡り、shell を経由しないため、この
@@ -469,11 +470,17 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
         # （本 if ブロック冒頭）が既にそれを保証している。
         #
-        # **#2525 以降、night-watch モードで許可される書き込み経路はこれだけ。**
-        # 旧 board-issue.mjs（盤面起票）/ dod-candidate.mjs（DoD 候補）/
-        # run-log.mjs（運行記録・盤面 note・env-failure・recent-pending）の
-        # 許可形は、対応する wrapper ごと削除した。夜勤が触ってよい issue は
-        # 「自分が起票した alert issue」だけになった。
+        # **#2525 以降、night-watch モードで許可される書き込み経路はこの
+        # wrapper だけ。** 旧 board-issue.mjs（盤面起票）/ dod-candidate.mjs
+        # （DoD 候補）/ run-log.mjs（運行記録・盤面 note・env-failure・
+        # recent-pending）の許可形は、対応する wrapper ごと削除した。夜勤が
+        # 触ってよい issue は「自分が起票した alert issue」だけになった。
+        #
+        # `report-fetch-failed` は観測コマンド自体の取得失敗を起票する
+        # サブコマンド（Codex 指摘 P2）。自動パートは run-all.mjs から直接
+        # 呼ぶが、手動代行はこの allowlist を通る wrapper 経由でしか書けない
+        # ため、これが無いと代行時に観測失敗だけ issue へ残せない。動的引数は
+        # check-id 1 つで、既知キーかどうかは wrapper 内部が検証する。
         night_watch_allowed=1
         ;;
     esac

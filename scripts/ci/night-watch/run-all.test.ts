@@ -372,6 +372,76 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome.evidenceUrl).toBe('job2'); // failure した job の url
   });
 
+  // Codex 指摘 P2（実測確定）: 畳み込みの reduce が `worst === null` を「初回か」
+  // の番兵に使っていたため、**未完了 job の conclusion も null** である
+  // [in_progress(null), success] の並びで 2 件目が無検査に上書きし、run 全体が
+  // 偽の success になっていた。#2525 の stale 判定がこの success を根拠に
+  // 無音へ倒すため、E2E が何晩 stuck しても Web が success なら永遠に
+  // 検出されない、という無音化になっていた。
+  it('未完了 job と success job が混在する run を success に化けさせない', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 1, createdAt: '2026-08-25T03:00:00+09:00', url: 'u1' }]),
+        jobsResponseFor(1, [
+          {
+            name: NIGHTLY_HEAVY_JOB_NAMES[0],
+            status: 'in_progress',
+            conclusion: null,
+            html_url: 'job1',
+          },
+          {
+            name: NIGHTLY_HEAVY_JOB_NAMES[1],
+            status: 'completed',
+            conclusion: 'success',
+            html_url: 'job2',
+          },
+        ]),
+      ]),
+    );
+    // 直近 run が未完了で、履歴に完了した success が 1 件も無い（この run だけ）
+    // ので stale へ倒れる。旧実装ではこの run 自身が success 扱いになり
+    // pending のまま返っていた。
+    const outcome = checkWorkflowJobRun(NIGHTLY_HEAVY_JOB_NAMES, { execFileImpl, now: NOW });
+    expect(outcome.status).toBe('red');
+  });
+
+  // Codex 指摘 P2（実測確定）: stale-pending は「窓内に success が無い」ことを
+  // 根拠に赤へ倒す判定なので、履歴の一部が読めていないと根拠が成立しない。
+  // 前夜の success run だけ jobs API が落ちた夜に誤 red を起票していた。
+  it('stale 判定の根拠となる履歴を読めなかった run があれば fetch-failed へ倒す', () => {
+    const execFileImpl = vi.fn((_file: string, args: string[]) => {
+      if (args[0] === 'run') {
+        return JSON.stringify([
+          { databaseId: 2, createdAt: '2026-08-25T03:00:00+09:00', url: 'u2' },
+          { databaseId: 1, createdAt: '2026-08-24T03:00:00+09:00', url: 'u1' },
+        ]);
+      }
+      // 直近 run（2）は未完了。前夜の run（1）は jobs API が落ちて読めない。
+      if (args[1]?.includes('/2/')) {
+        return JSON.stringify([
+          {
+            name: NIGHTLY_INTEGRATION_JOB_NAME,
+            status: 'queued',
+            conclusion: null,
+            started_at: '2026-08-25T03:00:00+09:00',
+            html_url: 'job2',
+          },
+        ]);
+      }
+      throw Object.assign(new Error('Command failed: gh api'), {
+        status: 1,
+        stderr: 'HTTP 502: Bad Gateway',
+      });
+    });
+
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], {
+      execFileImpl,
+      now: NOW,
+      sleepImpl: () => {},
+    });
+    expect(outcome.status).toBe('fetch-failed');
+  });
+
   it('databaseId が整数でない run は jobs API を呼ばずスキップする（push前反証レビュー risk-reviewer 指摘）', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
@@ -544,6 +614,23 @@ describe('execObservationCommand', () => {
       expect(attempts(execFileImpl)).toBe(3);
     });
 
+    // Codex 指摘 P2（実測確定）: 5xx はどの分類語にも該当せず `unknown` へ落ちて
+    // 1 回で確定していた。#2525 は「GitHub の 5xx は retry が吸収する」と書いて
+    // いたので、documentation と実装が食い違っていた。
+    it.each([
+      ['HTTP 502: Bad Gateway'],
+      ['HTTP 503: Service Unavailable'],
+      ['HTTP 504: Gateway Timeout'],
+      ['HTTP 500: Internal Server Error'],
+    ])('server error（%s）は retry する', (stderr) => {
+      const execFileImpl = vi.fn(() => {
+        throw ghError(stderr);
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl });
+      expect(attempts(execFileImpl)).toBe(3);
+    });
+
     it('本物の赤（分類できない非 0 exit）は retry しない', () => {
       const execFileImpl = vi.fn(() => {
         throw Object.assign(new Error('command failed'), { status: 1 });
@@ -581,8 +668,18 @@ describe('execObservationCommand', () => {
   // （内製クロスレビュー risk-reviewer 指摘 high）。timeout を retry 対象に
   // 戻すと 240s × 3 = 720s になり、setup（checkout / pnpm install /
   // Sentry CLI）と合わせて 15 分を超えて runner に kill される。
-  it('観測コマンド 1 本の最悪コストが job 予算を大きく下回る', () => {
+  //
+  // **これは「観測コマンド 1 本あたり」の上限であって、run 全体の保証ではない**
+  // （Codex 指摘 P2 の指摘どおり。過大な主張をしないため明記する）。7 check が
+  // 揃って timeout すれば 7 × 240s = 1680s で job 予算を超えるが、それは
+  // #2525 以前から同じで、この PR が悪化させたものではない（timeout を retry
+  // 対象から外したので 1 本あたりの上限は実質据え置き）。観測フェーズ全体の
+  // deadline は別の設計変更なので、この PR の scope には入れない。
+  it('観測コマンド 1 本の最悪コストが job 予算を大きく下回る（run 全体の保証ではない）', () => {
     expect(WORST_CASE_OBSERVATION_MS).toBeLessThan(NIGHT_WATCH_JOB_TIMEOUT_MS / 2);
+    // retry を含めても、timeout 1 回ぶんから大きく増えないことを固定する。
+    // ここが跳ね上がる変更（timeout の retry 復活など）は必ずこの test を割る。
+    expect(WORST_CASE_OBSERVATION_MS).toBeLessThan(250_000);
   });
 
   it('env を渡すと process.env の代わりにその env で実行する（token 分離の検証）', () => {
@@ -1122,8 +1219,24 @@ describe('runNightWatch', () => {
   // 通しで効くことを固定する。単発の pending は無音、48h 以内に success が
   // 無ければ赤。
   it('直近 run が pending でも 48h 以内に success があれば起票しない（判定保留）', () => {
+    // **前夜の完了 run を履歴に置く。** Codex 指摘 P2 の修正前は、同一 run 内の
+    // [in_progress, success] が偽の success に畳まれるせいで、前夜の run が
+    // 無くてもこの test が通ってしまっていた（stale 判定を素通りさせる
+    // 実装バグを test が追認していた形。TEST-1）。
+    const PREVIOUS_RUN_ID = 400;
+    const previousNight = new Date(FIXED_NOW.getTime() - 24 * 60 * 60 * 1000).toISOString();
     const rules = [
       {
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'run', 'list', '--workflow=nightly.yml', '--branch'),
+        respond: () =>
+          JSON.stringify([
+            { databaseId: NIGHTLY_RUN_ID, createdAt: FIXED_NOW.toISOString(), url: 'https://x/2' },
+            { databaseId: PREVIOUS_RUN_ID, createdAt: previousNight, url: 'https://x/1' },
+          ]),
+      },
+      {
+        // 直近 run: E2E がまだ走っている（Web / Integration は完了）
         match: (file: string, args: string[]) =>
           file === 'gh' && has(args, 'api', `actions/runs/${NIGHTLY_RUN_ID}/jobs`),
         respond: () =>
@@ -1150,6 +1263,23 @@ describe('runNightWatch', () => {
               html_url: 'https://github.com/Dayopt/dayopt/actions/runs/99/job/3',
             },
           ]),
+      },
+      {
+        // 前夜の run: 全 job が success（= 48h 窓内の success 実績）
+        match: (file: string, args: string[]) =>
+          file === 'gh' && has(args, 'api', `actions/runs/${PREVIOUS_RUN_ID}/jobs`),
+        respond: () =>
+          JSON.stringify(
+            ['\u{1F3AD} E2E Tests', '\u{1F310} Web Build & E2E', 'Integration Tests'].map(
+              (name, i) => ({
+                name,
+                status: 'completed',
+                conclusion: 'success',
+                started_at: previousNight,
+                html_url: `https://github.com/Dayopt/dayopt/actions/runs/98/job/${i + 1}`,
+              }),
+            ),
+          ),
       },
       ...baseRules(),
     ];

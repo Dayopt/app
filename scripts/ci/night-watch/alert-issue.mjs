@@ -553,18 +553,54 @@ function isDirectExecution() {
   }
 }
 
+const USAGE = [
+  'Usage:',
+  '  node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
+  '  node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed <check-id>',
+].join('\n');
+
+/**
+ * CLI の結果を exit code へ写す。**`skipped`（dedup 検索失敗による起票見送り）
+ * を成功にしない**（Codex 指摘 P2）。手動代行（cron 故障時に指揮台がローカルで
+ * 代行する経路、SKILL.md §手動代行）ではこの CLI が唯一の書き込み手段なので、
+ * 起票できていないのに exit 0 だと、代行した本人が「issue を残せた」と誤認する。
+ *
+ * `capped`（run 内の起票上限）は意図的な減衰なので 0 のまま。
+ * @param {{ action: string }} result
+ */
+function exitCodeForAlertResult(result) {
+  return result.action === 'skipped' ? 1 : 0;
+}
+
 if (isDirectExecution()) {
   const [subcommand, checkId, ...rest] = process.argv.slice(2);
-  if (subcommand !== 'report' || !checkId) {
-    console.error(
-      'Usage: node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
-    );
+  if (!checkId || (subcommand !== 'report' && subcommand !== 'report-fetch-failed')) {
+    console.error(USAGE);
     process.exitCode = 1;
   } else {
     try {
-      const args = parseAlertArgs(rest);
-      const result = runAlertSync({ checkId, args });
-      console.log(JSON.stringify(result));
+      let result;
+      if (subcommand === 'report-fetch-failed') {
+        // 観測コマンド自体の取得失敗を起票する（#2525）。自動パートは
+        // `run-all.mjs` から直接 `runFetchFailureAlertSync` を呼ぶが、手動代行は
+        // 層3 guard の allowlist を通る個別 wrapper 経由でしか書き込めないため、
+        // この経路が無いと代行時に観測失敗を issue へ残せない。
+        // 動的引数は check-id 1 つだけで、その値は CHECK_DEFINITIONS の
+        // 既知キーかどうかを wrapper 内部が検証する。
+        if (rest.length > 0) {
+          console.error(USAGE);
+          process.exitCode = 1;
+        } else {
+          result = runFetchFailureAlertSync({ checkId });
+        }
+      } else {
+        const args = parseAlertArgs(rest);
+        result = runAlertSync({ checkId, args });
+      }
+      if (result) {
+        console.log(JSON.stringify(result));
+        process.exitCode = exitCodeForAlertResult(result);
+      }
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'alert-issue report failed');
       process.exitCode = 1;
