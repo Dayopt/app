@@ -48,7 +48,7 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 [checklist.md](checklist.md) の 4 項目（`docs-check` / `docs-coverage` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）の 7 check-id を観測する。この 7 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
 
 - **fail-closed 原則**: 観測コマンドが失敗（spawn 失敗・パース不能）した check-id は緑と判定せず `failed` へ記録する
-- **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**非 0 exit（本物の赤）と timeout kill は retry しない** — 前者は retry しても結果が変わらず、後者は 1 本 240s × 3 回で job 予算（15 分）を溶かして残りの check ごと道連れにする（`isRetriableObservationFailure` 参照）
+- **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）
 - **赤判定は直近 run（fetch した3件のうち先頭）の terminal 結果を基準にする**（過去 run に non-success が混じっていても直近が success なら緑。旧 heavy-post-merge.yml / integration.yml は nightly と push:main が同一 concurrency group だったため過去 run が `cancelled` になるのが日常的で、それを含めて判定すると誤起票が常態化した。#2483 で nightly.yml へ統合後は push:main トリガー自体が無くなりこの経路は解消したが、再 dispatch 等で同型が再発しうるため backstop として維持している）
 - **pending の stale 判定**（v4、#2525）: `heavy-red` / `integration-red` の「直近 run 未完了」は `pending` として区別し、単発（前夜は成功している cron 遅延）は無音のまま判定を保留する。ただし取得した run 群に **48h 以内の success が 1 件も無ければ red** へ倒す。旧 v3 はこの連晩判定を `checkRecentPending`（常設運行記録 issue のコメント列を数える）に持たせていたが、そのコメント自体を廃止したため run 履歴だけから導出する形へ置き換えた。これが無いと「queued のまま何晩も進まない」が永遠に無音になる
 - 判定関数は `judgeCountBaseline` / `judgeWorkflowRun` / `classifyGhError`（`run-all.mjs`）
@@ -61,11 +61,11 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 **fetch-failed の起票は、全 check-id の赤判定が確定した後にまとめて処理する**（`deferredFetchFailed`、#2422 の P2 是正・PR #2445）。起票予算は run 全体で共有されているため、逐次処理すると慢性的な観測失敗が先に使い切って本物の CI 赤が起票されなくなる。v4 で fetch-failed が当夜起票になったぶん、この順序の重要性はむしろ上がっている。
 
-**赤を検出したのに起票そのものが失敗したら job を非 0 exit にする**（夜勤の主目的が壊れたのに job が緑、という最悪の組み合わせを防ぐ）。
+**異常を検出したのに issue を残せなかったら job を非 0 exit にする**（夜勤の主目的が壊れたのに job が緑、という最悪の組み合わせを防ぐ）。これは例外が飛んだ場合だけでなく、**dedup 検索の失敗で起票を見送った場合も含む** — `runAlertSync` は `gh issue list --search` が落ちると throw せず `{ action: 'skipped' }` を返す（fail closed で誤起票を避ける設計）ため、そこを拾わないと gh 障害・token scope 退行の夜に「本物の赤あり / issue ゼロ / job 緑」が成立する（内製クロスレビュー risk-reviewer 指摘 high）。`run-cap-reached`（`MAX_NEW_ISSUES_PER_RUN` による意図的な減衰）は障害ではないので対象外。
 
 ### Step 3（run サマリを job log へ）
 
-`buildRunSummaryLine`（`run-all.mjs`）が「観測 N/7 | 起票 N | 保留 N | 見送り N | 取得失敗 N」の 1 行を `console.log` へ出す。常設運行記録 issue への毎晩 1 コメントを廃止したため、run の結論を人が後から読める場所はここだけ。**exitCode を立てる前に出す** — 先に倒して出力を飛ばすと「赤を検出したのに起票できなかった」という最も知りたい事実がどこにも残らない。
+`buildRunSummaryLine`（`run-all.mjs`）が「観測 N/7 | 起票 N | 保留 N | 起票失敗 N | 予算超過 N | 取得失敗 N」の 1 行を `console.log` へ出す。**「起票失敗」（gh 障害）と「予算超過」（意図的な減衰）と「取得失敗」（観測できなかった）を畳まない** — この 1 行が唯一の人間可読な記録なので、原因の違いが読めないと故障の切り分けに使えない。pending だけの夜は verdict を `判定保留あり` にする（`要確認` に倒すと、heavy-e2e が 04:00 時点で走行中という日常で毎晩赤く見えて識別力が落ちる）。常設運行記録 issue への毎晩 1 コメントを廃止したため、run の結論を人が後から読める場所はここだけ。**exitCode を立てる前に出す** — 先に倒して出力を飛ばすと「赤を検出したのに起票できなかった」という最も知りたい事実がどこにも残らない。
 
 ## トークン（secrets）
 

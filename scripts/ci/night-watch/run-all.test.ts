@@ -13,11 +13,13 @@ import {
   execObservationCommand,
   judgeCountBaseline,
   judgeWorkflowRun,
+  NIGHT_WATCH_JOB_TIMEOUT_MS,
   NIGHTLY_HEAVY_JOB_NAMES,
   NIGHTLY_INTEGRATION_JOB_NAME,
   readBaseline,
   runNightWatch,
   worseConclusion,
+  WORST_CASE_OBSERVATION_MS,
 } from './run-all.mjs';
 
 describe('countDocsCoverageMissing', () => {
@@ -488,6 +490,101 @@ describe('execObservationCommand', () => {
     expect(result.error).toBeInstanceOf(Error);
   });
 
+  // #2525 の retry 分類。**error の形はすべて 2026-09-01 に実測した実物に
+  // 合わせてある**（内製クロスレビュー risk-reviewer 指摘 high/medium。
+  // 旧 test は gh の失敗を `status` を持たない素の Error で模擬しており、
+  // 実挙動と乖離していたため retry 対象の反転を検出できていなかった）:
+  //
+  //   execFileSync('sleep', ['5'], { timeout: 200, killSignal: 'SIGKILL' })
+  //     → { signal: 'SIGKILL', status: null, code: 'ETIMEDOUT' }（killed は無い）
+  //   execFileSync('gh', ['api', '<404 path>'])
+  //     → { status: 1 }（数値。つまり gh の失敗は spawn 失敗ではない）
+  describe('retry の分類（#2525）', () => {
+    const attempts = (execFileImpl: ReturnType<typeof vi.fn>) => execFileImpl.mock.calls.length;
+
+    function timeoutError() {
+      return Object.assign(new Error('Command failed: pnpm docs:check'), {
+        signal: 'SIGKILL',
+        status: null,
+        code: 'ETIMEDOUT',
+      });
+    }
+
+    function ghError(stderr: string) {
+      return Object.assign(new Error('Command failed: gh api ...'), { status: 1, stderr });
+    }
+
+    it('timeout kill は retry しない（240s × 3 で job 予算を溶かさない）', () => {
+      const execFileImpl = vi.fn(() => {
+        throw timeoutError();
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      const result = execObservationCommand('pnpm', ['docs:check'], { execFileImpl, sleepImpl });
+      expect(result.ok).toBe(false);
+      expect(attempts(execFileImpl)).toBe(1);
+      expect(sleepImpl).not.toHaveBeenCalled();
+    });
+
+    it('rate limit（非 0 exit）は retry する', () => {
+      const execFileImpl = vi.fn(() => {
+        throw ghError('API rate limit exceeded for user ID 1.');
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl });
+      expect(attempts(execFileImpl)).toBe(3);
+      expect(sleepImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it('ネットワーク断（非 0 exit）は retry する', () => {
+      const execFileImpl = vi.fn(() => {
+        throw ghError('could not resolve host: api.github.com');
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl });
+      expect(attempts(execFileImpl)).toBe(3);
+    });
+
+    it('本物の赤（分類できない非 0 exit）は retry しない', () => {
+      const execFileImpl = vi.fn(() => {
+        throw Object.assign(new Error('command failed'), { status: 1 });
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      execObservationCommand('pnpm', ['docs:check'], { execFileImpl, sleepImpl });
+      expect(attempts(execFileImpl)).toBe(1);
+    });
+
+    it('auth-error は retry しない（token scope の退行は 3 回叩いても同じ）', () => {
+      const execFileImpl = vi.fn(() => {
+        throw ghError('HTTP 403: Resource not accessible by personal access token');
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl });
+      expect(attempts(execFileImpl)).toBe(1);
+    });
+
+    it('retry の途中で成功したらそこで打ち切る', () => {
+      let n = 0;
+      const execFileImpl = vi.fn(() => {
+        n += 1;
+        if (n === 1) throw ghError('API rate limit exceeded');
+        return 'ok\n';
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>();
+      const result = execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl });
+      expect(result).toEqual({ ok: true, stdout: 'ok\n' });
+      expect(attempts(execFileImpl)).toBe(2);
+      expect(sleepImpl).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // retry の総コストが job 予算に収まることを定数間の不等式で固定する
+  // （内製クロスレビュー risk-reviewer 指摘 high）。timeout を retry 対象に
+  // 戻すと 240s × 3 = 720s になり、setup（checkout / pnpm install /
+  // Sentry CLI）と合わせて 15 分を超えて runner に kill される。
+  it('観測コマンド 1 本の最悪コストが job 予算を大きく下回る', () => {
+    expect(WORST_CASE_OBSERVATION_MS).toBeLessThan(NIGHT_WATCH_JOB_TIMEOUT_MS / 2);
+  });
+
   it('env を渡すと process.env の代わりにその env で実行する（token 分離の検証）', () => {
     const execFileImpl: (
       file: string,
@@ -757,7 +854,7 @@ describe('runNightWatch', () => {
     expect(writeCalls).toHaveLength(0);
 
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 見送り 0 | 取得失敗 0',
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     expect(process.exitCode).not.toBe(1);
     process.exitCode = 0;
@@ -799,7 +896,7 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch(docs-check): pnpm docs:check が exit 0 以外');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 見送り 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -879,6 +976,52 @@ describe('runNightWatch', () => {
     process.exitCode = 0;
   });
 
+  // 内製クロスレビュー risk-reviewer 指摘（high）: dedup 検索（`gh issue list
+  // --search`）が失敗すると `runAlertSync` は **throw せず**
+  // `{ action: 'skipped' }` を返す（fail closed で誤起票を避ける設計）。
+  // これを「起票しなかった」で片付けると、gh 障害・token scope 退行の夜に
+  // 「本物の赤あり / issue ゼロ / job 緑」が成立する。#2525 より前は同じ障害で
+  // Step 5（運行記録の gh 投稿）も失敗し、その非 0 exit が backstop だった。
+  it('dedup 検索が失敗して起票を見送った夜も非 0 exit になる（緑のまま赤を無音化しない）', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () => {
+          const error = new Error('command failed') as Error & { status: number };
+          error.status = 1;
+          return error;
+        },
+      },
+      {
+        // dedup 検索そのものが落ちる（gh の障害）。runAlertSync は throw せず
+        // { action: 'skipped' } を返す。
+        match: (file: string, args: string[]) =>
+          file === 'gh' && args[0] === 'issue' && args[1] === 'list' && has(args, 'nightwatch'),
+        respond: () =>
+          Object.assign(new Error('Command failed: gh issue list'), {
+            status: 1,
+            stderr: 'HTTP 403: Resource not accessible by personal access token',
+          }),
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    // issue は 1 件も作られていない（fail closed は維持する）。
+    const createCalls = execFileImpl.calls.filter(
+      (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
+    );
+    expect(createCalls).toHaveLength(0);
+
+    // それでも job は赤くなる。ここが #2525 で開きかけた穴。
+    expect(process.exitCode).toBe(1);
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 6/7 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
+    );
+    process.exitCode = 0;
+  });
+
   // #2422 → #2525: 観測コマンド自体の取得失敗（fetch-failed）は、run 内 retry で
   // 回復しなければその夜のうちに起票する（旧「3 晩連続」条件は、判定に使っていた
   // 常設運行記録 issue のコメントごと廃止した）。
@@ -889,7 +1032,10 @@ describe('runNightWatch', () => {
         match: (file: string, args: string[]) =>
           file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
         respond: () =>
-          new Error('HTTP 403: Resource not accessible by personal access token (fine-grained)'),
+          Object.assign(new Error('Command failed: gh api ...'), {
+            status: 1,
+            stderr: 'API rate limit exceeded for user ID 1.',
+          }),
       },
       {
         // fetch-failure の dedup 検索（既存 issue 無し → 新規作成）
@@ -913,7 +1059,8 @@ describe('runNightWatch', () => {
     const execFileImpl = createExecFileImpl(rules);
     runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
 
-    // 起票の前に run 内 retry を尽くしている（合計 3 回試行）。
+    // 起票の前に run 内 retry を尽くしている（rate limit は retriable なので
+    // 合計 3 回試行される）。
     const alertsCalls = execFileImpl.calls.filter(
       (c) => c.file === 'gh' && c.args[0] === 'api' && (c.args[1] ?? '').includes('dependabot'),
     );
@@ -932,7 +1079,7 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測コマンドが取得失敗');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 見送り 0 | 取得失敗 1',
+      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
     );
     process.exitCode = 0;
   });
@@ -945,7 +1092,12 @@ describe('runNightWatch', () => {
           file === 'gh' && args[0] === 'api' && (args[1] ?? '').includes('dependabot/alerts'),
         respond: () => {
           attempts += 1;
-          if (attempts === 1) return new Error('getaddrinfo ENOTFOUND api.github.com');
+          if (attempts === 1) {
+            return Object.assign(new Error('Command failed: gh api ...'), {
+              status: 1,
+              stderr: 'could not resolve host: api.github.com',
+            });
+          }
           return `${readBaseline().dependabot_alert_count}\n`;
         },
       },
@@ -960,7 +1112,7 @@ describe('runNightWatch', () => {
     );
     expect(createCalls).toHaveLength(0);
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 見送り 0 | 取得失敗 0',
+      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1008,7 +1160,11 @@ describe('runNightWatch', () => {
       (c) => c.file === 'gh' && c.args[0] === 'issue' && c.args[1] === 'create',
     );
     expect(createCalls).toHaveLength(0);
-    expect(summaryLine()).toContain('保留 1');
+    // pending だけの夜は「要確認」に倒さない（日常的に起きるため verdict の
+    // 識別力が落ちる。内製クロスレビュー risk-reviewer 指摘 low）。
+    expect(summaryLine()).toBe(
+      'night-watch: 判定保留あり | 観測 7/7 | 起票 0 | 保留 1 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+    );
     process.exitCode = 0;
   });
 
@@ -1161,7 +1317,7 @@ describe('runNightWatch', () => {
     expect(fetchFailedCreates.length).toBe(2); // 3件中1件は予算超過でcapされる
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 見送り 1 | 取得失敗 3',
+      'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
     );
     process.exitCode = 0;
   });
