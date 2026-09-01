@@ -29,6 +29,15 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const MIGRATIONS_PREFIX = 'supabase/migrations/';
 
 /**
+ * 走査対象は migrations 配下の .sql のみ。配下のポインタ用 markdown
+ * （CLAUDE.md 等）は適用される SQL ではないため対象外にする（#2510）。
+ * @param {string} path
+ */
+function isMigrationSqlPath(path) {
+  return path.startsWith(MIGRATIONS_PREFIX) && path.endsWith('.sql');
+}
+
+/**
  * 検出パターン。`kind` はラベル・コメント文面で使う識別子。
  * SQL コメント行（`--`）を先に除去してから判定する（コメント中の DROP 言及で
  * 誤検知しないため）。
@@ -295,7 +304,7 @@ export function checkFiles(files) {
   const results = [];
   for (const file of files) {
     if (file.status !== 'added') continue;
-    if (!file.path.startsWith(MIGRATIONS_PREFIX)) continue;
+    if (!isMigrationSqlPath(file.path)) continue;
     const findings = detectDestructivePatterns(file.content);
     if (findings.length > 0) {
       results.push({ path: file.path, findings });
@@ -377,9 +386,7 @@ if (isDirectRun) {
     }
 
     const files = entries
-      .filter(
-        (e) => e && typeof e.filename === 'string' && e.filename.startsWith(MIGRATIONS_PREFIX),
-      )
+      .filter((e) => e && typeof e.filename === 'string' && isMigrationSqlPath(e.filename))
       .map((e) => {
         let content = '';
         try {
