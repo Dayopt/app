@@ -120,6 +120,44 @@ const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/dayopt\.sentry\.io\/issues\/\d
 // 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
 const MAX_SENTRY_EVIDENCE = 5;
 
+/**
+ * evidence の書式・件数エラーに付ける識別子（Codex レビュー P2、#2525）。
+ *
+ * `run-all.mjs` の `reportRedCheck` は sentry-new について「evidence が
+ * 弾かれたら evidence 無しで 1 回だけ再試行する」フォールバックを持つが、
+ * 以前は `catch` が**あらゆる例外**を拾っていた。`reserveAlertRunSlot` は
+ * gh を呼ぶ直前に check-id を `actedCheckIds` へ記録するため、1 回目が
+ * `gh issue create` で落ちた場合、2 回目は `actedCheckIds.includes(checkId)`
+ * に当たって必ず `capped` を返す。`capped` は「意図的な減衰」として配送失敗
+ * から除外されるので、**赤を検出したのに issue も非 0 exit も残らない**
+ * （この PR が塞ごうとしている無音そのもの）。
+ *
+ * フォールバックの対象を「gh を呼ぶ前に確定する検証エラー」だけに限るため、
+ * 例外側へ識別子を持たせる。message の文字列一致に頼らないのは、文言変更で
+ * 静かに壊れる判定を作らないため。
+ */
+export const EVIDENCE_VALIDATION_ERROR_CODE = 'sentry-evidence-invalid';
+
+/** @param {string} message */
+function evidenceValidationError(message) {
+  const error = new Error(message);
+  // @ts-expect-error -- Error に独自 code を載せる（Node の慣習に合わせる）
+  error.code = EVIDENCE_VALIDATION_ERROR_CODE;
+  return error;
+}
+
+/**
+ * `buildAlertBody` の evidence 検証で throw された例外か。
+ * @param {unknown} error
+ */
+export function isEvidenceValidationError(error) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    /** @type {{ code?: unknown }} */ (error).code === EVIDENCE_VALIDATION_ERROR_CODE
+  );
+}
+
 const BASELINE_PATH = fileURLToPath(
   new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
 );
@@ -224,13 +262,13 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       }
       const evidence = args.evidence ?? [];
       if (evidence.length > MAX_SENTRY_EVIDENCE) {
-        throw new Error(
+        throw evidenceValidationError(
           `--evidence は 1 check あたり最大 ${MAX_SENTRY_EVIDENCE} 件までです（指定: ${evidence.length} 件）`,
         );
       }
       const badEvidence = evidence.filter((entry) => !SENTRY_EVIDENCE_RE.test(entry));
       if (badEvidence.length > 0) {
-        throw new Error(
+        throw evidenceValidationError(
           `--evidence は "DAYOPT-<番号> https://dayopt.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
         );
       }

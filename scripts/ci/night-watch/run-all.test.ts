@@ -17,7 +17,9 @@ import {
   NIGHT_WATCH_JOB_TIMEOUT_MS,
   NIGHTLY_HEAVY_JOB_NAMES,
   NIGHTLY_INTEGRATION_JOB_NAME,
+  OBSERVATION_COMMAND_TIMEOUT_MS,
   readBaseline,
+  reportRedCheck,
   runNightWatch,
   worseConclusion,
   WORST_CASE_OBSERVATION_MS,
@@ -752,6 +754,55 @@ describe('execObservationCommand', () => {
       expect(sleepImpl).toHaveBeenCalledTimes(2);
     });
 
+    // Codex レビュー P2（#2525）。retry 対象に分類される失敗**自体が遅い**時、
+    // 各試行へ満額の timeout を与えると 1 本で 240s × 3 を消費し、
+    // `WORST_CASE_OBSERVATION_MS` が主張する上限が嘘になる。
+    it('遅い retriable 失敗が続いても、合計は 1 本ぶんの timeout 予算を超えない', () => {
+      let clock = 0;
+      const nowImpl = () => clock;
+      // 1 回の試行が timeout 直前（235s）まで粘ってから 5xx で落ちる。
+      const execFileImpl = vi.fn((_cmd: string, _args: string[], opts?: { timeout?: number }) => {
+        clock += Math.min(235_000, opts?.timeout ?? 0);
+        throw ghError('HTTP 503: Service Unavailable');
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>((ms) => {
+        clock += ms;
+      });
+
+      const result = execObservationCommand('gh', ['api', 'x'], {
+        execFileImpl,
+        sleepImpl,
+        nowImpl,
+      });
+
+      expect(result.ok).toBe(false);
+      // 満額 timeout を 3 回与えると 720s+ になる。deadline で切り詰められる。
+      expect(clock).toBeLessThanOrEqual(WORST_CASE_OBSERVATION_MS);
+      // 2 本目は残余（5s）へ切り詰められて実行され、3 本目は予算切れで走らない。
+      expect(attempts(execFileImpl)).toBe(2);
+      const secondCallTimeout = execFileImpl.mock.calls[1][2]?.timeout ?? 0;
+      expect(secondCallTimeout).toBeLessThan(OBSERVATION_COMMAND_TIMEOUT_MS);
+    });
+
+    it('速い retriable 失敗なら、予算内で満額 retry する（切り詰めが効きすぎない）', () => {
+      let clock = 0;
+      const nowImpl = () => clock;
+      const execFileImpl = vi.fn((_cmd: string, _args: string[], opts?: { timeout?: number }) => {
+        clock += 100; // 即座に 5xx
+        // 経過ぶんだけ残余は縮むが、通常系では実質フル timeout が保たれる。
+        expect(opts?.timeout ?? 0).toBeGreaterThan(OBSERVATION_COMMAND_TIMEOUT_MS - 10_000);
+        throw ghError('HTTP 502: Bad Gateway');
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>((ms) => {
+        clock += ms;
+      });
+
+      execObservationCommand('gh', ['api', 'x'], { execFileImpl, sleepImpl, nowImpl });
+
+      expect(attempts(execFileImpl)).toBe(3);
+      expect(sleepImpl).toHaveBeenCalledTimes(2);
+    });
+
     it('ネットワーク断（非 0 exit）は retry する', () => {
       const execFileImpl = vi.fn(() => {
         throw ghError('could not resolve host: api.github.com');
@@ -917,6 +968,90 @@ describe('checkSentryNew / buildAlertArgs（count は常に素の数字）', () 
       detectedAt: '2026-08-25T05:00:00+09:00',
     });
     expect(body).toContain('件数: 100');
+  });
+
+  // Codex レビュー P2（#2525）。evidence-less 再試行のフォールバックは
+  // 「gh を呼ぶ前に確定する検証エラー」だけを対象にする必要がある。
+  // gh 由来の例外まで拾うと、1 回目で `reserveAlertRunSlot` が check-id を
+  // 消費済みのため 2 回目は必ず `capped` になり、赤が無音化する。
+  describe('evidence 検証エラーの識別（#2525、Codex P2）', () => {
+    it('evidence の書式エラーは isEvidenceValidationError が true', async () => {
+      const { buildAlertBody, isEvidenceValidationError } = await import('./alert-issue.mjs');
+      let thrown: unknown;
+      try {
+        buildAlertBody({
+          checkId: 'sentry-new',
+          args: { count: '1', evidence: ['Sentry issue のタイトルがここに入ってしまった'] },
+          detectedAt: '2026-08-25T05:00:00+09:00',
+        });
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect(isEvidenceValidationError(thrown)).toBe(true);
+    });
+
+    it('gh 由来の例外は isEvidenceValidationError が false（フォールバックしない）', async () => {
+      const { isEvidenceValidationError } = await import('./alert-issue.mjs');
+      const ghFailure = Object.assign(new Error('Command failed: gh issue create'), {
+        status: 1,
+        stderr: 'HTTP 503: Service Unavailable',
+      });
+      expect(isEvidenceValidationError(ghFailure)).toBe(false);
+      expect(isEvidenceValidationError(new Error('plain'))).toBe(false);
+      expect(isEvidenceValidationError(undefined)).toBe(false);
+    });
+  });
+
+  // **述語の unit test だけでは fix を証明できない**（実測: 述語を残したまま
+  // `reportRedCheck` の guard を外しても述語 test は全部 pass した）。
+  // `reportRedCheck` 自体を通し、gh 失敗が `capped` に化けないことを固定する。
+  describe('reportRedCheck の evidence-less 再試行（#2525、Codex P2）', () => {
+    let tmpDir: string;
+    let runStatePath: string;
+
+    beforeEach(() => {
+      tmpDir = mkdtempSync(join(tmpdir(), 'night-watch-report-red-'));
+      runStatePath = join(tmpDir, 'alert-run-state.json');
+    });
+    afterEach(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+    const validArgs = {
+      count: '1',
+      evidence: ['DAYOPT-1 https://dayopt.sentry.io/issues/1/'],
+    };
+
+    it('gh issue create が落ちたら throw する（capped に化けて無音にならない）', () => {
+      const execFileImpl = vi.fn((_file: string, args: string[]) => {
+        // dedup 検索は成功させ、既存 issue 無しにする。
+        if (args.includes('list')) return '[]';
+        // 起票で 5xx。1 回目の reserveAlertRunSlot は既に消費済み。
+        throw Object.assign(new Error('Command failed: gh issue create'), {
+          status: 1,
+          stderr: 'HTTP 503: Service Unavailable',
+        });
+      });
+
+      expect(() => reportRedCheck('sentry-new', validArgs, { execFileImpl, runStatePath })).toThrow(
+        /gh issue create/,
+      );
+    });
+
+    it('evidence の書式エラーなら evidence 無しで再試行して起票できる（本来の意図は残る）', () => {
+      const execFileImpl = vi.fn((_file: string, args: string[]) => {
+        if (args.includes('list')) return '[]';
+        return 'https://github.com/Dayopt/dayopt/issues/999';
+      });
+
+      const result = reportRedCheck(
+        'sentry-new',
+        { count: '1', evidence: ['Sentry issue のタイトルが混入した'] },
+        { execFileImpl, runStatePath },
+      );
+
+      expect(result.action).toBe('created');
+      expect(result.issueNumber).toBe(999);
+    });
   });
 });
 

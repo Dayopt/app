@@ -2,7 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { CHECK_DEFINITIONS, runAlertSync, runFetchFailureAlertSync } from './alert-issue.mjs';
+import {
+  CHECK_DEFINITIONS,
+  isEvidenceValidationError,
+  runAlertSync,
+  runFetchFailureAlertSync,
+} from './alert-issue.mjs';
 import { isLatestWorkflowRunPending, REPO } from './lib.mjs';
 
 /**
@@ -265,7 +270,7 @@ export function classifyGhError(error) {
  * 「取得失敗」（`isSpawnFailure` → fetch-failed 経路）へ縮退させる。
  * @type {number}
  */
-const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
+export const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
 
 /**
  * 観測コマンドの追加試行回数（#2525）。合計試行は 1 + この値。
@@ -311,6 +316,16 @@ export const NIGHT_WATCH_JOB_TIMEOUT_MS = 15 * 60 * 1000;
  * risk-reviewer 指摘、high。2026-09-01 実測で確定 — `execFileSync` の
  * timeout error は `killed` を持たず `signal: 'SIGKILL'` / `code: 'ETIMEDOUT'`
  * を返すため、旧実装の `error.killed` ガードは常に素通りしていた）。
+ *
+ * **この値は「1 本あたりの実行時間の総和」の上限であって、`retries + 1` 回
+ * ぶんの timeout の和ではない**（Codex レビュー P2、#2525）。timeout を retry
+ * 対象から外しても、retry 対象に分類される失敗（rate-limited / network-error）
+ * 自体が遅いと同じ超過が起きる: gh が 5xx を返すまで 235s かかる夜は
+ * 240s × 3 + 3s ≈ 723s を 1 本で消費し、この定数が主張する上限は嘘になる。
+ * 旧実装の不等式 test は「understate された定数」を検査していたので通って
+ * いた（TEST-1）。`execObservationCommand` が**試行をまたぐ絶対 deadline**を
+ * 持ち、各試行の timeout を残余へ切り詰めることで、この定数を実際の上限に
+ * した。
  */
 export const WORST_CASE_OBSERVATION_MS =
   OBSERVATION_COMMAND_TIMEOUT_MS + OBSERVATION_RETRY_TOTAL_DELAY_MS;
@@ -335,9 +350,17 @@ function sleepSync(ms) {
  * retry するのは `isRetriableObservationFailure` が true を返すもの（spawn
  * 失敗・ネットワーク系）だけ。非 0 exit（本物の赤）と timeout kill は
  * 1 回で確定させる。
+ *
+ * **試行をまたぐ絶対 deadline を持つ**（Codex レビュー P2、#2525）。各試行へ
+ * 同じ `OBSERVATION_COMMAND_TIMEOUT_MS` を与えると、retry 対象に分類される
+ * 遅い失敗（gh が 5xx を返すまで 235s 等）で 1 本が 240s × 3 を消費し、
+ * `WORST_CASE_OBSERVATION_MS` が主張する上限を破って job ごと SIGKILL される。
+ * kill されればサマリ 1 行も alert 起票も残らない。残余が尽きたら retry せず
+ * その時点の失敗を返す — 「retry しきれなかった」も観測失敗として
+ * `fetch-failed` へ落ちるので、無音にはならない。
  * @param {string} cmd
  * @param {string[]} args
- * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, cwd?: string, retries?: number, sleepImpl?: (ms: number) => void }} [opts]
+ * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, cwd?: string, retries?: number, sleepImpl?: (ms: number) => void, nowImpl?: () => number }} [opts]
  * @returns {{ ok: true, stdout: string } | { ok: false, error: unknown }}
  */
 export function execObservationCommand(
@@ -349,15 +372,28 @@ export function execObservationCommand(
     cwd,
     retries = OBSERVATION_COMMAND_RETRIES,
     sleepImpl = sleepSync,
+    nowImpl = Date.now,
   } = {},
 ) {
   let lastError;
+  // deadline は `WORST_CASE_OBSERVATION_MS`（timeout 1 本ぶん + retry の待ち
+  // 時間の合計）そのもの。これで「この関数の実時間は必ずこの定数以下」が
+  // 成り立ち、定数が主張する上限が実際の上限になる。
+  const deadline = nowImpl() + WORST_CASE_OBSERVATION_MS;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const remaining = deadline - nowImpl();
+    if (remaining <= 0) {
+      // 予算を使い切った。ここで打ち切らないと次の試行が丸ごと 1 本ぶんの
+      // timeout を追加で消費する。
+      logObservationBudgetExhausted(cmd, args, { attempt: attempt + 1 });
+      break;
+    }
     try {
       const stdout = execFileImpl(cmd, args, {
         encoding: 'utf8',
         env: env ?? process.env,
-        timeout: OBSERVATION_COMMAND_TIMEOUT_MS,
+        // 残余へ切り詰める。速い失敗が続く通常系では実質フル timeout のまま。
+        timeout: Math.min(OBSERVATION_COMMAND_TIMEOUT_MS, remaining),
         killSignal: 'SIGKILL',
         ...(cwd ? { cwd } : {}),
       });
@@ -366,7 +402,16 @@ export function execObservationCommand(
       lastError = error;
       logObservationFailure(cmd, args, error, { attempt: attempt + 1, total: retries + 1 });
       if (!isRetriableObservationFailure(error)) break;
-      if (attempt < retries) sleepImpl(OBSERVATION_RETRY_BASE_DELAY_MS * (attempt + 1));
+      if (attempt < retries) {
+        const delay = OBSERVATION_RETRY_BASE_DELAY_MS * (attempt + 1);
+        // 待ってから予算切れで即打ち切る、を避ける（待った時間ぶんだけ
+        // deadline を超過してしまう）。待つ価値が無いなら待たずに終える。
+        if (nowImpl() + delay >= deadline) {
+          logObservationBudgetExhausted(cmd, args, { attempt: attempt + 2 });
+          break;
+        }
+        sleepImpl(delay);
+      }
     }
   }
   return { ok: false, error: lastError };
@@ -409,6 +454,21 @@ function logObservationFailure(cmd, args, error, { attempt, total } = {}) {
   const detail = detailParts.length > 0 ? ` — ${detailParts.join(' ')}` : '';
   console.error(
     `::warning::観測コマンドが失敗しました（分類: ${classification}）: ${cmd} ${args.join(' ')}${detail}`,
+  );
+}
+
+/**
+ * retry の絶対 deadline を使い切って打ち切ったことを job log へ残す
+ * （Codex レビュー P2、#2525）。無音で試行回数だけ減ると、後から
+ * 「retry したのに直らなかった」のか「retry する予算が無かった」のかを
+ * 区別できない。
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {{ attempt: number }} opts
+ */
+function logObservationBudgetExhausted(cmd, args, { attempt }) {
+  console.error(
+    `::warning::観測コマンドの retry 予算（${OBSERVATION_COMMAND_TIMEOUT_MS}ms）を使い切ったため attempt=${attempt} を実行せず打ち切りました: ${cmd} ${args.join(' ')}`,
   );
 }
 
@@ -860,12 +920,28 @@ export function buildAlertArgs(checkId, outcome) {
  * `SENTRY_EVIDENCE_RE`（alert-issue.mjs 側、複製しない）と一致せず throw
  * した場合に、evidence 無し（count のみ）で 1 回だけ再試行する
  * （#2367 issue コメントの設計判断）。
+ *
+ * **再試行は `isEvidenceValidationError` が true の時だけ**（Codex レビュー
+ * P2、#2525）。以前は `catch` があらゆる例外を拾っていたため、1 回目が
+ * `gh issue create` / `gh issue comment` で落ちた夜に次が起きた:
+ *
+ *   1. `runAlertSync` が dedup 成功 → `reserveAlertRunSlot` が `sentry-new`
+ *      を `actedCheckIds` へ記録 → `gh` が throw
+ *   2. ここで evidence 無しの再試行に入る
+ *   3. 2 回目の `reserveAlertRunSlot` は `actedCheckIds.includes('sentry-new')`
+ *      に当たり、**予算の残量に関係なく**必ず `{ action: 'capped' }` を返す
+ *   4. `capped` は「意図的な減衰」なので `isAlertDeliveryFailure` が false
+ *      → job は緑、alert issue も無し
+ *
+ * 赤を検出したのに痕跡がどこにも残らない、という本 PR が塞ごうとしている
+ * 無音そのものだった。gh 由来の例外は素通しして外側の catch
+ * （`alertPostFailed` 経由で非 0 exit）へ渡す。
  */
-function reportRedCheck(checkId, args, { execFileImpl, runStatePath } = {}) {
+export function reportRedCheck(checkId, args, { execFileImpl, runStatePath } = {}) {
   try {
     return runAlertSync({ checkId, args, execFileImpl, runStatePath });
   } catch (error) {
-    if (checkId === 'sentry-new' && args.evidence?.length > 0) {
+    if (checkId === 'sentry-new' && args.evidence?.length > 0 && isEvidenceValidationError(error)) {
       return runAlertSync({ checkId, args: { ...args, evidence: [] }, execFileImpl, runStatePath });
     }
     throw error;
