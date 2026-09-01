@@ -5,7 +5,7 @@ import {
   CODEX_BOT_LOGIN,
   computeIssueFingerprintFromIssue,
 } from '../lib/issue-review-core.mjs';
-import { runIssueReviewGate } from './issue-review-gate.mjs';
+import { resolveContentChangedAt, runIssueReviewGate } from './issue-review-gate.mjs';
 
 const REVIEWED_URL = 'https://github.com/Dayopt/dayopt/issues/2530#issuecomment-1';
 
@@ -18,7 +18,10 @@ interface IssueFixture {
     login: string;
     body: string;
     createdAt?: string;
+    url?: string;
   }>;
+  lastEditedAt?: string | null;
+  removedLabels?: string[];
   totalCount?: number;
 }
 
@@ -34,6 +37,11 @@ function ghStub(issue: IssueFixture | null) {
                 title: issue.title,
                 body: issue.body,
                 labels: { nodes: issue.labels.map((name) => ({ name })) },
+                lastEditedAt: issue.lastEditedAt ?? null,
+                renames: { nodes: [] },
+                unlabeled: {
+                  nodes: (issue.removedLabels ?? []).map((name) => ({ label: { name } })),
+                },
                 comments: {
                   totalCount: issue.totalCount ?? issue.comments.length,
                   nodes: issue.comments.map((c) => ({
@@ -41,6 +49,7 @@ function ghStub(issue: IssueFixture | null) {
                     author: { login: c.login },
                     body: c.body,
                     createdAt: c.createdAt,
+                    url: c.url,
                   })),
                 },
               }
@@ -64,12 +73,19 @@ function markerFor(issue: Pick<IssueFixture, 'title' | 'body' | 'labels'>, overr
 
 const BASE = { title: '設計を見直す', body: '## 背景\n本文', labels: ['review:full'] };
 
-function codexCommentEntry() {
-  return { authorAssociation: 'NONE', login: CODEX_BOT_LOGIN, body: 'レビュー結果です。' };
+function codexCommentEntry(overrides: Partial<IssueFixture['comments'][number]> = {}) {
+  return {
+    authorAssociation: 'NONE',
+    login: CODEX_BOT_LOGIN,
+    body: 'レビュー結果です。',
+    url: REVIEWED_URL,
+    createdAt: '2026-09-01T01:00:00Z',
+    ...overrides,
+  };
 }
 
 function markerEntry(body: string, authorAssociation = 'OWNER') {
-  return { authorAssociation, login: 't3-nico', body };
+  return { authorAssociation, login: 't3-nico', body, createdAt: '2026-09-01T02:00:00Z' };
 }
 
 function run(issue: IssueFixture | null) {
@@ -242,11 +258,42 @@ describe('runIssueReviewGate', () => {
     const result = run({
       ...BASE,
       comments: [
-        { authorAssociation: 'NONE', login: `${CODEX_BOT_LOGIN}[bot]`, body: 'レビュー結果' },
+        codexCommentEntry({ login: `${CODEX_BOT_LOGIN}[bot]` }),
         markerEntry(markerFor(BASE)),
       ],
     });
     expect(result.ok).toBe(true);
+  });
+
+  // push 前反証レビュー P2: marker が出る前（Codex が P1 を返した直後）に
+  // ラベルを剥がす窓を塞ぐ。
+  it('review:full の削除履歴があれば marker が無くても gate 対象', () => {
+    const result = run({ ...BASE, labels: [], removedLabels: ['review:full'], comments: [] });
+    expect(result.required).toBe(true);
+    expect(result.requiredBy).toBe('review-full-label-removed');
+    expect(result.ok).toBe(false);
+  });
+
+  it('無関係なラベルの削除では gate 対象にならない', () => {
+    const result = run({ ...BASE, labels: [], removedLabels: ['status:ready'], comments: [] });
+    expect(result).toEqual({ required: false, ok: true });
+  });
+
+  // Codex コメントの存在だけで gate 対象にすると、review:full と無関係な issue で
+  // 一度 Codex を呼んだだけで恒久的に止まる。そうはしない。
+  it('Codex コメントがあるだけでは gate 対象にならない', () => {
+    const result = run({ ...BASE, labels: [], comments: [codexCommentEntry()] });
+    expect(result).toEqual({ required: false, ok: true });
+  });
+
+  it('本文がレビュー後に編集されていれば停止する', () => {
+    const result = run({
+      ...BASE,
+      lastEditedAt: '2026-09-01T03:00:00Z',
+      comments: [codexCommentEntry(), markerEntry(markerFor(BASE))],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('後に Issue が更新されています');
   });
 
   it('--repo 相当の owner/name が不正なら throw する', () => {
@@ -257,5 +304,33 @@ describe('runIssueReviewGate', () => {
         execFileImpl: ghStub(null) as never,
       }),
     ).toThrow(/owner\/name/);
+  });
+});
+
+describe('resolveContentChangedAt', () => {
+  it('本文編集と title 変更の遅い方を返す', () => {
+    expect(
+      resolveContentChangedAt({
+        lastEditedAt: '2026-09-01T01:00:00Z',
+        lastRenamedAt: '2026-09-01T02:00:00Z',
+      }),
+    ).toBe('2026-09-01T02:00:00Z');
+    expect(
+      resolveContentChangedAt({
+        lastEditedAt: '2026-09-01T03:00:00Z',
+        lastRenamedAt: '2026-09-01T02:00:00Z',
+      }),
+    ).toBe('2026-09-01T03:00:00Z');
+  });
+
+  // fingerprint は title も含むため、rename だけでも再レビューが要る。
+  it('title 変更しか無くてもその時刻を返す', () => {
+    expect(resolveContentChangedAt({ lastRenamedAt: '2026-09-01T02:00:00Z' })).toBe(
+      '2026-09-01T02:00:00Z',
+    );
+  });
+
+  it('どちらも無ければ null', () => {
+    expect(resolveContentChangedAt({})).toBeNull();
   });
 });

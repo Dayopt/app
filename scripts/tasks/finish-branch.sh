@@ -749,7 +749,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
         pullRequest(number: $number) {
           closingIssuesReferences(first: 50) {
             totalCount
-            nodes { number labels(first: 100) { nodes { name } } }
+            nodes {
+              number
+              repository { nameWithOwner }
+              labels(first: 100) { nodes { name } }
+            }
           }
         }
       }
@@ -774,16 +778,93 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  # review:full を持つ linked issue の番号（スペース区切り）。1 件でもあれば required。
-  LINKED_REVIEW_FULL_ISSUES="$(printf '%s' "$CLOSING_ISSUES_JSON" | jq -r '
-    [ .data.repository.pullRequest.closingIssuesReferences.nodes[]
-      | select(any(.labels.nodes[]?.name; . == "review:full"))
-      | .number ]
-    | join(" ")' 2>/dev/null || true)"
+  # **nodes の件数が totalCount と一致することを要求する。** field-level error で
+  # 一部の node が null になる経路（cross-repo / private / transfer 済みの issue を
+  # 参照している場合に実在する）を「継承なし」と誤読しないため。changedFiles の
+  # truncation 検査（§影響範囲を判定）と同じ形の fail closed。
+  CLOSING_ISSUES_NODE_COUNT="$(printf '%s' "$CLOSING_ISSUES_JSON" | jq -r '
+    [ .data.repository.pullRequest.closingIssuesReferences.nodes[] | select(. != null) ] | length' 2>/dev/null || true)"
 
-  if [[ -n "$LINKED_REVIEW_FULL_ISSUES" ]]; then
-    REVIEW_GATE_REQUIRED="true"
-    REVIEW_GATE_REASONS+=("linked issue review:full: $LINKED_REVIEW_FULL_ISSUES")
+  if [[ ! "$CLOSING_ISSUES_NODE_COUNT" =~ ^[0-9]+$ ]] ||
+    [[ "$CLOSING_ISSUES_NODE_COUNT" != "$CLOSING_ISSUES_TOTAL" ]]; then
+    error "linked issue の一覧が申告件数と一致しません（取得 ${CLOSING_ISSUES_NODE_COUNT:-不明} / 申告 ${CLOSING_ISSUES_TOTAL}）。マージを中止します（fail closed）。"
+    error "参照先が別 repo / private / 転送済みの可能性があります。gh pr view $PR_NUMBER で linked issue を確認してください。"
+    exit 1
+  fi
+
+  # linked issue を `owner/name#number` 形式で列挙する。**repo を明示的に持ち回る**
+  # のは、closing reference が別 repo の issue も指せるため（`Closes owner/other#N`）。
+  # 番号だけを渡すと gate 側の既定 repo で同番号の別 issue を検証し、「確認しました」
+  # と誤って表示してしまう（push 前反証レビュー P2）。
+  ALL_LINKED_ISSUES="$(printf '%s' "$CLOSING_ISSUES_JSON" | jq -r '
+    [ .data.repository.pullRequest.closingIssuesReferences.nodes[]
+      | "\(.repository.nameWithOwner)#\(.number)" ]
+    | join(" ")' 2>/dev/null)"
+  ALL_LINKED_ISSUES_STATUS=$?
+
+  # jq の失敗を「該当なし」に読み替えない（この gate が塞ごうとしている穴そのもの）。
+  if [[ "$ALL_LINKED_ISSUES_STATUS" != "0" ]]; then
+    error "linked issue の一覧を解釈できませんでした。マージを中止します（fail closed）。"
+    exit 1
+  fi
+
+  # ── linked issue ごとに Issue Review gate を回す（#2530） ────────────────
+  #
+  # **ラベルの有無で事前に絞り込まない。** `review:full` を外した issue を
+  # bash 側で除外すると、gate が持つ「ラベル削除では降格しない」判定に到達できず、
+  # 「レビューが止まった issue からラベルを剥がして軽量経路で merge する」迂回が
+  # そのまま通る（push 前反証レビュー P2）。要否の判定そのものを
+  # `scripts/tasks/issue-review-gate.mjs`（正本）へ委譲し、bash はその verdict を
+  # 受け取るだけにする（protected-path-gate.mjs と同じ責務分離）。
+  #
+  # gate は required でない issue に対して `{"required":false,"ok":true}` を返して
+  # exit 0 するので、無関係な linked issue で止まることはない。
+  if [[ -n "$ALL_LINKED_ISSUES" ]]; then
+    step "linked issue の Codex Issue Review 証跡を確認"
+
+    ISSUE_REVIEW_GATE_SCRIPT="$SCRIPT_DIR/issue-review-gate.mjs"
+
+    if ! command -v node >/dev/null 2>&1; then
+      error "node が見つからないため Issue Review 証跡を検証できません。マージを中止します（fail closed）。"
+      exit 1
+    fi
+
+    # 無効な証跡は即 exit せずここへ溜める。`review gate:` の要約行を先に出してから
+    # 停止した方が、なぜ full review 対象になったのかを読んで直せる。
+    INVALID_ISSUE_REVIEWS=""
+
+    for LINKED_ISSUE in $ALL_LINKED_ISSUES; do
+      # `owner/name#number` を分解して渡す。番号だけを渡すと gate 側の既定 repo で
+      # 同番号の別 issue を検証してしまう。
+      LINKED_ISSUE_REPO="${LINKED_ISSUE%%#*}"
+      LINKED_ISSUE_NUMBER="${LINKED_ISSUE##*#}"
+
+      if ! ISSUE_GATE_JSON="$(node "$ISSUE_REVIEW_GATE_SCRIPT" \
+        --issue "$LINKED_ISSUE_NUMBER" --repo "$LINKED_ISSUE_REPO")"; then
+        # gate が非 0 を返すのは「required かつ証跡が無効」か「取得失敗」のみ。
+        # どちらも要 full review 側へ倒し、停止理由として記録する。
+        REVIEW_GATE_REQUIRED="true"
+        REVIEW_GATE_REASONS+=("linked issue review required: ${LINKED_ISSUE}")
+        INVALID_ISSUE_REVIEWS="$INVALID_ISSUE_REVIEWS $LINKED_ISSUE"
+        continue
+      fi
+
+      ISSUE_GATE_REQUIRED="$(printf '%s' "$ISSUE_GATE_JSON" | jq -r '.required' 2>/dev/null || echo "")"
+      case "$ISSUE_GATE_REQUIRED" in
+        true)
+          REVIEW_GATE_REQUIRED="true"
+          REVIEW_GATE_REASONS+=("linked issue review required: ${LINKED_ISSUE}")
+          info "linked issue ${LINKED_ISSUE} の Issue Review 証跡を確認しました（PR も full review 対象）。"
+          ;;
+        false)
+          info "linked issue ${LINKED_ISSUE} は Issue Review 対象外です。"
+          ;;
+        *)
+          error "Issue Review gate の出力を解釈できませんでした（linked issue ${LINKED_ISSUE}）。マージを中止します（fail closed）。"
+          exit 1
+          ;;
+      esac
+    done
   fi
 
   if [[ "$REVIEW_GATE_REQUIRED" == "true" ]]; then
@@ -791,6 +872,14 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     echo "review gate: required (${REVIEW_GATE_REASON_JOINED})" >&2
   else
     echo "review gate: not required" >&2
+  fi
+
+  # Issue Review 証跡が無効な linked issue があれば、要約行を出したうえで停止する。
+  if [[ -n "${INVALID_ISSUE_REVIEWS:-}" ]]; then
+    error "linked issue${INVALID_ISSUE_REVIEWS} の Codex Issue Review 証跡が無効です。マージを中止します。"
+    error "実装中に issue 本文 / title が変わった場合は再レビューが必要です。"
+    error "詳細: pnpm review:issue:gate <issue番号>"
+    exit 1
   fi
 
   # ── 内製クロスレビューが実際に回ったことを要求する（保護対象 path / review:full 該当時のみ） ──
@@ -1067,33 +1156,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   info "Codex の独立レビューを確認しました（現 HEAD に対して ${CODEX_REVIEW_COUNT} 件）。"
 
-  # ── linked issue の Codex Issue Review 証跡を確認する（#2530） ───────────
-  #
-  # `review:full` Issue は実装前に Codex Issue Review を通す契約（dispatch skill
-  # 操作A）。着手時にしか見ないと、着手後に本文を書き換えた場合に「レビューされて
-  # いない設計」がそのまま実装されて merge されうるため、merge 直前にも現在の
-  # fingerprint で再検証する。判定は scripts/ci/issue-review-gate.mjs（正本）へ
-  # 委譲し、canonical 化と fingerprint の計算式を bash 側へ複製しない。
-  if [[ -n "$LINKED_REVIEW_FULL_ISSUES" ]]; then
-    step "linked issue の Codex Issue Review 証跡を確認"
-
-    ISSUE_REVIEW_GATE_SCRIPT="$SCRIPT_DIR/issue-review-gate.mjs"
-
-    if ! command -v node >/dev/null 2>&1; then
-      error "node が見つからないため Issue Review 証跡を検証できません。マージを中止します（fail closed）。"
-      exit 1
-    fi
-
-    for LINKED_ISSUE in $LINKED_REVIEW_FULL_ISSUES; do
-      if ! node "$ISSUE_REVIEW_GATE_SCRIPT" --issue "$LINKED_ISSUE" >/dev/null; then
-        error "linked issue #${LINKED_ISSUE} の Codex Issue Review 証跡が無効です。マージを中止します。"
-        error "実装中に issue 本文が変わった場合は再レビューが必要です"
-        error "（pnpm review:issue:gate ${LINKED_ISSUE} で詳細を確認できます）。"
-        exit 1
-      fi
-      info "linked issue #${LINKED_ISSUE} の Issue Review 証跡を確認しました。"
-    done
-  fi
+  # linked issue の Issue Review 証跡は、この gate より前（§linked issue ごとに
+  # Issue Review gate を回す）で全 linked issue に対して検証済み。ラベルを外した
+  # issue も降格させないため、REVIEW_GATE_REQUIRED の判定より前に置いてある。
   fi # REVIEW_GATE_REQUIRED
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと

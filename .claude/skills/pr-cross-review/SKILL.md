@@ -55,7 +55,9 @@ maxTurns: 20
 gh pr comment <PR番号> --body "@codex review"
 ```
 
-**順序が独立性の機械化そのもの。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない（prompt に混ぜない、という約束を運用ではなく順序で担保する）。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path しか渡さない。
+**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path しか渡さない。
+
+ただし **これは運用規約であって機械強制ではない**（push 前反証レビュー P3）。merge gate は Codex review が現 HEAD に対して存在することしか見ておらず、内製 findings の投稿時刻と Codex review の投稿時刻を比較していない。逆順で実行しても gate は通る。順序を守る責任は指揮台にある。
 
 - Codex は PR 全体を全量レビューする。**delta review の概念を Codex 側に持ち込まない**（旧 HEAD の review を積み上げて範囲の連続性を主張する経路を作らない、#2529 実装前レビュー P2）
 - push で HEAD が動いたら Codex 証跡も無効になる。fix round のたびに `@codex review` を投げ直す

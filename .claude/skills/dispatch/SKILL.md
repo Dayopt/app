@@ -51,7 +51,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
    3. `pnpm review:issue:marker <N> --p1 <件数> --p2 <件数> [--resolution-note "..."]` で marker を生成し、内容を目視してから `gh issue comment` で投稿する。fingerprint は script が現在の issue 内容から実測するので手書きしない（`--fingerprint` は受け付けない）。P1/P2 が非ゼロの marker は `--resolution-note` が無いと `status: findings` になり gate を通らない
    4. `pnpm review:issue:gate <N>` を再実行して pass を確認する
 
-   gate は「Codex bot のコメントが実在すること」と「marker の fingerprint が現在の issue 内容と一致すること」の AND で判定する。前者がレビュー実施の証明、後者がレビュー対象が現在の本文である証明で、片方だけでは通らない。**`review:full` を外しても降格しない** — 一度 review を始めた issue は current な pass 証跡が出るまで gate 対象に残る（失敗したレビューをラベル削除で迂回する経路を塞ぐため、#2530 実装前レビュー P2）。
+   gate は「Codex bot のコメントが実在すること」と「marker の fingerprint が現在の issue 内容と一致すること」の AND で判定する。前者がレビュー実施の証明、後者がレビュー対象が現在の本文である証明で、片方だけでは通らない。**`review:full` を外しても降格しない** — ラベルの削除履歴があるか、この issue 宛ての marker が既にある issue は、current な pass 証跡が出るまで gate 対象に残る（失敗したレビューをラベル削除で迂回する経路を塞ぐため、#2530 実装前レビュー P2）。merge 時も同じ判定が linked issue すべてに対して走る。
 
    `review:full` issue を実装する PR は、PR 側でも自動的にクロスレビュー必須になる（`Closes #N` の linked issue から継承。`Refs #N` は継承しない、#2530）。束ねた issue はすべて `Closes #N` で列挙する。
 

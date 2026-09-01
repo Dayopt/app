@@ -34,6 +34,7 @@ import {
   computeIssueFingerprintFromIssue,
   hasAnyIssueReviewEvidence,
   validateIssueReviewEvidence,
+  wasReviewFullLabelRemoved,
 } from '../lib/issue-review-core.mjs';
 
 const DEFAULT_REPO = 'Dayopt/dayopt';
@@ -48,10 +49,17 @@ const ISSUE_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
       number
       title
       body
+      lastEditedAt
       labels(first: 100) { nodes { name } }
+      renames: timelineItems(last: 1, itemTypes: [RENAMED_TITLE_EVENT]) {
+        nodes { ... on RenamedTitleEvent { createdAt } }
+      }
+      unlabeled: timelineItems(last: 100, itemTypes: [UNLABELED_EVENT]) {
+        nodes { ... on UnlabeledEvent { label { name } } }
+      }
       comments(last: ${COMMENT_WINDOW}) {
         totalCount
-        nodes { authorAssociation author { login } body createdAt }
+        nodes { authorAssociation author { login } body createdAt url }
       }
     }
   }
@@ -115,10 +123,30 @@ export function fetchIssue({ issueNumber, repo, execFileImpl }) {
     number: issue.number,
     title: issue.title ?? '',
     body: issue.body ?? '',
+    lastEditedAt: issue.lastEditedAt ?? null,
+    lastRenamedAt: issue.renames?.nodes?.[0]?.createdAt ?? null,
+    unlabeledEvents: issue.unlabeled?.nodes ?? [],
     labels: (issue.labels?.nodes ?? []).map((n) => n?.name).filter(Boolean),
     comments: issue.comments?.nodes ?? [],
     commentsTotalCount: issue.comments?.totalCount ?? 0,
   };
+}
+
+/**
+ * Issue の「内容が最後に変わった時刻」。本文編集（`lastEditedAt`）と title 変更
+ * （`RenamedTitleEvent`）の遅い方を採る。fingerprint は title も含むため、
+ * 本文編集だけを見ると rename 後の未レビュー title を検出できない
+ * （push 前反証レビュー P2 の指摘）。
+ *
+ * @param {{lastEditedAt?: string|null, lastRenamedAt?: string|null}} issue
+ * @returns {string|null}
+ */
+export function resolveContentChangedAt(issue) {
+  const candidates = [issue?.lastEditedAt, issue?.lastRenamedAt].filter(Boolean);
+  if (candidates.length === 0) return null;
+  return candidates.reduce((latest, current) =>
+    new Date(current).getTime() >= new Date(latest).getTime() ? current : latest,
+  );
 }
 
 /**
@@ -131,12 +159,15 @@ export function runIssueReviewGate({ issueNumber, repo = DEFAULT_REPO, execFileI
   const issue = fetchIssue({ issueNumber, repo, execFileImpl });
 
   const hasLabel = issue.labels.includes(REVIEW_RELEVANT_LABEL);
-  // ラベルが外れていても、一度 review を始めた痕跡がある Issue は gate 対象に
-  // 残す。「レビューが止まった Issue からラベルを剥がして軽量経路で着手する」
-  // という迂回を塞ぐため（#2530 Issue Review P2）。正当な再分類をしたい場合は、
-  // current な pass 証跡を作るか、この gate 自体の契約を別 issue で変更する。
-  const startedReview = hasAnyIssueReviewEvidence(issue.comments);
-  if (!hasLabel && !startedReview) {
+  // ラベルが外れていても降格させない 2 条件（#2530 Issue Review P2 + push 前反証
+  // レビュー P2）。「レビューが止まった Issue からラベルを剥がして軽量経路で
+  // 着手する」迂回を、marker が出る前の窓も含めて塞ぐ:
+  //   - ラベル削除イベントの履歴がある（Codex が P1 を返した直後の剥がしを捕まえる）
+  //   - この issue 宛ての marker が既にある
+  // 正当な再分類をしたい場合は current な pass 証跡を作る。
+  const labelRemoved = wasReviewFullLabelRemoved(issue.unlabeledEvents);
+  const startedReview = hasAnyIssueReviewEvidence(issue.comments, issueNumber);
+  if (!hasLabel && !labelRemoved && !startedReview) {
     return { required: false, ok: true };
   }
 
@@ -145,11 +176,17 @@ export function runIssueReviewGate({ issueNumber, repo = DEFAULT_REPO, execFileI
     comments: issue.comments,
     issueNumber,
     expectedFingerprint: fingerprint,
+    contentChangedAt: resolveContentChangedAt(issue),
   });
+
+  let requiredBy = REVIEW_RELEVANT_LABEL;
+  if (!hasLabel) {
+    requiredBy = labelRemoved ? 'review-full-label-removed' : 'existing-review-evidence';
+  }
 
   return {
     required: true,
-    requiredBy: hasLabel ? REVIEW_RELEVANT_LABEL : 'existing-review-evidence',
+    requiredBy,
     ok: result.ok,
     fingerprint,
     reason: result.reason,
@@ -222,10 +259,13 @@ function main() {
     return;
   }
 
+  const REQUIRED_REASONS = {
+    [REVIEW_RELEVANT_LABEL]: `${REVIEW_RELEVANT_LABEL} ラベルが付いています`,
+    'review-full-label-removed': `過去に ${REVIEW_RELEVANT_LABEL} が剥がされた履歴があります（ラベル削除では降格しません）`,
+    'existing-review-evidence': `過去に review が開始された痕跡があります（ラベル削除では降格しません）`,
+  };
   const requiredReason =
-    result.requiredBy === REVIEW_RELEVANT_LABEL
-      ? `${REVIEW_RELEVANT_LABEL} ラベルが付いています`
-      : `過去に ${REVIEW_RELEVANT_LABEL} として review が開始された痕跡があります（ラベル削除では降格しません）`;
+    REQUIRED_REASONS[result.requiredBy] ?? REQUIRED_REASONS[REVIEW_RELEVANT_LABEL];
   process.stderr.write(
     `❌ issue #${args.issueNumber} は${requiredReason}が、有効な Codex Issue Review の証跡がありません。\n` +
       `   原因: ${result.reason}\n` +

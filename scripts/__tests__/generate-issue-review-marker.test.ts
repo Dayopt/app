@@ -1,3 +1,7 @@
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { CODEX_BOT_LOGIN } from '../lib/issue-review-core.mjs';
@@ -149,5 +153,39 @@ describe('generateIssueReviewMarker', () => {
     const withLabel = generate({ comments: [CODEX_REVIEWED], labels: ['review:full'] });
     const withoutLabel = generate({ comments: [CODEX_REVIEWED], labels: [] });
     expect(withLabel).not.toBe(withoutLabel);
+  });
+});
+
+describe('CLI 引数の契約', () => {
+  const scriptPath = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../tasks/generate-issue-review-marker.mjs',
+  );
+
+  function runCli(args: string[]) {
+    return spawnSync(process.execPath, [scriptPath, ...args], { encoding: 'utf8' });
+  }
+
+  // fingerprint / reviewed-comment / status を手入力できると、実測値で束縛する
+  // 設計そのものが無効化される。dispatch skill が明記している契約。
+  it.each([['--fingerprint'], ['--reviewed-comment'], ['--status']])(
+    '%s は受け付けない（捏造経路を塞ぐ）',
+    (flag) => {
+      const result = runCli(['2530', flag, 'x']);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('引数で受け付けません');
+    },
+  );
+
+  it('issue 番号が無ければ失敗する', () => {
+    const result = runCli([]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('issue 番号');
+  });
+
+  it('--p1 / --p2 に非数値は渡せない', () => {
+    const result = runCli(['2530', '--p1', 'いくつか']);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('0 以上の整数');
   });
 });

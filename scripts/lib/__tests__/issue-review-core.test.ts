@@ -7,7 +7,9 @@ import {
   computeIssueFingerprint,
   computeIssueFingerprintFromIssue,
   formatIssueReviewCountLine,
+  hasAnyIssueReviewEvidence,
   validateIssueReviewEvidence,
+  wasReviewFullLabelRemoved,
 } from '../issue-review-core.mjs';
 
 const REVIEWED_URL = 'https://github.com/Dayopt/dayopt/issues/2530#issuecomment-1';
@@ -17,11 +19,24 @@ function fingerprintOf(issue: { title?: string; body?: string; labels?: string[]
 }
 
 function markerComment(body: string, overrides: Record<string, unknown> = {}) {
-  return { authorAssociation: 'OWNER', author: { login: 't3-nico' }, body, ...overrides };
+  return {
+    authorAssociation: 'OWNER',
+    author: { login: 't3-nico' },
+    body,
+    createdAt: '2026-09-01T02:00:00Z',
+    ...overrides,
+  };
 }
 
-function botComment(body = 'Codex のレビュー結果です。') {
-  return { authorAssociation: 'NONE', author: { login: CODEX_BOT_LOGIN }, body };
+function botComment(body = 'Codex のレビュー結果です。', overrides: Record<string, unknown> = {}) {
+  return {
+    authorAssociation: 'NONE',
+    author: { login: CODEX_BOT_LOGIN },
+    body,
+    url: REVIEWED_URL,
+    createdAt: '2026-09-01T01:00:00Z',
+    ...overrides,
+  };
 }
 
 describe('canonicalizeIssueForReview / computeIssueFingerprint', () => {
@@ -339,6 +354,73 @@ describe('validateIssueReviewEvidence', () => {
     expect(result.ok).toBe(true);
   });
 
+  // push 前反証レビュー P2: `reviewed-comment:` が判定に効いていないと、bot が
+  // 何か 1 言コメントしただけで「レビュー実施済み」になってしまう。
+  it('reviewed-comment が実在の Codex コメントを指していなければ通さない', () => {
+    const result = validateIssueReviewEvidence({
+      comments: [
+        botComment('レビュー結果です。', { url: 'https://example.com/other' }),
+        markerComment(validMarker),
+      ],
+      issueNumber,
+      expectedFingerprint: fingerprint,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('reviewed-comment');
+  });
+
+  // push 前反証レビュー P2: fingerprint 一致だけでは「レビュー後に本文を書き換えて
+  // marker を作り直す」順序の逆転を検出できない。
+  it('marker が指すレビューより後に issue が更新されていれば通さない', () => {
+    const result = validateIssueReviewEvidence({
+      comments: [botComment(), markerComment(validMarker)],
+      issueNumber,
+      expectedFingerprint: fingerprint,
+      contentChangedAt: '2026-09-01T03:00:00Z',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('後に Issue が更新されています');
+  });
+
+  it('レビューより前の更新なら通す', () => {
+    const result = validateIssueReviewEvidence({
+      comments: [botComment(), markerComment(validMarker)],
+      issueNumber,
+      expectedFingerprint: fingerprint,
+      contentChangedAt: '2026-09-01T00:30:00Z',
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it('更新時刻を解釈できなければ fail closed', () => {
+    const result = validateIssueReviewEvidence({
+      comments: [botComment(), markerComment(validMarker)],
+      issueNumber,
+      expectedFingerprint: fingerprint,
+      contentChangedAt: 'not-a-date',
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  // push 前反証レビュー P2: 行の欠落を 0 件扱いにすると、「なし」と書くより
+  // 簡単に非ゼロ申告を回避できてしまう。
+  it('P1 / P2 行が欠落した marker は通さない', () => {
+    const withoutCounts = [
+      '[codex-issue-review]',
+      `issue: #${issueNumber}`,
+      `fingerprint: ${fingerprint}`,
+      `reviewed-comment: ${REVIEWED_URL}`,
+      'status: pass',
+    ].join('\n');
+    const result = validateIssueReviewEvidence({
+      comments: [botComment(), markerComment(withoutCounts)],
+      issueNumber,
+      expectedFingerprint: fingerprint,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('P1:');
+  });
+
   it('コメントが空でも例外を投げず停止側に倒れる', () => {
     const result = validateIssueReviewEvidence({
       comments: [],
@@ -346,5 +428,44 @@ describe('validateIssueReviewEvidence', () => {
       expectedFingerprint: fingerprint,
     });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('hasAnyIssueReviewEvidence', () => {
+  const marker = buildIssueReviewMarkerBody({
+    issueNumber: 2530,
+    fingerprint: 'd'.repeat(64),
+    reviewedCommentUrl: REVIEWED_URL,
+    p1Count: 0,
+    p2Count: 0,
+  });
+
+  it('この issue 宛ての marker があれば true', () => {
+    expect(hasAnyIssueReviewEvidence([{ body: marker }], 2530)).toBe(true);
+  });
+
+  // push 前反証レビュー P2: 別 issue 宛ての marker を貼り間違えただけで、
+  // 無関係な issue が恒久的に gate へ捕まってはいけない。
+  it('別 issue 宛ての marker は数えない', () => {
+    expect(hasAnyIssueReviewEvidence([{ body: marker }], 9999)).toBe(false);
+  });
+
+  it('marker が無ければ false', () => {
+    expect(hasAnyIssueReviewEvidence([{ body: 'ただのコメント' }], 2530)).toBe(false);
+  });
+});
+
+describe('wasReviewFullLabelRemoved', () => {
+  it('review:full の削除イベントがあれば true', () => {
+    expect(wasReviewFullLabelRemoved([{ label: { name: 'review:full' } }])).toBe(true);
+  });
+
+  it('他のラベルの削除では false（無関係な issue を巻き込まない）', () => {
+    expect(wasReviewFullLabelRemoved([{ label: { name: 'status:ready' } }])).toBe(false);
+  });
+
+  it('イベントが無ければ false', () => {
+    expect(wasReviewFullLabelRemoved([])).toBe(false);
+    expect(wasReviewFullLabelRemoved(undefined as never)).toBe(false);
   });
 });
