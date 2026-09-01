@@ -11,6 +11,7 @@ import {
   classifyGhError,
   countDocsCoverageMissing,
   execObservationCommand,
+  foldJobConclusions,
   judgeCountBaseline,
   judgeWorkflowRun,
   NIGHT_WATCH_JOB_TIMEOUT_MS,
@@ -260,6 +261,43 @@ describe('judgeWorkflowRun', () => {
   });
 });
 
+// Codex 指摘 P2（実測確定）: 畳み込みの reduce が `worst === null` を「初回か」の
+// 番兵に使っていたため、**未完了 job の conclusion も null** である
+// `[null, 'success']` の並びで 2 件目が無検査に上書きし、run 全体が偽の success に
+// なっていた。#2525 の stale 判定がこの success を根拠に無音へ倒すため、E2E が
+// 何晩 stuck しても Web が success なら永遠に検出されない。
+//
+// **この unit test が畳み込みの回帰を固定する唯一の場所。** 統合側
+// （checkWorkflowJobRun 経由）では judgeWorkflowRun の `status === 'completed'`
+// ガードが独立して同じ事故を防ぐため、reduce を旧実装へ戻しても統合 test は
+// 全部通ってしまう（実測で確認した）。二重防御は保つが、それぞれを別々に
+// 固定する。
+describe('foldJobConclusions', () => {
+  it('未完了（null）が混ざると success で上書きされない', () => {
+    expect(foldJobConclusions([null, 'success'])).toBeNull();
+    expect(foldJobConclusions(['success', null])).toBeNull();
+  });
+
+  it('全 success なら success', () => {
+    expect(foldJobConclusions(['success', 'success'])).toBe('success');
+  });
+
+  it('worst-of で畳む（重大度が高い方が残る）', () => {
+    expect(foldJobConclusions(['success', 'failure'])).toBe('failure');
+    expect(foldJobConclusions(['cancelled', 'failure'])).toBe('failure');
+    expect(foldJobConclusions(['success', 'cancelled', 'timed_out'])).toBe('timed_out');
+  });
+
+  it('単一要素はその値をそのまま返す', () => {
+    expect(foldJobConclusions(['success'])).toBe('success');
+    expect(foldJobConclusions([null])).toBeNull();
+  });
+
+  it('空配列は例外を投げる（fail closed）', () => {
+    expect(() => foldJobConclusions([])).toThrow(/非空配列/);
+  });
+});
+
 describe('worseConclusion', () => {
   it('重大度順で悪い方を返す', () => {
     expect(worseConclusion('success', 'failure')).toBe('failure');
@@ -372,12 +410,8 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome.evidenceUrl).toBe('job2'); // failure した job の url
   });
 
-  // Codex 指摘 P2（実測確定）: 畳み込みの reduce が `worst === null` を「初回か」
-  // の番兵に使っていたため、**未完了 job の conclusion も null** である
-  // [in_progress(null), success] の並びで 2 件目が無検査に上書きし、run 全体が
-  // 偽の success になっていた。#2525 の stale 判定がこの success を根拠に
-  // 無音へ倒すため、E2E が何晩 stuck しても Web が success なら永遠に
-  // 検出されない、という無音化になっていた。
+  // 統合側の確認（judgeWorkflowRun の status ガードでも同じ結果になるため、
+  // 畳み込み自体の回帰は下の `foldJobConclusions` の unit test が固定する）。
   it('未完了 job と success job が混在する run を success に化けさせない', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
@@ -408,6 +442,44 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
   // Codex 指摘 P2（実測確定）: stale-pending は「窓内に success が無い」ことを
   // 根拠に赤へ倒す判定なので、履歴の一部が読めていないと根拠が成立しない。
   // 前夜の success run だけ jobs API が落ちた夜に誤 red を起票していた。
+  // 内製クロスレビュー risk-reviewer 指摘（medium）: retry 対象を非 0 exit へ
+  // 広げたため、GitHub の 5xx incident や secondary rate limit の夜に
+  // このループ（1 check-id あたり最大 runListLimit 本の jobs 取得）が 3 倍に
+  // 増幅し、job 予算（15 分）を溶かして job ごと SIGKILL される恐れがあった。
+  // ループ内の jobs 取得だけ `retries: 0` にしてある。
+  //
+  // 実測（2026-09-01）: 全 run が 503 でも gh 呼び出しは 31 本 / sleep 0 回。
+  // retry が効いていた場合は 91 本 / sleep 60 回に膨らむ。
+  it('全 run の jobs 取得が 5xx でも retry で増幅しない（job 予算を溶かさない）', () => {
+    const runs = Array.from({ length: 30 }, (_, i) => ({
+      databaseId: i + 1,
+      createdAt: '2026-08-25T03:00:00+09:00',
+      url: `https://x/${i + 1}`,
+    }));
+    let ghCalls = 0;
+    const sleepImpl = vi.fn<(ms: number) => void>();
+    const execFileImpl = (_file: string, args: string[]) => {
+      ghCalls += 1;
+      if (args[0] === 'run') return JSON.stringify(runs);
+      throw Object.assign(new Error('Command failed'), {
+        status: 1,
+        stderr: 'HTTP 503: Service Unavailable',
+      });
+    };
+
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], {
+      execFileImpl,
+      now: NOW,
+      sleepImpl,
+    });
+
+    expect(outcome.status).toBe('fetch-failed');
+    // run-list 1 本 + jobs 30 本。retry が効くと 91 本になる。
+    expect(ghCalls).toBe(31);
+    // ループ内 jobs 取得の retry backoff が発生していないこと。
+    expect(sleepImpl).not.toHaveBeenCalled();
+  });
+
   it('stale 判定の根拠となる履歴を読めなかった run があれば fetch-failed へ倒す', () => {
     const execFileImpl = vi.fn((_file: string, args: string[]) => {
       if (args[0] === 'run') {
@@ -1115,8 +1187,10 @@ describe('runNightWatch', () => {
 
     // それでも job は赤くなる。ここが #2525 で開きかけた穴。
     expect(process.exitCode).toBe(1);
+    // 観測そのものは 7/7 成功している（赤だと分かったからこそ起票を試みた）。
+    // 「取得失敗 0 / 起票失敗 1」と読めることが、gh 障害の切り分けに要る。
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 6/7 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });

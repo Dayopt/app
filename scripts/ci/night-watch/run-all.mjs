@@ -558,6 +558,37 @@ const CONCLUSION_SEVERITY = [
   'success',
 ];
 
+/**
+ * 複数 job の conclusion を 1 run 分の結論へ畳む（worst-of）。
+ *
+ * **初期値に `null` を渡す reduce にしない**（Codex 指摘 P2、2026-09-01 実測で
+ * 確定）。旧実装は
+ * `reduce((worst, c) => worst === null ? c : worseConclusion(worst, c), null)`
+ * で、`worst === null` を「初回かどうか」の番兵に使っていた。ところが
+ * **未完了 job の conclusion も `null`** なので、`[null, 'success']` の順で
+ * 畳むと 2 件目で番兵条件が再び真になり、`worseConclusion` を通さず
+ * `'success'` で上書きされる（実測: 畳んだ結論が `"success"`）。
+ *
+ * これは #2483 からの潜在バグだが、#2525 の stale 判定が
+ * 「窓内に `conclusion === 'success'` の run があるか」を根拠にしたことで
+ * 実害化した: heavy の E2E が何晩 stuck しても Web が success なら偽の
+ * success が毎晩記録され、stale へ倒れず永遠に無音になる。
+ *
+ * **この関数を export しているのは test から直接叩くため。** inline の reduce
+ * のままでは、`judgeWorkflowRun` 側の `status === 'completed'` ガードが
+ * 独立して同じ事故を防いでしまい、畳み込みの回帰を test で捕まえられない
+ * （実際、ガードだけ入れて reduce を旧実装へ戻しても test が全部通ることを
+ * 実測で確認した）。
+ * @param {(string | null)[]} conclusions
+ * @returns {string | null}
+ */
+export function foldJobConclusions(conclusions) {
+  if (conclusions.length === 0) {
+    throw new Error('conclusions は非空配列である必要があります');
+  }
+  return conclusions.reduce((worst, c, i) => (i === 0 ? c : worseConclusion(worst, c)));
+}
+
 export function worseConclusion(a, b) {
   const ai = CONCLUSION_SEVERITY.indexOf(a);
   const bi = CONCLUSION_SEVERITY.indexOf(b);
@@ -641,7 +672,19 @@ export function checkWorkflowJobRun(
     const jobsResult = execObservationCommand(
       'gh',
       ['api', `repos/${REPO}/actions/runs/${run.databaseId}/jobs`, '--jq', '.jobs'],
-      { execFileImpl, sleepImpl },
+      // **この 1 本だけ retry しない**（内製クロスレビュー risk-reviewer 指摘）。
+      // このループは 1 check-id あたり最大 `runListLimit`（30）本の jobs 取得を
+      // 発行する。retry 対象を非 0 exit（rate-limited / network-error）へ広げた
+      // ため、GitHub の 5xx incident や secondary rate limit の夜は全 run が
+      // 失敗し、heavy-red + integration-red の 2 check だけで 180 本の API
+      // 呼び出しと 180s のスリープを追加で消費しうる。job 予算（15 分）を
+      // 超えれば SIGKILL され、サマリ 1 行も alert 起票も残らない — この PR が
+      // 防ごうとしている無音そのものになる。
+      //
+      // ここは retry の価値も薄い: 1 run の取得失敗は既に「次の run へ進む」で
+      // 吸収され、必要な件数（targetCount）は他の run から満たせる。rate limit
+      // 中の即時 retry はむしろ secondary rate limit を深める方向に働く。
+      { execFileImpl, sleepImpl, retries: 0 },
     );
     if (!jobsResult.ok) {
       // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）。ただし
@@ -672,22 +715,8 @@ export function checkWorkflowJobRun(
     const status = targetJobs.some((j) => j.status !== 'completed')
       ? targetJobs.find((j) => j.status !== 'completed').status
       : 'completed';
-    // **初期値に null を使わない**（Codex 指摘 P2、実測確定）。旧実装は
-    // `reduce((worst, c) => worst === null ? c : worseConclusion(worst, c), null)`
-    // で、`worst === null` を「初回かどうか」の番兵に使っていた。ところが
-    // **未完了 job の conclusion も null** なので、[in_progress(null), success]
-    // の順で畳むと 2 件目で番兵条件が再び真になり、`worseConclusion` を通さず
-    // `success` で上書きされる（実測: 畳んだ結論が "success" になる）。
-    //
-    // これは #2483 からの潜在バグだが、#2525 の stale 判定が
-    // 「窓内に conclusion === 'success' の run があるか」を根拠にしたことで
-    // 実害化した: heavy の E2E が何晩 stuck しても Web が success なら
-    // 偽の success が毎晩記録され、stale へ倒れず永遠に無音になる。
-    // index で初回を判定すれば `worseConclusion(null, 'success')` が呼ばれ、
-    // 未知の値（null）を worst として正しく null を返す。
-    const conclusion = targetJobs
-      .map((j) => j.conclusion)
-      .reduce((worst, c, i) => (i === 0 ? c : worseConclusion(worst, c)));
+    // 畳み込みの正本は `foldJobConclusions`（番兵バグの経緯はそちらのコメント）。
+    const conclusion = foldJobConclusions(targetJobs.map((j) => j.conclusion));
     const earliestStartedAt = targetJobs
       .map((j) => j.started_at)
       .filter(Boolean)
@@ -922,18 +951,20 @@ function processCheckOutcome(
       console.error(
         `::error::${checkId} の赤を検出しましたが dedup 検索が失敗し起票を見送りました`,
       );
-      failed.push(checkId);
       alertPostFailed.push(checkId);
     }
   } catch (error) {
     console.error(`::error::${checkId} の alert 投稿に失敗しました:`, error);
-    failed.push(checkId);
-    // 赤を検出したのに alert issue を起票できなかった、という夜勤の主目的
-    // に反する最悪の組み合わせ。`failed` への計上（観測未完了扱い）は維持
-    // しつつ、job の成否には別途この配列で反映する（Codex レビュー指摘・
-    // 指揮台採用、PR #2380）。`runNightWatch` 側で run サマリを job log へ
-    // 出した後に非 0 exit へ倒す — 「alert 投稿が失敗した」事実そのものが
+    // 赤を検出したのに alert issue を起票できなかった、という夜勤の主目的に
+    // 反する最悪の組み合わせ。job の成否へこの配列で反映する（Codex レビュー
+    // 指摘・指揮台採用、PR #2380）。`runNightWatch` 側で run サマリを job log
+    // へ出した後に非 0 exit へ倒す — 「alert 投稿が失敗した」事実そのものが
     // サマリに残るよう、先に exitCode を立ててサマリを飛ばさない。
+    //
+    // **`failed` へは入れない**（内製クロスレビュー risk-reviewer 指摘 low）。
+    // ここへ来た時点で観測は成功している（赤だと分かっている）。`failed` を
+    // 観測失敗専用にしておかないと、サマリの「取得失敗」と「起票失敗」が
+    // 混ざり、gh 障害の夜に「観測は通ったが起票だけ落ちた」と読み違える。
     alertPostFailed.push(checkId);
   }
 }
@@ -987,11 +1018,10 @@ export function buildRunSummaryLine({ executed, failed, results, alertPostFailed
   const issued = count((e) => e.outcome === 'issue');
   const pending = count((e) => e.outcome === 'pending');
   const capped = count((e) => e.outcome === 'skipped' && e.reason === 'run-cap-reached');
-  // 観測できなかった check-id。`failed` には起票に失敗した分も混ざるため、
-  // そちらを引いて「本当に観測できなかった件数」だけを出す（内製クロス
-  // レビュー risk-reviewer 指摘 low: 唯一の人間可読な記録が、gh の起票失敗を
-  // 観測コマンドの失敗として報告していた）。
-  const fetchFailed = failed.filter((id) => !alertPostFailed.includes(id)).length;
+  // `failed` は観測できなかった check-id 専用なのでそのまま数える。起票失敗は
+  // `alertPostFailed` が別に持つ（両方に入る組み合わせ——観測に失敗し、その
+  // 起票にも失敗した——は両方でカウントされるのが事実として正しい）。
+  const fetchFailed = new Set(failed).size;
 
   // pending だけの夜（heavy-e2e が 04:00 時点でまだ走っている、という日常）を
   // 「要確認」にしない。ここを厳しくすると verdict の識別力が落ちる。
@@ -1112,9 +1142,9 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
     escalateFetchFailure(checkId, { execFileImpl, alertPostFailed, results, runStatePath });
   }
 
-  // `failed` には「観測できなかった」に加えて「赤は観測できたが起票に失敗した」
-  // も入る。executed（観測できた件数）はその重複を差し引かない — どちらも
-  // 「この夜その check-id の結論を確定できなかった」で正しい。
+  // `failed` は**観測できなかった** check-id 専用（起票に失敗しただけの
+  // check-id は入らない — そちらは `alertPostFailed`）。観測失敗と起票失敗を
+  // 別々に数えないと、サマリ 1 行から原因を切り分けられない。
   const executed = CHECK_IDS.size - new Set(failed).size;
 
   const report = { executed, failed, results, baselineRecommend, alertPostFailed };

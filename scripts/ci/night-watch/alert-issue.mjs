@@ -289,6 +289,23 @@ function buildDedupSearchQuery(prefix, checkId) {
 }
 
 /**
+ * dedup 検索の取得件数。**明示しないと `gh issue list` は既定 30 件で無音に
+ * 切り詰める**（`scripts/ci/strip-status-labels.mjs` が同じ罠を
+ * `BULK_SEARCH_LIMIT` として明文化している）。
+ *
+ * 括弧を外して検索が初めて候補を返すようになったことで、この打ち切りが
+ * **新たに到達可能になった**（内製クロスレビュー risk-reviewer 指摘）。ある
+ * check-id の open 一致候補が 30 件を超えると、本物の alert issue が先頭
+ * 30 件から漏れて `find` が null を返し、その夜も新規起票される — 今回直した
+ * 毎晩重複の症状にそのまま戻る。しかも job は緑のままなので気づけない。
+ *
+ * 実測（2026-09-01）で `nightwatch-fetch-failed` の open 一致は最大 6 件。
+ * 100 なら現状の 15 倍以上の余裕があり、それでも足りない状況（= 重複が
+ * 100 件溜まる）は dedup が壊れている証拠なので、そこは別途気づける。
+ */
+const DEDUP_SEARCH_LIMIT = 100;
+
+/**
  * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
  *
  * GitHub の検索は語単位の緩いマッチで、`nightwatch(<id>): in:title` の括弧・
@@ -320,6 +337,8 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
       'open',
       '--search',
       buildDedupSearchQuery('nightwatch', checkId),
+      '--limit',
+      String(DEDUP_SEARCH_LIMIT),
       '--json',
       'number,title,labels',
     ],
@@ -451,6 +470,8 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
       'open',
       '--search',
       buildDedupSearchQuery(FETCH_FAILURE_TITLE_PREFIX, checkId),
+      '--limit',
+      String(DEDUP_SEARCH_LIMIT),
       '--json',
       'number,title,labels',
     ],

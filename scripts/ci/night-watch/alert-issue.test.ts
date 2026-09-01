@@ -283,6 +283,11 @@ describe('findExistingAlertIssue', () => {
         // 期待値として固定しており、本番で毎晩重複起票されていた事実を
         // 検出できなかった（TEST-1）。
         'nightwatch docs-check in:title',
+        // `--limit` を明示する（内製クロスレビュー risk-reviewer 指摘）。
+        // gh issue list は既定 30 件で無音に切り詰めるため、一致候補が 30 件を
+        // 超えると本物の alert issue が漏れて dedup が再び壊れる。
+        '--limit',
+        '100',
         '--json',
         'number,title,labels',
       ],
@@ -295,14 +300,21 @@ describe('findExistingAlertIssue', () => {
   //   gh issue list --search 'nightwatch-fetch-failed dependabot-alerts in:title'   → 5 件
   it('dedup 検索の検索語に括弧を入れない（入れると GitHub 検索が常に 0 件になる）', () => {
     const searchQueries: string[] = [];
+    const searchArgs: string[][] = [];
     const execFileImpl = (_file: string, args: string[]) => {
       searchQueries.push(args[args.indexOf('--search') + 1]);
+      searchArgs.push(args);
       return '[]';
     };
     findExistingAlertIssue('docs-check', { execFileImpl });
     findExistingFetchFailureAlertIssue('docs-check', { execFileImpl });
 
     expect(searchQueries).toHaveLength(2);
+    // 既定 30 件の切り詰めを踏まないこと（検索が実際に候補を返すようになった
+    // ことで初めて到達可能になった罠。内製クロスレビュー risk-reviewer 指摘）。
+    for (const args of searchArgs) {
+      expect(args).toContain('--limit');
+    }
     for (const query of searchQueries) {
       expect(query).not.toMatch(/[()]/);
       // check-id は検索語として残っている（候補を絞る役には立てる）。
