@@ -120,6 +120,44 @@ const SENTRY_EVIDENCE_RE = /^DAYOPT-\d+ https:\/\/dayopt\.sentry\.io\/issues\/\d
 // 上限が無いと 1 件あたりの長さを絞ってもペイロード総量は無制限になる。
 const MAX_SENTRY_EVIDENCE = 5;
 
+/**
+ * evidence の書式・件数エラーに付ける識別子（Codex レビュー P2、#2525）。
+ *
+ * `run-all.mjs` の `reportRedCheck` は sentry-new について「evidence が
+ * 弾かれたら evidence 無しで 1 回だけ再試行する」フォールバックを持つが、
+ * 以前は `catch` が**あらゆる例外**を拾っていた。`reserveAlertRunSlot` は
+ * gh を呼ぶ直前に check-id を `actedCheckIds` へ記録するため、1 回目が
+ * `gh issue create` で落ちた場合、2 回目は `actedCheckIds.includes(checkId)`
+ * に当たって必ず `capped` を返す。`capped` は「意図的な減衰」として配送失敗
+ * から除外されるので、**赤を検出したのに issue も非 0 exit も残らない**
+ * （この PR が塞ごうとしている無音そのもの）。
+ *
+ * フォールバックの対象を「gh を呼ぶ前に確定する検証エラー」だけに限るため、
+ * 例外側へ識別子を持たせる。message の文字列一致に頼らないのは、文言変更で
+ * 静かに壊れる判定を作らないため。
+ */
+export const EVIDENCE_VALIDATION_ERROR_CODE = 'sentry-evidence-invalid';
+
+/** @param {string} message */
+function evidenceValidationError(message) {
+  const error = new Error(message);
+  // @ts-expect-error -- Error に独自 code を載せる（Node の慣習に合わせる）
+  error.code = EVIDENCE_VALIDATION_ERROR_CODE;
+  return error;
+}
+
+/**
+ * `buildAlertBody` の evidence 検証で throw された例外か。
+ * @param {unknown} error
+ */
+export function isEvidenceValidationError(error) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    /** @type {{ code?: unknown }} */ (error).code === EVIDENCE_VALIDATION_ERROR_CODE
+  );
+}
+
 const BASELINE_PATH = fileURLToPath(
   new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
 );
@@ -224,13 +262,13 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       }
       const evidence = args.evidence ?? [];
       if (evidence.length > MAX_SENTRY_EVIDENCE) {
-        throw new Error(
+        throw evidenceValidationError(
           `--evidence は 1 check あたり最大 ${MAX_SENTRY_EVIDENCE} 件までです（指定: ${evidence.length} 件）`,
         );
       }
       const badEvidence = evidence.filter((entry) => !SENTRY_EVIDENCE_RE.test(entry));
       if (badEvidence.length > 0) {
-        throw new Error(
+        throw evidenceValidationError(
           `--evidence は "DAYOPT-<番号> https://dayopt.sentry.io/issues/<数字>/" 形式（空白区切り）でのみ指定してください（不正な値: ${badEvidence.join(', ')}）。Sentry issue の title / culprit / message はここへ書けません`,
         );
       }
@@ -267,6 +305,45 @@ baseline は \`.claude/skills/night-watch/baseline.json\` に固定。更新は�
 const ALERT_ISSUE_LABELS = ['type:chore', 'area:operations'];
 
 /**
+ * dedup 検索の候補を集めるための検索語を組み立てる。
+ *
+ * **括弧を検索語に入れない**（2026-09-01 実測で確定、#2525）。GitHub の issue
+ * 検索は `(` `)` を構文（グループ化）として解釈するため、`nightwatch-fetch-failed(sentry-new):`
+ * のような素の title 断片を投げると**常に 0 件**になる:
+ *
+ *     gh issue list --search 'nightwatch-fetch-failed(dependabot-alerts): in:title'  → 0 件
+ *     gh issue list --search 'nightwatch-fetch-failed dependabot-alerts in:title'    → 5 件
+ *
+ * この不具合により dedup は本番で一度も成立しておらず、`nightwatch-fetch-failed`
+ * issue が毎晩（日によっては 1 晩に 2 件）新規起票され続けていた（実測: 2026-08-28
+ * 〜08-31 で 11 件の重複が open）。**検索はあくまで候補生成**で、最終的な同定は
+ * 呼び出し側の title prefix 完全一致 + 固定ラベルの検査が担うため、検索語を
+ * 緩めても誤って別 issue を掴むことはない。
+ * @param {string} prefix `nightwatch` / `nightwatch-fetch-failed`
+ * @param {string} checkId
+ */
+function buildDedupSearchQuery(prefix, checkId) {
+  return `${prefix} ${checkId} in:title`;
+}
+
+/**
+ * dedup 検索の取得件数。**明示しないと `gh issue list` は既定 30 件で無音に
+ * 切り詰める**（`scripts/ci/strip-status-labels.mjs` が同じ罠を
+ * `BULK_SEARCH_LIMIT` として明文化している）。
+ *
+ * 括弧を外して検索が初めて候補を返すようになったことで、この打ち切りが
+ * **新たに到達可能になった**（内製クロスレビュー risk-reviewer 指摘）。ある
+ * check-id の open 一致候補が 30 件を超えると、本物の alert issue が先頭
+ * 30 件から漏れて `find` が null を返し、その夜も新規起票される — 今回直した
+ * 毎晩重複の症状にそのまま戻る。しかも job は緑のままなので気づけない。
+ *
+ * 実測（2026-09-01）で `nightwatch-fetch-failed` の open 一致は最大 6 件。
+ * 100 なら現状の 15 倍以上の余裕があり、それでも足りない状況（= 重複が
+ * 100 件溜まる）は dedup が壊れている証拠なので、そこは別途気づける。
+ */
+const DEDUP_SEARCH_LIMIT = 100;
+
+/**
  * dedup 検索。SKILL.md §Step3 と同じ「検索失敗時は起票しない（fail closed）」を実装する。
  *
  * GitHub の検索は語単位の緩いマッチで、`nightwatch(<id>): in:title` の括弧・
@@ -297,7 +374,9 @@ export function findExistingAlertIssue(checkId, { execFileImpl } = {}) {
       '--state',
       'open',
       '--search',
-      `nightwatch(${checkId}): in:title`,
+      buildDedupSearchQuery('nightwatch', checkId),
+      '--limit',
+      String(DEDUP_SEARCH_LIMIT),
       '--json',
       'number,title,labels',
     ],
@@ -395,12 +474,20 @@ export function runAlertSync({
 // 「観測が失敗している」という別事象の body をそこへ紛れ込ませてしまう。
 const FETCH_FAILURE_TITLE_PREFIX = 'nightwatch-fetch-failed';
 
-// consecutiveNights の妥当範囲（無制限の整数を issue title/body へ載せる経路を
-// 作らない。run-log.mjs の MAX_ISSUE_NUMBER と同じ考え方）。
-const MAX_CONSECUTIVE_NIGHTS = 999;
-
-function fetchFailureTitle(checkId, consecutiveNights) {
-  return `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): 観測が${consecutiveNights}晩連続で取得失敗`;
+/**
+ * title は check-id 以外の可変要素を持たない（#2525）。
+ *
+ * 旧実装は「観測が N 晩連続で取得失敗」という晩数を title に含めていたが、
+ * その N は常設運行記録 issue #2216 のコメント列を数えて得ていた
+ * （`run-log.mjs` の `checkRecentFetchFailed`）。#2525 でそのコメント自体を
+ * 廃止し、起票条件も「retry しても駄目だったその夜」へ変えたため、title に
+ * 載せられる正しい晩数が存在しない。**title prefix
+ * `nightwatch-fetch-failed(<checkId>): ` は変えていない**ので、旧 title の
+ * 既存 open issue も `findExistingFetchFailureAlertIssue` の dedup に一致し、
+ * 新規起票ではなくコメント追記になる。
+ */
+function fetchFailureTitle(checkId) {
+  return `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): 観測コマンドが取得失敗`;
 }
 
 /**
@@ -420,7 +507,9 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
       '--state',
       'open',
       '--search',
-      `${FETCH_FAILURE_TITLE_PREFIX}(${checkId}): in:title`,
+      buildDedupSearchQuery(FETCH_FAILURE_TITLE_PREFIX, checkId),
+      '--limit',
+      String(DEDUP_SEARCH_LIMIT),
       '--json',
       'number,title,labels',
     ],
@@ -436,35 +525,21 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
 }
 
 /**
- * @param {{ checkId: string, consecutiveNights: number, detectedAt: string, isContinuing?: boolean }} params
+ * @param {{ checkId: string, detectedAt: string, isContinuing?: boolean }} params
  */
-export function buildFetchFailureAlertBody({
-  checkId,
-  consecutiveNights,
-  detectedAt,
-  isContinuing = false,
-}) {
+export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing = false }) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
   }
-  if (
-    !Number.isInteger(consecutiveNights) ||
-    consecutiveNights <= 0 ||
-    consecutiveNights > MAX_CONSECUTIVE_NIGHTS
-  ) {
-    throw new Error(`consecutiveNights は 1〜${MAX_CONSECUTIVE_NIGHTS} の整数である必要があります`);
-  }
-  // 既存 escalation issue への追記（isContinuing）では固定の晩数を繰り返さない
-  // （push前反証レビュー指摘・P2、PR #2445）。呼び出し元は常に固定の
-  // `consecutiveNights`（既定 3）しか渡さないため、night4 以降も毎晩「3晩連続」
-  // という同じ本文が積まれ、実際の継続期間が過小評価される「検出はしたが
-  // 深刻度が伝わらない」劣化版無音化になっていた。実際の連続晩数を数える
-  // 代わりに、新規/継続で文言を分岐する最小修正を採る。
+  // 新規と継続で文言を分ける（push前反証レビュー指摘・P2、PR #2445 で導入した
+  // 分岐を #2525 の当夜起票へ引き継いだ形）。同じ本文が毎晩積まれると、
+  // 「1 晩だけの取得失敗」と「何週間も直っていない」がコメント列から区別
+  // できなくなる。
   const status = isContinuing
-    ? '前回の検出以降も継続して取得失敗しています（直近の運行記録でも観測失敗を確認）。'
-    : `観測コマンド自体が ${consecutiveNights} 晩連続で取得失敗しています。`;
-  return `## night-watch 検出: ${checkId}（観測失敗の escalation）
+    ? 'この issue が起票された晩以降も、取得失敗が続いています。'
+    : '観測コマンド自体が失敗し、run 内の retry でも回復しませんでした。';
+  return `## night-watch 検出: ${checkId}（観測失敗）
 
 この check は red/green の判定ではなく、**観測コマンド自体**が失敗しています。${status}
 
@@ -476,13 +551,12 @@ export function buildFetchFailureAlertBody({
 }
 
 /**
- * fetch-failed（観測コマンド自体の取得失敗）escalation の起票/追記。
+ * fetch-failed（観測コマンド自体の取得失敗）の起票/追記。
  * `runAlertSync` と同じ dedup・run-scoped 起票上限（`reserveAlertRunSlot`）の
  * 仕組みを使うが、reservation key は `fetch-failed:<checkId>` にして
  * red-alert 用の予約枠（`checkId` そのもの）と衝突させない。
  * @param {{
  *   checkId: string,
- *   consecutiveNights: number,
  *   detectedAt?: string,
  *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
  *   runStatePath?: string,
@@ -490,7 +564,6 @@ export function buildFetchFailureAlertBody({
  */
 export function runFetchFailureAlertSync({
   checkId,
-  consecutiveNights,
   detectedAt = new Date().toISOString(),
   execFileImpl,
   runStatePath,
@@ -509,7 +582,6 @@ export function runFetchFailureAlertSync({
 
   const body = buildFetchFailureAlertBody({
     checkId,
-    consecutiveNights,
     detectedAt,
     isContinuing: Boolean(existing),
   });
@@ -530,7 +602,7 @@ export function runFetchFailureAlertSync({
     return { action: 'commented', issueNumber: existing.number };
   }
 
-  const title = fetchFailureTitle(checkId, consecutiveNights);
+  const title = fetchFailureTitle(checkId);
   const createOutput = runGh(
     [
       'issue',
@@ -562,18 +634,54 @@ function isDirectExecution() {
   }
 }
 
+const USAGE = [
+  'Usage:',
+  '  node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
+  '  node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed <check-id>',
+].join('\n');
+
+/**
+ * CLI の結果を exit code へ写す。**`skipped`（dedup 検索失敗による起票見送り）
+ * を成功にしない**（Codex 指摘 P2）。手動代行（cron 故障時に指揮台がローカルで
+ * 代行する経路、SKILL.md §手動代行）ではこの CLI が唯一の書き込み手段なので、
+ * 起票できていないのに exit 0 だと、代行した本人が「issue を残せた」と誤認する。
+ *
+ * `capped`（run 内の起票上限）は意図的な減衰なので 0 のまま。
+ * @param {{ action: string }} result
+ */
+function exitCodeForAlertResult(result) {
+  return result.action === 'skipped' ? 1 : 0;
+}
+
 if (isDirectExecution()) {
   const [subcommand, checkId, ...rest] = process.argv.slice(2);
-  if (subcommand !== 'report' || !checkId) {
-    console.error(
-      'Usage: node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
-    );
+  if (!checkId || (subcommand !== 'report' && subcommand !== 'report-fetch-failed')) {
+    console.error(USAGE);
     process.exitCode = 1;
   } else {
     try {
-      const args = parseAlertArgs(rest);
-      const result = runAlertSync({ checkId, args });
-      console.log(JSON.stringify(result));
+      let result;
+      if (subcommand === 'report-fetch-failed') {
+        // 観測コマンド自体の取得失敗を起票する（#2525）。自動パートは
+        // `run-all.mjs` から直接 `runFetchFailureAlertSync` を呼ぶが、手動代行は
+        // 層3 guard の allowlist を通る個別 wrapper 経由でしか書き込めないため、
+        // この経路が無いと代行時に観測失敗を issue へ残せない。
+        // 動的引数は check-id 1 つだけで、その値は CHECK_DEFINITIONS の
+        // 既知キーかどうかを wrapper 内部が検証する。
+        if (rest.length > 0) {
+          console.error(USAGE);
+          process.exitCode = 1;
+        } else {
+          result = runFetchFailureAlertSync({ checkId });
+        }
+      } else {
+        const args = parseAlertArgs(rest);
+        result = runAlertSync({ checkId, args });
+      }
+      if (result) {
+        console.log(JSON.stringify(result));
+        process.exitCode = exitCodeForAlertResult(result);
+      }
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'alert-issue report failed');
       process.exitCode = 1;

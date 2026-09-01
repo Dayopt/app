@@ -53,75 +53,12 @@ export function runGhJson(args, opts = {}) {
   return JSON.parse(out);
 }
 
-/** JST（Asia/Tokyo）暦日を YYYY-MM-DD で返す。引数省略時は現在時刻。 */
-export function jstDateString(date = new Date()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Tokyo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-}
-
-/**
- * JST 暦日の N 日前を YYYY-MM-DD で返す。DST が無い JST では、JST 深夜 0 時の
- * 瞬間から 24h × N 引けば常に N 日前の JST 暦日になるため、UTC 演算で安全に求まる。
- */
-export function jstDaysAgoString(days, date = new Date()) {
-  const todayJst = jstDateString(date);
-  const jstMidnight = new Date(`${todayJst}T00:00:00+09:00`);
-  jstMidnight.setUTCDate(jstMidnight.getUTCDate() - days);
-  return jstDateString(jstMidnight);
-}
-
-/** JST 暦日の前日を YYYY-MM-DD で返す。 */
-export function jstYesterdayString(date = new Date()) {
-  return jstDaysAgoString(1, date);
-}
-
-/**
- * GitHub 検索クエリの日境界レンジ（`<qualifier>:<start>..<end>` の右辺）。
- * `endDateStr` を省略すると `startDateStr` 単日のレンジになる（dod-candidate.mjs
- * の月曜拡張窓のように複数日にまたがるレンジが必要な呼び出し元は明示的に渡す）。
- */
-export function jstDayRange(startDateStr, endDateStr = startDateStr) {
-  return `${startDateStr}T00:00:00+09:00..${endDateStr}T23:59:59+09:00`;
-}
-
-// JST 曜日名 → インデックス（0=日, 1=月, ..., 6=土）。night-watch の起点が
-// 05:00 JST 毎日運行へ確定した際（#2334 コメント）、盤面 issue の起票だけは
-// 平日のみに絞り、DoD 監査候補選定は月曜だけ金〜日の3日分をまとめて拾う設計に
-// なった。両方が同じ JST 曜日判定を必要とするため共通ユーティリティにする。
-const JST_WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-
-/**
- * JST 曜日インデックス（0=日〜6=土）を返す。`Intl.DateTimeFormat` が想定外の
- * label を返した場合は例外を投げる（push前反証レビュー risk-reviewer 指摘、
- * P3）。無言で fallback すると `isJstWeekend` / `isJstMonday` がどちらも
- * false（平日扱い）を返し、weekend skip が無音で無効化される。
- */
-export function jstWeekdayIndex(date = new Date()) {
-  const label = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Tokyo',
-    weekday: 'short',
-  }).format(date);
-  const index = JST_WEEKDAY_INDEX[label];
-  if (index === undefined) {
-    throw new Error(`未知の JST 曜日ラベルです: ${label}`);
-  }
-  return index;
-}
-
-/** JST で土曜日または日曜日か。 */
-export function isJstWeekend(date = new Date()) {
-  const idx = jstWeekdayIndex(date);
-  return idx === 0 || idx === 6;
-}
-
-/** JST で月曜日か。 */
-export function isJstMonday(date = new Date()) {
-  return jstWeekdayIndex(date) === 1;
-}
+// #2525: JST 暦日ユーティリティ（jstDateString / jstDaysAgoString /
+// jstYesterdayString / jstDayRange / jstWeekdayIndex / isJstWeekend /
+// isJstMonday）と findTodayBoardIssue はここから削除した。唯一の利用者だった
+// board-issue.mjs / dod-candidate.mjs / run-log.mjs / morning-brief.mjs
+// （盤面起票・DoD 候補選定・運行記録・朝ブリーフ）を廃止したため。
+// 夜勤に曜日の概念は残っていない（週末も平日と同じく観測して赤なら起票する）。
 
 /** issue/comment URL 末尾の番号を取り出す（`gh issue create/comment` の stdout 形式）。 */
 export function extractTrailingNumber(url) {
@@ -151,32 +88,6 @@ export function isLatestWorkflowRunPending(runs) {
   if (!Array.isArray(runs) || runs.length === 0) return false;
   const status = runs[0]?.status;
   return status === 'in_progress' || status === 'queued';
-}
-
-/**
- * 当日 JST タイトルの盤面 issue を探す。無ければ null。
- * dod-candidate.mjs（Step 4）・run-log.mjs（Step 5 の当日盤面 issue への 1 行
- * コメント）の両方が使う共通ルックアップ。
- * @param {{ execFileImpl?: ExecFileImpl }} [opts]
- */
-export function findTodayBoardIssue({ execFileImpl } = {}) {
-  const title = `盤面 ${jstDateString()}`;
-  const openBoardIssues = runGhJson(
-    [
-      'issue',
-      'list',
-      '--repo',
-      REPO,
-      '--state',
-      'open',
-      '--label',
-      'type:board',
-      '--json',
-      'number,title',
-    ],
-    { execFileImpl },
-  );
-  return openBoardIssues.find((issue) => issue.title === title) ?? null;
 }
 
 /**

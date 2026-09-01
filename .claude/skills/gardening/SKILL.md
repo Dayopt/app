@@ -13,7 +13,7 @@ description: ユーザーが月次ガーデニングの人間パート実施を�
 
 機械にできる検出・調査・下書きを人間の記憶に依存させない。人間が使うのは判断だけ、が設計原則（「機械で強制できるものは機械へ」の思想）。
 
-**統治レビューへの重心移動（2026-08-10）。** 指揮台オーケストレーション運用（`dispatch` skill（旧 orchestration.md、#2479 で再編））が朝の編成で盤面（open PR・issue の停滞、worktree・ブランチ残骸、milestone 実態）という**速い変数**を日次で扱うようになった。gardening は**遅い変数**——権限境界（旧 orchestration.md §権限の既定、#2479 で廃止・git 履歴参照）・ルールの足し引き・機能の削除候補——を月 1 回、日次では溜まらない証拠（判断ジャーナルの分岐実績、月単位でしか動かない外部指標）に基づいて動かす場に絞る。二層構造は「日次が速い変数、gardening が遅い変数」で分担し、同じ検出項目を両方に持たせない。
+**統治レビューへの重心移動（2026-08-10）。** 指揮台オーケストレーション運用（`dispatch` skill（旧 orchestration.md、#2479 で再編））が朝の編成で**速い変数**（open PR・issue の停滞、worktree・ブランチ残骸、milestone 実態）を日次で扱うようになった。gardening は**遅い変数**——権限境界（旧 orchestration.md §権限の既定、#2479 で廃止・git 履歴参照）・ルールの足し引き・機能の削除候補——を月 1 回、日次では溜まらない証拠（判断ジャーナルの分岐実績、月単位でしか動かない外部指標）に基づいて動かす場に絞る。二層構造は「日次が速い変数、gardening が遅い変数」で分担し、同じ検出項目を両方に持たせない。
 
 ## When to Use
 
@@ -61,7 +61,7 @@ Routine の draft PR が存在する前提で、ユーザーと Main が以下�
 2. **レビュー待ちリストの裁定** — superseded 判定、昇格の採否、AI 設定棚卸しの実施可否を決める
 3. **判断層の検証**（`AGENTS.md` §シンプルルール） — ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか（あれば今から理由を言語化）③先月触らなかった機能はどれか（ルール 5。削除候補は dispatch intake で起票）④**決定ログの sweep**（2026-08-28、#2475 でラベル→月次 sync 機構は廃止。分岐時点で `docs/decisions.md` へ直接 1 行追記する運用へ移行済み。`dispatch` skill 冒頭「履歴もコメントに落とす」参照） — `gh search issues --repo Dayopt/dayopt --label judgment:diverged --include-prs` で、判定材料が揃っているのに追記が漏れている分岐が無いか確認し、見つかれば追記する。判定済み事例（`docs/decisions.md` に記録済みの全件）を母集団に権限境界（旧 orchestration.md §権限の既定、#2479 で廃止・git 履歴参照）を実測で更新する（可逆な采配を指揮台決定 + opt-out にする試行運用の恒久化 / 巻き戻しの判定もここで行う）
 4. **実行層の検証**（pause point 運用） — ⑤各チェックは今月何かを捕まえたか ⑥pause point の迂回の痕跡は無いか ⑦機械へ昇格できる項目は無いか
-5. **深掘りスキャン** — claude-security プラグイン（multi-agent のリポジトリ全体走査 + 敵対検証 + patch 生成）を月次の 1 項目として月 1 回転する。per-PR には重すぎる（1 回で数百万 token 級）ため per-PR 層（plan-review / レーン反証 / 指揮台クロスレビュー）には組み込まず、変更同士の合成で開く穴（per-PR レビューの構造的死角）を拾う backstop と位置づける。専用セッションで、**User の明示同意の下で起動**する（プラグインは大量 token 消費の明示 opt-in が前提の設計。`/claude-security` の「Scan codebase」はユーザーのみ起動できる、`disable-model-invocation: true`）。走行レーンの無い静かな盤面で行う（同日に通常レーンを並走させない — findings が in-flight 変更と衝突して triage が濁る）。findings は全件 issue 化して通常の編成へ流す。patch の適用は findings の triage 後に個別判断する。初回実施は 2026-09 の gardening
+5. **深掘りスキャン** — claude-security プラグイン（multi-agent のリポジトリ全体走査 + 敵対検証 + patch 生成）を月次の 1 項目として月 1 回転する。per-PR には重すぎる（1 回で数百万 token 級）ため per-PR 層（plan-review / レーン反証 / 指揮台クロスレビュー）には組み込まず、変更同士の合成で開く穴（per-PR レビューの構造的死角）を拾う backstop と位置づける。専用セッションで、**User の明示同意の下で起動**する（プラグインは大量 token 消費の明示 opt-in が前提の設計。`/claude-security` の「Scan codebase」はユーザーのみ起動できる、`disable-model-invocation: true`）。走行レーンが 1 本も無い日に行う（同日に通常レーンを並走させない — findings が in-flight 変更と衝突して triage が濁る）。findings は全件 issue 化して通常の編成へ流す。patch の適用は findings の triage 後に個別判断する。初回実施は 2026-09 の gardening
 6. 3・4 で所見が出たら journal（draft PR 本文）に記録する。項目や pause point を変える場合はメタルール（**1 つ足すときは 1 つ削る**）に従い `/decision` で決定ログを残す
 
 ## 故障モード

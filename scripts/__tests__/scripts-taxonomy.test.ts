@@ -51,16 +51,12 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   // ディレクトリごと分割しない（夜勤 cron の内部結合が強く、分割すると相互
   // import の path 更新が二重化する）。
   'scripts/ci/night-watch/alert-issue.mjs',
-  'scripts/ci/night-watch/board-issue.mjs',
   // check-workflow-job.mjs: heavy-red / integration-red の job-scoped 判定を
   // 「単一の単純コマンド」として手動代行できるようにする wrapper（#2483）。
   // pre-tool-guard-impl.sh の allowlist 完全一致で hooks 判定になるが、他の
   // night-watch/*.mjs wrapper と同じ理由でディレクトリを分割しない。
   'scripts/ci/night-watch/check-workflow-job.mjs',
-  'scripts/ci/night-watch/dod-candidate.mjs',
   'scripts/ci/night-watch/lib.mjs',
-  'scripts/ci/night-watch/morning-brief.mjs',
-  'scripts/ci/night-watch/run-log.mjs',
   // admin-*.sh family: admin-common.sh を `dirname "${BASH_SOURCE[0]}"` 相対で
   // source するため、同一ディレクトリに揃える必要がある。admin-delete-user.sh は
   // lane-protocol.md / usability-probe SKILL.md からの言及で agent 判定になるが、

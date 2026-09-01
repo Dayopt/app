@@ -32,7 +32,6 @@
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "prepare": "husky",
     "branch:finish": "bash scripts/tasks/finish-branch.sh",
-    "board:update": "node scripts/tasks/board-update.mjs",
     "green:watch": "node scripts/tasks/green-watch.mjs",
     "review:marker": "tsx scripts/tasks/generate-marker.ts",
     "review:issue:marker": "node scripts/tasks/generate-issue-review-marker.mjs",

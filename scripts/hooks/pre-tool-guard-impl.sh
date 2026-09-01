@@ -293,7 +293,7 @@ is_single_simple_command() {
 # チップ起票（spawn_task）は指揮台セッションの専権。レーン（worktree の作業
 # セッション）が直接 User へチップを出すと、triage の判断が User へ飛んでしまう。
 # レーンは「issue 化 + 指揮台へ send_message」に一本化する
-# （dispatch skill（旧 orchestration.md、#2479 で再編） §盤面の正本は issue + open PR、§レーンの連絡規律）。
+# （`dispatch` skill 冒頭「正（source of truth）」— 状態は issue / PR 自身が持つ）。
 #
 # 判定は「指揮台にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
 # path の慣習では見ない — 慣習の外に置かれた worktree が main checkout と区別
@@ -459,17 +459,9 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       "echo \$DAYOPT_NIGHT_WATCH")
         night_watch_allowed=1
         ;;
-      "node scripts/ci/night-watch/board-issue.mjs sync" | "node scripts/ci/night-watch/dod-candidate.mjs select")
-        # Step 1（盤面起票・前日盤面 close）・Step 4（DoD候補検索・コメント）の
-        # wrapper。動的引数を一切取らない完全一致コマンドで、値の組み立ては
-        # script 内部（JST 日付計算・gh issue list の結果からの前日 issue
-        # 選定）が担う。close 対象を Claude が argv で指定する余地が無いため、
-        # 旧 thread #1（P1: close 対象を前日の盤面 issue に限定する）を構造的に
-        # 満たす。
-        night_watch_allowed=1
-        ;;
-      "node scripts/ci/night-watch/alert-issue.mjs report "*)
-        # Step 3（nightwatch(check-id) issue の起票・追記）の wrapper。動的な
+      "node scripts/ci/night-watch/alert-issue.mjs report "* \
+        | "node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed "*)
+        # 赤の起票・追記（nightwatch(check-id) issue）の wrapper。動的な
         # check-id・実測値が要るため完全一致にはできないが、値は script 内部で
         # execFile の argv 要素として gh へ渡り、shell を経由しないため、この
         # 節で flag 単位の検査を重ねる必要が無い（値の形の検証は wrapper 内部の
@@ -477,34 +469,18 @@ if [ "$TOOL_NAME" = "Bash" ]; then
         # 「本当に node scripts/ci/night-watch/alert-issue.mjs report <...> の
         # 単純呼び出しか」だけで、is_single_simple_command と redirect 拒否
         # （本 if ブロック冒頭）が既にそれを保証している。
-        night_watch_allowed=1
-        ;;
-      "node scripts/ci/night-watch/run-log.mjs env-failure no-var" \
-        | "node scripts/ci/night-watch/run-log.mjs env-failure write-token")
-        # Step 0（自己検証の環境故障報告）の wrapper。固定 2 文言のみ完全一致で
-        # 許可する（scripts/ci/night-watch/run-log.mjs の ENV_FAILURE_MESSAGES）。
-        night_watch_allowed=1
-        ;;
-      "node scripts/ci/night-watch/run-log.mjs report "* | "node scripts/ci/night-watch/run-log.mjs board-note "*)
-        # Step 5（運行記録: 常設運行記録 issue へのコメント + 当日盤面 issue への
-        # 1 行コメント）の wrapper。push 前反証レビュー（risk-reviewer、high）で
-        # 発見: board/alert/dod の 3 wrapper 化で `gh issue comment` の直接
-        # allowlist を全面撤去した際、Step 5 の運行記録コメントがどの wrapper
-        # にも属さず、night-watch の唯一の故障検出チャネル
-        # （docs/operations/night-watch.md §故障検出手順）が毎晩無音で block
-        # されていた。alert-issue.mjs と同じ理由（値は execFile の argv 要素と
-        # して gh へ渡り shell を経由しない）で flag 単位の検査は不要。運行記録
-        # issue の宛先番号は wrapper 内部が docs/operations/night-watch.md から
-        # 解決し、呼び出し元は argv で指定できない（board-issue.mjs の close 対象
-        # と同じ設計）。
-        night_watch_allowed=1
-        ;;
-      "node scripts/ci/night-watch/run-log.mjs recent-pending "*)
-        # Step 2（heavy-red/integration-red の pending escalation 判定、#2350
-        # クロスレビュー指摘 P2-1）の read-only wrapper。常設運行記録 issue の
-        # 直近コメントを読むだけで書き込みは行わない。値（check-id）は他
-        # wrapper と同じく execFile の argv 要素として gh へ渡り shell を経由
-        # しないため、flag 単位の検査は不要。
+        #
+        # **#2525 以降、night-watch モードで許可される書き込み経路はこの
+        # wrapper だけ。** 旧 board-issue.mjs（盤面起票）/ dod-candidate.mjs
+        # （DoD 候補）/ run-log.mjs（運行記録・盤面 note・env-failure・
+        # recent-pending）の許可形は、対応する wrapper ごと削除した。夜勤が
+        # 触ってよい issue は「自分が起票した alert issue」だけになった。
+        #
+        # `report-fetch-failed` は観測コマンド自体の取得失敗を起票する
+        # サブコマンド（Codex 指摘 P2）。自動パートは run-all.mjs から直接
+        # 呼ぶが、手動代行はこの allowlist を通る wrapper 経由でしか書けない
+        # ため、これが無いと代行時に観測失敗だけ issue へ残せない。動的引数は
+        # check-id 1 つで、既知キーかどうかは wrapper 内部が検証する。
         night_watch_allowed=1
         ;;
     esac

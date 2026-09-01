@@ -2,31 +2,36 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { CHECK_DEFINITIONS, runAlertSync, runFetchFailureAlertSync } from './alert-issue.mjs';
-import { runBoardSync } from './board-issue.mjs';
-import { runDodCandidateSelect } from './dod-candidate.mjs';
-import { isLatestWorkflowRunPending, REPO } from './lib.mjs';
-import { runMorningBrief } from './morning-brief.mjs';
 import {
-  CHECK_IDS,
-  checkRecentFetchFailed,
-  checkRecentPending,
-  runBoardNote,
-  runOpsLogReport,
-} from './run-log.mjs';
+  CHECK_DEFINITIONS,
+  isEvidenceValidationError,
+  runAlertSync,
+  runFetchFailureAlertSync,
+} from './alert-issue.mjs';
+import { isLatestWorkflowRunPending, REPO } from './lib.mjs';
 
 /**
- * night-watch SKILL.md §自動パートの Step 1〜5 を GitHub Actions cron から
- * model 不在で完走させるオーケストレータ（#2367、Claude Routine からの移植。
- * 経緯は issue #2367 のコメント列を正本とする）。
- * Step 6（朝編成ブリーフ、#2370）も同じ run の最後に実行する。
+ * night-watch SKILL.md §自動パート（観測 → 赤なら起票）を GitHub Actions cron
+ * から model 不在で完走させるオーケストレータ（#2367、Claude Routine からの
+ * 移植。経緯は issue #2367 のコメント列を正本とする）。
  *
- * 既存 wrapper（board-issue.mjs / alert-issue.mjs / dod-candidate.mjs /
- * run-log.mjs / lib.mjs）は無変更のまま import して使う。唯一の例外は
- * `run-log.mjs` の `checkRecentPending`（github-actions[bot] の login を
- * trusted author として OR 追加した点修正、#2367 issue コメントで指揮台が
- * 承認済み）。ここに書くのは、旧設計で Claude（LLM）の裁量に委ねていた
- * 「観測結果を読んで red/green を判定する」部分だけ。
+ * **2026-09-01（#2525）で「毎朝の読み物」を作る層をすべて廃止した。** 旧
+ * Step 1（当日盤面 issue の起票）/ Step 4（DoD 監査候補選定）/ Step 5（常設
+ * 運行記録 issue #2216 への毎晩 1 コメント + 盤面への 1 行 note）/ Step 6
+ * （朝編成ブリーフ）と、その先の 05:00 JST 蒸留層 Routine を廃止し、
+ * `board-issue.mjs` / `dod-candidate.mjs` / `run-log.mjs` / `morning-brief.mjs`
+ * を削除した。夜勤に残るのは **観測して、赤なら issue を起票する** だけ。
+ * 緑の夜は無音（GitHub Actions の job が緑であること自体が「夜勤は動いた」の
+ * 証跡）。故障検出手順は docs/operations/night-watch.md を正本とする。
+ *
+ * 廃止に伴い、#2216 のコメント列を読み取り元にしていた 2 つのエスカレーション
+ * 機構を、外部状態に依存しない形へ置き換えた:
+ * - pending の連晩判定（旧 `checkRecentPending`）→ `judgeWorkflowRun` の
+ *   stale 判定（直近 run が pending でも、取得した run 群に
+ *   `STALE_SUCCESS_WINDOW_MS` 以内の success が 1 つも無ければ red）
+ * - fetch-failed の連晩判定（旧 `checkRecentFetchFailed`）→
+ *   `execObservationCommand` の run 内 retry（一過性の失敗を吸収した上で、
+ *   確定失敗はその夜のうちに起票する）
  *
  * Step 0（自己検証）は SKILL.md 側で廃止した。GitHub Actions の
  * `permissions:` ブロックはジョブ開始前に server 側で GITHUB_TOKEN を強制
@@ -34,6 +39,25 @@ import {
  * 強い。手動代行（指揮台のローカル実行）の前提条件としての
  * `echo $DAYOPT_NIGHT_WATCH` 確認は SKILL.md 側に残す。
  */
+
+/**
+ * 夜勤が毎晩観測する check-id（#2525 で run-log.mjs から移設）。
+ *
+ * **`CHECK_DEFINITIONS`（alert-issue.mjs）のキー集合とは意図的に別物**にして
+ * ある。`CHECK_DEFINITIONS` は「起票できる id」の集合で、観測ループを経由せず
+ * 別の workflow job から CLI で起票される id（#2526 の `promote-red` など）も
+ * 含む。ここから導出すると、そうした id を夜勤が「観測し忘れた check」として
+ * 毎晩 fetch-failed 扱いしてしまう。
+ */
+export const CHECK_IDS = new Set([
+  'docs-check',
+  'docs-coverage',
+  'deadcode',
+  'dependabot-alerts',
+  'heavy-red',
+  'integration-red',
+  'sentry-new',
+]);
 
 const BASELINE_PATH = fileURLToPath(
   new URL('../../../.claude/skills/night-watch/baseline.json', import.meta.url),
@@ -94,6 +118,20 @@ export function judgeCountBaseline(actual, baseline) {
 const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * stale 判定（下記 `judgeWorkflowRun`）の success 猶予。#2525 で
+ * `checkRecentPending`（常設運行記録 issue のコメント列を読んで「pending が
+ * 2 晩連続したか」を数える機構）を廃止した代わりに、run 履歴だけから
+ * 「pending のまま何日も進んでいない」を検出する。
+ *
+ * `WORKFLOW_RUN_WINDOW_MS`（24h）より緩くしてあるのは、pending 経路が
+ * 通常運用で 24h ぎりぎりに寄るため。層 3 は毎晩 03:00 JST に走るので、
+ * 前夜の success からこの判定までは概ね 24h -α。cron 配信が数十分遅れる
+ * だけで「24h 以内の success が無い」に倒れて誤 red を出す。48h なら
+ * 「2 晩続けて完了できていない」だけを拾える。
+ */
+const STALE_SUCCESS_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
  * heavy-red / integration-red の判定（SKILL.md §自動パート の Step 2 参照）。
  * pending 判定は `isLatestWorkflowRunPending`（lib.mjs、正本）にそのまま委ねる。
  * pending でなければ、**直近 run（runs[0]）の terminal 結果を基準に**判定
@@ -133,6 +171,16 @@ const WORKFLOW_RUN_WINDOW_MS = 24 * 60 * 60 * 1000;
  * 場合は別 issue で設計する — 直近 run 基準への変更自体は Codex 指摘で
  * 採用した設計であり、ここを緩めると誤 red が戻る。evidence には
  * runs[0].url（直近 run の URL）を使う。
+ *
+ * **pending の stale 判定（#2525）**: 直近 run が未完了（in_progress /
+ * queued）でも、取得した run 群に `STALE_SUCCESS_WINDOW_MS`（48h）以内の
+ * success が 1 つも無ければ red を返す。旧設計は pending を無条件で
+ * 「判定保留」に倒し、連晩の判定は `checkRecentPending`（常設運行記録
+ * issue のコメント列を数える）へ委ねていた。#2525 でそのコメント自体を
+ * 廃止したため、**run 履歴だけから導出できる形へ置き換えた**。これが無いと
+ * 「queued のまま何晩も進まない」（runner 枯渇・workflow 定義の破損で
+ * 起動しない等）が永遠に pending 扱いで無音になる。単発の遅延は 48h 窓の
+ * 内側に前夜の success があるため red にならない。
  * @param {{ status: string, conclusion: string | null, createdAt: string, url: string }[]} runs
  * @param {{ now?: number }} [opts]
  */
@@ -140,25 +188,37 @@ export function judgeWorkflowRun(runs, { now = Date.now() } = {}) {
   if (!Array.isArray(runs) || runs.length === 0) {
     throw new Error('runs は非空配列である必要があります');
   }
+  // `status === 'completed'` も要求する（Codex 指摘 P2 の推奨修正）。畳み込み側
+  // （`checkWorkflowJobRun`）の番兵バグは直したが、success を根拠に無音へ倒す
+  // 判断はこの関数の側でも「本当に終わった run か」を確かめる。未完了の run が
+  // success 扱いで履歴に混じると stale 判定が恒久的に効かなくなるため、
+  // 二重に閉じる価値がある。
+  const hasSuccessWithin = (windowMs) =>
+    runs.some(
+      (run) =>
+        run.status === 'completed' &&
+        run.conclusion === 'success' &&
+        now - new Date(run.createdAt).getTime() <= windowMs,
+    );
   if (isLatestWorkflowRunPending(runs)) {
-    return { status: 'pending' };
+    if (hasSuccessWithin(STALE_SUCCESS_WINDOW_MS)) {
+      return { status: 'pending' };
+    }
+    return { status: 'red', evidenceUrl: runs[0].url, reason: 'stale-pending' };
   }
   const latest = runs[0];
   const latestNonSuccessTerminal = latest.status === 'completed' && latest.conclusion !== 'success';
-  const hasRecentSuccess = runs.some(
-    (run) =>
-      run.conclusion === 'success' &&
-      now - new Date(run.createdAt).getTime() <= WORKFLOW_RUN_WINDOW_MS,
-  );
+  const hasRecentSuccess = hasSuccessWithin(WORKFLOW_RUN_WINDOW_MS);
   const red = latestNonSuccessTerminal || !hasRecentSuccess;
   return { status: red ? 'red' : 'green', evidenceUrl: latest.url };
 }
 
 /**
- * gh CLI（や JSON.parse）の失敗を `run-log.mjs` の `board.reason` enum
- * （`BOARD_FAIL_REASONS`、既知 5 種）へ写像する。自由文字列を public な
- * 常設運行記録 issue へ書かないという既存の設計原則（run-log.mjs の
- * コメント参照）を、生成元の gh エラーメッセージにも適用する。
+ * gh CLI（や JSON.parse）の失敗を既知の分類へ写像する。元は `run-log.mjs` の
+ * `board.reason` enum へ写すためのもので（自由文字列を public な常設運行記録
+ * issue へ書かない設計原則を、生成元の gh エラーメッセージにも適用していた）、
+ * #2525 で運行記録を廃止した後は **retry 対象の判定**（`isRetriableObservationFailure`）
+ * と job log の診断行が利用者。
  * @param {unknown} error
  * @returns {'auth-error' | 'rate-limited' | 'network-error' | 'invalid-response' | 'unknown'}
  */
@@ -180,7 +240,30 @@ export function classifyGhError(error) {
     text.includes('enotfound') ||
     text.includes('etimedout') ||
     text.includes('could not resolve host') ||
-    text.includes('network is unreachable')
+    text.includes('network is unreachable') ||
+    // GitHub / Sentry 側の一時的な server error（Codex 指摘 P2、実測確定）。
+    // #2525 は「GitHub の 5xx は run 内 retry が吸収する」と書いていたが、
+    // 5xx は上のどの語にも該当せず `unknown` へ落ちて 1 回で確定していた。
+    // 恒久障害なら retry 後に結局 fetch-failed として起票されるので、
+    // ここを retriable 側へ入れても無音化には繋がらない。
+    /http 5\d\d/.test(text) ||
+    text.includes('bad gateway') ||
+    text.includes('service unavailable') ||
+    text.includes('gateway timeout') ||
+    // transport 層の一時切断（Codex 指摘 P2 第 2 ラウンド、#2525）。上の語は
+    // DNS 解決失敗と HTTP レイヤの 5xx しか拾っておらず、接続が確立した後で
+    // 切れる系（TLS handshake / socket reset / Go 製クライアントの deadline）は
+    // `unknown` へ落ちて 1 回で確定していた。数秒後には回復する夜でも
+    // fetch-failed が確定し、不要な alert issue が立つ。
+    text.includes('econnreset') ||
+    text.includes('connection reset') ||
+    text.includes('epipe') ||
+    text.includes('socket hang up') ||
+    text.includes('tls handshake timeout') ||
+    text.includes('context deadline exceeded') ||
+    text.includes('i/o timeout') ||
+    text.includes('connection refused') ||
+    text.includes('temporary failure in name resolution')
   ) {
     return 'network-error';
   }
@@ -201,32 +284,165 @@ export function classifyGhError(error) {
  * 「取得失敗」（`isSpawnFailure` → fetch-failed 経路）へ縮退させる。
  * @type {number}
  */
-const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
+export const OBSERVATION_COMMAND_TIMEOUT_MS = 240_000;
+
+/**
+ * 観測コマンドの追加試行回数（#2525）。合計試行は 1 + この値。
+ *
+ * fetch-failed の起票条件を「3 晩連続」（常設運行記録 issue のコメント列を
+ * 数える `checkRecentFetchFailed`）から「その夜のうち」へ変えたことの対価を
+ * ここで払う。単発の rate limit / ネットワーク断・DNS 一時失敗をそのまま
+ * issue にすると、翌朝に自然回復している alert が定常的に溜まり、
+ * 「issue があれば本物」という #2525 の前提が崩れる。
+ *
+ * **retry 対象は「一過性と分類できた失敗」だけ**（`isRetriableObservationFailure`）。
+ * 特に timeout kill は除外する: `OBSERVATION_COMMAND_TIMEOUT_MS` は 240s で
+ * job 全体の予算は `timeout-minutes: 15`（900s）。hang したコマンドを 3 回
+ * 走らせると 720s + setup（checkout / pnpm install / Sentry CLI）で予算を
+ * 超え、残りの check の観測・alert 起票・サマリ 1 行ごと runner に kill
+ * される。**この不等式は `scripts/ci/night-watch/run-all.test.ts` の
+ * 「retry の総コストが job 予算を超えない」test が固定する。**
+ */
+const OBSERVATION_COMMAND_RETRIES = 2;
+
+/** retry 間隔の基数（ミリ秒）。n 回目の待ちは base × n（1s → 2s）。 */
+const OBSERVATION_RETRY_BASE_DELAY_MS = 1_000;
+
+/**
+ * 残余がこれ未満なら、その試行を実行せず打ち切る（内製クロスレビュー
+ * risk-reviewer 指摘 medium、#2525）。
+ *
+ * deadline による切り詰め（`Math.min(timeout, remaining)`）に下限が無いと、
+ * 1 回目が 240s 近く粘った夜の 2 回目が timeout 1〜3s で spawn され、**必ず**
+ * SIGKILL される。無駄な試行を 1 本消費するだけでなく、`lastError` が本来の
+ * 原因（503 / rate limit）から `SIGKILL` / `ETIMEDOUT` へ上書きされ、
+ * `checkExitCode` 経路では本物の赤が status: null になって red ではなく
+ * fetch-failed へ降格する（無音にはならないが alert の種類と本文が実態と
+ * ずれる）。「勝ち目のない試行はしない」方が原因を保存できる。
+ */
+export const OBSERVATION_RETRY_MIN_ATTEMPT_MS = 5_000;
+
+/** retry の待ち時間の合計（1s + 2s = 3s）。 */
+const OBSERVATION_RETRY_TOTAL_DELAY_MS =
+  ((OBSERVATION_COMMAND_RETRIES * (OBSERVATION_COMMAND_RETRIES + 1)) / 2) *
+  OBSERVATION_RETRY_BASE_DELAY_MS;
+
+/**
+ * night-watch job の `timeout-minutes`（`.github/workflows/nightly.yml`）を
+ * ミリ秒で持つ。workflow 側を変えたらここも変える。
+ */
+export const NIGHT_WATCH_JOB_TIMEOUT_MS = 15 * 60 * 1000;
+
+/**
+ * 観測コマンド 1 本が retry を含めて消費しうる最悪時間。
+ *
+ * **timeout を retry 対象から外していることが、この値が job 予算に収まる
+ * 根拠**（`isRetriableObservationFailure`）。timeout が retry されると
+ * 240s × 3 = 720s になり、setup（checkout / pnpm install / Sentry CLI）と
+ * 合わせて `NIGHT_WATCH_JOB_TIMEOUT_MS` を超えて runner に kill される。
+ * `run-all.test.ts` の不等式 test がこれを固定する（内製クロスレビュー
+ * risk-reviewer 指摘、high。2026-09-01 実測で確定 — `execFileSync` の
+ * timeout error は `killed` を持たず `signal: 'SIGKILL'` / `code: 'ETIMEDOUT'`
+ * を返すため、旧実装の `error.killed` ガードは常に素通りしていた）。
+ *
+ * **この値は「1 本あたりの実行時間の総和」の上限であって、`retries + 1` 回
+ * ぶんの timeout の和ではない**（Codex レビュー P2、#2525）。timeout を retry
+ * 対象から外しても、retry 対象に分類される失敗（rate-limited / network-error）
+ * 自体が遅いと同じ超過が起きる: gh が 5xx を返すまで 235s かかる夜は
+ * 240s × 3 + 3s ≈ 723s を 1 本で消費し、この定数が主張する上限は嘘になる。
+ * 旧実装の不等式 test は「understate された定数」を検査していたので通って
+ * いた（TEST-1）。`execObservationCommand` が**試行をまたぐ絶対 deadline**を
+ * 持ち、各試行の timeout を残余へ切り詰めることで、この定数を実際の上限に
+ * した。
+ */
+export const WORST_CASE_OBSERVATION_MS =
+  OBSERVATION_COMMAND_TIMEOUT_MS + OBSERVATION_RETRY_TOTAL_DELAY_MS;
+
+/**
+ * 同期スリープ。夜勤は単一プロセスの直列実行（lib.mjs の
+ * `reserveAlertRunSlot` コメント参照）で、待つ間に進められる仕事が無いため
+ * async 化しない。`Atomics.wait` は実 timer を使うので busy loop にならない。
+ * @param {number} ms
+ */
+function sleepSync(ms) {
+  if (ms <= 0) return;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
 
 /**
  * Step 2 の観測コマンドを実行する共通 helper。secret を含む env override
  * （dependabot-alerts の PAT 等）はこの `env` 引数経由でのみ渡す —
  * `process.env` はここでは一切書き換えない（#2367 issue コメントのトークン
  * 分離設計）。
+ *
+ * retry するのは `isRetriableObservationFailure` が true を返すもの（spawn
+ * 失敗・ネットワーク系）だけ。非 0 exit（本物の赤）と timeout kill は
+ * 1 回で確定させる。
+ *
+ * **試行をまたぐ絶対 deadline を持つ**（Codex レビュー P2、#2525）。各試行へ
+ * 同じ `OBSERVATION_COMMAND_TIMEOUT_MS` を与えると、retry 対象に分類される
+ * 遅い失敗（gh が 5xx を返すまで 235s 等）で 1 本が 240s × 3 を消費し、
+ * `WORST_CASE_OBSERVATION_MS` が主張する上限を破って job ごと SIGKILL される。
+ * kill されればサマリ 1 行も alert 起票も残らない。残余が尽きたら retry せず
+ * その時点の失敗を返す — 「retry しきれなかった」も観測失敗として
+ * `fetch-failed` へ落ちるので、無音にはならない。
  * @param {string} cmd
  * @param {string[]} args
- * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
+ * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, cwd?: string, retries?: number, sleepImpl?: (ms: number) => void, nowImpl?: () => number }} [opts]
  * @returns {{ ok: true, stdout: string } | { ok: false, error: unknown }}
  */
-export function execObservationCommand(cmd, args, { execFileImpl = execFileSync, env, cwd } = {}) {
-  try {
-    const stdout = execFileImpl(cmd, args, {
-      encoding: 'utf8',
-      env: env ?? process.env,
-      timeout: OBSERVATION_COMMAND_TIMEOUT_MS,
-      killSignal: 'SIGKILL',
-      ...(cwd ? { cwd } : {}),
-    });
-    return { ok: true, stdout };
-  } catch (error) {
-    logObservationFailure(cmd, args, error);
-    return { ok: false, error };
+export function execObservationCommand(
+  cmd,
+  args,
+  {
+    execFileImpl = execFileSync,
+    env,
+    cwd,
+    retries = OBSERVATION_COMMAND_RETRIES,
+    sleepImpl = sleepSync,
+    nowImpl = Date.now,
+  } = {},
+) {
+  let lastError;
+  // deadline は `WORST_CASE_OBSERVATION_MS`（timeout 1 本ぶん + retry の待ち
+  // 時間の合計）そのもの。これで「この関数の実時間は必ずこの定数以下」が
+  // 成り立ち、定数が主張する上限が実際の上限になる。
+  const deadline = nowImpl() + WORST_CASE_OBSERVATION_MS;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const remaining = deadline - nowImpl();
+    // 下限を割った残余で spawn しても必ず kill されるだけで、原因（lastError）
+    // を上書きして失うぶん有害。attempt 0 は残余 = 満額なので必ず実行される。
+    if (remaining < OBSERVATION_RETRY_MIN_ATTEMPT_MS) {
+      logObservationBudgetExhausted(cmd, args, { attempt: attempt + 1 });
+      break;
+    }
+    try {
+      const stdout = execFileImpl(cmd, args, {
+        encoding: 'utf8',
+        env: env ?? process.env,
+        // 残余へ切り詰める。速い失敗が続く通常系では実質フル timeout のまま。
+        timeout: Math.min(OBSERVATION_COMMAND_TIMEOUT_MS, remaining),
+        killSignal: 'SIGKILL',
+        ...(cwd ? { cwd } : {}),
+      });
+      return { ok: true, stdout };
+    } catch (error) {
+      lastError = error;
+      logObservationFailure(cmd, args, error, { attempt: attempt + 1, total: retries + 1 });
+      if (!isRetriableObservationFailure(error)) break;
+      if (attempt < retries) {
+        const delay = OBSERVATION_RETRY_BASE_DELAY_MS * (attempt + 1);
+        // 待ってから予算切れで即打ち切る、を避ける（待った時間ぶんだけ
+        // deadline を超過してしまう）。待つ価値が無いなら待たずに終える。
+        if (nowImpl() + delay >= deadline) {
+          logObservationBudgetExhausted(cmd, args, { attempt: attempt + 2 });
+          break;
+        }
+        sleepImpl(delay);
+      }
+    }
   }
+  return { ok: false, error: lastError };
 }
 
 // GitHub Actions の job log（private、常設運行記録 issue とは別の出力先）へ
@@ -243,10 +459,18 @@ function truncateForLog(text) {
     : text;
 }
 
-/** @param {string} cmd @param {string[]} args @param {unknown} error */
-function logObservationFailure(cmd, args, error) {
+/**
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {unknown} error
+ * @param {{ attempt?: number, total?: number }} [progress]
+ */
+function logObservationFailure(cmd, args, error, { attempt, total } = {}) {
   const classification = classifyGhError(error);
   const detailParts = [];
+  if (attempt !== undefined && total !== undefined && total > 1) {
+    detailParts.push(`attempt=${attempt}/${total}`);
+  }
   const message = /** @type {{ message?: unknown, stderr?: unknown }} */ (error)?.message;
   const stderr = /** @type {{ message?: unknown, stderr?: unknown }} */ (error)?.stderr;
   if (typeof message === 'string' && message.length > 0) {
@@ -262,6 +486,21 @@ function logObservationFailure(cmd, args, error) {
 }
 
 /**
+ * retry の絶対 deadline を使い切って打ち切ったことを job log へ残す
+ * （Codex レビュー P2、#2525）。無音で試行回数だけ減ると、後から
+ * 「retry したのに直らなかった」のか「retry する予算が無かった」のかを
+ * 区別できない。
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {{ attempt: number }} opts
+ */
+function logObservationBudgetExhausted(cmd, args, { attempt }) {
+  console.error(
+    `::warning::観測コマンドの retry 予算（${WORST_CASE_OBSERVATION_MS}ms）を使い切ったため attempt=${attempt} を実行せず打ち切りました: ${cmd} ${args.join(' ')}`,
+  );
+}
+
+/**
  * `execFileSync` が投げる Error のうち、「process を spawn できなかった」
  * （ENOENT 等、`error.status` が無い）ものだけを true にする。「process は
  * 起動して非 0 exit で終了した」（`error.status` に実際の exit code が入る）
@@ -272,6 +511,54 @@ function logObservationFailure(cmd, args, error) {
  */
 function isSpawnFailure(error) {
   return typeof (/** @type {{ status?: unknown }} */ (error)?.status) !== 'number';
+}
+
+/**
+ * `execFileSync` が timeout で子プロセスを kill した失敗か。
+ *
+ * **`error.killed` は見ない**（2026-09-01 実測、内製クロスレビュー
+ * risk-reviewer 指摘 high）。`execFileSync` は `spawnSync` の戻り値を error へ
+ * 写すだけで、そこに `killed` は含まれない。実測値:
+ *
+ *     execFileSync('sleep', ['5'], { timeout: 200, killSignal: 'SIGKILL' })
+ *     → { signal: 'SIGKILL', status: null, code: 'ETIMEDOUT' }（killed は undefined）
+ *
+ * `killed` を見ていた旧実装は timeout を常に「retry してよい」と誤判定し、
+ * 防ぐと宣言していた 240s × 3 をそのまま踏んでいた。
+ * @param {unknown} error
+ */
+function isTimeoutFailure(error) {
+  const e = /** @type {{ code?: unknown, signal?: unknown }} */ (error);
+  return e?.code === 'ETIMEDOUT' || e?.signal === 'SIGKILL';
+}
+
+/**
+ * `execObservationCommand` の retry 対象か（#2525）。
+ *
+ * **「一過性だと分類できた失敗」だけを retry する。** 判定は
+ * `classifyGhError`（gh / sentry の stderr・message を読む既存の分類器）に
+ * 委ね、`isSpawnFailure`（= `status` が数値でない）では切らない。
+ *
+ * spawn 失敗かどうかで切っていた旧実装は対象が反転していた（内製クロス
+ * レビュー risk-reviewer 指摘 medium、2026-09-01 実測で確定）: 吸収したい
+ * 失敗——gh の rate limit、GitHub の 5xx、DNS 一時失敗——は**プロセスが起動
+ * して非 0 exit する**ため `status: 1` になり retry されず、逆に retry しても
+ * 回復しない ENOENT と、retry してはいけない timeout だけが retry されていた。
+ *
+ *     execFileSync('gh', ['api', '<404 path>'])  → status: 1（数値）
+ *
+ * 現在の分類:
+ * - **timeout kill** → 対象外（`isTimeoutFailure`。job 予算を溶かす）
+ * - **rate-limited / network-error** → 対象。非 0 exit でも retry する
+ * - **それ以外**（本物の赤の非 0 exit、ENOENT、auth-error、invalid-response）
+ *   → 対象外。retry しても結果が変わらない。特に auth-error（token scope の
+ *   退行）は 3 回叩いても同じで、その夜のうちに起票されるべき異常
+ * @param {unknown} error
+ */
+function isRetriableObservationFailure(error) {
+  if (isTimeoutFailure(error)) return false;
+  const classification = classifyGhError(error);
+  return classification === 'rate-limited' || classification === 'network-error';
 }
 
 /**
@@ -299,10 +586,10 @@ function envWithout(...keys) {
  * SENTRY_AUTH_TOKEN がスナップショットに焼き込まれ、削除が無意味になる。
  * @param {string} command
  * @param {string[]} args
- * @param {{ execFileImpl?: ExecFileImpl, env: NodeJS.ProcessEnv }} opts
+ * @param {{ execFileImpl?: ExecFileImpl, env: NodeJS.ProcessEnv, sleepImpl?: (ms: number) => void }} opts
  */
-function checkExitCode(command, args, { execFileImpl, env }) {
-  const result = execObservationCommand(command, args, { execFileImpl, env });
+function checkExitCode(command, args, { execFileImpl, env, sleepImpl }) {
+  const result = execObservationCommand(command, args, { execFileImpl, env, sleepImpl });
   if (result.ok) return { status: 'green' };
   if (isSpawnFailure(result.error)) return { status: 'fetch-failed' };
   return { status: 'red' };
@@ -325,10 +612,10 @@ function parseNonNegativeInt(stdout) {
  * @param {string} command
  * @param {string[]} args
  * @param {number} baselineValue
- * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, parse: (stdout: string) => number }} opts
+ * @param {{ execFileImpl?: ExecFileImpl, env?: NodeJS.ProcessEnv, parse: (stdout: string) => number, sleepImpl?: (ms: number) => void }} opts
  */
-function checkCountBaseline(command, args, baselineValue, { execFileImpl, env, parse }) {
-  const result = execObservationCommand(command, args, { execFileImpl, env });
+function checkCountBaseline(command, args, baselineValue, { execFileImpl, env, parse, sleepImpl }) {
+  const result = execObservationCommand(command, args, { execFileImpl, env, sleepImpl });
   if (!result.ok) return { status: 'fetch-failed' };
   let actual;
   try {
@@ -358,6 +645,37 @@ const CONCLUSION_SEVERITY = [
   'neutral',
   'success',
 ];
+
+/**
+ * 複数 job の conclusion を 1 run 分の結論へ畳む（worst-of）。
+ *
+ * **初期値に `null` を渡す reduce にしない**（Codex 指摘 P2、2026-09-01 実測で
+ * 確定）。旧実装は
+ * `reduce((worst, c) => worst === null ? c : worseConclusion(worst, c), null)`
+ * で、`worst === null` を「初回かどうか」の番兵に使っていた。ところが
+ * **未完了 job の conclusion も `null`** なので、`[null, 'success']` の順で
+ * 畳むと 2 件目で番兵条件が再び真になり、`worseConclusion` を通さず
+ * `'success'` で上書きされる（実測: 畳んだ結論が `"success"`）。
+ *
+ * これは #2483 からの潜在バグだが、#2525 の stale 判定が
+ * 「窓内に `conclusion === 'success'` の run があるか」を根拠にしたことで
+ * 実害化した: heavy の E2E が何晩 stuck しても Web が success なら偽の
+ * success が毎晩記録され、stale へ倒れず永遠に無音になる。
+ *
+ * **この関数を export しているのは test から直接叩くため。** inline の reduce
+ * のままでは、`judgeWorkflowRun` 側の `status === 'completed'` ガードが
+ * 独立して同じ事故を防いでしまい、畳み込みの回帰を test で捕まえられない
+ * （実際、ガードだけ入れて reduce を旧実装へ戻しても test が全部通ることを
+ * 実測で確認した）。
+ * @param {(string | null)[]} conclusions
+ * @returns {string | null}
+ */
+export function foldJobConclusions(conclusions) {
+  if (conclusions.length === 0) {
+    throw new Error('conclusions は非空配列である必要があります');
+  }
+  return conclusions.reduce((worst, c, i) => (i === 0 ? c : worseConclusion(worst, c)));
+}
 
 export function worseConclusion(a, b) {
   const ai = CONCLUSION_SEVERITY.indexOf(a);
@@ -396,11 +714,11 @@ export function worseConclusion(a, b) {
  * @param {string[]} jobNames nightly.yml の対象 job の `name:` と完全一致
  *   させる（例: `['🎭 E2E Tests', '🌐 Web Build & E2E']`）。job 名を変えたら
  *   呼び出し側の定数も同時に変える。
- * @param {{ execFileImpl?: ExecFileImpl, now?: number, runListLimit?: number, targetCount?: number }} [opts]
+ * @param {{ execFileImpl?: ExecFileImpl, now?: number, runListLimit?: number, targetCount?: number, sleepImpl?: (ms: number) => void }} [opts]
  */
 export function checkWorkflowJobRun(
   jobNames,
-  { execFileImpl, now, runListLimit = 30, targetCount = 3 } = {},
+  { execFileImpl, now, runListLimit = 30, targetCount = 3, sleepImpl } = {},
 ) {
   const listResult = execObservationCommand(
     'gh',
@@ -415,7 +733,8 @@ export function checkWorkflowJobRun(
       '--json',
       'databaseId,createdAt,url',
     ],
-    { execFileImpl },
+    // env は既定（process.env）のまま。この 2 本は gh を呼ぶので GH_TOKEN が要る。
+    { execFileImpl, sleepImpl },
   );
   if (!listResult.ok) return { status: 'fetch-failed' };
 
@@ -428,27 +747,77 @@ export function checkWorkflowJobRun(
   if (!Array.isArray(runs) || runs.length === 0) return { status: 'fetch-failed' };
 
   const matched = [];
+  // 「対象 job を読めなかった run」の件数。stale 判定の根拠（窓内に success が
+  // 無い）を確定させてよいかの判断に使う。
+  let jobFetchFailures = 0;
+  // **失敗した位置**も控える（Codex 指摘 P2 第 3 ラウンド、#2525）。ループは
+  // 新しい順に走るので、`matched` がまだ空のうちに起きた失敗＝**採用する run
+  // より新しい** run が読めなかった、という意味になる。green を縮退させて
+  // よいのはこちらだけ。読めた最新 run が green の夜に、3 件そろえる途中の
+  // **より古い** run が 1 回 503 になっただけで縮退させると、不要な
+  // `nightwatch-fetch-failed` を毎回起票してしまう。
+  let jobFetchFailuresBeforeFirstMatch = 0;
+  const countJobFetchFailure = () => {
+    jobFetchFailures += 1;
+    if (matched.length === 0) jobFetchFailuresBeforeFirstMatch += 1;
+  };
   for (const run of runs) {
     if (matched.length >= targetCount) break;
     // gh run list の JSON 出力（GitHub API 由来）を信頼しているが、他 wrapper
     // （alert-issue.mjs の evidence-url 検証、strip-status-labels.mjs の
     // Number.isInteger）と同じ「値の形は使う直前に検証する」規約に揃える
     // （push前反証レビュー risk-reviewer 指摘、P2）。
+    // **ここは意図的に数えない**（内製クロスレビュー risk-reviewer 指摘 low、
+    // 推奨どおり挙動は変えずコメントで精度を合わせる）。gh の応答形が壊れて
+    // databaseId が整数でない run は黙って読み飛ばすため、下の
+    // `jobFetchFailuresBeforeFirstMatch` の不変条件（「matched が空のうちの失敗
+    // ＝採用 run より新しい run が読めなかった」）はこの経路を網羅しない。
+    // 既存 test が「不正な databaseId では gh api を呼ばず green のまま」を
+    // 固定しており、ここを数えると余分な fetch-failed 側へ倒れる。
     if (!Number.isInteger(run.databaseId)) continue;
     const jobsResult = execObservationCommand(
       'gh',
       ['api', `repos/${REPO}/actions/runs/${run.databaseId}/jobs`, '--jq', '.jobs'],
-      { execFileImpl },
+      // **この 1 本だけ retry しない**（内製クロスレビュー risk-reviewer 指摘）。
+      // このループは 1 check-id あたり最大 `runListLimit`（30）本の jobs 取得を
+      // 発行する。retry 対象を非 0 exit（rate-limited / network-error）へ広げた
+      // ため、GitHub の 5xx incident や secondary rate limit の夜は全 run が
+      // 失敗し、heavy-red + integration-red の 2 check だけで 180 本の API
+      // 呼び出しと 180s のスリープを追加で消費しうる。rate limit 中の即時
+      // retry はむしろ secondary rate limit を深める方向にも働く。
+      //
+      // **これで消えるのは「retry による 3 倍増幅」だけ**で、ループそのものの
+      // 乗算（最大 30 本 × 1 本あたり最大 240s）は残っている（内製クロス
+      // レビュー risk-reviewer 指摘 low）。gh が fail-fast に 5xx を返さず
+      // hang する夜は、retry の有無に関わらず job 予算を超えうる。観測フェーズ
+      // 全体の締切は別途設計する（この PR の scope 外）。
+      //
+      // 取りこぼしの補償: ここで諦めた run は `jobFetchFailures` に数えられ、
+      // 「異常なし」側の結論（green / stale-pending）を確定させない根拠になる
+      // （下の縮退判定）。したがって retry を外しても赤が無音化する方向へは
+      // 倒れない。
+      { execFileImpl, sleepImpl, retries: 0 },
     );
-    if (!jobsResult.ok) continue; // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）
+    if (!jobsResult.ok) {
+      // この run は諦めて次へ（1 run の一時失敗で全体を諦めない）。ただし
+      // 「読めなかった run がある」事実は控える — stale 判定は「窓内に success
+      // が無い」ことを根拠に赤へ倒すので、読めなかった run を「success では
+      // なかった」と同一視すると誤 red を出す（Codex 指摘 P2、実測確定）。
+      countJobFetchFailure();
+      continue;
+    }
 
     let jobs;
     try {
       jobs = JSON.parse(jobsResult.stdout);
     } catch {
+      countJobFetchFailure();
       continue;
     }
-    if (!Array.isArray(jobs)) continue;
+    if (!Array.isArray(jobs)) {
+      countJobFetchFailure();
+      continue;
+    }
 
     const targetJobs = jobs.filter(
       (j) => jobNames.includes(j?.name) && j?.conclusion !== 'skipped',
@@ -458,9 +827,8 @@ export function checkWorkflowJobRun(
     const status = targetJobs.some((j) => j.status !== 'completed')
       ? targetJobs.find((j) => j.status !== 'completed').status
       : 'completed';
-    const conclusion = targetJobs
-      .map((j) => j.conclusion)
-      .reduce((worst, c) => (worst === null ? c : worseConclusion(worst, c)), null);
+    // 畳み込みの正本は `foldJobConclusions`（番兵バグの経緯はそちらのコメント）。
+    const conclusion = foldJobConclusions(targetJobs.map((j) => j.conclusion));
     const earliestStartedAt = targetJobs
       .map((j) => j.started_at)
       .filter(Boolean)
@@ -478,6 +846,47 @@ export function checkWorkflowJobRun(
 
   const judged = judgeWorkflowRun(matched, { now });
   const latestUrl = matched[0]?.url;
+
+  // **読めなかった run があるなら「異常なし」側の結論を確定させない。**
+  // ただし縮退の根拠は結論ごとに違うので、数える失敗の範囲も分ける
+  // （Codex 指摘 P2 第 3 ラウンド、#2525。旧実装は両方を `jobFetchFailures`
+  // で見ており、「失敗は必ず採用 run と同じか新しい」と書いたコメントの主張が
+  // **誤りだった** — ループは 3 件そろうまで走るので、採用済みの最新 run より
+  // 古い run の失敗も同じ counter に入る）:
+  //
+  // - `green` → **採用した run より新しい** run が読めなかった時だけ縮退する
+  //   （`jobFetchFailuresBeforeFirstMatch`）。内製クロスレビュー risk-reviewer
+  //   指摘 medium の経路（最新 run の 1 回の 503 で前夜の success へ落ち、本物の
+  //   赤が緑になる）はこちらに入る。逆に、最新 run を green と読めた後で古い run
+  //   が 503 になっただけなら、その古い run の内容は green の根拠に効いていない
+  //   ので縮退させない（させると毎回不要な issue が立つ）
+  // - `stale-pending` の red → **どの位置の失敗でも**縮退する（`jobFetchFailures`）。
+  //   この判定は「窓内に success が 1 件も無い」を根拠にするため、古い success run
+  //   が読めなかっただけで誤 red になる（Codex 指摘 P2 第 1 ラウンド）
+  //
+  // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
+  // `nightwatch-fetch-failed` として起票されるので、朝には見える。
+  // 採用 run が terminal（`completed`）でない時は、green の根拠が matched[0] を
+  // 離れて**より古い run**（`hasRecentSuccess`）へ移る。この時だけは古い位置の
+  // 失敗も効くので総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。
+  //
+  // 該当するのは status が `completed` / `in_progress` / `queued` のどれでもない
+  // 値（`waiting` / `requested` 等）を取る class。`isLatestWorkflowRunPending` は
+  // in_progress / queued しか pending と見なさないため、`waiting` は pending にも
+  // ならず `latestNonSuccessTerminal` にもならない。実測では `development`
+  // environment の protection_rules は空（`gh api .../environments/development`）
+  // なので現状この経路は到達しないが、**protection rule を 1 つ足すだけで
+  // 到達可能になる**。repo 設定に安全性を依存させない。
+  const adoptedRunIsTerminal = matched[0]?.status === 'completed';
+  const degradeGreen =
+    judged.status === 'green' &&
+    (jobFetchFailuresBeforeFirstMatch > 0 || (!adoptedRunIsTerminal && jobFetchFailures > 0));
+  const degradeStale =
+    judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0;
+  if (degradeGreen || degradeStale) {
+    return { status: 'fetch-failed' };
+  }
+
   if (judged.status === 'pending') return { status: 'pending', evidenceUrl: latestUrl };
   if (judged.status === 'red')
     return { status: 'red', evidenceUrl: judged.evidenceUrl ?? latestUrl };
@@ -518,9 +927,9 @@ const SENTRY_QUERY_LIMIT = 100;
  * `env` は GH_TOKEN を持たない base（呼び出し元の `envWithoutGh`）を渡す —
  * この CLI は gh を必要としないため、issues:write 等を持つ既定トークンを
  * 見せる理由が無い（push 前反証レビュー risk-reviewer 指摘、medium）。
- * @param {{ execFileImpl?: ExecFileImpl, sentryToken?: string, env?: NodeJS.ProcessEnv }} [opts]
+ * @param {{ execFileImpl?: ExecFileImpl, sentryToken?: string, env?: NodeJS.ProcessEnv, sleepImpl?: (ms: number) => void }} [opts]
  */
-export function checkSentryNew({ execFileImpl, sentryToken, env = process.env } = {}) {
+export function checkSentryNew({ execFileImpl, sentryToken, env = process.env, sleepImpl } = {}) {
   const result = execObservationCommand(
     'sentry',
     [
@@ -535,7 +944,7 @@ export function checkSentryNew({ execFileImpl, sentryToken, env = process.env } 
       '--limit',
       String(SENTRY_QUERY_LIMIT),
     ],
-    { execFileImpl, env: { ...env, SENTRY_AUTH_TOKEN: sentryToken } },
+    { execFileImpl, env: { ...env, SENTRY_AUTH_TOKEN: sentryToken }, sleepImpl },
   );
   if (!result.ok) return { status: 'fetch-failed' };
   let issues;
@@ -575,19 +984,35 @@ export function buildAlertArgs(checkId, outcome) {
  * `SENTRY_EVIDENCE_RE`（alert-issue.mjs 側、複製しない）と一致せず throw
  * した場合に、evidence 無し（count のみ）で 1 回だけ再試行する
  * （#2367 issue コメントの設計判断）。
+ *
+ * **再試行は `isEvidenceValidationError` が true の時だけ**（Codex レビュー
+ * P2、#2525）。以前は `catch` があらゆる例外を拾っていたため、1 回目が
+ * `gh issue create` / `gh issue comment` で落ちた夜に次が起きた:
+ *
+ *   1. `runAlertSync` が dedup 成功 → `reserveAlertRunSlot` が `sentry-new`
+ *      を `actedCheckIds` へ記録 → `gh` が throw
+ *   2. ここで evidence 無しの再試行に入る
+ *   3. 2 回目の `reserveAlertRunSlot` は `actedCheckIds.includes('sentry-new')`
+ *      に当たり、**予算の残量に関係なく**必ず `{ action: 'capped' }` を返す
+ *   4. `capped` は「意図的な減衰」なので `isAlertDeliveryFailure` が false
+ *      → job は緑、alert issue も無し
+ *
+ * 赤を検出したのに痕跡がどこにも残らない、という本 PR が塞ごうとしている
+ * 無音そのものだった。gh 由来の例外は素通しして外側の catch
+ * （`alertPostFailed` 経由で非 0 exit）へ渡す。
  */
-function reportRedCheck(checkId, args, { execFileImpl, runStatePath } = {}) {
+export function reportRedCheck(checkId, args, { execFileImpl, runStatePath } = {}) {
   try {
     return runAlertSync({ checkId, args, execFileImpl, runStatePath });
   } catch (error) {
-    if (checkId === 'sentry-new' && args.evidence?.length > 0) {
+    if (checkId === 'sentry-new' && args.evidence?.length > 0 && isEvidenceValidationError(error)) {
       return runAlertSync({ checkId, args: { ...args, evidence: [] }, execFileImpl, runStatePath });
     }
     throw error;
   }
 }
 
-/** `runAlertSync` の戻り値を Step 5 の `results[]` エントリへ写像する。 */
+/** `runAlertSync` の戻り値を run サマリの `results[]` エントリへ写像する。 */
 function mapAlertResultToOutcome(checkId, alertResult) {
   if (alertResult.action === 'created' || alertResult.action === 'commented') {
     return { checkId, outcome: 'issue', issueNumber: alertResult.issueNumber };
@@ -599,16 +1024,30 @@ function mapAlertResultToOutcome(checkId, alertResult) {
   return { checkId, outcome: 'skipped', reason: 'dedup-search-failed' };
 }
 
-// #2422: fetch-failed（観測コマンド自体の取得失敗）の escalation lookback。
-// checkRecentFetchFailed は「直近 lookback 件の過去レポートすべてで同一
-// check-id が取得失敗だったか」を見るため、今回の失敗と合わせた合計は
-// lookback + 1 晩連続。heavy-red/integration-red の pending escalation
-// （checkRecentPending、既定 lookback 2）と同じ既定値を踏襲し、#2422 が
-// 提案する既定 3 晩連続と一致させる。
-const FETCH_FAILURE_ESCALATION_LOOKBACK = 2;
+/**
+ * この結果は「赤を検出したのに issue を残せなかった」か。
+ *
+ * `runAlertSync` / `runFetchFailureAlertSync` は dedup 検索（`gh issue list
+ * --search`）が失敗すると **throw せず** `{ action: 'skipped' }` を返す
+ * （fail closed で誤起票を避ける設計、alert-issue.mjs）。この戻り値を
+ * 「起票しなかった」で片付けると、gh 側の障害（token scope の退行・API
+ * incident・secondary rate limit）の夜に **本物の赤あり / issue ゼロ /
+ * job 緑** が成立する（内製クロスレビュー risk-reviewer 指摘、high）。
+ *
+ * #2525 より前はこの障害で Step 5（運行記録の gh 投稿）も一緒に失敗し、
+ * その非 0 exit が backstop になっていた。運行記録を廃止した以上、
+ * ここで明示的に拾わないと backstop が丸ごと消える。
+ *
+ * **`run-cap-reached` は対象外**。これは `MAX_NEW_ISSUES_PER_RUN` による
+ * 意図的な減衰であって障害ではない。
+ * @param {{ outcome: string, reason?: string }} entry
+ */
+function isAlertDeliveryFailure(entry) {
+  return entry.outcome === 'skipped' && entry.reason === 'dedup-search-failed';
+}
 
 /**
- * 1 check-id の観測結果を Step 3 の起票判断へつなげ、`failed` /
+ * 1 check-id の観測結果を起票判断へつなげ、`failed` /
  * `results` / `baselineRecommend` へ書き込む。
  * @param {string} checkId
  * @param {{ status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome
@@ -629,8 +1068,8 @@ function processCheckOutcome(
 ) {
   if (outcome.status === 'fetch-failed') {
     failed.push(checkId);
-    // #2422: fetch-failure escalation はここでは起票せず、全 check-id の
-    // red/pending 判定（下の他分岐）が終わってから、まとめて処理する。
+    // #2422: fetch-failure の起票はここでは行わず、全 check-id の red/pending
+    // 判定（下の他分岐）が終わってから、まとめて処理する。
     // 理由（push前反証レビュー指摘・P2、PR #2445）: `reserveAlertRunSlot` の
     // 新規起票上限（`MAX_NEW_ISSUES_PER_RUN`）は run 全体で共有されている。
     // CHECK_IDS の並び順（dependabot-alerts が heavy-red/integration-red より
@@ -638,6 +1077,8 @@ function processCheckOutcome(
     // 本物の CI 赤（heavy-red/integration-red）が `run-cap-reached` で
     // 起票されなくなる。夜勤の主目的（赤の起票）を副次目的（観測失敗の
     // 可視化）より優先するため、red/pending の予約を先に確定させる。
+    // **#2525 で「3 晩連続」の条件は外したが、この順序は維持する** — 起票が
+    // 当夜化したぶん fetch-failed が予算を取りにいく頻度はむしろ上がる。
     deferredFetchFailed.push(checkId);
     return;
   }
@@ -650,125 +1091,128 @@ function processCheckOutcome(
     baselineRecommend.push(checkId);
     return;
   }
-  let redOutcome = outcome;
   if (outcome.status === 'pending') {
-    let escalate = false;
-    try {
-      escalate = checkRecentPending(checkId, { execFileImpl }).consecutivePending;
-    } catch (error) {
-      console.error(
-        `::warning::${checkId} の pending escalation 判定に失敗しました（pending のまま扱います）:`,
-        error,
-      );
-    }
-    if (!escalate) {
-      results.push({ checkId, outcome: 'pending' });
-      return;
-    }
-    redOutcome = { status: 'red', evidenceUrl: outcome.evidenceUrl };
+    // 単発の pending（cron 遅延で観測時点にまだ走っている）は判定保留のまま
+    // 無音にする。連晩の stuck は `judgeWorkflowRun` の stale 判定が既に
+    // red へ倒しているため、ここへは来ない（#2525。旧 `checkRecentPending`
+    // による常設運行記録 issue のコメント列走査は廃止した）。
+    console.log(`::notice::${checkId}: 直近 run が未完了のため判定を保留しました`);
+    results.push({ checkId, outcome: 'pending' });
+    return;
   }
-  // redOutcome.status === 'red'
-  const alertArgs = buildAlertArgs(checkId, redOutcome);
+  // outcome.status === 'red'
+  const alertArgs = buildAlertArgs(checkId, outcome);
   try {
     const alertResult = reportRedCheck(checkId, alertArgs, { execFileImpl, runStatePath });
-    results.push(mapAlertResultToOutcome(checkId, alertResult));
+    const entry = mapAlertResultToOutcome(checkId, alertResult);
+    results.push(entry);
+    if (isAlertDeliveryFailure(entry)) {
+      // throw されない起票失敗（dedup 検索が落ちて fail closed で見送られた）。
+      // catch 節と同じ扱いへ倒さないと job が緑のまま赤が無音化する。
+      console.error(
+        `::error::${checkId} の赤を検出しましたが dedup 検索が失敗し起票を見送りました`,
+      );
+      alertPostFailed.push(checkId);
+    }
   } catch (error) {
     console.error(`::error::${checkId} の alert 投稿に失敗しました:`, error);
-    failed.push(checkId);
-    // 赤を検出したのに alert issue を起票できなかった、という夜勤の主目的
-    // に反する最悪の組み合わせ。`failed` への計上（観測未完了扱い・板note
-    // の「一部取得失敗」表示）は維持しつつ、job の成否には別途この配列で
-    // 反映する（Codex レビュー指摘・指揮台採用、PR #2380）。
-    // `runNightWatch` 側で Step 5（運行記録）の投稿後に非 0 exit へ倒す —
-    // Step 5 の記録自体は「alert 投稿が失敗した」事実も含めて必ず残す
-    // ため、先に exitCode を立てて Step 5 をスキップさせない。
+    // 赤を検出したのに alert issue を起票できなかった、という夜勤の主目的に
+    // 反する最悪の組み合わせ。job の成否へこの配列で反映する（Codex レビュー
+    // 指摘・指揮台採用、PR #2380）。`runNightWatch` 側で run サマリを job log
+    // へ出した後に非 0 exit へ倒す — 「alert 投稿が失敗した」事実そのものが
+    // サマリに残るよう、先に exitCode を立ててサマリを飛ばさない。
+    //
+    // **`failed` へは入れない**（内製クロスレビュー risk-reviewer 指摘 low）。
+    // ここへ来た時点で観測は成功している（赤だと分かっている）。`failed` を
+    // 観測失敗専用にしておかないと、サマリの「取得失敗」と「起票失敗」が
+    // 混ざり、gh 障害の夜に「観測は通ったが起票だけ落ちた」と読み違える。
     alertPostFailed.push(checkId);
   }
 }
 
 /**
  * `processCheckOutcome` が deferred した fetch-failed check-id を、全 check-id の
- * red/pending 判定が確定した後にまとめて処理する（#2422、P2 是正・PR #2445）。
+ * red 判定が確定した後にまとめて処理する（#2422、P2 是正・PR #2445）。
+ *
+ * **#2525 で「3 晩連続」の条件を外し、その夜のうちに起票するようにした。**
+ * 旧実装は `checkRecentFetchFailed` が常設運行記録 issue #2216 のコメント列を
+ * 走査して連晩を数えていたが、そのコメント自体を廃止したため成立しない。
+ * 一過性の失敗は `execObservationCommand` の run 内 retry
+ * （`isRetriableObservationFailure`）が吸収するので、ここへ来る時点で
+ * 「retry しても駄目だった」が確定している。既に open な escalation issue が
+ * あれば `runFetchFailureAlertSync` の dedup がコメント追記へ倒す。
  * @param {string} checkId
  * @param {{ execFileImpl?: ExecFileImpl, alertPostFailed: string[], results: unknown[], runStatePath?: string }} deps
  */
 function escalateFetchFailure(checkId, { execFileImpl, alertPostFailed, results, runStatePath }) {
-  let escalate = false;
-  try {
-    escalate = checkRecentFetchFailed(checkId, {
-      execFileImpl,
-      lookback: FETCH_FAILURE_ESCALATION_LOOKBACK,
-    }).consecutiveFetchFailed;
-  } catch (error) {
-    console.error(
-      `::warning::${checkId} の fetch-failure escalation 判定に失敗しました（escalate しません）:`,
-      error,
-    );
-    return;
-  }
-  if (!escalate) return;
   try {
     const alertResult = runFetchFailureAlertSync({
       checkId,
-      consecutiveNights: FETCH_FAILURE_ESCALATION_LOOKBACK + 1,
       execFileImpl,
       runStatePath,
     });
-    results.push(mapAlertResultToOutcome(checkId, alertResult));
+    const entry = mapAlertResultToOutcome(checkId, alertResult);
+    results.push(entry);
+    if (isAlertDeliveryFailure(entry)) {
+      console.error(
+        `::error::${checkId} の観測失敗を検出しましたが dedup 検索が失敗し起票を見送りました`,
+      );
+      alertPostFailed.push(checkId);
+    }
   } catch (error) {
     console.error(`::error::${checkId} の fetch-failure alert 投稿に失敗しました:`, error);
     alertPostFailed.push(checkId);
   }
 }
 
-/** Step 1（盤面起票）を実行し、run-log.mjs の `board` schema へ写像する。 */
-function runStep1Board({ execFileImpl } = {}) {
-  try {
-    const result = runBoardSync({ execFileImpl });
-    if (result.action === 'created') {
-      return { status: 'success', issueNumber: result.issueNumber };
-    }
-    if (result.reason === 'weekend') {
-      return { status: 'weekend' };
-    }
-    return { status: 'skip' };
-  } catch (error) {
-    return { status: 'fail', reason: classifyGhError(error) };
-  }
+/**
+ * run の結論を GitHub Actions の job log へ 1 行で残す（#2525）。
+ *
+ * 常設運行記録 issue #2216 への毎晩 1 コメントを廃止したため、「何件観測して
+ * 何件起票したか」を人が後から読める場所がここだけになる。緑の夜は issue が
+ * 1 件も増えないのが正常系なので、run ログにこの 1 行が無いことが「夜勤が
+ * 途中で死んだ」の signal になる（docs/operations/night-watch.md §故障検出手順）。
+ * @param {{ executed: number, failed: string[], results: { checkId: string, outcome: string }[] }} report
+ */
+export function buildRunSummaryLine({ executed, failed, results, alertPostFailed = [] }) {
+  const count = (fn) => results.filter(fn).length;
+  const issued = count((e) => e.outcome === 'issue');
+  const pending = count((e) => e.outcome === 'pending');
+  const capped = count((e) => e.outcome === 'skipped' && e.reason === 'run-cap-reached');
+  // `failed` は観測できなかった check-id 専用なのでそのまま数える。起票失敗は
+  // `alertPostFailed` が別に持つ（両方に入る組み合わせ——観測に失敗し、その
+  // 起票にも失敗した——は両方でカウントされるのが事実として正しい）。
+  const fetchFailed = new Set(failed).size;
+
+  // pending だけの夜（heavy-e2e が 04:00 時点でまだ走っている、という日常）を
+  // 「要確認」にしない。ここを厳しくすると verdict の識別力が落ちる。
+  const hasProblem =
+    fetchFailed > 0 ||
+    alertPostFailed.length > 0 ||
+    issued > 0 ||
+    capped > 0 ||
+    results.some((e) => e.outcome === 'skipped' && e.reason !== 'run-cap-reached');
+  const allGreen = !hasProblem && pending === 0;
+  const verdict = allGreen ? 'all green' : hasProblem ? '要確認' : '判定保留あり';
+
+  return [
+    `night-watch: ${verdict}`,
+    `観測 ${executed}/${CHECK_IDS.size}`,
+    `起票 ${issued}`,
+    `保留 ${pending}`,
+    `起票失敗 ${alertPostFailed.length}`,
+    `予算超過 ${capped}`,
+    `取得失敗 ${fetchFailed}`,
+  ].join(' | ');
 }
 
 /**
- * Step 4（DoD 監査候補選定）を実行する。`run-log.mjs` の `dod` schema には
- * `fail` 相当の状態が無い（既存 wrapper を無変更に保つ制約、#2367 issue
- * コメントで指揮台へ確認済み）ため、想定外の失敗は `status: 'none'` として
- * 報告した上で `dod4Failed: true` を返し、呼び出し元が job を fail させる
- * （事実と異なる 1 行が常設運行記録 issue に残る代わりに、job の赤で検出可能
- * にする設計判断）。
+ * 全 check-id を観測し、赤なら alert issue を起票する（#2525 で Step 1/4/5/6
+ * を廃止し、この 2 段だけになった）。alert 投稿の失敗（赤を検出したのに
+ * 起票できなかった）だけが非 0 exit の条件で、それ以外は緑で終える。
+ * @param {{ execFileImpl?: ExecFileImpl, now?: number, runStatePath?: string, sleepImpl?: (ms: number) => void }} [opts]
  */
-function runStep4Dod({ execFileImpl, randomImpl } = {}) {
-  try {
-    const result = runDodCandidateSelect({ execFileImpl, randomImpl });
-    if (result.reason === 'weekend') {
-      return { dod: { status: 'weekend' }, dod4Failed: false };
-    }
-    if (result.selected) {
-      return { dod: { status: 'candidate', prNumber: result.selected.number }, dod4Failed: false };
-    }
-    return { dod: { status: 'none' }, dod4Failed: false };
-  } catch (error) {
-    console.error('::error::Step 4（DoD候補選定）が失敗しました:', error);
-    return { dod: { status: 'none' }, dod4Failed: true };
-  }
-}
-
-/**
- * Step 1〜5 を順に実行する。各 Step は個別に失敗を許容し、Step 5（運行記録）
- * が必ず実行されるようにする。Step 5 自体の投稿失敗、または Step 4 の
- * 想定外失敗（schema 制約で報告内容が不正確になる、上記参照）は非 0 exit で
- * job を fail させる。
- * @param {{ execFileImpl?: ExecFileImpl, randomImpl?: () => number, now?: number, runStatePath?: string }} [opts]
- */
-export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = {}) {
+export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {}) {
   // トークン分離: NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN を
   // process.env から即座に取り除き、以降に spawn する pnpm 系コマンド
   // （docs:check 等、サードパーティ依存コードを大量実行する）から見えなく
@@ -789,8 +1233,6 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
 
   const baseline = readBaseline();
 
-  const board = runStep1Board({ execFileImpl });
-
   const failed = [];
   const alertPostFailed = [];
   const results = [];
@@ -798,13 +1240,22 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
 
   /** @type {Record<string, { status: string, actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }>} */
   const checkOutcomes = {
-    'docs-check': checkExitCode('pnpm', ['docs:check'], { execFileImpl, env: envWithoutGh }),
+    'docs-check': checkExitCode('pnpm', ['docs:check'], {
+      execFileImpl,
+      env: envWithoutGh,
+      sleepImpl,
+    }),
     'docs-coverage': checkCountBaseline('pnpm', ['docs:coverage'], baseline.docs_coverage_missing, {
       execFileImpl,
       env: envWithoutGh,
       parse: countDocsCoverageMissing,
+      sleepImpl,
     }),
-    deadcode: checkExitCode('pnpm', ['quality:deadcode:ci'], { execFileImpl, env: envWithoutGh }),
+    deadcode: checkExitCode('pnpm', ['quality:deadcode:ci'], {
+      execFileImpl,
+      env: envWithoutGh,
+      sleepImpl,
+    }),
     'dependabot-alerts': checkCountBaseline(
       'gh',
       ['api', 'repos/Dayopt/dayopt/dependabot/alerts?state=open', '--jq', 'length'],
@@ -813,6 +1264,7 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
         execFileImpl,
         env: { ...process.env, GH_TOKEN: dependabotToken },
         parse: parseNonNegativeInt,
+        sleepImpl,
       },
     ),
     // job 名は nightly.yml の該当 job の `name:` と完全一致させる
@@ -822,13 +1274,17 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     // ため、feature branch からの手動発火が直近 run を占有して main の赤を
     // 隠す・誤起票する事故を防ぐ（旧 heavy-post-merge.yml / integration.yml
     // と同じ理由、PR #2380 / #2333 の教訓を維持）。
-    'heavy-red': checkWorkflowJobRun(NIGHTLY_HEAVY_JOB_NAMES, { execFileImpl, now }),
-    'integration-red': checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now }),
-    'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh }),
+    'heavy-red': checkWorkflowJobRun(NIGHTLY_HEAVY_JOB_NAMES, { execFileImpl, now, sleepImpl }),
+    'integration-red': checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], {
+      execFileImpl,
+      now,
+      sleepImpl,
+    }),
+    'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh, sleepImpl }),
   };
 
-  // #2422 の P2 是正（PR #2445）: fetch-failed の escalation は他 check-id の
-  // red/pending 判定がすべて確定してから処理する（deferredFetchFailed に集める）。
+  // #2422 の P2 是正（PR #2445）: fetch-failed の起票は他 check-id の
+  // red 判定がすべて確定してから処理する（deferredFetchFailed に集める）。
   // 新規起票予算（reserveAlertRunSlot の run 全体共有カウンタ）を、慢性的な
   // 観測失敗より本物の CI 赤（heavy-red/integration-red）に優先して割り当てる。
   const deferredFetchFailed = [];
@@ -847,61 +1303,33 @@ export function runNightWatch({ execFileImpl, randomImpl, now, runStatePath } = 
     escalateFetchFailure(checkId, { execFileImpl, alertPostFailed, results, runStatePath });
   }
 
-  const executed = CHECK_IDS.size - failed.length;
+  // `failed` は**観測できなかった** check-id 専用（起票に失敗しただけの
+  // check-id は入らない — そちらは `alertPostFailed`）。観測失敗と起票失敗を
+  // 別々に数えないと、サマリ 1 行から原因を切り分けられない。
+  const executed = CHECK_IDS.size - new Set(failed).size;
 
-  const { dod, dod4Failed } = runStep4Dod({ execFileImpl, randomImpl });
+  const report = { executed, failed, results, baselineRecommend, alertPostFailed };
 
-  const report = { executed, failed, results, baselineRecommend, board, dod };
-  let step5Failed = false;
-  try {
-    runOpsLogReport({ report, execFileImpl, alertRunStatePath: runStatePath });
-  } catch (error) {
-    console.error('::error::Step 5（運行記録）の投稿に失敗しました:', error);
-    step5Failed = true;
+  // run の結論を job log へ残す（#2525）。**exitCode を立てる前に出す** —
+  // 先に倒して出力を飛ばすと、「赤を検出したのに起票できなかった」という
+  // 最も知りたい事実がどこにも残らなくなる（Step 5 の投稿順序について
+  // Codex が指摘した論点、PR #2380。出力先が issue から job log へ変わって
+  // も同じ理由が効く）。
+  console.log(buildRunSummaryLine(report));
+  if (baselineRecommend.length > 0) {
+    console.log(
+      `::notice::baseline 更新推奨（実測が baseline を下回りました）: ${baselineRecommend.join(', ')}`,
+    );
   }
 
-  try {
-    const allGreen = failed.length === 0 && results.every((entry) => entry.outcome === 'green');
-    const issued = results.filter((entry) => entry.outcome === 'issue').length;
-    runBoardNote({ note: { allGreen, issued, observed: executed }, execFileImpl });
-  } catch (error) {
-    // 当日盤面への 1 行は運行記録の補助であり、失敗しても運行記録自体は
-    // 落とさない（board の状態次第で当日盤面が無いのは正常系にも起こる —
-    // weekend や fail 時）。
-    console.error('board-note の投稿に失敗しました（非致命）:', error);
-  }
-
-  // Step 6（#2370）: 朝編成ブリーフ。観測データの機械整形のみで判断を含まない。
-  // 失敗しても他 Step の結果（運行記録・alert 起票）は既に確定しているため
-  // run 全体は失敗にしない（非致命）。ただし完全な無音は避ける —
-  // `::warning::` で GitHub Actions の annotation に残す（Codex レビュー
-  // 指摘、指揮台採用。issue #2367 コメント参照。蒸留層 #2372 の入力が
-  // 欠けても「ブリーフ無し」と「正常」を区別できるようにする。
-  // `process.exitCode` は立てない — Step 6 は観測の付加価値であり、夜勤
-  // 本体（Step 1〜5）の成否とは切り分ける）。
-  //
-  // `skipped` 経路（当日盤面 issue が無い、または既に投稿済み）も無音に
-  // しない。特に `no-board-issue` は Step 1（起票）の失敗を示唆しうるため、
-  // `::notice::` annotation を残す（PR #2380 クロスレビュー指摘、P3）。
-  try {
-    const briefResult = runMorningBrief({ execFileImpl, now });
-    if (briefResult.action === 'skipped') {
-      console.log(`::notice::朝編成ブリーフを skip しました（reason: ${briefResult.reason}）`);
-    }
-  } catch (error) {
-    console.error('::warning::朝編成ブリーフの投稿に失敗しました（非致命）:', error);
-  }
-
-  // alert 投稿失敗（赤を検出したのに alert issue を起票できなかった）は
-  // Step 5（運行記録）の投稿後に判定する。この順序が重要 — 先に exitCode
-  // を立てて Step 5 の実行自体を止めてしまうと、「alert 投稿が失敗した」
-  // という事実そのものが常設運行記録 issue に残らなくなる（Codex レビュー
-  // 指摘・指揮台採用、PR #2380）。
-  if (step5Failed || dod4Failed || alertPostFailed.length > 0) {
+  if (alertPostFailed.length > 0) {
+    console.error(
+      `::error::異常を検出しましたが alert issue を起票できませんでした: ${alertPostFailed.join(', ')}`,
+    );
     process.exitCode = 1;
   }
 
-  return { board, dod, report };
+  return { report };
 }
 
 function isDirectExecution() {

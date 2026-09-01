@@ -37,7 +37,7 @@
 
 ルート直下の `strategy.md` と `state.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う（docs-guard の `ROOT_STOCK_FILES`）。
 
-`strategy.md` / `state.md` / 日次盤面 issue は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは日次盤面 issue（`type:board`）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に盤面が動くたび古くなる（2026-08-20 に廃止した STATE.md と同じ失敗）。運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） が正本。
+`strategy.md` / `state.md` / issue・PR は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは **issue と PR 自身**（`status:*` ラベルと各 issue のコメント列）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に古くなる（2026-08-20 に廃止した STATE.md、および 2026-09-01 に廃止した日次盤面 issue と同じ失敗）。運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） が正本。
 
 ## 現在・履歴
 
