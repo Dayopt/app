@@ -29,7 +29,6 @@ export const PRESET_USER_SETTINGS = {
     showWeekends: true,
     showWeekNumbers: false,
     defaultDuration: 60,
-    snapInterval: 15 as const,
     defaultView: 'week',
     hourHeightDensity: 'default',
     planRecordMode: 'both',

@@ -9,7 +9,7 @@ import { dispatch } from './machine-test-helpers';
 import type { InteractionState } from './types';
 
 describe('Grid selection (mouse)', () => {
-  it('GRID_POINTER_DOWN → selecting with initial 15-min range', () => {
+  it('GRID_POINTER_DOWN → selecting with initial minimum-duration range', () => {
     const { state } = dispatch(IDLE, {
       type: 'GRID_POINTER_DOWN',
       point: { clientX: 100, clientY: 300 },
@@ -23,9 +23,9 @@ describe('Grid selection (mouse)', () => {
       expect(state.gridStartY).toBe(540);
       expect(state.selectionRange.start.getHours()).toBe(9);
       expect(state.selectionRange.start.getMinutes()).toBe(0);
-      // Minimum 15-min selection
+      // Minimum 5-min selection (MIN_TIMEBLOCK_DURATION_MINUTES)
       expect(state.selectionRange.end.getHours()).toBe(9);
-      expect(state.selectionRange.end.getMinutes()).toBe(15);
+      expect(state.selectionRange.end.getMinutes()).toBe(5);
     }
   });
 
@@ -189,11 +189,11 @@ describe('Upward selection', () => {
     });
 
     if (state.mode === 'selecting') {
-      // 上方向ドラッグは無視: 10:00 → 10:15（最低1スロット）
+      // 上方向ドラッグは無視: 10:00 → 10:05（最小ブロック長）
       expect(state.selectionRange.start.getHours()).toBe(10);
       expect(state.selectionRange.start.getMinutes()).toBe(0);
       expect(state.selectionRange.end.getHours()).toBe(10);
-      expect(state.selectionRange.end.getMinutes()).toBe(15);
+      expect(state.selectionRange.end.getMinutes()).toBe(5);
     }
   });
 });

@@ -62,13 +62,13 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
   **この集合は数え上げられない。** guard が見るのはコマンド文字列で、そこから shell の解釈を再現することはできない。静的に決まる quote 形式（`"` `'` `\`、`$'…'` / `$"…"` の literal）は正規化して追うが、**中身を展開しないと `--env-file` にならない形は追わない**。1 つ塞いでも同じ到達が別の形で作れる — 実測で、escape 展開を塞いでも `X=file; op run --env-$X=…` と wrapper script はどちらも通る。したがって escape 展開だけを塞ぐことに意味は無い。
 
-  **ここから先の権威は 2 つ**。実行時の中身検査（上記 1）が、どの書き方で辿り着いても最後に実ファイルを読む。そして `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と 1Password 側の承認が、production への操作そのものを止める。**hook はそこへ至る前のスピードバンプ**であって、意図的な回避の最終的な境界ではない。
+  **ここから先の権威は 2 つ**。実行時の中身検査（上記 1）が、どの書き方で辿り着いても最後に実ファイルを読む。そして `AGENTS.md` §シンプルルール の `EXPLICIT AUTHORITY` と 1Password 側の承認が、production への操作そのものを止める。**hook はそこへ至る前のスピードバンプ**であって、意図的な回避の最終的な境界ではない。
 
 - **inline env var 経由の `op://` 解決** — `VAR="op://…" op run -- <cmd>` の形は、env-file を経由しないため vault allowlist（env-file の中身検査）の対象外。`op run` は process env 中の参照も解決する。**これは意図的な受容**（機械で閉じるには hook がコマンド中の全 env 代入を解釈する必要があり、env-file 検査と同じ「regex で shell を再現できない」壁に当たる）。この形で human / ci を読むのは User の明示操作に限り、実効的な抑止は 1Password 側の承認プロンプトが担う。Service Account 導入の設計（[#2086](https://github.com/Dayopt/dayopt/issues/2086)）で機械的に閉じられるかを再訪する
 - **hook の cwd と実行時の cwd がずれる場合** — 中身の検査は hook の cwd から path を解決する。コマンド自身が `cd` する形は上記 2 で落とすが、tool 側の cwd が hook と異なる環境では検査対象と実際のファイルがずれうる
 - **tool 呼び出しをまたぐ書き換え** — 1 回目で書き、2 回目で消費する形は、2 回目の実行時検査が捕まえる（同一コマンド内は上記 2 が担当）
 
-**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ。`AGENTS.md §PR / git 運用` §Pause point）。production への操作を止める本体は `CLAUDE.md` §協働のかたち の `EXPLICIT AUTHORITY` と、1Password 側の承認。
+**hook はスピードバンプであって最終的な境界ではない**（`.husky/pre-push` と同じ位置づけ）。production への操作を止める本体は `AGENTS.md` §シンプルルール の `EXPLICIT AUTHORITY` と、1Password 側の承認。
 
 **guard script 自体が壊れた時の挙動は決定済み（2026-08-13、User 決定。[#1961](https://github.com/Dayopt/dayopt/issues/1961)）。** bash は構文エラーでも `exit 2` を返すため、単一ファイル構成では guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。
 
@@ -442,6 +442,8 @@ master へ値を戻す時は GUI か対象を限定した `op item create` / `op
 
 - **integration 注入（11 件）**: `POSTGRES_DATABASE` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` / `SUPABASE_JWT_SECRET` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`。Supabase↔Vercel Marketplace integration（configurationId `icfg_ZZhIJpCa3ksZJLqBXjg257gb`、slug: `supabase`）が Production へ自動注入する固定セットで、Supabase 公式仕様上 per-key の選択的無効化はできない（all-or-nothing）。同じ integration が Preview の PR Preview Branch credentials 注入（本節上部の Vercel Preview 記述）も担うため integration 自体の切断もできない。アプリコードからの参照は 0 件（`rg` で production runtime / build-gate / env.ts を確認）。**master は integration 自身とし、1Password には登録しない**。`scripts/tasks/env/check-vercel-replica.ts` の `allowedNonLedgerKeys` に理由付きで台帳化済み
 - **手動残骸（2 件、削除済み）**: `SUPABASE_URL` / `SUPABASE_ANON_KEY`。`configurationId` が無く、257 日前に手動作成された stray entry と判明（integration の 11 件は 73 日前）。既に台帳化済みの `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`（human/supabase）と意味的に重複し、アプリコードからの参照も 0 件だったため、2026-08-17 に Vercel Production から削除済み（User 裁可、指揮台実行）
+  - **追記（2026-08-31、[#2458](https://github.com/Dayopt/dayopt/issues/2458)）: `SUPABASE_ANON_KEY` は削除の 1 週間後に integration が再注入した。** `replica:check` の再 NG を受けて `configurationId` を実測したところ、上の 11 件と同じ `icfg_ZZhIJpCa3ksZJLqBXjg257gb` で、`createdAt` は 2026-08-24（11 件は 2026-06-04）。つまり Supabase 側の注入セットが 12 件へ増えた。削除しても戻るため、手動残骸の扱いをやめて `allowedNonLedgerKeys` へ移した。**master は integration 自身で、1Password には登録しない**（台帳には `NEXT_PUBLIC_SUPABASE_ANON_KEY` が human/supabase として既に存在し、二重 master を作らないため）。`SUPABASE_URL` は再注入されていない（2026-08-31 時点の production target に不在）
+  - integration 管理下の変数は **Vercel Dashboard の project env 一覧に現れない**（2026-08-31 実測。検索しても出ない）。由来の確認は `configurationId` を返す API でしか行えない: `curl -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v10/projects/product/env?teamId=$VERCEL_TEAM_ID"` を `jq` で `key` / `type` / `configurationId` / `createdAt` に射影する（値は射影しない）
 
 **preview target には同名 `SUPABASE_URL` / `SUPABASE_ANON_KEY` が integration 注入として存在し続ける**（`configurationId` 一致で確認）。production target の手動残骸を削除しただけで、preview 側の integration 注入分は対象外・維持。`replica:check` は production target だけを見る設計のため影響しない。
 

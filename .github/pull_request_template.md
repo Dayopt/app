@@ -30,7 +30,7 @@
 
 ## Rollback・外部状態
 
-<!-- rollback不能な変更、外部サービスやproduction state、段階展開の有無を書く。`scripts/ci/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml` に触れる場合は trusted dispatch が必要（`AGENTS.md §PR / git 運用` §指揮台の merge シーケンス）。該当なしなら「なし」。 -->
+<!-- rollback不能な変更、外部サービスやproduction state、段階展開の有無を書く。`scripts/ci/production-config-audit.mjs` / 各 `production-build-gate.mjs` / `production-config-audit.yml` に触れる場合は trusted dispatch が必要（`production-config-audit.yml` の self-change 検出を参照）。該当なしなら「なし」。 -->
 
 ## 例外・後続対応
 

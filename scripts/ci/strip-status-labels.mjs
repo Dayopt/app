@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
 
 import { isDirectExecution } from '../lib/is-direct-execution.mjs';
 
@@ -134,6 +135,78 @@ export function collectBulkTargets({ execFileImpl } = {}) {
   return [...numbers].sort((a, b) => a - b);
 }
 
+/**
+ * bulk 実行の既定の時間予算（秒）。`nightly.yml` の `timeout-minutes: 10` に対して
+ * 2 分の余白を残す。余白が要るのは、予算は「次の 1 件を始めてよいか」の判定にしか
+ * 使えないため — 予算ちょうどにすると最後の 1 件の処理中に job timeout の SIGKILL が
+ * 来て、打ち切り報告そのものが出力されずに終わる（#2506 が塞ぐ元の症状と同じ）。
+ */
+export const DEFAULT_BULK_BUDGET_SECONDS = 480;
+
+/**
+ * 対象 issue を時間予算内で順に処理する。予算を使い切ったら**次の 1 件を始めずに**
+ * 打ち切り、どこまで進んだかを返す。
+ *
+ * 打ち切りを例外にしないのは、進捗が出ている以上これは失敗ではなく「1 晩で終わら
+ * なかった」だけだから（backstop sweep は翌晩に続きを拾える）。ただし黙って終わる
+ * と #2506 の元の症状に戻るため、呼び出し側が `remaining > 0` を必ず可視化する。
+ *
+ * @param {{
+ *   targets: number[],
+ *   budgetSeconds?: number,
+ *   nowImpl?: () => number,
+ *   stripImpl?: (issueNumber: number) => string[],
+ *   logImpl?: (message: string) => void,
+ * }} opts
+ * @returns {{ processed: number, remaining: number, lastProcessed: number | undefined }}
+ */
+export function runBulkStrip({
+  targets,
+  budgetSeconds = DEFAULT_BULK_BUDGET_SECONDS,
+  nowImpl = Date.now,
+  stripImpl = stripStatusLabelsForIssue,
+  logImpl = console.log,
+}) {
+  const startedAt = nowImpl();
+  const budgetMs = budgetSeconds * 1000;
+  let processed = 0;
+  /** @type {number | undefined} */
+  let lastProcessed;
+
+  for (const issueNumber of targets) {
+    if (nowImpl() - startedAt >= budgetMs) break;
+    const stripped = stripImpl(issueNumber);
+    processed += 1;
+    lastProcessed = issueNumber;
+    logImpl(
+      `[${processed}/${targets.length}] #${issueNumber}: ${
+        stripped.length > 0 ? stripped.join(', ') : '対象なし'
+      }`,
+    );
+  }
+
+  return { processed, remaining: targets.length - processed, lastProcessed };
+}
+
+/**
+ * 打ち切り時の報告を組み立てる。再開コマンドをそのまま貼れる形で含める
+ * （`--resume-from` は `n > resumeFrom` の filter なので、最後に処理した番号を
+ * そのまま渡せば続きから再開する）。
+ * @param {{ processed: number, remaining: number, lastProcessed: number | undefined }} result
+ * @returns {string}
+ */
+export function formatBulkInterruption({ processed, remaining, lastProcessed }) {
+  const resumeCommand =
+    lastProcessed === undefined
+      ? 'node scripts/ci/strip-status-labels.mjs bulk --execute'
+      : `node scripts/ci/strip-status-labels.mjs bulk --execute --resume-from ${lastProcessed}`;
+  const progress =
+    processed === 0
+      ? '時間予算内に 1 件も処理できませんでした（1 件あたりの所要時間が予算を超えている可能性があります）。'
+      : `時間予算に達したため ${processed} 件で打ち切りました。`;
+  return `${progress} 残り ${remaining} 件。続きは次回の sweep が拾いますが、今すぐ流し切る場合:\n\n    ${resumeCommand}\n`;
+}
+
 if (isDirectExecution(import.meta.url)) {
   const [subcommand, ...rest] = process.argv.slice(2);
   try {
@@ -156,6 +229,13 @@ if (isDirectExecution(import.meta.url)) {
         throw new Error(`--resume-from の値が不正です: ${rest[resumeFromArgIndex + 1]}`);
       }
 
+      const budgetArgIndex = rest.indexOf('--budget-seconds');
+      const budgetSeconds =
+        budgetArgIndex >= 0 ? Number(rest[budgetArgIndex + 1]) : DEFAULT_BULK_BUDGET_SECONDS;
+      if (budgetArgIndex >= 0 && (!Number.isFinite(budgetSeconds) || budgetSeconds <= 0)) {
+        throw new Error(`--budget-seconds の値が不正です: ${rest[budgetArgIndex + 1]}`);
+      }
+
       console.log(`対象を検索中（${KNOWN_STATUS_LABELS.join(', ')} を持つ closed issue）...`);
       const targets = collectBulkTargets();
       const scoped = resumeFrom ? targets.filter((n) => n > resumeFrom) : targets;
@@ -170,21 +250,27 @@ if (isDirectExecution(import.meta.url)) {
           `dry-run 結果: ${scoped.length} 件が対象。実行するには --execute を付けてください。`,
         );
       } else {
-        let done = 0;
-        for (const issueNumber of scoped) {
-          const stripped = stripStatusLabelsForIssue(issueNumber);
-          done += 1;
+        const result = runBulkStrip({ targets: scoped, budgetSeconds });
+        if (result.remaining === 0) {
+          console.log(`完了: ${result.processed} 件処理しました。`);
+        } else {
+          // 打ち切りは失敗ではない（進捗は出ている）ので exit 0 のままにするが、
+          // 黙って終わると #2506 の元の症状に戻る。annotation と Step Summary の
+          // 両方へ残件と再開コマンドを出す。
+          const report = formatBulkInterruption(result);
+          console.log(report);
           console.log(
-            `[${done}/${scoped.length}] #${issueNumber}: ${
-              stripped.length > 0 ? stripped.join(', ') : '対象なし'
-            }`,
+            `::warning::status ラベル sweep を打ち切りました（残り ${result.remaining} 件）`,
           );
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          if (summaryPath) {
+            appendFileSync(summaryPath, `## status ラベル batch sweep\n\n${report}\n`);
+          }
         }
-        console.log(`完了: ${done} 件処理しました。`);
       }
     } else {
       console.error(
-        'Usage: node scripts/ci/strip-status-labels.mjs <on-close <issue番号> | bulk [--execute] [--resume-from <issue番号>]>',
+        'Usage: node scripts/ci/strip-status-labels.mjs <on-close <issue番号> | bulk [--execute] [--resume-from <issue番号>] [--budget-seconds <秒>]>',
       );
       process.exitCode = 1;
     }

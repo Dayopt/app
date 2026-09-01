@@ -50,7 +50,6 @@ export function useUserSettings() {
         dbInput.showWeekNumbers = settings.showWeekNumbers;
       if (settings.defaultDuration !== undefined)
         dbInput.defaultDuration = settings.defaultDuration;
-      if (settings.snapInterval !== undefined) dbInput.snapInterval = settings.snapInterval;
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)
         dbInput.hourHeightDensity = settings.hourHeightDensity;

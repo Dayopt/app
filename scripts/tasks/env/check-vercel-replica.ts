@@ -69,6 +69,13 @@ export const allowedNonLedgerKeys: ReadonlyMap<string, string> = new Map<string,
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
     'Supabase↔Vercel integration 自動注入。アプリ未参照（#2094）',
   ],
+  // #2094 では configurationId が無い「手動残骸」と判定して 2026-08-17 に削除したが、
+  // 2026-08-24 に同じ integration（icfg_ZZhIJpCa3ksZJLqBXjg257gb）が再注入した。
+  // 注入セットが 11 件から増えた形で、削除しても戻るため allowlist へ移す（#2458）。
+  [
+    'SUPABASE_ANON_KEY',
+    'Supabase↔Vercel integration 自動注入（2026-08-24 に再注入）。アプリ未参照（#2094 / #2458）',
+  ],
 ]);
 
 export type EnvKeyEntry = { key: string; targets: string[] };

@@ -724,7 +724,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 
 // worktree 外ファイル編集ガード（2026-08-24, #2359）。
 // レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
-// §Writer ownership）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
+// の writer 4 条件）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
 // working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
 describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
   let fixtureRoot: string;
@@ -1632,5 +1632,31 @@ describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持�
 
   it('代替経路（op item get --fields、既定形式）は影響を受けない', () => {
     expect(runGuard(bash('op item get "human/supabase" --fields password'))).toBe('allow');
+  });
+});
+
+describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#2510、.sql 限定）', () => {
+  // migrations 配下ガードは「適用済み migration の書き換え」を防ぐもの。
+  // 判定が prefix 一致だけだと、配下のポインタ用 markdown（CLAUDE.md）まで
+  // 編集不能＋的外れなエラー案内になるため、対象を .sql に限定した。
+  const existingSql = resolve(rootDir, 'supabase/migrations/00000000000000_baseline.sql');
+  const pointerMd = resolve(rootDir, 'supabase/migrations/CLAUDE.md');
+
+  it('既存 .sql への Edit は引き続き block する', () => {
+    expect(runGuard(edit(existingSql, 'DROP TABLE x;'))).toBe('block');
+  });
+
+  it('既存 .sql への Write も引き続き block する', () => {
+    expect(runGuard(write(existingSql, 'DROP TABLE x;'))).toBe('block');
+  });
+
+  it('配下の非 SQL（CLAUDE.md、既存）への Edit は allow する', () => {
+    expect(runGuard(edit(pointerMd, 'ポインタ更新'))).toBe('allow');
+  });
+
+  it('新規 .sql の作成（未存在ファイルへの Write）は引き続き allow する', () => {
+    expect(
+      runGuard(write(resolve(rootDir, 'supabase/migrations/99999999999999_new.sql'), 'SELECT 1;')),
+    ).toBe('allow');
   });
 });

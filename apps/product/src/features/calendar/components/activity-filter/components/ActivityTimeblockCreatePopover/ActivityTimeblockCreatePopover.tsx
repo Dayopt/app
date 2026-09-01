@@ -29,12 +29,12 @@ import {
   type ActivityEntryCreateFormProps,
 } from './ActivityTimeblockCreateForm';
 
-/** 開始時刻の default: today なら現在時刻を次の 15 分境界に ceil、それ以外は 09:00 */
+/** 開始時刻の default: today なら現在時刻を次の 1 分境界に ceil、それ以外は 09:00 */
 function defaultStartHHMM(forDate: Date): string {
   const now = new Date();
   if (isSameDay(forDate, now)) {
-    const FIFTEEN_MIN_MS = 15 * 60 * 1000;
-    const ceiled = new Date(Math.ceil(now.getTime() / FIFTEEN_MIN_MS) * FIFTEEN_MIN_MS);
+    const ONE_MIN_MS = 60 * 1000;
+    const ceiled = new Date(Math.ceil(now.getTime() / ONE_MIN_MS) * ONE_MIN_MS);
     const h = String(ceiled.getHours()).padStart(2, '0');
     const m = String(ceiled.getMinutes()).padStart(2, '0');
     return `${h}:${m}`;

@@ -5,6 +5,7 @@
  * React/DOM 依存ゼロの純粋関数のみ。
  */
 
+import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../precision';
 import { snapToGrid } from './time-math';
 import type { InteractionContext, Point, TimeRange } from './types';
 
@@ -53,12 +54,13 @@ export function ensureEndAfterStartSnap(
   hourHeight: number,
   intervalMin: number,
 ): GridSnap {
-  if (endSnap.snappedTop > startSnap.snappedTop) return endSnap;
-
+  const minDurationMin = Math.max(intervalMin, MIN_TIMEBLOCK_DURATION_MINUTES);
   const minEndTop = Math.min(
     24 * hourHeight,
-    startSnap.snappedTop + (hourHeight / 60) * intervalMin,
+    startSnap.snappedTop + (hourHeight / 60) * minDurationMin,
   );
+  if (endSnap.snappedTop >= minEndTop) return endSnap;
+
   return snapEndToGrid(minEndTop, hourHeight, intervalMin);
 }
 
@@ -75,7 +77,7 @@ export function buildDragTimeRange(
   end.setHours(endSnap.hour, endSnap.minute, 0, 0);
 
   if (end.getTime() <= start.getTime()) {
-    end.setTime(start.getTime() + intervalMin * 60_000);
+    end.setTime(start.getTime() + Math.max(intervalMin, MIN_TIMEBLOCK_DURATION_MINUTES) * 60_000);
   }
 
   return { start, end };

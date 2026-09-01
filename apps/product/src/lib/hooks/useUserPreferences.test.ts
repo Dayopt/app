@@ -9,7 +9,6 @@ const SETTINGS = {
   showWeekends: true,
   showWeekNumbers: true,
   defaultDuration: 30,
-  snapInterval: 5 as const,
   defaultView: 'week' as const,
   hourHeightDensity: 'default' as const,
   theme: 'system' as const,
@@ -29,7 +28,6 @@ describe('toUserPreferences', () => {
       weekStartsOn: 0,
       showWeekNumbers: true,
       defaultDuration: 30,
-      snapInterval: 5,
     });
   });
 
@@ -40,7 +38,6 @@ describe('toUserPreferences', () => {
       weekStartsOn: 1,
       showWeekNumbers: false,
       defaultDuration: 60,
-      snapInterval: 15,
     });
   });
 });

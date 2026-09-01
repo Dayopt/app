@@ -43,7 +43,7 @@ export function toPublicRecordRow(row: Row<'records'>): PublicRecordRow {
 }
 
 export const publicUserSettingsSelect =
-  'id, user_id, timezone, time_format, week_starts_on, show_weekends, show_week_numbers, default_duration, snap_interval, default_view, hour_height_density, theme, personalization, preferred_locale, ical_feed_token, created_at, updated_at' as const;
+  'id, user_id, timezone, time_format, week_starts_on, show_weekends, show_week_numbers, default_duration, default_view, hour_height_density, theme, personalization, preferred_locale, ical_feed_token, created_at, updated_at' as const;
 
 export type PublicUserSettingsRow = Pick<
   Row<'user_settings'>,
@@ -55,7 +55,6 @@ export type PublicUserSettingsRow = Pick<
   | 'show_weekends'
   | 'show_week_numbers'
   | 'default_duration'
-  | 'snap_interval'
   | 'default_view'
   | 'hour_height_density'
   | 'theme'

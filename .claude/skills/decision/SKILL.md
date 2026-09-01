@@ -1,5 +1,6 @@
 ---
 name: decision
+user_invocable: true
 description: ユーザーが意思決定ログの作成を明示依頼した時、または `/decision` として明示起動された時に発動。`docs/decisions.md`（全決定の時系列索引、append-only）へ1行追記し、該当ストック（state.md / AGENTS.md / 該当 docs）の編集を同じ変更に含める。技術判断・プロダクト判断・事業判断を区別せず同じ索引を使う。調査・監査・feedback・incidentなど時点ものの記録（GitHub issue の領域）では発動しない。
 ---
 

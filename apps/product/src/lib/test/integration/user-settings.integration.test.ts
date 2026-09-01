@@ -215,12 +215,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
 
       await caller.update({
         defaultDuration: 60,
-        snapInterval: 15,
       });
 
       const settings = await caller.get();
       expect(settings?.defaultDuration).toBe(60);
-      expect(settings?.snapInterval).toBe(15);
     });
 
     it('should update theme settings', async () => {
@@ -274,17 +272,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       await expect(
         caller.update({
           defaultDuration: 500, // maximum is 480
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should reject invalid snap interval', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await expect(
-        caller.update({
-          // @ts-expect-error - Testing invalid input
-          snapInterval: 20, // only 5, 10, 15, 30 allowed
         }),
       ).rejects.toThrow();
     });

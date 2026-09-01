@@ -74,7 +74,6 @@ vi.mock('@/lib/hooks/useUserPreferences', () => ({
     weekStartsOn: 1,
     showWeekNumbers: false,
     defaultDuration: 60,
-    snapInterval: 15,
   }),
 }));
 
@@ -86,7 +85,6 @@ const DB_SETTINGS = {
   showWeekends: true,
   showWeekNumbers: false,
   defaultDuration: 30,
-  snapInterval: 15,
   defaultView: 'week',
   hourHeightDensity: 'comfortable',
 };

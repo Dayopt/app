@@ -12,7 +12,7 @@
 #   ④ リモート branch 消滅（fetch --prune で確認）
 #   ⑤ ローカル main ref が origin/main と一致
 #
-# 詳細な設計と手動フォールバックは AGENTS.md §PR / git 運用 §Worktree 運用 を参照。
+# 詳細な設計と手動フォールバックは AGENTS.md §PR / git 運用 を参照。
 
 set -euo pipefail
 
@@ -324,7 +324,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # **product / web の build は Vercel でしか検証されない。** Actions 側の無条件
   # build は 2026-08-03 に撤去し、Next build と bundle 検査（secret 混入 /
   # JS budget / CSS budget）は `apps/product/vercel.json` の buildCommand へ移した
-  # （`AGENTS.md §PR / git 運用` §build と bundle 検査は Vercel 側で走る）。
+  # （build と bundle 検査は Vercel 側で走る）。
   #
   # このため affected な project の context が **付かなかった場合**、上の「成功 1 件
   # 以上」は Static / Unit / Docs Guard だけで満たされ、build が一度も走らないまま
@@ -514,7 +514,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # レビュー（内製クロスレビュー等）の指摘 thread が未解決のまま merge できると、指摘の
   # 黙殺が構造的に可能になる。「解決」は 3 択のいずれか: ① fix を積んで resolve、
   # ② 反論・根拠を reply して resolve、③ 別 issue へ切り出し番号を reply して
-  # resolve（`AGENTS.md §PR / git 運用` §レビュー指摘の必須解決）。
+  # resolve（`AGENTS.md §PR / git 運用` §レビュー）。
   #
   # thread の resolve 状態は GraphQL の reviewThreads にしか無い（REST には出ない）。
   # 取得に失敗した場合は「未確認のまま通す」ではなく停止に倒す（fail closed）。

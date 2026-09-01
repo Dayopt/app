@@ -137,7 +137,7 @@ guard_path_belongs_to_current_root() {
 if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "MultiEdit" ] || [ "$TOOL_NAME" = "NotebookEdit" ]; then
   # --- worktree 外ファイル編集ガード（2026-08-24, #2359）---
   # レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
-  # §Writer ownership）。scratchpad・memory 等 repo 外は対象外（許可）。
+  # の writer 4 条件）。scratchpad・memory 等 repo 外は対象外（許可）。
   #
   # Write/Edit tool は絶対パスを要求する仕様だが、guard としてそれを信頼せず
   # 正規化する（`..` を含む形や相対パスでのすり抜けを防ぐ、push 前反証レビュー
@@ -171,7 +171,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
     # ファイルを指す symlink（basename 側）を事前に作っておけば、その
     # symlink への Write は境界を越えて書ける。この経路は敵対的な自己攻撃
     # にしか使えず（他人が事前に自分の worktree に symlink を仕込むことは
-    # できない）、Writer ownership guard が防ぐ「事故」の脅威モデルの外。
+    # できない）、worktree 外編集ガードが防ぐ「事故」の脅威モデルの外。
     guard_dir_part=$(dirname "$FILE_PATH")
     guard_base_part=$(basename "$FILE_PATH")
     guard_resolved_dir=$(cd "$guard_dir_part" 2> /dev/null && pwd -P)
@@ -186,7 +186,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
       # を判定する（指揮台が他レーンへ書き込む場合も、レーンが他レーンへ
       # 書き込む場合も、同じ判定で一律に閉じる。物理配置に依存しない）。
       if ! guard_path_belongs_to_current_root "$GUARD_NORMALIZED_FILE_PATH"; then
-        echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（AGENTS.md §委任・報告の作法 §Writer ownership、AGENTS.md §PR / git 運用 §main checkout の役割）" >&2
+        echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（AGENTS.md §委任・報告の作法 の writer 4 条件、AGENTS.md §PR / git 運用）" >&2
         exit 2
       fi
     fi
@@ -257,8 +257,10 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
       ;;
   esac
 
-  # 既存マイグレーションファイルの変更（新規作成は許可）
-  if echo "$FILE_PATH" | grep -q "supabase/migrations/"; then
+  # 既存マイグレーションファイルの変更（新規作成は許可）。
+  # 対象は .sql のみ — migrations 配下のポインタ用 markdown（CLAUDE.md 等）は
+  # 適用済み migration ではないので編集を許す（#2510）。
+  if echo "$FILE_PATH" | grep -q "supabase/migrations/.*\.sql$"; then
     if [ -f "$FILE_PATH" ]; then
       echo "BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください" >&2
       exit 2
@@ -291,7 +293,7 @@ is_single_simple_command() {
 # チップ起票（spawn_task）は指揮台セッションの専権。レーン（worktree の作業
 # セッション）が直接 User へチップを出すと、triage の判断が User へ飛んでしまう。
 # レーンは「issue 化 + 指揮台へ send_message」に一本化する
-# （dispatch skill（旧 orchestration.md、#2479 で再編） §盤面の正本は issue + open PR、§レーンの連絡規律）。
+# （`dispatch` skill 冒頭「正（source of truth）」— 状態は issue / PR 自身が持つ）。
 #
 # 判定は「指揮台にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
 # path の慣習では見ない — 慣習の外に置かれた worktree が main checkout と区別
@@ -299,7 +301,7 @@ is_single_simple_command() {
 #
 # 見ているのは **worktree の構造** であって branch ではない。主 clone で feature
 # branch を直接 checkout していても「指揮台」と判定する。これは意図的で、
-# その状態は `AGENTS.md §PR / git 運用` §main checkout の役割 が既に禁じている
+# その状態は `AGENTS.md §PR / git 運用` の worktree 運用が既に禁じている
 # 別の規律違反であり、このガードの担当範囲ではない。
 if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
   # 「指揮台だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /

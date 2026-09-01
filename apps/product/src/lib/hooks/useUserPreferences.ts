@@ -15,7 +15,6 @@ export interface UserPreference {
   weekStartsOn: 0 | 1 | 6;
   showWeekNumbers: boolean;
   defaultDuration: number;
-  snapInterval: 5 | 10 | 15 | 30;
 }
 
 type UserSettingsData = inferRouterOutputs<AppRouter>['userSettings']['get'];
@@ -33,7 +32,6 @@ export function toUserPreferences(settings: UserSettingsData | undefined): UserP
       weekStartsOn: 1,
       showWeekNumbers: false,
       defaultDuration: 60,
-      snapInterval: 15,
     };
   }
 
@@ -44,7 +42,6 @@ export function toUserPreferences(settings: UserSettingsData | undefined): UserP
     weekStartsOn: settings.weekStartsOn,
     showWeekNumbers: settings.showWeekNumbers,
     defaultDuration: settings.defaultDuration,
-    snapInterval: settings.snapInterval,
   };
 }
 

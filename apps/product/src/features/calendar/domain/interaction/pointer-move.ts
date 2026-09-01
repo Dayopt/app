@@ -2,6 +2,7 @@
  * Interaction State Machine — POINTER_MOVE handler (per-mode routing)
  */
 
+import { crossedHapticBoundary, MIN_TIMEBLOCK_DURATION_MINUTES } from '../precision';
 import {
   buildDragTimeRange,
   buildSelectionRange,
@@ -106,7 +107,9 @@ export function handlePointerMove(
         'drag',
       );
 
-      if (startSnap.snappedTop !== state.snappedTop) {
+      const prevStartMinutes = Math.round((state.snappedTop / ctx.hourHeight) * 60);
+      const nextStartMinutes = startSnap.hour * 60 + startSnap.minute;
+      if (crossedHapticBoundary(prevStartMinutes, nextStartMinutes)) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
       }
       effects.push({ type: 'DRAG_STORE_UPDATE', targetDateIndex });
@@ -126,7 +129,7 @@ export function handlePointerMove(
 
     case 'resizing': {
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const minHeight = (ctx.hourHeight / 60) * interval;
+      const minHeight = (ctx.hourHeight / 60) * Math.max(interval, MIN_TIMEBLOCK_DURATION_MINUTES);
       const resizeMinEndMinutes = ctx.getResizeMinEndMinutes?.(state.timeblockId) ?? null;
       const resizeMinEndTop =
         resizeMinEndMinutes == null
@@ -149,7 +152,11 @@ export function handlePointerMove(
         Math.max(minHeight, endSnap.snappedTop - startSnap.snappedTop),
       );
 
-      if (newHeight !== state.snappedHeight) {
+      const prevEndMinutes = Math.round(
+        ((startSnap.snappedTop + state.snappedHeight) / ctx.hourHeight) * 60,
+      );
+      const nextEndMinutes = Math.round(((startSnap.snappedTop + newHeight) / ctx.hourHeight) * 60);
+      if (crossedHapticBoundary(prevEndMinutes, nextEndMinutes)) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
       }
 

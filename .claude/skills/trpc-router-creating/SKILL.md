@@ -30,10 +30,9 @@ DayoptプロジェクトのtRPC v11ルーターを規約に沿って作成する
 ```
 apps/product/src/features/{feature}/server/
 ├── router.ts              # ルーター定義
+├── router.test.ts         # テスト（対象ファイルの隣に置く。`test` skill、#2485）
 ├── {feature}-service.ts   # ビジネスロジック
-├── types.ts               # feature内の型定義（optional）
-└── __tests__/
-    └── router.test.ts
+└── types.ts               # feature内の型定義（optional）
 ```
 
 大規模featureの場合（例: entry）:
@@ -45,9 +44,10 @@ apps/product/src/features/entry/server/
 ├── entry-service.ts       # メインサービス
 ├── service-index.ts       # サービスのマージ
 ├── statistics.ts          # 統計（optional）
-├── types.ts
-└── __tests__/
+└── types.ts
 ```
+
+テストは各対象ファイルの隣に `X.test.ts` として置く（`__tests__/` は使わない。`test` skill、#2485）。
 
 ## 作成手順
 

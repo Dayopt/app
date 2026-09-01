@@ -17,6 +17,9 @@ import { useTranslations } from 'next-intl';
 import { resolveTimeblockClipboardPaste } from '../../lib/timeblock-clipboard-paste';
 import { useTimeblockClipboardStore } from '../../stores/useTimeblockClipboardStore';
 
+/** C / Shift+C quick create の枠長。snap 粒度（1 分）とは独立したプロダクト既定値。 */
+const QUICK_CREATE_DURATION_MS = 15 * 60 * 1000;
+
 /** useCalendarEventKeyboard フックのオプション */
 interface UseCalendarTimeblockKeyboardOptions {
   /** ショートカットを有効にするか */
@@ -235,11 +238,10 @@ export function useCalendarEventKeyboard({
           e.preventDefault();
 
           // 未来15分の枠を既定にする（quick create は必ず時間範囲を持つ time model の制約に合わせる）
+          // 開始は次の 1 分境界に ceil（秒ノイズと past 判定揺れの回避）
           const now = new Date();
-          const roundedStart = new Date(
-            Math.ceil(now.getTime() / (15 * 60 * 1000)) * 15 * 60 * 1000,
-          );
-          const defaultEnd = new Date(roundedStart.getTime() + 15 * 60 * 1000);
+          const roundedStart = new Date(Math.ceil(now.getTime() / (60 * 1000)) * 60 * 1000);
+          const defaultEnd = new Date(roundedStart.getTime() + QUICK_CREATE_DURATION_MS);
 
           const initialData = e.shiftKey ? undefined : getInitialEntryDataRef.current?.();
           const startAt = initialData?.start_time ?? roundedStart.toISOString();
@@ -272,10 +274,8 @@ export function useCalendarEventKeyboard({
           e.preventDefault();
 
           const now = new Date();
-          const roundedStart = new Date(
-            Math.ceil(now.getTime() / (15 * 60 * 1000)) * 15 * 60 * 1000,
-          );
-          const endAt = new Date(roundedStart.getTime() + 15 * 60 * 1000).toISOString();
+          const roundedStart = new Date(Math.ceil(now.getTime() / (60 * 1000)) * 60 * 1000);
+          const endAt = new Date(roundedStart.getTime() + QUICK_CREATE_DURATION_MS).toISOString();
           const destination = resolveTimeblockDestination(endAt);
           const createInput = {
             title: tRef.current('timeblock.untitled'),
