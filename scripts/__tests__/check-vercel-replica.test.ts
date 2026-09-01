@@ -140,11 +140,27 @@ describe('buildLedger / allowedNonLedgerKeys（schema との接続）', () => {
     expect(ledger.has('TOTALLY_UNKNOWN_KEY')).toBe(false);
   });
 
-  it('allowlist の各 entry は理由必須（空が既定。#2094 で integration-managed 11 件を例外登録済み。docs/operations/secrets.md §Vercel Production の integration-managed 例外）', () => {
-    expect(allowedNonLedgerKeys.size).toBe(11);
+  it('allowlist の各 entry は理由必須（空が既定。#2094 で integration-managed 11 件、#2458 で再注入された SUPABASE_ANON_KEY を例外登録済み。docs/operations/secrets.md §Vercel Production の integration-managed 例外）', () => {
+    expect(allowedNonLedgerKeys.size).toBe(12);
     for (const reason of allowedNonLedgerKeys.values()) {
       expect(reason.length).toBeGreaterThan(0);
     }
+  });
+
+  // #2458: #2094 が「手動残骸」として削除した key が、同じ integration から
+  // 再注入された（configurationId icfg_ZZhIJpCa3ksZJLqBXjg257gb、2026-08-24）。
+  // 削除しても戻るため allowlist 側で扱う。台帳（1Password）へは入れない。
+  it('SUPABASE_ANON_KEY は allowlist にあり台帳には無い', () => {
+    expect(allowedNonLedgerKeys.has('SUPABASE_ANON_KEY')).toBe(true);
+    expect(buildLedger().has('SUPABASE_ANON_KEY')).toBe(false);
+  });
+
+  it('allowlist にある key は production にあっても未台帳として報告しない', () => {
+    const findings = findUnlistedKeys(
+      [{ key: 'SUPABASE_ANON_KEY', targets: ['production'] }],
+      buildLedger(),
+    );
+    expect(findings).toEqual([]);
   });
 });
 
