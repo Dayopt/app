@@ -172,8 +172,9 @@ pnpm security:check
    内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
    「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
    見えなくなる。**判定は自動では走らない**（外部モデルの自動レビュー ai-review は
-   2026-08-03 に撤去済み、全PR対象の外部レビュー（Codex）も 2026-08-13 に運用停止。
-   保護対象 path に触れる PR に限り Codex を条件付きで併用する）。危険クラスの
+   2026-08-03 に撤去済み、全PR対象の外部レビュー（Codex）も 2026-08-13 に停止。
+   クロスレビュー必須 PR に限り `@codex review` で Codex を起動し、その review object を
+   merge gate が必須とする、#2529）。危険クラスの
    diff では merge 前に `pr-cross-review` skill を明示的に実行する
 
 ## 関連する検査経路

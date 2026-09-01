@@ -94,6 +94,18 @@ export const PROTECTED_PATH_GLOBS = [
   'scripts/hooks/**',
   'scripts/tasks/finish-branch.sh',
   'scripts/ci/protected-path-gate.mjs',
+  // レビュー証跡の生成・検証そのもの（#2529 / #2530 の Codex Issue Review P2）。
+  // これらは head SHA / fingerprint の実測と書式強制を担う trust boundary で、
+  // 「空出力を成功扱いにする」「任意の識別子を受け入れる」といった変更が入れば
+  // gate は green のまま無効化される（CI では捕まらない、revert だけでは
+  // 取り戻せない）。判定基準「外部契約 or 不可逆」の後段そのものなので、
+  // ガードレール自己保護として必須側に置く。**Codex レビュー対象の通常 PR の
+  // 範囲を広げる変更ではない**（product path の選別基準は不変）。
+  'scripts/tasks/issue-review-gate.mjs',
+  'scripts/lib/issue-review-core.mjs',
+  'scripts/tasks/generate-issue-review-marker.mjs',
+  'scripts/tasks/generate-marker.ts',
+  'scripts/lib/generate-marker-core.ts',
   // CI の中枢。check.mjs は write 権限つき GH_TOKEN を PR コードから隔離する
   // 処理とどの test を skip するかの判定を持ち、ci.yml はその job / permissions
   // を決める。どちらも「壊れても CI は green のまま」になりうるため、
