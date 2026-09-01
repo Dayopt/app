@@ -727,6 +727,65 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     REVIEW_GATE_REASONS+=("label: review:full")
   fi
 
+  # ── linked issue の review:full を PR へ継承する（#2530） ────────────────
+  #
+  # `review:full` は「この変更は高リスク」という **Issue / PR 共通のシグナル**。
+  # Issue 側で高リスクと判定していたのに、実装結果の path がたまたま保護対象 glob に
+  # 当たらず PR ラベルも付け忘れた、という経路で full review を抜けられる穴を塞ぐ。
+  #
+  # **linkage の正本は PR の closing issue references（`Closes #N`）だけ**とする
+  # （#2530 Issue Review P2）。`Refs #N` / 本文中の URL / sub-issue 関係は
+  # GitHub 側で closing reference にならず、機械判定の対象にできないため継承しない。
+  # `Closes` を使えない部分対応 PR は、PR 自身へ `review:full` を手で付ける
+  # （AGENTS.md §PR / git 運用 の `Closes #N` 規約と同じ前提に乗る）。
+  #
+  # 取得失敗・解釈不能・窓の切り詰めはすべて停止に倒す。「linked issue を確認
+  # できなかったので継承なしとして通す」は、この gate が塞ごうとしている穴を
+  # そのままにする（thread gate と同じ fail closed）。
+  CLOSING_ISSUES_MAX=50
+  CLOSING_ISSUES_JSON="$(gh api graphql \
+    -f query='query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          closingIssuesReferences(first: 50) {
+            totalCount
+            nodes { number labels(first: 100) { nodes { name } } }
+          }
+        }
+      }
+    }' \
+    -f owner="$THREAD_OWNER" \
+    -f name="$THREAD_NAME" \
+    -F number="$PR_NUMBER" 2>/dev/null || true)"
+
+  CLOSING_ISSUES_TOTAL="$(printf '%s' "$CLOSING_ISSUES_JSON" | jq -r '
+    .data.repository.pullRequest.closingIssuesReferences
+    | select(. != null)
+    | .totalCount' 2>/dev/null || true)"
+
+  if [[ ! "$CLOSING_ISSUES_TOTAL" =~ ^[0-9]+$ ]]; then
+    error "linked issue（closing issue references）を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  if [[ "$CLOSING_ISSUES_TOTAL" -gt "$CLOSING_ISSUES_MAX" ]]; then
+    error "linked issue が ${CLOSING_ISSUES_MAX} 件を超えており全件を確認できません。マージを中止します。"
+    exit 1
+  fi
+
+  # review:full を持つ linked issue の番号（スペース区切り）。1 件でもあれば required。
+  LINKED_REVIEW_FULL_ISSUES="$(printf '%s' "$CLOSING_ISSUES_JSON" | jq -r '
+    [ .data.repository.pullRequest.closingIssuesReferences.nodes[]
+      | select(any(.labels.nodes[]?.name; . == "review:full"))
+      | .number ]
+    | join(" ")' 2>/dev/null || true)"
+
+  if [[ -n "$LINKED_REVIEW_FULL_ISSUES" ]]; then
+    REVIEW_GATE_REQUIRED="true"
+    REVIEW_GATE_REASONS+=("linked issue review:full: $LINKED_REVIEW_FULL_ISSUES")
+  fi
+
   if [[ "$REVIEW_GATE_REQUIRED" == "true" ]]; then
     REVIEW_GATE_REASON_JOINED="$(IFS=', '; echo "${REVIEW_GATE_REASONS[*]}")"
     echo "review gate: required (${REVIEW_GATE_REASON_JOINED})" >&2
@@ -769,6 +828,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
       repository(owner: $owner, name: $name) {
         pullRequest(number: $number) {
           comments(last: 100) { totalCount nodes { author { login } authorAssociation body } }
+          reviews(last: 100) { totalCount nodes { author { login } state commit { oid } } }
         }
       }
     }' \
@@ -924,6 +984,116 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   INTERNAL_REVIEW_AGENTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '(.agents // []) | map(select(. != null and . != "")) | unique | join(", ")' 2>/dev/null || true)"
 
   info "内製クロスレビューの痕跡を確認しました（agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
+
+  # ── Codex の独立レビューを要求する（#2529、2 系統目） ──────────────────
+  #
+  # 内製 subagent レビューは同一モデル系列の中で役割を分けたものであり、
+  # 「同一系列の自己申告に検証を委ねない」という設計思想を最後まで通すなら、
+  # クロスレビュー必須 PR では **別 provider の独立レビュー**も要求する。
+  # 2026-08-13 の外部レビュー停止判断は、必須 PR に限りここで撤回する
+  # （低リスク PR は従来どおり Codex を起動しない）。
+  #
+  # **証跡は Codex 自身が投稿した GitHub review object のみ**。marker 方式
+  # （Main がコメントを書く）は採らない — Main が書ける痕跡では「Codex が実行
+  # された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が
+  # 自己申告に戻る（#2529 Issue Review P1）。review object なら:
+  #   - producer = GitHub App の identity（Main には投稿できない）
+  #   - commit.oid = レビュー対象の commit（現 HEAD への束縛）
+  #   - Codex の error / timeout / usage limit / 空応答は「現 HEAD の review が
+  #     存在しない」に帰着するので、失敗は構造的に fail closed になる
+  # を 1 つの object から機械検証できる。
+  #
+  # **delta review は Codex 側では認めない。** `@codex review` は常に現時点の PR
+  # 全体を読むため、review object は「その commit の final diff を全量読んだ」
+  # 証跡になる。旧 HEAD の review を積み上げて範囲の連続性を主張する経路
+  # （#2529 Issue Review P2 の delta chain 問題）を、そもそも作らない。
+  #
+  # **バイパス marker は作らない**（#2529 failure policy）。可用性が実害化した
+  # 場合は gate を黙って弱めず、別 issue で evidence を集めて範囲を再判断する。
+  #
+  # login は GraphQL 表記（`[bot]` サフィックス無し）と REST 表記の両方を許容する。
+  # GitHub の user login に `[` は使えないため、この正規化で人間が bot と誤認
+  # されることはない（scripts/lib/issue-review-core.mjs の isCodexBotLogin と同契約）。
+  step "Codex の独立レビューを確認"
+
+  CODEX_REVIEW_LOGIN="chatgpt-codex-connector"
+
+  CODEX_REVIEW_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
+    --arg login "$CODEX_REVIEW_LOGIN" \
+    --arg headSha "$HEAD_SHA" '
+    def normalized_login: (.author.login // "") | sub("\\[bot\\]$"; "");
+    (.data.repository.pullRequest.reviews.nodes // []) as $nodes
+    | ($nodes | map(select(normalized_login == $login))) as $step1
+    | ($step1 | map(select((.state // "") | . != "PENDING" and . != "DISMISSED"))) as $step2
+    | ($step2 | map(select((.commit.oid // "") == $headSha))) as $step3
+    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+
+  CODEX_REVIEW_COUNT="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
+
+  CODEX_REVIEW_WINDOW_TRUNCATED="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r '
+    .data.repository.pullRequest
+    | select(. != null)
+    | ((.reviews.totalCount // 0) > 100)' 2>/dev/null || true)"
+
+  # 数値以外（取得失敗・field 欠落・部分出力）は「痕跡あり」に読み替えず停止に倒す。
+  if [[ ! "$CODEX_REVIEW_COUNT" =~ ^[0-9]+$ ]]; then
+    error "Codex レビューの痕跡を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  if [[ "$CODEX_REVIEW_COUNT" == "0" ]]; then
+    error "この PR には現在の HEAD に対する Codex レビューがありません。マージを中止します。"
+    error "PR へ「@codex review」をコメントし、Codex のレビュー投稿を待ってから再実行してください。"
+    error "（クロスレビュー必須 PR は内製 subagent と Codex の 2 系統が必須です。AGENTS.md §レビュー）"
+
+    CODEX_STEP1="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
+    CODEX_STEP2="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
+
+    if [[ "$CODEX_STEP1" == "0" ]]; then
+      error "原因: ${CODEX_REVIEW_LOGIN} によるレビューが 1 件もありません（未実行、または実行に失敗しています）。"
+    elif [[ "$CODEX_STEP2" == "0" ]]; then
+      error "原因: Codex のレビューはありますが PENDING / DISMISSED のみです。"
+    else
+      error "原因: Codex のレビューは古い commit に対するものです（現在の HEAD: ${HEAD_SHA}）。"
+      error "push で HEAD が動くと Codex の証跡も無効になります。もう一度「@codex review」を投稿してください。"
+    fi
+
+    if [[ "$CODEX_REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
+      error "なお、この PR は review が 100 件を超えており、直近 100 件しか見ていません。"
+    fi
+    exit 1
+  fi
+
+  info "Codex の独立レビューを確認しました（現 HEAD に対して ${CODEX_REVIEW_COUNT} 件）。"
+
+  # ── linked issue の Codex Issue Review 証跡を確認する（#2530） ───────────
+  #
+  # `review:full` Issue は実装前に Codex Issue Review を通す契約（dispatch skill
+  # 操作A）。着手時にしか見ないと、着手後に本文を書き換えた場合に「レビューされて
+  # いない設計」がそのまま実装されて merge されうるため、merge 直前にも現在の
+  # fingerprint で再検証する。判定は scripts/ci/issue-review-gate.mjs（正本）へ
+  # 委譲し、canonical 化と fingerprint の計算式を bash 側へ複製しない。
+  if [[ -n "$LINKED_REVIEW_FULL_ISSUES" ]]; then
+    step "linked issue の Codex Issue Review 証跡を確認"
+
+    ISSUE_REVIEW_GATE_SCRIPT="$SCRIPT_DIR/issue-review-gate.mjs"
+
+    if ! command -v node >/dev/null 2>&1; then
+      error "node が見つからないため Issue Review 証跡を検証できません。マージを中止します（fail closed）。"
+      exit 1
+    fi
+
+    for LINKED_ISSUE in $LINKED_REVIEW_FULL_ISSUES; do
+      if ! node "$ISSUE_REVIEW_GATE_SCRIPT" --issue "$LINKED_ISSUE" >/dev/null; then
+        error "linked issue #${LINKED_ISSUE} の Codex Issue Review 証跡が無効です。マージを中止します。"
+        error "実装中に issue 本文が変わった場合は再レビューが必要です"
+        error "（pnpm review:issue:gate ${LINKED_ISSUE} で詳細を確認できます）。"
+        exit 1
+      fi
+      info "linked issue #${LINKED_ISSUE} の Issue Review 証跡を確認しました。"
+    done
+  fi
   fi # REVIEW_GATE_REQUIRED
 
   # マージは REST を直叩きする。`gh pr merge` は「削除対象 branch が current」だと
