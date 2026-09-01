@@ -78,6 +78,19 @@ export const CHECK_DEFINITIONS = {
     command:
       'gh run list --workflow=nightly.yml --branch main --limit 30 --json databaseId,url | jq -r \'.[].databaseId\' | while read -r id; do gh api "repos/Dayopt/dayopt/actions/runs/$id/jobs" --jq \'.jobs[] | select(.name=="Integration Tests") | select(.conclusion!="skipped")\'; done | head -3',
   },
+  // #2467: SUPABASE_STORAGE_RLS_AUDIT_TOKEN（90日期限、2026-08-25 発行、
+  // #2345）の失効に備える軽量案。新しい儀式（人間ゲート消化リスト等）を
+  // 作らず、既存の夜勤ループへチェックを1本足すだけにする（#2467 の推奨案）。
+  // `expiresAt` / `warningDays` は checkSecretExpiry（run-all.mjs）が読む。
+  // 失効日が変わったら（再発行した等）この定数を更新すること。
+  'storage-rls-audit-token-expiry': {
+    kind: 'secret-expiry',
+    title: 'SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効が近づいています',
+    command:
+      '1Password `ci` vault で token を再発行し GitHub Secrets へ再登録する（docs/operations/secrets.md 参照）',
+    expiresAt: '2026-11-23',
+    warningDays: 14,
+  },
   // #2535: 「無音 = 緑」規約の backstop。night-watch job 自身が失敗/timeout で
   // 強制終了した夜は、他の check-id 全部が未実行のまま alert issue もサマリ
   // 1 行も残らず無音になっていた。`CHECK_IDS`（観測ループが毎晩回す集合）には
@@ -255,6 +268,16 @@ export function buildAlertBody({ checkId, args, detectedAt }) {
       const baselineValue = readBaseline()[definition.baselineKey];
       actual = args.actual;
       baseline = String(baselineValue);
+      break;
+    }
+    case 'secret-expiry': {
+      // #2467: 残り日数は失効済み（0 以下）もありうるため負数も許可する
+      // （count-baseline の DIGITS_RE は非負整数のみで流用できない）。
+      if (!args.actual || !/^-?\d+$/.test(args.actual)) {
+        throw new Error('--actual は整数（残り日数）で指定してください');
+      }
+      actual = `残り ${args.actual} 日`;
+      baseline = `${definition.warningDays} 日以内で警告（失効予定日: ${definition.expiresAt}）`;
       break;
     }
     case 'run-url': {

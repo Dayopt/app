@@ -45,7 +45,9 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 ### Step 1（観測）
 
-[checklist.md](checklist.md) の 4 項目（`docs-check` / `docs-coverage` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）の 7 check-id を観測する。この 7 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
+[checklist.md](checklist.md) の 4 項目（`docs-check` / `docs-coverage` / `deadcode` / `dependabot-alerts`）+ `heavy-red` / `integration-red`（CI 赤確認）+ `sentry-new`（直近24h新規 unresolved issue）+ `storage-rls-audit-token-expiry`（#2467、`SUPABASE_STORAGE_RLS_AUDIT_TOKEN` の失効監視）の 8 check-id を観測する。この 8 件が `CHECK_IDS`（`run-all.mjs`）の正本で、**`alert-issue.mjs` の `CHECK_DEFINITIONS`（起票できる id の集合）とは意図的に別物**にしてある（観測ループを経由せず別 job から起票される id が入るため）。
+
+`storage-rls-audit-token-expiry` は他の 7 件と違い gh/sentry を一切呼ばない純粋な日付計算（`checkSecretExpiry`、`run-all.mjs`）。`CHECK_DEFINITIONS['storage-rls-audit-token-expiry'].expiresAt`（token の既知の失効日）を固定値として持ち、`warningDays`（14）以内に迫ると red。ネットワーク越しの取得が無いため fetch-failed 経路（run 内 retry）の対象にならない。token を再発行したら `expiresAt` を更新すること（新しい儀式は作らない——夜勤の既存ループへ 1 本足すだけ、という #2467 の軽量案）。
 
 - **fail-closed 原則**: 観測コマンドが失敗（spawn 失敗・パース不能）した check-id は緑と判定せず `failed` へ記録する
 - **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。`network-error` には GitHub / Sentry 側の 5xx（502 / 503 / 504 / 500）も含む — Codex 指摘で、5xx がどの分類語にも該当せず `unknown` へ落ちて 1 回で確定していたことが実測で判明した。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）

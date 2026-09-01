@@ -57,6 +57,10 @@ export const CHECK_IDS = new Set([
   'heavy-red',
   'integration-red',
   'sentry-new',
+  // #2467: SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効監視（軽量案）。gh も
+  // sentry も呼ばない純粋な日付計算のため、他の check と違い run 内 retry の
+  // 対象にはならない（`checkSecretExpiry` 参照）。
+  'storage-rls-audit-token-expiry',
 ]);
 
 const BASELINE_PATH = fileURLToPath(
@@ -972,6 +976,32 @@ export function checkSentryNew({ execFileImpl, sentryToken, env = process.env, s
   return { status: 'red', count: issues.length, evidence };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * secret-expiry kind（storage-rls-audit-token-expiry）の観測（#2467）。
+ *
+ * 他の check と違い gh/sentry を一切呼ばない純粋な日付計算——`definition`
+ * に固定した `expiresAt`（token 発行時に判明している既知の失効日）と
+ * `now` の差分だけで判定するため、`execObservationCommand` の run 内
+ * retry・fetch-failed 経路の対象にならない（ネットワーク越しの取得が
+ * 無いので、そもそも「取得失敗」という状態が存在しない）。
+ *
+ * `warningDays` 以内に失効が迫ったら red。#2467 の推奨案（軽量な期日運用）
+ * どおり、token の再発行そのものは人間ゲート（1Password `ci` vault +
+ * GitHub Secrets 登録）に残す——このチェックは「気づく」ところまでだけを
+ * 夜勤の既存ループへ足す。
+ * @param {{ expiresAt: string, warningDays: number }} definition
+ * @param {{ now?: number }} [opts]
+ */
+export function checkSecretExpiry(definition, { now = Date.now() } = {}) {
+  const daysRemaining = Math.floor((new Date(definition.expiresAt).getTime() - now) / MS_PER_DAY);
+  if (daysRemaining <= definition.warningDays) {
+    return { status: 'red', actual: daysRemaining };
+  }
+  return { status: 'green' };
+}
+
 /** @param {string} checkId @param {{ actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome */
 export function buildAlertArgs(checkId, outcome) {
   const definition = CHECK_DEFINITIONS[checkId];
@@ -979,6 +1009,8 @@ export function buildAlertArgs(checkId, outcome) {
     case 'exit-code':
       return {};
     case 'count-baseline':
+      return { actual: String(outcome.actual) };
+    case 'secret-expiry':
       return { actual: String(outcome.actual) };
     case 'run-url':
       return { 'evidence-url': outcome.evidenceUrl };
@@ -1291,6 +1323,10 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
       sleepImpl,
     }),
     'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh, sleepImpl }),
+    'storage-rls-audit-token-expiry': checkSecretExpiry(
+      CHECK_DEFINITIONS['storage-rls-audit-token-expiry'],
+      { now },
+    ),
   };
 
   // #2422 の P2 是正（PR #2445）: fetch-failed の起票は他 check-id の
