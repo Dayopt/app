@@ -57,6 +57,10 @@ export const CHECK_IDS = new Set([
   'heavy-red',
   'integration-red',
   'sentry-new',
+  // #2467: SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効監視（軽量案）。gh も
+  // sentry も呼ばない純粋な日付計算のため、他の check と違い run 内 retry の
+  // 対象にはならない（`checkSecretExpiry` 参照）。
+  'storage-rls-audit-token-expiry',
 ]);
 
 const BASELINE_PATH = fileURLToPath(
@@ -591,7 +595,19 @@ function envWithout(...keys) {
 function checkExitCode(command, args, { execFileImpl, env, sleepImpl }) {
   const result = execObservationCommand(command, args, { execFileImpl, env, sleepImpl });
   if (result.ok) return { status: 'green' };
-  if (isSpawnFailure(result.error)) return { status: 'fetch-failed' };
+  // #2535 item 4: red / fetch-failed の分岐を `isRetriableObservationFailure`
+  // の分類と揃える。旧実装は `isSpawnFailure`（`status` が数値かどうか）
+  // だけを見ていたため、`execObservationCommand` が run 内 retry を尽くした
+  // 後の最終エラーが「一過性と分類できる」（rate-limited / network-error）
+  // 場合でも red 側へ落ちていた。プロセスは起動して非 0 exit するため
+  // `status` は数値（`isSpawnFailure` は false）になるが、`pnpm docs:check`
+  // 等が exit 1 かつ stderr に econnreset 等を含んで終わる夜は、retry しても
+  // 直らなかっただけの観測失敗であって、コマンドが検出した本物の赤ではない。
+  // 「retry しても駄目だった一過性分類は観測失敗であって赤ではない」を
+  // ここ 1 箇所で表現する。
+  if (isSpawnFailure(result.error) || isRetriableObservationFailure(result.error)) {
+    return { status: 'fetch-failed' };
+  }
   return { status: 'red' };
 }
 
@@ -866,21 +882,19 @@ export function checkWorkflowJobRun(
   //
   // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
   // `nightwatch-fetch-failed` として起票されるので、朝には見える。
-  // 採用 run が terminal（`completed`）でない時は、green の根拠が matched[0] を
-  // 離れて**より古い run**（`hasRecentSuccess`）へ移る。この時だけは古い位置の
-  // 失敗も効くので総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。
   //
-  // 該当するのは status が `completed` / `in_progress` / `queued` のどれでもない
-  // 値（`waiting` / `requested` 等）を取る class。`isLatestWorkflowRunPending` は
-  // in_progress / queued しか pending と見なさないため、`waiting` は pending にも
-  // ならず `latestNonSuccessTerminal` にもならない。実測では `development`
-  // environment の protection_rules は空（`gh api .../environments/development`）
-  // なので現状この経路は到達しないが、**protection rule を 1 つ足すだけで
-  // 到達可能になる**。repo 設定に安全性を依存させない。
-  const adoptedRunIsTerminal = matched[0]?.status === 'completed';
-  const degradeGreen =
-    judged.status === 'green' &&
-    (jobFetchFailuresBeforeFirstMatch > 0 || (!adoptedRunIsTerminal && jobFetchFailures > 0));
+  // `judged.status === 'green'` に到達するのは `judgeWorkflowRun` が
+  // pending 分岐（`isLatestWorkflowRunPending`）を通らなかった時だけであり、
+  // #2534 の allowlist 反転後は「採用 run の status !== 'completed'」が
+  // 必ず pending 側へ倒れるため、この時点で `matched[0].status ===
+  // 'completed'` は常に真になる（`waiting` / `requested` 等の非 terminal
+  // 値は既に上の pending/stale-pending 分岐で処理済み）。したがって green の
+  // 根拠が matched[0] より古い run へ移るケースは無くなり、「採用 run が
+  // terminal でない時だけ古い位置の失敗も見る」という旧来の場合分け
+  // （`adoptedRunIsTerminal`）は冗長になった。green の縮退判定は
+  // `jobFetchFailuresBeforeFirstMatch`（採用 run より新しい run の取得失敗）
+  // だけで足りる。
+  const degradeGreen = judged.status === 'green' && jobFetchFailuresBeforeFirstMatch > 0;
   const degradeStale =
     judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0;
   if (degradeGreen || degradeStale) {
@@ -962,6 +976,32 @@ export function checkSentryNew({ execFileImpl, sentryToken, env = process.env, s
   return { status: 'red', count: issues.length, evidence };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * secret-expiry kind（storage-rls-audit-token-expiry）の観測（#2467）。
+ *
+ * 他の check と違い gh/sentry を一切呼ばない純粋な日付計算——`definition`
+ * に固定した `expiresAt`（token 発行時に判明している既知の失効日）と
+ * `now` の差分だけで判定するため、`execObservationCommand` の run 内
+ * retry・fetch-failed 経路の対象にならない（ネットワーク越しの取得が
+ * 無いので、そもそも「取得失敗」という状態が存在しない）。
+ *
+ * `warningDays` 以内に失効が迫ったら red。#2467 の推奨案（軽量な期日運用）
+ * どおり、token の再発行そのものは人間ゲート（1Password `ci` vault +
+ * GitHub Secrets 登録）に残す——このチェックは「気づく」ところまでだけを
+ * 夜勤の既存ループへ足す。
+ * @param {{ expiresAt: string, warningDays: number }} definition
+ * @param {{ now?: number }} [opts]
+ */
+export function checkSecretExpiry(definition, { now = Date.now() } = {}) {
+  const daysRemaining = Math.floor((new Date(definition.expiresAt).getTime() - now) / MS_PER_DAY);
+  if (daysRemaining <= definition.warningDays) {
+    return { status: 'red', actual: daysRemaining };
+  }
+  return { status: 'green' };
+}
+
 /** @param {string} checkId @param {{ actual?: number, evidenceUrl?: string, count?: number, evidence?: string[] }} outcome */
 export function buildAlertArgs(checkId, outcome) {
   const definition = CHECK_DEFINITIONS[checkId];
@@ -969,6 +1009,8 @@ export function buildAlertArgs(checkId, outcome) {
     case 'exit-code':
       return {};
     case 'count-baseline':
+      return { actual: String(outcome.actual) };
+    case 'secret-expiry':
       return { actual: String(outcome.actual) };
     case 'run-url':
       return { 'evidence-url': outcome.evidenceUrl };
@@ -1281,6 +1323,10 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
       sleepImpl,
     }),
     'sentry-new': checkSentryNew({ execFileImpl, sentryToken, env: envWithoutGh, sleepImpl }),
+    'storage-rls-audit-token-expiry': checkSecretExpiry(
+      CHECK_DEFINITIONS['storage-rls-audit-token-expiry'],
+      { now },
+    ),
   };
 
   // #2422 の P2 是正（PR #2445）: fetch-failed の起票は他 check-id の
@@ -1325,6 +1371,25 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
   if (alertPostFailed.length > 0) {
     console.error(
       `::error::異常を検出しましたが alert issue を起票できませんでした: ${alertPostFailed.join(', ')}`,
+    );
+    process.exitCode = 1;
+  }
+
+  // #2535 item 3（推奨案 a）: `capped`（MAX_NEW_ISSUES_PER_RUN 超過による
+  // 意図的な減衰）は `isAlertDeliveryFailure` の対象外なので、これまでは
+  // exit code に一切出なかった。4 本以上が同時赤化した夜、4 本目以降は
+  // job log のサマリ 1 行（`予算超過 N`）にしか事実が残らず、job 自体は
+  // 緑のままだった（`isAlertDeliveryFailure` は `run-cap-reached` を意図的な
+  // 減衰として除外している——この判定自体は正しい。exit code 側にも同じ
+  // 除外が伝播していたのが漏れだった）。capped が 1 件でもあれば job を
+  // 非 0 exit にし、朝に気づけるようにする（起票そのものはしない——4 本目
+  // 以降を無理に起票すると `MAX_NEW_ISSUES_PER_RUN` の濫造防止の意図に反する）。
+  const cappedCheckIds = results
+    .filter((e) => e.outcome === 'skipped' && e.reason === 'run-cap-reached')
+    .map((e) => e.checkId);
+  if (cappedCheckIds.length > 0) {
+    console.error(
+      `::error::1 run あたりの新規起票上限（MAX_NEW_ISSUES_PER_RUN）に達し、起票を見送った check-id があります: ${cappedCheckIds.join(', ')}`,
     );
     process.exitCode = 1;
   }

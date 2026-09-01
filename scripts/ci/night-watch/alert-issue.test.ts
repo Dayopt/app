@@ -12,6 +12,7 @@ import {
   findExistingAlertIssue,
   findExistingFetchFailureAlertIssue,
   parseAlertArgs,
+  parseFetchFailedArgs,
   runAlertSync,
   runFetchFailureAlertSync,
 } from './alert-issue.mjs';
@@ -606,6 +607,50 @@ describe('buildFetchFailureAlertBody', () => {
     expect(fresh).toContain('retry でも回復しませんでした');
     expect(fresh).not.toContain('取得失敗が続いています');
   });
+
+  // #2535: night-watch-self backstop 用。CHECK_DEFINITIONS に kind: 'exit-code'
+  // で登録済みの合成 check-id でも、fetch-failure body は kind を分岐しない
+  // ため通常どおり組み立てられる。
+  it('night-watch-self（job 自身の backstop）でも本文を組み立てられる', () => {
+    const body = buildFetchFailureAlertBody({
+      checkId: 'night-watch-self',
+      detectedAt: '2026-08-27T00:00:00Z',
+    });
+    expect(body).toContain('night-watch-self');
+  });
+
+  it('runUrl を渡すと本文へ job log 行を追加する', () => {
+    const withUrl = buildFetchFailureAlertBody({
+      checkId: 'night-watch-self',
+      detectedAt: '2026-08-27T00:00:00Z',
+      runUrl: 'https://github.com/Dayopt/dayopt/actions/runs/123',
+    });
+    expect(withUrl).toContain('**job log**: https://github.com/Dayopt/dayopt/actions/runs/123');
+
+    const withoutUrl = buildFetchFailureAlertBody({
+      checkId: 'night-watch-self',
+      detectedAt: '2026-08-27T00:00:00Z',
+    });
+    expect(withoutUrl).not.toContain('job log');
+  });
+});
+
+describe('parseFetchFailedArgs', () => {
+  it('--run-url を受け取る', () => {
+    expect(parseFetchFailedArgs(['--run-url', 'https://x'])).toEqual({ runUrl: 'https://x' });
+  });
+
+  it('引数無しなら空 object', () => {
+    expect(parseFetchFailedArgs([])).toEqual({});
+  });
+
+  it('未知の flag は拒否する', () => {
+    expect(() => parseFetchFailedArgs(['--evidence', 'x'])).toThrow(/未知の引数/);
+  });
+
+  it('値の無い --run-url は拒否する', () => {
+    expect(() => parseFetchFailedArgs(['--run-url'])).toThrow(/値がありません/);
+  });
 });
 
 describe('findExistingFetchFailureAlertIssue', () => {
@@ -730,5 +775,42 @@ describe('runFetchFailureAlertSync', () => {
       runStatePath,
     });
     expect(result).toEqual({ action: 'skipped', reason: 'dedup検索失敗のため起票見送り' });
+  });
+
+  // #2535: night-watch-self backstop が nightly.yml から渡す runUrl を本文へ
+  // 反映することの回帰確認。
+  it('runUrl を渡すと本文の job log 行へ反映される', () => {
+    const execFileImpl = vi.fn((cmd, args) => {
+      if (args[1] === 'list') return '[]';
+      if (args[1] === 'create') return 'https://github.com/Dayopt/dayopt/issues/900\n';
+      throw new Error(`unexpected: ${JSON.stringify(args)}`);
+    });
+
+    const result = runFetchFailureAlertSync({
+      checkId: 'night-watch-self',
+      runUrl: 'https://github.com/Dayopt/dayopt/actions/runs/123',
+      execFileImpl,
+      runStatePath,
+    });
+
+    expect(result).toEqual({ action: 'created', issueNumber: 900 });
+    const createCall = mustFind(execFileImpl.mock.calls, (call) => call[1][1] === 'create');
+    const body = createCall[1][createCall[1].indexOf('--body') + 1];
+    expect(body).toContain('https://github.com/Dayopt/dayopt/actions/runs/123');
+  });
+
+  it('形式が不正な runUrl は例外を投げる（gh を一切呼ばない）', () => {
+    const execFileImpl = vi.fn(() => {
+      throw new Error('should not be called');
+    });
+    expect(() =>
+      runFetchFailureAlertSync({
+        checkId: 'night-watch-self',
+        runUrl: 'javascript:alert(1)',
+        execFileImpl,
+        runStatePath,
+      }),
+    ).toThrow(/--run-url/);
+    expect(execFileImpl).not.toHaveBeenCalled();
   });
 });

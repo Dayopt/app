@@ -69,7 +69,7 @@ export function extractTrailingNumber(url) {
 /**
  * heavy-red / integration-red（`gh run list ... --json conclusion,status,...`）の
  * 判定規約の正本。**直近 run（配列先頭、gh run list は新しい順）が未完了
- * （`status` が `in_progress` / `queued`）なら、判定を保留すべきかを返す**。
+ * （`status !== 'completed'`）なら、判定を保留すべきかを返す**。
  *
  * GitHub Actions の scheduled workflow は数十分規模の遅延が日常的に起きる。
  * 旧判定規約は status を無条件で赤判定へ含めており、単に実行中というだけの
@@ -77,6 +77,26 @@ export function extractTrailingNumber(url) {
  * 30分しかなく実際に誤起票しうると判明）。true を返した check-id は §Step2
  * fail-closed 原則と同じ経路（`<check-id>: 取得失敗`、Step 5 の `failed` へ
  * 記録）へ倒し、赤とは判定しない・alert-issue.mjs を呼ばない。
+ *
+ * **allowlist 反転（#2534）**: 旧実装は `status === 'in_progress' ||
+ * status === 'queued'` という denylist で pending を判定していた。GitHub
+ * Actions の job status は `in_progress` / `queued` 以外に `waiting`
+ * （environment protection rule 承認待ち）/ `requested` も取りうり、
+ * denylist は未知の値を非 pending（=「completed 相当」）へ倒す。その結果
+ * `waiting` の run は pending にも `judgeWorkflowRun` の
+ * `latestNonSuccessTerminal`（`status === 'completed'` を要求）にもならず、
+ * 判定の根拠が採用 run を離れて古い run へ移ってしまっていた（内製レビュー
+ * risk-reviewer 指摘、#2528 クロスレビュー第3ラウンド）。`status !==
+ * 'completed'` の allowlist 反転にすることで、`waiting` / `requested` /
+ * GitHub が将来追加する未知の status がすべて pending 側へ倒れる（fail
+ * closed）。実測: `gh api repos/Dayopt/dayopt/environments/development` は
+ * `protection_rules: []` を返すため `waiting` は現状発生しないが、
+ * protection rule を 1 つ足すだけで到達可能になるため repo 設定に依存
+ * させない。
+ *
+ * pending を「無条件で判定保留」にはしない: `judgeWorkflowRun` 側が
+ * `STALE_SUCCESS_WINDOW_MS`（48h）以内に success が無ければ red
+ * （`stale-pending`）へ倒すため、赤の検出は弱まらない。
  *
  * 過去の run（配列 2 件目以降）が in_progress のまま止まっている場合まで
  * 拾わない（そのような状態は通常発生せず、拾おうとすると「実行中」の通常
@@ -87,7 +107,7 @@ export function extractTrailingNumber(url) {
 export function isLatestWorkflowRunPending(runs) {
   if (!Array.isArray(runs) || runs.length === 0) return false;
   const status = runs[0]?.status;
-  return status === 'in_progress' || status === 'queued';
+  return status !== 'completed';
 }
 
 /**

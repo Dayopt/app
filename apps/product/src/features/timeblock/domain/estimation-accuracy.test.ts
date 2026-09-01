@@ -133,10 +133,31 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
         is_uncategorized: false,
         avg_planned_minutes: 45,
         avg_actual_minutes: 55,
-        avg_deviation_minutes: 20,
+        // 符号付き合算: p1 は +30（超過）、p2 は -10（早期完了）→ 平均 +10。
+        // Math.abs で合算していた旧実装は |+30| + |-10| = 40 → 平均 20 だった。
+        avg_deviation_minutes: 10,
         record_count: 2,
       },
     ]);
+  });
+
+  // #2386: 早期完了側（実績 < 予定）が一貫している場合、平均偏差は負のまま
+  // 返る必要がある。Math.abs で符号を潰すと常に非負になり、消費側
+  // （WeeklyReflectionPanel の deriveReflectionSignal）が
+  // `insightEstimationUnder`（早期完了の文言）へ到達できなくなる。
+  it('実績が予定より一貫して早い場合、avg_deviation_minutes は負のまま返る', () => {
+    const plans = [
+      makePlan({ id: 'p1', planned_minutes: 60 }),
+      makePlan({ id: 'p2', planned_minutes: 60 }),
+    ];
+    const records = [
+      makeRecord({ plan_id: 'p1', minutes: 40 }),
+      makeRecord({ plan_id: 'p2', minutes: 50 }),
+    ];
+
+    const result = aggregatePlanRecordEstimationAccuracy(plans, records, ACTIVITIES);
+
+    expect(result[0]?.avg_deviation_minutes).toBe(-15);
   });
 
   it('record_count が 1 件のアクティビティは分母から除外する（旧 RPC の HAVING COUNT(*)>=2 を踏襲）', () => {

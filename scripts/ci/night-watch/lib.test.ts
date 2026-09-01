@@ -25,6 +25,20 @@ describe('isLatestWorkflowRunPending', () => {
     expect(isLatestWorkflowRunPending([{ status }, { status: 'completed' }])).toBe(true);
   });
 
+  // #2534: allowlist 反転の回帰確認。`waiting`（environment protection rule
+  // 承認待ち）/ `requested` は denylist 方式（旧実装）だと pending から漏れ、
+  // 判定の根拠が採用 run を離れて古い run へ移っていた。
+  it.each(['waiting', 'requested'])(
+    '直近 run が status: %s（未知の非 completed 値）でも true',
+    (status) => {
+      expect(isLatestWorkflowRunPending([{ status }, { status: 'completed' }])).toBe(true);
+    },
+  );
+
+  it('直近 run が GitHub 側の将来の未知 status でも true（fail closed）', () => {
+    expect(isLatestWorkflowRunPending([{ status: 'some-future-status' }])).toBe(true);
+  });
+
   it('直近 run が completed（terminal）なら false（赤判定を進めてよい）', () => {
     expect(isLatestWorkflowRunPending([{ status: 'completed' }])).toBe(false);
   });
