@@ -249,7 +249,21 @@ export function classifyGhError(error) {
     /http 5\d\d/.test(text) ||
     text.includes('bad gateway') ||
     text.includes('service unavailable') ||
-    text.includes('gateway timeout')
+    text.includes('gateway timeout') ||
+    // transport 層の一時切断（Codex 指摘 P2 第 2 ラウンド、#2525）。上の語は
+    // DNS 解決失敗と HTTP レイヤの 5xx しか拾っておらず、接続が確立した後で
+    // 切れる系（TLS handshake / socket reset / Go 製クライアントの deadline）は
+    // `unknown` へ落ちて 1 回で確定していた。数秒後には回復する夜でも
+    // fetch-failed が確定し、不要な alert issue が立つ。
+    text.includes('econnreset') ||
+    text.includes('connection reset') ||
+    text.includes('epipe') ||
+    text.includes('socket hang up') ||
+    text.includes('tls handshake timeout') ||
+    text.includes('context deadline exceeded') ||
+    text.includes('i/o timeout') ||
+    text.includes('connection refused') ||
+    text.includes('temporary failure in name resolution')
   ) {
     return 'network-error';
   }
@@ -293,6 +307,20 @@ const OBSERVATION_COMMAND_RETRIES = 2;
 
 /** retry 間隔の基数（ミリ秒）。n 回目の待ちは base × n（1s → 2s）。 */
 const OBSERVATION_RETRY_BASE_DELAY_MS = 1_000;
+
+/**
+ * 残余がこれ未満なら、その試行を実行せず打ち切る（内製クロスレビュー
+ * risk-reviewer 指摘 medium、#2525）。
+ *
+ * deadline による切り詰め（`Math.min(timeout, remaining)`）に下限が無いと、
+ * 1 回目が 240s 近く粘った夜の 2 回目が timeout 1〜3s で spawn され、**必ず**
+ * SIGKILL される。無駄な試行を 1 本消費するだけでなく、`lastError` が本来の
+ * 原因（503 / rate limit）から `SIGKILL` / `ETIMEDOUT` へ上書きされ、
+ * `checkExitCode` 経路では本物の赤が status: null になって red ではなく
+ * fetch-failed へ降格する（無音にはならないが alert の種類と本文が実態と
+ * ずれる）。「勝ち目のない試行はしない」方が原因を保存できる。
+ */
+const OBSERVATION_RETRY_MIN_ATTEMPT_MS = 5_000;
 
 /** retry の待ち時間の合計（1s + 2s = 3s）。 */
 const OBSERVATION_RETRY_TOTAL_DELAY_MS =
@@ -382,9 +410,9 @@ export function execObservationCommand(
   const deadline = nowImpl() + WORST_CASE_OBSERVATION_MS;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const remaining = deadline - nowImpl();
-    if (remaining <= 0) {
-      // 予算を使い切った。ここで打ち切らないと次の試行が丸ごと 1 本ぶんの
-      // timeout を追加で消費する。
+    // 下限を割った残余で spawn しても必ず kill されるだけで、原因（lastError）
+    // を上書きして失うぶん有害。attempt 0 は残余 = 満額なので必ず実行される。
+    if (remaining < OBSERVATION_RETRY_MIN_ATTEMPT_MS) {
       logObservationBudgetExhausted(cmd, args, { attempt: attempt + 1 });
       break;
     }
@@ -468,7 +496,7 @@ function logObservationFailure(cmd, args, error, { attempt, total } = {}) {
  */
 function logObservationBudgetExhausted(cmd, args, { attempt }) {
   console.error(
-    `::warning::観測コマンドの retry 予算（${OBSERVATION_COMMAND_TIMEOUT_MS}ms）を使い切ったため attempt=${attempt} を実行せず打ち切りました: ${cmd} ${args.join(' ')}`,
+    `::warning::観測コマンドの retry 予算（${WORST_CASE_OBSERVATION_MS}ms）を使い切ったため attempt=${attempt} を実行せず打ち切りました: ${cmd} ${args.join(' ')}`,
   );
 }
 

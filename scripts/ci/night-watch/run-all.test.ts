@@ -676,6 +676,22 @@ describe('classifyGhError', () => {
     );
   });
 
+  // Codex 指摘 P2 第 2 ラウンド（#2525）。接続確立後に切れる系は DNS 失敗にも
+  // HTTP 5xx にも該当せず unknown へ落ちて retry されていなかった。
+  it.each([
+    ['read ECONNRESET', 'econnreset'],
+    ['connection reset by peer', 'connection reset'],
+    ['write EPIPE', 'epipe'],
+    ['socket hang up', 'socket hang up'],
+    ['net/http: TLS handshake timeout', 'tls handshake timeout'],
+    ['context deadline exceeded (Client.Timeout)', 'context deadline exceeded'],
+    ['dial tcp 140.82.121.6:443: i/o timeout', 'i/o timeout'],
+    ['dial tcp: connection refused', 'connection refused'],
+    ['Temporary failure in name resolution', 'temporary failure in name resolution'],
+  ])('transport 層の一時切断は network-error: %s', (stderr) => {
+    expect(classifyGhError({ stderr })).toBe('network-error');
+  });
+
   it('分類できないものは unknown', () => {
     expect(classifyGhError({ message: 'something unexpected happened' })).toBe('unknown');
   });
@@ -782,6 +798,34 @@ describe('execObservationCommand', () => {
       expect(attempts(execFileImpl)).toBe(2);
       const secondCallTimeout = execFileImpl.mock.calls[1][2]?.timeout ?? 0;
       expect(secondCallTimeout).toBeLessThan(OBSERVATION_COMMAND_TIMEOUT_MS);
+    });
+
+    // 内製クロスレビュー risk-reviewer 指摘 medium（#2525）。deadline 切り詰めに
+    // 下限が無いと、残余数秒で spawn された試行が必ず SIGKILL され、lastError が
+    // 本来の原因（503）から ETIMEDOUT へ上書きされて赤の種類がずれる。
+    it('残余が下限を割ったら試行せず打ち切り、原因の error を保存する', () => {
+      let clock = 0;
+      const nowImpl = () => clock;
+      const originalCause = ghError('HTTP 503: Service Unavailable');
+      const execFileImpl = vi.fn((_cmd: string, _args: string[], opts?: { timeout?: number }) => {
+        // 1 回目が満額ぎりぎり（239s）まで粘る → 残余は sleep 後 3s しか残らない。
+        clock += Math.min(239_000, opts?.timeout ?? 0);
+        throw originalCause;
+      });
+      const sleepImpl = vi.fn<(ms: number) => void>((ms) => {
+        clock += ms;
+      });
+
+      const result = execObservationCommand('gh', ['api', 'x'], {
+        execFileImpl,
+        sleepImpl,
+        nowImpl,
+      });
+
+      expect(attempts(execFileImpl)).toBe(1);
+      expect(result.ok).toBe(false);
+      // 勝ち目のない試行で上書きされず、503 がそのまま残る。
+      expect(result.ok === false && result.error).toBe(originalCause);
     });
 
     it('速い retriable 失敗なら、予算内で満額 retry する（切り詰めが効きすぎない）', () => {
