@@ -257,8 +257,10 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
       ;;
   esac
 
-  # 既存マイグレーションファイルの変更（新規作成は許可）
-  if echo "$FILE_PATH" | grep -q "supabase/migrations/"; then
+  # 既存マイグレーションファイルの変更（新規作成は許可）。
+  # 対象は .sql のみ — migrations 配下のポインタ用 markdown（CLAUDE.md 等）は
+  # 適用済み migration ではないので編集を許す（#2510）。
+  if echo "$FILE_PATH" | grep -q "supabase/migrations/.*\.sql$"; then
     if [ -f "$FILE_PATH" ]; then
       echo "BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください" >&2
       exit 2

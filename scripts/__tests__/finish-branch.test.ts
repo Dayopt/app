@@ -1666,6 +1666,20 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     },
   );
 
+  // #2509: Phase C の移動（scripts/ → scripts/ci/）後も glob が旧 path のままだと、
+  // production 監査本体を書き換える PR が marker gate を素通りする。
+  it('production 監査本体（scripts/ci/production-config-audit.mjs）は marker を要求する', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['scripts/ci/production-config-audit.mjs'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain(
+      'review gate: required (matched scripts/ci/production-config-audit.mjs)',
+    );
+    expect(status).toBe(1);
+  });
+
   it('CI でも nightly.yml は marker を要求しない（PR gate を持たないため）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['.github/workflows/nightly.yml'],
