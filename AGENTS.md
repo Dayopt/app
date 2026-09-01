@@ -4,7 +4,7 @@ Dayopt で作業する全エージェント（Claude / Codex 含む）の正本�
 
 ## Codex レビュー規則
 
-Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
+Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
 
 - レビューコメントは日本語で書く
 - diff によって新たに生じる、または現実に悪化する不具合だけを指摘する。問題がなければ指摘ゼロでよい
@@ -127,7 +127,9 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-クロスレビュー必須PRは **`[internal-review]` marker と現HEAD束縛のCodex review objectの両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
+クロスレビュー必須PRは **`[internal-review]` marker と現HEAD束縛のCodex自身の証跡（review object または `Reviewed commit` 付き指摘ゼロcomment）の両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
+
+retreat条件: `apps/product/src/features/timeblock` または `apps/product/src/lib/time` 配下のtestを削除・skipするPRは、上記の保護対象pathに触れなくても手動で `review:full` labelを付ける（時間不変条件の安全網がそのtest自身であるため。#2489 / #2503）。
 
 ### レーン運用
 

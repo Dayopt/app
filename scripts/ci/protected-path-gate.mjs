@@ -24,11 +24,10 @@
  * of adding review. `review:full` remains the manual escalation for a PR that
  * deserves the heavier review without matching a glob.
  *
- * Retreat condition for that call: the safety net for those paths is the unit
- * test suite under `apps/product/src/features/timeblock` and
- * `apps/product/src/lib/time`. Nothing here re-checks that the suite still
- * exists, so a PR that deletes or skips those tests must carry `review:full`
- * by hand - that is the one case where the reasoning above stops holding.
+ * Retreat condition for that call: see AGENTS.md §レビュー (the sentence
+ * referencing #2489 / #2503) for when a PR must carry `review:full` by hand
+ * even though nothing here re-checks it. Described once there, not
+ * duplicated here, to avoid two sources of truth drifting apart.
  *
  * Usage:
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
@@ -56,6 +55,22 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
+ * `.github/workflows/production-config-audit.yml` の self-change 検出
+ * （`grep -Eq '^(...)$'`、`Detect audit contract changes` step）がリテラルで
+ * 持つ 4 path。あちらは PR 由来の checkout を使わない trusted-base 判定用の
+ * 別経路（Vercel token を PR code から隔離する）で、こちらの marker gate と
+ * 目的は違うが対象は同じ 4 つの契約ファイルなので、リストの重複をここでは
+ * named export にしてテスト（`scripts/__tests__/protected-path-gate-contract.test.ts`）
+ * から両者の一致を機械的に固定する。どちらか一方だけ変えるとテストが落ちる。
+ */
+export const PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS = [
+  'scripts/ci/production-config-audit.mjs',
+  'apps/product/production-build-gate.mjs',
+  'apps/web/production-build-gate.mjs',
+  '.github/workflows/production-config-audit.yml',
+];
+
+/**
  * Protected path globs (OR'd together). If any changed file matches one of
  * these, the internal cross-review marker gate becomes required. Add or
  * remove entries only in this array (finish-branch.sh does not keep a copy).
@@ -71,6 +86,8 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/app/api/integrations/**',
   'apps/product/src/app/mcp/**',
   'apps/product/src/app/api/mcp/**',
+  // MCP の認証 / 認可 + service role（RLS を迂回する）アクセス面全体（#2503 監査）。
+  'apps/product/src/lib/mcp/**',
   // DB / migrations
   'supabase/migrations/**',
   'supabase/functions/**',
@@ -81,6 +98,14 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/features/settings/server/billing-*.ts',
   // external calendar integrations
   'apps/product/src/features/external-calendar/server/providers/**',
+  // アカウント削除に伴う外部 calendar データの不可逆な一括削除を駆動する cron（#2503 監査）。
+  'apps/product/src/app/api/cron/calendar-account-deletion-settle/**',
+  // 不可逆な purge 本体 + provider 側 token の revoke（#2503 監査）。
+  'apps/product/src/features/external-calendar/server/account-deletion.ts',
+  // rotation を誤ると唯一の refresh token が失効し、以後そのアカウントの sync が復旧できない（#2503 監査）。
+  'apps/product/src/features/external-calendar/server/token-rotation.ts',
+  // provider 側の revoke は一方向操作で、実行してしまえば取り消せない（#2503 監査）。
+  'apps/product/src/features/external-calendar/server/revoke-outbox.ts',
   // timeblock feature の server 側だけに同居する高リスク面（#2489 クロスレビュー P1）。
   // feature 全体は必須側から外したが、この 2 つは「外部契約 or 不可逆」に該当するため
   // 残す: mcp-* は MCP の公開契約 + service role（RLS を迂回する）クエリ、
@@ -112,10 +137,7 @@ export const PROTECTED_PATH_GLOBS = [
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
-  'scripts/ci/production-config-audit.mjs',
-  'apps/product/production-build-gate.mjs',
-  'apps/web/production-build-gate.mjs',
-  '.github/workflows/production-config-audit.yml',
+  ...PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS,
 ];
 
 /**
