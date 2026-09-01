@@ -49,8 +49,10 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 - **fail-closed 原則**: 観測コマンドが失敗（spawn 失敗・パース不能）した check-id は緑と判定せず `failed` へ記録する
 - **一過性の失敗は run 内 retry で吸収する**（v4、#2525）。`execObservationCommand` が最大 2 回まで再試行する。**retry するのは `classifyGhError` が `rate-limited` / `network-error` と分類した失敗だけ**（`isRetriableObservationFailure`）。`network-error` には GitHub / Sentry 側の 5xx（502 / 503 / 504 / 500）も含む — Codex 指摘で、5xx がどの分類語にも該当せず `unknown` へ落ちて 1 回で確定していたことが実測で判明した。timeout kill は除外する — 1 本 240s × 3 回で job 予算（15 分）を溶かし、残りの check の観測と起票ごと runner に kill される。本物の赤（分類できない非 0 exit）・auth-error・ENOENT も除外する（retry しても結果が変わらない）。**判定を「spawn 失敗か否か」で切らないこと** — gh の rate limit も 5xx も DNS 失敗も `status: 1` の非 0 exit で返るため、そこで切ると吸収したい対象がまるごと外れる（2026-09-01 実測、内製クロスレビュー指摘）
+  - **`checkExitCode`（docs-check/deadcode）の red/fetch-failed 分岐も同じ分類で揃える**（#2535 item 4）。retry を尽くした後の最終エラーが `isRetriableObservationFailure` 判定で一過性（rate-limited/network-error）と分かる場合は、プロセスが非 0 exit していても（`isSpawnFailure` は false）`fetch-failed` へ倒す。「retry しても駄目だった一過性分類は観測失敗であって赤ではない」という前提を、赤判定を持つ経路すべてで統一する
 - **赤判定は直近 run（fetch した3件のうち先頭）の terminal 結果を基準にする**（過去 run に non-success が混じっていても直近が success なら緑。旧 heavy-post-merge.yml / integration.yml は nightly と push:main が同一 concurrency group だったため過去 run が `cancelled` になるのが日常的で、それを含めて判定すると誤起票が常態化した。#2483 で nightly.yml へ統合後は push:main トリガー自体が無くなりこの経路は解消したが、再 dispatch 等で同型が再発しうるため backstop として維持している）
 - **pending の stale 判定**（v4、#2525）: `heavy-red` / `integration-red` の「直近 run 未完了」は `pending` として区別し、単発（前夜は成功している cron 遅延）は無音のまま判定を保留する。ただし取得した run 群に **48h 以内の完了した success が 1 件も無ければ red** へ倒す。旧 v3 はこの連晩判定を `checkRecentPending`（常設運行記録 issue のコメント列を数える）に持たせていたが、そのコメント自体を廃止したため run 履歴だけから導出する形へ置き換えた。これが無いと「queued のまま何晩も進まない」が永遠に無音になる
+  - **pending 判定は allowlist（`status !== 'completed'`）**（#2534）。旧実装は `in_progress` / `queued` の denylist で、`waiting`（environment protection rule 承認待ち）等の未知の非 completed 値が pending からも「直近 run の terminal 結果」判定からも漏れ、判定の根拠が採用 run を離れて古い run へ移っていた。`isLatestWorkflowRunPending`（`lib.mjs`）が正本
   - success の判定には `status === 'completed'` も要求する。Codex 指摘で、`checkWorkflowJobRun` の畳み込みが `[in_progress, success]` を偽の success にしていた（未完了 job の `conclusion` も `null` なので、`worst === null` を初回の番兵に使う reduce が 2 件目で無検査に上書きしていた）ことが実測で判明した。畳み込み側も直したが、無音へ倒す判断はこちらでも確かめる
   - **履歴の一部を読めなかった夜は stale を確定させない**（`fetch-failed` へ縮退）。stale は「窓内に success が無い」ことを根拠にするので、前夜の success run だけ jobs API が落ちると誤 red を起票する（Codex 指摘、実測確定）
 - 判定関数は `judgeCountBaseline` / `judgeWorkflowRun` / `classifyGhError`（`run-all.mjs`）
@@ -63,7 +65,9 @@ GitHub Actions の `permissions:` ブロックはジョブ開始前に server �
 
 **fetch-failed の起票は、全 check-id の赤判定が確定した後にまとめて処理する**（`deferredFetchFailed`、#2422 の P2 是正・PR #2445）。起票予算は run 全体で共有されているため、逐次処理すると慢性的な観測失敗が先に使い切って本物の CI 赤が起票されなくなる。v4 で fetch-failed が当夜起票になったぶん、この順序の重要性はむしろ上がっている。
 
-**異常を検出したのに issue を残せなかったら job を非 0 exit にする**（夜勤の主目的が壊れたのに job が緑、という最悪の組み合わせを防ぐ）。これは例外が飛んだ場合だけでなく、**dedup 検索の失敗で起票を見送った場合も含む** — `runAlertSync` は `gh issue list --search` が落ちると throw せず `{ action: 'skipped' }` を返す（fail closed で誤起票を避ける設計）ため、そこを拾わないと gh 障害・token scope 退行の夜に「本物の赤あり / issue ゼロ / job 緑」が成立する（内製クロスレビュー risk-reviewer 指摘 high）。`run-cap-reached`（`MAX_NEW_ISSUES_PER_RUN` による意図的な減衰）は障害ではないので対象外。
+**異常を検出したのに issue を残せなかったら job を非 0 exit にする**（夜勤の主目的が壊れたのに job が緑、という最悪の組み合わせを防ぐ）。これは例外が飛んだ場合だけでなく、**dedup 検索の失敗で起票を見送った場合も含む** — `runAlertSync` は `gh issue list --search` が落ちると throw せず `{ action: 'skipped' }` を返す（fail closed で誤起票を避ける設計）ため、そこを拾わないと gh 障害・token scope 退行の夜に「本物の赤あり / issue ゼロ / job 緑」が成立する（内製クロスレビュー risk-reviewer 指摘 high）。`run-cap-reached`（`MAX_NEW_ISSUES_PER_RUN` による意図的な減衰）は `isAlertDeliveryFailure`（＝ alert 投稿失敗としての扱い）の対象外——これは変えていない。
+
+**ただし `run-cap-reached` が 1 件でもあれば、別経路で job を非 0 exit にする**（#2535 item 3、推奨案 a）。4 本以上が同時赤化した夜、4 本目以降は意図的に起票を見送るが、その事実が job log のサマリ 1 行（`予算超過 N`）にしか残らず job 自体は緑のままだと朝に気づけない。起票そのものはしない（`MAX_NEW_ISSUES_PER_RUN` の濫造防止の意図はそのまま維持する）が、job を赤くして気づけるようにする。
 
 ### Step 3（run サマリを job log へ）
 
@@ -95,6 +99,7 @@ checklist（[checklist.md](checklist.md)）と baseline（[baseline.json](baseli
 ## 故障モード
 
 - **夜勤が動いた形跡が無い** — v4（#2525）以降、緑の夜は issue が 1 件も増えないのが正常系なので、「無音」だけでは故障を判定できない。判定材料は GitHub Actions の run そのもの: `gh run list --workflow=nightly.yml --limit 10` で直近 run 一覧を取得し、04:00 JST 前後の run を `gh run view <run-id>` で開いて night-watch job の成否を確認する（失敗していればログは `gh run view <run-id> --log-failed`）。run 自体が発火していなければ nightly.yml の schedule 設定を確認する。**job が緑なら、log の `night-watch: ...` サマリ 1 行が run の結論**（この行が無いまま緑なら、途中で kill された可能性がある）。故障していれば §手動代行 で代行する
+  - **job 自身が失敗/timeout（`timeout-minutes: 15`）で強制終了した夜の backstop**（#2535 item 1）: `nightly.yml` の night-watch job 末尾に `if: failure() || cancelled()` の step があり、`alert-issue.mjs report-fetch-failed night-watch-self --run-url <run URL>` で固定タイトルの alert issue（`nightwatch-fetch-failed(night-watch-self)`）を起票する。GitHub Actions は job 自身の timeout を cancellation として扱うため `cancelled()` も見る（`failure()` だけでは timeout を拾えない）。ただし runner が cancellation 後に猶予するごく短い grace period 内でしか動かないため、**確実な backstop ではない**（観測フェーズ全体の deadline 設計は #2535 item 2 として未着手のまま残す）。この issue が open なら「job が死んだ夜」の直接証拠になる
 - **Sentry org slug（`dayopt`）が変わる** — `SENTRY_EVIDENCE_RE`（`scripts/ci/night-watch/alert-issue.mjs`）の subdomain は固定文字列なので、org slug が変われば `sentry-new` の evidence が全件拒否され、件数のみの起票すら出せなくなる。org slug 変更時は `SENTRY_EVIDENCE_RE` と `CHECK_DEFINITIONS['sentry-new'].command` の org 名を同時に更新する
 - **Sentry CLI の version/checksum が古くなる** — `.github/workflows/nightly.yml`（night-watch job）の `NIGHT_WATCH_CLI_VERSION` / `NIGHT_WATCH_CLI_CHECKSUM_SHA256` は pin されているため自動更新されない。更新する時は `gh api repos/getsentry/cli/releases/tags/<VERSION> --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' | sed 's/^sha256://'` で新 version の digest を取り直す（`releases/latest` ではなく pin 対象 version を明示する。digest の `sha256:` prefix は `sed` で落とす）。**env 変数名に「SENTRY」を含めない**（gitleaks の `sentry-access-token` ルールが変数名+hex文字列で誤検知するため。`nightly.yml` の night-watch job、該当 step コメント参照）
 

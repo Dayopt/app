@@ -591,7 +591,19 @@ function envWithout(...keys) {
 function checkExitCode(command, args, { execFileImpl, env, sleepImpl }) {
   const result = execObservationCommand(command, args, { execFileImpl, env, sleepImpl });
   if (result.ok) return { status: 'green' };
-  if (isSpawnFailure(result.error)) return { status: 'fetch-failed' };
+  // #2535 item 4: red / fetch-failed の分岐を `isRetriableObservationFailure`
+  // の分類と揃える。旧実装は `isSpawnFailure`（`status` が数値かどうか）
+  // だけを見ていたため、`execObservationCommand` が run 内 retry を尽くした
+  // 後の最終エラーが「一過性と分類できる」（rate-limited / network-error）
+  // 場合でも red 側へ落ちていた。プロセスは起動して非 0 exit するため
+  // `status` は数値（`isSpawnFailure` は false）になるが、`pnpm docs:check`
+  // 等が exit 1 かつ stderr に econnreset 等を含んで終わる夜は、retry しても
+  // 直らなかっただけの観測失敗であって、コマンドが検出した本物の赤ではない。
+  // 「retry しても駄目だった一過性分類は観測失敗であって赤ではない」を
+  // ここ 1 箇所で表現する。
+  if (isSpawnFailure(result.error) || isRetriableObservationFailure(result.error)) {
+    return { status: 'fetch-failed' };
+  }
   return { status: 'red' };
 }
 
@@ -1323,6 +1335,25 @@ export function runNightWatch({ execFileImpl, now, runStatePath, sleepImpl } = {
   if (alertPostFailed.length > 0) {
     console.error(
       `::error::異常を検出しましたが alert issue を起票できませんでした: ${alertPostFailed.join(', ')}`,
+    );
+    process.exitCode = 1;
+  }
+
+  // #2535 item 3（推奨案 a）: `capped`（MAX_NEW_ISSUES_PER_RUN 超過による
+  // 意図的な減衰）は `isAlertDeliveryFailure` の対象外なので、これまでは
+  // exit code に一切出なかった。4 本以上が同時赤化した夜、4 本目以降は
+  // job log のサマリ 1 行（`予算超過 N`）にしか事実が残らず、job 自体は
+  // 緑のままだった（`isAlertDeliveryFailure` は `run-cap-reached` を意図的な
+  // 減衰として除外している——この判定自体は正しい。exit code 側にも同じ
+  // 除外が伝播していたのが漏れだった）。capped が 1 件でもあれば job を
+  // 非 0 exit にし、朝に気づけるようにする（起票そのものはしない——4 本目
+  // 以降を無理に起票すると `MAX_NEW_ISSUES_PER_RUN` の濫造防止の意図に反する）。
+  const cappedCheckIds = results
+    .filter((e) => e.outcome === 'skipped' && e.reason === 'run-cap-reached')
+    .map((e) => e.checkId);
+  if (cappedCheckIds.length > 0) {
+    console.error(
+      `::error::1 run あたりの新規起票上限（MAX_NEW_ISSUES_PER_RUN）に達し、起票を見送った check-id があります: ${cappedCheckIds.join(', ')}`,
     );
     process.exitCode = 1;
   }

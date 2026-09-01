@@ -78,6 +78,17 @@ export const CHECK_DEFINITIONS = {
     command:
       'gh run list --workflow=nightly.yml --branch main --limit 30 --json databaseId,url | jq -r \'.[].databaseId\' | while read -r id; do gh api "repos/Dayopt/dayopt/actions/runs/$id/jobs" --jq \'.jobs[] | select(.name=="Integration Tests") | select(.conclusion!="skipped")\'; done | head -3',
   },
+  // #2535: 「無音 = 緑」規約の backstop。night-watch job 自身が失敗/timeout で
+  // 強制終了した夜は、他の check-id 全部が未実行のまま alert issue もサマリ
+  // 1 行も残らず無音になっていた。`CHECK_IDS`（観測ループが毎晩回す集合）には
+  // 意図的に含めない — この id は観測ループを経由せず、nightly.yml の
+  // `if: failure() || cancelled()` backstop step から `report-fetch-failed`
+  // 経由で直接呼ばれる（#2526 で予告されていた `promote-red` と同型のパターン）。
+  'night-watch-self': {
+    kind: 'exit-code',
+    title: 'night-watch job 自身が失敗、または timeout で強制終了',
+    command: 'gh run view <run-id> --log（nightly.yml の night-watch job）',
+  },
   'sentry-new': {
     kind: 'sentry',
     title: '直近24hに新規 unresolved production issue を検出',
@@ -525,9 +536,9 @@ export function findExistingFetchFailureAlertIssue(checkId, { execFileImpl } = {
 }
 
 /**
- * @param {{ checkId: string, detectedAt: string, isContinuing?: boolean }} params
+ * @param {{ checkId: string, detectedAt: string, isContinuing?: boolean, runUrl?: string }} params
  */
-export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing = false }) {
+export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing = false, runUrl }) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
@@ -539,13 +550,17 @@ export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing =
   const status = isContinuing
     ? 'この issue が起票された晩以降も、取得失敗が続いています。'
     : '観測コマンド自体が失敗し、run 内の retry でも回復しませんでした。';
+  // #2535: night-watch-self backstop 用。nightly.yml の `if: failure() ||
+  // cancelled()` step から渡される GitHub Actions run URL（job log への
+  // 入口）。他の check-id は runUrl を渡さないので既存の本文は変わらない。
+  const runUrlLine = runUrl ? `\n**job log**: ${runUrl}\n` : '';
   return `## night-watch 検出: ${checkId}（観測失敗）
 
 この check は red/green の判定ではなく、**観測コマンド自体**が失敗しています。${status}
 
 **再現コマンド**: \`${definition.command}\`
 **検出日時**: ${detectedAt}
-
+${runUrlLine}
 原因の切り分けは \`docs/operations/night-watch.md\` §故障検出手順 を参照してください。
 `;
 }
@@ -558,6 +573,7 @@ export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing =
  * @param {{
  *   checkId: string,
  *   detectedAt?: string,
+ *   runUrl?: string,
  *   execFileImpl?: import('./lib.mjs').ExecFileImpl,
  *   runStatePath?: string,
  * }} params
@@ -565,12 +581,18 @@ export function buildFetchFailureAlertBody({ checkId, detectedAt, isContinuing =
 export function runFetchFailureAlertSync({
   checkId,
   detectedAt = new Date().toISOString(),
+  runUrl,
   execFileImpl,
   runStatePath,
 }) {
   const definition = getCheckDefinition(checkId);
   if (!definition) {
     throw new Error(`未知の check-id です: ${checkId}`);
+  }
+  if (runUrl !== undefined && !RUN_URL_RE.test(runUrl)) {
+    throw new Error(
+      '--run-url は https://github.com/Dayopt/dayopt/actions/runs/<id> 形式でのみ指定してください',
+    );
   }
 
   let existing;
@@ -584,6 +606,7 @@ export function runFetchFailureAlertSync({
     checkId,
     detectedAt,
     isContinuing: Boolean(existing),
+    runUrl,
   });
 
   const reservation = reserveAlertRunSlot({
@@ -637,8 +660,32 @@ function isDirectExecution() {
 const USAGE = [
   'Usage:',
   '  node scripts/ci/night-watch/alert-issue.mjs report <check-id> [--actual N] [--evidence-url URL] [--count N] [--evidence "DAYOPT-1 https://..."]',
-  '  node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed <check-id>',
+  '  node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed <check-id> [--run-url URL]',
 ].join('\n');
+
+/**
+ * `report-fetch-failed` 用の最小限の flag parser。既知 flag は `--run-url`
+ * だけ（#2535、night-watch-self backstop 用）。`parseAlertArgs` を流用しない
+ * のは、あちらが `--evidence` の複数回指定等 `report` 専用の語彙を持つため。
+ * @param {string[]} argv
+ * @returns {{ runUrl?: string }}
+ */
+export function parseFetchFailedArgs(argv) {
+  const result = {};
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (token !== '--run-url') {
+      throw new Error(`未知の引数です: ${token}`);
+    }
+    const value = argv[i + 1];
+    if (value === undefined) {
+      throw new Error(`${token} に値がありません`);
+    }
+    i += 1;
+    result.runUrl = value;
+  }
+  return result;
+}
 
 /**
  * CLI の結果を exit code へ写す。**`skipped`（dedup 検索失敗による起票見送り）
@@ -666,14 +713,10 @@ if (isDirectExecution()) {
         // `run-all.mjs` から直接 `runFetchFailureAlertSync` を呼ぶが、手動代行は
         // 層3 guard の allowlist を通る個別 wrapper 経由でしか書き込めないため、
         // この経路が無いと代行時に観測失敗を issue へ残せない。
-        // 動的引数は check-id 1 つだけで、その値は CHECK_DEFINITIONS の
-        // 既知キーかどうかを wrapper 内部が検証する。
-        if (rest.length > 0) {
-          console.error(USAGE);
-          process.exitCode = 1;
-        } else {
-          result = runFetchFailureAlertSync({ checkId });
-        }
+        // 動的引数は check-id と任意の --run-url のみで、値は
+        // CHECK_DEFINITIONS の既知キー / RUN_URL_RE を wrapper 内部が検証する。
+        const fetchFailedArgs = parseFetchFailedArgs(rest);
+        result = runFetchFailureAlertSync({ checkId, runUrl: fetchFailedArgs.runUrl });
       } else {
         const args = parseAlertArgs(rest);
         result = runAlertSync({ checkId, args });

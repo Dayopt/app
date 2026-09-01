@@ -1588,6 +1588,68 @@ describe('runNightWatch', () => {
     process.exitCode = 0;
   });
 
+  // #2535 item 4: `checkExitCode`（docs-check/deadcode の kind）は旧実装だと
+  // `isSpawnFailure` だけを見ており、retry を尽くした後の最終エラーが
+  // network-error 分類でも（プロセスは起動して非 0 exit するため）red へ
+  // 落ちていた。`isRetriableObservationFailure` の分類と揃えることで、
+  // 一過性の観測失敗は red-alert ではなく fetch-failed 側へ倒れる。
+  it('docs-check が network-error 分類のまま retry しきれない時は red ではなく fetch-failed になる', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () =>
+          Object.assign(new Error('Command failed: pnpm docs:check'), {
+            status: 1,
+            stderr: 'read ECONNRESET',
+          }),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch-fetch-failed docs-check in:title'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'create' &&
+          has(args, 'nightwatch-fetch-failed(docs-check)'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/851\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    // red-alert（nightwatch(docs-check)）は起票されていない。
+    const redAlertCreateCalls = execFileImpl.calls.filter(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch(docs-check)') &&
+        !has(c.args, 'nightwatch-fetch-failed(docs-check)'),
+    );
+    expect(redAlertCreateCalls).toHaveLength(0);
+
+    const fetchFailedCreateCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed(docs-check)'),
+    );
+    expect(fetchFailedCreateCall).toBeDefined();
+
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
+    );
+    process.exitCode = 0;
+  });
+
   it('retry の途中で回復した観測は fetch-failed にせず green として扱う', () => {
     let attempts = 0;
     const rules = [
@@ -1856,6 +1918,10 @@ describe('runNightWatch', () => {
     expect(summaryLine()).toBe(
       'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
     );
+    // #2535 item 3（推奨案 a）: capped が 1 件でもあれば job を非 0 exit にする。
+    // 起票上限で見送った事実がサマリ 1 行にしか残らないと、job 自体は緑のまま
+    // 朝に気づけない。
+    expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });
 });
