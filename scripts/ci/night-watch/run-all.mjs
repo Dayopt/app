@@ -866,21 +866,19 @@ export function checkWorkflowJobRun(
   //
   // どちらも `fetch-failed` へ縮退させる。無音ではなく、retry しても駄目なら
   // `nightwatch-fetch-failed` として起票されるので、朝には見える。
-  // 採用 run が terminal（`completed`）でない時は、green の根拠が matched[0] を
-  // 離れて**より古い run**（`hasRecentSuccess`）へ移る。この時だけは古い位置の
-  // 失敗も効くので総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。
   //
-  // 該当するのは status が `completed` / `in_progress` / `queued` のどれでもない
-  // 値（`waiting` / `requested` 等）を取る class。`isLatestWorkflowRunPending` は
-  // in_progress / queued しか pending と見なさないため、`waiting` は pending にも
-  // ならず `latestNonSuccessTerminal` にもならない。実測では `development`
-  // environment の protection_rules は空（`gh api .../environments/development`）
-  // なので現状この経路は到達しないが、**protection rule を 1 つ足すだけで
-  // 到達可能になる**。repo 設定に安全性を依存させない。
-  const adoptedRunIsTerminal = matched[0]?.status === 'completed';
-  const degradeGreen =
-    judged.status === 'green' &&
-    (jobFetchFailuresBeforeFirstMatch > 0 || (!adoptedRunIsTerminal && jobFetchFailures > 0));
+  // `judged.status === 'green'` に到達するのは `judgeWorkflowRun` が
+  // pending 分岐（`isLatestWorkflowRunPending`）を通らなかった時だけであり、
+  // #2534 の allowlist 反転後は「採用 run の status !== 'completed'」が
+  // 必ず pending 側へ倒れるため、この時点で `matched[0].status ===
+  // 'completed'` は常に真になる（`waiting` / `requested` 等の非 terminal
+  // 値は既に上の pending/stale-pending 分岐で処理済み）。したがって green の
+  // 根拠が matched[0] より古い run へ移るケースは無くなり、「採用 run が
+  // terminal でない時だけ古い位置の失敗も見る」という旧来の場合分け
+  // （`adoptedRunIsTerminal`）は冗長になった。green の縮退判定は
+  // `jobFetchFailuresBeforeFirstMatch`（採用 run より新しい run の取得失敗）
+  // だけで足りる。
+  const degradeGreen = judged.status === 'green' && jobFetchFailuresBeforeFirstMatch > 0;
   const degradeStale =
     judged.status === 'red' && judged.reason === 'stale-pending' && jobFetchFailures > 0;
   if (degradeGreen || degradeStale) {

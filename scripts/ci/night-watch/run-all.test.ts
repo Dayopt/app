@@ -644,34 +644,49 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome).toEqual({ status: 'green' });
   });
 
-  // 採用 run が terminal でない class（環境承認待ちの `waiting` 等）では、green の
-  // 根拠が matched[0] を離れて古い run へ移る。この時は古い位置の失敗も効くので
-  // 総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。実測では
-  // development environment の protection_rules は空で現状到達しないが、
-  // rule を 1 つ足すだけで到達可能になるため repo 設定に依存させない。
-  it('採用 run が terminal でないなら、古い run の取得失敗でも green を確定させない', () => {
+  // 採用 run が terminal でない class（環境承認待ちの `waiting` 等）。#2534 の
+  // allowlist 反転後は `isLatestWorkflowRunPending` がこの run を pending と
+  // 認識するため、judgeWorkflowRun は green/red の確定へ進まず pending を返す
+  // （48h 以内に success があるため stale-pending 化もしない）。green を
+  // 誤って確定させる経路そのものが無くなったので、間に挟まる run 2 の取得
+  // 失敗は結果に効かない（旧実装は denylist の穴で waiting を pending と
+  // 認識できず、この失敗を green の縮退根拠として拾う必要があった）。
+  it('採用 run が非 terminal（waiting）なら、48h 以内に success があれば pending として返す', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
         runListResponse([
           { databaseId: 3, createdAt: '2026-08-25T04:00:00+09:00', url: 'u3' },
           { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
-          // 24h 窓の内側（NOW の 23h 前）。ここが窓外だと hasRecentSuccess が
-          // false になり green ではなく red になって、縮退判定まで到達しない。
           { databaseId: 1, createdAt: '2026-08-24T06:00:00+09:00', url: 'u1' },
         ]),
         // 最新（3）は environment 承認待ちで waiting（completed でも queued でもない）。
         jobsResponseFor(3, [
           { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'waiting', conclusion: null },
         ]),
-        // 2 は未 mock（throw）= 読めない。1 は 24h 以内の success。
+        // 2 は未 mock（throw）= 読めない。1 は 48h 以内の success。
         jobsResponseFor(1, [
           { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
         ]),
       ]),
     );
     const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
-    // run 2 が本物の red だった可能性を排除できないので green を確定させない。
-    expect(outcome).toEqual({ status: 'fetch-failed' });
+    expect(outcome).toEqual({ status: 'pending', evidenceUrl: 'u3' });
+  });
+
+  // 赤の検出を弱めていないことの回帰確認（#2534 注意事項）。waiting のまま
+  // 48h 以内に success が 1 件も無ければ、pending ではなく stale-pending の
+  // red へ倒れ、取得失敗があれば fetch-failed へ縮退する（無音にはならない）。
+  it('採用 run が非 terminal（waiting）で 48h 以内に success が無ければ red（stale-pending）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 3, createdAt: '2026-08-25T04:00:00+09:00', url: 'u3' }]),
+        jobsResponseFor(3, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'waiting', conclusion: null },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'red', evidenceUrl: 'u3' });
   });
 
   // 上の縮退は「異常なし」側だけに効く。赤が読めているなら、それより古い run の
