@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-20
+last_verified: 2026-09-01
 code: .github/dependabot.yml
 ---
 
@@ -18,7 +18,7 @@ code: .github/dependabot.yml
 - `type:`、`area:`、`quality:` は複数可。
 - 技術名、担当者名、Workflow名、Phase、実装ファイル種別をラベル化しない。
 - namespace の無い裸のラベルを作らない。`ops` は 2026-08-11（#1915）に `area:operations` へ付け替えたうえで削除した。
-- 新しいラベルが必要な場合は、既存 namespace（`type` / `priority` / `status` / `area` / `scope` / `quality` / `risk` / `judgment`）では表現できないことを確認したうえで判断する。
+- 新しいラベルが必要な場合は、既存 namespace（`type` / `priority` / `status` / `area` / `scope` / `quality` / `risk` / `judgment` / `review`）では表現できないことを確認したうえで判断する。
 
 ## 正規ラベル一覧
 
@@ -95,6 +95,13 @@ code: .github/dependabot.yml
 - `judgment:judged` — 個別判定を書き終えた状態（2026-08-27、User 裁可の新設。`judgment` namespace 内の追加のため既存 2 値体系への例外にあたる。経緯は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル）。`docs/decisions.md` への反映はラベル→月次 sync 機構ではなく、判定時点での直接追記に一本化済み（2026-08-28、#2475）
 
 運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル
+
+### review
+
+- `review:full` — **Issue / PR 共通の高リスクシグナル**（2026-09-01、[#2529](https://github.com/Dayopt/dayopt/issues/2529) / [#2530](https://github.com/Dayopt/dayopt/issues/2530)）。手で付ける明示的なエスカレーションで、AI が自動付与する仕組みは作らない
+  - **PR に付いている場合**: 保護対象 path に該当しなくてもクロスレビュー必須になる（`[internal-review]` marker + 現 HEAD 束縛の Codex review が両方必要）。判定は `scripts/tasks/finish-branch.sh` が `scripts/ci/protected-path-gate.mjs` と併せて行う
+  - **Issue に付いている場合**: 実装着手前に Codex Issue Review が必須になる（`pnpm review:issue:gate <N>` が機械判定、`dispatch` skill 操作A 手順 6）。さらに、その issue を `Closes #N` した PR も自動的にクロスレビュー必須になる（`Refs #N` や本文中の URL は継承しない）
+  - **ラベルを外しても gate 対象のまま**（`review:full` の削除履歴、またはこの issue 宛ての review marker があれば降格しない。失敗したレビューをラベル削除で迂回させないため）。再分類したい場合は current な pass 証跡を作る
 
 ### quality
 

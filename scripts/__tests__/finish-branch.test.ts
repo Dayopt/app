@@ -15,6 +15,11 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import {
+  buildIssueReviewMarkerBody,
+  computeIssueFingerprintFromIssue,
+} from '../lib/issue-review-core.mjs';
+
 /**
  * `finish-branch.sh` は Claude / 人間で共通のマージゲートで、判定を誤ると
  * 「失敗を見落としてマージする」方向に倒れる。実スクリプトを子プロセスで動かし、
@@ -130,19 +135,28 @@ function internalReviewMarkerBody(
   return `[internal-review]\nhead: ${head}\nagent: ${agent}\nP1: ${p1}\nP2: ${p2}`;
 }
 
+/** Codex GitHub 連携 bot の login（GraphQL 表記。REST は `[bot]` 付き） */
+const CODEX_BOT_LOGIN = 'chatgpt-codex-connector';
+
+type CodexReviewFixture = { login?: string; state?: string; commitOid?: string };
+
 /**
- * 内製クロスレビュー痕跡クエリ（comments のみ）のレスポンスを組み立てる。
+ * 内製クロスレビュー痕跡クエリのレスポンスを組み立てる。
  *
- * 外部レビュー（Codex）廃止後、痕跡は `[internal-review]` marker 付き issue comment
- * の 1 経路のみで判定する（`scripts/tasks/finish-branch.sh` §内製クロスレビューの
- * 実施を要求する gate 参照）。
+ * 1 回のクエリで 2 系統の証跡を取る（`scripts/tasks/finish-branch.sh` 参照）:
+ * - `comments`: 内製レビューの `[internal-review]` marker（1 層目）
+ * - `reviews`: Codex の独立レビュー object（#2529、2 系統目）
  */
 function reviewEvidencePayload(evidence: {
   comments?: Array<{ author: string; body?: string; association?: string }>;
   /** 窓（last: 100）より多い総件数を申告させる。省略時は nodes 件数 = 切り詰めなし */
   commentsTotalCount?: number;
+  /** Codex review object。省略時は現 HEAD の有効なレビュー 1 件（既存ケースの前提を維持） */
+  codexReviews?: CodexReviewFixture[];
+  reviewsTotalCount?: number;
 }): unknown {
   const comments = evidence.comments ?? [];
+  const reviews = evidence.codexReviews ?? [{}];
   return {
     data: {
       repository: {
@@ -155,6 +169,37 @@ function reviewEvidencePayload(evidence: {
               authorAssociation:
                 comment.association ?? (comment.author === 't3-nico' ? 'MEMBER' : 'NONE'),
               body: comment.body ?? '',
+            })),
+          },
+          reviews: {
+            totalCount: evidence.reviewsTotalCount ?? reviews.length,
+            nodes: reviews.map((review) => ({
+              author: { login: review.login ?? CODEX_BOT_LOGIN },
+              state: review.state ?? 'COMMENTED',
+              commit: { oid: review.commitOid ?? DEFAULT_HEAD_SHA },
+            })),
+          },
+        },
+      },
+    },
+  };
+}
+
+/** PR の closing issue references（`Closes #N`）のレスポンスを組み立てる。 */
+function closingIssuesPayload(
+  issues: Array<{ number: number; labels?: string[]; repo?: string }>,
+  totalCount?: number,
+): unknown {
+  return {
+    data: {
+      repository: {
+        pullRequest: {
+          closingIssuesReferences: {
+            totalCount: totalCount ?? issues.length,
+            nodes: issues.map((issue) => ({
+              number: issue.number,
+              repository: { nameWithOwner: issue.repo ?? 'Dayopt/dayopt' },
+              labels: { nodes: (issue.labels ?? []).map((name) => ({ name })) },
             })),
           },
         },
@@ -207,9 +252,43 @@ function runScript(
     reviewEvidence?: {
       comments?: Array<{ author: string; body?: string; association?: string }>;
       commentsTotalCount?: number;
+      /** Codex review object（#2529）。省略時は現 HEAD の有効レビュー 1 件 */
+      codexReviews?: CodexReviewFixture[];
+      reviewsTotalCount?: number;
     };
     /** 痕跡クエリを失敗させる（fail closed 経路の検証） */
     reviewEvidenceUnavailable?: boolean;
+    /**
+     * PR の closing issue references（`Closes #N`）。省略時は 0 件。
+     * `review:full` を持つ issue が 1 件でもあれば review gate が required になる（#2530）。
+     */
+    linkedIssues?: Array<{ number: number; labels?: string[]; repo?: string }>;
+    /** closing issue references の申告総件数（窓超過の検証用） */
+    linkedIssuesTotalCount?: number;
+    /** closing issue references の取得を失敗させる（fail closed 経路の検証） */
+    linkedIssuesUnavailable?: boolean;
+    /**
+     * linked issue ごとの Issue Review 証跡（issue-review-gate.mjs が読む GraphQL 応答）。
+     * 省略した issue は「証跡なし」として gate が停止する。
+     */
+    issueFixtures?: Record<
+      number,
+      {
+        title?: string;
+        body?: string;
+        labels?: string[];
+        /** 過去に剥がされたラベル（UNLABELED_EVENT）。review:full を含めると降格しない */
+        removedLabels?: string[];
+        lastEditedAt?: string;
+        comments?: Array<{
+          author: string;
+          body?: string;
+          association?: string;
+          createdAt?: string;
+          url?: string;
+        }>;
+      }
+    >;
     /**
      * PR に付与されたラベル名一覧。`review:full` を含めると保護対象 path に
      * 該当しなくても内製クロスレビュー marker gate を要求する（#2478）。
@@ -301,6 +380,53 @@ function runScript(
     ),
   );
 
+  // PR の closing issue references（`Closes #N`）のレスポンス。既定は 0 件。
+  const closingIssuesPath = join(temporaryDirectory, 'closing-issues.json');
+  writeFileSync(
+    closingIssuesPath,
+    JSON.stringify(
+      closingIssuesPayload(options.linkedIssues ?? [], options.linkedIssuesTotalCount),
+    ),
+  );
+
+  // linked issue ごとの Issue Review 証跡（issue-review-gate.mjs が読む形）。
+  const issueDirectory = join(temporaryDirectory, 'issues');
+  mkdirSync(issueDirectory);
+  for (const [numberKey, fixture] of Object.entries(options.issueFixtures ?? {})) {
+    const comments = fixture.comments ?? [];
+    writeFileSync(
+      join(issueDirectory, `issue-${numberKey}.json`),
+      JSON.stringify({
+        data: {
+          repository: {
+            issue: {
+              number: Number(numberKey),
+              title: fixture.title ?? 'linked issue',
+              body: fixture.body ?? '本文',
+              lastEditedAt: fixture.lastEditedAt ?? null,
+              labels: { nodes: (fixture.labels ?? ['review:full']).map((name) => ({ name })) },
+              renames: { nodes: [] },
+              unlabeled: {
+                nodes: (fixture.removedLabels ?? []).map((name) => ({ label: { name } })),
+              },
+              comments: {
+                totalCount: comments.length,
+                nodes: comments.map((comment) => ({
+                  authorAssociation:
+                    comment.association ?? (comment.author === 't3-nico' ? 'MEMBER' : 'NONE'),
+                  author: { login: comment.author },
+                  body: comment.body ?? '',
+                  createdAt: comment.createdAt ?? '2026-09-01T00:00:00Z',
+                  url: comment.url,
+                })),
+              },
+            },
+          },
+        },
+      }),
+    );
+  }
+
   // `gh` だけ差し替える。git は temp repo 上で本物を動かす（worktree / show-ref の判定を
   // 実挙動に任せる方が、stub の作り込みより契約に近い）。
   const ghStub = join(binDirectory, 'gh');
@@ -318,9 +444,24 @@ case "$1" in
   api)
     shift
     if [[ "\${1:-}" == graphql ]]; then
-      # graphql は 2 用途ある。reviewThreads のページングと、内製クロスレビュー痕跡の
-      # 取得（comments last:）。クエリ本文で振り分ける（thread クエリ側は
-      # comments(first: 1) を使うため "comments(last:" では衝突しない）。
+      # graphql は 4 用途ある。判定順は「限定的なクエリから先に」— issue クエリも
+      # comments(last:) を含むため、先に issue / closingIssues を振り分ける。
+      if [[ "$*" == *"closingIssuesReferences"* ]]; then
+        cat "$FINISH_BRANCH_CLOSING_ISSUES"
+        exit 0
+      fi
+      if [[ "$*" == *"issue(number:"* ]]; then
+        issue_number=""
+        for arg in "$@"; do
+          case "$arg" in
+            number=*) issue_number="\${arg#number=}" ;;
+          esac
+        done
+        cat "$FINISH_BRANCH_ISSUE_DIR/issue-\${issue_number}.json"
+        exit 0
+      fi
+      # reviewThreads のページングと、クロスレビュー痕跡の取得（comments last: +
+      # reviews last:）。thread クエリ側は comments(first: 1) を使うため衝突しない。
       if [[ "$*" == *"comments(last:"* ]]; then
         cat "$FINISH_BRANCH_REVIEW_EVIDENCE"
         exit 0
@@ -383,6 +524,10 @@ esac
       FINISH_BRANCH_REVIEW_EVIDENCE: options.reviewEvidenceUnavailable
         ? join(temporaryDirectory, 'missing-review-evidence.json')
         : reviewEvidencePath,
+      FINISH_BRANCH_CLOSING_ISSUES: options.linkedIssuesUnavailable
+        ? join(temporaryDirectory, 'missing-closing-issues.json')
+        : closingIssuesPath,
+      FINISH_BRANCH_ISSUE_DIR: issueDirectory,
     },
   });
 
@@ -512,7 +657,8 @@ case "$1" in
       exit 2
     fi
     case "$*" in
-      *"comments(last:"*) echo '{"data":{"repository":{"pullRequest":{"comments":{"totalCount":1,"nodes":[{"author":{"login":"t3-nico"},"authorAssociation":"MEMBER","body":"[internal-review]\\nhead: ${headSha}\\nagent: risk-reviewer\\nP1: none"}]}}}}}' ;;
+      *closingIssuesReferences*) echo '{"data":{"repository":{"pullRequest":{"closingIssuesReferences":{"totalCount":0,"nodes":[]}}}}}' ;;
+      *"comments(last:"*) echo '{"data":{"repository":{"pullRequest":{"comments":{"totalCount":1,"nodes":[{"author":{"login":"t3-nico"},"authorAssociation":"MEMBER","body":"[internal-review]\\nhead: ${headSha}\\nagent: risk-reviewer\\nP1: none"}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"chatgpt-codex-connector"},"state":"COMMENTED","commit":{"oid":"${headSha}"}}]}}}}}' ;;
       *graphql*) echo '{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}}' ;;
       *full_name*) echo "Dayopt/dayopt" ;;
       *pulls/123/files*) printf 'F\\tapps/product/src/x.ts\\nF\\tapps/web/src/y.ts\\n' ;;
@@ -1989,5 +2135,370 @@ describe('掃除で緩めてはいけない判定（#1771）', () => {
     expect(repo.status).toBe(1);
     expect(repo.stderr).toContain('main に到達しておらず');
     expect(repo.branchExists()).toBe(true);
+  });
+});
+
+/**
+ * #2529: クロスレビュー必須 PR は「内製 subagent」と「Codex」の 2 系統が
+ * 現 HEAD に対して揃って初めて merge できる。
+ *
+ * 証跡は Codex 自身が投稿した GitHub review object（`chatgpt-codex-connector`）で、
+ * Main が書ける marker ではない。Codex の失敗（error / timeout / usage limit /
+ * 空応答）は「現 HEAD の review object が存在しない」に帰着するため、
+ * 個別の失敗モードを列挙せずとも構造的に fail closed になる。
+ */
+describe('Codex 独立レビューの必須化（#2529）', () => {
+  const greenRollup = () => [
+    checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+    ...requiredChecks(),
+  ];
+
+  const protectedFile = 'supabase/migrations/20260901000000_x.sql';
+
+  function runProtected(options: Parameters<typeof runScript>[1] = {}) {
+    return runScript(greenRollup(), { files: [protectedFile], threads: [], ...options });
+  }
+
+  it('内製 marker と Codex review が現 HEAD で揃えば通す', () => {
+    const { status, stderr } = runProtected();
+    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('Codex の独立レビューを確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('内製 marker だけでは通さない（Codex 側が欠けている）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('現在の HEAD に対する Codex レビューがありません');
+    expect(stderr).toContain('@codex review');
+    expect(status).toBe(1);
+  });
+
+  it('Codex review だけでは通さない（内製 marker が欠けている）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  it('内製 marker が旧 HEAD を指していれば停止する', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) }],
+      },
+    });
+    expect(stderr).toContain('現在の HEAD SHA');
+    expect(status).toBe(1);
+  });
+
+  it('Codex review が旧 HEAD を指していれば停止する（delta を積み上げさせない）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [{ commitOid: '1'.repeat(40) }],
+      },
+    });
+    expect(stderr).toContain('古い commit に対するもの');
+    expect(status).toBe(1);
+  });
+
+  it('HEAD 更新後に再レビューすれば通す（新旧 review が同居しても新側で通る）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) },
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+        ],
+        codexReviews: [{ commitOid: '1'.repeat(40) }, {}],
+      },
+    });
+    expect(stderr).toContain('Codex の独立レビューを確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('別 login のレビューは Codex 証跡として数えない（producer の詐称を防ぐ）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [{ login: 't3-nico' }],
+      },
+    });
+    expect(stderr).toContain('レビューが 1 件もありません');
+    expect(status).toBe(1);
+  });
+
+  it.each([['PENDING'], ['DISMISSED']])('state が %s の Codex review は証跡にならない', (state) => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [{ state }],
+      },
+    });
+    expect(stderr).toContain('PENDING / DISMISSED のみ');
+    expect(status).toBe(1);
+  });
+
+  it('REST 形式の login（[bot] 付き）も Codex 証跡として認める', () => {
+    const { status } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [{ login: 'chatgpt-codex-connector[bot]' }],
+      },
+    });
+    expect(status).toBe(0);
+  });
+
+  it('review の窓を超えている場合は停止時にその旨を伝える（判定は緩めない）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [],
+        reviewsTotalCount: 150,
+      },
+    });
+    expect(stderr).toContain('review が 100 件を超えており');
+    expect(status).toBe(1);
+  });
+
+  it('Codex の指摘 thread が未解決なら thread gate で停止する（既存機構で担保）', () => {
+    const { status, stderr } = runProtected({
+      threads: [{ isResolved: false, author: 'chatgpt-codex-connector' }],
+    });
+    expect(stderr).toContain('未解決のレビュー thread');
+    expect(status).toBe(1);
+  });
+
+  it('クロスレビュー非対象 PR では Codex レビューを要求しない', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
+      threads: [],
+      reviewEvidence: { comments: [], codexReviews: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(stderr).not.toContain('Codex');
+    expect(status).toBe(0);
+  });
+
+  // #2529 Issue Review P2（ガードレール自己保護）: レビュー証跡の生成・検証自身を
+  // 変更する PR が、2 系統レビュー無しで merge できてはいけない。
+  it.each([
+    ['scripts/tasks/issue-review-gate.mjs'],
+    ['scripts/lib/issue-review-core.mjs'],
+    ['scripts/tasks/generate-issue-review-marker.mjs'],
+    ['scripts/tasks/generate-marker.ts'],
+    ['scripts/lib/generate-marker-core.ts'],
+  ])('レビュー証跡機構自身（%s）は review gate を必須にする', (file) => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [file],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    // marker gate で止まる（Codex gate はここまで到達しない）
+    expect(stderr).toContain(`review gate: required (matched ${file})`);
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  // 上の it.each は marker gate で止まるため Codex gate を通らない。
+  // 証跡機構自身の変更でも 2 系統目が要ることを、marker あり・Codex なしで固定する。
+  it('レビュー証跡機構自身の変更は marker があっても Codex レビューを要求する', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: ['scripts/lib/issue-review-core.mjs'],
+      threads: [],
+      reviewEvidence: {
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('現在の HEAD に対する Codex レビューがありません');
+    expect(status).toBe(1);
+  });
+});
+
+/**
+ * #2530: linked issue の `review:full` を PR の cross-review 判定へ継承し、
+ * merge 時にも Issue Review 証跡が current であることを確認する。
+ *
+ * linkage の正本は closing issue references（`Closes #N`）のみ。`Refs #N` や
+ * 本文中の URL は GitHub 側で closing reference にならないため継承しない。
+ */
+describe('linked issue の review:full 継承と Issue Review 証跡（#2530）', () => {
+  const greenRollup = () => [
+    checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+    ...requiredChecks(),
+  ];
+
+  const ordinaryFile = 'apps/product/src/features/activities/components/ActivityRow.tsx';
+
+  /** issue-review-gate.mjs が pass する証跡（Codex コメント + 現 fingerprint marker）を作る */
+  function passingIssueFixture(issueNumber: number) {
+    const issue = { title: 'linked issue', body: '本文', labels: ['review:full'] };
+    const codexUrl = `https://github.com/Dayopt/dayopt/issues/${issueNumber}#issuecomment-1`;
+    const marker = buildIssueReviewMarkerBody({
+      issueNumber,
+      fingerprint: computeIssueFingerprintFromIssue(issue),
+      reviewedCommentUrl: codexUrl,
+      p1Count: 0,
+      p2Count: 0,
+    });
+    return {
+      ...issue,
+      comments: [
+        {
+          author: 'chatgpt-codex-connector',
+          body: 'レビュー結果です。',
+          url: codexUrl,
+          createdAt: '2026-09-01T01:00:00Z',
+        },
+        { author: 't3-nico', body: marker, createdAt: '2026-09-01T02:00:00Z' },
+      ],
+    };
+  }
+
+  it('linked issue に review:full があれば非保護 path でも review gate を必須にする', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['review:full'] }],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain(
+      'review gate: required (linked issue review required: Dayopt/dayopt#77)',
+    );
+    expect(status).toBe(1);
+  });
+
+  it('linked issue に review:full が無ければ従来どおり軽量経路', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['type:chore'] }],
+      issueFixtures: { 77: { labels: ['type:chore'], comments: [] } },
+      reviewEvidence: { comments: [], codexReviews: [] },
+    });
+    expect(stderr).toContain('linked issue Dayopt/dayopt#77 は Issue Review 対象外です');
+    expect(stderr).toContain('review gate: not required');
+    expect(status).toBe(0);
+  });
+
+  // push 前反証レビュー P2: ラベルを外すだけで軽量経路へ降格できてはいけない。
+  // bash 側でラベル事前フィルタをしていた頃はここが素通りしていた。
+  it('review:full を外した履歴がある linked issue は降格せず gate 対象のまま', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: [] }],
+      issueFixtures: { 77: { labels: [], removedLabels: ['review:full'], comments: [] } },
+      reviewEvidence: { comments: [], codexReviews: [] },
+    });
+    expect(stderr).toContain('linked issue review required: Dayopt/dayopt#77');
+    expect(stderr).toContain('Dayopt/dayopt#77 の Codex Issue Review 証跡が無効です');
+    expect(status).toBe(1);
+  });
+
+  // push 前反証レビュー P2: 番号だけを渡すと gate 側の既定 repo で同番号の
+  // 別 issue を検証し、「確認しました」と誤表示する。
+  it('別 repo の linked issue はその repo の issue として検証する', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['review:full'], repo: 'Dayopt/other' }],
+      issueFixtures: { 77: passingIssueFixture(77) },
+    });
+    expect(stderr).toContain('Dayopt/other#77');
+    expect(status).toBe(0);
+  });
+
+  // 複数 linked issue を回す経路（1 件目だけ検証して終わる回帰を検出する）。
+  it('複数 linked issue のうち 1 件でも証跡が無効なら止める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [
+        { number: 77, labels: ['review:full'] },
+        { number: 78, labels: ['review:full'] },
+      ],
+      issueFixtures: {
+        77: passingIssueFixture(77),
+        78: { labels: ['review:full'], comments: [] },
+      },
+    });
+    expect(stderr).toContain('linked issue Dayopt/dayopt#77 の Issue Review 証跡を確認しました');
+    expect(stderr).toContain('Dayopt/dayopt#78 の Codex Issue Review 証跡が無効です');
+    expect(status).toBe(1);
+  });
+
+  it('複数 linked issue のうち 1 件でも review:full なら必須にする', () => {
+    const { stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [
+        { number: 76, labels: [] },
+        { number: 77, labels: ['review:full'] },
+      ],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('linked issue review required: Dayopt/dayopt#77');
+  });
+
+  it('両 PR 証跡 + 有効な Issue Review 証跡が揃えば通す', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['review:full'] }],
+      issueFixtures: { 77: passingIssueFixture(77) },
+    });
+    expect(stderr).toContain('linked issue Dayopt/dayopt#77 の Issue Review 証跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('Issue Review 証跡が無ければ merge を止める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['review:full'] }],
+      issueFixtures: { 77: { labels: ['review:full'], comments: [] } },
+    });
+    expect(stderr).toContain('Dayopt/dayopt#77 の Codex Issue Review 証跡が無効です');
+    expect(status).toBe(1);
+  });
+
+  it('実装中に issue 本文が変わっていれば stale として止める', () => {
+    const fixture = passingIssueFixture(77);
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: ['review:full'] }],
+      // marker は旧本文の fingerprint のまま、本文だけ書き換わった状態
+      issueFixtures: { 77: { ...fixture, body: '本文（実装中に追記）' } },
+    });
+    expect(stderr).toContain('Dayopt/dayopt#77 の Codex Issue Review 証跡が無効です');
+    expect(status).toBe(1);
+  });
+
+  it('closing issue references の取得に失敗したら fail closed で止める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssuesUnavailable: true,
+    });
+    expect(stderr).toContain('linked issue（closing issue references）を取得できませんでした');
+    expect(status).toBe(1);
+  });
+
+  it('linked issue が窓（50 件）を超えていれば止める', () => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [ordinaryFile],
+      threads: [],
+      linkedIssues: [{ number: 77, labels: [] }],
+      linkedIssuesTotalCount: 51,
+    });
+    expect(stderr).toContain('linked issue が 50 件を超えており');
+    expect(status).toBe(1);
   });
 });

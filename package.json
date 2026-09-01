@@ -34,6 +34,8 @@
     "branch:finish": "bash scripts/tasks/finish-branch.sh",
     "green:watch": "node scripts/tasks/green-watch.mjs",
     "review:marker": "tsx scripts/tasks/generate-marker.ts",
+    "review:issue:marker": "node scripts/tasks/generate-issue-review-marker.mjs",
+    "review:issue:gate": "node scripts/tasks/issue-review-gate.mjs",
     "migration:create": "supabase migration new",
     "migration:list": "supabase migration list",
     "migration:status": "supabase db diff",

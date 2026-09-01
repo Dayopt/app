@@ -4,7 +4,7 @@ Dayopt で作業する全エージェント（Claude / Codex 含む）の正本�
 
 ## Codex レビュー規則
 
-Codex（OpenAI）がこの repo の PR をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。どの PR を Codex に見せるかは `scripts/ci/protected-path-gate.mjs` が機械判定する（保護対象 path に触れる PR、または `review:full` ラベル付き PR）。
+Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
 
 - レビューコメントは日本語で書く
 - diff によって新たに生じる、または現実に悪化する不具合だけを指摘する。問題がなければ指摘ゼロでよい
@@ -127,7 +127,7 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-保護対象pathに触れるPR、または `review:full` ラベル付きPRは `[internal-review]` marker（`pr-cross-review` skill）が必須。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*`（MCP公開契約 + service roleのRLS迂回クエリ）と `private-timeblock-search-query.ts`（検索語のprivacy境界）は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPRには `review:full` を手で付ける。
+クロスレビュー必須PRは **`[internal-review]` marker と現HEAD束縛のCodex review objectの両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
 
 ### レーン運用
 

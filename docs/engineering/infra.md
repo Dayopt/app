@@ -263,7 +263,7 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - **GitHub CodeQL は 2026-08-11 に無効化すると決めた。UI 操作は本記述時点で未実施で、現在も CodeQL は動いている**（残作業は #1934。現在状態は `gh api repos/Dayopt/dayopt/code-scanning/default-setup --jq '.state'` が `configured` を返すか `not-configured` を返すかで判定する。`not-configured` を確認したらこの一文を完了形へ更新する）。無効化を決めた理由は次のとおり。 default setup が `languages: ["actions"]` で有効化されており、**workflow YAML しか解析していなかった**（`apps/` 配下の JS / TS は対象外）。#1425 の Done 条件「JavaScript / TypeScript が対象になっていることを確認する」が満たされないまま COMPLETED で close されたため、誤った前提が docs 側に残り続けていた。無効化後のセキュリティ静的解析の担当: secret は gitleaks と `pnpm secrets:check`（#2483 以前は `.github/workflows/docs-guard.yml`、現在は `ci.yml` の static job（`scripts/ci/check.mjs`））、依存は Dependabot、深掘り SAST は `/claude-security`。**`.github/workflows/**` に対する PR ごとの自動解析だけは代替が無く、無効化で失われる**（受容済み。根拠と再評価の条件は決定ログ）。再有効化する場合は `languages` に `javascript-typescript` が入っていることを `gh api repos/Dayopt/dayopt/code-scanning/default-setup` で確認する（設定画面を開いた事実では確認にならない）。判断は2026-08-11 の決定ログ（削除済み、git 履歴参照）
-- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に運用停止し、内製クロスレビューへ一本化した**（2026-08-13 決定ログ（削除済み、git 履歴参照）、`.claude/skills/pr-cross-review/SKILL.md`）。Codex 向け規則は `AGENTS.md` に凍結保存してあり、再開時はそこから読み替える
+- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に全 PR 適用を停止し、内製クロスレビューへ一本化した**が、2026-09-01 に**クロスレビュー必須 PR に限り必須の 2 系統目として再開した**（#2529。`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して存在しないと `pnpm branch:finish` が止まる）。低リスク PR では従来どおり起動しない。規則は `AGENTS.md` §Codex レビュー規則、手順は `.claude/skills/pr-cross-review/SKILL.md`
 - **repo ruleset「Copilot automatic first review」は 2026-08-05 に削除した。** 上記の「外した」後も ruleset 自体は active で残っており、seat 付与後に復活したのか直近 PR（#1832）へ実際にレビューを投稿し、PR ごとに約 3 課金分の Actions 実行を発生させていた。private 化後の課金源かつ（当時の）Codex 一本化方針と二重のため ruleset ごと削除。再開する場合は org の Copilot seat 割り当て（Settings → Copilot → Access）と ruleset の再作成の両方が必要
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
@@ -381,7 +381,8 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
   ruleset の required 指定に使うため
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
-  外部レビュー（Codex、2026-08-13 に運用停止）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
+  外部レビュー（Codex。2026-08-13 に全 PR 適用を停止し、2026-09-01 にクロスレビュー必須 PR 限定で
+  必須化して再開、#2529）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
   §Read-only delegation の `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化して
   いたが、現在は内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が merge gate の標準を
   担う。判定基準だった不変条件カタログは [invariants.md](./invariants.md) に残っている
