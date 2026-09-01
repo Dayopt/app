@@ -1,15 +1,28 @@
 ---
 name: pr-cross-review
-description: 指揮台がレーンから merge 可能報告を受けた時、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。risk-reviewer / behavior-verifier を並列実行し `[internal-review]` marker 付きで指摘を PR へ投稿する。実装では発動しない。
+description: 指揮台がレーンから merge 可能報告を受けた時、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。Codex へ `@codex review` を投げ、内製 subagent（risk-reviewer / behavior-verifier）を並列実行し、`[internal-review]` marker 付きで指摘を PR へ投稿する。実装では発動しない。
 effort: medium
 maxTurns: 20
 ---
 
 # PR クロスレビュー スキル
 
-指揮台が merge 前に実行する内製クロスレビューの標準手順。外部レビュー（Codex）の全 PR 適用は 2026-08-13 に停止し、現在は保護対象 path / `review:full` ラベルの PR に限り併用する（選別は `scripts/ci/protected-path-gate.mjs` が機械判定、レビュー規則は `AGENTS.md` 冒頭の Codex レビュー規則）。`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡はこのスキルが生成する `[internal-review]` marker 付きコメント + inline review comment で満たす。
+指揮台が merge 前に実行するクロスレビューの標準手順。**クロスレビュー必須 PR は内製 subagent と Codex の独立 2 系統が揃って初めて merge できる**（#2529、2026-09-01）。全 PR への Codex 適用を止めた 2026-08-13 の判断は、必須 PR に限りここで撤回した — 同一モデル系列の中で役割を分けただけのレビューを「独立」とは呼べないため、別 provider の反証を hard gate に載せる。低リスク PR のテンポは変えない（Codex を起動しない）。
 
-**このレビューが必須になる PR は保護対象 path / `review:full` ラベルに該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
+2 系統の役割分担:
+
+| 系統  | 起動方法                       | 証跡                                                      | 何を担保するか                                |
+| ----- | ------------------------------ | --------------------------------------------------------- | --------------------------------------------- |
+| 内製  | `Workflow`（手順 3）           | `[internal-review]` marker（`head:` で現 HEAD へ束縛）    | repo 固有の不変条件・アーキテクチャ・挙動検証 |
+| Codex | PR へ `@codex review` コメント | Codex 自身が投稿した review object（`commit.oid` で束縛） | 別 provider による反証・観点差                |
+
+**Codex 側は marker を作らない。** Main が書けるコメントでは「Codex が実行された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が自己申告に戻るため（#2529 実装前レビュー P1）、`scripts/tasks/finish-branch.sh` は Codex 自身の review object（`chatgpt-codex-connector`）を直接検証する。Codex の失敗（error / timeout / usage limit / 空応答）は「現 HEAD の review object が存在しない」に帰着するので、失敗モードを列挙せずとも fail closed になる。**バイパス marker は作らない** — 可用性が実害化したら gate を黙って弱めず、別 issue で evidence を集めて範囲を再判断する。
+
+**この gate は `pnpm branch:finish` 経路の機械強制**であり、GitHub の required check ではない（private repo + Free plan では server-side の required check 強制が効かない。既存の全 gate と同じ性質）。UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている。Codex provider 障害で gate 自体を直す PR が止まった場合も、この性質が復旧経路になる（owner が内製レビュー済みの revert PR を UI から merge し、PR にその経緯を残す）。日常のバイパスとしては使わない。
+
+`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する `[internal-review]` marker 付きコメント + inline review comment + Codex の review object で満たす。
+
+**このレビューが必須になる PR は保護対象 path / `review:full` ラベル / linked issue（`Closes #N`）の `review:full` に該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化。linked issue の継承は #2530）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
 
 **常設の subagent 定義（`.claude/agents/*.md`）は 2026-08 に全廃した（#2478）。** risk-reviewer / behavior-verifier / architecture-guard の persona・read-only 契約・review scope は、`.claude/skills/pr-cross-review/cross-review-workflow.js` の `ROLE_PROMPTS` へ inline prompt として畳み込んである（下記手順 3 参照）。role 名は `Workflow` 呼び出し時のラベル・schema 選択キーとしてのみ残り、`Agent` tool の `subagent_type` としては存在しない。
 
@@ -33,6 +46,22 @@ maxTurns: 20
 - 実装そのもの（write 可能な subagent への委譲は `AGENTS.md §委任・報告の作法` の writer 4 条件に従う。このスキルは read-only）
 
 ## 手順
+
+### 0. Codex へレビューを投げる（内製 findings を投稿する前に）
+
+クロスレビュー必須 PR では、**内製レビューの findings を PR へ投稿する前に**、現在の HEAD で Codex を起動する:
+
+```bash
+gh pr comment <PR番号> --body "@codex review"
+```
+
+**順序が独立性の機械化そのもの。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない（prompt に混ぜない、という約束を運用ではなく順序で担保する）。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path しか渡さない。
+
+- Codex は PR 全体を全量レビューする。**delta review の概念を Codex 側に持ち込まない**（旧 HEAD の review を積み上げて範囲の連続性を主張する経路を作らない、#2529 実装前レビュー P2）
+- push で HEAD が動いたら Codex 証跡も無効になる。fix round のたびに `@codex review` を投げ直す
+- Codex の返信を待つ間に手順 1〜3（内製レビュー）を進めてよい。両者が揃ってから手順 4 で統合する
+- Codex の指摘は inline review comment として届くため `reviewThreads` を生成し、既存の thread-resolve gate がそのまま解決を強制する（内製指摘と同じ 3 択: fix を積む / 反論を reply / issue 化）。**Codex 側のために新しい解決機構は要らない**
+- Codex が body だけの review（inline comment 無し）で P1/P2 相当を書いてきた場合は、Main が手順 5 の経路で inline comment へ正規化する。summary に書いて終えない
 
 ### 1. 対象 diff を読み取り可能な形にする
 
@@ -85,7 +114,13 @@ Workflow はタスク通知でバックグラウンド完了する。目安 30 �
 - **P2**: 現実的なエッジケースで誤動作し、修正せずに出荷すべきでない
 - **P3**: P1/P2 に満たないが記録に値する指摘（軽微な改善、将来の技術的負債）。**単独では merge を止めない。review comment 化せず、summary コメント本文にだけ書く**（thread 必須解決の対象外。原則 issue 化するか、記録のみで放置してよい）
 
-P1/P2 の定義は `AGENTS.md` の凍結前の定義を踏襲しているが、この skill が生きた正本。`AGENTS.md` 側は変更しない。
+P1/P2 の定義は `AGENTS.md` の Codex レビュー規則と同じものを両系統へ適用する（どちらが見つけたかで扱いを変えない）。
+
+**両系統が揃ってから Main が統合する。** 内製と Codex は「相談して 1 回レビュー」ではなく、同じ一次情報を別々に読む独立レビューなので:
+
+- reviewer 同士の一致を成功条件にしない。観点差・反証・片方だけの finding に価値がある
+- 同じ指摘を両者が挙げた場合、thread は 1 本に統合してよい。ただし「両方が独立に検出した」事実は手順 6 の summary に残す
+- 両者の結論が食い違う場合、Main が一次情報（diff / test / migration）で裁く。AI 間の合意を証拠として扱わない
 
 ### 5. P1/P2 は review comment として投稿する（thread を生成させる）
 
@@ -136,9 +171,14 @@ head SHA は script が `gh pr view --json headRefOid` で実測する（引数�
 
 指摘の 3 択対応が済み thread が全件 resolve されたら、「確定伝達」としてレーンへ通知する。確定伝達には「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも含めて宣言する。
 
-### 8. HEAD が動いたら delta re-review する
+### 8. HEAD が動いたら両系統を張り直す
 
-指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、`旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す。全量の再レビューを毎回要求しない。gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
+指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、**内製・Codex の両方**の証跡が新しい HEAD に対して必要になる。
+
+- **内製**: `旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD SHA を指す summary comment を投稿し直す（全量の再レビューを毎回要求しない）
+- **Codex**: `@codex review` を投げ直す。Codex は毎回 PR 全体を読むため、delta の連続性を人が主張する余地が無い（証跡は常に「その commit の全量レビュー」）
+
+内製側の gate 判定:gate は「取得窓（直近 100 件）内に、現在の HEAD を指す有効な `[internal-review]` marker が 1 件以上あること」を見る（過去の marker を明示的に無効化する仕組みは無く、古い head を指す marker はそもそも一致しないため実質的に効かなくなる）。
 
 **書式を誤った marker は窓内に残ると gate を塞ぎ続ける。** gate は「最新の marker」だけでなく窓内の**全 marker を any 判定**する（`scripts/tasks/finish-branch.sh` の `INTERNAL_REVIEW_CLAIMS_FINDINGS`）ため、正しい書式の新しい marker を投稿しても、窓内に残る誤書式の古い marker 1 件（例: §投稿フォーマット の zerolike 判定に落ちる注釈付き `P1: なし（…）`）が非ゼロ申告と誤認され続け、対応する review comment が無いまま停止する。復旧は当該コメントの削除または編集のみ（新しい marker の追加投稿では解決しない）。PR [#2053](https://github.com/Dayopt/dayopt/pull/2053) の初運用でこの型で 2 度停止し、汚染 marker を削除してから通過した。
 
@@ -169,11 +209,12 @@ agent: docs-only
 
 ## 参考ファイル
 
-| ファイル                             | 用途                                                                 |
-| ------------------------------------ | -------------------------------------------------------------------- |
-| `AGENTS.md §委任・報告の作法`        | subagent 選定基準、model tiering                                     |
-| `AGENTS.md §PR / git 運用` §レビュー | 指摘後の 3 択・resolve 運用                                          |
-| `dispatch` skill                     | このスキルが実行されるタイミング（merge 可能報告の受領）             |
-| `AGENTS.md`                          | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                |
-| `scripts/tasks/finish-branch.sh`     | `[internal-review]` marker の gate 判定ロジック                      |
-| `scripts/tasks/generate-marker.ts`   | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制） |
+| ファイル                              | 用途                                                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md §委任・報告の作法`         | subagent 選定基準、model tiering                                                                          |
+| `AGENTS.md §PR / git 運用` §レビュー  | 指摘後の 3 択・resolve 運用                                                                               |
+| `dispatch` skill                      | このスキルが実行されるタイミング（merge 可能報告の受領）                                                  |
+| `AGENTS.md`                           | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                                                     |
+| `scripts/tasks/finish-branch.sh`      | `[internal-review]` marker の gate 判定ロジック                                                           |
+| `scripts/tasks/generate-marker.ts`    | `[internal-review]` marker 本文の生成（SHA 実測・zerolike 書式強制）                                      |
+| `scripts/tasks/issue-review-gate.mjs` | linked issue の Codex Issue Review 証跡の検証（#2530、`dispatch` skill 操作A と merge gate から呼ばれる） |
