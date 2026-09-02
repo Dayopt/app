@@ -1166,14 +1166,27 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # sha は現 HEAD の **prefix** であることを要求する（Codex のコメントは短縮
   # sha を出す一方、$HEAD_SHA は 40 桁のフル SHA のため完全一致ではなく
   # startswith で比較する）。
+  #
+  # **Codex 指摘（PR #2546 実測）**: sha の抽出だけでは、Codex が review object
+  # ではなく plain comment で P1/P2 の指摘そのものを報告し、その本文にたまたま
+  # 「現 HEAD \`<sha>\`」相当の文言が含まれる場合、review thread の無い
+  # 未解決指摘を残したまま clean pass として通してしまう。Codex が実際の指摘を
+  # 書く時は必ず badge markup（\`![P1 Badge]\` / \`![P2 Badge]\`、img.shields.io
+  # のバッジ画像）を伴う（このリポジトリで実際に投稿された P1/P2 指摘コメントは
+  # すべてこの形式）。badge markup を含む comment は sha が一致しても証跡から
+  # 除外する（fail closed 側に倒す）。
   CODEX_COMMENT_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
     --arg login "$CODEX_REVIEW_LOGIN" \
     --arg headSha "$HEAD_SHA" '
     def normalized_login: (.author.login // "") | sub("\\[bot\\]$"; "");
+    def has_finding_badge: (.body // "") | test("!\\[P[12] Badge\\]");
     def reviewed_sha:
-      ((.body // "")
-        | capture("(?i)(?:reviewed commit|現\\s*head)[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
-      | ($m.sha // "");
+      if has_finding_badge then ""
+      else
+        ((.body // "")
+          | capture("(?i)(?:reviewed commit|現\\s*head)[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
+        | ($m.sha // "")
+      end;
     (.data.repository.pullRequest.comments.nodes // []) as $nodes
     | ($nodes | map(select(normalized_login == $login))) as $step1
     | ($step1 | map(select(reviewed_sha != ""))) as $step2

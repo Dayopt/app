@@ -137,6 +137,11 @@ export const PROTECTED_PATH_GLOBS = [
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
+  // この2つの drift 検出テスト自身がガードレール（#2503）。削除・skip・
+  // 弱体化されても保護対象 path の選定にも他の test にも現れず、将来の glob /
+  // privacy 境界の縮退を恒久的に検出できなくなる（Codex 指摘 #2546）。
+  'scripts/__tests__/protected-path-gate-contract.test.ts',
+  'apps/product/src/features/timeblock/server/private-search-boundary-contract.test.ts',
   ...PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS,
 ];
 

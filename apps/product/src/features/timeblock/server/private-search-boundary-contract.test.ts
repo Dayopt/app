@@ -16,31 +16,38 @@ import { describe, expect, it } from 'vitest';
  * （#2503 class-based 是正）。
  *
  * ここでは wrapper 自身を除くこのディレクトリの全 .ts（非 test）ファイルを
- * 再帰的に走査し、`.ilike(` / `.like(` / `.textSearch(` / `.or(`（`
+ * 再帰的に走査し、`.ilike(` / `.like(` / `.textSearch(` / `.or(` / PostgREST の
+ * 同等 API である `.filter(column, 'ilike' | 'like', value)`（`
  * buildTimeblockSearchFilter` の戻り値を query へ適用する、このディレクトリの
- * 既存 idiom）の呼び出しがラッパーを経由せず bare await される経路が無いことを
+ * 既存 idiom）の呼び出しがラッパーを経由せず実行される経路が無いことを
  * 固定する。代入先は `x = x.or(...)` の再代入だけでなく `const q = base.or(...)`
  * のような宣言時代入も追跡する（Codex 指摘 #2546: `.or()` だけ同じ変数への
  * 再代入に限定していた旧実装は、新しい変数への宣言時代入を見逃していた。
  * `.ilike()` 等と同じ汎用検出へ統合して class ごと閉じた）。
+ *
+ * 実行 sink は `await` だけでなく `return query`（呼び出し元が await/thenable
+ * 解決する）と、`() => query` のような arrow 関数の式本体 return も対象にする
+ * （Codex 指摘 #2546: await だけを sink とすると、tainted な query を直接
+ * return する async 関数がラッパーの外で実行されてもテストを通していた）。
  *
  * 判定は完全な dataflow 解析ではなく、このディレクトリの既存 idiom
  * （`search ? await runPrivateTimeblockSearchQuery(() => query) : await query`）
  * を安全とみなすヒューリスティックである: taint を導入した if 文の条件式と
  * 同じテキストでガードされ、かつ **taint とは逆側の分岐**（taint が if の
  * then 側にあれば三項演算子の false 側 / if-else の else 側、taint が
- * else 側にあれば逆）にある bare await だけを許容する。ガードが無い、
- * ガードの条件式が一致しない、または taint と同じ側にある bare await は
- * 違反として報告する（Codex 指摘 #2546: `if (!search) {} else { query =
- * query.or(...); await query }` のように taint と bare await が同じ
- * else 節に同居する形は、ガード文字列の一致だけを見ていた旧実装では
- * 安全と誤判定していた）。
+ * else 側にあれば逆）にある sink だけを許容する。ガードが無い、ガードの
+ * 条件式が一致しない、または taint と同じ側にある sink は違反として報告する
+ * （Codex 指摘 #2546: `if (!search) {} else { query = query.or(...); await
+ * query }` のように taint と sink が同じ else 節に同居する形は、ガード文字列の
+ * 一致だけを見ていた旧実装では安全と誤判定していた）。
  */
 
 const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
 const WRAPPER_FILE = 'private-timeblock-search-query.ts';
 const WRAPPER_FUNCTION = 'runPrivateTimeblockSearchQuery';
 const TAINTING_METHODS = new Set(['ilike', 'like', 'textSearch', 'or']);
+/** PostgREST の `.filter(column, operator, value)` で `.ilike()` / `.like()` と同義になる operator 文字列。 */
+const TAINTING_FILTER_OPERATORS = new Set(['ilike', 'like']);
 
 interface Violation {
   file: string;
@@ -151,47 +158,68 @@ function isDescendantOf(node: ts.Node, ancestorCandidate: ts.Node): boolean {
 }
 
 /**
- * bare await が、taint とは逆側の分岐で安全にガードされているか。
+ * sink（await 式 / return 文 / arrow 関数の式本体）が、taint とは逆側の分岐で
+ * 安全にガードされているか。
  *
  * 単に「同じテキストの条件式を持つ if/三項演算子の中にあるか」だけでは、
- * taint と bare await が同じ分岐（例: 同じ else 節）に同居していても
- * 安全と誤判定してしまう（Codex 指摘 #2546）。taint 側の branch を反転
- * させた側でなければ安全と認めない。
+ * taint と sink が同じ分岐（例: 同じ else 節）に同居していても安全と
+ * 誤判定してしまう（Codex 指摘 #2546）。taint 側の branch を反転させた側で
+ * なければ安全と認めない。
  */
-function isSafelyGuardedAgainst(
-  awaitNode: ts.AwaitExpression,
-  taintGuard: IfGuard | null,
-): boolean {
+function isSafelyGuardedAgainst(sinkNode: ts.Node, taintGuard: IfGuard | null): boolean {
   if (taintGuard === null) return false;
 
   const conditional = ts.findAncestor(
-    awaitNode,
+    sinkNode,
     (ancestor): ancestor is ts.ConditionalExpression => {
       if (!ts.isConditionalExpression(ancestor)) return false;
       if (ancestor.condition.getText() !== taintGuard.text) return false;
-      // taint が then 側なら await は三項の whenFalse、taint が else 側なら whenTrue。
+      // taint が then 側なら sink は三項の whenFalse、taint が else 側なら whenTrue。
       const oppositeBranch = taintGuard.branch === 'then' ? ancestor.whenFalse : ancestor.whenTrue;
-      return isDescendantOf(awaitNode, oppositeBranch);
+      return isDescendantOf(sinkNode, oppositeBranch);
     },
   );
   if (conditional) return true;
 
-  const ifStatement = ts.findAncestor(awaitNode, (ancestor): ancestor is ts.IfStatement => {
+  const ifStatement = ts.findAncestor(sinkNode, (ancestor): ancestor is ts.IfStatement => {
     if (!ts.isIfStatement(ancestor)) return false;
     if (ancestor.expression.getText() !== taintGuard.text) return false;
     // taint が then 側なら await は else 側、taint が else 側なら await は then 側。
     if (taintGuard.branch === 'then') {
       return (
-        ancestor.elseStatement !== undefined && isDescendantOf(awaitNode, ancestor.elseStatement)
+        ancestor.elseStatement !== undefined && isDescendantOf(sinkNode, ancestor.elseStatement)
       );
     }
-    return isDescendantOf(awaitNode, ancestor.thenStatement);
+    return isDescendantOf(sinkNode, ancestor.thenStatement);
   });
   return ifStatement !== undefined;
 }
 
 function lineOf(sourceFile: ts.SourceFile, pos: number): number {
   return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
+}
+
+/**
+ * taint を導入する呼び出しかどうか。`.ilike(`/`.like(`/`.textSearch(`/`.or(`
+ * に加え、PostgREST の同等 API である `.filter(column, 'ilike'|'like', value)`
+ * も対象にする（Codex 指摘 #2546）。
+ */
+function isTaintingCall(node: ts.Node): node is ts.CallExpression {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return false;
+  const methodName = node.expression.name.text;
+  if (TAINTING_METHODS.has(methodName)) return true;
+  if (methodName === 'filter' && node.arguments.length >= 2) {
+    const operatorArg = node.arguments[1]!;
+    return ts.isStringLiteralLike(operatorArg) && TAINTING_FILTER_OPERATORS.has(operatorArg.text);
+  }
+  return false;
+}
+
+/** taint 呼び出しの表示用ラベル（`.ilike(...)` / `.filter(...)` 等）。 */
+function taintingCallLabel(
+  node: ts.CallExpression & { expression: ts.PropertyAccessExpression },
+): string {
+  return `.${node.expression.name.text}(...)`;
 }
 
 function analyzeFile(fileName: string, sourceText: string): Violation[] {
@@ -225,16 +253,12 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
   }
 
   function visit(node: ts.Node) {
-    // `.ilike(` / `.like(` / `.textSearch(` / `.or(` 呼び出し。代入先が
-    // `x = x.or(...)` の再代入か `const q = base.or(...)` の宣言時代入かは
-    // 問わず、識別子1つに絞れる形なら等しく追跡する（Codex 指摘 #2546:
-    // `.or()` だけ同じ変数への再代入に限定していた旧実装は、新しい変数への
-    // 宣言時代入を見逃していた）。
-    if (
-      ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      TAINTING_METHODS.has(node.expression.name.text)
-    ) {
+    // taint を導入する呼び出し（`.ilike(` / `.like(` / `.textSearch(` / `.or(` /
+    // `.filter(column, 'ilike'|'like', value)`）。代入先が `x = x.or(...)` の
+    // 再代入か `const q = base.or(...)` の宣言時代入かは問わず、識別子1つに
+    // 絞れる形なら等しく追跡する（Codex 指摘 #2546: `.or()` だけ同じ変数への
+    // 再代入に限定していた旧実装は、新しい変数への宣言時代入を見逃していた）。
+    if (isTaintingCall(node)) {
       if (!isInsideWrapperArrow(node)) {
         const assignment = ts.findAncestor(
           node,
@@ -254,7 +278,7 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
           violations.push({
             file: fileName,
             line: lineOf(sourceFile, node.getStart()),
-            detail: `.${node.expression.name.text}(...) 呼び出しが runPrivateTimeblockSearchQuery(() => ...) の外にあり、代入先の変数も追跡できません。`,
+            detail: `${taintingCallLabel(node as ts.CallExpression & { expression: ts.PropertyAccessExpression })} 呼び出しが runPrivateTimeblockSearchQuery(() => ...) の外にあり、代入先の変数も追跡できません。`,
           });
         }
       }
@@ -266,39 +290,53 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
 
   if (taints.length === 0) return violations;
 
-  function visitAwait(node: ts.Node) {
-    if (ts.isAwaitExpression(node)) {
-      // `await query` だけでなく `await query.limit(10)` / `await query.single()`
-      // のような chained call / property access も taint 変数を経由していれば
-      // 検知する。leftmostIdentifier は taint 呼び出し側の左端識別子抽出と同じ
-      // ロジックを再利用する（risk-reviewer 指摘 #2503: bare identifier のみを見ると
-      // chain 付き await が素通りしてしまう）。
-      const name = leftmostIdentifier(node.expression);
-      if (name !== null) {
-        for (const taint of taints) {
-          if (
-            taint.targetName === name &&
-            node.getStart() > taint.pos &&
-            isDescendantOf(node, taint.scope)
-          ) {
-            if (!isSafelyGuardedAgainst(node, taint.guard)) {
-              violations.push({
-                file: fileName,
-                line: lineOf(sourceFile, node.getStart()),
-                detail: `\`await ${node.expression.getText()}\` が runPrivateTimeblockSearchQuery(() => ...) でラップされておらず、taint（${
-                  taint.guard
-                    ? `${taint.guard.branch === 'then' ? 'if' : 'else'} (${taint.guard.text}) ...`
-                    : '無条件'
-                }）を安全に迂回できません。`,
-              });
-            }
-          }
+  /**
+   * taint された変数が wrapper を経由せず実行される sink（`await X` /
+   * `return X` / arrow 関数の式本体 `() => X`）を検知する。`sinkNode` は
+   * 違反位置・スコープ・ガード判定に使う node（await 式・return 文・arrow
+   * 関数本体）、`sinkExpr` はそこで評価される式。await だけを見ていた
+   * 旧実装は、tainted な query を直接 return する async 関数がラッパーの
+   * 外で実行されても検知できなかった（Codex 指摘 #2546）。
+   */
+  function checkSink(sinkNode: ts.Node, sinkExpr: ts.Expression, kindLabel: string) {
+    if (isInsideWrapperArrow(sinkNode)) return;
+    // `X` だけでなく `X.limit(10)` / `X.single()` のような chained call /
+    // property access も taint 変数を経由していれば検知する（risk-reviewer
+    // 指摘 #2503: bare identifier のみを見ると chain 付き sink が素通りする）。
+    const name = leftmostIdentifier(sinkExpr);
+    if (name === null) return;
+    for (const taint of taints) {
+      if (
+        taint.targetName === name &&
+        sinkNode.getStart() > taint.pos &&
+        isDescendantOf(sinkNode, taint.scope)
+      ) {
+        if (!isSafelyGuardedAgainst(sinkNode, taint.guard)) {
+          violations.push({
+            file: fileName,
+            line: lineOf(sourceFile, sinkNode.getStart()),
+            detail: `${kindLabel}（\`${sinkExpr.getText()}\`）が runPrivateTimeblockSearchQuery(() => ...) でラップされておらず、taint（${
+              taint.guard
+                ? `${taint.guard.branch === 'then' ? 'if' : 'else'} (${taint.guard.text}) ...`
+                : '無条件'
+            }）を安全に迂回できません。`,
+          });
         }
       }
     }
-    ts.forEachChild(node, visitAwait);
   }
-  visitAwait(sourceFile);
+
+  function visitSinks(node: ts.Node) {
+    if (ts.isAwaitExpression(node)) {
+      checkSink(node, node.expression, 'await 式');
+    } else if (ts.isReturnStatement(node) && node.expression) {
+      checkSink(node, node.expression, 'return 文');
+    } else if (ts.isArrowFunction(node) && !ts.isBlock(node.body)) {
+      checkSink(node, node.body, 'arrow 関数の式本体');
+    }
+    ts.forEachChild(node, visitSinks);
+  }
+  visitSinks(sourceFile);
 
   return violations;
 }

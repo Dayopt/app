@@ -1985,6 +1985,15 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       'apps/product/src/features/external-calendar/server/revoke-outbox.ts',
       'apps/product/src/features/external-calendar/server/revoke-outbox.ts',
     ],
+    // drift 検出テスト自身のガードレール自己保護（Codex 指摘 #2546）。
+    [
+      'scripts/__tests__/protected-path-gate-contract.test.ts',
+      'scripts/__tests__/protected-path-gate-contract.test.ts',
+    ],
+    [
+      'apps/product/src/features/timeblock/server/private-search-boundary-contract.test.ts',
+      'apps/product/src/features/timeblock/server/private-search-boundary-contract.test.ts',
+    ],
   ])('#2503 で追加した保護対象（%s）は marker を要求する', (file, glob) => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
@@ -2492,6 +2501,27 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
     });
     expect(stderr).toContain('指摘ゼロの clean pass コメント');
     expect(status).toBe(0);
+  });
+
+  // Codex 実測（PR #2546、2026-09-02）: 指摘（P1/P2 badge markup）付きの plain
+  // comment に「現 HEAD `<sha>`」相当の文言がたまたま含まれると、sha 抽出だけの
+  // 判定では review thread の無い未解決指摘を残したまま clean pass として通して
+  // しまう。badge markup を含む comment は sha が一致しても証跡から除外する。
+  it('P2 badge markup を含む指摘ありコメントは「現 HEAD」文言があっても証跡にしない（fail closed）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: `## レビュー結果\n\n現 HEAD \`${DEFAULT_HEAD_SHA}\` を確認しました。\n\n**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  問題があります**\n\n説明...`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('`Reviewed commit` 行がありません');
+    expect(status).toBe(1);
   });
 
   it('review object が現 HEAD にあれば clean pass コメントが無くても従来どおり通す（回帰なし）', () => {
