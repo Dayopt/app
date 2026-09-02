@@ -5,7 +5,7 @@ last_verified: 2026-08-20
 
 # 誤診断防止プロトコル（不可解な失敗の切り分け手順）
 
-2026-08-19 の 1 日で、レーンの重大な誤診断が 3 件発生し、いずれも指揮台の独立再検証で棄却された（[#2229](https://github.com/Dayopt/dayopt/issues/2229)）。全て同一クラス: **「クリーンな基準状態 + 単一変数」の対照実験をせずに切り分け結論を出した。** それぞれ調査往復 1〜3 回分のコストが出ており、再発性は十分にある。
+2026-08-19 の 1 日で、レーンの重大な誤診断が 3 件発生し、いずれも Main の独立再検証で棄却された（[#2229](https://github.com/Dayopt/dayopt/issues/2229)）。全て同一クラス: **「クリーンな基準状態 + 単一変数」の対照実験をせずに切り分け結論を出した。** それぞれ調査往復 1〜3 回分のコストが出ており、再発性は十分にある。
 
 「pre-existing」「型システムの限界」「環境の問題」と主張する前に、本ページのプロトコルを実施する。特に `dispatch` skill（旧 orchestration.md、#2479 で再編） §矛盾報告の独立再検証 が対象とする主張（真なら不可逆または大規模な対応を引き起こすもの）ほど、このプロトコルの実施結果を報告に添える。
 
@@ -43,7 +43,7 @@ last_verified: 2026-08-20
 
 - **症状**: `apps/product/src/lib/i18n/messages.d.ts` の `Messages` intersection 型へ新規 namespace（`report.json`）を登録したところ、`pnpm exec tsc --noEmit` で無関係な既存ファイル（`day/page.tsx` の `t('views.day')` など）まで大量に型エラー化した
 - **誤診 1（当初）**: 「`Messages` 型が TypeScript の union/template literal 型展開の上限に極めて近く、どんな 1 キー追加でも型が `never` へ潰れる」。既存 namespace（`calendar.json`）へのキー追加でも再現すると報告した
-- **独立検証**: 指揮台が clean main + `calendar.json` への 1 キー追加で `exit 0` を確認。誤診 1 は REFUTED
+- **独立検証**: Main が clean main + `calendar.json` への 1 キー追加で `exit 0` を確認。誤診 1 は REFUTED
 - **誤診 2（訂正後）**: 「1 キー追加」ではなく「16 個目の distinct import を `messages.d.ts` に足す操作そのもの」が原因、と主張を狭めた
 - **第 2 次独立検証**: 隔離 worktree で「16 個目の新規 import + intersection member 追加」を実測 → `exit 0`、エラーゼロ。誤診 2 も REFUTED
 - **真因**: PostToolUse formatter hook による import の無言除去。import 追加の編集を先に行うと、formatter hook が「未使用 import」として剥がし、その後 intersection に member を足すと未解決識別子を参照する intersection になり、`Messages` 型全体が error 型化 → アプリ内の全 `t()` 呼び出しが広範囲に型エラー化した

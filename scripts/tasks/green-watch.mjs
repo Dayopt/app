@@ -16,16 +16,16 @@ import { REPO, runGhJson } from '../lib/gh.mjs';
  * 動作モード:
  * - 既定: 遷移（pending → success / failure、または新 head が最初から終端状態で
  *   現れた時）を検出したらその内容を stdout に出して **exit 0 する**。
- *   指揮台が Bash の run_in_background で起動すれば、プロセス終了 = 完了通知が
+ *   Main が Bash の run_in_background で起動すれば、プロセス終了 = 完了通知が
  *   そのまま push 型の通知になる（通知後は再起動して張り直す）
  * - `--follow`: exit せず遷移のたびに 1 行ずつ出力し続ける（人間が tee で
  *   眺める用途）
- * - `--once`: 1 回 poll して現在の盤面（PR ごとの集約状態）を出して終了する
+ * - `--once`: 1 回 poll して現在の状態（PR ごとの集約状態）を出して終了する
  *   （セッション起動時の初期把握用）
  *
  * poll の一過性失敗（ネットワーク flake・gh の 5xx）は stderr に記録して
  * 継続するが、連続 MAX_CONSECUTIVE_FAILURES 回で exit 1 に倒す — watch が
- * 死んだこと自体も background 完了通知として指揮台へ届く（無音で監視が
+ * 死んだこと自体も background 完了通知として Main へ届く（無音で監視が
  * 消えている状態を作らない）。
  */
 
@@ -124,7 +124,7 @@ function fetchChecks(prNumber, { execFileImpl } = {}) {
 /**
  * open PR 全件の snapshot を取る。**draft PR は対象外。**
  *
- * この watch は「レーンが green 報告を送り忘れた時に指揮台が気づけるようにする」
+ * この watch は「レーンが green 報告を送り忘れた時に Main が気づけるようにする」
  * backstop（`dispatch` skill（旧 orchestration.md、#2479 で再編） §green watch）で、拾いたいのは
  * **ready + green = レビュー待ち**への遷移だけ。
  *
@@ -133,7 +133,7 @@ function fetchChecks(prNumber, { execFileImpl } = {}) {
  * 以外をすべて success へ畳むため、**docs guard が通っただけの draft PR が
  * 'pending → success' として通知される**。本 PR が確立するセマンティクス
  * （draft = レーンの私的作業場 / ready + green = レビュー待ち）と真逆の信号になり、
- * 指揮台のクロスレビューを誤発火させる。
+ * Main のクロスレビューを誤発火させる。
  * @param {{ execFileImpl?: import('../lib/gh.mjs').ExecFileImpl }} [opts]
  * @returns {Map<string, PrSnapshot>}
  */

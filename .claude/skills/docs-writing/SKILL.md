@@ -1,7 +1,7 @@
 ---
 name: docs-writing
 description: 新機能実装完了後のユーザー向けドキュメント（`apps/web/content/docs/**/*.mdx`）執筆時、リリース完了後のリリースノート（`apps/web/content/blog/{en,ja}/` の `category: 'release'` 記事）作成時、Breaking change を含む変更の merge 前の技術ドキュメント更新時、`docs-audit` skill からの docs gap フィードバック受領時に発動。AI 生成時は `draft: true` 初期値を適用する。意思決定ログの追記（`decision` skill の領域）やコード内コメント・一時メモでは発動しない。
-effort: high
+effort: medium
 maxTurns: 25
 ---
 

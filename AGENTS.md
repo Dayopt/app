@@ -143,7 +143,17 @@ worktree で作業するセッション（レーン）は次を守る:
 
 ## 委任・報告の作法
 
-- **委譲時はmodelを明示する**: Haiku=rename/一括置換/ログ蒸留などの機械的作業、Sonnet=通常実装・調査、Main(Opus)=判断・統合・diffレビュー・commit。省略すると同tierが継承され階層が機能しない
+- **委譲時は model を明示し、Frontier を既定にしない**（省略すると同 tier が継承され階層が機能しない）。仕事ごとに必要な能力を測り L0 から上へ、下位層で解けないと分かった時と判断・不可逆の時だけ上げる（Uber Software Factory 原則①④）
+
+| tier | 実行主体                                                                                                                                                      | 担当                                                                                                                                                                                    | 上げる条件                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| L0   | 決定的 script / CLI（LLM を使わない）                                                                                                                         | ファイル検索・git history・diff・typecheck・lint・test・依存確認・JSON 変換・SQL・CI 結果取得・polling・大量ファイル処理。**LLM turn の前に `pnpm run` / `gh` / `rg` で閉じないか探す** | script に書けない、毎回形が変わる |
+| L1   | Haiku、または User が Gemini / ChatGPT chat で行う Deep Research（issue §やること に「Deep Research 依頼: <問い>」を書き `status:blocked`、結果はコメントへ） | 判断を含まない読み書き（ログ蒸留・機械的 rename・定型抽出）、外部リサーチ                                                                                                               | 判断が要る                        |
+| L2   | Sonnet                                                                                                                                                        | 通常実装・調査・レビュー実行。**worker の既定**                                                                                                                                         | 設計判断、矛盾報告の再検証        |
+| L3   | Opus / Fable                                                                                                                                                  | 判断・統合・diff レビュー・commit・不可逆操作                                                                                                                                           | —                                 |
+
+- **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す**（原則③。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする。`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
+- **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（#2529 の独立 2 系統の延長。Antigravity は User が手動で使う目で、CI gate にはしない）
 - **write可能なsubagentへの委譲**は次の4条件を満たす時のみ: 同一worktree、Mainと非重複scope、commit前にMainがgit diffをレビュー、commit/push/external stateの変更はMainに残す
 - **確認・裁可依頼は選択肢+推奨込みが既定**。推奨を先頭に、各選択肢へ一言根拠を添える。複数の判断は1回に束ねる
 - **完了報告**では利用したagent、意図的に使わなかったagentと理由、未確認事項、deferred scopeを示す
@@ -153,29 +163,30 @@ worktree で作業するセッション（レーン）は次を守る:
 
 `.claude/skills/*/SKILL.md` を参照。該当する作業では先に読む。
 
-| skill                  | 使う場面                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                              |
-| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/Playwright/GitHub/UptimeRobot 等の MCP 呼び出し |
-| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                           |
-| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                                  |
-| `trpc-router-creating` | tRPC router/service の新規作成                                                        |
-| `store-creating`       | 新規 Zustand store                                                                    |
-| `storybook`            | Story作成・design token 選択                                                          |
-| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                                 |
-| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                                    |
-| `optimistic-update`    | tRPC mutation の楽観的更新                                                            |
-| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                              |
-| `test`                 | 新機能・バグ修正後のテスト                                                            |
-| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）                  |
-| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                                    |
-| `docs-audit`           | 公開docsの監査                                                                        |
-| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                              |
-| `gardening`            | 月次ガーデニングの人間パート（明示依頼時のみ）                                        |
-| `audit-ai-config`      | AI設定の棚卸し・audit                                                                 |
-| `blog-ideas`           | ブログネタ提案とissue起票                                                             |
-| `usability-probe`      | Haikuユーザビリティプローブ実行                                                       |
-| `decision`             | `docs/decisions.md` への意思決定1行追記                                               |
+| skill                  | 使う場面                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                         |
+| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約       |
+| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/UptimeRobot 等の MCP 呼び出し              |
+| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                      |
+| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                             |
+| `trpc-router-creating` | tRPC router/service の新規作成                                                   |
+| `store-creating`       | 新規 Zustand store                                                               |
+| `storybook`            | Story作成・design token 選択                                                     |
+| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                            |
+| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                               |
+| `optimistic-update`    | tRPC mutation の楽観的更新                                                       |
+| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                         |
+| `test`                 | 新機能・バグ修正後のテスト                                                       |
+| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）             |
+| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                               |
+| `docs-audit`           | 公開docsの監査                                                                   |
+| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                         |
+| `gardening`            | 月次改善ループ: ai:usage の 4 問 → 月に 1 変数 → 結果(未) 回収（明示依頼時のみ） |
+| `audit-ai-config`      | AI設定の棚卸し・audit                                                            |
+| `blog-ideas`           | ブログネタ提案とissue起票                                                        |
+| `usability-probe`      | Haikuユーザビリティプローブ実行                                                  |
+| `decision`             | `docs/decisions.md` への意思決定1行追記                                          |
 
 ## Deploy / Release
 

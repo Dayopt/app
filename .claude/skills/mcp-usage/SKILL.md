@@ -1,6 +1,6 @@
 ---
 name: mcp-usage
-description: Sentry / Supabase(local・cloud) / Vercel / Context7 / Eagle / Playwright / Storybook / GitHub / UptimeRobot の MCP サーバーをいつ・どう呼ぶか判断する時に発動。各サーバーの Invoke when・認証方式（OAuth 承認 / op run 自己解決 / headersHelper / token 不要）・オンデマンド登録手順・境界ケースを適用する。MCP 定義自体の追加・削除（global 設定変更）や、MCP を使わない通常の実装作業では発動しない。
+description: Sentry / Supabase(local・cloud) / Context7 / Eagle / Storybook / UptimeRobot の MCP と Vercel / GitHub の CLI-first 経路をいつ使うか判断する時に発動。Invoke when・認証方式（OAuth / op run 自己解決 / headersHelper / token不要）・登録手順・境界ケースを適用する。MCP 定義の追加・削除（global 設定変更）や通常の実装作業では発動しない。
 ---
 
 # MCP サーバー利用ガイドライン
@@ -9,30 +9,28 @@ description: Sentry / Supabase(local・cloud) / Vercel / Context7 / Eagle / Play
 
 MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.json` の user scope `mcpServers`）。**repo 側に MCP 定義を置かない**。repo と global の両方に同名サーバーがあるとキー単位でマージされ、方式が食い違うと壊れる。
 
-全 11 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
+全 9 サーバーの登録内容。新しいマシンではこの表を元に global へ登録する:
 
 | Server                    | 種別                 | 登録内容                                                                                                                                                                                                                                                                                                |
 | ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `eagle`                   | http                 | `http://127.0.0.1:41596/mcp`                                                                                                                                                                                                                                                                            |
 | `supabase-local`          | http                 | `http://127.0.0.1:54321/mcp`                                                                                                                                                                                                                                                                            |
 | `storybook`               | http                 | `http://localhost:6006/mcp`                                                                                                                                                                                                                                                                             |
-| `sentry`                  | http (OAuth)         | `https://mcp.sentry.dev/mcp`                                                                                                                                                                                                                                                                            |
-| `vercel`                  | http (OAuth)         | `https://mcp.vercel.com`                                                                                                                                                                                                                                                                                |
+| `sentry`                  | http (OAuth)         | **常駐登録しない**（オンデマンド、下記 §Sentry）。`https://mcp.sentry.dev/mcp`                                                                                                                                                                                                                          |
+| `vercel`                  | http (OAuth)         | **常駐登録しない**（CLI-first。下記 §Vercel）。登録が要る時だけ `https://mcp.vercel.com`                                                                                                                                                                                                                |
 | `context7`                | stdio                | `npx -y @upstash/context7-mcp@latest`                                                                                                                                                                                                                                                                   |
-| `playwright`              | stdio                | `npx -y @playwright/mcp@latest`                                                                                                                                                                                                                                                                         |
 | `supabase` (cloud)        | stdio                | **常駐登録しない**（使う時だけ登録。下記 §`supabase`(cloud) はオンデマンド登録する）。`op run -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=yvglwblxrnrenfifsnje` / env `SUPABASE_ACCESS_TOKEN=op://human/supabase-cli/SUPABASE_ACCESS_TOKEN`                                |
-| `github`                  | stdio                | `op run -- github-mcp-server stdio` / env `GITHUB_PERSONAL_ACCESS_TOKEN=op://agent/github-mcp-pat/credential`                                                                                                                                                                                           |
 | `uptimerobot`             | http (headersHelper) | **常駐登録しない**（使う時だけ登録。下記 §`uptimerobot` はオンデマンド登録する）。`https://mcp.uptimerobot.com/mcp` / `headersHelper: ~/.claude/scripts/uptimerobot-headers.sh`（spawn 時に 1Password の Read-only API Key を解決）                                                                     |
 | `usability-probe-browser` | stdio                | **常駐登録しない**（ユーザビリティプローブ実行時だけ登録。下記 §`usability-probe-browser` はオンデマンド登録する）。`npx -y @playwright/mcp@latest --storage-state=<storageState のパス> --allowed-origins=<probe 対象 origin>`。token 不要（`--storage-state` は事前生成したファイルへのローカルパス） |
 
 認証方式はサーバーごとに 4 通り:
 
-1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
-2. **global 設定内 `op run` 自己解決方式**: `supabase`(cloud) / `github`。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。stdio の token 系 MCP はこの方式を標準とする。
+1. **OAuth 承認方式**（`/mcp` で承認、トークン管理不要）: `sentry` / `vercel`（いずれもオンデマンド登録）。`sentry` は `https://mcp.sentry.dev/mcp` を直叩きする hosted MCP。
+2. **global 設定内 `op run` 自己解決方式**: `supabase`(cloud)。MCP プロセスの起動コマンド自体を `op run -- <bin>` でラップし、spawn 時に 1Password が `op://` 参照を解決する。**Claude 本体の起動経路に依存しない**（desktop アプリ起動でも動く）。stdio の token 系 MCP はこの方式を標準とする。
 3. **`headersHelper` 方式**（remote http + Bearer token）: `uptimerobot`。設定の `headersHelper` に指定した script を接続時に実行し、stdout の JSON を認証ヘッダーとして使う。script 内で `op read` するため設定ファイルに token の平文が残らない。remote http で OAuth の read-only scope が保証されないサーバーはこの方式を使う。
 4. **token 不要方式**（ローカルファイル引数のみ）: `usability-probe-browser`。認証情報は 1Password ではなく事前生成したローカルの storageState ファイルで、起動フラグにそのパスを渡すだけ。1Password / OAuth のいずれも介さない。
 
-**`op run` 方式のサーバーは常駐登録を 1 つに保つ。** spawn ごとに 1Password の承認が要求されるため、常駐登録が N 個あるとロック状態からの起動時に承認が N 回出る。常時使う `github` だけを常駐させ、それ以外はオンデマンド登録にする。
+**`op run` 方式の常駐登録はゼロにする（`supabase`(cloud) はオンデマンド）。** spawn ごとに 1Password の承認が要求されるため、常駐登録が N 個あるとロック状態からの起動時に承認が N 回出る。
 
 **トークンを平文でハードコードしない**。env 注入を要する MCP はもう無いため、Claude 起動に zsh の `op run` ラッパーは不要。前提は `op` CLI + 1Password desktop 統合が使えること。`op run` は stdout / stderr の secret masking が既定で有効なので、MCP server へ env token を渡す用途では `--no-masking` を付けない。
 
@@ -44,15 +42,23 @@ MCP サーバーの定義は **global 設定に一本化する**（`~/.claude.js
 
 ## 運用方針
 
-- **常時使う**: `context7` / `sentry` / `github` / `vercel`
-- **オンデマンドで使う**: `eagle` / `supabase-local` / `storybook` / `supabase`(cloud) / `uptimerobot` / `usability-probe-browser`
+- **常時使う**: `context7` のみ
+- **オンデマンド**: `sentry`（Seer 分析など CLI で閉じない時だけ） / `eagle` / `supabase-local` / `storybook` / `supabase`(cloud) / `uptimerobot` / `usability-probe-browser`
+- **CLI-first（MCP を登録しない）**: Vercel（`vercel` CLI）、GitHub（`gh`）
 - `context7` はバージョン依存の判断では原則使う。Next.js / React / tRPC / Supabase client / TanStack Query / Zustand などはmanifestでexact versionを確認し、記憶だけで判断しない。
-- `sentry` / `vercel` は OAuth 方式。初回や期限切れ時に `/mcp` で承認する。token 管理は不要。
-- `supabase`(cloud) / `github` は global 設定の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
+- `sentry` は通常 CLI（下記 §Sentry CLI）。Seer 分析や横断検索が要る時だけ `/mcp` で承認して MCP を使い、終わったら `claude mcp remove sentry -s user`。OAuth トークンはキャッシュされるため再登録は `/mcp` 承認 1 回で済む。
+- `vercel` は MCP を常駐登録しない。デプロイ状態・build/runtime log・env 一覧は `vercel` CLI で閉じる（下記 §Vercel）。
+- `supabase`(cloud) は global 設定の起動コマンドが `op run` で `op://` を自己解決する。zsh ラッパー起動に依存しない。token は repo に置かない。
 - `supabase`(cloud) は production project（read-only 既定）を参照する。schema/RLS の確認用。書き込みを伴う migration は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - `supabase-local` は migration / RLS / schema 確認時だけ Docker Desktop と `supabase start` を起動する。通常のレビュー・実装ではローカル DB が落ちていても異常扱いしない。
 - `eagle` はローカル Eagle app が起動している時だけ使う。Eagle app が落ちている場合は MCP 接続失敗を異常扱いしない。
 - `storybook` は公式アドオン方式で global 設定に正式登録済み。
+
+### 常駐を増やさない
+
+**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする**（原則③、2026-09-02 決定）。
+
+常駐 tool 数 × schema は毎ターンのプロンプトに載る。常駐を 1 つ足すなら 1 つ外す。単発 CLI で足りるものは MCP にしない（実施済み: `github` → `gh`、`playwright` → Browser tool）。ローカルアプリ依存（`eagle` / `storybook` / `supabase-local`）は常駐させない — 未起動時に毎セッション接続失敗のノイズを出すため。使う時だけ `claude mcp add`、終わったら `claude mcp remove`（登録内容は上の表が正本）。購入・停止・deploy など不可逆の能力を含む OAuth MCP（Vercel など）は常駐させない。read 用途は CLI で閉じる。
 
 ### `supabase`(cloud) はオンデマンド登録する
 
@@ -84,7 +90,7 @@ claude mcp remove uptimerobot -s user
 
 ### `usability-probe-browser` はオンデマンド登録する
 
-`usability-probe` skill 専用の Playwright MCP。既存の `playwright`（常時使う共有ブラウザ）とは別名で登録する。理由は 2 つ: (1) `--storage-state` 起動フラグは registration 時に固定されるため、プローブ専用の認証済みセッションを積んだ別プロセスが要る (2) 常駐させると `playwright` と役割が重複し、どちらが「共有」でどちらが「プローブ専用（認証済み）」か区別できなくなる。token は不要（`op run` も headersHelper も無し）だが、`--storage-state` が指すファイルは実セッションの cookie を含むため、使い終わったら登録解除とファイル削除をセットで行う。
+`usability-probe` skill 専用の Playwright MCP。理由は 2 つ: (1) `--storage-state` 起動フラグは registration 時に固定されるため、プローブ専用の認証済みセッションを積んだ別プロセスが要る (2) 常駐 MCP を増やさない（§常駐を増やさない）。token は不要（`op run` も headersHelper も無し）だが、`--storage-state` が指すファイルは実セッションの cookie を含むため、使い終わったら登録解除とファイル削除をセットで行う。
 
 **navigation の scope は `--allowed-origins` で宣言するが、これはセキュリティ境界ではない。** `@playwright/mcp --help` に明記: 「does not serve as a security boundary and does not affect redirects」。実際に構造として塞がれているのは `file://` navigation だけ（`--allow-unrestricted-file-access` を渡さない限り既定でブロックされる。本登録コマンドは渡さない）。`--allowed-origins` は誤って `--base-url` と無関係な外部サイトへ迷い込むのを防ぐ宣言的な足場として付ける（probe 対象の origin と一致させる）。
 
@@ -104,17 +110,19 @@ cd "$(git rev-parse --show-toplevel)/apps/product" && rm -rf .probe
 
 ### Sentry (`mcp__sentry__*`)
 
-- **Invoke when**:
-  - ユーザーがエラーや予期しない挙動を報告したら、再現手順を聞く前にまず `list_issues` / `list_events` で該当イベントを検索する
-  - デプロイ直後の不具合調査時は `find_releases` で最新リリースのエラー増加を確認する
-  - スタックトレースから原因が曖昧なとき `analyze_issue_with_seer` で一次切り分けを行う
+**既定は `sentry` CLI**（下記 §Sentry CLI）。MCP はオンデマンド登録。
+
+- **Invoke when**（CLI で閉じない時のみ MCP を使う）:
+  - スタックトレースから原因が曖昧で `analyze_issue_with_seer` の一次切り分けが要る時
+  - 複数 issue/event を横断する構造化検索が CLI の単発取得では足りない時
 - **Before use**:
-  - **OAuth 承認方式**。`sentry` は hosted MCP `https://mcp.sentry.dev/mcp` を直叩きする。トークン注入・env 変数は不要。
-  - 未承認 / 期限切れなら `/mcp` で `sentry` を承認する（github / vercel と同じフロー）。承認後の OAuth トークンは Claude 側にキャッシュされ、desktop アプリ起動・zsh ターミナル起動のどちらでも動く。
-  - 疎通確認は `whoami` または `find_organizations`（`dayopt` org が返れば OK）。
+  - まず `sentry` CLI（下記）で足りるか検討する
+  - Seer 分析や横断検索が必要と判断したら `claude mcp add` で `sentry`（`https://mcp.sentry.dev/mcp`）をオンデマンド登録し、`/mcp` で OAuth 承認する。承認後の OAuth トークンは Claude 側にキャッシュされ、desktop アプリ起動・zsh ターミナル起動のどちらでも動くため再登録は `/mcp` 承認 1 回で済む
+  - 疎通確認は `whoami` または `find_organizations`（`dayopt` org が返れば OK）
+  - 使い終わったら `claude mcp remove sentry -s user`
 - **`Authorization Expired` / 401 が出たら**: `/mcp` で `sentry` を再承認する。OAuth トークンの失効サイン。
-- **フォールバック**: MCP が通らない間は Sentry Web UI、または下記の Sentry CLI を使う。
-- **境界ケース**: 「再現できますか？」とユーザーに尋ねる前に Sentry で対象 issue を探す。ヒットすればスタックトレースから直接原因を特定できるので、ユーザーの手間を省ける。
+- **フォールバック**: MCP を使わない間は Sentry Web UI、または下記の Sentry CLI を使う。
+- **境界ケース**: 「再現できますか？」とユーザーに尋ねる前に Sentry（CLI 優先）で対象 issue を探す。ヒットすればスタックトレースから直接原因を特定できるので、ユーザーの手間を省ける。
 
 ### Sentry CLI（`sentry` コマンド、cli.sentry.dev）
 
@@ -152,16 +160,20 @@ MCP（上記）との分担: **メインセッションの構造化・横断調�
 - **絶対ルール**: `supabase`(cloud) は global 設定で `--read-only` + production project に固定。**cloud 経由で書き込み・migration はしない**。schema 変更は `supabase-local` → PR Preview → production の既存フロー（`supabase` skill）で行う。
 - **境界ケース**: `pnpm types:generate` を走らせる前に、スキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。
 
-### Vercel (`mcp__vercel__*`)
+### Vercel（`vercel` CLI が正、MCP は登録しない）
 
-- **Invoke when**:
-  - デプロイ直後にビルド/デプロイ状態や preview URL を確認する時（`list_deployments` / `get_deployment`）
-  - 本番・preview の runtime ログ調査時（`get_runtime_logs`）
-  - プロジェクト設定や環境変数の構成を確認する時（`list_projects` / `get_project`）
-- **Before use**:
-  - OAuth 方式（`https://mcp.vercel.com`）。未承認 / 期限切れなら `/mcp` で承認する。
-  - 疎通は `list_projects` で確認する
-- **境界ケース**: 単純な単一 API 取得は `vercel` CLI で十分。デプロイ横断の状態確認やログ調査で MCP を使う。env 系エンドポイントのレスポンスは `value` に実値を含むため、全文を表示せず `docs/operations/secrets.md` §API 経由の設定読戻し の jq 射影規則に従う。
+MCP の tool set には `buy_domain` / `buy_pro` / `buy_credits` / `pause_project` / `deploy_to_vercel` など購入・停止・deploy の不可逆な能力が含まれ、常駐させると毎セッションその権限が載る（原則③違反）。read 用途は `vercel` CLI（50.32.5、OAuth ログイン済み）で閉じる。
+
+- **Invoke when**: デプロイ状態・build log・runtime log・env 一覧を確認したい時
+- **主要コマンド**（テーブル出力は `| head` / `| rg` で射影する。`--json` を持つのは `vercel logs` のみ）:
+  - `vercel ls | head -20`（最新 deployment 一覧。repo が link 済みなら `--scope` 不要。2026-09-02 実測: 約 8 行で MCP `list_deployments` の 1 回 34k chars と同じ情報が取れる）
+  - `vercel inspect <deployment-url>`（状態・commit・region）
+  - `vercel inspect --logs <deployment-url> | tail -80`（build log）
+  - `vercel logs <deployment-url> --json | jq -c 'select(.level=="error")' | head`（runtime error）
+  - `vercel project ls`、`vercel env ls`（既存 `pnpm vercel:env`）
+- **ドキュメント参照**: `context7`（`resolve-library-id vercel` → `query-docs`）か WebFetch を使う。Vercel MCP の `search_vercel_documentation` は使わない。
+- **絶対ルール**: 本番 promote / env 書き換えは既存 workflow（`promote.yml`、`pnpm vercel:env:pull:unsafe`）のみで行う。CLI から `vercel deploy` / `vercel env add` を production に対して打たない。`--token` は渡さない（pre-tool-guard がブロックする）。
+- **MCP が要る場面**（横断 deployment 検索、agent run trace など CLI に無い機能）: `claude mcp add` で `https://mcp.vercel.com` をオンデマンド登録し、`/mcp` で OAuth 承認、使い終わったら `claude mcp remove vercel -s user`。
 
 ### Context7 (`mcp__context7__*`)
 
@@ -187,14 +199,6 @@ MCP（上記）との分担: **メインセッションの構造化・横断調�
   - `item_query` はタグ・annotation を対象とし、**ファイル名では検索できない**
 - **境界ケース**: 実装の見た目を確認したい時は Eagle を開かない。Storybook が正。ライブラリのアイテムを削除・trash 移動しない。
 
-### Playwright (`mcp__playwright__*`)
-
-- **Invoke when**:
-  - 同じ操作を反復できる形で検証する必要がある時、または複数 viewport / variant のスクリーンショット比較を行う時
-  - E2E スモークが失敗した際の再現状況を撮影する
-- **Before use**: 検証対象が起動していることを確認する
-- **境界ケース**: 「型チェック・lint は通った」だけで完了報告しない。UI 変更は共有 browser surface、Preview、または Playwright のいずれかで視覚確認する。
-
 ### Storybook (`mcp__storybook__*`)
 
 公式アドオン `@storybook/addon-mcp` が Storybook dev サーバー上に MCP を公開する（`http://localhost:6006/mcp`）。
@@ -205,15 +209,9 @@ MCP（上記）との分担: **メインセッションの構造化・横断調�
 - **Before use**: `pnpm storybook`（localhost:6006）が起動していることを確認する（`nc -z localhost 6006`）
 - **境界ケース**: Storybook MCP は構造化知識取得に使い、見た目の検証には使わない。
 
-### GitHub (`mcp__github__*`)
+### MCP を持たない経路
 
-- **Invoke when**:
-  - ユーザーが PR / issue / commit を番号や URL で参照したら、本文をペーストしてもらう前に MCP で取得する
-  - 複数 PR や issue の横断集計を行う時
-- **Before use**:
-  - **stdio + op run 自己解決方式**。global 設定の `github` は `op run -- github-mcp-server stdio` を起動し、spawn 時に `op://agent/github-mcp-pat/credential`（PAT）を解決する。
-  - 前提: 公式バイナリ `github-mcp-server`（`brew install github-mcp-server`）+ `op` CLI + 1Password desktop 統合
-- **境界ケース**: 単純な単一取得（`gh pr view N`）は `gh` CLI で十分。構造化抽出や横断集計が必要なときに MCP を使う。
+GitHub は `gh` CLI が正（`--json` + `--jq` で射影、横断集計も足りる。2026-08-13 に global から削除済み）。ブラウザ操作は Claude Code 組み込みの Browser tool が正（同日削除）。この 2 つは MCP へ戻さない。
 
 ### UptimeRobot (`mcp__uptimerobot__*`)
 

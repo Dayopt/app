@@ -38,6 +38,16 @@
  *
  *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
  *     --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
+ *
+ * `--review-result` 経由の生成時は、各 role の `result.findings`（schema 強制済みの
+ * findings 配列）から role 別の内訳を持つ `findings:` 行を自動で追加する（例:
+ * `findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0, architecture-guard(text-fallback)=不明`）。
+ * `scripts/tasks/trace.mjs` はこの行を role 別 指摘数の authoritative な情報源として読み、
+ * 行が無い古い marker や text-fallback role では review/issue comment の役割名部分一致に
+ * よる粗い推定へ fall back する（`deriveRoleFindingsField` 参照）。`--agent` 直接指定
+ * （docs-only 等）では role 別内訳が無いため `findings:` 行自体を出力しない。
+ * `finish-branch.sh` の 5 点チェックはこの行を検証しない（`head:`/`agent:`/`P1:`/`P2:`
+ * 行の正規表現とは無関係な独立行のため、gate の判定に影響しない）。
  */
 
 import { execFileSync } from 'node:child_process';
@@ -48,6 +58,7 @@ import {
   buildMarkerBody,
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
+  deriveRoleFindingsField,
   type ReviewResultEntry,
 } from '../lib/generate-marker-core.ts';
 
@@ -182,10 +193,12 @@ function main(): void {
   const entries = args.reviewResultPath ? readReviewResultEntries(args.reviewResultPath) : null;
   const agent = entries ? deriveAgentFieldFromReviewResult(entries) : (args.agent as string);
   const partialCoverageRoles = entries ? derivePartialCoverageRoles(entries) : [];
+  const roleFindingsField = entries ? deriveRoleFindingsField(entries) : undefined;
 
   const body = buildMarkerBody({
     headSha,
     agent,
+    roleFindingsField,
     p1Count: args.p1Count,
     p1Note: args.p1Note,
     p2Count: args.p2Count,
