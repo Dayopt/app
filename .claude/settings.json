@@ -93,6 +93,7 @@
       "Bash(sort:*)",
       "Edit(.claude/skills/**)",
       "Write(.claude/skills/**)",
+      "Skill(routing)",
       "Skill(error-handling)",
       "Skill(storybook)",
       "Skill(test)",

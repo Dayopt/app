@@ -164,6 +164,7 @@ worktree で作業するセッション（レーン）は次を守る:
 | skill                  | 使う場面                                                                              |
 | ---------------------- | ------------------------------------------------------------------------------------- |
 | `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                              |
+| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約            |
 | `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/Playwright/GitHub/UptimeRobot 等の MCP 呼び出し |
 | `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                           |
 | `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                                  |
