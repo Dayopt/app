@@ -139,13 +139,12 @@ graph TD
 graph LR
 subgraph Cache["TanStack Query キャッシュ"]
 E["plans / records / calendars<br/>stale: 5min, gc: 10min"]
-T["tags<br/>stale: 5min, gc: 10min"]
+AC["activities / categories<br/>stale: 5min, gc: 10min"]
 US["userSettings<br/>stale: 1h, gc: 2h"]
-TU["tagUsage<br/>stale: 1min, gc: 5min"]
 end
 
     WF["refetchOnWindowFocus"] -.->|"stale時 再取得"| E
-    WF -.->|"stale時 再取得"| T
+    WF -.->|"stale時 再取得"| AC
 ```
 
 ### Feature 間の依存（Composition Layer）
@@ -153,7 +152,7 @@ end
 ```mermaid
 graph TD
 subgraph Features
-TAG["tags (Layer 0)"]
+ACT["activities (Layer 0)"]
 TB["timeblock (Layer 1)"]
 CAL["calendar (Layer 2 / hub)"]
 REV["review (Layer 2)"]
@@ -168,11 +167,11 @@ end
         STORE["lib/stores/*"]
     end
 
-    TB --> TAG
+    TB --> ACT
     CAL --> TB
-    CAL --> TAG
+    CAL --> ACT
     REV --> TB
-    REV --> TAG
+    REV --> ACT
     APP --> CAL
     APP --> REV
     APP --> AUTH
@@ -354,21 +353,25 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **RLS 対象 public テーブル数**: 15 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 28 | **PostgreSQL**: v17
 
 Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
 RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
 
 ### テーブル一覧
 
-#### コアビジネス（4テーブル）
+#### コアビジネス（7テーブル）
 
 | テーブル                     | 役割                                                             | 主要カラム                                                                                                               |
 | ---------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, tag_id, start_at, end_at, skipped_at, source, external_calendar_event_id                                          |
-| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, tag_id, plan_id, start_at, end_at, source, external_calendar_event_id                                             |
+| **plans**                    | Plan（予定）。これからやる時間の宣言                             | title, activity_id, start_at, end_at, skipped_at, source, external_calendar_event_id                                     |
+| **records**                  | Record（記録）。`plan_id` で 1 Plan : N Record                   | title, activity_id, plan_id, start_at, end_at, source, external_calendar_event_id                                        |
 | **external_calendar_events** | 外部カレンダー同期ミラー（テーブルのみ存在。同期実装は Phase 2） | connection_id, provider, provider_calendar_id, provider_event_id, start_at, end_at, status, dismissed_at, last_synced_at |
-| **tags**                     | 階層タグ（親子1階層）                                            | name, color, parent_id, sort_order, is_active                                                                            |
+| **categories**               | 所属の主軸。単一所属（`activities.category_id` 1本で表現）       | name, color, icon, archived_at                                                                                           |
+| **activities**               | Plan / Record の分類単位。所属カテゴリーから色・アイコンを継承   | category_id, name, archived_at                                                                                           |
+| **segments**                 | 分析用の保存クエリ（横断参照、重複を許す）                       | name                                                                                                                     |
+| **segment_activities**       | セグメントとアクティビティの多対多 junction                      | segment_id, activity_id                                                                                                  |
+| **tags**（凍結中）           | 旧階層タグ。write path から切断済み、物理削除は #2175 待ち       | name, color, parent_id, sort_order, is_active                                                                            |
 
 #### 外部カレンダー連携（2テーブル）
 
@@ -409,15 +412,25 @@ Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 
          │                         │                         │
          ▼                         ▼                         ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│    profiles       │  │  user_settings    │  │       tags        │
+│    profiles       │  │  user_settings    │  │     categories     │
 │    (1:1)          │  │    (1:1)          │  │──────────────────│
 │──────────────────│  │──────────────────│  │ id (PK)           │
 │ id (PK=FK)        │  │ user_id (FK,UQ)   │  │ user_id (FK)      │
-│ email, username   │  │ timezone, theme   │  │ name, color       │
-└──────────────────┘  └──────────────────┘  │ parent_id (FK→    │
-                                              │   self, max 1階層) │
+│ email, username   │  │ timezone, theme   │  │ name, color, icon │
+└──────────────────┘  └──────────────────┘  │ archived_at       │
                                               └────────┬─────────┘
-                                                       │ tag_id (nullable, both)
+                                                       │ category_id (nullable)
+                                                       ▼
+                                              ┌──────────────────┐
+                                              │    activities      │
+                                              │──────────────────│
+                                              │ id (PK)           │
+                                              │ user_id (FK)      │
+                                              │ category_id (FK,  │
+                                              │   nullable)       │
+                                              │ name, archived_at │
+                                              └────────┬─────────┘
+                                                       │ activity_id (nullable, both)
                               ┌─────────────────────────┤
                               │                         │
                               ▼                         ▼
@@ -507,9 +520,9 @@ Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 
 - 保存先は選択 UI ではなく `end_at > now` か否かで一意に決まる（`end_at > now` → Plan、`end_at <= now` → Record）
 - 詳細は ADR-025（削除済み、git 履歴参照） 参照
 
-#### Tags の階層制限
+#### カテゴリー / アクティビティの所有者整合
 
-`level < 2` で親子1階層に制限。トリガーで `level`, `path`, `depth` を自動計算。深い階層は複雑性を増すだけと判断。
+親子階層は持たない（旧タグの `level < 2` 制限を廃止）。`activities.category_id` の 1 列だけで単一所属を表現し、所有者整合は複合外部キー `(category_id, user_id) → categories(id, user_id)` で担保する。トリガーは使わない — 子側の AFTER トリガーは親の `user_id` 変更を観測できず、ロックを取らない存在確認は race するため。
 
 #### トランザクション関数
 
@@ -518,7 +531,6 @@ Phase 2（external-calendar-import）で追加。OAuth / 同期 / UI は Step 2 
 - `soft_delete_plan()` / `restore_plan()` — Plan のソフトデリート / 復元
 - `soft_delete_record()` / `restore_record()` — Record のソフトデリート / 復元
 - `confirm_day_plans_to_records()` — 指定日の未記録 Plan を一括で Record 化（一括「この日を確定」）
-- `merge_tags_with_hierarchy()` — タグマージ + 子タグの昇格（plans / records 両方の tag_id を追随して更新）
 
 ### インデックス監査ランブック
 
