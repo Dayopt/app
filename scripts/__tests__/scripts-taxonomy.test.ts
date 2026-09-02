@@ -45,18 +45,6 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   'scripts/tasks/docs-coverage/collect.ts',
   // env/: check-*.ts が全て pkg entry を持つ tasks unit。schema.ts はその内部 lib。
   'scripts/tasks/env/schema.ts',
-  // night-watch/: run-all.mjs が nightly.yml（#2483 で night-watch.yml から
-  // 統合）から直接実行される ci unit。pre-tool-guard-impl.sh の allowlist
-  // 文字列一致・skill/rule の言及により個別ファイルが hooks/agent 判定になるが、
-  // ディレクトリごと分割しない（夜勤 cron の内部結合が強く、分割すると相互
-  // import の path 更新が二重化する）。
-  'scripts/ci/night-watch/alert-issue.mjs',
-  // check-workflow-job.mjs: heavy-red / integration-red の job-scoped 判定を
-  // 「単一の単純コマンド」として手動代行できるようにする wrapper（#2483）。
-  // pre-tool-guard-impl.sh の allowlist 完全一致で hooks 判定になるが、他の
-  // night-watch/*.mjs wrapper と同じ理由でディレクトリを分割しない。
-  'scripts/ci/night-watch/check-workflow-job.mjs',
-  'scripts/ci/night-watch/lib.mjs',
   // admin-*.sh family: admin-common.sh を `dirname "${BASH_SOURCE[0]}"` 相対で
   // source するため、同一ディレクトリに揃える必要がある。admin-delete-user.sh は
   // lane-protocol.md / usability-probe SKILL.md からの言及で agent 判定になるが、
@@ -64,7 +52,7 @@ const KNOWN_PLACEMENT_EXCEPTIONS = new Set<string>([
   'scripts/runbook/admin-delete-user.sh',
   // supabase-mgmt-safe-get.mjs: pre-tool-guard-impl.sh 内の言及は「このscriptを使え」
   // という利用者(agent)向け誘導メッセージであり、フック自身がこのscriptを実行・
-  // 照合するわけではない（night-watch/*.mjs の allowlist 完全一致とは性質が違う）。
+  // 照合するわけではない（hook が完全一致で実行照合する allowlist とは性質が違う）。
   // 実利用のされ方は agent 直叩きに近いため agent/ に置く。
   'scripts/agent/supabase-mgmt-safe-get.mjs',
   // storage-objects-app-policy-names.mjs: #2483 以前は integration.yml の

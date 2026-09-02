@@ -87,7 +87,6 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 | env・deploy・secret            | `engineering/infra.md`, `operations/secrets.md`                                      |
 | 障害対応・release              | `operations/runbook.md`                                                              |
 | 監視・alert                    | `operations/monitoring.md`                                                           |
-| 夜間 read-only 品質観測        | `operations/night-watch.md`                                                          |
 | security                       | `operations/security.md`                                                             |
 | 外部 OAuth の審査申請          | `operations/google-oauth-verification.md`                                            |
 | 契約サービス                   | `company/accounts.md`                                                                |
