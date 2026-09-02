@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -28,7 +28,9 @@ import { describe, expect, it } from 'vitest';
  * すると `.git/config` の `http.extraheader` に GITHUB_TOKEN が残り、PR 側のコードから
  * `git config --get-all http.https://github.com/.extraheader` で読み出せる。unit job は
  * `pull-requests: write` / `issues: write` を持つので、これは書き込み権限の奪取に直結する。
- * repo の他 workflow（promote / nightly / production-config-audit）は既に false を明示済み。
+ * この契約は **repo の全 workflow に適用する**。#2539 の時点で ci.yml は 4 件中 0 件、
+ * nightly.yml は 6 件中 3 件が未指定だった（create-release.yml も未指定で、しかも
+ * `contents: write` を持つ）。件数ではなく checkout ブロック単位で見る。
  */
 
 const readWorkflow = (name: string) =>
@@ -100,35 +102,78 @@ describe('CI job 名の契約', () => {
   });
 
   // ── checkout の資格情報（#2539 クロスレビュー risk-reviewer P1）─────
-  describe('ci.yml の checkout は資格情報を残さない', () => {
-    const ci = readWorkflow('ci.yml');
-    const checkoutCount = [...ci.matchAll(/uses: actions\/checkout@/g)].length;
-    const persistFalseCount = [...ci.matchAll(/persist-credentials: false/g)].length;
+  describe('checkout は資格情報を残さない', () => {
+    // **件数比較にしない**（同レビュー P3）。`checkout の数 === persist-credentials の数`
+    // だと、解説コメントに `persist-credentials: false` という文字列を 1 行足した上で
+    // 未指定の checkout を 1 件足すと数が揃って素通りする。この repo の workflow は
+    // 日本語コメントが密なので現実的な偽陰性経路になる。step ブロック単位で見る。
+    function checkoutStepsWithoutPersistFalse(yamlText: string): number[] {
+      const lines = yamlText.split('\n');
+      const offenders: number[] = [];
+      lines.forEach((line, index) => {
+        if (!/^\s*(-\s+)?uses:\s*actions\/checkout@/.test(line)) return;
+        // この checkout step のブロック = 次の `- ` 始まりの step まで
+        let hasPersistFalse = false;
+        for (let i = index + 1; i < lines.length; i += 1) {
+          const current = lines[i];
+          if (/^\s*-\s/.test(current)) break; // 次の step
+          if (/^\s*\w[\w-]*:/.test(current) && !/^\s+/.test(current)) break; // 次の top-level key
+          const withoutComment = current.replace(/#.*$/, ''); // コメントは数えない
+          if (/persist-credentials:\s*false/.test(withoutComment)) {
+            hasPersistFalse = true;
+            break;
+          }
+        }
+        if (!hasPersistFalse) offenders.push(index + 1);
+      });
+      return offenders;
+    }
 
-    it('全ての checkout が persist-credentials: false を明示する', () => {
-      expect(checkoutCount).toBeGreaterThan(0);
-      expect(persistFalseCount).toBe(checkoutCount);
+    const WORKFLOWS = [
+      'ci.yml',
+      'nightly.yml',
+      'promote.yml',
+      'production-config-audit.yml',
+      'create-release.yml',
+    ];
+
+    it.each(WORKFLOWS)('%s の全 checkout が persist-credentials: false を持つ', (name) => {
+      const offenders = checkoutStepsWithoutPersistFalse(readWorkflow(name));
+
+      expect(offenders, `${name} の ${offenders.join(', ')} 行目の checkout が未指定`).toEqual([]);
     });
 
-    it('repo の他 workflow と同じ扱いになっている（片方だけ緩まない）', () => {
-      for (const name of ['promote.yml', 'production-config-audit.yml']) {
-        const other = readWorkflow(name);
-        const co = [...other.matchAll(/uses: actions\/checkout@/g)].length;
-        const pf = [...other.matchAll(/persist-credentials: false/g)].length;
-        expect(
-          pf,
-          `${name} の checkout ${co} 件に対し persist-credentials: false が ${pf} 件`,
-        ).toBe(co);
-      }
+    it('検査対象が repo の全 workflow を覆っている（追加漏れの検出）', () => {
+      const actual = readdirSync(join(process.cwd(), '.github/workflows'))
+        .filter((f) => f.endsWith('.yml'))
+        .sort();
+
+      expect(actual).toEqual([...WORKFLOWS].sort());
     });
 
-    it('persist-credentials 未指定の checkout を検出できる（回帰確認）', () => {
-      const regressed = ['    steps:', '      - uses: actions/checkout@abc # v7'].join('\n');
-      const co = [...regressed.matchAll(/uses: actions\/checkout@/g)].length;
-      const pf = [...regressed.matchAll(/persist-credentials: false/g)].length;
+    it('未指定の checkout を検出できる（回帰確認）', () => {
+      const regressed = [
+        'jobs:',
+        '  a:',
+        '    steps:',
+        '      - uses: actions/checkout@abc # v7',
+        '      - uses: ./.github/actions/setup',
+      ].join('\n');
 
-      expect(co).toBe(1);
-      expect(pf).not.toBe(co);
+      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([4]);
+    });
+
+    it('コメント中の persist-credentials: false では通らない（偽陰性の回帰確認）', () => {
+      const regressed = [
+        'jobs:',
+        '  a:',
+        '    steps:',
+        '      # persist-credentials: false を忘れないこと',
+        '      - uses: actions/checkout@abc # v7',
+        '      - uses: ./.github/actions/setup',
+      ].join('\n');
+
+      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([5]);
     });
   });
 

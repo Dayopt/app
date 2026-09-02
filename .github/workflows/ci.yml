@@ -7,8 +7,11 @@ name: CI
 #
 # job は impact →（static ∥ unit ∥ integration）の 2 段。**判定 job だけが直列で、
 # 検査 3 本は並列**（2026-09-02、#2539）。分離前は 1 本の test job が Supabase 起動から
-# unit・integration まで直列に抱え、さらに static の完走を待っていた。実測 16 分 55 秒
-# （run 33588708693）→ 約 8 分。
+# unit・integration まで直列に抱え、さらに static の完走を待っていた。
+#
+# **実測値の正本は docs/engineering/infra.md §merge gate**（ここには数値を書かない。
+# 同じ数字を複数箇所へ散らすと、次に構成を触る担当がどれを基準に退行を判断すべきか
+# 分からなくなる。内製クロスレビュー risk-reviewer 指摘、P3）。
 #
 # affected 判定（docs-only skip・integration の DB-touch 判定・functions_changed）は
 # scripts/ci/impact.mjs が正本で、impact job が 1 回だけ判定して job output へ出し、
@@ -135,8 +138,7 @@ jobs:
   #
   # 分割理由は **直列だった 2 種類の検査の並列化**。分割前は 1 job の中で
   # 「Supabase 起動（約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に
-  # 並んでいた。分割後は別 runner で同時に走り、実測で **16 分 55 秒 → 12 分 17 秒**
-  # （run 33588708693 → 33609204823）。**検査内容は 1 つも削っていない。**
+  # 並んでいた。分割後は別 runner で同時に走る。**検査内容は 1 つも削っていない。**
   #
   # **CPU 競合説は実測で否定された**（当初の仮説）。product unit test の所要は
   # Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で差は 3.6%。分割前に

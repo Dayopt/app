@@ -26,8 +26,8 @@
  * **unit と integration を別 job に分けてあるのは、直列だった 2 種類の検査を
  * 並列化するため**（2026-09-02、#2539）。分割前は 1 job の中で「Supabase 起動
  * （約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に並んでいた。
- * 分割後は unit と integration が別 runner で同時に走り、実測で **16 分 55 秒 →
- * 12 分 17 秒**（run 33588708693 → 33609204823）になった。
+ * 分割後は unit と integration が別 runner で同時に走る（実測値の正本は
+ * docs/engineering/infra.md §merge gate。ここには数値を置かない）。
  *
  * **CPU 競合はほぼ関係なかった**（当初の仮説は実測で否定された）。同じ
  * product unit test の所要は Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で、
