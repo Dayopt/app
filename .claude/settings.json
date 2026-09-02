@@ -162,7 +162,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -171,7 +171,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -180,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -189,7 +189,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -198,7 +198,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -207,7 +207,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -216,7 +216,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -225,7 +225,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       }

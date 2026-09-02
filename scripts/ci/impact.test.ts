@@ -193,7 +193,7 @@ describe('中立 path（app 成果物に影響しない）', () => {
     // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
     // 崩れない。wrong-skip 方向の regression は本ファイルの unit test が防波堤になる。
     [['scripts/ci/impact.mjs', 'scripts/ci/impact.test.ts']],
-    [['scripts/hooks/pre-tool-guard.sh', '.claude/settings.json']],
+    [['scripts/hooks/pre-tool-guard.mjs', '.claude/settings.json']],
     [['.husky/pre-push', '.vscode/settings.json']],
     [['apps/storybook/.storybook/main.ts']],
     [['eslint.config.mjs', '.prettierrc', 'vitest.scripts.config.ts']],

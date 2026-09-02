@@ -1,0 +1,820 @@
+// PreToolUse hook の実ロジック（Node/ESM 移植、bash 版 scripts/hooks/pre-tool-guard-impl.sh
+// の 1:1 移植）。判定結果は `evaluate()` が `{ decision: 'allow' | 'block', message? }`
+// で返す純粋関数として実装する（decision === 'allow' 以外はすべて block 扱い）。
+//
+// このファイルは loader（scripts/hooks/pre-tool-guard.mjs）から
+// `await import('./pre-tool-guard-rules.mjs')` で読み込まれる。import 自体が
+// 構文エラー等で失敗した場合の fail-closed / 復旧経路は loader 側の責務。
+// このファイルの `evaluate()` が例外を投げた場合も loader 側で fail-closed
+// （exit 2）へ写す。
+//
+// 各セクションの見出しは bash 版のコメント・行範囲に対応させてある
+// （移植時の対応表は PR 説明を参照）。ロジックを変更したら bash 版との対応が
+// 崩れていないか確認すること。
+//
+// jq の `EXPR // empty` は EXPR が `null` / `false` を生成した時だけ右辺へ
+// フォールバックし、EXPR 自体のエラー（例: 文字列を `.foo` で index する）は
+// 捕捉せず伝播する（jq のよく知られる仕様）。bash 版はこの伝播を使って
+// 「jq が failure したか」を `$?` で判定している（R1 の fail-open 判定）。
+// 以下の `jqIndexPath` / `jqFirstOrEmpty` はこの挙動を模す。
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { isDirectExecution } from '../lib/is-direct-execution.mjs';
+
+// --- block 判定を例外で持ち上げるための内部signal（bash の exit 2 相当）---
+class GuardBlock extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GuardBlock';
+  }
+}
+
+function block(message) {
+  throw new GuardBlock(message);
+}
+
+// =====================================================================
+// jq 互換ヘルパー（bash: `jq -r '.a.b // empty'` 系の抽出を模す）
+// =====================================================================
+
+/**
+ * jq の `.a.b` indexing を模す。null を index すると null（エラーにならない）。
+ * オブジェクト以外（配列・文字列・数値・真偽値）を key で index するとエラー
+ * （jq: "Cannot index string with \"foo\""）。
+ * @returns {{ ok: boolean, value?: unknown }}
+ */
+function jqIndexPath(root, keys) {
+  let cur = root;
+  for (const key of keys) {
+    if (cur === null || cur === undefined) {
+      cur = null;
+      continue;
+    }
+    if (typeof cur !== 'object' || Array.isArray(cur)) {
+      return { ok: false };
+    }
+    cur = Object.prototype.hasOwnProperty.call(cur, key) ? cur[key] : null;
+  }
+  return { ok: true, value: cur === undefined ? null : cur };
+}
+
+/** jq -r の raw 出力への変換（文字列はそのまま、それ以外は文字列化）。 */
+function jqRaw(value) {
+  if (typeof value === 'string') return value;
+  return String(value);
+}
+
+/**
+ * `.a // .b // empty` 相当。候補を順に評価し、`null`/`false` 以外の最初の値を
+ * 採用する。途中で indexing エラーが起きたら（jq は `//` でエラーを捕まえない
+ * ため）即座に ok:false を返す。
+ * @returns {{ ok: boolean, text: string }}
+ */
+function jqFirstOrEmpty(root, keyPaths) {
+  for (const keys of keyPaths) {
+    const res = jqIndexPath(root, keys);
+    if (!res.ok) return { ok: false, text: '' };
+    if (res.value !== null && res.value !== false) {
+      return { ok: true, text: jqRaw(res.value) };
+    }
+  }
+  return { ok: true, text: '' };
+}
+
+/** `.a?` 相当（indexing エラーを飲み込み、値を生成しない）。文字列以外は捨てる
+ * （呼び出し側で `map(select(type == "string"))` 相当を併せて行うため）。 */
+function jqOptionalStringOrUndefined(root, keys) {
+  const res = jqIndexPath(root, keys);
+  if (!res.ok) return undefined;
+  return typeof res.value === 'string' ? res.value : undefined;
+}
+
+/**
+ * INPUT 全体を JSON.parse する。パース自体が失敗した場合は「どの `.foo` index も
+ * エラーになる」状態として扱う（jq がパースエラーで全 filter を失敗させるのと
+ * 同じ結果になるよう、非オブジェクト値の sentinel を返す）。
+ */
+function parseInputJson(rawInput) {
+  try {
+    return JSON.parse(rawInput);
+  } catch {
+    // jqIndexPath は object 以外（この undefined 含む）を index しようとすると
+    // ok:false を返すので、JSON parse 失敗は「最初の .foo から失敗する」と
+    // 同じ結果になる。
+    return undefined;
+  }
+}
+
+// =====================================================================
+// op:// vault allowlist（bash: ALLOWED_VAULT_PATTERN / disallowed_vault_refs）
+// =====================================================================
+
+// op run が解決してよい 1Password vault。禁止側を数え上げるのではなく許可側を
+// 固定する（vault が増えた時に穴が開かないように、#2086 の 3 vault 再編で
+// allowlist は agent 1 つに縮んだ）。
+const ALLOWED_VAULT_RE = /^op:\/\/(agent)$/;
+
+/** 渡されたテキストに含まれる op:// 参照のうち、allowlist 外の vault を返す。 */
+function disallowedVaultRefs(text) {
+  const matches = text.match(/op:\/\/[A-Za-z0-9_.-]+/g) ?? [];
+  const uniq = [...new Set(matches)];
+  return uniq.filter((ref) => !ALLOWED_VAULT_RE.test(ref));
+}
+
+// =====================================================================
+// worktree 家系解決（bash: guard_resolve_roots / guard_path_belongs_to_current_root）
+// =====================================================================
+
+function runGitCapture(args, cwd, execFileImpl) {
+  try {
+    return execFileImpl('git', args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+/** `cd DIR && pwd -P` 相当（symlink まで解決した絶対パス）。失敗時は空文字。 */
+function resolvePhysicalPath(p, cwd) {
+  if (!p) return '';
+  const abs = path.isAbsolute(p) ? p : path.join(cwd, p);
+  try {
+    return fs.realpathSync(abs);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * このセッションが今立っている working tree の root（currentRoot）、自分が
+ * main checkout かどうか（isMainCheckout）、家系の**他の** worktree の root
+ * 一覧（otherRoots）を返す。解決できなければ null（bash の return 1 相当）。
+ */
+function resolveRoots(cwd, execFileImpl = execFileSync) {
+  const toplevel = runGitCapture(['rev-parse', '--show-toplevel'], cwd, execFileImpl);
+  const gitDirRaw = runGitCapture(['rev-parse', '--absolute-git-dir'], cwd, execFileImpl);
+  const commonDirRaw = runGitCapture(['rev-parse', '--git-common-dir'], cwd, execFileImpl);
+  if (!toplevel || !gitDirRaw || !commonDirRaw) return null;
+
+  const toplevelResolved = resolvePhysicalPath(toplevel, cwd);
+  const gitDirResolved = resolvePhysicalPath(gitDirRaw, cwd);
+  const commonDirAbs = commonDirRaw.startsWith('/') ? commonDirRaw : path.join(cwd, commonDirRaw);
+  const commonDirResolved = resolvePhysicalPath(commonDirAbs, cwd);
+  if (!toplevelResolved || !gitDirResolved || !commonDirResolved) return null;
+
+  const isMainCheckout = gitDirResolved === commonDirResolved;
+
+  const otherRoots = [];
+  const worktreeListRaw = runGitCapture(['worktree', 'list', '--porcelain'], cwd, execFileImpl);
+  for (const line of worktreeListRaw.split('\n')) {
+    if (!line.startsWith('worktree ')) continue;
+    const wtPathRaw = line.slice('worktree '.length);
+    const wtResolved = resolvePhysicalPath(wtPathRaw, cwd);
+    if (!wtResolved) continue;
+    if (wtResolved === toplevelResolved) continue;
+    otherRoots.push(wtResolved);
+  }
+
+  return { currentRoot: toplevelResolved, isMainCheckout, otherRoots };
+}
+
+/**
+ * 引数の絶対パスが「どの worktree root に属するか」を longest-prefix-match で
+ * 判定する。true = 自分の currentRoot に属する（またはどの worktree root にも
+ * 属さない = family 外）。false = 自分以外の worktree root に属する。
+ */
+function pathBelongsToCurrentRoot(target, roots) {
+  let bestLen = -1;
+  let bestIsCurrent = true;
+
+  if (target === roots.currentRoot || target.startsWith(`${roots.currentRoot}/`)) {
+    bestLen = roots.currentRoot.length;
+    bestIsCurrent = true;
+  }
+  for (const other of roots.otherRoots) {
+    if (!other) continue;
+    if (target === other || target.startsWith(`${other}/`)) {
+      if (other.length > bestLen) {
+        bestLen = other.length;
+        bestIsCurrent = false;
+      }
+    }
+  }
+  if (bestLen < 0) return true; // どの worktree root にも属さない
+  return bestIsCurrent;
+}
+
+// =====================================================================
+// Write/Edit/MultiEdit/NotebookEdit 系の判定
+// =====================================================================
+
+function isAbsoluteFilePath(p) {
+  return p.startsWith('/');
+}
+
+function containsTraversal(p) {
+  return p.includes('/../') || p.endsWith('/..');
+}
+
+/** worktree 外ファイル編集ガード（#2359）。 */
+function checkWorktreeBoundary(filePath, cwd, execFileImpl) {
+  if (!filePath) return;
+  if (!isAbsoluteFilePath(filePath)) {
+    block(`BLOCKED: file_path が絶対パスではありません: ${filePath}`);
+  }
+  if (containsTraversal(filePath)) {
+    block(`BLOCKED: file_path に .. が含まれています（traversal は許可しません）: ${filePath}`);
+  }
+
+  const dirPart = path.dirname(filePath);
+  const basePart = path.basename(filePath);
+  const resolvedDir = resolvePhysicalPath(dirPart, cwd);
+  const normalized = resolvedDir ? path.join(resolvedDir, basePart) : filePath;
+
+  const roots = resolveRoots(cwd, execFileImpl);
+  if (roots && !pathBelongsToCurrentRoot(normalized, roots)) {
+    block(
+      `BLOCKED: 自分の worktree（${roots.currentRoot}）の外を編集しようとしています: ${normalized}（AGENTS.md §委任・報告の作法 の writer 4 条件、AGENTS.md §PR / git 運用）`,
+    );
+  }
+  // roots が解決できない場合は fail-open（Write/Edit は高頻度操作のため）。
+}
+
+/** .env / .env.* / .envrc への書き込み全面禁止。 */
+function isProtectedEnvFilePath(filePath) {
+  if (!filePath) return false;
+  return filePath.endsWith('.env') || filePath.includes('.env.') || filePath.endsWith('.envrc');
+}
+
+/** local dev 用の env-file（現行名・旧名）。 */
+function isLocalDevEnvFilePath(filePath) {
+  if (!filePath) return false;
+  return (
+    filePath.endsWith('.op-env.agent') ||
+    filePath.endsWith('.op-env.agent.example') ||
+    filePath.endsWith('.op-env.local') ||
+    filePath.endsWith('.op-env.local.example')
+  );
+}
+
+/** 既存 migration ファイル（.sql 限定）かどうか。 */
+function isExistingMigrationSqlPath(filePath) {
+  return /supabase\/migrations\/.*\.sql$/.test(filePath ?? '');
+}
+
+function isRegularFile(p) {
+  try {
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Write は content、Edit は new_string、MultiEdit は edits[].new_string、
+ * NotebookEdit は new_source に書き込み内容が入る。jq:
+ *   [.tool_input.content?, .tool_input.new_string?, .tool_input.new_source?,
+ *    (.tool_input.edits[]?.new_string?)] | map(select(type=="string")) | join("\n")
+ */
+function extractWrittenText(root) {
+  const parts = [];
+  const pushIfString = (keys) => {
+    const v = jqOptionalStringOrUndefined(root, keys);
+    if (v !== undefined) parts.push(v);
+  };
+  pushIfString(['tool_input', 'content']);
+  pushIfString(['tool_input', 'new_string']);
+  pushIfString(['tool_input', 'new_source']);
+
+  const editsRes = jqIndexPath(root, ['tool_input', 'edits']);
+  if (editsRes.ok && Array.isArray(editsRes.value)) {
+    for (const edit of editsRes.value) {
+      const v = jqOptionalStringOrUndefined(edit, ['new_string']);
+      if (v !== undefined) parts.push(v);
+    }
+  }
+  return parts.join('\n');
+}
+
+/** Write/Edit/MultiEdit/NotebookEdit の保護ファイル判定一式。 */
+function checkWriteGuards(filePath, root, cwd, execFileImpl) {
+  checkWorktreeBoundary(filePath, cwd, execFileImpl);
+
+  if (isProtectedEnvFilePath(filePath)) {
+    block('BLOCKED: .env系ファイルへの書き込みは禁止です');
+  }
+
+  if (isLocalDevEnvFilePath(filePath)) {
+    const written = extractWrittenText(root);
+    const badVaults = disallowedVaultRefs(written);
+    if (badVaults.length > 0) {
+      block(
+        `BLOCKED: local dev 用の env-file に許可外 vault の op:// 参照は書けません（検出: ${badVaults.join(' ')}）。このファイルは op run に渡せるので、production を参照する行を足すと production credential が解決されます。管理者運用の参照は .op-env.human.example 側に置いてください`,
+      );
+    }
+  }
+
+  if (isExistingMigrationSqlPath(filePath) && isRegularFile(filePath)) {
+    block(
+      'BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください',
+    );
+  }
+}
+
+// =====================================================================
+// 「1 つのことしかしないコマンド」判定（bash: is_single_simple_command）
+// =====================================================================
+
+function isSingleSimpleCommand(s) {
+  if (
+    s.includes(';') ||
+    s.includes('&') ||
+    s.includes('|') ||
+    s.includes('$(') ||
+    s.includes('`') ||
+    s.includes('<(') ||
+    s.includes('>(') ||
+    s.includes('eval')
+  ) {
+    return false;
+  }
+  if (s.includes('\n')) return false;
+  return true;
+}
+
+// =====================================================================
+// MCP: レーンからのチップ起票ブロック（bash: spawn_task section）
+// =====================================================================
+
+function checkSpawnTaskMainOnly(cwd, execFileImpl) {
+  const roots = resolveRoots(cwd, execFileImpl);
+  const isMainCheckout = roots ? roots.isMainCheckout : false;
+  if (!isMainCheckout) {
+    block(
+      'BLOCKED: チップ起票（spawn_task）は Main（main checkout の session）の専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) Main へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）',
+    );
+  }
+}
+
+// =====================================================================
+// Bash: 危険コマンドのブロック
+// =====================================================================
+
+// grep -qE 'pattern' を「行ごとに」評価する bash の挙動を模す（`\s` は改行に
+// またがらない）。COMMAND_JOINED / COMMAND_UNQUOTED は改行を除去済みなので
+// 1 行になるが、生の $COMMAND は複数行のことがある。
+function reMatchesAnyLine(text, re) {
+  return text.split('\n').some((line) => re.test(line));
+}
+
+const FORCE_PUSH_RE = /git\s+push\s+.*--force[^-]|git\s+push\s+.*--force$/;
+const RESET_HARD_RE = /git\s+reset\s+--hard/;
+const PUSH_NO_VERIFY_RE = /(^|[;&|]|&&|\|\|)\s*git\s+push[^;&|]*--no-verify/;
+const COMMIT_NO_VERIFY_RE = /(^|[;&|]|&&|\|\|)\s*git\s+commit[^;&|]*--no-verify/;
+
+/** bash: `\` + 改行の line-continuation を畳み、残る改行を空白に寄せる。 */
+function joinCommand(command) {
+  return command.replace(/\\\n/g, '').replace(/\n/g, ' ');
+}
+
+/** bash: quote / backslash / ANSI-C・locale quote の $ 導入を除いた写し。 */
+function unquoteCommand(joined) {
+  return joined
+    .replace(/\$'/g, "'")
+    .replace(/\$"/g, '"')
+    .replace(/"/g, '')
+    .replace(/'/g, '')
+    .replace(/\\/g, '');
+}
+
+const RM_RECURSIVE_RE =
+  /(^|\s)(\/\S*\/)?rm\s.*(-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|--recursive([\s=]|$))/;
+const RM_ESCAPE_TARGET_RE = /(^|[\s/])(~|\$)|(^|[\s/])\.\.([\s/]|$)/;
+const RM_ABSOLUTE_HINT_RE = /(^|\s)\//;
+
+/** bash: `tr ';&|' '\n'` + 空行スキップに相当するセグメント分割。 */
+function splitOnSeparators(text) {
+  return text.split(/[;&|]/).filter((s) => s.length > 0);
+}
+
+/** bash: `grep -oE '(^|[[:space:]])/[^[:space:]]*' | sed -E 's/^[[:space:]]+//'` */
+function extractAbsoluteTokens(segment) {
+  const re = /(^|\s)\/\S*/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(segment)) !== null) {
+    out.push(m[0].replace(/^\s+/, ''));
+  }
+  return out;
+}
+
+/** rm -r 系: worktree 外を指しうる対象を伴う呼び出しを block（#2359）。 */
+function checkRmRecursive(commandJoined, commandUnquoted, cwd, execFileImpl) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    for (const rmSegment of splitOnSeparators(scanned)) {
+      if (!RM_RECURSIVE_RE.test(rmSegment)) continue;
+      if (RM_ESCAPE_TARGET_RE.test(rmSegment)) {
+        block(
+          `BLOCKED: rm -r 系が worktree 外を指しうる対象（\`~\`・変数展開・\`..\` traversal）を伴っています。worktree 内の相対パス（node_modules・.next 等のキャッシュ削除）のみ許可します: ${scanned}`,
+        );
+      }
+      const roots = resolveRoots(cwd, execFileImpl);
+      if (roots) {
+        for (const absToken of extractAbsoluteTokens(rmSegment)) {
+          const resolved = resolvePhysicalPath(absToken, cwd) || absToken;
+          if (!pathBelongsToCurrentRoot(resolved, roots)) {
+            block(
+              `BLOCKED: rm -r 系が自分の worktree（${roots.currentRoot}）以外の worktree（${resolved}）を指しています。worktree 内の相対パスまたは family 外（scratchpad 等）の絶対パスのみ許可します: ${scanned}`,
+            );
+          }
+        }
+      } else if (RM_ABSOLUTE_HINT_RE.test(rmSegment)) {
+        block(
+          `BLOCKED: rm -r 系が絶対パス対象を伴っていますが、家系 root を解決できませんでした（fail closed）: ${scanned}`,
+        );
+      }
+    }
+  }
+}
+
+const SUPABASE_DB_RESET_RE =
+  /(^|[;&|]|&&|\|\|)\s*(npx\s+|pnpm\s+(exec|dlx)\s+)?supabase\s+db\s+reset/;
+
+function checkSupabaseDbResetRaw(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (SUPABASE_DB_RESET_RE.test(scanned)) {
+      block(
+        'BLOCKED: supabase db reset の直接呼び出しは禁止です。ローカル Supabase は複数レーンが共有する単一インスタンスで、reset は他レーンの進行中データも巻き戻します。既定コマンド pnpm db:reset / pnpm db:fresh を使うか、他レーンへの影響が無いことを確認してから Main へ相談してください（この文字列に言及しただけでも落ちます）',
+      );
+    }
+  }
+}
+
+const ADMIN_ENV_FILE_DIRECT_RE = /--env-file[=\s]+[^\s;&|]*\.op-env\.human/;
+
+// 許可する env-file の path。選択肢で列挙する（optional group で組み立てると
+// 区切りの / が任意になり、`..op-env.agent` のような別名まで通ってしまう）。
+const ALLOWED_ENV_FILE_ALTERNATION =
+  '(\\.op-env\\.agent|\\./\\.op-env\\.agent|\\.\\./\\.\\./\\.op-env\\.agent)';
+const CONFORMING_MENTION_SOURCE = `-env-file[=\\s]+${ALLOWED_ENV_FILE_ALTERNATION}[\\s;&|]`;
+
+/** --env-file の言及がすべて許可形かを判定する（出現数と適合数の一致で判定）。 */
+function envFileMentionsConform(text) {
+  const s = `${text} `;
+  const total = (s.match(/-env-file/g) ?? []).length;
+  if (total === 0) return true;
+  const conforming = (s.match(new RegExp(CONFORMING_MENTION_SOURCE, 'g')) ?? []).length;
+  return total === conforming;
+}
+
+/** 許可形を通った env-file の path を取り出す（中身検査に使う）。 */
+function conformingEnvFilePaths(text) {
+  const s = `${text} `;
+  const matches = s.match(new RegExp(CONFORMING_MENTION_SOURCE, 'g')) ?? [];
+  const cleaned = matches.map((m) => m.replace(/^-env-file[=\s]+/, '').replace(/[\s;&|]$/, ''));
+  return [...new Set(cleaned)];
+}
+
+function checkAdminEnvFileAndConformance(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (ADMIN_ENV_FILE_DIRECT_RE.test(scanned)) {
+      block(
+        'BLOCKED: .op-env.human / .op-env.human.example を op run に渡すのは User の明示操作に限ります（production の service role key が解決され、admin script が本番へ書き込めるため。読み書きは #1993 で解禁済みだが消費は引き続き禁止）',
+      );
+    }
+    if (!envFileMentionsConform(scanned)) {
+      block(
+        'BLOCKED: op run --env-file に渡してよいのは通常の local dev の env-file だけです（許可形以外の言及を検出）。別名や別ディレクトリへ複製した env-file 経由で production credential を解決する迂回を塞ぐためで、必要なら User に実行を依頼してください。名前を検索したいだけなら leading dash を外してください（例: rg env-file scripts/hooks/）',
+      );
+    }
+  }
+}
+
+function checkEnvFileConsumptionIsSingleCommand(rawCommand, commandJoined, commandUnquoted) {
+  const mentioned = commandJoined.includes('-env-file') || commandUnquoted.includes('-env-file');
+  if (!mentioned) return;
+  if (!isSingleSimpleCommand(rawCommand) || !isSingleSimpleCommand(commandUnquoted)) {
+    block(
+      'BLOCKED: env-file を op run へ渡すコマンドは、単一の単純コマンドにしてください（区切り ; & | 改行、コマンド置換 $( )、プロセス置換 <( )、eval は不可）。同じコマンドの中で env-file を書き換えられると、guard が検査した中身と実際に解決される中身が別物になるためです。書き込みや cd は別のコマンドに分けてください',
+    );
+  }
+}
+
+function checkEnvFileContents(commandJoined, commandUnquoted, cwd) {
+  const paths = [
+    ...conformingEnvFilePaths(commandJoined),
+    ...conformingEnvFilePaths(commandUnquoted),
+  ];
+  const uniquePaths = [...new Set(paths)];
+  for (const envFilePath of uniquePaths) {
+    if (!envFilePath) continue;
+    const resolved = path.isAbsolute(envFilePath) ? envFilePath : path.join(cwd, envFilePath);
+    let content;
+    try {
+      if (!fs.statSync(resolved).isFile()) continue;
+      content = fs.readFileSync(resolved, 'utf8');
+    } catch {
+      continue;
+    }
+    const badVaults = disallowedVaultRefs(content);
+    if (badVaults.length > 0) {
+      block(
+        `BLOCKED: ${envFilePath} が許可外 vault の op:// 参照を持っています（検出: ${badVaults.join(' ')}）。op run に渡すと production credential が解決されます。管理者運用は .op-env.human 側の経路と User の明示操作で行ってください`,
+      );
+    }
+  }
+}
+
+// --- #2293: agent-ops secret 露出の出力段 redaction ---
+
+const ITEM_GET_RE = /item\s+get(\s|$)/;
+const REVEAL_FLAG_RE = /(^|[\s;&|])--reveal([\s;&|]|$)/;
+const JSON_FORMAT_RE = /(--format[=\s]+json|OP_FORMAT=json)/;
+
+function checkOpItemGetReveal(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (
+      ITEM_GET_RE.test(scanned) &&
+      (REVEAL_FLAG_RE.test(scanned) || JSON_FORMAT_RE.test(scanned))
+    ) {
+      block(
+        'BLOCKED: op item get で --reveal / --format=json（または OP_FORMAT=json）を使うと concealed field の実値が出力されます（--format=json は --reveal の有無に関わらず値を含む仕様です）。既定の human-readable 形式・--reveal なしで存在確認してください。値そのものが必要な操作は既存の scripts/admin-*.sh 経由で行ってください（agent が直接値を reveal する経路には使えません。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）',
+      );
+    }
+  }
+}
+
+const BRANCHES_GET_RE = /branches\s+get(\s|$)/;
+
+function checkSupabaseBranchesGet(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (BRANCHES_GET_RE.test(scanned)) {
+      block(
+        'BLOCKED: supabase branches get は credential（SERVICE_ROLE_KEY 等）を含む JSON を返す仕様です（2026-08-11 incident）。状態確認には metadata のみを返す branches list を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）',
+      );
+    }
+  }
+}
+
+const VERCEL_INVOKE_RE = /(^|[\s;&|/])vercel(\s|$)/;
+const VERCEL_AUTH_FLAG_RE = /(^|[\s;&|])(--token|-t)([\s=]|$)/;
+
+function checkVercelToken(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (VERCEL_INVOKE_RE.test(scanned) && VERCEL_AUTH_FLAG_RE.test(scanned)) {
+      block(
+        'BLOCKED: vercel CLI に --token / -t を渡すのは禁止です（CLI が再実行・pagination 案内へ値を echo する場合があり、2026-07-22 に実際に露出しました）。VERCEL_TOKEN は環境変数として渡してください（docs/operations/secrets.md 既述。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）',
+      );
+    }
+  }
+}
+
+const SUPABASE_MGMT_DANGER_ENDPOINT_RE =
+  /api\.supabase\.com\/v1\/(projects\/[^\s"']*\/(config|branches)|branches)/;
+
+function checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (SUPABASE_MGMT_DANGER_ENDPOINT_RE.test(scanned)) {
+      block(
+        'BLOCKED: Supabase Management API の config / branches endpoint への言及は禁止です（secret 系フィールドが同梱される仕様で、jq 射影を挟んでも 2026-08-11 に 2 回漏れました。curl 限定だと別 HTTP client で迂回できるため、実行手段を問わず endpoint への言及自体を block します）。node scripts/agent/supabase-mgmt-safe-get.mjs auth-config <field...> を使ってください（この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）',
+      );
+    }
+  }
+}
+
+const OP_READ_RE = /(^|[\s;&|/])op\s+read(\s|$)/;
+
+function checkOpRead(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (OP_READ_RE.test(scanned)) {
+      block(
+        'BLOCKED: op read op://... は --reveal 相当の masking を持たず、常に実値を stdout へ出します（例外なく block）。接続確認は op item get <itemName> --vault <vault> --fields <field> （既定の human-readable 形式・--reveal なしなら masked 出力）で代替してください。値そのものが必要な操作は op run 経由で行ってください（stdout へ出さずに process へ渡せます。この文字列に言及しただけでも落ちます。docs や commit message に書く時は文面を変えるか、Write / Edit で file に書いてから渡してください）',
+      );
+    }
+  }
+}
+
+function checkBashCommand(rawCommand, cwd, execFileImpl) {
+  if (reMatchesAnyLine(rawCommand, FORCE_PUSH_RE)) {
+    block(
+      'BLOCKED: git push --force は禁止です。--force-with-lease を使ってください（この文字列に言及しただけでも落ちます。commit message や PR 本文に書く時は文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）',
+    );
+  }
+  if (reMatchesAnyLine(rawCommand, RESET_HARD_RE)) {
+    block(
+      'BLOCKED: git reset --hard は危険です。確認してください（この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから渡してください）',
+    );
+  }
+  if (reMatchesAnyLine(rawCommand, PUSH_NO_VERIFY_RE)) {
+    block(
+      'BLOCKED: git push --no-verify は禁止です。pre-push の pause point に答えてから push してください（heredoc の本文など、この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）',
+    );
+  }
+  if (reMatchesAnyLine(rawCommand, COMMIT_NO_VERIFY_RE)) {
+    block(
+      'BLOCKED: git commit --no-verify は禁止です。pre-commit の gitleaks スキャンを迂回するため（heredoc の本文など、この文字列に言及しただけでも落ちます。文面を変えるか、Write / Edit で file に書いてから -F / --body-file で渡してください）',
+    );
+  }
+
+  const commandJoined = joinCommand(rawCommand);
+  const commandUnquoted = unquoteCommand(commandJoined);
+
+  checkRmRecursive(commandJoined, commandUnquoted, cwd, execFileImpl);
+  checkSupabaseDbResetRaw(commandJoined, commandUnquoted);
+  checkAdminEnvFileAndConformance(commandJoined, commandUnquoted);
+  checkEnvFileConsumptionIsSingleCommand(rawCommand, commandJoined, commandUnquoted);
+  checkEnvFileContents(commandJoined, commandUnquoted, cwd);
+  checkOpItemGetReveal(commandJoined, commandUnquoted);
+  checkSupabaseBranchesGet(commandJoined, commandUnquoted);
+  checkVercelToken(commandJoined, commandUnquoted);
+  checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted);
+  checkOpRead(commandJoined, commandUnquoted);
+}
+
+// =====================================================================
+// Agent: model 明示 + 探索への Opus/Fable 使用ガード（cost guard、R1/R2）
+// =====================================================================
+// security guard ではなく cost guard のため、jq の index エラー相当（fail-open
+// 判定）は allow へ倒す。
+
+function checkAgentGuards(root) {
+  const modelRes = jqFirstOrEmpty(root, [['tool_input', 'model']]);
+  const agentModel = modelRes.text;
+  const agentModelJqOk = modelRes.ok;
+
+  const subagentTypeRes = jqFirstOrEmpty(root, [['tool_input', 'subagent_type']]);
+  const agentSubagentType = subagentTypeRes.ok ? subagentTypeRes.text : '';
+
+  // [.tool_input.prompt?, .tool_input.description?] | map(select(type=="string")) | join("\n")
+  const promptDescParts = [];
+  const promptV = jqOptionalStringOrUndefined(root, ['tool_input', 'prompt']);
+  if (promptV !== undefined) promptDescParts.push(promptV);
+  const descV = jqOptionalStringOrUndefined(root, ['tool_input', 'description']);
+  if (descV !== undefined) promptDescParts.push(descV);
+  const agentPromptDesc = promptDescParts.join('\n');
+
+  const exemptSubagentType =
+    agentSubagentType === 'Plan' || agentSubagentType.startsWith('claude-security');
+
+  // R1: model 未指定は block（jq が本当に成功して「値が無かった」時だけ判定する）。
+  if (agentModelJqOk && agentModel === '' && !exemptSubagentType) {
+    block(
+      'BLOCKED: Agent の model を明示してください（haiku=列挙・蒸留・突合 / sonnet=実装・調査 / opus=反証・設計判断）。省略すると Main の tier を継承し最も高い構成になります（AGENTS.md §委任・報告の作法、routing skill 反例）',
+    );
+  }
+
+  // R2: 編集を伴わない探索・調査の subagent に opus / fable を使わない。
+  const modelLc = agentModel.toLowerCase();
+  if (modelLc.includes('opus') || modelLc.includes('fable') || modelLc.includes('mythos')) {
+    let allowed = exemptSubagentType;
+    if (
+      !allowed &&
+      /反証|再検証|risk-reviewer|plan-review|設計判断|adversarial/i.test(agentPromptDesc)
+    ) {
+      allowed = true;
+    }
+    if (!allowed) {
+      block(
+        'BLOCKED: 編集を伴わない探索・調査の subagent に opus / fable は使いません（routing skill 反例、2026-08 実測: 編集なし Opus 154 件）。列挙・要約は haiku、調査・実装は sonnet。反証レビュー・矛盾報告の再検証・設計判断なら prompt にその旨（反証 / 再検証 / 設計判断）を書いてください',
+      );
+    }
+  }
+}
+
+// =====================================================================
+// Read: 大規模ファイルの範囲指定なし全文読み込みガード（cost guard、R3）
+// =====================================================================
+
+const READ_LARGE_FILE_EXTS = [
+  '.ts',
+  '.tsx',
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.md',
+  '.mdx',
+  '.json',
+  '.sql',
+  '.yml',
+  '.yaml',
+  '.sh',
+  '.py',
+  '.css',
+  '.txt',
+];
+
+function hasWatchedReadExtension(p) {
+  return READ_LARGE_FILE_EXTS.some((ext) => p.endsWith(ext));
+}
+
+/** `wc -l` 相当（改行文字の出現数。末尾に改行が無い最終行はカウントしない）。 */
+function countNewlines(content) {
+  const m = content.match(/\n/g);
+  return m ? m.length : 0;
+}
+
+function checkReadLargeFile(root) {
+  const filePathRes = jqFirstOrEmpty(root, [['tool_input', 'file_path']]);
+  const offsetRes = jqFirstOrEmpty(root, [['tool_input', 'offset']]);
+  const limitRes = jqFirstOrEmpty(root, [['tool_input', 'limit']]);
+
+  const readFilePath = filePathRes.text;
+  const readOffset = offsetRes.text;
+  const readLimit = limitRes.text;
+
+  if (!readFilePath || readOffset !== '' || readLimit !== '') return;
+  if (!hasWatchedReadExtension(readFilePath)) return;
+  if (!isRegularFile(readFilePath)) return;
+
+  let lineCount = 0;
+  try {
+    lineCount = countNewlines(fs.readFileSync(readFilePath, 'utf8'));
+  } catch {
+    return;
+  }
+  if (lineCount > 600) {
+    block(
+      `BLOCKED: ${lineCount} 行のファイルを範囲指定なしで Read しようとしています。offset / limit を付けるか、\`rg -n\` / \`sed -n\` で必要な範囲だけ読んでください（tool_result の Read が 2026-08 の context の 50% を占めた実測。routing skill §L0）`,
+    );
+  }
+}
+
+// =====================================================================
+// エントリポイント
+// =====================================================================
+
+const WRITE_LIKE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+
+function evaluateInner(rawInput, cwd, execFileImpl) {
+  const root = parseInputJson(rawInput);
+
+  const toolName = jqFirstOrEmpty(root, [['tool_name']]).text;
+  // NotebookEdit は file_path ではなく notebook_path を使う。
+  const filePath = jqFirstOrEmpty(root, [
+    ['tool_input', 'file_path'],
+    ['tool_input', 'notebook_path'],
+  ]).text;
+  const command = jqFirstOrEmpty(root, [['tool_input', 'command']]).text;
+
+  if (WRITE_LIKE_TOOLS.has(toolName)) {
+    checkWriteGuards(filePath, root, cwd, execFileImpl);
+  }
+
+  if (toolName === 'mcp__ccd_session__spawn_task') {
+    checkSpawnTaskMainOnly(cwd, execFileImpl);
+  }
+
+  if (toolName === 'Bash') {
+    checkBashCommand(command, cwd, execFileImpl);
+  }
+
+  if (toolName === 'Agent') {
+    checkAgentGuards(root);
+  }
+
+  if (toolName === 'Read') {
+    checkReadLargeFile(root);
+  }
+}
+
+/**
+ * PreToolUse hook の判定本体。純粋関数（プロセスを終了させない）。
+ * @param {string} rawInput hook に渡された stdin の生 JSON テキスト
+ * @param {{ cwd?: string, execFileImpl?: typeof execFileSync }} [options]
+ * @returns {{ decision: 'allow' | 'block', message?: string }}
+ */
+export function evaluate(rawInput, options = {}) {
+  const { cwd = process.cwd(), execFileImpl = execFileSync } = options;
+  try {
+    evaluateInner(rawInput, cwd, execFileImpl);
+    return { decision: 'allow' };
+  } catch (err) {
+    if (err instanceof GuardBlock) {
+      return { decision: 'block', message: err.message };
+    }
+    throw err;
+  }
+}
+
+// CLI 直接実行時（`node pre-tool-guard-rules.mjs` として stdin から JSON を
+// 読む）。通常経路は loader（pre-tool-guard.mjs）からの import 経由で
+// `evaluate()` を呼ぶ。ここは手動 smoke 用。
+if (isDirectExecution(import.meta.url)) {
+  const chunks = [];
+  process.stdin.on('data', (chunk) => chunks.push(chunk));
+  process.stdin.on('end', () => {
+    const rawInput = Buffer.concat(chunks).toString('utf8');
+    const result = evaluate(rawInput);
+    if (result.decision === 'allow') {
+      process.exit(0);
+    }
+    if (result.message) console.error(result.message);
+    process.exit(2);
+  });
+}

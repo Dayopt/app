@@ -11,7 +11,7 @@ import {
  * 射影を通した値だけ返す安全な wrapper（#2293）。
  *
  * `config/auth` の生応答には `security_captcha_secret` 等の secret が同梱されるため、
- * agent が curl / wget で直接叩くことは `scripts/hooks/pre-tool-guard-impl.sh` が block
+ * agent が curl / wget で直接叩くことは `scripts/hooks/pre-tool-guard-rules.mjs` が block
  * する（denylist keyword フィルタ・部分一致フィルタが 2026-08-11 に 2 回とも漏れた同型
  * incident を再発させないため）。安全な確認経路をこの wrapper 1 本に一本化する。
  *
