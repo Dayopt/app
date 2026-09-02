@@ -13,15 +13,20 @@
  * ```tsx
  * // middleware.ts
  * import { updateSession } from '@/lib/supabase/middleware'
+ * import { applySessionContinuity } from '@/lib/supabase/session-continuity'
  *
  * export async function middleware(request: NextRequest) {
- *   const { response, supabase } = await updateSession(request)
+ *   const { response, supabase, sessionContinuity } = await updateSession(request)
  *
  *   // 認証チェック
  *   const { data: { user } } = await supabase.auth.getUser()
  *
  *   if (!user && isProtectedPath(request.nextUrl.pathname)) {
- *     return NextResponse.redirect(new URL('/auth/login', request.url))
+ *     // 新しい response を作る経路では、refresh Cookie / cache headers を明示的に写す（#2516）
+ *     return applySessionContinuity(
+ *       NextResponse.redirect(new URL('/auth/login', request.url)),
+ *       sessionContinuity,
+ *     )
  *   }
  *
  *   return response
@@ -48,6 +53,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import type { Database } from '@/lib/database';
 
+import {
+  applySessionContinuity,
+  createEmptySessionContinuity,
+  type SessionContinuity,
+} from './session-continuity';
+
 /**
  * Middlewareでセッションを更新（トークンリフレッシュ）
  *
@@ -66,6 +77,11 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  // setAll() が渡す refresh Cookie / cache headers の持ち回り。呼び出し側（proxy.ts）が
+  // updateSession() の後で新しい NextResponse を作る場合、これを applySessionContinuity()
+  // で明示的に写す必要がある（#2516。ここで作った response を直接返す経路だけなら不要）。
+  const sessionContinuity: SessionContinuity = createEmptySessionContinuity();
+
   // Supabaseクライアントを作成
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -75,21 +91,29 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        // `@supabase/ssr` は refresh 時、第2引数 headers に Cache-Control / Expires /
+        // Pragma を渡す。CDN が Set-Cookie 付きレスポンスをキャッシュしないための no-cache
+        // 指示で、落とすとセッション漏洩の経路になり得る（#2516、Supabase 公式ガイド）。
+        setAll(cookiesToSet, headers) {
           // リクエストにCookieを設定（後続の処理で使用）
           cookiesToSet.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
 
-          // レスポンスを再作成してCookieを含める
-          response = NextResponse.next({
-            request,
-          });
+          // 持ち回りへ反映（同名 Cookie は後勝ち。headers は setAll が複数回呼ばれても
+          // 上書きマージでよい）
+          const cookiesByName = new Map(sessionContinuity.cookies.map((c) => [c.name, c]));
+          cookiesToSet.forEach((c) => cookiesByName.set(c.name, c));
+          sessionContinuity.cookies = [...cookiesByName.values()];
+          Object.assign(sessionContinuity.headers, headers ?? {});
 
-          // レスポンスにCookieを設定（ブラウザに送信）
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
+          // レスポンスを再作成してCookieとheadersを含める
+          response = applySessionContinuity(
+            NextResponse.next({
+              request,
+            }),
+            sessionContinuity,
+          );
         },
       },
     },
@@ -113,5 +137,5 @@ export async function updateSession(request: NextRequest) {
     });
   }
 
-  return { response, supabase, user };
+  return { response, supabase, user, sessionContinuity };
 }
