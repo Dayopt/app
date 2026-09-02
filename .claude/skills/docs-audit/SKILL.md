@@ -57,7 +57,7 @@ user_invocable: true
 
 ```bash
 git log --oneline -5 -- apps/product/src/features/<feature>/
-git log --oneline -5 -- apps/web/content/docs/ja/features/<feature>.mdx
+git log --oneline -5 -- apps/web/content/docs/ja/<section>/<feature>.mdx  # section = getting-started / plan / track / review / organize / data / faq / troubleshooting
 ```
 
 docs の最終更新と product 側の最終コミットを比較し、乖離が大きいものをフラグする。

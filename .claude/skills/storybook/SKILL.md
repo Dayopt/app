@@ -15,7 +15,7 @@ maxTurns: 15
 - 既存 component に props / variant / state を追加した後、Story 側に反映する時
 - Figma デザイン変更を component に反映した後、AllPatterns Story を更新する時
 - 新しい Foundation / Pattern（トークン、レイアウト規則）を定義して Storybook で可視化する時
-- `apps/product/src/lib/components/` 配下の UI component を新規追加する時
+- `packages/components/src/` 配下の UI component を新規追加する時
 - UI 実装中に spacing / icon size / z-index / radius / motion / elevation のどの値を使うべきか判断する時（→ §Design Token 選択ガイド）
 
 ## When NOT to Use
@@ -299,7 +299,7 @@ export const AllPatterns: Story = {
 
 ### Foundation
 
-**パス**: `apps/product/src/lib/styles/tokens/`
+**パス**: `packages/foundations/src/tokens/`
 **title**: `Shared/Foundations/`
 **layout**: `fullscreen`
 **モック**: 不要
