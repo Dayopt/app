@@ -19,7 +19,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）→ test（unit + affected integration/RLS + migration safety）の直列2 job
+    ci.yml                    # impact（affected 判定）→ static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）∥ unit（+ migration safety）∥ integration（affected 時の RLS/integration）の並列 4 job
     production-config-audit.yml  # Vercel environment metadata 監査
     nightly.yml               # heavy-e2e/heavy-web/integration（層3）+ status-label-sweep + replica-check + storage-backup-export の5 job（#2483 で旧ファイルから統合。night-watch job は 2026-09-02 に撤去）
     create-release.yml        # GitHub Release 作成
@@ -33,14 +33,16 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ### ワークフロー別 permissions
 
-| ワークフロー                                          | permissions                                                  | 理由                            |
-| ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
-| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取り + impact 判定    |
-| `ci.yml`（unit job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知         |
-| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ              |
-| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                |
-| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行 |
-| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成            |
+| ワークフロー                                          | permissions                                                  | 理由                                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ci.yml`（impact job）                                | `contents: read` / `pull-requests: read`                     | PR の変更ファイル一覧の取得（gh api）を行う唯一の job                                         |
+| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取りのみ（gh を呼ばないため step env に `GH_TOKEN` を渡さない）                     |
+| `ci.yml`（unit job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知                                                                       |
+| `ci.yml`（integration job）                           | `contents: read`                                             | gh を呼ばないため job 単位で最小へ絞る（PR コードを実行する job に書き込み token を置かない） |
+| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ                                                                            |
+| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                                                                              |
+| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行                                                               |
+| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成                                                                          |
 
 `production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**

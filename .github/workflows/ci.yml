@@ -36,7 +36,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# pull-requests: read は static job の impact 判定（PR の変更ファイル一覧取得）に、
+# pull-requests: read は impact job の判定（PR の変更ファイル一覧取得）に、
 # issues: write は unit job の migration safety のラベル付与に要る（job 単位で
 # 追加宣言する。ここでは最小に絞る。integration job は gh を呼ばないため
 # contents: read だけに絞ってある）。
@@ -102,7 +102,7 @@ jobs:
   static:
     name: "\U0001F50D Static Checks"
     needs: impact
-    if: always() && github.event.pull_request.draft != true && needs.impact.result == 'success'
+    if: always() && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -115,8 +115,12 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Run static checks
+        # **GH_TOKEN は渡さない**（内製クロスレビュー risk-reviewer 指摘、P2）。
+        # gh を使う唯一の処理（PR files 一覧の取得）は impact job へ移り、この job に
+        # gh 依存は残っていない（secrets:check / docs:check / lane のいずれも gh を
+        # 呼ばないことを確認済み）。PR コードとその全依存を実行する job に不要な
+        # token を置かない — integration job と同じ原則。
         env:
-          GH_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -145,7 +149,7 @@ jobs:
     # `always()` を付けるのは、上流 job 自体が落ちた時に下流が skip されると
     # 「検証なしで required check が success」になる（fail open）ため。always()
     # なら impact 失敗時も評価され、空の output は `!= 'true'` で実行側に倒れる。
-    if: always() && github.event.pull_request.draft != true && needs.impact.result == 'success' && needs.impact.outputs.docs_only != 'true'
+    if: always() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -175,13 +179,13 @@ jobs:
   #
   # `!= 'false'`（`== 'true'` ではない）: check.mjs の shouldRunIntegrationTests
   # と同じ fail-closed 方向（判定不能なら実行する）に揃える。output が空になる
-  # 経路は `needs.impact.result == 'success'` 要求で現状塞がれているが、guard の
+  # 経路は impact 失敗時は空になり実行側へ倒れるが、guard の
   # 向きが 2 箇所で食い違っていると将来の配線変更でサイレントに壊れる
   # （内製クロスレビュー risk-reviewer 指摘、P3）。
   integration:
     name: "\U0001F9EA Integration Tests"
     needs: impact
-    if: always() && github.event.pull_request.draft != true && needs.impact.result == 'success' && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false'
+    if: always() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     # gh を呼ばないため write 権限も GH_TOKEN も渡さない（migration safety は

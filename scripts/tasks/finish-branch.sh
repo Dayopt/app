@@ -488,7 +488,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # **「🔍 Static Checks」は docs-only でも免除しない**（#2483 以降、static job
   # 自体が docs-only でも skip されず secret/docs 検査の唯一の実行経路のため）。
   # 「📦 Unit Tests」だけを docs-only で免除する（ci.yml の unit job は
-  # `needs.static.outputs.docs_only != 'true'` で実際に skip されるため、
+  # `needs.impact.outputs.docs_only != 'true'` で実際に skip されるため、
   # ここを要求すると docs-only PR が永久に missing で止まる）。判定不能時は
   # IMPACT_DOCS_ONLY=false（＝両方要求する側）へ倒してある。
   # 「🧪 Integration Tests」（#2539 で test job から分離）は **docs-only でなく、かつ

@@ -77,7 +77,7 @@ function isDocsPath(file) {
 // fallback 専用）。
 //
 // 判定結果（resolveImpact().integration）は $GITHUB_OUTPUT 経由で ci.yml の
-// integration job（`needs.static.outputs.integration`）へ渡り、Supabase 起動と
+// integration job（`needs.impact.outputs.integration`）へ渡り、Supabase 起動と
 // integration/RLS test の実行可否を決める（#1815 で見送った gate job 化は
 // この統合で解消済み——affected 判定はもう workflow trigger と別建てではない）。
 //
@@ -85,6 +85,13 @@ function isDocsPath(file) {
 // `scripts/ci/check.mjs`、2026-09-02 #2539 の job 分割で追加）。これらを変更した PR で
 // integration=false になると、**配線を変えた当の job を一度も実走させないまま merge**
 // できてしまう（nightly.yml を既に含めているのと同じ理屈）。
+//
+// **このファイル自身（impact.mjs）は意図的に中立のまま**（内製クロスレビュー
+// risk-reviewer 指摘、P3）。INTEGRATION_GLOBS を締める変更だけを含む PR は
+// integration=false になり、新しい glob の下で integration job が走らない。
+// 保証境界は `scripts/ci/impact.test.ts` — この判定器の unit test は unit job で
+// 必ず走るため、glob の誤りは integration の実走を待たずに検出される。
+// 自己参照で全 PR に Supabase 起動を強いるより、判定器の test を厚くする側を採る。
 export const INTEGRATION_GLOBS = [
   '.nvmrc',
   'package.json',

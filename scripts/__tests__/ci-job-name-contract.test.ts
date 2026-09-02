@@ -56,11 +56,8 @@ describe('CI job 名の契約', () => {
     // 条件つきの `REQUIRED_CI_CHECKS+=("📦 Unit Tests")`）ので、配列リテラルの
     // 中身として現れることだけを見る。
     for (const name of ['🔍 Static Checks', '📦 Unit Tests', '🧪 Integration Tests']) {
-      expect(finishBranch, `finish-branch.sh が「${name}」を要求していない`).toContain(
-        `REQUIRED_CI_CHECKS`,
-      );
-      expect(finishBranch, `finish-branch.sh の要求配列に「${name}」が無い`).toContain(
-        `("${name}")`,
+      expect(finishBranch, `finish-branch.sh の REQUIRED_CI_CHECKS に「${name}」が無い`).toMatch(
+        new RegExp(`REQUIRED_CI_CHECKS\\+?=\\("${name}"\\)`),
       );
       expect(ciNames, `ci.yml に「${name}」が無い`).toContain(name);
     }
