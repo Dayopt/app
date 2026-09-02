@@ -300,7 +300,7 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 
 ### merge gate の required checks
 
-main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
+main ruleset の required status checks は `ci.yml` の 3 job（`🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests`）に加えて次を含める。`🧪 Integration Tests` は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539) で `📦 Unit Tests` から分離した（2 vCPU runner 上で Supabase と unit test が CPU を奪い合い、同じ unit test が同居時 4〜9 分・非同居時 1〜2 分だった実測による）。**この job は DB を触る PR でだけ走る**ため、`branch:finish` も affected な PR でだけ名前で要求する。
 
 **2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。**2026-08-28、#2483 で `heavy-post-merge.yml` はさらに `nightly.yml` へ吸収された（job 名・schedule・required checks の扱いは無変更）。** 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
 
@@ -314,13 +314,19 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 `🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
-- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
-  Draft CI 廃止により、この 2 job は draft の間 `conclusion: skipped` の check run になる。skipped は
+- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。3 つ目は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539)）。**
+  Draft CI 廃止により、この 3 job は draft の間 `conclusion: skipped` の check run になる。skipped は
   失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
   「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
   持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
-  影響判定が不能な場合は要求する側（fail closed）へ倒す。契約は
+  影響判定が不能な場合は要求する側（fail closed）へ倒す。**`🧪 Integration Tests` は加えて
+  `integration` affected な PR でだけ要求する**（affected でない PR では job ごと skip されるのが
+  正常で、無条件に要求すると永久に missing で止まる）。契約は
   `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
+- **`ci.yml` / `scripts/ci/check.mjs` は `INTEGRATION_GLOBS` に含める（#2539）。** integration を独立 job へ
+  切り出した結果、job まるごとが `if:` で skip されうるようになった。配線を持つこの 2 ファイルを
+  中立扱いのままにすると、**配線を変えた当の job を一度も実走させずに merge** できる（`nightly.yml` を
+  既に含めているのと同じ理屈）
 - **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context

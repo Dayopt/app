@@ -1,7 +1,7 @@
 name: Nightly
 
 # CI ファイル統合（#2483 Phase 1）: 旧 heavy-post-merge.yml / integration.yml
-# （integration job のみ。migration-safety は ci.yml の test job へ移設済み）/
+# （integration job のみ。migration-safety は ci.yml の unit job へ移設済み）/
 # replica-check.yml / storage-backup-export.yml の cron を 1 ファイルへ統合し、
 # status:* ラベルの close-time 剥がし漏れを掃除する batch sweep を新設 job として
 # 追加した（統合時に同居していた night-watch job は 2026-09-02 に撤去済み）。
@@ -28,7 +28,7 @@ on:
     # 03:00 JST — heavy（E2E / Web Build & E2E）。CI 4 層再設計（#2269）の層 3。
     - cron: '0 18 * * *'
     # 03:30 JST — integration（DB 起動を伴う重量テストの nightly fallback。
-    # per-PR 実行は ci.yml の test job が affected 判定つきで担う）。
+    # per-PR 実行は ci.yml の integration job が affected 判定つきで担う）。
     - cron: '30 18 * * *'
     # 04:30 JST — status:* ラベルの batch sweep（close 時の剥がし漏れ backstop）。
     - cron: '30 19 * * *'
@@ -178,7 +178,7 @@ jobs:
 
   # ─── integration（DB 起動を伴う重量テストの nightly fallback、旧 integration.yml）──
   # migration-safety（破壊的 migration の静的スキャン）は per-PR 化して
-  # ci.yml の test job へ移設済み。ここには残さない。
+  # ci.yml の unit job へ移設済み。ここには残さない。
   integration:
     name: Integration Tests
     if: github.event.schedule == '30 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))

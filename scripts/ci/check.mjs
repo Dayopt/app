@@ -10,20 +10,29 @@
  *
  * Usage:
  *   node scripts/ci/check.mjs static
- *   node scripts/ci/check.mjs test
+ *   node scripts/ci/check.mjs unit
+ *   node scripts/ci/check.mjs integration
  *
- * static: gitleaks CLI + allowlist canary + secrets:check + docs:check +
- *         validate:content（常時）+ typecheck/lint/knip/check:static の並列
- *         lane（docs-only でなければ）+ supabase/functions/** 変更時のみ deno check
- * test:   unit（product/web/i18n/observability + scripts、常時）+ 新規 migration の
- *         destructive scan（pull_request イベント時は常時）+ affected な PR だけ
- *         integration/RLS（Supabase の起動自体は ci.yml 側の `if:` が担い、
- *         接続情報は env 経由で渡される前提）
+ * static:      gitleaks CLI + allowlist canary + secrets:check + docs:check +
+ *              validate:content（常時）+ typecheck/lint/knip/check:static の並列
+ *              lane（docs-only でなければ）+ supabase/functions/** 変更時のみ deno check
+ * unit:        unit（product/web/i18n/observability + scripts、常時）+ 新規 migration の
+ *              destructive scan（pull_request イベント時は常時）。**DB を一切使わない**
+ * integration: affected な PR だけ integration/RLS（Supabase の起動自体は ci.yml 側の
+ *              `if:` が担い、接続情報は env 経由で渡される前提）
+ *
+ * **unit と integration を別 job に分けてあるのは wall-clock のためではなく、
+ * 同一 runner 上の CPU 競合を断つため**（2026-09-02、#2539）。直近 40 run の実測で、
+ * 同じ unit test が Supabase 同居時は 4〜9 分、非同居時は 1〜2 分だった。GitHub の
+ * private runner は 2 vCPU で、Supabase の container 群（postgres / kong / storage 等）
+ * が常駐したまま vitest の worker を回すと、両者が同じ 2 コアを奪い合う。**この 2 job を
+ * 再び 1 job へ戻すと、affected 判定が効いていない PR（実測 87%）で unit test が
+ * 数倍に伸びる**ため、統合する場合は runner の vCPU 数から見直すこと。
  *
  * impact 判定は static モードで 1 回だけ行い、`$GITHUB_OUTPUT` へ書き出す
- * （docs_only / product_unit / integration）。test job はそれを
+ * （docs_only / product_unit / integration）。unit / integration job はそれを
  * `needs.static.outputs` 経由で env として受け取り、ここでは再計算しない —
- * 同一 PR の 2 job で gh api を 2 回叩いて結果がずれるリスクを避けるため。
+ * 同一 PR の複数 job で gh api を叩いて結果がずれるリスクを避けるため。
  */
 
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
@@ -325,9 +334,9 @@ async function runStatic() {
   }
 }
 
-// ─── test モード ─────────────────────────────────────────────────────
+// ─── unit モード（DB 非依存。Supabase を起動しない job で走る）────────
 
-async function runTest() {
+async function runUnit() {
   // ── write 権限つき GH_TOKEN を PR コードの実行から隔離する ──────────
   // このジョブは permissions: pull-requests: write / issues: write を宣言し、
   // その GITHUB_TOKEN を GH_TOKEN として step env に受け取る。以降の run()
@@ -346,13 +355,17 @@ async function runTest() {
   const isPr = eventName === 'pull_request' && !!prNumber;
 
   const productUnit = shouldRunProductUnitTests(process.env.PRODUCT_UNIT);
-  const integrationAffected = shouldRunIntegrationTests(process.env.INTEGRATION_AFFECTED);
 
   // ── migration safety（破壊的変更の静的スキャン、常時・DB 不要）────
   // 他の unit test より先に実行する。DB 起動も build:packages も不要な軽い
-  // 静的スキャンで、後段の unit test 失敗（run() が例外を投げて runTest を
+  // 静的スキャンで、後段の unit test 失敗（run() が例外を投げて runUnit を
   // 中断する）に巻き込まれて検知そのものが飛ぶのを防ぐ（内製クロスレビュー
   // risk-reviewer 指摘、P2、PR #2484）。
+  //
+  // **integration job ではなく unit job に置く**。integration job は affected な
+  // PR でしか走らないが、この検知は「新規 migration を含む PR」で必ず要る。
+  // 両者の条件は現状ほぼ一致する（migrations/** は INTEGRATION_GLOBS に入っている）
+  // が、glob を締める変更（#2539 の後続）で乖離しうるため、常時走る側へ置く。
   if (isPr) {
     await runMigrationSafety({ repo, prNumber, env: { ...process.env, GH_TOKEN: ghToken } });
   }
@@ -379,14 +392,25 @@ async function runTest() {
   run('pnpm', ['test:web']);
   run('pnpm', ['--filter', '@dayopt/i18n', 'test:run']);
   run('pnpm', ['--filter', '@dayopt/observability', 'test:run']);
+}
 
-  // ── integration / RLS（affected な PR だけ。Supabase の起動自体は ci.yml 側の `if:` が担う）──
-  if (integrationAffected) {
-    run('pnpm', ['test:integration']);
-    run('pnpm', ['rls:snapshot:check']);
-  } else {
+// ─── integration モード（Supabase 起動済みの job で走る）──────────────
+
+async function runIntegration() {
+  // このモードは gh を一切呼ばないため、ci.yml 側も GH_TOKEN を渡さない
+  // （unit job のような押収・再注入が要らないよう、そもそも env に置かない設計）。
+  //
+  // ci.yml の job `if:` が既に affected 判定で job ごと skip するが、ここでも
+  // 同じ向き（判定不能なら実行 = fail closed）で確認する。guard の向きが 2 箇所で
+  // 食い違っていると、将来の配線変更でサイレントに壊れるため（既存 ci.yml の
+  // コメントと同じ設計判断）。
+  if (!shouldRunIntegrationTests(process.env.INTEGRATION_AFFECTED)) {
     console.log('DB を触らない変更のため integration/RLS test を skip します。');
+    return;
   }
+
+  run('pnpm', ['test:integration']);
+  run('pnpm', ['rls:snapshot:check']);
 }
 
 /**
@@ -527,10 +551,12 @@ if (isDirectRun) {
   try {
     if (mode === 'static') {
       await runStatic();
-    } else if (mode === 'test') {
-      await runTest();
+    } else if (mode === 'unit') {
+      await runUnit();
+    } else if (mode === 'integration') {
+      await runIntegration();
     } else {
-      console.error('Usage: node scripts/ci/check.mjs <static|test>');
+      console.error('Usage: node scripts/ci/check.mjs <static|unit|integration>');
       process.exitCode = 1;
     }
   } catch (error) {

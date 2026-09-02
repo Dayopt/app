@@ -36,7 +36,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 | ワークフロー                                          | permissions                                                  | 理由                            |
 | ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
 | `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取り + impact 判定    |
-| `ci.yml`（test job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知         |
+| `ci.yml`（unit job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知         |
 | `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ              |
 | `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                |
 | `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行 |
@@ -173,12 +173,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                           |
-| ---------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                      |
-| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ test job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
-| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                           |
-| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                      |
+| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                             |
+| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ integration job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
+| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                                  |
+| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                             |
 
 **束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`AGENTS.md §PR / git 運用` §PR 粒度）。
 
