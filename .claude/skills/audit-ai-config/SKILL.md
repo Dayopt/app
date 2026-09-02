@@ -26,13 +26,13 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 - docs gap の検出・技術ドキュメント更新 → `docs-writing` skill
 - skill 新設・description 書式判断 → `skill-design` skill
 
-## 前提（現在の構成、2026-08-28、#2479 で再編）
+## 前提（現在の構成、#2479 で再編）
 
 - 実装・運用ガイダンスの正本は `AGENTS.md`（毎セッション読み込まれる単一ファイル、~200行予算）。`CLAUDE.md` は `@AGENTS.md` import のみのシム
-- `.claude/rules/` と `.claude/agents/` は全廃した。rules の内容は AGENTS.md（判断層・不変条件）と各 skill（特定作業の手順）へ振り分け、常設 agent 定義（architecture-guard / behavior-verifier / risk-reviewer / plan-critic / plan-fact-checker / usability-probe）は `pr-cross-review` / `usability-probe` skill の inline prompt へ吸収した
+- `.claude/rules/` と `.claude/agents/` は全廃した（rules は AGENTS.md・各 skill へ、常設 agent 定義は `pr-cross-review` / `usability-probe` skill の inline prompt へ吸収済み）
 - 高リスク PR に限定した Codex 併用は継続する。選別は `scripts/ci/protected-path-gate.mjs` が機械判定する（保護対象 path または `review:full` ラベル）。Codex 向けレビュー規則は `AGENTS.md` 冒頭に残す
 - hooks 実体は `scripts/hooks/` にある（`.claude/hooks/` から #2479 で移動）。呼び出し元は `.claude/settings.json` のみ
-- 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・旧 `.claude/commands/*.md`）は過去に撤去済み。経緯は git 履歴参照
+- 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・旧 `.claude/commands/*.md`）は撤去済み。経緯は git 履歴参照
 
 ## Inventory
 
@@ -55,7 +55,7 @@ AGENTS.md は次も確認する。
 
 各項目を次の質問で評価する。
 
-1. **使用実績**: `git log -1` の日付を鮮度の根拠にしない（このリポジトリの clone は `.git/shallow` を持ち、2026-07-15 の 3 commit が親なしの境界になるため、それ以前の実質変更もすべて 2026-07-15 に誤帰属する）。代わりに **被参照数**（`rg --hidden --glob '!.git/**'` で他ファイルからの参照・呼び出しをカウント）と、必要なら到達可能な範囲での**実質 diff**（`git log --follow -p`。境界 commit で差分が付かない場合は `git show <sha>:<path>` で前後の内容を直接比較する）を根拠にする。docs からの被参照も含めて判断し、3 か月以上使われた形跡がないものは削除候補にする。
+1. **使用実績**: `git log -1` の日付を鮮度の根拠にしない（`.git/shallow` の境界 commit より前の実質変更が誤帰属するため）。代わりに **被参照数**（`rg --hidden --glob '!.git/**'` で他ファイルからの参照・呼び出しをカウント）と、必要なら到達可能な範囲での**実質 diff**（`git log --follow -p`。境界 commit で差分が付かない場合は `git show <sha>:<path>` で前後の内容を直接比較する）を根拠にする。docs からの被参照も含めて判断し、3 か月以上使われた形跡がないものは削除候補にする。
 2. **適材適所**: もっと下位の仕組みで代替できないか。判断不要・毎回実行するものは hooks か package.json script へ、短い常時ルールは AGENTS.md へ、単発 CLI で済む外部連携は MCP ではなく CLI 運用へ寄せる。
 3. **重複**: AGENTS.md、skills、docs で同じ規約を二重管理していないか。正本を 1 箇所に決め、他は参照に落とす。
 4. **トリガー品質**: skill の description / When to Use は発火条件として具体的か。対象ファイル、作業種別、NOT 条件が曖昧なものは書き直し案を出す。

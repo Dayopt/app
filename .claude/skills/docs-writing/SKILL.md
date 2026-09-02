@@ -28,7 +28,7 @@ app側の技術ドキュメント（`docs/`）とは別物。
 
 ## When NOT to Use
 
-- 意思決定ログの追記 → `decision` skill（`docs/decisions.md` へ 1 行追記。2026-08-28、#2475 で domain log/ を廃止）
+- 意思決定ログの追記 → `decision` skill（`docs/decisions.md` へ 1 行追記。#2475 で domain log/ を廃止）
 - コード内コメント（`AGENTS.md` のコメント・コード規約に従う、skill 層の範囲外）
 - 一時メモ・個人メモ・ミーティングノート（公開されない情報）
 - 自明な内容の重複記録（型定義・命名で自己説明できる内容）
@@ -48,7 +48,7 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 
 **`draft: true` のファイルはビルドから除外され、本番に公開されない。**
 
-**既に公開されている page の更新では draft を付けない**（付けると当該 URL が本番で 404 になる）。`draft: true` は新規 page の初期値であり、既存公開 page の編集にはこのワークフローを適用しない（2026-08-17、#2118。`getAllContent()` の draft フィルタと `dynamicParams = false` の組み合わせで、draft 付与 = 静的経路が生成されず既存 URL が 404 になる経路に入る）。
+**既に公開されている page の更新では draft を付けない**（付けると `getAllContent()` の draft フィルタと `dynamicParams = false` の組み合わせで当該 URL が本番 404 になる。#2118）。`draft: true` は新規 page の初期値であり、既存公開 page の編集には適用しない。
 
 ---
 
@@ -60,7 +60,7 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 | **blog**     | `apps/web/content/blog/{en,ja}/*.mdx`                 | ブログ記事（機能紹介、Tips、開発裏話等）                |
 | **releases** | blog と同じ。`category: 'release'` を付けた blog 記事 | リリースノート（`/blog/release` タブに表示）            |
 
-リリースノートは独立ページを持たない。blog の `release` カテゴリ記事として書く（旧 `/releases` ページは 2026-07 に廃止。決定ログ（削除済み、git 履歴参照））。役割分担は `docs/business/content/docs-policy.md`、文章基準は `docs/business/content/writing-style.md` に従う。
+リリースノートは独立ページを持たない。blog の `release` カテゴリ記事として書く（旧 `/releases` ページは廃止済み。経緯は git 履歴参照）。役割分担は `docs/business/content/docs-policy.md`、文章基準は `docs/business/content/writing-style.md` に従う。
 
 ---
 
@@ -171,7 +171,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 ```
 何を記録したいか？
 ├─ 機能の仕組み → 技術ドキュメント（docs/engineering/）
-├─ なぜこの方法を選んだか（意思決定） → docs/decisions.md へ 1 行追記（decision skill。#2475 で domain log/ 廃止）
+├─ なぜこの方法を選んだか（意思決定） → docs/decisions.md へ 1 行追記（decision skill）
 └─ APIの使い方 → APIドキュメント（docs/engineering/conventions-api.md）
 ```
 

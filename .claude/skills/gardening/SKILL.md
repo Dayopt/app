@@ -5,9 +5,9 @@ description: ユーザーが月次の改善ループの実施を明示依頼し�
 
 # 月次改善ループ（gardening）
 
-目的は「仮説 → 1 か月運用 → 実測 → 判定」を **人が月 1 回 30 分で閉じる** こと。Uber の factory loop（Outcome 定義 → 運用 → trace 分析）の Dayopt 版で、benchmark は持たず本番を benchmark とし、月を試行の単位にする（`docs/decisions.md` 2026-09-02）。
+目的は「仮説 → 1 か月運用 → 実測 → 判定」を **人が月 1 回 30 分で閉じる** こと。Uber の factory loop（Outcome 定義 → 運用 → trace 分析）の Dayopt 版で、benchmark は持たず本番を benchmark とし、月を試行の単位にする（`docs/decisions.md` 参照）。
 
-**engine は月初に User が開くローカル session**。`ai:usage` が読む session ログはこの Mac にしか無く、Routine や GitHub Actions では走らせられない（2026-09-02 実測: gardening の Routine は存在せず、8 月は人が代行した 1 回のみ）。自動パートは持たない。
+**engine は月初に User が開くローカル session**。`ai:usage` が読む session ログはこの Mac にしか無く、Routine や GitHub Actions では走らせられない。自動パートは持たない。
 
 ## When to Use
 
