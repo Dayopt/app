@@ -4,15 +4,21 @@
  * このリストは「触れたら内製クロスレビュー + Codex の 2 系統が必須になる」という
  * 強い意味を持つが、リテラルとして書かれているため次の 2 種類の drift が
  * 機械には見えない:
- *   1. リネーム / ディレクトリ移動で glob が指す先が消え、gate が黙って
- *      「マッチしない = 保護されない」へ縮退する
+ *   1. glob が実際には 1 件も既存ファイルに一致しない（親ディレクトリが残って
+ *      いても、対象ファイルがリネーム/移動されると gate が黙って「マッチしない
+ *      = 保護されない」へ縮退する。例えば `mcp-*` に一致するファイルが全て
+ *      移動されても `mcp/` ディレクトリ自体は残り得る。Codex 指摘 #2546:
+ *      static prefix ディレクトリの実在チェックだけでは検出できない）
  *   2. `.github/workflows/production-config-audit.yml` の self-change 検出
  *      （grep 正規表現）と、ここに載せた同じ 4 path のコピーが片方だけ変わる
  *
- * ここでは (1) を existsSync で、(2) を workflow の grep 正規表現を実際に
- * パースして `PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS` と突き合わせることで固定する。
+ * ここでは (1) を `resolveProtectedPathGate`（gate 本体が使う実際の matcher）に
+ * 対して repo の全 tracked file を1件ずつ通し、各 glob が少なくとも1件へ実際に
+ * 一致することで固定する。(2) は workflow の grep 正規表現を実際にパースして
+ * `PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS` と突き合わせることで固定する。
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,35 +27,36 @@ import { describe, expect, it } from 'vitest';
 import {
   PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS,
   PROTECTED_PATH_GLOBS,
+  resolveProtectedPathGate,
 } from '../ci/protected-path-gate.mjs';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
-/** glob の中で最初に `*` が現れる位置より前の、確実に存在するはずのディレクトリ部分。 */
-function staticDirectoryFor(glob: string): string {
-  const starIndex = glob.indexOf('*');
-  const prefix = starIndex === -1 ? glob : glob.slice(0, starIndex);
-  return prefix.endsWith('/') ? prefix.slice(0, -1) : dirname(prefix);
+function listTrackedFiles(): string[] {
+  return execFileSync('git', ['ls-files'], { cwd: rootDir, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean);
 }
 
 describe('PROTECTED_PATH_GLOBS の drift 検出（#2503）', () => {
-  it('glob を含まないリテラルは実ファイル/ディレクトリとして存在する', () => {
-    const literals = PROTECTED_PATH_GLOBS.filter((glob) => !glob.includes('*'));
+  it('各 glob（リテラル含む）は少なくとも1件の既存 tracked file に実際に一致する', () => {
     // 判定そのものが空リストで無意味化していないことを保証する。
-    expect(literals.length).toBeGreaterThan(0);
+    expect(PROTECTED_PATH_GLOBS.length).toBeGreaterThan(0);
 
-    const missing = literals.filter((literal) => !existsSync(join(rootDir, literal)));
-    expect(missing).toEqual([]);
-  });
+    const trackedFiles = listTrackedFiles();
+    expect(trackedFiles.length).toBeGreaterThan(0);
 
-  it('glob の static prefix（最初の * より前のディレクトリ）は実在する', () => {
-    const globs = PROTECTED_PATH_GLOBS.filter((glob) => glob.includes('*'));
-    expect(globs.length).toBeGreaterThan(0);
+    // gate 本体（scripts/tasks/finish-branch.sh から呼ばれる実際の matcher）を
+    // そのまま使う。glob 展開ロジックをここで再実装すると、実装と検証が別々に
+    // driftする経路を新たに作ってしまうため避ける。
+    const matchedGlobs = new Set<string>();
+    for (const file of trackedFiles) {
+      const result = resolveProtectedPathGate([file]);
+      if (result.required) matchedGlobs.add(result.reason);
+    }
 
-    const missing = globs
-      .map((glob) => ({ glob, dir: staticDirectoryFor(glob) }))
-      .filter(({ dir }) => !existsSync(join(rootDir, dir)));
-    expect(missing).toEqual([]);
+    const unmatched = PROTECTED_PATH_GLOBS.filter((glob) => !matchedGlobs.has(glob));
+    expect(unmatched).toEqual([]);
   });
 
   it('production-config-audit.yml の self-change grep と PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS は同じ 4 path を指す', () => {

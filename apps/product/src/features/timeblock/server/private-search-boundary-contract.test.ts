@@ -25,9 +25,14 @@ import { describe, expect, it } from 'vitest';
  * 判定は完全な dataflow 解析ではなく、このディレクトリの既存 idiom
  * （`search ? await runPrivateTimeblockSearchQuery(() => query) : await query`）
  * を安全とみなすヒューリスティックである: taint を導入した if 文の条件式と
- * 同じテキストでガードされた分岐（三項演算子の false 側 / if-else の else 側）
- * にある bare await だけを許容する。ガードが無い、またはガードの条件式が
- * 一致しない bare await は違反として報告する。
+ * 同じテキストでガードされ、かつ **taint とは逆側の分岐**（taint が if の
+ * then 側にあれば三項演算子の false 側 / if-else の else 側、taint が
+ * else 側にあれば逆）にある bare await だけを許容する。ガードが無い、
+ * ガードの条件式が一致しない、または taint と同じ側にある bare await は
+ * 違反として報告する（Codex 指摘 #2546: `if (!search) {} else { query =
+ * query.or(...); await query }` のように taint と bare await が同じ
+ * else 節に同居する形は、ガード文字列の一致だけを見ていた旧実装では
+ * 安全と誤判定していた）。
  */
 
 const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
@@ -41,9 +46,15 @@ interface Violation {
   detail: string;
 }
 
+interface IfGuard {
+  text: string;
+  /** taint 自身がこの if 文のどちら側の分岐にあるか。 */
+  branch: 'then' | 'else';
+}
+
 interface TaintRecord {
   targetName: string;
-  guardText: string | null;
+  guard: IfGuard | null;
   pos: number;
   scope: ts.Node;
 }
@@ -88,10 +99,22 @@ function isInsideWrapperArrow(node: ts.Node): boolean {
   return arrow !== undefined;
 }
 
-/** 直近の enclosing IfStatement の条件式テキスト（無ければ null）。 */
-function enclosingIfGuardText(node: ts.Node): string | null {
+/**
+ * 直近の enclosing IfStatement の条件式テキストと、node がどちら側の
+ * 分岐にあるか。thenStatement / elseStatement のどちらの子孫でもない
+ * （条件式自体の中など、taint 呼び出し側では通常起きない）場合は
+ * ガード無しとして安全側に倒す。
+ */
+function enclosingIfGuard(node: ts.Node): IfGuard | null {
   const ifStatement = ts.findAncestor(node, ts.isIfStatement);
-  return ifStatement ? ifStatement.expression.getText() : null;
+  if (!ifStatement) return null;
+  if (isDescendantOf(node, ifStatement.thenStatement)) {
+    return { text: ifStatement.expression.getText(), branch: 'then' };
+  }
+  if (ifStatement.elseStatement && isDescendantOf(node, ifStatement.elseStatement)) {
+    return { text: ifStatement.expression.getText(), branch: 'else' };
+  }
+  return null;
 }
 
 /** 直近の関数スコープ（await の探索範囲を関数単位に絞る）。 */
@@ -108,29 +131,42 @@ function isDescendantOf(node: ts.Node, ancestorCandidate: ts.Node): boolean {
   return false;
 }
 
-/** bare await（`await X` で X が識別子そのもの）が、taint と同じ guard で安全に分岐されているか。 */
-function isSafelyGuardedAgainst(awaitNode: ts.AwaitExpression, guardText: string | null): boolean {
-  if (guardText === null) return false;
+/**
+ * bare await が、taint とは逆側の分岐で安全にガードされているか。
+ *
+ * 単に「同じテキストの条件式を持つ if/三項演算子の中にあるか」だけでは、
+ * taint と bare await が同じ分岐（例: 同じ else 節）に同居していても
+ * 安全と誤判定してしまう（Codex 指摘 #2546）。taint 側の branch を反転
+ * させた側でなければ安全と認めない。
+ */
+function isSafelyGuardedAgainst(
+  awaitNode: ts.AwaitExpression,
+  taintGuard: IfGuard | null,
+): boolean {
+  if (taintGuard === null) return false;
 
   const conditional = ts.findAncestor(
     awaitNode,
     (ancestor): ancestor is ts.ConditionalExpression => {
       if (!ts.isConditionalExpression(ancestor)) return false;
-      // awaitNode が whenFalse 側（= guard が偽の側）にあることを確認する。
-      return (
-        isDescendantOf(awaitNode, ancestor.whenFalse) && ancestor.condition.getText() === guardText
-      );
+      if (ancestor.condition.getText() !== taintGuard.text) return false;
+      // taint が then 側なら await は三項の whenFalse、taint が else 側なら whenTrue。
+      const oppositeBranch = taintGuard.branch === 'then' ? ancestor.whenFalse : ancestor.whenTrue;
+      return isDescendantOf(awaitNode, oppositeBranch);
     },
   );
   if (conditional) return true;
 
   const ifStatement = ts.findAncestor(awaitNode, (ancestor): ancestor is ts.IfStatement => {
     if (!ts.isIfStatement(ancestor)) return false;
-    return (
-      ancestor.elseStatement !== undefined &&
-      isDescendantOf(awaitNode, ancestor.elseStatement) &&
-      ancestor.expression.getText() === guardText
-    );
+    if (ancestor.expression.getText() !== taintGuard.text) return false;
+    // taint が then 側なら await は else 側、taint が else 側なら await は then 側。
+    if (taintGuard.branch === 'then') {
+      return (
+        ancestor.elseStatement !== undefined && isDescendantOf(awaitNode, ancestor.elseStatement)
+      );
+    }
+    return isDescendantOf(awaitNode, ancestor.thenStatement);
   });
   return ifStatement !== undefined;
 }
@@ -163,7 +199,7 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
     }
     taints.push({
       targetName: targetExpr.text,
-      guardText: enclosingIfGuardText(assignmentLike),
+      guard: enclosingIfGuard(assignmentLike),
       pos: assignmentLike.getEnd(),
       scope: enclosingFunctionScope(assignmentLike),
     });
@@ -237,12 +273,14 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
             node.getStart() > taint.pos &&
             isDescendantOf(node, taint.scope)
           ) {
-            if (!isSafelyGuardedAgainst(node, taint.guardText)) {
+            if (!isSafelyGuardedAgainst(node, taint.guard)) {
               violations.push({
                 file: fileName,
                 line: lineOf(sourceFile, node.getStart()),
                 detail: `\`await ${node.expression.getText()}\` が runPrivateTimeblockSearchQuery(() => ...) でラップされておらず、taint（${
-                  taint.guardText ? `if (${taint.guardText}) ...` : '無条件'
+                  taint.guard
+                    ? `${taint.guard.branch === 'then' ? 'if' : 'else'} (${taint.guard.text}) ...`
+                    : '無条件'
                 }）を安全に迂回できません。`,
               });
             }
