@@ -148,13 +148,58 @@ export function detectJudgmentRecords(comments, body) {
   return { dod, breakdown, brief };
 }
 
-/** `detectJudgmentRecords` の結果から次の一手ヒントを組む。全て あり なら null。 */
+/** text 中の `## やること` セクションに、チェックリスト/箇条書き行が1つ以上あるか。 */
+function hasYaruKotoChecklist(text) {
+  if (!text) return false;
+  const lines = text.split('\n');
+  const startIdx = lines.findIndex((line) => /^#{1,6}\s*やること\s*$/.test(line.trim()));
+  if (startIdx === -1) return false;
+  for (let i = startIdx + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (/^#{1,6}\s/.test(line)) break; // 次のセクションに入ったら終了
+    if (/^\s*[-*]\s*(\[[ xX]\])?\s*\S/.test(line)) return true;
+  }
+  return false;
+}
+
+/**
+ * issue body の「受け入れ条件 / 検証コマンド」を判定する（routing skill / dispatch §status:ready）。
+ *
+ * - acceptance: body に `受け入れ条件` または `完了条件` の語がある、または
+ *   `## やること` セクションにチェックリスト/箇条書き行が1つ以上ある
+ * - verification: `## 検証` セクション（または body 全体）に fenced code block、
+ *   または `pnpm `/`gh `/`node `/`git `/`rg `/`npx ` で始まるインラインコード、
+ *   または `expect(` の語がある
+ */
+export function detectAcceptanceCriteria(body) {
+  const text = body ?? '';
+
+  const acceptance =
+    text.includes('受け入れ条件') || text.includes('完了条件') || hasYaruKotoChecklist(text);
+
+  const hasFencedCodeBlock = /```/.test(text);
+  const hasVerificationCommand =
+    /`(pnpm|gh|node|git|rg|npx) [^`]*`/.test(text) || text.includes('expect(');
+  const verification = hasFencedCodeBlock || hasVerificationCommand;
+
+  return { acceptance, verification };
+}
+
+/**
+ * `detectJudgmentRecords`（+ 任意で `detectAcceptanceCriteria`）の結果から次の一手ヒントを組む。
+ * `records` に `acceptance`/`verification` フィールドが無ければその判定はスキップする。
+ * 全て あり なら null。
+ */
 export function buildJudgmentHint(records) {
   if (!records) return null;
   const missing = [];
   if (!records.dod) missing.push('DoD');
   if (!records.breakdown) missing.push('分解表');
   if (!records.brief) missing.push('brief');
+  if ('acceptance' in records && !records.acceptance) missing.push('受け入れ条件');
+  if ('verification' in records && !records.verification) {
+    missing.push('検証コマンド（dispatch §status:ready の機械判定）');
+  }
   if (missing.length === 0) return null;
   return `判断の記録が欠けている: ${missing.join('・')}（routing skill 手順 1 / dispatch 手順 7）`;
 }
@@ -461,7 +506,7 @@ export function renderMarkdown(pack) {
     lines.push('#### 判断の記録');
     lines.push('');
     lines.push(
-      `DoD: ${r.dod ? 'あり' : 'なし'} | 分解表: ${r.breakdown ? 'あり' : 'なし'} | brief: ${r.brief ? 'あり' : 'なし'}`,
+      `DoD: ${r.dod ? 'あり' : 'なし'} | 分解表: ${r.breakdown ? 'あり' : 'なし'} | brief: ${r.brief ? 'あり' : 'なし'} | 受け入れ条件: ${r.acceptance ? 'あり' : 'なし'} | 検証コマンド: ${r.verification ? 'あり' : 'なし'}`,
     );
     lines.push('');
   }
@@ -720,7 +765,12 @@ export function buildContextPack(options, deps = {}) {
   // 判断の記録（routing skill §目標状態 / dispatch 手順 7）。issue のみ判定する
   // （PR 側は trace.mjs が linked issue ごとに同じ detector を使い分ける）。
   const judgmentRecords =
-    kind === 'issue' ? detectJudgmentRecords(commentsRaw ?? [], rawBody) : null;
+    kind === 'issue'
+      ? {
+          ...detectJudgmentRecords(commentsRaw ?? [], rawBody),
+          ...detectAcceptanceCriteria(rawBody),
+        }
+      : null;
   const judgmentHint = buildJudgmentHint(judgmentRecords);
   let finalNextStep = step;
   let nextStepSecondary = null;

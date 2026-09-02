@@ -1,7 +1,7 @@
 ---
 name: releasing
 description: Dayopt の release 作業を end-to-end で実行する時に発動。明示的な release 意図（「v0.X.0 をリリース」「リリースしたい」「タグを切る」）を契機に、現在の git state（feature branch / main / tag 状態）を自動判定し、適切な Phase（version bump → 品質チェック → PR merge → tag → GitHub Release → リリースノート）から開始する。明示的な release 意図がない限り他のトリガーでは発動しない。
-effort: high
+effort: medium
 maxTurns: 25
 ---
 

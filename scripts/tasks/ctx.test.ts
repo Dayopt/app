@@ -9,6 +9,7 @@ import {
   computeCiRollup,
   countUnresolvedThreads,
   CTX_MARKER,
+  detectAcceptanceCriteria,
   detectJudgmentRecords,
   extractLinkedIssueNumbers,
   extractParentEpic,
@@ -287,6 +288,40 @@ describe('detectJudgmentRecords', () => {
   });
 });
 
+describe('detectAcceptanceCriteria', () => {
+  it('受け入れ条件は語句、または「## やること」の箇条書きで あり', () => {
+    expect(detectAcceptanceCriteria('## 受け入れ条件\n- できる')).toMatchObject({
+      acceptance: true,
+    });
+    expect(detectAcceptanceCriteria('完了条件: XXX')).toMatchObject({ acceptance: true });
+    expect(detectAcceptanceCriteria('## やること\n- [ ] 実装する\n- [ ] test\n')).toMatchObject({
+      acceptance: true,
+    });
+    expect(detectAcceptanceCriteria('## やること\n\n## 別セクション\n- 無関係')).toMatchObject({
+      acceptance: false,
+    });
+    expect(detectAcceptanceCriteria('本文だけ')).toMatchObject({ acceptance: false });
+    expect(detectAcceptanceCriteria(undefined)).toMatchObject({ acceptance: false });
+  });
+
+  it('検証コマンドは fenced code block、pnpm/gh/node/git/rg/npx のインラインコード、または expect( で あり', () => {
+    expect(detectAcceptanceCriteria('## 検証\n```\npnpm test\n```')).toMatchObject({
+      verification: true,
+    });
+    expect(detectAcceptanceCriteria('`pnpm typecheck` を通す')).toMatchObject({
+      verification: true,
+    });
+    expect(detectAcceptanceCriteria('`gh pr view 1` で確認')).toMatchObject({
+      verification: true,
+    });
+    expect(detectAcceptanceCriteria('expect(result).toBe(true) を足す')).toMatchObject({
+      verification: true,
+    });
+    expect(detectAcceptanceCriteria('`ls -la` を実行')).toMatchObject({ verification: false });
+    expect(detectAcceptanceCriteria('本文だけ')).toMatchObject({ verification: false });
+  });
+});
+
 describe('buildJudgmentHint', () => {
   it('欠けているものだけ列挙する', () => {
     expect(buildJudgmentHint({ dod: false, breakdown: true, brief: true })).toBe(
@@ -300,6 +335,29 @@ describe('buildJudgmentHint', () => {
   it('全て あり、または records が無ければ null', () => {
     expect(buildJudgmentHint({ dod: true, breakdown: true, brief: true })).toBeNull();
     expect(buildJudgmentHint(null)).toBeNull();
+  });
+
+  it('受け入れ条件・検証コマンドも欠けていれば列挙する（フィールドが無ければ判定しない）', () => {
+    expect(
+      buildJudgmentHint({
+        dod: true,
+        breakdown: true,
+        brief: true,
+        acceptance: false,
+        verification: false,
+      }),
+    ).toBe(
+      '判断の記録が欠けている: 受け入れ条件・検証コマンド（dispatch §status:ready の機械判定）（routing skill 手順 1 / dispatch 手順 7）',
+    );
+    expect(
+      buildJudgmentHint({
+        dod: true,
+        breakdown: true,
+        brief: true,
+        acceptance: true,
+        verification: true,
+      }),
+    ).toBeNull();
   });
 });
 
@@ -408,9 +466,15 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
     ]);
     expect(pack.files).toContain('apps/product/src/foo.ts');
     expect(calls[0]).toEqual(['api', 'repos/Dayopt/dayopt/issues/2550']);
-    expect(pack.judgmentRecords).toEqual({ dod: false, breakdown: false, brief: false });
+    expect(pack.judgmentRecords).toEqual({
+      dod: false,
+      breakdown: false,
+      brief: false,
+      acceptance: false,
+      verification: false,
+    });
     expect(pack.nextStepSecondary).toBe(
-      '判断の記録が欠けている: DoD・分解表・brief（routing skill 手順 1 / dispatch 手順 7）',
+      '判断の記録が欠けている: DoD・分解表・brief・受け入れ条件・検証コマンド（dispatch §status:ready の機械判定）（routing skill 手順 1 / dispatch 手順 7）',
     );
   });
 

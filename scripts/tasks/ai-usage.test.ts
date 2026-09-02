@@ -240,6 +240,27 @@ describe('foldUsageRecord', () => {
     expect(bucket.ttl1h).toBe(70);
     expect(bucket.ttl5m).toBe(30);
   });
+
+  it('thinking / text block の文字数と thinking block 数を model 別に積む', () => {
+    const agg = createAggregate();
+    const ctx = { file: 'a.jsonl', currentChain: null };
+    foldUsageRecord(
+      agg,
+      assistantRecord({
+        content: [
+          { type: 'thinking', thinking: '12345' },
+          { type: 'text', text: 'abc' },
+          { type: 'redacted_thinking', data: 'opaque' },
+        ],
+      }),
+      BOUNDS,
+      ctx,
+    );
+    const bucket = agg.models.get('sonnet');
+    expect(bucket.thinkingChars).toBe(5);
+    expect(bucket.textChars).toBe(3);
+    expect(bucket.thinkingBlocks).toBe(2);
+  });
 });
 
 describe('collectToolResultSizes', () => {
@@ -437,6 +458,47 @@ describe('renderMarkdown', () => {
       prStats: null,
     });
     expect(markdown).toContain('weird\\|name');
+  });
+
+  it('表 F: thinking chars / text chars / thinking 比を描画する', () => {
+    const agg = createAggregate();
+    const ctx = { file: 'a.jsonl', currentChain: null };
+    foldUsageRecord(
+      agg,
+      assistantRecord({
+        content: [
+          { type: 'thinking', thinking: '1234567890' },
+          { type: 'text', text: 'abcdefghij' },
+        ],
+      }),
+      BOUNDS,
+      ctx,
+    );
+    const markdown = renderMarkdown({
+      since: '2026-08-01',
+      until: '2026-08-31',
+      agg,
+      prStats: null,
+    });
+    expect(markdown).toContain('| model | thinking chars | text chars | thinking 比 |');
+    expect(markdown).toContain('| sonnet | 10 | 10 | 50.0% |');
+    expect(markdown).toContain(
+      '**thinking の割合（全 model）**: 50.0%。effort を変えた効果はここに出る（routing skill 原則②）',
+    );
+  });
+
+  it('表 F: thinking / text がゼロなら未取得', () => {
+    const agg = createAggregate();
+    const markdown = renderMarkdown({
+      since: '2026-08-01',
+      until: '2026-08-31',
+      agg,
+      prStats: null,
+    });
+    expect(markdown).toContain('| 未取得 | — | — | — |');
+    expect(markdown).toContain(
+      '**thinking の割合（全 model）**: 未取得。effort を変えた効果はここに出る（routing skill 原則②）',
+    );
   });
 });
 

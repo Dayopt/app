@@ -34,7 +34,7 @@ maxTurns: 10
    - **L1** — 判断を含まないか（列挙・突合・蒸留・定型抽出・一括置換の下調べ）。yes なら Haiku。外部リサーチが要るなら User の Deep Research（issue §やること に「Deep Research 依頼: <問い>」を書き `status:blocked`。結果は User がコメントに貼る）
    - **L2** — 受け入れ条件と検証コマンドを文章で書けるか。yes なら Sonnet
    - **L3** — 設計判断・矛盾報告の裁定・不可逆操作・commit。Main（Opus / Fable）が自分でやる
-3. **委譲時は `model` を必ず明示し、recipe の出力契約を prompt に含める**。write 可能な委譲は `AGENTS.md` の 4 条件（同一 worktree / 非重複 scope / commit 前に Main が diff レビュー / commit・push・外部 state は Main）
+3. **委譲時は `model` を必ず明示し、recipe の出力契約を prompt に含める**。思考量（effort）は **Medium を既定**にし、high は判断を含む skill（`security` / `supabase`）だけ。既定で安定する条件は brief が Sonnet レベル（受け入れ条件 + 検証コマンド、`ctx` の判断の記録で確認）に落ちていることと、詰まったら粘らず止まって報告する規律（AGENTS.md §レーン運用）。write 可能な委譲は `AGENTS.md` の 4 条件（同一 worktree / 非重複 scope / commit 前に Main が diff レビュー / commit・push・外部 state は Main）
 4. **戻ってきた出力は Main が検証してから次へ進む**。diff・検証コマンドの出力末尾・出力契約との一致を見る。「passed」の一言だけで進めない
 5. 分解表の tier 列と実績（実際に使った model）がずれたら、表を直してから次の subtask へ（ずれの蓄積は月次 gardening の `pnpm ai:usage` で見える）
 

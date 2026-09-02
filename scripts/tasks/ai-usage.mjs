@@ -300,6 +300,9 @@ function ensureModelBucket(models, label) {
       sidechainOutput: 0,
       ttl1h: 0,
       ttl5m: 0,
+      thinkingChars: 0,
+      textChars: 0,
+      thinkingBlocks: 0,
     };
     models.set(label, bucket);
   }
@@ -418,6 +421,17 @@ export function foldUsageRecord(agg, record, bounds, ctx) {
         bucket.cacheCreation += usage.cache_creation_input_tokens ?? 0;
         bucket.ttl1h += usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
         bucket.ttl5m += usage.cache_creation?.ephemeral_5m_input_tokens ?? 0;
+        for (const block of content) {
+          if (!block || typeof block !== 'object') continue;
+          if (block.type === 'thinking') {
+            bucket.thinkingChars += typeof block.thinking === 'string' ? block.thinking.length : 0;
+            bucket.thinkingBlocks += 1;
+          } else if (block.type === 'redacted_thinking') {
+            bucket.thinkingBlocks += 1;
+          } else if (block.type === 'text') {
+            bucket.textChars += typeof block.text === 'string' ? block.text.length : 0;
+          }
+        }
         if (record.isSidechain === true) {
           bucket.sidechainRequests += 1;
           bucket.sidechainOutput += usage.output_tokens ?? 0;
@@ -865,6 +879,37 @@ export function renderMarkdown({ since, until, agg, prStats }) {
     `**Main が自分で編集した割合**: ${overallMainPct === null ? '未取得' : `${overallMainPct.toFixed(0)}%`}（編集あり session ÷ session n、model 別: ${perModelPct}）。目標: L3 は分解・検証・commit に限る（routing skill L3）`,
   );
 
+  // 表 F: thinking の量（effort を変えた効果、routing skill 原則②）
+  lines.push('');
+  lines.push('| model | thinking chars | text chars | thinking 比 |');
+  lines.push('| --- | --- | --- | --- |');
+  const thinkingRows = [...agg.models.entries()].sort(
+    (a, b) => b[1].thinkingChars - a[1].thinkingChars,
+  );
+  let totalThinkingChars = 0;
+  let totalTextChars = 0;
+  for (const [label, bucket] of thinkingRows) {
+    totalThinkingChars += bucket.thinkingChars;
+    totalTextChars += bucket.textChars;
+    const denom = bucket.thinkingChars + bucket.textChars;
+    const ratio = denom ? `${((bucket.thinkingChars * 100) / denom).toFixed(1)}%` : '—';
+    lines.push(
+      `| ${escapeCell(label)} | ${human(bucket.thinkingChars)} | ${human(bucket.textChars)} | ${ratio} |`,
+    );
+  }
+  if (thinkingRows.length === 0) {
+    lines.push('| 未取得 | — | — | — |');
+  }
+  lines.push('');
+  const overallThinkingDenom = totalThinkingChars + totalTextChars;
+  lines.push(
+    `**thinking の割合（全 model）**: ${
+      overallThinkingDenom === 0
+        ? '未取得'
+        : `${((totalThinkingChars * 100) / overallThinkingDenom).toFixed(1)}%`
+    }。effort を変えた効果はここに出る（routing skill 原則②）`,
+  );
+
   return lines.join('\n');
 }
 
@@ -944,6 +989,20 @@ async function main() {
         },
       ]),
     );
+    const thinking = Object.fromEntries(
+      [...agg.models.entries()].map(([label, bucket]) => {
+        const denom = bucket.thinkingChars + bucket.textChars;
+        return [
+          label,
+          {
+            thinkingChars: bucket.thinkingChars,
+            textChars: bucket.textChars,
+            thinkingBlocks: bucket.thinkingBlocks,
+            ratio: denom ? bucket.thinkingChars / denom : null,
+          },
+        ];
+      }),
+    );
     process.stdout.write(
       `${JSON.stringify(
         {
@@ -957,6 +1016,7 @@ async function main() {
             .map((c) => ({ file: c.file, length: c.length, tools: Object.fromEntries(c.tools) })),
           explorationBeforeEdit,
           mainSessions,
+          thinking,
           prStats,
         },
         null,
