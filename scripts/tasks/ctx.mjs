@@ -26,6 +26,38 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
 
 const [REPO_OWNER, REPO_NAME] = REPO.split('/');
 
+/** 配達コメントの先頭に置く隠しマーカー。このマーカーで始まるコメントが「ctx brief」。
+ * selectComments / findMarkerComment / detectJudgmentRecords が共通で参照するため
+ * ファイル先頭で定義する（元は --post セクションにあったが、独立性ガード（F2）で
+ * 上流の selectComments からも参照するようになった）。 */
+export const CTX_MARKER = '<!-- ctx-brief -->';
+
+// F2（独立性ガード）: Main 自身が書いた marker / brief コメントが reviewer への
+// ctx pack へ紛れ込むと、Main の判断が「独立レビュー」を経由せず reviewer の入力へ
+// 混入する。selectComments はこれらを常に除外する（--all-comments 指定時も除外 ──
+// bot 除外とは独立した懸念のため）。
+const OWN_MARKER_PREFIXES = [CTX_MARKER, '[internal-review]', '[codex-issue-review]'];
+
+/** body が Main 自身の marker / brief コメントで始まるか。 */
+function isOwnMarkerComment(body) {
+  return typeof body === 'string' && OWN_MARKER_PREFIXES.some((prefix) => body.startsWith(prefix));
+}
+
+// F2: findMarkerComment / detectJudgmentRecords の brief 判定は、なりすまし防止のため
+// author_association が OWNER/MEMBER/COLLABORATOR のコメントのみを対象にする
+// （誰でも書き込める comment body の prefix 一致だけでは、外部ユーザーが偽の
+// marker コメントを投稿して既存 brief の PATCH 更新を乗っ取れてしまう）。
+const TRUSTED_MARKER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
+/** comment が信頼できる author_association から投稿された marker コメントか。 */
+function isTrustedMarkerComment(comment) {
+  return (
+    typeof comment?.body === 'string' &&
+    comment.body.startsWith(CTX_MARKER) &&
+    TRUSTED_MARKER_ASSOCIATIONS.has(comment.author_association)
+  );
+}
+
 // --- 純関数群（test 対象） -------------------------------------------------
 
 /** CLI 引数を解釈する。位置引数は issue/PR 番号 1 つのみ。 */
@@ -129,8 +161,9 @@ function hasDodMention(text) {
  *
  * - DoD: bot 以外のコメント、または body に `DoD` / `完了の定義` の言及がある
  * - 分解表: コメントまたは body に `subtask`/`tier` 列を持つ表、または「分解表」の語がある
- * - brief: `CTX_MARKER` で始まるコメントがある（bot 判定は問わない ── ctx --post は
- *   通常ユーザー権限の gh 呼び出しで作られ bot login にならないため）
+ * - brief: `CTX_MARKER` で始まる、かつ author_association が信頼できる
+ *   （OWNER/MEMBER/COLLABORATOR）コメントがある（F2）。bot 判定は問わない ── ctx --post は
+ *   通常ユーザー権限の gh 呼び出しで作られ bot login にならないため
  */
 export function detectJudgmentRecords(comments, body) {
   const list = Array.isArray(comments) ? comments : [];
@@ -143,7 +176,7 @@ export function detectJudgmentRecords(comments, body) {
   const breakdown =
     hasBreakdownTable(bodyText) || list.some((c) => hasBreakdownTable(c.body ?? ''));
 
-  const brief = list.some((c) => typeof c.body === 'string' && c.body.startsWith(CTX_MARKER));
+  const brief = list.some((c) => isTrustedMarkerComment(c));
 
   return { dod, breakdown, brief };
 }
@@ -206,11 +239,18 @@ export function buildJudgmentHint(records) {
 
 /**
  * REST `issues/N/comments` の応答から、bot を除外（`allComments` 指定時は除外しない）
- * した上で最新 K 件を返す。
+ * した上で最新 K 件を返す。Main 自身の marker / brief コメント（F2、
+ * `isOwnMarkerComment`）は `allComments` の指定に関わらず常に除外する ──
+ * これらが reviewer への ctx pack に混入すると独立レビューの前提が崩れるため、
+ * bot 除外とは別の懸念として無条件に適用する。
  */
 export function selectComments(comments, k, allComments) {
   const list = Array.isArray(comments) ? comments : [];
-  const filtered = allComments ? list : list.filter((c) => !isBotLogin(c.user?.login));
+  const filtered = list.filter((c) => {
+    if (isOwnMarkerComment(c.body)) return false;
+    if (allComments) return true;
+    return !isBotLogin(c.user?.login);
+  });
   return k > 0 ? filtered.slice(-k) : [];
 }
 
@@ -642,7 +682,9 @@ export function buildContextPack(options, deps = {}) {
 
   const commentsRaw = tryOr(
     () =>
-      runGhJson(['api', `repos/${REPO}/issues/${number}/comments?per_page=100`], { execFileImpl }),
+      runGhJson(['api', `repos/${REPO}/issues/${number}/comments?per_page=100`, '--paginate'], {
+        execFileImpl,
+      }),
     null,
   );
   const comments =
@@ -800,19 +842,22 @@ export function buildContextPack(options, deps = {}) {
 }
 
 // --- `--post`（issue/PR コメントへの配達、idempotent 更新） ----------------
-
-/** 配達コメントの先頭に置く隠しマーカー。このマーカーで始まるコメントが「ctx brief」。 */
-export const CTX_MARKER = '<!-- ctx-brief -->';
+// CTX_MARKER の定義はファイル先頭（selectComments / detectJudgmentRecords と共用）。
 
 /** コメント本文を組み立てる。1 行目は必ずマーカー（idempotent 判定の唯一の根拠）。 */
 export function buildCommentBody({ number, date, markdown }) {
   return `${CTX_MARKER}\n**brief（\`pnpm ctx ${number}\`、${date}）**\n\n${markdown}\n`;
 }
 
-/** コメント一覧からマーカー付きの既存 ctx brief コメントを探す。無ければ null。 */
+/**
+ * コメント一覧からマーカー付きの既存 ctx brief コメントを探す。無ければ null。
+ * F2: author_association が OWNER/MEMBER/COLLABORATOR のコメントのみ対象にする
+ * ── そうしないと第三者が偽の marker コメントを投稿して PATCH 更新（--post）を
+ * 乗っ取れる（別ユーザーのコメントを書き換えてしまう）。
+ */
 export function findMarkerComment(comments) {
   const list = Array.isArray(comments) ? comments : [];
-  return list.find((c) => typeof c.body === 'string' && c.body.startsWith(CTX_MARKER)) ?? null;
+  return list.find((c) => isTrustedMarkerComment(c)) ?? null;
 }
 
 /**

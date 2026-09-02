@@ -130,6 +130,30 @@ describe('isBotLogin / selectComments', () => {
   it('k=0 は空配列', () => {
     expect(selectComments(comments, 0, false)).toEqual([]);
   });
+
+  it('F2: Main 自身の marker / brief コメントは allComments 指定に関わらず常に除外する', () => {
+    const withMarkers = [
+      { user: { login: 'a' }, created_at: '2026-08-01T00:00:00Z', body: '1' },
+      {
+        user: { login: 'claude' },
+        created_at: '2026-08-02T00:00:00Z',
+        body: `${CTX_MARKER}\n**brief（...）**`,
+      },
+      {
+        user: { login: 'claude' },
+        created_at: '2026-08-03T00:00:00Z',
+        body: '[internal-review]\nfindings...',
+      },
+      {
+        user: { login: 'codex' },
+        created_at: '2026-08-04T00:00:00Z',
+        body: '[codex-issue-review]\nfindings...',
+      },
+      { user: { login: 'b' }, created_at: '2026-08-05T00:00:00Z', body: '5' },
+    ];
+    expect(selectComments(withMarkers, 10, false).map((c) => c.body)).toEqual(['1', '5']);
+    expect(selectComments(withMarkers, 10, true).map((c) => c.body)).toEqual(['1', '5']);
+  });
 });
 
 describe('extractLinkedIssueNumbers', () => {
@@ -274,13 +298,31 @@ describe('detectJudgmentRecords', () => {
     expect(detectJudgmentRecords([], '本文だけ')).toMatchObject({ breakdown: false });
   });
 
-  it('brief は CTX_MARKER で始まるコメントの有無', () => {
+  it('brief は CTX_MARKER で始まる、かつ author_association が信頼できるコメントの有無', () => {
     expect(
-      detectJudgmentRecords([{ user: { login: 'tomoya' }, body: `${CTX_MARKER}\n本文` }], ''),
+      detectJudgmentRecords(
+        [{ user: { login: 'tomoya' }, author_association: 'OWNER', body: `${CTX_MARKER}\n本文` }],
+        '',
+      ),
     ).toMatchObject({ brief: true });
     expect(detectJudgmentRecords([{ user: { login: 'tomoya' }, body: '普通' }], '')).toMatchObject({
       brief: false,
     });
+  });
+
+  it('F2: brief は author_association が NONE/CONTRIBUTOR 等（信頼できない）だと あり にならない', () => {
+    expect(
+      detectJudgmentRecords(
+        [
+          {
+            user: { login: 'randomuser' },
+            author_association: 'NONE',
+            body: `${CTX_MARKER}\n偽の brief`,
+          },
+        ],
+        '',
+      ),
+    ).toMatchObject({ brief: false });
   });
 
   it('全て なし の場合', () => {
@@ -660,17 +702,27 @@ describe('buildCommentBody', () => {
 });
 
 describe('findMarkerComment', () => {
-  it('マーカーで始まる本文のコメントを見つける', () => {
+  it('マーカーで始まる、かつ author_association が信頼できる本文のコメントを見つける', () => {
     const comments = [
-      { id: 1, body: '普通のコメント' },
-      { id: 2, body: `${CTX_MARKER}\n**brief（...）**` },
+      { id: 1, body: '普通のコメント', author_association: 'OWNER' },
+      { id: 2, body: `${CTX_MARKER}\n**brief（...）**`, author_association: 'OWNER' },
     ];
     expect(findMarkerComment(comments)?.id).toBe(2);
   });
 
   it('無ければ null、配列でなければ null', () => {
-    expect(findMarkerComment([{ id: 1, body: '普通のコメント' }])).toBeNull();
+    expect(
+      findMarkerComment([{ id: 1, body: '普通のコメント', author_association: 'OWNER' }]),
+    ).toBeNull();
     expect(findMarkerComment(undefined)).toBeNull();
+  });
+
+  it('F2: マーカーがあっても author_association が信頼できなければ見つけない（なりすまし防止）', () => {
+    const comments = [
+      { id: 1, body: `${CTX_MARKER}\n偽の brief`, author_association: 'NONE' },
+      { id: 2, body: `${CTX_MARKER}\n本物の brief`, author_association: 'COLLABORATOR' },
+    ];
+    expect(findMarkerComment(comments)?.id).toBe(2);
   });
 });
 
@@ -751,7 +803,9 @@ describe('postContextBrief', () => {
     const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
       calls.push(args);
       if (args[0] === 'api' && args[1] !== '-X') {
-        return JSON.stringify([{ id: 42, body: `${CTX_MARKER}\n古い brief` }]);
+        return JSON.stringify([
+          { id: 42, body: `${CTX_MARKER}\n古い brief`, author_association: 'OWNER' },
+        ]);
       }
       if (args[0] === 'api' && args[1] === '-X') {
         return JSON.stringify({

@@ -1330,6 +1330,32 @@ describe('pre-tool-guard.sh: R1 Agent の model 明示', () => {
   it('model sonnet は通す', () => {
     expect(runGuard(agentCall({ model: 'sonnet', prompt: 'x' }))).toBe('allow');
   });
+
+  // F3: R1 は fail-open（cost guard）であるべきだが、旧実装は
+  // `AGENT_MODEL=$(jq ... || true)` で jq 自体の失敗と「jq が成功して model が
+  // 空だった」場合を区別できず、jq 失敗時も block していた（section 冒頭の
+  // fail-open コメントと矛盾）。tool_input が object でない（jq の
+  // `.tool_input.model` が index エラーで落ちる）入力で allow を確認する。
+  it('tool_input が非 object で jq 自体が失敗する場合は fail-open で allow する', () => {
+    expect(runGuard({ tool_name: 'Agent', tool_input: 'not-an-object' })).toBe('allow');
+  });
+
+  it('JSON として解釈できない入力全体は tool_name も取れず allow する', () => {
+    const result = spawnSync('bash', [guardPath], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: 'not json',
+      env: process.env,
+    });
+    expect(result.status).toBe(0);
+  });
+
+  it('subagent_type が Plan / claude-security 系なら model 未指定でも通す（harness spawn 例外）', () => {
+    expect(runGuard(agentCall({ subagent_type: 'Plan', prompt: 'x' }))).toBe('allow');
+    expect(runGuard(agentCall({ subagent_type: 'claude-security-lead', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
 });
 
 describe('pre-tool-guard.sh: R2 探索に opus / fable を使わない', () => {

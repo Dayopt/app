@@ -727,7 +727,8 @@ fi
 # 構成（実測: Opus 常駐）になる。委任・報告の作法（AGENTS.md §委任・報告の
 # 作法「委譲時はmodelを明示する」）を機械強制する。
 if [ "$TOOL_NAME" = "Agent" ]; then
-  AGENT_MODEL=$(printf '%s' "$INPUT" | jq -r '.tool_input.model // empty' 2> /dev/null || true)
+  AGENT_MODEL=$(printf '%s' "$INPUT" | jq -r '.tool_input.model // empty' 2> /dev/null)
+  AGENT_MODEL_JQ_STATUS=$?
   AGENT_SUBAGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2> /dev/null || true)
   AGENT_PROMPT_DESC=$(printf '%s' "$INPUT" | jq -r '
     [.tool_input.prompt?, .tool_input.description?]
@@ -735,7 +736,22 @@ if [ "$TOOL_NAME" = "Agent" ]; then
     | join("\n")
   ' 2> /dev/null || true)
 
-  if [ -z "$AGENT_MODEL" ]; then
+  # R1 の model 未指定例外: harness/plugin が spawn する subagent（Plan /
+  # claude-security 系）は model フィールドを持たないことがある。R2 と同じ
+  # 例外集合を適用し、harness 自身が起動する Agent 呼び出しまで block しない。
+  agent_r1_exempt_subagent_type=0
+  case "$AGENT_SUBAGENT_TYPE" in
+    Plan | claude-security*) agent_r1_exempt_subagent_type=1 ;;
+  esac
+
+  # jq 自体が失敗した場合（不正な JSON 入力など）は fail-open にする。このブロックは
+  # cost guard であり、hook 側の一時的な不調・想定外の入力形で Agent 呼び出しそのもの
+  # を止めるのは目的に見合わない（section 冒頭コメント参照）。`AGENT_MODEL` が
+  # 空文字なのが「jq が成功して model が無かった」のか「jq 自体が失敗した」のかを
+  # 区別しないと、後者まで block してしまい fail-open の意図と矛盾する
+  # （内製クロスレビュー risk-reviewer 指摘、F3）。
+  if [ "$AGENT_MODEL_JQ_STATUS" -eq 0 ] && [ -z "$AGENT_MODEL" ] \
+    && [ "$agent_r1_exempt_subagent_type" -ne 1 ]; then
     echo "BLOCKED: Agent の model を明示してください（haiku=列挙・蒸留・突合 / sonnet=実装・調査 / opus=反証・設計判断）。省略すると Main の tier を継承し最も高い構成になります（AGENTS.md §委任・報告の作法、routing skill 反例）" >&2
     exit 2
   fi
