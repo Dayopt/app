@@ -20,24 +20,24 @@
 
 迷ったらこの表で行き先を決める。ファイル単位の細かい引き先は後述の「質問から正本へのルーティング」。
 
-| 質問                                 | 行き先                                                               |
-| ------------------------------------ | -------------------------------------------------------------------- |
-| 変わらない前提・原則の話か           | `strategy.md`（憲法。全ドメインの上位、1 ファイル）                  |
-| 今どう認識しているかの話か           | `state.md`（現在の認識。1 ページ上限、週〜月で動く）                 |
-| 画面・API・データの振る舞いの話か    | `product/` — 原則、仕様（`specs/`）、用語、UI 文言                   |
-| 外の人に向けた言葉・お金・市場の話か | `business/` — 誰に・何と言って・いくらで届けるか                     |
-| コードの作り方の話か                 | `engineering/` — architecture、規約、infra                           |
-| 本番を動かし続ける話か               | `operations/` — runbook、monitoring、security、legal                 |
-| 何を契約・所有しているかの話か       | `company/` — accounts、登記                                          |
-| 進行中の複数領域を跨ぐ設計か         | epic issue 本文（`docs/projects/` は作らない。2026-08-28、#2473）    |
-| 意思決定の記録か                     | `decisions.md`（全決定の時系列索引、append-only。2026-08-28、#2475） |
-| 調査・feedback・incidentの記録か     | GitHub issue（`domain log/` は 2026-08-28、#2475 で全廃）            |
+| 質問                                         | 行き先                                                                                       |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 変わらない前提・原則の話か                   | `strategy.md`（憲法。全ドメインの上位、1 ファイル）                                          |
+| 今どう認識しているか・何に賭けているかの話か | open issue / PR（`state.md` は 2026-09-02 に廃止。賭けは epic issue の本文と撤退条件で持つ） |
+| 画面・API・データの振る舞いの話か            | `product/` — 原則、仕様（`specs/`）、用語、UI 文言                                           |
+| 外の人に向けた言葉・お金・市場の話か         | `business/` — 誰に・何と言って・いくらで届けるか                                             |
+| コードの作り方の話か                         | `engineering/` — architecture、規約、infra                                                   |
+| 本番を動かし続ける話か                       | `operations/` — runbook、monitoring、security、legal                                         |
+| 何を契約・所有しているかの話か               | `company/` — accounts、登記                                                                  |
+| 進行中の複数領域を跨ぐ設計か                 | epic issue 本文（`docs/projects/` は作らない。2026-08-28、#2473）                            |
+| 意思決定の記録か                             | `decisions.md`（全決定の時系列索引、append-only。2026-08-28、#2475）                         |
+| 調査・feedback・incidentの記録か             | GitHub issue（`domain log/` は 2026-08-28、#2475 で全廃）                                    |
 
 `business/` の下位構造: 直下 = 事業判断の正本（icp / messaging / competitors / pricing / business-model / growth）、`content/` = 公開コンテンツの書き方と運用（voice / writing-style / docs-policy / review-checklist / content-operations）、`channels/` = チャネル別の運用（x / reddit / lp）。旧 `marketing/` ドメインは 2026-08-10 に `business/` へ統合した。
 
-ルート直下の `strategy.md` と `state.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う（docs-guard の `ROOT_STOCK_FILES`）。
+ルート直下の `strategy.md` は stock として扱い、同じ frontmatter 契約（status / last_verified）に従う（docs-guard の `ROOT_STOCK_FILES`）。
 
-`strategy.md` / `state.md` / issue・PR は**変化速度で分かれる**。変わらない前提は `strategy.md`、現時点の認識（方向・賭け・やらないこと・前提）は `state.md`、日々動く現在地・当週キュー・進行中レーンは **issue と PR 自身**（`status:*` ラベルと各 issue のコメント列）。**現在地と当週キューを `state.md` へ転記しない** — 転記した瞬間に古くなる（2026-08-20 に廃止した STATE.md、および 2026-09-01 に廃止した日次盤面 issue と同じ失敗）。運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） が正本。
+`strategy.md` と issue・PR は**変化速度で分かれる**。変わらない前提は `strategy.md`、現在地・賭け・当週キュー・進行中の作業は **issue と PR 自身**（`status:*` ラベルと各 issue のコメント列）。**現在地を docs へ転記しない** — 転記した瞬間に古くなる（2026-08-20 に廃止した STATE.md、2026-09-01 に廃止した日次盤面 issue、2026-09-02 に廃止した `state.md` と同じ失敗）。
 
 ## 現在・履歴
 
@@ -62,7 +62,7 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 
 各ドメイン直下の `log/YYYY-MM-DD-slug.md`（frozen frontmatter contract）は 2026-08-28（#2475）に全廃した。過去分は移設・蒸留せず、正本は Git 履歴と merged PR に任せる。
 
-意思決定は [`decisions.md`](./decisions.md) 1 ファイルへ集約する。append-only（`---` 区切りより下のエントリ領域は追記のみ、`pnpm docs:check` が機械的に強制）で、書式・タグ語彙は同ファイルのヘッダが正本（ここでは複製しない）。決定したら `decisions.md` へ 1 行追記し、該当ストック（`state.md` / `AGENTS.md` / 該当 docs）の編集を同じ変更に含める。
+意思決定は [`decisions.md`](./decisions.md) 1 ファイルへ集約する。append-only（`---` 区切りより下のエントリ領域は追記のみ、`pnpm docs:check` が機械的に強制）で、書式・タグ語彙は同ファイルのヘッダが正本（ここでは複製しない）。決定したら `decisions.md` へ 1 行追記し、該当ストック（`AGENTS.md` / 該当 docs）の編集を同じ変更に含める。
 
 調査・feedback・incidentなど 1 回きりの記録は GitHub issue として起票する（`dispatch` skill の既存ラベル体系に従う）。
 
@@ -71,7 +71,7 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 | 質問                           | 正本                                                                                 |
 | ------------------------------ | ------------------------------------------------------------------------------------ |
 | なぜ作るか / 変えないもの      | `strategy.md`                                                                        |
-| 今の認識・賭け・やらないこと   | `state.md`                                                                           |
+| 今の認識・賭け・やらないこと   | open issue / PR（賭けは epic issue の撤退条件）、変えないものは `strategy.md` §5     |
 | 誰向けか                       | `strategy.md` §3、詳細は `business/icp.md`                                           |
 | 現在の価格・課金契約           | `product/specs/billing.md`、価格判断は `business/pricing.md`                         |
 | 事業指標の定義                 | `business/business-model.md` §Metrics                                                |
