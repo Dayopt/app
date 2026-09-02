@@ -55,7 +55,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
    `review:full` issue を実装する PR は、PR 側でも自動的にクロスレビュー必須になる（`Closes #N` の linked issue から継承。`Refs #N` は継承しない、#2530）。束ねた issue はすべて `Closes #N` で列挙する。
 
-7. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（2026-08-12。編成時（操作 B 手順 5）の「押し込むか」の判断とは独立に、着手 = 付与を機械的に行う。経緯は #2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と全体の把握が楽になる。経緯は #2065）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)。「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。merge 内容がその意図どおりかを後から確認できるよう、issue コメントに固定しておく。束ねた場合は代表 issue のコメントへ一括で書く。2026-09-01（#2525）に夜勤の DoD 監査候補提示は廃止したが、DoD を書くこと自体は残す — 突き合わせは PR レビュー時と、ズレを疑った時に行う）
+7. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（2026-08-12。編成時（操作 B 手順 5）の「押し込むか」の判断とは独立に、着手 = 付与を機械的に行う。経緯は #2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（2026-08-13。issue 側だけでなく PR 側にも milestone が付いていると、release notes 作成時の merged PR 集計と全体の把握が楽になる。経緯は #2065）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（2026-08-20、[#2273](https://github.com/Dayopt/dayopt/issues/2273)。「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。merge 内容がその意図どおりかを後から確認できるよう、issue コメントに固定しておく。束ねた場合は代表 issue のコメントへ一括で書く。突き合わせは PR レビュー時と、ズレを疑った時に行う）
 8. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする。着手手順・PR 規約・報告テンプレート・検証原則はチップ prompt へ個別に書き下さず `AGENTS.md` §レーン運用 への参照 1 行で足りる
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素 + 任意 1 要素）
@@ -116,8 +116,6 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 ### 日次盤面 issue は廃止（2026-09-01、[#2525](https://github.com/Dayopt/dayopt/issues/2525)）
 
-策定 2026-08-20（[#2259](https://github.com/Dayopt/dayopt/issues/2259)）、廃止 2026-09-01（User 決定）。夜勤が平日ごとに「盤面 YYYY-MM-DD」issue（`type:board`）を起票し、指揮台が §2 進行中レーン表を更新し、蒸留層が朝の整理コメントを積む、という運用だった。**「毎日必ず 1 件 issue が増える」コストが、読まれる価値を上回った**ため、朝編成ブリーフ・DoD 監査候補・常設運行記録コメント・05:00 JST 蒸留層とまとめて廃止した。`type:board` ラベルと `pnpm board:update` も同時に廃止。
-
 **レーンの進行状況は、各 issue / PR 自身のコメントが正本**（このファイル冒頭の「正（source of truth）」と同じ原則。盤面はその写しに過ぎず、二重管理と更新漏れの温床だった）。俯瞰が要る時は都度クエリで組み立てる:
 
 - ready キュー: `gh issue list --state open --label status:ready`
@@ -132,8 +130,9 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 - [ ] 現行 milestone の中身が実態と合っているか（停滞 issue を外してバックログへ / milestone 外で進んでいる作業を入れる）。**検査基準（2026-08-12）: open PR の Closes 対象 issue と `status:in-progress` issue はすべて現行 milestone に入っているか。open PR 自体にも milestone が付いているか（2026-08-13、#2065）**
 - [ ] `status:in-progress` の棚卸し（レーンが動いていない issue を `status:ready` へ戻す、または `status:blocked` に落とす）
 - [ ] Supabase の残存 preview branch 確認（δ 運用でコストが Spend Cap の対象外のため、閉じ忘れた branch は課金が止まらない。閉じた PR に対応する branch が残っていないかを毎朝見る）
-- [ ] 夜勤の alert issue 確認（`gh issue list --state open --label area:operations --search "nightwatch in:title"`）。**緑の夜は無音が正常**（2026-09-01、#2525）ので、issue が無いこと自体は異常ではない。run の死活が疑わしい時だけ `docs/operations/night-watch.md` §故障検出手順 に従う
-- [ ] **heavy-post-merge の赤確認**（2026-08-20、CI 4 層再設計 [#2269](https://github.com/Dayopt/dayopt/issues/2269)。2026-08-25、[#2382](https://github.com/Dayopt/dayopt/issues/2382) で per-merge 実行を廃止。2026-08-28、[#2483](https://github.com/Dayopt/dayopt/issues/2483) で heavy-post-merge.yml / integration.yml が nightly.yml へ統合され job-scoped 判定へ移行）: `node scripts/ci/night-watch/check-workflow-job.mjs heavy-red`（および `integration-red`）で直近の job-scoped 判定結果を確認する。`status: "red"` があれば修正 issue を最優先で起票する（`evidenceUrl` が該当 job のログ URL）。E2E / Web E2E / Integration Tests は per-PR から撤去され、nightly + 手動発火でしか検証されないため、この確認を欠くと壊れた main が promote gate（層 4）に阻まれるまで無通知で滞留する。**`status: "pending"` の場合は完了を待って再確認する**（per-merge 廃止で「日中の main push run が backstop になる」前提が消えたため、nightly の遅延をそのまま見ると赤確認が空振りする）
+- [ ] **heavy-post-merge の赤確認**（2026-08-20、CI 4 層再設計 [#2269](https://github.com/Dayopt/dayopt/issues/2269)。2026-08-25、[#2382](https://github.com/Dayopt/dayopt/issues/2382) で per-merge 実行を廃止。2026-08-28、[#2483](https://github.com/Dayopt/dayopt/issues/2483) で heavy-post-merge.yml / integration.yml が nightly.yml へ統合され job-scoped 判定へ移行）: `gh run list --repo Dayopt/dayopt --workflow nightly.yml --branch main --limit 30 --json databaseId,status,conclusion,createdAt` で直近 run を取り（**1 workflow に 5 cron が同居するため 3 件では目的の job を含む run に届かない**。対象は直近 3 件ではなく直近 30 件から絞り込む）、`gh api repos/Dayopt/dayopt/actions/runs/<id>/jobs --jq '.jobs[] | select(.name == "🎭 E2E Tests" or .name == "🌐 Web Build & E2E" or .name == "Integration Tests") | select(.conclusion != "skipped") | {name, status, conclusion, html_url}'` を run を跨いで確認する（promote.yml の層 3 gate と同じ check-run 名。`skipped` は除外し、対象 job が 1 件も見つからない場合は緑ではなく取得できていない扱いにして確認範囲を広げる）。`conclusion` が `success` 以外（`failure` に限らず `timed_out` / `cancelled` も含む）であれば修正 issue を最優先で起票する（`html_url` が該当 job のログ URL）。E2E / Web E2E / Integration Tests は per-PR から撤去され、nightly + 手動発火でしか検証されないため、この確認を欠くと壊れた main が promote gate（層 4）に阻まれるまで無通知で滞留する。**`status` が `in_progress` / `queued` の場合は完了を待って再確認する**（per-merge 廃止で「日中の main push run が backstop になる」前提が消えたため、nightly の遅延をそのまま見ると赤確認が空振りする）
+
+**この確認は人が素早く異常の気配を掴むための簡易チェックであり、正確な判定（同名 job の複数 run 重複排除・schedule 未発火の鮮度判定）を機械的に保証するものではない。実際に promote を止める安全網は `promote.yml` の「Verify heavy-tier (layer 3) checks are green」step であり、target SHA の check-runs を `conclusion == "success"` 以外すべて fail closed・同名 check は `started_at` 最新のものを代表にする形で既に実装済み（この checklist が見逃しても promote 実行時に必ず止まる）。schedule 自体が発火しない障害の検出は #2457 の担当スコープ。**
 
 ### 月次 backstop（`/gardening` と同時期に実施）
 

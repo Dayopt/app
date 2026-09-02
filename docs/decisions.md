@@ -30,3 +30,4 @@
 - 2026-09-01: [process] クロスレビュー必須 PR の merge 条件を「内製 subagent marker + Codex 自身の GitHub review object（現 HEAD 束縛）」の独立2系統 AND にし、2026-08-13 の Codex 全PR適用停止を必須PRに限り撤回する（理由: 同一モデル系列の中で役割を分けただけのレビューを独立とは呼べないため）（参照: [#2529](https://github.com/Dayopt/dayopt/issues/2529)）
 - 2026-09-01: [process] review:full を Issue / PR 共通の高リスクシグナルとし、review:full Issue は実装前 Codex Issue Review（本文 fingerprint 束縛）を必須化、Closes した issue の review:full を PR のクロスレビュー要否へ継承する（理由: 高リスク変更は Issue と PR の二段階で独立反証する）（参照: [#2530](https://github.com/Dayopt/dayopt/issues/2530)）
 - 2026-09-01: [process] 夜勤の「毎朝の読み物」層（日次盤面 issue・常設運行記録への毎晩1コメント・DoD 監査候補・朝編成ブリーフ・05:00 JST 蒸留層）を全廃し、「問題があれば issue、無ければ無音」へ集約する（理由: 毎日必ず何かが増えるコストが読まれる価値を上回ったため）（参照: [#2525](https://github.com/Dayopt/dayopt/issues/2525)）
+- 2026-09-02: [process] 夜勤（night-watch）を全撤去し、promote 再設計（[#2526](https://github.com/Dayopt/dayopt/issues/2526)）を白紙から行う（理由: 観測コマンド自体の故障と修正 PR の連鎖で運用負債化した。promote.yml の層 3 gate とはコード非結合のため撤去は可逆）

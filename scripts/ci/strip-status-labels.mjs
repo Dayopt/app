@@ -18,7 +18,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * ため、`judgment:` prefix は構造的に一致しない（denylist ではなく allowlist
  * 方式にしているのはこのため）。
  *
- * 設計原則は night-watch / codex-input.mjs と同型: 動的な値は execFile の argv
+ * 設計原則は scripts/lib/gh.mjs / codex-input.mjs と同型: 動的な値は execFile の argv
  * 要素としてのみ渡し、shell を経由しない。REPO / GH_MAX_BUFFER_BYTES は layering
  * を濁らせないため同型のまま複製する（codex-input.mjs 冒頭コメント参照）。
  */
