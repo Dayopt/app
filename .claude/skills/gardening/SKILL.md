@@ -1,6 +1,6 @@
 ---
 name: gardening
-description: ユーザーが月次の改善ループ（gardening）の実施を明示依頼した時、または `/gardening` として明示起動された時に発動。`pnpm ai:usage` / `pnpm trace` の実測から AI 工場の 4 問に答え、変えるのは月に 1 つだけ決めて `docs/decisions.md` へ `結果(未):` 付きで残し、前月分を回収し、シンプルルール検証と security sweep を回す。日次の作業判断（`dispatch` skill の領域）や自動実行の設計では発動しない。
+description: ユーザーが月次の改善ループの実施を明示依頼した時、または `/gardening` として明示起動された時に発動。`pnpm ai:usage` / `pnpm trace` の実測から AI 工場の 4 問に答え、変えるのは月に 1 つだけ決めて `docs/decisions.md` へ `結果(未):` 付きで残し、前月分を回収し、シンプルルール検証と security sweep を回す。日次の作業判断（`dispatch` skill の領域）や自動実行の設計では発動しない。
 ---
 
 # 月次改善ループ（gardening）
