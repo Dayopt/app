@@ -19,7 +19,7 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）→ test（unit + affected integration/RLS + migration safety）の直列2 job
+    ci.yml                    # impact（affected 判定）→ static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）∥ unit（+ migration safety）∥ integration（affected 時の RLS/integration）の並列 4 job
     production-config-audit.yml  # Vercel environment metadata 監査
     nightly.yml               # heavy-e2e/heavy-web/integration（層3）+ status-label-sweep + replica-check + storage-backup-export の5 job（#2483 で旧ファイルから統合。night-watch job は 2026-09-02 に撤去）
     create-release.yml        # GitHub Release 作成
@@ -33,14 +33,16 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ### ワークフロー別 permissions
 
-| ワークフロー                                          | permissions                                                  | 理由                            |
-| ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------- |
-| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取り + impact 判定    |
-| `ci.yml`（test job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知         |
-| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ              |
-| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                |
-| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行 |
-| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成            |
+| ワークフロー                                          | permissions                                                  | 理由                                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ci.yml`（impact job）                                | `contents: read` / `pull-requests: read`                     | PR の変更ファイル一覧の取得（gh api）を行う唯一の job                                         |
+| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取りのみ（gh を呼ばないため step env に `GH_TOKEN` を渡さない）                     |
+| `ci.yml`（unit job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知                                                                       |
+| `ci.yml`（integration job）                           | `contents: read`                                             | gh を呼ばないため job 単位で最小へ絞る（PR コードを実行する job に書き込み token を置かない） |
+| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ                                                                            |
+| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                                                                              |
+| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行                                                               |
+| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成                                                                          |
 
 `production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
@@ -173,12 +175,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                           |
-| ---------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                      |
-| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ test job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
-| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                           |
-| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                      |
+| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                             |
+| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ integration job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
+| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                                  |
+| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                             |
 
 **束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`AGENTS.md §PR / git 運用` §PR 粒度）。
 
@@ -214,7 +216,7 @@ secret 検出はこれとは別で、**ready 後の PR で自動実行される*
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-所見が出た場合は journal（月次 `/gardening` の draft PR 本文）に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
+所見が出た場合は issue に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 
 ### 前提: `claude-security` plugin
 

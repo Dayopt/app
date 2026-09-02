@@ -28,7 +28,7 @@ npm run test:integration
 
 ### CI
 
-GitHub Actions の `ci.yml`（affected な PR のみ、test job）または `nightly.yml`（integration job、nightly fallback）で自動実行されます（#2483 で `integration.yml` から統合）。
+GitHub Actions の `ci.yml`（affected な PR のみ、integration job）または `nightly.yml`（integration job、nightly fallback）で自動実行されます（#2483 で `integration.yml` から統合、#2539 で unit job から分離）。
 CI では Supabase CLI を使用してローカル環境を構築します。
 
 ## ファイル命名規則

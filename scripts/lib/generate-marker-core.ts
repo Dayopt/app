@@ -14,6 +14,13 @@ export interface MarkerInput {
   headSha: string;
   /** 実行した subagent 名。カンマ区切り、または `docs-only`。空文字列は不可。 */
   agent: string;
+  /**
+   * `deriveRoleFindingsField` が組み立てた role 別 findings 内訳（例:
+   * `risk-reviewer=2(P1 1/P2 1), behavior-verifier=0`）。`--review-result` 経由で
+   * reviewer を実際に起動した場合のみ渡す。未指定または空文字列なら `findings:` 行
+   * 自体を省略する（`--agent` 直接指定・docs-only の場合は role 別内訳が無いため）。
+   */
+  roleFindingsField?: string;
   p1Count: number;
   /** P1 が 0 件の時は付けられない（zerolike 書式を崩すため）。 */
   p1Note?: string;
@@ -90,11 +97,76 @@ export interface ReviewResultEntry {
    */
   status: 'ok' | 'empty' | 'error' | 'text-fallback';
   /**
-   * schema 検証済みの構造化出力本体。`result.coverage` だけを
-   * `derivePartialCoverageRoles` が読む（他フィールドは Main が直接読む一次情報
-   * のままにし、ここではパースしない）。
+   * schema 検証済みの構造化出力本体。`result.coverage` は `derivePartialCoverageRoles`、
+   * `result.findings` は `deriveRoleFindingsField` が読む（他フィールドは Main が
+   * 直接読む一次情報のままにし、ここではパースしない）。`findings` の各要素は
+   * `cross-review-workflow.js` の SCHEMA_CONTRACT が定義する `{severity, target,
+   * scenario, recommendationToMain}` だが、ここでは `severity` だけを見る。
    */
-  result?: { coverage?: string } | null;
+  result?: { coverage?: string; findings?: Array<{ severity?: string }> } | null;
+}
+
+/**
+ * role ごとの findings 内訳を `P1`/`P2` の 2 段にまとめるための「高 severity」定義。
+ * `cross-review-workflow.js` の SCHEMA_CONTRACT（severity enum）と 1:1 対応する:
+ *   - risk-reviewer: critical/high/medium/low → critical・high を P1 相当とする
+ *   - behavior-verifier / architecture-guard: blocker/warning → blocker を P1 相当とする
+ * この 2 段分類は `AGENTS.md` の P1/P2 定義そのものではなく、role 固有の severity
+ * enum を marker の `findings:` 行で読みやすくするための表示用の近似である。
+ */
+const HIGH_SEVERITY_BY_ROLE: Record<string, ReadonlySet<string>> = {
+  'risk-reviewer': new Set(['critical', 'high']),
+  'behavior-verifier': new Set(['blocker']),
+  'architecture-guard': new Set(['blocker']),
+};
+
+/**
+ * `--review-result` の `result.findings`（schema 強制済みの findings 配列）から
+ * marker の `findings:` 行の値を組み立てる。role 別の指摘数は marker 本文にしか
+ * 現れない唯一の authoritative な数値であり、`scripts/tasks/trace.mjs` はこの行を
+ * 最優先で読み、無ければ review/issue comment の役割名部分一致という粗い
+ * ヒューリスティックへ fall back する（trace.mjs 側のコメント参照）。
+ *
+ * - `status: 'ok'`（schema 強制済み）: `result.findings` を件数化する。**fail-closed**:
+ *   `findings` が配列でなければ「壊れた入力」として拒否する（`derivePartialCoverageRoles`
+ *   と同じ理由 — Main が `result` を手で刈り込んだ JSON を書くと、この安全網が
+ *   無ければ無音で誤情報を marker に刻んでしまう）
+ * - `status: 'text-fallback'`: StructuredOutput を経ていないため件数を信用できない。
+ *   `role(text-fallback)=不明` として明示し、trace.mjs 側で推定へ fall back させる
+ * - それ以外の status（`empty`/`error`）は無視する（`deriveAgentFieldFromReviewResult`
+ *   が同じ entries に対して先に呼ばれ、そちらで例外を投げている前提）
+ */
+export function deriveRoleFindingsField(entries: ReviewResultEntry[]): string {
+  const parts: string[] = [];
+  for (const entry of entries) {
+    if (entry.status === 'text-fallback') {
+      parts.push(`${entry.role}(text-fallback)=不明`);
+      continue;
+    }
+    if (entry.status !== 'ok') {
+      continue;
+    }
+    const findings = entry.result?.findings;
+    if (!Array.isArray(findings)) {
+      throw new Error(
+        `role "${entry.role}" は status:"ok" なのに result.findings が配列ではありません（${JSON.stringify(
+          entry.result,
+        )}）。Workflow の agent() が返した結果を result ごとそのまま JSON に書き出したか確認してください。`,
+      );
+    }
+    const count = findings.length;
+    if (count === 0) {
+      parts.push(`${entry.role}=0`);
+      continue;
+    }
+    const highSeverities = HIGH_SEVERITY_BY_ROLE[entry.role] ?? new Set<string>();
+    const high = findings.filter(
+      (f) => typeof f?.severity === 'string' && highSeverities.has(f.severity),
+    ).length;
+    const low = count - high;
+    parts.push(`${entry.role}=${count}(P1 ${high}/P2 ${low})`);
+  }
+  return parts.join(', ');
 }
 
 const VALID_COVERAGE_VALUES = new Set(['complete', 'partial']);
@@ -191,13 +263,13 @@ export function buildMarkerBody(input: MarkerInput): string {
   const p1Line = formatCountLine('P1', input.p1Count, input.p1Note);
   const p2Line = formatCountLine('P2', input.p2Count, input.p2Note);
 
-  const lines = [
-    '[internal-review]',
-    `head: ${input.headSha}`,
-    `agent: ${input.agent.trim()}`,
-    `P1: ${p1Line}`,
-    `P2: ${p2Line}`,
-  ];
+  const lines = ['[internal-review]', `head: ${input.headSha}`, `agent: ${input.agent.trim()}`];
+
+  if (input.roleFindingsField && input.roleFindingsField.trim()) {
+    lines.push(`findings: ${input.roleFindingsField.trim()}`);
+  }
+
+  lines.push(`P1: ${p1Line}`, `P2: ${p2Line}`);
 
   if (partialCoverageRoles.length > 0) {
     lines.push(

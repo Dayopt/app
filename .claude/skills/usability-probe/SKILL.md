@@ -11,7 +11,7 @@ maxTurns: 20
 
 ## When to Use
 
-**明示発動型** — この skill は指揮台の明示判断のみを契機に発動する（自動トリガーは実装しない。契機の判定自体は運用ルールであって機械化しない）。
+**明示発動型** — この skill は Main の明示判断のみを契機に発動する（自動トリガーは実装しない。契機の判定自体は運用ルールであって機械化しない）。
 
 - 新しいユーザー向け機能が production に乗った直後、そのフローを 1 回プローブしたい時
 - 月次ガーデニングと同周期で主要フローを一周したい時
@@ -22,7 +22,7 @@ maxTurns: 20
 この skill は **explicit な起動判断のみを契機とする**。参考として近接するが発動しないケース:
 
 - 実装の動作確認（Storybook 視覚確認、Playwright E2E）→ `test` skill / 既存 E2E harness の領域。usability-probe は「初見の人間の摩擦」を測る専用で、regression 検知が目的の E2E とは測定対象が異なる
-- 見つかった摩擦・バグの起票 → 指揮台が Main として直接起票する（プローブ自身は起票しない、下記 §手順 参照）
+- 見つかった摩擦・バグの起票 → Main が直接起票する（プローブ自身は起票しない、下記 §手順 参照）
 - production での実行 → 現状未対応（下記 §絶対ルール）。local / preview のみ
 
 ## 手順
@@ -36,7 +36,7 @@ maxTurns: 20
    2. test user を削除する。**`.op-env.human` は使わない**（production 専用の env file。`docs/operations/tooling.md` 参照）。local を対象にするなら `supabase status -o env` の値を使う: `NEXT_PUBLIC_SUPABASE_URL=<local> SUPABASE_SERVICE_ROLE_KEY=<local> USER_EMAIL=<setup script が出力した email> bash scripts/runbook/admin-delete-user.sh`
    3. storageState を削除する: `cd "$(git rev-parse --show-toplevel)/apps/product" && rm -rf .probe`。**削除後に存在しないことを確認する**（`rm -rf` は不在パスに黙って成功するため、cwd がずれていると消えたつもりで残ることがある）: `test -e "$(git rev-parse --show-toplevel)/apps/product/.probe" && echo "残っている" || echo "削除済み"`
 6. **所見を記録する**: agent の報告を GitHub issue のコメントまたは本文として保存する（2026-08-28、#2475 で domain log/ 廃止に伴い issue 起票へ移行）
-7. **実バグ・改善候補があれば、指揮台が issue 起票する**。プローブ自身（skill も agent も）は起票しない
+7. **実バグ・改善候補があれば、Main が issue 起票する**。プローブ自身（skill も agent も）は起票しない
 
 ## タスクリスト v1
 
@@ -113,7 +113,7 @@ ERROR RECOVERY
 RAW IMPRESSION
 <推論や忖度を挟まず、見たまま感じたままを 2-3 文で>
 
-推奨や技術的な修正案は書かなくて構いません。それは指揮台の仕事です。あなたの仕事は「初めて触った人が何を感じたか」を正確に記録することだけです。
+推奨や技術的な修正案は書かなくて構いません。それは Main の仕事です。あなたの仕事は「初めて触った人が何を感じたか」を正確に記録することだけです。
 ```
 
 ## 絶対ルール
@@ -124,5 +124,5 @@ RAW IMPRESSION
 - **agent に開発者向け tool を使わせない**（`browser_evaluate` / `browser_console_messages` / `browser_network_requests` 等）。初見ユーザーの観測解像度に合わせる。これも技術的制約ではなくペルソナ本文の明示指示に依る
 - **navigation の scope は `--allowed-origins` で宣言するが、これはセキュリティ境界ではない**（`@playwright/mcp` 公式ヘルプに明記）。実際に構造として塞がれているのは `file://` navigation だけ（`--allow-unrestricted-file-access` を渡さない限り既定でブロックされる。登録コマンドはこのフラグを渡さない）。origin 面の安全性は「agent が読める情報が probe 対象アプリの画面だけ」という設計全体に依存する
 - **使用後は on-demand 登録した MCP を必ず解除し、storageState ファイルを削除する**。生セッションを含むため放置しない
-- **所見の記録と issue 起票の判断を分離する**。agent の報告をそのまま記録し、価値判断（起票するか・優先度）は指揮台が行う
+- **所見の記録と issue 起票の判断を分離する**。agent の報告をそのまま記録し、価値判断（起票するか・優先度）は Main が行う
 - **初回運用の注記**: probe agent の起動には allow 未登録の MCP tool が伴うため、初回実行時は tool 承認 prompt が複数回出る。allow へワイルドカード登録はしない（on-demand 登録の意味が薄れるため）

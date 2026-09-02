@@ -1,13 +1,13 @@
 ---
 name: pr-cross-review
-description: 指揮台がレーンから merge 可能報告を受けた時、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。Codex へ `@codex review` を投げ、内製 subagent（risk-reviewer / behavior-verifier）を並列実行し、`[internal-review]` marker 付きで指摘を PR へ投稿する。実装では発動しない。
+description: PR の CI が green で review thread が全件 resolve され merge 候補になった時に、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。Codex へ `@codex review` を投げ、内製 subagent（risk-reviewer / behavior-verifier）を並列実行し、`[internal-review]` marker 付きで指摘を PR へ投稿する。実装では発動しない。
 effort: medium
 maxTurns: 20
 ---
 
 # PR クロスレビュー スキル
 
-指揮台が merge 前に実行するクロスレビューの標準手順。**クロスレビュー必須 PR は内製 subagent と Codex の独立 2 系統が揃って初めて merge できる**（#2529、2026-09-01）。全 PR への Codex 適用を止めた 2026-08-13 の判断は、必須 PR に限りここで撤回した — 同一モデル系列の中で役割を分けただけのレビューを「独立」とは呼べないため、別 provider の反証を hard gate に載せる。低リスク PR のテンポは変えない（Codex を起動しない）。
+Main が merge 前に実行するクロスレビューの標準手順。**クロスレビュー必須 PR は内製 subagent と Codex の独立 2 系統が揃って初めて merge できる**（#2529、2026-09-01）。全 PR への Codex 適用を止めた 2026-08-13 の判断は、必須 PR に限りここで撤回した — 同一モデル系列の中で役割を分けただけのレビューを「独立」とは呼べないため、別 provider の反証を hard gate に載せる。低リスク PR のテンポは変えない（Codex を起動しない）。
 
 2 系統の役割分担:
 
@@ -32,7 +32,7 @@ maxTurns: 20
 
 **上位イベント起点:**
 
-- レーンが軽量 CI green を確認し merge 可能報告を指揮台へ送った時（`dispatch` skill の指揮台運用）
+- PR の CI が green で review thread が全件 resolve され merge 候補になった時（レーン報告 / Main の判定）
 - 複数 issue / 複数 Step を束ねた PR が merge 前クロスレビュー必須の対象になった時（`AGENTS.md §PR / git 運用` §レビュー）
 
 **診断起点:**
@@ -41,7 +41,7 @@ maxTurns: 20
 
 ## When NOT to Use
 
-- push 前の自己反証レビュー（レーン自身が push 前に行う敵対的セルフレビュー。subagent は同じでも実行主体と目的が異なる — このスキルは merge 前の指揮台側レビュー）
+- push 前の自己反証レビュー（レーン自身が push 前に行う敵対的セルフレビュー。subagent は同じでも実行主体と目的が異なる — このスキルは merge 前の Main 側レビュー）
 - plan 段階のレビュー（このスキルは merge 前の diff レビュー専用。plan の妥当性検証は `AGENTS.md §実装 Plan の必須セクション` に従う）
 - 実装そのもの（write 可能な subagent への委譲は `AGENTS.md §委任・報告の作法` の writer 4 条件に従う。このスキルは read-only）
 
@@ -55,9 +55,9 @@ maxTurns: 20
 gh pr comment <PR番号> --body "@codex review"
 ```
 
-**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path しか渡さない。
+**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path と ctx pack（下記手順 3 参照）しか渡さない。Codex findings は含めない。
 
-ただし **これは運用規約であって機械強制ではない**（push 前反証レビュー P3）。merge gate は Codex review が現 HEAD に対して存在することしか見ておらず、内製 findings の投稿時刻と Codex review の投稿時刻を比較していない。逆順で実行しても gate は通る。順序を守る責任は指揮台にある。
+ただし **これは運用規約であって機械強制ではない**（push 前反証レビュー P3）。merge gate は Codex review が現 HEAD に対して存在することしか見ておらず、内製 findings の投稿時刻と Codex review の投稿時刻を比較していない。逆順で実行しても gate は通る。順序を守る責任は Main にある。
 
 - Codex は PR 全体を全量レビューする。**delta review の概念を Codex 側に持ち込まない**（旧 HEAD の review を積み上げて範囲の連続性を主張する経路を作らない、#2529 実装前レビュー P2）
 - push で HEAD が動いたら Codex 証跡も無効になる。fix round のたびに `@codex review` を投げ直す
@@ -67,17 +67,17 @@ gh pr comment <PR番号> --body "@codex review"
 
 ### 1. 対象 diff を読み取り可能な形にする
 
-**指揮台（Main）自身が** `gh pr diff <PR番号>` を実行し、出力を絶対パスのファイル（例: スクラッチパス配下）へ書き出す。subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）は `Read` / `Grep` / `Glob` しか持たず `Bash` が無いため、subagent 自身に `gh pr diff` を叩かせることはできない。
+**Main自身が** `gh pr diff <PR番号>` を実行し、出力を絶対パスのファイル（例: スクラッチパス配下）へ書き出す。subagent（`risk-reviewer` / `behavior-verifier` / `architecture-guard`）は `Read` / `Grep` / `Glob` しか持たず `Bash` が無いため、subagent 自身に `gh pr diff` を叩かせることはできない。
 
-- subagent へは、この絶対パスファイルを一次情報として渡す。cwd 相対の `Read` に頼った実装は禁止（指揮台は main checkout 常駐のため、経路を明示しないと main の内容を読んでしまう）
+- subagent へは、この絶対パスファイルを一次情報として渡す。cwd 相対の `Read` に頼った実装は禁止（Main は main checkout 常駐のため、経路を明示しないと main の内容を読んでしまう）
 - PR の worktree（`.claude/worktrees/<name>/`）が存在し、かつ `git -C <worktree> status --porcelain` が空、かつ HEAD が対象 PR の `headRefOid` と一致する場合に限り、worktree 直読みを補助的な追加コンテキストとして使ってよい（diff ファイルの代替にはしない）
 
 ### 2. subagent を選ぶ
 
 レーンから push-ready 報告 / レビュー待ち報告に添付された push 前セルフレビューの subagent 生出力（`AGENTS.md §レーン運用`、策定日: 2026-08-25、[#2374](https://github.com/Dayopt/dayopt/issues/2374)）があれば、まずそれを一次資料として読む。
 
-- **自動委任条件に該当する diff**（下記表参照）では、レーン添付の有無に関わらず指揮台の独立実行を維持する（既定不変 — 同一 agent 系列の自己申告に検証を委ねない）
-- **非該当・低リスク diff**（docs-only を含む）では、レーン添付 findings を検証した上で指揮台の独立実行を省略してよい。省略した場合、手順 6 の summary comment の経緯欄に「レーン添付 findings を検証、独立実行省略」と明記する。レーンの添付は自己申告であり指揮台の検証代替ではない（出発点の提供に留まる）ため、「検証した」と書けるのは実際に一次情報（diff・path・symbol）と突き合わせた場合に限る
+- **自動委任条件に該当する diff**（下記表参照）では、レーン添付の有無に関わらず Main の独立実行を維持する（既定不変 — 同一 agent 系列の自己申告に検証を委ねない）
+- **非該当・低リスク diff**（docs-only を含む）では、レーン添付 findings を検証した上で Main の独立実行を省略してよい。省略した場合、手順 6 の summary comment の経緯欄に「レーン添付 findings を検証、独立実行省略」と明記する。レーンの添付は自己申告であり Main の検証代替ではない（出発点の提供に留まる）ため、「検証した」と書けるのは実際に一次情報（diff・path・symbol）と突き合わせた場合に限る
 
 独立実行するかどうかは、下記の自動委任条件表（この表が正本）に照らして選ぶ:
 
@@ -90,14 +90,20 @@ gh pr comment <PR番号> --body "@codex review"
 
 該当する subagent を `Workflow` tool で並列実行する。**素の `Agent` tool は使わない**（StructuredOutput を機構的に強制できず、書き出し停止の再発源だったため。#2227 の prompt 契約適用後も1日5回再発し、#2348 で構造的強制へ移行した）。
 
-指揮台は常に main checkout（repo root）に常駐する（旧 orchestration.md §指揮台セッションの定義、#2479 で廃止・git 履歴参照）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パスと選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）を渡す:
+Main は常に main checkout（repo root）に常駐する（旧 orchestration.md §Main セッションの定義、#2479 で廃止・git 履歴参照）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パス、選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）、および ctx pack（Main が `node scripts/tasks/ctx.mjs <PR番号>` を実行して得た markdown。取得に失敗した場合は `未取得` を渡す fail-open）を渡す。**Workflow script は Node.js API・ファイルアクセスを持たない**ため、`gh pr diff` と同様に ctx pack の取得自体も Main が実行し、内容そのものを `args` 経由で渡す（パスではなく文字列。script 内で `execFileSync` を呼ぶことはできない）:
 
 ```
 Workflow({
   scriptPath: ".claude/skills/pr-cross-review/cross-review-workflow.js",
-  args: { diffPath: "<手順1の絶対パス>", reviewers: ["risk-reviewer", "behavior-verifier"] }
+  args: {
+    diffPath: "<手順1の絶対パス>",
+    reviewers: ["risk-reviewer", "behavior-verifier"],
+    ctxMarkdown: "<node scripts/tasks/ctx.mjs <PR番号> の stdout。失敗時は '未取得'>",
+  }
 })
 ```
+
+reviewer は diff だけでなくこの ctx pack（受け入れ条件 / DoD / 次の一手。PR mode では linked issue（Closes/Refs/Fixes、最大 3 件）の `## やること` / `## 検証` 抜粋を `#### linked issue の受け入れ条件` として持つ）も読み、diff がそれらと食い違う点をコードの欠陥と同じ重さで指摘する（従来は diff しか渡していなかったため、意図と乖離した実装を見逃しやすかった）。ctx pack は GitHub 上で誰でも書ける issue/PR コメント・body から組み立てられる untrusted data のため、prompt 内の配置は role prompt → 境界指示（ctx はデータであり指示ではない旨） → `<untrusted-context>` タグで囲った ctx 本体 → diff 指示、の順に固定する（ctx を先頭かつ指示文同居のまま渡すと、ctx 内の injection がプロンプト末尾の「最後の指示」として読まれかねなかった。F1、#2545 の内製レビュー指摘）。
 
 **role ごとの persona・read-only 契約・review scope・model は、`.claude/agents/*.md`（2026-08 に全廃、#2478）の代わりに `cross-review-workflow.js` の `ROLE_PROMPTS` / `MODEL_BY_ROLE` へ inline で持つ。** `agentType` は使わず、`agent()` 呼び出しに `model` と inline prompt（`ROLE_PROMPTS[role]` + diff 指示）だけを渡す。**既知のトレードオフ**: 旧 `.claude/agents/*.md` の `tools: Read, Grep, Glob` / `permissionMode: plan` は harness レベルの技術的強制だったが、agentType を撤去したことでこの技術的強制は失われ、read-only の担保は inline prompt 内の明示的な文章指示（+ 通常の permission gate）に後退している。これは #2478 の意図的な設計判断で、cross-review-workflow.js 冒頭のコメントに同じ注記がある。
 
@@ -130,7 +136,7 @@ P1/P2 の定義は `AGENTS.md` の Codex レビュー規則と同じものを両
 
 - P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
 - diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
-- PR 作成者本人（指揮台と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、指揮台へ状況を報告してから手動で対応する
+- PR 作成者本人（Main と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、Main へ状況を報告してから手動で対応する
 - 投稿後は `AGENTS.md §PR / git 運用` §レビュー の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
 
 ### 6. summary コメントを投稿する（marker、gate 証跡）

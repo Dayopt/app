@@ -183,7 +183,7 @@ if [ "$TOOL_NAME" = "Write" ] || [ "$TOOL_NAME" = "Edit" ] || [ "$TOOL_NAME" = "
 
     if guard_resolve_roots; then
       # longest-prefix-match で「このパスは実際にどの worktree に属するか」
-      # を判定する（指揮台が他レーンへ書き込む場合も、レーンが他レーンへ
+      # を判定する（Main が他レーンへ書き込む場合も、レーンが他レーンへ
       # 書き込む場合も、同じ判定で一律に閉じる。物理配置に依存しない）。
       if ! guard_path_belongs_to_current_root "$GUARD_NORMALIZED_FILE_PATH"; then
         echo "BLOCKED: 自分の worktree（$GUARD_CURRENT_ROOT）の外を編集しようとしています: $GUARD_NORMALIZED_FILE_PATH（AGENTS.md §委任・報告の作法 の writer 4 条件、AGENTS.md §PR / git 運用）" >&2
@@ -270,21 +270,21 @@ is_single_simple_command() {
 }
 
 # --- MCP: レーンからのチップ起票をブロック ---
-# チップ起票（spawn_task）は指揮台セッションの専権。レーン（worktree の作業
+# チップ起票（spawn_task）は Main（main checkout の session）の専権。レーン（worktree の作業
 # セッション）が直接 User へチップを出すと、triage の判断が User へ飛んでしまう。
-# レーンは「issue 化 + 指揮台へ send_message」に一本化する
+# レーンは「issue 化 + Main へ send_message」に一本化する
 # （`dispatch` skill 冒頭「正（source of truth）」— 状態は issue / PR 自身が持つ）。
 #
-# 判定は「指揮台にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
+# 判定は「Main（main checkout の session）にいる」ことの allowlist。`.claude/worktrees/` 配下かどうかという
 # path の慣習では見ない — 慣習の外に置かれた worktree が main checkout と区別
 # できず素通りするため。git の linked worktree かどうかで見る。
 #
 # 見ているのは **worktree の構造** であって branch ではない。主 clone で feature
-# branch を直接 checkout していても「指揮台」と判定する。これは意図的で、
+# branch を直接 checkout していても「Main」と判定する。これは意図的で、
 # その状態は `AGENTS.md §PR / git 運用` の worktree 運用が既に禁じている
 # 別の規律違反であり、このガードの担当範囲ではない。
 if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
-  # 「指揮台だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /
+  # 「Main だと言い切れた時だけ 1」。判定できない場合（git が無い / repo 外 /
   # 解決失敗）はブロックへ倒す。判定ロジックは guard_resolve_roots() を
   # worktree 境界 guard と共用する（2026-08-24, #2359 で関数抽出）。
   guard_is_main_checkout=0
@@ -292,7 +292,7 @@ if [ "$TOOL_NAME" = "mcp__ccd_session__spawn_task" ]; then
     guard_is_main_checkout=1
   fi
   if [ "$guard_is_main_checkout" -ne 1 ]; then
-    echo "BLOCKED: チップ起票（spawn_task）は指揮台セッションの専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) 指揮台へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）" >&2
+    echo "BLOCKED: チップ起票（spawn_task）は Main（main checkout の session）の専権です。レーンで別件を見つけたら、(1) dispatch skill の規約に沿って issue を起票し、(2) Main へ send_message で連絡してください。User へ直接チップを出すと triage の判断が User に飛びます（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）" >&2
     exit 2
   fi
 fi
@@ -503,7 +503,7 @@ if [ "$TOOL_NAME" = "Bash" ]; then
   SUPABASE_DB_RESET_RE='(^|[;&|]|&&|\|\|)[[:space:]]*(npx[[:space:]]+|pnpm[[:space:]]+(exec|dlx)[[:space:]]+)?supabase[[:space:]]+db[[:space:]]+reset'
   for scanned in "$COMMAND_JOINED" "$COMMAND_UNQUOTED"; do
     if echo "$scanned" | grep -qE "$SUPABASE_DB_RESET_RE"; then
-      echo "BLOCKED: supabase db reset の直接呼び出しは禁止です。ローカル Supabase は複数レーンが共有する単一インスタンスで、reset は他レーンの進行中データも巻き戻します。既定コマンド pnpm db:reset / pnpm db:fresh を使うか、他レーンへの影響が無いことを確認してから指揮台へ相談してください（この文字列に言及しただけでも落ちます）" >&2
+      echo "BLOCKED: supabase db reset の直接呼び出しは禁止です。ローカル Supabase は複数レーンが共有する単一インスタンスで、reset は他レーンの進行中データも巻き戻します。既定コマンド pnpm db:reset / pnpm db:fresh を使うか、他レーンへの影響が無いことを確認してから Main へ相談してください（この文字列に言及しただけでも落ちます）" >&2
       exit 2
     fi
   done
@@ -712,6 +712,106 @@ if [ "$TOOL_NAME" = "Bash" ]; then
       exit 2
     fi
   done
+fi
+
+# =====================================================================
+# --- Agent: model 明示 + 探索への Opus/Fable 使用ガード（cost guard） ---
+# =====================================================================
+# ここから下の R1/R2/R3 は security guard ではなく **cost guard**（committing
+# secret 露出やworktree破壊のような不可逆・越境の被害は無い）。よって jq の
+# parse エラーや stat エラー時は fail-open（今回だけ通す）にする——高頻度に
+# 使う Agent/Read が hook 側の一時的な不調で丸ごと止まるのは cost guard の
+# 目的に見合わない。
+#
+# R1: Agent の model を明示しないと、Main の tier をそのまま継承し最も高い
+# 構成（実測: Opus 常駐）になる。委任・報告の作法（AGENTS.md §委任・報告の
+# 作法「委譲時はmodelを明示する」）を機械強制する。
+if [ "$TOOL_NAME" = "Agent" ]; then
+  AGENT_MODEL=$(printf '%s' "$INPUT" | jq -r '.tool_input.model // empty' 2> /dev/null)
+  AGENT_MODEL_JQ_STATUS=$?
+  AGENT_SUBAGENT_TYPE=$(printf '%s' "$INPUT" | jq -r '.tool_input.subagent_type // empty' 2> /dev/null || true)
+  AGENT_PROMPT_DESC=$(printf '%s' "$INPUT" | jq -r '
+    [.tool_input.prompt?, .tool_input.description?]
+    | map(select(type == "string"))
+    | join("\n")
+  ' 2> /dev/null || true)
+
+  # R1 の model 未指定例外: harness/plugin が spawn する subagent（Plan /
+  # claude-security 系）は model フィールドを持たないことがある。R2 と同じ
+  # 例外集合を適用し、harness 自身が起動する Agent 呼び出しまで block しない。
+  agent_r1_exempt_subagent_type=0
+  case "$AGENT_SUBAGENT_TYPE" in
+    Plan | claude-security*) agent_r1_exempt_subagent_type=1 ;;
+  esac
+
+  # jq 自体が失敗した場合（不正な JSON 入力など）は fail-open にする。このブロックは
+  # cost guard であり、hook 側の一時的な不調・想定外の入力形で Agent 呼び出しそのもの
+  # を止めるのは目的に見合わない（section 冒頭コメント参照）。`AGENT_MODEL` が
+  # 空文字なのが「jq が成功して model が無かった」のか「jq 自体が失敗した」のかを
+  # 区別しないと、後者まで block してしまい fail-open の意図と矛盾する
+  # （内製クロスレビュー risk-reviewer 指摘、F3）。
+  if [ "$AGENT_MODEL_JQ_STATUS" -eq 0 ] && [ -z "$AGENT_MODEL" ] \
+    && [ "$agent_r1_exempt_subagent_type" -ne 1 ]; then
+    echo "BLOCKED: Agent の model を明示してください（haiku=列挙・蒸留・突合 / sonnet=実装・調査 / opus=反証・設計判断）。省略すると Main の tier を継承し最も高い構成になります（AGENTS.md §委任・報告の作法、routing skill 反例）" >&2
+    exit 2
+  fi
+
+  # R2: 編集を伴わない探索・調査の subagent に opus / fable を使わない。
+  # 例外は (a) Plan / claude-security 系 subagent_type（設計判断・脅威分析が
+  # 本務）、(b) prompt / description に反証・再検証・設計判断の意図が明記
+  # されている場合（矛盾報告の再検証、risk-reviewer、plan-review 等）。
+  # 表記ゆれ（Opus / claude-opus-5 / mythos 等）で素通りしないよう小文字化して
+  # 部分一致で判定する（2026-09-02 の敵対プローブで "Opus" と "claude-opus-5" が
+  # 完全一致判定を抜けた）。
+  AGENT_MODEL_LC=$(printf '%s' "$AGENT_MODEL" | tr '[:upper:]' '[:lower:]')
+  case "$AGENT_MODEL_LC" in
+    *opus* | *fable* | *mythos*)
+      agent_r2_allowed=0
+      case "$AGENT_SUBAGENT_TYPE" in
+        Plan | claude-security*) agent_r2_allowed=1 ;;
+      esac
+      if [ "$agent_r2_allowed" -ne 1 ] \
+        && printf '%s' "$AGENT_PROMPT_DESC" | grep -qiE '反証|再検証|risk-reviewer|plan-review|設計判断|adversarial'; then
+        agent_r2_allowed=1
+      fi
+      if [ "$agent_r2_allowed" -ne 1 ]; then
+        echo "BLOCKED: 編集を伴わない探索・調査の subagent に opus / fable は使いません（routing skill 反例、2026-08 実測: 編集なし Opus 154 件）。列挙・要約は haiku、調査・実装は sonnet。反証レビュー・矛盾報告の再検証・設計判断なら prompt にその旨（反証 / 再検証 / 設計判断）を書いてください" >&2
+        exit 2
+      fi
+      ;;
+  esac
+fi
+
+# =====================================================================
+# --- Read: 大規模ファイルの範囲指定なし全文読み込みガード ---
+# =====================================================================
+# R3: 600 行超のテキストファイルを offset/limit なしで Read しようとしたら
+# 止める。tool_result の Read が context を圧迫する実測（2026-08 に context
+# の 50% を占めた）があり、rg -n / sed -n で必要な範囲だけ読む方が安い
+# （routing skill §L0）。PDF・画像・notebook や存在しないパスは対象外
+# （テキスト拡張子の allowlist に無ければ素通り、ファイルが無ければ
+# `[ -f ... ]` で素通り＝fail-open）。
+if [ "$TOOL_NAME" = "Read" ]; then
+  READ_FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2> /dev/null || true)
+  READ_OFFSET=$(printf '%s' "$INPUT" | jq -r '.tool_input.offset // empty' 2> /dev/null || true)
+  READ_LIMIT=$(printf '%s' "$INPUT" | jq -r '.tool_input.limit // empty' 2> /dev/null || true)
+
+  if [ -n "$READ_FILE_PATH" ] && [ -z "$READ_OFFSET" ] && [ -z "$READ_LIMIT" ]; then
+    case "$READ_FILE_PATH" in
+      *.ts | *.tsx | *.js | *.mjs | *.cjs | *.md | *.mdx | *.json | *.sql | *.yml | *.yaml | *.sh | *.py | *.css | *.txt)
+        if [ -f "$READ_FILE_PATH" ]; then
+          read_line_count=$(wc -l < "$READ_FILE_PATH" 2> /dev/null | tr -d ' ')
+          case "$read_line_count" in
+            '' | *[!0-9]*) read_line_count=0 ;;
+          esac
+          if [ "$read_line_count" -gt 600 ]; then
+            echo "BLOCKED: ${read_line_count} 行のファイルを範囲指定なしで Read しようとしています。offset / limit を付けるか、\`rg -n\` / \`sed -n\` で必要な範囲だけ読んでください（tool_result の Read が 2026-08 の context の 50% を占めた実測。routing skill §L0）" >&2
+            exit 2
+          fi
+        fi
+        ;;
+    esac
+  fi
 fi
 
 exit 0

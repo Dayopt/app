@@ -15,7 +15,7 @@ export const STOCK_DIRS = ['business', 'product', 'engineering', 'operations', '
 
 // STOCK_DIRS はドメインサブディレクトリ単位で stock 契約を適用するための allowlist。
 // docs ルート直下へ昇格した個別ファイルはドメインを持たないため、ここに明示する。
-export const ROOT_STOCK_FILES = ['docs/strategy.md', 'docs/state.md'];
+export const ROOT_STOCK_FILES = ['docs/strategy.md'];
 
 // 手書きfrontmatterを付けないgenerated file。完全一致だけを例外にする。
 export const GENERATED_DOCS = ['docs/engineering/data/db/rls-snapshot.md'];

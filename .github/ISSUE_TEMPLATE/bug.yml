@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        `priority:` / `area:` は [github-labels.md](https://github.com/Dayopt/dayopt/blob/main/docs/operations/github-labels.md) の一覧から選んで追加する。**milestone は付けない**（着手時に指揮台が付与する。`.claude/skills/dispatch/SKILL.md` 操作 A）。
+        `priority:` / `area:` は [github-labels.md](https://github.com/Dayopt/dayopt/blob/main/docs/operations/github-labels.md) の一覧から選んで追加する。**milestone は付けない**（着手時に Main が付与する。`.claude/skills/dispatch/SKILL.md` 操作 A）。
   - type: textarea
     id: background
     attributes:
@@ -18,7 +18,7 @@ body:
     id: todo
     attributes:
       label: やること
-      description: 番号付き手順。分かる範囲で対象ファイル path を明記
+      description: '番号付き手順。分かる範囲で対象ファイル path を明記。受け入れ条件（何ができたら完了か）を 1 行以上。外部リサーチが要る時は「Deep Research 依頼: <問い>」を 1 行書く'
   - type: textarea
     id: caution
     attributes:
@@ -28,5 +28,5 @@ body:
     id: verification
     attributes:
       label: 検証
-      description: pass すべきコマンドと確認観点
+      description: そのまま実行できる検証コマンドと確認観点（worker が受け入れ条件を機械で確かめられる形に）
       placeholder: pnpm check / pnpm test:run など

@@ -300,7 +300,9 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 
 ### merge gate の required checks
 
-main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
+**merge gate は `pnpm branch:finish`（`scripts/tasks/finish-branch.sh`）が唯一の強制点であり、GitHub の required status check ではない。** この repo は Free plan の private repo で、ruleset / branch protection とも API が 403 を返し設定できない（2026-09-02 実測。`gh api repos/Dayopt/dayopt/rulesets` → `Upgrade to GitHub Pro or make this repository public`）。したがって「skipped が required check で成功扱いになる」という GitHub 側の挙動はそもそも発火せず、gate は finish-branch.sh が **success を名前で要求する**ことだけで成り立っている（UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている）。
+
+finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job（`🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests`）に加えて次を含める。`🧪 Integration Tests` は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539) で `📦 Unit Tests` から分離した。同じ #2539 で affected 判定を `🧭 Impact` job へ切り出し、`impact →（static ∥ unit ∥ integration）`の並列構成にしている（実測で CI 全体が 16 分 55 秒 → 6〜7 分台。run 33588708693 → 33615047182 / 33618057064。**この数値が構成の基準値の正本**で、`ci.yml` / `check.mjs` 側のコメントには数値を置かない）。**`🧭 Impact` は required にしない** — 下流 3 job は `needs.impact.result` を条件にせず、impact が落ちても空 output を fail closed（全実行）として受けて必ず走るため、検査そのものは常に行われる（この設計は Codex / 内製 risk-reviewer の P2 指摘で入れた。要求すると impact 障害時に全 job が skip され検査ゼロになる）。**`🧪 Integration Tests` は DB を触る PR でだけ走る**ため、`branch:finish` も affected な PR でだけ名前で要求する。
 
 **2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。**2026-08-28、#2483 で `heavy-post-merge.yml` はさらに `nightly.yml` へ吸収された（job 名・schedule・required checks の扱いは無変更）。** 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
 
@@ -314,13 +316,19 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 `🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
-- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
-  Draft CI 廃止により、この 2 job は draft の間 `conclusion: skipped` の check run になる。skipped は
+- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。3 つ目は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539)）。**
+  Draft CI 廃止により、この 3 job は draft の間 `conclusion: skipped` の check run になる。skipped は
   失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
   「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
   持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
-  影響判定が不能な場合は要求する側（fail closed）へ倒す。契約は
+  影響判定が不能な場合は要求する側（fail closed）へ倒す。**`🧪 Integration Tests` は加えて
+  `integration` affected な PR でだけ要求する**（affected でない PR では job ごと skip されるのが
+  正常で、無条件に要求すると永久に missing で止まる）。契約は
   `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
+- **`ci.yml` / `scripts/ci/check.mjs` は `INTEGRATION_GLOBS` に含める（#2539）。** integration を独立 job へ
+  切り出した結果、job まるごとが `if:` で skip されうるようになった。配線を持つこの 2 ファイルを
+  中立扱いのままにすると、**配線を変えた当の job を一度も実走させずに merge** できる（`nightly.yml` を
+  既に含めているのと同じ理屈）
 - **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context
@@ -449,7 +457,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 
 ## DNS 管理（Cloudflare）
 
-策定日: 2026-08-13（[#2001](https://github.com/Dayopt/dayopt/issues/2001)。2026-08-12、Search Console のドメイン検証作業中に指揮台が実測で発見）
+策定日: 2026-08-13（[#2001](https://github.com/Dayopt/dayopt/issues/2001)。2026-08-12、Search Console のドメイン検証作業中に Main が実測で発見）
 
 `dayopt.app` は **registrar が Vercel（Vercel Registrar）、権威 DNS が Cloudflare** という分離構成になっている（`dig NS dayopt.app` は `keira.ns.cloudflare.com` / `colin.ns.cloudflare.com` を返す。移管手順は [contact-email.md §1 DNS と受信の準備](../operations/contact-email.md#1-dnsと受信の準備ユーザー作業)）。
 
