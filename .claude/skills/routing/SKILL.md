@@ -107,7 +107,8 @@ Agent({ model: 'sonnet', prompt: `
 - Main が 5 ファイルを Read → Edit し始める（L3 が L2 の仕事をしている）
 - Haiku に「重要なものを選べ」と頼む（基準が無い判断は L1 では解けない）
 - `gh … --json | jq` で足りる集計を Sonnet に文章で依頼する（L0 を飛ばしている）
-- subagent の model を省略して起動する（Main の tier を継承し最も高い構成になる）
+- subagent の model を省略して起動する（Main の tier を継承し最も高い構成になる。2026-08 の「編集なし」subagent は Opus 154 件で、大半がこの継承）
+- **編集を伴わない探索・調査の subagent に Opus / Fable を使う**。例外は反証レビュー（`pr-cross-review` の risk-reviewer）と矛盾報告の独立再検証だけ。目標は「編集なしの Opus / Fable 件数 = 反証の実行回数」で、`ai:usage` 表 E の下の 1 行で毎月確認する
 
 ## When NOT to Use
 

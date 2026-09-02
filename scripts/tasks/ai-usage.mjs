@@ -722,6 +722,13 @@ export function renderMarkdown({ since, until, agg, prStats }) {
         : `全体 中央値 ${overallMedian.toFixed(1)} / 平均 ${overallMean.toFixed(1)}（n=${allEditValues.length}）`
     }。目標はゼロに近いこと（routing skill 目標状態）`,
   );
+  const heavyNoEdit = ['opus', 'fable'].reduce(
+    (sum, label) => sum + (explorationByModel.get(label)?.noEditN ?? 0),
+    0,
+  );
+  lines.push(
+    `**編集なしの Opus + Fable subagent**: ${heavyNoEdit} 件。目標は反証レビュー（pr-cross-review risk-reviewer）と矛盾報告の再検証の回数と同数（routing skill 反例）`,
+  );
 
   return lines.join('\n');
 }
