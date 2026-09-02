@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-27
+last_verified: 2026-09-02
 ---
 
 # Strategic State（現在の認識）
@@ -27,7 +27,7 @@ last_verified: 2026-08-27
 ## 優先（順序。タスク一覧ではない）
 
 1. **時間の台帳 v1** — 設計正本 #2395 が凍結済み。#2396（契約基盤）→ #2397 → #2398 → #2399 の直列。ここが動かないと下の 2 つが動かない
-2. **#2162（タグ → アクティビティ / カテゴリー / セグメント）の完走** — 残る #2175 は不可逆 migration で、#2396 の移行判断に従属する
+2. **#2175（tags 系 destructive migration）** — タグ → アクティビティ / カテゴリー / セグメント全置換（旧 epic #2162、完了・クローズ済み）の唯一の残 scope。不可逆 migration（`EXPLICIT AUTHORITY`）で、#2396 の移行判断に従属する
 3. **#1754（MCP closed beta）** — repo 側は完了。残りは User 同席が要る実機検証だけで、他の 2 つと資源を奪い合わない
 
 タスク粒度の当週キューは `gh issue list --state open --label status:ready` と現行 milestone を見る。
