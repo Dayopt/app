@@ -389,10 +389,12 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     IMPACT_JSON="$(printf '%s\n' "$CHANGED_FILES" | node "$IMPACT_RESOLVER" --stdin 2>/dev/null || true)"
   fi
   IMPACT_DOCS_ONLY="false"
+  IMPACT_INTEGRATION="true"
   if [[ -n "$IMPACT_JSON" ]]; then
     IMPACT_PRODUCT="$(printf '%s' "$IMPACT_JSON" | jq -r '.product' 2>/dev/null || echo true)"
     IMPACT_WEB="$(printf '%s' "$IMPACT_JSON" | jq -r '.web' 2>/dev/null || echo true)"
     IMPACT_DOCS_ONLY="$(printf '%s' "$IMPACT_JSON" | jq -r '.docsOnly' 2>/dev/null || echo false)"
+    IMPACT_INTEGRATION="$(printf '%s' "$IMPACT_JSON" | jq -r '.integration' 2>/dev/null || echo true)"
   else
     info "影響判定を実行できませんでした。fail closed で両方の Vercel context を必須にします。"
   fi
@@ -400,6 +402,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 明示的な "false" だけが必須 context を外せる。
   if [[ "$IMPACT_PRODUCT" != "false" ]]; then IMPACT_PRODUCT="true"; fi
   if [[ "$IMPACT_WEB" != "false" ]]; then IMPACT_WEB="true"; fi
+  # integration も同じ向き（明示的な "false" だけが Integration Tests の要求を外す）。
+  # ci.yml の job `if:` と check.mjs の guard も同じ fail-closed 方向で揃えてある。
+  if [[ "$IMPACT_INTEGRATION" != "false" ]]; then IMPACT_INTEGRATION="true"; fi
   # docsOnly は向きが逆（true が緩める側）なので、明示的な "true" だけを信じる。
   # 判定不能・想定外の出力は "false"（= CI check を必須にする厳格側）へ倒す。
   if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then IMPACT_DOCS_ONLY="false"; fi
@@ -482,15 +487,25 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #
   # **「🔍 Static Checks」は docs-only でも免除しない**（#2483 以降、static job
   # 自体が docs-only でも skip されず secret/docs 検査の唯一の実行経路のため）。
-  # 「📦 Unit Tests」だけを docs-only で免除する（ci.yml の test job は
-  # `needs.static.outputs.docs_only != 'true'` で実際に skip されるため、
+  # 「📦 Unit Tests」だけを docs-only で免除する（ci.yml の unit job は
+  # `needs.impact.outputs.docs_only != 'true'` で実際に skip されるため、
   # ここを要求すると docs-only PR が永久に missing で止まる）。判定不能時は
   # IMPACT_DOCS_ONLY=false（＝両方要求する側）へ倒してある。
+  # 「🧪 Integration Tests」（#2539 で test job から分離）は **docs-only でなく、かつ
+  # integration affected な PR でだけ**要求する。ci.yml 側は
+  # `docs_only != 'true' && integration != 'false'` で job ごと skip するため、
+  # 無条件に要求すると skip される PR が永久に missing で止まる。判定不能時は
+  # IMPACT_INTEGRATION=true（＝要求する側）へ倒してある。
   REQUIRED_CI_CHECKS=("🔍 Static Checks")
   if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then
     REQUIRED_CI_CHECKS+=("📦 Unit Tests")
+    if [[ "$IMPACT_INTEGRATION" != "false" ]]; then
+      REQUIRED_CI_CHECKS+=("🧪 Integration Tests")
+    else
+      info "DB を触らない変更のため Integration Tests の skip を許容します。"
+    fi
   else
-    info "docs-only の変更のため Unit Tests の skip を許容します（Static Checks は引き続き要求します）。"
+    info "docs-only の変更のため Unit Tests / Integration Tests の skip を許容します（Static Checks は引き続き要求します）。"
   fi
 
   for required in ${REQUIRED_CI_CHECKS[@]+"${REQUIRED_CI_CHECKS[@]}"}; do

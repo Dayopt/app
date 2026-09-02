@@ -5,11 +5,21 @@ name: CI
 # 層 3 撤去後に affected な PR だけ走る integration/RLS）を 1 ファイルへ統合した。
 # 実行本体は scripts/ci/check.mjs（「薄い呼び出し層 + scripts 実体」再編）。
 #
-# job は static → test の 2 本直列（fail-fast で課金を守る。static が落ちたら
-# test は走らない）。affected 判定（docs-only skip・integration の DB-touch 判定）
-# は scripts/ci/impact.mjs が正本で、static job が 1 回だけ判定して job output へ
-# 出し、test job はそれを再利用する（2 job で gh api を 2 回叩いて結果がずれる
-# リスクを避けるため）。
+# job は impact →（static ∥ unit ∥ integration）の 2 段。**判定 job だけが直列で、
+# 検査 3 本は並列**（2026-09-02、#2539）。分離前は 1 本の test job が Supabase 起動から
+# unit・integration まで直列に抱え、さらに static の完走を待っていた。
+#
+# **実測値の正本は docs/engineering/infra.md §merge gate**（ここには数値を書かない。
+# 同じ数字を複数箇所へ散らすと、次に構成を触る担当がどれを基準に退行を判断すべきか
+# 分からなくなる。内製クロスレビュー risk-reviewer 指摘、P3）。
+#
+# affected 判定（docs-only skip・integration の DB-touch 判定・functions_changed）は
+# scripts/ci/impact.mjs が正本で、impact job が 1 回だけ判定して job output へ出し、
+# 下流 3 job はそれを再利用する（複数 job で gh api を叩いて結果がずれるリスクを避ける）。
+#
+# **fail-fast を捨てた**（旧: static が落ちたら下流を走らせない）。直近 50 run で
+# static の failure は 0 件で、節約が一度も発動していなかったため。詳細は impact job の
+# コメント。gate は緩まない（finish-branch.sh が各 job の success を名前で要求する）。
 
 on:
   pull_request:
@@ -29,9 +39,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# pull-requests: read は static job の impact 判定（PR の変更ファイル一覧取得）に、
-# issues: write は test job の migration safety のラベル付与に要る（job 単位で
-# 追加宣言する。ここでは最小に絞る）。
+# pull-requests: read は impact job の判定（PR の変更ファイル一覧取得）に、
+# issues: write は unit job の migration safety のラベル付与に要る（job 単位で
+# 追加宣言する。ここでは最小に絞る。integration job は gh を呼ばないため
+# contents: read だけに絞ってある）。
 permissions:
   contents: read
   pull-requests: read
@@ -52,40 +63,98 @@ permissions:
 # pull_request context が無く null になるため、`== false` だと手動実行で
 # 全 job が skip される。
 jobs:
-  static:
-    name: "\U0001F50D Static Checks"
+  # ── 判定だけを行う軽量 job（全 job の上流）────────────────────────────
+  #
+  # **static から判定を切り出して、重い job が static の完走を待たない形にした**
+  # （2026-09-02、#2539 続き）。分離前は static が判定を持っていたため
+  # unit / integration が static の 4 分 20 秒を直列で待っていた。
+  #
+  # `pnpm install` を**あえて省く**。impact.mjs は node 標準ライブラリと workspace の
+  # package.json しか読まないため、setup action（実測 26 秒）が丸ごと不要になる。
+  # 依存を足す変更をこのファイルへ入れる時は、ここに setup が無いことを思い出すこと。
+  #
+  # fail-fast（static が落ちたら重い job を走らせない）を捨てた判断は実測に基づく:
+  # 直近 50 run で static の failure は 0 件だった（success 28 / draft skip 20 /
+  # cancelled 1）。同じ検査を pre-push フックが先に走らせるため、CI で static が
+  # 落ちる経路がほぼ塞がっている。**節約が一度も発動していない直列**のために
+  # 全 PR が 4 分待つのは割に合わない。static が落ちた run で unit も走るように
+  # なるが、merge は通らない（finish-branch.sh が `🔍 Static Checks` の success を
+  # 名前で要求する）。**緩むのは課金だけで gate は緩まない。**
+  impact:
+    name: "\U0001F9ED Impact"
     if: github.event.pull_request.draft != true
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     outputs:
       docs_only: ${{ steps.run.outputs.docs_only }}
       product_unit: ${{ steps.run.outputs.product_unit }}
       integration: ${{ steps.run.outputs.integration }}
+      functions_changed: ${{ steps.run.outputs.functions_changed }}
+    steps:
+      # 判定は gh api の PR files 一覧だけを入力にするため、履歴は要らない。
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve impact
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/ci/check.mjs impact
+
+  static:
+    name: "\U0001F50D Static Checks"
+    needs: impact
+    if: ${{ !cancelled() && github.event.pull_request.draft != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # gitleaks の diff scan と docs:check の append-only guard が
           # base ref との差分を見るため full history が必要（旧 docs-guard.yml と同じ）
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: ./.github/actions/setup
 
       - name: Run static checks
-        id: run
+        # **GH_TOKEN は渡さない**（内製クロスレビュー risk-reviewer 指摘、P2）。
+        # gh を使う唯一の処理（PR files 一覧の取得）は impact job へ移り、この job に
+        # gh 依存は残っていない（secrets:check / docs:check / lane のいずれも gh を
+        # 呼ばないことを確認済み）。PR コードとその全依存を実行する job に不要な
+        # token を置かない — integration job と同じ原則。
         env:
-          GH_TOKEN: ${{ github.token }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DOCS_ONLY: ${{ needs.impact.outputs.docs_only }}
+          FUNCTIONS_CHANGED: ${{ needs.impact.outputs.functions_changed }}
         run: node scripts/ci/check.mjs static
 
-  test:
+  # ── unit と integration を別 job に分ける（2026-09-02、#2539）─────────
+  #
+  # 分割理由は **直列だった 2 種類の検査の並列化**。分割前は 1 job の中で
+  # 「Supabase 起動（約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に
+  # 並んでいた。分割後は別 runner で同時に走る。**検査内容は 1 つも削っていない。**
+  #
+  # **CPU 競合説は実測で否定された**（当初の仮説）。product unit test の所要は
+  # Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で差は 3.6%。分割前に
+  # 「integration skip の PR は 1〜2 分」に見えたのは、それらが同時に
+  # `product_unit=false` だった交絡。**product unit の 5 分はこの分割では縮んでいない**。
+  #
+  # job 名 `📦 Unit Tests` は `scripts/tasks/finish-branch.sh` が merge gate として
+  # 名前で success を要求する（#2415）。**改名する場合は finish-branch.sh の
+  # REQUIRED_CI_CHECKS も同時に変更すること**（片方だけ直すと merge が永久に止まる）。
+  unit:
     name: "\U0001F4E6 Unit Tests"
-    needs: static
-    # `always()` を付けるのは、static job 自体が落ちた時に下流が skip されると
+    needs: impact
+    # `always()` を付けるのは、上流 job 自体が落ちた時に下流が skip されると
     # 「検証なしで required check が success」になる（fail open）ため。always()
-    # なら static 失敗時も評価され、空の output は `!= 'true'` で実行側に倒れる。
-    if: always() && github.event.pull_request.draft != true && needs.static.result == 'success' && needs.static.outputs.docs_only != 'true'
+    # なら impact 失敗時も評価され、空の output は `!= 'true'` で実行側に倒れる。
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -94,22 +163,51 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup
 
-      # ── Supabase の起動は affected な PR（DB を触る変更）だけに絞る ──
-      # 起動しない PR では test:integration / rls:snapshot:check 自体を
-      # check.mjs 側が skip するため、ここで CLI setup + start をまるごと
-      # 省略してコストを避ける（旧 integration.yml の per-PR 撤去〈#2269〉の
-      # 意図を、affected 判定つきの per-PR 実行として復活させたもの）。
-      #
-      # `!= 'false'`（`== 'true'` ではない）: check.mjs の shouldRunIntegrationTests
-      # と同じ fail-closed 方向（判定不能なら実行する）に揃える。output が
-      # 空になる経路は `needs.static.result == 'success'` 要求で現状塞がれて
-      # いるが、guard の向きが 2 箇所で食い違っていると将来の配線変更で
-      # サイレントに壊れる（内製クロスレビュー risk-reviewer 指摘、P3）。
+      - name: Run unit tests (+ migration safety)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PRODUCT_UNIT: ${{ needs.impact.outputs.product_unit }}
+          NODE_ENV: test
+          CI: true
+        run: node scripts/ci/check.mjs unit
+
+  # ── integration / RLS（DB を触る PR だけ。unit job と並列に走る）──────
+  #
+  # job 名 `🧪 Integration Tests` は finish-branch.sh が **affected な PR でだけ**
+  # 名前で success を要求する（skip される PR で要求すると merge が永久に止まる）。
+  # 改名時は finish-branch.sh 側も同時に変更すること。
+  #
+  # `!= 'false'`（`== 'true'` ではない）: check.mjs の shouldRunIntegrationTests
+  # と同じ fail-closed 方向（判定不能なら実行する）に揃える。output が空になる
+  # 経路は impact 失敗時は空になり実行側へ倒れるが、guard の
+  # 向きが 2 箇所で食い違っていると将来の配線変更でサイレントに壊れる
+  # （内製クロスレビュー risk-reviewer 指摘、P3）。
+  integration:
+    name: "\U0001F9EA Integration Tests"
+    needs: impact
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    # gh を呼ばないため write 権限も GH_TOKEN も渡さない（migration safety は
+    # unit job 側が担う）。PR コードを実行する job に書き込み token を置かない
+    # という token 分離原則（PR #2484 の P1 指摘）を、権限そのものを与えない形で満たす。
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
       - id: supabase-version
-        if: needs.static.outputs.integration != 'false'
         run: |
           version=$(node -p "require('./package.json').devDependencies.supabase")
           if [ "$version" = "undefined" ] || [ -z "$version" ]; then
@@ -119,17 +217,14 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        if: needs.static.outputs.integration != 'false'
         with:
           version: ${{ steps.supabase-version.outputs.version }}
 
       - name: Start Supabase
-        if: needs.static.outputs.integration != 'false'
         run: supabase start
 
       - name: Get Supabase status
         id: supabase
-        if: needs.static.outputs.integration != 'false'
         run: |
           API_URL=$(supabase status --output json | jq -r '.API_URL')
           ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
@@ -140,13 +235,9 @@ jobs:
           echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
           echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
 
-      - name: Run tests (unit + affected integration/RLS + migration safety)
+      - name: Run integration/RLS tests
         env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PRODUCT_UNIT: ${{ needs.static.outputs.product_unit }}
-          INTEGRATION_AFFECTED: ${{ needs.static.outputs.integration }}
+          INTEGRATION_AFFECTED: ${{ needs.impact.outputs.integration }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
@@ -154,8 +245,8 @@ jobs:
           USE_LOCAL_DB: 'true'
           NODE_ENV: test
           CI: true
-        run: node scripts/ci/check.mjs test
+        run: node scripts/ci/check.mjs integration
 
       - name: Stop Supabase
-        if: always() && needs.static.outputs.integration != 'false'
+        if: always()
         run: supabase stop

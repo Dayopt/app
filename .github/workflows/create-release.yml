@@ -27,6 +27,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # この job は permissions: contents: write を持つ。現状の step は gh CLI と
+          # action だけで repo のコードを実行しないが、将来 pnpm install や repo script を
+          # 1 行足した瞬間に write scope の token が任意の依存コードから読めるようになる。
+          persist-credentials: false
 
       - name: Extract version from tag
         id: version
