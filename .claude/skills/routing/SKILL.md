@@ -82,6 +82,8 @@ L0 と呼べる入口の条件は 3 つ。raw コマンドがこれを満たす�
 
 **Observability の目標状態（2026-09-02 User 定義）**: 「AI が何を見て、なぜその判断をし、何を実行し、その判断が正しかったか」を追跡できる。保存は増やさず、session ログ・git・GitHub・`decisions.md` を issue / PR 番号で join する pull 型（`pnpm trace`）に限る。「なぜ」は tool ではなく書く規律（分解表 / DoD / decisions.md）で、`ctx` の「判断の記録」行が欠落を着手時に知らせる。「正しかったか」の信号は DoD と PR 本文の突き合わせ・Codex 指摘数・`結果(未):` の回収率の 3 つ。
 
+**session の寿命**: 1 PR = 1 session を基本にする。毎 turn で履歴と tool_result が再送されるため、長い session ほど 1 turn あたりの入力が膨らむ（Uber が 400K で強制 compact する理由）。区切りは PR の draft 作成と ready 化で、`trace` の session 数と session あたり tool 呼び出し数で確認する。同じ session で次の PR に入らない。
+
 **AI が頼む前に走る層**: SessionStart hook（git 状態・token 構成比）、pre-commit / pre-push、CI 4 層、`branch:finish` の 10 ゲート。新しい確認を足す時は、まず「hook / CI で AI より先に走らせられないか」を考える。
 
 **育て方**: (1) 同じ形の tool 連鎖が 2 回出たら「候補」に載せる（`ai:usage` の Bash 頻出 prefix と最長 tool 連鎖が月次の証拠） (2) 作る前に raw で上の 3 条件を満たせないか確認する (3) wrapper は `scripts/tasks/` に置き `pnpm <name>` で呼ぶ（taxonomy test が配置を強制） (4) 1 つ足したらこの表を更新し、2 か月使われない行は削る
