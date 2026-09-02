@@ -20,7 +20,7 @@ maxTurns: 20
 
 **この gate は `pnpm branch:finish` 経路の機械強制**であり、GitHub の required check ではない（private repo + Free plan では server-side の required check 強制が効かない。既存の全 gate と同じ性質）。UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている。Codex provider 障害で gate 自体を直す PR が止まった場合も、この性質が復旧経路になる（owner が内製レビュー済みの revert PR を UI から merge し、PR にその経緯を残す）。日常のバイパスとしては使わない。
 
-`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する `[internal-review]` marker 付きコメント + inline review comment + Codex の review object で満たす。
+`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する `[internal-review]` marker 付きコメント + inline review comment + Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）で満たす。
 
 **このレビューが必須になる PR は保護対象 path / `review:full` ラベル / linked issue（`Closes #N`）の `review:full` に該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化。linked issue の継承は #2530）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
 

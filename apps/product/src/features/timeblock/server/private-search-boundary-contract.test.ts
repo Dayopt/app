@@ -223,22 +223,29 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
   if (taints.length === 0) return violations;
 
   function visitAwait(node: ts.Node) {
-    if (ts.isAwaitExpression(node) && ts.isIdentifier(node.expression)) {
-      const name = node.expression.text;
-      for (const taint of taints) {
-        if (
-          taint.targetName === name &&
-          node.getStart() > taint.pos &&
-          isDescendantOf(node, taint.scope)
-        ) {
-          if (!isSafelyGuardedAgainst(node, taint.guardText)) {
-            violations.push({
-              file: fileName,
-              line: lineOf(sourceFile, node.getStart()),
-              detail: `\`await ${name}\` が runPrivateTimeblockSearchQuery(() => ...) でラップされておらず、taint（${
-                taint.guardText ? `if (${taint.guardText}) ...` : '無条件'
-              }）を安全に迂回できません。`,
-            });
+    if (ts.isAwaitExpression(node)) {
+      // `await query` だけでなく `await query.limit(10)` / `await query.single()`
+      // のような chained call / property access も taint 変数を経由していれば
+      // 検知する。leftmostIdentifier は taint 呼び出し側の左端識別子抽出と同じ
+      // ロジックを再利用する（risk-reviewer 指摘 #2503: bare identifier のみを見ると
+      // chain 付き await が素通りしてしまう）。
+      const name = leftmostIdentifier(node.expression);
+      if (name !== null) {
+        for (const taint of taints) {
+          if (
+            taint.targetName === name &&
+            node.getStart() > taint.pos &&
+            isDescendantOf(node, taint.scope)
+          ) {
+            if (!isSafelyGuardedAgainst(node, taint.guardText)) {
+              violations.push({
+                file: fileName,
+                line: lineOf(sourceFile, node.getStart()),
+                detail: `\`await ${node.expression.getText()}\` が runPrivateTimeblockSearchQuery(() => ...) でラップされておらず、taint（${
+                  taint.guardText ? `if (${taint.guardText}) ...` : '無条件'
+                }）を安全に迂回できません。`,
+              });
+            }
           }
         }
       }

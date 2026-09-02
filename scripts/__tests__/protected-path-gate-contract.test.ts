@@ -61,6 +61,11 @@ describe('PROTECTED_PATH_GLOBS の drift 検出（#2503）', () => {
     // 対象の grep 行を取り出す: grep -Eq '^(path1|path2|...)$'
     const grepLineMatch = workflow.match(/grep -Eq '\^\(([^)]+)\)\$'/);
     expect(grepLineMatch).not.toBeNull();
+    // 将来 workflow に別の `grep -Eq '^(...)$'` が先行して追加されると、この
+    // match() は無関係な最初の 1 件を契約として検証してしまい、本来の
+    // self-change 検出リストの drift を見逃したまま green になる（risk-reviewer
+    // 指摘 #2503）。同じ形の行が複数存在しないことを固定する。
+    expect([...workflow.matchAll(/grep -Eq '\^\([^)]+\)\$'/g)]).toHaveLength(1);
 
     const alternation = grepLineMatch![1];
     // 各 alternative は shell 経由で ERE リテラルとして書かれており、正規表現の
