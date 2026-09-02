@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -40,12 +41,17 @@ function run(args: string[], cwd: string): void {
   }
 }
 
-function realBinDir(name: string): string {
+/** 実バイナリの絶対 path。無ければ null（timeout は macOS に無い）。 */
+function realBinPath(name: string): string | null {
   const result = spawnSync('bash', ['-c', `command -v ${name}`], { encoding: 'utf8' });
-  if (result.status !== 0 || !result.stdout.trim()) {
-    throw new Error(`${name} が PATH に見つかりません（test 前提）`);
-  }
-  return dirname(result.stdout.trim());
+  if (result.status !== 0 || !result.stdout.trim()) return null;
+  return result.stdout.trim();
+}
+
+function requireRealBinPath(name: string): string {
+  const found = realBinPath(name);
+  if (!found) throw new Error(`${name} が PATH に見つかりません（test 前提）`);
+  return found;
 }
 
 let workDir: string;
@@ -53,6 +59,7 @@ let repoDir: string;
 let stubDir: string;
 let ghStubDir: string;
 let basePath: string;
+let bashPath: string;
 
 beforeAll(() => {
   workDir = mkdtempSync(join(tmpdir(), 'session-start-'));
@@ -81,10 +88,20 @@ beforeAll(() => {
   writeFileSync(ghStub, '#!/bin/bash\nexit 0\n');
   chmodSync(ghStub, 0o755);
 
-  // stub を先頭に置き、hook が使う実バイナリ（git / node / date / wc / tr / timeout）だけ通す。
-  basePath = Array.from(
-    new Set([stubDir, realBinDir('git'), dirname(process.execPath), '/usr/bin', '/bin']),
-  ).join(':');
+  // PATH をホスト環境から隔離する。/usr/bin を丸ごと通すと GitHub-hosted runner の
+  // プリインストール gh が拾われ、`gh:no` を期待する case が CI で落ちる
+  // （Codex review P2、PR #2563）。hook が使う実バイナリだけを symlink した
+  // ディレクトリを作り、stub とそれ以外は一切見せない。
+  const isolatedBin = join(workDir, 'bin');
+  mkdirSync(isolatedBin);
+  for (const name of ['git', 'date', 'wc', 'tr', 'cat']) {
+    symlinkSync(requireRealBinPath(name), join(isolatedBin, name));
+  }
+  const timeoutPath = realBinPath('timeout');
+  if (timeoutPath) symlinkSync(timeoutPath, join(isolatedBin, 'timeout'));
+  symlinkSync(process.execPath, join(isolatedBin, 'node'));
+  bashPath = requireRealBinPath('bash');
+  basePath = `${stubDir}:${isolatedBin}`;
 });
 
 afterAll(() => {
@@ -114,7 +131,8 @@ function runHook(opts: { remote: boolean; stubExit?: number; withGh?: boolean })
   if (opts.remote) env.CLAUDE_CODE_REMOTE = 'true';
   if (opts.stubExit !== undefined) env.STUB_EXIT = String(opts.stubExit);
 
-  const result = spawnSync('bash', [hookPath], {
+  // bash は隔離 PATH に無いので絶対 path で起動する。
+  const result = spawnSync(bashPath, [hookPath], {
     cwd: repoDir,
     encoding: 'utf8',
     input: '{"source":"startup"}',

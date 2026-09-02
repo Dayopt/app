@@ -22,8 +22,6 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isDirectExecution } from '../lib/is-direct-execution.mjs';
-
 // --- block 判定を例外で持ち上げるための内部signal（bash の exit 2 相当）---
 class GuardBlock extends Error {
   constructor(message) {
@@ -802,19 +800,7 @@ export function evaluate(rawInput, options = {}) {
   }
 }
 
-// CLI 直接実行時（`node pre-tool-guard-rules.mjs` として stdin から JSON を
-// 読む）。通常経路は loader（pre-tool-guard.mjs）からの import 経由で
-// `evaluate()` を呼ぶ。ここは手動 smoke 用。
-if (isDirectExecution(import.meta.url)) {
-  const chunks = [];
-  process.stdin.on('data', (chunk) => chunks.push(chunk));
-  process.stdin.on('end', () => {
-    const rawInput = Buffer.concat(chunks).toString('utf8');
-    const result = evaluate(rawInput);
-    if (result.decision === 'allow') {
-      process.exit(0);
-    }
-    if (result.message) console.error(result.message);
-    process.exit(2);
-  });
-}
+// CLI 入口は持たない（loader `pre-tool-guard.mjs` が唯一の入口）。このファイルは
+// node 標準ライブラリ以外を import しない — repo 内の helper へ依存すると、その
+// helper が壊れた時にも loader の import が失敗し、復旧経路（rules 自身への
+// Write / Edit だけを通す）では直せない状態になる（Codex review P2、PR #2563）。
