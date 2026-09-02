@@ -264,7 +264,11 @@ function buildContextPackSection(ctxMarkdown) {
     lines.length > CTX_PACK_MAX_LINES
       ? lines.slice(0, CTX_PACK_MAX_LINES).join('\n') + '\n…（150 行超は省略）'
       : raw;
-  return ['<untrusted-context>', capped, '</untrusted-context>'].join('\n');
+  // 区切り子の完全性（delta re-review risk-reviewer P2）: ctx 本文に
+  // `</untrusted-context>` を書けばブロックを早期に閉じて以降を地の文として
+  // 読ませられる。本文中のタグ文字列は全角山括弧へ無害化し、閉じタグは必ず 1 回だけにする。
+  const neutralized = capped.replace(/<(\/?)untrusted-context>/gi, '＜$1untrusted-context＞');
+  return ['<untrusted-context>', neutralized, '</untrusted-context>'].join('\n');
 }
 
 // F1（prompt injection 対策、内製クロスレビュー risk-reviewer P1）: ctx pack は

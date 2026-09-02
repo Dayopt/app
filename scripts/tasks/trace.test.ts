@@ -21,7 +21,7 @@ import {
   hasInternalReviewMarker,
   hasNoEditHeavyModelSession,
   hasVerificationSection,
-  isCodexLogin,
+  loadSessionEntriesForBranch,
   matchesBranch,
   parseArgs,
   parseJsonlLines,
@@ -94,6 +94,52 @@ describe('matchesBranch', () => {
   });
 });
 
+describe('loadSessionEntriesForBranch', () => {
+  it('本体の project ディレクトリ名を prefix に持つ worktree 用ディレクトリも scan する', () => {
+    const rootDir = '-Users-x-dayopt';
+    const worktreeDir = '-Users-x-dayopt-.claude-worktrees-foo';
+    const listDirsImpl = vi.fn(() => [rootDir, worktreeDir, '-Users-x-other-repo']);
+    const listFilesImpl = vi.fn((projectDir: string) => {
+      if (projectDir.endsWith(rootDir)) return [`/${rootDir}/root-session.jsonl`];
+      if (projectDir.endsWith(worktreeDir)) return [`/${worktreeDir}/wt-session.jsonl`];
+      return [];
+    });
+    const readFileImpl = vi.fn((filePath: string) => {
+      if (filePath.includes('root-session')) {
+        return JSON.stringify({ gitBranch: 'sonnet/foo-1', timestamp: '2026-08-01T00:00:00Z' });
+      }
+      if (filePath.includes('wt-session')) {
+        return JSON.stringify({ gitBranch: 'sonnet/foo-1', timestamp: '2026-08-02T00:00:00Z' });
+      }
+      throw new Error(`unexpected file: ${filePath}`);
+    });
+
+    const entries = loadSessionEntriesForBranch({
+      projectsDir: '/home/.claude/projects',
+      cwdPrefix: '/Users/x/dayopt',
+      headRefName: 'sonnet/foo-1',
+      readFileImpl,
+      listFilesImpl,
+      listDirsImpl,
+    });
+
+    expect(entries?.map((e) => e.sessionId).sort()).toEqual(['root-session', 'wt-session'].sort());
+    // 無関係な repo のディレクトリは scan しない。
+    expect(listFilesImpl).not.toHaveBeenCalledWith(expect.stringContaining('-Users-x-other-repo'));
+  });
+
+  it('一致するディレクトリが 1 つも無ければ null', () => {
+    const entries = loadSessionEntriesForBranch({
+      projectsDir: '/home/.claude/projects',
+      cwdPrefix: '/Users/x/dayopt',
+      headRefName: 'main',
+      listDirsImpl: () => ['-Users-x-other-repo'],
+      listFilesImpl: () => [],
+    });
+    expect(entries).toBeNull();
+  });
+});
+
 describe('parseJsonlLines', () => {
   it('壊れた行を無視して parse する', () => {
     const raw = '{"a":1}\n\nnot json\n{"a":2}';
@@ -155,6 +201,34 @@ describe('buildSessionRow / buildSessionSection', () => {
     expect(summary.sessionCount).toBe(12);
     expect(summary.totalEdit).toBe(12);
   });
+
+  it('`all` は表示上限（10 件）の外の session も含む全件（#2530 P2: 11 件目以降の高コスト無編集 session を見落とさない）', () => {
+    // 12 件中、表示外（11 件目・古い方）に編集なしの opus session を混ぜる。
+    const entries = Array.from({ length: 12 }, (_, i) => ({
+      sessionId: `s${i}`,
+      records: [
+        {
+          type: 'assistant',
+          timestamp: `2026-08-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+          message: {
+            model: i === 0 ? 'opus' : 'sonnet',
+            usage: { output_tokens: 10 },
+            content:
+              i === 0
+                ? [] // 編集なし
+                : [{ type: 'tool_use', name: 'Edit', id: `${i}` }],
+          },
+        },
+      ],
+      subagentCount: 0,
+    }));
+    const { displayed, all } = buildSessionSection(entries);
+    expect(displayed).toHaveLength(10);
+    expect(displayed.some((r: { sessionId: string }) => r.sessionId === 's0')).toBe(false);
+    expect(all).toHaveLength(12);
+    expect(hasNoEditHeavyModelSession(displayed)).toBe(false);
+    expect(hasNoEditHeavyModelSession(all)).toBe(true);
+  });
 });
 
 describe('hasNoEditHeavyModelSession', () => {
@@ -213,21 +287,19 @@ describe('findReadyForReviewDate / countCommitsAfterReady / timelineLacksCommitE
   });
 });
 
-describe('isCodexLogin / countCodexPriorities', () => {
-  it('*codex または [bot] 終わりの login を判定する', () => {
-    expect(isCodexLogin('openai-codex')).toBe(true);
-    expect(isCodexLogin('some-codex')).toBe(true);
-    expect(isCodexLogin('github-actions[bot]')).toBe(true);
-    expect(isCodexLogin('tomoya')).toBe(false);
-  });
-
-  it('P1/P2 の言及件数を login で絞って数える', () => {
+describe('countCodexPriorities', () => {
+  it('P1/P2 の言及件数を Codex bot login で絞って数える', () => {
     const reviews = [
-      { user: { login: 'openai-codex' }, body: 'P1: 深刻な不具合' },
+      { user: { login: 'chatgpt-codex-connector' }, body: 'P1: 深刻な不具合' },
       { user: { login: 'tomoya' }, body: 'P1 だが自分のコメント' },
     ];
-    const comments = [{ user: { login: 'openai-codex' }, body: 'P2 の指摘' }];
+    const comments = [{ user: { login: 'chatgpt-codex-connector[bot]' }, body: 'P2 の指摘' }];
     expect(countCodexPriorities(reviews, comments)).toEqual({ p1: 1, p2: 1 });
+  });
+
+  it('dependabot[bot] 等の無関係な bot コメントは `[bot]` サフィックス一致だけでは誤計上しない', () => {
+    const comments = [{ user: { login: 'dependabot[bot]' }, body: 'P1 のセキュリティ更新' }];
+    expect(countCodexPriorities([], comments)).toEqual({ p1: 0, p2: 0 });
   });
 });
 
@@ -386,6 +458,7 @@ describe('buildInternalReviewSection', () => {
           coverage: 'partial',
           findings: 1,
           findingsSource: 'estimate',
+          totalFindings: 1,
           commitsAfterMarker: 1,
         },
         {
@@ -394,6 +467,7 @@ describe('buildInternalReviewSection', () => {
           coverage: 'complete',
           findings: 1,
           findingsSource: 'estimate',
+          totalFindings: 1,
           commitsAfterMarker: 1,
         },
       ],
@@ -429,6 +503,7 @@ describe('buildInternalReviewSection', () => {
         coverage: 'complete',
         findings: 2,
         findingsSource: 'marker',
+        totalFindings: 2,
         commitsAfterMarker: 0,
       },
       {
@@ -437,6 +512,7 @@ describe('buildInternalReviewSection', () => {
         coverage: 'complete',
         findings: 0,
         findingsSource: 'marker',
+        totalFindings: 0,
         commitsAfterMarker: 0,
       },
       {
@@ -445,9 +521,50 @@ describe('buildInternalReviewSection', () => {
         coverage: 'complete',
         findings: 1,
         findingsSource: 'estimate',
+        totalFindings: 1,
         commitsAfterMarker: 0,
       },
     ]);
+  });
+
+  it('複数 marker の findings を role ごとに合算する（round1=2, round2=0 → 合計 2）', () => {
+    const round1Body = [
+      '[internal-review]',
+      `head: ${'c'.repeat(40)}`,
+      'agent: risk-reviewer',
+      'findings: risk-reviewer=2(P1 1/P2 1)',
+      'P1: 1 件（review comment 参照）',
+      'P2: 1 件（review comment 参照）',
+    ].join('\n');
+    const round2Body = [
+      '[internal-review]',
+      `head: ${'d'.repeat(40)}`,
+      'agent: risk-reviewer',
+      'findings: risk-reviewer=0',
+      'P1: なし',
+      'P2: なし',
+    ].join('\n');
+    const issueComments = [
+      { body: round1Body, author_association: 'OWNER', created_at: '2026-08-10T00:00:00Z' },
+      { body: round2Body, author_association: 'OWNER', created_at: '2026-08-12T00:00:00Z' },
+    ];
+
+    const result = buildInternalReviewSection({ issueComments, reviewComments: [], commits: [] });
+
+    expect(result?.markerCount).toBe(2);
+    expect(result?.roles).toEqual([
+      {
+        role: 'risk-reviewer',
+        status: 'ok',
+        coverage: 'complete',
+        findings: 0,
+        findingsSource: 'marker',
+        totalFindings: 2,
+        commitsAfterMarker: 0,
+      },
+    ]);
+    // 最新 marker が 0 件でも合計が非ゼロなので歩留まりゼロ扱いにしない。
+    expect(computeZeroFindingRoleNotes(result, true)).toEqual([]);
   });
 
   it('docs-only 等 known role を含まない agent 行なら roles は空配列', () => {
@@ -474,6 +591,7 @@ describe('computeZeroFindingRoleNotes', () => {
           status: 'ok',
           coverage: 'complete',
           findings: 0,
+          totalFindings: 0,
           commitsAfterMarker: 0,
         },
         {
@@ -481,6 +599,7 @@ describe('computeZeroFindingRoleNotes', () => {
           status: 'ok',
           coverage: 'complete',
           findings: 2,
+          totalFindings: 2,
           commitsAfterMarker: 0,
         },
       ],
@@ -499,6 +618,7 @@ describe('computeZeroFindingRoleNotes', () => {
           status: 'ok',
           coverage: 'complete',
           findings: 0,
+          totalFindings: 0,
           commitsAfterMarker: 0,
         },
       ],
@@ -508,6 +628,27 @@ describe('computeZeroFindingRoleNotes', () => {
 
   it('internalReview が null なら空配列', () => {
     expect(computeZeroFindingRoleNotes(null, true)).toEqual([]);
+  });
+
+  it('最新 marker が 0 件でも、前 round の marker を合算した totalFindings が非ゼロなら所見を出さない（#2530 P2 再発防止）', () => {
+    // round 1 で 2 件・round 2（re-review）で 0 件の role を「指摘ゼロ」と
+    // 誤認しないことを確認する。totalFindings は buildInternalReviewSection が
+    // 全 marker を合算して算出する値。
+    const internalReview = {
+      markerCount: 2,
+      roles: [
+        {
+          role: 'risk-reviewer',
+          status: 'ok',
+          coverage: 'complete',
+          findings: 0,
+          findingsSource: 'marker',
+          totalFindings: 2,
+          commitsAfterMarker: 0,
+        },
+      ],
+    };
+    expect(computeZeroFindingRoleNotes(internalReview, true)).toEqual([]);
   });
 });
 
@@ -729,6 +870,7 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
         });
       }
       if (args[0] === 'api' && String(args[1]).includes('/issues/2547/comments')) {
+        expect(args).toContain('--paginate');
         return JSON.stringify([]);
       }
       if (args[0] === 'api' && args[1] === 'repos/Dayopt/dayopt/issues/2540') {

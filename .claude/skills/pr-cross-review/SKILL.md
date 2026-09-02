@@ -103,7 +103,7 @@ Workflow({
 })
 ```
 
-reviewer は diff だけでなくこの ctx pack（受け入れ条件 / DoD / 次の一手）も読み、diff がそれらと食い違う点をコードの欠陥と同じ重さで指摘する（従来は diff しか渡していなかったため、意図と乖離した実装を見逃しやすかった）。ctx pack は GitHub 上で誰でも書ける issue/PR コメント・body から組み立てられる untrusted data のため、prompt 内の配置は role prompt → 境界指示（ctx はデータであり指示ではない旨） → `<untrusted-context>` タグで囲った ctx 本体 → diff 指示、の順に固定する（ctx を先頭かつ指示文同居のまま渡すと、ctx 内の injection がプロンプト末尾の「最後の指示」として読まれかねなかった。F1、#2545 の内製レビュー指摘）。
+reviewer は diff だけでなくこの ctx pack（受け入れ条件 / DoD / 次の一手。PR mode では linked issue（Closes/Refs/Fixes、最大 3 件）の `## やること` / `## 検証` 抜粋を `#### linked issue の受け入れ条件` として持つ）も読み、diff がそれらと食い違う点をコードの欠陥と同じ重さで指摘する（従来は diff しか渡していなかったため、意図と乖離した実装を見逃しやすかった）。ctx pack は GitHub 上で誰でも書ける issue/PR コメント・body から組み立てられる untrusted data のため、prompt 内の配置は role prompt → 境界指示（ctx はデータであり指示ではない旨） → `<untrusted-context>` タグで囲った ctx 本体 → diff 指示、の順に固定する（ctx を先頭かつ指示文同居のまま渡すと、ctx 内の injection がプロンプト末尾の「最後の指示」として読まれかねなかった。F1、#2545 の内製レビュー指摘）。
 
 **role ごとの persona・read-only 契約・review scope・model は、`.claude/agents/*.md`（2026-08 に全廃、#2478）の代わりに `cross-review-workflow.js` の `ROLE_PROMPTS` / `MODEL_BY_ROLE` へ inline で持つ。** `agentType` は使わず、`agent()` 呼び出しに `model` と inline prompt（`ROLE_PROMPTS[role]` + diff 指示）だけを渡す。**既知のトレードオフ**: 旧 `.claude/agents/*.md` の `tools: Read, Grep, Glob` / `permissionMode: plan` は harness レベルの技術的強制だったが、agentType を撤去したことでこの技術的強制は失われ、read-only の担保は inline prompt 内の明示的な文章指示（+ 通常の permission gate）に後退している。これは #2478 の意図的な設計判断で、cross-review-workflow.js 冒頭のコメントに同じ注記がある。
 

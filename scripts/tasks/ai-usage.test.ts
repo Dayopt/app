@@ -132,6 +132,21 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--foo'])).toThrow(/未知の引数/);
     expect(() => parseArgs(['--since', 'not-a-date'])).toThrow(/YYYY-MM-DD/);
   });
+
+  it('実在しない日付（例: 2 月 31 日）は Date.UTC の自動繰り上げに頼らず拒否する', () => {
+    expect(() => parseArgs(['--since', '2026-02-31', '--until', '2026-03-31'])).toThrow(
+      /実在する日付/,
+    );
+    expect(() => parseArgs(['--since', '2026-01-01', '--until', '2026-02-30'])).toThrow(
+      /実在する日付/,
+    );
+  });
+
+  it('since > until は拒否する', () => {
+    expect(() => parseArgs(['--since', '2026-08-31', '--until', '2026-08-01'])).toThrow(
+      /--since は --until 以前/,
+    );
+  });
 });
 
 const BOUNDS = {
@@ -169,8 +184,11 @@ function userTextRecord(text = 'こんにちは') {
   return { type: 'user', message: { role: 'user', content: text } };
 }
 
-function toolResultRecord(entries: unknown[]) {
-  return { type: 'user', message: { role: 'user', content: entries } };
+function toolResultRecord(
+  entries: unknown[],
+  { timestamp = '2026-08-15T00:00:00.000Z', cwd = '/repo' } = {},
+) {
+  return { type: 'user', timestamp, cwd, message: { role: 'user', content: entries } };
 }
 
 describe('foldUsageRecord', () => {
@@ -208,6 +226,57 @@ describe('foldUsageRecord', () => {
     const ctx = { file: 'a.jsonl', currentChain: null };
     foldUsageRecord(agg, assistantRecord({ cwd: '/other-repo' }), BOUNDS, ctx);
     expect(agg.models.size).toBe(0);
+  });
+
+  it('窓外・cwd 不一致の assistant record は表 B（tool_result サイズ）/ D（Bash prefix・chain）から除く', () => {
+    const agg = createAggregate();
+
+    // 窓外: 2026-07-31 は BOUNDS（2026-08-01〜2026-09-01）の外。
+    const outOfWindowCtx = { file: 'out-of-window.jsonl', currentChain: null };
+    foldUsageRecord(
+      agg,
+      assistantRecord({
+        timestamp: '2026-07-31T23:59:59.000Z',
+        content: [{ type: 'tool_use', id: 'tu_ow', name: 'Bash', input: { command: 'pnpm oow' } }],
+      }),
+      BOUNDS,
+      outOfWindowCtx,
+    );
+    foldUsageRecord(
+      agg,
+      toolResultRecord([{ type: 'tool_result', tool_use_id: 'tu_ow', content: 'out of window' }], {
+        timestamp: '2026-07-31T23:59:59.000Z',
+        cwd: '/repo',
+      }),
+      BOUNDS,
+      outOfWindowCtx,
+    );
+
+    // cwd 不一致: BOUNDS は cwdPrefix '/repo'。
+    const outOfCwdCtx = { file: 'out-of-cwd.jsonl', currentChain: null };
+    foldUsageRecord(
+      agg,
+      assistantRecord({
+        cwd: '/other-repo',
+        content: [{ type: 'tool_use', id: 'tu_oc', name: 'Bash', input: { command: 'pnpm ooc' } }],
+      }),
+      BOUNDS,
+      outOfCwdCtx,
+    );
+    foldUsageRecord(
+      agg,
+      toolResultRecord([{ type: 'tool_result', tool_use_id: 'tu_oc', content: 'out of cwd' }], {
+        cwd: '/other-repo',
+      }),
+      BOUNDS,
+      outOfCwdCtx,
+    );
+
+    // どちらも B（tool_result サイズ）へ計上されない（'unknown' へも紛れ込まない）。
+    expect(agg.toolResultSizes.size).toBe(0);
+    // D（Bash prefix・chain）へも計上されない。
+    expect(agg.bashPrefixes.size).toBe(0);
+    expect(agg.chains).toHaveLength(0);
   });
 
   it('isSidechain === true は subagent 分として output を別枠計上する', () => {

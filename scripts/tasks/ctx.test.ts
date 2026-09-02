@@ -11,6 +11,7 @@ import {
   CTX_MARKER,
   detectAcceptanceCriteria,
   detectJudgmentRecords,
+  extractAcceptanceCriteriaText,
   extractLinkedIssueNumbers,
   extractParentEpic,
   extractPathTokens,
@@ -154,6 +155,27 @@ describe('isBotLogin / selectComments', () => {
     expect(selectComments(withMarkers, 10, false).map((c) => c.body)).toEqual(['1', '5']);
     expect(selectComments(withMarkers, 10, true).map((c) => c.body)).toEqual(['1', '5']);
   });
+
+  it('Codex（chatgpt-codex-connector[bot]）は bot 除外の対象外にする（実装前レビューを見落とさない）', () => {
+    const withCodex = [
+      { user: { login: 'a' }, created_at: '2026-08-01T00:00:00Z', body: '1' },
+      {
+        user: { login: 'chatgpt-codex-connector[bot]' },
+        created_at: '2026-08-02T00:00:00Z',
+        body: 'Codex のレビューコメント: P1 の指摘あり',
+      },
+      // 他の bot（dependabot 等）は引き続き除外する。
+      {
+        user: { login: 'dependabot[bot]' },
+        created_at: '2026-08-03T00:00:00Z',
+        body: 'dependency bump',
+      },
+    ];
+    expect(selectComments(withCodex, 10, false).map((c) => c.body)).toEqual([
+      '1',
+      'Codex のレビューコメント: P1 の指摘あり',
+    ]);
+  });
 });
 
 describe('extractLinkedIssueNumbers', () => {
@@ -287,6 +309,19 @@ describe('detectJudgmentRecords', () => {
     ).toMatchObject({ dod: false });
   });
 
+  it('ctx brief 自身（CTX_MARKER コメント）の「DoD: なし | 分解表: なし」で dod/breakdown が誤って true にならない（自己言及の除外）', () => {
+    const briefComment = {
+      user: { login: 'tomoya' },
+      author_association: 'OWNER',
+      body: `${CTX_MARKER}\n**brief（\`pnpm ctx 1\`、2026-09-01）**\n\n#### 判断の記録\n\nDoD: なし | 分解表: なし | brief: あり`,
+    };
+    expect(detectJudgmentRecords([briefComment], '')).toMatchObject({
+      dod: false,
+      breakdown: false,
+      brief: true,
+    });
+  });
+
   it('分解表は subtask/tier 列の表、または「分解表」の語で あり', () => {
     expect(detectJudgmentRecords([], '## 分解表\n本文')).toMatchObject({ breakdown: true });
     expect(
@@ -350,17 +385,68 @@ describe('detectAcceptanceCriteria', () => {
     expect(detectAcceptanceCriteria('## 検証\n```\npnpm test\n```')).toMatchObject({
       verification: true,
     });
-    expect(detectAcceptanceCriteria('`pnpm typecheck` を通す')).toMatchObject({
+    expect(detectAcceptanceCriteria('## 検証\n`pnpm typecheck` を通す')).toMatchObject({
       verification: true,
     });
-    expect(detectAcceptanceCriteria('`gh pr view 1` で確認')).toMatchObject({
+    expect(detectAcceptanceCriteria('## 検証\n`gh pr view 1` で確認')).toMatchObject({
       verification: true,
     });
-    expect(detectAcceptanceCriteria('expect(result).toBe(true) を足す')).toMatchObject({
+    expect(detectAcceptanceCriteria('## 検証\nexpect(result).toBe(true) を足す')).toMatchObject({
       verification: true,
     });
-    expect(detectAcceptanceCriteria('`ls -la` を実行')).toMatchObject({ verification: false });
+    expect(detectAcceptanceCriteria('## 検証\n`ls -la` を実行')).toMatchObject({
+      verification: false,
+    });
     expect(detectAcceptanceCriteria('本文だけ')).toMatchObject({ verification: false });
+  });
+
+  it('`## 検証` セクションの外にある fenced block / インラインコードは検証コマンドとして数えない', () => {
+    // §検証 セクションが無い（見出し自体が無い）本文中の言及は無視する。
+    expect(detectAcceptanceCriteria('`pnpm typecheck` を通す')).toMatchObject({
+      verification: false,
+    });
+    expect(detectAcceptanceCriteria('```\npnpm test\n```')).toMatchObject({ verification: false });
+    // §検証 セクションの手前・別セクションの言及も無視する。
+    expect(
+      detectAcceptanceCriteria(
+        ['`pnpm test` は雑談で出ただけ', '## 検証', '特に無し', '## 別セクション', '```'].join(
+          '\n',
+        ),
+      ),
+    ).toMatchObject({ verification: false });
+  });
+});
+
+describe('extractAcceptanceCriteriaText', () => {
+  it('## やること と ## 検証 セクションがあれば両方連結して返す', () => {
+    const body = [
+      '## やること',
+      '- [ ] API を実装する',
+      '- [ ] test を足す',
+      '## 検証',
+      '`pnpm test` が通る',
+      '## 別セクション（無関係）',
+      '無視される',
+    ].join('\n');
+    const text = extractAcceptanceCriteriaText(body);
+    expect(text).toContain('## やること');
+    expect(text).toContain('API を実装する');
+    expect(text).toContain('## 検証');
+    expect(text).toContain('`pnpm test` が通る');
+    expect(text).not.toContain('無視される');
+  });
+
+  it('セクション見出しが無ければ「受け入れ条件」「完了条件」を含む行だけを返す', () => {
+    const body = ['雑談', '受け入れ条件: ログインできる', '完了条件: エラーが出ない', '雑談2'].join(
+      '\n',
+    );
+    const text = extractAcceptanceCriteriaText(body);
+    expect(text).toBe('受け入れ条件: ログインできる\n完了条件: エラーが出ない');
+  });
+
+  it('何も見つからなければ空文字', () => {
+    expect(extractAcceptanceCriteriaText('本文だけ')).toBe('');
+    expect(extractAcceptanceCriteriaText(undefined)).toBe('');
   });
 });
 
@@ -412,20 +498,80 @@ describe('nextStep', () => {
 
   it('PR draft かつ CI 失敗', () => {
     expect(
-      nextStep({ kind: 'pr', number: 1, isDraft: true, ciFailure: true, unresolvedThreads: 0 }),
+      nextStep({
+        kind: 'pr',
+        number: 1,
+        isDraft: true,
+        ciRollup: { success: 0, failure: 1, pending: 0 },
+        unresolvedThreads: 0,
+      }),
     ).toBe('失敗 check を直す');
   });
 
   it('PR ready かつ未解決 thread あり', () => {
     expect(
-      nextStep({ kind: 'pr', number: 1, isDraft: false, ciFailure: false, unresolvedThreads: 2 }),
+      nextStep({
+        kind: 'pr',
+        number: 1,
+        isDraft: false,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: 2,
+      }),
     ).toBe('thread を resolve');
   });
 
   it('PR green + resolved なら branch:finish', () => {
     expect(
-      nextStep({ kind: 'pr', number: 42, isDraft: false, ciFailure: false, unresolvedThreads: 0 }),
+      nextStep({
+        kind: 'pr',
+        number: 42,
+        isDraft: false,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: 0,
+      }),
     ).toBe('pnpm branch:finish 42');
+  });
+
+  it('CI が pending 中なら branch:finish ではなく完走待ちを促す', () => {
+    expect(
+      nextStep({
+        kind: 'pr',
+        number: 42,
+        isDraft: false,
+        ciRollup: { success: 2, failure: 0, pending: 1 },
+        unresolvedThreads: 0,
+      }),
+    ).toBe('CI の完走を待つ（pending 1）');
+  });
+
+  it('CI rollup・未解決 thread・isDraft のいずれかが未取得（null）なら判断保留にする（branch:finish の fail-open 防止）', () => {
+    expect(
+      nextStep({
+        kind: 'pr',
+        number: 42,
+        isDraft: false,
+        ciRollup: null,
+        unresolvedThreads: 0,
+      }),
+    ).toBe('状態が未取得のため判断保留（gh の再実行）');
+    expect(
+      nextStep({
+        kind: 'pr',
+        number: 42,
+        isDraft: false,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: null,
+      }),
+    ).toBe('状態が未取得のため判断保留（gh の再実行）');
+    expect(
+      nextStep({
+        kind: 'pr',
+        number: 42,
+        isDraft: null,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: 0,
+      }),
+    ).toBe('状態が未取得のため判断保留（gh の再実行）');
   });
 
   it('issue で PR 紐付き済みは空文字', () => {
@@ -440,7 +586,7 @@ describe('nextStep', () => {
         kind: 'pr',
         number: 7,
         isDraft: false,
-        ciFailure: true,
+        ciRollup: { success: 0, failure: 1, pending: 0 },
         mergeStateStatus: 'DIRTY',
       }),
     ).toBe('origin/main を merge して追従する（mergeStateStatus: DIRTY）');
@@ -451,7 +597,13 @@ describe('nextStep', () => {
 
   it('draft で CI green・thread ゼロなら ready 化を促す', () => {
     expect(
-      nextStep({ kind: 'pr', number: 9, isDraft: true, ciFailure: false, unresolvedThreads: 0 }),
+      nextStep({
+        kind: 'pr',
+        number: 9,
+        isDraft: true,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: 0,
+      }),
     ).toBe('pnpm check を通して ready 化する（gh pr ready 9）');
   });
 });
@@ -484,7 +636,7 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
         return JSON.stringify({ state: 'open', title: '親 issue', labels: [] });
       }
       if (args[0] === 'search') {
-        return JSON.stringify([{ number: 99, title: 'PR', state: 'MERGED', body: 'Closes #2550' }]);
+        return JSON.stringify([{ number: 99, title: 'PR', state: 'OPEN', body: 'Closes #2550' }]);
       }
       if (args[0] === 'pr' && args[1] === 'view') {
         return JSON.stringify({
@@ -504,7 +656,7 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
     expect(pack.header.title).toBe('issue タイトル');
     expect(pack.related.parentEpic).toEqual({ number: 1, state: 'open', title: '親 issue' });
     expect(pack.related.prs).toEqual([
-      { number: 99, state: 'MERGED', title: 'PR', headRefName: 'sonnet/foo-2550' },
+      { number: 99, state: 'OPEN', title: 'PR', headRefName: 'sonnet/foo-2550' },
     ]);
     expect(pack.files).toContain('apps/product/src/foo.ts');
     expect(calls[0]).toEqual(['api', 'repos/Dayopt/dayopt/issues/2550']);
@@ -518,6 +670,54 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
     expect(pack.nextStepSecondary).toBe(
       '判断の記録が欠けている: DoD・分解表・brief・受け入れ条件・検証コマンド（dispatch §status:ready の機械判定）（routing skill 手順 1 / dispatch 手順 7）',
     );
+  });
+
+  it('issue: linked PR が CLOSED/MERGED だけなら次の一手を駆動しない（分解表を促す）', () => {
+    const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
+      if (args[0] === 'api' && args[1] === `repos/Dayopt/dayopt/issues/2550`) {
+        return JSON.stringify({
+          title: 'issue タイトル',
+          state: 'open',
+          labels: [],
+          milestone: null,
+          assignees: [],
+          html_url: 'x',
+          body: '',
+        });
+      }
+      if (
+        args[0] === 'api' &&
+        args[1] === 'repos/Dayopt/dayopt/issues/2550/comments?per_page=100'
+      ) {
+        return JSON.stringify([]);
+      }
+      if (args[0] === 'search') {
+        return JSON.stringify([
+          { number: 90, title: 'PR (closed)', state: 'CLOSED', body: 'Closes #2550' },
+          { number: 91, title: 'PR (merged)', state: 'MERGED', body: 'Closes #2550' },
+        ]);
+      }
+      if (args[0] === 'pr' && args[1] === 'view') {
+        return JSON.stringify({ headRefName: 'sonnet/foo-2550', files: [] });
+      }
+      throw new Error(`unexpected args: ${args.join(' ')}`);
+    });
+
+    const pack = buildContextPack(
+      { number: 2550, comments: 5, bodyLines: 60, allComments: false },
+      { execFileImpl, existsFn: () => false, readFileImpl: () => '' },
+    );
+
+    // 関連セクションには closed/merged PR も引き続き載る。
+    expect(pack.related.prs).toEqual([
+      { number: 90, state: 'CLOSED', title: 'PR (closed)', headRefName: 'sonnet/foo-2550' },
+      { number: 91, state: 'MERGED', title: 'PR (merged)', headRefName: 'sonnet/foo-2550' },
+    ]);
+    // だが次の一手は「紐付き済み」扱いにしない（linked PR #90/#91 を進める、には
+    // ならない）。judgmentHint が上書きするため実際の文言は「分解表」を含む
+    // 判断の記録の欠落ヒントになる。
+    expect(pack.nextStep).not.toContain('linked PR');
+    expect(pack.nextStep).toContain('分解表');
   });
 
   it('PR: pull_request キー検出後 pr view + graphql(reviewThreads) を呼ぶ', () => {
@@ -573,10 +773,84 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
     expect(pack.header.headRefName).toBe('sonnet/foo');
     expect(pack.header.unresolvedThreads).toBe(0);
     expect(pack.related.linkedIssues).toEqual([
-      { number: 2550, state: 'closed', title: '紐付け issue', labels: [] },
+      { number: 2550, state: 'closed', title: '紐付け issue', labels: [], acceptanceText: '' },
     ]);
     expect(pack.nextStep).toBe('pnpm branch:finish 2549');
     expect(pack.judgmentRecords).toBeNull();
+  });
+
+  it('PR: reviewThreads が 100 件を超えたら pageInfo.hasNextPage で追加ページを取得し全件数える', () => {
+    let graphqlCallCount = 0;
+    const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
+      if (args[0] === 'api' && args[1] === `repos/Dayopt/dayopt/issues/2549`) {
+        return JSON.stringify({ pull_request: { url: 'x' } });
+      }
+      if (args[0] === 'pr' && args[1] === 'view') {
+        return JSON.stringify({
+          number: 2549,
+          title: 'PR タイトル',
+          state: 'OPEN',
+          url: 'x',
+          labels: [],
+          milestone: null,
+          assignees: [],
+          headRefName: 'sonnet/foo',
+          baseRefName: 'main',
+          isDraft: false,
+          mergeStateStatus: 'CLEAN',
+          reviewDecision: 'APPROVED',
+          statusCheckRollup: [{ conclusion: 'SUCCESS' }],
+          body: '',
+          files: [],
+        });
+      }
+      if (args[0] === 'api' && args[1] === 'graphql') {
+        graphqlCallCount += 1;
+        if (graphqlCallCount === 1) {
+          expect(args.some((a) => a.startsWith('after='))).toBe(false);
+          return JSON.stringify({
+            data: {
+              repository: {
+                pullRequest: {
+                  reviewThreads: {
+                    nodes: [{ isResolved: false }],
+                    pageInfo: { hasNextPage: true, endCursor: 'CURSOR1' },
+                  },
+                },
+              },
+            },
+          });
+        }
+        expect(args.some((a) => a === 'after=CURSOR1')).toBe(true);
+        return JSON.stringify({
+          data: {
+            repository: {
+              pullRequest: {
+                reviewThreads: {
+                  nodes: [{ isResolved: false }],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                },
+              },
+            },
+          },
+        });
+      }
+      if (
+        args[0] === 'api' &&
+        args[1] === 'repos/Dayopt/dayopt/issues/2549/comments?per_page=100'
+      ) {
+        return JSON.stringify([]);
+      }
+      throw new Error(`unexpected args: ${args.join(' ')}`);
+    });
+
+    const pack = buildContextPack(
+      { number: 2549, comments: 5, bodyLines: 60, allComments: false },
+      { execFileImpl, existsFn: () => false, readFileImpl: () => '' },
+    );
+
+    expect(graphqlCallCount).toBe(2);
+    expect(pack.header.unresolvedThreads).toBe(2);
   });
 
   it('gh 呼び出し全滅でも例外にせず未取得の pack を返す', () => {
@@ -689,6 +963,145 @@ describe('renderMarkdown', () => {
     expect(markdown).not.toContain('skill');
     expect(markdown).not.toContain('次の一手');
   });
+
+  it('可変セクションが巨大でも 150 行以内に収め、末尾セクションは残す（150 行保証）', () => {
+    const hugeBody = Array.from({ length: 200 }, (_, i) => `本文行 ${i}`).join('\n');
+    const manyComments = Array.from({ length: 40 }, (_, i) => ({
+      author: `user${i}`,
+      date: '2026-08-01',
+      body: `コメント本文 ${i}\n2 行目`,
+    }));
+    const manyFiles = Array.from({ length: 60 }, (_, i) => `apps/product/src/file${i}.ts`);
+    const pack = {
+      number: 9999,
+      kind: 'pr' as const,
+      header: {
+        title: '巨大 PR',
+        state: 'OPEN',
+        labels: [],
+        milestone: null,
+        assignee: null,
+        url: 'https://github.com/Dayopt/dayopt/pull/9999',
+        headRefName: 'sonnet/huge',
+        baseRefName: 'main',
+        isDraft: false,
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: null,
+        ciRollup: { success: 3, failure: 0, pending: 0 },
+        unresolvedThreads: 0,
+      },
+      body: { text: hugeBody, truncated: false, remaining: 0 },
+      comments: manyComments,
+      related: {
+        parentEpic: null,
+        prs: null,
+        linkedIssues: Array.from({ length: 20 }, (_, i) => ({
+          number: 3000 + i,
+          state: 'open',
+          title: `紐付け issue ${i}`,
+          labels: [],
+        })),
+      },
+      files: manyFiles,
+      protectedRequired: true,
+      decisionLines: [],
+      skills: ['pr-cross-review'],
+      judgmentRecords: { dod: true, breakdown: true, brief: true },
+      nextStep: 'pnpm branch:finish 9999',
+      nextStepSecondary: null,
+    };
+
+    // この fixture は縮小しなければ 300 行を大きく超える。
+    const markdown = renderMarkdown(pack);
+    const lineCount = markdown.split('\n').length;
+    expect(lineCount).toBeLessThanOrEqual(150);
+    expect(markdown).toContain('#### 判断の記録');
+    expect(markdown).toContain('次の一手: pnpm branch:finish 9999');
+  });
+
+  it('PR mode: linked issue の acceptanceText を `#### linked issue の受け入れ条件` として ≤25 行で描画する', () => {
+    const pack = {
+      number: 3000,
+      kind: 'pr' as const,
+      header: {
+        title: 'PR タイトル',
+        state: 'OPEN',
+        labels: [],
+        milestone: null,
+        assignee: null,
+        url: 'x',
+        headRefName: 'sonnet/foo',
+        baseRefName: 'main',
+        isDraft: false,
+        mergeStateStatus: 'CLEAN',
+        reviewDecision: null,
+        ciRollup: { success: 1, failure: 0, pending: 0 },
+        unresolvedThreads: 0,
+      },
+      body: { text: '本文', truncated: false, remaining: 0 },
+      comments: [],
+      related: {
+        parentEpic: null,
+        prs: null,
+        linkedIssues: [
+          {
+            number: 100,
+            state: 'open',
+            title: 'issue A',
+            labels: [],
+            acceptanceText: '## やること\n- [ ] やる',
+          },
+          {
+            number: 101,
+            state: 'open',
+            title: 'issue B（本文になし）',
+            labels: [],
+            acceptanceText: '',
+          },
+          {
+            number: 102,
+            state: 'open',
+            title: 'issue C',
+            labels: [],
+            acceptanceText: Array.from({ length: 40 }, (_, i) => `行${i}`).join('\n'),
+          },
+          {
+            number: 103,
+            state: 'open',
+            title: 'issue D（4 件目は表示しない）',
+            labels: [],
+            acceptanceText: '受け入れ条件: D',
+          },
+        ],
+      },
+      files: null,
+      protectedRequired: null,
+      decisionLines: [],
+      skills: [],
+      judgmentRecords: null,
+      nextStep: '',
+      nextStepSecondary: null,
+    };
+
+    const markdown = renderMarkdown(pack);
+    expect(markdown).toContain('#### linked issue の受け入れ条件');
+
+    const allLines = markdown.split('\n');
+    const sectionStart = allLines.indexOf('#### linked issue の受け入れ条件');
+    const afterHeading = allLines.slice(sectionStart + 1);
+    const nextHeadingIdx = afterHeading.findIndex((line) => line.startsWith('#### '));
+    const sectionBodyLines =
+      nextHeadingIdx === -1 ? afterHeading : afterHeading.slice(0, nextHeadingIdx);
+    const ownSectionLines = ['#### linked issue の受け入れ条件', ...sectionBodyLines];
+    const sectionText = sectionBodyLines.join('\n');
+
+    expect(sectionText).toContain('#100 issue A');
+    // acceptanceText が空の issue B は省く。
+    expect(sectionText).not.toContain('issue B');
+    // 最大 3 件までしか含めない（4 件目の issue D は出さない）。
+    expect(sectionText).not.toContain('issue D');
+    expect(ownSectionLines.length).toBeLessThanOrEqual(25);
+  });
 });
 
 describe('buildCommentBody', () => {
@@ -702,27 +1115,78 @@ describe('buildCommentBody', () => {
 });
 
 describe('findMarkerComment', () => {
+  const authLogin = 'tomoya';
+
   it('マーカーで始まる、かつ author_association が信頼できる本文のコメントを見つける', () => {
     const comments = [
-      { id: 1, body: '普通のコメント', author_association: 'OWNER' },
-      { id: 2, body: `${CTX_MARKER}\n**brief（...）**`, author_association: 'OWNER' },
+      { id: 1, body: '普通のコメント', author_association: 'OWNER', user: { login: authLogin } },
+      {
+        id: 2,
+        body: `${CTX_MARKER}\n**brief（...）**`,
+        author_association: 'OWNER',
+        user: { login: authLogin },
+      },
     ];
-    expect(findMarkerComment(comments)?.id).toBe(2);
+    expect(findMarkerComment(comments, authLogin)?.id).toBe(2);
   });
 
   it('無ければ null、配列でなければ null', () => {
     expect(
-      findMarkerComment([{ id: 1, body: '普通のコメント', author_association: 'OWNER' }]),
+      findMarkerComment(
+        [
+          {
+            id: 1,
+            body: '普通のコメント',
+            author_association: 'OWNER',
+            user: { login: authLogin },
+          },
+        ],
+        authLogin,
+      ),
     ).toBeNull();
-    expect(findMarkerComment(undefined)).toBeNull();
+    expect(findMarkerComment(undefined, authLogin)).toBeNull();
   });
 
   it('F2: マーカーがあっても author_association が信頼できなければ見つけない（なりすまし防止）', () => {
     const comments = [
-      { id: 1, body: `${CTX_MARKER}\n偽の brief`, author_association: 'NONE' },
-      { id: 2, body: `${CTX_MARKER}\n本物の brief`, author_association: 'COLLABORATOR' },
+      {
+        id: 1,
+        body: `${CTX_MARKER}\n偽の brief`,
+        author_association: 'NONE',
+        user: { login: authLogin },
+      },
+      {
+        id: 2,
+        body: `${CTX_MARKER}\n本物の brief`,
+        author_association: 'COLLABORATOR',
+        user: { login: authLogin },
+      },
     ];
-    expect(findMarkerComment(comments)?.id).toBe(2);
+    expect(findMarkerComment(comments, authLogin)?.id).toBe(2);
+  });
+
+  it('認証ユーザーと異なる login の marker コメントは対象にしない（他ユーザーの brief を誤って PATCH しない）', () => {
+    const comments = [
+      {
+        id: 1,
+        body: `${CTX_MARKER}\n他ユーザーの brief`,
+        author_association: 'OWNER',
+        user: { login: 'other-user' },
+      },
+    ];
+    expect(findMarkerComment(comments, authLogin)).toBeNull();
+  });
+
+  it('authLogin が未取得（null）なら fail-open で常に null（新規作成へ倒す）', () => {
+    const comments = [
+      {
+        id: 1,
+        body: `${CTX_MARKER}\n本物の brief`,
+        author_association: 'OWNER',
+        user: { login: authLogin },
+      },
+    ];
+    expect(findMarkerComment(comments, null)).toBeNull();
   });
 });
 
@@ -759,7 +1223,10 @@ describe('postContextBrief', () => {
     const calls: string[][] = [];
     const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
       calls.push(args);
-      if (args[0] === 'api') return JSON.stringify([{ id: 1, body: '無関係なコメント' }]);
+      if (args[0] === 'api' && args[1] === 'user') return 'tomoya\n';
+      if (args[0] === 'api') {
+        return JSON.stringify([{ id: 1, body: '無関係なコメント', user: { login: 'tomoya' } }]);
+      }
       if (args[0] === 'issue' && args[1] === 'comment') {
         return 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-1\n';
       }
@@ -784,7 +1251,8 @@ describe('postContextBrief', () => {
       'repos/Dayopt/dayopt/issues/2550/comments?per_page=100',
       '--paginate',
     ]);
-    expect(calls[1]).toEqual([
+    expect(calls[1]).toEqual(['api', 'user', '--jq', '.login']);
+    expect(calls[2]).toEqual([
       'issue',
       'comment',
       '2550',
@@ -802,9 +1270,15 @@ describe('postContextBrief', () => {
     const calls: string[][] = [];
     const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
       calls.push(args);
+      if (args[0] === 'api' && args[1] === 'user') return 'tomoya\n';
       if (args[0] === 'api' && args[1] !== '-X') {
         return JSON.stringify([
-          { id: 42, body: `${CTX_MARKER}\n古い brief`, author_association: 'OWNER' },
+          {
+            id: 42,
+            body: `${CTX_MARKER}\n古い brief`,
+            author_association: 'OWNER',
+            user: { login: 'tomoya' },
+          },
         ]);
       }
       if (args[0] === 'api' && args[1] === '-X') {
@@ -828,7 +1302,7 @@ describe('postContextBrief', () => {
       mode: 'update',
       url: 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-42',
     });
-    expect(calls[1]).toEqual([
+    expect(calls[2]).toEqual([
       'api',
       '-X',
       'PATCH',
@@ -836,5 +1310,38 @@ describe('postContextBrief', () => {
       '-F',
       'body=@/tmp/ctx-brief-abc/body.md',
     ]);
+  });
+
+  it('認証ユーザーの取得に失敗しても fail-open で新規作成する（他ユーザーの brief を誤って PATCH しない）', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
+      calls.push(args);
+      if (args[0] === 'api' && args[1] === 'user') throw new Error('not authenticated');
+      if (args[0] === 'api') {
+        return JSON.stringify([
+          {
+            id: 42,
+            body: `${CTX_MARKER}\n他ユーザーの brief`,
+            author_association: 'OWNER',
+            user: { login: 'other-user' },
+          },
+        ]);
+      }
+      if (args[0] === 'issue' && args[1] === 'comment') {
+        return 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-99\n';
+      }
+      throw new Error(`unexpected args: ${args.join(' ')}`);
+    });
+    const writeFileImpl = vi.fn();
+    const mkdtempImpl = vi.fn(() => '/tmp/ctx-brief-fail-open');
+
+    const result = postContextBrief(pack, markdown, {
+      execFileImpl,
+      writeFileImpl,
+      mkdtempImpl,
+      now: () => new Date('2026-09-02T00:00:00Z'),
+    });
+
+    expect(result.mode).toBe('create');
   });
 });

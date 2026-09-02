@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { REPO, runGh, runGhJson } from '../lib/gh.mjs';
 import { isDirectExecution } from '../lib/is-direct-execution.mjs';
+import { isCodexBotLogin } from '../lib/issue-review-core.mjs';
 import {
   computeExplorationBeforeEdit,
   cwdPrefixToProjectDirSegment,
@@ -130,9 +131,31 @@ export function matchesBranch(records, headRefName) {
   return (records ?? []).some((r) => r && r.gitBranch === headRefName);
 }
 
+/** `projectsDir` 直下のディレクトリ名一覧（`listDirsImpl` の既定実装）。 */
+function defaultListProjectDirNames(projectsDir) {
+  return readdirSync(projectsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+}
+
 /**
  * `headRefName` の project ディレクトリを walk し、branch が一致する session だけの
  * record 列を集める（I/O をここへ閉じ込め、以降の集計は純関数にする）。
+ *
+ * **worktree 対応**: worktree（`.claude/worktrees/<name>`）内で動いた session の
+ * project ディレクトリ名は、リポジトリ本体の cwd（`cwdPrefix`）ではなく worktree の
+ * cwd をエンコードした名前になる（例: `-Users-x-dayopt` の本体に対し worktree は
+ * `-Users-x-dayopt-.claude-worktrees-foo`）。エンコードは `/` → `-` の単純置換で
+ * サブディレクトリ関係を保つため、本体の project ディレクトリ名を **prefix** として
+ * 持つ全ディレクトリを列挙し、それぞれで branch 一致 session を集める。
+ * @param {{
+ *   projectsDir?: string,
+ *   cwdPrefix?: string,
+ *   headRefName?: string,
+ *   readFileImpl?: (path: string, encoding: string) => string,
+ *   listFilesImpl?: (projectDir: string) => string[] | null,
+ *   listDirsImpl?: (projectsDir: string) => string[],
+ * }} [options]
  */
 export function loadSessionEntriesForBranch({
   projectsDir = PROJECTS_DIR,
@@ -140,23 +163,31 @@ export function loadSessionEntriesForBranch({
   headRefName,
   readFileImpl = readFileSync,
   listFilesImpl = listJsonlFiles,
+  listDirsImpl = defaultListProjectDirNames,
 } = {}) {
   const projectDirSegment = cwdPrefixToProjectDirSegment(cwdPrefix);
-  const projectDir = join(projectsDir, projectDirSegment);
-  const files = tryOr(() => listFilesImpl(projectDir), null);
-  if (files === null) return null;
+  const dirNames = tryOr(() => listDirsImpl(projectsDir), []) ?? [];
+  const matchingDirNames = dirNames.filter((name) => name.startsWith(projectDirSegment));
 
-  const groups = groupFilesBySession(files);
   const entries = [];
-  for (const [sessionId, { sessionFile, subagentFiles }] of groups) {
-    if (!sessionFile) continue;
-    const raw = tryOr(() => readFileImpl(sessionFile, 'utf8'), null);
-    if (raw === null) continue;
-    const records = parseJsonlLines(raw);
-    if (!matchesBranch(records, headRefName)) continue;
-    entries.push({ sessionId, records, subagentCount: subagentFiles.length });
+  let anyDirFound = false;
+  for (const dirName of matchingDirNames) {
+    const projectDir = join(projectsDir, dirName);
+    const files = tryOr(() => listFilesImpl(projectDir), null);
+    if (files === null) continue;
+    anyDirFound = true;
+
+    const groups = groupFilesBySession(files);
+    for (const [sessionId, { sessionFile, subagentFiles }] of groups) {
+      if (!sessionFile) continue;
+      const raw = tryOr(() => readFileImpl(sessionFile, 'utf8'), null);
+      if (raw === null) continue;
+      const records = parseJsonlLines(raw);
+      if (!matchesBranch(records, headRefName)) continue;
+      entries.push({ sessionId, records, subagentCount: subagentFiles.length });
+    }
   }
-  return entries;
+  return anyDirFound ? entries : null;
 }
 
 function median(values) {
@@ -237,6 +268,11 @@ export function buildSessionSection(entries) {
 
   return {
     displayed,
+    // 表示は最新 10 件に絞るが、`hasNoEditHeavyModelSession` のような所見判定は
+    // 表示外の session も見落としてはいけない（#2530 push 前反証レビュー P2:
+    // 11 件目以降に「編集なしの Opus/Fable」があっても displayed だけ見ると
+    // 検出できない）。summary 計算と同じ全件（rows）をここに残す。
+    all: rows,
     summary: {
       sessionCount: rows.length,
       modelTotals,
@@ -302,19 +338,16 @@ export function countCommitsAfterReadyFallback(commits, readyDate) {
   }).length;
 }
 
-/** login が Codex のレビュー/コメントか（`*codex` または `[bot]` 終わり）。 */
-export function isCodexLogin(login) {
-  if (typeof login !== 'string') return false;
-  return /codex$/i.test(login) || /\[bot\]$/i.test(login);
-}
-
 /** Codex（`reviews` + `pulls/N/comments`）の P1/P2 言及件数を数える。 */
 export function countCodexPriorities(reviews, comments) {
   const items = [...(reviews ?? []), ...(comments ?? [])];
   let p1 = 0;
   let p2 = 0;
   for (const item of items) {
-    if (!isCodexLogin(item?.user?.login)) continue;
+    // `[bot]` サフィックス一致だけで判定すると dependabot[bot] 等の無関係な bot
+    // コメントに "P1" という文字列が含まれるだけで誤計上する（#2530 実装済みの
+    // `isCodexBotLogin` を再利用し、Codex 本体の login とだけ一致させる）。
+    if (!isCodexBotLogin(item?.user?.login)) continue;
     const body = item?.body ?? '';
     if (/\bP1\b/.test(body)) p1 += 1;
     if (/\bP2\b/.test(body)) p2 += 1;
@@ -467,6 +500,20 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
   const markerCommentSet = new Set(markers);
   const nonMarkerIssueComments = (issueComments ?? []).filter((c) => !markerCommentSet.has(c));
 
+  // ヒューリスティック推定は marker 単位で時間分割できない（review comment /
+  // issue comment 自体が個々の marker に紐付いていないため）。role ごとに 1 回だけ
+  // 計算し、findings: 行を持たない marker の raund すべてで同じ推定値を使う。
+  const estimateByRole = new Map();
+  const estimateFor = (role) => {
+    if (!estimateByRole.has(role)) {
+      estimateByRole.set(
+        role,
+        countRoleFindingsHeuristic(role, reviewComments, nonMarkerIssueComments),
+      );
+    }
+    return estimateByRole.get(role);
+  };
+
   const roles = agentRoles
     .filter((r) => KNOWN_REVIEWER_ROLES.includes(r.role))
     .map((r) => {
@@ -474,14 +521,30 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
         ? markerFindings[r.role]
         : undefined;
       const hasAuthoritativeCount = typeof markerCount === 'number';
+      const findings = hasAuthoritativeCount ? markerCount : estimateFor(r.role);
+      const findingsSource = hasAuthoritativeCount ? 'marker' : 'estimate';
+
+      // 歩留まり判定（`computeZeroFindingRoleNotes`）は「最新 marker だけ 0 件」
+      // では止まらない — round 1 で 2 件拾って round 2（re-review）で 0 件になった
+      // だけの role を「指摘ゼロの role」と誤認し、Haiku 化 / 廃止候補に挙げて
+      // しまう（#2530 push 前反証レビュー P2）。PR 上の全 marker を横断して合計し、
+      // それを判定に使う。findings: 行が無い marker はここでも同じ推定値を加算する。
+      let totalFindings = 0;
+      for (const marker of sorted) {
+        const perMarkerFindings = parseMarkerFindingsField(marker.body);
+        const perMarkerCount = Object.prototype.hasOwnProperty.call(perMarkerFindings, r.role)
+          ? perMarkerFindings[r.role]
+          : undefined;
+        totalFindings += typeof perMarkerCount === 'number' ? perMarkerCount : estimateFor(r.role);
+      }
+
       return {
         role: r.role,
         status: r.status,
         coverage: partialRoles.has(r.role) ? 'partial' : 'complete',
-        findings: hasAuthoritativeCount
-          ? markerCount
-          : countRoleFindingsHeuristic(r.role, reviewComments, nonMarkerIssueComments),
-        findingsSource: hasAuthoritativeCount ? 'marker' : 'estimate',
+        findings,
+        findingsSource,
+        totalFindings,
         commitsAfterMarker,
       };
     });
@@ -497,8 +560,10 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
 /** 指摘 0 件の role のうち PR が merged なら Haiku化/廃止候補の所見行を返す（月次歩留まり判定用）。 */
 export function computeZeroFindingRoleNotes(internalReview, merged) {
   if (!internalReview || !merged) return [];
+  // 最新 marker だけでなく、PR 上の全 marker（re-review 込み）を合計した値で
+  // 判定する（`buildInternalReviewSection` の `totalFindings`）。
   return internalReview.roles
-    .filter((r) => r.findings === 0)
+    .filter((r) => r.totalFindings === 0)
     .map(
       (r) =>
         `${r.role}: 指摘ゼロの role: 月次で歩留まりを見て Haiku 化 / 廃止候補（gardening 手順 4）`,
@@ -691,7 +756,7 @@ export function renderMarkdown(pack) {
         for (const role of ir.roles) {
           const sourceLabel = role.findingsSource === 'marker' ? 'marker' : '推定';
           lines.push(
-            `- ${role.role}: 指摘 ${role.findings}（${sourceLabel}） / status ${role.status} / coverage ${role.coverage} / marker 後の commit ${role.commitsAfterMarker === null ? '未取得' : role.commitsAfterMarker}`,
+            `- ${role.role}: 指摘 合計 ${role.totalFindings}（marker ${ir.markerCount} 件、最新 ${role.findings}（${sourceLabel}）） / status ${role.status} / coverage ${role.coverage} / marker 後の commit ${role.commitsAfterMarker === null ? '未取得' : role.commitsAfterMarker}`,
           );
         }
       } else {
@@ -743,6 +808,7 @@ export function buildTracePack(options, deps = {}) {
     execFileImpl,
     readFileImpl = readFileSync,
     listFilesImpl = listJsonlFiles,
+    listDirsImpl,
     cwd = process.cwd(),
     projectsDir = PROJECTS_DIR,
   } = deps;
@@ -784,6 +850,7 @@ export function buildTracePack(options, deps = {}) {
         headRefName: pr.headRefName,
         readFileImpl,
         listFilesImpl,
+        listDirsImpl,
       })
     : null;
   const sessions = sessionEntries === null ? null : buildSessionSection(sessionEntries);
@@ -871,7 +938,9 @@ export function buildTracePack(options, deps = {}) {
 
   const issueComments = tryOr(
     () =>
-      runGhJson(['api', `repos/${REPO}/issues/${number}/comments?per_page=100`], { execFileImpl }),
+      runGhJson(['api', `repos/${REPO}/issues/${number}/comments?per_page=100`, '--paginate'], {
+        execFileImpl,
+      }),
     null,
   );
   const hasMarker = issueComments === null ? null : hasInternalReviewMarker(issueComments);
@@ -918,7 +987,7 @@ export function buildTracePack(options, deps = {}) {
       exploreMedian: sessions?.summary?.exploreMedian ?? null,
       codexP1: codex?.p1 ?? 0,
       commitsAfterReady,
-      hasNoEditHeavyModel: hasNoEditHeavyModelSession(sessions?.displayed ?? []),
+      hasNoEditHeavyModel: hasNoEditHeavyModelSession(sessions?.all ?? []),
     }),
     ...computeZeroFindingRoleNotes(internalReview, result.merged),
   ];

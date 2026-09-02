@@ -223,6 +223,20 @@ function pad2(n) {
   return String(n).padStart(2, '0');
 }
 
+/**
+ * `YYYY-MM-DD` が実在するカレンダー日付かどうか。`Date.UTC` は範囲外の日
+ * （例: 2026-02-31）を自動繰り上げ（2026-03-03）するため、正規表現での書式
+ * チェックだけでは非実在日付を素通ししてしまう。年月日を作った `Date` を
+ * 逆変換して一致するかで判定する。
+ * @param {string} value
+ */
+function isValidCalendarDateStr(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 function toDateStr(date) {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
@@ -256,11 +270,14 @@ export function parseArgs(argv, now = new Date()) {
       throw new Error(`未知の引数です: ${arg}（--since / --until / --json / --cwd-prefix のみ）`);
     }
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(options.since ?? '')) {
-    throw new Error('--since は YYYY-MM-DD で指定する');
+  if (!isValidCalendarDateStr(options.since)) {
+    throw new Error(`--since は実在する日付を YYYY-MM-DD で指定する: "${options.since}"`);
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(options.until ?? '')) {
-    throw new Error('--until は YYYY-MM-DD で指定する');
+  if (!isValidCalendarDateStr(options.until)) {
+    throw new Error(`--until は実在する日付を YYYY-MM-DD で指定する: "${options.until}"`);
+  }
+  if (options.since > options.until) {
+    throw new Error(`--since は --until 以前にしてください: ${options.since} > ${options.until}`);
   }
   return options;
 }
@@ -373,6 +390,22 @@ function contentLength(content) {
 }
 
 /**
+ * timestamp が bounds の窓内かどうか。`sinceMs`/`untilMs` がどちらも無限大
+ * （`collectToolResultSizes` 等、test 用の窓なし呼び出し）の時は「窓の指定が無い」
+ * とみなし、record 自身に timestamp が無くても通す。実運用（`scanProjects` 経由）
+ * では常に有限の `sinceMs`/`untilMs` が渡るため、この分岐は無窓呼び出し専用。
+ * @param {number} timestampMs
+ * @param {{ sinceMs: number, untilMs: number }} bounds
+ */
+function isTimestampInWindow(timestampMs, bounds) {
+  const hasWindow = Number.isFinite(bounds.sinceMs) || Number.isFinite(bounds.untilMs);
+  if (!hasWindow) return true;
+  return (
+    Number.isFinite(timestampMs) && timestampMs >= bounds.sinceMs && timestampMs < bounds.untilMs
+  );
+}
+
+/**
  * 1 レコード（parse 済み JSON）を集計へ畳み込む。窓外・cwd 不一致・dedup 済みは
  * 無視する。isDirectExecution 系の副作用は持たず純関数として test できる。
  * @param {ReturnType<typeof createAggregate>} agg
@@ -390,26 +423,30 @@ export function foldUsageRecord(agg, record, bounds, ctx) {
     const timestamp = record.timestamp ? Date.parse(record.timestamp) : NaN;
     const cwd = typeof record.cwd === 'string' ? record.cwd : '';
 
-    const inWindow =
-      Number.isFinite(timestamp) && timestamp >= bounds.sinceMs && timestamp < bounds.untilMs;
+    const inWindow = isTimestampInWindow(timestamp, bounds);
     const cwdMatches = !bounds.cwdPrefix || cwd.startsWith(bounds.cwdPrefix);
+    // 窓外・cwd 不一致の record は B（context bloat）/D（L0 候補）のどちらにも
+    // 混ぜない。tool_use → 名前の Map は tool_result 側の帰属に使うため、ここで
+    // 対象外にした id は後段の tool_result（type: 'user'）でも 'unknown' 扱いに
+    // なり、選択した期間・repo 以外の record が表へ紛れ込まない。
+    const accepted = inWindow && cwdMatches;
 
-    // tool_use → 名前の Map は L0/B 集計に使うため、model 集計の窓外判定とは
-    // 独立に常時記録する（tool_result 側は自分のタイムスタンプを持たないため）。
     const content = Array.isArray(message.content) ? message.content : [];
-    for (const block of content) {
-      if (block && block.type === 'tool_use' && typeof block.id === 'string') {
-        agg.toolNamesById.set(block.id, block.name ?? 'unknown');
-        if (block.name === 'Bash' && block.input && typeof block.input.command === 'string') {
-          const prefix = extractBashPrefix(block.input.command);
-          if (prefix) {
-            agg.bashPrefixes.set(prefix, (agg.bashPrefixes.get(prefix) ?? 0) + 1);
+    if (accepted) {
+      for (const block of content) {
+        if (block && block.type === 'tool_use' && typeof block.id === 'string') {
+          agg.toolNamesById.set(block.id, block.name ?? 'unknown');
+          if (block.name === 'Bash' && block.input && typeof block.input.command === 'string') {
+            const prefix = extractBashPrefix(block.input.command);
+            if (prefix) {
+              agg.bashPrefixes.set(prefix, (agg.bashPrefixes.get(prefix) ?? 0) + 1);
+            }
           }
         }
       }
     }
 
-    if (inWindow && cwdMatches && messageId && !agg.seenMessageIds.has(messageId)) {
+    if (accepted && messageId && !agg.seenMessageIds.has(messageId)) {
       agg.seenMessageIds.add(messageId);
       const label = normalizeModelLabel(message.model);
       if (label) {
@@ -440,18 +477,21 @@ export function foldUsageRecord(agg, record, bounds, ctx) {
     }
 
     // チェイン検出: このレコードに tool_use が含まれれば「進行中チェイン」を継続。
-    const toolUseBlocks = content.filter((b) => b && b.type === 'tool_use');
-    if (toolUseBlocks.length > 0) {
-      let chain = ctx.currentChain;
-      if (!chain || chain.file !== ctx.file) {
-        chain = { file: ctx.file, length: 0, tools: new Map() };
-        ctx.currentChain = chain;
-        agg.chains.push(chain);
-      }
-      chain.length += toolUseBlocks.length;
-      for (const block of toolUseBlocks) {
-        const name = block.name ?? 'unknown';
-        chain.tools.set(name, (chain.tools.get(name) ?? 0) + 1);
+    // 窓外・cwd 不一致の record は D（L0 候補）のチェイン長へ混ぜない。
+    if (accepted) {
+      const toolUseBlocks = content.filter((b) => b && b.type === 'tool_use');
+      if (toolUseBlocks.length > 0) {
+        let chain = ctx.currentChain;
+        if (!chain || chain.file !== ctx.file) {
+          chain = { file: ctx.file, length: 0, tools: new Map() };
+          ctx.currentChain = chain;
+          agg.chains.push(chain);
+        }
+        chain.length += toolUseBlocks.length;
+        for (const block of toolUseBlocks) {
+          const name = block.name ?? 'unknown';
+          chain.tools.set(name, (chain.tools.get(name) ?? 0) + 1);
+        }
       }
     }
     return;
@@ -460,6 +500,17 @@ export function foldUsageRecord(agg, record, bounds, ctx) {
   if (record.type === 'user') {
     const message = record.message ?? {};
     const content = message.content;
+    const timestamp = record.timestamp ? Date.parse(record.timestamp) : NaN;
+    const cwd = typeof record.cwd === 'string' ? record.cwd : '';
+    const inWindow = isTimestampInWindow(timestamp, bounds);
+    const cwdMatches = !bounds.cwdPrefix || cwd.startsWith(bounds.cwdPrefix);
+    // tool_result 自身は timestamp を持たないことが多いが、user record（親）は
+    // 持つ。B（context bloat）を選択した期間・repo に絞るためここでも同じ判定を
+    // 適用する。tool_result に紐づく tool_use が窓外だった場合も toolNamesById
+    // には登録されていないため 'unknown' 帰属になるが、この record 自体の
+    // 窓外判定で二重に弾く（tool_use が in-window でも tool_result の親 record が
+    // 窓外なら B には数えない）。
+    const accepted = inWindow && cwdMatches;
     if (typeof content === 'string') {
       // 平文発話 = チェインを断ち切る。
       ctx.currentChain = null;
@@ -470,16 +521,18 @@ export function foldUsageRecord(agg, record, bounds, ctx) {
       for (const block of content) {
         if (block && block.type === 'tool_result') {
           hasToolResult = true;
-          const name = agg.toolNamesById.get(block.tool_use_id) ?? 'unknown';
-          const chars = contentLength(block.content);
-          let sizeBucket = agg.toolResultSizes.get(name);
-          if (!sizeBucket) {
-            sizeBucket = { calls: 0, chars: 0, max: 0 };
-            agg.toolResultSizes.set(name, sizeBucket);
+          if (accepted) {
+            const name = agg.toolNamesById.get(block.tool_use_id) ?? 'unknown';
+            const chars = contentLength(block.content);
+            let sizeBucket = agg.toolResultSizes.get(name);
+            if (!sizeBucket) {
+              sizeBucket = { calls: 0, chars: 0, max: 0 };
+              agg.toolResultSizes.set(name, sizeBucket);
+            }
+            sizeBucket.calls += 1;
+            sizeBucket.chars += chars;
+            if (chars > sizeBucket.max) sizeBucket.max = chars;
           }
-          sizeBucket.calls += 1;
-          sizeBucket.chars += chars;
-          if (chars > sizeBucket.max) sizeBucket.max = chars;
         } else if (block && block.type === 'text') {
           hasToolResult = false;
         }
