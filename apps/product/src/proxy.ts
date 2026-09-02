@@ -19,6 +19,7 @@ import {
 } from '@/lib/oauth-server/identity';
 import { captureUnexpectedError } from '@/lib/sentry';
 import { updateSession } from '@/lib/supabase/middleware';
+import { applySessionContinuity, type SessionContinuity } from '@/lib/supabase/session-continuity';
 import { resolveMfaAssurance } from '@/lib/trpc/session-auth-context';
 import { routing } from '@dayopt/i18n/routing';
 
@@ -339,9 +340,25 @@ export async function proxy(request: NextRequest) {
     return applyCsp(intlResponse, contentSecurityPolicy);
   }
 
+  // updateSession() の refresh Cookie / cache headers を、後続で新しく作る
+  // NextResponse（redirect / 404 等）へも引き継ぐための持ち回り（#2516）。
+  // catch 節でも使うため try の外に置く（updateSession 解決後に別の処理が
+  // throw した場合、そこまでに得た継続性は落とさない）。
+  let sessionContinuity: SessionContinuity | undefined;
+  const withSession = <T extends NextResponse>(res: T): T =>
+    sessionContinuity ? applySessionContinuity(res, sessionContinuity) : res;
+
   try {
     // Supabaseセッションを更新（ユーザー情報も同時取得 - 重複呼び出し防止で高速化）
-    const { response, supabase, user } = await updateSession(request);
+    const {
+      response,
+      supabase,
+      user,
+      sessionContinuity: continuity,
+    } = await updateSession(request);
+    sessionContinuity = continuity;
+    const redirectWithSession = (url: URL) =>
+      withSession(redirectWithCsp(url, contentSecurityPolicy));
 
     // 環境変数で認証をスキップ（開発環境用）
     const skipAuth =
@@ -361,7 +378,7 @@ export async function proxy(request: NextRequest) {
       // OAuth flow 等で query string が必要なため search も含めて redirect 先に保持する
       const search = request.nextUrl.search;
       loginUrl.searchParams.set('redirect', pathWithoutLocale + search);
-      return redirectWithCsp(loginUrl, contentSecurityPolicy);
+      return redirectWithSession(loginUrl);
     }
 
     // 認証済みでauth系のパスにアクセスした場合
@@ -370,9 +387,8 @@ export async function proxy(request: NextRequest) {
     const isAllowedWhileAuthenticated = isAuthPathAllowedWhileAuthenticated(pathWithoutLocale);
 
     if (user && isAuthPath && !isAllowedWhileAuthenticated) {
-      return redirectWithCsp(
+      return redirectWithSession(
         new URL(getLocalizedPath('/calendar', currentLocale), request.url),
-        contentSecurityPolicy,
       );
     }
 
@@ -386,16 +402,14 @@ export async function proxy(request: NextRequest) {
         // なので MFA gate を再度通る。lookupFailed が続く限り無限ループになるため、
         // authPathsAllowedWhileAuthenticated に登録済みの専用ページへ送る。
         logger.warn('MFA assurance lookup failed; redirecting to session error page');
-        return redirectWithCsp(
+        return redirectWithSession(
           new URL(getLocalizedPath('/auth/session-error', currentLocale), request.url),
-          contentSecurityPolicy,
         );
       }
       if (mfaAssurance.currentLevel === 'aal1' && mfaAssurance.nextLevel === 'aal2') {
         // MFA有効だがまだ検証していない → mfa-verifyへ強制リダイレクト
-        return redirectWithCsp(
+        return redirectWithSession(
           new URL(getLocalizedPath('/auth/mfa-verify', currentLocale), request.url),
-          contentSecurityPolicy,
         );
       }
     }
@@ -420,13 +434,15 @@ export async function proxy(request: NextRequest) {
     // session-error への redirect を返してしまい自己ループになる。この path
     // 自体は認証を要求しない静的ページなので、redirect せずそのまま次へ流す。
     if (pathWithoutLocale === '/auth/session-error') {
-      return nextWithCsp(request, contentSecurityPolicy);
+      return withSession(nextWithCsp(request, contentSecurityPolicy));
     }
     // lookupFailed分岐と同じ理由で、/auth/login ではなく認証済みでも
     // 弾かれない session-error ページへ送る（同型の無限ループを避ける）。
-    return redirectWithCsp(
-      new URL(getLocalizedPath('/auth/session-error', currentLocale), request.url),
-      contentSecurityPolicy,
+    return withSession(
+      redirectWithCsp(
+        new URL(getLocalizedPath('/auth/session-error', currentLocale), request.url),
+        contentSecurityPolicy,
+      ),
     );
   }
 }

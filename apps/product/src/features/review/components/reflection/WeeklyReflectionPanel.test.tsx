@@ -127,6 +127,55 @@ describe('WeeklyReflectionPanel', () => {
     expect(onTagClick).not.toHaveBeenCalled();
   });
 
+  // #2386: avgDeviationMinutes は符号付き（実績 − 予定）を前提にした消費側
+  // ロジックが既に入っていたが、集計側（estimation-accuracy.ts）が
+  // Math.abs で符号を潰していたため insightEstimationUnder（早期完了）へ
+  // 実運用でほぼ到達しなかった。ここでは消費側単体で、符号付き値を渡せば
+  // 正しく分岐することを固定する（next-intl は setup-node.ts のモックにより
+  // 補間せず key をそのまま返すため、insightEstimationOver/Under の
+  // 文字列一致でどちらが選ばれたかを判別できる）。
+  it('avgDeviationMinutesが負（早期完了）なら insightEstimationUnder を表示する', () => {
+    const earlyFinishRow: WeeklyReflectionEstimationRow = {
+      ...estimationRows[0]!,
+      avgDeviationMinutes: -20,
+    };
+
+    render(
+      <WeeklyReflectionPanel
+        trackedMinutes={180}
+        planAccuracyRate={0.83}
+        plannedMinutes={120}
+        diffMinutes={-60}
+        timePLRows={timePLRows}
+        estimationRows={[earlyFinishRow]}
+      />,
+    );
+
+    expect(screen.getByText('review.insightEstimationUnder')).toBeInTheDocument();
+    expect(screen.queryByText('review.insightEstimationOver')).not.toBeInTheDocument();
+  });
+
+  it('avgDeviationMinutesが正（超過）なら insightEstimationOver を表示する', () => {
+    const overRunRow: WeeklyReflectionEstimationRow = {
+      ...estimationRows[0]!,
+      avgDeviationMinutes: 20,
+    };
+
+    render(
+      <WeeklyReflectionPanel
+        trackedMinutes={180}
+        planAccuracyRate={0.83}
+        plannedMinutes={120}
+        diffMinutes={-60}
+        timePLRows={timePLRows}
+        estimationRows={[overRunRow]}
+      />,
+    );
+
+    expect(screen.getByText('review.insightEstimationOver')).toBeInTheDocument();
+    expect(screen.queryByText('review.insightEstimationUnder')).not.toBeInTheDocument();
+  });
+
   it('見積もり精度の未分類を neutral marker と翻訳ラベルで表示する（#1576）', () => {
     const uncategorizedEstimationRow: WeeklyReflectionEstimationRow = {
       activityId: null,
