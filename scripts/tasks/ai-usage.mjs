@@ -40,7 +40,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * （AskUserQuestion 件数を jsonl から数える案。今回は journal 手書き）。
  */
 
-const PROJECTS_DIR = join(homedir(), '.claude', 'projects');
+export const PROJECTS_DIR = join(homedir(), '.claude', 'projects');
 const MODEL_LABELS = ['haiku', 'sonnet', 'opus', 'fable', 'mythos'];
 const BASH_PREFIX_LEADERS = new Set(['pnpm', 'npx', 'gh', 'git']);
 
@@ -465,7 +465,7 @@ function escapeCell(value) {
 }
 
 /** repo root 配下の `.jsonl` を列挙する。`~/.claude/projects` が無ければ空配列。 */
-function listJsonlFiles(projectsDir) {
+export function listJsonlFiles(projectsDir) {
   const files = [];
   let entries;
   try {
@@ -485,7 +485,7 @@ function listJsonlFiles(projectsDir) {
 // cwd が無い subagent record 向けの fallback: project ディレクトリ名は cwd の
 // `/`（`\` も一応）をすべて `-` に置換した形（例: `/Users/x/dayopt` →
 // `-Users-x-dayopt`）。実測（2026-08）の `~/.claude/projects/<dir>/` と一致。
-function cwdPrefixToProjectDirSegment(cwdPrefix) {
+export function cwdPrefixToProjectDirSegment(cwdPrefix) {
   return String(cwdPrefix ?? '').replace(/[/\\]/g, '-');
 }
 

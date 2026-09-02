@@ -35,6 +35,7 @@
     "green:watch": "node scripts/tasks/green-watch.mjs",
     "ai:usage": "node scripts/tasks/ai-usage.mjs",
     "ctx": "node scripts/tasks/ctx.mjs",
+    "trace": "node scripts/tasks/trace.mjs",
     "review:marker": "tsx scripts/tasks/generate-marker.ts",
     "review:issue:marker": "node scripts/tasks/generate-issue-review-marker.mjs",
     "review:issue:gate": "node scripts/tasks/issue-review-gate.mjs",

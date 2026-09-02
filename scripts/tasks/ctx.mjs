@@ -107,6 +107,58 @@ export function isBotLogin(login) {
   return typeof login === 'string' && login.endsWith('[bot]');
 }
 
+/** text 中に「subtask」「tier」列を持つ markdown 表ヘッダ、または「分解表」の語があるか。 */
+function hasBreakdownTable(text) {
+  if (!text) return false;
+  if (text.includes('分解表')) return true;
+  return text.split('\n').some((line) => {
+    if (!line.includes('|')) return false;
+    const lower = line.toLowerCase();
+    return lower.includes('subtask') && lower.includes('tier');
+  });
+}
+
+/** text 中に DoD / 完了の定義 の言及があるか。 */
+function hasDodMention(text) {
+  return /(DoD|完了の定義)/.test(text ?? '');
+}
+
+/**
+ * issue/PR の「判断の記録」を判定する（routing skill §目標状態、dispatch 手順 7）。
+ * `comments` は REST `issues/N/comments` の生応答（`user.login` / `body`）。
+ *
+ * - DoD: bot 以外のコメント、または body に `DoD` / `完了の定義` の言及がある
+ * - 分解表: コメントまたは body に `subtask`/`tier` 列を持つ表、または「分解表」の語がある
+ * - brief: `CTX_MARKER` で始まるコメントがある（bot 判定は問わない ── ctx --post は
+ *   通常ユーザー権限の gh 呼び出しで作られ bot login にならないため）
+ */
+export function detectJudgmentRecords(comments, body) {
+  const list = Array.isArray(comments) ? comments : [];
+  const bodyText = body ?? '';
+
+  const dod =
+    hasDodMention(bodyText) ||
+    list.some((c) => !isBotLogin(c.user?.login) && hasDodMention(c.body ?? ''));
+
+  const breakdown =
+    hasBreakdownTable(bodyText) || list.some((c) => hasBreakdownTable(c.body ?? ''));
+
+  const brief = list.some((c) => typeof c.body === 'string' && c.body.startsWith(CTX_MARKER));
+
+  return { dod, breakdown, brief };
+}
+
+/** `detectJudgmentRecords` の結果から次の一手ヒントを組む。全て あり なら null。 */
+export function buildJudgmentHint(records) {
+  if (!records) return null;
+  const missing = [];
+  if (!records.dod) missing.push('DoD');
+  if (!records.breakdown) missing.push('分解表');
+  if (!records.brief) missing.push('brief');
+  if (missing.length === 0) return null;
+  return `判断の記録が欠けている: ${missing.join('・')}（routing skill 手順 1 / dispatch 手順 7）`;
+}
+
 /**
  * REST `issues/N/comments` の応答から、bot を除外（`allComments` 指定時は除外しない）
  * した上で最新 K 件を返す。
@@ -404,8 +456,21 @@ export function renderMarkdown(pack) {
     lines.push('');
   }
 
+  if (pack.judgmentRecords) {
+    const r = pack.judgmentRecords;
+    lines.push('#### 判断の記録');
+    lines.push('');
+    lines.push(
+      `DoD: ${r.dod ? 'あり' : 'なし'} | 分解表: ${r.breakdown ? 'あり' : 'なし'} | brief: ${r.brief ? 'あり' : 'なし'}`,
+    );
+    lines.push('');
+  }
+
   if (pack.nextStep) {
     lines.push(`次の一手: ${pack.nextStep}`);
+    if (pack.nextStepSecondary) {
+      lines.push(pack.nextStepSecondary);
+    }
   }
 
   // 末尾の空行を畳んで行数を安定させる。
@@ -652,6 +717,21 @@ export function buildContextPack(options, deps = {}) {
     linkedPrNumber: hasLinkedPr ? (related.prs[0]?.number ?? null) : null,
   });
 
+  // 判断の記録（routing skill §目標状態 / dispatch 手順 7）。issue のみ判定する
+  // （PR 側は trace.mjs が linked issue ごとに同じ detector を使い分ける）。
+  const judgmentRecords =
+    kind === 'issue' ? detectJudgmentRecords(commentsRaw ?? [], rawBody) : null;
+  const judgmentHint = buildJudgmentHint(judgmentRecords);
+  let finalNextStep = step;
+  let nextStepSecondary = null;
+  if (judgmentHint) {
+    if (kind === 'issue' && !hasLinkedPr) {
+      finalNextStep = judgmentHint;
+    } else {
+      nextStepSecondary = judgmentHint;
+    }
+  }
+
   return {
     number,
     kind,
@@ -663,7 +743,9 @@ export function buildContextPack(options, deps = {}) {
     protectedRequired,
     decisionLines,
     skills,
-    nextStep: step,
+    judgmentRecords,
+    nextStep: finalNextStep,
+    nextStepSecondary,
   };
 }
 

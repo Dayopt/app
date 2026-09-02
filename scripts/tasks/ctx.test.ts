@@ -4,10 +4,12 @@ import {
   bodyReferencesNumber,
   buildCommentBody,
   buildContextPack,
+  buildJudgmentHint,
   buildPostArgs,
   computeCiRollup,
   countUnresolvedThreads,
   CTX_MARKER,
+  detectJudgmentRecords,
   extractLinkedIssueNumbers,
   extractParentEpic,
   extractPathTokens,
@@ -249,6 +251,58 @@ describe('mapSkills', () => {
   });
 });
 
+describe('detectJudgmentRecords', () => {
+  it('DoD は bot 以外のコメントまたは body の言及で あり', () => {
+    expect(detectJudgmentRecords([], 'ここに DoD を書く')).toMatchObject({ dod: true });
+    expect(
+      detectJudgmentRecords([{ user: { login: 'tomoya' }, body: '完了の定義: XXX' }], ''),
+    ).toMatchObject({ dod: true });
+    expect(
+      detectJudgmentRecords([{ user: { login: 'github-actions[bot]' }, body: 'DoD: XXX' }], ''),
+    ).toMatchObject({ dod: false });
+  });
+
+  it('分解表は subtask/tier 列の表、または「分解表」の語で あり', () => {
+    expect(detectJudgmentRecords([], '## 分解表\n本文')).toMatchObject({ breakdown: true });
+    expect(
+      detectJudgmentRecords(
+        [{ user: { login: 'tomoya' }, body: '| # | subtask | tier | 入力 |\n| - | - | - | - |' }],
+        '',
+      ),
+    ).toMatchObject({ breakdown: true });
+    expect(detectJudgmentRecords([], '本文だけ')).toMatchObject({ breakdown: false });
+  });
+
+  it('brief は CTX_MARKER で始まるコメントの有無', () => {
+    expect(
+      detectJudgmentRecords([{ user: { login: 'tomoya' }, body: `${CTX_MARKER}\n本文` }], ''),
+    ).toMatchObject({ brief: true });
+    expect(detectJudgmentRecords([{ user: { login: 'tomoya' }, body: '普通' }], '')).toMatchObject({
+      brief: false,
+    });
+  });
+
+  it('全て なし の場合', () => {
+    expect(detectJudgmentRecords([], '')).toEqual({ dod: false, breakdown: false, brief: false });
+  });
+});
+
+describe('buildJudgmentHint', () => {
+  it('欠けているものだけ列挙する', () => {
+    expect(buildJudgmentHint({ dod: false, breakdown: true, brief: true })).toBe(
+      '判断の記録が欠けている: DoD（routing skill 手順 1 / dispatch 手順 7）',
+    );
+    expect(buildJudgmentHint({ dod: false, breakdown: false, brief: false })).toBe(
+      '判断の記録が欠けている: DoD・分解表・brief（routing skill 手順 1 / dispatch 手順 7）',
+    );
+  });
+
+  it('全て あり、または records が無ければ null', () => {
+    expect(buildJudgmentHint({ dod: true, breakdown: true, brief: true })).toBeNull();
+    expect(buildJudgmentHint(null)).toBeNull();
+  });
+});
+
 describe('nextStep', () => {
   it('issue で紐付く PR が無い', () => {
     expect(nextStep({ kind: 'issue', number: 1, hasLinkedPr: false })).toBe(
@@ -354,6 +408,10 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
     ]);
     expect(pack.files).toContain('apps/product/src/foo.ts');
     expect(calls[0]).toEqual(['api', 'repos/Dayopt/dayopt/issues/2550']);
+    expect(pack.judgmentRecords).toEqual({ dod: false, breakdown: false, brief: false });
+    expect(pack.nextStepSecondary).toBe(
+      '判断の記録が欠けている: DoD・分解表・brief（routing skill 手順 1 / dispatch 手順 7）',
+    );
   });
 
   it('PR: pull_request キー検出後 pr view + graphql(reviewThreads) を呼ぶ', () => {
@@ -412,6 +470,7 @@ describe('buildContextPack (execFileImpl 経由の gh 呼び出し形)', () => {
       { number: 2550, state: 'closed', title: '紐付け issue', labels: [] },
     ]);
     expect(pack.nextStep).toBe('pnpm branch:finish 2549');
+    expect(pack.judgmentRecords).toBeNull();
   });
 
   it('gh 呼び出し全滅でも例外にせず未取得の pack を返す', () => {
@@ -466,7 +525,9 @@ describe('renderMarkdown', () => {
       protectedRequired: true,
       decisionLines: ['2026-08-01 #2549 の決定ログ行'],
       skills: ['pr-cross-review', 'test'],
+      judgmentRecords: { dod: true, breakdown: false, brief: true },
       nextStep: 'pnpm branch:finish 2549',
+      nextStepSecondary: '判断の記録が欠けている: 分解表（routing skill 手順 1 / dispatch 手順 7）',
     };
 
     const markdown = renderMarkdown(pack);
@@ -484,7 +545,12 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('保護対象: 必要');
     expect(markdown).toContain('#### 決定ログ');
     expect(markdown).toContain('#### 関連 skill 候補');
+    expect(markdown).toContain('#### 判断の記録');
+    expect(markdown).toContain('DoD: あり | 分解表: なし | brief: あり');
     expect(markdown).toContain('次の一手: pnpm branch:finish 2549');
+    expect(markdown).toContain(
+      '判断の記録が欠けている: 分解表（routing skill 手順 1 / dispatch 手順 7）',
+    );
     expect(markdown.split('\n').length).toBeLessThanOrEqual(150);
   });
 
