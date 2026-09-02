@@ -149,6 +149,9 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
   let degradedLoader: string;
   let degradedRules: string;
   let badExitLoader: string;
+  let badExitRules: string;
+  let renamedLoader: string;
+  let renamedRules: string;
 
   beforeAll(() => {
     fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-loader-'));
@@ -193,6 +196,20 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
       "export function evaluate() {\n  throw new Error('unexpected failure');\n}\n",
     );
     badExitLoader = join(badExitDir, 'pre-tool-guard.mjs');
+    badExitRules = join(badExitDir, 'pre-tool-guard-rules.mjs');
+
+    // import は成功するが `evaluate` が export されていない rules（編集中に export を
+    // 落とした / 関数名を変えた形。Codex review P2、PR #2563）。import 失敗と同じ
+    // 復旧経路に倒さないと、別セッション無しでは直せない。
+    const renamedDir = join(fixtureRoot, 'renamed-export');
+    mkdirSync(renamedDir);
+    writeFileSync(join(renamedDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(renamedDir, 'pre-tool-guard-rules.mjs'),
+      "export const renamedEvaluate = () => ({ decision: 'allow' });\n",
+    );
+    renamedLoader = join(renamedDir, 'pre-tool-guard.mjs');
+    renamedRules = join(renamedDir, 'pre-tool-guard-rules.mjs');
   });
 
   afterAll(() => {
@@ -233,6 +250,18 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
 
   it('rules の構文は健全でも evaluate() が例外を投げたら fail closed（exit code を 2 へ写す）', () => {
     expect(runVia(badExitLoader, bash('git status'))).toBe('block');
+  });
+
+  it('evaluate が export されていない（import は成功）時、無関係な操作は fail closed で rules 自身への Write/Edit だけ通る', () => {
+    expect(runVia(renamedLoader, bash('git status'))).toBe('block');
+    expect(runVia(renamedLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(renamedLoader, write(renamedRules))).toBe('allow');
+    expect(runVia(renamedLoader, edit(renamedRules))).toBe('allow');
+  });
+
+  it('evaluate() が例外を投げる時も、rules 自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(badExitLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(badExitLoader, write(badExitRules))).toBe('allow');
   });
 });
 
@@ -1478,5 +1507,33 @@ describe('pre-tool-guard.mjs: R3 Read の範囲指定なし大規模ファイル
 
   it('存在しないパスは通す（fail-open）', () => {
     expect(runGuard(readTool(join(fixtureRoot, 'does-not-exist.ts')))).toBe('allow');
+  });
+});
+
+// JS の \s は U+00A0（NBSP）等の Unicode 空白も区切りとして受理するが、bash の IFS は
+// ASCII 空白だけを単語区切りにする。許可名の直後に NBSP を置いた別ファイル名は shell では
+// 1 語のまま渡り、guard が「許可名 + 区切り」と誤認すると別ファイルが消費される
+// （Codex review P2、PR #2563。旧 bash 版の [[:space:]] は NBSP を含まなかった）。
+describe('pre-tool-guard.mjs: env-file 名の直後の非 ASCII 空白（NBSP）', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'pre-tool-guard-nbsp-'));
+    writeFileSync(join(dir, '.op-env.agent'), 'A=op://agent/x/y\n');
+    writeFileSync(join(dir, '.op-env.agent\u00a0x'), 'B=op://human/x/y\n');
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('許可名 + NBSP + 別名 を許可形と誤認せず block する', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent\u00a0x -- pnpm typecheck'), dir)).toBe(
+      'block',
+    );
+  });
+
+  it('許可名だけの通常形は引き続き通る', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent -- pnpm typecheck'), dir)).toBe('allow');
   });
 });

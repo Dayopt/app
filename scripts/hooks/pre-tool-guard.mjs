@@ -69,32 +69,47 @@ function extractToolNameAndFilePath(rawInput) {
 async function main() {
   const rawInput = await readStdin();
 
-  let rulesModule;
-  try {
-    rulesModule = await import(pathToFileURL(RULES_PATH).href);
-  } catch (importError) {
+  /**
+   * rules が使えない（import 失敗 / `evaluate` が export されていない / evaluate が
+   * 例外を投げた）時の共通経路。fail closed を既定にしつつ、rules ファイル自身への
+   * Write / Edit だけを復旧目的で通す。「import は成功するが `export` を落とした・
+   * 関数名を変えた」ケースを import 失敗と同じ扱いにしないと、別セッション無しでは
+   * 復旧できない状態になる（Codex review P2、PR #2563）。
+   */
+  function recoverOrBlock(reason, error) {
+    const detail = error?.message ?? error;
     const { toolName, filePath } = extractToolNameAndFilePath(rawInput);
     const isWriteOrEdit = toolName === 'Write' || toolName === 'Edit';
     if (isWriteOrEdit && filePath === RULES_PATH) {
       console.error(
-        `WARNING: pre-tool-guard-rules.mjs が壊れています（import 失敗）。復旧のため、この修復編集だけは通します。他の全操作は fail closed でブロックされます。エラー: ${importError?.message ?? importError}`,
+        `WARNING: pre-tool-guard-rules.mjs が壊れています（${reason}）。復旧のため、この修復編集だけは通します。他の全操作は fail closed でブロックされます。エラー: ${detail}`,
       );
       process.exit(0);
     }
     console.error(
-      `BLOCKED: pre-tool-guard-rules.mjs が壊れています（import 失敗、fail closed）。復旧するには pre-tool-guard-rules.mjs を修正してください（この Write/Edit だけは通ります）。エラー: ${importError?.message ?? importError}`,
+      `BLOCKED: pre-tool-guard-rules.mjs が壊れています（${reason}、fail closed）。復旧するには pre-tool-guard-rules.mjs を修正してください（この Write/Edit だけは通ります）。エラー: ${detail}`,
     );
     process.exit(2);
+  }
+
+  let rulesModule;
+  try {
+    rulesModule = await import(pathToFileURL(RULES_PATH).href);
+  } catch (importError) {
+    recoverOrBlock('import 失敗', importError);
+  }
+  if (typeof rulesModule?.evaluate !== 'function') {
+    recoverOrBlock(
+      'evaluate が export されていない',
+      new Error('export function evaluate が見つかりません'),
+    );
   }
 
   let result;
   try {
     result = rulesModule.evaluate(rawInput, { cwd: process.cwd(), execFileImpl: execFileSync });
   } catch (evalError) {
-    console.error(
-      `BLOCKED: pre-tool-guard-rules.mjs の評価が例外を投げました（fail closed）: ${evalError?.message ?? evalError}`,
-    );
-    process.exit(2);
+    recoverOrBlock('評価が例外を投げた', evalError);
   }
 
   if (result && result.decision === 'allow') {

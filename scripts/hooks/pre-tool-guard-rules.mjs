@@ -371,10 +371,12 @@ function reMatchesAnyLine(text, re) {
   return text.split('\n').some((line) => re.test(line));
 }
 
-const FORCE_PUSH_RE = /git\s+push\s+.*--force[^-]|git\s+push\s+.*--force$/;
-const RESET_HARD_RE = /git\s+reset\s+--hard/;
-const PUSH_NO_VERIFY_RE = /(^|[;&|]|&&|\|\|)\s*git\s+push[^;&|]*--no-verify/;
-const COMMIT_NO_VERIFY_RE = /(^|[;&|]|&&|\|\|)\s*git\s+commit[^;&|]*--no-verify/;
+const FORCE_PUSH_RE =
+  /git[ \t\n\v\f\r]+push[ \t\n\v\f\r]+.*--force[^-]|git[ \t\n\v\f\r]+push[ \t\n\v\f\r]+.*--force$/;
+const RESET_HARD_RE = /git[ \t\n\v\f\r]+reset[ \t\n\v\f\r]+--hard/;
+const PUSH_NO_VERIFY_RE = /(^|[;&|]|&&|\|\|)[ \t\n\v\f\r]*git[ \t\n\v\f\r]+push[^;&|]*--no-verify/;
+const COMMIT_NO_VERIFY_RE =
+  /(^|[;&|]|&&|\|\|)[ \t\n\v\f\r]*git[ \t\n\v\f\r]+commit[^;&|]*--no-verify/;
 
 /** bash: `\` + 改行の line-continuation を畳み、残る改行を空白に寄せる。 */
 function joinCommand(command) {
@@ -392,9 +394,9 @@ function unquoteCommand(joined) {
 }
 
 const RM_RECURSIVE_RE =
-  /(^|\s)(\/\S*\/)?rm\s.*(-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|--recursive([\s=]|$))/;
-const RM_ESCAPE_TARGET_RE = /(^|[\s/])(~|\$)|(^|[\s/])\.\.([\s/]|$)/;
-const RM_ABSOLUTE_HINT_RE = /(^|\s)\//;
+  /(^|[ \t\n\v\f\r])(\/[^ \t\n\v\f\r]*\/)?rm[ \t\n\v\f\r].*(-[a-zA-Z]*[rR][a-zA-Z]*([ \t\n\v\f\r]|$)|--recursive([ \t\n\v\f\r=]|$))/;
+const RM_ESCAPE_TARGET_RE = /(^|[ \t\n\v\f\r/])(~|\$)|(^|[ \t\n\v\f\r/])\.\.([ \t\n\v\f\r/]|$)/;
+const RM_ABSOLUTE_HINT_RE = /(^|[ \t\n\v\f\r])\//;
 
 /** bash: `tr ';&|' '\n'` + 空行スキップに相当するセグメント分割。 */
 function splitOnSeparators(text) {
@@ -403,11 +405,11 @@ function splitOnSeparators(text) {
 
 /** bash: `grep -oE '(^|[[:space:]])/[^[:space:]]*' | sed -E 's/^[[:space:]]+//'` */
 function extractAbsoluteTokens(segment) {
-  const re = /(^|\s)\/\S*/g;
+  const re = /(^|[ \t\n\v\f\r])\/[^ \t\n\v\f\r]*/g;
   const out = [];
   let m;
   while ((m = re.exec(segment)) !== null) {
-    out.push(m[0].replace(/^\s+/, ''));
+    out.push(m[0].replace(/^[ \t\n\v\f\r]+/, ''));
   }
   return out;
 }
@@ -442,7 +444,7 @@ function checkRmRecursive(commandJoined, commandUnquoted, cwd, execFileImpl) {
 }
 
 const SUPABASE_DB_RESET_RE =
-  /(^|[;&|]|&&|\|\|)\s*(npx\s+|pnpm\s+(exec|dlx)\s+)?supabase\s+db\s+reset/;
+  /(^|[;&|]|&&|\|\|)[ \t\n\v\f\r]*(npx[ \t\n\v\f\r]+|pnpm[ \t\n\v\f\r]+(exec|dlx)[ \t\n\v\f\r]+)?supabase[ \t\n\v\f\r]+db[ \t\n\v\f\r]+reset/;
 
 function checkSupabaseDbResetRaw(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
@@ -454,13 +456,18 @@ function checkSupabaseDbResetRaw(commandJoined, commandUnquoted) {
   }
 }
 
-const ADMIN_ENV_FILE_DIRECT_RE = /--env-file[=\s]+[^\s;&|]*\.op-env\.human/;
+const ADMIN_ENV_FILE_DIRECT_RE = /--env-file[= \t\n\v\f\r]+[^ \t\n\v\f\r;&|]*\.op-env\.human/;
 
 // 許可する env-file の path。選択肢で列挙する（optional group で組み立てると
 // 区切りの / が任意になり、`..op-env.agent` のような別名まで通ってしまう）。
 const ALLOWED_ENV_FILE_ALTERNATION =
   '(\\.op-env\\.agent|\\./\\.op-env\\.agent|\\.\\./\\.\\./\\.op-env\\.agent)';
-const CONFORMING_MENTION_SOURCE = `-env-file[=\\s]+${ALLOWED_ENV_FILE_ALTERNATION}[\\s;&|]`;
+// bash の [[:space:]]（POSIX space class: SP / TAB / LF / VT / FF / CR）と同じ集合。JS の \s は
+// U+00A0（NBSP）等の Unicode 空白も含むため、許可名の直後に NBSP を置いた別ファイル名を
+// 「許可名 + 区切り」と誤認し、shell では 1 語のまま別ファイルが消費される（Codex review
+// P2、PR #2563）。regex literal 側も同じ集合を書き下す（\s / \S は使わない）。
+const WS_CHARS_SRC = ' \t\n\v\f\r';
+const CONFORMING_MENTION_SOURCE = `-env-file[=${WS_CHARS_SRC}]+${ALLOWED_ENV_FILE_ALTERNATION}[${WS_CHARS_SRC};&|]`;
 
 /** --env-file の言及がすべて許可形かを判定する（出現数と適合数の一致で判定）。 */
 function envFileMentionsConform(text) {
@@ -475,7 +482,9 @@ function envFileMentionsConform(text) {
 function conformingEnvFilePaths(text) {
   const s = `${text} `;
   const matches = s.match(new RegExp(CONFORMING_MENTION_SOURCE, 'g')) ?? [];
-  const cleaned = matches.map((m) => m.replace(/^-env-file[=\s]+/, '').replace(/[\s;&|]$/, ''));
+  const cleaned = matches.map((m) =>
+    m.replace(/^-env-file[= \t\n\v\f\r]+/, '').replace(/[ \t\n\v\f\r;&|]$/, ''),
+  );
   return [...new Set(cleaned)];
 }
 
@@ -531,9 +540,9 @@ function checkEnvFileContents(commandJoined, commandUnquoted, cwd) {
 
 // --- #2293: agent-ops secret 露出の出力段 redaction ---
 
-const ITEM_GET_RE = /item\s+get(\s|$)/;
-const REVEAL_FLAG_RE = /(^|[\s;&|])--reveal([\s;&|]|$)/;
-const JSON_FORMAT_RE = /(--format[=\s]+json|OP_FORMAT=json)/;
+const ITEM_GET_RE = /item[ \t\n\v\f\r]+get([ \t\n\v\f\r]|$)/;
+const REVEAL_FLAG_RE = /(^|[ \t\n\v\f\r;&|])--reveal([ \t\n\v\f\r;&|]|$)/;
+const JSON_FORMAT_RE = /(--format[= \t\n\v\f\r]+json|OP_FORMAT=json)/;
 
 function checkOpItemGetReveal(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
@@ -548,7 +557,7 @@ function checkOpItemGetReveal(commandJoined, commandUnquoted) {
   }
 }
 
-const BRANCHES_GET_RE = /branches\s+get(\s|$)/;
+const BRANCHES_GET_RE = /branches[ \t\n\v\f\r]+get([ \t\n\v\f\r]|$)/;
 
 function checkSupabaseBranchesGet(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
@@ -560,8 +569,8 @@ function checkSupabaseBranchesGet(commandJoined, commandUnquoted) {
   }
 }
 
-const VERCEL_INVOKE_RE = /(^|[\s;&|/])vercel(\s|$)/;
-const VERCEL_AUTH_FLAG_RE = /(^|[\s;&|])(--token|-t)([\s=]|$)/;
+const VERCEL_INVOKE_RE = /(^|[ \t\n\v\f\r;&|/])vercel([ \t\n\v\f\r]|$)/;
+const VERCEL_AUTH_FLAG_RE = /(^|[ \t\n\v\f\r;&|])(--token|-t)([ \t\n\v\f\r=]|$)/;
 
 function checkVercelToken(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
@@ -574,7 +583,7 @@ function checkVercelToken(commandJoined, commandUnquoted) {
 }
 
 const SUPABASE_MGMT_DANGER_ENDPOINT_RE =
-  /api\.supabase\.com\/v1\/(projects\/[^\s"']*\/(config|branches)|branches)/;
+  /api\.supabase\.com\/v1\/(projects\/[^ \t\n\v\f\r"']*\/(config|branches)|branches)/;
 
 function checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
@@ -586,7 +595,7 @@ function checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted) {
   }
 }
 
-const OP_READ_RE = /(^|[\s;&|/])op\s+read(\s|$)/;
+const OP_READ_RE = /(^|[ \t\n\v\f\r;&|/])op[ \t\n\v\f\r]+read([ \t\n\v\f\r]|$)/;
 
 function checkOpRead(commandJoined, commandUnquoted) {
   for (const scanned of [commandJoined, commandUnquoted]) {
