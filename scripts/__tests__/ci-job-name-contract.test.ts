@@ -144,8 +144,11 @@ describe('CI job 名の契約', () => {
     });
 
     it('検査対象が repo の全 workflow を覆っている（追加漏れの検出）', () => {
+      // **`.yaml` も拾う**（クロスレビュー risk-reviewer P2）。GitHub Actions は
+      // 両方の拡張子を等しく受け付けるため、`.yml` だけを見ると `.yaml` で
+      // 追加された workflow が検査からも網羅性 assert からも同時に落ちる。
       const actual = readdirSync(join(process.cwd(), '.github/workflows'))
-        .filter((f) => f.endsWith('.yml'))
+        .filter((f) => /\.ya?ml$/.test(f))
         .sort();
 
       expect(actual).toEqual([...WORKFLOWS].sort());
@@ -164,16 +167,22 @@ describe('CI job 名の契約', () => {
     });
 
     it('コメント中の persist-credentials: false では通らない（偽陰性の回帰確認）', () => {
+      // **コメントは checkout ブロックの内側に置く**（クロスレビュー risk-reviewer P3）。
+      // 走査は checkout 行の次の行から始まるため、ブロックの外（前の行）へ置くと
+      // 一度も評価されず、実装から comment-stripping を消してもこの test が通ってしまう
+      // ＝ 主張している保証を証明できていない状態になる。
       const regressed = [
         'jobs:',
         '  a:',
         '    steps:',
-        '      # persist-credentials: false を忘れないこと',
         '      - uses: actions/checkout@abc # v7',
+        '        with:',
+        '          # persist-credentials: false を忘れないこと',
+        '          fetch-depth: 0',
         '      - uses: ./.github/actions/setup',
       ].join('\n');
 
-      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([5]);
+      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([4]);
     });
   });
 
