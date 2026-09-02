@@ -1153,6 +1153,16 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 厳格な位置合わせをしていない。実測フォーマット（例: `**Reviewed commit:**
   # \`<sha>\``）の変化に脆くなるより、"reviewed commit" という語句の直後に
   # backtick で囲まれた 7〜40 桁の hex sha があれば拾う緩い形にしてある。
+  #
+  # **PR #2546 実測（2026-09-02）で Codex が別表現も使うことを確認した。**
+  # `@codex review` の初回応答は英語の "Reviewed commit:" 定型句を含む一方、
+  # fix round 後の再レビュー応答は定型句を使わず「現 HEAD `<sha>` を再確認
+  # しました」という日本語の narrative になった（同じ bot、同じ PR での実測。
+  # #2536 が「安定した機械生成 field」と想定していた前提が崩れた）。
+  # どちらの語句でも sha を拾えるよう alternation で両方を受け付ける。将来また
+  # 別の言い回しが observed されたら、ここへ追加する（語句を減らす方向の変更は
+  # fail-closed 側に倒れるだけで安全だが、増やす方向は都度実測で確認すること）。
+  #
   # sha は現 HEAD の **prefix** であることを要求する（Codex のコメントは短縮
   # sha を出す一方、$HEAD_SHA は 40 桁のフル SHA のため完全一致ではなく
   # startswith で比較する）。
@@ -1161,7 +1171,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     --arg headSha "$HEAD_SHA" '
     def normalized_login: (.author.login // "") | sub("\\[bot\\]$"; "");
     def reviewed_sha:
-      ((.body // "") | capture("(?i)reviewed commit:?[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
+      ((.body // "")
+        | capture("(?i)(?:reviewed commit|現\\s*head)[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
       | ($m.sha // "");
     (.data.repository.pullRequest.comments.nodes // []) as $nodes
     | ($nodes | map(select(normalized_login == $login))) as $step1

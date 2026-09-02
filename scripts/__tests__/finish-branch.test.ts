@@ -2473,6 +2473,27 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
     expect(status).toBe(0);
   });
 
+  // PR #2546 実測（2026-09-02）: fix round 後の再レビューで Codex が
+  // "Reviewed commit:" 定型句を使わず「現 HEAD `<sha>` を再確認しました」という
+  // 日本語 narrative で応答した。同じ bot・同じ PR で応答フォーマットが変わる
+  // ことを実地で確認したため、この語句も証跡として拾えることを固定する。
+  it('「現 HEAD」表現で応答する fix-round 再レビューの clean pass も証跡として認める', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: `## レビュー結果\n\n**P1: なし**  \n**P2: なし**\n\n現 HEAD \`${DEFAULT_HEAD_SHA}\` を再確認しました。先行レビューの2件は適切に解消されています。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
   it('review object が現 HEAD にあれば clean pass コメントが無くても従来どおり通す（回帰なし）', () => {
     const { status, stderr } = runProtected();
     expect(stderr).toContain('review object: 現 HEAD に対して');
