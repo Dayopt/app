@@ -23,11 +23,49 @@
 //       いるのに合わせる）
 
 import { execFileSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { realpathSync, writeSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RULES_PATH = join(__dirname, 'pre-tool-guard-rules.mjs');
+
+/**
+ * symlink を解決した比較用 path を返す。ESM の `import.meta.url` は realpath を返す
+ * （Node の既定。`--preserve-symlinks-main` を付けない限り）ため RULES_PATH は解決済み
+ * だが、harness が渡す `file_path` は解決されていない。macOS の `/var` -> `/private/var`
+ * のように途中の component が symlink だと両者が食い違い、#1961 の復旧経路（rules 自身
+ * への Write/Edit だけ通す）が常に block へ落ちる——rules に構文エラーが入った瞬間、
+ * そのセッションからは二度と直せなくなる（#1961 の実障害そのもの）。
+ * 未作成の file でも比較できるよう、失敗したら親ディレクトリだけ解決する。
+ */
+function canonicalPath(target) {
+  if (!target) {
+    return '';
+  }
+  try {
+    return realpathSync(target);
+  } catch {
+    try {
+      return join(realpathSync(dirname(target)), basename(target));
+    } catch {
+      return target;
+    }
+  }
+}
+
+/**
+ * stderr への同期書き込み。`console.error` は stderr が pipe の時に非同期書き込みへ
+ * なりうるため、直後の `process.exit()` が保留中の write を捨てて block 理由や復旧
+ * WARNING が欠ける経路がある（bash 版の `echo >&2` は常に同期だった）。
+ */
+function writeStderr(message) {
+  try {
+    writeSync(2, `${message}\n`);
+  } catch {
+    // stderr が閉じている等。書けなくても exit code の側で fail closed は保たれる。
+  }
+}
 
 function readStdin() {
   return new Promise((resolve) => {
@@ -80,13 +118,13 @@ async function main() {
     const detail = error?.message ?? error;
     const { toolName, filePath } = extractToolNameAndFilePath(rawInput);
     const isWriteOrEdit = toolName === 'Write' || toolName === 'Edit';
-    if (isWriteOrEdit && filePath === RULES_PATH) {
-      console.error(
+    if (isWriteOrEdit && canonicalPath(filePath) === canonicalPath(RULES_PATH)) {
+      writeStderr(
         `WARNING: pre-tool-guard-rules.mjs が壊れています（${reason}）。復旧のため、この修復編集だけは通します。他の全操作は fail closed でブロックされます。エラー: ${detail}`,
       );
       process.exit(0);
     }
-    console.error(
+    writeStderr(
       `BLOCKED: pre-tool-guard-rules.mjs が壊れています（${reason}、fail closed）。復旧するには pre-tool-guard-rules.mjs を修正してください（この Write/Edit だけは通ります）。エラー: ${detail}`,
     );
     process.exit(2);
@@ -116,9 +154,19 @@ async function main() {
     process.exit(0);
   }
   if (result && result.message) {
-    console.error(result.message);
+    writeStderr(result.message);
   }
   process.exit(2);
 }
 
-main();
+// loader は「decision が allow の時だけ 0、それ以外はすべて 2」を返す。async 関数の
+// 未捕捉 rejection は Node の既定で exit 1 になり、exit 1 は harness では block では
+// なく non-blocking error（= tool は実行される）として扱われるため、fail closed が
+// 崩れる。try/catch で覆えていない箇所（例: `result.decision` の参照）が将来増えても
+// この不変条件が構造で残るように、最後に .catch を置く（#2563 内製クロスレビュー P2）。
+main().catch((error) => {
+  writeStderr(
+    `BLOCKED: pre-tool-guard の loader が異常終了しました（fail closed）。エラー: ${error?.message ?? error}`,
+  );
+  process.exit(2);
+});

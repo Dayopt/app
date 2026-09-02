@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +24,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 // pre-tool-guard.mjs は薄い loader（bash 版 #1961 の教訓を踏襲した Node/ESM
 // 移植）。実際のロジックは pre-tool-guard-rules.mjs にある（settings.json の
-// hooks 登録は Main が切り替えるまで bash 版のまま。通常の test はすべて
+// hooks 登録も同じ PR でこの loader へ切り替え済み。通常の test はすべて
 // loaderPath 経由で書ける）。
 const loaderPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.mjs');
 const rulesPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-rules.mjs');
@@ -152,21 +152,18 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
   let badExitRules: string;
   let renamedLoader: string;
   let renamedRules: string;
+  let throwingDecisionLoader: string;
+  let symlinkedLoader: string;
+  let symlinkedRules: string;
 
   beforeAll(() => {
     fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-loader-'));
 
     // loader は import('./pre-tool-guard-rules.mjs') で自分と同じディレクトリの
-    // rules を見る。rules 自身は '../lib/is-direct-execution.mjs' を相対 import
-    // するため、fixture も同じ相対構造（各 variant ディレクトリの隣に lib/）で
-    // 組む。
-    const libDir = join(fixtureRoot, 'lib');
-    mkdirSync(libDir);
-    writeFileSync(
-      join(libDir, 'is-direct-execution.mjs'),
-      readFileSync(resolve(rootDir, 'scripts/lib/is-direct-execution.mjs'), 'utf8'),
-    );
-
+    // rules を見る。rules は node 標準ライブラリ（node:child_process / node:fs /
+    // node:path）しか import しない——復旧経路（rules 自身への Write だけ通す）が
+    // repo 内 helper の破損で塞がらないようにするための不変条件なので、fixture も
+    // loader + rules の 2 ファイルだけで組む。
     const healthyDir = join(fixtureRoot, 'healthy');
     mkdirSync(healthyDir);
     writeFileSync(join(healthyDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
@@ -210,6 +207,41 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
     );
     renamedLoader = join(renamedDir, 'pre-tool-guard.mjs');
     renamedRules = join(renamedDir, 'pre-tool-guard-rules.mjs');
+
+    // evaluate() は返るが、その戻り値の参照（loader の `result.decision`）が例外を
+    // 投げる rules。この参照は try の外側にあり、bash 版 loader が構造として持って
+    // いた「0 か 2 以外を返さない」不変条件が Node では async 関数の未捕捉 rejection
+    // = exit 1（harness では block ではなく non-blocking error）へ落ちる。exit 1 に
+    // なると guard が判定を下せなかった操作が素通りするため fail closed が崩れる
+    // （#2563 内製クロスレビュー P2）。
+    const throwingDecisionDir = join(fixtureRoot, 'throwing-decision');
+    mkdirSync(throwingDecisionDir);
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard.mjs'),
+      readFileSync(loaderPath, 'utf8'),
+    );
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard-rules.mjs'),
+      "export function evaluate() {\n  return Object.defineProperty({}, 'decision', {\n    get() {\n      throw new Error('unexpected failure after evaluate');\n    },\n  });\n}\n",
+    );
+    throwingDecisionLoader = join(throwingDecisionDir, 'pre-tool-guard.mjs');
+
+    // path の途中に symlink がある配置。ESM の `import.meta.url` は realpath を返す
+    // 一方 harness が渡す `file_path` は解決されていないため、素の文字列比較では
+    // 復旧経路が常に block へ落ちる（macOS の tmpdir は `/var` -> `/private/var` で
+    // 実際にこの形。#2563 内製クロスレビュー P2、Linux CI では tmpdir が symlink で
+    // ないため素通りしていた）。symlink を明示的に作って両 OS で固定する。
+    const symlinkTargetDir = join(fixtureRoot, 'symlink-target');
+    mkdirSync(symlinkTargetDir);
+    writeFileSync(join(symlinkTargetDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(symlinkTargetDir, 'pre-tool-guard-rules.mjs'),
+      `${readFileSync(rulesPath, 'utf8')}\nfunction __brokenSyntax(x {\n`,
+    );
+    const symlinkDir = join(fixtureRoot, 'symlink-alias');
+    symlinkSync(symlinkTargetDir, symlinkDir, 'dir');
+    symlinkedLoader = join(symlinkDir, 'pre-tool-guard.mjs');
+    symlinkedRules = join(symlinkDir, 'pre-tool-guard-rules.mjs');
   });
 
   afterAll(() => {
@@ -257,6 +289,22 @@ describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', (
     expect(runVia(renamedLoader, write('/x/notes.md'))).toBe('block');
     expect(runVia(renamedLoader, write(renamedRules))).toBe('allow');
     expect(runVia(renamedLoader, edit(renamedRules))).toBe('allow');
+  });
+
+  it('path の途中が symlink でも、rules 自身への Write/Edit の復旧経路は働く', () => {
+    expect(runVia(symlinkedLoader, write(symlinkedRules))).toBe('allow');
+    expect(runVia(symlinkedLoader, edit(symlinkedRules))).toBe('allow');
+    // 例外は rules 自身に限る。symlink 経由でも他 path は fail closed のまま
+    expect(runVia(symlinkedLoader, write(join(dirname(symlinkedRules), 'notes.md')))).toBe('block');
+  });
+
+  it('try の外側で例外が起きても exit 1 ではなく 2 を返す（loader は 0 か 2 以外を返さない）', () => {
+    const result = spawnSync(process.execPath, [throwingDecisionLoader], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: JSON.stringify(bash('git status')),
+    });
+    expect(result.status).toBe(2);
   });
 
   it('evaluate() が例外を投げる時も、rules 自身への Write/Edit だけは復旧目的で通る', () => {
@@ -476,7 +524,7 @@ describe('pre-tool-guard.mjs: flag 自体の書き換え', () => {
 //
 // force-push / reset ガードは agent 自身の逸脱を止めるためのもので、ブロック側の
 // 後退は P3 の誤検知より重い。誤検知（コミットメッセージに文字列を書くと落ちる）は
-// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard.sh のコメントと
+// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard-rules.mjs のコメントと
 // #1944 のコメント。
 describe('pre-tool-guard.mjs: heredoc 本文と危険コマンド', () => {
   const heredoc = (intro: string, body: string, delim = 'EOF') => `${intro}\n${body}\n${delim}`;
