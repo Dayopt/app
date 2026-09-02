@@ -170,7 +170,6 @@ worktree で作業するセッション（レーン）は次を守る:
 | `docs-audit`           | 公開docsの監査                                                                        |
 | `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                              |
 | `gardening`            | 月次ガーデニングの人間パート（明示依頼時のみ）                                        |
-| `night-watch`          | 夜勤checklistの追加・変更、cron障害時の手動代行                                       |
 | `audit-ai-config`      | AI設定の棚卸し・audit                                                                 |
 | `blog-ideas`           | ブログネタ提案とissue起票                                                             |
 | `usability-probe`      | Haikuユーザビリティプローブ実行                                                       |

@@ -1,10 +1,10 @@
 name: Nightly
 
-# CI ファイル統合（#2483 Phase 1）: 旧 night-watch.yml / heavy-post-merge.yml /
-# integration.yml（integration job のみ。migration-safety は ci.yml の test job へ
-# 移設済み）/ replica-check.yml / storage-backup-export.yml の 5 cron を 1 ファイル
-# へ統合し、status:* ラベルの close-time 剥がし漏れを掃除する batch sweep を
-# 新設 job として追加した。
+# CI ファイル統合（#2483 Phase 1）: 旧 heavy-post-merge.yml / integration.yml
+# （integration job のみ。migration-safety は ci.yml の test job へ移設済み）/
+# replica-check.yml / storage-backup-export.yml の cron を 1 ファイルへ統合し、
+# status:* ラベルの close-time 剥がし漏れを掃除する batch sweep を新設 job として
+# 追加した（統合時に同居していた night-watch job は 2026-09-02 に撤去済み）。
 #
 # **同じ schedule 配列に複数 cron を書くと、どの cron でもこの workflow 全体が
 # 起動する。job 単位の `if: github.event.schedule == '<cron>'` 振り分けが
@@ -18,12 +18,10 @@ name: Nightly
 # concurrency group にすると、無関係な cron 同士が互いをキャンセルしてしまう）。
 #
 # **`heavy-e2e` / `heavy-web` / `integration` の `name:`（表示名）は
-# night-watch の heavy-red / integration-red 判定キーとして
-# `scripts/ci/night-watch/run-all.mjs` から job 名で直接参照される
-# （workflow ファイル名ではなく job 名で判定する job-scoped 方式、#2483）。
-# ここを改名すると night-watch 側の検知が静かに壊れる（`gh api
-# .../actions/runs/{id}/jobs` の `select(.name == "...")` が一致しなくなる）。
-# 改名する場合は run-all.mjs 側の対応する job 名リテラルも同時に変更すること。
+# promote.yml の「Verify heavy-tier (layer 3) checks are green」step が
+# check-run 名として直接参照する（層 3 gate）。ここを改名すると promote が
+# fail-closed で止まる。改名する場合は promote.yml 側の名前リテラルも同時に
+# 変更すること。
 
 on:
   schedule:
@@ -32,11 +30,6 @@ on:
     # 03:30 JST — integration（DB 起動を伴う重量テストの nightly fallback。
     # per-PR 実行は ci.yml の test job が affected 判定つきで担う）。
     - cron: '30 18 * * *'
-    # 04:00 JST — night-watch。層 3（03:00 / 03:30 JST）の結果を読める時刻に置く。
-    # #2525 以前は「朝の蒸留層 05:00 JST から逆算」した時刻だったが、その蒸留層
-    # （と朝編成ブリーフ・盤面 issue・運行記録コメント）は廃止した。夜勤の出力は
-    # alert issue と job log だけになったため、後段の締め切りは無い。
-    - cron: '0 19 * * *'
     # 04:30 JST — status:* ラベルの batch sweep（close 時の剥がし漏れ backstop）。
     - cron: '30 19 * * *'
     # 06:30 JST — replica-check（production-config-audit の 06:00 JST cron と
@@ -47,11 +40,10 @@ on:
   workflow_dispatch:
     inputs:
       jobs:
-        description: '実行する job を選ぶ。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。night-watch / replica-check / status-label-sweep / storage-backup は各 job を単独で手動代行したい時に選ぶ（night-watch SKILL.md §手動代行 等）。all は post-merge の一括検証専用——storage-backup-export の実転送・status label sweep も同時に走るため、単独の job だけ再実行したい時に選ばないこと（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484: jobs=all しか無いと、night-watch 単独の手動代行のつもりで実データ転送を誤爆させうる）'
+        description: '実行する job を選ぶ。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。replica-check / status-label-sweep / storage-backup は各 job を単独で手動代行したい時に選ぶ。all は post-merge の一括検証専用——storage-backup-export の実転送・status label sweep も同時に走るため、単独の job だけ再実行したい時に選ばないこと（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484: jobs=all しか無いと、単独 job の手動代行のつもりで実データ転送を誤爆させうる）'
         type: choice
         options:
           - layer3
-          - night-watch
           - replica-check
           - status-label-sweep
           - storage-backup
@@ -250,88 +242,6 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: supabase stop
-
-  # ─── night-watch（旧 night-watch.yml）───────────────────────────────
-  # 判定規約の正本は .claude/skills/night-watch/SKILL.md §自動パート。ここに
-  # 判定ロジックを複製しない — この workflow が扱うのは実行環境の配線
-  # （secrets・permissions・依存ツールの導入）だけ。
-  night-watch:
-    name: Night Watch
-    if: github.event.schedule == '0 19 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'night-watch' || github.event.inputs.jobs == 'all'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    concurrency:
-      group: nightly-night-watch
-      cancel-in-progress: false
-    # GITHUB_TOKEN の権限をここで明示的に最小化する。issues: write は alert
-    # issue の起票・追記、contents: read は checkout、actions: read は
-    # heavy-red / integration-red の `gh run list` に必要。
-    # #2525: DoD 候補選定（`gh pr list --search`）の廃止により
-    # `pull-requests: read` は不要になったので外した。
-    permissions:
-      issues: write
-      contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      - name: 必須 secrets の存在を確認（fail closed）
-        env:
-          NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: |
-          missing=()
-          for key in NIGHT_WATCH_DEPENDABOT_TOKEN SENTRY_AUTH_TOKEN; do
-            if [ -z "${!key:-}" ]; then
-              missing+=("$key")
-            fi
-          done
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::未設定の GitHub Secrets があります: ${missing[*]}"
-            echo "::error::docs/operations/night-watch.md の手順に従って登録してください（#2367）。"
-            exit 1
-          fi
-          echo "必須 secrets はすべて設定されています。"
-
-      # digest は GitHub の Release Assets API が計算したもの（アップロード時に
-      # サーバー側で算出され不変）を実測して固定した（2026-08-25）:
-      #   gh api repos/getsentry/cli/releases/tags/<VERSION> \
-      #     --jq '.assets[] | select(.name=="sentry-linux-x64") | .digest' \
-      #     | sed 's/^sha256://'
-      - name: Sentry CLI をダウンロード（pin + retry、取得失敗は degrade）
-        id: sentry-cli-download
-        continue-on-error: true
-        env:
-          NIGHT_WATCH_CLI_VERSION: '0.43.0'
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -fsSL --retry 3 --retry-connrefused --retry-all-errors \
-            -o "$HOME/.local/bin/sentry" \
-            "https://github.com/getsentry/cli/releases/download/${NIGHT_WATCH_CLI_VERSION}/sentry-linux-x64"
-
-      - name: Sentry CLI の checksum を検証（不一致は止める）
-        if: steps.sentry-cli-download.outcome == 'success'
-        env:
-          NIGHT_WATCH_CLI_CHECKSUM_SHA256: '20ac31a2b303b474f770175efd8c24c5c3315c389686dffaf5e439789670c225'
-        run: |
-          echo "${NIGHT_WATCH_CLI_CHECKSUM_SHA256}  $HOME/.local/bin/sentry" | sha256sum -c -
-          chmod +x "$HOME/.local/bin/sentry"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          sentry --version
-
-      # NIGHT_WATCH_DEPENDABOT_TOKEN / SENTRY_AUTH_TOKEN はこの step にしか渡さない。
-      # run-all.mjs は起動直後にこの 2 つを process.env から捕捉して削除し、以降に
-      # spawn する pnpm 系コマンドから見えなくする（run-all.mjs 冒頭コメント参照）。
-      - name: night-watch の観測と起票を実行
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NIGHT_WATCH_DEPENDABOT_TOKEN: ${{ secrets.NIGHT_WATCH_DEPENDABOT_TOKEN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: node scripts/ci/night-watch/run-all.mjs
 
   # ─── status:* ラベルの batch sweep（新設）────────────────────────────
   # #2483 で issue-status-label-cleanup.yml（issue close webhook 起点の
