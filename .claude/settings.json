@@ -145,7 +145,8 @@
           {
             "type": "command",
             "command": "scripts/hooks/session-start.sh",
-            "statusMessage": "プロジェクト状態を取得中..."
+            "statusMessage": "プロジェクト状態を取得中...",
+            "timeout": 300
           },
           {
             "type": "command",
