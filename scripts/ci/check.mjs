@@ -47,8 +47,8 @@ const MIGRATION_LABEL = 'db:destructive-migration';
 // DI 用の簡略型（`typeof execFileSync` 等の strict overload 型をそのまま JSDoc に
 // 使うと、test の単純な mock（`vi.fn(() => 'stdout')` 等）が Node の完全な戻り値型
 // （pid/output/stdout/stderr/signal を持つ SpawnSyncReturns 等）と一致せず
-// typecheck が落ちる。scripts/ci/night-watch/run-all.mjs の ExecFileImpl と同じ
-// 設計判断——実際に呼び出し側が使うプロパティだけを持つ最小型に絞る）。
+// typecheck が落ちる。scripts/lib/gh.mjs の ExecFileImpl と同じ設計判断——
+// 実際に呼び出し側が使うプロパティだけを持つ最小型に絞る）。
 /** @typedef {(file: string, args: string[], options?: object) => string} ExecFileImpl */
 /** @typedef {(command: string, args: string[], options?: object) => { status: number | null }} SpawnImpl */
 /** @typedef {(path: string, encoding: string) => string} ReadFileImpl */
@@ -334,7 +334,7 @@ async function runTest() {
   // 呼び出しは PR branch のテストコードと全依存（postinstall・vitest
   // transform・plugin を含む）を実行するため、env を明示指定しない
   // spawnSync はこのトークンをそのまま子プロセスへ継承してしまう
-  // （scripts/ci/night-watch/run-all.mjs の envWithout と同じ token 分離原則。
+  // （token 分離原則: 子プロセスへ継承させる env から押収し、
   // 押収した値は migration safety の gh 呼び出しにだけ明示的に渡す。
   // push前反証レビュー risk-reviewer 指摘、P1、PR #2484）。
   const ghToken = process.env.GH_TOKEN;
