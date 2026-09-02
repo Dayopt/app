@@ -21,13 +21,20 @@
  * integration: affected な PR だけ integration/RLS（Supabase の起動自体は ci.yml 側の
  *              `if:` が担い、接続情報は env 経由で渡される前提）
  *
- * **unit と integration を別 job に分けてあるのは wall-clock のためではなく、
- * 同一 runner 上の CPU 競合を断つため**（2026-09-02、#2539）。直近 40 run の実測で、
- * 同じ unit test が Supabase 同居時は 4〜9 分、非同居時は 1〜2 分だった。GitHub の
- * private runner は 2 vCPU で、Supabase の container 群（postgres / kong / storage 等）
- * が常駐したまま vitest の worker を回すと、両者が同じ 2 コアを奪い合う。**この 2 job を
- * 再び 1 job へ戻すと、affected 判定が効いていない PR（実測 87%）で unit test が
- * 数倍に伸びる**ため、統合する場合は runner の vCPU 数から見直すこと。
+ * **unit と integration を別 job に分けてあるのは、直列だった 2 種類の検査を
+ * 並列化するため**（2026-09-02、#2539）。分割前は 1 job の中で「Supabase 起動
+ * （約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に並んでいた。
+ * 分割後は unit と integration が別 runner で同時に走り、実測で **16 分 55 秒 →
+ * 12 分 17 秒**（run 33588708693 → 33609204823）になった。
+ *
+ * **CPU 競合はほぼ関係なかった**（当初の仮説は実測で否定された）。同じ
+ * product unit test の所要は Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で、
+ * 差は 3.6% しかない。分割前のデータで「integration を走らせない PR は 1〜2 分」に
+ * 見えたのは、それらが同時に `product_unit=false`（product unit test 自体を skip）
+ * だったための交絡で、Supabase の有無とは無関係だった。
+ *
+ * したがって **product unit test の 5 分そのものは、この分割では縮んでいない**。
+ * そこを縮めるのは別の手（affected 判定の見直し / vitest --changed 等、#2539 の続き）。
  *
  * impact 判定は static モードで 1 回だけ行い、`$GITHUB_OUTPUT` へ書き出す
  * （docs_only / product_unit / integration）。unit / integration job はそれを

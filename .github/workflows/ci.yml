@@ -83,12 +83,15 @@ jobs:
 
   # ── unit と integration を別 job に分ける（2026-09-02、#2539）─────────
   #
-  # 分割理由は wall-clock ではなく **同一 runner 上の CPU 競合**。直近 40 run の
-  # 実測で、同じ unit test 群が Supabase 同居時は 4〜9 分、非同居時（integration
-  # skip の PR）は 1〜2 分だった。private repo の runner は 2 vCPU で、Supabase の
-  # container 群（postgres / kong / storage 等）が常駐したまま vitest の worker を
-  # 回すと同じ 2 コアを奪い合う。**分割は「速い客観検査（unit）」と「触った危険地帯
-  # の検査（integration）」を別レーンへ再配置するもので、検査内容は 1 つも削っていない。**
+  # 分割理由は **直列だった 2 種類の検査の並列化**。分割前は 1 job の中で
+  # 「Supabase 起動（約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に
+  # 並んでいた。分割後は別 runner で同時に走り、実測で **16 分 55 秒 → 12 分 17 秒**
+  # （run 33588708693 → 33609204823）。**検査内容は 1 つも削っていない。**
+  #
+  # **CPU 競合説は実測で否定された**（当初の仮説）。product unit test の所要は
+  # Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で差は 3.6%。分割前に
+  # 「integration skip の PR は 1〜2 分」に見えたのは、それらが同時に
+  # `product_unit=false` だった交絡。**product unit の 5 分はこの分割では縮んでいない**。
   #
   # job 名 `📦 Unit Tests` は `scripts/tasks/finish-branch.sh` が merge gate として
   # 名前で success を要求する（#2415）。**改名する場合は finish-branch.sh の
