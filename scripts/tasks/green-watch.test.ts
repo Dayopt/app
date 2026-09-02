@@ -130,7 +130,7 @@ describe('takeSnapshot（gh 呼び出し契約）', () => {
    * Draft CI 廃止（#2415）で draft PR の Static / Unit は `skipping` になる。
    * `aggregateChecks` は fail / cancel / pending 以外をすべて success へ畳むため、
    * draft を watch に残すと「docs guard が通っただけの draft PR」が
-   * pending → success として通知され、指揮台のクロスレビューを誤発火させる。
+   * pending → success として通知され、Main のクロスレビューを誤発火させる。
    * この watch が拾いたいのは ready + green（= レビュー待ち）だけ。
    */
   it('draft PR は watch 対象から除外する（skipping を success と誤って通知しない）', () => {

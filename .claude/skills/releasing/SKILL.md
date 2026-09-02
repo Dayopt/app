@@ -17,7 +17,7 @@ Dayoptプロジェクトのリリース作業を安全かつ確実に実行す�
 - tag 作成（`git tag v...`）や GitHub Release 作成を明示的に指示された時
 - `package.json` の `version` フィールドを bump する作業を指示された時
 - 既存タグに対応する GitHub Release / リリースノートを更新・作成する指示時
-- 指揮台の朝の promote 提案（朝の編成、`dispatch` skill 操作 C §日次）に User が「流す」と応答した時。提案自体は権限を持たず、release 実行はここから通常の Phase に従う
+- Main の promote 提案（`dispatch` skill 操作 C §日次）に User が「流す」と応答した時。提案自体は権限を持たず、release 実行はここから通常の Phase に従う
 
 ## When NOT to Use
 

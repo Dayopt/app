@@ -91,7 +91,7 @@ code: .github/dependabot.yml
 
 ### judgment
 
-- `judgment:diverged` — 指揮台（または `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） の会話）の推奨と User の判断が分かれた記録（未判定 or 判定材料待ち）。判定を書いたら外さず `judgment:judged` へ付け替える
+- `judgment:diverged` — Main（dispatch skill を実行する session）の推奨と User の判断が分かれた記録（未判定 or 判定材料待ち）。判定を書いたら外さず `judgment:judged` へ付け替える
 - `judgment:judged` — 個別判定を書き終えた状態（2026-08-27、User 裁可の新設。`judgment` namespace 内の追加のため既存 2 値体系への例外にあたる。経緯は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル）。`docs/decisions.md` への反映はラベル→月次 sync 機構ではなく、判定時点での直接追記に一本化済み（2026-08-28、#2475）
 
 運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル
