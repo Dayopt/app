@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-25
+last_verified: 2026-09-02
 code: apps/product/src/features/review
 public_docs:
   - review
@@ -28,7 +28,7 @@ lp:
 - Plan との差分が `±0` の項目は一覧に表示しない
 - 差分の正負は符号と方向 icon で示し、成功・失敗を意味する色や評価ラベルは使わない
 - Plan と Record が別日の場合、Plan は Plan 自身の日、Record は Record 自身の日へ計上する
-- **セグメントの集計はタグ/アクティビティ可視性フィルタに従わない**（全アクティビティ対象）。サイドバーのチェックで合計が変わると分析ではなく表示の副作用になるため
+- **セグメントの集計はアクティビティ可視性フィルタに従わない**（全アクティビティ対象）。サイドバーのチェックで合計が変わると分析ではなく表示の副作用になるため
 - セグメント集計は `total` / `share` を返さない。円グラフ・積み上げ・「合計 100%」の表現は使わない（単体の数字 + 過去の自分との比較のみ）
 - セグメントの CRUD（作成・アクティビティ編集・削除）は Sidebar のコンテキストメニューで行う。並び替え・フォルダ分け・共有は持たない
 - Review UI と Storybook は Review feature が所有し、`/report` の Composition Layer（`app/**/(workspace)/_composition/ReportViewClient.tsx`）が timeblock 取得と diff 計算を担う

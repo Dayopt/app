@@ -11,16 +11,16 @@ Main が merge 前に実行するクロスレビューの標準手順。**クロ
 
 2 系統の役割分担:
 
-| 系統  | 起動方法                       | 証跡                                                      | 何を担保するか                                |
-| ----- | ------------------------------ | --------------------------------------------------------- | --------------------------------------------- |
-| 内製  | `Workflow`（手順 3）           | `[internal-review]` marker（`head:` で現 HEAD へ束縛）    | repo 固有の不変条件・アーキテクチャ・挙動検証 |
-| Codex | PR へ `@codex review` コメント | Codex 自身が投稿した review object（`commit.oid` で束縛） | 別 provider による反証・観点差                |
+| 系統  | 起動方法                       | 証跡                                                                                                            | 何を担保するか                                |
+| ----- | ------------------------------ | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 内製  | `Workflow`（手順 3）           | `[internal-review]` marker（`head:` で現 HEAD へ束縛）                                                          | repo 固有の不変条件・アーキテクチャ・挙動検証 |
+| Codex | PR へ `@codex review` コメント | Codex 自身が投稿した review object、または `Reviewed commit` 行付きの指摘ゼロ comment（いずれも現 HEAD へ束縛） | 別 provider による反証・観点差                |
 
-**Codex 側は marker を作らない。** Main が書けるコメントでは「Codex が実行された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が自己申告に戻るため（#2529 実装前レビュー P1）、`scripts/tasks/finish-branch.sh` は Codex 自身の review object（`chatgpt-codex-connector`）を直接検証する。Codex の失敗（error / timeout / usage limit / 空応答）は「現 HEAD の review object が存在しない」に帰着するので、失敗モードを列挙せずとも fail closed になる。**バイパス marker は作らない** — 可用性が実害化したら gate を黙って弱めず、別 issue で evidence を集めて範囲を再判断する。
+**Codex 側は marker を作らない。** Main が書けるコメントでは「Codex が実行された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が自己申告に戻るため（#2529 実装前レビュー P1）、`scripts/tasks/finish-branch.sh` は Codex 自身が投稿した証跡だけを直接検証する。証跡は 2 形態ある: (1) 指摘ありの review object（`commit.oid` が現 HEAD と一致）、(2) 指摘ゼロの時に Codex（`chatgpt-codex-connector`）が代わりに投稿する PR comment で、本文の `Reviewed commit:` 行（sha 値付き）が現 HEAD の prefix と一致するもの（#2536。review object を作らない「クリーンな pass」を marker と誤認して弾いていた不具合の是正）。Codex の usage-limit / error 応答はこの `Reviewed commit:` 行を含まないため、どちらの形態にも該当せず構造的に fail closed のままになる。**バイパス marker は作らない** — 可用性が実害化したら gate を黙って弱めず、別 issue で evidence を集めて範囲を再判断する。
 
 **この gate は `pnpm branch:finish` 経路の機械強制**であり、GitHub の required check ではない（private repo + Free plan では server-side の required check 強制が効かない。既存の全 gate と同じ性質）。UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている。Codex provider 障害で gate 自体を直す PR が止まった場合も、この性質が復旧経路になる（owner が内製レビュー済みの revert PR を UI から merge し、PR にその経緯を残す）。日常のバイパスとしては使わない。
 
-`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する `[internal-review]` marker 付きコメント + inline review comment + Codex の review object で満たす。
+`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する `[internal-review]` marker 付きコメント + inline review comment + Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）で満たす。
 
 **このレビューが必須になる PR は保護対象 path / `review:full` ラベル / linked issue（`Closes #N`）の `review:full` に該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化。linked issue の継承は #2530）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
 
