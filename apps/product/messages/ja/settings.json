@@ -343,7 +343,6 @@
         "exportButton": "エクスポート",
         "exportSuccess": "データをエクスポートしました",
         "exportFailed": "エクスポートできませんでした。もう一度お試しください。",
-        "csvComingSoon": "近日公開",
         "includedDataTitle": "エクスポートに含まれるデータ",
         "profileInfo": "プロフィール情報",
         "tasksEvents": "タイムブロック",
