@@ -22,6 +22,18 @@ maxTurns: 10
 - Main の session が Read → Edit の実装ループを自分で始めそうな時（L3 が L2 の仕事をしている兆候）
 - subagent の報告を受け取り、次の subtask を決める時
 
+## session の型と Main の位置
+
+L0–L3 は「誰がその subtask を実行するか」の役割で、session の種類ではない。Main は User と会話している session を指し、役割としては L3（分解・検証・commit）を占め、同時に router でもある。L0 は Main が script を直接叩く。L1 / L2 は subagent か別 session。
+
+| 型                  | 実体                                                                                  | 使う時                                            | その session の Main                                                          |
+| ------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 分解・裁定 session  | User と会話し、`ctx` → 分解表 → 委譲 → 検証 → commit を回す                           | 着手・裁定・merge                                 | Opus / Fable（L3）                                                            |
+| session 内 subagent | `Agent({ model })`、同じ worktree、write 可は AGENTS.md の 4 条件                     | 1 commit 分の実装・列挙・蒸留                     | 起動元の Main が diff を見て commit                                           |
+| worker session      | dispatch で `status:in-progress` + `ctx --post` → issue URL を渡して新 session を開く | 1 PR 分の仕事。branch と PR をその session が持つ | **Sonnet（L2）**。自分の subagent は Haiku、Opus は反証以外 guard R2 が止める |
+
+session の model は起動時に User が選ぶ（hook では強制できない）。既定は「分解・裁定 = Opus / Fable、issue を渡す worker = Sonnet」。subagent の model は Main が明示し、guard R1 / R2 が漏れを止める。
+
 ## 手順
 
 1. **分解表を書く**。issue コメント（issue が無ければ PR 本文）に置く。会話の中だけに置かない
