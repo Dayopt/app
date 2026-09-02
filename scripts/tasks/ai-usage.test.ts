@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  aggregateExplorationBeforeEdit,
   collectL0Candidates,
   collectToolResultSizes,
+  computeExplorationBeforeEdit,
   createAggregate,
   defaultWindow,
   extractBashPrefix,
   fetchMergedPrStats,
   foldUsageRecord,
   human,
+  isSubagentFilePath,
   normalizeModelLabel,
   parseArgs,
   renderMarkdown,
@@ -432,5 +435,101 @@ describe('renderMarkdown', () => {
       prStats: null,
     });
     expect(markdown).toContain('weird\\|name');
+  });
+});
+
+describe('isSubagentFilePath', () => {
+  it('subagents/agent-<id>.jsonl を検出する', () => {
+    expect(
+      isSubagentFilePath(
+        '/Users/x/.claude/projects/-Users-x-dayopt/sess/subagents/agent-abc123.jsonl',
+      ),
+    ).toBe(true);
+  });
+
+  it('通常の session jsonl は対象外', () => {
+    expect(isSubagentFilePath('/Users/x/.claude/projects/-Users-x-dayopt/sess.jsonl')).toBe(false);
+  });
+});
+
+describe('computeExplorationBeforeEdit', () => {
+  it('EDIT の前に出た EXPLORE を数える', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Read', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Grep', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't3', name: 'Bash', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't4', name: 'Edit', input: {} }] }),
+    ];
+    expect(computeExplorationBeforeEdit(records)).toMatchObject({
+      exploreCount: 3,
+      hasEdit: true,
+    });
+  });
+
+  it('EDIT が無ければ hasEdit: false（研究専任）', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Read', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Grep', input: {} }] }),
+    ];
+    expect(computeExplorationBeforeEdit(records)).toMatchObject({
+      exploreCount: 2,
+      hasEdit: false,
+    });
+  });
+
+  it('最初の tool_use が EDIT なら探索 turn は 0', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Write', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Read', input: {} }] }),
+    ];
+    expect(computeExplorationBeforeEdit(records)).toMatchObject({
+      exploreCount: 0,
+      hasEdit: true,
+    });
+  });
+
+  it('model は file 内で最も頻度の高い message.model（生ラベル）', () => {
+    const records = [
+      assistantRecord({ model: 'claude-sonnet-4-5', content: [] }),
+      assistantRecord({ model: 'claude-sonnet-4-5', content: [] }),
+      assistantRecord({ model: 'claude-fable-5', content: [] }),
+    ];
+    expect(computeExplorationBeforeEdit(records).model).toBe('claude-sonnet-4-5');
+  });
+
+  it('EDIT を含まないレコード・空配列は安全に処理する', () => {
+    expect(computeExplorationBeforeEdit([])).toMatchObject({
+      model: null,
+      exploreCount: 0,
+      hasEdit: false,
+    });
+    expect(computeExplorationBeforeEdit([{ type: 'user', message: {} }])).toMatchObject({
+      exploreCount: 0,
+      hasEdit: false,
+    });
+  });
+});
+
+describe('aggregateExplorationBeforeEdit', () => {
+  it('model 別に編集ありの探索 turn 数配列・編集なし件数を畳む', () => {
+    const byModel = aggregateExplorationBeforeEdit([
+      { model: 'sonnet', exploreCount: 3, hasEdit: true },
+      { model: 'sonnet', exploreCount: 5, hasEdit: true },
+      { model: 'sonnet', exploreCount: 0, hasEdit: false },
+      { model: 'haiku', exploreCount: 1, hasEdit: true },
+    ]);
+    expect(byModel.get('sonnet')).toEqual({ editValues: [3, 5], noEditN: 1 });
+    expect(byModel.get('haiku')).toEqual({ editValues: [1], noEditN: 0 });
+  });
+
+  it('model が無いエントリは「不明」へ畳む', () => {
+    const byModel = aggregateExplorationBeforeEdit([
+      { model: null, exploreCount: 2, hasEdit: true },
+    ]);
+    expect(byModel.get('不明')).toEqual({ editValues: [2], noEditN: 0 });
+  });
+
+  it('空配列は空 Map', () => {
+    expect(aggregateExplorationBeforeEdit([]).size).toBe(0);
   });
 });

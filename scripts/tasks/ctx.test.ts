@@ -2,18 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   bodyReferencesNumber,
+  buildCommentBody,
   buildContextPack,
+  buildPostArgs,
   computeCiRollup,
   countUnresolvedThreads,
+  CTX_MARKER,
   extractLinkedIssueNumbers,
   extractParentEpic,
   extractPathTokens,
   filterExistingPaths,
+  findMarkerComment,
   isBotLogin,
   isPullRequest,
   mapSkills,
   nextStep,
   parseArgs,
+  postContextBrief,
   renderMarkdown,
   selectComments,
   truncateBody,
@@ -28,6 +33,7 @@ describe('parseArgs', () => {
       comments: 5,
       bodyLines: 60,
       allComments: false,
+      post: false,
     });
   });
 
@@ -40,7 +46,12 @@ describe('parseArgs', () => {
       comments: 3,
       bodyLines: 10,
       allComments: true,
+      post: false,
     });
+  });
+
+  it('--post を解釈する', () => {
+    expect(parseArgs(['2550', '--post'])).toMatchObject({ number: 2550, post: true });
   });
 
   it('番号が無い・不正・複数は例外', () => {
@@ -505,5 +516,141 @@ describe('renderMarkdown', () => {
     expect(markdown).not.toContain('決定ログ');
     expect(markdown).not.toContain('skill');
     expect(markdown).not.toContain('次の一手');
+  });
+});
+
+describe('buildCommentBody', () => {
+  it('1 行目がマーカー、2 行目が見出し行', () => {
+    const body = buildCommentBody({ number: 2550, date: '2026-09-02', markdown: '### 本文' });
+    const lines = body.split('\n');
+    expect(lines[0]).toBe(CTX_MARKER);
+    expect(lines[1]).toBe('**brief（`pnpm ctx 2550`、2026-09-02）**');
+    expect(body).toContain('### 本文');
+  });
+});
+
+describe('findMarkerComment', () => {
+  it('マーカーで始まる本文のコメントを見つける', () => {
+    const comments = [
+      { id: 1, body: '普通のコメント' },
+      { id: 2, body: `${CTX_MARKER}\n**brief（...）**` },
+    ];
+    expect(findMarkerComment(comments)?.id).toBe(2);
+  });
+
+  it('無ければ null、配列でなければ null', () => {
+    expect(findMarkerComment([{ id: 1, body: '普通のコメント' }])).toBeNull();
+    expect(findMarkerComment(undefined)).toBeNull();
+  });
+});
+
+describe('buildPostArgs', () => {
+  it('既存コメントが有れば PATCH の argv を組む', () => {
+    const { mode, argv } = buildPostArgs({ number: 2550, existingCommentId: 99, tmpFile: '/t/b' });
+    expect(mode).toBe('update');
+    expect(argv).toEqual([
+      'api',
+      '-X',
+      'PATCH',
+      'repos/Dayopt/dayopt/issues/comments/99',
+      '-F',
+      'body=@/t/b',
+    ]);
+  });
+
+  it('既存コメントが無ければ新規作成の argv を組む', () => {
+    const { mode, argv } = buildPostArgs({
+      number: 2550,
+      existingCommentId: null,
+      tmpFile: '/t/b',
+    });
+    expect(mode).toBe('create');
+    expect(argv).toEqual(['issue', 'comment', '2550', '--body-file', '/t/b']);
+  });
+});
+
+describe('postContextBrief', () => {
+  const pack = { number: 2550 };
+  const markdown = '### #2550 タイトル';
+
+  it('既存の ctx brief コメントが無ければ作成する', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
+      calls.push(args);
+      if (args[0] === 'api') return JSON.stringify([{ id: 1, body: '無関係なコメント' }]);
+      if (args[0] === 'issue' && args[1] === 'comment') {
+        return 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-1\n';
+      }
+      throw new Error(`unexpected args: ${args.join(' ')}`);
+    });
+    const writeFileImpl = vi.fn();
+    const mkdtempImpl = vi.fn(() => '/tmp/ctx-brief-xyz');
+
+    const result = postContextBrief(pack, markdown, {
+      execFileImpl,
+      writeFileImpl,
+      mkdtempImpl,
+      now: () => new Date('2026-09-02T00:00:00Z'),
+    });
+
+    expect(result).toEqual({
+      mode: 'create',
+      url: 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-1',
+    });
+    expect(calls[0]).toEqual([
+      'api',
+      'repos/Dayopt/dayopt/issues/2550/comments?per_page=100',
+      '--paginate',
+    ]);
+    expect(calls[1]).toEqual([
+      'issue',
+      'comment',
+      '2550',
+      '--body-file',
+      '/tmp/ctx-brief-xyz/body.md',
+    ]);
+    expect(writeFileImpl).toHaveBeenCalledWith(
+      '/tmp/ctx-brief-xyz/body.md',
+      expect.stringContaining(CTX_MARKER),
+      'utf8',
+    );
+  });
+
+  it('既存の ctx brief コメントが有れば PATCH で更新する', () => {
+    const calls: string[][] = [];
+    const execFileImpl = vi.fn((_cmd: string, args: string[]) => {
+      calls.push(args);
+      if (args[0] === 'api' && args[1] !== '-X') {
+        return JSON.stringify([{ id: 42, body: `${CTX_MARKER}\n古い brief` }]);
+      }
+      if (args[0] === 'api' && args[1] === '-X') {
+        return JSON.stringify({
+          html_url: 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-42',
+        });
+      }
+      throw new Error(`unexpected args: ${args.join(' ')}`);
+    });
+    const writeFileImpl = vi.fn();
+    const mkdtempImpl = vi.fn(() => '/tmp/ctx-brief-abc');
+
+    const result = postContextBrief(pack, markdown, {
+      execFileImpl,
+      writeFileImpl,
+      mkdtempImpl,
+      now: () => new Date('2026-09-02T00:00:00Z'),
+    });
+
+    expect(result).toEqual({
+      mode: 'update',
+      url: 'https://github.com/Dayopt/dayopt/issues/2550#issuecomment-42',
+    });
+    expect(calls[1]).toEqual([
+      'api',
+      '-X',
+      'PATCH',
+      'repos/Dayopt/dayopt/issues/comments/42',
+      '-F',
+      'body=@/tmp/ctx-brief-abc/body.md',
+    ]);
   });
 });

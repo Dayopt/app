@@ -44,6 +44,21 @@ const PROJECTS_DIR = join(homedir(), '.claude', 'projects');
 const MODEL_LABELS = ['haiku', 'sonnet', 'opus', 'fable', 'mythos'];
 const BASH_PREFIX_LEADERS = new Set(['pnpm', 'npx', 'gh', 'git']);
 
+// E. 着手までの探索 turn 数（subagent transcript、routing skill 目標状態との距離）。
+const EXPLORE_TOOLS = new Set([
+  'Read',
+  'Grep',
+  'Glob',
+  'Bash',
+  'WebFetch',
+  'WebSearch',
+  'ToolSearch',
+  'Agent',
+]);
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+// `~/.claude/projects/<project>/<session>/subagents/agent-<id>.jsonl`。
+const SUBAGENT_FILE_RE = /[/\\]subagents[/\\]agent-[^/\\]+\.jsonl$/;
+
 /** model 名を短いラベルへ畳む。集計対象外（`<synthetic>` 等）なら null。 */
 export function normalizeModelLabel(raw) {
   if (!raw) return null;
@@ -53,6 +68,85 @@ export function normalizeModelLabel(raw) {
     if (name.includes(label)) return label;
   }
   return String(raw).slice(0, 24);
+}
+
+/** ファイル path が subagent transcript（`.../subagents/agent-<id>.jsonl`）かどうか。 */
+export function isSubagentFilePath(filePath) {
+  return SUBAGENT_FILE_RE.test(String(filePath ?? ''));
+}
+
+/**
+ * 1 つの subagent transcript（file 内の record を file 順に並べた配列）から、
+ * 最初の EDIT tool_use より前に出た EXPLORE tool_use の数を数える。EDIT が
+ * 1 つも無ければ `hasEdit: false`（研究専任、中央値/平均の対象外）。
+ * model は file 内で最も頻度の高い `message.model`（生ラベル、正規化は呼び出し側）。
+ */
+export function computeExplorationBeforeEdit(records) {
+  const modelCounts = new Map();
+  let exploreCount = 0;
+  let hasEdit = false;
+  let editFound = false;
+
+  for (const record of records ?? []) {
+    if (!record || record.type !== 'assistant') continue;
+    const message = record.message ?? {};
+    if (message.model) {
+      modelCounts.set(message.model, (modelCounts.get(message.model) ?? 0) + 1);
+    }
+    if (editFound) continue;
+    const content = Array.isArray(message.content) ? message.content : [];
+    for (const block of content) {
+      if (!block || block.type !== 'tool_use') continue;
+      if (EDIT_TOOLS.has(block.name)) {
+        editFound = true;
+        hasEdit = true;
+        break;
+      }
+      if (EXPLORE_TOOLS.has(block.name)) exploreCount += 1;
+    }
+  }
+
+  let model = null;
+  let bestCount = 0;
+  for (const [label, count] of modelCounts) {
+    if (count > bestCount) {
+      model = label;
+      bestCount = count;
+    }
+  }
+
+  return { model, exploreCount, hasEdit };
+}
+
+function median(values) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function mean(values) {
+  if (values.length === 0) return null;
+  return values.reduce((s, v) => s + v, 0) / values.length;
+}
+
+/**
+ * `computeExplorationBeforeEdit` の結果配列（model は既に `normalizeModelLabel` 済み）
+ * を model 別へ畳む。編集ありの探索 turn 数配列と、編集なしの件数を持つ。
+ */
+export function aggregateExplorationBeforeEdit(entries) {
+  const byModel = new Map(); // label -> { editValues: number[], noEditN: number }
+  for (const entry of entries ?? []) {
+    const label = entry.model ?? '不明';
+    let bucket = byModel.get(label);
+    if (!bucket) {
+      bucket = { editValues: [], noEditN: 0 };
+      byModel.set(label, bucket);
+    }
+    if (entry.hasEdit) bucket.editValues.push(entry.exploreCount);
+    else bucket.noEditN += 1;
+  }
+  return byModel;
 }
 
 /** `YYYY-MM-DD` 文字列から UTC 深夜の Date を作る。`endOfDay` なら翌日 00:00（inclusive 終端）。 */
@@ -123,6 +217,8 @@ export function createAggregate() {
     bashPrefixes: new Map(), // prefix -> calls
     /** @type {Chain[]} */
     chains: [],
+    // { model, exploreCount, hasEdit }[]（subagent transcript 1 ファイル = 1 要素）。
+    explorationAgents: [],
   };
 }
 
@@ -386,6 +482,38 @@ function listJsonlFiles(projectsDir) {
   return files;
 }
 
+// cwd が無い subagent record 向けの fallback: project ディレクトリ名は cwd の
+// `/`（`\` も一応）をすべて `-` に置換した形（例: `/Users/x/dayopt` →
+// `-Users-x-dayopt`）。実測（2026-08）の `~/.claude/projects/<dir>/` と一致。
+function cwdPrefixToProjectDirSegment(cwdPrefix) {
+  return String(cwdPrefix ?? '').replace(/[/\\]/g, '-');
+}
+
+/**
+ * subagent transcript 1 ファイル分の record 列から、E 節（着手までの探索 turn 数）
+ * 用のエントリを 1 件作る。時間窓はファイルの最初の timestamp、cwd はレコードに
+ * あればそれを見て `cwdPrefix` と突合し、無ければファイル path が project ディレクトリ
+ * 名を含むかで代用する。窓外 / cwd 不一致なら null。
+ */
+function buildExplorationEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix }) {
+  const firstTimestamp = fileRecords.find((r) => typeof r?.timestamp === 'string')?.timestamp;
+  const firstTsMs = firstTimestamp ? Date.parse(firstTimestamp) : NaN;
+  if (!Number.isFinite(firstTsMs) || firstTsMs < sinceMs || firstTsMs >= untilMs) return null;
+
+  const cwdRecord = fileRecords.find((r) => typeof r?.cwd === 'string');
+  const cwdOk = cwdRecord
+    ? !cwdPrefix || cwdRecord.cwd.startsWith(cwdPrefix)
+    : !cwdPrefix || file.includes(cwdPrefixToProjectDirSegment(cwdPrefix));
+  if (!cwdOk) return null;
+
+  const result = computeExplorationBeforeEdit(fileRecords);
+  return {
+    model: normalizeModelLabel(result.model),
+    exploreCount: result.exploreCount,
+    hasEdit: result.hasEdit,
+  };
+}
+
 /** jsonl 全ファイルを walk して集計する（副作用: FS 読み込み）。 */
 export function scanProjects({ projectsDir = PROJECTS_DIR, sinceMs, untilMs, cwdPrefix }) {
   const files = listJsonlFiles(projectsDir);
@@ -410,6 +538,8 @@ export function scanProjects({ projectsDir = PROJECTS_DIR, sinceMs, untilMs, cwd
     } catch {
       continue;
     }
+    const isSubagent = isSubagentFilePath(file);
+    const fileRecords = isSubagent ? [] : null;
     const ctx = { file, currentChain: null };
     for (const line of raw.split('\n')) {
       if (!line) continue;
@@ -419,7 +549,12 @@ export function scanProjects({ projectsDir = PROJECTS_DIR, sinceMs, untilMs, cwd
       } catch {
         continue;
       }
+      if (fileRecords) fileRecords.push(record);
       foldUsageRecord(agg, record, { sinceMs, untilMs, cwdPrefix }, ctx);
+    }
+    if (fileRecords && fileRecords.length > 0) {
+      const entry = buildExplorationEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix });
+      if (entry) agg.explorationAgents.push(entry);
     }
   }
   return agg;
@@ -555,6 +690,38 @@ export function renderMarkdown({ since, until, agg, prStats }) {
   if (chainRows.length === 0) {
     lines.push('| 未取得 | — | — |');
   }
+  lines.push('');
+
+  // 表 E: 着手までの探索 turn 数（subagent、routing skill 目標状態との距離）
+  lines.push('| model | 編集あり n | 探索 turn 中央値 | 平均 | 最大 | 編集なし n |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
+  const explorationByModel = aggregateExplorationBeforeEdit(agg.explorationAgents);
+  const explorationRows = [...explorationByModel.entries()].sort(
+    (a, b) => b[1].editValues.length - a[1].editValues.length,
+  );
+  for (const [label, bucket] of explorationRows) {
+    const med = median(bucket.editValues);
+    const avg = mean(bucket.editValues);
+    const max = bucket.editValues.length ? Math.max(...bucket.editValues) : null;
+    lines.push(
+      `| ${escapeCell(label)} | ${bucket.editValues.length} | ${med === null ? '—' : med.toFixed(1)} | ${avg === null ? '—' : avg.toFixed(1)} | ${max === null ? '—' : max} | ${bucket.noEditN} |`,
+    );
+  }
+  if (explorationRows.length === 0) {
+    lines.push('| 未取得 | — | — | — | — | — |');
+  }
+  lines.push('');
+
+  const allEditValues = [...explorationByModel.values()].flatMap((b) => b.editValues);
+  const overallMedian = median(allEditValues);
+  const overallMean = mean(allEditValues);
+  lines.push(
+    `**着手までの探索 turn（subagent）**: ${
+      allEditValues.length === 0
+        ? '未取得'
+        : `全体 中央値 ${overallMedian.toFixed(1)} / 平均 ${overallMean.toFixed(1)}（n=${allEditValues.length}）`
+    }。目標はゼロに近いこと（routing skill 目標状態）`,
+  );
 
   return lines.join('\n');
 }
@@ -608,6 +775,19 @@ async function main() {
     const modelsObj = Object.fromEntries(agg.models);
     const toolResultSizesObj = Object.fromEntries(agg.toolResultSizes);
     const bashPrefixesObj = Object.fromEntries(agg.bashPrefixes);
+    const explorationByModel = aggregateExplorationBeforeEdit(agg.explorationAgents);
+    const explorationBeforeEdit = Object.fromEntries(
+      [...explorationByModel.entries()].map(([label, bucket]) => [
+        label,
+        {
+          editN: bucket.editValues.length,
+          median: median(bucket.editValues),
+          mean: mean(bucket.editValues),
+          max: bucket.editValues.length ? Math.max(...bucket.editValues) : null,
+          noEditN: bucket.noEditN,
+        },
+      ]),
+    );
     process.stdout.write(
       `${JSON.stringify(
         {
@@ -619,6 +799,7 @@ async function main() {
           chains: agg.chains
             .filter((c) => c.length > 0)
             .map((c) => ({ file: c.file, length: c.length, tools: Object.fromEntries(c.tools) })),
+          explorationBeforeEdit,
           prStats,
         },
         null,

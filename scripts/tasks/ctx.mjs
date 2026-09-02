@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { resolveProtectedPathGate } from '../ci/protected-path-gate.mjs';
@@ -29,7 +30,14 @@ const [REPO_OWNER, REPO_NAME] = REPO.split('/');
 
 /** CLI 引数を解釈する。位置引数は issue/PR 番号 1 つのみ。 */
 export function parseArgs(argv) {
-  const options = { number: null, json: false, comments: 5, bodyLines: 60, allComments: false };
+  const options = {
+    number: null,
+    json: false,
+    comments: 5,
+    bodyLines: 60,
+    allComments: false,
+    post: false,
+  };
   const positionals = [];
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -37,6 +45,8 @@ export function parseArgs(argv) {
       options.json = true;
     } else if (arg === '--all-comments') {
       options.allComments = true;
+    } else if (arg === '--post') {
+      options.post = true;
     } else if (arg === '--comments') {
       options.comments = Number(argv[i + 1]);
       i += 1;
@@ -45,7 +55,7 @@ export function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith('--')) {
       throw new Error(
-        `未知の引数です: ${arg}（--json / --comments / --body-lines / --all-comments のみ）`,
+        `未知の引数です: ${arg}（--json / --comments / --body-lines / --all-comments / --post のみ）`,
       );
     } else {
       positionals.push(arg);
@@ -657,11 +667,100 @@ export function buildContextPack(options, deps = {}) {
   };
 }
 
+// --- `--post`（issue/PR コメントへの配達、idempotent 更新） ----------------
+
+/** 配達コメントの先頭に置く隠しマーカー。このマーカーで始まるコメントが「ctx brief」。 */
+export const CTX_MARKER = '<!-- ctx-brief -->';
+
+/** コメント本文を組み立てる。1 行目は必ずマーカー（idempotent 判定の唯一の根拠）。 */
+export function buildCommentBody({ number, date, markdown }) {
+  return `${CTX_MARKER}\n**brief（\`pnpm ctx ${number}\`、${date}）**\n\n${markdown}\n`;
+}
+
+/** コメント一覧からマーカー付きの既存 ctx brief コメントを探す。無ければ null。 */
+export function findMarkerComment(comments) {
+  const list = Array.isArray(comments) ? comments : [];
+  return list.find((c) => typeof c.body === 'string' && c.body.startsWith(CTX_MARKER)) ?? null;
+}
+
+/**
+ * 投稿方法（PATCH で更新 / 新規作成）を argv 配列へ落とす。
+ * body は tmpFile（os.tmpdir() 配下）経由で渡す ── shell 文字列に埋め込まない。
+ */
+export function buildPostArgs({ number, existingCommentId, tmpFile }) {
+  if (existingCommentId) {
+    return {
+      mode: 'update',
+      argv: [
+        'api',
+        '-X',
+        'PATCH',
+        `repos/${REPO}/issues/comments/${existingCommentId}`,
+        '-F',
+        `body=@${tmpFile}`,
+      ],
+    };
+  }
+  return {
+    mode: 'create',
+    argv: ['issue', 'comment', String(number), '--body-file', tmpFile],
+  };
+}
+
+/**
+ * `pnpm ctx N --post`: markdown を組み立てた後、issue/PR コメントとして配達する。
+ * idempotent ── 既存の ctx brief コメント（`CTX_MARKER` で始まる）があれば PATCH で
+ * 更新し、無ければ新規作成する。gh 呼び出しは `execFileImpl` 経由（shell を経由しない）。
+ */
+export function postContextBrief(pack, markdown, deps = {}) {
+  const {
+    execFileImpl,
+    writeFileImpl = writeFileSync,
+    mkdtempImpl = mkdtempSync,
+    tmpDirPath = tmpdir(),
+    now = () => new Date(),
+  } = deps;
+
+  const existingComments = runGhJson(
+    ['api', `repos/${REPO}/issues/${pack.number}/comments?per_page=100`, '--paginate'],
+    { execFileImpl },
+  );
+  const existing = findMarkerComment(existingComments);
+
+  const date = now().toISOString().slice(0, 10);
+  const body = buildCommentBody({ number: pack.number, date, markdown });
+
+  const dir = mkdtempImpl(join(tmpDirPath, 'ctx-brief-'));
+  const tmpFile = join(dir, 'body.md');
+  writeFileImpl(tmpFile, body, 'utf8');
+
+  const { mode, argv } = buildPostArgs({
+    number: pack.number,
+    existingCommentId: existing?.id ?? null,
+    tmpFile,
+  });
+
+  if (mode === 'update') {
+    const updated = runGhJson(argv, { execFileImpl });
+    return { mode, url: updated?.html_url ?? null };
+  }
+  const out = runGh(argv, { execFileImpl });
+  return { mode, url: out.trim() };
+}
+
 // --- CLI --------------------------------------------------------------
 
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const pack = buildContextPack(options, {});
+  if (options.post) {
+    const markdown = renderMarkdown(pack);
+    const result = postContextBrief(pack, markdown, {});
+    process.stdout.write(
+      `${result.mode === 'update' ? '更新' : '作成'}: ${result.url ?? '（URL 未取得）'}\n`,
+    );
+    return;
+  }
   if (options.json) {
     process.stdout.write(`${JSON.stringify(pack, null, 2)}\n`);
   } else {

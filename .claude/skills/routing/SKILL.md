@@ -48,24 +48,24 @@ L0 と呼べる入口の条件は 3 つ。raw コマンドがこれを満たす�
 2. exit code に意味があり、stdin を待たない（対話 prompt を出さない）
 3. 失敗は `未取得` と明記して fail-closed。黙って空を返さない
 
-| 分類       | 能力                    | 入口                                                                               | 射影の書き方                                           | 状態                                                 |
-| ---------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
-| Repository | search                  | `rg -n <pat> <path>`                                                               | `-l` / `-c` で件数から入り、本文は `-m` と head で絞る | raw で十分                                           |
-| Repository | diff / log / blame      | `git diff --stat`、`git log --oneline -S<sym>`、`git blame -L`                     | `--stat` → 必要な path だけ `-- <path>`                | raw で十分                                           |
-| Repository | 依存グラフ              | `pnpm lint:boundaries`、`pnpm deps:circular`、`rg -l "from '.*<name>'"`            | 「誰が import しているか」は `rg -l`                   | 候補: `pnpm deps <path>`                             |
-| Validation | typecheck / lint / test | `pnpm check`（個別は `pnpm typecheck` / `lint` / `test:run`）                      | tail 20 行、失敗行は `rg "error\|FAIL"`                | あり                                                 |
-| Validation | E2E                     | `pnpm test:e2e:smoke`、nightly 層 3                                                | 結果は `gh run view`                                   | あり                                                 |
-| Infra      | CI 状態                 | `gh pr checks <N> [--watch]`、`pnpm green:watch --once`                            | `--json` + `--jq`                                      | あり。候補: `pnpm pr:advance <N>`（追従→待ち→ready） |
-| Infra      | Vercel                  | `vercel ls`、`vercel inspect [--logs] <url>`、`vercel logs <url> --json`           | head / tail、`jq 'select(.level=="error")'`            | raw で十分（MCP は登録しない）                       |
-| Infra      | Supabase query          | `pnpm db:*`、`psql`（cloud MCP はオンデマンド）                                    | 行数上限を必ず付ける                                   | 候補: `pnpm db:sql`（read-only 固定・行数上限）      |
-| Infra      | Sentry                  | `sentry` CLI（`mcp-usage` skill §Sentry CLI）                                      | issue 1 件ずつ                                         | あり                                                 |
-| Automation | polling                 | `gh pr checks --watch`、`pnpm green:watch --follow`                                | 遷移だけ読む                                           | あり                                                 |
-| Automation | bulk / 変換             | `sed -i`、`jq`、`node -e`                                                          | 対象一覧を先に `rg -l` で確定してから一括              | ad-hoc（同じ形が 2 回出たら script 化）              |
-| Automation | context pack            | `pnpm ctx <issue または PR>`                                                       | 150 行以内で完結、`次の一手` を読む                    | あり                                                 |
-| 配達       | worker への brief       | `dispatch` で `status:in-progress` にした時に `pnpm ctx N` を issue コメントへ置く | 150 行以内                                             | 候補（dispatch skill 操作 A に 1 行）                |
-| 配達       | Main への brief         | SessionStart hook が branch 名の issue 番号から `pnpm ctx N` を注入                | 5 秒予算内                                             | 候補（`scripts/hooks/**` は保護対象、別 PR）         |
-| 観測       | 着手までの探索 turn 数  | `pnpm ai:usage` に subagent の最初の Edit 以前の Read / Grep / gh 回数を追加       | model 別 1 行                                          | 候補（目標状態との距離）                             |
-| 観測       | 経済メトリクス          | `pnpm ai:usage`                                                                    | 月次 gardening の journal に貼る                       | あり                                                 |
+| 分類       | 能力                    | 入口                                                                        | 射影の書き方                                           | 状態                                                 |
+| ---------- | ----------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| Repository | search                  | `rg -n <pat> <path>`                                                        | `-l` / `-c` で件数から入り、本文は `-m` と head で絞る | raw で十分                                           |
+| Repository | diff / log / blame      | `git diff --stat`、`git log --oneline -S<sym>`、`git blame -L`              | `--stat` → 必要な path だけ `-- <path>`                | raw で十分                                           |
+| Repository | 依存グラフ              | `pnpm lint:boundaries`、`pnpm deps:circular`、`rg -l "from '.*<name>'"`     | 「誰が import しているか」は `rg -l`                   | 候補: `pnpm deps <path>`                             |
+| Validation | typecheck / lint / test | `pnpm check`（個別は `pnpm typecheck` / `lint` / `test:run`）               | tail 20 行、失敗行は `rg "error\|FAIL"`                | あり                                                 |
+| Validation | E2E                     | `pnpm test:e2e:smoke`、nightly 層 3                                         | 結果は `gh run view`                                   | あり                                                 |
+| Infra      | CI 状態                 | `gh pr checks <N> [--watch]`、`pnpm green:watch --once`                     | `--json` + `--jq`                                      | あり。候補: `pnpm pr:advance <N>`（追従→待ち→ready） |
+| Infra      | Vercel                  | `vercel ls`、`vercel inspect [--logs] <url>`、`vercel logs <url> --json`    | head / tail、`jq 'select(.level=="error")'`            | raw で十分（MCP は登録しない）                       |
+| Infra      | Supabase query          | `pnpm db:*`、`psql`（cloud MCP はオンデマンド）                             | 行数上限を必ず付ける                                   | 候補: `pnpm db:sql`（read-only 固定・行数上限）      |
+| Infra      | Sentry                  | `sentry` CLI（`mcp-usage` skill §Sentry CLI）                               | issue 1 件ずつ                                         | あり                                                 |
+| Automation | polling                 | `gh pr checks --watch`、`pnpm green:watch --follow`                         | 遷移だけ読む                                           | あり                                                 |
+| Automation | bulk / 変換             | `sed -i`、`jq`、`node -e`                                                   | 対象一覧を先に `rg -l` で確定してから一括              | ad-hoc（同じ形が 2 回出たら script 化）              |
+| Automation | context pack            | `pnpm ctx <issue または PR>`                                                | 150 行以内で完結、`次の一手` を読む                    | あり                                                 |
+| 配達       | worker への brief       | `pnpm ctx N --post`（`dispatch` 操作 A 手順 7。再実行で同じコメントを更新） | 150 行以内                                             | あり                                                 |
+| 配達       | Main への brief         | SessionStart hook が branch 名の issue 番号から `pnpm ctx N` を注入         | 5 秒予算内                                             | 候補（`scripts/hooks/**` は保護対象、別 PR）         |
+| 観測       | 着手までの探索 turn 数  | `pnpm ai:usage` 表 E（subagent の最初の Edit 以前の探索 tool 回数）         | model 別 1 行                                          | あり（目標状態との距離）                             |
+| 観測       | 経済メトリクス          | `pnpm ai:usage`                                                             | 月次 gardening の journal に貼る                       | あり                                                 |
 
 **AI が頼む前に走る層**: SessionStart hook（git 状態・token 構成比）、pre-commit / pre-push、CI 4 層、`branch:finish` の 10 ゲート。新しい確認を足す時は、まず「hook / CI で AI より先に走らせられないか」を考える。
 
