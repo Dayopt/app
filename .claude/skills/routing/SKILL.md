@@ -78,7 +78,7 @@ L0 と呼べる入口の条件は 3 つ。raw コマンドがこれを満たす�
 | 配達       | Main への brief         | SessionStart hook が branch 名の issue 番号から `pnpm ctx N` を注入                     | 5 秒予算内                                             | 候補（`scripts/hooks/**` は保護対象、別 PR）         |
 | 観測       | 着手までの探索 turn 数  | `pnpm ai:usage` 表 E（subagent の最初の Edit 以前の探索 tool 回数）                     | model 別 1 行                                          | あり（目標状態との距離）                             |
 | 観測       | 判断のトレース          | `pnpm trace <PR>`（session 群 → 判断の記録 → レビュー → 結果を issue / PR 番号で join） | 120 行以内。判定は人                                   | あり（保存は増やさない。pull 型のみ）                |
-| 観測       | 経済メトリクス          | `pnpm ai:usage`                                                                         | 月次 gardening の journal に貼る                       | あり                                                 |
+| 観測       | 経済メトリクス          | `pnpm ai:usage`                                                                         | 月次 gardening 手順 0 で読む                           | あり                                                 |
 
 **Observability の目標状態（2026-09-02 User 定義）**: 「AI が何を見て、なぜその判断をし、何を実行し、その判断が正しかったか」を追跡できる。保存は増やさず、session ログ・git・GitHub・`decisions.md` を issue / PR 番号で join する pull 型（`pnpm trace`）に限る。「なぜ」は tool ではなく書く規律（分解表 / DoD / decisions.md）で、`ctx` の「判断の記録」行が欠落を着手時に知らせる。「正しかったか」の信号は DoD と PR 本文の突き合わせ・Codex 指摘数・`結果(未):` の回収率の 3 つ。
 
