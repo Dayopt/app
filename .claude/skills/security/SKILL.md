@@ -29,11 +29,6 @@ disallowedTools: Write
 
 ### 1. [Critical] 認証・認可
 
-**確認ポイント**:
-
-- `protectedProcedure` を使用しているか
-- `ctx.userId` でデータアクセスを制限しているか
-
 **Dayoptの正しいパターン** (`apps/product/src/features/activities/server/router.ts`参照):
 
 ```typescript
@@ -58,11 +53,6 @@ export const activitiesRouter = createTRPCRouter({
 - [ ] publicProcedure は本当に公開が必要な場合のみ
 
 ### 2. [Critical] 入力検証
-
-**確認ポイント**:
-
-- 全ての入力を Zod でバリデーション
-- UUID、文字列長、数値範囲を制限
 
 **Dayoptの正しいパターン**:
 
@@ -171,15 +161,14 @@ pnpm security:check
    Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。カタログは
    内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
    「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
-   見えなくなる。**判定は自動では走らない**（外部モデルの自動レビュー ai-review は
-   2026-08-03 に撤去済み、全PR対象の外部レビュー（Codex）も 2026-08-13 に停止。
-   クロスレビュー必須 PR に限り `@codex review` で Codex を起動し、その review object を
-   merge gate が必須とする、#2529）。危険クラスの
+   見えなくなる。**判定は自動では走らない**（自動レビューは廃止済み。クロスレビュー
+   必須 PR は `@codex review` で Codex を起動し、review object を merge gate が
+   必須とする。AGENTS.md §Codexレビュー規則、#2529）。危険クラスの
    diff では merge 前に `pr-cross-review` skill を明示的に実行する
 
 ## 関連する検査経路
 
-- **`pr-cross-review` skill** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う PR の merge 前クロスレビュー（旧 risk-reviewer agent の観点を inline 化して継承）
+- **`pr-cross-review` skill** — auth / RLS / service role / OAuth / webhook / billing / redirect / migration を扱う PR の merge 前クロスレビュー
 - **`/claude-security`** — 既存コードの深掘りスキャン。月次 sweep（`/gardening` §5.7）と、auth 周りの大きな変更前にユーザーが手動起動する
 
 > このスキルは「実装時のガイド」、上記は「既存コードの検査」。新規コード実装時はこのスキルを、既存コードのスキャンは `/claude-security` を使う。

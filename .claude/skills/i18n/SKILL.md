@@ -53,13 +53,11 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 ### namespace 自動検出（apps/product）
 
-`apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込む。**手動の NAMESPACES 配列への登録は不要**。
+`apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込むため、新規 namespace の追加は JSON ファイルを作るだけで有効になる（**手動の NAMESPACES 配列への登録は不要**）。
 
 ```
 apps/product/messages/en/calendar.json → 自動で calendar namespace を検出
 ```
-
-新規 namespace 追加は JSON ファイルを作るだけで有効になる。
 
 ### apps/web は固定配列方式
 

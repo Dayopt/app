@@ -130,9 +130,9 @@ git pull origin main
 
 ### Phase 1.2: Production promote を手動 dispatch し、完了を待つ
 
-main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`promote.yml` は `push: main` トリガーを持たず **`workflow_dispatch` のみ**で起動する（2026-08-20、#2268）。merge しても自動では走らないため、ここで明示的に dispatch する。**production への操作のため `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
+main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`promote.yml` は `push: main` トリガーを持たず **`workflow_dispatch` のみ**で起動する（#2268）。merge しても自動では走らないため、ここで明示的に dispatch する。**production への操作のため `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
 
-**promote 前に層 3（E2E / Web E2E / Integration Tests）が main HEAD の SHA で green か確認する**（2026-08-25、#2382）。heavy-e2e/heavy-web（旧 heavy-post-merge.yml、#2483 で nightly.yml へ吸収）は per-merge 実行を廃止し nightly + 手動発火のみになったため、main HEAD が直近の nightly 実行 SHA より進んでいる（nightly 後に merge があった）のが通常運用になる。`promote.yml` の層 4 gate は **target SHA ちょうど**の check-runs しか見ないため、この確認を省くと gate で止まる:
+**promote 前に層 3（E2E / Web E2E / Integration Tests）が main HEAD の SHA で green か確認する**（#2382）。heavy-e2e/heavy-web（旧 heavy-post-merge.yml、#2483 で nightly.yml へ吸収）は per-merge 実行を廃止し nightly + 手動発火のみになったため、main HEAD が直近の nightly 実行 SHA より進んでいる（nightly 後に merge があった）のが通常運用になる。`promote.yml` の層 4 gate は **target SHA ちょうど**の check-runs しか見ないため、この確認を省くと gate で止まる:
 
 ```bash
 # main HEAD に層 3 の 3 check がすべて success で付いているか確認する
@@ -144,15 +144,13 @@ gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/check-runs" \
 
 **`gh run list --limit 1` を dispatch 直後にそのまま使わない。** `gh workflow run` は run が Actions 側へ登録される前に返るため、`--limit 1` は**まだ存在しない新 run ではなく前夜の nightly（conclusion=success）を返しうる**。その id を `gh run watch --exit-status` へ渡すと完了済み run に対して即座に exit 0 が返り、「層 3 を green にした」と誤認したまま promote へ進んでしまう（実際には何も走っておらず層 4 gate で止まる）。`--event` / `--branch` で絞り、**headSha が main HEAD と一致すること**を確認してから watch する:
 
-**このブロックは頭から通しで実行する**（`MAIN_SHA` の取得を含む）。途中だけを別シェルへ貼ると `MAIN_SHA` が空になり、run を永久に特定できずに終わる。**#2483（CI ファイル統合）で heavy-post-merge.yml / integration.yml は nightly.yml へ吸収された** — heavy-e2e / heavy-web / integration は同一 workflow 内の 3 job になったため、`-f jobs=layer3`（既定値）**1 回の dispatch で 3 job とも同時に走る**（旧 `WF` を差し替えての 2 回実行は不要になった）。**`-f jobs=layer3` を必ず明示する**（省略時も既定値は layer3 だが、`gh workflow run` の `-f` は input の型検証を行うため、既定値に頼らず明示した方が「意図せず all を選んだ」誤操作を防げる。`jobs=all` は post-merge の一括検証専用で、storage-backup-export の実転送・status label sweep も同時に走るため release 前の routine では選ばない）。
+**このブロックは頭から通しで実行する**（`MAIN_SHA` の取得を含む）。途中だけを別シェルへ貼ると `MAIN_SHA` が空になり、run を永久に特定できずに終わる。heavy-e2e / heavy-web / integration は同一 workflow（nightly.yml、#2483 で統合済み）内の 3 job のため、`-f jobs=layer3`（既定値）**1 回の dispatch で 3 job とも同時に走る**。**`-f jobs=layer3` を必ず明示する**（`gh workflow run` の `-f` は型検証されるため、既定値に頼らず明示した方が「意図せず all を選んだ」誤操作を防げる。`jobs=all` は post-merge の一括検証専用で、storage-backup-export の実転送・status label sweep も同時に走るため release 前の routine では選ばない）。
 
 ```bash
 git fetch origin main                      # MAIN_SHA を確実に最新へ
 MAIN_SHA="$(git rev-parse origin/main)"
 
-# dispatch 前の最新 run id を控える。これより新しい run だけを受け入れることで、
-# 「同じ main HEAD に対する過去の dispatch」（再 dispatch / promote 中断後の再開）を
-# 掴んでしまう経路を塞ぐ。headSha 一致だけでは旧 run と区別できない。
+# dispatch 前の最新 run id を控える（過去の dispatch を誤って掴まないため。headSha 一致だけでは旧 run と区別できない）
 BEFORE_ID="$(gh run list --workflow=nightly.yml --event=workflow_dispatch --branch=main \
   --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
 case "$BEFORE_ID" in
@@ -181,7 +179,7 @@ fi
 
 完了後は、**冒頭の check-runs 確認コマンドを再実行**して 3 check すべての `success` を確かめる。`gh run watch` の結果ではなくこちらを最終判断に使う — **層 4 gate が実際に見るものと同じ**なので確実。
 
-`workflow_dispatch` でも check-run は commit へ正しく付く（2026-08-25 実測、#2382）ため、手動発火の green で層 4 gate は成立する。
+`workflow_dispatch` でも check-run は commit へ正しく付くため（#2382）、手動発火の green で層 4 gate は成立する。
 
 ### 層 3 が走っていない過去 SHA を promote したい時
 
@@ -203,9 +201,9 @@ git push origin --delete "$TAG"
 git tag -d "$TAG"
 ```
 
-**2026-08-25 実測**: `gh workflow run --ref` は 40-hex SHA を `HTTP 422: No ref found for: <sha>` で拒否するが、**tag は受け付ける**。tag ref で起動した run は `headSha` が tag 先の commit になり、check-run もその commit へ付く（層 4 gate は `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。tag ref は concurrency group も main と別になるため、走行中の main run を巻き込まない。
+`gh workflow run --ref` は 40-hex SHA を `HTTP 422: No ref found for: <sha>` で拒否するが、**tag は受け付ける**。tag ref で起動した run は `headSha` が tag 先の commit になり、check-run もその commit へ付く（層 4 gate は `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。tag ref は concurrency group も main と別になるため、走行中の main run を巻き込まない。
 
-**この経路が成立するのは、TARGET の tree に `nightly.yml`（heavy-e2e/heavy-web/integration の 3 job を含む）が存在し、かつ job 名が層 4 gate の `required_checks`（🎭 E2E Tests / 🌐 Web Build & E2E / Integration Tests）と一致する場合に限る。** dispatch は tag 先 commit の workflow 定義で走るため、CI ファイル統合（#2483）より前の SHA では `nightly.yml` 自体が存在せず（旧 `heavy-post-merge.yml` / `integration.yml` だった）dispatch 自体が失敗するか、job 名が当時のものと食い違い gate を通らない可能性がある（未検証）。したがって **実テストを走らせる道が残っているのは #2483 以降の SHA に限られる**。`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip するため、対象 SHA が該当するなら上記を試した上での最後の手段として扱う。
+**この経路が成立するのは、TARGET の tree に `nightly.yml`（heavy-e2e/heavy-web/integration の 3 job を含む）が存在し、job 名が層 4 gate の `required_checks`（🎭 E2E Tests / 🌐 Web Build & E2E / Integration Tests）と一致する場合に限る**（CI ファイル統合 #2483 より前の SHA では `nightly.yml` 自体が存在しないため道が無い。未検証）。`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip するため、上記を試した上での最後の手段として扱う。
 
 ```bash
 # Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。
@@ -307,7 +305,7 @@ done
 
 カテゴリは `docs/operations/runbook.md` 第4部「リリースノート執筆規約」の5分類に従う（Web版リリースノート `docs-writing` skill とも共通のタクソノミー。ここでは再定義しない）:
 
-1. **新機能**: 機能名 + 具体的な実装内容。**Storybook-only（本番コードからの呼び出し元が無い）変更は「新機能」に書かない**（策定日: 2026-08-28、[#2442](https://github.com/Dayopt/dayopt/issues/2442)）。対象 component/関数を `rg` し、`*.stories.tsx` や自 feature 内以外からの呼び出しが無ければ Storybook-only と判定する。どうしても記載する場合は「Storybook 上のみ・本番未接続」と明記し、ユーザーには見えないことを分かる形にする。2026-08-27、Storybook-only の [PR #2413](https://github.com/Dayopt/dayopt/pull/2413) を新機能として記載し、User が本番で探して見つからない実害が発生した
+1. **新機能**: 機能名 + 具体的な実装内容。**Storybook-only（本番コードからの呼び出し元が無い）変更は「新機能」に書かない**（[#2442](https://github.com/Dayopt/dayopt/issues/2442)。実例: PR #2413 で誤記載しユーザーが本番で見つけられない実害が発生）。対象 component/関数を `rg` し、`*.stories.tsx` や自 feature 内以外からの呼び出しが無ければ Storybook-only と判定する。どうしても記載する場合は「Storybook 上のみ・本番未接続」と明記し、ユーザーには見えないことを分かる形にする
 2. **改善**: 何がどう変わったか + 影響範囲（パフォーマンス最適化を含む）
 3. **バグ修正**: 問題の原因 + 修正内容
 4. **破壊的変更**: DB変更、削除されたAPI/コンポーネント
@@ -344,7 +342,7 @@ gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 
 #### Phase 3.1: milestone の締めと次の開設（minor リリース時のみ）
 
-milestone は「次の minor version」を単位に常に 1 個だけ open にする運用（経緯は 2026-08-09-milestone-versioning.md（削除済み、git 履歴参照））。minor リリースを出したらここで世代交代する。patch リリースでは何もしない。
+milestone は「次の minor version」を単位に常に 1 個だけ open にする運用（経緯は git 履歴参照）。minor リリースを出したらここで世代交代する。patch リリースでは何もしない。
 
 ```bash
 # リリースした version の milestone を閉じる（open issue が残っていれば次へ移す）
