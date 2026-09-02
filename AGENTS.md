@@ -163,30 +163,30 @@ worktree で作業するセッション（レーン）は次を守る:
 
 `.claude/skills/*/SKILL.md` を参照。該当する作業では先に読む。
 
-| skill                  | 使う場面                                                                   |
-| ---------------------- | -------------------------------------------------------------------------- |
-| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                   |
-| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約 |
-| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/UptimeRobot 等の MCP 呼び出し        |
-| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                |
-| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                       |
-| `trpc-router-creating` | tRPC router/service の新規作成                                             |
-| `store-creating`       | 新規 Zustand store                                                         |
-| `storybook`            | Story作成・design token 選択                                               |
-| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                      |
-| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                         |
-| `optimistic-update`    | tRPC mutation の楽観的更新                                                 |
-| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                   |
-| `test`                 | 新機能・バグ修正後のテスト                                                 |
-| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）       |
-| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                         |
-| `docs-audit`           | 公開docsの監査                                                             |
-| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                   |
-| `gardening`            | 月次ガーデニングの人間パート（明示依頼時のみ）                             |
-| `audit-ai-config`      | AI設定の棚卸し・audit                                                      |
-| `blog-ideas`           | ブログネタ提案とissue起票                                                  |
-| `usability-probe`      | Haikuユーザビリティプローブ実行                                            |
-| `decision`             | `docs/decisions.md` への意思決定1行追記                                    |
+| skill                  | 使う場面                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                         |
+| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約       |
+| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/UptimeRobot 等の MCP 呼び出し              |
+| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                      |
+| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                             |
+| `trpc-router-creating` | tRPC router/service の新規作成                                                   |
+| `store-creating`       | 新規 Zustand store                                                               |
+| `storybook`            | Story作成・design token 選択                                                     |
+| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                            |
+| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                               |
+| `optimistic-update`    | tRPC mutation の楽観的更新                                                       |
+| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                         |
+| `test`                 | 新機能・バグ修正後のテスト                                                       |
+| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）             |
+| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                               |
+| `docs-audit`           | 公開docsの監査                                                                   |
+| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                         |
+| `gardening`            | 月次改善ループ: ai:usage の 4 問 → 月に 1 変数 → 結果(未) 回収（明示依頼時のみ） |
+| `audit-ai-config`      | AI設定の棚卸し・audit                                                            |
+| `blog-ideas`           | ブログネタ提案とissue起票                                                        |
+| `usability-probe`      | Haikuユーザビリティプローブ実行                                                  |
+| `decision`             | `docs/decisions.md` への意思決定1行追記                                          |
 
 ## Deploy / Release
 
