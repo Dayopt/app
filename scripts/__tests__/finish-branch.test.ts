@@ -78,6 +78,10 @@ function statusContext(context: string, state: string, startedAt: string): Rollu
  *   免除しない**（#2483 で secret/docs 検査が static job へ吸収され、docs-only
  *   PR でも唯一の実行経路になったため。内製クロスレビュー risk-reviewer
  *   指摘、P1、PR #2484）。Unit Tests だけ docs-only PR で免除される
+ * - Integration Tests（#2539 で分離）は **integration affected な PR でだけ**
+ *   要求される。affected でない PR では rollup に無くても通るため、合格を
+ *   期待するケースでは常に足しておいて構わない（要求されない check が
+ *   余分に存在しても gate は名前で success を見るだけ）
  */
 function requiredChecks(): RollupEntry[] {
   return [
@@ -87,12 +91,22 @@ function requiredChecks(): RollupEntry[] {
   ];
 }
 
-/** ci.yml の軽量層 2 job。draft skip（#2415）で名前指定の要求対象になった。 */
+/**
+ * ci.yml の 3 job。draft skip（#2415）で名前指定の要求対象になった。
+ * Integration Tests は #2539 の job 分割で加わった（affected な PR でだけ要求される
+ * が、ここでは常に足す。上の requiredChecks() のコメント参照）。
+ */
 function ciChecks(conclusion = 'SUCCESS'): RollupEntry[] {
   return [
     checkRun('🔍 Static Checks', conclusion, '2026-07-30T10:00:00Z'),
     checkRun('📦 Unit Tests', conclusion, '2026-07-30T10:00:00Z'),
+    checkRun('🧪 Integration Tests', conclusion, '2026-07-30T10:00:00Z'),
   ];
+}
+
+/** ciChecks() から 1 つだけ落とす（「その check が欠けたら止まる」を固定する用）。 */
+function ciChecksWithout(name: string, conclusion = 'SUCCESS'): RollupEntry[] {
+  return ciChecks(conclusion).filter((entry) => (entry.name as string) !== name);
 }
 
 /** レビュー thread の GraphQL レスポンスを組み立てる（shape は gh api graphql の実出力） */
@@ -1293,6 +1307,102 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
     );
     expect(stderr).toContain('影響判定を実行できませんでした');
     expect(stderr).toContain('必須 check「🔍 Static Checks」');
+    expect(status).toBe(1);
+  });
+
+  // ── Integration Tests（#2539 で test job から分離）─────────────────
+  //
+  // 分離で「job まるごとが `if:` で skip されうる」形が新しく生まれた。Unit Tests と
+  // 同じ class（draft skip / 配線ミスで一度も実走しないまま merge）が再発しないよう
+  // 名前で要求するが、**affected でない PR では skip が正常**なので、要求の向きを
+  // 両方向とも固定する（無条件に要求すると skip される PR が永久に missing で止まる）。
+  //
+  // nightly.yml は integration=true かつ product/web=false（Vercel context を
+  // 誘発しない）ので、この gate だけを切り出して観察できる。
+  const INTEGRATION_AFFECTED = { files: ['.github/workflows/nightly.yml'] };
+
+  it('integration affected な PR で Integration Tests が欠けていれば止める', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        ...ciChecksWithout('🧪 Integration Tests'),
+      ],
+      INTEGRATION_AFFECTED,
+    );
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」が 1 件も見つかりません');
+    expect(status).toBe(1);
+  });
+
+  it('integration affected な PR で Integration Tests が skipped のままなら止める', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        ...ciChecksWithout('🧪 Integration Tests'),
+        checkRun('🧪 Integration Tests', 'SKIPPED', '2026-08-26T10:00:00Z'),
+      ],
+      INTEGRATION_AFFECTED,
+    );
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(1);
+  });
+
+  it('integration affected な PR で 3 job 揃えば通す', () => {
+    const { status, stderr } = runScript(
+      [checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'), ...ciChecks()],
+      INTEGRATION_AFFECTED,
+    );
+    expect(stderr).not.toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(0);
+  });
+
+  it('DB を触らない PR では Integration Tests の欠落を許容する', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        ...ciChecksWithout('🧪 Integration Tests'),
+      ],
+      SCRIPTS_ONLY,
+    );
+    expect(stderr).toContain('DB を触らない変更のため');
+    expect(status).toBe(0);
+  });
+
+  // docs-only は integration より優先する。**これは意図した挙動ではなく現状の固定**
+  // （[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。impact.mjs は
+  // rls-snapshot.md のような「docs だが integration を要求する」path を明示的に
+  // 想定していて、実際に `docsOnly: true, integration: true` を返す。しかし
+  // ci.yml の integration job は `docs_only != 'true'` で job ごと skip するため、
+  // gate 側もそれに合わせて免除しないと永久に missing で止まる。
+  //
+  // つまりこのテストは「gate と ci.yml が同じ向きに揃っている」ことを固定するもので、
+  // #2552 を直す時（両方で docs_only と integration を独立させる）には**このテストも
+  // 同時に更新する**必要がある。片方だけ変えるとここが落ちて気づける。
+  it('docs-only なら integration affected でも Integration Tests を免除する（ci.yml と対称、#2552）', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+      ],
+      // integration=true かつ docsOnly=true になる唯一の実在パターン
+      { files: ['docs/engineering/data/db/rls-snapshot.md'] },
+    );
+    expect(stderr).toContain('docs-only の変更のため');
+    expect(stderr).not.toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(0);
+  });
+
+  it('影響判定に失敗したら Integration Tests も要求する（fail closed）', () => {
+    // Static Checks / Unit Tests / Vercel context は揃えて、Integration Tests だけを
+    // 欠かせる。判定不能（filesUnavailable）でこの gate が緩まないことを固定する。
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        ...requiredChecks().filter((entry) => (entry.name as string) !== '🧪 Integration Tests'),
+      ],
+      { filesUnavailable: true },
+    );
+    expect(stderr).toContain('影響判定を実行できませんでした');
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」');
     expect(status).toBe(1);
   });
 });
