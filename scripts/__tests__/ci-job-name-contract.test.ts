@@ -21,6 +21,14 @@ import { describe, expect, it } from 'vitest';
  * ci.yml 側を絵文字なしの `Integration Tests` に改名した瞬間、per-PR の check run が
  * 層 3 の check として拾われ、**重量テストを一度も通していない SHA が promote を通過する**。
  * 絵文字の有無だけが両者を分けている状態を、その一致に依存していると明示して固定する。
+ *
+ * 併せて **ci.yml の checkout が資格情報を残さないこと**も固定する（#2539 のクロスレビュー
+ * risk-reviewer P1）。ci.yml の job は PR branch のコードとその全依存（postinstall・vitest
+ * transform・eslint plugin）を実行するため、`persist-credentials` を既定（true）のままに
+ * すると `.git/config` の `http.extraheader` に GITHUB_TOKEN が残り、PR 側のコードから
+ * `git config --get-all http.https://github.com/.extraheader` で読み出せる。unit job は
+ * `pull-requests: write` / `issues: write` を持つので、これは書き込み権限の奪取に直結する。
+ * repo の他 workflow（promote / nightly / production-config-audit）は既に false を明示済み。
  */
 
 const readWorkflow = (name: string) =>
@@ -89,6 +97,39 @@ describe('CI job 名の契約', () => {
     for (const name of [...ciNames, ...nightlyNames]) {
       expect(name, `${name} に VS16 が含まれる`).not.toContain('️');
     }
+  });
+
+  // ── checkout の資格情報（#2539 クロスレビュー risk-reviewer P1）─────
+  describe('ci.yml の checkout は資格情報を残さない', () => {
+    const ci = readWorkflow('ci.yml');
+    const checkoutCount = [...ci.matchAll(/uses: actions\/checkout@/g)].length;
+    const persistFalseCount = [...ci.matchAll(/persist-credentials: false/g)].length;
+
+    it('全ての checkout が persist-credentials: false を明示する', () => {
+      expect(checkoutCount).toBeGreaterThan(0);
+      expect(persistFalseCount).toBe(checkoutCount);
+    });
+
+    it('repo の他 workflow と同じ扱いになっている（片方だけ緩まない）', () => {
+      for (const name of ['promote.yml', 'production-config-audit.yml']) {
+        const other = readWorkflow(name);
+        const co = [...other.matchAll(/uses: actions\/checkout@/g)].length;
+        const pf = [...other.matchAll(/persist-credentials: false/g)].length;
+        expect(
+          pf,
+          `${name} の checkout ${co} 件に対し persist-credentials: false が ${pf} 件`,
+        ).toBe(co);
+      }
+    });
+
+    it('persist-credentials 未指定の checkout を検出できる（回帰確認）', () => {
+      const regressed = ['    steps:', '      - uses: actions/checkout@abc # v7'].join('\n');
+      const co = [...regressed.matchAll(/uses: actions\/checkout@/g)].length;
+      const pf = [...regressed.matchAll(/persist-credentials: false/g)].length;
+
+      expect(co).toBe(1);
+      expect(pf).not.toBe(co);
+    });
   });
 
   // ── 検出力の確認（上の assert が「たまたま通っている」のではないこと）──

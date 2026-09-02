@@ -90,6 +90,8 @@ jobs:
     steps:
       # 判定は gh api の PR files 一覧だけを入力にするため、履歴は要らない。
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Resolve impact
         id: run
@@ -102,7 +104,7 @@ jobs:
   static:
     name: "\U0001F50D Static Checks"
     needs: impact
-    if: always() && github.event.pull_request.draft != true
+    if: ${{ !cancelled() && github.event.pull_request.draft != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -111,6 +113,7 @@ jobs:
           # gitleaks の diff scan と docs:check の append-only guard が
           # base ref との差分を見るため full history が必要（旧 docs-guard.yml と同じ）
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: ./.github/actions/setup
 
@@ -149,7 +152,7 @@ jobs:
     # `always()` を付けるのは、上流 job 自体が落ちた時に下流が skip されると
     # 「検証なしで required check が success」になる（fail open）ため。always()
     # なら impact 失敗時も評価され、空の output は `!= 'true'` で実行側に倒れる。
-    if: always() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true'
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -158,6 +161,8 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup
 
@@ -185,7 +190,7 @@ jobs:
   integration:
     name: "\U0001F9EA Integration Tests"
     needs: impact
-    if: always() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false'
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     # gh を呼ばないため write 権限も GH_TOKEN も渡さない（migration safety は
@@ -195,6 +200,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: ./.github/actions/setup
 
