@@ -42,8 +42,13 @@ const finishBranch = readFileSync(join(process.cwd(), 'scripts/tasks/finish-bran
 const promote = readWorkflow('promote.yml');
 
 describe('CI job 名の契約', () => {
-  it('ci.yml は static / unit / integration の 3 job を持つ', () => {
-    expect(ciNames).toEqual(['🔍 Static Checks', '📦 Unit Tests', '🧪 Integration Tests']);
+  it('ci.yml は impact / static / unit / integration の 4 job を持つ', () => {
+    expect(ciNames).toEqual([
+      '🧭 Impact',
+      '🔍 Static Checks',
+      '📦 Unit Tests',
+      '🧪 Integration Tests',
+    ]);
   });
 
   it('finish-branch.sh が要求する 3 job 名は ci.yml に実在する', () => {
@@ -113,7 +118,7 @@ describe('CI job 名の契約', () => {
     });
 
     it('実ファイルから名前を 1 つ以上抜けている（regex の空振りで全 assert が素通りしない）', () => {
-      expect(ciNames.length).toBe(3);
+      expect(ciNames.length).toBe(4);
       expect(nightlyNames.length).toBeGreaterThanOrEqual(3);
     });
   });
