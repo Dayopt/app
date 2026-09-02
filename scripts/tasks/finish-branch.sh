@@ -1082,19 +1082,28 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 2026-08-13 の外部レビュー停止判断は、必須 PR に限りここで撤回する
   # （低リスク PR は従来どおり Codex を起動しない）。
   #
-  # **証跡は Codex 自身が投稿した GitHub review object のみ**。marker 方式
-  # （Main がコメントを書く）は採らない — Main が書ける痕跡では「Codex が実行
-  # された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が
-  # 自己申告に戻る（#2529 Issue Review P1）。review object なら:
-  #   - producer = GitHub App の identity（Main には投稿できない）
-  #   - commit.oid = レビュー対象の commit（現 HEAD への束縛）
-  #   - Codex の error / timeout / usage limit / 空応答は「現 HEAD の review が
-  #     存在しない」に帰着するので、失敗は構造的に fail closed になる
-  # を 1 つの object から機械検証できる。
+  # **証跡は Codex 自身が投稿した痕跡のみ**。marker 方式（Main がコメントを
+  # 書く）は採らない — Main が書ける痕跡では「Codex が実行された」ことも
+  # 「同じ diff を読んだ」ことも証明できず、独立性の主張が自己申告に戻る
+  # （#2529 Issue Review P1）。痕跡は 2 形態ある（#2536。詳細は
+  # `.claude/skills/pr-cross-review/SKILL.md`）:
+  #   1. review object（指摘ありの時に Codex が作る）。producer = GitHub App
+  #      の identity（Main には投稿できない）、commit.oid = レビュー対象の
+  #      commit（現 HEAD への束縛）。
+  #   2. `Reviewed commit: <sha>` 行を含む PR comment（指摘ゼロの時に Codex が
+  #      review object の代わりに投稿する）。login と本文中の sha で 1 と同じ
+  #      機械検証ができる。#2536 実測: 指摘が無いと Codex は review object を
+  #      作らず plain comment だけを残すため、review object のみを見ていた
+  #      旧実装は「指摘ゼロのクリーンな pass」を「Codex 未実行」と誤認して
+  #      merge を止めていた。
+  # いずれか一方でも「現 HEAD に対して存在する」ことが確認できれば通す。
+  # usage limit / timeout / error 応答はどちらの形態にも該当しない（review
+  # object も `Reviewed commit` 行も無い）ため、この経路では拾われず
+  # 構造的に fail closed のままになる。
   #
   # **delta review は Codex 側では認めない。** `@codex review` は常に現時点の PR
-  # 全体を読むため、review object は「その commit の final diff を全量読んだ」
-  # 証跡になる。旧 HEAD の review を積み上げて範囲の連続性を主張する経路
+  # 全体を読むため、いずれの形態も「その commit の final diff を全量読んだ」
+  # 証跡になる。旧 HEAD の痕跡を積み上げて範囲の連続性を主張する経路
   # （#2529 Issue Review P2 の delta chain 問題）を、そもそも作らない。
   #
   # **バイパス marker は作らない**（#2529 failure policy）。可用性が実害化した
@@ -1131,30 +1140,110 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  if [[ "$CODEX_REVIEW_COUNT" == "0" ]]; then
-    error "この PR には現在の HEAD に対する Codex レビューがありません。マージを中止します。"
-    error "PR へ「@codex review」をコメントし、Codex のレビュー投稿を待ってから再実行してください。"
+  # ── 痕跡の 2 形態目: 指摘ゼロの clean pass コメント（#2536） ──────────
+  #
+  # comments は内製 marker gate と同じ $REVIEW_EVIDENCE_JSON の comments
+  # フィールドを再利用する（追加の gh api 呼び出しを増やさない）。login は
+  # review object 判定と同じ normalized_login helper で正規化する。
+  # authorAssociation は見ない（内製 marker と異なり、第三者が
+  # chatgpt-codex-connector を名乗ることは GitHub の login 制約上できないため、
+  # login 一致だけで producer を担保できる — review object 判定と同じ考え方）。
+  #
+  # `Reviewed commit` の抽出は「行頭が `Reviewed commit` で始まる」といった
+  # 厳格な位置合わせをしていない。実測フォーマット（例: `**Reviewed commit:**
+  # \`<sha>\``）の変化に脆くなるより、"reviewed commit" という語句の直後に
+  # backtick で囲まれた 7〜40 桁の hex sha があれば拾う緩い形にしてある。
+  #
+  # **PR #2546 実測（2026-09-02）で Codex が別表現も使うことを確認した。**
+  # `@codex review` の初回応答は英語の "Reviewed commit:" 定型句を含む一方、
+  # fix round 後の再レビュー応答は定型句を使わず「現 HEAD `<sha>` を再確認
+  # しました」という日本語の narrative になった（同じ bot、同じ PR での実測。
+  # #2536 が「安定した機械生成 field」と想定していた前提が崩れた）。
+  # どちらの語句でも sha を拾えるよう alternation で両方を受け付ける。将来また
+  # 別の言い回しが observed されたら、ここへ追加する（語句を減らす方向の変更は
+  # fail-closed 側に倒れるだけで安全だが、増やす方向は都度実測で確認すること）。
+  #
+  # sha は現 HEAD の **prefix** であることを要求する（Codex のコメントは短縮
+  # sha を出す一方、$HEAD_SHA は 40 桁のフル SHA のため完全一致ではなく
+  # startswith で比較する）。
+  #
+  # **Codex 指摘（PR #2546 実測）**: sha の抽出だけでは、Codex が review object
+  # ではなく plain comment で P1/P2 の指摘そのものを報告し、その本文にたまたま
+  # 「現 HEAD \`<sha>\`」相当の文言が含まれる場合、review thread の無い
+  # 未解決指摘を残したまま clean pass として通してしまう。Codex が実際の指摘を
+  # 書く時は必ず badge markup（\`![P1 Badge]\` / \`![P2 Badge]\`、img.shields.io
+  # のバッジ画像）を伴う（このリポジトリで実際に投稿された P1/P2 指摘コメントは
+  # すべてこの形式）。badge markup を含む comment は sha が一致しても証跡から
+  # 除外する（fail closed 側に倒す）。
+  CODEX_COMMENT_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
+    --arg login "$CODEX_REVIEW_LOGIN" \
+    --arg headSha "$HEAD_SHA" '
+    def normalized_login: (.author.login // "") | sub("\\[bot\\]$"; "");
+    def has_finding_badge: (.body // "") | test("!\\[P[12] Badge\\]");
+    def reviewed_sha:
+      if has_finding_badge then ""
+      else
+        ((.body // "")
+          | capture("(?i)(?:reviewed commit|現\\s*head)[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
+        | ($m.sha // "")
+      end;
+    (.data.repository.pullRequest.comments.nodes // []) as $nodes
+    | ($nodes | map(select(normalized_login == $login))) as $step1
+    | ($step1 | map(select(reviewed_sha != ""))) as $step2
+    | ($step2 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step3
+    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+
+  CODEX_COMMENT_COUNT="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
+
+  if [[ ! "$CODEX_COMMENT_COUNT" =~ ^[0-9]+$ ]]; then
+    error "Codex の clean pass コメントの痕跡を取得できませんでした。マージを中止します（fail closed）。"
+    error "gh の認証とネットワークを確認して再実行してください。"
+    exit 1
+  fi
+
+  if [[ "$CODEX_REVIEW_COUNT" == "0" && "$CODEX_COMMENT_COUNT" == "0" ]]; then
+    error "この PR には現在の HEAD に対する Codex の痕跡（review object も clean pass コメントも）がありません。マージを中止します。"
+    error "PR へ「@codex review」をコメントし、Codex の投稿を待ってから再実行してください。"
     error "（クロスレビュー必須 PR は内製 subagent と Codex の 2 系統が必須です。AGENTS.md §レビュー）"
 
     CODEX_STEP1="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
     CODEX_STEP2="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
 
     if [[ "$CODEX_STEP1" == "0" ]]; then
-      error "原因: ${CODEX_REVIEW_LOGIN} によるレビューが 1 件もありません（未実行、または実行に失敗しています）。"
+      error "原因: ${CODEX_REVIEW_LOGIN} による review object が 1 件もありません（未実行、または実行に失敗しています）。"
     elif [[ "$CODEX_STEP2" == "0" ]]; then
-      error "原因: Codex のレビューはありますが PENDING / DISMISSED のみです。"
+      error "原因: Codex の review object はありますが PENDING / DISMISSED のみです。"
     else
-      error "原因: Codex のレビューは古い commit に対するものです（現在の HEAD: ${HEAD_SHA}）。"
+      error "原因: Codex の review object は古い commit に対するものです（現在の HEAD: ${HEAD_SHA}）。"
       error "push で HEAD が動くと Codex の証跡も無効になります。もう一度「@codex review」を投稿してください。"
+    fi
+
+    CODEX_COMMENT_STEP1="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
+    CODEX_COMMENT_STEP2="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
+
+    if [[ "$CODEX_COMMENT_STEP1" == "0" ]]; then
+      error "原因: ${CODEX_REVIEW_LOGIN} によるコメントが 1 件もありません。"
+    elif [[ "$CODEX_COMMENT_STEP2" == "0" ]]; then
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません"
+      error "（usage limit / timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+    else
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントの \`Reviewed commit\` は古い commit を指しています（現在の HEAD: ${HEAD_SHA}）。"
     fi
 
     if [[ "$CODEX_REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
       error "なお、この PR は review が 100 件を超えており、直近 100 件しか見ていません。"
     fi
+    if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
+      error "なお、この PR は comments が 100 件を超えており、直近 100 件しか見ていません。"
+    fi
     exit 1
   fi
 
-  info "Codex の独立レビューを確認しました（現 HEAD に対して ${CODEX_REVIEW_COUNT} 件）。"
+  if [[ "$CODEX_REVIEW_COUNT" != "0" ]]; then
+    info "Codex の独立レビューを確認しました（review object: 現 HEAD に対して ${CODEX_REVIEW_COUNT} 件）。"
+  else
+    info "Codex の独立レビューを確認しました（指摘ゼロの clean pass コメント: 現 HEAD に対して ${CODEX_COMMENT_COUNT} 件）。"
+  fi
 
   # linked issue の Issue Review 証跡は、この gate より前（§linked issue ごとに
   # Issue Review gate を回す）で全 linked issue に対して検証済み。ラベルを外した

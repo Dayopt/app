@@ -1951,9 +1951,70 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(status).toBe(1);
   });
 
+  // plan-service.ts / record-service.ts は runPrivateTimeblockSearchQuery を正しく
+  // 使っているが、この glob には載せない（#2503）。将来 wrapper 呼び出しを削って
+  // 検索語を Sentry へ漏らす回帰は、ここではなく class-based な contract test
+  // （apps/product/.../private-search-boundary-contract.test.ts）が検出する。
   it('同じ timeblock/server でも高リスク面でない service は marker を要求しない', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/timeblock/server/plan-service.ts'],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain('review gate: not required');
+    expect(status).toBe(0);
+  });
+
+  // #2503 監査で追加した 5 glob。「外部契約 or 不可逆」に該当する MCP 認可面 /
+  // アカウント削除の cron / 外部 calendar の不可逆操作 3 種。
+  it.each([
+    ['apps/product/src/lib/mcp/auth.ts', 'apps/product/src/lib/mcp/**'],
+    [
+      'apps/product/src/app/api/cron/calendar-account-deletion-settle/route.ts',
+      'apps/product/src/app/api/cron/calendar-account-deletion-settle/**',
+    ],
+    [
+      'apps/product/src/features/external-calendar/server/account-deletion.ts',
+      'apps/product/src/features/external-calendar/server/account-deletion.ts',
+    ],
+    [
+      'apps/product/src/features/external-calendar/server/token-rotation.ts',
+      'apps/product/src/features/external-calendar/server/token-rotation.ts',
+    ],
+    [
+      'apps/product/src/features/external-calendar/server/revoke-outbox.ts',
+      'apps/product/src/features/external-calendar/server/revoke-outbox.ts',
+    ],
+    // drift 検出テスト自身のガードレール自己保護（Codex 指摘 #2546）。
+    [
+      'scripts/__tests__/protected-path-gate-contract.test.ts',
+      'scripts/__tests__/protected-path-gate-contract.test.ts',
+    ],
+    [
+      'apps/product/src/features/timeblock/server/private-search-boundary-contract.test.ts',
+      'apps/product/src/features/timeblock/server/private-search-boundary-contract.test.ts',
+    ],
+  ])('#2503 で追加した保護対象（%s）は marker を要求する', (file, glob) => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [file],
+      threads: [],
+      reviewEvidence: { comments: [] },
+    });
+    expect(stderr).toContain(`review gate: required (matched ${glob})`);
+    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(status).toBe(1);
+  });
+
+  // #2503 監査で「反転可能 / CI で担保済み」と判断して明示的に外した path。
+  // 将来のリネームや似た命名で誤って保護対象化されていないことを固定する。
+  it.each([
+    ['apps/product/src/app/api/cron/calendar-sync/route.ts'],
+    ['apps/product/src/app/api/cron/external-connection-maintenance/route.ts'],
+    ['apps/product/src/lib/supabase/server.ts'],
+    ['apps/product/src/features/external-calendar/server/event-pruning.ts'],
+  ])('#2503 で明示的に対象外とした path（%s）は marker を要求しない', (file) => {
+    const { status, stderr } = runScript(greenRollup(), {
+      files: [file],
       threads: [],
       reviewEvidence: { comments: [] },
     });
@@ -2173,7 +2234,7 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
         codexReviews: [],
       },
     });
-    expect(stderr).toContain('現在の HEAD に対する Codex レビューがありません');
+    expect(stderr).toContain('Codex の痕跡（review object も clean pass コメントも）がありません');
     expect(stderr).toContain('@codex review');
     expect(status).toBe(1);
   });
@@ -2228,7 +2289,7 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
         codexReviews: [{ login: 't3-nico' }],
       },
     });
-    expect(stderr).toContain('レビューが 1 件もありません');
+    expect(stderr).toContain('review object が 1 件もありません');
     expect(status).toBe(1);
   });
 
@@ -2315,8 +2376,158 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
         codexReviews: [],
       },
     });
-    expect(stderr).toContain('現在の HEAD に対する Codex レビューがありません');
+    expect(stderr).toContain('Codex の痕跡（review object も clean pass コメントも）がありません');
     expect(status).toBe(1);
+  });
+});
+
+/**
+ * #2536: Codex は指摘ゼロの時 review object を作らず、代わりに
+ * `Reviewed commit: <sha>` 行を含む plain PR comment だけを残す（実測）。
+ * review object のみを見ていた #2529 の実装は、このクリーンな pass を
+ * 「Codex 未実行」と誤認して merge を止めていた。ここでは comment 側の
+ * 証跡パスを固定する。
+ */
+describe('Codex clean pass コメントによる代替証跡（#2536）', () => {
+  const greenRollup = () => [
+    checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+    ...requiredChecks(),
+  ];
+
+  const protectedFile = 'supabase/migrations/20260901000000_x.sql';
+  const CODEX_LOGIN = 'chatgpt-codex-connector';
+
+  function runProtected(options: Parameters<typeof runScript>[1] = {}) {
+    return runScript(greenRollup(), { files: [protectedFile], threads: [], ...options });
+  }
+
+  function codexCleanPassComment(overrides: { login?: string; sha?: string } = {}) {
+    const sha = overrides.sha ?? DEFAULT_HEAD_SHA.slice(0, 10);
+    return {
+      author: overrides.login ?? CODEX_LOGIN,
+      body: `Codex Review\n\nI reviewed the changes and found no issues.\n\n**Reviewed commit:** \`${sha}\``,
+    };
+  }
+
+  it('指摘ゼロの clean pass コメント（現 HEAD の prefix 一致）だけで通す', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          codexCleanPassComment(),
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
+  it('clean pass コメントの sha が旧 HEAD を指していれば停止する', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          codexCleanPassComment({ sha: '1'.repeat(10) }),
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('古い commit を指しています');
+    expect(status).toBe(1);
+  });
+
+  it('usage limit 応答のような `Reviewed commit` 行の無いコメントは証跡にならない（fail closed）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: 'Codex encountered an error while reviewing this PR: usage limit reached. Please retry later.',
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('`Reviewed commit` 行がありません');
+    expect(stderr).toContain('usage limit');
+    expect(status).toBe(1);
+  });
+
+  it('Codex を名乗らない第三者の同一文面コメントは証跡として数えない（producer の詐称を防ぐ）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          codexCleanPassComment({ login: 't3-nico' }),
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('コメントが 1 件もありません');
+    expect(status).toBe(1);
+  });
+
+  it('REST 形式の login（[bot] 付き）の clean pass コメントも証跡として認める', () => {
+    const { status } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          codexCleanPassComment({ login: 'chatgpt-codex-connector[bot]' }),
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(status).toBe(0);
+  });
+
+  // PR #2546 実測（2026-09-02）: fix round 後の再レビューで Codex が
+  // "Reviewed commit:" 定型句を使わず「現 HEAD `<sha>` を再確認しました」という
+  // 日本語 narrative で応答した。同じ bot・同じ PR で応答フォーマットが変わる
+  // ことを実地で確認したため、この語句も証跡として拾えることを固定する。
+  it('「現 HEAD」表現で応答する fix-round 再レビューの clean pass も証跡として認める', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: `## レビュー結果\n\n**P1: なし**  \n**P2: なし**\n\n現 HEAD \`${DEFAULT_HEAD_SHA}\` を再確認しました。先行レビューの2件は適切に解消されています。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
+  // Codex 実測（PR #2546、2026-09-02）: 指摘（P1/P2 badge markup）付きの plain
+  // comment に「現 HEAD `<sha>`」相当の文言がたまたま含まれると、sha 抽出だけの
+  // 判定では review thread の無い未解決指摘を残したまま clean pass として通して
+  // しまう。badge markup を含む comment は sha が一致しても証跡から除外する。
+  it('P2 badge markup を含む指摘ありコメントは「現 HEAD」文言があっても証跡にしない（fail closed）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: `## レビュー結果\n\n現 HEAD \`${DEFAULT_HEAD_SHA}\` を確認しました。\n\n**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  問題があります**\n\n説明...`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('`Reviewed commit` 行がありません');
+    expect(status).toBe(1);
+  });
+
+  it('review object が現 HEAD にあれば clean pass コメントが無くても従来どおり通す（回帰なし）', () => {
+    const { status, stderr } = runProtected();
+    expect(stderr).toContain('review object: 現 HEAD に対して');
+    expect(status).toBe(0);
   });
 });
 
