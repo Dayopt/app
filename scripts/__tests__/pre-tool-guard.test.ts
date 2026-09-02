@@ -56,6 +56,21 @@ function mcp(toolName: string): Record<string, unknown> {
   return { tool_name: toolName, tool_input: { title: 'x', prompt: 'y' } };
 }
 
+// R1/R2（Agent の model 明示 + 探索への opus/fable 使用ガード）用ヘルパー。
+function agentCall(
+  input: Partial<{ model: string; subagent_type: string; prompt: string; description: string }>,
+): Record<string, unknown> {
+  return { tool_name: 'Agent', tool_input: { ...input } };
+}
+
+// R3（Read の範囲指定なし大規模ファイル読み込みガード）用ヘルパー。
+function readTool(
+  filePath: string,
+  opts?: { offset?: number; limit?: number },
+): Record<string, unknown> {
+  return { tool_name: 'Read', tool_input: { file_path: filePath, ...opts } };
+}
+
 // setup が黙って失敗すると、以降の assert が「たまたま通る」形で緑になる。
 // 失敗は即座に投げる。
 function git(args: string[], cwd: string): void {
@@ -651,8 +666,8 @@ describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、�
   });
 });
 
-// #1959: チップ起票（spawn_task）は指揮台セッションの専権。レーンが直接 User へ
-// チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + 指揮台へ
+// #1959: チップ起票（spawn_task）は Main（main checkout の session）の専権。レーンが直接 User へ
+// チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + Main へ
 // send_message に一本化する（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）。
 describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
   const SPAWN = 'mcp__ccd_session__spawn_task';
@@ -696,13 +711,13 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
     expect(runGuard(mcp(SPAWN), worktreeDir)).toBe('block');
   });
 
-  it('main checkout からは通す（指揮台のレーン編成は正規手段）', () => {
+  it('main checkout からは通す（Main の着手する issue の選択は正規手段）', () => {
     expect(runGuard(mcp(SPAWN), mainDir)).toBe('allow');
   });
 
-  // 判定は「指揮台だと言い切れた時だけ通す」allowlist。git が使えない・repo 外は
+  // 判定は「Main だと言い切れた時だけ通す」allowlist。git が使えない・repo 外は
   // 落とす。`cd ""` は bash では成功してカレントに留まるため、空値を素通りさせると
-  // 両者が同じ cwd に解決されて「一致＝指揮台」と誤判定する（実装中に踏んだ）。
+  // 両者が同じ cwd に解決されて「一致＝Main」と誤判定する（実装中に踏んだ）。
   it('git 管理外のディレクトリからは落とす（fail closed）', () => {
     expect(runGuard(mcp(SPAWN), plainDir)).toBe('block');
   });
@@ -716,7 +731,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 
   it.each([
     ['章立て', 'mcp__ccd_session__mark_chapter'],
-    ['指揮台への連絡', 'mcp__ccd_session_mgmt__send_message'],
+    ['Main への連絡', 'mcp__ccd_session_mgmt__send_message'],
   ])('worktree でも他の tool は通す: %s', (_label, toolName) => {
     expect(runGuard(mcp(toolName), worktreeDir)).toBe('allow');
   });
@@ -801,7 +816,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
     expect(runGuard(write(join(mainDir, 'foo.ts')), mainDir)).toBe('allow');
   });
 
-  it('main checkout から他レーンの worktree への Write は block する（指揮台はコードを書かない）', () => {
+  it('main checkout から他レーンの worktree への Write は block する（Main はコードを書かない）', () => {
     expect(runGuard(write(join(laneADir, 'foo.ts')), mainDir)).toBe('block');
   });
 
@@ -813,7 +828,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
 // nested 配置（このリポジトリの実際の運用: worktree は main の配下の
 // `.claude/worktrees/<name>` に nested される）専用の fixture。
 // merge 前クロスレビュー risk-reviewer 指摘: sibling 配置の fixture（上の
-// describe）だけでは「指揮台（CURRENT_ROOT = 家系の親）から見ると、他
+// describe）だけでは「Main（CURRENT_ROOT = 家系の親）から見ると、他
 // レーンのパスも $GUARD_CURRENT_ROOT/* に該当してしまい先に許可側へ倒れる」
 // class を検出できない。longest-prefix-match で修正済み（guard_path_belongs_to_current_root）。
 describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
@@ -1293,5 +1308,122 @@ describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#251
     expect(
       runGuard(write(resolve(rootDir, 'supabase/migrations/99999999999999_new.sql'), 'SELECT 1;')),
     ).toBe('allow');
+  });
+});
+
+// R1/R2: Agent の model 明示 + 探索への opus/fable 使用ガード（cost guard）。
+// security guard ではないため、jq parse エラー等は fail-open にする設計だが、
+// 通常の JSON 入力ではその分岐は踏まない。ここでは正規の判定ロジックを固定する。
+describe('pre-tool-guard.sh: R1 Agent の model 明示', () => {
+  it('model 未指定は block する', () => {
+    expect(runGuard(agentCall({ prompt: 'x' }))).toBe('block');
+  });
+
+  it('model 空文字も block する', () => {
+    expect(runGuard(agentCall({ model: '', prompt: 'x' }))).toBe('block');
+  });
+
+  it('model haiku は通す', () => {
+    expect(runGuard(agentCall({ model: 'haiku', prompt: 'x' }))).toBe('allow');
+  });
+
+  it('model sonnet は通す', () => {
+    expect(runGuard(agentCall({ model: 'sonnet', prompt: 'x' }))).toBe('allow');
+  });
+});
+
+describe('pre-tool-guard.sh: R2 探索に opus / fable を使わない', () => {
+  it('model opus + subagent_type Plan は通す', () => {
+    expect(runGuard(agentCall({ model: 'opus', subagent_type: 'Plan', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
+
+  it('model opus + subagent_type claude-security 系は通す', () => {
+    expect(
+      runGuard(agentCall({ model: 'opus', subagent_type: 'claude-security:scan', prompt: 'x' })),
+    ).toBe('allow');
+  });
+
+  it('model opus + prompt に反証を含む場合は通す', () => {
+    expect(runGuard(agentCall({ model: 'opus', prompt: 'この plan を反証してください' }))).toBe(
+      'allow',
+    );
+  });
+
+  it('model opus + description に設計判断を含む場合は通す', () => {
+    expect(
+      runGuard(agentCall({ model: 'opus', prompt: 'x', description: '設計判断のための比較検討' })),
+    ).toBe('allow');
+  });
+
+  it('model opus + 反証等の言及がない plain prompt は block する', () => {
+    expect(runGuard(agentCall({ model: 'opus', prompt: 'このコードを調べてください' }))).toBe(
+      'block',
+    );
+  });
+
+  it('model の表記ゆれ（Opus / claude-opus-5）も plain prompt なら block する', () => {
+    for (const model of ['Opus', 'claude-opus-5', 'claude-fable-5-1']) {
+      expect(runGuard(agentCall({ model, prompt: '調べて' })), model).toBe('block');
+    }
+  });
+
+  it('model fable + plain prompt も block する', () => {
+    expect(runGuard(agentCall({ model: 'fable', prompt: 'このコードを調べてください' }))).toBe(
+      'block',
+    );
+  });
+
+  it('model fable + subagent_type Plan は通す', () => {
+    expect(runGuard(agentCall({ model: 'fable', subagent_type: 'Plan', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
+});
+
+// R3: Read の範囲指定なし大規模ファイル読み込みガード（cost guard）。
+describe('pre-tool-guard.sh: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
+  let fixtureRoot: string;
+  let bigFile: string;
+  let smallFile: string;
+  let pngFile: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-read-'));
+    bigFile = join(fixtureRoot, 'big.ts');
+    smallFile = join(fixtureRoot, 'small.ts');
+    pngFile = join(fixtureRoot, 'image.png');
+    writeFileSync(bigFile, Array.from({ length: 700 }, (_, i) => `// line ${i}`).join('\n'));
+    writeFileSync(smallFile, Array.from({ length: 50 }, (_, i) => `// line ${i}`).join('\n'));
+    writeFileSync(pngFile, 'not a real png, contents irrelevant');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('700 行のファイルを offset/limit なしで Read しようとすると block する', () => {
+    expect(runGuard(readTool(bigFile))).toBe('block');
+  });
+
+  it('limit を付ければ通す', () => {
+    expect(runGuard(readTool(bigFile, { limit: 100 }))).toBe('allow');
+  });
+
+  it('offset を付ければ通す', () => {
+    expect(runGuard(readTool(bigFile, { offset: 500 }))).toBe('allow');
+  });
+
+  it('50 行のファイルは範囲指定なしでも通す', () => {
+    expect(runGuard(readTool(smallFile))).toBe('allow');
+  });
+
+  it('.png のような非テキスト拡張子は行数に関わらず通す', () => {
+    expect(runGuard(readTool(pngFile))).toBe('allow');
+  });
+
+  it('存在しないパスは通す（fail-open）', () => {
+    expect(runGuard(readTool(join(fixtureRoot, 'does-not-exist.ts')))).toBe('allow');
   });
 });

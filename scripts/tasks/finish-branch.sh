@@ -887,7 +887,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # 上の thread gate は「**存在する** 指摘 thread が resolve 済みか」しか見ない。
   # thread が 0 件の PR は素通りするため、「レビューされて指摘ゼロだった PR」と
   # 「レビューを投げ忘れた PR」が機械には同じに見える。外部レビュー（Codex）廃止
-  # （2026-08-13、`AGENTS.md` 冒頭の凍結注記）により、レビューは指揮台が発火する
+  # （2026-08-13、`AGENTS.md` 冒頭の凍結注記）により、レビューは Main が発火する
   # `pr-cross-review` スキル（`.claude/skills/pr-cross-review/SKILL.md`）が担う。
   #
   # **痕跡は `[internal-review]` marker 付き comment 1 経路のみで判定する。**
@@ -987,7 +987,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   if [[ "$INTERNAL_REVIEW_EVIDENCE_COUNT" == "0" ]]; then
     error "この PR には内製クロスレビューの痕跡がありません。マージを中止します。"
-    error "指揮台が pr-cross-review スキルでクロスレビューを実行し、1 行目を"
+    error "Main が pr-cross-review スキルでクロスレビューを実行し、1 行目を"
     error "「${INTERNAL_REVIEW_MARKER}」で始めるコメントを投稿してから再実行してください。"
     error "コメントには \`head: <現在の HEAD SHA>\` 行と \`agent: <実行 agent 名>\` 行が必要です。"
     error "（.claude/skills/pr-cross-review/SKILL.md、AGENTS.md §PR / git 運用 §内製クロスレビューの実施を要求する gate）"
