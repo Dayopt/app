@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   aggregateExplorationBeforeEdit,
+  aggregateMainSessions,
   collectL0Candidates,
   collectToolResultSizes,
   computeExplorationBeforeEdit,
+  computeMainSessionStats,
   createAggregate,
   defaultWindow,
   extractBashPrefix,
@@ -531,5 +533,170 @@ describe('aggregateExplorationBeforeEdit', () => {
 
   it('空配列は空 Map', () => {
     expect(aggregateExplorationBeforeEdit([]).size).toBe(0);
+  });
+});
+
+describe('computeMainSessionStats', () => {
+  it('編集あり session は editCount / exploreCount / hasEdit を数える', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Read', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Grep', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't3', name: 'Edit', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't4', name: 'Write', input: {} }] }),
+    ];
+    expect(computeMainSessionStats(records)).toMatchObject({
+      exploreCount: 2,
+      hasEdit: true,
+      editCount: 2,
+      agentCalls: 0,
+      toolCalls: 4,
+    });
+  });
+
+  it('Agent / Workflow の tool_use を agentCalls として数える', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Agent', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Workflow', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't3', name: 'Read', input: {} }] }),
+    ];
+    expect(computeMainSessionStats(records)).toMatchObject({
+      agentCalls: 2,
+      toolCalls: 3,
+      editCount: 0,
+      hasEdit: false,
+    });
+  });
+
+  it('編集なし session は hasEdit: false・editCount: 0（研究/委譲専任）', () => {
+    const records = [
+      assistantRecord({ content: [{ type: 'tool_use', id: 't1', name: 'Agent', input: {} }] }),
+      assistantRecord({ content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: {} }] }),
+    ];
+    expect(computeMainSessionStats(records)).toMatchObject({
+      hasEdit: false,
+      editCount: 0,
+      agentCalls: 1,
+      toolCalls: 2,
+    });
+  });
+
+  it('空配列は安全に処理する', () => {
+    expect(computeMainSessionStats([])).toMatchObject({
+      model: null,
+      exploreCount: 0,
+      hasEdit: false,
+      editCount: 0,
+      agentCalls: 0,
+      toolCalls: 0,
+    });
+  });
+});
+
+describe('aggregateMainSessions', () => {
+  it('model 別に session n・編集あり session の Edit 数配列・探索 turn 配列・Agent 呼び出し合計を畳む', () => {
+    const byModel = aggregateMainSessions([
+      { model: 'sonnet', exploreCount: 2, hasEdit: true, editCount: 3, agentCalls: 1 },
+      { model: 'sonnet', exploreCount: 4, hasEdit: true, editCount: 5, agentCalls: 0 },
+      { model: 'sonnet', exploreCount: 0, hasEdit: false, editCount: 0, agentCalls: 2 },
+      { model: 'opus', exploreCount: 1, hasEdit: true, editCount: 1, agentCalls: 0 },
+    ]);
+    expect(byModel.get('sonnet')).toEqual({
+      n: 3,
+      editN: 2,
+      editCounts: [3, 5],
+      exploreValues: [2, 4],
+      agentCallsTotal: 3,
+    });
+    expect(byModel.get('opus')).toEqual({
+      n: 1,
+      editN: 1,
+      editCounts: [1],
+      exploreValues: [1],
+      agentCallsTotal: 0,
+    });
+  });
+
+  it('model が無いエントリは「不明」へ畳む', () => {
+    const byModel = aggregateMainSessions([
+      { model: null, exploreCount: 1, hasEdit: true, editCount: 1, agentCalls: 0 },
+    ]);
+    expect(byModel.get('不明')).toEqual({
+      n: 1,
+      editN: 1,
+      editCounts: [1],
+      exploreValues: [1],
+      agentCallsTotal: 0,
+    });
+  });
+
+  it('空配列は空 Map', () => {
+    expect(aggregateMainSessions([]).size).toBe(0);
+  });
+});
+
+describe('renderMarkdown（Main session 表）', () => {
+  it('Main session 表と割合行を描画する', () => {
+    const agg = createAggregate();
+    agg.mainSessions.push(
+      {
+        model: 'sonnet',
+        exploreCount: 2,
+        hasEdit: true,
+        editCount: 4,
+        agentCalls: 1,
+        toolCalls: 7,
+      },
+      {
+        model: 'sonnet',
+        exploreCount: 0,
+        hasEdit: false,
+        editCount: 0,
+        agentCalls: 3,
+        toolCalls: 3,
+      },
+      { model: 'fable', exploreCount: 1, hasEdit: true, editCount: 2, agentCalls: 0, toolCalls: 3 },
+    );
+
+    const markdown = renderMarkdown({
+      since: '2026-08-01',
+      until: '2026-08-31',
+      agg,
+      prStats: null,
+    });
+
+    expect(markdown).toContain('**Main session**');
+    expect(markdown).toContain(
+      '| model | session n | 編集あり n | Edit 合計 | Edit 中央値 | 探索 turn 中央値 | Agent 呼び出し |',
+    );
+    expect(markdown).toContain('| sonnet | 2 | 1 | 4 | 4.0 | 2.0 | 4 |');
+    expect(markdown).toContain('| fable | 1 | 1 | 2 | 2.0 | 1.0 | 0 |');
+    expect(markdown).toContain('**Main が自分で編集した割合**: 67%');
+    expect(markdown).toContain('sonnet 50%');
+    expect(markdown).toContain('fable 100%');
+    expect(markdown).toContain('routing skill L3');
+  });
+
+  it('Main session が 0 件なら未取得を明記する', () => {
+    const agg = createAggregate();
+    const markdown = renderMarkdown({
+      since: '2026-08-01',
+      until: '2026-08-31',
+      agg,
+      prStats: null,
+    });
+    expect(markdown).toContain('| 未取得 | — | — | — | — | — | — |');
+    expect(markdown).toContain('**Main が自分で編集した割合**: 未取得');
+  });
+});
+
+describe('subagent と Main session の分類は排他（isSubagentFilePath が単一の判定源）', () => {
+  it('subagents/agent-*.jsonl は Main session ではない', () => {
+    const file = '/Users/x/.claude/projects/-Users-x-dayopt/sess/subagents/agent-abc.jsonl';
+    expect(isSubagentFilePath(file)).toBe(true);
+  });
+
+  it('top-level session jsonl は subagent ではない（= Main session 扱い）', () => {
+    const file = '/Users/x/.claude/projects/-Users-x-dayopt/sess.jsonl';
+    expect(isSubagentFilePath(file)).toBe(false);
   });
 });

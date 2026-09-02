@@ -118,6 +118,68 @@ export function computeExplorationBeforeEdit(records) {
   return { model, exploreCount, hasEdit };
 }
 
+/**
+ * Main session（`<session-id>.jsonl`、subagent 配下でない top-level transcript）
+ * 1 ファイル分の record 列から、E 節「Main session」用の統計を 1 件作る。
+ * `editCount`（EDIT tool_use 数）・`agentCalls`（`Agent`/`Workflow` tool_use 数）・
+ * `toolCalls`（tool_use 総数）に加え、`computeExplorationBeforeEdit` を再利用した
+ * `model` / `exploreCount` / `hasEdit` を持つ。Main が自分で実装しているか
+ * （principle ① Frontier を既定にしない）を見るための計測。
+ */
+export function computeMainSessionStats(records) {
+  const exploration = computeExplorationBeforeEdit(records);
+  let editCount = 0;
+  let agentCalls = 0;
+  let toolCalls = 0;
+
+  for (const record of records ?? []) {
+    if (!record || record.type !== 'assistant') continue;
+    const message = record.message ?? {};
+    const content = Array.isArray(message.content) ? message.content : [];
+    for (const block of content) {
+      if (!block || block.type !== 'tool_use') continue;
+      toolCalls += 1;
+      if (EDIT_TOOLS.has(block.name)) editCount += 1;
+      if (block.name === 'Agent' || block.name === 'Workflow') agentCalls += 1;
+    }
+  }
+
+  return {
+    model: exploration.model,
+    exploreCount: exploration.exploreCount,
+    hasEdit: exploration.hasEdit,
+    editCount,
+    agentCalls,
+    toolCalls,
+  };
+}
+
+/**
+ * `computeMainSessionStats` の結果配列（model は既に `normalizeModelLabel` 済み）
+ * を model 別へ畳む。`aggregateExplorationBeforeEdit` と対になる Main session 版。
+ * Edit 合計・Edit 中央値・探索 turn 中央値は「編集あり session」だけを対象にする
+ * （編集ゼロの session を混ぜると中央値が意味を失うため、既存 E 節と同じ扱い）。
+ */
+export function aggregateMainSessions(entries) {
+  const byModel = new Map(); // label -> { n, editN, editCounts: number[], exploreValues: number[], agentCallsTotal }
+  for (const entry of entries ?? []) {
+    const label = entry.model ?? '不明';
+    let bucket = byModel.get(label);
+    if (!bucket) {
+      bucket = { n: 0, editN: 0, editCounts: [], exploreValues: [], agentCallsTotal: 0 };
+      byModel.set(label, bucket);
+    }
+    bucket.n += 1;
+    bucket.agentCallsTotal += entry.agentCalls ?? 0;
+    if (entry.hasEdit) {
+      bucket.editN += 1;
+      bucket.editCounts.push(entry.editCount ?? 0);
+      bucket.exploreValues.push(entry.exploreCount ?? 0);
+    }
+  }
+  return byModel;
+}
+
 function median(values) {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -219,6 +281,9 @@ export function createAggregate() {
     chains: [],
     // { model, exploreCount, hasEdit }[]（subagent transcript 1 ファイル = 1 要素）。
     explorationAgents: [],
+    // Main session = top-level `<session-id>.jsonl` 1 ファイル = 1 要素。
+    /** @type {{ model: string|null, exploreCount: number, hasEdit: boolean, editCount: number, agentCalls: number, toolCalls: number }[]} */
+    mainSessions: [],
   };
 }
 
@@ -490,27 +555,52 @@ export function cwdPrefixToProjectDirSegment(cwdPrefix) {
 }
 
 /**
- * subagent transcript 1 ファイル分の record 列から、E 節（着手までの探索 turn 数）
- * 用のエントリを 1 件作る。時間窓はファイルの最初の timestamp、cwd はレコードに
- * あればそれを見て `cwdPrefix` と突合し、無ければファイル path が project ディレクトリ
- * 名を含むかで代用する。窓外 / cwd 不一致なら null。
+ * ファイル最初の timestamp が時間窓内か、かつ cwd が一致するかを判定する。時間窓は
+ * ファイルの最初の timestamp、cwd はレコードにあればそれを見て `cwdPrefix` と
+ * 突合し、無ければファイル path が project ディレクトリ名を含むかで代用する。
+ * subagent transcript・Main session 双方の E 節エントリ生成で共有する。
  */
-function buildExplorationEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix }) {
+function fileMatchesWindowAndCwd(fileRecords, file, { sinceMs, untilMs, cwdPrefix }) {
   const firstTimestamp = fileRecords.find((r) => typeof r?.timestamp === 'string')?.timestamp;
   const firstTsMs = firstTimestamp ? Date.parse(firstTimestamp) : NaN;
-  if (!Number.isFinite(firstTsMs) || firstTsMs < sinceMs || firstTsMs >= untilMs) return null;
+  if (!Number.isFinite(firstTsMs) || firstTsMs < sinceMs || firstTsMs >= untilMs) return false;
 
   const cwdRecord = fileRecords.find((r) => typeof r?.cwd === 'string');
-  const cwdOk = cwdRecord
+  return cwdRecord
     ? !cwdPrefix || cwdRecord.cwd.startsWith(cwdPrefix)
     : !cwdPrefix || file.includes(cwdPrefixToProjectDirSegment(cwdPrefix));
-  if (!cwdOk) return null;
+}
+
+/**
+ * subagent transcript 1 ファイル分の record 列から、E 節（着手までの探索 turn 数）
+ * 用のエントリを 1 件作る。窓外 / cwd 不一致なら null。
+ */
+function buildExplorationEntry(fileRecords, file, bounds) {
+  if (!fileMatchesWindowAndCwd(fileRecords, file, bounds)) return null;
 
   const result = computeExplorationBeforeEdit(fileRecords);
   return {
     model: normalizeModelLabel(result.model),
     exploreCount: result.exploreCount,
     hasEdit: result.hasEdit,
+  };
+}
+
+/**
+ * Main session（top-level `<session-id>.jsonl`）1 ファイル分の record 列から、
+ * E 節「Main session」用のエントリを 1 件作る。窓外 / cwd 不一致なら null。
+ */
+function buildMainSessionEntry(fileRecords, file, bounds) {
+  if (!fileMatchesWindowAndCwd(fileRecords, file, bounds)) return null;
+
+  const stats = computeMainSessionStats(fileRecords);
+  return {
+    model: normalizeModelLabel(stats.model),
+    exploreCount: stats.exploreCount,
+    hasEdit: stats.hasEdit,
+    editCount: stats.editCount,
+    agentCalls: stats.agentCalls,
+    toolCalls: stats.toolCalls,
   };
 }
 
@@ -539,7 +629,10 @@ export function scanProjects({ projectsDir = PROJECTS_DIR, sinceMs, untilMs, cwd
       continue;
     }
     const isSubagent = isSubagentFilePath(file);
-    const fileRecords = isSubagent ? [] : null;
+    // subagent transcript は E 節（探索 turn 数）、top-level session は Main
+    // session 統計（E 節「Main session」）用に同じパスで record 列を溜める。
+    // 2 回目の読み込みはしない（1 パス方針）。
+    const fileRecords = [];
     const ctx = { file, currentChain: null };
     for (const line of raw.split('\n')) {
       if (!line) continue;
@@ -549,12 +642,17 @@ export function scanProjects({ projectsDir = PROJECTS_DIR, sinceMs, untilMs, cwd
       } catch {
         continue;
       }
-      if (fileRecords) fileRecords.push(record);
+      fileRecords.push(record);
       foldUsageRecord(agg, record, { sinceMs, untilMs, cwdPrefix }, ctx);
     }
-    if (fileRecords && fileRecords.length > 0) {
-      const entry = buildExplorationEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix });
-      if (entry) agg.explorationAgents.push(entry);
+    if (fileRecords.length > 0) {
+      if (isSubagent) {
+        const entry = buildExplorationEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix });
+        if (entry) agg.explorationAgents.push(entry);
+      } else {
+        const entry = buildMainSessionEntry(fileRecords, file, { sinceMs, untilMs, cwdPrefix });
+        if (entry) agg.mainSessions.push(entry);
+      }
     }
   }
   return agg;
@@ -730,6 +828,43 @@ export function renderMarkdown({ since, until, agg, prStats }) {
     `**編集なしの Opus + Fable subagent**: ${heavyNoEdit} 件。目標は反証レビュー（pr-cross-review risk-reviewer）と矛盾報告の再検証の回数と同数（routing skill 反例）`,
   );
 
+  // 表 E の続き: Main session（Main 自身が実装しているか、principle ① との距離）
+  lines.push('');
+  lines.push('**Main session**');
+  lines.push('');
+  lines.push(
+    '| model | session n | 編集あり n | Edit 合計 | Edit 中央値 | 探索 turn 中央値 | Agent 呼び出し |',
+  );
+  lines.push('| --- | --- | --- | --- | --- | --- | --- |');
+  const mainSessionByModel = aggregateMainSessions(agg.mainSessions);
+  const mainSessionRows = [...mainSessionByModel.entries()].sort((a, b) => b[1].n - a[1].n);
+  for (const [label, bucket] of mainSessionRows) {
+    const editTotal = bucket.editCounts.reduce((s, v) => s + v, 0);
+    const editMedian = median(bucket.editCounts);
+    const exploreMedian = median(bucket.exploreValues);
+    lines.push(
+      `| ${escapeCell(label)} | ${bucket.n} | ${bucket.editN} | ${editTotal} | ${editMedian === null ? '—' : editMedian.toFixed(1)} | ${exploreMedian === null ? '—' : exploreMedian.toFixed(1)} | ${bucket.agentCallsTotal} |`,
+    );
+  }
+  if (mainSessionRows.length === 0) {
+    lines.push('| 未取得 | — | — | — | — | — | — |');
+  }
+  lines.push('');
+
+  const totalMainN = mainSessionRows.reduce((s, [, bucket]) => s + bucket.n, 0);
+  const totalMainEditN = mainSessionRows.reduce((s, [, bucket]) => s + bucket.editN, 0);
+  const overallMainPct = totalMainN === 0 ? null : (totalMainEditN / totalMainN) * 100;
+  const perModelPct = ['opus', 'fable', 'sonnet']
+    .map((label) => {
+      const bucket = mainSessionByModel.get(label);
+      const pct = bucket && bucket.n > 0 ? (bucket.editN / bucket.n) * 100 : null;
+      return `${label} ${pct === null ? '—' : `${pct.toFixed(0)}%`}`;
+    })
+    .join(' / ');
+  lines.push(
+    `**Main が自分で編集した割合**: ${overallMainPct === null ? '未取得' : `${overallMainPct.toFixed(0)}%`}（編集あり session ÷ session n、model 別: ${perModelPct}）。目標: L3 は分解・検証・commit に限る（routing skill L3）`,
+  );
+
   return lines.join('\n');
 }
 
@@ -795,6 +930,20 @@ async function main() {
         },
       ]),
     );
+    const mainSessionByModel = aggregateMainSessions(agg.mainSessions);
+    const mainSessions = Object.fromEntries(
+      [...mainSessionByModel.entries()].map(([label, bucket]) => [
+        label,
+        {
+          n: bucket.n,
+          editN: bucket.editN,
+          editTotal: bucket.editCounts.reduce((s, v) => s + v, 0),
+          editMedian: median(bucket.editCounts),
+          exploreMedian: median(bucket.exploreValues),
+          agentCallsTotal: bucket.agentCallsTotal,
+        },
+      ]),
+    );
     process.stdout.write(
       `${JSON.stringify(
         {
@@ -807,6 +956,7 @@ async function main() {
             .filter((c) => c.length > 0)
             .map((c) => ({ file: c.file, length: c.length, tools: Object.fromEntries(c.tools) })),
           explorationBeforeEdit,
+          mainSessions,
           prStats,
         },
         null,
