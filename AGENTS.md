@@ -150,7 +150,7 @@ worktree で作業するセッション（レーン）は次を守る:
 | L2   | Sonnet                                                                                                                                                        | 通常実装・調査・レビュー実行。**worker の既定**                                                                                                                                         | 設計判断、矛盾報告の再検証        |
 | L3   | Opus / Fable                                                                                                                                                  | 判断・統合・diff レビュー・commit・不可逆操作                                                                                                                                           | —                                 |
 
-- **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**MCP は増やさない** — Tool Search / CLI / skill で必要な分だけロードし、常駐を 1 つ足すなら 1 つ外す（原則③、`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
+- **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す**（原則③。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする。`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
 - **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（#2529 の独立 2 系統の延長。Antigravity は User が手動で使う目で、CI gate にはしない）
 - **write可能なsubagentへの委譲**は次の4条件を満たす時のみ: 同一worktree、Mainと非重複scope、commit前にMainがgit diffをレビュー、commit/push/external stateの変更はMainに残す
 - **確認・裁可依頼は選択肢+推奨込みが既定**。推奨を先頭に、各選択肢へ一言根拠を添える。複数の判断は1回に束ねる
