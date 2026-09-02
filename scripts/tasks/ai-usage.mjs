@@ -12,7 +12,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * us-en-blog-ef-eventual-hare.md §Sub-1）。
  *
  * `~/.claude/projects/**\/*.jsonl` を 1 パスで walk し、指定期間（既定は前月の
- * 暦月。gardening step 1 が前月分を journal にするため）について以下を集計する:
+ * 暦月。gardening 手順 0 が前月分を見るため）について以下を集計する:
  *
  *   A. 消費 — model 別 requests / output / input / cache_read / cache_creation、
  *      output 構成比、subagent 比（isSidechain）、cache TTL（1h/5m）内訳、
@@ -37,7 +37,7 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * push 回数・review round・MTTR（PR ごと timeline API が N 回必要）、
  * Codex P1 件数、F1、`effort` / `attributionSkill` 別内訳、16 アンチパターンの
  * 自動 flag（数値だけ出し判定は人間パートへ）、Human intervention 回数の自動計測
- * （AskUserQuestion 件数を jsonl から数える案。今回は journal 手書き）。
+ * （AskUserQuestion 件数を jsonl から数える案。今回は未計測）。
  */
 
 export const PROJECTS_DIR = join(homedir(), '.claude', 'projects');
@@ -227,7 +227,7 @@ function toDateStr(date) {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 }
 
-/** 既定窓 = 前月の暦月（JST/UTC のズレは許容。月次 journal の粒度で十分）。 */
+/** 既定窓 = 前月の暦月（JST/UTC のズレは許容。月次の粒度で十分）。 */
 export function defaultWindow(now = new Date()) {
   const y = now.getUTCFullYear();
   const m = now.getUTCMonth(); // 0-11、前月は m-1

@@ -214,7 +214,7 @@ secret 検出はこれとは別で、**ready 後の PR で自動実行される*
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-所見が出た場合は journal（月次 `/gardening` の draft PR 本文）に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
+所見が出た場合は issue に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 
 ### 前提: `claude-security` plugin
 

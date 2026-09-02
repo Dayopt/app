@@ -118,7 +118,7 @@ code: apps/product/src/features/timeblock # 任意。repo 内の実在 path
 
 - featureの振る舞いを変えたら同じ変更で該当specを更新する
 - 意思決定はstock更新と `decisions.md` への1行追記を同じ変更に含める
-- 月次 `/gardening` の journal は draft PR 本文に書く（独立ファイルは持たない）
+- 月次 `/gardening` は journal を持たない。判断は `decisions.md`、所見は issue（数値は `pnpm ai:usage` で再計算できる）
 - `pnpm docs:check` はlink、metadata、path、naming、`decisions.md` の append-only 契約を検証する
 
 テンプレートは [`_templates/`](./_templates/)、AIの自発的な更新責務はroot [`CLAUDE.md`](../CLAUDE.md)を参照する。
