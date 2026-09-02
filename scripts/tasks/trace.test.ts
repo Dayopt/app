@@ -1,16 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  buildInternalReviewSection,
   buildRevertSearchArgv,
   buildSessionRow,
   buildSessionSection,
   buildTracePack,
   collectDecisionLines,
   computeFindings,
+  computeZeroFindingRoleNotes,
   countCodexPriorities,
+  countCommitsAfterMarker,
   countCommitsAfterReady,
   countCommitsAfterReadyFallback,
+  countRoleFindingsHeuristic,
   extractDodExcerpt,
+  filterInternalReviewMarkerComments,
   findReadyForReviewDate,
   groupFilesBySession,
   hasInternalReviewMarker,
@@ -20,6 +25,10 @@ import {
   matchesBranch,
   parseArgs,
   parseJsonlLines,
+  parseMarkerAgentField,
+  parseMarkerFindingsField,
+  parseMarkerHeadSha,
+  parseMarkerPartialCoverageRoles,
   renderMarkdown,
   sessionIdFromSubagentPath,
   timelineLacksCommitEvents,
@@ -226,6 +235,279 @@ describe('hasInternalReviewMarker', () => {
   it('[internal-review] を含むコメントの有無', () => {
     expect(hasInternalReviewMarker([{ body: '[internal-review] 完了' }])).toBe(true);
     expect(hasInternalReviewMarker([{ body: '普通のコメント' }])).toBe(false);
+  });
+});
+
+describe('filterInternalReviewMarkerComments', () => {
+  it('OWNER/MEMBER/COLLABORATOR かつ本文が [internal-review] で始まるものだけ抜く', () => {
+    const comments = [
+      { body: '[internal-review]\nhead: a', author_association: 'OWNER' },
+      { body: '[internal-review]\nhead: b', author_association: 'NONE' },
+      { body: '普通のコメント', author_association: 'MEMBER' },
+      { body: '前置きの後に [internal-review]', author_association: 'COLLABORATOR' },
+    ];
+    expect(filterInternalReviewMarkerComments(comments)).toEqual([comments[0]]);
+  });
+
+  it('issueComments が null/空でも例外にならない', () => {
+    expect(filterInternalReviewMarkerComments(null)).toEqual([]);
+    expect(filterInternalReviewMarkerComments([])).toEqual([]);
+  });
+});
+
+describe('parseMarkerAgentField', () => {
+  it('カンマ区切りの role を status ok で分解する', () => {
+    expect(parseMarkerAgentField('agent: risk-reviewer, behavior-verifier')).toEqual([
+      { role: 'risk-reviewer', status: 'ok' },
+      { role: 'behavior-verifier', status: 'ok' },
+    ]);
+  });
+
+  it('(text-fallback) 注釈を status へ反映する', () => {
+    expect(
+      parseMarkerAgentField('agent: risk-reviewer(text-fallback), architecture-guard'),
+    ).toEqual([
+      { role: 'risk-reviewer', status: 'text-fallback' },
+      { role: 'architecture-guard', status: 'ok' },
+    ]);
+  });
+
+  it('agent 行が無ければ空配列', () => {
+    expect(parseMarkerAgentField('head: abc')).toEqual([]);
+  });
+});
+
+describe('parseMarkerPartialCoverageRoles', () => {
+  it('partial coverage 行から role 名だけを抜く（注釈は除外）', () => {
+    const body =
+      'partial coverage: risk-reviewer, behavior-verifier（diff 該当箇所を目視確認済み）';
+    expect(parseMarkerPartialCoverageRoles(body)).toEqual(['risk-reviewer', 'behavior-verifier']);
+  });
+
+  it('行が無ければ空配列', () => {
+    expect(parseMarkerPartialCoverageRoles('head: abc')).toEqual([]);
+  });
+});
+
+describe('parseMarkerHeadSha', () => {
+  it('40 桁 hex を取る', () => {
+    const sha = 'a'.repeat(40);
+    expect(parseMarkerHeadSha(`head: ${sha}`)).toBe(sha);
+  });
+
+  it('無ければ null', () => {
+    expect(parseMarkerHeadSha('head: short')).toBeNull();
+  });
+});
+
+describe('parseMarkerFindingsField', () => {
+  it('role=件数(P1 x/P2 y) 形式を role 別の件数へ分解する', () => {
+    const body = 'findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0';
+    expect(parseMarkerFindingsField(body)).toEqual({
+      'risk-reviewer': 2,
+      'behavior-verifier': 0,
+    });
+  });
+
+  it('role(text-fallback)=不明 は null にする（件数を主張しない）', () => {
+    const body = 'findings: architecture-guard(text-fallback)=不明, risk-reviewer=1(P1 1/P2 0)';
+    expect(parseMarkerFindingsField(body)).toEqual({
+      'architecture-guard': null,
+      'risk-reviewer': 1,
+    });
+  });
+
+  it('findings: 行が無ければ空オブジェクト（古い marker との後方互換）', () => {
+    expect(parseMarkerFindingsField('head: abc\nagent: risk-reviewer\nP1: なし\nP2: なし')).toEqual(
+      {},
+    );
+  });
+});
+
+describe('countCommitsAfterMarker', () => {
+  it('marker の created_at より後の commit だけ数える', () => {
+    const commits = [
+      { committedDate: '2026-08-01T00:00:00Z' },
+      { committedDate: '2026-08-03T00:00:00Z' },
+    ];
+    expect(countCommitsAfterMarker(commits, '2026-08-02T00:00:00Z')).toBe(1);
+  });
+
+  it('markerCreatedAt が無ければ null', () => {
+    expect(countCommitsAfterMarker([{ committedDate: '2026-08-01T00:00:00Z' }], null)).toBeNull();
+  });
+});
+
+describe('countRoleFindingsHeuristic', () => {
+  it('role 名を含む review/issue comment 件数を数える（大文字小文字無視）', () => {
+    const reviewComments = [{ body: 'RISK-REVIEWER の指摘: 権限漏れ' }, { body: '無関係' }];
+    const issueComments = [{ body: 'behavior-verifier が見つけた回帰' }];
+    expect(countRoleFindingsHeuristic('risk-reviewer', reviewComments, issueComments)).toBe(1);
+    expect(countRoleFindingsHeuristic('behavior-verifier', reviewComments, issueComments)).toBe(1);
+    expect(countRoleFindingsHeuristic('architecture-guard', reviewComments, issueComments)).toBe(0);
+  });
+});
+
+describe('buildInternalReviewSection', () => {
+  it('marker が無ければ null', () => {
+    expect(
+      buildInternalReviewSection({ issueComments: [], reviewComments: [], commits: [] }),
+    ).toBeNull();
+  });
+
+  it('最新 marker の role 構成・coverage・findings・marker 後 commit を組み立てる', () => {
+    const sha = 'a'.repeat(40);
+    const markerBody = [
+      '[internal-review]',
+      `head: ${sha}`,
+      'agent: risk-reviewer, behavior-verifier(text-fallback)',
+      'P1: なし',
+      'P2: 1 件（review comment 参照）',
+      'partial coverage: risk-reviewer（diff 該当箇所を目視確認済み）',
+    ].join('\n');
+    const issueComments = [
+      { body: markerBody, author_association: 'OWNER', created_at: '2026-08-10T00:00:00Z' },
+      { body: 'risk-reviewer が指摘した権限漏れ' },
+    ];
+    const reviewComments = [{ body: 'behavior-verifier の指摘: cache 競合' }];
+    const commits = [
+      { committedDate: '2026-08-09T00:00:00Z' },
+      { committedDate: '2026-08-11T00:00:00Z' },
+    ];
+
+    expect(buildInternalReviewSection({ issueComments, reviewComments, commits })).toEqual({
+      markerCount: 1,
+      latestMarkerCreatedAt: '2026-08-10T00:00:00Z',
+      latestHeadSha: sha,
+      roles: [
+        {
+          role: 'risk-reviewer',
+          status: 'ok',
+          coverage: 'partial',
+          findings: 1,
+          findingsSource: 'estimate',
+          commitsAfterMarker: 1,
+        },
+        {
+          role: 'behavior-verifier',
+          status: 'text-fallback',
+          coverage: 'complete',
+          findings: 1,
+          findingsSource: 'estimate',
+          commitsAfterMarker: 1,
+        },
+      ],
+    });
+  });
+
+  it('findings: 行があれば marker の値を authoritative として使い、ヒューリスティックと食い違っても marker を優先する', () => {
+    const sha = 'b'.repeat(40);
+    const markerBody = [
+      '[internal-review]',
+      `head: ${sha}`,
+      'agent: risk-reviewer, behavior-verifier, architecture-guard(text-fallback)',
+      'findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0, architecture-guard(text-fallback)=不明',
+      'P1: 1 件（review comment 参照）',
+      'P2: 1 件（review comment 参照）',
+    ].join('\n');
+    const issueComments = [
+      { body: markerBody, author_association: 'OWNER', created_at: '2026-08-20T00:00:00Z' },
+      // ヒューリスティックだけなら risk-reviewer=1・architecture-guard=1 になる
+      // 部分一致（marker 自身は除外済みなので二重計上しない）が、findings: 行が
+      // あるので risk-reviewer は marker の 2 を、architecture-guard は
+      // text-fallback のため推定へ fall back する。
+      { body: 'risk-reviewer が指摘した権限漏れ' },
+      { body: 'architecture-guard の指摘: barrel 逸脱' },
+    ];
+
+    const result = buildInternalReviewSection({ issueComments, reviewComments: [], commits: [] });
+
+    expect(result?.roles).toEqual([
+      {
+        role: 'risk-reviewer',
+        status: 'ok',
+        coverage: 'complete',
+        findings: 2,
+        findingsSource: 'marker',
+        commitsAfterMarker: 0,
+      },
+      {
+        role: 'behavior-verifier',
+        status: 'ok',
+        coverage: 'complete',
+        findings: 0,
+        findingsSource: 'marker',
+        commitsAfterMarker: 0,
+      },
+      {
+        role: 'architecture-guard',
+        status: 'text-fallback',
+        coverage: 'complete',
+        findings: 1,
+        findingsSource: 'estimate',
+        commitsAfterMarker: 0,
+      },
+    ]);
+  });
+
+  it('docs-only 等 known role を含まない agent 行なら roles は空配列', () => {
+    const issueComments = [
+      {
+        body: '[internal-review]\nhead: b\nagent: docs-only\nP1: なし\nP2: なし',
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+    ];
+    const result = buildInternalReviewSection({ issueComments, reviewComments: [], commits: [] });
+    expect(result?.markerCount).toBe(1);
+    expect(result?.roles).toEqual([]);
+  });
+});
+
+describe('computeZeroFindingRoleNotes', () => {
+  it('指摘 0 件の role かつ merged なら所見行を返す', () => {
+    const internalReview = {
+      markerCount: 1,
+      roles: [
+        {
+          role: 'risk-reviewer',
+          status: 'ok',
+          coverage: 'complete',
+          findings: 0,
+          commitsAfterMarker: 0,
+        },
+        {
+          role: 'behavior-verifier',
+          status: 'ok',
+          coverage: 'complete',
+          findings: 2,
+          commitsAfterMarker: 0,
+        },
+      ],
+    };
+    expect(computeZeroFindingRoleNotes(internalReview, true)).toEqual([
+      'risk-reviewer: 指摘ゼロの role: 月次で歩留まりを見て Haiku 化 / 廃止候補（gardening 手順 4）',
+    ]);
+  });
+
+  it('merged でなければ空配列', () => {
+    const internalReview = {
+      markerCount: 1,
+      roles: [
+        {
+          role: 'risk-reviewer',
+          status: 'ok',
+          coverage: 'complete',
+          findings: 0,
+          commitsAfterMarker: 0,
+        },
+      ],
+    };
+    expect(computeZeroFindingRoleNotes(internalReview, false)).toEqual([]);
+  });
+
+  it('internalReview が null なら空配列', () => {
+    expect(computeZeroFindingRoleNotes(null, true)).toEqual([]);
   });
 });
 

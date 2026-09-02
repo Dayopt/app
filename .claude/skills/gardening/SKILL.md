@@ -30,7 +30,7 @@ description: ユーザーが月次の改善ループの実施を明示依頼し�
    - no が複数あっても **変えるのは 1 つ**。変えたら `decisions.md` に `結果(未):`（翌月または翌々月の判定条件）付きで 1 行追記する（`decision` skill）
 2. **前月の `結果(未):` を回収する**。判定材料が揃っていれば `結果(YYYY-MM-DD):` 行を追記して恒久化 / 撤回を明記する。揃っていなければ期限を 1 行で延ばす
 3. **判断層の検証**（`AGENTS.md` §シンプルルール）: ①今月このルールに戻った場面はあったか（1 度も戻らないルールは削る候補）②無言で破られたルールは無いか ③先月触らなかった機能はどれか（ルール 5。削除候補は `dispatch` intake で起票）
-4. **外部レビューの class**: `trace` の Codex P1 / P2 で同じ構造の指摘が当月 2 回以上、または通算 2 回以上なら機械化（test / lint / CI）の issue を起票する
+4. **レビューの歩留まり**: `trace` の Codex P1 / P2 で同じ構造の指摘が当月 2 回以上、または通算 2 回以上なら機械化（test / lint / CI）の issue を起票する。内製クロスレビューは role 別（risk-reviewer / behavior-verifier / architecture-guard）の指摘数を見て、指摘ゼロが続く role は Haiku 化か廃止の候補にする（Opus を使う理由は反証だけ）
 5. **security sweep**: cloud Supabase MCP をオンデマンド登録して `get_advisors`（security）、あわせて `pnpm security:check`。所見は issue、使用後に登録解除（`mcp-usage` skill）
 6. **成果物**: ルール・skill・docs に変更があれば docs 束 PR（`claude/gardening-YYYY-MM`）。無ければ **無音**。journal ファイルも常設 issue も作らない（数値は `pnpm ai:usage --since` でいつでも再計算できる。残すのは判断だけで、それは `decisions.md` に入る）
 

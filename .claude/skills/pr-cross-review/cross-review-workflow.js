@@ -23,6 +23,17 @@
 // 挟んだブロックは phase()/agent()/parallel() を一切呼ばない純粋な定義のみで、
 // scripts/__tests__/cross-review-workflow-schema.test.ts がこのブロックだけを
 // 抽出評価し、role ごとの required key 集合・severity enum を固定する。
+//
+// **ctx pack（意図と文脈）の受け渡し（2026-09）**: reviewer には従来 diff しか
+// 渡していなかったため、diff が受け入れ条件 / DoD / 次の一手と食い違っていても
+// 「diff 単体としては妥当」に見えて検出できなかった。Workflow script は
+// Node.js API・ファイルアクセスを一切持たない（workflow-authoring skill）ため、
+// このファイル自身が `node scripts/tasks/ctx.mjs <PR>` を実行することはできない
+// — `gh pr diff` を Main が実行して絶対パスを args 経由で渡す既存パターンと同じ理由で、
+// ctx pack の取得も Main が行い、markdown 本文そのもの（パスではない）を
+// `args.ctxMarkdown` として渡す。取得失敗時は Main が `未取得` を渡す fail-open。
+// このファイル側は受け取った文字列を 150 行に切り詰めて role prompt へ
+// prepend するだけで、取得の成否には関与しない。
 
 export const meta = {
   name: 'pr-cross-review-findings',
@@ -233,10 +244,39 @@ Dayopt 固有の architecture 規約（判断の参照事実として使う）:
 - feature 標準ディレクトリ構造は \`index.ts\`（barrel）/ \`components/\` / \`hooks/\` / \`types.ts\`（または \`types/\`）/ \`constants.ts\` / \`lib/\`（\`utils/\` は使わない）/ \`server/\` / \`stores/\` / \`schemas/\`。使わないサブディレクトリは作らず、あるなら必ずこの命名に揃える`,
 };
 
-function buildReviewPrompt(role, diffPath, extraContext) {
+// === CONTEXT_PACK_CONTRACT_START ===
+// このブロックも phase()/agent()/parallel() を呼ばない純粋関数のみで、
+// scripts/__tests__/cross-review-workflow-context-pack.test.ts が抽出評価する。
+const CTX_PACK_MAX_LINES = 150;
+
+/**
+ * `args.ctxMarkdown`（Main が `node scripts/tasks/ctx.mjs <PR>` で取得した markdown、
+ * 取得失敗時は `未取得`）を role prompt の先頭へ差し込むセクションを組み立てる。
+ * 150 行を超える分は切り詰める（このファイルは Node.js API を持たないため、
+ * 呼び出し側の Main が既に fail-open 済みの文字列を渡してくる前提でそのまま使う）。
+ */
+function buildContextPackSection(ctxMarkdown) {
+  const raw = typeof ctxMarkdown === 'string' && ctxMarkdown.trim() ? ctxMarkdown : '未取得';
+  const lines = raw.split('\n');
+  const capped =
+    lines.length > CTX_PACK_MAX_LINES
+      ? lines.slice(0, CTX_PACK_MAX_LINES).join('\n') + '\n…（150 行超は省略）'
+      : raw;
+  return [
+    '## 意図と文脈（context pack、L0 が生成）',
+    '',
+    capped,
+    '',
+    'diff が上の受け入れ条件 / DoD / 次の一手と食い違う点は、コードの欠陥と同じ重さで指摘する。',
+  ].join('\n');
+}
+// === CONTEXT_PACK_CONTRACT_END ===
+
+function buildReviewPrompt(role, diffPath, extraContext, ctxMarkdown) {
   const rolePrompt = ROLE_PROMPTS[role];
+  const contextPackSection = buildContextPackSection(ctxMarkdown);
   const diffInstruction = `対象 diff: ${diffPath}（絶対パス、Read で読むこと）。反証観点で確認する: 配線漏れ（workflow ↔ script の env 受け渡し等）、定数間の不等式（timeout / 予算）、直前の修正コミットが新たに開けた穴。`;
-  const parts = [rolePrompt, diffInstruction];
+  const parts = [contextPackSection, rolePrompt, diffInstruction];
   if (extraContext) parts.push(extraContext);
   return parts.join('\n\n');
 }
@@ -255,7 +295,7 @@ const results = await parallel(
         error: `unknown role: ${role}`,
       });
     }
-    return agent(buildReviewPrompt(role, args.diffPath, args.extraContext), {
+    return agent(buildReviewPrompt(role, args.diffPath, args.extraContext, args.ctxMarkdown), {
       model: MODEL_BY_ROLE[role],
       schema: SCHEMAS[role],
       label: role,

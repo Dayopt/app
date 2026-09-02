@@ -329,6 +329,182 @@ export function hasInternalReviewMarker(comments) {
   );
 }
 
+// --- Part 4b 内製クロスレビュー（marker の role 別歩留まり） -----------------
+//
+// `[internal-review]` marker は 2026-09 以前は role 横断の集計（P1/P2 合計・
+// agent 一覧・partial coverage 申告 role）しか持たなかった。`generate-marker-core.ts`
+// の `deriveRoleFindingsField` が `--review-result` 経由の生成時に `findings:` 行
+// （role 別の件数 + P1/P2 内訳、例: `risk-reviewer=2(P1 1/P2 1), behavior-verifier=0`）
+// を書くようになったため、この行があれば authoritative な数値として最優先で読む
+// （`parseMarkerFindingsField`）。行が無い古い marker、または `role(text-fallback)=不明`
+// （StructuredOutput を経ていないため件数を信用できない）の role は、PR の review
+// comment（inline, `pulls/{n}/comments`）と issue comment の本文に role 名が部分一致で
+// 現れる件数をプロキシとして数える旧ヒューリスティックへ fall back する
+// （`countRoleFindingsHeuristic`）。SKILL.md の投稿フォーマットは inline comment に
+// role 名タグを必須にしていないため、こちらは下限の近似値であり過小計上しうる —
+// 実際の指摘は 0 でなくても role 名を書かない comment だけなら 0 と出る。render・
+// json 双方で `findingsSource`（`'marker' | 'estimate'`）としてどちらの経路かを明示する。
+
+const KNOWN_REVIEWER_ROLES = ['risk-reviewer', 'behavior-verifier', 'architecture-guard'];
+
+/** OWNER/MEMBER/COLLABORATOR が投稿した `[internal-review]` marker コメントだけを抽出する。 */
+export function filterInternalReviewMarkerComments(issueComments) {
+  const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+  return (issueComments ?? []).filter((c) => {
+    if (typeof c?.body !== 'string') return false;
+    if (!trustedAssociations.has(c?.author_association)) return false;
+    return c.body.trimStart().startsWith('[internal-review]');
+  });
+}
+
+/** marker 本文の `agent:` 行を `{role, status}[]` へ分解する（`role(text-fallback)` 注釈を認識）。 */
+export function parseMarkerAgentField(body) {
+  const match = /^agent:\s*(.+)$/m.exec(body ?? '');
+  if (!match) return [];
+  return match[1]
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => {
+      const fallbackMatch = /^(.+?)\(text-fallback\)$/.exec(token);
+      return fallbackMatch
+        ? { role: fallbackMatch[1].trim(), status: 'text-fallback' }
+        : { role: token, status: 'ok' };
+    });
+}
+
+/** marker 本文の `partial coverage: role, role（note）` 行から partial 申告 role 名を抜く。 */
+export function parseMarkerPartialCoverageRoles(body) {
+  const match = /^partial coverage:\s*(.+)$/m.exec(body ?? '');
+  if (!match) return [];
+  const withoutNote = match[1].replace(/（.*$/, '').trim();
+  return withoutNote
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+}
+
+/** marker 本文の `head:` 行から 40 桁 hex の head SHA を取る（無ければ null）。 */
+export function parseMarkerHeadSha(body) {
+  const match = /^head:\s*([0-9a-f]{40})\s*$/m.exec(body ?? '');
+  return match ? match[1] : null;
+}
+
+/**
+ * marker 本文の `findings:` 行（`generate-marker-core.ts` の `deriveRoleFindingsField`
+ * が書く書式、例: `findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0,
+ * architecture-guard(text-fallback)=不明`）を role ごとの件数へ分解する。
+ *
+ * 値が数値で始まらない role（`=不明` の text-fallback）は `null` にする —
+ * 呼び出し側（`buildInternalReviewSection`）はこれをヒューリスティック fall back の
+ * トリガーとして扱う。行自体が無ければ空オブジェクトを返す（古い marker との後方互換）。
+ */
+export function parseMarkerFindingsField(body) {
+  const match = /^findings:\s*(.+)$/m.exec(body ?? '');
+  if (!match) return {};
+  const result = {};
+  for (const token of match[1].split(',').map((t) => t.trim())) {
+    if (!token) continue;
+    const eqIndex = token.indexOf('=');
+    if (eqIndex === -1) continue;
+    const role = token
+      .slice(0, eqIndex)
+      .replace(/\(text-fallback\)$/, '')
+      .trim();
+    const valuePart = token.slice(eqIndex + 1).trim();
+    if (!role) continue;
+    const countMatch = /^(\d+)/.exec(valuePart);
+    result[role] = countMatch ? Number(countMatch[1]) : null;
+  }
+  return result;
+}
+
+/** marker の `created_at` 以後の commit 数（`gh pr view --json commits` の commits 配列基準）。 */
+export function countCommitsAfterMarker(commits, markerCreatedAt) {
+  if (!markerCreatedAt) return null;
+  const markerMs = Date.parse(markerCreatedAt);
+  return (commits ?? []).filter((c) => {
+    const ts = Date.parse(c?.committedDate ?? '');
+    return Number.isFinite(ts) && ts > markerMs;
+  }).length;
+}
+
+/**
+ * role 名の部分一致で findings 件数を近似する（上記ヒューリスティック注記を参照）。
+ * 大文字小文字は無視する。
+ */
+export function countRoleFindingsHeuristic(role, reviewComments, issueComments) {
+  const needle = String(role).toLowerCase();
+  const items = [...(reviewComments ?? []), ...(issueComments ?? [])];
+  return items.filter(
+    (item) => typeof item?.body === 'string' && item.body.toLowerCase().includes(needle),
+  ).length;
+}
+
+/**
+ * marker 群 + PR の review/issue comment・commits から内製クロスレビューの role 別
+ * 歩留まりセクションを組み立てる。marker が 1 件も無ければ null（セクション自体を省く）。
+ * 複数 marker がある場合（HEAD が動いて張り直された場合）は最新 marker の role 構成を
+ * 使い、`markerCount` にだけ全 marker 数を残す。
+ */
+export function buildInternalReviewSection({ issueComments, reviewComments, commits }) {
+  const markers = filterInternalReviewMarkerComments(issueComments);
+  if (markers.length === 0) return null;
+
+  const sorted = [...markers].sort(
+    (a, b) => Date.parse(a.created_at ?? 0) - Date.parse(b.created_at ?? 0),
+  );
+  const latest = sorted[sorted.length - 1];
+
+  const agentRoles = parseMarkerAgentField(latest.body);
+  const partialRoles = new Set(parseMarkerPartialCoverageRoles(latest.body));
+  const markerFindings = parseMarkerFindingsField(latest.body);
+  const commitsAfterMarker = countCommitsAfterMarker(commits, latest.created_at);
+
+  // findings ヒューリスティックの対象から marker コメント自身を除く（`agent:` /
+  // `partial coverage:` / `findings:` 行に role 名がそのまま載るため、含めると
+  // 自己一致で過大計上する）。
+  const markerCommentSet = new Set(markers);
+  const nonMarkerIssueComments = (issueComments ?? []).filter((c) => !markerCommentSet.has(c));
+
+  const roles = agentRoles
+    .filter((r) => KNOWN_REVIEWER_ROLES.includes(r.role))
+    .map((r) => {
+      const markerCount = Object.prototype.hasOwnProperty.call(markerFindings, r.role)
+        ? markerFindings[r.role]
+        : undefined;
+      const hasAuthoritativeCount = typeof markerCount === 'number';
+      return {
+        role: r.role,
+        status: r.status,
+        coverage: partialRoles.has(r.role) ? 'partial' : 'complete',
+        findings: hasAuthoritativeCount
+          ? markerCount
+          : countRoleFindingsHeuristic(r.role, reviewComments, nonMarkerIssueComments),
+        findingsSource: hasAuthoritativeCount ? 'marker' : 'estimate',
+        commitsAfterMarker,
+      };
+    });
+
+  return {
+    markerCount: markers.length,
+    latestMarkerCreatedAt: latest.created_at ?? null,
+    latestHeadSha: parseMarkerHeadSha(latest.body),
+    roles,
+  };
+}
+
+/** 指摘 0 件の role のうち PR が merged なら Haiku化/廃止候補の所見行を返す（月次歩留まり判定用）。 */
+export function computeZeroFindingRoleNotes(internalReview, merged) {
+  if (!internalReview || !merged) return [];
+  return internalReview.roles
+    .filter((r) => r.findings === 0)
+    .map(
+      (r) =>
+        `${r.role}: 指摘ゼロの role: 月次で歩留まりを見て Haiku 化 / 廃止候補（gardening 手順 4）`,
+    );
+}
+
 // --- Part 5 結果 -------------------------------------------------------------
 
 /** `Revert` 検索用の argv（`gh pr list --search`）を組む。 */
@@ -508,6 +684,20 @@ export function renderMarkdown(pack) {
     lines.push(
       `[internal-review] marker: ${r.hasMarker === null ? '未取得' : r.hasMarker ? 'あり' : 'なし'}`,
     );
+    if (r.internalReview) {
+      const ir = r.internalReview;
+      lines.push(`内製クロスレビュー（marker ${ir.markerCount} 件）:`);
+      if (ir.roles.length > 0) {
+        for (const role of ir.roles) {
+          const sourceLabel = role.findingsSource === 'marker' ? 'marker' : '推定';
+          lines.push(
+            `- ${role.role}: 指摘 ${role.findings}（${sourceLabel}） / status ${role.status} / coverage ${role.coverage} / marker 後の commit ${role.commitsAfterMarker === null ? '未取得' : role.commitsAfterMarker}`,
+          );
+        }
+      } else {
+        lines.push('- reviewer role なし（docs-only 等の marker）');
+      }
+    }
     lines.push('');
   }
 
@@ -685,6 +875,14 @@ export function buildTracePack(options, deps = {}) {
     null,
   );
   const hasMarker = issueComments === null ? null : hasInternalReviewMarker(issueComments);
+  const internalReview =
+    issueComments === null
+      ? null
+      : buildInternalReviewSection({
+          issueComments,
+          reviewComments: codexComments ?? [],
+          commits: pr?.commits ?? [],
+        });
 
   const review = {
     readyDate,
@@ -692,6 +890,7 @@ export function buildTracePack(options, deps = {}) {
     codex,
     unresolvedThreads,
     hasMarker,
+    internalReview,
   };
 
   // --- Part 5: 結果 ---
@@ -714,12 +913,15 @@ export function buildTracePack(options, deps = {}) {
   };
 
   // --- Part 6: 所見 ---
-  const findings = computeFindings({
-    exploreMedian: sessions?.summary?.exploreMedian ?? null,
-    codexP1: codex?.p1 ?? 0,
-    commitsAfterReady,
-    hasNoEditHeavyModel: hasNoEditHeavyModelSession(sessions?.displayed ?? []),
-  });
+  const findings = [
+    ...computeFindings({
+      exploreMedian: sessions?.summary?.exploreMedian ?? null,
+      codexP1: codex?.p1 ?? 0,
+      commitsAfterReady,
+      hasNoEditHeavyModel: hasNoEditHeavyModelSession(sessions?.displayed ?? []),
+    }),
+    ...computeZeroFindingRoleNotes(internalReview, result.merged),
+  ];
 
   return { number, header, sessions, judgment, review, result, findings };
 }

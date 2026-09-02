@@ -55,7 +55,7 @@ Main が merge 前に実行するクロスレビューの標準手順。**クロ
 gh pr comment <PR番号> --body "@codex review"
 ```
 
-**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path しか渡さない。
+**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path と ctx pack（下記手順 3 参照）しか渡さない。Codex findings は含めない。
 
 ただし **これは運用規約であって機械強制ではない**（push 前反証レビュー P3）。merge gate は Codex review が現 HEAD に対して存在することしか見ておらず、内製 findings の投稿時刻と Codex review の投稿時刻を比較していない。逆順で実行しても gate は通る。順序を守る責任は Main にある。
 
@@ -90,14 +90,20 @@ gh pr comment <PR番号> --body "@codex review"
 
 該当する subagent を `Workflow` tool で並列実行する。**素の `Agent` tool は使わない**（StructuredOutput を機構的に強制できず、書き出し停止の再発源だったため。#2227 の prompt 契約適用後も1日5回再発し、#2348 で構造的強制へ移行した）。
 
-Main は常に main checkout（repo root）に常駐する（旧 orchestration.md §Main セッションの定義、#2479 で廃止・git 履歴参照）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パスと選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）を渡す:
+Main は常に main checkout（repo root）に常駐する（旧 orchestration.md §Main セッションの定義、#2479 で廃止・git 履歴参照）ため、`scriptPath` は repo root 基点で `.claude/skills/pr-cross-review/cross-review-workflow.js` を指定する。`args` に手順 1 の diff ファイル絶対パス、選定した reviewer 一覧（`risk-reviewer` / `behavior-verifier` / `architecture-guard` のいずれか）、および ctx pack（Main が `node scripts/tasks/ctx.mjs <PR番号>` を実行して得た markdown。取得に失敗した場合は `未取得` を渡す fail-open）を渡す。**Workflow script は Node.js API・ファイルアクセスを持たない**ため、`gh pr diff` と同様に ctx pack の取得自体も Main が実行し、内容そのものを `args` 経由で渡す（パスではなく文字列。script 内で `execFileSync` を呼ぶことはできない）:
 
 ```
 Workflow({
   scriptPath: ".claude/skills/pr-cross-review/cross-review-workflow.js",
-  args: { diffPath: "<手順1の絶対パス>", reviewers: ["risk-reviewer", "behavior-verifier"] }
+  args: {
+    diffPath: "<手順1の絶対パス>",
+    reviewers: ["risk-reviewer", "behavior-verifier"],
+    ctxMarkdown: "<node scripts/tasks/ctx.mjs <PR番号> の stdout。失敗時は '未取得'>",
+  }
 })
 ```
+
+reviewer は diff だけでなくこの ctx pack（受け入れ条件 / DoD / 次の一手）も読み、diff がそれらと食い違う点をコードの欠陥と同じ重さで指摘する（従来は diff しか渡していなかったため、意図と乖離した実装を見逃しやすかった）。
 
 **role ごとの persona・read-only 契約・review scope・model は、`.claude/agents/*.md`（2026-08 に全廃、#2478）の代わりに `cross-review-workflow.js` の `ROLE_PROMPTS` / `MODEL_BY_ROLE` へ inline で持つ。** `agentType` は使わず、`agent()` 呼び出しに `model` と inline prompt（`ROLE_PROMPTS[role]` + diff 指示）だけを渡す。**既知のトレードオフ**: 旧 `.claude/agents/*.md` の `tools: Read, Grep, Glob` / `permissionMode: plan` は harness レベルの技術的強制だったが、agentType を撤去したことでこの技術的強制は失われ、read-only の担保は inline prompt 内の明示的な文章指示（+ 通常の permission gate）に後退している。これは #2478 の意図的な設計判断で、cross-review-workflow.js 冒頭のコメントに同じ注記がある。
 
