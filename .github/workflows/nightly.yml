@@ -333,6 +333,23 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: node scripts/ci/night-watch/run-all.mjs
 
+      # #2535: 「無音 = 緑」規約の backstop。上の step が例外を投げて失敗した、
+      # または job 自身が `timeout-minutes`（15分。GitHub が degrade して 5xx を
+      # 遅く返す夜、7 check × 観測コマンド上限で timeout-minutes を超えうる）で
+      # 強制終了した夜は、alert issue もサマリ 1 行も残らず無音になっていた。
+      # `cancelled()` は job 自身の timeout でも true になる（GitHub Actions は
+      # job timeout をジョブの cancellation として扱う）。checkout 直後に置いた
+      # `./.github/actions/setup` が失敗した場合はこの step 自体も実行できない
+      # 可能性があるが、その場合は job run 自体が Actions の通常の失敗表示に
+      # 残るため「無音」ではない（観測ループの内側だけが対象）。
+      - name: job 自身の失敗/timeout を backstop 起票する
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/ci/night-watch/alert-issue.mjs report-fetch-failed night-watch-self \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
   # ─── status:* ラベルの batch sweep（新設）────────────────────────────
   # #2483 で issue-status-label-cleanup.yml（issue close webhook 起点の
   # per-close 即時剥がし）を廃止し、この nightly 一括 sweep が**唯一の経路**

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildAlertArgs,
+  checkSecretExpiry,
   checkSentryNew,
   checkWorkflowJobRun,
   classifyGhError,
@@ -644,34 +645,49 @@ describe('checkWorkflowJobRun（job-scoped 判定、#2483）', () => {
     expect(outcome).toEqual({ status: 'green' });
   });
 
-  // 採用 run が terminal でない class（環境承認待ちの `waiting` 等）では、green の
-  // 根拠が matched[0] を離れて古い run へ移る。この時は古い位置の失敗も効くので
-  // 総数で見る（内製クロスレビュー risk-reviewer 指摘 medium）。実測では
-  // development environment の protection_rules は空で現状到達しないが、
-  // rule を 1 つ足すだけで到達可能になるため repo 設定に依存させない。
-  it('採用 run が terminal でないなら、古い run の取得失敗でも green を確定させない', () => {
+  // 採用 run が terminal でない class（環境承認待ちの `waiting` 等）。#2534 の
+  // allowlist 反転後は `isLatestWorkflowRunPending` がこの run を pending と
+  // 認識するため、judgeWorkflowRun は green/red の確定へ進まず pending を返す
+  // （48h 以内に success があるため stale-pending 化もしない）。green を
+  // 誤って確定させる経路そのものが無くなったので、間に挟まる run 2 の取得
+  // 失敗は結果に効かない（旧実装は denylist の穴で waiting を pending と
+  // 認識できず、この失敗を green の縮退根拠として拾う必要があった）。
+  it('採用 run が非 terminal（waiting）なら、48h 以内に success があれば pending として返す', () => {
     const execFileImpl = vi.fn(
       makeExecFileImpl([
         runListResponse([
           { databaseId: 3, createdAt: '2026-08-25T04:00:00+09:00', url: 'u3' },
           { databaseId: 2, createdAt: '2026-08-25T03:30:00+09:00', url: 'u2' },
-          // 24h 窓の内側（NOW の 23h 前）。ここが窓外だと hasRecentSuccess が
-          // false になり green ではなく red になって、縮退判定まで到達しない。
           { databaseId: 1, createdAt: '2026-08-24T06:00:00+09:00', url: 'u1' },
         ]),
         // 最新（3）は environment 承認待ちで waiting（completed でも queued でもない）。
         jobsResponseFor(3, [
           { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'waiting', conclusion: null },
         ]),
-        // 2 は未 mock（throw）= 読めない。1 は 24h 以内の success。
+        // 2 は未 mock（throw）= 読めない。1 は 48h 以内の success。
         jobsResponseFor(1, [
           { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'completed', conclusion: 'success' },
         ]),
       ]),
     );
     const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
-    // run 2 が本物の red だった可能性を排除できないので green を確定させない。
-    expect(outcome).toEqual({ status: 'fetch-failed' });
+    expect(outcome).toEqual({ status: 'pending', evidenceUrl: 'u3' });
+  });
+
+  // 赤の検出を弱めていないことの回帰確認（#2534 注意事項）。waiting のまま
+  // 48h 以内に success が 1 件も無ければ、pending ではなく stale-pending の
+  // red へ倒れ、取得失敗があれば fetch-failed へ縮退する（無音にはならない）。
+  it('採用 run が非 terminal（waiting）で 48h 以内に success が無ければ red（stale-pending）', () => {
+    const execFileImpl = vi.fn(
+      makeExecFileImpl([
+        runListResponse([{ databaseId: 3, createdAt: '2026-08-25T04:00:00+09:00', url: 'u3' }]),
+        jobsResponseFor(3, [
+          { name: NIGHTLY_INTEGRATION_JOB_NAME, status: 'waiting', conclusion: null },
+        ]),
+      ]),
+    );
+    const outcome = checkWorkflowJobRun([NIGHTLY_INTEGRATION_JOB_NAME], { execFileImpl, now: NOW });
+    expect(outcome).toEqual({ status: 'red', evidenceUrl: 'u3' });
   });
 
   // 上の縮退は「異常なし」側だけに効く。赤が読めているなら、それより古い run の
@@ -1020,6 +1036,58 @@ describe('execObservationCommand', () => {
 // 24h で新規 unresolved が limit 件以上出た本番障害時（このチェックが
 // 最も必要な時）に限って alert issue の起票自体が失敗する回帰になる
 // （一度実装して自己発見・revert 済み）。
+// #2467: SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効監視（軽量案）。
+describe('checkSecretExpiry / buildAlertArgs（secret-expiry kind）', () => {
+  const DEFINITION = { expiresAt: '2026-11-23', warningDays: 14 };
+
+  it('warningDays より残り日数が多ければ green', () => {
+    // 2026-09-01 時点で残り約83日（> 14日）。
+    const now = new Date('2026-09-01T00:00:00Z').getTime();
+    expect(checkSecretExpiry(DEFINITION, { now })).toEqual({ status: 'green' });
+  });
+
+  it('残り日数が warningDays と一致する境界でも red（以内は含む）', () => {
+    const now = new Date('2026-11-09T00:00:00Z').getTime(); // 2026-11-23 の14日前
+    expect(checkSecretExpiry(DEFINITION, { now })).toEqual({ status: 'red', actual: 14 });
+  });
+
+  it('warningDays より残り日数が少なければ red', () => {
+    const now = new Date('2026-11-20T00:00:00Z').getTime(); // 残り3日
+    expect(checkSecretExpiry(DEFINITION, { now })).toEqual({ status: 'red', actual: 3 });
+  });
+
+  it('失効日を過ぎていても red（actual は負数）', () => {
+    const now = new Date('2026-12-01T00:00:00Z').getTime();
+    const outcome = checkSecretExpiry(DEFINITION, { now });
+    expect(outcome.status).toBe('red');
+    expect(outcome.actual).toBeLessThan(0);
+  });
+
+  it('buildAlertArgs は actual を文字列化する', () => {
+    expect(buildAlertArgs('storage-rls-audit-token-expiry', { actual: 3 })).toEqual({
+      actual: '3',
+    });
+  });
+
+  // risk-reviewer 指摘と同型（checkSentryNew の隣接テストに倣う）:
+  // outcome → buildAlertArgs → 実 buildAlertBody まで通して起票自体が
+  // 壊れないことを固定する（unit test だけの同語反復にしない）。
+  it('red の outcome でも実際の buildAlertBody（alert-issue.mjs）まで通してthrowしない', async () => {
+    const { buildAlertBody } = await import('./alert-issue.mjs');
+    const outcome = checkSecretExpiry(DEFINITION, {
+      now: new Date('2026-11-20T00:00:00Z').getTime(),
+    });
+    const args = buildAlertArgs('storage-rls-audit-token-expiry', outcome);
+    const body = buildAlertBody({
+      checkId: 'storage-rls-audit-token-expiry',
+      args,
+      detectedAt: '2026-11-20T00:00:00Z',
+    });
+    expect(body).toContain('残り 3 日');
+    expect(body).toContain('2026-11-23');
+  });
+});
+
 describe('checkSentryNew / buildAlertArgs（count は常に素の数字）', () => {
   it('issues.length が limit 未満なら count は実数のまま', () => {
     const issues = Array.from({ length: 3 }, (_, i) => ({
@@ -1339,7 +1407,7 @@ describe('runNightWatch', () => {
     expect(writeCalls).toHaveLength(0);
 
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: all green | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     expect(process.exitCode).not.toBe(1);
     process.exitCode = 0;
@@ -1382,7 +1450,70 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch(docs-check): pnpm docs:check が exit 0 以外');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 7/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 8/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+    );
+    process.exitCode = 0;
+  });
+
+  // #2467: SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効監視。他の check-id と違い
+  // gh/sentry の応答を一切 mock していない（純粋な日付計算のため）ことで、
+  // 配線ミス（CHECK_IDS のキーと CHECK_DEFINITIONS のキーが食い違う等）が
+  // あれば「未知の check-id です」で即 throw することを確認する。
+  //
+  // `now` は FIXED_NOW（baseRules 内の run/job タイムスタンプが依拠する基準
+  // 時刻）のまま据え置く——ここを動かすと heavy-red/integration-red 側の
+  // 24h/48h 窓判定が崩れ、この check-id 以外まで red 化して assertion が
+  // 意図と無関係な理由で壊れる。代わりに `CHECK_DEFINITIONS` の
+  // `expiresAt` を一時的に FIXED_NOW の 3 日後へ差し替える。
+  it('token失効が14日以内に迫った晩は nightwatch(storage-rls-audit-token-expiry) issue を新規起票する', async () => {
+    const { CHECK_DEFINITIONS } = await import('./alert-issue.mjs');
+    const definition = CHECK_DEFINITIONS['storage-rls-audit-token-expiry'];
+    const originalExpiresAt = definition.expiresAt;
+    definition.expiresAt = new Date(FIXED_NOW.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+
+    const rules = [
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch storage-rls-audit-token-expiry in:title'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'create' &&
+          has(args, 'nightwatch(storage-rls-audit-token-expiry)'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/12347',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    try {
+      runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+    } finally {
+      definition.expiresAt = originalExpiresAt;
+    }
+
+    const createCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch(storage-rls-audit-token-expiry)'),
+    );
+    expect(createCall).toBeDefined();
+    const title = createCall?.args[createCall.args.indexOf('--title') + 1];
+    expect(title).toBe(
+      'nightwatch(storage-rls-audit-token-expiry): SUPABASE_STORAGE_RLS_AUDIT_TOKEN の失効が近づいています',
+    );
+    const body = createCall?.args[createCall.args.indexOf('--body') + 1];
+    expect(body).toContain('残り 3 日');
+
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 8/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1506,7 +1637,7 @@ describe('runNightWatch', () => {
     // 観測そのものは 7/7 成功している（赤だと分かったからこそ起票を試みた）。
     // 「取得失敗 0 / 起票失敗 1」と読めることが、gh 障害の切り分けに要る。
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 要確認 | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 1 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1568,7 +1699,69 @@ describe('runNightWatch', () => {
     expect(title).toBe('nightwatch-fetch-failed(dependabot-alerts): 観測コマンドが取得失敗');
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 6/7 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
+      'night-watch: 要確認 | 観測 7/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
+    );
+    process.exitCode = 0;
+  });
+
+  // #2535 item 4: `checkExitCode`（docs-check/deadcode の kind）は旧実装だと
+  // `isSpawnFailure` だけを見ており、retry を尽くした後の最終エラーが
+  // network-error 分類でも（プロセスは起動して非 0 exit するため）red へ
+  // 落ちていた。`isRetriableObservationFailure` の分類と揃えることで、
+  // 一過性の観測失敗は red-alert ではなく fetch-failed 側へ倒れる。
+  it('docs-check が network-error 分類のまま retry しきれない時は red ではなく fetch-failed になる', () => {
+    const rules = [
+      {
+        match: (file: string, args: string[]) => file === 'pnpm' && args[0] === 'docs:check',
+        respond: () =>
+          Object.assign(new Error('Command failed: pnpm docs:check'), {
+            status: 1,
+            stderr: 'read ECONNRESET',
+          }),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'list' &&
+          has(args, 'nightwatch-fetch-failed docs-check in:title'),
+        respond: () => JSON.stringify([]),
+      },
+      {
+        match: (file: string, args: string[]) =>
+          file === 'gh' &&
+          args[0] === 'issue' &&
+          args[1] === 'create' &&
+          has(args, 'nightwatch-fetch-failed(docs-check)'),
+        respond: () => 'https://github.com/Dayopt/dayopt/issues/851\n',
+      },
+      ...baseRules(),
+    ];
+    const execFileImpl = createExecFileImpl(rules);
+    runNightWatch({ execFileImpl, now: FIXED_NOW.getTime(), runStatePath, sleepImpl });
+
+    // red-alert（nightwatch(docs-check)）は起票されていない。
+    const redAlertCreateCalls = execFileImpl.calls.filter(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch(docs-check)') &&
+        !has(c.args, 'nightwatch-fetch-failed(docs-check)'),
+    );
+    expect(redAlertCreateCalls).toHaveLength(0);
+
+    const fetchFailedCreateCall = execFileImpl.calls.find(
+      (c) =>
+        c.file === 'gh' &&
+        c.args[0] === 'issue' &&
+        c.args[1] === 'create' &&
+        has(c.args, 'nightwatch-fetch-failed(docs-check)'),
+    );
+    expect(fetchFailedCreateCall).toBeDefined();
+
+    expect(summaryLine()).toBe(
+      'night-watch: 要確認 | 観測 7/8 | 起票 1 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 1',
     );
     process.exitCode = 0;
   });
@@ -1601,7 +1794,7 @@ describe('runNightWatch', () => {
     );
     expect(createCalls).toHaveLength(0);
     expect(summaryLine()).toBe(
-      'night-watch: all green | 観測 7/7 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: all green | 観測 8/8 | 起票 0 | 保留 0 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1685,7 +1878,7 @@ describe('runNightWatch', () => {
     // pending だけの夜は「要確認」に倒さない（日常的に起きるため verdict の
     // 識別力が落ちる。内製クロスレビュー risk-reviewer 指摘 low）。
     expect(summaryLine()).toBe(
-      'night-watch: 判定保留あり | 観測 7/7 | 起票 0 | 保留 1 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
+      'night-watch: 判定保留あり | 観測 8/8 | 起票 0 | 保留 1 | 起票失敗 0 | 予算超過 0 | 取得失敗 0',
     );
     process.exitCode = 0;
   });
@@ -1839,8 +2032,12 @@ describe('runNightWatch', () => {
     expect(fetchFailedCreates.length).toBe(2); // 3件中1件は予算超過でcapされる
 
     expect(summaryLine()).toBe(
-      'night-watch: 要確認 | 観測 4/7 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
+      'night-watch: 要確認 | 観測 5/8 | 起票 3 | 保留 0 | 起票失敗 0 | 予算超過 1 | 取得失敗 3',
     );
+    // #2535 item 3（推奨案 a）: capped が 1 件でもあれば job を非 0 exit にする。
+    // 起票上限で見送った事実がサマリ 1 行にしか残らないと、job 自体は緑のまま
+    // 朝に気づけない。
+    expect(process.exitCode).toBe(1);
     process.exitCode = 0;
   });
 });
