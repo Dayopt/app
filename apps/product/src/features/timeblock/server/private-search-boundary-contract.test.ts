@@ -16,11 +16,13 @@ import { describe, expect, it } from 'vitest';
  * （#2503 class-based 是正）。
  *
  * ここでは wrapper 自身を除くこのディレクトリの全 .ts（非 test）ファイルを
- * 静的解析し、次の 2 種類の「検索語 taint」がラッパーを経由せず bare await
- * される経路が無いことを固定する:
- *   1. `.ilike(` / `.like(` / `.textSearch(` 呼び出し
- *   2. `x = x.or(...)` 形の検索 filter 適用（`buildTimeblockSearchFilter` の
- *      戻り値を `.or()` で query へ適用する、このディレクトリの既存 idiom）
+ * 再帰的に走査し、`.ilike(` / `.like(` / `.textSearch(` / `.or(`（`
+ * buildTimeblockSearchFilter` の戻り値を query へ適用する、このディレクトリの
+ * 既存 idiom）の呼び出しがラッパーを経由せず bare await される経路が無いことを
+ * 固定する。代入先は `x = x.or(...)` の再代入だけでなく `const q = base.or(...)`
+ * のような宣言時代入も追跡する（Codex 指摘 #2546: `.or()` だけ同じ変数への
+ * 再代入に限定していた旧実装は、新しい変数への宣言時代入を見逃していた。
+ * `.ilike()` 等と同じ汎用検出へ統合して class ごと閉じた）。
  *
  * 判定は完全な dataflow 解析ではなく、このディレクトリの既存 idiom
  * （`search ? await runPrivateTimeblockSearchQuery(() => query) : await query`）
@@ -38,7 +40,7 @@ import { describe, expect, it } from 'vitest';
 const SERVER_DIR = dirname(fileURLToPath(import.meta.url));
 const WRAPPER_FILE = 'private-timeblock-search-query.ts';
 const WRAPPER_FUNCTION = 'runPrivateTimeblockSearchQuery';
-const TAINTING_METHODS = new Set(['ilike', 'like', 'textSearch']);
+const TAINTING_METHODS = new Set(['ilike', 'like', 'textSearch', 'or']);
 
 interface Violation {
   file: string;
@@ -59,12 +61,29 @@ interface TaintRecord {
   scope: ts.Node;
 }
 
+/**
+ * `SERVER_DIR` 配下を再帰的に走査し、非 test の `.ts` ファイルを repo-relative
+ * （`SERVER_DIR` 基点）の相対パスで返す。直下だけを見ていた旧実装は、将来
+ * `server/<subdir>/*.ts` のようなサブディレクトリへ検索処理が追加された場合に
+ * 素通りしていた（Codex 指摘 #2546）。
+ */
 function listCandidateFiles(): string[] {
-  return readdirSync(SERVER_DIR)
-    .filter((name) => name.endsWith('.ts'))
-    .filter((name) => !name.endsWith('.test.ts'))
-    .filter((name) => name !== WRAPPER_FILE)
-    .sort();
+  const results: string[] = [];
+  function walk(dir: string, prefix: string) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name), relativePath);
+        continue;
+      }
+      if (!entry.name.endsWith('.ts')) continue;
+      if (entry.name.endsWith('.test.ts')) continue;
+      if (relativePath === WRAPPER_FILE) continue;
+      results.push(relativePath);
+    }
+  }
+  walk(SERVER_DIR, '');
+  return results.sort();
 }
 
 /** チェーンの左端（呼び出し元の変数）を辿る。`a.b().c(...)` -> `a`。 */
@@ -206,7 +225,11 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
   }
 
   function visit(node: ts.Node) {
-    // 1. `.ilike(` / `.like(` / `.textSearch(` 呼び出し
+    // `.ilike(` / `.like(` / `.textSearch(` / `.or(` 呼び出し。代入先が
+    // `x = x.or(...)` の再代入か `const q = base.or(...)` の宣言時代入かは
+    // 問わず、識別子1つに絞れる形なら等しく追跡する（Codex 指摘 #2546:
+    // `.or()` だけ同じ変数への再代入に限定していた旧実装は、新しい変数への
+    // 宣言時代入を見逃していた）。
     if (
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
@@ -234,21 +257,6 @@ function analyzeFile(fileName: string, sourceText: string): Violation[] {
             detail: `.${node.expression.name.text}(...) 呼び出しが runPrivateTimeblockSearchQuery(() => ...) の外にあり、代入先の変数も追跡できません。`,
           });
         }
-      }
-    }
-
-    // 2. `x = x.or(...)` 形の検索 filter 適用
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(node.left) &&
-      ts.isCallExpression(node.right) &&
-      ts.isPropertyAccessExpression(node.right.expression) &&
-      node.right.expression.name.text === 'or' &&
-      leftmostIdentifier(node.right.expression.expression) === node.left.text
-    ) {
-      if (!isInsideWrapperArrow(node)) {
-        recordAssignmentTaint(node, node.left);
       }
     }
 
