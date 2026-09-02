@@ -84,7 +84,7 @@ L0 と呼べる入口の条件は 3 つ。raw コマンドがこれを満たす�
 
 **session の寿命**: 1 PR = 1 session を基本にする。毎 turn で履歴と tool_result が再送されるため、長い session ほど 1 turn あたりの入力が膨らむ（Uber が 400K で強制 compact する理由）。区切りは PR の draft 作成と ready 化で、`trace` の session 数と session あたり tool 呼び出し数で確認する。同じ session で次の PR に入らない。
 
-**実行面（2026-09-02 決定）**: gh 依存の入口（ctx / trace / green:watch / branch:finish の gate / review marker）は cloud session では使えない（gh 不在、shell からの REST は遮断）。#2533 / #2561 で `workflow_dispatch` の ops workflow 1 本を実行面にし、ローカルは `gh workflow run`、cloud は MCP `actions_run_trigger` で同じ job を起動する。1Password・local Supabase・session ログの観測・release の不可逆操作はローカルに残す。
+**実行面（2026-09-02 決定）**: gh 依存の入口（ctx / trace / green:watch / branch:finish の gate / review marker）は cloud session では使えない（gh 不在、shell からの REST は遮断）。**この ops workflow は未実装**（2026-09-03 時点で `.github/workflows/` に該当 job は無い）。方向として #2533 / #2561 で `workflow_dispatch` の ops workflow 1 本を実行面にし、ローカルは `gh workflow run`、cloud は MCP `actions_run_trigger` で同じ job を起動する形にする。**それまでは cloud session からこれらを起動しようとしない** — cloud で詰まったら、担当 issue / PR へ状況を書いてローカル session へ引き継ぐ。1Password・local Supabase・session ログの観測・release の不可逆操作はローカルに残す。
 
 **AI が頼む前に走る層**: SessionStart hook（git 状態・token 構成比・実行環境の CLI 有無。cloud session では依存 install も担い、pre-commit / pre-push を有効にする）、pre-commit / pre-push、CI 4 層、`branch:finish` の 10 ゲート。新しい確認を足す時は、まず「hook / CI で AI より先に走らせられないか」を考える。
 
