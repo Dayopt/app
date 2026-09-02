@@ -37,7 +37,7 @@ permissions:
   pull-requests: read
 
 # ── draft 中は CI を完全に skip する（2026-08-28、#2483 Phase 1。User 裁可）──
-# 検査網が要るのは境界を越える瞬間（ready = レビューする Main / User の時間を使う / merge = main に
+# 検査網が要るのは境界を越える瞬間（ready = 指揮台の時間を使う / merge = main に
 # 入る）だけで、draft はレーンの私的作業場。機械 gate は pre-commit / pre-push
 # フック（affected typecheck/lint + typecheck:scripts/test:scripts/format:check、
 # #2359）が担う。**意図的な変更点は 2 つ**: (1) gitleaks が draft 中は走らない
