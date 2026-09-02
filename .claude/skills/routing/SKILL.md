@@ -38,12 +38,35 @@ maxTurns: 10
 
 ## Worker recipe
 
-### L0（LLM を使わない）
+### L0（LLM を使わない）— カタログ
 
-- 定型検証: `pnpm check` / `pnpm test:scripts` / `pnpm typecheck` / `gh pr checks <N> --watch`
-- 状態取得: `gh pr view <N> --json mergeStateStatus,reviewDecision,statusCheckRollup --jq …` / `gh issue list --label status:ready --json number,title` / `git worktree list --porcelain`
-- 履歴: `git log -S<symbol> --oneline` / `git log --merges --since`
-- **巨大出力は context に入れる前に射影する**: `Read` は範囲指定、MCP の list 系や `gh api` は `--jq` で必要キーだけ、長い出力は `| tail -n` / `| head -c`。tool_result の Read が全体の半分を占めた実測（2026-08）がある
+L0 と呼べる入口の条件は 3 つ。raw コマンドがこれを満たすなら wrapper を作らない。
+
+1. 既定の出力が 30 行前後の判断可能な要約で、`--json` で機械可読にもなる
+2. exit code に意味があり、stdin を待たない（対話 prompt を出さない）
+3. 失敗は `未取得` と明記して fail-closed。黙って空を返さない
+
+| 分類       | 能力                    | 入口                                                                     | 射影の書き方                                           | 状態                                                 |
+| ---------- | ----------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------- |
+| Repository | search                  | `rg -n <pat> <path>`                                                     | `-l` / `-c` で件数から入り、本文は `-m` と head で絞る | raw で十分                                           |
+| Repository | diff / log / blame      | `git diff --stat`、`git log --oneline -S<sym>`、`git blame -L`           | `--stat` → 必要な path だけ `-- <path>`                | raw で十分                                           |
+| Repository | 依存グラフ              | `pnpm lint:boundaries`、`pnpm deps:circular`、`rg -l "from '.*<name>'"`  | 「誰が import しているか」は `rg -l`                   | 候補: `pnpm deps <path>`                             |
+| Validation | typecheck / lint / test | `pnpm check`（個別は `pnpm typecheck` / `lint` / `test:run`）            | tail 20 行、失敗行は `rg "error\|FAIL"`                | あり                                                 |
+| Validation | E2E                     | `pnpm test:e2e:smoke`、nightly 層 3                                      | 結果は `gh run view`                                   | あり                                                 |
+| Infra      | CI 状態                 | `gh pr checks <N> [--watch]`、`pnpm green:watch --once`                  | `--json` + `--jq`                                      | あり。候補: `pnpm pr:advance <N>`（追従→待ち→ready） |
+| Infra      | Vercel                  | `vercel ls`、`vercel inspect [--logs] <url>`、`vercel logs <url> --json` | head / tail、`jq 'select(.level=="error")'`            | raw で十分（MCP は登録しない）                       |
+| Infra      | Supabase query          | `pnpm db:*`、`psql`（cloud MCP はオンデマンド）                          | 行数上限を必ず付ける                                   | 候補: `pnpm db:sql`（read-only 固定・行数上限）      |
+| Infra      | Sentry                  | `sentry` CLI（`mcp-usage` skill §Sentry CLI）                            | issue 1 件ずつ                                         | あり                                                 |
+| Automation | polling                 | `gh pr checks --watch`、`pnpm green:watch --follow`                      | 遷移だけ読む                                           | あり                                                 |
+| Automation | bulk / 変換             | `sed -i`、`jq`、`node -e`                                                | 対象一覧を先に `rg -l` で確定してから一括              | ad-hoc（同じ形が 2 回出たら script 化）              |
+| Automation | context pack            | `pnpm ctx <issue または PR>`                                             | 150 行以内で完結、`次の一手` を読む                    | あり                                                 |
+| 観測       | 経済メトリクス          | `pnpm ai:usage`                                                          | 月次 gardening の journal に貼る                       | あり                                                 |
+
+**AI が頼む前に走る層**: SessionStart hook（git 状態・token 構成比）、pre-commit / pre-push、CI 4 層、`branch:finish` の 10 ゲート。新しい確認を足す時は、まず「hook / CI で AI より先に走らせられないか」を考える。
+
+**育て方**: (1) 同じ形の tool 連鎖が 2 回出たら「候補」に載せる（`ai:usage` の Bash 頻出 prefix と最長 tool 連鎖が月次の証拠） (2) 作る前に raw で上の 3 条件を満たせないか確認する (3) wrapper は `scripts/tasks/` に置き `pnpm <name>` で呼ぶ（taxonomy test が配置を強制） (4) 1 つ足したらこの表を更新し、2 か月使われない行は削る
+
+- **巨大出力は context に入れる前に射影する**: `Read` は範囲指定、MCP の list 系や `gh api` は `--jq` で必要キーだけ、長い出力は tail / head で切る。tool_result の Read が全体の半分を占めた実測（2026-08）がある
 
 ### L1（Haiku）prompt 骨格
 
