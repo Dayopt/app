@@ -81,8 +81,8 @@ AI が記事を作成する場合は必ず `draft: true` で作成し、開発�
 
 ```
 URL構造:
-  英語: /docs/features/plans      （デフォルト、プレフィックスなし）
-  日本語: /ja/docs/features/plans  （/ja/ プレフィックス）
+  英語: /docs/plan/plans      （デフォルト、プレフィックスなし）
+  日本語: /ja/docs/plan/plans  （/ja/ プレフィックス）
 ```
 
 **基本方針**（`docs/business/content/content-operations.md` §言語ポリシーが正本）:
@@ -194,8 +194,8 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 
 ## 参考ファイル
 
-| ファイル                                         | 用途                                                  |
-| ------------------------------------------------ | ----------------------------------------------------- |
-| `apps/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）                                 |
-| `apps/web/src/lib/content-schemas.ts`            | Frontmatterスキーマの正式定義（Zod）                  |
-| `docs/operations/runbook.md` 第4部               | リリースノートのカテゴリ定義（GitHub Release と共通） |
+| ファイル                                     | 用途                                                  |
+| -------------------------------------------- | ----------------------------------------------------- |
+| `apps/web/content/docs/ja/plan/calendar.mdx` | 模範例（Feature Doc）                                 |
+| `apps/web/src/lib/content-schemas.ts`        | Frontmatterスキーマの正式定義（Zod）                  |
+| `docs/operations/runbook.md` 第4部           | リリースノートのカテゴリ定義（GitHub Release と共通） |

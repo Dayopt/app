@@ -35,16 +35,15 @@ apps/product/src/features/{feature}/server/
 └── types.ts               # feature内の型定義（optional）
 ```
 
-大規模featureの場合（例: entry）:
+大規模featureの場合（例: timeblock）:
 
 ```
-apps/product/src/features/entry/server/
-├── router.ts              # 個別ルーター
+apps/product/src/features/timeblock/server/
+├── plans-router.ts        # 個別ルーター（records-router / statistics-*-router も同様）
 ├── router-index.ts        # ルーターのマージ・エクスポート
-├── entry-service.ts       # メインサービス
+├── plan-service.ts        # 個別サービス（record-service / statistics-*-service も同様）
 ├── service-index.ts       # サービスのマージ
-├── statistics.ts          # 統計（optional）
-└── types.ts
+└── mcp-mutation-contract.ts # 外部契約（MCP）は同居させ、保護対象 path として扱う
 ```
 
 テストは各対象ファイルの隣に `X.test.ts` として置く（`__tests__/` は使わない。`test` skill、#2485）。
@@ -243,12 +242,15 @@ import type { Database } from '@/lib/database';
 
 ```
 apps/product/src/features/
-├── entry/server/      # 最も大規模な例（router-index + service-index）
-├── activities/server/ # 標準的なCRUD例
-├── auth/server/       # ユーザー管理
-├── settings/server/   # billing-router含む複数ルーター
-└── notifications/server/  # email-router, preferences-router含む
+├── timeblock/server/         # 最も大規模な例（router-index + service-index、統計 router 群）
+├── activities/server/        # 標準的なCRUD例（query / mutation / archive / delete を service 分割）
+├── auth/server/              # ユーザー管理
+├── settings/server/          # billing-router / mcp-connections-router を含む複数ルーター
+├── external-calendar/server/ # 外部 provider 連携（sync / token / revoke の service 群）
+└── review/server/            # 集計・分析 service
 ```
+
+現行 feature は `activities / auth / calendar / contact / external-calendar / review / settings / timeblock` のみ。ここに無い feature 名（entry / notifications 等）は廃止済みなので参考にしない。
 
 ## 関連スキル
 

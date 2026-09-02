@@ -155,11 +155,11 @@ t('items', { count: 5 }); // → "5 items"
 | `activities.json` | アクティビティ管理                                                   |
 | `settings.json`   | 設定画面                                                             |
 | `auth.json`       | 認証フロー                                                           |
-| `entry.json`      | エントリ機能                                                         |
+| `timeblock.json`  | Plan / Record（タイムブロック）                                      |
 | `navigation.json` | ナビゲーション                                                       |
 | `error.json`      | エラーページ UI                                                      |
 | `legal.json`      | 法的文書                                                             |
-| `record.json`     | レコード                                                             |
+| `shortcuts.json`  | キーボードショートカット                                             |
 | `sidebar.json`    | サイドバー                                                           |
 | `contact.json`    | お問い合わせ                                                         |
 | `oauth.json`      | OAuth 認証                                                           |
@@ -211,17 +211,17 @@ t('items', { count: 5 }); // → "5 items"
 4. **検証**: `pnpm i18n:check && pnpm copy:check`
 
 ```json
-// apps/product/messages/en/entry.json — 追加
+// apps/product/messages/en/timeblock.json — 追加
 {
-  "entry": {
-    "toast": { "created": "Entry created" }
+  "timeblock": {
+    "toast": { "created": "Plan created" }
   }
 }
 
-// apps/product/messages/ja/entry.json — 追加
+// apps/product/messages/ja/timeblock.json — 追加
 {
-  "entry": {
-    "toast": { "created": "エントリを作成しました" }
+  "timeblock": {
+    "toast": { "created": "予定を作成しました" }
   }
 }
 ```

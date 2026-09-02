@@ -343,7 +343,6 @@
         "exportButton": "Export",
         "exportSuccess": "Data exported successfully",
         "exportFailed": "Export failed. Please try again.",
-        "csvComingSoon": "Coming soon",
         "includedDataTitle": "Data included in export",
         "profileInfo": "Profile information",
         "tasksEvents": "Timeblocks",
