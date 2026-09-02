@@ -63,11 +63,11 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 ```markdown
 ## 背景 — なぜやるか。関連 issue / docs / 過去 PR へのリンク
 
-## やること — 番号付き手順。対象ファイル path を明記
+## やること — 番号付き手順。対象ファイル path を明記。**受け入れ条件（何ができたら完了か）を 1 行以上**。外部リサーチが要る時は「Deep Research 依頼: <問い>」を 1 行書き `status:blocked`（User が Gemini / ChatGPT で実行して結果をコメントに貼る。AGENTS.md L1）
 
 ## 注意 — 既知の罠、触ってはいけない領域、関連 skill（例: supabase skill のフロー）
 
-## 検証 — pass すべきコマンド（pnpm check 等）と確認観点
+## 検証 — pass すべきコマンド（pnpm check 等。**そのまま実行できる形**で書く）と確認観点
 
 ## 期待出力（該当時のみ）— 返してほしい形式。分類軸、判断ごとの証拠水準、撤退・rollback 条件の明示要求
 ```
