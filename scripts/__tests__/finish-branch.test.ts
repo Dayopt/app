@@ -1367,6 +1367,30 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
     expect(status).toBe(0);
   });
 
+  // docs-only は integration より優先する。**これは意図した挙動ではなく現状の固定**
+  // （[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。impact.mjs は
+  // rls-snapshot.md のような「docs だが integration を要求する」path を明示的に
+  // 想定していて、実際に `docsOnly: true, integration: true` を返す。しかし
+  // ci.yml の integration job は `docs_only != 'true'` で job ごと skip するため、
+  // gate 側もそれに合わせて免除しないと永久に missing で止まる。
+  //
+  // つまりこのテストは「gate と ci.yml が同じ向きに揃っている」ことを固定するもので、
+  // #2552 を直す時（両方で docs_only と integration を独立させる）には**このテストも
+  // 同時に更新する**必要がある。片方だけ変えるとここが落ちて気づける。
+  it('docs-only なら integration affected でも Integration Tests を免除する（ci.yml と対称、#2552）', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+      ],
+      // integration=true かつ docsOnly=true になる唯一の実在パターン
+      { files: ['docs/engineering/data/db/rls-snapshot.md'] },
+    );
+    expect(stderr).toContain('docs-only の変更のため');
+    expect(stderr).not.toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(0);
+  });
+
   it('影響判定に失敗したら Integration Tests も要求する（fail closed）', () => {
     // Static Checks / Unit Tests / Vercel context は揃えて、Integration Tests だけを
     // 欠かせる。判定不能（filesUnavailable）でこの gate が緩まないことを固定する。
