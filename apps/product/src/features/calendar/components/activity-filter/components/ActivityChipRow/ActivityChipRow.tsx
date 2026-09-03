@@ -76,14 +76,16 @@ export function ActivityChipRow({ className }: ActivityChipRowProps) {
         'scrollbar-hide overscroll-x-contain',
         className,
       )}
-      role="list"
+      // ボタンが並ぶ行なので list ではなく group。role="list" にすると子へ
+      // role="listitem" が要り、interactive な button に非 interactive な role を
+      // 付ける矛盾が生じる（listitem を付けるとボタンとして読まれなくなる）
+      role="group"
       aria-label={t('calendar.filter.quickCreate')}
     >
       {chips.map((chip) => (
         <button
           key={chip.id}
           type="button"
-          role="listitem"
           onClick={() => handleActivityTap(chip.id)}
           className="hover:bg-state-hover flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
         >
@@ -99,7 +101,6 @@ export function ActivityChipRow({ className }: ActivityChipRowProps) {
 
       <button
         type="button"
-        role="listitem"
         aria-label={t('calendar.filter.createActivity')}
         onClick={() => openActivityCreateModal()}
         className="hover:bg-state-hover text-muted-foreground flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"

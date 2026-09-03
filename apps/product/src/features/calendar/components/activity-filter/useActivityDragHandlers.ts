@@ -18,22 +18,27 @@ import type { ActivityDropTarget } from './activity-drop-target';
 export function useActivityDragSource(activity: Activity, enabled: boolean) {
   const { draggedActivity, startDrag, endDrag } = useActivityDrag();
 
-  // 行の中のボタン（👁 / ⋯）を掴んだ時はドラッグさせない。
+  // 行の中の操作ボタン（👁 / ⋯）を掴んだ時はドラッグさせない。
   //
   // **`dragstart` の `event.target` は掴んだ子ではなく draggable な祖先（行）**
   // なので、`CategoryHeader.handleRowClick` のような closest('button') 判定は
   // dragstart 側では効かない。押した瞬間の本当の target を ref に控えて見る。
   // state ではなく ref なのは、mousedown の setState が dragstart の発火までに
   // 反映される保証がないため。
-  const startedOnButtonRef = useRef(false);
+  //
+  // `button` 全部ではなく `[data-row-action]` だけを見る。行の名前もキーボード
+  // 経路のために button だが、そこは行の大半を占める一番自然な掴み所なので、
+  // ドラッグを止めてしまうと DnD がほぼ機能しなくなる（2026-09-04）。
+  const startedOnActionRef = useRef(false);
 
   const handleMouseDown = useCallback((event: MouseEvent<HTMLElement>) => {
-    startedOnButtonRef.current = (event.target as HTMLElement).closest('button') !== null;
+    startedOnActionRef.current =
+      (event.target as HTMLElement).closest('[data-row-action]') !== null;
   }, []);
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLElement>) => {
-      if (startedOnButtonRef.current) {
+      if (startedOnActionRef.current) {
         event.preventDefault();
         return;
       }

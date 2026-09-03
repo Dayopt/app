@@ -100,6 +100,7 @@ export function ActivityRow({
   return (
     <>
       <div role="listitem">
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- キーボード経路は内側の名前 button が持つ。この onClick は行の余白までクリックできるようにするマウス用の拡張で、role を付けると内側の button が入れ子の interactive 要素になり ARIA として不正になる */}
         <div
           className={cn(
             // select-none: 付けないと Firefox でラベルの文字列選択ドラッグが
@@ -126,19 +127,36 @@ export function ActivityRow({
               未分類では継承する色が無い。どちらも情報を足さずノイズになる。
               色とアイコンを見せるのはカテゴリー見出しだけ */}
 
+          {/* 名前は button。行全体の onClick はマウス用にヒット領域を広げるための
+              ものなので、キーボードから同じ操作へ届く経路をここが担う。行の div を
+              role="button" にすると内側の 👁 / ⋯ が入れ子の interactive 要素になり
+              ARIA として不正になるため、行ではなく名前を control にする */}
           <HoverTooltip
             content={activity.name}
             side="top"
             disabled={menuOpen || isDragging}
             wrapperClassName="ml-2 min-w-0 flex-1"
           >
-            <span className={cn('min-w-0 truncate', !checked && 'text-muted-foreground')}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenPopover(activity.id);
+              }}
+              className={cn(
+                'focus-visible:ring-ring block w-full min-w-0 truncate rounded-lg text-left focus-visible:ring-2 focus-visible:outline-none',
+                !checked && 'text-muted-foreground',
+              )}
+            >
               {activity.name}
-            </span>
+            </button>
           </HoverTooltip>
 
           <button
             type="button"
+            // 掴み判定から外す目印。行の名前も button なので closest('button') では
+            // 区別できない（useActivityDragHandlers）
+            data-row-action
             onClick={(event) => {
               event.stopPropagation();
               onToggle();
@@ -162,6 +180,7 @@ export function ActivityRow({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
+                data-row-action
                 aria-label={t('calendar.filter.activityMenu')}
                 // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
                 className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
