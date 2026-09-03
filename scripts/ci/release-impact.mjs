@@ -27,6 +27,7 @@ import {
   RELEASE_PROJECTS,
   getProjectState,
   gitHeadSha,
+  impactEnvVar,
   resolveProjectImpact,
 } from './production-release.mjs';
 
@@ -36,6 +37,16 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/;
 export const IMPACT_OUTPUT_KEYS = RELEASE_PROJECTS.map(
   (project) => `${project.impactKey}_affected`,
 );
+
+/**
+ * `IMPACT_OUTPUT_KEYS` と**同じ順序で並ぶ**、release job 側の step env 名。
+ *
+ * gate（release job の `if:`）は T0 の判定しか見ないので、live が Instant Rollback で
+ * 後退した時に層 3 未実行の project を promote しうる（#2574）。それを script 側で
+ * 塞ぐため、同じ verdict を step env でも渡す。`release-workflow-contract.test.ts` が
+ * この 2 つの配列を index で突き合わせ、promote.yml の配線を検査する。
+ */
+export const IMPACT_ENV_VARS = RELEASE_PROJECTS.map((project) => impactEnvVar(project.impactKey));
 
 /**
  * 全 project の「promote 前に層 3 を走らせる必要があるか」を返す。

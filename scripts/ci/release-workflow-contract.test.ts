@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { WORST_CASE_RELEASE_MS } from './production-release.mjs';
-import { IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
+import { IMPACT_ENV_VARS, IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
 
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を
@@ -226,6 +226,36 @@ describe('release workflow contract', () => {
       (match) => match[1],
     );
     expect([...new Set(referenced)].sort()).toEqual([...IMPACT_OUTPUT_KEYS].sort());
+  });
+
+  it('passes the impact verdict into the release script, not just into the gate', () => {
+    // gate（release job の `if:`）は T0（impact job 実行時点）の判定しか見ない。
+    // live が Instant Rollback で後退すると release 側（T1）だけが affected になり、
+    // 層 3 未実行の project を promote しうる（#2574）。script が T0 の verdict を
+    // 読めるよう、同じ値を step env でも渡す。
+    const releaseStep = releaseJob.slice(
+      releaseJob.indexOf('Wait, smoke, and promote Production'),
+      releaseJob.indexOf('Publish Production Release status'),
+    );
+    expect(releaseStep).not.toBe('');
+    // 出力キーと env 名は index で 1:1 対応する（片方だけ改名する事故を塞ぐ）。
+    expect(IMPACT_ENV_VARS).toHaveLength(IMPACT_OUTPUT_KEYS.length);
+
+    IMPACT_OUTPUT_KEYS.forEach((key, index) => {
+      expect(releaseStep).toContain(
+        `${IMPACT_ENV_VARS[index]}: \${{ needs.impact.outputs.${key} }}`,
+      );
+    });
+
+    // 逆向き: script が読む env が余分な値を混ぜていない。
+    const wired = [...releaseStep.matchAll(/^\s*(RELEASE_IMPACT_[A-Z_]+):/gm)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(wired)].sort()).toEqual([...IMPACT_ENV_VARS].sort());
+
+    // **既定値で丸めない。** `|| 'true'` のような fallback を書くと、配線が落ちた時に
+    // 層 3 ゼロで promote が通り、この対策そのものが無効になる。
+    expect(releaseStep).not.toMatch(/RELEASE_IMPACT_[A-Z_]+:\s*\$\{\{[^}]*(\|\||&&)[^}]*\}\}/);
   });
 
   it('keeps the layer 3 gate fail-closed for cancelled jobs', () => {

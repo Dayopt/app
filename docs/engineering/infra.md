@@ -165,6 +165,20 @@ deployment の source SHA」で、そこから対象 SHA までの `git diff` �
 （fail closed）。どの app にも影響しない merge では promote を行わず、`Production Release` status は
 **success**（`unaffected`）になる — production の artifact がその commit と等価だから、tag は打てる。
 
+**影響判定は 2 回・別の時刻に行い、その食い違いを不変条件で塞ぐ（#2574）。** 層 3（e2e / web）を
+走らせるかは `impact` job が run 開始時点（T0）の live production SHA を基準に決め、実際にどの
+project を promote するかは `release` job が層 3 完了後（T1、最大 20 分後）の live SHA を基準に
+**独立して再計算する**。live が前進するだけなら `diff(base_T1..Y) ⊆ diff(base_T0..Y)` なので T1 の
+affected 集合は T0 の subset になり、テスト範囲は superset で安全。**破れるのは Vercel Instant
+Rollback で live が後退した時だけ**で、その時 T1 だけが affected になり、層 3 を一度も走らせていない
+project を promote しうる（gate 式は `needs.impact.outputs.*_affected == 'false'` で層 3 を免除する
+ため、workflow 側では止まらない）。そこで `production-release.mjs` が **「promote 対象 ⊆ impact が
+affected と判定した project」** を promote 前に強制する。impact の verdict は release job の step env
+（`RELEASE_IMPACT_<KEY>_AFFECTED`）で渡し、**`'true'` 以外はすべて未検証として扱う**（配線が落ちた
+時に fail open しないため）。破れた run は production を 1 件も触らずに落ち、manifest の
+`status: impact-mismatch` として残る（復旧は rollback ではなく再 run。[runbook.md](../operations/runbook.md)
+Playbook 2 ケース0-B）。`force`（break-glass）は層 3 job 自体を skip する経路なのでこの検査も免除する。
+
 smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
 candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
 cutover まで smoke のコードパスが一度も実行されない。全 candidate に走らせることで、毎 merge が
