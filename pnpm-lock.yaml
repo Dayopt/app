@@ -4,6 +4,222 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@marsidev/react-turnstile':
+      specifier: ^1.5.3
+      version: 1.5.3
+    '@sentry/nextjs':
+      specifier: ^10.66.0
+      version: 10.66.0
+    '@tailwindcss/typography':
+      specifier: ^0.5.20
+      version: 0.5.20
+    '@tanstack/react-query':
+      specifier: ^5.101.2
+      version: 5.101.2
+    '@trpc/client':
+      specifier: ^11.18.0
+      version: 11.18.0
+    '@trpc/server':
+      specifier: ^11.18.0
+      version: 11.18.0
+    '@upstash/ratelimit':
+      specifier: ^2.0.8
+      version: 2.0.8
+    '@upstash/redis':
+      specifier: ^1.38.0
+      version: 1.38.0
+    '@vercel/analytics':
+      specifier: ^1.6.1
+      version: 1.6.1
+    '@vercel/speed-insights':
+      specifier: ^1.3.1
+      version: 1.3.1
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
+    cmdk:
+      specifier: ^1.1.1
+      version: 1.1.1
+    glob:
+      specifier: ^13.0.6
+      version: 13.0.6
+    lucide-react:
+      specifier: ^0.577.0
+      version: 0.577.0
+    next:
+      specifier: ^16.3.3
+      version: 16.3.3
+    next-intl:
+      specifier: ^4.13.2
+      version: 4.13.2
+    next-themes:
+      specifier: ^0.4.6
+      version: 0.4.6
+    react:
+      specifier: ^19.2.7
+      version: 19.2.7
+    react-dom:
+      specifier: ^19.2.7
+      version: 19.2.7
+    react-hook-form:
+      specifier: ^7.82.0
+      version: 7.82.0
+    remark-gfm:
+      specifier: ^4.0.1
+      version: 4.0.1
+    resend:
+      specifier: ^6.17.2
+      version: 6.17.2
+    server-only:
+      specifier: ^0.0.1
+      version: 0.0.1
+    sonner:
+      specifier: ^2.0.7
+      version: 2.0.7
+    tailwind-merge:
+      specifier: ^3.6.0
+      version: 3.6.0
+    zustand:
+      specifier: ^5.0.14
+      version: 5.0.14
+  tooling:
+    '@axe-core/playwright':
+      specifier: ^4.12.1
+      version: 4.12.1
+    '@axe-core/react':
+      specifier: ^4.12.1
+      version: 4.12.1
+    '@lhci/cli':
+      specifier: ^0.15.1
+      version: 0.15.1
+    '@next/bundle-analyzer':
+      specifier: ^16.3.3
+      version: 16.3.3
+    '@playwright/test':
+      specifier: ^1.61.1
+      version: 1.61.1
+    '@storybook/addon-a11y':
+      specifier: ^10.5.2
+      version: 10.5.2
+    '@storybook/addon-docs':
+      specifier: ^10.5.2
+      version: 10.5.2
+    '@storybook/addon-mcp':
+      specifier: ^0.7.0
+      version: 0.7.0
+    '@storybook/addon-vitest':
+      specifier: ^10.5.2
+      version: 10.5.2
+    '@storybook/nextjs-vite':
+      specifier: ^10.5.2
+      version: 10.5.2
+    '@tailwindcss/postcss':
+      specifier: ^4.3.3
+      version: 4.3.3
+    '@testing-library/dom':
+      specifier: ^10.4.1
+      version: 10.4.1
+    '@testing-library/jest-dom':
+      specifier: ^6.9.1
+      version: 6.9.1
+    '@testing-library/react':
+      specifier: ^16.3.2
+      version: 16.3.2
+    '@testing-library/user-event':
+      specifier: ^14.6.1
+      version: 14.6.1
+    '@types/qrcode':
+      specifier: ^1.5.6
+      version: 1.5.6
+    '@vitejs/plugin-react':
+      specifier: ^5.2.0
+      version: 5.2.0
+    '@vitest/browser-playwright':
+      specifier: ^4.1.10
+      version: 4.1.10
+    '@vitest/coverage-istanbul':
+      specifier: ^4.1.10
+      version: 4.1.10
+    '@vitest/ui':
+      specifier: ^4.1.10
+      version: 4.1.10
+    '@vueless/storybook-dark-mode':
+      specifier: ^10.0.8
+      version: 10.0.8
+    babel-plugin-react-compiler:
+      specifier: ^1.0.0
+      version: 1.0.0
+    eslint:
+      specifier: ^9.39.5
+      version: 9.39.5
+    eslint-config-next:
+      specifier: ^16.3.3
+      version: 16.3.3
+    eslint-plugin-storybook:
+      specifier: ^10.5.2
+      version: 10.5.2
+    eslint-plugin-tailwindcss:
+      specifier: ^4.2.0
+      version: 4.2.0
+    happy-dom:
+      specifier: ^20.11.0
+      version: 20.11.0
+    husky:
+      specifier: ^9.1.7
+      version: 9.1.7
+    knip:
+      specifier: ^5.88.1
+      version: 5.88.1
+    license-checker:
+      specifier: ^25.0.1
+      version: 25.0.1
+    madge:
+      specifier: ^8.0.0
+      version: 8.0.0
+    npm-check-updates:
+      specifier: ^19.6.6
+      version: 19.6.6
+    playwright:
+      specifier: ^1.61.1
+      version: 1.61.1
+    postcss:
+      specifier: ^8.5.23
+      version: 8.5.25
+    prettier:
+      specifier: ^3.9.5
+      version: 3.9.5
+    prettier-plugin-organize-imports:
+      specifier: ^4.3.0
+      version: 4.3.0
+    prettier-plugin-tailwindcss:
+      specifier: ^0.8.1
+      version: 0.8.1
+    sharp:
+      specifier: ^0.35.3
+      version: 0.35.3
+    storybook:
+      specifier: ^10.5.2
+      version: 10.5.2
+    tailwindcss:
+      specifier: ^4.3.3
+      version: 4.3.3
+    tsx:
+      specifier: ^4.23.1
+      version: 4.23.1
+    tw-animate-css:
+      specifier: ^1.3.6
+      version: 1.4.0
+    typescript:
+      specifier: ^5
+      version: 5.9.3
+    vitest:
+      specifier: ^4.1.10
+      version: 4.1.10
 overrides:
   tar: ^7.5.4
   tmp: ^0.2.4
@@ -30,10 +246,10 @@ importers:
   .:
     devDependencies:
       '@axe-core/playwright':
-        specifier: ^4.12.1
+        specifier: catalog:tooling
         version: 4.12.1(playwright-core@1.62.1)
       '@axe-core/react':
-        specifier: ^4.12.1
+        specifier: catalog:tooling
         version: 4.12.1
       '@commitlint/cli':
         specifier: ^20.5.3
@@ -42,49 +258,49 @@ importers:
         specifier: ^20.5.3
         version: 20.5.3
       '@lhci/cli':
-        specifier: ^0.15.1
+        specifier: catalog:tooling
         version: 0.15.1
       '@next/bundle-analyzer':
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3
       '@playwright/test':
-        specifier: ^1.61.1
+        specifier: catalog:tooling
         version: 1.61.1
       '@storybook/addon-a11y':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       '@storybook/addon-docs':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@storybook/addon-mcp':
-        specifier: ^0.7.0
+        specifier: catalog:tooling
         version: 0.7.0(@storybook/addon-vitest@10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       '@storybook/addon-vitest':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10)
       '@storybook/nextjs-vite':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@babel/core@7.29.7)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@tailwindcss/postcss':
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       '@testing-library/dom':
-        specifier: ^10.4.1
+        specifier: catalog:tooling
         version: 10.4.1
       '@testing-library/jest-dom':
-        specifier: ^6.9.1
+        specifier: catalog:tooling
         version: 6.9.1
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: catalog:tooling
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@testing-library/user-event':
-        specifier: ^14.6.1
+        specifier: catalog:tooling
         version: 14.6.1(@testing-library/dom@10.4.1)
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
       '@types/qrcode':
-        specifier: ^1.5.6
+        specifier: catalog:tooling
         version: 1.5.6
       '@types/react':
         specifier: 19.2.17
@@ -93,109 +309,109 @@ importers:
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
-        specifier: ^5.2.0
+        specifier: catalog:tooling
         version: 5.2.0(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
       '@vitest/browser-playwright':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(playwright@1.61.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10)
       '@vitest/coverage-istanbul':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(vitest@4.1.10)
       '@vitest/ui':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(vitest@4.1.10)
       '@vueless/storybook-dark-mode':
-        specifier: ^10.0.8
+        specifier: catalog:tooling
         version: 10.0.8(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       babel-plugin-react-compiler:
-        specifier: ^1.0.0
+        specifier: catalog:tooling
         version: 1.0.0
       eslint:
-        specifier: ^9.39.5
+        specifier: catalog:tooling
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3(@typescript-eslint/parser@8.60.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       eslint-plugin-jsx-a11y:
         specifier: ^6.10.2
         version: 6.10.2(eslint@9.39.5(jiti@2.7.0))
       eslint-plugin-storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(eslint@9.39.5(jiti@2.7.0))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       eslint-plugin-tailwindcss:
-        specifier: ^4.2.0
+        specifier: catalog:tooling
         version: 4.2.0(eslint@9.39.5(jiti@2.7.0))(tailwindcss@4.3.3)(typescript@5.9.3)
       glob:
-        specifier: ^13.0.6
+        specifier: 'catalog:'
         version: 13.0.6
       happy-dom:
-        specifier: ^20.11.0
+        specifier: catalog:tooling
         version: 20.11.0
       husky:
-        specifier: ^9.1.7
+        specifier: catalog:tooling
         version: 9.1.7
       knip:
-        specifier: ^5.88.1
+        specifier: catalog:tooling
         version: 5.88.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)(typescript@5.9.3)
       license-checker:
-        specifier: ^25.0.1
+        specifier: catalog:tooling
         version: 25.0.1
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0
       madge:
-        specifier: ^8.0.0
+        specifier: catalog:tooling
         version: 8.0.0(typescript@5.9.3)
       mdast-util-from-markdown:
         specifier: ^2.0.3
         version: 2.0.3
       next:
-        specifier: ^16.3.3
+        specifier: 'catalog:'
         version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       npm-check-updates:
-        specifier: ^19.6.6
+        specifier: catalog:tooling
         version: 19.6.6
       playwright:
-        specifier: ^1.61.1
+        specifier: catalog:tooling
         version: 1.61.1
       postcss:
-        specifier: ^8.5.23
+        specifier: catalog:tooling
         version: 8.5.25
       prettier:
-        specifier: ^3.9.5
+        specifier: catalog:tooling
         version: 3.9.5
       prettier-plugin-organize-imports:
-        specifier: ^4.0.0
+        specifier: catalog:tooling
         version: 4.3.0(prettier@3.9.5)(typescript@5.9.3)
       prettier-plugin-tailwindcss:
-        specifier: ^0.8.1
+        specifier: catalog:tooling
         version: 0.8.1(prettier-plugin-organize-imports@4.3.0(prettier@3.9.5)(typescript@5.9.3))(prettier@3.9.5)
       sharp:
-        specifier: ^0.35.3
+        specifier: catalog:tooling
         version: 0.35.3(@types/node@24.13.3)
       storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7)
       supabase:
         specifier: 2.109.1
         version: 2.109.1
       tailwindcss:
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       tsx:
-        specifier: ^4.23.1
+        specifier: catalog:tooling
         version: 4.23.1
       turbo:
         specifier: ^2.10.5
         version: 2.10.5
       tw-animate-css:
-        specifier: ^1.3.6
+        specifier: catalog:tooling
         version: 1.4.0
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
       zod-to-json-schema:
         specifier: ^3.25.2
@@ -225,13 +441,13 @@ importers:
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.82.0(react@19.2.7))
       '@marsidev/react-turnstile':
-        specifier: ^1.5.3
+        specifier: 'catalog:'
         version: 1.5.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@3.25.76)
       '@sentry/nextjs':
-        specifier: ^10.66.0
+        specifier: 'catalog:'
         version: 10.66.0(@opentelemetry/core@2.9.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.9.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@supabase/auth-js':
         specifier: ^2.110.7
@@ -243,37 +459,37 @@ importers:
         specifier: ^2.110.7
         version: 2.110.7
       '@tailwindcss/typography':
-        specifier: ^0.5.20
+        specifier: 'catalog:'
         version: 0.5.20(tailwindcss@4.3.3)
       '@tanstack/query-persist-client-core':
         specifier: ^5.101.2
         version: 5.101.2
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: 'catalog:'
         version: 5.101.2(react@19.2.7)
       '@tanstack/react-query-persist-client':
         specifier: ^5.101.2
         version: 5.101.2(@tanstack/react-query@5.101.2(react@19.2.7))(react@19.2.7)
       '@trpc/client':
-        specifier: ^11.18.0
+        specifier: 'catalog:'
         version: 11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/react-query':
         specifier: ^11.18.0
         version: 11.18.0(@tanstack/react-query@5.101.2(react@19.2.7))(@trpc/client@11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.18.0(typescript@5.9.3))(react@19.2.7)(typescript@5.9.3)
       '@trpc/server':
-        specifier: ^11.18.0
+        specifier: 'catalog:'
         version: 11.18.0(typescript@5.9.3)
       '@upstash/ratelimit':
-        specifier: ^2.0.8
+        specifier: 'catalog:'
         version: 2.0.8(@upstash/redis@1.38.0)
       '@upstash/redis':
-        specifier: ^1.38.0
+        specifier: 'catalog:'
         version: 1.38.0
       '@vercel/analytics':
-        specifier: ^1.6.1
+        specifier: 'catalog:'
         version: 1.6.1(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@vercel/speed-insights':
-        specifier: ^1.3.1
+        specifier: 'catalog:'
         version: 1.3.1(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       date-fns:
         specifier: ^4.4.0
@@ -282,22 +498,22 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0(date-fns@4.4.0)
       lucide-react:
-        specifier: ^0.577.0
+        specifier: 'catalog:'
         version: 0.577.0(react@19.2.7)
       next:
-        specifier: ^16.3.3
+        specifier: 'catalog:'
         version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: ^4.13.2
+        specifier: 'catalog:'
         version: 4.13.2(@swc/helpers@0.5.23)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
       react:
-        specifier: ^19.2.7
+        specifier: 'catalog:'
         version: 19.2.7
       react-dom:
-        specifier: ^19.2.7
+        specifier: 'catalog:'
         version: 19.2.7(react@19.2.7)
       react-dropzone:
         specifier: ^14.4.1
@@ -306,16 +522,16 @@ importers:
         specifier: ^6.9.0
         version: 6.9.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react-hook-form:
-        specifier: ^7.82.0
+        specifier: 'catalog:'
         version: 7.82.0(react@19.2.7)
       resend:
-        specifier: ^6.17.2
+        specifier: 'catalog:'
         version: 6.17.2(@react-email/render@2.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
       server-only:
-        specifier: ^0.0.1
+        specifier: 'catalog:'
         version: 0.0.1
       sonner:
-        specifier: ^2.0.7
+        specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       stripe:
         specifier: ^20.4.1
@@ -327,65 +543,65 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
       zustand:
-        specifier: ^5.0.14
+        specifier: 'catalog:'
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@axe-core/playwright':
-        specifier: ^4.12.1
+        specifier: catalog:tooling
         version: 4.12.1(playwright-core@1.62.1)
       '@axe-core/react':
-        specifier: ^4.12.1
+        specifier: catalog:tooling
         version: 4.12.1
       '@lhci/cli':
-        specifier: ^0.15.1
+        specifier: catalog:tooling
         version: 0.15.1
       '@modelcontextprotocol/conformance':
         specifier: 0.1.16
         version: 0.1.16
       '@next/bundle-analyzer':
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3
       '@next/env':
         specifier: ^16.3.3
         version: 16.3.3
       '@playwright/test':
-        specifier: ^1.61.1
+        specifier: catalog:tooling
         version: 1.61.1
       '@storybook/addon-a11y':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       '@storybook/addon-docs':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@storybook/addon-mcp':
-        specifier: ^0.7.0
+        specifier: catalog:tooling
         version: 0.7.0(@storybook/addon-vitest@10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       '@storybook/addon-vitest':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10)
       '@storybook/nextjs-vite':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@babel/core@7.29.7)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@tailwindcss/postcss':
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       '@testing-library/dom':
-        specifier: ^10.4.1
+        specifier: catalog:tooling
         version: 10.4.1
       '@testing-library/jest-dom':
-        specifier: ^6.9.1
+        specifier: catalog:tooling
         version: 6.9.1
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: catalog:tooling
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@testing-library/user-event':
-        specifier: ^14.6.1
+        specifier: catalog:tooling
         version: 14.6.1(@testing-library/dom@10.4.1)
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
       '@types/qrcode':
-        specifier: ^1.5.6
+        specifier: catalog:tooling
         version: 1.5.6
       '@types/react':
         specifier: 19.2.17
@@ -394,88 +610,88 @@ importers:
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
-        specifier: ^5.2.0
+        specifier: catalog:tooling
         version: 5.2.0(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
       '@vitest/browser-playwright':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(playwright@1.61.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10)
       '@vitest/coverage-istanbul':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(vitest@4.1.10)
       '@vitest/ui':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(vitest@4.1.10)
       '@vueless/storybook-dark-mode':
-        specifier: ^10.0.8
+        specifier: catalog:tooling
         version: 10.0.8(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       axe-core:
         specifier: ^4.12.1
         version: 4.12.1
       babel-plugin-react-compiler:
-        specifier: ^1.0.0
+        specifier: catalog:tooling
         version: 1.0.0
       eslint:
-        specifier: ^9.39.5
+        specifier: catalog:tooling
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3(@typescript-eslint/parser@8.60.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       eslint-plugin-storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(eslint@9.39.5(jiti@2.7.0))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       eslint-plugin-tailwindcss:
-        specifier: ^4.2.0
+        specifier: catalog:tooling
         version: 4.2.0(eslint@9.39.5(jiti@2.7.0))(tailwindcss@4.3.3)(typescript@5.9.3)
       glob:
-        specifier: ^13.0.6
+        specifier: 'catalog:'
         version: 13.0.6
       happy-dom:
-        specifier: ^20.11.0
+        specifier: catalog:tooling
         version: 20.11.0
       husky:
-        specifier: ^9.1.7
+        specifier: catalog:tooling
         version: 9.1.7
       knip:
-        specifier: ^5.88.1
+        specifier: catalog:tooling
         version: 5.88.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(@types/node@24.13.3)(typescript@5.9.3)
       license-checker:
-        specifier: ^25.0.1
+        specifier: catalog:tooling
         version: 25.0.1
       madge:
-        specifier: ^8.0.0
+        specifier: catalog:tooling
         version: 8.0.0(typescript@5.9.3)
       npm-check-updates:
-        specifier: ^19.6.6
+        specifier: catalog:tooling
         version: 19.6.6
       playwright:
-        specifier: ^1.61.1
+        specifier: catalog:tooling
         version: 1.61.1
       postcss:
-        specifier: ^8.5.23
+        specifier: catalog:tooling
         version: 8.5.25
       prettier:
-        specifier: ^3.9.5
+        specifier: catalog:tooling
         version: 3.9.5
       sharp:
-        specifier: ^0.35.3
+        specifier: catalog:tooling
         version: 0.35.3(@types/node@24.13.3)
       storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7)
       tailwindcss:
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       tsx:
-        specifier: ^4.23.1
+        specifier: catalog:tooling
         version: 4.23.1
       tw-animate-css:
-        specifier: ^1.3.6
+        specifier: catalog:tooling
         version: 1.4.0
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
 
   apps/storybook:
@@ -490,74 +706,74 @@ importers:
         specifier: workspace:*
         version: link:../product
       '@tanstack/react-query':
-        specifier: ^5.101.2
+        specifier: 'catalog:'
         version: 5.101.2(react@19.2.7)
       '@trpc/client':
-        specifier: ^11.18.0
+        specifier: 'catalog:'
         version: 11.18.0(@trpc/server@11.18.0(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/server':
-        specifier: ^11.18.0
+        specifier: 'catalog:'
         version: 11.18.0(typescript@5.9.3)
       lucide-react:
-        specifier: ^0.577.0
+        specifier: 'catalog:'
         version: 0.577.0(react@19.2.7)
       next:
-        specifier: ^16.3.3
+        specifier: 'catalog:'
         version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: ^4.13.2
+        specifier: 'catalog:'
         version: 4.13.2(@swc/helpers@0.5.23)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       react:
-        specifier: ^19.2.7
+        specifier: 'catalog:'
         version: 19.2.7
       react-dom:
-        specifier: ^19.2.7
+        specifier: 'catalog:'
         version: 19.2.7(react@19.2.7)
       zustand:
-        specifier: ^5.0.14
+        specifier: 'catalog:'
         version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@storybook/addon-a11y':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       '@storybook/addon-docs':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@storybook/addon-mcp':
-        specifier: ^0.7.0
+        specifier: catalog:tooling
         version: 0.7.0(@storybook/addon-vitest@10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       '@storybook/addon-vitest':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@vitest/browser-playwright@4.1.10)(@vitest/browser@4.1.10(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10))(@vitest/runner@4.1.10)(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vitest@4.1.10)
       '@storybook/nextjs-vite':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@babel/core@7.29.7)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
       '@vueless/storybook-dark-mode':
-        specifier: ^10.0.8
+        specifier: catalog:tooling
         version: 10.0.8(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))
       eslint-plugin-storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(eslint@9.39.5(jiti@2.7.0))(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)
       mermaid:
         specifier: ^11.16.1
         version: 11.16.1
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 'catalog:'
         version: 4.0.1
       storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7)
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vite:
         specifier: ^8.1.5
         version: 8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
 
   apps/web:
@@ -584,64 +800,64 @@ importers:
         specifier: ^5.1.1
         version: 5.2.2(react-hook-form@7.82.0(react@19.2.7))
       '@marsidev/react-turnstile':
-        specifier: ^1.5.3
+        specifier: 'catalog:'
         version: 1.5.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@sentry/nextjs':
-        specifier: ^10.66.0
+        specifier: 'catalog:'
         version: 10.66.0(@opentelemetry/core@2.9.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.9.0(@opentelemetry/api@1.9.1))(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@upstash/ratelimit':
-        specifier: ^2.0.8
+        specifier: 'catalog:'
         version: 2.0.8(@upstash/redis@1.38.0)
       '@upstash/redis':
-        specifier: ^1.37.0
+        specifier: 'catalog:'
         version: 1.38.0
       '@vercel/analytics':
-        specifier: ^1.6.1
+        specifier: 'catalog:'
         version: 1.6.1(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@vercel/speed-insights':
-        specifier: ^1.3.1
+        specifier: 'catalog:'
         version: 1.3.1(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 'catalog:'
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 'catalog:'
         version: 2.1.1
       cmdk:
-        specifier: ^1.1.1
+        specifier: 'catalog:'
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       glob:
-        specifier: ^13.0.6
+        specifier: 'catalog:'
         version: 13.0.6
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3
       lucide-react:
-        specifier: ^0.577.0
+        specifier: 'catalog:'
         version: 0.577.0(react@19.2.7)
       minisearch:
         specifier: ^7.2.0
         version: 7.2.0
       next:
-        specifier: ^16.3.3
+        specifier: 'catalog:'
         version: 16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-intl:
-        specifier: ^4.13.2
+        specifier: 'catalog:'
         version: 4.13.2(@swc/helpers@0.5.23)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       next-mdx-remote:
         specifier: ^6.0.0
         version: 6.0.0(@types/react@19.2.17)(react@19.2.7)
       next-themes:
-        specifier: ^0.4.6
+        specifier: 'catalog:'
         version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
-        specifier: ^19
+        specifier: 'catalog:'
         version: 19.2.7
       react-dom:
-        specifier: ^19
+        specifier: 'catalog:'
         version: 19.2.7(react@19.2.7)
       react-hook-form:
-        specifier: ^7.82.0
+        specifier: 'catalog:'
         version: 7.82.0(react@19.2.7)
       rehype-highlight:
         specifier: ^7.0.2
@@ -650,41 +866,41 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       remark-gfm:
-        specifier: ^4.0.1
+        specifier: 'catalog:'
         version: 4.0.1
       resend:
-        specifier: ^6.17.2
+        specifier: 'catalog:'
         version: 6.17.2(@react-email/render@2.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))
       server-only:
-        specifier: ^0.0.1
+        specifier: 'catalog:'
         version: 0.0.1
       sonner:
-        specifier: ^2.0.7
+        specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       tailwind-merge:
-        specifier: ^3.5.0
+        specifier: 'catalog:'
         version: 3.6.0
       zod:
         specifier: 4.3.6
         version: 4.3.6
     devDependencies:
       '@next/bundle-analyzer':
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3
       '@next/eslint-plugin-next':
         specifier: ^16.3.3
         version: 16.3.3(eslint@9.39.5(jiti@2.7.0))
       '@playwright/test':
-        specifier: ^1.61.1
+        specifier: catalog:tooling
         version: 1.61.1
       '@tailwindcss/postcss':
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       '@tailwindcss/typography':
-        specifier: ^0.5.20
+        specifier: 'catalog:'
         version: 0.5.20(tailwindcss@4.3.3)
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: catalog:tooling
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@types/mdx':
         specifier: ^2.0.14
@@ -705,19 +921,19 @@ importers:
         specifier: ^8.64.0
         version: 8.64.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       '@vitejs/plugin-react':
-        specifier: ^5.1.4
+        specifier: catalog:tooling
         version: 5.2.0(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
       '@vitest/browser-playwright':
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(playwright@1.62.1)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(vitest@4.1.10)
       autoprefixer:
         specifier: ^10.5.4
         version: 10.5.4(postcss@8.5.25)
       eslint:
-        specifier: ^9
+        specifier: catalog:tooling
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
-        specifier: ^16.3.3
+        specifier: catalog:tooling
         version: 16.3.3(@typescript-eslint/parser@8.64.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       eslint-config-prettier:
         specifier: ^10.1.8
@@ -732,34 +948,34 @@ importers:
         specifier: ^7.0.1
         version: 7.1.1(eslint@9.39.5(jiti@2.7.0))
       happy-dom:
-        specifier: ^20.11.0
+        specifier: catalog:tooling
         version: 20.11.0
       license-checker:
-        specifier: ^25.0.1
+        specifier: catalog:tooling
         version: 25.0.1
       postcss:
-        specifier: ^8.5.23
+        specifier: catalog:tooling
         version: 8.5.25
       prettier:
-        specifier: ^3.9.5
+        specifier: catalog:tooling
         version: 3.9.5
       prettier-plugin-organize-imports:
-        specifier: ^4.3.0
+        specifier: catalog:tooling
         version: 4.3.0(prettier@3.9.5)(typescript@5.9.3)
       prettier-plugin-tailwindcss:
-        specifier: ^0.8.1
+        specifier: catalog:tooling
         version: 0.8.1(prettier-plugin-organize-imports@4.3.0(prettier@3.9.5)(typescript@5.9.3))(prettier@3.9.5)
       tailwindcss:
-        specifier: ^4.3.3
+        specifier: catalog:tooling
         version: 4.3.3
       tsx:
-        specifier: ^4.23.1
+        specifier: catalog:tooling
         version: 4.23.1
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
     optionalDependencies:
       '@tailwindcss/oxide-darwin-arm64':
@@ -822,22 +1038,22 @@ importers:
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 'catalog:'
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 'catalog:'
         version: 2.1.1
       cmdk:
-        specifier: ^1.1.1
+        specifier: 'catalog:'
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
-        specifier: ^0.577.0
+        specifier: 'catalog:'
         version: 0.577.0(react@19.2.7)
       next-themes:
-        specifier: ^0.4.6
+        specifier: 'catalog:'
         version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19
@@ -846,20 +1062,20 @@ importers:
         specifier: ^19
         version: 19.2.7(react@19.2.7)
       sonner:
-        specifier: ^2.0.7
+        specifier: 'catalog:'
         version: 2.0.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       tailwind-merge:
-        specifier: ^3.6.0
+        specifier: 'catalog:'
         version: 3.6.0
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     devDependencies:
       '@storybook/addon-docs':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@storybook/nextjs-vite':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@babel/core@7.29.7)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@types/react':
         specifier: 19.2.17
@@ -868,37 +1084,37 @@ importers:
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.17)
       storybook:
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7)
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
 
   packages/config:
     devDependencies:
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
 
   packages/foundations:
     devDependencies:
       '@storybook/addon-docs':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.6(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@storybook/nextjs-vite':
-        specifier: ^10.5.2
+        specifier: catalog:tooling
         version: 10.5.2(@babel/core@7.29.7)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(esbuild@0.28.1)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rollup@4.62.2)(storybook@10.5.6(@types/react@19.2.17)(prettier@3.9.5)(react@19.2.7))(typescript@5.9.3)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))(webpack@5.106.2(esbuild@0.28.1)(postcss@8.5.25))
       '@types/react':
         specifier: 19.2.17
         version: 19.2.17
       lucide-react:
-        specifier: ^0.577.0
+        specifier: 'catalog:'
         version: 0.577.0(react@19.2.7)
       react:
-        specifier: ^19.2.7
+        specifier: 'catalog:'
         version: 19.2.7
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
 
   packages/i18n:
@@ -908,22 +1124,22 @@ importers:
         version: link:../config
     devDependencies:
       next-intl:
-        specifier: ^4.13.2
+        specifier: 'catalog:'
         version: 4.13.2(@swc/helpers@0.5.23)(next@16.3.3(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
 
   packages/observability:
     devDependencies:
       typescript:
-        specifier: ^5
+        specifier: catalog:tooling
         version: 5.9.3
       vitest:
-        specifier: ^4.1.10
+        specifier: catalog:tooling
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/ui@4.1.10)(happy-dom@20.11.0)(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.1)(yaml@2.9.0))
 
 packages:

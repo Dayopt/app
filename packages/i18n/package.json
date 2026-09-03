@@ -22,8 +22,8 @@
     "next-intl": "^4.13.2"
   },
   "devDependencies": {
-    "next-intl": "^4.13.2",
-    "typescript": "^5",
-    "vitest": "^4.1.10"
+    "next-intl": "catalog:",
+    "typescript": "catalog:tooling",
+    "vitest": "catalog:tooling"
   }
 }
