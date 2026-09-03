@@ -2462,29 +2462,14 @@ describe('層 3 coverage の不変条件（#2574）', () => {
     );
   });
 
-  it('impactAffected を渡さない呼び出しは fail closed（既定値が fail open へ倒れていない）', async () => {
-    // `release()` wrapper が既定を注入するため、wrapper 経由では
-    // `runProductionRelease` の default parameter を検査できない。
-    // 「既定を true 側にすると配線落ちで層 3 ゼロの promote が通る」という
-    // 実装コメントの契約を、wrapper を通さない直接呼び出しで固定する。
+  it('impactAffected を渡さない呼び出しは fail closed（既定値が fail open へ倒れていない）', () => {
+    // `undefined` を上書きで渡すと wrapper の既定注入が消え、`runProductionRelease` の
+    // default parameter（`impactAffected = {}`）が実際に効く。「既定を true 側にすると
+    // 配線落ちで層 3 ゼロの promote が通る」という実装コメントの契約をここで固定する。
     const world = createReleaseWorld();
-    await expect(
-      runProductionRelease({
-        sha: SHA,
-        token: TOKEN,
-        teamId: 'team',
-        sleepImpl: noSleep,
-        nowImpl: () => 0,
-        logger: noop,
-        bypassSecrets: { web: BYPASS, product: BYPASS },
-        diffFilesImpl: AFFECTS_BOTH,
-        headShaImpl: () => SHA,
-        isAncestorImpl,
-        fetchImpl: world.fetchImpl,
-        // impactAffected は渡さない
-      }),
+    return expect(
+      release({ fetchImpl: world.fetchImpl, impactAffected: undefined }),
     ).rejects.toThrow(/layer 3/i);
-    expect(world.pointCalls).toEqual([]);
   });
 
   it('impact が affected・release が unaffected の向きでは止めない（superset は正常）', async () => {

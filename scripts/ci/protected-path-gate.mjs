@@ -199,7 +199,8 @@ const AUDIT_CONTRACT_SET = new Set(PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS);
  * 起動したかどうかと無関係に** 要求する。
  *
  * @param {string[]} changedFiles
- * @returns {{ required: boolean, reason?: string, auditContract: boolean }}
+ * @returns {{ required: true, reason: string, auditContract: boolean }
+ *   | { required: false, auditContract: boolean }}
  */
 export function resolveProtectedPathGate(changedFiles) {
   const files = changedFiles.map((f) => f.trim()).filter(Boolean);
