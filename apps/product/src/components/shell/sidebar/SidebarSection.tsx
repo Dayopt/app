@@ -4,6 +4,8 @@ import { ChevronRight } from 'lucide-react';
 
 import { cn } from '@dayopt/components';
 
+import { SidebarIconButton } from './SidebarIconButton';
+
 interface SidebarSectionProps {
   /** セクションタイトル */
   title: string;
@@ -61,28 +63,21 @@ export function SidebarSection({
           {collapsible && (
             // カテゴリー見出し（CategoryHeader）と同じ位置: タイトルの右に置く独立ボタン。
             // 行クリックへ波及させない（行自体も onToggleCollapse を持つため二重発火しうる）
-            <button
-              type="button"
+            <SidebarIconButton
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleCollapse?.();
               }}
               aria-label={title}
               aria-expanded={!collapsed}
-              className={cn(
-                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-                "text-muted-foreground hover:text-foreground relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity duration-150 before:absolute before:-inset-2 before:content-['']",
-                // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
-                collapsed
-                  ? 'opacity-100'
-                  : 'opacity-0 transition-opacity group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
-              )}
+              // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
+              {...(collapsed ? {} : { revealOn: 'section' as const })}
             >
               <ChevronRight
                 className={cn('size-4 transition-transform', !collapsed && 'rotate-90')}
                 aria-hidden
               />
-            </button>
+            </SidebarIconButton>
           )}
         </div>
         <span className="flex-1" />

@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { ArchiveRestore, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { SidebarIconButton } from '@/components/shell/sidebar';
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import {
   useArchivedActivities,
@@ -121,18 +122,17 @@ export function ArchivedActivityList({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
+                <SidebarIconButton
                   aria-label={
                     entry.kind === 'category'
                       ? t('calendar.filter.categoryMenu')
                       : t('calendar.filter.activityMenu')
                   }
-                  // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+                  className="mr-1"
+                  revealOn="item"
                 >
                   <MoreHorizontal className="size-4" />
-                </button>
+                </SidebarIconButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="right">
                 <DropdownMenuItem

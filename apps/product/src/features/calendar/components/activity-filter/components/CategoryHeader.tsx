@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { SidebarIconButton } from '@/components/shell/sidebar';
 import type { CategoryColorName } from '@/features/activities';
 import { ActivityIcon, CategoryColorMenuItems, CategoryIconMenuItems } from '@/features/activities';
 import {
@@ -127,8 +128,7 @@ export function CategoryHeader({
       </span>
 
       {/* シェブロン: 行クリックへ波及させず折りたたみのみを担当する独立ボタン */}
-      <button
-        type="button"
+      <SidebarIconButton
         onClick={(e) => {
           e.stopPropagation();
           onToggleCollapse();
@@ -137,31 +137,25 @@ export function CategoryHeader({
           collapsed ? t('calendar.filter.expandCategory') : t('calendar.filter.collapseCategory')
         }
         aria-expanded={!collapsed}
-        className={cn(
-          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity duration-150 before:absolute before:-inset-2 before:content-['']",
-          // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
-          collapsed
-            ? 'opacity-100'
-            : 'opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
-        )}
+        className="ml-1"
+        // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
+        {...(collapsed ? {} : { revealOn: 'item' as const })}
       >
         <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-90')} />
-      </button>
+      </SidebarIconButton>
 
       <div className="flex-1" />
 
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
+          <SidebarIconButton
             aria-label={t('calendar.filter.categoryMenu')}
-            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+            className="mr-1"
+            revealOn="item"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
-          </button>
+          </SidebarIconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
           {isMobile ? (

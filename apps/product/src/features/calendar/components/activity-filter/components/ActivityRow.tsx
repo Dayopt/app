@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { SidebarIconButton } from '@/components/shell/sidebar';
 import type { Activity } from '@/features/activities';
 import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
@@ -152,8 +153,7 @@ export function ActivityRow({
             </button>
           </HoverTooltip>
 
-          <button
-            type="button"
+          <SidebarIconButton
             // 掴み判定から外す目印。行の名前も button なので closest('button') では
             // 区別できない（useActivityDragHandlers）
             data-row-action
@@ -162,32 +162,24 @@ export function ActivityRow({
               onToggle();
             }}
             aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
-            className={cn(
-              // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-              "text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-[''] focus-visible:ring-2 focus-visible:outline-none",
-              checked
-                ? 'opacity-0 group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 focus-visible:opacity-100'
-                : 'opacity-100',
-              isMobile && 'opacity-100',
-            )}
+            // 非表示にしている間は常時出す（戻す手段を隠さない）。モバイルも同様
+            {...(checked && !isMobile ? { revealOn: 'item' as const } : {})}
           >
             {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-          </button>
+          </SidebarIconButton>
 
           <div className="w-1 shrink-0" />
 
           <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <button
-                type="button"
+              <SidebarIconButton
                 data-row-action
                 aria-label={t('calendar.filter.activityMenu')}
-                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
-                className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+                revealOn="item"
                 onClick={(event) => event.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
-              </button>
+              </SidebarIconButton>
             </DropdownMenuTrigger>
             <ActivityRowMenu
               currentCategoryId={categoryId}
