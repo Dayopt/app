@@ -49,6 +49,10 @@ export function TemplateRow({
 }: TemplateRowProps) {
   const t = useTranslations();
   const [isHovered, setIsHovered] = useState(false);
+  // ミニプレビューはホバーだけでなくフォーカスでも出す。キーボードだけで
+  // 操作する人には、ホバー限定だとプレビューへ到達する手段が無くなる
+  // （WCAG 1.4.13 Content on Hover or Focus）
+  const [isFocused, setIsFocused] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(
     null,
   );
@@ -89,7 +93,7 @@ export function TemplateRow({
       onMouseLeave={() => setIsHovered(false)}
       onContextMenu={handleContextMenu}
     >
-      <Popover open={isHovered && !isRenaming && !contextMenuPosition}>
+      <Popover open={(isHovered || isFocused) && !isRenaming && !contextMenuPosition}>
         <PopoverTrigger asChild>
           {isRenaming ? (
             <input
@@ -107,8 +111,10 @@ export function TemplateRow({
           ) : (
             <button
               type="button"
-              className="text-foreground min-w-0 flex-1 truncate text-left text-sm"
+              className="text-foreground focus-visible:ring-ring min-w-0 flex-1 truncate rounded-lg text-left text-sm focus-visible:ring-2 focus-visible:outline-none"
               onClick={() => onApply?.()}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
             >
               {template.name}
             </button>
