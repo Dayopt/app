@@ -39,6 +39,7 @@ export function SidebarSection({
     // 「見える位置へ」と横スクロールし、見出しごと左へずれて文字が欠ける。
     // clip はスクロールコンテナを作らないのでこれが起きない
     <section className="w-full min-w-0 overflow-clip">
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- キーボード経路は内側の chevron button（aria-expanded 付き）が持つ。この onClick は見出し行のどこを押しても畳めるようにするマウス用の拡張 */}
       <div
         className={cn(
           'group/section flex h-8 w-full items-center',
@@ -86,6 +87,7 @@ export function SidebarSection({
         </div>
         <span className="flex-1" />
         {action && (
+          // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- 行の onClick へ波及させないための stopPropagation だけを持つ。この span 自体は操作対象ではなく、中身の action が自前の control を持つ
           <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
             {action}
           </span>

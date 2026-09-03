@@ -104,6 +104,7 @@ export function CategoryHeader({
   );
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- キーボード経路は ⋯ メニューの「このカテゴリーだけ表示」が持つ（同じ onShowOnlyCategory を呼ぶ）。この onClick は見出し行のどこを押しても効くようにするマウス用の拡張
     <div
       className={cn(
         'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm',
