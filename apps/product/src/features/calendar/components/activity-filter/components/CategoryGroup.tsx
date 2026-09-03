@@ -120,7 +120,7 @@ export function CategoryGroup({
       {/* ml-6: 見出しのアイコン + テキストぶんの字下げ（実測 32px）に子行のテキストを
           揃える。子行はアイコンを持たず、自身の ml-2 だけを引いた分をここで足す */}
       {!collapsed ? (
-        <div role="list" className="mt-1 ml-6 space-y-1">
+        <div role="list" className="mt-1 ml-6">
           {activities.map((activity) => (
             <ActivityRow
               key={activity.id}

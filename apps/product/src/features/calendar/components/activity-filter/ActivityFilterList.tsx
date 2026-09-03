@@ -484,7 +484,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
             >
               <UncategorizedDropZone>
                 {showActive ? (
-                  <div role="list" className="space-y-1">
+                  <div role="list">
                     {uncategorized.map((activity) => (
                       <ActivityRow
                         key={activity.id}
