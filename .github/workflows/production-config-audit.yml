@@ -1,14 +1,67 @@
 name: Production Config Audit
 
 # この audit が見るのは Vercel 側の状態（env 構成の drift）であって PR の diff では
-# ない。よって発火は「merge 前（ready 後の PR）・merge 時（push:main）・日次 cron」で
-# 足りる。draft の反復 push で毎回 Vercel API を叩く必要はない（2026-08-03、
-# 実測 3 日 74 run の削減）。contract 変更検出は ready_for_review でも発火するため、
-# draft の間に contract を書き換えても ready 化の時点で必ず捕まる。
+# ない。**PR ごとの実行は contract 変更 PR だけに絞る**（2026-09-03、#2571）。
+#
+# この workflow が PR で見ていたのは 2 つあった:
+#   (a) live な Vercel env drift —— PR の diff とは無関係。同じ live 状態を 1 日
+#       30〜42 回観測していた（実測: 2026-09-01〜09-03 の 2.1 日で 85 run。Actions の
+#       単一項目として repo 最大）
+#   (b) audit contract 4 path の変更検出 —— 下の `Detect audit contract changes` step が
+#       `changed=true` なら設計として必ず failure にし、trusted dispatch を強制する
+#       （PR code に contract 変更を自己検証させないため）
+#
+# `paths` は (b) を**完全に維持したまま**（contract PR では従来どおり `synchronize` ごとに
+# 発火する）、(a) の PR ごと実行だけを落とす。`types` は変えない。
+#
+# **(a) を落として安全な根拠**:
+#   - 本当に守りたいのは「drift したまま production へ promote しない」ことで、それは
+#     promote 側が見ている（`production-release.mjs` が `runProductionConfigAudit` を呼ぶ）。
+#     main へ merge する時点の drift は出荷を止めないので、検出遅延 1 日で足りる
+#   - backstop は日次 cron（06:00 JST）と下の push:main。dashboard の手動変更もそこで拾う
+#   - merge は deadlock しない。Free plan の private repo では ruleset / branch protection が
+#     使えず（`gh api .../rulesets` は 403）、唯一の gate である `finish-branch.sh` は
+#     **失敗数と pending 数を数えるだけ**で check run の「存在」を要求しない。run が無ければ
+#     rollup に entry が出ないだけで通る
+#   - 2026-08-05 の `ci.yml` paths-ignore 撤去（PR #1836）の再演にはならない。あの事故の原因は
+#     `paths` 単体ではなく「ruleset が required にした check が永久に expected で残る」ことで、
+#     ruleset を使えない今は同じ経路が成立しない。**将来 Pro へ上げて ruleset を使う時は、
+#     `Production Config Audit` を required にしないこと**（PR で publish されるのは
+#     contract 変更 PR だけなので blanket な required check に使えない）
+#   - contract ファイルを別 path へ動かして `paths` をすり抜ける経路は、
+#     `scripts/__tests__/protected-path-gate-contract.test.ts` が
+#     「各 glob が tracked file に 1 件以上一致する」ことを CI で毎回検査するので先に落ちる
+#
+# **`paths` だけに checkpoint を委ねない。** workflow が起動しない条件は `paths` の
+# 意味論だけではなく、次のクラスを含む。いずれも「PR code に contract 変更を自己検証
+# させない」という設計を静かに無効化する:
+#
+#   - Actions を一時 Disable している間（incident 対応で実際に行う運用がある）
+#   - base branch の workflow 定義が壊れている / 消えている（`pull_request_target` は
+#     **base 側の定義**で評価されるので、PR 側を直しても効かない）
+#   - `paths` の書き間違いで対象を取りこぼす
+#   - GitHub の `paths` 仕様（changed files が 3,000 件を超え、一致するファイルが先頭
+#     3,000 件に無いと起動しない）
+#
+# そこで `finish-branch.sh` が **workflow の起動有無と独立に**、contract を変えた PR へ
+# commit status `Production Config Audit` の success（= trusted dispatch 実行済み）を
+# 要求する（`protected-path-gate.mjs` の `auditContract`）。**変更ファイル一覧そのものを
+# 取得できなかった時も要求する**（contract 変更を否定できないため fail closed）。
+# なお最後の 3,000 件のクラスでは、その一覧取得も同じ理由で失敗するため
+# `auditContract` は判定不能になる —— そこを通すか止めるかが分岐点で、止める側に倒してある。
+#
+# `paths` のリストは `PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS`
+# （`scripts/ci/protected-path-gate.mjs`）および下の grep 正規表現と同じ 4 path。
+# 3 箇所の drift は `protected-path-gate-contract.test.ts` が固定する。
 on:
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'scripts/ci/production-config-audit.mjs'
+      - 'apps/product/production-build-gate.mjs'
+      - 'apps/web/production-build-gate.mjs'
+      - '.github/workflows/production-config-audit.yml'
   # **push:main は「監査対象そのものを変える merge」だけに絞る**（2026-09-03）。
   #
   # env metadata の drift は、promote する merge では promote 側でも見る

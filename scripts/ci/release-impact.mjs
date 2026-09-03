@@ -24,6 +24,7 @@
 import { appendFileSync } from 'node:fs';
 
 import {
+  IMPACT_WIRING,
   RELEASE_PROJECTS,
   getProjectState,
   gitHeadSha,
@@ -33,9 +34,7 @@ import {
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 /** `GITHUB_OUTPUT` へ出すキー。promote.yml の `needs.impact.outputs.*` と 1:1。 */
-export const IMPACT_OUTPUT_KEYS = RELEASE_PROJECTS.map(
-  (project) => `${project.impactKey}_affected`,
-);
+export const IMPACT_OUTPUT_KEYS = IMPACT_WIRING.map((wiring) => wiring.outputKey);
 
 /**
  * 全 project の「promote 前に層 3 を走らせる必要があるか」を返す。

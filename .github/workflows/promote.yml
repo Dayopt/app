@@ -350,6 +350,19 @@ jobs:
           VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_AUTOMATION_BYPASS_WEB }}
           RELEASE_SHA: ${{ steps.target.outputs.sha }}
           RELEASE_FORCE: ${{ inputs.force }}
+          # impact job（T0）の判定を release（T1）へ渡す（#2574）。この 2 つは **別時刻の
+          # live production SHA** を基準に独立して判定するため食い違いうる。live が前進する
+          # だけなら T1 の affected は T0 の subset で安全側だが、Vercel Instant Rollback で
+          # live が後退すると T1 だけが affected になり、層 3 を走らせていない project を
+          # promote できてしまう。gate 式（この job の `if:`）は T0 しか見ないのでそこでは
+          # 止まらないため、script 側で「promote 対象 ⊆ ここで 'true' と渡された project」を
+          # 強制する。
+          #
+          # **既定値を書かないこと。** `|| 'true'` のような丸めを入れると、この配線が 1 行
+          # 落ちただけで層 3 ゼロの promote が通る（対策そのものが無効になる）。空文字は
+          # script 側で「未検証」として fail closed に扱われる。
+          RELEASE_IMPACT_WEB_AFFECTED: ${{ needs.impact.outputs.web_affected }}
+          RELEASE_IMPACT_PRODUCT_AFFECTED: ${{ needs.impact.outputs.product_affected }}
           # 2026-08-05 に段階適用が完了（両 project の Auto-assign Custom Production
           # Domains を無効化。#1817 の project 設定監査が「'' のまま放置され、live が
           # true に固定されていた」未完了状態を検出したのを受けて実施）。'false' 宣言

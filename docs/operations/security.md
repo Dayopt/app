@@ -50,7 +50,11 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
 （2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 それでも `statuses: write` を持つのは、job 名から独立した固定 context
-（`Production Config Audit`）を ruleset の required 指定に使うため。
+（`Production Config Audit`）を `finish-branch.sh` の trusted dispatch 免除が照合するため。
+**この context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571。PR で
+publish されるのは `paths` に一致する contract 変更 PR だけなので、required にすると
+それ以外の PR が永久に `expected` で止まる。詳細は
+[infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 
 `contents: write` は持たない（外部 API の結果を受けて動く job に書き込み権限を与えない）。
 

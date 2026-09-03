@@ -703,6 +703,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   REVIEW_GATE_REQUIRED="false"
   REVIEW_GATE_REASONS=()
 
+  # 「audit contract を変えたか」は unknown を既定にする。判定できない経路（files 一覧の
+  # 取得失敗 / 3,000 件 truncation / node 不在）では contract 変更を否定できないため、
+  # 下の trusted-head checkpoint は fail closed 側（status success を要求）へ倒す。
+  AUDIT_CONTRACT_CHANGED="unknown"
+
   if [[ -z "$CHANGED_FILES" ]]; then
     REVIEW_GATE_REQUIRED="true"
     REVIEW_GATE_REASONS+=("changed files unavailable, fail closed")
@@ -715,6 +720,12 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
       REVIEW_GATE_REQUIRED="true"
       REVIEW_GATE_REASONS+=("protected-path-gate.mjs failed, fail closed")
     else
+      # **`// "unknown"` を使わない。** jq の `//` は null と false の両方を falsy として
+      # 右辺へ倒すため、`auditContract: false`（= contract を変えていない大多数の PR）が
+      # `unknown` に化ける。boolean かどうかを明示的に見る。
+      AUDIT_CONTRACT_CHANGED="$(printf '%s' "$PROTECTED_GATE_JSON" \
+        | jq -r 'if (.auditContract | type) == "boolean" then (.auditContract | tostring) else "unknown" end' \
+        2>/dev/null || echo unknown)"
       GATE_JSON_REQUIRED="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.required' 2>/dev/null || echo "")"
       case "$GATE_JSON_REQUIRED" in
         true)
@@ -887,6 +898,50 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     echo "review gate: required (${REVIEW_GATE_REASON_JOINED})" >&2
   else
     echo "review gate: not required" >&2
+  fi
+
+  # ── audit contract 変更 PR は trusted dispatch の status を必ず要求する（#2571）──
+  #
+  # `production-config-audit.yml` の `pull_request_target` は contract 4 path の `paths`
+  # filter を持つ（Actions の削減）。**workflow が起動したかどうかに checkpoint を委ねない。**
+  # 起動しない条件は `paths` の意味論だけでなく次のクラスを含み、いずれも「PR code に
+  # contract 変更を自己検証させない」という設計を静かに無効化する:
+  #
+  #   - Actions を一時 Disable している間（incident 対応で実際に行う運用がある）
+  #   - base branch の workflow 定義が壊れている / 消えている（`pull_request_target` は
+  #     **base 側の定義**で評価されるため、PR 側を直しても効かない）
+  #   - `paths` の書き間違いで対象を取りこぼす
+  #   - GitHub の `paths` 仕様（changed files が 3,000 件を超え、一致するファイルが
+  #     先頭 3,000 件に無いと起動しない）
+  #
+  # そこで changed-files 由来の判定（`protected-path-gate.mjs` の `auditContract`）で
+  # commit status `Production Config Audit` の success（= trusted dispatch 実行済み）を
+  # 要求する。**判定できなかった場合（`unknown`）も要求する** —— contract 変更を否定
+  # できない以上、通す理由が無い（fail closed。Codex / architecture-guard の両系統から
+  # 同じ指摘。#2586）。`unknown` になるのは変更ファイル一覧そのものを取得できなかった
+  # 時（API 失敗 / 3,000 件 truncation / node 不在）だけで、その PR は同じ理由で
+  # `REVIEW_GATE_REQUIRED` も立っている。
+  #
+  # status の照合は上の免除ロジックと同じ述語（`$JQ_GATE_DEFS` の `trusted_audit_cleared`）
+  # を使う。コピーすると、context 名や条件を片方だけ変えた時に **checkpoint 側だけが
+  # 無言で無効化される**（免除側だけズレても「うるさいが安全」側に倒れるので非対称）。
+  if [[ "$AUDIT_CONTRACT_CHANGED" != "false" ]]; then
+    AUDIT_STATUS_OK="$(printf '%s' "$ROLLUP" | jq -r "$JQ_GATE_DEFS"'
+      if trusted_audit_cleared then "true" else "false" end' 2>/dev/null || echo "")"
+    if [[ "$AUDIT_STATUS_OK" != "true" ]]; then
+      if [[ "$AUDIT_CONTRACT_CHANGED" == "unknown" ]]; then
+        error "変更ファイル一覧を取得できず、audit contract を変更したか判定できませんでした。"
+        error "contract 変更を否定できないため、trusted dispatch を要求します（fail closed）。"
+      else
+        error "この PR は audit contract（audit script / production-build-gate / workflow 自身）を変更しています。"
+      fi
+      error "commit status「Production Config Audit」が現 HEAD で success になっていません。"
+      error "PR code に contract 変更を自己検証させないため、trusted dispatch が必要です:"
+      error "  gh workflow run production-config-audit.yml --ref $BRANCH"
+      error "完了後に再実行してください（status は SHA ごとなので push のたびに要ります）。"
+      exit 1
+    fi
+    info "audit contract の trusted dispatch を確認しました（status「Production Config Audit」= success）。"
   fi
 
   # Issue Review 証跡が無効な linked issue があれば、要約行を出したうえで停止する。
@@ -1206,7 +1261,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     | ($nodes | map(select(normalized_login == $login))) as $step1
     | ($step1 | map(select(reviewed_sha != ""))) as $step2
     | ($step2 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step3
-    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length),
+        latest: ($step1 | last | (.body // "") | gsub("\\s+"; " ") | .[0:300]) }' 2>/dev/null || true)"
 
   CODEX_COMMENT_COUNT="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 
@@ -1239,8 +1295,26 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     if [[ "$CODEX_COMMENT_STEP1" == "0" ]]; then
       error "原因: ${CODEX_REVIEW_LOGIN} によるコメントが 1 件もありません。"
     elif [[ "$CODEX_COMMENT_STEP2" == "0" ]]; then
-      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません"
-      error "（usage limit / timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません。"
+      # 推測を並べるのではなく **実際の本文**を見せる。ここが分からないと、operator は
+      # 毎回 PR を開いて Codex の応答を目視することになる（#2584）。本文は外部 bot が
+      # 書いた untrusted なデータなので、制御文字（端末エスケープ）を落として出す。
+      # **判定には一切使わない** —— 証跡の条件は従来どおり review object または
+      # \`Reviewed commit\` 付きコメントの存在だけ。
+      CODEX_COMMENT_LATEST="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" \
+        | jq -r '.latest // ""' 2>/dev/null | tr -d '[:cntrl:]' || true)"
+      if [[ -n "$CODEX_COMMENT_LATEST" ]]; then
+        error "最新のコメント: ${CODEX_COMMENT_LATEST}"
+      fi
+      if [[ "$CODEX_COMMENT_LATEST" == *"usage limit"* ]]; then
+        error "→ Codex の利用上限です。gate は正しく fail closed しています（弱めないこと）。"
+        error "  対処: 上限の回復を待って PR へ「@codex review」を投稿し直す。"
+        error "  1 PR で fix を 1 push ずつ積んで毎回投げると上限を早く使い切ります。"
+        error "  fix はまとめて 1 push にし、最終 HEAD に対して 1 回投げてください。"
+        error "  恒久対応の判断は #2584 で evidence を集めています。頻発するならそこへ追記を。"
+      else
+        error "（timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      fi
     else
       error "原因: ${CODEX_REVIEW_LOGIN} のコメントの \`Reviewed commit\` は古い commit を指しています（現在の HEAD: ${HEAD_SHA}）。"
     fi

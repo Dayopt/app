@@ -10,6 +10,7 @@ import {
   buildManifest,
   findDeploymentForSha,
   gitDiffFiles,
+  readImpactAffected,
   resolveProjectImpact,
   runProductionRelease,
   smokeDeployment,
@@ -268,6 +269,8 @@ type ReleaseManifestProject = {
   name: string;
   productionDomain: string;
   affected: boolean | null;
+  /** impact job（T0）の verdict。層 3 が走ったか（#2574）。 */
+  impactAffected: boolean | null;
   reason: string | null;
   action:
     | 'unassigned'
@@ -307,6 +310,10 @@ function release(overrides: Record<string, unknown> = {}) {
     // 注入しないと全 test が fail closed 経路（常に両方 affected）に落ちる。
     headShaImpl: () => SHA,
     isAncestorImpl,
+    // impact job（T0）の verdict。**本番の既定は空 = 全 project 未検証（fail closed）**
+    // なので、個別の意図が無い test はここで「両 project とも層 3 を通った」を宣言する。
+    // 値が無い / false の時の挙動は『層 3 coverage の不変条件（#2574）』が明示的に検査する。
+    impactAffected: { web: true, product: true },
     ...overrides,
   });
 }
@@ -2363,6 +2370,157 @@ describe('runProductionRelease (affected-aware)', () => {
     expect(error.manifest?.status).toBe('failed');
     expect(error.manifest?.projects).toContainEqual(
       expect.objectContaining({ name: 'web', action: 'promoted', deploymentId: 'dpl_web_new' }),
+    );
+  });
+});
+
+describe('層 3 coverage の不変条件（#2574）', () => {
+  // impact job（T0）と release（T1）は **別時刻の live production SHA** を基準に独立して
+  // 影響判定を行う。live が前進するだけなら T1 の affected は T0 の subset なので安全側
+  // だが、Vercel Instant Rollback で live が後退すると T1 だけが affected になり、層 3 を
+  // 走らせていない project を promote しうる。gate 式は T0 しか見ないので止まらない。
+  //
+  // ここでは live 基準の差分を `diffFilesImpl` で模す（影響判定に基準 SHA が入る経路は
+  // そこだけで、既存 test も同じ idiom を使っている）。
+
+  it('impact が unaffected と言った project は promote しない（rollback で live が後退）', async () => {
+    const world = createReleaseWorld();
+    const error = (await release({
+      fetchImpl: world.fetchImpl,
+      // T1: 両 project affected（rollback で基準が後退し product の差分が復活した状態）
+      diffFilesImpl: AFFECTS_BOTH,
+      // T0: product は unaffected と判定され、e2e job が skip されている
+      impactAffected: { web: true, product: false },
+    }).catch((thrown: Error) => thrown)) as ReleaseError;
+
+    // `/product/` は文中の `production` にも一致してしまい、project が名指しされて
+    // いることを何も担保しない。名指し部分をそのまま突き合わせる。
+    expect(error.message).toContain('product: the impact job reported unaffected');
+    expect(error.message).toMatch(/layer 3/i);
+    // **1 件も promote していない。** 検証済みの web も含めて run 全体を止める
+    // （片側だけ promote すると runbook ケース0-B の「部分リリース」を自作するうえ、
+    // 未検証側について success が出て tag gate を素通りする）。
+    expect(world.pointCalls).toEqual([]);
+    expect(error.manifest?.status).toBe('impact-mismatch');
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({
+        name: 'product',
+        affected: true,
+        impactAffected: false,
+        action: 'pending',
+      }),
+    );
+  });
+
+  it('impact の verdict が無い（env 配線が落ちた）時も promote しない', async () => {
+    const world = createReleaseWorld();
+    await expect(release({ fetchImpl: world.fetchImpl, impactAffected: {} })).rejects.toThrow(
+      /layer 3/i,
+    );
+    expect(world.pointCalls).toEqual([]);
+  });
+
+  it('force は検査ごと免除する（impact job が壊れている時の break-glass）', async () => {
+    // force は層 3 job 自体を skip する（promote.yml の e2e / web job の `if:`）。
+    // ここで検査を効かせると、最後の手段が最も要る場面で使えなくなる。
+    const world = createReleaseWorld();
+    await expect(
+      release({ fetchImpl: world.fetchImpl, force: true, impactAffected: {} }),
+    ).resolves.toMatchObject({ status: 'promoted' });
+    // `status: 'promoted'` は promote 0 件でも成立しうる（Auto-assign で先に配信済み）。
+    // force 経路で promote 自体が行われなくなる書き換えを捕まえるため実 promote を見る。
+    expect(world.promoted()).toEqual(['web', 'product']);
+  });
+
+  it('待機中に外部 promote された project も検査対象にする（pending ではなく targets で見る）', async () => {
+    // **この PR が塞ぐ穴そのもの。** 待機中に人 / Auto-assign が同じ candidate を
+    // 先に live にすると、その project は `pending` から外れる（二重 promote を
+    // 避けるため）。検査を `pending` に対して行うと、層 3 未実行の build が
+    // stabilize を通って success になり、tag gate まで素通りする。
+    // 判定は必ず `targets`（= decisions）で行う。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+    });
+
+    const error = (await release({
+      fetchImpl: world.fetchImpl,
+      impactAffected: { web: false, product: true },
+    }).catch((thrown: Error) => thrown)) as ReleaseError;
+
+    expect(error.message).toContain('web: the impact job reported unaffected');
+    // promote は 1 件も走っていない。
+    expect(world.pointCalls).toEqual([]);
+    // このシナリオでは manifest は `impact-mismatch` ではなく `failed` になる。
+    // wrapper の catch が最後に live を読み直し、待機中に外部 promote で production が
+    // 実際に動いていたこと（deviation）を検出して上書きするため。**production が動いた
+    // 事実の方が復旧判断には重い**ので、この上書きは正しい（runbook は `failed` を
+    // 「`action: promoted` の project を戻す」経路として扱うが、ここでは promoted が
+    // 0 件なので戻す対象も無い）。
+    expect(error.manifest?.status).toBe('failed');
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({ name: 'web', impactAffected: false }),
+    );
+  });
+
+  it('impactAffected を渡さない呼び出しは fail closed（既定値が fail open へ倒れていない）', () => {
+    // `undefined` を上書きで渡すと wrapper の既定注入が消え、`runProductionRelease` の
+    // default parameter（`impactAffected = {}`）が実際に効く。「既定を true 側にすると
+    // 配線落ちで層 3 ゼロの promote が通る」という実装コメントの契約をここで固定する。
+    const world = createReleaseWorld();
+    return expect(
+      release({ fetchImpl: world.fetchImpl, impactAffected: undefined }),
+    ).rejects.toThrow(/layer 3/i);
+  });
+
+  it('impact が affected・release が unaffected の向きでは止めない（superset は正常）', async () => {
+    // 層 3 が余分に走っただけ。この向きで落とすと、rollback 後の docs merge が永久に止まる。
+    const world = createReleaseWorld();
+    const result = await release({
+      fetchImpl: world.fetchImpl,
+      diffFilesImpl: () => ['apps/web/src/app/page.tsx'],
+      impactAffected: { web: true, product: true },
+    });
+
+    expect(result.status).toBe('promoted');
+    expect(world.promoted()).toEqual(['web']);
+  });
+
+  it('promote 対象が 0 件の run は verdict が無くても success（tag gate を止めない）', async () => {
+    // docs のみの merge は create-release.yml の tag gate 用に success を出す必要がある。
+    // 検査は空集合に対して vacuous でなければならない。
+    const world = createReleaseWorld();
+    await expect(
+      release({
+        fetchImpl: world.fetchImpl,
+        diffFilesImpl: () => ['docs/x.md'],
+        impactAffected: {},
+      }),
+    ).resolves.toMatchObject({ status: 'unaffected' });
+    expect(world.pointCalls).toEqual([]);
+  });
+});
+
+describe('readImpactAffected', () => {
+  it('env の "true" / "false" だけを verdict として読む', () => {
+    expect(
+      readImpactAffected({
+        RELEASE_IMPACT_WEB_AFFECTED: 'true',
+        RELEASE_IMPACT_PRODUCT_AFFECTED: 'false',
+      }),
+    ).toEqual({ web: true, product: false });
+  });
+
+  it('それ以外はすべて null（未検証）へ倒す', () => {
+    // '1' / 'TRUE' / 空文字を true へ丸めると、workflow の配線が落ちた時に
+    // 「層 3 を通った」と誤解釈して fail open する。ここが唯一の変換点なので固定する。
+    for (const raw of ['', undefined, 'TRUE', 'True', '1', 'yes']) {
+      expect(readImpactAffected({ RELEASE_IMPACT_WEB_AFFECTED: raw }).web).toBeNull();
+    }
+  });
+
+  it('project が増えたら env 名も増える（配線忘れは null = fail closed）', () => {
+    expect(Object.keys(readImpactAffected({}))).toEqual(
+      RELEASE_PROJECTS.map((project) => project.name),
     );
   });
 });

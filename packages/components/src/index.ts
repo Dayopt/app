@@ -49,6 +49,8 @@ export { Input } from './inputs/input';
 export { InputOTP, InputOTPGroup, InputOTPSlot } from './inputs/input-otp';
 export { Label } from './inputs/label';
 export { RadioGroup, RadioGroupItem } from './inputs/radio-group';
+export { SegmentedControl } from './inputs/segmented-control';
+export type { SegmentedControlOption, SegmentedControlProps } from './inputs/segmented-control';
 export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './inputs/select';
 export { Switch } from './inputs/switch';
 export { Textarea } from './inputs/textarea';

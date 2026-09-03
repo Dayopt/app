@@ -165,6 +165,20 @@ deployment の source SHA」で、そこから対象 SHA までの `git diff` �
 （fail closed）。どの app にも影響しない merge では promote を行わず、`Production Release` status は
 **success**（`unaffected`）になる — production の artifact がその commit と等価だから、tag は打てる。
 
+**影響判定は 2 回・別の時刻に行い、その食い違いを不変条件で塞ぐ（#2574）。** 層 3（e2e / web）を
+走らせるかは `impact` job が run 開始時点（T0）の live production SHA を基準に決め、実際にどの
+project を promote するかは `release` job が層 3 完了後（T1、最大 20 分後）の live SHA を基準に
+**独立して再計算する**。live が前進するだけなら `diff(base_T1..Y) ⊆ diff(base_T0..Y)` なので T1 の
+affected 集合は T0 の subset になり、テスト範囲は superset で安全。**破れるのは Vercel Instant
+Rollback で live が後退した時だけ**で、その時 T1 だけが affected になり、層 3 を一度も走らせていない
+project を promote しうる（gate 式は `needs.impact.outputs.*_affected == 'false'` で層 3 を免除する
+ため、workflow 側では止まらない）。そこで `production-release.mjs` が **「promote 対象 ⊆ impact が
+affected と判定した project」** を promote 前に強制する。impact の verdict は release job の step env
+（`RELEASE_IMPACT_<KEY>_AFFECTED`）で渡し、**`'true'` 以外はすべて未検証として扱う**（配線が落ちた
+時に fail open しないため）。破れた run は production を 1 件も触らずに落ち、manifest の
+`status: impact-mismatch` として残る（復旧は rollback ではなく再 run。[runbook.md](../operations/runbook.md)
+Playbook 2 ケース0-B）。`force`（break-glass）は層 3 job 自体を skip する経路なのでこの検査も免除する。
+
 smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
 candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
 cutover まで smoke のコードパスが一度も実行されない。全 candidate に走らせることで、毎 merge が
@@ -417,7 +431,13 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
   workflow でも、gate のために commit status を自分で publish する必要は無い。
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
-  ruleset の required 指定に使うため
+  持たせるため（`finish-branch.sh` の trusted dispatch 免除がこの context 名で照合する）。
+  **ただしこの context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571）。
+  PR で publish されるのは `pull_request_target` の `paths` に一致する contract 変更 PR だけになり、
+  それ以外の PR では status も check run も存在しない。required にすると、2026-08-05 の
+  `ci.yml` paths-ignore 撤去（PR #1836）と同じく「永久に `expected` のまま」で全 PR が
+  merge 不能になる。現状 Free plan では ruleset 自体が使えない（`gh api .../rulesets` は 403）ので
+  実害は出ていないが、Pro へ上げる時の落とし穴として残す
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
   外部レビュー（Codex。2026-08-13 に全 PR 適用を停止し、2026-09-01 にクロスレビュー必須 PR 限定で
   必須化して再開、#2529）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
@@ -456,7 +476,19 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   `production-config-audit.yml` は audit contract 保護対象（`scripts/ci/production-config-audit.mjs` /
   各 `production-build-gate.mjs` / workflow 自身）を変更する PR で、`pull_request_target` の check run
   `Audit Vercel metadata (trusted)` を設計として必ず failure にする（PR code に contract 変更を
-  自己検証させないため）。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  自己検証させないため）。**2026-09-03（#2571）以降、`pull_request_target` にはこの 4 path の
+  `paths` filter が付いており、そもそも contract 変更 PR でしか workflow が起動しない**
+  （それ以外の PR では check run も status も存在しないので、免除の判定自体が走らない）。
+  live な env drift の検出は日次 cron・`push:main`・promote 経路の `runProductionConfigAudit` が担う。
+  **ただし checkpoint を `paths` だけに委ねてはいない。** workflow が起動しない条件は `paths` の
+  意味論だけでなく、Actions の一時 Disable・base 側の workflow 定義の破損（`pull_request_target` は
+  base 側の定義で評価される）・`paths` の書き間違い・changed files が 3,000 件を超えた時の GitHub 仕様を
+  含み、いずれも「PR code に contract 変更を自己検証させない」設計を静かに無効化する。そこで
+  `finish-branch.sh` は **workflow の起動有無と独立に**、contract を変えた PR へ status
+  `Production Config Audit` の success を要求する（判定は `protected-path-gate.mjs` の `auditContract`）。
+  **変更ファイル一覧そのものを取得できなかった PR も要求する** — contract 変更を否定できない以上、
+  通す理由が無い（#2586 で Codex と architecture-guard の両系統から同じ指摘）。その PR は同じ理由で
+  `REVIEW_GATE_REQUIRED` も fail closed で立ち、内製 marker と Codex の独立 2 系統も必須になる。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
   の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
   success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
   畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**

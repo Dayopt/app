@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { WORST_CASE_RELEASE_MS } from './production-release.mjs';
+import { IMPACT_WIRING, WORST_CASE_RELEASE_MS } from './production-release.mjs';
 import { IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
 
 /**
@@ -226,6 +226,39 @@ describe('release workflow contract', () => {
       (match) => match[1],
     );
     expect([...new Set(referenced)].sort()).toEqual([...IMPACT_OUTPUT_KEYS].sort());
+  });
+
+  it('passes the impact verdict into the release script, not just into the gate', () => {
+    // gate（release job の `if:`）は T0（impact job 実行時点）の判定しか見ない。
+    // live が Instant Rollback で後退すると release 側（T1）だけが affected になり、
+    // 層 3 未実行の project を promote しうる（#2574）。script が T0 の verdict を
+    // 読めるよう、同じ値を step env でも渡す。
+    // **両端を個別に確認する。** どちらかの step 名が変わると indexOf が -1 を返し、
+    // slice(start, -1) は「job の末尾まで」へ黙って広がる。そうなると配線を別 step へ
+    // 移しても全 assert が通ってしまう（`not.toBe('')` では捕まらない）。
+    const stepStart = releaseJob.indexOf('Wait, smoke, and promote Production');
+    const stepEnd = releaseJob.indexOf('Publish Production Release status');
+    expect(stepStart).toBeGreaterThan(-1);
+    expect(stepEnd).toBeGreaterThan(stepStart);
+    const releaseStep = releaseJob.slice(stepStart, stepEnd);
+
+    // 出力キーと env 名の対応は `IMPACT_WIRING` の 1 エントリから導出する。
+    // 2 配列を index で突き合わせていた頃は、片方だけ並べ替えられると test が
+    // **入れ替わった配線を要求する側へ回り**、runtime では別 project の verdict を
+    // 静かに使う（層 3 未実行の promote が通る）形になっていた。
+    for (const { outputKey, envVar } of IMPACT_WIRING) {
+      expect(releaseStep).toContain(`${envVar}: \${{ needs.impact.outputs.${outputKey} }}`);
+    }
+
+    // 逆向き: script が読む env が余分な値を混ぜていない。
+    const wired = [...releaseStep.matchAll(/^\s*(RELEASE_IMPACT_[A-Z_]+):/gm)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(wired)].sort()).toEqual(IMPACT_WIRING.map((w) => w.envVar).sort());
+
+    // **既定値で丸めない。** `|| 'true'` のような fallback を書くと、配線が落ちた時に
+    // 層 3 ゼロで promote が通り、この対策そのものが無効になる。
+    expect(releaseStep).not.toMatch(/RELEASE_IMPACT_[A-Z_]+:\s*\$\{\{[^}]*(\|\||&&)[^}]*\}\}/);
   });
 
   it('keeps the layer 3 gate fail-closed for cancelled jobs', () => {
