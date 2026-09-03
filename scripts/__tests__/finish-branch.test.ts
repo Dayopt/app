@@ -2554,14 +2554,35 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
           { author: 't3-nico', body: internalReviewMarkerBody() },
           {
             author: CODEX_LOGIN,
-            body: 'Codex encountered an error while reviewing this PR: usage limit reached. Please retry later.',
+            body: 'You have reached your Codex usage limits for code reviews. See the dashboard.',
           },
         ],
         codexReviews: [],
       },
     });
     expect(stderr).toContain('`Reviewed commit` 行がありません');
-    expect(stderr).toContain('usage limit');
+    // **実際のコメント本文**を出す（#2584）。以前はここが固定文言中の 'usage limit' に
+    // 一致していただけで、本文と無関係に通る assertion だった。
+    expect(stderr).toContain('最新のコメント: You have reached your Codex usage limits');
+    expect(stderr).toContain('Codex の利用上限です');
+    expect(stderr).toContain('#2584');
+    expect(status).toBe(1);
+  });
+
+  it('usage limit 以外の応答では利用上限の案内を出さない（誤誘導しない）', () => {
+    // 上の test が固定文言ではなく本文由来であることを、反対向きからも固定する。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          { author: CODEX_LOGIN, body: 'Codex hit an internal error while reviewing this PR.' },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('最新のコメント: Codex hit an internal error');
+    expect(stderr).not.toContain('Codex の利用上限です');
+    expect(stderr).toContain('timeout / error 応答の可能性があります');
     expect(status).toBe(1);
   });
 

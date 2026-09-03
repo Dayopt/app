@@ -1206,7 +1206,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     | ($nodes | map(select(normalized_login == $login))) as $step1
     | ($step1 | map(select(reviewed_sha != ""))) as $step2
     | ($step2 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step3
-    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length),
+        latest: ($step1 | last | (.body // "") | split("\n")[0] | .[0:200]) }' 2>/dev/null || true)"
 
   CODEX_COMMENT_COUNT="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 
@@ -1239,8 +1240,26 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     if [[ "$CODEX_COMMENT_STEP1" == "0" ]]; then
       error "原因: ${CODEX_REVIEW_LOGIN} によるコメントが 1 件もありません。"
     elif [[ "$CODEX_COMMENT_STEP2" == "0" ]]; then
-      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません"
-      error "（usage limit / timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません。"
+      # 推測を並べるのではなく **実際の本文**を見せる。ここが分からないと、operator は
+      # 毎回 PR を開いて Codex の応答を目視することになる（#2584）。本文は外部 bot が
+      # 書いた untrusted なデータなので、制御文字（端末エスケープ）を落として出す。
+      # **判定には一切使わない** —— 証跡の条件は従来どおり review object または
+      # \`Reviewed commit\` 付きコメントの存在だけ。
+      CODEX_COMMENT_LATEST="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" \
+        | jq -r '.latest // ""' 2>/dev/null | tr -d '[:cntrl:]' || true)"
+      if [[ -n "$CODEX_COMMENT_LATEST" ]]; then
+        error "最新のコメント: ${CODEX_COMMENT_LATEST}"
+      fi
+      if [[ "$CODEX_COMMENT_LATEST" == *"usage limit"* ]]; then
+        error "→ Codex の利用上限です。gate は正しく fail closed しています（弱めないこと）。"
+        error "  対処: 上限の回復を待って PR へ「@codex review」を投稿し直す。"
+        error "  1 PR で fix を 1 push ずつ積んで毎回投げると上限を早く使い切ります。"
+        error "  fix はまとめて 1 push にし、最終 HEAD に対して 1 回投げてください。"
+        error "  恒久対応の判断は #2584 で evidence を集めています。頻発するならそこへ追記を。"
+      else
+        error "（timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      fi
     else
       error "原因: ${CODEX_REVIEW_LOGIN} のコメントの \`Reviewed commit\` は古い commit を指しています（現在の HEAD: ${HEAD_SHA}）。"
     fi
