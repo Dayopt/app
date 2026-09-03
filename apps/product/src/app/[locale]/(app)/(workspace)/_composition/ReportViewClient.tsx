@@ -13,9 +13,10 @@ import {
   todayReportAnchor,
   type ReportGranularity,
 } from '@/features/review';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { Button } from '@dayopt/components';
+import { Button, Skeleton } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
@@ -54,6 +55,12 @@ export function ReportViewClient({
   const sidebar = useShellStore.use.sidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
+  // `?date=` が無いときの既定は「ユーザーの timezone での今日」だが、その timezone は
+  // client でしか分からない（SSR の `useUserPreferences` は UTC にフォールバックする）。
+  // サーバーの HTML と client の初回描画で日付がずれるとハイドレーションが壊れるため、
+  // 既定を使う経路だけマウント後まで描画を遅らせる。URL に日付があれば両者は一致するので
+  // 遅らせない。
+  const hasMounted = useHasMounted();
   const anchorDate = anchorDateParam ?? todayReportAnchor(timezone);
 
   const range = useMemo(
@@ -124,6 +131,15 @@ export function ReportViewClient({
       <ConnectedMobileAccountButton />
     </div>
   );
+
+  if (anchorDateParam === undefined && !hasMounted) {
+    return (
+      <div className="flex h-full flex-col gap-4 p-4 md:p-6">
+        <Skeleton className="h-8 w-64 rounded-lg" />
+        <Skeleton className="h-48 rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
