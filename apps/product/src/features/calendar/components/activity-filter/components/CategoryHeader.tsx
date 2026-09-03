@@ -142,7 +142,7 @@ export function CategoryHeader({
           // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
           collapsed
             ? 'opacity-100'
-            : 'opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+            : 'opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
         )}
       >
         <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-90')} />
@@ -156,7 +156,7 @@ export function CategoryHeader({
             type="button"
             aria-label={t('calendar.filter.categoryMenu')}
             // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 group-has-[:focus-visible]/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />

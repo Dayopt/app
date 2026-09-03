@@ -84,7 +84,7 @@ export function SegmentList() {
                     type="button"
                     variant="ghost"
                     icon
-                    className="size-6 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                    className="size-6 opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
                     aria-label={segment.name}
                   >
                     <MoreHorizontal className="size-4" />

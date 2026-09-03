@@ -91,7 +91,8 @@ export function Sidebar({
         <div className="flex min-w-0 items-center gap-2 pl-2">{headerTitle}</div>
         <div className="flex items-center gap-1">
           {/* 閉じるボタンはSidebarホバー時のみ表示（User指示）。キーボード操作でも
-              見えるよう group-focus-within も併用する */}
+              見えるよう group-has-[:focus-visible] を併用する。focus-within だと
+              マウスでクリックした後もフォーカスが残る間ずっと出しっぱなしになる */}
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"
@@ -99,7 +100,7 @@ export function Sidebar({
               size="sm"
               onClick={closeSidebar}
               aria-label={t('navigation.sidebar.closeSidebar')}
-              className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+              className="opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
             >
               <PanelLeft className="size-4" />
             </Button>

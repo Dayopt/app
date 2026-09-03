@@ -74,7 +74,7 @@ export function SidebarSection({
                 // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
                 collapsed
                   ? 'opacity-100'
-                  : 'opacity-0 transition-opacity group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+                  : 'opacity-0 transition-opacity group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
               )}
             >
               <ChevronRight

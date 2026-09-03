@@ -335,7 +335,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                     'opacity-0 transition-opacity',
                     categoryCreateOpen
                       ? 'opacity-100'
-                      : 'group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+                      : 'group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
                   )}
                 >
                   <CategoryCreatePopover onOpenChange={setCategoryCreateOpen} />
@@ -395,7 +395,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                     'flex items-center gap-1 transition-opacity',
                     displayMenuOpen
                       ? 'opacity-100'
-                      : 'opacity-0 group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+                      : 'opacity-0 group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
                   )}
                 >
                   <HoverTooltip content={t('calendar.filter.createActivity')} side="top">
