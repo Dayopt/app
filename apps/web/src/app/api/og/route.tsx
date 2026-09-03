@@ -14,7 +14,6 @@ import {
 import { OG_FALLBACK_IMAGE_BASE64 } from './og-fallback-image.generated';
 
 export const maxDuration = 25;
-export const runtime = 'edge';
 
 /**
  * 成功レスポンスの正規cache契約。長寿命(内容はpost frontmatterから決定的に導出される)。
