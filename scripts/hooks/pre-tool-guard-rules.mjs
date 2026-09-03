@@ -595,6 +595,30 @@ function checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Codex レビュー依頼の直接投稿（cost guard、#2558）
+// ---------------------------------------------------------------------
+// PR #2554 実測: 1 本の PR で「@codex review」を 8 回投稿し、うち 3 回は Codex の
+// 応答前の連投、6 回の応答が「問題なし」だった。無駄の構造は「追従前・CI 実行中・
+// 既存証跡が有効なまま投げる」ことにあり、判定はすべて機械化できる。
+// `pnpm review:request <PR>` が順に確認して必要な時だけ 1 回投稿するので、Bash から
+// の直接投稿はそちらへ誘導する。
+//
+// **security guard ではなく cost guard**。security 系と違い、迂回されても漏洩は
+// 起きない（無駄が増えるだけ）ので、判定は単純な正規表現に留める。
+const CODEX_REVIEW_POST_RE =
+  /(^|[ \t\n\v\f\r;&|/])gh[ \t\n\v\f\r]+(pr[ \t\n\v\f\r]+comment|api)[^\n]*@codex/;
+
+function checkCodexReviewDirectPost(commandJoined, commandUnquoted) {
+  for (const scanned of [commandJoined, commandUnquoted]) {
+    if (CODEX_REVIEW_POST_RE.test(scanned)) {
+      block(
+        'BLOCKED: gh から「@codex」を含むコメントを直接投稿しないでください（#2558 cost guard）。pnpm review:request <PR番号> を使ってください。追従前 / CI 実行中 / 既存証跡が現在の diff の指紋と一致する場合は投稿せずに理由を出し、必要な時だけ 1 回だけ投稿します（PR #2554 実測: 直接投稿で 8 回起動、うち 6 回が「問題なし」）',
+      );
+    }
+  }
+}
+
 const OP_READ_RE = /(^|[ \t\n\v\f\r;&|/])op[ \t\n\v\f\r]+read([ \t\n\v\f\r]|$)/;
 
 function checkOpRead(commandJoined, commandUnquoted) {
@@ -642,6 +666,7 @@ function checkBashCommand(rawCommand, cwd, execFileImpl) {
   checkVercelToken(commandJoined, commandUnquoted);
   checkSupabaseMgmtDangerEndpoint(commandJoined, commandUnquoted);
   checkOpRead(commandJoined, commandUnquoted);
+  checkCodexReviewDirectPost(commandJoined, commandUnquoted);
 }
 
 // =====================================================================

@@ -135,6 +135,12 @@ export const PROTECTED_PATH_GLOBS = [
   'scripts/tasks/generate-issue-review-marker.mjs',
   'scripts/tasks/generate-marker.ts',
   'scripts/lib/generate-marker-core.ts',
+  // レビュー証跡の**束縛**そのもの（#2558）。指紋の計算が「常に同じ値を返す」形へ
+  // 退化すると、旧レビューが恒久的に有効と判定され、未レビューの保護対象 diff が
+  // gate を素通りする。CI では捕まらず revert でも取り戻せないため、生成・検証系と
+  // 同じくガードレール自己保護として必須側に置く。
+  'scripts/lib/review-fingerprint.mjs',
+  'scripts/tasks/review-request.mjs',
   // CI の中枢。check.mjs は write 権限つき GH_TOKEN を PR コードから隔離する
   // 処理とどの test を skip するかの判定を持ち、ci.yml はその job / permissions
   // を決める。どちらも「壊れても CI は green のまま」になりうるため、
@@ -201,6 +207,22 @@ const MATCHERS = PROTECTED_PATH_GLOBS.map((glob) => ({ glob, re: globToRegExp(gl
 const AUDIT_CONTRACT_MATCHERS = PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS.map((glob) =>
   globToRegExp(glob),
 );
+
+/**
+ * 1 file が保護対象 path に該当するか。`resolveProtectedPathGate` と同じ
+ * `MATCHERS`（= `PROTECTED_PATH_GLOBS`）を使う。レビュー指紋
+ * （`scripts/lib/review-fingerprint.mjs`）が diff を保護対象だけへ絞り込むために
+ * 呼ぶ。glob リストを二重管理しないための named export で、判定意味論は
+ * `resolveProtectedPathGate` と 1 対 1 に対応する。
+ *
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isProtectedPath(file) {
+  const normalized = String(file ?? '').trim();
+  if (!normalized) return false;
+  return MATCHERS.some((matcher) => matcher.re.test(normalized));
+}
 
 /**
  * `auditContract` は「この PR が audit contract そのものを変えたか」。
