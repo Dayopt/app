@@ -49,7 +49,7 @@ export function SegmentedControl<TValue extends string>({
       aria-label={ariaLabel}
       data-slot="segmented-control"
       className={cn(
-        'border-border-subtle bg-container inline-flex items-center gap-1 rounded-lg border p-1',
+        'border-border-subtle bg-container inline-flex w-fit items-center gap-1 rounded-lg border p-1',
         className,
       )}
     >
