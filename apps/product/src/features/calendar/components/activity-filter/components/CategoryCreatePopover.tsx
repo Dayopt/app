@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { CategoryAppearancePickerRow, useCreateCategory } from '@/features/activities';
 import {
   Button,
+  cn,
   HoverTooltip,
   Input,
   Popover,
@@ -81,7 +82,8 @@ export function CategoryCreatePopover({ onOpenChange }: CategoryCreatePopoverPro
           <Button
             variant="ghost"
             icon
-            className="size-6"
+            // 未分類の歯車と同じく、開いている間は hover 状態を維持する
+            className={cn('size-6', open && 'bg-state-hover')}
             aria-label={t('calendar.filter.createCategory')}
           >
             <Plus className="size-4" />

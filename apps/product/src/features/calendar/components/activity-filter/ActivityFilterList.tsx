@@ -415,7 +415,10 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                         <Button
                           variant="ghost"
                           icon
-                          className="size-6"
+                          // メニューを開いている間は hover 状態を維持し、どのボタンから
+                          // 出ているメニューなのかを保つ。Radix の data-state 属性ではなく
+                          // React state で当てる（ActivityRow の menuOpen と同じ手口）
+                          className={cn('size-6', displayMenuOpen && 'bg-state-hover')}
                           aria-label={t('calendar.filter.activitySettings')}
                         >
                           <Settings2 className="size-4" />
