@@ -108,6 +108,28 @@ describe('release impact（層 3 の起動判定）', () => {
     expect(formatOutputs(results)).toBe('web_affected=true\nproduct_affected=true');
   });
 
+  it('fetchImpl を渡さなければ global fetch を既定にする', async () => {
+    // `callVercel` は `fetchImpl(url, init)` を直接呼ぶ（既定を持たない）。ここで
+    // undefined を渡すと全 project が「fetchImpl is not a function」で affected へ
+    // 倒れ、fail closed ではあるが「影響のある suite だけ走らせる」設計が丸ごと死ぬ。
+    // 他の test はすべて fake を注入するため、既定はここでしか検査されない。
+    let seenFetch: unknown;
+    await resolveReleaseImpact({
+      sha: SHA,
+      token: 'token',
+      teamId: 'team',
+      projects: PROJECTS as never,
+      headShaImpl: () => SHA,
+      projectStateImpl: (async ({ fetchImpl }: { fetchImpl: unknown }) => {
+        seenFetch = fetchImpl;
+        return { production: { sha: OTHER_SHA } };
+      }) as never,
+      projectImpactImpl: (() => ({ affected: false, reason: 'stub' })) as never,
+    });
+
+    expect(seenFetch).toBe(globalThis.fetch);
+  });
+
   it('checkout が target SHA でない時はその旨を判定へ渡す（fail closed の材料）', async () => {
     let seenCheckoutAtTarget: unknown;
     await run({

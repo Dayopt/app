@@ -46,8 +46,12 @@ export async function resolveReleaseImpact({
   sha,
   token,
   teamId,
-  // 既定を明示する（省略可能であることを型にも出すため。test は渡さない）。
-  fetchImpl = undefined,
+  // `production-release.mjs` の `runProductionRelease` と同じ既定にする。
+  // **undefined のままにしてはいけない** —— `callVercel` は `fetchImpl(url, init)` を
+  // 直接呼ぶため、渡さないと全 project が「cannot read live production:
+  // fetchImpl is not a function」で affected へ倒れ、影響判定が常に全実行になる
+  // （安全側だが、影響のある suite だけ走らせるという設計が丸ごと死ぬ）。
+  fetchImpl = fetch,
   projects = RELEASE_PROJECTS,
   headShaImpl = gitHeadSha,
   projectStateImpl = getProjectState,
