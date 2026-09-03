@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { WORST_CASE_RELEASE_MS } from './production-release.mjs';
+import { IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
 
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を
@@ -171,19 +172,60 @@ describe('release workflow contract', () => {
     expect(release).toMatch(/^\s*name: "\\U0001F310 Web Build & E2E"\s*$/m);
     expect(release).toMatch(/^\s*needs: \[impact, e2e, web\]\s*$/m);
 
-    // 「affected な suite は success でなければならない」を含意の形で書く。
-    // `result == 'skipped'` を許可する形にすると、層 3 の if: を壊して常に skip
-    // させた時に gate が素通りする。
-    expect(gate).toContain(
-      "(needs.impact.outputs.product_affected != 'true' || needs.e2e.result == 'success')",
-    );
-    expect(gate).toContain(
-      "(needs.impact.outputs.web_affected != 'true' || needs.web.result == 'success')",
-    );
-
     // check-run 名の照合はもう存在しない。
     expect(release).not.toContain('check-runs');
     expect(release).not.toContain('required_checks');
+    expect(gate.length).toBeGreaterThan(0);
+  });
+
+  it('pins the release gate expression exactly', () => {
+    // **部分文字列の検査では守れない。** 必要な conjunct の存在だけを見る形だと、
+    // 既存 literal を残したまま外側に選言を 1 本足すだけで gate 全体を無効化できる
+    // （内製クロスレビューで実測: `( needs.impact.result == 'success' || ...既存... )`
+    // を足した workflow が全 assert を通過した）。promote.yml は保護対象 path で、
+    // この test がその guardrail なので、式は全文で固定する。
+    //
+    // 意図して式を変える時はこの期待値も同時に更新する。その差分がレビューで
+    // 「gate の意味が変わった」と読める形になることがこの assert の目的。
+    const normalized = releaseJobIf.replace(/\s+/g, ' ').trim();
+
+    expect(normalized).toBe(
+      'if: >- ${{ !cancelled() ' +
+        "&& ( github.event.inputs.force == 'true' " +
+        "|| ( needs.impact.result == 'success' " +
+        "&& (needs.impact.outputs.product_affected == 'false' || needs.e2e.result == 'success') " +
+        "&& (needs.impact.outputs.web_affected == 'false' || needs.web.result == 'success') ) ) }}",
+    );
+  });
+
+  it('exempts a layer 3 suite only on an explicit false, never on a missing output', () => {
+    // `!= 'true'` 形だと空文字が免除側に落ちる。impact job の outputs キー / step の
+    // id / impactKey のいずれかを改名すると `needs.impact.outputs.*` が空文字になり、
+    // 層 3 も skip されたうえで gate が素通りする（= 層 3 ゼロで promote）。
+    expect(releaseJobIf).toContain("product_affected == 'false'");
+    expect(releaseJobIf).toContain("web_affected == 'false'");
+    expect(releaseJobIf).not.toContain("!= 'true'");
+  });
+
+  it('wires the impact outputs the gate reads to the keys the script emits', () => {
+    // 上の空文字 fail-open を実際に起こすのは「片方だけ改名」なので、script の出力
+    // キー・job の outputs マッピング・gate の参照の 3 点が一致することを固定する。
+    const impactJob = release.slice(release.indexOf('\n  impact:'), release.indexOf('\n  e2e:'));
+    const stepId = impactJob.match(/^\s*id: (\S+)\s*$/m)?.[1];
+    expect(stepId).toBeTruthy();
+
+    for (const key of IMPACT_OUTPUT_KEYS) {
+      // job の outputs は script が書く key を、その step の outputs から読む。
+      expect(impactJob).toContain(`${key}: \${{ steps.${stepId}.outputs.${key} }}`);
+      // gate はその job outputs を参照する。
+      expect(releaseJobIf).toContain(`needs.impact.outputs.${key}`);
+    }
+
+    // 逆向き: gate が参照する outputs が IMPACT_OUTPUT_KEYS 以外を含まない。
+    const referenced = [...releaseJobIf.matchAll(/needs\.impact\.outputs\.(\w+)/g)].map(
+      (match) => match[1],
+    );
+    expect([...new Set(referenced)].sort()).toEqual([...IMPACT_OUTPUT_KEYS].sort());
   });
 
   it('keeps the layer 3 gate fail-closed for cancelled jobs', () => {

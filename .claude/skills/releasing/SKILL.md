@@ -146,8 +146,12 @@ gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/status" \
 - `failure` → **tag を打たない**。run を開いて止まった段まで特定する
   （`gh run list --workflow=promote.yml --branch main --limit 5`）。層 3 の赤なら
   promote は走っておらず production は無傷。復旧は `docs/operations/runbook.md` Playbook 2
-- **status が 1 件も無い** → その commit の run がまだ走っているか、起動していない。
-  run 一覧を見て完了を待つ
+- **status が 1 件も無い** → その commit の run を見る
+  （`gh run list --workflow=promote.yml --branch main --limit 5`）。走行中なら待つ。
+  **run の release job が `skipped` で終わっている場合は、待っても status は来ない**
+  —— 層 3 が赤い、または後続 push に層 3 を cancel された run。その commit を
+  release 対象にするのは諦め、**main HEAD を対象にする**（後続 merge の run が
+  live 基準で拾い直しているので、HEAD には status が付く）
 
 #### promote をやり直したい / 緊急で通したい時（break-glass）
 

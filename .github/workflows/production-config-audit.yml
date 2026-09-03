@@ -10,15 +10,25 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
   # **push:main は「監査対象そのものを変える merge」だけに絞る**（2026-09-03）。
-  # Vercel の env metadata drift と production deploy health は promote 時に
-  # `scripts/ci/production-release.mjs` が同じ script で実行するため、merge 連動
-  # promote（promote.yml）が入った今は毎 merge で重ねる必要が無い。一方
+  #
+  # env metadata の drift は、promote する merge では promote 側でも見る
+  # （`production-release.mjs` が `runProductionConfigAudit` を呼ぶ）。ただし
+  # **完全な代替ではない**: 呼ばれるのは `!force && alreadyServing.length > 0` の時
+  # だけで（docs のみの merge では audit も smoke も走らない）、`checkProjectSettings:
+  # false` なので project 設定監査（rootDirectory / autoAssignCustomDomains 等）は
+  # 含まれず、`--deploy-health` と incident 起票は promote 経路に無い。
+  # つまりこの filter で「per-merge 検出 → 最大 1 日以内の検出」へ落ちる。**その
+  # backstop が日次 cron（06:00 JST）** で、dashboard の手動変更による drift も
+  # そこで拾う。auto-assign の drift だけは promote 側の `sweepSettings()` が
+  # unaffected な merge でも毎回掃くので per-merge のまま。
+  #
   # auth-config / storage-rls は **Supabase production** を見ており、migration は
   # Supabase の GitHub 連携で main merge 時に適用されるので、`supabase/**` を含む
   # merge では引き続き直後に走らせる。audit script / build gate / この workflow
   # 自身を変える merge も、変更した当の監査を一度も走らせずに通さないため含める。
-  # 日次 cron（06:00 JST）は dashboard の手動変更による drift を 1 日以内に拾う
-  # backstop として残る。
+  #
+  # `workflow_dispatch` は残す（`finish-branch.sh` の trusted-dispatch 免除経路は
+  # PR head SHA への status 発行に依存しており、paths filter の影響を受けない）。
   push:
     branches: [main]
     paths:

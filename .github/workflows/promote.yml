@@ -232,21 +232,34 @@ jobs:
   release:
     name: Promote Production
     needs: [impact, e2e, web]
-    # **「affected な suite は success でなければならない」を直接書く。**
-    # `result == 'success' || result == 'skipped'` 形にすると、将来 layer 3 の `if:`
-    # を壊して常に skip させた時に gate が素通りする。この形なら impact が affected
-    # と言っている限り止まる。cancelled / failure / 空文字はすべて不成立（fail closed）。
+    # **「suite を免除してよいのは impact が明示的に false と言った時だけ」**を
+    # 肯定形で書く。`!= 'true'` 形にすると **空文字が免除側に落ちる**: impact job の
+    # `outputs:` キー名 / step の `id:` / `impactKey` のどれか 1 つを改名すると、
+    # `needs.impact.outputs.*` は空文字になり、層 3 の `if`（`== 'true'`）も偽で
+    # 両 suite が skip され、gate も免除と読んで **層 3 ゼロで promote する**。
+    # 旧実装（check-run 名の照合）で名前がずれた時の最悪は「promote が止まる」
+    # だったので、`!= 'true'` は安全側を反転させてしまう。`== 'false'` なら空文字は
+    # 免除にならず、skip された suite の result（`skipped`）で不成立になる。
+    #
+    # cancelled / failure / skipped / 空文字はいずれも `== 'success'` に一致しない
+    # ので不成立（fail closed）。とくに job レベル concurrency で層 3 が cancel された
+    # 場合、式関数の `cancelled()` は **run 全体**の cancel しか見ないため false の
+    # ままだが、`needs.<id>.result == 'cancelled'` は正しく不成立になる。
     #
     # `!cancelled()` が要る: これが無いと暗黙の `success()` が付き、needs に skipped
     # が 1 つでもあるだけで release ごと skip される（unaffected な merge が
     # 永久に promote されなくなる）。`always()` は使わない —— run 全体が cancel
     # された時にまで promote を走らせない。
+    #
+    # **force は `needs.impact.result` の外側に置く。** break-glass が要るのは
+    # impact job（フル clone + Vercel API）自体が壊れている時でもあるため、
+    # impact の成功を前提にすると最後の手段が使えない。
     if: >-
       ${{ !cancelled()
-          && needs.impact.result == 'success'
           && ( github.event.inputs.force == 'true'
-               || ( (needs.impact.outputs.product_affected != 'true' || needs.e2e.result == 'success')
-                    && (needs.impact.outputs.web_affected != 'true' || needs.web.result == 'success') ) ) }}
+               || ( needs.impact.result == 'success'
+                    && (needs.impact.outputs.product_affected == 'false' || needs.e2e.result == 'success')
+                    && (needs.impact.outputs.web_affected == 'false' || needs.web.result == 'success') ) ) }}
     runs-on: ubuntu-latest
     # この environment には deployment branch policy（main のみ）が設定済みで、
     # main 以外の ref からの dispatch は job 開始前に GitHub 側で拒否される
