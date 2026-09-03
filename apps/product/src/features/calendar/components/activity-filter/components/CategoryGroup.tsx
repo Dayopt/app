@@ -6,9 +6,11 @@ import { useCallback, useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import type { Activity, Category } from '@/features/activities';
+import { cn } from '@dayopt/components';
 
 import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
 import { buildReportPath } from '../../../lib/panel-url';
+import { useActivityDropTarget } from '../useActivityDragHandlers';
 
 import { ActivityRow } from './ActivityRow';
 import type { CategoryOption } from './ActivityRowMenu';
@@ -73,6 +75,7 @@ export function CategoryGroup({
 
   const activityIds = useMemo(() => activities.map((activity) => activity.id), [activities]);
   const visibility = getCategoryVisibility(activityIds);
+  const { isActiveTarget, dropProps } = useActivityDropTarget(category.id);
 
   const handleViewStats = useCallback(() => {
     // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
@@ -84,7 +87,18 @@ export function CategoryGroup({
     // カテゴリー間は展開・折りたたみを問わず親の space-y-2（8px）だけ。
     // グループ内は 4px（見出し→1行目、行→行）なので 2 倍あれば境目は読める
     // （2026-09-03 User 判断。一度 16px / 12px を試して広すぎた）。
-    <div className="w-full min-w-0 rounded-lg">
+    //
+    // drop target は見出しだけでなくこの箱ごと。中の行は自前の drop 判定を
+    // 持たないので、配下の行の上に乗っていてもこのカテゴリーへの drop になる
+    // （並び替えを持たない以上それが正しく、ネストによるちらつきも消える）
+    <div
+      className={cn(
+        'w-full min-w-0 rounded-lg',
+        // ドロップ先の切り替えはカーソル追従なので、fade を入れると遅れて見える
+        isActiveTarget && 'bg-state-hover ring-ring ring-2 transition-none ring-inset',
+      )}
+      {...dropProps}
+    >
       <CategoryHeader
         label={category.name}
         visibility={visibility}

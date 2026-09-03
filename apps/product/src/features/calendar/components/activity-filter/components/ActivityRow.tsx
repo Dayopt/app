@@ -7,12 +7,13 @@ import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { Activity } from '@/features/activities';
-import { useUpdateActivity } from '@/features/activities';
-import { toast } from '@/lib/toast';
 import { cn, DropdownMenu, DropdownMenuTrigger, HoverTooltip } from '@dayopt/components';
 
 import { useActivityModalNavigation } from '../../../hooks/useActivityModalNavigation';
 import { buildReportPath } from '../../../lib/panel-url';
+import { DROP_TARGET_UNCATEGORIZED } from '../activity-drop-target';
+import { useActivityDragSource } from '../useActivityDragHandlers';
+import { useMoveActivityToCategory } from '../useMoveActivityToCategory';
 
 import { ActivityRowMenu, type CategoryOption } from './ActivityRowMenu';
 import { ActivityTimeblockCreatePopover } from './ActivityTimeblockCreatePopover';
@@ -68,33 +69,26 @@ export function ActivityRow({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const updateMutation = useUpdateActivity();
+  const moveActivity = useMoveActivityToCategory(allActivities);
   const { openActivityRenameModal } = useActivityModalNavigation();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isPopoverOpen = openPopoverActivityId === activity.id;
 
+  // メニュー / ポップオーバーを開いている行は drag source にしない。Radix の
+  // portal が開いている最中に掴まれると、開いたまま行だけが飛ぶ
+  const { isDragging, dragProps } = useActivityDragSource(
+    activity,
+    !isMobile && !menuOpen && !isPopoverOpen,
+  );
+
+  // 同名衝突の判定・toast・mutation は DnD と共有する（useMoveActivityToCategory）
   const handleChangeCategory = useCallback(
     (newCategoryId: string | null) => {
-      // 移動先に同名アクティビティがあると UNIQUE 制約に触れる。統合（マージ）は
-      // v1 で持たない（#2162 §4-8）ので、ここでは送らずに理由を伝えるだけにする。
-      // サーバー側も DUPLICATE_NAME で弾くが、先に出した方が往復が 1 回減る。
-      const hasConflict = allActivities.some(
-        (candidate) =>
-          candidate.id !== activity.id &&
-          (candidate.category_id ?? null) === newCategoryId &&
-          candidate.name.toLowerCase() === activity.name.toLowerCase(),
-      );
-
-      if (hasConflict) {
-        toast.error(t('calendar.filter.createDialog.duplicateName'));
-        return;
-      }
-
-      updateMutation.mutate({ id: activity.id, categoryId: newCategoryId });
+      moveActivity(activity, newCategoryId ?? DROP_TARGET_UNCATEGORIZED);
     },
-    [allActivities, activity.id, activity.name, updateMutation, t],
+    [moveActivity, activity],
   );
 
   const handleViewStats = useCallback(() => {
@@ -108,12 +102,18 @@ export function ActivityRow({
       <div role="listitem">
         <div
           className={cn(
-            'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
+            // select-none: 付けないと Firefox でラベルの文字列選択ドラッグが
+            // 先に始まり、行の drag が開始しない
+            'group/item relative flex cursor-pointer items-center rounded-lg text-sm select-none',
             isMobile ? 'h-11' : 'h-8',
             'hover:bg-state-hover',
             (menuOpen || isPopoverOpen) && 'bg-state-selected',
+            // 掴んでいる行。ドラッグ画像はブラウザが作る半透明の複製なので、
+            // ここで opacity を足すと二重に薄くなる。地色だけ変える
+            isDragging && 'bg-state-dragged',
           )}
           onClick={() => onOpenPopover(activity.id)}
+          {...dragProps}
         >
           {/* アクティビティ行にアイコンは出さない（2026-08-18 User 指示）。
               カテゴリー配下では見出しのアイコンをそのまま繰り返すことになり、
@@ -123,7 +123,7 @@ export function ActivityRow({
           <HoverTooltip
             content={activity.name}
             side="top"
-            disabled={menuOpen}
+            disabled={menuOpen || isDragging}
             wrapperClassName="ml-2 min-w-0 flex-1"
           >
             <span className={cn('min-w-0 truncate', !checked && 'text-muted-foreground')}>

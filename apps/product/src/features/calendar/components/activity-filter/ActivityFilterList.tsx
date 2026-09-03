@@ -39,11 +39,13 @@ import {
 import { useActivityModalNavigation } from '../../hooks/useActivityModalNavigation';
 
 import { mergeActivityDeleteCounts } from './activity-delete-counts';
+import { ActivityDragProvider } from './ActivityDragContext';
 import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
 import { CategoryCreatePopover } from './components/CategoryCreatePopover';
 import { CategoryGroup } from './components/CategoryGroup';
+import { UncategorizedDropZone } from './components/UncategorizedDropZone';
 
 const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
 const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
@@ -60,7 +62,12 @@ const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
  * それらのブロックは常に表示される。
  *
  * 並び順はサーバーの `listTree` が名前順で返す（`sort_order` は持たない）。
- * DnD は廃止した。カテゴリーの付け替えは行メニューの「カテゴリーを変更」で行う。
+ * **並び替えの DnD は廃止したままで、復活させない**（#2162）。
+ *
+ * 一方で「所属を変えるための DnD」は持つ: 行を別のカテゴリー群 / 未分類へ
+ * ドラッグすると `category_id` が変わる（`ActivityDragContext`）。順序は
+ * 名前順のまま変わらないので、`sort_order` の議論には戻らない。
+ * キーボード経路として行メニューの「カテゴリーを変更」も残す。
  */
 interface ActivityFilterListProps {
   /**
@@ -252,7 +259,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
   const isCompletelyEmpty = !hasAnyActivity && archivedCount === 0;
 
   return (
-    <>
+    <ActivityDragProvider allActivities={allActivities}>
       <div className="w-full min-w-0 space-y-2 overflow-hidden">
         {isLoading ? (
           <div className="space-y-1 py-1">
@@ -397,50 +404,52 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                 </span>
               }
             >
-              {showActive ? (
-                <div role="list" className="space-y-1">
-                  {uncategorized.map((activity) => (
-                    <ActivityRow
-                      key={activity.id}
-                      activity={activity}
-                      allActivities={allActivities}
-                      checked={visibleActivityIds.has(activity.id)}
-                      categoryId={null}
-                      inheritedColor={null}
-                      inheritedIcon={null}
-                      categoryOptions={categoryOptions}
-                      isMobile={isMobile}
-                      onToggle={() => toggleActivity(activity.id)}
-                      onArchiveActivity={() => handleArchiveActivity(activity.id)}
-                      onDeleteActivity={() => handleDeleteActivity(activity.id, activity.name)}
-                      onShowOnlyActivity={() => showOnlyActivity(activity.id)}
-                      openPopoverActivityId={openPopoverActivityId}
-                      onOpenPopover={setOpenPopoverActivityId}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <UncategorizedDropZone>
+                {showActive ? (
+                  <div role="list" className="space-y-1">
+                    {uncategorized.map((activity) => (
+                      <ActivityRow
+                        key={activity.id}
+                        activity={activity}
+                        allActivities={allActivities}
+                        checked={visibleActivityIds.has(activity.id)}
+                        categoryId={null}
+                        inheritedColor={null}
+                        inheritedIcon={null}
+                        categoryOptions={categoryOptions}
+                        isMobile={isMobile}
+                        onToggle={() => toggleActivity(activity.id)}
+                        onArchiveActivity={() => handleArchiveActivity(activity.id)}
+                        onDeleteActivity={() => handleDeleteActivity(activity.id, activity.name)}
+                        onShowOnlyActivity={() => showOnlyActivity(activity.id)}
+                        openPopoverActivityId={openPopoverActivityId}
+                        onOpenPopover={setOpenPopoverActivityId}
+                      />
+                    ))}
+                  </div>
+                ) : null}
 
-              {/* アーカイブ済みは種別を問わずここへ出す。アーカイブは未分類の話であって
+                {/* アーカイブ済みは種別を問わずここへ出す。アーカイブは未分類の話であって
                   カテゴリーの話ではない（2026-08-18 User 指示）。
                   アクティブ / すべて表示中は「未分類」の折りたたみに含まれ、アーカイブ
                   単独表示中はこの見出しの内容そのものになる */}
-              {showArchived ? (
-                <ArchivedActivityList
-                  onDeleteActivity={handleDeleteActivity}
-                  onDeleteCategory={handleDeleteCategory}
-                />
-              ) : null}
+                {showArchived ? (
+                  <ArchivedActivityList
+                    onDeleteActivity={handleDeleteActivity}
+                    onDeleteCategory={handleDeleteCategory}
+                  />
+                ) : null}
 
-              {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
+                {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
                   言い切る（未分類そのものが空だと誤読させない） */}
-              {uncategorizedCount === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-foreground px-2 py-1 text-xs">
-                  {statusFilter === 'archived'
-                    ? t('calendar.filter.noArchived')
-                    : t('calendar.filter.noUncategorized')}
-                </p>
-              ) : null}
+                {uncategorizedCount === 0 && !isCompletelyEmpty ? (
+                  <p role="status" className="text-foreground px-2 py-1 text-xs">
+                    {statusFilter === 'archived'
+                      ? t('calendar.filter.noArchived')
+                      : t('calendar.filter.noUncategorized')}
+                  </p>
+                ) : null}
+              </UncategorizedDropZone>
             </SidebarSection>
 
             {isCompletelyEmpty ? (
@@ -461,6 +470,6 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
         name={deleteTarget?.name ?? ''}
         affectedCount={deleteTarget?.affectedCount ?? 0}
       />
-    </>
+    </ActivityDragProvider>
   );
 }
