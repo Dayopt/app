@@ -44,7 +44,7 @@ export function ProStartEmail({
                 - {t('proStart.featureAnalytics')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('proStart.featureTags')}
+                - {t('proStart.featureActivities')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
                 - {t('proStart.featureApi')}

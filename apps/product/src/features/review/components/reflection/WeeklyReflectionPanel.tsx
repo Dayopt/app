@@ -9,7 +9,7 @@ import { formatDurationMinutes } from '@/lib/date';
 import { cn } from '@dayopt/components';
 
 import type { BarComparisonRow } from '../../domain/timePL/types';
-import { TimePLTagMarker } from '../time-pl/TimePLTagMarker';
+import { TimePLActivityMarker } from '../time-pl/TimePLActivityMarker';
 import { formatVariance, getVarianceColor } from '../time-pl/data/timePL.presentation';
 
 export interface WeeklyReflectionEstimationRow {
@@ -26,7 +26,7 @@ export interface WeeklyReflectionEstimationRow {
 interface WeeklyReflectionSkipSummary {
   skippedCount: number;
   skippedMinutes: number;
-  topTagName?: string | null | undefined;
+  topActivityName?: string | null | undefined;
 }
 
 interface WeeklyReflectionBlankSummary {
@@ -45,7 +45,7 @@ interface WeeklyReflectionPanelProps {
   estimationRows?: readonly WeeklyReflectionEstimationRow[] | undefined;
   skipSummary?: WeeklyReflectionSkipSummary | null | undefined;
   blankSummary?: WeeklyReflectionBlankSummary | null | undefined;
-  onTagClick?: ((tagId: string) => void) | undefined;
+  onActivityClick?: ((activityId: string) => void) | undefined;
 }
 
 export function WeeklyReflectionPanel({
@@ -58,7 +58,7 @@ export function WeeklyReflectionPanel({
   estimationRows,
   skipSummary,
   blankSummary,
-  onTagClick,
+  onActivityClick,
 }: WeeklyReflectionPanelProps) {
   const t = useTranslations('calendar.stats');
   const sortedEstimationRows = useMemo(
@@ -110,7 +110,11 @@ export function WeeklyReflectionPanel({
         ) : (
           <div className="flex flex-col gap-1">
             {timePLRows.map((row) => (
-              <TimePLRow key={row.activityId ?? 'no-activity'} row={row} onTagClick={onTagClick} />
+              <TimePLRow
+                key={row.activityId ?? 'no-activity'}
+                row={row}
+                onActivityClick={onActivityClick}
+              />
             ))}
           </div>
         )}
@@ -191,16 +195,16 @@ function ReviewMetricRow({
 
 function TimePLRow({
   row,
-  onTagClick,
+  onActivityClick,
 }: {
   row: BarComparisonRow;
-  onTagClick?: ((activityId: string) => void) | undefined;
+  onActivityClick?: ((activityId: string) => void) | undefined;
 }) {
   const t = useTranslations('calendar.stats.overview');
   const activityName = row.isNoActivity ? t('uncategorized') : row.activityName;
   const content = (
     <>
-      <TimePLTagMarker
+      <TimePLActivityMarker
         isNoActivity={row.isNoActivity}
         categoryIcon={row.categoryIcon}
         categoryColor={row.categoryColor}
@@ -222,7 +226,7 @@ function TimePLRow({
     </>
   );
 
-  if (row.isNoActivity || row.activityId == null || !onTagClick) {
+  if (row.isNoActivity || row.activityId == null || !onActivityClick) {
     return (
       <div
         className="flex min-h-11 items-center gap-2 px-2 py-2"
@@ -239,7 +243,7 @@ function TimePLRow({
     <button
       type="button"
       className="hover:bg-state-hover flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150"
-      onClick={() => onTagClick(activityId)}
+      onClick={() => onActivityClick(activityId)}
       data-timepl-row={activityId}
     >
       {content}
@@ -317,12 +321,12 @@ function deriveReflectionSignal({
   if (topBias && Math.abs(topBias.avgDeviationMinutes) >= 15) {
     const bias = Math.abs(Math.round(topBias.avgDeviationMinutes));
     // 未分類が最大バイアスの場合、activityName(null) をそのまま補間せず翻訳ラベルへ差し替える
-    const tagLabel = topBias.activityName ?? t('overview.uncategorized');
+    const activityLabel = topBias.activityName ?? t('overview.uncategorized');
     return {
       text:
         topBias.avgDeviationMinutes > 0
-          ? t('review.insightEstimationOver', { tag: tagLabel, bias })
-          : t('review.insightEstimationUnder', { tag: tagLabel, bias }),
+          ? t('review.insightEstimationOver', { activity: activityLabel, bias })
+          : t('review.insightEstimationUnder', { activity: activityLabel, bias }),
       detail: t('review.insightEstimationDetail'),
     };
   }
@@ -330,8 +334,8 @@ function deriveReflectionSignal({
   if (skipSummary && skipSummary.skippedCount > 0) {
     return {
       text: t('review.insightSkip', { count: skipSummary.skippedCount }),
-      detail: skipSummary.topTagName
-        ? t('review.insightSkipDetail', { tag: skipSummary.topTagName })
+      detail: skipSummary.topActivityName
+        ? t('review.insightSkipDetail', { activity: skipSummary.topActivityName })
         : undefined,
     };
   }

@@ -1,6 +1,6 @@
 // レーン H1。activity 参照の防御層と配線を実 DB に対して固定する。
 //
-// 元は tag 版（tag-assignment-guards）と対にして両方残す設計だった（「同じ不変条件が
+// 元は tag 版（activity-assignment-guards）と対にして両方残す設計だった（「同じ不変条件が
 // activity 側でも成立する」ことで移植の正しさを示すため）。tag 版は Step 8（tag_id
 // 剥離、issue #2352）で対象の assert_active_timeblock_tag_v1 呼び出しと
 // enforce_{plan,record}_tag_owner トリガーごと削除されたため、tag 版ファイルも

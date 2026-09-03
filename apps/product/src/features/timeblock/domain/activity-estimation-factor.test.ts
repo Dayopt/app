@@ -6,7 +6,7 @@ import {
   projectActualMinutes,
   type ActivityEstimationPlanRow,
   type ActivityEstimationRecordRow,
-} from './tag-estimation-factor';
+} from './activity-estimation-factor';
 
 function plan(
   overrides: Partial<ActivityEstimationPlanRow> & { id: string },

@@ -53,7 +53,7 @@ const PLANS: Plan[] = [
     featureKeys: [
       'settings.subscription.plans.free.features.timeboxing',
       'settings.subscription.plans.free.features.basicAnalytics',
-      'settings.subscription.plans.free.features.tags',
+      'settings.subscription.plans.free.features.activities',
       'settings.subscription.plans.free.features.ai',
     ],
   },
@@ -62,7 +62,7 @@ const PLANS: Plan[] = [
     nameKey: 'settings.subscription.plans.pro.name',
     featureKeys: [
       'settings.subscription.plans.pro.features.fullAnalytics',
-      'settings.subscription.plans.pro.features.unlimitedTags',
+      'settings.subscription.plans.pro.features.unlimitedActivities',
       'settings.subscription.plans.pro.features.api',
       'settings.subscription.plans.pro.features.dataExport',
       'settings.subscription.plans.pro.features.unlimitedAI',

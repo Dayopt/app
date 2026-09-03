@@ -4,7 +4,7 @@ import { ServiceError } from '@/lib/trpc/errors';
 /**
  * Category / Activity 共通のエラーコード。
  *
- * tags と異なり階層・マージが無いため TAG_ARCHIVED / SAME_TAG_MERGE 相当の
+ * 旧 tags と異なり階層・マージが無いため、マージ系エラーコード相当の
  * 専用コードは持たない。「アーカイブ済みカテゴリーへの割当」等の入力エラーは
  * INVALID_INPUT に畳む（`error-code-map.ts` は writer 境界外のため新規コードを
  * 追加しない。既存コードのみ再利用する）。

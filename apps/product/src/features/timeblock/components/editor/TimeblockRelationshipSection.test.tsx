@@ -21,10 +21,10 @@ vi.mock('next-intl', () => ({
         return `${String(values?.count)} records · ${String(values?.duration)} total`;
       }
       if (key === 'openRecord') {
-        return `Open record: ${String(values?.tag)}, ${String(values?.dateTime)}`;
+        return `Open record: ${String(values?.activity)}, ${String(values?.dateTime)}`;
       }
       if (key === 'openPlan') {
-        return `Open original plan: ${String(values?.tag)}, ${String(values?.dateTime)}`;
+        return `Open original plan: ${String(values?.activity)}, ${String(values?.dateTime)}`;
       }
       return translations[key] ?? key;
     },

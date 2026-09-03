@@ -15,7 +15,6 @@ interface ICalEntry {
   end_time: string | null;
   created_at: string | null;
   updated_at: string | null;
-  tag_name: string | null;
 }
 
 /**
@@ -75,7 +74,10 @@ export function plansToICal(entries: ICalEntry[]): string {
   for (const entry of entries) {
     if (!entry.start_time || !entry.end_time) continue;
 
-    const summary = entry.tag_name ?? entry.title;
+    // SUMMARY は Plan のタイトル。#2162 cutover 以降に作られた Plan は tag_id が
+    // NULL なので旧実装でも実質 title へ落ちており、ここでの一本化は現行挙動への
+    // 収束（cutover 前の古い Plan だけ、旧タグ名 → タイトル へ変わる）。
+    const summary = entry.title;
     const uid = `${entry.id}@${dayoptDomains.marketing}`;
 
     lines.push('BEGIN:VEVENT');

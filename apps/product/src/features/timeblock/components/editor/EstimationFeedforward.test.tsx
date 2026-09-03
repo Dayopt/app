@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ActivityEstimationFactor } from '../../domain/tag-estimation-factor';
+import type { ActivityEstimationFactor } from '../../domain/activity-estimation-factor';
 
 const queryResult = vi.hoisted(
   () =>

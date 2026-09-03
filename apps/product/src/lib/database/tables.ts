@@ -16,7 +16,6 @@ export const databaseTables = {
   profiles: 'profiles',
   reports: 'reports',
   stripeWebhookEvents: 'stripe_webhook_events',
-  tags: 'tags',
   userSettings: 'user_settings',
   writeFenceControl: 'write_fence_control',
 } as const;

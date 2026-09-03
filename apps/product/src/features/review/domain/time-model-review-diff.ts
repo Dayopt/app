@@ -12,7 +12,6 @@ interface TimeModelReviewDiffResult {
     id: string;
     kind: TimeModelReviewDiffKind;
     title: string;
-    tagId: string | null;
     color: string;
     planId: string | null;
     plannedMinutes: number;

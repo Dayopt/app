@@ -23,7 +23,6 @@ const completedPlannedEntry: CalendarDisplayEvent = {
   endDate: pastEnd,
   status: 'closed',
   color: 'var(--primary)',
-  tagId: 'tag-1',
   createdAt: new Date(),
   updatedAt: new Date(),
   version: '2026-07-15T00:00:00.000000Z',
@@ -40,7 +39,6 @@ const completedPlannedEntry: CalendarDisplayEvent = {
 const noTagEntry: CalendarDisplayEvent = {
   ...completedPlannedEntry,
   id: 'entry-2',
-  tagId: null,
 };
 
 /** 未来の planned entry（記録が存在し得ないため「予定外にする」非表示） */

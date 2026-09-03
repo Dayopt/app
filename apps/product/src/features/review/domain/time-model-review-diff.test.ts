@@ -16,7 +16,6 @@ describe('toTimeModelReviewDiff', () => {
           id: 'unrecorded:plan-1',
           kind: 'unrecorded',
           title: 'Plan',
-          tagId: null,
           color: 'gray',
           planId: 'plan-1',
           plannedMinutes: 60,

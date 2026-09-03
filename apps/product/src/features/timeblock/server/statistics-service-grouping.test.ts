@@ -92,10 +92,10 @@ describe('groupEnergyMap', () => {
 describe('computeContextSwitches', () => {
   it('同一日内でタグが変わるたびに switch を数える', () => {
     const rows = [
-      { tag_id: 'a', start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
-      { tag_id: 'b', start_at: '2026-07-01T01:00:00Z', end_at: '2026-07-01T01:30:00Z' },
-      { tag_id: 'b', start_at: '2026-07-01T02:00:00Z', end_at: '2026-07-01T02:30:00Z' },
-      { tag_id: 'a', start_at: '2026-07-01T03:00:00Z', end_at: '2026-07-01T03:30:00Z' },
+      { activity_id: 'a', start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
+      { activity_id: 'b', start_at: '2026-07-01T01:00:00Z', end_at: '2026-07-01T01:30:00Z' },
+      { activity_id: 'b', start_at: '2026-07-01T02:00:00Z', end_at: '2026-07-01T02:30:00Z' },
+      { activity_id: 'a', start_at: '2026-07-01T03:00:00Z', end_at: '2026-07-01T03:30:00Z' },
     ];
     // a→b(switch) b→b(no) b→a(switch) = 2 switches, 1 active day
     expect(computeContextSwitches(rows, TZ)).toEqual({ totalSwitches: 2, avgPerDay: 2 });
@@ -103,8 +103,8 @@ describe('computeContextSwitches', () => {
 
   it('null tag から値 tag への遷移も switch として数える', () => {
     const rows = [
-      { tag_id: null, start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
-      { tag_id: 'a', start_at: '2026-07-01T01:00:00Z', end_at: '2026-07-01T01:30:00Z' },
+      { activity_id: null, start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
+      { activity_id: 'a', start_at: '2026-07-01T01:00:00Z', end_at: '2026-07-01T01:30:00Z' },
     ];
     expect(computeContextSwitches(rows, TZ).totalSwitches).toBe(1);
   });

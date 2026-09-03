@@ -13,7 +13,7 @@ const serviceMethods = vi.hoisted(() => ({
   getMonthlyTrend: vi.fn(),
   getStatsOverview: vi.fn(),
   getStatsPageData: vi.fn(),
-  getTagStats: vi.fn(),
+  getActivityStats: vi.fn(),
   getTimePLData: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ vi.mock('./statistics-service', () => ({
     getMonthlyTrend = serviceMethods.getMonthlyTrend;
     getStatsOverview = serviceMethods.getStatsOverview;
     getStatsPageData = serviceMethods.getStatsPageData;
-    getTagStats = serviceMethods.getTagStats;
+    getActivityStats = serviceMethods.getActivityStats;
     getTimePLData = serviceMethods.getTimePLData;
   },
 }));
@@ -50,7 +50,7 @@ function authedCaller() {
 beforeEach(() => {
   vi.clearAllMocks();
   for (const method of Object.values(serviceMethods)) method.mockResolvedValue([]);
-  serviceMethods.getTagStats.mockResolvedValue({ counts: {}, planCounts: {}, lastUsed: {} });
+  serviceMethods.getActivityStats.mockResolvedValue({ counts: {}, planCounts: {}, lastUsed: {} });
   serviceMethods.getBlankRate.mockResolvedValue({
     availableMinutes: 0,
     scheduledMinutes: 0,
@@ -60,20 +60,20 @@ beforeEach(() => {
 });
 
 // 「未認証は UNAUTHORIZED」の契約は write-fence-coverage.test.ts が全 procedure 横断で
-// 機械検証する（#2187 E-3）。ここでの個別 assert（getTagStats）は重複だったため削除した。
+// 機械検証する（#2187 E-3）。ここでの個別 assert（getActivityStats）は重複だったため削除した。
 
 describe('statistics router: StatisticsService 委譲', () => {
   it('general procedures を plans / records service へ渡す', async () => {
     const caller = authedCaller();
     const range = { startDate: START, endDate: END };
 
-    await caller.getTagStats();
+    await caller.getActivityStats();
     await caller.getDailyHours({ year: 2026 });
     await caller.getHourlyDistribution(range);
     await caller.getDayOfWeekDistribution(range);
     await caller.getMonthlyTrend({ months: 6 });
 
-    expect(serviceMethods.getTagStats).toHaveBeenCalledWith(USER_ID);
+    expect(serviceMethods.getActivityStats).toHaveBeenCalledWith(USER_ID);
     expect(serviceMethods.getDailyHours).toHaveBeenCalledWith(USER_ID, 2026);
     expect(serviceMethods.getHourlyDistribution).toHaveBeenCalledWith(USER_ID, range);
     expect(serviceMethods.getDayOfWeekDistribution).toHaveBeenCalledWith(USER_ID, range);
@@ -142,8 +142,8 @@ describe('statistics router: StatisticsService 委譲', () => {
   });
 
   it('service error を INTERNAL_SERVER_ERROR に正規化する', async () => {
-    serviceMethods.getTagStats.mockRejectedValueOnce(new Error('db down'));
-    await expect(authedCaller().getTagStats()).rejects.toMatchObject({
+    serviceMethods.getActivityStats.mockRejectedValueOnce(new Error('db down'));
+    await expect(authedCaller().getActivityStats()).rejects.toMatchObject({
       code: 'INTERNAL_SERVER_ERROR',
     });
   });

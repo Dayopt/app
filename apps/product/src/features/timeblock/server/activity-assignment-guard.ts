@@ -16,9 +16,8 @@ import { TimeblockServiceError } from './timeblock-service-error';
  * されるのを防ぐ）は旧 tag 側と同じ。存在・所有権の検証は既存の FK / DB trigger
  * に委ね、ここでは可視なアクティビティがアーカイブ済みの場合だけ弾く。
  *
- * エラーコードは `TAG_ARCHIVED` を流用する。DB は tag / activity のどちらも
- * DT014 で表し区別しないため、ここだけ新コードを足すと層ごとに粒度が食い違う。
- * 語彙の付け替えは tags 撤去（Step 7）でまとめて行う。
+ * エラーコードは `ACTIVITY_ARCHIVED`。DB は DT014 で表す（#2175 で tags を撤去し、
+ * MCP 経路と同じ語彙へ統一した）。
  */
 export async function assertActivityAssignable(
   supabase: SupabaseClient<Database>,
@@ -45,6 +44,6 @@ export async function assertActivityAssignable(
   }
 
   if (data?.archived_at) {
-    throw new TimeblockServiceError('TAG_ARCHIVED', 'Archived activities cannot be assigned');
+    throw new TimeblockServiceError('ACTIVITY_ARCHIVED', 'Archived activities cannot be assigned');
   }
 }

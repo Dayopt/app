@@ -253,7 +253,6 @@ vi.mock('./TimeblockEditor', () => ({
 const futurePlan = {
   id: 'plan-1',
   user_id: 'user-1',
-  tag_id: '00000000-0000-4000-8000-000000000001',
   activity_id: null,
   external_calendar_event_id: null,
   title: 'Future plan',
@@ -276,7 +275,6 @@ const pastPlan = {
 const relatedRecord = {
   id: 'record-1',
   user_id: 'user-1',
-  tag_id: '00000000-0000-4000-8000-000000000001',
   activity_id: null,
   plan_id: pastPlan.id,
   external_calendar_event_id: null,

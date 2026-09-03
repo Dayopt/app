@@ -43,7 +43,7 @@ describe('WeeklyReflectionPanel', () => {
         diffMinutes={-60}
         timePLRows={timePLRows}
         estimationRows={estimationRows}
-        skipSummary={{ skippedCount: 2, skippedMinutes: 45, topTagName: 'Admin' }}
+        skipSummary={{ skippedCount: 2, skippedMinutes: 45, topActivityName: 'Admin' }}
         blankSummary={{ availableMinutes: 600, scheduledMinutes: 360, blankRate: 0.4 }}
       />,
     );
@@ -74,7 +74,7 @@ describe('WeeklyReflectionPanel', () => {
 
   it('Time P/L row click で activityId を渡す', async () => {
     const user = userEvent.setup();
-    const onTagClick = vi.fn();
+    const onActivityClick = vi.fn();
 
     render(
       <WeeklyReflectionPanel
@@ -84,17 +84,17 @@ describe('WeeklyReflectionPanel', () => {
         diffMinutes={-60}
         timePLRows={timePLRows}
         estimationRows={estimationRows}
-        onTagClick={onTagClick}
+        onActivityClick={onActivityClick}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: /Deep Work/ }));
 
-    expect(onTagClick).toHaveBeenCalledWith('activity-1');
+    expect(onActivityClick).toHaveBeenCalledWith('activity-1');
   });
 
   it('未分類を neutral marker で表示し、実体タグの選択操作にはしない', () => {
-    const onTagClick = vi.fn();
+    const onActivityClick = vi.fn();
     const uncategorizedRow: BarComparisonRow = {
       activityId: null,
       activityName: null,
@@ -114,17 +114,17 @@ describe('WeeklyReflectionPanel', () => {
         plannedMinutes={60}
         diffMinutes={15}
         timePLRows={[uncategorizedRow]}
-        onTagClick={onTagClick}
+        onActivityClick={onActivityClick}
       />,
     );
 
     expect(screen.getByText('uncategorized')).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="uncategorized-tag-marker"]')).toHaveClass(
+    expect(container.querySelector('[data-slot="uncategorized-marker"]')).toHaveClass(
       'bg-muted',
       'text-muted-foreground',
     );
     expect(screen.queryByRole('button', { name: /uncategorized/ })).not.toBeInTheDocument();
-    expect(onTagClick).not.toHaveBeenCalled();
+    expect(onActivityClick).not.toHaveBeenCalled();
   });
 
   // #2386: avgDeviationMinutes は符号付き（実績 − 予定）を前提にした消費側

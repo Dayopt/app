@@ -249,7 +249,7 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     const trendSection = page.getByRole('region', { name: 'Time P/L' });
     await expect(trendSection).toBeVisible({ timeout: 10_000 });
 
-    // TimePLRow は /report では onTagClick が未配線のため button ではなく div で描画される
+    // TimePLRow は /report では onActivityClick が未配線のため button ではなく div で描画される
     // （WeeklyReflectionPanel.tsx の TimePLRow、意図的な設計 — クリック機能は現状スコープ外）。
     // role=button を前提にしていたのは元 test の誤りだったため（day range は単日スコープなので
     // 明日の Plan は混入しない）、interactive/static どちらでも一致する data 属性で選ぶ。

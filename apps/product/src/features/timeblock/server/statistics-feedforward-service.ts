@@ -4,7 +4,7 @@ import 'server-only';
  * 統計 service — 作成時フィードフォワード（タグ別見積もり係数）
  *
  * ADR-026（決定ログ（削除済み、git 履歴参照））の 1 点目。
- * 集計の定義は `domain/tag-estimation-factor.ts` が正本で、この層は行取得と分単位への
+ * 集計の定義は `domain/activity-estimation-factor.ts` が正本で、この層は行取得と分単位への
  * 変換だけを担う。
  */
 

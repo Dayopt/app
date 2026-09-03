@@ -20,8 +20,8 @@ export interface TimeblockRelationshipItem {
   activityIcon: string | null;
   /**
    * true ならアクティビティ自体が存在しない。activityName は表示用に
-   * `common.tags.noTag` へ潰れているため、実在シグナルは別途この
-   * フィールドで保持する（呼び出し元が tag_id の null 判定から算出）。
+   * `common.activities.noActivity` へ潰れているため、実在シグナルは別途この
+   * フィールドで保持する（呼び出し元が activity_id の null 判定から算出）。
    */
   isUncategorized: boolean;
   startAt: Date;
@@ -72,7 +72,7 @@ export function TimeblockRelationshipSection(props: TimeblockRelationshipSection
       : `${startDate} ${startTime}–${formatDate(item.endAt)} ${endTime}`;
     const duration = formatDurationMinutes(getDurationMinutes(item));
     const openLabel = t(kind === 'record' ? 'openRecord' : 'openPlan', {
-      tag: item.activityName,
+      activity: item.activityName,
       dateTime,
       duration,
     });

@@ -3,7 +3,7 @@ export const TIMEBLOCK_CSV_COLUMNS = [
   'id',
   'title',
   'note',
-  'tag_id',
+  'activity_id',
   'plan_id',
   'start_at',
   'end_at',

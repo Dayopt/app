@@ -115,7 +115,7 @@ const EXPECTED_COMMAND_ERRORS: Readonly<Record<string, string>> = {
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
   DT013: 'PLAN_NOT_RECORDABLE',
-  DT014: 'TAG_ARCHIVED',
+  DT014: 'ACTIVITY_ARCHIVED',
 };
 
 const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
@@ -133,7 +133,7 @@ const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
   SKIP_IN_FUTURE: 'Future Plans cannot be skipped. Delete the Plan instead.',
   STALE_TARGET: 'This item no longer exists. Reload the latest data.',
   STALE_VERSION: 'This item was updated elsewhere. Reload the latest data.',
-  TAG_ARCHIVED: 'This tag is archived and cannot be assigned to a plan or record.',
+  ACTIVITY_ARCHIVED: 'This activity is archived and cannot be assigned to a plan or record.',
   TEMPORARY_FAILURE: 'The command timed out. Refresh before trying again.',
   TIME_OVERLAP: 'This time range overlaps with an existing item.',
 };

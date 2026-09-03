@@ -131,7 +131,7 @@
       "nextPlan": "次のタイムブロック",
       "options": "オプション",
       "selectAll": "すべて選択",
-      "tagColor": "カテゴリーカラー",
+      "categoryColor": "カテゴリーカラー",
       "closeSettings": "設定を閉じる",
       "weeklyCalendar": "週間カレンダー",
       "previous": "前へ",
@@ -200,7 +200,7 @@
       "title": "検索",
       "placeholder": "例: ミーティング、運動",
       "noResults": "一致する結果がありません",
-      "tagsGroup": "アクティビティ",
+      "activitiesGroup": "アクティビティ",
       "blocksGroup": "ブロック",
       "moreResults": "他に{count}件以上あります"
     },
@@ -257,7 +257,7 @@
     "createNew": {
       "plan": "Plan を作成",
       "task": "タスクを作成",
-      "tag": "アクティビティを作成",
+      "activity": "アクティビティを作成",
       "defaultPlanTitle": "新しい Plan"
     },
     "comingSoon": "近日公開",
@@ -271,10 +271,10 @@
         "unplanned": "記録のみ"
       }
     },
-    "tags": {
+    "activities": {
       "add": "アクティビティを追加",
       "change": "アクティビティを変更",
-      "noTag": "アクティビティなし"
+      "noActivity": "アクティビティなし"
     },
     "theme": {
       "light": "ライトモード",
@@ -328,7 +328,7 @@
       "file": {
         "maxSize": "ファイルサイズは{max}MB以下です"
       },
-      "tag": {
+      "activity": {
         "nameRequired": "アクティビティ名は必須です",
         "nameMaxLength": "アクティビティ名は{max}文字以内です"
       },

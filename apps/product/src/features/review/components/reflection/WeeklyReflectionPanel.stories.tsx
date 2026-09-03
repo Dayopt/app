@@ -76,14 +76,14 @@ export const Default: Story = {
     skipSummary: {
       skippedCount: 3,
       skippedMinutes: 150,
-      topTagName: 'Admin',
+      topActivityName: 'Admin',
     },
     blankSummary: {
       availableMinutes: 6720,
       scheduledMinutes: 3120,
       blankRate: 0.54,
     },
-    onTagClick: fn(),
+    onActivityClick: fn(),
   },
   render: (args) => (
     <div className="border-border-subtle w-64 border p-4">
@@ -111,7 +111,7 @@ export const BlankHeavy: Story = {
       scheduledMinutes: 2100,
       blankRate: 0.69,
     },
-    onTagClick: fn(),
+    onActivityClick: fn(),
   },
   render: (args) => (
     <div className="border-border-subtle w-64 border p-4">
@@ -162,14 +162,14 @@ export const AllPatterns: Story = {
           skipSummary={{
             skippedCount: 3,
             skippedMinutes: 150,
-            topTagName: 'Admin',
+            topActivityName: 'Admin',
           }}
           blankSummary={{
             availableMinutes: 6720,
             scheduledMinutes: 3120,
             blankRate: 0.54,
           }}
-          onTagClick={fn()}
+          onActivityClick={fn()}
         />
       </div>
       <div className="border-border-subtle w-64 border p-4">
@@ -190,7 +190,7 @@ export const AllPatterns: Story = {
             scheduledMinutes: 2100,
             blankRate: 0.69,
           }}
-          onTagClick={fn()}
+          onActivityClick={fn()}
         />
       </div>
       <div className="border-border-subtle w-64 border p-4">

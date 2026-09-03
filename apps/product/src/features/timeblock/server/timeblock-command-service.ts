@@ -10,9 +10,9 @@ import type {
   UpdateRecordInput,
 } from '../schemas/timeblock';
 import { parseFulfillment } from '../schemas/timeblock';
+import { assertActivityAssignable } from './activity-assignment-guard';
 import { PlanService } from './plan-service';
 import { RecordService } from './record-service';
-import { assertActivityAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,

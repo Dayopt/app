@@ -627,40 +627,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       end_at: hoursAgo(0.5),
     });
     expect(confirmedRecords.some((item) => item.plan_id === confirmablePlan.id)).toBe(true);
-
-    const { data: tags, error: tagError } = await userClient
-      .from('tags')
-      .insert([
-        { user_id: userId, name: 'Legacy source' },
-        { user_id: userId, name: 'Legacy target' },
-      ])
-      .select()
-      .order('name');
-    if (tagError) throw tagError;
-
-    const sourceTag = tags.find((tag) => tag.name === 'Legacy source')!;
-    const targetTag = tags.find((tag) => tag.name === 'Legacy target')!;
-    // tRPC の書き込み入口（tagId）は tag-model-replacement Step 5 で塞がれたため
-    // （schemas/timeblock.ts から tagId を除去済み）、tag 付与は残る唯一の writer
-    // である service_role で直接 DML する。この test の主眼は merge_tags_with_hierarchy
-    // RPC が既存 tag_id を正しく付け替えることの検証であり、付与経路自体ではない。
-    const { error: retagError } = await admin
-      .from('plans')
-      .update({ tag_id: sourceTag.id })
-      .eq('id', plan.id);
-    if (retagError) throw retagError;
-    const retagged = await plans.getById({ id: plan.id });
-    expect(retagged.tag_id).toBe(sourceTag.id);
-
-    const { error: mergeError } = await admin.rpc('merge_tags_with_hierarchy', {
-      p_source_tag_id: sourceTag.id,
-      p_target_tag_id: targetTag.id,
-      p_user_id: userId,
-    });
-    expect(mergeError).toBeNull();
-
-    const mergedPlan = await plans.getById({ id: plan.id });
-    expect(mergedPlan.tag_id).toBe(targetTag.id);
   });
 
   // 直接 DML の残る writer は service_role だけになった。linked-Record invariant は
