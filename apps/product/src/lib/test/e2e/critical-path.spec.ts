@@ -240,23 +240,20 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test('記録した実績が /report の Time P/L に反映される', async ({ page }) => {
-    // 旧 /day?panel=review は proxy.ts の redirect で /report?range=day へ写る（Step 2）。
-    // #2181 Step 4 で /report がフルページ化されたので直接開く。
-    await page.goto(`/ja/report?date=${offsetDateParam(-1)}&range=day`);
+  test('記録した実績が /report の 1 章（配分）に反映される', async ({ page }) => {
+    // レポートは週 / 月 / 年の 3 粒度（#2575）。前日の記録は今週の中に入る。
+    await page.goto(`/ja/report?date=${offsetDateParam(-1)}&range=week`);
 
-    // ReportBody の「予実の傾向」section は aria-label のみ持ち、暗黙 role="region" になる
-    const trendSection = page.getByRole('region', { name: 'Time P/L' });
-    await expect(trendSection).toBeVisible({ timeout: 10_000 });
+    const allocation = page.locator('[data-report-chapter="allocation"]');
+    await expect(allocation).toBeVisible({ timeout: 10_000 });
 
-    // TimePLRow は /report では onTagClick が未配線のため button ではなく div で描画される
-    // （WeeklyReflectionPanel.tsx の TimePLRow、意図的な設計 — クリック機能は現状スコープ外）。
-    // role=button を前提にしていたのは元 test の誤りだったため（day range は単日スコープなので
-    // 明日の Plan は混入しない）、interactive/static どちらでも一致する data 属性で選ぶ。
-    const activityRow = trendSection.locator('[data-timepl-row]', {
-      hasText: ACTIVITY_NAME,
-    });
-    await expect(activityRow).toBeVisible({ timeout: 10_000 });
-    await expect(activityRow).toContainText('1h');
+    // ヘッドラインは記録合計の `h:mm`。1 時間の記録があるので 0:00 のままにはならない。
+    const headline = allocation.locator('[data-report-headline="recorded"]');
+    await expect(headline).toBeVisible({ timeout: 10_000 });
+    await expect(headline).not.toHaveText('0:00');
+
+    // 凡例に 1 時間ぶんの行が出る。`未分類` を許容しない — カテゴリー紐付けを失う回帰で
+    // 全部が未分類へ落ちても緑になってしまうため（このアクティビティはカテゴリー付き）。
+    await expect(allocation.getByText('1:00')).toBeVisible({ timeout: 10_000 });
   });
 });

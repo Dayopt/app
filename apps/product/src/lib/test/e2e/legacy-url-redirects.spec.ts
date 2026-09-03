@@ -78,16 +78,17 @@ test.describe('Legacy URL redirects', () => {
     await expect(page).not.toHaveURL(/reviewTagId/);
   });
 
-  test('panel=diff on day view redirects to /report with range=day', async ({ page }) => {
+  test('panel=diff on day view redirects to /report with range=week', async ({ page }) => {
+    // レポートは週 / 月 / 年の 3 粒度しか持たない（#2575）。旧 day 系リンクは週へ寄る。
     await page.goto('/ja/day?date=2026-04-20&panel=diff');
-    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=day/);
+    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=week/);
   });
 
   test('panel=analytics（旧URL別名）redirects to /report — 恒久 shim を redirect 層が引き継ぐ', async ({
     page,
   }) => {
     await page.goto('/ja/day?date=2026-04-20&panel=analytics');
-    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=day/);
+    await expect(page).toHaveURL(/\/ja\/report\?date=2026-04-20&range=week/);
   });
 
   test('送信済みメールが焼き付けている裸の /week（locale prefix・query 無し）も /calendar へ着地する', async ({

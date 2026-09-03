@@ -2,7 +2,7 @@
  * Record レーンの差分バッジ（実績 - 予定、分）。
  *
  * copywriting「判定せず数字で示す」に従い、±0 は非表示（何も描画しない）。
- * 視覚言語は `features/review/components/diff/ReviewDiffPanel.tsx` の
+ * 視覚言語は旧 review の差分パネル（#2575 で撤去）の
  * DiffBadge（bg-container + 方向アイコン + 中立色）を踏襲するが、
  * feature DAG（calendar は review を import できない）のため独立実装する。
  */

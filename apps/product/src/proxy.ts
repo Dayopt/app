@@ -218,7 +218,8 @@ function resolveLegacyWorkspaceRedirect(
   if (panel === 'review' || panel === 'diff' || panel === 'analytics') {
     params.delete('panel');
     params.delete('reviewTagId');
-    params.set('range', legacyView === 'day' ? 'day' : 'week');
+    // レポートは週 / 月 / 年の 3 粒度しか持たない（#2575）。旧 `/day?panel=` も週へ寄せる。
+    params.set('range', 'week');
     return { pathname: '/report', search: params.toString() };
   }
 
