@@ -230,6 +230,23 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
 
+  // Cache Components / PPR（`cacheComponents: true`）は採用しない。2026-09-03 実測（#2519）。
+  //
+  // PPR は「動的にレンダリングされるページ」を静的シェル + 動的な穴へ分割して TTFB を
+  // 縮める仕組みだが、web には動的ページが 1 つも無い:
+  // - build の route table は全ページ route が ● (SSG, generateStaticParams)。
+  //   ƒ (Dynamic) は /api/* の route handler だけで、これは PPR の対象外
+  // - Preview 実測でも /ja, /ja/blog, /ja/blog/[slug], /ja/docs, /ja/docs/faq,
+  //   /ja/legal/privacy が全て x-vercel-cache: HIT、TTFB は中央値 80〜91ms
+  //
+  // 一方コストは実在する。`cacheComponents: true` は route segment config の
+  // `runtime` / `revalidate` / `dynamicParams` と非互換で（build が Error で落ちる）、
+  // web だけで 15 ファイル・18 宣言を `use cache` + `cacheLife` へ書き換える必要がある。
+  // 1h / 1d の revalidate 方針を移し替える回帰テストも今は無い。
+  //
+  // 便益が測定不能（既に静的配信の下限）でコストが確実に増えるため、現状維持とする。
+  // @see https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents
+
   experimental: {
     // Next.js 15 Router Cache再有効化
     staleTimes: {
