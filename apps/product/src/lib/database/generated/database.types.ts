@@ -674,6 +674,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -689,6 +690,7 @@ export type Database = {
           skipped_at?: string | null;
           source?: string;
           start_at: string;
+          tag_id?: string | null;
           title: string;
           updated_at?: string;
           user_id: string;
@@ -704,6 +706,7 @@ export type Database = {
           skipped_at?: string | null;
           source?: string;
           start_at?: string;
+          tag_id?: string | null;
           title?: string;
           updated_at?: string;
           user_id?: string;
@@ -721,6 +724,13 @@ export type Database = {
             columns: ['external_calendar_event_id'];
             isOneToOne: false;
             referencedRelation: 'external_calendar_events';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'plans_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
         ];
@@ -798,6 +808,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -814,6 +825,7 @@ export type Database = {
           plan_id?: string | null;
           source?: string;
           start_at: string;
+          tag_id?: string | null;
           title: string;
           updated_at?: string;
           user_id: string;
@@ -830,6 +842,7 @@ export type Database = {
           plan_id?: string | null;
           source?: string;
           start_at?: string;
+          tag_id?: string | null;
           title?: string;
           updated_at?: string;
           user_id?: string;
@@ -854,6 +867,13 @@ export type Database = {
             columns: ['plan_id'];
             isOneToOne: false;
             referencedRelation: 'plans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'records_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
         ];
@@ -974,6 +994,56 @@ export type Database = {
           status?: string;
         };
         Relationships: [];
+      };
+      tags: {
+        Row: {
+          archived_at: string | null;
+          color: string | null;
+          created_at: string | null;
+          icon: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          parent_id: string | null;
+          sort_order: number;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          archived_at?: string | null;
+          color?: string | null;
+          created_at?: string | null;
+          icon?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          parent_id?: string | null;
+          sort_order?: number;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          archived_at?: string | null;
+          color?: string | null;
+          created_at?: string | null;
+          icon?: string | null;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          parent_id?: string | null;
+          sort_order?: number;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tags_parent_id_fkey';
+            columns: ['parent_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       undo_receipt_effects: {
         Row: {
@@ -1124,6 +1194,7 @@ export type Database = {
           preferred_locale: string;
           show_week_numbers: boolean;
           show_weekends: boolean;
+          snap_interval: number;
           theme: string;
           time_format: string;
           timezone: string;
@@ -1142,6 +1213,7 @@ export type Database = {
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
+          snap_interval?: number;
           theme?: string;
           time_format?: string;
           timezone?: string;
@@ -1160,6 +1232,7 @@ export type Database = {
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
+          snap_interval?: number;
           theme?: string;
           time_format?: string;
           timezone?: string;
@@ -1397,6 +1470,10 @@ export type Database = {
         Args: { p_activity_id: string; p_user_id: string };
         Returns: undefined;
       };
+      assert_active_timeblock_tag_v1: {
+        Args: { p_tag_id: string; p_user_id: string };
+        Returns: undefined;
+      };
       assert_timeblock_content_v1: {
         Args: { p_note: string; p_title: string };
         Returns: undefined;
@@ -1407,6 +1484,27 @@ export type Database = {
       };
       authorize_owned_storage_read_v1: { Args: never; Returns: boolean };
       authorize_owned_storage_write_v1: { Args: never; Returns: boolean };
+      batch_rename_tags: {
+        Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
+        Returns: number;
+      };
+      batch_reorder_tags: {
+        Args: {
+          p_sort_orders: number[];
+          p_tag_ids: string[];
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      batch_reorder_tags_hierarchy: {
+        Args: {
+          p_parent_ids: string[];
+          p_sort_orders: number[];
+          p_tag_ids: string[];
+          p_user_id: string;
+        };
+        Returns: number;
+      };
       begin_account_deletion_v1: {
         Args: { p_user_id: string };
         Returns: {
@@ -1727,6 +1825,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1757,6 +1856,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1807,6 +1907,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1843,6 +1944,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1889,6 +1991,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -1918,6 +2021,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2087,6 +2191,10 @@ export type Database = {
       };
       get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
+      increment_tag_sort_orders: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
       invoke_edge_function: {
         Args: { p_body?: Json; p_function_name: string };
         Returns: number;
@@ -2137,6 +2245,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2174,6 +2283,14 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      merge_tags_with_hierarchy: {
+        Args: {
+          p_source_tag_id: string;
+          p_target_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
       };
       normalize_calendar_account_deletion_intent_v1: {
         Args: {
@@ -2322,6 +2439,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2344,6 +2462,28 @@ export type Database = {
           p_user_id: string;
         };
         Returns: string;
+      };
+      rename_tag_group: {
+        Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
+        Returns: {
+          archived_at: string | null;
+          color: string | null;
+          created_at: string | null;
+          icon: string | null;
+          id: string;
+          is_active: boolean;
+          name: string;
+          parent_id: string | null;
+          sort_order: number;
+          updated_at: string | null;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'tags';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       replace_selected_calendars_command_v1: {
         Args: {
@@ -2378,6 +2518,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2411,6 +2552,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2558,6 +2700,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2640,6 +2783,7 @@ export type Database = {
           skipped_at: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -2679,6 +2823,7 @@ export type Database = {
           plan_id: string | null;
           source: string;
           start_at: string;
+          tag_id: string | null;
           title: string;
           updated_at: string;
           user_id: string;

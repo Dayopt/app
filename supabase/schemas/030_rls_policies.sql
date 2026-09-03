@@ -49,7 +49,9 @@
 --   effective 権限の canonical audit は private.timeblock_effective_write_privileges_v1
 --     （`pnpm rls:snapshot` が読み、1 行でも返れば生成を止める）
 --   records の auto_migrated 行は authenticated から変更不可
--- ■ tags: 削除済み（20260903120000_drop_legacy_tags_model.sql、#2175）
+-- ■ tags:
+--   SELECT/INSERT/DELETE: user_id = auth.uid()
+--   UPDATE: USING user_id = auth.uid(), WITH CHECK user_id = auth.uid()
 -- ■ entry_tags: 削除済み（20260415000000_inline_entry_tag_id.sql）
 -- ■ user_settings:
 --   SELECT/INSERT/DELETE: user_id = auth.uid()

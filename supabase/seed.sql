@@ -98,25 +98,15 @@ INSERT INTO public.user_settings (user_id, timezone, time_format, week_starts_on
 VALUES ('00000000-0000-0000-0000-000000000001', 'Asia/Tokyo', '24h', 1, 60);
 
 -- ============================================================
--- カテゴリー / アクティビティ（3構造モデル。#2162 で tags を置き換えたもの）
+-- タグ（5つの基本カテゴリ）
 -- ============================================================
--- 旧 seed は tags だけを作っており activities / categories が 0 行だったため、
--- ローカルと PR Preview の開発データが「分類なし」の状態だった（#2175 で修正）。
--- 旧 tags の dev:api / dev:frontend という prefix 表現は、そのまま
--- カテゴリー「開発」配下の 2 アクティビティへ展開する。
 
-INSERT INTO public.categories (id, user_id, name, color) VALUES
-  ('c0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '開発', 'blue'),
-  ('c0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '仕事', 'orange'),
-  ('c0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '自己投資', 'green'),
-  ('c0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'プライベート', 'pink');
-
-INSERT INTO public.activities (id, user_id, category_id, name) VALUES
-  ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', 'API開発'),
-  ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', 'フロントエンド開発'),
-  ('a0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000002', 'ミーティング'),
-  ('a0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003', '学習'),
-  ('a0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000004', 'プライベート');
+INSERT INTO public.tags (id, user_id, name, color, sort_order) VALUES
+  ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'dev:api',      'blue',   0),
+  ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'dev:frontend',  'indigo', 1),
+  ('a0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'meeting',       'orange', 2),
+  ('a0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'learning',      'green',  3),
+  ('a0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001', 'personal',      'pink',   4);
 
 -- ============================================================
 -- Plan / Record（2週間分: 今日を基準に14日前〜今日）
@@ -129,7 +119,7 @@ DECLARE
   v_date DATE;
   v_plan_id UUID;
   v_dow INT;
-  v_activity_ids UUID[] := ARRAY[
+  v_tag_ids UUID[] := ARRAY[
     'a0000000-0000-0000-0000-000000000001',
     'a0000000-0000-0000-0000-000000000002',
     'a0000000-0000-0000-0000-000000000003',
@@ -143,96 +133,96 @@ BEGIN
 
     IF v_dow NOT IN (0, 6) THEN
       -- 平日: 朝の集中タイム (9:00-11:00) → dev:api
-      INSERT INTO public.plans (id, user_id, title, start_at, end_at, activity_id)
+      INSERT INTO public.plans (id, user_id, title, start_at, end_at, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'API開発',
         (v_date || ' 09:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
-        v_activity_ids[1])
+        v_tag_ids[1])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, activity_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'API開発',
         (v_date || ' 09:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
-        'from_plan', v_activity_ids[1]
+        'from_plan', v_tag_ids[1]
       );
 
       -- 午前ミーティング (11:00-12:00)
-      INSERT INTO public.plans (id, user_id, title, start_at, end_at, activity_id)
+      INSERT INTO public.plans (id, user_id, title, start_at, end_at, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'チームスタンドアップ',
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:30:00')::TIMESTAMPTZ,
-        v_activity_ids[3])
+        v_tag_ids[3])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, activity_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'チームスタンドアップ',
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:30:00')::TIMESTAMPTZ,
-        'from_plan', v_activity_ids[3]
+        'from_plan', v_tag_ids[3]
       );
 
       -- 午後のフロントエンド開発 (13:00-15:00)
-      INSERT INTO public.plans (id, user_id, title, start_at, end_at, activity_id)
+      INSERT INTO public.plans (id, user_id, title, start_at, end_at, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'UIコンポーネント実装',
         (v_date || ' 13:00:00')::TIMESTAMPTZ,
         (v_date || ' 15:00:00')::TIMESTAMPTZ,
-        v_activity_ids[2])
+        v_tag_ids[2])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, activity_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, 'UIコンポーネント実装',
         (v_date || ' 13:00:00')::TIMESTAMPTZ,
         (v_date || ' 15:00:00')::TIMESTAMPTZ,
-        'from_plan', v_activity_ids[2]
+        'from_plan', v_tag_ids[2]
       );
 
       -- 午後の学習 (15:30-16:30) — 隔日
       IF i % 2 = 0 THEN
-        INSERT INTO public.plans (id, user_id, title, start_at, end_at, activity_id)
+        INSERT INTO public.plans (id, user_id, title, start_at, end_at, tag_id)
         VALUES (gen_random_uuid(), v_user_id, 'TypeScript勉強会',
           (v_date || ' 15:30:00')::TIMESTAMPTZ,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
-          v_activity_ids[4])
+          v_tag_ids[4])
         RETURNING id INTO v_plan_id;
         INSERT INTO public.records (
-          user_id, plan_id, title, start_at, end_at, source, activity_id
+          user_id, plan_id, title, start_at, end_at, source, tag_id
         ) VALUES (
           v_user_id, v_plan_id, 'TypeScript勉強会',
           (v_date || ' 15:30:00')::TIMESTAMPTZ,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
-          'from_plan', v_activity_ids[4]
+          'from_plan', v_tag_ids[4]
         );
       END IF;
 
       -- 突発タスク（一部の日のみ）は Record だけを作る
       IF i % 3 = 0 THEN
         INSERT INTO public.records (
-          user_id, title, start_at, end_at, activity_id
+          user_id, title, start_at, end_at, tag_id
         ) VALUES (v_user_id, '緊急バグ対応',
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
           (v_date || ' 17:30:00')::TIMESTAMPTZ,
-          v_activity_ids[1]);
+          v_tag_ids[1]);
       END IF;
 
     ELSE
       -- 週末: 個人タスク (10:00-12:00)
-      INSERT INTO public.plans (id, user_id, title, start_at, end_at, activity_id)
+      INSERT INTO public.plans (id, user_id, title, start_at, end_at, tag_id)
       VALUES (gen_random_uuid(), v_user_id, '個人プロジェクト',
         (v_date || ' 10:00:00')::TIMESTAMPTZ,
         (v_date || ' 12:00:00')::TIMESTAMPTZ,
-        v_activity_ids[5])
+        v_tag_ids[5])
       RETURNING id INTO v_plan_id;
       INSERT INTO public.records (
-        user_id, plan_id, title, start_at, end_at, source, activity_id
+        user_id, plan_id, title, start_at, end_at, source, tag_id
       ) VALUES (
         v_user_id, v_plan_id, '個人プロジェクト',
         (v_date || ' 10:00:00')::TIMESTAMPTZ,
         (v_date || ' 12:00:00')::TIMESTAMPTZ,
-        'from_plan', v_activity_ids[5]
+        'from_plan', v_tag_ids[5]
       );
     END IF;
   END LOOP;
