@@ -185,22 +185,37 @@ function matchOneOrTwoStars(token) {
 
 const MATCHERS = PROTECTED_PATH_GLOBS.map((glob) => ({ glob, re: globToRegExp(glob) }));
 
+const AUDIT_CONTRACT_SET = new Set(PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS);
+
 /**
+ * `auditContract` は「この PR が audit contract そのものを変えたか」。
+ *
+ * `production-config-audit.yml` の `pull_request_target` は #2571 で `paths` filter を
+ * 付けたが、GitHub の `paths` は **changed files が 3,000 件を超えると、一致するファイルが
+ * 先頭 3,000 件に無い場合に workflow を起動しない**（公式仕様）。それだけに依存すると、
+ * 巨大な PR が contract を 1 行変えた時に trusted-head checkpoint を素通りしうる。
+ * `finish-branch.sh` はここの値を見て、contract 変更 PR には commit status
+ * `Production Config Audit` の success（= trusted dispatch 実行済み）を **workflow が
+ * 起動したかどうかと無関係に** 要求する。
+ *
  * @param {string[]} changedFiles
- * @returns {{ required: true, reason: string } | { required: false }}
+ * @returns {{ required: boolean, reason?: string, auditContract: boolean }}
  */
 export function resolveProtectedPathGate(changedFiles) {
   const files = changedFiles.map((f) => f.trim()).filter(Boolean);
 
+  // rename の旧 path（`previous_filename`）も呼び出し側が渡してくるため、両側が一致する。
+  const auditContract = files.some((file) => AUDIT_CONTRACT_SET.has(file));
+
   for (const file of files) {
     for (const matcher of MATCHERS) {
       if (matcher.re.test(file)) {
-        return { required: true, reason: matcher.glob };
+        return { required: true, reason: matcher.glob, auditContract };
       }
     }
   }
 
-  return { required: false };
+  return { required: false, auditContract };
 }
 
 // --- CLI -------------------------------------------------------------

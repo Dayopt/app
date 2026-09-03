@@ -703,6 +703,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   REVIEW_GATE_REQUIRED="false"
   REVIEW_GATE_REASONS=()
 
+  # 「audit contract を変えたか」は unknown を既定にする。判定できない経路（files 一覧の
+  # 取得失敗 / 3,000 件 truncation / node 不在）では contract 変更を否定できないため、
+  # 下の trusted-head checkpoint は fail closed 側（status success を要求）へ倒す。
+  AUDIT_CONTRACT_CHANGED="unknown"
+
   if [[ -z "$CHANGED_FILES" ]]; then
     REVIEW_GATE_REQUIRED="true"
     REVIEW_GATE_REASONS+=("changed files unavailable, fail closed")
@@ -715,6 +720,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
       REVIEW_GATE_REQUIRED="true"
       REVIEW_GATE_REASONS+=("protected-path-gate.mjs failed, fail closed")
     else
+      AUDIT_CONTRACT_CHANGED="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.auditContract // "unknown"' 2>/dev/null || echo unknown)"
       GATE_JSON_REQUIRED="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.required' 2>/dev/null || echo "")"
       case "$GATE_JSON_REQUIRED" in
         true)
@@ -887,6 +893,44 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     echo "review gate: required (${REVIEW_GATE_REASON_JOINED})" >&2
   else
     echo "review gate: not required" >&2
+  fi
+
+  # ── audit contract 変更 PR は trusted dispatch の status を必ず要求する（#2571）──
+  #
+  # `production-config-audit.yml` の `pull_request_target` は 2026-09-03 に contract 4 path の
+  # `paths` filter を得た（Actions の削減。実測 85 run / 2.1 日）。しかし **GitHub の `paths` は
+  # changed files が 3,000 件を超えると、一致するファイルが先頭 3,000 件に無い場合に workflow を
+  # 起動しない**（公式仕様）。workflow の起動有無だけに checkpoint を委ねると、巨大な PR が
+  # contract を 1 行変えた時に「PR code に contract 変更を自己検証させない」という設計が
+  # 素通りする。
+  #
+  # そこで **workflow が起動したかどうかと無関係に**、contract を変えた PR には commit status
+  # `Production Config Audit` の success（= trusted dispatch 実行済み）を要求する。ここが見る
+  # `$CHANGED_FILES` は `--paginate` + rename の両側 + 件数一致の fail closed を通った後の値で、
+  # `paths` より強い（§影響範囲を判定）。これで checkpoint は `paths` の意味論から独立する。
+  #
+  # **残る穴と、その補償**: changed files を列挙できなかった時（3,000 件 truncation / API 失敗 /
+  # node 不在）は contract 変更の有無を判定できない（`unknown`）。ここで status を要求すると、
+  # contract と無関係な PR まで API の一時失敗で trusted dispatch を強いられるため要求しない。
+  # 代わりにその経路は既に `REVIEW_GATE_REQUIRED=true`（changed files unavailable, fail closed）
+  # へ倒れており、**内製 marker と Codex の独立 2 系統が現 HEAD の diff を読む**ことが必須になる。
+  # 3,000 件超の PR が contract を 1 行変える、という組み合わせでのみ trusted dispatch が
+  # checkpoint から外れ、2 系統のクロスレビューが代替する。
+  if [[ "$AUDIT_CONTRACT_CHANGED" == "true" ]]; then
+    AUDIT_STATUS_OK="$(printf '%s' "$ROLLUP" | jq -r '
+      any(.[];
+        (.__typename // "") == "StatusContext"
+        and (.context // "") == "Production Config Audit"
+        and ((.state // "") | ascii_downcase) == "success")' 2>/dev/null || echo "")"
+    if [[ "$AUDIT_STATUS_OK" != "true" ]]; then
+      error "この PR は audit contract（audit script / production-build-gate / workflow 自身）を変更しています。"
+      error "commit status「Production Config Audit」が現 HEAD で success になっていません。"
+      error "PR code に contract 変更を自己検証させないため、trusted dispatch が必要です:"
+      error "  gh workflow run production-config-audit.yml --ref $BRANCH"
+      error "完了後に再実行してください（status は SHA ごとなので push のたびに要ります）。"
+      exit 1
+    fi
+    info "audit contract の trusted dispatch を確認しました（status「Production Config Audit」= success）。"
   fi
 
   # Issue Review 証跡が無効な linked issue があれば、要約行を出したうえで停止する。
@@ -1207,7 +1251,7 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     | ($step1 | map(select(reviewed_sha != ""))) as $step2
     | ($step2 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step3
     | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length),
-        latest: ($step1 | last | (.body // "") | split("\n")[0] | .[0:200]) }' 2>/dev/null || true)"
+        latest: ($step1 | last | (.body // "") | gsub("\\s+"; " ") | .[0:300]) }' 2>/dev/null || true)"
 
   CODEX_COMMENT_COUNT="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 

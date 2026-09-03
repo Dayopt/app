@@ -2393,7 +2393,9 @@ describe('層 3 coverage の不変条件（#2574）', () => {
       impactAffected: { web: true, product: false },
     }).catch((thrown: Error) => thrown)) as ReleaseError;
 
-    expect(error.message).toMatch(/product/);
+    // `/product/` は文中の `production` にも一致してしまい、project が名指しされて
+    // いることを何も担保しない。名指し部分をそのまま突き合わせる。
+    expect(error.message).toContain('product: the impact job reported unaffected');
     expect(error.message).toMatch(/layer 3/i);
     // **1 件も promote していない。** 検証済みの web も含めて run 全体を止める
     // （片側だけ promote すると runbook ケース0-B の「部分リリース」を自作するうえ、
@@ -2425,6 +2427,64 @@ describe('層 3 coverage の不変条件（#2574）', () => {
     await expect(
       release({ fetchImpl: world.fetchImpl, force: true, impactAffected: {} }),
     ).resolves.toMatchObject({ status: 'promoted' });
+    // `status: 'promoted'` は promote 0 件でも成立しうる（Auto-assign で先に配信済み）。
+    // force 経路で promote 自体が行われなくなる書き換えを捕まえるため実 promote を見る。
+    expect(world.promoted()).toEqual(['web', 'product']);
+  });
+
+  it('待機中に外部 promote された project も検査対象にする（pending ではなく targets で見る）', async () => {
+    // **この PR が塞ぐ穴そのもの。** 待機中に人 / Auto-assign が同じ candidate を
+    // 先に live にすると、その project は `pending` から外れる（二重 promote を
+    // 避けるため）。検査を `pending` に対して行うと、層 3 未実行の build が
+    // stabilize を通って success になり、tag gate まで素通りする。
+    // 判定は必ず `targets`（= decisions）で行う。
+    const world = createReleaseWorld({
+      webAliasSequence: ['dpl_web_old', 'dpl_web_new'],
+    });
+
+    const error = (await release({
+      fetchImpl: world.fetchImpl,
+      impactAffected: { web: false, product: true },
+    }).catch((thrown: Error) => thrown)) as ReleaseError;
+
+    expect(error.message).toContain('web: the impact job reported unaffected');
+    // promote は 1 件も走っていない。
+    expect(world.pointCalls).toEqual([]);
+    // このシナリオでは manifest は `impact-mismatch` ではなく `failed` になる。
+    // wrapper の catch が最後に live を読み直し、待機中に外部 promote で production が
+    // 実際に動いていたこと（deviation）を検出して上書きするため。**production が動いた
+    // 事実の方が復旧判断には重い**ので、この上書きは正しい（runbook は `failed` を
+    // 「`action: promoted` の project を戻す」経路として扱うが、ここでは promoted が
+    // 0 件なので戻す対象も無い）。
+    expect(error.manifest?.status).toBe('failed');
+    expect(error.manifest?.projects).toContainEqual(
+      expect.objectContaining({ name: 'web', impactAffected: false }),
+    );
+  });
+
+  it('impactAffected を渡さない呼び出しは fail closed（既定値が fail open へ倒れていない）', async () => {
+    // `release()` wrapper が既定を注入するため、wrapper 経由では
+    // `runProductionRelease` の default parameter を検査できない。
+    // 「既定を true 側にすると配線落ちで層 3 ゼロの promote が通る」という
+    // 実装コメントの契約を、wrapper を通さない直接呼び出しで固定する。
+    const world = createReleaseWorld();
+    await expect(
+      runProductionRelease({
+        sha: SHA,
+        token: TOKEN,
+        teamId: 'team',
+        sleepImpl: noSleep,
+        nowImpl: () => 0,
+        logger: noop,
+        bypassSecrets: { web: BYPASS, product: BYPASS },
+        diffFilesImpl: AFFECTS_BOTH,
+        headShaImpl: () => SHA,
+        isAncestorImpl,
+        fetchImpl: world.fetchImpl,
+        // impactAffected は渡さない
+      }),
+    ).rejects.toThrow(/layer 3/i);
+    expect(world.pointCalls).toEqual([]);
   });
 
   it('impact が affected・release が unaffected の向きでは止めない（superset は正常）', async () => {

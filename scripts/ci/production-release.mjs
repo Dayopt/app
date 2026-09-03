@@ -1352,9 +1352,11 @@ export async function runProductionRelease({
       throw Object.assign(
         new ReleaseError(
           `Refusing to promote ${sha}: ${unverified.map((project) => project.name).join(', ')} ` +
-            `would go out without layer 3. Production was left untouched; re-run promote after ` +
-            `production settles so the impact job re-baselines against the current live ` +
-            `deployment. (${detail})`,
+            `would go out without layer 3. Production was left untouched. Re-run the WHOLE ` +
+            `workflow once production has settled (\`gh workflow run promote.yml --ref main\`, ` +
+            `or "Re-run all jobs") so the impact job re-baselines against the current live ` +
+            `deployment. Do NOT use "Re-run failed jobs": it reuses the impact job's existing ` +
+            `outputs, so the stale verdict comes straight back and this fails again. (${detail})`,
         ),
         { manifest: manifestFor('impact-mismatch') },
       );

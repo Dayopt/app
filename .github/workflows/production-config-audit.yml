@@ -32,6 +32,14 @@ name: Production Config Audit
 #     `scripts/__tests__/protected-path-gate-contract.test.ts` が
 #     「各 glob が tracked file に 1 件以上一致する」ことを CI で毎回検査するので先に落ちる
 #
+# **`paths` だけに checkpoint を委ねない。** GitHub の `paths` には「changed files が
+# 3,000 件を超え、一致するファイルが先頭 3,000 件に無い場合は workflow を起動しない」
+# という公式仕様がある。そこで `finish-branch.sh` が **workflow の起動有無と独立に**、
+# contract を変えた PR へ commit status `Production Config Audit` の success（= trusted
+# dispatch 実行済み）を要求する（`protected-path-gate.mjs` の `auditContract`）。
+# そちらが見る変更ファイル一覧は `--paginate` + rename の両側 + 件数一致の fail closed を
+# 通っており、`paths` より強い。
+#
 # `paths` のリストは `PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS`
 # （`scripts/ci/protected-path-gate.mjs`）および下の grep 正規表現と同じ 4 path。
 # 3 箇所の drift は `protected-path-gate-contract.test.ts` が固定する。

@@ -479,7 +479,14 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   自己検証させないため）。**2026-09-03（#2571）以降、`pull_request_target` にはこの 4 path の
   `paths` filter が付いており、そもそも contract 変更 PR でしか workflow が起動しない**
   （それ以外の PR では check run も status も存在しないので、免除の判定自体が走らない）。
-  live な env drift の検出は日次 cron・`push:main`・promote 経路の `runProductionConfigAudit` が担う。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  live な env drift の検出は日次 cron・`push:main`・promote 経路の `runProductionConfigAudit` が担う。
+  **ただし checkpoint を `paths` だけに委ねてはいない。** GitHub の `paths` には「changed files が
+  3,000 件を超え、一致するファイルが先頭 3,000 件に無い場合は workflow を起動しない」という公式仕様が
+  あるため、`finish-branch.sh` は **workflow の起動有無と独立に**、contract を変えた PR へ status
+  `Production Config Audit` の success を要求する（判定は `protected-path-gate.mjs` の `auditContract`。
+  変更ファイル一覧は `--paginate` + rename の両側 + 件数一致の fail closed を通った後の値で `paths` より強い）。
+  一覧そのものを取得できなかった PR では contract 変更の有無を判定できないため、この要求は出さない代わりに
+  `REVIEW_GATE_REQUIRED` が fail closed で立ち、内製 marker と Codex の独立 2 系統が必須になる。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
   の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
   success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
   畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**

@@ -233,11 +233,14 @@ describe('release workflow contract', () => {
     // live が Instant Rollback で後退すると release 側（T1）だけが affected になり、
     // 層 3 未実行の project を promote しうる（#2574）。script が T0 の verdict を
     // 読めるよう、同じ値を step env でも渡す。
-    const releaseStep = releaseJob.slice(
-      releaseJob.indexOf('Wait, smoke, and promote Production'),
-      releaseJob.indexOf('Publish Production Release status'),
-    );
-    expect(releaseStep).not.toBe('');
+    // **両端を個別に確認する。** どちらかの step 名が変わると indexOf が -1 を返し、
+    // slice(start, -1) は「job の末尾まで」へ黙って広がる。そうなると配線を別 step へ
+    // 移しても全 assert が通ってしまう（`not.toBe('')` では捕まらない）。
+    const stepStart = releaseJob.indexOf('Wait, smoke, and promote Production');
+    const stepEnd = releaseJob.indexOf('Publish Production Release status');
+    expect(stepStart).toBeGreaterThan(-1);
+    expect(stepEnd).toBeGreaterThan(stepStart);
+    const releaseStep = releaseJob.slice(stepStart, stepEnd);
     // 出力キーと env 名は index で 1:1 対応する（片方だけ改名する事故を塞ぐ）。
     expect(IMPACT_ENV_VARS).toHaveLength(IMPACT_OUTPUT_KEYS.length);
 
