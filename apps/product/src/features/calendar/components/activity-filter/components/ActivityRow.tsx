@@ -112,7 +112,13 @@ export function ActivityRow({
             // ここで opacity を足すと二重に薄くなる。地色だけ変える
             isDragging && 'bg-state-dragged',
           )}
-          onClick={() => onOpenPopover(activity.id)}
+          onClick={(event) => {
+            // メニュー項目のクリックは行まで波及させない。Radix の portal でも
+            // React の合成イベントはコンポーネントツリーを遡るため、素通しだと
+            // 項目を押すたびにクイック作成ポップオーバーが裏で開く
+            if ((event.target as HTMLElement).closest('[role="menu"]')) return;
+            onOpenPopover(activity.id);
+          }}
           {...dragProps}
         >
           {/* アクティビティ行にアイコンは出さない（2026-08-18 User 指示）。
