@@ -9,6 +9,29 @@
 
 const HEAD_SHA_RE = /^[0-9a-f]{40}$/;
 
+/**
+ * 内製クロスレビュー証跡の commit status context（#2562）。
+ *
+ * 証跡の材料を「Main が自由に書く PR コメント」から commit status へ移した。
+ * SHA 束縛が `statuses/{sha}` というリソースの構造で保証され、同じ context への
+ * 再投稿が上書きになるため、コメント方式が生んでいた 3 つの事故クラス
+ * （zerolike 判定の破綻 / 取得窓に残る壊れた marker / 短縮 SHA 手打ちの捏造）が
+ * 構造的に消える。
+ */
+export const INTERNAL_REVIEW_STATUS_CONTEXT = 'dayopt/internal-review';
+
+/** GitHub commit status の description 上限（超過分は API 側で切られる）。 */
+export const STATUS_DESCRIPTION_MAX_LENGTH = 140;
+
+/**
+ * 人が読む summary コメントの marker。**gate は読まない**（#2562）。
+ *
+ * 旧 `[internal-review]` から名前を変えてあるのは、gate が読む証跡と分析用の
+ * 情報コメントを取り違えないため。`scripts/tasks/trace.mjs` は role 別 findings
+ * 内訳をここから読む（分析と gate の分離）。
+ */
+export const REVIEW_SUMMARY_MARKER = '[review-summary]';
+
 export interface MarkerInput {
   /** `gh pr view --json headRefOid` で実測した head SHA（40 桁 hex）。手入力は想定しない。 */
   headSha: string;
@@ -263,7 +286,7 @@ export function buildMarkerBody(input: MarkerInput): string {
   const p1Line = formatCountLine('P1', input.p1Count, input.p1Note);
   const p2Line = formatCountLine('P2', input.p2Count, input.p2Note);
 
-  const lines = ['[internal-review]', `head: ${input.headSha}`, `agent: ${input.agent.trim()}`];
+  const lines = [REVIEW_SUMMARY_MARKER, `head: ${input.headSha}`, `agent: ${input.agent.trim()}`];
 
   if (input.roleFindingsField && input.roleFindingsField.trim()) {
     lines.push(`findings: ${input.roleFindingsField.trim()}`);
@@ -282,4 +305,94 @@ export function buildMarkerBody(input: MarkerInput): string {
   }
 
   return lines.join('\n');
+}
+
+/**
+ * commit status の description。機械可読フィールドを**先頭に固定**する。
+ *
+ * 140 字 truncate で欠けるのが末尾（人が読む補足）だけになる順序にしてあり、
+ * gate が読む `p1` / `p2` / `fp` / `fpa` は必ず生き残る。
+ *
+ * - `fp`  : scope=protected の指紋。保護対象 path の一致だけで必須化された PR 用
+ * - `fpa` : scope=all の指紋。`review:full`（ラベル / linked issue 継承 / 判定不能で
+ *           fail closed）の PR 用。**2 つとも載せる**のは、生成側と gate 側で
+ *           「どちらの scope か」の判定が食い違っても、gate が自分の scope に
+ *           対応する値を選べるようにするため（食い違いを緩和側へ倒さない）
+ * - `coverage` : partial は「budget 逼迫で観点を打ち切った」自己申告（#2417）
+ */
+export function buildStatusDescription(input: {
+  p1Count: number;
+  p2Count: number;
+  fingerprintProtected: string;
+  fingerprintAll: string;
+  agent: string;
+  coverage: 'complete' | 'partial';
+}): string {
+  for (const [label, count] of [
+    ['p1', input.p1Count],
+    ['p2', input.p2Count],
+  ] as const) {
+    if (!Number.isInteger(count) || count < 0) {
+      throw new Error(`${label} は 0 以上の整数で指定してください: ${count}`);
+    }
+  }
+  for (const [label, value] of [
+    ['fp', input.fingerprintProtected],
+    ['fpa', input.fingerprintAll],
+  ] as const) {
+    if (!/^[0-9a-f]{16}$/.test(value)) {
+      throw new Error(`${label} は 16 桁 hex の指紋を渡してください: "${value}"`);
+    }
+  }
+  if (!input.agent.trim()) {
+    throw new Error('agent は必須です（実行した subagent 名、または docs-only）。');
+  }
+
+  // agent 値に空白と `,` 以外の区切りが混ざると gate 側の csv 解釈が崩れるため、
+  // description では空白を 1 つに畳む（marker 本文側の表記は変えない）。
+  const agents = input.agent.trim().replace(/\s+/g, ' ');
+
+  const description =
+    `p1=${input.p1Count} p2=${input.p2Count} ` +
+    `fp=${input.fingerprintProtected} fpa=${input.fingerprintAll} ` +
+    `coverage=${input.coverage} agents=${agents}`;
+
+  return description.slice(0, STATUS_DESCRIPTION_MAX_LENGTH);
+}
+
+/**
+ * 証跡を投稿する `gh api` コマンド 1 行を組み立てる。
+ *
+ * **生成と投稿は分けたままにする**（#2230 / #2562）。head SHA は CLI 側が
+ * `gh pr view --json headRefOid` で実測して URL へ埋め込み、Main が JSON から
+ * URL を手組みする経路は作らない。Main はこの 1 行を目視してから実行する。
+ */
+export function buildStatusPostCommand(input: {
+  headSha: string;
+  description: string;
+  targetUrl?: string;
+}): string {
+  if (!HEAD_SHA_RE.test(input.headSha)) {
+    throw new Error(`head SHA は 40 桁 hex を実測して渡してください: "${input.headSha}"`);
+  }
+  if (!input.description.trim()) {
+    throw new Error('description が空です。');
+  }
+  if (input.description.length > STATUS_DESCRIPTION_MAX_LENGTH) {
+    throw new Error(
+      `description が ${STATUS_DESCRIPTION_MAX_LENGTH} 字を超えています（${input.description.length} 字）。`,
+    );
+  }
+
+  const args = [
+    'gh api --method POST',
+    `repos/{owner}/{repo}/statuses/${input.headSha}`,
+    '-f state=success',
+    `-f context='${INTERNAL_REVIEW_STATUS_CONTEXT}'`,
+    `-f description=${JSON.stringify(input.description)}`,
+  ];
+  if (input.targetUrl) {
+    args.push(`-f target_url=${JSON.stringify(input.targetUrl)}`);
+  }
+  return args.join(' \\\n  ');
 }

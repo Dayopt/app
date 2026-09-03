@@ -37,7 +37,16 @@ export const CTX_MARKER = '<!-- ctx-brief -->';
 // ctx pack へ紛れ込むと、Main の判断が「独立レビュー」を経由せず reviewer の入力へ
 // 混入する。selectComments はこれらを常に除外する（--all-comments 指定時も除外 ──
 // bot 除外とは独立した懸念のため）。
-const OWN_MARKER_PREFIXES = [CTX_MARKER, '[internal-review]', '[codex-issue-review]'];
+// `[review-summary]` は #2562 でレビュー summary コメントの marker になった
+// （gate は読まない情報コメント）。旧 `[internal-review]` は過去 PR に残るため
+// 併記する。ここは「Main 自身が書いた marker コメントを ctx から除外する」ための
+// 一覧で、gate の判定材料ではない。
+const OWN_MARKER_PREFIXES = [
+  CTX_MARKER,
+  '[review-summary]',
+  '[internal-review]',
+  '[codex-issue-review]',
+];
 
 /** body が Main 自身の marker / brief コメントで始まるか。 */
 function isOwnMarkerComment(body) {
