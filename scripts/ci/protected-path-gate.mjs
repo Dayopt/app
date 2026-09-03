@@ -137,6 +137,27 @@ export const PROTECTED_PATH_GLOBS = [
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
+  // promote.yml は production domain を切り替える唯一の経路で、2026-09-03 以降は
+  // main merge がそれを自動で起動する（層 3 → smoke → promote → rollback）。
+  // gate の `if:` 式を 1 つ緩めるだけで未検証の main が本番へ出るが、その変更は
+  // CI では green のまま通り、promote 後の revert では届いてしまったものを
+  // 取り戻せない（判定基準「外部契約 or 不可逆」の両方に当たる）。
+  // **nightly.yml は含めない** —— 層 3 撤去後は sweep / replica / backup だけで、
+  // 「nightly.yml は marker を要求しない」既存契約（finish-branch.test.ts）を
+  // 反転させない。
+  '.github/workflows/promote.yml',
+  // promote.yml は配線にすぎず、「どの suite が要るか」「この SHA を promote するか」
+  // の判断はこの 2 つの script が持つ。workflow だけを保護対象にすると、判断側を
+  // 触る PR がクロスレビュー無しで通る（例: 影響判定の catch を fail open へ倒す）。
+  // production-release.mjs は元から保護対象外だったが、2026-09-03 の merge 連動化で
+  // 「人が dispatch した時だけ動く」から「全 merge で無人実行される」へ変わったため、
+  // 判定基準（外部契約 or 不可逆）に実際に該当するようになった。
+  'scripts/ci/release-impact.mjs',
+  'scripts/ci/production-release.mjs',
+  // 上 3 つの guardrail である contract test 自身（#2503 / #2546 と同じ判断）。
+  // 同じ PR で保護対象と test を同時に弱められる経路を塞ぐ。
+  'scripts/ci/release-workflow-contract.test.ts',
+  'scripts/ci/release-impact.test.ts',
   // この2つの drift 検出テスト自身がガードレール（#2503）。削除・skip・
   // 弱体化されても保護対象 path の選定にも他の test にも現れず、将来の glob /
   // privacy 境界の縮退を恒久的に検出できなくなる（Codex 指摘 #2546）。
