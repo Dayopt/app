@@ -1982,23 +1982,52 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(status).toBe(0);
   });
 
-  it('変更ファイル一覧の取得に失敗したら fail closed で marker を要求する（marker 無しで止める）', () => {
+  it('変更ファイル一覧の取得に失敗したら trusted dispatch を要求する（#2571 / #2586）', () => {
+    // 一覧が取れないと audit contract を変更したかどうか判定できない。contract 変更を
+    // 否定できない以上、trusted-head checkpoint を省略する理由が無い（fail closed）。
+    // Codex と architecture-guard の両系統から同じ指摘を受けて strict 側へ倒した。
     const { status, stderr } = runScript(greenRollup(), {
       filesUnavailable: true,
       threads: [],
       reviewEvidence: { comments: [] },
     });
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
+    expect(stderr).toContain('audit contract を変更したか判定できませんでした');
+    expect(stderr).toContain('gh workflow run production-config-audit.yml');
+    expect(status).toBe(1);
+  });
+
+  it('一覧取得に失敗しても trusted dispatch 済みなら marker gate まで進む', () => {
+    // checkpoint を通した先で、従来どおり marker を要求することを保つ
+    // （checkpoint が marker gate を覆い隠していないことの確認）。
+    const { status, stderr } = runScript(
+      [
+        ...greenRollup(),
+        statusContext('Production Config Audit', 'SUCCESS', '2026-09-03T00:25:36Z'),
+      ],
+      {
+        filesUnavailable: true,
+        threads: [],
+        reviewEvidence: { comments: [] },
+      },
+    );
+    expect(stderr).toContain('audit contract の trusted dispatch を確認しました');
     expect(stderr).toContain('内製クロスレビューの痕跡がありません');
     expect(status).toBe(1);
   });
 
-  it('変更ファイル一覧の取得に失敗しても marker があれば通す（fail closed だが実施済みなら merge できる）', () => {
-    const { status, stderr } = runScript(greenRollup(), {
-      filesUnavailable: true,
-      threads: [],
-      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
-    });
+  it('一覧取得に失敗しても trusted dispatch と marker が揃えば通す', () => {
+    const { status, stderr } = runScript(
+      [
+        ...greenRollup(),
+        statusContext('Production Config Audit', 'SUCCESS', '2026-09-03T00:25:36Z'),
+      ],
+      {
+        filesUnavailable: true,
+        threads: [],
+        reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+      },
+    );
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
     expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
     expect(status).toBe(0);
@@ -2151,6 +2180,76 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
     });
     expect(stderr).toContain('review gate: required (matched apps/product/src/lib/stripe/**)');
+  });
+
+  // #2571: `pull_request_target` に `paths` filter を付けたため、workflow の起動有無に
+  // trusted-head checkpoint を委ねられなくなった（GitHub の `paths` は changed files が
+  // 3,000 件を超えると、一致するファイルが先頭 3,000 件に無い場合に workflow を起動しない
+  // という公式仕様がある）。merge gate 側で「contract を変えた PR は status success を
+  // 必ず持つ」を、workflow が起動したかどうかと独立に要求する。
+  describe('audit contract 変更 PR の trusted dispatch 要求（#2571）', () => {
+    it.each([
+      ['scripts/ci/production-config-audit.mjs'],
+      ['apps/product/production-build-gate.mjs'],
+      ['apps/web/production-build-gate.mjs'],
+      ['.github/workflows/production-config-audit.yml'],
+    ])('%s を変えた PR は status success が無ければ止まる', (file) => {
+      // guard の check run が **一切存在しない** rollup（= paths filter で workflow が
+      // 起動しなかった状態）を渡す。従来の免除ロジックは「guard の failure を消す」形
+      // なので、この状態では何も要求できず素通りしていた。
+      const { status, stderr } = runScript(greenRollup(), {
+        files: [file],
+        threads: [],
+        reviewEvidence: { comments: [] },
+      });
+      expect(stderr).toContain('audit contract');
+      expect(stderr).toContain('gh workflow run production-config-audit.yml');
+      expect(status).toBe(1);
+    });
+
+    it('rename の移動元が contract path でも要求する', () => {
+      // contract を別 path へ動かす PR。`paths` は base の workflow 定義（旧 path）で
+      // 評価されるため rename 旧 path を拾う保証が無いが、こちらは
+      // `previous_filename` も含めた一覧を見るので確実に捕まえる。
+      const { status, stderr } = runScript(greenRollup(), {
+        files: ['scripts/ci/production-config-audit-v2.mjs'],
+        previousFiles: ['scripts/ci/production-config-audit.mjs'],
+        threads: [],
+        reviewEvidence: { comments: [] },
+      });
+      expect(stderr).toContain('gh workflow run production-config-audit.yml');
+      expect(status).toBe(1);
+    });
+
+    it('status success があれば checkpoint を通過する（trusted dispatch 実行済み）', () => {
+      const { stderr } = runScript(
+        [
+          ...greenRollup(),
+          statusContext('Production Config Audit', 'SUCCESS', '2026-09-03T00:25:36Z'),
+        ],
+        {
+          files: ['scripts/ci/production-config-audit.mjs'],
+          threads: [],
+          reviewEvidence: { comments: [] },
+        },
+      );
+      expect(stderr).toContain('audit contract の trusted dispatch を確認しました');
+      expect(stderr).not.toContain('gh workflow run production-config-audit.yml');
+      // checkpoint は通り、この PR は保護対象なので marker gate 側で止まる。
+      expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    });
+
+    it('audit contract を変えていない PR には要求しない', () => {
+      // 保護対象ではあるが audit contract ではない path。ここまで要求を広げると、
+      // 無関係な PR が毎回 trusted dispatch を強いられる。
+      const { stderr } = runScript(greenRollup(), {
+        files: ['supabase/migrations/20260903000000_x.sql'],
+        threads: [],
+        reviewEvidence: { comments: [] },
+      });
+      expect(stderr).not.toContain('gh workflow run production-config-audit.yml');
+      expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    });
   });
 });
 
@@ -2554,14 +2653,79 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
           { author: 't3-nico', body: internalReviewMarkerBody() },
           {
             author: CODEX_LOGIN,
-            body: 'Codex encountered an error while reviewing this PR: usage limit reached. Please retry later.',
+            body: 'You have reached your Codex usage limits for code reviews. See the dashboard.',
           },
         ],
         codexReviews: [],
       },
     });
     expect(stderr).toContain('`Reviewed commit` 行がありません');
-    expect(stderr).toContain('usage limit');
+    // **実際のコメント本文**を出す（#2584）。以前はここが固定文言中の 'usage limit' に
+    // 一致していただけで、本文と無関係に通る assertion だった。
+    expect(stderr).toContain('最新のコメント: You have reached your Codex usage limits');
+    expect(stderr).toContain('Codex の利用上限です');
+    expect(stderr).toContain('#2584');
+    expect(status).toBe(1);
+  });
+
+  it('usage limit 以外の応答では利用上限の案内を出さない（誤誘導しない）', () => {
+    // 上の test が固定文言ではなく本文由来であることを、反対向きからも固定する。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          { author: CODEX_LOGIN, body: 'Codex hit an internal error while reviewing this PR.' },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('最新のコメント: Codex hit an internal error');
+    expect(stderr).not.toContain('Codex の利用上限です');
+    expect(stderr).toContain('timeout / error 応答の可能性があります');
+    expect(status).toBe(1);
+  });
+
+  it('複数コメントでは最新 1 件を出し、制御文字を落とす', () => {
+    // `$step1 | last` を `first` に書き換えると「最新のコメント」という表示が嘘になる。
+    // また本文は外部 bot 由来の untrusted データを terminal へ出す唯一の経路なので、
+    // ANSI escape が素通りしないことを固定する。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          { author: CODEX_LOGIN, body: 'An older Codex response that is not evidence.' },
+          {
+            author: CODEX_LOGIN,
+            body: '\u001b[31mYou have reached your Codex usage limits\u001b[0m for code reviews.',
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    // 最新（末尾）の本文が出る。古い方ではない。
+    expect(stderr).toContain('You have reached your Codex usage limits');
+    expect(stderr).not.toContain('An older Codex response');
+    // ANSI escape は落ちている。
+    expect(stderr).not.toContain('\u001b');
+    expect(stderr).toContain('Codex の利用上限です');
+    expect(status).toBe(1);
+  });
+
+  it('利用上限の文言が本文の 2 行目以降でも検出する', () => {
+    // 実際の Codex 応答は複数行。1 行目だけを見ていると案内が黙って出なくなる。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          { author: 't3-nico', body: internalReviewMarkerBody() },
+          {
+            author: CODEX_LOGIN,
+            body: 'Codex review could not be completed.\n\nYou have reached your Codex usage limits for code reviews.',
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('Codex の利用上限です');
     expect(status).toBe(1);
   });
 

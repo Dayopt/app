@@ -227,6 +227,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] **修正を main へ merge すれば release gate は自動で再実行される**（`promote.yml` は `push: main` で起動、2026-09-03）。workflow を Disable している場合は先に Enable へ戻す
 - [ ] main HEAD をそのまま再試行するだけなら `gh workflow run promote.yml --ref main`。**`sha` input は廃止した**（2026-09-03）ので `-f sha=` は 422 で拒否される。対象は常にその run の commit で、古い SHA を本番へ戻すのは promote ではなく rollback（ケースC）
 - [ ] smoke が Deployment Protection で止まった場合は、対象 project の Protection Bypass for Automation と repository secret（`VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）を確認する
+- [ ] run summary が `would go out without layer 3` で止まっている場合は manifest の `status: impact-mismatch`。production は触られていないので、ケース0-B の該当項目を見る（対処は rollback ではなく再 run）
 
 #### ケース0-B: 片方だけ promote された（部分リリース）
 
@@ -238,6 +239,7 @@ promote は行われていないので、**Production domain は現行 SHA の�
 - [ ] run log で `rolled back to <deployment id>` を確認する
 - [ ] `MANUAL ROLLBACK REQUIRED` が出ている場合は自動 rollback も失敗している。メッセージ中の deployment id へ手動で戻す（ケースC の手順）
 - [ ] **まず manifest の `status` を見る。** `settings-drift` なら production は正しい SHA を配信しており、失敗の理由は `autoAssignCustomDomains` の復元だけ。**deployment は戻さず**、Vercel Dashboard で該当 project の Auto-assign を無効へ戻す（放置すると次の merge が gate を迂回する）
+- [ ] **`status: impact-mismatch` は promote が 0 件で production は無傷**（#2574）。層 3 の要否を決める impact job（run 開始時点の live SHA が基準）と、release の影響判定（promote 直前の live SHA が基準）は別時刻の基準を使うため、その間に Instant Rollback などで live が**後退**すると、層 3 を走らせていない project を promote しかける。それを検出して止めた状態。**deployment は戻さない。** 各 project の `affected`（release の判定）と `impactAffected`（impact の判定）の食い違いを見て、production が意図した deployment に落ち着いていることを確認してから `gh workflow run promote.yml --ref main` で **workflow 全体を** 再 run する（impact が現在の live を基準に再判定し、必要な層 3 が走る）。**「Re-run failed jobs」は使わない** —— 成功済みの impact job は再実行されず outputs がそのまま再利用されるため、古い verdict が戻ってきて同じ失敗を繰り返す。Actions UI から行うなら「Re-run all jobs」。**この状態は自己修復する** —— 次の merge でも同じ再判定が起きる
 - [ ] `status: failed` の場合、`action: promoted` の project が手動 rollback の対象。戻し先は同じ entry の `previousDeploymentId`。**`null` の場合は run 開始時点で domain が未割当だった**ので戻し先が manifest に無い。Deployments 履歴から直前に production を配信していた正常な deployment を選ぶ
 - [ ] `action: skipped` / `already-serving` の project はこの run が触っていない。**巻き添えで戻さない**
 - [ ] `action: moved-externally` は「この run の promote 後に**別の誰か**が production を動かし、release がそれを尊重して手を引いた」状態。`deploymentId` は他者が置いた deployment。**戻さない。** その deployment が意図したものかを本人に確認する（多くは緊急 hotfix）

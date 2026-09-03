@@ -33,8 +33,12 @@
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
  *   node scripts/ci/protected-path-gate.mjs apps/product/src/features/auth/foo.ts
  *
- * Output: `{"required": true, "reason": "<matched glob>"}` or
- * `{"required": false}`.
+ * Output: `{"required": true, "reason": "<matched glob>", "auditContract": <bool>}` or
+ * `{"required": false, "auditContract": <bool>}`.
+ *
+ * `auditContract` は「audit contract そのもの（audit script / production-build-gate /
+ * production-config-audit.yml）を変えたか」。`finish-branch.sh` が trusted dispatch の
+ * commit status を要求するかの判定に使う（#2571）。
  *
  * Design notes:
  * - Unknown paths are simply a non-match (they do not push the verdict
@@ -186,21 +190,48 @@ function matchOneOrTwoStars(token) {
 const MATCHERS = PROTECTED_PATH_GLOBS.map((glob) => ({ glob, re: globToRegExp(glob) }));
 
 /**
+ * audit contract の判定も **`PROTECTED_PATH_GLOBS` と同じ glob 意味論**で行う。
+ *
+ * 同じ 4 path のコピーは `paths` filter（glob）・workflow の self-change grep（正規表現）・
+ * この定数（`globToRegExp`）と、いずれもパターンとして解釈される。ここだけ完全一致にすると、
+ * 将来リストの 1 要素を glob へ畳んだ時（例: 3 つ目の app が増えて
+ * `apps/<app>/production-build-gate.mjs` のような形にする）に **他の 3 箇所は動き、契約 test も
+ * 通り、この判定だけが永久に false へ落ちて checkpoint がまるごと無効化される**。
+ */
+const AUDIT_CONTRACT_MATCHERS = PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS.map((glob) =>
+  globToRegExp(glob),
+);
+
+/**
+ * `auditContract` は「この PR が audit contract そのものを変えたか」。
+ *
+ * `production-config-audit.yml` の `pull_request_target` は #2571 で `paths` filter を
+ * 得たが、workflow が起動しない条件は `paths` の意味論だけではない（Actions の一時
+ * Disable、base 側の workflow 定義の破損、`paths` の書き間違い、そして changed files が
+ * 3,000 件を超えた時の GitHub 仕様）。`finish-branch.sh` はここの値を見て、contract 変更
+ * PR には commit status `Production Config Audit` の success（= trusted dispatch 実行済み）
+ * を **workflow が起動したかどうかと無関係に** 要求する。判定不能（変更ファイル一覧を
+ * 取得できない）な PR も同様に要求する側へ倒している。
+ *
  * @param {string[]} changedFiles
- * @returns {{ required: true, reason: string } | { required: false }}
+ * @returns {{ required: true, reason: string, auditContract: boolean }
+ *   | { required: false, auditContract: boolean }}
  */
 export function resolveProtectedPathGate(changedFiles) {
   const files = changedFiles.map((f) => f.trim()).filter(Boolean);
 
+  // rename の旧 path（`previous_filename`）も呼び出し側が渡してくるため、両側が一致する。
+  const auditContract = files.some((file) => AUDIT_CONTRACT_MATCHERS.some((re) => re.test(file)));
+
   for (const file of files) {
     for (const matcher of MATCHERS) {
       if (matcher.re.test(file)) {
-        return { required: true, reason: matcher.glob };
+        return { required: true, reason: matcher.glob, auditContract };
       }
     }
   }
 
-  return { required: false };
+  return { required: false, auditContract };
 }
 
 // --- CLI -------------------------------------------------------------
