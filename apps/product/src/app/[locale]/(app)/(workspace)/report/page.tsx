@@ -10,8 +10,12 @@ import { parseReportRangeParam } from '../_server/calendar-page-params';
  * `/report` — 4 章構成の 1 スクロールページ（#2575）。
  *
  * server prefetch はしない。期間の解決がユーザーの timezone と週開始曜日に依存するため、
- * サーバー（UTC）で組むと非 UTC ユーザーの週境界がずれる。`date` は文字列のまま
- * Composition Layer へ渡し、Date への変換は client 側で行う。
+ * サーバー（UTC）で組むと非 UTC ユーザーの週境界がずれる。
+ *
+ * **`?date=` はここで読まない。** 表示中の日付は `CalendarNavigationContext` が URL から
+ * 読んで保持し、`‹ ›` の移動もそこへ書く（`history.replaceState` 直書きなので server
+ * component は再描画されない）。`date` を prop で渡すと期間移動が画面に反映されなくなる。
+ * ここが受け取るのは、Context が持たない `range` だけ。
  */
 export const dynamic = 'force-dynamic';
 
@@ -29,21 +33,10 @@ export async function generateMetadata({
   };
 }
 
-const ANCHOR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ReportPage = async ({ searchParams }: { searchParams: Promise<{ range?: string }> }) => {
+  const { range } = await searchParams;
 
-const ReportPage = async ({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string; range?: string }>;
-}) => {
-  const { date, range } = await searchParams;
-
-  return (
-    <ReportViewClient
-      anchorDate={date !== undefined && ANCHOR_DATE_PATTERN.test(date) ? date : undefined}
-      granularity={parseReportRangeParam(range)}
-    />
-  );
+  return <ReportViewClient granularity={parseReportRangeParam(range)} />;
 };
 
 export default ReportPage;

@@ -252,7 +252,8 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     await expect(headline).toBeVisible({ timeout: 10_000 });
     await expect(headline).not.toHaveText('0:00');
 
-    // 凡例にアクティビティの属するカテゴリー行が出る（未分類なら「未分類」）。
-    await expect(allocation.getByText(/1:00|未分類/)).toBeVisible({ timeout: 10_000 });
+    // 凡例に 1 時間ぶんの行が出る。`未分類` を許容しない — カテゴリー紐付けを失う回帰で
+    // 全部が未分類へ落ちても緑になってしまうため（このアクティビティはカテゴリー付き）。
+    await expect(allocation.getByText('1:00')).toBeVisible({ timeout: 10_000 });
   });
 });

@@ -4,7 +4,7 @@ import { CalendarDays, PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useMemo } from 'react';
 
-import { formatCalendarDateParam, useCalendarNavigation } from '@/features/calendar';
+import { useCalendarNavigation } from '@/features/calendar';
 import {
   ReportBody,
   ReportHeader,
@@ -22,13 +22,6 @@ import { Link, useRouter } from '@dayopt/i18n/navigation';
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 
 interface ReportViewClientProps {
-  /**
-   * `?date=` の値（`YYYY-MM-DD`）。期間を含む任意の日。
-   *
-   * 省略時はユーザーの timezone での「今日」を使う。既定値の解決を client でやるのは、
-   * サーバー（UTC）で `new Date()` を取ると非 UTC ユーザーの日付が 1 日ずれるため。
-   */
-  anchorDate?: string | undefined;
   granularity: ReportGranularity;
 }
 
@@ -39,29 +32,31 @@ interface ReportViewClientProps {
  * （`useCalendarNavigation`）とルーティング（`useRouter`）をここが担う。review 側は
  * props のコールバックで受ける。
  *
+ * **表示中の日付の正本は `useCalendarNavigation().currentDate`**（`CalendarViewClient` と
+ * 同じ形）。`?date=` を server component から prop で受け取ってはいけない — `navigateToDate`
+ * は `history.replaceState` で URL を書くだけで Next.js の router を経由しないため、
+ * server component は再描画されず prop が更新されない。prop を正本にすると `‹ ›` を押しても
+ * 画面が変わらなくなる。Context は `/report` の `?date=` 読み取りと popstate 同期を
+ * 既に持っている（`CalendarNavigationContext` の `resolveCalendarProps`）。
+ *
  * `/report` は `hasOwnHeader` 扱い（`_shell/desktop-layout.tsx`）なので、shell が出していた
  * サイドバートグルとモバイルのアカウントボタンもここから `ReportHeader` の slot へ渡す
  * （`CalendarViewClient` が `CalendarLayout` に渡しているのと同じ形）。
  */
-export function ReportViewClient({
-  anchorDate: anchorDateParam,
-  granularity,
-}: ReportViewClientProps) {
+export function ReportViewClient({ granularity }: ReportViewClientProps) {
   const t = useTranslations();
-  const router = useRouter();
   const navigation = useCalendarNavigation();
+  const router = useRouter();
   const timezone = useUserPreferences((s) => s.timezone);
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
   const sidebar = useShellStore.use.sidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
 
-  // `?date=` が無いときの既定は「ユーザーの timezone での今日」だが、その timezone は
-  // client でしか分からない（SSR の `useUserPreferences` は UTC にフォールバックする）。
-  // サーバーの HTML と client の初回描画で日付がずれるとハイドレーションが壊れるため、
-  // 既定を使う経路だけマウント後まで描画を遅らせる。URL に日付があれば両者は一致するので
-  // 遅らせない。
+  // Context は SSR では `?date=` を読めず（`window` が無い）「今日」で始まるため、
+  // サーバーの HTML と client の初回描画がずれる。マウントまで骨組みを出して
+  // ハイドレーション不整合を避ける（`CalendarNavigationContext` の初期値解決と同じ制約）。
   const hasMounted = useHasMounted();
-  const anchorDate = anchorDateParam ?? todayReportAnchor(timezone);
+  const anchorDate = formatAnchor(navigation?.currentDate);
 
   const range = useMemo(
     () => resolveReportRange(anchorDate, granularity, timezone, weekStartsOn),
@@ -82,6 +77,7 @@ export function ReportViewClient({
           ? todayReportAnchor(timezone)
           : shiftReportAnchor(anchorDate, granularity, direction === 'next' ? 1 : -1);
 
+      // Context を更新すると URL（`?date=`）も書き換わり、`range` は素通しで残る。
       navigation?.navigateToDate(parseAnchorToLocalDate(nextAnchor), true);
     },
     [anchorDate, granularity, navigation, timezone],
@@ -111,8 +107,10 @@ export function ReportViewClient({
 
   // モバイルのワークスペース切替（#2300 でフッターの BottomTabBar を置き換えたもの）。
   // 現在地ではなく遷移先（カレンダー）を示すアイコンで、日付を引き継ぐ。
+  // 日付は「表示中の期間の anchor」から組む。粒度切替は pathname を変えないため
+  // Context の `currentDate` だけを見ると、粒度を変えた後に古い日付を指しうる。
   const calendarHref = navigation
-    ? `/calendar?view=${navigation.viewType}&date=${formatCalendarDateParam(navigation.currentDate)}`
+    ? `/calendar?view=${navigation.viewType}&date=${anchorDate}`
     : '/calendar';
 
   const mobileActions = (
@@ -132,7 +130,7 @@ export function ReportViewClient({
     </div>
   );
 
-  if (anchorDateParam === undefined && !hasMounted) {
+  if (!hasMounted) {
     return (
       <div className="flex h-full flex-col gap-4 p-4 md:p-6">
         <Skeleton className="h-8 w-64 rounded-lg" />
@@ -172,4 +170,12 @@ export function ReportViewClient({
 function parseAnchorToLocalDate(dateKey: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
   return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
+}
+
+/** 壁時計 Date を `YYYY-MM-DD` へ。Provider が無い場合（Storybook 等）は今日。 */
+function formatAnchor(date: Date | undefined): string {
+  const target = date ?? new Date();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  return `${target.getFullYear()}-${month}-${day}`;
 }
