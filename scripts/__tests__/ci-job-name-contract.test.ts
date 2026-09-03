@@ -10,17 +10,14 @@ import { describe, expect, it } from 'vitest';
  *
  * 参照している gate:
  * - `scripts/tasks/finish-branch.sh` の REQUIRED_CI_CHECKS（ci.yml の 3 job、#2415 / #2539）
- * - `.github/workflows/promote.yml` の層 3 gate（nightly.yml の 3 job、#2269）
  *
- * **とくに危ないのが ci.yml と nightly.yml の integration job**（2026-09-02、#2539 で
- * ci.yml 側に integration job を新設した）。両者は別物で:
- * - nightly.yml `Integration Tests` … 層 3。full fallback。promote gate が要求する
- * - ci.yml `🧪 Integration Tests` … per-PR。affected な PR だけ。finish-branch が要求する
- *
- * promote.yml の判定は `select(.name == $n)` の**完全一致**なので現状は衝突しないが、
- * ci.yml 側を絵文字なしの `Integration Tests` に改名した瞬間、per-PR の check run が
- * 層 3 の check として拾われ、**重量テストを一度も通していない SHA が promote を通過する**。
- * 絵文字の有無だけが両者を分けている状態を、その一致に依存していると明示して固定する。
+ * **promote.yml の層 3 gate は 2026-09-03 に名前結合をやめた。** 層 3（E2E /
+ * Web Build & E2E）を nightly.yml から promote.yml へ移設し、gate を check-run 名の
+ * 照合から同一 run 内の `needs.*.result` へ置き換えたため、「表示名を変えると
+ * promote が fail closed で止まる」class が消えている（契約は
+ * `scripts/ci/release-workflow-contract.test.ts` が持つ）。それでも表示名の重複は
+ * 別経路（finish-branch の名前照合、人が run を読む時の識別）で効くので、
+ * **repo の全 workflow を横断した重複禁止**として残す。
  *
  * 併せて **ci.yml の checkout が資格情報を残さないこと**も固定する（#2539 のクロスレビュー
  * risk-reviewer P1）。ci.yml の job は PR branch のコードとその全依存（postinstall・vitest
@@ -48,8 +45,8 @@ function jobDisplayNames(yamlText: string): string[] {
 
 const ciNames = jobDisplayNames(readWorkflow('ci.yml'));
 const nightlyNames = jobDisplayNames(readWorkflow('nightly.yml'));
+const promoteNames = jobDisplayNames(readWorkflow('promote.yml'));
 const finishBranch = readFileSync(join(process.cwd(), 'scripts/tasks/finish-branch.sh'), 'utf8');
-const promote = readWorkflow('promote.yml');
 
 describe('CI job 名の契約', () => {
   it('ci.yml は impact / static / unit / integration の 4 job を持つ', () => {
@@ -73,30 +70,35 @@ describe('CI job 名の契約', () => {
     }
   });
 
-  it('promote.yml の層 3 gate が要求する 3 job 名は nightly.yml に実在する', () => {
+  it('promote.yml は impact と層 3 の 2 suite、release を持つ', () => {
+    // 層 3 は 2026-09-03 に nightly.yml から移設した。名前は check-run gate の
+    // 入力ではなくなったが、run を読む人と `gh run view` の識別子として残る。
+    expect(promoteNames).toEqual([
+      '🧭 Release Impact',
+      '🎭 E2E Tests',
+      '🌐 Web Build & E2E',
+      'Promote Production',
+    ]);
+  });
+
+  it('nightly.yml は層 3 を持たない（promote.yml へ移設済み）', () => {
+    // ここへ戻すと同じ suite が 1 日 1 回と merge ごとの二重で走る。
     for (const name of ['🎭 E2E Tests', '🌐 Web Build & E2E', 'Integration Tests']) {
-      expect(promote, `promote.yml が「${name}」を要求していない`).toContain(`"${name}"`);
-      expect(nightlyNames, `nightly.yml に「${name}」が無い`).toContain(name);
+      expect(nightlyNames, `nightly.yml に「${name}」が残っている`).not.toContain(name);
     }
   });
 
-  it('ci.yml と nightly.yml の job 名は 1 つも重複しない（層 3 gate の誤マッチ防止）', () => {
-    const overlap = ciNames.filter((name) => nightlyNames.includes(name));
+  it('workflow を跨いで job 表示名が 1 つも重複しない', () => {
+    const all = [...ciNames, ...nightlyNames, ...promoteNames];
+    const duplicated = all.filter((name, index) => all.indexOf(name) !== index);
 
-    expect(overlap).toEqual([]);
-  });
-
-  it('ci.yml の per-PR integration は層 3 の `Integration Tests` と別名である', () => {
-    // 完全一致で判定されるため、この 1 文字の差が gate の分離そのもの。
-    expect(ciNames).toContain('🧪 Integration Tests');
-    expect(ciNames).not.toContain('Integration Tests');
-    expect(nightlyNames).toContain('Integration Tests');
+    expect(duplicated).toEqual([]);
   });
 
   it('job 表示名に variation selector（U+FE0F）を含めない', () => {
     // check run 名は文字列一致で照合される。`🗄️` のように VS16 が付く絵文字を
     // YAML の `\UXXXXXXXX` 記法と併記すると、bash 側のリテラルと不一致になりうる。
-    for (const name of [...ciNames, ...nightlyNames]) {
+    for (const name of [...ciNames, ...nightlyNames, ...promoteNames]) {
       expect(name, `${name} に VS16 が含まれる`).not.toContain('️');
     }
   });
@@ -194,13 +196,11 @@ describe('CI job 名の契約', () => {
       expect(jobDisplayNames(yaml)).toEqual(['📦 Unit Tests']);
     });
 
-    it('ci.yml が層 3 と同名の job を持ったら重複として検出できる', () => {
-      const regressed = ['jobs:', '  integration:', '    name: "Integration Tests"'].join('\n');
-      const regressedNames = jobDisplayNames(regressed);
+    it('workflow を跨いだ同名 job を重複として検出できる', () => {
+      const regressed = ['jobs:', '  e2e:', '    name: "\\U0001F3AD E2E Tests"'].join('\n');
+      const all = [...jobDisplayNames(regressed), ...promoteNames];
 
-      expect(regressedNames.filter((name) => nightlyNames.includes(name))).toEqual([
-        'Integration Tests',
-      ]);
+      expect(all.filter((name, index) => all.indexOf(name) !== index)).toEqual(['🎭 E2E Tests']);
     });
 
     it('VS16 付きの job 名を検出できる', () => {
@@ -212,6 +212,7 @@ describe('CI job 名の契約', () => {
     it('実ファイルから名前を 1 つ以上抜けている（regex の空振りで全 assert が素通りしない）', () => {
       expect(ciNames.length).toBe(4);
       expect(nightlyNames.length).toBeGreaterThanOrEqual(3);
+      expect(promoteNames.length).toBe(4);
     });
   });
 });

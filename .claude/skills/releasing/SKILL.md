@@ -17,7 +17,6 @@ Dayoptプロジェクトのリリース作業を安全かつ確実に実行す�
 - tag 作成（`git tag v...`）や GitHub Release 作成を明示的に指示された時
 - `package.json` の `version` フィールドを bump する作業を指示された時
 - 既存タグに対応する GitHub Release / リリースノートを更新・作成する指示時
-- Main の promote 提案（`dispatch` skill 操作 C §日次）に User が「流す」と応答した時。提案自体は権限を持たず、release 実行はここから通常の Phase に従う
 
 ## When NOT to Use
 
@@ -128,98 +127,51 @@ git checkout main
 git pull origin main
 ```
 
-### Phase 1.2: Production promote を手動 dispatch し、完了を待つ
+### Phase 1.2: Production promote が完了していることを確認する
 
-main への merge は Product / Web の Production build を作るだけで、Production domain は切り替わらない。`promote.yml` は `push: main` トリガーを持たず **`workflow_dispatch` のみ**で起動する（#2268）。merge しても自動では走らないため、ここで明示的に dispatch する。**production への操作のため `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
+**promote は main merge で自動的に走る**（2026-09-03 以降。`promote.yml` の `push: main`）。
+リリース作業の側から dispatch する必要は無い。workflow は `impact →（影響のある層 3）→ release`
+の 3 段で、層 3（E2E / Web Build & E2E）が green の時だけ promote する。
 
-**promote 前に層 3（E2E / Web E2E / Integration Tests）が main HEAD の SHA で green か確認する**（#2382）。heavy-e2e/heavy-web（旧 heavy-post-merge.yml、#2483 で nightly.yml へ吸収）は per-merge 実行を廃止し nightly + 手動発火のみになったため、main HEAD が直近の nightly 実行 SHA より進んでいる（nightly 後に merge があった）のが通常運用になる。`promote.yml` の層 4 gate は **target SHA ちょうど**の check-runs しか見ないため、この確認を省くと gate で止まる:
-
-```bash
-# main HEAD に層 3 の 3 check がすべて success で付いているか確認する
-gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/check-runs" \
-  --jq '.check_runs[] | select(.name == "🎭 E2E Tests" or .name == "🌐 Web Build & E2E" or .name == "Integration Tests") | "\(.name): \(.conclusion)"'
-```
-
-3 check すべて `success` なら Phase 1.2 の dispatch へ進む。**不足・pending・古い SHA の場合は日中の手動発火**で層 3 を先に main HEAD へ揃える（heavy-e2e/heavy-web は per-merge 実行が無いため常に必要、integration は DB / migration / RLS 系ファイルを触った merge なら push:main で既に走っている場合がある — 上記コマンドで確認済みなら省略可）。
-
-**`gh run list --limit 1` を dispatch 直後にそのまま使わない。** `gh workflow run` は run が Actions 側へ登録される前に返るため、`--limit 1` は**まだ存在しない新 run ではなく前夜の nightly（conclusion=success）を返しうる**。その id を `gh run watch --exit-status` へ渡すと完了済み run に対して即座に exit 0 が返り、「層 3 を green にした」と誤認したまま promote へ進んでしまう（実際には何も走っておらず層 4 gate で止まる）。`--event` / `--branch` で絞り、**headSha が main HEAD と一致すること**を確認してから watch する:
-
-**このブロックは頭から通しで実行する**（`MAIN_SHA` の取得を含む）。途中だけを別シェルへ貼ると `MAIN_SHA` が空になり、run を永久に特定できずに終わる。heavy-e2e / heavy-web / integration は同一 workflow（nightly.yml、#2483 で統合済み）内の 3 job のため、`-f jobs=layer3`（既定値）**1 回の dispatch で 3 job とも同時に走る**。**`-f jobs=layer3` を必ず明示する**（`gh workflow run` の `-f` は型検証されるため、既定値に頼らず明示した方が「意図せず all を選んだ」誤操作を防げる。`jobs=all` は post-merge の一括検証専用で、storage-backup-export の実転送・status label sweep も同時に走るため release 前の routine では選ばない）。
+やることは「main HEAD が既に promote 済みか」の確認だけ:
 
 ```bash
-git fetch origin main                      # MAIN_SHA を確実に最新へ
-MAIN_SHA="$(git rev-parse origin/main)"
-
-# dispatch 前の最新 run id を控える（過去の dispatch を誤って掴まないため。headSha 一致だけでは旧 run と区別できない）
-BEFORE_ID="$(gh run list --workflow=nightly.yml --event=workflow_dispatch --branch=main \
-  --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
-case "$BEFORE_ID" in
-  ''|*[!0-9]*) echo "gh run list に失敗しました（認証切れ・ネットワークを確認）"; BEFORE_ID=0 ;;
-esac
-
-gh workflow run nightly.yml --ref main -f jobs=layer3
-
-# run が Actions 側に現れるまで待つ（`gh workflow run` は登録前に返る）。
-RUN_ID=""
-for _ in $(seq 1 10); do
-  RUN_ID="$(gh run list --workflow=nightly.yml --event=workflow_dispatch --branch=main \
-    --limit 5 --json databaseId,headSha \
-    | jq -r --arg sha "$MAIN_SHA" --argjson before "$BEFORE_ID" \
-        '[.[] | select(.headSha == $sha and .databaseId > $before)] | .[0].databaseId // empty')"
-  [ -n "$RUN_ID" ] && break
-  sleep 5
-done
-
-if [ -n "$RUN_ID" ]; then
-  gh run watch --exit-status "$RUN_ID"   # heavy-e2e / heavy-web / integration が同一 run 内の3 jobなので、この1回で全部を待てる
-else
-  echo "dispatch した run を特定できません。MAIN_SHA=$MAIN_SHA が main HEAD と一致しているか（git fetch origin main 済みか）を確認し、Actions 画面で直接見る"
-fi
+git fetch origin main
+gh api "repos/Dayopt/dayopt/commits/$(git rev-parse origin/main)/status" \
+  --jq '.statuses[] | select(.context == "Production Release") | "\(.state) \(.description)"'
 ```
 
-完了後は、**冒頭の check-runs 確認コマンドを再実行**して 3 check すべての `success` を確かめる。`gh run watch` の結果ではなくこちらを最終判断に使う — **層 4 gate が実際に見るものと同じ**なので確実。
+- `success` → Phase 1.3 へ進む。`unaffected`（どの app にも影響しない merge）も success で、
+  production の artifact はその commit と等価なので tag を打ってよい
+- `failure` → **tag を打たない**。run を開いて止まった段まで特定する
+  （`gh run list --workflow=promote.yml --branch main --limit 5`）。層 3 の赤なら
+  promote は走っておらず production は無傷。復旧は `docs/operations/runbook.md` Playbook 2
+- **status が 1 件も無い** → その commit の run を見る
+  （`gh run list --workflow=promote.yml --branch main --limit 5`）。走行中なら待つ。
+  **run の release job が `skipped` で終わっている場合は、待っても status は来ない**
+  —— 層 3 が赤い、または後続 push に層 3 を cancel された run。その commit を
+  release 対象にするのは諦め、**main HEAD を対象にする**（後続 merge の run が
+  live 基準で拾い直しているので、HEAD には status が付く）
 
-`workflow_dispatch` でも check-run は commit へ正しく付くため（#2382）、手動発火の green で層 4 gate は成立する。
+#### promote をやり直したい / 緊急で通したい時（break-glass）
 
-### 層 3 が走っていない過去 SHA を promote したい時
-
-`promote.yml` は `sha` input で main HEAD より古い SHA を promote できる。その SHA に層 3 の check-run が無い場合、**一時 tag を経由して実テストを走らせられる**（`force` に倒す前に必ずこちらを試す）:
+自動経路が壊れている、または層 3 の赤を承知で通す必要がある場合だけ手動 dispatch する。
+**production への操作なので `EXPLICIT AUTHORITY`（ユーザー明示指示）が必要。**
 
 ```bash
-TARGET=<promote したい 40-hex SHA>
-git fetch origin "$TARGET" 2>/dev/null || git fetch origin main  # ローカルに無ければ取得
-TAG="tmp-layer3-$(git rev-parse --short "$TARGET")"              # 以降 $TAG で統一（再評価しない）
+# 層 3 を再実行して promote をやり直す（force なし。main HEAD が対象）
+gh workflow run promote.yml --ref main
 
-git tag "$TAG" "$TARGET"
-git push origin "$TAG"
-sleep 3  # ref の伝播待ち（push 直後の dispatch は 422 になることがある）
-gh workflow run nightly.yml --ref "$TAG" -f jobs=layer3
-# 完了後、check-runs 確認コマンドの $(git rev-parse origin/main) を $TARGET に置き換えて 3 check の success を確認
-
-# 確認できたら（成功・失敗どちらでも）tag を削除する
-git push origin --delete "$TAG"
-git tag -d "$TAG"
+# 層 3・smoke・Production Config Audit をすべて skip する break-glass
+gh workflow run promote.yml --ref main -f force=true -f reason='<なぜ gate を飛ばすか>'
 ```
 
-`gh workflow run --ref` は 40-hex SHA を `HTTP 422: No ref found for: <sha>` で拒否するが、**tag は受け付ける**。tag ref で起動した run は `headSha` が tag 先の commit になり、check-run もその commit へ付く（層 4 gate は `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。tag ref は concurrency group も main と別になるため、走行中の main run を巻き込まない。
+`sha` input は廃止した（2026-09-03）。対象は常にその run の commit で、**古い SHA を本番へ戻すのは
+promote ではなく rollback**。Vercel の `Instant Rollback` を使う（runbook Playbook 2）。
 
-**この経路が成立するのは、TARGET の tree に `nightly.yml`（heavy-e2e/heavy-web/integration の 3 job を含む）が存在し、job 名が層 4 gate の `required_checks`（🎭 E2E Tests / 🌐 Web Build & E2E / Integration Tests）と一致する場合に限る**（CI ファイル統合 #2483 より前の SHA では `nightly.yml` 自体が存在しないため道が無い。未検証）。`force` は層 4 gate だけでなく smoke と Production Config Audit も同時に skip するため、上記を試した上での最後の手段として扱う。
-
-```bash
-# Production promote を手動 dispatch する（sha 省略時は main の最新 commit）。
-# --ref は付けない。release script は常に main のものを使う（runbook.md 参照）。
-gh workflow run promote.yml
-
-# 実行状況を確認
-gh run list --workflow=promote.yml --limit 1
-gh run watch --exit-status
-
-# 対象 SHA が Production に出たことを確認
-gh api "repos/Dayopt/dayopt/commits/$(git rev-parse HEAD)/status" \
-  --jq '.statuses[] | select(.context == "Production Release") | .state'
-```
-
-`success` にならないうちはタグを打たない。失敗時は `docs/operations/runbook.md` の Playbook 2 に従う。
+`gh workflow run` は run が Actions 側へ登録される前に返るため、直後の `gh run list --limit 1` は
+**まだ存在しない新 run ではなく前の run を返しうる**。`--event=workflow_dispatch` で絞り、
+dispatch 前の最新 run id より大きいことを確認してから watch する。
 
 ### Phase 1.3: Production を観察する
 
