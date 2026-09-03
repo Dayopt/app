@@ -197,11 +197,23 @@ const nextConfig = {
     // @see https://github.com/amannn/next-intl/issues
     // reactCompiler: true,
 
-    // Partial Prerendering（PPR）- 現在無効化
-    // Next.js canary版でのみ利用可能なため、stable版では無効化
-    // TODO: Next.js 16以降でstableになったら再有効化を検討
-    // @see https://nextjs.org/docs/app/building-your-application/rendering/partial-prerendering
-    // ppr: 'incremental',
+    // Partial Prerendering（PPR）/ Cache Components - 採用しない
+    //
+    // Next.js 16 では `cacheComponents: true` で stable 利用できるようになったため、
+    // 2026-09-03 に web 起点で評価した（#2519）。結論は「web では採用しない」。
+    // Product は「web で便益が確認できた場合のみ評価する」という条件付きだったので、
+    // 前提が満たされず未評価のまま据え置く。
+    //
+    // web で採用しなかった理由（実測）:
+    // - web の全ページ route は既に ● (SSG)。実測でも x-vercel-cache: HIT / TTFB
+    //   64〜91ms で、サーバレンダリングが 1 度も発生していない。PPR が削る時間が無い
+    // - `cacheComponents: true` は route segment config の `runtime` / `revalidate` /
+    //   `dynamicParams` と非互換で、web だけで 15 ファイル・18 宣言の書き換えが要る
+    //
+    // Product を評価するなら前提が web と違う点に注意する。認証済みユーザーデータが
+    // 中心で、共有キャッシュへ載せてよい領域を先に切り分ける必要がある（#2516 の
+    // Supabase SSR cache-header / refresh-cookie continuity と競合させない）。
+    // @see https://nextjs.org/docs/app/api-reference/config/next-config-js/cacheComponents
 
     // Next.js 15 Router Cache再有効化（デフォルトで無効化された）
     // ページ遷移パフォーマンス向上のため、クライアント側キャッシュを有効化
