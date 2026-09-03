@@ -20,6 +20,7 @@ import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 
 import { useAuthStore } from '@/features/auth';
+import { useActivitySortStore } from '@/features/calendar/stores/useActivitySortStore';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -33,6 +34,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
  * 新しいストアを追加する場合はここに登録する
  */
 const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
+  useActivitySortStore: useActivitySortStore as unknown as StoreApi<Record<string, unknown>>,
   useAuthStore: useAuthStore as unknown as StoreApi<Record<string, unknown>>,
   useCalendarFilterStore: useCalendarFilterStore as unknown as StoreApi<Record<string, unknown>>,
   useCalendarNavigationStore: useCalendarNavigationStore as unknown as StoreApi<

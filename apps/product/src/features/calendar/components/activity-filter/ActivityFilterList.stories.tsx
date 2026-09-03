@@ -262,6 +262,40 @@ export const DraggingOverInvalidTarget: Story = {
   },
 };
 
+/**
+ * 並び替えを「最終アクティビティ」にした状態。
+ *
+ * 使った日時が新しいものが上に来て、**一度も使っていないものは末尾**へ回る
+ * （0 件のものが「古い」扱いで上位に混ざると、よく使うものを上げるという
+ * 目的が壊れるため）。カテゴリー配下と未分類の両方へ一様にかかり、
+ * カテゴリー自体の順序は名前順のまま動かない。
+ */
+export const SortedByLastUsed: Story = {
+  parameters: {
+    trpcMocks: {
+      ...MOCK_TRPC,
+      'statistics.getActivityStats': {
+        counts: {},
+        planCounts: {},
+        lastUsed: {
+          // 「仕事」内: 実装 > 会議 の順になる（名前順なら 会議 が先）
+          'act-dev': '2026-09-03T09:00:00.000Z',
+          'act-meeting': '2026-09-01T09:00:00.000Z',
+          // 未分類: 休憩 が先、運動 は未使用なので末尾（名前順なら 運動 が先）
+          'act-rest': '2026-09-02T09:00:00.000Z',
+        },
+      },
+    },
+    storeMocks: {
+      useCalendarFilterStore: {
+        visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
+        initialized: true,
+      },
+      useActivitySortStore: { sortKey: 'lastUsed' },
+    },
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   parameters: {

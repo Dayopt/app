@@ -3,9 +3,11 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Plus, Settings2 } from 'lucide-react';
+import { Archive, ArrowDownUp, Plus, Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import type { ActivitySortKey } from '@/features/calendar/stores/useActivitySortStore';
+import { useActivitySortStore } from '@/features/calendar/stores/useActivitySortStore';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
 import { SidebarSection } from '@/components/shell/sidebar';
@@ -31,6 +33,9 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   HoverTooltip,
   Skeleton,
@@ -46,9 +51,24 @@ import { ArchivedActivityList } from './components/ArchivedActivityList';
 import { CategoryCreatePopover } from './components/CategoryCreatePopover';
 import { CategoryGroup } from './components/CategoryGroup';
 import { UncategorizedDropZone } from './components/UncategorizedDropZone';
+import { sortActivities } from './sort-activities';
 
 const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
 const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
+/** サブメニューの見出しに出す現在値のラジオ項目と同じ文言（i18n キーを二重に持たない） */
+const STATUS_LABEL_KEYS = {
+  all: 'calendar.filter.statusAll',
+  active: 'calendar.filter.statusActive',
+  archived: 'calendar.filter.statusArchived',
+} as const;
+
+const SORT_LABEL_KEYS = {
+  name: 'calendar.filter.sortByName',
+  lastUsed: 'calendar.filter.sortByLastUsed',
+} as const;
+
+/** stats 未取得時に毎 render で新しい object を作らないための固定値 */
+const EMPTY_LAST_USED: Record<string, string> = {};
 
 /**
  * サイドバーのアクティビティ一覧。
@@ -90,8 +110,28 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
 
   // `?? []` を直接書くと毎 render で新しい配列になり、下流の useMemo /
   // useCallback の依存が毎回変わる。空配列を定数に固定して安定させる
-  const categories = useMemo(() => tree?.categories ?? EMPTY_CATEGORIES, [tree]);
-  const uncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
+  const rawCategories = useMemo(() => tree?.categories ?? EMPTY_CATEGORIES, [tree]);
+  const rawUncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
+
+  // 並び替えはカテゴリー配下と未分類の両方へ一様にかける（カテゴリー自体の順序は
+  // サーバーの名前順のまま触らない）。`lastUsed` は削除件数のために既に取得済みの
+  // getActivityStats に入っているので、この機能のための追加クエリは無い
+  const sortKey = useActivitySortStore((s) => s.sortKey);
+  const setSortKey = useActivitySortStore((s) => s.setSortKey);
+  const lastUsed = useMemo(() => stats?.lastUsed ?? EMPTY_LAST_USED, [stats]);
+
+  const categories = useMemo(
+    () =>
+      rawCategories.map((node) => ({
+        ...node,
+        activities: sortActivities(node.activities, sortKey, lastUsed),
+      })),
+    [rawCategories, sortKey, lastUsed],
+  );
+  const uncategorized = useMemo(
+    () => sortActivities(rawUncategorized, sortKey, lastUsed),
+    [rawUncategorized, sortKey, lastUsed],
+  );
 
   const categoryOptions = useMemo<CategoryOption[]>(
     () =>
@@ -383,22 +423,61 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                       </DropdownMenuTrigger>
                     </HoverTooltip>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuRadioGroup
-                        value={statusFilter}
-                        onValueChange={(value) =>
-                          setStatusFilter(value as 'all' | 'active' | 'archived')
-                        }
-                      >
-                        <DropdownMenuRadioItem value="all">
-                          {t('calendar.filter.statusAll')}
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="active">
-                          {t('calendar.filter.statusActive')}
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="archived">
-                          {t('calendar.filter.statusArchived')}
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
+                      {/* ステータスは未分類だけにかかり、並び替えは全アクティビティに
+                          かかる（かかる範囲が違うのは意図的。ステータスはアーカイブの
+                          話で、並び替えはアクティビティの話）。#2162 / 2026-09-03 */}
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Archive className="size-4" />
+                          {t('calendar.filter.statusSection')}
+                          {/* 開かなくても現在値が読めるようにする。ml-auto で右へ寄せると
+                              直後の chevron がその隣に並ぶ（SubTrigger の chevron も ml-auto） */}
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {t(STATUS_LABEL_KEYS[statusFilter])}
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={statusFilter}
+                            onValueChange={(value) =>
+                              setStatusFilter(value as 'all' | 'active' | 'archived')
+                            }
+                          >
+                            <DropdownMenuRadioItem value="all">
+                              {t('calendar.filter.statusAll')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="active">
+                              {t('calendar.filter.statusActive')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="archived">
+                              {t('calendar.filter.statusArchived')}
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <ArrowDownUp className="size-4" />
+                          {t('calendar.filter.sortSection')}
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {t(SORT_LABEL_KEYS[sortKey])}
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={sortKey}
+                            onValueChange={(value) => setSortKey(value as ActivitySortKey)}
+                          >
+                            <DropdownMenuRadioItem value="name">
+                              {t('calendar.filter.sortByName')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="lastUsed">
+                              {t('calendar.filter.sortByLastUsed')}
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </span>
