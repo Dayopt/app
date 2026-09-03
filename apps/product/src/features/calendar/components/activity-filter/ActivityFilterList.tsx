@@ -48,7 +48,7 @@ import { ActivityDragProvider } from './ActivityDragContext';
 import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
-import { CategoryCreatePopover } from './components/CategoryCreatePopover';
+import { CategoryCreateDialog } from './components/CategoryCreateDialog';
 import { CategoryGroup } from './components/CategoryGroup';
 import { UncategorizedDropZone } from './components/UncategorizedDropZone';
 import { sortActivities } from './sort-activities';
@@ -334,7 +334,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                       : 'group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
                   )}
                 >
-                  <CategoryCreatePopover onOpenChange={setCategoryCreateOpen} />
+                  <CategoryCreateDialog onOpenChange={setCategoryCreateOpen} />
                 </span>
               }
             >

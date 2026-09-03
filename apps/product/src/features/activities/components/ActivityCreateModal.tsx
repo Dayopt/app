@@ -64,7 +64,13 @@ export function ActivityCreateModal({
   } = useActivityCreateForm({ open, initialCategoryId, onCreated, onClose });
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      // 背景を暗転させない軽いポップアップにする（2026-09-03 User 指示）。
+      // 位置は中央のまま。モバイルの Drawer は常に modal なので影響しない
+      modal={false}
+    >
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
