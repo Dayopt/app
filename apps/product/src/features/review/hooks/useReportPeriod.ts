@@ -14,8 +14,6 @@ import type { ReportGranularity } from '../lib/report-period';
  * **`/report` の 1〜4 章はこの 1 本だけを読む。** フィルタ・レンズのトグルで再取得しない
  * （派生は `domain/report/` の純粋関数が client で行う）。詳細パネルだけが別の
  * procedure を持つので、将来「深掘りは Pro」にするならそちら側で分岐する。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
 export function useReportPeriod(anchorDate: string, granularity: ReportGranularity) {
   const timezone = useUserPreferences((s) => s.timezone);

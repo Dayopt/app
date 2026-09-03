@@ -78,6 +78,19 @@ const BASE_ARGS = {
   uncategorizedPercent: 3,
   previousDeltaMinutes: 130,
   marginVisible: true,
+  activeSegmentName: null,
+};
+
+/** レンズ中はバーがアクティビティ別に割れ、分母がセグメントの記録合計になる。 */
+const LENS_ARGS = {
+  ...BASE_ARGS,
+  activeSegmentName: '深い仕事',
+  marginVisible: false,
+  denominators: { ...BASE_ARGS.denominators, visibleMinutes: 1180, trackMinutes: 1180 },
+  slices: [
+    { key: 'act-write', label: '執筆', color: 'blue', icon: null, minutes: 700, percent: 59 },
+    { key: 'act-design', label: '設計', color: 'violet', icon: null, minutes: 480, percent: 41 },
+  ],
 };
 
 export const Default: Story = { args: BASE_ARGS };
@@ -189,6 +202,12 @@ export const YearGranularity: Story = {
   },
 };
 
+/**
+ * セグメントレンズ選択中。凡例がアクティビティ別に変わり、余白は分母から外れる。
+ * セグメント別バーは出さない（分母が選択中セグメントの合計なので比較にならない）。
+ */
+export const SegmentLens: Story = { args: LENS_ARGS };
+
 /** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
 export const AllPatterns: Story = {
   args: BASE_ARGS,
@@ -204,6 +223,9 @@ export const AllPatterns: Story = {
             marginVisible={false}
             denominators={{ ...BASE_ARGS.denominators, trackMinutes: 5560 }}
           />
+        </Row>
+        <Row label="セグメントレンズ選択中">
+          <AllocationChapter {...LENS_ARGS} />
         </Row>
         <Row label="前期間なし（Δ を出さない）">
           <AllocationChapter {...BASE_ARGS} previousDeltaMinutes={null} />

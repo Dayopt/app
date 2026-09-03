@@ -29,6 +29,8 @@ interface AllocationChapterProps {
   previousDeltaMinutes: number | null;
   /** 余白を分母に入れているか。 */
   marginVisible: boolean;
+  /** 選択中のセグメントレンズの名前。`null` は「すべて」（レンズなし）。 */
+  activeSegmentName: string | null;
 }
 
 /** 日別インクの最大高さ（px）。仕様 §4.1。 */
@@ -51,8 +53,10 @@ export function AllocationChapter({
   uncategorizedPercent,
   previousDeltaMinutes,
   marginVisible,
+  activeSegmentName,
 }: AllocationChapterProps) {
   const t = useTranslations('report.allocation');
+  const lensActive = activeSegmentName !== null;
 
   return (
     <section
@@ -63,6 +67,7 @@ export function AllocationChapter({
       <p className="text-muted-foreground text-xs">{t('kick')}</p>
 
       <Headline
+        activeSegmentName={activeSegmentName}
         denominators={denominators}
         granularity={granularity}
         marginVisible={marginVisible}
@@ -71,15 +76,17 @@ export function AllocationChapter({
       />
 
       <SettlementBar
-        ariaLabel={t('barAriaLabel')}
+        ariaLabel={lensActive ? t('barAriaLabelLens') : t('barAriaLabel')}
         marginVisible={marginVisible}
         slices={slices}
         trackMinutes={denominators.trackMinutes}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* レンズ中はセグメント別バーを出さない。分母が選択中セグメントの記録合計なので、
+          選択中だけ 100%・他が 0% と並び、比較としての意味を失う（2026-09-04 User 裁可） */}
+      <div className={cn('grid gap-6', !lensActive && 'md:grid-cols-2')}>
         <Legend granularity={granularity} slices={slices} />
-        <SegmentBars bars={segmentBars} />
+        {lensActive ? null : <SegmentBars bars={segmentBars} />}
       </div>
 
       <InkColumns columns={inkColumns} granularity={granularity} maxMinutes={maxInkMinutes} />
@@ -88,6 +95,7 @@ export function AllocationChapter({
 }
 
 function Headline({
+  activeSegmentName,
   denominators,
   granularity,
   marginVisible,
@@ -95,7 +103,12 @@ function Headline({
   uncategorizedPercent,
 }: Pick<
   AllocationChapterProps,
-  'denominators' | 'granularity' | 'marginVisible' | 'previousDeltaMinutes' | 'uncategorizedPercent'
+  | 'activeSegmentName'
+  | 'denominators'
+  | 'granularity'
+  | 'marginVisible'
+  | 'previousDeltaMinutes'
+  | 'uncategorizedPercent'
 >) {
   const t = useTranslations('report.allocation');
 
@@ -116,6 +129,12 @@ function Headline({
             })
           : t('subtitleInkOnly')}
       </p>
+
+      {activeSegmentName !== null && (
+        <p data-report-lens className="text-muted-foreground text-xs">
+          {t('lensLabel', { name: activeSegmentName })}
+        </p>
+      )}
 
       {previousDeltaMinutes !== null && (
         <p className="text-muted-foreground text-xs tabular-nums">

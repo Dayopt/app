@@ -7,21 +7,23 @@ import { ErrorState } from '@/components/ui/feedback/ErrorState';
 import { Skeleton } from '@dayopt/components';
 
 import {
+  applySegmentLens,
   buildAllocationSlices,
   buildInkColumns,
   buildSegmentBars,
   computeDenominators,
   computePreviousDelta,
   computeUncategorizedPercent,
-  defaultReportFilterState,
   maxInkColumnMinutes,
   resolveVisibleActivities,
 } from '../../domain/report/report-view-model';
 import { useReportPeriod } from '../../hooks/useReportPeriod';
 import { useReviewOpenedTracking } from '../../hooks/useReviewOpenedTracking';
 import { useSegments } from '../../hooks/useSegments';
+import { useReportViewStore } from '../../stores/useReportViewStore';
 import { AllocationChapter } from './chapters/AllocationChapter';
 
+import type { ReportFilterState } from '../../domain/report/report-view-model';
 import type { ReportGranularity } from '../../lib/report-period';
 
 interface ReportBodyProps {
@@ -35,8 +37,9 @@ interface ReportBodyProps {
  * 章は決まった順に並び、折りたたみ・並び替え・非表示は持たない（仕様 §0-1）。
  * 現在は 1 章のみ。2〜4 章は後続の issue で足す。
  *
- * フィルタ（カテゴリ / 未分類 / 余白）とセグメントレンズはまだ UI が無いため、
- * 「すべて可視・余白 on」を既定として派生する。サイドバーの UI は #2578 で足す。
+ * フィルタ（カテゴリー / 未分類 / 余白）とセグメントレンズは `useReportViewStore`
+ * （端末ローカル）から読む。派生はすべて client の純粋関数で、トグルのたびに
+ * サーバーへ往復しない（#2576 の設計）。
  */
 export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
   const t = useTranslations('report.errors');
@@ -45,32 +48,61 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
   const { data, isPending, isError } = useReportPeriod(anchorDate, granularity);
   const { data: segments } = useSegments();
 
+  // オブジェクトを返す selector は毎 render で新しい参照になるため、値ごとに読む
+  const hiddenCategoryIds = useReportViewStore((state) => state.hiddenCategoryIds);
+  const uncategorizedHidden = useReportViewStore((state) => state.uncategorizedHidden);
+  const marginHidden = useReportViewStore((state) => state.marginHidden);
+  const segmentId = useReportViewStore((state) => state.segmentId);
+
+  // 削除済みセグメントを指したままの ID は「すべて」へ縮退する
+  const activeSegment = useMemo(
+    () => segments?.find((segment) => segment.id === segmentId) ?? null,
+    [segments, segmentId],
+  );
+
   const view = useMemo(() => {
     if (!data) return null;
 
-    const visible = resolveVisibleActivities(data.activities, defaultReportFilterState);
+    const filter: ReportFilterState = { hiddenCategoryIds, uncategorizedHidden, marginHidden };
+    const visible = resolveVisibleActivities(data.activities, filter);
+    const lensed = applySegmentLens(visible, activeSegment?.activityIds ?? null);
+
+    // レンズ中は余白を分母に入れない。セグメント内の記録合計が 100% になる（仕様 §2.4）
+    const marginVisible = !marginHidden && activeSegment === null;
+
     const denominators = computeDenominators({
+      // ここにフィルタを掛けてはいけない。掛けると余白がフィルタで動く（仕様 §13-2）
       allActivities: data.activities,
-      visibleActivities: visible,
+      visibleActivities: lensed,
       lengthMinutes: data.period.lengthMinutes,
-      marginVisible: !defaultReportFilterState.marginHidden,
+      marginVisible,
     });
-    const inkColumns = buildInkColumns(visible, data.period.bucketKeys);
+    const inkColumns = buildInkColumns(lensed, data.period.bucketKeys);
 
     return {
       denominators,
+      marginVisible,
       inkColumns,
       maxInkMinutes: maxInkColumnMinutes(inkColumns),
-      slices: buildAllocationSlices(visible, denominators.trackMinutes, 'category'),
-      segmentBars: buildSegmentBars(visible, segments ?? [], denominators.trackMinutes),
-      uncategorizedPercent: computeUncategorizedPercent(visible, denominators.visibleMinutes),
+      slices: buildAllocationSlices(
+        lensed,
+        denominators.trackMinutes,
+        activeSegment === null ? 'category' : 'activity',
+      ),
+      // レンズ中はブロックごと描かない（選択中 100% / 他 ~0% は読み違いを生む）。
+      // 計算はレンズ前の集合で行う — レンズ後だと選択中のセグメントしか値を持たない
+      segmentBars:
+        activeSegment === null
+          ? buildSegmentBars(visible, segments ?? [], denominators.trackMinutes)
+          : [],
+      uncategorizedPercent: computeUncategorizedPercent(lensed, denominators.visibleMinutes),
       previousDeltaMinutes: computePreviousDelta({
         visibleMinutes: denominators.visibleMinutes,
         previousActivities: data.previousActivities,
-        visibleActivityIds: new Set(visible.map((activity) => activity.activityId)),
+        visibleActivityIds: new Set(lensed.map((activity) => activity.activityId)),
       }),
     };
-  }, [data, segments]);
+  }, [data, segments, activeSegment, hiddenCategoryIds, uncategorizedHidden, marginHidden]);
 
   if (isError) {
     return (
@@ -99,7 +131,8 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
         maxInkMinutes={view.maxInkMinutes}
         uncategorizedPercent={view.uncategorizedPercent}
         previousDeltaMinutes={view.previousDeltaMinutes}
-        marginVisible={!defaultReportFilterState.marginHidden}
+        marginVisible={view.marginVisible}
+        activeSegmentName={activeSegment?.name ?? null}
       />
     </div>
   );

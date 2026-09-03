@@ -48,7 +48,18 @@
         "weekColumn": "W{index}",
         "monthColumn": "{month}"
       },
-      "barAriaLabel": "Allocation by category"
+      "barAriaLabel": "Allocation by category",
+      "lensLabel": "Lens: {name}",
+      "barAriaLabelLens": "Allocation by activity"
+    },
+    "sidebar": {
+      "categoriesHeading": "Categories — add to or remove from the denominator",
+      "uncategorized": "Uncategorized",
+      "margin": "Margin (unrecorded)",
+      "marginLensDisabled": "Margin stays out of the denominator while a segment is selected",
+      "empty": "No categories yet",
+      "lensHeading": "Segments — saved questions",
+      "lensAll": "All"
     },
     "errors": {
       "title": "Could not load the report",
