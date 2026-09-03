@@ -45,13 +45,14 @@ describe('normalizeDiffForFingerprint', () => {
     expect(normalized).toContain(UNPROTECTED);
   });
 
-  it('hunk header・context 行・index 行を落とし、変更行だけを残す', () => {
+  it('hunk header の行番号と index 行を落とし、変更行と context 行を残す', () => {
     const normalized = normalizeDiffForFingerprint(diffBlock(PROTECTED, ['-old', '+new']));
     expect(normalized).not.toContain('@@');
     expect(normalized).not.toContain('index 1111111');
-    expect(normalized).not.toContain('context line');
     expect(normalized).toContain('-old');
     expect(normalized).toContain('+new');
+    // context は行の位置を指紋へ効かせるために残す（push 前反証レビュー P1）。
+    expect(normalized).toContain('context line');
   });
 
   it('mode 変更・rename・binary の行は残す（内容が同じでもレビュー対象の性質が変わる）', () => {
@@ -100,6 +101,38 @@ describe('fingerprintFromDiff', () => {
     expect(fingerprintFromDiff(withExtra, 'all')).not.toBe(
       fingerprintFromDiff(onlyProtected, 'all'),
     );
+  });
+
+  it('同じ行をファイル内の別の位置へ移すと指紋が変わる（認可チェックの前後の入れ替え）', () => {
+    // push 前反証レビュー P1（2026-09-03 実測）: 変更行だけを拾うと、追加行を
+    // 認可チェックの後ろから前へ動かした diff が同じ指紋になり、「レビュー対象は
+    // 変わっていない」と判定されて未レビューの認可バイパスが通る。context 行を
+    // 指紋に含めることで行の位置が効く。
+    const file = 'apps/product/src/app/api/oauth/token/route.ts';
+    const afterAuthCheck = [
+      `diff --git a/${file} b/${file}`,
+      '@@ -10,4 +10,5 @@',
+      '   const user = await requireUser(req);',
+      '   if (!user) return unauthorized();',
+      '+  return await handleToken(req);',
+      '',
+    ].join('\n');
+    const beforeAuthCheck = [
+      `diff --git a/${file} b/${file}`,
+      '@@ -8,5 +8,6 @@',
+      '+  return await handleToken(req);',
+      '   const user = await requireUser(req);',
+      '   if (!user) return unauthorized();',
+      '',
+    ].join('\n');
+
+    expect(fingerprintFromDiff(afterAuthCheck)).not.toBe(fingerprintFromDiff(beforeAuthCheck));
+  });
+
+  it('context 行の内容が変われば指紋が変わる（近傍の変更を取りこぼさない）', () => {
+    const base = diffBlock(PROTECTED, ['+x']);
+    const nearbyChanged = base.replace(' context line', ' context line changed');
+    expect(fingerprintFromDiff(nearbyChanged)).not.toBe(fingerprintFromDiff(base));
   });
 
   it('同じ変更行なら hunk header の行番号が動いても値が変わらない', () => {

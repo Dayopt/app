@@ -88,19 +88,63 @@ export function hasPendingChecks(rollup) {
 }
 
 /**
+ * Codex の証跡は 2 形態ある（`finish-branch.sh` の gate と同じ契約）:
+ *
+ *   1. review object（指摘ありの時に作られる）
+ *   2. `Reviewed commit: <sha>` / 「現 HEAD `<sha>`」を含む comment
+ *      （指摘ゼロの時は review object が作られない。#2536 実測）
+ *
+ * **両方を見ないと判定が非対称になる**（push 前反証レビュー P2）。証跡として
+ * review object しか見ないと、実測で最も多い「指摘ゼロの clean pass」が毎回
+ * 再依頼され、このスクリプトが潰すはずだった無駄がそのまま残る。逆に応答として
+ * comment しか見ないと、review object で応答された PR が永久に「応答待ち」に
+ * なり、再依頼が発火しない（レビュー漏れ側）。
+ *
+ * gate 側は bash + jq、こちらは JS で同じ契約を 2 度書いている。判定が割れると
+ * 「gate は止めるのに review:request は不要と言う」形の食い違いになるため、
+ * 契約を変える時は両方を同時に直す（`scripts/tasks/finish-branch.sh` の
+ * `CODEX_COMMENT_EVIDENCE_JSON` と本関数）。
+ */
+const REVIEWED_SHA_RE = /(?:reviewed commit|現\s*head)[^\n`]*`([0-9a-f]{7,40})`/i;
+
+export function extractReviewedSha(body) {
+  const match = REVIEWED_SHA_RE.exec(body ?? '');
+  return match ? match[1] : '';
+}
+
+export function isCodexAuthor(author) {
+  return normalizeLogin(author?.login ?? '') === CODEX_BOT_LOGIN;
+}
+
+/**
  * 直前の `@codex review` に Codex がまだ応答していないか。
  *
  * 応答前の連投（PR #2554 で 3 回）は、上限（#2584）を無駄に消費するだけで
- * レビューを 1 つも増やさない。
+ * レビューを 1 つも増やさない。応答は comment / review object の**どちらでも**成立する。
  */
-export function isAwaitingCodexResponse(comments) {
+export function isAwaitingCodexResponse(comments, reviews = []) {
   const lastRequestIndex = comments.findLastIndex((comment) =>
     (comment.body ?? '').includes(REVIEW_REQUEST_BODY),
   );
   if (lastRequestIndex === -1) return false;
-  return !comments
+
+  const respondedByComment = comments
     .slice(lastRequestIndex + 1)
-    .some((comment) => normalizeLogin(comment.author?.login ?? '') === CODEX_BOT_LOGIN);
+    .some((comment) => isCodexAuthor(comment.author));
+  if (respondedByComment) return false;
+
+  // review object 側は時刻で比較する（comments と reviews は別の配列で、
+  // index の前後関係が使えない）。時刻が読めない応答は「応答あり」に倒す —
+  // 連投を止める側の判定なので、判定不能で投稿を増やす方向へ倒さない。
+  const requestedAt = Date.parse(comments[lastRequestIndex]?.createdAt ?? '');
+  const respondedByReview = reviews.some((review) => {
+    if (!isCodexAuthor(review.author)) return false;
+    const submittedAt = Date.parse(review.submittedAt ?? '');
+    if (!Number.isFinite(submittedAt) || !Number.isFinite(requestedAt)) return true;
+    return submittedAt > requestedAt;
+  });
+
+  return !respondedByReview;
 }
 
 function normalizeLogin(login) {
@@ -173,7 +217,7 @@ function main(argv) {
     '-f',
     `query=query { repository(owner: "Dayopt", name: "dayopt") { pullRequest(number: ${Number(
       prNumber,
-    )}) { comments(last: 100) { nodes { author { login } body } } reviews(last: 100) { nodes { author { login } state commit { oid } } } } } }`,
+    )}) { comments(last: 100) { nodes { author { login __typename } body createdAt } } reviews(last: 100) { nodes { author { login } state submittedAt commit { oid } } } } } }`,
   ]);
   const pullRequest = evidence?.data?.repository?.pullRequest;
   if (!pullRequest) {
@@ -181,15 +225,23 @@ function main(argv) {
     return EXIT.blocked;
   }
 
+  const comments = pullRequest.comments?.nodes ?? [];
   const codexReviews = (pullRequest.reviews?.nodes ?? []).filter(
     (review) =>
-      normalizeLogin(review.author?.login ?? '') === CODEX_BOT_LOGIN &&
-      review.state !== 'PENDING' &&
-      review.state !== 'DISMISSED',
+      isCodexAuthor(review.author) && review.state !== 'PENDING' && review.state !== 'DISMISSED',
   );
+  // 指摘ゼロの clean pass は review object を作らず comment だけを残す（#2536 実測）。
+  // gate と同じく 2 形態を等価に扱う。
+  const codexCommentShas = comments
+    .filter((comment) => isCodexAuthor(comment.author))
+    .map((comment) => extractReviewedSha(comment.body))
+    .filter(Boolean);
 
   // 3. 現 HEAD の証跡があるならそもそも不要
-  if (codexReviews.some((review) => (review.commit?.oid ?? '') === pr.headRefOid)) {
+  const hasHeadEvidence =
+    codexReviews.some((review) => (review.commit?.oid ?? '') === pr.headRefOid) ||
+    codexCommentShas.some((sha) => pr.headRefOid.startsWith(sha));
+  if (hasHeadEvidence) {
     process.stdout.write('現 HEAD に対する Codex の証跡が既にあります。再依頼は不要です。\n');
     return EXIT.notNeeded;
   }
@@ -197,12 +249,10 @@ function main(argv) {
   // 3'. 旧 HEAD の証跡でも、その commit の diff の指紋が現在と一致すれば有効
   if (currentFingerprint) {
     const candidates = [
-      ...new Set(
-        codexReviews
-          .map((review) => review.commit?.oid ?? '')
-          .filter((oid) => oid && oid !== pr.headRefOid),
-      ),
-    ].slice(0, FINGERPRINT_CANDIDATE_LIMIT);
+      ...new Set([...codexReviews.map((review) => review.commit?.oid ?? ''), ...codexCommentShas]),
+    ]
+      .filter((sha) => sha && !pr.headRefOid.startsWith(sha))
+      .slice(0, FINGERPRINT_CANDIDATE_LIMIT);
 
     for (const candidate of candidates) {
       if (fingerprintOfCommit(candidate, baseRef, scope) === currentFingerprint) {
@@ -220,7 +270,7 @@ function main(argv) {
   }
 
   // 4. 応答前の連投を止める
-  if (isAwaitingCodexResponse(pullRequest.comments?.nodes ?? [])) {
+  if (isAwaitingCodexResponse(comments, pullRequest.reviews?.nodes ?? [])) {
     process.stdout.write(
       '直前の「@codex review」に Codex がまだ応答していません。応答を待ってください。\n',
     );

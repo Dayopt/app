@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { hasPendingChecks, isAwaitingCodexResponse, resolveScope } from './review-request.mjs';
+import {
+  extractReviewedSha,
+  hasPendingChecks,
+  isAwaitingCodexResponse,
+  resolveScope,
+} from './review-request.mjs';
 
 // `main` は gh 実行の副作用そのものなので、ここでは投稿するかどうかを決める
 // 純粋な判定だけを固定する（gh を挟む経路は finish-branch.test.ts と同じく
@@ -63,6 +68,58 @@ describe('review-request の判定', () => {
       expect(isAwaitingCodexResponse([{ author: { login: 't3-nico' }, body: 'よろしく' }])).toBe(
         false,
       );
+    });
+  });
+
+  // push 前反証レビュー P2: 証跡としては review object しか見ず、応答としては
+  // comment しか見ない非対称は、両方向に実害がある。
+  describe('証跡と応答の 2 形態（gate と同じ契約）', () => {
+    it('`Reviewed commit` 付き comment から sha を取れる（指摘ゼロの clean pass 形態）', () => {
+      expect(extractReviewedSha('**Reviewed commit:** `abc1234def`')).toBe('abc1234def');
+    });
+
+    it('fix round 後の narrative（現 HEAD `<sha>`）からも sha を取れる', () => {
+      expect(extractReviewedSha('現 HEAD `abc1234` を再確認しました')).toBe('abc1234');
+    });
+
+    it('sha の無い本文では空文字（usage limit 応答など）', () => {
+      expect(extractReviewedSha('You have reached your Codex usage limits.')).toBe('');
+    });
+
+    it('review object で応答されていれば応答待ちにしない（再依頼が発火しない穴を塞ぐ）', () => {
+      const comments = [
+        { author: { login: 't3-nico' }, body: '@codex review', createdAt: '2026-09-03T00:00:00Z' },
+      ];
+      const reviews = [
+        {
+          author: { login: 'chatgpt-codex-connector' },
+          state: 'COMMENTED',
+          submittedAt: '2026-09-03T00:05:00Z',
+        },
+      ];
+      expect(isAwaitingCodexResponse(comments, reviews)).toBe(false);
+    });
+
+    it('依頼より前の review object は応答とみなさない', () => {
+      const comments = [
+        { author: { login: 't3-nico' }, body: '@codex review', createdAt: '2026-09-03T00:10:00Z' },
+      ];
+      const reviews = [
+        {
+          author: { login: 'chatgpt-codex-connector' },
+          state: 'COMMENTED',
+          submittedAt: '2026-09-03T00:05:00Z',
+        },
+      ];
+      expect(isAwaitingCodexResponse(comments, reviews)).toBe(true);
+    });
+
+    it('時刻が読めない review object は応答扱いにする（判定不能で投稿を増やさない）', () => {
+      const comments = [
+        { author: { login: 't3-nico' }, body: '@codex review', createdAt: '2026-09-03T00:00:00Z' },
+      ];
+      const reviews = [{ author: { login: 'chatgpt-codex-connector' }, state: 'COMMENTED' }];
+      expect(isAwaitingCodexResponse(comments, reviews)).toBe(false);
     });
   });
 });

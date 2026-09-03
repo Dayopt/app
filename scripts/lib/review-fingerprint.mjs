@@ -25,10 +25,18 @@
  *   からの継承）や判定不能で fail closed した PR で使う。「重く見る」と宣言された
  *   PR で保護対象外の変更を指紋から落とすと、その PR に限り緩和が過剰になるため。
  *
- * 各 file について、hunk header（`@@ -1,7 +1,9 @@`）と context 行は**含めない**。
- * 追従 merge で merge-base が進むと、レーンの変更が同一でも行番号と周辺 context が
- * 動きうるため、そこを含めると「追従で指紋が変わらない」という中核の性質が壊れる。
- * mode 変更・rename・binary の差分行は含める（内容が変わらなくてもレビュー対象の
+ * 各 file について、hunk header の**行番号だけ**（`@@ -1,7 +1,9 @@`）を落とす。
+ * 追従 merge で merge-base が進むと、レーンの変更が同一でも行番号が動くため、
+ * そこを含めると「追従で指紋が変わらない」という中核の性質が壊れる。
+ *
+ * **context 行（先頭空白）は落とさない。** 変更行だけを拾うと「同じ行をファイル内の
+ * 別の場所へ移した diff」が同じ指紋になり、`+ return await handleToken(req)` を認可
+ * チェックの後ろから前へ動かす push が「レビュー対象は変わっていない」と判定される
+ * （push 前反証レビュー P1、2026-09-03 実測）。context を含めれば行の位置が指紋に
+ * 効く。追従 merge で main がレーンの変更の近傍（既定 ±3 行）を触った場合だけ指紋が
+ * 変わるが、それは再レビュー側（fail closed）へ倒れるだけで安全側。
+ *
+ * mode 変更・rename・binary の差分行も含める（内容が変わらなくてもレビュー対象の
  * 性質が変わるため）。
  *
  * ## fail closed の方向
@@ -119,8 +127,11 @@ export function normalizeDiffForFingerprint(diffText, scope = 'protected') {
       continue;
     }
 
-    // hunk 内。context 行（先頭空白）と空行は落とす。
-    if (line === '' || line.startsWith(' ')) continue;
+    // hunk 内。context 行は**残す**（行の位置を指紋に効かせるため。上の docblock 参照）。
+    // 空行だけは落とす — unified diff の空 context 行は本来 `' '` 1 文字だが、
+    // 経路によっては末尾空白が除かれて `''` になる。生成側（`gh pr diff`）と gate 側で
+    // 表現が割れると指紋が一致しなくなるため、表現差の出る空行は材料から外す。
+    if (line === '') continue;
     current.changes.push(line);
   }
 

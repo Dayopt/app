@@ -2896,6 +2896,25 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
     expect(status).toBe(0);
   });
 
+  it('`Reviewed commit` 付きなら本文に rate limit の語があっても通す（可用性を落とさない）', () => {
+    // push 前反証レビュー P2: 語彙一致だけで弾くと、rate limit を実装した PR の
+    // 正当な clean pass が恒久的に止まる（再依頼しても同じ応答が返る）。中断判定は
+    // narrative 経路にだけ効かせる。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `**Reviewed commit:** \`${DEFAULT_HEAD_SHA}\`\n\nrate limit の実装に問題はありません。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
   it('中断・未検証を示す narrative は sha があっても証跡にしない（#2559 指摘 2）', () => {
     const { status, stderr } = runProtected({
       reviewEvidence: {

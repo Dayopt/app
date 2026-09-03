@@ -1332,15 +1332,21 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   #   1. 投稿者が **bot**（GraphQL の `__typename == "Bot"`）で、login が Codex と一致
   #      （#2559 指摘 3。login 一致だけだと producer の担保が login 制約頼みになる）
   #   2. `Reviewed commit` / `現 HEAD` の直後に sha がある
-  #   3. 本文中の **`P1:` / `P2:` の形で件数を申告している箇所が、すべて zero-like**
-  #      （`0` / `0件` / `なし` / `none`）。1 つでも非ゼロなら証跡にしない
+  #   3. 本文中に **`P1:` / `P2:` の形で件数を申告している箇所があれば、すべて zero-like**
+  #      （`0` / `0件` / `なし` / `none`）であること。1 つでも非ゼロなら証跡にしない。
+  #      件数申告が 1 つも無い本文（実際の clean pass は多くがこれ）はこの条件を満たす
   #   4. badge markup を含まない（3 の追加防衛線として残す。単独の判定線ではない）
-  #   5. 中断・未検証を示す語（usage limit / 中断 / 未検証 等）を含まない
-  #      （#2559 指摘 2。narrative 経路が否定文を弾けない穴を塞ぐ）
+  #   5. narrative（`現 HEAD`）だけで sha を主張している場合は、中断・未検証を示す
+  #      定型句を含まない（#2559 指摘 2。narrative 経路が否定文を弾けない穴を塞ぐ）。
+  #      機械生成の `Reviewed commit` 形式にはこの条件を課さない — 中断応答はその行を
+  #      持たないことが実測で分かっており、語句一致で正当な clean pass を弾く方が
+  #      可用性の実害が大きい（#2584）
   #
-  # 3 は「`P1` という語が prose に出るだけ」では発火しない（`:` 区切りの件数申告に
-  # 限定）。取りこぼした書式は 4 / 5 で拾い、それでも漏れたものは fail-open では
-  # なく「証跡として通す」側に倒れるため、残余リスクは #2559 に記録してある。
+  # **判定は依然として「該当しなければ通す」形で、書式依存の残余がある。** 3 は
+  # `:` 区切りの件数申告に限定しているので、Codex が件数を別書式で書けば 4 / 5 で
+  # 拾えない限り clean pass として通る（= fail-open 側の残余）。旧実装との違いは
+  # 「badge markup 1 つだけが判定線」だった非対称を、値そのものを見る条件へ移した
+  # ことであって、完全な肯定条件ではない。残余は #2559 に記録してある。
   CODEX_COMMENT_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
     --arg login "$CODEX_REVIEW_LOGIN" \
     --arg headSha "$HEAD_SHA" '
@@ -1348,8 +1354,17 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     def is_bot: ((.author.__typename // "") == "Bot");
     def zerolike: gsub("^[ \t]+|[ \t]+$"; "") | test("^(0|0件|0 件|なし|[Nn]one)$");
     def has_finding_badge: (.body // "") | test("!\\[P[12] Badge\\]");
+    # 中断・未検証の応答を弾く。**語彙は狭く保つ**（push 前反証レビュー P2）:
+    # `rate limit` や `未検証` を単語として拾うと、rate limit を実装した PR の
+    # 「rate limit の実装に問題はありません」という正当な clean pass を恒久的に
+    # 弾いてしまう（再依頼しても同じ応答が返るため復旧できず、#2584 を悪化させる）。
     def is_interrupted: (.body // "")
-      | test("(?i)usage limit|rate limit|中断しました|未検証|検証していません|検証できません");
+      | test("(?i)reached your[^\n]{0,60}usage limit|hit an internal error|レビューは[^\n]{0,20}中断|中断しました|未検証です|検証していません|検証できません");
+    # 機械生成の `Reviewed commit` 形式は、レビューが実際に走った時にだけ出る
+    # （中断応答はこの行を持たない、#2536 / #2584 実測）。narrative（`現 HEAD`）は
+    # 否定文でも sha を含みうるため、中断判定は narrative 経路にだけ効かせる。
+    def is_machine_reviewed: (.body // "")
+      | test("(?i)reviewed commit[^\n`]*`[0-9a-f]{7,40}`");
     def claims_findings:
       [ ((.body // "")
           | match("(?i)P[12][*_ \t]*[:：][*_ \t]*(?<v>[0-9]+[^ \t\r\n*_]*|なし|[Nn]one)"; "g")
@@ -1364,7 +1379,9 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     | ($nodes | map(select(normalized_login == $login))) as $step1
     | ($step1 | map(select(is_bot))) as $step2
     | ($step2 | map(select(reviewed_sha != ""))) as $step3
-    | ($step3 | map(select((has_finding_badge | not) and (claims_findings | not) and (is_interrupted | not)))) as $step4
+    | ($step3 | map(select((has_finding_badge | not)
+                           and (claims_findings | not)
+                           and (is_machine_reviewed or (is_interrupted | not))))) as $step4
     | ($step4 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step5
     | { count: ($step5 | length),
         step1: ($step1 | length), step2: ($step2 | length),
