@@ -48,8 +48,8 @@ test.describe('Smoke: Report deep link', () => {
     await deleteScopedTestUser(SUPABASE_URL!, SERVICE_ROLE_KEY!, testUser.userId);
   });
 
-  // TODO(#2181 Step 4): /report 本体（DOM assert）は Step 4 で実装する。
-  // ここでは Step 2 の redirect 契約（旧 panel=review → /report?range=week）だけを固定する。
+  // 旧 panel=review → /report?range=week の redirect 契約を固定する。
+  // 4 章の DOM assert は章ごとの issue で足す（#2575）。
   test('panel=review deep link redirects to /report', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only（mobile は sheet 表示）');
     await login(page);

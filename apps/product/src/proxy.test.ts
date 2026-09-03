@@ -270,29 +270,29 @@ describe('proxy legacy workspace redirects', () => {
     );
   });
 
-  it.each([
-    ['/day', 'day'],
-    ['/week', 'week'],
-    ['/3day', 'week'],
-    ['/7day', 'week'],
-  ])('%s?panel=review → /report?range=%s（panel と reviewTagId は落とす）', async (from, range) => {
-    const response = await proxy(
-      new NextRequest(
-        `https://app.dayopt.app${from}?date=2026-04-20&panel=review&reviewTagId=tag-1`,
-      ),
-    );
+  // レポートは週 / 月 / 年の 3 粒度しか持たない（#2575）。旧 `/day` 系リンクも週へ寄せる
+  // — 日の解像度はカレンダーの仕事なので、`range=day` という着地点が存在しない。
+  it.each([['/day'], ['/week'], ['/3day'], ['/7day']])(
+    '%s?panel=review → /report?range=week（panel と reviewTagId は落とす）',
+    async (from) => {
+      const response = await proxy(
+        new NextRequest(
+          `https://app.dayopt.app${from}?date=2026-04-20&panel=review&reviewTagId=tag-1`,
+        ),
+      );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe(
-      `https://app.dayopt.app/report?date=2026-04-20&range=${range}`,
-    );
-  });
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe(
+        'https://app.dayopt.app/report?date=2026-04-20&range=week',
+      );
+    },
+  );
 
   it.each(['diff', 'analytics'])('panel=%s も /report へ写す', async (panel) => {
     const response = await proxy(new NextRequest(`https://app.dayopt.app/day?panel=${panel}`));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://app.dayopt.app/report?range=day');
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/report?range=week');
   });
 
   it('panel は view より優先される（同時に来たらレポートへ行く）', async () => {

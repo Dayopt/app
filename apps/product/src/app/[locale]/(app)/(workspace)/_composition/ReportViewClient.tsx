@@ -1,95 +1,181 @@
 'use client';
 
-/**
- * ReportViewClient - Composition Bridge for `/report`
- *
- * `/report` の期間契約（`?date=&range=`）から表示範囲を組み立て、差分（セクション1）用に
- * timeblock を取得して計算する。`features/review` は同層の `features/calendar` を import
- * できないため（feature-boundaries.md、同層 import 禁止）、この橋渡しを Composition Layer
- * が担う（overview.md §6-9 #D）。
- *
- * Time P/L 等（セクション2）は features/review 自身の tRPC hook が displayRange を受けて
- * 取得するため、ここでは timeblock 取得と diff 計算だけを行う。
- */
+import { CalendarDays, PanelLeft } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useMemo } from 'react';
 
-import { useMemo } from 'react';
-
+import { useCalendarNavigation } from '@/features/calendar';
 import {
-  buildTimeblockDayDiffPlans,
-  buildTimeblockDayDiffRecords,
-  computeTimeblockDayDiffs,
-  resolveTimeblockDayDiffBounds,
-  resolveTimeblockRangeDiffBounds,
-} from '@/features/timeblock';
-import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-
-import { useCalendarData, useCalendarSettings } from '@/features/calendar';
-import {
-  buildReportDisplayRange,
   ReportBody,
-  type ReportDiffState,
-  type ReviewDisplayRange,
-  type ReviewGranularity,
+  ReportHeader,
+  resolveReportRange,
+  shiftReportAnchor,
+  todayReportAnchor,
+  type ReportGranularity,
 } from '@/features/review';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
+import { useShellStore } from '@/lib/stores/useShellStore';
+import { Button, Skeleton } from '@dayopt/components';
+import { Link, useRouter } from '@dayopt/i18n/navigation';
+
+import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
 
 interface ReportViewClientProps {
-  date: Date;
-  range: ReviewGranularity;
+  granularity: ReportGranularity;
 }
 
-export function ReportViewClient({ date, range }: ReportViewClientProps) {
-  const showWeekends = useCalendarSettings((s) => s.showWeekends);
-  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
+/**
+ * ReportViewClient - `/report` の Composition Bridge
+ *
+ * `features/review` は同層の `features/calendar` を import できないため、期間ナビの配線
+ * （`useCalendarNavigation`）とルーティング（`useRouter`）をここが担う。review 側は
+ * props のコールバックで受ける。
+ *
+ * **表示中の日付の正本は `useCalendarNavigation().currentDate`**（`CalendarViewClient` と
+ * 同じ形）。`?date=` を server component から prop で受け取ってはいけない — `navigateToDate`
+ * は `history.replaceState` で URL を書くだけで Next.js の router を経由しないため、
+ * server component は再描画されず prop が更新されない。prop を正本にすると `‹ ›` を押しても
+ * 画面が変わらなくなる。Context は `/report` の `?date=` 読み取りと popstate 同期を
+ * 既に持っている（`CalendarNavigationContext` の `resolveCalendarProps`）。
+ *
+ * `/report` は `hasOwnHeader` 扱い（`_shell/desktop-layout.tsx`）なので、shell が出していた
+ * サイドバートグルとモバイルのアカウントボタンもここから `ReportHeader` の slot へ渡す
+ * （`CalendarViewClient` が `CalendarLayout` に渡しているのと同じ形）。
+ */
+export function ReportViewClient({ granularity }: ReportViewClientProps) {
+  const t = useTranslations();
+  const navigation = useCalendarNavigation();
+  const router = useRouter();
   const timezone = useUserPreferences((s) => s.timezone);
+  const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
+  const sidebar = useShellStore.use.sidebar();
+  const toggleSidebar = useShellStore.use.toggleSidebar();
 
-  const displayRange: ReviewDisplayRange = useMemo(
-    () => buildReportDisplayRange(date, range, showWeekends, weekStartsOn),
-    [date, range, showWeekends, weekStartsOn],
+  // Context は SSR では `?date=` を読めず（`window` が無い）「今日」で始まるため、
+  // サーバーの HTML と client の初回描画がずれる。マウントまで骨組みを出して
+  // ハイドレーション不整合を避ける（`CalendarNavigationContext` の初期値解決と同じ制約）。
+  const hasMounted = useHasMounted();
+  const anchorDate = formatAnchor(navigation?.currentDate);
+
+  const range = useMemo(
+    () => resolveReportRange(anchorDate, granularity, timezone, weekStartsOn),
+    [anchorDate, granularity, timezone, weekStartsOn],
   );
 
-  const { allCalendarEvents, viewDateRange, timeblocksError, isTimeblocksLoading } =
-    useCalendarData({ viewType: range, currentDate: date, showWeekends });
+  /**
+   * 期間の移動。
+   *
+   * `navigateRelative` は使わない（calendar の viewType 基準で動くため、レポートの粒度と
+   * 食い違う）。日付は必ず `navigateToDate` 経由で書く — review が独自に history を触ると
+   * `CalendarNavigationContext` が stale になり、`WorkspaceTabs` がタブ往復で古い日付を組む。
+   */
+  const handleNavigate = useCallback(
+    (direction: 'prev' | 'next' | 'today') => {
+      const nextAnchor =
+        direction === 'today'
+          ? todayReportAnchor(timezone)
+          : shiftReportAnchor(anchorDate, granularity, direction === 'next' ? 1 : -1);
 
-  const diffData = useMemo(() => {
-    if (isTimeblocksLoading || timeblocksError) return null;
+      // Context を更新すると URL（`?date=`）も書き換わり、`range` は素通しで残る。
+      navigation?.navigateToDate(parseAnchorToLocalDate(nextAnchor), true);
+    },
+    [anchorDate, granularity, navigation, timezone],
+  );
 
-    const dayBounds = viewDateRange.days.map((day) => resolveTimeblockDayDiffBounds(day, timezone));
-    const bounds =
-      range === 'day'
-        ? resolveTimeblockDayDiffBounds(date, timezone)
-        : resolveTimeblockRangeDiffBounds(
-            viewDateRange.days[0] ?? viewDateRange.start,
-            viewDateRange.days[viewDateRange.days.length - 1] ?? viewDateRange.end,
-            timezone,
-          );
+  const handleGranularityChange = useCallback(
+    (next: ReportGranularity) => {
+      router.push(`/report?date=${anchorDate}&range=${next}`);
+    },
+    [anchorDate, router],
+  );
 
-    // /report の集計はタグ/アクティビティ可視性フィルタに従わない（全アクティビティ対象。
-    // overview.md §6-9 #C。#2162 §3 の不変条件「Σカテゴリー + 未分類 = 全ブロック時間」を守る）。
-    const plans = buildTimeblockDayDiffPlans(allCalendarEvents, {
-      dayBounds,
-      isEntryVisible: () => true,
-    });
-    const records = buildTimeblockDayDiffRecords(allCalendarEvents, {
-      dayBounds,
-      isEntryVisible: () => true,
-    });
+  // Sidebar は desktop 専用。閉じている時だけトグルを出す（shell の実装と同じ条件）。
+  const sidebarToggle = !sidebar.open ? (
+    <Button
+      type="button"
+      variant="ghost"
+      icon
+      size="sm"
+      onClick={toggleSidebar}
+      aria-label="Open sidebar"
+      className="hidden md:inline-flex"
+    >
+      <PanelLeft className="size-4" />
+    </Button>
+  ) : null;
 
-    return computeTimeblockDayDiffs(plans, records, bounds);
-  }, [
-    allCalendarEvents,
-    date,
-    isTimeblocksLoading,
-    range,
-    timeblocksError,
-    timezone,
-    viewDateRange,
-  ]);
+  // モバイルのワークスペース切替（#2300 でフッターの BottomTabBar を置き換えたもの）。
+  // 現在地ではなく遷移先（カレンダー）を示すアイコンで、日付を引き継ぐ。
+  // 日付は「表示中の期間の anchor」から組む。粒度切替は pathname を変えないため
+  // Context の `currentDate` だけを見ると、粒度を変えた後に古い日付を指しうる。
+  const calendarHref = navigation
+    ? `/calendar?view=${navigation.viewType}&date=${anchorDate}`
+    : '/calendar';
 
-  const diff: ReportDiffState = {
-    data: diffData,
-    isPending: isTimeblocksLoading,
-    isError: timeblocksError != null,
-  };
+  const mobileActions = (
+    <div className="flex h-8 items-center gap-1 md:hidden">
+      <Button
+        variant="ghost"
+        icon
+        size="sm"
+        className="text-muted-foreground hover:text-foreground"
+        asChild
+      >
+        <Link href={calendarHref} aria-label={t('calendar.actions.openCalendar')}>
+          <CalendarDays className="size-5" />
+        </Link>
+      </Button>
+      <ConnectedMobileAccountButton />
+    </div>
+  );
 
-  return <ReportBody currentDate={date} displayRange={displayRange} diff={diff} />;
+  if (!hasMounted) {
+    return (
+      <div className="flex h-full flex-col gap-4 p-4 md:p-6">
+        <Skeleton className="h-8 w-64 rounded-lg" />
+        <Skeleton className="h-48 rounded-2xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <ReportHeader
+        periodStart={parseAnchorToLocalDate(range.buckets[0]?.key ?? anchorDate)}
+        periodEnd={parseAnchorToLocalDate(
+          range.buckets[range.buckets.length - 1]?.key ?? anchorDate,
+        )}
+        granularity={granularity}
+        weekStartsOn={weekStartsOn}
+        onNavigate={handleNavigate}
+        onGranularityChange={handleGranularityChange}
+        leftSlot={sidebarToggle}
+        rightSlot={mobileActions}
+      />
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <ReportBody anchorDate={anchorDate} granularity={granularity} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * `YYYY-MM-DD` を壁時計の Date として読む。
+ *
+ * 期間ラベルと `navigateToDate` はローカル日付の Date を期待するため、時刻としては
+ * 再解釈せず年月日の成分だけを使う。
+ */
+function parseAnchorToLocalDate(dateKey: string): Date {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
+}
+
+/** 壁時計 Date を `YYYY-MM-DD` へ。Provider が無い場合（Storybook 等）は今日。 */
+function formatAnchor(date: Date | undefined): string {
+  const target = date ?? new Date();
+  const month = String(target.getMonth() + 1).padStart(2, '0');
+  const day = String(target.getDate()).padStart(2, '0');
+  return `${target.getFullYear()}-${month}-${day}`;
 }

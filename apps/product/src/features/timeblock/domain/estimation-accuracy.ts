@@ -139,7 +139,7 @@ export function aggregatePlanRecordEstimationAccuracy(
     acc.plannedSum += plan.planned_minutes;
     acc.actualSum += actualMinutes;
     // 符号を保持する（実績 − 予定）。正なら超過、負なら早期完了。Math.abs で
-    // 符号を潰すと、消費側（WeeklyReflectionPanel の deriveReflectionSignal）が
+    // 符号を潰すと、消費側（見積もりの傾向を一文で出す表示層）が
     // `avgDeviationMinutes > 0` で超過/早期完了の文言を出し分けられなくなる
     // （#2386: 早期完了side がほぼ到達しなくなっていた不具合）。
     acc.deviationSum += actualMinutes - plan.planned_minutes;

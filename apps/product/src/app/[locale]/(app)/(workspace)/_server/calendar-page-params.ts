@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 
 import type { CalendarViewType, MultiDayViewType } from '@/features/calendar';
 import { parseCalendarDateParam } from '@/features/calendar';
-import type { ReviewGranularity } from '@/features/review';
+import { isReportGranularity, type ReportGranularity } from '@/features/review';
 import { isValidCalendarViewToken } from '@/lib/calendar-view-tokens';
 import type { Locale } from '@dayopt/i18n/routing';
 
@@ -36,11 +36,13 @@ export function parseCalendarViewParam(view: string | undefined): CalendarViewTy
 }
 
 /**
- * `/report?range=` の値を ReviewGranularity として解析する（overview.md §6-3）。
- * 省略時・不正値は 'week' にフォールバックする（v1 は day/week の 2 値のみ）。
+ * `/report?range=` の値をレポートの粒度として解析する。
+ *
+ * 省略時・不正値・旧 `day` はすべて `week` へ丸める。日の解像度はカレンダーの仕事なので、
+ * レポートは週 / 月 / 年の 3 粒度しか持たない（#2575）。旧リンクは壊れず週へ寄る。
  */
-export function parseReportRangeParam(range: string | undefined): ReviewGranularity {
-  return range === 'day' ? 'day' : 'week';
+export function parseReportRangeParam(range: string | undefined): ReportGranularity {
+  return isReportGranularity(range) ? range : 'week';
 }
 
 /**
