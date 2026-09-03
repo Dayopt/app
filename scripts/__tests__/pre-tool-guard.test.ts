@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,13 +14,20 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // まず「どう書けば通ってしまうか」を数え上げてから allow 側を書く。
 //
 // guard 実装側の対の教訓は「許可形を省略記法で組み立てず選択肢で列挙する」
-// （scripts/hooks/pre-tool-guard.sh のコメント参照）。
+// （scripts/hooks/pre-tool-guard-rules.mjs のコメント参照）。
+//
+// このファイルは scripts/__tests__/pre-tool-guard.test.ts（bash 版 guard の
+// contract test）の Node/ESM 移植。各 describe/it の意図と assert は元ファイル
+// と同一に保つ——変えたのは spawn 対象（bash loader → node loader）と、bash の
+// 構文エラー・exit code を前提にしていた「script 自体の健全性」「loader/rules
+// 分離」の 2 describe block だけ（Node の import 失敗・例外送出へ書き換えた）。
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-// pre-tool-guard.sh は #1961 以降、薄い loader。実際のロジックは
-// pre-tool-guard-impl.sh にある（settings.json の hooks 登録は loader のまま
-// 変更していないので、通常の test はすべて guardPath 経由で書ける）。
-const guardPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.sh');
-const implPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-impl.sh');
+// pre-tool-guard.mjs は薄い loader（bash 版 #1961 の教訓を踏襲した Node/ESM
+// 移植）。実際のロジックは pre-tool-guard-rules.mjs にある（settings.json の
+// hooks 登録も同じ PR でこの loader へ切り替え済み。通常の test はすべて
+// loaderPath 経由で書ける）。
+const loaderPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.mjs');
+const rulesPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-rules.mjs');
 
 // path を組み立てるのは、この test file 自体を編集する Write が
 // guard の file path 検査に引っかからないようにするため。
@@ -39,7 +46,7 @@ function runGuard(
   cwd: string = rootDir,
   env?: Record<string, string>,
 ): Decision {
-  const result = spawnSync('bash', [guardPath], {
+  const result = spawnSync(process.execPath, [loaderPath], {
     cwd,
     encoding: 'utf8',
     input: JSON.stringify(input),
@@ -106,74 +113,143 @@ function notebookEdit(notebookPath: string, newSource: string): Record<string, u
 }
 
 // guard 自体が壊れると全 tool がブロックされ、guard を直す編集まで塞がれる。
-// 2026-08-12 に実際に起きた（[[ ]] の中へ引用符入りの正規表現を直接書いて構文
-// エラーになり、Bash / Write / Edit がすべて拒否されて別セッションからの復旧が
-// 必要になった）。bash は構文エラーで exit 2 を返し、hook はそれを block と解釈する。
+// bash 版は 2026-08-12 に実際に起きた（[[ ]] の中へ引用符入りの正規表現を
+// 直接書いて構文エラーになり、Bash / Write / Edit がすべて拒否されて別
+// セッションからの復旧が必要になった、#1961）。Node/ESM 版でも同じ class の
+// 障害モードが起きる: `import()` は構文エラーを持つモジュールを読み込めない
+// （import 自体が reject し、モジュール内のどんなコードも実行されない）。
 // エディタ上の規律ではなく test で固定する。
-describe('pre-tool-guard.sh: script 自体の健全性', () => {
-  it('loader の bash 構文チェックを通る', () => {
-    const result = spawnSync('bash', ['-n', guardPath], { encoding: 'utf8' });
+describe('pre-tool-guard.mjs: script 自体の健全性', () => {
+  it('loader の構文チェックを通る（node --check）', () => {
+    const result = spawnSync(process.execPath, ['--check', loaderPath], { encoding: 'utf8' });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
 
-  it('impl の bash 構文チェックを通る', () => {
-    const result = spawnSync('bash', ['-n', implPath], { encoding: 'utf8' });
+  it('rules の構文チェックを通る（node --check）', () => {
+    const result = spawnSync(process.execPath, ['--check', rulesPath], { encoding: 'utf8' });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
 });
 
-// #1961: guard 自体（impl）が壊れた時、loader は fail closed を既定にしつつ、
-// **impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。1 ファイル
-// 構成では自己検査コードごと構文エラーで実行されなくなるため、loader/impl の
-// 2 ファイル分離だけがこの中間案を実装できる（#1961 コメント参照）。
-describe('pre-tool-guard.sh: loader/impl 分離（#1961）', () => {
+// #1961 の Node 移植: guard 自体（rules）が壊れた時、loader は fail closed を
+// 既定にしつつ、**rules ファイル自身への Write/Edit だけ**を復旧目的で例外的に
+// 通す。1 ファイル構成では自己検査コードごと構文エラーで実行されなくなるため、
+// loader/rules の 2 ファイル分離だけがこの中間案を実装できる（bash 版 #1961
+// コメント参照）。
+//
+// bash 版との対応: 「impl の構文エラー」→「rules の import 失敗」、
+// 「impl の構文は健全だが非 0 exit」→「rules の import は成功するが evaluate()
+// が例外を投げる」。loader はどちらも「import/評価に成功して decision が
+// 'allow' の時だけ 0、それ以外は全部 2」という同じ fail-closed 規則で捌く。
+describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', () => {
   let fixtureRoot: string;
   let healthyLoader: string;
   let degradedLoader: string;
-  let degradedImpl: string;
+  let degradedRules: string;
   let badExitLoader: string;
+  let badExitRules: string;
+  let renamedLoader: string;
+  let renamedRules: string;
+  let throwingDecisionLoader: string;
+  let symlinkedLoader: string;
+  let symlinkedRules: string;
 
   beforeAll(() => {
     fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-loader-'));
 
-    // loader は sibling を実ファイル名（pre-tool-guard-impl.sh）で探すため、
-    // 検証も同じファイル名関係で組む。
+    // loader は import('./pre-tool-guard-rules.mjs') で自分と同じディレクトリの
+    // rules を見る。rules は node 標準ライブラリ（node:child_process / node:fs /
+    // node:path）しか import しない——復旧経路（rules 自身への Write だけ通す）が
+    // repo 内 helper の破損で塞がらないようにするための不変条件なので、fixture も
+    // loader + rules の 2 ファイルだけで組む。
     const healthyDir = join(fixtureRoot, 'healthy');
     mkdirSync(healthyDir);
-    writeFileSync(join(healthyDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    writeFileSync(join(healthyDir, 'pre-tool-guard-impl.sh'), readFileSync(implPath, 'utf8'));
-    healthyLoader = join(healthyDir, 'pre-tool-guard.sh');
+    writeFileSync(join(healthyDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(join(healthyDir, 'pre-tool-guard-rules.mjs'), readFileSync(rulesPath, 'utf8'));
+    healthyLoader = join(healthyDir, 'pre-tool-guard.mjs');
 
     const degradedDir = join(fixtureRoot, 'degraded');
     mkdirSync(degradedDir);
-    writeFileSync(join(degradedDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    // 構文エラーを注入（未閉じの [[ ）。2026-08-12 の実障害と同型。
+    writeFileSync(join(degradedDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    // 構文エラーを注入（未閉じの関数呼び出し）。2026-08-12 の bash 実障害
+    // （未閉じの [[ ）と同型の「ファイル末尾が壊れている」形。
     writeFileSync(
-      join(degradedDir, 'pre-tool-guard-impl.sh'),
-      `${readFileSync(implPath, 'utf8')}\nif [[ "x" =~ "unclosed\n`,
+      join(degradedDir, 'pre-tool-guard-rules.mjs'),
+      `${readFileSync(rulesPath, 'utf8')}\nfunction __brokenSyntax(x {\n`,
     );
-    degradedLoader = join(degradedDir, 'pre-tool-guard.sh');
-    degradedImpl = join(degradedDir, 'pre-tool-guard-impl.sh');
+    degradedLoader = join(degradedDir, 'pre-tool-guard.mjs');
+    degradedRules = join(degradedDir, 'pre-tool-guard-rules.mjs');
 
     const badExitDir = join(fixtureRoot, 'bad-exit');
     mkdirSync(badExitDir);
-    writeFileSync(join(badExitDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    // 構文は健全だが実行時に想定外の非 0 を返す impl（block 以外の理由での失敗）
+    writeFileSync(join(badExitDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    // import（構文）は健全だが、evaluate() が常に例外を投げる rules
+    // （bash 版の「構文は健全だが実行時に想定外の非 0 を返す impl」の Node 版。
+    // lib への相対 import が無くても import 自体は成立する最小 stub）。
     writeFileSync(
-      join(badExitDir, 'pre-tool-guard-impl.sh'),
-      '#!/bin/bash\ncat >/dev/null\nexit 1\n',
+      join(badExitDir, 'pre-tool-guard-rules.mjs'),
+      "export function evaluate() {\n  throw new Error('unexpected failure');\n}\n",
     );
-    badExitLoader = join(badExitDir, 'pre-tool-guard.sh');
+    badExitLoader = join(badExitDir, 'pre-tool-guard.mjs');
+    badExitRules = join(badExitDir, 'pre-tool-guard-rules.mjs');
+
+    // import は成功するが `evaluate` が export されていない rules（編集中に export を
+    // 落とした / 関数名を変えた形。Codex review P2、PR #2563）。import 失敗と同じ
+    // 復旧経路に倒さないと、別セッション無しでは直せない。
+    const renamedDir = join(fixtureRoot, 'renamed-export');
+    mkdirSync(renamedDir);
+    writeFileSync(join(renamedDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(renamedDir, 'pre-tool-guard-rules.mjs'),
+      "export const renamedEvaluate = () => ({ decision: 'allow' });\n",
+    );
+    renamedLoader = join(renamedDir, 'pre-tool-guard.mjs');
+    renamedRules = join(renamedDir, 'pre-tool-guard-rules.mjs');
+
+    // evaluate() は返るが、その戻り値の参照（loader の `result.decision`）が例外を
+    // 投げる rules。この参照は try の外側にあり、bash 版 loader が構造として持って
+    // いた「0 か 2 以外を返さない」不変条件が Node では async 関数の未捕捉 rejection
+    // = exit 1（harness では block ではなく non-blocking error）へ落ちる。exit 1 に
+    // なると guard が判定を下せなかった操作が素通りするため fail closed が崩れる
+    // （#2563 内製クロスレビュー P2）。
+    const throwingDecisionDir = join(fixtureRoot, 'throwing-decision');
+    mkdirSync(throwingDecisionDir);
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard.mjs'),
+      readFileSync(loaderPath, 'utf8'),
+    );
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard-rules.mjs'),
+      "export function evaluate() {\n  return Object.defineProperty({}, 'decision', {\n    get() {\n      throw new Error('unexpected failure after evaluate');\n    },\n  });\n}\n",
+    );
+    throwingDecisionLoader = join(throwingDecisionDir, 'pre-tool-guard.mjs');
+
+    // path の途中に symlink がある配置。ESM の `import.meta.url` は realpath を返す
+    // 一方 harness が渡す `file_path` は解決されていないため、素の文字列比較では
+    // 復旧経路が常に block へ落ちる（macOS の tmpdir は `/var` -> `/private/var` で
+    // 実際にこの形。#2563 内製クロスレビュー P2、Linux CI では tmpdir が symlink で
+    // ないため素通りしていた）。symlink を明示的に作って両 OS で固定する。
+    const symlinkTargetDir = join(fixtureRoot, 'symlink-target');
+    mkdirSync(symlinkTargetDir);
+    writeFileSync(join(symlinkTargetDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(symlinkTargetDir, 'pre-tool-guard-rules.mjs'),
+      `${readFileSync(rulesPath, 'utf8')}\nfunction __brokenSyntax(x {\n`,
+    );
+    const symlinkDir = join(fixtureRoot, 'symlink-alias');
+    symlinkSync(symlinkTargetDir, symlinkDir, 'dir');
+    symlinkedLoader = join(symlinkDir, 'pre-tool-guard.mjs');
+    symlinkedRules = join(symlinkDir, 'pre-tool-guard-rules.mjs');
   });
 
   afterAll(() => {
     rmSync(fixtureRoot, { recursive: true, force: true });
   });
 
-  function runVia(loaderPath: string, input: Record<string, unknown>): Decision {
-    const result = spawnSync('bash', [loaderPath], {
+  function runVia(loaderFixturePath: string, input: Record<string, unknown>): Decision {
+    const result = spawnSync(process.execPath, [loaderFixturePath], {
       cwd: rootDir,
       encoding: 'utf8',
       input: JSON.stringify(input),
@@ -181,35 +257,63 @@ describe('pre-tool-guard.sh: loader/impl 分離（#1961）', () => {
     return result.status === 2 ? 'block' : 'allow';
   }
 
-  it('impl が健全なら loader は通常どおり委譲する（stdin forward が正しい）', () => {
+  it('rules が健全なら loader は通常どおり委譲する（stdin forward が正しい）', () => {
     expect(runVia(healthyLoader, write('/x/.op-env.human'))).toBe('allow');
     expect(runVia(healthyLoader, write('/x/.env'))).toBe('block');
     expect(runVia(healthyLoader, bash('git status'))).toBe('allow');
   });
 
-  it('impl が構文エラーの時、無関係な Bash 操作は fail closed', () => {
+  it('rules が構文エラー（import 失敗）の時、無関係な Bash 操作は fail closed', () => {
     expect(runVia(degradedLoader, bash('git status'))).toBe('block');
   });
 
-  it('impl が構文エラーの時、impl 以外への Write/Edit は fail closed', () => {
+  it('rules が構文エラーの時、rules 以外への Write/Edit は fail closed', () => {
     expect(runVia(degradedLoader, write('/x/notes.md'))).toBe('block');
   });
 
-  it('impl が構文エラーの時、impl ファイル自身への Write/Edit だけは復旧目的で通る', () => {
-    expect(runVia(degradedLoader, write(degradedImpl))).toBe('allow');
-    expect(runVia(degradedLoader, edit(degradedImpl))).toBe('allow');
+  it('rules が構文エラーの時、rules ファイル自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(degradedLoader, write(degradedRules))).toBe('allow');
+    expect(runVia(degradedLoader, edit(degradedRules))).toBe('allow');
   });
 
   it('loader 自身への Write は例外対象外（fail closed のまま）', () => {
     expect(runVia(degradedLoader, write(degradedLoader))).toBe('block');
   });
 
-  it('impl の構文は健全でも非 0 で終了したら fail closed（exit code を 2 へ写す）', () => {
+  it('rules の構文は健全でも evaluate() が例外を投げたら fail closed（exit code を 2 へ写す）', () => {
     expect(runVia(badExitLoader, bash('git status'))).toBe('block');
+  });
+
+  it('evaluate が export されていない（import は成功）時、無関係な操作は fail closed で rules 自身への Write/Edit だけ通る', () => {
+    expect(runVia(renamedLoader, bash('git status'))).toBe('block');
+    expect(runVia(renamedLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(renamedLoader, write(renamedRules))).toBe('allow');
+    expect(runVia(renamedLoader, edit(renamedRules))).toBe('allow');
+  });
+
+  it('path の途中が symlink でも、rules 自身への Write/Edit の復旧経路は働く', () => {
+    expect(runVia(symlinkedLoader, write(symlinkedRules))).toBe('allow');
+    expect(runVia(symlinkedLoader, edit(symlinkedRules))).toBe('allow');
+    // 例外は rules 自身に限る。symlink 経由でも他 path は fail closed のまま
+    expect(runVia(symlinkedLoader, write(join(dirname(symlinkedRules), 'notes.md')))).toBe('block');
+  });
+
+  it('try の外側で例外が起きても exit 1 ではなく 2 を返す（loader は 0 か 2 以外を返さない）', () => {
+    const result = spawnSync(process.execPath, [throwingDecisionLoader], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: JSON.stringify(bash('git status')),
+    });
+    expect(result.status).toBe(2);
+  });
+
+  it('evaluate() が例外を投げる時も、rules 自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(badExitLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(badExitLoader, write(badExitRules))).toBe('allow');
   });
 });
 
-describe('pre-tool-guard.sh: .op-env.human', () => {
+describe('pre-tool-guard.mjs: .op-env.human', () => {
   // .op-env.human は op:// 参照だけで実秘密を含まない。2026-08-13、User 決定
   // （#1993）で境界を「読み書き可・消費のみ禁止」へ変更した。作成・Write/Edit は
   // 解禁し、op run で production の service role key を解決する消費だけを止める。
@@ -364,7 +468,7 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
 // 「flag に一致したら後続 token を照合する」2 段構えは、トリガーに一致しない
 // 書き方が照合にすら入らず素通りする。判定を「-env-file の言及が **すべて**
 // 許可形か」に変え、変形を個別に数え上げるのをやめた。
-describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
+describe('pre-tool-guard.mjs: flag 自体の書き換え', () => {
   it.each([
     // quote は shell が引数から取り除くので、= の前後どこへ刺しても argv は同じ。
     // 旧実装はトリガーの --env-file[=空白] に一致せず素通りしていた。
@@ -420,9 +524,9 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
 //
 // force-push / reset ガードは agent 自身の逸脱を止めるためのもので、ブロック側の
 // 後退は P3 の誤検知より重い。誤検知（コミットメッセージに文字列を書くと落ちる）は
-// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard.sh のコメントと
+// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard-rules.mjs のコメントと
 // #1944 のコメント。
-describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
+describe('pre-tool-guard.mjs: heredoc 本文と危険コマンド', () => {
   const heredoc = (intro: string, body: string, delim = 'EOF') => `${intro}\n${body}\n${delim}`;
 
   // 受け入れる誤検知。回避策は文面を変えるか、Write / Edit で file へ書いてから渡す。
@@ -479,7 +583,7 @@ describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
 // #1949: path の allowlist は「どのファイルか」しか見ない。許可 path の中身へ
 // production 参照を書き足せば、path トリックなしで production credential に届く。
 // 中身は op:// の vault で判定し、許可 vault 以外を落とす。
-describe('pre-tool-guard.sh: env-file の中身', () => {
+describe('pre-tool-guard.mjs: env-file の中身', () => {
   let fixtureRoot: string;
   let cleanDir: string;
   let prodDir: string;
@@ -646,7 +750,7 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
 // (a) 適用後の文字列再構成、(b) PostToolUse での事後検査はどちらも見送った
 // （(a) は bash の literal 置換が壊れやすく静かな fail open になりうる、
 // (b) は権威層が既にこのケースを捕まえるため複雑さに見合わない）。
-describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
+describe('pre-tool-guard.mjs: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
   it('op:// を含まない部分置換 Edit は書き込み時検査を通る（権威は実行時層）', () => {
     expect(runGuard(edit(`/x/${AGENT}`, 'human'))).toBe('allow');
   });
@@ -658,7 +762,7 @@ describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既�
 // quote の中かどうかは追えないままで、#1944（heredoc）と同型の
 // 「shell の引用状態は regex で再現できない」という結論に当たる。
 // 確信が持てない narrowing は行わず、過剰ブロックを維持する。
-describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、受け入れる誤検知）', () => {
+describe('pre-tool-guard.mjs: 引用済み引数内の区切り記号（#1987、受け入れる誤検知）', () => {
   it('op run の子プロセス引数に quote された | があっても落ちる', () => {
     expect(runGuard(bash(`op run --env-file=${AGENT} -- node -e "console.log('a|b')"`))).toBe(
       'block',
@@ -669,7 +773,7 @@ describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、�
 // #1959: チップ起票（spawn_task）は Main（main checkout の session）の専権。レーンが直接 User へ
 // チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + Main へ
 // send_message に一本化する（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）。
-describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
+describe('pre-tool-guard.mjs: レーンからのチップ起票', () => {
   const SPAWN = 'mcp__ccd_session__spawn_task';
   let fixtureRoot: string;
   let mainDir: string;
@@ -741,7 +845,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 // レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
 // の writer 4 条件）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
 // working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
-describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
+describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneADir: string;
@@ -831,7 +935,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
 // describe）だけでは「Main（CURRENT_ROOT = 家系の親）から見ると、他
 // レーンのパスも $GUARD_CURRENT_ROOT/* に該当してしまい先に許可側へ倒れる」
 // class を検出できない。longest-prefix-match で修正済み（guard_path_belongs_to_current_root）。
-describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
+describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneBDir: string;
@@ -886,7 +990,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested �
 // 変数展開・`..`）で判定する（AGENTS.md §PR / git 運用 §同型指摘の打ち切り
 // 「denylist をやめて allowlist にする」）。worktree 内で完結する日常的な
 // キャッシュ削除は通す。
-describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
+describe('pre-tool-guard.mjs: rm -rf 系（#2359）', () => {
   it.each([
     ['rm -rf node_modules', 'rm -rf node_modules'],
     ['rm -rf .next', 'rm -rf .next'],
@@ -931,7 +1035,7 @@ describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
 // 直後の risk-reviewer 指摘: 単純な「絶対パスは全部 block」だと scratchpad
 // 掃除（family 外の絶対パス）まで壊れる。guard_resolve_roots の家系 root と
 // 突合し、**自分以外の worktree root に属する時だけ** block する。
-describe('pre-tool-guard.sh: rm -rf の絶対パス target（家系判定、#2359）', () => {
+describe('pre-tool-guard.mjs: rm -rf の絶対パス target（家系判定、#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneBDir: string;
@@ -988,7 +1092,7 @@ describe('pre-tool-guard.sh: rm -rf の絶対パス target（家系判定、#235
 // は複数 worktree セッションが共有する単一インスタンスのため、reset は他
 // レーンの進行中データも巻き戻す。CLAUDE.md Commands に明記された既定コマンド
 // （pnpm db:reset / db:fresh）は対象外にし、生の CLI 呼び出しだけを block する。
-describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', () => {
+describe('pre-tool-guard.mjs: supabase db reset の生呼び出し（#2359）', () => {
   it.each([
     ['supabase db reset', 'supabase db reset'],
     ['npx 経由', 'npx supabase db reset --local'],
@@ -1012,7 +1116,7 @@ describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', (
 // ため、既存の git push --no-verify block を commit にも拡張する。短縮形 `-n`
 // は tail -n / grep -n 等との誤検知リスクが高いため対象外にする
 // （既存の --no-verify トレードオフとは非対称）。
-describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
+describe('pre-tool-guard.mjs: git commit --no-verify（#2359）', () => {
   it('長形式 --no-verify は block する', () => {
     expect(runGuard(bash('git commit -m "x" --no-verify'))).toBe('block');
   });
@@ -1041,7 +1145,7 @@ describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
 // denylist の穴埋めではなく、危険な command shape そのものを block し、
 // field allowlist projection を持つ安全な代替（scripts/agent/supabase-mgmt-safe-get.mjs
 // 等）へ一本化する構造の contract を固定する。
-describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', () => {
+describe('pre-tool-guard.mjs: #2293 op item get の --reveal / --format=json', () => {
   it('--reveal を伴うと落ちる（concealed field の実値が出力される）', () => {
     expect(runGuard(bash('op item get "human/supabase" --fields password --reveal'))).toBe('block');
   });
@@ -1073,7 +1177,7 @@ describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', ()
   });
 });
 
-describe('pre-tool-guard.sh: #2293 supabase branches get（08-11 incident 再現）', () => {
+describe('pre-tool-guard.mjs: #2293 supabase branches get（08-11 incident 再現）', () => {
   it('08-11 incident の実行形（--experimental branches get）は落ちる', () => {
     expect(runGuard(bash('supabase --experimental branches get efqkuihquhzhuhnwvffk'))).toBe(
       'block',
@@ -1085,7 +1189,7 @@ describe('pre-tool-guard.sh: #2293 supabase branches get（08-11 incident 再現
   });
 });
 
-describe('pre-tool-guard.sh: #2293 vercel --token / -t（07-22 incident 再現）', () => {
+describe('pre-tool-guard.mjs: #2293 vercel --token / -t（07-22 incident 再現）', () => {
   it('--token に値を伴う vercel 呼び出しは落ちる', () => {
     expect(runGuard(bash('vercel ls --token abc123'))).toBe('block');
   });
@@ -1111,7 +1215,7 @@ describe('pre-tool-guard.sh: #2293 vercel --token / -t（07-22 incident 再現�
   });
 });
 
-describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-11 incident 再現 ×2）', () => {
+describe('pre-tool-guard.mjs: #2293 Supabase Management API secret endpoint（08-11 incident 再現 ×2）', () => {
   it('08-11 incident 1 の実行形（config/auth への直接 curl）は落ちる', () => {
     expect(
       runGuard(
@@ -1213,7 +1317,7 @@ describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-
   });
 });
 
-describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
+describe('pre-tool-guard.mjs: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
   it('op run -- の後ろに空白1つで置かれた vercel --token も落ちる', () => {
     expect(runGuard(bash('op run -- vercel ls --token abc123'))).toBe('block');
   });
@@ -1226,7 +1330,7 @@ describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（pus
   });
 });
 
-describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持たず、例外なく block）', () => {
+describe('pre-tool-guard.mjs: #2293 op read（--reveal 相当の masking を持たず、例外なく block）', () => {
   it('redirect なしの op read は落ちる', () => {
     expect(runGuard(bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"'))).toBe('block');
   });
@@ -1285,7 +1389,7 @@ describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持�
   });
 });
 
-describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#2510、.sql 限定）', () => {
+describe('pre-tool-guard.mjs: migrations 配下の既存ファイル編集（#2510、.sql 限定）', () => {
   // migrations 配下ガードは「適用済み migration の書き換え」を防ぐもの。
   // 判定が prefix 一致だけだと、配下のポインタ用 markdown（CLAUDE.md）まで
   // 編集不能＋的外れなエラー案内になるため、対象を .sql に限定した。
@@ -1314,7 +1418,7 @@ describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#251
 // R1/R2: Agent の model 明示 + 探索への opus/fable 使用ガード（cost guard）。
 // security guard ではないため、jq parse エラー等は fail-open にする設計だが、
 // 通常の JSON 入力ではその分岐は踏まない。ここでは正規の判定ロジックを固定する。
-describe('pre-tool-guard.sh: R1 Agent の model 明示', () => {
+describe('pre-tool-guard.mjs: R1 Agent の model 明示', () => {
   it('model 未指定は block する', () => {
     expect(runGuard(agentCall({ prompt: 'x' }))).toBe('block');
   });
@@ -1341,7 +1445,7 @@ describe('pre-tool-guard.sh: R1 Agent の model 明示', () => {
   });
 
   it('JSON として解釈できない入力全体は tool_name も取れず allow する', () => {
-    const result = spawnSync('bash', [guardPath], {
+    const result = spawnSync(process.execPath, [loaderPath], {
       cwd: rootDir,
       encoding: 'utf8',
       input: 'not json',
@@ -1358,7 +1462,7 @@ describe('pre-tool-guard.sh: R1 Agent の model 明示', () => {
   });
 });
 
-describe('pre-tool-guard.sh: R2 探索に opus / fable を使わない', () => {
+describe('pre-tool-guard.mjs: R2 探索に opus / fable を使わない', () => {
   it('model opus + subagent_type Plan は通す', () => {
     expect(runGuard(agentCall({ model: 'opus', subagent_type: 'Plan', prompt: 'x' }))).toBe(
       'allow',
@@ -1409,7 +1513,7 @@ describe('pre-tool-guard.sh: R2 探索に opus / fable を使わない', () => {
 });
 
 // R3: Read の範囲指定なし大規模ファイル読み込みガード（cost guard）。
-describe('pre-tool-guard.sh: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
+describe('pre-tool-guard.mjs: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
   let fixtureRoot: string;
   let bigFile: string;
   let smallFile: string;
@@ -1451,5 +1555,33 @@ describe('pre-tool-guard.sh: R3 Read の範囲指定なし大規模ファイル�
 
   it('存在しないパスは通す（fail-open）', () => {
     expect(runGuard(readTool(join(fixtureRoot, 'does-not-exist.ts')))).toBe('allow');
+  });
+});
+
+// JS の \s は U+00A0（NBSP）等の Unicode 空白も区切りとして受理するが、bash の IFS は
+// ASCII 空白だけを単語区切りにする。許可名の直後に NBSP を置いた別ファイル名は shell では
+// 1 語のまま渡り、guard が「許可名 + 区切り」と誤認すると別ファイルが消費される
+// （Codex review P2、PR #2563。旧 bash 版の [[:space:]] は NBSP を含まなかった）。
+describe('pre-tool-guard.mjs: env-file 名の直後の非 ASCII 空白（NBSP）', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'pre-tool-guard-nbsp-'));
+    writeFileSync(join(dir, '.op-env.agent'), 'A=op://agent/x/y\n');
+    writeFileSync(join(dir, '.op-env.agent\u00a0x'), 'B=op://human/x/y\n');
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('許可名 + NBSP + 別名 を許可形と誤認せず block する', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent\u00a0x -- pnpm typecheck'), dir)).toBe(
+      'block',
+    );
+  });
+
+  it('許可名だけの通常形は引き続き通る', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent -- pnpm typecheck'), dir)).toBe('allow');
   });
 });

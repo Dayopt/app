@@ -28,12 +28,12 @@ PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel i
 
 ## AI エージェントの env ファイル境界
 
-Claude はローカル環境で作業する唯一の coding agent であり、本節はその境界を定める（Codex は 2026-09-01 からクロスレビュー必須 PR / `review:full` Issue のレビューを担うが、GitHub 上のメンション起動によるクラウドレビュー専任で、ローカルファイル・env には一切触れない。規則は `AGENTS.md` §Codex レビュー規則）。enforcement の実装は `.claude/settings.json` deny + `pre-tool-guard.sh`、規約の正本はこの節に置く。
+Claude はローカル環境で作業する唯一の coding agent であり、本節はその境界を定める（Codex は 2026-09-01 からクロスレビュー必須 PR / `review:full` Issue のレビューを担うが、GitHub 上のメンション起動によるクラウドレビュー専任で、ローカルファイル・env には一切触れない。規則は `AGENTS.md` §Codex レビュー規則）。enforcement の実装は `.claude/settings.json` deny + `scripts/hooks/pre-tool-guard-rules.mjs`（loader は `pre-tool-guard.mjs`）、規約の正本はこの節に置く。
 
 **触ってよい（読み書き可）**:
 
 - `.op-env.agent` / `.op-env.agent.example` — 中身は `op://` 参照のみで実秘密なし（app ごとの `.env.example` は 2026-08-14 に廃止した。変数一覧の正本は `scripts/tasks/env/schema.ts` で、手動維持の重複コピーは drift 源にしかならないため）
-- `.op-env.human` / `.op-env.human.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.human.example` の編集）だけでなく、`.op-env.human` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard.sh` の Bash 側ガードが、`--env-file` が `.op-env.human` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
+- `.op-env.human` / `.op-env.human.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.human.example` の編集）だけでなく、`.op-env.human` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard-rules.mjs` の Bash 側ガードが、`--env-file` が `.op-env.human` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
   - **雛形も消費側の対象に含める**（`.op-env.human.example` は `op://human/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
 
 **このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.agent` だけで、それ以外は中身を問わず落とす。
@@ -72,9 +72,9 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 **guard script 自体が壊れた時の挙動は決定済み（2026-08-13、User 決定。[#1961](https://github.com/Dayopt/dayopt/issues/1961)）。** bash は構文エラーでも `exit 2` を返すため、単一ファイル構成では guard が壊れると hook は全操作をブロックし、**guard を直す編集まで塞ぐ**（2026-08-12 に発生し、別セッションからの復旧が必要になった）。
 
-採ったのは純粋な fail open でも fail closed 全面維持でもなく、**中間案**: `scripts/hooks/pre-tool-guard.sh` を薄い loader に変え、実ロジックを `pre-tool-guard-impl.sh` へ分離した。loader は毎回 `bash -n` で impl の構文を検査し、健全なら委譲する（impl の exit code は 0 のみ 0、他はすべて 2 へ写す — 実行時エラーで想定外の非 0 を返しても fail closed を保つ）。impl が壊れていたら fail closed を既定にしつつ、**impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。他のすべての操作（Bash 全般、他ファイルの Write/Edit、spawn_task）は引き続きブロックする。
+採ったのは純粋な fail open でも fail closed 全面維持でもなく、**中間案**: 薄い loader `scripts/hooks/pre-tool-guard.mjs` と実ロジック `pre-tool-guard-rules.mjs` の 2 ファイルに分離する。loader は毎回 rules を `import()` し、成功したら委譲する（rules の判定は allow のみ 0、他はすべて 2 へ写す — 実行時エラーで例外を投げても fail closed を保つ）。import に失敗（構文エラー等）したら fail closed を既定にしつつ、**rules ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。他のすべての操作（Bash 全般、他ファイルの Write/Edit、spawn_task）は引き続きブロックする。当初は bash（`pre-tool-guard.sh` + `pre-tool-guard-impl.sh`、`bash -n` で構文検査）で実装し、2026-09-02 に他の L0 script と同じ Node へ移植した（挙動は同一、経緯は git 履歴）。
 
-1 ファイル構成では、自己検査コードを含めファイル内のどのコードも構文エラーで実行されなくなるため（bash はスクリプト全体をパースしてから実行する）、この中間案は loader/impl の 2 ファイル分離でのみ実装できる。fail open 全面採用は復旧経路以外の全保護（force-push・env-file 消費・spawn_task ブロック）まで無効化する過剰な倒し方であり、fail closed 全面維持は復旧に別セッションを要求し続ける。中間案は問題の scope（復旧経路が塞がること）と対応の scope を一致させる。契約は `scripts/__tests__/pre-tool-guard.test.ts` の「loader/impl 分離」describe が固定する。
+1 ファイル構成では、自己検査コードを含めファイル内のどのコードも構文エラーで実行されなくなるため（bash も Node の ESM も、ファイル全体をパースしてから実行する）、この中間案は loader/rules の 2 ファイル分離でのみ実装できる。fail open 全面採用は復旧経路以外の全保護（force-push・env-file 消費・spawn_task ブロック）まで無効化する過剰な倒し方であり、fail closed 全面維持は復旧に別セッションを要求し続ける。中間案は問題の scope（復旧経路が塞がること）と対応の scope を一致させる。契約は `scripts/__tests__/pre-tool-guard.test.ts` の「loader/rules 分離」describe が固定する。
 
 **受け入れる誤検知**（fail closed の代償。どちらも回避策がある）:
 
@@ -102,7 +102,7 @@ secret の**利用**は制限しない。agent は `op run` 経由（`pnpm dev`�
 
 この節はここまで **Vercel Env API / Stripe API 等、下記の機械強制が及ばない API に対する規律**として維持する。
 
-**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`scripts/hooks/pre-tool-guard-impl.sh` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/agent/supabase-mgmt-safe-get.mjs` に一本化する:
+**Supabase Management API の `config/*` と `branches*` は、規律ではなく機械で閉じる（#2293）。** 2026-08-11 に denylist keyword フィルタと部分一致 keyword フィルタが 2 回とも漏れ（`db_pass` が `password` denylist を素通り、`security_captcha_secret` が `CAPTCHA` 部分一致に誤ヒット）、jq 射影の「形」を agent が都度書く運用そのものが再発を防げないと判明した。`scripts/hooks/pre-tool-guard-rules.mjs` が `curl` / `wget` によるこれらエンドポイントへの直接アクセスを **jq 射影の有無を問わず無条件で block** する（jq の形が正しい allowlist かどうかは regex では検証できないため。shell 展開回避と同型の壁）。安全な代替は `scripts/agent/supabase-mgmt-safe-get.mjs` に一本化する:
 
 ```bash
 SUPABASE_ACCESS_TOKEN="op://human/supabase-cli/SUPABASE_ACCESS_TOKEN" \
@@ -125,7 +125,7 @@ field allowlist は `production-auth-config-audit.mjs` の `AUTH_CONFIG_CONTRACT
 
 **agent は `op item create` / `op item edit` の引数へ実値を直接埋め込んで実行しない。** 値の投入は 1Password GUI で行うか、値を含まないプレースホルダ（`FIELD[concealed]=`、本ページの `scripts/runbook/setup-1password.sh` が使う形）だけを扱う。実値を要する item 操作（値の新規投入・更新）は User が行う。
 
-機械的な強制（pre-tool-guard.sh への正規表現追加）は見送る。`.op-env.human` の env-file ガードと同じ理由で「引数の形を数え上げると別の書き方で回り込まれる」壁に当たり、この事故は頻度・被害とも guard の複雑化に見合うほど大きくない。実インシデントが再発したら pre-tool-guard.sh 側の追加を再検討する。
+機械的な強制（pre-tool-guard-rules.mjs への正規表現追加）は見送る。`.op-env.human` の env-file ガードと同じ理由で「引数の形を数え上げると別の書き方で回り込まれる」壁に当たり、この事故は頻度・被害とも guard の複雑化に見合うほど大きくない。実インシデントが再発したら pre-tool-guard-rules.mjs 側の追加を再検討する。
 
 ---
 
@@ -319,7 +319,7 @@ vault は 2026-08-14 の信頼境界軸再編（[#2086](https://github.com/Dayop
 
 **目的**: 夜間自律実行・cron のような無人実行が、人間の 1Password desktop 統合セッションの承認プロンプトを介さずに `op run` を通すための経路。対話的セッション（現行の desktop 統合）はこの節の対象外で、変更しない。
 
-**scope（決定）**: **`agent` vault の read-only のみ**。`human` / `ci` への到達権限は持たせない。これは pre-tool-guard.sh が消費側で強制している vault allowlist（`agent` のみ通す、上記「AI エージェントの env ファイル境界」節）と同じ境界を、1Password 側の権限設定でも二重に持つ形になる。
+**scope（決定）**: **`agent` vault の read-only のみ**。`human` / `ci` への到達権限は持たせない。これは pre-tool-guard-rules.mjs が消費側で強制している vault allowlist（`agent` のみ通す、上記「AI エージェントの env ファイル境界」節）と同じ境界を、1Password 側の権限設定でも二重に持つ形になる。
 
 **認証方式**: `OP_SERVICE_ACCOUNT_TOKEN` 環境変数を設定したプロセスでは `op` CLI が Service Account モードで動作し、desktop 統合を経由しない。SA token が `agent` vault read-only にしか scope されていなければ、そのプロセスから `human` / `ci` を参照する `op://` は 1Password サーバー側で拒否される（hook の正規表現マッチではなく、1Password 自体の権限モデルによる拒否）。
 
