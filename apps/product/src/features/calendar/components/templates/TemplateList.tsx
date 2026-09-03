@@ -6,6 +6,7 @@ import { Plus, Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { SidebarSection } from '@/components/shell/sidebar';
+import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { Button, HoverTooltip } from '@dayopt/components';
 
 import { TemplateRow } from './TemplateRow';
@@ -35,6 +36,9 @@ interface TemplateListProps {
  *
  * データ取得（tRPC）は #2567 で配線する。ここでは `templates` を props で
  * 受け取るだけの表示専用コンポーネント。
+ *
+ * 削除だけは props をそのまま呼ばず、必ず確認を挟む（2026-09-04 User 指示）。
+ * アクティビティ / カテゴリーと同じく不可逆な操作のため。
  */
 export function TemplateList({
   templates,
@@ -48,6 +52,8 @@ export function TemplateList({
   const t = useTranslations();
   // 開閉状態。カテゴリ・未分類と同じく既定は展開
   const [collapsed, setCollapsed] = useState(false);
+  // 削除確認の対象。null なら閉じている
+  const [deleteTarget, setDeleteTarget] = useState<TemplateMock | null>(null);
 
   return (
     <SidebarSection
@@ -97,11 +103,24 @@ export function TemplateList({
               onApply={() => onApplyTemplate?.(template.id)}
               onEdit={() => onEditTemplate?.(template.id)}
               onRename={(name) => onRenameTemplate?.(template.id, name)}
-              onDelete={() => onDeleteTemplate?.(template.id)}
+              onDelete={() => setDeleteTarget(template)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) onDeleteTemplate?.(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        title={t('calendar.templates.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })}
+        description={t('calendar.templates.deleteConfirmDescription')}
+        confirmLabel={t('calendar.templates.deleteConfirmButton')}
+        variant="destructive"
+      />
     </SidebarSection>
   );
 }

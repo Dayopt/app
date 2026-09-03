@@ -228,18 +228,15 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
     affectedCount: number;
   } | null>(null);
 
-  // 未使用（Plan / Record 合計 0 件）は即削除、使用済みは「アクティビティなしになる」
-  // 説明つきの確認を挟む。stats 未取得 / エラー時は安全側に倒して常に確認する
+  // 削除は不可逆なので、影響件数に関わらず必ず確認を挟む（2026-09-04 User 指示）。
+  // 件数は「関連する予定・記録がどうなるか」を説明するためだけに使う。
+  // stats 未取得 / エラー時は安全側に倒して 1 件以上として扱う
   const handleDeleteActivity = useCallback(
     (id: string, name: string) => {
       const affectedCount = deleteCounts === null ? 1 : (deleteCounts[id] ?? 0);
-      if (affectedCount === 0) {
-        deleteActivityMutation.mutate({ id });
-        return;
-      }
       setDeleteTarget({ kind: 'activity', id, name, affectedCount });
     },
-    [deleteCounts, deleteActivityMutation],
+    [deleteCounts],
   );
 
   // カテゴリー削除は予定・記録に触れない。影響するのは所属アクティビティが
@@ -248,13 +245,9 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
     (id: string, name: string) => {
       const memberCount =
         categories.find((node) => node.category.id === id)?.activities.length ?? 0;
-      if (memberCount === 0) {
-        deleteCategoryMutation.mutate({ id });
-        return;
-      }
       setDeleteTarget({ kind: 'category', id, name, affectedCount: memberCount });
     },
-    [categories, deleteCategoryMutation],
+    [categories],
   );
 
   const handleArchiveActivity = useCallback(
