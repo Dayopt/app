@@ -284,19 +284,15 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
     }
   };
 
-  const hasAnyActivity = categories.length > 0 || uncategorized.length > 0;
-
   // 各セクションの空状態（empty state）。見出しは常に出るので、中身が無い時は
-  // 見出しだけが宙に浮かないよう一行の文言を置く。
+  // 見出しだけが宙に浮かないよう一行の文言を置く。カテゴリー・未分類・テンプレート
+  // の3セクションとも、中身が無ければ常にその場で言い切る（新規ユーザー向けの
+  // 別立てオンボーディング文は持たない。2026-09-03 User 判断）。
   //
   // 未分類の中身は表示ステータスで変わるため、件数も同じ条件で数える。
   const archivedCount = (archivedActivities?.length ?? 0) + (archivedCategories?.length ?? 0);
   const uncategorizedCount =
     (showActive ? uncategorized.length : 0) + (showArchived ? archivedCount : 0);
-
-  // 何一つ無い新規ユーザーには、セクションごとの短い文言ではなく
-  // 最初の 1 件を作るよう促す既存のオンボーディング文を出す
-  const isCompletelyEmpty = !hasAnyActivity && archivedCount === 0;
 
   return (
     <ActivityDragProvider allActivities={allActivities}>
@@ -366,8 +362,8 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                 />
               ))}
 
-              {categories.length === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-foreground px-2 py-1 text-xs">
+              {categories.length === 0 ? (
+                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
                   {t('calendar.filter.noCategories')}
                 </p>
               ) : null}
@@ -524,8 +520,8 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
 
                 {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
                   言い切る（未分類そのものが空だと誤読させない） */}
-                {uncategorizedCount === 0 && !isCompletelyEmpty ? (
-                  <p role="status" className="text-foreground px-2 py-1 text-xs">
+                {uncategorizedCount === 0 ? (
+                  <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
                     {statusFilter === 'archived'
                       ? t('calendar.filter.noArchived')
                       : t('calendar.filter.noUncategorized')}
@@ -533,12 +529,6 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                 ) : null}
               </UncategorizedDropZone>
             </SidebarSection>
-
-            {isCompletelyEmpty ? (
-              <div role="status" className="text-foreground px-2 py-2 text-xs">
-                {t('calendar.filter.noActivities')}
-              </div>
-            ) : null}
           </>
         )}
       </div>

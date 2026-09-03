@@ -85,7 +85,7 @@ export function TemplateList({
       }
     >
       {templates.length === 0 ? (
-        <p role="status" className="text-foreground px-2 py-1 text-xs">
+        <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
           {t('calendar.templates.empty')}
         </p>
       ) : (
