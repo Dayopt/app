@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Plus, Settings2 } from 'lucide-react';
@@ -61,7 +62,18 @@ const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
  * 並び順はサーバーの `listTree` が名前順で返す（`sort_order` は持たない）。
  * DnD は廃止した。カテゴリーの付け替えは行メニューの「カテゴリーを変更」で行う。
  */
-export function ActivityFilterList() {
+interface ActivityFilterListProps {
+  /**
+   * 「カテゴリ」見出しと「未分類」見出しの間に差し込む slot（テンプレート列用）。
+   *
+   * カテゴリー樹（本 component）とは別枠のフラットな一覧を、入れ子にせず
+   * 挟み込むためだけの穴。ActivityFilterList 自身はテンプレートの中身を
+   * 知らない（`@/features/calendar` barrel 経由で呼び出し側が組み立てる）。
+   */
+  betweenCategoriesAndUncategorized?: ReactNode | undefined;
+}
+
+export function ActivityFilterList({ betweenCategoriesAndUncategorized }: ActivityFilterListProps) {
   const t = useTranslations();
   const isMobile = useIsMobile();
   const { data: tree, isLoading, isFetching } = useActivityTree();
@@ -310,6 +322,8 @@ export function ActivityFilterList() {
                 </p>
               ) : null}
             </SidebarSection>
+
+            {betweenCategoriesAndUncategorized}
 
             {/* 未分類（カテゴリー未所属のアクティビティ） + アクティビティなし行。
                 「未分類」は分類の名前ではなく並びの単位なので、アーカイブ単独表示でも

@@ -273,6 +273,8 @@
     "templates": {
       "sectionTitle": "テンプレート",
       "empty": "テンプレートはまだありません",
+      "createEntryLabel": "テンプレートを追加",
+      "settingsLabel": "設定",
       "saveEntryLabel": "この並びを型として保存",
       "saveNamePlaceholder": "テンプレート名",
       "renameLabel": "テンプレート名を変更",

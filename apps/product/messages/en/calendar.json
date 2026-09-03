@@ -273,6 +273,8 @@
     "templates": {
       "sectionTitle": "Templates",
       "empty": "No templates yet",
+      "createEntryLabel": "Add template",
+      "settingsLabel": "Settings",
       "saveEntryLabel": "Save this arrangement as a template",
       "saveNamePlaceholder": "Template name",
       "renameLabel": "Rename template",
