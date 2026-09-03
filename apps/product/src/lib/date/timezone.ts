@@ -13,7 +13,6 @@
  * ```
  */
 
-import { startOfWeek as dfStartOfWeek, format } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 import { getDateKey } from './core';
@@ -155,38 +154,6 @@ export function parseISOToUserTimezone(isoString: string, timezone: string): Dat
 // ========================================
 // TZ境界ヘルパー
 // ========================================
-
-/**
- * ユーザーTZの週初日0:00をUTC ISOで返す
- *
- * @param date - 基準日
- * @param timezone - ユーザーのタイムゾーン
- * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
- * @returns UTC ISO 8601文字列
- */
-export function tzWeekStart(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
-  const zonedDate = toZonedTime(date, timezone);
-  const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
-  const dateStr = format(weekStart, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${dateStr}T00:00:00`), timezone).toISOString();
-}
-
-/**
- * ユーザーTZの週末日23:59:59.999をUTC ISOで返す
- *
- * @param date - 基準日
- * @param timezone - ユーザーのタイムゾーン
- * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
- * @returns UTC ISO 8601文字列
- */
-export function tzWeekEnd(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
-  const zonedDate = toZonedTime(date, timezone);
-  const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
-  const weekEndDate = new Date(weekStart);
-  weekEndDate.setDate(weekEndDate.getDate() + 6);
-  const dateStr = format(weekEndDate, 'yyyy-MM-dd');
-  return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
-}
 
 /**
  * 2つのUTC DateがユーザーTZで同じ日かどうか

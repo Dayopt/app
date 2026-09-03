@@ -103,18 +103,34 @@ describe('DesktopLayout', () => {
     expectBefore(alert, main);
   });
 
-  it('keeps one banner before main content and omits the shell header on /calendar', () => {
-    pathnameMock.mockReturnValue('/calendar');
+  // `/calendar` と `/report` は自前で AppHeader を組むため shell 側は出さない（#2575）。
+  it.each(['/calendar', '/report'])(
+    'keeps one banner before main content and omits the shell header on %s',
+    (pathname) => {
+      pathnameMock.mockReturnValue(pathname);
 
-    const { container } = render(
+      const { container } = render(
+        <DesktopLayout>
+          <div>Content</div>
+        </DesktopLayout>,
+      );
+
+      expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+      const alert = expectSingleVisibleBanner(container);
+      expectBefore(alert, screen.getByRole('main'));
+    },
+  );
+
+  it.each(['/projects', '/settings'])('keeps the shell header on %s', (pathname) => {
+    pathnameMock.mockReturnValue(pathname);
+
+    render(
       <DesktopLayout>
-        <div>Calendar</div>
+        <div>Content</div>
       </DesktopLayout>,
     );
 
-    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
-    const alert = expectSingleVisibleBanner(container);
-    expectBefore(alert, screen.getByRole('main'));
+    expect(screen.getByRole('banner')).toBeInTheDocument();
   });
 
   it('keeps a single hidden banner container out of the accessibility tree', () => {
@@ -172,7 +188,7 @@ describe('MobileLayout', () => {
     expectBefore(alert, main);
   });
 
-  it.each(['/calendar', '/settings', '/settings/billing'])(
+  it.each(['/calendar', '/report', '/settings', '/settings/billing'])(
     'shows one banner before main content and omits the shell header on %s',
     (pathname) => {
       pathnameMock.mockReturnValue(pathname);
@@ -192,33 +208,24 @@ describe('MobileLayout', () => {
     },
   );
 
-  // #2300: フッターの BottomTabBar を廃止し、report 画面限定でヘッダーに
-  // カレンダーへ戻るトグルアイコンを置く（calendar は独自ヘッダーのため対象外）。
-  it('shows the calendar toggle in the header only on /report', () => {
-    pathnameMock.mockReturnValue('/report');
+  // #2300 のカレンダーへ戻るトグルは、`/report` が独自ヘッダーを持つようになった
+  // （#2575）のに伴い ReportViewClient 側へ移した。shell はどの経路でも出さない。
+  it.each(['/calendar', '/report', '/projects'])(
+    'does not show the calendar toggle in the shell header on %s',
+    (pathname) => {
+      pathnameMock.mockReturnValue(pathname);
 
-    render(
-      <MobileLayout>
-        <div>Content</div>
-      </MobileLayout>,
-    );
+      render(
+        <MobileLayout>
+          <div>Content</div>
+        </MobileLayout>,
+      );
 
-    expect(screen.getByRole('link', { name: 'calendar.actions.openCalendar' })).toBeInTheDocument();
-  });
-
-  it.each(['/calendar', '/projects'])('does not show the calendar toggle on %s', (pathname) => {
-    pathnameMock.mockReturnValue(pathname);
-
-    render(
-      <MobileLayout>
-        <div>Content</div>
-      </MobileLayout>,
-    );
-
-    expect(
-      screen.queryByRole('link', { name: 'calendar.actions.openCalendar' }),
-    ).not.toBeInTheDocument();
-  });
+      expect(
+        screen.queryByRole('link', { name: 'calendar.actions.openCalendar' }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it('keeps a single hidden banner container out of the accessibility tree', () => {
     bannerState.current = { visible: false, message: '' };

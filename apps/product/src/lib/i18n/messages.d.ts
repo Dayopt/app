@@ -27,6 +27,7 @@ import type error from '../../../messages/en/error.json';
 import type legal from '../../../messages/en/legal.json';
 import type navigation from '../../../messages/en/navigation.json';
 import type oauth from '../../../messages/en/oauth.json';
+import type report from '../../../messages/en/report.json';
 import type settings from '../../../messages/en/settings.json';
 import type shortcuts from '../../../messages/en/shortcuts.json';
 import type sidebar from '../../../messages/en/sidebar.json';
@@ -42,6 +43,7 @@ type Messages = typeof activities &
   typeof legal &
   typeof navigation &
   typeof oauth &
+  typeof report &
   typeof settings &
   typeof shortcuts &
   typeof sidebar &
