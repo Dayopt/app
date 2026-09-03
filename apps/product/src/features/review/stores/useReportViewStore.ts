@@ -54,6 +54,12 @@ function createInitialReportViewState(): ReportViewState {
  *
  * localStorage は他バージョンの Dayopt・拡張・手編集で壊れうるため、型が違う値は既定へ倒す。
  * `persist` の中へ書かず独立 export しているのは、そのまま unit test にかけるため。
+ *
+ * **`migrate` だけでなく `merge` にも渡す。** zustand の persist が `migrate` を呼ぶのは
+ * 保存された version が現在と**違う**時だけ（zustand 5.0.14 `middleware.mjs`）。version が
+ * 一致したまま中身が壊れている localStorage はサニタイズを素通りし、`hiddenCategoryIds` が
+ * 配列でなければ `.includes()` でサイドバーごと落ちる。`merge` は毎回のハイドレーションで
+ * 必ず呼ばれるので、こちらを実際の防波堤にする。
  */
 export function migrateReportViewState(persistedState: unknown, _version: number): ReportViewState {
   const defaults = createInitialReportViewState();
@@ -107,6 +113,11 @@ export const useReportViewStore = create<ReportViewStore>()(
           segmentId,
         }),
         migrate: migrateReportViewState,
+        // version が一致していてもここは通る。壊れた値を state へ入れない最後の関門
+        merge: (persistedState, currentState) => ({
+          ...currentState,
+          ...migrateReportViewState(persistedState, 1),
+        }),
       },
     ),
     { name: 'report-view-store', enabled: process.env.NODE_ENV !== 'production' },

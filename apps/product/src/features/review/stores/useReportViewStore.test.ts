@@ -136,6 +136,36 @@ describe('useReportViewStore', () => {
       expect(state.marginHidden).toBe(true);
       expect(state.segmentId).toBe('seg-2');
     });
+
+    /**
+     * zustand は保存された version が現在と一致していると `migrate` を呼ばない。
+     * サニタイズを `merge` にも掛けていないと、壊れた値がそのまま state へ入り、
+     * `hiddenCategoryIds.includes()` でサイドバーが落ちる。
+     */
+    it('version が一致していても壊れた値をサニタイズする', async () => {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          state: {
+            hiddenCategoryIds: 'cat-work',
+            uncategorizedHidden: 'yes',
+            marginHidden: null,
+            segmentId: 42,
+          },
+          version: 1,
+        }),
+      );
+
+      await useReportViewStore.persist.rehydrate();
+
+      const state = useReportViewStore.getState();
+      expect(state.hiddenCategoryIds).toEqual([]);
+      expect(state.uncategorizedHidden).toBe(false);
+      expect(state.marginHidden).toBe(false);
+      expect(state.segmentId).toBeNull();
+      // action は失われない（merge で currentState を土台にしている）
+      expect(typeof state.toggleCategory).toBe('function');
+    });
   });
 
   describe('migrateReportViewState', () => {
