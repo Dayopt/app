@@ -417,7 +417,13 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
   workflow でも、gate のために commit status を自分で publish する必要は無い。
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
-  ruleset の required 指定に使うため
+  持たせるため（`finish-branch.sh` の trusted dispatch 免除がこの context 名で照合する）。
+  **ただしこの context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571）。
+  PR で publish されるのは `pull_request_target` の `paths` に一致する contract 変更 PR だけになり、
+  それ以外の PR では status も check run も存在しない。required にすると、2026-08-05 の
+  `ci.yml` paths-ignore 撤去（PR #1836）と同じく「永久に `expected` のまま」で全 PR が
+  merge 不能になる。現状 Free plan では ruleset 自体が使えない（`gh api .../rulesets` は 403）ので
+  実害は出ていないが、Pro へ上げる時の落とし穴として残す
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
   外部レビュー（Codex。2026-08-13 に全 PR 適用を停止し、2026-09-01 にクロスレビュー必須 PR 限定で
   必須化して再開、#2529）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
@@ -456,7 +462,10 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   `production-config-audit.yml` は audit contract 保護対象（`scripts/ci/production-config-audit.mjs` /
   各 `production-build-gate.mjs` / workflow 自身）を変更する PR で、`pull_request_target` の check run
   `Audit Vercel metadata (trusted)` を設計として必ず failure にする（PR code に contract 変更を
-  自己検証させないため）。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  自己検証させないため）。**2026-09-03（#2571）以降、`pull_request_target` にはこの 4 path の
+  `paths` filter が付いており、そもそも contract 変更 PR でしか workflow が起動しない**
+  （それ以外の PR では check run も status も存在しないので、免除の判定自体が走らない）。
+  live な env drift の検出は日次 cron・`push:main`・promote 経路の `runProductionConfigAudit` が担う。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
   の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
   success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
   畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**
