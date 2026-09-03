@@ -459,6 +459,7 @@ describe('buildInternalReviewSection', () => {
           findings: 1,
           findingsSource: 'estimate',
           totalFindings: 1,
+          totalFindingsEstimated: true,
           commitsAfterMarker: 1,
         },
         {
@@ -468,6 +469,7 @@ describe('buildInternalReviewSection', () => {
           findings: 1,
           findingsSource: 'estimate',
           totalFindings: 1,
+          totalFindingsEstimated: true,
           commitsAfterMarker: 1,
         },
       ],
@@ -504,6 +506,7 @@ describe('buildInternalReviewSection', () => {
         findings: 2,
         findingsSource: 'marker',
         totalFindings: 2,
+        totalFindingsEstimated: false,
         commitsAfterMarker: 0,
       },
       {
@@ -513,6 +516,7 @@ describe('buildInternalReviewSection', () => {
         findings: 0,
         findingsSource: 'marker',
         totalFindings: 0,
+        totalFindingsEstimated: false,
         commitsAfterMarker: 0,
       },
       {
@@ -522,6 +526,7 @@ describe('buildInternalReviewSection', () => {
         findings: 1,
         findingsSource: 'estimate',
         totalFindings: 1,
+        totalFindingsEstimated: true,
         commitsAfterMarker: 0,
       },
     ]);
@@ -560,6 +565,7 @@ describe('buildInternalReviewSection', () => {
         findings: 0,
         findingsSource: 'marker',
         totalFindings: 2,
+        totalFindingsEstimated: false,
         commitsAfterMarker: 0,
       },
     ]);
@@ -644,6 +650,7 @@ describe('computeZeroFindingRoleNotes', () => {
           findings: 0,
           findingsSource: 'marker',
           totalFindings: 2,
+          totalFindingsEstimated: false,
           commitsAfterMarker: 0,
         },
       ],
@@ -908,5 +915,88 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
       '--json',
       'number,title,state,url,isDraft,mergedAt,closedAt,headRefName,baseRefName,body,commits',
     ]);
+  });
+});
+
+// ── #2560 項目 2 / 4: 走査範囲と推定の多重加算 ────────────────────────
+describe('loadSessionEntriesForBranch の走査範囲（#2560 項目 2）', () => {
+  it('prefix が一致するだけの兄弟 repo は scan しない', () => {
+    const listFilesImpl = vi.fn((_projectDir: string) => ['/x/session.jsonl']);
+    loadSessionEntriesForBranch({
+      projectsDir: '/home/.claude/projects',
+      cwdPrefix: '/Users/x/dayopt',
+      headRefName: 'sonnet/foo-1',
+      listDirsImpl: () => ['-Users-x-dayopt', '-Users-x-dayopt-web', '-Users-x-dayopt2'],
+      listFilesImpl,
+      readFileImpl: () => JSON.stringify({ gitBranch: 'sonnet/foo-1' }),
+    });
+
+    const scanned = listFilesImpl.mock.calls.map((call) => call[0]);
+    expect(scanned).toEqual(['/home/.claude/projects/-Users-x-dayopt']);
+  });
+
+  it('branch 名を含まない session file は parse せずに落とす（全 parse を避ける）', () => {
+    const readFileImpl = vi.fn((filePath: string) =>
+      filePath.includes('hit')
+        ? JSON.stringify({ gitBranch: 'sonnet/foo-1', timestamp: '2026-08-01T00:00:00Z' })
+        : JSON.stringify({ gitBranch: 'other/branch' }),
+    );
+
+    const entries = loadSessionEntriesForBranch({
+      projectsDir: '/home/.claude/projects',
+      cwdPrefix: '/Users/x/dayopt',
+      headRefName: 'sonnet/foo-1',
+      listDirsImpl: () => ['-Users-x-dayopt'],
+      listFilesImpl: () => ['/p/hit.jsonl', '/p/miss.jsonl'],
+      readFileImpl,
+    });
+
+    expect(entries?.map((e) => e.sessionId)).toEqual(['hit']);
+  });
+});
+
+describe('totalFindings の推定は 1 回だけ足す（#2560 項目 4）', () => {
+  it('findings: 行の無い marker が複数あっても推定を多重加算しない', () => {
+    const markerBody = (head: string) =>
+      ['[review-summary]', `head: ${head}`, 'agent: risk-reviewer', 'P1: なし', 'P2: なし'].join(
+        '\n',
+      );
+    const issueComments = [
+      {
+        body: markerBody('c'.repeat(40)),
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+      {
+        body: markerBody('d'.repeat(40)),
+        author_association: 'OWNER',
+        created_at: '2026-08-11T00:00:00Z',
+      },
+      {
+        body: markerBody('e'.repeat(40)),
+        author_association: 'OWNER',
+        created_at: '2026-08-12T00:00:00Z',
+      },
+    ];
+    // ヒューリスティック推定の材料（role 名を含む review comment 1 件）。
+    const reviewComments = [{ body: 'risk-reviewer の指摘: ここが危ない' }];
+
+    const result = buildInternalReviewSection({ issueComments, reviewComments, commits: [] });
+
+    // 旧実装は marker 3 件 × 推定 1 = 3 になっていた。
+    expect(result?.roles[0].totalFindings).toBe(1);
+    expect(result?.roles[0].totalFindingsEstimated).toBe(true);
+  });
+});
+
+describe('レビュー summary marker の新旧書式（#2562）', () => {
+  it('`[review-summary]` と旧 `[internal-review]` の両方を分析対象として拾う', () => {
+    const comments = [
+      { body: '[review-summary]\nhead: x\nagent: risk-reviewer', author_association: 'OWNER' },
+      { body: '[internal-review]\nhead: y\nagent: risk-reviewer', author_association: 'MEMBER' },
+      { body: 'ただのコメント', author_association: 'OWNER' },
+      { body: '[review-summary]\n第三者', author_association: 'NONE' },
+    ];
+    expect(filterInternalReviewMarkerComments(comments)).toHaveLength(2);
   });
 });

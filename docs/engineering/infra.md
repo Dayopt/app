@@ -349,12 +349,28 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
 
 **2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。#2483（2026-08-28）で `heavy-post-merge.yml` は `nightly.yml` へ吸収され、**2026-09-03 に `promote.yml` へ再移設した**（merge 連動 promote。per-PR で required にしない扱いは不変で、走るのは merge 後の promote 経路。影響のある suite だけが走る）。 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
 
-| context                   | 発行元            | 目的                                                       |
-| ------------------------- | ----------------- | ---------------------------------------------------------- |
-| `🛡️ docs & secrets guard` | GitHub Actions    | docs lifecycle と secret 漏えい防止の検査が成功すること    |
-| `Production Config Audit` | GitHub Actions    | live な Vercel env metadata が Production 契約を満たすこと |
-| `Vercel – product`        | Vercel GitHub App | Product の Preview build が成功すること                    |
-| `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
+| context                   | 発行元                                                  | 目的                                                                    |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `🛡️ docs & secrets guard` | GitHub Actions                                          | docs lifecycle と secret 漏えい防止の検査が成功すること                 |
+| `Production Config Audit` | GitHub Actions                                          | live な Vercel env metadata が Production 契約を満たすこと              |
+| `Vercel – product`        | Vercel GitHub App                                       | Product の Preview build が成功すること                                 |
+| `Vercel – web`            | Vercel GitHub App                                       | Web の Preview build が成功すること                                     |
+| `dayopt/internal-review`  | `pnpm review:marker` が生成する `gh api` を Main が実行 | 内製クロスレビューが実施されたこと（クロスレビュー必須 PR のみ。#2562） |
+
+**`dayopt/internal-review` は他の context と性質が違う。** GitHub Actions / Vercel が発行するのではなく、
+Main が `pnpm review:marker` の出力（`gh api --method POST repos/{owner}/{repo}/statuses/<head>`）を
+目視してから実行して作る。description は `p1=<int> p2=<int> fp=<hash> fpa=<hash> coverage=<...> agents=<csv>` の
+機械可読フィールド固定で、gate は `p1` / `p2` を数値として読み（数値以外・欠落は fail closed）、
+`fp` / `fpa` を **レビュー指紋**として読む。
+
+- **束縛**: 現 HEAD の status が無くても、旧 HEAD の status の指紋が現在の PR diff の指紋と一致すれば
+  有効（#2558）。指紋は `git diff <base>...<head>` の変更行のうち保護対象 path だけ（`review:full` の
+  PR では全 file）を正規化した sha256 の先頭 16 桁で、hunk header と context 行を含まないため
+  **追従 merge では変わらない**。docs だけの push・追従で `@codex review` と CI をやり直す無駄を消す
+- **旧設計との違い**: 2026-09 以前は `[internal-review]` marker 付き PR コメントを正規表現で読んでいた。
+  zerolike 判定の破綻・取得窓に残る壊れた marker・短縮 SHA 手打ちの捏造という 3 事故クラスが
+  材料そのものから来ていたため、commit status へ移した（#2562）。summary コメントは
+  `[review-summary]` marker で残るが、**gate は読まない**（`pnpm trace` の分析用）
 
 `🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
@@ -488,7 +504,7 @@ finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job�
   `Production Config Audit` の success を要求する（判定は `protected-path-gate.mjs` の `auditContract`）。
   **変更ファイル一覧そのものを取得できなかった PR も要求する** — contract 変更を否定できない以上、
   通す理由が無い（#2586 で Codex と architecture-guard の両系統から同じ指摘）。その PR は同じ理由で
-  `REVIEW_GATE_REQUIRED` も fail closed で立ち、内製 marker と Codex の独立 2 系統も必須になる。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  `REVIEW_GATE_REQUIRED` も fail closed で立ち、内製証跡（commit status `dayopt/internal-review`）と Codex の独立 2 系統も必須になる。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
   の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
   success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
   畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**

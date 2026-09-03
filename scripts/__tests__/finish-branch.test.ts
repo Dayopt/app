@@ -19,6 +19,7 @@ import {
   buildIssueReviewMarkerBody,
   computeIssueFingerprintFromIssue,
 } from '../lib/issue-review-core.mjs';
+import { fingerprintFromDiff } from '../lib/review-fingerprint.mjs';
 
 /**
  * `finish-branch.sh` は Claude / 人間で共通のマージゲートで、判定を誤ると
@@ -152,6 +153,33 @@ function internalReviewMarkerBody(
 /** Codex GitHub 連携 bot の login（GraphQL 表記。REST は `[bot]` 付き） */
 const CODEX_BOT_LOGIN = 'chatgpt-codex-connector';
 
+/** 内製クロスレビュー証跡の commit status context（#2562） */
+const INTERNAL_REVIEW_STATUS_CONTEXT = 'dayopt/internal-review';
+
+/**
+ * commit status の description。gate は `p1` / `p2` を数値として、`fp` / `fpa` を
+ * 指紋として読む（`scripts/lib/generate-marker-core.ts` の buildStatusDescription
+ * と同じ書式）。テストでは指紋一致経路を使わないケースが大半なので、既定の指紋は
+ * 「現在の diff の指紋（stub では計算不能 = 空）」と一致しないダミー値にしてある。
+ */
+function statusDescription(
+  overrides: { p1?: string; p2?: string; fp?: string; fpa?: string; agents?: string } = {},
+): string {
+  const p1 = overrides.p1 ?? '0';
+  const p2 = overrides.p2 ?? '0';
+  const fp = overrides.fp ?? 'a'.repeat(16);
+  const fpa = overrides.fpa ?? 'b'.repeat(16);
+  const agents = overrides.agents ?? 'risk-reviewer, behavior-verifier';
+  return `p1=${p1} p2=${p2} fp=${fp} fpa=${fpa} coverage=complete agents=${agents}`;
+}
+
+type InternalReviewStatusFixture = {
+  oid?: string;
+  context?: string;
+  state?: string;
+  description?: string;
+};
+
 type CodexReviewFixture = { login?: string; state?: string; commitOid?: string };
 
 /**
@@ -162,28 +190,46 @@ type CodexReviewFixture = { login?: string; state?: string; commitOid?: string }
  * - `reviews`: Codex の独立レビュー object（#2529、2 系統目）
  */
 function reviewEvidencePayload(evidence: {
-  comments?: Array<{ author: string; body?: string; association?: string }>;
+  comments?: Array<{ author: string; body?: string; association?: string; isBot?: boolean }>;
   /** 窓（last: 100）より多い総件数を申告させる。省略時は nodes 件数 = 切り詰めなし */
   commentsTotalCount?: number;
   /** Codex review object。省略時は現 HEAD の有効なレビュー 1 件（既存ケースの前提を維持） */
   codexReviews?: CodexReviewFixture[];
   reviewsTotalCount?: number;
+  /**
+   * 内製クロスレビューの証跡（commit status、#2562）。省略時は現 HEAD に
+   * success の status が 1 件ある状態にして gate を通す（既存ケースの前提を維持）。
+   */
+  internalReviewStatuses?: InternalReviewStatusFixture[];
 }): unknown {
   const comments = evidence.comments ?? [];
   const reviews = evidence.codexReviews ?? [{}];
+  const statuses = evidence.internalReviewStatuses ?? [{}];
   return {
     data: {
       repository: {
         pullRequest: {
           comments: {
             totalCount: evidence.commentsTotalCount ?? comments.length,
-            nodes: comments.map((comment) => ({
-              author: { login: comment.author },
-              // 実測: 人間の repo member は MEMBER、bot は NONE を返す。
-              authorAssociation:
-                comment.association ?? (comment.author === 't3-nico' ? 'MEMBER' : 'NONE'),
-              body: comment.body ?? '',
-            })),
+            nodes: comments
+              .map((comment) => ({
+                author: { login: comment.author },
+                // 実測: 人間の repo member は MEMBER、bot は NONE を返す。
+                authorAssociation:
+                  comment.association ?? (comment.author === 't3-nico' ? 'MEMBER' : 'NONE'),
+                body: comment.body ?? '',
+              }))
+              .map((node, index) => ({
+                ...node,
+                author: {
+                  ...(node.author as Record<string, unknown>),
+                  // GraphQL の Actor.__typename。GitHub App は "Bot"、人間は "User"。
+                  __typename:
+                    (comments[index].isBot ?? comments[index].author.startsWith('chatgpt-'))
+                      ? 'Bot'
+                      : 'User',
+                },
+              })),
           },
           reviews: {
             totalCount: evidence.reviewsTotalCount ?? reviews.length,
@@ -191,6 +237,22 @@ function reviewEvidencePayload(evidence: {
               author: { login: review.login ?? CODEX_BOT_LOGIN },
               state: review.state ?? 'COMMENTED',
               commit: { oid: review.commitOid ?? DEFAULT_HEAD_SHA },
+            })),
+          },
+          commits: {
+            nodes: statuses.map((status) => ({
+              commit: {
+                oid: status.oid ?? DEFAULT_HEAD_SHA,
+                status: {
+                  contexts: [
+                    {
+                      context: status.context ?? INTERNAL_REVIEW_STATUS_CONTEXT,
+                      state: status.state ?? 'SUCCESS',
+                      description: status.description ?? statusDescription(),
+                    },
+                  ],
+                },
+              },
             })),
           },
         },
@@ -264,14 +326,23 @@ function runScript(
      * 前提を変えないため）。
      */
     reviewEvidence?: {
-      comments?: Array<{ author: string; body?: string; association?: string }>;
+      comments?: Array<{ author: string; body?: string; association?: string; isBot?: boolean }>;
       commentsTotalCount?: number;
       /** Codex review object（#2529）。省略時は現 HEAD の有効レビュー 1 件 */
       codexReviews?: CodexReviewFixture[];
       reviewsTotalCount?: number;
+      /** 内製クロスレビュー証跡の commit status（#2562）。省略時は現 HEAD に 1 件 */
+      internalReviewStatuses?: InternalReviewStatusFixture[];
     };
     /** 痕跡クエリを失敗させる（fail closed 経路の検証） */
     reviewEvidenceUnavailable?: boolean;
+    /**
+     * `gh pr diff` が返す diff（レビュー指紋の材料、#2558）。省略時は取得失敗として
+     * 扱われ、指紋一致による緩和が無効になる（head 完全一致だけを見る）。
+     */
+    prDiff?: string;
+    /** `compare/<base>...<sha>` の diff（Codex 証跡の指紋照合用）。key は sha。 */
+    compareDiffs?: Record<string, string>;
     /**
      * PR の closing issue references（`Closes #N`）。省略時は 0 件。
      * `review:full` を持つ issue が 1 件でもあれば review gate が required になる（#2530）。
@@ -385,13 +456,7 @@ function runScript(
   const reviewEvidencePath = join(temporaryDirectory, 'review-evidence.json');
   writeFileSync(
     reviewEvidencePath,
-    JSON.stringify(
-      reviewEvidencePayload(
-        options.reviewEvidence ?? {
-          comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
-        },
-      ),
-    ),
+    JSON.stringify(reviewEvidencePayload(options.reviewEvidence ?? {})),
   );
 
   // PR の closing issue references（`Closes #N`）のレスポンス。既定は 0 件。
@@ -441,6 +506,18 @@ function runScript(
     );
   }
 
+  // レビュー指紋（#2558）の材料。`prDiff` を渡した test だけが指紋経路を通る
+  // （渡さない test では gh stub が exit 2 になり、指紋は空 = head 完全一致のみ）。
+  const prDiffPath = join(temporaryDirectory, 'pr.diff');
+  if (options.prDiff !== undefined) {
+    writeFileSync(prDiffPath, options.prDiff);
+  }
+  const compareDiffDirectory = join(temporaryDirectory, 'compare-diffs');
+  mkdirSync(compareDiffDirectory);
+  for (const [sha, diff] of Object.entries(options.compareDiffs ?? {})) {
+    writeFileSync(join(compareDiffDirectory, `${sha}.diff`), diff);
+  }
+
   // `gh` だけ差し替える。git は temp repo 上で本物を動かす（worktree / show-ref の判定を
   // 実挙動に任せる方が、stub の作り込みより契約に近い）。
   const ghStub = join(binDirectory, 'gh');
@@ -452,6 +529,9 @@ case "$1" in
   pr)
     case "\${2:-}" in
       view) cat "$FINISH_BRANCH_PR_JSON" ;;
+      diff)
+        if [[ -f "\${FINISH_BRANCH_PR_DIFF:-}" ]]; then cat "$FINISH_BRANCH_PR_DIFF"; else exit 2; fi
+        ;;
       *) exit 2 ;;
     esac
     ;;
@@ -494,6 +574,20 @@ case "$1" in
       fi
     else
       case "$*" in
+        *application/vnd.github.v3.diff*)
+          # レビュー指紋のための compare（base...<候補 sha>）。sha 別の fixture を返す。
+          sha=""
+          for arg in "$@"; do
+            case "$arg" in
+              */compare/*...*) sha="\${arg##*...}" ;;
+            esac
+          done
+          if [[ -f "\${FINISH_BRANCH_COMPARE_DIFF_DIR:-}/\${sha}.diff" ]]; then
+            cat "$FINISH_BRANCH_COMPARE_DIFF_DIR/\${sha}.diff"
+          else
+            exit 1
+          fi
+          ;;
         *pulls/123/files*)
           cat "$FINISH_BRANCH_PR_FILES"
           if [[ "\${FINISH_BRANCH_FILES_EXIT:-0}" != "0" ]]; then exit 1; fi
@@ -542,6 +636,8 @@ esac
         ? join(temporaryDirectory, 'missing-closing-issues.json')
         : closingIssuesPath,
       FINISH_BRANCH_ISSUE_DIR: issueDirectory,
+      FINISH_BRANCH_PR_DIFF: options.prDiff === undefined ? '' : prDiffPath,
+      FINISH_BRANCH_COMPARE_DIFF_DIR: compareDiffDirectory,
     },
   });
 
@@ -1492,376 +1588,327 @@ describe('レビュー thread の必須解決 gate', () => {
   });
 });
 
-describe('内製クロスレビューの痕跡 gate', () => {
+describe('内製クロスレビュー証跡 gate（commit status、#2562）', () => {
   const greenRollup = () => [
     checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
     ...requiredChecks(),
   ];
 
-  // 内製クロスレビュー marker gate は保護対象 path に触れる PR にのみ必須化された
-  // （#2478、レビュー gate のテンポ連動化）。このブロックは marker 判定ロジック
-  // そのものを検証する場なので、常に保護対象 path（migration ファイル）を変更
-  // ファイルに含めてゲートを起動させる。gate 条件化そのものの挙動は別の
-  // describe（'保護対象 path / review:full ラベルによる gate 条件化（#2478）'）で見る。
+  // 内製クロスレビュー gate は保護対象 path に触れる PR にのみ必須化されている
+  // （#2478、レビュー gate のテンポ連動化）。このブロックは証跡判定ロジックそのものを
+  // 検証する場なので、常に保護対象 path（migration ファイル）を変更ファイルに含めて
+  // gate を起動させる。gate 条件化そのものの挙動は別の describe で見る。
   const run: typeof runScript = (rollup, options = {}) =>
     runScript(rollup, { files: ['supabase/migrations/0001_test.sql'], ...options });
 
-  it('痕跡が 1 つも無ければ止める（レビューの投げ忘れ）', () => {
+  it('証跡（commit status）が 1 つも無ければ止める（レビューの投げ忘れ）', () => {
     // thread の必須解決 gate は「存在する指摘」しか見ないため、thread 0 件の PR は
     // 「レビュー済みで指摘ゼロ」と「投げ忘れ」を区別できない。ここが本 gate の主目的。
     const { status, stderr } = run(greenRollup(), {
       threads: [],
-      reviewEvidence: { comments: [{ author: 't3-nico', body: 'よろしくお願いします' }] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
+    expect(stderr).toContain(
+      '原因: context「dayopt/internal-review」の commit status が 1 件もありません',
+    );
     expect(status).toBe(1);
   });
 
-  it('head / agent 行が揃った marker を痕跡として認める', () => {
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+  it('現 HEAD の success status を証跡として認める', () => {
+    const { status, stderr } = run(greenRollup(), { threads: [] });
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました（現 HEAD の commit status');
     expect(status).toBe(0);
   });
 
-  it('P1/P2 が「なし」の申告なら review thread が 0 件でも通す', () => {
+  it('別 context の status は証跡にならない（context 一致を要求する）', () => {
+    const { status, stderr } = run(greenRollup(), {
+      threads: [],
+      reviewEvidence: { internalReviewStatuses: [{ context: 'Production Config Audit' }] },
+    });
+    expect(stderr).toContain(
+      '原因: context「dayopt/internal-review」の commit status が 1 件もありません',
+    );
+    expect(status).toBe(1);
+  });
+
+  it('state が success 以外の status は証跡にならない', () => {
+    const { status, stderr } = run(greenRollup(), {
+      threads: [],
+      reviewEvidence: { internalReviewStatuses: [{ state: 'PENDING' }] },
+    });
+    expect(stderr).toContain(
+      '原因: 同 context の status はありますが state が success ではありません',
+    );
+    expect(status).toBe(1);
+  });
+
+  it('旧 HEAD 向けの status だけでは通さない（指紋も一致しない場合）', () => {
+    // 「未実施」ではなく「旧 HEAD へ投稿したが push で進んだ」と区別して伝える。
+    const { status, stderr } = run(greenRollup(), {
+      threads: [],
+      reviewEvidence: { internalReviewStatuses: [{ oid: '1'.repeat(40) }] },
+    });
+    expect(stderr).toContain('現 HEAD');
+    expect(stderr).toContain(
+      '旧 HEAD 向けに投稿した証跡で、その後にレビュー対象の diff が変わっています',
+    );
+    expect(status).toBe(1);
+  });
+
+  it('p1 / p2 が数値でない description は fail closed で止める', () => {
     const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
-        comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ p1: 'なし', p2: '0' }) }],
+        internalReviewStatuses: [{ description: statusDescription({ p1: 'abc' }) }],
       },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
-    expect(status).toBe(0);
+    expect(stderr).toContain('p1 / p2 を数値として読めませんでした');
+    expect(status).toBe(1);
   });
 
-  it('marker が P1 で指摘ありと申告しているのに review thread が 0 件なら止める（申告と実体の突き合わせ）', () => {
-    // marker は自己申告であり、review comment を投稿し忘れても marker 自体の
-    // 5 点チェックは通ってしまう。P1/P2 の非ゼロ申告と thread の実在を
-    // 突き合わせることで、この抜け道を塞ぐ。
+  it('p1 / p2 フィールドが欠落した description は fail closed で止める', () => {
     const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
-        comments: [
-          { author: 't3-nico', body: internalReviewMarkerBody({ p1: '2 件', p2: 'none' }) },
-        ],
+        internalReviewStatuses: [{ description: 'レビューしました（フィールドなし）' }],
+      },
+    });
+    expect(stderr).toContain('p1 / p2 を数値として読めませんでした');
+    expect(status).toBe(1);
+  });
+
+  it('p1=0 p2=0 なら review thread が 0 件でも通す', () => {
+    const { status, stderr } = run(greenRollup(), { threads: [] });
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました');
+    expect(status).toBe(0);
+  });
+
+  it('p2 が非ゼロなのに review thread が 0 件なら止める（申告と実体の突き合わせ）', () => {
+    // status は自己申告であり、review comment を投稿し忘れても status 自体は通る。
+    // 非ゼロ申告と thread の実在を突き合わせることで、この抜け道を塞ぐ（二層 AND）。
+    const { status, stderr } = run(greenRollup(), {
+      threads: [],
+      reviewEvidence: {
+        internalReviewStatuses: [{ description: statusDescription({ p2: '2' }) }],
       },
     });
     expect(stderr).toContain('review thread が 1 件もありません');
+    expect(stderr).toContain('p1=0 p2=2');
     expect(status).toBe(1);
   });
 
-  it('marker が P1 で指摘ありと申告していても review thread が 1 件あれば通す', () => {
-    const { status, stderr } = run(greenRollup(), {
+  it('p1 が非ゼロでも review thread が 1 件あれば通す', () => {
+    const { status } = run(greenRollup(), {
       threads: [{ isResolved: true }],
       reviewEvidence: {
-        comments: [
-          { author: 't3-nico', body: internalReviewMarkerBody({ p1: '2 件', p2: 'none' }) },
-        ],
+        internalReviewStatuses: [{ description: statusDescription({ p1: '1' }) }],
       },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
     expect(status).toBe(0);
   });
 
-  it('CRLF 改行の marker でも head / agent 行を認識する', () => {
-    const crlfBody = internalReviewMarkerBody().replace(/\n/g, '\r\n');
+  it('通過時のログに agents 値を含める', () => {
     const { status, stderr } = run(greenRollup(), {
       threads: [],
-      reviewEvidence: { comments: [{ author: 't3-nico', body: crlfBody }] },
+      reviewEvidence: {
+        internalReviewStatuses: [{ description: statusDescription({ agents: 'docs-only' }) }],
+      },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('agent: docs-only');
     expect(status).toBe(0);
   });
 
-  it('association が CONTRIBUTOR の marker では通さない', () => {
+  it('証跡の取得に失敗したら止める（fail closed）', () => {
     const { status, stderr } = run(greenRollup(), {
       threads: [],
-      reviewEvidence: {
-        comments: [
-          {
-            author: 'some-contributor',
-            association: 'CONTRIBUTOR',
-            body: internalReviewMarkerBody(),
-          },
-        ],
-      },
+      reviewEvidenceUnavailable: true,
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡を取得できませんでした');
     expect(status).toBe(1);
   });
 
-  it('github-actions[bot]（association NONE）の marker では通さない', () => {
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          {
-            author: 'github-actions[bot]',
-            association: 'NONE',
-            body: internalReviewMarkerBody(),
-          },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('head 行が現在の HEAD SHA と一致しなければ止める（marker の使い回し防止）', () => {
-    // 早い段階で貼った marker を使い回し、その後の未レビュー push を素通りさせる
-    // 抜け道を塞ぐ。DEFAULT_HEAD_SHA と異なる sha を指す marker は無効。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) }],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('head 行が無ければ止める', () => {
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          { author: 't3-nico', body: '[internal-review]\nagent: risk-reviewer\nP1: none' },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('agent 行が無ければ止める', () => {
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          {
-            author: 't3-nico',
-            body: `[internal-review]\nhead: ${DEFAULT_HEAD_SHA}\nP1: none`,
-          },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('agent 行はあるが値が空なら止める（`\\s*` が改行を跨いで次行の内容にマッチする回帰）', () => {
-    // jq の `\s` は改行にマッチするため、`^agent:\s*\S` は「agent: の後が空のまま
-    // 次の行に何か書かれていれば」誤って通過する。行内の空白（スペース/タブ）だけを
-    // 許す `[ \t]*` に固定する必要がある。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          {
-            author: 't3-nico',
-            body: `[internal-review]\nhead: ${DEFAULT_HEAD_SHA}\nagent:\nP1: none`,
-          },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('引用された marker では通さない（stderr / 規約文の貼り付けで空洞化しない）', () => {
-    // gate 自身の停止メッセージと workflow.md の規約本文には marker が平文で載る。
-    // 素朴な部分一致だと、それを PR コメントへ貼るだけで gate が黙って無効化される。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          {
-            author: 't3-nico',
-            body: `gate に止められた。メッセージは以下:\n\n> ${internalReviewMarkerBody()}\n\nどう対応する？`,
-          },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('先頭に複数の空行があっても marker を認める（1 段階だけの trim では落ちる回帰）', () => {
-    // 旧実装の `ltrimstr(" ") | ltrimstr("\n")` は先頭の空白/改行をそれぞれ 1 回しか
-    // 剥がさない。2 行以上の空行を挟んで marker を貼ると本来通るべきコメントが
-    // 「引用された marker」と区別できず弾かれていた。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [{ author: 't3-nico', body: `\n\n${internalReviewMarkerBody()}` }],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
-    expect(status).toBe(0);
-  });
-
-  it('第三者（association が NONE）の marker では通さない', () => {
-    // public repo なので任意のユーザーが PR にコメントできる。書き手を絞らないと
-    // 外部から 1 コメントで gate を無効化できてしまう。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [
-          { author: 'random-passerby', association: 'NONE', body: internalReviewMarkerBody() },
-        ],
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-    expect(status).toBe(1);
-  });
-
-  it('marker だけで中身が無いコメントは通さない', () => {
-    for (const body of ['[internal-review]', '[internal-review]   \n  ']) {
-      const { status, stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: { comments: [{ author: 't3-nico', body }] },
-      });
-      expect(stderr).toContain('内製クロスレビューの痕跡がありません');
-      expect(status).toBe(1);
-    }
-  });
-
-  it('comments が 100 件超なら、止める時に窓の切り詰めを伝える', () => {
-    // last: 100 の窓から古い痕跡が落ちうる。判定は緩めず（切り詰めを理由に通すと
-    // fail open になる）、なぜ止まったかだけを説明する。
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: { comments: [], commentsTotalCount: 140 },
-    });
-    expect(stderr).toContain('直近 100 件しか見ていません');
-    expect(status).toBe(1);
-  });
-
-  it('100 件超でも痕跡があれば通す（切り詰めの説明は出さない）', () => {
-    const { status, stderr } = run(greenRollup(), {
-      threads: [],
-      reviewEvidence: {
-        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
-        commentsTotalCount: 140,
-      },
-    });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
-    expect(stderr).not.toContain('直近 100 件しか見ていません');
-    expect(status).toBe(0);
-  });
-
-  it('痕跡の取得に失敗したら止める（fail closed）', () => {
-    const { status, stderr } = run(greenRollup(), { reviewEvidenceUnavailable: true });
-    expect(stderr).toContain('内製クロスレビューの痕跡を取得できませんでした');
-    expect(status).toBe(1);
-  });
-
-  it('止める時は pr-cross-review スキルへの案内と head/agent 行の要求を出す', () => {
+  it('止める時は pr-cross-review スキルと review:marker への案内を出す', () => {
     const { stderr } = run(greenRollup(), {
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('pr-cross-review');
-    expect(stderr).toContain('head:');
-    expect(stderr).toContain('agent:');
+    expect(stderr).toContain('pnpm review:marker');
+    expect(stderr).toContain('dayopt/internal-review');
   });
 
-  it('通過時のログに agent 値を含める', () => {
-    const { stderr } = run(greenRollup(), {
+  it('PR コメントの `[internal-review]` marker は証跡として一切扱わない（材料の置き換え）', () => {
+    // 旧設計はコメント本文を正規表現で読んでいた。取得窓に残る壊れた marker が
+    // gate を塞ぎ続ける / SHA 手打ちの捏造 / zerolike 破綻 の 3 事故クラスは
+    // 「コメントを読まない」ことで構造的に消える。読んでいないことをここで固定する。
+    const { status, stderr } = run(greenRollup(), {
       threads: [],
       reviewEvidence: {
-        comments: [
-          { author: 't3-nico', body: internalReviewMarkerBody({ agent: 'behavior-verifier' }) },
+        internalReviewStatuses: [],
+        comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }],
+      },
+    });
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
+    expect(status).toBe(1);
+  });
+});
+
+/**
+ * レビューの束縛を HEAD から「保護対象 diff の指紋」へ広げる（#2558）。
+ *
+ * 旧設計は証跡が現 HEAD を指しているかだけを見ていたため、docs だけの commit・
+ * 追従 merge・lint fix でも証跡が失効し、`@codex review` の再依頼と CI の再実行を
+ * 強いていた（PR #2554 実測: fix 6 push + 追従 1 で Codex 起動 8 回 / CI 10 回）。
+ *
+ * **緩める方向の変更なので、通す側と塞ぐ側を必ず 1 件ずつ固定する。**
+ */
+describe('レビュー証跡の指紋束縛（#2558）', () => {
+  const greenRollup = () => [
+    checkRun('CI', 'SUCCESS', '2026-08-04T10:00:00Z'),
+    ...requiredChecks(),
+  ];
+
+  const protectedFile = 'supabase/migrations/20260901000000_x.sql';
+  const OLD_HEAD = '1'.repeat(40);
+
+  /** 保護対象 file を 1 つ変更する diff。`marker` を変えると指紋が変わる。 */
+  function protectedDiff(marker: string): string {
+    return [
+      `diff --git a/${protectedFile} b/${protectedFile}`,
+      'index 1111111..2222222 100644',
+      `--- a/${protectedFile}`,
+      `+++ b/${protectedFile}`,
+      '@@ -1,2 +1,3 @@',
+      ' select 1;',
+      `+select '${marker}';`,
+      '',
+    ].join('\n');
+  }
+
+  /** protectedDiff と同じ材料から、gate が計算するのと同じ指紋を得る。 */
+  function fingerprintOf(diff: string, scope: 'protected' | 'all' = 'protected'): string {
+    return fingerprintFromDiff(diff, scope);
+  }
+
+  function runProtected(options: Parameters<typeof runScript>[1] = {}) {
+    return runScript(greenRollup(), { files: [protectedFile], threads: [], ...options });
+  }
+
+  it('旧 HEAD の status でも、diff の指紋が現在と一致すれば通す（追従 merge / docs push）', () => {
+    const diff = protectedDiff('lane');
+    const { status, stderr } = runProtected({
+      prDiff: diff,
+      reviewEvidence: {
+        internalReviewStatuses: [
+          { oid: OLD_HEAD, description: statusDescription({ fp: fingerprintOf(diff) }) },
         ],
       },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました（agent: behavior-verifier）');
+    expect(stderr).toContain('指紋一致');
+    expect(stderr).toContain('レビュー対象の diff は変わっていません');
+    expect(status).toBe(0);
   });
 
-  describe('痕跡ゼロ時の原因区別（5 点判定のどれで落ちたかをヒントで示す）', () => {
-    it('marker で始まるコメントが 1 件も無ければ原因 1 を示す', () => {
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: { comments: [{ author: 't3-nico', body: 'よろしくお願いします' }] },
-      });
-      expect(stderr).toContain(
-        '原因: 「[internal-review]」で本文が始まるコメントが 1 件もありません。',
-      );
+  it('旧 HEAD の status で指紋が違えば止める（レビュー対象が実際に変わった）', () => {
+    const { status, stderr } = runProtected({
+      prDiff: protectedDiff('lane-v2'),
+      reviewEvidence: {
+        internalReviewStatuses: [
+          {
+            oid: OLD_HEAD,
+            description: statusDescription({ fp: fingerprintOf(protectedDiff('lane')) }),
+          },
+        ],
+      },
     });
+    expect(stderr).toContain('旧 HEAD 向けに投稿した証跡');
+    expect(status).toBe(1);
+  });
 
-    it('association が不足しているだけなら原因 2 を示す', () => {
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: {
-          comments: [
-            { author: 'random-passerby', association: 'NONE', body: internalReviewMarkerBody() },
-          ],
-        },
-      });
-      expect(stderr).toContain(
-        '原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません',
-      );
+  it('PR diff を取得できなければ指紋緩和を無効にする（head 完全一致のみ / fail closed）', () => {
+    const diff = protectedDiff('lane');
+    const { status, stderr } = runProtected({
+      // prDiff を渡さない = gh pr diff が失敗する
+      reviewEvidence: {
+        internalReviewStatuses: [
+          { oid: OLD_HEAD, description: statusDescription({ fp: fingerprintOf(diff) }) },
+        ],
+      },
     });
+    expect(stderr).toContain('PR diff から指紋を計算できませんでした');
+    expect(status).toBe(1);
+  });
 
-    it('marker だけで中身が無ければ原因 3 を示す', () => {
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: { comments: [{ author: 't3-nico', body: '[internal-review]   \n  ' }] },
-      });
-      expect(stderr).toContain(
-        '原因: marker の後に本文が続いていません（marker だけのコメントは無効です）。',
-      );
-    });
+  it('review:full の PR では scope=all の指紋（fpa）を見る（保護対象外の変更でも失効させる）', () => {
+    // 保護対象 path に触れない PR を review:full で必須化する。scope=protected の
+    // 指紋は「保護対象の変更なし」で常に同じ値になるため、これを見てしまうと
+    // 「重く見る」と宣言した PR で緩和が過剰になる。
+    const unprotectedDiff = [
+      'diff --git a/apps/product/src/app/page.tsx b/apps/product/src/app/page.tsx',
+      '@@ -1 +1 @@',
+      '-old',
+      '+new',
+      '',
+    ].join('\n');
 
-    it('head SHA が不一致なら原因 4 を示す（delta re-review の示唆）', () => {
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: {
-          comments: [
-            { author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) },
-          ],
-        },
-      });
-      expect(stderr).toContain('原因: marker はありますが `head: <sha>` が現在の HEAD SHA');
+    const passing = runScript(greenRollup(), {
+      files: ['apps/product/src/app/page.tsx'],
+      labels: ['review:full'],
+      threads: [],
+      prDiff: unprotectedDiff,
+      reviewEvidence: {
+        internalReviewStatuses: [
+          {
+            oid: OLD_HEAD,
+            description: statusDescription({ fpa: fingerprintOf(unprotectedDiff, 'all') }),
+          },
+        ],
+      },
     });
+    expect(passing.status).toBe(0);
 
-    it('agent 行が欠落していれば原因 5 を示す', () => {
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: {
-          comments: [
-            { author: 't3-nico', body: `[internal-review]\nhead: ${DEFAULT_HEAD_SHA}\nP1: none` },
-          ],
-        },
-      });
-      expect(stderr).toContain(
-        '原因: marker と head SHA は一致していますが `agent:` 行が空または欠落しています。',
-      );
+    // 同じ PR で保護対象外の変更が動けば、scope=all の指紋は変わるので失効する。
+    const stopping = runScript(greenRollup(), {
+      files: ['apps/product/src/app/page.tsx'],
+      labels: ['review:full'],
+      threads: [],
+      prDiff: unprotectedDiff.replace('+new', '+newer'),
+      reviewEvidence: {
+        internalReviewStatuses: [
+          {
+            oid: OLD_HEAD,
+            description: statusDescription({ fpa: fingerprintOf(unprotectedDiff, 'all') }),
+          },
+        ],
+      },
     });
+    expect(stopping.status).toBe(1);
+  });
 
-    it('複数条件が同時に不足していても、判定順で最初の原因だけを示す', () => {
-      // association 不足（原因 2）と head 不一致（原因 4）が同時に起きているケース。
-      // 判定順（1→5）で最初の不足である原因 2 だけを示し、原因 4 は出さない。
-      const { stderr } = run(greenRollup(), {
-        threads: [],
-        reviewEvidence: {
-          comments: [
-            {
-              author: 'random-passerby',
-              association: 'NONE',
-              body: internalReviewMarkerBody({ head: '1'.repeat(40) }),
-            },
-          ],
-        },
-      });
-      expect(stderr).toContain(
-        '原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません',
-      );
-      expect(stderr).not.toContain('原因: marker はありますが `head:');
+  it('Codex の旧 HEAD 証跡も、その commit の diff の指紋が一致すれば通す', () => {
+    const diff = protectedDiff('lane');
+    const { status, stderr } = runProtected({
+      prDiff: diff,
+      compareDiffs: { [OLD_HEAD]: diff },
+      reviewEvidence: {
+        codexReviews: [{ commitOid: OLD_HEAD }],
+      },
     });
+    expect(stderr).toContain('旧 HEAD の証跡ですが、diff の指紋が現在と一致');
+    expect(status).toBe(0);
+  });
+
+  it('Codex の旧 HEAD 証跡で、その commit の diff が違えば止める', () => {
+    const { status, stderr } = runProtected({
+      prDiff: protectedDiff('lane-v2'),
+      compareDiffs: { [OLD_HEAD]: protectedDiff('lane') },
+      reviewEvidence: {
+        codexReviews: [{ commitOid: OLD_HEAD }],
+      },
+    });
+    expect(stderr).toContain('古い commit に対するもの');
+    expect(status).toBe(1);
   });
 });
 
@@ -1878,10 +1925,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['supabase/migrations/0002_add_column.sql'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: required (matched supabase/migrations/**)');
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -1892,7 +1939,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
     });
     expect(stderr).toContain('review gate: required (matched apps/product/src/features/auth/**)');
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました');
     expect(status).toBe(0);
   });
 
@@ -1900,10 +1947,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['.husky/pre-push'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: required (matched .husky/**)');
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -1915,7 +1962,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       const { status, stderr } = runScript(greenRollup(), {
         files: [file],
         threads: [],
-        reviewEvidence: { comments: [] },
+        reviewEvidence: { internalReviewStatuses: [] },
       });
       expect(stderr).toContain(`review gate: required (matched ${file})`);
       expect(status).toBe(1);
@@ -1928,7 +1975,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['scripts/ci/production-config-audit.mjs'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain(
       'review gate: required (matched scripts/ci/production-config-audit.mjs)',
@@ -1940,7 +1987,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['.github/workflows/nightly.yml'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
     expect(status).toBe(0);
@@ -1950,11 +1997,11 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
     expect(stderr).toContain('内製クロスレビュー marker gate をスキップします');
-    expect(stderr).not.toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).not.toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(0);
   });
 
@@ -1963,10 +2010,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
       labels: ['review:full'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: required (label: review:full)');
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -1978,7 +2025,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
     });
     expect(stderr).toContain('review gate: required (label: review:full)');
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました');
     expect(status).toBe(0);
   });
 
@@ -1989,7 +2036,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       filesUnavailable: true,
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
     expect(stderr).toContain('audit contract を変更したか判定できませんでした');
@@ -2008,11 +2055,11 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       {
         filesUnavailable: true,
         threads: [],
-        reviewEvidence: { comments: [] },
+        reviewEvidence: { internalReviewStatuses: [] },
       },
     );
     expect(stderr).toContain('audit contract の trusted dispatch を確認しました');
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -2029,7 +2076,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       },
     );
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました');
     expect(status).toBe(0);
   });
 
@@ -2037,7 +2084,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/activities/components/ActivityRow.tsx'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
   });
@@ -2056,7 +2103,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
     expect(stderr).toContain('内製クロスレビュー marker gate をスキップします');
@@ -2083,10 +2130,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain(`review gate: required (matched ${glob})`);
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -2098,7 +2145,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: ['apps/product/src/features/timeblock/server/plan-service.ts'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
     expect(status).toBe(0);
@@ -2137,10 +2184,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain(`review gate: required (matched ${glob})`);
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -2155,7 +2202,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: not required');
     expect(status).toBe(0);
@@ -2166,10 +2213,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       files: ['apps/product/src/features/timeblock/lib/timeblock-status.ts'],
       labels: ['review:full'],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
     expect(stderr).toContain('review gate: required (label: review:full)');
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -2200,7 +2247,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       const { status, stderr } = runScript(greenRollup(), {
         files: [file],
         threads: [],
-        reviewEvidence: { comments: [] },
+        reviewEvidence: { internalReviewStatuses: [] },
       });
       expect(stderr).toContain('audit contract');
       expect(stderr).toContain('gh workflow run production-config-audit.yml');
@@ -2215,7 +2262,7 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
         files: ['scripts/ci/production-config-audit-v2.mjs'],
         previousFiles: ['scripts/ci/production-config-audit.mjs'],
         threads: [],
-        reviewEvidence: { comments: [] },
+        reviewEvidence: { internalReviewStatuses: [] },
       });
       expect(stderr).toContain('gh workflow run production-config-audit.yml');
       expect(status).toBe(1);
@@ -2230,13 +2277,13 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
         {
           files: ['scripts/ci/production-config-audit.mjs'],
           threads: [],
-          reviewEvidence: { comments: [] },
+          reviewEvidence: { internalReviewStatuses: [] },
         },
       );
       expect(stderr).toContain('audit contract の trusted dispatch を確認しました');
       expect(stderr).not.toContain('gh workflow run production-config-audit.yml');
       // checkpoint は通り、この PR は保護対象なので marker gate 側で止まる。
-      expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+      expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     });
 
     it('audit contract を変えていない PR には要求しない', () => {
@@ -2245,10 +2292,10 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
       const { stderr } = runScript(greenRollup(), {
         files: ['supabase/migrations/20260903000000_x.sql'],
         threads: [],
-        reviewEvidence: { comments: [] },
+        reviewEvidence: { internalReviewStatuses: [] },
       });
       expect(stderr).not.toContain('gh workflow run production-config-audit.yml');
-      expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+      expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     });
   });
 });
@@ -2431,7 +2478,7 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
 
   it('内製 marker と Codex review が現 HEAD で揃えば通す', () => {
     const { status, stderr } = runProtected();
-    expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
+    expect(stderr).toContain('内製クロスレビューの証跡を確認しました');
     expect(stderr).toContain('Codex の独立レビューを確認しました');
     expect(status).toBe(0);
   });
@@ -2448,21 +2495,19 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
     expect(status).toBe(1);
   });
 
-  it('Codex review だけでは通さない（内製 marker が欠けている）', () => {
+  it('Codex review だけでは通さない（内製証跡が欠けている）', () => {
     const { status, stderr } = runProtected({
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
-  it('内製 marker が旧 HEAD を指していれば停止する', () => {
+  it('内製証跡が旧 HEAD を指していれば停止する', () => {
     const { status, stderr } = runProtected({
-      reviewEvidence: {
-        comments: [{ author: 't3-nico', body: internalReviewMarkerBody({ head: '1'.repeat(40) }) }],
-      },
+      reviewEvidence: { internalReviewStatuses: [{ oid: '1'.repeat(40) }] },
     });
-    expect(stderr).toContain('現在の HEAD SHA');
+    expect(stderr).toContain('旧 HEAD 向けに投稿した証跡');
     expect(status).toBe(1);
   });
 
@@ -2566,11 +2611,11 @@ describe('Codex 独立レビューの必須化（#2529）', () => {
     const { status, stderr } = runScript(greenRollup(), {
       files: [file],
       threads: [],
-      reviewEvidence: { comments: [] },
+      reviewEvidence: { internalReviewStatuses: [] },
     });
-    // marker gate で止まる（Codex gate はここまで到達しない）
+    // 内製証跡 gate で止まる（Codex gate はここまで到達しない）
     expect(stderr).toContain(`review gate: required (matched ${file})`);
-    expect(stderr).toContain('内製クロスレビューの痕跡がありません');
+    expect(stderr).toContain('内製クロスレビューの証跡（commit status）がありません');
     expect(status).toBe(1);
   });
 
@@ -2794,7 +2839,108 @@ describe('Codex clean pass コメントによる代替証跡（#2536）', () => 
         codexReviews: [],
       },
     });
-    expect(stderr).toContain('`Reviewed commit` 行がありません');
+    // 「現 HEAD `<sha>`」は sha を持つため step3 は通り、肯定条件（badge / 非ゼロ申告 /
+    // 中断語のいずれも無いこと）で落ちる。判定の主軸が badge の否定条件から
+    // 「指摘ゼロであることの肯定条件」へ移った（#2559 指摘 1）ことを固定する。
+    expect(stderr).toContain('「指摘ゼロ」の条件を満たしていません');
+    expect(status).toBe(1);
+  });
+
+  it('badge が無くても P1 の非ゼロ件数を申告していれば証跡にしない（#2559 指摘 1）', () => {
+    // 旧実装は badge markup の有無だけを見ていたため、badge を使わない書式で
+    // 指摘を報告されると「指摘ゼロ」と誤認して未解決 P1 のまま通していた。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `## レビュー結果\n\n**Reviewed commit:** \`${DEFAULT_HEAD_SHA}\`\n\n**P1: 1件** — 認可漏れがあります。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('「指摘ゼロ」の条件を満たしていません');
+    expect(status).toBe(1);
+  });
+
+  it('全角コロンの件数申告も証跡にしない（日本語応答の書式差で素通りさせない）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `**Reviewed commit:** \`${DEFAULT_HEAD_SHA}\`\n\n**P1：2件** — 認可漏れがあります。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('「指摘ゼロ」の条件を満たしていません');
+    expect(status).toBe(1);
+  });
+
+  it('P1 / P2 をゼロ件と申告している clean pass は証跡として通す', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `**Reviewed commit:** \`${DEFAULT_HEAD_SHA}\`\n\nP1: なし\nP2: 0`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
+  it('`Reviewed commit` 付きなら本文に rate limit の語があっても通す（可用性を落とさない）', () => {
+    // push 前反証レビュー P2: 語彙一致だけで弾くと、rate limit を実装した PR の
+    // 正当な clean pass が恒久的に止まる（再依頼しても同じ応答が返る）。中断判定は
+    // narrative 経路にだけ効かせる。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `**Reviewed commit:** \`${DEFAULT_HEAD_SHA}\`\n\nrate limit の実装に問題はありません。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('指摘ゼロの clean pass コメント');
+    expect(status).toBe(0);
+  });
+
+  it('中断・未検証を示す narrative は sha があっても証跡にしない（#2559 指摘 2）', () => {
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [
+          {
+            author: CODEX_LOGIN,
+            body: `現 HEAD \`${DEFAULT_HEAD_SHA}\` に対するレビューは usage limit で中断しました。`,
+          },
+        ],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('「指摘ゼロ」の条件を満たしていません');
+    expect(status).toBe(1);
+  });
+
+  it('bot でない投稿者の clean pass コメントは証跡にしない（#2559 指摘 3）', () => {
+    // login は GitHub の制約上詐称できない前提だったが、証跡の producer 判定を
+    // login 一致だけに委ねず `__typename == "Bot"` を要求する。
+    const { status, stderr } = runProtected({
+      reviewEvidence: {
+        comments: [{ ...codexCleanPassComment(), isBot: false }],
+        codexReviews: [],
+      },
+    });
+    expect(stderr).toContain('投稿者が bot ではありません');
     expect(status).toBe(1);
   });
 
