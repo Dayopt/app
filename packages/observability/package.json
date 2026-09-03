@@ -15,7 +15,7 @@
     "test:run": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "vitest": "^4.1.10"
+    "typescript": "catalog:tooling",
+    "vitest": "catalog:tooling"
   }
 }
