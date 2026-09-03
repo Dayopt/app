@@ -40,7 +40,7 @@ interface ActivitySortActions {
 type ActivitySortStore = ActivitySortState & ActivitySortActions;
 
 /** 保存値が壊れていても既定へ落とす（localStorage は手で書き換えられる） */
-export function migrateActivitySortState(persistedState: unknown): ActivitySortState {
+function migrateActivitySortState(persistedState: unknown): ActivitySortState {
   const sortKey =
     typeof persistedState === 'object' && persistedState !== null
       ? Reflect.get(persistedState, 'sortKey')

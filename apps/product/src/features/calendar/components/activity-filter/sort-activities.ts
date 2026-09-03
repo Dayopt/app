@@ -3,7 +3,7 @@ import type { Activity } from '@/features/activities';
 import type { ActivitySortKey } from '../../stores/useActivitySortStore';
 
 /** `statistics.getActivityStats` の `lastUsed`（activityId → ISO 日時） */
-export type ActivityLastUsedMap = Record<string, string>;
+type ActivityLastUsedMap = Record<string, string>;
 
 const collator = new Intl.Collator();
 
