@@ -8,12 +8,24 @@ import { ReportFilterList } from './ReportFilterList';
  * カテゴリー・未分類・余白の 3 種類だけを並べ、アクティビティは並べない。
  * `activities.listTree` を tRPC でモックし、トグル状態は `useReportViewStore` で作る。
  */
+const MOCK_SEGMENTS = [
+  {
+    id: 'seg-1',
+    name: '深い仕事',
+    activityIds: ['act-dev'],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
 const meta = {
   title: 'Product/Features/Review/Sidebar/ReportFilterList',
   component: ReportFilterList,
   parameters: {
     layout: 'padded',
-    trpcMocks: { 'activities.listTree': MOCK_TREE() },
+    // レンズの生死は `review.listSegments` で決まる（`useActiveSegment`）。
+    // ここを落とすと LensActive が「レンズ無し」に見えてしまう
+    trpcMocks: { 'activities.listTree': MOCK_TREE(), 'review.listSegments': MOCK_SEGMENTS },
   },
   tags: ['autodocs'],
   decorators: [
@@ -60,7 +72,10 @@ export const LensActive: Story = {
 /** カテゴリーが 1 つも無い状態。見出しと未分類・余白だけが残る。 */
 export const NoCategories: Story = {
   parameters: {
-    trpcMocks: { 'activities.listTree': { categories: [], uncategorized: [] } },
+    trpcMocks: {
+      'activities.listTree': { categories: [], uncategorized: [] },
+      'review.listSegments': MOCK_SEGMENTS,
+    },
     storeMocks: { useReportViewStore: ALL_VISIBLE },
   },
 };
