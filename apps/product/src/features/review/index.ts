@@ -29,4 +29,12 @@ export { buildReportDisplayRange } from './lib/compute-date-range';
 export type { ReviewDisplayRange } from './lib/compute-date-range';
 export type { ReviewGranularity } from './stores/useReviewFilterStore';
 
+// =============================================================================
+// Report v1.0（4 章構成。#2575）
+//
+// 集計 hook・期間契約・章の派生関数は **まだ barrel に載せない**。公開面は消費側の
+// PR（#2577 のヘッダー・1 章）が、実際に使うものだけを足す。使う前に barrel へ出すと
+// 「誰も呼ばない公開 API」が残り、feature の境界が緩む。
+// =============================================================================
+
 // ここにないものはfeature内部専用
