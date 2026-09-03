@@ -9,8 +9,26 @@ on:
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  # **push:main は「監査対象そのものを変える merge」だけに絞る**（2026-09-03）。
+  # Vercel の env metadata drift と production deploy health は promote 時に
+  # `scripts/ci/production-release.mjs` が同じ script で実行するため、merge 連動
+  # promote（promote.yml）が入った今は毎 merge で重ねる必要が無い。一方
+  # auth-config / storage-rls は **Supabase production** を見ており、migration は
+  # Supabase の GitHub 連携で main merge 時に適用されるので、`supabase/**` を含む
+  # merge では引き続き直後に走らせる。audit script / build gate / この workflow
+  # 自身を変える merge も、変更した当の監査を一度も走らせずに通さないため含める。
+  # 日次 cron（06:00 JST）は dashboard の手動変更による drift を 1 日以内に拾う
+  # backstop として残る。
   push:
     branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'scripts/ci/production-config-audit.mjs'
+      - 'scripts/ci/production-auth-config-audit.mjs'
+      - 'scripts/ci/production-storage-rls-audit.mjs'
+      - 'apps/product/production-build-gate.mjs'
+      - 'apps/web/production-build-gate.mjs'
+      - '.github/workflows/production-config-audit.yml'
   schedule:
     # 06:00 JST。merge が無い日でも dashboard 手動変更の drift を 1 日以内に検出する
     - cron: '0 21 * * *'

@@ -187,9 +187,13 @@ SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 
 ### 前提: mergeとProduction公開は分離されている
 
-main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
+main へ merge しても Production domain は**直接**切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。merge は `Production Release` workflow を自動で起動し（2026-09-03 以降。それ以前は人が dispatch していた）、workflow は影響のある層 3（E2E / Web Build & E2E）を走らせ、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
 
-このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
+このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。層 3 が赤い merge では promote が走らないので、その意味でも本番は無傷で残る。
+
+**失敗はどう届くか**: promote は merge した本人の push で起動するため、run が失敗すると GitHub の
+既定通知でその本人へ失敗メールが届く。加えて `Production Release` の commit status が main の
+当該 commit へ failure で付く（commit 一覧・PR 画面で赤く見える）。専用の異常起票 job は持たない。
 
 ただしこれは **Auto-assign Custom Production Domains を無効化した後**の話。無効化前は main merge が
 そのまま公開されるため、release run が赤くても本番が無傷とは限らない。ケース0 へ進む前に、現在の

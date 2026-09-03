@@ -137,6 +137,15 @@ export const PROTECTED_PATH_GLOBS = [
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
+  // promote.yml は production domain を切り替える唯一の経路で、2026-09-03 以降は
+  // main merge がそれを自動で起動する（層 3 → smoke → promote → rollback）。
+  // gate の `if:` 式を 1 つ緩めるだけで未検証の main が本番へ出るが、その変更は
+  // CI では green のまま通り、promote 後の revert では届いてしまったものを
+  // 取り戻せない（判定基準「外部契約 or 不可逆」の両方に当たる）。
+  // **nightly.yml は含めない** —— 層 3 撤去後は sweep / replica / backup だけで、
+  // 「nightly.yml は marker を要求しない」既存契約（finish-branch.test.ts）を
+  // 反転させない。
+  '.github/workflows/promote.yml',
   // この2つの drift 検出テスト自身がガードレール（#2503）。削除・skip・
   // 弱体化されても保護対象 path の選定にも他の test にも現れず、将来の glob /
   // privacy 境界の縮退を恒久的に検出できなくなる（Codex 指摘 #2546）。
