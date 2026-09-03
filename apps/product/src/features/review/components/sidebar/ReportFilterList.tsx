@@ -4,8 +4,10 @@ import { useTranslations } from 'next-intl';
 
 import { SidebarSection } from '@/components/shell/sidebar';
 import { ActivityIcon, useActivityTree } from '@/features/activities';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { Checkbox, cn, Skeleton } from '@dayopt/components';
 
+import { useActiveSegment } from '../../hooks/useActiveSegment';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 
 /**
@@ -22,18 +24,21 @@ import { useReportViewStore } from '../../stores/useReportViewStore';
  */
 export function ReportFilterList() {
   const t = useTranslations('report.sidebar');
+  const isMobile = useIsMobile();
   const { data: tree, isPending } = useActivityTree();
 
   const hiddenCategoryIds = useReportViewStore((state) => state.hiddenCategoryIds);
   const uncategorizedHidden = useReportViewStore((state) => state.uncategorizedHidden);
   const marginHidden = useReportViewStore((state) => state.marginHidden);
-  const segmentId = useReportViewStore((state) => state.segmentId);
   const toggleCategory = useReportViewStore((state) => state.toggleCategory);
   const toggleUncategorized = useReportViewStore((state) => state.toggleUncategorized);
   const toggleMargin = useReportViewStore((state) => state.toggleMargin);
 
   const categories = tree?.categories ?? [];
-  const lensActive = segmentId !== null;
+  // 生の `segmentId` を見てはいけない。削除済みセグメントを指したままだと、
+  // 画面のどこにもレンズが無いのに余白行だけ無効化されたまま戻せなくなる
+  const { activeSegment } = useActiveSegment();
+  const lensActive = activeSegment !== null;
 
   return (
     <SidebarSection title={t('categoriesHeading')} className="space-y-1">
@@ -48,6 +53,7 @@ export function ReportFilterList() {
             <FilterRow
               key={category.id}
               id={`report-filter-category-${category.id}`}
+              compact={!isMobile}
               label={category.name}
               checked={!hiddenCategoryIds.includes(category.id)}
               onToggle={() => toggleCategory(category.id)}
@@ -58,6 +64,7 @@ export function ReportFilterList() {
           {/* 未分類はカテゴリーの一種ではなく残余バケット。色を継承する先が無いので中立表示 */}
           <FilterRow
             id="report-filter-uncategorized"
+            compact={!isMobile}
             label={t('uncategorized')}
             checked={!uncategorizedHidden}
             onToggle={toggleUncategorized}
@@ -67,6 +74,7 @@ export function ReportFilterList() {
           {/* 余白は記録ではなく紙。ドットも中抜きにして「塗られていない」ことを見た目で保つ */}
           <FilterRow
             id="report-filter-margin"
+            compact={!isMobile}
             label={t('margin')}
             checked={!marginHidden}
             onToggle={toggleMargin}
@@ -96,6 +104,8 @@ interface FilterRowProps {
   checked: boolean;
   onToggle: () => void;
   marker: React.ReactNode;
+  /** desktop は行を詰める。モバイルは 44px のタッチターゲットを確保する。 */
+  compact: boolean;
   disabled?: boolean;
   /** 無効化の理由。読み上げ用に `aria-describedby` で結ぶ。 */
   description?: string | undefined;
@@ -114,6 +124,7 @@ function FilterRow({
   checked,
   onToggle,
   marker,
+  compact,
   disabled = false,
   description,
 }: FilterRowProps) {
@@ -124,7 +135,8 @@ function FilterRow({
       <label
         htmlFor={id}
         className={cn(
-          'flex min-h-8 items-center gap-2 rounded-lg px-2 text-sm',
+          'flex items-center gap-2 rounded-lg px-2 text-sm',
+          compact ? 'min-h-8' : 'min-h-11',
           disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-state-hover cursor-pointer',
         )}
       >

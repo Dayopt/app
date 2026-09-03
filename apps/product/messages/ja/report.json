@@ -59,7 +59,8 @@
       "marginLensDisabled": "セグメントを選んでいる間、余白は分母に入りません",
       "empty": "カテゴリーはまだありません",
       "lensHeading": "セグメント — 保存した問い",
-      "lensAll": "すべて"
+      "lensAll": "すべて",
+      "segmentMenu": "{name} のメニュー"
     },
     "errors": {
       "title": "レポートを読み込めませんでした",

@@ -17,6 +17,7 @@ import {
   maxInkColumnMinutes,
   resolveVisibleActivities,
 } from '../../domain/report/report-view-model';
+import { useActiveSegment } from '../../hooks/useActiveSegment';
 import { useReportPeriod } from '../../hooks/useReportPeriod';
 import { useReviewOpenedTracking } from '../../hooks/useReviewOpenedTracking';
 import { useSegments } from '../../hooks/useSegments';
@@ -52,13 +53,9 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
   const hiddenCategoryIds = useReportViewStore((state) => state.hiddenCategoryIds);
   const uncategorizedHidden = useReportViewStore((state) => state.uncategorizedHidden);
   const marginHidden = useReportViewStore((state) => state.marginHidden);
-  const segmentId = useReportViewStore((state) => state.segmentId);
 
-  // 削除済みセグメントを指したままの ID は「すべて」へ縮退する
-  const activeSegment = useMemo(
-    () => segments?.find((segment) => segment.id === segmentId) ?? null,
-    [segments, segmentId],
-  );
+  // 削除済みセグメントの縮退と解決待ちの判定は hook が持つ（サイドバーと同じ答えを使う）
+  const { activeSegment, isResolving } = useActiveSegment();
 
   const view = useMemo(() => {
     if (!data) return null;
@@ -112,7 +109,8 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
     );
   }
 
-  if (isPending || !view) {
+  // レンズの生死が決まる前に数字を出すと、非レンズの分母が一瞬見えてしまう
+  if (isPending || isResolving || !view) {
     return (
       <div className="flex flex-col gap-3 p-4 md:p-6">
         <Skeleton className="h-48 rounded-2xl" />

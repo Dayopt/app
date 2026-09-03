@@ -20,12 +20,17 @@ vi.mock('../../hooks/useReviewOpenedTracking', () => ({
   useReviewOpenedTracking: () => {},
 }));
 
-vi.mock('../../hooks/useReportPeriod', () => ({
-  useReportPeriod: () => ({ data: PERIOD_DATA, isPending: false, isError: false }),
+/** anchor ごとに別の集計を返す。引数を無視すると「期間を移動した」test が嘘になる。 */
+const useReportPeriod = vi.hoisted(() => vi.fn());
+
+const segmentsState = vi.hoisted(() => ({
+  current: { data: undefined as unknown, isPending: false },
 }));
 
+vi.mock('../../hooks/useReportPeriod', () => ({ useReportPeriod }));
+
 vi.mock('../../hooks/useSegments', () => ({
-  useSegments: () => ({ data: SEGMENTS }),
+  useSegments: () => segmentsState.current,
 }));
 
 import { useReportViewStore } from '../../stores/useReportViewStore';
@@ -72,6 +77,16 @@ const PERIOD_DATA = {
 
 const SEGMENTS = [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }];
 
+/** 前週。睡眠を 1200 分に減らし、記録合計 = 1860 分にした集計。 */
+const PREVIOUS_WEEK_DATA = {
+  ...PERIOD_DATA,
+  activities: PERIOD_DATA.activities.map((activity) =>
+    activity.activityId === 'act-sleep'
+      ? { ...activity, recordedMinutes: 1200, byBucket: [1200] }
+      : activity,
+  ),
+};
+
 function renderBody() {
   return render(<ReportBody anchorDate="2026-09-02" granularity="week" />);
 }
@@ -97,6 +112,13 @@ function paintedPercent(ariaLabel = 'report.allocation.barAriaLabel') {
 
 describe('ReportBody', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    useReportPeriod.mockImplementation((anchorDate: string) => ({
+      data: anchorDate === '2026-08-26' ? PREVIOUS_WEEK_DATA : PERIOD_DATA,
+      isPending: false,
+      isError: false,
+    }));
+    segmentsState.current = { data: SEGMENTS, isPending: false };
     localStorage.clear();
     useReportViewStore.setState({
       hiddenCategoryIds: [],
@@ -190,15 +212,43 @@ describe('ReportBody', () => {
     });
   });
 
-  it('フィルタとレンズは期間の移動をまたいで保たれる', () => {
+  /**
+   * 期間を移すと集計は入れ替わるが、フィルタは端末ローカルなので残る。
+   * `useReportPeriod` のモックは anchor ごとに別データを返すので、
+   * 「anchor を無視して同じ集計を出し続ける」退行はここで落ちる。
+   */
+  it('フィルタは期間の移動をまたいで保たれる', () => {
     useReportViewStore.setState({ hiddenCategoryIds: ['cat-sleep'] });
     const { rerender } = renderBody();
     expect(headline()).toBe('11:00');
 
     rerender(<ReportBody anchorDate="2026-08-26" granularity="week" />);
 
+    expect(useReportPeriod).toHaveBeenLastCalledWith('2026-08-26', 'week');
     expect(useReportViewStore.getState().hiddenCategoryIds).toEqual(['cat-sleep']);
+
+    // 前週も睡眠が抜けたまま（仕事 600 + 未分類 60 = 11:00）。余白だけが 10080 − 1860 へ動く
     expect(headline()).toBe('11:00');
+    expect(subtitle()).toContain('137:00');
+  });
+
+  /**
+   * `listSegments` が `getReportPeriod` より遅いと、レンズ前の分母が一瞬見えてしまう。
+   * レンズの生死が決まるまでは数字を出さない。
+   */
+  it('レンズの解決を待つ間は数字を出さない', () => {
+    useReportViewStore.setState({ segmentId: 'seg-1' });
+    segmentsState.current = { data: undefined, isPending: true };
+    renderBody();
+
+    expect(headline()).toBeUndefined();
+  });
+
+  it('レンズ未選択なら listSegments を待たずに描く', () => {
+    segmentsState.current = { data: undefined, isPending: true };
+    renderBody();
+
+    expect(headline()).toBe('51:00');
   });
 });
 

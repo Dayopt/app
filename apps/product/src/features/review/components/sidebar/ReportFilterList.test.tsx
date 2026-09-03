@@ -15,13 +15,28 @@ const treeState = vi.hoisted(() => ({
   },
 }));
 
+const segmentsState = vi.hoisted(() => ({
+  current: {
+    data: [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }],
+    isPending: false,
+  },
+}));
+
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
+}));
+
+vi.mock('../../hooks/useSegments', () => ({
+  useSegments: () => segmentsState.current,
 }));
 
 vi.mock('@/features/activities', () => ({
   useActivityTree: () => treeState.current,
   ActivityIcon: () => <span data-testid="activity-icon" />,
+}));
+
+vi.mock('@/lib/hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
 }));
 
 vi.mock('@/components/shell/sidebar', () => ({
@@ -46,6 +61,10 @@ describe('ReportFilterList', () => {
   beforeEach(() => {
     localStorage.clear();
     resetStore();
+    segmentsState.current = {
+      data: [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }],
+      isPending: false,
+    };
     treeState.current = {
       data: {
         categories: [
@@ -110,6 +129,18 @@ describe('ReportFilterList', () => {
 
     // カテゴリー側は無効化しない（レンズはフィルタと交差する）
     expect(screen.getByRole('checkbox', { name: /仕事/ })).not.toBeDisabled();
+  });
+
+  /**
+   * 別タブでセグメントを消しても `segmentId` は localStorage に残る。生の
+   * `segmentId` で無効化を決めると、画面のどこにもレンズが無いのに余白行だけが
+   * 押せないまま固定され、戻す手がかりが無くなる。
+   */
+  it('削除済みセグメントを指していたら余白行を無効化しない', () => {
+    useReportViewStore.setState({ segmentId: 'seg-deleted' });
+    render(<ReportFilterList />);
+
+    expect(screen.getByRole('checkbox', { name: /margin/ })).not.toBeDisabled();
   });
 
   it('store が知らないカテゴリーは既定で可視（checked）', () => {

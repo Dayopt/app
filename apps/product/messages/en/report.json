@@ -59,7 +59,8 @@
       "marginLensDisabled": "Margin stays out of the denominator while a segment is selected",
       "empty": "No categories yet",
       "lensHeading": "Segments — saved questions",
-      "lensAll": "All"
+      "lensAll": "All",
+      "segmentMenu": "Menu for {name}"
     },
     "errors": {
       "title": "Could not load the report",

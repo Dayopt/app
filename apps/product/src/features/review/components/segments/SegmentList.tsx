@@ -18,6 +18,7 @@ import {
   Skeleton,
 } from '@dayopt/components';
 
+import { useActiveSegment } from '../../hooks/useActiveSegment';
 import {
   useCreateSegment,
   useDeleteSegment,
@@ -54,9 +55,9 @@ export function SegmentList() {
 
   const pendingDeleteSegment = segments?.find((s) => s.id === pendingDeleteId) ?? null;
 
-  // 削除済みセグメントを指したままの `segmentId` はここで「すべて」へ縮退する。
-  // 描画中に store を書き戻さない（レンダー中の setState を避ける）
-  const activeSegmentId = segments?.some((s) => s.id === segmentId) ? segmentId : null;
+  // 削除済みセグメントの縮退は hook が持つ（1 章・カテゴリーフィルタと同じ答えを使う）
+  const { activeSegment } = useActiveSegment();
+  const activeSegmentId = activeSegment?.id ?? null;
   const rowHeight = isMobile ? 'min-h-11' : 'min-h-9';
 
   return (
@@ -124,7 +125,9 @@ export function SegmentList() {
                     variant="ghost"
                     icon
                     className="size-6 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
-                    aria-label={segment.name}
+                    // 行そのものがレンズ切替のボタンになったので、名前だけだと
+                    // 読み上げで区別できず、切替のつもりで破壊的メニューを開いてしまう
+                    aria-label={tSidebar('segmentMenu', { name: segment.name })}
                   >
                     <MoreHorizontal className="size-4" />
                   </Button>
