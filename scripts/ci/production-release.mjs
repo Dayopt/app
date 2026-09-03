@@ -76,6 +76,21 @@ export const RELEASE_PROJECTS = [
 export const impactEnvVar = (impactKey) => `RELEASE_IMPACT_${impactKey.toUpperCase()}_AFFECTED`;
 
 /**
+ * impact job の出力キーと release job の env 名を **1 つの構造から導出する**。
+ *
+ * 以前は `IMPACT_OUTPUT_KEYS` と `IMPACT_ENV_VARS` の 2 配列を index で対応させていたが、
+ * それだと片方だけ並べ替えられた時（`.sort()` の追加、リテラル列挙への書き換え）に
+ * contract test が **入れ替わった配線を要求する側へ回る**。runtime では
+ * `readImpactAffected` が project 名で読むため、product の env に web の verdict が
+ * 入っても静かに別 project の判定を使い、層 3 未実行の promote が通る。
+ */
+export const IMPACT_WIRING = RELEASE_PROJECTS.map((project) => ({
+  name: project.name,
+  outputKey: `${project.impactKey}_affected`,
+  envVar: impactEnvVar(project.impactKey),
+}));
+
+/**
  * env → `runProductionRelease({ impactAffected })` の変換。
  *
  * **`'true'` 以外はすべて null（未検証）に倒す。** `'1'` / `'TRUE'` / 空文字を true へ

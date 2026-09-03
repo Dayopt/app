@@ -1982,23 +1982,52 @@ describe('保護対象 path のレビュー gate 条件化（#2478）', () => {
     expect(status).toBe(0);
   });
 
-  it('変更ファイル一覧の取得に失敗したら fail closed で marker を要求する（marker 無しで止める）', () => {
+  it('変更ファイル一覧の取得に失敗したら trusted dispatch を要求する（#2571 / #2586）', () => {
+    // 一覧が取れないと audit contract を変更したかどうか判定できない。contract 変更を
+    // 否定できない以上、trusted-head checkpoint を省略する理由が無い（fail closed）。
+    // Codex と architecture-guard の両系統から同じ指摘を受けて strict 側へ倒した。
     const { status, stderr } = runScript(greenRollup(), {
       filesUnavailable: true,
       threads: [],
       reviewEvidence: { comments: [] },
     });
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
+    expect(stderr).toContain('audit contract を変更したか判定できませんでした');
+    expect(stderr).toContain('gh workflow run production-config-audit.yml');
+    expect(status).toBe(1);
+  });
+
+  it('一覧取得に失敗しても trusted dispatch 済みなら marker gate まで進む', () => {
+    // checkpoint を通した先で、従来どおり marker を要求することを保つ
+    // （checkpoint が marker gate を覆い隠していないことの確認）。
+    const { status, stderr } = runScript(
+      [
+        ...greenRollup(),
+        statusContext('Production Config Audit', 'SUCCESS', '2026-09-03T00:25:36Z'),
+      ],
+      {
+        filesUnavailable: true,
+        threads: [],
+        reviewEvidence: { comments: [] },
+      },
+    );
+    expect(stderr).toContain('audit contract の trusted dispatch を確認しました');
     expect(stderr).toContain('内製クロスレビューの痕跡がありません');
     expect(status).toBe(1);
   });
 
-  it('変更ファイル一覧の取得に失敗しても marker があれば通す（fail closed だが実施済みなら merge できる）', () => {
-    const { status, stderr } = runScript(greenRollup(), {
-      filesUnavailable: true,
-      threads: [],
-      reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
-    });
+  it('一覧取得に失敗しても trusted dispatch と marker が揃えば通す', () => {
+    const { status, stderr } = runScript(
+      [
+        ...greenRollup(),
+        statusContext('Production Config Audit', 'SUCCESS', '2026-09-03T00:25:36Z'),
+      ],
+      {
+        filesUnavailable: true,
+        threads: [],
+        reviewEvidence: { comments: [{ author: 't3-nico', body: internalReviewMarkerBody() }] },
+      },
+    );
     expect(stderr).toContain('review gate: required (changed files unavailable, fail closed)');
     expect(stderr).toContain('内製クロスレビューの痕跡を確認しました');
     expect(status).toBe(0);

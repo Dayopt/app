@@ -124,6 +124,23 @@ describe('PROTECTED_PATH_GLOBS の drift 検出（#2503）', () => {
     expect(paths.length).toBe(PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS.length);
   });
 
+  it('auditContract は 4 path すべてで true になる（判定器の取りこぼしを止める）', () => {
+    // 他の 3 コピー（`paths` filter / workflow の grep / PROTECTED_PATH_GLOBS）は
+    // すべてパターンとして解釈される。ここだけ完全一致にすると、将来リストの 1 要素を
+    // glob へ畳んだ瞬間に **他は動くのにこの判定だけ永久に false へ落ち**、
+    // #2571 の trusted-head checkpoint がまるごと無効化される。
+    for (const path of PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS) {
+      expect(resolveProtectedPathGate([path]).auditContract).toBe(true);
+    }
+  });
+
+  it('audit contract 以外の保護対象では auditContract を立てない', () => {
+    // ここまで広げると、migration を触るだけの PR が毎回 trusted dispatch を要求される。
+    const result = resolveProtectedPathGate(['supabase/migrations/20260903000000_x.sql']);
+    expect(result.required).toBe(true);
+    expect(result.auditContract).toBe(false);
+  });
+
   it('PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS は PROTECTED_PATH_GLOBS に含まれる', () => {
     for (const path of PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS) {
       expect(PROTECTED_PATH_GLOBS).toContain(path);

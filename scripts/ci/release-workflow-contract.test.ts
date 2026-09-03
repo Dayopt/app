@@ -3,8 +3,8 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { WORST_CASE_RELEASE_MS } from './production-release.mjs';
-import { IMPACT_ENV_VARS, IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
+import { IMPACT_WIRING, WORST_CASE_RELEASE_MS } from './production-release.mjs';
+import { IMPACT_OUTPUT_KEYS } from './release-impact.mjs';
 
 /**
  * Production Release workflow は Vercel の promote / rollback 権限を持つ token を
@@ -241,20 +241,20 @@ describe('release workflow contract', () => {
     expect(stepStart).toBeGreaterThan(-1);
     expect(stepEnd).toBeGreaterThan(stepStart);
     const releaseStep = releaseJob.slice(stepStart, stepEnd);
-    // 出力キーと env 名は index で 1:1 対応する（片方だけ改名する事故を塞ぐ）。
-    expect(IMPACT_ENV_VARS).toHaveLength(IMPACT_OUTPUT_KEYS.length);
 
-    IMPACT_OUTPUT_KEYS.forEach((key, index) => {
-      expect(releaseStep).toContain(
-        `${IMPACT_ENV_VARS[index]}: \${{ needs.impact.outputs.${key} }}`,
-      );
-    });
+    // 出力キーと env 名の対応は `IMPACT_WIRING` の 1 エントリから導出する。
+    // 2 配列を index で突き合わせていた頃は、片方だけ並べ替えられると test が
+    // **入れ替わった配線を要求する側へ回り**、runtime では別 project の verdict を
+    // 静かに使う（層 3 未実行の promote が通る）形になっていた。
+    for (const { outputKey, envVar } of IMPACT_WIRING) {
+      expect(releaseStep).toContain(`${envVar}: \${{ needs.impact.outputs.${outputKey} }}`);
+    }
 
     // 逆向き: script が読む env が余分な値を混ぜていない。
     const wired = [...releaseStep.matchAll(/^\s*(RELEASE_IMPACT_[A-Z_]+):/gm)].map(
       (match) => match[1],
     );
-    expect([...new Set(wired)].sort()).toEqual([...IMPACT_ENV_VARS].sort());
+    expect([...new Set(wired)].sort()).toEqual(IMPACT_WIRING.map((w) => w.envVar).sort());
 
     // **既定値で丸めない。** `|| 'true'` のような fallback を書くと、配線が落ちた時に
     // 層 3 ゼロで promote が通り、この対策そのものが無効になる。
