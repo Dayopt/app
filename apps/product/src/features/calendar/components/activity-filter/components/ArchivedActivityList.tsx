@@ -142,7 +142,7 @@ export function ArchivedActivityList({
                       : restoreActivity.mutate({ id: entry.id })
                   }
                 >
-                  <ArchiveRestore className="mr-2 size-4" />
+                  <ArchiveRestore className="size-4" />
                   {t('calendar.filter.restore')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -154,7 +154,7 @@ export function ArchivedActivityList({
                       : onDeleteActivity(entry.id, entry.name)
                   }
                 >
-                  <Trash2 className="mr-2 size-4" />
+                  <Trash2 className="size-4" />
                   {t('common.actions.delete')}
                 </DropdownMenuItem>
               </DropdownMenuContent>

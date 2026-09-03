@@ -166,12 +166,12 @@ export function CategoryHeader({
           {isMobile ? (
             <>
               <DropdownMenuItem onClick={onShowOnlyCategory}>
-                <Eye className="mr-2 size-4" />
+                <Eye className="size-4" />
                 {t('calendar.filter.showOnlyThisCategory')}
               </DropdownMenuItem>
               {onArchiveCategory && (
                 <DropdownMenuItem onClick={onArchiveCategory}>
-                  <Archive className="mr-2 size-4" />
+                  <Archive className="size-4" />
                   {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
@@ -180,19 +180,19 @@ export function CategoryHeader({
             <>
               {onAddActivityToCategory && (
                 <DropdownMenuItem onClick={onAddActivityToCategory}>
-                  <Plus className="mr-2 size-4" />
+                  <Plus className="size-4" />
                   {t('calendar.filter.addActivityToCategory')}
                 </DropdownMenuItem>
               )}
               {onRenameCategory && (
                 <DropdownMenuItem onClick={onRenameCategory}>
-                  <Pencil className="mr-2 size-4" />
+                  <Pencil className="size-4" />
                   {t('calendar.filter.rename')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <Palette className="mr-2 size-4" />
+                  <Palette className="size-4" />
                   {t('calendar.filter.changeColor')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
@@ -205,7 +205,7 @@ export function CategoryHeader({
               {onIconChange && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    <Smile className="mr-2 size-4" />
+                    <Smile className="size-4" />
                     {t('calendar.filter.changeIcon')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
@@ -217,12 +217,12 @@ export function CategoryHeader({
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={onShowOnlyCategory}>
-                <Eye className="mr-2 size-4" />
+                <Eye className="size-4" />
                 {t('calendar.filter.showOnlyThisCategory')}
               </DropdownMenuItem>
               {onViewStats && (
                 <DropdownMenuItem onClick={onViewStats}>
-                  <BarChart3 className="mr-2 size-4" />
+                  <BarChart3 className="size-4" />
                   {t('calendar.filter.viewStats')}
                 </DropdownMenuItem>
               )}
@@ -230,7 +230,7 @@ export function CategoryHeader({
               {/* アーカイブ（所属アクティビティも道連れ。可逆なので確認なし） */}
               {onArchiveCategory && (
                 <DropdownMenuItem onClick={onArchiveCategory}>
-                  <Archive className="mr-2 size-4" />
+                  <Archive className="size-4" />
                   {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
@@ -239,7 +239,7 @@ export function CategoryHeader({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onDeleteCategory} variant="destructive">
-                    <Trash2 className="mr-2 size-4" />
+                    <Trash2 className="size-4" />
                     {t('common.actions.delete')}
                   </DropdownMenuItem>
                 </>
