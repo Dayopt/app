@@ -210,7 +210,7 @@ describe('中立 path（app 成果物に影響しない）', () => {
     });
   });
 
-  it('nightly.yml（heavy-e2e/heavy-web/integration job を含む）の変更は integration を要求する', () => {
+  it('nightly.yml の変更は integration を要求する（共有部品経由の影響を安全側へ倒す）', () => {
     // #2483 で旧 integration.yml から統合。nightly.yml は CI_TOOLCHAIN_FILES には
     // 含まれないため productUnit / webCi は誘発しない（setup action とは違う扱い）。
     expectImpact(['.github/workflows/nightly.yml'], { integration: true });

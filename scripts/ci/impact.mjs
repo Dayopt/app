@@ -72,9 +72,8 @@ function isDocsPath(file) {
 // integration の per-PR 実行が「ci.yml の integration job が
 // `shouldRunIntegrationTests()`（check.mjs）を通じてこの判定結果を読む」形へ
 // 一本化されたため、**この INTEGRATION_GLOBS が per-PR 実行可否の唯一の定義**
-// になった——同期すべき別の YAML paths: リストはもう存在しない（nightly.yml の
-// integration job は schedule / workflow_dispatch 起動で `paths:` を持たない
-// fallback 専用）。
+// になった——同期すべき別の YAML paths: リストはもう存在しない（2026-09-03 に
+// nightly.yml の integration job も撤去し、per-PR 実行が唯一の経路になった）。
 //
 // 判定結果（resolveImpact().integration）は $GITHUB_OUTPUT 経由で ci.yml の
 // integration job（`needs.impact.outputs.integration`）へ渡り、Supabase 起動と
@@ -84,7 +83,9 @@ function isDocsPath(file) {
 // **integration の配線そのものを持つファイルを含める**（`.github/workflows/ci.yml` /
 // `scripts/ci/check.mjs`、2026-09-02 #2539 の job 分割で追加）。これらを変更した PR で
 // integration=false になると、**配線を変えた当の job を一度も実走させないまま merge**
-// できてしまう（nightly.yml を既に含めているのと同じ理屈）。
+// できてしまう。`.github/workflows/nightly.yml` も残してある——2026-09-03 に
+// integration job は撤去したが、`.github/actions/setup` などの共有部品を経由して
+// 影響しうるため、過剰発火側（安全側）に倒したまま据え置く。
 //
 // **このファイル自身（impact.mjs）は意図的に中立のまま**（内製クロスレビュー
 // risk-reviewer 指摘、P3）。INTEGRATION_GLOBS を締める変更だけを含む PR は

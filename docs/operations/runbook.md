@@ -187,9 +187,13 @@ SELECT cron.unschedule(jobname) FROM cron.job WHERE active;
 
 ### 前提: mergeとProduction公開は分離されている
 
-main へ merge しても Production domain は切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。`Production Release` workflow が、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
+main へ merge しても Production domain は**直接**切り替わらない。Product / Web は Auto-assign Custom Production Domains を無効化してあり、merge が作るのは **domain 未割当の Production build（candidate）** だけである。merge は `Production Release` workflow を自動で起動し（2026-09-03 以降。それ以前は人が dispatch していた）、workflow は影響のある層 3（E2E / Web Build & E2E）を走らせ、**その merge の影響を受ける project**の candidate を READY まで待ち、smoke と Production Config Audit を通してから promote する。影響を受けない project は待たずに skip し、どの app にも影響しない merge は promote 0 件の success（`unaffected`）で終わる。判定仕様は [infra.md](../engineering/infra.md)。
 
-このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。
+このため「本番が新しくならない」ことは、それ自体では障害ではない。**現行 Production は既知の正常 deployment のまま応答し続けている**。復旧の緊急度は「本番が壊れたか」ではなく「本番が古いままか」で判断する。層 3 が赤い merge では promote が走らないので、その意味でも本番は無傷で残る。
+
+**失敗はどう届くか**: promote は merge した本人の push で起動するため、run が失敗すると GitHub の
+既定通知でその本人へ失敗メールが届く。加えて `Production Release` の commit status が main の
+当該 commit へ failure で付く（commit 一覧・PR 画面で赤く見える）。専用の異常起票 job は持たない。
 
 ただしこれは **Auto-assign Custom Production Domains を無効化した後**の話。無効化前は main merge が
 そのまま公開されるため、release run が赤くても本番が無傷とは限らない。ケース0 へ進む前に、現在の
@@ -203,6 +207,7 @@ production deployment がどの SHA かを Vercel Dashboard で確認する（HT
 
 ### 初動
 
+- [ ] **本番が壊れている（rollback するかもしれない）なら、まず自動 promote を止める。** promote は main merge で自動起動するため、rollback しても**その後の無関係な merge が壊れたコードを本番へ戻す**（rollback 後の live は新しい merge の祖先なので、`production-release.mjs` の superseded 判定では止まらない。層 3 もその不具合を検出できない —— 検出できていれば本番に出ていない）。Actions → Production Release → "···" → **Disable workflow**。復旧 commit を merge するまで戻さない
 - [ ] `gh run list --workflow=promote.yml --limit 3` で直近の release run を確認。**in_progress の run がある間は、手動の promote / rollback / alias 操作をしない**。release は single-writer 前提で、run 中の手動操作は run の観測・rollback と衝突する（[infra.md §release の並行性モデル](../engineering/infra.md#release-の並行性モデル)）。完了（または cancel の完了）を待ってから以降へ進む
 - [ ] run summary で「どこで止まったか」を特定: candidate build / smoke / audit / promote
 - [ ] 本番 domain が正常応答しているか確認
@@ -219,8 +224,8 @@ curl -s -o /dev/null -w "%{http_code}\n" https://app.dayopt.app/api/health
 promote は行われていないので、**Production domain は現行 SHA のまま無傷**。緊急操作は不要。
 
 - [ ] run summary のエラーを確認し、原因に応じてケースA / B を実施
-- [ ] 修正を main へ merge しても release gate は自動で再実行されない（`promote.yml` は `workflow_dispatch` のみ、2026-08-20 #2268）。修正後に `gh workflow run promote.yml` を手動で dispatch する
-- [ ] 同じ SHA を再試行するだけなら `gh workflow run promote.yml -f sha=<SHA>` - `sha` は main に merge 済みの commit だけを受け付ける - `--ref` は付けない。付けるとその ref の script が Production 権限で動く
+- [ ] **修正を main へ merge すれば release gate は自動で再実行される**（`promote.yml` は `push: main` で起動、2026-09-03）。workflow を Disable している場合は先に Enable へ戻す
+- [ ] main HEAD をそのまま再試行するだけなら `gh workflow run promote.yml --ref main`。**`sha` input は廃止した**（2026-09-03）ので `-f sha=` は 422 で拒否される。対象は常にその run の commit で、古い SHA を本番へ戻すのは promote ではなく rollback（ケースC）
 - [ ] smoke が Deployment Protection で止まった場合は、対象 project の Protection Bypass for Automation と repository secret（`VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB`）を確認する
 
 #### ケース0-B: 片方だけ promote された（部分リリース）
@@ -274,11 +279,12 @@ promote 済みの deployment に問題があった場合だけ使う。
 - [ ] **壊れている project だけを戻す。** Product / Web の SHA を揃えようとしない（release は影響を受ける project だけを進めるので、SHA が違うのは正常）。無関係な側を戻すと、検証済みの build を理由なく巻き戻すことになる
 - [ ] ロールバック後: 本番サイトで動作確認。**両 domain を見る**（`dayopt.app` と `app.dayopt.app`）。web の signup CTA から product へ入れるかは片側だけ戻した時の典型的な壊れ方
 - [ ] ロールバック後: **操作した project の Auto-assign Custom Production Domains を無効へ戻す**（Settings → Git）。Instant Rollback / Promote to Production はどちらもこの設定を有効化するため、戻さないと次の main merge が release gate を通らず直接公開される
-- [ ] 落ち着いて原因調査 → 修正 → 再デプロイ
+- [ ] **`Production Release` workflow を Disable したままにする**（初動で止めていない場合はここで止める）。止めないと、次に誰かが無関係な PR を merge した時点で自動 promote が走り、rollback で外したはずのコードが本番へ戻る
+- [ ] 落ち着いて原因調査 → 修正（revert でも fix でも良い）→ main へ merge → **workflow を Enable へ戻す** → その merge の run が promote するのを確認する
 
 Vercel の rollback はビルド成果物だけを戻す。**DB migration と変更済み環境変数は戻らない**。migration を含むリリースでは、直前 deployment がそのまま動く後方互換期間（expand/contract）を事前に確保しておく。
 
-通常のProduction公開は `main` merge → `gh workflow run promote.yml` の手動 dispatch → `Production Release` workflow の promote だけを使う。
+通常のProduction公開は `main` merge → `Production Release` workflow（自動起動）の promote だけを使う。
 `Instant Rollback` / `Promote to Production` は正常な既存deploymentへ戻す緊急操作で、新規buildの作成経路ではない。
 
 #### ケースD: Force Promote（break-glass）
@@ -286,10 +292,12 @@ Vercel の rollback はビルド成果物だけを戻す。**DB migration と変
 release gate 自体が壊れていて、かつ Production を今すぐ前進させる必要がある時だけ使う。smoke と Production Config Audit をスキップするため、通常運用では使わない。
 
 ```bash
-gh workflow run promote.yml -f sha=<SHA> -f force=true -f reason="<なぜ gate を飛ばすか>"
+gh workflow run promote.yml --ref main -f force=true -f reason="<なぜ gate を飛ばすか>"
 ```
 
-`--ref` は付けない。release script は常に main のものを使う。
+対象は main HEAD（`sha` input は 2026-09-03 に廃止。`-f sha=` は 422 で拒否される）。`--ref main` 以外を指定しない —— 他の ref の script が Production 権限で動く（environment の deployment branch policy が拒否するが、二重防御として手順にも残す）。
+
+force は層 3・smoke・Production Config Audit をすべて skip する。**層 3 が赤いだけなら force ではなく、原因を直して merge する**（merge が自動で promote を再試行する）。
 
 - [ ] reason は必須。空だと workflow が停止する
 - [ ] 実行後、GitHub issue として使用理由と結果を起票する（2026-08-28、#2475 で domain log/ 廃止に伴い移行）
@@ -609,16 +617,14 @@ ORDER BY created_at DESC;
   git pull origin main
   ```
 
-### 1.2 Production promote を手動 dispatch し、完了を待つ
+### 1.2 Production promote の完了を確認する
 
-main merge は `promote.yml` を自動起動しない（`workflow_dispatch` のみ、2026-08-20 #2268）。タグを打つ前にここで明示的に dispatch し、promote の成功を確認する。
+main merge が `promote.yml` を自動起動する（`push: main`、2026-09-03）。タグを打つ前に、その run が promote を終えたことを確認する。
 
-- [ ] **`Production Release` を手動 dispatch し、promote が成功**
+- [ ] **merge が起動した `Production Release` が promote を終えている**
 
   ```bash
-  gh workflow run promote.yml
-  gh run list --workflow=promote.yml --limit 1
-  gh run watch --exit-status
+  gh run list --workflow=promote.yml --branch main --limit 3
 
   gh api "repos/Dayopt/dayopt/commits/$(git rev-parse HEAD)/status" \
     --jq '.statuses[] | select(.context == "Production Release") | .state'
@@ -1034,7 +1040,7 @@ git log -5 --oneline
 node -p "require('./package.json').version"  # → ${VERSION} になっているはず
 ```
 
-> main マージは domain 未割当の Production build を作るだけで、公開は `gh workflow run promote.yml` を手動 dispatch した `Production Release` workflow の promote が行う（mainマージでは自動起動しない、2026-08-20 #2268）。タグはデプロイトリガーではなく、promote と観察が終わった後の証跡。
+> main マージは domain 未割当の Production build を作り、`Production Release` workflow を自動起動する（`push: main`、2026-09-03）。公開はその workflow の promote が、影響のある層 3 を通した後に行う。タグはデプロイトリガーではなく、promote と観察が終わった後の証跡。
 
 ### Phase 2: リリースノート作成
 
@@ -1110,7 +1116,7 @@ git tag --list | tail -5
 git push origin v${VERSION}
 ```
 
-タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。この workflow はデプロイしない。公開は `gh workflow run promote.yml` の手動 dispatch で `Production Release` workflow が promote 済みのはずで（Phase 1.2）、create-release はタグ SHA の `Production Release` status が success であることを確認してから Release を作る。
+タグ push により GitHub Actions（`.github/workflows/create-release.yml`）が **GitHub Release を自動作成**する（auto-generated notes 付き）。この workflow はデプロイしない。公開は main merge が自動起動した `Production Release` workflow が promote 済みのはずで（Phase 1.2）、create-release はタグ SHA の `Production Release` status が success であることを確認してから Release を作る。
 
 #### 4.2 プッシュ確認
 
@@ -1479,7 +1485,7 @@ git commit -am "chore(release): v${VERSION} へ version bump"
    ↓
 3. CI・品質チェック (Quality Gate)
    ↓
-4. PR マージ (merge commit / ブランチ削除) → Vercel が Production build → `gh workflow run promote.yml` を手動 dispatch → `Production Release` が promote
+4. PR マージ (merge commit / ブランチ削除) → Vercel が Production build → `Production Release` が自動起動し、層 3 green で promote
    ↓
 5. main でタグ作成 & push
    ↓
