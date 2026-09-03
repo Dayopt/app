@@ -274,7 +274,10 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
                 このフィルタの影響を受けない（2026-08-18 User 指示） */}
             <SidebarSection
               title={t('calendar.filter.categoriesSection')}
-              className="space-y-1"
+              // カテゴリー「群」の間隔。配下のアクティビティ行（CategoryGroup 内の
+              // space-y-1 = 4px）より 1 段階広くして、どこまでが 1 カテゴリーかを
+              // 余白で区切る。ここを 4px に戻すと群と行の区別が付かなくなる
+              className="space-y-2"
               collapsed={categoriesSectionCollapsed}
               onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
               action={
@@ -317,7 +320,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
               ))}
 
               {categories.length === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                <p role="status" className="text-foreground px-2 py-1 text-xs">
                   {t('calendar.filter.noCategories')}
                 </p>
               ) : null}
@@ -432,7 +435,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
               {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
                   言い切る（未分類そのものが空だと誤読させない） */}
               {uncategorizedCount === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                <p role="status" className="text-foreground px-2 py-1 text-xs">
                   {statusFilter === 'archived'
                     ? t('calendar.filter.noArchived')
                     : t('calendar.filter.noUncategorized')}
@@ -441,7 +444,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
             </SidebarSection>
 
             {isCompletelyEmpty ? (
-              <div role="status" className="text-muted-foreground px-2 py-2 text-xs">
+              <div role="status" className="text-foreground px-2 py-2 text-xs">
                 {t('calendar.filter.noActivities')}
               </div>
             ) : null}

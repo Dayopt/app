@@ -81,7 +81,10 @@ export function CategoryGroup({
   }, [router, locale]);
 
   return (
-    <div className="w-full min-w-0">
+    // カテゴリー間は展開・折りたたみを問わず親の space-y-2（8px）だけ。
+    // グループ内は 4px（見出し→1行目、行→行）なので 2 倍あれば境目は読める
+    // （2026-09-03 User 判断。一度 16px / 12px を試して広すぎた）。
+    <div className="w-full min-w-0 rounded-lg">
       <CategoryHeader
         label={category.name}
         visibility={visibility}
@@ -103,7 +106,7 @@ export function CategoryGroup({
       {/* ml-6: 見出しのアイコン + テキストぶんの字下げ（実測 32px）に子行のテキストを
           揃える。子行はアイコンを持たず、自身の ml-2 だけを引いた分をここで足す */}
       {!collapsed ? (
-        <div role="list" className="ml-6 space-y-1">
+        <div role="list" className="mt-1 ml-6 space-y-1">
           {activities.map((activity) => (
             <ActivityRow
               key={activity.id}
