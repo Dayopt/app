@@ -42,7 +42,9 @@ export function useCategoryAppearanceEdit({
       try {
         await updateMutation.mutateAsync({ id: categoryId, color });
       } catch {
-        setOptimisticColor(null);
+        // 自分がまだ最新の楽観値である時だけ戻す。色を続けて変えた時に、
+        // 先に投げた方が後から失敗して、後発の楽観表示まで消してしまうのを防ぐ
+        setOptimisticColor((prev) => (prev === color ? null : prev));
       }
     },
     [categoryId, updateMutation],
