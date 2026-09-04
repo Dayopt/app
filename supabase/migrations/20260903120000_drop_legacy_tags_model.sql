@@ -18,6 +18,13 @@
 -- したがって **merge の前に、Part 1 を含むビルドが production を配信していることを
 -- 実測する**（Promote Production job / Vercel の production deployment の SHA）。
 --
+-- ⚠️ ROLLBACK FLOOR は #2568（Part 1）である。**適用後、Vercel の Instant Rollback
+-- で #2568 より前の deployment へ戻してはならない。** それは復旧操作ではなく
+-- 「旧ビルド × 新スキーマ」を自ら作り出す**追加の破壊操作**で、records.list /
+-- 公開 iCal が 400 になるだけでなく、非トランザクションの deleteAllData が
+-- loop 途中で失敗して user_settings に到達せず、復旧不能なデータ損失になる。
+-- production で障害が起きた場合の rollback 先は #2568 以降の deployment に限る。
+--
 -- 逆 SQL は無い（不可逆）。復旧は Supabase の日次論理バックアップからの復元のみで、
 -- PITR は無効（2026-09-03 実測: pitr_enabled=false / walg_enabled=true）。同日時点の
 -- production 実データ量は tags 6 行、plans.tag_id 非 NULL 28 行、records.tag_id 非 NULL
@@ -528,8 +535,25 @@ DROP TABLE public.tags;
 -- =============================================================================
 -- 「列挙し忘れた参照」を同一トランザクション内で捕まえる最後の網。
 -- pg_depend では見えない関数本体の文字列参照（Codex P2-5）をここで拾う。
+--
+-- 検査対象は `public.tags` だけでなく **drop する 10 関数の名前そのもの**も含める。
+-- plpgsql 本体からの関数呼び出しは pg_depend に載らないため、production だけに
+-- 残った未知の関数が落とした関数を呼んでいても DROP は黙って成功し、その関数が
+-- 呼ばれた瞬間に 42883 になる（内製クロスレビュー risk-reviewer / behavior-verifier
+-- が独立に指摘）。この repo は 20260714065248_harden_rpc_permissions.sql で
+-- 「production 限定に残った旧 overload」を実際に踏んでいる。
+--
+-- 範囲は system schema 以外の function / procedure。`prokind` の絞り込みは
+-- CTE を MATERIALIZED にして pg_get_functiondef より先に評価させる
+-- （同じ WHERE に並べると評価順序が保証されず、aggregate に当たって
+-- pg_get_functiondef がエラーを投げうる）。
+--
+-- 違反時は string_agg で **どの関数か** を message に載せる。production でだけ
+-- 失敗した時に、deploy log だけで対象を特定できるようにするため。
 
 DO $$
+DECLARE
+  v_offenders text;
 BEGIN
   IF pg_catalog.to_regclass('public.tags') IS NOT NULL THEN
     RAISE EXCEPTION 'public.tags still exists';
@@ -548,15 +572,31 @@ BEGIN
     RAISE EXCEPTION 'plans/records still expose tag_id';
   END IF;
 
-  IF EXISTS (
-    SELECT 1
+  WITH candidate AS MATERIALIZED (
+    SELECT p.oid, n.nspname, p.proname
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname IN ('public', 'private')
-      AND p.prokind = 'f'
-      AND pg_catalog.pg_get_functiondef(p.oid) ~ 'public\.tags'
-  ) THEN
-    RAISE EXCEPTION 'a function still references public.tags';
+    WHERE p.prokind IN ('f', 'p')
+      AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+  )
+  SELECT string_agg(
+           c.nspname || '.' || c.proname || '(' ||
+           pg_catalog.pg_get_function_identity_arguments(c.oid) || ')',
+           ', ' ORDER BY c.nspname, c.proname
+         )
+    INTO v_offenders
+    FROM candidate c
+   WHERE pg_catalog.pg_get_functiondef(c.oid) ~
+         ('public\.tags|\m('
+          || 'check_tag_hierarchy|check_tag_has_children'
+          || '|batch_rename_tags|batch_reorder_tags|batch_reorder_tags_hierarchy'
+          || '|increment_tag_sort_orders'
+          || '|merge_tags_with_hierarchy|merge_tags_with_hierarchy_unserialized_v1'
+          || '|rename_tag_group|assert_active_timeblock_tag_v1'
+          || ')\M');
+
+  IF v_offenders IS NOT NULL THEN
+    RAISE EXCEPTION 'residual reference to dropped tags objects in: %', v_offenders;
   END IF;
 END $$;
 

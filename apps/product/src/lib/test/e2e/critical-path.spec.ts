@@ -256,7 +256,9 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     // 凡例のうち「このカテゴリーの行」が 1 時間ぶんを出す。`未分類` を許容しない —
     // カテゴリー紐付けを失う回帰では label が未分類へ落ちてこの行が消えるため、
     // getByText('1:00') のような行を特定しない一致では緑になってしまう。
-    const legendRow = allocation.getByRole('listitem').filter({ hasText: CATEGORY_NAME });
+    const legendRow = allocation
+      .locator('[data-report-legend="allocation"] li')
+      .filter({ hasText: CATEGORY_NAME });
     await expect(legendRow).toHaveCount(1, { timeout: 10_000 });
     await expect(legendRow).toContainText('1:00');
   });
