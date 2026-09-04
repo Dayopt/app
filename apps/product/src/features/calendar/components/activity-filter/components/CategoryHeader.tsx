@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { SidebarIconButton } from '@/components/shell/sidebar';
 import type { CategoryColorName } from '@/features/activities';
 import { ActivityIcon, CategoryColorMenuItems, CategoryIconMenuItems } from '@/features/activities';
 import {
@@ -104,6 +105,7 @@ export function CategoryHeader({
   );
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- キーボード経路は ⋯ メニューの「このカテゴリーだけ表示」が持つ（同じ onShowOnlyCategory を呼ぶ）。この onClick は見出し行のどこを押しても効くようにするマウス用の拡張
     <div
       className={cn(
         'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm',
@@ -126,8 +128,7 @@ export function CategoryHeader({
       </span>
 
       {/* シェブロン: 行クリックへ波及させず折りたたみのみを担当する独立ボタン */}
-      <button
-        type="button"
+      <SidebarIconButton
         onClick={(e) => {
           e.stopPropagation();
           onToggleCollapse();
@@ -136,42 +137,38 @@ export function CategoryHeader({
           collapsed ? t('calendar.filter.expandCategory') : t('calendar.filter.collapseCategory')
         }
         aria-expanded={!collapsed}
-        className={cn(
-          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素のヒットエリア拡張に before:content-[''] の空文字指定が必須
-          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity duration-150 before:absolute before:-inset-2 before:content-['']",
-          // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
-          collapsed
-            ? 'opacity-100'
-            : 'opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
-        )}
+        // icon 自身の hover は持たない。ホバー表現は行全体が担う
+        // （SidebarSection の開閉 icon と同じ振る舞いに揃える。2026-09-04 User 指示）
+        className="hover:text-muted-foreground ml-1 hover:bg-transparent"
+        // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
+        {...(collapsed ? {} : { revealOn: 'item' as const })}
       >
         <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-90')} />
-      </button>
+      </SidebarIconButton>
 
       <div className="flex-1" />
 
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
+          <SidebarIconButton
             aria-label={t('calendar.filter.categoryMenu')}
-            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素の 44px ヒットエリアに空 content が必要
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover focus-visible:ring-ring relative mr-1 flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[''] focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+            className="mr-1"
+            revealOn="item"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="size-4" />
-          </button>
+          </SidebarIconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
           {isMobile ? (
             <>
               <DropdownMenuItem onClick={onShowOnlyCategory}>
-                <Eye className="mr-2 size-4" />
+                <Eye className="size-4" />
                 {t('calendar.filter.showOnlyThisCategory')}
               </DropdownMenuItem>
               {onArchiveCategory && (
                 <DropdownMenuItem onClick={onArchiveCategory}>
-                  <Archive className="mr-2 size-4" />
+                  <Archive className="size-4" />
                   {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
@@ -180,19 +177,19 @@ export function CategoryHeader({
             <>
               {onAddActivityToCategory && (
                 <DropdownMenuItem onClick={onAddActivityToCategory}>
-                  <Plus className="mr-2 size-4" />
+                  <Plus className="size-4" />
                   {t('calendar.filter.addActivityToCategory')}
                 </DropdownMenuItem>
               )}
               {onRenameCategory && (
                 <DropdownMenuItem onClick={onRenameCategory}>
-                  <Pencil className="mr-2 size-4" />
+                  <Pencil className="size-4" />
                   {t('calendar.filter.rename')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <Palette className="mr-2 size-4" />
+                  <Palette className="size-4" />
                   {t('calendar.filter.changeColor')}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
@@ -205,7 +202,7 @@ export function CategoryHeader({
               {onIconChange && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    <Smile className="mr-2 size-4" />
+                    <Smile className="size-4" />
                     {t('calendar.filter.changeIcon')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
@@ -217,12 +214,12 @@ export function CategoryHeader({
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={onShowOnlyCategory}>
-                <Eye className="mr-2 size-4" />
+                <Eye className="size-4" />
                 {t('calendar.filter.showOnlyThisCategory')}
               </DropdownMenuItem>
               {onViewStats && (
                 <DropdownMenuItem onClick={onViewStats}>
-                  <BarChart3 className="mr-2 size-4" />
+                  <BarChart3 className="size-4" />
                   {t('calendar.filter.viewStats')}
                 </DropdownMenuItem>
               )}
@@ -230,7 +227,7 @@ export function CategoryHeader({
               {/* アーカイブ（所属アクティビティも道連れ。可逆なので確認なし） */}
               {onArchiveCategory && (
                 <DropdownMenuItem onClick={onArchiveCategory}>
-                  <Archive className="mr-2 size-4" />
+                  <Archive className="size-4" />
                   {t('calendar.filter.archive')}
                 </DropdownMenuItem>
               )}
@@ -239,7 +236,7 @@ export function CategoryHeader({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onDeleteCategory} variant="destructive">
-                    <Trash2 className="mr-2 size-4" />
+                    <Trash2 className="size-4" />
                     {t('common.actions.delete')}
                   </DropdownMenuItem>
                 </>

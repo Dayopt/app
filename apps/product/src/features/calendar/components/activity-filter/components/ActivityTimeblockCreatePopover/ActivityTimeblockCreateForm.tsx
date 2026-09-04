@@ -70,6 +70,7 @@ export function ActivityTimeblockCreateForm({
   return (
     // 親 row の onClick (onOpenPopover) が portal から bubble してきた click で再発火し
     // popover の close と競合するため、form 内の click は止める。
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- 親 row への bubble を止めるための stopPropagation だけを持つ。この div 自体は操作対象ではなく、中身のフォーム部品が自前の control を持つ
     <div
       className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}
       onClick={(e) => e.stopPropagation()}

@@ -155,7 +155,7 @@ Tailwindデフォルトのみ（`text-xs`〜`text-lg`等）。任意値禁止。
 
 **フォームバリデーション**: react-hook-form + Zod。`mode: 'onBlur'`（初回）、`reValidateMode: 'onChange'`（以降）。エラー表示は `FieldError`（`text-sm text-destructive`、`＊` prefix自動付与）。
 
-**ドラッグ操作**: カレンダーグリッド内のブロック操作のみ。リスト並び替えDnDは廃止済み（`@dnd-kit`撤去済み。新設する場合は必要性から議論する）。
+**ドラッグ操作**: カレンダーグリッド内のブロック操作と、サイドバーのアクティビティ所属変更（カテゴリー間 / 未分類との出し入れ）。**リスト並び替えDnDは廃止済み**（`sort_order`ごと撤去。順序を変えるDnDを新設する場合は必要性から議論する）。DnDライブラリは使わずブラウザ標準のHTML5 DnDで実装する（`@dnd-kit`撤去済み）。
 
 ---
 

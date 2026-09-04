@@ -100,7 +100,12 @@ function CategoryRenameModalForm({ open, onClose, category }: CategoryRenameModa
   );
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      // アクティビティの作成 / 改名と同じく背景を暗転させない（2026-09-03 User 指示）
+      modal={false}
+    >
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>

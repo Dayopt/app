@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { CategoryCreatePopover } from './CategoryCreatePopover';
+import { CategoryCreateDialog } from './CategoryCreateDialog';
 
 /**
  * サイドバー「カテゴリ」見出しのカテゴリー直接作成ポップオーバー。
@@ -11,11 +11,11 @@ import { CategoryCreatePopover } from './CategoryCreatePopover';
  * 最小経路（名前入力 → Enter）は 2 手のまま変わらない（#2406）。
  */
 const meta = {
-  title: 'Product/Features/Activities/CategoryCreatePopover',
-  component: CategoryCreatePopover,
+  title: 'Product/Features/Activities/CategoryCreateDialog',
+  component: CategoryCreateDialog,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },
-} satisfies Meta<typeof CategoryCreatePopover>;
+} satisfies Meta<typeof CategoryCreateDialog>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -62,5 +62,5 @@ export const IconMenuOpen: Story = {
 
 /** 全パターン一覧（属性行のメニューは Portal に出るため、状態ごとに個別 Story で確認する）。 */
 export const AllPatterns: Story = {
-  render: () => <CategoryCreatePopover />,
+  render: () => <CategoryCreateDialog />,
 };

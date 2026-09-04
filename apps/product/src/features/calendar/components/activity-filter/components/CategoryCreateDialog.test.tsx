@@ -17,15 +17,15 @@ vi.mock('@/features/activities', async () => {
   };
 });
 
-import { CategoryCreatePopover } from './CategoryCreatePopover';
+import { CategoryCreateDialog } from './CategoryCreateDialog';
 
-describe('CategoryCreatePopover', () => {
+describe('CategoryCreateDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('submit button is disabled until a name is entered', async () => {
-    render(<CategoryCreatePopover />);
+    render(<CategoryCreateDialog />);
 
     fireEvent.click(screen.getByRole('button', { name: 'calendar.filter.createCategory' }));
 
@@ -40,7 +40,7 @@ describe('CategoryCreatePopover', () => {
   });
 
   it('calls useCreateCategory with the trimmed name and closes on success', async () => {
-    render(<CategoryCreatePopover />);
+    render(<CategoryCreateDialog />);
 
     fireEvent.click(screen.getByRole('button', { name: 'calendar.filter.createCategory' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '  仕事  ' } });
@@ -60,7 +60,7 @@ describe('CategoryCreatePopover', () => {
 
   it('notifies the parent via onOpenChange when the popover opens/closes', async () => {
     const onOpenChange = vi.fn();
-    render(<CategoryCreatePopover onOpenChange={onOpenChange} />);
+    render(<CategoryCreateDialog onOpenChange={onOpenChange} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'calendar.filter.createCategory' }));
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(true));
