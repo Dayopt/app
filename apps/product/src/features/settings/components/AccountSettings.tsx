@@ -36,7 +36,7 @@ interface AccountSettingsProps {
 /**
  * アカウント設定コンポーネント
  *
- * プロフィール（アバター・表示名）、メール、パスワード、2段階認証、ログアウト、アカウント削除
+ * プロフィール（アバター・表示名）、メール、パスワード、多要素認証、ログアウト、アカウント削除
  */
 export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {}) {
   const t = useTranslations();
@@ -148,7 +148,7 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
         </SectionCard>
       )}
 
-      {/* 2段階認証 */}
+      {/* 多要素認証 */}
       <MFASection {..._MFASectionProps} />
 
       {/* セッション */}

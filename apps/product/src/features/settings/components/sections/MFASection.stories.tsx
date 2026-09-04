@@ -49,7 +49,7 @@ function createMockMFA(overrides: Partial<UseMFAReturn> = {}): UseMFAReturn {
 // ─────────────────────────────────────────────────────────
 
 /**
- * MFASection - 二段階認証（TOTP）の登録・管理 UI
+ * MFASection - 多要素認証（TOTP）の登録・管理 UI
  *
  * `_useMFAHook` は関数 prop のため Storybook の args 型推論対象外。
  * `satisfies Meta` (型引数なし) を使い、component フィールドで autodocs を有効にしつつ
@@ -149,7 +149,7 @@ export const RecoveryCodesDisplay: Story = {
         createMockMFA({
           hasMFA: true,
           recoveryCodeCount: 10,
-          success: '二段階認証が有効になりました',
+          success: '多要素認証が有効になりました',
           recoveryCodes: [
             'ABCD-EF23',
             'GHJK-LM45',

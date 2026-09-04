@@ -67,7 +67,7 @@ export interface UseMFAReturn extends MFAState {
 }
 
 /**
- * MFA（二段階認証）管理フック
+ * MFA（多要素認証）管理フック
  *
  * Supabase MFA APIを使用して、TOTP認証の登録・検証・無効化を行う
  */

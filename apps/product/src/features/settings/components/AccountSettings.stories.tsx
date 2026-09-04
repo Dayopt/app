@@ -167,7 +167,7 @@ export const MFARecoveryCodes: Story = {
           createMockMFA({
             hasMFA: true,
             recoveryCodeCount: 10,
-            success: '二段階認証が有効になりました',
+            success: '多要素認証が有効になりました',
             recoveryCodes: [
               'ABCD-EF23',
               'GHJK-LM45',

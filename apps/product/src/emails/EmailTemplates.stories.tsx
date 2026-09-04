@@ -160,7 +160,7 @@ export const Guidelines: Story = {
           <p className="pl-4">PaymentFailedEmail.tsx — 支払い失敗</p>
           <p className="pl-4">PaymentRecoveredEmail.tsx — 支払い復旧</p>
           <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
-          <p className="pl-4">MfaDisabledEmail.tsx — 2段階認証無効化通知</p>
+          <p className="pl-4">MfaDisabledEmail.tsx — 多要素認証無効化通知</p>
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
@@ -220,7 +220,7 @@ export const Guidelines: Story = {
                 ['PaymentFailedEmail', '支払い失敗', 'email.sendPaymentFailed'],
                 ['PaymentRecoveredEmail', '支払い復旧', 'email.sendPaymentRecovered'],
                 ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
-                ['MfaDisabledEmail', '2段階認証無効化通知', 'RecoveryService.verify()'],
+                ['MfaDisabledEmail', '多要素認証無効化通知', 'RecoveryService.verify()'],
                 ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
@@ -497,7 +497,7 @@ export const PasswordChanged: Story = {
   ),
 };
 
-/** 2段階認証無効化通知 */
+/** 多要素認証無効化通知 */
 export const MfaDisabled: Story = {
   render: () => (
     <BilingualEmailPreview

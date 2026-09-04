@@ -34,7 +34,7 @@ export interface MFASectionProps {
 }
 
 /**
- * MFA（二段階認証）セクション
+ * MFA（多要素認証）セクション
  *
  * TOTP認証の登録・管理UIを提供
  */
