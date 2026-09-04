@@ -137,7 +137,9 @@ export function CategoryHeader({
           collapsed ? t('calendar.filter.expandCategory') : t('calendar.filter.collapseCategory')
         }
         aria-expanded={!collapsed}
-        className="ml-1"
+        // icon 自身の hover は持たない。ホバー表現は行全体が担う
+        // （SidebarSection の開閉 icon と同じ振る舞いに揃える。2026-09-04 User 指示）
+        className="hover:text-muted-foreground ml-1 hover:bg-transparent"
         // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
         {...(collapsed ? {} : { revealOn: 'item' as const })}
       >
