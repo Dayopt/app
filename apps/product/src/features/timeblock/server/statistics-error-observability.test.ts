@@ -45,7 +45,7 @@ describe('statistics fetcher observability', () => {
     ['fetch_plans', (client: ServiceSupabaseClient) => fetchPlans(client, USER_ID)],
   ])('%sは元DB障害を一度captureしてnormalized errorをthrowする', async (operation, run) => {
     const query = createChainableMock([], DATABASE_ERROR);
-    const client = clientFor({ plans: query, records: query, tags: query });
+    const client = clientFor({ plans: query, records: query });
 
     await expect(run(client)).rejects.toBe(mocks.normalizedError);
     expect(mocks.captureUnexpectedDatabaseError).toHaveBeenCalledOnce();

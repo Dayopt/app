@@ -60,9 +60,6 @@ function createVisibleDaysReviewService() {
     user_settings: createChainableMock({ timezone: 'UTC' }),
     records: createChainableMock(timeblocks),
     plans: createChainableMock(timeblocks),
-    tags: createChainableMock([
-      { id: 'activity-1', name: 'Deep Work', color: 'blue', icon: 'brain' },
-    ]),
     activities: createChainableMock([
       { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
     ]),
@@ -382,7 +379,6 @@ describe('StatisticsService Review visible days', () => {
   it('Time P/L は未設定と削除済みアクティビティの Plan / Record を同じアクティビティなし bucket に含める', async () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
-      tags: createChainableMock([]),
       activities: createChainableMock([
         { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
       ]),
