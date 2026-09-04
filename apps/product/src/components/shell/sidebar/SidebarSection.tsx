@@ -51,10 +51,14 @@ export function SidebarSection({
       >
         {/* 見出しテキスト + chevron。ホバーは上の行全体が持つ（テキスト/icon 個別の
             追加ホバーは持たない。2026-09-04 User 指示）。flex-1 は付けない
-            （残り幅は後続の spacer が吸収する既存の分担）。右側の action スロットは
-            別のクリック対象なのでこのグループには含めない。 */}
-        <div className="flex min-w-0 items-center px-2 py-1">
-          <h3 className="text-muted-foreground min-w-0 truncate text-sm font-normal">{title}</h3>
+            （残り幅は後続の spacer が吸収する既存の分担）。左右の余白は
+            CategoryHeader / ActivityRow と同じ construction（行自体は無
+            padding、先頭要素に ml-2、末尾 icon に mr-1）に揃える
+            （2026-09-04 User 指示: 「icon を変えるだけで振る舞いはすべて同じ」） */}
+        <div className="flex min-w-0 items-center py-1">
+          <h3 className="text-muted-foreground ml-2 min-w-0 truncate text-sm font-normal">
+            {title}
+          </h3>
           {collapsible && (
             // カテゴリー見出し（CategoryHeader）と同じ位置: タイトルの右に置く独立ボタン。
             // 行クリックへ波及させない（行自体も onToggleCollapse を持つため二重発火しうる）
@@ -81,7 +85,7 @@ export function SidebarSection({
         <span className="flex-1" />
         {action && (
           // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- 行の onClick へ波及させないための stopPropagation だけを持つ。この span 自体は操作対象ではなく、中身の action が自前の control を持つ
-          <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <span className="mr-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             {action}
           </span>
         )}

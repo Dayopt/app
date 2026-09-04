@@ -175,6 +175,9 @@ export function ActivityRow({
               <SidebarIconButton
                 data-row-action
                 aria-label={t('calendar.filter.activityMenu')}
+                // CategoryHeader / ArchivedActivityList と同じ末尾 icon の余白
+                // （2026-09-04 User 指示: 「icon を変えるだけで振る舞いはすべて同じ」）
+                className="mr-1"
                 revealOn="item"
                 onClick={(event) => event.stopPropagation()}
               >
