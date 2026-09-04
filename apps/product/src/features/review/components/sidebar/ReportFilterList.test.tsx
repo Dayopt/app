@@ -17,7 +17,7 @@ const treeState = vi.hoisted(() => ({
 
 const segmentsState = vi.hoisted(() => ({
   current: {
-    data: [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }],
+    data: [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }] as unknown,
     isPending: false,
   },
 }));
@@ -35,8 +35,10 @@ vi.mock('@/features/activities', () => ({
   ActivityIcon: () => <span data-testid="activity-icon" />,
 }));
 
-vi.mock('@/lib/hooks/useIsMobile', () => ({
-  useIsMobile: () => false,
+const isTouch = vi.hoisted(() => ({ current: false }));
+
+vi.mock('@/lib/hooks/useMediaQuery', () => ({
+  useMediaQuery: () => isTouch.current,
 }));
 
 vi.mock('@/components/shell/sidebar', () => ({
@@ -61,6 +63,7 @@ describe('ReportFilterList', () => {
   beforeEach(() => {
     localStorage.clear();
     resetStore();
+    isTouch.current = false;
     segmentsState.current = {
       data: [{ id: 'seg-1', name: '深い仕事', activityIds: ['act-dev'] }],
       isPending: false,
@@ -141,6 +144,43 @@ describe('ReportFilterList', () => {
     render(<ReportFilterList />);
 
     expect(screen.getByRole('checkbox', { name: /margin/ })).not.toBeDisabled();
+  });
+
+  /**
+   * `listTree` が先に解決した窓で余白を押せると、`marginHidden` だけが永続化されて
+   * レンズ確定後は無視される。後日「すべて」へ戻した時に理由の分からない状態が残る。
+   */
+  it('レンズの解決を待つ間も余白行を無効化する', () => {
+    useReportViewStore.setState({ segmentId: 'seg-1' });
+    segmentsState.current = { data: undefined, isPending: true };
+    render(<ReportFilterList />);
+
+    expect(screen.getByRole('checkbox', { name: /margin/ })).toBeDisabled();
+  });
+
+  it('レンズ未選択なら listSegments を待たずに余白を押せる', () => {
+    segmentsState.current = { data: undefined, isPending: true };
+    render(<ReportFilterList />);
+
+    expect(screen.getByRole('checkbox', { name: /margin/ })).not.toBeDisabled();
+  });
+
+  /**
+   * 幅 < 768px では `mobile-layout` が Sidebar ごと描かないので、`useIsMobile()` では
+   * この分岐に到達できない。実際にタッチで触られるのは iPad 縦のような
+   * 「幅は広いが coarse pointer」の面。
+   */
+  it('タッチ面では行を 44px にする', () => {
+    isTouch.current = true;
+    render(<ReportFilterList />);
+
+    expect(screen.getByText('仕事').closest('label')).toHaveClass('min-h-11');
+  });
+
+  it('マウス面では行を詰める', () => {
+    render(<ReportFilterList />);
+
+    expect(screen.getByText('仕事').closest('label')).toHaveClass('min-h-8');
   });
 
   it('store が知らないカテゴリーは既定で可視（checked）', () => {

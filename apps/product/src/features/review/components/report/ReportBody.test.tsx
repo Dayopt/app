@@ -203,6 +203,19 @@ describe('ReportBody', () => {
       expect(subtitle()).toBe('report.allocation.subtitleInkOnly');
     });
 
+    /**
+     * `listSegments` が落ちても本文は詰まらせない。`getReportPeriod` は成功しているので、
+     * 3 面そろって「すべて」へ縮退した画面を出す（skeleton のまま止めない）。
+     */
+    it('listSegments が失敗したらレンズ無しで描く', () => {
+      useReportViewStore.setState({ segmentId: 'seg-1' });
+      segmentsState.current = { data: undefined, isPending: false };
+      renderBody();
+
+      expect(headline()).toBe('51:00');
+      expect(screen.getByText('仕事')).toBeInTheDocument();
+    });
+
     it('存在しないセグメントを指していたら「すべて」へ縮退する', () => {
       useReportViewStore.setState({ segmentId: 'seg-deleted' });
       renderBody();

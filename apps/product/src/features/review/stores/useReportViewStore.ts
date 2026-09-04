@@ -60,8 +60,12 @@ function createInitialReportViewState(): ReportViewState {
  * 一致したまま中身が壊れている localStorage はサニタイズを素通りし、`hiddenCategoryIds` が
  * 配列でなければ `.includes()` でサイドバーごと落ちる。`merge` は毎回のハイドレーションで
  * 必ず呼ばれるので、こちらを実際の防波堤にする。
+ *
+ * version に依存しない形にしてある。`merge` が受け取るのは `migrate` 済みの state なので、
+ * ここが版数で分岐すると、将来 v2 を書いた瞬間に v2 の state へ v1 の変換を再適用してしまう。
+ * 版ごとの移行は `migrateReportViewState` 側に書く。
  */
-export function migrateReportViewState(persistedState: unknown, _version: number): ReportViewState {
+function sanitizeReportViewState(persistedState: unknown): ReportViewState {
   const defaults = createInitialReportViewState();
   if (typeof persistedState !== 'object' || persistedState === null) return defaults;
 
@@ -79,6 +83,15 @@ export function migrateReportViewState(persistedState: unknown, _version: number
     marginHidden: typeof marginHidden === 'boolean' ? marginHidden : defaults.marginHidden,
     segmentId: typeof segmentId === 'string' ? segmentId : null,
   };
+}
+
+/**
+ * 版をまたぐ移行。今は v1 しか無いのでサニタイズと同義。
+ *
+ * v2 を足す時は、ここで `version` を見て形を変えてから `sanitizeReportViewState` を通す。
+ */
+export function migrateReportViewState(persistedState: unknown, _version: number): ReportViewState {
+  return sanitizeReportViewState(persistedState);
 }
 
 /** `/report` のフィルタとレンズを持つ Zustand ストア（localStorage 永続化）。 */
@@ -113,10 +126,11 @@ export const useReportViewStore = create<ReportViewStore>()(
           segmentId,
         }),
         migrate: migrateReportViewState,
-        // version が一致していてもここは通る。壊れた値を state へ入れない最後の関門
+        // version が一致していてもここは通る。壊れた値を state へ入れない最後の関門。
+        // hydrate は replace 呼び出しなので `...currentState` で action を保つ
         merge: (persistedState, currentState) => ({
           ...currentState,
-          ...migrateReportViewState(persistedState, 1),
+          ...sanitizeReportViewState(persistedState),
         }),
       },
     ),

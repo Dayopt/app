@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 
 import { SidebarSection } from '@/components/shell/sidebar';
 import { ActivityIcon, useActivityTree } from '@/features/activities';
-import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { Checkbox, cn, Skeleton } from '@dayopt/components';
 
 import { useActiveSegment } from '../../hooks/useActiveSegment';
@@ -24,7 +25,10 @@ import { useReportViewStore } from '../../stores/useReportViewStore';
  */
 export function ReportFilterList() {
   const t = useTranslations('report.sidebar');
-  const isMobile = useIsMobile();
+  // `useIsMobile()` は使えない。幅 < 768px では `mobile-layout` が Sidebar ごと
+  // 描かないので、この component が生きている間 true になることが無い（分岐が死ぬ）。
+  // 実際にタッチで触られるのは iPad 縦のような「幅は広いが coarse pointer」の面
+  const isTouch = useMediaQuery(MEDIA_QUERIES.touch);
   const { data: tree, isPending } = useActivityTree();
 
   const hiddenCategoryIds = useReportViewStore((state) => state.hiddenCategoryIds);
@@ -37,8 +41,10 @@ export function ReportFilterList() {
   const categories = tree?.categories ?? [];
   // 生の `segmentId` を見てはいけない。削除済みセグメントを指したままだと、
   // 画面のどこにもレンズが無いのに余白行だけ無効化されたまま戻せなくなる
-  const { activeSegment } = useActiveSegment();
-  const lensActive = activeSegment !== null;
+  const { activeSegment, isResolving } = useActiveSegment();
+  // 解決待ちの間も押させない。押せてしまうと `marginHidden` が永続化されるのに
+  // レンズ確定後は無視され、後日「すべて」へ戻した時に理由の分からない状態が残る
+  const marginLocked = activeSegment !== null || isResolving;
 
   return (
     <SidebarSection title={t('categoriesHeading')} className="space-y-1">
@@ -53,7 +59,7 @@ export function ReportFilterList() {
             <FilterRow
               key={category.id}
               id={`report-filter-category-${category.id}`}
-              compact={!isMobile}
+              compact={!isTouch}
               label={category.name}
               checked={!hiddenCategoryIds.includes(category.id)}
               onToggle={() => toggleCategory(category.id)}
@@ -64,7 +70,7 @@ export function ReportFilterList() {
           {/* 未分類はカテゴリーの一種ではなく残余バケット。色を継承する先が無いので中立表示 */}
           <FilterRow
             id="report-filter-uncategorized"
-            compact={!isMobile}
+            compact={!isTouch}
             label={t('uncategorized')}
             checked={!uncategorizedHidden}
             onToggle={toggleUncategorized}
@@ -74,12 +80,12 @@ export function ReportFilterList() {
           {/* 余白は記録ではなく紙。ドットも中抜きにして「塗られていない」ことを見た目で保つ */}
           <FilterRow
             id="report-filter-margin"
-            compact={!isMobile}
+            compact={!isTouch}
             label={t('margin')}
             checked={!marginHidden}
             onToggle={toggleMargin}
-            disabled={lensActive}
-            description={lensActive ? t('marginLensDisabled') : undefined}
+            disabled={marginLocked}
+            description={marginLocked ? t('marginLensDisabled') : undefined}
             marker={
               <span className="flex size-4 items-center justify-center">
                 <span className="border-border size-3 rounded-full border" />

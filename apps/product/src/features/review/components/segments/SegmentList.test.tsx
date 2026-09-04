@@ -121,7 +121,7 @@ describe('SegmentList', () => {
         name: 'calendar.stats.review.segments.delete',
       }),
     );
-    await user.click(await screen.findByRole('button', { name: /confirm|削除|Delete/i }));
+    await user.click(await screen.findByRole('button', { name: 'common.actions.delete' }));
 
     expect(deleteSegment).toHaveBeenCalledWith({ segmentId: 'seg-1' });
     expect(useReportViewStore.getState().segmentId).toBeNull();
@@ -138,7 +138,7 @@ describe('SegmentList', () => {
         name: 'calendar.stats.review.segments.delete',
       }),
     );
-    await user.click(await screen.findByRole('button', { name: /confirm|削除|Delete/i }));
+    await user.click(await screen.findByRole('button', { name: 'common.actions.delete' }));
 
     expect(deleteSegment).toHaveBeenCalledWith({ segmentId: 'seg-2' });
     expect(useReportViewStore.getState().segmentId).toBe('seg-1');
