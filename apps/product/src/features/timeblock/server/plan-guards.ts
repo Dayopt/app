@@ -35,12 +35,6 @@ export function validateRange(startAt: string, endAt: string, code: string): voi
   }
 }
 
-export function ensurePlanCanBeCreated(endAt: string): void {
-  if (new Date(endAt).getTime() <= Date.now()) {
-    throw new TimeblockServiceError('PLAN_IN_PAST', 'Plans must end in the future.');
-  }
-}
-
 export function assertOptimisticLock(
   expectedUpdatedAt: string | undefined,
   actualUpdatedAt: string,

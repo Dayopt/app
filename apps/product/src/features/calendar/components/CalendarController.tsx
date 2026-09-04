@@ -90,9 +90,6 @@ interface CalendarControllerProps {
   onDeleteTimeblockConfirm: (entry: CalendarDisplayEvent) => void;
   onViewStats: (entry: CalendarDisplayEvent) => void;
   onCopy: (entry: CalendarDisplayEvent) => void;
-  // plan ⇄ record 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
-  onMarkUnplanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
-  onRestorePlanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onSkip: (entry: CalendarDisplayEvent) => void;
   onUnskip: (entry: CalendarDisplayEvent) => void;
 
@@ -137,8 +134,6 @@ export function CalendarController({
   onDeleteTimeblockConfirm,
   onViewStats,
   onCopy,
-  onMarkUnplanned,
-  onRestorePlanned,
   onSkip,
   onUnskip,
   onNavigate,
@@ -288,8 +283,6 @@ export function CalendarController({
           onViewStats={onViewStats}
           onCopy={onCopy}
           onDuplicate={handleDuplicate}
-          onMarkUnplanned={onMarkUnplanned}
-          onRestorePlanned={onRestorePlanned}
           onSkip={onSkip}
           onUnskip={onUnskip}
         />

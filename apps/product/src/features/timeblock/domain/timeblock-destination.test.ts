@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  isPlanRecordDrop,
-  isPlanTimeEditable,
-  resolveTimeblockDestination,
-} from './timeblock-destination';
+import { isPlanRecordDrop, resolveTimeblockDestination } from './timeblock-destination';
 
 const now = new Date('2026-07-10T12:00:00.000Z');
 
@@ -15,13 +11,6 @@ describe('resolveTimeblockDestination', () => {
 
   it('終了が現在以前なら Record を返す', () => {
     expect(resolveTimeblockDestination('2026-07-10T12:00:00.000Z', now)).toBe('record');
-  });
-});
-
-describe('isPlanTimeEditable', () => {
-  it('終了が未来の Plan だけ時間編集を許可する', () => {
-    expect(isPlanTimeEditable('2026-07-10T12:01:00.000Z', now)).toBe(true);
-    expect(isPlanTimeEditable('2026-07-10T12:00:00.000Z', now)).toBe(false);
   });
 });
 

@@ -55,20 +55,18 @@ Codex（OpenAI）は User が手動で `@codex review` と投稿し依頼する�
 
 ### 時間（Plan / Record 分離モデル）
 
-過去は変えられない。記録（Record）はユーザーが明示的に作る。
+記録（Record）はユーザーが明示的に作る。**時刻の規則は 2 本だけ**で、これ以外に過去・未来で操作を出し分けない（2026-09-04 に「未来 Plan」の特別扱い 4 種を撤去した）。
 
-| 状態     | 判定                       |
-| -------- | -------------------------- |
-| upcoming | `start_at > now`           |
-| active   | `start_at <= now < end_at` |
-| past     | `end_at <= now`            |
+| 規則                                             | 対象          | 強制点                                                    |
+| ------------------------------------------------ | ------------- | --------------------------------------------------------- |
+| `end_at > start_at`                              | Plan / Record | DB trigger（`DT003`）                                     |
+| **Record は未来に終われない**（`end_at <= now`） | Record        | DB trigger `validate_record_temporal_write_v1`（`DT005`） |
 
-判定関数: `getTimeblockState()`（`apps/product/src/features/timeblock/lib/timeblock-status.ts`）。
-
-- **過去 Plan**: ドラッグ移動・リサイズ・時間編集・過去日付への新規追加は禁止。タイトル/タグ/メモ訂正・ワンタップ記録・skip・削除は許可
-- **未来/進行中 Plan**: 全操作可。end を過去へ縮める操作のみ不可
-- **Record**: 過去の事実。end が未来になる編集は不可（`end_at <= now` が条件）
-- 各制約は UI（disabled/非表示）+ ロジック（早期return）の二重防御
+- **Plan**: 時間軸のどこにでも置ける。過去の Plan もドラッグ移動・リサイズ・時間編集ができ、未来の Plan も skip できる。編集しても Plan のままで Record へは変わらない
+- **Record**: 過去の事実。終了を未来へ動かす編集だけ不可。紐付け先 Plan がどこにあるかは制約しない
+- 過去スロットへ新規に引いたブロックは Record になる（`resolveTimeblockDestination` は end_at だけで宛先を決める。UI に種別選択の一手を足さない）
+- **強制点は DB trigger / SQL 関数**。アプリ層（service / MCP client / UI）はその写しで、UI だけを直しても規則は変わらない
+- 表示用の upcoming / active / past 分類は `useCalendarData` が持つ（`getTimeblockState()` は呼び出し元が test だけの残骸）
 
 ### アーキテクチャ
 

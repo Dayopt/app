@@ -10,7 +10,6 @@ import {
   assertOptimisticLock,
   ensureNoPlanOverlap,
   ensureNoRecordOverlap,
-  ensurePlanCanBeCreated,
   ensurePlanNotRecorded,
   handleRecordMutationError,
   isPastPlan,
@@ -159,7 +158,6 @@ export class PlanService {
     const { userId, input, preventOverlappingPlans = true } = options;
 
     validateRange(input.start_at, input.end_at, 'INVALID_TIME_RANGE');
-    ensurePlanCanBeCreated(input.end_at);
     await assertActivityAssignable(this.supabase, userId, input.activityId);
 
     if (preventOverlappingPlans) {
@@ -191,15 +189,7 @@ export class PlanService {
     const nextEndAt = input.end_at ?? existing.end_at;
     const updatesTime = input.start_at !== undefined || input.end_at !== undefined;
 
-    if (updatesTime && isPastPlan(existing)) {
-      throw new TimeblockServiceError(
-        'PLAN_TIME_LOCKED',
-        'Past plan time fields cannot be changed.',
-      );
-    }
-
     validateRange(nextStartAt, nextEndAt, 'INVALID_TIME_RANGE');
-    if (updatesTime) ensurePlanCanBeCreated(nextEndAt);
     // activity も同型に独立判定する。tag の条件へネストすると、activity だけを
     // 付け替える更新で fail-fast が発火しない（DB 側 assert は効くが、エラーが
     // tag 語彙で返り、timeblock-command-service の実装とも非対称になる）。
@@ -278,13 +268,6 @@ export class PlanService {
   async skip(options: DeletePlanOptions): Promise<PlanRow> {
     const { userId, planId } = options;
     const existing = await this.getById({ userId, planId });
-
-    if (!isPastPlan(existing)) {
-      throw new TimeblockServiceError(
-        'SKIP_IN_FUTURE',
-        'Future plans cannot be skipped. Delete the plan instead.',
-      );
-    }
 
     await ensurePlanNotRecorded(this.supabase, userId, planId);
 

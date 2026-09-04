@@ -905,7 +905,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
     });
   });
 
-  it('allows past content changes but rejects past time changes through the shared command', async () => {
+  it('allows past content and past time changes through the shared command', async () => {
     const authorization = await createWriteAuthorization();
     const plan = await createPlan({
       title: 'Soon past',
@@ -932,8 +932,8 @@ describe.skipIf(!RUN_LOCAL)('MCP Plan update, delete, and restore apply integrat
       contentUpdate.data!.version,
       { startAt: at(-3_000) },
     );
-    expect(timeUpdate.error?.code).toBe('DT006');
-    expect(await countReceipts([contentOperationId, timeOperationId])).toBe(1);
+    expect(timeUpdate.error).toBeNull();
+    expect(await countReceipts([contentOperationId, timeOperationId])).toBe(2);
   });
 
   it('does not expose any Plan apply RPC to authenticated clients', async () => {
