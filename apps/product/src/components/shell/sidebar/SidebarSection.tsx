@@ -65,6 +65,9 @@ export function SidebarSection({
               }}
               aria-label={title}
               aria-expanded={!collapsed}
+              // icon 自身の hover は持たない。ホバー表現は上の行全体が担う
+              // （2026-09-04 User 指示）
+              className="hover:text-muted-foreground hover:bg-transparent"
               // 展開中は行にカーソルが乗るまで隠す。畳んでいる間は常時表示（開き直す手段を隠さない）
               {...(collapsed ? {} : { revealOn: 'section' as const })}
             >
