@@ -59,7 +59,7 @@ export function SidebarSection({
             collapsible && 'hover:bg-state-hover',
           )}
         >
-          <h3 className="text-muted-foreground min-w-0 truncate text-sm font-normal">{title}</h3>
+          <h3 className="text-muted-foreground min-w-0 truncate text-xs font-normal">{title}</h3>
           {collapsible && (
             // カテゴリー見出し（CategoryHeader）と同じ位置: タイトルの右に置く独立ボタン。
             // 行クリックへ波及させない（行自体も onToggleCollapse を持つため二重発火しうる）
