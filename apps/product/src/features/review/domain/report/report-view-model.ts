@@ -52,7 +52,6 @@ export const MIRROR_MAX_ROWS = 3;
 /** 未分類（カテゴリー未設定）を表す擬似カテゴリのキー。 */
 export const UNCATEGORIZED_KEY = '__uncategorized';
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportFilterState {
   /** ここに載っていないカテゴリは可視。新しく作ったカテゴリが自動で可視になる。 */
   hiddenCategoryIds: readonly string[];

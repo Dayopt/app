@@ -48,7 +48,19 @@
         "weekColumn": "W{index}",
         "monthColumn": "{month}月"
       },
-      "barAriaLabel": "カテゴリー別の配分"
+      "barAriaLabel": "カテゴリー別の配分",
+      "lensLabel": "レンズ: {name}",
+      "barAriaLabelLens": "アクティビティ別の配分"
+    },
+    "sidebar": {
+      "categoriesHeading": "カテゴリー — 分母から出し入れ",
+      "uncategorized": "未分類",
+      "margin": "余白（未記録）",
+      "marginLensDisabled": "セグメントを選んでいる間、余白は分母に入りません",
+      "empty": "カテゴリーはまだありません",
+      "lensHeading": "セグメント — 保存した問い",
+      "lensAll": "すべて",
+      "segmentMenu": "{name} のメニュー"
     },
     "errors": {
       "title": "レポートを読み込めませんでした",

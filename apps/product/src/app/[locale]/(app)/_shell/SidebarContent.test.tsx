@@ -26,6 +26,7 @@ vi.mock('@/components/ui/inputs/mini-calendar', () => ({
 }));
 
 vi.mock('@/features/review', () => ({
+  ReportFilterList: () => <div data-testid="report-filter-list" />,
   SegmentList: () => <div data-testid="segment-list" />,
 }));
 
@@ -47,13 +48,14 @@ describe('SidebarContent', () => {
     expect(screen.getByTestId('activity-filter-list')).toBeInTheDocument();
   });
 
-  it('renders ReportSidebar（セグメント一覧、calendar の view-switcher/activity-filter は出さない）on /report', () => {
+  it('renders ReportSidebar（カテゴリーフィルタ + セグメント一覧、calendar の view-switcher/activity-filter は出さない）on /report', () => {
     pathnameMock.mockReturnValue('/report');
 
     render(<SidebarContent />);
 
     expect(screen.queryByTestId('view-switcher-list')).not.toBeInTheDocument();
     expect(screen.queryByTestId('activity-filter-list')).not.toBeInTheDocument();
+    expect(screen.getByTestId('report-filter-list')).toBeInTheDocument();
     expect(screen.getByTestId('segment-list')).toBeInTheDocument();
   });
 

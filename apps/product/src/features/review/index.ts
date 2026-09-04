@@ -11,7 +11,7 @@
  *
  * ページ本体（`ReportBody`）は 1 export に保つ — 章を個別 export すると分析の置き場が
  * 増える。`SegmentList` は Sidebar 側のコンテンツでページ本体の一部ではないため、この
- * 歯止めの対象外（Sidebar の CRUD 導線として別枠）。
+ * 歯止めの対象外（Sidebar の内容として別枠）。`ReportFilterList` も同じ枠。
  */
 
 // =============================================================================
@@ -20,6 +20,7 @@
 export { ReportHeader } from './components/layout/ReportHeader';
 export { ReportBody } from './components/report/ReportBody';
 export { SegmentList } from './components/segments/SegmentList';
+export { ReportFilterList } from './components/sidebar/ReportFilterList';
 
 // =============================================================================
 // Lib（期間契約 — Composition Layer が `?date=&range=` から期間を組む）
