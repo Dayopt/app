@@ -317,10 +317,8 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
             <div className={categoriesSectionCollapsed ? 'mb-2' : 'mb-6'}>
               <SidebarSection
                 title={t('calendar.filter.categoriesSection')}
-                // カテゴリー「群」の間隔。配下のアクティビティ行（CategoryGroup 内の
-                // space-y-1 = 4px）より 1 段階広くして、どこまでが 1 カテゴリーかを
-                // 余白で区切る。ここを 4px に戻すと群と行の区別が付かなくなる
-                className="space-y-2"
+                // カテゴリー「群」の間隔は CategoryGroup 自身が自分の開閉状態で
+                // 持つ（開いている時だけ margin-bottom）。ここでは指定しない
                 collapsed={categoriesSectionCollapsed}
                 onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
                 action={
