@@ -5,7 +5,19 @@ import { join } from 'node:path';
 import { resolveProtectedPathGate } from '../ci/protected-path-gate.mjs';
 import { REPO, runGh, runGhJson } from '../lib/gh.mjs';
 import { isDirectExecution } from '../lib/is-direct-execution.mjs';
-import { isCodexBotLogin } from '../lib/issue-review-core.mjs';
+
+/**
+ * Codex GitHub 連携 bot の login。GraphQL の `author.login` は
+ * `chatgpt-codex-connector`、REST の `user.login` は `chatgpt-codex-connector[bot]`
+ * と表記が割れる。bot コメント除外の例外判定専用で、merge を gate する用途では
+ * 使わない（#2596 で issue-review-core.mjs を削除したため、この表示用途だけを
+ * ここへ複製する）。
+ */
+const CODEX_BOT_LOGIN = 'chatgpt-codex-connector';
+
+function isCodexBotLogin(login) {
+  return String(login ?? '').replace(/\[bot\]$/, '') === CODEX_BOT_LOGIN;
+}
 
 /**
  * `pnpm ctx <N>` — L0 の「context pack」（AGENTS.md 委任・報告の作法 §L0、

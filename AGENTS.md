@@ -4,7 +4,7 @@ Dayopt で作業する全エージェント（Claude / Codex 含む）の正本�
 
 ## Codex レビュー規則
 
-Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
+Codex（OpenAI）は User が手動で `@codex review` と投稿し依頼する時だけ使う任意ツール（gate にも規約にもしない。2026-09-04、#2596。旧: クロスレビュー必須 PR での内製 subagent と並ぶ必須の 2 系統目 #2529 / #2530 は撤回した）。Codex はレビュー専任で実装は行わない。使う時は次の観点に従う。
 
 - レビューコメントは日本語で書く
 - diff によって新たに生じる、または現実に悪化する不具合だけを指摘する。問題がなければ指摘ゼロでよい
@@ -127,9 +127,9 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-クロスレビュー必須PRは **内製証跡の commit status（context `dayopt/internal-review`）とCodex自身の証跡（review object または `Reviewed commit` 付き指摘ゼロcomment）の両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。両系統とも束縛は「現HEAD一致 **または** 保護対象diffの指紋一致」（#2558）— 追従merge・docsだけのpushではレビューが失効しない。内製証跡は `pnpm review:marker` が出力する `gh api` 1行で投稿する（旧 `[internal-review]` コメントは廃止。#2562）。Codexへの依頼は `pnpm review:request <PR>` 経由に限る（直接投稿はhookがblockする）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
+**merge の遮断は Claude Code hook（`gh pr merge` / `gh api ... pulls/.../merge` の直接実行を block）と `pnpm branch:finish` の CI check（status-check-rollup 判定）だけで行う。hook の効かない実行主体と User 自身の UI merge は対象外**（この境界が実害化したら GitHub Team plan の ruleset へ切り替える。2026-09-04、#2596）。内製 subagent レビュー（`pr-cross-review` skill）と `@codex review`（任意ツール）はどちらも advisory で、所見は PR コメントとして投稿するだけで merge を止めない。保護対象 path の判定（`scripts/ci/protected-path-gate.mjs`）は残しており、advisory レビューをどこまで重く行うかの目安に使う。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身）。`review:full` ラベルは「User 自身が重く見て目を通す」印であり、機械判定の入力にはしない。
 
-retreat条件: `apps/product/src/features/timeblock` または `apps/product/src/lib/time` 配下のtestを削除・skipするPRは、上記の保護対象pathに触れなくても手動で `review:full` labelを付ける（時間不変条件の安全網がそのtest自身であるため。#2489 / #2503）。
+retreat条件: `apps/product/src/features/timeblock` または `apps/product/src/lib/time` 配下のtestを削除・skipするPRは、`review:full` labelを手で付けてUser自身が目を通す（時間不変条件の安全網がそのtest自身であるため。#2489 / #2503）。
 
 ### レーン運用
 
@@ -153,7 +153,7 @@ worktree で作業するセッション（レーン）は次を守る:
 | L3   | Opus / Fable                                                                                                                                                  | 判断・統合・diff レビュー・commit・不可逆操作                                                                                                                                           | —                                 |
 
 - **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す**（原則③。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする。`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
-- **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（#2529 の独立 2 系統の延長。Antigravity は User が手動で使う目で、CI gate にはしない）
+- **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（どちらも User が手動で使う任意ツールで、CI gate にはしない。2026-09-04、#2596）
 - **write可能なsubagentへの委譲**は次の4条件を満たす時のみ: 同一worktree、Mainと非重複scope、commit前にMainがgit diffをレビュー、commit/push/external stateの変更はMainに残す
 - **確認・裁可依頼は選択肢+推奨込みが既定**。推奨を先頭に、各選択肢へ一言根拠を添える。複数の判断は1回に束ねる
 - **完了報告**では利用したagent、意図的に使わなかったagentと理由、未確認事項、deferred scopeを示す

@@ -161,10 +161,9 @@ pnpm security:check
    Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。カタログは
    内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
    「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
-   見えなくなる。**判定は自動では走らない**（自動レビューは廃止済み。クロスレビュー
-   必須 PR は `@codex review` で Codex を起動し、review object を merge gate が
-   必須とする。AGENTS.md §Codexレビュー規則、#2529）。危険クラスの
-   diff では merge 前に `pr-cross-review` skill を明示的に実行する
+   見えなくなる。**判定は自動では走らない**（merge の hard gate ではない advisory
+   レビュー。`@codex review` は User が手動で使う任意ツール。AGENTS.md §Codexレビュー規則、
+   #2596）。危険クラスの diff では merge 前に `pr-cross-review` skill を明示的に実行する
 
 ## 関連する検査経路
 

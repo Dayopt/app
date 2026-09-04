@@ -1,32 +1,17 @@
 ---
 name: pr-cross-review
-description: PR の CI が green で review thread が全件 resolve され merge 候補になった時に、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。`pnpm review:request` で Codex を起動し、内製 subagent（risk-reviewer / behavior-verifier）を並列実行し、commit status（`dayopt/internal-review`）で証跡を残す。実装では発動しない。
+description: PR の CI が green で review thread が全件 resolve され merge 候補になった時に、束ねた PR の merge 前クロスレビュー時、auth / RLS / billing / migration / 公開契約等の diff を merge 前に確認する時に発動。内製 subagent（risk-reviewer / behavior-verifier / architecture-guard）を並列実行し、所見を PR review comment として投稿する advisory レビュー（merge を止めない）。実装では発動しない。
 effort: medium
 maxTurns: 20
 ---
 
 # PR クロスレビュー スキル
 
-Main が merge 前に実行するクロスレビューの標準手順。**クロスレビュー必須 PR は内製 subagent と Codex の独立 2 系統が揃って初めて merge できる**（#2529、2026-09-01）。全 PR への Codex 適用を止めた 2026-08-13 の判断は、必須 PR に限りここで撤回した — 同一モデル系列の中で役割を分けただけのレビューを「独立」とは呼べないため、別 provider の反証を hard gate に載せる。低リスク PR のテンポは変えない（Codex を起動しない）。
+Main が merge 前に実行する advisory クロスレビューの標準手順（2026-09-04、#2596。旧: 内製 subagent と Codex の独立 2 系統を merge の hard gate にする設計 #2529 / #2530 / #2558 / #2562 は撤回した）。
 
-2 系統の役割分担:
+**merge の遮断は Claude Code hook（`gh pr merge` 直接実行の block）と `pnpm branch:finish` の CI check（status-check-rollup 判定）だけで行う。**（`AGENTS.md §PR / git 運用` §レビュー）。このスキルの所見は PR review comment として投稿するだけで、merge の可否には影響しない — 見つけた P1/P2 は review thread の resolve 運用（fix / 反論 / issue 化）に乗せるが、投稿を忘れても機械的に検知されない。`@codex review` は User が手動で使いたい時だけの任意ツールで、このスキルの手順には含めない。
 
-| 系統  | 起動方法                   | 証跡                                                                                                                           | 何を担保するか                                |
-| ----- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| 内製  | `Workflow`（手順 3）       | commit status `dayopt/internal-review`（現 HEAD、または diff 指紋の一致で束縛）                                                | repo 固有の不変条件・アーキテクチャ・挙動検証 |
-| Codex | `pnpm review:request <PR>` | Codex 自身が投稿した review object、または `Reviewed commit` 行付きの指摘ゼロ comment（現 HEAD、または diff 指紋の一致で束縛） | 別 provider による反証・観点差                |
-
-**Codex 側は marker を作らない。** Main が書けるコメントでは「Codex が実行された」ことも「同じ diff を読んだ」ことも証明できず、独立性の主張が自己申告に戻るため（#2529 実装前レビュー P1）、`scripts/tasks/finish-branch.sh` は Codex 自身が投稿した証跡だけを直接検証する。証跡は 2 形態ある: (1) 指摘ありの review object（`commit.oid` が現 HEAD と一致）、(2) 指摘ゼロの時に Codex（`chatgpt-codex-connector`）が代わりに投稿する PR comment で、本文の `Reviewed commit:` 行（sha 値付き）が現 HEAD の prefix と一致するもの（#2536。review object を作らない「クリーンな pass」を marker と誤認して弾いていた不具合の是正）。Codex の usage-limit / error 応答はこの `Reviewed commit:` 行を含まないため、どちらの形態にも該当せず構造的に fail closed のままになる。**バイパス marker は作らない** — 可用性が実害化したら gate を黙って弱めず、別 issue で evidence を集めて範囲を再判断する。
-
-**この gate は `pnpm branch:finish` 経路の機械強制**であり、GitHub の required check ではない（private repo + Free plan では server-side の required check 強制が効かない。既存の全 gate と同じ性質）。UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている。Codex provider 障害で gate 自体を直す PR が止まった場合も、この性質が復旧経路になる（owner が内製レビュー済みの revert PR を UI から merge し、PR にその経緯を残す）。日常のバイパスとしては使わない。
-
-`AGENTS.md §PR / git 運用` §レビュー が要求するレビュー痕跡は、このスキルが生成する commit status（`dayopt/internal-review`）+ inline review comment + Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）で満たす。
-
-**証跡の材料は commit status（#2562、2026-09-03）。** 2026-09 以前は `[internal-review]` marker 付きの PR コメント本文を gate が正規表現で読んでいたが、その材料が 3 つの事故クラス（`P1: なし（注釈…）` を非ゼロ申告と誤認する zerolike 破綻 / 取得窓に残る壊れた marker が gate を塞ぎ続ける / 短縮 SHA 手打ちの捏造）を生んでいた。commit status なら SHA 束縛は `statuses/{sha}` というリソースの構造が保証し、同じ context への再投稿は上書きになるため、3 クラスとも構造的に消える。summary コメントは `[review-summary]` marker で残るが **gate は読まない**（`pnpm trace` の role 別分析用。分析と gate の分離）。
-
-**束縛は「現 HEAD 一致 または diff 指紋の一致」（#2558、2026-09-03）。** レビューが読んだのは diff であって commit ではない。HEAD 束縛だけだと docs だけの commit・追従 merge・lint fix でも証跡が失効し、再依頼と CI の再実行を強いていた（PR #2554 実測: fix 6 push + 追従 1 で Codex 起動 8 回 / CI 10 回、応答 7 回中 6 回が「問題なし」）。指紋は PR diff の変更行のうち保護対象 path だけ（`review:full` の PR では全 file）から作るため、追従 merge では変わらない。**head 完全一致の経路は残してある** — 指紋側の実装バグが gate を fail-open にしないよう、厳格な経路を先に評価する。
-
-**このレビューが必須になる PR は保護対象 path / `review:full` ラベル / linked issue（`Closes #N`）の `review:full` に該当する PR に限る**（2026-08、#2478、レビュー gate のテンポ連動化。linked issue の継承は #2530）。保護対象の選定基準は「外部契約 or 不可逆」に絞ってあり、timeblock / calendar / lib/time の時間不変条件は必須側から外れている（#2489、2026-08-31）。ただし `features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は、同じ feature に同居する MCP 公開契約 / service role クエリ / privacy 境界として必須側に残る。判定は `scripts/ci/protected-path-gate.mjs` が正本で、`scripts/tasks/finish-branch.sh` の merge gate から呼ばれる。該当しない可逆な変更は、CI green + 既存 review thread の resolve だけで merge できる（marker gate を求めない）。
+保護対象 path（`scripts/ci/protected-path-gate.mjs` が正本）に触れる PR は、advisory レビューをより丁寧に行う目安として扱う。低リスク PR（docs-only 等）は独立実行を省略してよい。
 
 **常設の subagent 定義（`.claude/agents/*.md`）は 2026-08 に全廃した（#2478）。** risk-reviewer / behavior-verifier / architecture-guard の persona・read-only 契約・review scope は、`.claude/skills/pr-cross-review/cross-review-workflow.js` の `ROLE_PROMPTS` へ inline prompt として畳み込んである（下記手順 3 参照）。role 名は `Workflow` 呼び出し時のラベル・schema 選択キーとしてのみ残り、`Agent` tool の `subagent_type` としては存在しない。
 
@@ -37,7 +22,7 @@ Main が merge 前に実行するクロスレビューの標準手順。**クロ
 **上位イベント起点:**
 
 - PR の CI が green で review thread が全件 resolve され merge 候補になった時（レーン報告 / Main の判定）
-- 複数 issue / 複数 Step を束ねた PR が merge 前クロスレビュー必須の対象になった時（`AGENTS.md §PR / git 運用` §レビュー）
+- 保護対象 path に触れる PR、または複数 issue / 複数 Step を束ねた PR が merge 前に advisory レビューを受けるべき時（`AGENTS.md §PR / git 運用` §レビュー）
 
 **診断起点:**
 
@@ -50,32 +35,6 @@ Main が merge 前に実行するクロスレビューの標準手順。**クロ
 - 実装そのもの（write 可能な subagent への委譲は `AGENTS.md §委任・報告の作法` の writer 4 条件に従う。このスキルは read-only）
 
 ## 手順
-
-### 0. Codex へレビューを投げる（内製 findings を投稿する前に）
-
-クロスレビュー必須 PR では、**内製レビューの findings を PR へ投稿する前に**、現在の HEAD で Codex を起動する:
-
-```bash
-pnpm review:request <PR番号>
-```
-
-**`gh` から直接投稿しない**（pre-tool-guard が block する、#2558）。`review:request` は投稿の前に順に確認し、投稿しなくてよい理由が 1 つでもあれば投稿しない:
-
-1. `mergeStateStatus` が BEHIND / DIRTY → 「先に追従」と言って exit 1
-2. CI 実行中 → 「CI 待ち」（red の修正で HEAD が動くため）
-3. 既存の Codex 証跡の指紋が現在の diff と一致 → 「有効、再依頼不要」
-4. 直前の依頼に Codex がまだ応答していない → 「応答待ち」（応答前の連投は上限を消費するだけ）
-5. ここまで来て初めて 1 回だけ投稿する
-
-**順序が独立性を実務上担保する。** Codex は PR の現在のスナップショットを読むため、内製 findings をまだ投稿していない時点で起動すれば、Codex の入力に内製 findings が構造的に含まれない。逆方向（Codex findings を内製 subagent の prompt へ渡す）も行わない — 手順 3 の `args` には diff path と ctx pack（下記手順 3 参照）しか渡さない。Codex findings は含めない。
-
-ただし **これは運用規約であって機械強制ではない**（push 前反証レビュー P3）。merge gate は Codex review が現 HEAD に対して存在することしか見ておらず、内製 findings の投稿時刻と Codex review の投稿時刻を比較していない。逆順で実行しても gate は通る。順序を守る責任は Main にある。
-
-- Codex は PR 全体を全量レビューする。**delta review の概念を Codex 側に持ち込まない**（旧 HEAD の review を積み上げて範囲の連続性を主張する経路を作らない、#2529 実装前レビュー P2）
-- push で HEAD が動いたら Codex 証跡も無効になる。fix round のたびに `@codex review` を投げ直す
-- Codex の返信を待つ間に手順 1〜3（内製レビュー）を進めてよい。両者が揃ってから手順 4 で統合する
-- Codex の指摘は inline review comment として届くため `reviewThreads` を生成し、既存の thread-resolve gate がそのまま解決を強制する（内製指摘と同じ 3 択: fix を積む / 反論を reply / issue 化）。**Codex 側のために新しい解決機構は要らない**
-- Codex が body だけの review（inline comment 無し）で P1/P2 相当を書いてきた場合は、Main が手順 5 の経路で inline comment へ正規化する。summary に書いて終えない
 
 ### 1. 対象 diff を読み取り可能な形にする
 
@@ -119,12 +78,12 @@ reviewer は diff だけでなくこの ctx pack（受け入れ条件 / DoD / �
 
 **role ごとの persona・read-only 契約・review scope・model は、`.claude/agents/*.md`（2026-08 に全廃、#2478）の代わりに `cross-review-workflow.js` の `ROLE_PROMPTS` / `MODEL_BY_ROLE` へ inline で持つ。** `agentType` は使わず、`agent()` 呼び出しに `model` と inline prompt（`ROLE_PROMPTS[role]` + diff 指示）だけを渡す。**既知のトレードオフ**: 旧 `.claude/agents/*.md` の `tools: Read, Grep, Glob` / `permissionMode: plan` は harness レベルの技術的強制だったが、agentType を撤去したことでこの技術的強制は失われ、read-only の担保は inline prompt 内の明示的な文章指示（+ 通常の permission gate）に後退している。これは #2478 の意図的な設計判断で、cross-review-workflow.js 冒頭のコメントに同じ注記がある。
 
-script は各 role について `{ role, status: 'ok' | 'empty' | 'error', result }` の配列を返す。`status` が `ok` 以外の role が 1 件でもあれば、手順 6 の marker 生成は機械的に拒否される（`--review-result` 参照）。その場合 Main は次のいずれかを選ぶ:
+script は各 role について `{ role, status: 'ok' | 'empty' | 'error', result }` の配列を返す。`status` が `ok` 以外の role が 1 件でもあれば、Main は次のいずれかを選ぶ:
 
-- 同一 script を再実行する（固定の自動リトライは行わない — 同一条件で同一失敗を再現するだけの可能性があり、1 週間の効果測定の解像度も下げるため、都度 Main が判断する）
-- 該当 role だけ素の `Agent` tool 経由（`subagent_type` は指定しない汎用 agent に、`cross-review-workflow.js` の `ROLE_PROMPTS[role]` をそのまま prompt として渡し、text 出力を求める）へ切り替える。この場合、手順 6 の `--review-result` JSON でその role のエントリを `status: "text-fallback"` にする（schema 強制を通った marker と区別するため。効果測定を汚染しないための必須事項）。**text-fallback は `coverage` を機械的に追跡できない**（text contract は schema を強制しないため）。partial coverage の safeguard（手順6）は text-fallback role には適用されない
+- 同一 script を再実行する（固定の自動リトライは行わない — 同一条件で同一失敗を再現するだけの可能性があるため、都度 Main が判断する）
+- 該当 role だけ素の `Agent` tool 経由（`subagent_type` は指定しない汎用 agent に、`cross-review-workflow.js` の `ROLE_PROMPTS[role]` をそのまま prompt として渡し、text 出力を求める）へ切り替える。この場合、手順 6 の summary comment でその role のエントリを「text-fallback」と明記する（schema 強制を通った結果と区別するため）
 
-`status: 'ok'` の各 role は `result.coverage`（`'complete' | 'partial'`）も持つ（#2417）。budget 逼迫で観点を打ち切った role は `'partial'` を自己申告する契約で、`status !== 'ok'` とは別の軸として扱う — schema 検証自体は通っているが浅い可能性がある、という意味。手順 6 の `--partial-coverage-note` 必須化がこの信号を marker の gate へ橋渡しする。
+`status: 'ok'` の各 role は `result.coverage`（`'complete' | 'partial'`）も持つ（#2417）。budget 逼迫で観点を打ち切った role は `'partial'` を自己申告する契約で、`status !== 'ok'` とは別の軸として扱う — schema 検証自体は通っているが浅い可能性がある、という意味。手順 6 の summary comment に partial である旨と理由（追加確認済み・許容する理由など）を明記する。
 
 Workflow はタスク通知でバックグラウンド完了する。目安 30 分（可逆 checkpoint のタイムアウト既定値。旧 orchestration.md 由来、#2479 で廃止・git 履歴参照）通知が届かなければ、セッション状態を確認した上で対処する。
 
@@ -134,80 +93,32 @@ Workflow はタスク通知でバックグラウンド完了する。目安 30 �
 - **P2**: 現実的なエッジケースで誤動作し、修正せずに出荷すべきでない
 - **P3**: P1/P2 に満たないが記録に値する指摘（軽微な改善、将来の技術的負債）。**単独では merge を止めない。review comment 化せず、summary コメント本文にだけ書く**（thread 必須解決の対象外。原則 issue 化するか、記録のみで放置してよい）
 
-P1/P2 の定義は `AGENTS.md` の Codex レビュー規則と同じものを両系統へ適用する（どちらが見つけたかで扱いを変えない）。
-
-**両系統が揃ってから Main が統合する。** 内製と Codex は「相談して 1 回レビュー」ではなく、同じ一次情報を別々に読む独立レビューなので:
-
-- reviewer 同士の一致を成功条件にしない。観点差・反証・片方だけの finding に価値がある
-- 同じ指摘を両者が挙げた場合、thread は 1 本に統合してよい。ただし「両方が独立に検出した」事実は手順 6 の summary に残す
-- 両者の結論が食い違う場合、Main が一次情報（diff / test / migration）で裁く。AI 間の合意を証拠として扱わない
+P1/P2 の定義は `AGENTS.md` の Codex レビュー規則の節と同じものを使う。
 
 ### 5. P1/P2 は review comment として投稿する（thread を生成させる）
 
-**summary コメント（`[review-summary]`）や commit status だけでは、既存の thread-resolve gate（`scripts/tasks/finish-branch.sh` の `isResolved` 走査）が内製指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`AGENTS.md §PR / git 運用` §レビュー）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
+**summary コメントだけでは、既存の thread-resolve gate（`scripts/tasks/finish-branch.sh` の `isResolved` 走査）が指摘に一切効かない。** issue コメントは `reviewThreads` を生成しないため、P1/P2 を summary コメントに書いて終えると「指摘の黙殺を構造的に不可能にする」（`AGENTS.md §PR / git 運用` §レビュー）が丸ごと失効する。**P3 はこの節の対象外**（手順 4 の通り summary コメントにのみ書く）。
 
 - P1/P2 は `gh api` の reviews エンドポイントで投稿する: `POST /repos/{owner}/{repo}/pulls/{pr}/reviews` で pending review を作成 → 各指摘を `path` + `line`（対象行が明確な場合）または `path` のみ（diff 上に自然な単一行が無い場合のファイルレベル指摘）で comment として追加 → `event: COMMENT` で submit する（`APPROVE` / `REQUEST_CHANGES` は使わない）
 - diff 上に自然な行がない P1/P2（rollback 手順の欠如、migration の順序など）は、最も関連するファイルへの comment として必ず付ける。**summary コメントに書いて終えることを禁止する**
 - PR 作成者本人（Main と同一 GitHub アカウント）が自 PR に `event: COMMENT` の review を submit できることは実地検証済み（PR #2051 で実測。`state: COMMENTED` で成功し `reviewThreads` にも正しく現れた。自己承認制限は `APPROVE` / `REQUEST_CHANGES` にのみ適用され `COMMENT` には効かない）。**フォールバックが必要になった場合も inline comment を伴う経路に限る**（`gh api` での 1 comment ずつの投稿など）。body だけの `gh pr review --comment`（inline comment なし）は `reviewThreads` を生成せず、二層構造の 2 層目が無音で失効するため使わない。inline comment がどうしても付けられない場合は投稿を諦めず、Main へ状況を報告してから手動で対応する
 - 投稿後は `AGENTS.md §PR / git 運用` §レビュー の 3 択（fix を積む / 反論を reply / issue化）+ thread resolve 運用へそのまま接続する
 
-### 6. 証跡の commit status を投稿する（gate 証跡）+ summary コメント
+### 6. summary コメントを投稿する（記録のみ、gate 証跡ではない）
 
-`pnpm review:marker` が **2 つ**を stdout に出す:
+**merge を止めるものは何もない。** レビューを実施した記録として、Main が `gh pr comment` で summary コメントを直接投稿する（生成スクリプトは持たない。手で 1 行組み立てる程度の定型文なので、機械生成する複雑さに見合わない）。書式は §投稿フォーマット を参照。role 別 findings 内訳（`findings:` 行）は `pnpm trace` が過去 PR の分析に使うため、書式を保つ。
 
-1. **commit status の投稿コマンド**（`gh api --method POST repos/{owner}/{repo}/statuses/<head SHA>`）。これが gate の証跡。description は `p1=<int> p2=<int> fp=<hash> fpa=<hash> coverage=<...> agents=<csv>` の固定書式で、head SHA と 2 つの指紋は script が実測する
-2. **summary コメント本文**（1 行目が `[review-summary]`）。人が読む記録で **gate は読まない**。role 別 findings 内訳（`findings:` 行）を `pnpm trace` が読む
-
-**どちらも手書きしない。** 生成された 1 行を**目視してから**実行する（生成と投稿を分ける 1 拍は #2230 から不変。SHA 捏造・書式汚染の再発防止）。 SHA の捏造（短縮 SHA からの補完、2026-08-14 実事故）と zerolike 書式の汚染（注釈付き `P1: なし（…）` が gate を誤通過させた PR #2053 の実事故）を、生成の機械化で防ぐ（`scripts/tasks/generate-marker.ts`、#2230）。
-
-**手順 3 で reviewer を起動した場合（docs-only 以外）は `--agent` ではなく `--review-result` を使う。** 手順 3 の Workflow が返した `{role, status, result}[]` を、Main が `Write` tool でそのまま JSON ファイルへ書き出し、そのパスを渡す（#2348）。`status` が `ok`/`text-fallback` 以外の role が 1 件でもあれば生成が失敗する — これは「1 role が結果を返していないのに手で `--agent` へ書いて gate を通す」抜け道を、値の手入力自体を無くして塞ぐための機械的ガード:
-
-```bash
-pnpm review:marker <PR番号> --review-result /path/to/review-result.json \
-  --p1 0 --p2 2 --p2-note "review comment 参照" [--p3 "..."]
-```
-
-docs-only 等 reviewer を起動しなかった場合は従来どおり `--agent` を直接指定する（`--agent` と `--review-result` は併用不可）:
-
-```bash
-pnpm review:marker <PR番号> --agent docs-only --p1 0 --p2 0
-```
-
-**`--review-result` のいずれかの role が `coverage: 'partial'`（budget 逼迫で観点を打ち切った自己申告、#2417）を報告している場合、`--partial-coverage-note` が無いと生成が失敗する。** pacing discipline を緩めて早期の StructuredOutput 呼び出しを許可すると、「schema 上は正常だが浅いレビュー」が `status: 'ok'` のまま marker を素通りしうる（fail-open）。これを黙って通さず、Main による明示的な扱い（追加確認済み・許容する理由など）を書かせる:
-
-```bash
-pnpm review:marker <PR番号> --review-result /path/to/review-result.json \
-  --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
-```
-
-**この防止線が効くのは `pnpm review:marker` 経由の生成時のみ。** `finish-branch.sh` の merge gate は description の `coverage=partial` を読み取るが、それを理由に停止はしない（`agents` フィールドと同じ trust boundary — gate は status の存在と `p1` / `p2` / 指紋だけで判定する）。手組みの `gh api` を直接実行すれば、この安全網は素通りする（PR #2424 クロスレビュー P2）。
-
-head SHA は script が `gh pr view --json headRefOid` で実測する（引数で渡す口は無い）。P1/P2 が 0 件の時は注釈を付けられない（zerolike 書式を維持するため。理由は P3 か経緯欄へ）。**stdout の出力を目視確認してから** `gh pr comment <PR番号> --body "<出力>"` 等で投稿する — 生成と投稿を分けているのは、投稿前に 1 拍置く確認ステップを残すため。
-
-`agent:` の値は自己申告であり、gate は非空であることしか検証しない（機械的な docs-only 判定はしない）。この trust boundary は marker を OWNER / MEMBER / COLLABORATOR しか投稿できない、という既存の権限境界に依っている。
+`agent:` には実際に起動した role をカンマ区切りで書く。手順 3 で text-fallback へ切り替えた role は `role(text-fallback)` の形で書く（`pnpm trace` が集計時に区別する）。
 
 ### 7. 収束後、確定伝達する
 
 指摘の 3 択対応が済み thread が全件 resolve されたら、「確定伝達」としてレーンへ通知する。確定伝達には「merge 順で先頭であり追従済みである（以後 main を動かさない）」ことも含めて宣言する。
 
-### 8. HEAD が動いたら両系統を張り直す
+### 8. HEAD が動いたら再レビューを判断する
 
-指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わったら、**内製・Codex の両方**の証跡が新しい HEAD に対して必要になる。
-
-**ただし「HEAD が動いた」= 「レビュー対象が変わった」ではない**（#2558）。docs だけの commit・追従 merge・保護対象外の lint fix では diff の指紋が変わらず、既存の証跡がそのまま有効になる。まず `pnpm review:request <PR番号>` を実行し、「有効、再依頼不要」と言われたら何もしない。
-
-指紋が変わっていた場合:
-
-- **内製**: `旧HEAD..新HEAD` の差分だけを対象に re-review し、新しい HEAD に対して status を投稿し直す（全量の再レビューを毎回要求しない）
-- **Codex**: `pnpm review:request` が必要と判断した時だけ 1 回投げ直す。Codex は毎回 PR 全体を読むため、delta の連続性を人が主張する余地が無い（証跡は常に「その commit の全量レビュー」）
-
-内製側の gate 判定: gate は PR の直近 30 commit の commit status を見て、context `dayopt/internal-review` かつ state が success で、**現 HEAD の commit** または **description の指紋が現在の diff の指紋と一致する commit** に付いた status を 1 件以上要求する。
-
-**壊れた証跡が gate を塞ぎ続ける事故は構造的に消えた**（#2562）。旧設計ではコメント取得窓（直近 100 件）に残る誤書式の marker 1 件が非ゼロ申告と誤認され続け、正しい marker を新たに投稿しても gate が塞がったままになった（PR [#2053](https://github.com/Dayopt/dayopt/pull/2053) で 2 度停止し、汚染 marker の削除で復旧）。commit status は同じ context への再投稿が上書きになるため、投稿し直すだけで復旧する。
+指摘対応の fix push や追従（想定外に発生した場合）で HEAD が変わった場合、再レビューが必要かは Main の判断による（機械的な束縛は無い。gate ではないため）。docs だけの commit・追従 merge・保護対象外の lint fix は再レビュー不要。保護対象 path やロジックに実質的な変更が入った場合は、`旧HEAD..新HEAD` の差分だけを対象に re-review し、summary コメントを新しい HEAD に対して投稿し直す（全量の再レビューを毎回要求しない）。
 
 ## 投稿フォーマット
-
-summary コメントは **gate の判定材料ではない**（#2562）。gate が読むのは commit status の description だけなので、コメント本文の書式が gate を止めることはもう無い。`pnpm review:marker` の出力をそのまま投稿する。
 
 ```
 [review-summary]
@@ -228,17 +139,15 @@ agent: docs-only
 一次情報照合: 記述した path / symbol の実在を rg で確認した。
 ```
 
-このコメントの書式は gate を通過させる条件ではない（証跡は commit status 側）。`head:` / `agent:` / `findings:` 行は人と `pnpm trace` のために残してある。
+`head:` / `agent:` 行は人と `pnpm trace` のために残してある。**このコメントの書式・投稿の有無は merge を止めない**（advisory）。
 
 ## 参考ファイル
 
-| ファイル                              | 用途                                                                                                                             |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md §委任・報告の作法`         | subagent 選定基準、model tiering                                                                                                 |
-| `AGENTS.md §PR / git 運用` §レビュー  | 指摘後の 3 択・resolve 運用                                                                                                      |
-| `dispatch` skill                      | このスキルが実行されるタイミング（merge 可能報告の受領）                                                                         |
-| `AGENTS.md`                           | 凍結された P1/P2 定義の由来（このスキルが生きた正本）                                                                            |
-| `scripts/tasks/finish-branch.sh`      | 内製証跡（commit status）と Codex 証跡の gate 判定ロジック                                                                       |
-| `scripts/tasks/generate-marker.ts`    | commit status の投稿コマンドと summary コメントの生成（SHA・指紋の実測。指紋の実装は同じ `scripts/lib/` 配下の core モジュール） |
-| `scripts/tasks/review-request.mjs`    | Codex への依頼を「必要な時だけ 1 回」にする（`pnpm review:request`）                                                             |
-| `scripts/tasks/issue-review-gate.mjs` | linked issue の Codex Issue Review 証跡の検証（#2530、`dispatch` skill 操作A と merge gate から呼ばれる）                        |
+| ファイル                             | 用途                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `AGENTS.md §委任・報告の作法`        | subagent 選定基準、model tiering                                                                    |
+| `AGENTS.md §PR / git 運用` §レビュー | merge gate の境界（hook + CI check）、指摘後の 3 択・resolve 運用                                   |
+| `dispatch` skill                     | このスキルが実行されるタイミング（merge 可能報告の受領）                                            |
+| `AGENTS.md`                          | P1/P2 定義の由来（このスキルが生きた正本）                                                          |
+| `scripts/tasks/finish-branch.sh`     | CI status-check-rollup 判定・thread-resolve gate（内製・外部レビューの証跡検証は #2596 で削除済み） |
+| `scripts/ci/protected-path-gate.mjs` | 保護対象 path の判定（advisory レビューの重さの目安）                                               |

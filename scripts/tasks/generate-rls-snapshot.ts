@@ -97,6 +97,8 @@ type PolicyRow = {
 
 type RlsRow = { table: string; rls: boolean; forced: boolean };
 
+type TableWithoutRlsProtectionRow = { table_name: string; rls: boolean; policy_count: number };
+
 type StorageBucketRow = {
   id: string;
   public: boolean;
@@ -153,6 +155,51 @@ function fetchRlsTables(): RlsRow[] {
               ) ORDER BY c.relname), '[]'::json)
        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public' AND c.relkind = 'r';`,
+    ) ?? []
+  );
+}
+
+/**
+ * RLS を有効化しつつ policy を 1 件も置かない「deny-all」設計を意図的に使っている
+ * public table の allow-list（#2596 CODEX-1 の決定的代替）。
+ *
+ * `RLS enabled + policy 0 件` は anon / authenticated からの読み書きを完全に拒否する
+ * 意図的なパターンで、MCP 系の内部テーブル（service role からしか触らない）で使われている。
+ * これを一律で red にすると既存の正当な設計を壊すため、名前を明示した allow-list だけを
+ * 通す。新設テーブルがここに載っていない状態で `rls=false` または `policy 0 件` になった
+ * 場合は、テナント分離が抜けている可能性が高いとみなし fail closed にする（新たに
+ * deny-all を選ぶ場合は、このリストへ明示的に追加することでレビューに乗る）。
+ */
+const PUBLIC_TABLES_WITHOUT_POLICIES_ALLOWLIST = [
+  'mcp_environment_identity',
+  'mcp_mutation_control',
+  'mcp_mutation_receipts',
+];
+
+/**
+ * テナント分離の穴を DB 側から実測する（#2596）。Codex クロスレビューが人手で見ていた
+ * 「新設 table に RLS policy が無い」を決定的検査へ置き換える。
+ *
+ * `rls = false`（RLS 自体を有効化し忘れている）と、`policy 0 件`（RLS は有効だが
+ * allow-list に無い deny-all）の両方を対象にする。1 行でも返れば snapshot 生成を停止する。
+ */
+function fetchTablesWithoutRlsProtection(): TableWithoutRlsProtectionRow[] {
+  return (
+    queryJson<TableWithoutRlsProtectionRow[] | null>(
+      `SELECT coalesce(json_agg(row_to_json(v) ORDER BY v.table_name), '[]'::json)
+       FROM (
+         SELECT c.relname AS table_name, c.relrowsecurity AS rls,
+                (SELECT count(*)::int FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = c.relname) AS policy_count
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind = 'r'
+           AND c.relname NOT IN (${sqlStringList(PUBLIC_TABLES_WITHOUT_POLICIES_ALLOWLIST)})
+           AND (
+             c.relrowsecurity = false
+             OR (SELECT count(*) FROM pg_policies p
+                  WHERE p.schemaname = 'public' AND p.tablename = c.relname) = 0
+           )
+       ) v;`,
     ) ?? []
   );
 }
@@ -895,6 +942,17 @@ function render({
 async function main(): Promise<void> {
   let content: string;
   try {
+    // 新設 public table がテナント分離の穴（RLS 無効 / policy 0 件）を持っていないかを
+    // 最初に確認する。migration guard 系と同じく fail closed（#2596）。
+    const tablesWithoutRlsProtection = fetchTablesWithoutRlsProtection();
+    if (tablesWithoutRlsProtection.length > 0) {
+      const violation = tablesWithoutRlsProtection[0]!;
+      throw new Error(
+        `public.${violation.table_name} has no RLS protection (rls=${violation.rls}, policies=${violation.policy_count}). ` +
+          'RLS を有効化し policy を追加するか、deny-all が意図的なら PUBLIC_TABLES_WITHOUT_POLICIES_ALLOWLIST へ明示的に追加してください。',
+      );
+    }
+
     const effectiveTimeblockWritePrivileges = fetchEffectiveTimeblockWritePrivileges();
     if (effectiveTimeblockWritePrivileges.length > 0) {
       const violation = effectiveTimeblockWritePrivileges[0]!;
