@@ -379,6 +379,7 @@ export function TimeblockSearchDialog({
       open={open}
       onOpenChange={handleOpenChange}
       responsive={responsive}
+      modal={false}
       title={t('calendar.search.title')}
       description={t('calendar.search.description')}
       mobilePresentation="full-height"
