@@ -549,7 +549,7 @@ PlanService / RecordService
 updatePlan({ id, startAt: newTime }); // pastの場合エラー
 
 // ✅ 過去Planの内容を訂正
-updatePlan({ id, note, tagId });
+updatePlan({ id, note, activityId });
 
 // ✅ 実際に使った時間はRecordとして作成・訂正
 updateRecord({ id, startAt, endAt, note });

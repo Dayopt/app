@@ -615,19 +615,19 @@ const plansQuery = api.plans.list.useQuery(searchInput, {
 ```typescript
 import { handleQueryError } from '@/lib/tanstack-query/error-handler';
 
-export function useCreateTag() {
+export function useCreateActivity() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: tagAPI.createTag,
+    mutationFn: activityAPI.createActivity,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagKeys.all });
+      queryClient.invalidateQueries({ queryKey: activityKeys.all });
     },
     onError: (error) => {
       handleQueryError(error, {
-        queryKey: tagKeys.all,
+        queryKey: activityKeys.all,
         operation: 'create',
-        feature: 'tags',
+        feature: 'activities',
       });
     },
   });
@@ -648,24 +648,24 @@ export function useCreateTag() {
 #### Mutation内での楽観的更新
 
 ```typescript
-export function useCreateTag() {
+export function useCreateActivity() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: tagAPI.createTag,
-    onMutate: async (newTag) => {
-      await queryClient.cancelQueries({ queryKey: tagKeys.lists() });
-      const previous = queryClient.getQueryData(tagKeys.lists());
+    mutationFn: activityAPI.createActivity,
+    onMutate: async (newActivity) => {
+      await queryClient.cancelQueries({ queryKey: activityKeys.lists() });
+      const previous = queryClient.getQueryData(activityKeys.lists());
 
       // 楽観的更新
-      queryClient.setQueryData(tagKeys.lists(), (old) => [...old, newTag]);
+      queryClient.setQueryData(activityKeys.lists(), (old) => [...old, newActivity]);
 
       return { previous };
     },
     onError: (error, variables, context) => {
       // エラー時にロールバック
       if (context?.previous) {
-        queryClient.setQueryData(tagKeys.lists(), context.previous);
+        queryClient.setQueryData(activityKeys.lists(), context.previous);
       }
     },
   });
@@ -703,9 +703,9 @@ function createWrapper() {
 #### テスト例
 
 ```typescript
-describe('useTags', () => {
-  it('should fetch tags', async () => {
-    const { result } = renderHook(() => useTags(), {
+describe('useActivities', () => {
+  it('should fetch activities', async () => {
+    const { result } = renderHook(() => useActivities(), {
       wrapper: createWrapper(),
     });
 
@@ -785,7 +785,7 @@ export default async function CalendarPage() {
 
   await helpers.plans.list.prefetch();
   await helpers.records.list.prefetch();
-  await helpers.tags.list.prefetch();
+  await helpers.activities.list.prefetch();
 
   return (
     <HydrationBoundary state={dehydrate(helpers.queryClient)}>

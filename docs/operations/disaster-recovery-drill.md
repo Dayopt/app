@@ -62,7 +62,7 @@ Dashboard → Project `dayopt` → Settings / Database → Backups
 - [ ] DB サイズ（Reports → Database、または `SELECT pg_size_pretty(pg_database_size(current_database()));`）
 - [ ] **復元前の production の状態を控える**（復元後の比較対象がこれしかない）
   - `SELECT jobname, schedule, active FROM cron.job ORDER BY jobname;`
-  - `plans` / `records` / `tags` / `profiles` の行数と、各テーブルの最新 `created_at`
+  - `plans` / `records` / `activities` / `categories` / `profiles` の行数と、各テーブルの最新 `created_at`
 
 **Free プランなら backup は存在しない。** その場合この演習は「backup を作るところ」から始まる（`db dump` の定期実行 + 保管先の決定）。
 
@@ -208,7 +208,7 @@ synthetic データは、この復元先に対して `supabase/seed.sql` と手�
 
 ### データ
 
-- [ ] `plans` / `records` / `tags` / `profiles` の行数が Step 0 で控えた値と一致する
+- [ ] `plans` / `records` / `activities` / `categories` / `profiles` の行数が Step 0 で控えた値と一致する
 - [ ] `mcp_mutation_receipts` / `oauth_connections` など MCP 系テーブルが揃っている
 
 **RPO は最新 `created_at` では測れない。** backup 以降に「更新・削除しかなかった」場合、最新 `created_at` は一致するのに変更は失われている。逆に新規作成が長期間なければ、損失ゼロでも大きな RPO を算出してしまう。**sentinel を使う。**

@@ -259,7 +259,7 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 
 ### 方針: 最小限
 
-`supabase/seed.sql` には**最小限のtagデータ(10件程度)のみ**を記述。
+`supabase/seed.sql` には**最小限のカテゴリー / アクティビティと、検証用の Plan / Record のみ**を記述。
 
 理由:
 
@@ -269,8 +269,12 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 
 ```sql
 -- supabase/seed.sql
-INSERT INTO public.tags (id, name, color, user_id) VALUES
-  -- system tags(全ユーザー共通のデフォルト)
+INSERT INTO public.categories (id, user_id, name, color) VALUES
+  -- 開発用のカテゴリー(色・アイコンを持つのはカテゴリーだけ)
+  (...)
+;
+INSERT INTO public.activities (id, user_id, category_id, name) VALUES
+  -- Plan / Record が参照する分類単位
   (...)
 ;
 ```
