@@ -52,7 +52,7 @@ DB の `plans` テーブルに対応する独立エンティティ。これか�
 
 - UI: 「予定」
 - 禁止: 「計画」(名詞としては使わない。動詞「計画する」は文脈により可)、「エントリ」(旧モデルの呼称。ADR-025 で廃止)
-- 過去の Plan は時間凍結。アクティビティ / note のみ訂正可
+- 過去の Plan も含め、時間軸のどこにでも自由に置け、時間・アクティビティ・note すべて編集可
 
 #### record / 記録
 
@@ -85,7 +85,7 @@ Review で区別する3つの状態:
 - **やらなかった予定** — Plan に `skipped_at` があるもの。実績集計からは除外するが計画履歴は残す
 - **予定外の記録** — Record に `plan_id` がないもの。予定していなかったが記録した時間
 
-いずれも判定ラベルではなく静かなマーカーで表示する(コピーライティング原則「判定せず数字で示す」)。
+未記録の予定・やらなかった予定は判定ラベルではなく静かなマーカーで表示する(コピーライティング原則「判定せず数字で示す」)。予定外の記録は Calendar 上に可視のマーカーを持たない内部区分で、Review の差分集計でのみ扱う(旧「予定外」/「Unplanned」マーカーと「予定に戻す」導線は2026-09-04にUIから撤去済み)。
 
 #### sign in / サインイン(移行中)
 
@@ -201,10 +201,10 @@ Plan / Record の時間位置から自動導出される3値。DBカラムでは
 | ---------- | -------------------------- | --------------------------------------------- |
 | `upcoming` | `start_at > now`           | Plan のみ取りうる(未来の Record は存在しない) |
 | `active`   | `start_at <= now < end_at` | 進行中                                        |
-| `past`     | `end_at <= now`            | Plan は時間凍結、Record は訂正可              |
+| `past`     | `end_at <= now`            | Plan は自由に編集可、Record は訂正可          |
 
-- 算出関数: `getTimeblockState()` — `src/features/timeblock/lib/timeblock-status.ts`
-- 意思決定ログ: 時間不変原則（削除済み、git 履歴参照）、ADR-025（削除済み、git 履歴参照）
+- 算出関数: `getTimeblockState()` — `src/features/timeblock/lib/timeblock-status.ts`（表示用の upcoming / active / past 分類の実体は `useCalendarData` が持ち、この関数は呼び出し元が test だけの残骸）
+- 意思決定ログ: ADR-025（削除済み、git 履歴参照）
 
 #### 2レーン表示
 
@@ -226,12 +226,11 @@ Calendar は Plan レーンと Record レーンを横並びで表示する。
 
 #### Time Immutability(時間不変原則)
 
-「Time waits for no one」 — 過去は変更できないという原則。
+「Time waits for no one」 — 過去は変更できないという原則。**Record にのみ適用され、Plan には適用されない**（2026-09-04、「未来 Plan」向け特例4種を撤去。Plan は時間軸のどこにでも自由に置ける）。
 
-- 過去 Plan の `start_at` / `end_at` は変更不可（アクティビティ / note のみ訂正可）
-- Record は過去の記録そのものなので、時間・アクティビティ・noteを訂正可能
-- UI: 過去 Plan は disabled 表示 + ロジックガードの二重防御
-- 意思決定ログ: ADR-025（削除済み、git 履歴参照）、時間不変原則（削除済み、git 履歴参照）
+- Plan は過去・未来を問わず `start_at` / `end_at` を含め自由に編集できる。編集しても Plan のままで Record へは変わらない
+- Record は過去の記録そのものなので、時間・アクティビティ・noteを訂正可能（ただし終了を未来へ動かす編集だけ不可）
+- 意思決定ログ: ADR-025（削除済み、git 履歴参照）
 
 ### UI機能
 

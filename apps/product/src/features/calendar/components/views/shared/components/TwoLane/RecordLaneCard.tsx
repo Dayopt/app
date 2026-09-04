@@ -175,11 +175,6 @@ export function RecordLaneCard({
           {formatTimeRange(event.displayStartDate, event.displayEndDate, timeFormat)}
         </p>
       )}
-      {isUnplanned && !compact && (
-        <span data-record-unplanned-marker className="text-muted-foreground truncate">
-          {t('timeblock.inspector.unplanned')}
-        </span>
-      )}
       {showDayDiffMarker && <DayDiffMarker />}
       {canDrag && onResizeStart && (
         <div

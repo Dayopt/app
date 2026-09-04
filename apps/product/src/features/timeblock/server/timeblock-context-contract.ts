@@ -67,15 +67,15 @@ export const TIMEBLOCK_CONTEXT_RULES = {
     planVsRecord: 'allowed',
   },
   plans: {
-    createEnd: 'after_as_of',
-    pastPlanTimeUpdate: 'forbidden',
+    createEnd: 'unrestricted',
+    pastPlanTimeUpdate: 'allowed',
     pastPlanContentUpdate: 'allowed',
-    timeUpdateEnd: 'after_as_of',
+    timeUpdateEnd: 'unrestricted',
     skippedOccupiesLane: true,
   },
   records: {
     createEnd: 'at_or_before_as_of',
     timeUpdateEnd: 'at_or_before_as_of',
-    linkedPlan: 'non_deleted_unskipped_completed',
+    linkedPlan: 'non_deleted_unskipped',
   },
 } as const;

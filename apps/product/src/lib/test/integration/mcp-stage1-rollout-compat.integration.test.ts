@@ -693,7 +693,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
     expect(relinkError?.code).toBe('DT001');
   });
 
-  it('still rejects restoring links to skipped or future Plans', async () => {
+  it('still rejects restoring links to skipped Plans, but allows future Plans', async () => {
     const skippedPlan = await createHistoricalPlan({
       title: 'Skipped restore Plan',
       startAt: hoursAgo(10),
@@ -769,10 +769,12 @@ describe.skipIf(!RUN_LOCAL)('MCP Stage 1 rolling compatibility', () => {
       p_record_id: futureRecordId,
       p_user_id: userId,
     });
+    // Plan が未来にあることは Record の紐付けを縛らない（旧 DT013 を撤去）。
+    // 残る時刻ルールは「Record は未来に終われない」だけで、restore は時刻を動かさないため通る。
     const { error: futureRestoreError } = await admin.rpc('restore_record', {
       p_record_id: futureRecordId,
       p_user_id: userId,
     });
-    expect(futureRestoreError?.code).toBe('DT013');
+    expect(futureRestoreError).toBeNull();
   });
 });

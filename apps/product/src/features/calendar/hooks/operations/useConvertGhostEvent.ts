@@ -21,8 +21,8 @@ import { api } from '@/lib/trpc';
  * に任せる。
  *
  * Plan / Record の判定は `event.endDate` と現在時刻だけで一意に決まる
- * （`ensurePlanCanBeCreated` は `end_at > now`、`ensureRecordCanBeCreated` は `end_at <= now`
- * を要求し、互いに排他的）。メニュー UI は不要。
+ * （`resolveTimeblockDestination` と同じ規則。Plan は時間軸のどこにでも置けるが、
+ * 終了済みの ghost を Plan にしても意味がないため Record へ寄せる）。メニュー UI は不要。
  *
  * **二重変換防止は `external_calendar_event_id` 専用の unique 制約ではなく、
  * `plans_no_overlap` / `records_no_overlap` EXCLUDE 制約（`user_id` + 時間帯の重複防止）の

@@ -11,12 +11,7 @@ import { toast } from '@/lib/toast';
 import { buildReportPath } from '../../lib/panel-url';
 import type { CalendarDisplayEvent } from '../../types/calendar.types';
 
-/**
- * コンテキストメニューで使用する plan / record 操作アクションを提供するフック
- *
- * plan ⇄ record 変換（markUnplanned / restorePlanned）は time model に procedure が
- * 存在しないため提供しない（entry-menu-items 側で該当 handler が undefined なら表示されない）。
- */
+/** コンテキストメニューで使用する plan / record 操作アクションを提供するフック */
 export function useTimeblockContextActions() {
   const router = useRouter();
   const locale = useLocale();

@@ -245,7 +245,7 @@ describe('useTimeblockOperations', () => {
       expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
-    it('キャッシュ上の plan が既に過去（end_at <= now）なら timeLocked トーストを出し mutate を呼ばない', async () => {
+    it('キャッシュ上の plan が既に過去（end_at <= now）でも mutate を呼ぶ', async () => {
       mockCaches(
         makeCache('plans', [
           {
@@ -260,8 +260,8 @@ describe('useTimeblockOperations', () => {
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleUpdateTimeblock(event);
 
-      expect(updatePlanMutate).not.toHaveBeenCalled();
-      expect(toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
+      expect(updatePlanMutate).toHaveBeenCalled();
+      expect(toastError).not.toHaveBeenCalled();
     });
 
     it('record を未来へ動かす更新は timeLocked トーストを出し mutate を呼ばない', async () => {

@@ -105,11 +105,8 @@
         "diff": "差分",
         "timeProgress": "時間達成率"
       },
-      "markUnplanned": "予定外にする",
-      "restorePlanned": "予定に戻す",
       "skip": "スキップ",
       "unskip": "スキップを解除",
-      "unplanned": "予定外",
       "note": {
         "label": "メモ",
         "placeholder": "例: 集中できた",
@@ -159,7 +156,7 @@
       "time": "時間",
       "note": "メモ",
       "notePlaceholder": "例: 集中できた",
-      "timeLocked": "過去の予定の時間は変更できません",
+      "timeLocked": "記録は未来へ移動できません",
       "duplicate": {
         "create": "複製を作成",
         "created": "複製しました",

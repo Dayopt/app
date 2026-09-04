@@ -340,7 +340,7 @@ export class RecordService {
   private async ensureRecordablePlan(userId: string, planId: string): Promise<void> {
     const { data, error } = await this.supabase
       .from('plans')
-      .select('id, end_at, skipped_at')
+      .select('id, skipped_at')
       .eq('id', planId)
       .eq('user_id', userId)
       .is('deleted_at', null)
@@ -357,13 +357,6 @@ export class RecordService {
     }
     if (!data) {
       throw new TimeblockServiceError('NOT_FOUND', 'Plan not found');
-    }
-
-    if (new Date(data.end_at).getTime() > Date.now()) {
-      throw new TimeblockServiceError(
-        'RECORD_IN_FUTURE',
-        'Future plans cannot have linked records.',
-      );
     }
 
     if (data.skipped_at) {
