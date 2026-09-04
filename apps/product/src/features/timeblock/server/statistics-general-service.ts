@@ -9,11 +9,11 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 
 import {
+  aggregateActivityPlanCounts,
+  aggregateActivityStats,
   aggregateDayOfWeekDistribution,
   aggregateHourlyDistribution,
   aggregateMonthlyTrend,
-  aggregateTagPlanCounts,
-  aggregateTagStats,
   getMonthlyStartDate,
 } from '../domain';
 
@@ -31,60 +31,12 @@ export class StatisticsGeneralService {
   constructor(private readonly supabase: ServiceSupabaseClient) {}
 
   /**
-   * `get_tag_stats` 相当。実績（records）ベースのタグ別件数・最終使用日 + Plan 側の件数。
+   * アクティビティ別の実績件数・最終使用日 + Plan 側の件数。
    *
-   * `counts` は records ベースで従来どおり（実績件数の表示用途に使う契約は変更しない）。
-   * `planCounts` は Plan 側の件数を別 Record で返す。タグ削除は Plan / Record 両方を
-   * 未分類化するため、呼び出し側（削除確認ダイアログ等）は両方の合計を「削除で
-   * 未分類になる件数」として扱う（#1576 フォローアップ: Plan のみのタグが 0 件と
-   * 誤判定され、確認ダイアログなしで即削除されてしまう不具合の修正）。
-   */
-  async getTagStats(userId: string): Promise<{
-    counts: Record<string, number>;
-    planCounts: Record<string, number>;
-    lastUsed: Record<string, string>;
-  }> {
-    const [records, plans] = await Promise.all([
-      fetchRecords(this.supabase, userId),
-      fetchPlans(this.supabase, userId),
-    ]);
-
-    const byTag = new Map<string, { count: number; lastUsed: string | null }>();
-    for (const record of records) {
-      if (record.tag_id == null) continue;
-      const acc = byTag.get(record.tag_id) ?? { count: 0, lastUsed: null };
-      acc.count += 1;
-      if (acc.lastUsed == null || record.start_at > acc.lastUsed) acc.lastUsed = record.start_at;
-      byTag.set(record.tag_id, acc);
-    }
-
-    const rows = Array.from(byTag.entries()).map(([tag_id, v]) => ({
-      tag_id,
-      record_count: v.count,
-      last_used: v.lastUsed,
-    }));
-
-    const planRows = plans
-      .filter((plan): plan is typeof plan & { tag_id: string } => plan.tag_id != null)
-      .map((plan) => ({ tag_id: plan.tag_id }));
-
-    return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
-  }
-
-  /**
-   * `getTagStats` のアクティビティ版。戻り値の形は同一で、キーが activityId になる。
-   *
-   * サイドバーの削除確認分岐がこれを引く。`getTagStats` は tag_id 集計なので
-   * activity ID で引くと全件 0 になり、使用中のアクティビティが確認なしで即削除
-   * される（tag 側で #1576 のフォローアップとして直したのと同型の断線）。
-   *
-   * `counts` は records ベース、`planCounts` は Plan 側を別 Record で返す。
-   * アクティビティ削除は Plan / Record の両方を「アクティビティなし」にするため、
-   * 呼び出し側は両方の合計を「削除で未分類になる件数」として扱う。
-   *
-   * 集約は tag 版と同じ pure 関数を通す。`tag_id` は grouping key の field 名として
-   * 使っているだけで、複製すると「last_used が null の row は lastUsed から除外する」
-   * のような細部が将来ずれるため、意図的に共有する。
+   * サイドバーの削除確認分岐がこれを引く。`counts` は records ベース、
+   * `planCounts` は Plan 側を別 Record で返す。アクティビティ削除は Plan / Record
+   * の両方を「アクティビティなし」にするため、呼び出し側は両方の合計を
+   * 「削除で未分類になる件数」として扱う（#1576 フォローアップ）。
    */
   async getActivityStats(userId: string): Promise<{
     counts: Record<string, number>;
@@ -106,16 +58,16 @@ export class StatisticsGeneralService {
     }
 
     const rows = Array.from(byActivity.entries()).map(([activityId, v]) => ({
-      tag_id: activityId,
+      groupKey: activityId,
       record_count: v.count,
       last_used: v.lastUsed,
     }));
 
     const planRows = plans
       .filter((plan): plan is typeof plan & { activity_id: string } => plan.activity_id != null)
-      .map((plan) => ({ tag_id: plan.activity_id }));
+      .map((plan) => ({ groupKey: plan.activity_id }));
 
-    return { ...aggregateTagStats(rows), planCounts: aggregateTagPlanCounts(planRows) };
+    return { ...aggregateActivityStats(rows), planCounts: aggregateActivityPlanCounts(planRows) };
   }
 
   /** `get_daily_hours` 相当。指定年の日別実績時間（ヒートマップ用）。 */

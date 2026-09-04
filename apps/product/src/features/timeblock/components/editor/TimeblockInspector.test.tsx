@@ -102,7 +102,6 @@ vi.mock('./TimeblockInspectorForm', () => ({
 const plan = {
   id: 'plan-1',
   user_id: 'user-1',
-  tag_id: 'tag-1',
   activity_id: 'activity-1',
   external_calendar_event_id: null,
   title: 'Legacy plan title',
@@ -119,7 +118,6 @@ const plan = {
 const record = {
   id: 'record-1',
   user_id: 'user-1',
-  tag_id: 'tag-1',
   activity_id: 'activity-1',
   plan_id: plan.id,
   external_calendar_event_id: null,

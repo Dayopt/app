@@ -342,12 +342,12 @@ Dayopt の service 層は近い将来、tRPC 以外の skin（MCP server を含�
 - input: `userId: string`
 - output: `Promise<{ success: true }>`
 - error: `UserServiceError(DELETE_DATA_FAILED)`
-- side effect: DB write（plans / records → tags → settings の cascade delete）
+- side effect: DB write（plans / records → activities / categories → settings の cascade delete）
 
 ##### `exportData(options)` — L237
 
 - input: `ExportDataOptions { userId }`
-- output: `Promise<ExportDataResult { exportedAt, userId, data: { profile, plans, records, tags, userSettings } }>`
+- output: `Promise<ExportDataResult { exportedAt, userId, data: { profile, plans, records, categories, activities, userSettings } }>`
 - error: `UserServiceError(EXPORT_FAILED)`
 - side effect: DB read（5 テーブル並列 fetch）
 

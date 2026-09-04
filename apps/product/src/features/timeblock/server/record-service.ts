@@ -6,8 +6,8 @@ import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 import { parseFulfillment } from '../schemas/timeblock';
+import { assertActivityAssignable } from './activity-assignment-guard';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertActivityAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,

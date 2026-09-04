@@ -49,7 +49,7 @@ export function TrialStartEmail({
                 - {t('trialStart.featureAnalytics')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('trialStart.featureTags')}
+                - {t('trialStart.featureActivities')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
                 - {t('trialStart.featureApi')}

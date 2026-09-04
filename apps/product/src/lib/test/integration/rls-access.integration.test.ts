@@ -34,13 +34,6 @@ const TEST_USER_A_ID = crypto.randomUUID();
 const TEST_USER_B_ID = crypto.randomUUID();
 const TEST_USER_B_PLAN_ID = crypto.randomUUID();
 const TEST_USER_B_RECORD_ID = crypto.randomUUID();
-const RPC_BATCH_TAG_ID = crypto.randomUUID();
-const RPC_REORDER_TAG_ID = crypto.randomUUID();
-const RPC_PARENT_TAG_ID = crypto.randomUUID();
-const RPC_GROUP_TAG_ID = crypto.randomUUID();
-const RPC_MERGE_SOURCE_TAG_ID = crypto.randomUUID();
-const RPC_MERGE_TARGET_TAG_ID = crypto.randomUUID();
-const RPC_FOREIGN_CHILD_TAG_ID = crypto.randomUUID();
 const RPC_SOFT_DELETE_PLAN_ID = crypto.randomUUID();
 const RPC_CONFIRM_PLAN_ID = crypto.randomUUID();
 const RPC_RESTORE_PLAN_ID = crypto.randomUUID();
@@ -169,20 +162,6 @@ const userOwnedCases: UserOwnedRlsCase[] = [
       if (error) throw error;
     },
     update: { title: 'foreign update' },
-  },
-  {
-    table: 'tags',
-    idColumn: 'id',
-    rowId: crypto.randomUUID(),
-    seed: async function () {
-      const { error } = await adminSupabase.from('tags').insert({
-        id: this.rowId,
-        user_id: TEST_USER_B_ID,
-        name: 'RLS tag',
-      });
-      if (error) throw error;
-    },
-    update: { name: 'foreign update' },
   },
   {
     table: 'user_settings',
@@ -1298,52 +1277,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       rpcConfirmRangeEndAt = new Date(confirmAnchor + 3_000).toISOString();
       rpcConfirmedAt = new Date(confirmAnchor + 2_000).toISOString();
 
-      const { error: tagError } = await adminSupabase.from('tags').insert([
-        {
-          id: RPC_BATCH_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Batch',
-          sort_order: 0,
-        },
-        {
-          id: RPC_REORDER_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Reorder',
-          sort_order: 1,
-        },
-        {
-          id: RPC_PARENT_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Parent',
-          sort_order: 2,
-        },
-        {
-          id: RPC_GROUP_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Old:Child',
-          sort_order: 3,
-        },
-        {
-          id: RPC_MERGE_SOURCE_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Merge Source',
-          sort_order: 4,
-        },
-        {
-          id: RPC_MERGE_TARGET_TAG_ID,
-          user_id: TEST_USER_B_ID,
-          name: 'RPC Merge Target',
-          sort_order: 5,
-        },
-        {
-          id: RPC_FOREIGN_CHILD_TAG_ID,
-          user_id: TEST_USER_A_ID,
-          name: 'RPC Foreign Child',
-          sort_order: 0,
-        },
-      ]);
-      if (tagError) throw tagError;
-
       const { error: planError } = await adminSupabase.from('plans').insert([
         {
           id: RPC_SOFT_DELETE_PLAN_ID,
@@ -1450,41 +1383,11 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         .from('mfa_recovery_codes')
         .delete()
         .in('id', [RPC_COUNT_CODE_ID, RPC_USE_CODE_ID]);
-      await adminSupabase
-        .from('tags')
-        .delete()
-        .in('id', [
-          RPC_BATCH_TAG_ID,
-          RPC_REORDER_TAG_ID,
-          RPC_PARENT_TAG_ID,
-          RPC_GROUP_TAG_ID,
-          RPC_MERGE_SOURCE_TAG_ID,
-          RPC_MERGE_TARGET_TAG_ID,
-          RPC_FOREIGN_CHILD_TAG_ID,
-        ]);
     });
 
-    it('5つの継続invoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
+    // #2175 で旧分類モデル専有の 3 RPC を drop したため、継続 invoker RPC は 2 本になった。
+    it('2つの継続invoker RPCはcross-userのp_user_idを拒否し対象を変更しない', async () => {
       const calls = [
-        () =>
-          supabaseA.rpc('batch_rename_tags', {
-            p_new_names: ['RPC Cross-user Rename'],
-            p_tag_ids: [RPC_BATCH_TAG_ID],
-            p_user_id: TEST_USER_B_ID,
-          }),
-        () =>
-          supabaseA.rpc('batch_reorder_tags_hierarchy', {
-            p_parent_ids: [RPC_PARENT_TAG_ID],
-            p_sort_orders: [99],
-            p_tag_ids: [RPC_REORDER_TAG_ID],
-            p_user_id: TEST_USER_B_ID,
-          }),
-        () =>
-          supabaseA.rpc('rename_tag_group', {
-            p_new_prefix: 'RPC Cross-user',
-            p_old_prefix: 'RPC Old',
-            p_user_id: TEST_USER_B_ID,
-          }),
         () => supabaseA.rpc('count_unused_recovery_codes', { p_user_id: TEST_USER_B_ID }),
         () =>
           supabaseA.rpc('update_personalization', {
@@ -1499,56 +1402,16 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
         expect(error?.message).toContain(ACCESS_DENIED_MESSAGE);
       }
 
-      const [{ data: tags }, { data: settings }] = await Promise.all([
-        adminSupabase
-          .from('tags')
-          .select('id, name, parent_id, sort_order')
-          .in('id', [RPC_BATCH_TAG_ID, RPC_REORDER_TAG_ID, RPC_GROUP_TAG_ID]),
-        adminSupabase
-          .from('user_settings')
-          .select('personalization')
-          .eq('user_id', TEST_USER_B_ID)
-          .single(),
-      ]);
+      const { data: settings } = await adminSupabase
+        .from('user_settings')
+        .select('personalization')
+        .eq('user_id', TEST_USER_B_ID)
+        .single();
 
-      expect(tags).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ id: RPC_BATCH_TAG_ID, name: 'RPC Batch' }),
-          expect.objectContaining({ id: RPC_REORDER_TAG_ID, parent_id: null, sort_order: 1 }),
-          expect.objectContaining({ id: RPC_GROUP_TAG_ID, name: 'RPC Old:Child' }),
-        ]),
-      );
       expect(JSON.stringify(settings?.personalization ?? {})).not.toContain('rpcCrossUser');
     });
 
-    it('5つの継続invoker RPCはowner経路で成功する', async () => {
-      const { data: renamed, error: renameError } = await supabaseB.rpc('batch_rename_tags', {
-        p_new_names: ['RPC Batch Renamed'],
-        p_tag_ids: [RPC_BATCH_TAG_ID],
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(renameError).toBeNull();
-      expect(renamed).toBe(1);
-
-      const { data: reordered, error: reorderError } = await supabaseB.rpc(
-        'batch_reorder_tags_hierarchy',
-        {
-          p_parent_ids: [RPC_PARENT_TAG_ID],
-          p_sort_orders: [9],
-          p_tag_ids: [RPC_REORDER_TAG_ID],
-          p_user_id: TEST_USER_B_ID,
-        },
-      );
-      expect(reorderError).toBeNull();
-      expect(reordered).toBe(1);
-
-      const { error: groupError } = await supabaseB.rpc('rename_tag_group', {
-        p_new_prefix: 'RPC New',
-        p_old_prefix: 'RPC Old',
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(groupError).toBeNull();
-
+    it('2つの継続invoker RPCはowner経路で成功する', async () => {
       const { data: count, error: countError } = await supabaseB.rpc(
         'count_unused_recovery_codes',
         { p_user_id: TEST_USER_B_ID },
@@ -1644,14 +1507,8 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       expect(deletedRecords).toEqual([]);
     });
 
-    it('4つのprivileged RPCはauthenticated直接実行を42501で拒否する', async () => {
+    it('3つのprivileged RPCはauthenticated直接実行を42501で拒否する', async () => {
       const calls = [
-        () =>
-          supabaseB.rpc('merge_tags_with_hierarchy', {
-            p_source_tag_id: RPC_MERGE_SOURCE_TAG_ID,
-            p_target_tag_id: RPC_MERGE_TARGET_TAG_ID,
-            p_user_id: TEST_USER_B_ID,
-          }),
         () =>
           supabaseB.rpc('restore_plan', {
             p_plan_id: RPC_RESTORE_PLAN_ID,
@@ -1675,14 +1532,7 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       }
     });
 
-    it('4つのprivileged RPCはservice-role経路で成功する', async () => {
-      const { error: mergeError } = await adminSupabase.rpc('merge_tags_with_hierarchy', {
-        p_source_tag_id: RPC_MERGE_SOURCE_TAG_ID,
-        p_target_tag_id: RPC_MERGE_TARGET_TAG_ID,
-        p_user_id: TEST_USER_B_ID,
-      });
-      expect(mergeError).toBeNull();
-
+    it('3つのprivileged RPCはservice-role経路で成功する', async () => {
       const { error: planError } = await adminSupabase.rpc('restore_plan', {
         p_plan_id: RPC_RESTORE_PLAN_ID,
         p_user_id: TEST_USER_B_ID,
@@ -1736,51 +1586,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS access matrix', () => {
       ]);
       expect(active?.deleted_at).toBeNull();
       expect(deleted?.deleted_at).not.toBeNull();
-    });
-
-    it('foreign parentをRPCと直接INSERT/UPDATEの全経路で拒否する', async () => {
-      const insertedTagId = crypto.randomUUID();
-      const { error: insertError } = await supabaseA.from('tags').insert({
-        id: insertedTagId,
-        user_id: TEST_USER_A_ID,
-        name: 'RPC Foreign Insert',
-        parent_id: RPC_PARENT_TAG_ID,
-      });
-      expect(insertError?.code).toBe('23514');
-
-      const { error: updateError } = await supabaseA
-        .from('tags')
-        .update({ parent_id: RPC_PARENT_TAG_ID })
-        .eq('id', RPC_FOREIGN_CHILD_TAG_ID);
-      expect(updateError?.code).toBe('23514');
-
-      const { error: rpcError } = await supabaseA.rpc('batch_reorder_tags_hierarchy', {
-        p_parent_ids: [RPC_PARENT_TAG_ID],
-        p_sort_orders: [1],
-        p_tag_ids: [RPC_FOREIGN_CHILD_TAG_ID],
-        p_user_id: TEST_USER_A_ID,
-      });
-      expect(rpcError?.code).toBe('23514');
-
-      const { data: child } = await adminSupabase
-        .from('tags')
-        .select('parent_id')
-        .eq('id', RPC_FOREIGN_CHILD_TAG_ID)
-        .single();
-      expect(child?.parent_id).toBeNull();
-    });
-
-    it('Production-only merge_tags overloadは存在しない', async () => {
-      const { error } = await adminSupabase.rpc(
-        'merge_tags' as never,
-        {
-          p_source_tag_ids: [RPC_MERGE_SOURCE_TAG_ID],
-          p_target_tag_id: RPC_MERGE_TARGET_TAG_ID,
-          p_user_id: TEST_USER_B_ID,
-        } as never,
-      );
-
-      expect(error?.code).toBe('PGRST202');
     });
   });
 

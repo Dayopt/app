@@ -117,7 +117,7 @@ export const Unplanned: Story = {
 
 /**
  * タグ未設定（未分類）。title は表示へフォールバックしない。
- * 実際のカレンダーは activityName=null と同時に tagColor/tagIcon も null になるため、
+ * 実際のカレンダーは activityName=null と同時に activityColor/activityIcon も null になるため、
  * ここでも両方 null にして中立表示（背景・アイコンとも中立）を確認する。
  */
 export const NoTag: Story = {

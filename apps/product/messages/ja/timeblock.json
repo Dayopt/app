@@ -17,8 +17,8 @@
       "bulkUpdateFailed": "一括更新できませんでした: {error}",
       "bulkDeleted": "{count}件を削除しました",
       "bulkDeleteFailed": "一括削除できませんでした: {error}",
-      "tagsAdded": "アクティビティを追加しました",
-      "tagsAddFailed": "アクティビティを追加できませんでした: {error}",
+      "activitiesAdded": "アクティビティを追加しました",
+      "activitiesAddFailed": "アクティビティを追加できませんでした: {error}",
       "statusChanged": "ステータスを{status}に変更しました",
       "statusChangedCount": "{count}件のステータスを変更しました",
       "statusChangeFailed": "ステータスを変更できませんでした。もう一度お試しください",
@@ -79,7 +79,7 @@
       "completeOptions": "完了オプション",
       "completeAndCreate": "完了 + タイムブロック作成",
       "toast": {
-        "tagsSaveFailed": "アクティビティを保存できませんでした。入力内容は保持されています。もう一度お試しください",
+        "activitiesSaveFailed": "アクティビティを保存できませんでした。入力内容は保持されています。もう一度お試しください",
         "createFailed": "タイムブロックを作成できませんでした。もう一度お試しください",
         "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください"
       },
@@ -92,7 +92,7 @@
         "copyLink": "リンクをコピー",
         "openNewTab": "新しいタブで開く"
       },
-      "tags": {
+      "activities": {
         "add": "アクティビティを追加"
       },
       "time": {
@@ -146,8 +146,8 @@
       "recordSummary": "{count}件 · 計{duration}",
       "originalPlan": "元の予定",
       "originalPlanUnavailable": "元の予定を表示できません",
-      "openRecord": "記録を開く: {tag}、{dateTime}、{duration}",
-      "openPlan": "元の予定を開く: {tag}、{dateTime}、{duration}",
+      "openRecord": "記録を開く: {activity}、{dateTime}、{duration}",
+      "openPlan": "元の予定を開く: {activity}、{dateTime}、{duration}",
       "loadFailed": "関連を読み込めませんでした"
     },
     "editor": {

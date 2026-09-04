@@ -23,8 +23,8 @@ interface TimeRangeRow {
   end_at: string;
 }
 
-interface TagTimeRangeRow extends TimeRangeRow {
-  tag_id: string | null;
+interface ActivityTimeRangeRow extends TimeRangeRow {
+  activity_id: string | null;
 }
 
 /** 分単位の所要時間（丸めなし）。 */
@@ -141,10 +141,10 @@ export function groupEnergyMap(
 
 /** `get_stats_kpi_summary` / `get_stats_page_data` の contextSwitches CTE 相当。 */
 export function computeContextSwitches(
-  rows: ReadonlyArray<TagTimeRangeRow>,
+  rows: ReadonlyArray<ActivityTimeRangeRow>,
   timezone: string,
 ): { totalSwitches: number; avgPerDay: number } {
-  const byDay = new Map<string, TagTimeRangeRow[]>();
+  const byDay = new Map<string, ActivityTimeRangeRow[]>();
   for (const row of rows) {
     const day = formatInTimeZone(new Date(row.start_at), timezone, 'yyyy-MM-dd');
     const list = byDay.get(day) ?? [];
@@ -158,7 +158,7 @@ export function computeContextSwitches(
       (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
     );
     for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i]!.tag_id !== sorted[i - 1]!.tag_id) {
+      if (sorted[i]!.activity_id !== sorted[i - 1]!.activity_id) {
         totalSwitches++;
       }
     }

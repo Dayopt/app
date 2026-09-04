@@ -269,7 +269,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
         // v4: ItemType ('plan'|'record') → TimeblockOrigin ('planned'|'unplanned') に変更
         // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
-        // v6: showUntagged 復活。未分類(tag_id=null)ブロックのフィルター対応（#1576）
+        // v6: showUntagged 復活。未分類(activity_id=null)ブロックのフィルター対応（#1576）
         // v7: knownTagIds 追加。syncWithTags が「新規タグ」と「意図的に非表示にした
         //     既知タグ」を区別するための基準集合（#1576フォローアップ）
         // v8: 状態名をアクティビティ語彙へ改名（visibleTagIds→visibleActivityIds /

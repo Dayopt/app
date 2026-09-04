@@ -17,8 +17,8 @@
       "bulkUpdateFailed": "Failed to bulk update: {error}",
       "bulkDeleted": "{count, plural, one {1 item} other {# items}} deleted",
       "bulkDeleteFailed": "Failed to bulk delete: {error}",
-      "tagsAdded": "Activities added",
-      "tagsAddFailed": "Failed to add activities: {error}",
+      "activitiesAdded": "Activities added",
+      "activitiesAddFailed": "Failed to add activities: {error}",
       "statusChanged": "Status changed to {status}",
       "statusChangedCount": "Status changed for {count, plural, one {1 item} other {# items}}",
       "statusChangeFailed": "Failed to change status",
@@ -79,7 +79,7 @@
       "completeOptions": "Complete options",
       "completeAndCreate": "Complete + create timeblock",
       "toast": {
-        "tagsSaveFailed": "Failed to save activities",
+        "activitiesSaveFailed": "Failed to save activities",
         "createFailed": "Failed to create timeblock",
         "saveFailed": "Failed to save"
       },
@@ -92,7 +92,7 @@
         "copyLink": "Copy link",
         "openNewTab": "Open in new tab"
       },
-      "tags": {
+      "activities": {
         "add": "Add activity"
       },
       "time": {
@@ -146,8 +146,8 @@
       "recordSummary": "{count, plural, one {# record} other {# records}} · {duration} total",
       "originalPlan": "Original plan",
       "originalPlanUnavailable": "Original plan is unavailable",
-      "openRecord": "Open record: {tag}, {dateTime}, {duration}",
-      "openPlan": "Open original plan: {tag}, {dateTime}, {duration}",
+      "openRecord": "Open record: {activity}, {dateTime}, {duration}",
+      "openPlan": "Open original plan: {activity}, {dateTime}, {duration}",
       "loadFailed": "Could not load relationships"
     },
     "editor": {

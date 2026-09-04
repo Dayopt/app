@@ -131,7 +131,7 @@
       "nextPlan": "Next timeblock",
       "options": "Options",
       "selectAll": "Select all",
-      "tagColor": "Category color",
+      "categoryColor": "Category color",
       "closeSettings": "Close settings",
       "weeklyCalendar": "Weekly calendar",
       "previous": "Previous",
@@ -200,7 +200,7 @@
       "title": "Search",
       "placeholder": "Search...",
       "noResults": "No results found",
-      "tagsGroup": "Activities",
+      "activitiesGroup": "Activities",
       "blocksGroup": "Blocks",
       "moreResults": "{count}+ more results"
     },
@@ -257,7 +257,7 @@
     "createNew": {
       "plan": "Create Plan",
       "task": "Create task",
-      "tag": "Create activity",
+      "activity": "Create activity",
       "defaultPlanTitle": "New Plan"
     },
     "comingSoon": "Coming soon",
@@ -271,10 +271,10 @@
         "unplanned": "Record only"
       }
     },
-    "tags": {
+    "activities": {
       "add": "Add activity",
       "change": "Change activity",
-      "noTag": "No activity"
+      "noActivity": "No activity"
     },
     "theme": {
       "light": "Light mode",
@@ -328,7 +328,7 @@
       "file": {
         "maxSize": "File size must be {max}MB or less"
       },
-      "tag": {
+      "activity": {
         "nameRequired": "Activity name is required",
         "nameMaxLength": "Activity name must be {max} characters or less"
       },

@@ -13,7 +13,6 @@ function makeEvent(overrides: Partial<CalendarDisplayEvent> = {}): CalendarDispl
     endDate: new Date('2026-07-14T01:45:00.000Z'),
     status: 'open',
     color: 'blue',
-    tagId: 'tag-reading',
     createdAt: new Date('2026-07-14T00:00:00.000Z'),
     updatedAt: new Date('2026-07-14T00:00:00.000Z'),
     version: '2026-07-14T00:00:00.000000Z',

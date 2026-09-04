@@ -474,7 +474,6 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     await admin.from('records').delete().in('user_id', [userId, foreignUserId]);
     await admin.from('plans').delete().in('user_id', [userId, foreignUserId]);
     await admin.from('external_calendar_events').delete().eq('user_id', userId);
-    await admin.from('tags').delete().eq('user_id', userId);
   });
 
   afterAll(async () => {

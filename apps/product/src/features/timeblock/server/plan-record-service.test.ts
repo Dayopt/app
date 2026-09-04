@@ -20,7 +20,6 @@ vi.mock('@/lib/supabase/oauth', () => ({
 }));
 
 const USER_ID = 'test-user-id';
-const TAG_ID = '72cc49b4-7e57-4a85-9346-0e90b2db78e2';
 const ACTIVITY_ID = '9f1d7c3e-5b2a-4d18-9c64-8a3f0e1b7d55';
 
 beforeEach(() => {
@@ -89,7 +88,6 @@ function createPlan(overrides: Partial<PlanRow> = {}): PlanRow {
     skipped_at: null,
     source: 'manual',
     start_at: '2030-03-17T10:00:00.000Z',
-    tag_id: null,
     activity_id: null,
     title: 'Plan',
     updated_at: '2026-07-01T00:00:00.000Z',
@@ -110,7 +108,6 @@ function createRecord(overrides: Partial<RecordRow> = {}): RecordRow {
     plan_id: null,
     source: 'manual',
     start_at: '2026-03-17T10:00:00.000Z',
-    tag_id: null,
     activity_id: null,
     title: 'Record',
     updated_at: '2026-07-01T00:00:00.000Z',
@@ -490,11 +487,10 @@ describe('PlanService.update', () => {
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
   });
 
-  it('過去 plan でもメモの更新は許可する（tagId は入力から除去済みのため既存値を保持する）', async () => {
+  it('過去 plan でもメモの更新は許可する（分類は入力から除去済みのため既存値を保持する）', async () => {
     const existing = createPlan({
       end_at: '2026-03-17T11:00:00.000Z',
       start_at: '2026-03-17T10:00:00.000Z',
-      tag_id: 'tag-1',
     });
     const updated = { ...existing, note: 'Updated note' };
     const { service, mockSupabase, commands } = createPlanService();
@@ -507,10 +503,9 @@ describe('PlanService.update', () => {
         planId: existing.id,
         input: { note: 'Updated note' },
       }),
-    ).resolves.toMatchObject({ note: 'Updated note', tag_id: 'tag-1' });
+    ).resolves.toMatchObject({ note: 'Updated note' });
 
-    // 部分更新は現在行で補完し、未指定fieldを取り落とさない。tagId は Step 8 で command
-    // 入力から除去済みのため、既存行の tag_id には一切触れず凍結される。
+    // 部分更新は現在行で補完し、未指定fieldを取り落とさない。
     expect(commands.updatePlan).toHaveBeenCalledWith({
       userId: USER_ID,
       planId: existing.id,
@@ -581,7 +576,6 @@ describe('PlanService.record', () => {
       external_calendar_event_id: 'external-event-1',
       note: 'note',
       start_at: '2026-03-17T10:00:00.000Z',
-      tag_id: 'tag-1',
       activity_id: null,
       title: 'Recorded plan',
       updated_at: '2026-07-01T00:00:00.654321Z',
@@ -592,7 +586,6 @@ describe('PlanService.record', () => {
       plan_id: plan.id,
       source: 'from_plan',
       start_at: plan.start_at,
-      tag_id: plan.tag_id,
       activity_id: null,
       title: plan.title,
     });
@@ -938,7 +931,6 @@ describe('RecordService.update', () => {
     const existing = createRecord({
       note: 'old note',
       plan_id: 'plan-1',
-      tag_id: TAG_ID,
       activity_id: null,
       updated_at: '2026-07-01T00:00:00.654321Z',
     });
@@ -1041,14 +1033,14 @@ describe('activity 付与ガードの対称性', () => {
   const ACTIVITY_ID = '9f2b1c34-5d6e-4a7b-8c9d-0e1f2a3b4c5d';
 
   /**
-   * tag を触らず activity だけを付け替える更新でも fail-fast が発火すること。
+   * activity だけを付け替える更新でも fail-fast が発火すること。
    *
-   * activity の guard を tag の変更条件へネストさせると、このパスだけ TS 層の
-   * 事前検証を素通りする。DB 側の assert は効くので実害は無いが、エラーが
-   * DT014 -> TAG_ARCHIVED という tag 語彙で返り、timeblock-command-service の
-   * 独立 if 実装とも非対称になる。対称性を契約として固定する。
+   * guard を他フィールドの変更条件へネストさせると、このパスだけ TS 層の
+   * 事前検証を素通りする。DB 側の assert は効くので実害は無いが、
+   * timeblock-command-service の独立 if 実装と非対称になる。
+   * 対称性を契約として固定する。
    */
-  it('PlanService.update は tagId 不変でも archived activity への付け替えを拒否する', async () => {
+  it('PlanService.update は archived activity への付け替えを拒否する', async () => {
     const existing = createPlan({ activity_id: null });
     const planQuery = createChainableMock(existing);
     const activityQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000Z' });
@@ -1062,7 +1054,7 @@ describe('activity 付与ガードの対称性', () => {
         userId: USER_ID,
         planId: existing.id,
         expectedUpdatedAt: existing.updated_at,
-        // tagId は渡さない = 変更なし。activityId だけを付け替える。
+        // activityId だけを付け替える。
         input: { activityId: ACTIVITY_ID },
       }),
     ).rejects.toBeInstanceOf(TimeblockServiceError);
@@ -1070,7 +1062,7 @@ describe('activity 付与ガードの対称性', () => {
     expect(commands.updatePlan).not.toHaveBeenCalled();
   });
 
-  it('RecordService.update は tagId 不変でも archived activity への付け替えを拒否する', async () => {
+  it('RecordService.update は archived activity への付け替えを拒否する', async () => {
     const existing = createRecord({ activity_id: null });
     const recordQuery = createChainableMock(existing);
     const activityQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000Z' });
