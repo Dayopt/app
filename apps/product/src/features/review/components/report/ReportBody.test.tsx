@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -101,6 +101,14 @@ function subtitle() {
   return screen.getByText(/^report\.allocation\.subtitle/).textContent;
 }
 
+/**
+ * 1 章の凡例。2 章の行にも同じアクティビティ名が出るので、凡例を見たい assert は
+ * ここを通す（`screen.getByText` は 2 つ見つけて落ちる）。
+ */
+function legend() {
+  return document.querySelector('[data-report-legend="allocation"]') as HTMLElement;
+}
+
 /** 決算バーが塗っている割合の合計（%）。残りは余白＝紙として塗られない。 */
 function paintedPercent(ariaLabel = 'report.allocation.barAriaLabel') {
   const bar = screen.getByRole('img', { name: ariaLabel });
@@ -178,7 +186,7 @@ describe('ReportBody', () => {
 
       expect(headline()).toBe('10:00');
       // カテゴリー名ではなくアクティビティ名が並ぶ
-      expect(screen.getByText('実装')).toBeInTheDocument();
+      expect(within(legend()).getByText('実装')).toBeInTheDocument();
       expect(screen.queryByText('仕事')).not.toBeInTheDocument();
       expect(screen.getByText('report.allocation.lensLabel 深い仕事')).toBeInTheDocument();
     });

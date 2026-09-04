@@ -52,6 +52,46 @@
       "lensLabel": "Lens: {name}",
       "barAriaLabelLens": "Allocation by activity"
     },
+    "execution": {
+      "kick": "2 · Execution — did it go as planned",
+      "empty": {
+        "week": "No activity moved this week yet",
+        "month": "No activity moved this month yet",
+        "year": "No activity moved this year yet"
+      },
+      "unnamed": "Unnamed activity",
+      "rowAriaLabel": "{name}, recorded {recorded}",
+      "planRatio": "{percent}% of plan",
+      "planRatioUnavailable": "—",
+      "mirror": {
+        "heading": "Estimation mirror — strongest habits first",
+        "empty": "Not enough plan-record pairs yet — plan a box and record it, and the habit shows up here",
+        "unnamed": "Unnamed activity",
+        "sentence": {
+          "over": "{name} runs longer than planned (×{coefficient})",
+          "under": "{name} tends to wrap up at {percent}% of the plan (×{coefficient})",
+          "onPlan": "{name} runs close to plan (×{coefficient})"
+        }
+      }
+    },
+    "quality": {
+      "kick": "3 · Quality — was it a good allocation",
+      "unnamed": "Unnamed activity",
+      "axis": {
+        "time": "Time spent →",
+        "fulfilled": "Fulfilled",
+        "drained": "Drained"
+      },
+      "hint": {
+        "lowButFulfilled": "Little but fulfilling → room to add",
+        "heavyButDrained": "Heavy but draining → trim, or use smaller boxes"
+      },
+      "pointAriaLabel": "{name}, recorded {recorded}",
+      "emptyBoard": "No points yet — answer the fulfillment prompt when you stop or place a record, and points appear here",
+      "waiting": "Waiting to become a point: {names}",
+      "waitingSeparator": ", ",
+      "footnote": "Opacity = number of answers · a point appears at n≥{threshold}"
+    },
     "sidebar": {
       "categoriesHeading": "Categories — add to or remove from the denominator",
       "uncategorized": "Uncategorized",

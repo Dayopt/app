@@ -575,6 +575,13 @@ describe('buildCompassPoints', () => {
     expect(yOf('neutral')).toBeCloseTo(50); // slope 0
   });
 
+  /** 読み上げラベルが投下時間を語るので、点は記録時間を持ったまま出す。 */
+  it('点が投下時間を持ち帰る', () => {
+    const points = buildCompassPoints([answered({ activityId: 'ok', recordedMinutes: 420 })]);
+
+    expect(points[0]?.recordedMinutes).toBe(420);
+  });
+
   it('濃度が回答数に比例し、5 件で頭打ちになる', () => {
     const points = buildCompassPoints([
       answered({ activityId: 'five', fulfillment: { low: 0, medium: 0, high: 5 } }),
