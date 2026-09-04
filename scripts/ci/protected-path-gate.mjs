@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Protected Path Gate - determines from a changed-files list whether the
- * internal cross-review marker gate (`[internal-review]`) should be required
- * for a PR (#2478, tempo-linked review gate).
+ * Protected Path Gate - determines from a changed-files list whether a PR
+ * touches a protected path, used as the signal for how heavily
+ * `pr-cross-review` skill's advisory review should be applied (#2478,
+ * tempo-linked review gate; downgraded from a merge-blocking gate to an
+ * advisory signal in #2596 - merge itself is blocked only by CI
+ * status-check-rollup and the `gh pr merge` guard hook).
  *
  * The old design required internal cross-review on every PR uniformly. This
- * script narrows that requirement to PRs that touch protected paths. It is the
- * single source of truth consumed by the merge gate in
+ * script narrows the "how heavily should this be reviewed" signal to PRs that
+ * touch protected paths. It is the single source of truth consumed by
  * `scripts/tasks/finish-branch.sh` (the glob list is not duplicated in bash to
- * avoid drift).
+ * avoid drift), which also reuses it to decide whether the `Production Config
+ * Audit` trusted-dispatch checkpoint applies (`auditContract`, still a merge
+ * gate - see below).
  *
  * The selection criterion is "external contract or irreversible" (#2489,
  * 2026-08-31): a mistake there is not caught by CI and cannot be undone by a
@@ -49,10 +54,6 @@
  * - Fail-closed behavior for empty input / missing node is the caller's
  *   responsibility (scripts/tasks/finish-branch.sh) - if node is missing
  *   this script cannot even run, so that branch cannot live here.
- * - Keep this glob list distinct from the
- *   dispatch skill（旧 orchestration.md、#2479 で再編） high-risk-PR Codex review selection
- *   criteria (that one picks PRs for the optional Codex layer; this one
- *   decides whether the internal marker gate is required).
  */
 
 import { resolve } from 'node:path';
@@ -76,8 +77,9 @@ export const PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS = [
 
 /**
  * Protected path globs (OR'd together). If any changed file matches one of
- * these, the internal cross-review marker gate becomes required. Add or
- * remove entries only in this array (finish-branch.sh does not keep a copy).
+ * these, `pr-cross-review` skill's advisory review is recommended (#2596;
+ * no longer a merge-blocking requirement). Add or remove entries only in this
+ * array (finish-branch.sh does not keep a copy).
  */
 export const PROTECTED_PATH_GLOBS = [
   // auth / OAuth / MCP integrations

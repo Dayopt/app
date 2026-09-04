@@ -37,26 +37,8 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 epic issue 本文（例: #1754 の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列処理するのを第一候補**とする（衝突回避が目的なら束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
 4. **凍結・state チェック**: `status:blocked` が付いていないこと、かつ候補 issue の `state` が OPEN であることを確認する。state は `gh issue view <N> --json state` の実測を根拠にする（close 済み issue にも `status:ready` 等のラベルが残留しうるため、**ラベルは state の代わりにならない**）。束ねた場合は全 issue について両方確認する。1 つでも凍結 or close 済みなら、その issue だけ束ねから外す（#1957）
 5. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-6. **実装前 Codex Issue Review の gate**（#2530）: 束ねる全 issue について `pnpm review:issue:gate <N>` を実行する。exit 0 なら次へ。**exit 1 の issue は `status:in-progress` へ進めない**（機械判定。`review:full` が無い issue には何も要求しない）
-
-   `review:full` issue で gate が止まった時の是正フロー:
-
-   1. issue へ定型メンションを投稿し、Codex の返信を待つ:
-
-      ```
-      @codex このIssueを実装前レビューしてください。問題設定、前提、設計、scope、rollback、verification を反証し、実装前に修正すべき問題があれば指摘してください。コード変更はしないでください。
-      ```
-
-   2. P1/P2 が出たら **実装前に**解決する。手段は 3 つ: 本文を修正する（fingerprint が変わるので再メンションが要る） / 反論の根拠を issue コメントへ残す / scope を分割する。**未解決のまま着手しない**
-   3. `pnpm review:issue:marker <N> --p1 <件数> --p2 <件数> [--resolution-note "..."]` で marker を生成し、内容を目視してから `gh issue comment` で投稿する。fingerprint は script が現在の issue 内容から実測するので手書きしない（`--fingerprint` は受け付けない）。P1/P2 が非ゼロの marker は `--resolution-note` が無いと `status: findings` になり gate を通らない
-   4. `pnpm review:issue:gate <N>` を再実行して pass を確認する
-
-   gate は「Codex bot のコメントが実在すること」と「marker の fingerprint が現在の issue 内容と一致すること」の AND で判定する。前者がレビュー実施の証明、後者がレビュー対象が現在の本文である証明で、片方だけでは通らない。**`review:full` を外しても降格しない** — ラベルの削除履歴があるか、この issue 宛ての marker が既にある issue は、current な pass 証跡が出るまで gate 対象に残る（失敗したレビューをラベル削除で迂回する経路を塞ぐため。#2530）。merge 時も同じ判定が linked issue すべてに対して走る。
-
-   `review:full` issue を実装する PR は、PR 側でも自動的にクロスレビュー必須になる（`Closes #N` の linked issue から継承。`Refs #N` は継承しない、#2530）。束ねた issue はすべて `Closes #N` で列挙する。
-
-7. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（編成時(操作 B 手順 5)の判断とは独立に、着手＝付与を機械的に行う。#2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（issue 側だけでなく PR 側にも付いていると release notes 作成時の集計が楽になる。#2065）。**差し替えたら `pnpm ctx <N> --post` を実行して brief（関連 PR / 触るファイル / 保護対象の要否 / 決定ログ / 次の一手）を issue コメントへ置く**（worker は issue URL しか受け取らないので、最初の turn より前に選別・圧縮済みの文脈を届ける。再実行すると同じコメントを更新する。`routing` skill §目標状態）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。束ねた場合は代表 issue のコメントへ一括で書く。突き合わせは PR レビュー時と、ズレを疑った時に行う。[#2273](https://github.com/Dayopt/dayopt/issues/2273)）
-8. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする。着手手順・PR 規約・報告テンプレート・検証原則はチップ prompt へ個別に書き下さず `AGENTS.md` §レーン運用 への参照 1 行で足りる
+6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（編成時(操作 B 手順 5)の判断とは独立に、着手＝付与を機械的に行う。#2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（issue 側だけでなく PR 側にも付いていると release notes 作成時の集計が楽になる。#2065）。**差し替えたら `pnpm ctx <N> --post` を実行して brief（関連 PR / 触るファイル / 保護対象の要否 / 決定ログ / 次の一手）を issue コメントへ置く**（worker は issue URL しか受け取らないので、最初の turn より前に選別・圧縮済みの文脈を届ける。再実行すると同じコメントを更新する。`routing` skill §目標状態）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。束ねた場合は代表 issue のコメントへ一括で書く。突き合わせは PR レビュー時と、ズレを疑った時に行う。[#2273](https://github.com/Dayopt/dayopt/issues/2273)）
+7. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする。着手手順・PR 規約・報告テンプレート・検証原則はチップ prompt へ個別に書き下さず `AGENTS.md` §レーン運用 への参照 1 行で足りる
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素 + 任意 1 要素）
 
@@ -85,7 +67,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 `size:*` ラベルには依存しない（`size:*` は deprecated。操作 B 手順 3 参照）。編成のたびに issue 本文の内容から次の 3 区分のいずれかを判定する:
 
 - **直接実装**: 手順が既存パターンの追従で完結する。plan 不要
-- **plan 先行**: 複数ファイル・複数 Step にまたがる、または既存 contract に触れる。worker に `AGENTS.md` §実装 Plan の必須セクション に従った plan を先に出させてから実装。複数 issue を束ねた PR は merge 前の `pr-cross-review` skill によるクロスレビューが必須
+- **plan 先行**: 複数ファイル・複数 Step にまたがる、または既存 contract に触れる。worker に `AGENTS.md` §実装 Plan の必須セクション に従った plan を先に出させてから実装。複数 issue を束ねた PR は merge 前に `pr-cross-review` skill による advisory クロスレビューを受ける対象になりやすい（merge を止めるものではない）
 - **最上位 tier 専用**: spike / 設計判断を含む issue、または `risk:authority` が付いた issue。worker に渡さず、最上位ティア（`AGENTS.md` §委任・報告の作法 のモデル tier 表参照）のセッションで実施
 
 ## 操作 B: intake — 新しい作業を issue 化する
@@ -104,7 +86,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
    出力をチケット本文に貼る。テストの実装は通常の worker レーンが行う（Codex にコードは書かせない）。呼び出し失敗・タイムアウト時はスキップして本来のフローを続行する（best-effort）
 
-   **これは起票時の攻撃シナリオ生成であり、操作 A 手順 6 の実装前 Codex Issue Review（`review:full` issue で必須・fail closed）とは別物。** 前者は本文を厚くするための best-effort な補助、後者は着手可否を決める機械 gate で、経路（CLI / GitHub メンション）も証跡の要否も違う
+   **これは起票時の攻撃シナリオ生成であり、実装の着手可否を決める gate ではない。** 本文を厚くするための best-effort な補助であり、Codex への実装前レビュー依頼を必須化する機構は持たない（2026-09-04、#2596 で撤回）
 
 3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `quality:*` など、掲載一覧（[github-labels.md](../../../docs/operations/github-labels.md)）にあるものだけ。`size:*` は **deprecated**（新規 issue には付けない。既存 issue から剥がしはしない）。新ラベルを作らない
 4. `status:*` で着手可否を表す（着手可なら `status:ready`。`status:ready` を付けられる条件は §`status:ready` の定義（機械判定）に従う。前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く。issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作（production mutation / release / データ削除 / 不可逆 migration / 実課金。`AGENTS.md` の authority level 定義）が含まれる場合に限り `risk:authority` を付け、実行前に User の明示指示を得る。可逆な auth / RLS / billing のコード変更には付けない（`pr-cross-review` skill での確認と、必要に応じた `CHECKPOINT` で扱う）

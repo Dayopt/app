@@ -30,7 +30,7 @@ Dayopt の AI 協働設定を棚卸しし、不要・重複・配置間違い・
 
 - 実装・運用ガイダンスの正本は `AGENTS.md`（毎セッション読み込まれる単一ファイル、~200行予算）。`CLAUDE.md` は `@AGENTS.md` import のみのシム
 - `.claude/rules/` と `.claude/agents/` は全廃した（rules は AGENTS.md・各 skill へ、常設 agent 定義は `pr-cross-review` / `usability-probe` skill の inline prompt へ吸収済み）
-- 高リスク PR に限定した Codex 併用は継続する。選別は `scripts/ci/protected-path-gate.mjs` が機械判定する（保護対象 path または `review:full` ラベル）。Codex 向けレビュー規則は `AGENTS.md` 冒頭に残す
+- Codex は User が手動で `@codex review` を使う任意ツールとして残す（merge の hard gate ではない、2026-09-04 #2596）。Codex 向けレビュー規則は `AGENTS.md` 冒頭に残す
 - hooks 実体は `scripts/hooks/` にある（`.claude/hooks/` から #2479 で移動）。呼び出し元は `.claude/settings.json` のみ
 - 旧構成（`.codex/` overlay・`.agents/` roles/skills symlink・旧 `.claude/commands/*.md`）は撤去済み。経緯は git 履歴参照
 
