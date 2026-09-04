@@ -353,7 +353,7 @@ USING (auth.uid() = user_id);
 
 ## Database Architecture
 
-> **RLS 対象 public テーブル数**: 28 | **PostgreSQL**: v17
+> **RLS 対象 public テーブル数**: 27 | **PostgreSQL**: v17
 
 Dayopt は Supabase（PostgreSQL）を使用する。本番は Pro organization の `dayopt` project、PR ごとの検証は ephemeral Preview Branches を使い、永続 Staging project は置かない。
 RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapshot.md`](./data/db/rls-snapshot.md) を正とする。
@@ -371,7 +371,6 @@ RLS の正確な対象・policy・grant は自動生成の [`data/db/rls-snapsho
 | **activities**               | Plan / Record の分類単位。所属カテゴリーから色・アイコンを継承   | category_id, name, archived_at                                                                                           |
 | **segments**                 | 分析用の保存クエリ（横断参照、重複を許す）                       | name                                                                                                                     |
 | **segment_activities**       | セグメントとアクティビティの多対多 junction                      | segment_id, activity_id                                                                                                  |
-| **tags**（凍結中）           | 旧階層タグ。write path から切断済み、物理削除は #2175 待ち       | name, color, parent_id, sort_order, is_active                                                                            |
 
 #### 外部カレンダー連携（2テーブル）
 
@@ -630,7 +629,7 @@ Source of truth:
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
 - Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
 
-Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('plans')` / `.from('records')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
+Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('plans')` / `.from('records')` / `.from('activities')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
 
 ### Foundation Readiness
 
@@ -758,7 +757,7 @@ product 専用（web・他 package から参照なし）のため package では
 例:
 
 - `Database`
-- `Row<typeof databaseTables.records>` / `Insert<'tags'>`
+- `Row<typeof databaseTables.records>` / `Insert<'activities'>`
 - `databaseTables`
 
 入れないもの:

@@ -203,7 +203,7 @@ function Legend({
   }
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul data-report-legend="allocation" className="flex flex-col gap-2">
       {slices.map((slice) => (
         <li key={slice.key} className="flex items-center gap-2 text-xs">
           <span

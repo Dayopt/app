@@ -112,9 +112,9 @@ lp:
 - `segments.list`: 入力なし。`{ id, name, activityIds }` の一覧。表示規律（合計・割合・円グラフ禁止）はツール説明文にも明記する
 - `review.get` はアクティビティ軸で集計し、`isNoActivity` / `isArchived` を各行に含める
 
-## 過渡期の注記
+## 旧タグモデルの撤去
 
-旧`tags`テーブルと`plans.tag_id` / `records.tag_id`列は、書き込み経路からは切り離し済みだが物理削除は未実施（epic #2162 Step 9、issue #2175、`EXPLICIT AUTHORITY`のため凍結中）。この間、所有者検証トリガーは撤去済みのため`tag_id`の値そのものは信頼しない。
+旧`tags`テーブル、`plans.tag_id` / `records.tag_id`列、tags専有の10関数は`20260903120000_drop_legacy_tags_model.sql`で物理削除した（epic #2162 Step 9、issue #2175）。分類の正本はカテゴリー / アクティビティ / セグメントの3構造だけで、tag系のオブジェクトはDBにもコードにも残っていない。
 
 ## 関連する意思決定
 

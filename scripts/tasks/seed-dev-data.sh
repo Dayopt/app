@@ -117,12 +117,23 @@ SELECT
   'from_plan'
 FROM inserted_plan;
 
--- サンプルタグ
-INSERT INTO public.tags (user_id, name, color) VALUES
-  ('${USER_ID}', 'Frontend', 'blue'),
-  ('${USER_ID}', 'Backend', 'green'),
-  ('${USER_ID}', 'Bug fix', 'red'),
-  ('${USER_ID}', 'Documentation', 'violet');
+-- サンプルカテゴリー / アクティビティ（旧 tags は #2175 で物理削除済み）
+-- 色・アイコンを持つのはカテゴリーだけで、アクティビティは所属カテゴリーから継承する
+WITH inserted_categories AS (
+  INSERT INTO public.categories (user_id, name, color) VALUES
+    ('${USER_ID}', 'Engineering', 'blue'),
+    ('${USER_ID}', 'Maintenance', 'red')
+  RETURNING id, name
+)
+INSERT INTO public.activities (user_id, category_id, name)
+SELECT '${USER_ID}', inserted_categories.id, seed.name
+FROM inserted_categories
+JOIN (VALUES
+  ('Engineering', 'Frontend'),
+  ('Engineering', 'Backend'),
+  ('Maintenance', 'Bug fix'),
+  ('Maintenance', 'Documentation')
+) AS seed(category_name, name) ON seed.category_name = inserted_categories.name;
 END;
 \$\$;
 EOF
@@ -138,6 +149,7 @@ echo "ユーザー: dev@example.com"
 echo "パスワード: password123"
 echo "Plan: 3件"
 echo "Record: 1件"
-echo "タグ: 4件"
+echo "カテゴリー: 2件"
+echo "アクティビティ: 4件"
 echo ""
 echo "開発を開始できます！"

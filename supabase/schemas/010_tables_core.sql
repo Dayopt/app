@@ -3,7 +3,7 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
--- 最終同期日: 2026-08-27
+-- 最終同期日: 2026-09-04
 -- 同期対象 migration:
 --   - 20260415000000_inline_entry_tag_id.sql
 --   - 20260424000000_restore_tag_parent_hierarchy.sql
@@ -29,6 +29,7 @@
 --   - 20260824090000_detach_tag_id_from_timeblock_write_path.sql
 --   - 20260826234713_add_ledger_composite_tenant_anchors.sql
 --   - 20260826234911_add_ledger_undo_substrate.sql
+--   - 20260903120000_drop_legacy_tags_model.sql
 --
 -- カラム順序の規則:
 --   1. id (PK)
@@ -151,7 +152,6 @@ CREATE TABLE public.external_calendar_events (
 CREATE TABLE public.plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
   external_calendar_event_id UUID REFERENCES public.external_calendar_events(id),
   title TEXT NOT NULL,
   note TEXT,
@@ -179,7 +179,6 @@ CREATE TABLE public.plans (
 CREATE TABLE public.records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
   plan_id UUID REFERENCES public.plans(id),
   external_calendar_event_id UUID REFERENCES public.external_calendar_events(id),
   title TEXT NOT NULL,
@@ -204,44 +203,8 @@ CREATE TABLE public.records (
 --   direct DML / command writer fence
 --     -> Planと同じuser binding、lock upgrade拒否、transaction単位revisionを適用
 
--- tags: タグ（root -> child の最大2階層）
--- 20260424000000 でコロン記法 "dev:api" から parent_id 階層へ移行済み
--- parent_id IS NULL が root、parent_id NOT NULL が child
--- 階層は trigger で最大1段に制限（grandchild不可 / 自己参照不可）
--- active child を持つ tag は child に移動できない（inactive child は除外）
--- color はプリセット名（hex値ではない）
-CREATE TABLE public.tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  parent_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
-  name TEXT NOT NULL,
-  color TEXT,                     -- red/orange/amber/green/teal/blue/indigo/violet/pink/gray
-  icon TEXT,                      -- Lucideアイコン名
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT true,  -- false = ソフトデリート（マージ時）
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE INDEX idx_tags_parent_id ON public.tags(parent_id);
-CREATE INDEX idx_tags_user_parent_sort_order
-  ON public.tags(user_id, parent_id, sort_order);
-
--- active tag の名前重複だけを禁止する partial unique index
--- root 同士: 同一 user_id + name
--- child 同士: 同一 user_id + parent_id + name
-CREATE UNIQUE INDEX tags_user_root_name_unique
-  ON public.tags(user_id, name)
-  WHERE parent_id IS NULL AND is_active = true;
-
-CREATE UNIQUE INDEX tags_user_parent_name_unique
-  ON public.tags(user_id, parent_id, name)
-  WHERE parent_id IS NOT NULL AND is_active = true;
-
--- tags 関連 trigger:
---   enforce_tag_hierarchy             -> check_tag_hierarchy()
---   enforce_tag_no_children_as_child  -> check_tag_has_children()
---   trigger_update_tags_updated_at    -> update_updated_at()
+-- tags: 削除済み（20260903120000_drop_legacy_tags_model.sql、#2175）
+--   plans.tag_id / records.tag_id と tags 専有 10 関数も同 migration で drop
 
 -- entries / entry_tags: 削除済み
 --   20260415000000_inline_entry_tag_id.sql

@@ -34,6 +34,7 @@ const TEST_USER_ID = crypto.randomUUID();
 const TEST_EMAIL = `critical-path-${TEST_RUN_ID}@example.com`;
 const TEST_PASSWORD = 'test-password-123';
 const ACTIVITY_NAME = `Journey ${TEST_RUN_ID.slice(0, 8)}`;
+const CATEGORY_NAME = `Cat ${TEST_RUN_ID.slice(0, 8)}`;
 
 type SupabaseClient = ReturnType<typeof createClient<Database>>;
 
@@ -157,7 +158,7 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
       .from('categories')
       .insert({
         user_id: TEST_USER_ID,
-        name: `Cat ${TEST_RUN_ID.slice(0, 8)}`,
+        name: CATEGORY_NAME,
         color: 'blue',
         icon: 'circle',
       })
@@ -252,8 +253,13 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     await expect(headline).toBeVisible({ timeout: 10_000 });
     await expect(headline).not.toHaveText('0:00');
 
-    // 凡例に 1 時間ぶんの行が出る。`未分類` を許容しない — カテゴリー紐付けを失う回帰で
-    // 全部が未分類へ落ちても緑になってしまうため（このアクティビティはカテゴリー付き）。
-    await expect(allocation.getByText('1:00')).toBeVisible({ timeout: 10_000 });
+    // 凡例のうち「このカテゴリーの行」が 1 時間ぶんを出す。`未分類` を許容しない —
+    // カテゴリー紐付けを失う回帰では label が未分類へ落ちてこの行が消えるため、
+    // getByText('1:00') のような行を特定しない一致では緑になってしまう。
+    const legendRow = allocation
+      .locator('[data-report-legend="allocation"] li')
+      .filter({ hasText: CATEGORY_NAME });
+    await expect(legendRow).toHaveCount(1, { timeout: 10_000 });
+    await expect(legendRow).toContainText('1:00');
   });
 });
