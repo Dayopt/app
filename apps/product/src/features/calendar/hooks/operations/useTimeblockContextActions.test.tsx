@@ -31,10 +31,10 @@ vi.mock('@/lib/toast', () => ({
 
 import { useTimeblockContextActions } from './useTimeblockContextActions';
 
-const taggedEntry = {
+const classifiedEntry = {
   id: 'entry-1',
   kind: 'plan',
-  tagId: 'tag-1',
+  activityId: 'activity-1',
   startDate: new Date(2026, 2, 25, 9),
   actualStartDate: null,
 } as unknown as CalendarDisplayEvent;
@@ -47,7 +47,7 @@ describe('useTimeblockContextActions - Review navigation', () => {
   it('/report へ遷移する（カレンダー内パネルは廃止済み、#2181 Step 4）', () => {
     const { result } = renderHook(() => useTimeblockContextActions());
 
-    act(() => result.current.handleViewStats(taggedEntry));
+    act(() => result.current.handleViewStats(classifiedEntry));
 
     expect(mocks.push).toHaveBeenCalledWith('/ja/report?date=2026-03-25');
   });
@@ -55,7 +55,7 @@ describe('useTimeblockContextActions - Review navigation', () => {
   it('tagなしentryではReviewを開かない', () => {
     const { result } = renderHook(() => useTimeblockContextActions());
 
-    act(() => result.current.handleViewStats({ ...taggedEntry, tagId: null }));
+    act(() => result.current.handleViewStats({ ...classifiedEntry, activityId: null }));
 
     expect(mocks.push).not.toHaveBeenCalled();
   });

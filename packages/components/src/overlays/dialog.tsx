@@ -249,6 +249,12 @@ const DialogContent = ({
       <DialogPrimitive.Content
         ref={contentRef}
         data-slot="dialog-content"
+        // 非モーダル（背景を暗転させない）Dialog は、既定ではフォーカスが外へ
+        // 出ただけでも閉じる。ドロップダウンの項目から開くと、メニューが閉じる際に
+        // Radix がトリガーへフォーカスを戻すため、出た瞬間に閉じてしまう
+        // （2026-09-03 実測）。外側クリックと Escape での close は残す。
+        // 呼び出し側が明示的に onFocusOutside を渡せば下の {...props} が優先する
+        {...(modal ? {} : { onFocusOutside: (e: Event) => e.preventDefault() })}
         className={cn(
           'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border p-6 transition-[top,max-height] duration-200',
           'w-full max-w-[calc(100vw-2rem)] min-w-80',

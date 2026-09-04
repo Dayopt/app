@@ -53,13 +53,11 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 ### namespace 自動検出（apps/product）
 
-`apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込む。**手動の NAMESPACES 配列への登録は不要**。
+`apps/product/src/lib/i18n/request.ts` が `messages/{locale}/` ディレクトリを**自動スキャン**してすべての `.json` を読み込むため、新規 namespace の追加は JSON ファイルを作るだけで有効になる（**手動の NAMESPACES 配列への登録は不要**）。
 
 ```
 apps/product/messages/en/calendar.json → 自動で calendar namespace を検出
 ```
-
-新規 namespace 追加は JSON ファイルを作るだけで有効になる。
 
 ### apps/web は固定配列方式
 
@@ -157,11 +155,11 @@ t('items', { count: 5 }); // → "5 items"
 | `activities.json` | アクティビティ管理                                                   |
 | `settings.json`   | 設定画面                                                             |
 | `auth.json`       | 認証フロー                                                           |
-| `entry.json`      | エントリ機能                                                         |
+| `timeblock.json`  | Plan / Record（タイムブロック）                                      |
 | `navigation.json` | ナビゲーション                                                       |
 | `error.json`      | エラーページ UI                                                      |
 | `legal.json`      | 法的文書                                                             |
-| `record.json`     | レコード                                                             |
+| `shortcuts.json`  | キーボードショートカット                                             |
 | `sidebar.json`    | サイドバー                                                           |
 | `contact.json`    | お問い合わせ                                                         |
 | `oauth.json`      | OAuth 認証                                                           |
@@ -213,17 +211,17 @@ t('items', { count: 5 }); // → "5 items"
 4. **検証**: `pnpm i18n:check && pnpm copy:check`
 
 ```json
-// apps/product/messages/en/entry.json — 追加
+// apps/product/messages/en/timeblock.json — 追加
 {
-  "entry": {
-    "toast": { "created": "Entry created" }
+  "timeblock": {
+    "toast": { "created": "Plan created" }
   }
 }
 
-// apps/product/messages/ja/entry.json — 追加
+// apps/product/messages/ja/timeblock.json — 追加
 {
-  "entry": {
-    "toast": { "created": "エントリを作成しました" }
+  "timeblock": {
+    "toast": { "created": "予定を作成しました" }
   }
 }
 ```

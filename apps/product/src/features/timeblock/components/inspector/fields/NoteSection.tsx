@@ -177,6 +177,7 @@ export function NoteSection({
         // （textarea自身にmin-h-11を付けると、1行の文字はtextarea内部で上詰めのまま
         // 描画され、表示div側の中央寄せと数px食い違って「入力時に少し上へ動く」ように
         // 見えていた。User指摘）。
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- textarea の外側 8px を押した時に blur させないための mousedown だけを持つ。操作対象は中の textarea で、キーボードからはそちらへ直接フォーカスが当たる
         <div
           className="hover:bg-state-hover focus-within:ring-ring -mx-2 flex min-h-11 cursor-text items-center rounded-lg px-2 py-2 focus-within:ring-2"
           // -mx-2 + px-2 で確保したホバー領域（textarea自身のpx-0の外側8px分）はtextarea要素

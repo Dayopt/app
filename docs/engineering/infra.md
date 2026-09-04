@@ -15,11 +15,11 @@ Dayopt の標準ルートは `local → PR Preview → production`。Vercel Prev
 
 ### 環境一覧
 
-| 環境           | Supabase                          | Vercel                                             | URL              |
-| -------------- | --------------------------------- | -------------------------------------------------- | ---------------- |
-| **Local**      | `supabase start`                  | `pnpm dev`                                         | localhost:3000   |
-| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                         | `*.vercel.app`   |
-| **Production** | `dayopt` main                     | 手動 dispatch（`promote.yml`）で Production deploy | `app.dayopt.app` |
+| 環境           | Supabase                          | Vercel                                     | URL              |
+| -------------- | --------------------------------- | ------------------------------------------ | ---------------- |
+| **Local**      | `supabase start`                  | `pnpm dev`                                 | localhost:3000   |
+| **PR Preview** | PR ごとの Supabase Preview Branch | Vercel Preview (`product`)                 | `*.vercel.app`   |
+| **Production** | `dayopt` main                     | main merge で自動 promote（`promote.yml`） | `app.dayopt.app` |
 
 persistent staging は常設しない。固定 URL が必要な Stripe / OAuth callback / closed beta 検証が出た時だけ、Vercel staging と Supabase persistent branch を追加する。
 
@@ -99,18 +99,38 @@ main merge
   ├── Supabase main deployment
   └── Vercel Production build（domain 未割当の candidate）
         ↓
-      Production Release workflow（手動 workflow_dispatch。影響判定 / smoke / audit）
+      Production Release workflow（push: main で自動起動）
+        ├── impact（各 project の live SHA からの差分で層 3 の要否を決める）
+        ├── 層 3（影響のある suite だけ。E2E / Web Build & E2E）
+        └── release（影響判定 / smoke / audit）
         ↓
       promote（affected な project のみ）→ Production domain
         ↓
       両 production domain の smoke
 ```
 
+**promote は 2026-09-03 に merge 連動の自動実行へ戻した**（#2268 の手動 dispatch を撤回）。
+手動 dispatch は break-glass（`force`）と drill 専用に残る。安全は「影響のある層 3 が
+**同一 run で** green」であることで担保し、層 3 の判定は check-run 名の照合ではなく
+`needs.*.result` で行う。層 3（E2E / Web Build & E2E）は nightly.yml から promote.yml へ
+移設した — #2382 が per-merge の層 3 を廃止した根拠は「promote が手動だから赤い main は
+ユーザーへ届かない」で、merge 連動にするとその前提が反転するため。integration は
+per-PR（ci.yml）へ一本化した（`branch:finish` の up-to-date gate により merge commit の
+tree は per-PR で検証済みの tree と一致する）。
+
+**Ignored Build Step が production build を決して skip しないこと（§merge gate）は、この設計の
+前提でもある。** docs のみの merge でも candidate deployment が存在しないと、release job が
+現れない build を待ち続ける。
+
 Vercel の正規 deployment source は `Dayopt/dayopt` の GitHub 連携だけとする。
 Preview は branch push / PR、Production build は `main` merge から作成する。CLI、REST API、Deploy Hook、
 Marketplace integration、v0 から新規 Production deployment を作らない。
 
 ### merge と Production 公開の分離
+
+main merge は Production domain を**直接**切り替えない。切り替えるのは `promote.yml` の release job
+だけで、それが走るのは影響のある層 3 が green の時に限る（層 3 が赤い merge では promote されず、
+production は現行 SHA のまま無傷で残る）。
 
 gate が機能する前提は **Product / Web の Auto-assign Custom Production Domains が無効**であること。
 これを無効化するまで main merge は従来どおり直接公開され、release workflow は素通りする。
@@ -145,12 +165,25 @@ deployment の source SHA」で、そこから対象 SHA までの `git diff` �
 （fail closed）。どの app にも影響しない merge では promote を行わず、`Production Release` status は
 **success**（`unaffected`）になる — production の artifact がその commit と等価だから、tag は打てる。
 
+**影響判定は 2 回・別の時刻に行い、その食い違いを不変条件で塞ぐ（#2574）。** 層 3（e2e / web）を
+走らせるかは `impact` job が run 開始時点（T0）の live production SHA を基準に決め、実際にどの
+project を promote するかは `release` job が層 3 完了後（T1、最大 20 分後）の live SHA を基準に
+**独立して再計算する**。live が前進するだけなら `diff(base_T1..Y) ⊆ diff(base_T0..Y)` なので T1 の
+affected 集合は T0 の subset になり、テスト範囲は superset で安全。**破れるのは Vercel Instant
+Rollback で live が後退した時だけ**で、その時 T1 だけが affected になり、層 3 を一度も走らせていない
+project を promote しうる（gate 式は `needs.impact.outputs.*_affected == 'false'` で層 3 を免除する
+ため、workflow 側では止まらない）。そこで `production-release.mjs` が **「promote 対象 ⊆ impact が
+affected と判定した project」** を promote 前に強制する。impact の verdict は release job の step env
+（`RELEASE_IMPACT_<KEY>_AFFECTED`）で渡し、**`'true'` 以外はすべて未検証として扱う**（配線が落ちた
+時に fail open しないため）。破れた run は production を 1 件も触らずに落ち、manifest の
+`status: impact-mismatch` として残る（復旧は rollback ではなく再 run。[runbook.md](../operations/runbook.md)
+Playbook 2 ケース0-B）。`force`（break-glass）は層 3 job 自体を skip する経路なのでこの検査も免除する。
+
 smoke は promote 対象だけでなく **全 candidate に毎回走る**。Auto-assign が有効な段階適用中は
 candidate が待機中に自動割当されて promote 対象が空になるため、promote 対象だけを smoke すると
 cutover まで smoke のコードパスが一度も実行されない。全 candidate に走らせることで、毎 merge が
-smoke と bypass secret の実働テストになる。**bypass secret を登録するまで release run は毎回
-失敗する**（Production は Auto-assign により更新され続けるので無傷。ただし `Production Release`
-status が failure になるため、その間は tag を打てない）。
+smoke と bypass secret の実働テストになる（bypass secret は登録済み。未登録の間は release run が
+毎回失敗し、`Production Release` status が failure になって tag を打てない）。
 
 promote 後は **両 production domain** を smoke する。片側だけ進んだ production はその組み合わせが
 初めて世に出る状態で、実際に配信している domain の健全性は candidate 単体の smoke では出ないため。
@@ -184,26 +217,29 @@ run の結果は `release-manifest-<attempt>` artifact（保持 90 日、`github
 ### release workflow の信頼境界
 
 `promote.yml` は Vercel の promote / rollback 権限を持つ token を扱う。実行する script は常に
-**workflow を dispatch した ref のもの**を使い、`sha` 入力は release 対象を指す data としてだけ扱う。
-`actions/checkout` の `ref` に入力 SHA を渡すと、未 merge の commit が持つ script が Production 権限で
-動く。この制約は `scripts/__tests__/release-workflow-contract.test.ts` が回帰から守る。
+**その run の ref のもの**を使う。release 対象は常に `github.sha` で、呼び出し側が任意の SHA を
+指定する口は持たない（`sha` input は 2026-09-03 に廃止した。層 3 を同一 run で走らせる設計では
+checkout と異なる SHA を検証できず、`checkoutAtTarget=false` の fail closed により
+「未検証 × 全 project promote」の組み合わせしか作れないため。古い SHA を本番へ戻すのは promote では
+なく rollback で、Vercel Instant Rollback / runbook Playbook 2 が正しい経路）。この制約は
+`scripts/ci/release-workflow-contract.test.ts` が回帰から守る。
 
-手動 dispatch の `sha` は main に merge 済みであることを compare API で確認する。ただしこれは
-「merge 済みか」の確認であって、コード実行の防御ではない。
+`github.sha` が main に merge 済みであることは compare API で確認する。push: main の run では自明だが、
+`workflow_dispatch` は任意 ref から起動できるため無条件に検証する。ただしこれは「merge 済みか」の
+確認であって、コード実行の防御ではない。
 
-**未解決の残存リスク**: `actions: write` を持つ主体が main 以外の ref から dispatch すると、その ref の
+**残存リスクの現状**: `actions: write` を持つ主体が main 以外の ref から dispatch すると、その ref の
 script が Production secret 付きで動く。YAML の条件では塞げない（攻撃者の branch では条件ごと消せる）。
+これは `environment: production-release` の **deployment branch policy で閉じてある**（2026-09-01 実測:
+custom branch policies、許可は `main` のみ、required reviewers なし）。main 以外の ref からの dispatch は
+job 開始前に GitHub 側で拒否される。
 
-release job は `environment: production-release` を宣言済みなので、閉じるのに必要なのは GitHub 設定だけ。
-**設定するまでこのリスクは開いたまま**である点に注意する。
+**この environment に required reviewers を付けてはいけない。** merge 連動の自動 promote が承認待ちで
+timeout する。付ける必要が出た場合は promote.yml の設計ごと見直す。
 
-1. Settings → Environments → `production-release` を開く（初回 run で自動作成される）
-2. Deployment branch policy を Selected branches にし、`main` だけを許可する
-3. `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` だけを repository secret から
-   environment secret へ移す
-
-2 だけでも main 以外からの dispatch は job 開始前に拒否される。3 は secret の露出範囲をこの job に
-限定するための追加措置で、対象は promote.yml しか読まない bypass secret 2 つに限る。
+残る任意の追加措置: `VERCEL_AUTOMATION_BYPASS_PRODUCT` / `VERCEL_AUTOMATION_BYPASS_WEB` だけを
+repository secret から environment secret へ移すと、secret の露出範囲がこの job に限定される
+（対象は promote.yml しか読まない bypass secret 2 つに限る）。
 
 **`VERCEL_TOKEN` と `VERCEL_ORG_ID` は repository secret のまま残す。** `production-config-audit.yml` の
 audit job は `pull_request_target` と `push: main` で走るため `environment:` を宣言できず、repository
@@ -225,7 +261,14 @@ release script は Vercel API への read-modify-write で、API にトランザ
 
 前提（運用で守る）:
 
-- **書き手は同時に 1 つ。** CI は `promote.yml` の `concurrency: production-release`（cancel なし）で直列化される
+- **書き手は同時に 1 つ。** CI は `promote.yml` の release job が持つ **job レベル** concurrency
+  （group `production-release`、cancel なし）で直列化される。**workflow レベルには置かない** ——
+  層 3 を内包した workflow 全体を 1 group にすると、GitHub は group ごとに pending を 1 本しか
+  保持せず新着で古い pending を cancel するため、burst（実測 1 時間に 1〜3 merge）の 2 本目が
+  promote されないまま消える。層 3 の 2 job は suite 別・ref 別の group（cancel あり）を持ち、
+  新しい push が古い run の同種 job だけをキャンセルする。キャンセルされた job は
+  `needs.<id>.result == 'cancelled'` になり、その run の release job は不成立で skip される
+  （= promote しない。次の push の run が live 基準で拾い直す）
 - **release run の実行中に、人手で Vercel の promote / rollback / alias 操作をしない。** 緊急時も run の完了（または cancel の完了）を待ってから [runbook](../operations/runbook.md) Playbook 2 に従う
 
 script が保証すること（コードで守る）:
@@ -300,27 +343,51 @@ Code Qualityを採用しない判断と2026-07-21時点の外部設定証跡は�
 
 ### merge gate の required checks
 
-main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Checks` / `📦 Unit Tests`）に加えて次を含める。
+**merge gate は `pnpm branch:finish`（`scripts/tasks/finish-branch.sh`）が唯一の強制点であり、GitHub の required status check ではない。** この repo は Free plan の private repo で、ruleset / branch protection とも API が 403 を返し設定できない（2026-09-02 実測。`gh api repos/Dayopt/dayopt/rulesets` → `Upgrade to GitHub Pro or make this repository public`）。したがって「skipped が required check で成功扱いになる」という GitHub 側の挙動はそもそも発火せず、gate は finish-branch.sh が **success を名前で要求する**ことだけで成り立っている（UI / API から直接 merge すればすり抜けられる点は既知で、`branch:finish` を標準経路とする運用契約の上に乗っている）。
 
-**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。**2026-08-28、#2483 で `heavy-post-merge.yml` はさらに `nightly.yml` へ吸収された（job 名・schedule・required checks の扱いは無変更）。** 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
+finish-branch.sh が名前で success を要求するのは `ci.yml` の 3 job（`🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests`）に加えて次を含める。`🧪 Integration Tests` は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539) で `📦 Unit Tests` から分離した。同じ #2539 で affected 判定を `🧭 Impact` job へ切り出し、`impact →（static ∥ unit ∥ integration）`の並列構成にしている（実測で CI 全体が 16 分 55 秒 → 6〜7 分台。run 33588708693 → 33615047182 / 33618057064。**この数値が構成の基準値の正本**で、`ci.yml` / `check.mjs` 側のコメントには数値を置かない）。**`🧭 Impact` は required にしない** — 下流 3 job は `needs.impact.result` を条件にせず、impact が落ちても空 output を fail closed（全実行）として受けて必ず走るため、検査そのものは常に行われる（この設計は Codex / 内製 risk-reviewer の P2 指摘で入れた。要求すると impact 障害時に全 job が skip され検査ゼロになる）。**`🧪 Integration Tests` は DB を触る PR でだけ走る**ため、`branch:finish` も affected な PR でだけ名前で要求する。
 
-| context                   | 発行元            | 目的                                                       |
-| ------------------------- | ----------------- | ---------------------------------------------------------- |
-| `🛡️ docs & secrets guard` | GitHub Actions    | docs lifecycle と secret 漏えい防止の検査が成功すること    |
-| `Production Config Audit` | GitHub Actions    | live な Vercel env metadata が Production 契約を満たすこと |
-| `Vercel – product`        | Vercel GitHub App | Product の Preview build が成功すること                    |
-| `Vercel – web`            | Vercel GitHub App | Web の Preview build が成功すること                        |
+**2026-08-20、CI 4 層再設計（[#2269](https://github.com/Dayopt/dayopt/issues/2269)）により `🎭 E2E Tests` / `🌐 Web Build & E2E` は required checks から除去した。** この 2 job は `.github/workflows/ci.yml` から `.github/workflows/heavy-post-merge.yml` へ移設され、pull_request では発火しなくなった（nightly + workflow_dispatch のみ。push:main は #2382（2026-08-25）で per-merge 実行のコストを理由に廃止済み）。旧記述（4 job が required）は誤り。#2483（2026-08-28）で `heavy-post-merge.yml` は `nightly.yml` へ吸収され、**2026-09-03 に `promote.yml` へ再移設した**（merge 連動 promote。per-PR で required にしない扱いは不変で、走るのは merge 後の promote 経路。影響のある suite だけが走る）。 詳細は 2026-08-20 の決定ログ（削除済み、git 履歴参照）、per-PR 検証の後継はレーンのローカル影響 spec 実走義務（`AGENTS.md §レーン運用` §条件付き事前 E2E）を参照。
+
+| context                   | 発行元                                                  | 目的                                                                    |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `🛡️ docs & secrets guard` | GitHub Actions                                          | docs lifecycle と secret 漏えい防止の検査が成功すること                 |
+| `Production Config Audit` | GitHub Actions                                          | live な Vercel env metadata が Production 契約を満たすこと              |
+| `Vercel – product`        | Vercel GitHub App                                       | Product の Preview build が成功すること                                 |
+| `Vercel – web`            | Vercel GitHub App                                       | Web の Preview build が成功すること                                     |
+| `dayopt/internal-review`  | `pnpm review:marker` が生成する `gh api` を Main が実行 | 内製クロスレビューが実施されたこと（クロスレビュー必須 PR のみ。#2562） |
+
+**`dayopt/internal-review` は他の context と性質が違う。** GitHub Actions / Vercel が発行するのではなく、
+Main が `pnpm review:marker` の出力（`gh api --method POST repos/{owner}/{repo}/statuses/<head>`）を
+目視してから実行して作る。description は `p1=<int> p2=<int> fp=<hash> fpa=<hash> coverage=<...> agents=<csv>` の
+機械可読フィールド固定で、gate は `p1` / `p2` を数値として読み（数値以外・欠落は fail closed）、
+`fp` / `fpa` を **レビュー指紋**として読む。
+
+- **束縛**: 現 HEAD の status が無くても、旧 HEAD の status の指紋が現在の PR diff の指紋と一致すれば
+  有効（#2558）。指紋は `git diff <base>...<head>` の変更行のうち保護対象 path だけ（`review:full` の
+  PR では全 file）を正規化した sha256 の先頭 16 桁で、hunk header と context 行を含まないため
+  **追従 merge では変わらない**。docs だけの push・追従で `@codex review` と CI をやり直す無駄を消す
+- **旧設計との違い**: 2026-09 以前は `[internal-review]` marker 付き PR コメントを正規表現で読んでいた。
+  zerolike 判定の破綻・取得窓に残る壊れた marker・短縮 SHA 手打ちの捏造という 3 事故クラスが
+  材料そのものから来ていたため、commit status へ移した（#2562）。summary コメントは
+  `[review-summary]` marker で残るが、**gate は読まない**（`pnpm trace` の分析用）
 
 `🛡️ docs & secrets guard` は #1868 で main ruleset の required check へ追加した。
 
 - `Vercel – product` / `Vercel – web` の区切り文字は en dash（U+2013）で、hyphen ではない
-- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)）。**
-  Draft CI 廃止により、この 2 job は draft の間 `conclusion: skipped` の check run になる。skipped は
+- **`branch:finish` は `🔍 Static Checks` / `📦 Unit Tests` / `🧪 Integration Tests` も名前で success を要求する（2026-08-26、[#2415](https://github.com/Dayopt/dayopt/issues/2415)。3 つ目は 2026-09-02、[#2539](https://github.com/Dayopt/dayopt/issues/2539)）。**
+  Draft CI 廃止により、この 3 job は draft の間 `conclusion: skipped` の check run になる。skipped は
   失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
   「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
   持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
-  影響判定が不能な場合は要求する側（fail closed）へ倒す。契約は
+  影響判定が不能な場合は要求する側（fail closed）へ倒す。**`🧪 Integration Tests` は加えて
+  `integration` affected な PR でだけ要求する**（affected でない PR では job ごと skip されるのが
+  正常で、無条件に要求すると永久に missing で止まる）。契約は
   `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
+- **`ci.yml` / `scripts/ci/check.mjs` は `INTEGRATION_GLOBS` に含める（#2539）。** integration を独立 job へ
+  切り出した結果、job まるごとが `if:` で skip されうるようになった。配線を持つこの 2 ファイルを
+  中立扱いのままにすると、**配線を変えた当の job を一度も実走させずに merge** できる（`nightly.yml` を
+  既に含めているのと同じ理屈）
 - **`branch:finish` はこの 2 context を無条件には要求しない（2026-08-04、#1813）。**
   `scripts/ci/impact.mjs`（Impact Resolver）が PR の変更ファイルから affected な app を判定し、
   affected な project の context だけを success 必須にする。unaffected な project の context
@@ -336,7 +403,8 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `apps/product` / `apps/web` からの相対 path）。exit 1 = build 続行、exit 0 = build skip という
   Vercel の契約に合わせ、Impact Resolver の判定結果を exit code へ変換する
   - **skip するのは preview build だけ。production build（`VERCEL_ENV=production`）は
-    変更内容によらず常に build する。** `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
+    変更内容によらず常に build する。これは merge 連動 promote（§デプロイフロー）の前提でもある**
+    ——docs のみの merge でも candidate が存在しないと、release job が現れない build を待ち続ける。 `VERCEL_GIT_PREVIOUS_SHA` は「直前の**成功した
     build**」であって live SHA ではなく、未 promote candidate を基準に skip すると
     Production Release が存在しない candidate を待ち続けて詰まるため
     （旧 ci-monorepo-refactor overview §8「移行順序・安全制約」の実施形態。
@@ -379,7 +447,13 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `Audit Vercel metadata (trusted)` という CheckRun として出ている。したがって trusted base 実行の
   workflow でも、gate のために commit status を自分で publish する必要は無い。
   `Production Config Audit` という StatusContext が別に存在するのは、job 名から独立した固定 context を
-  ruleset の required 指定に使うため
+  持たせるため（`finish-branch.sh` の trusted dispatch 免除がこの context 名で照合する）。
+  **ただしこの context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571）。
+  PR で publish されるのは `pull_request_target` の `paths` に一致する contract 変更 PR だけになり、
+  それ以外の PR では status も check run も存在しない。required にすると、2026-08-05 の
+  `ci.yml` paths-ignore 撤去（PR #1836）と同じく「永久に `expected` のまま」で全 PR が
+  merge 不能になる。現状 Free plan では ruleset 自体が使えない（`gh api .../rulesets` は 403）ので
+  実害は出ていないが、Pro へ上げる時の落とし穴として残す
 - **外部モデルの自動 diff レビュー（ai-review / Gemini）は 2026-08-03 に撤去した。** レビューは
   外部レビュー（Codex。2026-08-13 に全 PR 適用を停止し、2026-09-01 にクロスレビュー必須 PR 限定で
   必須化して再開、#2529）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
@@ -418,7 +492,19 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
   `production-config-audit.yml` は audit contract 保護対象（`scripts/ci/production-config-audit.mjs` /
   各 `production-build-gate.mjs` / workflow 自身）を変更する PR で、`pull_request_target` の check run
   `Audit Vercel metadata (trusted)` を設計として必ず failure にする（PR code に contract 変更を
-  自己検証させないため）。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
+  自己検証させないため）。**2026-09-03（#2571）以降、`pull_request_target` にはこの 4 path の
+  `paths` filter が付いており、そもそも contract 変更 PR でしか workflow が起動しない**
+  （それ以外の PR では check run も status も存在しないので、免除の判定自体が走らない）。
+  live な env drift の検出は日次 cron・`push:main`・promote 経路の `runProductionConfigAudit` が担う。
+  **ただし checkpoint を `paths` だけに委ねてはいない。** workflow が起動しない条件は `paths` の
+  意味論だけでなく、Actions の一時 Disable・base 側の workflow 定義の破損（`pull_request_target` は
+  base 側の定義で評価される）・`paths` の書き間違い・changed files が 3,000 件を超えた時の GitHub 仕様を
+  含み、いずれも「PR code に contract 変更を自己検証させない」設計を静かに無効化する。そこで
+  `finish-branch.sh` は **workflow の起動有無と独立に**、contract を変えた PR へ status
+  `Production Config Audit` の success を要求する（判定は `protected-path-gate.mjs` の `auditContract`）。
+  **変更ファイル一覧そのものを取得できなかった PR も要求する** — contract 変更を否定できない以上、
+  通す理由が無い（#2586 で Codex と architecture-guard の両系統から同じ指摘）。その PR は同じ理由で
+  `REVIEW_GATE_REQUIRED` も fail closed で立ち、内製証跡（commit status `dayopt/internal-review`）と Codex の独立 2 系統も必須になる。解除は **push ごとに** `gh workflow run production-config-audit.yml --ref <branch>`
   の trusted dispatch を実行する。成功すると commit status `Production Config Audit` が head SHA へ
   success で発行される。workflow_dispatch run の check run は PR の `statusCheckRollup` に紐づかないため
   畳み込みでは解消できず、`finish-branch.sh` は **status `Production Config Audit` が success の時に限り**
@@ -449,7 +535,7 @@ main ruleset の required status checks は `ci.yml` の 2 job（`🔍 Static Ch
 
 ## DNS 管理（Cloudflare）
 
-策定日: 2026-08-13（[#2001](https://github.com/Dayopt/dayopt/issues/2001)。2026-08-12、Search Console のドメイン検証作業中に指揮台が実測で発見）
+策定日: 2026-08-13（[#2001](https://github.com/Dayopt/dayopt/issues/2001)。2026-08-12、Search Console のドメイン検証作業中に Main が実測で発見）
 
 `dayopt.app` は **registrar が Vercel（Vercel Registrar）、権威 DNS が Cloudflare** という分離構成になっている（`dig NS dayopt.app` は `keira.ns.cloudflare.com` / `colin.ns.cloudflare.com` を返す。移管手順は [contact-email.md §1 DNS と受信の準備](../operations/contact-email.md#1-dnsと受信の準備ユーザー作業)）。
 

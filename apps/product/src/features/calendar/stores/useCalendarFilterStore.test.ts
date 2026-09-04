@@ -183,8 +183,8 @@ describe('useCalendarFilterStore', () => {
 
   describe('showAllActivities / hideAllActivities', () => {
     it('全アクティビティを表示できる', () => {
-      const tagIds = ['tag-1', 'tag-2', 'tag-3'];
-      useCalendarFilterStore.getState().showAllActivities(tagIds);
+      const activityIds = ['activity-1', 'activity-2', 'activity-3'];
+      useCalendarFilterStore.getState().showAllActivities(activityIds);
       const state = useCalendarFilterStore.getState();
       expect(state.visibleActivityIds.size).toBe(3);
     });

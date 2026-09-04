@@ -1,19 +1,10 @@
 'use client';
 
-import { CalendarDays } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
 import { AppHeader } from '@/components/shell/AppHeader';
-import {
-  ActivityChipRow,
-  formatCalendarDateParam,
-  isCalendarViewPath,
-  resolveWorkspaceTab,
-  useCalendarNavigation,
-} from '@/features/calendar';
+import { ActivityChipRow, isCalendarViewPath, resolveWorkspaceTab } from '@/features/calendar';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { Button, InlineBanner } from '@dayopt/components';
-import { Link, usePathname } from '@dayopt/i18n/navigation';
+import { InlineBanner } from '@dayopt/components';
+import { usePathname } from '@dayopt/i18n/navigation';
 
 import { ConnectedMobileAccountButton } from './MobileAccountButton';
 import { useAppInlineBanner } from './useAppInlineBanner';
@@ -28,9 +19,9 @@ interface MobileLayoutProps {
  * モバイル用レイアウト
  *
  * **構成**:
- * - AppHeader（ナビゲーション。report 画面ではアカウントボタンの左横に
- *   カレンダーへ戻るトグルアイコンを置く。#2300 でフッターの
- *   BottomTabBar を廃止し、ワークスペース切替はヘッダーのトグルへ移行した）
+ * - AppHeader（ナビゲーション。calendar / report / settings は自前のヘッダーを
+ *   持つため、ここでは出さない。カレンダーへ戻るトグル（#2300 でフッターの
+ *   BottomTabBar を置き換えたもの）は report 側のヘッダーが持つ）
  * - MainContent
  * - 固定バー群（画面下端。overview.md §5-7-b）: ActivityChipRow（Calendar
  *   タブのみ）。`pb-safe` はこのバー自身に付ける
@@ -41,22 +32,17 @@ interface MobileLayoutProps {
 export function MobileLayout({ children }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
-  const t = useTranslations();
-  const navigation = useCalendarNavigation();
 
   const pathname = usePathname();
-
-  // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
-  const hasOwnHeader =
-    isCalendarViewPath(pathname) || pathname === '/settings' || pathname.startsWith('/settings/');
 
   const isCalendarView = isCalendarViewPath(pathname);
   const isReportView = resolveWorkspaceTab(pathname) === 'report';
 
-  const view = navigation?.viewType ?? 'day';
-  const calendarHref = navigation
-    ? `/calendar?view=${view}&date=${formatCalendarDateParam(navigation.currentDate)}`
-    : `/calendar?view=${view}`;
+  // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）。
+  // `/report` は自前で AppHeader を組む（#2575）。カレンダーへ戻るトグルと
+  // アカウントボタンは ReportViewClient が rightSlot へ渡し直す。
+  const hasOwnHeader =
+    isCalendarView || isReportView || pathname === '/settings' || pathname.startsWith('/settings/');
 
   return (
     <>
@@ -69,22 +55,6 @@ export function MobileLayout({ children }: MobileLayoutProps) {
             <AppHeader
               rightSlot={
                 <div className="flex h-8 items-center gap-1">
-                  {/* フッターの BottomTabBar 廃止に伴うトグル（#2300）。
-                      現在地ではなく遷移先（カレンダー）を示すアイコン。
-                      report 画面限定（他の非独自ヘッダー画面には出さない） */}
-                  {isReportView && (
-                    <Button
-                      variant="ghost"
-                      icon
-                      size="sm"
-                      className="text-muted-foreground hover:text-foreground"
-                      asChild
-                    >
-                      <Link href={calendarHref} aria-label={t('calendar.actions.openCalendar')}>
-                        <CalendarDays className="size-5" />
-                      </Link>
-                    </Button>
-                  )}
                   <ConnectedMobileAccountButton />
                 </div>
               }

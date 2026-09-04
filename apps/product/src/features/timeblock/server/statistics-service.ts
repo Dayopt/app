@@ -46,15 +46,10 @@ export class StatisticsService {
   }
 
   // ---------------------------------------------------------------------------
-  // General: タグ別統計・時間帯分布
+  // General: アクティビティ別統計・時間帯分布
   // ---------------------------------------------------------------------------
 
-  /** `get_tag_stats` 相当。実績（records）ベースのタグ別件数・最終使用日。 */
-  async getTagStats(userId: string) {
-    return this.generalService.getTagStats(userId);
-  }
-
-  /** `getTagStats` のアクティビティ版。戻り値の形は同一でキーが activityId。 */
+  /** アクティビティ別の実績件数・最終使用日（キーは activityId）。 */
   async getActivityStats(userId: string) {
     return this.generalService.getActivityStats(userId);
   }
@@ -98,7 +93,7 @@ export class StatisticsService {
 
   /**
    * 作成時フィードフォワード用のタグ別見積もり係数（直近 4 週の中央値、`n >= 3`）。
-   * 定義は `domain/tag-estimation-factor.ts` を参照。
+   * 定義は `domain/activity-estimation-factor.ts` を参照。
    */
   async getTagEstimationFactors(userId: string) {
     return this.feedforwardService.getTagEstimationFactors(userId);

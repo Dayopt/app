@@ -295,6 +295,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
         </div>
       ) : (
         /* 時計盤 */
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 針をドラッグするポインタ専用の時計盤。キーボードからは同じ値を上の時刻入力欄（aria-label 付き）で直接打てる
         <div
           ref={clockRef}
           className="bg-muted relative touch-none rounded-full select-none"

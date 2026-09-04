@@ -69,17 +69,30 @@ function isDocsPath(file) {
 // hand-written `paths:` フィルタが per-PR 実行可否を決めており、この
 // INTEGRATION_GLOBS はその YAML と重複させた上で contract test（当時の
 // scripts/__tests__/impact.test.ts）が同期を強制していた。#2483 で
-// integration の per-PR 実行が「ci.yml の test job が
+// integration の per-PR 実行が「ci.yml の integration job が
 // `shouldRunIntegrationTests()`（check.mjs）を通じてこの判定結果を読む」形へ
 // 一本化されたため、**この INTEGRATION_GLOBS が per-PR 実行可否の唯一の定義**
-// になった——同期すべき別の YAML paths: リストはもう存在しない（nightly.yml の
-// integration job は schedule / workflow_dispatch 起動で `paths:` を持たない
-// fallback 専用）。
+// になった——同期すべき別の YAML paths: リストはもう存在しない（2026-09-03 に
+// nightly.yml の integration job も撤去し、per-PR 実行が唯一の経路になった）。
 //
 // 判定結果（resolveImpact().integration）は $GITHUB_OUTPUT 経由で ci.yml の
-// test job（`needs.static.outputs.integration`）へ渡り、Supabase 起動と
+// integration job（`needs.impact.outputs.integration`）へ渡り、Supabase 起動と
 // integration/RLS test の実行可否を決める（#1815 で見送った gate job 化は
 // この統合で解消済み——affected 判定はもう workflow trigger と別建てではない）。
+//
+// **integration の配線そのものを持つファイルを含める**（`.github/workflows/ci.yml` /
+// `scripts/ci/check.mjs`、2026-09-02 #2539 の job 分割で追加）。これらを変更した PR で
+// integration=false になると、**配線を変えた当の job を一度も実走させないまま merge**
+// できてしまう。`.github/workflows/nightly.yml` も残してある——2026-09-03 に
+// integration job は撤去したが、`.github/actions/setup` などの共有部品を経由して
+// 影響しうるため、過剰発火側（安全側）に倒したまま据え置く。
+//
+// **このファイル自身（impact.mjs）は意図的に中立のまま**（内製クロスレビュー
+// risk-reviewer 指摘、P3）。INTEGRATION_GLOBS を締める変更だけを含む PR は
+// integration=false になり、新しい glob の下で integration job が走らない。
+// 保証境界は `scripts/ci/impact.test.ts` — この判定器の unit test は unit job で
+// 必ず走るため、glob の誤りは integration の実走を待たずに検出される。
+// 自己参照で全 PR に Supabase 起動を強いるより、判定器の test を厚くする側を採る。
 export const INTEGRATION_GLOBS = [
   '.nvmrc',
   'package.json',
@@ -87,6 +100,8 @@ export const INTEGRATION_GLOBS = [
   'apps/product/package.json',
   '.github/actions/setup/action.yml',
   '.github/workflows/nightly.yml',
+  '.github/workflows/ci.yml',
+  'scripts/ci/check.mjs',
   'apps/product/src/features/*/domain/**',
   'apps/product/src/features/*/server/**',
   'apps/product/src/lib/time/**',
@@ -180,7 +195,7 @@ const CI_TOOLCHAIN_FILES = new Set(['.github/actions/setup/action.yml']);
 function isNeutralPath(file) {
   const prefixes = [
     'scripts/', // CI / release / 開発補助。app へ bundle されない
-    '.github/', // workflow 定義（integration 対象の 2 path は先に判定済み）
+    '.github/', // workflow 定義（integration 対象の path は先に判定済み）
     '.claude/', // agent 設定・hooks
     '.husky/',
     '.vscode/',

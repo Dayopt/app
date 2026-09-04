@@ -323,8 +323,8 @@
         "subscriptionDesc": "Plan and billing management",
         "about": "About",
         "aboutDesc": "Legal information and version",
-        "tags": "Activities",
-        "tagsDesc": "Create and edit categories and activities"
+        "activities": "Activities",
+        "activitiesDesc": "Create and edit categories and activities"
       }
     },
     "dataControls": {
@@ -343,11 +343,10 @@
         "exportButton": "Export",
         "exportSuccess": "Data exported successfully",
         "exportFailed": "Export failed. Please try again.",
-        "csvComingSoon": "Coming soon",
         "includedDataTitle": "Data included in export",
         "profileInfo": "Profile information",
         "tasksEvents": "Timeblocks",
-        "tagSettings": "Activity settings",
+        "activitySettings": "Activity settings",
         "calendarSettings": "Calendar settings",
         "otherSettings": "Other settings"
       },
@@ -657,7 +656,7 @@
           "features": {
             "timeboxing": "Timeboxing & time tracking",
             "basicAnalytics": "Basic analytics (2 metrics)",
-            "tags": "Up to 5 activities",
+            "activities": "Up to 5 activities",
             "ai": "AI reflection (10/month)"
           }
         },
@@ -665,7 +664,7 @@
           "name": "Pro",
           "features": {
             "fullAnalytics": "All 8 metrics + chart views",
-            "unlimitedTags": "Unlimited activities",
+            "unlimitedActivities": "Unlimited activities",
             "api": "MCP / API access",
             "dataExport": "Data export (CSV/JSON)",
             "unlimitedAI": "Unlimited AI + model selection"

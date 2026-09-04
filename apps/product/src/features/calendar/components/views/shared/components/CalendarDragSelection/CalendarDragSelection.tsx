@@ -61,6 +61,7 @@ export const CalendarDragSelection = ({
       containerRef={containerRef as React.MutableRefObject<HTMLDivElement | null>}
     >
       {/* イベントハンドラ層 */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events -- グリッドをなぞって時間帯を選ぶポインタ専用の面。キーボードからの新規作成はサイドバーの「+」とアクティビティ行が担う */}
       <div
         className="absolute inset-0"
         onMouseDown={(e) => {

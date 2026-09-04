@@ -79,20 +79,11 @@
       "WebFetch",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_console_messages",
-      "mcp__playwright__browser_network_requests",
-      "mcp__github__search_issues",
-      "mcp__github__search_pull_requests",
-      "mcp__github__get_pull_request",
-      "mcp__github__list_pull_requests",
-      "mcp__github__get_issue",
       "Bash(env)",
       "Bash(sort:*)",
       "Edit(.claude/skills/**)",
       "Write(.claude/skills/**)",
+      "Skill(routing)",
       "Skill(error-handling)",
       "Skill(storybook)",
       "Skill(test)",
@@ -154,7 +145,8 @@
           {
             "type": "command",
             "command": "scripts/hooks/session-start.sh",
-            "statusMessage": "プロジェクト状態を取得中..."
+            "statusMessage": "プロジェクト状態を取得中...",
+            "timeout": 300
           },
           {
             "type": "command",
@@ -170,7 +162,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -179,7 +171,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -188,7 +180,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -197,7 +189,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -206,7 +198,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       },
@@ -215,7 +225,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "scripts/hooks/pre-tool-guard.sh"
+            "command": "node scripts/hooks/pre-tool-guard.mjs"
           }
         ]
       }

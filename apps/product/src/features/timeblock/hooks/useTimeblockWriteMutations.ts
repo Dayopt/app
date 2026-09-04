@@ -35,7 +35,7 @@ function isTimeblockQuery(query: { queryKey: unknown }): boolean {
 interface TimeModelListFilter {
   ids?: string[];
   search?: string;
-  tagId?: string;
+  activityId?: string;
   planId?: string;
   planIds?: string[];
   startDate?: string;
@@ -51,7 +51,7 @@ interface TimeModelListRow {
   id: string;
   title: string;
   note: string | null;
-  tag_id: string | null;
+  activity_id: string | null;
   start_at: string;
   end_at: string;
   created_at: string;
@@ -80,7 +80,7 @@ export function doesTimeModelListQueryIncludeRow(
   if (row.deleted_at != null) return false;
   if (operation === 'create' && (filter.offset ?? 0) > 0) return false;
   if (lane === 'plans' && filter.ids && !filter.ids.includes(row.id)) return false;
-  if (filter.tagId && row.tag_id !== filter.tagId) return false;
+  if (filter.activityId && row.activity_id !== filter.activityId) return false;
   if (lane === 'records' && filter.planId && row.plan_id !== filter.planId) return false;
   if (
     lane === 'records' &&
@@ -90,7 +90,7 @@ export function doesTimeModelListQueryIncludeRow(
     return false;
   if (lane === 'plans' && filter.includeSkipped === false && row.skipped_at != null) return false;
 
-  // tag名はlist rowだけでは解決できないため、検索cacheの一致判定はserver再検証へ任せる。
+  // アクティビティ名はlist rowだけでは解決できないため、検索cacheの一致判定はserver再検証へ任せる。
   if (filter.search) return false;
 
   if (filter.startDate && filter.endDate) {
@@ -313,7 +313,6 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       const tempPlan: PlanListItem = {
         id: tempId,
         user_id: '',
-        tag_id: null,
         activity_id: input.activityId ?? null,
         external_calendar_event_id: input.externalCalendarEventId ?? null,
         title: input.title,
@@ -350,7 +349,6 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
       const tempRecord: RecordListItem = {
         id: tempId,
         user_id: '',
-        tag_id: null,
         activity_id: input.activityId ?? null,
         plan_id: input.planId ?? null,
         external_calendar_event_id: input.externalCalendarEventId ?? null,

@@ -38,6 +38,7 @@ const APP_NAMESPACES = [
   'plan',
   'record',
   'navigation',
+  'report',
   'settings',
   'sidebar',
   'shortcuts',

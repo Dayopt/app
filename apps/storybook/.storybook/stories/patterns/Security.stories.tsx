@@ -265,7 +265,7 @@ export const Overview: Story = {
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.string().uuid()</code>
                   </td>
-                  <td className="py-2">timeblockId, tagId, planId</td>
+                  <td className="py-2">timeblockId, activityId, planId</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2 font-medium">文字列</td>
@@ -297,7 +297,7 @@ export const Overview: Story = {
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.array().max(100)</code>
                   </td>
-                  <td className="py-2">bulk operations, tag IDs</td>
+                  <td className="py-2">bulk operations, activity IDs</td>
                 </tr>
               </tbody>
             </table>
@@ -305,14 +305,14 @@ export const Overview: Story = {
 
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
             {`// tRPC ルーターでの入力検証パターン
-export const tagsRouter = createTRPCRouter({
+export const activitiesRouter = createTRPCRouter({
   create: protectedProcedure
     .input(z.object({
       name: z.string().min(1).max(50),       // 長さ制限
       color: z.enum(['blue', 'green', ...]),  // 列挙型
     }))
     .mutation(async ({ ctx, input }) => {
-      const service = createTagService(ctx.supabase);
+      const service = createActivityService(ctx.supabase);
       return service.create({
         userId: ctx.userId!,  // 必須: userId フィルタ
         ...input,
@@ -353,10 +353,10 @@ export const tagsRouter = createTRPCRouter({
                   <td className="py-2">soft delete (deleted_at)</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-medium">タグ削除</td>
+                  <td className="py-2 font-medium">アクティビティ削除</td>
                   <td className="py-2">destructive 確認 + 影響件数表示</td>
                   <td className="py-2">protectedProcedure + userId</td>
-                  <td className="py-2">plans / records の tag_id SET NULL</td>
+                  <td className="py-2">plans / records の activity_id SET NULL</td>
                 </tr>
                 <tr>
                   <td className="py-2 font-medium">MFA 無効化</td>

@@ -15,7 +15,6 @@ vi.mock('@/lib/analytics/product-events', () => ({ trackProductEvent, trackProdu
 const USER_ID = '00000000-0000-4000-8000-0000000000a1';
 const PLAN_ID = '00000000-0000-4000-8000-0000000000b1';
 const RECORD_ID = '00000000-0000-4000-8000-0000000000c1';
-const TAG_ID = '00000000-0000-4000-8000-0000000000d1';
 
 const plan: PlanRow = {
   created_at: '2026-07-29T00:00:00.000001Z',
@@ -27,7 +26,6 @@ const plan: PlanRow = {
   skipped_at: null,
   source: 'api',
   start_at: '2026-07-30T01:00:00.000000Z',
-  tag_id: null,
   activity_id: null,
   title: 'Original',
   updated_at: '2026-07-29T00:00:00.000001Z',
@@ -45,7 +43,6 @@ const record: RecordRow = {
   plan_id: PLAN_ID,
   source: 'manual',
   start_at: '2026-07-28T01:00:00.000000Z',
-  tag_id: null,
   activity_id: null,
   title: 'Record',
   updated_at: '2026-07-29T00:00:00.000002Z',
@@ -189,35 +186,5 @@ describe('TimeblockCommandService', () => {
         planId: PLAN_ID,
       }),
     );
-  });
-
-  it('updatePlanはtagIdを入力に持たないため、既にarchive済みのタグでもguardを呼ばず既存値を保持する', async () => {
-    const archivedPlan: PlanRow = { ...plan, tag_id: TAG_ID };
-    const planQuery = createChainableMock(archivedPlan);
-    const tagQuery = createChainableMock({ archived_at: '2026-07-20T00:00:00.000000Z' });
-    const supabase = createMockSupabase({
-      from: vi.fn((table: string) => (table === 'tags' ? tagQuery : planQuery)),
-    });
-    const commands = createCommands();
-    const expectedUpdatedAt = archivedPlan.updated_at;
-    const service = new TimeblockCommandService(
-      supabase as unknown as ServiceSupabaseClient,
-      commands as unknown as TimeblockCommandClient,
-    );
-
-    await expect(
-      service.updatePlan({
-        userId: USER_ID,
-        id: PLAN_ID,
-        expectedUpdatedAt,
-        input: { title: 'Changed' },
-      }),
-    ).resolves.toEqual(plan);
-
-    expect(tagQuery.select).not.toHaveBeenCalled();
-    // Step 8（tag_id 剥離）で tagId は command 入力から除去済み。archive 済みタグの
-    // guard も呼ばれず、既存値は DB 側で凍結されたまま一切送られない。
-    const updatePlanArgs = commands.updatePlan.mock.calls[0]?.[0];
-    expect(updatePlanArgs).not.toHaveProperty('tagId');
   });
 });

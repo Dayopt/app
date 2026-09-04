@@ -103,10 +103,9 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     }
 
     // テストデータを作成（エクスポートテスト用）
-    await adminSupabase.from('tags').insert({
+    await adminSupabase.from('activities').insert({
       user_id: TEST_USER_ID,
-      name: 'GDPR Test Tag',
-      color: 'red',
+      name: 'GDPR Test Activity',
     });
 
     await adminSupabase.from('plans').insert({
@@ -141,7 +140,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     // テストデータをクリーンアップ
     await adminSupabase.from('records').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('plans').delete().eq('user_id', TEST_USER_ID);
-    await adminSupabase.from('tags').delete().eq('user_id', TEST_USER_ID);
+    await adminSupabase.from('activities').delete().eq('user_id', TEST_USER_ID);
     await adminSupabase.from('user_settings').delete().eq('user_id', TEST_USER_ID);
 
     // テスト用ユーザーを削除（auth.usersから削除するとprofilesもカスケード削除される）
@@ -183,7 +182,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('profile');
       expect(result.data).toHaveProperty('plans');
       expect(result.data).toHaveProperty('records');
-      expect(result.data).toHaveProperty('tags');
+      expect(result.data).toHaveProperty('activities');
       expect(result.data).toHaveProperty('userSettings');
     });
 
@@ -207,15 +206,17 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data.userSettings).not.toHaveProperty('chronotype_settings');
     });
 
-    it('should include user tags in export', async () => {
+    it('should include user activities in export', async () => {
       const caller = createTestCaller(userRouter, ctx);
 
       const result = await caller.exportData();
 
-      expect(Array.isArray(result.data.tags)).toBe(true);
-      // テストで作成したタグが含まれている
-      const testTag = result.data.tags.find((t: { name?: string }) => t.name === 'GDPR Test Tag');
-      expect(testTag).toBeDefined();
+      expect(Array.isArray(result.data.activities)).toBe(true);
+      // テストで作成したアクティビティが含まれている
+      const testActivity = result.data.activities.find(
+        (a: { name?: string }) => a.name === 'GDPR Test Activity',
+      );
+      expect(testActivity).toBeDefined();
     });
 
     it('should not allow access without authentication', async () => {

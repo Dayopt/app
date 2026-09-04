@@ -24,6 +24,10 @@ interface ActivityDeleteConfirmDialogProps {
  * どちらも削除しても関連レコードは削除されない（アクティビティ削除は予定・記録が
  * 「アクティビティなし」になり、カテゴリー削除は所属アクティビティが未分類になる）。
  * 2 つは意味が違うため、`kind` で説明文を出し分ける。
+ *
+ * 影響が 0 件でも省略せず必ず出す（2026-09-04 User 指示）。削除は不可逆なので、
+ * 件数の有無ではなく操作の不可逆性そのものを確認の理由にする。0 件の時は
+ * 「〜件は削除されません」が空回りするため、専用の文言へ切り替える。
  */
 export function ActivityDeleteConfirmDialog({
   open,
@@ -42,7 +46,13 @@ export function ActivityDeleteConfirmDialog({
       onConfirm={onConfirm}
       title={t('delete.confirmTitle', { name })}
       description={t(
-        kind === 'activity' ? 'delete.activityDescription' : 'delete.categoryDescription',
+        affectedCount === 0
+          ? kind === 'activity'
+            ? 'delete.activityDescriptionEmpty'
+            : 'delete.categoryDescriptionEmpty'
+          : kind === 'activity'
+            ? 'delete.activityDescription'
+            : 'delete.categoryDescription',
         { count: affectedCount },
       )}
       variant="destructive"

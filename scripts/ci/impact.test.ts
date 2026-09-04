@@ -193,8 +193,7 @@ describe('中立 path（app 成果物に影響しない）', () => {
     // できるが、誤りは fail open（exit 非 0 = build 続行）に倒れるため integrity は
     // 崩れない。wrong-skip 方向の regression は本ファイルの unit test が防波堤になる。
     [['scripts/ci/impact.mjs', 'scripts/ci/impact.test.ts']],
-    [['scripts/hooks/pre-tool-guard.sh', '.claude/settings.json']],
-    [['.github/workflows/ci.yml']],
+    [['scripts/hooks/pre-tool-guard.mjs', '.claude/settings.json']],
     [['.husky/pre-push', '.vscode/settings.json']],
     [['apps/storybook/.storybook/main.ts']],
     [['eslint.config.mjs', '.prettierrc', 'vitest.scripts.config.ts']],
@@ -211,10 +210,20 @@ describe('中立 path（app 成果物に影響しない）', () => {
     });
   });
 
-  it('nightly.yml（heavy-e2e/heavy-web/integration job を含む）の変更は integration を要求する', () => {
+  it('nightly.yml の変更は integration を要求する（共有部品経由の影響を安全側へ倒す）', () => {
     // #2483 で旧 integration.yml から統合。nightly.yml は CI_TOOLCHAIN_FILES には
     // 含まれないため productUnit / webCi は誘発しない（setup action とは違う扱い）。
     expectImpact(['.github/workflows/nightly.yml'], { integration: true });
+  });
+
+  it('ci.yml / check.mjs（integration job の配線を持つ）の変更は integration を要求する', () => {
+    // #2539 で integration を独立 job へ切り出したことによる変更。**job まるごとが
+    // `if:` で skip されうる**ようになったため、配線を変えた PR で integration=false に
+    // なると、Supabase 起動〜`check.mjs integration` が一度も実走しないまま merge できる。
+    // job 分割前は「単一 test job が必ず走り、中の条件分岐だけが未検証」だったので
+    // 中立で済んでいた（下の CI toolchain describe が旧線引きの残りを固定する）。
+    expectImpact(['.github/workflows/ci.yml'], { integration: true });
+    expectImpact(['scripts/ci/check.mjs'], { integration: true });
   });
 });
 
@@ -240,7 +249,13 @@ describe('CI toolchain（productUnit / webCi と product / web の分離）', ()
     // ci.yml を変えた PR ではその新しい ci.yml 自体が実行されるため、gate 判定・
     // job 構成・無条件 step は検証される。ここを productUnit に含めると
     // product=false な PR の 1/3（実測 19 件中 7 件）で skip できなくなる。
-    expectImpact(['.github/workflows/ci.yml'], {});
+    //
+    // **integration は別**（#2539 の job 分割で INTEGRATION_GLOBS へ追加済み）。
+    // unit job は ci.yml を変えた PR で必ず走る（＝この線引きが今も成立する）が、
+    // integration job は job ごと skip されうるため同じ理屈が通らない。
+    const impact = expectImpact(['.github/workflows/ci.yml'], { integration: true });
+    expect(impact.productUnit).toBe(false);
+    expect(impact.product).toBe(false);
   });
 
   it('product 変更と同時なら productUnit も当然 true', () => {

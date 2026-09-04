@@ -91,7 +91,7 @@ code: .github/dependabot.yml
 
 ### judgment
 
-- `judgment:diverged` — 指揮台（または `dispatch` skill（旧 orchestration.md、#2479 で再編） §メタ把握（User + Fable） の会話）の推奨と User の判断が分かれた記録（未判定 or 判定材料待ち）。判定を書いたら外さず `judgment:judged` へ付け替える
+- `judgment:diverged` — Main（dispatch skill を実行する session）の推奨と User の判断が分かれた記録（未判定 or 判定材料待ち）。判定を書いたら外さず `judgment:judged` へ付け替える
 - `judgment:judged` — 個別判定を書き終えた状態（2026-08-27、User 裁可の新設。`judgment` namespace 内の追加のため既存 2 値体系への例外にあたる。経緯は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル）。`docs/decisions.md` への反映はラベル→月次 sync 機構ではなく、判定時点での直接追記に一本化済み（2026-08-28、#2475）
 
 運用は `dispatch` skill（旧 orchestration.md、#2479 で再編） §判断ジャーナル
@@ -99,7 +99,7 @@ code: .github/dependabot.yml
 ### review
 
 - `review:full` — **Issue / PR 共通の高リスクシグナル**（2026-09-01、[#2529](https://github.com/Dayopt/dayopt/issues/2529) / [#2530](https://github.com/Dayopt/dayopt/issues/2530)）。手で付ける明示的なエスカレーションで、AI が自動付与する仕組みは作らない
-  - **PR に付いている場合**: 保護対象 path に該当しなくてもクロスレビュー必須になる（`[internal-review]` marker + 現 HEAD 束縛の Codex review が両方必要）。判定は `scripts/tasks/finish-branch.sh` が `scripts/ci/protected-path-gate.mjs` と併せて行う
+  - **PR に付いている場合**: 保護対象 path に該当しなくてもクロスレビュー必須になる（内製証跡の commit status `dayopt/internal-review` + Codex 自身の証跡が両方必要。どちらも現 HEAD 一致または diff 指紋一致で束縛する）。判定は `scripts/tasks/finish-branch.sh` が `scripts/ci/protected-path-gate.mjs` と併せて行う
   - **Issue に付いている場合**: 実装着手前に Codex Issue Review が必須になる（`pnpm review:issue:gate <N>` が機械判定、`dispatch` skill 操作A 手順 6）。さらに、その issue を `Closes #N` した PR も自動的にクロスレビュー必須になる（`Refs #N` や本文中の URL は継承しない）
   - **ラベルを外しても gate 対象のまま**（`review:full` の削除履歴、またはこの issue 宛ての review marker があれば降格しない。失敗したレビューをラベル削除で迂回させないため）。再分類したい場合は current な pass 証跡を作る
 

@@ -7,7 +7,7 @@
  * 掛け算は client の pure 関数（`projectActualMinutes`）で行う。draft の時間を
  * 動かすたびに query を撃つ必要は無く、debounce も要らない。
  *
- * hook 名・ファイル名（`tag-estimation-factor.ts`）は tRPC procedure 名
+ * hook 名・ファイル名（`activity-estimation-factor.ts`）は tRPC procedure 名
  * （`statistics.getTagEstimationFactors`、破壊的公開契約変更を避けるため維持）
  * との対応を保つため据え置いている。中身は activity 軸の集計
  * （issue #2162 のコメント欄 step-5-7-completion.md §4-2 相当、#2473 で移設）。
@@ -18,7 +18,7 @@ import { useMemo } from 'react';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import { projectActualMinutes } from '../domain/tag-estimation-factor';
+import { projectActualMinutes } from '../domain/activity-estimation-factor';
 
 interface ActivityEstimationProjection {
   /** draft の予定時間に係数を掛けた実時間（分、5 分刻み）。 */

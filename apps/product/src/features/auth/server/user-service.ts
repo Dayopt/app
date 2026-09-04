@@ -174,7 +174,6 @@ interface ExportDataResult {
     records: PublicRecordRow[];
     categories: Row<'categories'>[];
     activities: Row<'activities'>[];
-    tags: Row<'tags'>[];
     userSettings: PublicUserSettingsRow | null;
   };
 }
@@ -191,7 +190,7 @@ export function createUserService(
      * アカウント即時削除
      *
      * auth.users を削除すると CASCADE DELETE により
-     * entries, tags 等すべてのユーザーデータが自動削除される
+     * plans / records / activities / categories 等すべてのユーザーデータが自動削除される
      */
     async deleteAccount(options: DeleteAccountOptions): Promise<DeleteAccountResult> {
       const { userId, userEmail, userName, password, totpCode, requiresPassword, confirmText } =
@@ -467,7 +466,7 @@ export function createUserService(
 
     /**
      * 全データを削除（アカウントは保持）
-     * plans, records, activities, categories, tags, 設定を全削除
+     * plans, records, activities, categories, 設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
       const adminClient = createServiceRoleClient();
@@ -478,7 +477,6 @@ export function createUserService(
         databaseTables.plans,
         databaseTables.activities,
         databaseTables.categories,
-        databaseTables.tags,
         databaseTables.userSettings,
       ] as const) {
         const { error } = await adminClient.from(table).delete().eq('user_id', userId);
@@ -512,7 +510,6 @@ export function createUserService(
         recordsResult,
         categoriesResult,
         activitiesResult,
-        tagsResult,
         userSettingsResult,
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', userId).single(),
@@ -520,7 +517,6 @@ export function createUserService(
         adminClient.from(databaseTables.records).select(publicRecordSelect).eq('user_id', userId),
         supabase.from(databaseTables.categories).select('*').eq('user_id', userId),
         supabase.from(databaseTables.activities).select('*').eq('user_id', userId),
-        supabase.from('tags').select('*').eq('user_id', userId),
         supabase
           .from('user_settings')
           .select(publicUserSettingsSelect)
@@ -563,13 +559,6 @@ export function createUserService(
         });
         throw new UserServiceError('EXPORT_FAILED', 'Activities fetch failed', { cause: original });
       }
-      if (tagsResult.error) {
-        const original = captureUnexpectedDatabaseError(tagsResult.error, {
-          feature: 'account_export',
-          operation: 'fetch_tags',
-        });
-        throw new UserServiceError('EXPORT_FAILED', 'Tags fetch failed', { cause: original });
-      }
       if (userSettingsResult.error && userSettingsResult.error.code !== 'PGRST116') {
         const original = captureUnexpectedDatabaseError(userSettingsResult.error, {
           feature: 'account_export',
@@ -588,7 +577,6 @@ export function createUserService(
           records: recordsResult.data || [],
           categories: categoriesResult.data || [],
           activities: activitiesResult.data || [],
-          tags: tagsResult.data || [],
           userSettings: userSettingsResult.data || null,
         },
       };

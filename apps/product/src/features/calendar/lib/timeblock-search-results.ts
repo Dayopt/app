@@ -4,7 +4,6 @@ export type TimeblockSearchResultKind = 'plan' | 'record';
 export interface TimeblockSearchSourceRow {
   id: string;
   note: string | null;
-  tag_id: string | null;
   activity_id: string | null;
   start_at: string;
   end_at: string;
@@ -16,7 +15,6 @@ export interface TimeblockSearchResult {
   kind: TimeblockSearchResultKind;
   id: string;
   note: string | null;
-  tagId: string | null;
   activityId: string | null;
   startAt: string;
   endAt: string;
@@ -36,7 +34,6 @@ function toSearchResult(
     kind,
     id: row.id,
     note: row.note,
-    tagId: row.tag_id,
     activityId: row.activity_id,
     startAt: row.start_at,
     endAt: row.end_at,

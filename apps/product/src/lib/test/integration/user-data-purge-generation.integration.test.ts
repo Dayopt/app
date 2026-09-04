@@ -327,7 +327,7 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     const connectionId = await saveCalendarConnection(generation);
     const calendarId = crypto.randomUUID();
     const eventId = crypto.randomUUID();
-    const tagId = crypto.randomUUID();
+    const activityId = crypto.randomUUID();
     const receiptOperationId = crypto.randomUUID();
     const receiptResourceId = crypto.randomUUID();
     const { codeHash, connectionId: oauthConnectionId } = await createOAuthAuthority();
@@ -358,14 +358,13 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     expect(eventError).toBeNull();
 
     // Plan / Record の FK 先を先に確定する。Promise.all に含めると、PostgREST request の
-    // 到着順次第で tag commit 前に子が insert され、fixture 自体が非決定的に失敗する。
-    const { error: tagError } = await admin.from('tags').insert({
-      id: tagId,
+    // 到着順次第で activity commit 前に子が insert され、fixture 自体が非決定的に失敗する。
+    const { error: activityError } = await admin.from('activities').insert({
+      id: activityId,
       user_id: userId,
       name: 'Purge me',
-      sort_order: 0,
     });
-    expect(tagError).toBeNull();
+    expect(activityError).toBeNull();
 
     const fixtureResults = await Promise.all([
       admin
@@ -374,7 +373,6 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
       admin.from('plans').insert({
         user_id: userId,
         title: 'Purge Plan',
-        tag_id: tagId,
         external_calendar_event_id: eventId,
         source: 'external_calendar',
         start_at: instant(3 * 60 * 60_000),
@@ -383,7 +381,6 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
       admin.from('records').insert({
         user_id: userId,
         title: 'Purge Record',
-        tag_id: tagId,
         start_at: instant(-4 * 60 * 60_000),
         end_at: instant(-3 * 60 * 60_000),
       }),
@@ -447,7 +444,7 @@ describe.skipIf(!RUN_LOCAL)('account-preserving user-data purge generation', () 
     for (const table of [
       'plans',
       'records',
-      'tags',
+      'activities',
       'user_settings',
       'reports',
       'calendar_connections',

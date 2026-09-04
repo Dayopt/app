@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
+  buildStatusDescription,
+  buildStatusPostCommand,
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
+  deriveRoleFindingsField,
+  STATUS_DESCRIPTION_MAX_LENGTH,
   type ReviewResultEntry,
 } from '../lib/generate-marker-core.ts';
 
@@ -31,7 +35,7 @@ describe('buildMarkerBody', () => {
     });
 
     expect(body).toBe(
-      ['[internal-review]', `head: ${VALID_SHA}`, 'agent: docs-only', 'P1: なし', 'P2: なし'].join(
+      ['[review-summary]', `head: ${VALID_SHA}`, 'agent: docs-only', 'P1: なし', 'P2: なし'].join(
         '\n',
       ),
     );
@@ -48,7 +52,7 @@ describe('buildMarkerBody', () => {
     });
 
     expect(body.split('\n')).toEqual([
-      '[internal-review]',
+      '[review-summary]',
       `head: ${VALID_SHA}`,
       'agent: risk-reviewer, behavior-verifier',
       'P1: なし',
@@ -152,6 +156,69 @@ describe('buildMarkerBody', () => {
         partialCoverageRoles: [],
       }),
     ).not.toThrow();
+  });
+
+  it('roleFindingsField が非空なら findings: 行を agent: の直後・P1: の直前に挟む', () => {
+    const body = buildMarkerBody({
+      headSha: VALID_SHA,
+      agent: 'risk-reviewer, behavior-verifier',
+      roleFindingsField: 'risk-reviewer=2(P1 1/P2 1), behavior-verifier=0',
+      p1Count: 0,
+      p2Count: 2,
+      p2Note: 'review comment 参照',
+    });
+
+    expect(body.split('\n')).toEqual([
+      '[review-summary]',
+      `head: ${VALID_SHA}`,
+      'agent: risk-reviewer, behavior-verifier',
+      'findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0',
+      'P1: なし',
+      'P2: 2 件（review comment 参照）',
+    ]);
+  });
+
+  it('roleFindingsField が未指定・空文字列なら findings: 行を省略する（--agent 直接指定・docs-only）', () => {
+    const bodyWithoutField = buildMarkerBody({
+      headSha: VALID_SHA,
+      agent: 'docs-only',
+      p1Count: 0,
+      p2Count: 0,
+    });
+    const bodyWithBlankField = buildMarkerBody({
+      headSha: VALID_SHA,
+      agent: 'docs-only',
+      roleFindingsField: '   ',
+      p1Count: 0,
+      p2Count: 0,
+    });
+
+    expect(bodyWithoutField).not.toContain('findings:');
+    expect(bodyWithBlankField).not.toContain('findings:');
+  });
+
+  it('findings: 行は finish-branch.sh の head:/agent:/P1:/P2: 行アンカー正規表現と干渉しない', () => {
+    // finish-branch.sh は `(?m)^head:`, `(?m)^agent:[ \t]*\S`,
+    // `(?m)^P1:[ \t]*(?<v>[^\n\r]*)`, `(?m)^P2:[ \t]*(?<v>[^\n\r]*)` を行頭アンカーで
+    // 見る。findings: 行がこれらのどれとも前方一致しないことを固定する。
+    const body = buildMarkerBody({
+      headSha: VALID_SHA,
+      agent: 'risk-reviewer',
+      roleFindingsField: 'risk-reviewer=1(P1 1/P2 0)',
+      p1Count: 1,
+      p1Note: 'review comment 参照',
+      p2Count: 0,
+    });
+    const findingsLine = body.split('\n').find((l) => l.startsWith('findings:'));
+    expect(findingsLine).toBeDefined();
+    expect(findingsLine).not.toMatch(/^head:/);
+    expect(findingsLine).not.toMatch(/^agent:/);
+    expect(findingsLine).not.toMatch(/^P1:/);
+    expect(findingsLine).not.toMatch(/^P2:/);
+    // 5 点チェック用の行はそれぞれ単独行のまま存在し続ける
+    expect(body).toMatch(new RegExp(`(?<!\\S)head: ${VALID_SHA}(?!\\S)`));
+    expect(body).toMatch(/(?:^|\n)agent: \S/);
+    expect(body).toMatch(/(?:^|\n)P1: 1 件（review comment 参照）/);
   });
 
   it('負数・非整数の件数を拒否する', () => {
@@ -317,5 +384,161 @@ describe('assertAgentFieldHasNoKnownReviewerRole', () => {
 
   it('既知 role と無関係な自由記述は許可する', () => {
     expect(() => assertAgentFieldHasNoKnownReviewerRole('my-custom-note')).not.toThrow();
+  });
+});
+
+/**
+ * deriveRoleFindingsField の契約テスト。
+ *
+ * marker 本文の role 別 findings 内訳を、`--review-result` の `result.findings`
+ * （cross-review-workflow.js の SCHEMA_CONTRACT が定義する schema 強制済みの配列）
+ * から機械的に導出する。role 別の指摘数は marker にしか現れない authoritative な
+ * 数値であり、`scripts/tasks/trace.mjs` がこれを最優先で読む。
+ */
+describe('deriveRoleFindingsField', () => {
+  it('status: ok の role は findings 件数と P1/P2 内訳を組み立てる', () => {
+    const entries: ReviewResultEntry[] = [
+      {
+        role: 'risk-reviewer',
+        status: 'ok',
+        result: {
+          findings: [{ severity: 'critical' }, { severity: 'low' }],
+        },
+      },
+      {
+        role: 'behavior-verifier',
+        status: 'ok',
+        result: { findings: [] },
+      },
+    ];
+
+    expect(deriveRoleFindingsField(entries)).toBe(
+      'risk-reviewer=2(P1 1/P2 1), behavior-verifier=0',
+    );
+  });
+
+  it('architecture-guard / behavior-verifier は blocker だけを P1 相当として数える', () => {
+    const entries: ReviewResultEntry[] = [
+      {
+        role: 'architecture-guard',
+        status: 'ok',
+        result: {
+          findings: [{ severity: 'blocker' }, { severity: 'warning' }, { severity: 'warning' }],
+        },
+      },
+    ];
+
+    expect(deriveRoleFindingsField(entries)).toBe('architecture-guard=3(P1 1/P2 2)');
+  });
+
+  it('text-fallback の role は件数を主張せず (text-fallback)=不明 にする', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'behavior-verifier', status: 'text-fallback' },
+      {
+        role: 'risk-reviewer',
+        status: 'ok',
+        result: { findings: [{ severity: 'high' }] },
+      },
+    ];
+
+    expect(deriveRoleFindingsField(entries)).toBe(
+      'behavior-verifier(text-fallback)=不明, risk-reviewer=1(P1 1/P2 0)',
+    );
+  });
+
+  it('status: ok なのに result.findings が配列でなければ拒否する（fail-closed）', () => {
+    const entries: ReviewResultEntry[] = [{ role: 'risk-reviewer', status: 'ok', result: {} }];
+
+    expect(() => deriveRoleFindingsField(entries)).toThrow(/result\.findings が配列ではありません/);
+  });
+
+  it('status: ok なのに result 自体が欠落していれば拒否する（fail-closed）', () => {
+    const entries: ReviewResultEntry[] = [{ role: 'behavior-verifier', status: 'ok' }];
+
+    expect(() => deriveRoleFindingsField(entries)).toThrow(/result\.findings が配列ではありません/);
+  });
+
+  it('empty/error の role は無視する（deriveAgentFieldFromReviewResult が先に例外を投げる前提）', () => {
+    const entries: ReviewResultEntry[] = [
+      { role: 'architecture-guard', status: 'empty' },
+      {
+        role: 'risk-reviewer',
+        status: 'ok',
+        result: { findings: [] },
+      },
+    ];
+
+    expect(deriveRoleFindingsField(entries)).toBe('risk-reviewer=0');
+  });
+
+  it('entries が空なら空文字列を返す', () => {
+    expect(deriveRoleFindingsField([])).toBe('');
+  });
+});
+
+// ── commit status（#2562）+ レビュー指紋（#2558）────────────────────────
+//
+// 証跡の材料が「Main が自由に書く PR コメント」から commit status へ移った。
+// gate が読むのは description の機械可読フィールドだけなので、その書式と
+// fail-closed の入力検証をここで固定する。
+describe('buildStatusDescription / buildStatusPostCommand', () => {
+  const FP = 'a'.repeat(16);
+  const FPA = 'b'.repeat(16);
+
+  const base = {
+    p1Count: 0,
+    p2Count: 0,
+    fingerprintProtected: FP,
+    fingerprintAll: FPA,
+    agent: 'risk-reviewer, behavior-verifier',
+    coverage: 'complete' as const,
+  };
+
+  it('機械可読フィールドを先頭に固定して組み立てる', () => {
+    expect(buildStatusDescription(base)).toBe(
+      `p1=0 p2=0 fp=${FP} fpa=${FPA} coverage=complete agents=risk-reviewer, behavior-verifier`,
+    );
+  });
+
+  it('140 字を超えても gate が読む p1 / p2 / fp / fpa は先頭に残る', () => {
+    const description = buildStatusDescription({ ...base, agent: 'x'.repeat(300) });
+    expect(description.length).toBe(STATUS_DESCRIPTION_MAX_LENGTH);
+    expect(description.startsWith(`p1=0 p2=0 fp=${FP} fpa=${FPA} coverage=complete`)).toBe(true);
+  });
+
+  it('p1 / p2 が整数でなければ拒否する', () => {
+    expect(() => buildStatusDescription({ ...base, p1Count: 1.5 })).toThrow(/0 以上の整数/);
+    expect(() => buildStatusDescription({ ...base, p2Count: -1 })).toThrow(/0 以上の整数/);
+  });
+
+  it('指紋が 16 桁 hex でなければ拒否する', () => {
+    expect(() => buildStatusDescription({ ...base, fingerprintProtected: 'zz' })).toThrow(/fp は/);
+    expect(() => buildStatusDescription({ ...base, fingerprintAll: '' })).toThrow(/fpa は/);
+  });
+
+  it('partial coverage を description に載せる（gate は数値だけ見るが、人が気づける）', () => {
+    expect(buildStatusDescription({ ...base, coverage: 'partial' })).toContain('coverage=partial');
+  });
+
+  it('投稿コマンドは実測 head SHA を URL へ埋め、context を固定する', () => {
+    const command = buildStatusPostCommand({
+      headSha: VALID_SHA,
+      description: buildStatusDescription(base),
+    });
+    expect(command).toContain(`repos/{owner}/{repo}/statuses/${VALID_SHA}`);
+    expect(command).toContain("-f context='dayopt/internal-review'");
+    expect(command).toContain('-f state=success');
+  });
+
+  it('head SHA が 40 桁 hex でなければ投稿コマンドを作らない（捏造の再発防止）', () => {
+    expect(() => buildStatusPostCommand({ headSha: 'abc1234', description: 'p1=0 p2=0' })).toThrow(
+      /40 桁 hex/,
+    );
+  });
+
+  it('description が上限超過なら投稿コマンドを作らない', () => {
+    expect(() =>
+      buildStatusPostCommand({ headSha: VALID_SHA, description: 'x'.repeat(141) }),
+    ).toThrow(/140 字を超えています/);
   });
 });

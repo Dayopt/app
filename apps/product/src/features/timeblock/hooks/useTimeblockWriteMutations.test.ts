@@ -9,8 +9,8 @@ const row = {
   id: 'record-1',
   title: 'Deep Work',
   note: 'Focus',
-  tag_id: 'tag-1',
   plan_id: 'plan-1',
+  activity_id: 'activity-1',
   start_at: '2026-07-10T01:00:00.000Z',
   end_at: '2026-07-10T02:00:00.000Z',
   created_at: '2026-07-10T00:00:00.000Z',
@@ -80,16 +80,16 @@ describe('useTimeblockWriteMutations', () => {
     expect(doesTimeModelListQueryIncludeRow(listKey({ offset: 10 }), row, 'records')).toBe(false);
   });
 
-  it('tag filterは行から判定する', () => {
-    expect(doesTimeModelListQueryIncludeRow(listKey({ tagId: 'tag-1' }), row, 'records')).toBe(
-      true,
-    );
-    expect(doesTimeModelListQueryIncludeRow(listKey({ tagId: 'tag-2' }), row, 'records')).toBe(
-      false,
-    );
+  it('activity filterは行から判定する', () => {
+    expect(
+      doesTimeModelListQueryIncludeRow(listKey({ activityId: 'activity-1' }), row, 'records'),
+    ).toBe(true);
+    expect(
+      doesTimeModelListQueryIncludeRow(listKey({ activityId: 'activity-2' }), row, 'records'),
+    ).toBe(false);
   });
 
-  it('tag名を解決できないsearch cacheは楽観更新の一致対象にしない', () => {
+  it('アクティビティ名を解決できないsearch cacheは楽観更新の一致対象にしない', () => {
     expect(doesTimeModelListQueryIncludeRow(listKey({ search: 'focus' }), row, 'records')).toBe(
       false,
     );

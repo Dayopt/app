@@ -25,7 +25,6 @@ const plan: Row<'plans'> = {
   skipped_at: null,
   source: 'manual',
   start_at: '2026-07-24T01:00:00.000000Z',
-  tag_id: null,
   activity_id: null,
   title: 'Plan',
   updated_at: '2026-07-23T00:00:00.000001Z',

@@ -19,7 +19,7 @@ describe('collectTimeblockLaneItems', () => {
   it('指定レーンのlist cacheだけを集め、同じidを重複させない', () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData([['plans', 'list'], { input: { startDate: '2026-07-17' } }], [plan]);
-    queryClient.setQueryData([['plans', 'list'], { input: { tagId: 'tag-1' } }], [plan]);
+    queryClient.setQueryData([['plans', 'list'], { input: { activityId: 'activity-1' } }], [plan]);
     queryClient.setQueryData(
       [['records', 'list'], { input: { startDate: '2026-07-17' } }],
       [record],

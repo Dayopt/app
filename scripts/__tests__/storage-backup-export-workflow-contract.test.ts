@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
  *
  * storage-backup-export.yml は #2483（CI ファイル統合 Phase 1）で nightly.yml へ
  * 吸収された（storage-backup-export job）。ファイル全体を regex 走査するため、
- * 他 job（heavy-e2e 等）が RCLONE_ 始まりの env キーを持たない限り false
+ * 他 job（replica-check 等）が RCLONE_ 始まりの env キーを持たない限り false
  * positive にはならない。
  */
 const workflow = readFileSync(join(process.cwd(), '.github/workflows/nightly.yml'), 'utf8');

@@ -9,21 +9,41 @@
  * 各種チェックの実行はここに内包する。
  *
  * Usage:
+ *   node scripts/ci/check.mjs impact
  *   node scripts/ci/check.mjs static
- *   node scripts/ci/check.mjs test
+ *   node scripts/ci/check.mjs unit
+ *   node scripts/ci/check.mjs integration
  *
- * static: gitleaks CLI + allowlist canary + secrets:check + docs:check +
- *         validate:content（常時）+ typecheck/lint/knip/check:static の並列
- *         lane（docs-only でなければ）+ supabase/functions/** 変更時のみ deno check
- * test:   unit（product/web/i18n/observability + scripts、常時）+ 新規 migration の
- *         destructive scan（pull_request イベント時は常時）+ affected な PR だけ
- *         integration/RLS（Supabase の起動自体は ci.yml 側の `if:` が担い、
- *         接続情報は env 経由で渡される前提）
+ * impact:      PR の変更ファイルから affected 判定を出すだけの軽量 job（全 job の上流）
+ * static:      gitleaks CLI + allowlist canary + secrets:check + docs:check +
+ *              validate:content（常時）+ typecheck/lint/knip/check:static の並列
+ *              lane（docs-only でなければ）+ supabase/functions/** 変更時のみ deno check
+ * unit:        unit（product/web/i18n/observability + scripts、常時）+ 新規 migration の
+ *              destructive scan（pull_request イベント時は常時）。**DB を一切使わない**
+ * integration: affected な PR だけ integration/RLS（Supabase の起動自体は ci.yml 側の
+ *              `if:` が担い、接続情報は env 経由で渡される前提）
  *
- * impact 判定は static モードで 1 回だけ行い、`$GITHUB_OUTPUT` へ書き出す
- * （docs_only / product_unit / integration）。test job はそれを
- * `needs.static.outputs` 経由で env として受け取り、ここでは再計算しない —
- * 同一 PR の 2 job で gh api を 2 回叩いて結果がずれるリスクを避けるため。
+ * **unit と integration を別 job に分けてあるのは、直列だった 2 種類の検査を
+ * 並列化するため**（2026-09-02、#2539）。分割前は 1 job の中で「Supabase 起動
+ * （約 3 分）→ unit（約 7 分）→ integration（約 1.6 分）」が直列に並んでいた。
+ * 分割後は unit と integration が別 runner で同時に走る（実測値の正本は
+ * docs/engineering/infra.md §merge gate。ここには数値を置かない）。
+ *
+ * **CPU 競合はほぼ関係なかった**（当初の仮説は実測で否定された）。同じ
+ * product unit test の所要は Supabase 同居時 5 分 06 秒 / 非同居時 4 分 55 秒で、
+ * 差は 3.6% しかない。分割前のデータで「integration を走らせない PR は 1〜2 分」に
+ * 見えたのは、それらが同時に `product_unit=false`（product unit test 自体を skip）
+ * だったための交絡で、Supabase の有無とは無関係だった。
+ *
+ * したがって **product unit test の 5 分そのものは、この分割では縮んでいない**。
+ * そこを縮めるのは別の手（affected 判定の見直し / vitest --changed 等、#2539 の続き）。
+ *
+ * impact 判定は impact モードで 1 回だけ行い、`$GITHUB_OUTPUT` へ書き出す
+ * （docs_only / product_unit / integration / functions_changed）。static / unit /
+ * integration job はそれを `needs.impact.outputs` 経由で env として受け取り、
+ * ここでは再計算しない — 同一 PR の複数 job で gh api を叩いて結果がずれる
+ * リスクを避けるため。判定を独立 job にしたのは、static の完走（実測 4 分 20 秒）を
+ * 待たずに重い job を起動するため（詳細は runImpact のコメント）。
  */
 
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
@@ -47,8 +67,8 @@ const MIGRATION_LABEL = 'db:destructive-migration';
 // DI 用の簡略型（`typeof execFileSync` 等の strict overload 型をそのまま JSDoc に
 // 使うと、test の単純な mock（`vi.fn(() => 'stdout')` 等）が Node の完全な戻り値型
 // （pid/output/stdout/stderr/signal を持つ SpawnSyncReturns 等）と一致せず
-// typecheck が落ちる。scripts/ci/night-watch/run-all.mjs の ExecFileImpl と同じ
-// 設計判断——実際に呼び出し側が使うプロパティだけを持つ最小型に絞る）。
+// typecheck が落ちる。scripts/lib/gh.mjs の ExecFileImpl と同じ設計判断——
+// 実際に呼び出し側が使うプロパティだけを持つ最小型に絞る）。
 /** @typedef {(file: string, args: string[], options?: object) => string} ExecFileImpl */
 /** @typedef {(command: string, args: string[], options?: object) => { status: number | null }} SpawnImpl */
 /** @typedef {(path: string, encoding: string) => string} ReadFileImpl */
@@ -233,9 +253,24 @@ async function writeStepSummary(markdown) {
   appendFileSync(path, `${markdown}\n`);
 }
 
-// ─── static モード ───────────────────────────────────────────────────
-
-async function runStatic() {
+// ─── impact モード（判定だけを行う軽量 job。全 job の上流）────────────
+//
+// **静的検査より前に、単独の job として判定を出す**（2026-09-02、#2539 続き）。
+// 分離前は static job が判定を持っていたため、判定を待つ unit / integration が
+// static の完走（実測 4 分 20 秒）を直列で待っていた。判定自体は gh api 1 回 +
+// 純関数で数秒しかかからず、`pnpm install` すら不要（impact.mjs は node 標準
+// ライブラリと workspace の package.json しか読まない）。
+//
+// **fail-fast（static が落ちたら重い job を走らせない）を捨てる判断**は実測に
+// 基づく: 直近 50 run で static job の failure は 0 件（success 28 / draft skip 20 /
+// cancelled 1）だった。同じ検査を pre-push フックが先に走らせるため、CI で
+// static が落ちる経路がほぼ塞がっている。**節約が一度も発動していない直列**の
+// ために全 PR が 4 分待つのは割に合わない。
+//
+// なお static が落ちた時に unit が success になっても merge は通らない
+// （finish-branch.sh が `🔍 Static Checks` の success を名前で要求する）。
+// 並列化で緩むのは課金だけで、gate は緩まない。
+async function runImpact() {
   const repo = process.env.GITHUB_REPOSITORY;
   const eventName = process.env.GITHUB_EVENT_NAME;
   const prNumber = process.env.PR_NUMBER;
@@ -244,7 +279,25 @@ async function runStatic() {
   const filenames = isPr ? fetchPrFilenames({ repo, prNumber }) : [];
   const impact = resolveImpact(filenames);
   await writeStepSummary(formatImpactSummary(impact));
-  await writeGithubOutput(formatGithubOutput(impact).trim().split('\n'));
+
+  // `functions_changed` は impact.mjs（app build への影響判定）の関心ではないため
+  // ここで併せて出す。static job の deno check がこれを見る。`!isPr` を true 側へ
+  // 倒すのは分離前の runStatic と同じ規約（workflow_dispatch では全部走らせる）。
+  const functionsChanged = !isPr || filenames.some((f) => f.startsWith('supabase/functions/'));
+
+  await writeGithubOutput([
+    ...formatGithubOutput(impact).trim().split('\n'),
+    `functions_changed=${functionsChanged}`,
+  ]);
+}
+
+// ─── static モード ───────────────────────────────────────────────────
+
+async function runStatic() {
+  // impact 判定は上流の impact job が済ませており、ここでは env 経由で受け取る
+  // （同一 PR の複数 job で gh api を叩いて結果がずれるのを避ける既存規約）。
+  const docsOnly = process.env.DOCS_ONLY;
+  const functionsChanged = process.env.FUNCTIONS_CHANGED;
 
   // ── secret scan（gitleaks、旧 docs-guard.yml）─────────────────────
   const GITLEAKS_VERSION = '8.30.1';
@@ -257,6 +310,7 @@ async function runStatic() {
       `sudo install -m 0755 gitleaks /usr/local/bin/gitleaks`,
   ]);
 
+  const isPr = process.env.GITHUB_EVENT_NAME === 'pull_request' && !!process.env.PR_NUMBER;
   const diffBase = resolveDiffBase({
     candidate: process.env.PR_BASE_SHA || process.env.GITHUB_EVENT_BEFORE || '',
   });
@@ -297,7 +351,7 @@ async function runStatic() {
   });
   run('pnpm', ['--filter', '@dayopt/web', 'validate:content']);
 
-  if (shouldRunStaticLanes(impact.docsOnly)) {
+  if (shouldRunStaticLanes(docsOnly)) {
     await runLanesInParallel([
       { label: 'ESLint', cmd: 'pnpm', args: ['lint'] },
       { label: 'Dead code', cmd: 'pnpm', args: ['quality:deadcode:ci'] },
@@ -308,8 +362,9 @@ async function runStatic() {
     console.log('docs-only の変更のため typecheck/lint/knip/check:static lane を skip します。');
   }
 
-  const functionsChanged = filenames.some((f) => f.startsWith('supabase/functions/'));
-  if (functionsChanged || !isPr) {
+  // impact job が `!isPr`（workflow_dispatch）も込みで解決済み。ここでは
+  // `!== 'false'` で受ける（空 = 判定不能なら実行する fail-closed 方向）。
+  if (functionsChanged !== 'false') {
     const DENO_VERSION = '2.9.4';
     const DENO_SHA256 = 'c24f955d9fbfe0ea5ae2b501c8e71ae76e31e4c9782390a54a284b3364fda725';
     run('bash', [
@@ -325,16 +380,16 @@ async function runStatic() {
   }
 }
 
-// ─── test モード ─────────────────────────────────────────────────────
+// ─── unit モード（DB 非依存。Supabase を起動しない job で走る）────────
 
-async function runTest() {
+async function runUnit() {
   // ── write 権限つき GH_TOKEN を PR コードの実行から隔離する ──────────
   // このジョブは permissions: pull-requests: write / issues: write を宣言し、
   // その GITHUB_TOKEN を GH_TOKEN として step env に受け取る。以降の run()
   // 呼び出しは PR branch のテストコードと全依存（postinstall・vitest
   // transform・plugin を含む）を実行するため、env を明示指定しない
   // spawnSync はこのトークンをそのまま子プロセスへ継承してしまう
-  // （scripts/ci/night-watch/run-all.mjs の envWithout と同じ token 分離原則。
+  // （token 分離原則: 子プロセスへ継承させる env から押収し、
   // 押収した値は migration safety の gh 呼び出しにだけ明示的に渡す。
   // push前反証レビュー risk-reviewer 指摘、P1、PR #2484）。
   const ghToken = process.env.GH_TOKEN;
@@ -346,13 +401,17 @@ async function runTest() {
   const isPr = eventName === 'pull_request' && !!prNumber;
 
   const productUnit = shouldRunProductUnitTests(process.env.PRODUCT_UNIT);
-  const integrationAffected = shouldRunIntegrationTests(process.env.INTEGRATION_AFFECTED);
 
   // ── migration safety（破壊的変更の静的スキャン、常時・DB 不要）────
   // 他の unit test より先に実行する。DB 起動も build:packages も不要な軽い
-  // 静的スキャンで、後段の unit test 失敗（run() が例外を投げて runTest を
+  // 静的スキャンで、後段の unit test 失敗（run() が例外を投げて runUnit を
   // 中断する）に巻き込まれて検知そのものが飛ぶのを防ぐ（内製クロスレビュー
   // risk-reviewer 指摘、P2、PR #2484）。
+  //
+  // **integration job ではなく unit job に置く**。integration job は affected な
+  // PR でしか走らないが、この検知は「新規 migration を含む PR」で必ず要る。
+  // 両者の条件は現状ほぼ一致する（migrations/** は INTEGRATION_GLOBS に入っている）
+  // が、glob を締める変更（#2539 の後続）で乖離しうるため、常時走る側へ置く。
   if (isPr) {
     await runMigrationSafety({ repo, prNumber, env: { ...process.env, GH_TOKEN: ghToken } });
   }
@@ -379,14 +438,25 @@ async function runTest() {
   run('pnpm', ['test:web']);
   run('pnpm', ['--filter', '@dayopt/i18n', 'test:run']);
   run('pnpm', ['--filter', '@dayopt/observability', 'test:run']);
+}
 
-  // ── integration / RLS（affected な PR だけ。Supabase の起動自体は ci.yml 側の `if:` が担う）──
-  if (integrationAffected) {
-    run('pnpm', ['test:integration']);
-    run('pnpm', ['rls:snapshot:check']);
-  } else {
+// ─── integration モード（Supabase 起動済みの job で走る）──────────────
+
+async function runIntegration() {
+  // このモードは gh を一切呼ばないため、ci.yml 側も GH_TOKEN を渡さない
+  // （unit job のような押収・再注入が要らないよう、そもそも env に置かない設計）。
+  //
+  // ci.yml の job `if:` が既に affected 判定で job ごと skip するが、ここでも
+  // 同じ向き（判定不能なら実行 = fail closed）で確認する。guard の向きが 2 箇所で
+  // 食い違っていると、将来の配線変更でサイレントに壊れるため（既存 ci.yml の
+  // コメントと同じ設計判断）。
+  if (!shouldRunIntegrationTests(process.env.INTEGRATION_AFFECTED)) {
     console.log('DB を触らない変更のため integration/RLS test を skip します。');
+    return;
   }
+
+  run('pnpm', ['test:integration']);
+  run('pnpm', ['rls:snapshot:check']);
 }
 
 /**
@@ -525,12 +595,16 @@ const isDirectRun = process.argv[1] && resolve(process.argv[1]) === fileURLToPat
 if (isDirectRun) {
   const mode = process.argv[2];
   try {
-    if (mode === 'static') {
+    if (mode === 'impact') {
+      await runImpact();
+    } else if (mode === 'static') {
       await runStatic();
-    } else if (mode === 'test') {
-      await runTest();
+    } else if (mode === 'unit') {
+      await runUnit();
+    } else if (mode === 'integration') {
+      await runIntegration();
     } else {
-      console.error('Usage: node scripts/ci/check.mjs <static|test>');
+      console.error('Usage: node scripts/ci/check.mjs <impact|static|unit|integration>');
       process.exitCode = 1;
     }
   } catch (error) {

@@ -19,11 +19,11 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 .github/
   dependabot.yml              # 依存関係自動更新
   workflows/
-    ci.yml                    # static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）→ test（unit + affected integration/RLS + migration safety）の直列2 job
+    ci.yml                    # impact（affected 判定）→ static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）∥ unit（+ migration safety）∥ integration（affected 時の RLS/integration）の並列 4 job
     production-config-audit.yml  # Vercel environment metadata 監査
-    nightly.yml               # heavy-e2e/heavy-web/integration（層3）+ night-watch + status-label-sweep + replica-check + storage-backup-export の6 job（#2483 で旧6ファイルから統合）
+    nightly.yml               # status-label-sweep + replica-check + storage-backup-export の 3 job（#2483 で旧ファイルから統合。night-watch job は 2026-09-02、層 3 と integration は 2026-09-03 に撤去）
     create-release.yml        # GitHub Release 作成
-    promote.yml               # リリース処理
+    promote.yml               # main merge 連動の promote。impact → 層 3（E2E / Web Build & E2E）→ release の 3 job
 ```
 
 ## 権限設計
@@ -33,21 +33,28 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ### ワークフロー別 permissions
 
-| ワークフロー                                          | permissions                                                                  | 理由                            |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------- |
-| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                                     | コード読み取り + impact 判定    |
-| `ci.yml`（test job）                                  | `contents: read` / `pull-requests: write` / `issues: write`                  | migration safety の通知         |
-| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                                             | コード読み取りのみ              |
-| `nightly.yml`（night-watch job）                      | `contents: read` / `issues: write` / `actions: read` / `pull-requests: read` | issue 起票・run 状態確認        |
-| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                                           | ラベル一括剥がし                |
-| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write`                 | 固定 context 名での status 発行 |
-| `create-release.yml`                                  | `contents: write`                                                            | タグからリリース作成            |
+| ワークフロー                                        | permissions                                                  | 理由                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ci.yml`（impact job）                              | `contents: read` / `pull-requests: read`                     | PR の変更ファイル一覧の取得（gh api）を行う唯一の job                                         |
+| `ci.yml`（static job）                              | `contents: read` / `pull-requests: read`                     | コード読み取りのみ（gh を呼ばないため step env に `GH_TOKEN` を渡さない）                     |
+| `ci.yml`（unit job）                                | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知                                                                       |
+| `ci.yml`（integration job）                         | `contents: read`                                             | gh を呼ばないため job 単位で最小へ絞る（PR コードを実行する job に書き込み token を置かない） |
+| `nightly.yml`（replica-check / storage-backup job） | `contents: read`                                             | コード読み取りのみ                                                                            |
+| `nightly.yml`（status-label-sweep job）             | `issues: write` / `contents: read`                           | ラベル一括剥がし                                                                              |
+| `production-config-audit.yml`                       | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行                                                               |
+| `promote.yml`（impact / 層 3 job）                  | `contents: read`                                             | コード読み取りのみ（層 3 は local Supabase で完結し secret を読まない）                       |
+| `promote.yml`（release job）                        | `contents: read` / `statuses: write`                         | `Production Release` context の status 発行。workflow レベルには置かない                      |
+| `create-release.yml`                                | `contents: write`                                            | タグからリリース作成                                                                          |
 
 `production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
 （2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 それでも `statuses: write` を持つのは、job 名から独立した固定 context
-（`Production Config Audit`）を ruleset の required 指定に使うため。
+（`Production Config Audit`）を `finish-branch.sh` の trusted dispatch 免除が照合するため。
+**この context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571。PR で
+publish されるのは `paths` に一致する contract 変更 PR だけなので、required にすると
+それ以外の PR が永久に `expected` で止まる。詳細は
+[infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 
 `contents: write` は持たない（外部 API の結果を受けて動く job に書き込み権限を与えない）。
 
@@ -174,12 +181,12 @@ OWASP準拠のセキュリティ監視の全体像と、定期検査の cadence 
 
 セキュリティレビューは 4 層で構成する。どの層も単独では完全でなく、コード変更起点（1・2）と時間経過起点（3・4）を組み合わせて成立させる。
 
-| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                           |
-| ---------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                      |
-| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ test job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
-| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                           |
-| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                      |
+| 層         | タイミング               | 実体                                                                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 実装中     | コード変更ごと           | `security` skill（OWASP 観点のガイド）/ `risk-reviewer` の自動委任（`AGENTS.md §委任・報告の作法` §Read-only delegation）                                                                                                                                                                                             |
+| PR ごと    | CI（ready 後）+ merge 前 | `ci.yml` static job の secret scan（gitleaks + `secrets:check`）/ integration job（affected 時）の RLS snapshot drift 検査 / Vercel build の client bundle secret 検査（`verify:bundle`）/ `production-config-audit.yml` / 内製クロスレビュー（`pr-cross-review` skill、外部レビュー廃止後は merge 前に指揮台が発火） |
+| 継続       | 常時・自動               | Dependabot alerts（security update は schedule と無関係に即時 PR）/ Actions の SHA 固定 / Sentry / CSP 違反モニタリング / rate limit                                                                                                                                                                                  |
+| 定期・随時 | 月次 + オンデマンド      | `/gardening` §5.7 のセキュリティ sweep（advisors + `pnpm security:check` + `/claude-security` 提案）/ `/security-review` / `/code-review`                                                                                                                                                                             |
 
 **束ねた PR のレビュー**: 複数 issue / Step を束ねた PR は merge 前に read-only subagent のクロスレビューを必須とする（`AGENTS.md §PR / git 運用` §PR 粒度）。
 
@@ -215,7 +222,7 @@ secret 検出はこれとは別で、**ready 後の PR で自動実行される*
 
 3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
 
-所見が出た場合は journal（月次 `/gardening` の draft PR 本文）に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
+所見が出た場合は issue に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 
 ### 前提: `claude-security` plugin
 
@@ -331,23 +338,18 @@ Issue #1564 で、Production Security Advisorの
 
 ## RPC判断表
 
-| RPC                              | server caller                          | EXECUTE role                    | 実行属性           | 判断                                                                                          |
-| -------------------------------- | -------------------------------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
-| `batch_rename_tags`              | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
-| `batch_reorder_tags_hierarchy`   | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLS、`p_user_id` guard、tag parent owner triggerで更新する                              |
-| `rename_tag_group`               | `TagService`のuser-scoped client       | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで更新する                                                        |
-| `confirm_day_plans_to_records`   | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardでPlanをRecordへ確定する                                          |
-| `count_unused_recovery_codes`    | `RecoveryService`のuser-scoped client  | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで件数だけ返す                                                    |
-| `update_personalization`         | user-scoped client                     | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで設定を更新する                                                  |
-| `soft_delete_plan`               | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで論理削除する                                                    |
-| `soft_delete_record`             | `RecordService`のuser-scoped client    | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardを使い、`auto_migrated`を常に拒否する                             |
-| `merge_tags(uuid, uuid[], uuid)` | callerなし                             | なし                            | DROP               | Productionだけに残った旧table参照overloadを`CASCADE`なしで削除する                            |
-| `merge_tags_with_hierarchy`      | `TagService`のservice-role client      | `service_role`                  | `SECURITY DEFINER` | deleted Plan/Recordを含む関連更新が必要。service-role JWTを確認し、全更新を`p_user_id`で絞る  |
-| `restore_plan`                   | `PlanService`のservice-role client     | `service_role`                  | `SECURITY DEFINER` | authenticated SELECTから隠れたdeleted rowを復元するためdefinerを維持する                      |
-| `restore_record`                 | `RecordService`のservice-role client   | `service_role`                  | `SECURITY DEFINER` | deleted row復元のためdefinerを維持し、`auto_migrated`を常に拒否する                           |
-| `use_recovery_code`              | `RecoveryService`のservice-role client | `service_role`                  | `SECURITY DEFINER` | recovery codeにauthenticated UPDATE policyを追加せず、service-role JWTと`p_user_id`で消費する |
+| RPC                            | server caller                          | EXECUTE role                    | 実行属性           | 判断                                                                                          |
+| ------------------------------ | -------------------------------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `confirm_day_plans_to_records` | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardでPlanをRecordへ確定する                                          |
+| `count_unused_recovery_codes`  | `RecoveryService`のuser-scoped client  | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで件数だけ返す                                                    |
+| `update_personalization`       | user-scoped client                     | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで設定を更新する                                                  |
+| `soft_delete_plan`             | `PlanService`のuser-scoped client      | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardで論理削除する                                                    |
+| `soft_delete_record`           | `RecordService`のuser-scoped client    | `authenticated`, `service_role` | `SECURITY INVOKER` | owner RLSと`p_user_id` guardを使い、`auto_migrated`を常に拒否する                             |
+| `restore_plan`                 | `PlanService`のservice-role client     | `service_role`                  | `SECURITY DEFINER` | authenticated SELECTから隠れたdeleted rowを復元するためdefinerを維持する                      |
+| `restore_record`               | `RecordService`のservice-role client   | `service_role`                  | `SECURITY DEFINER` | deleted row復元のためdefinerを維持し、`auto_migrated`を常に拒否する                           |
+| `use_recovery_code`            | `RecoveryService`のservice-role client | `service_role`                  | `SECURITY DEFINER` | recovery codeにauthenticated UPDATE policyを追加せず、service-role JWTと`p_user_id`で消費する |
 
-全対象で`PUBLIC`と`anon`の`EXECUTE`を明示的にREVOKEする。service-role-onlyの4 RPCは
+全対象で`PUBLIC`と`anon`の`EXECUTE`を明示的にREVOKEする。service-role-onlyの3 RPCは
 `authenticated`もREVOKEし、`search_path = ''`と完全修飾したrelation名を必須とする。
 protected routerは入力からuser IDを受けず、`ctx.userId`だけをserviceへ渡す。
 
@@ -359,17 +361,19 @@ SELECT policyが評価されるため、`soft_delete_plan`と`soft_delete_record
 transaction内だけdeleted rowを許可する。PostgRESTの通常SELECTや次のtransactionには値が残らず、
 deleted rowはauthenticated clientへ露出しない。
 
-## tag hierarchy
+## tag hierarchy（廃止済み）
 
-migration適用前にcross-user parentを検査し、1件でもあれば自動修復せず失敗させる。
-`check_tag_hierarchy()`はINSERTとUPDATEの両方で、parentとchildの`user_id`をNULL安全に比較する。
-RPC、直接table操作、service-role操作のすべてに同じ制約を適用する。
+`tags` テーブルと `check_tag_hierarchy()` / `check_tag_has_children()` を含む tags 専有
+10 関数は #2175（`20260903120000_drop_legacy_tags_model.sql`）で物理削除した。後継の
+アクティビティ / カテゴリーは階層を持たず単一所属を列で表すため、cross-user parent の
+検査に相当する制約は `activities_category_owner_fkey`（`(category_id, user_id)` の複合 FK）
+が構造的に担う。本節は履歴として残す。
 
 ## 検証
 
 - LocalとPR PreviewでSecurity Advisorの該当WARNが0件
-- 8 invoker RPCのowner成功とcross-user拒否
-- 4 definer RPCのauthenticated `42501`とservice-role成功
+- 5 invoker RPCのowner成功とcross-user拒否
+- 3 definer RPCのauthenticated `42501`とservice-role成功
 - `auto_migrated` Recordのdelete/restore拒否
-- foreign parentのRPC、直接INSERT、直接UPDATE拒否
+- 別ユーザーのカテゴリーを指すアクティビティのINSERT / UPDATE拒否（`activities_category_owner_fkey`）
 - [RLS snapshot](../engineering/data/db/rls-snapshot.md)のdrift check

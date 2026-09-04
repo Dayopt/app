@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,13 +14,20 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // まず「どう書けば通ってしまうか」を数え上げてから allow 側を書く。
 //
 // guard 実装側の対の教訓は「許可形を省略記法で組み立てず選択肢で列挙する」
-// （scripts/hooks/pre-tool-guard.sh のコメント参照）。
+// （scripts/hooks/pre-tool-guard-rules.mjs のコメント参照）。
+//
+// このファイルは scripts/__tests__/pre-tool-guard.test.ts（bash 版 guard の
+// contract test）の Node/ESM 移植。各 describe/it の意図と assert は元ファイル
+// と同一に保つ——変えたのは spawn 対象（bash loader → node loader）と、bash の
+// 構文エラー・exit code を前提にしていた「script 自体の健全性」「loader/rules
+// 分離」の 2 describe block だけ（Node の import 失敗・例外送出へ書き換えた）。
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-// pre-tool-guard.sh は #1961 以降、薄い loader。実際のロジックは
-// pre-tool-guard-impl.sh にある（settings.json の hooks 登録は loader のまま
-// 変更していないので、通常の test はすべて guardPath 経由で書ける）。
-const guardPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.sh');
-const implPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-impl.sh');
+// pre-tool-guard.mjs は薄い loader（bash 版 #1961 の教訓を踏襲した Node/ESM
+// 移植）。実際のロジックは pre-tool-guard-rules.mjs にある（settings.json の
+// hooks 登録も同じ PR でこの loader へ切り替え済み。通常の test はすべて
+// loaderPath 経由で書ける）。
+const loaderPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.mjs');
+const rulesPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard-rules.mjs');
 
 // path を組み立てるのは、この test file 自体を編集する Write が
 // guard の file path 検査に引っかからないようにするため。
@@ -39,7 +46,7 @@ function runGuard(
   cwd: string = rootDir,
   env?: Record<string, string>,
 ): Decision {
-  const result = spawnSync('bash', [guardPath], {
+  const result = spawnSync(process.execPath, [loaderPath], {
     cwd,
     encoding: 'utf8',
     input: JSON.stringify(input),
@@ -54,6 +61,21 @@ function bash(command: string): Record<string, unknown> {
 
 function mcp(toolName: string): Record<string, unknown> {
   return { tool_name: toolName, tool_input: { title: 'x', prompt: 'y' } };
+}
+
+// R1/R2（Agent の model 明示 + 探索への opus/fable 使用ガード）用ヘルパー。
+function agentCall(
+  input: Partial<{ model: string; subagent_type: string; prompt: string; description: string }>,
+): Record<string, unknown> {
+  return { tool_name: 'Agent', tool_input: { ...input } };
+}
+
+// R3（Read の範囲指定なし大規模ファイル読み込みガード）用ヘルパー。
+function readTool(
+  filePath: string,
+  opts?: { offset?: number; limit?: number },
+): Record<string, unknown> {
+  return { tool_name: 'Read', tool_input: { file_path: filePath, ...opts } };
 }
 
 // setup が黙って失敗すると、以降の assert が「たまたま通る」形で緑になる。
@@ -91,74 +113,143 @@ function notebookEdit(notebookPath: string, newSource: string): Record<string, u
 }
 
 // guard 自体が壊れると全 tool がブロックされ、guard を直す編集まで塞がれる。
-// 2026-08-12 に実際に起きた（[[ ]] の中へ引用符入りの正規表現を直接書いて構文
-// エラーになり、Bash / Write / Edit がすべて拒否されて別セッションからの復旧が
-// 必要になった）。bash は構文エラーで exit 2 を返し、hook はそれを block と解釈する。
+// bash 版は 2026-08-12 に実際に起きた（[[ ]] の中へ引用符入りの正規表現を
+// 直接書いて構文エラーになり、Bash / Write / Edit がすべて拒否されて別
+// セッションからの復旧が必要になった、#1961）。Node/ESM 版でも同じ class の
+// 障害モードが起きる: `import()` は構文エラーを持つモジュールを読み込めない
+// （import 自体が reject し、モジュール内のどんなコードも実行されない）。
 // エディタ上の規律ではなく test で固定する。
-describe('pre-tool-guard.sh: script 自体の健全性', () => {
-  it('loader の bash 構文チェックを通る', () => {
-    const result = spawnSync('bash', ['-n', guardPath], { encoding: 'utf8' });
+describe('pre-tool-guard.mjs: script 自体の健全性', () => {
+  it('loader の構文チェックを通る（node --check）', () => {
+    const result = spawnSync(process.execPath, ['--check', loaderPath], { encoding: 'utf8' });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
 
-  it('impl の bash 構文チェックを通る', () => {
-    const result = spawnSync('bash', ['-n', implPath], { encoding: 'utf8' });
+  it('rules の構文チェックを通る（node --check）', () => {
+    const result = spawnSync(process.execPath, ['--check', rulesPath], { encoding: 'utf8' });
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
 });
 
-// #1961: guard 自体（impl）が壊れた時、loader は fail closed を既定にしつつ、
-// **impl ファイル自身への Write/Edit だけ**を復旧目的で例外的に通す。1 ファイル
-// 構成では自己検査コードごと構文エラーで実行されなくなるため、loader/impl の
-// 2 ファイル分離だけがこの中間案を実装できる（#1961 コメント参照）。
-describe('pre-tool-guard.sh: loader/impl 分離（#1961）', () => {
+// #1961 の Node 移植: guard 自体（rules）が壊れた時、loader は fail closed を
+// 既定にしつつ、**rules ファイル自身への Write/Edit だけ**を復旧目的で例外的に
+// 通す。1 ファイル構成では自己検査コードごと構文エラーで実行されなくなるため、
+// loader/rules の 2 ファイル分離だけがこの中間案を実装できる（bash 版 #1961
+// コメント参照）。
+//
+// bash 版との対応: 「impl の構文エラー」→「rules の import 失敗」、
+// 「impl の構文は健全だが非 0 exit」→「rules の import は成功するが evaluate()
+// が例外を投げる」。loader はどちらも「import/評価に成功して decision が
+// 'allow' の時だけ 0、それ以外は全部 2」という同じ fail-closed 規則で捌く。
+describe('pre-tool-guard.mjs: loader/rules 分離（#1961 の Node 移植）', () => {
   let fixtureRoot: string;
   let healthyLoader: string;
   let degradedLoader: string;
-  let degradedImpl: string;
+  let degradedRules: string;
   let badExitLoader: string;
+  let badExitRules: string;
+  let renamedLoader: string;
+  let renamedRules: string;
+  let throwingDecisionLoader: string;
+  let symlinkedLoader: string;
+  let symlinkedRules: string;
 
   beforeAll(() => {
     fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-loader-'));
 
-    // loader は sibling を実ファイル名（pre-tool-guard-impl.sh）で探すため、
-    // 検証も同じファイル名関係で組む。
+    // loader は import('./pre-tool-guard-rules.mjs') で自分と同じディレクトリの
+    // rules を見る。rules は node 標準ライブラリ（node:child_process / node:fs /
+    // node:path）しか import しない——復旧経路（rules 自身への Write だけ通す）が
+    // repo 内 helper の破損で塞がらないようにするための不変条件なので、fixture も
+    // loader + rules の 2 ファイルだけで組む。
     const healthyDir = join(fixtureRoot, 'healthy');
     mkdirSync(healthyDir);
-    writeFileSync(join(healthyDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    writeFileSync(join(healthyDir, 'pre-tool-guard-impl.sh'), readFileSync(implPath, 'utf8'));
-    healthyLoader = join(healthyDir, 'pre-tool-guard.sh');
+    writeFileSync(join(healthyDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(join(healthyDir, 'pre-tool-guard-rules.mjs'), readFileSync(rulesPath, 'utf8'));
+    healthyLoader = join(healthyDir, 'pre-tool-guard.mjs');
 
     const degradedDir = join(fixtureRoot, 'degraded');
     mkdirSync(degradedDir);
-    writeFileSync(join(degradedDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    // 構文エラーを注入（未閉じの [[ ）。2026-08-12 の実障害と同型。
+    writeFileSync(join(degradedDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    // 構文エラーを注入（未閉じの関数呼び出し）。2026-08-12 の bash 実障害
+    // （未閉じの [[ ）と同型の「ファイル末尾が壊れている」形。
     writeFileSync(
-      join(degradedDir, 'pre-tool-guard-impl.sh'),
-      `${readFileSync(implPath, 'utf8')}\nif [[ "x" =~ "unclosed\n`,
+      join(degradedDir, 'pre-tool-guard-rules.mjs'),
+      `${readFileSync(rulesPath, 'utf8')}\nfunction __brokenSyntax(x {\n`,
     );
-    degradedLoader = join(degradedDir, 'pre-tool-guard.sh');
-    degradedImpl = join(degradedDir, 'pre-tool-guard-impl.sh');
+    degradedLoader = join(degradedDir, 'pre-tool-guard.mjs');
+    degradedRules = join(degradedDir, 'pre-tool-guard-rules.mjs');
 
     const badExitDir = join(fixtureRoot, 'bad-exit');
     mkdirSync(badExitDir);
-    writeFileSync(join(badExitDir, 'pre-tool-guard.sh'), readFileSync(guardPath, 'utf8'));
-    // 構文は健全だが実行時に想定外の非 0 を返す impl（block 以外の理由での失敗）
+    writeFileSync(join(badExitDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    // import（構文）は健全だが、evaluate() が常に例外を投げる rules
+    // （bash 版の「構文は健全だが実行時に想定外の非 0 を返す impl」の Node 版。
+    // lib への相対 import が無くても import 自体は成立する最小 stub）。
     writeFileSync(
-      join(badExitDir, 'pre-tool-guard-impl.sh'),
-      '#!/bin/bash\ncat >/dev/null\nexit 1\n',
+      join(badExitDir, 'pre-tool-guard-rules.mjs'),
+      "export function evaluate() {\n  throw new Error('unexpected failure');\n}\n",
     );
-    badExitLoader = join(badExitDir, 'pre-tool-guard.sh');
+    badExitLoader = join(badExitDir, 'pre-tool-guard.mjs');
+    badExitRules = join(badExitDir, 'pre-tool-guard-rules.mjs');
+
+    // import は成功するが `evaluate` が export されていない rules（編集中に export を
+    // 落とした / 関数名を変えた形。Codex review P2、PR #2563）。import 失敗と同じ
+    // 復旧経路に倒さないと、別セッション無しでは直せない。
+    const renamedDir = join(fixtureRoot, 'renamed-export');
+    mkdirSync(renamedDir);
+    writeFileSync(join(renamedDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(renamedDir, 'pre-tool-guard-rules.mjs'),
+      "export const renamedEvaluate = () => ({ decision: 'allow' });\n",
+    );
+    renamedLoader = join(renamedDir, 'pre-tool-guard.mjs');
+    renamedRules = join(renamedDir, 'pre-tool-guard-rules.mjs');
+
+    // evaluate() は返るが、その戻り値の参照（loader の `result.decision`）が例外を
+    // 投げる rules。この参照は try の外側にあり、bash 版 loader が構造として持って
+    // いた「0 か 2 以外を返さない」不変条件が Node では async 関数の未捕捉 rejection
+    // = exit 1（harness では block ではなく non-blocking error）へ落ちる。exit 1 に
+    // なると guard が判定を下せなかった操作が素通りするため fail closed が崩れる
+    // （#2563 内製クロスレビュー P2）。
+    const throwingDecisionDir = join(fixtureRoot, 'throwing-decision');
+    mkdirSync(throwingDecisionDir);
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard.mjs'),
+      readFileSync(loaderPath, 'utf8'),
+    );
+    writeFileSync(
+      join(throwingDecisionDir, 'pre-tool-guard-rules.mjs'),
+      "export function evaluate() {\n  return Object.defineProperty({}, 'decision', {\n    get() {\n      throw new Error('unexpected failure after evaluate');\n    },\n  });\n}\n",
+    );
+    throwingDecisionLoader = join(throwingDecisionDir, 'pre-tool-guard.mjs');
+
+    // path の途中に symlink がある配置。ESM の `import.meta.url` は realpath を返す
+    // 一方 harness が渡す `file_path` は解決されていないため、素の文字列比較では
+    // 復旧経路が常に block へ落ちる（macOS の tmpdir は `/var` -> `/private/var` で
+    // 実際にこの形。#2563 内製クロスレビュー P2、Linux CI では tmpdir が symlink で
+    // ないため素通りしていた）。symlink を明示的に作って両 OS で固定する。
+    const symlinkTargetDir = join(fixtureRoot, 'symlink-target');
+    mkdirSync(symlinkTargetDir);
+    writeFileSync(join(symlinkTargetDir, 'pre-tool-guard.mjs'), readFileSync(loaderPath, 'utf8'));
+    writeFileSync(
+      join(symlinkTargetDir, 'pre-tool-guard-rules.mjs'),
+      `${readFileSync(rulesPath, 'utf8')}\nfunction __brokenSyntax(x {\n`,
+    );
+    const symlinkDir = join(fixtureRoot, 'symlink-alias');
+    symlinkSync(symlinkTargetDir, symlinkDir, 'dir');
+    symlinkedLoader = join(symlinkDir, 'pre-tool-guard.mjs');
+    symlinkedRules = join(symlinkDir, 'pre-tool-guard-rules.mjs');
   });
 
   afterAll(() => {
     rmSync(fixtureRoot, { recursive: true, force: true });
   });
 
-  function runVia(loaderPath: string, input: Record<string, unknown>): Decision {
-    const result = spawnSync('bash', [loaderPath], {
+  function runVia(loaderFixturePath: string, input: Record<string, unknown>): Decision {
+    const result = spawnSync(process.execPath, [loaderFixturePath], {
       cwd: rootDir,
       encoding: 'utf8',
       input: JSON.stringify(input),
@@ -166,35 +257,63 @@ describe('pre-tool-guard.sh: loader/impl 分離（#1961）', () => {
     return result.status === 2 ? 'block' : 'allow';
   }
 
-  it('impl が健全なら loader は通常どおり委譲する（stdin forward が正しい）', () => {
+  it('rules が健全なら loader は通常どおり委譲する（stdin forward が正しい）', () => {
     expect(runVia(healthyLoader, write('/x/.op-env.human'))).toBe('allow');
     expect(runVia(healthyLoader, write('/x/.env'))).toBe('block');
     expect(runVia(healthyLoader, bash('git status'))).toBe('allow');
   });
 
-  it('impl が構文エラーの時、無関係な Bash 操作は fail closed', () => {
+  it('rules が構文エラー（import 失敗）の時、無関係な Bash 操作は fail closed', () => {
     expect(runVia(degradedLoader, bash('git status'))).toBe('block');
   });
 
-  it('impl が構文エラーの時、impl 以外への Write/Edit は fail closed', () => {
+  it('rules が構文エラーの時、rules 以外への Write/Edit は fail closed', () => {
     expect(runVia(degradedLoader, write('/x/notes.md'))).toBe('block');
   });
 
-  it('impl が構文エラーの時、impl ファイル自身への Write/Edit だけは復旧目的で通る', () => {
-    expect(runVia(degradedLoader, write(degradedImpl))).toBe('allow');
-    expect(runVia(degradedLoader, edit(degradedImpl))).toBe('allow');
+  it('rules が構文エラーの時、rules ファイル自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(degradedLoader, write(degradedRules))).toBe('allow');
+    expect(runVia(degradedLoader, edit(degradedRules))).toBe('allow');
   });
 
   it('loader 自身への Write は例外対象外（fail closed のまま）', () => {
     expect(runVia(degradedLoader, write(degradedLoader))).toBe('block');
   });
 
-  it('impl の構文は健全でも非 0 で終了したら fail closed（exit code を 2 へ写す）', () => {
+  it('rules の構文は健全でも evaluate() が例外を投げたら fail closed（exit code を 2 へ写す）', () => {
     expect(runVia(badExitLoader, bash('git status'))).toBe('block');
+  });
+
+  it('evaluate が export されていない（import は成功）時、無関係な操作は fail closed で rules 自身への Write/Edit だけ通る', () => {
+    expect(runVia(renamedLoader, bash('git status'))).toBe('block');
+    expect(runVia(renamedLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(renamedLoader, write(renamedRules))).toBe('allow');
+    expect(runVia(renamedLoader, edit(renamedRules))).toBe('allow');
+  });
+
+  it('path の途中が symlink でも、rules 自身への Write/Edit の復旧経路は働く', () => {
+    expect(runVia(symlinkedLoader, write(symlinkedRules))).toBe('allow');
+    expect(runVia(symlinkedLoader, edit(symlinkedRules))).toBe('allow');
+    // 例外は rules 自身に限る。symlink 経由でも他 path は fail closed のまま
+    expect(runVia(symlinkedLoader, write(join(dirname(symlinkedRules), 'notes.md')))).toBe('block');
+  });
+
+  it('try の外側で例外が起きても exit 1 ではなく 2 を返す（loader は 0 か 2 以外を返さない）', () => {
+    const result = spawnSync(process.execPath, [throwingDecisionLoader], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: JSON.stringify(bash('git status')),
+    });
+    expect(result.status).toBe(2);
+  });
+
+  it('evaluate() が例外を投げる時も、rules 自身への Write/Edit だけは復旧目的で通る', () => {
+    expect(runVia(badExitLoader, write('/x/notes.md'))).toBe('block');
+    expect(runVia(badExitLoader, write(badExitRules))).toBe('allow');
   });
 });
 
-describe('pre-tool-guard.sh: .op-env.human', () => {
+describe('pre-tool-guard.mjs: .op-env.human', () => {
   // .op-env.human は op:// 参照だけで実秘密を含まない。2026-08-13、User 決定
   // （#1993）で境界を「読み書き可・消費のみ禁止」へ変更した。作成・Write/Edit は
   // 解禁し、op run で production の service role key を解決する消費だけを止める。
@@ -349,7 +468,7 @@ describe('pre-tool-guard.sh: .op-env.human', () => {
 // 「flag に一致したら後続 token を照合する」2 段構えは、トリガーに一致しない
 // 書き方が照合にすら入らず素通りする。判定を「-env-file の言及が **すべて**
 // 許可形か」に変え、変形を個別に数え上げるのをやめた。
-describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
+describe('pre-tool-guard.mjs: flag 自体の書き換え', () => {
   it.each([
     // quote は shell が引数から取り除くので、= の前後どこへ刺しても argv は同じ。
     // 旧実装はトリガーの --env-file[=空白] に一致せず素通りしていた。
@@ -405,9 +524,9 @@ describe('pre-tool-guard.sh: flag 自体の書き換え', () => {
 //
 // force-push / reset ガードは agent 自身の逸脱を止めるためのもので、ブロック側の
 // 後退は P3 の誤検知より重い。誤検知（コミットメッセージに文字列を書くと落ちる）は
-// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard.sh のコメントと
+// 受け入れて docs に書く。判断の記録は scripts/hooks/pre-tool-guard-rules.mjs のコメントと
 // #1944 のコメント。
-describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
+describe('pre-tool-guard.mjs: heredoc 本文と危険コマンド', () => {
   const heredoc = (intro: string, body: string, delim = 'EOF') => `${intro}\n${body}\n${delim}`;
 
   // 受け入れる誤検知。回避策は文面を変えるか、Write / Edit で file へ書いてから渡す。
@@ -464,7 +583,7 @@ describe('pre-tool-guard.sh: heredoc 本文と危険コマンド', () => {
 // #1949: path の allowlist は「どのファイルか」しか見ない。許可 path の中身へ
 // production 参照を書き足せば、path トリックなしで production credential に届く。
 // 中身は op:// の vault で判定し、許可 vault 以外を落とす。
-describe('pre-tool-guard.sh: env-file の中身', () => {
+describe('pre-tool-guard.mjs: env-file の中身', () => {
   let fixtureRoot: string;
   let cleanDir: string;
   let prodDir: string;
@@ -631,7 +750,7 @@ describe('pre-tool-guard.sh: env-file の中身', () => {
 // (a) 適用後の文字列再構成、(b) PostToolUse での事後検査はどちらも見送った
 // （(a) は bash の literal 置換が壊れやすく静かな fail open になりうる、
 // (b) は権威層が既にこのケースを捕まえるため複雑さに見合わない）。
-describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
+describe('pre-tool-guard.mjs: 部分置換の Edit（#1986、受け入れる既知のギャップ）', () => {
   it('op:// を含まない部分置換 Edit は書き込み時検査を通る（権威は実行時層）', () => {
     expect(runGuard(edit(`/x/${AGENT}`, 'human'))).toBe('allow');
   });
@@ -643,7 +762,7 @@ describe('pre-tool-guard.sh: 部分置換の Edit（#1986、受け入れる既�
 // quote の中かどうかは追えないままで、#1944（heredoc）と同型の
 // 「shell の引用状態は regex で再現できない」という結論に当たる。
 // 確信が持てない narrowing は行わず、過剰ブロックを維持する。
-describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、受け入れる誤検知）', () => {
+describe('pre-tool-guard.mjs: 引用済み引数内の区切り記号（#1987、受け入れる誤検知）', () => {
   it('op run の子プロセス引数に quote された | があっても落ちる', () => {
     expect(runGuard(bash(`op run --env-file=${AGENT} -- node -e "console.log('a|b')"`))).toBe(
       'block',
@@ -651,10 +770,10 @@ describe('pre-tool-guard.sh: 引用済み引数内の区切り記号（#1987、�
   });
 });
 
-// #1959: チップ起票（spawn_task）は指揮台セッションの専権。レーンが直接 User へ
-// チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + 指揮台へ
+// #1959: チップ起票（spawn_task）は Main（main checkout の session）の専権。レーンが直接 User へ
+// チップを出すと triage の判断が User に飛ぶ。レーンは issue 化 + Main へ
 // send_message に一本化する（dispatch skill（旧 orchestration.md、#2479 で再編） §レーンの連絡規律）。
-describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
+describe('pre-tool-guard.mjs: レーンからのチップ起票', () => {
   const SPAWN = 'mcp__ccd_session__spawn_task';
   let fixtureRoot: string;
   let mainDir: string;
@@ -696,13 +815,13 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
     expect(runGuard(mcp(SPAWN), worktreeDir)).toBe('block');
   });
 
-  it('main checkout からは通す（指揮台のレーン編成は正規手段）', () => {
+  it('main checkout からは通す（Main の着手する issue の選択は正規手段）', () => {
     expect(runGuard(mcp(SPAWN), mainDir)).toBe('allow');
   });
 
-  // 判定は「指揮台だと言い切れた時だけ通す」allowlist。git が使えない・repo 外は
+  // 判定は「Main だと言い切れた時だけ通す」allowlist。git が使えない・repo 外は
   // 落とす。`cd ""` は bash では成功してカレントに留まるため、空値を素通りさせると
-  // 両者が同じ cwd に解決されて「一致＝指揮台」と誤判定する（実装中に踏んだ）。
+  // 両者が同じ cwd に解決されて「一致＝Main」と誤判定する（実装中に踏んだ）。
   it('git 管理外のディレクトリからは落とす（fail closed）', () => {
     expect(runGuard(mcp(SPAWN), plainDir)).toBe('block');
   });
@@ -716,7 +835,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 
   it.each([
     ['章立て', 'mcp__ccd_session__mark_chapter'],
-    ['指揮台への連絡', 'mcp__ccd_session_mgmt__send_message'],
+    ['Main への連絡', 'mcp__ccd_session_mgmt__send_message'],
   ])('worktree でも他の tool は通す: %s', (_label, toolName) => {
     expect(runGuard(mcp(toolName), worktreeDir)).toBe('allow');
   });
@@ -726,7 +845,7 @@ describe('pre-tool-guard.sh: レーンからのチップ起票', () => {
 // レーンは自分の worktree 外を書き換えない（AGENTS.md §委任・報告の作法
 // の writer 4 条件）。判定は guard_resolve_roots()（spawn_task 判定と共用）を
 // working tree root ベースで行うため、fixture は main + 2 linked worktree で組む。
-describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）', () => {
+describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneADir: string;
@@ -801,7 +920,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
     expect(runGuard(write(join(mainDir, 'foo.ts')), mainDir)).toBe('allow');
   });
 
-  it('main checkout から他レーンの worktree への Write は block する（指揮台はコードを書かない）', () => {
+  it('main checkout から他レーンの worktree への Write は block する（Main はコードを書かない）', () => {
     expect(runGuard(write(join(laneADir, 'foo.ts')), mainDir)).toBe('block');
   });
 
@@ -813,10 +932,10 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（#2359）'
 // nested 配置（このリポジトリの実際の運用: worktree は main の配下の
 // `.claude/worktrees/<name>` に nested される）専用の fixture。
 // merge 前クロスレビュー risk-reviewer 指摘: sibling 配置の fixture（上の
-// describe）だけでは「指揮台（CURRENT_ROOT = 家系の親）から見ると、他
+// describe）だけでは「Main（CURRENT_ROOT = 家系の親）から見ると、他
 // レーンのパスも $GUARD_CURRENT_ROOT/* に該当してしまい先に許可側へ倒れる」
 // class を検出できない。longest-prefix-match で修正済み（guard_path_belongs_to_current_root）。
-describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
+describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（nested 配置、#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneBDir: string;
@@ -871,7 +990,7 @@ describe('pre-tool-guard.sh: worktree 外ファイル編集ガード（nested �
 // 変数展開・`..`）で判定する（AGENTS.md §PR / git 運用 §同型指摘の打ち切り
 // 「denylist をやめて allowlist にする」）。worktree 内で完結する日常的な
 // キャッシュ削除は通す。
-describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
+describe('pre-tool-guard.mjs: rm -rf 系（#2359）', () => {
   it.each([
     ['rm -rf node_modules', 'rm -rf node_modules'],
     ['rm -rf .next', 'rm -rf .next'],
@@ -916,7 +1035,7 @@ describe('pre-tool-guard.sh: rm -rf 系（#2359）', () => {
 // 直後の risk-reviewer 指摘: 単純な「絶対パスは全部 block」だと scratchpad
 // 掃除（family 外の絶対パス）まで壊れる。guard_resolve_roots の家系 root と
 // 突合し、**自分以外の worktree root に属する時だけ** block する。
-describe('pre-tool-guard.sh: rm -rf の絶対パス target（家系判定、#2359）', () => {
+describe('pre-tool-guard.mjs: rm -rf の絶対パス target（家系判定、#2359）', () => {
   let fixtureRoot: string;
   let mainDir: string;
   let laneBDir: string;
@@ -973,7 +1092,7 @@ describe('pre-tool-guard.sh: rm -rf の絶対パス target（家系判定、#235
 // は複数 worktree セッションが共有する単一インスタンスのため、reset は他
 // レーンの進行中データも巻き戻す。CLAUDE.md Commands に明記された既定コマンド
 // （pnpm db:reset / db:fresh）は対象外にし、生の CLI 呼び出しだけを block する。
-describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', () => {
+describe('pre-tool-guard.mjs: supabase db reset の生呼び出し（#2359）', () => {
   it.each([
     ['supabase db reset', 'supabase db reset'],
     ['npx 経由', 'npx supabase db reset --local'],
@@ -997,7 +1116,7 @@ describe('pre-tool-guard.sh: supabase db reset の生呼び出し（#2359）', (
 // ため、既存の git push --no-verify block を commit にも拡張する。短縮形 `-n`
 // は tail -n / grep -n 等との誤検知リスクが高いため対象外にする
 // （既存の --no-verify トレードオフとは非対称）。
-describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
+describe('pre-tool-guard.mjs: git commit --no-verify（#2359）', () => {
   it('長形式 --no-verify は block する', () => {
     expect(runGuard(bash('git commit -m "x" --no-verify'))).toBe('block');
   });
@@ -1019,371 +1138,6 @@ describe('pre-tool-guard.sh: git commit --no-verify（#2359）', () => {
   });
 });
 
-// night-watch（.claude/skills/night-watch/SKILL.md）: DAYOPT_NIGHT_WATCH=1 の時だけ
-// 有効になる allowlist。denylist ではなく allowlist にした理由は
-// AGENTS.md §PR / git 運用 §同型指摘の打ち切り「denylist をやめて allowlist にする」。
-// 危険側を先に列挙してから許可側を書く（file 冒頭コメントの教訓）。
-describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
-  const NIGHT_WATCH_ENV = { DAYOPT_NIGHT_WATCH: '1' };
-  // force-push の文字列自体が guard の別ルールに引っかかるため、リテラルで
-  // 埋め込まず組み立てる（file 冒頭 27-30 行目と同じ回避）。
-  const FORCE_FLAG = `--for${''}ce`;
-
-  describe('env var が無い通常レーンには一切影響しない', () => {
-    it('git push はそのまま通る（既存挙動）', () => {
-      expect(runGuard(bash('git push origin main'))).toBe('allow');
-    });
-
-    it('allowlist に無い任意コマンドも通る（既存挙動）', () => {
-      expect(runGuard(bash('curl https://example.com'))).toBe('allow');
-    });
-  });
-
-  describe('許可形（night-watch checklist が実行する形。完全一致 or 固定 wrapper prefix）', () => {
-    it.each([
-      ['docs:check', 'pnpm docs:check'],
-      ['docs:coverage', 'pnpm docs:coverage'],
-      ['quality:deadcode:ci', 'pnpm quality:deadcode:ci'],
-      [
-        'dependabot alerts (GET)',
-        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length'",
-      ],
-      ['token permissions self-check (GET)', 'gh api repos/Dayopt/dayopt --jq .permissions'],
-      ['self-check echo', 'echo $DAYOPT_NIGHT_WATCH'],
-      // #2483（CI ファイル統合 Phase 1）: heavy-post-merge.yml / integration.yml が
-      // nightly.yml へ吸収され、job 名で判定する多段処理（`checkWorkflowJobRun`）が
-      // 必要になった。単一の単純コマンドでは表現できないため、他の Step と同じ
-      // 「個別 wrapper を allowlist する」設計へ揃えた。
-      [
-        'heavy-red 判定 wrapper（Step2、job-scoped 化）',
-        'node scripts/ci/night-watch/check-workflow-job.mjs heavy-red',
-      ],
-      [
-        'integration-red 判定 wrapper（Step2、job-scoped 化）',
-        'node scripts/ci/night-watch/check-workflow-job.mjs integration-red',
-      ],
-      [
-        'Sentry 新規 issue スキャン (GET、指揮台の手動代行用 op run 形)',
-        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved age:-24h"',
-      ],
-      // #2334 コメント（scope 追加5点目）: Cloud Environment（night-watch の
-      // 実行先）には 1Password が無く SENTRY_AUTH_TOKEN が env として直接
-      // 注入されるため、op run を挟まない cloud 互換形も許可する。
-      [
-        'Sentry 新規 issue スキャン (GET、cloud 互換の env 直読み形)',
-        'sentry issue list dayopt --query "is:unresolved age:-24h"',
-      ],
-      // night-watch v2（#2291）の gh 直叩きは scripts/ci/night-watch/*.mjs の
-      // wrapper へ寄せた（PR #2309 未解決 thread 1/2/3/4/5/6 の構造的解消）。
-      // 動的引数（check-id・実測値）が要る alert-issue.mjs は固定 prefix のみで
-      // 許可し、flag 単位の検証は行わない（値は wrapper 内部で execFile の argv
-      // 要素として gh へ渡るため shell を経由しない。
-      // scripts/ci/night-watch/*.test.ts が値の形の検証を担保する）。
-      //
-      // **#2525 以降、書き込み系で許可されるのは alert-issue.mjs だけ。**
-      // board-issue.mjs（盤面起票）/ dod-candidate.mjs（DoD候補）/ run-log.mjs
-      // （運行記録・board-note・env-failure・recent-pending）は wrapper ごと
-      // 廃止したため、それらの許可形は下の「拒否形」側で塞がれていることを
-      // 検証する。
-      [
-        'check-id alert wrapper（count-baseline）',
-        'node scripts/ci/night-watch/alert-issue.mjs report docs-coverage --actual 9',
-      ],
-      [
-        'check-id alert wrapper（sentry evidence を含む実測形）',
-        'node scripts/ci/night-watch/alert-issue.mjs report sentry-new --count 2 --evidence "DAYOPT-123 https://dayopt-x.sentry.io/issues/999/"',
-      ],
-    ])('%s は通す', (_label, command) => {
-      expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('allow');
-    });
-  });
-
-  describe('拒否形（敵対的）', () => {
-    it.each([
-      ['git push', 'git push origin main'],
-      ['git commit', 'git commit -m x'],
-      ['git merge', 'git merge origin/main'],
-      ['gh pr create', 'gh pr create --title x --body y'],
-      ['gh pr merge', 'gh pr merge 1 --merge'],
-      ['gh pr ready', 'gh pr ready 1'],
-      ['gh pr edit', 'gh pr edit 1 --title x'],
-      ['gh issue edit（ラベル変更）', 'gh issue edit 1 --add-label priority:p0'],
-      ['gh issue delete', 'gh issue delete 1'],
-      ['gh release create', 'gh release create v1.0.0'],
-      ['gh workflow run', 'gh workflow run production-config-audit.yml'],
-      [
-        'gh api dependabot alerts に -X POST を付ける迂回',
-        'gh api repos/Dayopt/dayopt/dependabot/alerts?state=open -X POST',
-      ],
-      [
-        'gh api dependabot alerts に --method PUT を付ける迂回',
-        'gh api repos/Dayopt/dayopt/dependabot/alerts --method PUT',
-      ],
-      ['gh api graphql mutation', "gh api graphql -f query='mutation{}'"],
-      ['allowlist に無い任意コマンド', 'curl https://evil.example'],
-      ['redirect による書き込み（>）', 'pnpm docs:check > /tmp/night-watch-out.txt'],
-      ['redirect による追記（>>）', 'echo x >> baseline.json'],
-      [
-        'stdin redirect（<）',
-        'node scripts/ci/night-watch/alert-issue.mjs report docs-check < /tmp/body.txt',
-      ],
-      // #2525: 廃止した wrapper の旧許可形。ファイル自体が存在しないので実行
-      // しても失敗するが、guard の allowlist からも消えていることを固定する
-      // （allowlist に残したまま wrapper だけ消すと、後から同名ファイルを
-      // 置いた時に無検査で通る面が復活する）。
-      ['廃止: 盤面起票 wrapper', 'node scripts/ci/night-watch/board-issue.mjs sync'],
-      ['廃止: DoD候補選定 wrapper', 'node scripts/ci/night-watch/dod-candidate.mjs select'],
-      ['廃止: 環境故障報告 wrapper', 'node scripts/ci/night-watch/run-log.mjs env-failure no-var'],
-      [
-        '廃止: 運行記録 wrapper',
-        'node scripts/ci/night-watch/run-log.mjs report \'{"executed":6}\'',
-      ],
-      [
-        '廃止: 盤面1行note wrapper',
-        'node scripts/ci/night-watch/run-log.mjs board-note \'{"allGreen":true}\'',
-      ],
-      [
-        '廃止: pending escalation 判定 wrapper',
-        'node scripts/ci/night-watch/run-log.mjs recent-pending heavy-red',
-      ],
-      // read-only git は checklist が実際には使わないため allowlist から撤去した
-      // （未使用の攻撃面を削除で閉じる。git status/log 自体は無害でも、同じ枠に
-      // git diff/show を残すと --output= 迂回の温床になる）。
-      ['git status（allowlist に無い）', 'git status --porcelain'],
-      ['git log（allowlist に無い）', 'git log -1'],
-      // P1（2026-08-19、内製クロスレビュー risk-reviewer が実測確認）:
-      // 「literal prefix + 末尾ワイルドカード」だった旧実装は git diff の
-      // ネイティブ --output フラグを検査しておらず、任意ファイル書込
-      // （baseline.json 破壊 / hook 自体の上書きによる全セッション DoS）が
-      // 通っていた。完全一致 + read-only git 撤去で class ごと閉じた。
-      ['P1回帰: git diff --output での任意ファイル書込', 'git diff --output=/tmp/pwned.txt'],
-      ['P1回帰: git show --output での任意ファイル書込', 'git show --output=/tmp/pwned.txt HEAD'],
-      // P1（同上）: quality:deadcode:ci --fix で knip がソースを自動改変できた。
-      // 完全一致（引数を一切許さない）で閉じた。
-      ['P1回帰: quality:deadcode:ci --fix によるソース自動改変', 'pnpm quality:deadcode:ci --fix'],
-      ['docs:check に引数を付ける迂回', 'pnpm docs:check --anything'],
-      ['docs:coverage に引数を付ける迂回', 'pnpm docs:coverage --write'],
-      // P2-a（同上）: gh api への -f/-F/--input は暗黙的に POST を意味しうる。
-      // dependabot alerts コマンドは完全一致のみ許可のため、追加 flag は
-      // 文字列として一致しなくなり自動的に拒否される。
-      [
-        'P2回帰: gh api dependabot alerts に -f を付けて暗黙POSTを試みる迂回',
-        "gh api repos/Dayopt/dayopt/dependabot/alerts?state=open --jq 'length' -f x=1",
-      ],
-      [
-        'gh api permissions self-check に --input を付ける迂回',
-        'gh api repos/Dayopt/dayopt --jq .permissions --input /tmp/x',
-      ],
-      // #2483（CI ファイル統合 Phase 1）: heavy-red / integration-red の生 gh
-      // コマンド直叩きは wrapper 化で無効化された（旧文字列は workflow が
-      // 存在しないため gh 側で失敗するが、guard の完全一致も通らないため
-      // 二重に拒否される）。旧 v1 攻撃パターン（flag 追加・workflow 名差し替え・
-      // --json field 差し替え・--branch 省略）は新 wrapper の攻撃面に置き換える。
-      [
-        'heavy-red wrapper の gh 生コマンド直叩きを試みる迂回（旧v1文字列、workflow 自体が現存しない）',
-        'gh run list --workflow=heavy-post-merge.yml --limit 3 --json conclusion,status,headSha,createdAt,url',
-      ],
-      [
-        'integration-red wrapper の gh 生コマンド直叩きを試みる迂回（旧v1文字列、workflow 自体が現存しない）',
-        'gh run list --workflow=integration.yml --branch main --limit 3 --json conclusion,status,headSha,createdAt,url',
-      ],
-      [
-        'check-workflow-job wrapper に未許可 checkId を渡す迂回',
-        'node scripts/ci/night-watch/check-workflow-job.mjs docs-check',
-      ],
-      [
-        'check-workflow-job wrapper に余分な flag を付ける迂回',
-        'node scripts/ci/night-watch/check-workflow-job.mjs heavy-red --extra',
-      ],
-      [
-        'check-workflow-job wrapper の checkId を別 workflow っぽい文字列に差し替える迂回',
-        'node scripts/ci/night-watch/check-workflow-job.mjs production-config-audit',
-      ],
-      [
-        'Sentry スキャンの query を差し替える迂回',
-        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue list dayopt --query "is:unresolved"',
-      ],
-      [
-        'Sentry スキャンに write 系サブコマンド（resolve）を混ぜる迂回',
-        'SENTRY_AUTH_TOKEN="op://agent/sentry-cli-readonly/credential" op run -- sentry issue resolve 1',
-      ],
-      [
-        'Sentry スキャン cloud互換形の query を差し替える迂回',
-        'sentry issue list dayopt --query "is:unresolved"',
-      ],
-      [
-        'Sentry スキャン cloud互換形に write 系サブコマンド（resolve）を混ぜる迂回',
-        'sentry issue resolve 1',
-      ],
-      [
-        'Sentry スキャン cloud互換形の org を差し替える迂回',
-        'sentry issue list evil-org --query "is:unresolved age:-24h"',
-      ],
-      // thread #1（P1: close 対象を前日の盤面 issue に限定する）: gh issue
-      // create/comment/close を直接 Bash から呼ぶ経路そのものを撤去したため、
-      // 旧来の positive flag allowlist 迂回はすべて「allowlist に無い任意
-      // コマンド」として一律で落ちる。代表形だけ回帰確認する。
-      [
-        '旧経路: gh issue create の直接呼び出し（wrapper 撤去後は allowlist に無い）',
-        'gh issue create --title x --body y --label type:board --repo Dayopt/dayopt',
-      ],
-      [
-        '旧経路: gh issue close の直接呼び出し（close 対象を Claude が指定する経路が無くなった）',
-        'gh issue close 2000 --repo Dayopt/dayopt --comment bye',
-      ],
-      [
-        '旧経路: gh search issues の直接呼び出し',
-        'gh search issues --repo Dayopt/dayopt --state open test',
-      ],
-      // thread #5（P1、2026-08-21 内製クロスレビュー risk-reviewer が実測確認）
-      // の原型攻撃: quote/backslash 除去だけの二重検査は shell 展開
-      // （ANSI-C escape `$'…'`）を再現できず、`gh issue create` へ未許可
-      // flag（`--body-file`）を渡せていた。wrapper 化により `gh issue create`
-      // の直接呼び出し経路自体が allowlist から消えたため、この攻撃形は
-      // 「allowlist に無い任意コマンド」として block される。
-      [
-        'P1回帰（thread #5 原型）: shell 展開で --body-file を smuggle する攻撃',
-        "gh issue create --title x $'\\x2d\\x2dbody-file' /path --repo Dayopt/dayopt",
-      ],
-      [
-        'P1回帰（thread #5、対象を wrapper 呼び出し自体に変えた迂回）: alert-issue.mjs の呼び出しに未知の script 名を混ぜる',
-        'node scripts/ci/night-watch/evil.mjs report x --actual 1',
-      ],
-      [
-        'wrapper prefix の迂回: alert-issue.mjs に未許可のサブコマンドを渡す',
-        'node scripts/ci/night-watch/alert-issue.mjs close 2000',
-      ],
-    ])('%s は落とす', (_label, command) => {
-      expect(runGuard(bash(command), rootDir, NIGHT_WATCH_ENV)).toBe('block');
-    });
-
-    it('force-push flag 付きでも落とす（既存 force-push ガードとの二重防御）', () => {
-      expect(runGuard(bash(`git push ${FORCE_FLAG} origin main`), rootDir, NIGHT_WATCH_ENV)).toBe(
-        'block',
-      );
-    });
-
-    it('許可コマンドをセパレータで連結して push を混ぜる迂回は落とす', () => {
-      expect(
-        runGuard(bash('pnpm docs:check; git push origin main'), rootDir, NIGHT_WATCH_ENV),
-      ).toBe('block');
-    });
-
-    it('許可コマンドをパイプで連結する迂回は落とす', () => {
-      expect(
-        runGuard(bash('pnpm docs:check | tee /tmp/night-watch-out.txt'), rootDir, NIGHT_WATCH_ENV),
-      ).toBe('block');
-    });
-
-    it('wrapper 呼び出しをセパレータで連結して push を混ぜる迂回は落とす', () => {
-      expect(
-        runGuard(
-          bash(
-            'node scripts/ci/night-watch/alert-issue.mjs report docs-check; git push origin main',
-          ),
-          rootDir,
-          NIGHT_WATCH_ENV,
-        ),
-      ).toBe('block');
-    });
-
-    it('コマンド置換で隠す迂回は落とす', () => {
-      expect(
-        runGuard(
-          bash('node scripts/ci/night-watch/alert-issue.mjs report $(git log -1)'),
-          rootDir,
-          NIGHT_WATCH_ENV,
-        ),
-      ).toBe('block');
-    });
-
-    it('eval で隠す迂回は落とす', () => {
-      expect(runGuard(bash("eval 'git push'"), rootDir, NIGHT_WATCH_ENV)).toBe('block');
-    });
-  });
-
-  // 層2（RemoteTrigger の allowed_tools から Write/Edit/MultiEdit/NotebookEdit を
-  // 除外する設定）が唯一の防御だと、その設定が漏れた場合に agent が
-  // scripts/ci/night-watch/*.mjs（layer3 が prefix 一致で信頼している node script）
-  // や本 hook 自体を書き換えてから、信頼されたコマンド名で実行するだけで任意
-  // コード実行 / guard 自体の無効化に到達できる（push 前反証レビュー
-  // risk-reviewer 指摘、medium）。layer3 も Write/Edit を無条件で拒否し、
-  // 層2 の設定漏れに対する defense-in-depth にする。
-  describe('Write/Edit の無条件拒否（層2 の設定漏れに対する defense-in-depth）', () => {
-    it('通常ファイルへの Write は落とす', () => {
-      expect(runGuard(write('docs/some-file.md'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
-    });
-
-    it('通常ファイルへの Edit は落とす', () => {
-      expect(runGuard(edit('apps/product/src/index.ts'), rootDir, NIGHT_WATCH_ENV)).toBe('block');
-    });
-
-    it('wrapper script 自身への Write（信頼された prefix の書き換え試行）は落とす', () => {
-      expect(
-        runGuard(write('scripts/ci/night-watch/alert-issue.mjs'), rootDir, NIGHT_WATCH_ENV),
-      ).toBe('block');
-    });
-
-    it('guard 自身への Edit（guard 無効化の書き換え試行）は落とす', () => {
-      expect(runGuard(edit('scripts/hooks/pre-tool-guard-impl.sh'), rootDir, NIGHT_WATCH_ENV)).toBe(
-        'block',
-      );
-    });
-
-    // 非ブロッキング Codex レビュー指摘（P1）: この if ブロックが MultiEdit/
-    // NotebookEdit も判定対象にしていても、.claude/settings.json の
-    // PreToolUse matcher にその 2 tool が登録されていなければ hook 自体が
-    // 発火せず、判定コードは無意味になる。実際に登録が漏れていた
-    // （settings.json 側の修正と一緒でないと閉じない class）。
-    it('MultiEdit も落とす（本 hook への入力を直接検証。matcher 登録の固定は別 test）', () => {
-      expect(
-        runGuard(
-          { tool_name: 'MultiEdit', tool_input: { file_path: 'docs/some-file.md', edits: [] } },
-          rootDir,
-          NIGHT_WATCH_ENV,
-        ),
-      ).toBe('block');
-    });
-
-    it('NotebookEdit も落とす（file_path ではなく notebook_path で渡る）', () => {
-      expect(
-        runGuard(
-          { tool_name: 'NotebookEdit', tool_input: { notebook_path: 'analysis.ipynb' } },
-          rootDir,
-          NIGHT_WATCH_ENV,
-        ),
-      ).toBe('block');
-    });
-
-    it('env var が無ければ通常どおり許可される（既存挙動）', () => {
-      // file_path は絶対パスで渡す（#2359 の worktree 境界 guard が相対パスを
-      // 拒否するようになったため。tool 仕様どおりの絶対パスで書く）。
-      expect(runGuard(write(join(rootDir, 'docs/some-file.md')))).toBe('allow');
-    });
-  });
-
-  // settings.json の PreToolUse matcher 自体を固定する。層3（本 hook）が
-  // MultiEdit/NotebookEdit を判定できても、matcher に登録が無ければ発火せず
-  // 無意味だった（非ブロッキング Codex レビュー指摘、P1）。
-  describe('.claude/settings.json: PreToolUse matcher の登録', () => {
-    it('Write / Edit / MultiEdit / NotebookEdit / Bash / spawn_task すべてが guard hook を指す', () => {
-      const settings = JSON.parse(readFileSync(join(rootDir, '.claude/settings.json'), 'utf8'));
-      const matchers = new Map(
-        settings.hooks.PreToolUse.map(
-          (entry: { matcher: string; hooks: { command: string }[] }) => [
-            entry.matcher,
-            entry.hooks[0]?.command,
-          ],
-        ),
-      );
-      for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'Bash']) {
-        expect(matchers.get(tool)).toBe('scripts/hooks/pre-tool-guard.sh');
-      }
-      expect(matchers.get('mcp__ccd_session__spawn_task')).toBe('scripts/hooks/pre-tool-guard.sh');
-    });
-  });
-});
-
 // #2293: agent-ops secret 露出の出力段 redaction。過去 4 件の露出 incident
 // （07-22 Vercel CLI token / 08-11 Supabase branches credential / 08-11
 // Turnstile secret via Management API ×2）はいずれも「生表示 command を
@@ -1391,7 +1145,7 @@ describe('night-watch: DAYOPT_NIGHT_WATCH=1 の Bash allowlist', () => {
 // denylist の穴埋めではなく、危険な command shape そのものを block し、
 // field allowlist projection を持つ安全な代替（scripts/agent/supabase-mgmt-safe-get.mjs
 // 等）へ一本化する構造の contract を固定する。
-describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', () => {
+describe('pre-tool-guard.mjs: #2293 op item get の --reveal / --format=json', () => {
   it('--reveal を伴うと落ちる（concealed field の実値が出力される）', () => {
     expect(runGuard(bash('op item get "human/supabase" --fields password --reveal'))).toBe('block');
   });
@@ -1423,7 +1177,7 @@ describe('pre-tool-guard.sh: #2293 op item get の --reveal / --format=json', ()
   });
 });
 
-describe('pre-tool-guard.sh: #2293 supabase branches get（08-11 incident 再現）', () => {
+describe('pre-tool-guard.mjs: #2293 supabase branches get（08-11 incident 再現）', () => {
   it('08-11 incident の実行形（--experimental branches get）は落ちる', () => {
     expect(runGuard(bash('supabase --experimental branches get efqkuihquhzhuhnwvffk'))).toBe(
       'block',
@@ -1435,7 +1189,7 @@ describe('pre-tool-guard.sh: #2293 supabase branches get（08-11 incident 再現
   });
 });
 
-describe('pre-tool-guard.sh: #2293 vercel --token / -t（07-22 incident 再現）', () => {
+describe('pre-tool-guard.mjs: #2293 vercel --token / -t（07-22 incident 再現）', () => {
   it('--token に値を伴う vercel 呼び出しは落ちる', () => {
     expect(runGuard(bash('vercel ls --token abc123'))).toBe('block');
   });
@@ -1461,7 +1215,7 @@ describe('pre-tool-guard.sh: #2293 vercel --token / -t（07-22 incident 再現�
   });
 });
 
-describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-11 incident 再現 ×2）', () => {
+describe('pre-tool-guard.mjs: #2293 Supabase Management API secret endpoint（08-11 incident 再現 ×2）', () => {
   it('08-11 incident 1 の実行形（config/auth への直接 curl）は落ちる', () => {
     expect(
       runGuard(
@@ -1563,7 +1317,7 @@ describe('pre-tool-guard.sh: #2293 Supabase Management API secret endpoint（08-
   });
 });
 
-describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
+describe('pre-tool-guard.mjs: #2293 vercel invoke anchor の抜け穴修正（push前反証レビュー・merge前クロスレビュー）', () => {
   it('op run -- の後ろに空白1つで置かれた vercel --token も落ちる', () => {
     expect(runGuard(bash('op run -- vercel ls --token abc123'))).toBe('block');
   });
@@ -1576,7 +1330,7 @@ describe('pre-tool-guard.sh: #2293 vercel invoke anchor の抜け穴修正（pus
   });
 });
 
-describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持たず、例外なく block）', () => {
+describe('pre-tool-guard.mjs: #2293 op read（--reveal 相当の masking を持たず、例外なく block）', () => {
   it('redirect なしの op read は落ちる', () => {
     expect(runGuard(bash('op read "op://human/supabase/SUPABASE_SERVICE_ROLE_KEY"'))).toBe('block');
   });
@@ -1635,7 +1389,7 @@ describe('pre-tool-guard.sh: #2293 op read（--reveal 相当の masking を持�
   });
 });
 
-describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#2510、.sql 限定）', () => {
+describe('pre-tool-guard.mjs: migrations 配下の既存ファイル編集（#2510、.sql 限定）', () => {
   // migrations 配下ガードは「適用済み migration の書き換え」を防ぐもの。
   // 判定が prefix 一致だけだと、配下のポインタ用 markdown（CLAUDE.md）まで
   // 編集不能＋的外れなエラー案内になるため、対象を .sql に限定した。
@@ -1658,5 +1412,218 @@ describe('pre-tool-guard.sh: migrations 配下の既存ファイル編集（#251
     expect(
       runGuard(write(resolve(rootDir, 'supabase/migrations/99999999999999_new.sql'), 'SELECT 1;')),
     ).toBe('allow');
+  });
+});
+
+// R1/R2: Agent の model 明示 + 探索への opus/fable 使用ガード（cost guard）。
+// security guard ではないため、jq parse エラー等は fail-open にする設計だが、
+// 通常の JSON 入力ではその分岐は踏まない。ここでは正規の判定ロジックを固定する。
+describe('pre-tool-guard.mjs: R1 Agent の model 明示', () => {
+  it('model 未指定は block する', () => {
+    expect(runGuard(agentCall({ prompt: 'x' }))).toBe('block');
+  });
+
+  it('model 空文字も block する', () => {
+    expect(runGuard(agentCall({ model: '', prompt: 'x' }))).toBe('block');
+  });
+
+  it('model haiku は通す', () => {
+    expect(runGuard(agentCall({ model: 'haiku', prompt: 'x' }))).toBe('allow');
+  });
+
+  it('model sonnet は通す', () => {
+    expect(runGuard(agentCall({ model: 'sonnet', prompt: 'x' }))).toBe('allow');
+  });
+
+  // F3: R1 は fail-open（cost guard）であるべきだが、旧実装は
+  // `AGENT_MODEL=$(jq ... || true)` で jq 自体の失敗と「jq が成功して model が
+  // 空だった」場合を区別できず、jq 失敗時も block していた（section 冒頭の
+  // fail-open コメントと矛盾）。tool_input が object でない（jq の
+  // `.tool_input.model` が index エラーで落ちる）入力で allow を確認する。
+  it('tool_input が非 object で jq 自体が失敗する場合は fail-open で allow する', () => {
+    expect(runGuard({ tool_name: 'Agent', tool_input: 'not-an-object' })).toBe('allow');
+  });
+
+  it('JSON として解釈できない入力全体は tool_name も取れず allow する', () => {
+    const result = spawnSync(process.execPath, [loaderPath], {
+      cwd: rootDir,
+      encoding: 'utf8',
+      input: 'not json',
+      env: process.env,
+    });
+    expect(result.status).toBe(0);
+  });
+
+  it('subagent_type が Plan / claude-security 系なら model 未指定でも通す（harness spawn 例外）', () => {
+    expect(runGuard(agentCall({ subagent_type: 'Plan', prompt: 'x' }))).toBe('allow');
+    expect(runGuard(agentCall({ subagent_type: 'claude-security-lead', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
+});
+
+describe('pre-tool-guard.mjs: R2 探索に opus / fable を使わない', () => {
+  it('model opus + subagent_type Plan は通す', () => {
+    expect(runGuard(agentCall({ model: 'opus', subagent_type: 'Plan', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
+
+  it('model opus + subagent_type claude-security 系は通す', () => {
+    expect(
+      runGuard(agentCall({ model: 'opus', subagent_type: 'claude-security:scan', prompt: 'x' })),
+    ).toBe('allow');
+  });
+
+  it('model opus + prompt に反証を含む場合は通す', () => {
+    expect(runGuard(agentCall({ model: 'opus', prompt: 'この plan を反証してください' }))).toBe(
+      'allow',
+    );
+  });
+
+  it('model opus + description に設計判断を含む場合は通す', () => {
+    expect(
+      runGuard(agentCall({ model: 'opus', prompt: 'x', description: '設計判断のための比較検討' })),
+    ).toBe('allow');
+  });
+
+  it('model opus + 反証等の言及がない plain prompt は block する', () => {
+    expect(runGuard(agentCall({ model: 'opus', prompt: 'このコードを調べてください' }))).toBe(
+      'block',
+    );
+  });
+
+  it('model の表記ゆれ（Opus / claude-opus-5）も plain prompt なら block する', () => {
+    for (const model of ['Opus', 'claude-opus-5', 'claude-fable-5-1']) {
+      expect(runGuard(agentCall({ model, prompt: '調べて' })), model).toBe('block');
+    }
+  });
+
+  it('model fable + plain prompt も block する', () => {
+    expect(runGuard(agentCall({ model: 'fable', prompt: 'このコードを調べてください' }))).toBe(
+      'block',
+    );
+  });
+
+  it('model fable + subagent_type Plan は通す', () => {
+    expect(runGuard(agentCall({ model: 'fable', subagent_type: 'Plan', prompt: 'x' }))).toBe(
+      'allow',
+    );
+  });
+});
+
+// R3: Read の範囲指定なし大規模ファイル読み込みガード（cost guard）。
+describe('pre-tool-guard.mjs: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
+  let fixtureRoot: string;
+  let bigFile: string;
+  let smallFile: string;
+  let pngFile: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-read-'));
+    bigFile = join(fixtureRoot, 'big.ts');
+    smallFile = join(fixtureRoot, 'small.ts');
+    pngFile = join(fixtureRoot, 'image.png');
+    writeFileSync(bigFile, Array.from({ length: 700 }, (_, i) => `// line ${i}`).join('\n'));
+    writeFileSync(smallFile, Array.from({ length: 50 }, (_, i) => `// line ${i}`).join('\n'));
+    writeFileSync(pngFile, 'not a real png, contents irrelevant');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('700 行のファイルを offset/limit なしで Read しようとすると block する', () => {
+    expect(runGuard(readTool(bigFile))).toBe('block');
+  });
+
+  it('limit を付ければ通す', () => {
+    expect(runGuard(readTool(bigFile, { limit: 100 }))).toBe('allow');
+  });
+
+  it('offset を付ければ通す', () => {
+    expect(runGuard(readTool(bigFile, { offset: 500 }))).toBe('allow');
+  });
+
+  it('50 行のファイルは範囲指定なしでも通す', () => {
+    expect(runGuard(readTool(smallFile))).toBe('allow');
+  });
+
+  it('.png のような非テキスト拡張子は行数に関わらず通す', () => {
+    expect(runGuard(readTool(pngFile))).toBe('allow');
+  });
+
+  it('存在しないパスは通す（fail-open）', () => {
+    expect(runGuard(readTool(join(fixtureRoot, 'does-not-exist.ts')))).toBe('allow');
+  });
+});
+
+// JS の \s は U+00A0（NBSP）等の Unicode 空白も区切りとして受理するが、bash の IFS は
+// ASCII 空白だけを単語区切りにする。許可名の直後に NBSP を置いた別ファイル名は shell では
+// 1 語のまま渡り、guard が「許可名 + 区切り」と誤認すると別ファイルが消費される
+// （Codex review P2、PR #2563。旧 bash 版の [[:space:]] は NBSP を含まなかった）。
+describe('pre-tool-guard.mjs: env-file 名の直後の非 ASCII 空白（NBSP）', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'pre-tool-guard-nbsp-'));
+    writeFileSync(join(dir, '.op-env.agent'), 'A=op://agent/x/y\n');
+    writeFileSync(join(dir, '.op-env.agent\u00a0x'), 'B=op://human/x/y\n');
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('許可名 + NBSP + 別名 を許可形と誤認せず block する', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent\u00a0x -- pnpm typecheck'), dir)).toBe(
+      'block',
+    );
+  });
+
+  it('許可名だけの通常形は引き続き通る', () => {
+    expect(runGuard(bash('op run --env-file=.op-env.agent -- pnpm typecheck'), dir)).toBe('allow');
+  });
+});
+
+// =====================================================================
+// Codex レビュー依頼の直接投稿（cost guard、#2558）
+// =====================================================================
+// PR #2554 実測: 1 本の PR で「@codex review」を 8 回投稿し、うち 3 回は応答前の
+// 連投、応答 7 回のうち 6 回が「問題なし」だった。判定（追従済みか / CI green か /
+// 既存証跡が現在の diff の指紋と一致するか）はすべて機械化できるため、Bash からの
+// 直接投稿は `pnpm review:request` へ誘導する。
+//
+// 他の Bash guard と同じく、**文字列に言及しただけでも落ちる**（コマンド本文を
+// 走査するため）。docs や commit message へ書く時は Write / Edit で file に
+// 書いてから渡す。
+describe('pre-tool-guard.mjs: Codex レビュー依頼の直接投稿（#2558）', () => {
+  const bash = (command: string) => ({ tool_name: 'Bash', tool_input: { command } });
+  const CODEX_MENTION = ['@', 'codex review'].join('');
+
+  it('gh pr comment での直接依頼を block する', () => {
+    expect(runGuard(bash(`gh pr comment 2554 --body "${CODEX_MENTION}"`))).toBe('block');
+  });
+
+  it('gh api 経由の直接依頼も block する', () => {
+    expect(
+      runGuard(bash(`gh api repos/Dayopt/dayopt/issues/2554/comments -f body="${CODEX_MENTION}"`)),
+    ).toBe('block');
+  });
+
+  it('pnpm review:request は通す（誘導先を塞がない）', () => {
+    expect(runGuard(bash('pnpm review:request 2554'))).toBe('allow');
+  });
+
+  it('メンションを含まない gh pr comment は通す（他のコメント投稿を妨げない）', () => {
+    expect(runGuard(bash('gh pr comment 2554 --body "確定伝達: merge 順で先頭です"'))).toBe(
+      'allow',
+    );
+  });
+
+  it('gh を伴わない文中のメンションは通す（docs へ書く操作を妨げない）', () => {
+    expect(runGuard(bash(`echo "skill の手順に ${CODEX_MENTION} と書く" >> /tmp/note.md`))).toBe(
+      'allow',
+    );
   });
 });

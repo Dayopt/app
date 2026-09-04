@@ -53,7 +53,7 @@ Dayoptのエラー処理パターン（層ごとに分散した4責務を呼び�
 
 ## グローバルエラーハンドラー
 
-エラー処理を1関数へ集約する `handleError` のようなグローバルハンドラーは存在しない。ログ出力（Sentry）とユーザー通知（toast）は呼び出し側が個別に組み合わせる。
+`handleError` のようにエラー処理を1関数へ集約するグローバルハンドラーは**存在しない**。ログ出力（Sentry）とユーザー通知（toast）は呼び出し側が個別に組み合わせる。
 
 ```typescript
 import { captureUnexpectedError } from '@/lib/sentry';

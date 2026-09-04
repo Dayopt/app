@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-25
+last_verified: 2026-09-02
 code: apps/product/src/features/review
 public_docs:
   - review
@@ -10,6 +10,11 @@ lp:
 ---
 
 # Review（振り返り）
+
+> **このファイルは陳腐化している（2026-09-03）。** レポート面は 4 章構成（配分 / 執行 / 質 / 整える）へ
+> 一新中で、下記の「固定 3 セクション」「`range=day|week`」「週次補正」は既に実装から消えている。
+> 現行の設計は [#2575](https://github.com/Dayopt/dayopt/issues/2575)、本文の全面書き換えは
+> [#2583](https://github.com/Dayopt/dayopt/issues/2583) で行う。
 
 `/report` フルページで Plan と Record の差分を読み、次の計画に使うための振り返り機能。点数・streak・評価ラベルは使わず、数字と事実を静かに示す。
 
@@ -28,7 +33,7 @@ lp:
 - Plan との差分が `±0` の項目は一覧に表示しない
 - 差分の正負は符号と方向 icon で示し、成功・失敗を意味する色や評価ラベルは使わない
 - Plan と Record が別日の場合、Plan は Plan 自身の日、Record は Record 自身の日へ計上する
-- **セグメントの集計はタグ/アクティビティ可視性フィルタに従わない**（全アクティビティ対象）。サイドバーのチェックで合計が変わると分析ではなく表示の副作用になるため
+- **セグメントの集計はアクティビティ可視性フィルタに従わない**（全アクティビティ対象）。サイドバーのチェックで合計が変わると分析ではなく表示の副作用になるため
 - セグメント集計は `total` / `share` を返さない。円グラフ・積み上げ・「合計 100%」の表現は使わない（単体の数字 + 過去の自分との比較のみ）
 - セグメントの CRUD（作成・アクティビティ編集・削除）は Sidebar のコンテキストメニューで行う。並び替え・フォルダ分け・共有は持たない
 - Review UI と Storybook は Review feature が所有し、`/report` の Composition Layer（`app/**/(workspace)/_composition/ReportViewClient.tsx`）が timeblock 取得と diff 計算を担う

@@ -356,7 +356,13 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                         // 今日: primary
                         isToday && !isDisabled && 'bg-primary text-primary-foreground font-medium',
                         // 選択中（今日以外）
-                        isSelected && !isToday && !isDisabled && 'bg-state-hover text-foreground',
+                        // hover と同じトークンだと10%の半透明が薄すぎて、選択が
+                        // 消えたように見える（今日の塗りと並ぶと特に）。12%のstate-selected
+                        // にして今日ほど強くはないが「選ばれている」と分かる濃さにする
+                        isSelected &&
+                          !isToday &&
+                          !isDisabled &&
+                          'bg-state-selected text-foreground',
                       )}
                     >
                       {format(date, 'd')}

@@ -4,7 +4,7 @@ Dayopt で作業する全エージェント（Claude / Codex 含む）の正本�
 
 ## Codex レビュー規則
 
-Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
+Codex（OpenAI）がこの repo の PR / Issue をレビューする際の専用規則。Codex はレビュー専任で実装は行わない。**クロスレビュー必須 PR では内製 subagent と並ぶ必須の 2 系統目**（#2529）で、`@codex review` で起動し、Codex 自身の証跡（review object または `Reviewed commit` 付き指摘ゼロ comment）が現 HEAD に対して無いと merge できない。対象判定は `scripts/ci/protected-path-gate.mjs`（保護対象 path）+ `review:full` ラベル + `Closes #N` した issue の `review:full`（#2530）。`review:full` Issue は実装前 Codex Issue Review も必須（`pnpm review:issue:gate`、`dispatch` skill 操作A）。
 
 - レビューコメントは日本語で書く
 - diff によって新たに生じる、または現実に悪化する不具合だけを指摘する。問題がなければ指摘ゼロでよい
@@ -127,7 +127,9 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-クロスレビュー必須PRは **`[internal-review]` marker と現HEAD束縛のCodex review objectの両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
+クロスレビュー必須PRは **内製証跡の commit status（context `dayopt/internal-review`）とCodex自身の証跡（review object または `Reviewed commit` 付き指摘ゼロcomment）の両方**が必須（独立2系統。`pr-cross-review` skill、#2529）。両系統とも束縛は「現HEAD一致 **または** 保護対象diffの指紋一致」（#2558）— 追従merge・docsだけのpushではレビューが失効しない。内製証跡は `pnpm review:marker` が出力する `gh api` 1行で投稿する（旧 `[internal-review]` コメントは廃止。#2562）。Codexへの依頼は `pnpm review:request <PR>` 経由に限る（直接投稿はhookがblockする）。必須になるのは保護対象pathに触れるPR / `review:full` ラベル付きPR / `Closes #N` したissueが `review:full` のPR（#2530）。それ以外はCI green + thread resolveのみでmerge可能。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身 — レビュー証跡の生成・検証スクリプトを含む）— revertだけでは戻せない、CIで捕まらない変更に限る。timeblock/calendar/lib/timeの時間不変条件は可逆でtestが担保するため対象外だが、`features/timeblock/server/mcp-*` と `private-timeblock-search-query.ts` は同居する外部契約・不可逆面として必須側に残す（#2489）。重く見たいPR/issueには `review:full` を手で付ける。
+
+retreat条件: `apps/product/src/features/timeblock` または `apps/product/src/lib/time` 配下のtestを削除・skipするPRは、上記の保護対象pathに触れなくても手動で `review:full` labelを付ける（時間不変条件の安全網がそのtest自身であるため。#2489 / #2503）。
 
 ### レーン運用
 
@@ -141,7 +143,17 @@ worktree で作業するセッション（レーン）は次を守る:
 
 ## 委任・報告の作法
 
-- **委譲時はmodelを明示する**: Haiku=rename/一括置換/ログ蒸留などの機械的作業、Sonnet=通常実装・調査、Main(Opus)=判断・統合・diffレビュー・commit。省略すると同tierが継承され階層が機能しない
+- **委譲時は model を明示し、Frontier を既定にしない**（省略すると同 tier が継承され階層が機能しない）。仕事ごとに必要な能力を測り L0 から上へ、下位層で解けないと分かった時と判断・不可逆の時だけ上げる（Uber Software Factory 原則①④）
+
+| tier | 実行主体                                                                                                                                                      | 担当                                                                                                                                                                                    | 上げる条件                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| L0   | 決定的 script / CLI（LLM を使わない）                                                                                                                         | ファイル検索・git history・diff・typecheck・lint・test・依存確認・JSON 変換・SQL・CI 結果取得・polling・大量ファイル処理。**LLM turn の前に `pnpm run` / `gh` / `rg` で閉じないか探す** | script に書けない、毎回形が変わる |
+| L1   | Haiku、または User が Gemini / ChatGPT chat で行う Deep Research（issue §やること に「Deep Research 依頼: <問い>」を書き `status:blocked`、結果はコメントへ） | 判断を含まない読み書き（ログ蒸留・機械的 rename・定型抽出）、外部リサーチ                                                                                                               | 判断が要る                        |
+| L2   | Sonnet                                                                                                                                                        | 通常実装・調査・レビュー実行。**worker の既定**                                                                                                                                         | 設計判断、矛盾報告の再検証        |
+| L3   | Opus / Fable                                                                                                                                                  | 判断・統合・diff レビュー・commit・不可逆操作                                                                                                                                           | —                                 |
+
+- **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す**（原則③。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする。`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
+- **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（#2529 の独立 2 系統の延長。Antigravity は User が手動で使う目で、CI gate にはしない）
 - **write可能なsubagentへの委譲**は次の4条件を満たす時のみ: 同一worktree、Mainと非重複scope、commit前にMainがgit diffをレビュー、commit/push/external stateの変更はMainに残す
 - **確認・裁可依頼は選択肢+推奨込みが既定**。推奨を先頭に、各選択肢へ一言根拠を添える。複数の判断は1回に束ねる
 - **完了報告**では利用したagent、意図的に使わなかったagentと理由、未確認事項、deferred scopeを示す
@@ -151,30 +163,30 @@ worktree で作業するセッション（レーン）は次を守る:
 
 `.claude/skills/*/SKILL.md` を参照。該当する作業では先に読む。
 
-| skill                  | 使う場面                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                              |
-| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/Playwright/GitHub/UptimeRobot 等の MCP 呼び出し |
-| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                           |
-| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                                  |
-| `trpc-router-creating` | tRPC router/service の新規作成                                                        |
-| `store-creating`       | 新規 Zustand store                                                                    |
-| `storybook`            | Story作成・design token 選択                                                          |
-| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                                 |
-| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                                    |
-| `optimistic-update`    | tRPC mutation の楽観的更新                                                            |
-| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                              |
-| `test`                 | 新機能・バグ修正後のテスト                                                            |
-| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）                  |
-| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                                    |
-| `docs-audit`           | 公開docsの監査                                                                        |
-| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                              |
-| `gardening`            | 月次ガーデニングの人間パート（明示依頼時のみ）                                        |
-| `night-watch`          | 夜勤checklistの追加・変更、cron障害時の手動代行                                       |
-| `audit-ai-config`      | AI設定の棚卸し・audit                                                                 |
-| `blog-ideas`           | ブログネタ提案とissue起票                                                             |
-| `usability-probe`      | Haikuユーザビリティプローブ実行                                                       |
-| `decision`             | `docs/decisions.md` への意思決定1行追記                                               |
+| skill                  | 使う場面                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                         |
+| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約       |
+| `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/UptimeRobot 等の MCP 呼び出し              |
+| `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                      |
+| `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                             |
+| `trpc-router-creating` | tRPC router/service の新規作成                                                   |
+| `store-creating`       | 新規 Zustand store                                                               |
+| `storybook`            | Story作成・design token 選択                                                     |
+| `i18n`                 | UI文言・翻訳ファイル・用語集/禁止表記                                            |
+| `error-handling`       | try/catch・tRPC onError・ErrorBoundary・Sentry連携                               |
+| `optimistic-update`    | tRPC mutation の楽観的更新                                                       |
+| `security`             | 認証/認可・RLS・外部入力を受けるフォーム                                         |
+| `test`                 | 新機能・バグ修正後のテスト                                                       |
+| `pr-cross-review`      | merge前クロスレビュー（旧risk-reviewer/behavior-verifier観点を統合）             |
+| `docs-writing`         | ユーザー向けdocs・リリースノート・技術ドキュメント                               |
+| `docs-audit`           | 公開docsの監査                                                                   |
+| `releasing`            | リリース作業end-to-end（明示依頼時のみ）                                         |
+| `gardening`            | 月次改善ループ: ai:usage の 4 問 → 月に 1 変数 → 結果(未) 回収（明示依頼時のみ） |
+| `audit-ai-config`      | AI設定の棚卸し・audit                                                            |
+| `blog-ideas`           | ブログネタ提案とissue起票                                                        |
+| `usability-probe`      | Haikuユーザビリティプローブ実行                                                  |
+| `decision`             | `docs/decisions.md` への意思決定1行追記                                          |
 
 ## Deploy / Release
 

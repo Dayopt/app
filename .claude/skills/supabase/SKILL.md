@@ -122,17 +122,11 @@ git push
 # → staging Supabase branch に自動適用
 ```
 
-### Preview branch の作られ方（2026-08-11 実測）
+### Preview branch の作られ方
 
-上のフローで「Supabase preview branch 自動生成」が起きるのは、**PR の diff に migration（schema に実影響する変更）が含まれる時だけ**。この条件は誤解しやすいので、実測で確かめた事実を残す。
+「Supabase preview branch 自動生成」が起きるのは **PR の diff に migration（schema に実影響する変更）が含まれる時だけ**。branch が作られない時に bot が出す文言（`there are no changes detected in supabase directory`）は「directory の変更」と読めるが、**ディレクトリ単位ではない** — `supabase/` 直下に任意のファイルを置いても、`supabase/seed.sql` を編集しても発火しない。「適当なファイルを触って Preview 用の branch を出す」opt-in は成立しない。
 
-**bot の文言は実態と一致しない。** PR に branch が作られない時、bot は次のように書く:
-
-> This pull request has been ignored ... because there are no changes detected in `supabase` directory.
-
-「directory の変更」と読めるが、**ディレクトリ単位ではない**。`supabase/` 直下に任意のファイルを置いても、実在する `supabase/seed.sql` を編集しても発火しない（dot 始まり / 非 dot / seed.sql コメントの 3 パターンで `Supabase Preview` check が `skipped` を確認）。「適当なファイルを触って Preview 用の branch を出す」opt-in は成立しない。
-
-**帰結**: `supabase/` を触らない PR の Vercel Preview には Supabase env が注入されない。その Preview で auth など DB 接続が要る挙動は検証できない（env validation で 500 になる）。**Preview での実挙動確認に依存した検証計画を立てない。** local + production 確認で回すのが既定（経緯は [#1461](https://github.com/Dayopt/dayopt/issues/1461)）。
+**帰結**: `supabase/` を触らない PR の Vercel Preview には Supabase env が注入されず、auth など DB 接続が要る挙動は検証できない（env validation で 500 になる）。**Preview での実挙動確認に依存した検証計画を立てない。** local + production 確認で回すのが既定（[#1461](https://github.com/Dayopt/dayopt/issues/1461)）。
 
 ### CLI から preview branch を作る時
 
@@ -149,7 +143,7 @@ supabase --experimental branches create <name> \
 
 省略すると action run の `git_config.ref` が空になり、`migrate` step が `DEAD` で停止する。git `main` への紐付けは **409 で拒否される**（default branch が占有済み）。実在する feature branch に紐付ければ全 migration が適用される。
 
-**2. 手動 branch の credential は Vercel へ同期されない。** 同期は integration が自分で branch を作る経路でしか走らないため、手動で作った branch は Vercel Preview から見えない。Preview を実際に動かす目的では使えない。
+**2. 手動 branch の credential は Vercel へ同期されない**（integration が自分で branch を作る経路でしか同期が走らないため）。Preview を実際に動かす目的では使えない。
 
 **削除は 2 段階**（persistent の場合）:
 
@@ -179,7 +173,7 @@ curl -s "https://api.supabase.com/v1/projects/<branch-ref>/actions" \
   | jq '[.[] | {git_config, run_steps: [.run_steps[] | {name, status}]}]'
 ```
 
-**API / CLI の出力は `jq` の allowlist 射影だけを表示する。** `supabase branches get` は credential を返す command なので、状態確認には metadata しか返さない `branches list` を使う（[#1920](https://github.com/Dayopt/dayopt/issues/1920)、2026-08-11 incident（削除済み、git 履歴参照））。
+**API / CLI の出力は `jq` の allowlist 射影だけを表示する。** `supabase branches get` は credential を返す command なので、状態確認には metadata しか返さない `branches list` を使う（[#1920](https://github.com/Dayopt/dayopt/issues/1920)。経緯は git 履歴参照）。
 
 ### 機能削除の順序（destructive change）
 
@@ -265,7 +259,7 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 
 ### 方針: 最小限
 
-`supabase/seed.sql` には**最小限のtagデータ(10件程度)のみ**を記述。
+`supabase/seed.sql` には**最小限のカテゴリー / アクティビティと、検証用の Plan / Record のみ**を記述。
 
 理由:
 
@@ -275,8 +269,12 @@ CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 
 ```sql
 -- supabase/seed.sql
-INSERT INTO public.tags (id, name, color, user_id) VALUES
-  -- system tags(全ユーザー共通のデフォルト)
+INSERT INTO public.categories (id, user_id, name, color) VALUES
+  -- 開発用のカテゴリー(色・アイコンを持つのはカテゴリーだけ)
+  (...)
+;
+INSERT INTO public.activities (id, user_id, category_id, name) VALUES
+  -- Plan / Record が参照する分類単位
   (...)
 ;
 ```
@@ -389,19 +387,17 @@ export function useEntityRealtime(onUpdate: () => void) {
 
 **方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、コスト要因になるため除外。
 
-かつて `check-reminders` / `daily-insights` を運用していたが、実体・宣言とも既に無く、DB 側の cron 登録も `20260425000000_unschedule_removed_edge_function_cron_jobs.sql` で解除済み。
+旧 `check-reminders` / `daily-insights` は廃止済み（cron 登録も `20260425000000_unschedule_removed_edge_function_cron_jobs.sql` で解除済み）。
 
 ### Auth Hook を Edge Function で受ける時の verify_jwt
 
-**`verify_jwt = false` にする。** Auth の send_email hook は standardwebhooks の署名を付けて POST するが、**JWT は付けない**。`true` のままだと入口で弾かれ、GoTrue 側に `500: Hook requires authorization token` が返り、**認証メールが 1 通も送れない**。画面には汎用エラーしか出ないため、Auth ログを見るまで原因が分からない（2026-07-27 に本番で発生）。
+**`verify_jwt = false` にする。** Auth の send_email hook は standardwebhooks の署名を付けて POST するが、**JWT は付けない**。`true` のままだと入口で弾かれ、GoTrue 側に `500: Hook requires authorization token` が返り、**認証メールが 1 通も送れない**。画面には汎用エラーしか出ないため、Auth ログを見るまで原因が分からない。
 
 真正性は function 側の署名検証（`SEND_EMAIL_HOOK_SECRET`）で担保する。この設定は `scripts/auth-hook-config.test.ts` で固定している。
 
 ### デプロイ経路
 
-**既定は config.toml 宣言による自動デプロイ。** `supabase/config.toml` に `[functions.<slug>]` を宣言した function だけが、Preview branch と production へ自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されない(手動デプロイ忘れの分だけ乖離する)。新しい function を追加したら宣言も同じ PR に含める。
-
-手動デプロイは、緊急時や宣言前の検証に限る。
+**既定は config.toml 宣言による自動デプロイ。** `supabase/config.toml` に `[functions.<slug>]` を宣言した function だけが、Preview branch と production へ自動デプロイされる。宣言が無いと、function を変更した PR をマージしても本番に反映されない。新しい function を追加したら宣言も同じ PR に含める。手動デプロイは緊急時や宣言前の検証に限る。
 
 ### デプロイコマンド(手動)
 
@@ -415,7 +411,7 @@ npx supabase functions deploy send-auth-email --use-api --project-ref=<PREVIEW_R
 npx supabase functions deploy send-auth-email --use-api --project-ref=<PROD_REF>
 ```
 
-通常は GitHub Actions で自動実行される。手動デプロイは緊急時のみ。
+通常は GitHub Actions が自動実行する。
 
 ### Secrets 管理
 
@@ -498,7 +494,7 @@ npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
 
 ### 環境操作
 
-- Staging と Production を**同時にデプロイしない**
+- Staging と Production は同時に触らない（`AGENTS.md` §Deploy / Release）
 - production への変更は必ず preview branch での検証を経る
 - staging は「Stripe検証 / hotfix / closed beta」以外の目的では触らない
 

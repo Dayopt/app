@@ -7,7 +7,6 @@ interface CalendarDayDiffItem {
   timeblockId: string;
   kind: CalendarDayDiffKind;
   title: string;
-  tagId: string | null;
   activityId: string | null;
   color: string;
   plannedStart: Date | null;
@@ -139,7 +138,6 @@ function makeItem(
     timeblockId: entry.id,
     kind,
     title: entry.title,
-    tagId: entry.tagId ?? null,
     activityId: entry.activityId ?? null,
     color: entry.color,
     plannedStart: planned.start,

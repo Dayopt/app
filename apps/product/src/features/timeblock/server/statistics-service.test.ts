@@ -24,7 +24,6 @@ function createVisibleDaysReviewService() {
   const timeblocks = [
     {
       id: 'visible-thursday',
-      tag_id: 'tag-1',
       activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
@@ -33,7 +32,6 @@ function createVisibleDaysReviewService() {
     },
     {
       id: 'hidden-saturday',
-      tag_id: 'tag-1',
       activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
@@ -42,7 +40,6 @@ function createVisibleDaysReviewService() {
     },
     {
       id: 'visible-monday',
-      tag_id: 'tag-1',
       activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
@@ -51,7 +48,6 @@ function createVisibleDaysReviewService() {
     },
     {
       id: 'previous-monday',
-      tag_id: 'tag-1',
       activity_id: 'activity-1',
       plan_id: null,
       source: 'manual',
@@ -64,7 +60,6 @@ function createVisibleDaysReviewService() {
     user_settings: createChainableMock({ timezone: 'UTC' }),
     records: createChainableMock(timeblocks),
     plans: createChainableMock(timeblocks),
-    tags: createChainableMock([{ id: 'tag-1', name: 'Deep Work', color: 'blue', icon: 'brain' }]),
     activities: createChainableMock([
       { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
     ]),
@@ -78,13 +73,13 @@ beforeEach(() => {
   invalidateUserTimezoneCache(USER_ID);
 });
 
-describe('StatisticsService.getTagStats', () => {
-  it('records をタグ別に集計し counts/lastUsed を返す（deleted は除外済み前提）', async () => {
+describe('StatisticsService.getActivityStats', () => {
+  it('records をアクティビティ別に集計し counts/lastUsed を返す（deleted は除外済み前提）', async () => {
     const { service } = createService({
       records: createChainableMock([
         {
           id: 'l1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: null,
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
@@ -92,7 +87,7 @@ describe('StatisticsService.getTagStats', () => {
         },
         {
           id: 'l2',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: null,
           source: 'manual',
           start_at: '2026-07-02T00:00:00Z',
@@ -100,7 +95,7 @@ describe('StatisticsService.getTagStats', () => {
         },
         {
           id: 'l3',
-          tag_id: 'tag-2',
+          activity_id: 'activity-2',
           plan_id: null,
           source: 'manual',
           start_at: '2026-07-01T00:00:00Z',
@@ -110,13 +105,13 @@ describe('StatisticsService.getTagStats', () => {
       plans: createChainableMock([]),
     });
 
-    const result = await service.getTagStats(USER_ID);
+    const result = await service.getActivityStats(USER_ID);
 
     // counts は records のみの実績件数（サイドバー等の「実績件数」表示用途の契約は不変）
-    expect(result.counts).toEqual({ 'tag-1': 2, 'tag-2': 1 });
+    expect(result.counts).toEqual({ 'activity-1': 2, 'activity-2': 1 });
     expect(result.lastUsed).toEqual({
-      'tag-1': '2026-07-02T00:00:00Z',
-      'tag-2': '2026-07-01T00:00:00Z',
+      'activity-1': '2026-07-02T00:00:00Z',
+      'activity-2': '2026-07-01T00:00:00Z',
     });
     expect(result.planCounts).toEqual({});
   });
@@ -126,41 +121,41 @@ describe('StatisticsService.getTagStats', () => {
       records: createChainableMock([]),
       plans: createChainableMock([]),
     });
-    expect(await service.getTagStats(USER_ID)).toEqual({
+    expect(await service.getActivityStats(USER_ID)).toEqual({
       counts: {},
       lastUsed: {},
       planCounts: {},
     });
   });
 
-  it('Plan のみ（record 無し）のタグは counts=0 のまま、planCounts に件数が反映される（#1576フォローアップ）', async () => {
+  it('Plan のみ（record 無し）のアクティビティは counts=0 のまま、planCounts に件数が反映される（#1576フォローアップ）', async () => {
     const { service } = createService({
       records: createChainableMock([]),
       plans: createChainableMock([
         {
           id: 'p1',
-          tag_id: 'tag-future',
+          activity_id: 'activity-future',
           start_at: '2026-08-10T00:00:00Z',
           end_at: '2026-08-10T01:00:00Z',
         },
       ]),
     });
 
-    const result = await service.getTagStats(USER_ID);
+    const result = await service.getActivityStats(USER_ID);
 
-    // records が無いタグは counts に現れない（0 扱い） — 削除確認の合計判定は呼び出し側が
+    // records が無いアクティビティは counts に現れない（0 扱い） — 削除確認の合計判定は呼び出し側が
     // counts + planCounts を合算する（apps/product/src/features/calendar/components/
     // activity-filter/activity-delete-counts.ts の mergeActivityDeleteCounts）
-    expect(result.counts['tag-future']).toBeUndefined();
-    expect(result.planCounts).toEqual({ 'tag-future': 1 });
+    expect(result.counts['activity-future']).toBeUndefined();
+    expect(result.planCounts).toEqual({ 'activity-future': 1 });
   });
 
-  it('records と plans 両方を持つタグは counts/planCounts がそれぞれ独立して反映される', async () => {
+  it('records と plans 両方を持つアクティビティは counts/planCounts がそれぞれ独立して反映される', async () => {
     const { service } = createService({
       records: createChainableMock([
         {
           id: 'l1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           plan_id: 'p1',
           source: 'from_plan',
           start_at: '2026-07-01T00:00:00Z',
@@ -170,39 +165,39 @@ describe('StatisticsService.getTagStats', () => {
       plans: createChainableMock([
         {
           id: 'p1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
         },
         {
           id: 'p2',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-07-08T00:00:00Z',
           end_at: '2026-07-08T01:00:00Z',
         },
       ]),
     });
 
-    const result = await service.getTagStats(USER_ID);
+    const result = await service.getActivityStats(USER_ID);
 
-    expect(result.counts).toEqual({ 'tag-1': 1 });
-    expect(result.planCounts).toEqual({ 'tag-1': 2 });
+    expect(result.counts).toEqual({ 'activity-1': 1 });
+    expect(result.planCounts).toEqual({ 'activity-1': 2 });
   });
 
-  it('tag_id が null の Plan（未分類）は planCounts に含めない', async () => {
+  it('activity_id が null の Plan（未分類）は planCounts に含めない', async () => {
     const { service } = createService({
       records: createChainableMock([]),
       plans: createChainableMock([
         {
           id: 'p1',
-          tag_id: null,
+          activity_id: null,
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
         },
       ]),
     });
 
-    const result = await service.getTagStats(USER_ID);
+    const result = await service.getActivityStats(USER_ID);
     expect(result.planCounts).toEqual({});
   });
 });
@@ -323,7 +318,7 @@ describe('StatisticsService.getBlankRate', () => {
       plans: createChainableMock([
         {
           id: 'p1',
-          tag_id: 'tag-1',
+          activity_id: 'activity-1',
           start_at: '2026-07-01T00:00:00Z',
           end_at: '2026-07-01T01:00:00Z',
         },
@@ -384,7 +379,6 @@ describe('StatisticsService Review visible days', () => {
   it('Time P/L は未設定と削除済みアクティビティの Plan / Record を同じアクティビティなし bucket に含める', async () => {
     const { service } = createService({
       user_settings: createChainableMock({ timezone: 'UTC' }),
-      tags: createChainableMock([]),
       activities: createChainableMock([
         { id: 'activity-1', name: 'Deep Work', category_id: 'category-1' },
       ]),
@@ -495,7 +489,6 @@ describe('StatisticsService.getSegmentTotals', () => {
       records: createChainableMock([
         {
           id: 'record-1',
-          tag_id: null,
           activity_id: 'activity-1',
           plan_id: null,
           start_at: '2026-01-15T09:00:00Z',
@@ -503,7 +496,6 @@ describe('StatisticsService.getSegmentTotals', () => {
         },
         {
           id: 'record-other',
-          tag_id: null,
           activity_id: 'activity-2',
           plan_id: null,
           start_at: '2026-01-15T11:00:00Z',
@@ -544,7 +536,6 @@ describe('StatisticsService.getSegmentTotals', () => {
       records: createChainableMock([
         {
           id: 'record-1',
-          tag_id: null,
           activity_id: 'activity-1',
           plan_id: null,
           start_at: '2026-01-15T09:00:00Z',

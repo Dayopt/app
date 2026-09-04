@@ -1,0 +1,70 @@
+{
+  "report": {
+    "title": {
+      "week": "今週のレポート",
+      "month": "今月のレポート",
+      "year": "今年のレポート"
+    },
+    "granularity": {
+      "ariaLabel": "期間の粒度",
+      "week": "週",
+      "month": "月",
+      "year": "年"
+    },
+    "nav": {
+      "current": {
+        "week": "今週へ",
+        "month": "今月へ",
+        "year": "今年へ"
+      }
+    },
+    "allocation": {
+      "kick": "1 · 配分 — 何にいくら使ったか",
+      "subtitleWithMargin": "記録 {recorded} ・ 余白 {margin}",
+      "subtitleInkOnly": "インクのみ表示（余白チップ・オフ）",
+      "deltaPrevious": {
+        "week": "前週",
+        "month": "前月",
+        "year": "前年"
+      },
+      "uncategorizedShare": "未分類 {percent}%",
+      "uncategorized": "未分類",
+      "legendEmpty": {
+        "week": "この週にインクはまだありません",
+        "month": "この月にインクはまだありません",
+        "year": "この年にインクはまだありません"
+      },
+      "segments": {
+        "heading": "セグメント — 重なってよい・合計しない",
+        "empty": "セグメントはまだありません"
+      },
+      "ink": {
+        "heading": {
+          "week": "日別のインク",
+          "month": "週別のインク",
+          "year": "月別のインク"
+        },
+        "weekdays": ["月", "火", "水", "木", "金", "土", "日"],
+        "weekColumn": "W{index}",
+        "monthColumn": "{month}月"
+      },
+      "barAriaLabel": "カテゴリー別の配分",
+      "lensLabel": "レンズ: {name}",
+      "barAriaLabelLens": "アクティビティ別の配分"
+    },
+    "sidebar": {
+      "categoriesHeading": "カテゴリー — 分母から出し入れ",
+      "uncategorized": "未分類",
+      "margin": "余白（未記録）",
+      "marginLensDisabled": "セグメントを選んでいる間、余白は分母に入りません",
+      "empty": "カテゴリーはまだありません",
+      "lensHeading": "セグメント — 保存した問い",
+      "lensAll": "すべて",
+      "segmentMenu": "{name} のメニュー"
+    },
+    "errors": {
+      "title": "レポートを読み込めませんでした",
+      "description": "時間をおいて開き直してください"
+    }
+  }
+}

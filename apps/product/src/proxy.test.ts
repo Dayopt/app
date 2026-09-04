@@ -270,29 +270,29 @@ describe('proxy legacy workspace redirects', () => {
     );
   });
 
-  it.each([
-    ['/day', 'day'],
-    ['/week', 'week'],
-    ['/3day', 'week'],
-    ['/7day', 'week'],
-  ])('%s?panel=review → /report?range=%s（panel と reviewTagId は落とす）', async (from, range) => {
-    const response = await proxy(
-      new NextRequest(
-        `https://app.dayopt.app${from}?date=2026-04-20&panel=review&reviewTagId=tag-1`,
-      ),
-    );
+  // レポートは週 / 月 / 年の 3 粒度しか持たない（#2575）。旧 `/day` 系リンクも週へ寄せる
+  // — 日の解像度はカレンダーの仕事なので、`range=day` という着地点が存在しない。
+  it.each([['/day'], ['/week'], ['/3day'], ['/7day']])(
+    '%s?panel=review → /report?range=week（panel と reviewTagId は落とす）',
+    async (from) => {
+      const response = await proxy(
+        new NextRequest(
+          `https://app.dayopt.app${from}?date=2026-04-20&panel=review&reviewTagId=tag-1`,
+        ),
+      );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe(
-      `https://app.dayopt.app/report?date=2026-04-20&range=${range}`,
-    );
-  });
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe(
+        'https://app.dayopt.app/report?date=2026-04-20&range=week',
+      );
+    },
+  );
 
   it.each(['diff', 'analytics'])('panel=%s も /report へ写す', async (panel) => {
     const response = await proxy(new NextRequest(`https://app.dayopt.app/day?panel=${panel}`));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://app.dayopt.app/report?range=day');
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/report?range=week');
   });
 
   it('panel は view より優先される（同時に来たらレポートへ行く）', async () => {
@@ -395,5 +395,175 @@ describe('proxy /calendar view 範囲外検証', () => {
     const response = await proxy(new NextRequest(url));
 
     expect(response.status).toBe(404);
+  });
+});
+
+// #2516: updateSession() が refresh 時に返す Cookie / cache headers（sessionContinuity）を、
+// proxy が新しく作る全 response（redirect / 404 / 素通し）へ引き継ぐことを固定する。
+// 引き継がないと、CDN が Set-Cookie 付きレスポンスをキャッシュし得るセッション漏洩経路になる。
+describe('proxy が refresh 後の Cookie / cache headers を全 response へ引き継ぐ（#2516）', () => {
+  const REFRESHED_COOKIE = { name: 'sb-refresh', value: 'rotated', options: { path: '/' } };
+  const NO_CACHE_HEADERS = {
+    'Cache-Control': 'private, no-cache, no-store, must-revalidate, max-age=0',
+    Expires: '0',
+    Pragma: 'no-cache',
+  };
+
+  function continuity(refreshed: boolean) {
+    return refreshed
+      ? { cookies: [REFRESHED_COOKIE], headers: NO_CACHE_HEADERS }
+      : { cookies: [], headers: {} };
+  }
+
+  function refreshedResponse(refreshed: boolean) {
+    const response = NextResponse.next();
+    if (refreshed) {
+      response.cookies.set(REFRESHED_COOKIE.name, REFRESHED_COOKIE.value, REFRESHED_COOKIE.options);
+      for (const [key, value] of Object.entries(NO_CACHE_HEADERS)) {
+        response.headers.set(key, value);
+      }
+    }
+    return response;
+  }
+
+  function mockAuthenticatedSessionWithContinuity(
+    aalResult: {
+      data: { currentLevel: string | null; nextLevel: string | null } | null;
+      error: unknown;
+    },
+    opts: { refreshed?: boolean } = {},
+  ) {
+    mocks.updateSession.mockResolvedValue({
+      response: refreshedResponse(!!opts.refreshed),
+      sessionContinuity: continuity(!!opts.refreshed),
+      user: { id: 'user-1' },
+      supabase: {
+        auth: {
+          getSession: vi.fn().mockResolvedValue({
+            data: { session: { access_token: 'session-token' } },
+            error: null,
+          }),
+          mfa: {
+            getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue(aalResult),
+          },
+        },
+      },
+    });
+  }
+
+  function mockUnauthenticatedSessionWithContinuity(opts: { refreshed?: boolean } = {}) {
+    mocks.updateSession.mockResolvedValue({
+      response: refreshedResponse(!!opts.refreshed),
+      sessionContinuity: continuity(!!opts.refreshed),
+      user: null,
+      supabase: { auth: {} },
+    });
+  }
+
+  function expectSessionCarried(response: NextResponse) {
+    expect(response.cookies.get('sb-refresh')?.value).toBe('rotated');
+    expect(response.headers.get('cache-control')).toBe(NO_CACHE_HEADERS['Cache-Control']);
+    expect(response.headers.get('expires')).toBe('0');
+    expect(response.headers.get('pragma')).toBe('no-cache');
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'self'");
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_MAINTENANCE_MODE', 'false');
+    vi.stubEnv('SKIP_AUTH_IN_DEV', 'false');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('未認証 → login redirect でも引き継ぐ', async () => {
+    mockUnauthenticatedSessionWithContinuity({ refreshed: true });
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(
+      'https://app.dayopt.app/auth/login?redirect=%2Fcalendar',
+    );
+    expectSessionCarried(response);
+  });
+
+  it('認証済み auth path → /calendar redirect でも引き継ぐ', async () => {
+    mockAuthenticatedSessionWithContinuity(
+      { data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null },
+      { refreshed: true },
+    );
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/auth/login'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/calendar');
+    expectSessionCarried(response);
+  });
+
+  it('MFA aal1→aal2 → mfa-verify redirect でも引き継ぐ', async () => {
+    mockAuthenticatedSessionWithContinuity(
+      { data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null },
+      { refreshed: true },
+    );
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/mfa-verify');
+    expectSessionCarried(response);
+  });
+
+  it('MFA lookupFailed → session-error redirect でも引き継ぐ', async () => {
+    mockAuthenticatedSessionWithContinuity(
+      { data: null, error: { message: 'lookup failed' } },
+      { refreshed: true },
+    );
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
+    expectSessionCarried(response);
+  });
+
+  it('catch 経路（updateSession 後の予期しない例外）→ session-error redirect でも引き継ぐ', async () => {
+    mockAuthenticatedSessionWithContinuity(
+      { data: null, error: { message: 'lookup failed' } },
+      { refreshed: true },
+    );
+    const { logger } = await import('@/lib/logger');
+    vi.mocked(logger.warn).mockImplementation(() => {
+      throw new Error('boom');
+    });
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.headers.get('location')).toBe('https://app.dayopt.app/auth/session-error');
+    expectSessionCarried(response);
+  });
+
+  it('通常の 200 response でも保持される（非回帰）', async () => {
+    mockAuthenticatedSessionWithContinuity(
+      { data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null },
+      { refreshed: true },
+    );
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).toBe(200);
+    expectSessionCarried(response);
+  });
+
+  it('refresh が無い redirect には cache headers / cookie を足さない（一律付与ではない）', async () => {
+    mockUnauthenticatedSessionWithContinuity();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/calendar'));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('cache-control')).toBeNull();
+    expect(response.cookies.get('sb-refresh')).toBeUndefined();
   });
 });

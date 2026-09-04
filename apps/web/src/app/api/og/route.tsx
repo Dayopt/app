@@ -14,7 +14,34 @@ import {
 import { OG_FALLBACK_IMAGE_BASE64 } from './og-fallback-image.generated';
 
 export const maxDuration = 25;
-export const runtime = 'edge';
+
+/**
+ * runtime は既定(Node.js Fluid Compute)。以前は `runtime = 'edge'` を明示していたが、
+ * 2026-09-03 に同一 Vercel Preview 環境で Edge / Node を実測比較して外した(#2520)。
+ *
+ * 測り方: 同じ branch の連続する 2 commit の Preview へ、1 リクエストずつ交互に
+ * (奇数/偶数ラウンドで A/B の順序も反転して)cache buster 付きで叩き、全件 cache MISS
+ * = 実際に function が走る経路の TTFB を取った。各 195 サンプル。
+ *
+ * | 指標 | Edge  | Node  |
+ * | ---- | ----- | ----- |
+ * | p50  | 0.890 | 0.252 |
+ * | p95  | 1.000 | 0.360 |
+ * | p99  | 1.204 | 0.445 |
+ *
+ * 外れ値(>2s)は Edge / Node ともちょうど 1 件ずつ(0.51%)。それを除くと Node の最大値
+ * 0.447s が Edge の最小値 0.852s を下回り、分布が完全に分離する。
+ *
+ * 出力の同一性も確認済み: PNG のバイト列は一致しない(エンコーダが違うため Node 版は
+ * 約 30% 小さい)が、raw RGBA へ展開したピクセル差は平均 0.2/255、maxΔ>8 の画素は
+ * 0.43% のみで、その分布は文字の輪郭(アンチエイリアス差)と背景グラデーションの
+ * 量子化差に限られる。グリフ内部は完全一致で、フォント fallback もレイアウトずれも無い。
+ * cache 契約 3 種(成功/fallback/reject)と oversized query の 400 応答は sha256 まで一致。
+ *
+ * Active CPU は未計測(Vercel の runtime-logs API は live tail 専用で履歴を返さない)。
+ * ただし Upstash 2 往復は両 runtime で同一なので、TTFB の差 0.64s はほぼ Satori の
+ * ラスタライズと PNG エンコード = CPU 側の差と考えてよい。
+ */
 
 /**
  * 成功レスポンスの正規cache契約。長寿命(内容はpost frontmatterから決定的に導出される)。

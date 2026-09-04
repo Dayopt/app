@@ -48,7 +48,7 @@ conversion = new paid subscribers / eligible trial or free users
 churn = canceled paid subscribers / paid subscribers at period start
 ```
 
-推定値ではなくStripe、Vercel、Supabase等のdashboardから同じ期間の実数を取得する。secretや個人情報はdocsへ転記しない。実数の定期取得は月次ガーデニング（`.claude/skills/gardening/SKILL.md` §自動パート）がjournalに記録する。
+推定値ではなくStripe、Vercel、Supabase等のdashboardから同じ期間の実数を取得する。secretや個人情報はdocsへ転記しない。実数は各 dashboard が時系列を持つので docs へ定期転記しない（必要な時に同じ期間で取り直す）。
 
 ### 成長ファネルの計測指標
 

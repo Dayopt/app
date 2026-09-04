@@ -6,6 +6,12 @@
  * 実体は `useShellStore` の `activeSheet`（shell 全体で 1 つしか開かない overlay）。
  * 統合（マージ）は v1 で持たないため入口も無い（#2162 §4-8）。
  *
+ * **開くのは必ず 1 tick 遅らせる。** これらのモーダルは背景を暗転させない
+ * `modal={false}` で、外側クリックで閉じる。ドロップダウンの項目から開くと、
+ * メニューを閉じた同じ `pointerup` がそのまま「外側クリック」と解釈され、
+ * 出た瞬間に閉じてしまう（2026-09-03 実測）。macrotask へ逃がして層を分ける
+ * （`requestAnimationFrame` は非表示タブで発火しないので使わない）。
+ *
  * @example
  * const { openActivityCreateModal, openActivityRenameModal } = useActivityModalNavigation();
  * openActivityRenameModal({ id, name });
@@ -30,7 +36,7 @@ export function useActivityModalNavigation() {
    */
   const openActivityCreateModal = useCallback(
     (context?: Partial<ActivityCreateContext>) => {
-      openCreate(context);
+      setTimeout(() => openCreate(context), 0);
     },
     [openCreate],
   );
@@ -38,7 +44,7 @@ export function useActivityModalNavigation() {
   /** アクティビティの改名モーダルを開く */
   const openActivityRenameModal = useCallback(
     (activity: { id: string; name: string }) => {
-      openActivityRename(activity);
+      setTimeout(() => openActivityRename(activity), 0);
     },
     [openActivityRename],
   );
@@ -46,7 +52,7 @@ export function useActivityModalNavigation() {
   /** カテゴリーの改名モーダルを開く */
   const openCategoryRenameModal = useCallback(
     (category: { id: string; name: string }) => {
-      openCategoryRename(category);
+      setTimeout(() => openCategoryRename(category), 0);
     },
     [openCategoryRename],
   );

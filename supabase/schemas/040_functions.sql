@@ -51,8 +51,6 @@
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
 --   private.track_product_user_signup_v1()    — auth.users INSERT → payload-free signup event
---   check_tag_hierarchy()                     — tags の root -> child 最大2階層を強制
---   check_tag_has_children()                  — active child を持つ tag の child 化を禁止
 --   bind_legacy_oauth_insert_to_connection()  — oauth codes/tokens の connection_id NULL insert を
 --       legacy connection へ補完する互換 trigger（WHEN 句で NULL 時のみ発火、SECURITY DEFINER）。
 --       20260810013820 で補完実行を private.legacy_oauth_bind_observations へ append-only 記録する
@@ -60,10 +58,6 @@
 --       Stage 8-3 の forward restoration は観測 INSERT の無い 20260729073125 の定義へ戻す
 -- ■ RPC 関数
 --   update_personalization(user_id, key, value) — user_settings.personalization 更新
---   merge_tags_with_hierarchy(user_id, source, target) — plans / records 対応の atomic タグマージ
---   batch_reorder_tags_hierarchy(user_id, tag_ids, parent_ids, sort_orders) — 階層 + 並び順更新
---   batch_rename_tags(user_id, tag_ids, names) — 複数タグ名を一括変更
---   rename_tag_group(user_id, old_name, new_name) — root tag group の名称変更
 --   use_recovery_code(user_id, code_hash)     — MFAリカバリーコードを使用済みにマーク
 --   count_unused_recovery_codes(user_id)      — 未使用リカバリーコード数
 --   soft_delete_plan / restore_plan            — Plan の soft delete / restore

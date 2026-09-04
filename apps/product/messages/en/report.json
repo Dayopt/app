@@ -1,0 +1,70 @@
+{
+  "report": {
+    "title": {
+      "week": "This week's report",
+      "month": "This month's report",
+      "year": "This year's report"
+    },
+    "granularity": {
+      "ariaLabel": "Period granularity",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
+    "nav": {
+      "current": {
+        "week": "This week",
+        "month": "This month",
+        "year": "This year"
+      }
+    },
+    "allocation": {
+      "kick": "1 · Allocation — where the time went",
+      "subtitleWithMargin": "Recorded {recorded} · Margin {margin}",
+      "subtitleInkOnly": "Ink only (margin chip off)",
+      "deltaPrevious": {
+        "week": "Last week",
+        "month": "Last month",
+        "year": "Last year"
+      },
+      "uncategorizedShare": "Uncategorized {percent}%",
+      "uncategorized": "Uncategorized",
+      "legendEmpty": {
+        "week": "No ink this week yet",
+        "month": "No ink this month yet",
+        "year": "No ink this year yet"
+      },
+      "segments": {
+        "heading": "Segments — they may overlap, they do not sum",
+        "empty": "No segments yet"
+      },
+      "ink": {
+        "heading": {
+          "week": "Ink by day",
+          "month": "Ink by week",
+          "year": "Ink by month"
+        },
+        "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "weekColumn": "W{index}",
+        "monthColumn": "{month}"
+      },
+      "barAriaLabel": "Allocation by category",
+      "lensLabel": "Lens: {name}",
+      "barAriaLabelLens": "Allocation by activity"
+    },
+    "sidebar": {
+      "categoriesHeading": "Categories — add to or remove from the denominator",
+      "uncategorized": "Uncategorized",
+      "margin": "Margin (unrecorded)",
+      "marginLensDisabled": "Margin stays out of the denominator while a segment is selected",
+      "empty": "No categories yet",
+      "lensHeading": "Segments — saved questions",
+      "lensAll": "All",
+      "segmentMenu": "Menu for {name}"
+    },
+    "errors": {
+      "title": "Could not load the report",
+      "description": "Please try opening it again later"
+    }
+  }
+}

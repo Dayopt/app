@@ -456,6 +456,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           innerClassName="border-border-subtle bg-background flex h-full border-l"
         >
           {sideRail}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- WAI-ARIA の window splitter パターン。フォーカス可能な separator に aria-valuenow と onKeyDown を持たせるのが規定の形で、ルールが separator を一律に非 interactive として扱うための誤検出 */}
           <div
             role="separator"
             aria-label={resolvedSideRailResizeLabel}
@@ -463,6 +464,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             aria-valuemin={SIDE_RAIL_MIN_WIDTH}
             aria-valuemax={sideRailMaxWidth}
             aria-valuenow={effectiveSideRailWidth}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- 同上。splitter は Tab で到達できる必要がある
             tabIndex={0}
             className="hover:bg-state-hover focus-visible:outline-ring absolute inset-y-0 left-0 w-2 -translate-x-1 cursor-col-resize transition-colors duration-150 focus-visible:outline-2"
             onPointerDown={handleSideRailResizeStart}

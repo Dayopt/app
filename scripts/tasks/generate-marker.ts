@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
- * `[internal-review]` marker 生成スクリプト（#2230）
+ * レビュー証跡生成スクリプト（#2230 / #2562 / #2558）
+ *
+ * stdout へ **2 つ**を出す:
+ *
+ *   1. gate の証跡である commit status の投稿コマンド
+ *      （`gh api --method POST repos/{owner}/{repo}/statuses/<head SHA>`、
+ *      context `dayopt/internal-review`）
+ *   2. 人が読む summary コメント本文（1 行目が `[review-summary]`）。**gate は読まない**
  *
  * head SHA の手書き補完（短縮 SHA からの捏造、2026-08-14 実事故）と、
  * zerolike 書式の崩れ（注釈付き `P1: なし（…）` が gate を誤通過させた
- * PR #2053 の実事故）を、生成の機械化で構造的に防ぐ。
+ * PR #2053 の実事故）を、生成の機械化で構造的に防ぐ。証跡を commit status へ移した
+ * ことで後者の事故クラス自体が消えたが、summary コメント側の書式は維持する。
  *
- * head SHA は本スクリプトが `gh pr view --json headRefOid` で実測する。
- * **SHA を引数で渡す口は意図的に用意しない**（手入力・捏造の経路を残さないため）。
+ * head SHA は本スクリプトが `gh pr view --json headRefOid` で実測し、レビュー指紋は
+ * `gh pr diff` の出力から計算する。**SHA も指紋も引数で渡す口は意図的に用意しない**
+ * （手入力・捏造の経路を残さないため）。
  *
- * 出力は stdout のみ。投稿（`gh pr comment` 等）は行わない — 目視確認してから
+ * 出力は stdout のみ。投稿（`gh api` / `gh pr comment`）は行わない — 目視確認してから
  * 投稿する 1 拍を残すのが `.claude/skills/pr-cross-review/SKILL.md` 手順 6 の意図。
  *
  * Usage:
@@ -38,6 +47,16 @@
  *
  *   pnpm review:marker <PR番号> --review-result /path/to/result.json \
  *     --p1 0 --p2 0 --partial-coverage-note "risk-reviewer の partial 分は diff 該当箇所を Main が目視確認済み"
+ *
+ * `--review-result` 経由の生成時は、各 role の `result.findings`（schema 強制済みの
+ * findings 配列）から role 別の内訳を持つ `findings:` 行を自動で追加する（例:
+ * `findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0, architecture-guard(text-fallback)=不明`）。
+ * `scripts/tasks/trace.mjs` はこの行を role 別 指摘数の authoritative な情報源として読み、
+ * 行が無い古い marker や text-fallback role では review/issue comment の役割名部分一致に
+ * よる粗い推定へ fall back する（`deriveRoleFindingsField` 参照）。`--agent` 直接指定
+ * （docs-only 等）では role 別内訳が無いため `findings:` 行自体を出力しない。
+ * `finish-branch.sh` の 5 点チェックはこの行を検証しない（`head:`/`agent:`/`P1:`/`P2:`
+ * 行の正規表現とは無関係な独立行のため、gate の判定に影響しない）。
  */
 
 import { execFileSync } from 'node:child_process';
@@ -46,10 +65,14 @@ import { readFileSync } from 'node:fs';
 import {
   assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
+  buildStatusDescription,
+  buildStatusPostCommand,
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
+  deriveRoleFindingsField,
   type ReviewResultEntry,
 } from '../lib/generate-marker-core.ts';
+import { fingerprintFromDiff } from '../lib/review-fingerprint.mjs';
 
 interface Args {
   prNumber: number;
@@ -135,6 +158,28 @@ function parseArgs(argv: string[]): Args {
   };
 }
 
+/**
+ * PR の diff（three-dot = merge-base 基準）を実測する。**指紋の材料は必ずこれ**。
+ *
+ * gate（`finish-branch.sh`）も同じ `gh pr diff` を使う。ローカルの作業ツリーから
+ * 計算すると、Main が main checkout に常駐する運用（`pr-cross-review` skill）では
+ * 対象 PR と別の diff を指紋化してしまう。
+ */
+function fetchPrDiff(prNumber: number, repo: string | undefined): string {
+  const args = ['pr', 'diff', String(prNumber)];
+  if (repo) {
+    args.push('--repo', repo);
+  }
+  const diff = execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (!diff.trim()) {
+    throw new Error(
+      `PR #${prNumber} の diff を取得できませんでした（gh の認証を確認してください）。` +
+        '空 diff を指紋化すると「常に同じ指紋 = 旧レビューが常に有効」へ倒れるため停止します。',
+    );
+  }
+  return diff;
+}
+
 function fetchHeadSha(prNumber: number, repo: string | undefined): string {
   const args = ['pr', 'view', String(prNumber), '--json', 'headRefOid', '--jq', '.headRefOid'];
   if (repo) {
@@ -182,10 +227,12 @@ function main(): void {
   const entries = args.reviewResultPath ? readReviewResultEntries(args.reviewResultPath) : null;
   const agent = entries ? deriveAgentFieldFromReviewResult(entries) : (args.agent as string);
   const partialCoverageRoles = entries ? derivePartialCoverageRoles(entries) : [];
+  const roleFindingsField = entries ? deriveRoleFindingsField(entries) : undefined;
 
   const body = buildMarkerBody({
     headSha,
     agent,
+    roleFindingsField,
     p1Count: args.p1Count,
     p1Note: args.p1Note,
     p2Count: args.p2Count,
@@ -195,7 +242,28 @@ function main(): void {
     partialCoverageNote: args.partialCoverageNote,
   });
 
-  process.stdout.write(`${body}\n`);
+  const diff = fetchPrDiff(args.prNumber, args.repo);
+  const description = buildStatusDescription({
+    p1Count: args.p1Count,
+    p2Count: args.p2Count,
+    fingerprintProtected: fingerprintFromDiff(diff, 'protected'),
+    fingerprintAll: fingerprintFromDiff(diff, 'all'),
+    agent,
+    coverage: partialCoverageRoles.length > 0 ? 'partial' : 'complete',
+  });
+  const statusCommand = buildStatusPostCommand({ headSha, description });
+
+  process.stdout.write(
+    [
+      '# 1. gate の証跡（commit status）。目視してから実行する。',
+      statusCommand,
+      '',
+      '# 2. 人が読む summary コメント。gate は読まない（分析と gate の分離、#2562）。',
+      `#    投稿例: gh pr comment ${args.prNumber} --body "<下の本文>"`,
+      body,
+      '',
+    ].join('\n'),
+  );
 }
 
 main();

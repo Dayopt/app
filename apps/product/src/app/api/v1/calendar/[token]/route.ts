@@ -69,9 +69,7 @@ async function getPlansForFeed(userId: string) {
       start_at,
       end_at,
       created_at,
-      updated_at,
-      tag_id,
-      tags(name)
+      updated_at
     `,
     )
     .eq('user_id', userId)
@@ -90,9 +88,7 @@ async function getPlansForFeed(userId: string) {
     });
   }
 
-  // tags リレーションからタグ名を抽出
   return (plans ?? []).map((plan) => {
-    const tagName = plan.tags?.name ?? null;
     return {
       id: plan.id,
       title: plan.title,
@@ -101,7 +97,6 @@ async function getPlansForFeed(userId: string) {
       end_time: plan.end_at,
       created_at: plan.created_at,
       updated_at: plan.updated_at,
-      tag_name: tagName,
     };
   });
 }
