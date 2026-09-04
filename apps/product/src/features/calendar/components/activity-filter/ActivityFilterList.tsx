@@ -289,7 +289,7 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
 
   return (
     <ActivityDragProvider allActivities={allActivities}>
-      <div className="w-full min-w-0 space-y-2 overflow-hidden">
+      <div className="w-full min-w-0 overflow-hidden">
         {isLoading ? (
           <div className="space-y-1 py-1">
             <Skeleton className="h-8 w-full" />
@@ -307,60 +307,68 @@ export function ActivityFilterList({ betweenCategoriesAndUncategorized }: Activi
 
                 **表示ステータス（すべて / アクティブ / アーカイブ）は「未分類」だけに
                 かかる。** カテゴリーは独立した単位で、その配下のアクティビティごと
-                このフィルタの影響を受けない（2026-08-18 User 指示） */}
-            <SidebarSection
-              title={t('calendar.filter.categoriesSection')}
-              // カテゴリー「群」の間隔。配下のアクティビティ行（CategoryGroup 内の
-              // space-y-1 = 4px）より 1 段階広くして、どこまでが 1 カテゴリーかを
-              // 余白で区切る。ここを 4px に戻すと群と行の区別が付かなくなる
-              className="space-y-2"
-              collapsed={categoriesSectionCollapsed}
-              onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
-              action={
-                // 「未分類」の + と対称: 常時は隠し、見出し行にホバー / フォーカス
-                // した時だけ出す。popover 展開中は categoryCreateOpen で強制表示
-                <span
-                  className={cn(
-                    'opacity-0 transition-opacity',
-                    categoryCreateOpen
-                      ? 'opacity-100'
-                      : 'group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
-                  )}
-                >
-                  <CategoryCreateDialog onOpenChange={setCategoryCreateOpen} />
-                </span>
-              }
-            >
-              {categories.map(({ category, activities }) => (
-                <CategoryGroup
-                  key={category.id}
-                  category={category}
-                  activities={activities}
-                  allActivities={allActivities}
-                  visibleActivityIds={visibleActivityIds}
-                  categoryOptions={categoryOptions}
-                  collapsed={collapsedCategories.has(category.id)}
-                  isMobile={isMobile}
-                  onToggleCollapse={() => toggleCategoryCollapse(category.id)}
-                  onToggleActivity={toggleActivity}
-                  onShowOnlyActivity={showOnlyActivity}
-                  onShowOnlyCategoryActivities={showOnlyCategoryActivities}
-                  getCategoryVisibility={getCategoryVisibility}
-                  onArchiveCategory={handleArchiveCategory}
-                  onDeleteCategory={handleDeleteCategory}
-                  onArchiveActivity={handleArchiveActivity}
-                  onDeleteActivity={handleDeleteActivity}
-                  openPopoverActivityId={openPopoverActivityId}
-                  onOpenPopover={setOpenPopoverActivityId}
-                />
-              ))}
+                このフィルタの影響を受けない（2026-08-18 User 指示）。
 
-              {categories.length === 0 ? (
-                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
-                  {t('calendar.filter.noCategories')}
-                </p>
-              ) : null}
-            </SidebarSection>
+                次のセクションとの余白は、自分が開いているかどうかで自分の下に
+                margin-bottom を足す形で決める（開＝下に24px / 閉＝下に8px）。
+                次のセクション側の margin-top で決めると、その次のセクション自身を
+                開閉するたびに「自分の上の余白」が動いて見出しごと位置がずれる
+                （2026-09-04 User 指摘: テンプレートを開くと不自然に下へ動いた）*/}
+            <div className={categoriesSectionCollapsed ? 'mb-2' : 'mb-6'}>
+              <SidebarSection
+                title={t('calendar.filter.categoriesSection')}
+                // カテゴリー「群」の間隔。配下のアクティビティ行（CategoryGroup 内の
+                // space-y-1 = 4px）より 1 段階広くして、どこまでが 1 カテゴリーかを
+                // 余白で区切る。ここを 4px に戻すと群と行の区別が付かなくなる
+                className="space-y-2"
+                collapsed={categoriesSectionCollapsed}
+                onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
+                action={
+                  // 「未分類」の + と対称: 常時は隠し、見出し行にホバー / フォーカス
+                  // した時だけ出す。popover 展開中は categoryCreateOpen で強制表示
+                  <span
+                    className={cn(
+                      'opacity-0 transition-opacity',
+                      categoryCreateOpen
+                        ? 'opacity-100'
+                        : 'group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
+                    )}
+                  >
+                    <CategoryCreateDialog onOpenChange={setCategoryCreateOpen} />
+                  </span>
+                }
+              >
+                {categories.map(({ category, activities }) => (
+                  <CategoryGroup
+                    key={category.id}
+                    category={category}
+                    activities={activities}
+                    allActivities={allActivities}
+                    visibleActivityIds={visibleActivityIds}
+                    categoryOptions={categoryOptions}
+                    collapsed={collapsedCategories.has(category.id)}
+                    isMobile={isMobile}
+                    onToggleCollapse={() => toggleCategoryCollapse(category.id)}
+                    onToggleActivity={toggleActivity}
+                    onShowOnlyActivity={showOnlyActivity}
+                    onShowOnlyCategoryActivities={showOnlyCategoryActivities}
+                    getCategoryVisibility={getCategoryVisibility}
+                    onArchiveCategory={handleArchiveCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                    onArchiveActivity={handleArchiveActivity}
+                    onDeleteActivity={handleDeleteActivity}
+                    openPopoverActivityId={openPopoverActivityId}
+                    onOpenPopover={setOpenPopoverActivityId}
+                  />
+                ))}
+
+                {categories.length === 0 ? (
+                  <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                    {t('calendar.filter.noCategories')}
+                  </p>
+                ) : null}
+              </SidebarSection>
+            </div>
 
             {betweenCategoriesAndUncategorized}
 

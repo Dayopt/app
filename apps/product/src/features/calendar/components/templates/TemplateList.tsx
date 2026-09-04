@@ -56,71 +56,77 @@ export function TemplateList({
   const [deleteTarget, setDeleteTarget] = useState<TemplateMock | null>(null);
 
   return (
-    <SidebarSection
-      title={t('calendar.templates.sectionTitle')}
-      className="space-y-1"
-      collapsed={collapsed}
-      onToggleCollapse={() => setCollapsed((prev) => !prev)}
-      action={
-        // 常時は隠し、見出し行にホバー / フォーカスした時だけ出す
-        // （「未分類」の action と同じ visibility パターン）
-        <span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100">
-          <HoverTooltip content={t('calendar.templates.createEntryLabel')} side="top">
-            <Button
-              variant="ghost"
-              icon
-              className="size-6"
-              aria-label={t('calendar.templates.createEntryLabel')}
-              onClick={() => onCreateEntry?.()}
-            >
-              <Plus className="size-4" />
-            </Button>
-          </HoverTooltip>
-          <HoverTooltip content={t('calendar.templates.settingsLabel')} side="top">
-            <Button
-              variant="ghost"
-              icon
-              className="size-6"
-              aria-label={t('calendar.templates.settingsLabel')}
-              onClick={() => onOpenSettings?.()}
-            >
-              <Settings2 className="size-4" />
-            </Button>
-          </HoverTooltip>
-        </span>
-      }
-    >
-      {templates.length === 0 ? (
-        <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
-          {t('calendar.templates.empty')}
-        </p>
-      ) : (
-        <div role="list" className="space-y-1">
-          {templates.map((template) => (
-            <TemplateRow
-              key={template.id}
-              template={template}
-              onApply={() => onApplyTemplate?.(template.id)}
-              onEdit={() => onEditTemplate?.(template.id)}
-              onRename={(name) => onRenameTemplate?.(template.id, name)}
-              onDelete={() => setDeleteTarget(template)}
-            />
-          ))}
-        </div>
-      )}
+    // 次のセクション（未分類）との余白は、自分が開いているかどうかで自分の下に
+    // margin-bottom を足す形で決める（開＝下に24px / 閉＝下に8px）。次側の
+    // margin-top で決めると、開閉するたびに自分の見出し位置がずれてしまう
+    // （2026-09-04 User 指摘）
+    <div className={collapsed ? 'mb-2' : 'mb-6'}>
+      <SidebarSection
+        title={t('calendar.templates.sectionTitle')}
+        className="space-y-1"
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((prev) => !prev)}
+        action={
+          // 常時は隠し、見出し行にホバー / フォーカスした時だけ出す
+          // （「未分類」の action と同じ visibility パターン）
+          <span className="flex items-center gap-1 opacity-0 transition-opacity group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100">
+            <HoverTooltip content={t('calendar.templates.createEntryLabel')} side="top">
+              <Button
+                variant="ghost"
+                icon
+                className="size-6"
+                aria-label={t('calendar.templates.createEntryLabel')}
+                onClick={() => onCreateEntry?.()}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </HoverTooltip>
+            <HoverTooltip content={t('calendar.templates.settingsLabel')} side="top">
+              <Button
+                variant="ghost"
+                icon
+                className="size-6"
+                aria-label={t('calendar.templates.settingsLabel')}
+                onClick={() => onOpenSettings?.()}
+              >
+                <Settings2 className="size-4" />
+              </Button>
+            </HoverTooltip>
+          </span>
+        }
+      >
+        {templates.length === 0 ? (
+          <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+            {t('calendar.templates.empty')}
+          </p>
+        ) : (
+          <div role="list" className="space-y-1">
+            {templates.map((template) => (
+              <TemplateRow
+                key={template.id}
+                template={template}
+                onApply={() => onApplyTemplate?.(template.id)}
+                onEdit={() => onEditTemplate?.(template.id)}
+                onRename={(name) => onRenameTemplate?.(template.id, name)}
+                onDelete={() => setDeleteTarget(template)}
+              />
+            ))}
+          </div>
+        )}
 
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (deleteTarget) onDeleteTemplate?.(deleteTarget.id);
-          setDeleteTarget(null);
-        }}
-        title={t('calendar.templates.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })}
-        description={t('calendar.templates.deleteConfirmDescription')}
-        confirmLabel={t('calendar.templates.deleteConfirmButton')}
-        variant="destructive"
-      />
-    </SidebarSection>
+        <ConfirmDialog
+          open={deleteTarget !== null}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            if (deleteTarget) onDeleteTemplate?.(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+          title={t('calendar.templates.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })}
+          description={t('calendar.templates.deleteConfirmDescription')}
+          confirmLabel={t('calendar.templates.deleteConfirmButton')}
+          variant="destructive"
+        />
+      </SidebarSection>
+    </div>
   );
 }
