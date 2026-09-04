@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 import { REPO, runGh, runGhJson } from '../lib/gh.mjs';
 import { isDirectExecution } from '../lib/is-direct-execution.mjs';
-import { isCodexBotLogin } from '../lib/issue-review-core.mjs';
 import {
   computeExplorationBeforeEdit,
   cwdPrefixToProjectDirSegment,
@@ -315,6 +314,19 @@ export function extractDodExcerpt(text) {
 }
 
 // --- Part 4 レビュー ---------------------------------------------------------
+
+/**
+ * Codex GitHub 連携 bot の login。GraphQL の `author.login` は
+ * `chatgpt-codex-connector`、REST の `user.login` は `chatgpt-codex-connector[bot]`
+ * と表記が割れる。過去 PR の履歴を遡って読む集計・表示専用の判定であり、merge を
+ * gate する用途では使わない（#2596 で issue-review-core.mjs を削除したため、この
+ * 表示用途だけをここへ複製する）。
+ */
+const CODEX_BOT_LOGIN = 'chatgpt-codex-connector';
+
+function isCodexBotLogin(login) {
+  return String(login ?? '').replace(/\[bot\]$/, '') === CODEX_BOT_LOGIN;
+}
 
 /** timeline event 配列から `ready_for_review` の日時（無ければ null）。 */
 export function findReadyForReviewDate(timelineEvents) {
