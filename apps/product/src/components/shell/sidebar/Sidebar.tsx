@@ -110,10 +110,14 @@ export function Sidebar({
       </div>
 
       {/* Content */}
-      {/* scrollbar-gutter-stable: drag 中に collapsed groups の children container が
-          展開されて scrollbar が現れる際、内容が左右にずれるのを防ぐ。
-          ポップオーバー等の小さな要素には使用しないこと */}
-      <div className="flex min-h-0 min-w-0 flex-1 scrollbar-gutter-stable flex-col gap-4 overflow-x-hidden overflow-y-auto">
+      {/* scrollbar-gutter-stable は付けない。旧「並び替えDnD」（@dnd-kit の
+          sortable、ドラッグ中に折りたたみグループが自動展開される機構）向けの
+          対策だったが、その機能自体が #2162 で廃止済み。現在のカテゴリー
+          再割り当てDnD（ネイティブ HTML5）は自動展開を持たないため、この予約が
+          守っていた実害はもう無い一方、行のホバー背景が右側だけ 11px ほど狭く
+          見える実害が残っていた（2026-09-04 User 指摘・実測）。gutter 予約を
+          外すことで解消する */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
         {children}
       </div>
 
