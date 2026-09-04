@@ -1587,43 +1587,73 @@ describe('pre-tool-guard.mjs: env-file 名の直後の非 ASCII 空白（NBSP）
 });
 
 // =====================================================================
-// Codex レビュー依頼の直接投稿（cost guard、#2558）
+// gh pr merge / gh api ...pulls/.../merge の直接実行（cost guard、#2596）
 // =====================================================================
-// PR #2554 実測: 1 本の PR で「@codex review」を 8 回投稿し、うち 3 回は応答前の
-// 連投、応答 7 回のうち 6 回が「問題なし」だった。判定（追従済みか / CI green か /
-// 既存証跡が現在の diff の指紋と一致するか）はすべて機械化できるため、Bash からの
-// 直接投稿は `pnpm review:request` へ誘導する。
+// merge 経路を `pnpm branch:finish <N>` 1 本に機械的に絞る。free plan の private
+// repo では branch protection / ruleset が使えず、CI red の遮断は
+// finish-branch.sh の statusCheckRollup 判定だけが担っている。
 //
 // 他の Bash guard と同じく、**文字列に言及しただけでも落ちる**（コマンド本文を
 // 走査するため）。docs や commit message へ書く時は Write / Edit で file に
 // 書いてから渡す。
-describe('pre-tool-guard.mjs: Codex レビュー依頼の直接投稿（#2558）', () => {
+describe('pre-tool-guard.mjs: gh pr merge 直接実行（#2596）', () => {
   const bash = (command: string) => ({ tool_name: 'Bash', tool_input: { command } });
-  const CODEX_MENTION = ['@', 'codex review'].join('');
 
-  it('gh pr comment での直接依頼を block する', () => {
-    expect(runGuard(bash(`gh pr comment 2554 --body "${CODEX_MENTION}"`))).toBe('block');
+  it('gh pr merge を直接実行すると block する', () => {
+    expect(runGuard(bash('gh pr merge 2596'))).toBe('block');
   });
 
-  it('gh api 経由の直接依頼も block する', () => {
+  it('gh pr merge に追加フラグが付いていても block する', () => {
+    expect(runGuard(bash('gh pr merge 2596 --merge --delete-branch'))).toBe('block');
+  });
+
+  it('引用符付きの PR 番号でも block する', () => {
+    expect(runGuard(bash('gh pr merge "2596"'))).toBe('block');
+  });
+
+  it('gh api で pulls/<N>/merge へ -X PUT する直接実行を block する', () => {
     expect(
-      runGuard(bash(`gh api repos/Dayopt/dayopt/issues/2554/comments -f body="${CODEX_MENTION}"`)),
+      runGuard(
+        bash(
+          'gh api -X PUT repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge -f sha=abc123',
+        ),
+      ),
     ).toBe('block');
   });
 
-  it('pnpm review:request は通す（誘導先を塞がない）', () => {
-    expect(runGuard(bash('pnpm review:request 2554'))).toBe('allow');
+  it('--method PUT（フラグの別表記）でも block する', () => {
+    expect(
+      runGuard(
+        bash('gh api --method PUT repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge'),
+      ),
+    ).toBe('block');
   });
 
-  it('メンションを含まない gh pr comment は通す（他のコメント投稿を妨げない）', () => {
-    expect(runGuard(bash('gh pr comment 2554 --body "確定伝達: merge 順で先頭です"'))).toBe(
-      'allow',
-    );
+  it('--method put（小文字）でも block する', () => {
+    expect(
+      runGuard(
+        bash('gh api --method put repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge'),
+      ),
+    ).toBe('block');
   });
 
-  it('gh を伴わない文中のメンションは通す（docs へ書く操作を妨げない）', () => {
-    expect(runGuard(bash(`echo "skill の手順に ${CODEX_MENTION} と書く" >> /tmp/note.md`))).toBe(
-      'allow',
-    );
+  it('pnpm branch:finish は通す（誘導先を塞がない）', () => {
+    expect(runGuard(bash('pnpm branch:finish 2596'))).toBe('allow');
+  });
+
+  it('bash scripts/tasks/finish-branch.sh の直接起動も通す', () => {
+    expect(runGuard(bash('bash scripts/tasks/finish-branch.sh 2596'))).toBe('allow');
+  });
+
+  it('gh pr view 等 merge 以外の pr 操作は通す', () => {
+    expect(runGuard(bash('gh pr view 2596'))).toBe('allow');
+  });
+
+  it('PUT を伴わない gh api での pulls/.../merge 参照（状態確認）は通す', () => {
+    expect(runGuard(bash('gh api repos/Dayopt/dayopt/pulls/2596/merge'))).toBe('allow');
+  });
+
+  it('merge を含まない別コマンド名（word boundary）は通す', () => {
+    expect(runGuard(bash('gh pr merger-status 2596'))).toBe('allow');
   });
 });
