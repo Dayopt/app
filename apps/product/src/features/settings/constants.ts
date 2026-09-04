@@ -1,12 +1,4 @@
-import {
-  CreditCard,
-  Database,
-  Monitor,
-  Plug,
-  Settings as SettingsIcon,
-  User,
-  type LucideIcon,
-} from 'lucide-react';
+import { CreditCard, Database, Monitor, Plug, User, type LucideIcon } from 'lucide-react';
 
 import type { MessageKey } from '@/lib/i18n';
 
@@ -24,14 +16,14 @@ interface SettingsCategoryMeta {
 }
 
 /**
- * 設定カテゴリの定義（6カテゴリ）
+ * 設定カテゴリの定義（5カテゴリ）
  */
 export const SETTINGS_CATEGORIES: readonly SettingsCategoryMeta[] = [
   {
-    id: 'profile',
+    id: 'account',
     icon: User,
-    labelKey: 'settings.dialog.categories.profile',
-    descKey: 'settings.dialog.categories.profileDesc',
+    labelKey: 'settings.dialog.categories.account',
+    descKey: 'settings.dialog.categories.accountDesc',
   },
   {
     id: 'display',
@@ -56,11 +48,5 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategoryMeta[] = [
     icon: CreditCard,
     labelKey: 'settings.dialog.categories.billing',
     descKey: 'settings.dialog.categories.billingDesc',
-  },
-  {
-    id: 'account',
-    icon: SettingsIcon,
-    labelKey: 'settings.dialog.categories.account',
-    descKey: 'settings.dialog.categories.accountDesc',
   },
 ] as const;

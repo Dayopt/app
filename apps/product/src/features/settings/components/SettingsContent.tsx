@@ -12,7 +12,6 @@ const categoryComponents: Record<
   SettingsCategory,
   React.LazyExoticComponent<React.ComponentType<object>>
 > = {
-  profile: lazy(() => import('./ProfileSettings').then((m) => ({ default: m.ProfileSettings }))),
   display: lazy(() => import('./DisplaySettings').then((m) => ({ default: m.DisplaySettings }))),
   data: lazy(() => import('./DataSettings').then((m) => ({ default: m.DataSettings }))),
   integrations: lazy(() =>
@@ -22,14 +21,7 @@ const categoryComponents: Record<
   account: lazy(() => import('./AccountSettings').then((m) => ({ default: m.AccountSettings }))),
 };
 
-const VALID_CATEGORIES = new Set<string>([
-  'profile',
-  'display',
-  'data',
-  'integrations',
-  'billing',
-  'account',
-]);
+const VALID_CATEGORIES = new Set<string>(['display', 'data', 'integrations', 'billing', 'account']);
 
 /**
  * 文字列が有効な設定カテゴリかチェックする型ガード

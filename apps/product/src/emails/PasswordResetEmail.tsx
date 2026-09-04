@@ -84,7 +84,7 @@ export function PasswordResetEmail({
               <br />
               <br />
               {t.securityNote(appUrl)}{' '}
-              <Link style={styles.link} href={`${appUrl}/settings/profile`}>
+              <Link style={styles.link} href={`${appUrl}/settings/account`}>
                 {t.settingsLinkText}
               </Link>
               <br />
