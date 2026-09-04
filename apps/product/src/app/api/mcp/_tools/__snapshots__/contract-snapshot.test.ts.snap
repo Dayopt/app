@@ -319,7 +319,7 @@ exports[`MCP tool contract snapshot > constraintsGetOutput の JSON Schema が�
           "properties": {
             "createEnd": {
               "enum": [
-                "after_as_of",
+                "unrestricted",
               ],
               "type": "string",
             },
@@ -331,7 +331,7 @@ exports[`MCP tool contract snapshot > constraintsGetOutput の JSON Schema が�
             },
             "pastPlanTimeUpdate": {
               "enum": [
-                "forbidden",
+                "allowed",
               ],
               "type": "string",
             },
@@ -343,7 +343,7 @@ exports[`MCP tool contract snapshot > constraintsGetOutput の JSON Schema が�
             },
             "timeUpdateEnd": {
               "enum": [
-                "after_as_of",
+                "unrestricted",
               ],
               "type": "string",
             },
@@ -368,7 +368,7 @@ exports[`MCP tool contract snapshot > constraintsGetOutput の JSON Schema が�
             },
             "linkedPlan": {
               "enum": [
-                "non_deleted_unskipped_completed",
+                "non_deleted_unskipped",
               ],
               "type": "string",
             },

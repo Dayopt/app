@@ -172,8 +172,8 @@ describe('TimeblockCommandClient', () => {
     });
   });
 
-  it('recordable Plan triggerの拒否を公開用codeへ変換する', async () => {
-    rpc.mockResolvedValue({ data: null, error: { code: 'DT013', message: 'trigger detail' } });
+  it('未来 Record を拒否する trigger の code を公開用 code へ変換する', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'DT005', message: 'trigger detail' } });
 
     await expect(
       new TimeblockCommandClient().createRecord({
@@ -181,6 +181,6 @@ describe('TimeblockCommandClient', () => {
         planId: plan.id,
         fulfillment: null,
       }),
-    ).rejects.toMatchObject({ code: 'PLAN_NOT_RECORDABLE' });
+    ).rejects.toMatchObject({ code: 'RECORD_IN_FUTURE' });
   });
 });

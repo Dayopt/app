@@ -105,11 +105,8 @@
         "diff": "Diff",
         "timeProgress": "Time progress"
       },
-      "markUnplanned": "Mark as unplanned",
-      "restorePlanned": "Restore plan",
       "skip": "Skip",
       "unskip": "Undo skip",
-      "unplanned": "Unplanned",
       "note": {
         "label": "Note",
         "placeholder": "Add a note...",
@@ -159,7 +156,7 @@
       "time": "Time",
       "note": "Note",
       "notePlaceholder": "Add a note...",
-      "timeLocked": "Time is fixed for past plans",
+      "timeLocked": "Records cannot be moved into the future",
       "duplicate": {
         "create": "Create duplicate",
         "created": "Duplicated",

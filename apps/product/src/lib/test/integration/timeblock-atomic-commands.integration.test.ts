@@ -165,6 +165,48 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     expect(error?.code).toBe('22023');
   });
 
+  it('places and moves Plans anywhere on the timeline, and skips upcoming Plans', async () => {
+    // 過去に終わる Plan を作れる
+    const pastPlan = await createPlan({
+      title: 'Yesterday',
+      startAt: at(-30 * 60 * 60_000),
+      endAt: at(-29 * 60 * 60_000),
+    });
+
+    // 過去 Plan の時刻を過去の範囲内で動かせる
+    const correctedStartAt = at(-28 * 60 * 60_000);
+    const { data: movedInPast, error: movedInPastError } = await admin
+      .rpc('update_plan_command_v1', {
+        ...planUpdateArgs(pastPlan, 'Yesterday, corrected'),
+        p_start_at: correctedStartAt,
+        p_end_at: at(-27 * 60 * 60_000),
+      })
+      .single();
+    expect(movedInPastError).toBeNull();
+    expect(new Date(movedInPast!.start_at).getTime()).toBe(new Date(correctedStartAt).getTime());
+
+    // 過去 Plan を未来へ動かせる
+    const { data: movedToFuture, error: movedToFutureError } = await admin
+      .rpc('update_plan_command_v1', {
+        ...planUpdateArgs(movedInPast!, 'Rescheduled'),
+        p_start_at: at(30 * 60 * 60_000),
+        p_end_at: at(31 * 60 * 60_000),
+      })
+      .single();
+    expect(movedToFutureError).toBeNull();
+
+    // 未来 Plan を skip できる
+    const { error: skipError } = await admin
+      .rpc('set_plan_skipped_command_v1', {
+        p_user_id: userId,
+        p_plan_id: movedToFuture!.id,
+        p_expected_updated_at: movedToFuture!.updated_at,
+        p_skipped: true,
+      })
+      .single();
+    expect(skipError).toBeNull();
+  });
+
   it('serializes concurrent Plan updates with exact compare-and-swap', async () => {
     const plan = await createPlan({
       title: 'Original',
@@ -427,7 +469,7 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
     expect(plan.id).not.toBe(record.id);
   });
 
-  it('distinguishes a future Record from a Record linked to a future Plan', async () => {
+  it('rejects a future Record but allows a past Record linked to a future Plan', async () => {
     const plan = await createPlan({
       title: 'Future link target',
       startAt: at(60 * 60_000),
@@ -472,10 +514,12 @@ describe.skipIf(!RUN_LOCAL)('atomic Plan and Record command boundary', () => {
       .update({ plan_id: plan.id })
       .eq('id', unlinked.id);
 
+    // 未来に終わる Record だけが唯一残る時刻ルールで拒否される。
     expect(futureRecordError?.code).toBe('DT005');
-    expect(futurePlanError?.code).toBe('DT013');
-    expect(directFuturePlanError?.code).toBe('DT013');
-    expect(directRelinkError?.code).toBe('DT013');
+    // 過去の Record は、紐付け先 Plan が未来にあっても受け付ける。
+    expect(futurePlanError).toBeNull();
+    expect(directFuturePlanError).toBeNull();
+    expect(directRelinkError).toBeNull();
   });
 
   it('allows either Record restore or overlapping create, never both', async () => {

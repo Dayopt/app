@@ -63,16 +63,6 @@ interface TwoLaneEntryRendererProps {
 
 /** auto_migrated record はドラッグ/リサイズを禁止する。 */
 function isDragDisabled(entry: CalendarDisplayEvent): boolean {
-  if (entry.recordSource === 'auto_migrated') return true;
-  return false;
-}
-
-/** 過去Planは時間変更を禁止するが、Recordレーンへの記録dropは許可する。 */
-function isResizeDisabled(entry: CalendarDisplayEvent, now: number): boolean {
-  if (entry.kind === 'plan') {
-    const end = entry.endDate?.getTime();
-    return end != null && end <= now;
-  }
   return entry.recordSource === 'auto_migrated';
 }
 
@@ -126,10 +116,8 @@ export function TwoLaneTimeblockRenderer({
   const activityIcon = activity?.icon ?? null;
   const activityCategoryId = activity?.categoryId ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
-  // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
-  const now = Date.now();
   const disableDrag = isDragDisabled(entry);
-  const disableResize = isResizeDisabled(entry, now);
+  const disableResize = disableDrag;
   const rect = toRect(position);
 
   const handleClick = (_target: unknown) => {

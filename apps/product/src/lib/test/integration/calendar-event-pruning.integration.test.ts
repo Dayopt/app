@@ -25,8 +25,8 @@ const admin = createClient<Database>(LOCAL_DB_URL, SERVICE_ROLE_KEY, {
 const userId = crypto.randomUUID();
 const userEmail = `calendar-event-pruning-${userId}@example.com`;
 
-// `plans` は end_at が未来であることを DB trigger で強制する（DT004）。固定日付だと
-// テストが古くなった時に落ちるため、実行時刻からの相対値にする。
+// この fixture は「これから来る予定」を表す。固定日付だとテストが古くなった時に
+// 意味が変わるため、実行時刻からの相対値にする。
 const EVENT_START_AT = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 const EVENT_END_AT = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
 

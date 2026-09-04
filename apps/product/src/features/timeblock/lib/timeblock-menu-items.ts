@@ -9,28 +9,13 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import {
-  BarChart3,
-  CalendarOff,
-  CircleSlash,
-  Copy,
-  CopyPlus,
-  RotateCcw,
-  Trash2,
-} from 'lucide-react';
+import { BarChart3, CircleSlash, Copy, CopyPlus, RotateCcw, Trash2 } from 'lucide-react';
 
 import type { MessageKey } from '@/lib/i18n';
 import type { TimeblockOrigin } from '@/lib/time';
 
 export type TimeblockMenuItemKey =
-  | 'viewStats'
-  | 'copy'
-  | 'duplicate'
-  | 'markUnplanned'
-  | 'restorePlanned'
-  | 'skip'
-  | 'unskip'
-  | 'delete';
+  'viewStats' | 'copy' | 'duplicate' | 'skip' | 'unskip' | 'delete';
 
 export interface TimeblockMenuItem {
   key: TimeblockMenuItemKey;
@@ -44,24 +29,11 @@ export interface TimeblockMenuItem {
 interface TimeblockMenuItemsArgs {
   origin: TimeblockOrigin | undefined;
   activityId?: string | null | undefined;
-  /**
-   * 未来（upcoming）の予定か。
-   * 未来の予定はまだ記録が存在し得ないため「予定外にする」を表示しない。
-   */
-  isUpcoming?: boolean | undefined;
-  /**
-   * 過去（past: end_time <= now）の予定か。
-   * skip はサーバーが過去の planned のみ許可する（active/未来は SKIP_IN_FUTURE 拒否）ため、
-   * past の時だけ skip を出して「失敗するメニュー」を見せない。
-   */
-  isPast?: boolean | undefined;
   /** スキップ済み（skipped_at あり）か。skip / unskip の表示切替に使う */
   isSkipped?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
   onCopy?: (() => void) | undefined;
   onDuplicate?: (() => void) | undefined;
-  onMarkUnplanned?: (() => void) | undefined;
-  onRestorePlanned?: (() => void) | undefined;
   onSkip?: (() => void) | undefined;
   onUnskip?: (() => void) | undefined;
   onDelete?: (() => void) | undefined;
@@ -70,19 +42,14 @@ interface TimeblockMenuItemsArgs {
 export function getTimeblockMenuItems({
   origin,
   activityId,
-  isUpcoming = false,
-  isPast = false,
   isSkipped = false,
   onViewStats,
   onCopy,
   onDuplicate,
-  onMarkUnplanned,
-  onRestorePlanned,
   onSkip,
   onUnskip,
   onDelete,
 }: TimeblockMenuItemsArgs): TimeblockMenuItem[] {
-  const isUnplanned = origin === 'unplanned';
   const isPlanned = origin === 'planned';
 
   const items: (TimeblockMenuItem | null)[] = [
@@ -113,26 +80,7 @@ export function getTimeblockMenuItems({
           onSelect: onDuplicate,
         }
       : null,
-    onMarkUnplanned && isPlanned && !isUpcoming
-      ? {
-          key: 'markUnplanned',
-          labelKey: 'timeblock.inspector.markUnplanned',
-          icon: CalendarOff,
-          dangerous: false,
-          onSelect: onMarkUnplanned,
-        }
-      : null,
-    onRestorePlanned && isUnplanned
-      ? {
-          key: 'restorePlanned',
-          labelKey: 'timeblock.inspector.restorePlanned',
-          icon: RotateCcw,
-          dangerous: false,
-          onSelect: onRestorePlanned,
-        }
-      : null,
-    // 過去の planned のみスキップ可能（active/未来はサーバーが拒否するため出さない）
-    onSkip && isPlanned && isPast && !isSkipped
+    onSkip && isPlanned && !isSkipped
       ? {
           key: 'skip',
           labelKey: 'timeblock.inspector.skip',

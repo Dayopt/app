@@ -42,15 +42,11 @@ const EXPECTED_ERROR_CODES: Readonly<Record<string, McpMutationErrorCode>> = {
   DT001: 'NOT_FOUND',
   DT002: 'CONFLICT',
   DT003: 'INVALID_TIME_RANGE',
-  DT004: 'PLAN_IN_PAST',
   DT005: 'RECORD_IN_FUTURE',
-  DT006: 'PLAN_TIME_LOCKED',
-  DT007: 'SKIP_IN_FUTURE',
   DT008: 'INVALID_INPUT',
   DT009: 'FORBIDDEN',
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
-  DT013: 'PLAN_NOT_RECORDABLE',
   DT014: 'ACTIVITY_ARCHIVED',
 };
 
@@ -66,12 +62,8 @@ const ERROR_MESSAGES: Readonly<Record<McpMutationErrorCode, string>> = {
   INVALID_TIME_RANGE: 'Time range end must be after start.',
   MUTATION_FAILED: 'Dayopt could not apply the change.',
   NOT_FOUND: 'The requested item was not found.',
-  PLAN_IN_PAST: 'Plans must end in the future.',
-  PLAN_NOT_RECORDABLE: 'Records can only link to completed plans.',
-  PLAN_TIME_LOCKED: 'Past plan time fields cannot be changed.',
   PRO_REQUIRED: 'Dayopt Pro is required for MCP changes.',
   RECORD_IN_FUTURE: 'Records cannot end in the future.',
-  SKIP_IN_FUTURE: 'Future plans cannot be skipped. Delete the plan instead.',
   TIME_OVERLAP: 'This time range overlaps with an existing item.',
   WRITE_DISABLED: 'Dayopt MCP changes are temporarily disabled.',
 };

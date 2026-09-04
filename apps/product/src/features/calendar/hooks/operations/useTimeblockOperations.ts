@@ -183,15 +183,6 @@ export const useTimeblockOperations = () => {
       }
       if ((found.row?.source ?? projectedSource) === 'auto_migrated') return;
 
-      // 過去 plan は時間変更不可（server も PLAN_TIME_LOCKED で拒否するが、無駄な往復を避ける）
-      if (
-        found.kind === 'plan' &&
-        found.row &&
-        resolveTimeblockDestination(found.row.end_at) === 'record'
-      ) {
-        toast.error(t('timeblock.editor.timeLocked'));
-        return;
-      }
       // record は未来へ移動できない（記録は過去のみ）
       if (found.kind === 'record' && resolveTimeblockDestination(nextRange.end) === 'plan') {
         toast.error(t('timeblock.editor.timeLocked'));

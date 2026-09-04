@@ -168,9 +168,9 @@ CREATE TABLE public.plans (
 --   plans_no_overlap                    -> user_id + tstzrange(start_at, end_at, '[)') EXCLUDE
 --   prevent_plans_source_change         -> prevent_time_model_source_change()
 --   enforce_plan_external_event_owner   -> enforce_plan_external_event_owner()
---   validate_plan_temporal_write_v1      -> 時刻順序、過去 Plan の時刻固定、future-only 作成
+--   validate_plan_temporal_write_v1      -> 時刻順序のみ。Plan は時間軸のどこにでも置ける
 --   enforce_plan_skip_record_invariant_v1
---     -> active Record がある Plan の skip と future Plan の skip を拒否
+--     -> active Record がある Plan の skip を拒否
 --   direct DML / command writer fence
 --     -> 旧UIのdirect DMLとtyped commandをglobal + user単位lockで直列化し、
 --        commit時のuser revisionをtransactionごとに1回だけ進める
@@ -198,7 +198,7 @@ CREATE TABLE public.records (
 --   enforce_record_external_event_owner   -> enforce_record_external_event_owner()
 --   validate_record_temporal_write_v1      -> 時刻順序、未来 Record を拒否
 --   enforce_active_record_plan_v1
---     -> new link/relinkはactive / owner / 完了済み / non-skipped Planだけ。
+--     -> new link/relinkはactive / owner / non-skipped Planだけ。
 --        既存リンクを持つRecordのrestoreだけはPlan soft-delete後も現行UI互換で許可
 --   direct DML / command writer fence
 --     -> Planと同じuser binding、lock upgrade拒否、transaction単位revisionを適用

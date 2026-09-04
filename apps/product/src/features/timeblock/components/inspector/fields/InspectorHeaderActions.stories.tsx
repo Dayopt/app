@@ -33,17 +33,18 @@ const fullPlannedMenu = getTimeblockMenuItems({
   onViewStats: fn(),
   onCopy: fn(),
   onDuplicate: fn(),
-  onMarkUnplanned: fn(),
+  onSkip: fn(),
   onDelete: fn(),
 });
 
-const unplannedMenu = getTimeblockMenuItems({
+/** Record（plan 紐付けなし）: skip / unskip は planned にしか出ない。 */
+const recordMenu = getTimeblockMenuItems({
   origin: 'unplanned',
   activityId: 'activity-1',
   onViewStats: fn(),
   onCopy: fn(),
   onDuplicate: fn(),
-  onRestorePlanned: fn(),
+  onSkip: fn(),
   onDelete: fn(),
 });
 
@@ -55,15 +56,16 @@ const copyAndDeleteMenu = getTimeblockMenuItems({
   onDelete: fn(),
 });
 
-/** 未来の予定: まだ記録が存在し得ないため「予定外にする」は出ない。 */
-const upcomingPlannedMenu = getTimeblockMenuItems({
+/** skip 済みの planned: skip が unskip に入れ替わる。 */
+const skippedPlannedMenu = getTimeblockMenuItems({
   origin: 'planned',
   activityId: 'activity-1',
-  isUpcoming: true,
+  isSkipped: true,
   onViewStats: fn(),
   onCopy: fn(),
   onDuplicate: fn(),
-  onMarkUnplanned: fn(),
+  onSkip: fn(),
+  onUnskip: fn(),
   onDelete: fn(),
 });
 
@@ -89,20 +91,20 @@ export const CopyAndDelete: Story = {
   ),
 };
 
-/** Unplanned（計画に戻す表示）。 */
-export const Unplanned: Story = {
+/** Record（plan 紐付けなし）。skip / unskip は出ない。 */
+export const Record: Story = {
   render: () => (
     <div className="w-72">
-      <InspectorHeaderActions menuItems={unplannedMenu} onCloseInspector={fn()} />
+      <InspectorHeaderActions menuItems={recordMenu} onCloseInspector={fn()} />
     </div>
   ),
 };
 
-/** 未来の予定（planned）。「予定外にする」は非表示。 */
-export const UpcomingPlanned: Story = {
+/** skip 済みの予定。skip が unskip に入れ替わる。 */
+export const SkippedPlanned: Story = {
   render: () => (
     <div className="w-72">
-      <InspectorHeaderActions menuItems={upcomingPlannedMenu} onCloseInspector={fn()} />
+      <InspectorHeaderActions menuItems={skippedPlannedMenu} onCloseInspector={fn()} />
     </div>
   ),
 };
@@ -125,12 +127,12 @@ export const AllPatterns: Story = {
         <InspectorHeaderActions menuItems={fullPlannedMenu} onCloseInspector={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">Unplanned</p>
-        <InspectorHeaderActions menuItems={unplannedMenu} onCloseInspector={fn()} />
+        <p className="text-muted-foreground text-xs">Record（skip なし）</p>
+        <InspectorHeaderActions menuItems={recordMenu} onCloseInspector={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">未来の予定（予定外にする非表示）</p>
-        <InspectorHeaderActions menuItems={upcomingPlannedMenu} onCloseInspector={fn()} />
+        <p className="text-muted-foreground text-xs">skip 済みの予定</p>
+        <InspectorHeaderActions menuItems={skippedPlannedMenu} onCloseInspector={fn()} />
       </div>
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">メニューなし（閉じるボタンのみ）</p>
