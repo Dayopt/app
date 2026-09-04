@@ -190,7 +190,7 @@ export function UserMenu({
 
         {/* アカウント関連 */}
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => handleOpenSettings('profile')}>
+          <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
             <UserCircle />
             {t('navigation.navUser.account')}
           </DropdownMenuItem>
@@ -204,7 +204,7 @@ export function UserMenu({
 
         {/* 設定 */}
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => handleOpenSettings('profile')}>
+          <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
             <Settings />
             {t('navigation.navUser.settings')}
           </DropdownMenuItem>

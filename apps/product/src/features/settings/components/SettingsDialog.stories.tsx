@@ -49,7 +49,7 @@ const DIALOG_MOCKS = {
 // ─────────────────────────────────────────────────────────
 
 function InteractiveSettingsDialog({
-  initialCategory = 'profile',
+  initialCategory = 'account',
 }: {
   initialCategory?: SettingsCategory;
 }) {
@@ -99,14 +99,14 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────
 
 /**
- * デフォルト状態（プロフィールカテゴリ）
+ * デフォルト状態（アカウントカテゴリ）
  *
- * ダイアログが開いた状態でプロフィール設定を表示。
+ * ダイアログが開いた状態でアカウント設定を表示。
  * サイドバーで他カテゴリに切り替えできる。
  */
 export const Default: Story = {
   render: () => {
-    useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
     return <SettingsDialog />;
   },
 };
@@ -137,16 +137,6 @@ export const DataCategory: Story = {
 export const IntegrationsCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'integrations' } });
-    return <SettingsDialog />;
-  },
-};
-
-/**
- * アカウント設定カテゴリ
- */
-export const AccountCategory: Story = {
-  render: () => {
-    useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
     return <SettingsDialog />;
   },
 };

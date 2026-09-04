@@ -169,7 +169,7 @@ describe('settings route hydration guards', () => {
 
     render(<SettingsPage />);
 
-    expect(mockOpenSettings).toHaveBeenCalledWith('profile');
+    expect(mockOpenSettings).toHaveBeenCalledWith('account');
     expect(mockReplace).toHaveBeenCalledWith('/calendar');
   });
 

@@ -36,7 +36,7 @@ export function SettingsRoute() {
   // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
     if (hasMounted && !isMobile) {
-      openSettings('profile');
+      openSettings('account');
       router.replace(DESKTOP_SETTINGS_EXIT_PATH);
     }
   }, [hasMounted, isMobile, openSettings, router]);

@@ -215,7 +215,7 @@ export async function sendAccountDeletionEmail({
 }
 
 /**
- * MFA無効化（リカバリーコードによる二段階認証解除）の通知メールを送る
+ * MFA無効化（リカバリーコードによる多要素認証解除）の通知メールを送る
  *
  * `features/auth/server/recovery-service.ts` の `RecoveryService.verify()` からのみ呼ぶ。
  * 攻撃者がクライアントを制御していても迂回できないよう、procedure ではなく

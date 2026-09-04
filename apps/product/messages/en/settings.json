@@ -67,17 +67,17 @@
       "passwordIncorrect": "Current password is incorrect",
       "passwordReused": "Cannot reuse any of your last 5 passwords. Please choose a different password.",
       "passwordPwned": "This password has been exposed in a data breach. Please use a more secure password.",
-      "twoFactor": "Two-factor authentication",
+      "twoFactor": "Multi-factor authentication",
       "twoFactorDesc": "Add an extra layer of security to your account",
-      "enable2FA": "Enable 2FA",
-      "twoFactorEnabled": "Two-factor authentication is enabled",
+      "enable2FA": "Enable MFA",
+      "twoFactorEnabled": "Multi-factor authentication is enabled",
       "twoFactorPrompt": "Require authentication code when signing in",
-      "twoFactorActive": "Two-factor authentication active",
+      "twoFactorActive": "Multi-factor authentication active",
       "twoFactorProtection": "Your account is protected with an additional security layer.",
       "emailUsedFor": "Used for login and account emails",
       "emailVerified": "Verified",
       "mfa": {
-        "title": "Two-factor authentication (MFA)",
+        "title": "Multi-factor authentication (MFA)",
         "description": "Add an extra security layer using an authenticator app when signing in",
         "enableMFA": "Enable MFA",
         "disableMFA": "Disable MFA",
@@ -89,8 +89,8 @@
         "generating": "Generating...",
         "regenerate": "Regenerate",
         "setup": {
-          "title": "Set up two-factor authentication",
-          "description": "Follow the steps below to set up two-factor authentication with your authenticator app.",
+          "title": "Set up multi-factor authentication",
+          "description": "Follow the steps below to set up multi-factor authentication with your authenticator app.",
           "step1": "1. Scan QR code",
           "step1Desc": "Scan with Google Authenticator, Microsoft Authenticator, Authy, or another authenticator app",
           "manualEntry": "Or enter this code manually:",
@@ -99,7 +99,7 @@
           "verificationCodeLabel": "Verification code"
         },
         "enabled": {
-          "title": "Two-factor authentication is enabled",
+          "title": "Multi-factor authentication is enabled",
           "description": "A code from your authenticator app will be required when signing in"
         },
         "recoveryCodes": {
@@ -116,9 +116,9 @@
           "regenerateFailed": "Failed to generate recovery codes"
         },
         "disableDialog": {
-          "title": "Disable two-factor authentication",
-          "description": "Enter the 6-digit code from your authenticator app to disable two-factor authentication.",
-          "codeLabel": "Code to disable two-factor authentication"
+          "title": "Disable multi-factor authentication",
+          "description": "Enter the 6-digit code from your authenticator app to disable multi-factor authentication.",
+          "codeLabel": "Code to disable multi-factor authentication"
         },
         "regenerateDialog": {
           "title": "Regenerate recovery codes",
@@ -309,8 +309,6 @@
         "dataControlsDesc": "Export, import, and backup settings",
         "integrations": "Integrations",
         "integrationsDesc": "Google Calendar, iCal feeds, and MCP connections",
-        "profile": "Profile",
-        "profileDesc": "Name and email",
         "display": "Display",
         "displayDesc": "Theme, language, timezone, and calendar defaults",
         "data": "Data",
@@ -318,7 +316,7 @@
         "billing": "Billing",
         "billingDesc": "Plans, payments, and invoices",
         "account": "Account",
-        "accountDesc": "Email, password, and login connections",
+        "accountDesc": "Profile, email, password, and login connections",
         "subscription": "Subscription",
         "subscriptionDesc": "Plan and billing management",
         "about": "About",
@@ -487,7 +485,7 @@
           "proRequired": "A Pro plan is required to connect Google Calendar",
           "rateLimited": "Too many connection attempts. Try again later.",
           "reconnectTargetInvalid": "This connection can no longer be reconnected. Refresh and try again.",
-          "mfaVerificationRequired": "Two-factor verification is required. Verify and try again.",
+          "mfaVerificationRequired": "Multi-factor verification is required. Verify and try again.",
           "scopeNotGranted": "Some required permissions weren't granted. Allow all the permissions shown, then try again.",
           "budgetExhausted": "Connecting took too long. Try again.",
           "unavailable": "Google Calendar connection is temporarily unavailable",

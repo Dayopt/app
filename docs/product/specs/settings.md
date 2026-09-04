@@ -14,7 +14,7 @@ lp:
 
 ## 現在の振る舞い
 
-- `/settings/[category]` のカテゴリ別ルーティング（`profile` / `display` / `data` / `integrations` / `billing` / `account`）
+- `/settings/[category]` のカテゴリ別ルーティング（`account` / `display` / `data` / `integrations` / `billing`）
 - 連携設定では複数の Google アカウントを接続でき、取り込むカレンダーの選択、手動同期、再接続、切断を行える
 - Google OAuth の callback は連携設定へ戻り、成功・失敗を通知する。未知の provider エラー詳細は表示しない
 - Google 連携に必要な設定や redirect URI が現在の origin で利用できない場合、接続・再接続操作を無効にする

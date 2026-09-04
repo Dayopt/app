@@ -163,7 +163,7 @@ describe('React Email templates', () => {
 
       expect(html).toContain('This link will expire in 24 hours.');
       expect(html.match(/your settings/g)).toHaveLength(2);
-      expect(html).toContain('href="https://app.dayopt.app/settings/profile"');
+      expect(html).toContain('href="https://app.dayopt.app/settings/account"');
       expect(countHtmlOccurrences(html, resetUrl)).toBe(3);
     });
 

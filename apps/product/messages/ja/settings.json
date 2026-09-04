@@ -67,17 +67,17 @@
       "passwordIncorrect": "現在のパスワードが正しくありません",
       "passwordReused": "過去5回分のパスワードは使用できません。別のパスワードを入力してください。",
       "passwordPwned": "このパスワードは過去に漏洩しています。より安全なパスワードを使ってください。",
-      "twoFactor": "2要素認証",
+      "twoFactor": "多要素認証",
       "twoFactorDesc": "アカウントに追加のセキュリティ層を追加",
-      "enable2FA": "2FAを有効にする",
-      "twoFactorEnabled": "2要素認証が有効",
+      "enable2FA": "多要素認証を有効にする",
+      "twoFactorEnabled": "多要素認証が有効",
       "twoFactorPrompt": "サインイン時に認証コードを要求",
-      "twoFactorActive": "2要素認証が有効",
+      "twoFactorActive": "多要素認証が有効",
       "twoFactorProtection": "アカウントは追加のセキュリティ層で保護されています。",
       "emailUsedFor": "ログインやアカウントメールに使用",
       "emailVerified": "認証済み",
       "mfa": {
-        "title": "2要素認証 (MFA)",
+        "title": "多要素認証 (MFA)",
         "description": "認証アプリを使って、ログイン時に追加のセキュリティ層を追加",
         "enableMFA": "MFAを有効にする",
         "disableMFA": "MFAを無効にする",
@@ -89,8 +89,8 @@
         "generating": "生成中...",
         "regenerate": "再生成",
         "setup": {
-          "title": "2段階認証を設定",
-          "description": "以下の手順に従って、認証アプリで2段階認証を設定してください。",
+          "title": "多要素認証を設定",
+          "description": "以下の手順に従って、認証アプリで多要素認証を設定してください。",
           "step1": "1. QRコードをスキャン",
           "step1Desc": "Google Authenticator、Microsoft Authenticator、Authyなどの認証アプリでスキャンしてください",
           "manualEntry": "またはこのコードを手動で入力:",
@@ -99,7 +99,7 @@
           "verificationCodeLabel": "認証コード"
         },
         "enabled": {
-          "title": "2段階認証が有効",
+          "title": "多要素認証が有効",
           "description": "ログイン時に認証アプリで生成されるコードが必要です"
         },
         "recoveryCodes": {
@@ -116,9 +116,9 @@
           "regenerateFailed": "リカバリーコードを生成できませんでした。もう一度お試しください"
         },
         "disableDialog": {
-          "title": "2段階認証を無効にする",
-          "description": "2段階認証を無効にするには、認証アプリの6桁のコードを入力してください。",
-          "codeLabel": "2段階認証を無効にするための認証コード"
+          "title": "多要素認証を無効にする",
+          "description": "多要素認証を無効にするには、認証アプリの6桁のコードを入力してください。",
+          "codeLabel": "多要素認証を無効にするための認証コード"
         },
         "regenerateDialog": {
           "title": "リカバリーコードを再生成",
@@ -309,8 +309,6 @@
         "dataControlsDesc": "エクスポート、インポート、バックアップ設定",
         "integrations": "連携",
         "integrationsDesc": "Google Calendar、iCalフィード、MCP接続",
-        "profile": "プロフィール",
-        "profileDesc": "名前、メール",
         "display": "表示",
         "displayDesc": "テーマ、言語、タイムゾーン、カレンダー設定",
         "data": "データ",
@@ -318,7 +316,7 @@
         "billing": "請求",
         "billingDesc": "プラン、お支払い、領収書",
         "account": "アカウント",
-        "accountDesc": "メール、パスワード、ログイン連携",
+        "accountDesc": "プロフィール、メール、パスワード、ログイン連携",
         "subscription": "サブスクリプション",
         "subscriptionDesc": "プランと課金管理",
         "about": "このアプリについて",
@@ -487,7 +485,7 @@
           "proRequired": "Google カレンダーとの接続にはProプランが必要です",
           "rateLimited": "接続の試行回数が多すぎます。時間をおいてお試しください。",
           "reconnectTargetInvalid": "この接続は再接続できなくなりました。更新して、もう一度お試しください。",
-          "mfaVerificationRequired": "2段階認証の確認が必要です。確認後にもう一度お試しください。",
+          "mfaVerificationRequired": "多要素認証の確認が必要です。確認後にもう一度お試しください。",
           "scopeNotGranted": "必要な権限の一部が許可されませんでした。表示された権限をすべて許可して、もう一度お試しください。",
           "budgetExhausted": "接続の準備に時間がかかりすぎました。もう一度お試しください。",
           "unavailable": "Google カレンダーに一時的に接続できません",

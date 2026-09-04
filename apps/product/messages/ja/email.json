@@ -23,9 +23,9 @@
     "securityWarning": "この変更に覚えがない場合は、すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
   },
   "mfaDisabled": {
-    "subject": "2段階認証が無効になりました",
-    "heading": "2段階認証が無効になりました",
-    "body": "{disabledAt}、リカバリーコードを使用して Dayopt アカウントの2段階認証が無効になりました。",
+    "subject": "多要素認証が無効になりました",
+    "heading": "多要素認証が無効になりました",
+    "body": "{disabledAt}、リカバリーコードを使用して Dayopt アカウントの多要素認証が無効になりました。",
     "securityWarning": "この操作に覚えがない場合、アカウントが第三者にアクセスされている可能性があります。すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
   },
   "accountDeletion": {
