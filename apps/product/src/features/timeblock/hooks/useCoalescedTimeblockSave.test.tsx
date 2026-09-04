@@ -26,7 +26,7 @@ describe('useCoalescedTimeblockSave', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
 
     act(() => {
-      result.current.enqueue({ tagId: 'tag-2' });
+      result.current.enqueue({ activityId: 'activity-2' });
       result.current.enqueue({
         start_at: '2026-07-14T01:00:00.000Z',
         end_at: '2026-07-14T02:00:00.000Z',
@@ -38,7 +38,7 @@ describe('useCoalescedTimeblockSave', () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
     expect(onSave).toHaveBeenLastCalledWith({
-      tagId: 'tag-2',
+      activityId: 'activity-2',
       start_at: '2026-07-14T01:00:00.000Z',
       end_at: '2026-07-14T02:00:00.000Z',
     });
@@ -80,7 +80,7 @@ describe('useCoalescedTimeblockSave', () => {
     act(() => result.current.enqueue({ note: 'version 0 の保存' }));
     let pendingFlush!: Promise<void>;
     act(() => {
-      pendingFlush = result.current.flush({ tagId: 'version 0 の待機patch' });
+      pendingFlush = result.current.flush({ activityId: 'version 0 の待機patch' });
     });
 
     const rejection = expect(pendingFlush).rejects.toBe(conflict);
@@ -110,7 +110,7 @@ describe('useCoalescedTimeblockSave', () => {
     act(() => result.current.enqueue({ note: '送信中' }));
     let pendingFlush!: Promise<void>;
     act(() => {
-      pendingFlush = result.current.flush({ tagId: '待機中' });
+      pendingFlush = result.current.flush({ activityId: '待機中' });
     });
 
     const rejection = expect(pendingFlush).rejects.toBe(uncertain);
@@ -136,7 +136,7 @@ describe('useCoalescedTimeblockSave', () => {
     let flushPromise!: Promise<void>;
     act(() => {
       result.current.enqueue({ note: '入力途中' });
-      flushPromise = result.current.flush({ note: '最新メモ', tagId: 'tag-2' });
+      flushPromise = result.current.flush({ note: '最新メモ', activityId: 'activity-2' });
     });
 
     expect(onSave).toHaveBeenCalledTimes(1);
@@ -144,7 +144,7 @@ describe('useCoalescedTimeblockSave', () => {
     firstSave.resolve();
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
-    expect(onSave).toHaveBeenLastCalledWith({ note: '最新メモ', tagId: 'tag-2' });
+    expect(onSave).toHaveBeenLastCalledWith({ note: '最新メモ', activityId: 'activity-2' });
 
     let settled = false;
     void flushPromise.then(() => {
@@ -166,17 +166,17 @@ describe('useCoalescedTimeblockSave', () => {
       .mockResolvedValue(undefined);
     const { result } = renderHook(() => useCoalescedTimeblockSave(onSave));
 
-    act(() => result.current.enqueue({ tagId: '古いタグ' }));
+    act(() => result.current.enqueue({ activityId: '古いアクティビティ' }));
 
     let flushPromise!: Promise<void>;
     act(() => {
-      flushPromise = result.current.flush({ note: '最新メモ', tagId: 'tag-2' });
+      flushPromise = result.current.flush({ note: '最新メモ', activityId: 'activity-2' });
     });
 
     firstSave.reject(new Error('一時的な保存失敗'));
 
     await expect(flushPromise).resolves.toBeUndefined();
-    expect(onSave).toHaveBeenLastCalledWith({ note: '最新メモ', tagId: 'tag-2' });
+    expect(onSave).toHaveBeenLastCalledWith({ note: '最新メモ', activityId: 'activity-2' });
   });
 
   it('snapshotの保存失敗時はflushをrejectし、同じsnapshotを再試行できる', async () => {
@@ -189,7 +189,7 @@ describe('useCoalescedTimeblockSave', () => {
 
     let failedFlush!: Promise<void>;
     act(() => {
-      failedFlush = result.current.flush({ note: '最新メモ', tagId: 'tag-2' });
+      failedFlush = result.current.flush({ note: '最新メモ', activityId: 'activity-2' });
     });
     const rejection = expect(failedFlush).rejects.toThrow('snapshot save failed');
 
@@ -197,7 +197,7 @@ describe('useCoalescedTimeblockSave', () => {
 
     await rejection;
     await expect(
-      result.current.flush({ note: '最新メモ', tagId: 'tag-2' }),
+      result.current.flush({ note: '最新メモ', activityId: 'activity-2' }),
     ).resolves.toBeUndefined();
     expect(onSave).toHaveBeenCalledTimes(2);
   });

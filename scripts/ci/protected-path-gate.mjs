@@ -33,8 +33,12 @@
  *   printf '%s\n' file1 file2 | node scripts/ci/protected-path-gate.mjs --stdin
  *   node scripts/ci/protected-path-gate.mjs apps/product/src/features/auth/foo.ts
  *
- * Output: `{"required": true, "reason": "<matched glob>"}` or
- * `{"required": false}`.
+ * Output: `{"required": true, "reason": "<matched glob>", "auditContract": <bool>}` or
+ * `{"required": false, "auditContract": <bool>}`.
+ *
+ * `auditContract` は「audit contract そのもの（audit script / production-build-gate /
+ * production-config-audit.yml）を変えたか」。`finish-branch.sh` が trusted dispatch の
+ * commit status を要求するかの判定に使う（#2571）。
  *
  * Design notes:
  * - Unknown paths are simply a non-match (they do not push the verdict
@@ -131,12 +135,39 @@ export const PROTECTED_PATH_GLOBS = [
   'scripts/tasks/generate-issue-review-marker.mjs',
   'scripts/tasks/generate-marker.ts',
   'scripts/lib/generate-marker-core.ts',
+  // レビュー証跡の**束縛**そのもの（#2558）。指紋の計算が「常に同じ値を返す」形へ
+  // 退化すると、旧レビューが恒久的に有効と判定され、未レビューの保護対象 diff が
+  // gate を素通りする。CI では捕まらず revert でも取り戻せないため、生成・検証系と
+  // 同じくガードレール自己保護として必須側に置く。
+  'scripts/lib/review-fingerprint.mjs',
+  'scripts/tasks/review-request.mjs',
   // CI の中枢。check.mjs は write 権限つき GH_TOKEN を PR コードから隔離する
   // 処理とどの test を skip するかの判定を持ち、ci.yml はその job / permissions
   // を決める。どちらも「壊れても CI は green のまま」になりうるため、
   // guardrail として必須側に置く（#2483 クロスレビュー、risk-reviewer 指摘）。
   'scripts/ci/check.mjs',
   '.github/workflows/ci.yml',
+  // promote.yml は production domain を切り替える唯一の経路で、2026-09-03 以降は
+  // main merge がそれを自動で起動する（層 3 → smoke → promote → rollback）。
+  // gate の `if:` 式を 1 つ緩めるだけで未検証の main が本番へ出るが、その変更は
+  // CI では green のまま通り、promote 後の revert では届いてしまったものを
+  // 取り戻せない（判定基準「外部契約 or 不可逆」の両方に当たる）。
+  // **nightly.yml は含めない** —— 層 3 撤去後は sweep / replica / backup だけで、
+  // 「nightly.yml は marker を要求しない」既存契約（finish-branch.test.ts）を
+  // 反転させない。
+  '.github/workflows/promote.yml',
+  // promote.yml は配線にすぎず、「どの suite が要るか」「この SHA を promote するか」
+  // の判断はこの 2 つの script が持つ。workflow だけを保護対象にすると、判断側を
+  // 触る PR がクロスレビュー無しで通る（例: 影響判定の catch を fail open へ倒す）。
+  // production-release.mjs は元から保護対象外だったが、2026-09-03 の merge 連動化で
+  // 「人が dispatch した時だけ動く」から「全 merge で無人実行される」へ変わったため、
+  // 判定基準（外部契約 or 不可逆）に実際に該当するようになった。
+  'scripts/ci/release-impact.mjs',
+  'scripts/ci/production-release.mjs',
+  // 上 3 つの guardrail である contract test 自身（#2503 / #2546 と同じ判断）。
+  // 同じ PR で保護対象と test を同時に弱められる経路を塞ぐ。
+  'scripts/ci/release-workflow-contract.test.ts',
+  'scripts/ci/release-impact.test.ts',
   // この2つの drift 検出テスト自身がガードレール（#2503）。削除・skip・
   // 弱体化されても保護対象 path の選定にも他の test にも現れず、将来の glob /
   // privacy 境界の縮退を恒久的に検出できなくなる（Codex 指摘 #2546）。
@@ -165,21 +196,64 @@ function matchOneOrTwoStars(token) {
 const MATCHERS = PROTECTED_PATH_GLOBS.map((glob) => ({ glob, re: globToRegExp(glob) }));
 
 /**
+ * audit contract の判定も **`PROTECTED_PATH_GLOBS` と同じ glob 意味論**で行う。
+ *
+ * 同じ 4 path のコピーは `paths` filter（glob）・workflow の self-change grep（正規表現）・
+ * この定数（`globToRegExp`）と、いずれもパターンとして解釈される。ここだけ完全一致にすると、
+ * 将来リストの 1 要素を glob へ畳んだ時（例: 3 つ目の app が増えて
+ * `apps/<app>/production-build-gate.mjs` のような形にする）に **他の 3 箇所は動き、契約 test も
+ * 通り、この判定だけが永久に false へ落ちて checkpoint がまるごと無効化される**。
+ */
+const AUDIT_CONTRACT_MATCHERS = PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS.map((glob) =>
+  globToRegExp(glob),
+);
+
+/**
+ * 1 file が保護対象 path に該当するか。`resolveProtectedPathGate` と同じ
+ * `MATCHERS`（= `PROTECTED_PATH_GLOBS`）を使う。レビュー指紋
+ * （`scripts/lib/review-fingerprint.mjs`）が diff を保護対象だけへ絞り込むために
+ * 呼ぶ。glob リストを二重管理しないための named export で、判定意味論は
+ * `resolveProtectedPathGate` と 1 対 1 に対応する。
+ *
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isProtectedPath(file) {
+  const normalized = String(file ?? '').trim();
+  if (!normalized) return false;
+  return MATCHERS.some((matcher) => matcher.re.test(normalized));
+}
+
+/**
+ * `auditContract` は「この PR が audit contract そのものを変えたか」。
+ *
+ * `production-config-audit.yml` の `pull_request_target` は #2571 で `paths` filter を
+ * 得たが、workflow が起動しない条件は `paths` の意味論だけではない（Actions の一時
+ * Disable、base 側の workflow 定義の破損、`paths` の書き間違い、そして changed files が
+ * 3,000 件を超えた時の GitHub 仕様）。`finish-branch.sh` はここの値を見て、contract 変更
+ * PR には commit status `Production Config Audit` の success（= trusted dispatch 実行済み）
+ * を **workflow が起動したかどうかと無関係に** 要求する。判定不能（変更ファイル一覧を
+ * 取得できない）な PR も同様に要求する側へ倒している。
+ *
  * @param {string[]} changedFiles
- * @returns {{ required: true, reason: string } | { required: false }}
+ * @returns {{ required: true, reason: string, auditContract: boolean }
+ *   | { required: false, auditContract: boolean }}
  */
 export function resolveProtectedPathGate(changedFiles) {
   const files = changedFiles.map((f) => f.trim()).filter(Boolean);
 
+  // rename の旧 path（`previous_filename`）も呼び出し側が渡してくるため、両側が一致する。
+  const auditContract = files.some((file) => AUDIT_CONTRACT_MATCHERS.some((re) => re.test(file)));
+
   for (const file of files) {
     for (const matcher of MATCHERS) {
       if (matcher.re.test(file)) {
-        return { required: true, reason: matcher.glob };
+        return { required: true, reason: matcher.glob, auditContract };
       }
     }
   }
 
-  return { required: false };
+  return { required: false, auditContract };
 }
 
 // --- CLI -------------------------------------------------------------

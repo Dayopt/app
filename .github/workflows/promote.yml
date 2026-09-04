@@ -1,21 +1,40 @@
 name: Production Release
 
-# main へ merge しても Production domain は自動で切り替わらない。
+# main へ merge しても Production domain は即座には切り替わらない。
 # Auto-assign Custom Production Domains を無効化した Product / Web に対し、
-# このワークフローだけが「同一 SHA・両 project 成功」を確認して promote する。
-# タグと GitHub Release は promote と観察が終わった後の証跡であり、deploy trigger ではない。
+# この workflow だけが「影響のある層 3 が green・同一 SHA・両 project 成功」を
+# 確認して promote する。タグと GitHub Release は promote と観察が終わった後の
+# 証跡であり、deploy trigger ではない。
 #
-# 2026-08-20: push:main トリガーを廃止し、手動 workflow_dispatch のみへ切り替えた（#2268）。
-# main への merge が Production domain の切り替えを自動で起動することはない。
+# 2026-08-20（#2268）: push:main を廃止し手動 dispatch のみにした。
+# 2026-09-03: **merge 連動の自動 promote へ戻した**。ただし #2268 以前の
+# 「merge したら即 promote」ではなく、`impact →（影響のある層 3）→ release` の
+# 3 段にして、層 3 が green の時だけ promote する。手動 dispatch は break-glass
+# （force）と drill 専用に残る。
+#
+# 層 3（E2E / Web Build & E2E）は nightly.yml からこの workflow へ移設した。
+# #2382 が per-merge の層 3 を廃止した根拠は「promote が手動だから赤い main は
+# ユーザーへ届かない」で、merge 連動にするとその前提が反転するため。影響のある
+# suite だけを走らせることで per-merge のコストを抑える（判定は
+# scripts/ci/release-impact.mjs、基準は各 project の live production SHA）。
+#
+# **層 3 の gate は check-run 名の文字列照合ではなく `needs.*.result`** で行う。
+# 旧実装は nightly.yml の job 表示名を promote.yml 側の literal と一致させる
+# 必要があり、改名で fail closed に止まる結合を持っていた。同一 workflow 内の
+# needs にしたことでその class ごと消えている。
+#
+# kill switch: Actions 画面でこの workflow を Disable する（変数も revert も不要）。
 
 on:
+  # main への merge が promote を起動する。paths filter は付けない —— docs のみの
+  # merge でも release job まで到達させ、`unaffected` の success status を発行する
+  # 必要がある（create-release.yml の tag gate がこの status を要求する）。
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
-      sha:
-        description: 'Release target commit SHA (40 hex). Defaults to the current ref.'
-        required: false
       force:
-        description: 'Break-glass Force Promote: skip smoke and Production Config Audit'
+        description: 'Break-glass Force Promote: skip layer 3, smoke, and Production Config Audit'
         type: boolean
         default: false
       reason:
@@ -25,37 +44,250 @@ on:
         description: 'Drill only: smoke:<p> | promote:<p> | production-smoke:<p> (p = web | product)'
         required: false
 
+# statuses: write は release job にだけ置く（層 3 job へ commit status 発行権限を
+# 配らない）。
 permissions:
   contents: read
-  statuses: write
 
-concurrency:
-  # 実行中の release は中断しない。中断すると片方だけ promote された状態が残りうる。
-  group: production-release
-  cancel-in-progress: false
+# **workflow レベルの concurrency は置かない。** 層 3 を内包した状態で workflow 全体
+# を 1 group へ直列化すると、GitHub は group ごとに pending を 1 本しか保持せず新着
+# で古い pending を cancel するため、burst（実測 1 時間に 1〜3 merge）の 2 本目が
+# promote されないまま黙って消える。直列化が要るのは promote そのものだけなので、
+# release job の job レベル concurrency で行う。
 
 jobs:
+  # ─── どの層 3 を走らせるかを決める（pnpm install 不要の軽量 job）───────────
+  impact:
+    name: "\U0001F9ED Release Impact"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      product_affected: ${{ steps.run.outputs.product_affected }}
+      web_affected: ${{ steps.run.outputs.web_affected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # 判定は「各 project が今配信している SHA → target SHA」の git diff で行う。
+          # 既定の shallow clone では過去の production SHA が checkout に無く、判定が
+          # 毎回 fail closed（= 常に両 project affected）へ落ちる。
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # pnpm install は行わない。release-impact.mjs と production-release.mjs は
+      # node 標準ライブラリしか使わない（ci.yml の impact job と同じ判断）。
+      - name: Resolve release impact
+        id: run
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # GitHub keeps the existing VERCEL_ORG_ID replica; the runtime contract
+          # uses the canonical 1Password/schema name VERCEL_TEAM_ID.
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: node scripts/ci/release-impact.mjs
+
+  # ─── 層 3（CI 4 層再設計 #2269。2026-09-03 に nightly.yml から移設）──────────
+  #
+  # **job id にハイフンを使わない。** GitHub の式では `needs.web-e2e` が減算として
+  # 解析され、release job の gate が黙って壊れる。
+  #
+  # concurrency group は job ごとに分ける。**2 job を同じ group に入れてはいけない**
+  # —— job レベルの group は同一 run 内の job 同士にも効くため、
+  # cancel-in-progress: true だと e2e と web が互いをキャンセルする。
+  # 新しい push が古い run の同種 job をキャンセルする挙動は、group を
+  # `<suite>-${{ github.ref }}` にすれば個別に成立する。キャンセルされた job は
+  # `needs.<id>.result == 'cancelled'` になり、release job の gate が不成立になる
+  # （= その run は promote しない。次の push の run が live 基準で拾い直す）。
+  e2e:
+    name: "\U0001F3AD E2E Tests"
+    needs: impact
+    if: ${{ needs.impact.outputs.product_affected == 'true' && github.event.inputs.force != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: promote-layer3-e2e-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
+
+      - id: supabase-version
+        run: |
+          version=$(node -p "require('./package.json').devDependencies.supabase")
+          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
+            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: ${{ steps.supabase-version.outputs.version }}
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Get Supabase status
+        id: supabase
+        run: |
+          API_URL=$(supabase status --output json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+      - name: Run E2E tests
+        run: pnpm --dir apps/product exec playwright test --project="chromium"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop
+
+      - name: Upload report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/product/playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: screenshots
+          path: apps/product/test-results/
+          retention-days: 7
+
+  web:
+    name: "\U0001F310 Web Build & E2E"
+    needs: impact
+    if: ${{ needs.impact.outputs.web_affected == 'true' && github.event.inputs.force != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: promote-layer3-web-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**/*.{ts,tsx}', 'apps/web/content/**/*.{md,mdx,json}') }}
+          restore-keys: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      - name: Build web
+        run: pnpm build:web
+
+      - name: Install Playwright browser
+        run: pnpm --filter @dayopt/web exec playwright install --with-deps chromium chromium-headless-shell
+
+      - name: Run web E2E tests
+        run: pnpm --filter @dayopt/web test:e2e:smoke
+
+      - name: Upload web report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: web-playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - name: Upload web test results on failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: web-test-results
+          path: apps/web/test-results/
+          retention-days: 7
+
+  # ─── promote 本体（層 4）────────────────────────────────────────────────
   release:
     name: Promote Production
+    needs: [impact, e2e, web]
+    # **「suite を免除してよいのは impact が明示的に false と言った時だけ」**を
+    # 肯定形で書く。`!= 'true'` 形にすると **空文字が免除側に落ちる**: impact job の
+    # `outputs:` キー名 / step の `id:` / `impactKey` のどれか 1 つを改名すると、
+    # `needs.impact.outputs.*` は空文字になり、層 3 の `if`（`== 'true'`）も偽で
+    # 両 suite が skip され、gate も免除と読んで **層 3 ゼロで promote する**。
+    # 旧実装（check-run 名の照合）で名前がずれた時の最悪は「promote が止まる」
+    # だったので、`!= 'true'` は安全側を反転させてしまう。`== 'false'` なら空文字は
+    # 免除にならず、skip された suite の result（`skipped`）で不成立になる。
+    #
+    # cancelled / failure / skipped / 空文字はいずれも `== 'success'` に一致しない
+    # ので不成立（fail closed）。とくに job レベル concurrency で層 3 が cancel された
+    # 場合、式関数の `cancelled()` は **run 全体**の cancel しか見ないため false の
+    # ままだが、`needs.<id>.result == 'cancelled'` は正しく不成立になる。
+    #
+    # `!cancelled()` が要る: これが無いと暗黙の `success()` が付き、needs に skipped
+    # が 1 つでもあるだけで release ごと skip される（unaffected な merge が
+    # 永久に promote されなくなる）。`always()` は使わない —— run 全体が cancel
+    # された時にまで promote を走らせない。
+    #
+    # **force は `needs.impact.result` の外側に置く。** break-glass が要るのは
+    # impact job（フル clone + Vercel API）自体が壊れている時でもあるため、
+    # impact の成功を前提にすると最後の手段が使えない。
+    if: >-
+      ${{ !cancelled()
+          && ( github.event.inputs.force == 'true'
+               || ( needs.impact.result == 'success'
+                    && (needs.impact.outputs.product_affected == 'false' || needs.e2e.result == 'success')
+                    && (needs.impact.outputs.web_affected == 'false' || needs.web.result == 'success') ) ) }}
     runs-on: ubuntu-latest
-    # この environment に deployment branch policy（main のみ）を設定すると、
-    # main 以外の ref からの dispatch は job 開始前に GitHub 側で拒否される。
-    # policy 未設定の間は素通りするため、設定するまで残存リスクは閉じない。
-    # 手順は docs/engineering/infra.md を参照。
+    # この environment には deployment branch policy（main のみ）が設定済みで、
+    # main 以外の ref からの dispatch は job 開始前に GitHub 側で拒否される
+    # （2026-09-01 実測: custom branch policies、許可は main のみ、required
+    # reviewers なし）。**required reviewers を付けると自動 promote が承認待ちで
+    # timeout する**ので、付ける場合はこの workflow の設計ごと見直すこと。
     environment: production-release
+    # promote だけを直列化する。実行中の release は中断しない —— 中断すると片方
+    # だけ promote された状態が残りうる。
+    concurrency:
+      group: production-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      statuses: write
     # scripts/ci/production-release.mjs の WORST_CASE_RELEASE_MS を必ず上回ること。
     # 下回ると rollback の途中で job が kill され、片方だけ promote された
     # production が手動 rollback の手掛かりごと失われる。
     # scripts/ci/release-workflow-contract.test.ts が不等式を守る。
     timeout-minutes: 80
     steps:
-      # 実行する workflow / script は常に dispatch した ref のものを使う。
-      # inputs.sha は release 対象を指す data であって、実行するコードではない。
-      # ref に渡すと、未 merge の commit が持つ script を Production 権限で走らせられる。
-      #
-      # 残存リスク: main 以外の ref から dispatch すると、その ref の script が
-      # Production secret 付きで動く。これは YAML の if では塞げず、environment の
-      # deployment branch policy でしか閉じられない（infra.md に手順を記載）。
+      # 実行する script は常にこの run の ref（push なら main、dispatch なら
+      # dispatch した ref）のもの。release 対象は常に `github.sha` で、呼び出し側が
+      # 任意の SHA を指定する口は持たない（`sha` input は 2026-09-03 に廃止した。
+      # 層 3 を run 内で走らせる設計では checkout と異なる SHA は検証不能で、
+      # 「未検証 × 全 project promote」の組み合わせしか作れないため。古い SHA を
+      # 本番へ戻すのは promote ではなく rollback で、Vercel Instant Rollback
+      # / runbook Playbook 2 が正しい経路）。
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -82,20 +314,17 @@ jobs:
         id: target
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_SHA: ${{ inputs.sha }}
         run: |
-          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          sha="$GITHUB_SHA"
           if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::Release target must be a 40 character commit SHA"
             exit 1
           fi
 
-          # 常に main 包含を確認する。push:main 廃止（#2268）前は github.sha が
-          # main 上の commit である push イベントでしか埋まらなかったため、
-          # 人が渡した sha だけを検証していた。workflow_dispatch は任意 ref から
-          # 起動できるため、sha 未指定時の github.sha（= dispatch した ref の
-          # tip）も main 以外を指しうる。無条件化しないと、main 以外の ref から
-          # sha 省略で dispatch した場合にこの検証が丸ごと素通りする。
+          # 常に main 包含を確認する。push:main の run では自明だが、
+          # workflow_dispatch は任意 ref から起動でき、その場合 github.sha は
+          # dispatch した ref の tip（main 以外）になりうる。environment の
+          # deployment branch policy と二重防御にする。
           #
           # `main` という名の tag との曖昧さを避けるため heads/main で明示する。
           # 404 なら gh が非 0 終了し、代入が set -e に拾われて fail closed になる
@@ -107,72 +336,6 @@ jobs:
           fi
 
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-      # CI 4 層再設計（#2269）の層 4。E2E / Web E2E / Integration Tests は
-      # per-PR から撤去され、層 3（heavy-post-merge.yml は nightly + 手動発火、
-      # integration.yml はこれに加え paths 該当時の main push）だけが検証する。
-      # promote 前にこの層 3 が target SHA で green だったことを確認しないと、
-      # 壊れた main がそのまま Production へ昇格しうる。
-      # force（break-glass）時はこの gate も既存の smoke/audit skip と同様にスキップする。
-      - name: Verify heavy-tier (layer 3) checks are green
-        if: '!inputs.force'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ steps.target.outputs.sha }}
-        run: |
-          # target SHA に対する check-runs を取得し、層 3 の 3 check（E2E / Web E2E /
-          # Integration Tests）がすべて success であることを要求する。取得失敗・
-          # 見つからない・pending はすべて fail closed（停止）に倒す。
-          # #2382（2026-08-25）で heavy-post-merge.yml の push:main トリガーを廃止し、
-          # 層 3 は nightly + 手動発火（+ integration.yml のみ paths 該当時の
-          # main push）へ変わった。つまり main HEAD が「直近の層 3 実行 SHA」より
-          # 進んでいる（nightly 後に追加の merge があった）のは通常運用で起こりうる。
-          # この gate は target SHA ちょうどの check-runs しか見ないため、その場合は
-          # ここで fail closed に停止する。
-          #
-          # 対処は .claude/skills/releasing/SKILL.md Phase 1.2 の手動発火手順:
-          # **main HEAD に対して**層 3 を dispatch し、その run の headSha を
-          # この workflow の `sha` input へ渡して promote する。
-          #
-          # main HEAD 以外（層 3 が走っていない過去 SHA）を promote したい時は、
-          # その SHA へ一時 tag を打って `--ref <tag>` で dispatch する。
-          # `gh workflow run --ref` は 40-hex SHA を HTTP 422 で拒否するが
-          # **tag は受け付ける**（2026-08-25 実測。tag ref の run は headSha が
-          # tag 先の commit になり、check-run もその commit へ付く。本 gate は
-          # `commits/$RELEASE_SHA/check-runs` を見るので ref の種類に依存しない）。
-          # tag ref は concurrency group も main と別になるため、走行中の
-          # main run を巻き込まない。
-          # この経路は TARGET の tree に heavy-post-merge.yml / integration.yml
-          # が存在し、job 名が required_checks と一致する場合に限り成立する
-          # （dispatch は tag 先 commit の workflow 定義で走るため、CI 4 層
-          # 再設計 #2269 より前の SHA では成立しない可能性がある。未検証）。
-          # 該当する SHA では force は最後の手段（force は本 gate だけでなく
-          # smoke と Production Config Audit も同時に skip する）。
-          required_checks=("🎭 E2E Tests" "🌐 Web Build & E2E" "Integration Tests")
-
-          runs_json="$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs" \
-            --jq '.check_runs[] | {name, status, conclusion, started_at}' | jq -s '.')"
-
-          if [ -z "$runs_json" ] || [ "$runs_json" = "[]" ]; then
-            echo "::error::target SHA の check-runs を取得できませんでした（0 件）。.claude/skills/releasing/SKILL.md Phase 1.2 の手順で層 3 を手動発火し、その run の headSha を sha input へ渡して再実行してください（force は smoke と Production Config Audit も同時に skip する最終手段）。"
-            exit 1
-          fi
-
-          fail=0
-          for name in "${required_checks[@]}"; do
-            # 同名 check-run が複数（再実行）ある場合は started_at が最新のものを代表とする。
-            conclusion="$(printf '%s' "$runs_json" | jq -r --arg n "$name" \
-              '[.[] | select(.name == $n)] | sort_by(.started_at // "") | .[-1].conclusion // "missing"')"
-            if [ "$conclusion" != "success" ]; then
-              echo "::error::layer 3 check \"$name\" is not green (conclusion=$conclusion)"
-              fail=1
-            fi
-          done
-
-          if [ "$fail" -ne 0 ]; then
-            echo "::error::promote を停止しました。層 3（nightly + 手動発火の重量テスト）が target SHA で green ではありません。.claude/skills/releasing/SKILL.md Phase 1.2 の手順で層 3 を手動発火し、その run の headSha を sha input へ渡して再実行してください。"
-            exit 1
-          fi
 
       - name: Wait, smoke, and promote Production
         id: release
@@ -187,6 +350,19 @@ jobs:
           VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_AUTOMATION_BYPASS_WEB }}
           RELEASE_SHA: ${{ steps.target.outputs.sha }}
           RELEASE_FORCE: ${{ inputs.force }}
+          # impact job（T0）の判定を release（T1）へ渡す（#2574）。この 2 つは **別時刻の
+          # live production SHA** を基準に独立して判定するため食い違いうる。live が前進する
+          # だけなら T1 の affected は T0 の subset で安全側だが、Vercel Instant Rollback で
+          # live が後退すると T1 だけが affected になり、層 3 を走らせていない project を
+          # promote できてしまう。gate 式（この job の `if:`）は T0 しか見ないのでそこでは
+          # 止まらないため、script 側で「promote 対象 ⊆ ここで 'true' と渡された project」を
+          # 強制する。
+          #
+          # **既定値を書かないこと。** `|| 'true'` のような丸めを入れると、この配線が 1 行
+          # 落ちただけで層 3 ゼロの promote が通る（対策そのものが無効になる）。空文字は
+          # script 側で「未検証」として fail closed に扱われる。
+          RELEASE_IMPACT_WEB_AFFECTED: ${{ needs.impact.outputs.web_affected }}
+          RELEASE_IMPACT_PRODUCT_AFFECTED: ${{ needs.impact.outputs.product_affected }}
           # 2026-08-05 に段階適用が完了（両 project の Auto-assign Custom Production
           # Domains を無効化。#1817 の project 設定監査が「'' のまま放置され、live が
           # true に固定されていた」未完了状態を検出したのを受けて実施）。'false' 宣言

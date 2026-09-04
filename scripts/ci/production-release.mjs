@@ -63,6 +63,49 @@ export const RELEASE_PROJECTS = [
   },
 ];
 
+/**
+ * impact job の output key（`<impactKey>_affected`）→ release job の step env 名。
+ *
+ * `release-impact.mjs` の `IMPACT_OUTPUT_KEYS` と 1:1 で、`promote.yml` の配線検査は
+ * この 2 つを index で突き合わせてループする（片方だけ改名する事故を test で塞ぐ）。
+ *
+ * **ここから release-impact.mjs を import しないこと** —— あちらが既にこちらを
+ * import しており、逆向きを張ると `IMPACT_OUTPUT_KEYS` の top-level 評価が
+ * `RELEASE_PROJECTS` の TDZ を踏んで ReferenceError になる。
+ */
+export const impactEnvVar = (impactKey) => `RELEASE_IMPACT_${impactKey.toUpperCase()}_AFFECTED`;
+
+/**
+ * impact job の出力キーと release job の env 名を **1 つの構造から導出する**。
+ *
+ * 以前は `IMPACT_OUTPUT_KEYS` と `IMPACT_ENV_VARS` の 2 配列を index で対応させていたが、
+ * それだと片方だけ並べ替えられた時（`.sort()` の追加、リテラル列挙への書き換え）に
+ * contract test が **入れ替わった配線を要求する側へ回る**。runtime では
+ * `readImpactAffected` が project 名で読むため、product の env に web の verdict が
+ * 入っても静かに別 project の判定を使い、層 3 未実行の promote が通る。
+ */
+export const IMPACT_WIRING = RELEASE_PROJECTS.map((project) => ({
+  name: project.name,
+  outputKey: `${project.impactKey}_affected`,
+  envVar: impactEnvVar(project.impactKey),
+}));
+
+/**
+ * env → `runProductionRelease({ impactAffected })` の変換。
+ *
+ * **`'true'` 以外はすべて null（未検証）に倒す。** `'1'` / `'TRUE'` / 空文字を true へ
+ * 丸めない —— そこが唯一の fail-open 経路になる。workflow の env 配線が 1 行落ちた時に
+ * 「層 3 を通った」と誤って解釈すると、この gate ごと無効になる。
+ */
+export function readImpactAffected(env = process.env, projects = RELEASE_PROJECTS) {
+  return Object.fromEntries(
+    projects.map((project) => {
+      const raw = env[impactEnvVar(project.impactKey)];
+      return [project.name, raw === 'true' ? true : raw === 'false' ? false : null];
+    }),
+  );
+}
+
 /** 200 のまま streaming 中に失敗した Next.js response の目印。 */
 const STREAMED_FAILURE_MARKERS = ['NEXT_HTTP_ERROR_FALLBACK', 'NEXT_REDIRECT'];
 
@@ -792,6 +835,7 @@ export function buildManifest({
   rolledBack,
   observedLive = new Map(),
   gatesPassed = new Map(),
+  impactAffected = {},
 }) {
   const promotedBy = new Map(promoted.map((entry) => [entry.project.name, entry]));
   const rolledBackNames = new Set(rolledBack.map((entry) => entry.project.name));
@@ -847,7 +891,12 @@ export function buildManifest({
       return {
         name: project.name,
         productionDomain: project.productionDomain,
+        // `affected` はこの run（T1、promote 直前の live 基準）の判定。
+        // `impactAffected` は impact job（T0、層 3 の起動判定）の判定 = その project で
+        // 層 3 が走ったか。**2 つが食い違った時に production を触らずに止めた**ことを、
+        // artifact だけで読めるようにする（#2574）。
         affected: decision?.affected ?? null,
+        impactAffected: impactAffected[project.name] ?? null,
         reason: decision?.reason ?? null,
         action,
         deploymentId: effective?.id ?? null,
@@ -905,6 +954,17 @@ export async function runProductionRelease({
   token,
   teamId,
   force = false,
+  /**
+   * impact job（層 3 の起動判定、T0）の verdict。**project 名** → `true` / `false` / `null`。
+   *
+   * この script 自身の影響判定（T1）とは基準にする live production SHA の時刻が違うため、
+   * 両者は独立に食い違いうる（#2574）。`true` の project についてだけ層 3 が走っている。
+   *
+   * **既定は空 = 全 project「未検証」**。true 側を既定にすると fail open になり、
+   * workflow の env 配線が 1 行落ちただけで層 3 ゼロの promote が通る。
+   * `force`（break-glass）の時だけこの検査ごと免除する。
+   */
+  impactAffected = {},
   // gate が有効な運用（Auto-assign 無効化済み）では false を宣言する。
   // null の間は「run 開始時点の値へ戻す」だけになり、前回 run から持ち越した
   // ドリフトは検出できない。段階適用が終わったら宣言する。
@@ -1096,6 +1156,7 @@ export async function runProductionRelease({
       rolledBack,
       observedLive,
       gatesPassed,
+      impactAffected,
     });
 
   // 全 project の auto-assign を期待値へ戻す。外部の promote が待機中に設定を
@@ -1264,6 +1325,58 @@ export async function runProductionRelease({
   let driftRecovery = null;
 
   const result = await (async () => {
+    // ── 層 3 未実行の promote を拒む（#2574）─────────────────────────────
+    //
+    // impact job（T0）と この script（T1）は **別時刻の live production SHA** を基準に
+    // 独立して影響判定を行う。live が前進するだけなら `diff(base_T1..Y) ⊆ diff(base_T0..Y)`
+    // なので T1 の affected 集合は T0 の subset になり安全側だが、**Instant Rollback で
+    // live が後退すると T1 だけが affected になる**:
+    //
+    //   1. live: product = L / web = L
+    //   2. merge Y は apps/web だけ変更 → impact（基準 L）は product unaffected → e2e skip
+    //   3. web job の実行中（最大 20 分）に product を R（L より古い）へ Instant Rollback
+    //   4. release（基準 R）は R..Y に product 変更を見て affected → E2E 未実行のまま promote
+    //
+    // release job の gate 式は `needs.impact.outputs.product_affected == 'false'` で層 3 を
+    // 免除するため workflow 側では止まらない。そこで「promote 対象 ⊆ impact が affected と
+    // 言った project」をここで強制する。
+    //
+    // **判定は `targets`（= decisions）で行う。`pending` で行ってはいけない** ——
+    // 外部 actor や Auto-assign が先に candidate を live にすると pending から消えるため、
+    // 未検証のまま stabilize を通って success になり、層 3 未実行の build へ tag gate 用の
+    // status を出してしまう。
+    const unverified = force
+      ? // break-glass は層 3 job 自体を skip する（promote.yml の e2e / web job の `if:`）。
+        // 検査を効かせると、impact job が壊れている時の最後の手段が使えなくなる。
+        []
+      : targets.filter((project) => impactAffected[project.name] !== true);
+    if (unverified.length > 0) {
+      const detail = unverified
+        .map((project) => {
+          const verdict = impactAffected[project.name];
+          const reported = verdict === false ? 'unaffected' : 'nothing';
+          return (
+            `${project.name}: the impact job reported ${reported}, so layer 3 never ran for it, ` +
+            `but this run resolved it as affected against live ` +
+            `${short(before.get(project.name)?.sha)} (${decisions.get(project.name).reason})`
+          );
+        })
+        .join('; ');
+      // ここまでで production は 1 件も触っていない（`before` の読み取りだけ）。
+      // wrapper の catch が sweepSettings() と manifest 出力を行うので、IIFE の内側で投げる。
+      throw Object.assign(
+        new ReleaseError(
+          `Refusing to promote ${sha}: ${unverified.map((project) => project.name).join(', ')} ` +
+            `would go out without layer 3. Production was left untouched. Re-run the WHOLE ` +
+            `workflow once production has settled (\`gh workflow run promote.yml --ref main\`, ` +
+            `or "Re-run all jobs") so the impact job re-baselines against the current live ` +
+            `deployment. Do NOT use "Re-run failed jobs": it reuses the impact job's existing ` +
+            `outputs, so the stale verdict comes straight back and this fails again. (${detail})`,
+        ),
+        { manifest: manifestFor('impact-mismatch') },
+      );
+    }
+
     // 前回 run が中断して片側だけ公開された状態。既に配信中の側は戻し先を持たないので
     // 自動 rollback の対象にはできない。せめて名指しして人が判断できるようにする。
     // promote する予定が無い run には rollback scope 自体が無いので警告しない。
@@ -2229,6 +2342,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     token: process.env.VERCEL_TOKEN,
     teamId: process.env.VERCEL_TEAM_ID,
     force: process.env.RELEASE_FORCE === 'true',
+    impactAffected: readImpactAffected(),
     expectedAutoAssign:
       process.env.RELEASE_EXPECT_AUTO_ASSIGN === 'false'
         ? false

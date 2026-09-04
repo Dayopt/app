@@ -11,7 +11,6 @@ const baseEvent: CalendarDisplayEvent = {
   title: 'test entry',
   startDate: new Date('2026-01-15T09:00:00'),
   endDate: new Date('2026-01-15T10:00:00'),
-  tagId: null,
   origin: 'manual',
   actualStartDate: null,
   actualEndDate: null,

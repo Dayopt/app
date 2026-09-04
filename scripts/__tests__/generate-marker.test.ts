@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   assertAgentFieldHasNoKnownReviewerRole,
   buildMarkerBody,
+  buildStatusDescription,
+  buildStatusPostCommand,
   deriveAgentFieldFromReviewResult,
   derivePartialCoverageRoles,
   deriveRoleFindingsField,
+  STATUS_DESCRIPTION_MAX_LENGTH,
   type ReviewResultEntry,
 } from '../lib/generate-marker-core.ts';
 
@@ -32,7 +35,7 @@ describe('buildMarkerBody', () => {
     });
 
     expect(body).toBe(
-      ['[internal-review]', `head: ${VALID_SHA}`, 'agent: docs-only', 'P1: なし', 'P2: なし'].join(
+      ['[review-summary]', `head: ${VALID_SHA}`, 'agent: docs-only', 'P1: なし', 'P2: なし'].join(
         '\n',
       ),
     );
@@ -49,7 +52,7 @@ describe('buildMarkerBody', () => {
     });
 
     expect(body.split('\n')).toEqual([
-      '[internal-review]',
+      '[review-summary]',
       `head: ${VALID_SHA}`,
       'agent: risk-reviewer, behavior-verifier',
       'P1: なし',
@@ -166,7 +169,7 @@ describe('buildMarkerBody', () => {
     });
 
     expect(body.split('\n')).toEqual([
-      '[internal-review]',
+      '[review-summary]',
       `head: ${VALID_SHA}`,
       'agent: risk-reviewer, behavior-verifier',
       'findings: risk-reviewer=2(P1 1/P2 1), behavior-verifier=0',
@@ -470,5 +473,72 @@ describe('deriveRoleFindingsField', () => {
 
   it('entries が空なら空文字列を返す', () => {
     expect(deriveRoleFindingsField([])).toBe('');
+  });
+});
+
+// ── commit status（#2562）+ レビュー指紋（#2558）────────────────────────
+//
+// 証跡の材料が「Main が自由に書く PR コメント」から commit status へ移った。
+// gate が読むのは description の機械可読フィールドだけなので、その書式と
+// fail-closed の入力検証をここで固定する。
+describe('buildStatusDescription / buildStatusPostCommand', () => {
+  const FP = 'a'.repeat(16);
+  const FPA = 'b'.repeat(16);
+
+  const base = {
+    p1Count: 0,
+    p2Count: 0,
+    fingerprintProtected: FP,
+    fingerprintAll: FPA,
+    agent: 'risk-reviewer, behavior-verifier',
+    coverage: 'complete' as const,
+  };
+
+  it('機械可読フィールドを先頭に固定して組み立てる', () => {
+    expect(buildStatusDescription(base)).toBe(
+      `p1=0 p2=0 fp=${FP} fpa=${FPA} coverage=complete agents=risk-reviewer, behavior-verifier`,
+    );
+  });
+
+  it('140 字を超えても gate が読む p1 / p2 / fp / fpa は先頭に残る', () => {
+    const description = buildStatusDescription({ ...base, agent: 'x'.repeat(300) });
+    expect(description.length).toBe(STATUS_DESCRIPTION_MAX_LENGTH);
+    expect(description.startsWith(`p1=0 p2=0 fp=${FP} fpa=${FPA} coverage=complete`)).toBe(true);
+  });
+
+  it('p1 / p2 が整数でなければ拒否する', () => {
+    expect(() => buildStatusDescription({ ...base, p1Count: 1.5 })).toThrow(/0 以上の整数/);
+    expect(() => buildStatusDescription({ ...base, p2Count: -1 })).toThrow(/0 以上の整数/);
+  });
+
+  it('指紋が 16 桁 hex でなければ拒否する', () => {
+    expect(() => buildStatusDescription({ ...base, fingerprintProtected: 'zz' })).toThrow(/fp は/);
+    expect(() => buildStatusDescription({ ...base, fingerprintAll: '' })).toThrow(/fpa は/);
+  });
+
+  it('partial coverage を description に載せる（gate は数値だけ見るが、人が気づける）', () => {
+    expect(buildStatusDescription({ ...base, coverage: 'partial' })).toContain('coverage=partial');
+  });
+
+  it('投稿コマンドは実測 head SHA を URL へ埋め、context を固定する', () => {
+    const command = buildStatusPostCommand({
+      headSha: VALID_SHA,
+      description: buildStatusDescription(base),
+    });
+    expect(command).toContain(`repos/{owner}/{repo}/statuses/${VALID_SHA}`);
+    expect(command).toContain("-f context='dayopt/internal-review'");
+    expect(command).toContain('-f state=success');
+  });
+
+  it('head SHA が 40 桁 hex でなければ投稿コマンドを作らない（捏造の再発防止）', () => {
+    expect(() => buildStatusPostCommand({ headSha: 'abc1234', description: 'p1=0 p2=0' })).toThrow(
+      /40 桁 hex/,
+    );
+  });
+
+  it('description が上限超過なら投稿コマンドを作らない', () => {
+    expect(() =>
+      buildStatusPostCommand({ headSha: VALID_SHA, description: 'x'.repeat(141) }),
+    ).toThrow(/140 字を超えています/);
   });
 });

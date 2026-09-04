@@ -266,21 +266,18 @@ const presetSampleEntries: CalendarDisplayEvent[] = [
   // 過去（記録済み）
   preset('preset-1', 'Morning Run', 'var(--category-teal)', 8, 0, 30, {
     ...closed,
-    tagId: 'tag-exercise',
     // 予定通り実行
     actualStartDate: makeDate(today, 8, 0),
     actualEndDate: makeDate(today, 8, 30),
   }),
   preset('preset-2', 'Draft Proposal', 'var(--category-blue)', 10, 0, 90, {
     ...closed,
-    tagId: 'tag-work',
     // 10分遅れて開始 → 上部に斜線
     actualStartDate: makeDate(today, 10, 10),
     actualEndDate: makeDate(today, 11, 30),
   }),
   preset('preset-3', 'English Lesson', 'var(--category-green)', 11, 45, 45, {
     ...closed,
-    tagId: 'tag-learning',
     description: 'Unit 5 — Pronunciation practice',
     // 予定通り
     actualStartDate: makeDate(today, 11, 45),
@@ -288,21 +285,14 @@ const presetSampleEntries: CalendarDisplayEvent[] = [
   }),
   preset('preset-4', 'Lunch & Walk', 'var(--category-amber)', 13, 0, 45, {
     ...closed,
-    tagId: 'tag-life',
     // 15分早く終了 → 下部に斜線
     actualStartDate: makeDate(today, 13, 0),
     actualEndDate: makeDate(today, 13, 30),
   }),
   // 未来（予定）
-  preset('preset-5', 'Prepare Presentation', 'var(--category-blue)', 14, 30, 60, {
-    tagId: 'tag-work',
-  }),
-  preset('preset-6', 'Reading', 'var(--category-violet)', 16, 0, 30, {
-    tagId: 'tag-hobby',
-  }),
-  preset('preset-7', 'Yoga', 'var(--category-teal)', 18, 0, 45, {
-    tagId: 'tag-exercise',
-  }),
+  preset('preset-5', 'Prepare Presentation', 'var(--category-blue)', 14, 30, 60, {}),
+  preset('preset-6', 'Reading', 'var(--category-violet)', 16, 0, 30, {}),
+  preset('preset-7', 'Yoga', 'var(--category-teal)', 18, 0, 45, {}),
 ];
 
 const presetDiffEntryIds = computeCalendarDayDiffs(

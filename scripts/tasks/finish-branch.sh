@@ -107,7 +107,7 @@ fi
 # ── 1. PR 状態を取得 ────────────────────────────────────────────────
 step "PR #$PR_NUMBER の状態を確認"
 
-PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,changedFiles,labels 2>/dev/null || true)"
+PR_JSON="$(gh pr view "$PR_NUMBER" --json state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,changedFiles,labels 2>/dev/null || true)"
 
 if [[ -z "$PR_JSON" ]]; then
   error "PR #$PR_NUMBER を取得できませんでした。番号とネットワークを確認してください。"
@@ -118,6 +118,7 @@ PR_STATE="$(printf '%s' "$PR_JSON" | jq -r '.state')"
 IS_DRAFT="$(printf '%s' "$PR_JSON" | jq -r '.isDraft // false')"
 BRANCH="$(printf '%s' "$PR_JSON" | jq -r '.headRefName')"
 HEAD_SHA="$(printf '%s' "$PR_JSON" | jq -r '.headRefOid // ""')"
+BASE_REF="$(printf '%s' "$PR_JSON" | jq -r '.baseRefName // "main"')"
 
 if [[ -z "$BRANCH" || "$BRANCH" == "null" ]]; then
   error "PR #$PR_NUMBER の head branch を特定できませんでした。"
@@ -703,6 +704,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   REVIEW_GATE_REQUIRED="false"
   REVIEW_GATE_REASONS=()
 
+  # 「audit contract を変えたか」は unknown を既定にする。判定できない経路（files 一覧の
+  # 取得失敗 / 3,000 件 truncation / node 不在）では contract 変更を否定できないため、
+  # 下の trusted-head checkpoint は fail closed 側（status success を要求）へ倒す。
+  AUDIT_CONTRACT_CHANGED="unknown"
+
   if [[ -z "$CHANGED_FILES" ]]; then
     REVIEW_GATE_REQUIRED="true"
     REVIEW_GATE_REASONS+=("changed files unavailable, fail closed")
@@ -715,6 +721,12 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
       REVIEW_GATE_REQUIRED="true"
       REVIEW_GATE_REASONS+=("protected-path-gate.mjs failed, fail closed")
     else
+      # **`// "unknown"` を使わない。** jq の `//` は null と false の両方を falsy として
+      # 右辺へ倒すため、`auditContract: false`（= contract を変えていない大多数の PR）が
+      # `unknown` に化ける。boolean かどうかを明示的に見る。
+      AUDIT_CONTRACT_CHANGED="$(printf '%s' "$PROTECTED_GATE_JSON" \
+        | jq -r 'if (.auditContract | type) == "boolean" then (.auditContract | tostring) else "unknown" end' \
+        2>/dev/null || echo unknown)"
       GATE_JSON_REQUIRED="$(printf '%s' "$PROTECTED_GATE_JSON" | jq -r '.required' 2>/dev/null || echo "")"
       case "$GATE_JSON_REQUIRED" in
         true)
@@ -889,6 +901,50 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     echo "review gate: not required" >&2
   fi
 
+  # ── audit contract 変更 PR は trusted dispatch の status を必ず要求する（#2571）──
+  #
+  # `production-config-audit.yml` の `pull_request_target` は contract 4 path の `paths`
+  # filter を持つ（Actions の削減）。**workflow が起動したかどうかに checkpoint を委ねない。**
+  # 起動しない条件は `paths` の意味論だけでなく次のクラスを含み、いずれも「PR code に
+  # contract 変更を自己検証させない」という設計を静かに無効化する:
+  #
+  #   - Actions を一時 Disable している間（incident 対応で実際に行う運用がある）
+  #   - base branch の workflow 定義が壊れている / 消えている（`pull_request_target` は
+  #     **base 側の定義**で評価されるため、PR 側を直しても効かない）
+  #   - `paths` の書き間違いで対象を取りこぼす
+  #   - GitHub の `paths` 仕様（changed files が 3,000 件を超え、一致するファイルが
+  #     先頭 3,000 件に無いと起動しない）
+  #
+  # そこで changed-files 由来の判定（`protected-path-gate.mjs` の `auditContract`）で
+  # commit status `Production Config Audit` の success（= trusted dispatch 実行済み）を
+  # 要求する。**判定できなかった場合（`unknown`）も要求する** —— contract 変更を否定
+  # できない以上、通す理由が無い（fail closed。Codex / architecture-guard の両系統から
+  # 同じ指摘。#2586）。`unknown` になるのは変更ファイル一覧そのものを取得できなかった
+  # 時（API 失敗 / 3,000 件 truncation / node 不在）だけで、その PR は同じ理由で
+  # `REVIEW_GATE_REQUIRED` も立っている。
+  #
+  # status の照合は上の免除ロジックと同じ述語（`$JQ_GATE_DEFS` の `trusted_audit_cleared`）
+  # を使う。コピーすると、context 名や条件を片方だけ変えた時に **checkpoint 側だけが
+  # 無言で無効化される**（免除側だけズレても「うるさいが安全」側に倒れるので非対称）。
+  if [[ "$AUDIT_CONTRACT_CHANGED" != "false" ]]; then
+    AUDIT_STATUS_OK="$(printf '%s' "$ROLLUP" | jq -r "$JQ_GATE_DEFS"'
+      if trusted_audit_cleared then "true" else "false" end' 2>/dev/null || echo "")"
+    if [[ "$AUDIT_STATUS_OK" != "true" ]]; then
+      if [[ "$AUDIT_CONTRACT_CHANGED" == "unknown" ]]; then
+        error "変更ファイル一覧を取得できず、audit contract を変更したか判定できませんでした。"
+        error "contract 変更を否定できないため、trusted dispatch を要求します（fail closed）。"
+      else
+        error "この PR は audit contract（audit script / production-build-gate / workflow 自身）を変更しています。"
+      fi
+      error "commit status「Production Config Audit」が現 HEAD で success になっていません。"
+      error "PR code に contract 変更を自己検証させないため、trusted dispatch が必要です:"
+      error "  gh workflow run production-config-audit.yml --ref $BRANCH"
+      error "完了後に再実行してください（status は SHA ごとなので push のたびに要ります）。"
+      exit 1
+    fi
+    info "audit contract の trusted dispatch を確認しました（status「Production Config Audit」= success）。"
+  fi
+
   # Issue Review 証跡が無効な linked issue があれば、要約行を出したうえで停止する。
   if [[ -n "${INVALID_ISSUE_REVIEWS:-}" ]]; then
     error "linked issue${INVALID_ISSUE_REVIEWS} の Codex Issue Review 証跡が無効です。マージを中止します。"
@@ -919,20 +975,93 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   if [[ "$REVIEW_GATE_REQUIRED" != "true" ]]; then
     info "保護対象 path に該当せず review:full ラベルも無いため、内製クロスレビュー marker gate をスキップします。"
   else
-  step "内製クロスレビューの痕跡を確認"
+  step "内製クロスレビューの証跡（commit status）を確認"
 
-  INTERNAL_REVIEW_MARKER="[internal-review]"
+  # ── 証跡の材料は commit status（#2562） ──────────────────────────────
+  #
+  # 旧設計は `[internal-review]` marker 付き **PR コメントの本文を正規表現で読んで**
+  # いた。この材料が 3 つの事故クラスを生んでいた:
+  #   1. zerolike 判定の破綻（`P1: なし（注釈…）` を非ゼロ申告と誤認、PR #2053 で 2 回）
+  #   2. 取得窓（直近 100 件）に壊れた marker が残ると、正しい marker を新たに
+  #      投稿しても gate が塞がり続ける（復旧はコメント削除のみ）
+  #   3. `head:` 行の文字列一致が SHA 束縛の実体で、短縮 SHA 手打ちの捏造事故
+  #      （2026-08-14 実事故）
+  #
+  # commit status なら SHA 束縛は `statuses/{sha}` というリソースの構造が保証し、
+  # 同じ context への再投稿は上書きになるため、上の 3 クラスが構造的に消える。
+  # description は `p1=<int> p2=<int> fp=<hash> fpa=<hash> coverage=<...> agents=<csv>`
+  # の機械可読フィールド固定で、`pnpm review:marker` が生成する（Main は生成された
+  # `gh api` 1 行を目視してから実行する。生成と投稿の分離は維持）。
+  #
+  # **この repo は Free plan の private repo で GitHub 側の required status check を
+  # 強制できない**（`docs/engineering/infra.md` §merge gate）。commit status 化の
+  # 価値は読み取りロジックの単純化と事故クラスの削減であって、merge button の
+  # 強制力を得ることではない。gate は従来どおり `pnpm branch:finish` 経路の機械強制。
+  #
+  # trust boundary: status を作れるのは write 権限者のみ。marker の
+  # OWNER / MEMBER / COLLABORATOR より僅かに厳しい（read / triage の COLLABORATOR を
+  # 排除する方向）ので後退ではない。
 
-  # comment は `last:` で引く。marker は merge 直前に置かれるため、古い側を切り
-  # 落とす `first:` より取りこぼしにくい。100 件を超える PR では古い痕跡が窓から
-  # 落ちうるので totalCount も取り、「痕跡なし」で止める時に窓の切り詰めが起きて
-  # いたかを伝える。取得失敗は「未確認のまま通す」ではなく停止に倒す（fail closed）。
+  # ── レビューの束縛を HEAD から「保護対象 diff の指紋」へ広げる（#2558） ──
+  #
+  # レビューが読んだのは diff であって commit ではない。HEAD 束縛だけだと、
+  # docs だけの commit・追従 merge・lint fix でも証跡が失効し、`@codex review` の
+  # 再依頼と CI の再実行を強いていた（PR #2554 実測: fix 6 push + 追従 1 で
+  # Codex 起動 8 回 / CI 10 回）。
+  #
+  # **`head` 完全一致の経路は残す。** 指紋は緩和の追加経路であり、指紋側の実装バグが
+  # gate を fail-open にしないよう、厳格な経路を先に評価する。
+  #
+  # scope の選び方（`scripts/lib/review-fingerprint.mjs` 参照）:
+  #   - 必須化の理由が保護対象 path の一致だけ → `protected`（保護対象外の変更は
+  #     CI が見る、という #2489 の境界に乗る）
+  #   - `review:full` / linked issue 継承 / 判定不能の fail closed が 1 つでも
+  #     混ざる → `all`（「重く見る」と宣言された PR で緩和を過剰にしない）
+  REVIEW_FINGERPRINT_SCOPE="all"
+  if [[ ${#REVIEW_GATE_REASONS[@]} -gt 0 ]]; then
+    REVIEW_SCOPE_ONLY_PROTECTED="true"
+    for REVIEW_GATE_REASON in "${REVIEW_GATE_REASONS[@]}"; do
+      if [[ "$REVIEW_GATE_REASON" != matched\ * ]]; then
+        REVIEW_SCOPE_ONLY_PROTECTED="false"
+      fi
+    done
+    if [[ "$REVIEW_SCOPE_ONLY_PROTECTED" == "true" ]]; then
+      REVIEW_FINGERPRINT_SCOPE="protected"
+    fi
+  fi
+
+  # description 側のフィールド名は scope と 1 対 1（fp = protected / fpa = all）。
+  # 生成側は両方を載せるため、gate は自分の scope に対応する値だけを見る。
+  if [[ "$REVIEW_FINGERPRINT_SCOPE" == "protected" ]]; then
+    REVIEW_FINGERPRINT_FIELD="fp"
+  else
+    REVIEW_FINGERPRINT_FIELD="fpa"
+  fi
+
+  # 指紋の材料は **PR の diff（API 由来 = merge-base 基準）**。ローカルの HEAD は
+  # main checkout の HEAD であって対象 PR の head ではないため、git から計算しない。
+  # 取得失敗は空文字にし、**指紋一致の経路だけを無効化**する（head 完全一致の経路は
+  # 生きているので、ここで merge 全体を止める必要はない。緩和が使えなくなるだけ）。
+  FINGERPRINT_SCRIPT="$SCRIPT_DIR/../lib/review-fingerprint.mjs"
+  REVIEW_FINGERPRINT=""
+  if command -v node >/dev/null 2>&1; then
+    REVIEW_FINGERPRINT="$(gh pr diff "$PR_NUMBER" 2>/dev/null \
+      | node "$FINGERPRINT_SCRIPT" --stdin --scope "$REVIEW_FINGERPRINT_SCOPE" 2>/dev/null || true)"
+  fi
+  REVIEW_FINGERPRINT="$(printf '%s' "$REVIEW_FINGERPRINT" | tr -d '[:space:]')"
+  if [[ ! "$REVIEW_FINGERPRINT" =~ ^[0-9a-f]{16}$ ]]; then
+    REVIEW_FINGERPRINT=""
+  fi
+
+  # comments / reviews / commits の commit status を 1 回の GraphQL で取る。
+  # 取得失敗は「未確認のまま通す」ではなく停止に倒す（fail closed）。
   REVIEW_EVIDENCE_JSON="$(gh api graphql \
     -f query='query($owner: String!, $name: String!, $number: Int!) {
       repository(owner: $owner, name: $name) {
         pullRequest(number: $number) {
-          comments(last: 100) { totalCount nodes { author { login } authorAssociation body } }
+          comments(last: 100) { totalCount nodes { author { login __typename } authorAssociation body } }
           reviews(last: 100) { totalCount nodes { author { login } state commit { oid } } }
+          commits(last: 30) { nodes { commit { oid status { contexts { context state description } } } } }
         }
       }
     }' \
@@ -940,154 +1069,140 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     -f name="$THREAD_NAME" \
     -F number="$PR_NUMBER" 2>/dev/null || true)"
 
-  # marker の 5 点チェック。**この判定は意図的に厳しくする。**
-  # 素朴な「body に marker を含む」だと、gate 自身が出す停止メッセージや
-  # workflow.md の規約本文を PR コメントへ貼っただけで gate が黙って無効化される
-  # （引用・stderr の貼り付け・この diff のレビュー依頼など、日常操作で踏む）。
-  #   1. コメント**本文の先頭**が marker であること（引用行は `>` で始まるので落ちる）
-  #   2. 書き手が OWNER / MEMBER / COLLABORATOR であること（bot と第三者は NONE。
-  #      この repo は public なので、任意のユーザーがコメントできる）
-  #   3. marker を除いた本文が空でないこと
-  #   4. `head: <sha>` 行があり、値が今回の merge に使う $HEAD_SHA と完全一致する
-  #      こと。早い段階で貼った marker を使い回し、その後の未レビュー push を
-  #      素通りさせる抜け道を塞ぐ（$HEAD_SHA は L120 で取得し、merge 実行時にも
-  #      同じ変数を使う。§マージ実行 参照）
-  #   5. `agent: <値>` 行があり非空であること。値そのものは自己申告であり機械
-  #      検証しない（OWNER/MEMBER/COLLABORATOR しか投稿できないことが唯一の
-  #      担保。`pr-cross-review` スキル参照）
-  # count（痕跡数）と agents（agent 値の一覧）を 1 回の jq で同時に取得する。
-  # 5 点チェックを段階（step1〜step5）に分解し、各 step は「1 つ前の step を
-  # 満たした上でその条件も満たす」候補数にする。痕跡ゼロ時にどの条件で落ちたかを
-  # 特定するのに使う（下記の停止メッセージ参照）。agent 値の抽出は count と
-  # 同じフィルタ（$step5）から行い、マッチ用フィルタを二重に書かない。
+  # commit status を読む。**数値以外・欠落は fail closed**（description の
+  # パースは残るが、発生源が「Main が自由に書くコメント」から「CLI が一度だけ
+  # 機械生成する 1 行」へ変わっているため、同じ事故の再生産ではない）。
+  INTERNAL_REVIEW_STATUS_CONTEXT="dayopt/internal-review"
+
   INTERNAL_REVIEW_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
-    --arg marker "$INTERNAL_REVIEW_MARKER" \
-    --arg headSha "$HEAD_SHA" '
-    def trimmedBody: (.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; "");
-    (.data.repository.pullRequest.comments.nodes // []) as $nodes
-    | ($nodes | map(select(trimmedBody | startswith($marker)))) as $step1
-    | ($step1 | map(select(.authorAssociation == "OWNER"
-                           or .authorAssociation == "MEMBER"
-                           or .authorAssociation == "COLLABORATOR"))) as $step2
-    | ($step2 | map(select(trimmedBody | ltrimstr($marker) | test("[^[:space:]]")))) as $step3
-    | ($step3 | map(select(trimmedBody | test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$")))) as $step4
-    | ($step4 | map(select(trimmedBody | test("(?m)^agent:[ \\t]*\\S")))) as $step5
+    --arg ctx "$INTERNAL_REVIEW_STATUS_CONTEXT" \
+    --arg headSha "$HEAD_SHA" \
+    --arg fingerprint "$REVIEW_FINGERPRINT" \
+    --arg fpField "$REVIEW_FINGERPRINT_FIELD" '
+    def field($name):
+      if test("(?:^| )" + $name + "=") then capture("(?:^| )" + $name + "=(?<v>[^ ]*)").v else "" end;
+    [ (.data.repository.pullRequest.commits.nodes // [])[]
+      | .commit
+      | . as $commit
+      | (($commit.status.contexts) // [])[]
+      | select((.context // "") == $ctx)
+      | { oid: ($commit.oid // ""), state: (.state // ""), description: (.description // "") }
+    ] as $all
+    | ($all
+       | map(select(.state == "SUCCESS"))
+       | map(. + {
+           p1: (.description | field("p1")),
+           p2: (.description | field("p2")),
+           fpv: (.description | field($fpField)),
+           coverage: (.description | field("coverage")),
+           agents: (.description
+                    | if test(" agents=") then capture(" agents=(?<v>.*)$").v else "" end)
+         })) as $ok
+    | ($ok | map(select(.oid == $headSha))) as $head
+    | ($ok | map(select($fingerprint != "" and .fpv == $fingerprint))) as $fp
     | {
-        count: ($step5 | length),
-        agents: ($step5 | map(trimmedBody | capture("(?m)^agent:[ \\t]*(?<v>\\S.*)$").v)),
-        step1: ($step1 | length),
-        step2: ($step2 | length),
-        step3: ($step3 | length),
-        step4: ($step4 | length),
-        step5: ($step5 | length)
+        contexts: ($all | length),
+        successes: ($ok | length),
+        head: ($head | length),
+        fingerprint: ($fp | length),
+        selected: (($head + $fp) | if length > 0 then .[0] else null end)
       }' 2>/dev/null || true)"
 
-  INTERNAL_REVIEW_EVIDENCE_COUNT="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
+  INTERNAL_REVIEW_EVIDENCE_COUNT="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" \
+    | jq -r 'if .selected == null then 0 else 1 end' 2>/dev/null || true)"
 
-  # 窓（last: 100）より多い comments を持つ PR かどうか。停止時の説明にだけ使い、
-  # 判定そのものは緩めない（切り詰めを理由に通すと fail open になる）。
+  # 窓（commits last: 30）より多い commit を持つ PR かどうかは commits.nodes の
+  # 件数では判定できない（totalCount を取っていない）。ここでは comments の窓
+  # 切り詰めだけを従来どおり停止時の説明に使う。
   REVIEW_WINDOW_TRUNCATED="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r '
     .data.repository.pullRequest
     | select(. != null)
     | ((.comments.totalCount // 0) > 100)' 2>/dev/null || true)"
 
-  # 数値以外（取得失敗・null 混入・部分出力）は「痕跡あり」に読み替えられないよう
-  # 停止に倒す。`-z` だけの判定にすると、想定外の文字列が "0 でない" として
-  # 素通りしてしまう。
-  if [[ ! "$INTERNAL_REVIEW_EVIDENCE_COUNT" =~ ^[0-9]+$ ]]; then
-    error "内製クロスレビューの痕跡を取得できませんでした。マージを中止します（fail closed）。"
+  # 数値以外（取得失敗・null 混入・部分出力）は「証跡あり」に読み替えられないよう
+  # 停止に倒す。
+  if [[ ! "$INTERNAL_REVIEW_EVIDENCE_COUNT" =~ ^[01]$ ]]; then
+    error "内製クロスレビューの証跡を取得できませんでした。マージを中止します（fail closed）。"
     error "gh の認証とネットワークを確認して再実行してください。"
     exit 1
   fi
 
   if [[ "$INTERNAL_REVIEW_EVIDENCE_COUNT" == "0" ]]; then
-    error "この PR には内製クロスレビューの痕跡がありません。マージを中止します。"
-    error "Main が pr-cross-review スキルでクロスレビューを実行し、1 行目を"
-    error "「${INTERNAL_REVIEW_MARKER}」で始めるコメントを投稿してから再実行してください。"
-    error "コメントには \`head: <現在の HEAD SHA>\` 行と \`agent: <実行 agent 名>\` 行が必要です。"
-    error "（.claude/skills/pr-cross-review/SKILL.md、AGENTS.md §PR / git 運用 §内製クロスレビューの実施を要求する gate）"
+    error "この PR には内製クロスレビューの証跡（commit status）がありません。マージを中止します。"
+    error "Main が pr-cross-review スキルでクロスレビューを実行し、\`pnpm review:marker\` が"
+    error "出力する commit status の投稿コマンド（context: ${INTERNAL_REVIEW_STATUS_CONTEXT}）を"
+    error "実行してから再実行してください。"
+    error "（.claude/skills/pr-cross-review/SKILL.md、AGENTS.md §PR / git 運用 §レビュー）"
 
-    # 5 点判定のどの条件で落ちたかを、段階的に絞り込んだ step1〜step5 の候補数
-    # から特定する。最初に 0 になった step が原因（複数条件が同時に不足して
-    # いても、判定順で最初の条件だけをヒントとして示す）。100 件超過時の
-    # window truncation ヒントとの非対称を解消する追加ヒント。
-    REVIEW_STEP1="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
-    REVIEW_STEP2="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
-    REVIEW_STEP3="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step3 // 0' 2>/dev/null || echo 0)"
-    REVIEW_STEP4="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step4 // 0' 2>/dev/null || echo 0)"
-    REVIEW_STEP5="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.step5 // 0' 2>/dev/null || echo 0)"
+    INTERNAL_STATUS_CONTEXTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.contexts // 0' 2>/dev/null || echo 0)"
+    INTERNAL_STATUS_SUCCESSES="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.successes // 0' 2>/dev/null || echo 0)"
 
-    if [[ "$REVIEW_STEP1" == "0" ]]; then
-      error "原因: 「${INTERNAL_REVIEW_MARKER}」で本文が始まるコメントが 1 件もありません。"
-    elif [[ "$REVIEW_STEP2" == "0" ]]; then
-      error "原因: marker で始まるコメントはありますが、投稿者が OWNER/MEMBER/COLLABORATOR ではありません（bot や第三者のコメントは無効です）。"
-    elif [[ "$REVIEW_STEP3" == "0" ]]; then
-      error "原因: marker の後に本文が続いていません（marker だけのコメントは無効です）。"
-    elif [[ "$REVIEW_STEP4" == "0" ]]; then
-      error "原因: marker はありますが \`head: <sha>\` が現在の HEAD SHA（${HEAD_SHA}）と一致しません。"
-    elif [[ "$REVIEW_STEP5" == "0" ]]; then
-      error "原因: marker と head SHA は一致していますが \`agent:\` 行が空または欠落しています。"
+    if [[ "$INTERNAL_STATUS_CONTEXTS" == "0" ]]; then
+      error "原因: context「${INTERNAL_REVIEW_STATUS_CONTEXT}」の commit status が 1 件もありません（未実施）。"
+    elif [[ "$INTERNAL_STATUS_SUCCESSES" == "0" ]]; then
+      error "原因: 同 context の status はありますが state が success ではありません。"
+    else
+      # 「未実施」と「旧 HEAD へ投稿したが push で進んだ」を区別する。この診断は
+      # commit status 化で失われがちな情報なので明示的に出す（#2562 手順 4）。
+      error "原因: status は存在しますが、現 HEAD（${HEAD_SHA}）にも現在の diff の指紋にも一致しません。"
+      error "      = 旧 HEAD 向けに投稿した証跡で、その後にレビュー対象の diff が変わっています。"
+      if [[ -z "$REVIEW_FINGERPRINT" ]]; then
+        error "      なお、今回は PR diff から指紋を計算できませんでした（gh / node を確認）。"
+        error "      指紋一致による緩和は無効で、head 完全一致だけを見ています。"
+      else
+        error "      現在の指紋: ${REVIEW_FINGERPRINT}（scope: ${REVIEW_FINGERPRINT_SCOPE}）"
+      fi
+      error "      delta re-review を行い、新しい HEAD に対して status を投稿し直してください。"
     fi
 
     if [[ "$REVIEW_WINDOW_TRUNCATED" == "true" ]]; then
-      error "なお、この PR は comments が 100 件を超えており、直近 100 件しか見ていません。"
-      error "実際にはレビュー済みで、痕跡が窓の外に落ちている可能性があります。"
+      error "なお、この PR は comments が 100 件を超えています（Codex 側の証跡判定に影響します）。"
     fi
-    error "push 直後で marker がまだ最新 commit を指していない場合は、delta re-review を行い"
-    error "新しい HEAD SHA を指す marker を投稿し直してください（HEAD が変わると古い marker は無効になります）。"
     exit 1
   fi
 
-  # ── marker の申告と review thread の実在を突き合わせる（二層 AND の機械強制） ──
+  # ── status の申告と review thread の実在を突き合わせる（二層 AND の機械強制） ──
   #
-  # marker 自体は自己申告であり、`P1: 3 件` と書いて実際には review comment を
-  # 1 件も投稿しないことを機械的には防げない（gate は marker の 5 点チェックしか
-  # 見ないため）。marker が P1 または P2 で非ゼロ件数を申告しているのに review
-  # thread が 1 件も存在しない場合は、指摘を投稿し忘れている疑いが強いため停止する。
+  # status 自体は自己申告であり、`p1=3` と書いて実際には review comment を 1 件も
+  # 投稿しないことを機械的には防げない。P1 または P2 が非ゼロなのに review thread が
+  # 1 件も存在しない場合は、指摘を投稿し忘れている疑いが強いため停止する。
   # thread は既に全ページ取得済み（$ALL_THREADS_JSON）なので再取得しない。
-  INTERNAL_REVIEW_CLAIMS_FINDINGS="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq -r \
-    --arg marker "$INTERNAL_REVIEW_MARKER" \
-    --arg headSha "$HEAD_SHA" '
-    def zerolike:
-      gsub("^[ \t]+|[ \t]+$"; "")
-      | test("^(0|0件|0 件|なし|[Nn]one)$");
-    .data.repository.pullRequest
-    | select(. != null)
-    | select(.comments != null)
-    | [
-        .comments.nodes[]
-        | select(.authorAssociation == "OWNER"
-                 or .authorAssociation == "MEMBER"
-                 or .authorAssociation == "COLLABORATOR")
-        | ((.body // "") | gsub("\r"; "") | sub("^[[:space:]]+"; ""))
-        | select(startswith($marker))
-        | select(ltrimstr($marker) | test("[^[:space:]]"))
-        | select(test("(?m)^head:[ \\t]*" + $headSha + "[ \\t]*$"))
-        | select(test("(?m)^agent:[ \\t]*\\S"))
-        | ( (capture("(?m)^P1:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p1
-        | ( (capture("(?m)^P2:[ \\t]*(?<v>[^\\n\\r]*)") // {v:""}).v ) as $p2
-        | [$p1, $p2] | any(. != "" and (zerolike | not))
-      ]
-    | any' 2>/dev/null || true)"
+  #
+  # **旧実装の zerolike 正規表現（`^(0|0件|なし|None)$`）は不要になった。**
+  # description は CLI が `p1=<int>` の形で機械生成するため、判定は数値比較で足りる。
+  # 数値以外・欠落は fail closed（「0 件」に読み替えない）。
+  INTERNAL_REVIEW_P1="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.selected.p1 // ""' 2>/dev/null || true)"
+  INTERNAL_REVIEW_P2="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.selected.p2 // ""' 2>/dev/null || true)"
+
+  if [[ ! "$INTERNAL_REVIEW_P1" =~ ^[0-9]+$ || ! "$INTERNAL_REVIEW_P2" =~ ^[0-9]+$ ]]; then
+    error "内製クロスレビュー status の description から p1 / p2 を数値として読めませんでした。マージを中止します（fail closed）。"
+    error "description（実測）: $(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.selected.description // ""' 2>/dev/null | tr -d '[:cntrl:]')"
+    error "\`pnpm review:marker\` が生成した投稿コマンドをそのまま実行してください（手で書き換えない）。"
+    exit 1
+  fi
 
   ALL_THREADS_COUNT="$(printf '%s' "$ALL_THREADS_JSON" | jq -r 'length' 2>/dev/null || true)"
   if [[ ! "$ALL_THREADS_COUNT" =~ ^[0-9]+$ ]]; then
     ALL_THREADS_COUNT=0
   fi
 
-  if [[ "$INTERNAL_REVIEW_CLAIMS_FINDINGS" == "true" && "$ALL_THREADS_COUNT" == "0" ]]; then
-    error "marker が P1 または P2 の指摘ありと申告していますが、review thread が 1 件もありません。マージを中止します。"
+  if [[ ( "$INTERNAL_REVIEW_P1" != "0" || "$INTERNAL_REVIEW_P2" != "0" ) && "$ALL_THREADS_COUNT" == "0" ]]; then
+    error "status が P1 または P2 の指摘ありと申告していますが（p1=${INTERNAL_REVIEW_P1} p2=${INTERNAL_REVIEW_P2}）、review thread が 1 件もありません。マージを中止します。"
     error "P1/P2 は inline review comment として投稿し review thread を生成する必要があります"
     error "（.claude/skills/pr-cross-review/SKILL.md 手順 5）。summary コメントに件数だけ書いて"
     error "review comment の投稿を忘れていないか確認してください。"
     exit 1
   fi
 
-  # 通過時のログに agent 値を含める（「どの経路で通ったかを出力する」旧設計の
-  # 踏襲）。count と同じ $step5 フィルタから抽出済みの agents を使う。
-  INTERNAL_REVIEW_AGENTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '(.agents // []) | map(select(. != null and . != "")) | unique | join(", ")' 2>/dev/null || true)"
+  INTERNAL_REVIEW_AGENTS="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.selected.agents // ""' 2>/dev/null | tr -d '[:cntrl:]' || true)"
+  INTERNAL_REVIEW_MATCH_HEAD="$(printf '%s' "$INTERNAL_REVIEW_EVIDENCE_JSON" | jq -r '.head // 0' 2>/dev/null || echo 0)"
 
-  info "内製クロスレビューの痕跡を確認しました（agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
+  if [[ "$INTERNAL_REVIEW_MATCH_HEAD" != "0" ]]; then
+    info "内製クロスレビューの証跡を確認しました（現 HEAD の commit status、agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
+  else
+    info "内製クロスレビューの証跡を確認しました（指紋一致: ${REVIEW_FINGERPRINT} / scope ${REVIEW_FINGERPRINT_SCOPE}、agent: ${INTERNAL_REVIEW_AGENTS:-不明}）。"
+    info "  = HEAD は動いていますが、レビュー対象の diff は変わっていません（#2558）。"
+  fi
 
   # ── Codex の独立レビューを要求する（#2529、2 系統目） ──────────────────
   #
@@ -1131,6 +1246,50 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   CODEX_REVIEW_LOGIN="chatgpt-codex-connector"
 
+  # ── 旧 HEAD の証跡を「同じ diff を読んだか」で救う（#2558） ────────────
+  #
+  # Codex は常に PR 全体を読むので、証跡はその commit の全量レビューを意味する。
+  # 旧 HEAD 向けの証跡でも、**その commit の diff の指紋が現在の diff の指紋と
+  # 一致する**なら、Codex が読んだ diff は現在の diff と同じ。docs だけの commit や
+  # 追従 merge のたびに再依頼するのをここで止める（delta chain の主張とは別物 —
+  # 積み上げではなく「同一性の実測」）。
+  #
+  # 実測は 1 候補につき API 1 回。strict 経路（現 HEAD 一致）が失敗した時だけ、
+  # 最大 3 候補まで試す。
+  CODEX_FINGERPRINT_CANDIDATE_LIMIT=3
+
+  codex_fingerprint_matches() {
+    local candidate_sha="$1"
+    [[ -n "$candidate_sha" ]] || return 1
+    [[ -n "$REVIEW_FINGERPRINT" ]] || return 1
+    command -v node >/dev/null 2>&1 || return 1
+
+    local candidate_fingerprint
+    candidate_fingerprint="$(gh api -H "Accept: application/vnd.github.v3.diff" \
+      "repos/{owner}/{repo}/compare/${BASE_REF}...${candidate_sha}" 2>/dev/null \
+      | node "$FINGERPRINT_SCRIPT" --stdin --scope "$REVIEW_FINGERPRINT_SCOPE" 2>/dev/null || true)"
+    candidate_fingerprint="$(printf '%s' "$candidate_fingerprint" | tr -d '[:space:]')"
+
+    [[ "$candidate_fingerprint" == "$REVIEW_FINGERPRINT" ]]
+  }
+
+  # 候補 SHA を順に指紋照合する。1 件でも一致すれば 0 を返す。
+  codex_any_candidate_matches() {
+    local checked=0
+    local candidate_sha
+    for candidate_sha in "$@"; do
+      [[ -n "$candidate_sha" ]] || continue
+      if [[ "$checked" -ge "$CODEX_FINGERPRINT_CANDIDATE_LIMIT" ]]; then
+        break
+      fi
+      checked=$((checked + 1))
+      if codex_fingerprint_matches "$candidate_sha"; then
+        return 0
+      fi
+    done
+    return 1
+  }
+
   CODEX_REVIEW_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
     --arg login "$CODEX_REVIEW_LOGIN" \
     --arg headSha "$HEAD_SHA" '
@@ -1139,7 +1298,8 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     | ($nodes | map(select(normalized_login == $login))) as $step1
     | ($step1 | map(select((.state // "") | . != "PENDING" and . != "DISMISSED"))) as $step2
     | ($step2 | map(select((.commit.oid // "") == $headSha))) as $step3
-    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length),
+        candidates: ($step2 | map(.commit.oid // "") | map(select(. != "" and . != $headSha)) | unique) }' 2>/dev/null || true)"
 
   CODEX_REVIEW_COUNT="$(printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 
@@ -1155,58 +1315,79 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  # ── 痕跡の 2 形態目: 指摘ゼロの clean pass コメント（#2536） ──────────
+  # ── 痕跡の 2 形態目: 指摘ゼロの clean pass コメント（#2536 / #2559） ──────
   #
-  # comments は内製 marker gate と同じ $REVIEW_EVIDENCE_JSON の comments
-  # フィールドを再利用する（追加の gh api 呼び出しを増やさない）。login は
-  # review object 判定と同じ normalized_login helper で正規化する。
-  # authorAssociation は見ない（内製 marker と異なり、第三者が
-  # chatgpt-codex-connector を名乗ることは GitHub の login 制約上できないため、
-  # login 一致だけで producer を担保できる — review object 判定と同じ考え方）。
+  # comments は内製 gate と同じ $REVIEW_EVIDENCE_JSON を再利用する（追加の
+  # gh api 呼び出しを増やさない）。
   #
-  # `Reviewed commit` の抽出は「行頭が `Reviewed commit` で始まる」といった
-  # 厳格な位置合わせをしていない。実測フォーマット（例: `**Reviewed commit:**
-  # \`<sha>\``）の変化に脆くなるより、"reviewed commit" という語句の直後に
-  # backtick で囲まれた 7〜40 桁の hex sha があれば拾う緩い形にしてある。
+  # **判定を blocklist から肯定条件へ反転させた（#2559 指摘 1）。** 旧実装は
+  # 「badge markup（`![P1 Badge]`）が **無ければ** clean pass」という否定条件で、
+  # Codex が badge を使わない書式で指摘を書いた瞬間に「指摘ゼロ」と誤認し、
+  # review thread の無い未解決 P1 を抱えたまま保護対象 path を通してしまう。
+  # この変更の根拠自体が「同じ bot・同じ PR で応答フォーマットが変わることを
+  # 実測した」（#2536）である以上、除外側の書式依存だけが先に陳腐化する非対称が
+  # 構造的に残っていた。
   #
-  # **PR #2546 実測（2026-09-02）で Codex が別表現も使うことを確認した。**
-  # `@codex review` の初回応答は英語の "Reviewed commit:" 定型句を含む一方、
-  # fix round 後の再レビュー応答は定型句を使わず「現 HEAD `<sha>` を再確認
-  # しました」という日本語の narrative になった（同じ bot、同じ PR での実測。
-  # #2536 が「安定した機械生成 field」と想定していた前提が崩れた）。
-  # どちらの語句でも sha を拾えるよう alternation で両方を受け付ける。将来また
-  # 別の言い回しが observed されたら、ここへ追加する（語句を減らす方向の変更は
-  # fail-closed 側に倒れるだけで安全だが、増やす方向は都度実測で確認すること）。
+  # 現在の clean pass の条件（すべて満たす時だけ証跡と認める）:
+  #   1. 投稿者が **bot**（GraphQL の `__typename == "Bot"`）で、login が Codex と一致
+  #      （#2559 指摘 3。login 一致だけだと producer の担保が login 制約頼みになる）
+  #   2. `Reviewed commit` / `現 HEAD` の直後に sha がある
+  #   3. 本文中に **`P1:` / `P2:` の形で件数を申告している箇所があれば、すべて zero-like**
+  #      （`0` / `0件` / `なし` / `none`）であること。1 つでも非ゼロなら証跡にしない。
+  #      件数申告が 1 つも無い本文（実際の clean pass は多くがこれ）はこの条件を満たす
+  #   4. badge markup を含まない（3 の追加防衛線として残す。単独の判定線ではない）
+  #   5. narrative（`現 HEAD`）だけで sha を主張している場合は、中断・未検証を示す
+  #      定型句を含まない（#2559 指摘 2。narrative 経路が否定文を弾けない穴を塞ぐ）。
+  #      機械生成の `Reviewed commit` 形式にはこの条件を課さない — 中断応答はその行を
+  #      持たないことが実測で分かっており、語句一致で正当な clean pass を弾く方が
+  #      可用性の実害が大きい（#2584）
   #
-  # sha は現 HEAD の **prefix** であることを要求する（Codex のコメントは短縮
-  # sha を出す一方、$HEAD_SHA は 40 桁のフル SHA のため完全一致ではなく
-  # startswith で比較する）。
-  #
-  # **Codex 指摘（PR #2546 実測）**: sha の抽出だけでは、Codex が review object
-  # ではなく plain comment で P1/P2 の指摘そのものを報告し、その本文にたまたま
-  # 「現 HEAD \`<sha>\`」相当の文言が含まれる場合、review thread の無い
-  # 未解決指摘を残したまま clean pass として通してしまう。Codex が実際の指摘を
-  # 書く時は必ず badge markup（\`![P1 Badge]\` / \`![P2 Badge]\`、img.shields.io
-  # のバッジ画像）を伴う（このリポジトリで実際に投稿された P1/P2 指摘コメントは
-  # すべてこの形式）。badge markup を含む comment は sha が一致しても証跡から
-  # 除外する（fail closed 側に倒す）。
+  # **判定は依然として「該当しなければ通す」形で、書式依存の残余がある。** 3 は
+  # `:` 区切りの件数申告に限定しているので、Codex が件数を別書式で書けば 4 / 5 で
+  # 拾えない限り clean pass として通る（= fail-open 側の残余）。旧実装との違いは
+  # 「badge markup 1 つだけが判定線」だった非対称を、値そのものを見る条件へ移した
+  # ことであって、完全な肯定条件ではない。残余は #2559 に記録してある。
   CODEX_COMMENT_EVIDENCE_JSON="$(printf '%s' "$REVIEW_EVIDENCE_JSON" | jq \
     --arg login "$CODEX_REVIEW_LOGIN" \
     --arg headSha "$HEAD_SHA" '
     def normalized_login: (.author.login // "") | sub("\\[bot\\]$"; "");
+    def is_bot: ((.author.__typename // "") == "Bot");
+    def zerolike: gsub("^[ \t]+|[ \t]+$"; "") | test("^(0|0件|0 件|なし|[Nn]one)$");
     def has_finding_badge: (.body // "") | test("!\\[P[12] Badge\\]");
+    # 中断・未検証の応答を弾く。**語彙は狭く保つ**（push 前反証レビュー P2）:
+    # `rate limit` や `未検証` を単語として拾うと、rate limit を実装した PR の
+    # 「rate limit の実装に問題はありません」という正当な clean pass を恒久的に
+    # 弾いてしまう（再依頼しても同じ応答が返るため復旧できず、#2584 を悪化させる）。
+    def is_interrupted: (.body // "")
+      | test("(?i)reached your[^\n]{0,60}usage limit|hit an internal error|レビューは[^\n]{0,20}中断|中断しました|未検証です|検証していません|検証できません");
+    # 機械生成の `Reviewed commit` 形式は、レビューが実際に走った時にだけ出る
+    # （中断応答はこの行を持たない、#2536 / #2584 実測）。narrative（`現 HEAD`）は
+    # 否定文でも sha を含みうるため、中断判定は narrative 経路にだけ効かせる。
+    def is_machine_reviewed: (.body // "")
+      | test("(?i)reviewed commit[^\n`]*`[0-9a-f]{7,40}`");
+    def claims_findings:
+      [ ((.body // "")
+          | match("(?i)P[12][*_ \t]*[:：][*_ \t]*(?<v>[0-9]+[^ \t\r\n*_]*|なし|[Nn]one)"; "g")
+          | .captures[0].string // "") ]
+      | any(zerolike | not);
     def reviewed_sha:
-      if has_finding_badge then ""
-      else
-        ((.body // "")
-          | capture("(?i)(?:reviewed commit|現\\s*head)[^\\n`]*`(?<sha>[0-9a-f]{7,40})`"; "")) as $m
-        | ($m.sha // "")
-      end;
+      ((.body // "")
+        | if test("(?i)(?:reviewed commit|現\\s*head)[^\n`]*`[0-9a-f]{7,40}`") then
+            capture("(?i)(?:reviewed commit|現\\s*head)[^\n`]*`(?<sha>[0-9a-f]{7,40})`"; "").sha
+          else "" end);
     (.data.repository.pullRequest.comments.nodes // []) as $nodes
     | ($nodes | map(select(normalized_login == $login))) as $step1
-    | ($step1 | map(select(reviewed_sha != ""))) as $step2
-    | ($step2 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step3
-    | { count: ($step3 | length), step1: ($step1 | length), step2: ($step2 | length) }' 2>/dev/null || true)"
+    | ($step1 | map(select(is_bot))) as $step2
+    | ($step2 | map(select(reviewed_sha != ""))) as $step3
+    | ($step3 | map(select((has_finding_badge | not)
+                           and (claims_findings | not)
+                           and (is_machine_reviewed or (is_interrupted | not))))) as $step4
+    | ($step4 | map(select(reviewed_sha as $sha | $headSha | startswith($sha)))) as $step5
+    | { count: ($step5 | length),
+        step1: ($step1 | length), step2: ($step2 | length),
+        step3: ($step3 | length), step4: ($step4 | length),
+        candidates: ($step4 | map(reviewed_sha) | map(select($headSha | startswith(.) | not)) | unique),
+        latest: ($step1 | last | (.body // "") | gsub("\\s+"; " ") | .[0:300]) }' 2>/dev/null || true)"
 
   CODEX_COMMENT_COUNT="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.count // empty' 2>/dev/null || true)"
 
@@ -1216,7 +1397,26 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
     exit 1
   fi
 
-  if [[ "$CODEX_REVIEW_COUNT" == "0" && "$CODEX_COMMENT_COUNT" == "0" ]]; then
+  # 現 HEAD の証跡が無い時だけ、旧 HEAD の証跡を指紋で救う（#2558）。
+  CODEX_FINGERPRINT_MATCHED="false"
+  if [[ "$CODEX_REVIEW_COUNT" == "0" && "$CODEX_COMMENT_COUNT" == "0" && -n "$REVIEW_FINGERPRINT" ]]; then
+    # review object 側と comment 側の候補 SHA を 1 本のリストにまとめる（重複は
+    # codex_any_candidate_matches の呼び出し上限 3 件でまとめて頭打ちにする）。
+    CODEX_CANDIDATE_SHAS="$(
+      {
+        printf '%s' "$CODEX_REVIEW_EVIDENCE_JSON" | jq -r '(.candidates // [])[]' 2>/dev/null || true
+        printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '(.candidates // [])[]' 2>/dev/null || true
+      } | awk 'NF' | awk '!seen[$0]++'
+    )"
+    if [[ -n "$CODEX_CANDIDATE_SHAS" ]]; then
+      # shellcheck disable=SC2086 -- 候補は hex sha のみ。改行区切りを単語分割で配列化する
+      if codex_any_candidate_matches $CODEX_CANDIDATE_SHAS; then
+        CODEX_FINGERPRINT_MATCHED="true"
+      fi
+    fi
+  fi
+
+  if [[ "$CODEX_REVIEW_COUNT" == "0" && "$CODEX_COMMENT_COUNT" == "0" && "$CODEX_FINGERPRINT_MATCHED" != "true" ]]; then
     error "この PR には現在の HEAD に対する Codex の痕跡（review object も clean pass コメントも）がありません。マージを中止します。"
     error "PR へ「@codex review」をコメントし、Codex の投稿を待ってから再実行してください。"
     error "（クロスレビュー必須 PR は内製 subagent と Codex の 2 系統が必須です。AGENTS.md §レビュー）"
@@ -1235,12 +1435,38 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
     CODEX_COMMENT_STEP1="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step1 // 0' 2>/dev/null || echo 0)"
     CODEX_COMMENT_STEP2="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step2 // 0' 2>/dev/null || echo 0)"
+    CODEX_COMMENT_STEP3="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step3 // 0' 2>/dev/null || echo 0)"
+    CODEX_COMMENT_STEP4="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" | jq -r '.step4 // 0' 2>/dev/null || echo 0)"
 
     if [[ "$CODEX_COMMENT_STEP1" == "0" ]]; then
       error "原因: ${CODEX_REVIEW_LOGIN} によるコメントが 1 件もありません。"
     elif [[ "$CODEX_COMMENT_STEP2" == "0" ]]; then
-      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません"
-      error "（usage limit / timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      error "原因: ${CODEX_REVIEW_LOGIN} 名義のコメントはありますが、投稿者が bot ではありません（#2559 指摘 3）。"
+    elif [[ "$CODEX_COMMENT_STEP3" == "0" ]]; then
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントはありますが \`Reviewed commit\` 行がありません。"
+      # 推測を並べるのではなく **実際の本文**を見せる。ここが分からないと、operator は
+      # 毎回 PR を開いて Codex の応答を目視することになる（#2584）。本文は外部 bot が
+      # 書いた untrusted なデータなので、制御文字（端末エスケープ）を落として出す。
+      # **判定には一切使わない** —— 証跡の条件は従来どおり review object または
+      # \`Reviewed commit\` 付きコメントの存在だけ。
+      CODEX_COMMENT_LATEST="$(printf '%s' "$CODEX_COMMENT_EVIDENCE_JSON" \
+        | jq -r '.latest // ""' 2>/dev/null | tr -d '[:cntrl:]' || true)"
+      if [[ -n "$CODEX_COMMENT_LATEST" ]]; then
+        error "最新のコメント: ${CODEX_COMMENT_LATEST}"
+      fi
+      if [[ "$CODEX_COMMENT_LATEST" == *"usage limit"* ]]; then
+        error "→ Codex の利用上限です。gate は正しく fail closed しています（弱めないこと）。"
+        error "  対処: 上限の回復を待って PR へ「@codex review」を投稿し直す。"
+        error "  1 PR で fix を 1 push ずつ積んで毎回投げると上限を早く使い切ります。"
+        error "  fix はまとめて 1 push にし、最終 HEAD に対して 1 回投げてください。"
+        error "  恒久対応の判断は #2584 で evidence を集めています。頻発するならそこへ追記を。"
+      else
+        error "（timeout / error 応答の可能性があります。この場合も fail closed が正しい挙動です）。"
+      fi
+    elif [[ "$CODEX_COMMENT_STEP4" == "0" ]]; then
+      error "原因: ${CODEX_REVIEW_LOGIN} のコメントは「指摘ゼロ」の条件を満たしていません（#2559）。"
+      error "      P1 / P2 に非ゼロ件数の申告がある、badge markup を含む、または中断・未検証を示す応答です。"
+      error "      指摘があるなら review thread として解決してください（clean pass 証跡にはなりません）。"
     else
       error "原因: ${CODEX_REVIEW_LOGIN} のコメントの \`Reviewed commit\` は古い commit を指しています（現在の HEAD: ${HEAD_SHA}）。"
     fi
@@ -1256,8 +1482,11 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
 
   if [[ "$CODEX_REVIEW_COUNT" != "0" ]]; then
     info "Codex の独立レビューを確認しました（review object: 現 HEAD に対して ${CODEX_REVIEW_COUNT} 件）。"
-  else
+  elif [[ "$CODEX_COMMENT_COUNT" != "0" ]]; then
     info "Codex の独立レビューを確認しました（指摘ゼロの clean pass コメント: 現 HEAD に対して ${CODEX_COMMENT_COUNT} 件）。"
+  else
+    info "Codex の独立レビューを確認しました（旧 HEAD の証跡ですが、diff の指紋が現在と一致: ${REVIEW_FINGERPRINT} / scope ${REVIEW_FINGERPRINT_SCOPE}）。"
+    info "  = Codex が読んだ diff は現在の diff と同じです（#2558）。再依頼は不要でした。"
   fi
 
   # linked issue の Issue Review 証跡は、この gate より前（§linked issue ごとに

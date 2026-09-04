@@ -5,6 +5,7 @@ import { toPublicRecordRow } from '@/lib/database';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
+import { assertActivityAssignable } from './activity-assignment-guard';
 import {
   assertOptimisticLock,
   ensureNoPlanOverlap,
@@ -17,7 +18,6 @@ import {
   validateRange,
 } from './plan-guards';
 import { runPrivateTimeblockSearchQuery } from './private-timeblock-search-query';
-import { assertActivityAssignable } from './tag-assignment-guard';
 import {
   createTimeblockCommandClient,
   type TimeblockCommandClient,

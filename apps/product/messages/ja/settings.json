@@ -323,8 +323,8 @@
         "subscriptionDesc": "プランと課金管理",
         "about": "このアプリについて",
         "aboutDesc": "法的情報とバージョン",
-        "tags": "アクティビティ管理",
-        "tagsDesc": "カテゴリーとアクティビティの作成・編集"
+        "activities": "アクティビティ管理",
+        "activitiesDesc": "カテゴリーとアクティビティの作成・編集"
       }
     },
     "dataControls": {
@@ -346,7 +346,7 @@
         "includedDataTitle": "エクスポートに含まれるデータ",
         "profileInfo": "プロフィール情報",
         "tasksEvents": "タイムブロック",
-        "tagSettings": "アクティビティ設定",
+        "activitySettings": "アクティビティ設定",
         "calendarSettings": "カレンダー設定",
         "otherSettings": "その他の設定"
       },
@@ -656,7 +656,7 @@
           "features": {
             "timeboxing": "タイムボクシング & 時間記録",
             "basicAnalytics": "基本分析（2指標）",
-            "tags": "アクティビティ 5個まで",
+            "activities": "アクティビティ 5個まで",
             "ai": "AI振り返り（月10回）"
           }
         },
@@ -664,7 +664,7 @@
           "name": "Pro",
           "features": {
             "fullAnalytics": "全8指標 + チャートビュー",
-            "unlimitedTags": "無制限のアクティビティ",
+            "unlimitedActivities": "無制限のアクティビティ",
             "api": "MCP / APIアクセス",
             "dataExport": "データエクスポート（CSV/JSON）",
             "unlimitedAI": "AI振り返り無制限 + モデル選択"

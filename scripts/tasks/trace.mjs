@@ -167,7 +167,13 @@ export function loadSessionEntriesForBranch({
 } = {}) {
   const projectDirSegment = cwdPrefixToProjectDirSegment(cwdPrefix);
   const dirNames = tryOr(() => listDirsImpl(projectsDir), []) ?? [];
-  const matchingDirNames = dirNames.filter((name) => name.startsWith(projectDirSegment));
+  // **prefix 一致では兄弟 repo を巻き込む**（`-dayopt` に対し `-dayopt-web` 等）。
+  // 対象は「その repo 自身」と「その repo の worktree」だけなので、完全一致か
+  // worktree の命名（`<segment>-.claude-worktrees-...`）に限る（#2560 項目 2）。
+  const matchingDirNames = dirNames.filter(
+    (name) =>
+      name === projectDirSegment || name.startsWith(`${projectDirSegment}-.claude-worktrees-`),
+  );
 
   const entries = [];
   let anyDirFound = false;
@@ -182,6 +188,10 @@ export function loadSessionEntriesForBranch({
       if (!sessionFile) continue;
       const raw = tryOr(() => readFileImpl(sessionFile, 'utf8'), null);
       if (raw === null) continue;
+      // JSONL の全行 parse は重い（実測: 203 dir / 1,596 file / 1.2GB を全 parse）。
+      // branch 名の生文字列が本文に無ければ `matchesBranch` は必ず false になるので、
+      // parse する前に落とす（#2560 項目 2）。branch 名未指定時は従来どおり全件見る。
+      if (headRefName && !raw.includes(`"gitBranch":"${headRefName}"`)) continue;
       const records = parseJsonlLines(raw);
       if (!matchesBranch(records, headRefName)) continue;
       entries.push({ sessionId, records, subagentCount: subagentFiles.length });
@@ -355,11 +365,41 @@ export function countCodexPriorities(reviews, comments) {
   return { p1, p2 };
 }
 
-/** `[internal-review]` marker を含むコメントが有るか（pr-cross-review skill）。 */
+/** レビュー summary marker を含むコメントが有るか（pr-cross-review skill）。 */
 export function hasInternalReviewMarker(comments) {
   return (comments ?? []).some(
-    (c) => typeof c?.body === 'string' && c.body.includes('[internal-review]'),
+    (c) =>
+      typeof c?.body === 'string' &&
+      REVIEW_SUMMARY_MARKERS.some((marker) => c.body.includes(marker)),
   );
+}
+
+/**
+ * `@codex review` の投稿回数・Codex の応答回数・そのうち「問題なし」だった回数を数える
+ * （#2558 手順 6）。
+ *
+ * 無駄の構造は「レビューの有効性を HEAD で判定していた」ことにあり、その症状は
+ * 「投げた回数のわりに指摘が出ない」という形で現れる（PR #2554 実測: 投稿 8 /
+ * 応答 7 / 問題なし 6）。月次 gardening でこの 3 数字を読めるようにする。
+ */
+export function countCodexRequestCycles(comments) {
+  let requests = 0;
+  let responses = 0;
+  let cleanResponses = 0;
+  for (const comment of comments ?? []) {
+    const body = comment?.body ?? '';
+    if (isCodexBotLogin(comment?.user?.login)) {
+      responses += 1;
+      // 指摘は badge markup か `P1: <非ゼロ>` の形で出る。どちらも無ければ
+      // 「問題なし」とみなす（表示用の概算。gate の判定とは別物）。
+      const claimsFindings =
+        /!\[P[12] Badge\]/.test(body) || /P[12][*_ \t]*[：:][*_ \t]*[1-9]/.test(body);
+      if (!claimsFindings) cleanResponses += 1;
+      continue;
+    }
+    if (body.includes('@codex review')) requests += 1;
+  }
+  return { requests, responses, cleanResponses };
 }
 
 // --- Part 4b 内製クロスレビュー（marker の role 別歩留まり） -----------------
@@ -380,13 +420,23 @@ export function hasInternalReviewMarker(comments) {
 
 const KNOWN_REVIEWER_ROLES = ['risk-reviewer', 'behavior-verifier', 'architecture-guard'];
 
-/** OWNER/MEMBER/COLLABORATOR が投稿した `[internal-review]` marker コメントだけを抽出する。 */
+/**
+ * OWNER/MEMBER/COLLABORATOR が投稿したレビュー summary コメントだけを抽出する。
+ *
+ * **gate はこのコメントを読まない**（#2562 で証跡は commit status へ移った）。
+ * ここで読むのは role 別 findings 内訳という分析用の情報で、gate の判定材料では
+ * ない。marker は新しい `[review-summary]` と、過去 PR に残る旧 `[internal-review]`
+ * の両方を受け付ける（trace は過去の PR を遡って読むため）。
+ */
+const REVIEW_SUMMARY_MARKERS = ['[review-summary]', '[internal-review]'];
+
 export function filterInternalReviewMarkerComments(issueComments) {
   const trustedAssociations = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
   return (issueComments ?? []).filter((c) => {
     if (typeof c?.body !== 'string') return false;
     if (!trustedAssociations.has(c?.author_association)) return false;
-    return c.body.trimStart().startsWith('[internal-review]');
+    const body = c.body.trimStart();
+    return REVIEW_SUMMARY_MARKERS.some((marker) => body.startsWith(marker));
   });
 }
 
@@ -529,14 +579,25 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
       // だけの role を「指摘ゼロの role」と誤認し、Haiku 化 / 廃止候補に挙げて
       // しまう（#2530 push 前反証レビュー P2）。PR 上の全 marker を横断して合計し、
       // それを判定に使う。findings: 行が無い marker はここでも同じ推定値を加算する。
-      let totalFindings = 0;
+      // marker 由来の実数を足し合わせ、`findings:` 行を持たない marker（古い書式や
+      // text-fallback）については**推定を 1 回だけ**足す。marker ごとに推定を
+      // 加算すると、round を重ねた PR ほど同じ推定値が多重に積まれて役割別の
+      // 歩留まりが実態と乖離する（#2560 項目 4）。
+      let markerDerivedFindings = 0;
+      let markersMissingField = 0;
       for (const marker of sorted) {
         const perMarkerFindings = parseMarkerFindingsField(marker.body);
         const perMarkerCount = Object.prototype.hasOwnProperty.call(perMarkerFindings, r.role)
           ? perMarkerFindings[r.role]
           : undefined;
-        totalFindings += typeof perMarkerCount === 'number' ? perMarkerCount : estimateFor(r.role);
+        if (typeof perMarkerCount === 'number') {
+          markerDerivedFindings += perMarkerCount;
+        } else {
+          markersMissingField += 1;
+        }
       }
+      const totalFindings =
+        markerDerivedFindings + (markersMissingField > 0 ? estimateFor(r.role) : 0);
 
       return {
         role: r.role,
@@ -545,6 +606,9 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
         findings,
         findingsSource,
         totalFindings,
+        // 推定が混ざったかを表示側が区別できるようにする（marker 由来の実数だけを
+        // 見たい月次 gardening 用。#2560 項目 4）。
+        totalFindingsEstimated: markersMissingField > 0,
         commitsAfterMarker,
       };
     });
@@ -747,7 +811,15 @@ export function renderMarkdown(pack) {
       `未解決 thread: ${r.unresolvedThreads === null || r.unresolvedThreads === undefined ? '未取得' : r.unresolvedThreads}`,
     );
     lines.push(
-      `[internal-review] marker: ${r.hasMarker === null ? '未取得' : r.hasMarker ? 'あり' : 'なし'}`,
+      `レビュー summary marker: ${r.hasMarker === null ? '未取得' : r.hasMarker ? 'あり' : 'なし'}`,
+    );
+    // 「投げた回数のわりに指摘が出ない」を月次で見るための 3 数字（#2558 手順 6）。
+    lines.push(
+      `@codex 起動: ${
+        r.codexCycles === null || r.codexCycles === undefined
+          ? '未取得'
+          : `投稿 ${r.codexCycles.requests} / 応答 ${r.codexCycles.responses} / 問題なし ${r.codexCycles.cleanResponses}`
+      }`,
     );
     if (r.internalReview) {
       const ir = r.internalReview;
@@ -957,6 +1029,7 @@ export function buildTracePack(options, deps = {}) {
     readyDate,
     commitsAfterReady,
     codex,
+    codexCycles: issueComments === null ? null : countCodexRequestCycles(issueComments),
     unresolvedThreads,
     hasMarker,
     internalReview,

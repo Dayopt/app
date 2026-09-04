@@ -79,7 +79,7 @@ export function CategoryGroup({
 
   const handleViewStats = useCallback(() => {
     // カレンダー内パネル（CalendarReviewRail）は廃止済み（#2181 Step 4）。
-    // tagId によるセグメント絞り込みは Step 5（セグメント配線）で復元する。
+    // アクティビティによるセグメント絞り込みは Step 5（セグメント配線）で復元する。
     router.push(buildReportPath(locale, new Date()));
   }, [router, locale]);
 

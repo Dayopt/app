@@ -13,7 +13,6 @@ import type { ServiceSupabaseClient } from './types';
 
 export interface StatPlanRow {
   id: string;
-  tag_id: string | null;
   activity_id: string | null;
   start_at: string;
   end_at: string;
@@ -21,7 +20,6 @@ export interface StatPlanRow {
 
 export interface StatRecordRow {
   id: string;
-  tag_id: string | null;
   activity_id: string | null;
   plan_id: string | null;
   source: string;
@@ -32,13 +30,6 @@ export interface StatRecordRow {
 /** 見積もり係数用の Plan 行。skip 判定に `skipped_at` を要するため専用 shape にする。 */
 interface EstimationPlanRow extends StatPlanRow {
   skipped_at: string | null;
-}
-
-interface TagLookupRow {
-  id: string;
-  name: string;
-  color: string | null;
-  icon: string | null;
 }
 
 export interface DateRangeInput {
@@ -53,7 +44,7 @@ export async function fetchRecords(
 ): Promise<StatRecordRow[]> {
   let query = supabase
     .from(databaseTables.records)
-    .select('id, tag_id, activity_id, plan_id, source, start_at, end_at')
+    .select('id, activity_id, plan_id, source, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -76,7 +67,7 @@ export async function fetchRecordsByPlanIds(
 ): Promise<StatRecordRow[]> {
   const { data, error } = await supabase
     .from(databaseTables.records)
-    .select('id, tag_id, activity_id, plan_id, source, start_at, end_at')
+    .select('id, activity_id, plan_id, source, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .in('plan_id', planIds);
@@ -96,7 +87,7 @@ export async function fetchPlans(
 ): Promise<StatPlanRow[]> {
   let query = supabase
     .from('plans')
-    .select('id, tag_id, activity_id, start_at, end_at')
+    .select('id, activity_id, start_at, end_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -125,7 +116,7 @@ export async function fetchPlansForEstimation(
 ): Promise<EstimationPlanRow[]> {
   let query = supabase
     .from('plans')
-    .select('id, tag_id, activity_id, start_at, end_at, skipped_at')
+    .select('id, activity_id, start_at, end_at, skipped_at')
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (range.startDate) query = query.gte('start_at', range.startDate);
@@ -139,25 +130,6 @@ export async function fetchPlansForEstimation(
     });
   }
   return data ?? [];
-}
-
-export async function fetchTagsById(
-  supabase: ServiceSupabaseClient,
-  userId: string,
-): Promise<Map<string, TagLookupRow>> {
-  // is_active / archived_at では絞らない。過去の Plan / Record はアーカイブ済み
-  // タグを参照し続けるため、統計・過去表示では元の名前・色を解決する必要がある（#1576）
-  const { data, error } = await supabase
-    .from('tags')
-    .select('id, name, color, icon')
-    .eq('user_id', userId);
-  if (error) {
-    throw captureUnexpectedDatabaseError(error, {
-      feature: 'statistics',
-      operation: 'fetch_tags',
-    });
-  }
-  return new Map((data ?? []).map((tag) => [tag.id, tag]));
 }
 
 export async function fetchActivitiesById(

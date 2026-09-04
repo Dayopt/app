@@ -21,9 +21,9 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
   workflows/
     ci.yml                    # impact（affected 判定）→ static（gitleaks + secrets:check + docs:check + lint/typecheck/knip）∥ unit（+ migration safety）∥ integration（affected 時の RLS/integration）の並列 4 job
     production-config-audit.yml  # Vercel environment metadata 監査
-    nightly.yml               # heavy-e2e/heavy-web/integration（層3）+ status-label-sweep + replica-check + storage-backup-export の5 job（#2483 で旧ファイルから統合。night-watch job は 2026-09-02 に撤去）
+    nightly.yml               # status-label-sweep + replica-check + storage-backup-export の 3 job（#2483 で旧ファイルから統合。night-watch job は 2026-09-02、層 3 と integration は 2026-09-03 に撤去）
     create-release.yml        # GitHub Release 作成
-    promote.yml               # リリース処理
+    promote.yml               # main merge 連動の promote。impact → 層 3（E2E / Web Build & E2E）→ release の 3 job
 ```
 
 ## 権限設計
@@ -33,22 +33,28 @@ GitHub Actionsのセキュリティ設定、OWASP準拠のセキュリティ監�
 
 ### ワークフロー別 permissions
 
-| ワークフロー                                          | permissions                                                  | 理由                                                                                          |
-| ----------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `ci.yml`（impact job）                                | `contents: read` / `pull-requests: read`                     | PR の変更ファイル一覧の取得（gh api）を行う唯一の job                                         |
-| `ci.yml`（static job）                                | `contents: read` / `pull-requests: read`                     | コード読み取りのみ（gh を呼ばないため step env に `GH_TOKEN` を渡さない）                     |
-| `ci.yml`（unit job）                                  | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知                                                                       |
-| `ci.yml`（integration job）                           | `contents: read`                                             | gh を呼ばないため job 単位で最小へ絞る（PR コードを実行する job に書き込み token を置かない） |
-| `nightly.yml`（heavy/integration/replica/backup job） | `contents: read`                                             | コード読み取りのみ                                                                            |
-| `nightly.yml`（status-label-sweep job）               | `issues: write` / `contents: read`                           | ラベル一括剥がし                                                                              |
-| `production-config-audit.yml`                         | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行                                                               |
-| `create-release.yml`                                  | `contents: write`                                            | タグからリリース作成                                                                          |
+| ワークフロー                                        | permissions                                                  | 理由                                                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ci.yml`（impact job）                              | `contents: read` / `pull-requests: read`                     | PR の変更ファイル一覧の取得（gh api）を行う唯一の job                                         |
+| `ci.yml`（static job）                              | `contents: read` / `pull-requests: read`                     | コード読み取りのみ（gh を呼ばないため step env に `GH_TOKEN` を渡さない）                     |
+| `ci.yml`（unit job）                                | `contents: read` / `pull-requests: write` / `issues: write`  | migration safety の通知                                                                       |
+| `ci.yml`（integration job）                         | `contents: read`                                             | gh を呼ばないため job 単位で最小へ絞る（PR コードを実行する job に書き込み token を置かない） |
+| `nightly.yml`（replica-check / storage-backup job） | `contents: read`                                             | コード読み取りのみ                                                                            |
+| `nightly.yml`（status-label-sweep job）             | `issues: write` / `contents: read`                           | ラベル一括剥がし                                                                              |
+| `production-config-audit.yml`                       | `contents: read` / `pull-requests: read` / `statuses: write` | 固定 context 名での status 発行                                                               |
+| `promote.yml`（impact / 層 3 job）                  | `contents: read`                                             | コード読み取りのみ（層 3 は local Supabase で完結し secret を読まない）                       |
+| `promote.yml`（release job）                        | `contents: read` / `statuses: write`                         | `Production Release` context の status 発行。workflow レベルには置かない                      |
+| `create-release.yml`                                | `contents: write`                                            | タグからリリース作成                                                                          |
 
 `production-config-audit.yml` は `pull_request_target` で走るが、
 **`pull_request_target` でも job の check run は PR の `statusCheckRollup` に出る**
 （2026-07-30 に PR #1760 で実測。詳細は [infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 それでも `statuses: write` を持つのは、job 名から独立した固定 context
-（`Production Config Audit`）を ruleset の required 指定に使うため。
+（`Production Config Audit`）を `finish-branch.sh` の trusted dispatch 免除が照合するため。
+**この context を ruleset の required 指定に使ってはいけない**（2026-09-03、#2571。PR で
+publish されるのは `paths` に一致する contract 変更 PR だけなので、required にすると
+それ以外の PR が永久に `expected` で止まる。詳細は
+[infra.md §merge gate の required checks](../engineering/infra.md#merge-gate-の-required-checks)）。
 
 `contents: write` は持たない（外部 API の結果を受けて動く job に書き込み権限を与えない）。
 

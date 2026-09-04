@@ -73,7 +73,6 @@ vi.mock('@/lib/trpc', () => ({
 const record = {
   id: 'record-1',
   user_id: 'user-1',
-  tag_id: 'tag-1',
   activity_id: null,
   plan_id: 'plan-1',
   external_calendar_event_id: null,

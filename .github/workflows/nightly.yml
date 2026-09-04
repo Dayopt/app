@@ -17,19 +17,15 @@ name: Nightly
 # cancel-in-progress: false を維持する必要がある。workflow 全体を 1 つの
 # concurrency group にすると、無関係な cron 同士が互いをキャンセルしてしまう）。
 #
-# **`heavy-e2e` / `heavy-web` / `integration` の `name:`（表示名）は
-# promote.yml の「Verify heavy-tier (layer 3) checks are green」step が
-# check-run 名として直接参照する（層 3 gate）。ここを改名すると promote が
-# fail-closed で止まる。改名する場合は promote.yml 側の名前リテラルも同時に
-# 変更すること。
+# **層 3（E2E / Web Build & E2E）と integration は 2026-09-03 にこのファイルから
+# 撤去した。** 層 3 は promote.yml へ移設し（merge 連動 promote。影響のある suite
+# だけを promote の前段で走らせる）、integration は per-PR の ci.yml へ一本化した
+# （branch:finish の up-to-date gate により merge commit の tree = per-PR で検証済み
+# の tree になるため、nightly の再実行は同じ tree を 2 度検証していた）。これに伴い
+# 「promote.yml が job 表示名を check-run 名として参照する」結合も解消している。
 
 on:
   schedule:
-    # 03:00 JST — heavy（E2E / Web Build & E2E）。CI 4 層再設計（#2269）の層 3。
-    - cron: '0 18 * * *'
-    # 03:30 JST — integration（DB 起動を伴う重量テストの nightly fallback。
-    # per-PR 実行は ci.yml の integration job が affected 判定つきで担う）。
-    - cron: '30 18 * * *'
     # 04:30 JST — status:* ラベルの batch sweep（close 時の剥がし漏れ backstop）。
     - cron: '30 19 * * *'
     # 06:30 JST — replica-check（production-config-audit の 06:00 JST cron と
@@ -40,215 +36,20 @@ on:
   workflow_dispatch:
     inputs:
       jobs:
-        description: '実行する job を選ぶ。layer3 = heavy-e2e/heavy-web/integration のみ（release 前の手動 green 確認、既定）。replica-check / status-label-sweep / storage-backup は各 job を単独で手動代行したい時に選ぶ。all は post-merge の一括検証専用——storage-backup-export の実転送・status label sweep も同時に走るため、単独の job だけ再実行したい時に選ばないこと（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484: jobs=all しか無いと、単独 job の手動代行のつもりで実データ転送を誤爆させうる）'
+        description: '実行する job を選ぶ。replica-check / status-label-sweep / storage-backup は各 job を単独で手動代行したい時に選ぶ（既定は replica-check）。all は一括検証専用——storage-backup-export の実転送・status label sweep も同時に走るため、単独の job だけ再実行したい時に選ばないこと（内製クロスレビュー risk-reviewer 指摘、P2、PR #2484: jobs=all しか無いと、単独 job の手動代行のつもりで実データ転送を誤爆させうる）'
         type: choice
         options:
-          - layer3
           - replica-check
           - status-label-sweep
           - storage-backup
           - all
-        default: layer3
+        default: replica-check
       dry_run:
         description: 'storage-backup-export 用（jobs=storage-backup または all の時のみ意味を持つ）: true にすると実際には転送・削除せず rclone --dry-run で予定操作だけ表示する'
         type: boolean
         default: false
 
 jobs:
-  # ─── heavy（CI 4 層再設計 #2269 の層 3、旧 heavy-post-merge.yml）──────
-  heavy-e2e:
-    name: "\U0001F3AD E2E Tests"
-    if: github.event.schedule == '0 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
-    runs-on: ubuntu-latest
-    environment: development
-    timeout-minutes: 20
-    concurrency:
-      group: nightly-heavy-e2e
-      cancel-in-progress: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
-
-      - id: supabase-version
-        run: |
-          version=$(node -p "require('./package.json').devDependencies.supabase")
-          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
-            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        with:
-          version: ${{ steps.supabase-version.outputs.version }}
-
-      - name: Start Supabase
-        run: supabase start
-
-      - name: Get Supabase status
-        id: supabase
-        run: |
-          API_URL=$(supabase status --output json | jq -r '.API_URL')
-          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
-          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
-          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
-          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
-
-      - name: Run E2E tests
-        run: pnpm --dir apps/product exec playwright test --project="chromium"
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
-
-      - name: Upload report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: playwright-report
-          path: apps/product/playwright-report/
-          retention-days: 7
-
-      - name: Upload screenshots on failure
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: screenshots
-          path: apps/product/test-results/
-          retention-days: 7
-
-  heavy-web:
-    name: "\U0001F310 Web Build & E2E"
-    if: github.event.schedule == '0 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    concurrency:
-      group: nightly-heavy-web
-      cancel-in-progress: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.0.0
-        with:
-          path: apps/web/.next/cache
-          key: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**/*.{ts,tsx}', 'apps/web/content/**/*.{md,mdx,json}') }}
-          restore-keys: nextjs-web-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - name: Build web
-        run: pnpm build:web
-
-      - name: Install Playwright browser
-        run: pnpm --filter @dayopt/web exec playwright install --with-deps chromium chromium-headless-shell
-
-      - name: Run web E2E tests
-        run: pnpm --filter @dayopt/web test:e2e:smoke
-
-      - name: Upload web report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: web-playwright-report
-          path: apps/web/playwright-report/
-          retention-days: 7
-
-      - name: Upload web test results on failure
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: web-test-results
-          path: apps/web/test-results/
-          retention-days: 7
-
-  # ─── integration（DB 起動を伴う重量テストの nightly fallback、旧 integration.yml）──
-  # migration-safety（破壊的 migration の静的スキャン）は per-PR 化して
-  # ci.yml の unit job へ移設済み。ここには残さない。
-  integration:
-    name: Integration Tests
-    if: github.event.schedule == '30 18 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.jobs == 'layer3' || github.event.inputs.jobs == 'all'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    concurrency:
-      group: nightly-integration
-      cancel-in-progress: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      - id: supabase-version
-        run: |
-          version=$(node -p "require('./package.json').devDependencies.supabase")
-          if [ "$version" = "undefined" ] || [ -z "$version" ]; then
-            echo "::error::supabase CLI version の抽出に失敗しました（root package.json の devDependencies.supabase を確認してください）: '$version'"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
-        with:
-          version: ${{ steps.supabase-version.outputs.version }}
-
-      - name: Start Supabase
-        run: supabase start
-
-      - name: Get Supabase status
-        id: supabase
-        run: |
-          API_URL=$(supabase status --output json | jq -r '.API_URL')
-          ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
-          SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
-          DB_URL=$(supabase status --output json | jq -r '.DB_URL')
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
-          echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
-          echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
-          echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
-
-      - name: Run integration tests
-        run: pnpm test:integration
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
-          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
-          USE_LOCAL_DB: 'true'
-          NODE_ENV: test
-          CI: true
-
-      # migration から構築した DB の RLS が、committed snapshot と一致するか検証する。
-      - name: Check RLS snapshot drift
-        run: pnpm rls:snapshot:check
-        env:
-          DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop
-
   # ─── status:* ラベルの batch sweep（新設）────────────────────────────
   # #2483 で issue-status-label-cleanup.yml（issue close webhook 起点の
   # per-close 即時剥がし）を廃止し、この nightly 一括 sweep が**唯一の経路**

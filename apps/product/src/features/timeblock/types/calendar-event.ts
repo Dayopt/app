@@ -10,8 +10,6 @@ export interface CalendarEvent {
   endDate: Date | null;
   status: 'open' | 'closed';
   color: string;
-  /** タグID。1エントリ1タグ。タグの詳細情報はtags.listキャッシュから取得する。 */
-  tagId?: string | null | undefined;
   activityId?: string | null | undefined;
   createdAt: Date;
   updatedAt: Date;

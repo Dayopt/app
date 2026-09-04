@@ -6,17 +6,6 @@ import { StatisticsService } from './statistics-service';
 import { dateRangeInput, handleStatsError } from './statistics-shared';
 
 export const statisticsGeneralRouter = createTRPCRouter({
-  /** Get tag statistics (entry count and last used date) */
-  getTagStats: protectedProcedure
-    .meta({ description: 'タグ別統計取得（エントリ数・最終使用日）' })
-    .query(async ({ ctx }) => {
-      try {
-        return await new StatisticsService(ctx.supabase).getTagStats(ctx.userId);
-      } catch (error) {
-        handleStatsError('getTagStats', error);
-      }
-    }),
-
   /** Get activity statistics (entry count and last used date) */
   getActivityStats: protectedProcedure
     .meta({ description: 'アクティビティ別統計取得（エントリ数・最終使用日）' })

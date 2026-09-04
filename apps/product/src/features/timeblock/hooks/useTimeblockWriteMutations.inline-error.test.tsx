@@ -27,7 +27,7 @@ interface TimeModelRow {
   id: string;
   title: string;
   note: string | null;
-  tag_id: string | null;
+  activity_id: string | null;
   start_at: string;
   end_at: string;
   skipped_at?: string | null;
@@ -330,7 +330,7 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
       id: 'plan-1',
       title: 'Before',
       note: null,
-      tag_id: null,
+      activity_id: null,
       start_at: '2026-07-17T09:00:00.000Z',
       end_at: '2026-07-17T10:00:00.000Z',
       skipped_at: null,
@@ -358,7 +358,7 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
       id: 'plan-1',
       title: 'Plan',
       note: null,
-      tag_id: null,
+      activity_id: null,
       start_at: '2026-07-17T09:00:00.000Z',
       end_at: '2026-07-17T10:00:00.000Z',
       skipped_at: null,
@@ -386,7 +386,7 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
       id: 'plan-1',
       title: 'Restored',
       note: null,
-      tag_id: null,
+      activity_id: null,
       start_at: '2026-07-17T09:00:00.000Z',
       end_at: '2026-07-17T10:00:00.000Z',
       skipped_at: null,

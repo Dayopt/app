@@ -12,7 +12,6 @@ interface ICalTimeblockInput {
   end_time: string | null;
   created_at: string | null;
   updated_at: string | null;
-  tag_name: string | null;
 }
 
 function makeTimeblock(
@@ -25,7 +24,6 @@ function makeTimeblock(
     end_time: '2026-04-27T02:00:00.000Z',
     created_at: '2026-04-26T00:00:00.000Z',
     updated_at: '2026-04-26T00:00:00.000Z',
-    tag_name: null,
     ...overrides,
   };
 }
@@ -113,17 +111,11 @@ describe('plansToICal', () => {
     });
   });
 
-  describe('SUMMARY: tag_name を優先', () => {
-    it('tag_name が存在すれば SUMMARY は tag_name を使う', () => {
-      const ical = plansToICal([
-        makeTimeblock({ id: 'e1', title: 'Meeting', tag_name: 'Deep Work' }),
-      ]);
-      expect(ical).toContain('SUMMARY:Deep Work');
-      expect(ical).not.toContain('SUMMARY:Meeting');
-    });
-
-    it('tag_name が null なら title を使う', () => {
-      const ical = plansToICal([makeTimeblock({ id: 'e1', title: 'Meeting', tag_name: null })]);
+  describe('SUMMARY', () => {
+    // #2175: 旧実装は旧タグ名を優先し title へ fallback していた。tags 撤去で
+    // SUMMARY は常に Plan のタイトルになる。
+    it('SUMMARY は Plan のタイトルを使う', () => {
+      const ical = plansToICal([makeTimeblock({ id: 'e1', title: 'Meeting' })]);
       expect(ical).toContain('SUMMARY:Meeting');
     });
   });

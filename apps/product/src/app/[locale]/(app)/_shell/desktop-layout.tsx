@@ -7,7 +7,7 @@ import { AnimatedWidthPanel } from '@/components/shell/AnimatedWidthPanel';
 import { AppHeader } from '@/components/shell/AppHeader';
 import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
-import { isCalendarViewPath } from '@/features/calendar';
+import { isCalendarViewPath, resolveWorkspaceTab } from '@/features/calendar';
 import { TIMEBLOCK_INSPECTOR_SLOT_KEY, useTimeblockInspectorStore } from '@/features/timeblock';
 import { setDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
@@ -56,8 +56,10 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
     avatar: getAvatarUrl(authUser),
   };
 
-  // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
-  const hasOwnHeader = isCalendarViewPath(pathname);
+  // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）。
+  // `/report` も自前で AppHeader を組む（期間ラベル・`‹ ›`・粒度切替を持つため、#2575）。
+  // サイドバートグルは ReportViewClient が leftSlot へ渡し直す。
+  const hasOwnHeader = isCalendarViewPath(pathname) || resolveWorkspaceTab(pathname) === 'report';
   const sidebarVisible = sidebar.open && !sidebarSuppressed;
 
   // サイドバーが閉じているときに表示するトグルボタン

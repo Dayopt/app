@@ -621,13 +621,12 @@ describe('createUserService', () => {
 
   describe('deleteAllData', () => {
     // activities は categories を参照するため、この順序が FK 依存順であること自体が契約。
-    it('records、plans、activities、categories、tags、user_settingsの順に削除する', async () => {
+    it('records、plans、activities、categories、user_settingsの順に削除する', async () => {
       mockAdminTables({
         records: { data: [] },
         plans: { data: [] },
         activities: { data: [] },
         categories: { data: [] },
-        tags: { data: [] },
         user_settings: { data: [] },
       });
       const { service } = createSupabase();
@@ -638,7 +637,6 @@ describe('createUserService', () => {
         'plans',
         'activities',
         'categories',
-        'tags',
         'user_settings',
       ]);
     });
@@ -654,18 +652,17 @@ describe('createUserService', () => {
         code: 'DELETE_DATA_FAILED',
         message: 'plans deletion failed',
       });
-      expect(adminFrom).not.toHaveBeenCalledWith('tags');
+      expect(adminFrom).not.toHaveBeenCalledWith('activities');
     });
   });
 
   describe('exportData', () => {
-    it('plans / records / categories / activities / tags / settings をexportする', async () => {
+    it('plans / records / categories / activities / settings をexportする', async () => {
       const profile = { id: USER_ID, email: USER_EMAIL };
       const plans = [{ id: 'plan-1', user_id: USER_ID }];
       const records = [{ id: 'record-1', user_id: USER_ID }];
       const categories = [{ id: 'category-1', user_id: USER_ID }];
       const activities = [{ id: 'activity-1', user_id: USER_ID }];
-      const tags = [{ id: 'tag-1', user_id: USER_ID }];
       const settings = { id: 'settings-1', user_id: USER_ID };
       const adminQueries = mockAdminTables({ plans: { data: plans }, records: { data: records } });
       const { service, query } = createSupabase({
@@ -673,7 +670,6 @@ describe('createUserService', () => {
           profiles: { data: profile },
           categories: { data: categories },
           activities: { data: activities },
-          tags: { data: tags },
           user_settings: { data: settings },
         },
       });
@@ -688,7 +684,6 @@ describe('createUserService', () => {
         records,
         categories,
         activities,
-        tags,
         userSettings: settings,
       });
       expect(result.data.records).toHaveLength(1);
@@ -703,7 +698,6 @@ describe('createUserService', () => {
       const { service } = createSupabase({
         tables: {
           profiles: { error: { code: 'PGRST116', message: 'not found' } },
-          tags: { data: [] },
           user_settings: { data: null },
         },
       });
@@ -721,7 +715,6 @@ describe('createUserService', () => {
       const { service } = createSupabase({
         tables: {
           profiles: { data: null },
-          tags: { data: [] },
           user_settings: { data: null },
         },
       });
@@ -732,19 +725,19 @@ describe('createUserService', () => {
       });
     });
 
-    it('tags取得失敗をEXPORT_FAILEDに変換する', async () => {
+    it('activities取得失敗をEXPORT_FAILEDに変換する', async () => {
       mockAdminTables({ plans: { data: [] }, records: { data: [] } });
       const { service } = createSupabase({
         tables: {
           profiles: { data: null },
-          tags: { error: { message: 'tags fetch failed' } },
+          activities: { error: { message: 'activities fetch failed' } },
           user_settings: { data: null },
         },
       });
 
       await expect(service.exportData({ userId: USER_ID })).rejects.toMatchObject({
         code: 'EXPORT_FAILED',
-        message: 'Tags fetch failed',
+        message: 'Activities fetch failed',
       });
     });
   });
