@@ -10,6 +10,7 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { fireEvent, within } from 'storybook/test';
 
 import { ActivityFilterList } from './ActivityFilterList';
 
@@ -90,6 +91,24 @@ const meta = {
 } satisfies Meta<typeof ActivityFilterList>;
 
 export default meta;
+
+/**
+ * 実ブラウザの `DragEvent` は `dataTransfer` に本物の `DataTransfer` しか受け取らない
+ * （プレーンオブジェクトを渡すと "Failed to convert value to 'DataTransfer'" で落ちる）。
+ * jsdom 側には構築子が無いので、無ければ最小限の代用を返す。
+ */
+function createDataTransfer(): DataTransfer {
+  if (typeof DataTransfer !== 'undefined') return new DataTransfer();
+
+  const store = new Map<string, string>();
+  return {
+    setData: (type: string, value: string) => store.set(type, value),
+    getData: (type: string) => store.get(type) ?? '',
+    effectAllowed: '',
+    dropEffect: '',
+  } as unknown as DataTransfer;
+}
+
 type Story = StoryObj<typeof meta>;
 
 /**
@@ -183,6 +202,98 @@ export const EmptyState: Story = {
 /** ローディング状態。スケルトンが出る。 */
 export const Loading: Story = {
   parameters: { trpcPending: true },
+};
+
+/**
+ * ドラッグ中の見え方（所属変更 DnD）。
+ *
+ * ドラッグは静的に描けないので `play` で実際に `dragstart` → `dragover` を流し、
+ * 掴んだ行（`bg-state-dragged`）とドロップ先のリング（`ring-ring`）が
+ * 同時に見える瞬間で止める。test 専用の初期状態 prop を足すのではなく本物の
+ * ハンドラを通すことで、Story が実装の証跡になる。
+ */
+export const DraggingOverValidTarget: Story = {
+  parameters: {
+    storeMocks: {
+      useCalendarFilterStore: {
+        visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
+        initialized: true,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = (await canvas.findByText('会議')).closest('[draggable="true"]');
+    if (!row) throw new Error('drag source row not found');
+
+    const dataTransfer = createDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    // 「学習」カテゴリーの箱をドロップ先にする
+    const target = (await canvas.findByText('学習')).closest('.rounded-lg')?.parentElement;
+    if (target) fireEvent.dragOver(target, { dataTransfer });
+  },
+};
+
+/**
+ * 掴んだ行が今いるカテゴリーの上にいる状態。禁止表現は作らず、
+ * **ハイライトを出さない**ことで伝える（カーソルはブラウザが no-drop にする）。
+ */
+export const DraggingOverInvalidTarget: Story = {
+  parameters: {
+    storeMocks: {
+      useCalendarFilterStore: {
+        visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
+        initialized: true,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const row = (await canvas.findByText('会議')).closest('[draggable="true"]');
+    if (!row) throw new Error('drag source row not found');
+
+    const dataTransfer = createDataTransfer();
+    fireEvent.dragStart(row, { dataTransfer });
+
+    // 掴んだ本人が属する「仕事」の上へ。ここは光らない
+    const ownGroup = (await canvas.findByText('仕事')).closest('.rounded-lg')?.parentElement;
+    if (ownGroup) fireEvent.dragOver(ownGroup, { dataTransfer });
+  },
+};
+
+/**
+ * 並び替えを「最終アクティビティ」にした状態。
+ *
+ * 使った日時が新しいものが上に来て、**一度も使っていないものは末尾**へ回る
+ * （0 件のものが「古い」扱いで上位に混ざると、よく使うものを上げるという
+ * 目的が壊れるため）。カテゴリー配下と未分類の両方へ一様にかかり、
+ * カテゴリー自体の順序は名前順のまま動かない。
+ */
+export const SortedByLastUsed: Story = {
+  parameters: {
+    trpcMocks: {
+      ...MOCK_TRPC,
+      'statistics.getActivityStats': {
+        counts: {},
+        planCounts: {},
+        lastUsed: {
+          // 「仕事」内: 実装 > 会議 の順になる（名前順なら 会議 が先）
+          'act-dev': '2026-09-03T09:00:00.000Z',
+          'act-meeting': '2026-09-01T09:00:00.000Z',
+          // 未分類: 休憩 が先、運動 は未使用なので末尾（名前順なら 運動 が先）
+          'act-rest': '2026-09-02T09:00:00.000Z',
+        },
+      },
+    },
+    storeMocks: {
+      useCalendarFilterStore: {
+        visibleActivityIds: new Set(ALL_ACTIVITY_IDS),
+        initialized: true,
+      },
+      useActivitySortStore: { sortKey: 'lastUsed' },
+    },
+  },
 };
 
 /** 全パターン一覧。 */

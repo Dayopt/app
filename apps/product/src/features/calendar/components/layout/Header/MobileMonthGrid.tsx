@@ -146,6 +146,10 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                     type="button"
                     onClick={() => handleDateClick(date)}
                     aria-label={format(date, 'yyyy-MM-dd')}
+                    // 「今日」「選択中」は背景色でしか出していないので、読み上げにも
+                    // 同じ情報を渡す（MobileYearStrip と同じ扱い）
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-pressed={isSelected}
                     className={cn(
                       'flex h-11 items-center justify-center text-sm transition-colors',
                       !isCurrentMonth && 'text-muted-foreground',

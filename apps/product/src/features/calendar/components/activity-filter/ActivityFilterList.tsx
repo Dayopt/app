@@ -1,10 +1,13 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Plus, Settings2 } from 'lucide-react';
+import { Archive, ArrowDownUp, Plus, Settings2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import type { ActivitySortKey } from '@/features/calendar/stores/useActivitySortStore';
+import { useActivitySortStore } from '@/features/calendar/stores/useActivitySortStore';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
 import { SidebarSection } from '@/components/shell/sidebar';
@@ -30,6 +33,9 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   HoverTooltip,
   Skeleton,
@@ -38,14 +44,31 @@ import {
 import { useActivityModalNavigation } from '../../hooks/useActivityModalNavigation';
 
 import { mergeActivityDeleteCounts } from './activity-delete-counts';
+import { ActivityDragProvider } from './ActivityDragContext';
 import { ActivityRow } from './components/ActivityRow';
 import type { CategoryOption } from './components/ActivityRowMenu';
 import { ArchivedActivityList } from './components/ArchivedActivityList';
-import { CategoryCreatePopover } from './components/CategoryCreatePopover';
+import { CategoryCreateDialog } from './components/CategoryCreateDialog';
 import { CategoryGroup } from './components/CategoryGroup';
+import { UncategorizedDropZone } from './components/UncategorizedDropZone';
+import { sortActivities } from './sort-activities';
 
 const EMPTY_CATEGORIES: ActivityTree['categories'] = [];
 const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
+/** サブメニューの見出しに出す現在値のラジオ項目と同じ文言（i18n キーを二重に持たない） */
+const STATUS_LABEL_KEYS = {
+  all: 'calendar.filter.statusAll',
+  active: 'calendar.filter.statusActive',
+  archived: 'calendar.filter.statusArchived',
+} as const;
+
+const SORT_LABEL_KEYS = {
+  name: 'calendar.filter.sortByName',
+  lastUsed: 'calendar.filter.sortByLastUsed',
+} as const;
+
+/** stats 未取得時に毎 render で新しい object を作らないための固定値 */
+const EMPTY_LAST_USED: Record<string, string> = {};
 
 /**
  * サイドバーのアクティビティ一覧。
@@ -59,9 +82,25 @@ const EMPTY_ACTIVITIES: ActivityTree['uncategorized'] = [];
  * それらのブロックは常に表示される。
  *
  * 並び順はサーバーの `listTree` が名前順で返す（`sort_order` は持たない）。
- * DnD は廃止した。カテゴリーの付け替えは行メニューの「カテゴリーを変更」で行う。
+ * **並び替えの DnD は廃止したままで、復活させない**（#2162）。
+ *
+ * 一方で「所属を変えるための DnD」は持つ: 行を別のカテゴリー群 / 未分類へ
+ * ドラッグすると `category_id` が変わる（`ActivityDragContext`）。順序は
+ * 名前順のまま変わらないので、`sort_order` の議論には戻らない。
+ * キーボード経路として行メニューの「カテゴリーを変更」も残す。
  */
-export function ActivityFilterList() {
+interface ActivityFilterListProps {
+  /**
+   * 「カテゴリ」見出しと「未分類」見出しの間に差し込む slot（テンプレート列用）。
+   *
+   * カテゴリー樹（本 component）とは別枠のフラットな一覧を、入れ子にせず
+   * 挟み込むためだけの穴。ActivityFilterList 自身はテンプレートの中身を
+   * 知らない（`@/features/calendar` barrel 経由で呼び出し側が組み立てる）。
+   */
+  betweenCategoriesAndUncategorized?: ReactNode | undefined;
+}
+
+export function ActivityFilterList({ betweenCategoriesAndUncategorized }: ActivityFilterListProps) {
   const t = useTranslations();
   const isMobile = useIsMobile();
   const { data: tree, isLoading, isFetching } = useActivityTree();
@@ -71,8 +110,28 @@ export function ActivityFilterList() {
 
   // `?? []` を直接書くと毎 render で新しい配列になり、下流の useMemo /
   // useCallback の依存が毎回変わる。空配列を定数に固定して安定させる
-  const categories = useMemo(() => tree?.categories ?? EMPTY_CATEGORIES, [tree]);
-  const uncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
+  const rawCategories = useMemo(() => tree?.categories ?? EMPTY_CATEGORIES, [tree]);
+  const rawUncategorized = tree?.uncategorized ?? EMPTY_ACTIVITIES;
+
+  // 並び替えはカテゴリー配下と未分類の両方へ一様にかける（カテゴリー自体の順序は
+  // サーバーの名前順のまま触らない）。`lastUsed` は削除件数のために既に取得済みの
+  // getActivityStats に入っているので、この機能のための追加クエリは無い
+  const sortKey = useActivitySortStore((s) => s.sortKey);
+  const setSortKey = useActivitySortStore((s) => s.setSortKey);
+  const lastUsed = useMemo(() => stats?.lastUsed ?? EMPTY_LAST_USED, [stats]);
+
+  const categories = useMemo(
+    () =>
+      rawCategories.map((node) => ({
+        ...node,
+        activities: sortActivities(node.activities, sortKey, lastUsed),
+      })),
+    [rawCategories, sortKey, lastUsed],
+  );
+  const uncategorized = useMemo(
+    () => sortActivities(rawUncategorized, sortKey, lastUsed),
+    [rawUncategorized, sortKey, lastUsed],
+  );
 
   const categoryOptions = useMemo<CategoryOption[]>(
     () =>
@@ -169,18 +228,15 @@ export function ActivityFilterList() {
     affectedCount: number;
   } | null>(null);
 
-  // 未使用（Plan / Record 合計 0 件）は即削除、使用済みは「アクティビティなしになる」
-  // 説明つきの確認を挟む。stats 未取得 / エラー時は安全側に倒して常に確認する
+  // 削除は不可逆なので、影響件数に関わらず必ず確認を挟む（2026-09-04 User 指示）。
+  // 件数は「関連する予定・記録がどうなるか」を説明するためだけに使う。
+  // stats 未取得 / エラー時は安全側に倒して 1 件以上として扱う
   const handleDeleteActivity = useCallback(
     (id: string, name: string) => {
       const affectedCount = deleteCounts === null ? 1 : (deleteCounts[id] ?? 0);
-      if (affectedCount === 0) {
-        deleteActivityMutation.mutate({ id });
-        return;
-      }
       setDeleteTarget({ kind: 'activity', id, name, affectedCount });
     },
-    [deleteCounts, deleteActivityMutation],
+    [deleteCounts],
   );
 
   // カテゴリー削除は予定・記録に触れない。影響するのは所属アクティビティが
@@ -189,13 +245,9 @@ export function ActivityFilterList() {
     (id: string, name: string) => {
       const memberCount =
         categories.find((node) => node.category.id === id)?.activities.length ?? 0;
-      if (memberCount === 0) {
-        deleteCategoryMutation.mutate({ id });
-        return;
-      }
       setDeleteTarget({ kind: 'category', id, name, affectedCount: memberCount });
     },
-    [categories, deleteCategoryMutation],
+    [categories],
   );
 
   const handleArchiveActivity = useCallback(
@@ -225,23 +277,19 @@ export function ActivityFilterList() {
     }
   };
 
-  const hasAnyActivity = categories.length > 0 || uncategorized.length > 0;
-
   // 各セクションの空状態（empty state）。見出しは常に出るので、中身が無い時は
-  // 見出しだけが宙に浮かないよう一行の文言を置く。
+  // 見出しだけが宙に浮かないよう一行の文言を置く。カテゴリー・未分類・テンプレート
+  // の3セクションとも、中身が無ければ常にその場で言い切る（新規ユーザー向けの
+  // 別立てオンボーディング文は持たない。2026-09-03 User 判断）。
   //
   // 未分類の中身は表示ステータスで変わるため、件数も同じ条件で数える。
   const archivedCount = (archivedActivities?.length ?? 0) + (archivedCategories?.length ?? 0);
   const uncategorizedCount =
     (showActive ? uncategorized.length : 0) + (showArchived ? archivedCount : 0);
 
-  // 何一つ無い新規ユーザーには、セクションごとの短い文言ではなく
-  // 最初の 1 件を作るよう促す既存のオンボーディング文を出す
-  const isCompletelyEmpty = !hasAnyActivity && archivedCount === 0;
-
   return (
-    <>
-      <div className="w-full min-w-0 space-y-2 overflow-hidden">
+    <ActivityDragProvider allActivities={allActivities}>
+      <div className="w-full min-w-0 overflow-hidden">
         {isLoading ? (
           <div className="space-y-1 py-1">
             <Skeleton className="h-8 w-full" />
@@ -259,57 +307,68 @@ export function ActivityFilterList() {
 
                 **表示ステータス（すべて / アクティブ / アーカイブ）は「未分類」だけに
                 かかる。** カテゴリーは独立した単位で、その配下のアクティビティごと
-                このフィルタの影響を受けない（2026-08-18 User 指示） */}
-            <SidebarSection
-              title={t('calendar.filter.categoriesSection')}
-              className="space-y-1"
-              collapsed={categoriesSectionCollapsed}
-              onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
-              action={
-                // 「未分類」の + と対称: 常時は隠し、見出し行にホバー / フォーカス
-                // した時だけ出す。popover 展開中は categoryCreateOpen で強制表示
-                <span
-                  className={cn(
-                    'opacity-0 transition-opacity',
-                    categoryCreateOpen
-                      ? 'opacity-100'
-                      : 'group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100',
-                  )}
-                >
-                  <CategoryCreatePopover onOpenChange={setCategoryCreateOpen} />
-                </span>
-              }
-            >
-              {categories.map(({ category, activities }) => (
-                <CategoryGroup
-                  key={category.id}
-                  category={category}
-                  activities={activities}
-                  allActivities={allActivities}
-                  visibleActivityIds={visibleActivityIds}
-                  categoryOptions={categoryOptions}
-                  collapsed={collapsedCategories.has(category.id)}
-                  isMobile={isMobile}
-                  onToggleCollapse={() => toggleCategoryCollapse(category.id)}
-                  onToggleActivity={toggleActivity}
-                  onShowOnlyActivity={showOnlyActivity}
-                  onShowOnlyCategoryActivities={showOnlyCategoryActivities}
-                  getCategoryVisibility={getCategoryVisibility}
-                  onArchiveCategory={handleArchiveCategory}
-                  onDeleteCategory={handleDeleteCategory}
-                  onArchiveActivity={handleArchiveActivity}
-                  onDeleteActivity={handleDeleteActivity}
-                  openPopoverActivityId={openPopoverActivityId}
-                  onOpenPopover={setOpenPopoverActivityId}
-                />
-              ))}
+                このフィルタの影響を受けない（2026-08-18 User 指示）。
 
-              {categories.length === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
-                  {t('calendar.filter.noCategories')}
-                </p>
-              ) : null}
-            </SidebarSection>
+                次のセクションとの余白は、自分が開いているかどうかで自分の下に
+                margin-bottom を足す形で決める（開＝下に24px / 閉＝下に8px）。
+                次のセクション側の margin-top で決めると、その次のセクション自身を
+                開閉するたびに「自分の上の余白」が動いて見出しごと位置がずれる
+                （2026-09-04 User 指摘: テンプレートを開くと不自然に下へ動いた）*/}
+            <div className={categoriesSectionCollapsed ? 'mb-2' : 'mb-6'}>
+              <SidebarSection
+                title={t('calendar.filter.categoriesSection')}
+                // カテゴリー「群」の間隔は CategoryGroup 自身が自分の開閉状態で
+                // 持つ（開いている時だけ margin-bottom）。ここでは指定しない
+                collapsed={categoriesSectionCollapsed}
+                onToggleCollapse={() => setCategoriesSectionCollapsed((prev) => !prev)}
+                action={
+                  // 「未分類」の + と対称: 常時は隠し、見出し行にホバー / フォーカス
+                  // した時だけ出す。popover 展開中は categoryCreateOpen で強制表示
+                  <span
+                    className={cn(
+                      'opacity-0 transition-opacity',
+                      categoryCreateOpen
+                        ? 'opacity-100'
+                        : 'group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
+                    )}
+                  >
+                    <CategoryCreateDialog onOpenChange={setCategoryCreateOpen} />
+                  </span>
+                }
+              >
+                {categories.map(({ category, activities }) => (
+                  <CategoryGroup
+                    key={category.id}
+                    category={category}
+                    activities={activities}
+                    allActivities={allActivities}
+                    visibleActivityIds={visibleActivityIds}
+                    categoryOptions={categoryOptions}
+                    collapsed={collapsedCategories.has(category.id)}
+                    isMobile={isMobile}
+                    onToggleCollapse={() => toggleCategoryCollapse(category.id)}
+                    onToggleActivity={toggleActivity}
+                    onShowOnlyActivity={showOnlyActivity}
+                    onShowOnlyCategoryActivities={showOnlyCategoryActivities}
+                    getCategoryVisibility={getCategoryVisibility}
+                    onArchiveCategory={handleArchiveCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                    onArchiveActivity={handleArchiveActivity}
+                    onDeleteActivity={handleDeleteActivity}
+                    openPopoverActivityId={openPopoverActivityId}
+                    onOpenPopover={setOpenPopoverActivityId}
+                  />
+                ))}
+
+                {categories.length === 0 ? (
+                  <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                    {t('calendar.filter.noCategories')}
+                  </p>
+                ) : null}
+              </SidebarSection>
+            </div>
+
+            {betweenCategoriesAndUncategorized}
 
             {/* 未分類（カテゴリー未所属のアクティビティ） + アクティビティなし行。
                 「未分類」は分類の名前ではなく並びの単位なので、アーカイブ単独表示でも
@@ -331,7 +390,7 @@ export function ActivityFilterList() {
                     'flex items-center gap-1 transition-opacity',
                     displayMenuOpen
                       ? 'opacity-100'
-                      : 'opacity-0 group-focus-within/section:opacity-100 group-hover/section:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100',
+                      : 'opacity-0 group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
                   )}
                 >
                   <HoverTooltip content={t('calendar.filter.createActivity')} side="top">
@@ -351,7 +410,10 @@ export function ActivityFilterList() {
                         <Button
                           variant="ghost"
                           icon
-                          className="size-6"
+                          // メニューを開いている間は hover 状態を維持し、どのボタンから
+                          // 出ているメニューなのかを保つ。Radix の data-state 属性ではなく
+                          // React state で当てる（ActivityRow の menuOpen と同じ手口）
+                          className={cn('size-6', displayMenuOpen && 'bg-state-hover')}
                           aria-label={t('calendar.filter.activitySettings')}
                         >
                           <Settings2 className="size-4" />
@@ -359,78 +421,113 @@ export function ActivityFilterList() {
                       </DropdownMenuTrigger>
                     </HoverTooltip>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuRadioGroup
-                        value={statusFilter}
-                        onValueChange={(value) =>
-                          setStatusFilter(value as 'all' | 'active' | 'archived')
-                        }
-                      >
-                        <DropdownMenuRadioItem value="all">
-                          {t('calendar.filter.statusAll')}
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="active">
-                          {t('calendar.filter.statusActive')}
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="archived">
-                          {t('calendar.filter.statusArchived')}
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
+                      {/* ステータスは未分類だけにかかり、並び替えは全アクティビティに
+                          かかる（かかる範囲が違うのは意図的。ステータスはアーカイブの
+                          話で、並び替えはアクティビティの話）。#2162 / 2026-09-03 */}
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Archive className="size-4" />
+                          {t('calendar.filter.statusSection')}
+                          {/* 開かなくても現在値が読めるようにする。ml-auto で右へ寄せると
+                              直後の chevron がその隣に並ぶ（SubTrigger の chevron も ml-auto） */}
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {t(STATUS_LABEL_KEYS[statusFilter])}
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={statusFilter}
+                            onValueChange={(value) =>
+                              setStatusFilter(value as 'all' | 'active' | 'archived')
+                            }
+                          >
+                            <DropdownMenuRadioItem value="all">
+                              {t('calendar.filter.statusAll')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="active">
+                              {t('calendar.filter.statusActive')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="archived">
+                              {t('calendar.filter.statusArchived')}
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <ArrowDownUp className="size-4" />
+                          {t('calendar.filter.sortSection')}
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {t(SORT_LABEL_KEYS[sortKey])}
+                          </span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={sortKey}
+                            onValueChange={(value) => setSortKey(value as ActivitySortKey)}
+                          >
+                            <DropdownMenuRadioItem value="name">
+                              {t('calendar.filter.sortByName')}
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="lastUsed">
+                              {t('calendar.filter.sortByLastUsed')}
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </span>
               }
             >
-              {showActive ? (
-                <div role="list" className="space-y-1">
-                  {uncategorized.map((activity) => (
-                    <ActivityRow
-                      key={activity.id}
-                      activity={activity}
-                      allActivities={allActivities}
-                      checked={visibleActivityIds.has(activity.id)}
-                      categoryId={null}
-                      inheritedColor={null}
-                      inheritedIcon={null}
-                      categoryOptions={categoryOptions}
-                      isMobile={isMobile}
-                      onToggle={() => toggleActivity(activity.id)}
-                      onArchiveActivity={() => handleArchiveActivity(activity.id)}
-                      onDeleteActivity={() => handleDeleteActivity(activity.id, activity.name)}
-                      onShowOnlyActivity={() => showOnlyActivity(activity.id)}
-                      openPopoverActivityId={openPopoverActivityId}
-                      onOpenPopover={setOpenPopoverActivityId}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <UncategorizedDropZone>
+                {showActive ? (
+                  <div role="list">
+                    {uncategorized.map((activity) => (
+                      <ActivityRow
+                        key={activity.id}
+                        activity={activity}
+                        allActivities={allActivities}
+                        checked={visibleActivityIds.has(activity.id)}
+                        categoryId={null}
+                        inheritedColor={null}
+                        inheritedIcon={null}
+                        categoryOptions={categoryOptions}
+                        isMobile={isMobile}
+                        onToggle={() => toggleActivity(activity.id)}
+                        onArchiveActivity={() => handleArchiveActivity(activity.id)}
+                        onDeleteActivity={() => handleDeleteActivity(activity.id, activity.name)}
+                        onShowOnlyActivity={() => showOnlyActivity(activity.id)}
+                        openPopoverActivityId={openPopoverActivityId}
+                        onOpenPopover={setOpenPopoverActivityId}
+                      />
+                    ))}
+                  </div>
+                ) : null}
 
-              {/* アーカイブ済みは種別を問わずここへ出す。アーカイブは未分類の話であって
+                {/* アーカイブ済みは種別を問わずここへ出す。アーカイブは未分類の話であって
                   カテゴリーの話ではない（2026-08-18 User 指示）。
                   アクティブ / すべて表示中は「未分類」の折りたたみに含まれ、アーカイブ
                   単独表示中はこの見出しの内容そのものになる */}
-              {showArchived ? (
-                <ArchivedActivityList
-                  onDeleteActivity={handleDeleteActivity}
-                  onDeleteCategory={handleDeleteCategory}
-                />
-              ) : null}
+                {showArchived ? (
+                  <ArchivedActivityList
+                    onDeleteActivity={handleDeleteActivity}
+                    onDeleteCategory={handleDeleteCategory}
+                  />
+                ) : null}
 
-              {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
+                {/* 空状態。アーカイブ単独表示で 0 件の時は「アーカイブ済みが無い」と
                   言い切る（未分類そのものが空だと誤読させない） */}
-              {uncategorizedCount === 0 && !isCompletelyEmpty ? (
-                <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
-                  {statusFilter === 'archived'
-                    ? t('calendar.filter.noArchived')
-                    : t('calendar.filter.noUncategorized')}
-                </p>
-              ) : null}
+                {uncategorizedCount === 0 ? (
+                  <p role="status" className="text-muted-foreground px-2 py-1 text-xs">
+                    {statusFilter === 'archived'
+                      ? t('calendar.filter.noArchived')
+                      : t('calendar.filter.noUncategorized')}
+                  </p>
+                ) : null}
+              </UncategorizedDropZone>
             </SidebarSection>
-
-            {isCompletelyEmpty ? (
-              <div role="status" className="text-muted-foreground px-2 py-2 text-xs">
-                {t('calendar.filter.noActivities')}
-              </div>
-            ) : null}
           </>
         )}
       </div>
@@ -444,6 +541,6 @@ export function ActivityFilterList() {
         name={deleteTarget?.name ?? ''}
         affectedCount={deleteTarget?.affectedCount ?? 0}
       />
-    </>
+    </ActivityDragProvider>
   );
 }

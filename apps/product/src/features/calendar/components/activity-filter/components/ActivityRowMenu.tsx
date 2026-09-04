@@ -64,12 +64,12 @@ export function ActivityRowMenu({
     return (
       <DropdownMenuContent align="start" side="right">
         <DropdownMenuItem onClick={onShowOnlyActivity}>
-          <Eye className="mr-2 size-4" />
+          <Eye className="size-4" />
           {t('calendar.filter.showOnlyThisActivity')}
         </DropdownMenuItem>
         {onArchiveActivity && (
           <DropdownMenuItem onClick={onArchiveActivity}>
-            <Archive className="mr-2 size-4" />
+            <Archive className="size-4" />
             {t('calendar.filter.archive')}
           </DropdownMenuItem>
         )}
@@ -77,7 +77,7 @@ export function ActivityRowMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onDeleteActivity}>
-              <Trash2 className="mr-2 size-4" />
+              <Trash2 className="size-4" />
               {t('common.actions.delete')}
             </DropdownMenuItem>
           </>
@@ -89,14 +89,14 @@ export function ActivityRowMenu({
   return (
     <DropdownMenuContent align="start" side="right">
       <DropdownMenuItem onClick={onOpenRenameDialog}>
-        <Pencil className="mr-2 size-4" />
+        <Pencil className="size-4" />
         {t('calendar.filter.rename')}
       </DropdownMenuItem>
 
       {/* カテゴリーを変更（DnD の代替導線） */}
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
-          <FolderUp className="mr-2 size-4" />
+          <FolderUp className="size-4" />
           {t('calendar.filter.changeCategory')}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
@@ -104,7 +104,7 @@ export function ActivityRowMenu({
             onClick={() => onChangeCategory(null)}
             className={currentCategoryId === null ? 'bg-state-selected' : undefined}
           >
-            <X className="text-muted-foreground mr-2 size-4" />
+            <X className="text-muted-foreground size-4" />
             <span className="flex-1">{t('calendar.filter.noCategory')}</span>
             {currentCategoryId === null && <Check className="text-muted-foreground ml-2 size-4" />}
           </DropdownMenuItem>
@@ -124,7 +124,7 @@ export function ActivityRowMenu({
                       icon={category.icon}
                       color={category.color}
                       size="sm"
-                      className="mr-2 shrink-0"
+                      className="shrink-0"
                     />
                     <span className="flex-1">{category.name}</span>
                     {isCurrent && <Check className="text-muted-foreground ml-2 size-4" />}
@@ -140,13 +140,13 @@ export function ActivityRowMenu({
 
       {/* 統合（マージ）は v1 で持たない（#2162 §4-8）。重複は改名 + アーカイブで代替する */}
       <DropdownMenuItem onClick={onShowOnlyActivity}>
-        <Eye className="mr-2 size-4" />
+        <Eye className="size-4" />
         {t('calendar.filter.showOnlyThisActivity')}
       </DropdownMenuItem>
 
       {onViewStats && (
         <DropdownMenuItem onClick={onViewStats}>
-          <BarChart3 className="mr-2 size-4" />
+          <BarChart3 className="size-4" />
           {t('calendar.filter.viewStats')}
         </DropdownMenuItem>
       )}
@@ -154,7 +154,7 @@ export function ActivityRowMenu({
       {/* アーカイブ（可逆なので確認なし） */}
       {onArchiveActivity && (
         <DropdownMenuItem onClick={onArchiveActivity}>
-          <Archive className="mr-2 size-4" />
+          <Archive className="size-4" />
           {t('calendar.filter.archive')}
         </DropdownMenuItem>
       )}
@@ -163,7 +163,7 @@ export function ActivityRowMenu({
         <>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onDeleteActivity}>
-            <Trash2 className="mr-2 size-4" />
+            <Trash2 className="size-4" />
             {t('common.actions.delete')}
           </DropdownMenuItem>
         </>

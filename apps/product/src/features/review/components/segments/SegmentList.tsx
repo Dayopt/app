@@ -124,7 +124,7 @@ export function SegmentList() {
                     type="button"
                     variant="ghost"
                     icon
-                    className="size-6 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                    className="size-6 opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
                     // 行そのものがレンズ切替のボタンになったので、名前だけだと
                     // 読み上げで区別できず、切替のつもりで破壊的メニューを開いてしまう
                     aria-label={tSidebar('segmentMenu', { name: segment.name })}

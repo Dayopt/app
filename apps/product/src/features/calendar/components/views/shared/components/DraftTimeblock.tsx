@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type KeyboardEvent } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -20,6 +20,9 @@ import {
 } from '../../../../stores/useActivityDraftStore';
 import { Z_INDEX } from '../constants/grid.constants';
 import { ConflictOverlay } from './ConflictOverlay';
+
+/** 矢印キー 1 回で動かす分数。Shift 併用で 60 分になる */
+const RESIZE_KEY_STEP_MINUTES = 15;
 
 /** plans.list / records.list の cached query を判定する predicate（tRPC v11 key 形式） */
 function isTimeblocksListQuery(query: { queryKey: unknown }): boolean {
@@ -160,6 +163,29 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
     [endMinutes, hourHeight, startMinutes, updateTimes],
   );
 
+  // role="slider" を名乗る以上、矢印キーで値が動かないと読み上げと実態が食い違う。
+  // 上下で 15 分、Shift 併用で 1 時間、Home / End で最小 / その日の終わり。
+  const handleResizeKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      const minEndMinutes = startMinutes + MIN_TIMEBLOCK_DURATION_MINUTES;
+      const step = event.shiftKey ? 60 : RESIZE_KEY_STEP_MINUTES;
+
+      let next: number | null = null;
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = endMinutes + step;
+      else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = endMinutes - step;
+      else if (event.key === 'Home') next = minEndMinutes;
+      else if (event.key === 'End') next = 24 * 60;
+      if (next === null) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      const clamped = Math.max(minEndMinutes, Math.min(24 * 60, next));
+      if (clamped === endMinutes) return;
+      updateTimes({ endTime: `${pad(Math.floor(clamped / 60))}:${pad(clamped % 60)}` });
+    },
+    [endMinutes, startMinutes, updateTimes],
+  );
+
   return (
     <div
       data-activity-draft-block
@@ -266,6 +292,7 @@ export function DraftTimeblock({ draft, hourHeight }: DraftTimeblockProps) {
             e.stopPropagation();
             handleResizeStart(e.clientY);
           }}
+          onKeyDown={handleResizeKeyDown}
         />
       </div>
     </div>
