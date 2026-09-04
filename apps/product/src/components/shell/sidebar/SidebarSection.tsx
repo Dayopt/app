@@ -53,8 +53,8 @@ export function SidebarSection({
             追加ホバーは持たない。2026-09-04 User 指示）。flex-1 は付けない
             （残り幅は後続の spacer が吸収する既存の分担）。右側の action スロットは
             別のクリック対象なのでこのグループには含めない。 */}
-        <div className="flex min-w-0 items-center gap-1 px-2 py-1">
-          <h3 className="text-muted-foreground min-w-0 truncate text-xs font-normal">{title}</h3>
+        <div className="flex min-w-0 items-center px-2 py-1">
+          <h3 className="text-muted-foreground min-w-0 truncate text-sm font-normal">{title}</h3>
           {collapsible && (
             // カテゴリー見出し（CategoryHeader）と同じ位置: タイトルの右に置く独立ボタン。
             // 行クリックへ波及させない（行自体も onToggleCollapse を持つため二重発火しうる）
