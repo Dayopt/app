@@ -9,7 +9,11 @@ import { Skeleton } from '@dayopt/components';
 import {
   applySegmentLens,
   buildAllocationSlices,
+  buildCompassPoints,
+  buildCompassWaitingList,
+  buildExecutionRows,
   buildInkColumns,
+  buildMirrorRows,
   buildSegmentBars,
   computeDenominators,
   computePreviousDelta,
@@ -23,6 +27,8 @@ import { useReviewOpenedTracking } from '../../hooks/useReviewOpenedTracking';
 import { useSegments } from '../../hooks/useSegments';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 import { AllocationChapter } from './chapters/AllocationChapter';
+import { ExecutionChapter } from './chapters/ExecutionChapter';
+import { QualityChapter } from './chapters/QualityChapter';
 
 import type { ReportFilterState } from '../../domain/report/report-view-model';
 import type { ReportGranularity } from '../../lib/report-period';
@@ -36,7 +42,7 @@ interface ReportBodyProps {
  * `/report` の本体（1 スクロール構成）。
  *
  * 章は決まった順に並び、折りたたみ・並び替え・非表示は持たない（仕様 §0-1）。
- * 現在は 1 章のみ。2〜4 章は後続の issue で足す。
+ * 現在は 1〜3 章。4 章は後続の issue で足す。
  *
  * フィルタ（カテゴリー / 未分類 / 余白）とセグメントレンズは `useReportViewStore`
  * （端末ローカル）から読む。派生はすべて client の純粋関数で、トグルのたびに
@@ -92,6 +98,12 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
         activeSegment === null
           ? buildSegmentBars(visible, segments ?? [], denominators.trackMinutes)
           : [],
+      // 2〜4 章もフィルタとレンズを効かせるので、1 章と同じ `lensed` を渡す。
+      // `computeDenominators` の `allActivities` だけがフィルタ前（仕様 §13-2）
+      executionRows: buildExecutionRows(lensed),
+      mirrorRows: buildMirrorRows(lensed),
+      compassPoints: buildCompassPoints(lensed),
+      waitingActivities: buildCompassWaitingList(lensed),
       uncategorizedPercent: computeUncategorizedPercent(lensed, denominators.visibleMinutes),
       previousDeltaMinutes: computePreviousDelta({
         visibleMinutes: denominators.visibleMinutes,
@@ -132,6 +144,14 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
         marginVisible={view.marginVisible}
         activeSegmentName={activeSegment?.name ?? null}
       />
+
+      <ExecutionChapter
+        granularity={granularity}
+        mirrorRows={view.mirrorRows}
+        rows={view.executionRows}
+      />
+
+      <QualityChapter points={view.compassPoints} waitingActivities={view.waitingActivities} />
     </div>
   );
 }
