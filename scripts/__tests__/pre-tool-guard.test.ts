@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1754,5 +1762,85 @@ describe('pre-tool-guard.mjs: gh pr merge 直接実行（#2596）', () => {
 
   it('merge を含まない別コマンド名（word boundary）は通す', () => {
     expect(runGuard(bash('gh pr merger-status 2596'))).toBe('allow');
+  });
+});
+
+// PreToolUse hook の launcher（2026-09-05, #2565）。
+//
+// Claude Code は PreToolUse hook の **exit 2 だけ**を block と解釈し、それ以外の
+// 非 0（not found = 127 を含む）は non-blocking error として tool 実行を続行する。
+// settings.json に `node scripts/hooks/pre-tool-guard.mjs` と書いていた頃は hook の
+// 起動が `node` の PATH 解決に依存し、解決できない実行コンテキストでは 8 matcher が
+// すべて無言で fail-open していた（実測: 旧 command は node 不在 PATH で exit 127）。
+//
+// launcher は shell 経由でも argv 直渡しでも動く必要がある（harness の実行
+// セマンティクスは repo 側から固定できない）。両方の起動形をここで固定する。
+describe('pre-tool-guard.sh: launcher の fail-closed（#2565）', () => {
+  const launcherPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.sh');
+  // POSIX 既定に近い、この repo の node（非標準ロケーション）を含まない PATH。
+  const PATH_WITHOUT_NODE = '/usr/bin:/bin';
+
+  function runLauncher(
+    input: Record<string, unknown>,
+    opts: { viaShell: boolean; path?: string },
+  ): { status: number | null; stderr: string } {
+    const env = { PATH: opts.path ?? (process.env.PATH as string) };
+    const result = opts.viaShell
+      ? // settings.json の command 文字列が sh -c 経由で実行される場合
+        spawnSync('sh', ['-c', 'scripts/hooks/pre-tool-guard.sh'], {
+          cwd: rootDir,
+          encoding: 'utf8',
+          input: JSON.stringify(input),
+          env,
+        })
+      : // argv 直渡しで実行される場合（shebang + 実行ビットで起動する）
+        spawnSync(launcherPath, [], {
+          cwd: rootDir,
+          encoding: 'utf8',
+          input: JSON.stringify(input),
+          env,
+        });
+    return { status: result.status, stderr: result.stderr ?? '' };
+  }
+
+  it('launcher は実行ビットを持つ（argv 直渡しでも起動できる）', () => {
+    // eslint-disable-next-line no-bitwise -- 実行ビットの検査は mode のビット演算でしか書けない
+    expect(statSync(launcherPath).mode & 0o111).not.toBe(0);
+  });
+
+  it.each([
+    ['shell 経由', true],
+    ['argv 直渡し', false],
+  ])('node が PATH に無い時は block する（exit 2、fail closed）: %s', (_label, viaShell) => {
+    const { status, stderr } = runLauncher(write('/home/user/x/notes.md'), {
+      viaShell: viaShell as boolean,
+      path: PATH_WITHOUT_NODE,
+    });
+
+    // 127（not found）だと Claude Code は tool 実行を続行してしまう。2 でなければならない。
+    expect(status).toBe(2);
+    expect(stderr).toContain('node を解決できないため');
+  });
+
+  it.each([
+    ['shell 経由', true],
+    ['argv 直渡し', false],
+  ])('通常の PATH では従来どおり判定を委譲する: %s', (_label, viaShell) => {
+    const opts = { viaShell: viaShell as boolean };
+
+    expect(runLauncher(write(join(rootDir, '.env')), opts).status).toBe(2);
+    expect(runLauncher(bash('git status'), opts).status).toBe(0);
+  });
+
+  it('settings.json の 8 matcher すべてが launcher を指している', () => {
+    // node を直接指す形へ戻すと fail-open が復活する。8 箇所とも launcher であること
+    // を固定する（1 箇所だけ戻す差分をレビューで見落とさないため）。
+    const settings = JSON.parse(readFileSync(resolve(rootDir, '.claude/settings.json'), 'utf8'));
+    const commands = settings.hooks.PreToolUse.flatMap((group: { hooks: { command: string }[] }) =>
+      group.hooks.map((hook) => hook.command),
+    );
+
+    expect(commands).toHaveLength(8);
+    expect(new Set(commands)).toEqual(new Set(['scripts/hooks/pre-tool-guard.sh']));
   });
 });
