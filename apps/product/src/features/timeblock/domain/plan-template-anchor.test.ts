@@ -58,6 +58,28 @@ describe('anchorMinuteToInstant', () => {
       const afterGap = anchorMinuteToInstant('2025-03-09', 195, 'America/New_York').getTime();
       expect(inGap).toBeGreaterThan(afterGap);
     });
+
+    /**
+     * gap の錨を「DST 差分だけ前方へ送る」以上、その差分ちょうど後ろにある錨とは
+     * 必ず同じ instant になる。1 時間が消える日にその 1 時間ぶんの並びを置く先は
+     * 無いので、これは policy の帰結であって避けられない。具現化側はこの衝突を
+     * 検知して適用全体を拒否する（`plan-template-materialize.test.ts`）。
+     */
+    it('gap 幅ちょうど後ろの錨とは同じ instant になる（消えた 1 時間の行き先が無い）', () => {
+      expect(anchorMinuteToInstant('2025-03-09', 150, 'America/New_York').toISOString()).toBe(
+        anchorMinuteToInstant('2025-03-09', 210, 'America/New_York').toISOString(),
+      );
+    });
+
+    /** 真夜中に遷移する TZ では、00:00 と 01:00 という普通の錨が衝突する。 */
+    it.each([
+      ['America/Santiago', '2022-09-11'],
+      ['Asia/Beirut', '2023-03-26'],
+    ])('%s %s は 00:00 の錨が 01:00 と同じ instant になる', (timezone, dateKey) => {
+      expect(anchorMinuteToInstant(dateKey, 0, timezone).toISOString()).toBe(
+        anchorMinuteToInstant(dateKey, 60, timezone).toISOString(),
+      );
+    });
   });
 
   describe('America/New_York 2025-11-02（fall back、02:00 → 01:00）', () => {

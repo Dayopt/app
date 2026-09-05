@@ -13,6 +13,8 @@ vi.mock('@dayopt/i18n/navigation', () => ({
 }));
 
 const applyMutate = vi.hoisted(() => vi.fn());
+/** 適用 mutation の実行中フラグ。連打ガードの検証で切り替える */
+const applyState = vi.hoisted(() => ({ isPending: false }));
 const templateRows = vi.hoisted(() => [
   {
     id: 'template-1',
@@ -71,7 +73,7 @@ vi.mock('@/features/activities', () => ({
 
 vi.mock('@/features/timeblock', () => ({
   usePlanTemplateMutations: () => ({
-    applyToDay: { mutate: applyMutate },
+    applyToDay: { mutate: applyMutate, isPending: applyState.isPending },
     renameTemplate: { mutate: vi.fn() },
     deleteTemplate: { mutate: vi.fn() },
   }),
@@ -95,6 +97,7 @@ import { SidebarContent } from './SidebarContent';
 describe('SidebarContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    applyState.isPending = false;
     pathnameMock.mockReturnValue('/calendar');
   });
 
@@ -136,6 +139,15 @@ describe('SidebarContent', () => {
     fireEvent.click(screen.getByRole('button', { name: '朝のルーティン' }));
 
     expect(applyMutate).toHaveBeenCalledWith({ templateId: 'template-1', date: '2026-03-25' });
+  });
+
+  it('適用中はもう一度クリックしても送らない（2 通目は必ず重複で失敗し、巻き戻しが 1 通目を消す）', () => {
+    applyState.isPending = true;
+
+    render(<SidebarContent />);
+    fireEvent.click(screen.getByRole('button', { name: '朝のルーティン' }));
+
+    expect(applyMutate).not.toHaveBeenCalled();
   });
 
   it('falls back to CalendarSidebar on workspace-external paths (e.g. /settings)', () => {

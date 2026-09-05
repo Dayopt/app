@@ -43,6 +43,9 @@ export function CalendarSidebar() {
 
   const handleApply = useCallback(
     (templateId: string) => {
+      // 連打を止める。2 通目は必ず重複で失敗し、その rollback が 1 通目の確定行を
+      // 巻き戻してしまう（onSettled の再取得まで画面に偽の行が残る）
+      if (applyToDay.isPending) return;
       applyToDay.mutate({ templateId, date: getDateKey(viewedDate) });
     },
     [applyToDay, viewedDate],

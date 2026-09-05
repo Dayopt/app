@@ -221,6 +221,21 @@ describe('usePlanTemplateMutations', () => {
       expect(mocks.toastError).toHaveBeenCalledWith('calendar.templates.toast.applyOverlap');
     });
 
+    it('この日に収まらない型は原因が分かる文言で伝える', async () => {
+      const context = await mocks.applyCallbacks?.onMutate?.({
+        templateId: TEMPLATE_ID,
+        date: '2026-09-05',
+      });
+
+      mocks.applyCallbacks?.onError?.(
+        { message: 'does not fit', data: { serviceCode: 'TEMPLATE_DOES_NOT_FIT' } },
+        {},
+        context,
+      );
+
+      expect(mocks.toastError).toHaveBeenCalledWith('calendar.templates.toast.applyDoesNotFit');
+    });
+
     it('重複以外の失敗は汎用の文言で伝える', async () => {
       const context = await mocks.applyCallbacks?.onMutate?.({
         templateId: TEMPLATE_ID,

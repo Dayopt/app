@@ -292,6 +292,7 @@
       "rowAriaHint": "Template \"{name}\". Click to apply, drag to any day, right-click to edit, rename, or delete",
       "toast": {
         "applyOverlap": "This day already has blocks in the way, so the template wasn't applied",
+        "applyDoesNotFit": "This day skips part of the clock, so the template doesn't fit",
         "applyFailed": "Couldn't apply the template. Please try again",
         "saveFailed": "Couldn't save the template. Please try again",
         "renameFailed": "Couldn't rename the template. Please try again",

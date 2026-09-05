@@ -214,7 +214,8 @@ function replaceTimeModelRowInMatchingLists<T extends TimeModelListRow>(
   }
 }
 
-function getTimeblockServiceCode(error: unknown): string | undefined {
+/** server が返した ServiceError code（allowlist に載ったものだけ client へ届く）。 */
+export function getTimeblockServiceCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('data' in error)) return undefined;
   const data = error.data;
   if (!data || typeof data !== 'object' || !('serviceCode' in data)) return undefined;

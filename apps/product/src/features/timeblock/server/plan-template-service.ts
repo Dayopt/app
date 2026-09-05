@@ -276,7 +276,9 @@ export class PlanTemplateService {
       });
     } catch (error) {
       if (error instanceof PlanTemplateMaterializeError) {
-        throw new TimeblockServiceError('INVALID_INPUT', error.message, { cause: error });
+        // 「この型はこの日に収まらない」は client が原因を出し分けられる必要がある
+        // （DST の gap 日など、他の日なら通る型がその日だけ落ちるため）
+        throw new TimeblockServiceError('TEMPLATE_DOES_NOT_FIT', error.message, { cause: error });
       }
       throw error;
     }

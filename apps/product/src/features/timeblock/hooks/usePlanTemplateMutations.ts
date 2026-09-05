@@ -21,6 +21,7 @@ import { api } from '@/lib/trpc';
 import { materializeTemplateDay } from '../domain/plan-template-materialize';
 
 import {
+  getTimeblockServiceCode,
   insertTimeModelRowIntoMatchingLists,
   isTimeblockOverlapError,
   removeTimeModelRowsFromMatchingLists,
@@ -121,7 +122,9 @@ export function usePlanTemplateMutations() {
       toast.error(
         isTimeblockOverlapError(error)
           ? t('calendar.templates.toast.applyOverlap')
-          : t('calendar.templates.toast.applyFailed'),
+          : getTimeblockServiceCode(error) === 'TEMPLATE_DOES_NOT_FIT'
+            ? t('calendar.templates.toast.applyDoesNotFit')
+            : t('calendar.templates.toast.applyFailed'),
       );
     },
     onSettled: () => {

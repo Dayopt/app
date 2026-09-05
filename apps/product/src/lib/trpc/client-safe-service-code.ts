@@ -18,6 +18,9 @@ const CLIENT_SAFE_SERVICE_CODES = new Set([
   'STALE_VERSION',
   'TEMPORARY_FAILURE',
   'TIME_OVERLAP',
+  // Timeblock: 型がその日に収まらない（DST で時計が飛ぶ日など）。他の日なら通る型が
+  // その日だけ落ちるので、汎用の失敗と区別して原因を伝える必要がある（#2567）
+  'TEMPLATE_DOES_NOT_FIT',
   // Billing: 支払い操作の失敗を「再試行 / やり直し / 削除中」へ畳む。いずれも
   // ユーザー自身の操作状態だけを表し、決済ベンダーの構成や内部commandの失敗
   // （BILLING_COMMAND_FAILED / BILLING_CONTRACT_INVALID / STRIPE_NOT_CONFIGURED 等）は含まない。

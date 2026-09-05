@@ -329,7 +329,7 @@ describe('PlanTemplateService', () => {
       expect(commands.createPlansBulk).not.toHaveBeenCalled();
     });
 
-    it('具現化できない型（clip 後 5 分未満）は INVALID_INPUT で、command を呼ばない', async () => {
+    it('具現化できない型（clip 後 5 分未満）は TEMPLATE_DOES_NOT_FIT で、command を呼ばない', async () => {
       const commands = createCommands();
       const { supabase } = createSupabaseStub({
         plan_templates: [{ data: template, error: null }],
@@ -350,7 +350,7 @@ describe('PlanTemplateService', () => {
 
       await expect(
         service.apply({ userId: USER_ID, input: { templateId: TEMPLATE_ID, date: '2026-09-05' } }),
-      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+      ).rejects.toMatchObject({ code: 'TEMPLATE_DOES_NOT_FIT' });
       expect(commands.createPlansBulk).not.toHaveBeenCalled();
     });
 

@@ -159,6 +159,32 @@ describe('materializeTemplateDay', () => {
     });
   });
 
+  /**
+   * 消える 1 時間に錨があると、その錨は gap 幅ぶん後ろの錨と同じ instant へ落ちる。
+   * 置き場が無いので適用全体を拒否する（ブロックを黙って落とさない）。
+   * 該当するのはユーザーの timezone が DST の日に当たった時だけで、他の日は通る。
+   */
+  it.each([
+    ['America/New_York', '2025-03-09', 150, 210],
+    ['America/Santiago', '2022-09-11', 0, 60],
+    ['Asia/Beirut', '2023-03-26', 0, 60],
+  ])('%s %s は消えた時間帯の錨（%i 分）を置けず全体を拒否する', (timezone, dateKey, gap, after) => {
+    expect(() =>
+      materializeTemplateDay({
+        blocks: [block('gap', gap as number), block('after', after as number)],
+        dateKey: dateKey as string,
+        timezone: timezone as string,
+        medianMinutesByActivity: NO_MEDIANS,
+        defaultMinutes: 60,
+        archivedActivityIds: NO_ARCHIVED,
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'BLOCK_TOO_SHORT',
+      }) as unknown as PlanTemplateMaterializeError,
+    );
+  });
+
   it('spring forward 日の gap 前ブロックは実経過分ではなく次の錨で切れる', () => {
     // 01:30 EST（06:30Z）に 60 分 → 02:30 は存在しないので instant 上は 07:30Z（03:30 EDT）。
     // 次の錨 03:00 EDT（07:00Z）が先に来るので end は 07:00Z（実経過 30 分）
