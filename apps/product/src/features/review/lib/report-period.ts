@@ -152,6 +152,72 @@ export function resolveNextPeriodStartDayKey(
   return formatDateKey(resolvePeriodStartDay(nextAnchor, granularity, weekStartsOn));
 }
 
+/**
+ * 時間帯の 6 バケット（仕様 §6-4）。**配列の順序がそのまま棒の並び**になる。
+ *
+ * 深夜（0–300）が最後なのは「1 日の先頭だが、読み手にとっては 1 日の終わり」だから
+ * （仕様の並び）。区間はすべて半開 `[start, end)` で、1440 分を隙間なく覆う。
+ */
+export const REPORT_TIME_OF_DAY_BUCKETS = [
+  { key: 'morning', startMinute: 300, endMinute: 540 },
+  { key: 'lateMorning', startMinute: 540, endMinute: 720 },
+  { key: 'midday', startMinute: 720, endMinute: 900 },
+  { key: 'afternoon', startMinute: 900, endMinute: 1080 },
+  { key: 'evening', startMinute: 1080, endMinute: 1440 },
+  { key: 'night', startMinute: 0, endMinute: 300 },
+] as const;
+
+/**
+ * ブロックを時間帯 6 バケットへ按分する（分）。
+ *
+ * **0 時またぎは日境界で分割してから按分する。** 23:30–翌 1:00 の記録は「夜 30 分 +
+ * 深夜 60 分」であって、どちらか一方へ丸ごと寄せない（#2576 の日別按分と同じ規則）。
+ * 壁時計での位置が要るので、境界はユーザーの timezone で解く。
+ */
+export function distributeToTimeOfDay(
+  blockStartAt: string,
+  blockEndAt: string,
+  timezone: string,
+): number[] {
+  const totals = REPORT_TIME_OF_DAY_BUCKETS.map(() => 0);
+  const startMs = Date.parse(blockStartAt);
+  const endMs = Date.parse(blockEndAt);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return totals;
+
+  // 記録が跨ぐ壁時計日を 1 日ずつ辿る。年粒度でも 1 ブロックの長さは高々数日なので、
+  // 日数で回して問題ない（暴走を避けるため上限を置く）。
+  let dayKey = toZonedDateKey(new Date(startMs), timezone);
+  for (let index = 0; index < MAX_TIME_OF_DAY_DAYS; index += 1) {
+    const dayStartMs = zonedDayStart(dayKey, timezone).getTime();
+    const nextDayKey = formatDateKey(addDays(parseDateKey(dayKey), 1));
+    const dayEndMs = zonedDayStart(nextDayKey, timezone).getTime();
+
+    const segmentStart = Math.max(startMs, dayStartMs);
+    const segmentEnd = Math.min(endMs, dayEndMs);
+
+    if (segmentEnd > segmentStart) {
+      // その日の 00:00 からの経過分で位置を測る（DST の日は 1 日が 23 / 25 時間になるが、
+      // 分布の見た目に効く差ではないので公称値で扱う）
+      const fromMinute = (segmentStart - dayStartMs) / 60_000;
+      const toMinute = (segmentEnd - dayStartMs) / 60_000;
+
+      REPORT_TIME_OF_DAY_BUCKETS.forEach((bucket, bucketIndex) => {
+        const overlap =
+          Math.min(toMinute, bucket.endMinute) - Math.max(fromMinute, bucket.startMinute);
+        if (overlap > 0) totals[bucketIndex] = (totals[bucketIndex] ?? 0) + overlap;
+      });
+    }
+
+    if (dayEndMs >= endMs) break;
+    dayKey = nextDayKey;
+  }
+
+  return totals;
+}
+
+/** `distributeToTimeOfDay` が辿る壁時計日の上限。1 ブロックがこれを超える長さになる想定は無い。 */
+const MAX_TIME_OF_DAY_DAYS = 400;
+
 /** 期間の終端日（壁時計、含まない）を粒度ごとに求める。 */
 function resolvePeriodEndDay(startDay: Date, granularity: ReportGranularity): Date {
   switch (granularity) {

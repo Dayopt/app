@@ -8,11 +8,12 @@ import { cn } from '@dayopt/components';
 import { formatReportDuration } from '../../../domain/report/format-duration';
 
 import type { ReportCompassPoint } from '../../../domain/report/report-view-model';
+import type { ReportDetailTarget } from '../../../stores/useReportDetailStore';
 
 interface CompassScatterProps {
   /** 座標・濃度は domain が計算済み。component 側で再計算しない。 */
   points: readonly ReportCompassPoint[];
-  onSelectActivity?: ((activityId: string | null) => void) | undefined;
+  onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
 }
 
 /** 盤の高さ（px）。仕様 §4.3。 */
@@ -83,7 +84,7 @@ function CompassPoint({
   onSelectActivity,
   point,
 }: {
-  onSelectActivity?: ((activityId: string | null) => void) | undefined;
+  onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
   point: ReportCompassPoint;
 }) {
   const t = useTranslations('report.quality');
@@ -94,7 +95,14 @@ function CompassPoint({
     <button
       type="button"
       // 詳細パネル（#2581）へ渡す口。この issue では呼ばれても何も起きない
-      onClick={() => onSelectActivity?.(point.activityId)}
+      onClick={() =>
+        onSelectActivity?.({
+          activityId: point.activityId,
+          name: point.name,
+          categoryName: point.categoryName,
+          color: point.color,
+        })
+      }
       aria-label={t('pointAriaLabel', {
         name,
         recorded: formatReportDuration(point.recordedMinutes),

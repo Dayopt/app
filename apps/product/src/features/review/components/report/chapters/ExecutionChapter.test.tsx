@@ -21,6 +21,7 @@ function row(overrides: Partial<ReportExecutionRow> = {}): ReportExecutionRow {
   return {
     activityId: 'act-write',
     name: '執筆',
+    categoryName: '仕事',
     color: 'blue',
     archived: false,
     recordedMinutes: 600,

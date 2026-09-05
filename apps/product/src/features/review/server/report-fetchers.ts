@@ -316,3 +316,78 @@ async function loadGhostReferencedEventIds(
 
   return referenced;
 }
+
+// =============================================================================
+// 詳細パネル（#2581）
+// =============================================================================
+
+/** 明細に出す 1 箱の上限。パネルは読み物で、全件スクロールさせる面ではない（仕様 §6-6）。 */
+export const REPORT_DETAIL_RECORD_LIMIT = 200;
+
+export interface ReportDetailRecordRow {
+  id: string;
+  title: string;
+  note: string | null;
+  activity_id: string | null;
+  start_at: string;
+  end_at: string;
+  fulfillment: string | null;
+}
+
+/**
+ * 1 アクティビティの記録を期間分だけ取る（詳細パネル）。
+ *
+ * `fetchReportRecords` と違い **title / note を持ち、DB 側で `activity_id` を絞る**。
+ * 期間集計は全アクティビティを 1 往復で取るのが正しいが、詳細は 1 行ぶんしか要らないので、
+ * 同じ形にすると年粒度で無駄が大きい。
+ *
+ * `activityId` が `null` は「アクティビティ未設定の記録」で、`.is()` を使う（`.eq(null)` は
+ * PostgREST では `IS NULL` にならない）。
+ */
+export async function fetchReportDetailRecords(
+  supabase: ReportFetchClient,
+  userId: string,
+  activityId: string | null,
+  range: ReportRangeInput,
+): Promise<ReportDetailRecordRow[]> {
+  const base = supabase
+    .from(databaseTables.records)
+    .select('id, title, note, activity_id, start_at, end_at, fulfillment')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .lt('start_at', range.endAt)
+    .gt('end_at', range.startAt);
+
+  const { data, error } =
+    activityId === null
+      ? await base.is('activity_id', null)
+      : await base.eq('activity_id', activityId);
+
+  if (error) throwDatabaseError(error, 'fetch_report_detail_records');
+  return data ?? [];
+}
+
+/** 1 アクティビティの予定を期間分だけ取る（予定比・未消化の判定に使う）。 */
+export async function fetchReportDetailPlans(
+  supabase: ReportFetchClient,
+  userId: string,
+  activityId: string | null,
+  range: ReportRangeInput,
+): Promise<ReportPlanRow[]> {
+  const base = supabase
+    .from(databaseTables.plans)
+    .select('id, activity_id, start_at, end_at')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .is('skipped_at', null)
+    .lt('start_at', range.endAt)
+    .gt('end_at', range.startAt);
+
+  const { data, error } =
+    activityId === null
+      ? await base.is('activity_id', null)
+      : await base.eq('activity_id', activityId);
+
+  if (error) throwDatabaseError(error, 'fetch_report_detail_plans');
+  return data ?? [];
+}

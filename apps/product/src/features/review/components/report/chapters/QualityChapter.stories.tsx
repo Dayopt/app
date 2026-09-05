@@ -21,6 +21,7 @@ type Story = StoryObj<typeof meta>;
 const POINTS: ReportCompassPoint[] = [
   {
     activityId: 'act-write',
+    categoryName: '仕事',
     name: '執筆',
     color: 'blue',
     x: 92,
@@ -31,6 +32,7 @@ const POINTS: ReportCompassPoint[] = [
   },
   {
     activityId: 'act-mail',
+    categoryName: '仕事',
     name: 'メール',
     color: 'violet',
     x: 34,
@@ -41,6 +43,7 @@ const POINTS: ReportCompassPoint[] = [
   },
   {
     activityId: 'act-read',
+    categoryName: '学習',
     name: '読書',
     color: 'green',
     x: 18,

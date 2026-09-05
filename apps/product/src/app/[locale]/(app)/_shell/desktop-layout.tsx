@@ -8,6 +8,11 @@ import { AppHeader } from '@/components/shell/AppHeader';
 import { Sidebar } from '@/components/shell/sidebar';
 import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath, resolveWorkspaceTab } from '@/features/calendar';
+import {
+  REPORT_DETAIL_PANEL_WIDTH,
+  REPORT_DETAIL_SLOT_KEY,
+  useReportDetailStore,
+} from '@/features/review';
 import { TIMEBLOCK_INSPECTOR_SLOT_KEY, useTimeblockInspectorStore } from '@/features/timeblock';
 import { setDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
@@ -36,7 +41,11 @@ const INSPECTOR_PANEL_WIDTH = 400;
  * - Sidebar（256px、開閉可能）← 全ページ共通 Sidebar
  * - PageHeader + MainContent
  * - Inspector（400px、Timeblock 選択時のみ開く。@/features/timeblock が portal で描画）
+ * - Report detail（250px、`/report` で行・点を選んだ時のみ開く。@/features/review が portal で描画）
  *
+ * **右のパネルは 2 枚とも DOM 上に常に存在する**（`AnimatedWidthPanel` が幅 0 で畳む）が、
+ * inspector はカレンダー、report detail はレポートに属するので同時には開かない。slot を
+ * 共有せず 2 枚並べているのは、調停ロジックを shell に置かないため（#2581）。
  */
 export function DesktopLayout({ children }: DesktopLayoutProps) {
   const pathname = usePathname();
@@ -49,6 +58,10 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
   const isInspectorOpen = useTimeblockInspectorStore((s) => s.isOpen);
   const setInspectorSlot = useCallback((element: HTMLDivElement | null) => {
     setDomSlot(TIMEBLOCK_INSPECTOR_SLOT_KEY, element);
+  }, []);
+  const isReportDetailOpen = useReportDetailStore((s) => s.isOpen);
+  const setReportDetailSlot = useCallback((element: HTMLDivElement | null) => {
+    setDomSlot(REPORT_DETAIL_SLOT_KEY, element);
   }, []);
   const sidebarUser = {
     name: getDisplayName(authUser, 'User'),
@@ -118,6 +131,7 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
 
         {/* Inspector（固定幅、Timeblock 選択時のみ開く） */}
         <AnimatedWidthPanel
+          data-panel="timeblock-inspector"
           open={isInspectorOpen}
           width={INSPECTOR_PANEL_WIDTH}
           side="right"
@@ -125,6 +139,18 @@ export function DesktopLayout({ children }: DesktopLayoutProps) {
           innerClassName="h-full"
         >
           <div ref={setInspectorSlot} className="h-full" />
+        </AnimatedWidthPanel>
+
+        {/* Report detail（固定幅、`/report` で行・点を選んだ時のみ開く） */}
+        <AnimatedWidthPanel
+          data-panel="report-detail"
+          open={isReportDetailOpen}
+          width={REPORT_DETAIL_PANEL_WIDTH}
+          side="right"
+          className="border-border h-full border-l"
+          innerClassName="h-full"
+        >
+          <div ref={setReportDetailSlot} className="h-full" />
         </AnimatedWidthPanel>
       </div>
     </div>

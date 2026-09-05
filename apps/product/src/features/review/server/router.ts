@@ -4,6 +4,7 @@ import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { createReportAggregationService } from './report-aggregation-service';
+import { createReportDetailService } from './report-detail-service';
 import { trackReviewOpened } from './review-analytics-service';
 import { createSegmentsService } from './segments-service';
 
@@ -54,6 +55,32 @@ export const reviewRouter = createTRPCRouter({
           ctx.userId,
           input,
         );
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * 詳細パネル（仕様 §6）が読む 1 アクティビティ分の明細。
+   *
+   * 期間集計と分けているのは、明細・中央値・時間帯分布がパネルを開いた時にしか要らないため
+   * （主 payload に載せると年粒度で Record 件数に比例して膨らむ）。
+   */
+  getReportActivityDetail: protectedProcedure
+    .meta({ description: 'レポート詳細パネルの明細（1 アクティビティ分）' })
+    .input(
+      z.object({
+        activityId: z.string().uuid().nullable(),
+        anchorDate: ANCHOR_DATE,
+        granularity: GRANULARITY,
+        timezone: TIMEZONE,
+        weekStartsOn: WEEK_STARTS_ON,
+        includeTrend: z.boolean().default(true),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        return await createReportDetailService(ctx.supabase).getActivityDetail(ctx.userId, input);
       } catch (error) {
         return handleServiceError(error);
       }
