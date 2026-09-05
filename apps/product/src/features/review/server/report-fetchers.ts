@@ -19,18 +19,18 @@ import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/se
  * `archived_at` では絞らない。アーカイブは未来にだけ効く操作で、過去の記録が消えるわけでは
  * ないため、期間内にインクがあるアクティビティは通常どおり集計対象にする。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 
 export type ReportFetchClient = SupabaseClient<Database>;
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportRangeInput {
   startAt: string;
   endAt: string;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportPlanRow {
   id: string;
   activity_id: string | null;
@@ -38,7 +38,7 @@ export interface ReportPlanRow {
   end_at: string;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportRecordRow {
   id: string;
   activity_id: string | null;
@@ -47,7 +47,7 @@ export interface ReportRecordRow {
   fulfillment: string | null;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportActivityRow {
   id: string;
   name: string;
@@ -55,7 +55,7 @@ export interface ReportActivityRow {
   archived_at: string | null;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportCategoryRow {
   id: string;
   name: string;

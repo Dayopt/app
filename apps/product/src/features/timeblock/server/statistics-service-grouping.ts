@@ -132,19 +132,17 @@ interface BlankRateRangeInput {
   endDate?: string | undefined;
   wakeHour: number;
   sleepHour: number;
-  visibleDayCount?: number | undefined;
 }
 
 /** `get_blank_rate` / `get_stats_kpi_summary` の blankRate 部分と同じ計算式。 */
 export function computeBlankRate(
   scheduledMinutes: number,
-  { startDate, endDate, wakeHour, sleepHour, visibleDayCount }: BlankRateRangeInput,
+  { startDate, endDate, wakeHour, sleepHour }: BlankRateRangeInput,
 ): { availableMinutes: number; scheduledMinutes: number; blankMinutes: number; blankRate: number } {
   const days =
-    visibleDayCount ??
-    (startDate && endDate
+    startDate && endDate
       ? Math.max(1, (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000)
-      : 7);
+      : 7;
 
   const dailyMinutes =
     sleepHour <= wakeHour ? (24 - wakeHour + sleepHour) * 60 : (sleepHour - wakeHour) * 60;

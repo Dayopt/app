@@ -21,21 +21,21 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 /**
  * レポートの粒度。`day` は持たない（日の解像度はカレンダーの仕事）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export const reportGranularities = ['week', 'month', 'year'] as const;
 /**
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export type ReportGranularity = (typeof reportGranularities)[number];
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export function isReportGranularity(value: unknown): value is ReportGranularity {
   return typeof value === 'string' && (reportGranularities as readonly string[]).includes(value);
 }
 
 /** 週の開始曜日（0=日, 1=月, 6=土）。`user_settings.week_starts_on` と同じ 3 値。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export type ReportWeekStartsOn = 0 | 1 | 6;
 
@@ -48,7 +48,7 @@ const MINUTES_PER_WEEK = 10080;
 
 /** 日別・週別・月別の列 1 本。`key` は表示のラベル生成と `byBucket` の対応付けに使う。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export interface ReportBucket {
   /**
@@ -60,7 +60,7 @@ export interface ReportBucket {
   endAt: string;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportRange {
   /** UTC ISO。期間の開始（含む）。 */
   startAt: string;
@@ -306,7 +306,7 @@ function resolveLengthMinutes(
  * @param weekStartsOn - 週の開始曜日（0 / 1 / 6）
 
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolveReportRange(
   anchorDate: string,
@@ -332,7 +332,7 @@ export function resolveReportRange(
  * カレンダーの `navigateRelative` は calendar の viewType 基準で動くため、レポートの
  * 粒度とは食い違う。レポートの期間移動はこの関数を通す。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function shiftReportAnchor(
   anchorDate: string,
@@ -353,7 +353,7 @@ export function shiftReportAnchor(
 /**
  * 前期間（Δ 表示用）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolvePreviousReportRange(
   anchorDate: string,
@@ -372,7 +372,7 @@ export function resolvePreviousReportRange(
 /**
  * 次期間（4 章「来週はすでに N 分の箱が置かれています」）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolveNextReportRange(
   anchorDate: string,
@@ -391,7 +391,7 @@ export function resolveNextReportRange(
 /**
  * 指定 timezone における「今日」の日付キー。既定の anchor を組むのに使う。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function todayReportAnchor(timezone: string, now: Date = new Date()): string {
   return toZonedDateKey(now, timezone);
@@ -404,7 +404,7 @@ export function todayReportAnchor(timezone: string, now: Date = new Date()): str
  * 計上する前に必ずここを通す。#2426 は clip を欠いたことで、跨いだブロックの全時間を
  * 片側の期間へ帰属させていた。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function clipMinutes(
   blockStartAt: string,
@@ -424,7 +424,7 @@ export function clipMinutes(
  * 0 時またぎ（就寝など）はここで日境界に分割される。**ブロック自体は分割しない** —
  * 数値の帰属だけを按分する（仕様 §1）。合計は `clipMinutes` と一致する。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function distributeToBuckets(
   blockStartAt: string,

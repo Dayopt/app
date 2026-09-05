@@ -38,18 +38,13 @@ import {
  * 線形比例するのを構造的に断つ。
  */
 
-/**
- * 充実の 3 値（`records.fulfillment`）。UI では 消耗 / 普通 / 充実。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
- */
+/** 充実の 3 値（`records.fulfillment`）。UI では 消耗 / 普通 / 充実。 */
 export interface ReportFulfillmentCounts {
   low: number;
   medium: number;
   high: number;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportActivityAggregate {
   /** `null` はアクティビティ未設定の記録・予定。表示側は未分類として扱う。 */
   activityId: string | null;
@@ -76,8 +71,7 @@ export interface ReportActivityAggregate {
   byBucket: number[];
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
-export interface ReportPeriodSummary {
+interface ReportPeriodSummary {
   startAt: string;
   endAt: string;
   /** 余白の分母（仕様の `L`）。DST を無視した公称値。 */
@@ -85,8 +79,7 @@ export interface ReportPeriodSummary {
   bucketKeys: string[];
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
-export interface ReportPeriodResult {
+interface ReportPeriodResult {
   period: ReportPeriodSummary;
   previous: Omit<ReportPeriodSummary, 'bucketKeys'>;
   /** `plannedPastMinutes` の判定基準。client の時計とずれてもサーバーの値で一貫させる。 */
@@ -121,8 +114,7 @@ interface ReportJumpTarget {
   dayKey: string;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
-export interface ReportPeriodInput {
+interface ReportPeriodInput {
   anchorDate: string;
   granularity: ReportGranularity;
   timezone: string;
@@ -156,8 +148,11 @@ function isFulfillmentLevel(value: string | null): value is keyof ReportFulfillm
   return value === 'low' || value === 'medium' || value === 'high';
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
-export class ReportAggregationService {
+/**
+ * 公開するのは `createReportAggregationService` だけ。呼び出し側（router / test）は
+ * factory 経由で受け取り、戻り値の型は推論で拾う。
+ */
+class ReportAggregationService {
   constructor(private readonly supabase: ReportFetchClient) {}
 
   async getReportPeriod(
@@ -380,7 +375,6 @@ export class ReportAggregationService {
   }
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export function createReportAggregationService(supabase: ReportFetchClient) {
   return new ReportAggregationService(supabase);
 }
