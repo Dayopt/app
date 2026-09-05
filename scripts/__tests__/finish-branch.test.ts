@@ -1163,7 +1163,26 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
     expect(status).toBe(1);
   });
 
-  it('docs-only かつ integration affected な PR は Integration Tests が揃えば通る（#2552）', () => {
+  it('docs-only でも Integration Tests が skipped のままなら止める（#2552）', () => {
+    // 「missing」だけでなく「skipped で残っている」経路も塞ぐ。draft 期の skipped
+    // check run が ready 後も残るケース（#2415 の元事故）が docs-only 側から
+    // 復活しないことを固定する。
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🧪 Integration Tests', 'SKIPPED', '2026-08-26T10:00:00Z'),
+      ],
+      { files: ['docs/engineering/data/db/rls-snapshot.md'] },
+    );
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(1);
+  });
+
+  // このケースは #2552 の修正**前でも**通る（旧実装は docs-only で Integration を
+  // 免除していたため）。証明しているのは「修正後に永久停止しないこと」であって
+  // 修正そのものではない。上の 2 本が修正の証明を持つ。
+  it('docs-only かつ integration affected な PR は Integration Tests が揃えば通る（永久停止しないことの確認）', () => {
     const { status, stderr } = runScript(
       [
         checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
