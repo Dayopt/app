@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { databaseTables, type Database } from '@/lib/database';
 import { logger } from '@/lib/logger';
-import { captureUnexpectedDatabaseError } from '@/lib/sentry';
+import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
 
 /**
  * レポート集計の行取得。
@@ -145,7 +145,14 @@ export async function fetchReportCategories(
  */
 const GHOST_MIRROR_RADIUS_MS = 90 * 24 * 60 * 60 * 1000;
 
-/** 1 バッチの件数と上限。`event-query-service.ts` と同値（150 × 20 = 3,000 件）。 */
+/**
+ * 1 バッチの件数と上限。`event-query-service.ts` と同値（150 × 20 = 3,000 件）。
+ *
+ * **窓の広さが違うことに注意。** あちらの 3,000 件は router が保証する最大 62 日レンジ向けだが、
+ * こちらは ±90 日（180 日）に同じ上限を当てている。共有・会議室カレンダーを多数選ぶと
+ * 到達しうるので、到達時は件数が実際より少なくなる（下の fail-open）。黙って劣化させないよう
+ * Sentry へも送る。
+ */
 const GHOST_BATCH_SIZE = 150;
 const GHOST_MAX_BATCHES = 20;
 
@@ -239,8 +246,14 @@ export async function fetchReportUnconvertedExternalEvents(
   }
 
   // 上限に当たったら「数え切れたぶん」で返す（上のコメント参照）。カレンダー側と違い
-  // ここで落とすとレポート全体が読めなくなる。
+  // ここで落とすとレポート全体が読めなくなる。ただし **黙って少なく数えるのは避ける** —
+  // 件数が実際より少ないまま出続けるので、運用側が気づけるよう Sentry にも残す
+  // （`event-query-service.ts` は throw する側で同じ通知を出している）。
   logger.warn('[report-ghost] stopped at the batch limit', { batches: GHOST_MAX_BATCHES });
+  captureUnexpectedError(new Error('report ghost count hit the batch limit'), {
+    feature: 'report',
+    operation: 'ghost_count_batch_limit',
+  });
   return events;
 }
 
