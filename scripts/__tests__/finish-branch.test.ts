@@ -1139,17 +1139,16 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
     expect(status).toBe(0);
   });
 
-  // docs-only は integration より優先する。**これは意図した挙動ではなく現状の固定**
-  // （[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。impact.mjs は
-  // rls-snapshot.md のような「docs だが integration を要求する」path を明示的に
-  // 想定していて、実際に `docsOnly: true, integration: true` を返す。しかし
-  // ci.yml の integration job は `docs_only != 'true'` で job ごと skip するため、
-  // gate 側もそれに合わせて免除しないと永久に missing で止まる。
+  // docs-only と integration は独立に見る（[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。
+  // impact.mjs は rls-snapshot.md のような「docs だが integration を要求する」path を
+  // 明示的に想定していて `docsOnly: true, integration: true` を返す。以前は gate も
+  // ci.yml も docs-only を外側の条件に置いていたため、rls-snapshot.md 単独の PR で
+  // RLS drift 検査（`rls:snapshot:check`）が一度も走らないまま merge できていた。
   //
-  // つまりこのテストは「gate と ci.yml が同じ向きに揃っている」ことを固定するもので、
-  // #2552 を直す時（両方で docs_only と integration を独立させる）には**このテストも
-  // 同時に更新する**必要がある。片方だけ変えるとここが落ちて気づける。
-  it('docs-only なら integration affected でも Integration Tests を免除する（ci.yml と対称、#2552）', () => {
+  // このテストは「gate と ci.yml が同じ向きに揃っている」ことを固定する。ci.yml の
+  // integration job も `integration != 'false'` だけで判定するよう直してあるので、
+  // **片方だけ変えるとここが落ちて気づける**（その関係は #2552 を直した後も同じ）。
+  it('docs-only でも integration affected なら Integration Tests を要求する（ci.yml と対称、#2552）', () => {
     const { status, stderr } = runScript(
       [
         checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
@@ -1158,8 +1157,43 @@ describe('軽量層（Static Checks / Unit Tests）の実走要求（#2415）', 
       // integration=true かつ docsOnly=true になる唯一の実在パターン
       { files: ['docs/engineering/data/db/rls-snapshot.md'] },
     );
+    // Unit Tests は docs-only のまま免除する（免除するのは unit だけ）
     expect(stderr).toContain('docs-only の変更のため');
-    expect(stderr).not.toContain('必須 check「🧪 Integration Tests」');
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」が 1 件も見つかりません');
+    expect(status).toBe(1);
+  });
+
+  it('docs-only でも Integration Tests が skipped のままなら止める（#2552）', () => {
+    // 「missing」だけでなく「skipped で残っている」経路も塞ぐ。draft 期の skipped
+    // check run が ready 後も残るケース（#2415 の元事故）が docs-only 側から
+    // 復活しないことを固定する。
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🧪 Integration Tests', 'SKIPPED', '2026-08-26T10:00:00Z'),
+      ],
+      { files: ['docs/engineering/data/db/rls-snapshot.md'] },
+    );
+    expect(stderr).toContain('必須 check「🧪 Integration Tests」');
+    expect(status).toBe(1);
+  });
+
+  // このケースは #2552 の修正**前でも**通る（旧実装は docs-only で Integration を
+  // 免除していたため）。証明しているのは「修正後に永久停止しないこと」であって
+  // 修正そのものではない。上の 2 本が修正の証明を持つ。
+  it('docs-only かつ integration affected な PR は Integration Tests が揃えば通る（永久停止しないことの確認）', () => {
+    const { status, stderr } = runScript(
+      [
+        checkRun('🛡️ docs & secrets guard', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🔍 Static Checks', 'SUCCESS', '2026-08-26T10:00:00Z'),
+        checkRun('🧪 Integration Tests', 'SUCCESS', '2026-08-26T10:00:00Z'),
+      ],
+      { files: ['docs/engineering/data/db/rls-snapshot.md'] },
+    );
+    // Unit Tests は無くても通る（docs-only で免除される）
+    expect(stderr).toContain('docs-only の変更のため');
+    expect(stderr).not.toContain('必須 check「📦 Unit Tests」');
     expect(status).toBe(0);
   });
 

@@ -492,21 +492,27 @@ if [[ "$PR_STATE" == "OPEN" ]]; then
   # `needs.impact.outputs.docs_only != 'true'` で実際に skip されるため、
   # ここを要求すると docs-only PR が永久に missing で止まる）。判定不能時は
   # IMPACT_DOCS_ONLY=false（＝両方要求する側）へ倒してある。
-  # 「🧪 Integration Tests」（#2539 で test job から分離）は **docs-only でなく、かつ
-  # integration affected な PR でだけ**要求する。ci.yml 側は
-  # `docs_only != 'true' && integration != 'false'` で job ごと skip するため、
-  # 無条件に要求すると skip される PR が永久に missing で止まる。判定不能時は
+  # 「🧪 Integration Tests」（#2539 で test job から分離）は **integration affected な
+  # PR でだけ**要求する。ci.yml 側は `integration != 'false'` で job ごと skip する
+  # ため、無条件に要求すると skip される PR が永久に missing で止まる。判定不能時は
   # IMPACT_INTEGRATION=true（＝要求する側）へ倒してある。
+  #
+  # **docs-only と integration は独立に見る**（#2552）。impact.mjs は
+  # `docs/engineering/data/db/rls-snapshot.md` のような「docs パスだが integration
+  # 対象」を docsOnly=true / integration=true として返す。ここで docs-only を
+  # 外側の条件にすると、rls-snapshot.md 単独の PR で RLS drift 検査を一度も
+  # 走らせずに merge できてしまう。ci.yml の integration job も同じ向きに直してある
+  # （どちらか片方だけ直すと gate と CI がずれるため、必ず両方同時に変更する）。
   REQUIRED_CI_CHECKS=("🔍 Static Checks")
   if [[ "$IMPACT_DOCS_ONLY" != "true" ]]; then
     REQUIRED_CI_CHECKS+=("📦 Unit Tests")
-    if [[ "$IMPACT_INTEGRATION" != "false" ]]; then
-      REQUIRED_CI_CHECKS+=("🧪 Integration Tests")
-    else
-      info "DB を触らない変更のため Integration Tests の skip を許容します。"
-    fi
   else
-    info "docs-only の変更のため Unit Tests / Integration Tests の skip を許容します（Static Checks は引き続き要求します）。"
+    info "docs-only の変更のため Unit Tests の skip を許容します（Static Checks は引き続き要求します）。"
+  fi
+  if [[ "$IMPACT_INTEGRATION" != "false" ]]; then
+    REQUIRED_CI_CHECKS+=("🧪 Integration Tests")
+  else
+    info "DB を触らない変更のため Integration Tests の skip を許容します。"
   fi
 
   for required in ${REQUIRED_CI_CHECKS[@]+"${REQUIRED_CI_CHECKS[@]}"}; do

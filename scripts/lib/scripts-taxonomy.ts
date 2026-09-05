@@ -166,6 +166,10 @@ function fileContainsReference(
 function scanGroup(repoRoot: string, files: string[], relPath: string, base: string): string[] {
   const hits: string[] = [];
   for (const f of files) {
+    // 自己言及は「呼ばれている」ではない（findImporters と同じ扱い）。走査対象に
+    // script 自身が入りうるのは hook launcher 群だけだが、そこで自分の basename を
+    // コメントに書くと無条件に hooks 判定になってしまう。
+    if (f === relPath) continue;
     if (fileContainsReference(repoRoot, f, base, relPath)) hits.push(f);
   }
   return hits;
@@ -199,23 +203,65 @@ export interface ScanContext {
   huskyFiles: string[];
   claudeHookFiles: string[];
   claudeSettingsFiles: string[];
+  /** hook 登録から直接起動される `scripts/hooks/` 配下の launcher（#2565） */
+  hookLauncherFiles: string[];
   claudeRuleFiles: string[];
   claudeSkillFiles: string[];
   docsFiles: string[];
 }
 
+const HOOKS_DIR_PREFIX = 'scripts/hooks/';
+
+/**
+ * hook 登録（husky / `.claude/hooks/` / `.claude/settings.json`）から**直接**起動される
+ * `scripts/hooks/` 配下の script（launcher）を返す。
+ *
+ * launcher が同じディレクトリの別 script を呼ぶ形（#2565 の `pre-tool-guard.sh` →
+ * `pre-tool-guard.mjs`）では、呼ばれる側は settings.json に名前が出ないため hooks 判定
+ * から落ちる。launcher 自身を hook 登録の延長として扱い、**`scripts/hooks/` 配下へ 1 段だけ**
+ * 伝播させる。
+ *
+ * 範囲を `scripts/hooks/` に閉じるのは、launcher が import する汎用 lib
+ * （`scripts/lib/is-direct-execution.mjs` 等）まで hooks 判定へ引きずられるため。
+ * このライブラリは実行呼び出しと import を区別できない（冒頭の制約を参照）ので、
+ * 伝播させてよい範囲をディレクトリで縛る。
+ */
+function collectHookLauncherFiles(
+  repoRoot: string,
+  allScriptFiles: string[],
+  registrationFiles: string[],
+): string[] {
+  return allScriptFiles
+    .filter((relPath) => relPath.startsWith(HOOKS_DIR_PREFIX))
+    .filter(
+      (relPath) =>
+        scanGroup(repoRoot, registrationFiles, relPath, path.basename(relPath)).length > 0,
+    );
+}
+
 /** 参照解析に使う全ファイルリストを一度だけ集める（複数 script の分類で使い回す）。 */
 export function buildScanContext(repoRoot: string, scriptsDir = 'scripts'): ScanContext {
+  const allScriptFiles = listNonTestScriptFiles(repoRoot, scriptsDir);
+  const huskyFiles = walkFiles(repoRoot, '.husky');
+  const claudeHookFiles = walkFiles(repoRoot, '.claude/hooks');
+  const settingsFiles = fs.existsSync(path.join(repoRoot, '.claude/settings.json'))
+    ? ['.claude/settings.json']
+    : [];
+  const hookLauncherFiles = collectHookLauncherFiles(repoRoot, allScriptFiles, [
+    ...huskyFiles,
+    ...claudeHookFiles,
+    ...settingsFiles,
+  ]);
+
   return {
     repoRoot,
-    allScriptFiles: listNonTestScriptFiles(repoRoot, scriptsDir),
+    allScriptFiles,
     pkgEntries: collectPackageJsonEntries(repoRoot),
     workflowFiles: walkFiles(repoRoot, '.github/workflows'),
-    huskyFiles: walkFiles(repoRoot, '.husky'),
-    claudeHookFiles: walkFiles(repoRoot, '.claude/hooks'),
-    claudeSettingsFiles: fs.existsSync(path.join(repoRoot, '.claude/settings.json'))
-      ? ['.claude/settings.json']
-      : [],
+    huskyFiles,
+    claudeHookFiles,
+    claudeSettingsFiles: settingsFiles,
+    hookLauncherFiles,
     claudeRuleFiles: ['CLAUDE.md', 'AGENTS.md'].filter((f) =>
       fs.existsSync(path.join(repoRoot, f)),
     ),
@@ -234,7 +280,13 @@ export function collectReferenceHits(ctx: ScanContext, relPath: string): Referen
     workflow: scanGroup(ctx.repoRoot, ctx.workflowFiles, relPath, base),
     husky: scanGroup(ctx.repoRoot, ctx.huskyFiles, relPath, base),
     claudeHook: scanGroup(ctx.repoRoot, ctx.claudeHookFiles, relPath, base),
-    claudeSettings: scanGroup(ctx.repoRoot, ctx.claudeSettingsFiles, relPath, base),
+    claudeSettings: [
+      ...scanGroup(ctx.repoRoot, ctx.claudeSettingsFiles, relPath, base),
+      // launcher からの伝播は `scripts/hooks/` 配下にだけ効かせる（#2565）
+      ...(relPath.startsWith(HOOKS_DIR_PREFIX)
+        ? scanGroup(ctx.repoRoot, ctx.hookLauncherFiles, relPath, base)
+        : []),
+    ],
     claudeRule: scanGroup(ctx.repoRoot, ctx.claudeRuleFiles, relPath, base),
     claudeSkill: scanGroup(ctx.repoRoot, ctx.claudeSkillFiles, relPath, base),
     docs: scanGroup(ctx.repoRoot, ctx.docsFiles, relPath, base),

@@ -379,10 +379,14 @@ Main が `pnpm review:marker` の出力（`gh api --method POST repos/{owner}/{r
   Draft CI 廃止により、この 3 job は draft の間 `conclusion: skipped` の check run になる。skipped は
   失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
   「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
-  持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
-  影響判定が不能な場合は要求する側（fail closed）へ倒す。**`🧪 Integration Tests` は加えて
-  `integration` affected な PR でだけ要求する**（affected でない PR では job ごと skip されるのが
-  正常で、無条件に要求すると永久に missing で止まる）。契約は
+  持たない docs guard が満たす）。影響判定が不能な場合は要求する側（fail closed）へ倒す。
+  **docs-only で免除するのは `📦 Unit Tests` だけ**（Impact gate による skip が正当なため）。
+  `🔍 Static Checks` は docs-only でも常に要求し、**`🧪 Integration Tests` は docs-only とは
+  独立に `integration` affected な PR でだけ要求する**（2026-09-05、[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。
+  affected でない PR では job ごと skip されるのが正常で、無条件に要求すると永久に missing で止まる。
+  逆に docs-only を integration の外側条件に置くと、`docs/engineering/data/db/rls-snapshot.md`
+  のような「docs パスだが integration 対象」の PR で RLS drift 検査が一度も走らずに merge できる
+  （#2552 で実際に空いていた穴。ci.yml の integration job の `if:` と同じ向きに揃える）。契約は
   `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
 - **`ci.yml` / `scripts/ci/check.mjs` は `INTEGRATION_GLOBS` に含める（#2539）。** integration を独立 job へ
   切り出した結果、job まるごとが `if:` で skip されうるようになった。配線を持つこの 2 ファイルを
