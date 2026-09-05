@@ -2,9 +2,11 @@
 
 import { useEffect } from 'react';
 
+import { useDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { useReportActivityDetail } from '../../hooks/useReportActivityDetail';
+import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
 import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { ReportDetailPanel } from './ReportDetailPanel';
 
@@ -35,6 +37,11 @@ export function ConnectedReportDetailPanel({
 }: ConnectedReportDetailPanelProps) {
   const isOpen = useReportDetailStore((state) => state.isOpen);
   const target = useReportDetailStore((state) => state.target);
+  // **器が無い環境では query も走らせない。** モバイルの shell は詳細パネルの slot を
+  // 登録しないので（器は #2582 で足す）、ここで止めないと「画面は無反応なのに
+  // `getReportActivityDetail` だけ毎回飛ぶ」状態になる。`isMobile` ではなく slot の有無で
+  // 見るのは、#2582 が器を足した時にこの分岐が自動で解けるようにするため。
+  const hasSlot = useDomSlot(REPORT_DETAIL_SLOT_KEY) !== null;
 
   // `/report` を離れたら閉じる。**store は shell の 4 カラム目の開閉も握っている**ので、
   // 開いたままカレンダーへ移ると、中身の無い 250px の帯がカレンダー側に残る
@@ -44,7 +51,7 @@ export function ConnectedReportDetailPanel({
   // **閉じている間は query を持つ component ごとマウントしない。** `enabled: false` で
   // 済ませると hook は呼ばれるので、`/report` を描くだけで tRPC context が要る形になる
   // （`ReportViewClient` の単体 test がそれで落ちた）。開いた時だけ配線する。
-  if (!isOpen || target === null) return null;
+  if (!hasSlot || !isOpen || target === null) return null;
 
   return (
     <OpenReportDetailPanel

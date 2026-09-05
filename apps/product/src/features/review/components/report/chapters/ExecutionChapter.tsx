@@ -17,7 +17,7 @@ interface ExecutionChapterProps {
   /** 記録か予定のどちらかがある行。**足切りしない**（決算の完全性、仕様 §13-10）。 */
   rows: readonly ReportExecutionRow[];
   mirrorRows: readonly ReportMirrorRow[];
-  /** 行をクリックした時に詳細パネルへ渡す。接続は #2581。 */
+  /** 行をクリックした時に詳細パネルを開く。渡されなければ行は押せるが何も起きない。 */
   onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
 }
 
@@ -84,7 +84,7 @@ function ExecutionRow({
     <li>
       <button
         type="button"
-        // 詳細パネル（#2581）へ渡す口。この issue では呼ばれても何も起きない
+        // 詳細パネルを開く（本体は Composition Bridge が描く。#2581）
         onClick={() =>
           onSelectActivity?.({
             activityId: row.activityId,

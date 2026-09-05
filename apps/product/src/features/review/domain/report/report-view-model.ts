@@ -21,15 +21,15 @@ export const COMPASS_MIN_FULFILLMENT = 5;
 /**
  * 見積もりの鏡の候補になる過去予定の箱数。
  */
-const MIRROR_MIN_PLAN_BOXES = 3;
+export const MIRROR_MIN_PLAN_BOXES = 3;
 /**
  * 見積もりの鏡の候補になる過去予定の分数。
  */
-const MIRROR_MIN_PLAN_MINUTES = 30;
+export const MIRROR_MIN_PLAN_MINUTES = 30;
 /**
  * 予定比を出す最小の過去予定分数。これ未満は比率を作らない。
  */
-const EXECUTION_MIN_PLAN_MINUTES = 15;
+export const EXECUTION_MIN_PLAN_MINUTES = 15;
 /**
  * 見積もりの鏡に出す最大件数。
  */

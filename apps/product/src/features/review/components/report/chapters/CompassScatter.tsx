@@ -94,7 +94,7 @@ function CompassPoint({
   return (
     <button
       type="button"
-      // 詳細パネル（#2581）へ渡す口。この issue では呼ばれても何も起きない
+      // 詳細パネルを開く（本体は Composition Bridge が描く。#2581）
       onClick={() =>
         onSelectActivity?.({
           activityId: point.activityId,

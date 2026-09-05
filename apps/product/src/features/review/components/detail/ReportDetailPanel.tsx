@@ -10,6 +10,11 @@ import { useDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { Button, Skeleton, cn } from '@dayopt/components';
 
 import { formatReportDuration } from '../../domain/report/format-duration';
+import {
+  EXECUTION_MIN_PLAN_MINUTES,
+  MIRROR_MIN_PLAN_BOXES,
+  MIRROR_MIN_PLAN_MINUTES,
+} from '../../domain/report/report-view-model';
 import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
 import { resolveZonedDayKey } from '../../lib/report-period';
 
@@ -35,8 +40,6 @@ interface ReportDetailPanelProps {
   onOpenCalendarDay: ((dayKey: string) => void) | null;
 }
 
-/** 予定比を出す最小の過去予定分数。2 章と同じ閾値（数えるに足りない回数で率を作らない）。 */
-const PLAN_RATIO_MIN_MINUTES = 15;
 /** 時間帯の棒の最大高さ（px）と、0 のときの下限。仕様 §6-4。 */
 const TIME_OF_DAY_MAX_HEIGHT = 38;
 const TIME_OF_DAY_EMPTY_HEIGHT = 2;
@@ -203,7 +206,9 @@ function planValue(
   detail: ReportActivityDetailResult,
   t: ReturnType<typeof useTranslations<'report.detail.stats'>>,
 ): string {
-  if (detail.plannedPastMinutes >= PLAN_RATIO_MIN_MINUTES) {
+  // 閾値は 2 章と同じものを domain から読む（値を複製すると、片方だけ変えた時に
+  // 「章では予定比が出るのにパネルでは出ない」が起きる）
+  if (detail.plannedPastMinutes >= EXECUTION_MIN_PLAN_MINUTES) {
     return t('planRatio', {
       percent: Math.round((detail.recordedMinutes / detail.plannedPastMinutes) * 100),
     });
@@ -227,8 +232,11 @@ function fulfillmentValue(
 /** 見積もりの鏡（1 行）。候補条件を満たさなければ、傾向を出せないことだけ言う。 */
 function MirrorLine({ detail }: { detail: ReportActivityDetailResult }) {
   const t = useTranslations('report.detail');
+  // 候補条件も 2 章の見積もりの鏡と同じ（domain の定数を読む）
   const eligible =
-    detail.plannedPastMinutes >= 30 && detail.recordedMinutes > 0 && detail.plannedPastBoxes >= 3;
+    detail.plannedPastMinutes >= MIRROR_MIN_PLAN_MINUTES &&
+    detail.recordedMinutes > 0 &&
+    detail.plannedPastBoxes >= MIRROR_MIN_PLAN_BOXES;
 
   return (
     <div className="flex flex-col gap-1">
