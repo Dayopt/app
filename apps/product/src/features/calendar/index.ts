@@ -27,7 +27,7 @@ export { ActivityChipRow } from './components/activity-filter/components/Activit
 // Templates（型）
 // =============================================================================
 export { TemplateList } from './components/templates/TemplateList';
-export type { TemplateMock } from './components/templates/types';
+export { toTemplateView } from './components/templates/toTemplateView';
 
 // =============================================================================
 // Types

@@ -289,7 +289,14 @@
       "overwriteSaveLabel": "上書き保存",
       "diffSummaryPrefix": "変更:",
       "contextMenuTitle": "テンプレートメニュー",
-      "rowAriaHint": "テンプレート「{name}」。クリックで適用、ドラッグで任意の日へ、右クリックで編集・改名・削除"
+      "rowAriaHint": "テンプレート「{name}」。クリックで適用、ドラッグで任意の日へ、右クリックで編集・改名・削除",
+      "toast": {
+        "applyOverlap": "この時間帯には既にブロックがあり、型を置けませんでした",
+        "applyFailed": "型を適用できませんでした。もう一度お試しください",
+        "saveFailed": "型を保存できませんでした。もう一度お試しください",
+        "renameFailed": "型の名前を変更できませんでした。もう一度お試しください",
+        "deleteFailed": "型を削除できませんでした。もう一度お試しください"
+      }
     },
     "activitySelector": {
       "title": "アクティビティを選択",

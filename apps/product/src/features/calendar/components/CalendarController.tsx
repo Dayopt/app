@@ -9,14 +9,18 @@
  * @see _composition/useCalendarComposition.ts
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import {
   createTimeblockDuplicateDraft,
+  deriveTemplateBlocksFromDay,
   resolveTimeblockDestination,
+  usePlanTemplateMutations,
   useTimeblockInspectorStore,
 } from '@/features/timeblock';
+import { getDateKey } from '@/lib/date';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
@@ -29,6 +33,7 @@ import type {
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
+import { SaveAsTemplateHeader } from './templates/SaveAsTemplateHeader';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { CalendarLayout } from './layout/CalendarLayout';
@@ -155,6 +160,31 @@ export function CalendarController({
 
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
 
+  // =========================================================================
+  // テンプレート（型）の保存（#2567）
+  // =========================================================================
+  // 保存中はヘッダーの中身だけを名前入力へ差し替える。メインの盤面は触らない
+  // （保存されるのは「今見えている日の盤面そのもの」という関係を UI で保つ）。
+  const [isSavingAsTemplate, setIsSavingAsTemplate] = useState(false);
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const { createTemplate } = usePlanTemplateMutations();
+
+  // `currentDate` は壁時計 Date（navigation 由来）なので timezone 無しで暦日を読む（#2017）
+  const templateDayBlocks = useMemo(
+    () => deriveTemplateBlocksFromDay(allTimeblocks, getDateKey(currentDate), timezone),
+    [allTimeblocks, currentDate, timezone],
+  );
+
+  const handleSaveAsTemplate = useCallback(
+    (name: string) => {
+      createTemplate.mutate(
+        { name, blocks: templateDayBlocks },
+        { onSuccess: () => setIsSavingAsTemplate(false) },
+      );
+    },
+    [createTemplate, templateDayBlocks],
+  );
+
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
     useCalendarContextMenu();
@@ -270,6 +300,17 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
+        headerReplacement={
+          isSavingAsTemplate ? (
+            <SaveAsTemplateHeader
+              onSave={handleSaveAsTemplate}
+              onCancel={() => setIsSavingAsTemplate(false)}
+              isSaving={createTemplate.isPending}
+            />
+          ) : undefined
+        }
+        onSaveAsTemplate={() => setIsSavingAsTemplate(true)}
+        saveAsTemplateDisabled={templateDayBlocks.length === 0}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>

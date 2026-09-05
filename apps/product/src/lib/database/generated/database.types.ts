@@ -662,6 +662,75 @@ export type Database = {
           },
         ];
       };
+      plan_template_blocks: {
+        Row: {
+          activity_id: string | null;
+          anchor_minute: number;
+          created_at: string;
+          id: string;
+          template_id: string;
+          title: string;
+          user_id: string;
+        };
+        Insert: {
+          activity_id?: string | null;
+          anchor_minute: number;
+          created_at?: string;
+          id?: string;
+          template_id: string;
+          title: string;
+          user_id: string;
+        };
+        Update: {
+          activity_id?: string | null;
+          anchor_minute?: number;
+          created_at?: string;
+          id?: string;
+          template_id?: string;
+          title?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'plan_template_blocks_activity_owner_fkey';
+            columns: ['activity_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'activities';
+            referencedColumns: ['id', 'user_id'];
+          },
+          {
+            foreignKeyName: 'plan_template_blocks_template_owner_fkey';
+            columns: ['template_id', 'user_id'];
+            isOneToOne: false;
+            referencedRelation: 'plan_templates';
+            referencedColumns: ['id', 'user_id'];
+          },
+        ];
+      };
+      plan_templates: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       plans: {
         Row: {
           activity_id: string | null;
@@ -1796,6 +1865,30 @@ export type Database = {
           p_title: string;
           p_user_id: string;
         };
+        Returns: {
+          activity_id: string | null;
+          created_at: string;
+          deleted_at: string | null;
+          end_at: string;
+          external_calendar_event_id: string | null;
+          id: string;
+          note: string | null;
+          skipped_at: string | null;
+          source: string;
+          start_at: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'plans';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      create_plans_bulk_command_v1: {
+        Args: { p_plans: Json; p_user_id: string };
         Returns: {
           activity_id: string | null;
           created_at: string;

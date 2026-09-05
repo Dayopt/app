@@ -57,6 +57,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
+    // snapshot 前の in-flight refetch を止める（#2567 で utils.*.cancel から
+    // queryClient.cancelQueries へ移した。挙動は同じく list query だけを止める）
+    cancelQueries: vi.fn().mockResolvedValue(undefined),
     getQueriesData: vi.fn(({ predicate }) =>
       mocks.cacheEntries.filter(([queryKey]) => predicate({ queryKey })),
     ),

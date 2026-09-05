@@ -75,9 +75,22 @@ interface ConfirmDayCommandInput {
   endAt: string;
 }
 
+interface BulkPlanCommandRow {
+  title: string;
+  activityId: string | null;
+  startAt: string;
+  endAt: string;
+}
+
+interface CreatePlansBulkCommandInput {
+  userId: string;
+  plans: ReadonlyArray<BulkPlanCommandRow>;
+}
+
 type CommandOperation =
   | 'confirm_day_plans'
   | 'create_plan'
+  | 'create_plans_bulk'
   | 'create_record'
   | 'delete_plan'
   | 'delete_record'
@@ -244,6 +257,25 @@ export class TimeblockCommandClient {
       this.admin.rpc('record_plan_command_v1', {
         p_expected_updated_at: input.expectedUpdatedAt,
         p_plan_id: input.planId,
+        p_user_id: input.userId,
+      }),
+    );
+  }
+
+  /**
+   * N 件の Plan を 1 transaction で作る（#2567 テンプレート適用）。
+   * 1 件でも検証・overlap で落ちれば全件 rollback される。error code の対応表は
+   * 1 件 command と同じ（23P01 → TIME_OVERLAP、DT014 → ACTIVITY_ARCHIVED）。
+   */
+  async createPlansBulk(input: CreatePlansBulkCommandInput): Promise<PlanRow[]> {
+    return this.runMany('create_plans_bulk', () =>
+      this.admin.rpc('create_plans_bulk_command_v1', {
+        p_plans: input.plans.map((plan) => ({
+          title: plan.title,
+          activity_id: plan.activityId,
+          start_at: plan.startAt,
+          end_at: plan.endAt,
+        })),
         p_user_id: input.userId,
       }),
     );

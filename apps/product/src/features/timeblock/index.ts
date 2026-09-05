@@ -18,7 +18,7 @@ export type { RecordEvent } from './types/record-event';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useTimeblockWriteMutations } from './hooks';
+export { usePlanTemplateMutations, useTimeblockWriteMutations } from './hooks';
 
 // =============================================================================
 // Stores
@@ -38,6 +38,8 @@ export { timeblockTintColor } from './lib/timeblock-tint';
 // =============================================================================
 export { isPlanRecordDrop, resolveTimeblockDestination } from './domain/timeblock-destination';
 export type { TimeblockDestination } from './domain/timeblock-destination';
+// テンプレート（型）— 保存する組成を「生きた日」から取り出す（#2567）
+export { deriveTemplateBlocksFromDay } from './domain/plan-template-compose';
 
 // =============================================================================
 // Lib (iCal export)

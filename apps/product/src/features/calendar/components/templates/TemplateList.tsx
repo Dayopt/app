@@ -10,10 +10,10 @@ import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import { Button, HoverTooltip } from '@dayopt/components';
 
 import { TemplateRow } from './TemplateRow';
-import type { TemplateMock } from './types';
+import type { TemplateView } from './types';
 
 interface TemplateListProps {
-  templates: ReadonlyArray<TemplateMock>;
+  templates: ReadonlyArray<TemplateView>;
   onApplyTemplate?: ((templateId: string) => void) | undefined;
   onEditTemplate?: ((templateId: string) => void) | undefined;
   onRenameTemplate?: ((templateId: string, name: string) => void) | undefined;
@@ -53,7 +53,7 @@ export function TemplateList({
   // 開閉状態。カテゴリ・未分類と同じく既定は展開
   const [collapsed, setCollapsed] = useState(false);
   // 削除確認の対象。null なら閉じている
-  const [deleteTarget, setDeleteTarget] = useState<TemplateMock | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TemplateView | null>(null);
 
   return (
     // 次のセクション（未分類）との余白は、自分が開いているかどうかで自分の下に
