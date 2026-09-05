@@ -229,16 +229,38 @@ function containsTraversal(p) {
  *
  * 未作成の file でも比較できるよう、target 自身の realpath に失敗したら親ディレクトリ
  * だけ解決して basename を繋ぐ（新規作成の Write を巻き込まないため）。
+ *
+ * **dangling symlink（実体がまだ存在しない link）も辿る**: `realpathSync` は途中で
+ * ENOENT になると何も返さないため、`.env` が未作成の checkout で `ln -s ../.env tmp/x`
+ * を置くと link 先が見えず素通りする。`lstat` + `readlink` で 1 本ずつ手で解く
+ * （深さ上限で循環 symlink を切る）。
+ *
+ * **この関数だけでは保護判定は完結しない。** 呼び出し元は raw path と canonical path の
+ * **両方**で判定する（下の `checkWriteGuards` を参照）。canonical だけで見ると、逆に
+ * `.env` 自身が非保護名のファイルを指す symlink の checkout（env を 1 箇所へ集約する
+ * 構成）で `.env` への Write が素通りする。
  */
 function canonicalFilePath(filePath, cwd) {
   if (!filePath) return '';
-  const abs = path.isAbsolute(filePath) ? filePath : path.join(cwd, filePath);
-  try {
-    return fs.realpathSync(abs);
-  } catch {
-    const resolvedDir = resolvePhysicalPath(path.dirname(abs), cwd);
-    return resolvedDir ? path.join(resolvedDir, path.basename(abs)) : filePath;
+  let abs = path.isAbsolute(filePath) ? filePath : path.join(cwd, filePath);
+
+  for (let depth = 0; depth < 16; depth += 1) {
+    try {
+      return fs.realpathSync(abs);
+    } catch {
+      let link = null;
+      try {
+        if (fs.lstatSync(abs).isSymbolicLink()) link = fs.readlinkSync(abs);
+      } catch {
+        link = null;
+      }
+      if (link === null) break;
+      abs = path.resolve(path.dirname(abs), link);
+    }
   }
+
+  const resolvedDir = resolvePhysicalPath(path.dirname(abs), cwd);
+  return resolvedDir ? path.join(resolvedDir, path.basename(abs)) : abs;
 }
 
 /**
@@ -329,27 +351,34 @@ function extractWrittenText(root) {
 /**
  * Write/Edit/MultiEdit/NotebookEdit の保護ファイル判定一式。
  *
- * **判定はすべて正規化後の path（symlink 解決済み）で行う**（#2566）。書き込みが
- * 着地するのは symlink の実体側なので、生の file_path の文字列一致で判定すると
- * `ln -s .env tmp/foo` のような別名 1 本で保護境界が外れる。
+ * **判定は raw path と正規化後の path の両方で行う（どちらかが当たれば block）**（#2566）。
+ * 片方だけでは、それぞれ逆向きの穴が開く:
  *
- * `checkBashGuards` 側の `--env-file` 判定（`checkEnvFileContents`）は
+ * - raw だけ: `ln -s .env tmp/foo` のような別名 1 本で、保護対象を指す symlink が
+ *   basename 一致から外れて素通りする（書き込みは実体の `.env` へ着地する）
+ * - canonical だけ: `.env` / `.env.local` 自身が非保護名のファイルを指す symlink である
+ *   checkout（env を 1 箇所へ集約する構成）で、`.env` への Write が素通りする
+ *
+ * `.env` / `.env.*` / `.envrc` は AGENTS.md §Non-Negotiables で「読みも書きもしない」と
+ * 定めた境界で、`.claude/settings.json` の `permissions.deny` は Read しか塞いでいない
+ * （Write の機械強制はこの guard が唯一）。判定を緩める方向の変更は入れない。
+ *
+ * `checkBashGuards` 側の op run 引数判定（`checkEnvFileContents`）は
  * `ALLOWED_ENV_FILE_ALTERNATION` の allowlist 方式で、許可された名前でなければ
  * そもそも op run に渡せない。任意名の symlink では通らないため、こちらは
  * 正規化を足していない（#2566 の「同じ非対称が他に無いか」への回答）。
  */
 function checkWriteGuards(filePath, root, cwd, execFileImpl) {
   const targetPath = checkWorktreeBoundary(filePath, cwd, execFileImpl) || filePath;
+  // 重複を除いた判定対象（symlink でなければ 1 件）。
+  const candidates = targetPath === filePath ? [filePath] : [filePath, targetPath];
+  const via = targetPath === filePath ? '' : `（${filePath} は ${targetPath} を指しています）`;
 
-  if (isProtectedEnvFilePath(targetPath)) {
-    block(
-      targetPath === filePath
-        ? 'BLOCKED: .env系ファイルへの書き込みは禁止です'
-        : `BLOCKED: .env系ファイルへの書き込みは禁止です（${filePath} は ${targetPath} を指しています）`,
-    );
+  if (candidates.some(isProtectedEnvFilePath)) {
+    block(`BLOCKED: .env系ファイルへの書き込みは禁止です${via}`);
   }
 
-  if (isLocalDevEnvFilePath(targetPath)) {
+  if (candidates.some(isLocalDevEnvFilePath)) {
     const written = extractWrittenText(root);
     const badVaults = disallowedVaultRefs(written);
     if (badVaults.length > 0) {
@@ -359,11 +388,9 @@ function checkWriteGuards(filePath, root, cwd, execFileImpl) {
     }
   }
 
-  if (isExistingMigrationSqlPath(targetPath) && isRegularFile(targetPath)) {
+  if (candidates.some((p) => isExistingMigrationSqlPath(p) && isRegularFile(p))) {
     block(
-      targetPath === filePath
-        ? 'BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください'
-        : `BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください（${filePath} は ${targetPath} を指しています）`,
+      `BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください${via}`,
     );
   }
 }

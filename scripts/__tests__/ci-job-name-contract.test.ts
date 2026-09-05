@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -173,7 +173,10 @@ describe('CI job 名の契約', () => {
         .filter((file) => /\.ya?ml$/.test(file))
         .map((file) => ({ label: `workflows/${file}`, path: join(workflowDir, file) }));
 
-      const actions = readdirSync(actionDir, { withFileTypes: true })
+      // `.github/actions/` が無い repo 状態（composite action の全廃など）で ENOENT を
+      // 投げると、checkout の検査だけでなくこのファイルの全 test が collection 時に落ちる。
+      // 消失自体は EXPECTED_SCAN_TARGETS の網羅性 assert が別途検出する。
+      const actions = (existsSync(actionDir) ? readdirSync(actionDir, { withFileTypes: true }) : [])
         .filter((entry) => entry.isDirectory())
         .flatMap((dir) =>
           readdirSync(join(actionDir, dir.name))

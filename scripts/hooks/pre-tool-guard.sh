@@ -23,11 +23,26 @@
 # どちらでも動く**（shebang + 実行ビットのスクリプトは argv 直渡しでも起動する）。
 # 同じ形の scripts/hooks/session-start.sh / post-tool-format.sh が現に稼働している。
 # 「不要な wrapper」に見えても外さないこと — 外すと fail-open へ戻る。
+#
+# **この launcher の保証境界**: 閉じているのは `node` の PATH 解決だけ。**launcher 自身に
+# 到達できない経路は依然 fail-open** で、repo 側からは閉じられない:
+#   - harness が repo root 以外の cwd で相対 command を起動する（exit 127）
+#     ※ 旧 `node scripts/hooks/pre-tool-guard.mjs` も同じ cwd 依存を持っていた
+#   - この launcher の実行ビットが落ちる（exit 126）
+#     ※ launcher 導入で新たに増えた依存。git は 100755 で追跡し、
+#       scripts/__tests__/pre-tool-guard.test.ts が mode & 0o111 を assert する
+# どちらも「exit 2 以外の非 0 = non-blocking error」として tool 実行が続行される。
+
+# **意図的なトレードオフ**: node を解決できない時は 8 matcher すべてが block になるため、
+# Bash も Read も止まりセッション内からは復旧できない（User が PATH を直すまで）。
+# 既知の絶対パスを探しに行く逃げ道は置かない — guard の解決先を PATH 外の
+# 決め打ちパスへ広げたくないのと、「node 不在なら exit 2」を test で固定できなくなるため。
+# fail-open（guard 全体の消失）より、止まって気づける方を選ぶ。
 
 set -u
 
 if ! command -v node >/dev/null 2>&1; then
-  # exit 2 = block。fail-open（guard 全体の消失）より、tool が 1 つ止まる方を選ぶ。
+  # exit 2 = block。
   echo "BLOCKED: node を解決できないため PreToolUse guard を実行できません（fail closed、#2565）。PATH に node を通してから再実行してください。" >&2
   exit 2
 fi
