@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { TemplateRow } from './TemplateRow';
-import type { TemplateMock } from './types';
+import type { TemplateView } from './types';
 
 /**
  * サイドバーのテンプレート行（v1.0 §5.4）。ホバーでミニプレビュー、
@@ -20,7 +20,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   return <div className="w-56">{children}</div>;
 }
 
-function makeTemplate(overrides: Partial<TemplateMock> = {}): TemplateMock {
+function makeTemplate(overrides: Partial<TemplateView> = {}): TemplateView {
   return {
     id: 'template-1',
     name: '朝のルーティン',

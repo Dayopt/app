@@ -74,6 +74,17 @@ interface CalendarLayoutProps {
   leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
 
+  /**
+   * デスクトップヘッダーの中身を差し替える（#2567 の「型として保存」中）。
+   * `AppHeader` はこの component が 1 つだけ描く — 呼び出し側が独自の header を
+   * 足すと 1 画面 2 header になるため、差し替えは中身だけを受け取る形にしている。
+   */
+  headerReplacement?: React.ReactNode | undefined;
+  /** ViewSwitcher の「この並びを型として保存」。渡さなければ項目が出ない */
+  onSaveAsTemplate?: (() => void) | undefined;
+  /** 保存できる並びが無い日で項目を無効化する */
+  saveAsTemplateDisabled?: boolean | undefined;
+
   // Side rail
   sideRail?: React.ReactNode | undefined;
   mobileSideRail?: React.ReactNode | undefined;
@@ -116,6 +127,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Header slots
     leftSlot,
     rightSlot,
+    headerReplacement,
+    onSaveAsTemplate,
+    saveAsTemplateDisabled,
 
     // Side rail
     sideRail,
@@ -412,23 +426,31 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
               視覚的に一体化する（#2233-2 案B。境界線は日付ヘッダー行の下端 1 本だけに絞る） */}
           <div className="bg-background hidden md:block">
             <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
-              <div className="flex items-center gap-2">
-                <DateRangeDisplay
-                  date={currentDate}
-                  viewType={viewType}
-                  showWeekNumber={showWeekNumbers}
-                  weekStartsOn={weekStartsOn}
-                  clickable={false}
-                  displayRange={displayRange}
-                />
-                <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
-                <ViewSwitcher
-                  className="ml-2"
-                  currentView={viewType}
-                  onChange={(view) => onViewChange(view as CalendarViewType)}
-                  onSettingsChange={onSettingsChange}
-                />
-              </div>
+              {headerReplacement ?? (
+                <div className="flex items-center gap-2">
+                  <DateRangeDisplay
+                    date={currentDate}
+                    viewType={viewType}
+                    showWeekNumber={showWeekNumbers}
+                    weekStartsOn={weekStartsOn}
+                    clickable={false}
+                    displayRange={displayRange}
+                  />
+                  <DateNavigator
+                    onNavigate={handleNavigate}
+                    onPrefetch={onPrefetch}
+                    arrowSize="md"
+                  />
+                  <ViewSwitcher
+                    className="ml-2"
+                    currentView={viewType}
+                    onChange={(view) => onViewChange(view as CalendarViewType)}
+                    onSettingsChange={onSettingsChange}
+                    onSaveAsTemplate={onSaveAsTemplate}
+                    saveAsTemplateDisabled={saveAsTemplateDisabled}
+                  />
+                </div>
+              )}
             </AppHeader>
           </div>
 

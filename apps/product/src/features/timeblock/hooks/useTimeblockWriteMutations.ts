@@ -32,6 +32,37 @@ function isTimeblockQuery(query: { queryKey: unknown }): boolean {
   );
 }
 
+function isTimeblockListQuery(query: { queryKey: unknown }): boolean {
+  return isPlansListQuery(query) || isRecordsListQuery(query);
+}
+
+/**
+ * plans / records の全 cache を退避する（テンプレート適用など、この hook の外の
+ * mutation も同じ rollback 単位を使うため module 関数として公開する）。
+ * cancel は list query だけに掛ける — in-flight の refetch が楽観行を上書きする窓を
+ * 閉じるのが目的で、getById の再取得まで止める必要は無い。
+ */
+export async function snapshotTimeblockLists(
+  queryClient: QueryClient,
+): Promise<TimeblockListsSnapshot> {
+  await queryClient.cancelQueries({ predicate: isTimeblockListQuery });
+  return {
+    snapshots: queryClient.getQueriesData({ predicate: isTimeblockQuery }) as Array<
+      [QueryKey, unknown]
+    >,
+  };
+}
+
+/** `snapshotTimeblockLists` で取った cache を書き戻す。 */
+export function restoreTimeblockLists(
+  queryClient: QueryClient,
+  context: TimeblockListsSnapshot | undefined,
+): void {
+  for (const [queryKey, data] of context?.snapshots ?? []) {
+    queryClient.setQueryData(queryKey, data);
+  }
+}
+
 interface TimeModelListFilter {
   ids?: string[];
   search?: string;
@@ -139,6 +170,19 @@ export function insertTimeModelRowIntoMatchingLists<T extends TimeModelListRow>(
   }
 }
 
+/** 指定 id の行を、現在保持している全 list cache から取り除く（temp 行の掃除・削除の楽観更新）。 */
+export function removeTimeModelRowsFromMatchingLists(
+  queryClient: QueryClient,
+  lane: 'plans' | 'records',
+  ids: ReadonlySet<string>,
+): void {
+  if (ids.size === 0) return;
+  const predicate = lane === 'plans' ? isPlansListQuery : isRecordsListQuery;
+  queryClient.setQueriesData<TimeModelListRow[]>({ predicate }, (old) =>
+    old?.filter((row) => !ids.has(row.id)),
+  );
+}
+
 /** DBが返した確定行を、現在保持している全list cacheへ反映する。 */
 function replaceTimeModelRowInMatchingLists<T extends TimeModelListRow>(
   queryClient: QueryClient,
@@ -170,14 +214,16 @@ function replaceTimeModelRowInMatchingLists<T extends TimeModelListRow>(
   }
 }
 
-function getTimeblockServiceCode(error: unknown): string | undefined {
+/** server が返した ServiceError code（allowlist に載ったものだけ client へ届く）。 */
+export function getTimeblockServiceCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('data' in error)) return undefined;
   const data = error.data;
   if (!data || typeof data !== 'object' || !('serviceCode' in data)) return undefined;
   return typeof data.serviceCode === 'string' ? data.serviceCode : undefined;
 }
 
-function isTimeOverlapError(error: { message: string }): boolean {
+/** DB の EXCLUDE 制約（`plans_no_overlap` / 23P01）由来の重複エラーか。 */
+export function isTimeblockOverlapError(error: { message: string }): boolean {
   return (
     getTimeblockServiceCode(error) === 'TIME_OVERLAP' || error.message.includes('TIME_OVERLAP')
   );
@@ -193,8 +239,11 @@ export function isTimeblockUncertainError(error: unknown): boolean {
   return code === undefined || code === 'RETRYABLE_CONTENTION' || code === 'TEMPORARY_FAILURE';
 }
 
-interface MutationContext {
+export interface TimeblockListsSnapshot {
   snapshots: ReadonlyArray<readonly [QueryKey, unknown]>;
+}
+
+interface MutationContext extends TimeblockListsSnapshot {
   tempId?: string;
 }
 
@@ -228,24 +277,15 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   type PlanListItem = NonNullable<Awaited<ReturnType<typeof utils.plans.list.fetch>>>[number];
   type RecordListItem = NonNullable<Awaited<ReturnType<typeof utils.records.list.fetch>>>[number];
 
-  const snapshot = async (): Promise<MutationContext> => {
-    await Promise.all([utils.plans.list.cancel(), utils.records.list.cancel()]);
-    return {
-      snapshots: queryClient.getQueriesData({ predicate: isTimeblockQuery }) as Array<
-        [QueryKey, unknown]
-      >,
-    };
-  };
+  const snapshot = (): Promise<MutationContext> => snapshotTimeblockLists(queryClient);
 
   const restore = (context: MutationContext | undefined) => {
-    for (const [queryKey, data] of context?.snapshots ?? []) {
-      queryClient.setQueryData(queryKey, data);
-    }
+    restoreTimeblockLists(queryClient, context);
   };
 
   const reportError = (error: { message: string }) => {
     toast.error(
-      isTimeOverlapError(error)
+      isTimeblockOverlapError(error)
         ? t('toast.overlap')
         : isTimeblockStaleError(error)
           ? t('toast.conflict')
@@ -254,7 +294,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   };
 
   const reportCreateError = (error: { message: string }) => {
-    if (isTimeOverlapError(error) && onCreateTimeOverlap) {
+    if (isTimeblockOverlapError(error) && onCreateTimeOverlap) {
       onCreateTimeOverlap();
       return;
     }
@@ -262,7 +302,7 @@ export function useTimeblockWriteMutations(options: UseTimeblockWriteMutationsOp
   };
 
   const reportUpdateError = (error: { message: string }, input: TimeblockOverlapUpdateInput) => {
-    if (isTimeOverlapError(error) && onUpdateTimeOverlap) {
+    if (isTimeblockOverlapError(error) && onUpdateTimeOverlap) {
       onUpdateTimeOverlap(input);
       return;
     }

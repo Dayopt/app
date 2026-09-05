@@ -8,12 +8,12 @@ import { cn, Popover, PopoverContent, PopoverTrigger } from '@dayopt/components'
 
 import { MiniDayPreview } from './MiniDayPreview';
 import { TemplateContextMenu } from './TemplateContextMenu';
-import type { TemplateMock } from './types';
+import type { TemplateView } from './types';
 
 type TemplateRowVisualState = 'idle' | 'applying' | 'dragging';
 
 interface TemplateRowProps {
-  template: TemplateMock;
+  template: TemplateView;
   /** クリック適用・ドラッグ中などの静的な視覚状態（Storybook 確認用） */
   visualState?: TemplateRowVisualState | undefined;
   onApply?: (() => void) | undefined;
@@ -129,7 +129,7 @@ export function TemplateRow({
         <TemplateContextMenu
           position={contextMenuPosition}
           onClose={() => setContextMenuPosition(null)}
-          onEdit={() => onEdit?.()}
+          onEdit={onEdit}
           onRename={handleStartRename}
           onDelete={() => onDelete?.()}
         />

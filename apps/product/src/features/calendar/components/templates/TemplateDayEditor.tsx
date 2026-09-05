@@ -7,11 +7,11 @@ import { AppHeader } from '@/components/shell/AppHeader';
 import { Button } from '@dayopt/components';
 
 import { MiniDayPreview } from './MiniDayPreview';
-import type { TemplateBlockMock } from './types';
+import type { TemplateBlockView } from './types';
 
 interface TemplateDayEditorProps {
   templateName: string;
-  blocks: ReadonlyArray<TemplateBlockMock>;
+  blocks: ReadonlyArray<TemplateBlockView>;
   /** 上書き保存時に出す差分一行。null なら未保存（差分なし）の状態 */
   savedDiffSummary?: string | null | undefined;
   onSave?: (() => void) | undefined;

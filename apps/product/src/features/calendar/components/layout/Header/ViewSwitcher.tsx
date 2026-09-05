@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, LayoutTemplate } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCalendarSettings } from '@/features/calendar/hooks/useCalendarSettings';
@@ -29,6 +29,13 @@ interface ViewSwitcherProps {
   currentView: CalendarViewType;
   onChange: (view: CalendarViewType) => void;
   onSettingsChange?: ((settings: Partial<UserSettings>) => void) | undefined;
+  /**
+   * 「この並びを型として保存」（#2567）。表示中の日の盤面を型にする導線で、
+   * 保存対象の日が一意に決まる日ビューでだけ出す。渡さなければ項目自体が出ない。
+   */
+  onSaveAsTemplate?: (() => void) | undefined;
+  /** 保存できる並びが無い（空の日）時に項目を無効化する */
+  saveAsTemplateDisabled?: boolean | undefined;
   className?: string;
 }
 
@@ -62,6 +69,8 @@ export function ViewSwitcher({
   currentView,
   onChange,
   onSettingsChange,
+  onSaveAsTemplate,
+  saveAsTemplateDisabled = false,
   className,
 }: ViewSwitcherProps) {
   const t = useTranslations();
@@ -239,6 +248,20 @@ export function ViewSwitcher({
             {t(`calendar.views.density_${d}`)}
           </DropdownMenuCheckboxItem>
         ))}
+
+        {onSaveAsTemplate && currentView === 'day' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onSaveAsTemplate}
+              disabled={saveAsTemplateDisabled}
+              className="gap-2"
+            >
+              <LayoutTemplate className="size-4" />
+              {t('calendar.templates.saveEntryLabel')}
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => useShellStore.getState().openSettings('display')}>

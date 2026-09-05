@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const pathnameMock = vi.hoisted(() => vi.fn(() => '/calendar'));
@@ -12,18 +12,71 @@ vi.mock('@dayopt/i18n/navigation', () => ({
   ),
 }));
 
+const applyMutate = vi.hoisted(() => vi.fn());
+/** 適用 mutation の実行中フラグ。連打ガードの検証で切り替える */
+const applyState = vi.hoisted(() => ({ isPending: false }));
+const templateRows = vi.hoisted(() => [
+  {
+    id: 'template-1',
+    name: '朝のルーティン',
+    blocks: [
+      {
+        id: 'block-1',
+        activityId: null,
+        title: '集中',
+        anchorMinute: 540,
+        previewDurationMinutes: 60,
+      },
+    ],
+  },
+]);
+
 vi.mock('@/features/calendar', () => ({
   resolveWorkspaceTab: (pathname: string) =>
     pathname === '/calendar' ? 'calendar' : pathname === '/report' ? 'report' : 'other',
   formatCalendarDateParam: () => '2026-03-25',
   useCalendarNavigation: () => null,
+  // カレンダーが表示中の日（壁時計 Date）。テンプレート適用の宛先になる
+  useCalendarNavigationStore: (selector: (state: { viewedDate: Date }) => unknown) =>
+    selector({ viewedDate: new Date(2026, 2, 25) }),
+  toTemplateView: (template: { id: string; name: string }) => ({ ...template, blocks: [] }),
   ActivityFilterList: ({
     betweenCategoriesAndUncategorized,
   }: {
     betweenCategoriesAndUncategorized?: React.ReactNode;
   }) => <div data-testid="activity-filter-list">{betweenCategoriesAndUncategorized}</div>,
   ViewSwitcherList: () => <div data-testid="view-switcher-list" />,
-  TemplateList: () => <div data-testid="template-list" />,
+  TemplateList: ({
+    templates,
+    onApplyTemplate,
+  }: {
+    templates: ReadonlyArray<{ id: string; name: string }>;
+    onApplyTemplate?: (templateId: string) => void;
+  }) => (
+    <div data-testid="template-list">
+      {templates.map((template) => (
+        <button key={template.id} type="button" onClick={() => onApplyTemplate?.(template.id)}>
+          {template.name}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  api: { planTemplates: { list: { useQuery: () => ({ data: templateRows }) } } },
+}));
+
+vi.mock('@/features/activities', () => ({
+  useActivitiesMap: () => ({ getActivityById: () => undefined }),
+}));
+
+vi.mock('@/features/timeblock', () => ({
+  usePlanTemplateMutations: () => ({
+    applyToDay: { mutate: applyMutate, isPending: applyState.isPending },
+    renameTemplate: { mutate: vi.fn() },
+    deleteTemplate: { mutate: vi.fn() },
+  }),
 }));
 
 vi.mock('@/components/ui/inputs/mini-calendar', () => ({
@@ -43,6 +96,8 @@ import { SidebarContent } from './SidebarContent';
 
 describe('SidebarContent', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    applyState.isPending = false;
     pathnameMock.mockReturnValue('/calendar');
   });
 
@@ -76,6 +131,23 @@ describe('SidebarContent', () => {
     expect(screen.queryByTestId('template-list')).not.toBeInTheDocument();
     expect(screen.getByTestId('report-filter-list')).toBeInTheDocument();
     expect(screen.getByTestId('segment-list')).toBeInTheDocument();
+  });
+
+  it('取得したテンプレートを一覧へ渡し、クリックで表示中の日へ適用する（#2567）', () => {
+    render(<SidebarContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: '朝のルーティン' }));
+
+    expect(applyMutate).toHaveBeenCalledWith({ templateId: 'template-1', date: '2026-03-25' });
+  });
+
+  it('適用中はもう一度クリックしても送らない（2 通目は必ず重複で失敗し、巻き戻しが 1 通目を消す）', () => {
+    applyState.isPending = true;
+
+    render(<SidebarContent />);
+    fireEvent.click(screen.getByRole('button', { name: '朝のルーティン' }));
+
+    expect(applyMutate).not.toHaveBeenCalled();
   });
 
   it('falls back to CalendarSidebar on workspace-external paths (e.g. /settings)', () => {

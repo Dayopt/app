@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { TemplateList } from './TemplateList';
-import type { TemplateMock } from './types';
+import type { TemplateView } from './types';
 
 /**
  * サイドバーのテンプレート列（v1.0 §5.1）。カテゴリー分けを持たないフラットな一覧。
@@ -19,7 +19,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   return <div className="w-56">{children}</div>;
 }
 
-const templates: TemplateMock[] = [
+const templates: TemplateView[] = [
   {
     id: 't1',
     name: '朝のルーティン',
