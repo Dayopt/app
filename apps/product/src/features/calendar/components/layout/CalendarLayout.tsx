@@ -23,8 +23,8 @@ import { AppHeader } from '@/components/shell/AppHeader';
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 import { DateNavigator } from '@/components/ui/navigation/DateNavigator';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
-import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
 import { DateRangeDisplay } from './Header/DateRangeDisplay';

@@ -102,7 +102,11 @@ function ExecutionRow({
           style={{ backgroundColor: rowColor(row.color) }}
         />
 
-        <span className={cn('w-24 shrink-0 truncate text-xs', row.archived && 'opacity-50')}>
+        {/* 狭い面では名前と比率の欄を詰める（バーが潰れて長短が読めなくなるため）。
+            出す内容と計算は変えない — 幅だけをレスポンシブにする */}
+        <span
+          className={cn('w-18 shrink-0 truncate text-xs md:w-24', row.archived && 'opacity-50')}
+        >
           {name}
         </span>
 
@@ -131,7 +135,7 @@ function ExecutionRow({
         </span>
 
         {/* 過去予定が閾値未満の行では比率を作らない。0% や空文字ではなくダッシュ */}
-        <span className="text-muted-foreground w-14 shrink-0 text-right text-xs tabular-nums">
+        <span className="text-muted-foreground w-10 shrink-0 text-right text-xs tabular-nums md:w-14">
           {row.planRatioPercent === null
             ? t('planRatioUnavailable')
             : t('planRatio', { percent: row.planRatioPercent })}

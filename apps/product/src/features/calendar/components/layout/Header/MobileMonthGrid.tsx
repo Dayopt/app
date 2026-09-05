@@ -20,7 +20,7 @@ import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { cn } from '@dayopt/components';
 
-import { useSwipeGesture } from '../../../hooks/useSwipeGesture';
+import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture';
 
 /** 週の開始日に応じた曜日配列を回転 */
 function rotateWeekdays(weekdaysNarrow: string[], weekStartsOn: 0 | 1 | 6): string[] {

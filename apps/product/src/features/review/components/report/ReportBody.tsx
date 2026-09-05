@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo } from 'react';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
-import { useDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { Skeleton } from '@dayopt/components';
 
 import {
@@ -26,7 +25,6 @@ import { useActiveSegment } from '../../hooks/useActiveSegment';
 import { useReportPeriod } from '../../hooks/useReportPeriod';
 import { useReviewOpenedTracking } from '../../hooks/useReviewOpenedTracking';
 import { useSegments } from '../../hooks/useSegments';
-import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
 import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 import { AllocationChapter } from './chapters/AllocationChapter';
@@ -76,12 +74,10 @@ export function ReportBody({
 
   // 行・点から詳細パネルを開く。パネル本体は Composition Bridge が描く（review 本体に
   // tRPC query を持ち込むと、`/report` 以外から描いた時に context を要求してしまう）
-  const toggleDetail = useReportDetailStore((state) => state.toggle);
+  // 器（デスクトップのパネル / モバイルのシート）は Composition Bridge が選ぶので、
+  // 開く口はどの面でも常に渡す（#2582 まではモバイルに器が無く、slot の有無で塞いでいた）
+  const selectActivity = useReportDetailStore((state) => state.toggle);
   const closeDetail = useReportDetailStore((state) => state.close);
-  // 詳細パネルの器を持たない shell（モバイル。#2582 で足す）では、行・点に開く口を渡さない。
-  // 渡すと store だけが動いて画面は無反応になる
-  const canOpenDetail = useDomSlot(REPORT_DETAIL_SLOT_KEY) !== null;
-  const selectActivity = canOpenDetail ? toggleDetail : undefined;
 
   // 期間を移したら閉じる（仕様 §5）。別の期間の明細を開いたまま残さない
   useEffect(() => {

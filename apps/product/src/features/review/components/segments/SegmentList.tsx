@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
-import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import {
   Button,
   cn,
@@ -42,7 +41,6 @@ import { SegmentEditPopover } from './SegmentEditPopover';
 export function SegmentList() {
   const t = useTranslations('calendar.stats.review.segments');
   const tSidebar = useTranslations('report.sidebar');
-  const isMobile = useIsMobile();
   const { data: segments, isPending } = useSegments();
   const createSegment = useCreateSegment();
   const renameSegment = useRenameSegment();
@@ -58,7 +56,9 @@ export function SegmentList() {
   // 削除済みセグメントの縮退は hook が持つ（1 章・カテゴリーフィルタと同じ答えを使う）
   const { activeSegment } = useActiveSegment();
   const activeSegmentId = activeSegment?.id ?? null;
-  const rowHeight = isMobile ? 'min-h-11' : 'min-h-9';
+  // この一覧はデスクトップのサイドバー専用（モバイルは `ReportFilterChipRow` の Drawer が
+  // レンズ選択を持つ）。`useIsMobile()` はここでは恒真で false だったので分岐ごと落とした（#2582）
+  const rowHeight = 'min-h-9';
 
   return (
     <div className="flex flex-col gap-1 px-2">

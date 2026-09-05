@@ -8,13 +8,18 @@ import { useCalendarNavigation } from '@/features/calendar';
 import {
   ConnectedReportDetailPanel,
   ReportBody,
+  ReportFilterChipRow,
   ReportHeader,
+  ReportMobileHeader,
   resolveReportRange,
   shiftReportAnchor,
   todayReportAnchor,
   type ReportGranularity,
 } from '@/features/review';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useSwipeGesture } from '@/lib/hooks/useSwipeGesture';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { Button, Skeleton } from '@dayopt/components';
@@ -53,6 +58,12 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
   const weekStartsOn = useUserPreferences((s) => s.weekStartsOn);
   const sidebar = useShellStore.use.sidebar();
   const toggleSidebar = useShellStore.use.toggleSidebar();
+  // 器（ヘッダー・フィルタ・詳細）の選択。モバイルの shell は Sidebar も詳細 slot も持たない。
+  // **判定は shell（`BaseLayoutContent`）と同じ `MEDIA_QUERIES.mobile` にする** —
+  // `useIsMobile()` は「幅 かつ coarse pointer」なので、狭くしたデスクトップの窓では false に
+  // なる。器だけモバイル（slot 無し）・中身だけデスクトップ（portal 先が無い）に割れると、
+  // 行を押しても何も開かない面が生まれる（#2581 のクロスレビュー P2 と同じ壊れ方）
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   // Context は SSR では `?date=` を読めず（`window` が無い）「今日」で始まるため、
   // サーバーの HTML と client の初回描画がずれる。マウントまで骨組みを出して
@@ -94,6 +105,22 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
     },
     [anchorDate, router],
   );
+
+  /**
+   * モバイルの左右スワイプで前後の期間へ（仕様 §8）。
+   *
+   * しきい値は画面幅ベースの既定（40〜80px）ではなく 55px / 縦の 1.4 倍で固定する。
+   * `/report` は縦スクロールが主で、章をなぞる指が期間を飛ばすと数字が黙って入れ替わる。
+   * 移動は `handleNavigate` 経由 = `navigateToDate`（`navigateRelative` はカレンダーの
+   * viewType 基準なのでレポートの粒度と食い違う）。
+   */
+  const swipeNext = useCallback(() => handleNavigate('next'), [handleNavigate]);
+  const swipePrev = useCallback(() => handleNavigate('prev'), [handleNavigate]);
+  const { handlers: swipeHandlers, ref: swipeRef } = useSwipeGesture(swipeNext, swipePrev, {
+    threshold: 55,
+    directionRatio: 1.4,
+    disabled: !isMobile,
+  });
 
   // Sidebar は desktop 専用。閉じている時だけトグルを出す（shell の実装と同じ条件）。
   const sidebarToggle = !sidebar.open ? (
@@ -144,30 +171,53 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
     );
   }
 
+  const periodStart = parseAnchorToLocalDate(range.buckets[0]?.key ?? anchorDate);
+  const periodEnd = parseAnchorToLocalDate(
+    range.buckets[range.buckets.length - 1]?.key ?? anchorDate,
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <ReportHeader
-        periodStart={parseAnchorToLocalDate(range.buckets[0]?.key ?? anchorDate)}
-        periodEnd={parseAnchorToLocalDate(
-          range.buckets[range.buckets.length - 1]?.key ?? anchorDate,
-        )}
-        granularity={granularity}
-        weekStartsOn={weekStartsOn}
-        onNavigate={handleNavigate}
-        onGranularityChange={handleGranularityChange}
-        leftSlot={sidebarToggle}
-        rightSlot={mobileActions}
-      />
+      {isMobile ? (
+        <>
+          <ReportMobileHeader
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+            granularity={granularity}
+            weekStartsOn={weekStartsOn}
+            onNavigate={handleNavigate}
+            rightSlot={mobileActions}
+          />
+          {/* サイドバーを持たない面のフィルタとレンズ。読み書きは同じ store */}
+          <ReportFilterChipRow />
+        </>
+      ) : (
+        <ReportHeader
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          granularity={granularity}
+          weekStartsOn={weekStartsOn}
+          onNavigate={handleNavigate}
+          onGranularityChange={handleGranularityChange}
+          leftSlot={sidebarToggle}
+          rightSlot={mobileActions}
+        />
+      )}
 
-      {/* 詳細パネル本体は shell の 4 カラム目へ portal される（#2581）。
-          review 本体に tRPC query を持ち込まないため、ここから描く */}
+      {/* 詳細の器はここが選ぶ（デスクトップ = shell の 4 カラム目へ portal / モバイル =
+          ボトムシート）。review 本体に tRPC query を持ち込まないため、ここから描く */}
       <ConnectedReportDetailPanel
         anchorDate={anchorDate}
         granularity={granularity}
         onOpenCalendarDay={jump.onJumpToDay}
+        surface={isMobile ? 'sheet' : 'panel'}
       />
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto"
+        ref={swipeRef as React.RefObject<HTMLDivElement>}
+        {...swipeHandlers}
+      >
         <ReportBody
           anchorDate={anchorDate}
           granularity={granularity}
