@@ -929,6 +929,105 @@ describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（#2359）
   });
 });
 
+// symlink 経由の別名で保護境界が外れないこと（2026-09-05, #2566）。
+//
+// 保護判定（.env 系 / 既存 migration / local dev env-file）が **生の file_path の
+// 文字列一致**だった頃は、`ln -s .env tmp/foo` のように保護対象を指す symlink を
+// 1 本置けば、basename が `.env` で終わらないので判定を素通りし、書き込みは実体の
+// `.env` へ着地した。`.env` / `.env.local` は AGENTS.md §Non-Negotiables で
+// 「読みも書きもしない」と定めた境界で、その機械強制が symlink 1 本で外れていた。
+//
+// fixture は worktree 境界ガードを通すために git repo として作る（repo 外への
+// Write は worktree 境界の側で落ちてしまい、保護判定を証明できないため）。
+// 「無関係な symlink は allow のまま」も併せて固定し、誤検知が増えていないことを示す。
+describe('pre-tool-guard.mjs: symlink 経由の保護ファイル判定（#2566）', () => {
+  let fixtureRoot: string;
+  let repoDir: string;
+  let migrationPath: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-symlink-'));
+    repoDir = join(fixtureRoot, 'repo');
+    mkdirSync(repoDir);
+    git(['init', '-q', '.'], repoDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      repoDir,
+    );
+
+    // 実体（保護対象）
+    writeFileSync(join(repoDir, '.env'), 'SECRET=1\n');
+    writeFileSync(join(repoDir, '.env.local'), 'SECRET=2\n');
+    writeFileSync(join(repoDir, AGENT), '');
+    writeFileSync(join(repoDir, 'notes.md'), '');
+    mkdirSync(join(repoDir, 'supabase', 'migrations'), { recursive: true });
+    migrationPath = join(repoDir, 'supabase', 'migrations', '20260101000000_init.sql');
+    writeFileSync(migrationPath, 'select 1;\n');
+
+    // 保護対象を指す別名（basename からは保護対象と分からない形）
+    mkdirSync(join(repoDir, 'tmp'));
+    symlinkSync(join(repoDir, '.env'), join(repoDir, 'tmp', 'alias-a'), 'file');
+    symlinkSync(join(repoDir, '.env.local'), join(repoDir, 'tmp', 'alias-b'), 'file');
+    symlinkSync(join(repoDir, AGENT), join(repoDir, 'tmp', 'alias-c'), 'file');
+    symlinkSync(migrationPath, join(repoDir, 'tmp', 'alias-d'), 'file');
+    symlinkSync(join(repoDir, 'notes.md'), join(repoDir, 'tmp', 'alias-e'), 'file');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('直接 path での .env / .env.local への Write は従来どおり block（回帰確認）', () => {
+    expect(runGuard(write(join(repoDir, '.env')), repoDir)).toBe('block');
+    expect(runGuard(write(join(repoDir, '.env.local')), repoDir)).toBe('block');
+  });
+
+  it('.env を指す symlink への Write を block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-a')), repoDir)).toBe('block');
+  });
+
+  it('.env.local を指す symlink への Write を block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-b')), repoDir)).toBe('block');
+  });
+
+  it('.env を指す symlink への Edit / MultiEdit / NotebookEdit も block する', () => {
+    const alias = join(repoDir, 'tmp', 'alias-a');
+    expect(runGuard(edit(alias), repoDir)).toBe('block');
+    expect(runGuard(multiEdit(alias, ['x']), repoDir)).toBe('block');
+    expect(runGuard(notebookEdit(alias, 'x'), repoDir)).toBe('block');
+  });
+
+  it('local dev env-file を指す symlink でも許可外 vault の op:// 参照は block する', () => {
+    const alias = join(repoDir, 'tmp', 'alias-c');
+    // 直接 path と同じ挙動になること（許可 vault なら通り、production 参照なら落ちる）
+    expect(runGuard(write(alias, `A=${AGENT_REF}\n`), repoDir)).toBe('allow');
+    expect(runGuard(write(alias, `A=${PROD_REF}\n`), repoDir)).toBe('block');
+  });
+
+  it('既存 migration を指す symlink への Write も block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-d')), repoDir)).toBe('block');
+  });
+
+  it('保護対象でないファイルを指す symlink は allow のまま（誤検知を増やしていない）', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-e')), repoDir)).toBe('allow');
+  });
+
+  it('symlink でない通常ファイルへの Write は allow のまま', () => {
+    expect(runGuard(write(join(repoDir, 'notes.md')), repoDir)).toBe('allow');
+    expect(runGuard(write(join(repoDir, 'new', 'nested', 'foo.ts')), repoDir)).toBe('allow');
+  });
+});
+
 // nested 配置（このリポジトリの実際の運用: worktree は main の配下の
 // `.claude/worktrees/<name>` に nested される）専用の fixture。
 // merge 前クロスレビュー risk-reviewer 指摘: sibling 配置の fixture（上の

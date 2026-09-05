@@ -220,9 +220,36 @@ function containsTraversal(p) {
   return p.includes('/../') || p.endsWith('/..');
 }
 
-/** worktree 外ファイル編集ガード（#2359）。 */
+/**
+ * symlink を解決した「実体の path」を返す（loader の `canonicalPath()` と同じ形）。
+ *
+ * 保護判定を **生の file_path の文字列一致**で行うと、`/repo/tmp/foo` が `/repo/.env`
+ * を指す symlink の場合に basename が `.env` で終わらないので素通りし、実体として
+ * `.env` が上書きされる（#2566）。書き込みが着地するのは実体側なので、判定も実体で行う。
+ *
+ * 未作成の file でも比較できるよう、target 自身の realpath に失敗したら親ディレクトリ
+ * だけ解決して basename を繋ぐ（新規作成の Write を巻き込まないため）。
+ */
+function canonicalFilePath(filePath, cwd) {
+  if (!filePath) return '';
+  const abs = path.isAbsolute(filePath) ? filePath : path.join(cwd, filePath);
+  try {
+    return fs.realpathSync(abs);
+  } catch {
+    const resolvedDir = resolvePhysicalPath(path.dirname(abs), cwd);
+    return resolvedDir ? path.join(resolvedDir, path.basename(abs)) : filePath;
+  }
+}
+
+/**
+ * worktree 外ファイル編集ガード（#2359）。
+ *
+ * 正規化後の path を返す。呼び出し元（`checkWriteGuards`）はこれを保護判定へ渡す
+ * （#2566。以前は normalized を捨てて生の filePath を渡していたため、worktree 境界だけ
+ * symlink を解決し、`.env` / migration の判定は解決しないという非対称があった）。
+ */
 function checkWorktreeBoundary(filePath, cwd, execFileImpl) {
-  if (!filePath) return;
+  if (!filePath) return '';
   if (!isAbsoluteFilePath(filePath)) {
     block(`BLOCKED: file_path が絶対パスではありません: ${filePath}`);
   }
@@ -230,10 +257,7 @@ function checkWorktreeBoundary(filePath, cwd, execFileImpl) {
     block(`BLOCKED: file_path に .. が含まれています（traversal は許可しません）: ${filePath}`);
   }
 
-  const dirPart = path.dirname(filePath);
-  const basePart = path.basename(filePath);
-  const resolvedDir = resolvePhysicalPath(dirPart, cwd);
-  const normalized = resolvedDir ? path.join(resolvedDir, basePart) : filePath;
+  const normalized = canonicalFilePath(filePath, cwd);
 
   const roots = resolveRoots(cwd, execFileImpl);
   if (roots && !pathBelongsToCurrentRoot(normalized, roots)) {
@@ -242,6 +266,8 @@ function checkWorktreeBoundary(filePath, cwd, execFileImpl) {
     );
   }
   // roots が解決できない場合は fail-open（Write/Edit は高頻度操作のため）。
+
+  return normalized;
 }
 
 /** .env / .env.* / .envrc への書き込み全面禁止。 */
@@ -300,15 +326,30 @@ function extractWrittenText(root) {
   return parts.join('\n');
 }
 
-/** Write/Edit/MultiEdit/NotebookEdit の保護ファイル判定一式。 */
+/**
+ * Write/Edit/MultiEdit/NotebookEdit の保護ファイル判定一式。
+ *
+ * **判定はすべて正規化後の path（symlink 解決済み）で行う**（#2566）。書き込みが
+ * 着地するのは symlink の実体側なので、生の file_path の文字列一致で判定すると
+ * `ln -s .env tmp/foo` のような別名 1 本で保護境界が外れる。
+ *
+ * `checkBashGuards` 側の `--env-file` 判定（`checkEnvFileContents`）は
+ * `ALLOWED_ENV_FILE_ALTERNATION` の allowlist 方式で、許可された名前でなければ
+ * そもそも op run に渡せない。任意名の symlink では通らないため、こちらは
+ * 正規化を足していない（#2566 の「同じ非対称が他に無いか」への回答）。
+ */
 function checkWriteGuards(filePath, root, cwd, execFileImpl) {
-  checkWorktreeBoundary(filePath, cwd, execFileImpl);
+  const targetPath = checkWorktreeBoundary(filePath, cwd, execFileImpl) || filePath;
 
-  if (isProtectedEnvFilePath(filePath)) {
-    block('BLOCKED: .env系ファイルへの書き込みは禁止です');
+  if (isProtectedEnvFilePath(targetPath)) {
+    block(
+      targetPath === filePath
+        ? 'BLOCKED: .env系ファイルへの書き込みは禁止です'
+        : `BLOCKED: .env系ファイルへの書き込みは禁止です（${filePath} は ${targetPath} を指しています）`,
+    );
   }
 
-  if (isLocalDevEnvFilePath(filePath)) {
+  if (isLocalDevEnvFilePath(targetPath)) {
     const written = extractWrittenText(root);
     const badVaults = disallowedVaultRefs(written);
     if (badVaults.length > 0) {
@@ -318,9 +359,11 @@ function checkWriteGuards(filePath, root, cwd, execFileImpl) {
     }
   }
 
-  if (isExistingMigrationSqlPath(filePath) && isRegularFile(filePath)) {
+  if (isExistingMigrationSqlPath(targetPath) && isRegularFile(targetPath)) {
     block(
-      'BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください',
+      targetPath === filePath
+        ? 'BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください'
+        : `BLOCKED: 既存マイグレーションファイルの変更は禁止です。新しいマイグレーションを作成してください（${filePath} は ${targetPath} を指しています）`,
     );
   }
 }
