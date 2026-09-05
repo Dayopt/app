@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { setDomSlot } from '@/lib/dom-slots/useDomSlot';
 
 import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
+import { ReportDetailBody } from './ReportDetailBody';
 import { ReportDetailPanel } from './ReportDetailPanel';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -150,3 +151,113 @@ export const Unassigned: Story = {
 export const Loading: Story = { args: { detail: undefined, isPending: true } };
 
 export const ErrorState: Story = { args: { detail: undefined, isError: true } };
+
+/**
+ * すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。
+ *
+ * 器（`ReportDetailPanel`）は shell の 1 つの slot へ portal するので、複数を並べると
+ * 同じ器に積み上がって読めない。並べるのは**中身**（`ReportDetailBody`）を器と同じ
+ * 250px 幅に置いたもの。器そのものの見え方は `Default` を見る。
+ */
+export const AllPatterns: Story = {
+  args: { detail: detail() },
+  render: function AllPatternsDetailPanel() {
+    const base = {
+      name: '執筆',
+      categoryName: '仕事',
+      color: 'blue',
+      granularity: 'week' as const,
+      timezone: 'Asia/Tokyo',
+      isError: false,
+      isPending: false,
+      onClose: () => {},
+      onOpenCalendarDay: () => {},
+      showTrend: true,
+    };
+    return (
+      <div className="flex flex-wrap items-start gap-6">
+        <Row label="通常">
+          <Panel>
+            <ReportDetailBody {...base} detail={detail()} />
+          </Panel>
+        </Row>
+        <Row label="推移なし（データのある期間が 2 未満）">
+          <Panel>
+            <ReportDetailBody
+              {...base}
+              detail={detail({
+                trend: [
+                  { key: 'a', recordedMinutes: 0 },
+                  { key: 'b', recordedMinutes: 0 },
+                  { key: 'c', recordedMinutes: 600 },
+                ],
+              })}
+            />
+          </Panel>
+        </Row>
+        <Row label="記録なし（中央値はダッシュ）">
+          <Panel>
+            <ReportDetailBody
+              {...base}
+              detail={detail({
+                recordedMinutes: 0,
+                medianBoxMinutes: null,
+                fulfillment: { low: 0, medium: 0, high: 0 },
+                timeOfDay: [0, 0, 0, 0, 0, 0],
+                records: [],
+                trend: [],
+              })}
+            />
+          </Panel>
+        </Row>
+        <Row label="予定が未消化（率を作らない）">
+          <Panel>
+            <ReportDetailBody
+              {...base}
+              detail={detail({ plannedPastMinutes: 0, plannedPastBoxes: 0, plannedMinutes: 240 })}
+            />
+          </Panel>
+        </Row>
+        <Row label="アクティビティ未設定">
+          <Panel>
+            <ReportDetailBody
+              {...base}
+              name={null}
+              categoryName={null}
+              color={null}
+              detail={detail()}
+            />
+          </Panel>
+        </Row>
+        <Row label="読み込み中">
+          <Panel>
+            <ReportDetailBody {...base} detail={undefined} isPending />
+          </Panel>
+        </Row>
+        <Row label="エラー">
+          <Panel>
+            <ReportDetailBody {...base} detail={undefined} isError />
+          </Panel>
+        </Row>
+      </div>
+    );
+  },
+};
+
+/** 本番の 4 カラム目と同じ幅の器。 */
+function Panel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="border-border-subtle flex h-[560px] w-64 flex-col gap-4 overflow-y-auto rounded-2xl border p-4">
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

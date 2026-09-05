@@ -81,3 +81,44 @@ export const NoWaiting: Story = { args: { points: POINTS, waitingActivities: [] 
 
 /** 記録も回答もまだ無い週。 */
 export const Empty: Story = { args: { points: [], waitingActivities: [] } };
+
+/** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
+export const AllPatterns: Story = {
+  args: { points: POINTS, waitingActivities: [] },
+  render: function AllPatternsQuality() {
+    const waiting = [
+      { activityId: 'act-gym', name: '運動' },
+      { activityId: 'act-chore', name: '家事' },
+    ];
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="通常（点 + 待機）">
+          <QualityChapter points={POINTS} waitingActivities={waiting} />
+        </Row>
+        <Row label="回答が閾値未満で点が無い（盤は黙る）">
+          <QualityChapter points={[]} waitingActivities={waiting} />
+        </Row>
+        <Row label="待機がいない（footnote だけ）">
+          <QualityChapter points={POINTS} waitingActivities={[]} />
+        </Row>
+        <Row label="記録も回答も無い">
+          <QualityChapter points={[]} waitingActivities={[]} />
+        </Row>
+        <Row label="狭い面（320px）">
+          <div className="w-[320px]">
+            <QualityChapter points={POINTS} waitingActivities={waiting} />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

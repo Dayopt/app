@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  computeAvailableMinutesInclusive,
   computeBlankRate,
   computeContextSwitches,
-  groupEnergyMap,
   groupHoursByDay,
   groupHoursByMonth,
   groupMinutesByDow,
@@ -78,17 +76,6 @@ describe('groupHoursByMonth', () => {
   });
 });
 
-describe('groupEnergyMap', () => {
-  it('(hour, dow) ごとに合計分・件数を集計する', () => {
-    const rows = [
-      { start_at: '2026-07-01T00:00:00Z', end_at: '2026-07-01T00:30:00Z' },
-      { start_at: '2026-07-01T00:10:00Z', end_at: '2026-07-01T00:40:00Z' },
-    ];
-    const result = groupEnergyMap(rows, TZ);
-    expect(result).toEqual([{ hour: 9, dow: 3, totalMinutes: 60, recordCount: 2 }]);
-  });
-});
-
 describe('computeContextSwitches', () => {
   it('同一日内でタグが変わるたびに switch を数える', () => {
     const rows = [
@@ -150,29 +137,5 @@ describe('computeBlankRate', () => {
       sleepHour: 23,
     });
     expect(result.blankMinutes).toBe(0);
-  });
-});
-
-describe('computeAvailableMinutesInclusive', () => {
-  it('start/end が同日なら 1 日分を返す', () => {
-    const result = computeAvailableMinutesInclusive({
-      startDate: '2026-07-01T00:00:00Z',
-      endDate: '2026-07-01T12:00:00Z',
-      wakeHour: 7,
-      sleepHour: 23,
-      timezone: 'UTC',
-    });
-    expect(result).toBe((23 - 7) * 60);
-  });
-
-  it('start/end が 3 日分なら inclusive に 3 日分を返す', () => {
-    const result = computeAvailableMinutesInclusive({
-      startDate: '2026-07-01T00:00:00Z',
-      endDate: '2026-07-03T23:00:00Z',
-      wakeHour: 7,
-      sleepHour: 23,
-      timezone: 'UTC',
-    });
-    expect(result).toBe((23 - 7) * 60 * 3);
   });
 });

@@ -69,6 +69,50 @@ export const NarrowScreen: Story = {
   ],
 };
 
+/**
+ * すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。
+ *
+ * チップの状態は**グローバルな `useReportViewStore` 1 つ**から来るので、1 Story の中で
+ * 別々の状態を並べることはできない。代わりに 1 つの状態へ全パターンを同居させる:
+ * 可視（仕事）/ 非可視（睡眠・未分類は `opacity-40`）/ 無効（レンズ中の余白）/
+ * 選択中のレンズ名が載った束チップ。下段は同じ状態を 320px 幅で見る。
+ */
+export const AllPatterns: Story = {
+  parameters: {
+    storeMocks: {
+      useReportViewStore: {
+        hiddenCategoryIds: ['cat-sleep'],
+        uncategorizedHidden: true,
+        marginHidden: false,
+        segmentId: 'seg-1',
+      },
+    },
+  },
+  render: function AllPatternsChipRow() {
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="可視 / 非可視 / 無効（レンズ中の余白）/ レンズ選択中">
+          <ReportFilterChipRow />
+        </Row>
+        <Row label="最小幅（320px）">
+          <div className="w-[320px]">
+            <ReportFilterChipRow />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground px-4 text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}
+
 /** サーバーの `activities.listTree` と同じ形。 */
 function MOCK_TREE() {
   const timestamps = {

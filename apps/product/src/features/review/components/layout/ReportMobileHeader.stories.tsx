@@ -61,3 +61,54 @@ export const NarrowScreen: Story = {
     ),
   ],
 };
+
+/** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
+export const AllPatterns: Story = {
+  args: BASE_ARGS,
+  render: function AllPatternsMobileHeader() {
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="週（粒度切替は出さない）">
+          <ReportMobileHeader {...BASE_ARGS} />
+        </Row>
+        <Row label="月（URL の粒度を尊重）">
+          <ReportMobileHeader
+            {...BASE_ARGS}
+            granularity="month"
+            periodStart={new Date(2026, 8, 1)}
+            periodEnd={new Date(2026, 8, 30)}
+          />
+        </Row>
+        <Row label="年">
+          <ReportMobileHeader
+            {...BASE_ARGS}
+            granularity="year"
+            periodStart={new Date(2026, 0, 1)}
+            periodEnd={new Date(2026, 11, 31)}
+          />
+        </Row>
+        <Row label="年をまたぐ週">
+          <ReportMobileHeader
+            {...BASE_ARGS}
+            periodStart={new Date(2026, 11, 28)}
+            periodEnd={new Date(2027, 0, 3)}
+          />
+        </Row>
+        <Row label="最小幅（320px）">
+          <div className="w-[320px]">
+            <ReportMobileHeader {...BASE_ARGS} />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

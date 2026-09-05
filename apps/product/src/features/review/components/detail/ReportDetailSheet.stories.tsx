@@ -1,3 +1,4 @@
+import { ReportDetailBody } from './ReportDetailBody';
 import { ReportDetailSheet } from './ReportDetailSheet';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -103,3 +104,84 @@ export const NarrowScreen: Story = {
 export const Loading: Story = { args: { detail: undefined, isPending: true } };
 
 export const ErrorState: Story = { args: { detail: undefined, isError: true } };
+
+/**
+ * すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。
+ *
+ * 器（`Drawer`）は画面に固定されるので複数を同時に開けない。並べるのは**中身**
+ * （`ReportDetailBody`、`showTrend={false}`）をシートと同じ幅に置いたもの。
+ */
+export const AllPatterns: Story = {
+  args: { detail: detail() },
+  render: function AllPatternsDetailSheet() {
+    const base = {
+      name: '執筆',
+      categoryName: '仕事',
+      color: 'blue',
+      granularity: 'week' as const,
+      timezone: 'Asia/Tokyo',
+      isError: false,
+      isPending: false,
+      onClose: () => {},
+      onOpenCalendarDay: () => {},
+      showTrend: false,
+    };
+    return (
+      <div className="flex flex-wrap items-start gap-6 p-4">
+        <Row label="通常（推移は出さない）">
+          <Sheet>
+            <ReportDetailBody {...base} detail={detail()} />
+          </Sheet>
+        </Row>
+        <Row label="記録なし">
+          <Sheet>
+            <ReportDetailBody
+              {...base}
+              detail={detail({
+                recordedMinutes: 0,
+                medianBoxMinutes: null,
+                fulfillment: { low: 0, medium: 0, high: 0 },
+                timeOfDay: [0, 0, 0, 0, 0, 0],
+                records: [],
+                trend: [],
+              })}
+            />
+          </Sheet>
+        </Row>
+        <Row label="最小幅（320px）">
+          <div className="bg-card border-border-subtle flex w-[320px] flex-col gap-4 rounded-2xl border p-4">
+            <ReportDetailBody {...base} detail={detail()} />
+          </div>
+        </Row>
+        <Row label="読み込み中">
+          <Sheet>
+            <ReportDetailBody {...base} detail={undefined} isPending />
+          </Sheet>
+        </Row>
+        <Row label="エラー">
+          <Sheet>
+            <ReportDetailBody {...base} detail={undefined} isError />
+          </Sheet>
+        </Row>
+      </div>
+    );
+  },
+};
+
+/** 本番のボトムシートと同じ幅の器。 */
+function Sheet({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-card border-border-subtle flex w-[375px] flex-col gap-4 rounded-2xl border p-4">
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

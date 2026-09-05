@@ -15,8 +15,8 @@ import 'server-only';
  * 公開 API は facade（このファイル）。実装はドメイン単位の service に分割されている:
  * - General（タグ別統計・時間帯分布・トレンド）: statistics-general-service.ts
  * - KPI（見積もり精度・空白率）: statistics-kpi-service.ts
- * - Summary（streak / KPI サマリー / Time P/L / Review panel 統合データ）: statistics-summary-service.ts
- * - 行取得: statistics-fetchers.ts / 行組み立て: statistics-row-builders.ts
+ * - Summary（streak / KPI サマリー）: statistics-summary-service.ts
+ * - 行取得: statistics-fetchers.ts / 集計の下ごしらえ: statistics-service-grouping.ts
  */
 
 import { StatisticsFeedforwardService } from './statistics-feedforward-service';
@@ -24,11 +24,6 @@ import type { DateRangeInput } from './statistics-fetchers';
 import { StatisticsGeneralService } from './statistics-general-service';
 import type { BlankRateInput } from './statistics-kpi-service';
 import { StatisticsKpiService } from './statistics-kpi-service';
-import type {
-  SegmentTotalsInput,
-  StatsPageDataInput,
-  TimePLInput,
-} from './statistics-summary-service';
 import { StatisticsSummaryService } from './statistics-summary-service';
 import type { ServiceSupabaseClient } from './types';
 
@@ -42,7 +37,7 @@ export class StatisticsService {
     this.feedforwardService = new StatisticsFeedforwardService(supabase);
     this.generalService = new StatisticsGeneralService(supabase);
     this.kpiService = new StatisticsKpiService(supabase);
-    this.summaryService = new StatisticsSummaryService(supabase, this.kpiService);
+    this.summaryService = new StatisticsSummaryService(supabase);
   }
 
   // ---------------------------------------------------------------------------
@@ -100,7 +95,7 @@ export class StatisticsService {
   }
 
   // ---------------------------------------------------------------------------
-  // Summary: streak / KPI サマリー / Time P/L / Review panel 統合データ
+  // Summary: streak / KPI サマリー
   // ---------------------------------------------------------------------------
 
   /** `get_active_dates` 相当。実績（records）が存在する日付（tz basis）の一覧。 */
@@ -111,20 +106,5 @@ export class StatisticsService {
   /** `get_stats_kpi_summary` 相当。 */
   async getStatsOverview(userId: string, input: BlankRateInput) {
     return this.summaryService.getStatsOverview(userId, input);
-  }
-
-  /** `get_time_pl_data` 相当。タグ別の予実（budget/actual）+ 日次ポイント。 */
-  async getTimePLData(userId: string, input: TimePLInput) {
-    return this.summaryService.getTimePLData(userId, input);
-  }
-
-  /** `get_stats_page_data` 相当。Review panel 用データを一括構築する。 */
-  async getStatsPageData(userId: string, input: StatsPageDataInput) {
-    return this.summaryService.getStatsPageData(userId, input);
-  }
-
-  /** セグメント別の予実合計 + 直前期間との比較（#2181 Step 5）。 */
-  async getSegmentTotals(userId: string, input: SegmentTotalsInput) {
-    return this.summaryService.getSegmentTotals(userId, input);
   }
 }
