@@ -11,8 +11,12 @@ import {
   transformEstimationAccuracy,
 } from '../domain';
 
-import type { ActivityLookupRow, CategoryLookupRow } from './statistics-activity-axis-builders';
-import type { DateRangeInput, StatPlanRow } from './statistics-fetchers';
+import type {
+  ActivityLookupRow,
+  CategoryLookupRow,
+  DateRangeInput,
+  StatPlanRow,
+} from './statistics-fetchers';
 import {
   fetchActivitiesById,
   fetchCategoriesById,

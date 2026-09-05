@@ -13,7 +13,6 @@
  * - groupHoursByMonth    → get_monthly_hours
  * - computeBlankRate     → get_blank_rate
  * - computeContextSwitches → get_stats_kpi_summary / get_stats_page_data の contextSwitches CTE
- * - groupEnergyMap       → get_stats_page_data の energy_map CTE
  */
 
 import { formatInTimeZone } from 'date-fns-tz';
@@ -99,46 +98,6 @@ export function groupHoursByMonth(
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
-/** `get_stats_page_data` の energy_map CTE 相当: (hour, dow) 別の合計分・件数。 */
-export function groupEnergyMap(
-  rows: ReadonlyArray<TimeRangeRow>,
-  timezone: string,
-): Array<{
-  hour: number;
-  dow: number;
-  totalMinutes: number;
-  recordCount: number;
-}> {
-  interface Bucket {
-    hour: number;
-    dow: number;
-    totalMinutes: number;
-    recordCount: number;
-  }
-  const buckets = new Map<string, Bucket>();
-  for (const row of rows) {
-    const date = new Date(row.start_at);
-    const hour = Number(formatInTimeZone(date, timezone, 'H'));
-    const dow = Number(formatInTimeZone(date, timezone, 'i')) % 7;
-    const key = `${hour}-${dow}`;
-    const bucket = buckets.get(key) ?? {
-      hour,
-      dow,
-      totalMinutes: 0,
-      recordCount: 0,
-    };
-    bucket.totalMinutes += minutesBetween(row.start_at, row.end_at);
-    bucket.recordCount += 1;
-    buckets.set(key, bucket);
-  }
-  return Array.from(buckets.values()).map((bucket) => ({
-    hour: bucket.hour,
-    dow: bucket.dow,
-    totalMinutes: bucket.totalMinutes,
-    recordCount: bucket.recordCount,
-  }));
-}
-
 /** `get_stats_kpi_summary` / `get_stats_page_data` の contextSwitches CTE 相当。 */
 export function computeContextSwitches(
   rows: ReadonlyArray<ActivityTimeRangeRow>,
@@ -198,36 +157,4 @@ export function computeBlankRate(
     blankMinutes,
     blankRate: availableMinutes > 0 ? blankMinutes / availableMinutes : 0,
   };
-}
-
-interface AvailableMinutesInclusiveInput {
-  startDate: string;
-  endDate: string;
-  wakeHour: number;
-  sleepHour: number;
-  timezone: string;
-  visibleDayCount?: number | undefined;
-}
-
-/** `get_time_pl_data` の available CTE 相当（tz 日付の inclusive 日数差）。 */
-export function computeAvailableMinutesInclusive({
-  startDate,
-  endDate,
-  wakeHour,
-  sleepHour,
-  timezone,
-  visibleDayCount,
-}: AvailableMinutesInclusiveInput): number {
-  const startDay = formatInTimeZone(new Date(startDate), timezone, 'yyyy-MM-dd');
-  const endDay = formatInTimeZone(new Date(endDate), timezone, 'yyyy-MM-dd');
-  const dayCount =
-    visibleDayCount ??
-    Math.round(
-      (new Date(`${endDay}T00:00:00Z`).getTime() - new Date(`${startDay}T00:00:00Z`).getTime()) /
-        86_400_000,
-    ) + 1;
-
-  const dailyMinutes =
-    sleepHour <= wakeHour ? (24 - wakeHour + sleepHour) * 60 : (sleepHour - wakeHour) * 60;
-  return Math.max(0, dailyMinutes * dayCount);
 }
