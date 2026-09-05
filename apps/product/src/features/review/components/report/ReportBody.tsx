@@ -29,6 +29,7 @@ import { useReportViewStore } from '../../stores/useReportViewStore';
 import { AllocationChapter } from './chapters/AllocationChapter';
 import { ExecutionChapter } from './chapters/ExecutionChapter';
 import { QualityChapter } from './chapters/QualityChapter';
+import { TidyChapter } from './chapters/TidyChapter';
 
 import type { ReportFilterState } from '../../domain/report/report-view-model';
 import type { ReportGranularity } from '../../lib/report-period';
@@ -36,19 +37,35 @@ import type { ReportGranularity } from '../../lib/report-period';
 interface ReportBodyProps {
   anchorDate: string;
   granularity: ReportGranularity;
+  /**
+   * 4 章からカレンダーへ飛ぶ 3 つの導線（仕様 §7）。
+   *
+   * **遷移そのものは review が持たない。** `useRouter` を本体で呼ぶと、`/report` 以外から
+   * 描かれた時（Storybook・単体 test）に intl / router context を要求してしまう。期間の解釈と
+   * 同じく、ルーティングは Composition Bridge（`ReportViewClient`）の仕事にする。
+   */
+  onJumpToRecord: (target: { id: string; dayKey: string }) => void;
+  onJumpToDay: (dayKey: string) => void;
+  onJumpToNextPeriod: () => void;
 }
 
 /**
  * `/report` の本体（1 スクロール構成）。
  *
  * 章は決まった順に並び、折りたたみ・並び替え・非表示は持たない（仕様 §0-1）。
- * 現在は 1〜3 章。4 章は後続の issue で足す。
+ * 4 章まで揃っている。
  *
  * フィルタ（カテゴリー / 未分類 / 余白）とセグメントレンズは `useReportViewStore`
  * （端末ローカル）から読む。派生はすべて client の純粋関数で、トグルのたびに
  * サーバーへ往復しない（#2576 の設計）。
  */
-export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
+export function ReportBody({
+  anchorDate,
+  granularity,
+  onJumpToDay,
+  onJumpToNextPeriod,
+  onJumpToRecord,
+}: ReportBodyProps) {
   const t = useTranslations('report.errors');
   useReviewOpenedTracking(true);
 
@@ -152,6 +169,24 @@ export function ReportBody({ anchorDate, granularity }: ReportBodyProps) {
       />
 
       <QualityChapter points={view.compassPoints} waitingActivities={view.waitingActivities} />
+
+      <TidyChapter
+        granularity={granularity}
+        nextPeriodPlannedMinutes={data.nextPeriodPlannedMinutes}
+        onOpenNextPeriod={onJumpToNextPeriod}
+        onReviewExternalEvents={() => {
+          // 件数が 0 ならボタン自体が出ないが、集計とジャンプ先は同じ query の結果なので
+          // 念のため null を握る（押した先に何も無い日を開かない）
+          if (data.firstUnconvertedExternalEvent === null) return;
+          onJumpToDay(data.firstUnconvertedExternalEvent.dayKey);
+        }}
+        onSortUncategorized={() => {
+          if (data.firstUncategorizedRecord === null) return;
+          onJumpToRecord(data.firstUncategorizedRecord);
+        }}
+        uncategorizedRecordCount={data.uncategorizedRecordCount}
+        unconvertedExternalEventCount={data.unconvertedExternalEventCount}
+      />
     </div>
   );
 }

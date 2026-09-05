@@ -92,6 +92,31 @@
       "waitingSeparator": "、",
       "footnote": "濃度＝回答数 · 点は回答 n≥{threshold} で生まれます"
     },
+    "tidy": {
+      "kick": "4 · 整える — そして来週へ",
+      "none": "なし",
+      "uncategorized": {
+        "label": "未分類の記録が {count} 件",
+        "action": "仕分ける"
+      },
+      "externalEvents": {
+        "label": "未確認の外部カレンダー予定が {count} 件",
+        "action": "確認する"
+      },
+      "nextPeriod": {
+        "planned": {
+          "week": "来週はすでに {duration} の箱が置かれています",
+          "month": "来月はすでに {duration} の箱が置かれています",
+          "year": "来年はすでに {duration} の箱が置かれています"
+        },
+        "empty": {
+          "week": "来週の箱はまだありません",
+          "month": "来月の箱はまだありません",
+          "year": "来年の箱はまだありません"
+        },
+        "action": "カレンダーで組む"
+      }
+    },
     "sidebar": {
       "categoriesHeading": "カテゴリー — 分母から出し入れ",
       "uncategorized": "未分類",

@@ -6,6 +6,7 @@ import {
   resolveNextReportRange,
   resolvePreviousReportRange,
   resolveReportRange,
+  resolveZonedDayKey,
   type ReportGranularity,
   type ReportWeekStartsOn,
 } from '../lib/report-period';
@@ -15,9 +16,11 @@ import {
   fetchReportCategories,
   fetchReportPlans,
   fetchReportRecords,
+  fetchReportUnconvertedExternalEvents,
   type ReportActivityRow,
   type ReportCategoryRow,
   type ReportFetchClient,
+  type ReportGhostEventRow,
   type ReportPlanRow,
   type ReportRecordRow,
 } from './report-fetchers';
@@ -95,6 +98,27 @@ export interface ReportPeriodResult {
   nextPeriodPlannedMinutes: number;
   /** 4 章「未分類の記録が N 件」。期間内の記録のうちカテゴリー未設定のもの。 */
   uncategorizedRecordCount: number;
+  /**
+   * 4 章「未確認の外部カレンダー予定が N 件」。**期間に限定しない**（仕様 §4.4）。
+   * 外部カレンダー未接続・選択なしなら 0。
+   *
+   * **Free / Pro の切れ目はここ。** カレンダー画面の ghost 表示（`externalCalendar.listEvents`）は
+   * `proProcedure` にある（#1962）。課金 enforcement を有効にする時（#1669 配下）、この件数も
+   * 同じゲートに揃える必要がある — 揃えないと「Pro を切ると ghost は見えないのに、レポートは
+   * 件数を出して押せる」非対称になる。enforcement が off の今は実害が無いので、切れ目の
+   * 明示だけに留める。
+   */
+  unconvertedExternalEventCount: number;
+  /** 4 章「仕分ける」のジャンプ先。期間内で最も早い未分類の記録。無ければ `null`。 */
+  firstUncategorizedRecord: ReportJumpTarget | null;
+  /** 4 章「確認する」のジャンプ先。最も早い未変換の外部予定。無ければ `null`。 */
+  firstUnconvertedExternalEvent: Omit<ReportJumpTarget, 'id'> | null;
+}
+
+/** カレンダーへのジャンプ先（4 章）。`dayKey` はユーザーの timezone での壁時計日付。 */
+interface ReportJumpTarget {
+  id: string;
+  dayKey: string;
 }
 
 /** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
@@ -152,19 +176,22 @@ export class ReportAggregationService {
     const nextRange = resolveNextReportRange(anchorDate, granularity, timezone, weekStartsOn);
     const nowAt = now.toISOString();
 
-    const [records, plans, previousRecords, nextPlans, activities, categories] = await Promise.all([
-      fetchReportRecords(this.supabase, userId, range),
-      fetchReportPlans(this.supabase, userId, range),
-      fetchReportRecords(this.supabase, userId, previousRange),
-      fetchReportPlans(this.supabase, userId, nextRange),
-      fetchReportActivities(this.supabase, userId),
-      fetchReportCategories(this.supabase, userId),
-    ]);
+    const [records, plans, previousRecords, nextPlans, activities, categories, ghostEvents] =
+      await Promise.all([
+        fetchReportRecords(this.supabase, userId, range),
+        fetchReportPlans(this.supabase, userId, range),
+        fetchReportRecords(this.supabase, userId, previousRange),
+        fetchReportPlans(this.supabase, userId, nextRange),
+        fetchReportActivities(this.supabase, userId),
+        fetchReportCategories(this.supabase, userId),
+        fetchReportUnconvertedExternalEvents(this.supabase, userId, now),
+      ]);
 
     const activityById = new Map(activities.map((row) => [row.id, row]));
     const categoryById = new Map(categories.map((row) => [row.id, row]));
 
     const states = this.buildStates(records, plans, range, now.getTime());
+    const uncategorizedRecords = this.selectUncategorizedRecords(records, activityById, range);
 
     return {
       period: {
@@ -188,7 +215,10 @@ export class ReportAggregationService {
           total + clipMinutes(plan.start_at, plan.end_at, nextRange.startAt, nextRange.endAt),
         0,
       ),
-      uncategorizedRecordCount: this.countUncategorizedRecords(records, activityById, range),
+      uncategorizedRecordCount: uncategorizedRecords.length,
+      unconvertedExternalEventCount: ghostEvents.length,
+      firstUncategorizedRecord: this.toFirstJumpTarget(uncategorizedRecords, timezone),
+      firstUnconvertedExternalEvent: this.toFirstGhostDay(ghostEvents, timezone),
     };
   }
 
@@ -294,16 +324,19 @@ export class ReportAggregationService {
   }
 
   /**
-   * 未分類の記録件数（4 章 1 行目）。
+   * 未分類の記録（4 章 1 行目）。
    *
    * アクティビティ未設定の記録も「カテゴリーが決まっていない記録」として数える。
    * 仕分けの導線が向かう先は同じ（記録を開いてアクティビティ / カテゴリーを付ける）。
+   *
+   * **件数とジャンプ先を同じ集合から出す。** 別々の query で数えると、「N 件」と
+   * 「最初の 1 件」が食い違って、押した先に何も無い日が開きうる。
    */
-  private countUncategorizedRecords(
+  private selectUncategorizedRecords(
     records: ReportRecordRow[],
     activityById: Map<string, ReportActivityRow>,
     range: { startAt: string; endAt: string },
-  ): number {
+  ): ReportRecordRow[] {
     return records.filter((record) => {
       // 期間へ clip すると長さ 0 になる行（境界に接するだけ・長さ 0 の記録）は数えない。
       // `recordBoxes` と件数がずれると、4 章の「N 件」を押した先に何も無い事故になる。
@@ -312,7 +345,38 @@ export class ReportAggregationService {
       }
       if (record.activity_id === null) return true;
       return activityById.get(record.activity_id)?.category_id == null;
-    }).length;
+    });
+  }
+
+  /** 最も早い記録をジャンプ先に選ぶ。`start_at` は文字列比較せず数値で比べる。 */
+  private toFirstJumpTarget(records: ReportRecordRow[], timezone: string): ReportJumpTarget | null {
+    const first = records.reduce<ReportRecordRow | null>(
+      (earliest, record) =>
+        earliest === null || Date.parse(record.start_at) < Date.parse(earliest.start_at)
+          ? record
+          : earliest,
+      null,
+    );
+
+    if (first === null) return null;
+    return { id: first.id, dayKey: resolveZonedDayKey(first.start_at, timezone) };
+  }
+
+  /** 最も早い未変換の外部予定の日。id は使わない（ghost を開く UI が無い）。 */
+  private toFirstGhostDay(
+    events: ReportGhostEventRow[],
+    timezone: string,
+  ): { dayKey: string } | null {
+    const first = events.reduce<ReportGhostEventRow | null>(
+      (earliest, event) =>
+        earliest === null || Date.parse(event.start_at) < Date.parse(earliest.start_at)
+          ? event
+          : earliest,
+      null,
+    );
+
+    if (first === null) return null;
+    return { dayKey: resolveZonedDayKey(first.start_at, timezone) };
   }
 }
 

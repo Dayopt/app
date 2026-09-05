@@ -27,6 +27,7 @@ export { ReportFilterList } from './components/sidebar/ReportFilterList';
 // =============================================================================
 export {
   isReportGranularity,
+  resolveNextPeriodStartDayKey,
   resolveReportRange,
   shiftReportAnchor,
   todayReportAnchor,

@@ -95,6 +95,16 @@ function toZonedDateKey(date: Date, timezone: string): string {
   return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
 }
 
+/**
+ * instant（UTC ISO）を、指定 timezone の壁時計日付キー（`YYYY-MM-DD`）へ。
+ *
+ * 4 章のジャンプ先（`/calendar?view=day&date=`）を組むのに使う。UTC のまま日付を切ると、
+ * 深夜の記録が前後の日へずれてカレンダーが「何も無い日」を開く。
+ */
+export function resolveZonedDayKey(instant: string, timezone: string): string {
+  return toZonedDateKey(new Date(instant), timezone);
+}
+
 /** `YYYY-MM-DD` を、TZ 非依存の壁時計 Date（ローカル正午）として読む。日付演算の足場にする。 */
 function parseDateKey(dateKey: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -124,6 +134,22 @@ function resolvePeriodStartDay(
     case 'year':
       return new Date(anchor.getFullYear(), 0, 1, 12, 0, 0, 0);
   }
+}
+
+/**
+ * 次の期間の初日（`YYYY-MM-DD`、ユーザーの壁時計日付）。
+ *
+ * 4 章「カレンダーで組む ›」のジャンプ先。週なら次週の開始曜日、月なら翌月 1 日、
+ * 年なら翌年 1 月 1 日。**年粒度の bucket キーは `YYYY-MM` なので流用できない**ため、
+ * 期間の先頭日を粒度ごとに解いて日付キーで返す。
+ */
+export function resolveNextPeriodStartDayKey(
+  anchorDate: string,
+  granularity: ReportGranularity,
+  weekStartsOn: ReportWeekStartsOn,
+): string {
+  const nextAnchor = parseDateKey(shiftReportAnchor(anchorDate, granularity, 1));
+  return formatDateKey(resolvePeriodStartDay(nextAnchor, granularity, weekStartsOn));
 }
 
 /** 期間の終端日（壁時計、含まない）を粒度ごとに求める。 */

@@ -92,6 +92,31 @@
       "waitingSeparator": ", ",
       "footnote": "Opacity = number of answers · a point appears at n≥{threshold}"
     },
+    "tidy": {
+      "kick": "4 · Tidy up — and on to next week",
+      "none": "None",
+      "uncategorized": {
+        "label": "{count, plural, one {# uncategorized record} other {# uncategorized records}}",
+        "action": "Sort them"
+      },
+      "externalEvents": {
+        "label": "{count, plural, one {# external calendar event not reviewed} other {# external calendar events not reviewed}}",
+        "action": "Review them"
+      },
+      "nextPeriod": {
+        "planned": {
+          "week": "Next week already holds {duration} of boxes",
+          "month": "Next month already holds {duration} of boxes",
+          "year": "Next year already holds {duration} of boxes"
+        },
+        "empty": {
+          "week": "No boxes for next week yet",
+          "month": "No boxes for next month yet",
+          "year": "No boxes for next year yet"
+        },
+        "action": "Open the calendar"
+      }
+    },
     "sidebar": {
       "categoriesHeading": "Categories — add to or remove from the denominator",
       "uncategorized": "Uncategorized",
