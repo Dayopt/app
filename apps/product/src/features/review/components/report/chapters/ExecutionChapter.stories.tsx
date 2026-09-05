@@ -137,3 +137,47 @@ export const ManyRows: Story = {
     mirrorRows: MIRROR_ROWS,
   },
 };
+
+/** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
+export const AllPatterns: Story = {
+  args: { granularity: 'week', rows: ROWS, mirrorRows: MIRROR_ROWS },
+  render: function AllPatternsExecution() {
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="通常（鏡 3 件）">
+          <ExecutionChapter granularity="week" rows={ROWS} mirrorRows={MIRROR_ROWS} />
+        </Row>
+        <Row label="鏡が 1 件だけ">
+          <ExecutionChapter
+            granularity="week"
+            rows={ROWS}
+            mirrorRows={[MIRROR_ROWS[0] as ReportMirrorRow]}
+          />
+        </Row>
+        <Row label="鏡の候補なし（閾値未満で黙る）">
+          <ExecutionChapter granularity="week" rows={ROWS} mirrorRows={[]} />
+        </Row>
+        <Row label="空（記録も予定も無い）">
+          <ExecutionChapter granularity="week" rows={[]} mirrorRows={[]} />
+        </Row>
+        <Row label="月粒度">
+          <ExecutionChapter granularity="month" rows={ROWS} mirrorRows={MIRROR_ROWS} />
+        </Row>
+        <Row label="狭い面（320px）">
+          <div className="w-[320px]">
+            <ExecutionChapter granularity="week" rows={ROWS} mirrorRows={MIRROR_ROWS} />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

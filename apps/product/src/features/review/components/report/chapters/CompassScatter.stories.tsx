@@ -64,3 +64,40 @@ export const RightEdgeLabels: Story = {
 
 /** 点が 1 つも無い盤。 */
 export const Empty: Story = { args: { points: [] } };
+
+/** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
+export const AllPatterns: Story = {
+  args: { points: [] },
+  render: function AllPatternsCompass() {
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="通常（3 点）">
+          <CompassScatter points={Default.args?.points ?? []} />
+        </Row>
+        <Row label="濃度の階段（回答数の差）">
+          <CompassScatter points={OpacityLadder.args?.points ?? []} />
+        </Row>
+        <Row label="右端の点（ラベルが左寄せへ倒れる）">
+          <CompassScatter points={RightEdgeLabels.args?.points ?? []} />
+        </Row>
+        <Row label="点なし">
+          <CompassScatter points={[]} />
+        </Row>
+        <Row label="狭い面（320px）">
+          <div className="w-[320px]">
+            <CompassScatter points={Default.args?.points ?? []} />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}

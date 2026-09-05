@@ -64,3 +64,38 @@ export const OneRow: Story = {
 
 /** 候補 0 件。責めず、催促もしない一文を置く。 */
 export const Empty: Story = { args: { rows: [] } };
+
+/** すべての状態を 1 画面に並べる（ADR-023 の AllPatterns）。 */
+export const AllPatterns: Story = {
+  args: { rows: [] },
+  render: function AllPatternsMirrorRows() {
+    const rows = ThreeRows.args?.rows ?? [];
+    return (
+      <div className="flex flex-col gap-6">
+        <Row label="3 件（伸びる / 切り上げがち / 予定どおり）">
+          <MirrorRows rows={rows} />
+        </Row>
+        <Row label="1 件だけ">
+          <MirrorRows rows={rows.slice(0, 1)} />
+        </Row>
+        <Row label="候補なし（責めず催促しない一文）">
+          <MirrorRows rows={[]} />
+        </Row>
+        <Row label="狭い面（320px）">
+          <div className="w-[320px]">
+            <MirrorRows rows={rows} />
+          </div>
+        </Row>
+      </div>
+    );
+  },
+};
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      {children}
+    </div>
+  );
+}
