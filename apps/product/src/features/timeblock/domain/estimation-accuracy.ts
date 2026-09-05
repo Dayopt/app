@@ -68,8 +68,7 @@ export function transformEstimationAccuracy(
  *
  * `activity_id` が null の plan、および `activity_id` はあるが `activitiesById` に存在しない
  * （アクティビティ削除済み参照）plan は、どちらも単一の未分類バケット（`activity_id: null`）へ
- * 畳んで集計する。Time P/L の `buildActivityPL`（`statistics-activity-axis-builders.ts`）と
- * 同じ扱い（#1576: タグ削除時に Plan / Record を未分類化する仕様を activity 軸でも踏襲）。
+ * 畳んで集計する（#1576: タグ削除時に Plan / Record を未分類化する仕様を activity 軸でも踏襲）。
  *
  * 出力は `transformEstimationAccuracy` にそのまま渡せる DB-row 互換 shape。
  */

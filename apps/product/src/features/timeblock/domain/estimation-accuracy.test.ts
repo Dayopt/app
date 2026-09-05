@@ -225,7 +225,7 @@ describe('aggregatePlanRecordEstimationAccuracy', () => {
     ]);
   });
 
-  it('activity_id はあるが activitiesById に存在しない（削除済みアクティビティ参照）は未分類バケットへ畳む（Time P/L の buildActivityPL と同じ扱い）', () => {
+  it('activity_id はあるが activitiesById に存在しない（削除済みアクティビティ参照）は未分類バケットへ畳む', () => {
     const plans = [
       makePlan({ id: 'p1', activity_id: 'deleted-activity-id' }),
       makePlan({ id: 'p2', activity_id: 'deleted-activity-id' }),

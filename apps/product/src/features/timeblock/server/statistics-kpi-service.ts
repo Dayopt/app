@@ -63,7 +63,7 @@ export class StatisticsKpiService {
     return computeBlankRate(scheduledMinutes, { startDate, endDate, wakeHour, sleepHour });
   }
 
-  /** 見積もり精度の共通計算（summary の getStatsPageData からも使う） */
+  /** 見積もり精度の共通計算。 */
   async computeEstimationAccuracy(
     userId: string,
     plans: ReadonlyArray<StatPlanRow>,
@@ -88,7 +88,6 @@ export class StatisticsKpiService {
     }));
 
     // アクティビティ自身は色を持たないため、所属カテゴリーの色をここで継承させておく
-    // （`statistics-activity-axis-builders.ts` の `buildActivityPL` と同じ結線パターン）。
     const activityLookup: Map<string, EstimationAccuracyActivityLookup> = new Map(
       Array.from(activitiesById.entries()).map(([id, activity]) => {
         const category =

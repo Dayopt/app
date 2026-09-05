@@ -16,7 +16,7 @@ import 'server-only';
  * - General（タグ別統計・時間帯分布・トレンド）: statistics-general-service.ts
  * - KPI（見積もり精度・空白率）: statistics-kpi-service.ts
  * - Summary（streak / KPI サマリー）: statistics-summary-service.ts
- * - 行取得: statistics-fetchers.ts / 行組み立て: statistics-row-builders.ts
+ * - 行取得: statistics-fetchers.ts / 集計の下ごしらえ: statistics-service-grouping.ts
  */
 
 import { StatisticsFeedforwardService } from './statistics-feedforward-service';
