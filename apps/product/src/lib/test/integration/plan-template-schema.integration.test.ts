@@ -62,6 +62,8 @@ const EXCLUSION_VIOLATION = '23P01';
 const INVALID_PARAMETER = '22023';
 /** アーカイブ済み activity の付与（DT014）。 */
 const ACTIVITY_ARCHIVED = 'DT014';
+/** RLS / 権限による拒否。WITH CHECK 違反もこれで返る。 */
+const RLS_VIOLATION = '42501';
 
 async function createActivity(userId: string, name: string, archived = false): Promise<string> {
   const { data, error } = await admin
@@ -355,17 +357,32 @@ describe.skipIf(!RUN_LOCAL)('plan_templates schema contract (#2567)', () => {
       expect(survivor.name).not.toBe('乗っ取り');
     });
 
+    /**
+     * 自分の行なので UPDATE の USING は通るが、WITH CHECK が新しい行（他人の user_id）を
+     * 弾く。PostgREST は 0 件更新ではなく **エラー**（42501）を返す — 行が黙って
+     * フィルタされる形ではないので、`data` が空配列であることを期待すると落ちる。
+     */
     it('refuses to move a template to another user', async () => {
       const templateId = await createTemplate(ownerId, `所有-${crypto.randomUUID()}`);
       const client = await signIn(ownerEmail);
 
-      const { data } = await client
+      const { data, error } = await client
         .from('plan_templates')
         .update({ user_id: otherId })
         .eq('id', templateId)
         .select('id');
 
-      expect(data).toEqual([]);
+      expect(error?.code).toBe(RLS_VIOLATION);
+      expect(data).toBeNull();
+
+      // 所有者が実際に変わっていないことまで見る（エラーの形だけでは移動の有無を証明しない）
+      const { data: survivor, error: readError } = await admin
+        .from('plan_templates')
+        .select('user_id')
+        .eq('id', templateId)
+        .single();
+      if (readError) throw readError;
+      expect(survivor.user_id).toBe(ownerId);
     });
   });
 
