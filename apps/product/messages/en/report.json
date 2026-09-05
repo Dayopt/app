@@ -117,6 +117,63 @@
         "action": "Open the calendar"
       }
     },
+    "detail": {
+      "ariaLabel": "Activity details",
+      "close": "Close",
+      "unassigned": "No activity set",
+      "uncategorized": "Uncategorized",
+      "error": "Could not load the details",
+      "openCalendar": "Open in calendar",
+      "subtitle": {
+        "week": "{category} · this week",
+        "month": "{category} · this month",
+        "year": "{category} · this year"
+      },
+      "stats": {
+        "recorded": "Recorded",
+        "plan": "Against plan",
+        "planRatio": "{percent}% of plan",
+        "planPending": "Plan not yet due",
+        "planNone": "No plan",
+        "median": "Median box",
+        "none": "—",
+        "fulfillment": "Fulfillment",
+        "unanswered": "No answers",
+        "answerCount": "(n={count})",
+        "fulfillmentLevel": {
+          "high": "{count} fulfilled",
+          "medium": "{count} neutral",
+          "low": "{count} drained"
+        }
+      },
+      "mirror": {
+        "heading": "Estimation mirror",
+        "coefficient": "×{coefficient} against plan",
+        "notEnough": "Not enough runs to show a habit yet"
+      },
+      "timeOfDay": {
+        "heading": "Time of day — when it happens",
+        "labels": ["Early", "Morning", "Midday", "Afternoon", "Evening", "Night"]
+      },
+      "trend": {
+        "heading": {
+          "week": "Last 6 weeks",
+          "month": "Last 6 months",
+          "year": "Last 6 years"
+        }
+      },
+      "records": {
+        "heading": "{count, plural, one {# record} other {# records}}",
+        "empty": "No records in this period",
+        "unanswered": "—",
+        "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "fulfillment": {
+          "high": "Fulfilled",
+          "medium": "Neutral",
+          "low": "Drained"
+        }
+      }
+    },
     "sidebar": {
       "categoriesHeading": "Categories — add to or remove from the denominator",
       "uncategorized": "Uncategorized",

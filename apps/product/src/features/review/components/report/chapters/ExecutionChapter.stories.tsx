@@ -23,6 +23,7 @@ function row(overrides: Partial<ReportExecutionRow> = {}): ReportExecutionRow {
   return {
     activityId: 'act-write',
     name: '執筆',
+    categoryName: '仕事',
     color: 'blue',
     archived: false,
     recordedMinutes: 600,
@@ -75,9 +76,30 @@ const ROWS: ReportExecutionRow[] = [
 ];
 
 const MIRROR_ROWS: ReportMirrorRow[] = [
-  { activityId: 'act-write', name: '執筆', color: 'blue', coefficient: 1.31, tone: 'over' },
-  { activityId: 'act-mail', name: 'メール', color: 'violet', coefficient: 0.72, tone: 'under' },
-  { activityId: 'act-read', name: '読書', color: 'green', coefficient: 0.98, tone: 'onPlan' },
+  {
+    activityId: 'act-write',
+    name: '執筆',
+    categoryName: '仕事',
+    color: 'blue',
+    coefficient: 1.31,
+    tone: 'over',
+  },
+  {
+    activityId: 'act-mail',
+    name: 'メール',
+    categoryName: '仕事',
+    color: 'violet',
+    coefficient: 0.72,
+    tone: 'under',
+  },
+  {
+    activityId: 'act-read',
+    name: '読書',
+    categoryName: '学習',
+    color: 'green',
+    coefficient: 0.98,
+    tone: 'onPlan',
+  },
 ];
 
 export const Default: Story = {

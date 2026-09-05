@@ -10,14 +10,15 @@ import { MirrorRows } from './MirrorRows';
 
 import type { ReportExecutionRow, ReportMirrorRow } from '../../../domain/report/report-view-model';
 import type { ReportGranularity } from '../../../lib/report-period';
+import type { ReportDetailTarget } from '../../../stores/useReportDetailStore';
 
 interface ExecutionChapterProps {
   granularity: ReportGranularity;
   /** 記録か予定のどちらかがある行。**足切りしない**（決算の完全性、仕様 §13-10）。 */
   rows: readonly ReportExecutionRow[];
   mirrorRows: readonly ReportMirrorRow[];
-  /** 行をクリックした時に詳細パネルへ渡す。接続は #2581。 */
-  onSelectActivity?: ((activityId: string | null) => void) | undefined;
+  /** 行をクリックした時に詳細パネルを開く。渡されなければ行は押せるが何も起きない。 */
+  onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
 }
 
 /** 記録バーの高さ（px）と角丸（px）。仕様 §4.2。 */
@@ -63,7 +64,7 @@ export function ExecutionChapter({
         </ul>
       )}
 
-      <MirrorRows rows={mirrorRows} />
+      <MirrorRows onSelectActivity={onSelectActivity} rows={mirrorRows} />
     </section>
   );
 }
@@ -72,7 +73,7 @@ function ExecutionRow({
   onSelectActivity,
   row,
 }: {
-  onSelectActivity?: ((activityId: string | null) => void) | undefined;
+  onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
   row: ReportExecutionRow;
 }) {
   const t = useTranslations('report.execution');
@@ -83,8 +84,15 @@ function ExecutionRow({
     <li>
       <button
         type="button"
-        // 詳細パネル（#2581）へ渡す口。この issue では呼ばれても何も起きない
-        onClick={() => onSelectActivity?.(row.activityId)}
+        // 詳細パネルを開く（本体は Composition Bridge が描く。#2581）
+        onClick={() =>
+          onSelectActivity?.({
+            activityId: row.activityId,
+            name: row.name,
+            categoryName: row.categoryName,
+            color: row.color,
+          })
+        }
         aria-label={t('rowAriaLabel', { name, recorded })}
         className="hover:bg-state-hover flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left"
       >

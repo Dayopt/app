@@ -6,6 +6,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useCalendarNavigation } from '@/features/calendar';
 import {
+  ConnectedReportDetailPanel,
   ReportBody,
   ReportHeader,
   resolveReportRange,
@@ -156,6 +157,14 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
         onGranularityChange={handleGranularityChange}
         leftSlot={sidebarToggle}
         rightSlot={mobileActions}
+      />
+
+      {/* 詳細パネル本体は shell の 4 カラム目へ portal される（#2581）。
+          review 本体に tRPC query を持ち込まないため、ここから描く */}
+      <ConnectedReportDetailPanel
+        anchorDate={anchorDate}
+        granularity={granularity}
+        onOpenCalendarDay={jump.onJumpToDay}
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">

@@ -20,6 +20,7 @@ function point(overrides: Partial<ReportCompassPoint> = {}): ReportCompassPoint 
   return {
     activityId: 'act-write',
     name: '執筆',
+    categoryName: '仕事',
     color: 'blue',
     x: 50,
     y: 50,

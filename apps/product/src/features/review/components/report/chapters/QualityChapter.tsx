@@ -10,11 +10,12 @@ import type {
   ReportCompassPoint,
   ReportWaitingActivity,
 } from '../../../domain/report/report-view-model';
+import type { ReportDetailTarget } from '../../../stores/useReportDetailStore';
 
 interface QualityChapterProps {
   points: readonly ReportCompassPoint[];
   waitingActivities: readonly ReportWaitingActivity[];
-  onSelectActivity?: ((activityId: string | null) => void) | undefined;
+  onSelectActivity?: ((target: ReportDetailTarget) => void) | undefined;
 }
 
 /**

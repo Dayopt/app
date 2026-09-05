@@ -45,10 +45,26 @@ vi.mock('@/lib/stores/useShellStore', () => ({
 }));
 
 vi.mock('@/components/shell/AnimatedWidthPanel', () => ({
-  AnimatedWidthPanel: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
-    <aside data-open={open}>{children}</aside>
+  // `data-panel` など呼び出し側が付けた属性はそのまま通す（右側のパネルが 2 枚あるので、
+  // 並び順ではなく属性で選べる必要がある）
+  AnimatedWidthPanel: ({
+    children,
+    open,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  } & Record<string, unknown>) => (
+    <aside data-open={open} {...pickDataAttributes(rest)}>
+      {children}
+    </aside>
   ),
 }));
+
+/** mock へ渡された props のうち `data-*` だけを DOM へ流す。 */
+function pickDataAttributes(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(props).filter(([key]) => key.startsWith('data-')));
+}
 
 vi.mock('@/components/shell/sidebar', () => ({
   Sidebar: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -66,6 +82,7 @@ vi.mock('./useAppInlineBanner', () => ({
   useAppInlineBanner: () => bannerState.current,
 }));
 
+import { useReportDetailStore } from '@/features/review';
 import { useTimeblockInspectorStore } from '@/features/timeblock';
 
 import { DesktopLayout } from './desktop-layout';
@@ -155,15 +172,48 @@ describe('DesktopLayout', () => {
       </DesktopLayout>,
     );
 
-    const asides = container.querySelectorAll('aside');
-    const inspectorAside = asides[asides.length - 1]!;
-    expect(inspectorAside.getAttribute('data-open')).toBe('false');
+    // 右側のパネルは 2 枚あるので、並び順ではなく `data-panel` で選ぶ（#2581 で
+    // report detail を足した時、末尾の aside を見る書き方が壊れた）
+    const inspector = () => container.querySelector('[data-panel="timeblock-inspector"]');
+    expect(inspector()?.getAttribute('data-open')).toBe('false');
 
     act(() => useTimeblockInspectorStore.getState().openInspector('timeblock-1', 'plan'));
-    const openedAside = container.querySelectorAll('aside');
-    expect(openedAside[openedAside.length - 1]!.getAttribute('data-open')).toBe('true');
+    expect(inspector()?.getAttribute('data-open')).toBe('true');
 
     act(() => useTimeblockInspectorStore.getState().closeInspector());
+  });
+
+  /**
+   * 詳細パネル（#2581）は inspector とは別の 4 枚目。DOM 上は常に存在し、
+   * `useReportDetailStore` が開いた時だけ幅を持つ。
+   */
+  it('renders the report detail panel as a separate column driven by its own store', () => {
+    act(() => useReportDetailStore.getState().close());
+
+    const { container } = render(
+      <DesktopLayout>
+        <div>Content</div>
+      </DesktopLayout>,
+    );
+
+    const detail = () => container.querySelector('[data-panel="report-detail"]');
+    const inspector = () => container.querySelector('[data-panel="timeblock-inspector"]');
+    expect(detail()?.getAttribute('data-open')).toBe('false');
+
+    act(() =>
+      useReportDetailStore.getState().toggle({
+        activityId: 'act-1',
+        name: '執筆',
+        categoryName: '仕事',
+        color: 'blue',
+      }),
+    );
+
+    expect(detail()?.getAttribute('data-open')).toBe('true');
+    // inspector は道連れで開かない（別ページに属する 2 枚が独立していること）
+    expect(inspector()?.getAttribute('data-open')).toBe('false');
+
+    act(() => useReportDetailStore.getState().close());
   });
 });
 

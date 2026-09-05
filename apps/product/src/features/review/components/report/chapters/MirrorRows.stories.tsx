@@ -19,16 +19,46 @@ type Story = StoryObj<typeof meta>;
 export const ThreeRows: Story = {
   args: {
     rows: [
-      { activityId: 'a', name: '執筆', color: 'blue', coefficient: 1.31, tone: 'over' },
-      { activityId: 'b', name: 'メール', color: 'violet', coefficient: 0.72, tone: 'under' },
-      { activityId: 'c', name: '読書', color: 'green', coefficient: 1.02, tone: 'onPlan' },
+      {
+        activityId: 'a',
+        name: '執筆',
+        categoryName: '仕事',
+        color: 'blue',
+        coefficient: 1.31,
+        tone: 'over',
+      },
+      {
+        activityId: 'b',
+        name: 'メール',
+        categoryName: '仕事',
+        color: 'violet',
+        coefficient: 0.72,
+        tone: 'under',
+      },
+      {
+        activityId: 'c',
+        name: '読書',
+        categoryName: '学習',
+        color: 'green',
+        coefficient: 1.02,
+        tone: 'onPlan',
+      },
     ] satisfies ReportMirrorRow[],
   },
 };
 
 export const OneRow: Story = {
   args: {
-    rows: [{ activityId: 'a', name: '執筆', color: 'blue', coefficient: 1.44, tone: 'over' }],
+    rows: [
+      {
+        activityId: 'a',
+        name: '執筆',
+        categoryName: '仕事',
+        color: 'blue',
+        coefficient: 1.44,
+        tone: 'over',
+      },
+    ],
   },
 };
 

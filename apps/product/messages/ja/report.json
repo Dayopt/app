@@ -117,6 +117,63 @@
         "action": "カレンダーで組む"
       }
     },
+    "detail": {
+      "ariaLabel": "アクティビティの明細",
+      "close": "閉じる",
+      "unassigned": "アクティビティ未設定",
+      "uncategorized": "未分類",
+      "error": "明細を読み込めませんでした",
+      "openCalendar": "カレンダーで見る",
+      "subtitle": {
+        "week": "{category} · この週の明細",
+        "month": "{category} · この月の明細",
+        "year": "{category} · この年の明細"
+      },
+      "stats": {
+        "recorded": "記録合計",
+        "plan": "計画との差",
+        "planRatio": "予定比 {percent}%",
+        "planPending": "予定は未消化",
+        "planNone": "予定なし",
+        "median": "1 箱の中央値",
+        "none": "—",
+        "fulfillment": "充実の分布",
+        "unanswered": "未回答",
+        "answerCount": "（n={count}）",
+        "fulfillmentLevel": {
+          "high": "充{count}",
+          "medium": "普{count}",
+          "low": "消{count}"
+        }
+      },
+      "mirror": {
+        "heading": "見積もりの鏡",
+        "coefficient": "予定に対して ×{coefficient}",
+        "notEnough": "まだ傾向を出せる回数がない"
+      },
+      "timeOfDay": {
+        "heading": "時間帯の分布 — いつやっているか",
+        "labels": ["朝", "午前", "昼", "午後", "夜", "深夜"]
+      },
+      "trend": {
+        "heading": {
+          "week": "週別の推移（6 週）",
+          "month": "月別の推移（6 か月）",
+          "year": "年別の推移（6 年）"
+        }
+      },
+      "records": {
+        "heading": "記録（{count}箱）",
+        "empty": "この期間に記録はありません",
+        "unanswered": "—",
+        "weekdays": ["日", "月", "火", "水", "木", "金", "土"],
+        "fulfillment": {
+          "high": "充実",
+          "medium": "普通",
+          "low": "消耗"
+        }
+      }
+    },
     "sidebar": {
       "categoriesHeading": "カテゴリー — 分母から出し入れ",
       "uncategorized": "未分類",

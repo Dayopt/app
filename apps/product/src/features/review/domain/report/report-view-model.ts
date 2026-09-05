@@ -21,15 +21,15 @@ export const COMPASS_MIN_FULFILLMENT = 5;
 /**
  * 見積もりの鏡の候補になる過去予定の箱数。
  */
-const MIRROR_MIN_PLAN_BOXES = 3;
+export const MIRROR_MIN_PLAN_BOXES = 3;
 /**
  * 見積もりの鏡の候補になる過去予定の分数。
  */
-const MIRROR_MIN_PLAN_MINUTES = 30;
+export const MIRROR_MIN_PLAN_MINUTES = 30;
 /**
  * 予定比を出す最小の過去予定分数。これ未満は比率を作らない。
  */
-const EXECUTION_MIN_PLAN_MINUTES = 15;
+export const EXECUTION_MIN_PLAN_MINUTES = 15;
 /**
  * 見積もりの鏡に出す最大件数。
  */
@@ -339,6 +339,7 @@ export function maxInkColumnMinutes(columns: readonly ReportInkColumn[]): number
 export interface ReportExecutionRow {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   archived: boolean;
   recordedMinutes: number;
@@ -376,6 +377,7 @@ export function buildExecutionRows(
     .map((activity) => ({
       activityId: activity.activityId,
       name: activity.activityName,
+      categoryName: activity.categoryName,
       color: activity.categoryColor,
       archived: activity.archived,
       recordedMinutes: activity.recordedMinutes,
@@ -400,6 +402,7 @@ export type ReportMirrorTone = 'over' | 'under' | 'onPlan';
 export interface ReportMirrorRow {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   /** `rec / planPast`。1 より大きいほど予定より伸びている。 */
   coefficient: number;
@@ -433,6 +436,7 @@ export function buildMirrorRows(
       return {
         activityId: activity.activityId,
         name: activity.activityName,
+        categoryName: activity.categoryName,
         color: activity.categoryColor,
         coefficient,
         tone: resolveMirrorTone(coefficient),
@@ -455,6 +459,7 @@ function resolveMirrorTone(coefficient: number): ReportMirrorTone {
 export interface ReportCompassPoint {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   /** 盤の左からの位置（%）。投下時間に比例。 */
   x: number;
@@ -490,6 +495,7 @@ export function buildCompassPoints(
     return {
       activityId: activity.activityId,
       name: activity.activityName,
+      categoryName: activity.categoryName,
       color: activity.categoryColor,
       x: 6 + (activity.recordedMinutes / maxRecorded) * 86,
       y: 14 + ((slope + 1) / 2) * 72,

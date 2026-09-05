@@ -1,9 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { ErrorState } from '@/components/ui/feedback/ErrorState';
+import { useDomSlot } from '@/lib/dom-slots/useDomSlot';
 import { Skeleton } from '@dayopt/components';
 
 import {
@@ -25,6 +26,8 @@ import { useActiveSegment } from '../../hooks/useActiveSegment';
 import { useReportPeriod } from '../../hooks/useReportPeriod';
 import { useReviewOpenedTracking } from '../../hooks/useReviewOpenedTracking';
 import { useSegments } from '../../hooks/useSegments';
+import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
+import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 import { AllocationChapter } from './chapters/AllocationChapter';
 import { ExecutionChapter } from './chapters/ExecutionChapter';
@@ -70,6 +73,20 @@ export function ReportBody({
   useReviewOpenedTracking(true);
 
   const { data, isPending, isError } = useReportPeriod(anchorDate, granularity);
+
+  // 行・点から詳細パネルを開く。パネル本体は Composition Bridge が描く（review 本体に
+  // tRPC query を持ち込むと、`/report` 以外から描いた時に context を要求してしまう）
+  const toggleDetail = useReportDetailStore((state) => state.toggle);
+  const closeDetail = useReportDetailStore((state) => state.close);
+  // 詳細パネルの器を持たない shell（モバイル。#2582 で足す）では、行・点に開く口を渡さない。
+  // 渡すと store だけが動いて画面は無反応になる
+  const canOpenDetail = useDomSlot(REPORT_DETAIL_SLOT_KEY) !== null;
+  const selectActivity = canOpenDetail ? toggleDetail : undefined;
+
+  // 期間を移したら閉じる（仕様 §5）。別の期間の明細を開いたまま残さない
+  useEffect(() => {
+    closeDetail();
+  }, [anchorDate, granularity, closeDetail]);
   const { data: segments } = useSegments();
 
   // オブジェクトを返す selector は毎 render で新しい参照になるため、値ごとに読む
@@ -165,10 +182,15 @@ export function ReportBody({
       <ExecutionChapter
         granularity={granularity}
         mirrorRows={view.mirrorRows}
+        onSelectActivity={selectActivity}
         rows={view.executionRows}
       />
 
-      <QualityChapter points={view.compassPoints} waitingActivities={view.waitingActivities} />
+      <QualityChapter
+        onSelectActivity={selectActivity}
+        points={view.compassPoints}
+        waitingActivities={view.waitingActivities}
+      />
 
       <TidyChapter
         granularity={granularity}
