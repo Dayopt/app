@@ -88,7 +88,15 @@ const PREVIOUS_WEEK_DATA = {
 };
 
 function renderBody() {
-  return render(<ReportBody anchorDate="2026-09-02" granularity="week" />);
+  return render(
+    <ReportBody
+      anchorDate="2026-09-02"
+      granularity="week"
+      onJumpToDay={() => {}}
+      onJumpToNextPeriod={() => {}}
+      onJumpToRecord={() => {}}
+    />,
+  );
 }
 
 /** ヘッドラインの大きい数字（見えているインク `V`）。 */
@@ -243,7 +251,15 @@ describe('ReportBody', () => {
     const { rerender } = renderBody();
     expect(headline()).toBe('11:00');
 
-    rerender(<ReportBody anchorDate="2026-08-26" granularity="week" />);
+    rerender(
+      <ReportBody
+        anchorDate="2026-08-26"
+        granularity="week"
+        onJumpToDay={() => {}}
+        onJumpToNextPeriod={() => {}}
+        onJumpToRecord={() => {}}
+      />,
+    );
 
     expect(useReportPeriod).toHaveBeenLastCalledWith('2026-08-26', 'week');
     expect(useReportViewStore.getState().hiddenCategoryIds).toEqual(['cat-sleep']);

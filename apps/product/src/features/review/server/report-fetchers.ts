@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { databaseTables, type Database } from '@/lib/database';
+import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError } from '@/lib/sentry';
 
 /**
@@ -129,4 +130,176 @@ export async function fetchReportCategories(
 
   if (error) throwDatabaseError(error, 'fetch_report_categories');
   return data ?? [];
+}
+
+// =============================================================================
+// 未変換の外部予定（4 章 2 行目）
+// =============================================================================
+
+/**
+ * 数える窓の半径。`external-calendar` の sync window（±90 日、`sync-service.ts`）と同値。
+ *
+ * 仕様 §4.4 は期間非限定を要求するが、無限区間の query は書けない。sync がこの外側へ
+ * 行を書かないので、実質「いま存在する ghost の総数」になる。**prune が追いつかず窓の外に
+ * 残っている古い行は数えない** — 件数を多く見せて押した先を空にするより、少なく数える方に倒す。
+ */
+const GHOST_MIRROR_RADIUS_MS = 90 * 24 * 60 * 60 * 1000;
+
+/** 1 バッチの件数と上限。`event-query-service.ts` と同値（150 × 20 = 3,000 件）。 */
+const GHOST_BATCH_SIZE = 150;
+const GHOST_MAX_BATCHES = 20;
+
+/** `sync-service` が active な行へ入れる唯一の status。除外は allowlist で書く。 */
+const GHOST_ACTIVE_STATUS = 'confirmed';
+
+export interface ReportGhostEventRow {
+  id: string;
+  start_at: string;
+}
+
+interface GhostCandidateRow {
+  id: string;
+  connection_id: string | null;
+  provider_calendar_id: string;
+  start_at: string | null;
+}
+
+function ghostCalendarKey(connectionId: string, providerCalendarId: string): string {
+  return `${connectionId} ${providerCalendarId}`;
+}
+
+/**
+ * カレンダー画面が ghost として描く行の選択条件を、レポート側でも同じ形で組む。
+ *
+ * **`external-calendar` の `listGhostEvents` を呼べない**（feature 間の deep import は
+ * eslint が error、barrel は client 用で `server-only` を通せない）ため、導出条件
+ * 「ミラー − cancelled − dismissed − 孤児 − 選択解除 − plans/records が参照済み」を
+ * ここでも同じ順序で書く。**条件を 1 つでも緩めると、4 章の「N 件」を押した先の
+ * カレンダーに ghost が 1 つも無い**という行き止まりになる。
+ *
+ * `listGhostEvents` との意図的な違いは 1 点だけ: **バッチ上限に当たっても throw しない**。
+ * あちらは「範囲内の予定が再現性なく欠落する」ことを避けるための fail closed だが、
+ * こちらは 4 章 1 行のための件数で、ここで throw するとレポート全体（1〜4 章）が
+ * 落ちる。数え漏れの方が実害が小さいので、そこまでの件数を返す。
+ */
+export async function fetchReportUnconvertedExternalEvents(
+  supabase: ReportFetchClient,
+  userId: string,
+  now: Date,
+): Promise<ReportGhostEventRow[]> {
+  const selectedCalendarKeys = await loadSelectedGhostCalendarKeys(supabase, userId);
+  if (selectedCalendarKeys.size === 0) return [];
+
+  const windowStart = new Date(now.getTime() - GHOST_MIRROR_RADIUS_MS).toISOString();
+  const windowEnd = new Date(now.getTime() + GHOST_MIRROR_RADIUS_MS).toISOString();
+
+  const events: ReportGhostEventRow[] = [];
+  let cursor: string | null = null;
+
+  for (let batch = 0; batch < GHOST_MAX_BATCHES; batch += 1) {
+    let query = supabase
+      .from(databaseTables.externalCalendarEvents)
+      .select('id, connection_id, provider_calendar_id, start_at')
+      .eq('user_id', userId)
+      .eq('status', GHOST_ACTIVE_STATUS)
+      .is('dismissed_at', null)
+      .not('connection_id', 'is', null)
+      .lt('start_at', windowEnd)
+      .gt('end_at', windowStart);
+
+    // 初回は cursor 無し。UUID 列に空文字を渡すと PostgREST 側で invalid UUID になる。
+    if (cursor !== null) query = query.gt('id', cursor);
+
+    const { data, error } = await query.order('id', { ascending: true }).limit(GHOST_BATCH_SIZE);
+
+    if (error) throwDatabaseError(error, 'fetch_report_external_events');
+
+    const candidates: GhostCandidateRow[] = data ?? [];
+    if (candidates.length === 0) return events;
+
+    const referenced = await loadGhostReferencedEventIds(
+      supabase,
+      userId,
+      candidates.map((row) => row.id),
+    );
+
+    for (const row of candidates) {
+      if (referenced.has(row.id)) continue;
+      if (row.start_at === null || row.connection_id === null) continue;
+      if (
+        !selectedCalendarKeys.has(ghostCalendarKey(row.connection_id, row.provider_calendar_id))
+      ) {
+        continue;
+      }
+      events.push({ id: row.id, start_at: row.start_at });
+    }
+
+    cursor = candidates[candidates.length - 1]?.id ?? cursor;
+    if (candidates.length < GHOST_BATCH_SIZE) return events;
+  }
+
+  // 上限に当たったら「数え切れたぶん」で返す（上のコメント参照）。カレンダー側と違い
+  // ここで落とすとレポート全体が読めなくなる。
+  logger.warn('[report-ghost] stopped at the batch limit', { batches: GHOST_MAX_BATCHES });
+  return events;
+}
+
+/** ユーザーがいま選択している `(connection_id, provider_calendar_id)`。active な接続のみ。 */
+async function loadSelectedGhostCalendarKeys(
+  supabase: ReportFetchClient,
+  userId: string,
+): Promise<Set<string>> {
+  const { data: connections, error: connectionError } = await supabase
+    .from(databaseTables.calendarConnections)
+    .select('id')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (connectionError) throwDatabaseError(connectionError, 'fetch_report_calendar_connections');
+
+  const activeConnectionIds = (connections ?? []).map((row) => row.id);
+  if (activeConnectionIds.length === 0) return new Set();
+
+  const { data, error } = await supabase
+    .from(databaseTables.calendarConnectionCalendars)
+    .select('connection_id, provider_calendar_id')
+    .eq('user_id', userId)
+    .in('connection_id', activeConnectionIds);
+
+  if (error) throwDatabaseError(error, 'fetch_report_selected_calendars');
+
+  return new Set(
+    (data ?? []).map((row) => ghostCalendarKey(row.connection_id, row.provider_calendar_id)),
+  );
+}
+
+/**
+ * plans / records が既に参照しているミラー行の id。
+ *
+ * soft-delete 済みの参照は数えない（ゴミ箱に入れた plan / record が ghost を永久に隠すのを
+ * 避ける。`event-query-service.ts` と同じ判断）。
+ */
+async function loadGhostReferencedEventIds(
+  supabase: ReportFetchClient,
+  userId: string,
+  ids: string[],
+): Promise<Set<string>> {
+  const referenced = new Set<string>();
+
+  for (const table of [databaseTables.plans, databaseTables.records] as const) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('external_calendar_event_id')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .in('external_calendar_event_id', ids);
+
+    if (error) throwDatabaseError(error, 'fetch_report_converted_external_events');
+
+    for (const row of data ?? []) {
+      if (row.external_calendar_event_id !== null) referenced.add(row.external_calendar_event_id);
+    }
+  }
+
+  return referenced;
 }

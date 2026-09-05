@@ -4,6 +4,7 @@ import {
   clipMinutes,
   distributeToBuckets,
   isReportGranularity,
+  resolveNextPeriodStartDayKey,
   resolveNextReportRange,
   resolvePreviousReportRange,
   resolveReportRange,
@@ -337,5 +338,24 @@ describe('todayReportAnchor', () => {
     expect(todayReportAnchor(UTC, now)).toBe('2026-09-02');
     expect(todayReportAnchor(TOKYO, now)).toBe('2026-09-03');
     expect(todayReportAnchor(NEW_YORK, now)).toBe('2026-09-02');
+  });
+});
+
+describe('resolveNextPeriodStartDayKey', () => {
+  it('週は次週の開始曜日を返す（週の開始設定に従う）', () => {
+    expect(resolveNextPeriodStartDayKey('2026-09-04', 'week', 1)).toBe('2026-09-07');
+    expect(resolveNextPeriodStartDayKey('2026-09-04', 'week', 0)).toBe('2026-09-06');
+    // 土曜始まり。9/4（金）を含む週は 08-29(土)〜09-04(金) で、次週は 09-05(土)
+    expect(resolveNextPeriodStartDayKey('2026-09-04', 'week', 6)).toBe('2026-09-05');
+  });
+
+  it('月は翌月 1 日を返す', () => {
+    expect(resolveNextPeriodStartDayKey('2026-09-20', 'month', 1)).toBe('2026-10-01');
+    // 年をまたぐ
+    expect(resolveNextPeriodStartDayKey('2026-12-31', 'month', 1)).toBe('2027-01-01');
+  });
+
+  it('年は翌年 1 月 1 日を返す', () => {
+    expect(resolveNextPeriodStartDayKey('2026-05-02', 'year', 1)).toBe('2027-01-01');
   });
 });

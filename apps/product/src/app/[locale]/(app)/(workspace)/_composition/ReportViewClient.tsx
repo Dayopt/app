@@ -20,6 +20,7 @@ import { Button, Skeleton } from '@dayopt/components';
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 
 import { ConnectedMobileAccountButton } from '../../_shell/MobileAccountButton';
+import { useReportJump } from './useReportJump';
 
 interface ReportViewClientProps {
   granularity: ReportGranularity;
@@ -57,6 +58,9 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
   // ハイドレーション不整合を避ける（`CalendarNavigationContext` の初期値解決と同じ制約）。
   const hasMounted = useHasMounted();
   const anchorDate = formatAnchor(navigation?.currentDate);
+
+  // 4 章からカレンダーへのジャンプ（仕様 §7）。review は router を持たない
+  const jump = useReportJump({ anchorDate, granularity, weekStartsOn });
 
   const range = useMemo(
     () => resolveReportRange(anchorDate, granularity, timezone, weekStartsOn),
@@ -155,7 +159,13 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ReportBody anchorDate={anchorDate} granularity={granularity} />
+        <ReportBody
+          anchorDate={anchorDate}
+          granularity={granularity}
+          onJumpToDay={jump.onJumpToDay}
+          onJumpToNextPeriod={jump.onJumpToNextPeriod}
+          onJumpToRecord={jump.onJumpToRecord}
+        />
       </div>
     </div>
   );
