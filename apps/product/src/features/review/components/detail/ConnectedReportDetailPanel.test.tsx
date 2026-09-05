@@ -16,25 +16,22 @@ vi.mock('./ReportDetailPanel', () => ({
   ReportDetailPanel: () => <div data-testid="detail-panel" />,
 }));
 
-import { setDomSlot } from '@/lib/dom-slots/useDomSlot';
+vi.mock('./ReportDetailSheet', () => ({
+  ReportDetailSheet: () => <div data-testid="detail-sheet" />,
+}));
 
-import { REPORT_DETAIL_SLOT_KEY } from '../../lib/report-detail-slot';
 import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { ConnectedReportDetailPanel } from './ConnectedReportDetailPanel';
 
 const TARGET = { activityId: 'act-1', name: '執筆', categoryName: '仕事', color: 'blue' };
 
-/** shell が器を用意した状態（デスクトップ）にする。 */
-function registerSlot() {
-  setDomSlot(REPORT_DETAIL_SLOT_KEY, document.createElement('div'));
-}
-
-function renderConnected() {
+function renderConnected(surface: 'panel' | 'sheet' = 'panel') {
   return render(
     <ConnectedReportDetailPanel
       anchorDate="2026-09-04"
       granularity="week"
       onOpenCalendarDay={() => {}}
+      surface={surface}
     />,
   );
 }
@@ -43,43 +40,40 @@ describe('ConnectedReportDetailPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useReportDetailStore.getState().close();
-    registerSlot();
   });
 
-  it('閉じている間は何も描かない', () => {
-    const { queryByTestId } = renderConnected();
-
-    expect(queryByTestId('detail-panel')).toBeNull();
-  });
-
-  it('開いていれば描く', () => {
-    const { queryByTestId, rerender } = renderConnected();
-
-    act(() => useReportDetailStore.getState().toggle(TARGET));
-    rerender(
-      <ConnectedReportDetailPanel
-        anchorDate="2026-09-04"
-        granularity="week"
-        onOpenCalendarDay={() => {}}
-      />,
-    );
-
-    expect(queryByTestId('detail-panel')).not.toBeNull();
-  });
-
-  /**
-   * モバイルの shell は詳細パネルの器（slot）を登録しない（#2582 で足す）。器が無い間は
-   * **query を持つ component ごとマウントしない** — でないと「画面は無反応なのに
-   * `getReportActivityDetail` だけ飛ぶ」状態になる。
-   */
-  it('器が無ければ開いていても描かず、明細も取りに行かない', () => {
-    setDomSlot(REPORT_DETAIL_SLOT_KEY, null);
-    useReportDetailStore.getState().toggle(TARGET);
-
+  it('閉じている間は何も描かず、明細も取りに行かない', () => {
     const { queryByTestId } = renderConnected();
 
     expect(queryByTestId('detail-panel')).toBeNull();
     expect(useReportActivityDetail).not.toHaveBeenCalled();
+  });
+
+  it('開いていればデスクトップはパネルを描き、推移も取りに行く', () => {
+    const { queryByTestId } = renderConnected();
+
+    act(() => useReportDetailStore.getState().toggle(TARGET));
+
+    expect(queryByTestId('detail-panel')).not.toBeNull();
+    expect(useReportActivityDetail).toHaveBeenCalledWith(
+      expect.objectContaining({ includeTrend: true }),
+    );
+  });
+
+  /**
+   * モバイルは面が狭いのでシートに推移を出さない（仕様 §8）。表示側だけで落とすと
+   * 運ぶだけ無駄になるので、**取得ごと** `includeTrend: false` で落とす。
+   */
+  it('モバイルはシートを描き、推移を取りに行かない', () => {
+    const { queryByTestId } = renderConnected('sheet');
+
+    act(() => useReportDetailStore.getState().toggle(TARGET));
+
+    expect(queryByTestId('detail-sheet')).not.toBeNull();
+    expect(queryByTestId('detail-panel')).toBeNull();
+    expect(useReportActivityDetail).toHaveBeenCalledWith(
+      expect.objectContaining({ includeTrend: false }),
+    );
   });
 
   /**
@@ -89,7 +83,7 @@ describe('ConnectedReportDetailPanel', () => {
   it('unmount 時に閉じる（他ページへ帯を持ち越さない）', () => {
     const { unmount } = renderConnected();
 
-    useReportDetailStore.getState().toggle(TARGET);
+    act(() => useReportDetailStore.getState().toggle(TARGET));
     expect(useReportDetailStore.getState().isOpen).toBe(true);
 
     unmount();

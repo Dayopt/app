@@ -23,8 +23,6 @@ vi.mock('next-intl', () => ({
   },
 }));
 
-vi.mock('@/lib/hooks/useIsMobile', () => ({ useIsMobile: () => false }));
-
 vi.mock('../../hooks/useSegments', () => ({
   useSegments: () => segmentsState.current,
   useCreateSegment: () => ({ mutate: vi.fn(), isPending: false }),

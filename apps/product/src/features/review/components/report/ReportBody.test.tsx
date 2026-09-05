@@ -1,4 +1,5 @@
 import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -33,6 +34,7 @@ vi.mock('../../hooks/useSegments', () => ({
   useSegments: () => segmentsState.current,
 }));
 
+import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 import { ReportBody } from './ReportBody';
 
@@ -135,6 +137,7 @@ describe('ReportBody', () => {
       isError: false,
     }));
     segmentsState.current = { data: SEGMENTS, isPending: false };
+    useReportDetailStore.getState().close();
     localStorage.clear();
     useReportViewStore.setState({
       hiddenCategoryIds: [],
@@ -286,6 +289,22 @@ describe('ReportBody', () => {
     renderBody();
 
     expect(headline()).toBe('51:00');
+  });
+
+  /**
+   * 詳細の器（デスクトップのパネル / モバイルのシート）は Composition Bridge が選ぶので、
+   * **`ReportBody` はどの面でも開く口を渡す**。#2582 までは DOM slot の有無で塞いでいたが、
+   * モバイルにシートができた今その判定は誤りになる（押せるのに開かない面が生まれる）。
+   */
+  it('章の行から詳細を開ける（器の有無を見ない）', async () => {
+    const user = userEvent.setup();
+    renderBody();
+
+    const row = screen.getByRole('button', { name: /report.execution.rowAriaLabel 実装/ });
+    await user.click(row);
+
+    expect(useReportDetailStore.getState().isOpen).toBe(true);
+    expect(useReportDetailStore.getState().target?.activityId).toBe('act-dev');
   });
 });
 

@@ -35,7 +35,9 @@ interface SwipeGestureResult {
 /**
  * スワイプジェスチャーを検出するフック
  *
- * モバイルカレンダーで左右スワイプによる期間移動に使用
+ * モバイルの左右スワイプによる期間移動に使う（カレンダーとレポートの両方）。
+ * **feature 非依存なので `lib/` に置く** — `features/review` は同層の
+ * `features/calendar` を import できないため、共有できる場所がここしかない（#2582）。
  *
  * @example
  * ```tsx

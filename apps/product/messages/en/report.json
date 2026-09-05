@@ -184,6 +184,12 @@
       "lensAll": "All",
       "segmentMenu": "Menu for {name}"
     },
+    "mobile": {
+      "lens": {
+        "chip": "Lens",
+        "open": "Choose a lens"
+      }
+    },
     "errors": {
       "title": "Could not load the report",
       "description": "Please try opening it again later"

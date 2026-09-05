@@ -19,8 +19,10 @@
 // =============================================================================
 export { ConnectedReportDetailPanel } from './components/detail/ConnectedReportDetailPanel';
 export { ReportHeader } from './components/layout/ReportHeader';
+export { ReportMobileHeader } from './components/layout/ReportMobileHeader';
 export { ReportBody } from './components/report/ReportBody';
 export { SegmentList } from './components/segments/SegmentList';
+export { ReportFilterChipRow } from './components/sidebar/ReportFilterChipRow';
 export { ReportFilterList } from './components/sidebar/ReportFilterList';
 
 // =============================================================================

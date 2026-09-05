@@ -184,6 +184,12 @@
       "lensAll": "すべて",
       "segmentMenu": "{name} のメニュー"
     },
+    "mobile": {
+      "lens": {
+        "chip": "束",
+        "open": "束を選ぶ"
+      }
+    },
     "errors": {
       "title": "レポートを読み込めませんでした",
       "description": "時間をおいて開き直してください"
