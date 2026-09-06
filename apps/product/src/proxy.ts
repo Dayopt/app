@@ -138,6 +138,22 @@ function redirectWithCsp(url: URL, contentSecurityPolicy: string): NextResponse 
   return applyCsp(NextResponse.redirect(url), contentSecurityPolicy);
 }
 
+/**
+ * next-intl の rewrite 判定と同じ `decodeURI` で pathname を正規化する。
+ *
+ * 同じ関数・同じ回数だけ通すのが要件で、多重 decode すると rewrite 側と
+ * 判定側が再びずれる（`%2F` を decode しない挙動も rewrite 側と揃う）。
+ * 不正な escape で `decodeURI` は URIError を投げるため、その場合は null を
+ * 返して呼び出し側に fail closed の分岐を強制する。
+ */
+function canonicalizePathname(pathname: string): string | null {
+  try {
+    return decodeURI(pathname);
+  } catch {
+    return null;
+  }
+}
+
 function notFoundWithCsp(contentSecurityPolicy: string): NextResponse {
   return applyCsp(
     new NextResponse(null, { status: 404, headers: { 'cache-control': 'no-store' } }),
@@ -250,8 +266,27 @@ function resolveCalendarViewNotFound(
 }
 
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
+
+  // 認可判定より前に pathname を正規化する。
+  //
+  // `request.nextUrl.pathname` は percent-encoding を保ったまま渡ってくるのに対し、
+  // next-intl の middleware は `decodeURI` した値で rewrite 先を決める
+  // （4.13.2 `middleware.js:16`、encode 前後が異なれば `:40` で rewrite が出る）。
+  // 判定側だけが encode されたままだと `/%63alendar` は
+  // `isProtectedProductPath` の `startsWith` に一致せず「保護対象ではない」と
+  // 扱われる一方、rewrite で `/calendar` が描画され、未認証の login redirect と
+  // aal1 の MFA gate を同時に迂回できる（locale prefix を encode した
+  // `/%6a%61/calendar` は getPathWithoutLocale も素通りするため同じ穴になる）。
+  // **rewrite 側と同じ decode を通した値だけで判定する**のが唯一の防ぎ方で、
+  // 判定関数を個別に直しても encode の入り口が残る。
+  const pathname = canonicalizePathname(request.nextUrl.pathname);
+  if (pathname === null) {
+    // decodeURI が URIError を投げる pathname は Next 側でも実ルートへ解決されない。
+    // 判定を続けず fail closed で落とす。
+    return notFoundWithCsp(prepareCspRequest(request));
+  }
+
   const oauthHostBoundaryResponse = enforceOAuthHostBoundary(
     hostname,
     getPathWithoutLocale(pathname),
