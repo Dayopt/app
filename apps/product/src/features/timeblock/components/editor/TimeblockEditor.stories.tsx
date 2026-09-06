@@ -79,7 +79,7 @@ export const Record: Story = {
   },
 };
 
-/** 過去の Plan の日時ロックとメモ編集。フィールド順は Record と同じだが充実度は無い。 */
+/** 過去の Plan の日時・メモ編集。フィールド順は Record と同じだが充実度は無い。 */
 export const PastPlan: Story = {
   args: {
     value: futureValue,
