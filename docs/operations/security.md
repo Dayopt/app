@@ -220,7 +220,18 @@ secret 検出はこれとは別で、**ready 後の PR で自動実行される*
 
 全履歴棚卸しの結果と個々の判定根拠は 決定ログ（削除済み、git 履歴参照） を参照。
 
-3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
+3 は `disable-model-invocation: true` のため **モデルが自発的には起動できない**。通常はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
+
+**cloud session（Claude Code on the web）からの実行**は 2026-09-06 に実測した。`/plugin` の対話 UI は terminal 専用だが、`claude plugin marketplace add anthropics/claude-plugins-official` と `claude plugin install claude-security@claude-plugins-official` の CLI サブコマンドは cloud でも通る。plugin が提供する `claude-security:scan` workflow は**セッション開始時にしか登録されない**ため、導入したセッションからは呼べず、次のセッション以降に使える。
+
+**スキャンの規模はセッションの利用上限で決まる。この repo では 1 回で全体は通らない**（2026-09-06 実測、#2617）。
+
+| 実行                | 規模                    | 結果                                                                                                     |
+| ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| 全体                | 2,634 ファイル / medium | 約 3 時間走り researcher 98 体・verifier 約 160 体まで進んだが、**レポート生成の直前に上限**。成果物ゼロ |
+| 攻撃面へ scope 絞り | 220 ファイル / medium   | researcher 29 体は完走。候補 10 件を得たが**検証パネルの途中で上限**。パネルを通ったのは 2 件のみ        |
+
+候補は researcher の主張であって所見ではない。**パネルを通らなかった候補をそのまま修正に着手しない。** 次に回す時は effort を下げるか scope をさらに割り、**パネルまで完走する単位**にする。plugin は途中結果を run dir へ永続化しないため、上限に当たると調査の成果ごと失われる（workflow の結果自体は残るので、そこから候補を取り出すことはできる）。
 
 所見が出た場合は issue に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 
