@@ -138,6 +138,41 @@ function redirectWithCsp(url: URL, contentSecurityPolicy: string): NextResponse 
   return applyCsp(NextResponse.redirect(url), contentSecurityPolicy);
 }
 
+/**
+ * next-intl が rewrite 先を決める時と同じ正規化を pathname へ適用する。
+ *
+ * next-intl 4.13.2 は `decodeURI`（`middleware.js:16`）**の後に**
+ * `sanitizePathname`（`middleware.js:25` → `utils.js:187`）を通した値で
+ * rewrite 先を決める。decode だけを揃えても sanitize の 3 段が残るため、
+ * `/%09calendar`（TAB）・`/%0A/calendar`（LF）・`//calendar`（連続スラッシュ）は
+ * 判定側で別物のままになり、同じバイパスが 1 文字違いで成立する。
+ * **decodeURI + sanitize 相当を同じ順で 1 回ずつ**通すのが要件で、
+ * 多重 decode すると rewrite 側と再びずれる（`%2F` を decode しない挙動も
+ * rewrite 側と揃う）。
+ *
+ * 不正な escape で `decodeURI` は URIError を投げるため、その場合は null を
+ * 返して呼び出し側に fail closed の分岐を強制する。
+ *
+ * next-intl を upgrade する時は `utils.js` の `sanitizePathname` がここと
+ * 一致しているか確認する（drift は proxy.canonicalization.test.ts が実物の
+ * next-intl を通して検出する）。
+ */
+function canonicalizePathname(pathname: string): string | null {
+  let decoded: string;
+  try {
+    decoded = decodeURI(pathname);
+  } catch {
+    return null;
+  }
+  // next-intl の sanitizePathname（utils.js:187）と同じ置換を同じ順で行う。
+  // U+0009 / U+000A / U+000D は WHATWG URL parser が黙って落とすため、
+  // 除去しないと segment 区切り位置の TAB が `//host` へ潰れる。
+  return decoded
+    .replace(/\\/g, '%5C')
+    .replace(/[\t\n\r]/g, '')
+    .replace(/\/+/g, '/');
+}
+
 function notFoundWithCsp(contentSecurityPolicy: string): NextResponse {
   return applyCsp(
     new NextResponse(null, { status: 404, headers: { 'cache-control': 'no-store' } }),
@@ -250,8 +285,31 @@ function resolveCalendarViewNotFound(
 }
 
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
   const hostname = request.nextUrl.hostname;
+
+  // 認可判定より前に pathname を正規化する。
+  //
+  // `request.nextUrl.pathname` は percent-encoding を保ったまま渡ってくるのに対し、
+  // next-intl の middleware は `decodeURI` した値で rewrite 先を決める
+  // （4.13.2 `middleware.js:16`、encode 前後が異なれば `:40` で rewrite が出る）。
+  // 判定側だけが encode されたままだと `/%63alendar` は
+  // `isProtectedProductPath` の `startsWith` に一致せず「保護対象ではない」と
+  // 扱われる一方、rewrite で `/calendar` が描画され、未認証の login redirect と
+  // aal1 の MFA gate を同時に迂回できる（locale prefix を encode した
+  // `/%6a%61/calendar` は getPathWithoutLocale も素通りするため同じ穴になる）。
+  // decode だけでは足りず、next-intl が続けて通す sanitize（TAB / LF / CR の
+  // 除去と連続スラッシュの畳み込み）まで揃えないと `/%09calendar` や
+  // `//calendar` が同じ穴として残る。
+  // **rewrite 先を決めるのと同じ正規化を通した値だけで判定する**のが唯一の
+  // 防ぎ方で、判定関数を個別に直しても encode の入り口が残る。
+  const rawPathname = request.nextUrl.pathname;
+  const pathname = canonicalizePathname(rawPathname);
+  if (pathname === null) {
+    // decodeURI が URIError を投げる pathname は Next 側でも実ルートへ解決されない。
+    // 判定を続けず fail closed で落とす。
+    return notFoundWithCsp(prepareCspRequest(request));
+  }
+
   const oauthHostBoundaryResponse = enforceOAuthHostBoundary(
     hostname,
     getPathWithoutLocale(pathname),
@@ -266,12 +324,19 @@ export async function proxy(request: NextRequest) {
   // - /api/chat: 内部認証チェック
   // - /api/webhooks: Stripe/Resend署名検証
   // ⚠️ 新規APIルートは必ず自前の認証を実装すること
+  //
+  // **ここだけは canonical ではなく raw を見る。** この分岐は「Next が rewrite
+  // 抜きで何にルーティングするか」の判定で、認可の分類ではない。canonical を
+  // 使うと `/settings/general%2Ex` の `%2E` が `.` へ decode されて静的アセット
+  // 用の早期 return に落ち、`updateSession`・protected 判定・MFA gate をまとめて
+  // 飛ばす（リテラルの `.` は config.matcher の `.*\..*` で middleware 自体が
+  // 起動しないため、raw で見る限りこの穴は開かない）。
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.') ||
-    (hostname === MCP_HOST && pathname === '/') ||
-    isPublicRewritePath(pathname)
+    rawPathname.startsWith('/_next') ||
+    rawPathname.startsWith('/api') ||
+    rawPathname.includes('.') ||
+    (hostname === MCP_HOST && rawPathname === '/') ||
+    isPublicRewritePath(rawPathname)
   ) {
     return nextWithCsp(request, contentSecurityPolicy);
   }

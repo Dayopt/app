@@ -60,7 +60,15 @@ REQUEST_BODY=$(jq -n \
   --arg password "$USER_PASSWORD" \
   '{email: $email, password: $password, email_confirm: true}')
 
-HTTP_STATUS=$(curl -sS -o /tmp/admin-create-user-response.json -w "%{http_code}" \
+# mktemp は mkstemp(3) 経由でファイルを 0600 (owner のみ読み書き) で作成するため、
+# curl が書き込む前の隙間なく world-readable な固定パスを避けられる。応答には
+# live な token / 個人情報が載るので、抽出後は trap で確実に削除する。
+# 固定パスのままだと (1) 同一ホストの別 uid が読める (2) 攻撃者が先に symlink を
+# 置くと curl -o が任意ファイルを operator 権限で truncate する。
+RESPONSE_FILE=$(mktemp "${TMPDIR:-/tmp}/admin-create-user-response.XXXXXX")
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+HTTP_STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X POST \
   "${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users" \
   -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
@@ -69,7 +77,7 @@ HTTP_STATUS=$(curl -sS -o /tmp/admin-create-user-response.json -w "%{http_code}"
   -d "$REQUEST_BODY")
 
 if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
-  USER_ID=$(jq -r '.id' /tmp/admin-create-user-response.json)
+  USER_ID=$(jq -r '.id' "$RESPONSE_FILE")
   echo ""
   echo "=== 完了 ==="
   echo "Email: $USER_EMAIL"
@@ -77,7 +85,7 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo "Email confirmed: true (即 login 可能)"
 else
   echo "エラー: user 作成に失敗しました (HTTP $HTTP_STATUS)" >&2
-  cat /tmp/admin-create-user-response.json >&2
+  cat "$RESPONSE_FILE" >&2
   echo "" >&2
   exit 1
 fi
