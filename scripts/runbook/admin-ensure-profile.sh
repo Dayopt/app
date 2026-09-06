@@ -54,7 +54,15 @@ REQUEST_BODY=$(jq -n \
   --arg email "$USER_EMAIL" \
   '{id: $id, email: $email}')
 
-HTTP_STATUS=$(curl -sS -o /tmp/admin-ensure-profile-response.json -w "%{http_code}" \
+# mktemp は mkstemp(3) 経由でファイルを 0600 (owner のみ読み書き) で作成するため、
+# curl が書き込む前の隙間なく world-readable な固定パスを避けられる。応答には
+# live な token / 個人情報が載るので、抽出後は trap で確実に削除する。
+# 固定パスのままだと (1) 同一ホストの別 uid が読める (2) 攻撃者が先に symlink を
+# 置くと curl -o が任意ファイルを operator 権限で truncate する。
+RESPONSE_FILE=$(mktemp "${TMPDIR:-/tmp}/admin-ensure-profile-response.XXXXXX")
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+HTTP_STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X POST \
   "${NEXT_PUBLIC_SUPABASE_URL}/rest/v1/profiles?on_conflict=id" \
   "${AUTH_HEADERS[@]}" \
@@ -70,11 +78,11 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo "profile row を upsert しました"
   echo ""
   echo "Response:"
-  cat /tmp/admin-ensure-profile-response.json
+  cat "$RESPONSE_FILE"
   echo ""
 else
   echo "エラー: profile upsert に失敗しました (HTTP $HTTP_STATUS)" >&2
-  cat /tmp/admin-ensure-profile-response.json >&2
+  cat "$RESPONSE_FILE" >&2
   echo "" >&2
   exit 1
 fi

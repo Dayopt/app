@@ -68,7 +68,15 @@ fi
 # ========================================
 echo "[dayopt/Production] custom_access_token hook を有効化中..."
 
-HTTP_STATUS=$(curl -s -o /tmp/auth-hook-response.json -w "%{http_code}" \
+# mktemp は mkstemp(3) 経由でファイルを 0600 (owner のみ読み書き) で作成するため、
+# curl が書き込む前の隙間なく world-readable な固定パスを避けられる。応答には
+# live な token / 個人情報が載るので、抽出後は trap で確実に削除する。
+# 固定パスのままだと (1) 同一ホストの別 uid が読める (2) 攻撃者が先に symlink を
+# 置くと curl -o が任意ファイルを operator 権限で truncate する。
+RESPONSE_FILE=$(mktemp "${TMPDIR:-/tmp}/auth-hook-response.XXXXXX")
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+HTTP_STATUS=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X PATCH \
   "https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth" \
   -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
@@ -82,7 +90,7 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo "[dayopt/Production] Auth Hook 有効化完了 (HTTP $HTTP_STATUS)"
 else
   echo "エラー: Auth Hook の有効化に失敗しました (HTTP $HTTP_STATUS)"
-  cat /tmp/auth-hook-response.json
+  cat "$RESPONSE_FILE"
   exit 1
 fi
 
