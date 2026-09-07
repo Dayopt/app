@@ -5,6 +5,18 @@ import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { entitlementKeys } from '@dayopt/billing';
 
+// 判定は本物（capability map）を使いつつ、どのキーで引いたかだけを観測する。
+const hasEntitlementForStatus = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/billing/enforcement', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/enforcement')>();
+  return {
+    ...actual,
+    hasEntitlementForStatus: hasEntitlementForStatus.mockImplementation(
+      actual.hasEntitlementForStatus,
+    ),
+  };
+});
+
 import { createCallerFactory, createTRPCRouter, entitledProcedure } from './procedures';
 
 // テスト用の最小ルーター
@@ -184,7 +196,7 @@ describe('entitledProcedure', () => {
     });
   });
 
-  it('別の entitlement key でも Pro なら通る（key が builder を通っている）', async () => {
+  it('別の entitlement key でも Pro なら通る', async () => {
     const ctx = createProTestContext('active');
     const caller = createCaller(ctx as never);
 
@@ -196,6 +208,21 @@ describe('entitledProcedure', () => {
     const caller = createCaller(ctx as never);
 
     await expect(caller.mcpPing()).rejects.toThrow(TRPCError);
+  });
+
+  // 現在 Pro は 4 キー全部を持つので、key を無視して固定キーで判定しても上の 2 本は
+  // 通ってしまう。map が一様でなくなった瞬間に誤配線が課金バグになるため、
+  // 「どのキーで判定したか」をここで固定する。
+  it.each([
+    { procedure: 'ping', expectedKey: entitlementKeys.externalCalendarSync },
+    { procedure: 'mcpPing', expectedKey: entitlementKeys.mcpApi },
+  ])('$procedure は $expectedKey で判定する', async ({ procedure, expectedKey }) => {
+    const ctx = createProTestContext('active');
+    const caller = createCaller(ctx as never);
+
+    await (caller as unknown as Record<string, () => Promise<string>>)[procedure]!();
+
+    expect(hasEntitlementForStatus).toHaveBeenCalledWith('active', expectedKey);
   });
 
   describe('enforcement 無効時（既定・全機能無料）', () => {

@@ -35,16 +35,25 @@ export const entitlementKeys = {
   /**
    * 月・年の俯瞰と、期間をまたぐ推移・過去の自分との比較。
    *
-   * gate: `input_range`（`granularity` が `month` / `year`）
-   * 強制点は #2605 で review router へ入れる。現時点ではキーの定義だけで、
-   * report の閲覧は Free / Pro を問わず通る。
+   * 現在の gate: `procedure`（granularity を問わず procedure 全体を弾く）
+   * - `apps/product/src/features/timeblock/server/statistics-summary-router.ts`（`getStatsOverview`）
+   * - `apps/product/src/features/timeblock/server/statistics-kpi-router.ts`（`getBlankRate`）
+   * - `apps/product/src/features/timeblock/server/statistics-general-router.ts`
+   *   （`getHourlyDistribution` / `getDayOfWeekDistribution` / `getMonthlyTrend`）
+   *
+   * 目標の gate は `input_range`（`granularity` が `month` / `year` の時だけ弾く）。
+   * #2605 で review router へ入れるまでは週の閲覧も含めて procedure ごと弾くため、
+   * **`BILLING_ENFORCED` を反転する前に #2605 を終わらせる**（Phase 1 の前提）。
    */
   reportLongRange: 'report_long_range',
   /**
    * 見積もりのフィードフォワードを全履歴から算出する。
    *
-   * gate: `service_window`（Free は直近 `ESTIMATION_WINDOW_DAYS` 日）
-   * 強制点は未実装。現時点ではキーの定義だけ。
+   * 現在の gate: `procedure`（`statistics-kpi-router.ts` の `getEstimationAccuracy`）
+   *
+   * 目標の gate は `service_window`（Free は直近 `ESTIMATION_WINDOW_DAYS` 日に
+   * 縮めて返す）。今は Free へ縮めるのではなく procedure ごと弾くので、
+   * reportLongRange と同じく flag 反転前に narrowing が要る。
    */
   estimationFullHistory: 'estimation_full_history',
 } as const;
