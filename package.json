@@ -96,7 +96,9 @@
     "build-storybook": "pnpm --filter @dayopt/storybook build",
     "build:web": "pnpm --filter @dayopt/web build",
     "test:web": "pnpm --filter @dayopt/web test",
-    "agent:preflight": "node scripts/tasks/agent-preflight.mjs"
+    "agent:preflight": "node scripts/tasks/agent-preflight.mjs",
+    "review:pack": "node scripts/tasks/review-pack.mjs create",
+    "review:validate": "node scripts/tasks/review-pack.mjs validate"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:tooling",

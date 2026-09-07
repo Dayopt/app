@@ -1,47 +1,13 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
-
-/**
- * `.agents/skills/pr-cross-review/cross-review-workflow.js` の schema 契約テスト（#2348）。
- *
- * Workflow script は `import()` が使えない（実測: SyntaxError）ため、schema は
- * そのファイルへ自己完結で持つほかない。typecheck / import による検証ができない
- * 代わりに、`SCHEMA_CONTRACT_START`/`END` マーカーで挟んだ純粋定義ブロック
- * （`phase()`/`agent()`/`parallel()` を呼ばない）だけをファイルから抽出し、
- * 安全に評価して role ごとの required key 集合・severity enum を固定する。
- */
-
-const WORKFLOW_SCRIPT_PATH = join(
-  import.meta.dirname,
-  '../../.agents/skills/pr-cross-review/cross-review-workflow.js',
-);
-
-function extractSchemas(): Record<string, unknown> {
-  const source = readFileSync(WORKFLOW_SCRIPT_PATH, 'utf8');
-  const startMarker = '// === SCHEMA_CONTRACT_START ===';
-  const endMarker = '// === SCHEMA_CONTRACT_END ===';
-  const startIndex = source.indexOf(startMarker);
-  const endIndex = source.indexOf(endMarker);
-  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
-    throw new Error(
-      `cross-review-workflow.js から SCHEMA_CONTRACT マーカーを抽出できませんでした（start: ${startIndex}, end: ${endIndex}）。ファイル構造が変わっていないか確認してください。`,
-    );
-  }
-
-  const block = source.slice(startIndex + startMarker.length, endIndex);
-  const evaluate = new Function(`'use strict'; ${block} return SCHEMAS;`);
-  return evaluate() as Record<string, unknown>;
-}
+import { SCHEMAS } from '../lib/review-contract.mjs';
 
 type JsonSchemaObject = {
   required?: string[];
   properties?: Record<string, { enum?: string[]; items?: { enum?: string[] } }>;
 };
 
-describe('cross-review-workflow.js の SCHEMA_CONTRACT', () => {
-  const schemas = extractSchemas();
+describe('review-contract.mjs の SCHEMA_CONTRACT', () => {
+  const schemas: Record<string, unknown> = SCHEMAS;
 
   it('3 role すべてが定義されている', () => {
     expect(Object.keys(schemas).sort()).toEqual(

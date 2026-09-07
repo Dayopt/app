@@ -11,6 +11,7 @@ import {
   listJsonlFiles,
   normalizeModelLabel,
   PROJECTS_DIR,
+  SESSION_TELEMETRY_COVERAGE,
 } from './ai-usage.mjs';
 import { detectJudgmentRecords, extractLinkedIssueNumbers } from './ctx.mjs';
 
@@ -19,7 +20,7 @@ import { detectJudgmentRecords, extractLinkedIssueNumbers } from './ctx.mjs';
  * その判断が正しかったか」を PR 番号を軸に 1 コマンドで追跡する（routing skill
  * §目標状態、AGENTS.md 委任・報告の作法）。
  *
- * Storage は追加しない。material は session log（`~/.claude/projects/**\/*.jsonl`）、
+ * Storage は追加しない。material は Claude Code session log（`~/.claude/projects/**\/*.jsonl`）、
  * git、GitHub、`docs/decisions.md` の 4 つ。`ctx.mjs`（判断の記録の検出）と
  * `ai-usage.mjs`（jsonl walker・model 正規化・探索 turn 計算）をそのまま流用する。
  *
@@ -479,6 +480,25 @@ export function parseMarkerPartialCoverageRoles(body) {
     .filter(Boolean);
 }
 
+const REVIEW_RESULT_STATUSES = new Set(['not-run', 'stale', 'partial', 'reviewed', 'invalid']);
+
+/** `status: role=reviewed, role=partial` を role -> status へ分解する。 */
+export function parseMarkerStatusField(body) {
+  const match = /^status:\s*(.+)$/m.exec(body ?? '');
+  if (!match) return {};
+  const result = {};
+  for (const token of match[1].split(',').map((value) => value.trim())) {
+    const eqIndex = token.indexOf('=');
+    if (eqIndex === -1) continue;
+    const role = token.slice(0, eqIndex).trim();
+    const status = token.slice(eqIndex + 1).trim();
+    if (KNOWN_REVIEWER_ROLES.includes(role)) {
+      result[role] = REVIEW_RESULT_STATUSES.has(status) ? status : 'invalid';
+    }
+  }
+  return result;
+}
+
 /** marker 本文の `head:` 行から 40 桁 hex の head SHA を取る（無ければ null）。 */
 export function parseMarkerHeadSha(body) {
   const match = /^head:\s*([0-9a-f]{40})\s*$/m.exec(body ?? '');
@@ -542,7 +562,12 @@ export function countRoleFindingsHeuristic(role, reviewComments, issueComments) 
  * 複数 marker がある場合（HEAD が動いて張り直された場合）は最新 marker の role 構成を
  * 使い、`markerCount` にだけ全 marker 数を残す。
  */
-export function buildInternalReviewSection({ issueComments, reviewComments, commits }) {
+export function buildInternalReviewSection({
+  issueComments,
+  reviewComments,
+  commits,
+  headSha = null,
+}) {
   const markers = filterInternalReviewMarkerComments(issueComments);
   if (markers.length === 0) return null;
 
@@ -553,8 +578,11 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
 
   const agentRoles = parseMarkerAgentField(latest.body);
   const partialRoles = new Set(parseMarkerPartialCoverageRoles(latest.body));
+  const resultStatuses = parseMarkerStatusField(latest.body);
+  const hasResultStatusLine = /^status:\s*(.+)$/m.test(latest.body ?? '');
   const markerFindings = parseMarkerFindingsField(latest.body);
   const commitsAfterMarker = countCommitsAfterMarker(commits, latest.created_at);
+  const latestHeadSha = parseMarkerHeadSha(latest.body);
 
   // findings ヒューリスティックの対象から marker コメント自身を除く（`agent:` /
   // `partial coverage:` / `findings:` 行に role 名がそのまま載るため、含めると
@@ -579,16 +607,35 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
   const roles = agentRoles
     .filter((r) => KNOWN_REVIEWER_ROLES.includes(r.role))
     .map((r) => {
+      const explicitStatus = hasResultStatusLine ? (resultStatuses[r.role] ?? 'invalid') : null;
+      const markerHeadMismatch = headSha !== null && latestHeadSha !== headSha;
+      const timestampShowsStale = headSha === null && commitsAfterMarker > 0;
+      const status =
+        markerHeadMismatch || timestampShowsStale ? 'stale' : (explicitStatus ?? r.status);
+      const coverage = status === 'partial' || partialRoles.has(r.role) ? 'partial' : 'complete';
+      const usableResult = (status === 'reviewed' || status === 'ok') && coverage === 'complete';
       const markerCount = Object.prototype.hasOwnProperty.call(markerFindings, r.role)
         ? markerFindings[r.role]
         : undefined;
       const hasAuthoritativeCount = typeof markerCount === 'number';
-      const findings = hasAuthoritativeCount ? markerCount : estimateFor(r.role);
-      const findingsSource = hasAuthoritativeCount ? 'marker' : 'estimate';
+      const findings = usableResult
+        ? hasAuthoritativeCount
+          ? markerCount
+          : hasResultStatusLine
+            ? null
+            : estimateFor(r.role)
+        : null;
+      const findingsSource = usableResult
+        ? hasAuthoritativeCount
+          ? 'marker'
+          : hasResultStatusLine
+            ? 'status'
+            : 'estimate'
+        : 'status';
 
       // 歩留まり判定（`computeZeroFindingRoleNotes`）は「最新 marker だけ 0 件」
       // では止まらない — round 1 で 2 件拾って round 2（re-review）で 0 件になった
-      // だけの role を「指摘ゼロの role」と誤認し、Haiku 化 / 廃止候補に挙げて
+      // だけの role を「指摘ゼロの role」と誤認し、scope 縮小 / 廃止候補に挙げて
       // しまう（#2530 push 前反証レビュー P2）。PR 上の全 marker を横断して合計し、
       // それを判定に使う。findings: 行が無い marker はここでも同じ推定値を加算する。
       // marker 由来の実数を足し合わせ、`findings:` 行を持たない marker（古い書式や
@@ -597,11 +644,21 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
       // 歩留まりが実態と乖離する（#2560 項目 4）。
       let markerDerivedFindings = 0;
       let markersMissingField = 0;
+      let hasUnconfirmedRound = false;
       for (const marker of sorted) {
+        if (!parseMarkerAgentField(marker.body).some((entry) => entry.role === r.role)) continue;
         const perMarkerFindings = parseMarkerFindingsField(marker.body);
         const perMarkerCount = Object.prototype.hasOwnProperty.call(perMarkerFindings, r.role)
           ? perMarkerFindings[r.role]
           : undefined;
+        const perMarkerHasStatus = /^status:\s*(.+)$/m.test(marker.body ?? '');
+        if (perMarkerHasStatus) {
+          const perMarkerStatus = parseMarkerStatusField(marker.body)[r.role] ?? 'invalid';
+          if (perMarkerStatus !== 'reviewed' || typeof perMarkerCount !== 'number') {
+            hasUnconfirmedRound = true;
+            continue;
+          }
+        }
         if (typeof perMarkerCount === 'number') {
           markerDerivedFindings += perMarkerCount;
         } else {
@@ -609,12 +666,14 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
         }
       }
       const totalFindings =
-        markerDerivedFindings + (markersMissingField > 0 ? estimateFor(r.role) : 0);
+        usableResult && !hasUnconfirmedRound && findings !== null
+          ? markerDerivedFindings + (markersMissingField > 0 ? estimateFor(r.role) : 0)
+          : null;
 
       return {
         role: r.role,
-        status: r.status,
-        coverage: partialRoles.has(r.role) ? 'partial' : 'complete',
+        status,
+        coverage,
         findings,
         findingsSource,
         totalFindings,
@@ -628,21 +687,26 @@ export function buildInternalReviewSection({ issueComments, reviewComments, comm
   return {
     markerCount: markers.length,
     latestMarkerCreatedAt: latest.created_at ?? null,
-    latestHeadSha: parseMarkerHeadSha(latest.body),
+    latestHeadSha,
     roles,
   };
 }
 
-/** 指摘 0 件の role のうち PR が merged なら Haiku化/廃止候補の所見行を返す（月次歩留まり判定用）。 */
+/** 指摘 0 件の role のうち PR が merged なら scope/費用の再評価候補を返す。 */
 export function computeZeroFindingRoleNotes(internalReview, merged) {
   if (!internalReview || !merged) return [];
   // 最新 marker だけでなく、PR 上の全 marker（re-review 込み）を合計した値で
   // 判定する（`buildInternalReviewSection` の `totalFindings`）。
   return internalReview.roles
-    .filter((r) => r.totalFindings === 0)
+    .filter(
+      (r) =>
+        (r.status === 'reviewed' || r.status === 'ok') &&
+        r.coverage === 'complete' &&
+        r.totalFindings === 0,
+    )
     .map(
       (r) =>
-        `${r.role}: 指摘ゼロの role: 月次で歩留まりを見て Haiku 化 / 廃止候補（gardening 手順 4）`,
+        `${r.role}: 指摘ゼロの role: 月次で scope・費用・独立性を見直し、縮小 / 廃止 / 別手段の候補にする（gardening 手順 4）`,
     );
 }
 
@@ -683,14 +747,14 @@ export function collectDecisionLines(raw, numbers) {
 /**
  * @param {{
  *   exploreMedian?: number | null,
- *   codexP1?: number,
+ *   codexP1?: number | null,
  *   commitsAfterReady?: number | null,
  *   hasNoEditHeavyModel?: boolean,
  * }} [options]
  */
 export function computeFindings({
   exploreMedian = null,
-  codexP1 = 0,
+  codexP1 = null,
   commitsAfterReady = null,
   hasNoEditHeavyModel = false,
 } = {}) {
@@ -698,14 +762,16 @@ export function computeFindings({
   if (exploreMedian !== null && exploreMedian > 10) {
     lines.push('探索 turn が多い: brief（ctx --post）の選別漏れを疑う');
   }
-  if (codexP1 > 0) {
+  if (codexP1 !== null && codexP1 > 0) {
     lines.push('レビューが P1 を拾った: 判断の記録（DoD / 分解表）に穴が無いか');
   }
   if (commitsAfterReady !== null && commitsAfterReady > 3) {
     lines.push('ready 後の push が多い: push 前セルフレビューの範囲を見直す');
   }
   if (hasNoEditHeavyModel) {
-    lines.push('編集なしの Opus / Fable session: routing 反例');
+    lines.push(
+      'Claude Code telemetry: 編集なしの Opus / Fable session あり（用途と費用を個別確認）',
+    );
   }
   return lines;
 }
@@ -741,12 +807,16 @@ export function renderMarkdown(pack) {
     lines.push(`linked issues: ${h.linkedIssues.map((n) => `#${n}`).join(', ')}`);
   }
   lines.push('');
+  lines.push(
+    '**session telemetry**: Claude Code の local transcript のみ。Codex / Antigravity は未収集（不明であり 0 ではない）。PR / review / merge 情報は GitHub 由来の repo 全体で、Claude Code の効率へ帰属させない。',
+  );
+  lines.push('');
 
   // #### 見た・実行（session）
   if (pack.sessions === null) {
     lines.push('#### 見た・実行（session）');
     lines.push('');
-    lines.push('未取得（session log の走査に失敗、または project ディレクトリが無い）');
+    lines.push('未取得（Claude Code session log の走査に失敗、または project ディレクトリが無い）');
     lines.push('');
   } else if (pack.sessions.displayed.length > 0) {
     lines.push('#### 見た・実行（session）');
@@ -774,7 +844,9 @@ export function renderMarkdown(pack) {
   } else {
     lines.push('#### 見た・実行（session）');
     lines.push('');
-    lines.push(`該当 session なし（headRefName: ${h.headRefName ?? '未取得'}）`);
+    lines.push(
+      `該当 Claude Code session なし（headRefName: ${h.headRefName ?? '未取得'}。他 provider の実行有無は不明）`,
+    );
     lines.push('');
   }
 
@@ -838,9 +910,16 @@ export function renderMarkdown(pack) {
       lines.push(`内製クロスレビュー（marker ${ir.markerCount} 件）:`);
       if (ir.roles.length > 0) {
         for (const role of ir.roles) {
-          const sourceLabel = role.findingsSource === 'marker' ? 'marker' : '推定';
+          const sourceLabel =
+            role.findingsSource === 'marker'
+              ? 'marker'
+              : role.findingsSource === 'estimate'
+                ? '推定'
+                : 'status により未集計';
+          const totalFindings = role.totalFindings === null ? '未取得' : role.totalFindings;
+          const latestFindings = role.findings === null ? '未取得' : role.findings;
           lines.push(
-            `- ${role.role}: 指摘 合計 ${role.totalFindings}（marker ${ir.markerCount} 件、最新 ${role.findings}（${sourceLabel}）） / status ${role.status} / coverage ${role.coverage} / marker 後の commit ${role.commitsAfterMarker === null ? '未取得' : role.commitsAfterMarker}`,
+            `- ${role.role}: 指摘 合計 ${totalFindings}（marker ${ir.markerCount} 件、最新 ${latestFindings}（${sourceLabel}）） / status ${role.status} / coverage ${role.coverage} / marker 後の commit ${role.commitsAfterMarker === null ? '未取得' : role.commitsAfterMarker}`,
           );
         }
       } else {
@@ -906,7 +985,7 @@ export function buildTracePack(options, deps = {}) {
           'view',
           String(number),
           '--json',
-          'number,title,state,url,isDraft,mergedAt,closedAt,headRefName,baseRefName,body,commits',
+          'number,title,state,url,isDraft,mergedAt,closedAt,headRefName,headRefOid,baseRefName,body,commits',
         ],
         { execFileImpl },
       ),
@@ -922,6 +1001,7 @@ export function buildTracePack(options, deps = {}) {
     mergedAt: pr?.mergedAt ?? null,
     closedAt: pr?.closedAt ?? null,
     headRefName: pr?.headRefName ?? null,
+    headRefOid: pr?.headRefOid ?? null,
     baseRefName: pr?.baseRefName ?? null,
     linkedIssues,
   };
@@ -1035,6 +1115,7 @@ export function buildTracePack(options, deps = {}) {
           issueComments,
           reviewComments: codexComments ?? [],
           commits: pr?.commits ?? [],
+          headSha: pr?.headRefOid ?? null,
         });
 
   const review = {
@@ -1070,14 +1151,23 @@ export function buildTracePack(options, deps = {}) {
   const findings = [
     ...computeFindings({
       exploreMedian: sessions?.summary?.exploreMedian ?? null,
-      codexP1: codex?.p1 ?? 0,
+      codexP1: codex?.p1 ?? null,
       commitsAfterReady,
       hasNoEditHeavyModel: hasNoEditHeavyModelSession(sessions?.all ?? []),
     }),
     ...computeZeroFindingRoleNotes(internalReview, result.merged),
   ];
 
-  return { number, header, sessions, judgment, review, result, findings };
+  return {
+    number,
+    header,
+    sessionTelemetryCoverage: SESSION_TELEMETRY_COVERAGE,
+    sessions,
+    judgment,
+    review,
+    result,
+    findings,
+  };
 }
 
 // --- CLI --------------------------------------------------------------

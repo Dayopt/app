@@ -510,6 +510,53 @@ Codex でこの project を初めて開く時は、project trust を確認し、
 
 新規・更新時は `.agents/skills/skill-design/SKILL.md` に従う。description / When to Use は provider-neutral にし、特定 model の名前を発火条件や必須 tier にしない。provider 固有の adapter は capability、scope、出力契約、generic fallback、実際の保証境界を併記する。
 
+## 5. Portable review interface
+
+クロスレビューの一次情報は provider の session ではなく immutable review pack に固定する。
+
+```bash
+pnpm review:pack --base <ref> --head <ref> \
+  --context <context-markdown-path> --verification <verification-markdown-path> \
+  --source <repo-relative-file> --out <new-directory>
+```
+
+pack は exact base / head SHA、pack ID、base から head への直接 diff、変更 path の before / after source、関連 source、role ごとの prompt と result-body schema を持つ。`--source` は繰り返せる。binary、欠落、1 MiB 超の source は omission として記録される。context と verification は非空、出力先は新規 directory とする。
+
+reviewer は read-only sandbox で provider 固有の tool を使い、同じ pack を読む。資料確認の `cat` / `rg` / `git show` 相当は許可するが、test や package install を含むコード実行、状態変更、nested agent は許可しない。result body を schema に合わせ、その外側に `packId`、`baseSha`、`headSha`、`provider`、`model`、`modelFamily`、`sessionId`、`independence`、`role` を持つ JSON envelope を付ける。`independence` は実態に応じて `separate-session` または `different-model-family` を記録する。固定 model、Claude Workflow、provider の多数決は共通契約に含めない。
+
+```bash
+pnpm review:validate --pack <directory> --result <result.json>
+```
+
+validator は `not-run`、`stale`、`partial`、`reviewed`、`invalid` を区別する。`invalid` は envelope / result の schema 違反で、必須 string が空白だけの場合も含む。`not-run` / `stale` / `partial` / `invalid` は非 0 exit、`reviewed` は findings の件数に関係なく 0 exit である。これは transport と provenance の検証であり、レビュー品質や merge 可否の判定ではない。`not-run`、`partial`、未収集 provider を指摘 0 件として集計しない。
+
+OpenAI / Codex を primary reviewer とする。auth / RLS / billing / migration / 公開契約などで独立した反証の価値がある時は、Claude Code や Antigravity を optional counterreview として追加できる。各 provider の所見は個別に failure scenario と一次情報を照合し、多数決で棄却しない。role の選択と投稿手順は `.agents/skills/pr-cross-review/SKILL.md` を正本とする。
+
+## 6. Migration acceptance と handoff
+
+native worktree root の fresh Codex session による共通指示・skills の発見と、サブディレクトリ起動の別 Codex session への review pack 引き継ぎを確認した。Codex の project trust と実 hook 発火、Antigravity の skill discovery と review adapter は未検証であり、設定ファイルの存在を有効化の証拠にしない。
+
+2026-09-07、`scripts/tasks` から新規 Codex read-only セッション（gpt-5.6-sol、session `01a0796e-8943-7303-9bb3-6184e41a9b2f`）を起動し、base `393f432c6` → head `bbdb9510a` の移行差分を pack で手渡した。result envelope は `reviewed`、recommendation は `revise`、指摘 1 件だった。指摘は shell の任意編集に対する保証の過大解釈で、経路別の保護表へ保証外の操作を明記した。これは別 OpenAI セッションの反証であり、別モデル系列の反証や native hook 発火の証拠ではない。旧 SHA の所見を後続 SHA の指摘ゼロとして再利用しない。
+
+次の 3 trial は将来の実 PR で各 1 件行い、証跡はその issue / PR comment に残す。ここに別の常設 tracker は作らない。Antigravity は高リスク変更で独立した反証が有益な時の任意 adapter であり、trial の合格条件にはしない。
+
+| trial                    | 対象                                                 | status  |
+| ------------------------ | ---------------------------------------------------- | ------- |
+| **通常バグ修正**         | 1 feature 内の再現可能な bug fix 1 件                | pending |
+| **複数ファイル変更**     | 複数 file / connection point を含む変更 1 件         | pending |
+| **高リスク diff review** | auth / RLS / billing / migration / 公開契約など 1 件 | pending |
+
+各 trial は次の 4 軸で評価する。
+
+1. **成功条件**: issue / PR の受け入れ条件と検証結果を満たしたか
+2. **説明し直し救済**: 曖昧さや誤解が生じた時、User が全体を説明し直さず issue / PR / pack の事実から修正できたか
+3. **手戻り・見逃し**: review 後の修正 round、revert、見逃した P1 / P2、未解消 unknown を記録できたか
+4. **別 session 再開**: fresh separate session が issue / PR / pack だけから対象 SHA と次の一手を復元できたか
+
+`stale` / `partial` / `not-run` / `invalid` の区別と、未完了 result を findings 0 にしない契約は自動 test 24 件で検証済みである。これは実 PR での上記 3 trial や reviewer 品質の代替ではない。
+
+`pnpm ai:usage` と `pnpm trace` の session / token / tool データは Claude Code local transcript のみを収集する。Codex / Antigravity は `null` / unknown であり 0 ではない。GitHub 由来の aggregate PR outcomes は repo 全体の値なので、Claude Code の token や session で割って provider の効率を主張しない。
+
 ---
 
 ## 履歴: Opus 4.7 Skill Triggers Migration
