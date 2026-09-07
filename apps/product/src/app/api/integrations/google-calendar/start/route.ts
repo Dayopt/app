@@ -13,7 +13,9 @@ import {
   isGoogleCalendarConfigured,
   resolveRedirectUri,
 } from '@/features/external-calendar/server/google-oauth';
-import { checkProAccessForUser } from '@/lib/billing/enforcement';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { checkEntitlementForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
 import { captureUnexpectedError } from '@/lib/sentry';
@@ -72,9 +74,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL(getLocalizedPath('/auth/mfa-verify', locale), requestUrl));
   }
 
-  const proAccess = await checkProAccessForUser(supabase, user.id);
+  const entitlement = await checkEntitlementForUser(
+    supabase,
+    user.id,
+    entitlementKeys.externalCalendarSync,
+  );
 
-  if (proAccess === 'lookup_failed') {
+  if (entitlement === 'lookup_failed') {
     captureUnexpectedError(new Error('subscription lookup failed'), {
       feature: 'external_calendar',
       operation: 'check_pro_subscription',
@@ -83,7 +89,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to verify subscription' }, { status: 500 });
   }
 
-  if (proAccess === 'denied') {
+  if (entitlement === 'denied') {
     return NextResponse.json({ error: 'Pro plan required' }, { status: 403 });
   }
 

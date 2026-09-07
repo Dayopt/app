@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const createServiceRoleClient = vi.hoisted(() => vi.fn());
 const syncConnection = vi.hoisted(() => vi.fn());
 const isBillingEnforced = vi.hoisted(() => vi.fn(() => false));
-const checkProAccessForUser = vi.hoisted(() => vi.fn());
+const checkEntitlementForUser = vi.hoisted(() => vi.fn());
 const isDailyFullSyncSlot = vi.hoisted(() => vi.fn((_connectionId: string, _now: Date) => false));
 const captureUnexpectedDatabaseError = vi.hoisted(() => vi.fn((error: unknown) => error));
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/supabase/oauth', () => ({ createServiceRoleClient }));
-vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced, checkProAccessForUser }));
+vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced, checkEntitlementForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedDatabaseError, captureUnexpectedError }));
 vi.mock('@/lib/logger', () => ({
   logger: { log: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
@@ -62,7 +62,7 @@ beforeEach(() => {
   isBillingEnforced.mockReturnValue(false);
   isDailyFullSyncSlot.mockReturnValue(false);
   syncConnection.mockResolvedValue({ outcome: 'synced', calendarsSynced: 1, calendarsFailed: 0 });
-  checkProAccessForUser.mockResolvedValue('allowed');
+  checkEntitlementForUser.mockResolvedValue('allowed');
 });
 
 afterEach(() => {
@@ -178,19 +178,26 @@ describe('dispatchCalendarSync — 課金ゲート', () => {
 
     await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
 
-    expect(checkProAccessForUser).not.toHaveBeenCalled();
+    expect(checkEntitlementForUser).not.toHaveBeenCalled();
     expect(syncConnection).toHaveBeenCalledTimes(2);
   });
 
   it('BILLING_ENFORCED on で非 Pro は skip する', async () => {
     setupDb({ data: connections(2), error: null });
     isBillingEnforced.mockReturnValue(true);
-    checkProAccessForUser.mockResolvedValueOnce('allowed').mockResolvedValueOnce('denied');
+    checkEntitlementForUser.mockResolvedValueOnce('allowed').mockResolvedValueOnce('denied');
 
     const summary = await dispatchCalendarSync({ now: NOW, deadlineAt: FAR_DEADLINE });
 
     expect(syncConnection).toHaveBeenCalledTimes(1);
     expect(summary.skippedNonPro).toBe(1);
     expect(summary.processed).toBe(1);
+    // capability map のどのキーで判定したかまで固定する（gate の切れ目が
+    // external_calendar_sync 以外へずれたら落とす）。
+    expect(checkEntitlementForUser).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      'external_calendar_sync',
+    );
   });
 });

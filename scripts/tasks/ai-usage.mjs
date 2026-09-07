@@ -11,15 +11,15 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  * Token でなく Outcome」の Dayopt 写像、Sub-1。plan: dayopt-https-www-uber-com-
  * us-en-blog-ef-eventual-hare.md §Sub-1）。
  *
- * `~/.claude/projects/**\/*.jsonl` を 1 パスで walk し、指定期間（既定は前月の
+ * Claude Code の local transcript `~/.claude/projects/**\/*.jsonl` だけを 1 パスで
+ * walk し、指定期間（既定は前月の
  * 暦月。gardening 手順 0 が前月分を見るため）について以下を集計する:
  *
  *   A. 消費 — model 別 requests / output / input / cache_read / cache_creation、
  *      output 構成比、subagent 比（isSidechain）、cache TTL（1h/5m）内訳、
  *      cache miss 比
  *   B. context bloat proxy — tool_use → tool_result の chars を tool 名へ帰属
- *   C. 成果（gh 経由）— 当該期間の merged PR 数・revert PR 数（title proxy）・
- *      merged PR あたり output/cache_read token
+ *   C. repo 成果（gh 経由）— 当該期間の merged PR 数・revert PR 数（title proxy）
  *   D. L0 候補検出 — Bash コマンドの先頭トークン頻度、および連続 tool_use
  *      チェイン（ユーザーの平文発話に遮られない連鎖）の上位
  *
@@ -41,6 +41,11 @@ import { isDirectExecution } from '../lib/is-direct-execution.mjs';
  */
 
 export const PROJECTS_DIR = join(homedir(), '.claude', 'projects');
+export const SESSION_TELEMETRY_COVERAGE = Object.freeze({
+  source: 'claude-code-local-jsonl',
+  providers: Object.freeze({ claudeCode: 'collected', codex: null, antigravity: null }),
+  missingMeans: 'unknown-not-zero',
+});
 const MODEL_LABELS = ['haiku', 'sonnet', 'opus', 'fable', 'mythos'];
 const BASH_PREFIX_LEADERS = new Set(['pnpm', 'npx', 'gh', 'git']);
 
@@ -754,6 +759,10 @@ export function renderMarkdown({ since, until, agg, prStats }) {
   const lines = [];
   lines.push(`### AI 経済メトリクス（${since}〜${until}）`);
   lines.push('');
+  lines.push(
+    '**session telemetry**: Claude Code の local transcript のみ。Codex / Antigravity は未収集（不明であり 0 ではない）。',
+  );
+  lines.push('');
 
   // 表 A: model 別消費
   const totalOutput = [...agg.models.values()].reduce((s, b) => s + b.output, 0);
@@ -805,20 +814,17 @@ export function renderMarkdown({ since, until, agg, prStats }) {
   }
   lines.push('');
 
-  // 表 C: 成果（gh）
+  // 表 C: repo 全体の成果（gh）。Claude Code session telemetry へ帰属させない。
   if (prStats) {
-    const outputPerPr = prStats.merged ? Math.round(totalOutput / prStats.merged) : 0;
-    const cacheReadPerPr = prStats.merged ? Math.round(totalCacheRead / prStats.merged) : 0;
     lines.push(`**merged PR 数**: ${prStats.merged}`);
     lines.push(`**revert PR 数（title proxy）**: ${prStats.reverts}`);
-    lines.push(`**output tok / merged PR**: ${human(outputPerPr)}`);
-    lines.push(`**cache_read tok / merged PR**: ${human(cacheReadPerPr)}`);
   } else {
     lines.push('**merged PR 数**: 未取得（gh 呼び出し失敗）');
     lines.push('**revert PR 数（title proxy）**: 未取得');
-    lines.push('**output tok / merged PR**: 未取得');
-    lines.push('**cache_read tok / merged PR**: 未取得');
   }
+  lines.push(
+    '**帰属境界**: PR outcome は repo 全体。provider attribution が無いため Claude Code の token / session と割って効率指標にしない。',
+  );
   lines.push('');
 
   // 表 D1: Bash prefix
@@ -892,12 +898,12 @@ export function renderMarkdown({ since, until, agg, prStats }) {
     0,
   );
   lines.push(
-    `**編集なしの Opus + Fable subagent**: ${heavyNoEdit} 件。目標は反証レビュー（pr-cross-review risk-reviewer）と矛盾報告の再検証の回数と同数（routing skill 反例）`,
+    `**Claude Code の編集なし Opus + Fable subagent**: ${heavyNoEdit} 件（用途は transcript から個別確認）`,
   );
 
   // 表 E の続き: Main session（Main 自身が実装しているか、principle ① との距離）
   lines.push('');
-  lines.push('**Main session**');
+  lines.push('**Claude Code top-level session**');
   lines.push('');
   lines.push(
     '| model | session n | 編集あり n | Edit 合計 | Edit 中央値 | 探索 turn 中央値 | Agent 呼び出し |',
@@ -929,7 +935,7 @@ export function renderMarkdown({ since, until, agg, prStats }) {
     })
     .join(' / ');
   lines.push(
-    `**Main が自分で編集した割合**: ${overallMainPct === null ? '未取得' : `${overallMainPct.toFixed(0)}%`}（編集あり session ÷ session n、model 別: ${perModelPct}）。目標: L3 は分解・検証・commit に限る（routing skill L3）`,
+    `**Claude Code top-level session の編集あり割合**: ${overallMainPct === null ? '未取得' : `${overallMainPct.toFixed(0)}%`}（編集あり session ÷ session n、model 別: ${perModelPct}）。provider 間の品質・効率比較には使わない`,
   );
 
   // 表 F: thinking の量（effort を変えた効果、routing skill 原則②）
@@ -1001,11 +1007,11 @@ async function main() {
   if (agg === null) {
     if (options.json) {
       process.stdout.write(
-        `${JSON.stringify({ since: options.since, until: options.until, error: 'projects_dir_missing', prStats }, null, 2)}\n`,
+        `${JSON.stringify({ since: options.since, until: options.until, sessionTelemetryCoverage: SESSION_TELEMETRY_COVERAGE, error: 'projects_dir_missing', prStats }, null, 2)}\n`,
       );
     } else {
       process.stdout.write(
-        `### AI 経済メトリクス（${options.since}〜${options.until}）\n\n未取得（~/.claude/projects が存在しない）\n`,
+        `### AI 経済メトリクス（${options.since}〜${options.until}）\n\n**session telemetry**: Claude Code の local transcript のみ。Codex / Antigravity は未収集（不明であり 0 ではない）。\n\n未取得（~/.claude/projects が存在しない）\n`,
       );
     }
     return;
@@ -1061,6 +1067,7 @@ async function main() {
         {
           since: options.since,
           until: options.until,
+          sessionTelemetryCoverage: SESSION_TELEMETRY_COVERAGE,
           models: modelsObj,
           toolResultSizes: toolResultSizesObj,
           bashPrefixes: bashPrefixesObj,

@@ -220,7 +220,25 @@ secret 検出はこれとは別で、**ready 後の PR で自動実行される*
 
 全履歴棚卸しの結果と個々の判定根拠は 決定ログ（削除済み、git 履歴参照） を参照。
 
-3 は `disable-model-invocation: true` のため AI 側から起動できない。実行はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
+3 は `disable-model-invocation: true` のため **モデルが自発的には起動できない**。通常はユーザーが `/claude-security` を叩く。結果は `CLAUDE-SECURITY-<timestamp>/` に出力され、`.gitignore` を同梱するため誤って commit されない。
+
+**cloud session（Claude Code on the web）からの実行**は 2026-09-06 に実測した。`/plugin` の対話 UI は terminal 専用だが、`claude plugin marketplace add anthropics/claude-plugins-official` と `claude plugin install claude-security@claude-plugins-official` の CLI サブコマンドは cloud でも通る。plugin が提供する `claude-security:scan` workflow は**セッション開始時にしか登録されない**ため、導入したセッションからは呼べず、次のセッション以降に使える。
+
+**スキャンの規模はセッションの利用上限で決まる。この repo では 1 回で全体は通らない**（2026-09-06 実測、#2617）。
+
+| 実行                | 規模                    | 結果                                                                                                     |
+| ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| 全体                | 2,634 ファイル / medium | 約 3 時間走り researcher 98 体・verifier 約 160 体まで進んだが、**レポート生成の直前に上限**。成果物ゼロ |
+| 攻撃面へ scope 絞り | 220 ファイル / medium   | researcher 29 体は完走。候補 10 件を得たが**検証パネルの途中で上限**。パネルを通ったのは 2 件のみ        |
+| 上記を**再開**      | 同上                    | エージェント 63 体すべて成功、エラーゼロ。確定 5 件 / 却下 3 件、`verification.status: verified`         |
+
+**上限に当たっても捨てなくてよい。`resumeFromRunId` で途中から再開でき、完了済みエージェントはキャッシュから復元される**（実測: researcher 29 体は 1 体も再実行されず、検証パネルだけが走り直した）。手順は run dir を同じパスに作り直して `write_scan_meta.py` を実行し、`Workflow({scriptPath, resumeFromRunId, args})` を同じ args で呼ぶ。plugin は途中結果を run dir へ永続化しないので、run dir を消していても workflow の journal から再開できる。
+
+**ただし再開のたびに候補集合は変わりうる。** 今回、中断時の候補にあった 4 件（auth メールの `redirect_to`、redirect allowlist の wildcard、CSRF の origin 正規表現、`supabase/server.ts` の no-store）は再出現せず、代わりに 3 件（永続化キャッシュのユーザー非分離、`disconnect()` の revoke 漏れ、cron secret の長さ下限）が新たに上がった。researcher の結果がキャッシュ復元されても後段が走り直すためで、**中断時の候補を「所見」として扱ってはいけない**根拠がこれ（#2616 / #2617）。
+
+候補は researcher の主張であって所見ではない。**パネルを通らなかった候補をそのまま修正に着手しない。** 逆に、パネルの却下も所見と同じだけ価値がある（今回 3 件が全会一致で却下され、いずれもコードの該当箇所を引いた反証が付いた）。
+
+**scope から外した領域は「見て問題なし」ではない。** 今回は `apps/product` の 8 ディレクトリに絞ったため、`supabase/`（migration・RLS・Edge Functions の全部）と `scripts/ci` は読まれていない。レポートの Coverage 節が除外領域を明示するので、所見ゼロを clean と読む前にそこを見る。
 
 所見が出た場合は issue に記録し、修正が必要なものは `dispatch` skill の intake で起票する（sweep と同じセッション内で起票まで行う）。
 

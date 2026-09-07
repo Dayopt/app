@@ -87,7 +87,7 @@ code: .github/dependabot.yml
 
 ### risk
 
-- `risk:authority` — issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作を含む場合のみ付与。運用は `.claude/skills/dispatch/SKILL.md` 操作 B
+- `risk:authority` — issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作を含む場合のみ付与。運用は `.agents/skills/dispatch/SKILL.md` 操作 B
 
 ### judgment
 

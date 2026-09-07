@@ -3,7 +3,9 @@ import { z } from 'zod';
 
 import { calendarSyncNowRateLimit } from '@/lib/rate-limit/upstash';
 import { handleServiceError } from '@/lib/trpc/errors';
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { createTRPCRouter, entitledProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 import {
   disconnect,
@@ -20,15 +22,15 @@ import { syncConnection } from './sync-service';
 /**
  * 外部カレンダー接続の tRPC router（overview.md §7-2）。
  *
- * 接続状態の読み取り 4 本は protectedProcedure、provider を叩く / 書き込む 3 本は proProcedure
+ * 接続状態の読み取り 4 本は protectedProcedure、provider を叩く / 書き込む 3 本は entitledProcedure（external_calendar_sync）
  * （課金ゲート。`BILLING_ENFORCED` off の間は素通り）。
  *
- * ghost 表示の `listEvents` は **proProcedure 側**に置く（#1962）。接続状態の読み取りが
+ * ghost 表示の `listEvents` は **entitledProcedure（external_calendar_sync） 側**に置く（#1962）。接続状態の読み取りが
  * protected なのは「解約済みでも状態が見えて必ず切断できる」ためで、ghost 表示にその理由は
  * 当てはまらない。protected にすると課金を有効化した日に「Pro を切っても外部予定は見え続ける」が
  * 既定になり、しかも同期は止まるのでミラーが凍結して古い予定が恒久的に出続ける。
  *
- * `dismissEvent`（#1984）も同じ理由で **proProcedure 側**に置く。protected にすると
+ * `dismissEvent`（#1984）も同じ理由で **entitledProcedure（external_calendar_sync） 側**に置く。protected にすると
  * 解約済みユーザーが「見えないはずの ghost を dismiss/undo できる」非対称なゲートになる。
  */
 
@@ -156,7 +158,7 @@ export const externalCalendarRouter = createTRPCRouter({
       }
     }),
 
-  listEvents: proProcedure
+  listEvents: entitledProcedure(entitlementKeys.externalCalendarSync)
     .meta({ description: 'calendar 画面に出す ghost（未変換の外部予定）' })
     .input(listEventsInput)
     .query(async ({ ctx, input }) => {
@@ -170,7 +172,7 @@ export const externalCalendarRouter = createTRPCRouter({
       }
     }),
 
-  dismissEvent: proProcedure
+  dismissEvent: entitledProcedure(entitlementKeys.externalCalendarSync)
     .meta({ description: 'ghost の非表示状態を切り替える（dismissed: false で取り消し）' })
     .input(dismissEventInput)
     .mutation(async ({ ctx, input }) => {
@@ -182,7 +184,7 @@ export const externalCalendarRouter = createTRPCRouter({
       }
     }),
 
-  listProviderCalendars: proProcedure
+  listProviderCalendars: entitledProcedure(entitlementKeys.externalCalendarSync)
     .meta({ description: 'provider のカレンダー一覧をオンデマンド取得' })
     .input(connectionIdInput)
     .query(async ({ ctx, input }) => {
@@ -197,7 +199,7 @@ export const externalCalendarRouter = createTRPCRouter({
       }
     }),
 
-  updateSelectedCalendars: proProcedure
+  updateSelectedCalendars: entitledProcedure(entitlementKeys.externalCalendarSync)
     .meta({ description: '取り込むカレンダーの選択を差し替え、即時同期する' })
     .input(updateSelectedCalendarsInput)
     .mutation(async ({ ctx, input }) => {
@@ -221,7 +223,7 @@ export const externalCalendarRouter = createTRPCRouter({
       }
     }),
 
-  syncNow: proProcedure
+  syncNow: entitledProcedure(entitlementKeys.externalCalendarSync)
     .meta({ description: '今すぐ同期（rate-limited）' })
     .input(connectionIdInput)
     .mutation(async ({ ctx, input }) => {

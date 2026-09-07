@@ -96,7 +96,7 @@ interface ReportPeriodResult {
    * 外部カレンダー未接続・選択なしなら 0。
    *
    * **Free / Pro の切れ目はここ。** カレンダー画面の ghost 表示（`externalCalendar.listEvents`）は
-   * `proProcedure` にある（#1962）。課金 enforcement を有効にする時（#1669 配下）、この件数も
+   * `entitledProcedure` にある（#1962）。課金 enforcement を有効にする時（#1669 配下）、この件数も
    * 同じゲートに揃える必要がある — 揃えないと「Pro を切ると ghost は見えないのに、レポートは
    * 件数を出して押せる」非対称になる。enforcement が off の今は実害が無いので、切れ目の
    * 明示だけに留める。

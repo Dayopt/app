@@ -38,6 +38,26 @@ overrides:
   # Storybook/Tailwind に加え、@sentry/nextjs のビルドプラグイン peer chain を含む。
   # 実行時 bundle 非搭載）。size=0 での無限ループ DoS (GHSA-2v37-7h3g-55p8) を解消する (#2108)
   'nanoid@3.3.17': '^3.3.18'
+  # security sweep (claude-security スキャン, 2026-09-06) で pnpm audit が拾った
+  # 間接依存。いずれも patch レベルの上げ幅で修正版が出ているため、既存方針どおり
+  # 脆弱な version だけを狙って置換する。
+  # fast-uri: ajv 経由（@modelcontextprotocol/sdk / @sentry/nextjs / Storybook）。
+  #   SSRF と host confusion の 4 件 (GHSA-5jgf-p345-68v8 ほか)
+  'fast-uri@3.1.5': '^3.1.6'
+  # browserslist: prototype write と無制限メモリ増加の 2 件
+  #   (GHSA-73wf-gq98-2v4g / GHSA-c83g-rgw3-j3cx)。lockfile 内に 4.28.6 と 4.28.7 が
+  #   混在していたので、脆弱な 4.28.6 側だけを揃える
+  'browserslist@4.28.6': '^4.28.7'
+  # qs: express 経由の DoS と array-limit bypass
+  #   (GHSA-4mjr-xmp4-gh2g / GHSA-x5fp-wj9c-mxmx)
+  'qs@6.15.3': '^6.15.4'
+  # extract-zip (GHSA-jmr9-qjv8-65gv) は **ここに入れられない**。advisory は
+  # `>=2.0.2` を修正版と書くが 2.0.2 は未リリースで、最新が 2.0.1（override を
+  # 書くと ERR_PNPM_NO_MATCHING_VERSION で install が落ちる）。経路は
+  # @lhci/cli -> lighthouse -> puppeteer-core -> @puppeteer/browsers の
+  # devDependency のみで production bundle に載らない。上流が出すまで
+  # `pnpm security:check` に出続けるのを許容する（ignoreGhsas へ入れない —
+  # 局所パッチのような緩和実体が無いため、隠すと再評価の機会を失う）。
 # image-size 2.0.2 の未リリース上流修正を固定する。
 # GHSA-w3rx-r6r6-pgpr / GHSA-5p2g-fcmc-qvqq は patchedDependencies で緩和済み。
 patchedDependencies:

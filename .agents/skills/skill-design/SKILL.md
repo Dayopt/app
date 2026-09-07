@@ -1,13 +1,13 @@
 ---
 name: skill-design
-description: 新規 project skill（`.claude/skills/`）を作成する時、既存 skill の description・When to Use・NOT 条件を改修する時に発動。Dayopt 固有の 6 類型（作成系/予防系/運用系/副次トリガー型/明示発動型/ライフサイクル型）、description の字数・構造規約、When to Use/NOT の記法、skill 間・skill-AGENTS.md 間の境界設計原則を適用する。skill の中身（手順・コマンド）の実装作業そのものでは発動しない。
+description: 新規 project skill（`.agents/skills/`）を作成する時、既存 skill の description・When to Use・NOT 条件を改修する時に発動。Dayopt 固有の 6 類型、description の字数・構造規約、When to Use/NOT の記法、skill 間・skill-AGENTS.md 間の境界設計原則を適用する。skill の手順・コマンドだけを更新する作業では発動しない。
 ---
 
 # Skill 設計ルール
 
-Dayopt の `.claude/skills/` 配下に置く project skill を設計する際の恒常ルール。description と `SKILL.md` 本体の書式、skill 間の境界、skill 層と AGENTS.md 層の境界を定義する。
+Dayopt の `.agents/skills/` 配下に置く provider-neutral な project skill を設計する際の恒常ルール。description と `SKILL.md` 本体の書式、skill 間の境界、skill 層と AGENTS.md 層の境界を定義する。`.claude/skills` は互換 symlink であり編集先にしない。
 
-skill は Claude Code の `Skill` tool から invoke される仕組み上、**description が invocation 判断の主戦場、本文は invoke 後の行動強化**という役割分担を前提にする。
+skill runtime は最初に frontmatter の description を見て候補を選ぶため、**description が invocation 判断の主戦場、本文は invoke 後の行動強化**という役割分担を前提にする。特定 provider の tool 名・model 名・permission manifest が必要な時は、共通手順と混ぜず optional adapter として明示し、generic fallback を併記する。
 
 ---
 
@@ -30,7 +30,7 @@ project skill は以下 6 類型のいずれかに属する。類型は descript
 
 ## 2. description の書式
 
-Claude Code の skill routing は description を読んで invocation を判断する。description はリライト前提で、先頭句にトリガーフレーズを埋め込む。
+skill routing は description を読んで invocation を判断する。description はリライト前提で、先頭句にトリガーフレーズを埋め込む。
 
 ### 2.1 字数
 
@@ -187,7 +187,7 @@ description と When to Use は「**いつ invoke するか**」の純粋リス�
 **project skill の description と本文は、repo に commit される情報のみで self-contained でなければならない。**
 
 - 参照可能: 同一 repo 内のファイル（`AGENTS.md`, 他 skill docs, コード）、公開 URL
-- 参照不可: 個人メモリ（`~/.claude/projects/.../memory/`）、user-global skill（`~/.claude/skills/`）、個人設定、外部の非公開情報
+- 参照不可: 個人メモリ、provider 固有の user-global skill、個人設定、外部の非公開情報
 
 個人文脈が必要な skill は user-global skills に置く。project / user-global の境界はこの問題を分離するために存在する。solo dev のうちは緩めても動くが、他の dev が repo を clone した瞬間に壊れる skill を作らない。
 
@@ -204,3 +204,4 @@ description と When to Use は「**いつ invoke するか**」の純粋リス�
 - [ ] 他 skill との境界が既存 skill の When to Use / NOT と整合する（相互参照の skill 名が正確）
 - [ ] 個人メモリ / user-global skill を参照していない（self-contained）
 - [ ] 自動生成 artifact を発動契機にしていない
+- [ ] 共通手順が特定 provider の model tier や tool 名を必須にしていない。必要な provider adapter には generic fallback と実際の保証境界がある

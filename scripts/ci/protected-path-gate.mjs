@@ -122,6 +122,8 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/app/api/v1/system/**',
   // the guardrails themselves
   '.husky/**',
+  '.codex/**',
+  '.claude/settings.json',
   'scripts/hooks/**',
   'scripts/tasks/finish-branch.sh',
   'scripts/ci/protected-path-gate.mjs',

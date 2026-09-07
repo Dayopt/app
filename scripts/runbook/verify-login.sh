@@ -49,7 +49,15 @@ REQUEST_BODY=$(jq -n \
   --arg password "$USER_PASSWORD" \
   '{email: $email, password: $password}')
 
-HTTP_STATUS=$(curl -sS -o /tmp/verify-login-response.json -w "%{http_code}" \
+# mktemp は mkstemp(3) 経由でファイルを 0600 (owner のみ読み書き) で作成するため、
+# curl が書き込む前の隙間なく world-readable な固定パスを避けられる。応答には
+# live な token / 個人情報が載るので、抽出後は trap で確実に削除する。
+# 固定パスのままだと (1) 同一ホストの別 uid が読める (2) 攻撃者が先に symlink を
+# 置くと curl -o が任意ファイルを operator 権限で truncate する。
+RESPONSE_FILE=$(mktemp "${TMPDIR:-/tmp}/verify-login-response.XXXXXX")
+trap 'rm -f "$RESPONSE_FILE"' EXIT
+
+HTTP_STATUS=$(curl -sS -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X POST \
   "${NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password" \
   -H "apikey: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
@@ -62,9 +70,9 @@ echo "HTTP Status: $HTTP_STATUS"
 echo ""
 
 if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
-  ACCESS_TOKEN=$(jq -r '.access_token // empty' /tmp/verify-login-response.json | head -c 20)
-  USER_ID=$(jq -r '.user.id // empty' /tmp/verify-login-response.json)
-  EMAIL_CONFIRMED=$(jq -r '.user.email_confirmed_at // empty' /tmp/verify-login-response.json)
+  ACCESS_TOKEN=$(jq -r '.access_token // empty' "$RESPONSE_FILE" | head -c 20)
+  USER_ID=$(jq -r '.user.id // empty' "$RESPONSE_FILE")
+  EMAIL_CONFIRMED=$(jq -r '.user.email_confirmed_at // empty' "$RESPONSE_FILE")
   echo "✅ login 成功 (password と email_confirm は OK)"
   echo "User ID: $USER_ID"
   echo "Email confirmed at: $EMAIL_CONFIRMED"
@@ -72,10 +80,10 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo ""
   echo "→ UI 経由で login 失敗するなら、CSP / form / browser cache 側の問題"
 else
-  ERROR_CODE=$(jq -r '.error_code // empty' /tmp/verify-login-response.json)
+  ERROR_CODE=$(jq -r '.error_code // empty' "$RESPONSE_FILE")
   echo "❌ login 失敗"
   echo "Response body:"
-  cat /tmp/verify-login-response.json
+  cat "$RESPONSE_FILE"
   echo ""
   echo ""
   # captcha protection が enabled だと curl 経由では captcha_token を生成できないため

@@ -666,8 +666,8 @@ export function TimeblockInspectorForm({
 
         {/*
           保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
-          瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 時間が
-          凍結されていて見積もりを直す余地が無いため。
+          瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 見積もりの
+          事前フィードバックであり、終わった時間帯に対しては助言する相手がいないため。
         */}
         <EstimationFeedforward
           destination={resolveTimeblockDestination(value.endAt)}

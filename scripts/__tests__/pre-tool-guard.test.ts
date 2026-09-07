@@ -1593,101 +1593,15 @@ describe('pre-tool-guard.mjs: migrations 配下の既存ファイル編集（#25
 // R1/R2: Agent の model 明示 + 探索への opus/fable 使用ガード（cost guard）。
 // security guard ではないため、jq parse エラー等は fail-open にする設計だが、
 // 通常の JSON 入力ではその分岐は踏まない。ここでは正規の判定ロジックを固定する。
-describe('pre-tool-guard.mjs: R1 Agent の model 明示', () => {
-  it('model 未指定は block する', () => {
-    expect(runGuard(agentCall({ prompt: 'x' }))).toBe('block');
-  });
-
-  it('model 空文字も block する', () => {
-    expect(runGuard(agentCall({ model: '', prompt: 'x' }))).toBe('block');
-  });
-
-  it('model haiku は通す', () => {
-    expect(runGuard(agentCall({ model: 'haiku', prompt: 'x' }))).toBe('allow');
-  });
-
-  it('model sonnet は通す', () => {
-    expect(runGuard(agentCall({ model: 'sonnet', prompt: 'x' }))).toBe('allow');
-  });
-
-  // F3: R1 は fail-open（cost guard）であるべきだが、旧実装は
-  // `AGENT_MODEL=$(jq ... || true)` で jq 自体の失敗と「jq が成功して model が
-  // 空だった」場合を区別できず、jq 失敗時も block していた（section 冒頭の
-  // fail-open コメントと矛盾）。tool_input が object でない（jq の
-  // `.tool_input.model` が index エラーで落ちる）入力で allow を確認する。
-  it('tool_input が非 object で jq 自体が失敗する場合は fail-open で allow する', () => {
-    expect(runGuard({ tool_name: 'Agent', tool_input: 'not-an-object' })).toBe('allow');
-  });
-
-  it('JSON として解釈できない入力全体は tool_name も取れず allow する', () => {
-    const result = spawnSync(process.execPath, [loaderPath], {
-      cwd: rootDir,
-      encoding: 'utf8',
-      input: 'not json',
-      env: process.env,
-    });
-    expect(result.status).toBe(0);
-  });
-
-  it('subagent_type が Plan / claude-security 系なら model 未指定でも通す（harness spawn 例外）', () => {
-    expect(runGuard(agentCall({ subagent_type: 'Plan', prompt: 'x' }))).toBe('allow');
-    expect(runGuard(agentCall({ subagent_type: 'claude-security-lead', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
+describe('pre-tool-guard.mjs: model choice does not grant or remove permissions', () => {
+  it.each(['', 'sonnet', 'opus', 'gpt-6-astra', 'gemini'])(
+    'allows delegation with model %s',
+    (model) => {
+      expect(runGuard(agentCall({ model, prompt: '調査' }))).toBe('allow');
+    },
+  );
 });
 
-describe('pre-tool-guard.mjs: R2 探索に opus / fable を使わない', () => {
-  it('model opus + subagent_type Plan は通す', () => {
-    expect(runGuard(agentCall({ model: 'opus', subagent_type: 'Plan', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
-
-  it('model opus + subagent_type claude-security 系は通す', () => {
-    expect(
-      runGuard(agentCall({ model: 'opus', subagent_type: 'claude-security:scan', prompt: 'x' })),
-    ).toBe('allow');
-  });
-
-  it('model opus + prompt に反証を含む場合は通す', () => {
-    expect(runGuard(agentCall({ model: 'opus', prompt: 'この plan を反証してください' }))).toBe(
-      'allow',
-    );
-  });
-
-  it('model opus + description に設計判断を含む場合は通す', () => {
-    expect(
-      runGuard(agentCall({ model: 'opus', prompt: 'x', description: '設計判断のための比較検討' })),
-    ).toBe('allow');
-  });
-
-  it('model opus + 反証等の言及がない plain prompt は block する', () => {
-    expect(runGuard(agentCall({ model: 'opus', prompt: 'このコードを調べてください' }))).toBe(
-      'block',
-    );
-  });
-
-  it('model の表記ゆれ（Opus / claude-opus-5）も plain prompt なら block する', () => {
-    for (const model of ['Opus', 'claude-opus-5', 'claude-fable-5-1']) {
-      expect(runGuard(agentCall({ model, prompt: '調べて' })), model).toBe('block');
-    }
-  });
-
-  it('model fable + plain prompt も block する', () => {
-    expect(runGuard(agentCall({ model: 'fable', prompt: 'このコードを調べてください' }))).toBe(
-      'block',
-    );
-  });
-
-  it('model fable + subagent_type Plan は通す', () => {
-    expect(runGuard(agentCall({ model: 'fable', subagent_type: 'Plan', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
-});
-
-// R3: Read の範囲指定なし大規模ファイル読み込みガード（cost guard）。
 describe('pre-tool-guard.mjs: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
   let fixtureRoot: string;
   let bigFile: string;

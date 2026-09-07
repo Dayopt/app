@@ -750,3 +750,20 @@ describe('Vercel Ignored Build Step CLI（実 git fixture）', () => {
     expect(result.stdout).toContain('fail open');
   });
 });
+
+describe('provider-neutral harness paths', () => {
+  it.each(['.agents/skills/routing/SKILL.md', '.codex/README.md'])(
+    'classifies %s as documentation',
+    (file) => {
+      expectImpact([file], { docsOnly: true });
+    },
+  );
+  it.each([
+    '.codex/hooks.json',
+    '.codex/config.toml',
+    '.agents/skills/review/runner.js',
+    '.claude/skills',
+  ])('keeps executable/config %s outside docs-only skipping', (file) => {
+    expectImpact([file], { docsOnly: false });
+  });
+});

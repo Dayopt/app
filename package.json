@@ -60,7 +60,7 @@
     "quality:deadcode": "pnpm --filter @dayopt/product quality:deadcode",
     "quality:deadcode:ci": "pnpm --filter @dayopt/product quality:deadcode:ci",
     "test": "pnpm --filter @dayopt/product test",
-    "test:run": "pnpm --filter @dayopt/i18n test:run && pnpm --filter @dayopt/observability test:run && pnpm --filter @dayopt/product test:run && pnpm test:web && pnpm test:scripts",
+    "test:run": "pnpm --filter @dayopt/billing test:run && pnpm --filter @dayopt/i18n test:run && pnpm --filter @dayopt/observability test:run && pnpm --filter @dayopt/product test:run && pnpm test:web && pnpm test:scripts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "test-storybook": "pnpm --filter @dayopt/storybook test-storybook",
     "test-storybook:dark": "pnpm --filter @dayopt/storybook test-storybook:dark",
@@ -95,7 +95,10 @@
     "storybook": "pnpm --filter @dayopt/storybook storybook",
     "build-storybook": "pnpm --filter @dayopt/storybook build",
     "build:web": "pnpm --filter @dayopt/web build",
-    "test:web": "pnpm --filter @dayopt/web test"
+    "test:web": "pnpm --filter @dayopt/web test",
+    "agent:preflight": "node scripts/tasks/agent-preflight.mjs",
+    "review:pack": "node scripts/tasks/review-pack.mjs create",
+    "review:validate": "node scripts/tasks/review-pack.mjs validate"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:tooling",

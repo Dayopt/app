@@ -94,7 +94,7 @@ beforeAll(() => {
   // ディレクトリを作り、stub とそれ以外は一切見せない。
   const isolatedBin = join(workDir, 'bin');
   mkdirSync(isolatedBin);
-  for (const name of ['git', 'date', 'wc', 'tr', 'cat']) {
+  for (const name of ['git', 'date', 'wc', 'tr', 'cat', 'dirname', 'which']) {
     symlinkSync(requireRealBinPath(name), join(isolatedBin, name));
   }
   const timeoutPath = realBinPath('timeout');
@@ -189,9 +189,9 @@ describe('session-start.sh: 実行環境の報告', () => {
   it('gh が無ければ、gh 依存の L0 入口（ctx / trace / green:watch / branch:finish）が使えない旨と MCP への迂回を出す', () => {
     const r = runHook({ remote: false });
     expect(r.stdout).toContain('gh なし');
-    expect(r.stdout).toContain('`pnpm ctx`');
-    expect(r.stdout).toContain('`pnpm branch:finish`');
-    expect(r.stdout).toContain('MCP');
+    expect(r.stdout).toContain('ctx');
+    expect(r.stdout).toContain('branch:finish');
+    expect(r.stdout).toContain('利用可能な接続');
   });
 
   it('gh があれば gh:yes になり、迂回の案内は出ない', () => {

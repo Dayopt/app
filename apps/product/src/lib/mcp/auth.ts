@@ -1,7 +1,9 @@
 import 'server-only';
 
 import { env } from '@/env';
-import { canAccessProFeatures } from '@/lib/auth/domain';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { hasEntitlementForStatus, isBillingEnforced } from '@/lib/billing/enforcement';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import {
@@ -31,7 +33,10 @@ interface VerifiedAccessToken {
   userId: string;
   clientId: OAuthClientId;
   scopes: SupportedScope[];
-  /** MCP is a Pro product surface independently of the general billing rollout flag. */
+  /**
+   * capability map の `mcp_api` を通過したか。`BILLING_ENFORCED` が未設定（既定）の
+   * 間は他の gate と同じく常に true。
+   */
   proEntitled: boolean;
   resourceUri: CanonicalResourceUri;
   /** Unix epoch seconds, matching MCP AuthInfo. */
@@ -140,7 +145,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
     throw new OAuthServerError('invalid_token', 'OAuth connection has no active scopes', 401);
   }
 
-  const proEntitled = await checkMcpProEntitlement(db, row.user_id);
+  const proEntitled = await checkMcpEntitlement(db, row.user_id);
 
   // 拒否されたFree accessをSettingsの「最終利用」として記録しない。
   if (proEntitled) updateUsageTimestamps(db, row.id, connection.id);
@@ -185,10 +190,18 @@ async function applyDurableWriteGate(
     : scopes.filter((scope) => !isWriteScope(scope));
 }
 
-async function checkMcpProEntitlement(
+/**
+ * MCP route の entitlement 判定（gate の型は `route`）。
+ *
+ * 他の gate（`entitledProcedure` / `checkEntitlementForUser`）と同じく
+ * `BILLING_ENFORCED` に従う。無効（既定）なら `profiles` を読まずに true。
+ */
+async function checkMcpEntitlement(
   db: ReturnType<typeof createMcpAccessDbClient>,
   userId: string,
 ): Promise<boolean> {
+  if (!isBillingEnforced()) return true;
+
   const { data: profile, error } = await db
     .from(databaseTables.profiles)
     .select('subscription_status')
@@ -205,7 +218,7 @@ async function checkMcpProEntitlement(
     );
   }
 
-  return canAccessProFeatures(profile.subscription_status);
+  return hasEntitlementForStatus(profile.subscription_status, entitlementKeys.mcpApi);
 }
 
 function parseStoredScopes(scopes: string[]): SupportedScope[] | null {

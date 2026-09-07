@@ -7,8 +7,9 @@
  * 描画は kind に応じて `PlanLaneCard` / `RecordLaneCard`（presentational）に委譲する。
  * PlanLaneCard/RecordLaneCard は自身の `position` prop から絶対座標を描画するため、
  * 追加のラッパー div で位置を持たせない（二重にレーン幅が掛かるのを避ける）。
- * past-plan/auto_migrated ロックは TimeblockRenderer には無い、
- * time model 固有の関心事としてここに実装する。
+ * auto_migrated ロックは TimeblockRenderer には無い、
+ * time model 固有の関心事としてここに実装する（過去 Plan のロックは存在しない —
+ * Plan は時間軸のどこにでも置ける。docs/product/specs/plan-record.md）。
  */
 
 import type React from 'react';

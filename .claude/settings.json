@@ -81,6 +81,8 @@
       "mcp__context7__query-docs",
       "Bash(env)",
       "Bash(sort:*)",
+      "Edit(.agents/skills/**)",
+      "Write(.agents/skills/**)",
       "Edit(.claude/skills/**)",
       "Write(.claude/skills/**)",
       "Skill(routing)",

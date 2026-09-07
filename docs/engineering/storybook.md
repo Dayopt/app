@@ -168,7 +168,7 @@ Story作成時に確認：
 
 **データ依存** — tRPC/Zustand依存コンポーネントは無理にStorybookに入れない。
 
-詳細: `.claude/skills/storybook/SKILL.md`
+詳細: `.agents/skills/storybook/SKILL.md`
 
 ## 📚 推奨リーディングパス
 

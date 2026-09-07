@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Dayopt で作業する全エージェント（Claude / Codex 含む）の正本ガイダンス。毎セッション読み込まれる唯一のファイルとして ~200 行に圧縮している。特定作業でだけ要る手順は `.claude/skills/*/SKILL.md` を参照する（末尾の Skills 索引）。機械が強制しているルール（lint / typecheck / CI / hooks）の説明は極力書かない — 機械の判定結果そのものが正であり、prose の重複は陳腐化する。
+Dayopt で作業する全エージェントの provider-neutral な正本ガイダンス。OpenAI / Codex を primary harness とし、他 provider でも同じ判断層と不変条件を使う。毎セッション読み込まれる唯一のファイルとして ~200 行に圧縮し、特定作業でだけ要る手順は `.agents/skills/*/SKILL.md` を参照する（末尾の Skills 索引）。機械が強制しているルール（lint / typecheck / CI / hooks）の説明は極力書かない — 機械の判定結果そのものが正であり、prose の重複は陳腐化する。
 
-## Codex レビュー規則
+## レビュー規則
 
-Codex（OpenAI）は User が手動で `@codex review` と投稿し依頼する時だけ使う任意ツール（gate にも規約にもしない。2026-09-04、#2596。旧: クロスレビュー必須 PR での内製 subagent と並ぶ必須の 2 系統目 #2529 / #2530 は撤回した）。Codex はレビュー専任で実装は行わない。使う時は次の観点に従う。
+実装 agent 自身のセルフレビュー、`pr-cross-review`、User が任意で依頼する外部レビューに共通する観点。OpenAI / Codex は実装・調査・レビューを担える primary provider とし、他 provider は高リスク変更で独立した反証が有益な時だけ任意で追加する。外部 provider の可用性は merge gate にしない。
 
 - レビューコメントは日本語で書く
 - diff によって新たに生じる、または現実に悪化する不具合だけを指摘する。問題がなければ指摘ゼロでよい
@@ -12,13 +12,13 @@ Codex（OpenAI）は User が手動で `@codex review` と投稿し依頼する�
   - **P1**: 本番でユーザー影響、データ破壊、認可漏れ、または誤課金が起きる
   - **P2**: 現実的なエッジケースで誤動作し、修正せずに出荷すべきでない
 - 指摘には原因と最小限の安全な修正方針を含める。到達可能な failure scenario を説明できない推測は指摘しない
-- OpenAI 公式の P0/P1 表記は本ファイルの P1（最重大）へ読み替える
+- provider 固有の優先度表記は、上記の failure scenario に基づいて P1 / P2 へ正規化する
 
 重点不変条件（機械では検出できない観点）:
 
-- **CODEX-1（ユーザー・テナント分離）**: 別ユーザーのデータへ読み書きできる経路を新規に開いていないか。RLS / authorization / service role の境界を越境していないか
-- **CODEX-2（Dayopt の時間不変条件）**: timezone / DST / 日境界、半開区間 `[start, end)`、overlap 判定、Plan / Log の対応関係を壊していないか
-- **CODEX-3（外部契約の後方互換性）**: MCP / public API / OAuth scope、Stripe / billing / webhook、外部 calendar sync の event / payload / field name を、既存 consumer が壊れる形で変更していないか
+- **REVIEW-1（ユーザー・テナント分離）**: 別ユーザーのデータへ読み書きできる経路を新規に開いていないか。RLS / authorization / service role の境界を越境していないか
+- **REVIEW-2（Dayopt の時間不変条件）**: timezone / DST / 日境界、半開区間 `[start, end)`、overlap 判定、Plan / Log の対応関係を壊していないか
+- **REVIEW-3（外部契約の後方互換性）**: MCP / public API / OAuth scope、Stripe / billing / webhook、外部 calendar sync の event / payload / field name を、既存 consumer が壊れる形で変更していないか
 - **TEST-1（挙動を証明しないテスト）**: 変更後の挙動を担保する test が、操作前から存在する要素・generic な assert・発火していない mock だけで通っていないか
 
 指摘しないもの: スタイル / 可読性 / 命名の好み、PR の大きさ、「ついで refactor」、lint・型検査で確定的に検出される違反、diff と無関係な既存問題。
@@ -66,6 +66,7 @@ Codex（OpenAI）は User が手動で `@codex review` と投稿し依頼する�
 - **Record**: 過去の事実。終了を未来へ動かす編集だけ不可。紐付け先 Plan がどこにあるかは制約しない
 - 過去スロットへ新規に引いたブロックは Record になる（`resolveTimeblockDestination` は end_at だけで宛先を決める。UI に種別選択の一手を足さない）
 - **強制点は DB trigger / SQL 関数**。アプリ層（service / MCP client / UI）はその写しで、UI だけを直しても規則は変わらない
+- **規則を撤去する時は写しを全部消すまでが 1 変更**。DB / service だけ緩めて UI 側の写しが残ると「操作はできるのに保存されない」症状になり、旧規則を assert しているテストが緑のまま隠す。撤去 PR では `features/calendar` の interaction 経路と Storybook docs まで grep する（2026-09-07、過去 Plan のドラッグ移動が 40348e2bd の後も効かなかった件）
 - 表示用の upcoming / active / past 分類は `useCalendarData` が持つ（`getTimeblockState()` は呼び出し元が test だけの残骸）
 
 ### アーキテクチャ
@@ -125,7 +126,7 @@ review threadは全件resolveしてからmerge（fix積む/反論reply/issue化�
 
 レビューのシンプルルール: (1) 壊れる筋書きを語れないなら指摘しない、語れたなら黙殺しない (2) mergeの基準は完璧ではなくmainより安全 (3) 迷ったら点を塞ぐよりclassを閉じる。
 
-**merge の遮断は Claude Code hook（`gh pr merge` / `gh api ... pulls/.../merge` の直接実行を block）と `pnpm branch:finish` の CI check（status-check-rollup 判定）だけで行う。hook の効かない実行主体と User 自身の UI merge は対象外**（この境界が実害化したら GitHub Team plan の ruleset へ切り替える。2026-09-04、#2596）。内製 subagent レビュー（`pr-cross-review` skill）と `@codex review`（任意ツール）はどちらも advisory で、所見は PR コメントとして投稿するだけで merge を止めない。保護対象 path の判定（`scripts/ci/protected-path-gate.mjs`）は残しており、advisory レビューをどこまで重く行うかの目安に使う。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身）。`review:full` ラベルは「User 自身が重く見て目を通す」印であり、機械判定の入力にはしない。
+**merge の遮断は、有効化された provider adapter の pre-tool guard（`gh pr merge` / `gh api ... pulls/.../merge` の直接実行を block）と `pnpm branch:finish` の CI check（status-check-rollup 判定）だけで行う。adapter を呼ばない runtime と User 自身の UI merge は対象外**（この境界が実害化したら GitHub Team plan の ruleset へ切り替える。2026-09-04、#2596）。`pr-cross-review` と外部 provider の反証レビューは advisory で、所見は PR コメントとして投稿するだけで merge を止めない。保護対象 path の判定（`scripts/ci/protected-path-gate.mjs`）は、レビューをどこまで重く行うかの目安に使う。保護対象の基準は**外部契約 or 不可逆**（auth/OAuth/MCP、billing/webhook、migration、外部calendar provider、system API、ガードレール自身）。`review:full` ラベルは「User 自身が重く見て目を通す」印であり、機械判定の入力にはしない。
 
 retreat条件: `apps/product/src/features/timeblock` または `apps/product/src/lib/time` 配下のtestを削除・skipするPRは、`review:full` labelを手で付けてUser自身が目を通す（時間不変条件の安全網がそのtest自身であるため。#2489 / #2503）。
 
@@ -141,30 +142,26 @@ worktree で作業するセッション（レーン）は次を守る:
 
 ## 委任・報告の作法
 
-- **委譲時は model を明示し、Frontier を既定にしない**（省略すると同 tier が継承され階層が機能しない）。仕事ごとに必要な能力を測り L0 から上へ、下位層で解けないと分かった時と判断・不可逆の時だけ上げる（Uber Software Factory 原則①④）
-
-| tier | 実行主体                                                                                                                                                      | 担当                                                                                                                                                                                    | 上げる条件                        |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| L0   | 決定的 script / CLI（LLM を使わない）                                                                                                                         | ファイル検索・git history・diff・typecheck・lint・test・依存確認・JSON 変換・SQL・CI 結果取得・polling・大量ファイル処理。**LLM turn の前に `pnpm run` / `gh` / `rg` で閉じないか探す** | script に書けない、毎回形が変わる |
-| L1   | Haiku、または User が Gemini / ChatGPT chat で行う Deep Research（issue §やること に「Deep Research 依頼: <問い>」を書き `status:blocked`、結果はコメントへ） | 判断を含まない読み書き（ログ蒸留・機械的 rename・定型抽出）、外部リサーチ                                                                                                               | 判断が要る                        |
-| L2   | Sonnet                                                                                                                                                        | 通常実装・調査・レビュー実行。**worker の既定**                                                                                                                                         | 設計判断、矛盾報告の再検証        |
-| L3   | Opus / Fable                                                                                                                                                  | 判断・統合・diff レビュー・commit・不可逆操作                                                                                                                                           | —                                 |
-
-- **コストは model 価格より無駄な Context / Turn で見る**（原則②）。**外部能力は、必要なものだけを、必要な瞬間だけ、最小の Context・権限・経路で渡す**（原則③。常駐を 1 つ足すなら 1 つ外す、CLI で閉じるなら MCP を使わない、read-only を既定にする。`mcp-usage` skill）。**評価は Token でなく Outcome** — tokens / merged PR、revert 率、User 介入回数（原則⑤、`pnpm ai:usage` を月次 gardening で読む）
-- **Codex / Antigravity（Gemini）はレビュー・反証専任**。実装レーンには入れない（どちらも User が手動で使う任意ツールで、CI gate にはしない。2026-09-04、#2596）
-- **write可能なsubagentへの委譲**は次の4条件を満たす時のみ: 同一worktree、Mainと非重複scope、commit前にMainがgit diffをレビュー、commit/push/external stateの変更はMainに残す
-- **確認・裁可依頼は選択肢+推奨込みが既定**。推奨を先頭に、各選択肢へ一言根拠を添える。複数の判断は1回に束ねる
-- **完了報告**では利用したagent、意図的に使わなかったagentと理由、未確認事項、deferred scopeを示す
+- **最初に成功条件を固定する**。ユーザーが確認できる結果、対象範囲、検証方法を先に書き、手段や model 選択を目的化しない
+- **事実と仮説を分ける**。repo / docs / issue / 実行結果で確認した事実には証拠を添え、未実測の原因や効果は仮説として明記する。安く確認できる仮説は作業前に検証する
+- **決定的な道具を先に使う**。検索・git history・diff・typecheck・lint・test・JSON 変換・CI 取得は、まず既存 script / CLI で閉じられないか探す。LLM や外部連携を使う時も、必要な瞬間だけ最小の context・権限・経路を渡す（`routing` / `mcp-usage` skill）
+- **委譲は採算が合う時だけ行う**。独立して進められ、scope と出力を検証でき、context 引き渡しと統合の費用を上回る時に限る。小さく一体な作業は担当 agent がそのまま完了してよい
+- **委譲契約**: 成功条件、触ってよい path、既知の制約、期待する証拠、検証コマンド、外部 state を変更してよいかを明記する。write 可能な委譲は同一 worktree・非重複 scope に限定し、commit / push / external mutation は明示的に委ねられた場合だけ行う
+- **判断では意味のある選択肢を比較する**。差が実際の挙動・リスク・可逆性に影響する選択肢だけを並べ、推奨と最悪の failure mode を添える。複数の判断は 1 回に束ねる
+- **出力ではなく outcome を検証する**。diff、コマンド出力、実際の UI / API / data flow を成功条件と突き合わせ、subagent や tool の「passed」という申告だけで完了にしない
+- **外部 provider の反証は任意**。auth / RLS / billing / migration / 公開契約などで独立視点の便益が実行コストを上回る時に追加する。OpenAI / Codex を primary としつつ、別 provider を使う場合も同じ scope・証拠・privacy 境界を適用する
+- **永続 handoff**: issue / PR がある作業は、進捗・判断・ブロック・検証結果をその issue / PR へ残す。会話 transcript を唯一の状態にしない
+- **完了報告**では変更、検証コマンドと出力の要点、未確認事項、deferred scopeを示す
 - **曖昧な指示**: (1) repo/docs/issueから判明する事実を先に調べる (2) 承認済みscope内で安全かつ可逆なら合理的仮定を明示して進める (3) 未決事項だけ証拠付き推奨とともに確認する (4) 質問・懸念を承認へ読み替えない
 
 ## Skills 索引
 
-`.claude/skills/*/SKILL.md` を参照。該当する作業では先に読む。
+`.agents/skills/*/SKILL.md` を参照。`.claude/skills` は Claude Code 互換の相対 symlink であり、正本ではない。該当する作業では先に読む。
 
 | skill                  | 使う場面                                                                         |
 | ---------------------- | -------------------------------------------------------------------------------- |
 | `dispatch`             | issueをworkerへ渡す準備、issue起票、束ね、状態ラベル運用                         |
-| `routing`              | 非 trivial タスクの分解と L0–L3 への振り分け、subagent の model / 出力契約       |
+| `routing`              | 非 trivial タスクの分解、実行方法・委譲の採算判断、出力契約                      |
 | `mcp-usage`            | Sentry/Supabase/Vercel/Context7/Eagle/UptimeRobot 等の MCP 呼び出し              |
 | `skill-design`         | 新規 skill 作成・既存 skill の description/When to Use 改修                      |
 | `supabase`             | migration/RLS/Storage policy/Realtime/Edge Functions                             |
@@ -183,7 +180,7 @@ worktree で作業するセッション（レーン）は次を守る:
 | `gardening`            | 月次改善ループ: ai:usage の 4 問 → 月に 1 変数 → 結果(未) 回収（明示依頼時のみ） |
 | `audit-ai-config`      | AI設定の棚卸し・audit                                                            |
 | `blog-ideas`           | ブログネタ提案とissue起票                                                        |
-| `usability-probe`      | Haikuユーザビリティプローブ実行                                                  |
+| `usability-probe`      | repo blind な browser-only ユーザビリティプローブ実行                            |
 | `decision`             | `docs/decisions.md` への意思決定1行追記                                          |
 
 ## Deploy / Release

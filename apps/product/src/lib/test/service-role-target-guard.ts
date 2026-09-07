@@ -11,6 +11,10 @@
  * 既定はローカル stack のみ。PR Preview など非ローカルで走らせる場合は
  * `E2E_ALLOW_NONLOCAL_SUPABASE=1` の明示的な opt-in を要求する。
  * Production project ref は opt-in があっても許可しない。
+ *
+ * `e2e/` 配下ではなくここに置く。vitest の unit project は `**\/e2e/**` を exclude
+ * するため、あの場所では単体テストが実行されない（`apps/product/vitest.config.ts` の
+ * `UNIT_EXCLUDE` 参照。`usability-probe-guards.ts` と同じ理由）。
  */
 
 /** Production Supabase project ref（docs/engineering/infra.md §Supabase Project）。 */
@@ -55,4 +59,29 @@ export function resolveServiceRoleTarget(
     safe: false,
     reason: `非ローカルの Supabase (${hostname}) には E2E_ALLOW_NONLOCAL_SUPABASE=1 の明示 opt-in が必要`,
   };
+}
+
+/**
+ * 「この suite は必ず走るはず」の実行環境で、guard が unsafe と判定したら throw する。
+ *
+ * `safe === false` で suite を丸ごと `test.describe.skip` にする設計は安全側だが、
+ * skip は Playwright 上「0 failed」として集計されるため、**実行先の env が壊れていても
+ * CI は緑になる**。実際 `promote.yml` は `supabase status | jq` の出力を
+ * `SUPABASE_SERVICE_ROLE_KEY` へ渡しており、ここが空文字に落ちれば破壊的 suite が
+ * 全部静かに消えたまま job が通る。
+ *
+ * そこで「走らないとおかしい」実行主体（= CI）だけが
+ * `E2E_REQUIRE_SERVICE_ROLE_SUITES=1` を立て、その時は skip ではなく module load 時の
+ * throw にする。ローカルや env の無い環境では従来どおり skip する。
+ */
+export function assertServiceRoleSuiteRunnable(
+  target: ServiceRoleTarget,
+  suiteName: string,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  if (target.safe) return;
+  if (env.E2E_REQUIRE_SERVICE_ROLE_SUITES !== '1') return;
+  throw new Error(
+    `E2E_REQUIRE_SERVICE_ROLE_SUITES=1 だが suite "${suiteName}" を実行できない: ${target.reason}`,
+  );
 }

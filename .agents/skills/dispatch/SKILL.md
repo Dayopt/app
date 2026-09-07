@@ -1,11 +1,11 @@
 ---
 name: dispatch
-description: GitHub issue を worker（Sonnet などの委譲先モデル）へ渡す準備をする時、非 feature 作業の issue を新規起票する時、epic の sub-issue 構成や `status:*` ラベルを更新する時、`status:blocked` の凍結 issue への着手が話題になった時、並行作業の定期棚卸し（sweep）や凍結解除を行う時に発動。凍結・衝突チェック、handoff-quality 補強、既存ラベル体系を適用する。issue の中身の実装作業そのものや、意思決定ログ作成（`decision` skill の領域）では発動しない。
+description: GitHub issue を worker へ渡す準備をする時、非 feature 作業の issue を新規起票する時、epic の sub-issue 構成や `status:*` ラベルを更新する時、`status:blocked` の凍結 issue への着手が話題になった時、並行作業の定期棚卸し（sweep）や凍結解除を行う時に発動。凍結・衝突チェック、handoff-quality 補強、既存ラベル体系を適用する。issue の中身の実装作業や意思決定ログ作成では発動しない。
 ---
 
 # Dispatch Skill
 
-feature 開発と並行する非 feature 作業を issue ベースで回す指揮者（conductor）の定常運用。**どのモデル（Opus / Sonnet / それ以降）でも実行できる**ことを前提に、判断基準をすべて本ファイルに明文化する。個人メモリや特定モデルの記憶に依存しない。
+feature 開発と並行する非 feature 作業を issue ベースで回す定常運用。どの provider / model でも実行できるよう、判断基準を本ファイルに明文化する。OpenAI / Codex を primary harness とするが、個人メモリや特定モデルの記憶に依存しない。
 
 **正（source of truth）**: 状態は **GitHub issue 自身**が持つ。open / closed に加えて `status:ready` / `status:in-progress` / `status:review` / `status:blocked` / `status:watching` のラベルが着手可否を表し、大きなテーマは `scope:epic` の issue が sub-issues で束ねる。全体俯瞰は rollup issue を読むのではなく、`scope:epic` 一覧 + `status:*` クエリで都度組み立てる。
 
@@ -37,7 +37,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 3. **衝突チェック**: 候補 issue が触るファイル・ディレクトリを、(a) 進行中 epic issue 本文（例: #1754 の該当 Step）の対象、(b) 他の in-progress issue（`status:in-progress` ラベル）の対象、と突合する。**重なる場合は同一 worker に束ねて直列処理するのを第一候補**とする（衝突回避が目的なら束ねる方が安全かつ安価）。束ねられない場合だけ次の候補へ
 4. **凍結・state チェック**: `status:blocked` が付いていないこと、かつ候補 issue の `state` が OPEN であることを確認する。state は `gh issue view <N> --json state` の実測を根拠にする（close 済み issue にも `status:ready` 等のラベルが残留しうるため、**ラベルは state の代わりにならない**）。束ねた場合は全 issue について両方確認する。1 つでも凍結 or close 済みなら、その issue だけ束ねから外す（#1957）
 5. issue 本文を **handoff-quality** に補強する（下記テンプレート）。worker が repo 探索なしで着手できる密度が基準
-6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（Sonnet / その他）を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（編成時(操作 B 手順 5)の判断とは独立に、着手＝付与を機械的に行う。#2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（issue 側だけでなく PR 側にも付いていると release notes 作成時の集計が楽になる。#2065）。**差し替えたら `pnpm ctx <N> --post` を実行して brief（関連 PR / 触るファイル / 保護対象の要否 / 決定ログ / 次の一手）を issue コメントへ置く**（worker は issue URL しか受け取らないので、最初の turn より前に選別・圧縮済みの文脈を届ける。再実行すると同じコメントを更新する。`routing` skill §目標状態）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。束ねた場合は代表 issue のコメントへ一括で書く。突き合わせは PR レビュー時と、ズレを疑った時に行う。[#2273](https://github.com/Dayopt/dayopt/issues/2273)）
+6. `status:ready` を `status:in-progress` へ差し替え、**その issue 自身**にコメントで dispatch 先（session / agent / provider）と scope を記録する。束ねた場合は代表 issue にコメントし、他は代表へリンクする。**この着手のタイミング（レーンへの割り当て、または PR の Closes に載せた時点）で、対象 issue に現行 milestone を付与する**（編成時(操作 B 手順 5)の判断とは独立に、着手＝付与を機械的に行う。#2006）。**レーンが draft PR を作成した時点で、PR 自身にも現行 milestone を付与する**（issue 側だけでなく PR 側にも付いていると release notes 作成時の集計が楽になる。#2065）。**差し替えたら `pnpm ctx <N> --post` を実行して brief（関連 PR / 触るファイル / 保護対象の要否 / 決定ログ / 次の一手）を issue コメントへ置く**（worker は issue URL しか受け取らないので、最初の turn より前に選別・圧縮済みの文脈を届ける。再実行すると同じコメントを更新する。`routing` skill）。**この dispatch コメントに DoD（完了の定義）を 1〜3 行で記載する**（「仕様には適合しているが意図とズレている」静かな失敗は着手時点の意図と突き合わせないと見つからない。束ねた場合は代表 issue のコメントへ一括で書く。突き合わせは PR レビュー時と、ズレを疑った時に行う。[#2273](https://github.com/Dayopt/dayopt/issues/2273)）
 7. worker への指示は issue URL + 「本文の受け入れ条件と検証コマンドに従う」だけで済む状態にする。着手手順・PR 規約・報告テンプレート・検証原則はチップ prompt へ個別に書き下さず `AGENTS.md` §レーン運用 への参照 1 行で足りる
 
 ### handoff-quality テンプレート（issue 本文に含める 4 要素 + 任意 1 要素）
@@ -45,7 +45,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 ```markdown
 ## 背景 — なぜやるか。関連 issue / docs / 過去 PR へのリンク
 
-## やること — 番号付き手順。対象ファイル path を明記。**受け入れ条件（何ができたら完了か）を 1 行以上**。外部リサーチが要る時は「Deep Research 依頼: <問い>」を 1 行書き `status:blocked`（User が Gemini / ChatGPT で実行して結果をコメントに貼る。AGENTS.md L1）
+## やること — 番号付き手順。対象ファイル path を明記。**受け入れ条件（何ができたら完了か）を 1 行以上**。外部リサーチが要る時は「外部リサーチ: <問い / 必要な一次資料 / 出力形式>」を 1 行書き、結果が前提なら `status:blocked`。provider は固定せず、結果を issue コメントへ残す
 
 ## 注意 — 既知の罠、触ってはいけない領域、関連 skill（例: supabase skill のフロー）
 
@@ -54,7 +54,7 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 ## 期待出力（該当時のみ）— 返してほしい形式。分類軸、判断ごとの証拠水準、撤退・rollback 条件の明示要求
 ```
 
-**「## やること」で原因・機構に触れる記述には証拠水準ラベルを必須にする**（[#2428](https://github.com/Dayopt/dayopt/issues/2428)）。「なぜそうなるか」「どう直るか」の記述は、`推定（未実測、issue本文由来）` か `実測（コマンドと出力を併記）` のどちらかを明記する。「## やること」は番号付き手順という命令形の書式のため、Main が未実測の推定をそのまま手順として書く誘導が構造的にある（実例: #2417 / #2419）。ラベルがあれば、レーンは §着手手順 の復唱で「推定」箇所だけを狙って着手前に実測できる。**ラベルを付けさえすれば推定を書いてよい、という逃げ道にしない** — 実測できる推定は起票前に実測してから書く。実測コストが高い（外部サービス往復・本番環境限定等）場合に限って `推定（未実測、issue本文由来）` を使う
+**「## やること」で原因・機構に触れる記述には証拠水準ラベルを必須にする**（[#2428](https://github.com/Dayopt/dayopt/issues/2428)）。「なぜそうなるか」「どう直るか」の記述は、`推定（未実測、issue本文由来）` か `実測（コマンドと出力を併記）` のどちらかを明記する。番号付き手順という命令形の書式には、起票者が未実測の推定をそのまま手順として書く誘導がある（実例: #2417 / #2419）。ラベルがあれば、レーンは §着手手順 の復唱で「推定」箇所だけを狙って着手前に実測できる。**ラベルを付けさえすれば推定を書いてよい、という逃げ道にしない** — 実測できる推定は起票前に実測してから書く。実測コストが高い（外部サービス往復・本番環境限定等）場合に限って `推定（未実測、issue本文由来）` を使う
 
 **「## 期待出力」はレビュー / 調査 / spike 系の issue でだけ書く**（[#2468](https://github.com/Dayopt/dayopt/issues/2468)）。`type:spike`・反証レビュー依頼・監査系のように成果物がコードではなく判断である issue は、出力形式が受け手任せだと要約の粒度と証拠水準がぶれる。依頼側が先に契約（分類軸、判断ごとの repo 証拠、最小差分、rollback・撤退条件、「やらない方がいい改善」の明示など）を固定すると往復が減る（実例: #2453）。**実装系 issue では省略する** — 「## 検証」が出力契約を兼ねるため、埋めても空欄か形式的コピペになる。
 
@@ -68,14 +68,14 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
 
 - **直接実装**: 手順が既存パターンの追従で完結する。plan 不要
 - **plan 先行**: 複数ファイル・複数 Step にまたがる、または既存 contract に触れる。worker に `AGENTS.md` §実装 Plan の必須セクション に従った plan を先に出させてから実装。複数 issue を束ねた PR は merge 前に `pr-cross-review` skill による advisory クロスレビューを受ける対象になりやすい（merge を止めるものではない）
-- **最上位 tier 専用**: spike / 設計判断を含む issue、または `risk:authority` が付いた issue。worker に渡さず、最上位ティア（`AGENTS.md` §委任・報告の作法 のモデル tier 表参照）のセッションで実施
+- **裁定 session で実施**: spike / 設計判断を含む issue、または `risk:authority` が付いた issue。権限・比較・rollback を判断できる担当が実施し、provider の model tier 名では固定しない
 
 ## 操作 B: intake — 新しい作業を issue 化する
 
 作業依頼・発見事項・監査結果が issue の外にある状態を作らない。
 
 1. `gh search issues` で既存 issue との重複を確認（close 済み含む）
-2. 重複なら既存 issue に本文追記 or コメントで統合。新規なら handoff-quality で起票。**RLS ポリシー・テナント境界・スキーマ変更に関わる起票では、ここで Codex（読み取り専用の別系統批評係）に攻撃シナリオ生成を実行させ、出力を「## テストすべき攻撃シナリオ」として本文に貼る**:
+2. 重複なら既存 issue に本文追記 or コメントで統合。新規なら handoff-quality で起票。**RLS ポリシー・テナント境界・スキーマ変更に関わる起票では、攻撃シナリオ生成が issue の品質を実質的に上げる場合だけ、別 context の read-only reviewer に依頼し、出力を「## テストすべき攻撃シナリオ」として本文に貼る**。OpenAI / Codex の CLI adapter 例:
 
    ```bash
    codex exec --sandbox read-only \
@@ -84,9 +84,9 @@ feature 開発と並行する非 feature 作業を issue ベースで回す指�
       10個列挙せよ。それぞれ悪用手順を1行で添えること。"
    ```
 
-   出力をチケット本文に貼る。テストの実装は通常の worker レーンが行う（Codex にコードは書かせない）。呼び出し失敗・タイムアウト時はスキップして本来のフローを続行する（best-effort）
+   同等の read-only reviewer を利用できる runtime では、上記 command の代わりに同じ prompt・scope・出力契約を渡してよい。出力をチケット本文に貼り、到達可能なシナリオだけをテスト候補へ残す。呼び出し失敗・タイムアウト時はスキップして本来のフローを続行する（best-effort）
 
-   **これは起票時の攻撃シナリオ生成であり、実装の着手可否を決める gate ではない。** 本文を厚くするための best-effort な補助であり、Codex への実装前レビュー依頼を必須化する機構は持たない（2026-09-04、#2596 で撤回）
+   **これは起票時の攻撃シナリオ生成であり、実装の着手可否を決める gate ではない。** 本文を厚くするための best-effort な補助で、外部 provider の可用性を前提にしない
 
 3. ラベルは既存体系のみ使う: `type:*` / `priority:*` / `area:*` / `quality:*` など、掲載一覧（[github-labels.md](../../../docs/operations/github-labels.md)）にあるものだけ。`size:*` は **deprecated**（新規 issue には付けない。既存 issue から剥がしはしない）。新ラベルを作らない
 4. `status:*` で着手可否を表す（着手可なら `status:ready`。`status:ready` を付けられる条件は §`status:ready` の定義（機械判定）に従う。前提待ちなら `status:blocked`）。既存テーマに属するなら該当 `scope:epic` issue の sub-issue にする。最上位ティア専用 / 🔒 prod 操作である旨は issue 本文の §注意 に書く。issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作（production mutation / release / データ削除 / 不可逆 migration / 実課金。`AGENTS.md` の authority level 定義）が含まれる場合に限り `risk:authority` を付け、実行前に User の明示指示を得る。可逆な auth / RLS / billing のコード変更には付けない（`pr-cross-review` skill での確認と、必要に応じた `CHECKPOINT` で扱う）
