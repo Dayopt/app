@@ -97,25 +97,24 @@
           "period": "",
           "cta": "Start Free",
           "features": [
-            "Calendar — day, week, and multi-day views",
-            "Plan and Record tracking",
-            "Core Review metrics",
-            "Activities"
+            "Plan and Record (timeboxing)",
+            "Weekly review",
+            "Unlimited activities",
+            "Data export"
           ]
         },
         "pro": {
           "name": "Pro",
           "badge": "Recommended",
-          "description": "All review metrics, unlimited activities, and API and MCP access",
+          "description": "Monthly and yearly overviews with past-self comparison, Google Calendar sync, and API and MCP access",
           "price": "$5",
           "period": "/month",
           "priceDaily": "About 15¢ a day",
           "cta": "Try Pro Free",
           "highlights": [
-            "All Review metrics",
-            "Unlimited activities",
-            "API and MCP access",
-            "Data export"
+            "Monthly and yearly overviews with past-self comparison",
+            "Google Calendar sync",
+            "API and MCP access"
           ]
         }
       },
