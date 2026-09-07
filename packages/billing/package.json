@@ -10,6 +10,11 @@
   "scripts": {
     "build": "tsc --noEmit",
     "lint": "eslint src --max-warnings 0",
+    "test:run": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:tooling",
+    "vitest": "catalog:tooling"
   }
 }

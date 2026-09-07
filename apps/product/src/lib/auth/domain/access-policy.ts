@@ -1,5 +1,3 @@
-import { isProSubscriptionStatus } from '@dayopt/billing';
-
 const protectedProductPaths = [
   '/calendar',
   '/report',
@@ -43,10 +41,6 @@ const authPathsAllowedWhileAuthenticated = [
 const publicProductPaths = ['/', '/about', '/privacy', '/terms', '/contact', '/pricing'] as const;
 
 const publicRewritePaths = ['/mcp', '/oauth/token'] as const;
-
-export function canAccessProFeatures(status: string | null | undefined): boolean {
-  return isProSubscriptionStatus(status);
-}
 
 export function isProtectedProductPath(pathname: string): boolean {
   return matchesPathPrefix(pathname, protectedProductPaths);

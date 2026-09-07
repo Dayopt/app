@@ -41,15 +41,12 @@ export function ProStartEmail({
             <Text style={styles.paragraph}>{t('proStart.fullAccessIntro')}</Text>
             <Section style={styles.infoBox}>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('proStart.featureAnalytics')}
+                - {t('proStart.featureLongRange')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('proStart.featureActivities')}
+                - {t('proStart.featureGoogleCalendar')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('proStart.featureApi')}
-              </Text>
-              <Text style={{ ...styles.paragraph, margin: '0' }}>- {t('proStart.featureAi')}</Text>
+              <Text style={{ ...styles.paragraph, margin: '0' }}>- {t('proStart.featureApi')}</Text>
             </Section>
             <Text style={styles.paragraph}>{t('proStart.manageHint')}</Text>
             <Button style={styles.button} href={`${appUrl}/calendar`}>

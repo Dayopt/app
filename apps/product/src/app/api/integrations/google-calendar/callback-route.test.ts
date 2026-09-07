@@ -8,7 +8,7 @@ const getReconnectTarget = vi.hoisted(() => vi.fn());
 const reconnectExistingConnection = vi.hoisted(() => vi.fn());
 const revokeOrphanedGrant = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
-const checkProAccessForUser = vi.hoisted(() => vi.fn());
+const checkEntitlementForUser = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
 const isWriteFenceEnabled = vi.hoisted(() => vi.fn());
 const resolveMfaAssurance = vi.hoisted(() => vi.fn());
@@ -22,7 +22,7 @@ const envMock = vi.hoisted(() => ({
 vi.mock('@/env', () => ({ env: envMock }));
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
-vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
+vi.mock('@/lib/billing/enforcement', () => ({ checkEntitlementForUser }));
 vi.mock('@/lib/rate-limit/upstash', () => ({ calendarConnectRateLimit: { limit: rateLimit } }));
 vi.mock('@/features/external-calendar/server/connection-service', async (importOriginal) => {
   // CALENDAR_CONNECTION_DB_TIMEOUT_MS は実値を使う（route.ts が POST_EXCHANGE_BUDGET_MS の
@@ -120,7 +120,7 @@ describe('google calendar callback route', () => {
     });
     reconnectExistingConnection.mockResolvedValue('updated');
     revokeOrphanedGrant.mockResolvedValue(undefined);
-    checkProAccessForUser.mockResolvedValue('allowed');
+    checkEntitlementForUser.mockResolvedValue('allowed');
     resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal1' });
     rateLimit.mockResolvedValue({ success: true });
     isWriteFenceEnabled.mockResolvedValue(false);
@@ -181,7 +181,7 @@ describe('google calendar callback route', () => {
   // curl で中身を作れる。start を一度も踏まずに callback へ直接来られるため、start 側の
   // 403 だけでは Free ユーザーを止められない
   it('Pro でないユーザーは cookie と state が整合していても接続を作れない', async () => {
-    checkProAccessForUser.mockResolvedValue('denied');
+    checkEntitlementForUser.mockResolvedValue('denied');
 
     const response = await GET(withCookie(request()));
 
@@ -190,7 +190,7 @@ describe('google calendar callback route', () => {
   });
 
   it('subscription の参照に失敗したら接続を保存しない', async () => {
-    checkProAccessForUser.mockResolvedValue('lookup_failed');
+    checkEntitlementForUser.mockResolvedValue('lookup_failed');
 
     const response = await GET(withCookie(request()));
 

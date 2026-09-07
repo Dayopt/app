@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+import { resolveServiceRoleTarget } from '../service-role-target-guard';
 import {
   createScopedTestUser,
   deleteScopedTestUser,
   type ScopedTestUser,
 } from './create-scoped-test-user';
-import { resolveServiceRoleTarget } from './service-role-target-guard';
 
 /**
  * アクセシビリティテスト

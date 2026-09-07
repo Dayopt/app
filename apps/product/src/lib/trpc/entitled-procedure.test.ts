@@ -3,17 +3,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import { createCallerFactory, createTRPCRouter, proProcedure } from './procedures';
+import { entitlementKeys } from '@dayopt/billing';
+
+// 判定は本物（capability map）を使いつつ、どのキーで引いたかだけを観測する。
+const hasEntitlementForStatus = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/billing/enforcement', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/enforcement')>();
+  return {
+    ...actual,
+    hasEntitlementForStatus: hasEntitlementForStatus.mockImplementation(
+      actual.hasEntitlementForStatus,
+    ),
+  };
+});
+
+import { createCallerFactory, createTRPCRouter, entitledProcedure } from './procedures';
 
 // テスト用の最小ルーター
 const testRouter = createTRPCRouter({
-  ping: proProcedure.query(() => 'pong'),
+  ping: entitledProcedure(entitlementKeys.externalCalendarSync).query(() => 'pong'),
+  mcpPing: entitledProcedure(entitlementKeys.mcpApi).query(() => 'pong'),
 });
 
 const createCaller = createCallerFactory(testRouter);
 
 /**
- * proProcedure 用のコンテキストを作成
+ * entitledProcedure 用のコンテキストを作成
  *
  * profiles テーブルの応答をモックし、subscription_status を制御する
  */
@@ -48,7 +63,7 @@ function createProTestContext(
   };
 }
 
-describe('proProcedure', () => {
+describe('entitledProcedure', () => {
   // 既定（enforcement 無効）では全 status が素通りするため、enforcement の挙動を
   // 検証する既存テストは BILLING_ENFORCED='true' を前提にする。
   beforeEach(() => {
@@ -179,6 +194,35 @@ describe('proProcedure', () => {
       const result = await caller.ping();
       expect(result).toBe('pong');
     });
+  });
+
+  it('別の entitlement key でも Pro なら通る', async () => {
+    const ctx = createProTestContext('active');
+    const caller = createCaller(ctx as never);
+
+    await expect(caller.mcpPing()).resolves.toBe('pong');
+  });
+
+  it('別の entitlement key でも Free は弾かれる', async () => {
+    const ctx = createProTestContext('free');
+    const caller = createCaller(ctx as never);
+
+    await expect(caller.mcpPing()).rejects.toThrow(TRPCError);
+  });
+
+  // 現在 Pro は 4 キー全部を持つので、key を無視して固定キーで判定しても上の 2 本は
+  // 通ってしまう。map が一様でなくなった瞬間に誤配線が課金バグになるため、
+  // 「どのキーで判定したか」をここで固定する。
+  it.each([
+    { procedure: 'ping', expectedKey: entitlementKeys.externalCalendarSync },
+    { procedure: 'mcpPing', expectedKey: entitlementKeys.mcpApi },
+  ])('$procedure は $expectedKey で判定する', async ({ procedure, expectedKey }) => {
+    const ctx = createProTestContext('active');
+    const caller = createCaller(ctx as never);
+
+    await (caller as unknown as Record<string, () => Promise<string>>)[procedure]!();
+
+    expect(hasEntitlementForStatus).toHaveBeenCalledWith('active', expectedKey);
   });
 
   describe('enforcement 無効時（既定・全機能無料）', () => {

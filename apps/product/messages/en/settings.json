@@ -653,19 +653,17 @@
           "name": "Free",
           "features": {
             "timeboxing": "Timeboxing & time tracking",
-            "basicAnalytics": "Basic analytics (2 metrics)",
-            "activities": "Up to 5 activities",
-            "ai": "AI reflection (10/month)"
+            "weeklyReview": "Weekly review",
+            "unlimitedActivities": "Unlimited activities",
+            "dataExport": "Data export (CSV / JSON)"
           }
         },
         "pro": {
           "name": "Pro",
           "features": {
-            "fullAnalytics": "All 8 metrics + chart views",
-            "unlimitedActivities": "Unlimited activities",
-            "api": "MCP / API access",
-            "dataExport": "Data export (CSV/JSON)",
-            "unlimitedAI": "Unlimited AI + model selection"
+            "longRange": "Monthly and yearly overviews with past-self comparison",
+            "googleCalendar": "Google Calendar sync",
+            "api": "MCP / API access"
           }
         }
       },

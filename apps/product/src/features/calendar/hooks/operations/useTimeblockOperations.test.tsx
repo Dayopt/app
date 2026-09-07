@@ -245,7 +245,10 @@ describe('useTimeblockOperations', () => {
       expect(updateRecordMutate).not.toHaveBeenCalled();
     });
 
-    it('キャッシュ上の plan が既に過去（end_at <= now）でも mutate を呼ぶ', async () => {
+    // Plan は時間軸のどこにでも置ける（AGENTS.md §時間）。移動元も移動先も過去、という
+    // 「過去 Plan を過去の範囲内で動かす」ケースを踏む。makeEvent の既定日時は now より
+    // 未来なので、startDate/endDate を明示的に過去へ上書きしないとこのケースにならない。
+    it('過去の plan を過去の範囲内へ動かしても新しい時刻で mutate を呼ぶ', async () => {
       mockCaches(
         makeCache('plans', [
           {
@@ -255,12 +258,26 @@ describe('useTimeblockOperations', () => {
           },
         ]),
       );
-      const event = makeEvent({ id: 'plan-1', kind: 'plan' });
+      const event = makeEvent({
+        id: 'plan-1',
+        kind: 'plan',
+        startDate: new Date('2026-04-25T03:00:00.000Z'),
+        endDate: new Date('2026-04-25T04:00:00.000Z'),
+      });
 
       const { result } = renderHook(() => useTimeblockOperations());
       await result.current.handleUpdateTimeblock(event);
 
-      expect(updatePlanMutate).toHaveBeenCalled();
+      expect(updatePlanMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'plan-1',
+          data: {
+            start_at: '2026-04-25T03:00:00.000Z',
+            end_at: '2026-04-25T04:00:00.000Z',
+          },
+        }),
+        expect.anything(),
+      );
       expect(toastError).not.toHaveBeenCalled();
     });
 
