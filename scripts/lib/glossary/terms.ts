@@ -176,9 +176,9 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         term: 'ラベル',
         locale: 'ja',
         enforcement: 'active',
-        allowKeyPaths: ['[Aa]riaLabel$', '^aria\\.'],
-        reason:
-          '1 対象に複数付けられる印象を与える。1 タイムブロック 1 アクティビティ。a11y の aria-label は別義',
+        // a11y の aria-label は「ラベル」という語を UI 文言側に出さないので除外は付けない。
+        // 除外を足すと active ルールに未検証の抜け道を作ることになる。
+        reason: '1 対象に複数付けられる印象を与える。1 タイムブロック 1 アクティビティ',
       },
     ],
   },
