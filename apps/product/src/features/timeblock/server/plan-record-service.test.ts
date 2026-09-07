@@ -432,7 +432,15 @@ describe('PlanService.update', () => {
       }),
     ).resolves.toMatchObject({ start_at: '2026-03-17T09:00:00.000Z' });
 
-    expect(commands.updatePlan).toHaveBeenCalled();
+    // mock の戻り値をなぞるだけでは「新しい時刻が command へ渡ったか」を証明できないので、
+    // 引数まで見る。end_at 省略時に既存値へ落ちることもここで担保する。
+    expect(commands.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: existing.id,
+        startAt: '2026-03-17T09:00:00.000Z',
+        endAt: '2026-03-17T11:00:00.000Z',
+      }),
+    );
   });
 
   it('過去 plan を未来へ移動し直す時間変更も許可する', async () => {
@@ -463,6 +471,14 @@ describe('PlanService.update', () => {
         },
       }),
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
+
+    expect(commands.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: existing.id,
+        startAt: '2030-03-17T10:00:00.000Z',
+        endAt: '2030-03-17T11:00:00.000Z',
+      }),
+    );
   });
 
   it('終了が将来の plan を現在以前へ縮める時間変更も許可する', async () => {
@@ -490,6 +506,14 @@ describe('PlanService.update', () => {
         },
       }),
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
+
+    expect(commands.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: existing.id,
+        startAt: '2026-07-15T11:00:00.000Z',
+        endAt: '2026-07-15T12:00:00.000Z',
+      }),
+    );
   });
 
   it('終了が将来の plan は将来範囲内で時間変更できる', async () => {
@@ -514,6 +538,14 @@ describe('PlanService.update', () => {
         input: { start_at: updated.start_at, end_at: updated.end_at },
       }),
     ).resolves.toMatchObject({ start_at: updated.start_at, end_at: updated.end_at });
+
+    expect(commands.updatePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planId: existing.id,
+        startAt: '2030-03-17T12:00:00.000Z',
+        endAt: '2030-03-17T13:00:00.000Z',
+      }),
+    );
   });
 
   it('過去 plan でもメモの更新は許可する（分類は入力から除去済みのため既存値を保持する）', async () => {
