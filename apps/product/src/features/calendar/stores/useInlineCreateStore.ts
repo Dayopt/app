@@ -4,10 +4,11 @@ import { devtools } from 'zustand/middleware';
 import { createSelectors } from '@/lib/zustand/createSelectors';
 
 /**
- * ドラッグ選択によるインライン作成の状態管理
+ * ドラッグ選択による作成の状態管理
  *
- * ドラッグ終了 → pendingSelection セット → InlineActivityPalette 表示
- * タグ選択 or 外部クリック → clearPendingSelection
+ * ドラッグ終了 → pendingSelection セット → グリッドに DragSelectionHighlight を描き、
+ * 同時に Inspector を作成モード（InlineCreatePanel）で開く。
+ * アクティビティ選択で作成、パネルを閉じると破棄 → clearPendingSelection。
  */
 
 /** ドラッグ選択で確定した時間範囲 */
@@ -33,6 +34,8 @@ interface InlineCreateState {
   clearPendingSelection: () => void;
   /** ユーザーが選んだ種別を設定する（null 時 no-op） */
   setSelectionKind: (kind: 'plan' | 'record') => void;
+  /** 作成パネルの日付入力から対象日を差し替える（null 時 no-op） */
+  setSelectionDate: (date: Date) => void;
   /** 既存 pendingSelection の時間フィールドを部分更新する（null 時 no-op） */
   updateSelectionTimes: (
     partial: Partial<Pick<PendingSelection, 'startHour' | 'startMinute' | 'endHour' | 'endMinute'>>,
@@ -49,6 +52,12 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
         set((state) =>
           state.pendingSelection
             ? { pendingSelection: { ...state.pendingSelection, kind } }
+            : state,
+        ),
+      setSelectionDate: (date) =>
+        set((state) =>
+          state.pendingSelection
+            ? { pendingSelection: { ...state.pendingSelection, date } }
             : state,
         ),
       updateSelectionTimes: (partial) =>

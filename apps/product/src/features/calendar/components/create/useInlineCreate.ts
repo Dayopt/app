@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * インラインアクティビティパレットの entry 作成ロジック
+ * ドラッグ作成（Inspector 作成モード）の entry 作成ロジック
  *
  * ドラッグ選択（pendingSelection）からの plan / record 作成、
  * 新規アクティビティ作成 → entry 作成、選択範囲の live 競合判定を担う。
@@ -19,15 +19,16 @@ import {
   collectTimeblockLaneItems,
   hasTimeblockLaneConflict,
   resolveTimeblockKindChoice,
+  useTimeblockInspectorStore,
   useTimeblockWriteMutations,
 } from '@/features/timeblock';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { logger } from '@/lib/logger';
 
-import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
+import { useInlineCreateStore } from '../../stores/useInlineCreateStore';
 
-export function useInlineActivityPaletteCreation() {
+export function useInlineCreate() {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const timezone = useUserPreferences((s) => s.timezone);
@@ -35,6 +36,8 @@ export function useInlineActivityPaletteCreation() {
   const tEntry = useTranslations('timeblock');
 
   const queryClient = useQueryClient();
+  const openInspector = useTimeblockInspectorStore((state) => state.openInspector);
+  const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
   const { createRecord, createPlan } = useTimeblockWriteMutations();
   const createActivityMutation = useCreateActivity({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
@@ -84,24 +87,21 @@ export function useInlineActivityPaletteCreation() {
         destination === 'plan' ? 'plans' : 'records',
       );
       if (hasTimeblockLaneConflict(laneItems, utcStart, utcEnd)) {
+        // パネルは開いたままにする。時間を直して選び直せる
         toast.error(tEntry('errors.timeOverlap'));
-        clearPendingSelection();
         return;
       }
 
       lockedRef.current = true;
       setIsCreating(true);
 
-      logger.log('🏷️ InlineActivityPalette: Creating', {
+      logger.log('🏷️ InlineCreate: Creating', {
         destination,
         start: utcStart.toISOString(),
         end: utcEnd.toISOString(),
         activityId,
         title: activityName,
       });
-
-      // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
-      clearPendingSelection();
 
       const mutation = destination === 'plan' ? createPlan : createRecord;
       mutation.mutate(
@@ -112,15 +112,28 @@ export function useInlineActivityPaletteCreation() {
           activityId,
         },
         {
-          onSuccess: () => {
+          onSuccess: (created) => {
             setIsCreating(false);
+            lockedRef.current = false;
+            clearPendingSelection();
             toast.success(
               destination === 'plan'
                 ? tEntry('editor.toast.planCreated')
                 : tEntry('editor.toast.recorded'),
             );
+            // 同じパネルをそのまま作成したブロックの詳細へ切り替える。メモ入力や
+            // 記録化へ続けて進めるようにするため（作成モードはここで終わる）
+            if (created?.id) {
+              openInspector(created.id, destination);
+            } else {
+              closeInspector();
+            }
           },
-          onError: () => setIsCreating(false),
+          // 失敗時はパネルを閉じない。時間や種別を直して選び直せる
+          onError: () => {
+            setIsCreating(false);
+            lockedRef.current = false;
+          },
         },
       );
     },
@@ -131,6 +144,8 @@ export function useInlineActivityPaletteCreation() {
       createPlan,
       createRecord,
       clearPendingSelection,
+      closeInspector,
+      openInspector,
       queryClient,
       tEntry,
     ],

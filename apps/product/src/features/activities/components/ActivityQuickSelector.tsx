@@ -210,20 +210,7 @@ function CreateBadge({ label, onClick }: { label: string; onClick: () => void })
   );
 }
 
-/**
- * アクティビティ選択コンテンツ
- *
- * カテゴリーごとの見出し + 所属アクティビティ、末尾に「未分類」、さらに末尾の「+」で
- * 自身を閉じてグローバル ActivityCreateModal を `openActivityCreateModal({ onCreated })`
- * で開く。所属アクティビティが 0 件のカテゴリーは見出しごと出さない（選べるものが無い
- * 見出しはノイズになるため）。
- */
-function ActivityQuickSelectorContent({
-  onSelect,
-  onCreateAndSelect,
-  onActivityHover,
-  closeSelf,
-}: {
+interface ActivityPickerListProps {
   onSelect: (activityId: string, activityName: string) => void;
   onCreateAndSelect: (
     name: string,
@@ -232,9 +219,36 @@ function ActivityQuickSelectorContent({
     categoryId?: string | null,
   ) => void;
   onActivityHover?: ((activity: HoveredActivityInfo | null) => void) | undefined;
-  /** 自身（ActivityQuickSelector）を閉じる関数。modal を開く前に呼んで nest を回避 */
-  closeSelf: () => void;
-}) {
+  /**
+   * 自身を包む overlay を閉じる関数。ActivityCreateModal を開く前に呼んで
+   * vaul の nested Drawer を避ける。overlay に載っていない埋め込み用途では省略する。
+   */
+  closeSelf?: (() => void) | undefined;
+  /**
+   * `overlay`: 自前で縦スクロールし、左右に overlay 用の余白と区切り線を持つ（既定）。
+   * `embedded`: スクロールも余白も持たない。高さと余白は埋め込み先のパネルが与える。
+   */
+  variant?: 'overlay' | 'embedded' | undefined;
+}
+
+/**
+ * アクティビティ選択リスト（カテゴリー絞り込みチップ + 見出しごとの pill）。
+ *
+ * カテゴリーごとの見出し + 所属アクティビティ、末尾に「未分類」、さらに末尾の「+」で
+ * グローバル ActivityCreateModal を `openActivityCreateModal({ onCreated })` で開く。
+ * 所属アクティビティが 0 件のカテゴリーは見出しごと出さない（選べるものが無い
+ * 見出しはノイズになるため）。
+ *
+ * 縦スクロールは持たない。高さの制約は呼び出し側（overlay / パネル）が与える。
+ */
+export function ActivityPickerList({
+  onSelect,
+  onCreateAndSelect,
+  onActivityHover,
+  closeSelf,
+  variant = 'overlay',
+}: ActivityPickerListProps) {
+  const isEmbedded = variant === 'embedded';
   const t = useTranslations('calendar');
   const { data: tree } = useActivityTree();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -269,7 +283,7 @@ function ActivityQuickSelectorContent({
   );
 
   const handleOpenCreate = useCallback(() => {
-    closeSelf();
+    closeSelf?.();
     openActivityCreateModal({
       onCreated: (activity) => {
         // 作成は modal 側で済んでいる。caller の onCreateAndSelect は再度 mutation
@@ -287,7 +301,9 @@ function ActivityQuickSelectorContent({
   return (
     <>
       {showChipRow ? (
-        <div className="border-border-subtle shrink-0 border-b px-4 pb-2">
+        <div
+          className={cn('shrink-0 pb-2', isEmbedded ? '' : 'border-border-subtle border-b px-4')}
+        >
           <div
             role="group"
             aria-label={t('activitySelector.categoryFilterLabel')}
@@ -319,9 +335,9 @@ function ActivityQuickSelectorContent({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={cn(isEmbedded ? '' : 'min-h-0 flex-1 overflow-y-auto')}>
         {isActivityZero ? (
-          <div className="space-y-2 px-4 py-4">
+          <div className={cn('space-y-2 py-4', isEmbedded ? '' : 'px-4')}>
             <div className="text-center">
               <p className="text-foreground text-sm">{t('activitySelector.emptyTitle')}</p>
               <p className="text-muted-foreground mt-1 text-xs">
@@ -347,7 +363,7 @@ function ActivityQuickSelectorContent({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-2 px-4 py-2">
+        <div className={cn('flex flex-col gap-2 py-2', isEmbedded ? '' : 'px-4')}>
           {visibleCategories.map(({ category, activities }) =>
             activities.length > 0 ? (
               <div key={category.id} className="flex flex-col gap-2">
@@ -521,7 +537,7 @@ export function ActivityQuickSelector({
             {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
             {hint}
           </DrawerHeader>
-          <ActivityQuickSelectorContent
+          <ActivityPickerList
             onSelect={onSelect}
             onCreateAndSelect={onCreateAndSelect}
             onActivityHover={onActivityHover}
@@ -567,7 +583,7 @@ export function ActivityQuickSelector({
         </Button>
       </div>
 
-      <ActivityQuickSelectorContent
+      <ActivityPickerList
         onSelect={onSelect}
         onCreateAndSelect={onCreateAndSelect}
         onActivityHover={onActivityHover}

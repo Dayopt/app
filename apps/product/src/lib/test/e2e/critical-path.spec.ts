@@ -206,10 +206,10 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 9, 10);
 
-    // InlineActivityPalette → アクティビティ選択ダイアログ
-    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
-    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
-    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
+    // ドラッグ確定 → 編集と同じ右パネルが作成モードで開く
+    const createPanel = page.getByRole('region', { name: 'アクティビティを選択' });
+    await expect(createPanel).toBeVisible({ timeout: 10_000 });
+    await createPanel.getByRole('button', { name: ACTIVITY_NAME }).click();
 
     // Plan lane にカードが現れる（lane カードはアクティビティ名を表示する）
     const planCard = page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first();
@@ -230,10 +230,10 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 9, 10);
 
-    // InlineActivityPalette → アクティビティ選択ダイアログ
-    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
-    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
-    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
+    // ドラッグ確定 → 編集と同じ右パネルが作成モードで開く
+    const createPanel = page.getByRole('region', { name: 'アクティビティを選択' });
+    await expect(createPanel).toBeVisible({ timeout: 10_000 });
+    await createPanel.getByRole('button', { name: ACTIVITY_NAME }).click();
 
     // Record レーンにカードが現れる（lane カードはアクティビティ名を表示する）
     const recordCard = page.locator('[data-record-lane-card]', { hasText: ACTIVITY_NAME }).first();
@@ -252,12 +252,12 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
 
     await dragSelect(page, 14, 15);
 
-    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
-    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
+    const createPanel = page.getByRole('region', { name: 'アクティビティを選択' });
+    await expect(createPanel).toBeVisible({ timeout: 10_000 });
 
     // 過去帯の既定は「記録」。タブで「予定」へ切り替えてから選ぶ
-    await activityDialog.getByRole('button', { name: '予定', exact: true }).click();
-    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
+    await createPanel.getByRole('button', { name: '予定', exact: true }).click();
+    await createPanel.getByRole('button', { name: ACTIVITY_NAME }).click();
 
     const planCard = page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first();
     await expect(planCard).toBeVisible({ timeout: 10_000 });

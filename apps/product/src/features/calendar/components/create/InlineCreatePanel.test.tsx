@@ -1,20 +1,22 @@
 /**
- * ドラッグ作成の種別タブ（記録 / 予定）の挙動。
+ * ドラッグ作成パネル（Inspector 作成モード）の挙動。
  *
- * 既定は end_at 判定のまま、過去スロットだけ Plan へ切り替えられ、未来スロットでは
- * 記録タブが disabled になることを、実際の作成 mutation の呼び分けまで含めて確認する。
+ * 既定は end_at 判定のまま、過去スロットだけ Plan へ切り替えられること、未来スロットでは
+ * 記録タブが選べないことを、実際に呼ばれる作成 mutation まで含めて確認する。
+ * また「アクティビティを選んだ瞬間に保存」「閉じたら保存しない」も併せて見る。
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resolveTimeblockKindChoice } from '@/features/timeblock';
+import { useInlineCreateStore } from '../../stores/useInlineCreateStore';
 
-import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
-import { InlineActivityPalette } from './InlineActivityPalette';
+import { InlineCreatePanel } from './InlineCreatePanel';
 
 const createPlanMutate = vi.hoisted(() => vi.fn());
 const createRecordMutate = vi.hoisted(() => vi.fn());
+const openInspector = vi.hoisted(() => vi.fn());
+const closeInspector = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/timeblock', async () => {
   const domain = await vi.importActual<
@@ -30,31 +32,31 @@ vi.mock('@/features/timeblock', async () => {
       createPlan: { mutate: createPlanMutate },
       createRecord: { mutate: createRecordMutate },
     }),
+    useTimeblockInspectorStore: Object.assign(
+      (selector: (s: { openInspector: unknown; closeInspector: unknown }) => unknown) =>
+        selector({ openInspector, closeInspector }),
+      { getState: () => ({ openInspector, closeInspector }) },
+    ),
+    // 日付・時間行と重複アラート、ヘッダーの閉じるボタンは本体側で検証済みなので
+    // ここでは種別タブと作成経路に集中する
+    DateTimeSection: () => null,
+    TimeConflictAlert: () => null,
+    InspectorHeaderActions: ({ onCloseInspector }: { onCloseInspector?: () => void }) => (
+      <button type="button" onClick={onCloseInspector}>
+        close
+      </button>
+    ),
   };
 });
 
-// アクティビティ一覧は 1 件だけ返す。選択でそのまま作成へ進む。
+// アクティビティ一覧は 1 件だけ返す。押すとその場で作成へ進む
 vi.mock('@/features/activities', () => ({
-  ActivityIcon: () => null,
-  getCategoryColorClasses: () => null,
   useCreateActivity: () => ({ mutateAsync: vi.fn() }),
-  ActivityQuickSelector: ({
-    open,
-    onSelect,
-    hint,
-  }: {
-    open: boolean;
-    onSelect: (id: string, name: string) => void;
-    hint?: React.ReactNode;
-  }) =>
-    open ? (
-      <div>
-        {hint}
-        <button type="button" onClick={() => onSelect('activity-1', '開発')}>
-          開発
-        </button>
-      </div>
-    ) : null,
+  ActivityPickerList: ({ onSelect }: { onSelect: (id: string, name: string) => void }) => (
+    <button type="button" onClick={() => onSelect('activity-1', '開発')}>
+      開発
+    </button>
+  ),
 }));
 
 vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({}) }));
@@ -62,13 +64,7 @@ vi.mock('@/lib/hooks/useUserPreferences', () => ({
   useUserPreferences: (selector: (s: { timezone: string; timeFormat: string }) => unknown) =>
     selector({ timezone: 'UTC', timeFormat: '24h' }),
 }));
-vi.mock('@/lib/stores/useShellStore', () => ({
-  useShellStore: Object.assign(
-    (selector: (s: { activeSheet: null }) => unknown) => selector({ activeSheet: null }),
-    { getState: () => ({ activeSheet: null }), use: { openActivityCreateModal: () => vi.fn() } },
-  ),
-}));
-vi.mock('../../../../../hooks/accessibility/useHapticFeedback', () => ({
+vi.mock('../../hooks/accessibility/useHapticFeedback', () => ({
   useHapticFeedback: () => ({ tap: vi.fn(), impact: vi.fn() }),
 }));
 vi.mock('next-intl', () => ({
@@ -101,16 +97,18 @@ function futureDay() {
   return d;
 }
 
-describe('InlineActivityPalette の種別タブ', () => {
+describe('InlineCreatePanel', () => {
   beforeEach(() => {
     createPlanMutate.mockClear();
     createRecordMutate.mockClear();
+    openInspector.mockClear();
+    closeInspector.mockClear();
     useInlineCreateStore.setState({ pendingSelection: null });
   });
 
-  it('過去スロットの既定は記録で、そのまま選ぶと Record を作る', () => {
+  it('過去スロットの既定は記録で、アクティビティを押した時点で Record を作る', () => {
     setSelection(pastDay());
-    render(<InlineActivityPalette hourHeight={60} />);
+    render(<InlineCreatePanel onClose={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'event.preview.record' })).not.toBeDisabled();
 
@@ -122,7 +120,7 @@ describe('InlineActivityPalette の種別タブ', () => {
 
   it('過去スロットで予定タブへ切り替えると Plan を作る', () => {
     setSelection(pastDay());
-    render(<InlineActivityPalette hourHeight={60} />);
+    render(<InlineCreatePanel onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'event.preview.plan' }));
     expect(useInlineCreateStore.getState().pendingSelection?.kind).toBe('plan');
@@ -135,7 +133,7 @@ describe('InlineActivityPalette の種別タブ', () => {
 
   it('未来スロットでは記録タブが選べず、選択すると Plan を作る', () => {
     setSelection(futureDay());
-    render(<InlineActivityPalette hourHeight={60} />);
+    render(<InlineCreatePanel onClose={vi.fn()} />);
 
     expect(
       screen.getByRole('button', {
@@ -149,11 +147,15 @@ describe('InlineActivityPalette の種別タブ', () => {
     expect(createRecordMutate).not.toHaveBeenCalled();
   });
 
-  it('未来スロットは kind=record を要求されても Plan へ倒す（DT005）', () => {
-    const future = new Date(Date.now() + 60 * 60 * 1000);
-    expect(resolveTimeblockKindChoice(future, 'record')).toEqual({
-      kind: 'plan',
-      canRecord: false,
-    });
+  it('閉じるボタンでは何も作成しない', () => {
+    const onClose = vi.fn();
+    setSelection(pastDay());
+    render(<InlineCreatePanel onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(createPlanMutate).not.toHaveBeenCalled();
+    expect(createRecordMutate).not.toHaveBeenCalled();
   });
 });
