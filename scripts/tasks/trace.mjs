@@ -566,7 +566,7 @@ export function buildInternalReviewSection({
   issueComments,
   reviewComments,
   commits,
-  headSha = null,
+  headSha = /** @type {string | null} */ (null),
 }) {
   const markers = filterInternalReviewMarkerComments(issueComments);
   if (markers.length === 0) return null;
