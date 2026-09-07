@@ -9,14 +9,21 @@
  *
  * 保存先は end_at のルールで決まる（過去 → 記録、未来 → 予定）。既定の開始時刻は
  * 今日なら現在時刻、それ以外は 09:00 なので、今日のタップは常に「今から先」＝予定になる。
+ *
+ * 既定の枠が同じレーンの既存ブロックと重なる時は作成しない。作らずに知らせる方が、
+ * サーバーの EXCLUDE 制約で弾かれてから戻すより短い（重なる時はカレンダー上で
+ * ドラッグして空いている場所を指せばよい）。
  */
 
 import { useCallback } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import {
+  collectTimeblockLaneItems,
+  hasTimeblockLaneConflict,
   resolveTimeblockDestination,
   useTimeblockInspectorStore,
   useTimeblockWriteMutations,
@@ -49,6 +56,7 @@ export function useActivityQuickCreate() {
   const t = useTranslations();
   const timezone = useUserPreferences((s) => s.timezone);
   const defaultDuration = useUserPreferences((s) => s.defaultDuration);
+  const queryClient = useQueryClient();
   const { createPlan, createRecord, deletePlan, deleteRecord } = useTimeblockWriteMutations();
   const openInspector = useTimeblockInspectorStore((state) => state.openInspector);
   const closeInspector = useTimeblockInspectorStore((state) => state.closeInspector);
@@ -60,6 +68,16 @@ export function useActivityQuickCreate() {
       const startAt = convertFromTimezone(localStart, timezone);
       const endAt = convertFromTimezone(localEnd, timezone);
       const destination = resolveTimeblockDestination(endAt);
+
+      // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は共存できる
+      const laneItems = collectTimeblockLaneItems(
+        queryClient,
+        destination === 'plan' ? 'plans' : 'records',
+      );
+      if (hasTimeblockLaneConflict(laneItems, startAt, endAt)) {
+        toast.error(t('timeblock.errors.timeOverlap'));
+        return;
+      }
 
       const mutation = destination === 'plan' ? createPlan : createRecord;
       mutation.mutate(
@@ -105,6 +123,7 @@ export function useActivityQuickCreate() {
       deletePlan,
       deleteRecord,
       openInspector,
+      queryClient,
       t,
       timezone,
     ],

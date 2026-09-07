@@ -31,6 +31,7 @@ import { useInlineCreateStore } from '../../stores/useInlineCreateStore';
 export function useInlineCreate() {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
+  const setHoveredActivity = useInlineCreateStore.use.setHoveredActivity();
   const timezone = useUserPreferences((s) => s.timezone);
   const t = useTranslations('activities');
   const tEntry = useTranslations('timeblock');
@@ -41,14 +42,16 @@ export function useInlineCreate() {
   const { createRecord, createPlan } = useTimeblockWriteMutations();
   const createActivityMutation = useCreateActivity({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
-  const [hoveredActivity, setHoveredActivity] = useState<HoveredActivityInfo | null>(null);
   const lockedRef = useRef(false);
 
   // 選択後はホバークリアを無視（mouseLeaveでちらつかないように）
-  const handleActivityHover = useCallback((activity: HoveredActivityInfo | null) => {
-    if (activity === null && lockedRef.current) return;
-    setHoveredActivity(activity);
-  }, []);
+  const handleActivityHover = useCallback(
+    (activity: HoveredActivityInfo | null) => {
+      if (activity === null && lockedRef.current) return;
+      setHoveredActivity(activity);
+    },
+    [setHoveredActivity],
+  );
 
   // plan / record 作成ハンドラー（アクティビティ必須、その名前をタイトルに設定）
   const handleCreate = useCallback(
@@ -219,7 +222,6 @@ export function useInlineCreate() {
 
   return {
     isCreating,
-    hoveredActivity,
     handleActivityHover,
     handleCreate,
     handleCreateAndSelect,

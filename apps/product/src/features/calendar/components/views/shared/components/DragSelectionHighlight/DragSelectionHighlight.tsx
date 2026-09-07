@@ -66,6 +66,8 @@ export function DragSelectionHighlight({
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
   const isCreateMode = useTimeblockInspectorStore((state) => state.createMode);
+  // 作成パネルでホバー中のアクティビティ。色と名前をハイライトへ先出しする
+  const hoveredActivity = useInlineCreateStore.use.hoveredActivity();
   const timezone = useUserPreferences((s) => s.timezone);
   const tCalendar = useTranslations('calendar');
   const tEntry = useTranslations('timeblock');
@@ -73,9 +75,8 @@ export function DragSelectionHighlight({
 
   const highlightRef = useRef<HTMLDivElement>(null);
 
-  // ホバー中アクティビティ（Inspector 作成モードの一覧を hover した時のプレビュー）と
-  // 競合判定は、作成パネルと同じ hook を共有する
-  const { hoveredActivity, hasConflict } = useInlineCreate();
+  // 競合判定は作成パネルと同じロジックを使う（どちらも store の pendingSelection を見る）
+  const { hasConflict } = useInlineCreate();
 
   // 作成パネルが閉じた（＝破棄された）らハイライトも消す。作成成功時は
   // useInlineCreate 側が先に clearPendingSelection するので二重呼び出しにならない

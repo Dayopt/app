@@ -52,8 +52,22 @@ vi.mock('@/features/timeblock', async () => {
 // アクティビティ一覧は 1 件だけ返す。押すとその場で作成へ進む
 vi.mock('@/features/activities', () => ({
   useCreateActivity: () => ({ mutateAsync: vi.fn() }),
-  ActivityPickerList: ({ onSelect }: { onSelect: (id: string, name: string) => void }) => (
-    <button type="button" onClick={() => onSelect('activity-1', '開発')}>
+  ActivityPickerList: ({
+    onSelect,
+    onActivityHover,
+  }: {
+    onSelect: (id: string, name: string) => void;
+    onActivityHover?: (
+      activity: { id: string; name: string; color: string | null; icon: string | null } | null,
+    ) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() => onSelect('activity-1', '開発')}
+      onMouseEnter={() =>
+        onActivityHover?.({ id: 'activity-1', name: '開発', color: 'blue', icon: 'briefcase' })
+      }
+    >
       開発
     </button>
   ),
@@ -103,7 +117,7 @@ describe('InlineCreatePanel', () => {
     createRecordMutate.mockClear();
     openInspector.mockClear();
     closeInspector.mockClear();
-    useInlineCreateStore.setState({ pendingSelection: null });
+    useInlineCreateStore.setState({ pendingSelection: null, hoveredActivity: null });
   });
 
   it('過去スロットの既定は記録で、アクティビティを押した時点で Record を作る', () => {
@@ -145,6 +159,19 @@ describe('InlineCreatePanel', () => {
 
     expect(createPlanMutate).toHaveBeenCalledTimes(1);
     expect(createRecordMutate).not.toHaveBeenCalled();
+  });
+
+  it('一覧のホバーは store 経由でグリッドのハイライトへ伝わる', () => {
+    setSelection(pastDay());
+    render(<InlineCreatePanel onClose={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: '開発' }));
+
+    // ハイライトは別コンポーネントなので、hook の local state ではなく store を読む
+    expect(useInlineCreateStore.getState().hoveredActivity).toMatchObject({
+      id: 'activity-1',
+      name: '開発',
+    });
   });
 
   it('閉じるボタンでは何も作成しない', () => {
