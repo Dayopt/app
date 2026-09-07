@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * `.claude/skills/pr-cross-review/cross-review-workflow.js` の
+ * `.agents/skills/pr-cross-review/cross-review-workflow.js` の
  * `buildContextPackSection` / `buildReviewPrompt`（ctx pack を role prompt へ
  * 組み込む部分）の契約テスト。
  *
@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest';
 
 const WORKFLOW_SCRIPT_PATH = join(
   import.meta.dirname,
-  '../../.claude/skills/pr-cross-review/cross-review-workflow.js',
+  '../../.agents/skills/pr-cross-review/cross-review-workflow.js',
 );
 
 interface ContextPackExports {

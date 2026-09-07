@@ -21,7 +21,7 @@ Storybook は公開ヘルプ化しない。ヘルプページの役割は `apps/
 
 ## リリースノートは blog の release カテゴリ
 
-独立した `/releases` ページは持たない（2026-07-23 廃止）。リリースノートは `apps/web/content/blog/{en,ja}/vX-Y-Z.mdx` に `category: 'release'` の blog 記事として書き、`/blog/release` タブに表示する。書式は `.claude/skills/docs-writing/templates/blog-frontmatter.md`。
+独立した `/releases` ページは持たない（2026-07-23 廃止）。リリースノートは `apps/web/content/blog/{en,ja}/vX-Y-Z.mdx` に `category: 'release'` の blog 記事として書き、`/blog/release` タブに表示する。書式は `.agents/skills/docs-writing/templates/blog-frontmatter.md`。
 
 ## 更新の連鎖（リリース駆動）
 
@@ -92,5 +92,5 @@ blog まで両言語必須にすると solo 運用で執筆が止まる。書け
 
 - 発信の思想・3 本柱: [voice.md](./voice.md)
 - グロース全体: [growth.md](../growth.md)（グロース戦略）
-- 執筆手順: `.claude/skills/docs-writing/SKILL.md`
-- ネタ出し: `.claude/skills/blog-ideas/SKILL.md` / 監査: `.claude/skills/docs-audit/SKILL.md`
+- 執筆手順: `.agents/skills/docs-writing/SKILL.md`
+- ネタ出し: `.agents/skills/blog-ideas/SKILL.md` / 監査: `.agents/skills/docs-audit/SKILL.md`

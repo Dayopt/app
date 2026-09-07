@@ -1,11 +1,11 @@
 ---
 status: current
-last_verified: 2026-08-14
+last_verified: 2026-09-07
 ---
 
-# 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers / 管理者スクリプト）
+# 運用ツール（Eagle / ライセンスコンプライアンス / AI協働ハーネス / 管理者スクリプト）
 
-Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、Opus 4.7 Skill Triggers migration、管理者向け運用スクリプトの記録を集約する。
+Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、provider-neutral な AI 協働ハーネス、管理者向け運用スクリプトの記録を集約する。
 
 ---
 
@@ -472,10 +472,50 @@ BSD-2-Clause: 12 packages (1.3%)
 
 ---
 
-# 第3部: Opus 4.7 Skill Triggers Migration
+# 第3部: AI 協働ハーネス
+
+**Date**: 2026-09-07
+**Scope**: `AGENTS.md`、`.agents/skills/`、provider adapter、共有 hook rules
+**Status**: current
+
+## 1. 正本と互換 adapter
+
+- 実装・調査・レビューの共通ガイダンスは `AGENTS.md` を正本とする。OpenAI / Codex が primary harness だが、判断層・Dayopt の不変条件・authority level は provider に依存しない
+- project skill の実体は `.agents/skills/*/SKILL.md` に置く。`.claude/skills` は Claude Code が同じ実体を見つけるための相対 symlink で、複製ではない
+- `CLAUDE.md` は `@AGENTS.md` を import する互換 adapter。provider 固有の設定を共通ガイダンスへ逆流させない
+- runtime / tool 固有の command が必要な skill は、共通の目的・scope・出力契約を先に書き、command を optional provider adapter として示す。別 runtime では同じ契約を満たす generic fallback を使う
+
+## 2. Routing の基準
+
+特定 provider の model tier や「coordinator は実装しない」という役割固定は持たない。作業ごとに次を順に決める。
+
+1. ユーザーが確認できる成功条件、対象範囲、検証方法を固定する
+2. repo / docs / issue / command output で確認した事実と、未実測の仮説を分ける
+3. 決定的な script / CLI、担当 agent の直接実行、scoped delegation、別 provider の反証を意味のある選択肢として比較する
+4. 委譲は bounded scope と独立検証が可能で、引き渡し・待ち・統合の費用を上回る時だけ行う
+5. diff、実行結果、必要な UI / API / data flow を成功条件と突き合わせる
+6. issue / PR がある作業は、判断・進捗・ブロック・検証をそこへ残す
+
+OpenAI / Codex は実装を含む primary provider として使う。他 provider は auth / RLS / billing / migration / 公開契約などで、独立した反証の便益が費用を上回る時に任意で追加する。外部 provider の可用性は merge gate にしない。
+
+## 3. Hook の共有と保証境界
+
+判定ロジックは `scripts/hooks/pre-tool-guard-rules.mjs` に置き、provider adapter は runtime の tool-call payload を共有形式へ変換する薄い入口にする。Claude Code は `scripts/hooks/pre-tool-guard.mjs`、Codex は `scripts/hooks/codex-pre-tool-guard.mjs` を入口とする。
+
+adapter の script が存在するだけでは tool call は止まらない。runtime 側で adapter が実行前 hook として登録・起動され、block 結果を尊重する必要がある。repo は user-global 設定、直接 shell、User 自身の UI 操作、未知の tool surface を強制できない。具体的な secret 境界と残余リスクは [secrets.md](./secrets.md) を正本とする。
+
+Codex でこの project を初めて開く時は、project trust を確認し、`/hooks` で `.codex/hooks.json` の command と有効状態を User が 1 回レビューする。repo の `.codex/config.toml` に `hooks = true` があっても、runtime が project を trust して hook を読み込んだ証拠にはならない。`pnpm agent:preflight`（機械利用は `pnpm agent:preflight --json`）は依存、Git hooks、CLI、skills、Codex hook 設定ファイルの存在を確認するが、runtime の trust や実際の hook 発火は判定できない。user-global 設定はこの onboarding で変更しない。
+
+## 4. Skill 設計
+
+新規・更新時は `.agents/skills/skill-design/SKILL.md` に従う。description / When to Use は provider-neutral にし、特定 model の名前を発火条件や必須 tier にしない。provider 固有の adapter は capability、scope、出力契約、generic fallback、実際の保証境界を併記する。
+
+---
+
+## 履歴: Opus 4.7 Skill Triggers Migration
 
 **Date**: 2026-04-17
-**Scope**: `.claude/skills/` 配下 project skills 12 個
+**Scope**: 現在の `.agents/skills/` に移行済みの project skills 12 個
 **Status**: 完了
 
 ## 1. 背景
@@ -486,7 +526,7 @@ skill invocation は description を読んで判断される仕様上、**descri
 
 ## 2. 対象と範囲
 
-**対象**: project skills 12 個（`.claude/skills/` 配下、repo commit される）
+**対象**: project skills 12 個（現在は `.agents/skills/` 配下、repo commit される）
 
 - `storybook` / `security` / `test` / `optimistic-update`
 - `trpc-router-creating` / `store-creating` / `i18n` / `error-handling`
@@ -542,7 +582,7 @@ skill invocation は description を読んで判断される仕様上、**descri
 
 ## 4. 12 skill の類型マッピング
 
-各 skill の類型定義と書式詳細は [`skill-design` skill](../../`skill-design` skill) を参照。
+各 skill の類型定義と書式詳細は [`skill-design` skill](../../.agents/skills/skill-design/SKILL.md) を参照。
 
 | #   | skill                  | 類型             |
 | --- | ---------------------- | ---------------- |
@@ -581,11 +621,11 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 
 ### `eagle-dayopt`: ライフサイクル型、要素数 8
 
-パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[`skill-design` skill](../../`skill-design` skill) の類型表で 8 まで許容と明記済み。
+パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[`skill-design` skill](../../.agents/skills/skill-design/SKILL.md) の類型表で 8 まで許容と明記済み。
 
 ## 6. 設計原則の確立
 
-この migration 中に確立した skill 設計の恒常ルールは **[`skill-design` skill](../../`skill-design` skill)** に分離した。主要原則:
+この migration 中に確立した skill 設計の恒常ルールは **[`skill-design` skill](../../.agents/skills/skill-design/SKILL.md)** に分離した。主要原則:
 
 - **6 類型の定義**（作成系 / 予防系 / 運用系 / 副次トリガー型 / 明示発動型 / ライフサイクル型）
 - **description の書式**（字数、先頭句、構造）
@@ -594,7 +634,7 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 - **境界設計原則**（skill 間 handoff、skill 層と rules 層の境界、自動生成 artifact の扱い、invocation トリガーと実行時ルールの分離、self-contained 原則）
 - **空白領域 flag**（URL state の将来 skill 化余地）
 
-本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `skill-design` skill 側。将来 skill を追加・修正する際は rules/ 側を参照する。
+本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `skill-design` skill 側。将来 skill を追加・修正する際は `.agents/skills/skill-design/SKILL.md` を参照する。
 
 ## 7. スコープ境界（未着手タスク）
 
