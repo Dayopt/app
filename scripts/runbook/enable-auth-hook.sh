@@ -4,7 +4,7 @@
 # Dayopt - Auth Hook 有効化スクリプト
 # ========================================
 # custom_access_token hook を Supabase プロジェクトで有効化する。
-# JWTに subscription_status を埋め込み、proProcedureの毎リクエストDBクエリを排除。
+# JWTに subscription_status を埋め込み、entitledProcedureの毎リクエストDBクエリを排除。
 #
 # ========================================
 # ⚠ production では現在このスクリプトを実行しない（#1946 で決着、2026-08-12）
@@ -13,13 +13,13 @@
 # scripts/ci/production-auth-config-audit.mjs が期待値として pin している。
 #
 # 無効のままにする理由: この hook は課金 gate の性能最適化であって機能要件ではない。
-# BILLING_ENFORCED が未設定の間、proProcedure は購読チェック自体を skip する
+# BILLING_ENFORCED が未設定の間、entitledProcedure は購読チェック自体を skip する
 # （apps/product/src/lib/trpc/procedures.ts）ため、claim を載せても消せる DB クエリが
-# 無い。claim が無い場合も context.ts → proProcedure の DB fallback で正しく動く。
+# 無い。claim が無い場合も context.ts → entitledProcedure の DB fallback で正しく動く。
 #
 # 実行してよい条件（すべて満たすこと）:
 #   1. BILLING_ENFORCED=true で課金 gate が実際に効いている
-#   2. proProcedure の DB fallback が実測で負荷になっている
+#   2. entitledProcedure の DB fallback が実測で負荷になっている
 #   3. 解約後の暴露窓が jwt_exp（現在 3600 秒）まで開くのを許容できる
 #      — claim は token refresh まで更新されないため。OAuth 経路は設計上つねに
 #        DB を読むので影響しない（旧 docs/projects 配下の設計メモ Decision 1、

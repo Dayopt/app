@@ -32,7 +32,12 @@ vi.mock('@/lib/rate-limit/upstash', () => ({
   // protectedProcedure が毎リクエスト参照する。ここでは常に成功させる。
   trpcUserRateLimit: { limit: vi.fn().mockResolvedValue({ success: true }) },
 }));
-vi.mock('@/lib/billing/enforcement', () => ({ isBillingEnforced }));
+// flag だけ差し替え、capability map の判定（hasEntitlementForStatus）は本物を使う。
+// map を mock すると「どのキーで弾いたか」を検証できなくなる。
+vi.mock('@/lib/billing/enforcement', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/billing/enforcement')>()),
+  isBillingEnforced,
+}));
 
 import { externalCalendarRouter, TRPC_TIME_BUDGET_MS } from './router';
 
@@ -65,7 +70,7 @@ beforeEach(() => {
 });
 
 describe('externalCalendarRouter — 認可', () => {
-  it('proProcedure は BILLING_ENFORCED off で素通りする', async () => {
+  it('entitledProcedure は BILLING_ENFORCED off で素通りする', async () => {
     await expect(caller().listProviderCalendars({ connectionId: CONNECTION_ID })).resolves.toEqual(
       [],
     );
@@ -224,7 +229,7 @@ describe('externalCalendarRouter — listEvents', () => {
     });
   });
 
-  it('proProcedure なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
+  it('entitledProcedure(external_calendar_sync) なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
     isBillingEnforced.mockReturnValue(true);
 
     await expect(caller().listEvents(RANGE)).rejects.toMatchObject({ code: 'FORBIDDEN' });
@@ -274,7 +279,7 @@ describe('externalCalendarRouter — dismissEvent', () => {
     expect(setEventDismissed).toHaveBeenCalledWith(expect.anything(), USER_ID, EVENT_ID, false);
   });
 
-  it('proProcedure なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
+  it('entitledProcedure(external_calendar_sync) なので BILLING_ENFORCED on の未 Pro ユーザーは弾かれる', async () => {
     isBillingEnforced.mockReturnValue(true);
 
     await expect(

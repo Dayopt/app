@@ -46,16 +46,13 @@ export function TrialStartEmail({
             <Text style={styles.paragraph}>{t('trialStart.proFeaturesIntro')}</Text>
             <Section style={styles.infoBox}>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('trialStart.featureAnalytics')}
+                - {t('trialStart.featureLongRange')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('trialStart.featureActivities')}
-              </Text>
-              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('trialStart.featureApi')}
+                - {t('trialStart.featureGoogleCalendar')}
               </Text>
               <Text style={{ ...styles.paragraph, margin: '0' }}>
-                - {t('trialStart.featureAi')}
+                - {t('trialStart.featureApi')}
               </Text>
             </Section>
             <Text style={styles.paragraph}>{t('trialStart.noActionNote')}</Text>

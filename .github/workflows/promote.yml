@@ -158,6 +158,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_PUBLIC_STRIPE_PRO_PRICE_ID: price_e2e_dummy
+          # service role suite が env の欠落で丸ごと skip されても「0 failed」で緑に
+          # なるのを防ぐ（skip ではなく即 fail させる）。
+          E2E_REQUIRE_SERVICE_ROLE_SUITES: '1'
 
       - name: Stop Supabase
         if: always()

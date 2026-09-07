@@ -3,11 +3,7 @@
 import { Link, useRouter } from '@dayopt/i18n/navigation';
 import { useState } from 'react';
 
-import {
-  canUseEntitlement,
-  entitlementKeys,
-  getPlanIdForSubscriptionStatus,
-} from '@dayopt/billing';
+import { getPlanIdForSubscriptionStatus, isPaidPlan } from '@dayopt/billing';
 import {
   Avatar,
   AvatarFallback,
@@ -74,7 +70,7 @@ export function MobileAccountOverview({
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
-  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
+  const canAccessPro = isPaidPlan(currentPlan);
   const isLoadingBilling = billingOverview.isLoading;
 
   const helpLinks: Array<{

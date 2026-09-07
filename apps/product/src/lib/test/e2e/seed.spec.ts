@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+import { resolveServiceRoleTarget } from '../service-role-target-guard';
 import {
   createScopedTestUser,
   deleteScopedTestUser,
   type ScopedTestUser,
 } from './create-scoped-test-user';
-import { resolveServiceRoleTarget } from './service-role-target-guard';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

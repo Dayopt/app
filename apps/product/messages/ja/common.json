@@ -211,7 +211,7 @@
     },
     "trialEnded": {
       "title": "14日間のトライアルが終了しました",
-      "description": "これからはFreeプランでご利用いただけます。AI提案、全期間の履歴、無制限のテンプレートはProプランの機能です。",
+      "description": "これからはFreeプランでご利用いただけます。月・年の俯瞰、Google カレンダー同期、API/MCP アクセスはProプランの機能です。",
       "continueFree": "Freeで続ける",
       "continuePro": "Proを続ける"
     },

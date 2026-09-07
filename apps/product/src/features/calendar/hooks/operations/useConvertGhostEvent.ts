@@ -15,7 +15,7 @@ import { api } from '@/lib/trpc';
  *
  * 新規の DB write ロジックは書かない。`useTimeblockWriteMutations` の `createPlan` /
  * `createRecord`（`externalCalendarEventId` 対応済み・optimistic update 完備）と
- * `externalCalendar.dismissEvent`（proProcedure、#1984）をそのまま呼ぶ。この hook が足すのは
+ * `externalCalendar.dismissEvent`（entitledProcedure、#1984）をそのまま呼ぶ。この hook が足すのは
  * 「どちらに変換するか」の判定と、ghost 一覧（`externalCalendar.listEvents`）側の
  * optimistic な即時除去だけ — plans/records 側のキャッシュ操作は `useTimeblockWriteMutations`
  * に任せる。

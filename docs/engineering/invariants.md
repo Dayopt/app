@@ -29,7 +29,7 @@ docs へ残している。
 
 - 外部カレンダー連携は **Pro 限定**。OAuth の開始・callback・cron 同期の**すべての入口**で
   entitlement を検査する（2026-07 に callback の検査漏れが実際に起きたクラス）
-- Pro 限定機能の server 入口は `proProcedure` を使うか、明示的に entitlement を検査する
+- Pro 限定機能の server 入口は `entitledProcedure(key)` を使うか、明示的に entitlement を検査する
 - Stripe webhook は署名を検証し、event id で冪等化する
   （`app/api/webhooks/stripe/stripe-webhook-idempotency.ts`）
 

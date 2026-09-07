@@ -12,6 +12,10 @@ import { extractBearerToken, verifyAccessToken } from './auth';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // MCP の entitlement は BILLING_ENFORCED に従う（他の gate と同じ切れ目）。
+  // 未設定（既定）では全 status が素通りするため、entitlement の判定を検証する
+  // テストは enforcement 有効を前提にする。素通り側は専用の it で押さえる。
+  vi.stubEnv('BILLING_ENFORCED', 'true');
   captureUnexpectedDatabaseError.mockImplementation((error: unknown) =>
     error instanceof Error ? error : new Error('Unexpected database failure', { cause: error }),
   );
@@ -234,6 +238,29 @@ describe('verifyAccessToken dependency failures', () => {
       expect(db.from).toHaveBeenCalledTimes(3);
     },
   );
+
+  it('BILLING_ENFORCED 未設定なら Free でも proEntitled で、profiles を読まない', async () => {
+    vi.stubEnv('BILLING_ENFORCED', 'false');
+    const db = createAccessDb({
+      oauth_tokens: {
+        data: { ...validAccessTokenRow, scopes: ['read:entries'] },
+        error: null,
+      },
+      oauth_connections: {
+        data: { ...validConnectionRow, scopes: ['read:entries'] },
+        error: null,
+      },
+      profiles: { data: { subscription_status: 'free' }, error: null },
+    });
+    createMcpAccessDbClient.mockReturnValue(db);
+
+    await expect(verifyAccessToken('opaque-token')).resolves.toMatchObject({
+      scopes: ['read:entries'],
+      proEntitled: true,
+    });
+    // early return が profiles の読み取りより前にあることを固定する。
+    expect(db.from).not.toHaveBeenCalledWith('profiles');
+  });
 });
 
 const validAccessTokenRow = {

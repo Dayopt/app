@@ -475,7 +475,7 @@ class+factory / factory→object / standalone function の混在は **shape の�
 
 shape の話ではなく後続 plan で扱う:
 
-- `proProcedure` middleware の `ctx.subscriptionStatus` を service が読むべきか → 現状読まないので問題なし（badges 削除済み）
+- `entitledProcedure` middleware の `ctx.subscriptionStatus` を service が読むべきか → 現状読まないので問題なし（badges 削除済み）
 - method 単位の 1:1 結合度の細部 → 必要が出たときに測る
 - `statistics.ts` / `tag-statistics.ts` の service 層分離 → 構造課題、shape とは別
 
