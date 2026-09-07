@@ -3,11 +3,14 @@ import { SegmentList } from './SegmentList';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 /**
- * サイドバーの「セグメント — 保存した問い」（デスクトップ専用）。
+ * サイドバーの「セグメント」（デスクトップ専用）。
  *
  * 1 本の一覧がレンズ選択（行クリック）と CRUD（⋯ メニュー）の両方を担う。同じ名前を
  * 2 度並べない。モバイルは選ぶだけの Drawer（`ReportFilterChipRow`）が受け持つので、
  * この component は狭い面を持たない。
+ *
+ * 作成・編集のダイアログは `activities.listTree` を引くので、Storybook 上で `+` や
+ * ⋯ の「アクティビティを編集」を押した時に中身が空にならないよう tree もモックする。
  */
 const MOCK_SEGMENTS = [
   {
@@ -38,7 +41,7 @@ const meta = {
   component: SegmentList,
   parameters: {
     layout: 'padded',
-    trpcMocks: { 'review.listSegments': MOCK_SEGMENTS },
+    trpcMocks: { 'review.listSegments': MOCK_SEGMENTS, 'activities.listTree': MOCK_TREE() },
     storeMocks: { useReportViewStore: ALL_VISIBLE },
   },
   tags: ['autodocs'],
@@ -109,4 +112,40 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       {children}
     </div>
   );
+}
+
+function MOCK_TREE() {
+  const timestamps = {
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  };
+  const activity = (id: string, name: string, categoryId: string | null) => ({
+    id,
+    name,
+    user_id: 'user-1',
+    category_id: categoryId,
+    archived_at: null,
+    ...timestamps,
+  });
+
+  return {
+    categories: [
+      {
+        category: {
+          id: 'cat-work',
+          name: '仕事',
+          user_id: 'user-1',
+          color: 'blue',
+          icon: 'briefcase',
+          archived_at: null,
+          ...timestamps,
+        },
+        activities: [
+          activity('act-dev', '実装', 'cat-work'),
+          activity('act-write', '執筆', 'cat-work'),
+        ],
+      },
+    ],
+    uncategorized: [activity('act-gym', '運動', null)],
+  };
 }

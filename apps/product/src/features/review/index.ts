@@ -32,6 +32,7 @@ export {
   isReportGranularity,
   resolveNextPeriodStartDayKey,
   resolveReportRange,
+  resolveZonedDayKey,
   shiftReportAnchor,
   todayReportAnchor,
 } from './lib/report-period';

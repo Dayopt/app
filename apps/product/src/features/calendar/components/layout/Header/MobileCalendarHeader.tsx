@@ -15,9 +15,9 @@ import { Link } from '@dayopt/i18n/navigation';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 
+import { MobileMonthGrid } from '@/components/ui/navigation/MobileMonthGrid';
+import { MobileYearStrip } from '@/components/ui/navigation/MobileYearStrip';
 import { formatCalendarDateParam } from '../../../lib/date-param';
-import { MobileMonthGrid } from './MobileMonthGrid';
-import { MobileYearStrip } from './MobileYearStrip';
 
 interface MobileCalendarHeaderProps {
   currentDate: Date;
@@ -180,7 +180,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
           <button
             type="button"
             onClick={handleToggle}
-            className="flex items-center gap-1"
+            // 44px のタッチターゲット。AppHeader の行は 32px だが、はみ出す分は
+            // 透明なので見た目は動かず、当たり判定だけが広がる
+            className="flex min-h-11 items-center gap-1"
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >

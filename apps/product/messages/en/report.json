@@ -175,12 +175,12 @@
       }
     },
     "sidebar": {
-      "categoriesHeading": "Categories — add to or remove from the denominator",
+      "categoriesHeading": "Categories",
       "uncategorized": "Uncategorized",
       "margin": "Margin (unrecorded)",
       "marginLensDisabled": "Margin stays out of the denominator while a segment is selected",
       "empty": "No categories yet",
-      "lensHeading": "Segments — saved questions",
+      "lensHeading": "Segments",
       "lensAll": "All",
       "segmentMenu": "Menu for {name}"
     },
@@ -188,7 +188,16 @@
       "lens": {
         "chip": "Lens",
         "open": "Choose a lens"
-      }
+      },
+      "periodFormat": {
+        "weekDay": "MMM d",
+        "weekDayShort": "d",
+        "weekRange": "{start} – {end}",
+        "month": "MMMM",
+        "year": "yyyy"
+      },
+      "openMiniCalendar": "Open calendar",
+      "closeMiniCalendar": "Close calendar"
     },
     "errors": {
       "title": "Could not load the report",
