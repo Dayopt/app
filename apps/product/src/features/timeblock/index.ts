@@ -36,7 +36,11 @@ export { timeblockTintColor } from './lib/timeblock-tint';
 // =============================================================================
 // Domain (時間モデル — 純粋関数、DB/tRPC/React 非依存)
 // =============================================================================
-export { isPlanRecordDrop, resolveTimeblockDestination } from './domain/timeblock-destination';
+export {
+  isPlanRecordDrop,
+  resolveTimeblockDestination,
+  resolveTimeblockKindChoice,
+} from './domain/timeblock-destination';
 export type { TimeblockDestination } from './domain/timeblock-destination';
 // テンプレート（型）— 保存する組成を「生きた日」から取り出す（#2567）
 export { deriveTemplateBlocksFromDay } from './domain/plan-template-compose';

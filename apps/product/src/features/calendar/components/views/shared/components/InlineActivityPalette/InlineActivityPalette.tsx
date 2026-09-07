@@ -22,12 +22,12 @@ import {
   ActivityQuickSelector,
   getCategoryColorClasses,
 } from '@/features/activities';
-import { resolveTimeblockDestination } from '@/features/timeblock';
+import { resolveTimeblockDestination, resolveTimeblockKindChoice } from '@/features/timeblock';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { cn } from '@dayopt/components';
+import { cn, SegmentedControl, type SegmentedControlOption } from '@dayopt/components';
 
 import { MIN_TIMEBLOCK_DURATION_MINUTES } from '../../../../../domain/precision';
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
@@ -67,6 +67,7 @@ export function InlineActivityPalette({
 }: InlineActivityPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
+  const setSelectionKind = useInlineCreateStore.use.setSelectionKind();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
   const timezone = useUserPreferences((s) => s.timezone);
   const locale = useLocale();
@@ -157,10 +158,52 @@ export function InlineActivityPalette({
     endHour,
     endMinute,
   );
-  const destination = resolveTimeblockDestination(convertFromTimezone(selectionEndLocal, timezone));
+  // 既定は end_at 判定。過去スロットだけタブで Plan / Record を選び直せる。
+  const { kind: destination, canRecord } = resolveTimeblockKindChoice(
+    convertFromTimezone(selectionEndLocal, timezone),
+    pendingSelection.kind,
+  );
   const isPlan = destination === 'plan';
   const destinationLabel = tCalendar(`event.preview.${destination}`);
-  const pickerContextLabel = `${destinationLabel} · ${pickerTimeLabel}`;
+
+  const kindOptions: SegmentedControlOption<'record' | 'plan'>[] = [
+    {
+      value: 'record',
+      label: tCalendar('event.preview.record'),
+      disabled: !canRecord,
+      // disabled な button は hover を受け付けないので、理由は読み上げラベルと
+      // 下の常時表示テキストの両方で伝える
+      ...(canRecord
+        ? {}
+        : {
+            ariaLabel: `${tCalendar('event.preview.record')} — ${tCalendar('activitySelector.recordUnavailableFuture')}`,
+          }),
+    },
+    { value: 'plan', label: tCalendar('event.preview.plan') },
+  ];
+
+  // 種別タブ + 時間ラベル。SegmentedControl は disabled で pointer-events を殺すので、
+  // 記録が選べない理由は hover ではなく常時表示の 1 行で出す。
+  const pickerHint = (
+    <div className="mt-2 flex flex-col gap-1">
+      <p className="text-muted-foreground truncate text-sm">{pickerTimeLabel}</p>
+      <SegmentedControl
+        value={destination}
+        onValueChange={(next) => {
+          tap();
+          setSelectionKind(next);
+        }}
+        options={kindOptions}
+        ariaLabel={tCalendar('activitySelector.kindLabel')}
+        size="sm"
+      />
+      {!canRecord && (
+        <p className="text-muted-foreground text-xs">
+          {tCalendar('activitySelector.recordUnavailableFuture')}
+        </p>
+      )}
+    </div>
+  );
 
   // #2250: 相手レーンに重なる entry が無ければフル幅にする（表示層・選択プレビューと
   // 同じ判定）。selectionStartLocal/EndLocal は displayStartDate/displayEndDate と
@@ -318,7 +361,7 @@ export function InlineActivityPalette({
         onCreateAndSelect={handleCreateAndSelect}
         onActivityHover={handleActivityHover}
         anchorRef={highlightRef}
-        timeLabel={pickerContextLabel}
+        hint={pickerHint}
       />
     </>
   );

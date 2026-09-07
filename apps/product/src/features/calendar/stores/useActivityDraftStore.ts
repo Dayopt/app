@@ -24,6 +24,11 @@ export interface ActivityDraft {
   date: Date;
   startTime: string; // HH:MM
   endTime: string; // HH:MM
+  /**
+   * ユーザーがタブで選んだ種別。未指定なら end_at の既定判定に従う。
+   * 未来スロット（end_at > now）では要求に関わらず plan になる（DT005）。
+   */
+  kind?: 'plan' | 'record' | undefined;
 }
 
 interface ActivityDraftState {
@@ -31,6 +36,7 @@ interface ActivityDraftState {
   openDraft: (draft: ActivityDraft) => void;
   updateTimes: (next: { startTime?: string; endTime?: string; date?: Date }) => void;
   updateActivity: (nextActivity: DraftActivitySummary) => void;
+  updateKind: (kind: 'plan' | 'record') => void;
   closeDraft: () => void;
 }
 
@@ -56,6 +62,8 @@ const useActivityDraftStoreBase = create<ActivityDraftState>()(
           if (!state.draft) return state;
           return { draft: { ...state.draft, activity: nextActivity } };
         }),
+      updateKind: (kind) =>
+        set((state) => (state.draft ? { draft: { ...state.draft, kind } } : state)),
       closeDraft: () => set({ draft: null }),
     }),
     { name: 'activity-draft-store', enabled: process.env.NODE_ENV !== 'production' },

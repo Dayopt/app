@@ -4,6 +4,8 @@ import { fn } from 'storybook/test';
 
 import { ActivityIcon } from '@/features/activities';
 
+import { useActivityDraftStore } from '../../../../stores/useActivityDraftStore';
+
 import { ActivityTimeblockCreatePopover } from './ActivityTimeblockCreatePopover';
 
 const MOCK_TAG = {
@@ -98,6 +100,34 @@ export const Mobile: Story = {
     trpcMocks: mockTrpc(),
   },
   render: () => renderPopover({ isMobile: true }),
+};
+
+/** 昨日の 09:00–10:00。過去スロットなので記録 / 予定の両タブが選べる。 */
+export const PastSlot: Story = {
+  parameters: { trpcMocks: mockTrpc() },
+  render: () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    useActivityDraftStore.setState({
+      draft: { activity: MOCK_TAG, date: yesterday, startTime: '09:00', endTime: '10:00' },
+    });
+    return renderPopover();
+  },
+};
+
+/** 明日の 09:00–10:00。未来スロットでは記録タブが選べず、理由行が出る。 */
+export const FutureSlot: Story = {
+  parameters: { trpcMocks: mockTrpc() },
+  render: () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    useActivityDraftStore.setState({
+      draft: { activity: MOCK_TAG, date: tomorrow, startTime: '09:00', endTime: '10:00' },
+    });
+    return renderPopover();
+  },
 };
 
 /** 全パターン一覧。 */

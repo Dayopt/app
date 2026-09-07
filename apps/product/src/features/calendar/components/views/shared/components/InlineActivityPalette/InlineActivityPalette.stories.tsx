@@ -274,6 +274,36 @@ export const PastSelection: Story = {
 };
 
 /**
+ * 過去の時間帯で「予定」タブへ切り替えた状態
+ *
+ * 過去スロットは既定が Record だが、タブで Plan を選ぶと左レーンの枠線カードになる。
+ */
+export const PastSelectionAsPlan: Story = {
+  parameters: {
+    trpcMocks: { 'activities.listTree': ACTIVITY_TREE },
+  },
+  decorators: [
+    (Story) => {
+      useInlineCreateStore.setState({
+        pendingSelection: {
+          date: PAST_DAY,
+          startHour: 9,
+          startMinute: 0,
+          endHour: 10,
+          endMinute: 0,
+          kind: 'plan',
+        },
+      });
+      return (
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
+      );
+    },
+  ],
+};
+
+/**
  * pendingSelection が null（非表示状態）
  *
  * ドラッグ前 or クリア後は何も表示されない。

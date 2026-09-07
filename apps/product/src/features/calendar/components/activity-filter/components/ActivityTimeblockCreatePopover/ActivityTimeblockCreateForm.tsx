@@ -3,8 +3,13 @@
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ActivityFieldRow, DateTimeSection, TimeConflictAlert } from '@/features/timeblock';
-import { Button, cn } from '@dayopt/components';
+import {
+  ActivityFieldRow,
+  DateTimeSection,
+  TimeConflictAlert,
+  type TimeblockDestination,
+} from '@/features/timeblock';
+import { Button, cn, SegmentedControl, type SegmentedControlOption } from '@dayopt/components';
 
 export interface ActivityEntryCreateFormProps {
   activity: {
@@ -30,6 +35,11 @@ export interface ActivityEntryCreateFormProps {
     icon?: string | null,
     categoryId?: string | null,
   ) => Promise<void> | void;
+  /** 保存する種別。過去スロットだけユーザーが切り替えられる */
+  kind: TimeblockDestination;
+  /** 「記録」を選べるか（end_at <= now） */
+  canRecord: boolean;
+  onKindChange: (kind: TimeblockDestination) => void;
   surface?: 'card' | 'sheet';
   className?: string;
 }
@@ -39,8 +49,9 @@ export interface ActivityEntryCreateFormProps {
  *
  * レイアウト:
  * 1. アクティビティアイコン + 名前ヘッダー
- * 2. 日付行 (`DateRow`) と予定行 (`TimeRow` = 開始 → 終了)
- * 3. キャンセル / 作成 ボタン
+ * 2. 種別タブ（記録 / 予定。未来スロットでは記録が選べない）
+ * 3. 日付行 (`DateRow`) と予定行 (`TimeRow` = 開始 → 終了)
+ * 4. キャンセル / 作成 ボタン
  *
  * PC popover では Inspector と同じカード面、mobile sheet では sheet の地色を使う。
  */
@@ -56,6 +67,9 @@ export function ActivityTimeblockCreateForm({
   onCancel,
   onActivityChange,
   onCreateAndSelect,
+  kind,
+  canRecord,
+  onKindChange,
   isSubmitting = false,
   hasError = false,
   surface = 'card',
@@ -64,6 +78,21 @@ export function ActivityTimeblockCreateForm({
   const t = useTranslations();
   const tEditor = useTranslations('timeblock.editor');
   const scheduleClassName = surface === 'sheet' ? 'mt-2' : 'bg-muted mt-2 rounded-2xl';
+  const kindOptions: SegmentedControlOption<TimeblockDestination>[] = [
+    {
+      value: 'record',
+      label: t('calendar.event.preview.record'),
+      disabled: !canRecord,
+      // disabled な button は hover を受け付けないので、理由は読み上げラベルと
+      // 下の常時表示テキストの両方で伝える
+      ...(canRecord
+        ? {}
+        : {
+            ariaLabel: `${t('calendar.event.preview.record')} — ${t('calendar.activitySelector.recordUnavailableFuture')}`,
+          }),
+    },
+    { value: 'plan', label: t('calendar.event.preview.plan') },
+  ];
   const scheduleBodyClassName =
     surface === 'sheet' ? 'flex flex-col gap-2' : 'flex flex-col gap-2 px-4 pt-2 pb-4';
 
@@ -97,6 +126,22 @@ export function ActivityTimeblockCreateForm({
         >
           <X className="size-5" />
         </button>
+      </div>
+
+      {/* 種別タブ（記録 / 予定） */}
+      <div className="flex flex-col gap-1">
+        <SegmentedControl
+          value={kind}
+          onValueChange={onKindChange}
+          options={kindOptions}
+          ariaLabel={t('calendar.activitySelector.kindLabel')}
+          size="sm"
+        />
+        {!canRecord && (
+          <p className="text-muted-foreground text-xs">
+            {t('calendar.activitySelector.recordUnavailableFuture')}
+          </p>
+        )}
       </div>
 
       {/* スケジュール */}

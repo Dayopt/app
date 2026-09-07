@@ -10,7 +10,7 @@ import { resolveCategoryColor, useActivitiesMap, useCreateActivity } from '@/fea
 import {
   collectTimeblockLaneItems,
   hasTimeblockLaneConflict,
-  resolveTimeblockDestination,
+  resolveTimeblockKindChoice,
   useTimeblockWriteMutations,
 } from '@/features/timeblock';
 import { toast } from '@/lib/toast';
@@ -96,12 +96,20 @@ export function ActivityTimeblockCreatePopover({
   const openDraft = useActivityDraftStore((s) => s.openDraft);
   const updateTimes = useActivityDraftStore((s) => s.updateTimes);
   const updateActivity = useActivityDraftStore((s) => s.updateActivity);
+  const updateKind = useActivityDraftStore((s) => s.updateKind);
   const closeDraft = useActivityDraftStore((s) => s.closeDraft);
 
   const currentActivity = draft?.activity ?? activity;
   const selectedDate = draft ? draft.date : startOfDay(new Date());
   const startTime = draft ? draft.startTime : '09:00';
   const endTime = draft ? draft.endTime : '10:00';
+  const requestedKind = draft?.kind;
+
+  // 既定は end_at 判定。過去スロットだけタブで Plan / Record を選び直せる。
+  const { kind: destination, canRecord } = resolveTimeblockKindChoice(
+    combineDateAndHHMM(selectedDate, endTime),
+    requestedKind,
+  );
 
   // open=true & store に対応する draft が無いとき seed する（tap 時に呼び出し側で
   // call する代替。row 側の handler を変更しなくて済む）
@@ -210,20 +218,18 @@ export function ActivityTimeblockCreatePopover({
     const endDate = combineDateAndHHMM(selectedDate, endTime);
     if (endDate.getTime() <= startDate.getTime()) return false;
 
-    const destination = resolveTimeblockDestination(endDate);
     const laneItems = collectTimeblockLaneItems(
       queryClient,
       destination === 'plan' ? 'plans' : 'records',
     );
     return hasTimeblockLaneConflict(laneItems, startDate, endDate);
-  }, [queryClient, selectedDate, startTime, endTime]);
+  }, [queryClient, selectedDate, startTime, endTime, destination]);
 
   const handleSubmit = useCallback(() => {
     if (hasConflict) return; // defensive: button is already disabled
 
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
-    const destination = resolveTimeblockDestination(endDate);
     const displayTitle = currentActivity.name;
     const input = {
       title: currentActivity.name,
@@ -262,6 +268,7 @@ export function ActivityTimeblockCreatePopover({
     createPlan,
     deleteRecord,
     deletePlan,
+    destination,
     endTime,
     handleClose,
     hasConflict,
@@ -277,6 +284,9 @@ export function ActivityTimeblockCreatePopover({
       activity={currentActivity}
       onActivityChange={handleActivityChange}
       onCreateAndSelect={handleCreateAndSelectActivity}
+      kind={destination}
+      canRecord={canRecord}
+      onKindChange={updateKind}
       selectedDate={selectedDate}
       onDateSelect={handleDateSelect}
       startTime={startTime}

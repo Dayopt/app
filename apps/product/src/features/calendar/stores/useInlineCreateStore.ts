@@ -20,12 +20,19 @@ interface PendingSelection {
   creationSource?: 'planned-gap' | undefined;
   /** Step 5 のレーン起点。保存先は最終的に end_at のルールが優先する。 */
   lane?: 'plan' | 'record' | undefined;
+  /**
+   * ユーザーがタブで選んだ種別。未指定なら end_at の既定判定に従う。
+   * 未来スロット（end_at > now）では要求に関わらず plan になる（DT005）。
+   */
+  kind?: 'plan' | 'record' | undefined;
 }
 
 interface InlineCreateState {
   pendingSelection: PendingSelection | null;
   setPendingSelection: (selection: PendingSelection) => void;
   clearPendingSelection: () => void;
+  /** ユーザーが選んだ種別を設定する（null 時 no-op） */
+  setSelectionKind: (kind: 'plan' | 'record') => void;
   /** 既存 pendingSelection の時間フィールドを部分更新する（null 時 no-op） */
   updateSelectionTimes: (
     partial: Partial<Pick<PendingSelection, 'startHour' | 'startMinute' | 'endHour' | 'endMinute'>>,
@@ -38,6 +45,12 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
       pendingSelection: null,
       setPendingSelection: (selection) => set({ pendingSelection: selection }),
       clearPendingSelection: () => set({ pendingSelection: null }),
+      setSelectionKind: (kind) =>
+        set((state) =>
+          state.pendingSelection
+            ? { pendingSelection: { ...state.pendingSelection, kind } }
+            : state,
+        ),
       updateSelectionTimes: (partial) =>
         set((state) =>
           state.pendingSelection

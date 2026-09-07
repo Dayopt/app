@@ -64,7 +64,7 @@ Dayopt で作業する全エージェントの provider-neutral な正本ガイ�
 
 - **Plan**: 時間軸のどこにでも置ける。過去の Plan もドラッグ移動・リサイズ・時間編集ができ、未来の Plan も skip できる。編集しても Plan のままで Record へは変わらない
 - **Record**: 過去の事実。終了を未来へ動かす編集だけ不可。紐付け先 Plan がどこにあるかは制約しない
-- 過去スロットへ新規に引いたブロックは Record になる（`resolveTimeblockDestination` は end_at だけで宛先を決める。UI に種別選択の一手を足さない）
+- 新規作成の**既定**は end_at だけで決まる（`resolveTimeblockDestination`。過去スロット → Record、未来スロット → Plan）。作成 UI は `resolveTimeblockKindChoice` で既定と選択可否を出し、**過去スロットでだけ** Plan へ切り替えるタブを出す。未来スロットは記録タブを disabled にする（DT005）。既定経路の手数は増やさない（2026-09-07）
 - **強制点は DB trigger / SQL 関数**。アプリ層（service / MCP client / UI）はその写しで、UI だけを直しても規則は変わらない
 - **規則を撤去する時は写しを全部消すまでが 1 変更**。DB / service だけ緩めて UI 側の写しが残ると「操作はできるのに保存されない」症状になり、旧規則を assert しているテストが緑のまま隠す。撤去 PR では `features/calendar` の interaction 経路と Storybook docs まで grep する（2026-09-07、過去 Plan のドラッグ移動が 40348e2bd の後も効かなかった件）
 - 表示用の upcoming / active / past 分類は `useCalendarData` が持つ（`getTimeblockState()` は呼び出し元が test だけの残骸）

@@ -247,6 +247,28 @@ describeWithEnv('Critical Path: 計画 → 実績 → 振り返り', () => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  test('過去帯でも予定タブを選べば Plan として作成できる', async ({ page }) => {
+    await openDay(page, offsetDateParam(-1));
+
+    await dragSelect(page, 14, 15);
+
+    const activityDialog = page.getByRole('dialog', { name: 'アクティビティを選択' });
+    await expect(activityDialog).toBeVisible({ timeout: 10_000 });
+
+    // 過去帯の既定は「記録」。タブで「予定」へ切り替えてから選ぶ
+    await activityDialog.getByRole('button', { name: '予定', exact: true }).click();
+    await activityDialog.getByRole('button', { name: ACTIVITY_NAME }).click();
+
+    const planCard = page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first();
+    await expect(planCard).toBeVisible({ timeout: 10_000 });
+
+    await page.reload();
+    await expect(page.locator('[data-calendar-grid]').first()).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-plan-lane-card]', { hasText: ACTIVITY_NAME }).first(),
+    ).toBeVisible({ timeout: 10_000 });
+  });
+
   test('記録した実績が /report の 1 章（配分）に反映される', async ({ page }) => {
     // レポートは週 / 月 / 年の 3 粒度（#2575）。前日の記録は今週の中に入る。
     await page.goto(`/ja/report?date=${offsetDateParam(-1)}&range=week`);

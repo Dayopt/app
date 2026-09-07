@@ -18,7 +18,7 @@ import { useCreateActivity } from '@/features/activities';
 import {
   collectTimeblockLaneItems,
   hasTimeblockLaneConflict,
-  resolveTimeblockDestination,
+  resolveTimeblockKindChoice,
   useTimeblockWriteMutations,
 } from '@/features/timeblock';
 import { convertFromTimezone } from '@/lib/date/timezone';
@@ -73,8 +73,9 @@ export function useInlineActivityPaletteCreation() {
       const utcStart = convertFromTimezone(localStart, timezone);
       const utcEnd = convertFromTimezone(localEnd, timezone);
 
-      // 保存先は end ルールで一意に決める（lane はドラッグ起点の表示ヒントに留める）
-      const destination = resolveTimeblockDestination(utcEnd);
+      // 既定は end ルール。過去スロットに限りユーザーがタブで選んだ種別を優先する
+      // （lane はドラッグ起点の表示ヒントに留める）。
+      const { kind: destination } = resolveTimeblockKindChoice(utcEnd, pendingSelection.kind);
 
       // 事前 overlap 判定（セレクタを開いている間の resize / 他クライアント更新による race を回避）
       // 同一レーンのみ禁止（plan×plan / record×record）。plan×record は許可。
@@ -193,7 +194,7 @@ export function useInlineActivityPaletteCreation() {
     const utcEnd = convertFromTimezone(localEnd, timezone);
 
     // 保存先レーンと同じレーンのみ判定（plan×record は共存可）
-    const destination = resolveTimeblockDestination(utcEnd);
+    const { kind: destination } = resolveTimeblockKindChoice(utcEnd, pendingSelection.kind);
     const laneItems = collectTimeblockLaneItems(
       queryClient,
       destination === 'plan' ? 'plans' : 'records',
