@@ -67,7 +67,7 @@ function toExternalCalendarEvent(event: {
  *
  * **エラー時は必ず空配列にする**（前回成功時の `data` にフォールバックしない）。TanStack Query は
  * refetch が失敗しても直前の成功 `data` を保持し続けるため、`data ?? []` のままだと
- * `proProcedure` の課金ゲートが `FORBIDDEN` を返すようになった後も解約前の外部予定を描画し続ける
+ * `entitledProcedure` の課金ゲートが `FORBIDDEN` を返すようになった後も解約前の外部予定を描画し続ける
  * （fail closed。`apps/product/src/AGENTS.md` EXT-1）。
  */
 export function useExternalCalendarEvents({

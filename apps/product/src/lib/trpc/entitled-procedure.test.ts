@@ -3,17 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
-import { createCallerFactory, createTRPCRouter, proProcedure } from './procedures';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { createCallerFactory, createTRPCRouter, entitledProcedure } from './procedures';
 
 // テスト用の最小ルーター
 const testRouter = createTRPCRouter({
-  ping: proProcedure.query(() => 'pong'),
+  ping: entitledProcedure(entitlementKeys.externalCalendarSync).query(() => 'pong'),
+  mcpPing: entitledProcedure(entitlementKeys.mcpApi).query(() => 'pong'),
 });
 
 const createCaller = createCallerFactory(testRouter);
 
 /**
- * proProcedure 用のコンテキストを作成
+ * entitledProcedure 用のコンテキストを作成
  *
  * profiles テーブルの応答をモックし、subscription_status を制御する
  */
@@ -48,7 +51,7 @@ function createProTestContext(
   };
 }
 
-describe('proProcedure', () => {
+describe('entitledProcedure', () => {
   // 既定（enforcement 無効）では全 status が素通りするため、enforcement の挙動を
   // 検証する既存テストは BILLING_ENFORCED='true' を前提にする。
   beforeEach(() => {
@@ -179,6 +182,20 @@ describe('proProcedure', () => {
       const result = await caller.ping();
       expect(result).toBe('pong');
     });
+  });
+
+  it('別の entitlement key でも Pro なら通る（key が builder を通っている）', async () => {
+    const ctx = createProTestContext('active');
+    const caller = createCaller(ctx as never);
+
+    await expect(caller.mcpPing()).resolves.toBe('pong');
+  });
+
+  it('別の entitlement key でも Free は弾かれる', async () => {
+    const ctx = createProTestContext('free');
+    const caller = createCaller(ctx as never);
+
+    await expect(caller.mcpPing()).rejects.toThrow(TRPCError);
   });
 
   describe('enforcement 無効時（既定・全機能無料）', () => {

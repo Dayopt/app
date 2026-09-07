@@ -226,7 +226,7 @@ function McpApiSection() {
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
-  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
+  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.mcpApi);
   // この deploy の canonical MCP resource URI（next.config.mjs の
   // resolveProductPublicMcpResourceUri が build 時に解決）。production は
   // mcp.dayopt.app、Preview identity 有効時は branch origin、MCP 資格のない

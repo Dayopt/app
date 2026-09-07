@@ -265,8 +265,8 @@ export const AUTH_CONFIG_CONTRACT = [
     // 満たすまで実行しない手順書、後者は local / PR Preview にしか効かないので、いずれも
     // production の false と矛盾しない。
     //
-    // 無効のままにする根拠: この hook は entitlement claim を JWT に載せて proProcedure の
-    // DB 参照を消す性能最適化で、機能要件ではない。BILLING_ENFORCED が未設定の間 proProcedure
+    // 無効のままにする根拠: この hook は entitlement claim を JWT に載せて entitledProcedure の
+    // DB 参照を消す性能最適化で、機能要件ではない。BILLING_ENFORCED が未設定の間 entitledProcedure
     // は購読チェックごと skip する（`apps/product/src/lib/trpc/procedures.ts`）ため、有効化して
     // も消せるクエリが無い。一方 on にすると解約後の暴露窓が jwt_exp まで開くので、得るものが
     // 無いまま fail-open 側のリスクだけ増える。

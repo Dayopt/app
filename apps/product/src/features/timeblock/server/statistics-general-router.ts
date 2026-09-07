@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { createTRPCRouter, entitledProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { StatisticsService } from './statistics-service';
 import { dateRangeInput, handleStatsError } from './statistics-shared';
@@ -30,7 +32,7 @@ export const statisticsGeneralRouter = createTRPCRouter({
     }),
 
   /** Get hourly distribution (DB function) */
-  getHourlyDistribution: proProcedure
+  getHourlyDistribution: entitledProcedure(entitlementKeys.reportLongRange)
     .meta({ description: '時間帯別分布取得（2時間スロット）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -42,7 +44,7 @@ export const statisticsGeneralRouter = createTRPCRouter({
     }),
 
   /** Get day of week distribution (DB function) */
-  getDayOfWeekDistribution: proProcedure
+  getDayOfWeekDistribution: entitledProcedure(entitlementKeys.reportLongRange)
     .meta({ description: '曜日別分布取得（月曜始まり）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -57,7 +59,7 @@ export const statisticsGeneralRouter = createTRPCRouter({
     }),
 
   /** Get monthly trend (DB function) */
-  getMonthlyTrend: proProcedure
+  getMonthlyTrend: entitledProcedure(entitlementKeys.reportLongRange)
     .meta({ description: '月別トレンド取得（デフォルト12ヶ月）' })
     .input(z.object({ months: z.number().min(1).max(120).optional() }).optional())
     .query(async ({ ctx, input }) => {

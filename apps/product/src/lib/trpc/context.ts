@@ -112,7 +112,7 @@ async function createTRPCContext(opts: {
       accessToken = token;
       oauthClientId = verified.clientId;
       oauthScopes = verified.scopes;
-      // Opaque token は JWT ではないため subscription_status は proProcedure 側で
+      // Opaque token は JWT ではないため subscription_status は entitledProcedure 側で
       // 必ず DB lookup する (Decision 1)。supabase は service-role client。
       supabase = createServiceRoleClient();
     } catch (error) {
@@ -213,7 +213,7 @@ async function createTRPCContext(opts: {
             : undefined;
       }
     } catch {
-      // JWTデコード失敗時はundefined（proProcedureでフォールバック）
+      // JWTデコード失敗時はundefined（entitledProcedureでフォールバック）
     }
   }
 
