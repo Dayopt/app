@@ -173,10 +173,10 @@ describe('useInteraction Plan → Record drop', () => {
 
     act(() => hook.result.current.dispatch({ type: 'POINTER_UP' }));
 
-    // 過去 Plan の同一レーン（'plan' のまま）dropなので、Record 変換はもちろん
-    // 時間更新も発火しない（「過去Planの同一レーンdropは時間更新しない」と同型）。
+    // 同一レーン（'plan' のまま）dropなので Record 変換は発火しない。
+    // 時間更新は過去 Plan でも通常どおり走る（「過去Planの同一レーンdropも時間更新する」と同型）。
     expect(onPlanRecord).not.toHaveBeenCalled();
-    expect(onEventUpdate).not.toHaveBeenCalled();
+    expect(onEventUpdate).toHaveBeenCalled();
   });
 
   it('最初のmousemoveでRecordレーンへ入った場合もtarget laneとpreview rangeを保持する', () => {
@@ -332,7 +332,10 @@ describe('useInteraction Plan → Record drop', () => {
     expect(onEventUpdate).not.toHaveBeenCalled();
   });
 
-  it('過去Planの同一レーンdropは時間更新しない', () => {
+  // Plan は時間軸のどこにでも置ける（AGENTS.md §時間 / docs/product/specs/plan-record.md）。
+  // 旧 DT006（過去 Plan の時刻変更禁止）を DB / service から撤去した後も drop の
+  // コミット経路だけガードが残り、過去 Plan が元位置へスナップバックしていた。
+  it('過去Planの同一レーンdropも時間更新する', () => {
     const onEventUpdate = vi.fn();
     const pastPlan = {
       ...baseEvent,
@@ -346,7 +349,15 @@ describe('useInteraction Plan → Record drop', () => {
       hook.result.current.dispatch({ type: 'POINTER_UP' });
     });
 
-    expect(onEventUpdate).not.toHaveBeenCalled();
+    // 「呼ばれた」だけでは移動が反映された証拠にならないので、drag で 30 分ぶん
+    // 下げた preview 時刻がそのまま渡ることまで見る。
+    expect(onEventUpdate).toHaveBeenCalledWith(
+      'entry-1',
+      expect.objectContaining({
+        startTime: new Date('2026-01-15T09:30:00'),
+        endTime: new Date('2026-01-15T10:30:00'),
+      }),
+    );
   });
 });
 

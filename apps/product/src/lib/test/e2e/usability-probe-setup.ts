@@ -48,8 +48,8 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database';
 
+import { resolveServiceRoleTarget } from '../service-role-target-guard';
 import { resolveBaseUrlTarget } from '../usability-probe-guards';
-import { resolveServiceRoleTarget } from './service-role-target-guard';
 import { suppressConsentBanner } from './suppress-consent-banner';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
