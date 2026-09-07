@@ -324,13 +324,13 @@ gh api repos/Dayopt/dayopt/milestones -f title="vX.Y+1"
 ### バージョン重複チェック
 
 ```bash
-.claude/skills/releasing/scripts/check-version.sh 0.X.0
+.agents/skills/releasing/scripts/check-version.sh 0.X.0
 ```
 
 ### マージ済みPR取得
 
 ```bash
-.claude/skills/releasing/scripts/get-merged-prs.sh
+.agents/skills/releasing/scripts/get-merged-prs.sh
 ```
 
 ## 詳細ドキュメント

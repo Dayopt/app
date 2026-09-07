@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * `.claude/skills/pr-cross-review/cross-review-workflow.js` の schema 契約テスト（#2348）。
+ * `.agents/skills/pr-cross-review/cross-review-workflow.js` の schema 契約テスト（#2348）。
  *
  * Workflow script は `import()` が使えない（実測: SyntaxError）ため、schema は
  * そのファイルへ自己完結で持つほかない。typecheck / import による検証ができない
@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 const WORKFLOW_SCRIPT_PATH = join(
   import.meta.dirname,
-  '../../.claude/skills/pr-cross-review/cross-review-workflow.js',
+  '../../.agents/skills/pr-cross-review/cross-review-workflow.js',
 );
 
 function extractSchemas(): Record<string, unknown> {

@@ -13,7 +13,7 @@
  *      （#2479 で hooks 実体が `.claude/hooks/` から `scripts/hooks/` へ移動し、
  *      呼び出し元は settings.json の command path のみになった。`.claude/hooks/`
  *      配下に残る言及があれば従来どおり拾うが、判定の主経路は settings.json）
- *   4. `.claude/skills/` / CLAUDE.md / AGENTS.md が
+ *   4. `.agents/skills/` / CLAUDE.md / AGENTS.md が
  *      実行手順として指定する（エージェント直叩き） -> agent
  *      （#2479 で `.claude/rules/` は全廃し AGENTS.md へ一本化した。walkFiles は
  *      存在しないディレクトリに対して空配列を返すため、以前の `.claude/rules/`
@@ -244,9 +244,9 @@ export function buildScanContext(repoRoot: string, scriptsDir = 'scripts'): Scan
   const allScriptFiles = listNonTestScriptFiles(repoRoot, scriptsDir);
   const huskyFiles = walkFiles(repoRoot, '.husky');
   const claudeHookFiles = walkFiles(repoRoot, '.claude/hooks');
-  const settingsFiles = fs.existsSync(path.join(repoRoot, '.claude/settings.json'))
-    ? ['.claude/settings.json']
-    : [];
+  const settingsFiles = ['.claude/settings.json', '.codex/hooks.json', '.codex/config.toml'].filter(
+    (file) => fs.existsSync(path.join(repoRoot, file)),
+  );
   const hookLauncherFiles = collectHookLauncherFiles(repoRoot, allScriptFiles, [
     ...huskyFiles,
     ...claudeHookFiles,
@@ -265,7 +265,10 @@ export function buildScanContext(repoRoot: string, scriptsDir = 'scripts'): Scan
     claudeRuleFiles: ['CLAUDE.md', 'AGENTS.md'].filter((f) =>
       fs.existsSync(path.join(repoRoot, f)),
     ),
-    claudeSkillFiles: walkFiles(repoRoot, '.claude/skills'),
+    claudeSkillFiles: walkFiles(
+      repoRoot,
+      fs.existsSync(path.join(repoRoot, '.agents/skills')) ? '.agents/skills' : '.claude/skills',
+    ),
     docsFiles: walkFiles(repoRoot, 'docs'),
   };
 }

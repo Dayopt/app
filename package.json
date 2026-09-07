@@ -95,7 +95,8 @@
     "storybook": "pnpm --filter @dayopt/storybook storybook",
     "build-storybook": "pnpm --filter @dayopt/storybook build",
     "build:web": "pnpm --filter @dayopt/web build",
-    "test:web": "pnpm --filter @dayopt/web test"
+    "test:web": "pnpm --filter @dayopt/web test",
+    "agent:preflight": "node scripts/tasks/agent-preflight.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:tooling",

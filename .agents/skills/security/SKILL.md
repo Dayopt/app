@@ -159,10 +159,10 @@ pnpm security:check
 3. **`handleServiceError()` を使用** - 直接TRPCErrorをthrowしない
 4. **守るべき前提を作ったら `docs/engineering/invariants.md` を同じ PR で更新** - 新しい
    Pro 限定機能、新しい公開エンドポイント種別、新しい table パターンなど。カタログは
-   内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が
+   内製クロスレビュー（`.agents/skills/pr-cross-review/SKILL.md`）が
    「あるべき検査の不在」を判定する時の照合先なので、更新を怠ると新機能の穴が構造的に
    見えなくなる。**判定は自動では走らない**（merge の hard gate ではない advisory
-   レビュー。`@codex review` は User が手動で使う任意ツール。AGENTS.md §Codexレビュー規則、
+   レビュー。別 provider の反証は User が必要時に使う任意経路。AGENTS.md §レビュー規則、
    #2596）。危険クラスの diff では merge 前に `pr-cross-review` skill を明示的に実行する
 
 ## 関連する検査経路

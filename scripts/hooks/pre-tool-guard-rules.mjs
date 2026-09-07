@@ -754,56 +754,6 @@ function checkBashCommand(rawCommand, cwd, execFileImpl) {
 }
 
 // =====================================================================
-// Agent: model 明示 + 探索への Opus/Fable 使用ガード（cost guard、R1/R2）
-// =====================================================================
-// security guard ではなく cost guard のため、jq の index エラー相当（fail-open
-// 判定）は allow へ倒す。
-
-function checkAgentGuards(root) {
-  const modelRes = jqFirstOrEmpty(root, [['tool_input', 'model']]);
-  const agentModel = modelRes.text;
-  const agentModelJqOk = modelRes.ok;
-
-  const subagentTypeRes = jqFirstOrEmpty(root, [['tool_input', 'subagent_type']]);
-  const agentSubagentType = subagentTypeRes.ok ? subagentTypeRes.text : '';
-
-  // [.tool_input.prompt?, .tool_input.description?] | map(select(type=="string")) | join("\n")
-  const promptDescParts = [];
-  const promptV = jqOptionalStringOrUndefined(root, ['tool_input', 'prompt']);
-  if (promptV !== undefined) promptDescParts.push(promptV);
-  const descV = jqOptionalStringOrUndefined(root, ['tool_input', 'description']);
-  if (descV !== undefined) promptDescParts.push(descV);
-  const agentPromptDesc = promptDescParts.join('\n');
-
-  const exemptSubagentType =
-    agentSubagentType === 'Plan' || agentSubagentType.startsWith('claude-security');
-
-  // R1: model 未指定は block（jq が本当に成功して「値が無かった」時だけ判定する）。
-  if (agentModelJqOk && agentModel === '' && !exemptSubagentType) {
-    block(
-      'BLOCKED: Agent の model を明示してください（haiku=列挙・蒸留・突合 / sonnet=実装・調査 / opus=反証・設計判断）。省略すると Main の tier を継承し最も高い構成になります（AGENTS.md §委任・報告の作法、routing skill 反例）',
-    );
-  }
-
-  // R2: 編集を伴わない探索・調査の subagent に opus / fable を使わない。
-  const modelLc = agentModel.toLowerCase();
-  if (modelLc.includes('opus') || modelLc.includes('fable') || modelLc.includes('mythos')) {
-    let allowed = exemptSubagentType;
-    if (
-      !allowed &&
-      /反証|再検証|risk-reviewer|plan-review|設計判断|adversarial/i.test(agentPromptDesc)
-    ) {
-      allowed = true;
-    }
-    if (!allowed) {
-      block(
-        'BLOCKED: 編集を伴わない探索・調査の subagent に opus / fable は使いません（routing skill 反例、2026-08 実測: 編集なし Opus 154 件）。列挙・要約は haiku、調査・実装は sonnet。反証レビュー・矛盾報告の再検証・設計判断なら prompt にその旨（反証 / 再検証 / 設計判断）を書いてください',
-      );
-    }
-  }
-}
-
-// =====================================================================
 // Read: 大規模ファイルの範囲指定なし全文読み込みガード（cost guard、R3）
 // =====================================================================
 
@@ -890,11 +840,10 @@ function evaluateInner(rawInput, cwd, execFileImpl) {
     checkBashCommand(command, cwd, execFileImpl);
   }
 
-  if (toolName === 'Agent') {
-    checkAgentGuards(root);
-  }
-
   if (toolName === 'Read') {
+    if ([filePath, canonicalFilePath(filePath, cwd)].some(isProtectedEnvFilePath)) {
+      block('BLOCKED: .env系ファイルの読み込みは禁止です');
+    }
     checkReadLargeFile(root);
   }
 }

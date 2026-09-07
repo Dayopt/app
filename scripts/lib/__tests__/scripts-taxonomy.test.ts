@@ -69,7 +69,7 @@ describe('classifyHits', () => {
         husky: ['.husky/pre-push'],
         claudeHook: [],
         claudeSettings: [],
-        claudeRule: ['.claude/skills/dispatch/SKILL.md'],
+        claudeRule: ['.agents/skills/dispatch/SKILL.md'],
         claudeSkill: [],
         docs: [],
         importedBy: [],
@@ -83,7 +83,7 @@ describe('classifyHits', () => {
         husky: [],
         claudeHook: [],
         claudeSettings: [],
-        claudeRule: ['.claude/skills/dispatch/SKILL.md'],
+        claudeRule: ['.agents/skills/dispatch/SKILL.md'],
         docs: ['docs/x.md'],
         claudeSkill: [],
         importedBy: [],
@@ -267,5 +267,20 @@ describe('classifyAllScripts (統合)', () => {
     const result = classifyAllScripts(root);
     const target = result.find((r) => r.path === 'scripts/orphan.ts');
     expect(target?.category).toBe('unreferenced');
+  });
+});
+
+describe('Codex hook registration', () => {
+  it('classifies a launcher referenced only by .codex/hooks.json as a hook', () => {
+    const root = makeFixtureRepo({
+      '.codex/hooks.json': JSON.stringify({
+        hooks: { PreToolUse: [{ hooks: [{ command: 'bash scripts/hooks/codex-guard.sh' }] }] },
+      }),
+      'scripts/hooks/codex-guard.sh': '#!/bin/sh\nexit 0\n',
+    });
+    const result = classifyAllScripts(root).find(
+      (entry) => entry.path === 'scripts/hooks/codex-guard.sh',
+    );
+    expect(result?.category).toBe('hooks');
   });
 });
