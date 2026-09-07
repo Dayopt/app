@@ -211,7 +211,7 @@
     },
     "trialEnded": {
       "title": "Your 14-day trial has ended",
-      "description": "You can continue using the Free plan. AI suggestions, full history, and unlimited templates are Pro features.",
+      "description": "You can continue using the Free plan. Monthly and yearly overviews, Google Calendar sync, and API/MCP access are Pro features.",
       "continueFree": "Continue with Free",
       "continuePro": "Continue with Pro"
     },

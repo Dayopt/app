@@ -316,4 +316,4 @@ deep import(`@/features/timeblock/hooks/useTimeblock`)は禁止。
 | `canceled` | 解約済み                 |
 
 - 決済: Stripe Checkout + Customer Portal
-- 機能制限: `proProcedure` で Pro専用APIをガード
+- 機能制限: `entitledProcedure(key)` で Pro専用APIをガード

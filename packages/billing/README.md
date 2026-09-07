@@ -29,13 +29,13 @@ entitlement と access 判定、価格表示用定数（`$0` / `$5` / cents）�
 
 **入れない（置き場）**:
 
-| 入れないもの                                              | 正しい置き場                                                   |
-| --------------------------------------------------------- | -------------------------------------------------------------- |
-| Stripe SDK client / secret / webhook handler              | `apps/product/src/lib/stripe` / `app/api/webhooks/stripe`      |
-| Checkout / Customer Portal / Invoice 等の Stripe API 操作 | `apps/product/src/features/settings/server/billing-service.ts` |
-| plan 説明文 / 機能リスト / email 本文（翻訳文言）         | `apps/*/messages`                                              |
-| `BILLING_ENFORCED` / Stripe price ID 等の env 依存値      | env（`apps/product/src/env.ts`）                               |
-| Pro gating の enforcement on/off / tRPC `proProcedure`    | `apps/product/src/lib/billing` / `lib/trpc/procedures.ts`      |
+| 入れないもの                                                | 正しい置き場                                                   |
+| ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Stripe SDK client / secret / webhook handler                | `apps/product/src/lib/stripe` / `app/api/webhooks/stripe`      |
+| Checkout / Customer Portal / Invoice 等の Stripe API 操作   | `apps/product/src/features/settings/server/billing-service.ts` |
+| plan 説明文 / 機能リスト / email 本文（翻訳文言）           | `apps/*/messages`                                              |
+| `BILLING_ENFORCED` / Stripe price ID 等の env 依存値        | env（`apps/product/src/env.ts`）                               |
+| Pro gating の enforcement on/off / tRPC `entitledProcedure` | `apps/product/src/lib/billing` / `lib/trpc/procedures.ts`      |
 
 ## 3 つの境界（billing model / Stripe runtime / i18n copy）
 

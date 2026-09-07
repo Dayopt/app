@@ -4,12 +4,11 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import {
-  canUseEntitlement,
   dayoptPlanIds,
   dayoptPlans,
   dayoptPricing,
-  entitlementKeys,
   getPlanIdForSubscriptionStatus,
+  isPaidPlan,
   type DayoptPlanId,
 } from '@dayopt/billing';
 import { Badge, cn } from '@dayopt/components';
@@ -52,20 +51,18 @@ const PLANS: Plan[] = [
     nameKey: 'settings.subscription.plans.free.name',
     featureKeys: [
       'settings.subscription.plans.free.features.timeboxing',
-      'settings.subscription.plans.free.features.basicAnalytics',
-      'settings.subscription.plans.free.features.activities',
-      'settings.subscription.plans.free.features.ai',
+      'settings.subscription.plans.free.features.weeklyReview',
+      'settings.subscription.plans.free.features.unlimitedActivities',
+      'settings.subscription.plans.free.features.dataExport',
     ],
   },
   {
     id: dayoptPlans.pro.id,
     nameKey: 'settings.subscription.plans.pro.name',
     featureKeys: [
-      'settings.subscription.plans.pro.features.fullAnalytics',
-      'settings.subscription.plans.pro.features.unlimitedActivities',
+      'settings.subscription.plans.pro.features.longRange',
+      'settings.subscription.plans.pro.features.googleCalendar',
       'settings.subscription.plans.pro.features.api',
-      'settings.subscription.plans.pro.features.dataExport',
-      'settings.subscription.plans.pro.features.unlimitedAI',
     ],
     recommended: true,
   },
@@ -112,7 +109,7 @@ export function BillingSettings() {
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
   const trialEndsAt = overview.data?.trialEndsAt ?? null;
   const currentPlan = getPlanIdForSubscriptionStatus(subscriptionStatus);
-  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
+  const canAccessPro = isPaidPlan(currentPlan);
 
   // Portal Session 作成（checkout 失敗時の出口としても使うため checkout より先に定義する）
   const createPortal = api.billing.createPortalSession.useMutation({
@@ -404,7 +401,7 @@ export function BillingSettings() {
                   ))}
                 </ul>
 
-                {canUseEntitlement(plan.id, entitlementKeys.proAccess) ? (
+                {isPaidPlan(plan.id) ? (
                   <Button
                     className="w-full"
                     variant="primary"

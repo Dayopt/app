@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { checkProAccessForUser, isBillingEnforced } from '@/lib/billing/enforcement';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { checkEntitlementForUser, isBillingEnforced } from '@/lib/billing/enforcement';
 import { databaseTables } from '@/lib/database';
 import { logger } from '@/lib/logger';
 import { captureUnexpectedDatabaseError, captureUnexpectedError } from '@/lib/sentry';
@@ -19,7 +21,7 @@ import { syncConnection } from './sync-service';
  *
  * service_role client は full `Database` の `createServiceRoleClient()` を使う（narrow client
  * 方針の例外）。理由: (a) 全ユーザー横断で `calendar_connections` を列挙する信頼された cron
- * 経路、(b) `checkProAccessForUser` が `profiles` を読むため full client を要求する。iCal
+ * 経路、(b) `checkEntitlementForUser` が `profiles` を読むため full client を要求する。iCal
  * feed route も同じ full client を使っている。
  */
 
@@ -106,7 +108,11 @@ export async function dispatchCalendarSync(params: {
     }
 
     if (billingEnforced) {
-      const access = await checkProAccessForUser(db, connection.user_id);
+      const access = await checkEntitlementForUser(
+        db,
+        connection.user_id,
+        entitlementKeys.externalCalendarSync,
+      );
       // lookup 失敗は今回 skip し次回に委ねる（Pro を誤って通さない安全側）。
       if (access !== 'allowed') {
         summary.skippedNonPro += 1;

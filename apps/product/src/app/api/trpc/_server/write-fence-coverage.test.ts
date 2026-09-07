@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { appRouter } from '@/app/api/trpc/_server/app-router';
 
 /**
- * 全 procedure（mutation / query 両方）が write fence（protectedProcedure / proProcedure
+ * 全 procedure（mutation / query 両方）が write fence（protectedProcedure / entitledProcedure
  * 経由）を通ることを機械的に保証する。fence check は protectedProcedure の middleware に
  * しか無いため、将来 t.procedure を直接使う procedure が追加されると fence を素通りする —
  * meta.auth の有無でそれを検出する（`auth: 'protected' | 'pro'` は protectedProcedure /
- * proProcedure だけが .meta() で付与する）。
+ * entitledProcedure だけが .meta() で付与する）。
  *
  * このリポジトリに `publicProcedure` は存在しない（`apps/product/src/lib/trpc/procedures.ts`
- * が export するのは protectedProcedure / proProcedure のみ）。つまり mutation・query の
+ * が export するのは protectedProcedure / entitledProcedure のみ）。つまり mutation・query の
  * どちらも auth meta 無しは常に fence 漏れであり、query だけ緩める理由が無い
  * （元は mutation のみを対象にしていたが、query 41 本がこの網の外にあった。#2187 E-3）。
  *
