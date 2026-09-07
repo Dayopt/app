@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-17
+last_verified: 2026-09-07
 public_docs:
   - faq/pricing
   - api-mcp
@@ -24,7 +24,7 @@ Dayoptの Stripe サブスクリプション課金システムの技術ドキュ
 | 決済基盤       | Stripe Checkout + Customer Portal + Webhook |
 | ステータス管理 | Supabase `profiles` テーブル                |
 
-現行 entitlement は `pro_access` の1種類。Free/Pro の最終的な機能境界は [#1336](https://github.com/tanakatomoya/dayopt/issues/1336) で確定する。`BILLING_ENFORCED` の既定値は `false` で、その間 `proProcedure` は認証後にゲートせず通過する。
+現行 entitlement は `external_calendar_sync` / `mcp_api` / `report_long_range` / `estimation_full_history` の 4 キー（`@dayopt/billing` `entitlement.ts` が正本）。Free は空配列、Pro は 4 キー全部。gate の型は `procedure`（`entitledProcedure`）/ `route`（MCP）/ `input_range`（report の `granularity`、強制点は [#2605](https://github.com/Dayopt/dayopt/issues/2605) で未実装）/ `service_window`（見積もりの算出期間、強制点は未実装）の4種。Free/Pro の機能境界は epic [#2610](https://github.com/Dayopt/dayopt/issues/2610) §方針 で管理する。`BILLING_ENFORCED` の既定値は `false` で、その間は `entitledProcedure` / MCP を含む全 gate が認証後にゲートせず通過する（旧実装は MCP だけ enforcement flag を無視して Pro を必須にしていたが、現在は他の gate と同じ扱いになった）。
 ---
 
 ## アーキテクチャ
@@ -207,31 +207,35 @@ account削除フローはgeneric operationをcommitしてからStripe subscripti
 
 ## Feature Gating
 
-### proProcedure
+### entitledProcedure
 
-`apps/product/src/lib/trpc/procedures.ts` で定義。`protectedProcedure` を拡張し、`BILLING_ENFORCED=true` のときだけ Pro プラン判定を追加する。
+`apps/product/src/lib/trpc/procedures.ts` で定義。`protectedProcedure` を拡張し、`EntitlementKey` を1つ受け取る builder。`BILLING_ENFORCED=true` のときだけ、その key を `@dayopt/billing` の `planEntitlements` と `profiles.subscription_status` から判定する。
 
 ```typescript
-export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (!isBillingEnforced()) return next({ ctx });
-  // enforcement 有効時だけ profiles.subscription_status を確認
-  const status = profile.subscription_status;
-  const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
+export function entitledProcedure(key: EntitlementKey) {
+  return protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
+    if (!isBillingEnforced()) return next({ ctx });
 
-  if (!isProActive) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Pro プランが必要です',
-    });
-  }
+    let status = ctx.authMode === 'oauth' ? undefined : ctx.subscriptionStatus;
+    if (!status) {
+      // profiles.subscription_status を DB から取得
+    }
 
-  return next({ ctx });
-});
+    if (!hasEntitlementForStatus(status, key)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Pro plan required',
+      });
+    }
+
+    return next({ ctx });
+  });
+}
 ```
 
 ### 使い方
 
-Pro 限定のエンドポイントでは `protectedProcedure` の代わりに `proProcedure` を使用:
+Pro 限定のエンドポイントでは `protectedProcedure` の代わりに `entitledProcedure(key)` を使用:
 
 ```typescript
 // ❌ 誰でもアクセス可能
@@ -239,19 +243,19 @@ export const myRouter = createTRPCRouter({
   proFeature: protectedProcedure.query(async ({ ctx }) => { ... }),
 });
 
-// ✅ Pro ユーザーのみ
+// ✅ 該当 entitlement を持つユーザーのみ
 export const myRouter = createTRPCRouter({
-  proFeature: proProcedure.query(async ({ ctx }) => { ... }),
+  proFeature: entitledProcedure(entitlementKeys.mcpApi).query(async ({ ctx }) => { ... }),
 });
 ```
 
 ### プロシージャ階層
 
 ```
-publicProcedure          ← 認証不要
-  └─ protectedProcedure  ← ログイン必須
-       ├─ proProcedure   ← Pro プラン必須
-       └─ adminProcedure ← 管理者権限必須
+publicProcedure                 ← 認証不要
+  └─ protectedProcedure         ← ログイン必須
+       ├─ entitledProcedure(key) ← 該当 entitlement 必須
+       └─ adminProcedure        ← 管理者権限必須
 ```
 
 ---
@@ -315,7 +319,7 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 | `apps/product/src/features/settings/server/billing-router.ts`                      | tRPC Router（Router層）                                                |
 | `apps/product/src/app/api/webhooks/stripe/route.ts`                                | Webhook エンドポイント                                                 |
 | `apps/product/src/app/api/webhooks/stripe/stripe-webhook-identity.ts`              | Webhook secretとAPI accountのprovider照合                              |
-| `apps/product/src/lib/trpc/procedures.ts`                                          | `proProcedure` 定義                                                    |
+| `apps/product/src/lib/trpc/procedures.ts`                                          | `entitledProcedure` 定義                                               |
 | `apps/product/src/features/settings/components/BillingSettings.tsx`                | 課金設定UI                                                             |
 | `apps/product/src/app/[locale]/(app)/settings/[category]/page.tsx`                 | Checkout 復帰 query（`?success=true` / `?canceled=true`）の toast 表示 |
 | `apps/product/src/app/[locale]/(app)/settings/_utils/billing-return.ts`            | Checkout / Portal 復帰 query の解釈（parse / remove）                  |
@@ -325,4 +329,4 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 | `supabase/migrations/20260730090051_remove_legacy_billing_receipt_cleanup.sql`     | count-only cleanup RPCの撤去                                           |
 | `supabase/migrations/20260730090055_report_billing_cleanup_backlog.sql`            | Billing cleanupの残件判定                                              |
 | `packages/billing/src/pricing.ts`                                                  | Free / Pro の表示価格と7日トライアル                                   |
-| `packages/billing/src/entitlement.ts`                                              | `pro_access` entitlement                                               |
+| `packages/billing/src/entitlement.ts`                                              | 4-key entitlement map（`entitlementKeys` / `planEntitlements`）        |
