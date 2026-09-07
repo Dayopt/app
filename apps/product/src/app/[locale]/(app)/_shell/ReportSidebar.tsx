@@ -4,7 +4,7 @@ import { ReportFilterList, SegmentList } from '@/features/review';
  * Report タブの Sidebar 本体（Composition Layer、スクロール領域）。
  *
  * MiniCalendar は Sidebar の pinned 領域（プロフィール直上）へ移動済み（#2217）。
- * 上から「カテゴリー — 分母から出し入れ」→「セグメント — 保存した問い」の 2 見出し
+ * 上から「カテゴリ」→「セグメント」の 2 見出し
  * （仕様 §3.3）。セグメント一覧はレンズ選択と CRUD を 1 本で兼ねる（#2578）。
  */
 export function ReportSidebar() {

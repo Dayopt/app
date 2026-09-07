@@ -12,6 +12,7 @@ import {
   ReportHeader,
   ReportMobileHeader,
   resolveReportRange,
+  resolveZonedDayKey,
   shiftReportAnchor,
   todayReportAnchor,
   type ReportGranularity,
@@ -99,6 +100,21 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
     [anchorDate, granularity, navigation, timezone],
   );
 
+  /**
+   * ミニカレンダーで日付を選んだ時。**粒度は変えず**、その日を含む期間へ移す
+   * （週を見ていれば、その日の週へ）。期間の解決は `range` が anchor から素通しで
+   * 行うので、ここは anchor を書くだけでよい。
+   *
+   * 書き込みは `handleNavigate` と同じく `navigateToDate` 経由にする。review が独自に
+   * history を触ると `CalendarNavigationContext` が stale になる。
+   */
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      navigation?.navigateToDate(date, true);
+    },
+    [navigation],
+  );
+
   const handleGranularityChange = useCallback(
     (next: ReportGranularity) => {
       router.push(`/report?date=${anchorDate}&range=${next}`);
@@ -163,6 +179,7 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
   );
 
   if (!hasMounted) {
+    // 本文（`ReportBody`）と同じ枠にする。ずれると mount 後に横位置が跳ねる
     return (
       <div className="flex h-full flex-col gap-4 p-4 md:p-6">
         <Skeleton className="h-8 w-64 rounded-lg" />
@@ -171,10 +188,21 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
     );
   }
 
-  const periodStart = parseAnchorToLocalDate(range.buckets[0]?.key ?? anchorDate);
-  const periodEnd = parseAnchorToLocalDate(
-    range.buckets[range.buckets.length - 1]?.key ?? anchorDate,
+  // **期間の両端は `range.startAt` / `range.endAt` から取る。** bucket の粒度は
+  // 週=日 / 月=週 / 年=月 と変わるので、末尾 bucket の `key` は期間の終わりではない
+  // （月なら最終週の開始日、年なら `YYYY-MM` で `parseAnchorToLocalDate` が 1 日と読む）。
+  // `endAt` は半開区間の終端なので 1ms 引いて、その瞬間の壁時計日を最終日にする。
+  const periodStartKey = resolveZonedDayKey(range.startAt, timezone);
+  const periodEndKey = resolveZonedDayKey(
+    new Date(new Date(range.endAt).getTime() - 1).toISOString(),
+    timezone,
   );
+  const periodStart = parseAnchorToLocalDate(periodStartKey);
+  const periodEnd = parseAnchorToLocalDate(periodEndKey);
+  const todayAnchor = todayReportAnchor(timezone);
+  // `YYYY-MM-DD` は辞書順 = 時系列なので、文字列比較で足りる
+  const todayDirection =
+    todayAnchor < periodStartKey ? 'future' : todayAnchor > periodEndKey ? 'past' : 'current';
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -184,8 +212,10 @@ export function ReportViewClient({ granularity }: ReportViewClientProps) {
             periodStart={periodStart}
             periodEnd={periodEnd}
             granularity={granularity}
-            weekStartsOn={weekStartsOn}
+            todayDirection={todayDirection}
             onNavigate={handleNavigate}
+            onGranularityChange={handleGranularityChange}
+            onDateSelect={handleDateSelect}
             rightSlot={mobileActions}
           />
           {/* サイドバーを持たない面のフィルタとレンズ。読み書きは同じ store */}

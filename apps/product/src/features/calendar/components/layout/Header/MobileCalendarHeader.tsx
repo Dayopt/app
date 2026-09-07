@@ -15,9 +15,9 @@ import { Link } from '@dayopt/i18n/navigation';
 
 import type { NavigationDirection } from '@/components/ui/navigation/DateNavigator';
 
+import { MobileMonthGrid } from '@/components/ui/navigation/MobileMonthGrid';
+import { MobileYearStrip } from '@/components/ui/navigation/MobileYearStrip';
 import { formatCalendarDateParam } from '../../../lib/date-param';
-import { MobileMonthGrid } from './MobileMonthGrid';
-import { MobileYearStrip } from './MobileYearStrip';
 
 interface MobileCalendarHeaderProps {
   currentDate: Date;
@@ -25,7 +25,6 @@ interface MobileCalendarHeaderProps {
   /** ホバー/タッチ時にナビゲーション先のデータを事前取得する */
   onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
   onDateSelect?: ((date: Date) => void) | undefined;
-  displayRange?: { start: Date; end: Date } | undefined;
   rightSlot?: ReactNode | undefined;
   className?: string | undefined;
   defaultExpanded?: boolean | undefined;
@@ -44,7 +43,6 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     onNavigate,
     onPrefetch,
     onDateSelect,
-    displayRange,
     rightSlot,
     className,
     defaultExpanded,
@@ -180,7 +178,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
           <button
             type="button"
             onClick={handleToggle}
-            className="flex items-center gap-1"
+            // 44px のタッチターゲット。AppHeader の行は 32px だが、はみ出す分は
+            // 透明なので見た目は動かず、当たり判定だけが広がる
+            className="flex min-h-11 items-center gap-1"
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >
@@ -232,11 +232,16 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 </Button>
               </div>
 
-              {/* 月グリッド */}
+              {/* 月グリッド。
+                  **`displayRange` は渡さない。** カレンダーの表示日は連続とは限らず
+                  （週末非表示の複数日ビューでは `generateMultiDayDates` が土日を飛ばす）、
+                  端点だけを帯にすると描いていない土日まで「表示中」と塗ってしまう。
+                  帯を出すなら `viewDateRange.days` そのものを渡す形へ直してから
+                  （2026-09-07 の反証レビュー指摘）。レポートの期間は常に連続なので
+                  あちらは `displayRange` を使う */}
               <MobileMonthGrid
                 viewMonth={viewMonth}
                 selectedDate={currentDate}
-                displayRange={displayRange}
                 onViewMonthChange={handleViewMonthChange}
                 onDateSelect={handleDateSelect}
                 className="w-full"

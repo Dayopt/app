@@ -175,12 +175,12 @@
       }
     },
     "sidebar": {
-      "categoriesHeading": "カテゴリー — 分母から出し入れ",
+      "categoriesHeading": "カテゴリ",
       "uncategorized": "未分類",
       "margin": "余白（未記録）",
       "marginLensDisabled": "セグメントを選んでいる間、余白は分母に入りません",
       "empty": "カテゴリーはまだありません",
-      "lensHeading": "セグメント — 保存した問い",
+      "lensHeading": "セグメント",
       "lensAll": "すべて",
       "segmentMenu": "{name} のメニュー"
     },
@@ -188,7 +188,16 @@
       "lens": {
         "chip": "束",
         "open": "束を選ぶ"
-      }
+      },
+      "periodFormat": {
+        "weekDay": "M月d日",
+        "weekDayShort": "d日",
+        "weekRange": "{start}〜{end}",
+        "month": "M月",
+        "year": "yyyy'年'"
+      },
+      "openMiniCalendar": "カレンダーを開く",
+      "closeMiniCalendar": "カレンダーを閉じる"
     },
     "errors": {
       "title": "レポートを読み込めませんでした",

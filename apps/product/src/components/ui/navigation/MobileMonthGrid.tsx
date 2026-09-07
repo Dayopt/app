@@ -3,11 +3,15 @@
 import {
   addMonths,
   eachDayOfInterval,
+  endOfDay,
   endOfMonth,
   endOfWeek,
   format,
   getWeek,
+  isSameDay,
   isSameMonth,
+  isWithinInterval,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   subMonths,
@@ -30,6 +34,12 @@ function rotateWeekdays(weekdaysNarrow: string[], weekStartsOn: 0 | 1 | 6): stri
 interface MobileMonthGridProps {
   viewMonth: Date;
   selectedDate: Date;
+  /**
+   * 見ている範囲（両端を含む）。渡すと帯で塗る。
+   *
+   * 1 日より広い単位を見ている面（レポートの週 / 月 / 年、カレンダーの複数日ビュー）で、
+   * `selectedDate` の 1 マスだけが光ると「その日だけの数字」と読み違える。
+   */
   displayRange?: { start: Date; end: Date } | undefined;
   onViewMonthChange: (newMonth: Date) => void;
   onDateSelect: (date: Date) => void;
@@ -43,7 +53,7 @@ interface MobileMonthGridProps {
  * セル高さ44px（WCAG 2.5.5 のタッチターゲット最小サイズ準拠）。
  */
 export const MobileMonthGrid = memo<MobileMonthGridProps>(
-  ({ viewMonth, selectedDate, onViewMonthChange, onDateSelect, className }) => {
+  ({ viewMonth, selectedDate, displayRange, onViewMonthChange, onDateSelect, className }) => {
     const tCommon = useTranslations('common');
     const weekStartsOn = useUserPreferences((state) => state.weekStartsOn);
     const showWeekNumbers = useUserPreferences((state) => state.showWeekNumbers);
@@ -90,10 +100,22 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
         const isToday = isTodayInTimezone(date, timezone);
         const isSelected = tzIsSameDay(date, selectedDate, timezone);
         const isCurrentMonth = isSameMonth(date, viewMonth);
+        // 帯は端だけ角を丸める。中はつなげて 1 本に見せる
+        const isInRange =
+          displayRange !== undefined &&
+          isWithinInterval(date, {
+            start: startOfDay(displayRange.start),
+            end: endOfDay(displayRange.end),
+          });
+        // 端の判定は所属判定（`isWithinInterval` = device local）と同じ基準にする。
+        // `tzIsSameDay` を混ぜると、端末の TZ とユーザーの TZ が違う時に端だけ一致せず、
+        // 帯の角丸が片側だけ落ちる
+        const isRangeStart = isInRange && isSameDay(date, displayRange.start);
+        const isRangeEnd = isInRange && isSameDay(date, displayRange.end);
 
-        return { isToday, isSelected, isCurrentMonth };
+        return { isToday, isSelected, isCurrentMonth, isInRange, isRangeStart, isRangeEnd };
       },
-      [selectedDate, viewMonth, timezone],
+      [selectedDate, viewMonth, timezone, displayRange],
     );
 
     const handleDateClick = useCallback(
@@ -138,7 +160,8 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                 </div>
               )}
               {week.map((date) => {
-                const { isToday, isSelected, isCurrentMonth } = getDayState(date);
+                const { isToday, isSelected, isCurrentMonth, isInRange, isRangeStart, isRangeEnd } =
+                  getDayState(date);
 
                 return (
                   <button
@@ -153,6 +176,9 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                     className={cn(
                       'flex h-11 items-center justify-center text-sm transition-colors',
                       !isCurrentMonth && 'text-muted-foreground',
+                      isInRange && 'bg-state-selected',
+                      isRangeStart && 'rounded-l-lg',
+                      isRangeEnd && 'rounded-r-lg',
                     )}
                   >
                     <span

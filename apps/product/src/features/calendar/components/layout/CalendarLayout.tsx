@@ -417,7 +417,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             onNavigate={handleNavigate}
             onPrefetch={onPrefetch}
             onDateSelect={onDateSelect}
-            displayRange={displayRange}
             rightSlot={rightSlot}
           />
 

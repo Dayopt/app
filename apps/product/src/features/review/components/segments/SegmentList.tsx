@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { SidebarSection } from '@/components/shell/sidebar';
 import { EmptyState } from '@/components/ui/feedback/EmptyState';
 import { ConfirmDialog } from '@/components/ui/overlays/confirm-dialog';
 import {
@@ -19,21 +20,24 @@ import {
 
 import { useActiveSegment } from '../../hooks/useActiveSegment';
 import {
-  useCreateSegment,
   useDeleteSegment,
   useRenameSegment,
   useSegments,
   useSetSegmentActivities,
 } from '../../hooks/useSegments';
 import { useReportViewStore } from '../../stores/useReportViewStore';
-import { SegmentEditPopover } from './SegmentEditPopover';
+import { SegmentCreateDialog } from './SegmentCreateDialog';
+import { SegmentEditDialog } from './SegmentEditDialog';
 
 /**
- * サイドバーの「セグメント — 保存した問い」（仕様 §3.3-2）。
+ * サイドバーの「セグメント」（仕様 §3.3-2）。
  *
  * 1 本の一覧がレンズ選択（行クリック）と CRUD（⋯ メニュー）の両方を担う。同じ名前を
  * 2 度並べない — 狭いサイドバーで同じ一覧が 2 つあると、どちらを押せばよいか読めなくなる
  * （2026-09-04 User 裁可）。
+ *
+ * 見出しと作成導線はカレンダーの「カテゴリ」見出しと同じ構成に揃える（2026-09-07 User 指示）:
+ * `SidebarSection` の action スロットに `+` を置き、hover / focus 時だけ出す。
  *
  * レンズは「すべて」が既定。選ぶと 1 章の宇宙が `segment.activityIds ∩ visible` に縮む
  * （仕様 §2.4）。並び替え・フォルダ分け・共有は持たない（v1 スコープ外）。
@@ -42,16 +46,22 @@ export function SegmentList() {
   const t = useTranslations('calendar.stats.review.segments');
   const tSidebar = useTranslations('report.sidebar');
   const { data: segments, isPending } = useSegments();
-  const createSegment = useCreateSegment();
   const renameSegment = useRenameSegment();
   const setSegmentActivities = useSetSegmentActivities();
   const deleteSegment = useDeleteSegment();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // 編集ダイアログはメニューの中ではなく一覧の外に 1 つだけ置く。`DropdownMenuContent` の
+  // 中に Dialog を入れると、メニューを閉じる時のフォーカス戻しと Dialog の開閉が競合する
+  // （同ファイルの削除確認が既に取っている流儀に合わせる）
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // 作成ダイアログ展開中は見出しの `+` を強制表示する（カレンダーの #2211 と同じ扱い）
+  const [createOpen, setCreateOpen] = useState(false);
 
   const segmentId = useReportViewStore((state) => state.segmentId);
   const setSegmentId = useReportViewStore((state) => state.setSegmentId);
 
   const pendingDeleteSegment = segments?.find((s) => s.id === pendingDeleteId) ?? null;
+  const editingSegment = segments?.find((s) => s.id === editingId) ?? null;
 
   // 削除済みセグメントの縮退は hook が持つ（1 章・カテゴリーフィルタと同じ答えを使う）
   const { activeSegment } = useActiveSegment();
@@ -61,20 +71,24 @@ export function SegmentList() {
   const rowHeight = 'min-h-9';
 
   return (
-    <div className="flex flex-col gap-1 px-2">
-      <div className="flex items-center justify-between px-1 py-1">
-        <span className="text-muted-foreground text-xs font-medium">{tSidebar('lensHeading')}</span>
-        <SegmentEditPopover
-          trigger={
-            <Button type="button" variant="ghost" icon className="size-6" aria-label={t('create')}>
-              <Plus className="size-4" />
-            </Button>
-          }
-          isSubmitting={createSegment.isPending}
-          onSubmit={(input) => createSegment.mutate(input)}
-        />
-      </div>
-
+    <SidebarSection
+      title={tSidebar('lensHeading')}
+      className="flex flex-col gap-1"
+      action={
+        // カレンダーの「カテゴリ」見出しと同じ式: 常時は隠し、見出し行に hover / focus
+        // した時だけ出す。ダイアログ展開中は createOpen で強制表示する
+        <span
+          className={cn(
+            'transition-opacity',
+            createOpen
+              ? 'opacity-100'
+              : 'opacity-0 group-hover/section:opacity-100 group-has-[:focus-visible]/section:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100',
+          )}
+        >
+          <SegmentCreateDialog onOpenChange={setCreateOpen} />
+        </span>
+      }
+    >
       {isPending ? (
         <div className="flex flex-col gap-1">
           <Skeleton className="h-9 rounded-lg" />
@@ -133,25 +147,9 @@ export function SegmentList() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <SegmentEditPopover
-                    trigger={
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        {t('editActivities')}
-                      </DropdownMenuItem>
-                    }
-                    initialName={segment.name}
-                    initialActivityIds={segment.activityIds}
-                    isSubmitting={renameSegment.isPending || setSegmentActivities.isPending}
-                    onSubmit={(input) => {
-                      if (input.name !== segment.name) {
-                        renameSegment.mutate({ segmentId: segment.id, name: input.name });
-                      }
-                      setSegmentActivities.mutate({
-                        segmentId: segment.id,
-                        activityIds: input.activityIds,
-                      });
-                    }}
-                  />
+                  <DropdownMenuItem onSelect={() => setEditingId(segment.id)}>
+                    {t('editActivities')}
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     variant="destructive"
                     onSelect={() => setPendingDeleteId(segment.id)}
@@ -174,6 +172,29 @@ export function SegmentList() {
         />
       ) : null}
 
+      {editingSegment ? (
+        <SegmentEditDialog
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditingId(null);
+          }}
+          title={t('editActivities')}
+          initialName={editingSegment.name}
+          initialActivityIds={editingSegment.activityIds}
+          isSubmitting={renameSegment.isPending || setSegmentActivities.isPending}
+          onSubmit={(input) => {
+            if (input.name !== editingSegment.name) {
+              renameSegment.mutate({ segmentId: editingSegment.id, name: input.name });
+            }
+            setSegmentActivities.mutate({
+              segmentId: editingSegment.id,
+              activityIds: input.activityIds,
+            });
+            setEditingId(null);
+          }}
+        />
+      ) : null}
+
       <ConfirmDialog
         open={pendingDeleteSegment != null}
         onClose={() => setPendingDeleteId(null)}
@@ -193,6 +214,6 @@ export function SegmentList() {
         }
         variant="destructive"
       />
-    </div>
+    </SidebarSection>
   );
 }

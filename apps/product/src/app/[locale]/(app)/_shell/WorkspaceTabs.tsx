@@ -3,9 +3,9 @@
 import { BarChart3, CalendarDays } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { IconTabSwitcher } from '@/components/ui/navigation/IconTabSwitcher';
 import { formatCalendarDateParam, useCalendarNavigation } from '@/features/calendar';
-import { cn, HoverTooltip } from '@dayopt/components';
-import { Link, usePathname } from '@dayopt/i18n/navigation';
+import { usePathname } from '@dayopt/i18n/navigation';
 
 import { getWorkspaceTabFromPath } from './workspace-tabs';
 
@@ -50,60 +50,34 @@ export function WorkspaceTitle() {
 /**
  * Sidebar ヘッダーの右側に置く、カレンダー / レポート切替アイコン。
  *
- * Sidebar.tsx の検索・閉じるボタンと同じ「size-8 + 44pxタップターゲット」の
- * 技法（`packages/components/src/actions/button.tsx` の `_square-sm` variant）に揃える。
+ * 見た目と当たり判定は共有の `IconTabSwitcher` が持つ（レポートの粒度タブと同じ部品）。
+ * ここが受け持つのは「どの href を指すか」だけ。
  */
 export function WorkspaceTabs() {
+  const t = useTranslations();
   const { currentTab, calendarHref, reportHref, calendarLabel, reportLabel } =
     useWorkspaceTabsState();
 
   return (
-    <div className="bg-muted flex items-center rounded-lg" role="tablist">
-      <IconTabButton
-        href={calendarHref}
-        label={calendarLabel}
-        icon={<CalendarDays className="size-4" />}
-        active={currentTab === 'calendar'}
-      />
-      <IconTabButton
-        href={reportHref}
-        label={reportLabel}
-        icon={<BarChart3 className="size-4" />}
-        active={currentTab === 'report'}
-      />
-    </div>
-  );
-}
-
-function IconTabButton({
-  href,
-  label,
-  icon,
-  active,
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-}) {
-  return (
-    <HoverTooltip content={label} side="bottom">
-      <Link
-        href={href}
-        role="tab"
-        aria-selected={active}
-        aria-label={label}
-        className={cn(
-          'relative flex size-8 items-center justify-center rounded-lg transition-colors duration-150',
-          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 44pxタップターゲット確保。Buttonの_square-sm variantと同じ技法（packages/components/src/actions/button.tsx）
-          'after:absolute after:inset-0 after:m-auto after:size-11 after:content-[""]',
-          active
-            ? 'bg-state-selected text-foreground'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        {icon}
-      </Link>
-    </HoverTooltip>
+    <IconTabSwitcher
+      ariaLabel={t('sidebar.pageNav.label')}
+      // `other`（/settings 等）では**どちらも選択しない**。'calendar' に丸めると、
+      // カレンダーを見ていないのにカレンダータブが選択済みに見える（2026-09-07 の反証レビュー指摘）
+      value={currentTab === 'calendar' || currentTab === 'report' ? currentTab : undefined}
+      items={[
+        {
+          value: 'calendar',
+          label: calendarLabel,
+          href: calendarHref,
+          icon: <CalendarDays className="size-4" />,
+        },
+        {
+          value: 'report',
+          label: reportLabel,
+          href: reportHref,
+          icon: <BarChart3 className="size-4" />,
+        },
+      ]}
+    />
   );
 }

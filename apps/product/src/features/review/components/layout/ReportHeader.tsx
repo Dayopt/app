@@ -32,7 +32,12 @@ interface ReportHeaderProps {
  *
  * カレンダーと**同じ器と同じ部品**で組む: 共有シェルの `AppHeader` に、共有層の
  * `DateRangeDisplay`（期間ラベル）と `DateNavigator`（`‹ ›` + 今日）を差し込む。
- * 粒度切替だけがレポート固有で、こちらはセグメントにする。
+ * 並ぶ順序と余白もカレンダーの中央グループに揃える（2026-09-07 User 指示）。
+ *
+ * 粒度切替だけがレポート固有だが、器はカレンダーの `ViewSwitcher` と同じ
+ * `h-8` の outline トリガー + `DropdownMenu` にする（2026-09-07 User 指示）。
+ * 以前はセグメントだったが、1 項目が `min-h-11` で枠込み 54px あり、32px の行から
+ * はみ出してレポートのヘッダーだけ厚く見えていた。
  *
  * `features/calendar` は同層なので import できない。期間の移動や粒度の変更は
  * すべて props のコールバックで Composition Layer へ返す。
@@ -50,23 +55,27 @@ export function ReportHeader({
   const t = useTranslations('report');
 
   return (
-    <AppHeader
-      {...(leftSlot ? { leftSlot } : {})}
-      rightSlot={
-        <>
-          <ReportGranularitySwitcher value={granularity} onValueChange={onGranularityChange} />
-          {rightSlot}
-        </>
-      }
-    >
-      <div className="flex min-w-0 items-center gap-3">
+    <AppHeader {...(leftSlot ? { leftSlot } : {})} rightSlot={rightSlot}>
+      {/* 並び・余白はカレンダーの中央グループと同値にする（`gap-2` + switcher に `ml-2`）。
+          期間ラベル → `‹ 今日 ›` → 粒度を左に固めて 1 つのまとまりに読ませる —
+          粒度だけ右端に置くと、面を移るたびに目線が横断する（2026-09-07 User 指示） */}
+      <div className="flex min-w-0 items-center gap-2">
         <DateRangeDisplay
           date={periodStart}
           {...(granularity === 'week' ? { endDate: periodEnd } : {})}
           weekStartsOn={weekStartsOn}
           formatPattern={resolveFormatPattern(granularity)}
         />
-        <DateNavigator onNavigate={onNavigate} todayLabel={t(`nav.current.${granularity}`)} />
+        <DateNavigator
+          onNavigate={onNavigate}
+          todayLabel={t(`nav.current.${granularity}`)}
+          arrowSize="md"
+        />
+        <ReportGranularitySwitcher
+          className="ml-2"
+          value={granularity}
+          onValueChange={onGranularityChange}
+        />
       </div>
     </AppHeader>
   );
