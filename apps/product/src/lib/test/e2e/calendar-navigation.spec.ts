@@ -3,12 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database';
 
-import { resolveServiceRoleTarget } from './service-role-target-guard';
+import {
+  assertServiceRoleSuiteRunnable,
+  resolveServiceRoleTarget,
+} from '../service-role-target-guard';
 import { suppressConsentBanner } from './suppress-consent-banner';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SERVICE_ROLE_TARGET = resolveServiceRoleTarget(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// CI（E2E_REQUIRE_SERVICE_ROLE_SUITES=1）では skip を許さない。env が壊れて suite が
+// 丸ごと消えても「0 failed」で緑になるのを防ぐ。
+assertServiceRoleSuiteRunnable(SERVICE_ROLE_TARGET, 'Calendar navigation');
 const describeWithEnv = SERVICE_ROLE_TARGET.safe ? test.describe : test.describe.skip;
 
 const TIMEZONE = 'Asia/Tokyo';
