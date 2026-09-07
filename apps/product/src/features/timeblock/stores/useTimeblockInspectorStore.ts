@@ -22,6 +22,11 @@ interface TimeblockInspectorState {
   timeblockKind: TimeblockDestination;
   /** 複製時だけ保持する独立新規ブロックの下書き。 */
   duplicateDraft: TimeblockDuplicateDraft | null;
+  /**
+   * ドラッグ作成モード。calendar 側の pendingSelection を元に、同じパネルで
+   * アクティビティを選ぶ。timeblockId は null（URL 同期しない）。
+   */
+  createMode: boolean;
 }
 
 /**
@@ -34,6 +39,8 @@ interface TimeblockInspectorActions {
   openDuplicate: (draft: TimeblockDuplicateDraft) => void;
   /** 複製を取り消して元ブロックの詳細へ戻る。 */
   cancelDuplicate: () => void;
+  /** ドラッグ作成モードで開く（アクティビティ選択 → 作成）。 */
+  openCreate: () => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
 }
@@ -51,6 +58,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
       timeblockId: null,
       timeblockKind: 'plan',
       duplicateDraft: null,
+      createMode: false,
 
       openInspector: (timeblockId, kind = 'plan') =>
         set(
@@ -59,6 +67,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             timeblockId,
             timeblockKind: kind,
             duplicateDraft: null,
+            createMode: false,
           },
           false,
           'openInspector',
@@ -71,9 +80,23 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             timeblockId: draft.sourceId,
             timeblockKind: draft.kind,
             duplicateDraft: draft,
+            createMode: false,
           },
           false,
           'openDuplicate',
+        ),
+
+      openCreate: () =>
+        set(
+          {
+            isOpen: true,
+            timeblockId: null,
+            timeblockKind: 'plan',
+            duplicateDraft: null,
+            createMode: true,
+          },
+          false,
+          'openCreate',
         ),
 
       cancelDuplicate: () => set({ duplicateDraft: null }, false, 'cancelDuplicate'),
@@ -89,6 +112,7 @@ export const useTimeblockInspectorStore = create<TimeblockInspectorStore>()(
             timeblockId: null,
             timeblockKind: 'plan',
             duplicateDraft: null,
+            createMode: false,
           },
           false,
           'closeInspector',
