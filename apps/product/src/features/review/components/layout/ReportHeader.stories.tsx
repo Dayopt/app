@@ -6,7 +6,8 @@ import { ReportHeader } from './ReportHeader';
  * `/report` のヘッダー。
  *
  * カレンダーと同じ器（`AppHeader`）と同じ部品（`DateRangeDisplay` / `DateNavigator`）で
- * 組み、粒度切替だけがレポート固有。
+ * 組み、粒度切替だけがレポート固有。並ぶ順序と余白もカレンダーの中央グループに
+ * 揃えてある（期間ラベル → `‹ 今日 ›` → 粒度、を左に固める）。
  */
 const meta = {
   title: 'Product/Features/Review/Layout/ReportHeader',
@@ -69,6 +70,20 @@ export const SundayStart: Story = {
   },
 };
 
+/**
+ * Composition Layer が両端の slot を差した状態。
+ *
+ * 粒度は左のまとまり（期間ラベル・`‹ 今日 ›` と同じ列）に、注入された action は
+ * 右端に出る。位置を戻した時にここで気づけるようにしておく。
+ */
+export const WithSlots: Story = {
+  args: {
+    ...BASE_ARGS,
+    leftSlot: <SlotButton label="サイドバー" />,
+    rightSlot: <SlotButton label="カレンダーへ" />,
+  },
+};
+
 /** すべての粒度を並べる（ADR-023 の AllPatterns）。 */
 export const AllPatterns: Story = {
   args: BASE_ARGS,
@@ -76,6 +91,11 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-col gap-4">
         <ReportHeader {...BASE_ARGS} />
+        <ReportHeader
+          {...BASE_ARGS}
+          leftSlot={<SlotButton label="サイドバー" />}
+          rightSlot={<SlotButton label="カレンダーへ" />}
+        />
         <ReportHeader
           {...BASE_ARGS}
           granularity="month"
@@ -92,3 +112,15 @@ export const AllPatterns: Story = {
     );
   },
 };
+
+/** slot に差さる想定のボタン（Composition Layer が渡すものの代役）。 */
+function SlotButton({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      className="border-border-subtle text-muted-foreground h-8 rounded-lg border px-2 text-xs"
+    >
+      {label}
+    </button>
+  );
+}

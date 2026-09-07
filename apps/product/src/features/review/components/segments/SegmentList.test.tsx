@@ -31,8 +31,10 @@ vi.mock('../../hooks/useSegments', () => ({
   useDeleteSegment: () => ({ mutate: deleteSegment, isPending: false }),
 }));
 
-vi.mock('./SegmentEditPopover', () => ({
-  SegmentEditPopover: ({ trigger }: { trigger: React.ReactNode }) => <>{trigger}</>,
+// 中身のフォームは `useActivityTree`（tRPC）を引くので、この一覧の test では器だけを見る
+vi.mock('./SegmentEditDialog', () => ({
+  SegmentEditDialog: ({ open, title }: { open: boolean; title: string }) =>
+    open ? <div data-testid="segment-edit-dialog">{title}</div> : null,
 }));
 
 import { useReportViewStore } from '../../stores/useReportViewStore';
@@ -140,5 +142,44 @@ describe('SegmentList', () => {
 
     expect(deleteSegment).toHaveBeenCalledWith({ segmentId: 'seg-2' });
     expect(useReportViewStore.getState().segmentId).toBe('seg-1');
+  });
+  /**
+   * 作成導線はカレンダーの「カテゴリ」見出しと同じく、見出しの action スロットに置く。
+   * 一覧の中に紛れると、レンズ切替の行と作成が同じ列に並んでしまう。
+   */
+  it('作成ボタンを見出し行に置き、押すとダイアログが開く', async () => {
+    const user = userEvent.setup();
+    render(<SegmentList />);
+
+    expect(screen.queryByTestId('segment-edit-dialog')).not.toBeInTheDocument();
+
+    const createButton = screen.getByRole('button', {
+      name: 'calendar.stats.review.segments.create',
+    });
+    // 見出し（h3）と同じ行にいることを、見出しを含む section 直下の header で確かめる
+    expect(createButton.closest('section')?.querySelector('h3')?.textContent).toBe(
+      'report.sidebar.lensHeading',
+    );
+
+    await user.click(createButton);
+    expect(await screen.findByTestId('segment-edit-dialog')).toHaveTextContent(
+      'calendar.stats.review.segments.create',
+    );
+  });
+
+  it('⋯ の「アクティビティを編集」で編集ダイアログが開く', async () => {
+    const user = userEvent.setup();
+    render(<SegmentList />);
+
+    await user.click(screen.getByRole('button', { name: 'report.sidebar.segmentMenu 深い仕事' }));
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: 'calendar.stats.review.segments.editActivities',
+      }),
+    );
+
+    expect(await screen.findByTestId('segment-edit-dialog')).toHaveTextContent(
+      'calendar.stats.review.segments.editActivities',
+    );
   });
 });

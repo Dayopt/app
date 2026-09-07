@@ -35,6 +35,20 @@ import { TidyChapter } from './chapters/TidyChapter';
 import type { ReportFilterState } from '../../domain/report/report-view-model';
 import type { ReportGranularity } from '../../lib/report-period';
 
+/**
+ * 本文の外枠。
+ *
+ * **最大幅を持たせない**（2026-09-07 User 指示）。以前は `mx-auto max-w-2xl` で
+ * 中央に細く置いていたが、広い画面では左右に大きな空きができて盤面だけが痩せて
+ * 見えていた。横は与えられた幅いっぱいまで使う。
+ *
+ * 左右の padding（`p-4 md:p-6`）は残す。端まで詰めると章のカードが画面の縁に
+ * 貼り付く。
+ *
+ * 読み込み・エラーの分岐も同じ枠を使う。枠が違うと、解決した瞬間に横位置が跳ねる。
+ */
+const REPORT_BODY_CONTAINER = 'flex w-full flex-col gap-3 p-4 md:p-6';
+
 interface ReportBodyProps {
   anchorDate: string;
   granularity: ReportGranularity;
@@ -145,7 +159,7 @@ export function ReportBody({
 
   if (isError) {
     return (
-      <div className="p-4 md:p-6">
+      <div className={REPORT_BODY_CONTAINER}>
         <ErrorState title={t('title')} description={t('description')} />
       </div>
     );
@@ -154,14 +168,14 @@ export function ReportBody({
   // レンズの生死が決まる前に数字を出すと、非レンズの分母が一瞬見えてしまう
   if (isPending || isResolving || !view) {
     return (
-      <div className="flex flex-col gap-3 p-4 md:p-6">
+      <div className={REPORT_BODY_CONTAINER}>
         <Skeleton className="h-48 rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 p-4 md:p-6">
+    <div className={REPORT_BODY_CONTAINER}>
       <AllocationChapter
         granularity={granularity}
         denominators={view.denominators}

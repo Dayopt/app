@@ -1,6 +1,7 @@
 {
   "sidebar": {
     "pageNav": {
+      "label": "ワークスペース",
       "calendar": "カレンダー",
       "report": "レポート"
     }

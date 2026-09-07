@@ -8,8 +8,9 @@ import type { ReportGranularity } from '../../lib/report-period';
 /**
  * 週｜月｜年 の粒度切替（デスクトップのヘッダー専用）。
  *
- * 選択肢が 3 つで固定なのでセグメントで出す（1 タップで切り替わる）。モバイルには
- * 置かない — 狭い面では期間ラベルと `‹ ›` が潰れるため（仕様 §8）。
+ * カレンダーのビュー切替（`ViewSwitcher`）と同じ作り: `h-8` の outline トリガー +
+ * シェブロン + `DropdownMenu`。ヘッダーの 32px 行に収まる高さに揃えてある。
+ * モバイルには置かない — 狭い面では期間ラベルと `‹ ›` が潰れるため（仕様 §8）。
  */
 const meta = {
   title: 'Product/Features/Review/Layout/ReportGranularitySwitcher',
@@ -30,7 +31,7 @@ export const Month: Story = { args: { value: 'month' } };
 
 export const Year: Story = { args: { value: 'year' } };
 
-/** 実際に切り替わるところ。選択は 1 タップで、確定操作を挟まない。 */
+/** 実際に切り替わるところ。メニューから選ぶと即座に反映され、確定操作を挟まない。 */
 export const Interactive: Story = {
   render: function InteractiveSwitcher() {
     const [value, setValue] = useState<ReportGranularity>('week');

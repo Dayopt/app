@@ -53,14 +53,25 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
       [onViewMonthChange],
     );
 
-    // 選択中の月を中央にスクロール
+    // 選択中の月を中央にスクロール。
+    //
+    // **初回だけ smooth を使わない。** 2020〜2050 の帯は 24000px 超あり、初期位置から
+    // 目的の月まで 5000px 前後をアニメーションさせることになる。その最中に再描画や
+    // 別のスクロールが挟まると途中で打ち切られ、選択中の月が画面外のまま残る
+    // （2026-09-07 実測: scrollLeft が 17 で停止し、2020 年が見えたまま）。
+    // 初期配置は一瞬で決め、以後の月移動だけ滑らかにする。
+    const hasPositioned = useRef(false);
     useEffect(() => {
       const el = activeRef.current;
       const container = scrollRef.current;
       if (!el || !container) return;
 
       const scrollTarget = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-      container.scrollTo({ left: scrollTarget, behavior: 'smooth' });
+      container.scrollTo({
+        left: scrollTarget,
+        behavior: hasPositioned.current ? 'smooth' : 'auto',
+      });
+      hasPositioned.current = true;
     }, [currentYear, currentMonth]);
 
     return (
@@ -93,6 +104,10 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
               onClick={() => handleMonthClick(item.year, item.month)}
               className={cn(
                 'mx-1 flex h-7 shrink-0 items-center justify-center rounded-full px-4 text-xs transition-colors',
+                // 見た目は 28px の細いチップのまま、当たり判定だけ縦へ 44px 広げる
+                // （横は px-4 で既に 44px 以上ある）。帯を太らせずに最小サイズを満たす
+                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素を描くには content が要り、空文字以外に書きようがない
+                'relative after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[""]',
                 isActive
                   ? 'border-primary text-primary border font-medium'
                   : 'border-border text-muted-foreground hover:text-foreground border',
