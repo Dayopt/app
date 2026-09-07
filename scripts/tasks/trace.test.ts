@@ -29,6 +29,7 @@ import {
   parseMarkerFindingsField,
   parseMarkerHeadSha,
   parseMarkerPartialCoverageRoles,
+  parseMarkerStatusField,
   renderMarkdown,
   sessionIdFromSubagentPath,
   timelineLacksCommitEvents,
@@ -361,6 +362,27 @@ describe('parseMarkerPartialCoverageRoles', () => {
   });
 });
 
+describe('parseMarkerStatusField', () => {
+  it('known role の portable review status を読む', () => {
+    expect(
+      parseMarkerStatusField(
+        'status: risk-reviewer=reviewed, behavior-verifier=partial, architecture-guard=not-run',
+      ),
+    ).toEqual({
+      'risk-reviewer': 'reviewed',
+      'behavior-verifier': 'partial',
+      'architecture-guard': 'not-run',
+    });
+  });
+
+  it('unknown role / status と status 行なしを無視する', () => {
+    expect(parseMarkerStatusField('status: risk-reviewer=unknown, other=reviewed')).toEqual({
+      'risk-reviewer': 'invalid',
+    });
+    expect(parseMarkerStatusField('agent: risk-reviewer')).toEqual({});
+  });
+});
+
 describe('parseMarkerHeadSha', () => {
   it('40 桁 hex を取る', () => {
     const sha = 'a'.repeat(40);
@@ -454,21 +476,21 @@ describe('buildInternalReviewSection', () => {
       roles: [
         {
           role: 'risk-reviewer',
-          status: 'ok',
+          status: 'stale',
           coverage: 'partial',
-          findings: 1,
-          findingsSource: 'estimate',
-          totalFindings: 1,
+          findings: null,
+          findingsSource: 'status',
+          totalFindings: null,
           totalFindingsEstimated: true,
           commitsAfterMarker: 1,
         },
         {
           role: 'behavior-verifier',
-          status: 'text-fallback',
+          status: 'stale',
           coverage: 'complete',
-          findings: 1,
-          findingsSource: 'estimate',
-          totalFindings: 1,
+          findings: null,
+          findingsSource: 'status',
+          totalFindings: null,
           totalFindingsEstimated: true,
           commitsAfterMarker: 1,
         },
@@ -490,8 +512,8 @@ describe('buildInternalReviewSection', () => {
       { body: markerBody, author_association: 'OWNER', created_at: '2026-08-20T00:00:00Z' },
       // ヒューリスティックだけなら risk-reviewer=1・architecture-guard=1 になる
       // 部分一致（marker 自身は除外済みなので二重計上しない）が、findings: 行が
-      // あるので risk-reviewer は marker の 2 を、architecture-guard は
-      // text-fallback のため推定へ fall back する。
+      // あるので risk-reviewer は marker の 2 を使う。architecture-guard は
+      // text-fallback で完了を証明できないため未集計にする。
       { body: 'risk-reviewer が指摘した権限漏れ' },
       { body: 'architecture-guard の指摘: barrel 逸脱' },
     ];
@@ -523,9 +545,9 @@ describe('buildInternalReviewSection', () => {
         role: 'architecture-guard',
         status: 'text-fallback',
         coverage: 'complete',
-        findings: 1,
-        findingsSource: 'estimate',
-        totalFindings: 1,
+        findings: null,
+        findingsSource: 'status',
+        totalFindings: null,
         totalFindingsEstimated: true,
         commitsAfterMarker: 0,
       },
@@ -585,6 +607,162 @@ describe('buildInternalReviewSection', () => {
     expect(result?.markerCount).toBe(1);
     expect(result?.roles).toEqual([]);
   });
+
+  it('partial / not-run / stale / invalid は findings 0 や歩留まり 0 にしない', () => {
+    for (const status of ['partial', 'not-run', 'stale', 'invalid']) {
+      const issueComments = [
+        {
+          body: [
+            '[review-summary]',
+            `head: ${'e'.repeat(40)}`,
+            'agent: risk-reviewer',
+            `status: risk-reviewer=${status}`,
+            'findings: risk-reviewer=0',
+          ].join('\n'),
+          author_association: 'OWNER',
+          created_at: '2026-08-10T00:00:00Z',
+        },
+      ];
+      const result = buildInternalReviewSection({ issueComments, reviewComments: [], commits: [] });
+
+      expect(result?.roles[0]).toMatchObject({
+        status,
+        findings: null,
+        findingsSource: 'status',
+        totalFindings: null,
+      });
+      expect(computeZeroFindingRoleNotes(result, true)).toEqual([]);
+    }
+  });
+
+  it('explicit reviewed でも marker head が現在 head と違えば stale', () => {
+    const markerHead = '1'.repeat(40);
+    const currentHead = '2'.repeat(40);
+    const issueComments = [
+      {
+        body: [
+          '[review-summary]',
+          `head: ${markerHead}`,
+          'agent: risk-reviewer',
+          'status: risk-reviewer=reviewed',
+          'findings: risk-reviewer=0',
+        ].join('\n'),
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+    ];
+
+    const result = buildInternalReviewSection({
+      issueComments,
+      reviewComments: [],
+      commits: [],
+      headSha: currentHead,
+    });
+
+    expect(result?.roles[0]).toMatchObject({ status: 'stale', totalFindings: null });
+    expect(computeZeroFindingRoleNotes(result, true)).toEqual([]);
+  });
+
+  it('known role の未知 status は legacy ok へ戻さず invalid', () => {
+    const sha = '3'.repeat(40);
+    const issueComments = [
+      {
+        body: [
+          '[review-summary]',
+          `head: ${sha}`,
+          'agent: risk-reviewer',
+          'status: risk-reviewer=timed-out',
+          'findings: risk-reviewer=0',
+        ].join('\n'),
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+    ];
+
+    const result = buildInternalReviewSection({
+      issueComments,
+      reviewComments: [],
+      commits: [],
+      headSha: sha,
+    });
+
+    expect(result?.roles[0]).toMatchObject({ status: 'invalid', totalFindings: null });
+  });
+
+  it('過去 round が partial なら最新 reviewed 0 でも total は未集計', () => {
+    const oldHead = '4'.repeat(40);
+    const currentHead = '5'.repeat(40);
+    const issueComments = [
+      {
+        body: [
+          '[review-summary]',
+          `head: ${oldHead}`,
+          'agent: risk-reviewer',
+          'status: risk-reviewer=partial',
+          'findings: risk-reviewer=0',
+        ].join('\n'),
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+      {
+        body: [
+          '[review-summary]',
+          `head: ${currentHead}`,
+          'agent: risk-reviewer',
+          'status: risk-reviewer=reviewed',
+          'findings: risk-reviewer=0',
+        ].join('\n'),
+        author_association: 'OWNER',
+        created_at: '2026-08-11T00:00:00Z',
+      },
+    ];
+
+    const result = buildInternalReviewSection({
+      issueComments,
+      reviewComments: [],
+      commits: [],
+      headSha: currentHead,
+    });
+
+    expect(result?.roles[0]).toMatchObject({
+      status: 'reviewed',
+      findings: 0,
+      totalFindings: null,
+    });
+    expect(computeZeroFindingRoleNotes(result, true)).toEqual([]);
+  });
+
+  it('reviewed でも findings が不明なら heuristic で 0 にせず未集計', () => {
+    const sha = '6'.repeat(40);
+    const issueComments = [
+      {
+        body: [
+          '[review-summary]',
+          `head: ${sha}`,
+          'agent: risk-reviewer',
+          'status: risk-reviewer=reviewed',
+          'findings: risk-reviewer=不明',
+        ].join('\n'),
+        author_association: 'OWNER',
+        created_at: '2026-08-10T00:00:00Z',
+      },
+    ];
+
+    const result = buildInternalReviewSection({
+      issueComments,
+      reviewComments: [],
+      commits: [],
+      headSha: sha,
+    });
+
+    expect(result?.roles[0]).toMatchObject({
+      status: 'reviewed',
+      findings: null,
+      findingsSource: 'status',
+      totalFindings: null,
+    });
+    expect(computeZeroFindingRoleNotes(result, true)).toEqual([]);
+  });
 });
 
 describe('computeZeroFindingRoleNotes', () => {
@@ -611,7 +789,7 @@ describe('computeZeroFindingRoleNotes', () => {
       ],
     };
     expect(computeZeroFindingRoleNotes(internalReview, true)).toEqual([
-      'risk-reviewer: 指摘ゼロの role: 月次で歩留まりを見て Haiku 化 / 廃止候補（gardening 手順 4）',
+      'risk-reviewer: 指摘ゼロの role: 月次で scope・費用・独立性を見直し、縮小 / 廃止 / 別手段の候補にする（gardening 手順 4）',
     ]);
   });
 
@@ -708,10 +886,14 @@ describe('computeFindings', () => {
     expect(computeFindings({ commitsAfterReady: 3 })).toEqual([]);
   });
 
-  it('編集なしの opus/fable session があれば routing 反例', () => {
+  it('編集なしの opus/fable session は Claude Code telemetry の確認候補', () => {
     expect(computeFindings({ hasNoEditHeavyModel: true })).toContain(
-      '編集なしの Opus / Fable session: routing 反例',
+      'Claude Code telemetry: 編集なしの Opus / Fable session あり（用途と費用を個別確認）',
     );
+  });
+
+  it('未収集の Codex P1 は 0 件として扱わない', () => {
+    expect(computeFindings({ codexP1: null })).toEqual([]);
   });
 
   it('どれにも当てはまらなければ空配列', () => {
@@ -783,6 +965,9 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('sonnet/foo-2547 → main');
     expect(markdown).toContain('linked issues: #2540');
     expect(markdown).toContain('#### 見た・実行（session）');
+    expect(markdown).toContain('Claude Code の local transcript のみ');
+    expect(markdown).toContain('Codex / Antigravity は未収集（不明であり 0 ではない）');
+    expect(markdown).toContain('PR / review / merge 情報は GitHub 由来の repo 全体');
     expect(markdown).toContain('abcdef12');
     expect(markdown).toContain('#### 判断');
     expect(markdown).toContain('DoD: あり | 分解表: あり | brief: あり');
@@ -814,7 +999,7 @@ describe('renderMarkdown', () => {
       findings: [],
     };
     const markdown = renderMarkdown(pack);
-    expect(markdown).toContain('未取得（session log の走査に失敗');
+    expect(markdown).toContain('未取得（Claude Code session log の走査に失敗');
     expect(markdown).not.toContain('#### 判断');
     expect(markdown).not.toContain('#### 所見');
   });
@@ -837,6 +1022,8 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
     );
     expect(pack.header.title).toBeNull();
     expect(pack.sessions).toBeNull();
+    expect(pack.sessionTelemetryCoverage.providers.codex).toBeNull();
+    expect(pack.sessionTelemetryCoverage.providers.antigravity).toBeNull();
     expect(pack.review.codex).toBeNull();
     expect(pack.result.merged).toBeNull();
   });
@@ -854,6 +1041,7 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
           mergedAt: '2026-08-15T00:00:00Z',
           closedAt: null,
           headRefName: 'sonnet/foo-2547',
+          headRefOid: '7'.repeat(40),
           baseRefName: 'main',
           body: 'Closes #2540',
           commits: [],
@@ -904,6 +1092,7 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
     );
 
     expect(pack.header.headRefName).toBe('sonnet/foo-2547');
+    expect(pack.header.headRefOid).toBe('7'.repeat(40));
     expect(pack.header.linkedIssues).toEqual([2540]);
     expect(pack.review.readyDate).toBe('2026-08-14T00:00:00Z');
     expect(pack.review.commitsAfterReady).toBe(1);
@@ -913,7 +1102,7 @@ describe('buildTracePack (execFileImpl 経由の gh 呼び出し形)', () => {
       'view',
       '2547',
       '--json',
-      'number,title,state,url,isDraft,mergedAt,closedAt,headRefName,baseRefName,body,commits',
+      'number,title,state,url,isDraft,mergedAt,closedAt,headRefName,headRefOid,baseRefName,body,commits',
     ]);
   });
 });

@@ -17,7 +17,19 @@ import {
   normalizeModelLabel,
   parseArgs,
   renderMarkdown,
+  SESSION_TELEMETRY_COVERAGE,
 } from './ai-usage.mjs';
+
+describe('session telemetry coverage', () => {
+  it('Claude Code だけを collected とし、未収集 provider を 0 にしない', () => {
+    expect(SESSION_TELEMETRY_COVERAGE.providers).toEqual({
+      claudeCode: 'collected',
+      codex: null,
+      antigravity: null,
+    });
+    expect(SESSION_TELEMETRY_COVERAGE.missingMeans).toBe('unknown-not-zero');
+  });
+});
 
 describe('normalizeModelLabel', () => {
   it('haiku/sonnet/opus/fable/mythos の部分一致で畳む', () => {
@@ -484,9 +496,13 @@ describe('renderMarkdown', () => {
     });
 
     expect(markdown).toContain('### AI 経済メトリクス（2026-08-01〜2026-08-31）');
+    expect(markdown).toContain('Claude Code の local transcript のみ');
+    expect(markdown).toContain('Codex / Antigravity は未収集（不明であり 0 ではない）');
     expect(markdown).toContain('| sonnet | 1 | 100 |');
     expect(markdown).toContain('**merged PR 数**: 2');
     expect(markdown).toContain('**revert PR 数（title proxy）**: 0');
+    expect(markdown).toContain('PR outcome は repo 全体');
+    expect(markdown).not.toContain('output tok / merged PR');
     expect(markdown).toContain('| pnpm test | 1 |');
     expect(markdown).toContain('| Bash | 1 |');
     expect(markdown).toContain('session1 | 1 | Bash×1 |');
@@ -765,8 +781,8 @@ describe('aggregateMainSessions', () => {
   });
 });
 
-describe('renderMarkdown（Main session 表）', () => {
-  it('Main session 表と割合行を描画する', () => {
+describe('renderMarkdown（Claude Code top-level session 表）', () => {
+  it('top-level session 表と割合行を描画する', () => {
     const agg = createAggregate();
     agg.mainSessions.push(
       {
@@ -795,16 +811,16 @@ describe('renderMarkdown（Main session 表）', () => {
       prStats: null,
     });
 
-    expect(markdown).toContain('**Main session**');
+    expect(markdown).toContain('**Claude Code top-level session**');
     expect(markdown).toContain(
       '| model | session n | 編集あり n | Edit 合計 | Edit 中央値 | 探索 turn 中央値 | Agent 呼び出し |',
     );
     expect(markdown).toContain('| sonnet | 2 | 1 | 4 | 4.0 | 2.0 | 4 |');
     expect(markdown).toContain('| fable | 1 | 1 | 2 | 2.0 | 1.0 | 0 |');
-    expect(markdown).toContain('**Main が自分で編集した割合**: 67%');
+    expect(markdown).toContain('**Claude Code top-level session の編集あり割合**: 67%');
     expect(markdown).toContain('sonnet 50%');
     expect(markdown).toContain('fable 100%');
-    expect(markdown).toContain('routing skill L3');
+    expect(markdown).toContain('provider 間の品質・効率比較には使わない');
   });
 
   it('Main session が 0 件なら未取得を明記する', () => {
@@ -816,7 +832,7 @@ describe('renderMarkdown（Main session 表）', () => {
       prStats: null,
     });
     expect(markdown).toContain('| 未取得 | — | — | — | — | — | — |');
-    expect(markdown).toContain('**Main が自分で編集した割合**: 未取得');
+    expect(markdown).toContain('**Claude Code top-level session の編集あり割合**: 未取得');
   });
 });
 
