@@ -229,9 +229,14 @@ function EntryCard({ entry, onEdit, onDelete }) {
 ```tsx
 function EntryCardContainer({ entryId }) {
   const { data: entry } = api.plans.getById.useQuery({ id: entryId });
-  const deleteEntry = api.plans.delete.useMutation();
+  const deleteEntry = api.planCommands.delete.useMutation();
 
-  return <EntryCard entry={entry} onDelete={() => deleteEntry.mutate({ id: entryId })} />;
+  return (
+    <EntryCard
+      entry={entry}
+      onDelete={() => deleteEntry.mutate({ id: entryId, expectedUpdatedAt: entry.updated_at })}
+    />
+  );
 }
 ```
 
@@ -249,7 +254,7 @@ if (!entry) {
 }
 
 // Client側でキャッチ
-const mutation = api.plans.update.useMutation({
+const mutation = api.planCommands.update.useMutation({
   onError: (error) => {
     if (error.data?.code === 'NOT_FOUND') {
       toast.error('エントリが見つかりません');
@@ -533,7 +538,7 @@ from('entries')
 EntryService
 
 // ✅ 現在
-api.plans.create(...) / api.records.create(...)
+api.planCommands.create(...) / api.recordCommands.create(...)
 from('plans') / from('records')
 PlanService / RecordService
 ```
