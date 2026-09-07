@@ -123,7 +123,8 @@ describe.skipIf(!RUN_LOCAL)('activity assignment guards and wiring (DB boundary)
     // コピーの実体は public wrapper ではなく private.record_plan_unserialized_v1。
     // wrapper 側だけ直しても 1 行もコピーされないため、保存行で確かめる。
     const activity = await insertActivity({ userId: ownerId, name: '開発' });
-    // Plan は未来にしか作れず（DT004）、Record 化は終了後にしかできない（DT005）。
+    // Record 化は Plan が終了してからしかできない（未来の Plan を記録すると
+    // 未来の Record ができてしまい DT005 で弾かれる）。
     // 既存 integration test と同じく、短い Plan を作って終了を待つ。
     const { data: plan, error: createError } = await admin
       .rpc('create_plan_command_v1', {

@@ -32,9 +32,9 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
 
   // PC: store から、Mobile: pathname から現在カテゴリを取得
   const activeSheet = useShellStore((s) => s.activeSheet);
-  const storeCategory = activeSheet?.type === 'settings' ? activeSheet.category : 'profile';
+  const storeCategory = activeSheet?.type === 'settings' ? activeSheet.category : 'account';
   const setCategory = useShellStore((s) => s.setSettingsCategory);
-  const pathCategory = pathname.split('/settings/')[1]?.split('/')[0] ?? 'profile';
+  const pathCategory = pathname.split('/settings/')[1]?.split('/')[0] ?? 'account';
   const currentCategory = isMobile ? pathCategory : storeCategory;
 
   return (

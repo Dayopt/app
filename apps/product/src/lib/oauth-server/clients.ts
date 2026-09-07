@@ -47,7 +47,14 @@ const CLIENTS: Record<OAuthClientId, Omit<OAuthClient, 'redirectUris'>> = {
 
 export function resolveClient(clientId: string | null | undefined): OAuthClient | null {
   if (!clientId) return null;
-  if (clientId in CLIENTS) {
+  // `in` ではなく own-property で判定する。`in` は prototype chain を辿るため
+  // `constructor` / `toString` / `valueOf` / `hasOwnProperty` / `__proto__` が
+  // 「既知の client」として通り、直後の `DEFAULT_REDIRECT_URIS[id]` の spread が
+  // iterable でない値に当たって TypeError になる。client_id は未認証の
+  // POST /oauth/token の form body から来る完全な attacker 入力なので、本来の
+  // `invalid_client`(400) が 500 `server_error` + Sentry の unexpected error に
+  // 化ける（token も code も発行されないが、意図した拒否が内部エラーに変わる）。
+  if (Object.hasOwn(CLIENTS, clientId)) {
     const id = clientId as OAuthClientId;
     return {
       ...CLIENTS[id],

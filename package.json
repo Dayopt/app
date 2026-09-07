@@ -37,10 +37,6 @@
     "ai:usage": "node scripts/tasks/ai-usage.mjs",
     "ctx": "node scripts/tasks/ctx.mjs",
     "trace": "node scripts/tasks/trace.mjs",
-    "review:marker": "tsx scripts/tasks/generate-marker.ts",
-    "review:request": "node scripts/tasks/review-request.mjs",
-    "review:issue:marker": "node scripts/tasks/generate-issue-review-marker.mjs",
-    "review:issue:gate": "node scripts/tasks/issue-review-gate.mjs",
     "migration:create": "supabase migration new",
     "migration:list": "supabase migration list",
     "migration:status": "supabase db diff",
@@ -65,7 +61,7 @@
     "quality:deadcode": "pnpm --filter @dayopt/product quality:deadcode",
     "quality:deadcode:ci": "pnpm --filter @dayopt/product quality:deadcode:ci",
     "test": "pnpm --filter @dayopt/product test",
-    "test:run": "pnpm --filter @dayopt/i18n test:run && pnpm --filter @dayopt/observability test:run && pnpm --filter @dayopt/product test:run && pnpm test:web && pnpm test:scripts",
+    "test:run": "pnpm --filter @dayopt/billing test:run && pnpm --filter @dayopt/i18n test:run && pnpm --filter @dayopt/observability test:run && pnpm --filter @dayopt/product test:run && pnpm test:web && pnpm test:scripts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "test-storybook": "pnpm --filter @dayopt/storybook test-storybook",
     "test-storybook:dark": "pnpm --filter @dayopt/storybook test-storybook:dark",
@@ -100,7 +96,10 @@
     "storybook": "pnpm --filter @dayopt/storybook storybook",
     "build-storybook": "pnpm --filter @dayopt/storybook build",
     "build:web": "pnpm --filter @dayopt/web build",
-    "test:web": "pnpm --filter @dayopt/web test"
+    "test:web": "pnpm --filter @dayopt/web test",
+    "agent:preflight": "node scripts/tasks/agent-preflight.mjs",
+    "review:pack": "node scripts/tasks/review-pack.mjs create",
+    "review:validate": "node scripts/tasks/review-pack.mjs validate"
   },
   "devDependencies": {
     "@axe-core/playwright": "catalog:tooling",

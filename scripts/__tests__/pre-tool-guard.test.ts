@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -929,6 +937,173 @@ describe('pre-tool-guard.mjs: worktree 外ファイル編集ガード（#2359）
   });
 });
 
+// symlink 経由の別名で保護境界が外れないこと（2026-09-05, #2566）。
+//
+// 保護判定（.env 系 / 既存 migration / local dev env-file）が **生の file_path の
+// 文字列一致**だった頃は、`ln -s .env tmp/foo` のように保護対象を指す symlink を
+// 1 本置けば、basename が `.env` で終わらないので判定を素通りし、書き込みは実体の
+// `.env` へ着地した。`.env` / `.env.local` は AGENTS.md §Non-Negotiables で
+// 「読みも書きもしない」と定めた境界で、その機械強制が symlink 1 本で外れていた。
+//
+// fixture は worktree 境界ガードを通すために git repo として作る（repo 外への
+// Write は worktree 境界の側で落ちてしまい、保護判定を証明できないため）。
+// 「無関係な symlink は allow のまま」も併せて固定し、誤検知が増えていないことを示す。
+describe('pre-tool-guard.mjs: symlink 経由の保護ファイル判定（#2566）', () => {
+  let fixtureRoot: string;
+  let repoDir: string;
+  let migrationPath: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-symlink-'));
+    repoDir = join(fixtureRoot, 'repo');
+    mkdirSync(repoDir);
+    git(['init', '-q', '.'], repoDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      repoDir,
+    );
+
+    // 実体（保護対象）
+    writeFileSync(join(repoDir, '.env'), 'SECRET=1\n');
+    writeFileSync(join(repoDir, '.env.local'), 'SECRET=2\n');
+    writeFileSync(join(repoDir, AGENT), '');
+    writeFileSync(join(repoDir, 'notes.md'), '');
+    mkdirSync(join(repoDir, 'supabase', 'migrations'), { recursive: true });
+    migrationPath = join(repoDir, 'supabase', 'migrations', '20260101000000_init.sql');
+    writeFileSync(migrationPath, 'select 1;\n');
+
+    // 保護対象を指す別名（basename からは保護対象と分からない形）
+    mkdirSync(join(repoDir, 'tmp'));
+    symlinkSync(join(repoDir, '.env'), join(repoDir, 'tmp', 'alias-a'), 'file');
+    symlinkSync(join(repoDir, '.env.local'), join(repoDir, 'tmp', 'alias-b'), 'file');
+    symlinkSync(join(repoDir, AGENT), join(repoDir, 'tmp', 'alias-c'), 'file');
+    symlinkSync(migrationPath, join(repoDir, 'tmp', 'alias-d'), 'file');
+    symlinkSync(join(repoDir, 'notes.md'), join(repoDir, 'tmp', 'alias-e'), 'file');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('直接 path での .env / .env.local への Write は従来どおり block（回帰確認）', () => {
+    expect(runGuard(write(join(repoDir, '.env')), repoDir)).toBe('block');
+    expect(runGuard(write(join(repoDir, '.env.local')), repoDir)).toBe('block');
+  });
+
+  it('.env を指す symlink への Write を block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-a')), repoDir)).toBe('block');
+  });
+
+  it('.env.local を指す symlink への Write を block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-b')), repoDir)).toBe('block');
+  });
+
+  it('.env を指す symlink への Edit / MultiEdit / NotebookEdit も block する', () => {
+    const alias = join(repoDir, 'tmp', 'alias-a');
+    expect(runGuard(edit(alias), repoDir)).toBe('block');
+    expect(runGuard(multiEdit(alias, ['x']), repoDir)).toBe('block');
+    expect(runGuard(notebookEdit(alias, 'x'), repoDir)).toBe('block');
+  });
+
+  it('local dev env-file を指す symlink でも許可外 vault の op:// 参照は block する', () => {
+    const alias = join(repoDir, 'tmp', 'alias-c');
+    // 直接 path と同じ挙動になること（許可 vault なら通り、production 参照なら落ちる）
+    expect(runGuard(write(alias, `A=${AGENT_REF}\n`), repoDir)).toBe('allow');
+    expect(runGuard(write(alias, `A=${PROD_REF}\n`), repoDir)).toBe('block');
+  });
+
+  it('既存 migration を指す symlink への Write も block する', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-d')), repoDir)).toBe('block');
+  });
+
+  it('保護対象でないファイルを指す symlink は allow のまま（誤検知を増やしていない）', () => {
+    expect(runGuard(write(join(repoDir, 'tmp', 'alias-e')), repoDir)).toBe('allow');
+  });
+
+  it('symlink でない通常ファイルへの Write は allow のまま', () => {
+    expect(runGuard(write(join(repoDir, 'notes.md')), repoDir)).toBe('allow');
+    expect(runGuard(write(join(repoDir, 'new', 'nested', 'foo.ts')), repoDir)).toBe('allow');
+  });
+});
+
+// 逆向きの symlink（保護対象の**名前**が非保護名の実体を指す）(#2566 の 2 巡目レビュー P2)。
+//
+// #2566 の修正を「raw path の判定を canonical path の判定へ**置き換える**」形で書くと、
+// `.env` / `.env.local` 自身を symlink にしている checkout（env を 1 箇所へ集約する構成）で、
+// 実体側の名前が保護パターンに当たらないため `.env` への Write が素通りする。
+// 判定は raw と canonical の**両方**で行う（どちらかが当たれば block）。
+//
+// `.claude/settings.json` の `permissions.deny` は `Read(**/.env*)` しか持たず Write を
+// 塞いでいないため、AGENTS.md §Non-Negotiables の書き込み禁止はこの guard が唯一の強制。
+describe('pre-tool-guard.mjs: 保護対象の名前が非保護名の実体を指す symlink（#2566）', () => {
+  let fixtureRoot: string;
+  let repoDir: string;
+
+  beforeAll(() => {
+    fixtureRoot = mkdtempSync(join(tmpdir(), 'pre-tool-guard-reverse-symlink-'));
+    repoDir = join(fixtureRoot, 'repo');
+    mkdirSync(repoDir);
+    git(['init', '-q', '.'], repoDir);
+    git(
+      [
+        '-c',
+        'user.email=t@example.com',
+        '-c',
+        'user.name=t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'init',
+      ],
+      repoDir,
+    );
+
+    // 実体は保護対象の名前を持たない
+    mkdirSync(join(repoDir, 'secrets'));
+    writeFileSync(join(repoDir, 'secrets', 'dev-config'), 'SECRET=1\n');
+    writeFileSync(join(repoDir, 'secrets', 'creds'), 'SECRET=2\n');
+    symlinkSync(join(repoDir, 'secrets', 'dev-config'), join(repoDir, '.env'), 'file');
+    symlinkSync(join(repoDir, 'secrets', 'creds'), join(repoDir, '.env.local'), 'file');
+
+    // dangling symlink（実体がまだ存在しない `.env` を指す別名）
+    mkdirSync(join(repoDir, 'tmp'));
+    symlinkSync(join(repoDir, 'not-created-yet', '.env'), join(repoDir, 'tmp', 'dangling'), 'file');
+  });
+
+  afterAll(() => {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it('.env 自体が非保護名の実体を指す symlink でも Write を block する', () => {
+    expect(runGuard(write(join(repoDir, '.env')), repoDir)).toBe('block');
+  });
+
+  it('.env.local 自体が非保護名の実体を指す symlink でも Write を block する', () => {
+    expect(runGuard(write(join(repoDir, '.env.local')), repoDir)).toBe('block');
+  });
+
+  it('実体が未作成の .env を指す dangling symlink への Write も block する', () => {
+    // realpathSync は途中で ENOENT になると何も返さないため、lstat + readlink で
+    // 手で辿らないと link 先が見えず素通りする。
+    expect(runGuard(write(join(repoDir, 'tmp', 'dangling')), repoDir)).toBe('block');
+  });
+
+  it('実体（非保護名）へ直接書くのは allow のまま（誤検知を増やしていない）', () => {
+    expect(runGuard(write(join(repoDir, 'secrets', 'dev-config')), repoDir)).toBe('allow');
+  });
+});
+
 // nested 配置（このリポジトリの実際の運用: worktree は main の配下の
 // `.claude/worktrees/<name>` に nested される）専用の fixture。
 // merge 前クロスレビュー risk-reviewer 指摘: sibling 配置の fixture（上の
@@ -1418,101 +1593,15 @@ describe('pre-tool-guard.mjs: migrations 配下の既存ファイル編集（#25
 // R1/R2: Agent の model 明示 + 探索への opus/fable 使用ガード（cost guard）。
 // security guard ではないため、jq parse エラー等は fail-open にする設計だが、
 // 通常の JSON 入力ではその分岐は踏まない。ここでは正規の判定ロジックを固定する。
-describe('pre-tool-guard.mjs: R1 Agent の model 明示', () => {
-  it('model 未指定は block する', () => {
-    expect(runGuard(agentCall({ prompt: 'x' }))).toBe('block');
-  });
-
-  it('model 空文字も block する', () => {
-    expect(runGuard(agentCall({ model: '', prompt: 'x' }))).toBe('block');
-  });
-
-  it('model haiku は通す', () => {
-    expect(runGuard(agentCall({ model: 'haiku', prompt: 'x' }))).toBe('allow');
-  });
-
-  it('model sonnet は通す', () => {
-    expect(runGuard(agentCall({ model: 'sonnet', prompt: 'x' }))).toBe('allow');
-  });
-
-  // F3: R1 は fail-open（cost guard）であるべきだが、旧実装は
-  // `AGENT_MODEL=$(jq ... || true)` で jq 自体の失敗と「jq が成功して model が
-  // 空だった」場合を区別できず、jq 失敗時も block していた（section 冒頭の
-  // fail-open コメントと矛盾）。tool_input が object でない（jq の
-  // `.tool_input.model` が index エラーで落ちる）入力で allow を確認する。
-  it('tool_input が非 object で jq 自体が失敗する場合は fail-open で allow する', () => {
-    expect(runGuard({ tool_name: 'Agent', tool_input: 'not-an-object' })).toBe('allow');
-  });
-
-  it('JSON として解釈できない入力全体は tool_name も取れず allow する', () => {
-    const result = spawnSync(process.execPath, [loaderPath], {
-      cwd: rootDir,
-      encoding: 'utf8',
-      input: 'not json',
-      env: process.env,
-    });
-    expect(result.status).toBe(0);
-  });
-
-  it('subagent_type が Plan / claude-security 系なら model 未指定でも通す（harness spawn 例外）', () => {
-    expect(runGuard(agentCall({ subagent_type: 'Plan', prompt: 'x' }))).toBe('allow');
-    expect(runGuard(agentCall({ subagent_type: 'claude-security-lead', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
+describe('pre-tool-guard.mjs: model choice does not grant or remove permissions', () => {
+  it.each(['', 'sonnet', 'opus', 'gpt-6-astra', 'gemini'])(
+    'allows delegation with model %s',
+    (model) => {
+      expect(runGuard(agentCall({ model, prompt: '調査' }))).toBe('allow');
+    },
+  );
 });
 
-describe('pre-tool-guard.mjs: R2 探索に opus / fable を使わない', () => {
-  it('model opus + subagent_type Plan は通す', () => {
-    expect(runGuard(agentCall({ model: 'opus', subagent_type: 'Plan', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
-
-  it('model opus + subagent_type claude-security 系は通す', () => {
-    expect(
-      runGuard(agentCall({ model: 'opus', subagent_type: 'claude-security:scan', prompt: 'x' })),
-    ).toBe('allow');
-  });
-
-  it('model opus + prompt に反証を含む場合は通す', () => {
-    expect(runGuard(agentCall({ model: 'opus', prompt: 'この plan を反証してください' }))).toBe(
-      'allow',
-    );
-  });
-
-  it('model opus + description に設計判断を含む場合は通す', () => {
-    expect(
-      runGuard(agentCall({ model: 'opus', prompt: 'x', description: '設計判断のための比較検討' })),
-    ).toBe('allow');
-  });
-
-  it('model opus + 反証等の言及がない plain prompt は block する', () => {
-    expect(runGuard(agentCall({ model: 'opus', prompt: 'このコードを調べてください' }))).toBe(
-      'block',
-    );
-  });
-
-  it('model の表記ゆれ（Opus / claude-opus-5）も plain prompt なら block する', () => {
-    for (const model of ['Opus', 'claude-opus-5', 'claude-fable-5-1']) {
-      expect(runGuard(agentCall({ model, prompt: '調べて' })), model).toBe('block');
-    }
-  });
-
-  it('model fable + plain prompt も block する', () => {
-    expect(runGuard(agentCall({ model: 'fable', prompt: 'このコードを調べてください' }))).toBe(
-      'block',
-    );
-  });
-
-  it('model fable + subagent_type Plan は通す', () => {
-    expect(runGuard(agentCall({ model: 'fable', subagent_type: 'Plan', prompt: 'x' }))).toBe(
-      'allow',
-    );
-  });
-});
-
-// R3: Read の範囲指定なし大規模ファイル読み込みガード（cost guard）。
 describe('pre-tool-guard.mjs: R3 Read の範囲指定なし大規模ファイル読み込み', () => {
   let fixtureRoot: string;
   let bigFile: string;
@@ -1587,43 +1676,153 @@ describe('pre-tool-guard.mjs: env-file 名の直後の非 ASCII 空白（NBSP）
 });
 
 // =====================================================================
-// Codex レビュー依頼の直接投稿（cost guard、#2558）
+// gh pr merge / gh api ...pulls/.../merge の直接実行（cost guard、#2596）
 // =====================================================================
-// PR #2554 実測: 1 本の PR で「@codex review」を 8 回投稿し、うち 3 回は応答前の
-// 連投、応答 7 回のうち 6 回が「問題なし」だった。判定（追従済みか / CI green か /
-// 既存証跡が現在の diff の指紋と一致するか）はすべて機械化できるため、Bash からの
-// 直接投稿は `pnpm review:request` へ誘導する。
+// merge 経路を `pnpm branch:finish <N>` 1 本に機械的に絞る。free plan の private
+// repo では branch protection / ruleset が使えず、CI red の遮断は
+// finish-branch.sh の statusCheckRollup 判定だけが担っている。
 //
 // 他の Bash guard と同じく、**文字列に言及しただけでも落ちる**（コマンド本文を
 // 走査するため）。docs や commit message へ書く時は Write / Edit で file に
 // 書いてから渡す。
-describe('pre-tool-guard.mjs: Codex レビュー依頼の直接投稿（#2558）', () => {
+describe('pre-tool-guard.mjs: gh pr merge 直接実行（#2596）', () => {
   const bash = (command: string) => ({ tool_name: 'Bash', tool_input: { command } });
-  const CODEX_MENTION = ['@', 'codex review'].join('');
 
-  it('gh pr comment での直接依頼を block する', () => {
-    expect(runGuard(bash(`gh pr comment 2554 --body "${CODEX_MENTION}"`))).toBe('block');
+  it('gh pr merge を直接実行すると block する', () => {
+    expect(runGuard(bash('gh pr merge 2596'))).toBe('block');
   });
 
-  it('gh api 経由の直接依頼も block する', () => {
+  it('gh pr merge に追加フラグが付いていても block する', () => {
+    expect(runGuard(bash('gh pr merge 2596 --merge --delete-branch'))).toBe('block');
+  });
+
+  it('引用符付きの PR 番号でも block する', () => {
+    expect(runGuard(bash('gh pr merge "2596"'))).toBe('block');
+  });
+
+  it('gh api で pulls/<N>/merge へ -X PUT する直接実行を block する', () => {
     expect(
-      runGuard(bash(`gh api repos/Dayopt/dayopt/issues/2554/comments -f body="${CODEX_MENTION}"`)),
+      runGuard(
+        bash(
+          'gh api -X PUT repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge -f sha=abc123',
+        ),
+      ),
     ).toBe('block');
   });
 
-  it('pnpm review:request は通す（誘導先を塞がない）', () => {
-    expect(runGuard(bash('pnpm review:request 2554'))).toBe('allow');
+  it('--method PUT（フラグの別表記）でも block する', () => {
+    expect(
+      runGuard(
+        bash('gh api --method PUT repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge'),
+      ),
+    ).toBe('block');
   });
 
-  it('メンションを含まない gh pr comment は通す（他のコメント投稿を妨げない）', () => {
-    expect(runGuard(bash('gh pr comment 2554 --body "確定伝達: merge 順で先頭です"'))).toBe(
-      'allow',
-    );
+  it('--method put（小文字）でも block する', () => {
+    expect(
+      runGuard(
+        bash('gh api --method put repos/Dayopt/dayopt/pulls/2596/merge -f merge_method=merge'),
+      ),
+    ).toBe('block');
   });
 
-  it('gh を伴わない文中のメンションは通す（docs へ書く操作を妨げない）', () => {
-    expect(runGuard(bash(`echo "skill の手順に ${CODEX_MENTION} と書く" >> /tmp/note.md`))).toBe(
-      'allow',
+  it('pnpm branch:finish は通す（誘導先を塞がない）', () => {
+    expect(runGuard(bash('pnpm branch:finish 2596'))).toBe('allow');
+  });
+
+  it('bash scripts/tasks/finish-branch.sh の直接起動も通す', () => {
+    expect(runGuard(bash('bash scripts/tasks/finish-branch.sh 2596'))).toBe('allow');
+  });
+
+  it('gh pr view 等 merge 以外の pr 操作は通す', () => {
+    expect(runGuard(bash('gh pr view 2596'))).toBe('allow');
+  });
+
+  it('PUT を伴わない gh api での pulls/.../merge 参照（状態確認）は通す', () => {
+    expect(runGuard(bash('gh api repos/Dayopt/dayopt/pulls/2596/merge'))).toBe('allow');
+  });
+
+  it('merge を含まない別コマンド名（word boundary）は通す', () => {
+    expect(runGuard(bash('gh pr merger-status 2596'))).toBe('allow');
+  });
+});
+
+// PreToolUse hook の launcher（2026-09-05, #2565）。
+//
+// Claude Code は PreToolUse hook の **exit 2 だけ**を block と解釈し、それ以外の
+// 非 0（not found = 127 を含む）は non-blocking error として tool 実行を続行する。
+// settings.json に `node scripts/hooks/pre-tool-guard.mjs` と書いていた頃は hook の
+// 起動が `node` の PATH 解決に依存し、解決できない実行コンテキストでは 8 matcher が
+// すべて無言で fail-open していた（実測: 旧 command は node 不在 PATH で exit 127）。
+//
+// launcher は shell 経由でも argv 直渡しでも動く必要がある（harness の実行
+// セマンティクスは repo 側から固定できない）。両方の起動形をここで固定する。
+describe('pre-tool-guard.sh: launcher の fail-closed（#2565）', () => {
+  const launcherPath = resolve(rootDir, 'scripts/hooks/pre-tool-guard.sh');
+  // POSIX 既定に近い、この repo の node（非標準ロケーション）を含まない PATH。
+  const PATH_WITHOUT_NODE = '/usr/bin:/bin';
+
+  function runLauncher(
+    input: Record<string, unknown>,
+    opts: { viaShell: boolean; path?: string },
+  ): { status: number | null; stderr: string } {
+    const env = { PATH: opts.path ?? (process.env.PATH as string) };
+    const result = opts.viaShell
+      ? // settings.json の command 文字列が sh -c 経由で実行される場合
+        spawnSync('sh', ['-c', 'scripts/hooks/pre-tool-guard.sh'], {
+          cwd: rootDir,
+          encoding: 'utf8',
+          input: JSON.stringify(input),
+          env,
+        })
+      : // argv 直渡しで実行される場合（shebang + 実行ビットで起動する）
+        spawnSync(launcherPath, [], {
+          cwd: rootDir,
+          encoding: 'utf8',
+          input: JSON.stringify(input),
+          env,
+        });
+    return { status: result.status, stderr: result.stderr ?? '' };
+  }
+
+  it('launcher は実行ビットを持つ（argv 直渡しでも起動できる）', () => {
+    // eslint-disable-next-line no-bitwise -- 実行ビットの検査は mode のビット演算でしか書けない
+    expect(statSync(launcherPath).mode & 0o111).not.toBe(0);
+  });
+
+  it.each([
+    ['shell 経由', true],
+    ['argv 直渡し', false],
+  ])('node が PATH に無い時は block する（exit 2、fail closed）: %s', (_label, viaShell) => {
+    const { status, stderr } = runLauncher(write('/home/user/x/notes.md'), {
+      viaShell: viaShell as boolean,
+      path: PATH_WITHOUT_NODE,
+    });
+
+    // 127（not found）だと Claude Code は tool 実行を続行してしまう。2 でなければならない。
+    expect(status).toBe(2);
+    expect(stderr).toContain('node を解決できないため');
+  });
+
+  it.each([
+    ['shell 経由', true],
+    ['argv 直渡し', false],
+  ])('通常の PATH では従来どおり判定を委譲する: %s', (_label, viaShell) => {
+    const opts = { viaShell: viaShell as boolean };
+
+    expect(runLauncher(write(join(rootDir, '.env')), opts).status).toBe(2);
+    expect(runLauncher(bash('git status'), opts).status).toBe(0);
+  });
+
+  it('settings.json の 8 matcher すべてが launcher を指している', () => {
+    // node を直接指す形へ戻すと fail-open が復活する。8 箇所とも launcher であること
+    // を固定する（1 箇所だけ戻す差分をレビューで見落とさないため）。
+    const settings = JSON.parse(readFileSync(resolve(rootDir, '.claude/settings.json'), 'utf8'));
+    const commands = settings.hooks.PreToolUse.flatMap((group: { hooks: { command: string }[] }) =>
+      group.hooks.map((hook) => hook.command),
     );
+
+    expect(commands).toHaveLength(8);
+    expect(new Set(commands)).toEqual(new Set(['scripts/hooks/pre-tool-guard.sh']));
   });
 });

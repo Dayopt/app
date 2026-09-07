@@ -18,6 +18,15 @@ const CLIENT_SAFE_SERVICE_CODES = new Set([
   'STALE_VERSION',
   'TEMPORARY_FAILURE',
   'TIME_OVERLAP',
+  // Timeblock: 時刻規則（DT003 / DT005）の拒否。UI 側の写しを外しても汎用の
+  // saveFailed へ退化しないよう、規則ごとの文言へ写像できるようにする（#2628）。
+  // 規則そのものは公開仕様（MCP `constraints.get` が同じものを返す）なので、
+  // これを載せても内部構成は漏れない
+  'INVALID_TIME_RANGE',
+  'RECORD_IN_FUTURE',
+  // Timeblock: 型がその日に収まらない（DST で時計が飛ぶ日など）。他の日なら通る型が
+  // その日だけ落ちるので、汎用の失敗と区別して原因を伝える必要がある（#2567）
+  'TEMPLATE_DOES_NOT_FIT',
   // Billing: 支払い操作の失敗を「再試行 / やり直し / 削除中」へ畳む。いずれも
   // ユーザー自身の操作状態だけを表し、決済ベンダーの構成や内部commandの失敗
   // （BILLING_COMMAND_FAILED / BILLING_CONTRACT_INVALID / STRIPE_NOT_CONFIGURED 等）は含まない。

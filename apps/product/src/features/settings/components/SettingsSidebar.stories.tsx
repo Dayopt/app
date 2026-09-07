@@ -24,7 +24,7 @@ import { SettingsSidebar } from './SettingsSidebar';
  *
  * PC: button で store のカテゴリを切替（URL変更なし）。
  * Mobile: Link でページ遷移（pathname からアクティブカテゴリを判定）。
- * 6カテゴリ（プロフィール・表示・データ・連携・課金・アカウント）を表示。
+ * 5カテゴリ（アカウント・表示・データ・連携・課金）を表示。
  */
 const meta = {
   title: 'Product/Features/Settings/SettingsSidebar',
@@ -50,14 +50,14 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────
 
 /**
- * デフォルト状態（プロフィールカテゴリ選択中）
+ * デフォルト状態（アカウントカテゴリ選択中）
  *
- * PC表示（button要素）。「プロフィール」がアクティブ表示。
+ * PC表示（button要素）。「アカウント」がアクティブ表示。
  */
 export const Default: Story = {
   decorators: [
     (Story) => {
-      useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
       return <Story />;
     },
   ],

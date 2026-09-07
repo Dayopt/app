@@ -75,9 +75,22 @@ interface ConfirmDayCommandInput {
   endAt: string;
 }
 
+interface BulkPlanCommandRow {
+  title: string;
+  activityId: string | null;
+  startAt: string;
+  endAt: string;
+}
+
+interface CreatePlansBulkCommandInput {
+  userId: string;
+  plans: ReadonlyArray<BulkPlanCommandRow>;
+}
+
 type CommandOperation =
   | 'confirm_day_plans'
   | 'create_plan'
+  | 'create_plans_bulk'
   | 'create_record'
   | 'delete_plan'
   | 'delete_record'
@@ -106,15 +119,11 @@ const EXPECTED_COMMAND_ERRORS: Readonly<Record<string, string>> = {
   '23P01': 'TIME_OVERLAP',
   DT002: 'STALE_VERSION',
   DT003: 'INVALID_TIME_RANGE',
-  DT004: 'PLAN_IN_PAST',
   DT005: 'RECORD_IN_FUTURE',
-  DT006: 'PLAN_TIME_LOCKED',
-  DT007: 'SKIP_IN_FUTURE',
   DT008: 'INVALID_INPUT',
   DT009: 'FORBIDDEN',
   DT011: 'ALREADY_RECORDED',
   DT012: 'INVALID_INPUT',
-  DT013: 'PLAN_NOT_RECORDABLE',
   DT014: 'ACTIVITY_ARCHIVED',
 };
 
@@ -125,12 +134,8 @@ const EXPECTED_COMMAND_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_INPUT: 'The timeblock input is invalid.',
   INVALID_TIME_RANGE: 'Time range end must be after start.',
   NOT_FOUND: 'Timeblock not found.',
-  PLAN_IN_PAST: 'Plans must end in the future.',
-  PLAN_NOT_RECORDABLE: 'This Plan cannot be linked to a Record.',
-  PLAN_TIME_LOCKED: 'Past Plan time fields cannot be changed.',
   RECORD_IN_FUTURE: 'Records cannot end in the future.',
   RETRYABLE_CONTENTION: 'Another write is in progress. Refresh and try again.',
-  SKIP_IN_FUTURE: 'Future Plans cannot be skipped. Delete the Plan instead.',
   STALE_TARGET: 'This item no longer exists. Reload the latest data.',
   STALE_VERSION: 'This item was updated elsewhere. Reload the latest data.',
   ACTIVITY_ARCHIVED: 'This activity is archived and cannot be assigned to a plan or record.',
@@ -252,6 +257,25 @@ export class TimeblockCommandClient {
       this.admin.rpc('record_plan_command_v1', {
         p_expected_updated_at: input.expectedUpdatedAt,
         p_plan_id: input.planId,
+        p_user_id: input.userId,
+      }),
+    );
+  }
+
+  /**
+   * N 件の Plan を 1 transaction で作る（#2567 テンプレート適用）。
+   * 1 件でも検証・overlap で落ちれば全件 rollback される。error code の対応表は
+   * 1 件 command と同じ（23P01 → TIME_OVERLAP、DT014 → ACTIVITY_ARCHIVED）。
+   */
+  async createPlansBulk(input: CreatePlansBulkCommandInput): Promise<PlanRow[]> {
+    return this.runMany('create_plans_bulk', () =>
+      this.admin.rpc('create_plans_bulk_command_v1', {
+        p_plans: input.plans.map((plan) => ({
+          title: plan.title,
+          activity_id: plan.activityId,
+          start_at: plan.startAt,
+          end_at: plan.endAt,
+        })),
         p_user_id: input.userId,
       }),
     );

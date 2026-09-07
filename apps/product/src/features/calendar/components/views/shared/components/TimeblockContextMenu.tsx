@@ -16,8 +16,6 @@ interface TimeblockContextMenuProps {
   onViewStats?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onCopy?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onDuplicate?: ((entry: CalendarDisplayEvent) => void) | undefined;
-  onMarkUnplanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
-  onRestorePlanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onSkip?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onUnskip?: ((entry: CalendarDisplayEvent) => void) | undefined;
 }
@@ -31,8 +29,6 @@ export const EventContextMenu = ({
   onViewStats,
   onCopy,
   onDuplicate,
-  onMarkUnplanned,
-  onRestorePlanned,
   onSkip,
   onUnskip,
 }: TimeblockContextMenuProps) => {
@@ -115,27 +111,16 @@ export const EventContextMenu = ({
     onClose();
   };
 
-  // 未来の予定は記録が存在し得ないため「予定外にする」を出さない。
-  // planned の予定開始が現在より後（または時刻未設定）なら upcoming 扱い。
-  // skip は過去（end <= now）のみ可能なので isPast も別に判定する。
-  const plannedStartMs = (entry.plannedStartDate ?? entry.startDate)?.getTime();
-  const plannedEndMs = (entry.plannedEndDate ?? entry.endDate)?.getTime();
-  // eslint-disable-next-line react-hooks/purity -- transient context menu, 右クリック時点の now で十分
-  const now = Date.now();
-  const isUpcoming = plannedStartMs === undefined || plannedStartMs > now;
-  const isPast = plannedEndMs !== undefined && plannedEndMs <= now;
-
   // 共通の menu items 定義から取得（Inspector の TagRow と同じ source）
+  // origin は entry.origin ではなく kind から作る。useCalendarData は plan 紐付きの
+  // Record にも origin: 'planned' を付けるため、entry.origin をそのまま渡すと
+  // Record に skip が出てしまう（handler が kind で早期 return する無反応メニュー）。
   const menuItems = getTimeblockMenuItems({
-    origin: entry.origin,
-    isUpcoming,
-    isPast,
+    origin: (entry.kind ?? 'plan') === 'plan' ? 'planned' : 'unplanned',
     isSkipped: entry.isSkipped,
     onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
     onCopy: onCopy ? () => onCopy(entry) : undefined,
     onDuplicate: onDuplicate ? () => onDuplicate(entry) : undefined,
-    onMarkUnplanned: onMarkUnplanned && !entry.isSkipped ? () => onMarkUnplanned(entry) : undefined,
-    onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
     onSkip: onSkip ? () => onSkip(entry) : undefined,
     onUnskip: onUnskip ? () => onUnskip(entry) : undefined,
     onDelete:

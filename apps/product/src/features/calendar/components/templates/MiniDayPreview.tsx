@@ -3,10 +3,10 @@
 import { ActivityIcon, getCategoryColorClasses } from '@/features/activities';
 import { cn } from '@dayopt/components';
 
-import type { TemplateBlockMock } from './types';
+import type { TemplateBlockView } from './types';
 
 interface MiniDayPreviewProps {
-  blocks: ReadonlyArray<TemplateBlockMock>;
+  blocks: ReadonlyArray<TemplateBlockView>;
   className?: string | undefined;
 }
 

@@ -26,7 +26,7 @@ export function SettingsDialog() {
   const t = useTranslations();
   const activeSheet = useShellStore((s) => s.activeSheet);
   const isOpen = activeSheet?.type === 'settings';
-  const category = activeSheet?.type === 'settings' ? activeSheet.category : 'profile';
+  const category = activeSheet?.type === 'settings' ? activeSheet.category : 'account';
   const close = useShellStore((s) => s.closeSheet);
 
   return (

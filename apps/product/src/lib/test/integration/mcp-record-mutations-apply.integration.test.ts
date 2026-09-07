@@ -1049,7 +1049,7 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     expect(unknown.error?.code).toBe('DT001');
 
     const futurePlan = await createPlan({
-      title: 'Not recordable yet',
+      title: 'Recordable even while upcoming',
       startAt: at(3 * 60 * 60_000),
       endAt: at(4 * 60 * 60_000),
     });
@@ -1060,7 +1060,8 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
       startAt: at(-44 * 60 * 60_000),
       endAt: at(-43 * 60 * 60_000),
     });
-    expect(futurePlanLink.error?.code).toBe('DT013');
+    // Plan の位置は Record の紐付けを制約しない。Record 自身が過去であればよい。
+    expect(futurePlanLink.error).toBeNull();
 
     const { data: foreignPlan, error: foreignPlanError } = await admin
       .rpc('create_plan_command_v1', {
@@ -1130,10 +1131,11 @@ describe.skipIf(!RUN_LOCAL)('MCP Record create, update, delete, and restore appl
     expect(foreignUpdate.error?.code).toBe('DT001');
     expect(foreignDelete.error?.code).toBe('DT001');
     expect(foreignRestore.error?.code).toBe('DT001');
+    // 未来 Plan への紐付けは成功する側なので receipt が 1 件残る。
+    expect(await countReceipts([futurePlanOperationId])).toBe(1);
     expect(
       await countReceipts([
         unknownOperationId,
-        futurePlanOperationId,
         foreignCreateId,
         foreignUpdateId,
         foreignDeleteId,

@@ -17,7 +17,7 @@ interface MutationCallbacks {
   }) => Promise<unknown>;
   onSuccess?: (data: TimeModelRow) => void;
   onError?: (
-    error: { message: string },
+    error: { message: string; data?: { serviceCode?: string } },
     input: { id: string; data: { start_at: string; end_at: string } } | undefined,
     context: undefined,
   ) => void;
@@ -57,6 +57,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
+    // snapshot 前の in-flight refetch を止める（#2567 で utils.*.cancel から
+    // queryClient.cancelQueries へ移した。挙動は同じく list query だけを止める）
+    cancelQueries: vi.fn().mockResolvedValue(undefined),
     getQueriesData: vi.fn(({ predicate }) =>
       mocks.cacheEntries.filter(([queryKey]) => predicate({ queryKey })),
     ),
@@ -276,6 +279,34 @@ describe('useTimeblockWriteMutations create overlap presentation', () => {
     expect(mocks.toastError).toHaveBeenLastCalledWith('toast.overlap');
 
     act(() => mocks.recordCreateCallbacks?.onError?.({ message: 'UNKNOWN' }, undefined, undefined));
+    expect(mocks.toastError).toHaveBeenLastCalledWith('toast.saveFailed');
+  });
+
+  // server 拒否（DT003 / DT005）の文言は allowlist に載った serviceCode から引く。
+  // ここが汎用 saveFailed に落ちると、UI 側の事前チェック（invariants.md §時刻 の
+  // 分類 (b)）が「消せない写し」になる（#2628）。
+  it('serverの時刻規則拒否は規則ごとの文言を出す', () => {
+    renderHook(() => useTimeblockWriteMutations());
+
+    act(() =>
+      mocks.recordUpdateCallbacks?.onError?.(
+        { message: 'record ends in the future', data: { serviceCode: 'RECORD_IN_FUTURE' } },
+        undefined,
+        undefined,
+      ),
+    );
+    expect(mocks.toastError).toHaveBeenLastCalledWith('timeLocked');
+
+    act(() =>
+      mocks.planUpdateCallbacks?.onError?.(
+        { message: 'end must be after start', data: { serviceCode: 'INVALID_TIME_RANGE' } },
+        undefined,
+        undefined,
+      ),
+    );
+    expect(mocks.toastError).toHaveBeenLastCalledWith('duplicate.validation.invalidRange');
+
+    act(() => mocks.planUpdateCallbacks?.onError?.({ message: 'UNKNOWN' }, undefined, undefined));
     expect(mocks.toastError).toHaveBeenLastCalledWith('toast.saveFailed');
   });
 

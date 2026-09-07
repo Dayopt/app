@@ -5,7 +5,7 @@ import { expect, userEvent, within } from 'storybook/test';
 
 import { MFAVerifyForm } from './MFAVerifyForm';
 
-/** MFAVerifyForm - 2段階認証フォーム（TOTP / リカバリーコード） */
+/** MFAVerifyForm - 多要素認証フォーム（TOTP / リカバリーコード） */
 const meta = {
   title: 'Product/Features/Auth/MFAVerifyForm',
   component: MFAVerifyForm,

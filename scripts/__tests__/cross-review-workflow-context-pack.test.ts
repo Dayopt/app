@@ -1,63 +1,7 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
+import { buildContextPackSection, buildReviewPrompt } from '../lib/review-contract.mjs';
 
-/**
- * `.claude/skills/pr-cross-review/cross-review-workflow.js` の
- * `buildContextPackSection` / `buildReviewPrompt`（ctx pack を role prompt へ
- * 組み込む部分）の契約テスト。
- *
- * Workflow script は `import()` が使えず typecheck / import による検証もできない
- * （`cross-review-workflow-schema.test.ts` と同じ制約）ため、
- * `CONTEXT_PACK_CONTRACT_START`/`END` マーカーで挟んだ純粋関数・定数ブロックだけを
- * ファイルから抽出して安全に評価する。
- *
- * F1（prompt injection 対策）: ctx pack は GitHub 上で誰でも書ける issue/PR
- * コメントや body から組み立てられる untrusted data。buildReviewPrompt が
- * 組み立てる最終 prompt は role prompt → boundary 指示 → <untrusted-context> で
- * 囲った ctx → diff 指示、の順でなければならない。ctx ブロック内部に紛れた
- * 指示文がプロンプトの「最後の指示」として読まれないことを、実際の文字列上の
- * 出現順（indexOf）で検証する。
- */
-
-const WORKFLOW_SCRIPT_PATH = join(
-  import.meta.dirname,
-  '../../.claude/skills/pr-cross-review/cross-review-workflow.js',
-);
-
-interface ContextPackExports {
-  buildContextPackSection: (ctxMarkdown: unknown) => string;
-  buildReviewPrompt: (
-    role: string,
-    diffPath: string,
-    extraContext: string | undefined,
-    ctxMarkdown: unknown,
-  ) => string;
-}
-
-function extractContextPackExports(): ContextPackExports {
-  const source = readFileSync(WORKFLOW_SCRIPT_PATH, 'utf8');
-  const startMarker = '// === CONTEXT_PACK_CONTRACT_START ===';
-  const endMarker = '// === CONTEXT_PACK_CONTRACT_END ===';
-  const startIndex = source.indexOf(startMarker);
-  const endIndex = source.indexOf(endMarker);
-  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
-    throw new Error(
-      `cross-review-workflow.js から CONTEXT_PACK_CONTRACT マーカーを抽出できませんでした（start: ${startIndex}, end: ${endIndex}）。ファイル構造が変わっていないか確認してください。`,
-    );
-  }
-
-  const block = source.slice(startIndex + startMarker.length, endIndex);
-  const evaluate = new Function(
-    `'use strict'; ${block} return { buildContextPackSection, buildReviewPrompt };`,
-  );
-  return evaluate() as ContextPackExports;
-}
-
-describe('cross-review-workflow.js の buildContextPackSection', () => {
-  const { buildContextPackSection } = extractContextPackExports();
-
+describe('review-contract.mjs の buildContextPackSection', () => {
   it('<untrusted-context> タグで本文を囲む', () => {
     const result = buildContextPackSection('## 受け入れ条件\n- 何か');
     expect(result).toContain('<untrusted-context>');
@@ -100,9 +44,7 @@ describe('cross-review-workflow.js の buildContextPackSection', () => {
   });
 });
 
-describe('cross-review-workflow.js の buildReviewPrompt（F1: prompt injection 対策）', () => {
-  const { buildReviewPrompt } = extractContextPackExports();
-
+describe('review-contract.mjs の buildReviewPrompt（F1: prompt injection 対策）', () => {
   it('role prompt → boundary 指示 → untrusted-context → diff 指示、の順で並ぶ', () => {
     const result = buildReviewPrompt(
       'risk-reviewer',

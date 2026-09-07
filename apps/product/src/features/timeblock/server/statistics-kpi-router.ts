@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { createTRPCRouter, entitledProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { StatisticsService } from './statistics-service';
 import { dateRangeInput, handleStatsError } from './statistics-shared';
 
 export const statisticsKpiRouter = createTRPCRouter({
   /** 見積もり精度: タグ別の予定時間 vs 実績時間 */
-  getEstimationAccuracy: proProcedure
+  getEstimationAccuracy: entitledProcedure(entitlementKeys.estimationFullHistory)
     .meta({ description: '見積もり精度KPI（タグ別の予定vs実績）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -19,7 +21,7 @@ export const statisticsKpiRouter = createTRPCRouter({
     }),
 
   /** 空白率: 活動可能時間のうちスケジュールされていない時間の割合 */
-  getBlankRate: proProcedure
+  getBlankRate: entitledProcedure(entitlementKeys.reportLongRange)
     .meta({ description: '空白率KPI（未スケジュール時間の割合）' })
     .input(
       dateRangeInput.extend({
@@ -39,11 +41,10 @@ export const statisticsKpiRouter = createTRPCRouter({
    * 作成時フィードフォワード: タグ別見積もり係数（直近 4 週の中央値、`n >= 3`）
    *
    * `protectedProcedure` を使う。同じ statistics router 内でも Pro 区分は分かれており、
-   * Calendar の常設導線が引くもの（`getTagStats` / `getStreak` /
-   * `getTimePL`）は protected、Review の分析深度にあたるもの（`getEstimationAccuracy` /
-   * `getStatsPageData` 等）は pro になっている。本 procedure は Plan を作る瞬間の
-   * 中核ループ（ADR-026 の 1 点目）に属するため前者に揃える。
-   * Free / Pro 境界の最終決定は #1336 が持つ。
+   * Calendar の常設導線が引くもの（`getTagStats` / `getStreak`）は protected、
+   * 分析深度にあたるもの（`getEstimationAccuracy` / `getStatsOverview`）は pro になっている。
+   * 本 procedure は Plan を作る瞬間の中核ループ（ADR-026 の 1 点目）に属するため前者に揃える。
+   * Free / Pro 境界の最終決定は #1336 が持つ（レポート面の境界は #2605）。
    */
   getTagEstimationFactors: protectedProcedure
     .meta({ description: '作成時フィードフォワード（タグ別見積もり係数の中央値）' })

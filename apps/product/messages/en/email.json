@@ -23,9 +23,9 @@
     "securityWarning": "If you didn't make this change, please reset your password immediately at {resetLink} and contact us at {supportEmail}"
   },
   "mfaDisabled": {
-    "subject": "Two-factor authentication has been disabled",
-    "heading": "Two-factor authentication has been disabled",
-    "body": "Two-factor authentication on your Dayopt account was disabled using a recovery code on {disabledAt}.",
+    "subject": "Multi-factor authentication has been disabled",
+    "heading": "Multi-factor authentication has been disabled",
+    "body": "Multi-factor authentication on your Dayopt account was disabled using a recovery code on {disabledAt}.",
     "securityWarning": "If you didn't do this, someone may have access to your account. Please reset your password immediately at {resetLink} and contact us at {supportEmail}"
   },
   "accountDeletion": {
@@ -46,10 +46,9 @@
     "body": "Your 7-day Pro trial is now active. Here's what you can explore:",
     "labelTrialEnds": "Trial ends",
     "proFeaturesIntro": "What's included in Pro:",
-    "featureAnalytics": "Full analytics and insights",
-    "featureActivities": "Unlimited activities",
-    "featureApi": "API access and data export",
-    "featureAi": "Unlimited AI assistance",
+    "featureLongRange": "Monthly and yearly overviews with past-self comparison",
+    "featureGoogleCalendar": "Google Calendar sync",
+    "featureApi": "MCP / API access",
     "noActionNote": "No action needed — your trial starts now. If you decide Pro isn't for you, you'll automatically move to the Free plan when the trial ends.",
     "ctaButton": "Open Dayopt"
   },
@@ -69,7 +68,7 @@
     "featureTimeboxing": "Timeboxing and daily planning",
     "featureTracking": "Time tracking and records",
     "featureCalendar": "Calendar views",
-    "upgradeHint": "If you'd like to unlock analytics, unlimited activities, and more, you can upgrade to Pro anytime.",
+    "upgradeHint": "If you'd like monthly and yearly overviews, Google Calendar sync, and more, you can upgrade to Pro anytime.",
     "ctaButton": "Upgrade to Pro",
     "thankYou": "Thanks for trying Pro."
   },
@@ -78,10 +77,9 @@
     "heading": "Welcome to Pro",
     "body": "Your Pro subscription is now active. Thank you for your support.",
     "fullAccessIntro": "You now have full access to:",
-    "featureAnalytics": "Detailed analytics and insights",
-    "featureActivities": "Unlimited activities and categories",
-    "featureApi": "API access and data export",
-    "featureAi": "Unlimited AI assistance",
+    "featureLongRange": "Monthly and yearly overviews with past-self comparison",
+    "featureGoogleCalendar": "Google Calendar sync",
+    "featureApi": "MCP / API access",
     "manageHint": "Manage your subscription anytime in Settings → Billing.",
     "ctaButton": "Open Dayopt"
   },

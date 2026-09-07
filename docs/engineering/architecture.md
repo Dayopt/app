@@ -222,7 +222,7 @@ const handleCreatePlan = async (data) => {
 型安全な API 呼び出しとキャッシュ管理。
 
 ```typescript
-const createPlan = api.plans.create.useMutation({
+const createPlan = api.planCommands.create.useMutation({
   onSuccess: () => {
     utils.plans.list.invalidate(); // キャッシュ無効化→再取得
   },
@@ -613,7 +613,7 @@ apps/product, apps/web
 `apps/product/src/lib/time`（旧 `packages/domain`）は Dayopt の意味を表すpure TypeScriptで、`TimeRange`, `TimeblockOrigin`, `ReviewPeriod`, `UserPreference`等の軽い型・定数・helperを持つ。
 
 DB boundary は `apps/product/src/lib/database`（旧 `packages/database`、product-local 化済み）が Supabase generated types と DB row helper を担う。DB access を含む service は product 側に残す。
-`packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
+`packages/billing` は Free / Pro の公開 plan model, subscription status, entitlement map（`entitlementKeys` / `planEntitlements`）, pricing 表示用定数の境界として運用中。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
 `packages/types`, `packages/server`, `packages/utils` は未使用のまま責務が立たなかったため削除済み。
 
 ### Integration Audit
@@ -627,7 +627,7 @@ Source of truth:
 - Sentry event sanitizer / technical context / explicit cancellation / browser telemetry consent / Production build gate policy: `packages/observability`
 - Plan / Record source・time range・time conflict / date-time preference / pure Dayopt concept: `apps/product/src/lib/time`（旧 `packages/domain`）
 - Supabase generated type / table name / row helper type: `apps/product/src/lib/database`
-- Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
+- Free / Pro plan / subscription status / entitlement map / public pricing: `packages/billing`
 
 Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('plans')` / `.from('records')` / `.from('activities')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
 
@@ -777,7 +777,7 @@ product 専用（web・他 package から参照なし）のため package では
 - Free / Pro plan id と plan name
 - Free `$0`, Pro `$5/month` の公開価格表示用定数
 - `free | active | past_due | canceled | trialing` の subscription status
-- `pro_access` entitlement と pure helper
+- entitlement map（`entitlementKeys` / `planEntitlements`）と pure helper
 
 入れないもの:
 

@@ -12,9 +12,7 @@ const serviceMethods = vi.hoisted(() => ({
   getHourlyDistribution: vi.fn(),
   getMonthlyTrend: vi.fn(),
   getStatsOverview: vi.fn(),
-  getStatsPageData: vi.fn(),
   getActivityStats: vi.fn(),
-  getTimePLData: vi.fn(),
 }));
 
 vi.mock('./statistics-service', () => ({
@@ -27,9 +25,7 @@ vi.mock('./statistics-service', () => ({
     getHourlyDistribution = serviceMethods.getHourlyDistribution;
     getMonthlyTrend = serviceMethods.getMonthlyTrend;
     getStatsOverview = serviceMethods.getStatsOverview;
-    getStatsPageData = serviceMethods.getStatsPageData;
     getActivityStats = serviceMethods.getActivityStats;
-    getTimePLData = serviceMethods.getTimePLData;
   },
 }));
 
@@ -92,53 +88,6 @@ describe('statistics router: StatisticsService 委譲', () => {
     expect(serviceMethods.getEstimationAccuracy).toHaveBeenCalledWith(USER_ID, range);
     expect(serviceMethods.getBlankRate).toHaveBeenCalledWith(USER_ID, blankInput);
     expect(serviceMethods.getStatsOverview).toHaveBeenCalledWith(USER_ID, blankInput);
-  });
-
-  it('Review procedures の表示日キーを service へ渡す', async () => {
-    const caller = authedCaller();
-    const timePLInput = {
-      startDate: START,
-      endDate: END,
-      visibleDateKeys: ['2026-04-01', '2026-04-02'],
-      prevVisibleDateKeys: ['2026-03-30', '2026-03-31'],
-      wakeHour: 7,
-      sleepHour: 23,
-    };
-    const pageInput = {
-      ...timePLInput,
-      prevStart: '2026-03-01T00:00:00.000Z',
-      prevEnd: '2026-03-31T23:59:59.000Z',
-      year: 2026,
-      monthlyMonths: 3,
-    };
-
-    await caller.getTimePL(timePLInput);
-    await caller.getStatsPageData(pageInput);
-
-    expect(serviceMethods.getTimePLData).toHaveBeenCalledWith(USER_ID, timePLInput);
-    expect(serviceMethods.getStatsPageData).toHaveBeenCalledWith(USER_ID, pageInput);
-  });
-
-  it('Review procedures は不正または上限超過の表示日キーを拒否する', async () => {
-    await expect(
-      authedCaller().getTimePL({
-        startDate: START,
-        endDate: END,
-        visibleDateKeys: ['2026-02-30'],
-      }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-
-    await expect(
-      authedCaller().getTimePL({
-        startDate: START,
-        endDate: END,
-        visibleDateKeys: Array.from(
-          { length: 10 },
-          (_, index) => `2026-04-${String(index + 1).padStart(2, '0')}`,
-        ),
-      }),
-    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    expect(serviceMethods.getTimePLData).not.toHaveBeenCalled();
   });
 
   it('service error を INTERNAL_SERVER_ERROR に正規化する', async () => {

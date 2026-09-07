@@ -189,10 +189,19 @@ jobs:
   # 経路は impact 失敗時は空になり実行側へ倒れるが、guard の
   # 向きが 2 箇所で食い違っていると将来の配線変更でサイレントに壊れる
   # （内製クロスレビュー risk-reviewer 指摘、P3）。
+  #
+  # **`docs_only` を条件に入れない**（#2552）: impact.mjs は integration を docs
+  # とも app とも独立に判定しており、`docs/engineering/data/db/rls-snapshot.md`
+  # のように「docs パスだが integration 対象」のファイルがある。ここで
+  # `docs_only != 'true'` を AND すると、rls-snapshot.md 単独の PR で
+  # `rls:snapshot:check`（RLS drift 検査）が一度も走らないまま merge できてしまう
+  # （snapshot を先に緩めておいてから RLS を緩める migration を出す 2 段階の
+  # 通過経路になる）。unit job 側の docs_only 条件はそのままでよい。
+  # finish-branch.sh の REQUIRED_CI_CHECKS も同じ向きで独立させてある。
   integration:
     name: "\U0001F9EA Integration Tests"
     needs: impact
-    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.docs_only != 'true' && needs.impact.outputs.integration != 'false' }}
+    if: ${{ !cancelled() && github.event.pull_request.draft != true && needs.impact.outputs.integration != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     # gh を呼ばないため write 権限も GH_TOKEN も渡さない（migration safety は

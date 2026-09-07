@@ -12,7 +12,7 @@ import { useActiveSegment } from '../../hooks/useActiveSegment';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 
 /**
- * サイドバーの「カテゴリー — 分母から出し入れ」（仕様 §3.3-1）。
+ * サイドバーの「カテゴリ」（仕様 §3.3-1）。分母から出し入れする。
  *
  * 並ぶのはカテゴリー・未分類・余白の 3 種類だけで、**アクティビティは並べない**。
  * 葉は作成の起点であり、レポート面に作成は無い（仕様 §0-6 / §3.3-3）。

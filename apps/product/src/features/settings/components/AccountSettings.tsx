@@ -3,19 +3,22 @@
 import { useCallback, useState } from 'react';
 
 import { toast } from '@/lib/toast';
-import { LogOut } from 'lucide-react';
+import { Camera, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { hasPasswordIdentity, useAuthStore } from '@/features/auth';
 import { logger } from '@/lib/logger';
 import { observeAuthOperation } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
-import { Button } from '@dayopt/components';
+import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
+import { Avatar, AvatarFallback, AvatarImage, Button } from '@dayopt/components';
 import { useRouter } from '@dayopt/i18n/navigation';
 
 import { LabeledRow } from '@/components/ui/display/LabeledRow';
 import { SectionCard } from '@/components/ui/display/SectionCard';
 import { AccountDeletionDialog } from './AccountDeletionDialog';
+import { AvatarChangeDialog } from './AvatarChangeDialog';
+import { DisplayNameDialog } from './DisplayNameDialog';
 import { EmailChangeDialog } from './EmailChangeDialog';
 import { PasswordChangeDialog } from './PasswordChangeDialog';
 import { type MFASectionProps, MFASection } from './sections/MFASection';
@@ -33,7 +36,7 @@ interface AccountSettingsProps {
 /**
  * アカウント設定コンポーネント
  *
- * メール、パスワード、2段階認証、ログアウト、アカウント削除
+ * プロフィール（アバター・表示名）、メール、パスワード、多要素認証、ログアウト、アカウント削除
  */
 export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {}) {
   const t = useTranslations();
@@ -42,10 +45,14 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showAvatarDialog, setShowAvatarDialog] = useState(false);
+  const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
 
   const email = user?.email || '';
   // Google のみのユーザーはパスワードを持たない。パスワード前提の UI を出さない
   const canUsePassword = hasPasswordIdentity(user);
+  const avatarUrl = getAvatarUrl(user);
+  const displayName = getDisplayName(user);
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -65,6 +72,34 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
 
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* アバター・表示名 */}
+      <SectionCard title={t('settings.account.profile')}>
+        <LabeledRow
+          label={t('settings.account.avatar')}
+          variant="navigate"
+          onClick={() => setShowAvatarDialog(true)}
+        >
+          <div className="group relative">
+            <Avatar size="sm">
+              <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+              <AvatarFallback className="bg-foreground text-background text-xs">
+                {getInitials(displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="group-hover:bg-foreground absolute inset-0 flex items-center justify-center rounded-full transition-colors group-hover:opacity-40">
+              <Camera className="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+          </div>
+        </LabeledRow>
+        <LabeledRow
+          label={t('settings.account.displayName')}
+          variant="navigate"
+          onClick={() => setShowDisplayNameDialog(true)}
+        >
+          <span className="text-muted-foreground">{displayName}</span>
+        </LabeledRow>
+      </SectionCard>
+
       {/* ログイン方法（Google のみのユーザーにだけ出す。パスワード派は自明なので出さない） */}
       {!canUsePassword && (
         <SectionCard title={t('settings.account.loginMethod.title')}>
@@ -113,7 +148,7 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
         </SectionCard>
       )}
 
-      {/* 2段階認証 */}
+      {/* 多要素認証 */}
       <MFASection {..._MFASectionProps} />
 
       {/* セッション */}
@@ -132,6 +167,12 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
       </SectionCard>
 
       {/* Dialogs */}
+      <AvatarChangeDialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog} />
+      <DisplayNameDialog
+        open={showDisplayNameDialog}
+        onOpenChange={setShowDisplayNameDialog}
+        currentName={displayName}
+      />
       <EmailChangeDialog
         open={showEmailDialog}
         onOpenChange={setShowEmailDialog}

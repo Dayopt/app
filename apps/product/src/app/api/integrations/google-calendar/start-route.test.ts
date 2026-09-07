@@ -5,7 +5,7 @@ const getUser = vi.hoisted(() => vi.fn());
 const from = vi.hoisted(() => vi.fn());
 const createClient = vi.hoisted(() => vi.fn());
 const rateLimit = vi.hoisted(() => vi.fn());
-const checkProAccessForUser = vi.hoisted(() => vi.fn());
+const checkEntitlementForUser = vi.hoisted(() => vi.fn());
 const captureUnexpectedError = vi.hoisted(() => vi.fn());
 const getReconnectTarget = vi.hoisted(() => vi.fn());
 const resolveMfaAssurance = vi.hoisted(() => vi.fn());
@@ -22,7 +22,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/rate-limit/upstash', () => ({
   calendarConnectRateLimit: { limit: rateLimit },
 }));
-vi.mock('@/lib/billing/enforcement', () => ({ checkProAccessForUser }));
+vi.mock('@/lib/billing/enforcement', () => ({ checkEntitlementForUser }));
 vi.mock('@/lib/sentry', () => ({ captureUnexpectedError }));
 vi.mock('@/features/external-calendar/server/connection-service', () => ({ getReconnectTarget }));
 vi.mock('@/lib/trpc/session-auth-context', () => ({ resolveMfaAssurance }));
@@ -49,7 +49,7 @@ describe('google calendar start route', () => {
     createClient.mockResolvedValue({ auth: { getUser }, from });
     resolveMfaAssurance.mockResolvedValue({ currentLevel: 'aal1', nextLevel: 'aal1' });
     rateLimit.mockResolvedValue({ success: true });
-    checkProAccessForUser.mockResolvedValue('allowed');
+    checkEntitlementForUser.mockResolvedValue('allowed');
     getReconnectTarget.mockResolvedValue({
       id: '00000000-0000-4000-8000-0000000000c1',
       providerAccountId: 'google-sub-123',
@@ -94,7 +94,7 @@ describe('google calendar start route', () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toContain('/auth/mfa-verify');
-    expect(checkProAccessForUser).not.toHaveBeenCalled();
+    expect(checkEntitlementForUser).not.toHaveBeenCalled();
   });
 
   // proxy.tsのgetLocalizedPath(as-needed prefix)に揃える。default localeは
@@ -130,7 +130,7 @@ describe('google calendar start route', () => {
 
     expect(response.status).toBe(500);
     expect(captureUnexpectedError).not.toHaveBeenCalled();
-    expect(checkProAccessForUser).not.toHaveBeenCalled();
+    expect(checkEntitlementForUser).not.toHaveBeenCalled();
     expect(rateLimit).not.toHaveBeenCalled();
   });
 
@@ -289,7 +289,7 @@ describe('google calendar start route', () => {
   });
 
   it('Pro でないユーザーは 403', async () => {
-    checkProAccessForUser.mockResolvedValue('denied');
+    checkEntitlementForUser.mockResolvedValue('denied');
 
     const response = await GET(request());
 
@@ -297,7 +297,7 @@ describe('google calendar start route', () => {
   });
 
   it('subscription の参照に失敗したら 500', async () => {
-    checkProAccessForUser.mockResolvedValue('lookup_failed');
+    checkEntitlementForUser.mockResolvedValue('lookup_failed');
 
     const response = await GET(request());
 

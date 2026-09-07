@@ -1,11 +1,11 @@
 ---
 status: current
-last_verified: 2026-08-14
+last_verified: 2026-09-07
 ---
 
-# 運用ツール（Eagle / ライセンスコンプライアンス / Skill Triggers / 管理者スクリプト）
+# 運用ツール（Eagle / ライセンスコンプライアンス / AI協働ハーネス / 管理者スクリプト）
 
-Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、Opus 4.7 Skill Triggers migration、管理者向け運用スクリプトの記録を集約する。
+Eagle デザインアセット管理設計、OSSライセンスコンプライアンスガイド、provider-neutral な AI 協働ハーネス、管理者向け運用スクリプトの記録を集約する。
 
 ---
 
@@ -472,10 +472,112 @@ BSD-2-Clause: 12 packages (1.3%)
 
 ---
 
-# 第3部: Opus 4.7 Skill Triggers Migration
+# 第3部: AI 協働ハーネス
+
+**Date**: 2026-09-07
+**Scope**: `AGENTS.md`、`.agents/skills/`、provider adapter、共有 hook rules
+**Status**: current
+
+## 1. 正本と互換 adapter
+
+- 実装・調査・レビューの共通ガイダンスは `AGENTS.md` を正本とする。OpenAI / Codex が primary harness だが、判断層・Dayopt の不変条件・authority level は provider に依存しない
+- project skill の実体は `.agents/skills/*/SKILL.md` に置く。`.claude/skills` は Claude Code が同じ実体を見つけるための相対 symlink で、複製ではない
+- `CLAUDE.md` は `@AGENTS.md` を import する互換 adapter。provider 固有の設定を共通ガイダンスへ逆流させない
+- runtime / tool 固有の command が必要な skill は、共通の目的・scope・出力契約を先に書き、command を optional provider adapter として示す。別 runtime では同じ契約を満たす generic fallback を使う
+
+## 2. Routing の基準
+
+特定 provider の model tier や「coordinator は実装しない」という役割固定は持たない。作業ごとに次を順に決める。
+
+1. ユーザーが確認できる成功条件、対象範囲、検証方法を固定する
+2. repo / docs / issue / command output で確認した事実と、未実測の仮説を分ける
+3. 決定的な script / CLI、担当 agent の直接実行、scoped delegation、別 provider の反証を意味のある選択肢として比較する
+4. 委譲は bounded scope と独立検証が可能で、引き渡し・待ち・統合の費用を上回る時だけ行う
+5. diff、実行結果、必要な UI / API / data flow を成功条件と突き合わせる
+6. issue / PR がある作業は、判断・進捗・ブロック・検証をそこへ残す
+
+OpenAI / Codex は実装を含む primary provider として使う。他 provider は auth / RLS / billing / migration / 公開契約などで、独立した反証の便益が費用を上回る時に任意で追加する。外部 provider の可用性は merge gate にしない。
+
+## 3. Hook の共有と保証境界
+
+判定ロジックは `scripts/hooks/pre-tool-guard-rules.mjs` に置き、provider adapter は runtime の tool-call payload を共有形式へ変換する薄い入口にする。Claude Code は `scripts/hooks/pre-tool-guard.mjs`、Codex は `scripts/hooks/codex-pre-tool-guard.mjs` を入口とする。
+
+adapter の script が存在するだけでは tool call は止まらない。runtime 側で adapter が実行前 hook として登録・起動され、block 結果を尊重する必要がある。repo は user-global 設定、直接 shell、User 自身の UI 操作、未知の tool surface を強制できない。具体的な secret 境界と残余リスクは [secrets.md](./secrets.md) を正本とする。
+
+Codex でこの project を初めて開く時は、project trust を確認し、`/hooks` で `.codex/hooks.json` の command と有効状態を User が 1 回レビューする。repo の `.codex/config.toml` に `hooks = true` があっても、runtime が project を trust して hook を読み込んだ証拠にはならない。`pnpm agent:preflight`（機械利用は `pnpm agent:preflight --json`）は依存、Git hooks、CLI、skills、Codex hook 設定ファイルの存在を確認するが、runtime の trust や実際の hook 発火は判定できない。user-global 設定はこの onboarding で変更しない。
+
+### 実行経路ごとの保護範囲
+
+「機械」は該当 hook が信頼・発火した場合の判定を指す。現時点の native Codex 発火は未確認である。
+
+| 分類・操作                                  | Claude Code                                           | Codex                                                                            | Antigravity                                |
+| ------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------ |
+| 秘密情報: envファイル、vault参照            | Read/Write/Edit と Bash の個別パターンを機械検査      | apply_patch の全対象・shell の個別パターンを機械検査。汎用read toolはsurface依存 | repo hook接続なし。指示で制御、実動未確認  |
+| 破壊的操作: 既存migration・他worktreeの編集 | Write/Editで機械検査。任意shell編集は保証外           | apply_patch の変更元/先・symlinkを機械検査。任意shell編集は保証外                | 指示で制御、機械保護は未対応               |
+| Git運用: force push、no-verify、直接merge等 | Bashの列挙パターンを機械検査                          | 共通Bash判定を再利用                                                             | 共通Git hookのみ。tool実行前の検査は未対応 |
+| コスト・利便性                              | モデル名に基づく委任制限は撤去。起動確認は共通command | 同左                                                                             | 共通commandを手動利用可能、実動未確認      |
+
+**shell の任意編集は機械的に閉じていない**。`sed -i`、`perl -pi`、`cp`、`mv`、`tee`、出力redirect、任意scriptによる既存migration・他worktreeへの書き込みを、このadapterは一般には検出しない。Codexのファイル変更は原則 `apply_patch` を使い、shell編集へ切り替えてこの検査を迂回しない（指示による制御）。hookに到達しただけで全操作が保護されるわけではない。write_stdin、hosted/specialized tool、wrapper内部の処理も同じ保証を持たない。
+
+この境界はshell interpreterの自作で埋めず、runtimeの書き込み範囲・Git hooks/CI・最小権限の資格情報で補う。本番は既存の明示権限・独立レビュー・dry-run/backupを維持する。上記が不足する操作は未対応として扱い、通常開発の実動試行でも境界を確認する。
+
+## 4. Skill 設計
+
+新規・更新時は `.agents/skills/skill-design/SKILL.md` に従う。description / When to Use は provider-neutral にし、特定 model の名前を発火条件や必須 tier にしない。provider 固有の adapter は capability、scope、出力契約、generic fallback、実際の保証境界を併記する。
+
+## 5. Portable review interface
+
+クロスレビューの一次情報は provider の session ではなく immutable review pack に固定する。
+
+```bash
+pnpm review:pack --base <ref> --head <ref> \
+  --context <context-markdown-path> --verification <verification-markdown-path> \
+  --source <repo-relative-file> --out <new-directory>
+```
+
+pack は exact base / head SHA、pack ID、base から head への直接 diff、変更 path の before / after source、関連 source、role ごとの prompt と result-body schema を持つ。`--source` は繰り返せる。binary、欠落、1 MiB 超の source は omission として記録される。context と verification は非空、出力先は新規 directory とする。
+
+reviewer は read-only sandbox で provider 固有の tool を使い、同じ pack を読む。資料確認の `cat` / `rg` / `git show` 相当は許可するが、test や package install を含むコード実行、状態変更、nested agent は許可しない。result body を schema に合わせ、その外側に `packId`、`baseSha`、`headSha`、`provider`、`model`、`modelFamily`、`sessionId`、`independence`、`role` を持つ JSON envelope を付ける。`independence` は実態に応じて `separate-session` または `different-model-family` を記録する。固定 model、Claude Workflow、provider の多数決は共通契約に含めない。
+
+```bash
+pnpm review:validate --pack <directory> --result <result.json>
+```
+
+validator は `not-run`、`stale`、`partial`、`reviewed`、`invalid` を区別する。`invalid` は envelope / result の schema 違反で、必須 string が空白だけの場合も含む。`not-run` / `stale` / `partial` / `invalid` は非 0 exit、`reviewed` は findings の件数に関係なく 0 exit である。これは transport と provenance の検証であり、レビュー品質や merge 可否の判定ではない。`not-run`、`partial`、未収集 provider を指摘 0 件として集計しない。
+
+OpenAI / Codex を primary reviewer とする。auth / RLS / billing / migration / 公開契約などで独立した反証の価値がある時は、Claude Code や Antigravity を optional counterreview として追加できる。各 provider の所見は個別に failure scenario と一次情報を照合し、多数決で棄却しない。role の選択と投稿手順は `.agents/skills/pr-cross-review/SKILL.md` を正本とする。
+
+## 6. Migration acceptance と handoff
+
+native worktree root の fresh Codex session による共通指示・skills の発見と、サブディレクトリ起動の別 Codex session への review pack 引き継ぎを確認した。Codex の project trust と実 hook 発火、Antigravity の skill discovery と review adapter は未検証であり、設定ファイルの存在を有効化の証拠にしない。
+
+2026-09-07、`scripts/tasks` から新規 Codex read-only セッション（gpt-5.6-sol、session `01a0796e-8943-7303-9bb3-6184e41a9b2f`）を起動し、base `393f432c6` → head `bbdb9510a` の移行差分を pack で手渡した。result envelope は `reviewed`、recommendation は `revise`、指摘 1 件だった。指摘は shell の任意編集に対する保証の過大解釈で、経路別の保護表へ保証外の操作を明記した。これは別 OpenAI セッションの反証であり、別モデル系列の反証や native hook 発火の証拠ではない。旧 SHA の所見を後続 SHA の指摘ゼロとして再利用しない。
+
+次の 3 trial は将来の実 PR で各 1 件行い、証跡はその issue / PR comment に残す。ここに別の常設 tracker は作らない。Antigravity は高リスク変更で独立した反証が有益な時の任意 adapter であり、trial の合格条件にはしない。
+
+| trial                    | 対象                                                 | status  |
+| ------------------------ | ---------------------------------------------------- | ------- |
+| **通常バグ修正**         | 1 feature 内の再現可能な bug fix 1 件                | pending |
+| **複数ファイル変更**     | 複数 file / connection point を含む変更 1 件         | pending |
+| **高リスク diff review** | auth / RLS / billing / migration / 公開契約など 1 件 | pending |
+
+各 trial は次の 4 軸で評価する。
+
+1. **成功条件**: issue / PR の受け入れ条件と検証結果を満たしたか
+2. **説明し直し救済**: 曖昧さや誤解が生じた時、User が全体を説明し直さず issue / PR / pack の事実から修正できたか
+3. **手戻り・見逃し**: review 後の修正 round、revert、見逃した P1 / P2、未解消 unknown を記録できたか
+4. **別 session 再開**: fresh separate session が issue / PR / pack だけから対象 SHA と次の一手を復元できたか
+
+`stale` / `partial` / `not-run` / `invalid` の区別と、未完了 result を findings 0 にしない契約は自動 test 24 件で検証済みである。これは実 PR での上記 3 trial や reviewer 品質の代替ではない。
+
+`pnpm ai:usage` と `pnpm trace` の session / token / tool データは Claude Code local transcript のみを収集する。Codex / Antigravity は `null` / unknown であり 0 ではない。GitHub 由来の aggregate PR outcomes は repo 全体の値なので、Claude Code の token や session で割って provider の効率を主張しない。
+
+---
+
+## 履歴: Opus 4.7 Skill Triggers Migration
 
 **Date**: 2026-04-17
-**Scope**: `.claude/skills/` 配下 project skills 12 個
+**Scope**: 現在の `.agents/skills/` に移行済みの project skills 12 個
 **Status**: 完了
 
 ## 1. 背景
@@ -486,7 +588,7 @@ skill invocation は description を読んで判断される仕様上、**descri
 
 ## 2. 対象と範囲
 
-**対象**: project skills 12 個（`.claude/skills/` 配下、repo commit される）
+**対象**: project skills 12 個（現在は `.agents/skills/` 配下、repo commit される）
 
 - `storybook` / `security` / `test` / `optimistic-update`
 - `trpc-router-creating` / `store-creating` / `i18n` / `error-handling`
@@ -542,7 +644,7 @@ skill invocation は description を読んで判断される仕様上、**descri
 
 ## 4. 12 skill の類型マッピング
 
-各 skill の類型定義と書式詳細は [`skill-design` skill](../../`skill-design` skill) を参照。
+各 skill の類型定義と書式詳細は [`skill-design` skill](../../.agents/skills/skill-design/SKILL.md) を参照。
 
 | #   | skill                  | 類型             |
 | --- | ---------------------- | ---------------- |
@@ -581,11 +683,11 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 
 ### `eagle-dayopt`: ライフサイクル型、要素数 8
 
-パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[`skill-design` skill](../../`skill-design` skill) の類型表で 8 まで許容と明記済み。
+パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）で最低 1-2 要素必要なため、要素数が通常型を超える。[`skill-design` skill](../../.agents/skills/skill-design/SKILL.md) の類型表で 8 まで許容と明記済み。
 
 ## 6. 設計原則の確立
 
-この migration 中に確立した skill 設計の恒常ルールは **[`skill-design` skill](../../`skill-design` skill)** に分離した。主要原則:
+この migration 中に確立した skill 設計の恒常ルールは **[`skill-design` skill](../../.agents/skills/skill-design/SKILL.md)** に分離した。主要原則:
 
 - **6 類型の定義**（作成系 / 予防系 / 運用系 / 副次トリガー型 / 明示発動型 / ライフサイクル型）
 - **description の書式**（字数、先頭句、構造）
@@ -594,7 +696,7 @@ description に「DB 変更系 / Realtime 系 / Edge Functions 系 / 3 環境運
 - **境界設計原則**（skill 間 handoff、skill 層と rules 層の境界、自動生成 artifact の扱い、invocation トリガーと実行時ルールの分離、self-contained 原則）
 - **空白領域 flag**（URL state の将来 skill 化余地）
 
-本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `skill-design` skill 側。将来 skill を追加・修正する際は rules/ 側を参照する。
+本節は **1 回性のイベント記録**であり、skill 設計の source of truth は `skill-design` skill 側。将来 skill を追加・修正する際は `.agents/skills/skill-design/SKILL.md` を参照する。
 
 ## 7. スコープ境界（未着手タスク）
 

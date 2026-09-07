@@ -229,9 +229,14 @@ function EntryCard({ entry, onEdit, onDelete }) {
 ```tsx
 function EntryCardContainer({ entryId }) {
   const { data: entry } = api.plans.getById.useQuery({ id: entryId });
-  const deleteEntry = api.plans.delete.useMutation();
+  const deleteEntry = api.planCommands.delete.useMutation();
 
-  return <EntryCard entry={entry} onDelete={() => deleteEntry.mutate({ id: entryId })} />;
+  return (
+    <EntryCard
+      entry={entry}
+      onDelete={() => deleteEntry.mutate({ id: entryId, expectedUpdatedAt: entry.updated_at })}
+    />
+  );
 }
 ```
 
@@ -249,7 +254,7 @@ if (!entry) {
 }
 
 // Client側でキャッチ
-const mutation = api.plans.update.useMutation({
+const mutation = api.planCommands.update.useMutation({
   onError: (error) => {
     if (error.data?.code === 'NOT_FOUND') {
       toast.error('エントリが見つかりません');
@@ -533,31 +538,32 @@ from('entries')
 EntryService
 
 // ✅ 現在
-api.plans.create(...) / api.records.create(...)
+api.planCommands.create(...) / api.recordCommands.create(...)
 from('plans') / from('records')
 PlanService / RecordService
 ```
 
 コードベースやドキュメントで `entry` / `entries` を見かけたら、文脈に応じて `plan` / `record` に読み替える。
 
-### 2. 過去 Timeblock の編集（時間不変原則）
+### 2. Plan / Record の時刻ルール
 
-`TimeblockState === 'past'` の Timeblock は読み取り専用。スケジュール変更は不可。
+強制点は2本だけ（`end_at > start_at`、Record は未来に終われない）。過去 Plan は読み取り専用ではなく、過去・未来で操作を出し分ける特別扱いはこれ以外にない（2026-09-04、「未来 Plan」向け特例4種を撤去）。
 
 ```tsx
-// ❌ 過去Planの時間を変更
-updatePlan({ id, startAt: newTime }); // pastの場合エラー
+// ✅ 過去Planの時間も自由に変更できる
+updatePlan({ id, startAt: newTime }); // Planのままで、Recordへは変換されない
 
 // ✅ 過去Planの内容を訂正
 updatePlan({ id, note, activityId });
 
-// ✅ 実際に使った時間はRecordとして作成・訂正
+// ❌ Recordの終了を未来へ動かす
+updateRecord({ id, endAt: futureTime }); // DB trigger `DT005` がエラーにする
+
+// ✅ Recordの時間・内容を訂正（終了は現在以前のまま）
 updateRecord({ id, startAt, endAt, note });
 ```
 
-**二重防御**: UIの`isPlanTimeEditable()`判定とserver側の時間更新制約の両方で制御。
-
-詳細: ADR-015 時間不変原則（決定ログは削除済み・git 履歴参照）
+強制点は DB trigger（`DT003` / `DT005`）。アプリ層はその写しで、UI だけを直しても規則は変わらない。
 
 ### 3. 直接カラーの使用
 

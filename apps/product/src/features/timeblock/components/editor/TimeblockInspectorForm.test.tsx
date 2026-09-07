@@ -363,16 +363,18 @@ describe('TimeblockInspectorForm', () => {
     expect(screen.getByTestId('feedforward-props')).toHaveTextContent(/^record\//);
   });
 
-  it('未来Planの終了を現在以前へ変更せず、保存キューにも送らない', () => {
+  it('未来Planの終了を現在以前へ変更でき、保存キューにも送る', () => {
     render(<TimeblockInspectorForm kind="plan" plan={futurePlan} onDeleted={vi.fn()} />);
 
     expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T14:00:00.000Z');
 
     fireEvent.click(screen.getByRole('button', { name: 'move-to-now' }));
 
-    expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T14:00:00.000Z');
-    expect(mocks.enqueueSave).not.toHaveBeenCalled();
-    expect(mocks.toastError).toHaveBeenCalledWith('timeblock.editor.timeLocked');
+    expect(screen.getByTestId('current-end')).toHaveTextContent('2026-07-15T12:00:00.000Z');
+    expect(mocks.enqueueSave).toHaveBeenCalledWith(
+      expect.objectContaining({ end_at: '2026-07-15T12:00:00.000Z' }),
+    );
+    expect(mocks.toastError).not.toHaveBeenCalled();
   });
 
   it('Planを別のPlanと重なる時間へ変更するとインライン表示し、保存しない', () => {

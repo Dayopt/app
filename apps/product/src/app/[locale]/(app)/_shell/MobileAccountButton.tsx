@@ -42,10 +42,17 @@ export function MobileAccountButton({
       aria-label={ariaLabel}
       className={cn(
         'hover:bg-state-hover focus-visible:outline-ring flex size-8 items-center justify-center rounded-lg transition-colors focus-visible:outline-2',
+        // 44px のタッチターゲットを擬似要素で確保する（`Button` の icon variant と同じ手口）。
+        // 32px のままだと、隣に並ぶアイコンボタンだけが 44px でここだけ小さい
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素を描くには content が要り、空文字以外に書きようがない（packages/components の Button の icon variant と同じ記述）
+        'relative after:absolute after:inset-0 after:m-auto after:size-11 after:content-[""]',
         className,
       )}
     >
-      <Avatar size="sm">
+      {/* **`size="sm"`（32px）にしない。** 箱と同寸になってアバターが縁まで埋まり、
+          隣の 20px グリフと並ぶと不釣り合いに大きく、箱の hover も見えなくなる。
+          24px なら内側に余白が残り、線のアイコンと光学的な重さが揃う（2026-09-07 実測）*/}
+      <Avatar size="sm" className="size-6">
         {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
         <AvatarFallback className="bg-muted text-muted-foreground text-xs">
           {getInitials(displayName)}

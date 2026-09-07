@@ -18,7 +18,7 @@ export interface StatPlanRow {
   end_at: string;
 }
 
-export interface StatRecordRow {
+interface StatRecordRow {
   id: string;
   activity_id: string | null;
   plan_id: string | null;
@@ -30,6 +30,21 @@ export interface StatRecordRow {
 /** 見積もり係数用の Plan 行。skip 判定に `skipped_at` を要するため専用 shape にする。 */
 interface EstimationPlanRow extends StatPlanRow {
   skipped_at: string | null;
+}
+
+export interface ActivityLookupRow {
+  id: string;
+  name: string;
+  /** カテゴリー未所属は null */
+  category_id: string | null;
+}
+
+export interface CategoryLookupRow {
+  id: string;
+  name: string;
+  /** 実 schema では nullable。色なしのカテゴリーがありうる */
+  color: string | null;
+  icon: string | null;
 }
 
 export interface DateRangeInput {

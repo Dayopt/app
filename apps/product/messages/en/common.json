@@ -211,7 +211,7 @@
     },
     "trialEnded": {
       "title": "Your 14-day trial has ended",
-      "description": "You can continue using the Free plan. AI suggestions, full history, and unlimited templates are Pro features.",
+      "description": "You can continue using the Free plan. Monthly and yearly overviews, Google Calendar sync, and API/MCP access are Pro features.",
       "continueFree": "Continue with Free",
       "continuePro": "Continue with Pro"
     },
@@ -368,7 +368,7 @@
       "mfa": {
         "enrollFailed": "Enrollment error",
         "dataNotFound": "Could not retrieve MFA data",
-        "setupFailed": "Failed to start 2FA setup",
+        "setupFailed": "Failed to start MFA setup",
         "enterCode": "Please enter a 6-digit code",
         "codeLength": "Code must be 6 digits",
         "challengeFailed": "Challenge error",
@@ -379,10 +379,10 @@
         "noFactorFound": "No valid MFA factor found",
         "noVerifiedFactor": "No verified MFA factor found",
         "disableFailed": "Disable error",
-        "disableGeneralFailed": "Failed to disable 2FA",
-        "disablePrompt": "Enter your 6-digit authenticator code to disable 2FA:",
-        "enabled": "2FA has been enabled!",
-        "disabled": "2FA has been disabled"
+        "disableGeneralFailed": "Failed to disable MFA",
+        "disablePrompt": "Enter your 6-digit authenticator code to disable MFA:",
+        "enabled": "MFA has been enabled!",
+        "disabled": "MFA has been disabled"
       },
       "auth": {
         "emailUpdateFailed": "Failed to update email address",

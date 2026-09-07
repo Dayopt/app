@@ -28,7 +28,7 @@ const meta = {
   tags: ['autodocs'],
   decorators: [
     (Story) => {
-      useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
       return (
         <ThemeProvider>
           <div className="mx-auto max-w-2xl">

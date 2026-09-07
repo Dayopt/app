@@ -16,34 +16,24 @@ import type { ReportActivityAggregate } from '../../server/report-aggregation-se
 
 /**
  * 羅針盤に点が生まれる充実の回答数。これ未満は待機リストへ。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
 export const COMPASS_MIN_FULFILLMENT = 5;
 /**
  * 見積もりの鏡の候補になる過去予定の箱数。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
 export const MIRROR_MIN_PLAN_BOXES = 3;
 /**
  * 見積もりの鏡の候補になる過去予定の分数。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
 export const MIRROR_MIN_PLAN_MINUTES = 30;
 /**
  * 予定比を出す最小の過去予定分数。これ未満は比率を作らない。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
 export const EXECUTION_MIN_PLAN_MINUTES = 15;
 /**
  * 見積もりの鏡に出す最大件数。
- *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
  */
-export const MIRROR_MAX_ROWS = 3;
+const MIRROR_MAX_ROWS = 3;
 
 // ============================================================
 // フィルタとレンズ
@@ -104,7 +94,6 @@ export function applySegmentLens(
 // 分母（1 章）
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportDenominators {
   /** フィルタを無視した全アクティビティの記録合計。余白の計算に使う。 */
   totalAllMinutes: number;
@@ -154,7 +143,6 @@ export function toPercent(minutes: number, trackMinutes: number): number {
 // 1 章: 決算バーと凡例
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportAllocationSlice {
   /** カテゴリー ID。未分類は `UNCATEGORIZED_KEY`。レンズ中はアクティビティ ID。 */
   key: string;
@@ -248,7 +236,6 @@ export function computePreviousDelta(options: {
 // 1 章: セグメント別バー
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportSegmentBar {
   segmentId: string;
   name: string;
@@ -294,7 +281,6 @@ export function buildSegmentBars(
 // 1 章: 日別のインク
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportInkColumn {
   key: string;
   /** カテゴリー別の積み上げ。記録 0 のカテゴリは含まない。 */
@@ -350,10 +336,10 @@ export function maxInkColumnMinutes(columns: readonly ReportInkColumn[]): number
 // 2 章: 執行
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportExecutionRow {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   archived: boolean;
   recordedMinutes: number;
@@ -391,6 +377,7 @@ export function buildExecutionRows(
     .map((activity) => ({
       activityId: activity.activityId,
       name: activity.activityName,
+      categoryName: activity.categoryName,
       color: activity.categoryColor,
       archived: activity.archived,
       recordedMinutes: activity.recordedMinutes,
@@ -410,13 +397,12 @@ export function buildExecutionRows(
 // 2 章: 見積もりの鏡
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export type ReportMirrorTone = 'over' | 'under' | 'onPlan';
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportMirrorRow {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   /** `rec / planPast`。1 より大きいほど予定より伸びている。 */
   coefficient: number;
@@ -450,6 +436,7 @@ export function buildMirrorRows(
       return {
         activityId: activity.activityId,
         name: activity.activityName,
+        categoryName: activity.categoryName,
         color: activity.categoryColor,
         coefficient,
         tone: resolveMirrorTone(coefficient),
@@ -469,10 +456,10 @@ function resolveMirrorTone(coefficient: number): ReportMirrorTone {
 // 3 章: 羅針盤
 // ============================================================
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
 export interface ReportCompassPoint {
   activityId: string | null;
   name: string | null;
+  categoryName: string | null;
   color: string | null;
   /** 盤の左からの位置（%）。投下時間に比例。 */
   x: number;
@@ -482,6 +469,8 @@ export interface ReportCompassPoint {
   opacity: number;
   /** 充実の回答数。 */
   answerCount: number;
+  /** 投下時間（分）。読み上げラベルに使う。 */
+  recordedMinutes: number;
 }
 
 /**
@@ -506,13 +495,20 @@ export function buildCompassPoints(
     return {
       activityId: activity.activityId,
       name: activity.activityName,
+      categoryName: activity.categoryName,
       color: activity.categoryColor,
       x: 6 + (activity.recordedMinutes / maxRecorded) * 86,
       y: 14 + ((slope + 1) / 2) * 72,
       opacity: 0.35 + Math.min(answerCount, 5) * 0.13,
       answerCount,
+      recordedMinutes: activity.recordedMinutes,
     };
   });
+}
+
+export interface ReportWaitingActivity {
+  activityId: string | null;
+  name: string | null;
 }
 
 /**
@@ -522,7 +518,7 @@ export function buildCompassPoints(
  */
 export function buildCompassWaitingList(
   visibleActivities: readonly ReportActivityAggregate[],
-): { activityId: string | null; name: string | null }[] {
+): ReportWaitingActivity[] {
   return visibleActivities
     .filter(
       (activity) =>

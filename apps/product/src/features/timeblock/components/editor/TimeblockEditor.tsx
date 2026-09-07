@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { DateTimeSection } from '@/features/timeblock';
 import { formatHHmm } from '@/lib/date';
 
-import { isPlanTimeEditable, type TimeblockDestination } from '../../domain/timeblock-destination';
+import { type TimeblockDestination } from '../../domain/timeblock-destination';
 import { NoteSection } from '../inspector/fields';
 import { TimeConflictAlert } from '../inspector/fields/TimeConflictAlert';
 
@@ -53,16 +53,10 @@ export function TimeblockEditor({
   fulfillmentSlot,
 }: TimeModelEditorProps) {
   const t = useTranslations('timeblock.editor');
-  const timeLocked = value.source === 'plan' && !isPlanTimeEditable(value.endAt);
   const hasDateTimeError = !isValidTimeModelRange(value) || dateTimeError != null;
 
   return (
     <div className="space-y-3">
-      {timeLocked ? (
-        <div className="flex justify-end">
-          <span className="text-muted-foreground text-xs">{t('timeLocked')}</span>
-        </div>
-      ) : null}
       <div className="space-y-1">
         <div className="bg-muted rounded-2xl px-4 py-2">
           <DateTimeSection
@@ -84,7 +78,7 @@ export function TimeblockEditor({
             onEndChange={(next) =>
               onDateTimeChange({ ...value, endAt: withTime(value.endAt, next) })
             }
-            disabled={disabled === true || timeLocked}
+            disabled={disabled === true}
             hasError={hasDateTimeError}
           />
           {fulfillmentSlot}

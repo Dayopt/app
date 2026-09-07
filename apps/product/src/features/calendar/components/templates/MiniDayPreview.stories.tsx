@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { MiniDayPreview } from './MiniDayPreview';
-import type { TemplateBlockMock } from './types';
+import type { TemplateBlockView } from './types';
 
 /**
  * テンプレートのホバープレビュー用ミニチュア日ビュー（v1.0 §5.4）。
@@ -24,7 +24,7 @@ function Frame({ children }: { children: React.ReactNode }) {
   );
 }
 
-function makeBlock(overrides: Partial<TemplateBlockMock> = {}): TemplateBlockMock {
+function makeBlock(overrides: Partial<TemplateBlockView> = {}): TemplateBlockView {
   return {
     id: 'block-1',
     activityName: '集中作業',

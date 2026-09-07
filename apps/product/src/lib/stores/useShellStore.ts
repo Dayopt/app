@@ -188,7 +188,7 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
         },
 
         // ── Settings Convenience ──
-        openSettings: (category = 'profile') =>
+        openSettings: (category = 'account') =>
           set({ activeSheet: { type: 'settings', category } }, false, 'openSettings'),
         closeSettings: () => {
           const { activeSheet } = get();

@@ -96,7 +96,7 @@ describe('TimeblockEditor', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('この時間帯には既に予定があります');
   });
 
-  it('過去Planでは日時だけを無効化し、メモ編集は維持する', () => {
+  it('過去Planでも日時とメモを編集できる', () => {
     render(
       <TimeblockEditor
         value={{
@@ -109,12 +109,12 @@ describe('TimeblockEditor', () => {
       />,
     );
 
-    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('date-time-section')).toHaveAttribute('data-disabled', 'false');
     const note = screen.getByRole('button', { name: 'note' });
     expect(note).toHaveAttribute('tabindex', '0');
     fireEvent.click(note);
     expect(screen.getByRole('textbox', { name: 'note' })).not.toBeDisabled();
-    expect(screen.getByText('timeLocked')).toBeInTheDocument();
+    expect(screen.queryByText('timeLocked')).not.toBeInTheDocument();
   });
 
   it('過去Recordでは日時とメモを編集できる', () => {

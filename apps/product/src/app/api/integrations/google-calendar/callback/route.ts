@@ -27,7 +27,9 @@ import {
   resolveRedirectUri,
   TOKEN_REQUEST_TIMEOUT_MS,
 } from '@/features/external-calendar/server/google-oauth';
-import { checkProAccessForUser } from '@/lib/billing/enforcement';
+import { entitlementKeys } from '@dayopt/billing';
+
+import { checkEntitlementForUser } from '@/lib/billing/enforcement';
 import { logger } from '@/lib/logger';
 import { isWriteFenceEnabled } from '@/lib/ops/write-fence';
 import { calendarConnectRateLimit } from '@/lib/rate-limit/upstash';
@@ -187,9 +189,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // 止めるだけなので、ユーザー自身は devtools や curl で中身を作れる。state / verifier /
   // userId を全部自分で用意して Google の認可 URL を手で組み立てれば、start を一度も
   // 踏まずにこの経路へ到達できる。start 側の 403 だけでは Free ユーザーを止められない。
-  const proAccess = await checkProAccessForUser(supabase, user.id);
+  const entitlement = await checkEntitlementForUser(
+    supabase,
+    user.id,
+    entitlementKeys.externalCalendarSync,
+  );
 
-  if (proAccess === 'lookup_failed') {
+  if (entitlement === 'lookup_failed') {
     captureUnexpectedError(new Error('subscription lookup failed'), {
       feature: 'external_calendar',
       operation: 'check_pro_subscription',
@@ -198,7 +204,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return fail('subscription_check_failed');
   }
 
-  if (proAccess === 'denied') {
+  if (entitlement === 'denied') {
     logger.warn('[calendar-callback] pro entitlement is required');
     return fail('pro_required');
   }

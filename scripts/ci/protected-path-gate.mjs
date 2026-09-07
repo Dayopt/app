@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Protected Path Gate - determines from a changed-files list whether the
- * internal cross-review marker gate (`[internal-review]`) should be required
- * for a PR (#2478, tempo-linked review gate).
+ * Protected Path Gate - determines from a changed-files list whether a PR
+ * touches a protected path, used as the signal for how heavily
+ * `pr-cross-review` skill's advisory review should be applied (#2478,
+ * tempo-linked review gate; downgraded from a merge-blocking gate to an
+ * advisory signal in #2596 - merge itself is blocked only by CI
+ * status-check-rollup and the `gh pr merge` guard hook).
  *
  * The old design required internal cross-review on every PR uniformly. This
- * script narrows that requirement to PRs that touch protected paths. It is the
- * single source of truth consumed by the merge gate in
+ * script narrows the "how heavily should this be reviewed" signal to PRs that
+ * touch protected paths. It is the single source of truth consumed by
  * `scripts/tasks/finish-branch.sh` (the glob list is not duplicated in bash to
- * avoid drift).
+ * avoid drift), which also reuses it to decide whether the `Production Config
+ * Audit` trusted-dispatch checkpoint applies (`auditContract`, still a merge
+ * gate - see below).
  *
  * The selection criterion is "external contract or irreversible" (#2489,
  * 2026-08-31): a mistake there is not caught by CI and cannot be undone by a
@@ -49,10 +54,6 @@
  * - Fail-closed behavior for empty input / missing node is the caller's
  *   responsibility (scripts/tasks/finish-branch.sh) - if node is missing
  *   this script cannot even run, so that branch cannot live here.
- * - Keep this glob list distinct from the
- *   dispatch skill（旧 orchestration.md、#2479 で再編） high-risk-PR Codex review selection
- *   criteria (that one picks PRs for the optional Codex layer; this one
- *   decides whether the internal marker gate is required).
  */
 
 import { resolve } from 'node:path';
@@ -76,8 +77,9 @@ export const PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS = [
 
 /**
  * Protected path globs (OR'd together). If any changed file matches one of
- * these, the internal cross-review marker gate becomes required. Add or
- * remove entries only in this array (finish-branch.sh does not keep a copy).
+ * these, `pr-cross-review` skill's advisory review is recommended (#2596;
+ * no longer a merge-blocking requirement). Add or remove entries only in this
+ * array (finish-branch.sh does not keep a copy).
  */
 export const PROTECTED_PATH_GLOBS = [
   // auth / OAuth / MCP integrations
@@ -120,27 +122,11 @@ export const PROTECTED_PATH_GLOBS = [
   'apps/product/src/app/api/v1/system/**',
   // the guardrails themselves
   '.husky/**',
+  '.codex/**',
+  '.claude/settings.json',
   'scripts/hooks/**',
   'scripts/tasks/finish-branch.sh',
   'scripts/ci/protected-path-gate.mjs',
-  // レビュー証跡の生成・検証そのもの（#2529 / #2530 の Codex Issue Review P2）。
-  // これらは head SHA / fingerprint の実測と書式強制を担う trust boundary で、
-  // 「空出力を成功扱いにする」「任意の識別子を受け入れる」といった変更が入れば
-  // gate は green のまま無効化される（CI では捕まらない、revert だけでは
-  // 取り戻せない）。判定基準「外部契約 or 不可逆」の後段そのものなので、
-  // ガードレール自己保護として必須側に置く。**Codex レビュー対象の通常 PR の
-  // 範囲を広げる変更ではない**（product path の選別基準は不変）。
-  'scripts/tasks/issue-review-gate.mjs',
-  'scripts/lib/issue-review-core.mjs',
-  'scripts/tasks/generate-issue-review-marker.mjs',
-  'scripts/tasks/generate-marker.ts',
-  'scripts/lib/generate-marker-core.ts',
-  // レビュー証跡の**束縛**そのもの（#2558）。指紋の計算が「常に同じ値を返す」形へ
-  // 退化すると、旧レビューが恒久的に有効と判定され、未レビューの保護対象 diff が
-  // gate を素通りする。CI では捕まらず revert でも取り戻せないため、生成・検証系と
-  // 同じくガードレール自己保護として必須側に置く。
-  'scripts/lib/review-fingerprint.mjs',
-  'scripts/tasks/review-request.mjs',
   // CI の中枢。check.mjs は write 権限つき GH_TOKEN を PR コードから隔離する
   // 処理とどの test を skip するかの判定を持ち、ci.yml はその job / permissions
   // を決める。どちらも「壊れても CI は green のまま」になりうるため、
@@ -207,22 +193,6 @@ const MATCHERS = PROTECTED_PATH_GLOBS.map((glob) => ({ glob, re: globToRegExp(gl
 const AUDIT_CONTRACT_MATCHERS = PRODUCTION_CONFIG_AUDIT_CONTRACT_PATHS.map((glob) =>
   globToRegExp(glob),
 );
-
-/**
- * 1 file が保護対象 path に該当するか。`resolveProtectedPathGate` と同じ
- * `MATCHERS`（= `PROTECTED_PATH_GLOBS`）を使う。レビュー指紋
- * （`scripts/lib/review-fingerprint.mjs`）が diff を保護対象だけへ絞り込むために
- * 呼ぶ。glob リストを二重管理しないための named export で、判定意味論は
- * `resolveProtectedPathGate` と 1 対 1 に対応する。
- *
- * @param {string} file
- * @returns {boolean}
- */
-export function isProtectedPath(file) {
-  const normalized = String(file ?? '').trim();
-  if (!normalized) return false;
-  return MATCHERS.some((matcher) => matcher.re.test(normalized));
-}
 
 /**
  * `auditContract` は「この PR が audit contract そのものを変えたか」。

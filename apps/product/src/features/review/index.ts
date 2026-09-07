@@ -17,9 +17,12 @@
 // =============================================================================
 // Components
 // =============================================================================
+export { ConnectedReportDetailPanel } from './components/detail/ConnectedReportDetailPanel';
 export { ReportHeader } from './components/layout/ReportHeader';
+export { ReportMobileHeader } from './components/layout/ReportMobileHeader';
 export { ReportBody } from './components/report/ReportBody';
 export { SegmentList } from './components/segments/SegmentList';
+export { ReportFilterChipRow } from './components/sidebar/ReportFilterChipRow';
 export { ReportFilterList } from './components/sidebar/ReportFilterList';
 
 // =============================================================================
@@ -27,10 +30,18 @@ export { ReportFilterList } from './components/sidebar/ReportFilterList';
 // =============================================================================
 export {
   isReportGranularity,
+  resolveNextPeriodStartDayKey,
   resolveReportRange,
+  resolveZonedDayKey,
   shiftReportAnchor,
   todayReportAnchor,
 } from './lib/report-period';
 export type { ReportGranularity } from './lib/report-period';
+
+// =============================================================================
+// 詳細パネルの器（shell が 4 カラム目を用意するために要る）
+// =============================================================================
+export { REPORT_DETAIL_PANEL_WIDTH, REPORT_DETAIL_SLOT_KEY } from './lib/report-detail-slot';
+export { useReportDetailStore } from './stores/useReportDetailStore';
 
 // ここにないものはfeature内部専用

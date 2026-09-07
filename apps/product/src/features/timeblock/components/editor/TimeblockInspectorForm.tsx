@@ -22,7 +22,6 @@ import { toast } from '@/lib/toast';
 import { Button } from '@dayopt/components';
 
 import {
-  isPlanTimeEditable,
   resolveTimeblockDestination,
   type TimeblockDestination,
 } from '../../domain/timeblock-destination';
@@ -384,10 +383,6 @@ export function TimeblockInspectorForm({
   const handleDateTimeChange = useCallback(
     (next: TimeModelEditorValue) => {
       if (actionPreparingRef.current || conflictRecoveringRef.current) return;
-      if (!isDuplicateMode && kind === 'plan' && !isPlanTimeEditable(next.endAt)) {
-        toast.error(t('timeblock.editor.timeLocked'));
-        return;
-      }
       setHasTimeConflict(false);
       setValue(next);
       if (isDuplicateMode || !isValidTimeModelRange(next)) return;
@@ -404,7 +399,7 @@ export function TimeblockInspectorForm({
         end_at: next.endAt.toISOString(),
       });
     },
-    [kind, isDuplicateMode, queryClient, targetId, enqueueSave, t],
+    [kind, isDuplicateMode, queryClient, targetId, enqueueSave],
   );
 
   const handleNoteChange = useCallback(
@@ -575,11 +570,9 @@ export function TimeblockInspectorForm({
     ? []
     : // eslint-disable-next-line react-hooks/refs -- helperはcallbackを実行せずmenu itemへ格納するだけ
       getTimeblockMenuItems({
-        // time model では変換系（markUnplanned / restorePlanned）を出さないため
-        // plan → planned / record → unplanned の対応で表示条件だけ流用する
+        // skip / unskip は Plan にしか出ないため、kind をそのまま origin へ写す
         origin: kind === 'plan' ? 'planned' : 'unplanned',
         activityId: value.activityId,
-        isPast,
         isSkipped,
         onViewStats:
           onViewStats && value.activityId ? () => onViewStats(value.activityId ?? '') : undefined,
@@ -673,8 +666,8 @@ export function TimeblockInspectorForm({
 
         {/*
           保存先は kind ではなく end_at のルールで判定する。編集で end を過去へ動かした
-          瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 時間が
-          凍結されていて見積もりを直す余地が無いため。
+          瞬間に消え、未来へ戻せば再び出る。過去 Plan（end が過去）では出ない — 見積もりの
+          事前フィードバックであり、終わった時間帯に対しては助言する相手がいないため。
         */}
         <EstimationFeedforward
           destination={resolveTimeblockDestination(value.endAt)}

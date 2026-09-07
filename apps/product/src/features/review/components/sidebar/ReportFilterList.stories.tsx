@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { ReportFilterList } from './ReportFilterList';
 
 /**
- * `/report` サイドバーの「カテゴリー — 分母から出し入れ」。
+ * `/report` サイドバーの「カテゴリ」（分母から出し入れ）。
  *
  * カテゴリー・未分類・余白の 3 種類だけを並べ、アクティビティは並べない。
  * `activities.listTree` を tRPC でモックし、トグル状態は `useReportViewStore` で作る。

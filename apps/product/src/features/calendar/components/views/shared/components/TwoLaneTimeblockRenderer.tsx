@@ -7,8 +7,9 @@
  * 描画は kind に応じて `PlanLaneCard` / `RecordLaneCard`（presentational）に委譲する。
  * PlanLaneCard/RecordLaneCard は自身の `position` prop から絶対座標を描画するため、
  * 追加のラッパー div で位置を持たせない（二重にレーン幅が掛かるのを避ける）。
- * past-plan/auto_migrated ロックは TimeblockRenderer には無い、
- * time model 固有の関心事としてここに実装する。
+ * auto_migrated ロックは TimeblockRenderer には無い、
+ * time model 固有の関心事としてここに実装する（過去 Plan のロックは存在しない —
+ * Plan は時間軸のどこにでも置ける。docs/product/specs/plan-record.md）。
  */
 
 import type React from 'react';
@@ -63,16 +64,6 @@ interface TwoLaneEntryRendererProps {
 
 /** auto_migrated record はドラッグ/リサイズを禁止する。 */
 function isDragDisabled(entry: CalendarDisplayEvent): boolean {
-  if (entry.recordSource === 'auto_migrated') return true;
-  return false;
-}
-
-/** 過去Planは時間変更を禁止するが、Recordレーンへの記録dropは許可する。 */
-function isResizeDisabled(entry: CalendarDisplayEvent, now: number): boolean {
-  if (entry.kind === 'plan') {
-    const end = entry.endDate?.getTime();
-    return end != null && end <= now;
-  }
   return entry.recordSource === 'auto_migrated';
 }
 
@@ -126,10 +117,8 @@ export function TwoLaneTimeblockRenderer({
   const activityIcon = activity?.icon ?? null;
   const activityCategoryId = activity?.categoryId ?? null;
   const isActive = isInspectorOpen && inspectorEntryId === entry.id;
-  // eslint-disable-next-line react-hooks/purity -- 過去 plan / auto_migrated ロック判定。再レンダーごとの now で十分（TimeblockContextMenu と同じ運用）
-  const now = Date.now();
   const disableDrag = isDragDisabled(entry);
-  const disableResize = isResizeDisabled(entry, now);
+  const disableResize = disableDrag;
   const rect = toRect(position);
 
   const handleClick = (_target: unknown) => {

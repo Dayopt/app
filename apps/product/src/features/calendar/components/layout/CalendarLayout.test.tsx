@@ -35,7 +35,7 @@ vi.mock('@/lib/hooks/useUserPreferences', () => ({
   ) => selector({ showWeekNumbers: false, weekStartsOn: 1 }),
 }));
 
-vi.mock('../../hooks/useSwipeGesture', () => ({
+vi.mock('@/lib/hooks/useSwipeGesture', () => ({
   useSwipeGesture: () => ({
     handlers: {
       onTouchStart: vi.fn(),

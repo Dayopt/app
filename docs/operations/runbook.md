@@ -1590,7 +1590,7 @@ npm version prerelease --preid=rc
 
 # 第4部: リリースノート執筆規約
 
-GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.claude/skills/releasing/SKILL.md`、`.claude/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
+GitHub Release 本文（`gh release edit` で反映）と Web公開用リリースノート（`apps/web/content/releases/{en,ja}/*.mdx`、`docs-writing` skill が担当）が共有する、唯一のカテゴリ定義。Claude・人間のいずれが書く場合もこの規約に従う。カテゴリはここでのみ定義し、他ファイル（`.agents/skills/releasing/SKILL.md`、`.agents/skills/docs-writing/templates/blog-frontmatter.md`）は再定義せずこのセクションを参照する。
 
 ## カテゴリ定義（共通・唯一の正）
 
@@ -1617,7 +1617,7 @@ id・アイコン・色は `apps/web/src/features/releases/lib/releases.ts` の 
 
 ## GitHub Release テンプレート
 
-AIがリリースノートを記載する際の構造テンプレート。リポジトリにリリースノートファイルをコミットする必要はなく、`gh release edit` で GitHub Release ページに直接反映する。PR一覧の取得方法は第2部「2.1 前回リリース以降の全PRを取得」と同じ（`.claude/skills/releasing/scripts/get-merged-prs.sh` でも同等の処理が可能）。
+AIがリリースノートを記載する際の構造テンプレート。リポジトリにリリースノートファイルをコミットする必要はなく、`gh release edit` で GitHub Release ページに直接反映する。PR一覧の取得方法は第2部「2.1 前回リリース以降の全PRを取得」と同じ（`.agents/skills/releasing/scripts/get-merged-prs.sh` でも同等の処理が可能）。
 
 ```markdown
 # Release vX.Y.Z
@@ -1687,7 +1687,7 @@ AIがリリースノートを記載する際の構造テンプレート。リポ
 
 ## Web版リリースノートとの関係
 
-同じ変更内容から `apps/web/content/releases/{en,ja}/*.mdx` を書く場合は `docs-writing` skill（`.claude/skills/docs-writing/templates/blog-frontmatter.md`）に従う。カテゴリは上記の5分類をそのまま使い、PR一覧の収集も本パートと同じ手順を流用する。GitHub Release本文をそのまま転記せず、エンドユーザー向けに平易な言葉へ書き直す（PRリンクは含めない）。
+同じ変更内容から `apps/web/content/releases/{en,ja}/*.mdx` を書く場合は `docs-writing` skill（`.agents/skills/docs-writing/templates/blog-frontmatter.md`）に従う。カテゴリは上記の5分類をそのまま使い、PR一覧の収集も本パートと同じ手順を流用する。GitHub Release本文をそのまま転記せず、エンドユーザー向けに平易な言葉へ書き直す（PRリンクは含めない）。
 
 ## 過去のリリースノートスナップショット
 

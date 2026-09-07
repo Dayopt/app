@@ -90,11 +90,6 @@ export function processInteractionEffects(
           interactionVersionRef.current = null;
           break;
         }
-        // 過去PlanはRecordレーンへの記録dropだけ許可し、同一レーンの時間移動は無視する。
-        if (event?.kind === 'plan' && event.endDate && event.endDate.getTime() <= Date.now()) {
-          interactionVersionRef.current = null;
-          break;
-        }
         r.onEventUpdate?.(effect.timeblockId, {
           startTime: effect.time.start,
           endTime: effect.time.end,

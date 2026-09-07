@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-08-24
+last_verified: 2026-09-07
 code: scripts/tasks/env/schema.ts
 ---
 
@@ -28,7 +28,17 @@ PR ごとの Supabase Preview Branch credentials は例外。Supabase / Vercel i
 
 ## AI エージェントの env ファイル境界
 
-Claude はローカル環境で作業する唯一の coding agent であり、本節はその境界を定める（Codex は 2026-09-01 からクロスレビュー必須 PR / `review:full` Issue のレビューを担うが、GitHub 上のメンション起動によるクラウドレビュー専任で、ローカルファイル・env には一切触れない。規則は `AGENTS.md` §Codex レビュー規則）。enforcement の実装は `.claude/settings.json` deny + `scripts/hooks/pre-tool-guard-rules.mjs`（loader は `pre-tool-guard.mjs`）、規約の正本はこの節に置く。
+この境界は provider を問わず、Dayopt の workspace を読む・書く全 coding agent に適用する。OpenAI / Codex を primary harness とし、Claude Code など他 provider も同じ規約を読む。規約の正本は本節、共有判定ロジックは `scripts/hooks/pre-tool-guard-rules.mjs` に置く。
+
+provider ごとの入口は薄い adapter として分ける。
+
+- Claude Code は `.claude/settings.json` から `scripts/hooks/pre-tool-guard.mjs` を呼ぶ
+- Codex 用の入口は `scripts/hooks/codex-pre-tool-guard.mjs`。Codex の tool-call payload を共有 rules の入力へ変換する
+- 他 runtime は共有 rules を呼ぶ adapter が登録されている場合だけ同じ機械判定を受ける。adapter が無ければ本節と `AGENTS.md` の規律だけが適用される
+
+**script が repo に存在するだけでは強制力にならない。** runtime が該当 adapter を tool 実行前に登録・起動し、block 結果を尊重する場合にだけ、その runtime 内の対象 tool call を止める。repo は user-global Codex 設定や未知の provider の hook 登録を保証しない。直接 shell、User 自身の UI 操作、adapter が受け取らない tool surface、意図的な文字列組み立てまで閉じる security boundary とは表現しない。hook は事故を減らす speed bump で、production mutation の最終境界は `AGENTS.md` の EXPLICIT AUTHORITY とサービス側の認証・承認である。
+
+Codex では project 初回利用時に trust を確認し、`/hooks` で `.codex/hooks.json` の command と有効状態を User がレビューする。`pnpm agent:preflight --json` の `codexHooks: "configured; runtime activation unverified"` は設定ファイルの存在だけを表し、runtime trust や hook の発火を証明しない。この移行は user-global Codex 設定を変更しない。
 
 **触ってよい（読み書き可）**:
 
@@ -36,7 +46,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 - `.op-env.human` / `.op-env.human.example` — 中身は `op://` 参照だけで実秘密は含まない。旧境界（作成・読み書き禁止）は 2026-08-13、User 決定（[#1993](https://github.com/Dayopt/dayopt/issues/1993)）で緩和した。読み・作成・編集は解禁し、境界は**消費**（`op run` にこのファイルを `--env-file` として渡す実行経路）だけに絞る。中身は参照 path のみで無害だが、消費すると production の service role key が解決される実行経路が用意されるため、消費は User の明示操作に限る。agent は schema の更新（`.op-env.human.example` の編集）だけでなく、`.op-env.human` 自体の作成・編集もできる。**enforcement は消費側だけに残す**: `pre-tool-guard-rules.mjs` の Bash 側ガードが、`--env-file` が `.op-env.human` 系（雛形含む）を指す実行を拒否する。`.claude/settings.json` の `deny`（旧 `Write` / `Edit`）は撤去した。契約は `scripts/__tests__/pre-tool-guard.test.ts` が固定する（作成・書き込みは許可、直後の消費は block、を両方 assert する）
   - **雛形も消費側の対象に含める**（`.op-env.human.example` は `op://human/...` の参照をそのまま持つため、コピーせず `op run` に渡すだけで同じ本番権限が解決される）
 
-**このガードの保証境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.agent` だけで、それ以外は中身を問わず落とす。
+**共有 rules が adapter から呼ばれた時の判定境界。** 消費側は **allowlist で判定する**。`--env-file` に渡してよいのは `.op-env.agent` だけで、それ以外は中身を問わず落とす。
 
 禁止する側を数え上げる方式には 2 段階で穴が見つかった。第一に、`op` がコマンド位置に来る形だけを見ると `env op run` / `command op run` / 絶対パス / `sh -c "op run …"` / `xargs` で迂回できる。第二に、`--env-file` が `.op-env.human` 系を指す場合だけを落としても、**雛形を別名へ複製すれば破れる**（`cp .op-env.human.example /tmp/foo` → その別名を `op run` へ）。path 名から中身は判別できない以上、許可する側を固定するしかない。新しい env-file を足す時はガードも更新する（増やすこと自体を意図的な判断にするため）。
 
@@ -44,7 +54,7 @@ Claude はローカル環境で作業する唯一の coding agent であり、�
 
 ここに至るまでに、緩い判定は 2 通りの穴を開けた。「path らしくない token は無視する」例外は quote / backslash escape を含む path を検査対象から外し、空白入りの別名で迂回できた。basename での判定は、任意ディレクトリに同名で置くだけで通った（`cp .op-env.human.example /tmp/.op-env.agent`）。token を分類したり path を正規化したりせず、許可形の literal 以外はすべて落とす。
 
-これで **path の形を変えて回り込む経路は閉じ切った**。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、変数展開、別ディレクトリの同名ファイル — いずれも許可形の literal に一致しないため落ちる。
+adapter が共有 rules へ渡したコマンド文字列では、列挙した静的な path 表現を拒否する。起動方法（`env` / `command` / 絶対パス / `sh -c` / `xargs`）、別名、quote / escape、別ディレクトリの同名ファイルは許可形の literal に一致しないため落ちる。runtime が adapter を呼ばない経路と、後述する実行時の文字列組み立てはこの保証に含めない。
 
 **flag の書き方も allowlist で判定する。** path を allowlist にしても、**flag と path の書き方を変えれば照合に入らない**（`--env-file"=…"` のように `=` の前へ引用符を刺すと、トリガーの正規表現に一致せず素通りした）。regex でコマンド文字列を見る限り shell の引数解釈は再現できず、同じ argv に落ちる書き方は無数にあるので、変形を数え上げるのをやめた。**`-env-file` という言及が 1 つでもあれば、その言及が全部「flag + `=`/空白 + 許可 literal + 区切り」でない限り落とす。** 加えて引用符と backslash を除いた写しでも同じ判定を行い、どちらかが落ちたら落とす（flag 名の内側へ引用符を刺す `--env-f"ile"=…` はこの写しでしか捕まらない）。
 

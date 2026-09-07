@@ -27,7 +27,7 @@ Plan（予定）とRecord（記録）を同じ時間軸で配置・閲覧する�
 - scroll keyはfocus中のCalendar gridだけが処理し、入力、IME、menu / dialog中はglobal shortcutを実行しない
 - hour gridとday dividerは内部線としてsubtleに表示し、同じ境界を重ねて描画しない
 - Diffは符号と方向を数字・iconで示し、増減そのものをsuccess / destructive色で評価しない
-- 過去Planの時間は凍結し、Recordの時間は訂正できる
+- 過去Planの時間も通常どおり編集できる。Recordは終了を未来へ動かす編集だけ不可
 - 既存カードのdrag previewは移動先のレーンと同じカードで表示する。Planはoutline、RecordとPlan→Recordの記録化previewは塗りで区別する
 - 過去PlanをRecordレーンへdragすると、drop previewの時間帯で元Planに紐づくRecordを作る。元Planは移動せず、Record同士が重ならなければ同じPlanへ複数回記録できる
 - 1つのPlanに複数のRecordがある場合、Calendarの差分は関連Recordの合計時間から計算し、代表するRecord card 1枚だけに表示する。`±0`は表示しない

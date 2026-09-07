@@ -9,14 +9,18 @@
  * @see _composition/useCalendarComposition.ts
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { ExternalCalendarEvent } from '@/features/external-calendar';
 import {
   createTimeblockDuplicateDraft,
+  deriveTemplateBlocksFromDay,
   resolveTimeblockDestination,
+  usePlanTemplateMutations,
   useTimeblockInspectorStore,
 } from '@/features/timeblock';
+import { getDateKey } from '@/lib/date';
+import { useUserPreferences } from '@/lib/hooks/useUserPreferences';
 
 import { CalendarTimeblockActionsProvider } from '../contexts/CalendarTimeblockActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
@@ -29,6 +33,7 @@ import type {
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
+import { SaveAsTemplateHeader } from './templates/SaveAsTemplateHeader';
 
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { CalendarLayout } from './layout/CalendarLayout';
@@ -90,9 +95,6 @@ interface CalendarControllerProps {
   onDeleteTimeblockConfirm: (entry: CalendarDisplayEvent) => void;
   onViewStats: (entry: CalendarDisplayEvent) => void;
   onCopy: (entry: CalendarDisplayEvent) => void;
-  // plan ⇄ record 変換は time model に procedure が存在しないため optional（渡さなければメニュー非表示）
-  onMarkUnplanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
-  onRestorePlanned?: ((entry: CalendarDisplayEvent) => void) | undefined;
   onSkip: (entry: CalendarDisplayEvent) => void;
   onUnskip: (entry: CalendarDisplayEvent) => void;
 
@@ -137,8 +139,6 @@ export function CalendarController({
   onDeleteTimeblockConfirm,
   onViewStats,
   onCopy,
-  onMarkUnplanned,
-  onRestorePlanned,
   onSkip,
   onUnskip,
   onNavigate,
@@ -159,6 +159,65 @@ export function CalendarController({
   // =========================================================================
 
   const openDuplicateInspector = useTimeblockInspectorStore((state) => state.openDuplicate);
+
+  // =========================================================================
+  // テンプレート（型）の保存（#2567）
+  // =========================================================================
+  // 保存中はヘッダーの中身だけを名前入力へ差し替える。メインの盤面は触らない
+  // （保存されるのは「今見えている日の盤面そのもの」という関係を UI で保つ）。
+  const [savingDateKey, setSavingDateKey] = useState<string | null>(null);
+  const timezone = useUserPreferences((preferences) => preferences.timezone);
+  const { createTemplate } = usePlanTemplateMutations();
+
+  // `currentDate` は壁時計 Date（navigation 由来）なので timezone 無しで暦日を読む（#2017）
+  const templateDateKey = getDateKey(currentDate);
+  const templateDayBlocks = useMemo(
+    () => deriveTemplateBlocksFromDay(allTimeblocks, templateDateKey, timezone),
+    [allTimeblocks, templateDateKey, timezone],
+  );
+
+  // 保存対象は「今見えている日」。開いた時の日から動いたら（キーボード移動・URL 変更・
+  // ビュー切替のどれでも）ヘッダーを閉じる。開いたままにすると、ユーザーが意図した日と
+  // 実際に保存される日がずれる。state ではなく導出で持ち、閉じ忘れの経路を作らない。
+  const isSavingAsTemplate = savingDateKey === templateDateKey && viewType === 'day';
+
+  const closeSaveAsTemplate = useCallback(() => setSavingDateKey(null), []);
+
+  // 移動系は保存状態を落としてから元のハンドラへ渡す（同じ日へ戻った時に
+  // 空のヘッダーが復活しないようにする）
+  const handleNavigate = useCallback(
+    (direction: 'prev' | 'next' | 'today') => {
+      closeSaveAsTemplate();
+      onNavigate(direction);
+    },
+    [closeSaveAsTemplate, onNavigate],
+  );
+
+  const handleViewChange = useCallback(
+    (newView: CalendarViewType) => {
+      closeSaveAsTemplate();
+      onViewChange(newView);
+    },
+    [closeSaveAsTemplate, onViewChange],
+  );
+
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      closeSaveAsTemplate();
+      onDateSelect(date);
+    },
+    [closeSaveAsTemplate, onDateSelect],
+  );
+
+  const handleSaveAsTemplate = useCallback(
+    (name: string) => {
+      createTemplate.mutate(
+        { name, blocks: templateDayBlocks },
+        { onSuccess: closeSaveAsTemplate },
+      );
+    },
+    [closeSaveAsTemplate, createTemplate, templateDayBlocks],
+  );
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -185,8 +244,8 @@ export function CalendarController({
   // キーボードショートカット（ビューナビゲーション用）
   useCalendarKeyboard({
     viewType,
-    onNavigate,
-    onViewChange,
+    onNavigate: handleNavigate,
+    onViewChange: handleViewChange,
     onToggleWeekends,
   });
 
@@ -264,9 +323,9 @@ export function CalendarController({
         className={className}
         viewType={viewType}
         currentDate={currentDate}
-        onNavigate={onNavigate}
-        onViewChange={onViewChange}
-        onDateSelect={onDateSelect}
+        onNavigate={handleNavigate}
+        onViewChange={handleViewChange}
+        onDateSelect={handleDateSelect}
         displayRange={{
           start: viewDateRange.start,
           end: viewDateRange.end,
@@ -275,6 +334,17 @@ export function CalendarController({
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}
+        headerReplacement={
+          isSavingAsTemplate ? (
+            <SaveAsTemplateHeader
+              onSave={handleSaveAsTemplate}
+              onCancel={closeSaveAsTemplate}
+              isSaving={createTemplate.isPending}
+            />
+          ) : undefined
+        }
+        onSaveAsTemplate={() => setSavingDateKey(templateDateKey)}
+        saveAsTemplateDisabled={templateDayBlocks.length === 0}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />
       </CalendarLayout>
@@ -288,8 +358,6 @@ export function CalendarController({
           onViewStats={onViewStats}
           onCopy={onCopy}
           onDuplicate={handleDuplicate}
-          onMarkUnplanned={onMarkUnplanned}
-          onRestorePlanned={onRestorePlanned}
           onSkip={onSkip}
           onUnskip={onUnskip}
         />

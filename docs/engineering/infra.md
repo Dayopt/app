@@ -306,7 +306,7 @@ GitHub Code QualityはOrganization / Repositoryの両方で無効にし、PR品�
 
 - Required checksはrepository rulesetと`.github/workflows/ci.yml`を正とし、Code Quality由来のcheckを追加しない
 - **GitHub CodeQL は 2026-08-11 に無効化すると決めた。UI 操作は本記述時点で未実施で、現在も CodeQL は動いている**（残作業は #1934。現在状態は `gh api repos/Dayopt/dayopt/code-scanning/default-setup --jq '.state'` が `configured` を返すか `not-configured` を返すかで判定する。`not-configured` を確認したらこの一文を完了形へ更新する）。無効化を決めた理由は次のとおり。 default setup が `languages: ["actions"]` で有効化されており、**workflow YAML しか解析していなかった**（`apps/` 配下の JS / TS は対象外）。#1425 の Done 条件「JavaScript / TypeScript が対象になっていることを確認する」が満たされないまま COMPLETED で close されたため、誤った前提が docs 側に残り続けていた。無効化後のセキュリティ静的解析の担当: secret は gitleaks と `pnpm secrets:check`（#2483 以前は `.github/workflows/docs-guard.yml`、現在は `ci.yml` の static job（`scripts/ci/check.mjs`））、依存は Dependabot、深掘り SAST は `/claude-security`。**`.github/workflows/**` に対する PR ごとの自動解析だけは代替が無く、無効化で失われる**（受容済み。根拠と再評価の条件は決定ログ）。再有効化する場合は `languages` に `javascript-typescript` が入っていることを `gh api repos/Dayopt/dayopt/code-scanning/default-setup` で確認する（設定画面を開いた事実では確認にならない）。判断は2026-08-11 の決定ログ（削除済み、git 履歴参照）
-- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に全 PR 適用を停止し、内製クロスレビューへ一本化した**が、2026-09-01 に**クロスレビュー必須 PR に限り必須の 2 系統目として再開した**（#2529。`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して存在しないと `pnpm branch:finish` が止まる）。低リスク PR では従来どおり起動しない。規則は `AGENTS.md` §Codex レビュー規則、手順は `.claude/skills/pr-cross-review/SKILL.md`
+- **自動の外部レビューは Codex（`chatgpt-codex-connector[bot]`）だけにしていた（2026-08-03〜2026-08-13）。** 2026-08-03 に Gemini の ai-review を撤去し、Copilot も外した（直近マージ 10 PR の実測で review / comment がともに 0 件。原因は org の Copilot seat が 0 で、automatic review が実際には機能していなかったこと）。「外部の目」を Codex の 1 系統だけにし、実装・テスト・内部レビューはすべて Claude 系という前提で品質設計していたが、**Codex（外部レビュー）は 2026-08-13 に全 PR 適用を停止し、内製クロスレビューへ一本化した**が、2026-09-01 に**クロスレビュー必須 PR に限り必須の 2 系統目として再開した**（#2529。`@codex review` で起動し、Codex 自身の review object が現 HEAD に対して存在しないと `pnpm branch:finish` が止まる）。低リスク PR では従来どおり起動しない。現在の規則は `AGENTS.md` §レビュー規則、手順は `.agents/skills/pr-cross-review/SKILL.md`
 - **repo ruleset「Copilot automatic first review」は 2026-08-05 に削除した。** 上記の「外した」後も ruleset 自体は active で残っており、seat 付与後に復活したのか直近 PR（#1832）へ実際にレビューを投稿し、PR ごとに約 3 課金分の Actions 実行を発生させていた。private 化後の課金源かつ（当時の）Codex 一本化方針と二重のため ruleset ごと削除。再開する場合は org の Copilot seat 割り当て（Settings → Copilot → Access）と ruleset の再作成の両方が必要
 - カバレッジ閾値が必要になった場合はVitest / CIで直接管理する
 - Code Qualityを再評価する場合は、有効化前にbilling impactと既存品質ゲートとの差分を確認する
@@ -379,10 +379,14 @@ Main が `pnpm review:marker` の出力（`gh api --method POST repos/{owner}/{r
   Draft CI 廃止により、この 3 job は draft の間 `conclusion: skipped` の check run になる。skipped は
   失敗にも成功にも実行中にも数えないため、集約判定（失敗 0 / 実行中 0 / success 1 件以上）だけでは
   「draft 期の skipped が残ったまま ready 直後に merge」を通してしまう（success 1 件は draft guard を
-  持たない docs guard が満たす）。docs-only PR では Impact gate による skip が正当なので免除し、
-  影響判定が不能な場合は要求する側（fail closed）へ倒す。**`🧪 Integration Tests` は加えて
-  `integration` affected な PR でだけ要求する**（affected でない PR では job ごと skip されるのが
-  正常で、無条件に要求すると永久に missing で止まる）。契約は
+  持たない docs guard が満たす）。影響判定が不能な場合は要求する側（fail closed）へ倒す。
+  **docs-only で免除するのは `📦 Unit Tests` だけ**（Impact gate による skip が正当なため）。
+  `🔍 Static Checks` は docs-only でも常に要求し、**`🧪 Integration Tests` は docs-only とは
+  独立に `integration` affected な PR でだけ要求する**（2026-09-05、[#2552](https://github.com/Dayopt/dayopt/issues/2552)）。
+  affected でない PR では job ごと skip されるのが正常で、無条件に要求すると永久に missing で止まる。
+  逆に docs-only を integration の外側条件に置くと、`docs/engineering/data/db/rls-snapshot.md`
+  のような「docs パスだが integration 対象」の PR で RLS drift 検査が一度も走らずに merge できる
+  （#2552 で実際に空いていた穴。ci.yml の integration job の `if:` と同じ向きに揃える）。契約は
   `scripts/__tests__/finish-branch.test.ts` §軽量層（Static Checks / Unit Tests）の実走要求 が固定する
 - **`ci.yml` / `scripts/ci/check.mjs` は `INTEGRATION_GLOBS` に含める（#2539）。** integration を独立 job へ
   切り出した結果、job まるごとが `if:` で skip されうるようになった。配線を持つこの 2 ファイルを
@@ -458,7 +462,7 @@ Main が `pnpm review:marker` の出力（`gh api --method POST repos/{owner}/{r
   外部レビュー（Codex。2026-08-13 に全 PR 適用を停止し、2026-09-01 にクロスレビュー必須 PR 限定で
   必須化して再開、#2529）と Claude の内部レビュー（`AGENTS.md §委任・報告の作法`
   §Read-only delegation の `risk-reviewer` / `behavior-verifier` / `architecture-guard`）に一本化して
-  いたが、現在は内製クロスレビュー（`.claude/skills/pr-cross-review/SKILL.md`）が merge gate の標準を
+  いたが、現在は内製クロスレビュー（`.agents/skills/pr-cross-review/SKILL.md`）が merge gate の標準を
   担う。判定基準だった不変条件カタログは [invariants.md](./invariants.md) に残っている
 - `ci.yml` は docs / rules のみの変更でも **workflow 自体は起動し**、`gate` job（Impact Resolver）の
   判定を各 job の `if:` に配って skip する。**skip された job は required status check として success
@@ -842,8 +846,8 @@ flip 忘れ・後日の戻しを検知する仕組みは **#1966** で `producti
 
 ### 関連ドキュメント
 
-- tRPC procedure 設計: `.claude/skills/trpc-router-creating/SKILL.md`（`trpc-router-creating` skill）
-- Supabase Branching 運用: `.claude/skills/supabase/SKILL.md`（`supabase` skill）
+- tRPC procedure 設計: `.agents/skills/trpc-router-creating/SKILL.md`（`trpc-router-creating` skill）
+- Supabase Branching 運用: `.agents/skills/supabase/SKILL.md`（`supabase` skill）
 - 問い合わせメール運用: `docs/operations/contact-email.md`
 
 ---
@@ -1546,7 +1550,7 @@ ORDER BY schemaname, tablename;
 
 ### 関連
 
-- skill: `.claude/skills/supabase/SKILL.md`
+- skill: `.agents/skills/supabase/SKILL.md`
 - secrets: `docs/operations/secrets.md`
 
 ---

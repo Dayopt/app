@@ -78,7 +78,7 @@ describe('useExternalCalendarEvents', () => {
   });
 
   it('query が error でも直前の成功 data が残っている場合、events は空配列にする（fail closed）', () => {
-    // proProcedure が FORBIDDEN を返すようになった後、TanStack Query は refetch 失敗時も
+    // entitledProcedure が FORBIDDEN を返すようになった後、TanStack Query は refetch 失敗時も
     // 直前の成功 data を保持し続ける。`data ?? []` のままだと解約後も外部予定が描画され続ける。
     mockQuery = {
       data: [

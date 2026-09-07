@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -33,6 +34,7 @@ vi.mock('../../hooks/useSegments', () => ({
   useSegments: () => segmentsState.current,
 }));
 
+import { useReportDetailStore } from '../../stores/useReportDetailStore';
 import { useReportViewStore } from '../../stores/useReportViewStore';
 import { ReportBody } from './ReportBody';
 
@@ -88,7 +90,15 @@ const PREVIOUS_WEEK_DATA = {
 };
 
 function renderBody() {
-  return render(<ReportBody anchorDate="2026-09-02" granularity="week" />);
+  return render(
+    <ReportBody
+      anchorDate="2026-09-02"
+      granularity="week"
+      onJumpToDay={() => {}}
+      onJumpToNextPeriod={() => {}}
+      onJumpToRecord={() => {}}
+    />,
+  );
 }
 
 /** ヘッドラインの大きい数字（見えているインク `V`）。 */
@@ -99,6 +109,14 @@ function headline() {
 /** 「記録 x ・ 余白 y」の行。余白の値がフィルタで動かないことを見る。 */
 function subtitle() {
   return screen.getByText(/^report\.allocation\.subtitle/).textContent;
+}
+
+/**
+ * 1 章の凡例。2 章の行にも同じアクティビティ名が出るので、凡例を見たい assert は
+ * ここを通す（`screen.getByText` は 2 つ見つけて落ちる）。
+ */
+function legend() {
+  return document.querySelector('[data-report-legend="allocation"]') as HTMLElement;
 }
 
 /** 決算バーが塗っている割合の合計（%）。残りは余白＝紙として塗られない。 */
@@ -119,6 +137,7 @@ describe('ReportBody', () => {
       isError: false,
     }));
     segmentsState.current = { data: SEGMENTS, isPending: false };
+    useReportDetailStore.getState().close();
     localStorage.clear();
     useReportViewStore.setState({
       hiddenCategoryIds: [],
@@ -178,7 +197,7 @@ describe('ReportBody', () => {
 
       expect(headline()).toBe('10:00');
       // カテゴリー名ではなくアクティビティ名が並ぶ
-      expect(screen.getByText('実装')).toBeInTheDocument();
+      expect(within(legend()).getByText('実装')).toBeInTheDocument();
       expect(screen.queryByText('仕事')).not.toBeInTheDocument();
       expect(screen.getByText('report.allocation.lensLabel 深い仕事')).toBeInTheDocument();
     });
@@ -235,7 +254,15 @@ describe('ReportBody', () => {
     const { rerender } = renderBody();
     expect(headline()).toBe('11:00');
 
-    rerender(<ReportBody anchorDate="2026-08-26" granularity="week" />);
+    rerender(
+      <ReportBody
+        anchorDate="2026-08-26"
+        granularity="week"
+        onJumpToDay={() => {}}
+        onJumpToNextPeriod={() => {}}
+        onJumpToRecord={() => {}}
+      />,
+    );
 
     expect(useReportPeriod).toHaveBeenLastCalledWith('2026-08-26', 'week');
     expect(useReportViewStore.getState().hiddenCategoryIds).toEqual(['cat-sleep']);
@@ -262,6 +289,22 @@ describe('ReportBody', () => {
     renderBody();
 
     expect(headline()).toBe('51:00');
+  });
+
+  /**
+   * 詳細の器（デスクトップのパネル / モバイルのシート）は Composition Bridge が選ぶので、
+   * **`ReportBody` はどの面でも開く口を渡す**。#2582 までは DOM slot の有無で塞いでいたが、
+   * モバイルにシートができた今その判定は誤りになる（押せるのに開かない面が生まれる）。
+   */
+  it('章の行から詳細を開ける（器の有無を見ない）', async () => {
+    const user = userEvent.setup();
+    renderBody();
+
+    const row = screen.getByRole('button', { name: /report.execution.rowAriaLabel 実装/ });
+    await user.click(row);
+
+    expect(useReportDetailStore.getState().isOpen).toBe(true);
+    expect(useReportDetailStore.getState().target?.activityId).toBe('act-dev');
   });
 });
 

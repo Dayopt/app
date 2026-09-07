@@ -1,0 +1,1219 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MCP tool contract snapshot > activityListInput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "includeArchived": {
+      "default": false,
+      "type": "boolean",
+    },
+  },
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > activityListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "activities": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "archivedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "categoryId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "isArchived": {
+            "type": "boolean",
+          },
+          "name": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "name",
+          "categoryId",
+          "isArchived",
+          "archivedAt",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "activities",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > categoryListInput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "includeArchived": {
+      "default": false,
+      "type": "boolean",
+    },
+  },
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > categoryListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "categories": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "archivedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "color": {
+            "nullable": true,
+            "type": "string",
+          },
+          "icon": {
+            "nullable": true,
+            "type": "string",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "isArchived": {
+            "type": "boolean",
+          },
+          "name": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "name",
+          "color",
+          "icon",
+          "isArchived",
+          "archivedAt",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "categories",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > constraintsGetInput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "endDate": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+    "startDate": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+  },
+  "required": [
+    "startDate",
+    "endDate",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > constraintsGetOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "asOf": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+    "completeness": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "enum": [
+            true,
+          ],
+          "type": "boolean",
+        },
+        "maxItemsPerLane": {
+          "enum": [
+            5000,
+          ],
+          "type": "number",
+        },
+      },
+      "required": [
+        "complete",
+        "maxItemsPerLane",
+      ],
+      "type": "object",
+    },
+    "occupancy": {
+      "additionalProperties": false,
+      "properties": {
+        "plans": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "endAt": {
+                "description": "ISO 8601 date-time with a UTC offset",
+                "type": "string",
+              },
+              "startAt": {
+                "description": "ISO 8601 date-time with a UTC offset",
+                "type": "string",
+              },
+            },
+            "required": [
+              "startAt",
+              "endAt",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "records": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "endAt": {
+                "description": "ISO 8601 date-time with a UTC offset",
+                "type": "string",
+              },
+              "startAt": {
+                "description": "ISO 8601 date-time with a UTC offset",
+                "type": "string",
+              },
+            },
+            "required": [
+              "startAt",
+              "endAt",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "plans",
+        "records",
+      ],
+      "type": "object",
+    },
+    "range": {
+      "additionalProperties": false,
+      "properties": {
+        "endDate": {
+          "description": "ISO 8601 date-time with a UTC offset",
+          "type": "string",
+        },
+        "endExclusive": {
+          "enum": [
+            true,
+          ],
+          "type": "boolean",
+        },
+        "startDate": {
+          "description": "ISO 8601 date-time with a UTC offset",
+          "type": "string",
+        },
+      },
+      "required": [
+        "startDate",
+        "endDate",
+        "endExclusive",
+      ],
+      "type": "object",
+    },
+    "rules": {
+      "additionalProperties": false,
+      "properties": {
+        "intervalBoundary": {
+          "enum": [
+            "[)",
+          ],
+          "type": "string",
+        },
+        "overlap": {
+          "additionalProperties": false,
+          "properties": {
+            "planVsPlan": {
+              "enum": [
+                "forbidden",
+              ],
+              "type": "string",
+            },
+            "planVsRecord": {
+              "enum": [
+                "allowed",
+              ],
+              "type": "string",
+            },
+            "recordVsRecord": {
+              "enum": [
+                "forbidden",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "planVsPlan",
+            "recordVsRecord",
+            "planVsRecord",
+          ],
+          "type": "object",
+        },
+        "plans": {
+          "additionalProperties": false,
+          "properties": {
+            "createEnd": {
+              "enum": [
+                "unrestricted",
+              ],
+              "type": "string",
+            },
+            "pastPlanContentUpdate": {
+              "enum": [
+                "allowed",
+              ],
+              "type": "string",
+            },
+            "pastPlanTimeUpdate": {
+              "enum": [
+                "allowed",
+              ],
+              "type": "string",
+            },
+            "skippedOccupiesLane": {
+              "enum": [
+                true,
+              ],
+              "type": "boolean",
+            },
+            "timeUpdateEnd": {
+              "enum": [
+                "unrestricted",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "createEnd",
+            "pastPlanTimeUpdate",
+            "pastPlanContentUpdate",
+            "timeUpdateEnd",
+            "skippedOccupiesLane",
+          ],
+          "type": "object",
+        },
+        "records": {
+          "additionalProperties": false,
+          "properties": {
+            "createEnd": {
+              "enum": [
+                "at_or_before_as_of",
+              ],
+              "type": "string",
+            },
+            "linkedPlan": {
+              "enum": [
+                "non_deleted_unskipped",
+              ],
+              "type": "string",
+            },
+            "timeUpdateEnd": {
+              "enum": [
+                "at_or_before_as_of",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "createEnd",
+            "timeUpdateEnd",
+            "linkedPlan",
+          ],
+          "type": "object",
+        },
+      },
+      "required": [
+        "intervalBoundary",
+        "overlap",
+        "plans",
+        "records",
+      ],
+      "type": "object",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+    "timezone": {
+      "minLength": 1,
+      "type": "string",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "asOf",
+    "timezone",
+    "range",
+    "completeness",
+    "occupancy",
+    "rules",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > entryListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "entries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "actualEndTime": {
+            "nullable": true,
+            "type": "string",
+          },
+          "actualStartTime": {
+            "nullable": true,
+            "type": "string",
+          },
+          "createdAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "description": {
+            "nullable": true,
+            "type": "string",
+          },
+          "durationMinutes": {
+            "nullable": true,
+            "type": "number",
+          },
+          "endTime": {
+            "nullable": true,
+            "type": "string",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "origin": {
+            "type": "string",
+          },
+          "startTime": {
+            "nullable": true,
+            "type": "string",
+          },
+          "title": {
+            "type": "string",
+          },
+          "updatedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "origin",
+          "startTime",
+          "endTime",
+          "actualStartTime",
+          "actualEndTime",
+          "durationMinutes",
+          "activityId",
+          "createdAt",
+          "updatedAt",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "entries",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > planGetOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "plan": {
+      "additionalProperties": false,
+      "properties": {
+        "activityId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string",
+        },
+        "createdAt": {
+          "type": "string",
+        },
+        "deletedAt": {
+          "nullable": true,
+          "type": "string",
+        },
+        "endAt": {
+          "type": "string",
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string",
+        },
+        "note": {
+          "nullable": true,
+          "type": "string",
+        },
+        "skippedAt": {
+          "nullable": true,
+          "type": "string",
+        },
+        "source": {
+          "type": "string",
+        },
+        "startAt": {
+          "type": "string",
+        },
+        "title": {
+          "type": "string",
+        },
+        "updatedAt": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+        "title",
+        "note",
+        "activityId",
+        "startAt",
+        "endAt",
+        "source",
+        "skippedAt",
+        "deletedAt",
+        "createdAt",
+        "updatedAt",
+      ],
+      "type": "object",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "plan",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > planListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "plans": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "createdAt": {
+            "type": "string",
+          },
+          "deletedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "endAt": {
+            "type": "string",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "note": {
+            "nullable": true,
+            "type": "string",
+          },
+          "skippedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "source": {
+            "type": "string",
+          },
+          "startAt": {
+            "type": "string",
+          },
+          "title": {
+            "type": "string",
+          },
+          "updatedAt": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "title",
+          "note",
+          "activityId",
+          "startAt",
+          "endAt",
+          "source",
+          "skippedAt",
+          "deletedAt",
+          "createdAt",
+          "updatedAt",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "plans",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > recordGetOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "record": {
+      "additionalProperties": false,
+      "properties": {
+        "activityId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string",
+        },
+        "createdAt": {
+          "type": "string",
+        },
+        "deletedAt": {
+          "nullable": true,
+          "type": "string",
+        },
+        "endAt": {
+          "type": "string",
+        },
+        "fulfillment": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+          ],
+          "nullable": true,
+          "type": "string",
+        },
+        "id": {
+          "format": "uuid",
+          "type": "string",
+        },
+        "note": {
+          "nullable": true,
+          "type": "string",
+        },
+        "planId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string",
+        },
+        "source": {
+          "type": "string",
+        },
+        "startAt": {
+          "type": "string",
+        },
+        "title": {
+          "type": "string",
+        },
+        "updatedAt": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+        "title",
+        "note",
+        "activityId",
+        "planId",
+        "startAt",
+        "endAt",
+        "source",
+        "fulfillment",
+        "deletedAt",
+        "createdAt",
+        "updatedAt",
+      ],
+      "type": "object",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "record",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > recordListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "records": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "createdAt": {
+            "type": "string",
+          },
+          "deletedAt": {
+            "nullable": true,
+            "type": "string",
+          },
+          "endAt": {
+            "type": "string",
+          },
+          "fulfillment": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+            ],
+            "nullable": true,
+            "type": "string",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "note": {
+            "nullable": true,
+            "type": "string",
+          },
+          "planId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "source": {
+            "type": "string",
+          },
+          "startAt": {
+            "type": "string",
+          },
+          "title": {
+            "type": "string",
+          },
+          "updatedAt": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "title",
+          "note",
+          "activityId",
+          "planId",
+          "startAt",
+          "endAt",
+          "source",
+          "fulfillment",
+          "deletedAt",
+          "createdAt",
+          "updatedAt",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "records",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > reviewGetInput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "endDate": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+    "startDate": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+  },
+  "required": [
+    "startDate",
+    "endDate",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > reviewGetOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "accuracy": {
+      "additionalProperties": false,
+      "nullable": true,
+      "properties": {
+        "rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number",
+        },
+        "status": {
+          "enum": [
+            "excellent",
+            "good",
+            "fair",
+            "poor",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "rate",
+        "status",
+      ],
+      "type": "object",
+    },
+    "activities": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+          },
+          "isArchived": {
+            "type": "boolean",
+          },
+          "isNoActivity": {
+            "type": "boolean",
+          },
+          "plannedMinutes": {
+            "minimum": 0,
+            "type": "number",
+          },
+          "recordedMinutes": {
+            "minimum": 0,
+            "type": "number",
+          },
+          "varianceMinutes": {
+            "type": "number",
+          },
+          "variancePercent": {
+            "nullable": true,
+            "type": "integer",
+          },
+        },
+        "required": [
+          "activityId",
+          "isNoActivity",
+          "isArchived",
+          "plannedMinutes",
+          "recordedMinutes",
+          "varianceMinutes",
+          "variancePercent",
+        ],
+        "type": "object",
+      },
+      "maxItems": 1000,
+      "type": "array",
+    },
+    "asOf": {
+      "description": "ISO 8601 date-time with a UTC offset",
+      "type": "string",
+    },
+    "basis": {
+      "additionalProperties": false,
+      "properties": {
+        "durationBoundary": {
+          "enum": [
+            "full_row_not_clipped",
+          ],
+          "type": "string",
+        },
+        "periodBoundary": {
+          "enum": [
+            "[)",
+          ],
+          "type": "string",
+        },
+        "planMeaning": {
+          "enum": [
+            "budget",
+          ],
+          "type": "string",
+        },
+        "recordMeaning": {
+          "enum": [
+            "actual",
+          ],
+          "type": "string",
+        },
+        "rowFilter": {
+          "enum": [
+            "active_start_in_period",
+          ],
+          "type": "string",
+        },
+        "varianceConvention": {
+          "enum": [
+            "planned_minus_recorded",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "planMeaning",
+        "recordMeaning",
+        "rowFilter",
+        "durationBoundary",
+        "periodBoundary",
+        "varianceConvention",
+      ],
+      "type": "object",
+    },
+    "hasData": {
+      "type": "boolean",
+    },
+    "period": {
+      "additionalProperties": false,
+      "properties": {
+        "endDate": {
+          "description": "ISO 8601 date-time with a UTC offset",
+          "type": "string",
+        },
+        "endExclusive": {
+          "enum": [
+            true,
+          ],
+          "type": "boolean",
+        },
+        "startDate": {
+          "description": "ISO 8601 date-time with a UTC offset",
+          "type": "string",
+        },
+        "timezone": {
+          "minLength": 1,
+          "type": "string",
+        },
+      },
+      "required": [
+        "startDate",
+        "endDate",
+        "endExclusive",
+        "timezone",
+      ],
+      "type": "object",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+    "signals": {
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "enum": [
+                  "plan_accuracy",
+                ],
+                "type": "string",
+              },
+              "rate": {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number",
+              },
+              "status": {
+                "enum": [
+                  "excellent",
+                  "good",
+                  "fair",
+                  "poor",
+                ],
+                "type": "string",
+              },
+            },
+            "required": [
+              "code",
+              "rate",
+              "status",
+            ],
+            "type": "object",
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "absoluteMinutes": {
+                "exclusiveMinimum": true,
+                "minimum": 0,
+                "type": "number",
+              },
+              "activityId": {
+                "format": "uuid",
+                "nullable": true,
+                "type": "string",
+              },
+              "code": {
+                "enum": [
+                  "largest_activity_variance",
+                ],
+                "type": "string",
+              },
+              "direction": {
+                "enum": [
+                  "recorded_less_than_planned",
+                  "recorded_more_than_planned",
+                ],
+                "type": "string",
+              },
+              "isArchived": {
+                "type": "boolean",
+              },
+              "isNoActivity": {
+                "type": "boolean",
+              },
+            },
+            "required": [
+              "code",
+              "activityId",
+              "isNoActivity",
+              "isArchived",
+              "direction",
+              "absoluteMinutes",
+            ],
+            "type": "object",
+          },
+        ],
+      },
+      "type": "array",
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "plannedMinutes": {
+          "minimum": 0,
+          "type": "number",
+        },
+        "recordedMinutes": {
+          "minimum": 0,
+          "type": "number",
+        },
+        "varianceMinutes": {
+          "type": "number",
+        },
+      },
+      "required": [
+        "plannedMinutes",
+        "recordedMinutes",
+        "varianceMinutes",
+      ],
+      "type": "object",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "asOf",
+    "period",
+    "basis",
+    "hasData",
+    "summary",
+    "accuracy",
+    "activities",
+    "signals",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`MCP tool contract snapshot > segmentListOutput の JSON Schema が変わっていない 1`] = `
+{
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "type": "integer",
+    },
+    "schemaVersion": {
+      "enum": [
+        3,
+      ],
+      "type": "number",
+    },
+    "segments": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "activityIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string",
+            },
+            "type": "array",
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string",
+          },
+          "name": {
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "name",
+          "activityIds",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+  },
+  "required": [
+    "schemaVersion",
+    "count",
+    "segments",
+  ],
+  "type": "object",
+}
+`;

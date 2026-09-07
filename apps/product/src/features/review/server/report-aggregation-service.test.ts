@@ -17,6 +17,8 @@ interface RecordSeed {
   start_at: string;
   end_at: string;
   fulfillment?: string | null;
+  /** 外部予定から変換された記録は、その予定 id を持つ（ghost の anti-join に効く）。 */
+  external_calendar_event_id?: string | null;
   user_id?: string;
 }
 
@@ -44,11 +46,26 @@ interface CategorySeed {
   user_id?: string;
 }
 
+interface ExternalEventSeed {
+  id: string;
+  start_at: string;
+  end_at: string;
+  status?: string;
+  dismissed_at?: string | null;
+  connection_id?: string | null;
+  provider_calendar_id?: string;
+  user_id?: string;
+}
+
 interface Seed {
   records?: RecordSeed[];
   plans?: PlanSeed[];
   activities?: ActivitySeed[];
   categories?: CategorySeed[];
+  externalEvents?: ExternalEventSeed[];
+  /** 接続とカレンダー選択。省略時は「外部カレンダー未接続」。 */
+  connections?: { id: string; status?: string }[];
+  selectedCalendars?: { connection_id: string; provider_calendar_id: string }[];
 }
 
 /**
@@ -64,12 +81,14 @@ function createFakeClient(seed: Seed): ReportFetchClient {
       user_id: USER_ID,
       deleted_at: null,
       fulfillment: null,
+      external_calendar_event_id: null,
       ...row,
     })),
     plans: (seed.plans ?? []).map((row) => ({
       user_id: USER_ID,
       deleted_at: null,
       skipped_at: null,
+      external_calendar_event_id: null,
       ...row,
     })),
     activities: (seed.activities ?? []).map((row) => ({
@@ -81,6 +100,23 @@ function createFakeClient(seed: Seed): ReportFetchClient {
       user_id: USER_ID,
       color: null,
       icon: null,
+      ...row,
+    })),
+    external_calendar_events: (seed.externalEvents ?? []).map((row) => ({
+      user_id: USER_ID,
+      status: 'confirmed',
+      dismissed_at: null,
+      connection_id: 'conn-1',
+      provider_calendar_id: 'cal-1',
+      ...row,
+    })),
+    calendar_connections: (seed.connections ?? []).map((row) => ({
+      user_id: USER_ID,
+      status: 'active',
+      ...row,
+    })),
+    calendar_connection_calendars: (seed.selectedCalendars ?? []).map((row) => ({
+      user_id: USER_ID,
       ...row,
     })),
   };
@@ -103,6 +139,22 @@ function createFakeClient(seed: Seed): ReportFetchClient {
       },
       gt: (column: string, value: string) => {
         current = current.filter((row) => Date.parse(String(row[column])) > Date.parse(value));
+        return query;
+      },
+      not: (column: string, _operator: string, value: unknown) => {
+        current = current.filter((row) => row[column] !== value);
+        return query;
+      },
+      in: (column: string, values: unknown[]) => {
+        current = current.filter((row) => values.includes(row[column]));
+        return query;
+      },
+      order: (column: string) => {
+        current = [...current].sort((a, b) => String(a[column]).localeCompare(String(b[column])));
+        return query;
+      },
+      limit: (count: number) => {
+        current = current.slice(0, count);
         return query;
       },
       then: (
@@ -492,6 +544,154 @@ describe('ReportAggregationService.getReportPeriod', () => {
 
     expect(result.period.bucketKeys).toHaveLength(12);
     expect(result.period.bucketKeys[0]).toBe('2026-01');
+  });
+  describe('4 章（整える）', () => {
+    /** 件数とジャンプ先が同じ集合から出ることを見る（別 query だと押した先が空になりうる）。 */
+    it('未分類の記録の件数と、最も早い 1 件の日を返す', async () => {
+      const service = createReportAggregationService(
+        createFakeClient({
+          records: [
+            mkRecord('rec-late', null, '2026-09-03T01:00:00+00:00', '2026-09-03T02:00:00+00:00'),
+            mkRecord(
+              'rec-early',
+              'act-1',
+              '2026-09-01T00:30:00+00:00',
+              '2026-09-01T01:30:00+00:00',
+            ),
+            mkRecord(
+              'rec-sorted',
+              'act-2',
+              '2026-09-02T01:00:00+00:00',
+              '2026-09-02T02:00:00+00:00',
+            ),
+          ],
+          activities: [
+            { id: 'act-1', name: '散歩', category_id: null },
+            { id: 'act-2', name: '実装', category_id: 'cat-1' },
+          ],
+          categories: [{ id: 'cat-1', name: '仕事' }],
+        }),
+      );
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.uncategorizedRecordCount).toBe(2);
+      // JST 09-01 09:30。UTC のまま日付を切る実装だと深夜帯でずれる
+      expect(result.firstUncategorizedRecord).toEqual({ id: 'rec-early', dayKey: '2026-09-01' });
+    });
+
+    it('未分類の記録が無ければジャンプ先を返さない', async () => {
+      const service = createReportAggregationService(
+        createFakeClient({
+          records: [
+            mkRecord('rec-1', 'act-2', '2026-09-02T01:00:00+00:00', '2026-09-02T02:00:00+00:00'),
+          ],
+          activities: [{ id: 'act-2', name: '実装', category_id: 'cat-1' }],
+          categories: [{ id: 'cat-1', name: '仕事' }],
+        }),
+      );
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.uncategorizedRecordCount).toBe(0);
+      expect(result.firstUncategorizedRecord).toBeNull();
+    });
+
+    /** 外部カレンダー未接続でも 2 行目が落ちない（受け入れ条件 6）。 */
+    it('外部カレンダー未接続なら未変換の予定は 0 件', async () => {
+      const service = createReportAggregationService(createFakeClient({}));
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.unconvertedExternalEventCount).toBe(0);
+      expect(result.firstUnconvertedExternalEvent).toBeNull();
+    });
+
+    it('未変換の外部予定を数え、最も早い日を返す（期間の外も数える）', async () => {
+      const service = createReportAggregationService(
+        createFakeClient({
+          connections: [{ id: 'conn-1' }],
+          selectedCalendars: [{ connection_id: 'conn-1', provider_calendar_id: 'cal-1' }],
+          externalEvents: [
+            // どちらも表示中の週（08-31〜09-07 JST）の外。期間に限定しない（仕様 §4.4）
+            {
+              id: 'ev-late',
+              start_at: '2026-09-20T02:00:00+00:00',
+              end_at: '2026-09-20T03:00:00+00:00',
+            },
+            {
+              id: 'ev-early',
+              start_at: '2026-09-14T00:00:00+00:00',
+              end_at: '2026-09-14T01:00:00+00:00',
+            },
+          ],
+        }),
+      );
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.unconvertedExternalEventCount).toBe(2);
+      expect(result.firstUnconvertedExternalEvent).toEqual({ dayKey: '2026-09-14' });
+    });
+
+    /**
+     * カレンダー画面が ghost として描かない行は、レポートでも数えない。
+     * ここが緩むと「N 件」を押した先に ghost が 1 つも無い行き止まりになる。
+     */
+    it('cancelled / dismiss 済み / 孤児 / 選択解除 / 変換済みは数えない', async () => {
+      const span = {
+        start_at: '2026-09-08T00:00:00+00:00',
+        end_at: '2026-09-08T01:00:00+00:00',
+      };
+      const service = createReportAggregationService(
+        createFakeClient({
+          connections: [{ id: 'conn-1' }],
+          selectedCalendars: [{ connection_id: 'conn-1', provider_calendar_id: 'cal-1' }],
+          externalEvents: [
+            { id: 'ev-ok', ...span },
+            { id: 'ev-cancelled', status: 'cancelled', ...span },
+            { id: 'ev-dismissed', dismissed_at: '2026-09-01T00:00:00+00:00', ...span },
+            { id: 'ev-orphan', connection_id: null, ...span },
+            { id: 'ev-unselected', provider_calendar_id: 'cal-other', ...span },
+            { id: 'ev-converted', ...span },
+          ],
+          records: [
+            {
+              ...mkRecord('rec-converted', 'act-2', span.start_at, span.end_at),
+              external_calendar_event_id: 'ev-converted',
+            },
+          ],
+          activities: [{ id: 'act-2', name: '実装', category_id: 'cat-1' }],
+          categories: [{ id: 'cat-1', name: '仕事' }],
+        }),
+      );
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.unconvertedExternalEventCount).toBe(1);
+      expect(result.firstUnconvertedExternalEvent).toEqual({ dayKey: '2026-09-08' });
+    });
+
+    /** 再認証待ちの接続は同期が止まっており、ミラーが凍結する。fail closed で数えない。 */
+    it('active でない接続の予定は数えない', async () => {
+      const service = createReportAggregationService(
+        createFakeClient({
+          connections: [{ id: 'conn-1', status: 'reauth_required' }],
+          selectedCalendars: [{ connection_id: 'conn-1', provider_calendar_id: 'cal-1' }],
+          externalEvents: [
+            {
+              id: 'ev-1',
+              start_at: '2026-09-08T00:00:00+00:00',
+              end_at: '2026-09-08T01:00:00+00:00',
+            },
+          ],
+        }),
+      );
+
+      const result = await service.getReportPeriod(USER_ID, baseInput(), NOW);
+
+      expect(result.unconvertedExternalEventCount).toBe(0);
+    });
   });
 });
 

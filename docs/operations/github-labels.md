@@ -87,7 +87,7 @@ code: .github/dependabot.yml
 
 ### risk
 
-- `risk:authority` — issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作を含む場合のみ付与。運用は `.claude/skills/dispatch/SKILL.md` 操作 B
+- `risk:authority` — issue の実行自体に `EXPLICIT AUTHORITY` の不可逆操作を含む場合のみ付与。運用は `.agents/skills/dispatch/SKILL.md` 操作 B
 
 ### judgment
 
@@ -98,10 +98,10 @@ code: .github/dependabot.yml
 
 ### review
 
-- `review:full` — **Issue / PR 共通の高リスクシグナル**（2026-09-01、[#2529](https://github.com/Dayopt/dayopt/issues/2529) / [#2530](https://github.com/Dayopt/dayopt/issues/2530)）。手で付ける明示的なエスカレーションで、AI が自動付与する仕組みは作らない
-  - **PR に付いている場合**: 保護対象 path に該当しなくてもクロスレビュー必須になる（内製証跡の commit status `dayopt/internal-review` + Codex 自身の証跡が両方必要。どちらも現 HEAD 一致または diff 指紋一致で束縛する）。判定は `scripts/tasks/finish-branch.sh` が `scripts/ci/protected-path-gate.mjs` と併せて行う
-  - **Issue に付いている場合**: 実装着手前に Codex Issue Review が必須になる（`pnpm review:issue:gate <N>` が機械判定、`dispatch` skill 操作A 手順 6）。さらに、その issue を `Closes #N` した PR も自動的にクロスレビュー必須になる（`Refs #N` や本文中の URL は継承しない）
-  - **ラベルを外しても gate 対象のまま**（`review:full` の削除履歴、またはこの issue 宛ての review marker があれば降格しない。失敗したレビューをラベル削除で迂回させないため）。再分類したい場合は current な pass 証跡を作る
+- `review:full` — **Issue / PR 共通の「User 自身が重く見て目を通す」印**（2026-09-04、[#2596](https://github.com/Dayopt/dayopt/issues/2596) で機械 gate から情報ラベルへ格下げ。旧: Issue / PR 共通の高リスクシグナルとして必須レビューを機械判定していた [#2529](https://github.com/Dayopt/dayopt/issues/2529) / [#2530](https://github.com/Dayopt/dayopt/issues/2530) は撤回）。手で付ける明示的なエスカレーションで、AI が自動付与する仕組みは作らない
+  - **PR に付いている場合**: `pr-cross-review` skill による advisory レビューをより丁寧に行う目安になる（merge を止める機械 gate ではない）。判定材料として `scripts/ci/protected-path-gate.mjs` の保護対象 path 判定と併せて使う
+  - **Issue に付いている場合**: 実装着手前に User 自身が目を通すべき合図（機械 gate はない）
+  - ラベルの有無は merge / 着手可否の機械判定に使わない
 
 ### quality
 

@@ -2,9 +2,9 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { TemplateDayEditor } from './TemplateDayEditor';
-import type { TemplateBlockMock } from './types';
+import type { TemplateBlockView } from './types';
 
-const blocks: TemplateBlockMock[] = [
+const blocks: TemplateBlockView[] = [
   {
     id: 'b1',
     activityName: '集中作業',

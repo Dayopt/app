@@ -1,6 +1,6 @@
 /**
  * MFA Disabled Email Template
- * リカバリーコードによる二段階認証無効化のセキュリティ通知
+ * リカバリーコードによる多要素認証無効化のセキュリティ通知
  *
  * トリガー: RecoveryService.verify() でリカバリーコード検証に成功し、
  * verified MFA factor が削除された後（サーバー側、verify() 応答内で await して送信。

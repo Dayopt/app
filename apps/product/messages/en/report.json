@@ -52,15 +52,152 @@
       "lensLabel": "Lens: {name}",
       "barAriaLabelLens": "Allocation by activity"
     },
+    "execution": {
+      "kick": "2 · Execution — did it go as planned",
+      "empty": {
+        "week": "No activity moved this week yet",
+        "month": "No activity moved this month yet",
+        "year": "No activity moved this year yet"
+      },
+      "unnamed": "Unnamed activity",
+      "rowAriaLabel": "{name}, recorded {recorded}",
+      "planRatio": "{percent}% of plan",
+      "planRatioUnavailable": "—",
+      "mirror": {
+        "heading": "Estimation mirror — strongest habits first",
+        "empty": "Not enough plan-record pairs yet — plan a box and record it, and the habit shows up here",
+        "unnamed": "Unnamed activity",
+        "sentence": {
+          "over": "{name} runs longer than planned (×{coefficient})",
+          "under": "{name} tends to wrap up at {percent}% of the plan (×{coefficient})",
+          "onPlan": "{name} runs close to plan (×{coefficient})"
+        }
+      }
+    },
+    "quality": {
+      "kick": "3 · Quality — was it a good allocation",
+      "unnamed": "Unnamed activity",
+      "axis": {
+        "time": "Time spent →",
+        "fulfilled": "Fulfilled",
+        "drained": "Drained"
+      },
+      "hint": {
+        "lowButFulfilled": "Little but fulfilling → room to add",
+        "heavyButDrained": "Heavy but draining → trim, or use smaller boxes"
+      },
+      "pointAriaLabel": "{name}, recorded {recorded}",
+      "emptyBoard": "No points yet — answer the fulfillment prompt when you stop or place a record, and points appear here",
+      "waiting": "Waiting to become a point: {names}",
+      "waitingSeparator": ", ",
+      "footnote": "Opacity = number of answers · a point appears at n≥{threshold}"
+    },
+    "tidy": {
+      "kick": "4 · Tidy up — and on to next week",
+      "none": "None",
+      "uncategorized": {
+        "label": "{count, plural, one {# uncategorized record} other {# uncategorized records}}",
+        "action": "Sort them"
+      },
+      "externalEvents": {
+        "label": "{count, plural, one {# external calendar event not reviewed} other {# external calendar events not reviewed}}",
+        "action": "Review them"
+      },
+      "nextPeriod": {
+        "planned": {
+          "week": "Next week already holds {duration} of boxes",
+          "month": "Next month already holds {duration} of boxes",
+          "year": "Next year already holds {duration} of boxes"
+        },
+        "empty": {
+          "week": "No boxes for next week yet",
+          "month": "No boxes for next month yet",
+          "year": "No boxes for next year yet"
+        },
+        "action": "Open the calendar"
+      }
+    },
+    "detail": {
+      "ariaLabel": "Activity details",
+      "close": "Close",
+      "unassigned": "No activity set",
+      "uncategorized": "Uncategorized",
+      "error": "Could not load the details",
+      "openCalendar": "Open in calendar",
+      "subtitle": {
+        "week": "{category} · this week",
+        "month": "{category} · this month",
+        "year": "{category} · this year"
+      },
+      "stats": {
+        "recorded": "Recorded",
+        "plan": "Against plan",
+        "planRatio": "{percent}% of plan",
+        "planPending": "Plan not yet due",
+        "planNone": "No plan",
+        "median": "Median box",
+        "none": "—",
+        "fulfillment": "Fulfillment",
+        "unanswered": "No answers",
+        "answerCount": "(n={count})",
+        "fulfillmentLevel": {
+          "high": "{count} fulfilled",
+          "medium": "{count} neutral",
+          "low": "{count} drained"
+        }
+      },
+      "mirror": {
+        "heading": "Estimation mirror",
+        "coefficient": "×{coefficient} against plan",
+        "notEnough": "Not enough runs to show a habit yet"
+      },
+      "timeOfDay": {
+        "heading": "Time of day — when it happens",
+        "labels": ["Early", "Morning", "Midday", "Afternoon", "Evening", "Night"]
+      },
+      "trend": {
+        "heading": {
+          "week": "Last 6 weeks",
+          "month": "Last 6 months",
+          "year": "Last 6 years"
+        }
+      },
+      "records": {
+        "heading": "{count, plural, one {# record} other {# records}}",
+        "empty": "No records in this period",
+        "unanswered": "—",
+        "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "fulfillment": {
+          "high": "Fulfilled",
+          "medium": "Neutral",
+          "low": "Drained"
+        }
+      }
+    },
     "sidebar": {
-      "categoriesHeading": "Categories — add to or remove from the denominator",
+      "categoriesHeading": "Categories",
       "uncategorized": "Uncategorized",
       "margin": "Margin (unrecorded)",
       "marginLensDisabled": "Margin stays out of the denominator while a segment is selected",
       "empty": "No categories yet",
-      "lensHeading": "Segments — saved questions",
+      "lensHeading": "Segments",
       "lensAll": "All",
       "segmentMenu": "Menu for {name}"
+    },
+    "mobile": {
+      "lens": {
+        "chip": "Lens",
+        "open": "Choose a lens"
+      },
+      "periodFormat": {
+        "weekDay": "MMM d",
+        "weekDayShort": "d",
+        "weekRange": "{start} – {end}",
+        "month": "MMMM",
+        "year": "yyyy"
+      },
+      "openMiniCalendar": "Open calendar",
+      "closeMiniCalendar": "Close calendar"
     },
     "errors": {
       "title": "Could not load the report",

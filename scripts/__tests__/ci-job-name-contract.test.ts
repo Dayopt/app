@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -105,6 +105,34 @@ describe('CI job 名の契約', () => {
 
   // ── checkout の資格情報（#2539 クロスレビュー risk-reviewer P1）─────
   describe('checkout は資格情報を残さない', () => {
+    /**
+     * ── この guard の保証境界（#2557）───────────────────────────────
+     *
+     * 走査は YAML パーサを使わず、**行単位の正規表現**で `uses: actions/checkout@…`
+     * を拾い、その step ブロック内に `persist-credentials: false` があるかを見る。
+     *
+     * **保証すること**:
+     * - block style（1 step 1 行の `- uses: …`）で書かれた checkout を、
+     *   `uses` の値が quote されていても検出する
+     * - 走査対象は `.github/workflows/*.{yml,yaml}` に加えて
+     *   `.github/actions/*​/action.{yml,yaml}`。**composite action は呼び出し元 job の
+     *   token 権限で走る**ため、workflow に直接書いた checkout と同じ露出を持つ
+     *   （ci.yml の全 job が `./.github/actions/setup` を呼ぶ）
+     *
+     * **保証しないこと**（意図的に諦めている範囲）:
+     * - flow style（`- {uses: actions/checkout@sha}`）
+     * - folded / block scalar や anchor / alias 経由で組み立てた `uses`
+     * - 上の 2 つの glob の外に置かれた workflow / action 定義
+     *   （`.github/actions/<dir>/<dir>/action.yml` のような入れ子を含む）
+     * - `actions/checkout` の fork や別名の checkout 実装
+     *
+     * **同型（YAML を regex で読むことに起因する取りこぼし）の指摘が出ても、
+     * 個別ケースを 1 つずつ regex へ足さないこと。** ここに書いた境界を更新するか、
+     * YAML パーサで読む方式へ切り替えるかを先に判断する。点を足し続けると
+     * 「何を保証している guard なのか」を誰も言えなくなる（#2554 → #2557 で同型の
+     * 指摘が 2 巡した。AGENTS.md §レビュー「迷ったら点を塞ぐより class を閉じる」）。
+     */
+
     // **件数比較にしない**（同レビュー P3）。`checkout の数 === persist-credentials の数`
     // だと、解説コメントに `persist-credentials: false` という文字列を 1 行足した上で
     // 未指定の checkout を 1 件足すと数が揃って素通りする。この repo の workflow は
@@ -113,7 +141,9 @@ describe('CI job 名の契約', () => {
       const lines = yamlText.split('\n');
       const offenders: number[] = [];
       lines.forEach((line, index) => {
-        if (!/^\s*(-\s+)?uses:\s*actions\/checkout@/.test(line)) return;
+        // `['"]?` は quote した `- uses: 'actions/checkout@v7'` を拾うため（#2557 穴 2）。
+        // 値の直後は必ず `@<ref>` が続く（GitHub は ref 無しの remote action を許さない）。
+        if (!/^\s*(-\s+)?uses:\s*['"]?actions\/checkout@/.test(line)) return;
         // この checkout step のブロック = 次の `- ` 始まりの step まで
         let hasPersistFalse = false;
         for (let i = index + 1; i < lines.length; i += 1) {
@@ -131,29 +161,60 @@ describe('CI job 名の契約', () => {
       return offenders;
     }
 
-    const WORKFLOWS = [
-      'ci.yml',
-      'nightly.yml',
-      'promote.yml',
-      'production-config-audit.yml',
-      'create-release.yml',
+    // 走査対象は workflow だけでなく composite action 定義も含む（#2557 穴 1）。
+    // **`.yaml` も拾う**（#2554 クロスレビュー risk-reviewer P2）。GitHub Actions は
+    // 両方の拡張子を等しく受け付けるため、`.yml` だけを見ると `.yaml` で
+    // 追加された定義が検査からも網羅性 assert からも同時に落ちる。
+    function credentialScanTargets(): { label: string; path: string }[] {
+      const workflowDir = join(process.cwd(), '.github/workflows');
+      const actionDir = join(process.cwd(), '.github/actions');
+
+      const workflows = readdirSync(workflowDir)
+        .filter((file) => /\.ya?ml$/.test(file))
+        .map((file) => ({ label: `workflows/${file}`, path: join(workflowDir, file) }));
+
+      // `.github/actions/` が無い repo 状態（composite action の全廃など）で ENOENT を
+      // 投げると、checkout の検査だけでなくこのファイルの全 test が collection 時に落ちる。
+      // 消失自体は EXPECTED_SCAN_TARGETS の網羅性 assert が別途検出する。
+      const actions = (existsSync(actionDir) ? readdirSync(actionDir, { withFileTypes: true }) : [])
+        .filter((entry) => entry.isDirectory())
+        .flatMap((dir) =>
+          readdirSync(join(actionDir, dir.name))
+            .filter((file) => /^action\.ya?ml$/.test(file))
+            .map((file) => ({
+              label: `actions/${dir.name}/${file}`,
+              path: join(actionDir, dir.name, file),
+            })),
+        );
+
+      return [...workflows, ...actions].sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    const SCAN_TARGETS = credentialScanTargets();
+
+    // 網羅性 assert の入力。定義を足したらここも更新することになる（それが目的）。
+    const EXPECTED_SCAN_TARGETS = [
+      'actions/setup/action.yml',
+      'workflows/ci.yml',
+      'workflows/create-release.yml',
+      'workflows/nightly.yml',
+      'workflows/production-config-audit.yml',
+      'workflows/promote.yml',
     ];
 
-    it.each(WORKFLOWS)('%s の全 checkout が persist-credentials: false を持つ', (name) => {
-      const offenders = checkoutStepsWithoutPersistFalse(readWorkflow(name));
+    it.each(SCAN_TARGETS.map((target) => [target.label, target.path]))(
+      '%s の全 checkout が persist-credentials: false を持つ',
+      (label, path) => {
+        const offenders = checkoutStepsWithoutPersistFalse(readFileSync(path, 'utf8'));
 
-      expect(offenders, `${name} の ${offenders.join(', ')} 行目の checkout が未指定`).toEqual([]);
-    });
+        expect(offenders, `${label} の ${offenders.join(', ')} 行目の checkout が未指定`).toEqual(
+          [],
+        );
+      },
+    );
 
-    it('検査対象が repo の全 workflow を覆っている（追加漏れの検出）', () => {
-      // **`.yaml` も拾う**（クロスレビュー risk-reviewer P2）。GitHub Actions は
-      // 両方の拡張子を等しく受け付けるため、`.yml` だけを見ると `.yaml` で
-      // 追加された workflow が検査からも網羅性 assert からも同時に落ちる。
-      const actual = readdirSync(join(process.cwd(), '.github/workflows'))
-        .filter((f) => /\.ya?ml$/.test(f))
-        .sort();
-
-      expect(actual).toEqual([...WORKFLOWS].sort());
+    it('検査対象が repo の全 workflow / composite action を覆っている（追加漏れの検出）', () => {
+      expect(SCAN_TARGETS.map((target) => target.label)).toEqual(EXPECTED_SCAN_TARGETS);
     });
 
     it('未指定の checkout を検出できる（回帰確認）', () => {
@@ -182,6 +243,39 @@ describe('CI job 名の契約', () => {
         '          # persist-credentials: false を忘れないこと',
         '          fetch-depth: 0',
         '      - uses: ./.github/actions/setup',
+      ].join('\n');
+
+      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([4]);
+    });
+
+    it('quote した uses の未指定 checkout を検出できる（#2557 穴 2 の回帰確認）', () => {
+      // 旧 regex（`uses:\s*actions\/checkout@`）は quote した値に非一致で、
+      // 未指定のまま it.each と網羅性 assert の両方を素通りしていた。
+      const regressed = [
+        'jobs:',
+        '  a:',
+        '    steps:',
+        "      - uses: 'actions/checkout@abc' # v7",
+        '      - uses: "actions/checkout@abc"',
+        '        with:',
+        '          persist-credentials: false',
+      ].join('\n');
+
+      expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([4]);
+    });
+
+    it('composite action 定義も走査対象に入っている（#2557 穴 1 の回帰確認）', () => {
+      // 走査が `.github/workflows/` 直下だけだった頃は、`.github/actions/setup/action.yml`
+      // へ checkout を 1 step 足すと未指定でも it.each の対象外・網羅性 assert も green
+      // のまま通った。composite action は呼び出し元 job の token 権限で走るため、
+      // ci.yml unit job（`pull-requests: write`）経由で同じ露出が復活する。
+      expect(SCAN_TARGETS.map((target) => target.label)).toContain('actions/setup/action.yml');
+
+      const regressed = [
+        'runs:',
+        '  using: composite',
+        '  steps:',
+        '    - uses: actions/checkout@abc',
       ].join('\n');
 
       expect(checkoutStepsWithoutPersistFalse(regressed)).toEqual([4]);

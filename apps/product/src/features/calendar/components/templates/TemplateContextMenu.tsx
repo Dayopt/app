@@ -10,7 +10,8 @@ import { cn, overlaySurface } from '@dayopt/components';
 interface TemplateContextMenuProps {
   position: { x: number; y: number };
   onClose: () => void;
-  onEdit: () => void;
+  /** 「型を一日として開く」。未配線の間は項目自体を出さない（#2567 では非 scope） */
+  onEdit?: (() => void) | undefined;
   onRename: () => void;
   onDelete: () => void;
 }
@@ -105,13 +106,17 @@ export function TemplateContextMenu({
   };
 
   const items = [
-    {
-      key: 'edit',
-      labelKey: 'calendar.templates.editEntryLabel' as const,
-      icon: SquarePen,
-      dangerous: false,
-      onSelect: onEdit,
-    },
+    ...(onEdit
+      ? [
+          {
+            key: 'edit',
+            labelKey: 'calendar.templates.editEntryLabel' as const,
+            icon: SquarePen,
+            dangerous: false,
+            onSelect: onEdit,
+          },
+        ]
+      : []),
     {
       key: 'rename',
       labelKey: 'common.actions.rename' as const,

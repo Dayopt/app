@@ -21,21 +21,21 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 /**
  * レポートの粒度。`day` は持たない（日の解像度はカレンダーの仕事）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export const reportGranularities = ['week', 'month', 'year'] as const;
 /**
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export type ReportGranularity = (typeof reportGranularities)[number];
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export function isReportGranularity(value: unknown): value is ReportGranularity {
   return typeof value === 'string' && (reportGranularities as readonly string[]).includes(value);
 }
 
 /** 週の開始曜日（0=日, 1=月, 6=土）。`user_settings.week_starts_on` と同じ 3 値。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export type ReportWeekStartsOn = 0 | 1 | 6;
 
@@ -48,7 +48,7 @@ const MINUTES_PER_WEEK = 10080;
 
 /** 日別・週別・月別の列 1 本。`key` は表示のラベル生成と `byBucket` の対応付けに使う。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export interface ReportBucket {
   /**
@@ -60,7 +60,7 @@ export interface ReportBucket {
   endAt: string;
 }
 
-/** @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。 */
+/** @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。 */
 export interface ReportRange {
   /** UTC ISO。期間の開始（含む）。 */
   startAt: string;
@@ -95,6 +95,16 @@ function toZonedDateKey(date: Date, timezone: string): string {
   return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
 }
 
+/**
+ * instant（UTC ISO）を、指定 timezone の壁時計日付キー（`YYYY-MM-DD`）へ。
+ *
+ * 4 章のジャンプ先（`/calendar?view=day&date=`）を組むのに使う。UTC のまま日付を切ると、
+ * 深夜の記録が前後の日へずれてカレンダーが「何も無い日」を開く。
+ */
+export function resolveZonedDayKey(instant: string, timezone: string): string {
+  return toZonedDateKey(new Date(instant), timezone);
+}
+
 /** `YYYY-MM-DD` を、TZ 非依存の壁時計 Date（ローカル正午）として読む。日付演算の足場にする。 */
 function parseDateKey(dateKey: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -125,6 +135,88 @@ function resolvePeriodStartDay(
       return new Date(anchor.getFullYear(), 0, 1, 12, 0, 0, 0);
   }
 }
+
+/**
+ * 次の期間の初日（`YYYY-MM-DD`、ユーザーの壁時計日付）。
+ *
+ * 4 章「カレンダーで組む ›」のジャンプ先。週なら次週の開始曜日、月なら翌月 1 日、
+ * 年なら翌年 1 月 1 日。**年粒度の bucket キーは `YYYY-MM` なので流用できない**ため、
+ * 期間の先頭日を粒度ごとに解いて日付キーで返す。
+ */
+export function resolveNextPeriodStartDayKey(
+  anchorDate: string,
+  granularity: ReportGranularity,
+  weekStartsOn: ReportWeekStartsOn,
+): string {
+  const nextAnchor = parseDateKey(shiftReportAnchor(anchorDate, granularity, 1));
+  return formatDateKey(resolvePeriodStartDay(nextAnchor, granularity, weekStartsOn));
+}
+
+/**
+ * 時間帯の 6 バケット（仕様 §6-4）。**配列の順序がそのまま棒の並び**になる。
+ *
+ * 深夜（0–300）が最後なのは「1 日の先頭だが、読み手にとっては 1 日の終わり」だから
+ * （仕様の並び）。区間はすべて半開 `[start, end)` で、1440 分を隙間なく覆う。
+ */
+export const REPORT_TIME_OF_DAY_BUCKETS = [
+  { key: 'morning', startMinute: 300, endMinute: 540 },
+  { key: 'lateMorning', startMinute: 540, endMinute: 720 },
+  { key: 'midday', startMinute: 720, endMinute: 900 },
+  { key: 'afternoon', startMinute: 900, endMinute: 1080 },
+  { key: 'evening', startMinute: 1080, endMinute: 1440 },
+  { key: 'night', startMinute: 0, endMinute: 300 },
+] as const;
+
+/**
+ * ブロックを時間帯 6 バケットへ按分する（分）。
+ *
+ * **0 時またぎは日境界で分割してから按分する。** 23:30–翌 1:00 の記録は「夜 30 分 +
+ * 深夜 60 分」であって、どちらか一方へ丸ごと寄せない（#2576 の日別按分と同じ規則）。
+ * 壁時計での位置が要るので、境界はユーザーの timezone で解く。
+ */
+export function distributeToTimeOfDay(
+  blockStartAt: string,
+  blockEndAt: string,
+  timezone: string,
+): number[] {
+  const totals = REPORT_TIME_OF_DAY_BUCKETS.map(() => 0);
+  const startMs = Date.parse(blockStartAt);
+  const endMs = Date.parse(blockEndAt);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return totals;
+
+  // 記録が跨ぐ壁時計日を 1 日ずつ辿る。年粒度でも 1 ブロックの長さは高々数日なので、
+  // 日数で回して問題ない（暴走を避けるため上限を置く）。
+  let dayKey = toZonedDateKey(new Date(startMs), timezone);
+  for (let index = 0; index < MAX_TIME_OF_DAY_DAYS; index += 1) {
+    const dayStartMs = zonedDayStart(dayKey, timezone).getTime();
+    const nextDayKey = formatDateKey(addDays(parseDateKey(dayKey), 1));
+    const dayEndMs = zonedDayStart(nextDayKey, timezone).getTime();
+
+    const segmentStart = Math.max(startMs, dayStartMs);
+    const segmentEnd = Math.min(endMs, dayEndMs);
+
+    if (segmentEnd > segmentStart) {
+      // その日の 00:00 からの経過分で位置を測る（DST の日は 1 日が 23 / 25 時間になるが、
+      // 分布の見た目に効く差ではないので公称値で扱う）
+      const fromMinute = (segmentStart - dayStartMs) / 60_000;
+      const toMinute = (segmentEnd - dayStartMs) / 60_000;
+
+      REPORT_TIME_OF_DAY_BUCKETS.forEach((bucket, bucketIndex) => {
+        const overlap =
+          Math.min(toMinute, bucket.endMinute) - Math.max(fromMinute, bucket.startMinute);
+        if (overlap > 0) totals[bucketIndex] = (totals[bucketIndex] ?? 0) + overlap;
+      });
+    }
+
+    if (dayEndMs >= endMs) break;
+    dayKey = nextDayKey;
+  }
+
+  return totals;
+}
+
+/** `distributeToTimeOfDay` が辿る壁時計日の上限。1 ブロックがこれを超える長さになる想定は無い。 */
+const MAX_TIME_OF_DAY_DAYS = 400;
 
 /** 期間の終端日（壁時計、含まない）を粒度ごとに求める。 */
 function resolvePeriodEndDay(startDay: Date, granularity: ReportGranularity): Date {
@@ -214,7 +306,7 @@ function resolveLengthMinutes(
  * @param weekStartsOn - 週の開始曜日（0 / 1 / 6）
 
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolveReportRange(
   anchorDate: string,
@@ -240,7 +332,7 @@ export function resolveReportRange(
  * カレンダーの `navigateRelative` は calendar の viewType 基準で動くため、レポートの
  * 粒度とは食い違う。レポートの期間移動はこの関数を通す。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function shiftReportAnchor(
   anchorDate: string,
@@ -261,7 +353,7 @@ export function shiftReportAnchor(
 /**
  * 前期間（Δ 表示用）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolvePreviousReportRange(
   anchorDate: string,
@@ -280,7 +372,7 @@ export function resolvePreviousReportRange(
 /**
  * 次期間（4 章「来週はすでに N 分の箱が置かれています」）。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function resolveNextReportRange(
   anchorDate: string,
@@ -299,7 +391,7 @@ export function resolveNextReportRange(
 /**
  * 指定 timezone における「今日」の日付キー。既定の anchor を組むのに使う。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function todayReportAnchor(timezone: string, now: Date = new Date()): string {
   return toZonedDateKey(now, timezone);
@@ -312,7 +404,7 @@ export function todayReportAnchor(timezone: string, now: Date = new Date()): str
  * 計上する前に必ずここを通す。#2426 は clip を欠いたことで、跨いだブロックの全時間を
  * 片側の期間へ帰属させていた。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function clipMinutes(
   blockStartAt: string,
@@ -332,7 +424,7 @@ export function clipMinutes(
  * 0 時またぎ（就寝など）はここで日境界に分割される。**ブロック自体は分割しない** —
  * 数値の帰属だけを按分する（仕様 §1）。合計は `clipMinutes` と一致する。
  *
- * @public #2577 が消費するまで未接続（#2576 で先に集計だけ固めた）。
+ * @public 直接 import されず tRPC の推論経由で使われるため、knip には見えない。
  */
 export function distributeToBuckets(
   blockStartAt: string,

@@ -1,20 +1,19 @@
 /**
- * テンプレート（型）UI の mock 型定義（Storybook-only）。
+ * テンプレート（型）UI の表示モデル。
  *
  * v1.0 設計書 §5.4 の契約: テンプレートが保存するのは「組成」「順序」「錨位置」のみ。
  * 寸法（各ブロックの長さ）は持たず、適用時に過去の中央値を着て具現化する
  * （型は使うほど正確になり、腐らない）。
  *
- * この issue の scope は backend / store / tRPC 非配線の Storybook-only なので、
- * ここで定義する型は実データモデルではなく、Story を組み立てるための mock shape。
- * 実装フェーズで tRPC procedure の input/output 型を設計する際は、この型をそのまま
- * 転用せず「組成・順序・錨位置のみを保存する」契約から改めて設計し直すこと
- * （`medianDurationRatio` は保存値ではなく適用時点の具現化結果のプレビュー用モック値）。
+ * ここに出てくる比率（`anchorRatio` / `medianDurationRatio`）は**保存値ではなく描画用の
+ * 派生値**。保存されているのは `anchor_minute`（local midnight からの分）で、長さは
+ * server が毎回「直近 4 週の中央値 or 既定長」から計算して返す（#2567）。
+ * 実データからの変換は `toTemplateView.ts` が持つ。
  */
 
 import type { CategoryColorName } from '@/features/activities';
 
-export interface TemplateBlockMock {
+export interface TemplateBlockView {
   id: string;
   activityName: string;
   /** null = 未分類（継承元カテゴリーなし） */
@@ -23,18 +22,18 @@ export interface TemplateBlockMock {
   categoryIcon: string | null;
   /**
    * 錨位置: 0〜1 の相対位置（0 = 一日の始まり、1 = 一日の終わり）。
-   * 保存されるのはこの錨位置のみで、時刻ラベルには変換して見せない。
+   * 時刻ラベルには変換して見せない。
    */
   anchorRatio: number;
   /**
    * 適用時に中央値を着た後の長さ比率（0〜1、一日の長さに対する割合）。
-   * 型自体は寸法を持たないため、これは具現化後のプレビュー用モック値。
+   * 型自体は寸法を持たないため、これは具現化後のプレビュー値。
    */
   medianDurationRatio: number;
 }
 
-export interface TemplateMock {
+export interface TemplateView {
   id: string;
   name: string;
-  blocks: TemplateBlockMock[];
+  blocks: TemplateBlockView[];
 }

@@ -28,11 +28,11 @@ vi.mock('@dayopt/i18n/navigation', () => ({
   ),
 }));
 
-vi.mock('./MobileMonthGrid', () => ({
+vi.mock('@/components/ui/navigation/MobileMonthGrid', () => ({
   MobileMonthGrid: () => <div data-testid="month-grid" />,
 }));
 
-vi.mock('./MobileYearStrip', () => ({
+vi.mock('@/components/ui/navigation/MobileYearStrip', () => ({
   MobileYearStrip: () => <div data-testid="year-strip" />,
 }));
 
