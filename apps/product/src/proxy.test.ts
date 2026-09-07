@@ -567,3 +567,71 @@ describe('proxy が refresh 後の Cookie / cache headers を全 response へ引
     expect(response.cookies.get('sb-refresh')).toBeUndefined();
   });
 });
+
+// percent-encoding による認可バイパス（claude-security スキャン C1、HIGH）。
+//
+// `request.nextUrl.pathname` は percent-encoding を保ったまま渡ってくるのに対し、
+// next-intl の middleware は `decodeURI` した値で rewrite 先を決める
+// （4.13.2 `middleware.js:16` / `:40`）。判定側だけが encode されたままだと
+// `/%63alendar` が `isProtectedProductPath` の `startsWith` に一致せず
+// 「保護対象ではない」と扱われ、未認証の login redirect（proxy.ts）と
+// aal1 の MFA gate の両方を同時に迂回できる。
+// 不変条件「proxy の MFA redirect を procedure backstop と引き換えに弱めない」
+// （docs/engineering/invariants.md §認証・MFA）を守る回帰テスト。
+describe('proxy path canonicalization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv('NEXT_PUBLIC_MAINTENANCE_MODE', 'false');
+    vi.stubEnv('SKIP_AUTH_IN_DEV', 'false');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each([
+    ['先頭 1 文字を encode', 'https://app.dayopt.app/%63alendar'],
+    ['複数文字を encode', 'https://app.dayopt.app/%63%61lendar'],
+    ['locale prefix を encode', 'https://app.dayopt.app/%6a%61/calendar'],
+  ])('%s した protected path でも未認証なら login へ redirect する', async (_label, url) => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/auth/login');
+  });
+
+  it.each([
+    [
+      '先頭 1 文字を encode',
+      'https://app.dayopt.app/%63alendar',
+      'https://app.dayopt.app/auth/mfa-verify',
+    ],
+    [
+      'locale prefix を encode',
+      'https://app.dayopt.app/%6a%61/calendar',
+      'https://app.dayopt.app/ja/auth/mfa-verify',
+    ],
+  ])('%s した protected path でも AAL1 なら MFA gate を通る', async (_label, url, expected) => {
+    mockAuthenticatedSession({
+      data: { currentLevel: 'aal1', nextLevel: 'aal2' },
+      error: null,
+    });
+
+    const response = await proxy(new NextRequest(url));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(expected);
+  });
+
+  // decodeURI が URIError を投げる pathname は Next 側でも実ルートへ解決されない。
+  // 判定を続けず fail closed で落とす。
+  it('decode できない pathname は 404 にする', async () => {
+    mockUnauthenticatedSession();
+
+    const response = await proxy(new NextRequest('https://app.dayopt.app/%ZZ'));
+
+    expect(response.status).toBe(404);
+  });
+});
