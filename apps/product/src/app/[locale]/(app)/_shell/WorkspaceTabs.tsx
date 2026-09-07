@@ -61,7 +61,9 @@ export function WorkspaceTabs() {
   return (
     <IconTabSwitcher
       ariaLabel={t('sidebar.pageNav.label')}
-      value={currentTab === 'report' ? 'report' : 'calendar'}
+      // `other`（/settings 等）では**どちらも選択しない**。'calendar' に丸めると、
+      // カレンダーを見ていないのにカレンダータブが選択済みに見える（2026-09-07 の反証レビュー指摘）
+      value={currentTab === 'calendar' || currentTab === 'report' ? currentTab : undefined}
       items={[
         {
           value: 'calendar',

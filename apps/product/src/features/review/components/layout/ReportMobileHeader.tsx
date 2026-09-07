@@ -137,11 +137,11 @@ export function ReportMobileHeader({
     // `yyyy'年'` の `'…'` も ICU のエスケープと衝突する。
     // `MobileMonthGrid` が曜日配列を `raw()` で引いているのと同じ扱い
     patterns: {
-      weekDay: tMobile.raw('periodFormat.weekDay') as string,
-      weekDayShort: tMobile.raw('periodFormat.weekDayShort') as string,
-      weekRange: tMobile.raw('periodFormat.weekRange') as string,
-      month: tMobile.raw('periodFormat.month') as string,
-      year: tMobile.raw('periodFormat.year') as string,
+      weekDay: rawPattern(tMobile, 'periodFormat.weekDay', 'MMM d'),
+      weekDayShort: rawPattern(tMobile, 'periodFormat.weekDayShort', 'd'),
+      weekRange: rawPattern(tMobile, 'periodFormat.weekRange', '{start} – {end}'),
+      month: rawPattern(tMobile, 'periodFormat.month', 'MMMM'),
+      year: rawPattern(tMobile, 'periodFormat.year', 'yyyy'),
     },
   });
 
@@ -238,4 +238,26 @@ export function ReportMobileHeader({
       ) : null}
     </div>
   );
+}
+
+/**
+ * 書式キーを `raw()` で引く（ICU 解釈を通さない）。欠けていたら英語の既定へ倒す。
+ *
+ * next-intl の `raw()` はキーが無いとキーのパス文字列をそのまま返す。それを
+ * `date-fns.format` へ渡すと `RangeError`（未エスケープのラテン文字）で
+ * ヘッダーごと落ちるので、文字列であることを確かめた上で使う。
+ */
+function rawPattern(
+  t: ReturnType<typeof useTranslations<'report.mobile'>>,
+  key:
+    | 'periodFormat.weekDay'
+    | 'periodFormat.weekDayShort'
+    | 'periodFormat.weekRange'
+    | 'periodFormat.month'
+    | 'periodFormat.year',
+  fallback: string,
+): string {
+  const value: unknown = t.raw(key);
+  // キーが無い時は `raw()` がキーのパスを返す。それは書式として使えない
+  return typeof value === 'string' && value !== `report.mobile.${key}` ? value : fallback;
 }

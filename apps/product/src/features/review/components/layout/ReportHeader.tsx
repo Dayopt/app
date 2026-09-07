@@ -34,9 +34,10 @@ interface ReportHeaderProps {
  * `DateRangeDisplay`（期間ラベル）と `DateNavigator`（`‹ ›` + 今日）を差し込む。
  * 並ぶ順序と余白もカレンダーの中央グループに揃える（2026-09-07 User 指示）。
  *
- * 粒度切替だけがレポート固有で、こちらは `DropdownMenu` ではなくセグメントにする。
- * カレンダーが dropdown なのは 1〜7 日に週末・週番号・密度・型保存まで抱えるからで、
- * 3 択固定のレポートとは理由が違う。1 タップで切り替わる利点を捨てない。
+ * 粒度切替だけがレポート固有だが、器はカレンダーの `ViewSwitcher` と同じ
+ * `h-8` の outline トリガー + `DropdownMenu` にする（2026-09-07 User 指示）。
+ * 以前はセグメントだったが、1 項目が `min-h-11` で枠込み 54px あり、32px の行から
+ * はみ出してレポートのヘッダーだけ厚く見えていた。
  *
  * `features/calendar` は同層なので import できない。期間の移動や粒度の変更は
  * すべて props のコールバックで Composition Layer へ返す。

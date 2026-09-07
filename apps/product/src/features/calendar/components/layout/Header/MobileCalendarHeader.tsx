@@ -25,7 +25,6 @@ interface MobileCalendarHeaderProps {
   /** ホバー/タッチ時にナビゲーション先のデータを事前取得する */
   onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
   onDateSelect?: ((date: Date) => void) | undefined;
-  displayRange?: { start: Date; end: Date } | undefined;
   rightSlot?: ReactNode | undefined;
   className?: string | undefined;
   defaultExpanded?: boolean | undefined;
@@ -44,7 +43,6 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     onNavigate,
     onPrefetch,
     onDateSelect,
-    displayRange,
     rightSlot,
     className,
     defaultExpanded,
@@ -234,11 +232,16 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 </Button>
               </div>
 
-              {/* 月グリッド */}
+              {/* 月グリッド。
+                  **`displayRange` は渡さない。** カレンダーの表示日は連続とは限らず
+                  （週末非表示の複数日ビューでは `generateMultiDayDates` が土日を飛ばす）、
+                  端点だけを帯にすると描いていない土日まで「表示中」と塗ってしまう。
+                  帯を出すなら `viewDateRange.days` そのものを渡す形へ直してから
+                  （2026-09-07 の反証レビュー指摘）。レポートの期間は常に連続なので
+                  あちらは `displayRange` を使う */}
               <MobileMonthGrid
                 viewMonth={viewMonth}
                 selectedDate={currentDate}
-                displayRange={displayRange}
                 onViewMonthChange={handleViewMonthChange}
                 onDateSelect={handleDateSelect}
                 className="w-full"

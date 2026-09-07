@@ -8,6 +8,7 @@ import {
   endOfWeek,
   format,
   getWeek,
+  isSameDay,
   isSameMonth,
   isWithinInterval,
   startOfDay,
@@ -106,8 +107,11 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
             start: startOfDay(displayRange.start),
             end: endOfDay(displayRange.end),
           });
-        const isRangeStart = isInRange && tzIsSameDay(date, displayRange.start, timezone);
-        const isRangeEnd = isInRange && tzIsSameDay(date, displayRange.end, timezone);
+        // 端の判定は所属判定（`isWithinInterval` = device local）と同じ基準にする。
+        // `tzIsSameDay` を混ぜると、端末の TZ とユーザーの TZ が違う時に端だけ一致せず、
+        // 帯の角丸が片側だけ落ちる
+        const isRangeStart = isInRange && isSameDay(date, displayRange.start);
+        const isRangeEnd = isInRange && isSameDay(date, displayRange.end);
 
         return { isToday, isSelected, isCurrentMonth, isInRange, isRangeStart, isRangeEnd };
       },

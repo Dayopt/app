@@ -17,7 +17,8 @@ interface IconTabSwitcherItem<TValue extends string> {
 
 interface IconTabSwitcherProps<TValue extends string> {
   items: readonly IconTabSwitcherItem<TValue>[];
-  value: TValue;
+  /** 選択中の項目。どれでもない状態（別ページを見ている等）は `undefined`。 */
+  value: TValue | undefined;
   /** `href` を持たない項目の切替。href 項目だけなら不要。 */
   onValueChange?: ((value: TValue) => void) | undefined;
   /** タブ群自体のラベル。何を切り替えるのかを読み上げる。 */
@@ -77,10 +78,14 @@ function TabItem<TValue extends string>({
 }) {
   const className = cn(
     'relative flex h-8 items-center justify-center rounded-lg transition-colors duration-150',
-    // アイコンは正方形、テキストは中身ぶんの幅を取る。どちらも下の擬似要素で 44px を確保する
-    item.icon ? 'w-8' : 'min-w-8 px-3 text-xs',
-    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 44px タップターゲット確保。Button の _square-sm variant と同じ技法（packages/components/src/actions/button.tsx）
-    'after:absolute after:inset-0 after:m-auto after:size-11 after:content-[""]',
+    item.icon
+      ? // アイコンは 32px の正方形。44px は擬似要素で足す（Button の _square-sm と同じ技法）
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- 擬似要素を描くには content が要り、空文字以外に書きようがない
+        'w-8 after:absolute after:inset-0 after:m-auto after:size-11 after:content-[""]'
+      : // テキストは**自分で 44px の幅を持つ**。アイコンと同じ「中央 44px」の擬似要素にすると、
+        // 「週」のような 1 文字だと箱が 36px しかなく左右へ 4px ずつはみ出し、隣のタブの上に
+        // 重なって別の粒度が選ばれる（2026-09-07 の反証レビュー指摘）。縦だけ広げる
+        'min-w-11 px-3 text-xs after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[""]',
     active ? 'bg-state-selected text-foreground' : 'text-muted-foreground hover:text-foreground',
   );
 
